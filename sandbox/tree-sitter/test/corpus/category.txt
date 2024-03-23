@@ -1,0 +1,25 @@
+===
+Object statements
+===
+
+x : Ob
+
+---
+
+(source_file
+ (object_definition
+  name: (identifier)))
+
+===
+Arrow statements
+===
+
+f : x -> y
+
+---
+
+(source_file
+ (arrow_definition
+  name: (identifier)
+  dom: (identifier)
+  cod: (identifier)))
