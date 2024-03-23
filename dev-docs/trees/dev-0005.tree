@@ -1,0 +1,19 @@
+\title{Example applications}
+
+\subtree{
+\title{Rich-text editors}
+
+\p{Open-source, collaborative, rich-text editors built using
+TypeScript/ProseMirror/TipTap/Yjs:
+\ul{
+  \li{[Vrite](https://vrite.io/)
+  ([demo](https://editor.vrite.io/),
+   [GitHub](https://github.com/vriteio/vrite)
+   [HN](https://news.ycombinator.com/item?id=36446045)):
+  WYSIWYG Markdown editor}
+  \li{[BlockNote](https://www.blocknotejs.org/)
+  ([GitHub](https://github.com/TypeCellOS/BlockNote),
+   [HN](https://news.ycombinator.com/item?id=32764493)):
+  block-based editor inspired by Notion}
+}}
+}

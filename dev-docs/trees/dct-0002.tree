@@ -1,0 +1,28 @@
+\title{Signed categories}
+\taxon{doctrine}
+\import{macros}
+
+\def\Sgn{#{\operatorname{Sgn}}}
+
+\p{A signed category is a category graded by signs. To be more precise, let
+#{\Sgn \coloneqq \{\pm 1\} \cong \Z_2} be the group of (nonzero) signs under
+their usual multiplication.}
+
+\definition{Signed category}{
+  \p{A \define{signed category} a category \cat{A} along
+  with a functor #{\cat{A} \to \Sgn}, viewing \Sgn as a one-object category.}
+  \p{These are the objects of the slice category #{\cat{Cat}/\Sgn},
+  the \define{category of signed categories}.}
+}
+
+\transclude{thy-0002}
+
+\proposition{Characterization of signed categories}{The following are equivalent:
+  \ol{
+    \li{a signed category;}
+    \li{a category \cat{C} equipped with a profunctor #{N: \cat{C} \proto \cat{C}}
+    and a composition operation ##{\mu: N \odot N \To \Hom_{\cat{C}},} which is
+    a natural transformation;}
+    \li{a model of the theory of signed categories.}
+  }
+}

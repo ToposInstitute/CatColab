@@ -1,0 +1,32 @@
+\title{Frontend base}
+
+\subtree{
+\title{Language}
+
+\p{The obvious choice is \strong{[TypeScript](https://www.typescriptlang.org/)}.
+It is a saner JavaScript and the new industry standard.}
+
+\p{Scala and OCaml stand out as typed functional programming languages with 
+reasonable stories about compiling to JavaScript, but will have less refined
+ecosystems and toolchains. [Hazel](https://hazel.org/), a toy structure editor
+for a functional programming language, is written in OCaml
+([GitHub](https://github.com/hazelgrove/hazel)). Since we do not aim to innovate
+in frontend programming, we should stick to the mainstream, hence
+JavaScript/TypeScript.}
+}
+
+\subtree{
+\title{UI framework}
+
+\p{The proliferation of web
+[UI frameworks](https://bestofjs.org/projects?tags=framework) is notorious.
+\strong{React} remains the industry standard and would be a safe choice,
+although in past experience it felt a bit clunky and boilerplate-y.}
+
+\p{\strong{[Solid](https://www.solidjs.com/)} is an appealing newer framework
+that is clearly inspired by React but has learned some lessons
+([HN](https://news.ycombinator.com/item?id=30508524)). It ditches the virtual
+DOM and has a better story about component updates ("reactivity"), being one
+of few frameworks to have proper support for
+[nested reactivity](https://www.solidjs.com/tutorial/stores_nested_reactivity).}
+}

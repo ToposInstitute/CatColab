@@ -1,0 +1,59 @@
+\title{Structure editor components}
+
+\subtree{
+\title{Incremental parsing}
+
+\p{Parsing is traditionally a backend task but since we need \em{live} and 
+\em{incremental parsing} as the first step of content entry into a structure
+editor, it is better that parsing happen on the frontend.}
+
+\p{Web-compatible incremental parsers:
+\ol{
+  \li{[Tree-sitter](http://tree-sitter.github.io/tree-sitter/)
+  ([demo](http://tree-sitter.github.io/tree-sitter/playground)):
+  Written in C, with both Node and WASM bindings}
+  \li{[Lezer](https://lezer.codemirror.net/):
+  Written in TypeScript by the CodeMirror team}
+}
+Tree-sitter is more mature and has bindings to many langauges.
+Lezer is web native and is directly inspired by Tree-sitter.
+Both are based on the same parsing algorithm.}
+}
+
+\subtree{
+\title{Rich-text UI components}
+
+\p{Though structure editors are niche, components for web-based rich-text editors
+are extensively developed and seem modular enough to adapt to the formal context
+of a structure editor.}
+
+\p{The following combination is popular and designed to be highly modular:
+\ol{
+  \li{[ProseMirror](https://prosemirror.net/): Library of components for a rich
+  content editor, written in TypeScript}
+  \li{[TipTap](https://tiptap.dev/): Optional: builds on ProseMirror to make it
+  easier to use}
+}}
+
+\p{Additional options:
+\ol{
+  \li{[Lexical](https://lexical.dev/)
+  ([HN](https://news.ycombinator.com/item?id=31019778)), by Facebook}
+  \li{[Quill](https://quilljs.com/): older, perhaps less flexible}
+}}
+}
+
+\subtree{
+\title{Collaborative editing}
+
+\p{All of the rich-text editors support collaborative editing via integration
+with \strong{[Yjs](https://yjs.dev/)}, a widely used implementation of
+[CRDT](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type)
+for JSON-esque data structures.}
+
+\p{Tools for integrating Yjs:
+\ul{
+  \li{[Hocuspocus](https://tiptap.dev/docs/hocuspocus/introduction):
+  Integrates Yjs with ProseMirror/TipTap}
+}}
+}

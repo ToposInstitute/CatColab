@@ -1,0 +1,8 @@
+\title{Categories}
+\taxon{doctrine}
+\import{macros}
+
+\p{Categories are the simplest of all doctrines. They are precisely the models
+of the trivial double theory.}
+
+\transclude{thy-0001}

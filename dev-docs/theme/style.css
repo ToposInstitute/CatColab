@@ -1,0 +1,606 @@
+/* SPDX-License-Identifier: CC0-1.0 */
+
+.katex {
+ font-size: 1.15em !important;
+}
+
+/* inria-sans-300 - latin_latin-ext */
+@font-face {
+  font-display: swap;
+  /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+  font-family: 'Inria Sans';
+  font-style: normal;
+  font-weight: 300;
+  src: url('fonts/inria-sans-v14-latin_latin-ext-300.woff2') format('woff2');
+  /* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
+}
+
+/* inria-sans-300italic - latin_latin-ext */
+@font-face {
+  font-display: swap;
+  /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+  font-family: 'Inria Sans';
+  font-style: italic;
+  font-weight: 300;
+  src: url('fonts/inria-sans-v14-latin_latin-ext-300italic.woff2') format('woff2');
+  /* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
+}
+
+/* inria-sans-regular - latin_latin-ext */
+@font-face {
+  font-display: swap;
+  /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+  font-family: 'Inria Sans';
+  font-style: normal;
+  font-weight: 400;
+  src: url('fonts/inria-sans-v14-latin_latin-ext-regular.woff2') format('woff2');
+  /* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
+}
+
+/* inria-sans-italic - latin_latin-ext */
+@font-face {
+  font-display: swap;
+  /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+  font-family: 'Inria Sans';
+  font-style: italic;
+  font-weight: 400;
+  src: url('fonts/inria-sans-v14-latin_latin-ext-italic.woff2') format('woff2');
+  /* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
+}
+
+/* inria-sans-700 - latin_latin-ext */
+@font-face {
+  font-display: swap;
+  /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+  font-family: 'Inria Sans';
+  font-style: normal;
+  font-weight: 700;
+  src: url('fonts/inria-sans-v14-latin_latin-ext-700.woff2') format('woff2');
+  /* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
+}
+
+/* inria-sans-700italic - latin_latin-ext */
+@font-face {
+  font-display: swap;
+  /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+  font-family: 'Inria Sans';
+  font-style: italic;
+  font-weight: 700;
+  src: url('fonts/inria-sans-v14-latin_latin-ext-700italic.woff2') format('woff2');
+  /* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
+}
+
+:root {
+  --content-gap: 15px;
+  --radius: 5px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  line-height: 1.2;
+  margin-bottom: 0;
+}
+
+h5,
+h6,
+p {
+  margin-top: 0;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin-top: .5em;
+}
+
+pre,
+img,
+.katex-display,
+section,
+center {
+  overflow-y: hidden;
+}
+
+pre {
+  border-radius: var(--radius);
+  background-color: rgba(0, 100, 100, 0.04);
+  padding: .5em;
+  font-size: 11pt;
+  margin-top: 0em;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  white-space: -moz-pre-wrap;
+  white-space: -pre-wrap;
+  white-space: -o-pre-wrap;
+  word-wrap: break-word;
+}
+
+code {
+  border-radius: var(--radius);
+  background-color: rgba(0, 100, 100, 0.04);
+  padding: 0.2em;
+  font-size: 0.9em;
+}
+
+body {
+  font-family: "Inria Sans";
+  font-size: 12pt;
+  line-height: 1.5em;
+}
+
+.logo {
+  font-weight: 1000;
+  font-size: 24px;
+}
+
+.logo a {
+  color: #666;
+  text-decoration: none;
+}
+
+.logo a:hover {
+  color: #aaa;
+}
+
+.block.hide-metadata>details>summary>header>.metadata {
+  display: none;
+}
+
+article>section>details>summary>header>h1>.taxon {
+  display: block;
+  font-size: .9em;
+  color: #888;
+  padding-bottom: 5pt;
+}
+
+section section[data-taxon="Reference"]>details>summary>header>h1>.taxon,
+section section[data-taxon="Person"]>details>summary>header>h1>.taxon {
+  display: none;
+}
+
+footer>section {
+  margin-bottom: 1em;
+}
+
+footer h2 {
+  font-size: 14pt;
+}
+
+.metadata>address {
+  display: inline;
+}
+
+@media only screen and (max-width: 1000px) {
+  body {
+    margin-top: 1em;
+    margin-left: .5em;
+    margin-right: .5em;
+    transition: ease all .2s;
+  }
+
+  #grid-wrapper>nav {
+    display: none;
+    transition: ease all .2s;
+  }
+}
+
+@media only screen and (min-width: 1000px) {
+  body {
+    margin-top: 2em;
+    margin-left: 2em;
+    transition: ease all .2s;
+  }
+
+  #grid-wrapper {
+    display: grid;
+    grid-template-columns: 90ex;
+  }
+}
+
+body>header {
+  margin-bottom: 2em;
+}
+
+#grid-wrapper>article {
+  max-width: 90ex;
+  margin-right: auto;
+  grid-column: 1;
+}
+
+#grid-wrapper>nav {
+  grid-column: 2;
+}
+
+details>summary>header {
+  display: inline;
+}
+
+a.heading-link {
+  box-shadow: none;
+}
+
+details h1 {
+  font-size: 13pt;
+  display: inline;
+}
+
+section .block[data-taxon] details>summary>header>h1 {
+  font-size: 12pt;
+}
+
+span.taxon {
+  color: #444;
+}
+
+
+.link-list>section>details>summary>header h1 {
+  font-size: 12pt;
+}
+
+
+article>section>details>summary>header>h1 {
+  font-size: 1.5em;
+}
+
+details>summary {
+  list-style-type: none;
+}
+
+details>summary::marker,
+details>summary::-webkit-details-marker {
+  display: none;
+}
+
+article>section>details>summary>header {
+  display: block;
+  margin-bottom: .5em;
+}
+
+section.block>details {
+  margin-bottom: 0.4em;
+}
+
+
+section.block>details[open] {
+  margin-bottom: 1em;
+}
+
+
+.link-list>section.block>details {
+  margin-bottom: .25em;
+}
+
+nav#toc {
+  margin-left: 1em;
+}
+
+nav#toc h1 {
+  margin-top: 0;
+  font-size: 16pt;
+}
+
+nav#toc,
+nav#toc a {
+  color: #555;
+}
+
+nav#toc .link {
+ box-shadow: none;
+ text-decoration: none;
+}
+
+nav#toc a.bullet {
+ opacity: 0.7;
+ margin-left: 0.4em;
+ margin-right: 0.3em;
+ padding-left: 0.2em;
+ padding-right: 0.2em;
+ text-decoration: none;
+}
+
+nav#toc h2 {
+  font-size: 1.1em;
+}
+
+nav#toc ul {
+  list-style-type: none;
+}
+
+nav#toc li > ul {
+ padding-left: 1em;
+}
+
+nav#toc li {
+ list-style-position: inside;
+}
+
+.toc-item-label {
+  font-weight: bolder;
+}
+
+.block {
+  border-radius: var(--radius)
+}
+
+.block:hover {
+  background-color: rgba(0, 100, 255, 0.04);
+}
+
+.block.highlighted {
+  border-style: solid;
+  border-width: 1pt;
+}
+
+.highlighted {
+  background-color: rgba(255, 255, 140, .3);
+  border-color: #ccc;
+}
+
+.highlighted:hover {
+  background-color: rgba(255, 255, 140, .6);
+  border-color: #aaa;
+}
+
+.slug,
+.doi,
+.orcid {
+  color: gray;
+  font-weight: 200;
+}
+
+.edit-button {
+  color: rgb(180, 180, 180);
+  font-weight: 200;
+}
+
+.error {
+  color: rgb(255, 50, 50, .8);
+}
+
+.block {
+  padding-left: 5px;
+  padding-right: 10px;
+  padding-bottom: 2px;
+  border-radius: 5px;
+}
+
+.link.external {
+  text-decoration: underline;
+}
+
+a.link.local,
+.link.local a,
+a.slug {
+  box-shadow: none;
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+ }
+
+ninja-keys::part(ninja-action) {
+  white-space: nowrap;
+}
+
+body {
+  hyphens: auto;
+}
+
+table {
+  margin-bottom: 1em;
+}
+
+table.macros {
+  overflow-x: visible;
+  overflow-y: visible;
+  font-size: 0.9em;
+}
+
+table.macros td {
+  padding-left: 5pt;
+  padding-right: 15pt;
+  vertical-align: baseline;
+}
+
+th {
+  text-align: left;
+}
+
+th,
+td {
+  padding: 0 15px;
+  vertical-align: top;
+}
+
+td.macro-name,
+td.macro-body {
+  white-space: nowrap;
+}
+
+td.macro-doc {
+  font-size: .9em;
+}
+
+.enclosing.macro-scope>.enclosing {
+  border-radius: 2px;
+}
+
+.enclosing.macro-scope>.enclosing:hover {
+  background-color: rgba(0, 100, 255, 0.1);
+}
+
+[aria-label][role~="tooltip"]::after {
+  font-family: "Inria Sans";
+}
+
+.tooltip {
+  position: relative;
+}
+
+.inline.tooltip {
+  display: inline-block;
+}
+
+.display.tooltip {
+  display: block;
+}
+
+
+/* The tooltip class is applied to the span element that is the tooltip */
+
+.tooltip .tooltiptext {
+  visibility: hidden;
+  white-space: nowrap;
+  min-width: fit-content;
+  background-color: black;
+  color: #fff;
+  padding-left: 5px;
+  padding-top: 5px;
+  padding-right: 10px;
+  border-radius: 6px;
+  position: absolute;
+  z-index: 1;
+  top: 100%;
+  left: 50%;
+  margin-left: -60px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.tooltip .tooltiptext::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+}
+
+
+/* Show the tooltip */
+
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+  opacity: 1;
+}
+
+.tooltiptext a {
+  color: white
+}
+
+.macro-doc {
+  font-style: italic;
+}
+
+.macro-name {
+  white-space: nowrap;
+}
+
+.macro-is-private {
+  color: var(--secondary);
+}
+
+blockquote {
+  border-inline-start: 1px solid var(--secondary);
+}
+
+a.slug:hover,
+a.bullet:hover,
+.edit-button:hover,
+.link:hover {
+  background-color: rgba(0, 100, 255, .1);
+}
+
+.link {
+ cursor: pointer;
+}
+
+a {
+  color: black;
+  text-decoration: inherit;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.nocite {
+  display: none
+}
+
+blockquote {
+  font-style: italic;
+}
+
+
+
+address {
+  display: inline;
+}
+
+
+.metadata ul {
+  padding-left: 0;
+  display: inline;
+}
+
+.metadata li::after {
+  content: " · ";
+}
+
+.metadata li:last-child::after {
+  content: "";
+}
+
+.metadata ul li {
+  display: inline
+}
+
+img {
+  object-fit: cover;
+  max-width: 100%;
+}
+
+figcaption {
+  font-style: italic;
+  padding: 3px;
+  text-align: center;
+}
+
+mark {
+  background-color: rgb(255, 255, 151);
+}
+
+hr {
+  margin-top: 10px;
+  margin-bottom: 20px;
+  background-color: gainsboro;
+  border: 0 none;
+  width: 100%;
+  height: 2px;
+}
+
+ul, ol {
+ padding-bottom: .5em;
+}
+
+ol {
+ list-style-type: decimal;
+}
+
+ol li ol {
+ list-style-type: lower-alpha;
+}
+
+ol li ol li ol {
+ list-style-type: lower-roman;
+}
+
+.error {
+ background-color: red;
+ font-weight: bold;
+ color: white;
+}

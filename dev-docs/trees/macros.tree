@@ -1,0 +1,48 @@
+% Markup
+
+\def\table[body]{\xml{table}{\body}}
+\def\th[body]{\xml{th}{\body}}
+\def\tr[body]{\xml{tr}{\body}}
+\def\td[body]{\xml{td}{\body}}
+
+\def\nlab[article]{\xml{span}[class]{nlab}{[\article](https://ncatlab.org/nlab/show/\article)}}
+
+% Figures
+
+\def\quiver[body]{
+  \xml{center}{\tex{\usepackage{quiver,amsopn,amssymb}}{\body}}
+}
+
+% Theorems
+
+\def\definition[head][body]{
+  \subtree{\title{\head} \taxon{definition} \body}
+}
+
+\def\proposition[head][body]{
+  \subtree{\title{\head} \taxon{proposition} \body}
+}
+
+% General mathematics
+
+\def\define[name]{\strong{\name}}
+
+% Category theory
+
+\def\Ob{#{\operatorname{Ob}}}
+\def\Hom{#{\operatorname{Hom}}}
+\def\id{#{\operatorname{id}}}
+
+\def\To{#{\Rightarrow}}
+\def\hetto{#{\dashrightarrow}}
+
+\def\cat[name]{#{\mathsf{\name}}}
+\def\Tw{#{\operatorname{Tw}}}
+
+% Double category theory
+
+\def\proto{#{\mathrel{\mkern3mu\vcenter{\hbox{$\shortmid$}}\mkern-10mu{\to}}}}
+
+\def\tabulator[ob]{#{\top\ob}}
+
+\def\dbl[name]{#{\mathbb{\name}}}
