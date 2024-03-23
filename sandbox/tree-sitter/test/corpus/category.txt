@@ -1,5 +1,5 @@
 ===
-Object statements
+Object declarations
 ===
 
 x : Ob
@@ -11,10 +11,11 @@ x : Ob
   name: (identifier)))
 
 ===
-Arrow statements
+Arrow declarations
 ===
 
 f : x -> y
+g : y → z
 
 ---
 
@@ -22,4 +23,30 @@ f : x -> y
  (arrow_definition
   name: (identifier)
   dom: (identifier)
+  cod: (identifier))
+ (arrow_definition
+  name: (identifier)
+  dom: (identifier)
   cod: (identifier)))
+
+===
+Arrow equations
+===
+
+c[f, g] = h
+
+---
+
+(source_file
+ (arrow_equation
+  lhs: (composite_arrow
+        (identifier)
+         (identifier))
+  rhs: (identifier)))
+
+===
+Incomplete statements
+:error
+===
+
+c[f, g]

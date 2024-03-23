@@ -36,6 +36,59 @@
     }
   },
   {
+    "type": "arrow_equation",
+    "named": true,
+    "fields": {
+      "lhs": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "composite_arrow",
+            "named": true
+          },
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      },
+      "rhs": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "composite_arrow",
+            "named": true
+          },
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "composite_arrow",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "composite_arrow",
+          "named": true
+        },
+        {
+          "type": "identifier",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "object_definition",
     "named": true,
     "fields": {
@@ -64,11 +117,19 @@
           "named": true
         },
         {
+          "type": "arrow_equation",
+          "named": true
+        },
+        {
           "type": "object_definition",
           "named": true
         }
       ]
     }
+  },
+  {
+    "type": ",",
+    "named": false
   },
   {
     "type": "->",
@@ -79,11 +140,31 @@
     "named": false
   },
   {
+    "type": "=",
+    "named": false
+  },
+  {
     "type": "Ob",
+    "named": false
+  },
+  {
+    "type": "[",
+    "named": false
+  },
+  {
+    "type": "]",
+    "named": false
+  },
+  {
+    "type": "c",
     "named": false
   },
   {
     "type": "identifier",
     "named": true
+  },
+  {
+    "type": "→",
+    "named": false
   }
 ]
