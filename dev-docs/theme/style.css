@@ -198,7 +198,7 @@ footer h2 {
 
   #grid-wrapper {
     display: grid;
-    grid-template-columns: 90ex;
+    grid-template-columns: 110ex;
   }
 }
 
@@ -207,7 +207,7 @@ body>header {
 }
 
 #grid-wrapper>article {
-  max-width: 90ex;
+  max-width: 110ex;
   margin-right: auto;
   grid-column: 1;
 }
