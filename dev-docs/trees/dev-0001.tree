@@ -5,7 +5,7 @@
 \title{Mathematics}
 
 \table{
-  \tr{\th{Doctrine} \th{Free objects} \th{Scientific interpretation}}
+  \tr{\th{Doctrine} \th{Free objects} \th{Systems interpretation}}
   \tr{\td{[[dct-0001]]} \td{Graphs} \td{...}}
   \tr{\td{[[dct-0002]]} \td{Signed graphs} \td{Regulatory networks/causal loop diagrams}}
   \tr{\td{[[dct-0003]]} \td{Graphs with links} \td{Stock-flow diagrams}}

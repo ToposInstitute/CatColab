@@ -2,7 +2,7 @@
 \taxon{theory}
 \import{macros}
 
-\p{The \define{trivial double theory} is the
+\p{The \define{trivial double theory} or \define{theory of categories} is the
 terminal double category \dbl{1}.}
 
 \p{The trivial double theory is a simple double theory, but it can also be
