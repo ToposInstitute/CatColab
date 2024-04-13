@@ -1,0 +1,11 @@
+\title{Monoids}
+\taxon{doctrine}
+
+\p{In the formalism of double theories, it is [categories](dct-0001), not
+monoids, that are the primitive  concept. Nevertheless, monoids can be obtained
+as models of the following double theory.}
+
+\transclude{thy-0004}
+
+\p{In the context of automata theory, free monoids are identified with 
+alphabets or sets of labels.}
