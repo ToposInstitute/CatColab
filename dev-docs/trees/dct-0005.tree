@@ -1,5 +1,6 @@
 \title{Monoid actions}
 \taxon{doctrine}
+\import{macros}
 
 \p{As categories are more primitive than [monoids](dct-0004) in the formalism of
 double theories, so are category actions (presheaves and copresheaves)
@@ -7,3 +8,17 @@ more primitive than monoid actions. Nevertheless, monoid actions are models
 of a double theory.}
 
 \transclude{thy-0005}
+
+\example{Dynamical systems}{
+On one definition, a \nlab{dynamical system} is a monoid action in a concrete
+category. Common choice of monoids are the nonnegative natural or real numbers
+under addition.
+}
+
+\example{Transition systems}{
+\p{Actions of free monoids can be identified with deterministic, labelled
+transition systems, also known as \wikipedia{semiautomata}.}
+
+\p{When such transition systems are equipped with an output function, one
+obtains \nlab{Moore machines} or, more generally, \nlab{Mealy machines}.}
+}

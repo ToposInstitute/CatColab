@@ -6,6 +6,7 @@
 \def\td[body]{\xml{td}{\body}}
 
 \def\nlab[article]{\xml{span}[class]{nlab}{[\article](https://ncatlab.org/nlab/show/\article)}}
+\def\wikipedia[article]{\xml{span}[class]{wikipedia}{[\article](https://en.wikipedia.org/wiki/\article)}}
 
 % Figures
 
@@ -23,6 +24,10 @@
   \subtree{\title{\head} \taxon{proposition} \body}
 }
 
+\def\example[head][body]{
+  \subtree{\title{\head} \taxon{example} \body}
+}
+
 % General mathematics
 
 \def\define[name]{\strong{\name}}
@@ -37,6 +42,7 @@
 \def\hetto{#{\dashrightarrow}}
 
 \def\cat[name]{#{\mathsf{\name}}}
+\def\Set{#{\mathsf{Set}}}
 \def\Tw{#{\operatorname{Tw}}}
 
 % Double category theory
