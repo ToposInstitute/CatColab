@@ -1,0 +1,18 @@
+\title{Monoid actions}
+\taxon{theory}
+\import{macros}
+
+\p{The \define{theory of monoid actions} extends the [theory of monoids](thy-0004)
+with another proarrow #{s: 1 \proto 1}, subject to the equations
+
+##{
+  m \odot s = s \qquad\text{and}\qquad \eta \odot 1_s = 1_s,
+}
+
+endowing with #{s} with a (left) action by #{m}, along with the side equations
+
+##{
+  s \odot s = \id_1 = s \odot m,
+}
+
+trivializing the implicit self-multiplication on #{s} and right action by #{m}.}

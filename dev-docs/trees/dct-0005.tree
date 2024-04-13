@@ -1,0 +1,9 @@
+\title{Monoid actions}
+\taxon{doctrine}
+
+\p{As categories are more primitive than [monoids](dct-0004) in the formalism of
+double theories, so are category actions (presheaves and copresheaves)
+more primitive than monoid actions. Nevertheless, monoid actions are models
+of a double theory.}
+
+\transclude{thy-0005}
