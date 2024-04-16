@@ -31,16 +31,19 @@ of a structure editor.}
 \ol{
   \li{[ProseMirror](https://prosemirror.net/): Library of components for a rich
   content editor, written in TypeScript}
-  \li{[TipTap](https://tiptap.dev/): Optional: builds on ProseMirror to make it
-  easier to use}
+  \li{[TipTap](https://tiptap.dev/)N
+  ([HN](https://news.ycombinator.com/item?id=36957204)):
+  Optional: builds on ProseMirror to make it easier for standard use cases}
 }}
 
-\p{Additional options:
+\p{Other offerings, which seem to be less flexible than ProseMirror:
 \ol{
   \li{[Lexical](https://lexical.dev/)
   ([HN](https://news.ycombinator.com/item?id=31019778)), by Facebook}
-  \li{[Quill](https://quilljs.com/): older, perhaps less flexible}
+  \li{[Quill](https://quilljs.com/): older, but a new 2.0 release is on the way}
 }}
+
+\p{Assessment: we should use ProseMirror, without TipTap.}
 }
 
 \subtree{
@@ -51,9 +54,12 @@ with \strong{[Yjs](https://yjs.dev/)}, a widely used implementation of
 [CRDT](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type)
 for JSON-esque data structures.}
 
-\p{Tools for integrating Yjs:
 \ul{
+  \li{[prosemirror-collab](https://prosemirror.net/docs/guide/#collab):
+  ProseMirror's built-in module based on a central authority, \em{not} Yjs}
+  \li{[prosemirror-collab-commit](https://github.com/stepwisehq/prosemirror-collab-commit):
+  third-party module for commit-based collaborative editing}
   \li{[Hocuspocus](https://tiptap.dev/docs/hocuspocus/introduction):
-  Integrates Yjs with ProseMirror/TipTap}
-}}
+  integrates Yjs with ProseMirror/TipTap}
+}
 }

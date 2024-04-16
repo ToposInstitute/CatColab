@@ -6,14 +6,13 @@
 \p{The obvious choice is \strong{[TypeScript](https://www.typescriptlang.org/)}.
 It is a saner JavaScript and the new industry standard.}
 
-\p{OCaml, [Nim](https://nim-lang.org/), and Scala stand out as modern
-statically typed programming languages with reasonable stories about compiling to
-JavaScript, but will have less refined ecosystems and toolchains.
-[Hazel](https://hazel.org/), a toy structure editor for a functional programming
-language, is written in OCaml ([GitHub](https://github.com/hazelgrove/hazel)).
-Since we do not aim to innovate in frontend programming, we should stick to the
-mainstream, hence JavaScript/TypeScript.}
-}
+\p{OCaml, Scala, and Kotlin stand out as modern, statically typed programming
+languages with reasonable stories about compiling to JavaScript, but will have
+less refined ecosystems and toolchains. [Hazel](https://hazel.org/), a
+proof-of-concept structure editor for a functional programming language, is
+written in OCaml ([GitHub](https://github.com/hazelgrove/hazel)). Since we do
+not aim to innovate in frontend programming, we should stick to the mainstream,
+hence JavaScript/TypeScript.} }
 
 \subtree{
 \title{UI framework}
