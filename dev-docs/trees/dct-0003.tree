@@ -8,44 +8,32 @@ diagram in the same way that a category is related to a graph.}
 
 \definition{Category with links}{
   A \define{category with links} is a category \cat{C} equipped with a profunctor
-  #{L: \cat{C} \proto \Tw(\cat{C})},
-  where #{\Tw(\cat{C})} is the twisted arrow category of \cat{C}.
+  #{L: \cat{C} \proto \cat{C}^\to},
+  where #{\cat{C}^\to} is the \nlab{arrow category} of \cat{C}.
 }
-
-\p{Recall that the \nlab{twisted arrow category}
-
-##{\Tw(\cat{C}) \coloneqq \int^{c,c' \in \cat{C}} \Hom_{\cat{C}}(c,c')}
-
-of a category \cat{C} is the \nlab{category of elements} of the hom-functor of
-\cat{C}.}
 
 \p{Let #{(\cat{C},L)} be a category with links.
 
 Given an object #{x} and a morphism #{f: y \to z} in \cat{C}, a heteromorphim
 #{\ell: x \hetto f}, or element #{\ell \in L(x,f)}, is called a \define{link
 from #{x} to #{f}}. By the profunctorality of #{L}, a link #{x \hetto f} can be
-pulled back along a morphism #{g: x' \to x} and pushed forward along a pair of
-morphisms #{h: y' \to y} and #{k: z \to z'}, as illustrated below.}
-
-\quiver{
-  % https://q.uiver.app/#q=WzAsMTAsWzEsMSwieCJdLFswLDEsIngnIl0sWzIsMCwieSJdLFsyLDIsInoiXSxbMywwLCJ5JyJdLFszLDIsInonIl0sWzUsMSwieCciXSxbNiwwLCJ5JyJdLFs2LDIsInonIl0sWzQsMSwiXFxsZWFkc3RvIl0sWzEsMCwiZyJdLFsyLDMsImYiXSxbNCwyLCJoIl0sWzMsNSwiayIsMl0sWzcsOCwiaCBcXGNkb3QgZiBcXGNkb3QgayJdLFswLDExLCJcXGVsbCIsMCx7InNob3J0ZW4iOnsidGFyZ2V0IjoyMH0sImxldmVsIjoxLCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJkYXNoZWQifX19XSxbNiwxNCwiZyBcXGNkb3QgXFxlbGwgXFxjZG90IChoLGspIiwwLHsic2hvcnRlbiI6eyJ0YXJnZXQiOjIwfSwibGV2ZWwiOjEsInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImRhc2hlZCJ9fX1dXQ==
-  \begin{tikzcd}[row sep=small]
-	&& y & {y'} &&& {y'} \\
-	{x'} & x &&& \leadsto & {x'} \\
-	&& z & {z'} &&& {z'}
-	\arrow["g", from=2-1, to=2-2]
-	\arrow[""{name=0, anchor=center, inner sep=0}, "f", from=1-3, to=3-3]
-	\arrow["h", from=1-4, to=1-3]
-	\arrow["k"', from=3-3, to=3-4]
-	\arrow[""{name=1, anchor=center, inner sep=0}, "{h \cdot f \cdot k}", from=1-7, to=3-7]
-	\arrow["\ell", shorten >=5pt, dashed, from=2-2, to=0]
-	\arrow["{g \cdot \ell \cdot (h,k)}", shorten >=5pt, dashed, from=2-6, to=1]
-  \end{tikzcd}
-}
-
-\p{So a link into a morphism induces a link into any morphism that \em{factors
-through it}.}
+pulled back along a morphism #{g: x' \to x} and...}
 
 \p{Categories with links are models of the following double theory.}
 
 \transclude{thy-0003}
+
+\subtree{
+\title{Arrows versus twisted arrows}
+\taxon{Warning}
+
+\p{The tabulator #{\top P} of a profunctor #{P: \cat{C} \proto \cat{D}} is its
+\nlab{category of elements}, defined in such a way that there are projection
+functors #{\top P \to \cat{C}} and #{\top P \to \cat{D}}.
+This category is \em{not} the same as the category of elements of #{P}
+viewed as a copresheaf on #{\cat{C}^\op \times \cat{D}}, which has projections
+#{\int P \to \cat{C}^\op} and #{\int P \to \cat{D}}. Thus, the tabulator
+of the hom-profunctor on \cat{C} is the \nlab{arrow category}, \em{not} the
+\nlab{twisted arrow category}, of \cat{C}.
+See also the discussion of the \nlab{graph of a profunctor} on the nLab.}
+}
