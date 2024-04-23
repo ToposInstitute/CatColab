@@ -1,0 +1,20 @@
+\title{Persistence layer}
+
+\p{There are several out-of-the-box options for persisting a y.js document.}
+
+\ol{
+  \li{[y-websocket](https://github.com/yjs/y-websocket) seems like the "standard" yjs backend, and it supports persistence via [y-leveldb](https://github.com/yjs/y-leveldb), which uses [LevelDB](https://github.com/google/leveldb). Alarmingly, the leveldb repository has the following message at the top of the readme:
+    \blockquote{
+      This repository is receiving very limited maintenance. We will only review the following types of changes.
+
+      \ul{
+        \li{Fixes for critical bugs, such as data loss or memory corruption}
+
+        \li{Changes absolutely needed by internally supported leveldb clients. These typically fix breakage introduced by a language/standard library/OS update}
+      }
+    }
+    However, it appears that there are several clones, for instance the facebook version: [rocksdb](https://github.com/facebook/rocksdb/).
+  }
+  \li{[y-sweet](https://github.com/drifting-in-space/y-sweet) is written in Rust, and just persists directly to the filesystem (or to S3). Seems fairly simple, and gets points for not needing any external database. The authors also have another project [Plane](https://github.com/drifting-in-space/plane), which seems like it might be useful for us elsewhere; also see [this post about avoiding CRDTs via centralization](https://driftingin.space/posts/you-might-not-need-a-crdt). Their product based on Plane, [Jamsocket](https://jamsocket.com/) also seems interesting. Seems something like a "generalized binder", not just for running jupyter notebooks, and a lot simpler. I think that these are mostly irrelevant to y-sweet, though interesting for thinking about later down the line.}
+  \li{[hocuspocus](https://tiptap.dev/docs/hocuspocus/server/extensions#database) as mentioned above, seems to have built-in persistence support for a variety of databases, including notably sqlite.}
+}
