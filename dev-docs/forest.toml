@@ -1,0 +1,5 @@
+[forest]
+trees = ["trees"]
+assets = ["assets"]
+theme = "theme"
+root = "dev-0001"

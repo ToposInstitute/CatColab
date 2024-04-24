@@ -1,17 +1,21 @@
+% XML namespaces
+
+\xmlns:html{http://www.w3.org/1999/xhtml}
+
 % Markup
 
-\def\table[body]{\xml{table}{\body}}
-\def\th[body]{\xml{th}{\body}}
-\def\tr[body]{\xml{tr}{\body}}
-\def\td[body]{\xml{td}{\body}}
+\def\table[body]{\<html:table>{\body}}
+\def\th[body]{\<html:th>{\body}}
+\def\tr[body]{\<html:tr>{\body}}
+\def\td[body]{\<html:td>{\body}}
 
-\def\nlab[article]{\xml{span}[class]{nlab}{[\article](https://ncatlab.org/nlab/show/\article)}}
-\def\wikipedia[article]{\xml{span}[class]{wikipedia}{[\article](https://en.wikipedia.org/wiki/\article)}}
+\def\nlab[article]{\<html:span>[class]{nlab}{[\article](https://ncatlab.org/nlab/show/\article)}}
+\def\wikipedia[article]{\<html:span>[class]{wikipedia}{[\article](https://en.wikipedia.org/wiki/\article)}}
 
 % Figures
 
 \def\quiver[body]{
-  \xml{center}{\tex{\usepackage{quiver,amsopn,amssymb}}{\body}}
+  \tex{\usepackage{quiver,amsopn,amssymb}}{\body}
 }
 
 % Theorems
