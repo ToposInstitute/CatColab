@@ -1,0 +1,6 @@
+[forest]
+trees = ["trees"]
+assets = ["assets"]
+theme = "theme"
+stylesheet = "forest.xsl"
+root = "dev-0001"

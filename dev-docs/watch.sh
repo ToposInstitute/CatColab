@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-./build.sh
+forester build
 
 while true; do
   inotifywait -q -e modify,create,delete,move -r trees && \
-    ./build.sh
+    forester build
 done
