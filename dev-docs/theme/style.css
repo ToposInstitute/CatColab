@@ -235,6 +235,7 @@ section .block[data-taxon] details>summary>header>h1 {
 
 span.taxon {
   color: #444;
+  font-weight: bolder;
 }
 
 
@@ -319,10 +320,6 @@ nav#toc li {
  list-style-position: inside;
 }
 
-.toc-item-label {
-  font-weight: bolder;
-}
-
 .block {
   border-radius: var(--radius)
 }
@@ -356,10 +353,6 @@ nav#toc li {
 .edit-button {
   color: rgb(180, 180, 180);
   font-weight: 200;
-}
-
-.error {
-  color: rgb(255, 50, 50, .8);
 }
 
 .block {
@@ -599,8 +592,22 @@ ol li ol li ol {
  list-style-type: lower-roman;
 }
 
+.error, .info {
+  border-radius: 4pt;
+  padding-left: 3pt;
+  padding-right: 3pt;
+  padding-top: 1pt;
+  padding-bottom: 2pt;
+  font-weight: bold;
+}
+
 .error {
  background-color: red;
- font-weight: bold;
+ color: white;
+}
+
+
+.info {
+ background-color: #bbb;
  color: white;
 }
