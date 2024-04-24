@@ -3,8 +3,7 @@
 \import{macros}
 
 \p{In the formalism of double theories, it is [categories](dct-0001), not
-monoids, that are the primitive  concept. Nevertheless, monoids can be obtained
-as models of a double theory.}
+monoids, that are the primitive concept. Nevertheless, monoids can be obtained
+as models of a double theory, requiring only a terminal object.}
 
 \transclude{thy-0004}
-

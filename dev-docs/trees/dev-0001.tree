@@ -9,7 +9,7 @@
   \tr{\td{[[dct-0001]]} \td{Graphs} \td{...}}
   \tr{\td{[[dct-0002]]} \td{Signed graphs} \td{Regulatory networks/causal loop diagrams}}
   \tr{\td{[[dct-0003]]} \td{Graphs with links} \td{Stock-flow diagrams}}
-  \tr{\td{Strict symmetric monoidal categories} \td{Petri nets} \td{Reaction networks}}
+  \tr{\td{Commutative monoidal categories} \td{Petri nets} \td{Reaction networks}}
   \tr{\td{[[dct-0004]]} \td{Sets} \td{Labels}}
   \tr{\td{[[dct-0005]]} \td{Deterministic transition systems, aka semiautomata} \td{State diagrams}}
 }

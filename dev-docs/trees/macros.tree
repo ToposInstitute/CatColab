@@ -39,6 +39,7 @@
 \def\id{#{\operatorname{id}}}
 \def\op{#{\mathrm{op}}}
 
+\def\xto[label]{#{\xrightarrow{\label}}}
 \def\To{#{\Rightarrow}}
 \def\hetto{#{\dashrightarrow}}
 

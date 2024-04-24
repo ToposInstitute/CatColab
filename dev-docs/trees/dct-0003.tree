@@ -2,9 +2,9 @@
 \taxon{doctrine}
 \import{macros}
 
-\p{A category with links is a category equipped with a "linking" between objects
-and morphisms. The idea is that category with links is related to a stock-flow
-diagram in the same way that a category is related to a graph.}
+\p{A category with links is a category equipped with heteromorphisms that "link"
+objects to morphisms. The idea is that a category with links is related to a
+stock-flow diagram in the same way that a category is related to a graph.}
 
 \definition{Category with links}{
   A \define{category with links} is a category \cat{C} equipped with a profunctor
@@ -12,12 +12,41 @@ diagram in the same way that a category is related to a graph.}
   where #{\cat{C}^\to} is the \nlab{arrow category} of \cat{C}.
 }
 
-\p{Let #{(\cat{C},L)} be a category with links.
+\p{Let #{(\cat{C},L)} be a category with links. Given an object #{a} and a
+morphism #{f: x \to y} in \cat{C}, a heteromorphim #{\ell: a \hetto f}, or
+element #{\ell \in L(a,f)}, is called a \define{link from #{a} to #{f}}.}
 
-Given an object #{x} and a morphism #{f: y \to z} in \cat{C}, a heteromorphim
-#{\ell: x \hetto f}, or element #{\ell \in L(x,f)}, is called a \define{link
-from #{x} to #{f}}. By the profunctorality of #{L}, a link #{x \hetto f} can be
-pulled back along a morphism #{g: x' \to x} and...}
+
+\subtree{
+\title{Actions on links}
+\taxon{Interpretation}
+
+\p{Since #{L} is a profunctor, links can be acted on to produce new links in the
+following ways:
+
+\ol{
+
+\li{A link #{\ell: b \hetto f} can be pulled back along a morphism #{g: a \to b}
+to give a link #{g \cdot \ell: a \hetto f}. \em{Interpretation}: if #{b} affects
+#{f}, then #{a} indirectly affects #{f} because #{b} is downstream of #{a}.}
+
+\li{A link #{\ell: a \hetto f} can be pushed forward along a morphism #{g: y \to
+z} to give a link #{\ell \cdot g: a \hetto f \cdot g}. \em{Interpretation}: if
+#{a} affects the flow #{f}, then #{a} also affects the composite flow #{f \cdot
+g}.}
+
+\li{A link #{\ell: a \hetto f \cdot g}, where #{x \xto{f} y \xto{g} z} are
+morphisms, induces a link #{\ell / f: a \hetto g}. \em{Interpretation}: if #{a}
+affects the composite flow #{f \cdot g}, then #{a} affects #{g}, either directly
+or indirectly by affecting #{f}.}
+
+}
+
+The upshot of (2) and (3) is that if an object affects a morphism (flow), then
+it also affects all flows downstream of it. This makes sense because flows are
+always implicitly regulated by their source.}
+
+}
 
 \p{Categories with links are models of the following double theory.}
 
@@ -29,11 +58,11 @@ pulled back along a morphism #{g: x' \to x} and...}
 
 \p{The tabulator #{\top P} of a profunctor #{P: \cat{C} \proto \cat{D}} is its
 \nlab{category of elements}, defined in such a way that there are projection
-functors #{\top P \to \cat{C}} and #{\top P \to \cat{D}}.
-This category is \em{not} the same as the category of elements of #{P}
-viewed as a copresheaf on #{\cat{C}^\op \times \cat{D}}, which has projections
-#{\int P \to \cat{C}^\op} and #{\int P \to \cat{D}}. Thus, the tabulator
-of the hom-profunctor on \cat{C} is the \nlab{arrow category}, \em{not} the
-\nlab{twisted arrow category}, of \cat{C}.
-See also the discussion of the \nlab{graph of a profunctor} on the nLab.}
+functors #{\top P \to \cat{C}} and #{\top P \to \cat{D}}. This category is
+\em{not} the same as the category of elements of #{P} viewed as a copresheaf on
+#{\cat{C}^\op \times \cat{D}}, which has projections #{\int P \to \cat{C}^\op}
+and #{\int P \to \cat{D}}. Thus, the tabulator of the hom-profunctor on \cat{C}
+is the \nlab{arrow category}, \em{not} the \nlab{twisted arrow category}, of
+\cat{C}. See also the discussion of the \nlab{graph of a profunctor} on the
+nLab.}
 }
