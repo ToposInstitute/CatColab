@@ -1,8 +1,14 @@
-pub trait FinSet {
+use std::hash::Hash;
+use std::collections::HashSet;
+
+pub trait Set {
     type Elem;
 
+    fn contains(&self, x: &Self::Elem) -> bool;
+}
+
+pub trait FinSet: Set {
     fn len(&self) -> usize;
-    fn contains(&self, x: Self::Elem) -> bool;
 
     fn is_empty(&self) -> bool {
         self.len() == 0
@@ -10,17 +16,31 @@ pub trait FinSet {
 }
 
 #[derive(Clone,Copy)]
-pub struct FinSetInt {
-    n: usize,
-}
+pub struct FinSetSkel(usize);
 
-impl FinSet for FinSetInt {
+impl Set for FinSetSkel {
     type Elem = usize;
 
-    fn len(&self) -> usize { self.n }
-    fn contains(&self, x: usize) -> bool {
-        x < self.n
+    fn contains(&self, x: &usize) -> bool {
+        *x < self.0
     }
+}
+
+impl FinSet for FinSetSkel {
+    fn len(&self) -> usize { self.0 }
+}
+
+pub struct FinSetHash<T>(HashSet<T>);
+
+impl<T: Eq + Hash> Set for FinSetHash<T> {
+    type Elem = T;
+
+    fn contains(&self, x: &T) -> bool { self.0.contains(x) }
+}
+
+impl<T: Eq + Hash> FinSet for FinSetHash<T> {
+    fn len(&self) -> usize { self.0.len() }
+    fn is_empty(&self) -> bool { self.0.is_empty() }
 }
 
 #[cfg(test)]
@@ -29,10 +49,10 @@ mod tests {
 
     #[test]
     fn fin_set_int() {
-        let s = FinSetInt { n: 3 };
+        let s = FinSetSkel(3);
         assert!(!s.is_empty());
         assert_eq!(s.len(), 3);
-        assert!(s.contains(2));
-        assert!(!s.contains(3));
+        assert!(s.contains(&2));
+        assert!(!s.contains(&3));
     }
 }
