@@ -2,8 +2,13 @@ import * as Y from 'yjs'
 import { WebsocketProvider } from 'y-websocket'
 import { createSignal, For } from 'solid-js'
 import './App.css'
+import { UWD } from './UWD'
 
-function PortRow(port: Y.Map<any>, deleteMe: () => void, junctions: () => Array<Y.Map<any>>) {
+function PortRow(
+  port: Y.Map<any>,
+  deleteMe: () => void,
+  junctions: () => Array<Y.Map<any>>
+) {
   let [name, setName] = createSignal<string>('')
   let [junction, setJunction] = createSignal<string>('')
   setName(port.get('name'))
@@ -14,29 +19,40 @@ function PortRow(port: Y.Map<any>, deleteMe: () => void, junctions: () => Array<
   })
   return (<tr>
     <td>
-      <input type="text" value={name()} oninput={evt => port.set('name', evt.target.value)}></input>
+      <input
+        type="text"
+        value={name()}
+        oninput={
+          evt => port.set('name', evt.target.value)
+        }>
+      </input>
     </td>
     <td>
-      <select value={junction()} oninput={evt => port.set('junction', evt.target.value)}>
+      <select oninput={evt => port.set('junction', evt.target.value)}>
         <For each={junctions()}>
-          {junction => {
+          {yjunction => {
             let [name, setName] = createSignal<string>('')
-            junction.observe(_ => {
-              setName(junction.get('name'))
+            yjunction.observe(_ => {
+              setName(yjunction.get('name'))
             })
-            setName(junction.get('name'))
-            return (<option value={name()}>{name()}</option>)
+            setName(yjunction.get('name'))
+            return (<option selected={junction()==name()} value={name()}>{name()}</option>)
           }}
         </For>
       </select>
     </td>
     <td class="trash">
-      <button class="delete-port" onclick={_ => deleteMe()}><i class="fa-solid fa-trash"></i></button>
+      <button class="delete-port" onclick={_ => deleteMe()}>
+        <i class="fa-solid fa-trash"></i>
+      </button>
     </td>
   </tr>)
 }
 
-function PortTable(box: Y.Map<any>, junctions: () => Array<Y.Map<any>>) {
+function PortTable(
+  box: Y.Map<any>,
+  junctions: () => Array<Y.Map<any>>
+) {
   let [ports, setPorts] = createSignal<Array<Y.Map<any>>>([])
   let yports: Y.Array<Y.Map<any>> = box.get('ports')
   setPorts(yports.toArray())
@@ -60,12 +76,16 @@ function PortTable(box: Y.Map<any>, junctions: () => Array<Y.Map<any>>) {
         <tr><th>Port name</th><th>Junction</th></tr>
       </thead>
       <tbody>
-        <For each={ports()}>{
-          (port, i) => PortRow(port, () => yports.delete(i()),junctions)
-        }</For>
+        <For each={ports()}>
+          {(port, i) =>
+            PortRow(port, () => yports.delete(i()),junctions)
+          }
+        </For>
         <tr>
           <td class="plus">
-            <button onclick={_ => newPort()}><i class="fa-solid fa-plus"></i></button>
+            <button onclick={_ => newPort()}>
+              <i class="fa-solid fa-plus"></i>
+            </button>
           </td>
         </tr>
       </tbody>
@@ -73,7 +93,11 @@ function PortTable(box: Y.Map<any>, junctions: () => Array<Y.Map<any>>) {
   </div>)
 }
 
-function BoxEditor(box: Y.Map<any>, deleteMe: () => void, junctions: () => Array<Y.Map<any>>) {
+function BoxEditor(
+  box: Y.Map<any>,
+  deleteMe: () => void,
+  junctions: () => Array<Y.Map<any>>
+) {
   let [name, setName] = createSignal<string>('')
   setName(box.get('name'))
   box.observe(_ => {
@@ -84,35 +108,67 @@ function BoxEditor(box: Y.Map<any>, deleteMe: () => void, junctions: () => Array
       <div class="box-editor">
         <div class="box-content">
           <span><strong>Name: </strong></span>
-          <input type="text" value={name()} oninput={evt => box.set('name', evt.target.value)}></input>
+          <input
+            type="text"
+            value={name()}
+            oninput={evt => box.set('name', evt.target.value)}>
+          </input>
           {PortTable(box, junctions)}
         </div>
-        <button onclick={_ => deleteMe()}><i class="fa-solid fa-trash"></i></button>
+        <button onclick={_ => deleteMe()}>
+          <i class="fa-solid fa-trash"></i>
+        </button>
       </div>
     </li>
   )
 }
 
-function JunctionTable(junctions: () => Array<Y.Map<any>>, newJunction: () => void, deleteJunction: (i: number) => void) {
+function JunctionTable(
+  junctions: () => Array<Y.Map<any>>,
+  newJunction: () => void,
+  deleteJunction: (i: number) => void
+) {
   return (<table class="junctions-table">
     <thead>
-      <tr class="junctions-header"><th>Name</th><th>Exposed</th></tr>
+      <tr class="junctions-header">
+        <th>Name</th>
+        <th>Exposed</th>
+      </tr>
     </thead>
     <tbody>
       <For each={junctions()}>
         {(item, i) => {
           let [text, setText] = createSignal<string>('')
+          let [exposed, setExposed] = createSignal<boolean>(false)
           setText(item.get('name'))
-          item.observe(_ => setText(item.get('name')))
+          setExposed(item.get('exposed'))
+          item.observe(_ => {
+            setText(item.get('name'))
+            setExposed(item.get('exposed'))
+          })
           return (<tr>
             <td>
-              <input type="text" value={text()} oninput={evt => item.set('name', evt.target.value)}></input>
+              <input
+                type="text"
+                value={text()}
+                oninput={
+                  evt => item.set('name', evt.target.value)
+                }>
+              </input>
             </td>
             <td>
-              <input type="checkbox"></input>
+              <input
+                type="checkbox"
+                checked={exposed() as boolean}
+                oninput={
+                  evt => item.set('exposed', evt.target.checked)
+                }>
+              </input>
             </td>
             <td class="trash">
-              <button onclick={_ => deleteJunction(i())}><i class="fa-solid fa-trash"></i></button>
+              <button onclick={_ => deleteJunction(i())}>
+                <i class="fa-solid fa-trash"></i>
+              </button>
             </td>
           </tr>)
         }
@@ -120,26 +176,20 @@ function JunctionTable(junctions: () => Array<Y.Map<any>>, newJunction: () => vo
       </For>
       <tr>
         <td class="plus">
-          <button onclick={_ => newJunction()}><i class="fa-solid fa-plus"></i></button>
+          <button onclick={_ => newJunction()}>
+            <i class="fa-solid fa-plus"></i>
+          </button>
         </td>
       </tr>
     </tbody>
   </table>)
 }
 
-function App() {
-  const ydoc = new Y.Doc()
-
-  const provider = new WebsocketProvider(
-    'wss://demos.yjs.dev/ws', // use the public ws server
-    // `ws${location.protocol.slice(4)}//${location.host}/ws`, // alternatively: use the local ws server (run `npm start` in root directory)
-    'releditor6',
-    ydoc
-  )
-
-  let yjunctions: Y.Array<Y.Map<any>> = ydoc.getArray('junctions')
-  let yboxes: Y.Array<Y.Map<any>> = ydoc.getArray('boxes')
-
+function StructureEditor(
+  yboxes: Y.Array<Y.Map<any>>,
+  yjunctions: Y.Array<Y.Map<any>>,
+  onsynced: (cb: () => void) => void
+) {
   const [boxes, setBoxes] = createSignal<Array<Y.Map<any>>>([])
   const [junctions, setJunctions] = createSignal<Array<Y.Map<any>>>([])
 
@@ -151,7 +201,7 @@ function App() {
     setJunctions(yjunctions.toArray())
   })
 
-  provider.on('synced', () => {
+  onsynced(() => {
     setBoxes(yboxes.toArray())
     setJunctions(yjunctions.toArray())
   })
@@ -159,6 +209,7 @@ function App() {
   function newJunction() {
     let j = new Y.Map<any>()
     j.set('name', '')
+    j.set('exposed', 'false')
     yjunctions.push([j])
   }
 
@@ -175,19 +226,72 @@ function App() {
   }
 
   return (
-    <>
+    <div class="structure-editor">
       <h3>Junctions</h3>
       {JunctionTable(junctions, newJunction, deleteJunction)}
       <h3>Boxes</h3>
       <ul class="boxes">
         <For each={boxes()}>
-          {(box, i) => BoxEditor(box, () => {yboxes.delete(i())}, junctions)}
+          {(box, i) =>
+            BoxEditor(box, () => {yboxes.delete(i())}, junctions)
+          }
         </For>
         <li class="addbox">
-          <button onclick={_ => newBox()}><i class="fa-solid fa-plus"></i></button>
+          <button onclick={_ => newBox()}>
+            <i class="fa-solid fa-plus"></i>
+          </button>
         </li>
       </ul>
-    </>
+    </div>
+  )
+}
+
+function Display(
+  yboxes: Y.Array<any>,
+  yjunctions: Y.Array<any>,
+  onsynced: (cb: () => void) => void
+) {
+  let el: Element
+  function refresh() {
+    el.innerHTML = ''
+    el.appendChild(
+      UWD(yboxes.toArray(), yjunctions.toArray())
+    )
+  }
+  onsynced(refresh)
+  return (
+    <div class="display">
+      <button onclick={_ => refresh()}><i class="fa-solid fa-refresh"></i></button>
+      <div ref={thediv => {el = thediv}}>
+      </div>
+    </div>
+  )
+}
+
+function App() {
+  const ydoc = new Y.Doc()
+
+  const provider = new WebsocketProvider(
+    'wss://demos.yjs.dev/ws', // use the public ws server
+    // `ws${location.protocol.slice(4)}//${location.host}/ws`, // alternatively: use the local ws server (run `npm start` in root directory)
+    'releditor6',
+    ydoc
+  )
+
+  let yjunctions: Y.Array<Y.Map<any>> = ydoc.getArray('junctions')
+  let yboxes: Y.Array<Y.Map<any>> = ydoc.getArray('boxes')
+
+  let onsynced = (cb: () => void) => provider.on('synced', cb)
+
+  return (
+    <div class="app">
+      {StructureEditor(
+        yboxes,
+        yjunctions,
+        onsynced
+      )}
+      {Display(yboxes, yjunctions, onsynced)}
+    </div>
   )
 }
 

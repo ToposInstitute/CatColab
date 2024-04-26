@@ -11,6 +11,8 @@
   "dependencies": {
     "@fortawesome/fontawesome-free": "^6.5.2",
     "@fortawesome/fontawesome-svg-core": "^6.5.2",
+    "d3": "^7.9.0",
+    "d3-force": "^3.0.0",
     "prosemirror-commands": "^1.5.2",
     "prosemirror-dropcursor": "^1.8.1",
     "prosemirror-example-setup": "^1.2.2",
@@ -27,6 +29,8 @@
     "yjs": "^13.6.14"
   },
   "devDependencies": {
+    "@types/d3": "^7.4.3",
+    "@types/d3-force": "^3.0.9",
     "typescript": "^5.4.5",
     "vite": "^5.2.0",
     "vite-plugin-solid": "^2.10.2"

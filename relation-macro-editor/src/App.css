@@ -4,6 +4,11 @@
   padding: 2rem;
 }
 
+.app {
+  display: flex;
+  flex-direction: row;
+}
+
 .junctions-table input {
   background: transparent;
   border: none;
