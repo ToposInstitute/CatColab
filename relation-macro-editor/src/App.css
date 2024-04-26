@@ -9,6 +9,34 @@
   flex-direction: row;
 }
 
+.app > div {
+  margin: 1em;
+  padding-left: 1em;
+  padding-right: 1em;
+  border-radius: 1em;
+  background-color: #f7f7f7;
+}
+
+.saves {
+  width: 200px;
+}
+
+.workspace-table {
+  width: 100%;
+}
+
+.workspace-table td {
+  border: none;
+}
+
+.display {
+  width: 400px;
+}
+
+.structure-editor {
+  width: 600px;
+}
+
 .junctions-table input {
   background: transparent;
   border: none;
@@ -48,9 +76,26 @@ table {
   border-collapse: collapse;
 }
 
-ul.boxes {
+ul {
   list-style-type: none;
   padding-left: 0;
+}
+
+.newfile {
+  display: flex;
+  flex-direction: row;
+}
+
+.newfile > button {
+  height: 100%;
+  width: 100%;
+  margin: 0.5em;
+  padding: 0;
+  flex: 1;
+}
+
+.newfile > input {
+  width: 100%;
 }
 
 .box-content {

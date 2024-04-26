@@ -227,6 +227,7 @@ function StructureEditor(
 
   return (
     <div class="structure-editor">
+      <h2>Editor</h2>
       <h3>Junctions</h3>
       {JunctionTable(junctions, newJunction, deleteJunction)}
       <h3>Boxes</h3>
@@ -261,6 +262,7 @@ function Display(
   onsynced(refresh)
   return (
     <div class="display">
+      <h2>Viewer</h2>
       <button onclick={_ => refresh()}><i class="fa-solid fa-refresh"></i></button>
       <div ref={thediv => {el = thediv}}>
       </div>
@@ -268,13 +270,15 @@ function Display(
   )
 }
 
-function App() {
+type OnSynced = (cb: () => void) => void
+
+function EditorViewer(name: string) {
   const ydoc = new Y.Doc()
 
   const provider = new WebsocketProvider(
     'wss://demos.yjs.dev/ws', // use the public ws server
     // `ws${location.protocol.slice(4)}//${location.host}/ws`, // alternatively: use the local ws server (run `npm start` in root directory)
-    'releditor6',
+    name,
     ydoc
   )
 
@@ -284,13 +288,95 @@ function App() {
   let onsynced = (cb: () => void) => provider.on('synced', cb)
 
   return (
-    <div class="app">
+    <>
       {StructureEditor(
         yboxes,
         yjunctions,
         onsynced
       )}
       {Display(yboxes, yjunctions, onsynced)}
+    </>
+  )
+}
+
+function App() {
+  const ydoc = new Y.Doc()
+
+  const provider = new WebsocketProvider(
+    'wss://demos.yjs.dev/ws', // use the public ws server
+    // `ws${location.protocol.slice(4)}//${location.host}/ws`, // alternatively: use the local ws server (run `npm start` in root directory)
+    'relation-macro-editor-saves',
+    ydoc
+  )
+
+  let ysaves: Y.Map<null> = ydoc.getMap('saves')
+
+  ysaves.set('default', null)
+  ysaves.set('other', null)
+
+  let [saves, setSaves] = createSignal<Map<string, null>>(new Map())
+
+  function updateSaves() {
+    let newSaves = new Map()
+    for (let k of ysaves.keys()) {
+      newSaves.set(k, null)
+    }
+    setSaves(newSaves)
+  }
+
+  ysaves.observe(_ => {
+    updateSaves()
+  })
+
+  provider.on('synced', () => {
+    updateSaves()
+  })
+
+  let [current, setCurrent] = createSignal<string>('default')
+
+  let [newName, setNewName] = createSignal<string>('')
+
+  return (
+    <div class="app">
+      <div class="saves">
+        <h2>Workspace</h2>
+        <div class="newfile">
+          <input
+            type="text"
+            value={newName()}
+            onchange={evt => setNewName(evt.target.value)}>
+          </input>
+          <button onclick={evt =>
+            ysaves.set(newName(), null)
+          }><i class="fa-solid fa-plus"></i></button>
+        </div>
+        <table class="workspace-table">
+          <tbody>
+          <For each={[...(saves() as Map<string, null>).keys()]}>
+            {save =>
+              <tr>
+                <td>
+                  <i class="fa-solid fa-file"></i>
+                  <span> </span>
+                  <a onclick={_ => setCurrent(save)}>{save}</a>
+                  {current() == save &&
+                    <>
+                      <span> </span>
+                      <i class="fa-solid fa-pen"></i>
+                    </>}
+                </td>
+                <td>
+                <button onclick={_ => ysaves.delete(save)}>
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+                </td>
+              </tr>
+            }
+          </For>
+          </tbody>
+        </table>
+      </div>
+      {EditorViewer(current())}
     </div>
   )
 }
