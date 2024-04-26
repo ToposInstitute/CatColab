@@ -18,7 +18,6 @@ export const nodes: Record<string, NodeSpec> = {
     attrs: { ychange: { default: null } },
     content: 'inline*',
     group: 'block',
-    parseDOM: [{ tag: 'p' }],
     toDOM (node) {
       return [
         'p',
@@ -30,18 +29,41 @@ export const nodes: Record<string, NodeSpec> = {
     }
   },
 
-  box: {
+  port: {
+    attrs: { ychange: { default: null} },
+    content: 'inline*',
+    toDOM (_node) {
+      return ['li', 0]
+    }
+  },
+
+  boxname: {
     attrs: { ychange: { default: null } },
     content: 'inline*',
+    toDOM (_node) {
+      return ['span', 0]
+    }
+  },
+
+  ports: {
+    attrs: { ychange: { default: null } },
+    content: 'port*',
+    toDOM(_node) {
+      return ['ul', 0]
+    }
+  },
+
+  box: {
+    attrs: { ychange: { default: null } },
+    content: 'boxname ports',
     group: 'block',
-    parseDOM: [{ tag: 'p' }],
     toDOM (node) {
       return [
         'p',
         { class: 'box', ...calcYchangeDomAttrs(node.attrs) },
         [ 'i', {class: "fa-regular fa-square"} ],
         [ 'span', " " ],
-        [ 'span', 0 ]
+        [ 'div', 0 ]
       ]
     }
   },

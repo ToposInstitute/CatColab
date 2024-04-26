@@ -1,79 +1,6 @@
-import './prosemirror.css'
 import * as Y from 'yjs'
 import { WebsocketProvider } from 'y-websocket'
-import { ySyncPlugin, yCursorPlugin, yUndoPlugin, undo, redo } from 'y-prosemirror'
-import { EditorView } from 'prosemirror-view'
-import { EditorState, Command, TextSelection } from 'prosemirror-state'
-import { MenuItem, menuBar } from 'prosemirror-menu'
-import { keymap } from 'prosemirror-keymap'
-import { schema } from './RelationSchema'
-
-const junctionEl = document.createElement("i")
-junctionEl.classList.add("fa-solid", "fa-circle")
-
-const boxEl = document.createElement("i")
-boxEl.classList.add("fa-regular", "fa-square")
-
-function addNode(type: string): Command {
-  return (state, dispatch) => {
-    let tr = state.tr
-    let n = tr.doc.content.size
-    tr.insert(n, schema.node(type, null, []))
-    tr.setSelection(TextSelection.create(tr.doc, n+1))
-    if (dispatch) {
-      dispatch(tr)
-    }
-    return true
-  }
-}
-
-const InsertJunction = new MenuItem({
-  title: "Add Junction",
-  label: "Junction",
-  icon: { dom: junctionEl },
-  run: addNode("junction")
-})
-
-const InsertBox = new MenuItem({
-  title: "Add Box",
-  label: "Box",
-  icon: { dom: boxEl },
-  run: addNode("box")
-})
-
-const deleteCurrent: Command = (state, dispatch) => {
-  let tr = state.tr
-
-  let anchor = state.selection.$anchor
-
-  if (anchor.parent.childCount >= 1) {
-    tr.delete(anchor.pos-1, anchor.pos)
-  } else {
-    tr.delete(anchor.before(), anchor.after())
-    tr.setSelection(TextSelection.create(tr.doc, anchor.before()-1))
-  }
-
-  if (dispatch) {
-    dispatch(tr)
-  }
-  return true
-}
-
-const clone: Command = (state, dispatch) => {
-  let tr = state.tr
-
-  let anchor = state.selection.$anchor
-
-  let newNode = schema.node(anchor.parent.type.name, null, [])
-
-  tr.insert(anchor.after(), newNode)
-  tr.setSelection(TextSelection.create(tr.doc, anchor.after()+1))
-
-  if (dispatch) {
-    dispatch(tr)
-  }
-  return true
-}
+import { createSignal, For } from 'solid-js'
 
 function App() {
   const ydoc = new Y.Doc()
@@ -81,36 +8,134 @@ function App() {
   const provider = new WebsocketProvider(
     'wss://demos.yjs.dev/ws', // use the public ws server
     // `ws${location.protocol.slice(4)}//${location.host}/ws`, // alternatively: use the local ws server (run `npm start` in root directory)
-    'codemirror.next-demo',
+    'releditor6',
     ydoc
   )
 
-  const pm = ydoc.get('my-special-session', Y.XmlFragment)
+  let yjunctions: Y.Array<Y.Map<any>> = ydoc.getArray('junctions')
+  let yboxes: Y.Array<Y.Map<any>> = ydoc.getArray('boxes')
 
-  const onmount = (el: Element) => {
-    new EditorView(el, {
-      state: EditorState.create({
-        schema,
-        plugins: [
-            ySyncPlugin(pm),
-            yCursorPlugin(provider.awareness),
-            yUndoPlugin(),
-            keymap({
-              'Mod-z': undo,
-              'Mod-y': redo,
-              'Mod-Shift-z': redo,
-              'Backspace': deleteCurrent,
-              'Enter': clone
-            }),
-            menuBar({ content: [[InsertJunction, InsertBox]]})
-          ]
-      })
-    })
+  const [boxes, setBoxes] = createSignal<Array<Y.Map<any>>>([])
+  const [junctions, setJunctions] = createSignal<Array<Y.Map<any>>>([])
+
+  yboxes.observe(_event => {
+    setBoxes(yboxes.toArray())
+  })
+
+  yjunctions.observe(_event => {
+    setJunctions(yjunctions.toArray())
+  })
+
+  provider.on('synced', () => {
+    setBoxes(yboxes.toArray())
+    setJunctions(yjunctions.toArray())
+  })
+
+  function newJunction() {
+    let j = new Y.Map<any>()
+    j.set('name', '')
+    yjunctions.push([j])
+  }
+
+  function newBox() {
+    let b = new Y.Map<any>()
+    let ports = new Y.Array<Y.Map<any>>()
+    b.set('name', '')
+    b.set('ports', ports)
+    yboxes.push([b])
   }
 
   return (
     <>
-      <div ref={onmount}></div>
+      <div>Hello World</div>
+      <h3>Junctions</h3>
+      <button onclick={_ => newJunction()}>Add Junction</button>
+      <button onclick={_ => yjunctions.delete(yjunctions.length-1)}>Delete Junction</button>
+      <ul>
+        <For each={junctions()}>
+          {item => {
+            let [text, setText] = createSignal<string>('')
+            setText(item.get('name'))
+            item.observe(_ => setText(item.get('name')))
+            return (<li>
+              <input type="text" value={text()} oninput={evt => item.set('name', evt.target.value)}></input>
+            </li>)
+          }
+          }
+        </For>
+      </ul>
+      <h3>Boxes</h3>
+      <button onclick={_ => newBox()}>Add Box</button>
+      <button onclick={_ => yboxes.delete(yboxes.length-1)}>Delete Box</button>
+      <button onclick={_ => yboxes.delete(0, yboxes.length)}>Delete all boxes</button>
+      <ul>
+        <For each={boxes()}>
+          {box => {
+            let [name, setName] = createSignal<string>('')
+            let [ports, setPorts] = createSignal<Array<Y.Map<any>>>([])
+            let yports: Y.Array<Y.Map<any>> = box.get('ports')
+            setName(box.get('name'))
+            setPorts(yports.toArray())
+            box.observe(_ => {
+              setName(box.get('name'))
+            })
+            yports.observe(_ => {
+              setPorts(yports.toArray())
+            })
+            function newPort() {
+              let p = new Y.Map<any>()
+              p.set('name', '')
+              let js = yjunctions.toArray()
+              if (js.length >= 1) {
+                p.set('junction', js[0].get('name'))
+              } else {
+                p.set('junction', null)
+              }
+              yports.push([p])
+            }
+            function removePort() {
+              yports.delete(yports.length - 1)
+            }
+            return (
+              <li>
+                <div class="boxeditor">
+                  <input type="text" value={name()} oninput={evt => box.set('name', evt.target.value)}></input>
+                  <button onclick={_ => newPort()}>Add Port</button>
+                  <button onclick={_ => removePort()}>Remove Port</button>
+                  <ul>
+                    <For each={ports()}>
+                      {port => {
+                        let [name, setName] = createSignal<string>('')
+                        let [junction, setJunction] = createSignal<string>('')
+                        setName(port.get('name'))
+                        setJunction(port.get('junction'))
+                        port.observe(_ => {
+                          setName(port.get('name'))
+                          setJunction(port.get('junction'))
+                        })
+                        return (<li>
+                          <input type="text" value={name()} oninput={evt => port.set('name', evt.target.value)}></input>
+                          <select value={junction()} oninput={evt => port.set('junction', evt.target.value)}>
+                            <For each={junctions()}>
+                              {junction => {
+                                let [name, setName] = createSignal<string>('')
+                                junction.observe(_ => {
+                                  setName(junction.get('name'))
+                                })
+                                setName(junction.get('name'))
+                                return (<option value={name()}>{name()}</option>)
+                              }}
+                            </For>
+                          </select>
+                        </li>)
+                      }}
+                    </For>
+                  </ul>
+                </div>
+              </li>
+            )
+          }}</For>
+      </ul>
     </>
   )
 }
