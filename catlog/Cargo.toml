@@ -1,0 +1,10 @@
+[package]
+name = "catlog"
+description = "A toolbox for catgorical logic based on double theories"
+authors = ["Evan Patterson"]
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
