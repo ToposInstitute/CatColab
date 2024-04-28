@@ -29,6 +29,11 @@ pub trait Mapping {
     mapping, this method can be cheap or expensive.
     */
     fn preimage(&self, y: &Self::Cod) -> impl Iterator<Item = Self::Dom>;
+
+    /// Is the mapping defined at a value?
+    fn is_defined(&self, x: &Self::Dom) -> bool {
+        self.apply(x).is_some()
+    }
 }
 
 /** An unindexed mapping backed by a vector.
@@ -42,6 +47,10 @@ impl<T: Eq> Mapping for VecMapping<T> {
 
     fn apply(&self, x: &usize) -> Option<&T> {
         self.0.get(*x)
+    }
+
+    fn is_defined(&self, x: &usize) -> bool {
+        return *x < self.0.len();
     }
 
     fn preimage(&self, y: &T) -> impl Iterator<Item = usize> {
@@ -84,6 +93,10 @@ impl<T: Eq + Hash> Mapping for IndexedVecMapping<T> {
         self.mapping.get(*x)
     }
 
+    fn is_defined(&self, x: &usize) -> bool {
+        *x < self.mapping.len()
+    }
+
     fn preimage(&self, y: &T) -> impl Iterator<Item = usize> {
         let iter = match self.index.get(y) {
             Some(vec) => vec.iter(),
@@ -100,7 +113,9 @@ mod tests {
     #[test]
     fn vec_mapping() {
         let mapping = VecMapping(vec!["foo", "bar", "baz", "bar", "baz"]);
+        assert!(mapping.is_defined(&2));
         assert_eq!(mapping.apply(&2), Some(&"baz"));
+        assert!(!mapping.is_defined(&10));
         assert_eq!(mapping.apply(&10), None);
 
         let preimage: Vec<_> = mapping.preimage(&"bar").collect();
@@ -110,7 +125,9 @@ mod tests {
     #[test]
     fn indexed_vec_mapping() {
         let mapping = IndexedVecMapping::new(vec!["foo", "bar", "baz", "bar"]);
+        assert!(mapping.is_defined(&2));
         assert_eq!(mapping.apply(&2), Some(&"baz"));
+        assert!(!mapping.is_defined(&10));
         assert_eq!(mapping.apply(&10), None);
 
         let preimage: Vec<_> = mapping.preimage(&"bar").collect();
