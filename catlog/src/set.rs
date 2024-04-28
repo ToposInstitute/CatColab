@@ -4,9 +4,9 @@ use std::collections::HashSet;
 
 /** A set.
 
-The interface is minimal. A set has an element type ([Self::Elem]) and can check
-whether values of that type belongs to the set. Sets are not assumed to be
-finite.
+The interface is minimal. A set has an element type ([`Elem`](Self::Elem)) and
+can check whether values of that type belongs to the set. Sets are not assumed
+to be finite.
  */
 pub trait Set {
     /** Type of elements of the set.
