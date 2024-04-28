@@ -52,6 +52,13 @@ The elements of the skeletal finite set of size `n` are the numbers `0..n`
 #[derive(Clone,Copy)]
 pub struct SkelFinSet(usize);
 
+impl SkelFinSet {
+    /// Adds the (unique possible) next element to the skeletal finite set.
+    pub fn insert(&mut self) {
+        self.0 += 1;
+    }
+}
+
 impl Set for SkelFinSet {
     type Elem = usize;
 
@@ -77,6 +84,14 @@ impl IntoIterator for SkelFinSet {
 /// A finite set backed by a hash set.
 #[derive(Clone)]
 pub struct HashFinSet<T>(HashSet<T>);
+
+impl<T: Eq + Hash> HashFinSet<T> {
+
+    /// Adds an element to the set.
+    pub fn insert(&mut self, x: T) -> bool {
+        self.0.insert(x)
+    }
+}
 
 impl<T: Eq + Hash> Set for HashFinSet<T> {
     type Elem = T;
@@ -105,7 +120,9 @@ mod tests {
 
     #[test]
     fn fin_set_skel_basics() {
-        let s = SkelFinSet(3);
+        let mut s = SkelFinSet(0);
+        assert!(s.is_empty());
+        s.insert(); s.insert(); s.insert();
         assert!(!s.is_empty());
         assert_eq!(s.len(), 3);
         assert!(s.contains(&2));
@@ -123,7 +140,11 @@ mod tests {
 
     #[test]
     fn fin_set_hash_basics() {
-        let s = HashFinSet(HashSet::from([3, 5, 7]));
+        let mut s = HashFinSet(HashSet::new());
+        assert!(s.is_empty());
+        s.insert(3);
+        s.insert(5);
+        s.insert(7);
         assert!(!s.is_empty());
         assert_eq!(s.len(), 3);
         assert!(!s.contains(&2));
