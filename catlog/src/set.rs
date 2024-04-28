@@ -2,16 +2,19 @@ use std::ops::Range;
 use std::hash::Hash;
 use std::collections::HashSet;
 
-use crate::iterable::Iterable;
+/** A set.
 
-/** An arbitrary set.
-
-The interface is minimal. A set has an element type and can check whether a
-value of that type belongs to the set.
+The interface is minimal. A set has an element type ([Self::Elem]) and can check
+whether values of that type belongs to the set. Sets are not assumed to be
+finite.
  */
 pub trait Set {
-    /// Type of elements of the set.
-    type Elem;
+    /** Type of elements of the set.
+
+    Elements can be compared for equality and, following the spirit of category
+    theory, that is the *only* thing that can be done with elements.
+    */
+    type Elem: Eq;
 
     /// Does the set contain the element `x`?
     fn contains(&self, x: &Self::Elem) -> bool;
@@ -19,11 +22,21 @@ pub trait Set {
 
 /** A finite set.
 
-Finite sets know their size and are iterable.
+In addition to checking for element containment, finite sets know their size and
+are iterable. The elements of a finite set are assumed to be cheaply copyable
+values, such as integers or interned strings. Thus, iteration of elements is by
+value, not by reference.
  */
-pub trait FinSet: Set + IntoIterator + Iterable {
-    /// Returns the size of the finite set.
-    fn len(&self) -> usize;
+pub trait FinSet: Set {
+    type Iter<'a>: ExactSizeIterator<Item = Self::Elem> where Self: 'a;
+
+    /// Iterable over elements of the finite set.
+    fn iter<'a>(&'a self) -> Self::Iter<'a>;
+
+    /// The size of the finite set.
+    fn len(&self) -> usize {
+        self.iter().len()
+    }
 
     /// Is the set empty?
     fn is_empty(&self) -> bool {
@@ -37,9 +50,16 @@ The elements of the skeletal finite set of size `n` are the numbers `0..n`
 (excluding `n`).
  */
 #[derive(Clone,Copy)]
-pub struct FinSetSkel(usize);
+pub struct SkelFinSet(usize);
 
-impl Set for FinSetSkel {
+impl SkelFinSet {
+    /// Adds the (unique possible) next element to the skeletal finite set.
+    pub fn insert(&mut self) {
+        self.0 += 1;
+    }
+}
+
+impl Set for SkelFinSet {
     type Elem = usize;
 
     fn contains(&self, x: &usize) -> bool {
@@ -47,52 +67,51 @@ impl Set for FinSetSkel {
     }
 }
 
-impl Iterable for FinSetSkel {
-    type Item<'a> = usize;
+impl FinSet for SkelFinSet {
     type Iter<'a> = Range<usize>;
 
-    fn iter(&self) -> Self::Iter<'_> {
-        0..(self.0)
-    }
+    fn iter(&self) -> Self::Iter<'_> { 0..(self.0) }
+    fn len(&self) -> usize { self.0 }
 }
 
-impl IntoIterator for FinSetSkel {
+impl IntoIterator for SkelFinSet {
     type Item = usize;
     type IntoIter = Range<usize>;
 
     fn into_iter(self) -> Self::IntoIter { self.iter() }
 }
 
-impl FinSet for FinSetSkel {
-    fn len(&self) -> usize { self.0 }
+/// A finite set backed by a hash set.
+#[derive(Clone)]
+pub struct HashFinSet<T>(HashSet<T>);
+
+impl<T: Eq + Hash> HashFinSet<T> {
+
+    /// Adds an element to the set.
+    pub fn insert(&mut self, x: T) -> bool {
+        self.0.insert(x)
+    }
 }
 
-/// A finite set backed by a hash set.
-pub struct FinSetHash<T>(HashSet<T>);
-
-impl<T: Eq + Hash> Set for FinSetHash<T> {
+impl<T: Eq + Hash> Set for HashFinSet<T> {
     type Elem = T;
 
     fn contains(&self, x: &T) -> bool { self.0.contains(x) }
 }
 
-impl<T: Eq + Hash> IntoIterator for FinSetHash<T> {
+impl<T: Eq + Hash + Clone> FinSet for HashFinSet<T> {
+    type Iter<'a> = std::iter::Cloned<std::collections::hash_set::Iter<'a,T>> where T: 'a;
+
+    fn iter<'a>(&'a self) -> Self::Iter<'a> { self.0.iter().cloned() }
+    fn len(&self) -> usize { self.0.len() }
+    fn is_empty(&self) -> bool { self.0.is_empty() }
+}
+
+impl<T: Eq + Hash> IntoIterator for HashFinSet<T> {
     type Item = T;
     type IntoIter = std::collections::hash_set::IntoIter<T>;
 
     fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
-}
-
-impl<T: Eq + Hash> Iterable for FinSetHash<T> {
-    type Item<'a> = &'a T where T: 'a;
-    type Iter<'a> = std::collections::hash_set::Iter<'a,T> where T: 'a;
-
-    fn iter<'a>(&'a self) -> Self::Iter<'a> { self.0.iter() }
-}
-
-impl<T: Eq + Hash> FinSet for FinSetHash<T> {
-    fn len(&self) -> usize { self.0.len() }
-    fn is_empty(&self) -> bool { self.0.is_empty() }
 }
 
 #[cfg(test)]
@@ -101,7 +120,9 @@ mod tests {
 
     #[test]
     fn fin_set_skel_basics() {
-        let s = FinSetSkel(3);
+        let mut s = SkelFinSet(0);
+        assert!(s.is_empty());
+        s.insert(); s.insert(); s.insert();
         assert!(!s.is_empty());
         assert_eq!(s.len(), 3);
         assert!(s.contains(&2));
@@ -110,7 +131,7 @@ mod tests {
 
     #[test]
     fn fin_set_skel_iter() {
-        let s = FinSetSkel(3);
+        let s = SkelFinSet(3);
         let sum: usize = s.iter().sum();
         assert_eq!(sum, 3);
         let elems: Vec<usize> = s.into_iter().collect();
@@ -119,7 +140,11 @@ mod tests {
 
     #[test]
     fn fin_set_hash_basics() {
-        let s = FinSetHash(HashSet::from([3, 5, 7]));
+        let mut s = HashFinSet(HashSet::new());
+        assert!(s.is_empty());
+        s.insert(3);
+        s.insert(5);
+        s.insert(7);
         assert!(!s.is_empty());
         assert_eq!(s.len(), 3);
         assert!(!s.contains(&2));
@@ -128,7 +153,7 @@ mod tests {
 
     #[test]
     fn fin_set_hash_iter() {
-        let s = FinSetHash(HashSet::from([3, 5, 7]));
+        let s = HashFinSet(HashSet::from([3, 5, 7]));
         let sum: i32 = s.iter().sum();
         assert_eq!(sum, 15);
         assert_eq!(s.len(), 3);
