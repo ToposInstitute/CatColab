@@ -132,22 +132,59 @@ impl<K: Eq+Hash+Clone, V: Eq> Column for HashColumn<K,V> {
     }
 }
 
-/*
-/** An indexed mapping backed by a vector (and a hash map).
+
+/** An indexed column backed by a vector, with hash map as index.
  */
-#[derive(Clone)]
-pub struct IndexedVecMapping<T> {
-    mapping: Vec<T>,
+#[derive(Clone,Default)]
+pub struct IndexedVecColumn<T> {
+    mapping: VecColumn<T>,
     index: HashMap<T,Vec<usize>>,
 }
 
-impl<T: Eq + Hash + Clone> IndexedVecMapping<T> {
-    pub fn new(mapping: Vec<T>) -> Self {
+impl<T: Eq + Hash + Clone> IndexedVecColumn<T> {
+    pub fn new(values: Vec<T>) -> Self {
         let mut index: HashMap<T,Vec<usize>> = HashMap::new();
-        for (x, y) in mapping.iter().enumerate() {
+        for (x, y) in values.iter().enumerate() {
             insert_into_index(&mut index, x, y);
         }
-        Self { mapping, index }
+        Self { mapping: VecColumn::new(values), index: index }
+    }
+}
+
+impl<T: Eq + Hash + Clone> Mapping for IndexedVecColumn<T> {
+    type Dom = usize;
+    type Cod = T;
+
+    fn apply(&self, x: &usize) -> Option<&T> { self.mapping.apply(x) }
+    fn is_set(&self, x: &usize) -> bool { self.mapping.is_set(x) }
+
+    fn set(&mut self, x: usize, y: T) -> Option<T> {
+        let old = self.unset(&x);
+        insert_into_index(&mut self.index, x, &y);
+        self.mapping.set(x, y);
+        old
+    }
+
+    fn unset(&mut self, x: &usize) -> Option<T> {
+        let old = self.mapping.unset(x);
+        if let Some(ref y) = old {
+            remove_from_index(&mut self.index, &x, y);
+        }
+        old
+    }
+}
+
+impl <T: Eq + Hash + Clone> Column for IndexedVecColumn<T> {
+    fn iter(&self) -> impl Iterator<Item = (usize, &T)> {
+        self.mapping.iter()
+    }
+
+    fn preimage(&self, y: &T) -> impl Iterator<Item = usize> {
+        let iter = match self.index.get(y) {
+            Some(ref vec) => vec.iter(),
+            None => ([] as [usize; 0]).iter(),
+        };
+        iter.cloned()
     }
 }
 
@@ -159,27 +196,12 @@ fn insert_into_index<X,Y>(index: &mut HashMap<Y,Vec<X>>,
     }
 }
 
-impl<T: Eq + Hash> Mapping for IndexedVecMapping<T> {
-    type Dom = usize;
-    type Cod = T;
-
-    fn apply(&self, x: &usize) -> Option<&T> {
-        self.mapping.get(*x)
-    }
-
-    fn is_set(&self, x: &usize) -> bool {
-        *x < self.mapping.len()
-    }
-
-    fn preimage(&self, y: &T) -> impl Iterator<Item = usize> {
-        let iter = match self.index.get(y) {
-            Some(vec) => vec.iter(),
-            None => ([] as [usize; 0]).iter(),
-        };
-        iter.cloned()
-    }
+fn remove_from_index<X,Y>(index: &mut HashMap<Y,Vec<X>>,
+                          x: &X, y: &Y) where X: Eq, Y: Eq + Hash {
+    let vec = index.get_mut(y).unwrap();
+    let i = vec.iter().rposition(|w| *w == *x).unwrap();
+    vec.remove(i);
 }
-*/
 
 #[cfg(test)]
 mod tests {
@@ -210,7 +232,22 @@ mod tests {
         assert!(!col.is_set(&7));
         col.set(7, "bar");
 
-        let preimage: Vec<_> = col.preimage(&"bar").collect();
+        let mut preimage: Vec<_> = col.preimage(&"bar").collect();
+        preimage.sort();
         assert_eq!(preimage, vec![5,7]);
+    }
+
+    #[test]
+    fn indexed_vec_column() {
+        let mut col = VecColumn::new(vec!["foo", "bar", "baz"]);
+        assert!(col.is_set(&2));
+        assert_eq!(col.apply(&2), Some(&"baz"));
+        let preimage: Vec<_> = col.preimage(&"baz").collect();
+        assert_eq!(preimage, vec![2]);
+
+        assert_eq!(col.set(0, "baz"), Some("foo"));
+        let preimage: Vec<_> = col.preimage(&"baz").collect();
+        assert_eq!(preimage, vec![0,2]);
+
     }
 }
