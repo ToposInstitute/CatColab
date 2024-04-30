@@ -61,13 +61,17 @@ pub trait Column: Mapping {
 
 /** An unindexed column backed by a vector.
  */
-#[derive(Clone,Default)]
+#[derive(Clone)]
 pub struct VecColumn<T>(Vec<Option<T>>);
 
 impl<T> VecColumn<T> {
     pub fn new(values: Vec<T>) -> Self {
         Self { 0: values.into_iter().map(Some).collect() }
     }
+}
+
+impl<T> Default for VecColumn<T> {
+    fn default() -> Self { Self { 0: Default::default() } }
 }
 
 impl<T: Eq> Mapping for VecColumn<T> {
@@ -90,7 +94,11 @@ impl<T: Eq> Mapping for VecColumn<T> {
     }
 
     fn unset(&mut self, i: &usize) -> Option<T> {
-        std::mem::replace(&mut self.0[*i], None)
+        if *i < self.0.len() {
+            std::mem::replace(&mut self.0[*i], None)
+        } else {
+            None
+        }
     }
 
     fn is_set(&self, i: &usize) -> bool {
@@ -107,13 +115,17 @@ impl<T: Eq> Column for VecColumn<T> {
 
 /** An unindexed column backed by a hash map.
  */
-#[derive(Clone,Default)]
+#[derive(Clone)]
 pub struct HashColumn<K,V>(HashMap<K,V>);
 
 impl<K: Eq+Hash, V> HashColumn<K,V> {
     pub fn new(hash_map: HashMap<K,V>) -> Self {
         Self { 0: hash_map }
     }
+}
+
+impl<K: Eq+Hash, V: Eq> Default for HashColumn<K,V> {
+    fn default() -> Self { Self { 0: Default::default() } }
 }
 
 impl<K: Eq+Hash, V: Eq> Mapping for HashColumn<K,V> {
@@ -132,20 +144,79 @@ impl<K: Eq+Hash+Clone, V: Eq> Column for HashColumn<K,V> {
     }
 }
 
-/** An index implemented by a hash map.
+/** An index in a column.
 
-Indices are currently not an official interface, just a convenience for
-implementing columns.
+An index is a cache of preimages of a mapping, like an index in a relational
+database. For the time being, indices are not a public interface, just a
+convenient abstraction for implementing columns.
+*/
+trait Index {
+    type Dom;
+    type Cod;
+
+    /// Gets the cached preimage.
+    fn preimage(&self, y: &Self::Cod) -> impl Iterator<Item = Self::Dom>;
+
+    /// Inserts a new pair into the index.
+    fn insert(&mut self, x: Self::Dom, y: &Self::Cod);
+
+    /** Removes a pair from the index.
+
+    Assumes that the pair is already indexed, and may panic if not.
+     */
+    fn remove(&mut self, x: &Self::Dom, y: &Self::Cod);
+}
+
+/** An index implemented as a vector of vectors.
+ */
+#[derive(Clone)]
+struct VecIndex<T>(Vec<Vec<T>>);
+
+impl<T> Default for VecIndex<T> {
+    fn default() -> Self { Self { 0: Default::default() } }
+}
+
+impl<T: Eq + Clone> Index for VecIndex<T> {
+    type Dom = T;
+    type Cod = usize;
+
+    fn preimage(&self, y: &usize) -> impl Iterator<Item = T> {
+        let iter = match self.0.get(*y) {
+            Some(ref vec) => vec.iter(),
+            None => ([] as [T; 0]).iter(),
+        };
+        iter.cloned()
+    }
+
+    fn insert(&mut self, x: T, y: &usize) {
+        let i = *y;
+        if i >= self.0.len() {
+            self.0.resize_with(i+1, Default::default);
+        }
+        self.0[i].push(x);
+    }
+
+    fn remove(&mut self, x: &T, y: &usize) {
+        let vec = &mut self.0[*y];
+        let i = vec.iter().rposition(|w| *w == *x).unwrap();
+        vec.remove(i);
+    }
+}
+
+/** An index implemented by a hash map into vectors.
  */
 #[derive(Clone)]
 struct HashIndex<X,Y>(HashMap<Y,Vec<X>>);
 
-impl<X: Eq + Clone, Y: Eq + Hash + Clone> HashIndex<X,Y> {
-    pub fn new() -> Self {
-        Self { 0: HashMap::<Y,Vec<X>>::new() }
-    }
+impl<X, Y: Eq + Hash> Default for HashIndex<X,Y> {
+    fn default() -> Self { Self { 0: HashMap::<Y,Vec<X>>::new() } }
+}
 
-    pub fn preimage(&self, y: &Y) -> std::iter::Cloned<std::slice::Iter<'_,X>> {
+impl<X: Eq + Clone, Y: Eq + Hash + Clone> Index for HashIndex<X,Y> {
+    type Dom = X;
+    type Cod = Y;
+
+    fn preimage(&self, y: &Y) -> impl Iterator<Item = X> {
         let iter = match self.0.get(y) {
             Some(ref vec) => vec.iter(),
             None => ([] as [X; 0]).iter(),
@@ -153,14 +224,14 @@ impl<X: Eq + Clone, Y: Eq + Hash + Clone> HashIndex<X,Y> {
         iter.cloned()
     }
 
-    pub fn insert(&mut self, x: X, y: &Y) {
+    fn insert(&mut self, x: X, y: &Y) {
         match self.0.get_mut(y) {
             Some(vec) => { vec.push(x); }
             None => { self.0.insert(y.clone(), vec![x]); }
         }
     }
 
-    pub fn remove(&mut self, x: &X, y: &Y) {
+    fn remove(&mut self, x: &X, y: &Y) {
         let vec = self.0.get_mut(y).unwrap();
         let i = vec.iter().rposition(|w| *w == *x).unwrap();
         vec.remove(i);
@@ -170,36 +241,42 @@ impl<X: Eq + Clone, Y: Eq + Hash + Clone> HashIndex<X,Y> {
 /** An indexed column backed by a vector, with hash map as index.
  */
 #[derive(Clone)]
-pub struct IndexedVecColumn<T> {
-    mapping: VecColumn<T>,
-    index: HashIndex<usize,T>
+struct IndexedColumn<Dom,Cod,Col,Ind>
+where Col: Column<Dom=Dom, Cod=Cod>, Ind: Index<Dom=Dom, Cod=Cod> {
+    mapping: Col,
+    index: Ind,
 }
 
-impl<T: Eq + Hash + Clone> IndexedVecColumn<T> {
-    pub fn new(values: Vec<T>) -> Self {
-        let mut index = HashIndex::<usize,T>::new();
-        for (x, y) in values.iter().enumerate() {
-            index.insert(x, y);
-        }
-        Self { mapping: VecColumn::new(values), index: index }
+impl <Dom,Cod,Col,Ind> Default for IndexedColumn<Dom,Cod,Col,Ind>
+where Col: Column<Dom=Dom, Cod=Cod> + Default,
+      Ind: Index<Dom=Dom, Cod=Cod> + Default {
+    fn default() -> Self {
+        Self { mapping: Default::default(), index: Default::default() }
     }
 }
 
-impl<T: Eq + Hash + Clone> Mapping for IndexedVecColumn<T> {
-    type Dom = usize;
-    type Cod = T;
+impl<Dom,Cod,Col,Ind> Mapping for IndexedColumn<Dom,Cod,Col,Ind>
+where Dom: Eq + Clone, Cod: Eq,
+      Col: Column<Dom=Dom, Cod=Cod>, Ind: Index<Dom=Dom, Cod=Cod> {
+    type Dom = Dom;
+    type Cod = Cod;
 
-    fn apply(&self, x: &usize) -> Option<&T> { self.mapping.apply(x) }
-    fn is_set(&self, x: &usize) -> bool { self.mapping.is_set(x) }
+    fn apply(&self, x: &Dom) -> Option<&Cod> {
+        self.mapping.apply(x)
+    }
 
-    fn set(&mut self, x: usize, y: T) -> Option<T> {
+    fn is_set(&self, x: &Dom) -> bool {
+        self.mapping.is_set(x)
+    }
+
+    fn set(&mut self, x: Dom, y: Cod) -> Option<Cod> {
         let old = self.unset(&x);
-        self.index.insert(x, &y);
+        self.index.insert(x.clone(), &y);
         self.mapping.set(x, y);
         old
     }
 
-    fn unset(&mut self, x: &usize) -> Option<T> {
+    fn unset(&mut self, x: &Dom) -> Option<Cod> {
         let old = self.mapping.unset(x);
         if let Some(ref y) = old {
             self.index.remove(&x, y);
@@ -208,13 +285,48 @@ impl<T: Eq + Hash + Clone> Mapping for IndexedVecColumn<T> {
     }
 }
 
-impl <T: Eq + Hash + Clone> Column for IndexedVecColumn<T> {
-    fn iter(&self) -> impl Iterator<Item = (usize, &T)> {
+impl<Dom,Cod,Col,Ind> Column for IndexedColumn<Dom,Cod,Col,Ind>
+where Dom: Eq + Clone, Cod: Eq,
+      Col: Column<Dom=Dom, Cod=Cod>, Ind: Index<Dom=Dom, Cod=Cod> {
+    fn iter(&self) -> impl Iterator<Item = (Dom, &Cod)> {
         self.mapping.iter()
     }
-    fn preimage(&self, y: &T) -> impl Iterator<Item = usize> {
+    fn preimage(&self, y: &Cod) -> impl Iterator<Item = Dom> {
         self.index.preimage(y)
     }
+}
+
+/// An indexed column backed by a vector.
+#[derive(Clone)]
+pub struct IndexedVecColumn<T: Eq + Hash + Clone>(
+    IndexedColumn<usize, T, VecColumn<T>, HashIndex<usize,T>>);
+
+impl<T: Eq+Hash+Clone> IndexedVecColumn<T> {
+    pub fn new(values: &[T]) -> Self {
+        let mut col: Self = Default::default();
+        for (x, y) in values.iter().cloned().enumerate() {
+            col.set(x, y);
+        }
+        col
+    }
+}
+
+impl<T: Eq+Hash+Clone> Default for IndexedVecColumn<T> {
+    fn default() -> Self { Self { 0: Default::default() } }
+}
+
+impl<T: Eq+Hash+Clone> Mapping for IndexedVecColumn<T> {
+    type Dom = usize;
+    type Cod = T;
+    fn apply(&self, x: &usize) -> Option<&T> { self.0.apply(x) }
+    fn set(&mut self, x: usize, y: T) -> Option<T> { self.0.set(x,y) }
+    fn unset(&mut self, x: &usize) -> Option<T> { self.0.unset(x) }
+    fn is_set(&self, x: &usize) -> bool { self.0.is_set(x) }
+}
+
+impl<T: Eq+Hash+Clone> Column for IndexedVecColumn<T> {
+    fn iter(&self) -> impl Iterator<Item=(usize,&T)> { self.0.iter() }
+    fn preimage(&self, y: &T) -> impl Iterator<Item=usize> { self.0.preimage(y) }
 }
 
 #[cfg(test)]
@@ -253,7 +365,7 @@ mod tests {
 
     #[test]
     fn indexed_vec_column() {
-        let mut col = IndexedVecColumn::new(vec!["foo", "bar", "baz"]);
+        let mut col = IndexedVecColumn::new(&["foo", "bar", "baz"]);
         assert!(col.is_set(&2));
         assert_eq!(col.apply(&2), Some(&"baz"));
         let preimage: Vec<_> = col.preimage(&"baz").collect();
