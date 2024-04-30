@@ -1,5 +1,5 @@
 use crate::set::*;
-use crate::mapping::*;
+use crate::column::*;
 
 /** A graph.
 
@@ -63,60 +63,33 @@ pub trait FinGraph: Graph {
     }
 }
 
-pub trait MapBasedFinGraph {
-    type V: Eq + Clone;
-    type E: Eq + Clone;
-    type VSet: FinSet<Elem = Self::V>;
-    type ESet: FinSet<Elem = Self::E>;
-    type Map: Mapping<Dom = Self::E, Cod = Self::V>;
-
-    fn vertex_set(&self) -> &Self::VSet;
-    fn edge_set(&self) -> &Self::ESet;
-
-    fn src_map(&self) -> &Self::Map;
-    fn tgt_map(&self) -> &Self::Map;
+pub struct ColumnarGraph<VSet,ESet,Map> {
+    vertex_set: VSet,
+    edge_set: ESet,
+    src_map: Map,
+    tgt_map: Map,
 }
 
-// FIXME: Shouldn't be using a blanket implementation.
-impl<G: MapBasedFinGraph> Graph for G {
-    type V = <G as MapBasedFinGraph>::V;
-    type E = <G as MapBasedFinGraph>::E;
+impl<V,E,VSet,ESet,Map> Graph for ColumnarGraph<VSet,ESet,Map>
+where V: Eq + Clone, E: Eq + Clone,
+      VSet: FinSet<Elem = V>, ESet: FinSet<Elem = E>,
+      Map: Mapping<Dom = E, Cod = V> {
+    type V = V;
+    type E = E;
 
-    fn has_vertex(&self, v: &Self::V) -> bool {
-        self.vertex_set().contains(v)
+    fn has_vertex(&self, v: &V) -> bool {
+        self.vertex_set.contains(v)
     }
 
-    fn has_edge(&self, e: &Self::E) -> bool {
-        self.edge_set().contains(e)
+    fn has_edge(&self, e: &E) -> bool {
+        self.edge_set.contains(e)
     }
 
-    fn src(&self, e: &Self::E) -> Self::V {
-        let src = self.src_map();
-        src.apply(e).expect("Source of edge should be defined").clone()
+    fn src(&self, e: &E) -> V {
+        self.src_map.apply(e).expect("Source of edge should be defined").clone()
     }
 
-    fn tgt(&self, e: &Self::E) -> Self::V {
-        let tgt = self.tgt_map();
-        tgt.apply(e).expect("Target of edge should be defined").clone()
+    fn tgt(&self, e: &E) -> V {
+        self.tgt_map.apply(e).expect("Target of edge should be defined").clone()
     }
-}
-
-struct VecGraph {
-    vertices: SkelFinSet,
-    edges: SkelFinSet,
-    src: VecMapping<usize>,
-    tgt: VecMapping<usize>,
-}
-
-impl MapBasedFinGraph for VecGraph {
-    type V = usize;
-    type E = usize;
-    type VSet = SkelFinSet;
-    type ESet = SkelFinSet;
-    type Map = VecMapping<usize>;
-
-    fn vertex_set(&self) -> &Self::VSet { &self.vertices }
-    fn edge_set(&self) -> &Self::ESet { &self.edges }
-    fn src_map(&self) -> &Self::Map { &self.src }
-    fn tgt_map(&self) -> &Self::Map { &self.tgt }
 }

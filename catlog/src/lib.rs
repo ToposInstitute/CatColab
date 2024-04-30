@@ -1,3 +1,3 @@
+pub mod column;
 pub mod graph;
-pub mod mapping;
 pub mod set;
