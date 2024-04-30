@@ -21,10 +21,16 @@ pub trait Mapping {
     /// Applies the mapping at a point possibly in the domain.
     fn apply(&self, x: &Self::Dom) -> Option<&Self::Cod>;
 
-    /// Sets the mapping at a point.
-    fn set(&mut self, x: Self::Dom, y: Self::Cod);
+    /** Sets the mapping at a point.
 
-    /// Un-sets the mapping at a point, making it undefined at that point.
+    The old value is returned, if one was set.
+    */
+    fn set(&mut self, x: Self::Dom, y: Self::Cod) -> Option<Self::Cod>;
+
+    /** Un-sets the mapping at a point, making it undefined at that point.
+
+    The old value is returned, if one was set.
+    */
     fn unset(&mut self, x: &Self::Dom) -> Option<Self::Cod>;
 
     /// Is the mapping defined at a value?
@@ -76,11 +82,11 @@ impl<T: Eq> Mapping for VecColumn<T> {
         }
     }
 
-    fn set(&mut self, i: usize, y: T) {
+    fn set(&mut self, i: usize, y: T) -> Option<T> {
         if i >= self.0.len() {
             self.0.resize_with(i+1, Default::default);
         }
-        self.0[i] = Some(y);
+        std::mem::replace(&mut self.0[i], Some(y))
     }
 
     fn unset(&mut self, i: &usize) -> Option<T> {
@@ -92,10 +98,37 @@ impl<T: Eq> Mapping for VecColumn<T> {
     }
 }
 
-impl <T: Eq> Column for VecColumn<T> {
+impl<T: Eq> Column for VecColumn<T> {
     fn iter(&self) -> impl Iterator<Item = (usize, &T)> {
         let filtered = self.0.iter().enumerate().filter(|(_, y)| y.is_some());
         filtered.map(|(i, y)| (i, y.as_ref().unwrap()))
+    }
+}
+
+/** An unindexed column backed by a hash map.
+ */
+#[derive(Clone,Default)]
+pub struct HashColumn<K,V>(HashMap<K,V>);
+
+impl<K: Eq+Hash, V> HashColumn<K,V> {
+    pub fn new(hash_map: HashMap<K,V>) -> Self {
+        Self { 0: hash_map }
+    }
+}
+
+impl<K: Eq+Hash, V: Eq> Mapping for HashColumn<K,V> {
+    type Dom = K;
+    type Cod = V;
+
+    fn apply(&self, x: &K) -> Option<&V> { self.0.get(x) }
+    fn set(&mut self, x: K, y: V) -> Option<V> { self.0.insert(x, y) }
+    fn unset(&mut self, x: &K) -> Option<V> { self.0.remove(x) }
+    fn is_set(&self, x: &K) -> bool { self.0.contains_key(x) }
+}
+
+impl<K: Eq+Hash+Clone, V: Eq> Column for HashColumn<K,V> {
+    fn iter(&self) -> impl Iterator<Item = (K,&V)> {
+        self.0.iter().map(|(k,v)| (k.clone(), v))
     }
 }
 
@@ -164,5 +197,20 @@ mod tests {
         col.set(3, "bar");
         let preimage: Vec<_> = col.preimage(&"bar").collect();
         assert_eq!(preimage, vec![1,3]);
+    }
+
+    #[test]
+    fn hash_column() {
+        let mut col: HashColumn<i32, &str> = Default::default();
+        col.set(3, "foo");
+        col.set(5, "bar");
+        col.set(7, "baz");
+        assert_eq!(col.apply(&7), Some(&"baz"));
+        assert_eq!(col.unset(&7), Some("baz"));
+        assert!(!col.is_set(&7));
+        col.set(7, "bar");
+
+        let preimage: Vec<_> = col.preimage(&"bar").collect();
+        assert_eq!(preimage, vec![5,7]);
     }
 }
