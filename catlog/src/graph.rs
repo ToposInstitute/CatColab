@@ -4,8 +4,8 @@ use crate::column::*;
 /** A graph.
 
 This is a graph in the category theorist's sense, i.e., it is directed and
-admits multiple edges and self loops. Graphs are not assumed to be finite, even
-locally.
+admits multiple edges and self loops. Moreover, a graph is not assumed to be
+finite, even locally.
  */
 pub trait Graph {
     /// Type of vertices in graph.
