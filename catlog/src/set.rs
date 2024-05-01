@@ -67,6 +67,13 @@ impl SkelFinSet {
         self.0 += 1;
         new
     }
+
+    /// Adds the next `n` elements to the skeletal finite set.
+    pub fn extend(&mut self, n: usize) -> Range<usize> {
+        let start = self.0;
+        self.0 += n;
+        start..(self.0)
+    }
 }
 
 impl Default for SkelFinSet {
@@ -143,18 +150,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn fin_set_skel_basics() {
+    fn fin_set_skel() {
         let mut s: SkelFinSet = Default::default();
         assert!(s.is_empty());
-        s.insert(); s.insert(); s.insert();
+        assert_eq!(s.insert(), 0);
         assert!(!s.is_empty());
+        assert_eq!(s.extend(2), 1..3);
         assert_eq!(s.len(), 3);
         assert!(s.contains(&2));
         assert!(!s.contains(&3));
-    }
 
-    #[test]
-    fn fin_set_skel_iter() {
         let s = SkelFinSet::new(3);
         let sum: usize = s.iter().sum();
         assert_eq!(sum, 3);
@@ -163,7 +168,7 @@ mod tests {
     }
 
     #[test]
-    fn fin_set_hash_basics() {
+    fn fin_set_hash() {
         let mut s: HashFinSet<i32> = Default::default();
         assert!(s.is_empty());
         s.insert(3);
@@ -173,10 +178,7 @@ mod tests {
         assert_eq!(s.len(), 3);
         assert!(!s.contains(&2));
         assert!(s.contains(&3));
-    }
 
-    #[test]
-    fn fin_set_hash_iter() {
         let s = HashFinSet::new(HashSet::from([3, 5, 7]));
         let sum: i32 = s.iter().sum();
         assert_eq!(sum, 15);

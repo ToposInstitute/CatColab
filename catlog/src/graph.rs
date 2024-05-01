@@ -23,10 +23,10 @@ pub trait Graph {
     fn has_edge(&self, e: &Self::E) -> bool;
 
     /// Gets the source of an edge, assumed to be contained in the graph.
-    fn src(&self, e: &Self::E) -> &Self::V;
+    fn src<'a>(&'a self, e: &'a Self::E) -> &Self::V;
 
     /// Gets the target of an edge, assumed to be contained in the graph.
-    fn tgt(&self, e: &Self::E) -> &Self::V;
+    fn tgt<'a>(&'a self, e: &'a Self::E) -> &Self::V;
 }
 
 /** A graph with finitely many vertices and edges.
@@ -131,6 +131,11 @@ where Col: Column<Dom=usize, Cod=usize> {
         self.vertex_set.insert()
     }
 
+    /// Adds and returns `n` new vertices.
+    pub fn add_vertices(&mut self, n: usize) -> std::ops::Range<usize> {
+        self.vertex_set.extend(n)
+    }
+
     /// Adds and returns a new edge.
     pub fn add_edge(&mut self, src: usize, tgt: usize) -> usize {
         let e = self.edge_set.insert();
@@ -138,8 +143,27 @@ where Col: Column<Dom=usize, Cod=usize> {
         self.set_tgt(e, tgt);
         e
     }
-}
 
+    /// Makes a path graph of length `n`.
+    #[cfg(test)]
+    pub fn path(n: usize) -> Self where Col: Default {
+        let mut g: Self = Default::default();
+        g.add_vertices(n);
+        for (i, j) in std::iter::zip(0..(n-1), 1..n) {
+            g.add_edge(i, j);
+        }
+        g
+    }
+
+    /// Makes a triangle graph (2-simplex).
+    #[cfg(test)]
+    pub fn triangle() -> Self where Col: Default {
+        let mut g: Self = Default::default();
+        g.add_vertex(); g.add_vertex(); g.add_vertex();
+        g.add_edge(0,1); g.add_edge(1,2); g.add_edge(0,2);
+        g
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -147,9 +171,7 @@ mod tests {
 
     #[test]
     fn skel_fin_graph() {
-        let mut g: SkelFinGraph = Default::default();
-        g.add_vertex(); g.add_vertex(); g.add_vertex();
-        g.add_edge(0,1); g.add_edge(1,2); g.add_edge(0,2);
+        let g = SkelFinGraph::triangle();
         assert_eq!(g.nv(), 3);
         assert_eq!(g.ne(), 3);
         assert_eq!(*g.src(&1), 1);
