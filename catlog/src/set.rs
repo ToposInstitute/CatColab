@@ -4,9 +4,9 @@ use std::collections::HashSet;
 
 /** A set.
 
-The interface is minimal. A set has an element type ([Self::Elem]) and can check
-whether values of that type belongs to the set. Sets are not assumed to be
-finite.
+The interface is minimal. A set has an element type ([`Elem`](Self::Elem)) and
+can check whether values of that type belongs to the set. Sets are not assumed
+to be finite.
  */
 pub trait Set {
     /** Type of elements of the set.
@@ -53,10 +53,21 @@ The elements of the skeletal finite set of size `n` are the numbers `0..n`
 pub struct SkelFinSet(usize);
 
 impl SkelFinSet {
-    /// Adds the (unique possible) next element to the skeletal finite set.
-    pub fn insert(&mut self) {
-        self.0 += 1;
+    /// Create a skeletal finite set of the given size.
+    pub fn new(n: usize) -> Self {
+        Self { 0: n }
     }
+
+    /// Adds the (unique possible) next element to the skeletal finite set.
+    pub fn insert(&mut self) -> usize {
+        let new = self.0;
+        self.0 += 1;
+        new
+    }
+}
+
+impl Default for SkelFinSet {
+    fn default() -> Self { Self::new(0) }
 }
 
 impl Set for SkelFinSet {
@@ -86,10 +97,20 @@ impl IntoIterator for SkelFinSet {
 pub struct HashFinSet<T>(HashSet<T>);
 
 impl<T: Eq + Hash> HashFinSet<T> {
+    /// Create a finite set backed by the given hash set.
+    pub fn new(hash_set: HashSet<T>) -> Self {
+        Self { 0: hash_set }
+    }
 
     /// Adds an element to the set.
     pub fn insert(&mut self, x: T) -> bool {
         self.0.insert(x)
+    }
+}
+
+impl<T: Eq + Hash> Default for HashFinSet<T> {
+    fn default() -> Self {
+        Self::new(HashSet::new())
     }
 }
 
@@ -120,7 +141,7 @@ mod tests {
 
     #[test]
     fn fin_set_skel_basics() {
-        let mut s = SkelFinSet(0);
+        let mut s: SkelFinSet = Default::default();
         assert!(s.is_empty());
         s.insert(); s.insert(); s.insert();
         assert!(!s.is_empty());
@@ -131,7 +152,7 @@ mod tests {
 
     #[test]
     fn fin_set_skel_iter() {
-        let s = SkelFinSet(3);
+        let s = SkelFinSet::new(3);
         let sum: usize = s.iter().sum();
         assert_eq!(sum, 3);
         let elems: Vec<usize> = s.into_iter().collect();
@@ -140,7 +161,7 @@ mod tests {
 
     #[test]
     fn fin_set_hash_basics() {
-        let mut s = HashFinSet(HashSet::new());
+        let mut s: HashFinSet<i32> = Default::default();
         assert!(s.is_empty());
         s.insert(3);
         s.insert(5);
@@ -153,7 +174,7 @@ mod tests {
 
     #[test]
     fn fin_set_hash_iter() {
-        let s = HashFinSet(HashSet::from([3, 5, 7]));
+        let s = HashFinSet::new(HashSet::from([3, 5, 7]));
         let sum: i32 = s.iter().sum();
         assert_eq!(sum, 15);
         assert_eq!(s.len(), 3);
