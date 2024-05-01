@@ -1,3 +1,5 @@
+//! Interfaces and wrappers to treat sets generically.
+
 use std::ops::Range;
 use std::hash::Hash;
 use std::collections::HashSet;
@@ -28,6 +30,7 @@ values, such as integers or interned strings. Thus, iteration of elements is by
 value, not by reference.
  */
 pub trait FinSet: Set {
+    /// Type of iterator over elements of set.
     type Iter<'a>: ExactSizeIterator<Item = Self::Elem> where Self: 'a;
 
     /// Iterable over elements of the finite set.

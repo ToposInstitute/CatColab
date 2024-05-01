@@ -1,3 +1,5 @@
+//! Categories: interfaces and basic constructions.
+
 use nonempty::{NonEmpty, nonempty};
 
 use crate::graph::Graph;
@@ -16,7 +18,7 @@ pub enum Path<V,E> {
 We take the unbiased view of a category, regarding composition as an operation
 on paths in the underlying graph. This has several advantages. First, it takes
 as primitive the natural data structure for morphisms in a free category, or
-more generally in presentations of categories. It also enables more intelligent
+more generally in a presentation of a category. It also enables more intelligent
 strategies for evaluating composites in specific categories. For instance, when
 composing (multiplying) a sequence of matrices, it can be very inefficient to
 fold from the left or right by binary matrix multiplication. Instead, one might
@@ -63,6 +65,7 @@ category, respectively.
 pub struct UnderlyingGraph<Cat>(Cat);
 
 impl<Cat> UnderlyingGraph<Cat> {
+    /// Creates the underlying graph of a category.
     pub fn new(category: Cat) -> Self { Self {0: category} }
 }
 

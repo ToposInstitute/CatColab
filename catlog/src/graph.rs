@@ -1,3 +1,5 @@
+//! Graphs, finite and infinite.
+
 use crate::set::*;
 use crate::column::*;
 
@@ -124,10 +126,12 @@ pub type SkelFinGraph = ColumnarGraph<SkelFinSet,SkelFinSet,VecIndexedColumn>;
 
 impl<Col> ColumnarGraph<SkelFinSet,SkelFinSet,Col>
 where Col: Column<Dom=usize, Cod=usize> {
+    /// Adds and returns a new vertex.
     pub fn add_vertex(&mut self) -> usize {
         self.vertex_set.insert()
     }
 
+    /// Adds and returns a new edge.
     pub fn add_edge(&mut self, src: usize, tgt: usize) -> usize {
         let e = self.edge_set.insert();
         self.set_src(e, src);

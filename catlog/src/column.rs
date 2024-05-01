@@ -1,3 +1,5 @@
+//! Data structures for mappings and columns, as in a data table.
+
 use std::hash::Hash;
 use std::collections::hash_map::HashMap;
 
@@ -65,6 +67,7 @@ pub trait Column: Mapping {
 pub struct VecColumn<T>(Vec<Option<T>>);
 
 impl<T> VecColumn<T> {
+    /// Creates a vector-backed column by consuming an existing vector.
     pub fn new(values: Vec<T>) -> Self {
         Self { 0: values.into_iter().map(Some).collect() }
     }
@@ -119,6 +122,7 @@ impl<T: Eq> Column for VecColumn<T> {
 pub struct HashColumn<K,V>(HashMap<K,V>);
 
 impl<K: Eq+Hash, V> HashColumn<K,V> {
+    /// Creates a hash-backed column by consuming an existing hash map.
     pub fn new(hash_map: HashMap<K,V>) -> Self {
         Self { 0: hash_map }
     }
@@ -310,6 +314,7 @@ pub struct VecIndexedColumn(
 );
 
 impl VecIndexedColumn {
+    /// Creates a new vector-backed column from an existing vector.
     pub fn new(values: &[usize]) -> Self {
         let mut col: Self = Default::default();
         for (x, y) in values.iter().enumerate() {
@@ -348,6 +353,7 @@ pub struct IndexedVecColumn<T: Eq + Hash + Clone>(
 );
 
 impl<T: Eq+Hash+Clone> IndexedVecColumn<T> {
+    /// Creates a new vector-backed column from an existing vector.
     pub fn new(values: &[T]) -> Self {
         let mut col: Self = Default::default();
         for (x, y) in values.iter().cloned().enumerate() {
