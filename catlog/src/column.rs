@@ -238,7 +238,10 @@ impl<X: Eq + Clone, Y: Eq + Hash + Clone> Index for HashIndex<X,Y> {
     }
 }
 
-/** An indexed column backed by a vector, with hash map as index.
+/** An indexed column comprising a forward mapping and a separate index.
+
+This common pattern is used to implement more specific columns but, like the
+`Index` trait, is not directly exposed.
  */
 #[derive(Clone)]
 struct IndexedColumn<Dom,Cod,Col,Ind>
@@ -291,15 +294,58 @@ where Dom: Eq + Clone, Cod: Eq,
     fn iter(&self) -> impl Iterator<Item = (Dom, &Cod)> {
         self.mapping.iter()
     }
+
     fn preimage(&self, y: &Cod) -> impl Iterator<Item = Dom> {
         self.index.preimage(y)
     }
 }
 
-/// An indexed column backed by a vector.
+/** An indexed column backed by an integer-valued vector.
+
+The domain and codomain of the column are both the natural numbers (`usize`).
+*/
+#[derive(Clone)]
+pub struct VecIndexedColumn(
+    IndexedColumn<usize, usize, VecColumn<usize>, VecIndex<usize>>
+);
+
+impl VecIndexedColumn {
+    pub fn new(values: &[usize]) -> Self {
+        let mut col: Self = Default::default();
+        for (x, y) in values.iter().enumerate() {
+            col.set(x, *y);
+        }
+        col
+    }
+}
+
+impl Default for VecIndexedColumn {
+    fn default() -> Self { Self {0: Default::default() } }
+}
+
+impl Mapping for VecIndexedColumn {
+    type Dom = usize;
+    type Cod = usize;
+    fn apply(&self, x: &usize) -> Option<&usize> { self.0.apply(x) }
+    fn set(&mut self, x: usize, y: usize) -> Option<usize> { self.0.set(x,y) }
+    fn unset(&mut self, x: &usize) -> Option<usize> { self.0.unset(x) }
+    fn is_set(&self, x: &usize) -> bool { self.0.is_set(x) }
+}
+
+impl Column for VecIndexedColumn {
+    fn iter(&self) -> impl Iterator<Item=(usize,&usize)> { self.0.iter() }
+    fn preimage(&self, y: &usize) -> impl Iterator<Item=usize> { self.0.preimage(y) }
+}
+
+/** An indexed column backed by a vector.
+
+The domain of the column is the natural numbers (`usize`). Since the codomain is
+an arbitrary type (`T`), the index is implemented using a hash map.
+*/
 #[derive(Clone)]
 pub struct IndexedVecColumn<T: Eq + Hash + Clone>(
-    IndexedColumn<usize, T, VecColumn<T>, HashIndex<usize,T>>);
+    IndexedColumn<usize, T, VecColumn<T>, HashIndex<usize,T>>
+);
 
 impl<T: Eq+Hash+Clone> IndexedVecColumn<T> {
     pub fn new(values: &[T]) -> Self {
@@ -361,6 +407,20 @@ mod tests {
         let mut preimage: Vec<_> = col.preimage(&"bar").collect();
         preimage.sort();
         assert_eq!(preimage, vec![5,7]);
+    }
+
+    #[test]
+    fn vec_indexed_column() {
+        let mut col = VecIndexedColumn::new(&[1,3,5]);
+        assert!(col.is_set(&2));
+        assert_eq!(col.apply(&2), Some(&5));
+        let preimage: Vec<_> = col.preimage(&5).collect();
+        assert_eq!(preimage, vec![2]);
+
+        assert_eq!(col.set(0, 5), Some(1));
+        let mut preimage: Vec<_> = col.preimage(&5).collect();
+        preimage.sort();
+        assert_eq!(preimage, vec![0,2]);
     }
 
     #[test]

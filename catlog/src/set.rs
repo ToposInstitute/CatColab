@@ -59,8 +59,10 @@ impl SkelFinSet {
     }
 
     /// Adds the (unique possible) next element to the skeletal finite set.
-    pub fn insert(&mut self) {
+    pub fn insert(&mut self) -> usize {
+        let new = self.0;
         self.0 += 1;
+        new
     }
 }
 
