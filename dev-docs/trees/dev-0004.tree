@@ -3,9 +3,9 @@
 \subtree{
 \title{Incremental parsing}
 
-\p{Parsing is traditionally a backend task but since we need \em{live} and 
-\em{incremental parsing} as the first step of content entry into a structure
-editor, it is better that parsing happen on the frontend.}
+\p{Parsing is traditionally a backend task but if used in a structure editor, we
+would want \em{live} and \em{incremental parsing} as the first step of content
+entry. Parsing would then be part of the frontend.}
 
 \p{Web-compatible incremental parsers:
 \ol{
@@ -21,45 +21,23 @@ Both are based on the same parsing algorithm.}
 }
 
 \subtree{
-\title{Rich-text UI components}
+\title{Rich-text editors}
 
 \p{Though structure editors are niche, components for web-based rich-text editors
-are extensively developed and seem modular enough to adapt to the formal context
-of a structure editor.}
-
-\p{The following combination is popular and designed to be highly modular:
+are extensively developed:
 \ol{
-  \li{[ProseMirror](https://prosemirror.net/): Library of components for a rich
-  content editor, written in TypeScript}
-  \li{[TipTap](https://tiptap.dev/)N
-  ([HN](https://news.ycombinator.com/item?id=36957204)):
-  Optional: builds on ProseMirror to make it easier for standard use cases}
-}}
-
-\p{Other offerings, which seem to be less flexible than ProseMirror:
-\ol{
+  \li{[ProseMirror](dev-0005): the standard}
   \li{[Lexical](https://lexical.dev/)
   ([HN](https://news.ycombinator.com/item?id=31019778)), by Facebook}
   \li{[Quill](https://quilljs.com/): older, but a new 2.0 release is on the way}
 }}
 
-\p{Assessment: we should use ProseMirror, without TipTap.}
-}
-
-\subtree{
-\title{Collaborative editing}
-
 \p{All of the rich-text editors support collaborative editing via integration
 with \strong{[Yjs](https://yjs.dev/)}, a widely used implementation of
-[CRDT](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type)
-for JSON-esque data structures.}
+[CRDT](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type) for
+JSON-esque data structures.
 
-\ul{
-  \li{[prosemirror-collab](https://prosemirror.net/docs/guide/#collab):
-  ProseMirror's built-in module based on a central authority, \em{not} Yjs}
-  \li{[prosemirror-collab-commit](https://github.com/stepwisehq/prosemirror-collab-commit):
-  third-party module for commit-based collaborative editing}
-  \li{[Hocuspocus](https://tiptap.dev/docs/hocuspocus/introduction):
-  integrates Yjs with ProseMirror/TipTap}
-}
+I hypothesized that ProseMirror was flexible enough to \em{be} the foundation
+for a structure editor, but experiments suggest that its editing model is too
+text-centric for that role.}
 }

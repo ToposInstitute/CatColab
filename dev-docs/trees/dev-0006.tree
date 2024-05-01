@@ -16,7 +16,7 @@
     However, it appears that there are several clones, for instance the facebook version: [rocksdb](https://github.com/facebook/rocksdb/).
   }
   \li{[y-sweet](https://github.com/drifting-in-space/y-sweet) is written in Rust, and just persists directly to the filesystem (or to S3). Seems fairly simple, and gets points for not needing any external database. The authors also have another project [Plane](https://github.com/drifting-in-space/plane), which seems like it might be useful for us elsewhere; also see [this post about avoiding CRDTs via centralization](https://driftingin.space/posts/you-might-not-need-a-crdt). Their product based on Plane, [Jamsocket](https://jamsocket.com/) also seems interesting. Seems something like a "generalized binder", not just for running jupyter notebooks, and a lot simpler. I think that these are mostly irrelevant to y-sweet, though interesting for thinking about later down the line.}
-  \li{[hocuspocus](https://tiptap.dev/docs/hocuspocus/server/extensions#database) as mentioned above, seems to have built-in persistence support for a variety of databases, including notably sqlite.}
+  \li{[hocuspocus](https://tiptap.dev/docs/hocuspocus/server/extensions#database) seems to have built-in persistence support for a variety of databases, including notably sqlite.}
 }
 
 \p{Recommendation: y-websocket with y-leveldb for the relation macro demo, perhaps y-sweet later on.}

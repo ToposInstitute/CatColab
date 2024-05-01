@@ -1,7 +1,28 @@
-\title{Example applications}
+\title{ProseMirror}
+
+\p{[ProseMirror](https://prosemirror.net/) is a modular library of components
+  for building rich content editors, written in TypeScript. It is often used
+  with [TipTap](https://tiptap.dev/)
+  ([HN](https://news.ycombinator.com/item?id=36957204)), which builds on
+  ProseMirror to make it easier for standard use cases.}
 
 \subtree{
-\title{Rich-text editors}
+\title{Collaborative editing}
+
+\p{ProseMirror supports real-time collaborative editing through several
+different backends:
+\ul{
+  \li{[prosemirror-collab](https://prosemirror.net/docs/guide/#collab):
+  ProseMirror's built-in module based on a central authority, \em{not} Yjs}
+  \li{[prosemirror-collab-commit](https://github.com/stepwisehq/prosemirror-collab-commit):
+  third-party module for commit-based collaborative editing}
+  \li{[Hocuspocus](https://tiptap.dev/docs/hocuspocus/introduction):
+  integrates Yjs with ProseMirror/TipTap}
+}}
+}
+
+\subtree{
+\title{Example applications}
 
 \p{Open-source, collaborative, rich-text editors built using
 TypeScript/ProseMirror/TipTap/Yjs:
