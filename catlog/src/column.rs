@@ -388,11 +388,13 @@ pub struct IndexedHashColumn<K: Eq+Hash+Clone, V: Eq+Hash+Clone>(
     IndexedColumn<K, V, HashColumn<K,V>, HashIndex<K,V>>
 );
 
-impl<K: Eq+Hash+Clone, V: Eq+Hash+Clone> Default for IndexedHashColumn<K,V> {
+impl<K,V> Default for IndexedHashColumn<K,V>
+where K: Eq+Hash+Clone, V: Eq+Hash+Clone {
     fn default() -> Self { Self { 0: Default::default() } }
 }
 
-impl<K: Eq+Hash+Clone, V: Eq+Hash+Clone> Mapping for IndexedHashColumn<K,V> {
+impl<K,V> Mapping for IndexedHashColumn<K,V>
+where K: Eq+Hash+Clone, V: Eq+Hash+Clone {
     type Dom = K;
     type Cod = V;
     fn apply(&self, x: &K) -> Option<&V> { self.0.apply(x) }
@@ -401,7 +403,8 @@ impl<K: Eq+Hash+Clone, V: Eq+Hash+Clone> Mapping for IndexedHashColumn<K,V> {
     fn is_set(&self, x: &K) -> bool { self.0.is_set(x) }
 }
 
-impl<K: Eq+Hash+Clone, V: Eq+Hash+Clone> Column for IndexedHashColumn<K,V> {
+impl<K,V> Column for IndexedHashColumn<K,V>
+where K: Eq+Hash+Clone, V: Eq+Hash+Clone {
     fn iter(&self) -> impl Iterator<Item=(K,&V)> { self.0.iter() }
     fn preimage(&self, y: &V) -> impl Iterator<Item=K> { self.0.preimage(y) }
 }

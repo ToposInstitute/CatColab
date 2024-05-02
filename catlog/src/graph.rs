@@ -1,5 +1,6 @@
 //! Graphs, finite and infinite.
 
+use std::hash::Hash;
 use crate::set::*;
 use crate::column::*;
 
@@ -120,10 +121,6 @@ where V: Eq, E: Eq, VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Column<Dom=
     fn ne(&self) -> usize { self.edge_set.len() }
 }
 
-/** A skeletal finite graph with indexed source and target maps.
- */
-pub type SkelFinGraph = ColumnarGraph<SkelFinSet,SkelFinSet,SkelIndexedColumn>;
-
 impl<Col> ColumnarGraph<SkelFinSet,SkelFinSet,Col>
 where Col: Column<Dom=usize, Cod=usize> {
     /// Adds and returns a new vertex.
@@ -165,6 +162,39 @@ where Col: Column<Dom=usize, Cod=usize> {
     }
 }
 
+impl<V,E,Col> ColumnarGraph<HashFinSet<V>,HashFinSet<E>,Col>
+where V: Eq+Hash+Clone, E: Eq+Hash+Clone, Col: Column<Dom=E, Cod=V> {
+    /// Adds a vertex, returning whether the vertex is new.
+    pub fn add_vertex(&mut self, v: V) -> bool {
+        self.vertex_set.insert(v)
+    }
+
+    /** Adds an edge, returning whether the edge is new.
+
+    If the edge is not new, it source and target are updated.
+    */
+    pub fn add_edge(&mut self, e: E, src: V, tgt: V) -> bool {
+        self.set_src(e.clone(), src);
+        self.set_tgt(e.clone(), tgt);
+        self.edge_set.insert(e)
+    }
+}
+
+/** A skeletal finite graph with indexed source and target maps.
+
+The data structure is the same as the standard `Graph` type in
+[Catlab.jl](https://github.com/AlgebraicJulia/Catlab.jl).
+ */
+pub type SkelFinGraph = ColumnarGraph<SkelFinSet,SkelFinSet,SkelIndexedColumn>;
+
+/** A finite graph with indexed source and target maps, based on hash maps.
+
+Unlike in a skeletal finite graph, the vertices and edges can have arbitrary
+hashable types.
+*/
+pub type HashFinGraph<V,E> =
+    ColumnarGraph<HashFinSet<V>, HashFinSet<E>, IndexedHashColumn<E,V>>;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -178,5 +208,18 @@ mod tests {
         assert_eq!(*g.tgt(&1), 2);
         assert_eq!(g.out_edges(&0).collect::<Vec<_>>(), vec![0,2]);
         assert_eq!(g.in_edges(&2).collect::<Vec<_>>(), vec![1,2]);
+    }
+
+    #[test]
+    fn hash_fin_graph() {
+        let mut g: HashFinGraph<char,&str> = Default::default();
+        assert!(g.add_vertex('x'));
+        assert!(g.add_vertex('y'));
+        assert!(g.add_vertex('z'));
+        assert!(g.add_edge("f", 'x', 'y'));
+        assert!(g.add_edge("g", 'y', 'z'));
+        assert!(g.add_edge("fg", 'x', 'z'));
+        assert_eq!(*g.src(&"fg"), 'x');
+        assert_eq!(*g.tgt(&"fg"), 'z');
     }
 }
