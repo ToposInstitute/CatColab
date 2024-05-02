@@ -25,20 +25,23 @@ pub trait Set {
 /** A finite set.
 
 In addition to checking for element containment, finite sets know their size and
-are iterable. The elements of a finite set are assumed to be cheaply copyable
+are iterable. The elements of a finite set are assumed to be cheaply cloneable
 values, such as integers or interned strings. Thus, iteration of elements is by
 value, not by reference.
  */
 pub trait FinSet: Set {
-    /// Type of iterator over elements of set.
-    type Iter<'a>: ExactSizeIterator<Item = Self::Elem> where Self: 'a;
+    /** Iterates over elements of the finite set.
 
-    /// Iterable over elements of the finite set.
-    fn iter<'a>(&'a self) -> Self::Iter<'a>;
+    Though finite sets have a definite size, the iterator is not required to be
+    an [`ExactSizeIterator`] because they are not stable under even predictable
+    operations like chaining. Instead, retrieve the size of the set through the
+    separate method [`len`](FinSet::len).
+    */
+    fn iter(&self) -> impl Iterator<Item = Self::Elem>;
 
     /// The size of the finite set.
     fn len(&self) -> usize {
-        self.iter().len()
+        self.iter().count()
     }
 
     /// Is the set empty?
@@ -89,9 +92,7 @@ impl Set for SkelFinSet {
 }
 
 impl FinSet for SkelFinSet {
-    type Iter<'a> = Range<usize>;
-
-    fn iter(&self) -> Self::Iter<'_> { 0..(self.0) }
+    fn iter(&self) -> impl Iterator<Item = usize> { 0..(self.0) }
     fn len(&self) -> usize { self.0 }
 }
 
@@ -99,7 +100,7 @@ impl IntoIterator for SkelFinSet {
     type Item = usize;
     type IntoIter = Range<usize>;
 
-    fn into_iter(self) -> Self::IntoIter { self.iter() }
+    fn into_iter(self) -> Self::IntoIter { 0..(self.0) }
 }
 
 /// A finite set backed by a hash set.
@@ -131,9 +132,7 @@ impl<T: Eq + Hash> Set for HashFinSet<T> {
 }
 
 impl<T: Eq + Hash + Clone> FinSet for HashFinSet<T> {
-    type Iter<'a> = std::iter::Cloned<std::collections::hash_set::Iter<'a,T>> where T: 'a;
-
-    fn iter<'a>(&'a self) -> Self::Iter<'a> { self.0.iter().cloned() }
+    fn iter(&self) -> impl Iterator<Item = T> { self.0.iter().cloned() }
     fn len(&self) -> usize { self.0.len() }
     fn is_empty(&self) -> bool { self.0.is_empty() }
 }

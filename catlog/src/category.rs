@@ -72,10 +72,10 @@ pub trait FgCategory: Category {
     fn has_hom_generator(&self, f: &Self::Hom) -> bool;
 
     /// Iterates over object generators of the category.
-    fn ob_generators(&self) -> impl ExactSizeIterator<Item = Self::Ob>;
+    fn ob_generators(&self) -> impl Iterator<Item = Self::Ob>;
 
-    /// Iterates over morphism generators of the category.
-    fn hom_generators(&self) -> impl ExactSizeIterator<Item = Self::Hom>;
+    /// Iterates over all morphism generators of the category.
+    fn hom_generators(&self) -> impl Iterator<Item = Self::Hom>;
 
     /// Iterates over morphism generators with the given domain.
     fn generators_with_dom(&self, x: &Self::Ob) -> impl Iterator<Item = Self::Hom>;
@@ -123,10 +123,10 @@ impl<Cat: FgCategory> Graph for GeneratingGraph<Cat> {
 }
 
 impl<Cat: FgCategory> FinGraph for GeneratingGraph<Cat> {
-    fn vertices(&self) -> impl ExactSizeIterator<Item = Self::V> {
+    fn vertices(&self) -> impl Iterator<Item = Self::V> {
         self.0.ob_generators()
     }
-    fn edges(&self) -> impl ExactSizeIterator<Item = Self::E> {
+    fn edges(&self) -> impl Iterator<Item = Self::E> {
         self.0.hom_generators()
     }
     fn in_edges(&self, x: &Self::V) -> impl Iterator<Item = Self::E> {

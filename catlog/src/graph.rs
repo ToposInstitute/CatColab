@@ -33,10 +33,10 @@ pub trait Graph {
  */
 pub trait FinGraph: Graph {
     /// Iterates over the vertices in the graph.
-    fn vertices(&self) -> impl ExactSizeIterator<Item = Self::V>;
+    fn vertices(&self) -> impl Iterator<Item = Self::V>;
 
     /// Iterates over the edges in the graph.
-    fn edges(&self) -> impl ExactSizeIterator<Item = Self::E>;
+    fn edges(&self) -> impl Iterator<Item = Self::E>;
 
     /// Iterates over the edges incoming to a vertex.
     fn in_edges(&self, v: &Self::V) -> impl Iterator<Item = Self::E>;
@@ -46,12 +46,12 @@ pub trait FinGraph: Graph {
 
     /// Number of vertices in the graph.
     fn nv(&self) -> usize {
-        self.vertices().len()
+        self.vertices().count()
     }
 
     /// Number of edges in the graph.
     fn ne(&self) -> usize {
-        self.edges().len()
+        self.edges().count()
     }
 }
 
@@ -104,10 +104,10 @@ where V: Eq, E: Eq, VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Column<Dom=
 
 impl<V,E,VSet,ESet,Col> FinGraph for ColumnarGraph<VSet,ESet,Col>
 where V: Eq, E: Eq, VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Column<Dom=E,Cod=V> {
-    fn vertices(&self) -> impl ExactSizeIterator<Item = V> {
+    fn vertices(&self) -> impl Iterator<Item = V> {
         self.vertex_set.iter()
     }
-    fn edges(&self) -> impl ExactSizeIterator<Item = E> {
+    fn edges(&self) -> impl Iterator<Item = E> {
         self.edge_set.iter()
     }
     fn in_edges(&self, v: &V) -> impl Iterator<Item = E> {
