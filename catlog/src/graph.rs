@@ -123,17 +123,17 @@ where V: Eq, E: Eq, VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Column<Dom=
 
 impl<Col> ColumnarGraph<SkelFinSet,SkelFinSet,Col>
 where Col: Column<Dom=usize, Cod=usize> {
-    /// Adds and returns a new vertex.
+    /// Adds a new vertex to the graph and returns it.
     pub fn add_vertex(&mut self) -> usize {
         self.vertex_set.insert()
     }
 
-    /// Adds and returns `n` new vertices.
+    /// Adds `n` new vertices to the graphs and returns them.
     pub fn add_vertices(&mut self, n: usize) -> std::ops::Range<usize> {
         self.vertex_set.extend(n)
     }
 
-    /// Adds and returns a new edge.
+    /// Adds a new edge to the graph and returns it.
     pub fn add_edge(&mut self, src: usize, tgt: usize) -> usize {
         let e = self.edge_set.insert();
         self.set_src(e, src);
@@ -164,12 +164,17 @@ where Col: Column<Dom=usize, Cod=usize> {
 
 impl<V,E,Col> ColumnarGraph<HashFinSet<V>,HashFinSet<E>,Col>
 where V: Eq+Hash+Clone, E: Eq+Hash+Clone, Col: Column<Dom=E, Cod=V> {
-    /// Adds a vertex, returning whether the vertex is new.
+    /// Adds a vertex to the graph, returning whether the vertex is new.
     pub fn add_vertex(&mut self, v: V) -> bool {
         self.vertex_set.insert(v)
     }
 
-    /** Adds an edge, returning whether the edge is new.
+    /// Adds multiple vertices to the graph.
+    pub fn add_vertices<T>(&mut self, iter: T) where T: IntoIterator<Item = V> {
+        self.vertex_set.extend(iter)
+    }
+
+    /** Adds an edge to the graph, returning whether the edge is new.
 
     If the edge is not new, it source and target are updated.
     */
@@ -214,8 +219,7 @@ mod tests {
     fn hash_fin_graph() {
         let mut g: HashFinGraph<char,&str> = Default::default();
         assert!(g.add_vertex('x'));
-        assert!(g.add_vertex('y'));
-        assert!(g.add_vertex('z'));
+        g.add_vertices(['y', 'z'].into_iter());
         assert!(g.add_edge("f", 'x', 'y'));
         assert!(g.add_edge("g", 'y', 'z'));
         assert!(g.add_edge("fg", 'x', 'z'));

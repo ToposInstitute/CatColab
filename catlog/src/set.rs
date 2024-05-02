@@ -125,6 +125,12 @@ impl<T: Eq + Hash> Default for HashFinSet<T> {
     }
 }
 
+impl<T: Eq + Hash> Extend<T> for HashFinSet<T> {
+    fn extend<Iter>(&mut self, iter: Iter) where Iter: IntoIterator<Item = T> {
+        self.0.extend(iter)
+    }
+}
+
 impl<T: Eq + Hash> Set for HashFinSet<T> {
     type Elem = T;
 
@@ -171,12 +177,12 @@ mod tests {
         let mut s: HashFinSet<i32> = Default::default();
         assert!(s.is_empty());
         s.insert(3);
-        s.insert(5);
-        s.insert(7);
+        s.extend([5, 7].into_iter());
         assert!(!s.is_empty());
         assert_eq!(s.len(), 3);
-        assert!(!s.contains(&2));
         assert!(s.contains(&3));
+        assert!(s.contains(&7));
+        assert!(!s.contains(&2));
 
         let s = HashFinSet::new(HashSet::from([3, 5, 7]));
         let sum: i32 = s.iter().sum();

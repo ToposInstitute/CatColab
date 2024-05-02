@@ -8,4 +8,5 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-nonempty = "0.10.0"
+nonempty = "0.10"
+ref-cast = "1"
