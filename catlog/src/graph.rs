@@ -122,7 +122,7 @@ where V: Eq, E: Eq, VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Column<Dom=
 
 /** A skeletal finite graph with indexed source and target maps.
  */
-pub type SkelFinGraph = ColumnarGraph<SkelFinSet,SkelFinSet,VecIndexedColumn>;
+pub type SkelFinGraph = ColumnarGraph<SkelFinSet,SkelFinSet,SkelIndexedColumn>;
 
 impl<Col> ColumnarGraph<SkelFinSet,SkelFinSet,Col>
 where Col: Column<Dom=usize, Cod=usize> {

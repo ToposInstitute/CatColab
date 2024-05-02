@@ -149,7 +149,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn fin_set_skel() {
+    fn skel_fin_set() {
         let mut s: SkelFinSet = Default::default();
         assert!(s.is_empty());
         assert_eq!(s.insert(), 0);
@@ -167,7 +167,7 @@ mod tests {
     }
 
     #[test]
-    fn fin_set_hash() {
+    fn hash_fin_set() {
         let mut s: HashFinSet<i32> = Default::default();
         assert!(s.is_empty());
         s.insert(3);

@@ -1,4 +1,4 @@
-//! Data structures for mappings and columns, as in a data table.
+//! Data structures for mappings and columns, as found in data tables.
 
 use std::hash::Hash;
 use std::collections::hash_map::HashMap;
@@ -306,14 +306,15 @@ where Dom: Eq + Clone, Cod: Eq,
 
 /** An indexed column backed by an integer-valued vector.
 
-The domain and codomain of the column are both the natural numbers (`usize`).
+The column has the natural numbers (`usize`) as both its domain and codomain,
+making it suitable for use with skeletal finite sets.
 */
 #[derive(Clone)]
-pub struct VecIndexedColumn(
+pub struct SkelIndexedColumn(
     IndexedColumn<usize, usize, VecColumn<usize>, VecIndex<usize>>
 );
 
-impl VecIndexedColumn {
+impl SkelIndexedColumn {
     /// Creates a new vector-backed column from an existing vector.
     pub fn new(values: &[usize]) -> Self {
         let mut col: Self = Default::default();
@@ -324,11 +325,11 @@ impl VecIndexedColumn {
     }
 }
 
-impl Default for VecIndexedColumn {
+impl Default for SkelIndexedColumn {
     fn default() -> Self { Self {0: Default::default() } }
 }
 
-impl Mapping for VecIndexedColumn {
+impl Mapping for SkelIndexedColumn {
     type Dom = usize;
     type Cod = usize;
     fn apply(&self, x: &usize) -> Option<&usize> { self.0.apply(x) }
@@ -337,7 +338,7 @@ impl Mapping for VecIndexedColumn {
     fn is_set(&self, x: &usize) -> bool { self.0.is_set(x) }
 }
 
-impl Column for VecIndexedColumn {
+impl Column for SkelIndexedColumn {
     fn iter(&self) -> impl Iterator<Item=(usize,&usize)> { self.0.iter() }
     fn preimage(&self, y: &usize) -> impl Iterator<Item=usize> { self.0.preimage(y) }
 }
@@ -348,7 +349,7 @@ The domain of the column is the natural numbers (`usize`). Since the codomain is
 an arbitrary type (`T`), the index is implemented using a hash map.
 */
 #[derive(Clone)]
-pub struct IndexedVecColumn<T: Eq + Hash + Clone>(
+pub struct IndexedVecColumn<T: Eq+Hash+Clone>(
     IndexedColumn<usize, T, VecColumn<T>, HashIndex<usize,T>>
 );
 
@@ -381,6 +382,30 @@ impl<T: Eq+Hash+Clone> Column for IndexedVecColumn<T> {
     fn preimage(&self, y: &T) -> impl Iterator<Item=usize> { self.0.preimage(y) }
 }
 
+/// An indexed column backed by hash maps.
+#[derive(Clone)]
+pub struct IndexedHashColumn<K: Eq+Hash+Clone, V: Eq+Hash+Clone>(
+    IndexedColumn<K, V, HashColumn<K,V>, HashIndex<K,V>>
+);
+
+impl<K: Eq+Hash+Clone, V: Eq+Hash+Clone> Default for IndexedHashColumn<K,V> {
+    fn default() -> Self { Self { 0: Default::default() } }
+}
+
+impl<K: Eq+Hash+Clone, V: Eq+Hash+Clone> Mapping for IndexedHashColumn<K,V> {
+    type Dom = K;
+    type Cod = V;
+    fn apply(&self, x: &K) -> Option<&V> { self.0.apply(x) }
+    fn set(&mut self, x: K, y: V) -> Option<V> { self.0.set(x,y) }
+    fn unset(&mut self, x: &K) -> Option<V> { self.0.unset(x) }
+    fn is_set(&self, x: &K) -> bool { self.0.is_set(x) }
+}
+
+impl<K: Eq+Hash+Clone, V: Eq+Hash+Clone> Column for IndexedHashColumn<K,V> {
+    fn iter(&self) -> impl Iterator<Item=(K,&V)> { self.0.iter() }
+    fn preimage(&self, y: &V) -> impl Iterator<Item=K> { self.0.preimage(y) }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -401,29 +426,30 @@ mod tests {
 
     #[test]
     fn hash_column() {
-        let mut col: HashColumn<i32, &str> = Default::default();
-        col.set(3, "foo");
-        col.set(5, "bar");
-        col.set(7, "baz");
-        assert_eq!(col.apply(&7), Some(&"baz"));
-        assert_eq!(col.unset(&7), Some("baz"));
-        assert!(!col.is_set(&7));
-        col.set(7, "bar");
+        let mut col: HashColumn<char, &str> = Default::default();
+        col.set('a', "foo");
+        col.set('b', "bar");
+        col.set('c', "baz");
+        assert_eq!(col.apply(&'c'), Some(&"baz"));
+        assert_eq!(col.unset(&'c'), Some("baz"));
+        assert!(!col.is_set(&'c'));
+        col.set('c', "bar");
 
         let mut preimage: Vec<_> = col.preimage(&"bar").collect();
         preimage.sort();
-        assert_eq!(preimage, vec![5,7]);
+        assert_eq!(preimage, vec!['b','c']);
     }
 
     #[test]
-    fn vec_indexed_column() {
-        let mut col = VecIndexedColumn::new(&[1,3,5]);
+    fn skel_indexed_column() {
+        let mut col = SkelIndexedColumn::new(&[1,3,5]);
         assert!(col.is_set(&2));
         assert_eq!(col.apply(&2), Some(&5));
         let preimage: Vec<_> = col.preimage(&5).collect();
         assert_eq!(preimage, vec![2]);
 
         assert_eq!(col.set(0, 5), Some(1));
+        assert_eq!(col.preimage(&1).count(), 0);
         let mut preimage: Vec<_> = col.preimage(&5).collect();
         preimage.sort();
         assert_eq!(preimage, vec![0,2]);
@@ -438,8 +464,26 @@ mod tests {
         assert_eq!(preimage, vec![2]);
 
         assert_eq!(col.set(0, "baz"), Some("foo"));
+        assert_eq!(col.preimage(&"foo").count(), 0);
         let mut preimage: Vec<_> = col.preimage(&"baz").collect();
         preimage.sort();
         assert_eq!(preimage, vec![0,2]);
+    }
+
+    #[test]
+    fn indexed_hash_column() {
+        let mut col: IndexedHashColumn<char, &str> = Default::default();
+        col.set('a', "foo");
+        col.set('b', "bar");
+        col.set('c', "baz");
+        assert_eq!(col.apply(&'c'), Some(&"baz"));
+        let preimage: Vec<_> = col.preimage(&"baz").collect();
+        assert_eq!(preimage, vec!['c']);
+
+        assert_eq!(col.set('a', "baz"), Some("foo"));
+        assert_eq!(col.preimage(&"foo").count(), 0);
+        let mut preimage: Vec<_> = col.preimage(&"baz").collect();
+        preimage.sort();
+        assert_eq!(preimage, vec!['a','c']);
     }
 }
