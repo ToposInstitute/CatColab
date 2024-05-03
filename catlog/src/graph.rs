@@ -24,10 +24,10 @@ pub trait Graph {
     fn has_edge(&self, e: &Self::E) -> bool;
 
     /// Gets the source of an edge, assumed to be contained in the graph.
-    fn src<'a>(&'a self, e: &'a Self::E) -> &Self::V;
+    fn src(&self, e: &Self::E) -> Self::V;
 
     /// Gets the target of an edge, assumed to be contained in the graph.
-    fn tgt<'a>(&'a self, e: &'a Self::E) -> &Self::V;
+    fn tgt(&self, e: &Self::E) -> Self::V;
 }
 
 /** A graph with finitely many vertices and edges.
@@ -85,7 +85,8 @@ where V: Eq, E: Eq, VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Column<Dom=
 }
 
 impl<V,E,VSet,ESet,Col> Graph for ColumnarGraph<VSet,ESet,Col>
-where V: Eq, E: Eq, VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Column<Dom=E,Cod=V> {
+where V: Eq + Clone, E: Eq + Clone,
+      VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Column<Dom=E,Cod=V> {
     type V = V;
     type E = E;
 
@@ -95,16 +96,17 @@ where V: Eq, E: Eq, VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Column<Dom=
     fn has_edge(&self, e: &E) -> bool {
         self.edge_set.contains(e)
     }
-    fn src(&self, e: &E) -> &V {
-        self.get_src(e).expect("Source of edge should be defined")
+    fn src(&self, e: &E) -> V {
+        self.get_src(e).expect("Source of edge should be defined").clone()
     }
-    fn tgt(&self, e: &E) -> &V {
-        self.get_tgt(e).expect("Target of edge should be defined")
+    fn tgt(&self, e: &E) -> V {
+        self.get_tgt(e).expect("Target of edge should be defined").clone()
     }
 }
 
 impl<V,E,VSet,ESet,Col> FinGraph for ColumnarGraph<VSet,ESet,Col>
-where V: Eq, E: Eq, VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Column<Dom=E,Cod=V> {
+where V: Eq + Clone, E: Eq + Clone,
+      VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Column<Dom=E,Cod=V> {
     fn vertices(&self) -> impl Iterator<Item = V> {
         self.vertex_set.iter()
     }
@@ -209,8 +211,8 @@ mod tests {
         let g = SkelFinGraph::triangle();
         assert_eq!(g.nv(), 3);
         assert_eq!(g.ne(), 3);
-        assert_eq!(*g.src(&1), 1);
-        assert_eq!(*g.tgt(&1), 2);
+        assert_eq!(g.src(&1), 1);
+        assert_eq!(g.tgt(&1), 2);
         assert_eq!(g.out_edges(&0).collect::<Vec<_>>(), vec![0,2]);
         assert_eq!(g.in_edges(&2).collect::<Vec<_>>(), vec![1,2]);
     }
@@ -223,7 +225,7 @@ mod tests {
         assert!(g.add_edge("f", 'x', 'y'));
         assert!(g.add_edge("g", 'y', 'z'));
         assert!(g.add_edge("fg", 'x', 'z'));
-        assert_eq!(*g.src(&"fg"), 'x');
-        assert_eq!(*g.tgt(&"fg"), 'z');
+        assert_eq!(g.src(&"fg"), 'x');
+        assert_eq!(g.tgt(&"fg"), 'z');
     }
 }

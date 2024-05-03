@@ -42,10 +42,10 @@ pub trait Category {
     fn has_hom(&self, f: &Self::Hom) -> bool;
 
     /// Gets the domain of a morphism in the category.
-    fn dom<'a>(&'a self, f: &'a Self::Hom) -> &Self::Ob;
+    fn dom(&self, f: &Self::Hom) -> Self::Ob;
 
     /// Gets the codomain of a morphism in the category.
-    fn cod<'a>(&'a self, f: &'a Self::Hom) -> &Self::Ob;
+    fn cod(&self, f: &Self::Hom) -> Self::Ob;
 
     /// Composes a path of morphisms in the category.
     fn compose(&self, path: Path<Self::Ob,Self::Hom>) -> Self::Hom;
@@ -106,8 +106,8 @@ impl<Cat: FgCategory> Graph for GeneratingGraph<Cat> {
 
     fn has_vertex(&self, x: &Self::V) -> bool { self.0.has_ob_generator(x) }
     fn has_edge(&self, f: &Self::E) -> bool { self.0.has_hom_generator(f) }
-    fn src<'a>(&'a self, f: &'a Self::E) -> &Self::V { self.0.dom(f) }
-    fn tgt<'a>(&'a self, f: &'a Self::E) -> &Self::V { self.0.cod(f) }
+    fn src(&self, f: &Self::E) -> Self::V { self.0.dom(f) }
+    fn tgt(&self, f: &Self::E) -> Self::V { self.0.cod(f) }
 }
 
 impl<Cat: FgCategory> FinGraph for GeneratingGraph<Cat> {
@@ -145,8 +145,8 @@ impl<Cat: Category> Graph for UnderlyingGraph<Cat> {
 
     fn has_vertex(&self, x: &Self::V) -> bool { self.0.has_ob(x) }
     fn has_edge(&self, f: &Self::E) -> bool { self.0.has_hom(f) }
-    fn src<'a>(&'a self, f: &'a Self::E) -> &Self::V { self.0.dom(f) }
-    fn tgt<'a>(&'a self, f: &'a Self::E) -> &Self::V { self.0.cod(f) }
+    fn src(&self, f: &Self::E) -> Self::V { self.0.dom(f) }
+    fn tgt(&self, f: &Self::E) -> Self::V { self.0.cod(f) }
 }
 
 /** The free category on a graph.
@@ -163,7 +163,7 @@ impl<G> FreeCategory<G> {
     pub fn new(graph: G) -> Self { Self {0: graph} }
 }
 
-impl<G: Graph> Category for FreeCategory<G> {
+impl<G: Graph> Category for FreeCategory<G> where G::V: Clone {
     type Ob = G::V;
     type Hom = Path<G::V,G::E>;
 
@@ -184,16 +184,16 @@ impl<G: Graph> Category for FreeCategory<G> {
         }
     }
 
-    fn dom<'a>(&'a self, path: &'a Path<G::V,G::E>) -> &G::V {
+    fn dom(&self, path: &Path<G::V,G::E>) -> G::V {
         match path {
-            Path::Id(x) => x,
+            Path::Id(x) => x.clone(),
             Path::Seq(fs) => self.0.src(fs.first()),
         }
     }
 
-    fn cod<'a>(&'a self, path: &'a Path<G::V,G::E>) -> &G::V {
+    fn cod(&self, path: &Path<G::V,G::E>) -> G::V {
         match path {
-            Path::Id(x) => x,
+            Path::Id(x) => x.clone(),
             Path::Seq(fs) => self.0.tgt(fs.last()),
         }
     }
@@ -230,14 +230,14 @@ mod tests {
 
         let id = Path::Id(1);
         assert!(cat.has_hom(&id));
-        assert_eq!(*cat.dom(&id), 1);
-        assert_eq!(*cat.cod(&id), 1);
+        assert_eq!(cat.dom(&id), 1);
+        assert_eq!(cat.cod(&id), 1);
 
         let path = Path::Seq(nonempty![0,1]);
         assert!(cat.has_hom(&path));
         assert!(!cat.has_hom(&Path::Seq(nonempty![0,2])));
-        assert_eq!(*cat.dom(&path), 0);
-        assert_eq!(*cat.cod(&path), 2);
+        assert_eq!(cat.dom(&path), 0);
+        assert_eq!(cat.cod(&path), 2);
 
         let cat = FreeCategory(SkelFinGraph::path(5));
         let path = Path::Seq(nonempty![

@@ -84,16 +84,16 @@ impl<V,E> Category for FinCategory<V,E> where V: Eq+Hash+Clone, E: Eq+Hash+Clone
         }
     }
 
-    fn dom<'a>(&'a self, f: &'a Hom<V,E>) -> &Ob<V> {
-        Ob::ref_cast(match f {
-            Hom::Id(v) => v,
+    fn dom(&self, f: &Hom<V,E>) -> Ob<V> {
+        Ob(match f {
+            Hom::Id(v) => v.clone(),
             Hom::Generator(e) => self.generators.src(e),
         })
     }
 
-    fn cod<'a>(&'a self, f: &'a Hom<V,E>) -> &Ob<V> {
-        Ob::ref_cast(match f {
-            Hom::Id(v) => v,
+    fn cod(&self, f: &Hom<V,E>) -> Ob<V> {
+        Ob(match f {
+            Hom::Id(v) => v.clone(),
             Hom::Generator(e) => self.generators.tgt(e),
         })
     }
@@ -162,6 +162,8 @@ mod tests {
         sch_sgraph.add_hom_generator('i', 'E', 'E');
         assert_eq!(sch_sgraph.ob_generators().count(), 2);
         assert_eq!(sch_sgraph.hom_generators().count(), 3);
+        assert_eq!(sch_sgraph.dom(&Hom::Generator('t')), Ob('E'));
+        assert_eq!(sch_sgraph.cod(&Hom::Generator('t')), Ob('V'));
 
         sch_sgraph.set_composite('i', 'i', Hom::Id('E'));
         sch_sgraph.set_composite('i', 's', Hom::Generator('t'));
