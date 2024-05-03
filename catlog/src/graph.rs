@@ -1,5 +1,6 @@
 //! Graphs, finite and infinite.
 
+use std::hash::Hash;
 use crate::set::*;
 use crate::column::*;
 
@@ -23,20 +24,20 @@ pub trait Graph {
     fn has_edge(&self, e: &Self::E) -> bool;
 
     /// Gets the source of an edge, assumed to be contained in the graph.
-    fn src<'a>(&'a self, e: &'a Self::E) -> &Self::V;
+    fn src(&self, e: &Self::E) -> Self::V;
 
     /// Gets the target of an edge, assumed to be contained in the graph.
-    fn tgt<'a>(&'a self, e: &'a Self::E) -> &Self::V;
+    fn tgt(&self, e: &Self::E) -> Self::V;
 }
 
 /** A graph with finitely many vertices and edges.
  */
 pub trait FinGraph: Graph {
     /// Iterates over the vertices in the graph.
-    fn vertices(&self) -> impl ExactSizeIterator<Item = Self::V>;
+    fn vertices(&self) -> impl Iterator<Item = Self::V>;
 
     /// Iterates over the edges in the graph.
-    fn edges(&self) -> impl ExactSizeIterator<Item = Self::E>;
+    fn edges(&self) -> impl Iterator<Item = Self::E>;
 
     /// Iterates over the edges incoming to a vertex.
     fn in_edges(&self, v: &Self::V) -> impl Iterator<Item = Self::E>;
@@ -46,12 +47,12 @@ pub trait FinGraph: Graph {
 
     /// Number of vertices in the graph.
     fn nv(&self) -> usize {
-        self.vertices().len()
+        self.vertices().count()
     }
 
     /// Number of edges in the graph.
     fn ne(&self) -> usize {
-        self.edges().len()
+        self.edges().count()
     }
 }
 
@@ -84,7 +85,8 @@ where V: Eq, E: Eq, VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Column<Dom=
 }
 
 impl<V,E,VSet,ESet,Col> Graph for ColumnarGraph<VSet,ESet,Col>
-where V: Eq, E: Eq, VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Column<Dom=E,Cod=V> {
+where V: Eq + Clone, E: Eq + Clone,
+      VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Column<Dom=E,Cod=V> {
     type V = V;
     type E = E;
 
@@ -94,20 +96,21 @@ where V: Eq, E: Eq, VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Column<Dom=
     fn has_edge(&self, e: &E) -> bool {
         self.edge_set.contains(e)
     }
-    fn src(&self, e: &E) -> &V {
-        self.get_src(e).expect("Source of edge should be defined")
+    fn src(&self, e: &E) -> V {
+        self.get_src(e).expect("Source of edge should be defined").clone()
     }
-    fn tgt(&self, e: &E) -> &V {
-        self.get_tgt(e).expect("Target of edge should be defined")
+    fn tgt(&self, e: &E) -> V {
+        self.get_tgt(e).expect("Target of edge should be defined").clone()
     }
 }
 
 impl<V,E,VSet,ESet,Col> FinGraph for ColumnarGraph<VSet,ESet,Col>
-where V: Eq, E: Eq, VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Column<Dom=E,Cod=V> {
-    fn vertices(&self) -> impl ExactSizeIterator<Item = V> {
+where V: Eq + Clone, E: Eq + Clone,
+      VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Column<Dom=E,Cod=V> {
+    fn vertices(&self) -> impl Iterator<Item = V> {
         self.vertex_set.iter()
     }
-    fn edges(&self) -> impl ExactSizeIterator<Item = E> {
+    fn edges(&self) -> impl Iterator<Item = E> {
         self.edge_set.iter()
     }
     fn in_edges(&self, v: &V) -> impl Iterator<Item = E> {
@@ -120,23 +123,19 @@ where V: Eq, E: Eq, VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Column<Dom=
     fn ne(&self) -> usize { self.edge_set.len() }
 }
 
-/** A skeletal finite graph with indexed source and target maps.
- */
-pub type SkelFinGraph = ColumnarGraph<SkelFinSet,SkelFinSet,VecIndexedColumn>;
-
 impl<Col> ColumnarGraph<SkelFinSet,SkelFinSet,Col>
 where Col: Column<Dom=usize, Cod=usize> {
-    /// Adds and returns a new vertex.
+    /// Adds a new vertex to the graph and returns it.
     pub fn add_vertex(&mut self) -> usize {
         self.vertex_set.insert()
     }
 
-    /// Adds and returns `n` new vertices.
+    /// Adds `n` new vertices to the graphs and returns them.
     pub fn add_vertices(&mut self, n: usize) -> std::ops::Range<usize> {
         self.vertex_set.extend(n)
     }
 
-    /// Adds and returns a new edge.
+    /// Adds a new edge to the graph and returns it.
     pub fn add_edge(&mut self, src: usize, tgt: usize) -> usize {
         let e = self.edge_set.insert();
         self.set_src(e, src);
@@ -165,6 +164,44 @@ where Col: Column<Dom=usize, Cod=usize> {
     }
 }
 
+impl<V,E,Col> ColumnarGraph<HashFinSet<V>,HashFinSet<E>,Col>
+where V: Eq+Hash+Clone, E: Eq+Hash+Clone, Col: Column<Dom=E, Cod=V> {
+    /// Adds a vertex to the graph, returning whether the vertex is new.
+    pub fn add_vertex(&mut self, v: V) -> bool {
+        self.vertex_set.insert(v)
+    }
+
+    /// Adds multiple vertices to the graph.
+    pub fn add_vertices<T>(&mut self, iter: T) where T: IntoIterator<Item = V> {
+        self.vertex_set.extend(iter)
+    }
+
+    /** Adds an edge to the graph, returning whether the edge is new.
+
+    If the edge is not new, it source and target are updated.
+    */
+    pub fn add_edge(&mut self, e: E, src: V, tgt: V) -> bool {
+        self.set_src(e.clone(), src);
+        self.set_tgt(e.clone(), tgt);
+        self.edge_set.insert(e)
+    }
+}
+
+/** A skeletal finite graph with indexed source and target maps.
+
+The data structure is the same as the standard `Graph` type in
+[Catlab.jl](https://github.com/AlgebraicJulia/Catlab.jl).
+ */
+pub type SkelFinGraph = ColumnarGraph<SkelFinSet,SkelFinSet,SkelIndexedColumn>;
+
+/** A finite graph with indexed source and target maps, based on hash maps.
+
+Unlike in a skeletal finite graph, the vertices and edges can have arbitrary
+hashable types.
+*/
+pub type HashFinGraph<V,E> =
+    ColumnarGraph<HashFinSet<V>, HashFinSet<E>, IndexedHashColumn<E,V>>;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -174,9 +211,21 @@ mod tests {
         let g = SkelFinGraph::triangle();
         assert_eq!(g.nv(), 3);
         assert_eq!(g.ne(), 3);
-        assert_eq!(*g.src(&1), 1);
-        assert_eq!(*g.tgt(&1), 2);
+        assert_eq!(g.src(&1), 1);
+        assert_eq!(g.tgt(&1), 2);
         assert_eq!(g.out_edges(&0).collect::<Vec<_>>(), vec![0,2]);
         assert_eq!(g.in_edges(&2).collect::<Vec<_>>(), vec![1,2]);
+    }
+
+    #[test]
+    fn hash_fin_graph() {
+        let mut g: HashFinGraph<char,&str> = Default::default();
+        assert!(g.add_vertex('x'));
+        g.add_vertices(['y', 'z'].into_iter());
+        assert!(g.add_edge("f", 'x', 'y'));
+        assert!(g.add_edge("g", 'y', 'z'));
+        assert!(g.add_edge("fg", 'x', 'z'));
+        assert_eq!(g.src(&"fg"), 'x');
+        assert_eq!(g.tgt(&"fg"), 'z');
     }
 }

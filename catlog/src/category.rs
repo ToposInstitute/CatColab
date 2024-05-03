@@ -1,19 +1,20 @@
 /*! Categories: interfaces and basic constructions.
 
-We take the unbiased view of categories, meaning that composition is as an
-operation on paths of arbitrary finite length. This has several advantages.
-First, it takes as primitive the natural data structure for morphisms in a free
-category, or more generally in a presentation of a category. It also enables
-more intelligent strategies for evaluating composites in specific categories.
-For instance, when composing (multiplying) a sequence of matrices, it can be
-very inefficient to fold from the left or right by binary matrix multiplication.
-Instead, one might solve the "matrix chain multiplication" problem to find an
-optimal ordering.
+We take the unbiased view of categories, meaning that composition is an
+operation on [paths](Path) of arbitrary finite length. This has several
+advantages. First, it takes as primitive the natural data structure for
+morphisms in a free category, or more generally in a presentation of a category.
+It also enables more intelligent strategies for evaluating composites in
+specific categories. For instance, when composing (multiplying) a sequence of
+matrices, it can be very inefficient to just fold from the left or right,
+compared to multiplying in the [optimal
+order](https://en.wikipedia.org/wiki/Matrix_chain_multiplication).
 */
 
+use ref_cast::RefCast;
 use nonempty::{NonEmpty, nonempty};
 
-use crate::graph::Graph;
+use crate::graph::{Graph, FinGraph};
 
 /// A path in a graph or, more generally, in a category.
 #[derive(Clone,Debug,PartialEq,Eq)]
@@ -41,22 +42,86 @@ pub trait Category {
     fn has_hom(&self, f: &Self::Hom) -> bool;
 
     /// Gets the domain of a morphism in the category.
-    fn dom<'a>(&'a self, f: &'a Self::Hom) -> &Self::Ob;
+    fn dom(&self, f: &Self::Hom) -> Self::Ob;
 
     /// Gets the codomain of a morphism in the category.
-    fn cod<'a>(&'a self, f: &'a Self::Hom) -> &Self::Ob;
+    fn cod(&self, f: &Self::Hom) -> Self::Ob;
 
     /// Composes a path of morphisms in the category.
     fn compose(&self, path: Path<Self::Ob,Self::Hom>) -> Self::Hom;
+
+    /// Composes a pair of morphisms with compatible (co)domains.
+    fn compose2(&self, f: Self::Hom, g: Self::Hom) -> Self::Hom {
+        self.compose(Path::Seq::<Self::Ob,_>(nonempty![f, g]))
+    }
 
     /// Constructs the identity morphism at an object.
     fn id(&self, x: Self::Ob) -> Self::Hom {
         self.compose(Path::Id::<_,Self::Hom>(x))
     }
+}
 
-    /// Composes a consecutive pair of morphisms.
-    fn compose2(&self, f: Self::Hom, g: Self::Hom) -> Self::Hom {
-        self.compose(Path::Seq::<Self::Ob,_>(nonempty![f, g]))
+/** A finitely generated category with specified object and morphism generators.
+
+Such a category has finitely many objects, which usually coincide with the
+object generators (unless there are nontrivial equations between objects), but
+can have infinitely many morphisms.
+ */
+pub trait FgCategory: Category {
+    /// Is the object a generator of the category? Implies `self.has_ob(x)`.
+    fn has_ob_generator(&self, x: &Self::Ob) -> bool;
+
+    /// Is the morphism a generator of the category? Implies `self.has_hom(f)`.
+    fn has_hom_generator(&self, f: &Self::Hom) -> bool;
+
+    /// Iterates over object generators of the category.
+    fn ob_generators(&self) -> impl Iterator<Item = Self::Ob>;
+
+    /// Iterates over all morphism generators of the category.
+    fn hom_generators(&self) -> impl Iterator<Item = Self::Hom>;
+
+    /// Iterates over morphism generators with the given domain.
+    fn generators_with_dom(&self, x: &Self::Ob) -> impl Iterator<Item = Self::Hom>;
+
+    /// Iterates over morphism generators with the given codomain.
+    fn generators_with_cod(&self, x: &Self::Ob) -> impl Iterator<Item = Self::Hom>;
+}
+
+/** The generating graph of a finitely generated category.
+
+The vertices and edges of the graph are the object and morphism generators.
+*/
+#[derive(RefCast)]
+#[repr(transparent)]
+pub struct GeneratingGraph<Cat>(Cat);
+
+impl<Cat> GeneratingGraph<Cat> {
+    /// Constructs the generating graph of the given category.
+    pub fn new(category: Cat) -> Self { Self {0: category} }
+}
+
+impl<Cat: FgCategory> Graph for GeneratingGraph<Cat> {
+    type V = Cat::Ob;
+    type E = Cat::Hom;
+
+    fn has_vertex(&self, x: &Self::V) -> bool { self.0.has_ob_generator(x) }
+    fn has_edge(&self, f: &Self::E) -> bool { self.0.has_hom_generator(f) }
+    fn src(&self, f: &Self::E) -> Self::V { self.0.dom(f) }
+    fn tgt(&self, f: &Self::E) -> Self::V { self.0.cod(f) }
+}
+
+impl<Cat: FgCategory> FinGraph for GeneratingGraph<Cat> {
+    fn vertices(&self) -> impl Iterator<Item = Self::V> {
+        self.0.ob_generators()
+    }
+    fn edges(&self) -> impl Iterator<Item = Self::E> {
+        self.0.hom_generators()
+    }
+    fn in_edges(&self, x: &Self::V) -> impl Iterator<Item = Self::E> {
+        self.0.generators_with_cod(x)
+    }
+    fn out_edges(&self, x: &Self::V) -> impl Iterator<Item = Self::E> {
+        self.0.generators_with_dom(x)
     }
 }
 
@@ -65,10 +130,12 @@ pub trait Category {
 The vertices and edges of the graph are the objects and morphisms of the
 category, respectively.
  */
+#[derive(RefCast)]
+#[repr(transparent)]
 pub struct UnderlyingGraph<Cat>(Cat);
 
 impl<Cat> UnderlyingGraph<Cat> {
-    /// Creates the underlying graph of the given category.
+    /// Constructs the underlying graph of the given category.
     pub fn new(category: Cat) -> Self { Self {0: category} }
 }
 
@@ -78,23 +145,25 @@ impl<Cat: Category> Graph for UnderlyingGraph<Cat> {
 
     fn has_vertex(&self, x: &Self::V) -> bool { self.0.has_ob(x) }
     fn has_edge(&self, f: &Self::E) -> bool { self.0.has_hom(f) }
-    fn src<'a>(&'a self, f: &'a Self::E) -> &Self::V { self.0.dom(f) }
-    fn tgt<'a>(&'a self, f: &'a Self::E) -> &Self::V { self.0.cod(f) }
+    fn src(&self, f: &Self::E) -> Self::V { self.0.dom(f) }
+    fn tgt(&self, f: &Self::E) -> Self::V { self.0.cod(f) }
 }
 
 /** The free category on a graph.
 
 The objects and morphisms of the free category are the vertices and *paths* in
-the graph, respectively. Paths compose by concatentation.
+the graph, respectively. Paths compose by concatenation.
  */
+#[derive(RefCast)]
+#[repr(transparent)]
 pub struct FreeCategory<G>(G);
 
 impl<G> FreeCategory<G> {
-    /// Creates the free category on the given graph.
+    /// Constructs the free category on the given graph.
     pub fn new(graph: G) -> Self { Self {0: graph} }
 }
 
-impl<G: Graph> Category for FreeCategory<G> {
+impl<G: Graph> Category for FreeCategory<G> where G::V: Clone {
     type Ob = G::V;
     type Hom = Path<G::V,G::E>;
 
@@ -115,16 +184,16 @@ impl<G: Graph> Category for FreeCategory<G> {
         }
     }
 
-    fn dom<'a>(&'a self, path: &'a Path<G::V,G::E>) -> &G::V {
+    fn dom(&self, path: &Path<G::V,G::E>) -> G::V {
         match path {
-            Path::Id(x) => x,
+            Path::Id(x) => x.clone(),
             Path::Seq(fs) => self.0.src(fs.first()),
         }
     }
 
-    fn cod<'a>(&'a self, path: &'a Path<G::V,G::E>) -> &G::V {
+    fn cod(&self, path: &Path<G::V,G::E>) -> G::V {
         match path {
-            Path::Id(x) => x,
+            Path::Id(x) => x.clone(),
             Path::Seq(fs) => self.0.tgt(fs.last()),
         }
     }
@@ -161,14 +230,14 @@ mod tests {
 
         let id = Path::Id(1);
         assert!(cat.has_hom(&id));
-        assert_eq!(*cat.dom(&id), 1);
-        assert_eq!(*cat.cod(&id), 1);
+        assert_eq!(cat.dom(&id), 1);
+        assert_eq!(cat.cod(&id), 1);
 
         let path = Path::Seq(nonempty![0,1]);
         assert!(cat.has_hom(&path));
         assert!(!cat.has_hom(&Path::Seq(nonempty![0,2])));
-        assert_eq!(*cat.dom(&path), 0);
-        assert_eq!(*cat.cod(&path), 2);
+        assert_eq!(cat.dom(&path), 0);
+        assert_eq!(cat.cod(&path), 2);
 
         let cat = FreeCategory(SkelFinGraph::path(5));
         let path = Path::Seq(nonempty![

@@ -2,7 +2,8 @@
 
 #![warn(missing_docs)]
 
-pub mod category;
+pub mod set;
 pub mod column;
 pub mod graph;
-pub mod set;
+pub mod category;
+pub mod fin_category;
