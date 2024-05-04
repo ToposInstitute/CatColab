@@ -14,6 +14,7 @@ order](https://en.wikipedia.org/wiki/Matrix_chain_multiplication).
 use ref_cast::RefCast;
 use nonempty::{NonEmpty, nonempty};
 
+use crate::set::{Set, FinSet};
 use crate::graph::{Graph, FinGraph};
 
 /// A path in a graph or, more generally, in a category.
@@ -61,67 +62,55 @@ pub trait Category {
     }
 }
 
-/** A finitely generated category with specified object and morphism generators.
-
-Such a category has finitely many objects, which usually coincide with the
-object generators (unless there are nontrivial equations between objects), but
-can have infinitely many morphisms.
- */
-pub trait FgCategory: Category {
-    /// Is the object a generator of the category? Implies `self.has_ob(x)`.
-    fn has_ob_generator(&self, x: &Self::Ob) -> bool;
-
-    /// Is the morphism a generator of the category? Implies `self.has_hom(f)`.
-    fn has_hom_generator(&self, f: &Self::Hom) -> bool;
-
-    /// Iterates over object generators of the category.
-    fn ob_generators(&self) -> impl Iterator<Item = Self::Ob>;
-
-    /// Iterates over all morphism generators of the category.
-    fn hom_generators(&self) -> impl Iterator<Item = Self::Hom>;
-
-    /// Iterates over morphism generators with the given domain.
-    fn generators_with_dom(&self, x: &Self::Ob) -> impl Iterator<Item = Self::Hom>;
-
-    /// Iterates over morphism generators with the given codomain.
-    fn generators_with_cod(&self, x: &Self::Ob) -> impl Iterator<Item = Self::Hom>;
-}
-
-/** The generating graph of a finitely generated category.
-
-The vertices and edges of the graph are the object and morphism generators.
-*/
+/// The set of objects of a category.
 #[derive(RefCast)]
 #[repr(transparent)]
-pub struct GeneratingGraph<Cat>(Cat);
+pub struct ObSet<Cat>(Cat);
 
-impl<Cat> GeneratingGraph<Cat> {
-    /// Constructs the generating graph of the given category.
+impl<Cat> ObSet<Cat> {
+    /// Extracts the set of objects of the given category.
     pub fn new(category: Cat) -> Self { Self {0: category} }
 }
 
-impl<Cat: FgCategory> Graph for GeneratingGraph<Cat> {
-    type V = Cat::Ob;
-    type E = Cat::Hom;
+impl<Cat: Category> Set for ObSet<Cat> {
+    type Elem = Cat::Ob;
 
-    fn has_vertex(&self, x: &Self::V) -> bool { self.0.has_ob_generator(x) }
-    fn has_edge(&self, f: &Self::E) -> bool { self.0.has_hom_generator(f) }
-    fn src(&self, f: &Self::E) -> Self::V { self.0.dom(f) }
-    fn tgt(&self, f: &Self::E) -> Self::V { self.0.cod(f) }
+    fn contains(&self, x: &Cat::Ob) -> bool { self.0.has_ob(x) }
 }
 
-impl<Cat: FgCategory> FinGraph for GeneratingGraph<Cat> {
-    fn vertices(&self) -> impl Iterator<Item = Self::V> {
-        self.0.ob_generators()
-    }
-    fn edges(&self) -> impl Iterator<Item = Self::E> {
-        self.0.hom_generators()
-    }
-    fn in_edges(&self, x: &Self::V) -> impl Iterator<Item = Self::E> {
-        self.0.generators_with_cod(x)
-    }
-    fn out_edges(&self, x: &Self::V) -> impl Iterator<Item = Self::E> {
-        self.0.generators_with_dom(x)
+/** The discrete category on a set.
+
+The objects of the category are the elements of the set, and the only morphisms
+are the identities, which can thus be identified with the objects.
+ */
+#[derive(RefCast)]
+#[repr(transparent)]
+pub struct DiscreteCategory<S>(S);
+
+impl<S> DiscreteCategory<S> {
+    /// Constructs the discrete category on the given set.
+    pub fn new(set: S) -> Self { Self {0: set} }
+}
+
+impl<S: Set> Category for DiscreteCategory<S> where S::Elem: Clone {
+    type Ob = S::Elem;
+    type Hom = S::Elem;
+
+    fn has_ob(&self, x: &S::Elem) -> bool { self.0.contains(x) }
+    fn has_hom(&self, f: &S::Elem) -> bool { self.0.contains(f) }
+    fn dom(&self, x: &S::Elem) -> S::Elem { x.clone() }
+    fn cod(&self, x: &S::Elem) -> S::Elem { x.clone() }
+
+    fn compose(&self, path: Path<S::Elem,S::Elem>) -> S::Elem {
+        match path {
+            Path::Id(x) => x,
+            Path::Seq(xs) => {
+                let x = xs.head;
+                assert!(xs.tail.into_iter().all(|y| x == y),
+                        "Cannot compose identities on different objects");
+                x
+            }
+        }
     }
 }
 
@@ -135,7 +124,7 @@ category, respectively.
 pub struct UnderlyingGraph<Cat>(Cat);
 
 impl<Cat> UnderlyingGraph<Cat> {
-    /// Constructs the underlying graph of the given category.
+    /// Extracts the underlying graph of the given category.
     pub fn new(category: Cat) -> Self { Self {0: category} }
 }
 
@@ -218,10 +207,101 @@ impl<G: Graph> Category for FreeCategory<G> where G::V: Clone {
     } 
 }
 
+/** A finitely generated category with specified object and morphism generators.
+
+Such a category has finitely many objects, which usually coincide with the
+object generators (unless there are nontrivial equations between objects), but
+can have infinitely many morphisms.
+ */
+pub trait FgCategory: Category {
+    /// Is the object a generator of the category? Implies `self.has_ob(x)`.
+    fn has_ob_generator(&self, x: &Self::Ob) -> bool;
+
+    /// Is the morphism a generator of the category? Implies `self.has_hom(f)`.
+    fn has_hom_generator(&self, f: &Self::Hom) -> bool;
+
+    /// Iterates over object generators of the category.
+    fn ob_generators(&self) -> impl Iterator<Item = Self::Ob>;
+
+    /// Iterates over all morphism generators of the category.
+    fn hom_generators(&self) -> impl Iterator<Item = Self::Hom>;
+
+    /// Iterates over morphism generators with the given domain.
+    fn generators_with_dom(&self, x: &Self::Ob) -> impl Iterator<Item = Self::Hom>;
+
+    /// Iterates over morphism generators with the given codomain.
+    fn generators_with_cod(&self, x: &Self::Ob) -> impl Iterator<Item = Self::Hom>;
+}
+
+impl<S: FinSet> FgCategory for DiscreteCategory<S> where S::Elem: Clone {
+    fn has_ob_generator(&self, x: &S::Elem) -> bool { self.0.contains(x) }
+    fn has_hom_generator(&self, _: &S::Elem) -> bool { false }
+    fn ob_generators(&self) -> impl Iterator<Item=S::Elem> { self.0.iter() }
+    fn hom_generators(&self) -> impl Iterator<Item=S::Elem> {
+        std::iter::empty::<S::Elem>()
+    }
+    fn generators_with_dom(&self, _: &S::Elem) -> impl Iterator<Item=S::Elem> {
+        std::iter::empty::<S::Elem>()
+    }
+    fn generators_with_cod(&self, _: &S::Elem) -> impl Iterator<Item=S::Elem> {
+        std::iter::empty::<S::Elem>()
+    }
+}
+
+/** The generating graph of a finitely generated category.
+
+The vertices and edges of the graph are the object and morphism generators.
+*/
+#[derive(RefCast)]
+#[repr(transparent)]
+pub struct GeneratingGraph<Cat>(Cat);
+
+impl<Cat> GeneratingGraph<Cat> {
+    /// Constructs the generating graph of the given category.
+    pub fn new(category: Cat) -> Self { Self {0: category} }
+}
+
+impl<Cat: FgCategory> Graph for GeneratingGraph<Cat> {
+    type V = Cat::Ob;
+    type E = Cat::Hom;
+
+    fn has_vertex(&self, x: &Self::V) -> bool { self.0.has_ob_generator(x) }
+    fn has_edge(&self, f: &Self::E) -> bool { self.0.has_hom_generator(f) }
+    fn src(&self, f: &Self::E) -> Self::V { self.0.dom(f) }
+    fn tgt(&self, f: &Self::E) -> Self::V { self.0.cod(f) }
+}
+
+impl<Cat: FgCategory> FinGraph for GeneratingGraph<Cat> {
+    fn vertices(&self) -> impl Iterator<Item = Self::V> {
+        self.0.ob_generators()
+    }
+    fn edges(&self) -> impl Iterator<Item = Self::E> {
+        self.0.hom_generators()
+    }
+    fn in_edges(&self, x: &Self::V) -> impl Iterator<Item = Self::E> {
+        self.0.generators_with_cod(x)
+    }
+    fn out_edges(&self, x: &Self::V) -> impl Iterator<Item = Self::E> {
+        self.0.generators_with_dom(x)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::set::SkelFinSet;
     use crate::graph::SkelFinGraph;
+
+    #[test]
+    fn discrete_category() {
+        let cat = DiscreteCategory(SkelFinSet::new(3));
+        assert!(cat.has_ob(&2));
+        assert!(cat.has_hom(&2));
+        assert!(!cat.has_hom(&3));
+        assert_eq!(cat.dom(&1), 1);
+        assert_eq!(cat.cod(&1), 1);
+        assert_eq!(cat.compose(Path::Seq(nonempty![1, 1, 1])), 1);
+    }
 
     #[test]
     fn free_category() {
