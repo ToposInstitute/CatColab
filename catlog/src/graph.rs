@@ -1,6 +1,8 @@
 //! Graphs, finite and infinite.
 
 use std::hash::Hash;
+use thiserror::Error;
+
 use crate::set::*;
 use crate::column::*;
 
@@ -69,8 +71,21 @@ pub struct ColumnarGraph<VSet,ESet,Col> {
     tgt_map: Col,
 }
 
+/// An error in the state of a [`ColumnarGraph`].
+#[derive(Error,Debug)]
+pub enum ColumnarGraphInvalid<E> {
+    /// Edge with an invalid source.
+    #[error("Source of edge `{0}` is undefined or not contained in graph")]
+    Src(E),
+
+    /// Edge with an invalid target.
+    #[error("Target of edge `{0}` is undefined or not contained in graph")]
+    Tgt(E),
+}
+
 impl<V,E,VSet,ESet,Col> ColumnarGraph<VSet,ESet,Col>
-where V: Eq, E: Eq, VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Column<Dom=E,Cod=V> {
+where V: Eq, E: Eq,
+      VSet: Set<Elem=V>, ESet: Set<Elem=E>, Col: Mapping<Dom=E,Cod=V> {
     /// Gets the source of an edge, possibly undefined.
     pub fn get_src(&self, e: &E) -> Option<&V> { self.src_map.apply(e) }
 
@@ -82,11 +97,35 @@ where V: Eq, E: Eq, VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Column<Dom=
 
     /// Sets the target of an edge.
     pub fn set_tgt(&mut self, e: E, v: V) -> Option<V> { self.tgt_map.set(e,v) }
+
+    /// Is the edge's source defined and contained in the graph?
+    pub fn has_src(&self, e: &E) -> bool {
+        self.get_src(e).map(|v| self.vertex_set.contains(v)).unwrap_or(false)
+    }
+
+    /// Is the edge's target defined and contained in the graph?
+    pub fn has_tgt(&self, e: &E) -> bool {
+        self.get_tgt(e).map(|v| self.vertex_set.contains(v)).unwrap_or(false)
+    }
+}
+
+impl<V,E,VSet,ESet,Col> ColumnarGraph<VSet,ESet,Col>
+where V: Eq + Clone, E: Eq + Clone,
+      VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Column<Dom=E,Cod=V> {
+    /// Validates that the graph is well defined.
+    pub fn validate(&self) -> Result<(), Vec<ColumnarGraphInvalid<E>>> {
+        let mut errors = Vec::new();
+        self.edges().filter(|e| !self.has_src(e)).for_each(
+            |e| errors.push(ColumnarGraphInvalid::Src(e)));
+        self.edges().filter(|e| !self.has_tgt(e)).for_each(
+            |e| errors.push(ColumnarGraphInvalid::Tgt(e)));
+        if errors.is_empty() { Ok(()) } else { Err(errors) }
+    }
 }
 
 impl<V,E,VSet,ESet,Col> Graph for ColumnarGraph<VSet,ESet,Col>
 where V: Eq + Clone, E: Eq + Clone,
-      VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Column<Dom=E,Cod=V> {
+      VSet: Set<Elem=V>, ESet: Set<Elem=E>, Col: Mapping<Dom=E,Cod=V> {
     type V = V;
     type E = E;
 
@@ -158,7 +197,7 @@ where Col: Column<Dom=usize, Cod=usize> {
     #[cfg(test)]
     pub fn triangle() -> Self where Col: Default {
         let mut g: Self = Default::default();
-        g.add_vertex(); g.add_vertex(); g.add_vertex();
+        g.add_vertices(3);
         g.add_edge(0,1); g.add_edge(1,2); g.add_edge(0,2);
         g
     }
@@ -227,5 +266,15 @@ mod tests {
         assert!(g.add_edge("fg", 'x', 'z'));
         assert_eq!(g.src(&"fg"), 'x');
         assert_eq!(g.tgt(&"fg"), 'z');
+    }
+
+    #[test]
+    fn validate_columnar_graph() {
+        let mut g = SkelFinGraph::triangle();
+        assert!(g.validate().is_ok());
+        g.set_src(2, 3); // Vertex 3 doesn't exist yet.
+        assert!(g.validate().is_err());
+        g.add_vertex();
+        assert!(g.validate().is_ok());
     }
 }

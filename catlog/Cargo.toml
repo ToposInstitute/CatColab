@@ -10,3 +10,4 @@ edition = "2021"
 [dependencies]
 nonempty = "0.10"
 ref-cast = "1"
+thiserror = "1"
