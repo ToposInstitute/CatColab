@@ -2,6 +2,9 @@
 
 use std::hash::Hash;
 use std::collections::hash_map::HashMap;
+use thiserror::Error;
+
+use super::set::{Set,FinSet};
 
 /** A functional mapping.
 
@@ -9,7 +12,7 @@ A mapping takes values of type [`Dom`](Self::Dom) to values of type
 [`Cod`](Self::Cod). Unlike a function, a mapping need not be defined on its
 whole domain. A mapping is thus more like a partial function, but it does not
 actually know its domain of definition. If needed, that information should be
-provided separately, say as a [`Set`](crate::set::Set).
+provided separately, preferably as a [`Set`].
 
 Neither the domain nor the codomain of the mapping are assumed to be finite.
  */
@@ -39,6 +42,28 @@ pub trait Mapping {
     fn is_set(&self, x: &Self::Dom) -> bool {
         self.apply(x).is_some()
     }
+
+    /// Validates that the mapping restricts to a function on a finite domain.
+    fn validate_is_function<D,C>(&self, dom: &D, cod: &C) -> Result<(), Vec<NotFunctional<Self::Dom>>>
+    where D: FinSet<Elem = Self::Dom>, C: Set<Elem = Self::Cod> {
+        let errors: Vec<_> = self.iter_not_functional(dom, cod).collect();
+        if errors.is_empty() { Ok(()) } else { Err(errors) }
+    }
+
+    /// Iterates over failures of the mapping to restrict to a function.
+    fn iter_not_functional<D,C>(&self, dom: &D, cod: &C) -> impl Iterator<Item = NotFunctional<Self::Dom>>
+    where D: FinSet<Elem = Self::Dom>, C: Set<Elem = Self::Cod> {
+        dom.iter().filter_map(|x| {
+            match self.apply(&x) {
+                Some(y) => if cod.contains(&y) {
+                    None
+                } else {
+                    Some(NotFunctional::Cod(x))
+                }
+                None => Some(NotFunctional::Dom(x))
+            }
+        })
+    }
 }
 
 /** A mapping with finite support.
@@ -58,6 +83,26 @@ pub trait Column: Mapping {
     */
     fn preimage(&self, y: &Self::Cod) -> impl Iterator<Item = Self::Dom> {
         self.iter().filter(|&(_, z)| *z == *y).map(|(x,_)| x)
+    }
+}
+
+/// A failure of a mapping to restrict to a function on some domain.
+#[derive(Error,Debug,PartialEq,Eq)]
+pub enum NotFunctional<T> {
+    /// The mapping is not defined at a point in the domain.
+    #[error("Mapping not defined at point `{0}` in domain")]
+    Dom(T),
+
+    /// The image of a point in the domain is not contained in the codomain.
+    #[error("Image of mapping at point `{0}` is not in codomain")]
+    Cod(T),
+}
+
+impl<T> NotFunctional<T> {
+    pub(crate) fn take(self) -> T {
+        match self {
+            NotFunctional::Dom(x) | NotFunctional::Cod(x) => x
+        }
     }
 }
 
@@ -412,6 +457,7 @@ where K: Eq+Hash+Clone, V: Eq+Hash+Clone {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::set::SkelFinSet;
 
     #[test]
     fn vec_column() {
@@ -488,5 +534,15 @@ mod tests {
         let mut preimage: Vec<_> = col.preimage(&"baz").collect();
         preimage.sort();
         assert_eq!(preimage, vec!['a','c']);
+    }
+
+    #[test]
+    fn validate_column() {
+        let col = VecColumn::new(vec![1, 2, 4]);
+        let validate = |m, n|
+          col.validate_is_function(&SkelFinSet::new(m), &SkelFinSet::new(n));
+        assert!(validate(3, 5).is_ok());
+        assert_eq!(validate(4, 5).unwrap_err(), vec![NotFunctional::Dom::<usize>(3)]);
+        assert_eq!(validate(3, 4).unwrap_err(), vec![NotFunctional::Cod::<usize>(2)]);
     }
 }
