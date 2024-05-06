@@ -6,6 +6,7 @@
 pub mod set;
 pub mod column;
 pub mod graph;
+pub mod path;
 pub mod category;
 pub mod fin_category;
 

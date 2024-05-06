@@ -62,11 +62,11 @@ pub trait FinGraph: Graph {
 #[derive(Error,Debug)]
 pub enum GraphInvalid<E> {
     /// Edge with an invalid source.
-    #[error("Source of edge `{0}` is undefined or not contained in graph")]
+    #[error("Source of edge `{0}` is not set or not contained in graph")]
     Src(E),
 
     /// Edge with an invalid target.
-    #[error("Target of edge `{0}` is undefined or not contained in graph")]
+    #[error("Target of edge `{0}` is not set or not contained in graph")]
     Tgt(E),
 }
 

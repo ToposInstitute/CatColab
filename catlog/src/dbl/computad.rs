@@ -2,7 +2,7 @@
 
 use crate::set::{Set, FinSet};
 use crate::column::*;
-use crate::category::Path;
+use crate::path::Path;
 
 /** A double computad.
 

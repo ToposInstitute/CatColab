@@ -100,9 +100,7 @@ pub enum NotFunctional<T> {
 
 impl<T> NotFunctional<T> {
     pub(crate) fn take(self) -> T {
-        match self {
-            NotFunctional::Dom(x) | NotFunctional::Cod(x) => x
-        }
+        match self { NotFunctional::Dom(x) | NotFunctional::Cod(x) => x }
     }
 }
 
