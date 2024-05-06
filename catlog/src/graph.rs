@@ -132,10 +132,10 @@ where V: Eq + Clone, E: Eq + Clone,
         self.edge_set.contains(e)
     }
     fn src(&self, e: &E) -> V {
-        self.get_src(e).expect("Source of edge should be defined").clone()
+        self.get_src(e).expect("Source of edge should be set").clone()
     }
     fn tgt(&self, e: &E) -> V {
-        self.get_tgt(e).expect("Target of edge should be defined").clone()
+        self.get_tgt(e).expect("Target of edge should be set").clone()
     }
 }
 
