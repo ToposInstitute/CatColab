@@ -2,7 +2,7 @@
  */
 
 use ref_cast::RefCast;
-use nonempty::{NonEmpty, nonempty};
+use nonempty::NonEmpty;
 
 use super::set::{Set, FinSet};
 use super::graph::{Graph, FinGraph};
@@ -44,12 +44,12 @@ pub trait Category {
 
     /// Composes a pair of morphisms with compatible (co)domains.
     fn compose2(&self, f: Self::Hom, g: Self::Hom) -> Self::Hom {
-        self.compose(Path::Seq::<Self::Ob,_>(nonempty![f, g]))
+        self.compose(Path::pair(f, g))
     }
 
     /// Constructs the identity morphism at an object.
     fn id(&self, x: Self::Ob) -> Self::Hom {
-        self.compose(Path::Id::<_,Self::Hom>(x))
+        self.compose(Path::empty(x))
     }
 }
 
@@ -152,16 +152,7 @@ impl<G: Graph> Category for FreeCategory<G> where G::V: Clone {
     }
 
     fn has_hom(&self, path: &Path<G::V,G::E>) -> bool {
-        match path {
-            Path::Id(x) => self.0.has_vertex(x),
-            Path::Seq(fs) => {
-                // All the edges are exist in the graph...
-                fs.iter().all(|f| self.0.has_edge(f)) &&
-                // ...and their sources and target are compatible. Too strict?
-                std::iter::zip(fs.iter(), fs.iter().skip(1)).all(
-                    |(f,g)| self.0.tgt(f) == self.0.src(g))
-            }
-        }
+        path.contained_in(&self.0)
     }
 
     fn dom(&self, path: &Path<G::V,G::E>) -> G::V {
@@ -279,6 +270,8 @@ impl<Cat: FgCategory> FinGraph for GeneratingGraph<Cat> {
 
 #[cfg(test)]
 mod tests {
+    use nonempty::nonempty;
+
     use super::*;
     use crate::set::SkelFinSet;
     use crate::graph::SkelFinGraph;
