@@ -39,9 +39,22 @@ impl<V,E> Path<V,E> {
         Path::Id(v)
     }
 
+    /// Constructs a path with a single edge.
+    pub fn single(e: E) -> Self {
+        Path::Seq(NonEmpty::singleton(e))
+    }
+
     /// Constructs a pair of consecutive edges, or path of length 2.
     pub fn pair(e: E, f: E) -> Self {
         Path::Seq(nonempty![e, f])
+    }
+
+    /// Length of path.
+    pub fn len(&self) -> usize {
+        match self {
+            Path::Id(_) => 0,
+            Path::Seq(edges) => edges.len(),
+        }
     }
 
     /// Is the path contained in the given graph?
@@ -49,11 +62,11 @@ impl<V,E> Path<V,E> {
     where V: Eq, G: Graph<V=V, E=E> {
         match self {
             Path::Id(v) => graph.has_vertex(v),
-            Path::Seq(es) => {
+            Path::Seq(edges) => {
                 // All the edges are exist in the graph...
-                es.iter().all(|e| graph.has_edge(e)) &&
+                edges.iter().all(|e| graph.has_edge(e)) &&
                 // ...and their sources and target are compatible. Too strict?
-                std::iter::zip(es.iter(), es.iter().skip(1)).all(
+                std::iter::zip(edges.iter(), edges.iter().skip(1)).all(
                     |(e,f)| graph.tgt(e) == graph.src(f))
             }
         }

@@ -1,7 +1,12 @@
 //! Double computads, the most general analogue of graphs for double categories.
 
-use crate::set::{Set, FinSet};
+use ref_cast::RefCast;
+use thiserror::Error;
+
+use crate::validate::Validate;
+use crate::set::*;
 use crate::column::*;
+use crate::graph::*;
 use crate::path::Path;
 
 /** A double computad.
@@ -17,17 +22,17 @@ bicategories.
 pub trait DblComputad {
     /// Type of vertices in the computad, generating objects in a double
     /// category.
-    type V;
+    type V: Eq;
 
     /// Type of edges in the computad, generating arrows in a double category.
-    type E;
+    type E: Eq;
 
     /// Type of "pro-edges" in the computad, generating proarrows in a double
     /// category.
-    type ProE;
+    type ProE: Eq;
 
     /// Type of cells in the computad.
-    type Cell;
+    type Cell: Eq;
 
     /// Does the vertex belong to the computad?
     fn has_vertex(&self, v: &Self::V) -> bool;
@@ -89,11 +94,32 @@ pub trait FinDblComputad: DblComputad {
 Sets and columns are assumed to have the same type whenever that makes sense.
 There is no reason for this except to avoid an explosion of type parameters.
 */
+#[derive(Clone,Default)]
 pub struct ColumnarDblComputad<S,Col1,Col2> {
     vertex_set: S, edge_set: S, proedge_set: S, cell_set: S,
     dom_map: Col1, cod_map: Col1, src_map: Col1, tgt_map: Col1,
     cell_dom_map: Col2, cell_cod_map: Col2,
     cell_src_map: Col2, cell_tgt_map: Col2,
+}
+
+/// An invalid assignment in a columnar double computad.
+#[derive(Error,Debug)]
+pub enum ColumnarDblComputadInvalid<T> {
+    /// Edge with an invalid domain.
+    #[error("Domain of edge `{0}` is not set or not contained in graph")]
+    Dom(T),
+
+    /// Edge with an invalid codomain.
+    #[error("Codomain of edge `{0}` is not set or not contained in graph")]
+    Cod(T),
+
+    /// Proedge with an invalid source.
+    #[error("Source of proedge `{0}` is not set or not contained in graph")]
+    Src(T),
+
+    /// Proedge with an invalid target.
+    #[error("Target of proedge `{0}` is not set or not contained in graph")]
+    Tgt(T),
 }
 
 impl<S,Col1,Col2> DblComputad for ColumnarDblComputad<S,Col1,Col2>
@@ -146,4 +172,165 @@ where S: FinSet, S::Elem: Clone,
     fn edges(&self) -> impl Iterator<Item=Self::E> { self.edge_set.iter() }
     fn proedges(&self) -> impl Iterator<Item=Self::ProE> { self.proedge_set.iter() }
     fn cells(&self) -> impl Iterator<Item=Self::Cell> { self.cell_set.iter() }
+}
+
+impl<S,Col1,Col2> Validate for ColumnarDblComputad<S,Col1,Col2>
+where S: FinSet, S::Elem: Clone, Col1: Column<Dom=S::Elem, Cod=S::Elem>,
+      Col2: Column<Dom=S::Elem, Cod=Path<S::Elem,S::Elem>> {
+    type ValidationError = ColumnarDblComputadInvalid<S::Elem>;
+
+    fn iter_invalid(&self) -> impl Iterator<Item = Self::ValidationError> {
+        type Invalid<T> = ColumnarDblComputadInvalid<T>;
+
+        let edge_graph = EdgeGraph::ref_cast(self);
+        let edges_invalid = edge_graph.iter_invalid().map(|err| {
+            match err {
+                ColumnarGraphInvalid::Src(e) => Invalid::Dom(e),
+                ColumnarGraphInvalid::Tgt(e) => Invalid::Cod(e),
+            }
+        });
+
+        let proedge_graph = ProedgeGraph::ref_cast(self);
+        let proedges_invalid = proedge_graph.iter_invalid().map(|err| {
+            match err {
+                ColumnarGraphInvalid::Src(e) => Invalid::Src(e),
+                ColumnarGraphInvalid::Tgt(e) => Invalid::Tgt(e),
+            }
+        });
+
+        edges_invalid.chain(proedges_invalid)
+    }
+}
+
+/// The underlying graph of vertices and edges in a double computad.
+#[derive(RefCast)]
+#[repr(transparent)]
+pub struct EdgeGraph<Cptd>(Cptd);
+
+impl<Cptd> EdgeGraph<Cptd> {
+    /// Extracts the underlying graph of the double computad.
+    pub fn new(cptd: Cptd) -> Self { Self {0: cptd} }
+}
+
+impl<Cptd: DblComputad> Graph for EdgeGraph<Cptd> {
+    type V = Cptd::V;
+    type E = Cptd::E;
+
+    fn has_vertex(&self, v: &Self::V) -> bool { self.0.has_vertex(v) }
+    fn has_edge(&self, e: &Self::E) -> bool { self.0.has_edge(e) }
+    fn src(&self, e: &Self::E) -> Self::V { self.0.dom(e) }
+    fn tgt(&self, e: &Self::E) -> Self::V { self.0.cod(e) }
+}
+
+impl<S,Col1,Col2> Validate for EdgeGraph<ColumnarDblComputad<S,Col1,Col2>>
+where S: FinSet, Col1: Column<Dom=S::Elem, Cod=S::Elem> {
+    type ValidationError = ColumnarGraphInvalid<S::Elem>;
+
+    fn iter_invalid(&self) -> impl Iterator<Item = Self::ValidationError> {
+        let (eset, vset) = (&self.0.edge_set, &self.0.vertex_set);
+        let srcs = self.0.dom_map.iter_not_functional(eset, vset).map(
+            |e| ColumnarGraphInvalid::Src(e.take()));
+        let tgts = self.0.cod_map.iter_not_functional(eset, vset).map(
+            |e| ColumnarGraphInvalid::Tgt(e.take()));
+        srcs.chain(tgts)
+    }
+}
+
+/// The underlying graph of vertices and proedges in a double computad.
+#[derive(RefCast)]
+#[repr(transparent)]
+pub struct ProedgeGraph<Cptd>(Cptd);
+
+impl<Cptd> ProedgeGraph<Cptd> {
+    /// Extracts the underlying graph of the double computad.
+    pub fn new(cptd: Cptd) -> Self { Self {0: cptd} }
+}
+
+impl<Cptd: DblComputad> Graph for ProedgeGraph<Cptd> {
+    type V = Cptd::V;
+    type E = Cptd::ProE;
+
+    fn has_vertex(&self, v: &Self::V) -> bool { self.0.has_vertex(v) }
+    fn has_edge(&self, e: &Self::E) -> bool { self.0.has_proedge(e) }
+    fn src(&self, e: &Self::E) -> Self::V { self.0.src(e) }
+    fn tgt(&self, e: &Self::E) -> Self::V { self.0.tgt(e) }
+}
+
+impl<S,Col1,Col2> Validate for ProedgeGraph<ColumnarDblComputad<S,Col1,Col2>>
+where S: FinSet, Col1: Column<Dom=S::Elem, Cod=S::Elem> {
+    type ValidationError = ColumnarGraphInvalid<S::Elem>;
+
+    fn iter_invalid(&self) -> impl Iterator<Item = Self::ValidationError> {
+        let (eset, vset) = (&self.0.proedge_set, &self.0.vertex_set);
+        let srcs = self.0.src_map.iter_not_functional(eset, vset).map(
+            |e| ColumnarGraphInvalid::Src(e.take()));
+        let tgts = self.0.tgt_map.iter_not_functional(eset, vset).map(
+            |e| ColumnarGraphInvalid::Tgt(e.take()));
+        srcs.chain(tgts)
+    }
+}
+
+/// A path in a graph with skeletal vertex and edge sets.
+type SkelPath = Path<usize, usize>;
+
+/// A skeletal, finite double computad.
+pub type SkelDblComputad =
+    ColumnarDblComputad<SkelFinSet, VecColumn<usize>, VecColumn<SkelPath>>;
+
+impl<Col1,Col2> ColumnarDblComputad<SkelFinSet,Col1,Col2>
+where Col1: Column<Dom=usize, Cod=usize>,
+      Col2: Column<Dom=usize, Cod=SkelPath> {
+    /// Adds a new vertex to the computad and returns it.
+    pub fn add_vertex(&mut self) -> usize {
+        self.vertex_set.insert()
+    }
+
+    /// Adds a new edge to the computad and returns it.
+    pub fn add_edge(&mut self, dom: usize, cod: usize) -> usize {
+        let e = self.edge_set.insert();
+        self.dom_map.set(e, dom);
+        self.cod_map.set(e, cod);
+        e
+    }
+
+    /// Adds a new edge to the computad and returns it.
+    pub fn add_proedge(&mut self, src: usize, tgt: usize) -> usize {
+        let p = self.proedge_set.insert();
+        self.src_map.set(p, src);
+        self.tgt_map.set(p, tgt);
+        p
+    }
+
+    /// Adds a new cell to the computad and returns it.
+    pub fn add_cell(&mut self, dom: SkelPath, cod: SkelPath,
+                    src: SkelPath, tgt: SkelPath) -> usize {
+        let α = self.cell_set.insert();
+        self.cell_dom_map.set(α, dom);
+        self.cell_cod_map.set(α, cod);
+        self.cell_src_map.set(α, src);
+        self.cell_tgt_map.set(α, tgt);
+        α
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn skel_dbl_computad() {
+        // The signature for monads (Lambert & Patterson 2024, Theory 3.8).
+        let mut sig_monad: SkelDblComputad = Default::default();
+        let x = sig_monad.add_vertex();
+        let t = sig_monad.add_edge(x, x);
+        let μ = sig_monad.add_cell(Path::Id(x), Path::Id(x),
+                                   Path::pair(t,t), Path::single(t));
+        let _η = sig_monad.add_cell(Path::Id(x), Path::Id(x),
+                                    Path::Id(x), Path::single(t));
+        assert_eq!(sig_monad.cell_dom(&μ), SkelPath::Id(x));
+        assert_eq!(sig_monad.cell_cod(&μ), SkelPath::Id(x));
+        assert_eq!(sig_monad.cell_src(&μ).len(), 2);
+        assert_eq!(sig_monad.cell_tgt(&μ).len(), 1);
+        assert!(sig_monad.validate().is_ok());
+    }
 }

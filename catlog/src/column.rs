@@ -4,7 +4,7 @@ use std::hash::Hash;
 use std::collections::hash_map::HashMap;
 use thiserror::Error;
 
-use super::set::{Set,FinSet};
+use super::set::{Set, FinSet};
 
 /** A functional mapping.
 
