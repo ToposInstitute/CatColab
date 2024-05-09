@@ -37,7 +37,7 @@ graphs, and symmetric reflexive graphs are all finite.
  */
 #[derive(Clone)]
 pub struct FinCategory<V,E> where V: Eq+Hash+Clone, E: Eq+Hash+Clone {
-    generators: HashFinGraph<V,E>,
+    generators: HashGraph<V,E>,
     compose_map: HashColumn<(E,E), Hom<V,E>>,
 }
 

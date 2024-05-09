@@ -63,11 +63,11 @@ impl<V,E> Path<V,E> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::graph::SkelFinGraph;
+    use crate::graph::SkelGraph;
 
     #[test]
     fn path_contained_in_graph() {
-        let g = SkelFinGraph::triangle();
+        let g = SkelGraph::triangle();
         assert!(Path::Id(2).contained_in(&g));
         assert!(!Path::Id(3).contained_in(&g));
         assert!(Path::pair(0,1).contained_in(&g));

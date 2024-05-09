@@ -274,7 +274,7 @@ mod tests {
 
     use super::*;
     use crate::set::SkelFinSet;
-    use crate::graph::SkelFinGraph;
+    use crate::graph::SkelGraph;
 
     #[test]
     fn discrete_category() {
@@ -289,7 +289,7 @@ mod tests {
 
     #[test]
     fn free_category() {
-        let cat = FreeCategory(SkelFinGraph::triangle());
+        let cat = FreeCategory(SkelGraph::triangle());
         assert!(cat.has_ob(&2));
 
         let id = Path::Id(1);
@@ -303,7 +303,7 @@ mod tests {
         assert_eq!(cat.dom(&path), 0);
         assert_eq!(cat.cod(&path), 2);
 
-        let cat = FreeCategory(SkelFinGraph::path(5));
+        let cat = FreeCategory(SkelGraph::path(5));
         let path = Path::Seq(nonempty![
             Path::Id(0), Path::Seq(nonempty![0,1]),
             Path::Id(2), Path::Seq(nonempty![2,3]), Path::Id(4),

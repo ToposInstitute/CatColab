@@ -223,14 +223,14 @@ where V: Eq+Hash+Clone, E: Eq+Hash+Clone, Col: Column<Dom=E, Cod=V> {
 The data structure is the same as the standard `Graph` type in
 [Catlab.jl](https://github.com/AlgebraicJulia/Catlab.jl).
  */
-pub type SkelFinGraph = ColumnarGraph<SkelFinSet,SkelFinSet,SkelIndexedColumn>;
+pub type SkelGraph = ColumnarGraph<SkelFinSet,SkelFinSet,SkelIndexedColumn>;
 
 /** A finite graph with indexed source and target maps, based on hash maps.
 
 Unlike in a skeletal finite graph, the vertices and edges can have arbitrary
 hashable types.
 */
-pub type HashFinGraph<V,E> =
+pub type HashGraph<V,E> =
     ColumnarGraph<HashFinSet<V>, HashFinSet<E>, IndexedHashColumn<E,V>>;
 
 #[cfg(test)]
@@ -238,8 +238,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn skel_fin_graph() {
-        let g = SkelFinGraph::triangle();
+    fn skel_graph() {
+        let g = SkelGraph::triangle();
         assert_eq!(g.nv(), 3);
         assert_eq!(g.ne(), 3);
         assert_eq!(g.src(&1), 1);
@@ -249,8 +249,8 @@ mod tests {
     }
 
     #[test]
-    fn hash_fin_graph() {
-        let mut g: HashFinGraph<char,&str> = Default::default();
+    fn hash_graph() {
+        let mut g: HashGraph<char,&str> = Default::default();
         assert!(g.add_vertex('x'));
         g.add_vertices(['y', 'z'].into_iter());
         assert!(g.add_edge("f", 'x', 'y'));
@@ -262,7 +262,7 @@ mod tests {
 
     #[test]
     fn validate_columnar_graph() {
-        let mut g = SkelFinGraph::triangle();
+        let mut g = SkelGraph::triangle();
         assert!(g.validate().is_ok());
         g.set_src(2, 3); // Vertex 3 doesn't exist yet.
         assert!(g.validate().is_err());
