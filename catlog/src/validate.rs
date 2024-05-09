@@ -23,7 +23,7 @@ pub trait Validate {
 
     /// Validates the object.
     fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
-        match NonEmpty::<Self::ValidationError>::collect(self.iter_invalid()) {
+        match NonEmpty::collect(self.iter_invalid()) {
             Some(errors) => Err(errors),
             None => Ok(())
         }

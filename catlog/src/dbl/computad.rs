@@ -106,20 +106,36 @@ pub struct ColumnarDblComputad<S,Col1,Col2> {
 #[derive(Error,Debug)]
 pub enum ColumnarDblComputadInvalid<T> {
     /// Edge with an invalid domain.
-    #[error("Domain of edge `{0}` is not set or not contained in graph")]
+    #[error("Domain of edge `{0}` is not set or not contained in computad")]
     Dom(T),
 
     /// Edge with an invalid codomain.
-    #[error("Codomain of edge `{0}` is not set or not contained in graph")]
+    #[error("Codomain of edge `{0}` is not set or not contained in computad")]
     Cod(T),
 
     /// Proedge with an invalid source.
-    #[error("Source of proedge `{0}` is not set or not contained in graph")]
+    #[error("Source of proedge `{0}` is not set or not contained in computad")]
     Src(T),
 
     /// Proedge with an invalid target.
-    #[error("Target of proedge `{0}` is not set or not contained in graph")]
+    #[error("Target of proedge `{0}` is not set or not contained in computad")]
     Tgt(T),
+
+    /// Cell with an invalid domain.
+    #[error("Domain of cell `{0}` is not a path contained in the computad")]
+    CellDom(T),
+
+    /// Cell with an invalid codomain.
+    #[error("Codomain of cell `{0}` is not a path contained in the computad")]
+    CellCod(T),
+
+    /// Cell with an invalid source.
+    #[error("Source of cell `{0}` is not a path contained in the computad")]
+    CellSrc(T),
+
+    /// Cell with an invalid target.
+    #[error("Target of cell `{0}` is not a path contained in the computad")]
+    CellTgt(T),
 }
 
 impl<S,Col1,Col2> DblComputad for ColumnarDblComputad<S,Col1,Col2>
@@ -183,7 +199,7 @@ where S: FinSet, S::Elem: Clone, Col1: Column<Dom=S::Elem, Cod=S::Elem>,
         type Invalid<T> = ColumnarDblComputadInvalid<T>;
 
         let edge_graph = EdgeGraph::ref_cast(self);
-        let edges_invalid = edge_graph.iter_invalid().map(|err| {
+        let edge_errors = edge_graph.iter_invalid().map(|err| {
             match err {
                 ColumnarGraphInvalid::Src(e) => Invalid::Dom(e),
                 ColumnarGraphInvalid::Tgt(e) => Invalid::Cod(e),
@@ -191,14 +207,39 @@ where S: FinSet, S::Elem: Clone, Col1: Column<Dom=S::Elem, Cod=S::Elem>,
         });
 
         let proedge_graph = ProedgeGraph::ref_cast(self);
-        let proedges_invalid = proedge_graph.iter_invalid().map(|err| {
+        let proedge_errors = proedge_graph.iter_invalid().map(|err| {
             match err {
                 ColumnarGraphInvalid::Src(e) => Invalid::Src(e),
                 ColumnarGraphInvalid::Tgt(e) => Invalid::Tgt(e),
             }
         });
 
-        edges_invalid.chain(proedges_invalid)
+        let cell_errors = self.cell_set.iter().flat_map(|α| {
+            let mut errors = Vec::new();
+            if !self.cell_dom_map.apply(&α).map_or(false, |path| {
+                path.contained_in(proedge_graph)
+            }) {
+                errors.push(Invalid::CellDom(α.clone()));
+            }
+            if !self.cell_cod_map.apply(&α).map_or(false, |path| {
+                path.contained_in(proedge_graph)
+            }) {
+                errors.push(Invalid::CellCod(α.clone()));
+            }
+            if !self.cell_src_map.apply(&α).map_or(false, |path| {
+                path.contained_in(edge_graph)
+            }) {
+                errors.push(Invalid::CellSrc(α.clone()));
+            }
+            if !self.cell_tgt_map.apply(&α).map_or(false, |path| {
+                path.contained_in(edge_graph)
+            }) {
+                errors.push(Invalid::CellTgt(α.clone()));
+            }
+            errors.into_iter()
+        });
+
+        edge_errors.chain(proedge_errors).chain(cell_errors)
     }
 }
 

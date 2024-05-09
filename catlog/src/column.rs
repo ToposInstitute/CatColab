@@ -2,6 +2,7 @@
 
 use std::hash::Hash;
 use std::collections::hash_map::HashMap;
+use nonempty::NonEmpty;
 use thiserror::Error;
 
 use super::set::{Set, FinSet};
@@ -44,10 +45,12 @@ pub trait Mapping {
     }
 
     /// Validates that the mapping restricts to a function on a finite domain.
-    fn validate_is_function<D,C>(&self, dom: &D, cod: &C) -> Result<(), Vec<NotFunctional<Self::Dom>>>
+    fn validate_is_function<D,C>(&self, dom: &D, cod: &C) -> Result<(), NonEmpty<NotFunctional<Self::Dom>>>
     where D: FinSet<Elem = Self::Dom>, C: Set<Elem = Self::Cod> {
-        let errors: Vec<_> = self.iter_not_functional(dom, cod).collect();
-        if errors.is_empty() { Ok(()) } else { Err(errors) }
+        match NonEmpty::collect(self.iter_not_functional(dom, cod)) {
+            Some(errors) => Err(errors),
+            None => Ok(())
+        }
     }
 
     /// Iterates over failures of the mapping to restrict to a function.
@@ -540,7 +543,9 @@ mod tests {
         let validate = |m, n|
           col.validate_is_function(&SkelFinSet::new(m), &SkelFinSet::new(n));
         assert!(validate(3, 5).is_ok());
-        assert_eq!(validate(4, 5).unwrap_err(), vec![NotFunctional::Dom::<usize>(3)]);
-        assert_eq!(validate(3, 4).unwrap_err(), vec![NotFunctional::Cod::<usize>(2)]);
+        assert_eq!(validate(4, 5).unwrap_err(),
+                   NonEmpty::new(NotFunctional::Dom::<usize>(3)));
+        assert_eq!(validate(3, 4).unwrap_err(),
+                   NonEmpty::new(NotFunctional::Cod::<usize>(2)));
     }
 }
