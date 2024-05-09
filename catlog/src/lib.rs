@@ -3,6 +3,7 @@
 #![allow(mixed_script_confusables)] // Unicode identifiers.
 #![warn(missing_docs)]
 
+pub mod validate;
 pub mod set;
 pub mod column;
 pub mod graph;
