@@ -3,6 +3,7 @@
 use std::hash::Hash;
 use thiserror::Error;
 
+use crate::validate::Validate;
 use crate::set::*;
 use crate::column::*;
 
@@ -58,18 +59,6 @@ pub trait FinGraph: Graph {
     }
 }
 
-/// An invalid assignment in a graph.
-#[derive(Error,Debug)]
-pub enum GraphInvalid<E> {
-    /// Edge with an invalid source.
-    #[error("Source of edge `{0}` is undefined or not contained in graph")]
-    Src(E),
-
-    /// Edge with an invalid target.
-    #[error("Target of edge `{0}` is undefined or not contained in graph")]
-    Tgt(E),
-}
-
 /** A finite graph backed by columns.
 
 Such a graph is defined in the styles of "C-sets" by two
@@ -81,6 +70,18 @@ pub struct ColumnarGraph<VSet,ESet,Col> {
     edge_set: ESet,
     src_map: Col,
     tgt_map: Col,
+}
+
+/// An invalid assignment in a [columnar graph](ColumnarGraph).
+#[derive(Error,Debug)]
+pub enum ColumnarGraphInvalid<E> {
+    /// Edge with an invalid source.
+    #[error("Source of edge `{0}` is not set or not contained in graph")]
+    Src(E),
+
+    /// Edge with an invalid target.
+    #[error("Target of edge `{0}` is not set or not contained in graph")]
+    Tgt(E),
 }
 
 impl<V,E,VSet,ESet,Col> ColumnarGraph<VSet,ESet,Col>
@@ -99,22 +100,17 @@ where V: Eq, E: Eq,
     pub fn set_tgt(&mut self, e: E, v: V) -> Option<V> { self.tgt_map.set(e,v) }
 }
 
-impl<V,E,VSet,ESet,Col> ColumnarGraph<VSet,ESet,Col>
+impl<V,E,VSet,ESet,Col> Validate for ColumnarGraph<VSet,ESet,Col>
 where V: Eq + Clone, E: Eq + Clone,
       VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Column<Dom=E,Cod=V> {
-    /// Validates that the graph is well defined.
-    pub fn validate(&self) -> Result<(), Vec<GraphInvalid<E>>> {
-        let errors: Vec<_> = self.iter_invalid().collect();
-        if errors.is_empty() { Ok(()) } else { Err(errors) }
-    }
+    type ValidationError = ColumnarGraphInvalid<E>;
 
-    /// Iterates over invalid assignments in the graph.
-    pub fn iter_invalid<'a>(&'a self) -> impl Iterator<Item = GraphInvalid<E>> + 'a {
+    fn iter_invalid(&self) -> impl Iterator<Item = Self::ValidationError> {
         let (dom, cod) = (&self.edge_set, &self.vertex_set);
         let srcs = self.src_map.iter_not_functional(dom, cod).map(
-            |e| GraphInvalid::Src(e.take()));
+            |e| ColumnarGraphInvalid::Src(e.take()));
         let tgts = self.tgt_map.iter_not_functional(dom, cod).map(
-            |e| GraphInvalid::Tgt(e.take()));
+            |e| ColumnarGraphInvalid::Tgt(e.take()));
         srcs.chain(tgts)
     }
 }
@@ -132,10 +128,10 @@ where V: Eq + Clone, E: Eq + Clone,
         self.edge_set.contains(e)
     }
     fn src(&self, e: &E) -> V {
-        self.get_src(e).expect("Source of edge should be defined").clone()
+        self.get_src(e).expect("Source of edge should be set").clone()
     }
     fn tgt(&self, e: &E) -> V {
-        self.get_tgt(e).expect("Target of edge should be defined").clone()
+        self.get_tgt(e).expect("Target of edge should be set").clone()
     }
 }
 
@@ -227,14 +223,14 @@ where V: Eq+Hash+Clone, E: Eq+Hash+Clone, Col: Column<Dom=E, Cod=V> {
 The data structure is the same as the standard `Graph` type in
 [Catlab.jl](https://github.com/AlgebraicJulia/Catlab.jl).
  */
-pub type SkelFinGraph = ColumnarGraph<SkelFinSet,SkelFinSet,SkelIndexedColumn>;
+pub type SkelGraph = ColumnarGraph<SkelFinSet,SkelFinSet,SkelIndexedColumn>;
 
 /** A finite graph with indexed source and target maps, based on hash maps.
 
 Unlike in a skeletal finite graph, the vertices and edges can have arbitrary
 hashable types.
 */
-pub type HashFinGraph<V,E> =
+pub type HashGraph<V,E> =
     ColumnarGraph<HashFinSet<V>, HashFinSet<E>, IndexedHashColumn<E,V>>;
 
 #[cfg(test)]
@@ -242,8 +238,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn skel_fin_graph() {
-        let g = SkelFinGraph::triangle();
+    fn skel_graph() {
+        let g = SkelGraph::triangle();
         assert_eq!(g.nv(), 3);
         assert_eq!(g.ne(), 3);
         assert_eq!(g.src(&1), 1);
@@ -253,8 +249,8 @@ mod tests {
     }
 
     #[test]
-    fn hash_fin_graph() {
-        let mut g: HashFinGraph<char,&str> = Default::default();
+    fn hash_graph() {
+        let mut g: HashGraph<char,&str> = Default::default();
         assert!(g.add_vertex('x'));
         g.add_vertices(['y', 'z'].into_iter());
         assert!(g.add_edge("f", 'x', 'y'));
@@ -266,7 +262,7 @@ mod tests {
 
     #[test]
     fn validate_columnar_graph() {
-        let mut g = SkelFinGraph::triangle();
+        let mut g = SkelGraph::triangle();
         assert!(g.validate().is_ok());
         g.set_src(2, 3); // Vertex 3 doesn't exist yet.
         assert!(g.validate().is_err());

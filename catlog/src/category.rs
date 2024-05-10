@@ -2,39 +2,11 @@
  */
 
 use ref_cast::RefCast;
-use nonempty::{NonEmpty, nonempty};
+use nonempty::NonEmpty;
 
-use crate::set::{Set, FinSet};
-use crate::graph::{Graph, FinGraph};
-
-/** A path in a [graph](Graph) or a [category](Category).
-
-This definition by cases can be compared with the perhaps more obvious
-definition:
-
-```
-struct Path<V, E> {
-    start: V,
-    end: V, // Optional: more symmetric but also more redundant.
-    seq: Vec<E>,
-}
-```
-
-Not only does the single struct store redundant (hence possibly inconsistent)
-information when the sequence of edges is nonempty, one will often need to do a
-case analysis on the edge sequence anyway to determine whether, say,
-[`fold`](std::iter::Iterator::fold) can be called or the result of
-[`reduce`](std::iter::Iterator::reduce) is valid. Thus, it seems better to reify
-the two cases in the data structure itself.
-*/
-#[derive(Clone,Debug,PartialEq,Eq)]
-pub enum Path<V,E> {
-    /// The identity, or empty, path at a vertex.
-    Id(V),
-
-    /// A nontrivial path, comprising a *non-empty* vector of consecutive edges.
-    Seq(NonEmpty<E>)
-}
+use super::set::{Set, FinSet};
+use super::graph::{Graph, FinGraph};
+use super::path::Path;
 
 /** A category.
 
@@ -72,12 +44,12 @@ pub trait Category {
 
     /// Composes a pair of morphisms with compatible (co)domains.
     fn compose2(&self, f: Self::Hom, g: Self::Hom) -> Self::Hom {
-        self.compose(Path::Seq::<Self::Ob,_>(nonempty![f, g]))
+        self.compose(Path::pair(f, g))
     }
 
     /// Constructs the identity morphism at an object.
     fn id(&self, x: Self::Ob) -> Self::Hom {
-        self.compose(Path::Id::<_,Self::Hom>(x))
+        self.compose(Path::empty(x))
     }
 }
 
@@ -175,36 +147,12 @@ impl<G: Graph> Category for FreeCategory<G> where G::V: Clone {
     type Ob = G::V;
     type Hom = Path<G::V,G::E>;
 
-    fn has_ob(&self, x: &G::V) -> bool {
-        self.0.has_vertex(x)
-    }
-
+    fn has_ob(&self, x: &G::V) -> bool { self.0.has_vertex(x) }
     fn has_hom(&self, path: &Path<G::V,G::E>) -> bool {
-        match path {
-            Path::Id(x) => self.0.has_vertex(x),
-            Path::Seq(fs) => {
-                // All the edges are exist in the graph...
-                fs.iter().all(|f| self.0.has_edge(f)) &&
-                // ...and their sources and target are compatible. Too strict?
-                std::iter::zip(fs.iter(), fs.iter().skip(1)).all(
-                    |(f,g)| self.0.tgt(f) == self.0.src(g))
-            }
-        }
+        path.contained_in(&self.0)
     }
-
-    fn dom(&self, path: &Path<G::V,G::E>) -> G::V {
-        match path {
-            Path::Id(x) => x.clone(),
-            Path::Seq(fs) => self.0.src(fs.first()),
-        }
-    }
-
-    fn cod(&self, path: &Path<G::V,G::E>) -> G::V {
-        match path {
-            Path::Id(x) => x.clone(),
-            Path::Seq(fs) => self.0.tgt(fs.last()),
-        }
-    }
+    fn dom(&self, path: &Path<G::V,G::E>) -> G::V { path.src(&self.0) }
+    fn cod(&self, path: &Path<G::V,G::E>) -> G::V { path.tgt(&self.0) }
 
     fn compose(&self, path: Path<G::V,Path<G::V,G::E>>) -> Path<G::V,G::E> {
         match path {
@@ -307,9 +255,11 @@ impl<Cat: FgCategory> FinGraph for GeneratingGraph<Cat> {
 
 #[cfg(test)]
 mod tests {
+    use nonempty::nonempty;
+
     use super::*;
     use crate::set::SkelFinSet;
-    use crate::graph::SkelFinGraph;
+    use crate::graph::SkelGraph;
 
     #[test]
     fn discrete_category() {
@@ -324,7 +274,7 @@ mod tests {
 
     #[test]
     fn free_category() {
-        let cat = FreeCategory(SkelFinGraph::triangle());
+        let cat = FreeCategory(SkelGraph::triangle());
         assert!(cat.has_ob(&2));
 
         let id = Path::Id(1);
@@ -338,7 +288,7 @@ mod tests {
         assert_eq!(cat.dom(&path), 0);
         assert_eq!(cat.cod(&path), 2);
 
-        let cat = FreeCategory(SkelFinGraph::path(5));
+        let cat = FreeCategory(SkelGraph::path(5));
         let path = Path::Seq(nonempty![
             Path::Id(0), Path::Seq(nonempty![0,1]),
             Path::Id(2), Path::Seq(nonempty![2,3]), Path::Id(4),

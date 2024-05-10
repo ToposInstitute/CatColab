@@ -1,4 +1,8 @@
-//! Interfaces and wrappers to treat sets generically.
+/*! Sets, finite and infinite.
+
+This module provides interfaces and simple wrapper types to enable sets to be
+treated in a generic way.
+ */
 
 use std::ops::Range;
 use std::hash::Hash;
