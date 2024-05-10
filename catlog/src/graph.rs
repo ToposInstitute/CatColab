@@ -102,7 +102,7 @@ where V: Eq, E: Eq,
 
 impl<V,E,VSet,ESet,Col> Validate for ColumnarGraph<VSet,ESet,Col>
 where V: Eq + Clone, E: Eq + Clone,
-      VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Column<Dom=E,Cod=V> {
+      VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Mapping<Dom=E,Cod=V> {
     type ValidationError = ColumnarGraphInvalid<E>;
 
     fn iter_invalid(&self) -> impl Iterator<Item = Self::ValidationError> {
@@ -155,7 +155,7 @@ where V: Eq + Clone, E: Eq + Clone,
 }
 
 impl<Col> ColumnarGraph<SkelFinSet,SkelFinSet,Col>
-where Col: Column<Dom=usize, Cod=usize> {
+where Col: Mapping<Dom=usize, Cod=usize> {
     /// Adds a new vertex to the graph and returns it.
     pub fn add_vertex(&mut self) -> usize {
         self.vertex_set.insert()
@@ -196,7 +196,7 @@ where Col: Column<Dom=usize, Cod=usize> {
 }
 
 impl<V,E,Col> ColumnarGraph<HashFinSet<V>,HashFinSet<E>,Col>
-where V: Eq+Hash+Clone, E: Eq+Hash+Clone, Col: Column<Dom=E, Cod=V> {
+where V: Eq+Hash+Clone, E: Eq+Hash+Clone, Col: Mapping<Dom=E, Cod=V> {
     /// Adds a vertex to the graph, returning whether the vertex is new.
     pub fn add_vertex(&mut self, v: V) -> bool {
         self.vertex_set.insert(v)

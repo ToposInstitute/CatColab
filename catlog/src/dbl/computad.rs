@@ -198,8 +198,8 @@ where S: Set, S::Elem: Clone,
 
 impl<S,Col1,Col2> FinDblComputad for ColumnarDblComputad<S,Col1,Col2>
 where S: FinSet, S::Elem: Clone,
-      Col1: Column<Dom=S::Elem, Cod=S::Elem>,
-      Col2: Column<Dom=S::Elem, Cod=Path<S::Elem,S::Elem>> {
+      Col1: Mapping<Dom=S::Elem, Cod=S::Elem>,
+      Col2: Mapping<Dom=S::Elem, Cod=Path<S::Elem,S::Elem>> {
 
     fn vertices(&self) -> impl Iterator<Item=Self::V> { self.vertex_set.iter() }
     fn edges(&self) -> impl Iterator<Item=Self::E> { self.edge_set.iter() }
@@ -208,8 +208,9 @@ where S: FinSet, S::Elem: Clone,
 }
 
 impl<S,Col1,Col2> Validate for ColumnarDblComputad<S,Col1,Col2>
-where S: FinSet, S::Elem: Clone, Col1: Column<Dom=S::Elem, Cod=S::Elem>,
-      Col2: Column<Dom=S::Elem, Cod=Path<S::Elem,S::Elem>> {
+where S: FinSet, S::Elem: Clone,
+      Col1: Mapping<Dom=S::Elem, Cod=S::Elem>,
+      Col2: Mapping<Dom=S::Elem, Cod=Path<S::Elem,S::Elem>> {
     type ValidationError = ColumnarDblComputadInvalid<S::Elem>;
 
     fn iter_invalid(&self) -> impl Iterator<Item = Self::ValidationError> {
@@ -286,7 +287,7 @@ impl<Cptd: DblComputad> Graph for EdgeGraph<Cptd> {
 }
 
 impl<S,Col1,Col2> Validate for EdgeGraph<ColumnarDblComputad<S,Col1,Col2>>
-where S: FinSet, Col1: Column<Dom=S::Elem, Cod=S::Elem> {
+where S: FinSet, Col1: Mapping<Dom=S::Elem, Cod=S::Elem> {
     type ValidationError = ColumnarGraphInvalid<S::Elem>;
 
     fn iter_invalid(&self) -> impl Iterator<Item = Self::ValidationError> {
@@ -320,7 +321,7 @@ impl<Cptd: DblComputad> Graph for ProedgeGraph<Cptd> {
 }
 
 impl<S,Col1,Col2> Validate for ProedgeGraph<ColumnarDblComputad<S,Col1,Col2>>
-where S: FinSet, Col1: Column<Dom=S::Elem, Cod=S::Elem> {
+where S: FinSet, Col1: Mapping<Dom=S::Elem, Cod=S::Elem> {
     type ValidationError = ColumnarGraphInvalid<S::Elem>;
 
     fn iter_invalid(&self) -> impl Iterator<Item = Self::ValidationError> {
@@ -341,8 +342,8 @@ pub type SkelDblComputad =
     ColumnarDblComputad<SkelFinSet, VecColumn<usize>, VecColumn<SkelPath>>;
 
 impl<Col1,Col2> ColumnarDblComputad<SkelFinSet,Col1,Col2>
-where Col1: Column<Dom=usize, Cod=usize>,
-      Col2: Column<Dom=usize, Cod=SkelPath> {
+where Col1: Mapping<Dom=usize, Cod=usize>,
+      Col2: Mapping<Dom=usize, Cod=SkelPath> {
     /// Adds a new vertex to the computad and returns it.
     pub fn add_vertex(&mut self) -> usize {
         self.vertex_set.insert()
