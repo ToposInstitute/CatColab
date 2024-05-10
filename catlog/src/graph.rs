@@ -42,11 +42,23 @@ pub trait FinGraph: Graph {
     /// Iterates over the edges in the graph.
     fn edges(&self) -> impl Iterator<Item = Self::E>;
 
-    /// Iterates over the edges incoming to a vertex.
-    fn in_edges(&self, v: &Self::V) -> impl Iterator<Item = Self::E>;
+    /** Iterates over the edges incoming to a vertex.
 
-    /// Iterates over the edges outgoing from a vertex.
-    fn out_edges(&self, v: &Self::V) -> impl Iterator<Item = Self::E>;
+    Depending on whether the target map is indexed, this method can be cheap or
+    expensive.
+    */
+    fn in_edges(&self, v: &Self::V) -> impl Iterator<Item = Self::E> {
+        self.edges().filter(|e| self.tgt(e) == *v)
+    }
+
+    /** Iterates over the edges outgoing from a vertex.
+
+    Depending on whether the source map is indexed, this method can be cheap or
+    expensive.
+    */
+    fn out_edges(&self, v: &Self::V) -> impl Iterator<Item = Self::E> {
+        self.edges().filter(|e| self.src(e) == *v)
+    }
 
     /// Number of vertices in the graph.
     fn nv(&self) -> usize {

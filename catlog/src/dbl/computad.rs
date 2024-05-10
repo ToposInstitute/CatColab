@@ -286,6 +286,11 @@ impl<Cptd: DblComputad> Graph for EdgeGraph<Cptd> {
     fn tgt(&self, e: &Self::E) -> Self::V { self.0.cod(e) }
 }
 
+impl<Cptd: FinDblComputad> FinGraph for EdgeGraph<Cptd> {
+    fn vertices(&self) -> impl Iterator<Item = Self::V> { self.0.vertices() }
+    fn edges(&self) -> impl Iterator<Item = Self::E> { self.0.edges() }
+}
+
 impl<S,Col1,Col2> Validate for EdgeGraph<ColumnarDblComputad<S,Col1,Col2>>
 where S: FinSet, Col1: Mapping<Dom=S::Elem, Cod=S::Elem> {
     type ValidationError = ColumnarGraphInvalid<S::Elem>;
@@ -318,6 +323,11 @@ impl<Cptd: DblComputad> Graph for ProedgeGraph<Cptd> {
     fn has_edge(&self, e: &Self::E) -> bool { self.0.has_proedge(e) }
     fn src(&self, e: &Self::E) -> Self::V { self.0.src(e) }
     fn tgt(&self, e: &Self::E) -> Self::V { self.0.tgt(e) }
+}
+
+impl<Cptd: FinDblComputad> FinGraph for ProedgeGraph<Cptd> {
+    fn vertices(&self) -> impl Iterator<Item = Self::V> { self.0.vertices() }
+    fn edges(&self) -> impl Iterator<Item = Self::E> { self.0.proedges() }
 }
 
 impl<S,Col1,Col2> Validate for ProedgeGraph<ColumnarDblComputad<S,Col1,Col2>>
