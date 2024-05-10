@@ -149,6 +149,10 @@ pub enum ColumnarDblComputadInvalid<T> {
     /// Cell with an invalid target.
     #[error("Target of cell `{0}` is not a path contained in the computad")]
     CellTgt(T),
+
+    /// Cell does not satisfy compatibility equations making it a square.
+    #[error("Cell `{0}` is not a square: compatibility equations do not hold")]
+    NotSquare(T),
 }
 
 impl<S,Col1,Col2> DblComputad for ColumnarDblComputad<S,Col1,Col2>
@@ -228,28 +232,33 @@ where S: FinSet, S::Elem: Clone, Col1: Column<Dom=S::Elem, Cod=S::Elem>,
         });
 
         let cell_errors = self.cell_set.iter().flat_map(|α| {
-            let mut errors = Vec::new();
-            if !self.cell_dom_map.apply(&α).map_or(false, |path| {
-                path.contained_in(proedge_graph)
-            }) {
-                errors.push(Invalid::CellDom(α.clone()));
+            let m = self.cell_dom_map.apply(&α);
+            let n = self.cell_cod_map.apply(&α);
+            let f = self.cell_src_map.apply(&α);
+            let g = self.cell_tgt_map.apply(&α);
+            let mut errs = Vec::new();
+            if !m.map_or(false, |path| path.contained_in(proedge_graph)) {
+                errs.push(Invalid::CellDom(α.clone()));
             }
-            if !self.cell_cod_map.apply(&α).map_or(false, |path| {
-                path.contained_in(proedge_graph)
-            }) {
-                errors.push(Invalid::CellCod(α.clone()));
+            if !n.map_or(false, |path| path.contained_in(proedge_graph)) {
+                errs.push(Invalid::CellCod(α.clone()));
             }
-            if !self.cell_src_map.apply(&α).map_or(false, |path| {
-                path.contained_in(edge_graph)
-            }) {
-                errors.push(Invalid::CellSrc(α.clone()));
+            if !f.map_or(false, |path| path.contained_in(edge_graph)) {
+                errs.push(Invalid::CellSrc(α.clone()));
             }
-            if !self.cell_tgt_map.apply(&α).map_or(false, |path| {
-                path.contained_in(edge_graph)
-            }) {
-                errors.push(Invalid::CellTgt(α.clone()));
+            if !g.map_or(false, |path| path.contained_in(edge_graph)) {
+                errs.push(Invalid::CellTgt(α.clone()));
             }
-            errors.into_iter()
+            if errs.is_empty() {
+                let (m, n, f, g) = (m.unwrap(), n.unwrap(), f.unwrap(), g.unwrap());
+                if !(m.src(proedge_graph) == f.src(edge_graph) &&
+                     m.tgt(proedge_graph) == g.src(edge_graph) &&
+                     n.src(proedge_graph) == f.tgt(edge_graph) &&
+                     n.tgt(proedge_graph) == g.tgt(edge_graph)) {
+                    errs.push(Invalid::NotSquare(α));
+                }
+            }
+            errs.into_iter()
         });
 
         edge_errors.chain(proedge_errors).chain(cell_errors)

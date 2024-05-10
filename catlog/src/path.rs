@@ -49,11 +49,33 @@ impl<V,E> Path<V,E> {
         Path::Seq(nonempty![e, f])
     }
 
-    /// Length of path.
+    /// Length of the path.
     pub fn len(&self) -> usize {
         match self {
             Path::Id(_) => 0,
             Path::Seq(edges) => edges.len(),
+        }
+    }
+
+    /** Source of the path in the given graph.
+
+    Assumes that the path is [contained in](Path::contained_in) the graph.
+    */
+    pub fn src<G>(&self, graph: &G) -> V where V: Clone, G: Graph<V=V, E=E> {
+        match self {
+            Path::Id(v) => v.clone(),
+            Path::Seq(edges) => graph.src(edges.first()),
+        }
+    }
+
+    /** Target of the path in the given graph.
+
+    Assumes that the path is [contained in](Path::contained_in) the graph.
+    */
+    pub fn tgt<G>(&self, graph: &G) -> V where V: Clone, G: Graph<V=V, E=E> {
+        match self {
+            Path::Id(v) => v.clone(),
+            Path::Seq(edges) => graph.tgt(edges.last()),
         }
     }
 
@@ -79,11 +101,15 @@ mod tests {
     use crate::graph::SkelGraph;
 
     #[test]
-    fn path_contained_in_graph() {
+    fn path_in_graph() {
         let g = SkelGraph::triangle();
         assert!(Path::Id(2).contained_in(&g));
         assert!(!Path::Id(3).contained_in(&g));
         assert!(Path::pair(0,1).contained_in(&g));
         assert!(!Path::pair(1,0).contained_in(&g));
+
+        let path = Path::pair(0,1);
+        assert_eq!(path.src(&g), 0);
+        assert_eq!(path.tgt(&g), 2);
     }
 }

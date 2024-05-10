@@ -147,27 +147,12 @@ impl<G: Graph> Category for FreeCategory<G> where G::V: Clone {
     type Ob = G::V;
     type Hom = Path<G::V,G::E>;
 
-    fn has_ob(&self, x: &G::V) -> bool {
-        self.0.has_vertex(x)
-    }
-
+    fn has_ob(&self, x: &G::V) -> bool { self.0.has_vertex(x) }
     fn has_hom(&self, path: &Path<G::V,G::E>) -> bool {
         path.contained_in(&self.0)
     }
-
-    fn dom(&self, path: &Path<G::V,G::E>) -> G::V {
-        match path {
-            Path::Id(x) => x.clone(),
-            Path::Seq(fs) => self.0.src(fs.first()),
-        }
-    }
-
-    fn cod(&self, path: &Path<G::V,G::E>) -> G::V {
-        match path {
-            Path::Id(x) => x.clone(),
-            Path::Seq(fs) => self.0.tgt(fs.last()),
-        }
-    }
+    fn dom(&self, path: &Path<G::V,G::E>) -> G::V { path.src(&self.0) }
+    fn cod(&self, path: &Path<G::V,G::E>) -> G::V { path.tgt(&self.0) }
 
     fn compose(&self, path: Path<G::V,Path<G::V,G::E>>) -> Path<G::V,G::E> {
         match path {
