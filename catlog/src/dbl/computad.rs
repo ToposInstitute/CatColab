@@ -1,4 +1,25 @@
-//! Double computads, the most general analogue of graphs for double categories.
+/*! Double computads: interfaces and data structures.
+
+Double computads are like double graphs (two-dimensional cubical sets) except
+that the boundaries of cells can be paths of arbitrary finite length instead
+just single edges. A double computad is the most general data that generates a
+free double category.
+
+Though the term "double computad" is not standard, it is the obvious analogue
+for double categories of a [2-computad](https://ncatlab.org/nlab/show/computad),
+the generating data for a free 2-category or bicategory. Double computads have
+also been called "double signatures" (Delpeuch 2020, Definition 2.1). They are
+the special case of "double derivation schemes" where the categories of objects
+and arrows, and of objects and proarrows, are free categories (Fiore et al 2008,
+Definition 3.3).
+
+## References
+
+- Fiore, Paoli, Pronk, 2008: Model structures on the category of small double
+  categories ([arXiv](https://arxiv.org/abs/0711.0473))
+- Delpeuch, 2020: The word problem for double categories
+  ([arXiv](https://arxiv.org/abs/1907.09927))
+*/
 
 use ref_cast::RefCast;
 use thiserror::Error;
@@ -9,15 +30,7 @@ use crate::column::*;
 use crate::graph::*;
 use crate::path::Path;
 
-/** A double computad.
-
-Double computads are like double graphs (two-dimensional cubical sets) except
-that the boundaries of cells can be paths of arbitrary finite length instead
-just single edges. A double computad is the most general data that generates a
-free double category. Though the term "double computad" is not standard, it is
-the obvious analogue for double categories of a
-[2-computad](https://ncatlab.org/nlab/show/computad) for 2-categories or
-bicategories.
+/** A double computad, the generating data for a free double category.
  */
 pub trait DblComputad {
     /// Type of vertices in the computad, generating objects in a double
