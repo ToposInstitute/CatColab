@@ -1,9 +1,10 @@
 //! Graphs, finite and infinite.
 
 use std::hash::Hash;
+use nonempty::NonEmpty;
 use thiserror::Error;
 
-use crate::validate::Validate;
+use crate::validate::{self, Validate};
 use crate::set::*;
 use crate::column::*;
 
@@ -85,14 +86,14 @@ pub struct ColumnarGraph<VSet,ESet,Col> {
 }
 
 /// An invalid assignment in a [columnar graph](ColumnarGraph).
-#[derive(Error,Debug)]
+#[derive(Debug,Error)]
 pub enum ColumnarGraphInvalid<E> {
-    /// Edge with an invalid source.
-    #[error("Source of edge `{0}` is not set or not contained in graph")]
+    /// Edge with a source that is not a valid vertex.
+    #[error("Source of edge `{0}` is not a vertex in the graph")]
     Src(E),
 
-    /// Edge with an invalid target.
-    #[error("Target of edge `{0}` is not set or not contained in graph")]
+    /// Edge with a target that is not a valid vertex.
+    #[error("Target of edge `{0}` is not a vertex in the graph")]
     Tgt(E),
 }
 
@@ -245,6 +246,124 @@ hashable types.
 pub type HashGraph<V,E> =
     ColumnarGraph<HashFinSet<V>, HashFinSet<E>, IndexedHashColumn<E,V>>;
 
+/** A mapping between graphs.
+
+Like a [`Mapping`] is the data of a function without specified domain or
+codomain sets, a *graph mapping* is the data of a graph homomorphism without
+specified domain or codomain graphs. Put positively, a *graph morphism* is a
+pair of graphs with a compatible graph mapping.
+ */
+pub trait GraphMapping {
+    /// Type of vertices in domain graph.
+    type DomV: Eq;
+
+    /// Type of edges in domain graph.
+    type DomE: Eq;
+
+    /// Type of vertices in codomain graph.
+    type CodV: Eq;
+
+    /// Type of edges in codomain graph.
+    type CodE: Eq;
+
+    /// Applies the graph mapping at a vertex.
+    fn apply_vertex(&self, v: &Self::DomV) -> Option<&Self::CodV>;
+
+    /// Applies the graph mappting at an edge.
+    fn apply_edge(&self, e: &Self::DomE) -> Option<&Self::CodE>;
+
+    /// Validates that the mapping is a graph homomorphism between two graphs.
+    fn validate_is_morphism<Dom,Cod>(&self, dom: &Dom, cod: &Cod
+    ) -> Result<(), NonEmpty<GraphMorphismInvalid<Self::DomV, Self::DomE>>>
+    where Dom: FinGraph<V = Self::DomV, E = Self::DomE>,
+          Cod: Graph<V = Self::CodV, E = Self::CodE> {
+        validate::collect_errors(self.iter_morphism_invalid(dom, cod))
+    }
+
+    /// Iterates over failues of the mapping to be a graph homomorphism.
+    fn iter_morphism_invalid<Dom,Cod>(&self, dom: &Dom, cod: &Cod
+    ) -> impl Iterator<Item = GraphMorphismInvalid<Self::DomV, Self::DomE>>
+    where Dom: FinGraph<V = Self::DomV, E = Self::DomE>,
+          Cod: Graph<V = Self::CodV, E = Self::CodE> {
+
+        let vertex_errors = dom.vertices().filter_map(|v| {
+            if self.apply_vertex(&v).map_or(false, |w| cod.has_vertex(w)) {
+                None
+            } else {
+                Some(GraphMorphismInvalid::Vertex(v))
+            }
+        });
+
+        let edge_errors = dom.edges().filter_map(|e| {
+            if let Some(f) = self.apply_edge(&e) {
+                if cod.has_edge(f) {
+                    if self.apply_vertex(&dom.src(&e))
+                           .map_or(true, |v| *v == cod.src(f)) &&
+                        self.apply_vertex(&dom.tgt(&e))
+                            .map_or(true, |v| *v == cod.tgt(f)) {
+                        return None
+                    } else {
+                        return Some(GraphMorphismInvalid::NotHomomorphic(e))
+                    }
+                }
+            }
+            Some(GraphMorphismInvalid::Edge(e))
+        });
+
+        vertex_errors.chain(edge_errors)
+    }
+}
+
+/// A failure of a [mapping](GraphMapping) between graphs to define a graph
+/// homomorphism.
+#[derive(Debug,Error)]
+pub enum GraphMorphismInvalid<V,E> {
+    /// A vertex in the domain that is not mapped to a vertex in the codomain.
+    #[error("Vertex `{0}` is not mapped to a vertex in the codomain graph")]
+    Vertex(V),
+
+    /// An edge in the domain that is not mapped to an edge in the codomain.
+    #[error("Edge `{0}` is not mapped to an edge in the codomain graph")]
+    Edge(E),
+
+    /// An edge in the domain that does not have a homomorphic assignment.
+    #[error("Edge `{0}` has an assignment that is not homomorphic")]
+    NotHomomorphic(E),
+}
+
+/** A graph mapping backed by columns.
+
+That is, the data of the graph mapping is defined by two columns. The mapping
+can be between arbitrary graphs with compatible vertex and edge types.
+*/
+#[derive(Clone,Default)]
+pub struct ColumnarGraphMapping<ColV,ColE> {
+    vertex_map: ColV,
+    edge_map: ColE,
+}
+
+impl<ColV,ColE> ColumnarGraphMapping<ColV,ColE> {
+    /// Constructs a new graph mapping from existing columns.
+    pub fn new(vertex_map: ColV, edge_map: ColE) -> Self {
+        Self { vertex_map: vertex_map, edge_map: edge_map }
+    }
+}
+
+impl<ColV,ColE> GraphMapping for ColumnarGraphMapping<ColV,ColE>
+where ColV: Mapping, ColE: Mapping {
+    type DomV = ColV::Dom;
+    type DomE = ColE::Dom;
+    type CodV = ColV::Cod;
+    type CodE = ColE::Cod;
+
+    fn apply_vertex(&self, v: &Self::DomV) -> Option<&Self::CodV> {
+        self.vertex_map.apply(v)
+    }
+    fn apply_edge(&self, e: &Self::DomE) -> Option<&Self::CodE> {
+        self.edge_map.apply(e)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -280,5 +399,20 @@ mod tests {
         assert!(g.validate().is_err());
         assert_eq!(g.add_vertex(), 3); // OK, now it does!
         assert!(g.validate().is_ok());
+    }
+
+    #[test]
+    fn validate_graph_mapping() {
+        let g = SkelGraph::path(3);
+        let h = SkelGraph::path(4);
+        let f = ColumnarGraphMapping::new(
+            VecColumn::new(vec![1,2,3]), VecColumn::new(vec![1,2])
+        );
+        assert!(f.validate_is_morphism(&g, &h).is_ok());
+
+        let f = ColumnarGraphMapping::new(
+            VecColumn::new(vec![1,2,3]), VecColumn::new(vec![2,1])
+        ); // Not a homomorphism.
+        assert!(f.validate_is_morphism(&g, &h).is_err());
     }
 }

@@ -116,41 +116,41 @@ pub struct ColumnarDblComputad<S,Col1,Col2> {
 }
 
 /// An invalid assignment in a columnar double computad.
-#[derive(Error,Debug)]
+#[derive(Debug,Error)]
 pub enum ColumnarDblComputadInvalid<T> {
-    /// Edge with an invalid domain.
-    #[error("Domain of edge `{0}` is not set or not contained in computad")]
+    /// Edge with a domain that is not a valid vertex.
+    #[error("Domain of edge `{0}` is not a vertex in the computad")]
     Dom(T),
 
-    /// Edge with an invalid codomain.
-    #[error("Codomain of edge `{0}` is not set or not contained in computad")]
+    /// Edge with a codomain that is not a valid vertex.
+    #[error("Codomain of edge `{0}` is not a vertex in the computad")]
     Cod(T),
 
-    /// Proedge with an invalid source.
-    #[error("Source of proedge `{0}` is not set or not contained in computad")]
+    /// Proedge with a source that is not a valid vertex.
+    #[error("Source of proedge `{0}` is not a vertex in the computad")]
     Src(T),
 
-    /// Proedge with an invalid target.
-    #[error("Target of proedge `{0}` is not set or not contained in computad")]
+    /// Proedge with a target that is not a valid vertex.
+    #[error("Target of proedge `{0}` is not a vertex in the computad")]
     Tgt(T),
 
-    /// Cell with an invalid domain.
-    #[error("Domain of cell `{0}` is not a path contained in the computad")]
+    /// Cell with a domain that is not a valid path of proedges.
+    #[error("Domain of cell `{0}` is not a path of proedges in the computad")]
     CellDom(T),
 
-    /// Cell with an invalid codomain.
-    #[error("Codomain of cell `{0}` is not a path contained in the computad")]
+    /// Cell with a codomain that is not a valid path of proedges.
+    #[error("Codomain of cell `{0}` is not a path of proedges in the computad")]
     CellCod(T),
 
-    /// Cell with an invalid source.
-    #[error("Source of cell `{0}` is not a path contained in the computad")]
+    /// Cell with a source that is not a valid path of edges.
+    #[error("Source of cell `{0}` is not a path of edges in the computad")]
     CellSrc(T),
 
-    /// Cell with an invalid target.
-    #[error("Target of cell `{0}` is not a path contained in the computad")]
+    /// Cell with a target that is not a valid path of edges.
+    #[error("Target of cell `{0}` is not a path of edges in the computad")]
     CellTgt(T),
 
-    /// Cell does not satisfy compatibility equations making it a square.
+    /// Cell that is not a square due to failure of compatibility equations.
     #[error("Cell `{0}` is not a square: compatibility equations do not hold")]
     NotSquare(T),
 }
