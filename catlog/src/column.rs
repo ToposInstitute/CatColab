@@ -5,6 +5,7 @@ use std::collections::hash_map::HashMap;
 use nonempty::NonEmpty;
 use thiserror::Error;
 
+use crate::validate;
 use super::set::{Set, FinSet};
 
 /** A functional mapping.
@@ -45,17 +46,16 @@ pub trait Mapping {
     }
 
     /// Validates that the mapping restricts to a function on a finite domain.
-    fn validate_is_function<D,C>(&self, dom: &D, cod: &C) -> Result<(), NonEmpty<NotFunctional<Self::Dom>>>
-    where D: FinSet<Elem = Self::Dom>, C: Set<Elem = Self::Cod> {
-        match NonEmpty::collect(self.iter_not_functional(dom, cod)) {
-            Some(errors) => Err(errors),
-            None => Ok(())
-        }
+    fn validate_is_function<Dom,Cod>(&self, dom: &Dom, cod: &Cod
+    ) -> Result<(), NonEmpty<NotFunctional<Self::Dom>>>
+    where Dom: FinSet<Elem = Self::Dom>, Cod: Set<Elem = Self::Cod> {
+        validate::collect_errors(self.iter_not_functional(dom, cod))
     }
 
     /// Iterates over failures of the mapping to restrict to a function.
-    fn iter_not_functional<D,C>(&self, dom: &D, cod: &C) -> impl Iterator<Item = NotFunctional<Self::Dom>>
-    where D: FinSet<Elem = Self::Dom>, C: Set<Elem = Self::Cod> {
+    fn iter_not_functional<Dom,Cod>(&self, dom: &Dom, cod: &Cod
+    ) -> impl Iterator<Item = NotFunctional<Self::Dom>>
+    where Dom: FinSet<Elem = Self::Dom>, Cod: Set<Elem = Self::Cod> {
         dom.iter().filter_map(|x| {
             match self.apply(&x) {
                 Some(y) => if cod.contains(&y) {
@@ -89,8 +89,8 @@ pub trait Column: Mapping {
     }
 }
 
-/// A failure of a mapping to restrict to a function on some domain.
-#[derive(Error,Debug,PartialEq,Eq)]
+/// A failure of a mapping to restrict to a function between two sets.
+#[derive(Debug,Error,PartialEq,Eq)]
 pub enum NotFunctional<T> {
     /// The mapping is not defined at a point in the domain.
     #[error("Mapping not defined at point `{0}` in domain")]
