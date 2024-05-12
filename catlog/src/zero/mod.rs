@@ -2,3 +2,6 @@
 
 pub mod set;
 pub mod column;
+
+pub use self::set::*;
+pub use self::column::*;

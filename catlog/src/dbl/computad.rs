@@ -25,10 +25,8 @@ use ref_cast::RefCast;
 use thiserror::Error;
 
 use crate::validate::Validate;
-use crate::zero::set::*;
-use crate::zero::column::*;
-use crate::one::graph::*;
-use crate::one::path::Path;
+use crate::zero::*;
+use crate::one::{Graph, FinGraph, Path, ColumnarGraphInvalid};
 
 /** A double computad, the generating data for a free double category.
  */

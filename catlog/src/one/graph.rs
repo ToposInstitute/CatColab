@@ -5,8 +5,7 @@ use nonempty::NonEmpty;
 use thiserror::Error;
 
 use crate::validate::{self, Validate};
-use crate::zero::set::*;
-use crate::zero::column::*;
+use crate::zero::*;
 
 /** A graph.
 

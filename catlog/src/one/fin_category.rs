@@ -3,7 +3,7 @@
 use std::hash::Hash;
 use ref_cast::RefCast;
 
-use crate::zero::column::{Mapping, HashColumn};
+use crate::zero::{Mapping, HashColumn};
 use super::path::Path;
 use super::graph::*;
 use super::category::*;
