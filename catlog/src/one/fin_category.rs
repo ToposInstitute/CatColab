@@ -3,10 +3,10 @@
 use std::hash::Hash;
 use ref_cast::RefCast;
 
-use crate::column::{Mapping, HashColumn};
-use crate::path::Path;
-use crate::graph::*;
-use crate::category::*;
+use crate::zero::{Mapping, HashColumn};
+use super::path::Path;
+use super::graph::*;
+use super::category::*;
 
 /** Object in a finite category.
 

@@ -458,7 +458,7 @@ where K: Eq+Hash+Clone, V: Eq+Hash+Clone {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::set::SkelFinSet;
+    use super::super::set::SkelFinSet;
 
     #[test]
     fn vec_column() {

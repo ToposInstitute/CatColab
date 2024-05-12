@@ -2,9 +2,9 @@
 
 use nonempty::{NonEmpty, nonempty};
 
-use crate::graph::Graph;
+use super::graph::Graph;
 
-/** A path in a [graph](crate::graph::Graph) or [category](crate::category::Category).
+/** A path in a [graph](Graph) or [category](crate::one::category::Category).
 
 This definition by cases can be compared with the perhaps more obvious
 definition:
@@ -98,7 +98,7 @@ impl<V,E> Path<V,E> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::graph::SkelGraph;
+    use super::super::graph::SkelGraph;
 
     #[test]
     fn path_in_graph() {
