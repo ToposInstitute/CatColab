@@ -4,11 +4,7 @@
 #![warn(missing_docs)]
 
 pub mod validate;
-pub mod set;
-pub mod column;
-pub mod graph;
-pub mod path;
-pub mod category;
-pub mod fin_category;
 
+pub mod zero;
+pub mod one;
 pub mod dbl;

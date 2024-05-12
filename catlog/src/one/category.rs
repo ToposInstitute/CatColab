@@ -4,7 +4,7 @@
 use ref_cast::RefCast;
 use nonempty::NonEmpty;
 
-use super::set::{Set, FinSet};
+use crate::zero::set::{Set, FinSet};
 use super::graph::{Graph, FinGraph};
 use super::path::Path;
 
@@ -257,9 +257,9 @@ impl<Cat: FgCategory> FinGraph for GeneratingGraph<Cat> {
 mod tests {
     use nonempty::nonempty;
 
+    use crate::zero::set::SkelFinSet;
     use super::*;
-    use crate::set::SkelFinSet;
-    use crate::graph::SkelGraph;
+    use super::super::graph::SkelGraph;
 
     #[test]
     fn discrete_category() {

@@ -5,8 +5,8 @@ use nonempty::NonEmpty;
 use thiserror::Error;
 
 use crate::validate::{self, Validate};
-use crate::set::*;
-use crate::column::*;
+use crate::zero::set::*;
+use crate::zero::column::*;
 
 /** A graph.
 
@@ -74,8 +74,8 @@ pub trait FinGraph: Graph {
 
 /** A finite graph backed by columns.
 
-Such a graph is defined in the styles of "C-sets" by two
-[finite sets](crate::set::FinSet) and two [columns](crate::column::Column).
+Such a graph is defined in the styles of "C-sets" by two [finite sets](FinSet)
+and two [columns](Column).
  */
 #[derive(Clone,Default)]
 pub struct ColumnarGraph<VSet,ESet,Col> {
