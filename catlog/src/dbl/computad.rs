@@ -21,6 +21,7 @@ Definition 3.3).
   ([arXiv](https://arxiv.org/abs/1907.09927))
 */
 
+use derive_more::From;
 use ref_cast::RefCast;
 use thiserror::Error;
 
@@ -265,14 +266,9 @@ where S: FinSet, S::Elem: Clone,
 }
 
 /// The underlying graph of vertices and edges in a double computad.
-#[derive(RefCast)]
+#[derive(From,RefCast)]
 #[repr(transparent)]
-pub struct EdgeGraph<Cptd>(Cptd);
-
-impl<Cptd> EdgeGraph<Cptd> {
-    /// Extracts the underlying graph of the double computad.
-    pub fn new(cptd: Cptd) -> Self { Self {0: cptd} }
-}
+pub struct EdgeGraph<Cptd: DblComputad>(Cptd);
 
 impl<Cptd: DblComputad> Graph for EdgeGraph<Cptd> {
     type V = Cptd::V;
@@ -290,7 +286,8 @@ impl<Cptd: FinDblComputad> FinGraph for EdgeGraph<Cptd> {
 }
 
 impl<S,Col1,Col2> Validate for EdgeGraph<ColumnarDblComputad<S,Col1,Col2>>
-where S: FinSet, Col1: Mapping<Dom=S::Elem, Cod=S::Elem> {
+where S: FinSet, Col1: Mapping<Dom=S::Elem, Cod=S::Elem>,
+      ColumnarDblComputad<S,Col1,Col2>: DblComputad {
     type ValidationError = ColumnarGraphInvalid<S::Elem>;
 
     fn iter_invalid(&self) -> impl Iterator<Item = Self::ValidationError> {
@@ -304,14 +301,9 @@ where S: FinSet, Col1: Mapping<Dom=S::Elem, Cod=S::Elem> {
 }
 
 /// The underlying graph of vertices and proedges in a double computad.
-#[derive(RefCast)]
+#[derive(From,RefCast)]
 #[repr(transparent)]
-pub struct ProedgeGraph<Cptd>(Cptd);
-
-impl<Cptd> ProedgeGraph<Cptd> {
-    /// Extracts the underlying graph of the double computad.
-    pub fn new(cptd: Cptd) -> Self { Self {0: cptd} }
-}
+pub struct ProedgeGraph<Cptd: DblComputad>(Cptd);
 
 impl<Cptd: DblComputad> Graph for ProedgeGraph<Cptd> {
     type V = Cptd::V;
@@ -329,7 +321,8 @@ impl<Cptd: FinDblComputad> FinGraph for ProedgeGraph<Cptd> {
 }
 
 impl<S,Col1,Col2> Validate for ProedgeGraph<ColumnarDblComputad<S,Col1,Col2>>
-where S: FinSet, Col1: Mapping<Dom=S::Elem, Cod=S::Elem> {
+where S: FinSet, Col1: Mapping<Dom=S::Elem, Cod=S::Elem>,
+      ColumnarDblComputad<S,Col1,Col2>: DblComputad {
     type ValidationError = ColumnarGraphInvalid<S::Elem>;
 
     fn iter_invalid(&self) -> impl Iterator<Item = Self::ValidationError> {

@@ -1,6 +1,7 @@
 /*! Categories: interfaces and basic constructions.
  */
 
+use derive_more::From;
 use ref_cast::RefCast;
 use nonempty::NonEmpty;
 
@@ -54,14 +55,9 @@ pub trait Category {
 }
 
 /// The set of objects of a category.
-#[derive(RefCast)]
+#[derive(From,RefCast)]
 #[repr(transparent)]
-pub struct ObSet<Cat>(Cat);
-
-impl<Cat> ObSet<Cat> {
-    /// Extracts the set of objects of the given category.
-    pub fn new(category: Cat) -> Self { Self {0: category} }
-}
+pub struct ObSet<Cat: Category>(Cat);
 
 impl<Cat: Category> Set for ObSet<Cat> {
     type Elem = Cat::Ob;
@@ -74,14 +70,9 @@ impl<Cat: Category> Set for ObSet<Cat> {
 The objects of the category are the elements of the set, and the only morphisms
 are the identities, which can thus be identified with the objects.
  */
-#[derive(RefCast)]
+#[derive(From,RefCast)]
 #[repr(transparent)]
-pub struct DiscreteCategory<S>(S);
-
-impl<S> DiscreteCategory<S> {
-    /// Constructs the discrete category on the given set.
-    pub fn new(set: S) -> Self { Self {0: set} }
-}
+pub struct DiscreteCategory<S: Set>(S);
 
 impl<S: Set> Category for DiscreteCategory<S> where S::Elem: Clone {
     type Ob = S::Elem;
@@ -110,14 +101,9 @@ impl<S: Set> Category for DiscreteCategory<S> where S::Elem: Clone {
 The vertices and edges of the graph are the objects and morphisms of the
 category, respectively.
  */
-#[derive(RefCast)]
+#[derive(From,RefCast)]
 #[repr(transparent)]
-pub struct UnderlyingGraph<Cat>(Cat);
-
-impl<Cat> UnderlyingGraph<Cat> {
-    /// Extracts the underlying graph of the given category.
-    pub fn new(category: Cat) -> Self { Self {0: category} }
-}
+pub struct UnderlyingGraph<Cat: Category>(Cat);
 
 impl<Cat: Category> Graph for UnderlyingGraph<Cat> {
     type V = Cat::Ob;
@@ -134,14 +120,9 @@ impl<Cat: Category> Graph for UnderlyingGraph<Cat> {
 The objects and morphisms of the free category are the vertices and *paths* in
 the graph, respectively. Paths compose by concatenation.
  */
-#[derive(RefCast)]
+#[derive(From,RefCast)]
 #[repr(transparent)]
-pub struct FreeCategory<G>(G);
-
-impl<G> FreeCategory<G> {
-    /// Constructs the free category on the given graph.
-    pub fn new(graph: G) -> Self { Self {0: graph} }
-}
+pub struct FreeCategory<G: Graph>(G);
 
 impl<G: Graph> Category for FreeCategory<G> where G::V: Clone {
     type Ob = G::V;
@@ -219,14 +200,9 @@ impl<S: FinSet> FgCategory for DiscreteCategory<S> where S::Elem: Clone {
 
 The vertices and edges of the graph are the object and morphism generators.
 */
-#[derive(RefCast)]
+#[derive(From,RefCast)]
 #[repr(transparent)]
-pub struct GeneratingGraph<Cat>(Cat);
-
-impl<Cat> GeneratingGraph<Cat> {
-    /// Constructs the generating graph of the given category.
-    pub fn new(category: Cat) -> Self { Self {0: category} }
-}
+pub struct GeneratingGraph<Cat: FgCategory>(Cat);
 
 impl<Cat: FgCategory> Graph for GeneratingGraph<Cat> {
     type V = Cat::Ob;
@@ -263,7 +239,7 @@ mod tests {
 
     #[test]
     fn discrete_category() {
-        let cat = DiscreteCategory(SkelFinSet::from(3));
+        let cat = DiscreteCategory::from(SkelFinSet::from(3));
         assert!(cat.has_ob(&2));
         assert!(cat.has_hom(&2));
         assert!(!cat.has_hom(&3));
@@ -274,7 +250,7 @@ mod tests {
 
     #[test]
     fn free_category() {
-        let cat = FreeCategory(SkelGraph::triangle());
+        let cat = FreeCategory::from(SkelGraph::triangle());
         assert!(cat.has_ob(&2));
 
         let id = Path::Id(1);
@@ -288,7 +264,7 @@ mod tests {
         assert_eq!(cat.dom(&path), 0);
         assert_eq!(cat.cod(&path), 2);
 
-        let cat = FreeCategory(SkelGraph::path(5));
+        let cat = FreeCategory::from(SkelGraph::path(5));
         let path = Path::Seq(nonempty![
             Path::Id(0), Path::Seq(nonempty![0,1]),
             Path::Id(2), Path::Seq(nonempty![2,3]), Path::Id(4),

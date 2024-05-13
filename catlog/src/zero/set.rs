@@ -7,6 +7,7 @@ treated in a generic way.
 use std::ops::Range;
 use std::hash::Hash;
 use std::collections::HashSet;
+use derive_more::{From, Into};
 
 /** A set.
 
@@ -59,7 +60,7 @@ pub trait FinSet: Set {
 The elements of the skeletal finite set of size `n` are the numbers `0..n`
 (excluding `n`).
  */
-#[derive(Clone,Copy)]
+#[derive(Clone,Copy,From,Into)]
 pub struct SkelFinSet(usize);
 
 impl SkelFinSet {
@@ -75,12 +76,6 @@ impl SkelFinSet {
         let start = self.0;
         self.0 += n;
         start..(self.0)
-    }
-}
-
-impl From<usize> for SkelFinSet {
-    fn from(n: usize) -> Self {
-        Self { 0: n }
     }
 }
 
@@ -109,19 +104,13 @@ impl IntoIterator for SkelFinSet {
 }
 
 /// A finite set backed by a hash set.
-#[derive(Clone)]
+#[derive(Clone,From,Into)]
 pub struct HashFinSet<T>(HashSet<T>);
 
 impl<T: Eq + Hash> HashFinSet<T> {
     /// Adds an element to the set.
     pub fn insert(&mut self, x: T) -> bool {
         self.0.insert(x)
-    }
-}
-
-impl<T: Eq + Hash> From<HashSet<T>> for HashFinSet<T> {
-    fn from(hash_set: HashSet<T>) -> Self {
-        Self { 0: hash_set }
     }
 }
 
@@ -170,6 +159,8 @@ mod tests {
         assert_eq!(s.len(), 3);
         assert!(s.contains(&2));
         assert!(!s.contains(&3));
+        let n: usize = s.into();
+        assert_eq!(n, 3);
 
         let s = SkelFinSet::from(3);
         let sum: usize = s.iter().sum();

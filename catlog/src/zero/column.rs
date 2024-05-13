@@ -2,6 +2,7 @@
 
 use std::hash::Hash;
 use std::collections::hash_map::HashMap;
+use derive_more::From;
 use nonempty::NonEmpty;
 use thiserror::Error;
 
@@ -164,14 +165,8 @@ impl<T: Eq> Column for VecColumn<T> {
 
 /** An unindexed column backed by a hash map.
  */
-#[derive(Clone)]
+#[derive(Clone,From)]
 pub struct HashColumn<K,V>(HashMap<K,V>);
-
-impl<K: Eq+Hash, V: Eq> From<HashMap<K,V>> for HashColumn<K,V> {
-    fn from(hash_map: HashMap<K,V>) -> Self {
-        Self { 0: hash_map }
-    }
-}
 
 impl<K: Eq+Hash, V: Eq> Default for HashColumn<K,V> {
     fn default() -> Self { Self::from(HashMap::<K,V>::new()) }
