@@ -167,15 +167,14 @@ impl<T: Eq> Column for VecColumn<T> {
 #[derive(Clone)]
 pub struct HashColumn<K,V>(HashMap<K,V>);
 
-impl<K: Eq+Hash, V> HashColumn<K,V> {
-    /// Creates a hash-backed column by consuming an existing hash map.
-    pub fn new(hash_map: HashMap<K,V>) -> Self {
+impl<K: Eq+Hash, V: Eq> From<HashMap<K,V>> for HashColumn<K,V> {
+    fn from(hash_map: HashMap<K,V>) -> Self {
         Self { 0: hash_map }
     }
 }
 
 impl<K: Eq+Hash, V: Eq> Default for HashColumn<K,V> {
-    fn default() -> Self { Self { 0: Default::default() } }
+    fn default() -> Self { Self::from(HashMap::<K,V>::new()) }
 }
 
 impl<K: Eq+Hash, V: Eq> Mapping for HashColumn<K,V> {
@@ -541,7 +540,7 @@ mod tests {
     fn validate_column() {
         let col = VecColumn::new(vec![1, 2, 4]);
         let validate = |m, n|
-          col.validate_is_function(&SkelFinSet::new(m), &SkelFinSet::new(n));
+          col.validate_is_function(&SkelFinSet::from(m), &SkelFinSet::from(n));
         assert!(validate(3, 5).is_ok());
         assert_eq!(validate(4, 5).unwrap_err(),
                    NonEmpty::new(NotFunctional::Dom::<usize>(3)));

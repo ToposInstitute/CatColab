@@ -263,7 +263,7 @@ mod tests {
 
     #[test]
     fn discrete_category() {
-        let cat = DiscreteCategory(SkelFinSet::new(3));
+        let cat = DiscreteCategory(SkelFinSet::from(3));
         assert!(cat.has_ob(&2));
         assert!(cat.has_hom(&2));
         assert!(!cat.has_hom(&3));

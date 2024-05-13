@@ -63,11 +63,6 @@ The elements of the skeletal finite set of size `n` are the numbers `0..n`
 pub struct SkelFinSet(usize);
 
 impl SkelFinSet {
-    /// Create a skeletal finite set of the given size.
-    pub fn new(n: usize) -> Self {
-        Self { 0: n }
-    }
-
     /// Adds the (unique possible) next element to the skeletal finite set.
     pub fn insert(&mut self) -> usize {
         let new = self.0;
@@ -83,8 +78,14 @@ impl SkelFinSet {
     }
 }
 
+impl From<usize> for SkelFinSet {
+    fn from(n: usize) -> Self {
+        Self { 0: n }
+    }
+}
+
 impl Default for SkelFinSet {
-    fn default() -> Self { Self::new(0) }
+    fn default() -> Self { Self::from(0) }
 }
 
 impl Set for SkelFinSet {
@@ -112,20 +113,21 @@ impl IntoIterator for SkelFinSet {
 pub struct HashFinSet<T>(HashSet<T>);
 
 impl<T: Eq + Hash> HashFinSet<T> {
-    /// Create a finite set backed by the given hash set.
-    pub fn new(hash_set: HashSet<T>) -> Self {
-        Self { 0: hash_set }
-    }
-
     /// Adds an element to the set.
     pub fn insert(&mut self, x: T) -> bool {
         self.0.insert(x)
     }
 }
 
+impl<T: Eq + Hash> From<HashSet<T>> for HashFinSet<T> {
+    fn from(hash_set: HashSet<T>) -> Self {
+        Self { 0: hash_set }
+    }
+}
+
 impl<T: Eq + Hash> Default for HashFinSet<T> {
     fn default() -> Self {
-        Self::new(HashSet::new())
+        Self::from(HashSet::new())
     }
 }
 
@@ -169,7 +171,7 @@ mod tests {
         assert!(s.contains(&2));
         assert!(!s.contains(&3));
 
-        let s = SkelFinSet::new(3);
+        let s = SkelFinSet::from(3);
         let sum: usize = s.iter().sum();
         assert_eq!(sum, 3);
         let elems: Vec<usize> = s.into_iter().collect();
@@ -188,7 +190,7 @@ mod tests {
         assert!(s.contains(&7));
         assert!(!s.contains(&2));
 
-        let s = HashFinSet::new(HashSet::from([3, 5, 7]));
+        let s = HashFinSet::from(HashSet::from([3, 5, 7]));
         let sum: i32 = s.iter().sum();
         assert_eq!(sum, 15);
         assert_eq!(s.len(), 3);
