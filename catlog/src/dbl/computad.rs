@@ -1,19 +1,19 @@
-/*! Double computads: interfaces and data structures.
+/*! Double computads, the generators of free double categories.
 
 Double computads are like double graphs (two-dimensional cubical sets) except
-that the boundaries of cells can be paths of arbitrary finite length instead
-just single edges. A double computad is the most general data that generates a
-free double category.
+that the boundaries of the two-dimensional cells can be paths of arbitrary
+finite length instead just single edges. A double computad is the most general
+data that generates a free double category.
 
 Though the term "double computad" is not standard, it is the obvious analogue
 for double categories of a [2-computad](https://ncatlab.org/nlab/show/computad),
 the generating data for a free 2-category or bicategory. Double computads have
 also been called "double signatures" (Delpeuch 2020, Definition 2.1). They are
-the special case of "double derivation schemes" where the categories of objects
-and arrows, and of objects and proarrows, are free categories (Fiore et al 2008,
-Definition 3.3).
+the special case of "double derivation schemes" in which the categories of
+objects and arrows, and of objects and proarrows, are both free categories
+(Fiore et al 2008, Definition 3.3).
 
-## References
+# References
 
 - Fiore, Paoli, Pronk, 2008: Model structures on the category of small double
   categories ([arXiv](https://arxiv.org/abs/0711.0473))
@@ -30,6 +30,10 @@ use crate::zero::*;
 use crate::one::{Graph, FinGraph, Path, InvalidColumnarGraph};
 
 /** A double computad, the generating data for a free double category.
+
+Following our nomenclature for double categories, we say that an edge in a
+double computad has a *domain* and *codomain*, whereas a proedge has a *source*
+and a *target*. A square has all four of those.
  */
 pub trait DblComputad {
     /// Type of vertices in the computad, generating objects in a double
@@ -43,8 +47,8 @@ pub trait DblComputad {
     /// category.
     type ProE: Eq;
 
-    /// Type of cells in the computad.
-    type Cell: Eq;
+    /// Type of squares in the computad, generating cells in a double category.
+    type Sq: Eq;
 
     /// Does the vertex belong to the computad?
     fn has_vertex(&self, v: &Self::V) -> bool;
@@ -55,8 +59,8 @@ pub trait DblComputad {
     /// Does the proedge belong to the computad?
     fn has_proedge(&self, p: &Self::ProE) -> bool;
 
-    /// Does the cell belong to the comptuad?
-    fn has_cell(&self, α: &Self::Cell) -> bool;
+    /// Does the square belong to the comptuad?
+    fn has_square(&self, α: &Self::Sq) -> bool;
 
     /// Gets the domain of an edge.
     fn dom(&self, e: &Self::E) -> Self::V;
@@ -70,22 +74,22 @@ pub trait DblComputad {
     /// Gets the target of a proedge.
     fn tgt(&self, p: &Self::ProE) -> Self::V;
 
-    /// Gets the domain of a cell, which is a path of proedges.
-    fn cell_dom(&self, α: &Self::Cell) -> Path<Self::V, Self::ProE>;
+    /// Gets the domain of a square, which is a path of proedges.
+    fn square_dom(&self, α: &Self::Sq) -> Path<Self::V, Self::ProE>;
 
-    /// Gets the codomain of a cell, which is a path of proedges.
-    fn cell_cod(&self, α: &Self::Cell) -> Path<Self::V, Self::ProE>;
+    /// Gets the codomain of a square, which is a path of proedges.
+    fn square_cod(&self, α: &Self::Sq) -> Path<Self::V, Self::ProE>;
 
-    /// Gets the source of a cell, which is a path of edges.
-    fn cell_src(&self, α: &Self::Cell) -> Path<Self::V, Self::E>;
+    /// Gets the source of a square, which is a path of edges.
+    fn square_src(&self, α: &Self::Sq) -> Path<Self::V, Self::E>;
 
-    /// Gets the target of a cell, which is a path of edges.
-    fn cell_tgt(&self, α: &Self::Cell) -> Path<Self::V, Self::E>;
+    /// Gets the target of a square, which is a path of edges.
+    fn square_tgt(&self, α: &Self::Sq) -> Path<Self::V, Self::E>;
 }
 
 /** A finite double computad.
 
-Such a double computad has finitely many vertices, edges, proedges, and cells.
+Such a double computad has finitely many vertices, edges, proedges, and squares.
  */
 pub trait FinDblComputad: DblComputad {
     /// Iterates over vertices in the computad.
@@ -97,8 +101,8 @@ pub trait FinDblComputad: DblComputad {
     /// Iterates over proedges in the computad.
     fn proedges(&self) -> impl Iterator<Item = Self::ProE>;
 
-    /// Iterates over cells in the computad.
-    fn cells(&self) -> impl Iterator<Item = Self::Cell>;
+    /// Iterates over squares in the computad.
+    fn squares(&self) -> impl Iterator<Item = Self::Sq>;
 }
 
 /** A double computad backed by columns.
@@ -108,10 +112,10 @@ There is no reason for this except to avoid an explosion of type parameters.
 */
 #[derive(Clone,Default)]
 pub struct ColumnarDblComputad<S,Col1,Col2> {
-    vertex_set: S, edge_set: S, proedge_set: S, cell_set: S,
+    vertex_set: S, edge_set: S, proedge_set: S, square_set: S,
     dom_map: Col1, cod_map: Col1, src_map: Col1, tgt_map: Col1,
-    cell_dom_map: Col2, cell_cod_map: Col2,
-    cell_src_map: Col2, cell_tgt_map: Col2,
+    square_dom_map: Col2, square_cod_map: Col2,
+    square_src_map: Col2, square_tgt_map: Col2,
 }
 
 /// An invalid assignment in a columnar double computad.
@@ -133,24 +137,24 @@ pub enum InvalidColumnarDblComputad<T> {
     #[error("Target of proedge `{0}` is not a vertex in the computad")]
     Tgt(T),
 
-    /// Cell with a domain that is not a valid path of proedges.
-    #[error("Domain of cell `{0}` is not a path of proedges in the computad")]
-    CellDom(T),
+    /// Sq with a domain that is not a valid path of proedges.
+    #[error("Domain of square `{0}` is not a path of proedges in the computad")]
+    SqDom(T),
 
-    /// Cell with a codomain that is not a valid path of proedges.
-    #[error("Codomain of cell `{0}` is not a path of proedges in the computad")]
-    CellCod(T),
+    /// Sq with a codomain that is not a valid path of proedges.
+    #[error("Codomain of square `{0}` is not a path of proedges in the computad")]
+    SqCod(T),
 
-    /// Cell with a source that is not a valid path of edges.
-    #[error("Source of cell `{0}` is not a path of edges in the computad")]
-    CellSrc(T),
+    /// Sq with a source that is not a valid path of edges.
+    #[error("Source of square `{0}` is not a path of edges in the computad")]
+    SqSrc(T),
 
-    /// Cell with a target that is not a valid path of edges.
-    #[error("Target of cell `{0}` is not a path of edges in the computad")]
-    CellTgt(T),
+    /// Sq with a target that is not a valid path of edges.
+    #[error("Target of square `{0}` is not a path of edges in the computad")]
+    SqTgt(T),
 
-    /// Cell that is not a square due to failure of compatibility equations.
-    #[error("Cell `{0}` is not a square: compatibility equations do not hold")]
+    /// Sq that is not square-shaped due to failure of compatibility equations.
+    #[error("Square `{0}` is not square-shaped")]
     NotSquare(T),
 }
 
@@ -161,12 +165,12 @@ where S: Set, S::Elem: Clone,
     type V = S::Elem;
     type E = S::Elem;
     type ProE = S::Elem;
-    type Cell = S::Elem;
+    type Sq = S::Elem;
 
     fn has_vertex(&self, v: &Self::V) -> bool { self.vertex_set.contains(v) }
     fn has_edge(&self, e: &Self::E) -> bool { self.edge_set.contains(e) }
     fn has_proedge(&self, p: &Self::ProE) -> bool { self.proedge_set.contains(p) }
-    fn has_cell(&self, α: &Self::Cell) -> bool { self.cell_set.contains(α) }
+    fn has_square(&self, α: &Self::Sq) -> bool { self.square_set.contains(α) }
 
     fn dom(&self, e: &Self::E) -> Self::V {
         self.dom_map.apply(e).expect("Domain of edge should be set").clone()
@@ -181,17 +185,17 @@ where S: Set, S::Elem: Clone,
         self.tgt_map.apply(p).expect("Target of proedge should be set").clone()
     }
 
-    fn cell_dom(&self, α: &Self::Cell) -> Path<Self::V, Self::ProE> {
-        self.cell_dom_map.apply(α).expect("Domain of cell should be set").clone()
+    fn square_dom(&self, α: &Self::Sq) -> Path<Self::V, Self::ProE> {
+        self.square_dom_map.apply(α).expect("Domain of square should be set").clone()
     }
-    fn cell_cod(&self, α: &Self::Cell) -> Path<Self::V, Self::ProE> {
-        self.cell_cod_map.apply(α).expect("Codomain of cell should be set").clone()
+    fn square_cod(&self, α: &Self::Sq) -> Path<Self::V, Self::ProE> {
+        self.square_cod_map.apply(α).expect("Codomain of square should be set").clone()
     }
-    fn cell_src(&self, α: &Self::Cell) -> Path<Self::V, Self::E> {
-        self.cell_src_map.apply(α).expect("Source of cell should be set").clone()
+    fn square_src(&self, α: &Self::Sq) -> Path<Self::V, Self::E> {
+        self.square_src_map.apply(α).expect("Source of square should be set").clone()
     }
-    fn cell_tgt(&self, α: &Self::Cell) -> Path<Self::V, Self::E> {
-        self.cell_tgt_map.apply(α).expect("Target of cell should be set").clone()
+    fn square_tgt(&self, α: &Self::Sq) -> Path<Self::V, Self::E> {
+        self.square_tgt_map.apply(α).expect("Target of square should be set").clone()
     }
 }
 
@@ -203,7 +207,7 @@ where S: FinSet, S::Elem: Clone,
     fn vertices(&self) -> impl Iterator<Item=Self::V> { self.vertex_set.iter() }
     fn edges(&self) -> impl Iterator<Item=Self::E> { self.edge_set.iter() }
     fn proedges(&self) -> impl Iterator<Item=Self::ProE> { self.proedge_set.iter() }
-    fn cells(&self) -> impl Iterator<Item=Self::Cell> { self.cell_set.iter() }
+    fn squares(&self) -> impl Iterator<Item=Self::Sq> { self.square_set.iter() }
 }
 
 impl<S,Col1,Col2> Validate for ColumnarDblComputad<S,Col1,Col2>
@@ -231,23 +235,23 @@ where S: FinSet, S::Elem: Clone,
             }
         });
 
-        let cell_errors = self.cell_set.iter().flat_map(|α| {
-            let m = self.cell_dom_map.apply(&α);
-            let n = self.cell_cod_map.apply(&α);
-            let f = self.cell_src_map.apply(&α);
-            let g = self.cell_tgt_map.apply(&α);
+        let square_errors = self.square_set.iter().flat_map(|α| {
+            let m = self.square_dom_map.apply(&α);
+            let n = self.square_cod_map.apply(&α);
+            let f = self.square_src_map.apply(&α);
+            let g = self.square_tgt_map.apply(&α);
             let mut errs = Vec::new();
             if !m.map_or(false, |path| path.contained_in(proedge_graph)) {
-                errs.push(Invalid::CellDom(α.clone()));
+                errs.push(Invalid::SqDom(α.clone()));
             }
             if !n.map_or(false, |path| path.contained_in(proedge_graph)) {
-                errs.push(Invalid::CellCod(α.clone()));
+                errs.push(Invalid::SqCod(α.clone()));
             }
             if !f.map_or(false, |path| path.contained_in(edge_graph)) {
-                errs.push(Invalid::CellSrc(α.clone()));
+                errs.push(Invalid::SqSrc(α.clone()));
             }
             if !g.map_or(false, |path| path.contained_in(edge_graph)) {
-                errs.push(Invalid::CellTgt(α.clone()));
+                errs.push(Invalid::SqTgt(α.clone()));
             }
             if errs.is_empty() {
                 let (m, n, f, g) = (m.unwrap(), n.unwrap(), f.unwrap(), g.unwrap());
@@ -261,11 +265,11 @@ where S: FinSet, S::Elem: Clone,
             errs.into_iter()
         });
 
-        edge_errors.chain(proedge_errors).chain(cell_errors)
+        edge_errors.chain(proedge_errors).chain(square_errors)
     }
 }
 
-/// The underlying graph of vertices and edges in a double computad.
+/// The graph of vertices and edges underlying a double computad.
 #[derive(From,RefCast)]
 #[repr(transparent)]
 pub struct EdgeGraph<Cptd: DblComputad>(Cptd);
@@ -300,7 +304,7 @@ where S: FinSet, Col1: Mapping<Dom=S::Elem, Cod=S::Elem>,
     }
 }
 
-/// The underlying graph of vertices and proedges in a double computad.
+/// The graph of vertices and proedges underlying a double computad.
 #[derive(From,RefCast)]
 #[repr(transparent)]
 pub struct ProedgeGraph<Cptd: DblComputad>(Cptd);
@@ -366,14 +370,14 @@ where Col1: Mapping<Dom=usize, Cod=usize>,
         p
     }
 
-    /// Adds a new cell to the computad and returns it.
-    pub fn add_cell(&mut self, dom: SkelPath, cod: SkelPath,
+    /// Adds a new square to the computad and returns it.
+    pub fn add_square(&mut self, dom: SkelPath, cod: SkelPath,
                     src: SkelPath, tgt: SkelPath) -> usize {
-        let α = self.cell_set.insert();
-        self.cell_dom_map.set(α, dom);
-        self.cell_cod_map.set(α, cod);
-        self.cell_src_map.set(α, src);
-        self.cell_tgt_map.set(α, tgt);
+        let α = self.square_set.insert();
+        self.square_dom_map.set(α, dom);
+        self.square_cod_map.set(α, cod);
+        self.square_src_map.set(α, src);
+        self.square_tgt_map.set(α, tgt);
         α
     }
 }
@@ -388,14 +392,14 @@ mod tests {
         let mut sig_monad: SkelDblComputad = Default::default();
         let x = sig_monad.add_vertex();
         let t = sig_monad.add_edge(x, x);
-        let μ = sig_monad.add_cell(Path::Id(x), Path::Id(x),
-                                   Path::pair(t,t), Path::single(t));
-        let _η = sig_monad.add_cell(Path::Id(x), Path::Id(x),
-                                    Path::Id(x), Path::single(t));
-        assert_eq!(sig_monad.cell_dom(&μ), SkelPath::Id(x));
-        assert_eq!(sig_monad.cell_cod(&μ), SkelPath::Id(x));
-        assert_eq!(sig_monad.cell_src(&μ).len(), 2);
-        assert_eq!(sig_monad.cell_tgt(&μ).len(), 1);
+        let μ = sig_monad.add_square(Path::Id(x), Path::Id(x),
+                                     Path::pair(t,t), Path::single(t));
+        let _η = sig_monad.add_square(Path::Id(x), Path::Id(x),
+                                      Path::Id(x), Path::single(t));
+        assert_eq!(sig_monad.square_dom(&μ), SkelPath::Id(x));
+        assert_eq!(sig_monad.square_cod(&μ), SkelPath::Id(x));
+        assert_eq!(sig_monad.square_src(&μ).len(), 2);
+        assert_eq!(sig_monad.square_tgt(&μ).len(), 1);
         assert!(sig_monad.validate().is_ok());
     }
 }
