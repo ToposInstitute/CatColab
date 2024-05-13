@@ -86,7 +86,7 @@ pub struct ColumnarGraph<VSet,ESet,Col> {
 
 /// An invalid assignment in a [columnar graph](ColumnarGraph).
 #[derive(Debug,Error)]
-pub enum ColumnarGraphInvalid<E> {
+pub enum InvalidColumnarGraph<E> {
     /// Edge with a source that is not a valid vertex.
     #[error("Source of edge `{0}` is not a vertex in the graph")]
     Src(E),
@@ -115,14 +115,14 @@ where V: Eq, E: Eq,
 impl<V,E,VSet,ESet,Col> Validate for ColumnarGraph<VSet,ESet,Col>
 where V: Eq + Clone, E: Eq + Clone,
       VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Mapping<Dom=E,Cod=V> {
-    type ValidationError = ColumnarGraphInvalid<E>;
+    type ValidationError = InvalidColumnarGraph<E>;
 
     fn iter_invalid(&self) -> impl Iterator<Item = Self::ValidationError> {
         let (dom, cod) = (&self.edge_set, &self.vertex_set);
-        let srcs = self.src_map.iter_not_functional(dom, cod).map(
-            |e| ColumnarGraphInvalid::Src(e.take()));
-        let tgts = self.tgt_map.iter_not_functional(dom, cod).map(
-            |e| ColumnarGraphInvalid::Tgt(e.take()));
+        let srcs = self.src_map.iter_invalid_function(dom, cod).map(
+            |e| InvalidColumnarGraph::Src(e.take()));
+        let tgts = self.tgt_map.iter_invalid_function(dom, cod).map(
+            |e| InvalidColumnarGraph::Tgt(e.take()));
         srcs.chain(tgts)
     }
 }
@@ -247,10 +247,10 @@ pub type HashGraph<V,E> =
 
 /** A mapping between graphs.
 
-Like a [`Mapping`] is the data of a function without specified domain or
+Just as a [`Mapping`] is the data of a function without specified domain or
 codomain sets, a *graph mapping* is the data of a graph homomorphism without
-specified domain or codomain graphs. Put positively, a *graph morphism* is a
-pair of graphs with a compatible graph mapping.
+specified domain or codomain graphs. Turning this around, a *graph morphism* is
+a pair of graphs with a compatible graph mapping.
  */
 pub trait GraphMapping {
     /// Type of vertices in domain graph.
@@ -272,16 +272,22 @@ pub trait GraphMapping {
     fn apply_edge(&self, e: &Self::DomE) -> Option<&Self::CodE>;
 
     /// Validates that the mapping is a graph homomorphism between two graphs.
-    fn validate_is_morphism<Dom,Cod>(&self, dom: &Dom, cod: &Cod
-    ) -> Result<(), NonEmpty<GraphMorphismInvalid<Self::DomV, Self::DomE>>>
+    fn validate_is_morphism<Dom, Cod>(
+        &self,
+        dom: &Dom,
+        cod: &Cod
+    ) -> Result<(), NonEmpty<InvalidGraphMorphism<Self::DomV, Self::DomE>>>
     where Dom: FinGraph<V = Self::DomV, E = Self::DomE>,
           Cod: Graph<V = Self::CodV, E = Self::CodE> {
-        validate::collect_errors(self.iter_morphism_invalid(dom, cod))
+        validate::collect_errors(self.iter_invalid_morphism(dom, cod))
     }
 
     /// Iterates over failues of the mapping to be a graph homomorphism.
-    fn iter_morphism_invalid<Dom,Cod>(&self, dom: &Dom, cod: &Cod
-    ) -> impl Iterator<Item = GraphMorphismInvalid<Self::DomV, Self::DomE>>
+    fn iter_invalid_morphism<Dom, Cod>(
+        &self,
+        dom: &Dom,
+        cod: &Cod
+    ) -> impl Iterator<Item = InvalidGraphMorphism<Self::DomV, Self::DomE>>
     where Dom: FinGraph<V = Self::DomV, E = Self::DomE>,
           Cod: Graph<V = Self::CodV, E = Self::CodE> {
 
@@ -289,7 +295,7 @@ pub trait GraphMapping {
             if self.apply_vertex(&v).map_or(false, |w| cod.has_vertex(w)) {
                 None
             } else {
-                Some(GraphMorphismInvalid::Vertex(v))
+                Some(InvalidGraphMorphism::Vertex(v))
             }
         });
 
@@ -302,11 +308,11 @@ pub trait GraphMapping {
                             .map_or(true, |v| *v == cod.tgt(f)) {
                         return None
                     } else {
-                        return Some(GraphMorphismInvalid::NotHomomorphic(e))
+                        return Some(InvalidGraphMorphism::NotHomomorphic(e))
                     }
                 }
             }
-            Some(GraphMorphismInvalid::Edge(e))
+            Some(InvalidGraphMorphism::Edge(e))
         });
 
         vertex_errors.chain(edge_errors)
@@ -316,7 +322,7 @@ pub trait GraphMapping {
 /// A failure of a [mapping](GraphMapping) between graphs to define a graph
 /// homomorphism.
 #[derive(Debug,Error)]
-pub enum GraphMorphismInvalid<V,E> {
+pub enum InvalidGraphMorphism<V,E> {
     /// A vertex in the domain that is not mapped to a vertex in the codomain.
     #[error("Vertex `{0}` is not mapped to a vertex in the codomain graph")]
     Vertex(V),

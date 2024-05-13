@@ -47,24 +47,30 @@ pub trait Mapping {
     }
 
     /// Validates that the mapping restricts to a function on a finite domain.
-    fn validate_is_function<Dom,Cod>(&self, dom: &Dom, cod: &Cod
-    ) -> Result<(), NonEmpty<NotFunctional<Self::Dom>>>
+    fn validate_is_function<Dom, Cod>(
+        &self,
+        dom: &Dom,
+        cod: &Cod
+    ) -> Result<(), NonEmpty<InvalidFunction<Self::Dom>>>
     where Dom: FinSet<Elem = Self::Dom>, Cod: Set<Elem = Self::Cod> {
-        validate::collect_errors(self.iter_not_functional(dom, cod))
+        validate::collect_errors(self.iter_invalid_function(dom, cod))
     }
 
     /// Iterates over failures of the mapping to restrict to a function.
-    fn iter_not_functional<Dom,Cod>(&self, dom: &Dom, cod: &Cod
-    ) -> impl Iterator<Item = NotFunctional<Self::Dom>>
+    fn iter_invalid_function<Dom, Cod>(
+        &self,
+        dom: &Dom,
+        cod: &Cod
+    ) -> impl Iterator<Item = InvalidFunction<Self::Dom>>
     where Dom: FinSet<Elem = Self::Dom>, Cod: Set<Elem = Self::Cod> {
         dom.iter().filter_map(|x| {
             match self.apply(&x) {
                 Some(y) => if cod.contains(&y) {
                     None
                 } else {
-                    Some(NotFunctional::Cod(x))
+                    Some(InvalidFunction::Cod(x))
                 }
-                None => Some(NotFunctional::Dom(x))
+                None => Some(InvalidFunction::Dom(x))
             }
         })
     }
@@ -92,7 +98,7 @@ pub trait Column: Mapping {
 
 /// A failure of a mapping to restrict to a function between two sets.
 #[derive(Debug,Error,PartialEq,Eq)]
-pub enum NotFunctional<T> {
+pub enum InvalidFunction<T> {
     /// The mapping is not defined at a point in the domain.
     #[error("Mapping not defined at point `{0}` in domain")]
     Dom(T),
@@ -102,9 +108,9 @@ pub enum NotFunctional<T> {
     Cod(T),
 }
 
-impl<T> NotFunctional<T> {
+impl<T> InvalidFunction<T> {
     pub(crate) fn take(self) -> T {
-        match self { NotFunctional::Dom(x) | NotFunctional::Cod(x) => x }
+        match self { InvalidFunction::Dom(x) | InvalidFunction::Cod(x) => x }
     }
 }
 
@@ -538,8 +544,8 @@ mod tests {
           col.validate_is_function(&SkelFinSet::from(m), &SkelFinSet::from(n));
         assert!(validate(3, 5).is_ok());
         assert_eq!(validate(4, 5).unwrap_err(),
-                   NonEmpty::new(NotFunctional::Dom::<usize>(3)));
+                   NonEmpty::new(InvalidFunction::Dom::<usize>(3)));
         assert_eq!(validate(3, 4).unwrap_err(),
-                   NonEmpty::new(NotFunctional::Cod::<usize>(2)));
+                   NonEmpty::new(InvalidFunction::Cod::<usize>(2)));
     }
 }

@@ -27,7 +27,7 @@ use thiserror::Error;
 
 use crate::validate::Validate;
 use crate::zero::*;
-use crate::one::{Graph, FinGraph, Path, ColumnarGraphInvalid};
+use crate::one::{Graph, FinGraph, Path, InvalidColumnarGraph};
 
 /** A double computad, the generating data for a free double category.
  */
@@ -116,7 +116,7 @@ pub struct ColumnarDblComputad<S,Col1,Col2> {
 
 /// An invalid assignment in a columnar double computad.
 #[derive(Debug,Error)]
-pub enum ColumnarDblComputadInvalid<T> {
+pub enum InvalidColumnarDblComputad<T> {
     /// Edge with a domain that is not a valid vertex.
     #[error("Domain of edge `{0}` is not a vertex in the computad")]
     Dom(T),
@@ -210,24 +210,24 @@ impl<S,Col1,Col2> Validate for ColumnarDblComputad<S,Col1,Col2>
 where S: FinSet, S::Elem: Clone,
       Col1: Mapping<Dom=S::Elem, Cod=S::Elem>,
       Col2: Mapping<Dom=S::Elem, Cod=Path<S::Elem,S::Elem>> {
-    type ValidationError = ColumnarDblComputadInvalid<S::Elem>;
+    type ValidationError = InvalidColumnarDblComputad<S::Elem>;
 
     fn iter_invalid(&self) -> impl Iterator<Item = Self::ValidationError> {
-        type Invalid<T> = ColumnarDblComputadInvalid<T>;
+        type Invalid<T> = InvalidColumnarDblComputad<T>;
 
         let edge_graph = EdgeGraph::ref_cast(self);
         let edge_errors = edge_graph.iter_invalid().map(|err| {
             match err {
-                ColumnarGraphInvalid::Src(e) => Invalid::Dom(e),
-                ColumnarGraphInvalid::Tgt(e) => Invalid::Cod(e),
+                InvalidColumnarGraph::Src(e) => Invalid::Dom(e),
+                InvalidColumnarGraph::Tgt(e) => Invalid::Cod(e),
             }
         });
 
         let proedge_graph = ProedgeGraph::ref_cast(self);
         let proedge_errors = proedge_graph.iter_invalid().map(|err| {
             match err {
-                ColumnarGraphInvalid::Src(e) => Invalid::Src(e),
-                ColumnarGraphInvalid::Tgt(e) => Invalid::Tgt(e),
+                InvalidColumnarGraph::Src(e) => Invalid::Src(e),
+                InvalidColumnarGraph::Tgt(e) => Invalid::Tgt(e),
             }
         });
 
@@ -288,14 +288,14 @@ impl<Cptd: FinDblComputad> FinGraph for EdgeGraph<Cptd> {
 impl<S,Col1,Col2> Validate for EdgeGraph<ColumnarDblComputad<S,Col1,Col2>>
 where S: FinSet, Col1: Mapping<Dom=S::Elem, Cod=S::Elem>,
       ColumnarDblComputad<S,Col1,Col2>: DblComputad {
-    type ValidationError = ColumnarGraphInvalid<S::Elem>;
+    type ValidationError = InvalidColumnarGraph<S::Elem>;
 
     fn iter_invalid(&self) -> impl Iterator<Item = Self::ValidationError> {
         let (eset, vset) = (&self.0.edge_set, &self.0.vertex_set);
-        let srcs = self.0.dom_map.iter_not_functional(eset, vset).map(
-            |e| ColumnarGraphInvalid::Src(e.take()));
-        let tgts = self.0.cod_map.iter_not_functional(eset, vset).map(
-            |e| ColumnarGraphInvalid::Tgt(e.take()));
+        let srcs = self.0.dom_map.iter_invalid_function(eset, vset).map(
+            |e| InvalidColumnarGraph::Src(e.take()));
+        let tgts = self.0.cod_map.iter_invalid_function(eset, vset).map(
+            |e| InvalidColumnarGraph::Tgt(e.take()));
         srcs.chain(tgts)
     }
 }
@@ -323,14 +323,14 @@ impl<Cptd: FinDblComputad> FinGraph for ProedgeGraph<Cptd> {
 impl<S,Col1,Col2> Validate for ProedgeGraph<ColumnarDblComputad<S,Col1,Col2>>
 where S: FinSet, Col1: Mapping<Dom=S::Elem, Cod=S::Elem>,
       ColumnarDblComputad<S,Col1,Col2>: DblComputad {
-    type ValidationError = ColumnarGraphInvalid<S::Elem>;
+    type ValidationError = InvalidColumnarGraph<S::Elem>;
 
     fn iter_invalid(&self) -> impl Iterator<Item = Self::ValidationError> {
         let (eset, vset) = (&self.0.proedge_set, &self.0.vertex_set);
-        let srcs = self.0.src_map.iter_not_functional(eset, vset).map(
-            |e| ColumnarGraphInvalid::Src(e.take()));
-        let tgts = self.0.tgt_map.iter_not_functional(eset, vset).map(
-            |e| ColumnarGraphInvalid::Tgt(e.take()));
+        let srcs = self.0.src_map.iter_invalid_function(eset, vset).map(
+            |e| InvalidColumnarGraph::Src(e.take()));
+        let tgts = self.0.tgt_map.iter_invalid_function(eset, vset).map(
+            |e| InvalidColumnarGraph::Tgt(e.take()));
         srcs.chain(tgts)
     }
 }
