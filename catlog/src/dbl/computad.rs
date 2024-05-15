@@ -137,23 +137,23 @@ pub enum InvalidColumnarDblComputad<T> {
     #[error("Target of proedge `{0}` is not a vertex in the computad")]
     Tgt(T),
 
-    /// Sq with a domain that is not a valid path of proedges.
+    /// Square with a domain that is not a valid path of proedges.
     #[error("Domain of square `{0}` is not a path of proedges in the computad")]
-    SqDom(T),
+    SquareDom(T),
 
-    /// Sq with a codomain that is not a valid path of proedges.
+    /// Square with a codomain that is not a valid path of proedges.
     #[error("Codomain of square `{0}` is not a path of proedges in the computad")]
-    SqCod(T),
+    SquareCod(T),
 
-    /// Sq with a source that is not a valid path of edges.
+    /// Square with a source that is not a valid path of edges.
     #[error("Source of square `{0}` is not a path of edges in the computad")]
-    SqSrc(T),
+    SquareSrc(T),
 
-    /// Sq with a target that is not a valid path of edges.
+    /// Square with a target that is not a valid path of edges.
     #[error("Target of square `{0}` is not a path of edges in the computad")]
-    SqTgt(T),
+    SquareTgt(T),
 
-    /// Sq that is not square-shaped due to failure of compatibility equations.
+    /// Square that is not square-shaped: compatibility equations do not hold.
     #[error("Square `{0}` is not square-shaped")]
     NotSquare(T),
 }
@@ -242,16 +242,16 @@ where S: FinSet, S::Elem: Clone,
             let g = self.square_tgt_map.apply(&α);
             let mut errs = Vec::new();
             if !m.map_or(false, |path| path.contained_in(proedge_graph)) {
-                errs.push(Invalid::SqDom(α.clone()));
+                errs.push(Invalid::SquareDom(α.clone()));
             }
             if !n.map_or(false, |path| path.contained_in(proedge_graph)) {
-                errs.push(Invalid::SqCod(α.clone()));
+                errs.push(Invalid::SquareCod(α.clone()));
             }
             if !f.map_or(false, |path| path.contained_in(edge_graph)) {
-                errs.push(Invalid::SqSrc(α.clone()));
+                errs.push(Invalid::SquareSrc(α.clone()));
             }
             if !g.map_or(false, |path| path.contained_in(edge_graph)) {
-                errs.push(Invalid::SqTgt(α.clone()));
+                errs.push(Invalid::SquareTgt(α.clone()));
             }
             if errs.is_empty() {
                 let (m, n, f, g) = (m.unwrap(), n.unwrap(), f.unwrap(), g.unwrap());
@@ -380,6 +380,44 @@ where Col1: Mapping<Dom=usize, Cod=usize>,
         self.square_tgt_map.set(α, tgt);
         α
     }
+}
+
+/** A mapping between double computads.
+
+In the same spirit as mappings between [sets](crate::zero::Mapping) and
+[graphs](crate::one::GraphMapping), a computad mapping is like a computad
+morphism except that the domain and codomain computads are not specified.
+*/
+pub trait DblComputadMapping {
+    /// Type of vertices in domain computad.
+    type DomV: Eq;
+    /// Type of edges in domain computad.
+    type DomE: Eq;
+    /// Type of proedges in domain computad.
+    type DomProE: Eq;
+    /// Type of squares in domain computad.
+    type DomSq: Eq;
+
+    /// Type of vertices in codomain computad.
+    type CodV: Eq;
+    /// Type of edges in codomain computad.
+    type CodE: Eq;
+    /// Type of proedges in codomain computad.
+    type CodProE: Eq;
+    /// Type of squares in codomain computad.
+    type CodSq: Eq;
+
+    /// Applies the computad mapping at a vertex.
+    fn apply_vertex(&self, v: &Self::DomV) -> Option<&Self::CodV>;
+
+    /// Applies the computad mappting at an edge.
+    fn apply_edge(&self, e: &Self::DomE) -> Option<&Self::CodE>;
+
+    /// Applies the computad mapping at a proedge.
+    fn apply_proedge(&self, p: &Self::DomProE) -> Option<&Self::CodProE>;
+
+    /// Applies the computad mapping at a square.
+    fn apply_square(&self, α: &Self::DomSq) -> Option<&Self::CodSq>;
 }
 
 #[cfg(test)]
