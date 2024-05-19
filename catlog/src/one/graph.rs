@@ -277,7 +277,7 @@ pub trait GraphMapping {
         dom: &Dom,
         cod: &Cod
     ) -> Result<(), NonEmpty<InvalidGraphMorphism<Self::DomV, Self::DomE>>>
-    where Dom: FinGraph<V = Self::DomV, E = Self::DomE>,
+    where Dom: FinGraph<V = Self::DomV, E = Self::DomE>, Self::DomE: Clone,
           Cod: Graph<V = Self::CodV, E = Self::CodE> {
         validate::collect_errors(self.iter_invalid_morphism(dom, cod))
     }
@@ -288,7 +288,7 @@ pub trait GraphMapping {
         dom: &Dom,
         cod: &Cod
     ) -> impl Iterator<Item = InvalidGraphMorphism<Self::DomV, Self::DomE>>
-    where Dom: FinGraph<V = Self::DomV, E = Self::DomE>,
+    where Dom: FinGraph<V = Self::DomV, E = Self::DomE>, Self::DomE: Clone,
           Cod: Graph<V = Self::CodV, E = Self::CodE> {
 
         let vertex_errors = dom.vertices().filter_map(|v| {
@@ -299,20 +299,22 @@ pub trait GraphMapping {
             }
         });
 
-        let edge_errors = dom.edges().filter_map(|e| {
+        let edge_errors = dom.edges().flat_map(|e| {
             if let Some(f) = self.apply_edge(&e) {
                 if cod.has_edge(f) {
-                    if self.apply_vertex(&dom.src(&e))
-                           .map_or(true, |v| *v == cod.src(f)) &&
-                        self.apply_vertex(&dom.tgt(&e))
-                            .map_or(true, |v| *v == cod.tgt(f)) {
-                        return None
-                    } else {
-                        return Some(InvalidGraphMorphism::NotHomomorphic(e))
+                    let mut errs = Vec::new();
+                    if !self.apply_vertex(&dom.src(&e))
+                           .map_or(true, |v| *v == cod.src(f)) {
+                        errs.push(InvalidGraphMorphism::Src(e.clone()))
                     }
+                    if !self.apply_vertex(&dom.tgt(&e))
+                            .map_or(true, |v| *v == cod.tgt(f)) {
+                        errs.push(InvalidGraphMorphism::Tgt(e.clone()))
+                    }
+                    return errs
                 }
             }
-            Some(InvalidGraphMorphism::Edge(e))
+            vec![InvalidGraphMorphism::Edge(e)]
         });
 
         vertex_errors.chain(edge_errors)
@@ -331,9 +333,13 @@ pub enum InvalidGraphMorphism<V,E> {
     #[error("Edge `{0}` is not mapped to an edge in the codomain graph")]
     Edge(E),
 
-    /// An edge in the domain that does not have a homomorphic assignment.
-    #[error("Edge `{0}` has an assignment that is not homomorphic")]
-    NotHomomorphic(E),
+    /// An edge in the domain with an assignment not preserving its source.
+    #[error("Edge `{0}` has an assignment not preserving its source")]
+    Src(E),
+
+    /// An edge in the domain with an assignment not preserving its target.
+    #[error("Edge `{0}` has an assignment not preserving its target")]
+    Tgt(E)
 }
 
 /** A graph mapping backed by columns.
