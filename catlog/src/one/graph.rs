@@ -311,16 +311,16 @@ pub trait GraphMapping {
         let edge_errors = dom.edges().flat_map(|e| {
             if let Some(f) = self.apply_edge(&e) {
                 if cod.has_edge(f) {
-                    let mut errors = Vec::new();
+                    let mut errs = Vec::new();
                     if !self.apply_vertex(&dom.src(&e))
                            .map_or(true, |v| *v == cod.src(f)) {
-                        errors.push(InvalidGraphMorphism::Src(e.clone()))
+                        errs.push(InvalidGraphMorphism::Src(e.clone()))
                     }
                     if !self.apply_vertex(&dom.tgt(&e))
                             .map_or(true, |v| *v == cod.tgt(f)) {
-                        errors.push(InvalidGraphMorphism::Tgt(e.clone()))
+                        errs.push(InvalidGraphMorphism::Tgt(e.clone()))
                     }
-                    return errors
+                    return errs
                 }
             }
             vec![InvalidGraphMorphism::Edge(e)]

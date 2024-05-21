@@ -29,7 +29,7 @@ use thiserror::Error;
 
 use crate::validate::{self, Validate};
 use crate::zero::*;
-use crate::one::path::Path;
+use crate::one::path::{Path, SkelPath};
 use crate::one::graph::*;
 
 /** A double computad, the generating data for a free double category.
@@ -265,7 +265,7 @@ where S: FinSet, S::Elem: Clone,
                     errs.push(Invalid::NotSquare(α));
                 }
             }
-            errs.into_iter()
+            errs
         });
 
         edge_errors.chain(proedge_errors).chain(square_errors)
@@ -341,9 +341,6 @@ where S: FinSet, Col1: Mapping<Dom=S::Elem, Cod=S::Elem>,
         srcs.chain(tgts)
     }
 }
-
-/// A path in a graph with skeletal vertex and edge sets.
-type SkelPath = Path<usize, usize>;
 
 /// A skeletal, finite double computad.
 pub type SkelDblComputad =
@@ -532,24 +529,24 @@ pub trait DblComputadMapping {
         let square_errors = dom.squares().flat_map(|α| {
             if let Some(β) = self.apply_square(&α) {
                 if cod.has_square(β) {
-                    let mut errors = Vec::new();
+                    let mut errs = Vec::new();
                     if !self.apply_proedge_path(dom.square_dom(&α))
                            .map_or(true, |path| path == cod.square_dom(β)) {
-                        errors.push(Invalid::SquareDom(α.clone()));
+                        errs.push(Invalid::SquareDom(α.clone()));
                     }
                     if !self.apply_proedge_path(dom.square_cod(&α))
                            .map_or(true, |path| path == cod.square_cod(β)) {
-                        errors.push(Invalid::SquareCod(α.clone()));
+                        errs.push(Invalid::SquareCod(α.clone()));
                     }
                     if !self.apply_edge_path(dom.square_src(&α))
                            .map_or(true, |path| path == cod.square_src(β)) {
-                        errors.push(Invalid::SquareSrc(α.clone()));
+                        errs.push(Invalid::SquareSrc(α.clone()));
                     }
                     if !self.apply_edge_path(dom.square_tgt(&α))
                            .map_or(true, |path| path == cod.square_tgt(β)) {
-                        errors.push(Invalid::SquareTgt(α.clone()));
+                        errs.push(Invalid::SquareTgt(α.clone()));
                     }
-                    return errors
+                    return errs
                 }
             }
             vec![Invalid::Square(α)]

@@ -122,6 +122,9 @@ impl<V,E> Path<V,E> {
     }
 }
 
+/// A path in a graph with skeletal vertex and edge sets.
+pub type SkelPath = Path<usize, usize>;
+
 #[cfg(test)]
 mod tests {
     use std::convert::identity;
@@ -143,7 +146,6 @@ mod tests {
 
     #[test]
     fn map_path() {
-        type SkelPath = Path<usize, usize>;
         assert_eq!(SkelPath::Id(1).map(|v| v+1, identity),
                    Path::Id(2));
         assert_eq!(SkelPath::pair(0,1).map(identity, |e| e+1),
