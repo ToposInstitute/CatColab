@@ -221,7 +221,7 @@ where V: Eq+Hash+Clone, E: Eq+Hash+Clone, Col: Mapping<Dom=E, Cod=V> {
 
     /** Adds an edge to the graph, returning whether the edge is new.
 
-    If the edge is not new, it source and target are updated.
+    If the edge is not new, its source and target are updated.
     */
     pub fn add_edge(&mut self, e: E, src: V, tgt: V) -> bool {
         self.set_src(e.clone(), src);

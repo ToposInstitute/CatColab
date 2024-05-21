@@ -21,6 +21,7 @@ objects and arrows, and of objects and proarrows, are both free categories
   ([arXiv](https://arxiv.org/abs/1907.09927))
 */
 
+use std::hash::Hash;
 use derive_more::From;
 use nonempty::NonEmpty;
 use ref_cast::RefCast;
@@ -384,6 +385,50 @@ where Col1: Mapping<Dom=usize, Cod=usize>,
     }
 }
 
+/// A finite double computad backed by hash sets and hash maps.
+pub type HashDblComputad<T> =
+    ColumnarDblComputad<HashFinSet<T>, HashColumn<T,T>, HashColumn<T,Path<T,T>>>;
+
+impl<T,Col1,Col2> ColumnarDblComputad<HashFinSet<T>,Col1,Col2>
+where T: Eq + Hash + Clone,
+      Col1: Mapping<Dom=T, Cod=T>,
+      Col2: Mapping<Dom=T, Cod=Path<T,T>> {
+    /// Adds a vertex to the computad, returning whether it is new.
+    pub fn add_vertex(&mut self, v: T) -> bool {
+        self.vertex_set.insert(v)
+    }
+
+    /** Adds an edge to the computad, returning whether its is new.
+
+    If the edge is not new, its domain and codomain are updated.
+    */
+    pub fn add_edge(&mut self, e: T, dom: T, cod: T) -> bool {
+        self.dom_map.set(e.clone(), dom);
+        self.cod_map.set(e.clone(), cod);
+        self.edge_set.insert(e)
+    }
+
+    /** Adds a proedge to the computad, returning whether it is new.
+
+    If the proedge is not new, its source and target are updated.
+    */
+    pub fn add_proedge(&mut self, p: T, src: T, tgt: T) -> bool {
+        self.src_map.set(p.clone(), src);
+        self.tgt_map.set(p.clone(), tgt);
+        self.proedge_set.insert(p)
+    }
+
+    /// Adds a square to computad, returning whether it is new.
+    pub fn add_square(&mut self, α: T, dom: Path<T,T>, cod: Path<T,T>,
+                      src: Path<T,T>, tgt: Path<T,T>) -> bool {
+        self.square_dom_map.set(α.clone(), dom);
+        self.square_cod_map.set(α.clone(), cod);
+        self.square_src_map.set(α.clone(), src);
+        self.square_tgt_map.set(α.clone(), tgt);
+        self.square_set.insert(α)
+    }
+}
+
 /** A mapping between double computads.
 
 In the same spirit as mappings between [sets](crate::zero::Mapping) and
@@ -619,10 +664,27 @@ mod tests {
                                      Path::pair(t,t), Path::single(t));
         let _η = sig_monad.add_square(Path::Id(x), Path::Id(x),
                                       Path::Id(x), Path::single(t));
-        assert_eq!(sig_monad.square_dom(&μ), SkelPath::Id(x));
-        assert_eq!(sig_monad.square_cod(&μ), SkelPath::Id(x));
+        assert_eq!(sig_monad.square_dom(&μ), Path::Id(x));
+        assert_eq!(sig_monad.square_cod(&μ), Path::Id(x));
         assert_eq!(sig_monad.square_src(&μ).len(), 2);
         assert_eq!(sig_monad.square_tgt(&μ).len(), 1);
         assert!(sig_monad.validate().is_ok());
+    }
+
+    #[test]
+    fn hash_dbl_computad() {
+        let mut sig_monad: HashDblComputad<char> = Default::default();
+        assert!(sig_monad.add_vertex('x'));
+        assert!(sig_monad.add_edge('t', 'x', 'x'));
+        sig_monad.add_square('μ', Path::Id('x'), Path::Id('x'),
+                             Path::pair('t','t'), Path::single('t'));
+        sig_monad.add_square('η', Path::Id('x'), Path::Id('x'),
+                             Path::Id('x'), Path::single('t'));
+        assert_eq!(sig_monad.square_dom(&'μ'), Path::Id('x'));
+        assert_eq!(sig_monad.square_cod(&'μ'), Path::Id('x'));
+        assert_eq!(sig_monad.square_src(&'μ').len(), 2);
+        assert_eq!(sig_monad.square_tgt(&'μ').len(), 1);
+        assert!(sig_monad.validate().is_ok());
+
     }
 }
