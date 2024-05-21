@@ -395,6 +395,12 @@ where T: Eq + Hash + Clone,
         self.vertex_set.insert(v)
     }
 
+    /// Adds multiple vertices to the computad.
+    pub fn add_vertices<Iter>(&mut self, iter: Iter)
+    where Iter: IntoIterator<Item = T> {
+        self.vertex_set.extend(iter)
+    }
+
     /** Adds an edge to the computad, returning whether its is new.
 
     If the edge is not new, its domain and codomain are updated.

@@ -13,6 +13,9 @@ double category/computad. Practically speaking, this is the main difference
 between a double diagram and a double computad [mapping](DblComputadMapping).
  */
 
+use nonempty::NonEmpty;
+
+use crate::validate;
 use crate::zero::{Mapping, VecColumn};
 use crate::one::path::SkelPath;
 use super::computad::*;
@@ -99,6 +102,27 @@ where Ob: Eq, Arr: Eq, Pro: Eq, Cell: Eq {
     }
 }
 
+impl<Ob,Arr,Pro,Cell> SkelDblDiagram<Ob,Arr,Pro,Cell>
+where Ob: Eq+Clone, Arr: Eq+Clone, Pro: Eq+Clone, Cell: Eq+Clone {
+    /// Validates that diagram is contained in the given computad.
+    pub fn validate_in<Cptd>(
+        &self,
+        cptd: &Cptd
+    ) -> Result<(), NonEmpty<InvalidDblComputadMorphism<usize,usize,usize,usize>>>
+    where Cptd: DblComputad<V=Ob, E=Arr, ProE=Pro, Sq=Cell> {
+        validate::collect_errors(self.iter_invalid_in(cptd))
+    }
+
+    /// Iterates over failures of diagram to be contained in the given computad.
+    pub fn iter_invalid_in<'a, Cptd>(
+        &'a self,
+        cptd: &'a Cptd
+    ) -> impl Iterator<Item = InvalidDblComputadMorphism<usize,usize,usize,usize>> + 'a
+    where Cptd: DblComputad<V=Ob, E=Arr, ProE=Pro, Sq=Cell> {
+        self.iter_invalid_morphism(self.shape(), cptd)
+    }
+}
+
 impl<Ob,Arr,Pro,Cell> DblComputadMapping for SkelDblDiagram<Ob,Arr,Pro,Cell>
 where Ob: Eq+Clone, Arr: Eq+Clone, Pro: Eq+Clone, Cell: Eq+Clone {
     type DomV = usize;
@@ -162,27 +186,30 @@ mod tests {
 
     #[test]
     fn skel_dbl_diagram() {
-        let mut cptd: HashDblComputad<char> = Default::default();
-        cptd.add_vertex('x'); cptd.add_vertex('y'); cptd.add_vertex('z');
-        cptd.add_edge('f', 'x', 'x'); cptd.add_edge('g', 'z', 'z');
-        cptd.add_proedge('m', 'x', 'y'); cptd.add_proedge('n', 'y', 'z');
-        cptd.add_square('α', Path::single('m'), Path::single('m'),
-                        Path::single('f'), Path::Id('y'));
-        cptd.add_square('β', Path::single('n'), Path::single('n'),
-                        Path::Id('y'), Path::single('g'));
+        // Formula for general restriction in an equipment (see, for example,
+        // Lambert & Patterson 2024, Equation 4.7).
+        let mut cptd: HashDblComputad<&str> = Default::default();
+        cptd.add_vertices(["w", "x", "y", "z"].into_iter());
+        cptd.add_edge("f", "x", "w"); cptd.add_edge("g", "y", "z");
+        cptd.add_proedge("f!", "x", "w"); cptd.add_proedge("g*", "z", "y");
+        cptd.add_proedge("n", "w", "z");
+        cptd.add_square("f_res", Path::single("f!"), Path::Id("w"),
+                        Path::single("f"), Path::Id("w"));
+        cptd.add_square("g_res", Path::single("g*"), Path::Id("z"),
+                        Path::Id("z"), Path::single("g"));
         assert!(cptd.validate().is_ok());
 
-        let mut diag: SkelDblDiagram<char,char,char,char> = Default::default();
-        let (x1, x2) = (diag.add_object('x'), diag.add_object('x'));
-        let y = diag.add_object('y');
-        let (z1, z2) = (diag.add_object('z'), diag.add_object('z'));
-        let (f, g) = (diag.add_arrow('f', x1, x2), diag.add_arrow('g', z1, z2));
-        let (m1, m2) = (diag.add_proarrow('m', x1, y), diag.add_proarrow('m', x2, y));
-        let (n1, n2) = (diag.add_proarrow('n', y, z1), diag.add_proarrow('n', y, z2));
-        diag.add_cell('α', Path::single(m1), Path::single(m2),
-                      Path::single(f), Path::Id(y));
-        diag.add_cell('β', Path::single(n1), Path::single(n2),
-                      Path::Id(y), Path::single(g));
-        assert!(diag.validate_is_morphism(diag.shape(), &cptd).is_ok());
+        let mut diag: SkelDblDiagram<&str,&str,&str,&str> = Default::default();
+        let (w, x) = (diag.add_object("w"), diag.add_object("x"));
+        let (y, z) = (diag.add_object("y"), diag.add_object("z"));
+        let (f, g) = (diag.add_arrow("f", x, w), diag.add_arrow("g", y, z));
+        let fcmp = diag.add_proarrow("f!", x, w);
+        let gcnj = diag.add_proarrow("g*", z, y);
+        diag.add_proarrow("n", w, z);
+        diag.add_cell("f_res", Path::single(fcmp), Path::Id(w),
+                      Path::single(f), Path::Id(w));
+        diag.add_cell("g_res", Path::single(gcnj), Path::Id(z),
+                      Path::Id(z), Path::single(g));
+        assert!(diag.validate_in(&cptd).is_ok());
     }
 }
