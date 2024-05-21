@@ -271,24 +271,33 @@ pub trait GraphMapping {
     /// Applies the graph mappting at an edge.
     fn apply_edge(&self, e: &Self::DomE) -> Option<&Self::CodE>;
 
-    /// Validates that the mapping is a graph homomorphism between two graphs.
+    /** Validates that the mapping is a graph homomorphism between two graphs.
+
+    The domain and codomain are assumed to be valid graphs. If that is in
+    question, they should be validated *before* calling this method.
+    */
     fn validate_is_morphism<Dom, Cod>(
         &self,
         dom: &Dom,
         cod: &Cod
     ) -> Result<(), NonEmpty<InvalidGraphMorphism<Self::DomV, Self::DomE>>>
-    where Dom: FinGraph<V = Self::DomV, E = Self::DomE>, Self::DomE: Clone,
+    where Self::DomE: Clone,
+          Dom: FinGraph<V = Self::DomV, E = Self::DomE>,
           Cod: Graph<V = Self::CodV, E = Self::CodE> {
         validate::collect_errors(self.iter_invalid_morphism(dom, cod))
     }
 
-    /// Iterates over failues of the mapping to be a graph homomorphism.
+    /** Iterates over failues of the mapping to be a graph homomorphism.
+
+    The domain and codomain are assumed to be valid graphs.
+    */
     fn iter_invalid_morphism<Dom, Cod>(
         &self,
         dom: &Dom,
         cod: &Cod
     ) -> impl Iterator<Item = InvalidGraphMorphism<Self::DomV, Self::DomE>>
-    where Dom: FinGraph<V = Self::DomV, E = Self::DomE>, Self::DomE: Clone,
+    where Self::DomE: Clone,
+          Dom: FinGraph<V = Self::DomV, E = Self::DomE>,
           Cod: Graph<V = Self::CodV, E = Self::CodE> {
 
         let vertex_errors = dom.vertices().filter_map(|v| {
@@ -302,16 +311,16 @@ pub trait GraphMapping {
         let edge_errors = dom.edges().flat_map(|e| {
             if let Some(f) = self.apply_edge(&e) {
                 if cod.has_edge(f) {
-                    let mut errs = Vec::new();
+                    let mut errors = Vec::new();
                     if !self.apply_vertex(&dom.src(&e))
                            .map_or(true, |v| *v == cod.src(f)) {
-                        errs.push(InvalidGraphMorphism::Src(e.clone()))
+                        errors.push(InvalidGraphMorphism::Src(e.clone()))
                     }
                     if !self.apply_vertex(&dom.tgt(&e))
                             .map_or(true, |v| *v == cod.tgt(f)) {
-                        errs.push(InvalidGraphMorphism::Tgt(e.clone()))
+                        errors.push(InvalidGraphMorphism::Tgt(e.clone()))
                     }
-                    return errs
+                    return errors
                 }
             }
             vec![InvalidGraphMorphism::Edge(e)]
@@ -325,20 +334,20 @@ pub trait GraphMapping {
 /// homomorphism.
 #[derive(Debug,Error)]
 pub enum InvalidGraphMorphism<V,E> {
-    /// A vertex in the domain that is not mapped to a vertex in the codomain.
-    #[error("Vertex `{0}` is not mapped to a vertex in the codomain graph")]
+    /// A vertex in the domain graph not mapped to a vertex in the codomain.
+    #[error("Vertex `{0}` is not mapped to a vertex in the codomain")]
     Vertex(V),
 
-    /// An edge in the domain that is not mapped to an edge in the codomain.
-    #[error("Edge `{0}` is not mapped to an edge in the codomain graph")]
+    /// An edge in the domain graph not mapped to an edge in the codomain.
+    #[error("Edge `{0}` is not mapped to an edge in the codomain")]
     Edge(E),
 
-    /// An edge in the domain with an assignment not preserving its source.
-    #[error("Edge `{0}` has an assignment not preserving its source")]
+    /// An edge in the domain graph whose source is not preserved.
+    #[error("Mapping of edge `{0}` does not preserve its source")]
     Src(E),
 
-    /// An edge in the domain with an assignment not preserving its target.
-    #[error("Edge `{0}` has an assignment not preserving its target")]
+    /// An edge in the domain graph whose target is not preserved.
+    #[error("Mapping of edge `{0}` does not preserve its target")]
     Tgt(E)
 }
 

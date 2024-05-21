@@ -22,12 +22,14 @@ objects and arrows, and of objects and proarrows, are both free categories
 */
 
 use derive_more::From;
+use nonempty::NonEmpty;
 use ref_cast::RefCast;
 use thiserror::Error;
 
-use crate::validate::Validate;
+use crate::validate::{self, Validate};
 use crate::zero::*;
-use crate::one::{Graph, FinGraph, Path, InvalidColumnarGraph};
+use crate::one::path::Path;
+use crate::one::graph::*;
 
 /** A double computad, the generating data for a free double category.
 
@@ -390,22 +392,22 @@ morphism except that the domain and codomain computads are not specified.
 */
 pub trait DblComputadMapping {
     /// Type of vertices in domain computad.
-    type DomV: Eq;
+    type DomV: Eq + Clone;
     /// Type of edges in domain computad.
-    type DomE: Eq;
+    type DomE: Eq + Clone;
     /// Type of proedges in domain computad.
-    type DomProE: Eq;
+    type DomProE: Eq + Clone;
     /// Type of squares in domain computad.
-    type DomSq: Eq;
+    type DomSq: Eq + Clone;
 
     /// Type of vertices in codomain computad.
-    type CodV: Eq;
+    type CodV: Eq + Clone;
     /// Type of edges in codomain computad.
-    type CodE: Eq;
+    type CodE: Eq + Clone;
     /// Type of proedges in codomain computad.
-    type CodProE: Eq;
+    type CodProE: Eq + Clone;
     /// Type of squares in codomain computad.
-    type CodSq: Eq;
+    type CodSq: Eq + Clone;
 
     /// Applies the computad mapping at a vertex.
     fn apply_vertex(&self, v: &Self::DomV) -> Option<&Self::CodV>;
@@ -418,6 +420,189 @@ pub trait DblComputadMapping {
 
     /// Applies the computad mapping at a square.
     fn apply_square(&self, α: &Self::DomSq) -> Option<&Self::CodSq>;
+
+    /// Aplies the computad mapping to a path of edges.
+    fn apply_edge_path(&self, path: Path<Self::DomV, Self::DomE>
+    ) -> Option<Path<Self::CodV, Self::CodE>> {
+        path.try_map(|v| self.apply_vertex(&v).cloned(),
+                     |e| self.apply_edge(&e).cloned())
+    }
+
+    /// Aplies the computad mapping to a path of proedges.
+    fn apply_proedge_path(&self, path: Path<Self::DomV, Self::DomProE>
+    ) -> Option<Path<Self::CodV, Self::CodProE>> {
+        path.try_map(|v| self.apply_vertex(&v).cloned(),
+                     |p| self.apply_proedge(&p).cloned())
+    }
+
+    /// Validates that the mapping is a morphism between the two computads.
+    fn validate_is_morphism<Dom, Cod>(
+        &self,
+        dom: &Dom,
+        cod: &Cod
+    ) -> Result<(), NonEmpty<InvalidDblComputadMorphism<
+            Self::DomV, Self::DomE, Self::DomProE, Self::DomSq>>>
+    where Self: Sized,
+          Dom: FinDblComputad<V=Self::DomV, E=Self::DomE, ProE=Self::DomProE, Sq=Self::DomSq>,
+          Cod: DblComputad<V=Self::CodV, E=Self::CodE, ProE=Self::CodProE, Sq=Self::CodSq> {
+        validate::collect_errors(self.iter_invalid_morphism(dom, cod))
+    }
+
+    /// Iterates over failures of the mapping to be a computad morphism.
+    fn iter_invalid_morphism<Dom, Cod>(
+        &self,
+        dom: &Dom,
+        cod: &Cod
+    ) -> impl Iterator<Item = InvalidDblComputadMorphism<
+            Self::DomV, Self::DomE, Self::DomProE, Self::DomSq>>
+    where Self: Sized,
+          Dom: FinDblComputad<V=Self::DomV, E=Self::DomE, ProE=Self::DomProE, Sq=Self::DomSq>,
+          Cod: DblComputad<V=Self::CodV, E=Self::CodE, ProE=Self::CodProE, Sq=Self::CodSq> {
+        type Invalid<V,E,ProE,Sq> = InvalidDblComputadMorphism<V,E,ProE,Sq>;
+
+        let mapping = EdgeGraphMapping::ref_cast(self);
+        let edge_errors = mapping.iter_invalid_morphism(
+            EdgeGraph::ref_cast(dom),
+            EdgeGraph::ref_cast(cod)).map(|err| {
+                match err {
+                    InvalidGraphMorphism::Vertex(v) => Invalid::Vertex(v),
+                    InvalidGraphMorphism::Edge(e) => Invalid::Edge(e),
+                    InvalidGraphMorphism::Src(e) => Invalid::Dom(e),
+                    InvalidGraphMorphism::Tgt(e) => Invalid::Cod(e),
+                }
+            });
+
+        let mapping = ProedgeGraphMapping::ref_cast(self);
+        let proedge_errors = mapping.iter_invalid_morphism(
+            ProedgeGraph::ref_cast(dom),
+            ProedgeGraph::ref_cast(cod)).filter_map(|err| {
+                match err {
+                    InvalidGraphMorphism::Vertex(_) => None, // Already caught.
+                    InvalidGraphMorphism::Edge(p) => Some(Invalid::Proedge(p)),
+                    InvalidGraphMorphism::Src(p) => Some(Invalid::Src(p)),
+                    InvalidGraphMorphism::Tgt(p) => Some(Invalid::Tgt(p)),
+                }
+            });
+
+        let square_errors = dom.squares().flat_map(|α| {
+            if let Some(β) = self.apply_square(&α) {
+                if cod.has_square(β) {
+                    let mut errors = Vec::new();
+                    if !self.apply_proedge_path(dom.square_dom(&α))
+                           .map_or(true, |path| path == cod.square_dom(β)) {
+                        errors.push(Invalid::SquareDom(α.clone()));
+                    }
+                    if !self.apply_proedge_path(dom.square_cod(&α))
+                           .map_or(true, |path| path == cod.square_cod(β)) {
+                        errors.push(Invalid::SquareCod(α.clone()));
+                    }
+                    if !self.apply_edge_path(dom.square_src(&α))
+                           .map_or(true, |path| path == cod.square_src(β)) {
+                        errors.push(Invalid::SquareSrc(α.clone()));
+                    }
+                    if !self.apply_edge_path(dom.square_tgt(&α))
+                           .map_or(true, |path| path == cod.square_tgt(β)) {
+                        errors.push(Invalid::SquareTgt(α.clone()));
+                    }
+                    return errors
+                }
+            }
+            vec![Invalid::Square(α)]
+        });
+
+        edge_errors.chain(proedge_errors).chain(square_errors)
+    }
+}
+
+/// A failure of a [mapping](DblComputadMapping) between double computads to be
+/// a well-defined morphism.
+#[derive(Debug,Error)]
+pub enum InvalidDblComputadMorphism<V,E,ProE,Sq> {
+    /// A vertex in the domain computad not mapped to a vertex in the codomain.
+    #[error("Vertex `{0}` is not mapped to a vertex in the codomain")]
+    Vertex(V),
+
+    /// An edge in the domain computad not mapped to an edge in the codomain.
+    #[error("Edge `{0}` is not mapped to an edge in the codomain")]
+    Edge(E),
+
+    /// A proedge in the domain computad not mapped to a proedge in the codomain.
+    #[error("Proedge `{0}` is not mapped to a proedge in the codomain")]
+    Proedge(ProE),
+
+    /// A square in the domain computad not mapped to a square in the codomain.
+    #[error("Square `{0}` is not mapped to a square in the codomain")]
+    Square(Sq),
+
+    /// An edge in the domain computad whose domain is not preserved.
+    #[error("Mapping of edge `{0}` does not preserve its domain")]
+    Dom(E),
+
+    /// An edge in the domain computad whose codomain is not preserved.
+    #[error("Mapping of edge `{0}` does not preserve its codomain")]
+    Cod(E),
+
+    /// A proedge in the domain computad whose source is not preserved.
+    #[error("Mapping of proedge `{0}` does not preserve its source")]
+    Src(ProE),
+
+    /// A proedge in the domain computad whose target is not preserved.
+    #[error("Mapping of proedge `{0}` does not preserve its target")]
+    Tgt(ProE),
+
+    /// A square in the domain computad whose domain is not preserved.
+    #[error("Mapping of square `{0}` does not preserve its domain")]
+    SquareDom(Sq),
+
+    /// A square in the domain computad whose codomain is not preserved.
+    #[error("Mapping of square `{0}` does not preserve its codomain")]
+    SquareCod(Sq),
+
+    /// A square in the domain computad whose source is not preserved.
+    #[error("Mapping of square `{0}` does not preserve its source")]
+    SquareSrc(Sq),
+
+    /// A square in the domain computad whose target is not preserved.
+    #[error("Mapping of square `{0}` does not preserve its target")]
+    SquareTgt(Sq),
+}
+
+/// Mapping between [edge-graphs](EdgeGraph) underlying double computads.
+#[derive(From,RefCast)]
+#[repr(transparent)]
+pub struct EdgeGraphMapping<M: DblComputadMapping>(M);
+
+impl<M: DblComputadMapping> GraphMapping for EdgeGraphMapping<M> {
+    type DomV = M::DomV;
+    type DomE = M::DomE;
+    type CodV = M::CodV;
+    type CodE = M::CodE;
+
+    fn apply_vertex(&self, v: &Self::DomV) -> Option<&Self::CodV> {
+        self.0.apply_vertex(v)
+    }
+    fn apply_edge(&self, e: &Self::DomE) -> Option<&Self::CodE> {
+        self.0.apply_edge(e)
+    }
+}
+
+/// Mapping between [proedge-graphs](ProedgeGraph) underlying double computads.
+#[derive(From,RefCast)]
+#[repr(transparent)]
+pub struct ProedgeGraphMapping<M: DblComputadMapping>(M);
+
+impl<M: DblComputadMapping> GraphMapping for ProedgeGraphMapping<M> {
+    type DomV = M::DomV;
+    type DomE = M::DomProE;
+    type CodV = M::CodV;
+    type CodE = M::CodProE;
+
+    fn apply_vertex(&self, v: &Self::DomV) -> Option<&Self::CodV> {
+        self.0.apply_vertex(v)
+    }
+    fn apply_edge(&self, e: &Self::DomE) -> Option<&Self::CodE> {
+        self.0.apply_proedge(e)
+    }
 }
 
 #[cfg(test)]

@@ -1,22 +1,22 @@
 /*! Diagrams in double categories.
+
+To be more precise, this module is about *free and finitely generated* double
+diagrams, i.e., diagrams in a double category indexed by a free double category
+on a [finite double computad](FinDblComputad). Equivalently, by the adjunction,
+such a diagram is a morphism from a finite double computad to the double
+computad underlying a double category. Double diagrams are stored in the latter
+form, as it is simpler.
+
+As an object in a Rust, a double diagram knows its [shape](DblDiagram::shape)
+(indexing computad) and owns that data. It does not know or own the target
+double category/computad. Practically speaking, this is the main difference
+between a double diagram and a double computad [mapping](DblComputadMapping).
  */
 
 use crate::zero::{Mapping, VecColumn};
 use super::computad::*;
 
-/** A diagram in a double category.
-
-To be more precise, this is a *free*, *finitely generated* double diagram, i.e.,
-a diagram in a double category indexed by the free double category on a [finite
-double computad](FinDblComputad). Equivalently, by the adjunction, such a
-diagram is a morphism from a finite double computad to a double computad
-imagined to be the underlying computad of a double category.
-
-As an object in a Rust, a double diagram knows its shape (indexing computad) and
-owns that data. It does not know or own the target double category/computad.
-Practically speaking, this is the main difference between a double diagram and a
-double computad [mapping](DblComputadMapping).
-*/
+/// A diagram in a double category.
 pub trait DblDiagram {
     /// Type of vertices in the indexing computad.
     type V: Eq;
@@ -67,7 +67,7 @@ pub struct SkelDblDiagram<Ob, Arr, Pro, Cell> {
 }
 
 impl<Ob,Arr,Pro,Cell> DblComputadMapping for SkelDblDiagram<Ob,Arr,Pro,Cell>
-where Ob: Eq, Arr: Eq, Pro: Eq, Cell: Eq {
+where Ob: Eq+Clone, Arr: Eq+Clone, Pro: Eq+Clone, Cell: Eq+Clone {
     type DomV = usize;
     type DomE = usize;
     type DomProE = usize;
