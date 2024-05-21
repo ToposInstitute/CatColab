@@ -93,10 +93,38 @@ impl<V,E> Path<V,E> {
             }
         }
     }
+
+    /// Maps a path over functions on vertices and edges.
+    pub fn map<CodV, CodE, FnV, FnE>(self, fv: FnV, fe: FnE
+    ) -> Path<CodV, CodE>
+    where FnV: FnOnce(V) -> CodV, FnE: FnMut(E) -> CodE {
+        match self {
+            Path::Id(v) => Path::Id(fv(v)),
+            Path::Seq(edges) => Path::Seq(edges.map(fe)),
+        }
+    }
+
+    /// Maps a path over fallible functions on vertices and edges.
+    pub fn try_map<CodV, CodE, FnV, FnE>(self, fv: FnV, fe: FnE
+    ) -> Option<Path<CodV, CodE>>
+    where FnV: FnOnce(V) -> Option<CodV>, FnE: FnMut(E) -> Option<CodE> {
+        match self {
+            Path::Id(v) => {
+                let w = fv(v)?;
+                Some(Path::Id(w))
+            },
+            Path::Seq(edges) => {
+                let edges: Option<Vec<_>> = edges.into_iter().map(fe).collect();
+                let edges = edges?;
+                Some(Path::Seq(NonEmpty::from_vec(edges).unwrap()))
+            }
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::convert::identity;
     use super::*;
     use super::super::graph::SkelGraph;
 
@@ -111,5 +139,18 @@ mod tests {
         let path = Path::pair(0,1);
         assert_eq!(path.src(&g), 0);
         assert_eq!(path.tgt(&g), 2);
+    }
+
+    #[test]
+    fn map_path() {
+        type SkelPath = Path<usize, usize>;
+        assert_eq!(SkelPath::Id(1).map(|v| v+1, identity),
+                   Path::Id(2));
+        assert_eq!(SkelPath::pair(0,1).map(identity, |e| e+1),
+                   Path::pair(1,2));
+        assert_eq!(SkelPath::Id(1).try_map(|v| Some(v+1), |e| Some(e)),
+                   Some(Path::Id(2)));
+        assert_eq!(SkelPath::pair(0,1).try_map(|v| Some(v), |e| Some(e+1)),
+                   Some(Path::pair(1,2)));
     }
 }
