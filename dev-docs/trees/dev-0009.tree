@@ -1,0 +1,28 @@
+\title{Symbols}
+\import{macros}
+
+\p{Julia has a built-in \code{Symbol} type, which is a kind of
+\wikipedia{interned string}. Rust has no built-in data type for symbols but has
+a wide variety of external packages providing such functionality—a variety that
+is both a blessing and a curse. In fact, there are two strategies to create a
+data structure for \em{symbols}, or immutable, cheaply cloneable strings:
+internment and small strings.}
+
+\subtree{
+\title{Interned strings}
+
+\p{There are numerous Rust packages for [string
+interning](https://lib.rs/search?q=interning). Some of the most popular are:
+\ul{
+\li{[string_cache](https://lib.rs/crates/string_cache)}
+\li{[string-interner](https://lib.rs/crates/string-interner)}
+\li{[internment](https://lib.rs/crates/internment)}
+\li{[ustr](https://lib.rs/crates/ustr)}
+}
+}
+
+\p{Compared to the alternatives, the package \code{internment} is notable for
+(1) interning arbitrary data, not just strings and (2) supporting several
+strategies for when, if ever, to free the interned data.}
+
+}
