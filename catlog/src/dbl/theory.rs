@@ -37,11 +37,11 @@ summarized by the table:
 
 Models of a double theory are always *categorical* structures, rather than
 merely *set-theoretical* ones, because each object type is interpreted not just
-as a set of objects but has an associated set of morphisms between those
-objects. To achieve this, each object type in the double theory has a
-distinguished morphism or "hom" type ([`hom_type`](DblTheory::hom_type)).
-Similarly, all object operations are functorial since they are associated with a
-distinguished operation on morphisms ([`hom_op`](DblTheory::hom_op)).
+as a set of objects but also as a set of morphisms between those objects,
+constituting a category. To achieve this, each object type in the double theory
+has a distinguished morphism or "hom" type ([`hom_type`](DblTheory::hom_type)).
+Similarly, all object operations become functorial since they are associated
+with a distinguished operation on morphisms ([`hom_op`](DblTheory::hom_op)).
 
 # References
 
@@ -53,6 +53,8 @@ distinguished operation on morphisms ([`hom_op`](DblTheory::hom_op)).
   ([arXiv](https://arxiv.org/abs/2401.08990))
   - Section 10: Finite-product double theories
 */
+
+use crate::one::path::Path;
 
 /** A double theory.
 
@@ -90,9 +92,58 @@ pub trait DblTheory {
     /// Target of morphism type.
     fn tgt(&self, m: &Self::HomType) -> Self::ObType;
 
-    /// Type of morphism associated with object type.
-    fn hom_type(&self, x: &Self::ObType) -> Self::HomType;
+    /// Domain of operation on objects.
+    fn dom(&self, f: &Self::ObOp) -> Self::ObType;
 
-    /// Operation on morphisms associated with object operation.
-    fn hom_op(&self, f: &Self::ObOp) -> Self::HomOp;
+    /// Codomain of operation on objects.
+    fn cod(&self, f: &Self::ObOp) -> Self::ObType;
+
+    /// Source operation of operation on morphisms.
+    fn op_src(&self, α: &Self::HomOp) -> Self::ObOp;
+
+    /// Target operation of operation on morphisms.
+    fn op_tgt(&self, α: &Self::HomOp) -> Self::ObOp;
+
+    /// Domain type of operation on morphisms.
+    fn op_dom(&self, α: &Self::HomOp) -> Self::HomType;
+
+    /// Codomain type of operation on morphisms.
+    fn op_cod(&self, α: &Self::HomOp) -> Self::HomType;
+
+    /// Composes a sequence of morphism types.
+    fn compose_types(
+        &self,
+        path: Path<Self::ObType, Self::HomType>
+    ) -> Self::HomType;
+
+    /** Type of morphism associated with object type.
+
+    Viewing the theory as a double category, this is the identity proarrow on an
+    object.
+    */
+    fn hom_type(&self, x: Self::ObType) -> Self::HomType {
+        self.compose_types(Path::Id(x))
+    }
+
+    /// Compose a sequence of operations on objects.
+    fn compose_ob_ops(
+        &self,
+        path: Path<Self::ObType, Self::ObOp>
+    ) -> Self::ObOp;
+
+    /** Identity operation on an object type.
+
+    View the theory as a double category, this is the identity arrow on an
+    object.
+    */
+    fn id_ob_op(&self, x: Self::ObType) -> Self::ObOp {
+        self.compose_ob_ops(Path::Id(x))
+    }
+
+    /** Operation on morphisms associated with object operation.
+
+    Viewing the theory as a double category, this is the identity cell on an
+    arrow.
+    */
+    fn hom_op(&self, f: Self::ObOp) -> Self::HomOp;
 }
