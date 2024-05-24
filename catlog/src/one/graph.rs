@@ -84,14 +84,18 @@ pub struct ColumnarGraph<VSet,ESet,Col> {
     tgt_map: Col,
 }
 
-/// An invalid assignment in a [columnar graph](ColumnarGraph).
+/** An invalid assignment in a graph defined explicitly by data.
+
+For [columnar graphs](ColumnarGraph) and other such graphs, it is possible that
+the data is incomplete or inconsistent.
+*/
 #[derive(Debug,Error)]
-pub enum InvalidColumnarGraph<E> {
-    /// Edge with a source that is not a valid vertex.
+pub enum InvalidGraphData<E> {
+    /// Edge assigned a source that is not a vertex contained in the graph.
     #[error("Source of edge `{0}` is not a vertex in the graph")]
     Src(E),
 
-    /// Edge with a target that is not a valid vertex.
+    /// Edge assigned a target that is not a vertex contained in the graph.
     #[error("Target of edge `{0}` is not a vertex in the graph")]
     Tgt(E),
 }
@@ -115,14 +119,14 @@ where V: Eq, E: Eq,
 impl<V,E,VSet,ESet,Col> Validate for ColumnarGraph<VSet,ESet,Col>
 where V: Eq + Clone, E: Eq + Clone,
       VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Mapping<Dom=E,Cod=V> {
-    type ValidationError = InvalidColumnarGraph<E>;
+    type ValidationError = InvalidGraphData<E>;
 
     fn iter_invalid(&self) -> impl Iterator<Item = Self::ValidationError> {
         let (dom, cod) = (&self.edge_set, &self.vertex_set);
         let srcs = self.src_map.iter_invalid_function(dom, cod).map(
-            |e| InvalidColumnarGraph::Src(e.take()));
+            |e| InvalidGraphData::Src(e.take()));
         let tgts = self.tgt_map.iter_invalid_function(dom, cod).map(
-            |e| InvalidColumnarGraph::Tgt(e.take()));
+            |e| InvalidGraphData::Tgt(e.take()));
         srcs.chain(tgts)
     }
 }

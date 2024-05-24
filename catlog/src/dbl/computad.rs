@@ -121,38 +121,38 @@ pub struct ColumnarDblComputad<S,Col1,Col2> {
     square_src_map: Col2, square_tgt_map: Col2,
 }
 
-/// An invalid assignment in a columnar double computad.
+/// An invalid assignment in a double computad defined explicitly by data.
 #[derive(Debug,Error)]
-pub enum InvalidColumnarDblComputad<T> {
-    /// Edge with a domain that is not a valid vertex.
+pub enum InvalidDblComputadData<T> {
+    /// Edge assigned a domain that is not a vertex contained in the computad.
     #[error("Domain of edge `{0}` is not a vertex in the computad")]
     Dom(T),
 
-    /// Edge with a codomain that is not a valid vertex.
+    /// Edge assigned a codomain that is not a vertex contained in the computad.
     #[error("Codomain of edge `{0}` is not a vertex in the computad")]
     Cod(T),
 
-    /// Proedge with a source that is not a valid vertex.
+    /// Proedge assigned a source that is not a vertex contained in the computad.
     #[error("Source of proedge `{0}` is not a vertex in the computad")]
     Src(T),
 
-    /// Proedge with a target that is not a valid vertex.
+    /// Proedge assigned a target that is not a a vertex contained in the computad.
     #[error("Target of proedge `{0}` is not a vertex in the computad")]
     Tgt(T),
 
-    /// Square with a domain that is not a valid path of proedges.
+    /// Square assigned a domain that is not a valid path of proedges.
     #[error("Domain of square `{0}` is not a path of proedges in the computad")]
     SquareDom(T),
 
-    /// Square with a codomain that is not a valid path of proedges.
+    /// Square assigned a codomain that is not a valid path of proedges.
     #[error("Codomain of square `{0}` is not a path of proedges in the computad")]
     SquareCod(T),
 
-    /// Square with a source that is not a valid path of edges.
+    /// Square assigned a source that is not a valid path of edges.
     #[error("Source of square `{0}` is not a path of edges in the computad")]
     SquareSrc(T),
 
-    /// Square with a target that is not a valid path of edges.
+    /// Square assigned a target that is not a valid path of edges.
     #[error("Target of square `{0}` is not a path of edges in the computad")]
     SquareTgt(T),
 
@@ -217,24 +217,24 @@ impl<S,Col1,Col2> Validate for ColumnarDblComputad<S,Col1,Col2>
 where S: FinSet, S::Elem: Clone,
       Col1: Mapping<Dom=S::Elem, Cod=S::Elem>,
       Col2: Mapping<Dom=S::Elem, Cod=Path<S::Elem,S::Elem>> {
-    type ValidationError = InvalidColumnarDblComputad<S::Elem>;
+    type ValidationError = InvalidDblComputadData<S::Elem>;
 
     fn iter_invalid(&self) -> impl Iterator<Item = Self::ValidationError> {
-        type Invalid<T> = InvalidColumnarDblComputad<T>;
+        type Invalid<T> = InvalidDblComputadData<T>;
 
         let edge_graph = EdgeGraph::ref_cast(self);
         let edge_errors = edge_graph.iter_invalid().map(|err| {
             match err {
-                InvalidColumnarGraph::Src(e) => Invalid::Dom(e),
-                InvalidColumnarGraph::Tgt(e) => Invalid::Cod(e),
+                InvalidGraphData::Src(e) => Invalid::Dom(e),
+                InvalidGraphData::Tgt(e) => Invalid::Cod(e),
             }
         });
 
         let proedge_graph = ProedgeGraph::ref_cast(self);
         let proedge_errors = proedge_graph.iter_invalid().map(|err| {
             match err {
-                InvalidColumnarGraph::Src(e) => Invalid::Src(e),
-                InvalidColumnarGraph::Tgt(e) => Invalid::Tgt(e),
+                InvalidGraphData::Src(e) => Invalid::Src(e),
+                InvalidGraphData::Tgt(e) => Invalid::Tgt(e),
             }
         });
 
@@ -295,14 +295,14 @@ impl<Cptd: FinDblComputad> FinGraph for EdgeGraph<Cptd> {
 impl<S,Col1,Col2> Validate for EdgeGraph<ColumnarDblComputad<S,Col1,Col2>>
 where S: FinSet, Col1: Mapping<Dom=S::Elem, Cod=S::Elem>,
       ColumnarDblComputad<S,Col1,Col2>: DblComputad {
-    type ValidationError = InvalidColumnarGraph<S::Elem>;
+    type ValidationError = InvalidGraphData<S::Elem>;
 
     fn iter_invalid(&self) -> impl Iterator<Item = Self::ValidationError> {
         let (eset, vset) = (&self.0.edge_set, &self.0.vertex_set);
         let srcs = self.0.dom_map.iter_invalid_function(eset, vset).map(
-            |e| InvalidColumnarGraph::Src(e.take()));
+            |e| InvalidGraphData::Src(e.take()));
         let tgts = self.0.cod_map.iter_invalid_function(eset, vset).map(
-            |e| InvalidColumnarGraph::Tgt(e.take()));
+            |e| InvalidGraphData::Tgt(e.take()));
         srcs.chain(tgts)
     }
 }
@@ -330,14 +330,14 @@ impl<Cptd: FinDblComputad> FinGraph for ProedgeGraph<Cptd> {
 impl<S,Col1,Col2> Validate for ProedgeGraph<ColumnarDblComputad<S,Col1,Col2>>
 where S: FinSet, Col1: Mapping<Dom=S::Elem, Cod=S::Elem>,
       ColumnarDblComputad<S,Col1,Col2>: DblComputad {
-    type ValidationError = InvalidColumnarGraph<S::Elem>;
+    type ValidationError = InvalidGraphData<S::Elem>;
 
     fn iter_invalid(&self) -> impl Iterator<Item = Self::ValidationError> {
         let (eset, vset) = (&self.0.proedge_set, &self.0.vertex_set);
         let srcs = self.0.src_map.iter_invalid_function(eset, vset).map(
-            |e| InvalidColumnarGraph::Src(e.take()));
+            |e| InvalidGraphData::Src(e.take()));
         let tgts = self.0.tgt_map.iter_invalid_function(eset, vset).map(
-            |e| InvalidColumnarGraph::Tgt(e.take()));
+            |e| InvalidGraphData::Tgt(e.take()));
         srcs.chain(tgts)
     }
 }
