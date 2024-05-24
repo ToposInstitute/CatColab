@@ -2,10 +2,10 @@
 
 To be more precise, this module is about *free and finitely generated* double
 diagrams, i.e., diagrams in a double category indexed by a free double category
-on a [finite double computad](FinDblComputad). Equivalently, by the adjunction,
-such a diagram is a morphism from a finite double computad to the double
-computad underlying a double category. Double diagrams are stored in the latter,
-simpler form.
+on a [finite double computad](FinDblComputad). Equivalently, such a double
+diagram is a morphism from a finite double computad to the double computad
+underlying a double category. The latter description is simpler, so it is how we
+store a double diagram.
 
 As an object in a Rust, a double diagram knows its shape (indexing computad) and
 typically owns that data. It does not know or own the target double
