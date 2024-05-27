@@ -6,7 +6,7 @@ use derive_more::From;
 use nonempty::NonEmpty;
 use thiserror::Error;
 
-use crate::validate;
+use crate::validate::{self, Validate};
 use super::set::{Set, FinSet};
 
 /** A functional mapping.
@@ -45,35 +45,6 @@ pub trait Mapping {
     fn is_set(&self, x: &Self::Dom) -> bool {
         self.apply(x).is_some()
     }
-
-    /// Validates that the mapping restricts to a function on a finite domain.
-    fn validate_is_function<Dom, Cod>(
-        &self,
-        dom: &Dom,
-        cod: &Cod
-    ) -> Result<(), NonEmpty<InvalidFunction<Self::Dom>>>
-    where Dom: FinSet<Elem = Self::Dom>, Cod: Set<Elem = Self::Cod> {
-        validate::collect_errors(self.iter_invalid_function(dom, cod))
-    }
-
-    /// Iterates over failures of the mapping to restrict to a function.
-    fn iter_invalid_function<Dom, Cod>(
-        &self,
-        dom: &Dom,
-        cod: &Cod
-    ) -> impl Iterator<Item = InvalidFunction<Self::Dom>>
-    where Dom: FinSet<Elem = Self::Dom>, Cod: Set<Elem = Self::Cod> {
-        dom.iter().filter_map(|x| {
-            match self.apply(&x) {
-                Some(y) => if cod.contains(&y) {
-                    None
-                } else {
-                    Some(InvalidFunction::Cod(x))
-                }
-                None => Some(InvalidFunction::Dom(x))
-            }
-        })
-    }
 }
 
 /** A mapping with finite support.
@@ -93,6 +64,49 @@ pub trait Column: Mapping {
     */
     fn preimage(&self, y: &Self::Cod) -> impl Iterator<Item = Self::Dom> {
         self.iter().filter(|&(_, z)| *z == *y).map(|(x,_)| x)
+    }
+}
+
+/** A function between sets defined by a mapping.
+
+This struct borrows its data, and exists mainly as a convenient interface to
+validate that a mapping defines a valid function.
+ */
+pub struct Function<'a,Map,DomSet,CodSet>(
+    pub &'a Map,
+    pub &'a DomSet,
+    pub &'a CodSet,
+);
+
+impl<'a,Dom,Cod,Map,DomSet,CodSet> Function<'a,Map,DomSet,CodSet>
+where Dom: Eq, Cod: Eq, Map: Mapping<Dom=Dom, Cod=Cod>,
+      DomSet: FinSet<Elem=Dom>, CodSet: Set<Elem=Cod> {
+
+    /// Iterates over failures to be a function.
+    pub fn iter_invalid(
+        &self
+    ) -> impl Iterator<Item = InvalidFunction<Dom>> + 'a {
+        let Function(mapping, dom, cod) = self;
+        dom.iter().filter_map(|x| {
+            match mapping.apply(&x) {
+                Some(y) => if cod.contains(&y) {
+                    None
+                } else {
+                    Some(InvalidFunction::Cod(x))
+                }
+                None => Some(InvalidFunction::Dom(x))
+            }
+        })
+    }
+}
+
+impl<Dom,Cod,Map,DomSet,CodSet> Validate for Function<'_,Map,DomSet,CodSet>
+where Dom: Eq, Cod: Eq, Map: Mapping<Dom=Dom, Cod=Cod>,
+      DomSet: FinSet<Elem=Dom>, CodSet: Set<Elem=Cod> {
+    type ValidationError = InvalidFunction<Dom>;
+
+    fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
+        validate::collect_errors(self.iter_invalid())
     }
 }
 
@@ -541,7 +555,7 @@ mod tests {
     fn validate_column() {
         let col = VecColumn::new(vec![1, 2, 4]);
         let validate = |m, n|
-          col.validate_is_function(&SkelFinSet::from(m), &SkelFinSet::from(n));
+          Function(&col, &SkelFinSet::from(m), &SkelFinSet::from(n)).validate();
         assert!(validate(3, 5).is_ok());
         assert_eq!(validate(4, 5).unwrap_err(),
                    NonEmpty::new(InvalidFunction::Dom::<usize>(3)));

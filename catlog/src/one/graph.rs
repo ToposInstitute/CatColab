@@ -116,18 +116,30 @@ where V: Eq, E: Eq,
     pub fn set_tgt(&mut self, e: E, v: V) -> Option<V> { self.tgt_map.set(e,v) }
 }
 
+impl<V,E,VSet,ESet,Col> ColumnarGraph<VSet,ESet,Col>
+where V: Eq + Clone, E: Eq + Clone,
+      VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Mapping<Dom=E,Cod=V> {
+
+    /// Iterates over failures to be a valid graph.
+    pub fn iter_invalid(
+        &self
+    ) -> impl Iterator<Item = InvalidGraphData<E>> + '_ {
+        let (dom, cod) = (&self.edge_set, &self.vertex_set);
+        let srcs = Function(&self.src_map, dom, cod).iter_invalid().map(
+            |e| InvalidGraphData::Src(e.take()));
+        let tgts = Function(&self.tgt_map, dom, cod).iter_invalid().map(
+            |e| InvalidGraphData::Tgt(e.take()));
+        srcs.chain(tgts)
+    }
+}
+
 impl<V,E,VSet,ESet,Col> Validate for ColumnarGraph<VSet,ESet,Col>
 where V: Eq + Clone, E: Eq + Clone,
       VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Mapping<Dom=E,Cod=V> {
     type ValidationError = InvalidGraphData<E>;
 
-    fn iter_invalid(&self) -> impl Iterator<Item = Self::ValidationError> {
-        let (dom, cod) = (&self.edge_set, &self.vertex_set);
-        let srcs = self.src_map.iter_invalid_function(dom, cod).map(
-            |e| InvalidGraphData::Src(e.take()));
-        let tgts = self.tgt_map.iter_invalid_function(dom, cod).map(
-            |e| InvalidGraphData::Tgt(e.take()));
-        srcs.chain(tgts)
+    fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
+        validate::collect_errors(self.iter_invalid())
     }
 }
 
