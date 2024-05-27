@@ -534,21 +534,21 @@ pub trait DblComputadMapping {
     }
 
     /// Iterates over failures of the mapping to be a computad morphism.
-    fn iter_invalid_morphism<Dom, Cod>(
-        &self,
-        dom: &Dom,
-        cod: &Cod
+    fn iter_invalid_morphism<'a, Dom, Cod>(
+        &'a self,
+        dom: &'a Dom,
+        cod: &'a Cod
     ) -> impl Iterator<Item = InvalidDblComputadMorphism<
-            Self::DomV, Self::DomE, Self::DomProE, Self::DomSq>>
+            Self::DomV, Self::DomE, Self::DomProE, Self::DomSq>> + 'a
     where Self: Sized,
           Dom: FinDblComputad<V=Self::DomV, E=Self::DomE, ProE=Self::DomProE, Sq=Self::DomSq>,
           Cod: DblComputad<V=Self::CodV, E=Self::CodE, ProE=Self::CodProE, Sq=Self::CodSq> {
         type Invalid<V,E,ProE,Sq> = InvalidDblComputadMorphism<V,E,ProE,Sq>;
 
         let mapping = EdgeGraphMapping::ref_cast(self);
-        let edge_errors = mapping.iter_invalid_morphism(
+        let edge_errors = GraphMorphism(mapping,
             EdgeGraph::ref_cast(dom),
-            EdgeGraph::ref_cast(cod)).map(|err| {
+            EdgeGraph::ref_cast(cod)).iter_invalid().map(|err| {
                 match err {
                     InvalidGraphMorphism::Vertex(v) => Invalid::Vertex(v),
                     InvalidGraphMorphism::Edge(e) => Invalid::Edge(e),
@@ -558,9 +558,9 @@ pub trait DblComputadMapping {
             });
 
         let mapping = ProedgeGraphMapping::ref_cast(self);
-        let proedge_errors = mapping.iter_invalid_morphism(
+        let proedge_errors = GraphMorphism(mapping,
             ProedgeGraph::ref_cast(dom),
-            ProedgeGraph::ref_cast(cod)).filter_map(|err| {
+            ProedgeGraph::ref_cast(cod)).iter_invalid().filter_map(|err| {
                 match err {
                     InvalidGraphMorphism::Vertex(_) => None, // Already caught.
                     InvalidGraphMorphism::Edge(p) => Some(Invalid::Proedge(p)),

@@ -67,25 +67,24 @@ pub trait Column: Mapping {
     }
 }
 
-/** A function between sets defined by a mapping.
+/** A function between sets defined by a [mapping](Mapping).
 
 This struct borrows its data, and exists mainly as a convenient interface to
 validate that a mapping defines a valid function.
  */
-pub struct Function<'a,Map,DomSet,CodSet>(
+pub struct Function<'a,Map,Dom,Cod>(
     pub &'a Map,
-    pub &'a DomSet,
-    pub &'a CodSet,
+    pub &'a Dom,
+    pub &'a Cod,
 );
 
-impl<'a,Dom,Cod,Map,DomSet,CodSet> Function<'a,Map,DomSet,CodSet>
-where Dom: Eq, Cod: Eq, Map: Mapping<Dom=Dom, Cod=Cod>,
-      DomSet: FinSet<Elem=Dom>, CodSet: Set<Elem=Cod> {
+impl<'a,Map,Dom,Cod> Function<'a,Map,Dom,Cod>
+where Map: Mapping, Dom: FinSet<Elem=Map::Dom>, Cod: Set<Elem=Map::Cod> {
 
     /// Iterates over failures to be a function.
     pub fn iter_invalid(
         &self
-    ) -> impl Iterator<Item = InvalidFunction<Dom>> + 'a {
+    ) -> impl Iterator<Item = InvalidFunction<Map::Dom>> + 'a {
         let Function(mapping, dom, cod) = self;
         dom.iter().filter_map(|x| {
             match mapping.apply(&x) {
@@ -100,10 +99,9 @@ where Dom: Eq, Cod: Eq, Map: Mapping<Dom=Dom, Cod=Cod>,
     }
 }
 
-impl<Dom,Cod,Map,DomSet,CodSet> Validate for Function<'_,Map,DomSet,CodSet>
-where Dom: Eq, Cod: Eq, Map: Mapping<Dom=Dom, Cod=Cod>,
-      DomSet: FinSet<Elem=Dom>, CodSet: Set<Elem=Cod> {
-    type ValidationError = InvalidFunction<Dom>;
+impl<Map,Dom,Cod> Validate for Function<'_,Map,Dom,Cod>
+where Map: Mapping, Dom: FinSet<Elem=Map::Dom>, Cod: Set<Elem=Map::Cod> {
+    type ValidationError = InvalidFunction<Map::Dom>;
 
     fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
         validate::collect_errors(self.iter_invalid())

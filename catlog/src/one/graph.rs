@@ -347,38 +347,32 @@ pub trait GraphMapping {
 
     /// Applies the graph mappting at an edge.
     fn apply_edge(&self, e: &Self::DomE) -> Option<&Self::CodE>;
+}
 
-    /** Validates that the mapping is a graph homomorphism between two graphs.
+/** A homomorphism between graphs defined by a [mapping](GraphMapping).
 
-    The domain and codomain are assumed to be valid graphs. If that is in
-    question, they should be validated *before* calling this method.
-    */
-    fn validate_is_morphism<Dom, Cod>(
+This struct borrows its data to perform validation. The domain and codomain are
+assumed to be valid graphs. If that is in question, the graphs should be
+validated *before* valiating this object.
+ */
+pub struct GraphMorphism<'a,Map,Dom,Cod>(
+    pub &'a Map,
+    pub &'a Dom,
+    pub &'a Cod,
+);
+
+impl<'a,Map,Dom,Cod> GraphMorphism<'a,Map,Dom,Cod>
+where Map: GraphMapping, Map::DomE: Clone,
+      Dom: FinGraph<V=Map::DomV, E=Map::DomE>,
+      Cod: Graph<V=Map::CodV, E=Map::CodE> {
+
+    /// Iterates over failues of the mapping to be a graph homomorphism.
+    pub fn iter_invalid(
         &self,
-        dom: &Dom,
-        cod: &Cod
-    ) -> Result<(), NonEmpty<InvalidGraphMorphism<Self::DomV, Self::DomE>>>
-    where Self::DomE: Clone,
-          Dom: FinGraph<V = Self::DomV, E = Self::DomE>,
-          Cod: Graph<V = Self::CodV, E = Self::CodE> {
-        validate::collect_errors(self.iter_invalid_morphism(dom, cod))
-    }
-
-    /** Iterates over failues of the mapping to be a graph homomorphism.
-
-    The domain and codomain are assumed to be valid graphs.
-    */
-    fn iter_invalid_morphism<Dom, Cod>(
-        &self,
-        dom: &Dom,
-        cod: &Cod
-    ) -> impl Iterator<Item = InvalidGraphMorphism<Self::DomV, Self::DomE>>
-    where Self::DomE: Clone,
-          Dom: FinGraph<V = Self::DomV, E = Self::DomE>,
-          Cod: Graph<V = Self::CodV, E = Self::CodE> {
-
+    ) -> impl Iterator<Item = InvalidGraphMorphism<Map::DomV, Map::DomE>> + 'a {
+        let GraphMorphism(mapping, dom, cod) = self;
         let vertex_errors = dom.vertices().filter_map(|v| {
-            if self.apply_vertex(&v).map_or(false, |w| cod.has_vertex(w)) {
+            if mapping.apply_vertex(&v).map_or(false, |w| cod.has_vertex(w)) {
                 None
             } else {
                 Some(InvalidGraphMorphism::Vertex(v))
@@ -386,14 +380,14 @@ pub trait GraphMapping {
         });
 
         let edge_errors = dom.edges().flat_map(|e| {
-            if let Some(f) = self.apply_edge(&e) {
+            if let Some(f) = mapping.apply_edge(&e) {
                 if cod.has_edge(f) {
                     let mut errs = Vec::new();
-                    if !self.apply_vertex(&dom.src(&e))
+                    if !mapping.apply_vertex(&dom.src(&e))
                            .map_or(true, |v| *v == cod.src(f)) {
                         errs.push(InvalidGraphMorphism::Src(e.clone()))
                     }
-                    if !self.apply_vertex(&dom.tgt(&e))
+                    if !mapping.apply_vertex(&dom.tgt(&e))
                             .map_or(true, |v| *v == cod.tgt(f)) {
                         errs.push(InvalidGraphMorphism::Tgt(e.clone()))
                     }
@@ -404,6 +398,17 @@ pub trait GraphMapping {
         });
 
         vertex_errors.chain(edge_errors)
+    }
+}
+
+impl<Map,Dom,Cod> Validate for GraphMorphism<'_,Map,Dom,Cod>
+where Map: GraphMapping, Map::DomE: Clone,
+      Dom: FinGraph<V=Map::DomV, E=Map::DomE>,
+      Cod: Graph<V=Map::CodV, E=Map::CodE> {
+    type ValidationError = InvalidGraphMorphism<Map::DomV, Map::DomE>;
+
+    fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
+        validate::collect_errors(self.iter_invalid())
     }
 }
 
@@ -499,17 +504,17 @@ mod tests {
     }
 
     #[test]
-    fn validate_graph_mapping() {
+    fn validate_graph_moprhism() {
         let g = SkelGraph::path(3);
         let h = SkelGraph::path(4);
         let f = ColumnarGraphMapping::new(
             VecColumn::new(vec![1,2,3]), VecColumn::new(vec![1,2])
         );
-        assert!(f.validate_is_morphism(&g, &h).is_ok());
+        assert!(GraphMorphism(&f, &g, &h).validate().is_ok());
 
         let f = ColumnarGraphMapping::new(
             VecColumn::new(vec![1,2,3]), VecColumn::new(vec![2,1])
         ); // Not a homomorphism.
-        assert!(f.validate_is_morphism(&g, &h).is_err());
+        assert!(GraphMorphism(&f, &g, &h).validate().is_err());
     }
 }
