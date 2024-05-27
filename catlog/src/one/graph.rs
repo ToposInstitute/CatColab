@@ -75,7 +75,9 @@ pub trait FinGraph: Graph {
 /** A finite graph backed by columns.
 
 Such a graph is defined in the styles of "C-sets" by two [finite sets](FinSet)
-and two [columns](Column).
+and two [columns](Column). Since this is a common and flexible strategy for
+defining graphs, this trait provides a *blanket implementation* for [`Graph`]
+and [`FinGraph`].
  */
 pub trait ColumnarGraph {
     /// Type of vertices in columnar graph.
@@ -84,26 +86,17 @@ pub trait ColumnarGraph {
     /// Type of edges in columnar graph.
     type E: Eq + Clone;
 
-    /// Type of vertex set.
-    type VSet: FinSet<Elem = Self::V>;
-
-    /// Type of edge set.
-    type ESet: FinSet<Elem = Self::E>;
-
-    /// Type of column for source and target maps.
-    type Col: Column<Dom = Self::E, Cod = Self::V>;
-
     /// Gets the set of vertices.
-    fn vertex_set(&self) -> &Self::VSet;
+    fn vertex_set(&self) -> &impl FinSet<Elem = Self::V>;
 
     /// Gets the set of edges.
-    fn edge_set(&self) -> &Self::ESet;
+    fn edge_set(&self) -> &impl FinSet<Elem = Self::E>;
 
     /// Gets the mapping assigning a source vertex to each edge.
-    fn src_map(&self) -> &Self::Col;
+    fn src_map(&self) -> &impl Column<Dom = Self::E, Cod = Self::V>;
 
     /// Gets the mapping assignment a target vertex to each edge.
-    fn tgt_map(&self) -> &Self::Col;
+    fn tgt_map(&self) -> &impl Column<Dom = Self::E, Cod = Self::V>;
 
     /// Gets the source of an edge, possibly undefined.
     fn get_src(&self, e: &Self::E) -> Option<&Self::V> {
@@ -199,14 +192,19 @@ pub struct SkelGraph {
 impl ColumnarGraph for SkelGraph {
     type V = usize;
     type E = usize;
-    type VSet = SkelFinSet;
-    type ESet = SkelFinSet;
-    type Col = SkelIndexedColumn;
 
-    fn vertex_set(&self) -> &SkelFinSet { SkelFinSet::ref_cast(&self.nv) }
-    fn edge_set(&self) -> &SkelFinSet { SkelFinSet::ref_cast(&self.ne) }
-    fn src_map(&self) -> &Self::Col { &self.src_map }
-    fn tgt_map(&self) -> &Self::Col { &self.tgt_map }
+    fn vertex_set(&self) -> &impl FinSet<Elem = usize> {
+        SkelFinSet::ref_cast(&self.nv)
+    }
+    fn edge_set(&self) -> &impl FinSet<Elem = usize> {
+        SkelFinSet::ref_cast(&self.ne)
+    }
+    fn src_map(&self) -> &impl Column<Dom = usize, Cod = usize> {
+        &self.src_map
+    }
+    fn tgt_map(&self) -> &impl Column<Dom = usize, Cod =usize > {
+        &self.tgt_map
+    }
 }
 
 impl SkelGraph {
@@ -287,14 +285,11 @@ impl<V,E> ColumnarGraph for HashGraph<V,E>
 where V: Eq+Hash+Clone, E: Eq+Hash+Clone {
     type V = V;
     type E = E;
-    type VSet = HashFinSet<V>;
-    type ESet = HashFinSet<E>;
-    type Col = IndexedHashColumn<E,V>;
 
-    fn vertex_set(&self) -> &Self::VSet { &self.vertex_set }
-    fn edge_set(&self) -> &Self::ESet { &self.edge_set }
-    fn src_map(&self) -> &Self::Col { &self.src_map }
-    fn tgt_map(&self) -> &Self::Col { &self.tgt_map }
+    fn vertex_set(&self) -> &impl FinSet<Elem = V> { &self.vertex_set }
+    fn edge_set(&self) -> &impl FinSet<Elem = E> { &self.edge_set }
+    fn src_map(&self) -> &impl Column<Dom = E, Cod = V> { &self.src_map }
+    fn tgt_map(&self) -> &impl Column<Dom = E, Cod = V> { &self.tgt_map }
 }
 
 impl<V,E> HashGraph<V,E> where V: Eq+Hash+Clone, E: Eq+Hash+Clone {
