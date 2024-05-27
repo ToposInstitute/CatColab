@@ -3,6 +3,7 @@
 use std::hash::Hash;
 use nonempty::NonEmpty;
 use thiserror::Error;
+use ref_cast::RefCast;
 
 use crate::validate::{self, Validate};
 use crate::zero::*;
@@ -76,12 +77,94 @@ pub trait FinGraph: Graph {
 Such a graph is defined in the styles of "C-sets" by two [finite sets](FinSet)
 and two [columns](Column).
  */
-#[derive(Clone,Default)]
-pub struct ColumnarGraph<VSet,ESet,Col> {
-    vertex_set: VSet,
-    edge_set: ESet,
-    src_map: Col,
-    tgt_map: Col,
+pub trait ColumnarGraph {
+    /// Type of vertices in columnar graph.
+    type V: Eq + Clone;
+
+    /// Type of edges in columnar graph.
+    type E: Eq + Clone;
+
+    /// Type of vertex set.
+    type VSet: FinSet<Elem = Self::V>;
+
+    /// Type of edge set.
+    type ESet: FinSet<Elem = Self::E>;
+
+    /// Type of column for source and target maps.
+    type Col: Column<Dom = Self::E, Cod = Self::V>;
+
+    /// Gets the set of vertices.
+    fn vertex_set(&self) -> &Self::VSet;
+
+    /// Gets the set of edges.
+    fn edge_set(&self) -> &Self::ESet;
+
+    /// Gets the mapping assigning a source vertex to each edge.
+    fn src_map(&self) -> &Self::Col;
+
+    /// Gets the mapping assignment a target vertex to each edge.
+    fn tgt_map(&self) -> &Self::Col;
+
+    /// Gets the source of an edge, possibly undefined.
+    fn get_src(&self, e: &Self::E) -> Option<&Self::V> {
+        self.src_map().apply(e)
+    }
+
+    /// Gets the target of an edge, possibly undefined.
+    fn get_tgt(&self, e: &Self::E) -> Option<&Self::V> {
+        self.tgt_map().apply(e)
+    }
+
+    /// Iterates over failures to be a valid graph.
+    fn iter_invalid(
+        &self
+    ) -> impl Iterator<Item = InvalidGraphData<Self::E>> {
+        let (dom, cod) = (self.edge_set(), self.vertex_set());
+        let srcs = Function(self.src_map(), dom, cod).iter_invalid().map(
+            |e| InvalidGraphData::Src(e.take()));
+        let tgts = Function(self.tgt_map(), dom, cod).iter_invalid().map(
+            |e| InvalidGraphData::Tgt(e.take()));
+        srcs.chain(tgts)
+    }
+}
+
+impl<G: ColumnarGraph> Graph for G {
+    type V = G::V;
+    type E = G::E;
+
+    fn has_vertex(&self, v: &Self::V) -> bool {
+        self.vertex_set().contains(v)
+    }
+    fn has_edge(&self, e: &Self::E) -> bool {
+        self.edge_set().contains(e)
+    }
+    fn src(&self, e: &Self::E) -> Self::V {
+        self.get_src(e).expect("Source of edge should be set").clone()
+    }
+    fn tgt(&self, e: &Self::E) -> Self::V {
+        self.get_tgt(e).expect("Target of edge should be set").clone()
+    }
+}
+
+impl<G: ColumnarGraph> FinGraph for G {
+    fn vertices(&self) -> impl Iterator<Item = Self::V> {
+        self.vertex_set().iter()
+    }
+    fn edges(&self) -> impl Iterator<Item = Self::E> {
+        self.edge_set().iter()
+    }
+    fn in_edges(&self, v: &Self::V) -> impl Iterator<Item = Self::E> {
+        self.tgt_map().preimage(v)
+    }
+    fn out_edges(&self, v: &Self::V) -> impl Iterator<Item = Self::E> {
+        self.src_map().preimage(v)
+    }
+    fn nv(&self) -> usize {
+        self.vertex_set().len()
+    }
+    fn ne(&self) -> usize {
+        self.edge_set().len()
+    }
 }
 
 /** An invalid assignment in a graph defined explicitly by data.
@@ -100,111 +183,59 @@ pub enum InvalidGraphData<E> {
     Tgt(E),
 }
 
-impl<V,E,VSet,ESet,Col> ColumnarGraph<VSet,ESet,Col>
-where V: Eq, E: Eq,
-      VSet: Set<Elem=V>, ESet: Set<Elem=E>, Col: Mapping<Dom=E,Cod=V> {
-    /// Gets the source of an edge, possibly undefined.
-    pub fn get_src(&self, e: &E) -> Option<&V> { self.src_map.apply(e) }
+/** A skeletal finite graph with indexed source and target maps.
 
-    /// Gets the target of an edge, possibly undefined.
-    pub fn get_tgt(&self, e: &E) -> Option<&V> { self.tgt_map.apply(e) }
-
-    /// Sets the source of an edge.
-    pub fn set_src(&mut self, e: E, v: V) -> Option<V> { self.src_map.set(e,v) }
-
-    /// Sets the target of an edge.
-    pub fn set_tgt(&mut self, e: E, v: V) -> Option<V> { self.tgt_map.set(e,v) }
+The data structure is the same as the standard `Graph` type in
+[Catlab.jl](https://github.com/AlgebraicJulia/Catlab.jl).
+ */
+#[derive(Clone,Default)]
+pub struct SkelGraph {
+    nv: usize,
+    ne: usize,
+    src_map: SkelIndexedColumn,
+    tgt_map: SkelIndexedColumn,
 }
 
-impl<V,E,VSet,ESet,Col> ColumnarGraph<VSet,ESet,Col>
-where V: Eq + Clone, E: Eq + Clone,
-      VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Mapping<Dom=E,Cod=V> {
+impl ColumnarGraph for SkelGraph {
+    type V = usize;
+    type E = usize;
+    type VSet = SkelFinSet;
+    type ESet = SkelFinSet;
+    type Col = SkelIndexedColumn;
 
-    /// Iterates over failures to be a valid graph.
-    pub fn iter_invalid(
-        &self
-    ) -> impl Iterator<Item = InvalidGraphData<E>> + '_ {
-        let (dom, cod) = (&self.edge_set, &self.vertex_set);
-        let srcs = Function(&self.src_map, dom, cod).iter_invalid().map(
-            |e| InvalidGraphData::Src(e.take()));
-        let tgts = Function(&self.tgt_map, dom, cod).iter_invalid().map(
-            |e| InvalidGraphData::Tgt(e.take()));
-        srcs.chain(tgts)
-    }
+    fn vertex_set(&self) -> &SkelFinSet { SkelFinSet::ref_cast(&self.nv) }
+    fn edge_set(&self) -> &SkelFinSet { SkelFinSet::ref_cast(&self.ne) }
+    fn src_map(&self) -> &Self::Col { &self.src_map }
+    fn tgt_map(&self) -> &Self::Col { &self.tgt_map }
 }
 
-impl<V,E,VSet,ESet,Col> Validate for ColumnarGraph<VSet,ESet,Col>
-where V: Eq + Clone, E: Eq + Clone,
-      VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Mapping<Dom=E,Cod=V> {
-    type ValidationError = InvalidGraphData<E>;
-
-    fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
-        validate::collect_errors(self.iter_invalid())
-    }
-}
-
-impl<V,E,VSet,ESet,Col> Graph for ColumnarGraph<VSet,ESet,Col>
-where V: Eq + Clone, E: Eq + Clone,
-      VSet: Set<Elem=V>, ESet: Set<Elem=E>, Col: Mapping<Dom=E,Cod=V> {
-    type V = V;
-    type E = E;
-
-    fn has_vertex(&self, v: &V) -> bool {
-        self.vertex_set.contains(v)
-    }
-    fn has_edge(&self, e: &E) -> bool {
-        self.edge_set.contains(e)
-    }
-    fn src(&self, e: &E) -> V {
-        self.get_src(e).expect("Source of edge should be set").clone()
-    }
-    fn tgt(&self, e: &E) -> V {
-        self.get_tgt(e).expect("Target of edge should be set").clone()
-    }
-}
-
-impl<V,E,VSet,ESet,Col> FinGraph for ColumnarGraph<VSet,ESet,Col>
-where V: Eq + Clone, E: Eq + Clone,
-      VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Column<Dom=E,Cod=V> {
-    fn vertices(&self) -> impl Iterator<Item = V> {
-        self.vertex_set.iter()
-    }
-    fn edges(&self) -> impl Iterator<Item = E> {
-        self.edge_set.iter()
-    }
-    fn in_edges(&self, v: &V) -> impl Iterator<Item = E> {
-        self.tgt_map.preimage(v)
-    }
-    fn out_edges(&self, v: &V) -> impl Iterator<Item = E> {
-        self.src_map.preimage(v)
-    }
-    fn nv(&self) -> usize { self.vertex_set.len() }
-    fn ne(&self) -> usize { self.edge_set.len() }
-}
-
-impl<Col> ColumnarGraph<SkelFinSet,SkelFinSet,Col>
-where Col: Mapping<Dom=usize, Cod=usize> {
+impl SkelGraph {
     /// Adds a new vertex to the graph and returns it.
     pub fn add_vertex(&mut self) -> usize {
-        self.vertex_set.insert()
+        let v = self.nv;
+        self.nv += 1;
+        v
     }
 
     /// Adds `n` new vertices to the graphs and returns them.
     pub fn add_vertices(&mut self, n: usize) -> std::ops::Range<usize> {
-        self.vertex_set.extend(n)
+        let start = self.nv;
+        self.nv += n;
+        start..(self.nv)
     }
 
     /// Adds a new edge to the graph and returns it.
     pub fn add_edge(&mut self, src: usize, tgt: usize) -> usize {
-        let e = self.edge_set.insert();
-        self.set_src(e, src);
-        self.set_tgt(e, tgt);
+        let e = self.ne;
+        self.ne += 1;
+        self.src_map.set(e, src);
+        self.tgt_map.set(e, tgt);
         e
     }
 
     /// Makes a path graph of length `n`.
     #[cfg(test)]
-    pub fn path(n: usize) -> Self where Col: Default {
+    pub fn path(n: usize) -> Self {
         let mut g: Self = Default::default();
         g.add_vertices(n);
         for (i, j) in std::iter::zip(0..(n-1), 1..n) {
@@ -215,7 +246,7 @@ where Col: Mapping<Dom=usize, Cod=usize> {
 
     /// Makes a triangle graph (2-simplex).
     #[cfg(test)]
-    pub fn triangle() -> Self where Col: Default {
+    pub fn triangle() -> Self {
         let mut g: Self = Default::default();
         g.add_vertices(3);
         g.add_edge(0,1); g.add_edge(1,2); g.add_edge(0,2);
@@ -223,8 +254,50 @@ where Col: Mapping<Dom=usize, Cod=usize> {
     }
 }
 
-impl<V,E,Col> ColumnarGraph<HashFinSet<V>,HashFinSet<E>,Col>
-where V: Eq+Hash+Clone, E: Eq+Hash+Clone, Col: Mapping<Dom=E, Cod=V> {
+impl Validate for SkelGraph {
+    type ValidationError = InvalidGraphData<usize>;
+
+    fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
+        validate::collect_errors(self.iter_invalid())
+    }
+}
+
+/** A finite graph with indexed source and target maps, based on hash maps.
+
+Unlike in a skeletal finite graph, the vertices and edges can have arbitrary
+hashable types.
+*/
+#[derive(Clone)]
+pub struct HashGraph<V: Eq + Hash + Clone, E: Eq + Hash + Clone> {
+    vertex_set: HashFinSet<V>,
+    edge_set: HashFinSet<E>,
+    src_map: IndexedHashColumn<E,V>,
+    tgt_map: IndexedHashColumn<E,V>,
+}
+
+impl<V,E> Default for HashGraph<V,E> where V: Eq+Hash+Clone, E: Eq+Hash+Clone {
+    fn default() -> Self {
+        Self { vertex_set: Default::default(), edge_set: Default::default(),
+               src_map: Default::default(), tgt_map: Default::default(),
+        }
+    }
+}
+
+impl<V,E> ColumnarGraph for HashGraph<V,E>
+where V: Eq+Hash+Clone, E: Eq+Hash+Clone {
+    type V = V;
+    type E = E;
+    type VSet = HashFinSet<V>;
+    type ESet = HashFinSet<E>;
+    type Col = IndexedHashColumn<E,V>;
+
+    fn vertex_set(&self) -> &Self::VSet { &self.vertex_set }
+    fn edge_set(&self) -> &Self::ESet { &self.edge_set }
+    fn src_map(&self) -> &Self::Col { &self.src_map }
+    fn tgt_map(&self) -> &Self::Col { &self.tgt_map }
+}
+
+impl<V,E> HashGraph<V,E> where V: Eq+Hash+Clone, E: Eq+Hash+Clone {
     /// Adds a vertex to the graph, returning whether the vertex is new.
     pub fn add_vertex(&mut self, v: V) -> bool {
         self.vertex_set.insert(v)
@@ -240,26 +313,19 @@ where V: Eq+Hash+Clone, E: Eq+Hash+Clone, Col: Mapping<Dom=E, Cod=V> {
     If the edge is not new, its source and target are updated.
     */
     pub fn add_edge(&mut self, e: E, src: V, tgt: V) -> bool {
-        self.set_src(e.clone(), src);
-        self.set_tgt(e.clone(), tgt);
+        self.src_map.set(e.clone(), src);
+        self.tgt_map.set(e.clone(), tgt);
         self.edge_set.insert(e)
     }
 }
 
-/** A skeletal finite graph with indexed source and target maps.
+impl<V,E> Validate for HashGraph<V,E> where V: Eq+Hash+Clone, E: Eq+Hash+Clone {
+    type ValidationError = InvalidGraphData<E>;
 
-The data structure is the same as the standard `Graph` type in
-[Catlab.jl](https://github.com/AlgebraicJulia/Catlab.jl).
- */
-pub type SkelGraph = ColumnarGraph<SkelFinSet,SkelFinSet,SkelIndexedColumn>;
-
-/** A finite graph with indexed source and target maps, based on hash maps.
-
-Unlike in a skeletal finite graph, the vertices and edges can have arbitrary
-hashable types.
-*/
-pub type HashGraph<V,E> =
-    ColumnarGraph<HashFinSet<V>, HashFinSet<E>, IndexedHashColumn<E,V>>;
+    fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
+        validate::collect_errors(self.iter_invalid())
+    }
+}
 
 /** A mapping between graphs.
 
@@ -431,7 +497,7 @@ mod tests {
     fn validate_columnar_graph() {
         let mut g = SkelGraph::triangle();
         assert!(g.validate().is_ok());
-        g.set_src(2, 3); // Vertex 3 doesn't exist yet.
+        g.src_map.set(2, 3); // Vertex 3 doesn't exist yet.
         assert!(g.validate().is_err());
         assert_eq!(g.add_vertex(), 3); // OK, now it does!
         assert!(g.validate().is_ok());

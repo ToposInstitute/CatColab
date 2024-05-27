@@ -8,6 +8,7 @@ use std::ops::Range;
 use std::hash::Hash;
 use std::collections::HashSet;
 use derive_more::{From, Into};
+use ref_cast::RefCast;
 
 /** A set.
 
@@ -60,7 +61,8 @@ pub trait FinSet: Set {
 The elements of the skeletal finite set of size `n` are the numbers `0..n`
 (excluding `n`).
  */
-#[derive(Clone,Copy,From,Into)]
+#[derive(Clone,Copy,From,Into,RefCast)]
+#[repr(transparent)]
 pub struct SkelFinSet(usize);
 
 impl SkelFinSet {

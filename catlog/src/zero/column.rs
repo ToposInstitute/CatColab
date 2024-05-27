@@ -552,7 +552,7 @@ mod tests {
     }
 
     #[test]
-    fn validate_column() {
+    fn validate_function() {
         let col = VecColumn::new(vec![1, 2, 4]);
         let validate = |m, n|
           Function(&col, &SkelFinSet::from(m), &SkelFinSet::from(n)).validate();
