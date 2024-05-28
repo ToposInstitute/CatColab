@@ -4,8 +4,8 @@ To be more precise, this module is about *free and finitely generated* double
 diagrams, i.e., diagrams in a double category indexed by a free double category
 on a [finite double computad](FinDblComputad). Equivalently, by the adjunction,
 such a diagram is a morphism from a finite double computad to the double
-computad underlying a double category. Double diagrams are stored in the latter
-form, as it is simpler.
+computad underlying a double category. Double diagrams are stored in the latter,
+simpler form.
 
 As an object in a Rust, a double diagram knows its shape (indexing computad) and
 typically owns that data. It does not know or own the target double
@@ -138,27 +138,6 @@ where Ob: Eq+Clone, Arr: Eq+Clone, Pro: Eq+Clone, Cell: Eq+Clone {
     }
 }
 
-impl<Ob,Arr,Pro,Cell> SkelDblDiagram<Ob,Arr,Pro,Cell>
-where Ob: Eq+Clone, Arr: Eq+Clone, Pro: Eq+Clone, Cell: Eq+Clone {
-    /// Validates that diagram is contained in the given computad.
-    pub fn validate_in<Cptd>(
-        &self,
-        cptd: &Cptd
-    ) -> Result<(), NonEmpty<InvalidDblComputadMorphism<usize,usize,usize,usize>>>
-    where Cptd: DblComputad<V=Ob, E=Arr, ProE=Pro, Sq=Cell> {
-        validate::collect_errors(self.iter_invalid_in(cptd))
-    }
-
-    /// Iterates over failures of diagram to be contained in the given computad.
-    pub fn iter_invalid_in<'a, Cptd>(
-        &'a self,
-        cptd: &'a Cptd
-    ) -> impl Iterator<Item = InvalidDblComputadMorphism<usize,usize,usize,usize>> + 'a
-    where Cptd: DblComputad<V=Ob, E=Arr, ProE=Pro, Sq=Cell> {
-        self.iter_invalid_morphism(self, cptd)
-    }
-}
-
 impl<Ob,Arr,Pro,Cell> DblComputadMapping for SkelDblDiagram<Ob,Arr,Pro,Cell>
 where Ob: Eq+Clone, Arr: Eq+Clone, Pro: Eq+Clone, Cell: Eq+Clone {
     type DomV = usize;
@@ -218,6 +197,6 @@ mod tests {
         diag.add_cell("g_res", Path::single(gcnj), Path::Id(z),
                       Path::Id(z), Path::single(g));
         assert!(diag.validate().is_ok());
-        assert!(diag.validate_in(&cptd).is_ok());
+        assert!(DblComputadMorphism(&diag, &diag, &cptd).validate().is_ok());
     }
 }

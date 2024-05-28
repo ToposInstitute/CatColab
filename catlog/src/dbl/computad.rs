@@ -521,8 +521,9 @@ where V: Eq+Hash+Clone, E: Eq+Hash+Clone, ProE: Eq+Hash+Clone, Sq: Eq+Hash+Clone
 /** A mapping between double computads.
 
 In the same spirit as mappings between [sets](crate::zero::Mapping) and
-[graphs](crate::one::GraphMapping), a computad mapping is like a computad
-morphism except that the domain and codomain computads are not specified.
+[graphs](crate::one::GraphMapping), a computad mapping is like a [computad
+morphism](DblComputadMorphism) except that the domain and codomain computads are
+not specified.
 */
 pub trait DblComputadMapping {
     /// Type of vertices in domain computad.
@@ -568,73 +569,74 @@ pub trait DblComputadMapping {
         path.try_map(|v| self.apply_vertex(&v).cloned(),
                      |p| self.apply_proedge(&p).cloned())
     }
+}
 
-    /// Validates that the mapping is a morphism between the two computads.
-    fn validate_is_morphism<Dom, Cod>(
-        &self,
-        dom: &Dom,
-        cod: &Cod
-    ) -> Result<(), NonEmpty<InvalidDblComputadMorphism<
-            Self::DomV, Self::DomE, Self::DomProE, Self::DomSq>>>
-    where Self: Sized,
-          Dom: FinDblComputad<V=Self::DomV, E=Self::DomE, ProE=Self::DomProE, Sq=Self::DomSq>,
-          Cod: DblComputad<V=Self::CodV, E=Self::CodE, ProE=Self::CodProE, Sq=Self::CodSq> {
-        validate::collect_errors(self.iter_invalid_morphism(dom, cod))
-    }
+/** A morphism of double computads defined by a [mapping](DblComputadMapping).
+
+In the same spirit as [functions](Function) between sets and
+[homomorphisms](GraphMorphism) between graphs, this struct exists mainly to
+perform validation.
+*/
+pub struct DblComputadMorphism<'a,Map,Dom,Cod>(
+    pub &'a Map,
+    pub &'a Dom,
+    pub &'a Cod,
+);
+
+impl<'a,Map,Dom,Cod> DblComputadMorphism<'a,Map,Dom,Cod>
+where Map: DblComputadMapping,
+      Dom: FinDblComputad<V=Map::DomV, E=Map::DomE, ProE=Map::DomProE, Sq=Map::DomSq>,
+      Cod: DblComputad<V=Map::CodV, E=Map::CodE, ProE=Map::CodProE, Sq=Map::CodSq> {
 
     /// Iterates over failures of the mapping to be a computad morphism.
-    fn iter_invalid_morphism<'a, Dom, Cod>(
-        &'a self,
-        dom: &'a Dom,
-        cod: &'a Cod
+    pub fn iter_invalid(
+        &self
     ) -> impl Iterator<Item = InvalidDblComputadMorphism<
-            Self::DomV, Self::DomE, Self::DomProE, Self::DomSq>> + 'a
-    where Self: Sized,
-          Dom: FinDblComputad<V=Self::DomV, E=Self::DomE, ProE=Self::DomProE, Sq=Self::DomSq>,
-          Cod: DblComputad<V=Self::CodV, E=Self::CodE, ProE=Self::CodProE, Sq=Self::CodSq> {
+            Map::DomV, Map::DomE, Map::DomProE, Map::DomSq>> + 'a {
         type Invalid<V,E,ProE,Sq> = InvalidDblComputadMorphism<V,E,ProE,Sq>;
+        let DblComputadMorphism(mapping, dom, cod) = *self;
 
-        let mapping = EdgeGraphMapping::ref_cast(self);
-        let edge_errors = GraphMorphism(mapping,
-            EdgeGraph::ref_cast(dom),
-            EdgeGraph::ref_cast(cod)).iter_invalid().map(|err| {
-                match err {
-                    InvalidGraphMorphism::Vertex(v) => Invalid::Vertex(v),
-                    InvalidGraphMorphism::Edge(e) => Invalid::Edge(e),
-                    InvalidGraphMorphism::Src(e) => Invalid::Dom(e),
-                    InvalidGraphMorphism::Tgt(e) => Invalid::Cod(e),
-                }
-            });
+        let edge_hom = GraphMorphism(EdgeGraphMapping::ref_cast(mapping),
+                                     EdgeGraph::ref_cast(dom),
+                                     EdgeGraph::ref_cast(cod));
+        let edge_errors = edge_hom.iter_invalid().map(|err| {
+            match err {
+                InvalidGraphMorphism::Vertex(v) => Invalid::Vertex(v),
+                InvalidGraphMorphism::Edge(e) => Invalid::Edge(e),
+                InvalidGraphMorphism::Src(e) => Invalid::Dom(e),
+                InvalidGraphMorphism::Tgt(e) => Invalid::Cod(e),
+            }
+        });
 
-        let mapping = ProedgeGraphMapping::ref_cast(self);
-        let proedge_errors = GraphMorphism(mapping,
-            ProedgeGraph::ref_cast(dom),
-            ProedgeGraph::ref_cast(cod)).iter_invalid().filter_map(|err| {
-                match err {
-                    InvalidGraphMorphism::Vertex(_) => None, // Already caught.
-                    InvalidGraphMorphism::Edge(p) => Some(Invalid::Proedge(p)),
-                    InvalidGraphMorphism::Src(p) => Some(Invalid::Src(p)),
-                    InvalidGraphMorphism::Tgt(p) => Some(Invalid::Tgt(p)),
-                }
-            });
+        let proedge_hom = GraphMorphism(ProedgeGraphMapping::ref_cast(mapping),
+                                        ProedgeGraph::ref_cast(dom),
+                                        ProedgeGraph::ref_cast(cod));
+        let proedge_errors = proedge_hom.iter_invalid().filter_map(|err| {
+            match err {
+                InvalidGraphMorphism::Vertex(_) => None, // Already caught.
+                InvalidGraphMorphism::Edge(p) => Some(Invalid::Proedge(p)),
+                InvalidGraphMorphism::Src(p) => Some(Invalid::Src(p)),
+                InvalidGraphMorphism::Tgt(p) => Some(Invalid::Tgt(p)),
+            }
+        });
 
         let square_errors = dom.squares().flat_map(|α| {
-            if let Some(β) = self.apply_square(&α) {
+            if let Some(β) = mapping.apply_square(&α) {
                 if cod.has_square(β) {
                     let mut errs = Vec::new();
-                    if !self.apply_proedge_path(dom.square_dom(&α))
+                    if !mapping.apply_proedge_path(dom.square_dom(&α))
                            .map_or(true, |path| path == cod.square_dom(β)) {
                         errs.push(Invalid::SquareDom(α.clone()));
                     }
-                    if !self.apply_proedge_path(dom.square_cod(&α))
+                    if !mapping.apply_proedge_path(dom.square_cod(&α))
                            .map_or(true, |path| path == cod.square_cod(β)) {
                         errs.push(Invalid::SquareCod(α.clone()));
                     }
-                    if !self.apply_edge_path(dom.square_src(&α))
+                    if !mapping.apply_edge_path(dom.square_src(&α))
                            .map_or(true, |path| path == cod.square_src(β)) {
                         errs.push(Invalid::SquareSrc(α.clone()));
                     }
-                    if !self.apply_edge_path(dom.square_tgt(&α))
+                    if !mapping.apply_edge_path(dom.square_tgt(&α))
                            .map_or(true, |path| path == cod.square_tgt(β)) {
                         errs.push(Invalid::SquareTgt(α.clone()));
                     }
@@ -645,6 +647,18 @@ pub trait DblComputadMapping {
         });
 
         edge_errors.chain(proedge_errors).chain(square_errors)
+    }
+}
+
+impl<Map,Dom,Cod> Validate for DblComputadMorphism<'_,Map,Dom,Cod>
+where Map: DblComputadMapping,
+      Dom: FinDblComputad<V=Map::DomV, E=Map::DomE, ProE=Map::DomProE, Sq=Map::DomSq>,
+      Cod: DblComputad<V=Map::CodV, E=Map::CodE, ProE=Map::CodProE, Sq=Map::CodSq> {
+    type ValidationError = InvalidDblComputadMorphism<
+            Map::DomV, Map::DomE, Map::DomProE, Map::DomSq>;
+
+    fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
+        validate::collect_errors(self.iter_invalid())
     }
 }
 
@@ -701,7 +715,8 @@ pub enum InvalidDblComputadMorphism<V,E,ProE,Sq> {
     SquareTgt(Sq),
 }
 
-/// Mapping between [edge-graphs](EdgeGraph) underlying double computads.
+/// The mapping between [vertex-edge graphs](EdgeGraph) underlying double
+/// computads.
 #[derive(From,RefCast)]
 #[repr(transparent)]
 pub struct EdgeGraphMapping<M: DblComputadMapping>(M);
@@ -720,7 +735,8 @@ impl<M: DblComputadMapping> GraphMapping for EdgeGraphMapping<M> {
     }
 }
 
-/// Mapping between [proedge-graphs](ProedgeGraph) underlying double computads.
+/// The mapping between [vertex-proedge graphs](ProedgeGraph) underlying double
+/// computads.
 #[derive(From,RefCast)]
 #[repr(transparent)]
 pub struct ProedgeGraphMapping<M: DblComputadMapping>(M);
@@ -759,6 +775,5 @@ mod tests {
         assert_eq!(sig_monad.square_src(&'μ').len(), 2);
         assert_eq!(sig_monad.square_tgt(&'μ').len(), 1);
         assert!(sig_monad.validate().is_ok());
-
     }
 }

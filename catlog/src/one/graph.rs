@@ -372,9 +372,9 @@ where Map: GraphMapping, Map::DomE: Clone,
 
     /// Iterates over failues of the mapping to be a graph homomorphism.
     pub fn iter_invalid(
-        &self,
+        &self
     ) -> impl Iterator<Item = InvalidGraphMorphism<Map::DomV, Map::DomE>> + 'a {
-        let GraphMorphism(mapping, dom, cod) = self;
+        let GraphMorphism(mapping, dom, cod) = *self;
         let vertex_errors = dom.vertices().filter_map(|v| {
             if mapping.apply_vertex(&v).map_or(false, |w| cod.has_vertex(w)) {
                 None
