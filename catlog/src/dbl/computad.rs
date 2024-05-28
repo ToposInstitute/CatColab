@@ -204,8 +204,8 @@ where S: Set, S::Elem: Clone,
 
 impl<S,Col1,Col2> FinDblComputad for ColumnarDblComputad<S,Col1,Col2>
 where S: FinSet, S::Elem: Clone,
-      Col1: Mapping<Dom=S::Elem, Cod=S::Elem>,
-      Col2: Mapping<Dom=S::Elem, Cod=Path<S::Elem,S::Elem>> {
+      Col1: Column<Dom=S::Elem, Cod=S::Elem>,
+      Col2: Column<Dom=S::Elem, Cod=Path<S::Elem,S::Elem>> {
 
     fn vertices(&self) -> impl Iterator<Item=Self::V> { self.vertex_set.iter() }
     fn edges(&self) -> impl Iterator<Item=Self::E> { self.edge_set.iter() }
@@ -215,8 +215,8 @@ where S: FinSet, S::Elem: Clone,
 
 impl<S,Col1,Col2> ColumnarDblComputad<S,Col1,Col2>
 where S: FinSet, S::Elem: Clone,
-      Col1: Mapping<Dom=S::Elem, Cod=S::Elem>,
-      Col2: Mapping<Dom=S::Elem, Cod=Path<S::Elem,S::Elem>> {
+      Col1: Column<Dom=S::Elem, Cod=S::Elem>,
+      Col2: Column<Dom=S::Elem, Cod=Path<S::Elem,S::Elem>> {
 
     /// Iterates over failures to be a valid double computad.
     fn iter_invalid(
@@ -276,8 +276,8 @@ where S: FinSet, S::Elem: Clone,
 
 impl<S,Col1,Col2> Validate for ColumnarDblComputad<S,Col1,Col2>
 where S: FinSet, S::Elem: Clone,
-      Col1: Mapping<Dom=S::Elem, Cod=S::Elem>,
-      Col2: Mapping<Dom=S::Elem, Cod=Path<S::Elem,S::Elem>> {
+      Col1: Column<Dom=S::Elem, Cod=S::Elem>,
+      Col2: Column<Dom=S::Elem, Cod=Path<S::Elem,S::Elem>> {
     type ValidationError = InvalidDblComputadData<S::Elem>;
 
     fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
@@ -305,30 +305,19 @@ impl<Cptd: FinDblComputad> FinGraph for EdgeGraph<Cptd> {
     fn edges(&self) -> impl Iterator<Item = Self::E> { self.0.edges() }
 }
 
-impl<S,Col1,Col2> EdgeGraph<ColumnarDblComputad<S,Col1,Col2>>
-where S: FinSet, Col1: Mapping<Dom=S::Elem, Cod=S::Elem>,
+impl<S,Col1,Col2> ColumnarGraph for EdgeGraph<ColumnarDblComputad<S,Col1,Col2>>
+where S: FinSet, S::Elem: Clone, Col1: Column<Dom=S::Elem, Cod=S::Elem>,
       ColumnarDblComputad<S,Col1,Col2>: DblComputad {
+    type V = S::Elem;
+    type E = S::Elem;
 
-    /// Iterates over failures to be a valid graph.
-    pub fn iter_invalid(
-        &self
-    ) -> impl Iterator<Item = InvalidGraphData<S::Elem>> + '_ {
-        let (eset, vset) = (&self.0.edge_set, &self.0.vertex_set);
-        let srcs = Function(&self.0.dom_map, eset, vset).iter_invalid().map(
-            |e| InvalidGraphData::Src(e.take()));
-        let tgts = Function(&self.0.cod_map, eset, vset).iter_invalid().map(
-            |e| InvalidGraphData::Tgt(e.take()));
-        srcs.chain(tgts)
+    fn vertex_set(&self) -> &impl FinSet<Elem = Self::V> { &self.0.vertex_set }
+    fn edge_set(&self) -> &impl FinSet<Elem = Self::E> { &self.0.edge_set }
+    fn src_map(&self) -> &impl Column<Dom = Self::E, Cod = Self::V> {
+        &self.0.dom_map
     }
-}
-
-impl<S,Col1,Col2> Validate for EdgeGraph<ColumnarDblComputad<S,Col1,Col2>>
-where S: FinSet, Col1: Mapping<Dom=S::Elem, Cod=S::Elem>,
-      ColumnarDblComputad<S,Col1,Col2>: DblComputad {
-    type ValidationError = InvalidGraphData<S::Elem>;
-
-    fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
-        validate::collect_errors(self.iter_invalid())
+    fn tgt_map(&self) -> &impl Column<Dom = Self::E, Cod = Self::V> {
+        &self.0.cod_map
     }
 }
 
@@ -352,30 +341,19 @@ impl<Cptd: FinDblComputad> FinGraph for ProedgeGraph<Cptd> {
     fn edges(&self) -> impl Iterator<Item = Self::E> { self.0.proedges() }
 }
 
-impl<S,Col1,Col2> ProedgeGraph<ColumnarDblComputad<S,Col1,Col2>>
-where S: FinSet, Col1: Mapping<Dom=S::Elem, Cod=S::Elem>,
+impl<S,Col1,Col2> ColumnarGraph for ProedgeGraph<ColumnarDblComputad<S,Col1,Col2>>
+where S: FinSet, S::Elem: Clone, Col1: Column<Dom=S::Elem, Cod=S::Elem>,
       ColumnarDblComputad<S,Col1,Col2>: DblComputad {
+    type V = S::Elem;
+    type E = S::Elem;
 
-    /// Iterates over failures to be a valid graph.
-    pub fn iter_invalid(
-        &self
-    ) -> impl Iterator<Item = InvalidGraphData<S::Elem>> + '_ {
-        let (eset, vset) = (&self.0.proedge_set, &self.0.vertex_set);
-        let srcs = Function(&self.0.src_map, eset, vset).iter_invalid().map(
-            |e| InvalidGraphData::Src(e.take()));
-        let tgts = Function(&self.0.tgt_map, eset, vset).iter_invalid().map(
-            |e| InvalidGraphData::Tgt(e.take()));
-        srcs.chain(tgts)
+    fn vertex_set(&self) -> &impl FinSet<Elem = Self::V> { &self.0.vertex_set }
+    fn edge_set(&self) -> &impl FinSet<Elem = Self::E> { &self.0.proedge_set }
+    fn src_map(&self) -> &impl Column<Dom = Self::E, Cod = Self::V> {
+        &self.0.src_map
     }
-}
-
-impl<S,Col1,Col2> Validate for ProedgeGraph<ColumnarDblComputad<S,Col1,Col2>>
-where S: FinSet, Col1: Mapping<Dom=S::Elem, Cod=S::Elem>,
-      ColumnarDblComputad<S,Col1,Col2>: DblComputad {
-    type ValidationError = InvalidGraphData<S::Elem>;
-
-    fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
-        validate::collect_errors(self.iter_invalid())
+    fn tgt_map(&self) -> &impl Column<Dom = Self::E, Cod = Self::V> {
+        &self.0.tgt_map
     }
 }
 

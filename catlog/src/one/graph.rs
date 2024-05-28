@@ -75,9 +75,8 @@ pub trait FinGraph: Graph {
 /** A finite graph backed by columns.
 
 Such a graph is defined in the styles of "C-sets" by two [finite sets](FinSet)
-and two [columns](Column). Since this is a common and flexible strategy for
-defining graphs, this trait provides a *blanket implementation* for [`Graph`]
-and [`FinGraph`].
+and two [columns](Column). To derive an implementation of a graph, implement the
+further trait [`ColumnarGraphImplGraph`].
  */
 pub trait ColumnarGraph {
     /// Type of vertices in columnar graph.
@@ -121,7 +120,13 @@ pub trait ColumnarGraph {
     }
 }
 
-impl<G: ColumnarGraph> Graph for G {
+/** Derive implementation of a graph from a columnar graph.
+
+This trait provides a *blanket implementation* for [`Graph`] and [`FinGraph`].
+ */
+pub trait ColumnarGraphImplGraph: ColumnarGraph {}
+
+impl<G: ColumnarGraphImplGraph> Graph for G {
     type V = G::V;
     type E = G::E;
 
@@ -139,7 +144,7 @@ impl<G: ColumnarGraph> Graph for G {
     }
 }
 
-impl<G: ColumnarGraph> FinGraph for G {
+impl<G: ColumnarGraphImplGraph> FinGraph for G {
     fn vertices(&self) -> impl Iterator<Item = Self::V> {
         self.vertex_set().iter()
     }
@@ -206,6 +211,7 @@ impl ColumnarGraph for SkelGraph {
         &self.tgt_map
     }
 }
+impl ColumnarGraphImplGraph for SkelGraph {}
 
 impl SkelGraph {
     /// Adds a new vertex to the graph and returns it.
@@ -291,6 +297,8 @@ where V: Eq+Hash+Clone, E: Eq+Hash+Clone {
     fn src_map(&self) -> &impl Column<Dom = E, Cod = V> { &self.src_map }
     fn tgt_map(&self) -> &impl Column<Dom = E, Cod = V> { &self.tgt_map }
 }
+impl<V,E> ColumnarGraphImplGraph for HashGraph<V,E>
+where V: Eq+Hash+Clone, E: Eq+Hash+Clone {}
 
 impl<V,E> HashGraph<V,E> where V: Eq+Hash+Clone, E: Eq+Hash+Clone {
     /// Adds a vertex to the graph, returning whether the vertex is new.
