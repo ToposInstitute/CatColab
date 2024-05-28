@@ -76,14 +76,15 @@ pub trait FinGraph: Graph {
 /** A finite graph backed by columns.
 
 Such a graph is defined in the styles of "C-sets" by two [finite sets](FinSet)
-and two [columns](Column). To derive an implementation of a graph, implement the
-further trait [`ColumnarGraphImplGraph`].
+and two [columns](Column). Note that this trait does *not* extend [`Graph`]. To
+derive an implementation, implement the further trait
+[`ColumnarGraphImplGraph`].
  */
 pub trait ColumnarGraph {
-    /// Type of vertices in columnar graph.
+    /// Type of vertices in the columnar graph.
     type V: Eq + Clone;
 
-    /// Type of edges in columnar graph.
+    /// Type of edges in the columnar graph.
     type E: Eq + Clone;
 
     /// Gets the set of vertices.
@@ -123,7 +124,8 @@ pub trait ColumnarGraph {
 
 /** Derive implementation of a graph from a columnar graph.
 
-This trait provides a *blanket implementation* for [`Graph`] and [`FinGraph`].
+Implementing this trait provides a *blanket implementation* of [`Graph`] and
+[`FinGraph`].
  */
 pub trait ColumnarGraphImplGraph: ColumnarGraph {}
 
