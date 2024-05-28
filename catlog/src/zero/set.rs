@@ -7,6 +7,7 @@ treated in a generic way.
 use std::ops::Range;
 use std::hash::Hash;
 use std::collections::HashSet;
+use derivative::Derivative;
 use derive_more::{From, Into};
 use ref_cast::RefCast;
 
@@ -106,19 +107,14 @@ impl IntoIterator for SkelFinSet {
 }
 
 /// A finite set backed by a hash set.
-#[derive(Clone,From,Into)]
+#[derive(Clone,From,Into,Derivative)]
+#[derivative(Default(bound=""))]
 pub struct HashFinSet<T>(HashSet<T>);
 
 impl<T: Eq + Hash> HashFinSet<T> {
     /// Adds an element to the set.
     pub fn insert(&mut self, x: T) -> bool {
         self.0.insert(x)
-    }
-}
-
-impl<T: Eq + Hash> Default for HashFinSet<T> {
-    fn default() -> Self {
-        Self::from(HashSet::new())
     }
 }
 

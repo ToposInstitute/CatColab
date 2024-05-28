@@ -1,6 +1,7 @@
 //! Graphs, finite and infinite.
 
 use std::hash::Hash;
+use derivative::Derivative;
 use nonempty::NonEmpty;
 use thiserror::Error;
 use ref_cast::RefCast;
@@ -271,20 +272,13 @@ impl Validate for SkelGraph {
 Unlike in a skeletal finite graph, the vertices and edges can have arbitrary
 hashable types.
 */
-#[derive(Clone)]
+#[derive(Clone,Derivative)]
+#[derivative(Default(bound=""))]
 pub struct HashGraph<V: Eq + Hash + Clone, E: Eq + Hash + Clone> {
     vertex_set: HashFinSet<V>,
     edge_set: HashFinSet<E>,
     src_map: IndexedHashColumn<E,V>,
     tgt_map: IndexedHashColumn<E,V>,
-}
-
-impl<V,E> Default for HashGraph<V,E> where V: Eq+Hash+Clone, E: Eq+Hash+Clone {
-    fn default() -> Self {
-        Self { vertex_set: Default::default(), edge_set: Default::default(),
-               src_map: Default::default(), tgt_map: Default::default(),
-        }
-    }
 }
 
 impl<V,E> ColumnarGraph for HashGraph<V,E>
