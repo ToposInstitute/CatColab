@@ -1,8 +1,10 @@
 //! Graphs, finite and infinite.
 
 use std::hash::Hash;
+use derivative::Derivative;
 use nonempty::NonEmpty;
 use thiserror::Error;
+use ref_cast::RefCast;
 
 use crate::validate::{self, Validate};
 use crate::zero::*;
@@ -74,14 +76,96 @@ pub trait FinGraph: Graph {
 /** A finite graph backed by columns.
 
 Such a graph is defined in the styles of "C-sets" by two [finite sets](FinSet)
-and two [columns](Column).
+and two [columns](Column). Note that this trait does *not* extend [`Graph`]. To
+derive an implementation, implement the further trait
+[`ColumnarGraphImplGraph`].
  */
-#[derive(Clone,Default)]
-pub struct ColumnarGraph<VSet,ESet,Col> {
-    vertex_set: VSet,
-    edge_set: ESet,
-    src_map: Col,
-    tgt_map: Col,
+pub trait ColumnarGraph {
+    /// Type of vertices in the columnar graph.
+    type V: Eq + Clone;
+
+    /// Type of edges in the columnar graph.
+    type E: Eq + Clone;
+
+    /// Gets the set of vertices.
+    fn vertex_set(&self) -> &impl FinSet<Elem = Self::V>;
+
+    /// Gets the set of edges.
+    fn edge_set(&self) -> &impl FinSet<Elem = Self::E>;
+
+    /// Gets the mapping assigning a source vertex to each edge.
+    fn src_map(&self) -> &impl Column<Dom = Self::E, Cod = Self::V>;
+
+    /// Gets the mapping assignment a target vertex to each edge.
+    fn tgt_map(&self) -> &impl Column<Dom = Self::E, Cod = Self::V>;
+
+    /// Gets the source of an edge, possibly undefined.
+    fn get_src(&self, e: &Self::E) -> Option<&Self::V> {
+        self.src_map().apply(e)
+    }
+
+    /// Gets the target of an edge, possibly undefined.
+    fn get_tgt(&self, e: &Self::E) -> Option<&Self::V> {
+        self.tgt_map().apply(e)
+    }
+
+    /// Iterates over failures to be a valid graph.
+    fn iter_invalid(
+        &self
+    ) -> impl Iterator<Item = InvalidGraphData<Self::E>> {
+        let (dom, cod) = (self.edge_set(), self.vertex_set());
+        let srcs = Function(self.src_map(), dom, cod).iter_invalid().map(
+            |e| InvalidGraphData::Src(e.take()));
+        let tgts = Function(self.tgt_map(), dom, cod).iter_invalid().map(
+            |e| InvalidGraphData::Tgt(e.take()));
+        srcs.chain(tgts)
+    }
+}
+
+/** Derive implementation of a graph from a columnar graph.
+
+Implementing this trait provides a *blanket implementation* of [`Graph`] and
+[`FinGraph`].
+ */
+pub trait ColumnarGraphImplGraph: ColumnarGraph {}
+
+impl<G: ColumnarGraphImplGraph> Graph for G {
+    type V = G::V;
+    type E = G::E;
+
+    fn has_vertex(&self, v: &Self::V) -> bool {
+        self.vertex_set().contains(v)
+    }
+    fn has_edge(&self, e: &Self::E) -> bool {
+        self.edge_set().contains(e)
+    }
+    fn src(&self, e: &Self::E) -> Self::V {
+        self.get_src(e).expect("Source of edge should be set").clone()
+    }
+    fn tgt(&self, e: &Self::E) -> Self::V {
+        self.get_tgt(e).expect("Target of edge should be set").clone()
+    }
+}
+
+impl<G: ColumnarGraphImplGraph> FinGraph for G {
+    fn vertices(&self) -> impl Iterator<Item = Self::V> {
+        self.vertex_set().iter()
+    }
+    fn edges(&self) -> impl Iterator<Item = Self::E> {
+        self.edge_set().iter()
+    }
+    fn in_edges(&self, v: &Self::V) -> impl Iterator<Item = Self::E> {
+        self.tgt_map().preimage(v)
+    }
+    fn out_edges(&self, v: &Self::V) -> impl Iterator<Item = Self::E> {
+        self.src_map().preimage(v)
+    }
+    fn nv(&self) -> usize {
+        self.vertex_set().len()
+    }
+    fn ne(&self) -> usize {
+        self.edge_set().len()
+    }
 }
 
 /** An invalid assignment in a graph defined explicitly by data.
@@ -100,99 +184,65 @@ pub enum InvalidGraphData<E> {
     Tgt(E),
 }
 
-impl<V,E,VSet,ESet,Col> ColumnarGraph<VSet,ESet,Col>
-where V: Eq, E: Eq,
-      VSet: Set<Elem=V>, ESet: Set<Elem=E>, Col: Mapping<Dom=E,Cod=V> {
-    /// Gets the source of an edge, possibly undefined.
-    pub fn get_src(&self, e: &E) -> Option<&V> { self.src_map.apply(e) }
+/** A skeletal finite graph with indexed source and target maps.
 
-    /// Gets the target of an edge, possibly undefined.
-    pub fn get_tgt(&self, e: &E) -> Option<&V> { self.tgt_map.apply(e) }
-
-    /// Sets the source of an edge.
-    pub fn set_src(&mut self, e: E, v: V) -> Option<V> { self.src_map.set(e,v) }
-
-    /// Sets the target of an edge.
-    pub fn set_tgt(&mut self, e: E, v: V) -> Option<V> { self.tgt_map.set(e,v) }
+The data structure is the same as the standard `Graph` type in
+[Catlab.jl](https://github.com/AlgebraicJulia/Catlab.jl).
+ */
+#[derive(Clone,Default)]
+pub struct SkelGraph {
+    nv: usize,
+    ne: usize,
+    src_map: SkelIndexedColumn,
+    tgt_map: SkelIndexedColumn,
 }
 
-impl<V,E,VSet,ESet,Col> Validate for ColumnarGraph<VSet,ESet,Col>
-where V: Eq + Clone, E: Eq + Clone,
-      VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Mapping<Dom=E,Cod=V> {
-    type ValidationError = InvalidGraphData<E>;
+impl ColumnarGraph for SkelGraph {
+    type V = usize;
+    type E = usize;
 
-    fn iter_invalid(&self) -> impl Iterator<Item = Self::ValidationError> {
-        let (dom, cod) = (&self.edge_set, &self.vertex_set);
-        let srcs = self.src_map.iter_invalid_function(dom, cod).map(
-            |e| InvalidGraphData::Src(e.take()));
-        let tgts = self.tgt_map.iter_invalid_function(dom, cod).map(
-            |e| InvalidGraphData::Tgt(e.take()));
-        srcs.chain(tgts)
+    fn vertex_set(&self) -> &impl FinSet<Elem = usize> {
+        SkelFinSet::ref_cast(&self.nv)
+    }
+    fn edge_set(&self) -> &impl FinSet<Elem = usize> {
+        SkelFinSet::ref_cast(&self.ne)
+    }
+    fn src_map(&self) -> &impl Column<Dom = usize, Cod = usize> {
+        &self.src_map
+    }
+    fn tgt_map(&self) -> &impl Column<Dom = usize, Cod =usize > {
+        &self.tgt_map
     }
 }
+impl ColumnarGraphImplGraph for SkelGraph {}
 
-impl<V,E,VSet,ESet,Col> Graph for ColumnarGraph<VSet,ESet,Col>
-where V: Eq + Clone, E: Eq + Clone,
-      VSet: Set<Elem=V>, ESet: Set<Elem=E>, Col: Mapping<Dom=E,Cod=V> {
-    type V = V;
-    type E = E;
-
-    fn has_vertex(&self, v: &V) -> bool {
-        self.vertex_set.contains(v)
-    }
-    fn has_edge(&self, e: &E) -> bool {
-        self.edge_set.contains(e)
-    }
-    fn src(&self, e: &E) -> V {
-        self.get_src(e).expect("Source of edge should be set").clone()
-    }
-    fn tgt(&self, e: &E) -> V {
-        self.get_tgt(e).expect("Target of edge should be set").clone()
-    }
-}
-
-impl<V,E,VSet,ESet,Col> FinGraph for ColumnarGraph<VSet,ESet,Col>
-where V: Eq + Clone, E: Eq + Clone,
-      VSet: FinSet<Elem=V>, ESet: FinSet<Elem=E>, Col: Column<Dom=E,Cod=V> {
-    fn vertices(&self) -> impl Iterator<Item = V> {
-        self.vertex_set.iter()
-    }
-    fn edges(&self) -> impl Iterator<Item = E> {
-        self.edge_set.iter()
-    }
-    fn in_edges(&self, v: &V) -> impl Iterator<Item = E> {
-        self.tgt_map.preimage(v)
-    }
-    fn out_edges(&self, v: &V) -> impl Iterator<Item = E> {
-        self.src_map.preimage(v)
-    }
-    fn nv(&self) -> usize { self.vertex_set.len() }
-    fn ne(&self) -> usize { self.edge_set.len() }
-}
-
-impl<Col> ColumnarGraph<SkelFinSet,SkelFinSet,Col>
-where Col: Mapping<Dom=usize, Cod=usize> {
+impl SkelGraph {
     /// Adds a new vertex to the graph and returns it.
     pub fn add_vertex(&mut self) -> usize {
-        self.vertex_set.insert()
+        let v = self.nv;
+        self.nv += 1;
+        v
     }
 
     /// Adds `n` new vertices to the graphs and returns them.
     pub fn add_vertices(&mut self, n: usize) -> std::ops::Range<usize> {
-        self.vertex_set.extend(n)
+        let start = self.nv;
+        self.nv += n;
+        start..(self.nv)
     }
 
     /// Adds a new edge to the graph and returns it.
     pub fn add_edge(&mut self, src: usize, tgt: usize) -> usize {
-        let e = self.edge_set.insert();
-        self.set_src(e, src);
-        self.set_tgt(e, tgt);
+        let e = self.ne;
+        self.ne += 1;
+        self.src_map.set(e, src);
+        self.tgt_map.set(e, tgt);
         e
     }
 
     /// Makes a path graph of length `n`.
     #[cfg(test)]
-    pub fn path(n: usize) -> Self where Col: Default {
+    pub fn path(n: usize) -> Self {
         let mut g: Self = Default::default();
         g.add_vertices(n);
         for (i, j) in std::iter::zip(0..(n-1), 1..n) {
@@ -203,7 +253,7 @@ where Col: Mapping<Dom=usize, Cod=usize> {
 
     /// Makes a triangle graph (2-simplex).
     #[cfg(test)]
-    pub fn triangle() -> Self where Col: Default {
+    pub fn triangle() -> Self {
         let mut g: Self = Default::default();
         g.add_vertices(3);
         g.add_edge(0,1); g.add_edge(1,2); g.add_edge(0,2);
@@ -211,8 +261,42 @@ where Col: Mapping<Dom=usize, Cod=usize> {
     }
 }
 
-impl<V,E,Col> ColumnarGraph<HashFinSet<V>,HashFinSet<E>,Col>
-where V: Eq+Hash+Clone, E: Eq+Hash+Clone, Col: Mapping<Dom=E, Cod=V> {
+impl Validate for SkelGraph {
+    type ValidationError = InvalidGraphData<usize>;
+
+    fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
+        validate::collect_errors(self.iter_invalid())
+    }
+}
+
+/** A finite graph with indexed source and target maps, based on hash maps.
+
+Unlike in a skeletal finite graph, the vertices and edges can have arbitrary
+hashable types.
+*/
+#[derive(Clone,Derivative)]
+#[derivative(Default(bound=""))]
+pub struct HashGraph<V: Eq + Hash + Clone, E: Eq + Hash + Clone> {
+    vertex_set: HashFinSet<V>,
+    edge_set: HashFinSet<E>,
+    src_map: IndexedHashColumn<E,V>,
+    tgt_map: IndexedHashColumn<E,V>,
+}
+
+impl<V,E> ColumnarGraph for HashGraph<V,E>
+where V: Eq+Hash+Clone, E: Eq+Hash+Clone {
+    type V = V;
+    type E = E;
+
+    fn vertex_set(&self) -> &impl FinSet<Elem = V> { &self.vertex_set }
+    fn edge_set(&self) -> &impl FinSet<Elem = E> { &self.edge_set }
+    fn src_map(&self) -> &impl Column<Dom = E, Cod = V> { &self.src_map }
+    fn tgt_map(&self) -> &impl Column<Dom = E, Cod = V> { &self.tgt_map }
+}
+impl<V,E> ColumnarGraphImplGraph for HashGraph<V,E>
+where V: Eq+Hash+Clone, E: Eq+Hash+Clone {}
+
+impl<V,E> HashGraph<V,E> where V: Eq+Hash+Clone, E: Eq+Hash+Clone {
     /// Adds a vertex to the graph, returning whether the vertex is new.
     pub fn add_vertex(&mut self, v: V) -> bool {
         self.vertex_set.insert(v)
@@ -228,26 +312,19 @@ where V: Eq+Hash+Clone, E: Eq+Hash+Clone, Col: Mapping<Dom=E, Cod=V> {
     If the edge is not new, its source and target are updated.
     */
     pub fn add_edge(&mut self, e: E, src: V, tgt: V) -> bool {
-        self.set_src(e.clone(), src);
-        self.set_tgt(e.clone(), tgt);
+        self.src_map.set(e.clone(), src);
+        self.tgt_map.set(e.clone(), tgt);
         self.edge_set.insert(e)
     }
 }
 
-/** A skeletal finite graph with indexed source and target maps.
+impl<V,E> Validate for HashGraph<V,E> where V: Eq+Hash+Clone, E: Eq+Hash+Clone {
+    type ValidationError = InvalidGraphData<E>;
 
-The data structure is the same as the standard `Graph` type in
-[Catlab.jl](https://github.com/AlgebraicJulia/Catlab.jl).
- */
-pub type SkelGraph = ColumnarGraph<SkelFinSet,SkelFinSet,SkelIndexedColumn>;
-
-/** A finite graph with indexed source and target maps, based on hash maps.
-
-Unlike in a skeletal finite graph, the vertices and edges can have arbitrary
-hashable types.
-*/
-pub type HashGraph<V,E> =
-    ColumnarGraph<HashFinSet<V>, HashFinSet<E>, IndexedHashColumn<E,V>>;
+    fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
+        validate::collect_errors(self.iter_invalid())
+    }
+}
 
 /** A mapping between graphs.
 
@@ -274,38 +351,32 @@ pub trait GraphMapping {
 
     /// Applies the graph mappting at an edge.
     fn apply_edge(&self, e: &Self::DomE) -> Option<&Self::CodE>;
+}
 
-    /** Validates that the mapping is a graph homomorphism between two graphs.
+/** A homomorphism between graphs defined by a [mapping](GraphMapping).
 
-    The domain and codomain are assumed to be valid graphs. If that is in
-    question, they should be validated *before* calling this method.
-    */
-    fn validate_is_morphism<Dom, Cod>(
-        &self,
-        dom: &Dom,
-        cod: &Cod
-    ) -> Result<(), NonEmpty<InvalidGraphMorphism<Self::DomV, Self::DomE>>>
-    where Self::DomE: Clone,
-          Dom: FinGraph<V = Self::DomV, E = Self::DomE>,
-          Cod: Graph<V = Self::CodV, E = Self::CodE> {
-        validate::collect_errors(self.iter_invalid_morphism(dom, cod))
-    }
+This struct borrows its data to perform validation. The domain and codomain are
+assumed to be valid graphs. If that is in question, the graphs should be
+validated *before* valiating this object.
+ */
+pub struct GraphMorphism<'a,Map,Dom,Cod>(
+    pub &'a Map,
+    pub &'a Dom,
+    pub &'a Cod,
+);
 
-    /** Iterates over failues of the mapping to be a graph homomorphism.
+impl<'a,Map,Dom,Cod> GraphMorphism<'a,Map,Dom,Cod>
+where Map: GraphMapping, Map::DomE: Clone,
+      Dom: FinGraph<V=Map::DomV, E=Map::DomE>,
+      Cod: Graph<V=Map::CodV, E=Map::CodE> {
 
-    The domain and codomain are assumed to be valid graphs.
-    */
-    fn iter_invalid_morphism<Dom, Cod>(
-        &self,
-        dom: &Dom,
-        cod: &Cod
-    ) -> impl Iterator<Item = InvalidGraphMorphism<Self::DomV, Self::DomE>>
-    where Self::DomE: Clone,
-          Dom: FinGraph<V = Self::DomV, E = Self::DomE>,
-          Cod: Graph<V = Self::CodV, E = Self::CodE> {
-
+    /// Iterates over failues of the mapping to be a graph homomorphism.
+    pub fn iter_invalid(
+        &self
+    ) -> impl Iterator<Item = InvalidGraphMorphism<Map::DomV, Map::DomE>> + 'a {
+        let GraphMorphism(mapping, dom, cod) = *self;
         let vertex_errors = dom.vertices().filter_map(|v| {
-            if self.apply_vertex(&v).map_or(false, |w| cod.has_vertex(w)) {
+            if mapping.apply_vertex(&v).map_or(false, |w| cod.has_vertex(w)) {
                 None
             } else {
                 Some(InvalidGraphMorphism::Vertex(v))
@@ -313,14 +384,14 @@ pub trait GraphMapping {
         });
 
         let edge_errors = dom.edges().flat_map(|e| {
-            if let Some(f) = self.apply_edge(&e) {
+            if let Some(f) = mapping.apply_edge(&e) {
                 if cod.has_edge(f) {
                     let mut errs = Vec::new();
-                    if !self.apply_vertex(&dom.src(&e))
+                    if !mapping.apply_vertex(&dom.src(&e))
                            .map_or(true, |v| *v == cod.src(f)) {
                         errs.push(InvalidGraphMorphism::Src(e.clone()))
                     }
-                    if !self.apply_vertex(&dom.tgt(&e))
+                    if !mapping.apply_vertex(&dom.tgt(&e))
                             .map_or(true, |v| *v == cod.tgt(f)) {
                         errs.push(InvalidGraphMorphism::Tgt(e.clone()))
                     }
@@ -331,6 +402,17 @@ pub trait GraphMapping {
         });
 
         vertex_errors.chain(edge_errors)
+    }
+}
+
+impl<Map,Dom,Cod> Validate for GraphMorphism<'_,Map,Dom,Cod>
+where Map: GraphMapping, Map::DomE: Clone,
+      Dom: FinGraph<V=Map::DomV, E=Map::DomE>,
+      Cod: Graph<V=Map::CodV, E=Map::CodE> {
+    type ValidationError = InvalidGraphMorphism<Map::DomV, Map::DomE>;
+
+    fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
+        validate::collect_errors(self.iter_invalid())
     }
 }
 
@@ -419,24 +501,24 @@ mod tests {
     fn validate_columnar_graph() {
         let mut g = SkelGraph::triangle();
         assert!(g.validate().is_ok());
-        g.set_src(2, 3); // Vertex 3 doesn't exist yet.
+        g.src_map.set(2, 3); // Vertex 3 doesn't exist yet.
         assert!(g.validate().is_err());
         assert_eq!(g.add_vertex(), 3); // OK, now it does!
         assert!(g.validate().is_ok());
     }
 
     #[test]
-    fn validate_graph_mapping() {
+    fn validate_graph_moprhism() {
         let g = SkelGraph::path(3);
         let h = SkelGraph::path(4);
         let f = ColumnarGraphMapping::new(
             VecColumn::new(vec![1,2,3]), VecColumn::new(vec![1,2])
         );
-        assert!(f.validate_is_morphism(&g, &h).is_ok());
+        assert!(GraphMorphism(&f, &g, &h).validate().is_ok());
 
         let f = ColumnarGraphMapping::new(
             VecColumn::new(vec![1,2,3]), VecColumn::new(vec![2,1])
         ); // Not a homomorphism.
-        assert!(f.validate_is_morphism(&g, &h).is_err());
+        assert!(GraphMorphism(&f, &g, &h).validate().is_err());
     }
 }

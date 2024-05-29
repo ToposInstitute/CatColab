@@ -2,11 +2,12 @@
 
 use std::hash::Hash;
 use std::collections::hash_map::HashMap;
+use derivative::Derivative;
 use derive_more::From;
 use nonempty::NonEmpty;
 use thiserror::Error;
 
-use crate::validate;
+use crate::validate::{self, Validate};
 use super::set::{Set, FinSet};
 
 /** A functional mapping.
@@ -45,35 +46,6 @@ pub trait Mapping {
     fn is_set(&self, x: &Self::Dom) -> bool {
         self.apply(x).is_some()
     }
-
-    /// Validates that the mapping restricts to a function on a finite domain.
-    fn validate_is_function<Dom, Cod>(
-        &self,
-        dom: &Dom,
-        cod: &Cod
-    ) -> Result<(), NonEmpty<InvalidFunction<Self::Dom>>>
-    where Dom: FinSet<Elem = Self::Dom>, Cod: Set<Elem = Self::Cod> {
-        validate::collect_errors(self.iter_invalid_function(dom, cod))
-    }
-
-    /// Iterates over failures of the mapping to restrict to a function.
-    fn iter_invalid_function<Dom, Cod>(
-        &self,
-        dom: &Dom,
-        cod: &Cod
-    ) -> impl Iterator<Item = InvalidFunction<Self::Dom>>
-    where Dom: FinSet<Elem = Self::Dom>, Cod: Set<Elem = Self::Cod> {
-        dom.iter().filter_map(|x| {
-            match self.apply(&x) {
-                Some(y) => if cod.contains(&y) {
-                    None
-                } else {
-                    Some(InvalidFunction::Cod(x))
-                }
-                None => Some(InvalidFunction::Dom(x))
-            }
-        })
-    }
 }
 
 /** A mapping with finite support.
@@ -93,6 +65,47 @@ pub trait Column: Mapping {
     */
     fn preimage(&self, y: &Self::Cod) -> impl Iterator<Item = Self::Dom> {
         self.iter().filter(|&(_, z)| *z == *y).map(|(x,_)| x)
+    }
+}
+
+/** A function between sets defined by a [mapping](Mapping).
+
+This struct borrows its data, and exists mainly as a convenient interface to
+validate that a mapping defines a valid function.
+ */
+pub struct Function<'a,Map,Dom,Cod>(
+    pub &'a Map,
+    pub &'a Dom,
+    pub &'a Cod,
+);
+
+impl<'a,Map,Dom,Cod> Function<'a,Map,Dom,Cod>
+where Map: Mapping, Dom: FinSet<Elem=Map::Dom>, Cod: Set<Elem=Map::Cod> {
+
+    /// Iterates over failures to be a function.
+    pub fn iter_invalid(
+        &self
+    ) -> impl Iterator<Item = InvalidFunction<Map::Dom>> + 'a {
+        let Function(mapping, dom, cod) = self;
+        dom.iter().filter_map(|x| {
+            match mapping.apply(&x) {
+                Some(y) => if cod.contains(&y) {
+                    None
+                } else {
+                    Some(InvalidFunction::Cod(x))
+                }
+                None => Some(InvalidFunction::Dom(x))
+            }
+        })
+    }
+}
+
+impl<Map,Dom,Cod> Validate for Function<'_,Map,Dom,Cod>
+where Map: Mapping, Dom: FinSet<Elem=Map::Dom>, Cod: Set<Elem=Map::Cod> {
+    type ValidationError = InvalidFunction<Map::Dom>;
+
+    fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
+        validate::collect_errors(self.iter_invalid())
     }
 }
 
@@ -116,7 +129,8 @@ impl<T> InvalidFunction<T> {
 
 /** An unindexed column backed by a vector.
  */
-#[derive(Clone)]
+#[derive(Clone,Derivative)]
+#[derivative(Default(bound=""))]
 pub struct VecColumn<T>(Vec<Option<T>>);
 
 impl<T> VecColumn<T> {
@@ -124,10 +138,6 @@ impl<T> VecColumn<T> {
     pub fn new(values: Vec<T>) -> Self {
         Self { 0: values.into_iter().map(Some).collect() }
     }
-}
-
-impl<T> Default for VecColumn<T> {
-    fn default() -> Self { Self { 0: Default::default() } }
 }
 
 impl<T: Eq> Mapping for VecColumn<T> {
@@ -171,12 +181,9 @@ impl<T: Eq> Column for VecColumn<T> {
 
 /** An unindexed column backed by a hash map.
  */
-#[derive(Clone,From)]
+#[derive(Clone,From,Derivative)]
+#[derivative(Default(bound=""))]
 pub struct HashColumn<K,V>(HashMap<K,V>);
-
-impl<K: Eq+Hash, V: Eq> Default for HashColumn<K,V> {
-    fn default() -> Self { Self::from(HashMap::<K,V>::new()) }
-}
 
 impl<K: Eq+Hash, V: Eq> Mapping for HashColumn<K,V> {
     type Dom = K;
@@ -219,12 +226,9 @@ trait Index {
 
 /** An index implemented as a vector of vectors.
  */
-#[derive(Clone)]
+#[derive(Clone,Derivative)]
+#[derivative(Default(bound=""))]
 struct VecIndex<T>(Vec<Vec<T>>);
-
-impl<T> Default for VecIndex<T> {
-    fn default() -> Self { Self { 0: Default::default() } }
-}
 
 impl<T: Eq + Clone> Index for VecIndex<T> {
     type Dom = T;
@@ -255,12 +259,9 @@ impl<T: Eq + Clone> Index for VecIndex<T> {
 
 /** An index implemented by a hash map into vectors.
  */
-#[derive(Clone)]
+#[derive(Clone,Derivative)]
+#[derivative(Default(bound=""))]
 struct HashIndex<X,Y>(HashMap<Y,Vec<X>>);
-
-impl<X, Y: Eq + Hash> Default for HashIndex<X,Y> {
-    fn default() -> Self { Self { 0: HashMap::<Y,Vec<X>>::new() } }
-}
 
 impl<X: Eq + Clone, Y: Eq + Hash + Clone> Index for HashIndex<X,Y> {
     type Dom = X;
@@ -355,7 +356,8 @@ where Dom: Eq + Clone, Cod: Eq,
 The column has the natural numbers (`usize`) as both its domain and codomain,
 making it suitable for use with skeletal finite sets.
 */
-#[derive(Clone)]
+#[derive(Clone,Derivative)]
+#[derivative(Default(bound=""))]
 pub struct SkelIndexedColumn(
     IndexedColumn<usize, usize, VecColumn<usize>, VecIndex<usize>>
 );
@@ -369,10 +371,6 @@ impl SkelIndexedColumn {
         }
         col
     }
-}
-
-impl Default for SkelIndexedColumn {
-    fn default() -> Self { Self {0: Default::default() } }
 }
 
 impl Mapping for SkelIndexedColumn {
@@ -394,7 +392,8 @@ impl Column for SkelIndexedColumn {
 The domain of the column is the natural numbers (`usize`). Since the codomain is
 an arbitrary type (`T`), the index is implemented using a hash map.
 */
-#[derive(Clone)]
+#[derive(Clone,Derivative)]
+#[derivative(Default(bound=""))]
 pub struct IndexedVecColumn<T: Eq+Hash+Clone>(
     IndexedColumn<usize, T, VecColumn<T>, HashIndex<usize,T>>
 );
@@ -408,10 +407,6 @@ impl<T: Eq+Hash+Clone> IndexedVecColumn<T> {
         }
         col
     }
-}
-
-impl<T: Eq+Hash+Clone> Default for IndexedVecColumn<T> {
-    fn default() -> Self { Self { 0: Default::default() } }
 }
 
 impl<T: Eq+Hash+Clone> Mapping for IndexedVecColumn<T> {
@@ -429,15 +424,11 @@ impl<T: Eq+Hash+Clone> Column for IndexedVecColumn<T> {
 }
 
 /// An indexed column backed by hash maps.
-#[derive(Clone)]
+#[derive(Clone,Derivative)]
+#[derivative(Default(bound=""))]
 pub struct IndexedHashColumn<K: Eq+Hash+Clone, V: Eq+Hash+Clone>(
     IndexedColumn<K, V, HashColumn<K,V>, HashIndex<K,V>>
 );
-
-impl<K,V> Default for IndexedHashColumn<K,V>
-where K: Eq+Hash+Clone, V: Eq+Hash+Clone {
-    fn default() -> Self { Self { 0: Default::default() } }
-}
 
 impl<K,V> Mapping for IndexedHashColumn<K,V>
 where K: Eq+Hash+Clone, V: Eq+Hash+Clone {
@@ -538,10 +529,10 @@ mod tests {
     }
 
     #[test]
-    fn validate_column() {
+    fn validate_function() {
         let col = VecColumn::new(vec![1, 2, 4]);
         let validate = |m, n|
-          col.validate_is_function(&SkelFinSet::from(m), &SkelFinSet::from(n));
+          Function(&col, &SkelFinSet::from(m), &SkelFinSet::from(n)).validate();
         assert!(validate(3, 5).is_ok());
         assert_eq!(validate(4, 5).unwrap_err(),
                    NonEmpty::new(InvalidFunction::Dom::<usize>(3)));

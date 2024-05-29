@@ -4,33 +4,25 @@ To be more precise, this module is about *free and finitely generated* double
 diagrams, i.e., diagrams in a double category indexed by a free double category
 on a [finite double computad](FinDblComputad). Equivalently, by the adjunction,
 such a diagram is a morphism from a finite double computad to the double
-computad underlying a double category. Double diagrams are stored in the latter
-form, as it is simpler.
+computad underlying a double category. Double diagrams are stored in the latter,
+simpler form.
 
-As an object in a Rust, a double diagram knows its [shape](DblDiagram::shape)
-(indexing computad) and owns that data. It does not know or own the target
-double category/computad. Practically speaking, this is the main difference
-between a double diagram and a double computad [mapping](DblComputadMapping).
+As an object in a Rust, a double diagram knows its shape (indexing computad) and
+typically owns that data. It does not know or own the target double
+category/computad. Practically speaking, this is the main difference between a
+double diagram and a double computad [mapping](DblComputadMapping).
  */
 
+use derivative::Derivative;
 use nonempty::NonEmpty;
 
-use crate::validate;
-use crate::zero::{Mapping, VecColumn};
+use crate::validate::{self, Validate};
+use crate::zero::{FinSet, AttributedSkelSet, Mapping, Column, VecColumn};
 use crate::one::path::SkelPath;
 use super::computad::*;
 
 /// A diagram in a double category.
-pub trait DblDiagram {
-    /// Type of vertices in the indexing computad.
-    type V: Eq;
-    /// Type of edges in the indexing computad.
-    type E: Eq;
-    /// Type of proedges in the indexing computad.
-    type ProE: Eq;
-    /// Type of squares in the indexing computad.
-    type Sq: Eq;
-
+pub trait DblDiagram: FinDblComputad {
     /// Type of objects in the target double category.
     type Ob: Eq;
     /// Type of arrows in the target double category.
@@ -39,13 +31,6 @@ pub trait DblDiagram {
     type Pro: Eq;
     /// Type of cells in the target double category.
     type Cell: Eq;
-
-    /// Type of the diagram shape (indexing double computad).
-    type Shape: FinDblComputad<
-            V = Self::V, E = Self::E, ProE = Self::ProE, Sq = Self::Sq>;
-
-    /// Gets the shape of the double diagram.
-    fn shape<'a>(&'a self) -> &'a Self::Shape;
 
     /// Gets the object indexed by a vertex.
     fn object(&self, v: &Self::V) -> Self::Ob;
@@ -60,66 +45,96 @@ pub trait DblDiagram {
     fn cell(&self, α: &Self::Sq) -> Self::Cell;
 }
 
-/// A double diagram indexed by a skeletal double computad.
-#[derive(Clone,Default)]
+/// A double diagram with a skeletal indexing computad.
+#[derive(Clone,Derivative)]
+#[derivative(Default(bound=""))]
 pub struct SkelDblDiagram<Ob, Arr, Pro, Cell> {
-    shape: SkelDblComputad,
-    object_map: VecColumn<Ob>,
-    arrow_map: VecColumn<Arr>,
-    proarrow_map: VecColumn<Pro>,
-    cell_map: VecColumn<Cell>
+    objects: AttributedSkelSet<Ob>,
+    arrows: AttributedSkelSet<Arr>,
+    proarrows: AttributedSkelSet<Pro>,
+    cells: AttributedSkelSet<Cell>,
+    dom_map: VecColumn<usize>, cod_map: VecColumn<usize>,
+    src_map: VecColumn<usize>, tgt_map: VecColumn<usize>,
+    sq_dom_map: VecColumn<SkelPath>, sq_cod_map: VecColumn<SkelPath>,
+    sq_src_map: VecColumn<SkelPath>, sq_tgt_map: VecColumn<SkelPath>,
 }
 
 impl<Ob,Arr,Pro,Cell> SkelDblDiagram<Ob,Arr,Pro,Cell>
 where Ob: Eq, Arr: Eq, Pro: Eq, Cell: Eq {
     /// Adds an object to the diagram, and returns its indexing vertex.
     pub fn add_object(&mut self, x: Ob) -> usize {
-        let v = self.shape.add_vertex();
-        self.object_map.set(v, x);
-        v
+        self.objects.insert(x)
     }
 
     /// Adds an arrow to the diagram, and returns its indexing edge.
     pub fn add_arrow(&mut self, f: Arr, dom: usize, cod: usize) -> usize {
-        let e = self.shape.add_edge(dom, cod);
-        self.arrow_map.set(e, f);
+        let e = self.arrows.insert(f);
+        self.dom_map.set(e, dom);
+        self.cod_map.set(e, cod);
         e
     }
 
     /// Adds a proarrow to the diagram, and returns its indexing proedge.
     pub fn add_proarrow(&mut self, m: Pro, src: usize, tgt: usize) -> usize {
-        let p = self.shape.add_proedge(src, tgt);
-        self.proarrow_map.set(p, m);
+        let p = self.proarrows.insert(m);
+        self.src_map.set(p, src);
+        self.tgt_map.set(p, tgt);
         p
     }
 
     /// Adds a cell to the diagram, and returns its indexing square.
     pub fn add_cell(&mut self, α: Cell, dom: SkelPath, cod: SkelPath,
-                src: SkelPath, tgt: SkelPath) -> usize {
-        let sq = self.shape.add_square(dom, cod, src, tgt);
-        self.cell_map.set(sq, α);
+                    src: SkelPath, tgt: SkelPath) -> usize {
+        let sq = self.cells.insert(α);
+        self.sq_dom_map.set(sq, dom);
+        self.sq_cod_map.set(sq, cod);
+        self.sq_src_map.set(sq, src);
+        self.sq_tgt_map.set(sq, tgt);
         sq
     }
 }
 
-impl<Ob,Arr,Pro,Cell> SkelDblDiagram<Ob,Arr,Pro,Cell>
-where Ob: Eq+Clone, Arr: Eq+Clone, Pro: Eq+Clone, Cell: Eq+Clone {
-    /// Validates that diagram is contained in the given computad.
-    pub fn validate_in<Cptd>(
-        &self,
-        cptd: &Cptd
-    ) -> Result<(), NonEmpty<InvalidDblComputadMorphism<usize,usize,usize,usize>>>
-    where Cptd: DblComputad<V=Ob, E=Arr, ProE=Pro, Sq=Cell> {
-        validate::collect_errors(self.iter_invalid_in(cptd))
-    }
+impl<Ob,Arr,Pro,Cell> ColumnarDblComputad for SkelDblDiagram<Ob,Arr,Pro,Cell> {
+    type V = usize;
+    type E = usize;
+    type ProE = usize;
+    type Sq = usize;
 
-    /// Iterates over failures of diagram to be contained in the given computad.
-    pub fn iter_invalid_in<'a, Cptd>(
-        &'a self,
-        cptd: &'a Cptd
-    ) -> impl Iterator<Item = InvalidDblComputadMorphism<usize,usize,usize,usize>> + 'a
-    where Cptd: DblComputad<V=Ob, E=Arr, ProE=Pro, Sq=Cell> {
-        self.iter_invalid_morphism(self.shape(), cptd)
+    fn vertex_set(&self) -> &impl FinSet<Elem=usize> { &self.objects }
+    fn edge_set(&self) -> &impl FinSet<Elem=usize> { &self.arrows }
+    fn proedge_set(&self) -> &impl FinSet<Elem=usize> { &self.proarrows }
+    fn square_set(&self) -> &impl FinSet<Elem=usize> { &self.cells }
+
+    fn dom_map(&self) -> &impl Column<Dom=usize, Cod=usize> { &self.dom_map }
+    fn cod_map(&self) -> &impl Column<Dom=usize, Cod=usize> { &self.cod_map }
+    fn src_map(&self) -> &impl Column<Dom=usize, Cod=usize> { &self.src_map }
+    fn tgt_map(&self) -> &impl Column<Dom=usize, Cod=usize> { &self.tgt_map }
+
+    fn square_dom_map(&self) -> &impl Column<Dom=usize, Cod=SkelPath> { &self.sq_dom_map }
+    fn square_cod_map(&self) -> &impl Column<Dom=usize, Cod=SkelPath> { &self.sq_cod_map }
+    fn square_src_map(&self) -> &impl Column<Dom=usize, Cod=SkelPath> { &self.sq_src_map }
+    fn square_tgt_map(&self) -> &impl Column<Dom=usize, Cod=SkelPath> { &self.sq_tgt_map }
+}
+
+impl<Ob,Arr,Pro,Cell> DblDiagram for SkelDblDiagram<Ob,Arr,Pro,Cell>
+where Ob: Eq+Clone, Arr: Eq+Clone, Pro: Eq+Clone, Cell: Eq+Clone {
+    type Ob = Ob;
+    type Arr = Arr;
+    type Pro = Pro;
+    type Cell = Cell;
+
+    fn object(&self, v: &usize) -> Ob { self.objects.view(*v).clone() }
+    fn arrow(&self, e: &usize) -> Arr { self.arrows.view(*e).clone() }
+    fn proarrow(&self, p: &usize) -> Pro { self.proarrows.view(*p).clone() }
+    fn cell(&self, α: &usize) -> Cell { self.cells.view(*α).clone() }
+}
+
+impl<Ob,Arr,Pro,Cell> Validate for SkelDblDiagram<Ob,Arr,Pro,Cell>
+where Ob: Eq+Clone, Arr: Eq+Clone, Pro: Eq+Clone, Cell: Eq+Clone {
+    type ValidationError = InvalidDblComputadData<usize,usize,usize>;
+
+    fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
+        validate::collect_errors(self.iter_invalid())
     }
 }
 
@@ -136,45 +151,16 @@ where Ob: Eq+Clone, Arr: Eq+Clone, Pro: Eq+Clone, Cell: Eq+Clone {
     type CodSq = Cell;
 
     fn apply_vertex(&self, v: &usize) -> Option<&Ob> {
-        self.object_map.apply(v)
+        Some(self.objects.view(*v))
     }
     fn apply_edge(&self, e: &usize) -> Option<&Arr> {
-        self.arrow_map.apply(e)
+        Some(self.arrows.view(*e))
     }
     fn apply_proedge(&self, p: &usize) -> Option<&Pro> {
-        self.proarrow_map.apply(p)
+        Some(self.proarrows.view(*p))
     }
     fn apply_square(&self, α: &usize) -> Option<&Cell> {
-        self.cell_map.apply(α)
-    }
-}
-
-impl<Ob,Arr,Pro,Cell> DblDiagram for SkelDblDiagram<Ob,Arr,Pro,Cell>
-where Ob: Eq+Clone, Arr: Eq+Clone, Pro: Eq+Clone, Cell: Eq+Clone {
-    type V = usize;
-    type E = usize;
-    type ProE = usize;
-    type Sq = usize;
-
-    type Ob = Ob;
-    type Arr = Arr;
-    type Pro = Pro;
-    type Cell = Cell;
-
-    type Shape = SkelDblComputad;
-    fn shape<'a>(&'a self) -> &'a Self::Shape { &self.shape }
-
-    fn object(&self, v: &usize) -> Ob {
-        self.apply_vertex(v).expect("Object in diagram should be defined").clone()
-    }
-    fn arrow(&self, e: &usize) -> Arr {
-        self.apply_edge(e).expect("Arrow in diagram should be defined").clone()
-    }
-    fn proarrow(&self, p: &usize) -> Pro {
-        self.apply_proedge(p).expect("Proarrow in diagram should be defined").clone()
-    }
-    fn cell(&self, α: &usize) -> Cell {
-        self.apply_square(α).expect("Cell in diagram should be defined").clone()
+        Some(self.cells.view(*α))
     }
 }
 
@@ -188,7 +174,7 @@ mod tests {
     fn skel_dbl_diagram() {
         // Formula for general restriction in an equipment (see, for example,
         // Lambert & Patterson 2024, Equation 4.7).
-        let mut cptd: HashDblComputad<&str> = Default::default();
+        let mut cptd: HashDblComputad<&str,&str,&str,&str> = Default::default();
         cptd.add_vertices(["w", "x", "y", "z"].into_iter());
         cptd.add_edge("f", "x", "w"); cptd.add_edge("g", "y", "z");
         cptd.add_proedge("f!", "x", "w"); cptd.add_proedge("g*", "z", "y");
@@ -210,6 +196,7 @@ mod tests {
                       Path::single(f), Path::Id(w));
         diag.add_cell("g_res", Path::single(gcnj), Path::Id(z),
                       Path::Id(z), Path::single(g));
-        assert!(diag.validate_in(&cptd).is_ok());
+        assert!(diag.validate().is_ok());
+        assert!(DblComputadMorphism(&diag, &diag, &cptd).validate().is_ok());
     }
 }

@@ -1,6 +1,7 @@
 //! Data structures for finite categories.
 
 use std::hash::Hash;
+use derivative::Derivative;
 use ref_cast::RefCast;
 
 use crate::zero::{Mapping, HashColumn};
@@ -35,7 +36,8 @@ very special, finite categories show up surprisingly often as schemas or
 theories. For example, the schemas for graphs, symmetric graphs, reflexive
 graphs, and symmetric reflexive graphs are all finite.
  */
-#[derive(Clone)]
+#[derive(Clone,Derivative)]
+#[derivative(Default(bound=""))]
 pub struct FinCategory<V,E> where V: Eq+Hash+Clone, E: Eq+Hash+Clone {
     generators: HashGraph<V,E>,
     compose_map: HashColumn<(E,E), Hom<V,E>>,
@@ -61,13 +63,6 @@ impl<V,E> FinCategory<V,E> where V: Eq+Hash+Clone, E: Eq+Hash+Clone {
     pub fn set_composite(&mut self, d: E, e: E, f: Hom<V,E>) {
         self.compose_map.set((d, e), f);
     }
-}
-
-impl<V,E> Default for FinCategory<V,E> where V: Eq+Hash+Clone, E: Eq+Hash+Clone {
-    fn default() -> Self { Self {
-        generators: Default::default(),
-        compose_map: Default::default()
-    }}
 }
 
 impl<V,E> Category for FinCategory<V,E> where V: Eq+Hash+Clone, E: Eq+Hash+Clone {

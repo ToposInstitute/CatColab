@@ -22,16 +22,15 @@ pub trait Validate {
     type ValidationError;
 
     /// Validates the object.
-    fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
-        collect_errors(self.iter_invalid())
-    }
-
-    /// Iterates over validation errors.
-    fn iter_invalid(&self) -> impl Iterator<Item = Self::ValidationError>;
+    fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>>;
 }
 
-/// Collect errors into a `Result`.
-pub(crate) fn collect_errors<Error>(
+/** Collect iterator of validation errors into a `Result`.
+
+It is common to implement [`Validate`] by constructing an iterator over
+validation errors and then calling this convenience function.
+*/
+pub fn collect_errors<Error>(
     iter: impl Iterator<Item = Error>,
 ) -> Result<(), NonEmpty<Error>> {
     match NonEmpty::collect(iter) {

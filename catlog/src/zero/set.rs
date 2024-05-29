@@ -7,7 +7,9 @@ treated in a generic way.
 use std::ops::Range;
 use std::hash::Hash;
 use std::collections::HashSet;
+use derivative::Derivative;
 use derive_more::{From, Into};
+use ref_cast::RefCast;
 
 /** A set.
 
@@ -60,7 +62,8 @@ pub trait FinSet: Set {
 The elements of the skeletal finite set of size `n` are the numbers `0..n`
 (excluding `n`).
  */
-#[derive(Clone,Copy,From,Into)]
+#[derive(Clone,Copy,From,Into,RefCast)]
+#[repr(transparent)]
 pub struct SkelFinSet(usize);
 
 impl SkelFinSet {
@@ -104,19 +107,14 @@ impl IntoIterator for SkelFinSet {
 }
 
 /// A finite set backed by a hash set.
-#[derive(Clone,From,Into)]
+#[derive(Clone,From,Into,Derivative)]
+#[derivative(Default(bound=""))]
 pub struct HashFinSet<T>(HashSet<T>);
 
 impl<T: Eq + Hash> HashFinSet<T> {
     /// Adds an element to the set.
     pub fn insert(&mut self, x: T) -> bool {
         self.0.insert(x)
-    }
-}
-
-impl<T: Eq + Hash> Default for HashFinSet<T> {
-    fn default() -> Self {
-        Self::from(HashSet::new())
     }
 }
 
@@ -143,6 +141,48 @@ impl<T: Eq + Hash> IntoIterator for HashFinSet<T> {
     type IntoIter = std::collections::hash_set::IntoIter<T>;
 
     fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
+}
+
+/** A skeletal finite set with a data attribute.
+
+The internal representation is simply a vector.
+*/
+#[derive(Clone,From,Derivative)]
+#[derivative(Default(bound=""))]
+pub struct AttributedSkelSet<T>(Vec<T>);
+
+impl<T> AttributedSkelSet<T> {
+    /// Adds a new element with an associated data value.
+    pub fn insert(&mut self, value: T) -> usize {
+        let new = self.0.len();
+        self.0.push(value);
+        new
+    }
+
+    /// Adds multiple new elements with associated values.
+    pub fn extend<Iter>(&mut self, iter: Iter) -> Range<usize>
+    where Iter: IntoIterator<Item = T> {
+        let start = self.0.len();
+        self.0.extend(iter);
+        start..(self.0.len())
+    }
+
+    /// View the data value associated with an element.
+    pub fn view(&self, x: usize) -> &T {
+        &self.0[x]
+    }
+}
+
+impl<T> Set for AttributedSkelSet<T> {
+    type Elem = usize;
+
+    fn contains(&self, x: &usize) -> bool { *x < self.0.len() }
+}
+
+impl<T> FinSet for AttributedSkelSet<T> {
+    fn iter(&self) -> impl Iterator<Item = usize> { 0..(self.0.len()) }
+    fn len(&self) -> usize { self.0.len() }
+    fn is_empty(&self) -> bool { self.0.is_empty() }
 }
 
 #[cfg(test)]
@@ -185,5 +225,18 @@ mod tests {
         let sum: i32 = s.iter().sum();
         assert_eq!(sum, 15);
         assert_eq!(s.len(), 3);
+    }
+
+    #[test]
+    fn attributed_skel_set() {
+        let mut s: AttributedSkelSet<char> = Default::default();
+        assert!(s.is_empty());
+        assert_eq!(s.insert('a'), 0);
+        assert_eq!(s.extend(['b','c'].into_iter()), 1..3);
+        assert!(!s.is_empty());
+        assert_eq!(s.len(), 3);
+        assert!(s.contains(&2));
+        assert!(!s.contains(&3));
+        assert_eq!(*s.view(1), 'b');
     }
 }
