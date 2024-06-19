@@ -285,7 +285,7 @@ function EditorViewer(name: string) {
   let yjunctions: Y.Array<Y.Map<any>> = ydoc.getArray('junctions')
   let yboxes: Y.Array<Y.Map<any>> = ydoc.getArray('boxes')
 
-  let onsynced = (cb: () => void) => provider.on('synced', cb)
+  let onsynced: OnSynced = cb => provider.on('synced', cb)
 
   return (
     <>
@@ -346,7 +346,7 @@ function App() {
             value={newName()}
             onchange={evt => setNewName(evt.target.value)}>
           </input>
-          <button onclick={evt =>
+          <button onclick={_ =>
             ysaves.set(newName(), null)
           }><i class="fa-solid fa-plus"></i></button>
         </div>

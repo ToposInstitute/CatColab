@@ -29,6 +29,10 @@
   border: none;
 }
 
+.workspace-table a {
+  cursor: pointer;
+}
+
 .display {
   width: 400px;
 }
