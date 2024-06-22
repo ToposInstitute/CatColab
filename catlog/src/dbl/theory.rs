@@ -41,15 +41,24 @@ just a set of objects but also a span of morphisms between those objects,
 constituting a category. The morphism data comes from a distinguished "Hom" type
 for each object type in the double theory. Similarly, each object operation is
 automatically functorial since it comes with a "Hom" operation between the Hom
-types. Moreover, morphism types and operations can be composed to give new ones,
-as summarized by the table:
+types. Morphism types can also be composed to give new ones, as summarized by
+the table:
 
 | Method                                      | Double theory               | Double category        |
 |---------------------------------------------|-----------------------------|------------------------|
 | [`hom_type`](DblTheory::hom_type)           | Hom type                    | Identity proarrow      |
 | [`hom_op`](DblTheory::hom_op)               | Hom operation               | Identity cell on arrow |
 | [`compose_types`](DblTheory::compose_types) | Compose morphism types      | Compose proarrows      |
-| `compose_hom_ops`                           | Compose morphism operations | Compose cells          |
+
+Finally, operations on both objects and morphisms have identities and can be
+composed:
+
+| Method                                          | Double theory                       | Double category           |
+|-------------------------------------------------|-------------------------------------|---------------------------|
+| [`id_ob_op`](DblTheory::id_ob_op)               | Identity operation on object type   | Identity arrow            |
+| [`id_mor_op`](DblTheory::id_mor_op)             | Identity operation on morphism type | Identity cell on proarrow |
+| [`compose_ob_ops`](DblTheory::compose_ob_ops)   | Compose object operations           | Compose arrows            |
+| [`compose_mor_ops`](DblTheory::compose_mor_ops) | Compose morphism operations         | Compose cells             |
 
 # References
 
@@ -63,6 +72,7 @@ as summarized by the table:
 */
 
 use crate::one::path::Path;
+use super::pasting::DblPasting;
 
 /** A double theory.
 
@@ -124,7 +134,7 @@ pub trait DblTheory {
         path: Path<Self::ObType, Self::MorType>
     ) -> Self::MorType;
 
-    /** Type of morphism associated with object type.
+    /** Hom type of an object type.
 
     Viewing the theory as a double category, this is the identity proarrow on an
     object.
@@ -148,10 +158,23 @@ pub trait DblTheory {
         self.compose_ob_ops(Path::Id(x))
     }
 
-    /** Operation on morphisms associated with object operation.
+    /// Compose a pasting diagram of operations on morphisms.
+    fn compose_mor_ops(
+        &self,
+        pasting: DblPasting<Self::ObType, Self::ObOp, Self::MorType, Self::MorOp>
+    ) -> Self::MorOp;
+
+    /** Hom operation for an object operation.
 
     Viewing the theory as a double category, this is the identity cell on an
     arrow.
     */
     fn hom_op(&self, f: Self::ObOp) -> Self::MorOp;
+
+    /** Identity operation on a morphism type.
+
+    Viewing the theory as a double category, this is the identity cell on a
+    proarrow.
+    */
+    fn id_mor_op(&self, m: Self::MorType) -> Self::MorOp;
 }
