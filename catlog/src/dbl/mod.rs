@@ -2,5 +2,6 @@
 
 pub mod computad;
 pub mod diagram;
+pub mod pasting;
 
 pub mod theory;
