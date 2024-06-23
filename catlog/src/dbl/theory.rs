@@ -133,6 +133,12 @@ pub trait DblTheory {
     /// Codomain type of operation on morphisms.
     fn op_cod(&self, α: &Self::MorOp) -> Self::MorType;
 
+    /// Basic object types.
+    fn basic_ob_types(&self) -> impl Iterator<Item = Self::ObType>;
+
+    /// Basic morphism types.
+    fn basic_mor_types(&self) -> impl Iterator<Item = Self::MorType>;
+
     /// Composes a sequence of morphism types.
     fn compose_types(
         &self,
@@ -175,7 +181,7 @@ pub trait DblTheory {
     arrow.
     */
     fn hom_op(&self, f: Self::ObOp) -> Self::MorOp {
-        self.compose_mor_ops(DblPasting::ArrId(nonempty!(f)))
+        self.compose_mor_ops(DblPasting::ArrId(nonempty![f]))
     }
 
     /** Identity operation on a morphism type.
@@ -184,18 +190,18 @@ pub trait DblTheory {
     proarrow.
     */
     fn id_mor_op(&self, m: Self::MorType) -> Self::MorOp {
-        self.compose_mor_ops(DblPasting::ProId(nonempty!(m)))
+        self.compose_mor_ops(DblPasting::ProId(nonempty![m]))
     }
 }
-
 
 /** A discrete double theory.
 
 A **discrete double theory** is a double theory with no nontrivial operations on
-either object or morphism types. As a double category, such a theory is
-**discrete**, meaning it is a discrete object in the 2-category of double
-categories or, more concretely, a double category whose underlying categories
-are both discrete.
+either object or morphism types. Viewed as a double category, such a theory is
+indeed **discrete**, which can equivalently be defined as
+
+- a discrete object in the 2-category of double categories
+- a double category whose underlying categories are both discrete categories
 */
 #[derive(From,RefCast)]
 #[repr(transparent)]
@@ -218,6 +224,14 @@ where C::Ob: Clone, C::Hom: Clone, {
     fn op_dom(&self, m: &Self::MorOp) -> Self::MorType { m.clone() }
     fn op_cod(&self, m: &Self::MorOp) -> Self::MorType { m.clone() }
 
+    fn basic_ob_types(&self) -> impl Iterator<Item = Self::ObType> {
+        self.0.ob_generators()
+    }
+
+    fn basic_mor_types(&self) -> impl Iterator<Item = Self::MorType> {
+        self.0.hom_generators()
+    }
+
     fn compose_types(&self, path: Path<C::Ob, C::Hom>) -> C::Hom {
         self.0.compose(path)
     }
@@ -239,5 +253,27 @@ where C::Ob: Clone, C::Hom: Clone, {
             DblPasting::ProId(ms) => self.compose_types(Path::Seq(ms)),
             DblPasting::Diagram(_) => panic!("General pasting not implemented")
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::one::fin_category::{self, FinCategory};
+
+    #[test]
+    fn discrete_dbl_theory() {
+        type Hom<V,E> = fin_category::Hom<V,E>;
+
+        let mut sgn: FinCategory<char,char> = Default::default();
+        sgn.add_ob_generator('*');
+        sgn.add_hom_generator('n', '*', '*');
+        sgn.set_composite('n', 'n', Hom::Id('*'));
+
+        let thy = DiscreteDblTheory(sgn);
+        assert_eq!(thy.basic_ob_types().count(), 1);
+        assert_eq!(thy.basic_mor_types().count(), 1);
+        let path = Path::pair(Hom::Generator('n'), Hom::Generator('n'));
+        assert_eq!(thy.compose_types(path), Hom::Id('*'));
     }
 }
