@@ -71,7 +71,12 @@ composed:
   - Section 10: Finite-product double theories
 */
 
+use derive_more::From;
+use ref_cast::RefCast;
+use nonempty::nonempty;
+
 use crate::one::path::Path;
+use crate::one::category::*;
 use super::pasting::DblPasting;
 
 /** A double theory.
@@ -169,12 +174,70 @@ pub trait DblTheory {
     Viewing the theory as a double category, this is the identity cell on an
     arrow.
     */
-    fn hom_op(&self, f: Self::ObOp) -> Self::MorOp;
+    fn hom_op(&self, f: Self::ObOp) -> Self::MorOp {
+        self.compose_mor_ops(DblPasting::ArrId(nonempty!(f)))
+    }
 
     /** Identity operation on a morphism type.
 
     Viewing the theory as a double category, this is the identity cell on a
     proarrow.
     */
-    fn id_mor_op(&self, m: Self::MorType) -> Self::MorOp;
+    fn id_mor_op(&self, m: Self::MorType) -> Self::MorOp {
+        self.compose_mor_ops(DblPasting::ProId(nonempty!(m)))
+    }
+}
+
+
+/** A discrete double theory.
+
+A **discrete double theory** is a double theory with no nontrivial operations on
+either object or morphism types. As a double category, such a theory is
+**discrete**, meaning it is a discrete object in the 2-category of double
+categories or, more concretely, a double category whose underlying categories
+are both discrete.
+*/
+#[derive(From,RefCast)]
+#[repr(transparent)]
+pub struct DiscreteDblTheory<Cat: FgCategory>(Cat);
+
+impl<C: FgCategory> DblTheory for DiscreteDblTheory<C>
+where C::Ob: Clone, C::Hom: Clone, {
+    type ObType = C::Ob;
+    type ObOp = C::Ob;
+    type MorType = C::Hom;
+    type MorOp = C::Hom;
+
+    fn src(&self, m: &Self::MorType) -> Self::ObType { self.0.dom(m) }
+    fn tgt(&self, m: &Self::MorType) -> Self::ObType { self.0.cod(m) }
+    fn dom(&self, x: &Self::ObOp) -> Self::ObType { x.clone() }
+    fn cod(&self, x: &Self::ObOp) -> Self::ObType { x.clone() }
+
+    fn op_src(&self, m: &Self::MorOp) -> Self::ObOp { self.0.dom(m) }
+    fn op_tgt(&self, m: &Self::MorOp) -> Self::ObOp { self.0.cod(m) }
+    fn op_dom(&self, m: &Self::MorOp) -> Self::MorType { m.clone() }
+    fn op_cod(&self, m: &Self::MorOp) -> Self::MorType { m.clone() }
+
+    fn compose_types(&self, path: Path<C::Ob, C::Hom>) -> C::Hom {
+        self.0.compose(path)
+    }
+
+    fn compose_ob_ops(&self, path: Path<C::Ob, C::Ob>) -> C::Ob {
+        let disc = DiscreteCategory::ref_cast(ObSet::ref_cast(&self.0));
+        disc.compose(path)
+    }
+
+    fn compose_mor_ops(
+        &self,
+        pasting: DblPasting<C::Ob, C::Ob, C::Hom, C::Hom>
+    ) -> C::Hom {
+        match pasting {
+            DblPasting::ObId(x) => self.0.id(x),
+            DblPasting::ArrId(fs) => {
+                self.0.id(self.compose_ob_ops(Path::Seq(fs)))
+            },
+            DblPasting::ProId(ms) => self.compose_types(Path::Seq(ms)),
+            DblPasting::Diagram(_) => panic!("General pasting not implemented")
+        }
+    }
 }

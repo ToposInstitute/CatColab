@@ -33,10 +33,9 @@ use super::diagram::{DblDiagram, SkelDblDiagram};
 
 Like our data structure for [paths](crate::one::path::Path) in a category, this
 data structure separates the identity cells specified by lower-dimensional data
-as variants of an enum, even though in this situation the final case does
-actually include the others. However, the data required to specify the identity
-cells is so much simpler than a general composite that the logical redundancy
-seems justified.
+as variants of an enum, even though in this case the final variant does actually
+encompass the others. However, the data of a generic identity cell is so much
+simpler than a general composite that the redundancy seems justified.
 */
 pub enum DblPasting<Ob,Arr,Pro,Cell> {
     /// Identity cell on an object.
