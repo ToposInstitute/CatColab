@@ -5,8 +5,8 @@
 While the purpose of this package is to implement double theories and models,
 having a certain amount of lower-dimensional category theory is inevitably
 useful as a foundation. For instance, the starting point for a double graph or a
-[double computad](crate::dbl::computad) is a pair of graphs that share the same
-set of vertices. The package is organized into top-level modules according to
+[double computad](crate::dbl::computad) is a pair of graphs that share a set of
+vertices. The package is organized into top-level modules according to
 dimensionality:
 
 0. [`zero`]: Sets and mappings, known semi-seriously as zero-dimensional

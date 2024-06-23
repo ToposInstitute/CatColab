@@ -1,4 +1,4 @@
-//! Paths in graphs or categories.
+//! Paths in graphs and categories.
 
 use nonempty::{NonEmpty, nonempty};
 
