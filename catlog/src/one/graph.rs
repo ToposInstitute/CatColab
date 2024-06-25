@@ -1,6 +1,6 @@
 //! Graphs, finite and infinite.
 
-use std::hash::Hash;
+use std::hash::{Hash, BuildHasher, RandomState};
 use derivative::Derivative;
 use nonempty::NonEmpty;
 use thiserror::Error;
@@ -275,16 +275,16 @@ Unlike in a skeletal finite graph, the vertices and edges can have arbitrary
 hashable types.
 */
 #[derive(Clone,Derivative)]
-#[derivative(Default(bound=""))]
-pub struct HashGraph<V,E> {
-    vertex_set: HashFinSet<V>,
-    edge_set: HashFinSet<E>,
-    src_map: IndexedHashColumn<E,V>,
-    tgt_map: IndexedHashColumn<E,V>,
+#[derivative(Default(bound="S: Default"))]
+pub struct HashGraph<V, E, S = RandomState> {
+    vertex_set: HashFinSet<V,S>,
+    edge_set: HashFinSet<E,S>,
+    src_map: IndexedHashColumn<E,V,S>,
+    tgt_map: IndexedHashColumn<E,V,S>,
 }
 
-impl<V,E> ColumnarGraph for HashGraph<V,E>
-where V: Eq+Hash+Clone, E: Eq+Hash+Clone {
+impl<V,E,S> ColumnarGraph for HashGraph<V,E,S>
+where V: Eq+Hash+Clone, E: Eq+Hash+Clone, S: BuildHasher {
     type V = V;
     type E = E;
 
@@ -293,10 +293,11 @@ where V: Eq+Hash+Clone, E: Eq+Hash+Clone {
     fn src_map(&self) -> &impl Column<Dom = E, Cod = V> { &self.src_map }
     fn tgt_map(&self) -> &impl Column<Dom = E, Cod = V> { &self.tgt_map }
 }
-impl<V,E> ColumnarGraphImplGraph for HashGraph<V,E>
-where V: Eq+Hash+Clone, E: Eq+Hash+Clone {}
+impl<V,E,S> ColumnarGraphImplGraph for HashGraph<V,E,S>
+where V: Eq+Hash+Clone, E: Eq+Hash+Clone, S: BuildHasher {}
 
-impl<V,E> HashGraph<V,E> where V: Eq+Hash+Clone, E: Eq+Hash+Clone {
+impl<V,E,S> HashGraph<V,E,S>
+where V: Eq+Hash+Clone, E: Eq+Hash+Clone, S: BuildHasher {
     /// Adds a vertex to the graph, returning whether the vertex is new.
     pub fn add_vertex(&mut self, v: V) -> bool {
         self.vertex_set.insert(v)
@@ -318,7 +319,8 @@ impl<V,E> HashGraph<V,E> where V: Eq+Hash+Clone, E: Eq+Hash+Clone {
     }
 }
 
-impl<V,E> Validate for HashGraph<V,E> where V: Eq+Hash+Clone, E: Eq+Hash+Clone {
+impl<V,E,S> Validate for HashGraph<V,E,S>
+where V: Eq+Hash+Clone, E: Eq+Hash+Clone, S: BuildHasher {
     type ValidationError = InvalidGraphData<E>;
 
     fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {

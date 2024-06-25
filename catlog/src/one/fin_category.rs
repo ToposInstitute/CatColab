@@ -1,6 +1,6 @@
 //! Data structures for finite categories.
 
-use std::hash::Hash;
+use std::hash::{Hash, BuildHasher, RandomState};
 use derivative::Derivative;
 use ref_cast::RefCast;
 
@@ -37,13 +37,14 @@ theories. For example, the schemas for graphs, symmetric graphs, reflexive
 graphs, and symmetric reflexive graphs are all finite.
  */
 #[derive(Clone,Derivative)]
-#[derivative(Default(bound=""))]
-pub struct FinCategory<V,E> {
-    generators: HashGraph<V,E>,
+#[derivative(Default(bound="S: Default"))]
+pub struct FinCategory<V, E, S = RandomState> {
+    generators: HashGraph<V,E,S>,
     compose_map: HashColumn<(E,E), Hom<V,E>>,
 }
 
-impl<V,E> FinCategory<V,E> where V: Eq+Hash+Clone, E: Eq+Hash+Clone {
+impl<V,E,S> FinCategory<V,E,S>
+where V: Eq+Hash+Clone, E: Eq+Hash+Clone, S: BuildHasher {
     /// Adds an object generator, returning whether it is new.
     pub fn add_ob_generator(&mut self, v: V) -> bool {
         self.generators.add_vertex(v)
@@ -65,7 +66,8 @@ impl<V,E> FinCategory<V,E> where V: Eq+Hash+Clone, E: Eq+Hash+Clone {
     }
 }
 
-impl<V,E> Category for FinCategory<V,E> where V: Eq+Hash+Clone, E: Eq+Hash+Clone {
+impl<V,E,S> Category for FinCategory<V,E,S>
+where V: Eq+Hash+Clone, E: Eq+Hash+Clone, S: BuildHasher {
     type Ob = Ob<V>;
     type Hom = Hom<V,E>;
 
@@ -120,7 +122,8 @@ impl<V,E> Category for FinCategory<V,E> where V: Eq+Hash+Clone, E: Eq+Hash+Clone
     }
 }
 
-impl<V,E> FgCategory for FinCategory<V,E> where V: Eq+Hash+Clone, E: Eq+Hash+Clone {
+impl<V,E,S> FgCategory for FinCategory<V,E,S>
+where V: Eq+Hash+Clone, E: Eq+Hash+Clone, S: BuildHasher {
     fn has_ob_generator(&self, x: &Ob<V>) -> bool {
         self.generators.has_vertex(&x.0)
     }

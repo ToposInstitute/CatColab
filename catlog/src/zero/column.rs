@@ -183,14 +183,9 @@ impl<T: Eq> Column for VecColumn<T> {
 
 /** An unindexed column backed by a hash map.
  */
-#[derive(Clone,From)]
+#[derive(Clone,From,Derivative)]
+#[derivative(Default(bound="S: Default"))]
 pub struct HashColumn<K, V, S = RandomState>(HashMap<K,V,S>);
-
-impl<K,V,S> Default for HashColumn<K,V,S> where S: Default {
-    fn default() -> HashColumn<K,V,S> {
-        HashColumn { 0: Default::default() }
-    }
-}
 
 impl<K,V,S> Mapping for HashColumn<K,V,S>
 where K: Eq+Hash, V: Eq, S: BuildHasher {
@@ -268,14 +263,9 @@ impl<T: Eq + Clone> Index for VecIndex<T> {
 
 /** An index implemented by a hash map into vectors.
  */
-#[derive(Clone)]
+#[derive(Clone,Derivative)]
+#[derivative(Default(bound="S: Default"))]
 struct HashIndex<X, Y, S = RandomState>(HashMap<Y,Vec<X>,S>);
-
-impl<X,Y,S> Default for HashIndex<X,Y,S> where S: Default {
-    fn default() -> HashIndex<X,Y,S> {
-        HashIndex { 0: Default::default() }
-    }
-}
 
 impl<X,Y,S> Index for HashIndex<X,Y,S>
 where X: Eq + Clone, Y: Eq + Hash + Clone, S: BuildHasher {
@@ -440,16 +430,11 @@ impl<T: Eq+Hash+Clone> Column for IndexedVecColumn<T> {
 }
 
 /// An indexed column backed by hash maps.
-#[derive(Clone)]
+#[derive(Clone,Derivative)]
+#[derivative(Default(bound="S: Default"))]
 pub struct IndexedHashColumn<K, V, S = RandomState>(
     IndexedColumn<K, V, HashColumn<K,V,S>, HashIndex<K,V,S>>
 );
-
-impl<K,V,S> Default for IndexedHashColumn<K,V,S> where S: Default {
-    fn default() -> IndexedHashColumn<K,V,S> {
-        IndexedHashColumn { 0: Default::default() }
-    }
-}
 
 impl<K,V,S> Mapping for IndexedHashColumn<K,V,S>
 where K: Eq+Hash+Clone, V: Eq+Hash+Clone, S: BuildHasher {

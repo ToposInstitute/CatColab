@@ -107,14 +107,9 @@ impl IntoIterator for SkelFinSet {
 }
 
 /// A finite set backed by a hash set.
-#[derive(Clone,From,Into)]
+#[derive(Clone,From,Into,Derivative)]
+#[derivative(Default(bound="S: Default"))]
 pub struct HashFinSet<T, S = RandomState>(HashSet<T,S>);
-
-impl<T,S> Default for HashFinSet<T,S> where S: Default {
-    fn default() -> HashFinSet<T,S> {
-        HashFinSet { 0: Default::default() }
-    }
-}
 
 impl<T,S> HashFinSet<T,S> where T: Eq + Hash, S: BuildHasher {
     /// Adds an element to the set.
