@@ -276,7 +276,7 @@ hashable types.
 */
 #[derive(Clone,Derivative)]
 #[derivative(Default(bound=""))]
-pub struct HashGraph<V: Eq + Hash + Clone, E: Eq + Hash + Clone> {
+pub struct HashGraph<V,E> {
     vertex_set: HashFinSet<V>,
     edge_set: HashFinSet<E>,
     src_map: IndexedHashColumn<E,V>,
