@@ -1,7 +1,7 @@
 //! Data structures for mappings and columns, as found in data tables.
 
-use std::hash::Hash;
-use std::collections::hash_map::HashMap;
+use std::hash::{Hash, BuildHasher, RandomState};
+use std::collections::HashMap;
 use derivative::Derivative;
 use derive_more::From;
 use nonempty::NonEmpty;
@@ -181,11 +181,17 @@ impl<T: Eq> Column for VecColumn<T> {
 
 /** An unindexed column backed by a hash map.
  */
-#[derive(Clone,From,Derivative)]
-#[derivative(Default(bound=""))]
-pub struct HashColumn<K,V>(HashMap<K,V>);
+#[derive(Clone,From)]
+pub struct HashColumn<K, V, S = RandomState>(HashMap<K,V,S>);
 
-impl<K: Eq+Hash, V: Eq> Mapping for HashColumn<K,V> {
+impl<K,V,S> Default for HashColumn<K,V,S> where S: Default {
+    fn default() -> HashColumn<K,V,S> {
+        HashColumn { 0: Default::default() }
+    }
+}
+
+impl<K,V,S> Mapping for HashColumn<K,V,S>
+where K: Eq+Hash, V: Eq, S: BuildHasher {
     type Dom = K;
     type Cod = V;
 
@@ -195,7 +201,8 @@ impl<K: Eq+Hash, V: Eq> Mapping for HashColumn<K,V> {
     fn is_set(&self, x: &K) -> bool { self.0.contains_key(x) }
 }
 
-impl<K: Eq+Hash+Clone, V: Eq> Column for HashColumn<K,V> {
+impl<K,V,S> Column for HashColumn<K,V,S>
+where K: Eq+Hash+Clone, V: Eq, S: BuildHasher {
     fn iter(&self) -> impl Iterator<Item = (K,&V)> {
         self.0.iter().map(|(k,v)| (k.clone(), v))
     }
@@ -259,11 +266,17 @@ impl<T: Eq + Clone> Index for VecIndex<T> {
 
 /** An index implemented by a hash map into vectors.
  */
-#[derive(Clone,Derivative)]
-#[derivative(Default(bound=""))]
-struct HashIndex<X,Y>(HashMap<Y,Vec<X>>);
+#[derive(Clone)]
+struct HashIndex<X, Y, S = RandomState>(HashMap<Y,Vec<X>,S>);
 
-impl<X: Eq + Clone, Y: Eq + Hash + Clone> Index for HashIndex<X,Y> {
+impl<X,Y,S> Default for HashIndex<X,Y,S> where S: Default {
+    fn default() -> HashIndex<X,Y,S> {
+        HashIndex { 0: Default::default() }
+    }
+}
+
+impl<X,Y,S> Index for HashIndex<X,Y,S>
+where X: Eq + Clone, Y: Eq + Hash + Clone, S: BuildHasher {
     type Dom = X;
     type Cod = Y;
 
