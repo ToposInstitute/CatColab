@@ -108,35 +108,10 @@ where
         match self {
             Leaf(v) => f(v),
             Node(m) => {
-                let m_next: BTreeMap<K, NonEmptyDir<K, W, P>> = m
-                    .iter()
-                    .filter_map(|(k, ned)| {
-                        ned.filter_flatmap(&f).map(|ned| (k.clone(), ned.clone()))
-                    })
-                    .collect();
-                if m_next.len() == 0 {
-                    None
-                } else {
-                    Some(Node(SharedPointer::new(m_next)))
-                }
+                NonEmptyDir::try_from_iter(m.iter().filter_map(|(k, ned)| {
+                    ned.filter_flatmap(&f).map(|ned| (k.clone(), ned.clone()))
+                }))
             }
-        }
-    }
-}
-
-impl<K, V, P> NonEmptyDir<K, NonEmptyDir<K, V, P>, P>
-where
-    K: Ord + Eq + Clone,
-    P: SharedPointerKind,
-{
-    fn flatten(&self) -> NonEmptyDir<K, V, P> {
-        match self {
-            Leaf(ned) => ned.as_ref().clone(),
-            Node(m) => Node(SharedPointer::new(
-                m.iter()
-                    .map(|(p, ned)| (p.clone(), ned.flatten()))
-                    .collect(),
-            )),
         }
     }
 }
@@ -227,6 +202,14 @@ where
         let mut d: Self = self.clone();
         d.insert_mut(p, v).map(|_| d)
     }
+
+    /// The equivalent of `bind` or `>>=` for the directories monad.
+    pub fn flat_map<W, F: Fn(&V) -> Dir<K, W, P>>(&self, f: &F) -> Dir<K, W, P> {
+        match &self.0 {
+            None => Dir(None),
+            Some(ned) => Dir(ned.filter_flatmap(|d| f(d).0)),
+        }
+    }
 }
 
 impl<K, V, P> Dir<K, Dir<K, V, P>, P>
@@ -242,9 +225,9 @@ where
     /// a directory of models that we wish to compose, the directory of variables
     /// in the composite model is given by flattening.
     pub fn flatten(&self) -> Dir<K, V, P> {
-        match &self.0 {
-            None => Dir(None),
-            Some(ned) => Dir(ned.filter_flatmap(|d| d.0.clone())),
-        }
+        self.flat_map(&(|d| d.clone()))
     }
 }
+
+#[cfg(test)]
+mod test {}

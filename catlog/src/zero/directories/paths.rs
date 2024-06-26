@@ -3,15 +3,36 @@
 use archery::{SharedPointer, SharedPointerKind};
 
 /// A linked list with element type `K`. Used for indexing into directories.
-/// A path '/a/b/c' would be given by `Path::root().cons('c').cons('b').cons('a')`;
+/// A path `/a/b/c` would be given by `Path::root().cons('c').cons('b').cons('a')`;
 /// the first element of the list is the first element used for indexing into
 /// a directory.
 ///
 /// NOTE: This might conflict with paths for graphs?
 ///
 /// NOTE: It might be more efficient to use a SmallVec instead of a linked list?
-#[derive(PartialEq, Eq)]
+#[derive(Debug)]
 pub struct Path<K: Clone, P: SharedPointerKind>(Option<(K, SharedPointer<Path<K, P>, P>)>);
+
+impl<K, P> PartialEq for Path<K, P>
+where
+    K: Clone + PartialEq,
+    P: SharedPointerKind,
+{
+    fn eq(&self, other: &Self) -> bool {
+        match (&self.0, &other.0) {
+            (None, None) => true,
+            (Some((k1, p1)), Some((k2, p2))) => k1 == k2 && p1 == p2,
+            _ => false,
+        }
+    }
+}
+
+impl<K, P> Eq for Path<K, P>
+where
+    K: Clone + PartialEq,
+    P: SharedPointerKind,
+{
+}
 
 impl<K, P> Clone for Path<K, P>
 where
@@ -67,5 +88,36 @@ where
     /// Adds `k` to the *back* of the list. O(self.length())
     pub fn snoc(&self, k: K) -> Self {
         self.concat(&Path::root().cons(k))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use archery::RcK;
+
+    use super::*;
+
+    #[test]
+    fn cons_and_uncons() {
+        assert_eq!(
+            Path::<usize, RcK>::root().cons(1).uncons().map(|p| p.0),
+            Some(1)
+        )
+    }
+
+    #[test]
+    fn concat() {
+        assert_eq!(
+            Path::<usize, RcK>::root()
+                .cons(1)
+                .concat(&Path::root().cons(2)),
+            Path::root().cons(2).cons(1)
+        )
+    }
+
+    #[test]
+    fn isroot() {
+        assert!(Path::<usize, RcK>::root().isroot());
+        assert!(!Path::<usize, RcK>::root().cons(1).isroot());
     }
 }
