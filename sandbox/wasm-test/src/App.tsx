@@ -1,10 +1,13 @@
-import { createSignal } from 'solid-js'
-import solidLogo from './assets/solid.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { createSignal } from "solid-js";
+import solidLogo from "./assets/solid.svg";
+import viteLogo from "/vite.svg";
+import "./App.css";
+
+import * as wasm from "../wasm-test/pkg/wasm_test";
 
 function App() {
-  const [count, setCount] = createSignal(0)
+  const [count, _setCount] = createSignal(0);
+  const counter = new wasm.Counter(_setCount);
 
   return (
     <>
@@ -18,9 +21,7 @@ function App() {
       </div>
       <h1>Vite + Solid</h1>
       <div class="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count()}
-        </button>
+        <button onClick={() => counter.incr()}>count is {count()}</button>
         <p>
           Edit <code>src/App.tsx</code> and save to test HMR
         </p>
@@ -29,7 +30,7 @@ function App() {
         Click on the Vite and Solid logos to learn more
       </p>
     </>
-  )
+  );
 }
 
-export default App
+export default App;
