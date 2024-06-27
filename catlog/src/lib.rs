@@ -27,3 +27,4 @@ pub mod validate;
 pub mod zero;
 pub mod one;
 pub mod dbl;
+pub mod stdlib;

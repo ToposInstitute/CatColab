@@ -270,7 +270,7 @@ mod tests {
         sgn.add_hom_generator('n', '*', '*');
         sgn.set_composite('n', 'n', Hom::Id('*'));
 
-        let thy = DiscreteDblTheory(sgn);
+        let thy = DiscreteDblTheory::from(sgn);
         assert_eq!(thy.basic_ob_types().count(), 1);
         assert_eq!(thy.basic_mor_types().count(), 1);
         let path = Path::pair(Hom::Generator('n'), Hom::Generator('n'));
