@@ -5,11 +5,13 @@ treated in a generic way.
  */
 
 use std::ops::Range;
-use std::hash::{Hash, BuildHasher, RandomState};
+use std::hash::{Hash, BuildHasher, BuildHasherDefault, RandomState};
 use std::collections::HashSet;
+
 use derivative::Derivative;
 use derive_more::{From, Into};
 use ref_cast::RefCast;
+use ustr::{Ustr, IdentityHasher};
 
 /** A set.
 
@@ -110,6 +112,9 @@ impl IntoIterator for SkelFinSet {
 #[derive(Clone,From,Into,Derivative)]
 #[derivative(Default(bound="S: Default"))]
 pub struct HashFinSet<T, S = RandomState>(HashSet<T,S>);
+
+/// A finite set with elements of type `Ustr`.
+pub type UstrFinSet = HashFinSet<Ustr, BuildHasherDefault<IdentityHasher>>;
 
 impl<T,S> HashFinSet<T,S> where T: Eq + Hash, S: BuildHasher {
     /// Adds an element to the set.

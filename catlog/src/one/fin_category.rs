@@ -1,8 +1,10 @@
 //! Data structures for finite categories.
 
-use std::hash::{Hash, BuildHasher, RandomState};
+use std::hash::{Hash, BuildHasher, BuildHasherDefault, RandomState};
+
 use derivative::Derivative;
 use ref_cast::RefCast;
+use ustr::{Ustr, IdentityHasher};
 
 use crate::zero::{Mapping, HashColumn};
 use super::path::Path;
@@ -42,6 +44,10 @@ pub struct FinCategory<V, E, S = RandomState> {
     generators: HashGraph<V,E,S>,
     compose_map: HashColumn<(E,E), Hom<V,E>>,
 }
+
+/// A finite category with objects and morphisms of type `Ustr`.
+pub type UstrFinCategory =
+    FinCategory<Ustr, Ustr, BuildHasherDefault<IdentityHasher>>;
 
 impl<V,E,S> FinCategory<V,E,S>
 where V: Eq+Hash+Clone, E: Eq+Hash+Clone, S: BuildHasher {

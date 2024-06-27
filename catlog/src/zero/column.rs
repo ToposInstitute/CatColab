@@ -1,6 +1,6 @@
 //! Data structures for mappings and columns, as found in data tables.
 
-use std::hash::{Hash, BuildHasher, RandomState};
+use std::hash::{Hash, BuildHasher, BuildHasherDefault, RandomState};
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
@@ -8,6 +8,7 @@ use derivative::Derivative;
 use derive_more::From;
 use nonempty::NonEmpty;
 use thiserror::Error;
+use ustr::{Ustr, IdentityHasher};
 
 use crate::validate::{self, Validate};
 use super::set::{Set, FinSet};
@@ -186,6 +187,10 @@ impl<T: Eq> Column for VecColumn<T> {
 #[derive(Clone,From,Derivative)]
 #[derivative(Default(bound="S: Default"))]
 pub struct HashColumn<K, V, S = RandomState>(HashMap<K,V,S>);
+
+/// An unindexed column with keys of type `Ustr`.
+pub type UstrColumn<V> =
+    HashColumn<Ustr, V, BuildHasherDefault<IdentityHasher>>;
 
 impl<K,V,S> Mapping for HashColumn<K,V,S>
 where K: Eq+Hash, V: Eq, S: BuildHasher {
@@ -435,6 +440,10 @@ impl<T: Eq+Hash+Clone> Column for IndexedVecColumn<T> {
 pub struct IndexedHashColumn<K, V, S = RandomState>(
     IndexedColumn<K, V, HashColumn<K,V,S>, HashIndex<K,V,S>>
 );
+
+/// An indexed column with keys and values of type `Ustr`.
+pub type IndexedUstrColumn =
+    IndexedHashColumn<Ustr, Ustr, BuildHasherDefault<IdentityHasher>>;
 
 impl<K,V,S> Mapping for IndexedHashColumn<K,V,S>
 where K: Eq+Hash+Clone, V: Eq+Hash+Clone, S: BuildHasher {

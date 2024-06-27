@@ -1,10 +1,12 @@
 //! Graphs, finite and infinite.
 
-use std::hash::{Hash, BuildHasher, RandomState};
+use std::hash::{Hash, BuildHasher, BuildHasherDefault, RandomState};
+
 use derivative::Derivative;
 use nonempty::NonEmpty;
 use thiserror::Error;
 use ref_cast::RefCast;
+use ustr::{Ustr, IdentityHasher};
 
 use crate::validate::{self, Validate};
 use crate::zero::*;
@@ -282,6 +284,9 @@ pub struct HashGraph<V, E, S = RandomState> {
     src_map: IndexedHashColumn<E,V,S>,
     tgt_map: IndexedHashColumn<E,V,S>,
 }
+
+/// A finite graph with vertices and edges of type `Ustr`.
+pub type UstrGraph = HashGraph<Ustr, Ustr, BuildHasherDefault<IdentityHasher>>;
 
 impl<V,E,S> ColumnarGraph for HashGraph<V,E,S>
 where V: Eq+Hash+Clone, E: Eq+Hash+Clone, S: BuildHasher {
