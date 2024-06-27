@@ -3,7 +3,7 @@
 use std::sync::OnceLock;
 use ustr::ustr;
 
-use crate::one::fin_category::UstrFinCategory;
+use crate::one::fin_category::{self, UstrFinCategory};
 use crate::dbl::theory::DiscreteDblTheory;
 
 type UstrDiscreteDblThy = DiscreteDblTheory<UstrFinCategory>;
@@ -38,6 +38,23 @@ pub fn th_profunctor() -> &'static UstrDiscreteDblThy {
     })
 }
 
+/** The theory of signed categories.
+
+A signed category is a category sliced over the group of signs.
+ */
+pub fn th_signed_category() -> &'static UstrDiscreteDblThy {
+    static TH_SIGNED_CATEGORY: OnceLock<UstrDiscreteDblThy> = OnceLock::new();
+
+    TH_SIGNED_CATEGORY.get_or_init(|| {
+        let mut sgn: UstrFinCategory = Default::default();
+        let (x, n) = (ustr("default"), ustr("n"));
+        sgn.add_ob_generator(x);
+        sgn.add_hom_generator(n, x, x);
+        sgn.set_composite(n, n, fin_category::Hom::Id(x));
+        DiscreteDblTheory::from(sgn)
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -47,5 +64,6 @@ mod tests {
     fn theories() {
         assert_eq!(th_category().basic_ob_types().count(), 1);
         assert_eq!(th_profunctor().basic_ob_types().count(), 2);
+        assert_eq!(th_signed_category().basic_mor_types().count(), 1);
     }
 }
