@@ -5,6 +5,8 @@
     "module": "ESNext",
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "skipLibCheck": true,
+    "jsx": "react",
+    "jsxFactory": "createElement",
 
     /* Bundler mode */
     "moduleResolution": "bundler",
