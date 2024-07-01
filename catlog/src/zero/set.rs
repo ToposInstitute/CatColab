@@ -5,11 +5,13 @@ treated in a generic way.
  */
 
 use std::ops::Range;
-use std::hash::Hash;
+use std::hash::{Hash, BuildHasher, BuildHasherDefault, RandomState};
 use std::collections::HashSet;
+
 use derivative::Derivative;
 use derive_more::{From, Into};
 use ref_cast::RefCast;
+use ustr::{Ustr, IdentityHasher};
 
 /** A set.
 
@@ -108,35 +110,39 @@ impl IntoIterator for SkelFinSet {
 
 /// A finite set backed by a hash set.
 #[derive(Clone,From,Into,Derivative)]
-#[derivative(Default(bound=""))]
-pub struct HashFinSet<T>(HashSet<T>);
+#[derivative(Default(bound="S: Default"))]
+pub struct HashFinSet<T, S = RandomState>(HashSet<T,S>);
 
-impl<T: Eq + Hash> HashFinSet<T> {
+/// A finite set with elements of type `Ustr`.
+pub type UstrFinSet = HashFinSet<Ustr, BuildHasherDefault<IdentityHasher>>;
+
+impl<T,S> HashFinSet<T,S> where T: Eq + Hash, S: BuildHasher {
     /// Adds an element to the set.
     pub fn insert(&mut self, x: T) -> bool {
         self.0.insert(x)
     }
 }
 
-impl<T: Eq + Hash> Extend<T> for HashFinSet<T> {
+impl<T,S> Extend<T> for HashFinSet<T,S> where T: Eq + Hash, S: BuildHasher {
     fn extend<Iter>(&mut self, iter: Iter) where Iter: IntoIterator<Item = T> {
         self.0.extend(iter)
     }
 }
 
-impl<T: Eq + Hash> Set for HashFinSet<T> {
+impl<T,S> Set for HashFinSet<T,S> where T: Eq + Hash, S: BuildHasher {
     type Elem = T;
 
     fn contains(&self, x: &T) -> bool { self.0.contains(x) }
 }
 
-impl<T: Eq + Hash + Clone> FinSet for HashFinSet<T> {
+impl<T,S> FinSet for HashFinSet<T,S>
+where T: Eq + Hash + Clone, S: BuildHasher {
     fn iter(&self) -> impl Iterator<Item = T> { self.0.iter().cloned() }
     fn len(&self) -> usize { self.0.len() }
     fn is_empty(&self) -> bool { self.0.is_empty() }
 }
 
-impl<T: Eq + Hash> IntoIterator for HashFinSet<T> {
+impl<T,S> IntoIterator for HashFinSet<T,S> where T: Eq + Hash, S: BuildHasher {
     type Item = T;
     type IntoIter = std::collections::hash_set::IntoIter<T>;
 

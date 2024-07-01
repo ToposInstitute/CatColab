@@ -1,11 +1,14 @@
 //! Data structures for mappings and columns, as found in data tables.
 
-use std::hash::Hash;
-use std::collections::hash_map::HashMap;
+use std::hash::{Hash, BuildHasher, BuildHasherDefault, RandomState};
+use std::collections::HashMap;
+use std::marker::PhantomData;
+
 use derivative::Derivative;
 use derive_more::From;
 use nonempty::NonEmpty;
 use thiserror::Error;
+use ustr::{Ustr, IdentityHasher};
 
 use crate::validate::{self, Validate};
 use super::set::{Set, FinSet};
@@ -182,10 +185,15 @@ impl<T: Eq> Column for VecColumn<T> {
 /** An unindexed column backed by a hash map.
  */
 #[derive(Clone,From,Derivative)]
-#[derivative(Default(bound=""))]
-pub struct HashColumn<K,V>(HashMap<K,V>);
+#[derivative(Default(bound="S: Default"))]
+pub struct HashColumn<K, V, S = RandomState>(HashMap<K,V,S>);
 
-impl<K: Eq+Hash, V: Eq> Mapping for HashColumn<K,V> {
+/// An unindexed column with keys of type `Ustr`.
+pub type UstrColumn<V> =
+    HashColumn<Ustr, V, BuildHasherDefault<IdentityHasher>>;
+
+impl<K,V,S> Mapping for HashColumn<K,V,S>
+where K: Eq+Hash, V: Eq, S: BuildHasher {
     type Dom = K;
     type Cod = V;
 
@@ -195,7 +203,8 @@ impl<K: Eq+Hash, V: Eq> Mapping for HashColumn<K,V> {
     fn is_set(&self, x: &K) -> bool { self.0.contains_key(x) }
 }
 
-impl<K: Eq+Hash+Clone, V: Eq> Column for HashColumn<K,V> {
+impl<K,V,S> Column for HashColumn<K,V,S>
+where K: Eq+Hash+Clone, V: Eq, S: BuildHasher {
     fn iter(&self) -> impl Iterator<Item = (K,&V)> {
         self.0.iter().map(|(k,v)| (k.clone(), v))
     }
@@ -260,10 +269,11 @@ impl<T: Eq + Clone> Index for VecIndex<T> {
 /** An index implemented by a hash map into vectors.
  */
 #[derive(Clone,Derivative)]
-#[derivative(Default(bound=""))]
-struct HashIndex<X,Y>(HashMap<Y,Vec<X>>);
+#[derivative(Default(bound="S: Default"))]
+struct HashIndex<X, Y, S = RandomState>(HashMap<Y,Vec<X>,S>);
 
-impl<X: Eq + Clone, Y: Eq + Hash + Clone> Index for HashIndex<X,Y> {
+impl<X,Y,S> Index for HashIndex<X,Y,S>
+where X: Eq + Clone, Y: Eq + Hash + Clone, S: BuildHasher {
     type Dom = X;
     type Cod = Y;
 
@@ -295,17 +305,18 @@ This common pattern is used to implement more specific columns but, like the
 `Index` trait, is not directly exposed.
  */
 #[derive(Clone)]
-struct IndexedColumn<Dom,Cod,Col,Ind>
-where Col: Column<Dom=Dom, Cod=Cod>, Ind: Index<Dom=Dom, Cod=Cod> {
+struct IndexedColumn<Dom,Cod,Col,Ind> {
     mapping: Col,
     index: Ind,
+    dom_type: PhantomData<Dom>,
+    cod_type: PhantomData<Cod>,
 }
 
-impl <Dom,Cod,Col,Ind> Default for IndexedColumn<Dom,Cod,Col,Ind>
-where Col: Column<Dom=Dom, Cod=Cod> + Default,
-      Ind: Index<Dom=Dom, Cod=Cod> + Default {
+impl<Dom,Cod,Col,Ind> Default for IndexedColumn<Dom,Cod,Col,Ind>
+where Col: Default, Ind: Default {
     fn default() -> Self {
-        Self { mapping: Default::default(), index: Default::default() }
+        Self { mapping: Default::default(), index: Default::default(),
+               dom_type: PhantomData, cod_type: PhantomData }
     }
 }
 
@@ -394,7 +405,7 @@ an arbitrary type (`T`), the index is implemented using a hash map.
 */
 #[derive(Clone,Derivative)]
 #[derivative(Default(bound=""))]
-pub struct IndexedVecColumn<T: Eq+Hash+Clone>(
+pub struct IndexedVecColumn<T>(
     IndexedColumn<usize, T, VecColumn<T>, HashIndex<usize,T>>
 );
 
@@ -425,13 +436,17 @@ impl<T: Eq+Hash+Clone> Column for IndexedVecColumn<T> {
 
 /// An indexed column backed by hash maps.
 #[derive(Clone,Derivative)]
-#[derivative(Default(bound=""))]
-pub struct IndexedHashColumn<K: Eq+Hash+Clone, V: Eq+Hash+Clone>(
-    IndexedColumn<K, V, HashColumn<K,V>, HashIndex<K,V>>
+#[derivative(Default(bound="S: Default"))]
+pub struct IndexedHashColumn<K, V, S = RandomState>(
+    IndexedColumn<K, V, HashColumn<K,V,S>, HashIndex<K,V,S>>
 );
 
-impl<K,V> Mapping for IndexedHashColumn<K,V>
-where K: Eq+Hash+Clone, V: Eq+Hash+Clone {
+/// An indexed column with keys and values of type `Ustr`.
+pub type IndexedUstrColumn =
+    IndexedHashColumn<Ustr, Ustr, BuildHasherDefault<IdentityHasher>>;
+
+impl<K,V,S> Mapping for IndexedHashColumn<K,V,S>
+where K: Eq+Hash+Clone, V: Eq+Hash+Clone, S: BuildHasher {
     type Dom = K;
     type Cod = V;
     fn apply(&self, x: &K) -> Option<&V> { self.0.apply(x) }
@@ -440,8 +455,8 @@ where K: Eq+Hash+Clone, V: Eq+Hash+Clone {
     fn is_set(&self, x: &K) -> bool { self.0.is_set(x) }
 }
 
-impl<K,V> Column for IndexedHashColumn<K,V>
-where K: Eq+Hash+Clone, V: Eq+Hash+Clone {
+impl<K,V,S> Column for IndexedHashColumn<K,V,S>
+where K: Eq+Hash+Clone, V: Eq+Hash+Clone, S: BuildHasher {
     fn iter(&self) -> impl Iterator<Item=(K,&V)> { self.0.iter() }
     fn preimage(&self, y: &V) -> impl Iterator<Item=K> { self.0.preimage(y) }
 }
