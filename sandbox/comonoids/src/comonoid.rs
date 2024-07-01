@@ -1,5 +1,9 @@
+pub trait PossiblyId {
+    fn is_id(&self) -> bool;
+}
+
 pub trait Comonoid: Sized {
-    type Update;
+    type Update: PossiblyId;
 
     fn id(&self) -> Self::Update;
     fn apply(&self, update: &Self::Update) -> Option<Self>;

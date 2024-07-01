@@ -52,8 +52,21 @@ where
     }
 }
 
+impl<T: Comonoid> PossiblyId for Update<T> {
+    fn is_id(&self) -> bool {
+        self.0.len() == 1 && match self.0[0] { Retain(_) => true, _ => false }
+    }
+}
+
 impl<T: Comonoid> Update<T> {
+
     fn push(&mut self, seg: Segment<T>) {
+        if let Change(u) = &seg {
+            if u.is_id() {
+                self.push(Retain(1));
+                return;
+            }
+        }
         let mut squashed = true;
         match (self.0.last_mut(), &seg) {
             (Some(Delete(i)), Delete(j)) => {
