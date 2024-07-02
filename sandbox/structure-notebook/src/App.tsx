@@ -1,4 +1,4 @@
-import { createSignal, For } from "solid-js";
+import { For } from "solid-js";
 import { createDoc } from "./automerge-solid";
 import { Notebook } from "./notebook";
 import {

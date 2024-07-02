@@ -2,7 +2,7 @@ import { Newtype, iso } from "newtype-ts";
 import { generateId } from "./id";
 
 export interface VertexId
-  extends Newtype<{ readonly EdgeId: unique symbol }, string> {}
+  extends Newtype<{ readonly VertexId: unique symbol }, string> {}
 
 const isoVertexId = iso<VertexId>();
 
