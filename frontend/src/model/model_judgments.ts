@@ -66,3 +66,6 @@ export function newMorphismDecl(type: string): MorphismDecl {
 }
 
 export type ModelDecl = ObjectDecl | MorphismDecl;
+
+// TODO: Judgments can be declarations *or* morphism equations.
+export type ModelJudgment = ModelDecl;
