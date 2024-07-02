@@ -20,14 +20,12 @@ export type ObjectDecl = {
     type: string;
 };
 
-export function newObjectDecl(type: string): ObjectDecl {
-    return {
-        tag: "object",
-        id: isoObjectId.wrap(generateId()),
-        name: "",
-        type: type,
-    };
-}
+export const newObjectDecl = (type: string): ObjectDecl => ({
+    tag: "object",
+    id: isoObjectId.wrap(generateId()),
+    name: "",
+    type: type,
+});
 
 export interface MorphismId
 extends Newtype<{ readonly MorphismId: unique symbol }, string> {}
@@ -54,16 +52,14 @@ export type MorphismDecl = {
     cod: ObjectId | null;
 };
 
-export function newMorphismDecl(type: string): MorphismDecl {
-    return {
-        tag: "morphism",
-        id: isoMorphismId.wrap(generateId()),
-        name: "",
-        type: type,
-        dom: null,
-        cod: null,
-    };
-}
+export const newMorphismDecl = (type: string): MorphismDecl => ({
+    tag: "morphism",
+    id: isoMorphismId.wrap(generateId()),
+    name: "",
+    type: type,
+    dom: null,
+    cod: null,
+});
 
 export type ModelDecl = ObjectDecl | MorphismDecl;
 
