@@ -9,13 +9,13 @@ use std::collections::BTreeMap;
 
 /// Non-empty directories
 #[derive(PartialEq, Eq)]
-enum NonEmptyDir<K: Ord + Eq + Clone, V, P: SharedPointerKind> {
+enum NonEmptyDtry<K: Ord + Eq + Clone, V, P: SharedPointerKind> {
     Leaf(SharedPointer<V, P>),
-    Node(SharedPointer<BTreeMap<K, NonEmptyDir<K, V, P>>, P>),
+    Node(SharedPointer<BTreeMap<K, NonEmptyDtry<K, V, P>>, P>),
 }
-use NonEmptyDir::*;
+use NonEmptyDtry::*;
 
-impl<K, V, P> Clone for NonEmptyDir<K, V, P>
+impl<K, V, P> Clone for NonEmptyDtry<K, V, P>
 where
     K: Ord + Eq + Clone,
     P: SharedPointerKind,
@@ -28,14 +28,14 @@ where
     }
 }
 
-impl<K, V, P> NonEmptyDir<K, V, P>
+impl<K, V, P> NonEmptyDtry<K, V, P>
 where
     K: Ord + Eq + Clone,
     P: SharedPointerKind,
 {
     /// Produce a new non-empty directory with the same shape as self,
     /// whose values are transformed by f
-    fn map<W, F>(&self, f: &F) -> NonEmptyDir<K, W, P>
+    fn map<W, F>(&self, f: &F) -> NonEmptyDtry<K, W, P>
     where
         F: Fn(&V) -> W,
     {
@@ -65,7 +65,7 @@ where
                 let m = SharedPointer::make_mut(m);
                 match m.get_mut(&k) {
                     None => {
-                        m.insert(k, NonEmptyDir::singleton(&p, v));
+                        m.insert(k, NonEmptyDtry::singleton(&p, v));
                         Some(())
                     }
                     Some(ned) => ned.insert_mut(&p, v),
@@ -80,15 +80,15 @@ where
             None => Leaf(SharedPointer::new(v)),
             Some((k, p)) => {
                 let mut m = BTreeMap::new();
-                m.insert(k, NonEmptyDir::singleton(&p, v));
+                m.insert(k, NonEmptyDtry::singleton(&p, v));
                 Node(SharedPointer::new(m))
             }
         }
     }
 
-    fn try_from_iter<T: IntoIterator<Item = (K, NonEmptyDir<K, V, P>)>>(
+    fn try_from_iter<T: IntoIterator<Item = (K, NonEmptyDtry<K, V, P>)>>(
         iter: T,
-    ) -> Option<NonEmptyDir<K, V, P>> {
+    ) -> Option<NonEmptyDtry<K, V, P>> {
         let mut iter = iter.into_iter();
         match iter.next() {
             None => None,
@@ -96,19 +96,19 @@ where
                 let mut map = BTreeMap::new();
                 map.insert(k, m);
                 map.extend(iter);
-                Some(NonEmptyDir::Node(SharedPointer::new(map)))
+                Some(NonEmptyDtry::Node(SharedPointer::new(map)))
             }
         }
     }
 
-    pub fn filter_flatmap<W, F: Fn(&V) -> Option<NonEmptyDir<K, W, P>>>(
+    pub fn filter_flatmap<W, F: Fn(&V) -> Option<NonEmptyDtry<K, W, P>>>(
         &self,
         f: F,
-    ) -> Option<NonEmptyDir<K, W, P>> {
+    ) -> Option<NonEmptyDtry<K, W, P>> {
         match self {
             Leaf(v) => f(v),
             Node(m) => {
-                NonEmptyDir::try_from_iter(m.iter().filter_map(|(k, ned)| {
+                NonEmptyDtry::try_from_iter(m.iter().filter_map(|(k, ned)| {
                     ned.filter_flatmap(&f).map(|ned| (k.clone(), ned.clone()))
                 }))
             }
@@ -131,6 +131,7 @@ where
 ///
 /// Mainly, this implementation is a tree with reference-counted pointers. This means that
 /// multiple directories may share subdirectories. Directories are also cheap to clone.
+/// Specifically, cloning a directory does not clone any HashMaps or leaf nodes.
 /// However we take advantage of [`SharedPointer::make_mut`] in order
 /// to mutate in-place when the reference count of a pointer tells us that no other
 /// references to a given value are live. Thus, we also have mutating methods. Of course,
@@ -140,37 +141,37 @@ where
 ///
 /// [1]: https://en.wikipedia.org/wiki/Trie
 /// [2]: https://koka-lang.github.io/koka/doc/book.html#why-fbip
-pub struct Dir<K: Ord + Eq + Clone, V, P: SharedPointerKind>(Option<NonEmptyDir<K, V, P>>);
+pub struct Dtry<K: Ord + Eq + Clone, V, P: SharedPointerKind>(Option<NonEmptyDtry<K, V, P>>);
 
-impl<K, V, P> Clone for Dir<K, V, P>
+impl<K, V, P> Clone for Dtry<K, V, P>
 where
     K: Ord + Eq + Clone,
     P: SharedPointerKind,
 {
     fn clone(&self) -> Self {
-        Dir(self.0.clone())
+        Dtry(self.0.clone())
     }
 }
 
-impl<K, V, P> Dir<K, V, P>
+impl<K, V, P> Dtry<K, V, P>
 where
     K: Ord + Eq + Clone,
     P: SharedPointerKind,
 {
     /// Returns the empty directory
     pub fn empty() -> Self {
-        Dir(None)
+        Dtry(None)
     }
 
     /// Returns a new directory with the same domain as self, but
     /// whose value at path `p` is given by applying `f` to the value at `p` in `self`.
-    pub fn map<W, F>(&self, f: &F) -> Dir<K, W, P>
+    pub fn map<W, F>(&self, f: &F) -> Dtry<K, W, P>
     where
         F: Fn(&V) -> W,
     {
         match &self.0 {
-            Some(ned) => Dir(Some(ned.map(f))),
-            _ => Dir(None),
+            Some(ned) => Dtry(Some(ned.map(f))),
+            _ => Dtry(None),
         }
     }
 
@@ -188,7 +189,7 @@ where
     pub fn insert_mut(&mut self, p: &Path<K, P>, v: V) -> Option<()> {
         match &mut self.0 {
             None => {
-                *self = Dir(Some(NonEmptyDir::singleton(p, v)));
+                *self = Dtry(Some(NonEmptyDtry::singleton(p, v)));
                 Some(())
             }
             Some(ned) => ned.insert_mut(p, v),
@@ -204,15 +205,15 @@ where
     }
 
     /// The equivalent of `bind` or `>>=` for the directories monad.
-    pub fn flat_map<W, F: Fn(&V) -> Dir<K, W, P>>(&self, f: &F) -> Dir<K, W, P> {
+    pub fn flat_map<W, F: Fn(&V) -> Dtry<K, W, P>>(&self, f: &F) -> Dtry<K, W, P> {
         match &self.0 {
-            None => Dir(None),
-            Some(ned) => Dir(ned.filter_flatmap(|d| f(d).0)),
+            None => Dtry(None),
+            Some(ned) => Dtry(ned.filter_flatmap(|d| f(d).0)),
         }
     }
 }
 
-impl<K, V, P> Dir<K, Dir<K, V, P>, P>
+impl<K, V, P> Dtry<K, Dtry<K, V, P>, P>
 where
     K: Ord + Eq + Clone,
     P: SharedPointerKind,
@@ -224,7 +225,7 @@ where
     /// This is the fundamental namespacing operation for directories; if we have
     /// a directory of models that we wish to compose, the directory of variables
     /// in the composite model is given by flattening.
-    pub fn flatten(&self) -> Dir<K, V, P> {
+    pub fn flatten(&self) -> Dtry<K, V, P> {
         self.flat_map(&(|d| d.clone()))
     }
 }
