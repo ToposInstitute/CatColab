@@ -28,6 +28,8 @@ function App() {
   return (
     <div>
       <ModelEditor notebook={notebook()} modifyNotebook={modifyNotebook} />
+      <br/>
+      <ModelEditor notebook={notebook()} modifyNotebook={modifyNotebook} />
     </div>
   );
 }

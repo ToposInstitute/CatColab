@@ -18,12 +18,12 @@ function ObjectDeclEditor(props: {
             onInput={(evt) => {
                 props.modifyDecl((decl) => (decl.name = evt.target.value));
             }}
-            /*onKeyDown={(evt) => {
+            onKeyDown={(evt) => {
                 if (evt.key == "Backspace" && props.decl.name == "") {
                     evt.preventDefault();
                     props.delete();
                 }
-            }}*/
+            }}
             ></input>
         </div>
     );

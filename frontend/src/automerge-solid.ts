@@ -1,29 +1,27 @@
-import { Doc, Repo } from "@automerge/automerge-repo";
-import { createSignal } from "solid-js";
+import { Repo } from "@automerge/automerge-repo";
+import { createStore, reconcile } from "solid-js/store";
 
 /** Create Solid-compatible getter/setter for an automerge document.
 
-Loosely inspired by the automerge-React integration in `automerge-repo`.
+Interally, a Solid Store is used along with the
+[`reconcile`](https://www.solidjs.com/tutorial/stores_immutable) function to
+avoid re-rendering the whole DOM by diffing the data.
  */
-export function createDoc<T>(
+export function createDoc<T extends object>(
   repo: Repo,
   init: T,
-): [() => Doc<T>, (f: (d: T) => void) => void] {
+): [() => T, (f: (d: T) => void) => void] {
   const handle = repo.create(init);
+  const [store, setStore] = createStore<T>(init);
 
-  const [generation, setGeneration] = createSignal(0);
-
-  function get(): Doc<T> {
-    generation();
-    return handle.docSync() as Doc<T>;
-  }
+  const get = () => store;
 
   async function set(f: (d: T) => void): Promise<void> {
     return handle.change(f);
   }
 
-  handle.on("change", (_) => {
-    setGeneration(generation() + 1);
+  handle.on("change", (payload) => {
+    setStore(reconcile(payload.doc));
   });
 
   return [get, set];
