@@ -1,5 +1,7 @@
-.object-editor input {
-    font-size: inherit;
-    border: 0;
+.object-declaration input {
+    border: none;
     outline: none;
+    font-family: monospace;
+    font-size: inherit;
+    font-size: 1.3rem;
 }

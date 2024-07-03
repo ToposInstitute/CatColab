@@ -1,0 +1,7 @@
+#notebook-title input {
+    border: none;
+    outline: none;
+    font-family: inherit;
+    font-size: 3em;
+    line-height: 1.1;
+}

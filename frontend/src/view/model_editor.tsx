@@ -9,13 +9,13 @@ import "./model_editor.css";
 function ObjectDeclEditor(props: {
     decl: ObjectDecl,
     modifyDecl: (f: (decl: ObjectDecl) => void) => void;
-    delete: () => void;
+    deleteSelf: () => void;
 }) {
     let ref!: HTMLInputElement;
     onMount(() => ref.focus());
 
     return (
-        <div class="object-editor">
+        <div class="object-declaration">
             <input ref={ref} type="text"
             value={props.decl.name} placeholder="Unnamed"
             onInput={(evt) => {
@@ -24,7 +24,7 @@ function ObjectDeclEditor(props: {
             onKeyDown={(evt) => {
                 if (evt.key == "Backspace" && props.decl.name == "") {
                     evt.preventDefault();
-                    props.delete();
+                    props.deleteSelf();
                 }
             }}
             ></input>
@@ -35,7 +35,7 @@ function ObjectDeclEditor(props: {
 function ModelJudgmentEditor(props: {
     content: ModelJudgment;
     modifyContent: (f: (content: ModelJudgment) => void) => void;
-    delete: () => void;
+    deleteSelf: () => void;
 }) {
     if (props.content.tag == "object") {
         return <ObjectDeclEditor
@@ -45,7 +45,7 @@ function ModelJudgmentEditor(props: {
                     f(content as ObjectDecl);
                 })
             }
-            delete={props.delete}
+            deleteSelf={props.deleteSelf}
         />;
     } else if (props.content.tag == "morphism") {
         return <p>{props.content.name}</p>;
@@ -58,6 +58,6 @@ export function ModelEditor(props: {
 }) {
     return (
         <NotebookEditor notebook={props.notebook} modifyNotebook={props.modifyNotebook}
-            editFormalCell={ModelJudgmentEditor}/>
+            makeFormalCellEditor={ModelJudgmentEditor}/>
     );
 }
