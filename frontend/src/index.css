@@ -1,5 +1,8 @@
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --main-font: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --mono-font: Roboto Mono, monospace;
+
+  font-family: var(--main-font);
   line-height: 1.5;
 
   font-synthesis: none;
@@ -9,7 +12,6 @@
 }
 
 a {
-  font-weight: 500;
   color: #646cff;
   text-decoration: inherit;
 }
