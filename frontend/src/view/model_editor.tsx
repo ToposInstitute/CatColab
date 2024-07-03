@@ -1,4 +1,6 @@
 import { Doc } from "@automerge/automerge";
+import { onMount } from "solid-js";
+
 import { ModelJudgment, ObjectDecl } from "../model/model_judgments";
 import { Notebook } from "../model/notebook";
 import { NotebookEditor } from "./notebook_editor";
@@ -6,15 +8,18 @@ import { NotebookEditor } from "./notebook_editor";
 import "./model_editor.css";
 
 
-
 function ObjectDeclEditor(props: {
     decl: ObjectDecl,
     modifyDecl: (f: (decl: ObjectDecl) => void) => void;
     delete: () => void;
 }) {
+    let ref: HTMLInputElement;
+    onMount(() => ref.focus());
+
     return (
         <div class="object-editor">
-            <input type="text" value={props.decl.name} placeholder="Unnamed"
+            <input ref={ref} type="text"
+            value={props.decl.name} placeholder="Unnamed"
             onInput={(evt) => {
                 props.modifyDecl((decl) => (decl.name = evt.target.value));
             }}
