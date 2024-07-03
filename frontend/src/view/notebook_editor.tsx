@@ -1,5 +1,4 @@
 import { For } from "solid-js";
-import { Doc } from "@automerge/automerge";
 import { Notebook } from "../model/notebook";
 
 export function MarkupCellEditor(props: {
@@ -21,7 +20,7 @@ export type FormalCellEditor<T> =
 
 
 export function NotebookEditor<T>(props: {
-    notebook: Doc<Notebook<T>>;
+    notebook: Notebook<T>;
     modifyNotebook: (f: (d: Notebook<T>) => void) => void;
     editFormalCell: FormalCellEditor<T>;
 }) {

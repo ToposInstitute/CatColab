@@ -1,6 +1,4 @@
-import { Doc } from "@automerge/automerge";
 import { onMount } from "solid-js";
-
 import { ModelJudgment, ObjectDecl } from "../model/model_judgments";
 import { Notebook } from "../model/notebook";
 import { NotebookEditor } from "./notebook_editor";
@@ -13,7 +11,7 @@ function ObjectDeclEditor(props: {
     modifyDecl: (f: (decl: ObjectDecl) => void) => void;
     delete: () => void;
 }) {
-    let ref: HTMLInputElement;
+    let ref!: HTMLInputElement;
     onMount(() => ref.focus());
 
     return (
@@ -55,7 +53,7 @@ function ModelJudgmentEditor(props: {
 }
 
 export function ModelEditor(props: {
-    notebook: Doc<Notebook<ModelJudgment>>;
+    notebook: Notebook<ModelJudgment>;
     modifyNotebook: (f: (d: Notebook<ModelJudgment>) => void) => void;
 }) {
     return (
