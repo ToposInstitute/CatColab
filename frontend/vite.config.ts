@@ -1,7 +1,8 @@
 import { defineConfig } from 'vite'
 import wasm from 'vite-plugin-wasm'
+import topLevelAwait from 'vite-plugin-top-level-await'
 import solid from 'vite-plugin-solid'
 
 export default defineConfig({
-    plugins: [wasm(), solid()],
+    plugins: [wasm(), topLevelAwait(), solid()],
 })
