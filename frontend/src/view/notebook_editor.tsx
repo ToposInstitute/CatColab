@@ -35,9 +35,9 @@ export function NotebookEditor<T, Props extends FormalCellEditorProps<T>>(allPro
     return (
         <div id="notebook">
             <div id="notebook-title">
-                <InlineInput value={props.notebook.name}
-                onInput={(evt) => {
-                    props.modifyNotebook((nb) => (nb.name = evt.target.value));
+                <InlineInput text={props.notebook.name}
+                setText={(text) => {
+                    props.modifyNotebook((nb) => (nb.name = text));
                 }}
                 />
             </div>

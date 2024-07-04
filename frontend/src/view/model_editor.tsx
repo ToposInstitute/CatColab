@@ -20,9 +20,9 @@ function ObjectDeclEditor(props: {
 
     return <div class="model-judgment object-declaration">
         <InlineInput ref={nameRef} placeholder="Unnamed"
-            value={props.object.name}
-            onInput={(evt) => {
-                props.modifyObject((ob) => (ob.name = evt.target.value));
+            text={props.object.name}
+            setText={(text) => {
+                props.modifyObject((ob) => (ob.name = text));
             }}
             onKeyDown={(evt) => {
                 if (evt.key == "Backspace" && props.object.name == "") {
@@ -33,7 +33,7 @@ function ObjectDeclEditor(props: {
     </div>;
 }
 
-function ObjectIdEditor(allProps: {
+function ObjectIdInput(allProps: {
     objectId: ObjectId | null;
     setObjectId: (id: ObjectId | null) => void;
     objectNameMap: IndexedMap<ObjectId,string>;
@@ -50,11 +50,12 @@ function ObjectIdEditor(allProps: {
         return name;
     }
 
-    return <InlineInput value={objectName()}
-        onInput={(evt) => {
+    return <InlineInput text={objectName()}
+        setText={(text) => {
             let id = null;
-            const possibleIds = props.objectNameMap.index.get(evt.target.value);
+            const possibleIds = props.objectNameMap.index.get(text);
             if (possibleIds && possibleIds.length > 0) {
+                // TODO: Warn the user when the names are not unique.
                 id = possibleIds[0];
             }
             props.setObjectId(id);
@@ -76,9 +77,9 @@ function MorphismDeclEditor(props: {
 
     return <div class="model-judgment morphism-declaration">
         <InlineInput ref={nameRef} placeholder="Unnamed"
-            value={props.morphism.name}
-            onInput={(evt) => {
-                props.modifyMorphism((mor) => (mor.name = evt.target.value));
+            text={props.morphism.name}
+            setText={(text) => {
+                props.modifyMorphism((mor) => (mor.name = text));
             }}
             onKeyDown={(evt) => {
                 if (evt.key == "Backspace" && props.morphism.name == "") {
@@ -87,15 +88,22 @@ function MorphismDeclEditor(props: {
             }}
         />
         <span>:</span>
-        <ObjectIdEditor ref={domRef} placeholder="..."
+        <ObjectIdInput ref={domRef} placeholder="..."
             objectId={props.morphism.dom}
             setObjectId={(id) => {
                 props.modifyMorphism((mor) => (mor.dom = id));
             }}
             objectNameMap={props.objectNameMap}
+            onKeyDown={(evt) => {
+                const atStart = evt.currentTarget.selectionEnd == 0;
+                if ((evt.key == "Backspace" && atStart && !props.morphism.dom) ||
+                    (evt.key == "ArrowLeft" && atStart)) {
+                    nameRef.focus();
+                }
+            }}
         />
         <span>&LongRightArrow;</span>
-        <ObjectIdEditor ref={codRef} placeholder="..."
+        <ObjectIdInput ref={codRef} placeholder="..."
             objectId={props.morphism.cod}
             setObjectId={(id) => {
                 props.modifyMorphism((mor) => (mor.cod = id));
