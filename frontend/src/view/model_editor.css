@@ -1,10 +1,6 @@
 .object-declaration input,
 .morphism-declaration input {
-    display: inline;
-    border: none;
-    outline: none;
     font-family: var(--mono-font);
-    font-size: inherit;
     font-size: 1.3rem;
-    min-width: 10ex;
+    line-height: 1.1;
 }

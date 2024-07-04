@@ -1,0 +1,7 @@
+.inline-input {
+    display: inline;
+    border: none;
+    outline: none;
+    font-size: inherit;
+    min-width: 10ex;
+}

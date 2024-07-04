@@ -1,39 +1,41 @@
 import { createMemo, onMount } from "solid-js";
 import { Dynamic } from "solid-js/web";
+
 import { ModelJudgment, MorphismDecl, ObjectDecl, ObjectId } from "../model/model_judgments";
 import { Notebook } from "../model/notebook";
 import { NotebookEditor } from "./notebook_editor";
+import { InlineInput } from "./input";
 
 import "./model_editor.css";
 
 
 function ObjectDeclEditor(props: {
-    decl: ObjectDecl,
-    modifyDecl: (f: (decl: ObjectDecl) => void) => void;
+    object: ObjectDecl,
+    modifyObject: (f: (decl: ObjectDecl) => void) => void;
     deleteSelf: () => void;
 }) {
     let nameRef!: HTMLInputElement;
     onMount(() => nameRef.focus());
 
     return <div class="object-declaration">
-        <input ref={nameRef} type="text" size="1"
-            value={props.decl.name} placeholder="Unnamed"
+        <InlineInput ref={nameRef} placeholder="Unnamed"
+            value={props.object.name}
             onInput={(evt) => {
-                props.modifyDecl((decl) => (decl.name = evt.target.value));
+                props.modifyObject((ob) => (ob.name = evt.target.value));
             }}
             onKeyDown={(evt) => {
-                if (evt.key == "Backspace" && props.decl.name == "") {
+                if (evt.key == "Backspace" && props.object.name == "") {
                     evt.preventDefault();
                     props.deleteSelf();
                 }
             }}
-        ></input>
+        />
     </div>;
 }
 
 function MorphismDeclEditor(props: {
-    decl: MorphismDecl;
-    modifyDecl: (f: (decl: MorphismDecl) => void) => void;
+    morphism: MorphismDecl;
+    modifyMorphism: (f: (decl: MorphismDecl) => void) => void;
     deleteSelf: () => void;
     objectNameMap: Map<ObjectId,string>;
 }) {
@@ -41,12 +43,12 @@ function MorphismDeclEditor(props: {
     onMount(() => nameRef.focus());
 
     return <div class="morphism-declaration">
-        <input ref={nameRef} type="text" size="1"
-            value={props.decl.name} placeholder="Unnamed"
+        <InlineInput ref={nameRef} placeholder="Unnamed"
+            value={props.morphism.name}
             onInput={(evt) => {
-                props.modifyDecl((decl) => (decl.name = evt.target.value));
+                props.modifyMorphism((mor) => (mor.name = evt.target.value));
             }}
-        ></input>
+        />
         <span>:</span>
         <span>{props.objectNameMap.size}</span>
         <span>&LongRightArrow;</span>
@@ -61,15 +63,15 @@ function ModelJudgmentEditor(props: {
 }) {
     const editors = {
         object: () => <ObjectDeclEditor
-            decl={props.content as ObjectDecl}
-            modifyDecl={(f) => props.modifyContent(
+            object={props.content as ObjectDecl}
+            modifyObject={(f) => props.modifyContent(
                 (content) => f(content as ObjectDecl)
             )}
             deleteSelf={props.deleteSelf}
         />,
         morphism: () => <MorphismDeclEditor
-            decl={props.content as MorphismDecl}
-            modifyDecl={(f) => props.modifyContent(
+            morphism={props.content as MorphismDecl}
+            modifyMorphism={(f) => props.modifyContent(
                 (content) => f(content as MorphismDecl)
             )}
             deleteSelf={props.deleteSelf}

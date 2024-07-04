@@ -1,6 +1,7 @@
 import { Component, For, splitProps } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { Notebook } from "../model/notebook";
+import { InlineInput } from "./input";
 
 import "./notebook_editor.css";
 
@@ -34,11 +35,11 @@ export function NotebookEditor<T, Props extends FormalCellEditorProps<T>>(allPro
     return (
         <div id="notebook">
             <div id="notebook-title">
-                <input type="text" value={props.notebook.name}
+                <InlineInput value={props.notebook.name}
                 onInput={(evt) => {
                     props.modifyNotebook((nb) => (nb.name = evt.target.value));
                 }}
-                ></input>
+                />
             </div>
             <ul>
             <For each={props.notebook.cells}>
