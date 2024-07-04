@@ -1,5 +1,4 @@
-import { createEffect, createSignal } from "solid-js";
-import { JSX } from "solid-js/jsx-runtime";
+import { createEffect, createSignal, JSX } from "solid-js";
 
 import "./input.css";
 
@@ -9,7 +8,7 @@ export function InlineInput(props: JSX.InputHTMLAttributes<HTMLInputElement>) {
 
     createEffect(() => {
         let width = 0;
-        if (typeof props.value === "string" && props.value) {
+        if (props.value && typeof props.value === "string") {
             width = props.value.length;
         } else if (props.placeholder) {
             width = props.placeholder.length;

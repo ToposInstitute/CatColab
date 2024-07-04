@@ -1,6 +1,12 @@
-.object-declaration input,
-.morphism-declaration input {
-    font-family: var(--mono-font);
+.model-judgment {
     font-size: 1.3rem;
     line-height: 1.1;
+}
+
+.model-judgment input {
+    font-family: var(--mono-font);
+}
+
+.morphism-declaration span {
+    padding: 0 1ex;
 }

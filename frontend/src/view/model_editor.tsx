@@ -1,6 +1,7 @@
-import { createMemo, onMount } from "solid-js";
+import { createMemo, JSX, onMount, splitProps } from "solid-js";
 import { Dynamic } from "solid-js/web";
 
+import { IndexedMap, indexMap } from "../model/indexed_map";
 import { ModelJudgment, MorphismDecl, ObjectDecl, ObjectId } from "../model/model_judgments";
 import { Notebook } from "../model/notebook";
 import { NotebookEditor } from "./notebook_editor";
@@ -17,7 +18,7 @@ function ObjectDeclEditor(props: {
     let nameRef!: HTMLInputElement;
     onMount(() => nameRef.focus());
 
-    return <div class="object-declaration">
+    return <div class="model-judgment object-declaration">
         <InlineInput ref={nameRef} placeholder="Unnamed"
             value={props.object.name}
             onInput={(evt) => {
@@ -25,7 +26,6 @@ function ObjectDeclEditor(props: {
             }}
             onKeyDown={(evt) => {
                 if (evt.key == "Backspace" && props.object.name == "") {
-                    evt.preventDefault();
                     props.deleteSelf();
                 }
             }}
@@ -33,25 +33,75 @@ function ObjectDeclEditor(props: {
     </div>;
 }
 
+function ObjectIdEditor(allProps: {
+    objectId: ObjectId | null;
+    setObjectId: (id: ObjectId | null) => void;
+    objectNameMap: IndexedMap<ObjectId,string>;
+} & JSX.InputHTMLAttributes<HTMLInputElement>) {
+    const [props, inputProps] = splitProps(allProps, [
+        "objectId", "setObjectId", "objectNameMap",
+    ]);
+
+    const objectName = (): string => {
+        let name = "";
+        if (props.objectId) {
+            name = props.objectNameMap.map.get(props.objectId) || "";
+        }
+        return name;
+    }
+
+    return <InlineInput value={objectName()}
+        onInput={(evt) => {
+            let id = null;
+            const possibleIds = props.objectNameMap.index.get(evt.target.value);
+            if (possibleIds && possibleIds.length > 0) {
+                id = possibleIds[0];
+            }
+            props.setObjectId(id);
+        }}
+        {...inputProps}
+    />;
+}
+
 function MorphismDeclEditor(props: {
     morphism: MorphismDecl;
     modifyMorphism: (f: (decl: MorphismDecl) => void) => void;
     deleteSelf: () => void;
-    objectNameMap: Map<ObjectId,string>;
+    objectNameMap: IndexedMap<ObjectId,string>;
 }) {
     let nameRef!: HTMLInputElement;
+    let domRef!: HTMLInputElement;
+    let codRef!: HTMLInputElement;
     onMount(() => nameRef.focus());
 
-    return <div class="morphism-declaration">
+    return <div class="model-judgment morphism-declaration">
         <InlineInput ref={nameRef} placeholder="Unnamed"
             value={props.morphism.name}
             onInput={(evt) => {
                 props.modifyMorphism((mor) => (mor.name = evt.target.value));
             }}
+            onKeyDown={(evt) => {
+                if (evt.key == "Backspace" && props.morphism.name == "") {
+                    props.deleteSelf();
+                }
+            }}
         />
         <span>:</span>
-        <span>{props.objectNameMap.size}</span>
+        <ObjectIdEditor ref={domRef} placeholder="..."
+            objectId={props.morphism.dom}
+            setObjectId={(id) => {
+                props.modifyMorphism((mor) => (mor.dom = id));
+            }}
+            objectNameMap={props.objectNameMap}
+        />
         <span>&LongRightArrow;</span>
+        <ObjectIdEditor ref={codRef} placeholder="..."
+            objectId={props.morphism.cod}
+            setObjectId={(id) => {
+                props.modifyMorphism((mor) => (mor.cod = id));
+            }}
+            objectNameMap={props.objectNameMap}
+        />
     </div>;
 }
 
@@ -59,7 +109,7 @@ function ModelJudgmentEditor(props: {
     content: ModelJudgment;
     modifyContent: (f: (content: ModelJudgment) => void) => void;
     deleteSelf: () => void;
-    objectNameMap: Map<ObjectId,string>;
+    objectNameMap: IndexedMap<ObjectId,string>;
 }) {
     const editors = {
         object: () => <ObjectDeclEditor
@@ -85,14 +135,14 @@ export function ModelEditor(props: {
     notebook: Notebook<ModelJudgment>;
     modifyNotebook: (f: (d: Notebook<ModelJudgment>) => void) => void;
 }) {
-    const objectNameMap = createMemo<Map<ObjectId,string>>(() => {
+    const objectNameMap = createMemo<IndexedMap<ObjectId,string>>(() => {
         const map = new Map<ObjectId,string>();
         for (const cell of props.notebook.cells) {
             if (cell.tag == "formal" && cell.content.tag == "object") {
                 map.set(cell.content.id, cell.content.name);
             }
         }
-        return map;
+        return indexMap(map);
     });
 
     return (
