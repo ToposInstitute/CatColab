@@ -1,5 +1,5 @@
-import { onMount } from "solid-js";
-import { ModelJudgment, ObjectDecl } from "../model/model_judgments";
+import { createMemo, onMount } from "solid-js";
+import { ModelJudgment, MorphismDecl, ObjectDecl, ObjectId } from "../model/model_judgments";
 import { Notebook } from "../model/notebook";
 import { NotebookEditor } from "./notebook_editor";
 
@@ -11,12 +11,11 @@ function ObjectDeclEditor(props: {
     modifyDecl: (f: (decl: ObjectDecl) => void) => void;
     deleteSelf: () => void;
 }) {
-    let ref!: HTMLInputElement;
-    onMount(() => ref.focus());
+    let nameRef!: HTMLInputElement;
+    onMount(() => nameRef.focus());
 
-    return (
-        <div class="object-declaration">
-            <input ref={ref} type="text"
+    return <div class="object-declaration">
+        <input ref={nameRef} type="text" size="1"
             value={props.decl.name} placeholder="Unnamed"
             onInput={(evt) => {
                 props.modifyDecl((decl) => (decl.name = evt.target.value));
@@ -27,28 +26,55 @@ function ObjectDeclEditor(props: {
                     props.deleteSelf();
                 }
             }}
-            ></input>
-        </div>
-    );
+        ></input>
+    </div>;
+}
+
+function MorphismDeclEditor(props: {
+    decl: MorphismDecl;
+    modifyDecl: (f: (decl: MorphismDecl) => void) => void;
+    deleteSelf: () => void;
+    objectNameMap: Map<ObjectId,string>;
+}) {
+    let nameRef!: HTMLInputElement;
+    onMount(() => nameRef.focus());
+
+    return <div class="morphism-declaration">
+        <input ref={nameRef} type="text" size="1"
+            value={props.decl.name} placeholder="Unnamed"
+            onInput={(evt) => {
+                props.modifyDecl((decl) => (decl.name = evt.target.value));
+            }}
+        ></input>
+        <span>:</span>
+        <span>{props.objectNameMap.size}</span>
+        <span>&LongRightArrow;</span>
+    </div>;
 }
 
 function ModelJudgmentEditor(props: {
     content: ModelJudgment;
     modifyContent: (f: (content: ModelJudgment) => void) => void;
     deleteSelf: () => void;
+    objectNameMap: Map<ObjectId,string>;
 }) {
     if (props.content.tag == "object") {
         return <ObjectDeclEditor
             decl={props.content}
-            modifyDecl={(f) =>
-                props.modifyContent((content) => {
-                    f(content as ObjectDecl);
-                })
-            }
+            modifyDecl={(f) => props.modifyContent(
+                (content) => f(content as ObjectDecl)
+            )}
             deleteSelf={props.deleteSelf}
         />;
     } else if (props.content.tag == "morphism") {
-        return <p>{props.content.name}</p>;
+        return <MorphismDeclEditor
+            decl={props.content}
+            modifyDecl={(f) => props.modifyContent(
+                (content) => f(content as MorphismDecl)
+            )}
+            deleteSelf={props.deleteSelf}
+            objectNameMap={props.objectNameMap}
+        />;
     }
 }
 
@@ -56,8 +82,20 @@ export function ModelEditor(props: {
     notebook: Notebook<ModelJudgment>;
     modifyNotebook: (f: (d: Notebook<ModelJudgment>) => void) => void;
 }) {
+    const objectNameMap = createMemo<Map<ObjectId,string>>(() => {
+        const map = new Map<ObjectId,string>();
+        for (const cell of props.notebook.cells) {
+            if (cell.tag == "formal" && cell.content.tag == "object") {
+                map.set(cell.content.id, cell.content.name);
+            }
+        }
+        return map;
+    });
+
     return (
-        <NotebookEditor notebook={props.notebook} modifyNotebook={props.modifyNotebook}
-            makeFormalCellEditor={ModelJudgmentEditor}/>
+        <NotebookEditor notebook={props.notebook}
+            modifyNotebook={props.modifyNotebook}
+            formalCellEditor={ModelJudgmentEditor}
+            objectNameMap={objectNameMap()}/>
     );
 }

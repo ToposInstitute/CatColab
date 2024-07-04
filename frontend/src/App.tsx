@@ -2,8 +2,8 @@ import { Repo } from "@automerge/automerge-repo";
 import { createDoc } from "./automerge-solid";
 import { createShortcut } from "@solid-primitives/keyboard";
 
-import { newFormalCell, Notebook } from "./model/notebook";
-import { ModelJudgment, newObjectDecl } from "./model/model_judgments";
+import { Cell, newFormalCell, Notebook } from "./model/notebook";
+import { ModelJudgment, newMorphismDecl, newObjectDecl } from "./model/model_judgments";
 import { ModelEditor } from "./view/model_editor";
 
 import './App.css';
@@ -16,13 +16,18 @@ function App() {
     cells: [],
   });
 
+  const pushCell = (cell: Cell<ModelJudgment>) =>
+    modifyNotebook((nb) => {
+      nb.cells.push(cell);
+    });
+
   createShortcut(
     ["Alt", "0"],
-    () => {
-      modifyNotebook((nb) => {
-        nb.cells.push(newFormalCell(newObjectDecl("default")));
-      });
-    }
+    () => pushCell(newFormalCell(newObjectDecl("default"))),
+  );
+  createShortcut(
+    ["Alt", "1"],
+    () => pushCell(newFormalCell(newMorphismDecl("default"))),
   );
 
   return (

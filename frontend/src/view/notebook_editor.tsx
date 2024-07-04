@@ -1,4 +1,4 @@
-import { For } from "solid-js";
+import { Component, For, splitProps } from "solid-js";
 import { Notebook } from "../model/notebook";
 
 import "./notebook_editor.css";
@@ -13,19 +13,22 @@ export function MarkupCellEditor(props: {
     );
 }
 
-export type FormalCellEditor<T> =
-    (props: {
-        content: T;
-        modifyContent: (f: (content: T) => void) => void;
-        deleteSelf: () => void;
-    }) => any;
+export type FormalCellEditorProps<T> = {
+    content: T;
+    modifyContent: (f: (content: T) => void) => void;
+    deleteSelf: () => void;
+}
 
-
-export function NotebookEditor<T>(props: {
+export function NotebookEditor<T, Props extends FormalCellEditorProps<T>>(allProps: {
     notebook: Notebook<T>;
     modifyNotebook: (f: (d: Notebook<T>) => void) => void;
-    makeFormalCellEditor: FormalCellEditor<T>;
+    formalCellEditor: Component<Props>;
+} & {
+    [K in Exclude<keyof Props, keyof FormalCellEditorProps<T>>]: Props[K];
 }) {
+    const [props, otherProps] = splitProps(allProps, [
+        "notebook", "modifyNotebook", "formalCellEditor"
+    ]);
     return (
         <div id="notebook">
             <div id="notebook-title">
@@ -53,15 +56,16 @@ export function NotebookEditor<T>(props: {
                             deleteSelf={deleteCell}
                         />;
                     } else if (cell.tag == "formal") {
-                        return props.makeFormalCellEditor({
-                            content: cell.content,
-                            modifyContent: (f) => {
+                        return <props.formalCellEditor
+                            content={cell.content}
+                            modifyContent={(f) => {
                                 props.modifyNotebook((nb) => {
                                     f(nb.cells[i()].content as T);
                                 });
-                            },
-                            deleteSelf: deleteCell,
-                        });
+                            }}
+                            deleteSelf={deleteCell}
+                            {...otherProps as any} // FIXME: How to convince TypeScript that this works?
+                        />;
                     }
                 }}
             </For>
