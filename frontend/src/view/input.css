@@ -3,5 +3,10 @@
     border: none;
     outline: none;
     font-size: inherit;
-    min-width: 10ex;
+    min-width: 1ex;
+    border: 1px solid transparent;
+}
+
+.inline-input:hover {
+    border: 1px solid lightgray;
 }
