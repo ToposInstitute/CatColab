@@ -1,4 +1,5 @@
 import { createMemo, onMount } from "solid-js";
+import { Dynamic } from "solid-js/web";
 import { ModelJudgment, MorphismDecl, ObjectDecl, ObjectId } from "../model/model_judgments";
 import { Notebook } from "../model/notebook";
 import { NotebookEditor } from "./notebook_editor";
@@ -58,24 +59,24 @@ function ModelJudgmentEditor(props: {
     deleteSelf: () => void;
     objectNameMap: Map<ObjectId,string>;
 }) {
-    if (props.content.tag == "object") {
-        return <ObjectDeclEditor
-            decl={props.content}
+    const editors = {
+        object: () => <ObjectDeclEditor
+            decl={props.content as ObjectDecl}
             modifyDecl={(f) => props.modifyContent(
                 (content) => f(content as ObjectDecl)
             )}
             deleteSelf={props.deleteSelf}
-        />;
-    } else if (props.content.tag == "morphism") {
-        return <MorphismDeclEditor
-            decl={props.content}
+        />,
+        morphism: () => <MorphismDeclEditor
+            decl={props.content as MorphismDecl}
             modifyDecl={(f) => props.modifyContent(
                 (content) => f(content as MorphismDecl)
             )}
             deleteSelf={props.deleteSelf}
             objectNameMap={props.objectNameMap}
-        />;
-    }
+        />,
+    };
+    return <Dynamic component={editors[props.content.tag]} />;
 }
 
 export function ModelEditor(props: {

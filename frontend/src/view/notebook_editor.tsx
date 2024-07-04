@@ -1,7 +1,9 @@
 import { Component, For, splitProps } from "solid-js";
+import { Dynamic } from "solid-js/web";
 import { Notebook } from "../model/notebook";
 
 import "./notebook_editor.css";
+
 
 export function MarkupCellEditor(props: {
     content: string;
@@ -44,19 +46,19 @@ export function NotebookEditor<T, Props extends FormalCellEditorProps<T>>(allPro
                     const deleteCell = () =>
                         props.modifyNotebook((nb) => {
                             nb.cells.splice(i(), 1);
-                        });
-                    if (cell.tag == "markup") {
-                        return <MarkupCellEditor
-                            content={cell.content}
+                        })
+
+                    const editors = {
+                        markup: () => <MarkupCellEditor
+                            content={cell.content as string}
                             setContent={(content) => {
                                 props.modifyNotebook((nb) => {
                                     nb.cells[i()].content = content;
                                 });
                             }}
                             deleteSelf={deleteCell}
-                        />;
-                    } else if (cell.tag == "formal") {
-                        return <props.formalCellEditor
+                        />,
+                        formal: () => <props.formalCellEditor
                             content={cell.content}
                             modifyContent={(f) => {
                                 props.modifyNotebook((nb) => {
@@ -64,9 +66,11 @@ export function NotebookEditor<T, Props extends FormalCellEditorProps<T>>(allPro
                                 });
                             }}
                             deleteSelf={deleteCell}
-                            {...otherProps as any} // FIXME: How to convince TypeScript that this works?
-                        />;
-                    }
+                            // XXX: How to convince TypeScript that this works?
+                            {...otherProps as any}
+                        />,
+                    };
+                    return <Dynamic component={editors[cell.tag]} />;
                 }}
             </For>
             </ul>
