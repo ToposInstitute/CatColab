@@ -1,5 +1,5 @@
 import { Newtype, iso } from "newtype-ts";
-import { generateId } from "./id";
+import { generateId } from "../util/id";
 
 export interface ObjectId
 extends Newtype<{ readonly ObjectId: unique symbol }, string> {}

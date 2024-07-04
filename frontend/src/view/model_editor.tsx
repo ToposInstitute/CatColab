@@ -1,7 +1,7 @@
 import { createMemo, JSX, onMount, splitProps } from "solid-js";
 import { Dynamic } from "solid-js/web";
 
-import { IndexedMap, indexMap } from "../model/indexed_map";
+import { IndexedMap, indexMap } from "../util/indexed_map";
 import { ModelJudgment, MorphismDecl, ObjectDecl, ObjectId } from "../model/model_judgments";
 import { Notebook } from "../model/notebook";
 import { NotebookEditor } from "./notebook_editor";
@@ -42,15 +42,16 @@ function ObjectIdInput(allProps: {
         "objectId", "setObjectId", "objectNameMap",
     ]);
 
-    const objectName = (): string => {
-        let name = "";
+    const displayText = (): string => {
+        let text = "";
         if (props.objectId) {
-            name = props.objectNameMap.map.get(props.objectId) || "";
+            text = props.objectNameMap.map.get(props.objectId) || "";
         }
-        return name;
-    }
+        return text;
+    };
 
-    return <InlineInput text={objectName()}
+    return <InlineInput
+        text={displayText()}
         setText={(text) => {
             let id = null;
             const possibleIds = props.objectNameMap.index.get(text);
