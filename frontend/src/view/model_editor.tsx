@@ -1,11 +1,11 @@
-import { createMemo, JSX, onMount, splitProps } from "solid-js";
+import { createMemo, onMount, splitProps } from "solid-js";
 import { Dynamic } from "solid-js/web";
 
 import { IndexedMap, indexMap } from "../util/indexed_map";
 import { ModelJudgment, MorphismDecl, ObjectDecl, ObjectId } from "../model/model_judgments";
 import { Notebook } from "../model/notebook";
 import { NotebookEditor } from "./notebook_editor";
-import { InlineInput } from "./input";
+import { InlineInput, InlineInputOptions, InputBoundary } from "./input";
 
 import "./model_editor.css";
 
@@ -24,11 +24,7 @@ function ObjectDeclEditor(props: {
             setText={(text) => {
                 props.modifyObject((ob) => (ob.name = text));
             }}
-            onKeyDown={(evt) => {
-                if (evt.key == "Backspace" && props.object.name == "") {
-                    props.deleteSelf();
-                }
-            }}
+            delete={props.deleteSelf}
         />
     </div>;
 }
@@ -37,7 +33,7 @@ function ObjectIdInput(allProps: {
     objectId: ObjectId | null;
     setObjectId: (id: ObjectId | null) => void;
     objectNameMap: IndexedMap<ObjectId,string>;
-} & JSX.InputHTMLAttributes<HTMLInputElement>) {
+} & InlineInputOptions) {
     const [props, inputProps] = splitProps(allProps, [
         "objectId", "setObjectId", "objectNameMap",
     ]);
@@ -82,9 +78,10 @@ function MorphismDeclEditor(props: {
             setText={(text) => {
                 props.modifyMorphism((mor) => (mor.name = text));
             }}
-            onKeyDown={(evt) => {
-                if (evt.key == "Backspace" && props.morphism.name == "") {
-                    props.deleteSelf();
+            delete={props.deleteSelf}
+            exit={(where) => {
+                switch (where) {
+                    case InputBoundary.Right: return domRef.focus();
                 }
             }}
         />
@@ -95,11 +92,11 @@ function MorphismDeclEditor(props: {
                 props.modifyMorphism((mor) => (mor.dom = id));
             }}
             objectNameMap={props.objectNameMap}
-            onKeyDown={(evt) => {
-                const atStart = evt.currentTarget.selectionEnd == 0;
-                if ((evt.key == "Backspace" && atStart && !props.morphism.dom) ||
-                    (evt.key == "ArrowLeft" && atStart)) {
-                    nameRef.focus();
+            delete={() => nameRef.focus()}
+            exit={(where) => {
+                switch (where) {
+                    case InputBoundary.Left: return nameRef.focus();
+                    case InputBoundary.Right: return codRef.focus();
                 }
             }}
         />
@@ -110,6 +107,12 @@ function MorphismDeclEditor(props: {
                 props.modifyMorphism((mor) => (mor.cod = id));
             }}
             objectNameMap={props.objectNameMap}
+            delete={() => domRef.focus()}
+            exit={(where) => {
+                switch (where) {
+                    case InputBoundary.Left: return domRef.focus();
+                }
+            }}
         />
     </div>;
 }

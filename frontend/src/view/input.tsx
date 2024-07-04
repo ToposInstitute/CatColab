@@ -1,20 +1,33 @@
-import { createEffect, createSignal, JSX, splitProps } from "solid-js";
+import { createEffect, createSignal } from "solid-js";
 
 import "./input.css";
 
 
-export function InlineInput(allProps: {
+export enum InputBoundary {
+    Top = "TOP",
+    Bottom = "BOTTOM",
+    Left = "LEFT",
+    Right = "RIGHT",
+}
+
+// Optional props for inline input component.
+export type InlineInputOptions = {
+    ref?: HTMLInputElement;
+    placeholder?: string;
+    delete?: () => void;
+    exit?: ((where: InputBoundary) => void);
+}
+
+export function InlineInput(props: {
     text: string,
     setText: (text: string) => void;
-} & JSX.InputHTMLAttributes<HTMLInputElement>) {
-    const [props, inputProps] = splitProps(allProps, ["text", "setText"]);
-
+} & InlineInputOptions) {
     const computeWidth = (text: string) => {
         let width = 0;
         if (text) {
             width = text.length;
-        } else if (inputProps.placeholder) {
-            width = inputProps.placeholder.length;
+        } else if (props.placeholder) {
+            width = props.placeholder.length;
         }
         return width;
     };
@@ -25,16 +38,27 @@ export function InlineInput(allProps: {
         setWidth(computeWidth(props.text));
     })
 
-    return (
-        <input class="inline-input" type="text" size="1"
-            style={{ width: width() + 'ch' }}
-            value={props.text}
-            onInput={(evt) => {
-                let text = evt.target.value;
-                setWidth(computeWidth(text));
-                props.setText(text);
-            }}
-            {...inputProps}>
-        </input>
-    );
+    return <input class="inline-input" type="text" size="1"
+        ref={props.ref}
+        style={{ width: width() + 'ch' }}
+        value={props.text}
+        placeholder={props.placeholder}
+        onInput={(evt) => {
+            let text = evt.target.value;
+            setWidth(computeWidth(text));
+            props.setText(text);
+        }}
+        onKeyDown={(evt) => {
+            const value = evt.currentTarget.value;
+            if (props.delete && evt.key === "Backspace" && value === "") {
+                props.delete();
+            } else if (props.exit && evt.key === "ArrowLeft" &&
+                       evt.currentTarget.selectionEnd == 0) {
+                props.exit(InputBoundary.Left);
+            } else if (props.exit && evt.key === "ArrowRight" &&
+                       evt.currentTarget.selectionStart == value.length) {
+                props.exit(InputBoundary.Right);
+            }
+        }}
+    ></input>;
 }
