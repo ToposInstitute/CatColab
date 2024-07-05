@@ -4,7 +4,7 @@ import { Dynamic } from "solid-js/web";
 import { IndexedMap, indexMap } from "../util/indexed_map";
 import { ModelJudgment, MorphismDecl, ObjectDecl, ObjectId } from "../model/model_judgments";
 import { Notebook } from "../model/notebook";
-import { CellActions, NotebookEditor } from "./notebook_editor";
+import { CellActions, NotebookEditor, NotebookEditorRef } from "./notebook_editor";
 import { InlineInput, InlineInputOptions } from "./input";
 
 import "./model_editor.css";
@@ -149,6 +149,7 @@ function ModelJudgmentEditor(props: {
 export function ModelEditor(props: {
     notebook: Notebook<ModelJudgment>;
     modifyNotebook: (f: (d: Notebook<ModelJudgment>) => void) => void;
+    ref?: (ref: NotebookEditorRef<ModelJudgment>) => void;
 }) {
     const objectNameMap = createMemo<IndexedMap<ObjectId,string>>(() => {
         const map = new Map<ObjectId,string>();
@@ -161,7 +162,8 @@ export function ModelEditor(props: {
     });
 
     return (
-        <NotebookEditor notebook={props.notebook}
+        <NotebookEditor ref={props.ref}
+            notebook={props.notebook}
             modifyNotebook={props.modifyNotebook}
             formalCellEditor={ModelJudgmentEditor}
             objectNameMap={objectNameMap()}/>

@@ -1,9 +1,10 @@
-import { Component, createSignal, For, splitProps } from "solid-js";
+import { Component, createSignal, For, onMount, splitProps } from "solid-js";
 import { Dynamic } from "solid-js/web";
-import { Notebook } from "../model/notebook";
+import { Cell, Notebook } from "../model/notebook";
 import { InlineInput } from "./input";
 
 import "./notebook_editor.css";
+
 
 // Actions that can be invoked *within* a cell editor but affect the overall
 // notebook state.
@@ -39,18 +40,35 @@ export type FormalCellEditorProps<T> = {
     actions: CellActions;
 }
 
+
+export type NotebookEditorRef<T> = {
+    pushCell: (cell: Cell<T>) => void;
+};
+
 export function NotebookEditor<T, Props extends FormalCellEditorProps<T>>(allProps: {
     notebook: Notebook<T>;
     modifyNotebook: (f: (d: Notebook<T>) => void) => void;
     formalCellEditor: Component<Props>;
+    ref?: (ref: NotebookEditorRef<T>) => void;
 } & {
     [K in Exclude<keyof Props, keyof FormalCellEditorProps<T>>]: Props[K];
 }) {
     const [props, otherProps] = splitProps(allProps, [
-        "notebook", "modifyNotebook", "formalCellEditor"
+        "notebook", "modifyNotebook", "formalCellEditor", "ref",
     ]);
 
-    const [activeCell, setActiveCell] = createSignal(0, { equals: false });
+    const [activeCell, setActiveCell] = createSignal(-1, { equals: false });
+
+    onMount(() => {
+        props.ref?.({
+            pushCell: (cell: Cell<T>) => {
+                props.modifyNotebook((nb) => {
+                    nb.cells.push(cell);
+                    setActiveCell(nb.cells.length - 1);
+                });
+            },
+        });
+    });
 
     return (
         <div id="notebook">
