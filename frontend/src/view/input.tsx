@@ -3,19 +3,18 @@ import { createEffect, createSignal } from "solid-js";
 import "./input.css";
 
 
-export enum InputBoundary {
-    Top = "TOP",
-    Bottom = "BOTTOM",
-    Left = "LEFT",
-    Right = "RIGHT",
-}
-
-// Optional props for inline input component.
+// Optional props for `InlineInput` component.
 export type InlineInputOptions = {
     ref?: HTMLInputElement;
     placeholder?: string;
-    delete?: (backward: boolean) => void;
-    exit?: ((where: InputBoundary) => void);
+
+    deleteBackward?: () => void;
+    deleteForward?: () => void;
+
+    exitUp?: () => void;
+    exitDown?: () => void;
+    exitLeft?: () => void;
+    exitRight?: () => void;
 }
 
 export function InlineInput(props: {
@@ -50,20 +49,22 @@ export function InlineInput(props: {
         }}
         onKeyDown={(evt) => {
             const value = evt.currentTarget.value;
-            if (props.delete && evt.key === "Backspace" && value === "") {
-                props.delete(true);
-            } else if (props.delete && evt.key === "Delete" && value === "") {
-                props.delete(false);
-            } else if (props.exit && evt.key === "ArrowLeft" &&
+            if (props.deleteBackward && evt.key === "Backspace" &&
+                value === "") {
+                props.deleteBackward();
+            } else if (props.deleteForward && evt.key === "Delete" &&
+                       value === "") {
+                props.deleteForward();
+            } else if (props.exitLeft && evt.key === "ArrowLeft" &&
                        evt.currentTarget.selectionEnd == 0) {
-                props.exit(InputBoundary.Left);
-            } else if (props.exit && evt.key === "ArrowRight" &&
+                props.exitLeft();
+            } else if (props.exitRight && evt.key === "ArrowRight" &&
                        evt.currentTarget.selectionStart == value.length) {
-                props.exit(InputBoundary.Right);
-            } else if (props.exit && evt.key === "ArrowUp") {
-                props.exit(InputBoundary.Top);
-            } else if (props.exit && evt.key === "ArrowDown") {
-                props.exit(InputBoundary.Bottom);
+                props.exitRight();
+            } else if (props.exitUp && evt.key === "ArrowUp") {
+                props.exitUp();
+            } else if (props.exitDown && evt.key === "ArrowDown") {
+                props.exitDown();
             } else {
                 return;
             }

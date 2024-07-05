@@ -5,7 +5,7 @@ import { IndexedMap, indexMap } from "../util/indexed_map";
 import { ModelJudgment, MorphismDecl, ObjectDecl, ObjectId } from "../model/model_judgments";
 import { Notebook } from "../model/notebook";
 import { CellActions, NotebookEditor } from "./notebook_editor";
-import { InlineInput, InlineInputOptions, InputBoundary } from "./input";
+import { InlineInput, InlineInputOptions } from "./input";
 
 import "./model_editor.css";
 
@@ -28,16 +28,10 @@ function ObjectDeclEditor(props: {
             setText={(text) => {
                 props.modifyObject((ob) => (ob.name = text));
             }}
-            delete={(backward) => {
-                backward ? props.actions.deleteBackward() :
-                    props.actions.deleteForward();
-            }}
-            exit={(where) => {
-                switch (where) {
-                    case InputBoundary.Top: return props.actions.activateAbove();
-                    case InputBoundary.Bottom: return props.actions.activateBelow();
-                }
-            }}
+            deleteBackward={props.actions.deleteBackward}
+            deleteForward={props.actions.deleteForward}
+            exitUp={props.actions.activateAbove}
+            exitDown={props.actions.activateBelow}
         />
     </div>;
 }
@@ -95,17 +89,11 @@ function MorphismDeclEditor(props: {
             setText={(text) => {
                 props.modifyMorphism((mor) => (mor.name = text));
             }}
-            delete={(backward) => {
-                backward ? props.actions.deleteBackward() :
-                    props.actions.deleteForward();
-            }}
-            exit={(where) => {
-                switch (where) {
-                    case InputBoundary.Top: return props.actions.activateAbove();
-                    case InputBoundary.Bottom: return props.actions.activateBelow();
-                    case InputBoundary.Right: return domRef.focus();
-                }
-            }}
+            deleteBackward={props.actions.deleteBackward}
+            deleteForward={props.actions.deleteForward}
+            exitUp={props.actions.activateAbove}
+            exitDown={props.actions.activateBelow}
+            exitRight={() => domRef.focus()}
         />
         <span>:</span>
         <ObjectIdInput ref={domRef} placeholder="..."
@@ -114,13 +102,9 @@ function MorphismDeclEditor(props: {
                 props.modifyMorphism((mor) => (mor.dom = id));
             }}
             objectNameMap={props.objectNameMap}
-            delete={(backward) => { if (backward) nameRef.focus()}}
-            exit={(where) => {
-                switch (where) {
-                    case InputBoundary.Left: return nameRef.focus();
-                    case InputBoundary.Right: return codRef.focus();
-                }
-            }}
+            deleteBackward={() => nameRef.focus()}
+            exitLeft={() => nameRef.focus()}
+            exitRight={() => codRef.focus()}
         />
         <span>&LongRightArrow;</span>
         <ObjectIdInput ref={codRef} placeholder="..."
@@ -129,12 +113,8 @@ function MorphismDeclEditor(props: {
                 props.modifyMorphism((mor) => (mor.cod = id));
             }}
             objectNameMap={props.objectNameMap}
-            delete={(backward) => { if (backward) domRef.focus()}}
-            exit={(where) => {
-                switch (where) {
-                    case InputBoundary.Left: return domRef.focus();
-                }
-            }}
+            deleteBackward={() => domRef.focus()}
+            exitLeft={() => domRef.focus()}
         />
     </div>;
 }
