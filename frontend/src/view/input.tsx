@@ -14,7 +14,7 @@ export enum InputBoundary {
 export type InlineInputOptions = {
     ref?: HTMLInputElement;
     placeholder?: string;
-    delete?: () => void;
+    delete?: (backward: boolean) => void;
     exit?: ((where: InputBoundary) => void);
 }
 
@@ -51,14 +51,23 @@ export function InlineInput(props: {
         onKeyDown={(evt) => {
             const value = evt.currentTarget.value;
             if (props.delete && evt.key === "Backspace" && value === "") {
-                props.delete();
+                props.delete(true);
+            } else if (props.delete && evt.key === "Delete" && value === "") {
+                props.delete(false);
             } else if (props.exit && evt.key === "ArrowLeft" &&
                        evt.currentTarget.selectionEnd == 0) {
                 props.exit(InputBoundary.Left);
             } else if (props.exit && evt.key === "ArrowRight" &&
                        evt.currentTarget.selectionStart == value.length) {
                 props.exit(InputBoundary.Right);
+            } else if (props.exit && evt.key === "ArrowUp") {
+                props.exit(InputBoundary.Top);
+            } else if (props.exit && evt.key === "ArrowDown") {
+                props.exit(InputBoundary.Bottom);
+            } else {
+                return;
             }
+            evt.preventDefault();
         }}
     ></input>;
 }

@@ -1,10 +1,10 @@
-import { createMemo, onMount, splitProps } from "solid-js";
+import { createEffect, createMemo, splitProps } from "solid-js";
 import { Dynamic } from "solid-js/web";
 
 import { IndexedMap, indexMap } from "../util/indexed_map";
 import { ModelJudgment, MorphismDecl, ObjectDecl, ObjectId } from "../model/model_judgments";
 import { Notebook } from "../model/notebook";
-import { NotebookEditor } from "./notebook_editor";
+import { CellActions, NotebookEditor } from "./notebook_editor";
 import { InlineInput, InlineInputOptions, InputBoundary } from "./input";
 
 import "./model_editor.css";
@@ -13,10 +13,14 @@ import "./model_editor.css";
 function ObjectDeclEditor(props: {
     object: ObjectDecl,
     modifyObject: (f: (decl: ObjectDecl) => void) => void;
-    deleteSelf: () => void;
+    isActive: boolean;
+    actions: CellActions;
 }) {
     let nameRef!: HTMLInputElement;
-    onMount(() => nameRef.focus());
+
+    createEffect(() => {
+        props.isActive && nameRef.focus();
+    });
 
     return <div class="model-judgment object-declaration">
         <InlineInput ref={nameRef} placeholder="Unnamed"
@@ -24,7 +28,16 @@ function ObjectDeclEditor(props: {
             setText={(text) => {
                 props.modifyObject((ob) => (ob.name = text));
             }}
-            delete={props.deleteSelf}
+            delete={(backward) => {
+                backward ? props.actions.deleteBackward() :
+                    props.actions.deleteForward();
+            }}
+            exit={(where) => {
+                switch (where) {
+                    case InputBoundary.Top: return props.actions.activateAbove();
+                    case InputBoundary.Bottom: return props.actions.activateBelow();
+                }
+            }}
         />
     </div>;
 }
@@ -64,13 +77,17 @@ function ObjectIdInput(allProps: {
 function MorphismDeclEditor(props: {
     morphism: MorphismDecl;
     modifyMorphism: (f: (decl: MorphismDecl) => void) => void;
-    deleteSelf: () => void;
+    isActive: boolean;
+    actions: CellActions;
     objectNameMap: IndexedMap<ObjectId,string>;
 }) {
     let nameRef!: HTMLInputElement;
     let domRef!: HTMLInputElement;
     let codRef!: HTMLInputElement;
-    onMount(() => nameRef.focus());
+
+    createEffect(() => {
+        props.isActive && nameRef.focus();
+    });
 
     return <div class="model-judgment morphism-declaration">
         <InlineInput ref={nameRef} placeholder="Unnamed"
@@ -78,9 +95,14 @@ function MorphismDeclEditor(props: {
             setText={(text) => {
                 props.modifyMorphism((mor) => (mor.name = text));
             }}
-            delete={props.deleteSelf}
+            delete={(backward) => {
+                backward ? props.actions.deleteBackward() :
+                    props.actions.deleteForward();
+            }}
             exit={(where) => {
                 switch (where) {
+                    case InputBoundary.Top: return props.actions.activateAbove();
+                    case InputBoundary.Bottom: return props.actions.activateBelow();
                     case InputBoundary.Right: return domRef.focus();
                 }
             }}
@@ -92,7 +114,7 @@ function MorphismDeclEditor(props: {
                 props.modifyMorphism((mor) => (mor.dom = id));
             }}
             objectNameMap={props.objectNameMap}
-            delete={() => nameRef.focus()}
+            delete={(backward) => { if (backward) nameRef.focus()}}
             exit={(where) => {
                 switch (where) {
                     case InputBoundary.Left: return nameRef.focus();
@@ -107,7 +129,7 @@ function MorphismDeclEditor(props: {
                 props.modifyMorphism((mor) => (mor.cod = id));
             }}
             objectNameMap={props.objectNameMap}
-            delete={() => domRef.focus()}
+            delete={(backward) => { if (backward) domRef.focus()}}
             exit={(where) => {
                 switch (where) {
                     case InputBoundary.Left: return domRef.focus();
@@ -120,7 +142,8 @@ function MorphismDeclEditor(props: {
 function ModelJudgmentEditor(props: {
     content: ModelJudgment;
     modifyContent: (f: (content: ModelJudgment) => void) => void;
-    deleteSelf: () => void;
+    isActive: boolean;
+    actions: CellActions;
     objectNameMap: IndexedMap<ObjectId,string>;
 }) {
     const editors = {
@@ -129,14 +152,14 @@ function ModelJudgmentEditor(props: {
             modifyObject={(f) => props.modifyContent(
                 (content) => f(content as ObjectDecl)
             )}
-            deleteSelf={props.deleteSelf}
+            isActive={props.isActive} actions={props.actions}
         />,
         morphism: () => <MorphismDeclEditor
             morphism={props.content as MorphismDecl}
             modifyMorphism={(f) => props.modifyContent(
                 (content) => f(content as MorphismDecl)
             )}
-            deleteSelf={props.deleteSelf}
+            isActive={props.isActive} actions={props.actions}
             objectNameMap={props.objectNameMap}
         />,
     };
