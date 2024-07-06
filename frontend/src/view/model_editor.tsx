@@ -1,4 +1,4 @@
-import { createEffect, createMemo, splitProps } from "solid-js";
+import { createEffect, createMemo, createSignal, splitProps } from "solid-js";
 import { Dynamic } from "solid-js/web";
 
 import { IndexedMap, indexMap } from "../util/indexed_map";
@@ -45,24 +45,29 @@ function ObjectIdInput(allProps: {
         "objectId", "setObjectId", "objectNameMap",
     ]);
 
-    const displayText = (): string => {
-        let text = "";
+    const [text, setText] = createSignal("");
+
+    createEffect(() => {
+        let name = "";
         if (props.objectId) {
-            text = props.objectNameMap.map.get(props.objectId) || "";
+            name = props.objectNameMap.map.get(props.objectId) || "";
         }
-        return text;
-    };
+        setText(name);
+    });
 
     return <InlineInput
-        text={displayText()}
+        text={text()}
         setText={(text) => {
-            let id = null;
             const possibleIds = props.objectNameMap.index.get(text);
             if (possibleIds && possibleIds.length > 0) {
                 // TODO: Warn the user when the names are not unique.
-                id = possibleIds[0];
+                props.setObjectId(possibleIds[0]);
+            } else if (text === "") {
+                // To avoid erasing incompletely entered text, only reset the ID
+                // to null when the text is also empty.
+                props.setObjectId(null);
             }
-            props.setObjectId(id);
+            setText(text);
         }}
         {...inputProps}
     />;
