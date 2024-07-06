@@ -1,5 +1,6 @@
 import { Component, createSignal, For, onMount, splitProps } from "solid-js";
 import { Dynamic } from "solid-js/web";
+
 import { Cell, Notebook } from "../model/notebook";
 import { InlineInput } from "./input";
 
@@ -96,28 +97,32 @@ export function NotebookEditor<T, Props extends FormalCellEditorProps<T>>(allPro
                     }
 
                     const editors = {
-                        markup: () => <MarkupCellEditor
-                            content={cell.content as string}
-                            setContent={(content) => {
-                                props.modifyNotebook((nb) => {
-                                    nb.cells[i()].content = content;
-                                });
-                            }}
-                            isActive={activeCell() == i()}
-                            actions={cellActions}
-                        />,
-                        formal: () => <props.formalCellEditor
-                            content={cell.content}
-                            modifyContent={(f) => {
-                                props.modifyNotebook((nb) => {
-                                    f(nb.cells[i()].content as T);
-                                });
-                            }}
-                            isActive={activeCell() == i()}
-                            actions={cellActions}
-                            // XXX: How to convince TypeScript that this works?
-                            {...otherProps as any}
-                        />,
+                        markup: () => <div class="cell markup-cell">
+                            <MarkupCellEditor
+                                content={cell.content as string}
+                                setContent={(content) => {
+                                    props.modifyNotebook((nb) => {
+                                        nb.cells[i()].content = content;
+                                    });
+                                }}
+                                isActive={activeCell() == i()}
+                                actions={cellActions}
+                            />
+                        </div>,
+                        formal: () => <div class="cell formal-cell">
+                            <props.formalCellEditor
+                                content={cell.content}
+                                modifyContent={(f) => {
+                                    props.modifyNotebook((nb) => {
+                                        f(nb.cells[i()].content as T);
+                                    });
+                                }}
+                                isActive={activeCell() == i()}
+                                actions={cellActions}
+                                // XXX: How to convince TypeScript that this works?
+                                {...otherProps as any}
+                            />
+                        </div>,
                     };
                     return <Dynamic component={editors[cell.tag]} />;
                 }}

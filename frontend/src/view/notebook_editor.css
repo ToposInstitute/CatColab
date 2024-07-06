@@ -2,3 +2,12 @@
     font-size: 3em;
     line-height: 1.1;
 }
+
+.formal-cell {
+    font-size: 1.3rem;
+    line-height: 1.1;
+}
+
+.formal-cell input {
+    font-family: var(--mono-font);
+}
