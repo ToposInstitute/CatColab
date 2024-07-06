@@ -7,6 +7,10 @@
     border: 1px solid transparent;
 }
 
+.inline-input.invalid {
+    border-bottom: 3px solid indianred;
+}
+
 .inline-input:hover {
     border: 1px solid lightgray;
 }

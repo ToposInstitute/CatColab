@@ -69,6 +69,8 @@ function ObjectIdInput(allProps: {
             }
             setText(text);
         }}
+        invalid={text() !== (props.objectId ?
+            props.objectNameMap.map.get(props.objectId) : "")}
         {...inputProps}
     />;
 }

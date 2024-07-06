@@ -7,6 +7,7 @@ import "./input.css";
 export type InlineInputOptions = {
     ref?: HTMLInputElement;
     placeholder?: string;
+    invalid?: boolean;
 
     deleteBackward?: () => void;
     deleteForward?: () => void;
@@ -39,6 +40,7 @@ export function InlineInput(props: {
 
     return <input class="inline-input" type="text" size="1"
         ref={props.ref}
+        classList={{ invalid: props.invalid }}
         style={{ width: width() + 'ch' }}
         value={props.text}
         placeholder={props.placeholder}
