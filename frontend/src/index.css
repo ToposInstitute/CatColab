@@ -11,12 +11,9 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #747bff;
+#root {
+  max-width: 1280px;
+  padding: 1rem 3rem;
 }
 
 body {

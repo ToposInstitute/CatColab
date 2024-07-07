@@ -9,9 +9,6 @@ import { ModelJudgment, newMorphismDecl, newObjectDecl } from "./model/model_jud
 import { NotebookEditorRef } from "./view/notebook_editor";
 import { ModelEditor } from "./view/model_editor";
 
-import './App.css';
-
-
 
 function App() {
   const init: Notebook<ModelJudgment> = {

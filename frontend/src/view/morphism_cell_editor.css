@@ -2,16 +2,16 @@
     display: flex;
     flex-direction: row;
     align-items: center;
+    column-gap: 1ex;
 }
 
 .morphism-decl-arrow {
     background: black;
-    min-width: 2ex;
+    min-width: 1ex;
     height: 2px;
     border-radius: 3px;
-    /* FIXME: Calculate from font size. */
     margin-top: 0.3em;
-    margin-bottom: 1.6em;
+    margin-bottom: calc(var(--formal-font-size) + 0.3em);
     position: relative;
 
     &:before, &:after {

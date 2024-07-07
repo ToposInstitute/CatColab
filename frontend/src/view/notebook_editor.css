@@ -4,7 +4,9 @@
 }
 
 .formal-cell {
-    font-size: 1.3rem;
+    --formal-font-size: 1.3em;
+
+    font-size: var(--formal-font-size);
     line-height: 1.1;
 }
 
