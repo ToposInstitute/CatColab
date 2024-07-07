@@ -18,7 +18,7 @@ export function ObjectDeclEditor(props: {
         props.isActive && nameRef.focus();
     });
 
-    return <div class="model-judgment object-declaration">
+    return <div class="object-decl">
         <InlineInput ref={nameRef} placeholder="Unnamed"
             text={props.object.name}
             setText={(text) => {

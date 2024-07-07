@@ -24,7 +24,18 @@ export function MorphismDeclEditor(props: {
         props.isActive && nameRef.focus();
     });
 
-    return <div class="model-judgment morphism-declaration">
+    return <div class="morphism-decl">
+        <ObjectIdInput ref={domRef} placeholder="..."
+            objectId={props.morphism.dom}
+            setObjectId={(id) => {
+                props.modifyMorphism((mor) => (mor.dom = id));
+            }}
+            objectNameMap={props.objectNameMap}
+            deleteForward={() => nameRef.focus()}
+            exitRight={() => nameRef.focus()}
+        />
+        <div class="morphism-decl-name-container">
+        <div class="morphism-decl-name">
         <InlineInput ref={nameRef} placeholder="Unnamed"
             text={props.morphism.name}
             setText={(text) => {
@@ -34,28 +45,20 @@ export function MorphismDeclEditor(props: {
             deleteForward={props.actions.deleteForward}
             exitUp={props.actions.activateAbove}
             exitDown={props.actions.activateBelow}
-            exitRight={() => domRef.focus()}
-        />
-        <span>:</span>
-        <ObjectIdInput ref={domRef} placeholder="..."
-            objectId={props.morphism.dom}
-            setObjectId={(id) => {
-                props.modifyMorphism((mor) => (mor.dom = id));
-            }}
-            objectNameMap={props.objectNameMap}
-            deleteBackward={() => nameRef.focus()}
-            exitLeft={() => nameRef.focus()}
+            exitLeft={() => domRef.focus()}
             exitRight={() => codRef.focus()}
         />
-        <span>&LongRightArrow;</span>
+        </div>
+        <div class="morphism-decl-arrow"></div>
+        </div>
         <ObjectIdInput ref={codRef} placeholder="..."
             objectId={props.morphism.cod}
             setObjectId={(id) => {
                 props.modifyMorphism((mor) => (mor.cod = id));
             }}
             objectNameMap={props.objectNameMap}
-            deleteBackward={() => domRef.focus()}
-            exitLeft={() => domRef.focus()}
+            deleteBackward={() => nameRef.focus()}
+            exitLeft={() => nameRef.focus()}
         />
     </div>;
 }

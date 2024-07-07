@@ -1,3 +1,37 @@
-.morphism-declaration span {
-    padding: 0 1ex;
+.morphism-decl {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.morphism-decl-arrow {
+    background: black;
+    min-width: 2ex;
+    height: 2px;
+    border-radius: 3px;
+    /* FIXME: Calculate from font size. */
+    margin-top: 0.3em;
+    margin-bottom: 1.6em;
+    position: relative;
+
+    &:before, &:after {
+        content: "";
+        background: black;
+        position: absolute;
+        height: 2px;
+        width: 10px;
+        border-radius: 3px;
+    }
+
+    &:before {
+        right: -1px;
+        bottom: -3px;
+        transform: rotate(-45deg);
+    }
+
+    &:after {
+        right: -1px;
+        top: -3px;
+        transform: rotate(45deg);
+    }
 }
