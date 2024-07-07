@@ -3,13 +3,13 @@ import { createEffect } from "solid-js";
 import { IndexedMap } from "../util/indexed_map";
 import { MorphismDecl, ObjectId } from "../model/model_judgments";
 import { CellActions } from "./notebook_editor";
-import { ObjectIdInput} from "./object_editor";
+import { ObjectIdInput} from "./object_cell_editor";
 import { InlineInput } from "./input";
 
-import "./morphism_editor.css";
+import "./morphism_cell_editor.css";
 
 
-export function MorphismDeclEditor(props: {
+export function MorphismCellEditor(props: {
     morphism: MorphismDecl;
     modifyMorphism: (f: (decl: MorphismDecl) => void) => void;
     isActive: boolean;

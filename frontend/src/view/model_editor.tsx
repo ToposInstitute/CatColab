@@ -5,11 +5,12 @@ import { IndexedMap, indexMap } from "../util/indexed_map";
 import { ModelJudgment, MorphismDecl, ObjectDecl, ObjectId } from "../model/model_judgments";
 import { Notebook } from "../model/notebook";
 import { CellActions, NotebookEditor, NotebookEditorRef } from "./notebook_editor";
-import { ObjectDeclEditor } from "./object_editor";
-import { MorphismDeclEditor } from "./morphism_editor";
+import { ObjectCellEditor } from "./object_cell_editor";
+import { MorphismCellEditor } from "./morphism_cell_editor";
 
 
-export function ModelJudgmentEditor(props: {
+// Editor for a cell in a model of a discrete double theory.
+export function ModelCellEditor(props: {
     content: ModelJudgment;
     modifyContent: (f: (content: ModelJudgment) => void) => void;
     isActive: boolean;
@@ -17,14 +18,14 @@ export function ModelJudgmentEditor(props: {
     objectNameMap: IndexedMap<ObjectId,string>;
 }) {
     const editors = {
-        object: () => <ObjectDeclEditor
+        object: () => <ObjectCellEditor
             object={props.content as ObjectDecl}
             modifyObject={(f) => props.modifyContent(
                 (content) => f(content as ObjectDecl)
             )}
             isActive={props.isActive} actions={props.actions}
         />,
-        morphism: () => <MorphismDeclEditor
+        morphism: () => <MorphismCellEditor
             morphism={props.content as MorphismDecl}
             modifyMorphism={(f) => props.modifyContent(
                 (content) => f(content as MorphismDecl)
@@ -36,6 +37,7 @@ export function ModelJudgmentEditor(props: {
     return <Dynamic component={editors[props.content.tag]} />;
 }
 
+// Notebook-based editor for a model of a discrete double theory.
 export function ModelEditor(props: {
     notebook: Notebook<ModelJudgment>;
     modifyNotebook: (f: (d: Notebook<ModelJudgment>) => void) => void;
@@ -55,7 +57,7 @@ export function ModelEditor(props: {
         <NotebookEditor ref={props.ref}
             notebook={props.notebook}
             modifyNotebook={props.modifyNotebook}
-            formalCellEditor={ModelJudgmentEditor}
+            formalCellEditor={ModelCellEditor}
             objectNameMap={objectNameMap()}/>
     );
 }

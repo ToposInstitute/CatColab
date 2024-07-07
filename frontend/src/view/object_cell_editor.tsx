@@ -6,7 +6,7 @@ import { CellActions } from "./notebook_editor";
 import { InlineInput, InlineInputOptions } from "./input";
 
 
-export function ObjectDeclEditor(props: {
+export function ObjectCellEditor(props: {
     object: ObjectDecl,
     modifyObject: (f: (decl: ObjectDecl) => void) => void;
     isActive: boolean;
