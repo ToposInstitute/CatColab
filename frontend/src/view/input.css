@@ -1,5 +1,6 @@
 .inline-input {
     display: inline;
+    background: transparent;
     border: none;
     outline: none;
     font-size: inherit;
@@ -13,5 +14,5 @@
 }
 
 .inline-input:hover {
-    border: 1px solid lightgray;
+    border: 1px solid light-dark(lightgray, darkgray);
 }

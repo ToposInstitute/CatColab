@@ -6,7 +6,7 @@
 }
 
 .morphism-decl-arrow {
-    background: black;
+    background: light-dark(var(--light-color), var(--dark-color));
     min-width: 1ex;
     height: 2px;
     border-radius: 3px;
@@ -16,7 +16,7 @@
 
     &:before, &:after {
         content: "";
-        background: black;
+        background: light-dark(var(--light-color), var(--dark-color));
         position: absolute;
         height: 2px;
         width: 10px;
