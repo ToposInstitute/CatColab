@@ -72,15 +72,15 @@ export function NotebookEditor<T, Props extends FormalCellEditorProps<T>>(allPro
     });
 
     return (
-        <div id="notebook">
-            <div id="notebook-title">
+        <div class="notebook">
+            <div class="notebook-title">
                 <InlineInput text={props.notebook.name}
                 setText={(text) => {
                     props.modifyNotebook((nb) => (nb.name = text));
                 }}
                 />
             </div>
-            <ul>
+            <ul class="notebook-cells">
             <For each={props.notebook.cells}>
                 {(cell, i) => {
                     const cellActions: CellActions = {
@@ -124,7 +124,9 @@ export function NotebookEditor<T, Props extends FormalCellEditorProps<T>>(allPro
                             />
                         </div>,
                     };
-                    return <Dynamic component={editors[cell.tag]} />;
+                    return <li>
+                        <Dynamic component={editors[cell.tag]} />
+                    </li>;
                 }}
             </For>
             </ul>

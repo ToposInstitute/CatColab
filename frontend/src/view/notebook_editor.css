@@ -1,6 +1,11 @@
-#notebook-title input {
+.notebook-title input {
     font-size: 3em;
     line-height: 1.1;
+}
+
+.notebook-cells {
+    list-style: none;
+    padding: 0;
 }
 
 .formal-cell {
