@@ -12,6 +12,8 @@ export type InlineInputOptions = {
     deleteBackward?: () => void;
     deleteForward?: () => void;
 
+    exitBackward?: () => void;
+    exitForward?: () => void;
     exitUp?: () => void;
     exitDown?: () => void;
     exitLeft?: () => void;
@@ -57,6 +59,10 @@ export function InlineInput(props: {
             } else if (props.deleteForward && evt.key === "Delete" &&
                        value === "") {
                 props.deleteForward();
+            } else if (props.exitBackward && evt.key === "Tab" && evt.shiftKey) {
+                props.exitBackward();
+            } else if (props.exitForward && evt.key === "Tab" && !evt.shiftKey) {
+                props.exitForward();
             } else if (props.exitLeft && evt.key === "ArrowLeft" &&
                        evt.currentTarget.selectionEnd == 0) {
                 props.exitLeft();

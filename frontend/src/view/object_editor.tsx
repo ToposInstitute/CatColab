@@ -15,7 +15,10 @@ export function ObjectDeclEditor(props: {
     let nameRef!: HTMLInputElement;
 
     createEffect(() => {
-        props.isActive && nameRef.focus();
+        if (props.isActive) {
+            nameRef.focus();
+            nameRef.selectionStart = nameRef.selectionEnd = nameRef.value.length;
+        }
     });
 
     return <div class="object-decl">
@@ -26,6 +29,8 @@ export function ObjectDeclEditor(props: {
             }}
             deleteBackward={props.actions.deleteBackward}
             deleteForward={props.actions.deleteForward}
+            exitBackward={props.actions.activateAbove}
+            exitForward={props.actions.activateBelow}
             exitUp={props.actions.activateAbove}
             exitDown={props.actions.activateBelow}
         />

@@ -21,7 +21,10 @@ export function MorphismDeclEditor(props: {
     let codRef!: HTMLInputElement;
 
     createEffect(() => {
-        props.isActive && nameRef.focus();
+        if (props.isActive) {
+            nameRef.focus();
+            nameRef.selectionStart = nameRef.selectionEnd = nameRef.value.length;
+        }
     });
 
     return <div class="morphism-decl">
@@ -32,6 +35,8 @@ export function MorphismDeclEditor(props: {
             }}
             objectNameMap={props.objectNameMap}
             deleteForward={() => nameRef.focus()}
+            exitBackward={() => nameRef.focus()}
+            exitForward={() => codRef.focus()}
             exitRight={() => nameRef.focus()}
         />
         <div class="morphism-decl-name-container">
@@ -43,6 +48,8 @@ export function MorphismDeclEditor(props: {
             }}
             deleteBackward={props.actions.deleteBackward}
             deleteForward={props.actions.deleteForward}
+            exitBackward={props.actions.activateAbove}
+            exitForward={() => domRef.focus()}
             exitUp={props.actions.activateAbove}
             exitDown={props.actions.activateBelow}
             exitLeft={() => domRef.focus()}
@@ -58,6 +65,8 @@ export function MorphismDeclEditor(props: {
             }}
             objectNameMap={props.objectNameMap}
             deleteBackward={() => nameRef.focus()}
+            exitBackward={() => domRef.focus()}
+            exitForward={props.actions.activateBelow}
             exitLeft={() => nameRef.focus()}
         />
     </div>;
