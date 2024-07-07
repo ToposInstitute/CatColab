@@ -6,7 +6,7 @@
     font-size: inherit;
     min-width: 1ex;
     height: fit-content;
-    border: 1px solid transparent;
+    border: 2px solid transparent;
 }
 
 .inline-input.invalid {
@@ -14,5 +14,12 @@
 }
 
 .inline-input:hover {
-    border: 1px solid light-dark(lightgray, darkgray);
+    border: 2px solid darkgray;
+
+    /* Source: https://stackoverflow.com/a/61913549 */
+    --corner: 8px;
+    -webkit-mask:
+        conic-gradient(at var(--corner) var(--corner),#0000 75%,#000 0)
+        0 0/calc(100% - var(--corner)) calc(100% - var(--corner)),
+        linear-gradient(#000 0 0) content-box;
 }
