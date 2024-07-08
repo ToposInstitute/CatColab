@@ -34,12 +34,15 @@ function App() {
 
   let editorRef!: NotebookEditorRef<ModelJudgment>;
 
+  // On Mac, the Alt/Option key remaps keys, whereas on other platforms Control
+  // tends to be already bound in other shortcuts.
+  const modifier = navigator.userAgent.includes("Mac") ? "Control" : "Alt";
   createShortcut(
-    ["Alt", "0"],
+    [modifier, "0"],
     () => editorRef.pushCell(newFormalCell(newObjectDecl("default"))),
   );
   createShortcut(
-    ["Alt", "1"],
+    [modifier, "1"],
     () => editorRef.pushCell(newFormalCell(newMorphismDecl("default"))),
   );
 
