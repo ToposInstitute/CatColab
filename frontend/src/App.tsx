@@ -3,7 +3,7 @@ import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-index
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
 import { createShortcut } from "@solid-primitives/keyboard";
 
-import { createDoc } from "./util/automerge-solid";
+import { useAutomergeDoc } from "./util/automerge_solid";
 import { newFormalCell, Notebook } from "./model/notebook";
 import { ModelJudgment, newMorphismDecl, newObjectDecl } from "./model/model_judgments";
 import { NotebookEditorRef } from "./view/notebook_editor";
@@ -30,7 +30,7 @@ function App() {
     document.location.hash = handle.url;
   }
 
-  const [notebook, modifyNotebook] = createDoc(handle, init);
+  const [notebook, modifyNotebook] = useAutomergeDoc(() => handle, init);
 
   let editorRef!: NotebookEditorRef<ModelJudgment>;
 
