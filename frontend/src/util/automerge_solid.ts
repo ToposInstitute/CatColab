@@ -1,5 +1,5 @@
 import { DocHandle, DocHandleChangePayload } from "@automerge/automerge-repo";
-import { createEffect, onCleanup } from "solid-js";
+import { Accessor, createEffect, createSignal, onCleanup } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 
 /** Create Solid-compatible getter/setter from an Automerge document handle.
@@ -8,7 +8,7 @@ Internally, a Solid Store is used along with the
 [`reconcile`](https://www.solidjs.com/tutorial/stores_immutable) function to
 diff the data and thus avoid re-rendering the whole DOM.
  */
-export function useAutomergeDoc<T extends object>(
+export function useDoc<T extends object>(
     getHandle: () => DocHandle<T>,
     init: T,
 ): [() => T, (f: (d: T) => void) => void] {
@@ -39,4 +39,22 @@ export function useAutomergeDoc<T extends object>(
     }
 
     return [getDoc, changeDoc];
+}
+
+/** Create boolean signal for whether an Automerge document handle is ready.
+ */
+export function useDocHandleReady(
+    getHandle: () => DocHandle<unknown>,
+): Accessor<boolean> {
+    const [isReady, setIsReady] = createSignal<boolean>(false);
+
+    createEffect(() => {
+        setIsReady(false);
+
+        getHandle().whenReady().then(() => {
+            setIsReady(true);
+        });
+    });
+
+    return isReady;
 }

@@ -1,10 +1,10 @@
-export type MarkupCell = {
-    tag: "markup";
+export type RichTextCell = {
+    tag: "rich-text";
     content: string;
 };
 
-export const newMarkupCell = (): MarkupCell => ({
-    tag: "markup",
+export const newRichTextCell = (): RichTextCell => ({
+    tag: "rich-text",
     content: "",
 });
 
@@ -18,7 +18,7 @@ export const newFormalCell = <T>(content: T): FormalCell<T> => ({
     content: content,
 });
 
-export type Cell<T> = MarkupCell | FormalCell<T>;
+export type Cell<T> = RichTextCell | FormalCell<T>;
 
 export type Notebook<T> = {
     name: string;
