@@ -3,6 +3,8 @@ import { DocHandle, DocHandleChangePayload } from "@automerge/automerge-repo";
 import { AutoMirror } from "@automerge/prosemirror";
 import { EditorState, Plugin, Transaction } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
+import { keymap } from "prosemirror-keymap";
+import { baseKeymap, toggleMark } from "prosemirror-commands";
 import { createEffect, onCleanup } from "solid-js";
 
 import { useDocHandleReady } from "../util/automerge_solid";
@@ -32,8 +34,15 @@ export const AutomergeRichTextEditor = (props: {
         if (!isReady()) { return; }
 
         const autoMirror = new AutoMirror(props.path);
+        const schema = autoMirror.schema;
 
-        const plugins: Plugin[] = [];
+        const plugins: Plugin[] = [
+            keymap({
+                "Mod-b": toggleMark(schema.marks.strong),
+                "Mod-i": toggleMark(schema.marks.em),
+            }),
+            keymap(baseKeymap),
+        ];
         if (props.placeholder) {
             plugins.push(placeholder(props.placeholder));
         }
@@ -41,7 +50,7 @@ export const AutomergeRichTextEditor = (props: {
         let view: EditorView;
         view = new EditorView(editorRef, {
             state: EditorState.create({
-                schema: autoMirror.schema,
+                schema,
                 plugins,
                 doc: autoMirror.initialize(props.handle),
             }),
