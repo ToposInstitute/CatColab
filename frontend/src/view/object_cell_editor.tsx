@@ -3,7 +3,7 @@ import { createEffect, createSignal, splitProps } from "solid-js";
 import { IndexedMap } from "../util/indexed_map";
 import { ObjectDecl, ObjectId } from "../model/model_judgments";
 import { CellActions } from "./notebook_editor";
-import { InlineInput, InlineInputOptions } from "./input";
+import { InlineInput, InlineInputOptions } from "./inline_input";
 
 
 export function ObjectCellEditor(props: {

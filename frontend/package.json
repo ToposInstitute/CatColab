@@ -13,8 +13,13 @@
     "@automerge/automerge-repo": "^1.2.0",
     "@automerge/automerge-repo-network-websocket": "^1.2.0",
     "@automerge/automerge-repo-storage-indexeddb": "^1.2.0",
+    "@automerge/prosemirror": "^0.0.12",
     "@solid-primitives/keyboard": "^1.2.8",
     "newtype-ts": "^0.3.5",
+    "prosemirror-commands": "^1.5.2",
+    "prosemirror-keymap": "^1.2.2",
+    "prosemirror-state": "^1.4.3",
+    "prosemirror-view": "^1.33.8",
     "solid-js": "^1.8.17"
   },
   "devDependencies": {

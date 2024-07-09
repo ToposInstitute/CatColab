@@ -3,8 +3,7 @@ import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-index
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
 import { createShortcut } from "@solid-primitives/keyboard";
 
-import { useAutomergeDoc } from "./util/automerge_solid";
-import { newFormalCell, Notebook } from "./model/notebook";
+import { newFormalCell, newRichTextCell, Notebook } from "./model/notebook";
 import { ModelJudgment, newMorphismDecl, newObjectDecl } from "./model/model_judgments";
 import { NotebookEditorRef } from "./view/notebook_editor";
 import { ModelEditor } from "./view/model_editor";
@@ -30,25 +29,27 @@ function App() {
     document.location.hash = handle.url;
   }
 
-  const [notebook, modifyNotebook] = useAutomergeDoc(() => handle, init);
-
-  let editorRef!: NotebookEditorRef<ModelJudgment>;
+  let notebookRef!: NotebookEditorRef<ModelJudgment>;
 
   // On Mac, the Alt/Option key remaps keys, whereas on other platforms Control
   // tends to be already bound in other shortcuts.
   const modifier = navigator.userAgent.includes("Mac") ? "Control" : "Alt";
   createShortcut(
+    [modifier, "T"],
+    () => notebookRef.pushCell(newRichTextCell()),
+  );
+  createShortcut(
     [modifier, "0"],
-    () => editorRef.pushCell(newFormalCell(newObjectDecl("default"))),
+    () => notebookRef.pushCell(newFormalCell(newObjectDecl("default"))),
   );
   createShortcut(
     [modifier, "1"],
-    () => editorRef.pushCell(newFormalCell(newMorphismDecl("default"))),
+    () => notebookRef.pushCell(newFormalCell(newMorphismDecl("default"))),
   );
 
   return (
-    <ModelEditor notebook={notebook()} modifyNotebook={modifyNotebook}
-        ref={(ref) => {editorRef = ref;}} />
+    <ModelEditor handle={handle} init={init}
+        ref={(ref) => {notebookRef = ref;}} />
   );
 }
 
