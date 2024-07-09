@@ -1,6 +1,7 @@
 import { DocHandle, Prop } from "@automerge/automerge-repo";
-import { Component, createSignal, For, onMount, splitProps } from "solid-js";
+import { Component, createEffect, createSignal, For, onMount, splitProps } from "solid-js";
 import { Dynamic } from "solid-js/web";
+import { EditorView } from "prosemirror-view";
 
 import { Cell, Notebook } from "../model/notebook";
 import { useDoc } from "../util/automerge_solid";
@@ -32,8 +33,18 @@ export function RichTextCellEditor(props: {
     isActive: boolean;
     actions: CellActions,
 }) {
+    const [editorView, setEditorView] = createSignal<EditorView>();
+
+    createEffect(() => {
+        const view = editorView();
+        if (props.isActive && view) {
+            view.focus();
+        }
+    });
+
     return (
-        <RichTextEditor handle={props.handle}
+        <RichTextEditor ref={(view) => setEditorView(view)}
+            handle={props.handle}
             path={[...props.path, "content"]}
             placeholder="…"
             deleteBackward={props.actions.deleteBackward}

@@ -1,11 +1,11 @@
 import { Prop } from "@automerge/automerge";
 import { DocHandle, DocHandleChangePayload } from "@automerge/automerge-repo";
-import { AutoMirror } from "@automerge/prosemirror";
+import { createEffect, onCleanup } from "solid-js";
 import { Command, EditorState, Plugin, Transaction } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
 import { keymap } from "prosemirror-keymap";
 import { baseKeymap, toggleMark } from "prosemirror-commands";
-import { createEffect, onCleanup } from "solid-js";
+import { AutoMirror } from "@automerge/prosemirror";
 
 import { useDocHandleReady } from "../util/automerge_solid";
 
@@ -17,6 +17,7 @@ import "./rich_text_editor.css";
 /** Optional props for `RichTextEditor` component.
  */
 export type RichTextEditorOptions = {
+    ref?: (ref: EditorView) => void;
     placeholder?: string;
 
     deleteBackward?: () => void;
@@ -34,7 +35,7 @@ export const RichTextEditor = (props: {
     handle: DocHandle<unknown>;
     path: Prop[];
 } & RichTextEditorOptions) => {
-    let editorRef!: HTMLDivElement;
+    let editorRoot!: HTMLDivElement;
 
     const isReady = useDocHandleReady(() => props.handle);
 
@@ -64,7 +65,7 @@ export const RichTextEditor = (props: {
         }
 
         let view: EditorView;
-        view = new EditorView(editorRef, {
+        view = new EditorView(editorRoot, {
             state: EditorState.create({
                 schema,
                 plugins,
@@ -76,8 +77,20 @@ export const RichTextEditor = (props: {
                 view.updateState(newState);
             },
         });
+        if (props.ref) {
+            props.ref(view);
+        }
 
         const onPatch = (payload: DocHandleChangePayload<unknown>) => {
+            // XXX: Quit if a higher-level node is being deleted. Otherwise,
+            // `reconcilePatch` can error, a bug in `automerge-prosemirror`.
+            for (const patch of payload.patches) {
+                if (patch.action === "del" &&
+                    patch.path.length < props.path.length) {
+                    return;
+                }
+            }
+
             const newState = autoMirror.reconcilePatch(
                 payload.patchInfo.before,
                 payload.doc,
@@ -94,7 +107,7 @@ export const RichTextEditor = (props: {
         });
     });
 
-    return <div class="editable rich-text-editor" ref={editorRef}></div>;
+    return <div class="editable rich-text-editor" ref={editorRoot}></div>;
 }
 
 
