@@ -1,10 +1,11 @@
 import { createEffect } from "solid-js";
 
 import { IndexedMap } from "../util/indexed_map";
-import { MorphismDecl, ObjectId } from "../model/model_judgments";
-import { CellActions } from "./notebook_editor";
+import { MorphismDecl, ObjectId } from "./types";
+import { CellActions } from "../notebook";
+import { InlineInput } from "../notebook/inline_input";
 import { ObjectIdInput} from "./object_cell_editor";
-import { InlineInput } from "./inline_input";
+
 
 import "./morphism_cell_editor.css";
 

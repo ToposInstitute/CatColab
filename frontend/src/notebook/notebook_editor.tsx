@@ -3,8 +3,8 @@ import { Component, createEffect, createSignal, For, onMount, splitProps } from 
 import { Dynamic } from "solid-js/web";
 import { EditorView } from "prosemirror-view";
 
-import { Cell, CellId, Notebook } from "../model/notebook";
 import { useDoc } from "../util/automerge_solid";
+import { Cell, CellId, Notebook } from "./types";
 import { InlineInput } from "./inline_input";
 import { RichTextEditor } from "./rich_text_editor";
 
@@ -82,9 +82,12 @@ export type NotebookEditorRef<T> = {
 
 A notebook has two types of cells:
 
-1. Rich text cells, managed by Automerge and ProseMirror independently of
-   Solid's own state management
+1. Rich text cells, with state managed by Automerge and ProseMirror
+   independently of Solid's own state management
 2. Formal content cells, with state inside a Solid Store connected to Automerge
+
+Rich text cells are the same in all notebooks, whereas formal cells are handled
+by custom components supplied to the notebook.
  */
 export function NotebookEditor<T, Props extends FormalCellEditorProps<T>>(allProps: {
     handle: DocHandle<Notebook<T>>,

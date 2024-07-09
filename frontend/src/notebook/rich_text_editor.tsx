@@ -56,7 +56,7 @@ export const RichTextEditor = (props: {
         const schema = autoMirror.schema;
 
         const plugins: Plugin[] = [
-            keymap(richTextKeybindings(schema, props)),
+            keymap(richTextEditorKeymap(schema, props)),
             keymap(baseKeymap),
         ];
         if (props.placeholder) {
@@ -109,7 +109,7 @@ export const RichTextEditor = (props: {
     return <div class="editable rich-text-editor" ref={editorRoot}></div>;
 }
 
-function richTextKeybindings(schema: Schema, props: RichTextEditorOptions) {
+function richTextEditorKeymap(schema: Schema, props: RichTextEditorOptions) {
     const bindings: {[key: string]: Command} = {
         "Mod-b": toggleMark(schema.marks.strong),
         "Mod-i": toggleMark(schema.marks.em),

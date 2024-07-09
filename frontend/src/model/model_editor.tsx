@@ -1,13 +1,12 @@
+import { DocHandle } from "@automerge/automerge-repo";
 import { createMemo, createSignal } from "solid-js";
 import { Dynamic } from "solid-js/web";
 
 import { IndexedMap, indexMap } from "../util/indexed_map";
-import { ModelJudgment, MorphismDecl, ObjectDecl, ObjectId } from "../model/model_judgments";
-import { Notebook } from "../model/notebook";
-import { CellActions, NotebookEditor, NotebookEditorRef } from "./notebook_editor";
+import { ModelJudgment, MorphismDecl, ObjectDecl, ObjectId } from "./types";
+import { Notebook, CellActions, NotebookEditor, NotebookEditorRef } from "../notebook";
 import { ObjectCellEditor } from "./object_cell_editor";
 import { MorphismCellEditor } from "./morphism_cell_editor";
-import { DocHandle } from "@automerge/automerge-repo";
 
 
 /** Editor for a cell in a model of a discrete double theory.

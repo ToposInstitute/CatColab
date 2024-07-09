@@ -3,10 +3,8 @@ import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-index
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
 import { createShortcut } from "@solid-primitives/keyboard";
 
-import { newFormalCell, newRichTextCell, Notebook } from "./model/notebook";
-import { ModelJudgment, newMorphismDecl, newObjectDecl } from "./model/model_judgments";
-import { NotebookEditorRef } from "./view/notebook_editor";
-import { ModelEditor } from "./view/model_editor";
+import { newFormalCell, newRichTextCell, Notebook, NotebookEditorRef } from "./notebook";
+import { ModelEditor, ModelJudgment, newMorphismDecl, newObjectDecl } from "./model";
 
 
 function App() {
