@@ -23,6 +23,8 @@ export type RichTextEditorOptions = {
 
     deleteBackward?: () => void;
     deleteForward?: () => void;
+    exitUp?: () => void;
+    exitDown?: () => void;
 };
 
 /** Rich text editor combining Automerge and ProseMirror.
@@ -60,6 +62,12 @@ export const RichTextEditor = (props: {
         }
         if (props.deleteForward) {
             bindings["Delete"] = doIfEmpty(props.deleteForward);
+        }
+        if (props.exitUp) {
+            bindings["ArrowUp"] = doIfAtTop(props.exitUp);
+        }
+        if (props.exitDown) {
+            bindings["ArrowDown"] = doIfAtBottom(props.exitDown);
         }
 
         const plugins: Plugin[] = [
@@ -117,16 +125,50 @@ export const RichTextEditor = (props: {
 }
 
 
-/** ProseMirror command that calls a function if the document is empty.
+/** ProseMirror command invoked if the document is empty.
  */
 function doIfEmpty(callback: (dispatch: (tr: Transaction) => void) => void): Command {
     return (state, dispatch?) => {
         if (hasContent(state)) {
             return false;
         }
-        if (dispatch) {
-            callback(dispatch);
+        dispatch && callback(dispatch);
+        return true;
+    };
+}
+
+/** ProseMirror command invoked if the cursor is at the top of the document.
+ */
+function doIfAtTop(callback: (dispatch: (tr: Transaction) => void) => void): Command {
+    return (state, dispatch?, view?) => {
+        if (!state.selection.empty) {
+            return false;
         }
+        const pos = state.selection.$anchor;
+        if (!(pos.depth === 0 || (pos.depth === 1 && pos.index(0) === 0) &&
+                                  view && view.endOfTextblock("up"))) {
+            return false;
+        }
+        dispatch && callback(dispatch);
+        return true;
+    };
+}
+
+/** ProseMirror command invoked if the cursor is at the bottom of the document.
+ */
+function doIfAtBottom(callback: (dispatch: (tr: Transaction) => void) => void): Command {
+    return (state, dispatch?, view?) => {
+        if (!state.selection.empty) {
+            return false;
+        }
+        /// XXX: Is this logic correct?
+        const pos = state.selection.$anchor;
+        const n = pos.parent.childCount;
+        if (!(pos.depth === 0 || (pos.depth === 1 && pos.index(0) === n-1) &&
+                                  view && view.endOfTextblock("down"))) {
+            return false;
+        }
+        dispatch && callback(dispatch);
         return true;
     };
 }

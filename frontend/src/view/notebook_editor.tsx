@@ -51,6 +51,8 @@ export function RichTextCellEditor(props: {
             placeholder="…"
             deleteBackward={props.actions.deleteBackward}
             deleteForward={props.actions.deleteForward}
+            exitUp={props.actions.activateAbove}
+            exitDown={props.actions.activateBelow}
         />
     );
 }
