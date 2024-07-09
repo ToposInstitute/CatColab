@@ -1,12 +1,14 @@
 import { Prop } from "@automerge/automerge";
 import { DocHandle, DocHandleChangePayload } from "@automerge/automerge-repo";
-import { createEffect, onCleanup } from "solid-js";
+
+import { Schema } from "prosemirror-model";
 import { Command, EditorState, Plugin, Transaction } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
 import { keymap } from "prosemirror-keymap";
 import { baseKeymap, toggleMark } from "prosemirror-commands";
 import { AutoMirror } from "@automerge/prosemirror";
 
+import { createEffect, onCleanup } from "solid-js";
 import { useDocHandleReady } from "../util/automerge_solid";
 
 import "prosemirror-view/style/prosemirror.css";
@@ -53,25 +55,8 @@ export const RichTextEditor = (props: {
         const autoMirror = new AutoMirror(props.path);
         const schema = autoMirror.schema;
 
-        const bindings: {[key: string]: Command} = {
-            "Mod-b": toggleMark(schema.marks.strong),
-            "Mod-i": toggleMark(schema.marks.em),
-        }
-        if (props.deleteBackward) {
-            bindings["Backspace"] = doIfEmpty(props.deleteBackward);
-        }
-        if (props.deleteForward) {
-            bindings["Delete"] = doIfEmpty(props.deleteForward);
-        }
-        if (props.exitUp) {
-            bindings["ArrowUp"] = doIfAtTop(props.exitUp);
-        }
-        if (props.exitDown) {
-            bindings["ArrowDown"] = doIfAtBottom(props.exitDown);
-        }
-
         const plugins: Plugin[] = [
-            keymap(bindings),
+            keymap(richTextKeybindings(schema, props)),
             keymap(baseKeymap),
         ];
         if (props.placeholder) {
@@ -122,6 +107,26 @@ export const RichTextEditor = (props: {
     });
 
     return <div class="editable rich-text-editor" ref={editorRoot}></div>;
+}
+
+function richTextKeybindings(schema: Schema, props: RichTextEditorOptions) {
+    const bindings: {[key: string]: Command} = {
+        "Mod-b": toggleMark(schema.marks.strong),
+        "Mod-i": toggleMark(schema.marks.em),
+    }
+    if (props.deleteBackward) {
+        bindings["Backspace"] = doIfEmpty(props.deleteBackward);
+    }
+    if (props.deleteForward) {
+        bindings["Delete"] = doIfEmpty(props.deleteForward);
+    }
+    if (props.exitUp) {
+        bindings["ArrowUp"] = doIfAtTop(props.exitUp);
+    }
+    if (props.exitDown) {
+        bindings["ArrowDown"] = doIfAtBottom(props.exitDown);
+    }
+    return bindings;
 }
 
 
