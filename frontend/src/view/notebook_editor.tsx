@@ -4,7 +4,7 @@ import { Dynamic } from "solid-js/web";
 
 import { Cell, Notebook } from "../model/notebook";
 import { useDoc } from "../util/automerge_solid";
-import { InlineInput } from "./input";
+import { InlineInput } from "./inline_input";
 import { AutomergeRichTextEditor } from "./rich_text_editor";
 
 import "./notebook_editor.css";

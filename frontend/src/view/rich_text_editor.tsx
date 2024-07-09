@@ -7,6 +7,10 @@ import { createEffect, onCleanup } from "solid-js";
 
 import { useDocHandleReady } from "../util/automerge_solid";
 
+import "prosemirror-view/style/prosemirror.css";
+import "./editable.css";
+import "./rich_text_editor.css";
+
 
 /** Rich text editor combining Automerge and ProseMirror.
 
@@ -58,5 +62,5 @@ export const AutomergeRichTextEditor = (props: {
         });
     });
 
-    return <div class="rich-text-editor" ref={editorRef}></div>;
+    return <div class="editable rich-text-editor" ref={editorRef}></div>;
 }

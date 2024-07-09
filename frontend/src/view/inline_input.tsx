@@ -1,6 +1,7 @@
 import { createEffect, createSignal } from "solid-js";
 
-import "./input.css";
+import "./editable.css";
+import "./inline_input.css";
 
 
 // Optional props for `InlineInput` component.
@@ -40,7 +41,7 @@ export function InlineInput(props: {
         setWidth(computeWidth(props.text));
     })
 
-    return <input class="inline-input" type="text" size="1"
+    return <input class="editable inline-input" type="text" size="1"
         ref={props.ref}
         classList={{ invalid: props.invalid }}
         style={{ width: width() + 'ch' }}
