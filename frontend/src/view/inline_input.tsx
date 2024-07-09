@@ -4,7 +4,8 @@ import "./editable.css";
 import "./inline_input.css";
 
 
-// Optional props for `InlineInput` component.
+/** Optional props for `InlineInput` component.
+ */
 export type InlineInputOptions = {
     ref?: HTMLInputElement;
     placeholder?: string;

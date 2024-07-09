@@ -5,7 +5,7 @@ import { Dynamic } from "solid-js/web";
 import { Cell, Notebook } from "../model/notebook";
 import { useDoc } from "../util/automerge_solid";
 import { InlineInput } from "./inline_input";
-import { AutomergeRichTextEditor } from "./rich_text_editor";
+import { RichTextEditor } from "./rich_text_editor";
 
 import "./notebook_editor.css";
 
@@ -33,9 +33,11 @@ export function RichTextCellEditor(props: {
     actions: CellActions,
 }) {
     return (
-        <AutomergeRichTextEditor handle={props.handle}
+        <RichTextEditor handle={props.handle}
             path={[...props.path, "content"]}
             placeholder="…"
+            deleteBackward={props.actions.deleteBackward}
+            deleteForward={props.actions.deleteForward}
         />
     );
 }
@@ -61,6 +63,14 @@ export type NotebookEditorRef<T> = {
     pushCell: (cell: Cell<T>) => void;
 };
 
+/** Notebook editor based on Automerge.
+
+A notebook has two types of cells:
+
+1. Rich text cells, managed by Automerge and ProseMirror independently of
+   Solid's own state management
+2. Formal content cells, with state inside a Solid Store connected to Automerge
+ */
 export function NotebookEditor<T, Props extends FormalCellEditorProps<T>>(allProps: {
     handle: DocHandle<Notebook<T>>,
     init: Notebook<T>,

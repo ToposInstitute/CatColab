@@ -1,7 +1,7 @@
 import { Prop } from "@automerge/automerge";
 import { DocHandle, DocHandleChangePayload } from "@automerge/automerge-repo";
 import { AutoMirror } from "@automerge/prosemirror";
-import { EditorState, Plugin, Transaction } from "prosemirror-state";
+import { Command, EditorState, Plugin, Transaction } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
 import { keymap } from "prosemirror-keymap";
 import { baseKeymap, toggleMark } from "prosemirror-commands";
@@ -14,6 +14,15 @@ import "./editable.css";
 import "./rich_text_editor.css";
 
 
+/** Optional props for `RichTextEditor` component.
+ */
+export type RichTextEditorOptions = {
+    placeholder?: string;
+
+    deleteBackward?: () => void;
+    deleteForward?: () => void;
+};
+
 /** Rich text editor combining Automerge and ProseMirror.
 
 Adapted from:
@@ -21,11 +30,10 @@ Adapted from:
 - https://github.com/automerge/prosemirror-quickstart/
 - https://github.com/automerge/automerge-prosemirror/tree/main/playground/
  */
-export const AutomergeRichTextEditor = (props: {
+export const RichTextEditor = (props: {
     handle: DocHandle<unknown>;
     path: Prop[];
-    placeholder?: string;
-}) => {
+} & RichTextEditorOptions) => {
     let editorRef!: HTMLDivElement;
 
     const isReady = useDocHandleReady(() => props.handle);
@@ -36,11 +44,19 @@ export const AutomergeRichTextEditor = (props: {
         const autoMirror = new AutoMirror(props.path);
         const schema = autoMirror.schema;
 
+        const bindings: {[key: string]: Command} = {
+            "Mod-b": toggleMark(schema.marks.strong),
+            "Mod-i": toggleMark(schema.marks.em),
+        }
+        if (props.deleteBackward) {
+            bindings["Backspace"] = doIfEmpty(props.deleteBackward);
+        }
+        if (props.deleteForward) {
+            bindings["Delete"] = doIfEmpty(props.deleteForward);
+        }
+
         const plugins: Plugin[] = [
-            keymap({
-                "Mod-b": toggleMark(schema.marks.strong),
-                "Mod-i": toggleMark(schema.marks.em),
-            }),
+            keymap(bindings),
             keymap(baseKeymap),
         ];
         if (props.placeholder) {
@@ -82,6 +98,20 @@ export const AutomergeRichTextEditor = (props: {
 }
 
 
+/** ProseMirror command that calls a function if the document is empty.
+ */
+function doIfEmpty(callback: (dispatch: (tr: Transaction) => void) => void): Command {
+    return (state, dispatch?) => {
+        if (hasContent(state)) {
+            return false;
+        }
+        if (dispatch) {
+            callback(dispatch);
+        }
+        return true;
+    };
+}
+
 /** Placeholder text plugin for ProseMirror.
 
 Source:
@@ -91,7 +121,7 @@ Source:
  */
 function placeholder(text: string) {
   const update = (view: EditorView) => {
-    if (view.state.doc.textContent) {
+    if (hasContent(view.state)) {
       view.dom.removeAttribute('data-placeholder');
     } else {
       view.dom.setAttribute('data-placeholder', text);
@@ -105,4 +135,10 @@ function placeholder(text: string) {
       return { update };
     }
   });
+}
+
+const hasContent = (state: EditorState) => {
+    const doc = state.doc;
+    return (doc.textContent ||
+            (doc.firstChild && doc.firstChild.content.size > 0));
 }
