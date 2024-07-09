@@ -35,6 +35,7 @@ export function RichTextCellEditor(props: {
     return (
         <AutomergeRichTextEditor handle={props.handle}
             path={[...props.path, "content"]}
+            placeholder="…"
         />
     );
 }

@@ -1,7 +1,7 @@
 import { Prop } from "@automerge/automerge";
 import { DocHandle, DocHandleChangePayload } from "@automerge/automerge-repo";
 import { AutoMirror } from "@automerge/prosemirror";
-import { EditorState, Transaction } from "prosemirror-state";
+import { EditorState, Plugin, Transaction } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
 import { createEffect, onCleanup } from "solid-js";
 
@@ -20,8 +20,9 @@ Adapted from:
 - https://github.com/automerge/automerge-prosemirror/tree/main/playground/
  */
 export const AutomergeRichTextEditor = (props: {
-    handle: DocHandle<unknown>,
+    handle: DocHandle<unknown>;
     path: Prop[];
+    placeholder?: string;
 }) => {
     let editorRef!: HTMLDivElement;
 
@@ -32,16 +33,22 @@ export const AutomergeRichTextEditor = (props: {
 
         const autoMirror = new AutoMirror(props.path);
 
-        let editorView: EditorView;
-        editorView = new EditorView(editorRef, {
+        const plugins: Plugin[] = [];
+        if (props.placeholder) {
+            plugins.push(placeholder(props.placeholder));
+        }
+
+        let view: EditorView;
+        view = new EditorView(editorRef, {
             state: EditorState.create({
                 schema: autoMirror.schema,
+                plugins,
                 doc: autoMirror.initialize(props.handle),
             }),
             dispatchTransaction: (tx: Transaction) => {
                 const newState = autoMirror.intercept(
-                    props.handle, tx, editorView.state);
-                editorView.updateState(newState);
+                    props.handle, tx, view.state);
+                view.updateState(newState);
             },
         });
 
@@ -50,17 +57,43 @@ export const AutomergeRichTextEditor = (props: {
                 payload.patchInfo.before,
                 payload.doc,
                 payload.patches,
-                editorView.state,
+                view.state,
             );
-            editorView.updateState(newState);
+            view.updateState(newState);
         };
         props.handle.on("change", onPatch);
 
         onCleanup(() => {
             props.handle.off("change", onPatch);
-            editorView.destroy();
+            view.destroy();
         });
     });
 
     return <div class="editable rich-text-editor" ref={editorRef}></div>;
+}
+
+
+/** Placeholder text plugin for ProseMirror.
+
+Source:
+
+- https://discuss.prosemirror.net/t/how-to-input-like-placeholder-behavior/705
+- https://gist.github.com/amk221/1f9657e92e003a3725aaa4cf86a07cc0
+ */
+function placeholder(text: string) {
+  const update = (view: EditorView) => {
+    if (view.state.doc.textContent) {
+      view.dom.removeAttribute('data-placeholder');
+    } else {
+      view.dom.setAttribute('data-placeholder', text);
+    }
+  };
+
+  return new Plugin({
+    view(view) {
+      update(view);
+
+      return { update };
+    }
+  });
 }
