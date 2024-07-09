@@ -17,6 +17,7 @@ import "./rich_text_editor.css";
 /** Optional props for `RichTextEditor` component.
  */
 export type RichTextEditorOptions = {
+    id?: any;
     ref?: (ref: EditorView) => void;
     placeholder?: string;
 
@@ -40,6 +41,11 @@ export const RichTextEditor = (props: {
     const isReady = useDocHandleReady(() => props.handle);
 
     createEffect(() => {
+        // NOTE: Make the effect depend on the given ID to ensure that this
+        // component updates when the Automerge handle and path both stay the
+        // same but the path refers to a different object in the document.
+        props.id;
+
         if (!isReady()) { return; }
 
         const autoMirror = new AutoMirror(props.path);

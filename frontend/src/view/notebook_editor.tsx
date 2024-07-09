@@ -3,7 +3,7 @@ import { Component, createEffect, createSignal, For, onMount, splitProps } from 
 import { Dynamic } from "solid-js/web";
 import { EditorView } from "prosemirror-view";
 
-import { Cell, Notebook } from "../model/notebook";
+import { Cell, CellId, Notebook } from "../model/notebook";
 import { useDoc } from "../util/automerge_solid";
 import { InlineInput } from "./inline_input";
 import { RichTextEditor } from "./rich_text_editor";
@@ -28,6 +28,7 @@ export type CellActions = {
 };
 
 export function RichTextCellEditor(props: {
+    cell_id: CellId,
     handle: DocHandle<Notebook<unknown>>,
     path: Prop[],
     isActive: boolean;
@@ -44,6 +45,7 @@ export function RichTextCellEditor(props: {
 
     return (
         <RichTextEditor ref={(view) => setEditorView(view)}
+            id={props.cell_id}
             handle={props.handle}
             path={[...props.path, "content"]}
             placeholder="…"
@@ -139,6 +141,7 @@ export function NotebookEditor<T, Props extends FormalCellEditorProps<T>>(allPro
                     const editors = {
                         "rich-text": () => <div class="cell markup-cell">
                             <RichTextCellEditor
+                                cell_id={cell.id}
                                 handle={props.handle}
                                 path={["cells", i()]}
                                 isActive={activeCell() == i()}
