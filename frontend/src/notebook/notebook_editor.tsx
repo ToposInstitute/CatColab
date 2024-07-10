@@ -1,6 +1,5 @@
 import { DocHandle, Prop } from "@automerge/automerge-repo";
-import { Component, createEffect, createSignal, For, onMount, splitProps } from "solid-js";
-import { Dynamic } from "solid-js/web";
+import { Component, createEffect, createSignal, For, Match, onMount, splitProps, Switch } from "solid-js";
 import { EditorView } from "prosemirror-view";
 
 import { useDoc } from "../util/automerge_solid";
@@ -143,8 +142,10 @@ export function NotebookEditor<T, Props extends FormalCellEditorProps<T>>(allPro
                         }),
                     }
 
-                    const editors = {
-                        "rich-text": () => <div class="cell markup-cell">
+                    return <li>
+                        <Switch>
+                        <Match when={cell.tag === "rich-text"}>
+                            <div class="cell markup-cell">
                             <RichTextCellEditor
                                 cell_id={cell.id}
                                 handle={props.handle}
@@ -152,8 +153,10 @@ export function NotebookEditor<T, Props extends FormalCellEditorProps<T>>(allPro
                                 isActive={activeCell() == i()}
                                 actions={cellActions}
                             />
-                        </div>,
-                        "formal": () => <div class="cell formal-cell">
+                            </div>
+                        </Match>
+                        <Match when={cell.tag === "formal"}>
+                            <div class="cell formal-cell">
                             <props.formalCellEditor
                                 content={cell.content}
                                 changeContent={(f) => {
@@ -163,13 +166,12 @@ export function NotebookEditor<T, Props extends FormalCellEditorProps<T>>(allPro
                                 }}
                                 isActive={activeCell() == i()}
                                 actions={cellActions}
-                                // XXX: How to convince TypeScript that this works?
+                                // XXX: How to convince TypeScript this works?
                                 {...otherProps as any}
                             />
-                        </div>,
-                    };
-                    return <li>
-                        <Dynamic component={editors[cell.tag]} />
+                            </div>
+                        </Match>
+                        </Switch>
                     </li>;
                 }}
             </For>

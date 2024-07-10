@@ -1,6 +1,5 @@
 import { DocHandle } from "@automerge/automerge-repo";
-import { createMemo, createSignal } from "solid-js";
-import { Dynamic } from "solid-js/web";
+import { createMemo, createSignal, Match, Switch } from "solid-js";
 
 import { IndexedMap, indexMap } from "../util/indexed_map";
 import { ModelJudgment, MorphismDecl, ObjectDecl, ObjectId } from "./types";
@@ -18,24 +17,29 @@ export function ModelCellEditor(props: {
     actions: CellActions;
     objectNameMap: IndexedMap<ObjectId,string>;
 }) {
-    const editors = {
-        object: () => <ObjectCellEditor
-            object={props.content as ObjectDecl}
-            modifyObject={(f) => props.changeContent(
-                (content) => f(content as ObjectDecl)
-            )}
-            isActive={props.isActive} actions={props.actions}
-        />,
-        morphism: () => <MorphismCellEditor
-            morphism={props.content as MorphismDecl}
-            modifyMorphism={(f) => props.changeContent(
-                (content) => f(content as MorphismDecl)
-            )}
-            isActive={props.isActive} actions={props.actions}
-            objectNameMap={props.objectNameMap}
-        />,
-    };
-    return <Dynamic component={editors[props.content.tag]} />;
+    return (
+        <Switch>
+        <Match when={props.content.tag === "object"}>
+            <ObjectCellEditor
+                object={props.content as ObjectDecl}
+                modifyObject={(f) => props.changeContent(
+                    (content) => f(content as ObjectDecl)
+                )}
+                isActive={props.isActive} actions={props.actions}
+            />
+        </Match>
+        <Match when={props.content.tag === "morphism"}>
+            <MorphismCellEditor
+                morphism={props.content as MorphismDecl}
+                modifyMorphism={(f) => props.changeContent(
+                    (content) => f(content as MorphismDecl)
+                )}
+                isActive={props.isActive} actions={props.actions}
+                objectNameMap={props.objectNameMap}
+            />
+        </Match>
+        </Switch>
+    );
 }
 
 /** Notebook-based editor for a model of a discrete double theory.
