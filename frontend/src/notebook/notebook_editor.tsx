@@ -1,6 +1,7 @@
 import { DocHandle, Prop } from "@automerge/automerge-repo";
 import { Component, createEffect, createSignal, For, Match, onMount, splitProps, Switch } from "solid-js";
 import { EditorView } from "prosemirror-view";
+import { createShortcut, KbdKey } from "@solid-primitives/keyboard";
 
 import { useDoc } from "../util/automerge_solid";
 import { Cell, CellId, Notebook } from "./types";
@@ -25,6 +26,23 @@ export type CellActions = {
     // Delete this cell in the forward/downward direction.
     deleteForward: () => void;
 };
+
+/** Constructor of a cell in a notebook.
+
+A notebook knows how to edit cells, but without cell constructors, it wouldn't
+know how to create them!
+ */
+export type CellConstructor<T> = {
+    // Name of cell constructor, usually describing the cell type.
+    name: string,
+
+    // Keyboard shortcut to invoke the constructor.
+    shortcut?: KbdKey[];
+
+    // Function to construct the cell.
+    construct: () => Cell<T>;
+};
+
 
 export function RichTextCellEditor(props: {
     cell_id: CellId,
@@ -70,11 +88,8 @@ export type NotebookEditorRef<T> = {
     // Get the current notebook data.
     notebook: () => Notebook<T>,
 
-    // Perform an arbitrary change on the notebook data.
+    // Make a change to the notebook data.
     changeNotebook: (f: (nb: Notebook<T>) => void) => void;
-
-    // Add a new cell at the end of the notebook.
-    pushCell: (cell: Cell<T>) => void;
 };
 
 /** Notebook editor based on Automerge.
@@ -89,32 +104,39 @@ Rich text cells are the same in all notebooks, whereas formal cells are handled
 by custom components supplied to the notebook.
  */
 export function NotebookEditor<T, Props extends FormalCellEditorProps<T>>(allProps: {
-    handle: DocHandle<Notebook<T>>,
-    init: Notebook<T>,
+    handle: DocHandle<Notebook<T>>;
+    init: Notebook<T>;
     formalCellEditor: Component<Props>;
+    cellConstructors: CellConstructor<T>[];
     ref?: (ref: NotebookEditorRef<T>) => void;
 } & {
     [K in Exclude<keyof Props, keyof FormalCellEditorProps<T>>]: Props[K];
 }) {
     const [props, otherProps] = splitProps(allProps, [
-        "handle", "init", "formalCellEditor", "ref",
+        "handle", "init", "formalCellEditor", "cellConstructors", "ref",
     ]);
 
     const [notebook, changeNotebook] = useDoc(() => props.handle, props.init);
 
+    onMount(() => {
+        props.ref?.({ notebook, changeNotebook });
+    });
+
     const [activeCell, setActiveCell] = createSignal(-1, { equals: false });
 
-    onMount(() => {
-        props.ref?.({
-            notebook,
-            changeNotebook,
-            pushCell: (cell: Cell<T>) => {
-                changeNotebook((nb) => {
-                    nb.cells.push(cell);
-                    setActiveCell(nb.cells.length - 1);
-                });
-            },
+    // Set up keyboard shortcuts.
+    const pushCell = (cell: Cell<T>) => {
+        changeNotebook((nb) => {
+            nb.cells.push(cell);
+            setActiveCell(nb.cells.length - 1);
         });
+    };
+    createEffect(() => {
+        for (const cons of props.cellConstructors) {
+            if (cons.shortcut) {
+                createShortcut(cons.shortcut, () => pushCell(cons.construct()));
+            }
+        }
     });
 
     return (

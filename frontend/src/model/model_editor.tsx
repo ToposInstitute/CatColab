@@ -2,8 +2,8 @@ import { DocHandle } from "@automerge/automerge-repo";
 import { createMemo, createSignal, Match, Switch } from "solid-js";
 
 import { IndexedMap, indexMap } from "../util/indexed_map";
-import { ModelJudgment, MorphismDecl, ObjectDecl, ObjectId } from "./types";
-import { Notebook, CellActions, NotebookEditor, NotebookEditorRef } from "../notebook";
+import { ModelJudgment, MorphismDecl, newMorphismDecl, newObjectDecl, ObjectDecl, ObjectId } from "./types";
+import { CellActions, CellConstructor, newFormalCell, newRichTextCell, Notebook, NotebookEditor, NotebookEditorRef } from "../notebook";
 import { ObjectCellEditor } from "./object_cell_editor";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 
@@ -70,7 +70,32 @@ export function ModelEditor(props: {
                 props.ref && props.ref(ref);
             }}
             formalCellEditor={ModelCellEditor}
+            cellConstructors={modelCellConstructors}
             objectNameMap={objectNameMap()}
         />
     );
 }
+
+
+// On Mac, the Alt/Option key remaps keys, whereas on other platforms Control
+// tends to be already bound in other shortcuts.
+const modifier = navigator.userAgent.includes("Mac") ? "Control" : "Alt";
+
+// TODO: Thist list won't be hard-coded.
+const modelCellConstructors: CellConstructor<ModelJudgment>[] = [
+    {
+        name: "Text",
+        shortcut: [modifier, "T"],
+        construct: () => newRichTextCell(),
+    },
+    {
+        name: "Object",
+        shortcut: [modifier, "O"],
+        construct: () => newFormalCell(newObjectDecl("default")),
+    },
+    {
+        name: "Morphism",
+        shortcut: [modifier, "M"],
+        construct: () => newFormalCell(newMorphismDecl("default")),
+    },
+];
