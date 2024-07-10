@@ -4,6 +4,7 @@ import { createMemo, createSignal, Match, Switch } from "solid-js";
 import { IndexedMap, indexMap } from "../util/indexed_map";
 import { ModelJudgment, MorphismDecl, newMorphismDecl, newObjectDecl, ObjectDecl, ObjectId } from "./types";
 import { CellActions, CellConstructor, newFormalCell, newRichTextCell, Notebook, NotebookEditor, NotebookEditorRef } from "../notebook";
+import { ObjectNameMapContext } from "./model_context";
 import { ObjectCellEditor } from "./object_cell_editor";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 
@@ -15,7 +16,6 @@ export function ModelCellEditor(props: {
     changeContent: (f: (content: ModelJudgment) => void) => void;
     isActive: boolean;
     actions: CellActions;
-    objectNameMap: IndexedMap<ObjectId,string>;
 }) {
     return (
         <Switch>
@@ -35,7 +35,6 @@ export function ModelCellEditor(props: {
                     (content) => f(content as MorphismDecl)
                 )}
                 isActive={props.isActive} actions={props.actions}
-                objectNameMap={props.objectNameMap}
             />
         </Match>
         </Switch>
@@ -64,15 +63,16 @@ export function ModelEditor(props: {
     });
 
     return (
-       <NotebookEditor handle={props.handle} init={props.init}
-            ref={(ref) => {
-                setNotebookRef(ref);
-                props.ref && props.ref(ref);
-            }}
-            formalCellEditor={ModelCellEditor}
-            cellConstructors={modelCellConstructors}
-            objectNameMap={objectNameMap()}
-        />
+        <ObjectNameMapContext.Provider value={objectNameMap}>
+            <NotebookEditor handle={props.handle} init={props.init}
+                ref={(ref) => {
+                    setNotebookRef(ref);
+                    props.ref && props.ref(ref);
+                }}
+                formalCellEditor={ModelCellEditor}
+                cellConstructors={modelCellConstructors}
+            />
+        </ObjectNameMapContext.Provider>
     );
 }
 

@@ -1,5 +1,5 @@
 import { DocHandle, Prop } from "@automerge/automerge-repo";
-import { Component, createEffect, createSignal, For, Match, onMount, splitProps, Switch } from "solid-js";
+import { Component, createEffect, createSignal, For, Match, onMount, Switch } from "solid-js";
 import { EditorView } from "prosemirror-view";
 import { createShortcut, KbdKey } from "@solid-primitives/keyboard";
 
@@ -44,6 +44,8 @@ export type CellConstructor<T> = {
 };
 
 
+/** Editor for rich text cells, a simple wrapper around `RichTextEditor`.
+ */
 export function RichTextCellEditor(props: {
     cell_id: CellId,
     handle: DocHandle<Notebook<unknown>>,
@@ -74,6 +76,8 @@ export function RichTextCellEditor(props: {
     );
 }
 
+/** Interface for editors of cells with formal content.
+ */
 export type FormalCellEditorProps<T> = {
     content: T;
     changeContent: (f: (content: T) => void) => void;
@@ -103,19 +107,13 @@ A notebook has two types of cells:
 Rich text cells are the same in all notebooks, whereas formal cells are handled
 by custom components supplied to the notebook.
  */
-export function NotebookEditor<T, Props extends FormalCellEditorProps<T>>(allProps: {
+export function NotebookEditor<T>(props: {
     handle: DocHandle<Notebook<T>>;
     init: Notebook<T>;
-    formalCellEditor: Component<Props>;
+    formalCellEditor: Component<FormalCellEditorProps<T>>;
     cellConstructors: CellConstructor<T>[];
     ref?: (ref: NotebookEditorRef<T>) => void;
-} & {
-    [K in Exclude<keyof Props, keyof FormalCellEditorProps<T>>]: Props[K];
 }) {
-    const [props, otherProps] = splitProps(allProps, [
-        "handle", "init", "formalCellEditor", "cellConstructors", "ref",
-    ]);
-
     const [notebook, changeNotebook] = useDoc(() => props.handle, props.init);
 
     onMount(() => {
@@ -180,7 +178,7 @@ export function NotebookEditor<T, Props extends FormalCellEditorProps<T>>(allPro
                         <Match when={cell.tag === "formal"}>
                             <div class="cell formal-cell">
                             <props.formalCellEditor
-                                content={cell.content}
+                                content={cell.content as T}
                                 changeContent={(f) => {
                                     changeNotebook((nb) => {
                                         f(nb.cells[i()].content as T);
@@ -188,8 +186,6 @@ export function NotebookEditor<T, Props extends FormalCellEditorProps<T>>(allPro
                                 }}
                                 isActive={activeCell() == i()}
                                 actions={cellActions}
-                                // XXX: How to convince TypeScript this works?
-                                {...otherProps as any}
                             />
                             </div>
                         </Match>
