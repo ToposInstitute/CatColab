@@ -1,14 +1,16 @@
 import { DocHandle, Prop } from "@automerge/automerge-repo";
-import { Component, createEffect, createSignal, For, Match, onMount, Switch } from "solid-js";
+import { Component, createEffect, createSignal, For, Match, onMount, Show, Switch } from "solid-js";
 import { EditorView } from "prosemirror-view";
 import { createShortcut, KbdKey } from "@solid-primitives/keyboard";
 
 import { useDoc } from "../util/automerge_solid";
 import { Cell, CellId, Notebook } from "./types";
+import { CommandPopup } from "./command";
 import { InlineInput } from "./inline_input";
 import { RichTextEditor } from "./rich_text_editor";
 
 import "./notebook_editor.css";
+
 
 
 /** Actions invokable *within* a cell but affecting the overall notebook state.
@@ -146,6 +148,12 @@ export function NotebookEditor<T>(props: {
                 }}
             />
             </div>
+            <Show when={notebook().cells.length === 0}>
+                <NotebookEmpty
+                    cellConstructors={props.cellConstructors}
+                    pushCell={pushCell}
+                />
+            </Show>
             <ul class="notebook-cells">
             <For each={notebook().cells}>
                 {(cell, i) => {
@@ -194,6 +202,38 @@ export function NotebookEditor<T>(props: {
                 }}
             </For>
             </ul>
+        </div>
+    );
+}
+
+
+/** Component displayed when the notebook has no cells.
+ */
+function NotebookEmpty<T>(props: {
+    cellConstructors: CellConstructor<T>[],
+    pushCell: (cell: Cell<T>) => void,
+}) {
+    const [isOpen, setIsOpen] = createSignal(false);
+
+    createShortcut(["Shift", "Enter"], () => setIsOpen(true));
+
+    return (
+        <div class="notebook-empty">
+            <Show when={isOpen()}>
+                <CommandPopup
+                    commands={
+                        props.cellConstructors.map((cc) => ({
+                            name: cc.name,
+                            shortcut: cc.shortcut,
+                            execute: () => props.pushCell(cc.construct()),
+                        }))
+                    }
+                    close={() => setIsOpen(false)}
+                />
+            </Show>
+            <span class="placeholder">
+                Press Shift-Enter to create a cell
+            </span>
         </div>
     );
 }

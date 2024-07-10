@@ -15,6 +15,7 @@
     "@automerge/automerge-repo-storage-indexeddb": "^1.2.0",
     "@automerge/prosemirror": "^0.0.12",
     "@solid-primitives/keyboard": "^1.2.8",
+    "@solid-primitives/pointer": "^0.2.19",
     "newtype-ts": "^0.3.5",
     "prosemirror-commands": "^1.5.2",
     "prosemirror-keymap": "^1.2.2",

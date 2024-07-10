@@ -2,10 +2,11 @@
   --main-font: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   --mono-font: Roboto Mono, monospace;
 
-  --light-color: #213547;
+  --light-color: black;
   --dark-color: rgba(255, 255, 255, 0.87);
 
-  color-scheme: light dark;
+  /*color-scheme: light dark;*/
+  color-scheme: light;
   color: light-dark(var(--light-color), var(--dark-color));
   font-family: var(--main-font);
 

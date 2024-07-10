@@ -10,7 +10,16 @@
 
 .notebook-cells {
     list-style: none;
+    margin: 1rem 0;
     padding: 0;
+}
+
+.notebook-empty {
+    margin: 1rem 0;
+}
+
+.notebook-empty .placeholder {
+    color: darkgray;
 }
 
 .formal-cell {
