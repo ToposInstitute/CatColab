@@ -145,13 +145,9 @@ function doIfEmpty(callback: (dispatch: (tr: Transaction) => void) => void): Com
 /** ProseMirror command invoked if the cursor is at the top of the document.
  */
 function doIfAtTop(callback: (dispatch: (tr: Transaction) => void) => void): Command {
-    return (state, dispatch?, view?) => {
-        if (!state.selection.empty) {
-            return false;
-        }
-        const pos = state.selection.$anchor;
-        if (!(pos.depth === 0 || (pos.depth === 1 && pos.index(0) === 0) &&
-                                  view && view.endOfTextblock("up"))) {
+    return (state, dispatch?) => {
+        const sel = state.selection;
+        if (!(sel.empty && sel.$anchor.parent === state.doc.firstChild)) {
             return false;
         }
         dispatch && callback(dispatch);
@@ -162,15 +158,9 @@ function doIfAtTop(callback: (dispatch: (tr: Transaction) => void) => void): Com
 /** ProseMirror command invoked if the cursor is at the bottom of the document.
  */
 function doIfAtBottom(callback: (dispatch: (tr: Transaction) => void) => void): Command {
-    return (state, dispatch?, view?) => {
-        if (!state.selection.empty) {
-            return false;
-        }
-        /// XXX: Is this logic correct?
-        const pos = state.selection.$anchor;
-        const n = pos.parent.childCount;
-        if (!(pos.depth === 0 || (pos.depth === 1 && pos.index(0) === n-1) &&
-                                  view && view.endOfTextblock("down"))) {
+    return (state, dispatch?) => {
+        const sel = state.selection;
+        if (!(sel.empty && sel.$anchor.parent === state.doc.lastChild)) {
             return false;
         }
         dispatch && callback(dispatch);
