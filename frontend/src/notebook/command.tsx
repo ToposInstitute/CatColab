@@ -21,8 +21,11 @@ export function CommandPopup(props: {
     commands: Command[],
     close: () => void;
 }) {
+    let lastFocused: HTMLElement | null;
+
     const executeCommand = (index: number) => {
         props.commands[index].execute();
+        lastFocused = null;
         props.close();
     }
 
@@ -41,7 +44,6 @@ export function CommandPopup(props: {
     createShortcut(["Escape"], props.close);
 
     // Remove old focus when pop up is created, restore it when destroyed.
-    let lastFocused: HTMLElement | null;
     onMount(() => {
         lastFocused = document.activeElement as HTMLElement;
         if (lastFocused) {
