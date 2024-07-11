@@ -153,9 +153,10 @@ function doIfEmpty(callback: (dispatch: (tr: Transaction) => void) => void): Com
 /** ProseMirror command invoked if the cursor is at the top of the document.
  */
 function doIfAtTop(callback: (dispatch: (tr: Transaction) => void) => void): Command {
-    return (state, dispatch?) => {
+    return (state, dispatch?, view?) => {
         const sel = state.selection;
-        if (!(sel.empty && sel.$anchor.parent === state.doc.firstChild)) {
+        if (!(sel.empty && sel.$anchor.parent === state.doc.firstChild &&
+              view && view.endOfTextblock("up"))) {
             return false;
         }
         dispatch && callback(dispatch);
@@ -166,9 +167,10 @@ function doIfAtTop(callback: (dispatch: (tr: Transaction) => void) => void): Com
 /** ProseMirror command invoked if the cursor is at the bottom of the document.
  */
 function doIfAtBottom(callback: (dispatch: (tr: Transaction) => void) => void): Command {
-    return (state, dispatch?) => {
+    return (state, dispatch?, view?) => {
         const sel = state.selection;
-        if (!(sel.empty && sel.$anchor.parent === state.doc.lastChild)) {
+        if (!(sel.empty && sel.$anchor.parent === state.doc.lastChild &&
+              view && view.endOfTextblock("down"))) {
             return false;
         }
         dispatch && callback(dispatch);
