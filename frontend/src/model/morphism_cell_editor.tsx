@@ -40,6 +40,7 @@ export function MorphismCellEditor(props: {
             exitBackward={() => nameRef.focus()}
             exitForward={() => codRef.focus()}
             exitRight={() => nameRef.focus()}
+            onFocus={props.actions.hasFocused}
         />
         <div class="morphism-decl-name-container">
         <div class="morphism-decl-name">
@@ -56,6 +57,7 @@ export function MorphismCellEditor(props: {
             exitDown={props.actions.activateBelow}
             exitLeft={() => domRef.focus()}
             exitRight={() => codRef.focus()}
+            onFocus={props.actions.hasFocused}
         />
         </div>
         <div class="morphism-decl-arrow"></div>
@@ -70,6 +72,7 @@ export function MorphismCellEditor(props: {
             exitBackward={() => domRef.focus()}
             exitForward={props.actions.activateBelow}
             exitLeft={() => nameRef.focus()}
+            onFocus={props.actions.hasFocused}
         />
     </div>;
 }

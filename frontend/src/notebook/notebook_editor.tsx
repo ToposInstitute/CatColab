@@ -12,7 +12,10 @@ import { RichTextEditor } from "./rich_text_editor";
 import "./notebook_editor.css";
 
 
-/** Actions invokable *within* a cell but affecting the overall notebook state.
+/** Actions invokable *within* a cell but affecting the larger notebook state.
+
+Through these functions, a cell can request to perform an action on the notebook
+or inform the notebook that an action has occcured within the cell.
 */
 export type CellActions = {
     // Activate the cell above this one.
@@ -26,6 +29,9 @@ export type CellActions = {
 
     // Delete this cell in the forward/downward direction.
     deleteForward: () => void;
+
+    // The cell has received focus.
+    hasFocused: () => void;
 };
 
 /** Constructor of a cell in a notebook.
@@ -73,6 +79,7 @@ export function RichTextCellEditor(props: {
             deleteForward={props.actions.deleteForward}
             exitUp={props.actions.activateAbove}
             exitDown={props.actions.activateBelow}
+            onFocus={props.actions.hasFocused}
         />
     );
 }
@@ -121,10 +128,10 @@ export function NotebookEditor<T>(props: {
         props.ref?.({ notebook, changeNotebook });
     });
 
-    const [activeCell, setActiveCell] = createSignal(-1, { equals: false });
+    const [activeCell, setActiveCell] = createSignal(0);
 
     // Set up commands and their keyboard shortcuts.
-    const addCellAfterActive = (cell: Cell<T>) => {
+    const addAfterActiveCell = (cell: Cell<T>) => {
         changeNotebook((nb) => {
             const n = nb.cells.length;
             const i = Math.min(Math.max(activeCell() + 1, 0), n);
@@ -136,7 +143,7 @@ export function NotebookEditor<T>(props: {
         props.cellConstructors.map((cc) => ({
             name: cc.name,
             shortcut: cc.shortcut,
-            execute: () => addCellAfterActive(cc.construct()),
+            execute: () => addAfterActiveCell(cc.construct()),
         }))
     );
     createEffect(() => {
@@ -152,7 +159,7 @@ export function NotebookEditor<T>(props: {
     const openCellMenu = () => setIsCellMenuOpen(true);
     const closeCellMenu = () => setIsCellMenuOpen(false);
 
-    createShortcut(["Shift","Enter"], openCellMenu);
+    createShortcut(["Shift", "Enter"], openCellMenu);
 
     return (
         <div class="notebook">
@@ -178,8 +185,13 @@ export function NotebookEditor<T>(props: {
                 {(cell, i) => {
                     const isActive = () => activeCell() == i();
                     const cellActions: CellActions = {
-                        activateAbove: () => setActiveCell(i() - 1),
-                        activateBelow: () => setActiveCell(i() + 1),
+                        activateAbove: () => {
+                            i() > 0 && setActiveCell(i() - 1);
+                        },
+                        activateBelow: () => {
+                            const n = notebook().cells.length;
+                            i() < n - 1 && setActiveCell(i() + 1);
+                        },
                         deleteBackward: () => changeNotebook((nb) => {
                             nb.cells.splice(i(), 1);
                             setActiveCell(i() - 1);
@@ -188,6 +200,9 @@ export function NotebookEditor<T>(props: {
                             nb.cells.splice(i(), 1);
                             setActiveCell(i());
                         }),
+                        hasFocused: () => {
+                            setActiveCell(i());
+                        }
                     }
 
                     return <li>

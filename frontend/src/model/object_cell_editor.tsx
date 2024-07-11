@@ -33,6 +33,7 @@ export function ObjectCellEditor(props: {
             exitForward={props.actions.activateBelow}
             exitUp={props.actions.activateAbove}
             exitDown={props.actions.activateBelow}
+            onFocus={props.actions.hasFocused}
         />
     </div>;
 }

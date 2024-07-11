@@ -27,6 +27,8 @@ export type RichTextEditorOptions = {
     deleteForward?: () => void;
     exitUp?: () => void;
     exitDown?: () => void;
+
+    onFocus?: () => void;
 };
 
 /** Rich text editor combining Automerge and ProseMirror.
@@ -74,6 +76,12 @@ export const RichTextEditor = (props: {
                 const newState = autoMirror.intercept(
                     props.handle, tx, view.state);
                 view.updateState(newState);
+            },
+            handleDOMEvents: {
+              focus: () => {
+                  props.onFocus && props.onFocus();
+                  return false;
+              },
             },
         });
         if (props.ref) {

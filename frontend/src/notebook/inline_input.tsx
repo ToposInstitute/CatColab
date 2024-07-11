@@ -1,4 +1,6 @@
 import { createEffect, createSignal } from "solid-js";
+import { focus } from "@solid-primitives/active-element";
+focus;
 
 import "./editable.css";
 import "./inline_input.css";
@@ -20,6 +22,8 @@ export type InlineInputOptions = {
     exitDown?: () => void;
     exitLeft?: () => void;
     exitRight?: () => void;
+
+    onFocus?: () => void;
 }
 
 export function InlineInput(props: {
@@ -48,6 +52,9 @@ export function InlineInput(props: {
         style={{ width: width() + 'ch' }}
         value={props.text}
         placeholder={props.placeholder}
+        use:focus={(isFocused) => {
+            isFocused && props.onFocus && props.onFocus();
+        }}
         onInput={(evt) => {
             let text = evt.target.value;
             setWidth(computeWidth(text));
