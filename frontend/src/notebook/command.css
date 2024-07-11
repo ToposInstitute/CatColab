@@ -4,8 +4,10 @@
 
 .command-list {
     list-style: none;
+    z-index: 1;
     position: relative;
     top: 5px;
+    margin: 0;
     padding: 5px;
 
     background: white;

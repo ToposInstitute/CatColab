@@ -1,4 +1,4 @@
-import { createSignal, For, Show } from "solid-js";
+import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { createShortcut, KbdKey } from "@solid-primitives/keyboard";
 import { pointerHover } from "@solid-primitives/pointer";
 pointerHover;
@@ -39,6 +39,20 @@ export function CommandPopup(props: {
     });
     createShortcut(["Enter"], () => executeCommand(activeItem()));
     createShortcut(["Escape"], props.close);
+
+    // Remove old focus when pop up is created, restore it when destroyed.
+    let lastFocused: HTMLElement | null;
+    onMount(() => {
+        lastFocused = document.activeElement as HTMLElement;
+        if (lastFocused) {
+            lastFocused.blur();
+        }
+        onCleanup(() => {
+            if (lastFocused) {
+                lastFocused.focus();
+            }
+        });
+    })
 
     return (
         <div class="command-popup">
