@@ -33,6 +33,7 @@ export function ObjectCellEditor(props: {
             exitForward={props.actions.activateBelow}
             exitUp={props.actions.activateAbove}
             exitDown={props.actions.activateBelow}
+            onFocus={props.actions.hasFocused}
         />
     </div>;
 }
@@ -40,7 +41,7 @@ export function ObjectCellEditor(props: {
 export function ObjectIdInput(allProps: {
     objectId: ObjectId | null;
     setObjectId: (id: ObjectId | null) => void;
-    objectNameMap: IndexedMap<ObjectId,string>;
+    objectNameMap?: IndexedMap<ObjectId,string>;
 } & InlineInputOptions) {
     const [props, inputProps] = splitProps(allProps, [
         "objectId", "setObjectId", "objectNameMap",
@@ -51,27 +52,30 @@ export function ObjectIdInput(allProps: {
     createEffect(() => {
         let name = "";
         if (props.objectId) {
-            name = props.objectNameMap.map.get(props.objectId) || "";
+            name = props.objectNameMap?.map.get(props.objectId) || "";
         }
         setText(name);
     });
 
-    return <InlineInput
-        text={text()}
-        setText={(text) => {
-            const possibleIds = props.objectNameMap.index.get(text);
-            if (possibleIds && possibleIds.length > 0) {
-                // TODO: Warn the user when the names are not unique.
-                props.setObjectId(possibleIds[0]);
-            } else if (text === "") {
-                // To avoid erasing incompletely entered text, only reset the ID
-                // to null when the text is also empty.
-                props.setObjectId(null);
-            }
-            setText(text);
-        }}
-        invalid={text() !== (props.objectId ?
-            props.objectNameMap.map.get(props.objectId) : "")}
-        {...inputProps}
-    />;
+    const handleNewText = (text: string) => {
+        const possibleIds = props.objectNameMap?.index.get(text);
+        if (possibleIds && possibleIds.length > 0) {
+            // TODO: Warn the user when the names are not unique.
+            props.setObjectId(possibleIds[0]);
+        } else if (text === "") {
+            // To avoid erasing incompletely entered text, only reset the ID
+            // to null when the text is also empty.
+            props.setObjectId(null);
+        }
+        setText(text);
+    };
+
+    const isValid = () => {
+        const objectName = props.objectId ?
+            props.objectNameMap?.map.get(props.objectId) : "";
+        return text() === objectName;
+    };
+
+    return <InlineInput text={text()} setText={handleNewText}
+            invalid={!isValid()} {...inputProps} />;
 }

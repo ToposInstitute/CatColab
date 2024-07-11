@@ -1,9 +1,9 @@
-import { createEffect } from "solid-js";
+import { createEffect, useContext } from "solid-js";
 
-import { IndexedMap } from "../util/indexed_map";
-import { MorphismDecl, ObjectId } from "./types";
+import { MorphismDecl } from "./types";
 import { CellActions } from "../notebook";
 import { InlineInput } from "../notebook/inline_input";
+import { ObjectNameMapContext } from "./model_context";
 import { ObjectIdInput} from "./object_cell_editor";
 
 
@@ -15,7 +15,6 @@ export function MorphismCellEditor(props: {
     modifyMorphism: (f: (decl: MorphismDecl) => void) => void;
     isActive: boolean;
     actions: CellActions;
-    objectNameMap: IndexedMap<ObjectId,string>;
 }) {
     let nameRef!: HTMLInputElement;
     let domRef!: HTMLInputElement;
@@ -28,17 +27,20 @@ export function MorphismCellEditor(props: {
         }
     });
 
+    const objectNameMap = useContext(ObjectNameMapContext);
+
     return <div class="morphism-decl">
         <ObjectIdInput ref={domRef} placeholder="..."
             objectId={props.morphism.dom}
             setObjectId={(id) => {
                 props.modifyMorphism((mor) => (mor.dom = id));
             }}
-            objectNameMap={props.objectNameMap}
+            objectNameMap={objectNameMap ? objectNameMap() : undefined}
             deleteForward={() => nameRef.focus()}
             exitBackward={() => nameRef.focus()}
             exitForward={() => codRef.focus()}
             exitRight={() => nameRef.focus()}
+            onFocus={props.actions.hasFocused}
         />
         <div class="morphism-decl-name-container">
         <div class="morphism-decl-name">
@@ -55,6 +57,7 @@ export function MorphismCellEditor(props: {
             exitDown={props.actions.activateBelow}
             exitLeft={() => domRef.focus()}
             exitRight={() => codRef.focus()}
+            onFocus={props.actions.hasFocused}
         />
         </div>
         <div class="morphism-decl-arrow"></div>
@@ -64,11 +67,12 @@ export function MorphismCellEditor(props: {
             setObjectId={(id) => {
                 props.modifyMorphism((mor) => (mor.cod = id));
             }}
-            objectNameMap={props.objectNameMap}
+            objectNameMap={objectNameMap ? objectNameMap() : undefined}
             deleteBackward={() => nameRef.focus()}
             exitBackward={() => domRef.focus()}
             exitForward={props.actions.activateBelow}
             exitLeft={() => nameRef.focus()}
+            onFocus={props.actions.hasFocused}
         />
     </div>;
 }

@@ -1,16 +1,21 @@
 import { DocHandle, Prop } from "@automerge/automerge-repo";
-import { Component, createEffect, createSignal, For, Match, onMount, splitProps, Switch } from "solid-js";
+import { Component, createEffect, createSignal, For, Match, onMount, Show, Switch } from "solid-js";
 import { EditorView } from "prosemirror-view";
+import { createShortcut, KbdKey } from "@solid-primitives/keyboard";
 
 import { useDoc } from "../util/automerge_solid";
 import { Cell, CellId, Notebook } from "./types";
+import { Command, CommandPopup } from "./command";
 import { InlineInput } from "./inline_input";
 import { RichTextEditor } from "./rich_text_editor";
 
 import "./notebook_editor.css";
 
 
-/** Actions invokable *within* a cell but affecting the overall notebook state.
+/** Actions invokable *within* a cell but affecting the larger notebook state.
+
+Through these functions, a cell can request to perform an action on the notebook
+or inform the notebook that an action has occcured within the cell.
 */
 export type CellActions = {
     // Activate the cell above this one.
@@ -24,8 +29,30 @@ export type CellActions = {
 
     // Delete this cell in the forward/downward direction.
     deleteForward: () => void;
+
+    // The cell has received focus.
+    hasFocused: () => void;
 };
 
+/** Constructor of a cell in a notebook.
+
+A notebook knows how to edit cells, but without cell constructors, it wouldn't
+know how to create them!
+ */
+export type CellConstructor<T> = {
+    // Name of cell constructor, usually describing the cell type.
+    name: string,
+
+    // Keyboard shortcut to invoke the constructor.
+    shortcut?: KbdKey[];
+
+    // Function to construct the cell.
+    construct: () => Cell<T>;
+};
+
+
+/** Editor for rich text cells, a simple wrapper around `RichTextEditor`.
+ */
 export function RichTextCellEditor(props: {
     cell_id: CellId,
     handle: DocHandle<Notebook<unknown>>,
@@ -52,10 +79,13 @@ export function RichTextCellEditor(props: {
             deleteForward={props.actions.deleteForward}
             exitUp={props.actions.activateAbove}
             exitDown={props.actions.activateBelow}
+            onFocus={props.actions.hasFocused}
         />
     );
 }
 
+/** Interface for editors of cells with formal content.
+ */
 export type FormalCellEditorProps<T> = {
     content: T;
     changeContent: (f: (content: T) => void) => void;
@@ -70,11 +100,8 @@ export type NotebookEditorRef<T> = {
     // Get the current notebook data.
     notebook: () => Notebook<T>,
 
-    // Perform an arbitrary change on the notebook data.
+    // Make a change to the notebook data.
     changeNotebook: (f: (nb: Notebook<T>) => void) => void;
-
-    // Add a new cell at the end of the notebook.
-    pushCell: (cell: Cell<T>) => void;
 };
 
 /** Notebook editor based on Automerge.
@@ -88,34 +115,51 @@ A notebook has two types of cells:
 Rich text cells are the same in all notebooks, whereas formal cells are handled
 by custom components supplied to the notebook.
  */
-export function NotebookEditor<T, Props extends FormalCellEditorProps<T>>(allProps: {
-    handle: DocHandle<Notebook<T>>,
-    init: Notebook<T>,
-    formalCellEditor: Component<Props>;
+export function NotebookEditor<T>(props: {
+    handle: DocHandle<Notebook<T>>;
+    init: Notebook<T>;
+    formalCellEditor: Component<FormalCellEditorProps<T>>;
+    cellConstructors: CellConstructor<T>[];
     ref?: (ref: NotebookEditorRef<T>) => void;
-} & {
-    [K in Exclude<keyof Props, keyof FormalCellEditorProps<T>>]: Props[K];
 }) {
-    const [props, otherProps] = splitProps(allProps, [
-        "handle", "init", "formalCellEditor", "ref",
-    ]);
-
     const [notebook, changeNotebook] = useDoc(() => props.handle, props.init);
 
-    const [activeCell, setActiveCell] = createSignal(-1, { equals: false });
-
     onMount(() => {
-        props.ref?.({
-            notebook,
-            changeNotebook,
-            pushCell: (cell: Cell<T>) => {
-                changeNotebook((nb) => {
-                    nb.cells.push(cell);
-                    setActiveCell(nb.cells.length - 1);
-                });
-            },
-        });
+        props.ref?.({ notebook, changeNotebook });
     });
+
+    const [activeCell, setActiveCell] = createSignal(0);
+
+    // Set up commands and their keyboard shortcuts.
+    const addAfterActiveCell = (cell: Cell<T>) => {
+        changeNotebook((nb) => {
+            const n = nb.cells.length;
+            const i = Math.min(Math.max(activeCell() + 1, 0), n);
+            nb.cells.splice(i, 0, cell);
+            setActiveCell(i);
+        });
+    };
+    const commands = (): Command[] => (
+        props.cellConstructors.map((cc) => ({
+            name: cc.name,
+            shortcut: cc.shortcut,
+            execute: () => addAfterActiveCell(cc.construct()),
+        }))
+    );
+    createEffect(() => {
+        for (const command of commands()) {
+            if (command.shortcut) {
+                createShortcut(command.shortcut, command.execute);
+            }
+        }
+    });
+
+    // Set up popup menu to create new cells.
+    const [isCellMenuOpen, setIsCellMenuOpen] = createSignal(false);
+    const openCellMenu = () => setIsCellMenuOpen(true);
+    const closeCellMenu = () => setIsCellMenuOpen(false);
+
+    createShortcut(["Shift", "Enter"], openCellMenu);
 
     return (
         <div class="notebook">
@@ -126,12 +170,28 @@ export function NotebookEditor<T, Props extends FormalCellEditorProps<T>>(allPro
                 }}
             />
             </div>
+            <Show when={notebook().cells.length === 0}>
+                <div class="notebook-empty">
+                <span class="placeholder">
+                    Press Shift-Enter to create a cell
+                </span>
+                <Show when={isCellMenuOpen()}>
+                    <CommandPopup commands={commands()} close={closeCellMenu}/>
+                </Show>
+                </div>
+            </Show>
             <ul class="notebook-cells">
             <For each={notebook().cells}>
                 {(cell, i) => {
+                    const isActive = () => activeCell() == i();
                     const cellActions: CellActions = {
-                        activateAbove: () => setActiveCell(i() - 1),
-                        activateBelow: () => setActiveCell(i() + 1),
+                        activateAbove: () => {
+                            i() > 0 && setActiveCell(i() - 1);
+                        },
+                        activateBelow: () => {
+                            const n = notebook().cells.length;
+                            i() < n - 1 && setActiveCell(i() + 1);
+                        },
                         deleteBackward: () => changeNotebook((nb) => {
                             nb.cells.splice(i(), 1);
                             setActiveCell(i() - 1);
@@ -140,6 +200,9 @@ export function NotebookEditor<T, Props extends FormalCellEditorProps<T>>(allPro
                             nb.cells.splice(i(), 1);
                             setActiveCell(i());
                         }),
+                        hasFocused: () => {
+                            setActiveCell(i());
+                        }
                     }
 
                     return <li>
@@ -150,28 +213,28 @@ export function NotebookEditor<T, Props extends FormalCellEditorProps<T>>(allPro
                                 cell_id={cell.id}
                                 handle={props.handle}
                                 path={["cells", i()]}
-                                isActive={activeCell() == i()}
-                                actions={cellActions}
+                                isActive={isActive()} actions={cellActions}
                             />
                             </div>
                         </Match>
                         <Match when={cell.tag === "formal"}>
                             <div class="cell formal-cell">
                             <props.formalCellEditor
-                                content={cell.content}
+                                content={cell.content as T}
                                 changeContent={(f) => {
                                     changeNotebook((nb) => {
                                         f(nb.cells[i()].content as T);
                                     });
                                 }}
-                                isActive={activeCell() == i()}
-                                actions={cellActions}
-                                // XXX: How to convince TypeScript this works?
-                                {...otherProps as any}
+                                isActive={isActive()} actions={cellActions}
                             />
                             </div>
                         </Match>
                         </Switch>
+                        <Show when={isCellMenuOpen() && isActive()}>
+                            <CommandPopup commands={commands()}
+                                close={closeCellMenu}/>
+                        </Show>
                     </li>;
                 }}
             </For>

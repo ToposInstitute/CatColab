@@ -27,6 +27,8 @@ export type RichTextEditorOptions = {
     deleteForward?: () => void;
     exitUp?: () => void;
     exitDown?: () => void;
+
+    onFocus?: () => void;
 };
 
 /** Rich text editor combining Automerge and ProseMirror.
@@ -74,6 +76,12 @@ export const RichTextEditor = (props: {
                 const newState = autoMirror.intercept(
                     props.handle, tx, view.state);
                 view.updateState(newState);
+            },
+            handleDOMEvents: {
+              focus: () => {
+                  props.onFocus && props.onFocus();
+                  return false;
+              },
             },
         });
         if (props.ref) {
@@ -146,12 +154,9 @@ function doIfEmpty(callback: (dispatch: (tr: Transaction) => void) => void): Com
  */
 function doIfAtTop(callback: (dispatch: (tr: Transaction) => void) => void): Command {
     return (state, dispatch?, view?) => {
-        if (!state.selection.empty) {
-            return false;
-        }
-        const pos = state.selection.$anchor;
-        if (!(pos.depth === 0 || (pos.depth === 1 && pos.index(0) === 0) &&
-                                  view && view.endOfTextblock("up"))) {
+        const sel = state.selection;
+        if (!(sel.empty && sel.$anchor.parent === state.doc.firstChild &&
+              view && view.endOfTextblock("up"))) {
             return false;
         }
         dispatch && callback(dispatch);
@@ -163,14 +168,9 @@ function doIfAtTop(callback: (dispatch: (tr: Transaction) => void) => void): Com
  */
 function doIfAtBottom(callback: (dispatch: (tr: Transaction) => void) => void): Command {
     return (state, dispatch?, view?) => {
-        if (!state.selection.empty) {
-            return false;
-        }
-        /// XXX: Is this logic correct?
-        const pos = state.selection.$anchor;
-        const n = pos.parent.childCount;
-        if (!(pos.depth === 0 || (pos.depth === 1 && pos.index(0) === n-1) &&
-                                  view && view.endOfTextblock("down"))) {
+        const sel = state.selection;
+        if (!(sel.empty && sel.$anchor.parent === state.doc.lastChild &&
+              view && view.endOfTextblock("down"))) {
             return false;
         }
         dispatch && callback(dispatch);
