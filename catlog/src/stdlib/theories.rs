@@ -17,7 +17,7 @@ pub fn th_category() -> &'static UstrDiscreteDblThy {
 
     TH_CATEGORY.get_or_init(|| {
         let mut cat: UstrFinCategory = Default::default();
-        cat.add_ob_generator(ustr("default"));
+        cat.add_ob_generator(ustr("x"));
         DiscreteDblTheory::from(cat)
     })
 }
@@ -31,8 +31,8 @@ pub fn th_profunctor() -> &'static UstrDiscreteDblThy {
 
     TH_PROFUNCTOR.get_or_init(|| {
         let mut cat: UstrFinCategory = Default::default();
-        cat.add_ob_generator(ustr("0"));
-        cat.add_ob_generator(ustr("1"));
+        cat.add_ob_generator(ustr("x"));
+        cat.add_ob_generator(ustr("y"));
         cat.add_hom_generator(ustr("p"), ustr("0"), ustr("1"));
         DiscreteDblTheory::from(cat)
     })
@@ -47,7 +47,7 @@ pub fn th_signed_category() -> &'static UstrDiscreteDblThy {
 
     TH_SIGNED_CATEGORY.get_or_init(|| {
         let mut sgn: UstrFinCategory = Default::default();
-        let (x, n) = (ustr("default"), ustr("n"));
+        let (x, n) = (ustr("x"), ustr("n"));
         sgn.add_ob_generator(x);
         sgn.add_hom_generator(n, x, x);
         sgn.set_composite(n, n, fin_category::Hom::Id(x));
