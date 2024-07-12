@@ -31,9 +31,10 @@ pub fn th_profunctor() -> &'static UstrDiscreteDblThy {
 
     TH_PROFUNCTOR.get_or_init(|| {
         let mut cat: UstrFinCategory = Default::default();
-        cat.add_ob_generator(ustr("x"));
-        cat.add_ob_generator(ustr("y"));
-        cat.add_hom_generator(ustr("p"), ustr("0"), ustr("1"));
+        let (x, y, p) = (ustr("x"), ustr("y"), ustr("p"));
+        cat.add_ob_generator(x);
+        cat.add_ob_generator(y);
+        cat.add_hom_generator(p, x, y);
         DiscreteDblTheory::from(cat)
     })
 }

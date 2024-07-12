@@ -109,6 +109,12 @@ pub trait DblTheory {
     */
     type MorOp;
 
+    /// Does the object type belong to the theory?
+    fn has_ob_type(&self, x: &Self::ObType) -> bool;
+
+    /// Does the morphism type belong to the theory?
+    fn has_mor_type(&self, m: &Self::MorType) -> bool;
+
     /// Source of morphism type.
     fn src(&self, m: &Self::MorType) -> Self::ObType;
 
@@ -214,6 +220,9 @@ where C::Ob: Clone, C::Hom: Clone, {
     type MorType = C::Hom;
     type MorOp = C::Hom;
 
+    fn has_ob_type(&self, x: &Self::ObType) -> bool { self.0.has_ob(x) }
+    fn has_mor_type(&self, m: &Self::MorType) -> bool {self.0.has_hom(m) }
+
     fn src(&self, m: &Self::MorType) -> Self::ObType { self.0.dom(m) }
     fn tgt(&self, m: &Self::MorType) -> Self::ObType { self.0.cod(m) }
     fn dom(&self, x: &Self::ObOp) -> Self::ObType { x.clone() }
@@ -271,6 +280,8 @@ mod tests {
         sgn.set_composite('n', 'n', Hom::Id('*'));
 
         let thy = DiscreteDblTheory::from(sgn);
+        assert!(thy.has_ob_type(&fin_category::Ob('*')));
+        assert!(thy.has_mor_type(&Hom::Generator('n')));
         assert_eq!(thy.basic_ob_types().count(), 1);
         assert_eq!(thy.basic_mor_types().count(), 1);
         let path = Path::pair(Hom::Generator('n'), Hom::Generator('n'));
