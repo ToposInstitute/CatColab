@@ -1,11 +1,12 @@
 {
   "name": "frontend",
   "private": true,
+  "license": "MIT",
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "wasm-pack build catlog-wasm && tsc -b && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -17,6 +18,7 @@
     "@solid-primitives/active-element": "^2.0.20",
     "@solid-primitives/keyboard": "^1.2.8",
     "@solid-primitives/pointer": "^0.2.19",
+    "catlog-wasm": "file:catlog-wasm/pkg",
     "newtype-ts": "^0.3.5",
     "prosemirror-commands": "^1.5.2",
     "prosemirror-keymap": "^1.2.2",
