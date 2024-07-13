@@ -41,7 +41,7 @@ export type CellConstructor<T> = {
     // Name of cell constructor, usually naming the cell type.
     name: string;
 
-    // One-line description of cell constructor.
+    // Tooltip-length description of cell constructor.
     description?: string;
 
     // Keyboard shortcut to invoke the constructor.

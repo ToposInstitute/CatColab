@@ -8,6 +8,7 @@ import { newNotebook } from "./notebook";
 
 
 function App() {
+  const theories = stdTheories();
   const init: ModelNotebook = {
     name: "Untitled",
     notebook: newNotebook(),
@@ -28,7 +29,7 @@ function App() {
   }
 
   return (
-    <ModelNotebookEditor handle={handle} init={init} theories={stdTheories} />
+    <ModelNotebookEditor handle={handle} init={init} theories={theories} />
   );
 }
 

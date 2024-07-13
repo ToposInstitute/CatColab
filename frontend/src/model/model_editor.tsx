@@ -1,5 +1,6 @@
 import { DocHandle } from "@automerge/automerge-repo";
 import { createEffect, createMemo, createSignal, For, Match, Switch } from "solid-js";
+import { MultiProvider } from "@solid-primitives/context";
 
 import { IndexedMap, indexMap } from "../util/indexing";
 import { useDoc } from "../util/automerge_solid";
@@ -8,7 +9,7 @@ import { isoTheoryId, TheoryId, TheoryMeta } from "../theory";
 import { ModelJudgment, MorphismDecl, newMorphismDecl, newObjectDecl, ModelNotebook, ObjectDecl, ObjectId } from "./types";
 import { CellActions, CellConstructor, newFormalCell, newRichTextCell, NotebookEditor } from "../notebook";
 import { InlineInput } from "../notebook/inline_input";
-import { ObjectNameMapContext } from "./model_context";
+import { ObjectIndexContext, TheoryContext } from "./model_context";
 import { ObjectCellEditor } from "./object_cell_editor";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 
@@ -63,7 +64,7 @@ export function ModelNotebookEditor(props: {
         setTheory(id && props.theories.get(id));
     });
 
-    const objectNameMap = createMemo<IndexedMap<ObjectId,string>>(() => {
+    const objectIndex = createMemo<IndexedMap<ObjectId,string>>(() => {
         const map = new Map<ObjectId,string>();
         for (const cell of model().notebook.cells) {
             if (cell.tag == "formal" && cell.content.tag == "object") {
@@ -84,7 +85,7 @@ export function ModelNotebookEditor(props: {
                 />
                 </div>
                 <div class="model-theory">
-                <select required class="editable"
+                <select required
                     value={(id => id ? isoTheoryId.unwrap(id) : "")(model().theory)}
                     onInput={(evt) => {
                         let id = evt.target.value;
@@ -105,7 +106,10 @@ export function ModelNotebookEditor(props: {
                 </select>
                 </div>
             </div>
-            <ObjectNameMapContext.Provider value={objectNameMap}>
+            <MultiProvider values={[
+                [TheoryContext, theory],
+                [ObjectIndexContext, objectIndex],
+            ]}>
                 <NotebookEditor handle={props.handle} path={["notebook"]}
                     notebook={model().notebook}
                     changeNotebook={(f) => {
@@ -114,7 +118,7 @@ export function ModelNotebookEditor(props: {
                     formalCellEditor={ModelCellEditor}
                     cellConstructors={modelCellConstructors(theory())}
                 />
-            </ObjectNameMapContext.Provider>
+            </MultiProvider>
         </div>
     );
 }

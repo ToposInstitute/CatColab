@@ -14,7 +14,7 @@ export type TheoryMeta = {
     // Human-readable name for models of theory.
     name: string;
 
-    // One-line description of models of theory.
+    // Tooltip-length description of models of theory.
     description?: string;
 
     // The underlying double theory.
@@ -61,8 +61,11 @@ type BaseTypeMeta = {
     // Human-readable name of type.
     name: string;
 
-    // One-line description of type.
+    // Tooltip-length description of type.
     description?: string;
+
+    // CSS class to apply to editors for elements of this type.
+    cssClasses?: string[];
 
     // Keyboard shortcut for type, excluding modifier.
     shortcut?: KbdKey[];
@@ -77,5 +80,5 @@ export type MorTypeMeta = BaseTypeMeta & {
 
     // Style of arrow to use for morphisms of this type.
     // TODO: Not yet used. Should be an enum.
-    arrow_style?: string;
+    arrowStyle?: string;
 };

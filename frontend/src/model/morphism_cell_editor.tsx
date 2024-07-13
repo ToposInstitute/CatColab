@@ -3,7 +3,7 @@ import { createEffect, useContext } from "solid-js";
 import { MorphismDecl } from "./types";
 import { CellActions } from "../notebook";
 import { InlineInput } from "../notebook/inline_input";
-import { ObjectNameMapContext } from "./model_context";
+import { ObjectIndexContext, TheoryContext } from "./model_context";
 import { ObjectIdInput} from "./object_cell_editor";
 
 
@@ -27,7 +27,8 @@ export function MorphismCellEditor(props: {
         }
     });
 
-    const objectNameMap = useContext(ObjectNameMapContext);
+    const theory = useContext(TheoryContext);
+    const objectIndex = useContext(ObjectIndexContext);
 
     return <div class="morphism-decl">
         <ObjectIdInput ref={domRef} placeholder="..."
@@ -35,7 +36,8 @@ export function MorphismCellEditor(props: {
             setObjectId={(id) => {
                 props.modifyMorphism((mor) => (mor.dom = id));
             }}
-            objectNameMap={objectNameMap && objectNameMap()}
+            objectType={theory?.()?.theory.src(props.morphism.type)}
+            objectIndex={objectIndex && objectIndex()}
             deleteForward={() => nameRef.focus()}
             exitBackward={() => nameRef.focus()}
             exitForward={() => codRef.focus()}
@@ -67,7 +69,8 @@ export function MorphismCellEditor(props: {
             setObjectId={(id) => {
                 props.modifyMorphism((mor) => (mor.cod = id));
             }}
-            objectNameMap={objectNameMap && objectNameMap()}
+            objectType={theory?.()?.theory.tgt(props.morphism.type)}
+            objectIndex={objectIndex && objectIndex()}
             deleteBackward={() => nameRef.focus()}
             exitBackward={() => domRef.focus()}
             exitForward={props.actions.activateBelow}

@@ -1,6 +1,8 @@
 .inline-input {
     display: inline;
     background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
     outline: none;
     font-size: inherit;
     min-width: 1ex;

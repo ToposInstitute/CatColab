@@ -1,20 +1,21 @@
 import * as catlog from "catlog-wasm";
 
-import { createTheoryMeta, TheoryId, TheoryMeta } from "./types";
+import { uniqueIndexArray } from "../util/indexing";
+import { createTheoryMeta } from "./types";
 
 
 /** Standard library of double theories supported by frontend.
 
-TODO: Should the theories be lazy loaded?
+TODO: Should the underlying theories be lazy loaded?
  */
-export const stdTheories = new Map<TheoryId, TheoryMeta>();
+export const stdTheories = () => uniqueIndexArray([
+    thSimpleOlog(),
+    thSimpleSchema(),
+    thRegNet(),
+], th => th.id);
 
-function pushStdTheory(theory: TheoryMeta) {
-    console.assert(!stdTheories.has(theory.id));
-    stdTheories.set(theory.id, theory);
-}
 
-pushStdTheory(createTheoryMeta({
+const thSimpleOlog = () => createTheoryMeta({
     id: "simple-olog",
     name: "Olog",
     description: "Ontology log, a simple conceptual model",
@@ -26,6 +27,7 @@ pushStdTheory(createTheoryMeta({
             name: "Type",
             description: "Type or class of things",
             shortcut: ["O"],
+            cssClasses: ["object-corner-box"],
         },
         {
             tag: "mor_type",
@@ -35,9 +37,9 @@ pushStdTheory(createTheoryMeta({
             shortcut: ["M"],
         }
     ],
-}));
+});
 
-pushStdTheory(createTheoryMeta({
+const thSimpleSchema = () => createTheoryMeta({
     id: "simple-schema",
     name: "Schema",
     description: "Schema for a categorical database",
@@ -49,6 +51,7 @@ pushStdTheory(createTheoryMeta({
             name: "Entity",
             description: "Type of entity or thing",
             shortcut: ["O"],
+            cssClasses: ["object-box"],
         },
         {
             tag: "mor_type",
@@ -77,9 +80,9 @@ pushStdTheory(createTheoryMeta({
             description: "Operation on data types for attributes",
         }
     ],
-}));
+});
 
-pushStdTheory(createTheoryMeta({
+const thRegNet = () => createTheoryMeta({
     id: "reg-net",
     name: "Regulatory network",
     theory: catlog.thSignedCategory(),
@@ -104,4 +107,4 @@ pushStdTheory(createTheoryMeta({
             description: "Negative interaction: inhibits",
         }
     ],
-}));
+});

@@ -1,8 +1,12 @@
 import { Accessor, createContext } from "solid-js";
 
 import { IndexedMap } from "../util/indexing";
+import { TheoryMeta } from "../theory";
 import { ObjectId } from "./types";
 
-export type ObjectNameMap = IndexedMap<ObjectId,string>;
+export const TheoryContext = createContext<Accessor<TheoryMeta | undefined>>();
 
-export const ObjectNameMapContext = createContext<Accessor<ObjectNameMap>>();
+// Bidirectional mapping between object IDs and names.
+export type ObjectIndex = IndexedMap<ObjectId,string>;
+
+export const ObjectIndexContext = createContext<Accessor<ObjectIndex>>();

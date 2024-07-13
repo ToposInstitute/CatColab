@@ -16,6 +16,7 @@
     "@automerge/automerge-repo-storage-indexeddb": "^1.2.0",
     "@automerge/prosemirror": "^0.0.12",
     "@solid-primitives/active-element": "^2.0.20",
+    "@solid-primitives/context": "^0.2.3",
     "@solid-primitives/keyboard": "^1.2.8",
     "@solid-primitives/pointer": "^0.2.19",
     "catlog-wasm": "file:catlog-wasm/pkg",
