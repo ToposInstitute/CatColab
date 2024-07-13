@@ -38,8 +38,11 @@ A notebook knows how to edit cells, but without cell constructors, it wouldn't
 know how to create them!
  */
 export type CellConstructor<T> = {
-    // Name of cell constructor, usually describing the cell type.
-    name: string,
+    // Name of cell constructor, usually naming the cell type.
+    name: string;
+
+    // One-line description of cell constructor.
+    description?: string;
 
     // Keyboard shortcut to invoke the constructor.
     shortcut?: KbdKey[];
@@ -123,11 +126,13 @@ export function NotebookEditor<T>(props: {
         });
     };
     const commands = (): Command[] => (
-        props.cellConstructors.map((cc) => ({
-            name: cc.name,
-            shortcut: cc.shortcut,
-            execute: () => addAfterActiveCell(cc.construct()),
-        }))
+        props.cellConstructors.map((cc) => {
+            const {name, description, shortcut} = cc;
+            return {
+                name, description, shortcut,
+                execute: () => addAfterActiveCell(cc.construct()),
+            };
+        })
     );
     createEffect(() => {
         for (const command of commands()) {

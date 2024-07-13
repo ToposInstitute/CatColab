@@ -1,3 +1,4 @@
+import { Newtype, iso } from "newtype-ts";
 import { KbdKey } from "@solid-primitives/keyboard";
 
 import { DiscreteDblTheory } from "catlog-wasm";
@@ -7,7 +8,7 @@ import { DiscreteDblTheory } from "catlog-wasm";
  */
 export type TheoryMeta = {
     // Unique identifier of theory.
-    id: string;
+    id: TheoryId;
 
     // Human-readable name for models of theory.
     name: string;
@@ -24,6 +25,12 @@ export type TheoryMeta = {
     // Whether models of the double theory are constrained to be free.
     free?: boolean;
 };
+
+export interface TheoryId
+extends Newtype<{ readonly TheoryId: unique symbol }, string> {}
+
+export const isoTheoryId = iso<TheoryId>();
+
 
 /** A type in a double theory with frontend metadata.
  */

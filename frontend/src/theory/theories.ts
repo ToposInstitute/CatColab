@@ -1,15 +1,15 @@
 import * as catlog from "catlog-wasm";
 
-import { TheoryMeta } from "./types";
+import { isoTheoryId, TheoryMeta } from "./types";
 
 
-/** Double theories that ship with the frontend.
+/** Standard library of double theories supported by frontend.
 
 TODO: Should the underlying theories be lazy loaded?
  */
-export const theories = (): TheoryMeta[] => [
+export const stdTheories = (): TheoryMeta[] => [
     {
-        id: "simple-olog",
+        id: isoTheoryId.wrap("simple-olog"),
         name: "Olog",
         description: "Ontology log, a simple conceptual model",
         theory: catlog.thSimpleOlog(),
@@ -31,7 +31,7 @@ export const theories = (): TheoryMeta[] => [
         ],
     },
     {
-        id: "simple-schema",
+        id: isoTheoryId.wrap("simple-schema"),
         name: "Schema",
         description: "Schema for a categorical database",
         theory: catlog.thSimpleSchema(),
@@ -72,7 +72,7 @@ export const theories = (): TheoryMeta[] => [
         ]
     },
     {
-        id: "reg-net",
+        id: isoTheoryId.wrap("reg-net"),
         name: "Regulatory network",
         theory: catlog.thSignedCategory(),
         free: true,

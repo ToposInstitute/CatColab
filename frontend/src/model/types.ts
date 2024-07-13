@@ -1,6 +1,7 @@
 import { Newtype, iso } from "newtype-ts";
 
 import { generateId } from "../util/id";
+import { TheoryId } from "../theory";
 import { Notebook } from "../notebook";
 
 
@@ -11,7 +12,7 @@ export type NotebookModel = {
     name: string;
 
     // Identifier of double theory that the model is of.
-    theory?: string;
+    theory?: TheoryId;
 
     // Content of the model, formal and informal.
     notebook: Notebook<ModelJudgment>;

@@ -4,6 +4,7 @@ import { createMemo, Match, Switch } from "solid-js";
 import { IndexedMap, indexMap } from "../util/indexed_map";
 import { useDoc } from "../util/automerge_solid";
 
+import { TheoryId, TheoryMeta } from "../theory";
 import { ModelJudgment, MorphismDecl, newMorphismDecl, newObjectDecl, NotebookModel, ObjectDecl, ObjectId } from "./types";
 import { CellActions, CellConstructor, newFormalCell, newRichTextCell, NotebookEditor } from "../notebook";
 import { InlineInput } from "../notebook/inline_input";
@@ -51,7 +52,16 @@ export function ModelCellEditor(props: {
 export function ModelEditor(props: {
     handle: DocHandle<NotebookModel>,
     init: NotebookModel,
+    theories: TheoryMeta[],
 }) {
+    const theoryIndex = createMemo<Map<TheoryId,number>>(() => {
+        const map = new Map<TheoryId,number>();
+        for (const [i, th] of props.theories.entries()) {
+            map.set(th.id, i);
+        }
+        return map;
+    });
+
     const [model, changeModel] = useDoc(() => props.handle, props.init);
 
     const objectNameMap = createMemo<IndexedMap<ObjectId,string>>(() => {
@@ -63,6 +73,13 @@ export function ModelEditor(props: {
         }
         return indexMap(map);
     });
+
+    const cellConstructors = () => {
+        const id = model().theory;
+        const i = id && theoryIndex().get(id);
+        const th = typeof(i) === "number" ? props.theories[i] : undefined;
+        return modelCellConstructors(th);
+    }
 
     return (
         <div class="model-editor">
@@ -80,33 +97,38 @@ export function ModelEditor(props: {
                         changeModel((model) => f(model.notebook));
                     }}
                     formalCellEditor={ModelCellEditor}
-                    cellConstructors={modelCellConstructors}
+                    cellConstructors={cellConstructors()}
                 />
             </ObjectNameMapContext.Provider>
         </div>
     );
 }
 
+type ModelCellConstructor = CellConstructor<ModelJudgment>;
 
-// On Mac, the Alt/Option key remaps keys, whereas on other platforms Control
-// tends to be already bound in other shortcuts.
-const modifier = navigator.userAgent.includes("Mac") ? "Control" : "Alt";
+function modelCellConstructors(theory?: TheoryMeta): ModelCellConstructor[] {
+    // On Mac, the Alt/Option key remaps keys, whereas on other platforms
+    // Control tends to be already bound in other shortcuts.
+    const modifier = navigator.userAgent.includes("Mac") ? "Control" : "Alt";
 
-// TODO: Thist list won't be hard-coded.
-const modelCellConstructors: CellConstructor<ModelJudgment>[] = [
-    {
-        name: "Text",
-        shortcut: [modifier, "T"],
-        construct: () => newRichTextCell(),
-    },
-    {
-        name: "Object",
-        shortcut: [modifier, "O"],
-        construct: () => newFormalCell(newObjectDecl("default")),
-    },
-    {
-        name: "Morphism",
-        shortcut: [modifier, "M"],
-        construct: () => newFormalCell(newMorphismDecl("default")),
-    },
-];
+    const result: ModelCellConstructor[] = [
+        {
+            name: "Text",
+            shortcut: [modifier, "T"],
+            construct: () => newRichTextCell(),
+        }
+    ];
+
+    for (const typ of theory ? theory.types : []) {
+        const {name, description, shortcut} = typ;
+        result.push({
+            name, description,
+            shortcut: shortcut && [modifier, ...shortcut],
+            construct: typ.tag === "ob_type" ?
+                () => newFormalCell(newObjectDecl(typ.id)) :
+                () => newFormalCell(newMorphismDecl(typ.id)),
+        });
+    }
+
+    return result;
+}

@@ -2,6 +2,7 @@ import { DocHandle, isValidAutomergeUrl, Repo } from "@automerge/automerge-repo"
 import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb";
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
 
+import { stdTheories } from "./theory";
 import { ModelEditor, NotebookModel } from "./model";
 import { newNotebook } from "./notebook";
 
@@ -27,7 +28,7 @@ function App() {
   }
 
   return (
-    <ModelEditor handle={handle} init={init} />
+    <ModelEditor handle={handle} init={init} theories={stdTheories()} />
   );
 }
 

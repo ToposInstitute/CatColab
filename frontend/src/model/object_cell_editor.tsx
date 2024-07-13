@@ -52,7 +52,7 @@ export function ObjectIdInput(allProps: {
     createEffect(() => {
         let name = "";
         if (props.objectId) {
-            name = props.objectNameMap?.map.get(props.objectId) || "";
+            name = props.objectNameMap?.map.get(props.objectId) ?? "";
         }
         setText(name);
     });

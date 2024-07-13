@@ -8,6 +8,7 @@ import "./command.css";
 
 export type Command = {
     name: string;
+    description?: string;
     shortcut?: KbdKey[];
     execute: () => void;
 };

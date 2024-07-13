@@ -35,7 +35,7 @@ export function MorphismCellEditor(props: {
             setObjectId={(id) => {
                 props.modifyMorphism((mor) => (mor.dom = id));
             }}
-            objectNameMap={objectNameMap ? objectNameMap() : undefined}
+            objectNameMap={objectNameMap && objectNameMap()}
             deleteForward={() => nameRef.focus()}
             exitBackward={() => nameRef.focus()}
             exitForward={() => codRef.focus()}
@@ -67,7 +67,7 @@ export function MorphismCellEditor(props: {
             setObjectId={(id) => {
                 props.modifyMorphism((mor) => (mor.cod = id));
             }}
-            objectNameMap={objectNameMap ? objectNameMap() : undefined}
+            objectNameMap={objectNameMap && objectNameMap()}
             deleteBackward={() => nameRef.focus()}
             exitBackward={() => domRef.focus()}
             exitForward={props.actions.activateBelow}
