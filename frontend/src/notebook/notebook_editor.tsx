@@ -1,12 +1,10 @@
 import { DocHandle, Prop } from "@automerge/automerge-repo";
-import { Component, createEffect, createSignal, For, Match, onMount, Show, Switch } from "solid-js";
+import { Component, createEffect, createSignal, For, Match, Show, Switch } from "solid-js";
 import { EditorView } from "prosemirror-view";
 import { createShortcut, KbdKey } from "@solid-primitives/keyboard";
 
-import { useDoc } from "../util/automerge_solid";
 import { Cell, CellId, Notebook } from "./types";
 import { Command, CommandPopup } from "./command";
-import { InlineInput } from "./inline_input";
 import { RichTextEditor } from "./rich_text_editor";
 
 import "./notebook_editor.css";
@@ -55,7 +53,7 @@ export type CellConstructor<T> = {
  */
 export function RichTextCellEditor(props: {
     cell_id: CellId,
-    handle: DocHandle<Notebook<unknown>>,
+    handle: DocHandle<unknown>,
     path: Prop[],
     isActive: boolean;
     actions: CellActions,
@@ -94,16 +92,6 @@ export type FormalCellEditorProps<T> = {
 }
 
 
-/** Actions invokable on a notebook editor.
- */
-export type NotebookEditorRef<T> = {
-    // Get the current notebook data.
-    notebook: () => Notebook<T>,
-
-    // Make a change to the notebook data.
-    changeNotebook: (f: (nb: Notebook<T>) => void) => void;
-};
-
 /** Notebook editor based on Automerge.
 
 A notebook has two types of cells:
@@ -116,23 +104,18 @@ Rich text cells are the same in all notebooks, whereas formal cells are handled
 by custom components supplied to the notebook.
  */
 export function NotebookEditor<T>(props: {
-    handle: DocHandle<Notebook<T>>;
-    init: Notebook<T>;
+    handle: DocHandle<unknown>;
+    path: Prop[];
+    notebook: Notebook<T>;
+    changeNotebook: (f: (nb: Notebook<T>) => void) => void;
     formalCellEditor: Component<FormalCellEditorProps<T>>;
     cellConstructors: CellConstructor<T>[];
-    ref?: (ref: NotebookEditorRef<T>) => void;
 }) {
-    const [notebook, changeNotebook] = useDoc(() => props.handle, props.init);
-
-    onMount(() => {
-        props.ref?.({ notebook, changeNotebook });
-    });
-
     const [activeCell, setActiveCell] = createSignal(0);
 
     // Set up commands and their keyboard shortcuts.
     const addAfterActiveCell = (cell: Cell<T>) => {
-        changeNotebook((nb) => {
+        props.changeNotebook((nb) => {
             const n = nb.cells.length;
             const i = Math.min(Math.max(activeCell() + 1, 0), n);
             nb.cells.splice(i, 0, cell);
@@ -163,14 +146,7 @@ export function NotebookEditor<T>(props: {
 
     return (
         <div class="notebook">
-            <div class="notebook-title">
-            <InlineInput text={notebook().name}
-                setText={(text) => {
-                    changeNotebook((nb) => (nb.name = text));
-                }}
-            />
-            </div>
-            <Show when={notebook().cells.length === 0}>
+            <Show when={props.notebook.cells.length === 0}>
                 <div class="notebook-empty">
                 <span class="placeholder">
                     Press Shift-Enter to create a cell
@@ -181,7 +157,7 @@ export function NotebookEditor<T>(props: {
                 </div>
             </Show>
             <ul class="notebook-cells">
-            <For each={notebook().cells}>
+            <For each={props.notebook.cells}>
                 {(cell, i) => {
                     const isActive = () => activeCell() == i();
                     const cellActions: CellActions = {
@@ -189,14 +165,14 @@ export function NotebookEditor<T>(props: {
                             i() > 0 && setActiveCell(i() - 1);
                         },
                         activateBelow: () => {
-                            const n = notebook().cells.length;
+                            const n = props.notebook.cells.length;
                             i() < n - 1 && setActiveCell(i() + 1);
                         },
-                        deleteBackward: () => changeNotebook((nb) => {
+                        deleteBackward: () => props.changeNotebook((nb) => {
                             nb.cells.splice(i(), 1);
                             setActiveCell(i() - 1);
                         }),
-                        deleteForward: () => changeNotebook((nb) => {
+                        deleteForward: () => props.changeNotebook((nb) => {
                             nb.cells.splice(i(), 1);
                             setActiveCell(i());
                         }),
@@ -212,7 +188,7 @@ export function NotebookEditor<T>(props: {
                             <RichTextCellEditor
                                 cell_id={cell.id}
                                 handle={props.handle}
-                                path={["cells", i()]}
+                                path={[...props.path, "cells", i()]}
                                 isActive={isActive()} actions={cellActions}
                             />
                             </div>
@@ -222,7 +198,7 @@ export function NotebookEditor<T>(props: {
                             <props.formalCellEditor
                                 content={cell.content as T}
                                 changeContent={(f) => {
-                                    changeNotebook((nb) => {
+                                    props.changeNotebook((nb) => {
                                         f(nb.cells[i()].content as T);
                                     });
                                 }}

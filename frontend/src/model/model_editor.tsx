@@ -1,12 +1,17 @@
 import { DocHandle } from "@automerge/automerge-repo";
-import { createMemo, createSignal, Match, Switch } from "solid-js";
+import { createMemo, Match, Switch } from "solid-js";
 
 import { IndexedMap, indexMap } from "../util/indexed_map";
-import { ModelJudgment, MorphismDecl, newMorphismDecl, newObjectDecl, ObjectDecl, ObjectId } from "./types";
-import { CellActions, CellConstructor, newFormalCell, newRichTextCell, Notebook, NotebookEditor, NotebookEditorRef } from "../notebook";
+import { useDoc } from "../util/automerge_solid";
+
+import { ModelJudgment, MorphismDecl, newMorphismDecl, newObjectDecl, NotebookModel, ObjectDecl, ObjectId } from "./types";
+import { CellActions, CellConstructor, newFormalCell, newRichTextCell, NotebookEditor } from "../notebook";
+import { InlineInput } from "../notebook/inline_input";
 import { ObjectNameMapContext } from "./model_context";
 import { ObjectCellEditor } from "./object_cell_editor";
 import { MorphismCellEditor } from "./morphism_cell_editor";
+
+import "./model_editor.css";
 
 
 /** Editor for a cell in a model of a discrete double theory.
@@ -44,17 +49,14 @@ export function ModelCellEditor(props: {
 /** Notebook-based editor for a model of a discrete double theory.
  */
 export function ModelEditor(props: {
-    handle: DocHandle<Notebook<ModelJudgment>>,
-    init: Notebook<ModelJudgment>,
-    ref?: (ref: NotebookEditorRef<ModelJudgment>) => void;
+    handle: DocHandle<NotebookModel>,
+    init: NotebookModel,
 }) {
-    const [notebookRef, setNotebookRef] =
-        createSignal<NotebookEditorRef<ModelJudgment>>();
+    const [model, changeModel] = useDoc(() => props.handle, props.init);
 
     const objectNameMap = createMemo<IndexedMap<ObjectId,string>>(() => {
         const map = new Map<ObjectId,string>();
-        const ref = notebookRef();
-        for (const cell of ref ? ref.notebook().cells : []) {
+        for (const cell of model().notebook.cells) {
             if (cell.tag == "formal" && cell.content.tag == "object") {
                 map.set(cell.content.id, cell.content.name);
             }
@@ -63,16 +65,25 @@ export function ModelEditor(props: {
     });
 
     return (
-        <ObjectNameMapContext.Provider value={objectNameMap}>
-            <NotebookEditor handle={props.handle} init={props.init}
-                ref={(ref) => {
-                    setNotebookRef(ref);
-                    props.ref && props.ref(ref);
+        <div class="model-editor">
+            <div class="model-title">
+            <InlineInput text={model().name}
+                setText={(text) => {
+                    changeModel((model) => (model.name = text));
                 }}
-                formalCellEditor={ModelCellEditor}
-                cellConstructors={modelCellConstructors}
             />
-        </ObjectNameMapContext.Provider>
+            </div>
+            <ObjectNameMapContext.Provider value={objectNameMap}>
+                <NotebookEditor handle={props.handle} path={["notebook"]}
+                    notebook={model().notebook}
+                    changeNotebook={(f) => {
+                        changeModel((model) => f(model.notebook));
+                    }}
+                    formalCellEditor={ModelCellEditor}
+                    cellConstructors={modelCellConstructors}
+                />
+            </ObjectNameMapContext.Provider>
+        </div>
     );
 }
 

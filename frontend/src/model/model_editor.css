@@ -1,0 +1,9 @@
+.model-editor {
+    max-width: 100ex;
+    margin: 0 auto;
+}
+
+.model-title input {
+    font-size: 3em;
+    line-height: 1.1;
+}

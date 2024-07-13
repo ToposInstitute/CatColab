@@ -1,13 +1,3 @@
-.notebook {
-    max-width: 100ex;
-    margin: 0 auto;
-}
-
-.notebook-title input {
-    font-size: 3em;
-    line-height: 1.1;
-}
-
 .notebook-cells {
     list-style: none;
     margin: 1rem 0;
