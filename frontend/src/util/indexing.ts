@@ -19,3 +19,15 @@ export function indexMap<K,V>(map: Map<K,V>) {
     }
     return {map, index};
 }
+
+/** Index an array by a unique key.
+ */
+export function uniqueIndexArray<K,V>(arr: Array<V>, by: (x: V) => K) {
+    const index = new Map<K,V>();
+    for (const x of arr) {
+        const key = by(x);
+        console.assert(!index.has(key));
+        index.set(key, x);
+    }
+    return index;
+}

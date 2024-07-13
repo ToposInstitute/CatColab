@@ -1,11 +1,11 @@
 import { DocHandle } from "@automerge/automerge-repo";
 import { createEffect, createMemo, createSignal, For, Match, Switch } from "solid-js";
 
-import { IndexedMap, indexMap } from "../util/indexed_map";
+import { IndexedMap, indexMap } from "../util/indexing";
 import { useDoc } from "../util/automerge_solid";
 
 import { isoTheoryId, TheoryId, TheoryMeta } from "../theory";
-import { ModelJudgment, MorphismDecl, newMorphismDecl, newObjectDecl, NotebookModel, ObjectDecl, ObjectId } from "./types";
+import { ModelJudgment, MorphismDecl, newMorphismDecl, newObjectDecl, ModelNotebook, ObjectDecl, ObjectId } from "./types";
 import { CellActions, CellConstructor, newFormalCell, newRichTextCell, NotebookEditor } from "../notebook";
 import { InlineInput } from "../notebook/inline_input";
 import { ObjectNameMapContext } from "./model_context";
@@ -49,10 +49,10 @@ export function ModelCellEditor(props: {
 
 /** Notebook-based editor for a model of a discrete double theory.
  */
-export function ModelEditor(props: {
-    handle: DocHandle<NotebookModel>,
-    init: NotebookModel,
-    theories: TheoryMeta[],
+export function ModelNotebookEditor(props: {
+    handle: DocHandle<ModelNotebook>,
+    init: ModelNotebook,
+    theories: Map<TheoryId, TheoryMeta>,
 }) {
     const [theory, setTheory] = createSignal<TheoryMeta | undefined>();
 
@@ -60,13 +60,7 @@ export function ModelEditor(props: {
 
     createEffect(() => {
         const id = model().theory;
-        for (const theory of props.theories) {
-            if (id && id === theory.id) {
-                setTheory(theory);
-                return;
-            }
-        }
-        setTheory(undefined);
+        setTheory(id && props.theories.get(id));
     });
 
     const objectNameMap = createMemo<IndexedMap<ObjectId,string>>(() => {
@@ -102,7 +96,7 @@ export function ModelEditor(props: {
                     <option value="" disabled selected hidden>
                         Choose a logic
                     </option>
-                    <For each={props.theories}>
+                    <For each={Array.from(props.theories.values())}>
                     {(theory) =>
                         <option value={isoTheoryId.unwrap(theory.id)}>
                             {theory.name}
@@ -140,7 +134,7 @@ function modelCellConstructors(theory?: TheoryMeta): ModelCellConstructor[] {
         }
     ];
 
-    for (const typ of theory ? theory.types : []) {
+    for (const typ of theory?.types.values() ?? []) {
         const {name, description, shortcut} = typ;
         result.push({
             name, description,

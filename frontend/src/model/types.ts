@@ -7,7 +7,7 @@ import { Notebook } from "../notebook";
 
 /** A model of a discrete double theory in notebook form.
  */
-export type NotebookModel = {
+export type ModelNotebook = {
     // User-defined name of model.
     name: string;
 

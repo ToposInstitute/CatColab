@@ -1,6 +1,6 @@
 import { createEffect, createSignal, splitProps } from "solid-js";
 
-import { IndexedMap } from "../util/indexed_map";
+import { IndexedMap } from "../util/indexing";
 import { ObjectDecl, ObjectId } from "./types";
 import { CellActions } from "../notebook";
 import { InlineInput, InlineInputOptions } from "../notebook/inline_input";

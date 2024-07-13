@@ -3,12 +3,12 @@ import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-index
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
 
 import { stdTheories } from "./theory";
-import { ModelEditor, NotebookModel } from "./model";
+import { ModelNotebook, ModelNotebookEditor } from "./model";
 import { newNotebook } from "./notebook";
 
 
 function App() {
-  const init: NotebookModel = {
+  const init: ModelNotebook = {
     name: "Untitled",
     notebook: newNotebook(),
   };
@@ -19,16 +19,16 @@ function App() {
   });
 
   const handleId = document.location.hash.substring(1);
-  let handle: DocHandle<NotebookModel>;
+  let handle: DocHandle<ModelNotebook>;
   if (isValidAutomergeUrl(handleId)) {
     handle = repo.find(handleId);
   } else {
-    handle = repo.create<NotebookModel>(init);
+    handle = repo.create<ModelNotebook>(init);
     document.location.hash = handle.url;
   }
 
   return (
-    <ModelEditor handle={handle} init={init} theories={stdTheories()} />
+    <ModelNotebookEditor handle={handle} init={init} theories={stdTheories} />
   );
 }
 

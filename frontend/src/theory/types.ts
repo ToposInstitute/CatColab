@@ -1,6 +1,7 @@
 import { Newtype, iso } from "newtype-ts";
 import { KbdKey } from "@solid-primitives/keyboard";
 
+import { uniqueIndexArray } from "../util/indexing";
 import { DiscreteDblTheory } from "catlog-wasm";
 
 
@@ -20,16 +21,33 @@ export type TheoryMeta = {
     theory: DiscreteDblTheory;
 
     // Types in the double theory, to be displayed in this order.
-    types: TypeMeta[];
+    types: Map<string, TypeMeta>;
 
     // Whether models of the double theory are constrained to be free.
-    free?: boolean;
+    only_free: boolean;
 };
 
 export interface TheoryId
 extends Newtype<{ readonly TheoryId: unique symbol }, string> {}
 
 export const isoTheoryId = iso<TheoryId>();
+
+export function createTheoryMeta(meta: {
+    id: string;
+    name: string;
+    description?: string;
+    theory: DiscreteDblTheory;
+    types: TypeMeta[];
+    only_free?: boolean;
+}): TheoryMeta {
+    const {name, description, theory} = meta;
+    return {
+        id: isoTheoryId.wrap(meta.id),
+        name, description, theory,
+        types: uniqueIndexArray(meta.types, t => t.id),
+        only_free: meta.only_free ?? false,
+    };
+}
 
 
 /** A type in a double theory with frontend metadata.

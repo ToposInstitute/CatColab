@@ -1,6 +1,6 @@
 import { Accessor, createContext } from "solid-js";
 
-import { IndexedMap } from "../util/indexed_map";
+import { IndexedMap } from "../util/indexing";
 import { ObjectId } from "./types";
 
 export type ObjectNameMap = IndexedMap<ObjectId,string>;
