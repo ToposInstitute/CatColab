@@ -1,10 +1,10 @@
 import { DocHandle } from "@automerge/automerge-repo";
-import { createMemo, Match, Switch } from "solid-js";
+import { createEffect, createMemo, createSignal, For, Match, Switch } from "solid-js";
 
 import { IndexedMap, indexMap } from "../util/indexed_map";
 import { useDoc } from "../util/automerge_solid";
 
-import { TheoryId, TheoryMeta } from "../theory";
+import { isoTheoryId, TheoryId, TheoryMeta } from "../theory";
 import { ModelJudgment, MorphismDecl, newMorphismDecl, newObjectDecl, NotebookModel, ObjectDecl, ObjectId } from "./types";
 import { CellActions, CellConstructor, newFormalCell, newRichTextCell, NotebookEditor } from "../notebook";
 import { InlineInput } from "../notebook/inline_input";
@@ -54,15 +54,20 @@ export function ModelEditor(props: {
     init: NotebookModel,
     theories: TheoryMeta[],
 }) {
-    const theoryIndex = createMemo<Map<TheoryId,number>>(() => {
-        const map = new Map<TheoryId,number>();
-        for (const [i, th] of props.theories.entries()) {
-            map.set(th.id, i);
-        }
-        return map;
-    });
+    const [theory, setTheory] = createSignal<TheoryMeta | undefined>();
 
     const [model, changeModel] = useDoc(() => props.handle, props.init);
+
+    createEffect(() => {
+        const id = model().theory;
+        for (const theory of props.theories) {
+            if (id && id === theory.id) {
+                setTheory(theory);
+                return;
+            }
+        }
+        setTheory(undefined);
+    });
 
     const objectNameMap = createMemo<IndexedMap<ObjectId,string>>(() => {
         const map = new Map<ObjectId,string>();
@@ -74,21 +79,37 @@ export function ModelEditor(props: {
         return indexMap(map);
     });
 
-    const cellConstructors = () => {
-        const id = model().theory;
-        const i = id && theoryIndex().get(id);
-        const th = typeof(i) === "number" ? props.theories[i] : undefined;
-        return modelCellConstructors(th);
-    }
-
     return (
-        <div class="model-editor">
-            <div class="model-title">
-            <InlineInput text={model().name}
-                setText={(text) => {
-                    changeModel((model) => (model.name = text));
-                }}
-            />
+        <div class="model">
+            <div class="model-head">
+                <div class="model-title">
+                <InlineInput text={model().name}
+                    setText={(text) => {
+                        changeModel((model) => (model.name = text));
+                    }}
+                />
+                </div>
+                <div class="model-theory">
+                <select required class="editable"
+                    value={(id => id ? isoTheoryId.unwrap(id) : "")(model().theory)}
+                    onInput={(evt) => {
+                        let id = evt.target.value;
+                        changeModel((model) => {
+                            model.theory = id ? isoTheoryId.wrap(id) : undefined;
+                        });
+                    }}
+                >
+                    <option value="" disabled selected hidden>
+                        Choose a logic
+                    </option>
+                    <For each={props.theories}>
+                    {(theory) =>
+                        <option value={isoTheoryId.unwrap(theory.id)}>
+                            {theory.name}
+                        </option>}
+                    </For>
+                </select>
+                </div>
             </div>
             <ObjectNameMapContext.Provider value={objectNameMap}>
                 <NotebookEditor handle={props.handle} path={["notebook"]}
@@ -97,7 +118,7 @@ export function ModelEditor(props: {
                         changeModel((model) => f(model.notebook));
                     }}
                     formalCellEditor={ModelCellEditor}
-                    cellConstructors={cellConstructors()}
+                    cellConstructors={modelCellConstructors(theory())}
                 />
             </ObjectNameMapContext.Provider>
         </div>

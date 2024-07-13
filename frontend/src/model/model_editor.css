@@ -1,4 +1,4 @@
-.model-editor {
+.model {
     max-width: 100ex;
     margin: 0 auto;
 }
@@ -6,4 +6,22 @@
 .model-title input {
     font-size: 3em;
     line-height: 1.1;
+}
+
+.model-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.model-theory select {
+    appearance: none;
+    background-color: transparent;
+    color: var(--light-color);
+    font-size: 1.5em;
+    text-align-last: right;
+}
+
+.model-theory select:invalid {
+    color: darkgray;
 }
