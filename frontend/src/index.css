@@ -30,3 +30,7 @@ h1 {
   font-size: 3em;
   line-height: 1.1;
 }
+
+.code input {
+    font-family: var(--mono-font);
+}

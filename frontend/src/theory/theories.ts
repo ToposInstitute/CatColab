@@ -51,7 +51,7 @@ const thSimpleSchema = () => createTheoryMeta({
             name: "Entity",
             description: "Type of entity or thing",
             shortcut: ["O"],
-            cssClasses: ["object-box"],
+            cssClasses: ["object-box", "code"],
         },
         {
             tag: "mor_type",
@@ -59,6 +59,7 @@ const thSimpleSchema = () => createTheoryMeta({
             name: "Mapping",
             description: "Many-to-one relation between entities",
             shortcut: ["M"],
+            cssClasses: ["code"],
         },
         {
             tag: "mor_type",
@@ -66,18 +67,21 @@ const thSimpleSchema = () => createTheoryMeta({
             name: "Attribute",
             description: "Data attribute of an entity",
             shortcut: ["A"],
+            cssClasses: ["code"],
         },
         {
             tag: "ob_type",
             id: "attr_type",
             name: "Attribute type",
             description: "Data type for an attribute",
+            cssClasses: ["code"],
         },
         {
             tag: "mor_type",
             id: "attr_op",
             name: "Operation",
             description: "Operation on data types for attributes",
+            cssClasses: ["code"],
         }
     ],
 });

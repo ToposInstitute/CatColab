@@ -35,3 +35,7 @@
         transform: rotate(45deg);
     }
 }
+
+.morphism-decl-name input {
+    text-align: center;
+}
