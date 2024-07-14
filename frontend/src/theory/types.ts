@@ -24,7 +24,7 @@ export type TheoryMeta = {
     types: Map<string, TypeMeta>;
 
     // Whether models of the double theory are constrained to be free.
-    only_free: boolean;
+    onlyFree: boolean;
 };
 
 export interface TheoryId
@@ -38,14 +38,14 @@ export function createTheoryMeta(meta: {
     description?: string;
     theory: DiscreteDblTheory;
     types: TypeMeta[];
-    only_free?: boolean;
+    onlyFree?: boolean;
 }): TheoryMeta {
     const {name, description, theory} = meta;
     return {
         id: isoTheoryId.wrap(meta.id),
         name, description, theory,
         types: uniqueIndexArray(meta.types, t => t.id),
-        only_free: meta.only_free ?? false,
+        onlyFree: meta.onlyFree ?? false,
     };
 }
 
@@ -79,6 +79,7 @@ export type MorTypeMeta = BaseTypeMeta & {
     tag: "mor_type";
 
     // Style of arrow to use for morphisms of this type.
-    // TODO: Not yet used. Should be an enum.
-    arrowStyle?: string;
+    arrowStyle?: ArrowStyle;
 };
+
+export type ArrowStyle = "to" | "flat";

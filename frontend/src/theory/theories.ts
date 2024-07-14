@@ -90,7 +90,7 @@ const thRegNet = () => createTheoryMeta({
     id: "reg-net",
     name: "Regulatory network",
     theory: catlog.thSignedCategory(),
-    only_free: true,
+    onlyFree: true,
     types: [
         {
             tag: "ob_type",
@@ -103,12 +103,14 @@ const thRegNet = () => createTheoryMeta({
             id: "positive",
             name: "Promotion",
             description: "Positive interaction: activates or promotes",
+            arrowStyle: "to",
         },
         {
             tag: "mor_type",
             id: "negative",
             name: "Inhibition",
-            description: "Negative interaction: inhibits",
+            description: "Negative interaction: represses or inhibits",
+            arrowStyle: "flat",
         }
     ],
 });

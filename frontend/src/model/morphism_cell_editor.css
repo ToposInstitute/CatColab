@@ -5,6 +5,10 @@
     column-gap: 1ex;
 }
 
+.morphism-decl-name input {
+    text-align: center;
+}
+
 .morphism-decl-arrow {
     background: light-dark(var(--light-color), var(--dark-color));
     min-width: 1ex;
@@ -13,7 +17,9 @@
     margin-top: 0.3em;
     margin-bottom: calc(var(--formal-font-size) + 0.3em);
     position: relative;
+}
 
+.morphism-decl-arrow.to {
     &:before, &:after {
         content: "";
         background: light-dark(var(--light-color), var(--dark-color));
@@ -36,6 +42,13 @@
     }
 }
 
-.morphism-decl-name input {
-    text-align: center;
+.morphism-decl-arrow.flat:after {
+    content: "";
+    background: light-dark(var(--light-color), var(--dark-color));
+    position: absolute;
+    border-radius: 3px;
+    height: 14px;
+    width: 2px;
+    bottom: -6px;
+    right: 0;
 }

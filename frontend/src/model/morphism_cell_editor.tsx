@@ -8,6 +8,7 @@ import { ObjectIdInput} from "./object_cell_editor";
 
 
 import "./morphism_cell_editor.css";
+import { MorTypeMeta } from "../theory";
 
 
 export function MorphismCellEditor(props: {
@@ -29,6 +30,12 @@ export function MorphismCellEditor(props: {
 
     const theory = useContext(TheoryContext);
     const objectIndex = useContext(ObjectIndexContext);
+
+    const arrowClasses = (): string[] => {
+        const meta = theory?.()?.types.get(props.morphism.type) as MorTypeMeta;
+        const style = meta?.arrowStyle ?? "to";
+        return ["morphism-decl-arrow", style];
+    }
 
     return <div class="morphism-decl">
         <ObjectIdInput ref={domRef} placeholder="..."
@@ -62,7 +69,7 @@ export function MorphismCellEditor(props: {
             onFocus={props.actions.hasFocused}
         />
         </div>
-        <div class="morphism-decl-arrow"></div>
+        <div class={arrowClasses().join(" ")}></div>
         </div>
         <ObjectIdInput ref={codRef} placeholder="..."
             objectId={props.morphism.cod}
