@@ -43,7 +43,7 @@ export function InlineInput(props: {
 
     createEffect(() => {
         setWidth(computeWidth(props.text));
-    })
+    });
 
     return <input class="inline-input" type="text" size="1"
         ref={props.ref}

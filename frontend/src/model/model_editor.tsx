@@ -86,6 +86,8 @@ export function ModelNotebookEditor(props: {
                 </div>
                 <div class="model-theory">
                 <select required
+                    disabled={model().notebook.cells.some(
+                        cell => cell.tag === "formal")}
                     value={(id => id ? isoTheoryId.unwrap(id) : "")(model().theory)}
                     onInput={(evt) => {
                         let id = evt.target.value;
