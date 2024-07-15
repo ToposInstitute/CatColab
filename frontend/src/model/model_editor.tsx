@@ -8,7 +8,7 @@ import { useDoc } from "../util/automerge_solid";
 import { isoTheoryId, TheoryId, TheoryMeta } from "../theory";
 import { ModelJudgment, MorphismDecl, newMorphismDecl, newObjectDecl, ModelNotebook, ObjectDecl, ObjectId } from "./types";
 import { CellActions, CellConstructor, newFormalCell, newRichTextCell, NotebookEditor } from "../notebook";
-import { InlineInput } from "../notebook/inline_input";
+import { InlineInput } from "../components";
 import { ObjectIndexContext, TheoryContext } from "./model_context";
 import { ObjectCellEditor } from "./object_cell_editor";
 import { MorphismCellEditor } from "./morphism_cell_editor";

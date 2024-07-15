@@ -3,7 +3,7 @@ import { createEffect, createSignal, splitProps, useContext } from "solid-js";
 import { IndexedMap } from "../util/indexing";
 import { ObjectDecl, ObjectId } from "./types";
 import { CellActions } from "../notebook";
-import { InlineInput, InlineInputOptions } from "../notebook/inline_input";
+import { InlineInput, InlineInputOptions } from "../components";
 import { TheoryContext } from "./model_context";
 
 import "./object_cell_editor.css";

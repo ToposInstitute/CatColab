@@ -4,8 +4,7 @@ import { EditorView } from "prosemirror-view";
 import { createShortcut, KbdKey } from "@solid-primitives/keyboard";
 
 import { Cell, CellId, Notebook } from "./types";
-import { Command, CommandPopup } from "./command";
-import { RichTextEditor } from "./rich_text_editor";
+import { Command, CommandPopup, RichTextEditor } from "../components";
 
 import "./notebook_editor.css";
 
