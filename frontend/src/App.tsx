@@ -2,14 +2,16 @@ import { DocHandle, isValidAutomergeUrl, Repo } from "@automerge/automerge-repo"
 import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb";
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
 
-import { Notebook } from "./notebook";
-import { ModelEditor, ModelJudgment } from "./model";
+import { stdTheories } from "./theory";
+import { ModelNotebook, ModelNotebookEditor } from "./model";
+import { newNotebook } from "./notebook";
 
 
 function App() {
-  const init: Notebook<ModelJudgment> = {
+  const theories = stdTheories();
+  const init: ModelNotebook = {
     name: "Untitled",
-    cells: [],
+    notebook: newNotebook(),
   };
 
   const repo = new Repo({
@@ -18,16 +20,16 @@ function App() {
   });
 
   const handleId = document.location.hash.substring(1);
-  let handle: DocHandle<Notebook<ModelJudgment>>;
+  let handle: DocHandle<ModelNotebook>;
   if (isValidAutomergeUrl(handleId)) {
     handle = repo.find(handleId);
   } else {
-    handle = repo.create<Notebook<ModelJudgment>>(init);
+    handle = repo.create<ModelNotebook>(init);
     document.location.hash = handle.url;
   }
 
   return (
-    <ModelEditor handle={handle} init={init} />
+    <ModelNotebookEditor handle={handle} init={init} theories={theories} />
   );
 }
 

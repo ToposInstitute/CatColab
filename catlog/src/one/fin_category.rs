@@ -16,12 +16,12 @@ use super::category::*;
 This wrapper type is just for clarity. We prohibit equations between objects, so
 objects and object generators coincide.
 */
-#[derive(Clone,Debug,Copy,PartialEq,Eq,RefCast)]
+#[derive(Clone,Debug,Copy,PartialEq,Eq,Hash,RefCast)]
 #[repr(transparent)]
-pub struct Ob<V>(V);
+pub struct Ob<V>(pub V);
 
 /// Morphism in a finite category.
-#[derive(Clone,Debug,Copy,PartialEq,Eq)]
+#[derive(Clone,Debug,Copy,PartialEq,Eq,Hash)]
 pub enum Hom<V,E> {
     /// Identity morphism on an object.
     Id(V),

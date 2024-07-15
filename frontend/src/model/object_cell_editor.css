@@ -1,9 +1,15 @@
-.editable {
-    border: 2px solid transparent;
+.object-decl {
+    width: fit-content;
 }
 
-.editable:hover {
-    border: 2px solid darkgray;
+.object-box {
+    border: 1px solid black;
+    padding: 2px;
+}
+
+.object-corner-box {
+    border: 1px solid black;
+    padding: 2px;
 
     /* Source: https://stackoverflow.com/a/61913549 */
     --corner: 8px;

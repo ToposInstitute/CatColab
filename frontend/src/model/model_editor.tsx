@@ -1,12 +1,19 @@
 import { DocHandle } from "@automerge/automerge-repo";
-import { createMemo, createSignal, Match, Switch } from "solid-js";
+import { createEffect, createMemo, createSignal, For, Match, Switch } from "solid-js";
+import { MultiProvider } from "@solid-primitives/context";
 
-import { IndexedMap, indexMap } from "../util/indexed_map";
-import { ModelJudgment, MorphismDecl, newMorphismDecl, newObjectDecl, ObjectDecl, ObjectId } from "./types";
-import { CellActions, CellConstructor, newFormalCell, newRichTextCell, Notebook, NotebookEditor, NotebookEditorRef } from "../notebook";
-import { ObjectNameMapContext } from "./model_context";
+import { IndexedMap, indexMap } from "../util/indexing";
+import { useDoc } from "../util/automerge_solid";
+
+import { isoTheoryId, TheoryId, TheoryMeta } from "../theory";
+import { ModelJudgment, MorphismDecl, newMorphismDecl, newObjectDecl, ModelNotebook, ObjectDecl, ObjectId } from "./types";
+import { CellActions, CellConstructor, newFormalCell, newRichTextCell, NotebookEditor } from "../notebook";
+import { InlineInput } from "../notebook/inline_input";
+import { ObjectIndexContext, TheoryContext } from "./model_context";
 import { ObjectCellEditor } from "./object_cell_editor";
 import { MorphismCellEditor } from "./morphism_cell_editor";
+
+import "./model_editor.css";
 
 
 /** Editor for a cell in a model of a discrete double theory.
@@ -43,18 +50,23 @@ export function ModelCellEditor(props: {
 
 /** Notebook-based editor for a model of a discrete double theory.
  */
-export function ModelEditor(props: {
-    handle: DocHandle<Notebook<ModelJudgment>>,
-    init: Notebook<ModelJudgment>,
-    ref?: (ref: NotebookEditorRef<ModelJudgment>) => void;
+export function ModelNotebookEditor(props: {
+    handle: DocHandle<ModelNotebook>,
+    init: ModelNotebook,
+    theories: Map<TheoryId, TheoryMeta>,
 }) {
-    const [notebookRef, setNotebookRef] =
-        createSignal<NotebookEditorRef<ModelJudgment>>();
+    const [theory, setTheory] = createSignal<TheoryMeta | undefined>();
 
-    const objectNameMap = createMemo<IndexedMap<ObjectId,string>>(() => {
+    const [model, changeModel] = useDoc(() => props.handle, props.init);
+
+    createEffect(() => {
+        const id = model().theory;
+        setTheory(id && props.theories.get(id));
+    });
+
+    const objectIndex = createMemo<IndexedMap<ObjectId,string>>(() => {
         const map = new Map<ObjectId,string>();
-        const ref = notebookRef();
-        for (const cell of ref ? ref.notebook().cells : []) {
+        for (const cell of model().notebook.cells) {
             if (cell.tag == "formal" && cell.content.tag == "object") {
                 map.set(cell.content.id, cell.content.name);
             }
@@ -63,39 +75,81 @@ export function ModelEditor(props: {
     });
 
     return (
-        <ObjectNameMapContext.Provider value={objectNameMap}>
-            <NotebookEditor handle={props.handle} init={props.init}
-                ref={(ref) => {
-                    setNotebookRef(ref);
-                    props.ref && props.ref(ref);
-                }}
-                formalCellEditor={ModelCellEditor}
-                cellConstructors={modelCellConstructors}
-            />
-        </ObjectNameMapContext.Provider>
+        <div class="model">
+            <div class="model-head">
+                <div class="model-title">
+                <InlineInput text={model().name}
+                    setText={(text) => {
+                        changeModel((model) => (model.name = text));
+                    }}
+                />
+                </div>
+                <div class="model-theory">
+                <select required
+                    disabled={model().notebook.cells.some(
+                        cell => cell.tag === "formal")}
+                    value={(id => id ? isoTheoryId.unwrap(id) : "")(model().theory)}
+                    onInput={(evt) => {
+                        let id = evt.target.value;
+                        changeModel((model) => {
+                            model.theory = id ? isoTheoryId.wrap(id) : undefined;
+                        });
+                    }}
+                >
+                    <option value="" disabled selected hidden>
+                        Choose a logic
+                    </option>
+                    <For each={Array.from(props.theories.values())}>
+                    {(theory) =>
+                        <option value={isoTheoryId.unwrap(theory.id)}>
+                            {theory.name}
+                        </option>}
+                    </For>
+                </select>
+                </div>
+            </div>
+            <MultiProvider values={[
+                [TheoryContext, theory],
+                [ObjectIndexContext, objectIndex],
+            ]}>
+                <NotebookEditor handle={props.handle} path={["notebook"]}
+                    notebook={model().notebook}
+                    changeNotebook={(f) => {
+                        changeModel((model) => f(model.notebook));
+                    }}
+                    formalCellEditor={ModelCellEditor}
+                    cellConstructors={modelCellConstructors(theory())}
+                />
+            </MultiProvider>
+        </div>
     );
 }
 
+type ModelCellConstructor = CellConstructor<ModelJudgment>;
 
-// On Mac, the Alt/Option key remaps keys, whereas on other platforms Control
-// tends to be already bound in other shortcuts.
-const modifier = navigator.userAgent.includes("Mac") ? "Control" : "Alt";
+function modelCellConstructors(theory?: TheoryMeta): ModelCellConstructor[] {
+    // On Mac, the Alt/Option key remaps keys, whereas on other platforms
+    // Control tends to be already bound in other shortcuts.
+    const modifier = navigator.userAgent.includes("Mac") ? "Control" : "Alt";
 
-// TODO: Thist list won't be hard-coded.
-const modelCellConstructors: CellConstructor<ModelJudgment>[] = [
-    {
-        name: "Text",
-        shortcut: [modifier, "T"],
-        construct: () => newRichTextCell(),
-    },
-    {
-        name: "Object",
-        shortcut: [modifier, "O"],
-        construct: () => newFormalCell(newObjectDecl("default")),
-    },
-    {
-        name: "Morphism",
-        shortcut: [modifier, "M"],
-        construct: () => newFormalCell(newMorphismDecl("default")),
-    },
-];
+    const result: ModelCellConstructor[] = [
+        {
+            name: "Text",
+            shortcut: [modifier, "T"],
+            construct: () => newRichTextCell(),
+        }
+    ];
+
+    for (const typ of theory?.types.values() ?? []) {
+        const {name, description, shortcut} = typ;
+        result.push({
+            name, description,
+            shortcut: shortcut && [modifier, ...shortcut],
+            construct: typ.tag === "ob_type" ?
+                () => newFormalCell(newObjectDecl(typ.id)) :
+                () => newFormalCell(newMorphismDecl(typ.id)),
+        });
+    }
+
+    return result;
+}

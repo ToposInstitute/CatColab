@@ -1,11 +1,12 @@
 {
   "name": "frontend",
   "private": true,
+  "license": "MIT",
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "wasm-pack build catlog-wasm && tsc -b && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -15,8 +16,10 @@
     "@automerge/automerge-repo-storage-indexeddb": "^1.2.0",
     "@automerge/prosemirror": "^0.0.12",
     "@solid-primitives/active-element": "^2.0.20",
+    "@solid-primitives/context": "^0.2.3",
     "@solid-primitives/keyboard": "^1.2.8",
     "@solid-primitives/pointer": "^0.2.19",
+    "catlog-wasm": "file:catlog-wasm/pkg",
     "newtype-ts": "^0.3.5",
     "prosemirror-commands": "^1.5.2",
     "prosemirror-keymap": "^1.2.2",
@@ -30,6 +33,7 @@
     "vite": "^5.3.1",
     "vite-plugin-solid": "^2.10.2",
     "vite-plugin-top-level-await": "^1.4.1",
-    "vite-plugin-wasm": "^3.3.0"
+    "vite-plugin-wasm": "^3.3.0",
+    "wasm-pack": "^0.13.0"
   }
 }

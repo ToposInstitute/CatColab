@@ -1,9 +1,12 @@
-import { createEffect, createSignal, splitProps } from "solid-js";
+import { createEffect, createSignal, splitProps, useContext } from "solid-js";
 
-import { IndexedMap } from "../util/indexed_map";
+import { IndexedMap } from "../util/indexing";
 import { ObjectDecl, ObjectId } from "./types";
 import { CellActions } from "../notebook";
 import { InlineInput, InlineInputOptions } from "../notebook/inline_input";
+import { TheoryContext } from "./model_context";
+
+import "./object_cell_editor.css";
 
 
 export function ObjectCellEditor(props: {
@@ -21,7 +24,14 @@ export function ObjectCellEditor(props: {
         }
     });
 
-    return <div class="object-decl">
+    const theory = useContext(TheoryContext);
+    const cssClasses = (): string[] => {
+        const typ = props.object.type;
+        const list = theory?.()?.types.get(typ)?.cssClasses ?? [];
+        return ["object-decl", ...list];
+    };
+
+    return <div class={cssClasses().join(" ")}>
         <InlineInput ref={nameRef} placeholder="Unnamed"
             text={props.object.name}
             setText={(text) => {
@@ -41,10 +51,11 @@ export function ObjectCellEditor(props: {
 export function ObjectIdInput(allProps: {
     objectId: ObjectId | null;
     setObjectId: (id: ObjectId | null) => void;
-    objectNameMap?: IndexedMap<ObjectId,string>;
+    objectType?: string;
+    objectIndex?: IndexedMap<ObjectId,string>;
 } & InlineInputOptions) {
     const [props, inputProps] = splitProps(allProps, [
-        "objectId", "setObjectId", "objectNameMap",
+        "objectId", "setObjectId", "objectIndex", "objectType",
     ]);
 
     const [text, setText] = createSignal("");
@@ -52,13 +63,13 @@ export function ObjectIdInput(allProps: {
     createEffect(() => {
         let name = "";
         if (props.objectId) {
-            name = props.objectNameMap?.map.get(props.objectId) || "";
+            name = props.objectIndex?.map.get(props.objectId) ?? "";
         }
         setText(name);
     });
 
     const handleNewText = (text: string) => {
-        const possibleIds = props.objectNameMap?.index.get(text);
+        const possibleIds = props.objectIndex?.index.get(text);
         if (possibleIds && possibleIds.length > 0) {
             // TODO: Warn the user when the names are not unique.
             props.setObjectId(possibleIds[0]);
@@ -72,10 +83,18 @@ export function ObjectIdInput(allProps: {
 
     const isValid = () => {
         const objectName = props.objectId ?
-            props.objectNameMap?.map.get(props.objectId) : "";
+            props.objectIndex?.map.get(props.objectId) : "";
         return text() === objectName;
     };
 
-    return <InlineInput text={text()} setText={handleNewText}
-            invalid={!isValid()} {...inputProps} />;
+    const theory = useContext(TheoryContext);
+    const cssClass = () => {
+        const typ = props.objectType;
+        return typ && theory?.()?.types.get(typ)?.cssClasses?.join(" ");
+    };
+
+    return <div class={cssClass()}>
+        <InlineInput text={text()} setText={handleNewText}
+            invalid={!isValid()} {...inputProps} />
+    </div>;
 }

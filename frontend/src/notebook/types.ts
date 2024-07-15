@@ -1,10 +1,15 @@
 import { Newtype, iso } from "newtype-ts";
 import { generateId } from "../util/id";
 
-export interface CellId
-extends Newtype<{ readonly CellId: unique symbol }, string> {}
+export type Notebook<T> = {
+    cells: Cell<T>[];
+}
 
-const isoCellId = iso<CellId>();
+export type Cell<T> = RichTextCell | FormalCell<T>;
+
+export const newNotebook = <T>(): Notebook<T> => ({
+    cells: [],
+});
 
 export type RichTextCell = {
     tag: "rich-text";
@@ -30,9 +35,7 @@ export const newFormalCell = <T>(content: T): FormalCell<T> => ({
     content: content,
 });
 
-export type Cell<T> = RichTextCell | FormalCell<T>;
+export interface CellId
+extends Newtype<{ readonly CellId: unique symbol }, string> {}
 
-export type Notebook<T> = {
-    name: string;
-    cells: Cell<T>[];
-}
+const isoCellId = iso<CellId>();
