@@ -135,6 +135,7 @@ function modelCellConstructors(theory?: TheoryMeta): ModelCellConstructor[] {
     const result: ModelCellConstructor[] = [
         {
             name: "Text",
+            description: "Start writing ordinary text",
             shortcut: [modifier, "T"],
             construct: () => newRichTextCell(),
         }

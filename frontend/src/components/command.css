@@ -1,31 +1,28 @@
-.command-popup {
-    position: absolute;
-}
-
 .command-list {
     list-style: none;
-    z-index: 1;
-    position: relative;
-    top: -5px;
+    padding: 0;
     margin: 0;
-    padding: 5px;
-
-    background: white;
-    border-radius: 6px;
-    box-shadow: rgba(15, 15, 15, 0.05) 0px 0px 0px 1px, rgba(15, 15, 15, 0.1) 0px 3px 6px, rgba(15, 15, 15, 0.2) 0px 9px 24px;
 }
 
 .command-list li {
-    display: flex;
-    gap: 2em;
-    align-items: center;
-    justify-content: space-between;
     cursor: pointer;
     padding: 5px;
 }
 
 .command-list li.active {
     background: #f1f5f9;
+}
+
+.command-head {
+    display: flex;
+    gap: 2em;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.command-description {
+    font-size: 0.75em;
+    color: dimgray;
 }
 
 .command-shortcut {

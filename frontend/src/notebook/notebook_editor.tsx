@@ -2,9 +2,11 @@ import { DocHandle, Prop } from "@automerge/automerge-repo";
 import { Component, createEffect, createSignal, For, Match, Show, Switch } from "solid-js";
 import { EditorView } from "prosemirror-view";
 import { createShortcut, KbdKey } from "@solid-primitives/keyboard";
+import Popover from "@corvu/popover";
+import { FloatingOptions } from "@corvu/popover";
 
 import { Cell, CellId, Notebook } from "./types";
-import { Command, CommandPopup, RichTextEditor } from "../components";
+import { Command, CommandMenu, RichTextEditor } from "../components";
 
 import "./notebook_editor.css";
 
@@ -143,21 +145,28 @@ export function NotebookEditor<T>(props: {
 
     // Set up popup menu to create new cells.
     const [isCellMenuOpen, setIsCellMenuOpen] = createSignal(false);
-    const openCellMenu = () => setIsCellMenuOpen(true);
-    const closeCellMenu = () => setIsCellMenuOpen(false);
 
-    createShortcut(["Shift", "Enter"], openCellMenu);
+    createShortcut(["Shift", "Enter"], () => setIsCellMenuOpen(true));
 
     return (
         <div class="notebook">
             <Show when={props.notebook.cells.length === 0}>
                 <div class="notebook-empty">
+                <Popover open={isCellMenuOpen()}
+                    onOpenChange={setIsCellMenuOpen}
+                    floatingOptions={cellMenuFloatingOptions} >
+                <Popover.Anchor>
                 <span class="placeholder">
                     Press Shift-Enter to create a cell
                 </span>
-                <Show when={isCellMenuOpen()}>
-                    <CommandPopup commands={commands()} close={closeCellMenu}/>
-                </Show>
+                </Popover.Anchor>
+                <Popover.Portal>
+                    <Popover.Content class="notebook-cell-menu">
+                    <CommandMenu commands={commands()}
+                        onExecuted={() => setIsCellMenuOpen(false)}/>
+                    </Popover.Content>
+                </Popover.Portal>
+                </Popover>
                 </div>
             </Show>
             <ul class="notebook-cells">
@@ -186,6 +195,11 @@ export function NotebookEditor<T>(props: {
                     }
 
                     return <li>
+                        <Popover open={isCellMenuOpen() && isActive()}
+                            onOpenChange={setIsCellMenuOpen}
+                            restoreFocus={isActive()}
+                            floatingOptions={cellMenuFloatingOptions} >
+                        <Popover.Anchor>
                         <Switch>
                         <Match when={cell.tag === "rich-text"}>
                             <div class="cell markup-cell">
@@ -211,14 +225,24 @@ export function NotebookEditor<T>(props: {
                             </div>
                         </Match>
                         </Switch>
-                        <Show when={isCellMenuOpen() && isActive()}>
-                            <CommandPopup commands={commands()}
-                                close={closeCellMenu}/>
-                        </Show>
+                        </Popover.Anchor>
+                        <Popover.Portal>
+                            <Popover.Content class="notebook-cell-menu">
+                            <CommandMenu commands={commands()}
+                                onExecuted={() => setIsCellMenuOpen(false)}/>
+                            </Popover.Content>
+                        </Popover.Portal>
+                        </Popover>
                     </li>;
                 }}
             </For>
             </ul>
         </div>
     );
+}
+
+const cellMenuFloatingOptions: FloatingOptions = {
+    autoPlacement: {
+        allowedPlacements: ["bottom-start", "top-start"],
+    }
 }
