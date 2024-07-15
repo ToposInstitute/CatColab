@@ -5,16 +5,24 @@
 }
 
 .command-list li {
-    display: flex;
-    gap: 2em;
-    align-items: center;
-    justify-content: space-between;
     cursor: pointer;
     padding: 5px;
 }
 
 .command-list li.active {
     background: #f1f5f9;
+}
+
+.command-head {
+    display: flex;
+    gap: 2em;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.command-description {
+    font-size: 0.75em;
+    color: dimgray;
 }
 
 .command-shortcut {
