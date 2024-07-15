@@ -11,6 +11,7 @@
 .inline-input-filler {
     display: inline-block;
     visibility: hidden;
+    white-space-collapse: preserve;
     min-width: 1ex;
 }
 
