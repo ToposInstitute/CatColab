@@ -3,9 +3,8 @@
     margin: 0 auto;
 }
 
-.model-title input {
+.model-title {
     font-size: 3em;
-    line-height: 1.1;
 }
 
 .model-head {

@@ -1,12 +1,30 @@
-.inline-input {
-    display: inline;
-    background: transparent;
+.inline-input-container {
+    display: inline-block;
+    position: relative;
+}
+
+.inline-input-filler, .inline-input {
     border: none;
     border-bottom: 3px solid transparent;
-    outline: none;
-    font-size: inherit;
+}
+
+.inline-input-filler {
+    display: inline-block;
+    visibility: hidden;
     min-width: 1ex;
-    height: fit-content;
+}
+
+.inline-input {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+
+    background: transparent;
+    outline: none;
+    padding: 0;
+    font: inherit;
 }
 
 .inline-input.invalid {
