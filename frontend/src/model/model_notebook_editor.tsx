@@ -1,5 +1,5 @@
 import { DocHandle } from "@automerge/automerge-repo";
-import { createEffect, createMemo, createSignal, For, Match, Switch } from "solid-js";
+import { createEffect, createMemo, createSignal, For, Match, onMount, Switch } from "solid-js";
 import { MultiProvider } from "@solid-primitives/context";
 
 import { IndexedMap, indexMap } from "../util/indexing";
@@ -48,16 +48,29 @@ export function ModelCellEditor(props: {
     );
 }
 
+/** Reference to a `ModelNotebookEditor`.
+ */
+export type ModelNotebookRef = {
+    // Get the current model data.
+    model: () => ModelNotebook;
+
+    // Make a change to the model data.
+    changeModel: (f: (model: ModelNotebook) => void) => void;
+}
+
 /** Notebook-based editor for a model of a discrete double theory.
  */
 export function ModelNotebookEditor(props: {
-    handle: DocHandle<ModelNotebook>,
-    init: ModelNotebook,
-    theories: Map<TheoryId, TheoryMeta>,
+    handle: DocHandle<ModelNotebook>;
+    init: ModelNotebook;
+    theories: Map<TheoryId, TheoryMeta>;
+    ref?: (ref: ModelNotebookRef) => void;
 }) {
     const [theory, setTheory] = createSignal<TheoryMeta | undefined>();
 
     const [model, changeModel] = useDoc(() => props.handle, props.init);
+
+    onMount(() => props.ref?.({ model, changeModel }));
 
     createEffect(() => {
         const id = model().theory;

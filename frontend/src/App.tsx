@@ -3,7 +3,7 @@ import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-index
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
 
 import { stdTheories } from "./theory";
-import { ModelNotebook, ModelNotebookEditor } from "./model";
+import { ModelNotebook, ModelEditor } from "./model";
 import { newNotebook } from "./notebook";
 
 
@@ -29,7 +29,7 @@ function App() {
   }
 
   return (
-    <ModelNotebookEditor handle={handle} init={init} theories={theories} />
+    <ModelEditor handle={handle} init={init} theories={theories} />
   );
 }
 

@@ -16,14 +16,14 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-#root {
-  padding: 1rem;
+html, body, #root {
+  height: 100%;
+  margin: 0;
 }
 
-body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
+#root {
+  display: flex;
+  flex-direction: column;
 }
 
 h1 {
@@ -32,5 +32,14 @@ h1 {
 }
 
 .code {
-    font-family: var(--mono-font);
+  font-family: var(--mono-font);
+}
+
+.growable-container {
+  flex-grow: 1;
+  padding: 1rem;
+}
+
+.content-panel {
+  overflow: hidden;
 }
