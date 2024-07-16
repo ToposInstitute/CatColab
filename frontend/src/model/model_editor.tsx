@@ -1,6 +1,7 @@
 import { DocHandle } from "@automerge/automerge-repo";
 import Resizable from "@corvu/resizable";
 
+import { GraphvizSVG } from "../visualization";
 import { TheoryId, TheoryMeta } from "../theory";
 import { ModelNotebook } from "./types";
 import { ModelNotebookEditor } from "./model_notebook_editor";
@@ -23,7 +24,13 @@ export function ModelEditor(props: {
         <Resizable.Panel class="content-panel" collapsible initialSize={0}
             minSize={0.25}
         >
-            Model extras
+            <GraphvizSVG graph={{
+                directed: true,
+                edges: [
+                    { head: "Person", tail: "Age" },
+                    { head: "Person", tail: "Name" },
+                ],
+            }}/>
         </Resizable.Panel>
     </Resizable>;
 }

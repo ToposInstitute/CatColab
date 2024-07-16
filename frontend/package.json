@@ -21,6 +21,7 @@
     "@solid-primitives/context": "^0.2.3",
     "@solid-primitives/keyboard": "^1.2.8",
     "@solid-primitives/pointer": "^0.2.19",
+    "@viz-js/viz": "^3.7.0",
     "catlog-wasm": "file:catlog-wasm/pkg",
     "newtype-ts": "^0.3.5",
     "prosemirror-commands": "^1.5.2",
