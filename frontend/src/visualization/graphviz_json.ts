@@ -47,13 +47,13 @@ export interface GraphObject extends GraphElement {
 
 export interface Node extends GraphObject {
   /** Position of node as comma-separated pair, in points (72 points/inch). */
-  pos?: string;
+  pos: string;
 
   /** Width of node in inches. */
-  width?: string;
+  width: string;
 
   /** Height of node in inches. */
-  height?: string;
+  height: string;
 
   /** External label for node. */
   xlabel?: string;

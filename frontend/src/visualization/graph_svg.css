@@ -1,0 +1,9 @@
+.graph {
+    display: block;
+    margin: auto;
+}
+
+.node {
+    fill: transparent;
+    stroke: black;
+}

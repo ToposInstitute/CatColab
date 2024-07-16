@@ -1,31 +1,27 @@
 import { createResource, JSX, Show } from "solid-js";
-import type { Graph as GraphInput, RenderOptions } from "@viz-js/viz";
+import type * as Viz from "@viz-js/viz";
 
-import { Graph as GraphOutput } from "./graphviz_output";
+import { GraphSVG } from "./graph_svg";
+import { loadViz, parseGraphvizJSON, vizRenderJSON0 } from "./graphviz";
+import * as GraphvizJSON from "./graphviz_json";
 
 
 /** Visualize a graph using Graphviz and SVG.
 
 The layout is performed by Graphviz and then the rendering is done by custom SVG
-instead of an Graphviz's own SVG backend.
+rather than Graphviz's own SVG backend.
  */
 export function GraphvizSVG(props: {
-    graph: GraphInput;
-    options?: RenderOptions,
+    graph?: Viz.Graph;
+    options?: Viz.RenderOptions,
     fallback?: JSX.Element,
 }) {
-    const [vizResource] = createResource(async () => {
-        const { instance } = await import("@viz-js/viz");
-        const viz = await instance();
-        return viz;
-    });
+    const [vizResource] = createResource(loadViz);
 
     const render = () => {
-        // We use `renderString` rather than the convenience method `renderJSON`
-        // since we need only `json0` output, which is simpler than `json`.
-        const options = { ...props.options, format: "json0" };
         const viz = vizResource();
-        return viz && JSON.parse(viz.renderString(props.graph, options));
+        return viz && props.graph &&
+            vizRenderJSON0(viz, props.graph, props.options);
     }
 
     return <div class="graphviz-container">
@@ -33,15 +29,15 @@ export function GraphvizSVG(props: {
             {props.fallback}
         </Show>
         <Show when={vizResource()}>
-            <GraphvizOutputSVG graph={render() as GraphOutput} />
+            <GraphvizOutputSVG graph={render() as GraphvizJSON.Graph} />
         </Show>
     </div>;
 }
 
 function GraphvizOutputSVG(props: {
-    graph: GraphOutput,
+    graph: GraphvizJSON.Graph,
 }) {
     return <div class="graphviz">
-        {JSON.stringify(props.graph)}
+        <GraphSVG graph={parseGraphvizJSON(props.graph)} />
     </div>;
 }
