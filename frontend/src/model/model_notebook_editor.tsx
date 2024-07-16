@@ -13,7 +13,7 @@ import { ObjectIndexContext, TheoryContext } from "./model_context";
 import { ObjectCellEditor } from "./object_cell_editor";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 
-import "./model_editor.css";
+import "./model_notebook_editor.css";
 
 
 /** Editor for a cell in a model of a discrete double theory.
