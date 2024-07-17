@@ -4,7 +4,7 @@
 The coordinate system is that of SVG and HTML canvas, meaning that the origin is
 in the top-left corner.
  */
-export type Graph<Id> = {
+export interface Graph<Id> {
     /** Width of bounding box for graph. */
     width?: number;
 
@@ -16,9 +16,9 @@ export type Graph<Id> = {
 
     /** Edges of graph. */
     edges: Array<Edge<Id>>;
-};
+}
 
-export type Node<Id> = {
+export interface Node<Id> extends GraphElement {
     id: Id;
 
     /** Position of node, with origin at center of node. */
@@ -32,9 +32,9 @@ export type Node<Id> = {
 
     /** Node label, if any. */
     label?: string;
-};
+}
 
-export type Edge<Id> = {
+export interface Edge<Id> extends GraphElement {
     id?: Id;
 
     /** Source node of edge. */
@@ -57,7 +57,12 @@ export type Edge<Id> = {
 
     /** Path for the edge, SVG path data format. */
     path?: string;
-};
+}
+
+export interface GraphElement {
+    /** CSS class (or classes) to apply to element. */
+    cssClass?: string;
+}
 
 /** Point in a 2D cartesian coordinate system.
  */

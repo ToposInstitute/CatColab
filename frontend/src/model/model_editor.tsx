@@ -1,5 +1,5 @@
 import { DocHandle } from "@automerge/automerge-repo";
-import { createSignal } from "solid-js";
+import { createSignal, Show } from "solid-js";
 import Resizable from "@corvu/resizable";
 
 import { GraphvizSVG } from "../visualization";
@@ -9,7 +9,10 @@ import { ModelNotebookEditor, ModelNotebookRef } from "./model_notebook_editor";
 import { modelToGraphviz } from "./model_graph";
 
 
-/** TODO
+/** Editor for a model of a discrete double theory.
+
+For now it just wraps a notebook-style editor but eventually it should not be
+tied to the notebook format.
  */
 export function ModelEditor(props: {
     handle: DocHandle<ModelNotebook>;
@@ -19,8 +22,8 @@ export function ModelEditor(props: {
     const [editorRef, setEditorRef] = createSignal<ModelNotebookRef>();
 
     const modelGraph = () => {
-        const model = editorRef?.()?.model();
-        return model && modelToGraphviz(model);
+        const [model, theory] = [editorRef()?.model(), editorRef()?.theory()];
+        return model && theory && modelToGraphviz(model, theory);
     };
 
     return <Resizable class="growable-container">
@@ -35,9 +38,11 @@ export function ModelEditor(props: {
         <Resizable.Panel class="content-panel" collapsible
             initialSize={0} minSize={0.25}
         >
-            <GraphvizSVG graph={modelGraph()} options={{
-                engine: "neato",
-            }}/>
+            <Show when={editorRef()?.theory()}>
+                <GraphvizSVG graph={modelGraph()} options={{
+                    engine: "dot",
+                }}/>
+            </Show>
         </Resizable.Panel>
     </Resizable>;
 }

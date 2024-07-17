@@ -63,6 +63,7 @@ export function parseGraphvizJSON(
             width: inchesToPoints(parseFloat(node.width)),
             height: inchesToPoints(parseFloat(node.height)),
             label: node.label,
+            cssClass: node.class,
         });
     }
 
@@ -87,6 +88,7 @@ export function parseGraphvizJSON(
                 (edge.lp && transformPoint(parsePoint(edge.lp))) ||
                 undefined,
             path: splineToPath(spline),
+            cssClass: edge.class,
         });
     }
 

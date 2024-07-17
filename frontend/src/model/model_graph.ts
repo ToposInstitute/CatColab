@@ -1,6 +1,9 @@
 import type * as Viz from "@viz-js/viz";
 
+import { TheoryMeta, TypeMeta } from "../theory";
 import { isoObjectId, isoMorphismId, ModelNotebook } from "./types";
+
+import styles from "../theory/styles.module.css";
 
 
 /** Visualize a model of a discrete double theory as a graph.
@@ -13,6 +16,7 @@ FIXME: Should take a generic model object, not the notebook-specific one.
  */
 export function modelToGraphviz(
     model: ModelNotebook,
+    theory: TheoryMeta,
     attributes?: {
         graph?: {[name: string]: any};
         node?: {[name: string]: any};
@@ -27,22 +31,28 @@ export function modelToGraphviz(
 
         if (judgment.tag === "object") {
             const { id, name } = judgment;
+            const meta = theory.types.get(judgment.type);
             nodes.push({
                 name: isoObjectId.unwrap(id),
                 attributes: {
                     id: isoObjectId.unwrap(id),
                     label: name,
+                    class: meta?.textClasses?.join(" ") ?? "",
+                    fontname: fontname(meta),
                 },
             });
         } else if (judgment.tag === "morphism") {
             const { id, name, dom, cod } = judgment;
             if (!dom || !cod) { continue; }
+            const meta = theory.types.get(judgment.type);
             edges.push({
-                head: isoObjectId.unwrap(dom),
-                tail: isoObjectId.unwrap(cod),
+                head: isoObjectId.unwrap(cod),
+                tail: isoObjectId.unwrap(dom),
                 attributes: {
                     id: isoMorphismId.unwrap(id),
                     label: name,
+                    class: meta?.textClasses?.join(" ") ?? "",
+                    fontname: fontname(meta),
                 }
             });
         }
@@ -58,8 +68,13 @@ export function modelToGraphviz(
     };
 }
 
+// XXX: Precise font matching seems impossible here but we'll at least give
+// Graphviz a monospace font if and only if we're using one.
+const fontname = (meta?: TypeMeta) =>
+    meta?.textClasses?.includes(styles.code) ? "Courier" : "Helvetica";
+
 const defaultNodeAttributes = {
-    // FIXME: How to set these font sizes?
+    // FIXME: How to set the font size?
     fontsize: "20",
     shape: "box",
     width: 0,

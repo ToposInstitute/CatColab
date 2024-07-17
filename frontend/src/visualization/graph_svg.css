@@ -4,12 +4,12 @@
     overflow: visible; /* Graph layouts can clip borders. */
 }
 
-.node {
+.node rect {
     fill: transparent;
     stroke: black;
 }
 
-.edge {
+.edge line, .edge path {
     fill: none;
     stroke: black;
 }

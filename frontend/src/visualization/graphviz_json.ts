@@ -106,6 +106,9 @@ export interface GraphElement {
   /** Position of external label. */
   xlp?: string;
 
-  /** Style information. */
+  /** Graphviz-specific style. */
   style?: string;
+
+  /** CSS class passed to Graphviz. */
+  class?: string;
 }

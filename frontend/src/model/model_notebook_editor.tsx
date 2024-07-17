@@ -56,6 +56,9 @@ export type ModelNotebookRef = {
 
     // Make a change to the model data.
     changeModel: (f: (model: ModelNotebook) => void) => void;
+
+    // Get the double theory that the model is of, if defined.
+    theory: () => TheoryMeta | undefined;
 }
 
 /** Notebook-based editor for a model of a discrete double theory.
@@ -70,7 +73,7 @@ export function ModelNotebookEditor(props: {
 
     const [model, changeModel] = useDoc(() => props.handle, props.init);
 
-    onMount(() => props.ref?.({ model, changeModel }));
+    onMount(() => props.ref?.({ model, changeModel, theory }));
 
     createEffect(() => {
         const id = model().theory;

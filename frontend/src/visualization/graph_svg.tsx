@@ -20,36 +20,35 @@ export function GraphSVG<Id>(props: {
         <For each={props.graph.nodes}>
             {(node) => {
                 const { pos: {x, y}, width, height } = node;
-                return <>
-                    <rect class="node" x={x - width/2} y={y - height/2}
+                return <g class={`node ${node.cssClass ?? ""}`}>
+                    <rect x={x - width/2} y={y - height/2}
                         width={width} height={height}
                     />
-                    <text class="label node-label" x={x} y={y}
+                    <text class="label" x={x} y={y}
                         dominant-baseline="middle" text-anchor="middle"
                     >
                         {node.label}
                     </text>
-                </>;
+                </g>;
             }}
         </For>
         <For each={props.graph.edges}>
             {(edge) => {
                 const { label, sourcePos, targetPos, labelPos, path } = edge;
-                return <>
+                return <g class={`edge ${edge.cssClass ?? ""}`}>
                     {path ?
-                     <path class="edge" marker-end="url(#arrow)"
-                        d={path} /> :
-                     <line class="edge" marker-end="url(#arrow)"
+                     <path marker-end="url(#arrow)" d={path} /> :
+                     <line marker-end="url(#arrow)"
                         x1={sourcePos.x} y1={sourcePos.y}
                         x2={targetPos.x} y2={targetPos.y} />}
                     {label &&
-                     <text class="label edge-label"
+                     <text class="label"
                         x={labelPos?.x} y={labelPos?.y}
                         dominant-baseline="middle" text-anchor="middle"
                      >
                         {label}
                      </text>}
-                </>;
+                </g>;
             }}
         </For>
         </svg>
