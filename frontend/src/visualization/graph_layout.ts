@@ -11,19 +11,18 @@ export type Graph<Id> = {
     /** Height of bounding box for graph. */
     height?: number;
 
+    /** Nodes of graph. */
     nodes: Array<Node<Id>>;
 
+    /** Edges of graph. */
     edges: Array<Edge<Id>>;
 };
 
 export type Node<Id> = {
     id: Id;
 
-    /** x coordinate of node, with origin at center of node. */
-    x: number;
-
-    /** y coordinate of node, with origin at center of node. */
-    y: number;
+    /** Position of node, with origin at center of node. */
+    pos: Point;
 
     /** Width of bounding box for node. */
     width: number;
@@ -33,7 +32,7 @@ export type Node<Id> = {
 
     /** Node label, if any. */
     label?: string;
-}
+};
 
 export type Edge<Id> = {
     id?: Id;
@@ -46,4 +45,20 @@ export type Edge<Id> = {
 
     /** Edge label, if any. */
     label?: string;
-}
+
+    /** Position of source of edge. */
+    sourcePos: Point;
+
+    /** Position of target of edge. */
+    targetPos: Point;
+
+    /** Position of center of label. */
+    labelPos?: Point;
+};
+
+/** Point in a 2D cartesian coordinate system.
+ */
+export type Point = {
+    x: number,
+    y: number,
+};

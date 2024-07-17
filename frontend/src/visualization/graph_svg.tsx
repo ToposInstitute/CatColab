@@ -17,15 +17,32 @@ export function GraphSVG<Id>(props: {
         >
         <For each={props.graph.nodes}>
             {(node) => {
-                const { x, y, width, height } = node;
+                const { pos: {x, y}, width, height } = node;
                 return <>
                     <rect class="node" x={x - width/2} y={y - height/2}
                         width={width} height={height}
                     />
-                    <text class="node-label" x={x} y={y}
+                    <text class="label node-label" x={x} y={y}
                         dominant-baseline="middle" text-anchor="middle"
                     >
                         {node.label}
+                    </text>
+                </>;
+            }}
+        </For>
+        <For each={props.graph.edges}>
+            {(edge) => {
+                const { label, sourcePos, targetPos, labelPos } = edge;
+                return <>
+                    <line class="edge"
+                        x1={sourcePos.x} y1={sourcePos.y}
+                        x2={targetPos.x} y2={targetPos.y} />
+                    label &&
+                    <text class="label edge-label"
+                        x={labelPos?.x} y={labelPos?.y}
+                        dominant-baseline="middle" text-anchor="middle"
+                    >
+                        {label}
                     </text>
                 </>;
             }}

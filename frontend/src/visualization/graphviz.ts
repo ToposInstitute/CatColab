@@ -1,5 +1,6 @@
 import type * as Viz from "@viz-js/viz";
 import * as GraphvizJSON from "./graphviz_json";
+import { Point } from "./graph_layout";
 import * as GraphLayout from "./graph_layout";
 
 
@@ -55,9 +56,9 @@ export function parseGraphvizJSON(
     const nodeByNumber = (i: number) => nodes[i - offset];
     for (const node of graphviz.objects.slice(offset) as GraphvizJSON.Node[]) {
         const id = node.id || node.name;
-        const {x, y} = transformPoint(parsePoint(node.pos));
         nodes.push({
-            id, x, y,
+            id,
+            pos: transformPoint(parsePoint(node.pos)),
             width: inchesToPoints(parseFloat(node.width)),
             height: inchesToPoints(parseFloat(node.height)),
             label: node.label,
@@ -71,15 +72,51 @@ export function parseGraphvizJSON(
             // Omit invisible edges, used to tweak the layout in Graphviz.
             continue;
         }
+        const { points, startPoint, endPoint } = parseSpline(edge.pos);
         edges.push({
             id: edge.id,
             source: nodeByNumber(edge.head).id,
             target: nodeByNumber(edge.tail).id,
             label: edge.xlabel ?? edge.label,
+            sourcePos: transformPoint(startPoint || points[0]),
+            targetPos: transformPoint(endPoint || points[points.length - 1]),
+            labelPos:
+                (edge.xlp && transformPoint(parsePoint(edge.xlp))) ||
+                (edge.lp && transformPoint(parsePoint(edge.lp))) ||
+                undefined,
         });
     }
 
     return { width, height, nodes, edges };
+}
+
+
+/* Parse Graphviz spline.
+
+   In Graphviz, a "spline" is a cubic B-spline of overlapping cubic Bezier
+   curves. It consists of 3n+1 points, where n is the number of Bezier curves.
+
+   References:
+
+   - https://graphviz.org/docs/attr-types/splineType/
+   - https://cprimozic.net/notes/posts/graphviz-spline-drawing/
+ */
+function parseSpline(spline: string) {
+    const points: Point[] = [];
+    let startPoint: Point | undefined;
+    let endPoint: Point | undefined;
+
+    spline.split(" ").forEach((s) => {
+        if (s.startsWith("s,")) {
+            startPoint = parsePoint(s.slice(2));
+        } else if (s.startsWith("e,")) {
+            endPoint = parsePoint(s.slice(2));
+        } else {
+            points.push(parsePoint(s));
+        }
+    });
+
+    return { points, startPoint, endPoint };
 }
 
 
@@ -99,10 +136,3 @@ function parsePoint(s: string): Point {
 
 // 72 points per inch in Graphviz.
 const inchesToPoints = (x: number) => 72 * x;
-
-/** Point in a 2D cartesian coordinate system.
- */
-type Point = {
-    x: number,
-    y: number,
-}

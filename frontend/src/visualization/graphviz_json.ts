@@ -35,16 +35,6 @@ export interface Graph {
   edges: Array<Edge>;
 }
 
-/** Node or subgraph in Graphviz JSON output.
- */
-export interface GraphObject extends GraphElement {
-  /** Index of node or subgraph in `objects` array. */
-  _gvid: number;
-
-  /** Name of node or subgraph in dot file. */
-  name: string;
-}
-
 export interface Node extends GraphObject {
   /** Position of node as comma-separated pair, in points (72 points/inch). */
   pos: string;
@@ -54,9 +44,6 @@ export interface Node extends GraphObject {
 
   /** Height of node in inches. */
   height: string;
-
-  /** External label for node. */
-  xlabel?: string;
 }
 
 export interface Subgraph extends GraphObject {
@@ -87,20 +74,37 @@ export interface Edge extends GraphElement {
    *
    * https://graphviz.org/docs/attr-types/splineType/
    */
-  pos?: string;
+  pos: string;
 
-  /** External label for edge.
-     Except under the dot layout, a synonym for `label`.
-   */
-  xlabel?: string;
+  /** Position of edge label. */
+  lp?: string;
+}
+
+/** Node or subgraph in Graphviz JSON output.
+ */
+export interface GraphObject extends GraphElement {
+  /** Index of node or subgraph in `objects` array. */
+  _gvid: number;
+
+  /** Name of node or subgraph in dot file. */
+  name: string;
 }
 
 export interface GraphElement {
   /** User-defined ID, ignored by Graphviz. */
   id?: string;
 
-  /** Text label attached to element. */
+  /** Text label for element. */
   label?: string;
+
+  /** External label for node or edge.
+   *
+   * https://graphviz.org/docs/attrs/xlabel/
+   */
+  xlabel?: string;
+
+  /** Position of external label. */
+  xlp?: string;
 
   /** Style information. */
   style?: string;

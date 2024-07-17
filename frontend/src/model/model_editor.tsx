@@ -55,6 +55,7 @@ function modelToGraph(model: ModelNotebook): Viz.Graph {
                 attributes: {
                     id: isoObjectId.unwrap(id),
                     label: name,
+                    shape: "rect",
                 },
             });
         } else if (judgment.tag === "morphism") {
@@ -67,7 +68,7 @@ function modelToGraph(model: ModelNotebook): Viz.Graph {
                 tail: isoObjectId.unwrap(cod),
                 attributes: {
                     id: isoMorphismId.unwrap(id),
-                    xlabel: name,
+                    label: name,
                 }
             });
         }

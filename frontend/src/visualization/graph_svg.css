@@ -7,3 +7,7 @@
     fill: transparent;
     stroke: black;
 }
+
+.edge {
+    stroke: black;
+}
