@@ -67,10 +67,13 @@ type BaseTypeMeta = {
     // Keyboard shortcut for type, excluding modifier.
     shortcut?: KbdKey[];
 
-    // CSS classes to apply to HTML for elements of this type.
+    // CSS classes to apply to HTML displays.
     cssClasses?: string[];
 
-    // CSS classes to apply to text labels in both HTML and SVG.
+    // CSS classes to apply to SVG displays.
+    svgClasses?: string[];
+
+    // CSS classes to apply to text in both HTML and SVG.
     textClasses?: string[];
 };
 

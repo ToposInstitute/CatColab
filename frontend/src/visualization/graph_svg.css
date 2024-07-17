@@ -6,7 +6,6 @@
 
 .node rect {
     fill: transparent;
-    stroke: black;
 }
 
 .edge line, .edge path {

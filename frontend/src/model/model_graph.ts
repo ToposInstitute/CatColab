@@ -37,7 +37,7 @@ export function modelToGraphviz(
                 attributes: {
                     id: isoObjectId.unwrap(id),
                     label: name,
-                    class: meta?.textClasses?.join(" ") ?? "",
+                    class: cssClass(meta),
                     fontname: fontname(meta),
                 },
             });
@@ -51,7 +51,7 @@ export function modelToGraphviz(
                 attributes: {
                     id: isoMorphismId.unwrap(id),
                     label: name,
-                    class: meta?.textClasses?.join(" ") ?? "",
+                    class: cssClass(meta),
                     fontname: fontname(meta),
                 }
             });
@@ -67,6 +67,9 @@ export function modelToGraphviz(
         edgeAttributes: {...defaultEdgeAttributes, ...attributes?.edge},
     };
 }
+
+const cssClass = (meta?: TypeMeta): string =>
+    [...meta?.svgClasses ?? [], ...meta?.textClasses ?? []].join(" ")
 
 // XXX: Precise font matching seems impossible here but we'll at least give
 // Graphviz a monospace font if and only if we're using one.

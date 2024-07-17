@@ -4,6 +4,7 @@ import { uniqueIndexArray } from "../util/indexing";
 import { createTheoryMeta } from "./types";
 
 import styles from "./styles.module.css";
+import svgStyles from "./svg_styles.module.css";
 
 
 /** Standard library of double theories supported by frontend.
@@ -30,6 +31,7 @@ const thSimpleOlog = () => createTheoryMeta({
             description: "Type or class of things",
             shortcut: ["O"],
             cssClasses: [styles["corner-box"]],
+            svgClasses: [svgStyles.box],
         },
         {
             tag: "mor_type",
@@ -54,6 +56,7 @@ const thSimpleSchema = () => createTheoryMeta({
             description: "Type of entity or thing",
             shortcut: ["O"],
             cssClasses: [styles.box],
+            svgClasses: [svgStyles.box],
             textClasses: [styles.code],
         },
         {
