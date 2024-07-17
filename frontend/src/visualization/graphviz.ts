@@ -54,7 +54,8 @@ export function parseGraphvizJSON(
     const nodes: GraphLayout.Node<string>[] = [];
     const offset = graphviz._subgraph_cnt;
     const nodeByNumber = (i: number) => nodes[i - offset];
-    for (const node of graphviz.objects.slice(offset) as GraphvizJSON.Node[]) {
+    for (const node of
+         graphviz.objects?.slice(offset) as GraphvizJSON.Node[] ?? []) {
         const id = node.id || node.name;
         nodes.push({
             id,
@@ -67,7 +68,7 @@ export function parseGraphvizJSON(
 
     // Parse edge of graph.
     const edges: GraphLayout.Edge<string>[] = [];
-    for (const edge of graphviz.edges) {
+    for (const edge of graphviz.edges ?? []) {
         if (edge.style === "invis") {
             // Omit invisible edges, used to tweak the layout in Graphviz.
             continue;

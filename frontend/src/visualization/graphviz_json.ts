@@ -29,10 +29,10 @@ export interface Graph {
    *
    * The first `_subgraph_cnt` objects are subgraphs; the rest are nodes.
    */
-  objects: Array<Node | Subgraph>;
+  objects?: Array<Node | Subgraph>;
 
   /** Edges in the graph. */
-  edges: Array<Edge>;
+  edges?: Array<Edge>;
 }
 
 export interface Node extends GraphObject {
@@ -48,10 +48,10 @@ export interface Node extends GraphObject {
 
 export interface Subgraph extends GraphObject {
   /** Nodes (or subgraphs) in graph that are contained in this subgraph. */
-  nodes: number[];
+  nodes?: number[];
 
   /** Edges in graph that are contained in this subgraph. */
-  edges: number[];
+  edges?: number[];
 }
 
 export interface Edge extends GraphElement {
