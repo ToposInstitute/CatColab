@@ -3,6 +3,8 @@ import * as catlog from "catlog-wasm";
 import { uniqueIndexArray } from "../util/indexing";
 import { createTheoryMeta } from "./types";
 
+import styles from "./styles.module.css";
+
 
 /** Standard library of double theories supported by frontend.
 
@@ -27,7 +29,7 @@ const thSimpleOlog = () => createTheoryMeta({
             name: "Type",
             description: "Type or class of things",
             shortcut: ["O"],
-            cssClasses: ["object-corner-box"],
+            cssClasses: [styles["corner-box"]],
         },
         {
             tag: "mor_type",
@@ -51,7 +53,7 @@ const thSimpleSchema = () => createTheoryMeta({
             name: "Entity",
             description: "Type of entity or thing",
             shortcut: ["O"],
-            cssClasses: ["object-box", "code"],
+            cssClasses: [styles.box, styles.code],
         },
         {
             tag: "mor_type",
@@ -59,7 +61,7 @@ const thSimpleSchema = () => createTheoryMeta({
             name: "Mapping",
             description: "Many-to-one relation between entities",
             shortcut: ["M"],
-            cssClasses: ["code"],
+            cssClasses: [styles.code],
         },
         {
             tag: "mor_type",
@@ -67,21 +69,21 @@ const thSimpleSchema = () => createTheoryMeta({
             name: "Attribute",
             description: "Data attribute of an entity",
             shortcut: ["A"],
-            cssClasses: ["code"],
+            cssClasses: [styles.code],
         },
         {
             tag: "ob_type",
             id: "attr_type",
             name: "Attribute type",
             description: "Data type for an attribute",
-            cssClasses: ["code"],
+            cssClasses: [styles.code],
         },
         {
             tag: "mor_type",
             id: "attr_op",
             name: "Operation",
             description: "Operation on data types for attributes",
-            cssClasses: ["code"],
+            cssClasses: [styles.code],
         }
     ],
 });
