@@ -1,6 +1,7 @@
 .graph {
     display: block;
     margin: auto;
+    overflow: visible; /* Graph layouts can clip borders. */
 }
 
 .node {

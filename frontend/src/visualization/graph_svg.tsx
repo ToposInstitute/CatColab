@@ -10,11 +10,13 @@ import "./graph_svg.css";
 export function GraphSVG<Id>(props: {
     graph: GraphLayout.Graph<Id>,
 }) {
-
     return (
         <svg class="graph"
             width={props.graph.width} height={props.graph.height}
         >
+        <defs>
+            <ArrowheadMarker id="arrow" />
+        </defs>
         <For each={props.graph.nodes}>
             {(node) => {
                 const { pos: {x, y}, width, height } = node;
@@ -35,8 +37,9 @@ export function GraphSVG<Id>(props: {
                 const { label, sourcePos, targetPos, labelPos, path } = edge;
                 return <>
                     {path ?
-                     <path class="edge" d={path} /> :
-                     <line class="edge"
+                     <path class="edge" marker-end="url(#arrow)"
+                        d={path} /> :
+                     <line class="edge" marker-end="url(#arrow)"
                         x1={sourcePos.x} y1={sourcePos.y}
                         x2={targetPos.x} y2={targetPos.y} />}
                     {label &&
@@ -52,3 +55,21 @@ export function GraphSVG<Id>(props: {
         </svg>
     );
 }
+
+
+/** SVG marker for an arrow head.
+
+Source: https://developer.mozilla.org/en-US/docs/Web/SVG/Element/marker
+ */
+const ArrowheadMarker = (props: {
+    id: string;
+}) =>
+    <marker id={props.id}
+        viewBox="0 0 10 10"
+        refX="10"
+        refY="5"
+        markerWidth="6"
+        markerHeight="6"
+        orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" />
+    </marker>;
