@@ -4,6 +4,7 @@ import { IndexedMap } from "../util/indexing";
 import { ObjectDecl, ObjectId } from "./types";
 import { CellActions } from "../notebook";
 import { InlineInput, InlineInputOptions } from "../components";
+import { TheoryMeta } from "../theory";
 import { TheoryContext } from "./model_context";
 
 import "./object_cell_editor.css";
@@ -25,11 +26,8 @@ export function ObjectCellEditor(props: {
     });
 
     const theory = useContext(TheoryContext);
-    const cssClasses = (): string[] => {
-        const typ = props.object.type;
-        const list = theory?.()?.types.get(typ)?.cssClasses ?? [];
-        return ["object-decl", ...list];
-    };
+    const cssClasses = (): string[] =>
+        ["object-decl", ...extraClasses(theory?.(), props.object.type)];
 
     return <div class={cssClasses().join(" ")}>
         <InlineInput ref={nameRef} placeholder="Unnamed"
@@ -88,13 +86,19 @@ export function ObjectIdInput(allProps: {
     };
 
     const theory = useContext(TheoryContext);
-    const cssClass = () => {
-        const typ = props.objectType;
-        return typ && theory?.()?.types.get(typ)?.cssClasses?.join(" ");
-    };
+    const cssClasses = () => extraClasses(theory?.(), props.objectType);
 
-    return <div class={cssClass()}>
+    return <div class={cssClasses().join(" ")}>
         <InlineInput text={text()} setText={handleNewText}
             invalid={!isValid()} {...inputProps} />
     </div>;
+}
+
+
+function extraClasses(theory?: TheoryMeta, typ?: string): string[] {
+    const typeMeta = typ ? theory?.types.get(typ) : undefined;
+    return [
+        ...typeMeta?.cssClasses ?? [],
+        ...typeMeta?.textClasses ?? [],
+    ];
 }

@@ -64,11 +64,14 @@ type BaseTypeMeta = {
     // Tooltip-length description of type.
     description?: string;
 
-    // CSS class to apply to editors for elements of this type.
-    cssClasses?: string[];
-
     // Keyboard shortcut for type, excluding modifier.
     shortcut?: KbdKey[];
+
+    // CSS classes to apply to HTML for elements of this type.
+    cssClasses?: string[];
+
+    // CSS classes to apply to text labels in both HTML and SVG.
+    textClasses?: string[];
 };
 
 export type ObTypeMeta = BaseTypeMeta & {
