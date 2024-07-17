@@ -6,7 +6,7 @@ import { GraphvizSVG } from "../visualization";
 import { TheoryId, TheoryMeta } from "../theory";
 import { ModelNotebook } from "./types";
 import { ModelNotebookEditor, ModelNotebookRef } from "./model_notebook_editor";
-import { modelToGraph } from "./model_graph";
+import { modelToGraphviz } from "./model_graph";
 
 
 /** TODO
@@ -20,7 +20,7 @@ export function ModelEditor(props: {
 
     const modelGraph = () => {
         const model = editorRef?.()?.model();
-        return model && modelToGraph(model);
+        return model && modelToGraphviz(model);
     };
 
     return <Resizable class="growable-container">
@@ -35,7 +35,9 @@ export function ModelEditor(props: {
         <Resizable.Panel class="content-panel" collapsible
             initialSize={0} minSize={0.25}
         >
-            <GraphvizSVG graph={modelGraph()} />
+            <GraphvizSVG graph={modelGraph()} options={{
+                engine: "neato",
+            }}/>
         </Resizable.Panel>
     </Resizable>;
 }
