@@ -54,6 +54,9 @@ export type Edge<Id> = {
 
     /** Position of center of label. */
     labelPos?: Point;
+
+    /** Path for the edge, SVG path data format. */
+    path?: string;
 };
 
 /** Point in a 2D cartesian coordinate system.

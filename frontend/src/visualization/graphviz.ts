@@ -72,18 +72,20 @@ export function parseGraphvizJSON(
             // Omit invisible edges, used to tweak the layout in Graphviz.
             continue;
         }
-        const { points, startPoint, endPoint } = parseSpline(edge.pos);
+        const spline = parseSpline(edge.pos, transformPoint);
+        const { points } = spline;
         edges.push({
             id: edge.id,
             source: nodeByNumber(edge.head).id,
             target: nodeByNumber(edge.tail).id,
             label: edge.xlabel ?? edge.label,
-            sourcePos: transformPoint(startPoint || points[0]),
-            targetPos: transformPoint(endPoint || points[points.length - 1]),
+            sourcePos: spline.startPoint || points[0],
+            targetPos: spline.endPoint || points[points.length - 1],
             labelPos:
                 (edge.xlp && transformPoint(parsePoint(edge.xlp))) ||
                 (edge.lp && transformPoint(parsePoint(edge.lp))) ||
                 undefined,
+            path: splineToPath(spline),
         });
     }
 
@@ -101,23 +103,58 @@ export function parseGraphvizJSON(
    - https://graphviz.org/docs/attr-types/splineType/
    - https://cprimozic.net/notes/posts/graphviz-spline-drawing/
  */
-function parseSpline(spline: string) {
+function parseSpline(
+    spline: string,
+    transformPoint?: (pt: Point) => Point
+): GraphvizSpline {
     const points: Point[] = [];
     let startPoint: Point | undefined;
     let endPoint: Point | undefined;
+    transformPoint = transformPoint || ((pt: Point) => pt);
 
     spline.split(" ").forEach((s) => {
         if (s.startsWith("s,")) {
-            startPoint = parsePoint(s.slice(2));
+            startPoint = transformPoint(parsePoint(s.slice(2)));
         } else if (s.startsWith("e,")) {
-            endPoint = parsePoint(s.slice(2));
+            endPoint = transformPoint(parsePoint(s.slice(2)));
         } else {
-            points.push(parsePoint(s));
+            points.push(transformPoint(parsePoint(s)));
         }
     });
 
     return { points, startPoint, endPoint };
 }
+
+/** Convert a spline parsed from Graphviz into SVG path data.
+ */
+function splineToPath(spline: GraphvizSpline): string {
+    const { points, startPoint, endPoint } = spline;
+
+    // Start path.
+    const stmts: Array<string | number> = ["M"];
+    if (startPoint) {
+        stmts.push(startPoint.x, startPoint.y, "L");
+    }
+    stmts.push(points[0].x, points[0].y);
+
+    // Bezier curves for intermediate segments.
+    for (let i = 1; i < points.length; i += 3) {
+        const [p1, p2, p3] = [points[i], points[i+1], points[i+2]];
+        stmts.push("C", p1.x, `${p1.y},`, p2.x, `${p2.y},`, p3.x, p3.y);
+    }
+
+    // End path;
+    if (endPoint) {
+        stmts.push("L", endPoint.x, endPoint.y);
+    }
+    return stmts.join(" ");
+}
+
+type GraphvizSpline = {
+    points: Point[];
+    startPoint?: Point;
+    endPoint?: Point;
+};
 
 
 /** Parse array of floats in Graphviz's comma-separated format.

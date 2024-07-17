@@ -9,5 +9,6 @@
 }
 
 .edge {
+    fill: none;
     stroke: black;
 }

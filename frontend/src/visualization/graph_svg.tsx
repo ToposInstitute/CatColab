@@ -32,18 +32,20 @@ export function GraphSVG<Id>(props: {
         </For>
         <For each={props.graph.edges}>
             {(edge) => {
-                const { label, sourcePos, targetPos, labelPos } = edge;
+                const { label, sourcePos, targetPos, labelPos, path } = edge;
                 return <>
-                    <line class="edge"
+                    {path ?
+                     <path class="edge" d={path} /> :
+                     <line class="edge"
                         x1={sourcePos.x} y1={sourcePos.y}
-                        x2={targetPos.x} y2={targetPos.y} />
-                    label &&
-                    <text class="label edge-label"
+                        x2={targetPos.x} y2={targetPos.y} />}
+                    {label &&
+                     <text class="label edge-label"
                         x={labelPos?.x} y={labelPos?.y}
                         dominant-baseline="middle" text-anchor="middle"
-                    >
+                     >
                         {label}
-                    </text>
+                     </text>}
                 </>;
             }}
         </For>
