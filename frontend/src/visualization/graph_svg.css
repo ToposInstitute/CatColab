@@ -1,0 +1,23 @@
+.graph {
+    display: block;
+    margin: auto;
+    overflow: visible; /* Graph layouts can clip borders. */
+}
+
+.node rect {
+    fill: transparent;
+}
+
+.edge line, .edge path {
+    fill: none;
+    stroke: black;
+}
+
+#arrowhead-default, #arrowhead-flat {
+    fill: none;
+    stroke: black;
+}
+
+#arrowhead-flat {
+    stroke-width: 2;
+}

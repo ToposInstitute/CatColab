@@ -3,6 +3,7 @@ import { KbdKey } from "@solid-primitives/keyboard";
 
 import { uniqueIndexArray } from "../util/indexing";
 import { DiscreteDblTheory } from "catlog-wasm";
+import { ArrowStyle } from "../visualization/types";
 
 
 /** A double theory with frontend metadata.
@@ -64,11 +65,17 @@ type BaseTypeMeta = {
     // Tooltip-length description of type.
     description?: string;
 
-    // CSS class to apply to editors for elements of this type.
-    cssClasses?: string[];
-
     // Keyboard shortcut for type, excluding modifier.
     shortcut?: KbdKey[];
+
+    // CSS classes to apply to HTML displays.
+    cssClasses?: string[];
+
+    // CSS classes to apply to SVG displays.
+    svgClasses?: string[];
+
+    // CSS classes to apply to text in both HTML and SVG.
+    textClasses?: string[];
 };
 
 export type ObTypeMeta = BaseTypeMeta & {
@@ -81,5 +88,3 @@ export type MorTypeMeta = BaseTypeMeta & {
     // Style of arrow to use for morphisms of this type.
     arrowStyle?: ArrowStyle;
 };
-
-export type ArrowStyle = "to" | "flat";

@@ -52,7 +52,7 @@ export const newObjectDecl = (type: string): ObjectDecl => ({
 export interface ObjectId
 extends Newtype<{ readonly ObjectId: unique symbol }, string> {}
 
-const isoObjectId = iso<ObjectId>();
+export const isoObjectId = iso<ObjectId>();
 
 /** Declaration of a morphim in a model.
  */
@@ -87,4 +87,4 @@ export const newMorphismDecl = (type: string): MorphismDecl => ({
 export interface MorphismId
 extends Newtype<{ readonly MorphismId: unique symbol }, string> {}
 
-const isoMorphismId = iso<MorphismId>();
+export const isoMorphismId = iso<MorphismId>();

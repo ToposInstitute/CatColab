@@ -31,9 +31,12 @@ export function MorphismCellEditor(props: {
     const theory = useContext(TheoryContext);
     const objectIndex = useContext(ObjectIndexContext);
 
-    const arrowClasses = (): string[] => {
-        const meta = theory?.()?.types.get(props.morphism.type) as MorTypeMeta;
-        const style = meta?.arrowStyle ?? "to";
+    const typeMeta = () =>
+        theory?.()?.types.get(props.morphism.type) as MorTypeMeta | undefined;
+    const nameClasses = () =>
+        ["morphism-decl-name", ...typeMeta()?.textClasses ?? []];
+    const arrowClasses = () => {
+        const style = typeMeta()?.arrowStyle ?? "to";
         return ["morphism-decl-arrow", style];
     }
 
@@ -52,7 +55,7 @@ export function MorphismCellEditor(props: {
             onFocus={props.actions.hasFocused}
         />
         <div class="morphism-decl-name-container">
-        <div class="morphism-decl-name">
+        <div class={nameClasses().join(" ")}>
         <InlineInput ref={nameRef} placeholder="Unnamed"
             text={props.morphism.name}
             setText={(text) => {
