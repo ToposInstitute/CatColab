@@ -1,3 +1,5 @@
+import { ArrowStyle } from "./types";
+
 
 /** Graph with a layout.
 
@@ -55,8 +57,11 @@ export interface Edge<Id> extends GraphElement {
     /** Position of center of label. */
     labelPos?: Point;
 
-    /** Path for the edge, SVG path data format. */
+    /** Path for the edge in SVG path data format. */
     path?: string;
+
+    /** Style of edge, according to our own taxonomy. */
+    style?: ArrowStyle;
 }
 
 export interface GraphElement {

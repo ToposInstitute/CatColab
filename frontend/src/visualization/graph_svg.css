@@ -12,3 +12,12 @@
     fill: none;
     stroke: black;
 }
+
+#arrowhead-default, #arrowhead-flat {
+    fill: none;
+    stroke: black;
+}
+
+#arrowhead-flat {
+    stroke-width: 2;
+}

@@ -78,6 +78,9 @@ export interface Edge extends GraphElement {
 
   /** Position of edge label. */
   lp?: string;
+
+  /** Arrow style, our own custom attribute ignored by Graphviz. */
+  arrowstyle?: string;
 }
 
 /** Node or subgraph in Graphviz JSON output.

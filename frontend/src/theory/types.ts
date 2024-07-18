@@ -3,6 +3,7 @@ import { KbdKey } from "@solid-primitives/keyboard";
 
 import { uniqueIndexArray } from "../util/indexing";
 import { DiscreteDblTheory } from "catlog-wasm";
+import { ArrowStyle } from "../visualization/types";
 
 
 /** A double theory with frontend metadata.
@@ -87,5 +88,3 @@ export type MorTypeMeta = BaseTypeMeta & {
     // Style of arrow to use for morphisms of this type.
     arrowStyle?: ArrowStyle;
 };
-
-export type ArrowStyle = "to" | "flat";

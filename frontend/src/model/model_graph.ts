@@ -1,6 +1,6 @@
 import type * as Viz from "@viz-js/viz";
 
-import { TheoryMeta, TypeMeta } from "../theory";
+import { MorTypeMeta, TheoryMeta, TypeMeta } from "../theory";
 import { isoObjectId, isoMorphismId, ModelNotebook } from "./types";
 
 import styles from "../theory/styles.module.css";
@@ -44,7 +44,7 @@ export function modelToGraphviz(
         } else if (judgment.tag === "morphism") {
             const { id, name, dom, cod } = judgment;
             if (!dom || !cod) { continue; }
-            const meta = theory.types.get(judgment.type);
+            const meta = theory.types.get(judgment.type) as MorTypeMeta;
             edges.push({
                 head: isoObjectId.unwrap(cod),
                 tail: isoObjectId.unwrap(dom),
@@ -53,6 +53,8 @@ export function modelToGraphviz(
                     label: name,
                     class: cssClass(meta),
                     fontname: fontname(meta),
+                    // Not recognized by Graphviz but will be passed through!
+                    arrowstyle: meta?.arrowStyle ?? "to",
                 }
             });
         }

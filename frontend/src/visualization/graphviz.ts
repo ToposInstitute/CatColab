@@ -1,4 +1,6 @@
 import type * as Viz from "@viz-js/viz";
+
+import { ArrowStyle } from "./types";
 import * as GraphvizJSON from "./graphviz_json";
 import { Point } from "./graph_layout";
 import * as GraphLayout from "./graph_layout";
@@ -89,6 +91,7 @@ export function parseGraphvizJSON(
                 undefined,
             path: splineToPath(spline),
             cssClass: edge.class,
+            style: edge.arrowstyle as ArrowStyle,
         });
     }
 
