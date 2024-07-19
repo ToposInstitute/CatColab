@@ -14,7 +14,22 @@ use catlog::dbl::theory::{self as dbl_theory, DblTheory};
 type UstrDiscreteDblThy = dbl_theory::DiscreteDblTheory<UstrFinCategory>;
 
 
-// XXX: Why do I need this?
+/** Produce type defs for dependencies supporting `serde` but not `tsify`.
+
+Somewhat amazingly, the type system in TypeScript can express the constraint
+that an array be nonempty, with certain usage caveats:
+
+https://stackoverflow.com/q/56006111
+
+For now, though, we will not attempt to enforce this in the TypeScript layer.
+ */
+#[wasm_bindgen(typescript_custom_section)]
+const TS_APPEND_CONTENT: &'static str = r#"
+export type Ustr = string;
+export type NonEmpty<T> = Array<T>;
+"#;
+
+// XXX: It seems like tsify should find the following on its own.
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen]
