@@ -3,10 +3,11 @@
 use std::sync::OnceLock;
 use ustr::ustr;
 
-use crate::one::fin_category::{self, UstrFinCategory};
+use crate::one::fin_category::*;
 use crate::dbl::theory::DiscreteDblTheory;
 
 type UstrDiscreteDblThy = DiscreteDblTheory<UstrFinCategory>;
+
 
 /** The theory of categories, aka the trivial double theory.
 
@@ -51,7 +52,7 @@ pub fn th_signed_category() -> &'static UstrDiscreteDblThy {
         let (x, n) = (ustr("object"), ustr("negative"));
         sgn.add_ob_generator(x);
         sgn.add_hom_generator(n, x, x);
-        sgn.set_composite(n, n, fin_category::Hom::Id(x));
+        sgn.set_composite(n, n, FinHom::Id(x));
         DiscreteDblTheory::from(sgn)
     })
 }

@@ -3,7 +3,6 @@
 use std::hash::{Hash, BuildHasher, BuildHasherDefault, RandomState};
 
 use derivative::Derivative;
-use ref_cast::RefCast;
 use ustr::{Ustr, IdentityHasher};
 
 #[cfg(feature = "serde")]
@@ -16,17 +15,6 @@ use super::path::Path;
 use super::graph::*;
 use super::category::*;
 
-/** Object in a finite category.
-
-This wrapper type is just for clarity. We prohibit equations between objects, so
-objects and object generators coincide.
-*/
-#[derive(Clone,Debug,Copy,PartialEq,Eq,Hash,RefCast)]
-#[cfg_attr(feature = "serde", derive(Serialize,Deserialize))]
-#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
-#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
-#[repr(transparent)]
-pub struct Ob<V>(pub V);
 
 /// Morphism in a finite category.
 #[derive(Clone,Debug,Copy,PartialEq,Eq,Hash)]
@@ -34,7 +22,7 @@ pub struct Ob<V>(pub V);
 #[cfg_attr(feature = "serde", serde(tag = "tag", content = "content"))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
-pub enum Hom<V,E> {
+pub enum FinHom<V,E> {
     /// Identity morphism on an object.
     Id(V),
 
@@ -54,7 +42,7 @@ graphs, and symmetric reflexive graphs are all finite.
 #[derivative(Default(bound="S: Default"))]
 pub struct FinCategory<V, E, S = RandomState> {
     generators: HashGraph<V,E,S>,
-    compose_map: HashColumn<(E,E), Hom<V,E>>,
+    compose_map: HashColumn<(E,E), FinHom<V,E>>,
 }
 
 /// A finite category with objects and morphisms of type `Ustr`.
@@ -79,42 +67,42 @@ where V: Eq+Hash+Clone, E: Eq+Hash+Clone, S: BuildHasher {
     }
 
     /// Sets the value of a binary composite.
-    pub fn set_composite(&mut self, d: E, e: E, f: Hom<V,E>) {
+    pub fn set_composite(&mut self, d: E, e: E, f: FinHom<V,E>) {
         self.compose_map.set((d, e), f);
     }
 }
 
 impl<V,E,S> Category for FinCategory<V,E,S>
 where V: Eq+Hash+Clone, E: Eq+Hash+Clone, S: BuildHasher {
-    type Ob = Ob<V>;
-    type Hom = Hom<V,E>;
+    type Ob = V;
+    type Hom = FinHom<V,E>;
 
-    fn has_ob(&self, x: &Ob<V>) -> bool {
-        self.generators.has_vertex(&x.0)
+    fn has_ob(&self, x: &V) -> bool {
+        self.generators.has_vertex(x)
     }
 
-    fn has_hom(&self, f: &Hom<V,E>) -> bool {
+    fn has_hom(&self, f: &FinHom<V,E>) -> bool {
         match f {
-            Hom::Id(v) => self.generators.has_vertex(v),
-            Hom::Generator(e) => self.generators.has_edge(e),
+            FinHom::Id(v) => self.generators.has_vertex(v),
+            FinHom::Generator(e) => self.generators.has_edge(e),
         }
     }
 
-    fn dom(&self, f: &Hom<V,E>) -> Ob<V> {
-        Ob(match f {
-            Hom::Id(v) => v.clone(),
-            Hom::Generator(e) => self.generators.src(e),
-        })
+    fn dom(&self, f: &FinHom<V,E>) -> V {
+        match f {
+            FinHom::Id(v) => v.clone(),
+            FinHom::Generator(e) => self.generators.src(e),
+        }
     }
 
-    fn cod(&self, f: &Hom<V,E>) -> Ob<V> {
-        Ob(match f {
-            Hom::Id(v) => v.clone(),
-            Hom::Generator(e) => self.generators.tgt(e),
-        })
+    fn cod(&self, f: &FinHom<V,E>) -> V {
+        match f {
+            FinHom::Id(v) => v.clone(),
+            FinHom::Generator(e) => self.generators.tgt(e),
+        }
     }
 
-    fn compose(&self, path: Path<Ob<V>,Hom<V,E>>) -> Hom<V,E> {
+    fn compose(&self, path: Path<V,FinHom<V,E>>) -> FinHom<V,E> {
         match path {
             Path::Id(x) => self.id(x),
             Path::Seq(fs) => fs.tail.into_iter().fold(
@@ -122,11 +110,11 @@ where V: Eq+Hash+Clone, E: Eq+Hash+Clone, S: BuildHasher {
         }
     }
 
-    fn compose2(&self, f: Hom<V,E>, g: Hom<V,E>) -> Hom<V,E> {
+    fn compose2(&self, f: FinHom<V,E>, g: FinHom<V,E>) -> FinHom<V,E> {
         match (f, g) {
-            (Hom::Id(_), g) => g,
-            (f, Hom::Id(_)) => f,
-            (Hom::Generator(d), Hom::Generator(e)) => {
+            (FinHom::Id(_), g) => g,
+            (f, FinHom::Id(_)) => f,
+            (FinHom::Generator(d), FinHom::Generator(e)) => {
                 assert!(self.generators.tgt(&d) == self.generators.src(&e),
                         "(Co)domains should be equal");
                 self.compose_map.apply(&(d, e)).expect(
@@ -135,33 +123,33 @@ where V: Eq+Hash+Clone, E: Eq+Hash+Clone, S: BuildHasher {
         }
     }
 
-    fn id(&self, x: Ob<V>) -> Hom<V,E> {
-        Hom::Id(x.0)
+    fn id(&self, x: V) -> FinHom<V,E> {
+        FinHom::Id(x)
     }
 }
 
 impl<V,E,S> FgCategory for FinCategory<V,E,S>
 where V: Eq+Hash+Clone, E: Eq+Hash+Clone, S: BuildHasher {
-    fn has_ob_generator(&self, x: &Ob<V>) -> bool {
-        self.generators.has_vertex(&x.0)
+    fn has_ob_generator(&self, x: &V) -> bool {
+        self.generators.has_vertex(x)
     }
-    fn has_hom_generator(&self, f: &Hom<V,E>) -> bool {
+    fn has_hom_generator(&self, f: &FinHom<V,E>) -> bool {
         match f {
-            Hom::Id(_) => false,
-            Hom::Generator(e) => self.generators.has_edge(e),
+            FinHom::Id(_) => false,
+            FinHom::Generator(e) => self.generators.has_edge(e),
         }
     }
-    fn ob_generators(&self) -> impl Iterator<Item = Ob<V>> {
-        self.generators.vertices().map(Ob)
+    fn ob_generators(&self) -> impl Iterator<Item = V> {
+        self.generators.vertices()
     }
-    fn hom_generators(&self) -> impl Iterator<Item = Hom<V,E>> {
-        self.generators.edges().map(Hom::Generator)
+    fn hom_generators(&self) -> impl Iterator<Item = FinHom<V,E>> {
+        self.generators.edges().map(FinHom::Generator)
     }
-    fn generators_with_dom(&self, x: &Ob<V>) -> impl Iterator<Item = Hom<V,E>> {
-        self.generators.out_edges(&x.0).map(Hom::Generator)
+    fn generators_with_dom(&self, x: &V) -> impl Iterator<Item = FinHom<V,E>> {
+        self.generators.out_edges(x).map(FinHom::Generator)
     }
-    fn generators_with_cod(&self, x: &Ob<V>) -> impl Iterator<Item = Hom<V,E>> {
-        self.generators.in_edges(&x.0).map(Hom::Generator)
+    fn generators_with_cod(&self, x: &V) -> impl Iterator<Item = FinHom<V,E>> {
+        self.generators.in_edges(x).map(FinHom::Generator)
     }
 }
 
@@ -172,6 +160,8 @@ mod tests {
 
     #[test]
     fn fin_category() {
+        type Hom<V,E> = FinHom<V,E>;
+
         let mut sch_sgraph: FinCategory<char,char> = Default::default();
         sch_sgraph.add_ob_generators(['V','E']);
         sch_sgraph.add_hom_generator('s', 'E', 'V');
@@ -179,8 +169,8 @@ mod tests {
         sch_sgraph.add_hom_generator('i', 'E', 'E');
         assert_eq!(sch_sgraph.ob_generators().count(), 2);
         assert_eq!(sch_sgraph.hom_generators().count(), 3);
-        assert_eq!(sch_sgraph.dom(&Hom::Generator('t')), Ob('E'));
-        assert_eq!(sch_sgraph.cod(&Hom::Generator('t')), Ob('V'));
+        assert_eq!(sch_sgraph.dom(&Hom::Generator('t')), 'E');
+        assert_eq!(sch_sgraph.cod(&Hom::Generator('t')), 'V');
 
         sch_sgraph.set_composite('i', 'i', Hom::Id('E'));
         sch_sgraph.set_composite('i', 's', Hom::Generator('t'));

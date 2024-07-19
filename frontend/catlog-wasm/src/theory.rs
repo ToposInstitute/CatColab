@@ -18,21 +18,19 @@ type UstrDiscreteDblThy = dbl_theory::DiscreteDblTheory<UstrFinCategory>;
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen]
-    fn tsOb() -> Ob<Ustr>;
-    #[wasm_bindgen]
-    fn tsHom() -> Hom<Ustr, Ustr>;
+    fn tsFinHom() -> FinHom<Ustr, Ustr>;
 }
 
 
 /// Object type in discrete double theory.
 #[derive(Eq, Hash, PartialEq, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
-pub struct ObType(Ob<Ustr>);
+pub struct ObType(Ustr);
 
 /// Morphism type in discrete double theory.
 #[derive(Eq, Hash, PartialEq, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
-pub struct MorType(Hom<Ustr, Ustr>);
+pub struct MorType(FinHom<Ustr, Ustr>);
 
 /** Wasm bindings for a discrete double theory.
 

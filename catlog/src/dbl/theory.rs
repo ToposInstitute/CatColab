@@ -268,11 +268,11 @@ where C::Ob: Clone, C::Hom: Clone, {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::one::fin_category::{self, FinCategory};
+    use crate::one::fin_category::*;
 
     #[test]
     fn discrete_dbl_theory() {
-        type Hom<V,E> = fin_category::Hom<V,E>;
+        type Hom<V,E> = FinHom<V,E>;
 
         let mut sgn: FinCategory<char,char> = Default::default();
         sgn.add_ob_generator('*');
@@ -280,7 +280,7 @@ mod tests {
         sgn.set_composite('n', 'n', Hom::Id('*'));
 
         let thy = DiscreteDblTheory::from(sgn);
-        assert!(thy.has_ob_type(&fin_category::Ob('*')));
+        assert!(thy.has_ob_type(&'*'));
         assert!(thy.has_mor_type(&Hom::Generator('n')));
         assert_eq!(thy.basic_ob_types().count(), 1);
         assert_eq!(thy.basic_mor_types().count(), 1);
