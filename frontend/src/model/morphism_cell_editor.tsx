@@ -1,6 +1,5 @@
 import { createEffect, useContext } from "solid-js";
 
-import { getMorTypeMeta } from "../theory";
 import { MorphismDecl } from "./types";
 import { CellActions } from "../notebook";
 import { InlineInput } from "../components";
@@ -31,10 +30,7 @@ export function MorphismCellEditor(props: {
     const theory = useContext(TheoryContext);
     const objectIndex = useContext(ObjectIndexContext);
 
-    const typeMeta = () => {
-        const th = theory?.();
-        return th && getMorTypeMeta(th, props.morphism.type);
-    }
+    const typeMeta = () => theory?.()?.getMorTypeMeta(props.morphism.type);
     const nameClasses = () =>
         ["morphism-decl-name", ...typeMeta()?.textClasses ?? []];
     const arrowClasses = () => {

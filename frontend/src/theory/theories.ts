@@ -1,7 +1,7 @@
 import * as catlog from "catlog-wasm";
 
 import { uniqueIndexArray } from "../util/indexing";
-import { createTheoryMeta } from "./types";
+import { TheoryMeta } from "./types";
 
 import styles from "./styles.module.css";
 import svgStyles from "./svg_styles.module.css";
@@ -18,7 +18,7 @@ export const stdTheories = () => uniqueIndexArray([
 ], th => th.id);
 
 
-const thSimpleOlog = () => createTheoryMeta({
+const thSimpleOlog = () => new TheoryMeta({
     id: "simple-olog",
     name: "Olog",
     description: "Ontology log, a simple conceptual model",
@@ -43,7 +43,7 @@ const thSimpleOlog = () => createTheoryMeta({
     ],
 });
 
-const thSimpleSchema = () => createTheoryMeta({
+const thSimpleSchema = () => new TheoryMeta({
     id: "schema",
     name: "Schema",
     description: "Schema for a categorical database",
@@ -92,7 +92,7 @@ const thSimpleSchema = () => createTheoryMeta({
     ],
 });
 
-const thRegNet = () => createTheoryMeta({
+const thRegNet = () => new TheoryMeta({
     id: "reg-net",
     name: "Regulatory network",
     theory: catlog.thSignedCategory,

@@ -36,7 +36,9 @@ pub struct MorType(Hom<Ustr, Ustr>);
 
 /** Wasm bindings for a discrete double theory.
 
-This is a thin wrapper around the theory from `catlog`
+Besides being a thin wrapper around the theory from `catlog`, this struct allows
+numerical indices to be set for types in the theory, compensating for the lack
+of hash maps with arbitrary keys in JavaScript.
 */
 #[wasm_bindgen]
 pub struct DiscreteDblTheory {

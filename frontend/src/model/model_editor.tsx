@@ -1,5 +1,5 @@
 import { DocHandle } from "@automerge/automerge-repo";
-import { createSignal, Show } from "solid-js";
+import { createMemo, createSignal, Show } from "solid-js";
 import Resizable from "@corvu/resizable";
 
 import { GraphvizSVG } from "../visualization";
@@ -21,10 +21,11 @@ export function ModelEditor(props: {
 }) {
     const [editorRef, setEditorRef] = createSignal<ModelNotebookRef>();
 
-    const modelGraph = () => {
+    // Use memo to avoid unnecesary re-rendering with Graphviz.
+    const modelGraph = createMemo(() => {
         const [model, theory] = [editorRef()?.model(), editorRef()?.theory()];
         return model && theory && modelToGraphviz(model, theory);
-    };
+    });
 
     return <Resizable class="growable-container">
         <Resizable.Panel class="content-panel" collapsible

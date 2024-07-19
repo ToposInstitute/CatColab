@@ -5,7 +5,7 @@ import { IndexedMap } from "../util/indexing";
 import { ObjectDecl, ObjectId } from "./types";
 import { CellActions } from "../notebook";
 import { InlineInput, InlineInputOptions } from "../components";
-import { getObTypeMeta, TheoryMeta } from "../theory";
+import { TheoryMeta } from "../theory";
 import { TheoryContext } from "./model_context";
 
 import "./object_cell_editor.css";
@@ -97,7 +97,7 @@ export function ObjectIdInput(allProps: {
 
 
 function extraClasses(theory: TheoryMeta | undefined, typ: ObType): string[] {
-    const typeMeta = theory && getObTypeMeta(theory, typ);
+    const typeMeta = theory?.getObTypeMeta(typ);
     return [
         ...typeMeta?.cssClasses ?? [],
         ...typeMeta?.textClasses ?? [],

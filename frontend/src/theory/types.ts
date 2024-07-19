@@ -7,68 +7,66 @@ import { ArrowStyle } from "../visualization/types";
 
 /** A double theory with frontend metadata.
  */
-export type TheoryMeta = {
+export class TheoryMeta {
     // Unique identifier of theory.
-    id: TheoryId;
+    readonly id!: TheoryId;
 
     // Human-readable name for models of theory.
-    name: string;
+    readonly name!: string;
 
     // Tooltip-length description of models of theory.
-    description?: string;
+    readonly description?: string;
 
     // The underlying double theory.
-    theory: DiscreteDblTheory;
+    readonly theory!: DiscreteDblTheory;
 
     // Types in the double theory, to be displayed in this order.
-    types: TypeMeta[];
+    readonly types!: TypeMeta[];
 
     // Whether models of the double theory are constrained to be free.
-    onlyFree: boolean;
-};
+    readonly onlyFree!: boolean;
+
+    constructor(props: {
+        id: string;
+        name: string;
+        description?: string;
+        theory: () => DiscreteDblTheory;
+        types: TypeMeta[];
+        onlyFree?: boolean;
+    }) {
+        const {name, description, types} = props;
+        const theory = props.theory();
+
+        for (const [i, typeMeta] of types.entries()) {
+            if (typeMeta.tag === "ob_type") {
+                theory.setObTypeIndex(typeMeta.obType, i);
+            } else if (typeMeta.tag === "mor_type") {
+                theory.setMorTypeIndex(typeMeta.morType, i);
+            }
+        }
+
+        Object.assign(this, {
+            id: isoTheoryId.wrap(props.id),
+            name, description, theory, types,
+            onlyFree: props.onlyFree ?? false,
+        });
+    }
+
+    getObTypeMeta(typ: ObType): ObTypeMeta | undefined {
+        const i = this.theory.obTypeIndex(typ);
+        return i != null ? (this.types[i] as ObTypeMeta) : undefined;
+    }
+
+    getMorTypeMeta(typ: MorType): MorTypeMeta | undefined {
+        const i = this.theory.morTypeIndex(typ);
+        return i != null ? (this.types[i] as MorTypeMeta) : undefined;
+    }
+}
 
 export interface TheoryId
 extends Newtype<{ readonly TheoryId: unique symbol }, string> {}
 
 export const isoTheoryId = iso<TheoryId>();
-
-export function createTheoryMeta(meta: {
-    id: string;
-    name: string;
-    description?: string;
-    theory: () => DiscreteDblTheory;
-    types: TypeMeta[];
-    onlyFree?: boolean;
-}): TheoryMeta {
-    const {name, description, types} = meta;
-    const theory = meta.theory();
-
-    for (const [i, typeMeta] of types.entries()) {
-        if (typeMeta.tag === "ob_type") {
-            theory.setObTypeIndex(typeMeta.obType, i);
-        } else if (typeMeta.tag === "mor_type") {
-            theory.setMorTypeIndex(typeMeta.morType, i);
-        }
-    }
-
-    return {
-        id: isoTheoryId.wrap(meta.id),
-        name, description, theory, types,
-        onlyFree: meta.onlyFree ?? false,
-    };
-}
-
-export function getObTypeMeta(meta: TheoryMeta,
-                              typ: ObType): ObTypeMeta | undefined {
-    const i = meta.theory.obTypeIndex(typ);
-    return i != null ? (meta.types[i] as ObTypeMeta) : undefined;
-}
-
-export function getMorTypeMeta(meta: TheoryMeta,
-                               typ: MorType): MorTypeMeta | undefined {
-    const i = meta.theory.morTypeIndex(typ);
-    return i != null ? (meta.types[i] as MorTypeMeta) : undefined;
-}
 
 
 /** A type in a double theory with frontend metadata.
