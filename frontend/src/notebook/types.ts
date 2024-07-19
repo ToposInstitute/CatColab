@@ -1,5 +1,6 @@
 import { Newtype, iso } from "newtype-ts";
-import { generateId } from "../util/id";
+import { uuidv7 } from "uuidv7";
+
 
 export type Notebook<T> = {
     cells: Cell<T>[];
@@ -19,7 +20,7 @@ export type RichTextCell = {
 
 export const newRichTextCell = (): RichTextCell => ({
     tag: "rich-text",
-    id: isoCellId.wrap(generateId()),
+    id: isoCellId.wrap(uuidv7()),
     content: "",
 });
 
@@ -31,7 +32,7 @@ export type FormalCell<T> = {
 
 export const newFormalCell = <T>(content: T): FormalCell<T> => ({
     tag: "formal",
-    id: isoCellId.wrap(generateId()),
+    id: isoCellId.wrap(uuidv7()),
     content: content,
 });
 

@@ -1,7 +1,7 @@
 import { Newtype, iso } from "newtype-ts";
+import { uuidv7 } from "uuidv7";
 
 import { MorType, ObType } from "catlog-wasm";
-import { generateId } from "../util/id";
 import { TheoryId } from "../theory";
 import { Notebook } from "../notebook";
 
@@ -45,7 +45,7 @@ export type ObjectDecl = {
 
 export const newObjectDecl = (type: ObType): ObjectDecl => ({
     tag: "object",
-    id: isoObjectId.wrap(generateId()),
+    id: isoObjectId.wrap(uuidv7()),
     name: "",
     type: type,
 });
@@ -78,7 +78,7 @@ export type MorphismDecl = {
 
 export const newMorphismDecl = (type: MorType): MorphismDecl => ({
     tag: "morphism",
-    id: isoMorphismId.wrap(generateId()),
+    id: isoMorphismId.wrap(uuidv7()),
     name: "",
     type: type,
     dom: null,
