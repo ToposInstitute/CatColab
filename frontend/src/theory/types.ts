@@ -18,10 +18,10 @@ export class TheoryMeta {
     readonly description?: string;
 
     // The underlying double theory.
-    readonly theory!: DiscreteDblTheory;
+    readonly theory: DiscreteDblTheory;
 
-    // Types in the double theory, to be displayed in this order.
-    readonly types!: TypeMeta[];
+    // Types in theory bound with metadata, to be displayed in this order.
+    readonly types: TypeMeta[];
 
     // Whether models of the double theory are constrained to be free.
     readonly onlyFree!: boolean;
@@ -31,25 +31,29 @@ export class TheoryMeta {
         name: string;
         description?: string;
         theory: () => DiscreteDblTheory;
-        types: TypeMeta[];
+        types?: TypeMeta[];
         onlyFree?: boolean;
     }) {
-        const {name, description, types} = props;
-        const theory = props.theory();
+        this.theory = props.theory();
+        this.types = [];
+        props.types?.forEach(this.bindType, this);
 
-        for (const [i, typeMeta] of types.entries()) {
-            if (typeMeta.tag === "ob_type") {
-                theory.setObTypeIndex(typeMeta.obType, i);
-            } else if (typeMeta.tag === "mor_type") {
-                theory.setMorTypeIndex(typeMeta.morType, i);
-            }
-        }
-
+        const {name, description} = props;
         Object.assign(this, {
             id: isoTheoryId.wrap(props.id),
-            name, description, theory, types,
+            name, description,
             onlyFree: props.onlyFree ?? false,
         });
+    }
+
+    bindType(meta: TypeMeta) {
+        const index = this.types.length;
+        if (meta.tag === "ob_type") {
+            this.theory.setObTypeIndex(meta.obType, index);
+        } else if (meta.tag === "mor_type") {
+            this.theory.setMorTypeIndex(meta.morType, index);
+        }
+        this.types.push(meta);
     }
 
     getObTypeMeta(typ: ObType): ObTypeMeta | undefined {
