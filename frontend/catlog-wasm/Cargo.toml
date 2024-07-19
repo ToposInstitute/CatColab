@@ -11,18 +11,14 @@ crate-type = ["cdylib", "rlib"]
 default = ["console_error_panic_hook"]
 
 [dependencies]
-catlog = { path = "../../catlog" }
-getrandom = { version = "0.2", features = ["js"] }
-wasm-bindgen = "0.2.84"
-
-# The `console_error_panic_hook` crate provides better debugging of panics by
-# logging them with `console.error`. This is great for development, but requires
-# all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
-# code size when deploying.
+catlog = { path = "../../catlog", features = ["serde-wasm"] }
 console_error_panic_hook = { version = "0.1.7", optional = true }
-ustr = "1.0.0"
+getrandom = { version = "0.2", features = ["js"] }
 js-sys = "0.3.69"
-derivative = "2.2.0"
+serde = { version = "1", features = ["derive"] }
+tsify-next = { version = "0.5", features = ["js"] }
+ustr = "1"
+wasm-bindgen = "0.2.92"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.34"

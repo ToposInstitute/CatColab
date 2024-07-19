@@ -1,7 +1,7 @@
 import * as catlog from "catlog-wasm";
 
 import { uniqueIndexArray } from "../util/indexing";
-import { createTheoryMeta } from "./types";
+import { TheoryMeta } from "./types";
 
 import styles from "./styles.module.css";
 import svgStyles from "./svg_styles.module.css";
@@ -18,15 +18,15 @@ export const stdTheories = () => uniqueIndexArray([
 ], th => th.id);
 
 
-const thSimpleOlog = () => createTheoryMeta({
+const thSimpleOlog = () => new TheoryMeta({
     id: "simple-olog",
     name: "Olog",
     description: "Ontology log, a simple conceptual model",
-    theory: catlog.thSimpleOlog(),
+    theory: catlog.thCategory,
     types: [
         {
             tag: "ob_type",
-            id: "type",
+            obType: "object",
             name: "Type",
             description: "Type or class of things",
             shortcut: ["O"],
@@ -35,7 +35,7 @@ const thSimpleOlog = () => createTheoryMeta({
         },
         {
             tag: "mor_type",
-            id: "aspect",
+            morType: {tag: "Id", content: "object"},
             name: "Aspect",
             description: "Aspect or property of a thing",
             shortcut: ["M"],
@@ -43,15 +43,15 @@ const thSimpleOlog = () => createTheoryMeta({
     ],
 });
 
-const thSimpleSchema = () => createTheoryMeta({
-    id: "simple-schema",
+const thSimpleSchema = () => new TheoryMeta({
+    id: "schema",
     name: "Schema",
     description: "Schema for a categorical database",
-    theory: catlog.thSimpleSchema(),
+    theory: catlog.thSchema,
     types: [
         {
             tag: "ob_type",
-            id: "entity",
+            obType: "entity",
             name: "Entity",
             description: "Type of entity or thing",
             shortcut: ["O"],
@@ -61,7 +61,7 @@ const thSimpleSchema = () => createTheoryMeta({
         },
         {
             tag: "mor_type",
-            id: "map",
+            morType: {tag: "Id", content: "entity"},
             name: "Mapping",
             description: "Many-to-one relation between entities",
             shortcut: ["M"],
@@ -69,7 +69,7 @@ const thSimpleSchema = () => createTheoryMeta({
         },
         {
             tag: "mor_type",
-            id: "attr",
+            morType: {tag: "Generator", content: "attr"},
             name: "Attribute",
             description: "Data attribute of an entity",
             shortcut: ["A"],
@@ -77,14 +77,14 @@ const thSimpleSchema = () => createTheoryMeta({
         },
         {
             tag: "ob_type",
-            id: "attr_type",
+            obType: "attr_type",
             name: "Attribute type",
             description: "Data type for an attribute",
             textClasses: [styles.code],
         },
         {
             tag: "mor_type",
-            id: "attr_op",
+            morType: {tag: "Id", content: "attr_type"},
             name: "Operation",
             description: "Operation on data types for attributes",
             textClasses: [styles.code],
@@ -92,28 +92,28 @@ const thSimpleSchema = () => createTheoryMeta({
     ],
 });
 
-const thRegNet = () => createTheoryMeta({
+const thRegNet = () => new TheoryMeta({
     id: "reg-net",
     name: "Regulatory network",
-    theory: catlog.thSignedCategory(),
+    theory: catlog.thSignedCategory,
     onlyFree: true,
     types: [
         {
             tag: "ob_type",
-            id: "object",
+            obType: "object",
             name: "Species",
             description: "Biochemical species in the network",
         },
         {
             tag: "mor_type",
-            id: "positive",
+            morType: {tag: "Id", content: "object"},
             name: "Promotion",
             description: "Positive interaction: activates or promotes",
             arrowStyle: "to",
         },
         {
             tag: "mor_type",
-            id: "negative",
+            morType: {tag: "Generator", content: "negative"},
             name: "Inhibition",
             description: "Negative interaction: represses or inhibits",
             arrowStyle: "flat",
