@@ -96,8 +96,8 @@ export function ObjectIdInput(allProps: {
 }
 
 
-function extraClasses(theory: TheoryMeta | undefined, typ: ObType): string[] {
-    const typeMeta = theory?.getObTypeMeta(typ);
+function extraClasses(theory: TheoryMeta | undefined, typ?: ObType): string[] {
+    const typeMeta = typ ? theory?.getObTypeMeta(typ) : undefined;
     return [
         ...typeMeta?.cssClasses ?? [],
         ...typeMeta?.textClasses ?? [],
