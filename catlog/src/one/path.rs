@@ -2,6 +2,11 @@
 
 use nonempty::{NonEmpty, nonempty};
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+#[cfg(feature = "serde-wasm")]
+use tsify_next::Tsify;
+
 use super::graph::Graph;
 
 /** A path in a [graph](Graph) or [category](crate::one::category::Category).
@@ -25,6 +30,10 @@ case analysis on the edge sequence anyway to determine whether, say,
 the two cases in the data structure itself.
 */
 #[derive(Clone,Debug,PartialEq,Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize,Deserialize))]
+#[cfg_attr(feature = "serde", serde(tag = "tag", content = "content"))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
 pub enum Path<V,E> {
     /// The identity, or empty, path at a vertex.
     Id(V),

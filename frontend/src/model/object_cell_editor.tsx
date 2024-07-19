@@ -1,10 +1,11 @@
 import { createEffect, createSignal, splitProps, useContext } from "solid-js";
 
+import { ObType } from "catlog-wasm";
 import { IndexedMap } from "../util/indexing";
 import { ObjectDecl, ObjectId } from "./types";
 import { CellActions } from "../notebook";
 import { InlineInput, InlineInputOptions } from "../components";
-import { TheoryMeta } from "../theory";
+import { getObTypeMeta, TheoryMeta } from "../theory";
 import { TheoryContext } from "./model_context";
 
 import "./object_cell_editor.css";
@@ -49,7 +50,7 @@ export function ObjectCellEditor(props: {
 export function ObjectIdInput(allProps: {
     objectId: ObjectId | null;
     setObjectId: (id: ObjectId | null) => void;
-    objectType?: string;
+    objectType?: ObType;
     objectIndex?: IndexedMap<ObjectId,string>;
 } & InlineInputOptions) {
     const [props, inputProps] = splitProps(allProps, [
@@ -95,8 +96,8 @@ export function ObjectIdInput(allProps: {
 }
 
 
-function extraClasses(theory?: TheoryMeta, typ?: string): string[] {
-    const typeMeta = typ ? theory?.types.get(typ) : undefined;
+function extraClasses(theory: TheoryMeta | undefined, typ: ObType): string[] {
+    const typeMeta = theory && getObTypeMeta(theory, typ);
     return [
         ...typeMeta?.cssClasses ?? [],
         ...typeMeta?.textClasses ?? [],

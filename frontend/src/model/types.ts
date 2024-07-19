@@ -1,5 +1,6 @@
 import { Newtype, iso } from "newtype-ts";
 
+import { MorType, ObType } from "catlog-wasm";
 import { generateId } from "../util/id";
 import { TheoryId } from "../theory";
 import { Notebook } from "../notebook";
@@ -39,10 +40,10 @@ export type ObjectDecl = {
     name: string;
 
     // Identifier of object type in double theory.
-    type: string;
+    type: ObType;
 };
 
-export const newObjectDecl = (type: string): ObjectDecl => ({
+export const newObjectDecl = (type: ObType): ObjectDecl => ({
     tag: "object",
     id: isoObjectId.wrap(generateId()),
     name: "",
@@ -66,7 +67,7 @@ export type MorphismDecl = {
     name: string;
 
     // Identifier of morphism type in double theory.
-    type: string;
+    type: MorType;
 
     // Domain of morphism.
     dom: ObjectId | null;
@@ -75,7 +76,7 @@ export type MorphismDecl = {
     cod: ObjectId | null;
 };
 
-export const newMorphismDecl = (type: string): MorphismDecl => ({
+export const newMorphismDecl = (type: MorType): MorphismDecl => ({
     tag: "morphism",
     id: isoMorphismId.wrap(generateId()),
     name: "",

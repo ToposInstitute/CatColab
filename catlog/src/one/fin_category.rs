@@ -6,6 +6,11 @@ use derivative::Derivative;
 use ref_cast::RefCast;
 use ustr::{Ustr, IdentityHasher};
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+#[cfg(feature = "serde-wasm")]
+use tsify_next::Tsify;
+
 use crate::zero::{Mapping, HashColumn};
 use super::path::Path;
 use super::graph::*;
@@ -17,11 +22,18 @@ This wrapper type is just for clarity. We prohibit equations between objects, so
 objects and object generators coincide.
 */
 #[derive(Clone,Debug,Copy,PartialEq,Eq,Hash,RefCast)]
+#[cfg_attr(feature = "serde", derive(Serialize,Deserialize))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
 #[repr(transparent)]
 pub struct Ob<V>(pub V);
 
 /// Morphism in a finite category.
 #[derive(Clone,Debug,Copy,PartialEq,Eq,Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize,Deserialize))]
+#[cfg_attr(feature = "serde", serde(tag = "tag", content = "content"))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
 pub enum Hom<V,E> {
     /// Identity morphism on an object.
     Id(V),

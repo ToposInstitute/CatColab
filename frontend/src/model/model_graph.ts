@@ -1,6 +1,6 @@
 import type * as Viz from "@viz-js/viz";
 
-import { MorTypeMeta, TheoryMeta, TypeMeta } from "../theory";
+import { getMorTypeMeta, getObTypeMeta, TheoryMeta, TypeMeta } from "../theory";
 import { isoObjectId, isoMorphismId, ModelNotebook } from "./types";
 
 import styles from "../theory/styles.module.css";
@@ -31,7 +31,7 @@ export function modelToGraphviz(
 
         if (judgment.tag === "object") {
             const { id, name } = judgment;
-            const meta = theory.types.get(judgment.type);
+            const meta = getObTypeMeta(theory, judgment.type);
             nodes.push({
                 name: isoObjectId.unwrap(id),
                 attributes: {
@@ -44,7 +44,7 @@ export function modelToGraphviz(
         } else if (judgment.tag === "morphism") {
             const { id, name, dom, cod } = judgment;
             if (!dom || !cod) { continue; }
-            const meta = theory.types.get(judgment.type) as MorTypeMeta;
+            const meta = getMorTypeMeta(theory, judgment.type);
             edges.push({
                 head: isoObjectId.unwrap(cod),
                 tail: isoObjectId.unwrap(dom),

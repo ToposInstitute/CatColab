@@ -1,8 +1,7 @@
 import { Newtype, iso } from "newtype-ts";
 import { KbdKey } from "@solid-primitives/keyboard";
 
-import { uniqueIndexArray } from "../util/indexing";
-import { DiscreteDblTheory } from "catlog-wasm";
+import { DiscreteDblTheory, ObType, MorType } from "catlog-wasm";
 import { ArrowStyle } from "../visualization/types";
 
 
@@ -22,7 +21,7 @@ export type TheoryMeta = {
     theory: DiscreteDblTheory;
 
     // Types in the double theory, to be displayed in this order.
-    types: Map<string, TypeMeta>;
+    types: TypeMeta[];
 
     // Whether models of the double theory are constrained to be free.
     onlyFree: boolean;
@@ -37,17 +36,38 @@ export function createTheoryMeta(meta: {
     id: string;
     name: string;
     description?: string;
-    theory: DiscreteDblTheory;
+    theory: () => DiscreteDblTheory;
     types: TypeMeta[];
     onlyFree?: boolean;
 }): TheoryMeta {
-    const {name, description, theory} = meta;
+    const {name, description, types} = meta;
+    const theory = meta.theory();
+
+    for (const [i, typeMeta] of types.entries()) {
+        if (typeMeta.tag === "ob_type") {
+            theory.setObTypeIndex(typeMeta.obType, i);
+        } else if (typeMeta.tag === "mor_type") {
+            theory.setMorTypeIndex(typeMeta.morType, i);
+        }
+    }
+
     return {
         id: isoTheoryId.wrap(meta.id),
-        name, description, theory,
-        types: uniqueIndexArray(meta.types, t => t.id),
+        name, description, theory, types,
         onlyFree: meta.onlyFree ?? false,
     };
+}
+
+export function getObTypeMeta(meta: TheoryMeta,
+                              typ: ObType): ObTypeMeta | undefined {
+    const i = meta.theory.obTypeIndex(typ);
+    return i != null ? (meta.types[i] as ObTypeMeta) : undefined;
+}
+
+export function getMorTypeMeta(meta: TheoryMeta,
+                               typ: MorType): MorTypeMeta | undefined {
+    const i = meta.theory.morTypeIndex(typ);
+    return i != null ? (meta.types[i] as MorTypeMeta) : undefined;
 }
 
 
@@ -56,9 +76,6 @@ export function createTheoryMeta(meta: {
 export type TypeMeta = ObTypeMeta | MorTypeMeta;
 
 type BaseTypeMeta = {
-    // Unique identifier of type.
-    id: string;
-
     // Human-readable name of type.
     name: string;
 
@@ -80,10 +97,16 @@ type BaseTypeMeta = {
 
 export type ObTypeMeta = BaseTypeMeta & {
     tag: "ob_type";
+
+    // Object type in underlying theory.
+    obType: ObType;
 };
 
 export type MorTypeMeta = BaseTypeMeta & {
     tag: "mor_type";
+
+    // Morphism type in underlying theory.
+    morType: MorType;
 
     // Style of arrow to use for morphisms of this type.
     arrowStyle?: ArrowStyle;
