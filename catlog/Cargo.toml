@@ -16,7 +16,6 @@ derive_more = "0.99"
 nonempty = "0.10"
 ref-cast = "1"
 serde = { version = "1", features = ["derive"], optional = true }
-smallvec = "1"
 thiserror = "1"
 tsify-next = { version = "0.5", features = ["js"], optional = true }
 ustr = "1"
