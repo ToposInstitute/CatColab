@@ -196,6 +196,30 @@ impl<S: FinSet> FgCategory for DiscreteCategory<S> where S::Elem: Clone {
     }
 }
 
+impl<G: FinGraph> FgCategory for FreeCategory<G> where G::V: Eq+Clone {
+    fn has_ob_generator(&self, x: &G::V) -> bool {
+        self.0.has_vertex(x)
+    }
+    fn has_hom_generator(&self, path: &Path<G::V,G::E>) -> bool {
+        match path {
+            Path::Id(_) => false,
+            Path::Seq(fs) => fs.len() == 1 && self.0.has_edge(fs.first()),
+        }
+    }
+    fn ob_generators(&self) -> impl Iterator<Item = Self::Ob> {
+        self.0.vertices()
+    }
+    fn hom_generators(&self) -> impl Iterator<Item = Self::Hom> {
+        self.0.edges().map(|e| Path::single(e))
+    }
+    fn generators_with_dom(&self, x: &G::V) -> impl Iterator<Item = Self::Hom> {
+        self.0.out_edges(x).map(|e| Path::single(e))
+    }
+    fn generators_with_cod(&self, x: &G::V) -> impl Iterator<Item = Self::Hom> {
+        self.0.in_edges(x).map(|e| Path::single(e))
+    }
+}
+
 /** The generating graph of a finitely generated category.
 
 The vertices and edges of the graph are the object and morphism generators.
@@ -252,15 +276,22 @@ mod tests {
     fn free_category() {
         let cat = FreeCategory::from(SkelGraph::triangle());
         assert!(cat.has_ob(&2));
+        assert!(cat.has_ob_generator(&2));
+        assert_eq!(cat.ob_generators().count(), 3);
+        assert_eq!(cat.hom_generators().count(), 3);
+        assert_eq!(cat.generators_with_dom(&0).count(), 2);
+        assert_eq!(cat.generators_with_cod(&2).count(), 2);
 
         let id = Path::Id(1);
         assert!(cat.has_hom(&id));
+        assert!(!cat.has_hom_generator(&id));
         assert_eq!(cat.dom(&id), 1);
         assert_eq!(cat.cod(&id), 1);
 
         let path = Path::Seq(nonempty![0,1]);
         assert!(cat.has_hom(&path));
         assert!(!cat.has_hom(&Path::Seq(nonempty![0,2])));
+        assert!(!cat.has_hom_generator(&path));
         assert_eq!(cat.dom(&path), 0);
         assert_eq!(cat.cod(&path), 2);
 
