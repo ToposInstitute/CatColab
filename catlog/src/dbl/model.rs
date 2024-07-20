@@ -1,15 +1,18 @@
 /*! Models of double theories.
 
-A model of a double theory is a category (or categories) equipped with extra
-structure, categorifying the familiar idea from logic that a model of a theory
-is a set (or sets) equipped with extra structure. For background on double
-theories, see the [`theory`](super::theory) module.
+A model of a double theory is a category (or categories) equipped with
+operations specified by the theory, categorifying the familiar idea from logic
+that a model of a theory is a set (or sets) equipped with operations. For
+background on double theories, see the [`theory`](super::theory) module.
 
 In the case of a *simple* double theory, which is just a small double category,
-a **model** is a span-valued *lax* double functor. Such a model is a "lax
-copresheaf," categorifying the notion of a copresheaf or set-valued functor. As
-for double theories, we introduce new terminology for models to bring out the
-intended intuitions.
+a **model** of the theory is a span-valued *lax* double functor out of it. Such
+a model is a "lax copresheaf," categorifying the notion of a copresheaf or
+set-valued functor. Though they are "just" lax double functors, models are a
+[concept with an
+attitude](https://ncatlab.org/nlab/show/concept+with+an+attitude). To bring out
+the intended intuition we introduce new jargon, building on that for double
+theories.
 
 # Terminology
 
@@ -18,7 +21,7 @@ A model of a double theory consists of elements of two kinds:
 1. **Objects**, each assigned an object type in the theory;
 
 2. **Morphisms**, each having a domain and a codomain object and assigned a
-   morphism type in the theory, compatibly with the domain and codomain;
+   morphism type in the theory, compatibly with the domain and codomain types;
 
 In addition, a model has the following operations:
 
@@ -32,10 +35,71 @@ In addition, a model has the following operations:
   whose type is the composite of the corresponding morphism types.
  */
 
+use crate::one::path::Path;
+
 
 /** A model of a double theory.
+
+As always in logic, a model only makes sense relative to a theory, but a theory
+can have many different models. Thus, as an object in Rust, a model does not own
+the theory that it is a model of. Instead, it can be validated that a model is
+indeed valid for a theory provided separatedly.
  */
 pub trait DblModel {
+    /** Type of objects in the model.
+
+    Viewing the model as a span-valued double functor, this is the type of
+    elements in the sets in the image of the functor.
+    */
+    type Ob: Eq;
+
+    /** Type of morphisms in the model.
+
+    Viewing the model as a span-valued double functor, this is the type of
+    elements in the apexes of the spans in the image of the functor.
+    */
+    type Mor: Eq;
+
     /// Rust type of object types in the double theory.
-    type ObType;
+    type ObType: Eq;
+
+    /// Rust type of morphism types in the double theory.
+    type MorType: Eq;
+
+    /// Rust type of operations on objects.
+    type ObOp: Eq;
+
+    /// Rust type of operations on morphisms.
+    type MorOp: Eq;
+
+    /// Does the model contain the value as an object?
+    fn has_ob(&self, x: &Self::Ob) -> bool;
+
+    /// Does the model contain the value as a morphism?
+    fn has_mor(&self, m: &Self::Mor) -> bool;
+
+    /// Domain of morphism.
+    fn dom(&self, m: &Self::Mor) -> Self::Ob;
+
+    /// Codomain of morphism.
+    fn cod(&self, m: &Self::Mor) -> Self::Ob;
+
+    /// Composes a path of morphisms in the model.
+    fn compose(&self, path: Path<Self::Ob,Self::Mor>) -> Self::Mor;
+
+    /// Composes a pair of morphisms in the model.
+    fn compose2(&self, m: Self::Mor, n: Self::Mor) -> Self::Mor {
+        self.compose(Path::pair(m, n))
+    }
+
+    /// Constructs the identity morphism at an object.
+    fn id(&self, x: Self::Ob) -> Self::Mor {
+        self.compose(Path::empty(x))
+    }
+
+    /// Acts on an object with an object operation.
+    fn ob_act(&self, x: Self::Ob, f: &Self::ObOp) -> Self::Ob;
+
+    /// Acts on a morphism with a morphism operation.
+    fn mor_act(&self, m: Self::Mor, α: &Self::MorOp) -> Self::Mor;
 }

@@ -89,25 +89,25 @@ pub trait DblTheory {
 
     Viewing the theory as a double category, this is the type of objects.
     */
-    type ObType;
+    type ObType: Eq;
 
     /** Rust type of morphism types in the double theory.
 
     Viewing the theory as a double category, this is the type of proarrows.
     */
-    type MorType;
+    type MorType: Eq;
 
     /** Rust type of operations on objects in the double theory.
 
     Viewing the theory as a double category, this is the type of arrows.
     */
-    type ObOp;
+    type ObOp: Eq;
 
-    /** Rust type of operations on morphisns in the double theory.
+    /** Rust type of operations on morphisms in the double theory.
 
     Viewing the theory as a double category, this is the type of cells.
     */
-    type MorOp;
+    type MorOp: Eq;
 
     /// Does the object type belong to the theory?
     fn has_ob_type(&self, x: &Self::ObType) -> bool;
