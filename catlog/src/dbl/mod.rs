@@ -5,3 +5,4 @@ pub mod diagram;
 pub mod pasting;
 
 pub mod theory;
+pub mod model;
