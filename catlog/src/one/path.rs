@@ -134,6 +134,49 @@ impl<V,E> Path<V,E> {
 /// A path in a graph with skeletal vertex and edge sets.
 pub type SkelPath = Path<usize, usize>;
 
+
+/// Asserts an equation between the composites of two paths in a category.
+#[derive(Clone,Debug,PartialEq,Eq)]
+pub struct PathEq<V,E> {
+    /// Left hand side of equation.
+    pub lhs: Path<V,E>,
+
+    /// Right hand side of equation.
+    pub rhs: Path<V,E>,
+}
+
+impl<V,E> PathEq<V,E> {
+    /// Constructs a path equation with the given left- and right-hand sides.
+    pub fn new(lhs: Path<V,E>, rhs: Path<V,E>) -> PathEq<V,E> {
+        PathEq { lhs, rhs }
+    }
+
+    /// Is the path equation well defined in the given graph?
+    pub fn valid_in<G>(&self, graph: &G) -> bool
+    where V: Eq+Clone, G: Graph<V=V, E=E> {
+        // TODO: Should be `validate_in` with validation errors.
+        self.lhs.contained_in(graph) && self.rhs.contained_in(graph) &&
+            self.lhs.src(graph) == self.rhs.src(graph) &&
+            self.lhs.tgt(graph) == self.rhs.tgt(graph)
+    }
+
+    /** Source of the path equation in the given graph.
+
+    Only well defined when the path equation is valid.
+    */
+    pub fn src<G>(&self, graph: &G) -> V where V: Clone, G: Graph<V=V, E=E> {
+        self.lhs.src(graph) // == self.rhs.src(graph)
+    }
+
+    /** Target of the path equation in the given graph.
+
+    Only well defined when the path equation is valid.
+    */
+    pub fn tgt<G>(&self, graph: &G) -> V where V: Clone, G: Graph<V=V, E=E> {
+        self.lhs.tgt(graph) // == self.rhs.tgt(graph)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::convert::identity;
@@ -163,5 +206,14 @@ mod tests {
                    Some(Path::Id(2)));
         assert_eq!(SkelPath::pair(0,1).try_map(|v| Some(v), |e| Some(e+1)),
                    Some(Path::pair(1,2)));
+    }
+
+    #[test]
+    fn path_eq() {
+        let g = SkelGraph::triangle();
+        let eq = PathEq::new(Path::pair(0,1), Path::single(2));
+        assert_eq!(eq.src(&g), 0);
+        assert_eq!(eq.tgt(&g), 2);
+        assert!(eq.valid_in(&g));
     }
 }

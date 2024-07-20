@@ -171,7 +171,7 @@ pub trait FgCategory: Category {
     /// Iterates over object generators of the category.
     fn ob_generators(&self) -> impl Iterator<Item = Self::Ob>;
 
-    /// Iterates over all morphism generators of the category.
+    /// Iterates over morphism generators of the category.
     fn hom_generators(&self) -> impl Iterator<Item = Self::Hom>;
 
     /// Iterates over morphism generators with the given domain.
