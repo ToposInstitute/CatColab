@@ -3,7 +3,6 @@
 
 use derive_more::From;
 use ref_cast::RefCast;
-use nonempty::NonEmpty;
 
 use crate::zero::{Set, FinSet};
 use super::graph::{Graph, FinGraph};
@@ -136,23 +135,8 @@ impl<G: Graph> Category for FreeCategory<G> where G::V: Clone {
     fn cod(&self, path: &Path<G::V,G::E>) -> G::V { path.tgt(&self.0) }
 
     fn compose(&self, path: Path<G::V,Path<G::V,G::E>>) -> Path<G::V,G::E> {
-        match path {
-            Path::Id(x) => Path::Id(x),
-            Path::Seq(fs) => {
-                if fs.iter().any(|p| matches!(p, Path::Seq(_))) {
-                    let seqs = NonEmpty::collect(fs.into_iter().filter_map(|p| {
-                        match p {
-                            Path::Id(_) => None,
-                            Path::Seq(gs) => Some(gs)
-                        }
-                    }));
-                    Path::Seq(NonEmpty::flatten(seqs.unwrap()))
-                } else {
-                    fs.head // An identity.
-                }
-            }
-        }
-    } 
+        path.flatten()
+    }
 }
 
 /** A finitely generated category with specified object and morphism generators.
@@ -203,7 +187,7 @@ impl<G: FinGraph> FgCategory for FreeCategory<G> where G::V: Eq+Clone {
     fn has_hom_generator(&self, path: &Path<G::V,G::E>) -> bool {
         match path {
             Path::Id(_) => false,
-            Path::Seq(fs) => fs.len() == 1 && self.0.has_edge(fs.first()),
+            Path::Seq(es) => es.len() == 1 && self.0.has_edge(es.first()),
         }
     }
     fn ob_generators(&self) -> impl Iterator<Item = Self::Ob> {

@@ -131,11 +131,33 @@ impl<V,E> Path<V,E> {
     }
 }
 
+impl<V, E> Path<V,Path<V,E>> {
+    /// Flatten a path of paths into a single path.
+    pub fn flatten(self) -> Path<V,E> {
+        match self {
+            Path::Id(x) => Path::Id(x),
+            Path::Seq(fs) => {
+                if fs.iter().any(|p| matches!(p, Path::Seq(_))) {
+                    let seqs = NonEmpty::collect(fs.into_iter().filter_map(|p| {
+                        match p {
+                            Path::Id(_) => None,
+                            Path::Seq(gs) => Some(gs)
+                        }
+                    }));
+                    Path::Seq(NonEmpty::flatten(seqs.unwrap()))
+                } else {
+                    fs.head // An identity.
+                }
+            }
+        }
+    }
+}
+
 /// A path in a graph with skeletal vertex and edge sets.
 pub type SkelPath = Path<usize, usize>;
 
 
-/// Asserts an equation between the composites of two paths in a category.
+/// Assertion of an equation between the composites of two paths in a category.
 #[derive(Clone,Debug,PartialEq,Eq)]
 pub struct PathEq<V,E> {
     /// Left hand side of equation.
@@ -176,6 +198,7 @@ impl<V,E> PathEq<V,E> {
         self.lhs.tgt(graph) // == self.rhs.tgt(graph)
     }
 }
+
 
 #[cfg(test)]
 mod tests {
