@@ -3,7 +3,6 @@
 
 use derive_more::From;
 use ref_cast::RefCast;
-use nonempty::NonEmpty;
 
 use crate::zero::{Set, FinSet};
 use super::graph::{Graph, FinGraph};
@@ -136,23 +135,8 @@ impl<G: Graph> Category for FreeCategory<G> where G::V: Clone {
     fn cod(&self, path: &Path<G::V,G::E>) -> G::V { path.tgt(&self.0) }
 
     fn compose(&self, path: Path<G::V,Path<G::V,G::E>>) -> Path<G::V,G::E> {
-        match path {
-            Path::Id(x) => Path::Id(x),
-            Path::Seq(fs) => {
-                if fs.iter().any(|p| matches!(p, Path::Seq(_))) {
-                    let seqs = NonEmpty::collect(fs.into_iter().filter_map(|p| {
-                        match p {
-                            Path::Id(_) => None,
-                            Path::Seq(gs) => Some(gs)
-                        }
-                    }));
-                    Path::Seq(NonEmpty::flatten(seqs.unwrap()))
-                } else {
-                    fs.head // An identity.
-                }
-            }
-        }
-    } 
+        path.flatten()
+    }
 }
 
 /** A finitely generated category with specified object and morphism generators.
@@ -171,7 +155,7 @@ pub trait FgCategory: Category {
     /// Iterates over object generators of the category.
     fn ob_generators(&self) -> impl Iterator<Item = Self::Ob>;
 
-    /// Iterates over all morphism generators of the category.
+    /// Iterates over morphism generators of the category.
     fn hom_generators(&self) -> impl Iterator<Item = Self::Hom>;
 
     /// Iterates over morphism generators with the given domain.
@@ -193,6 +177,30 @@ impl<S: FinSet> FgCategory for DiscreteCategory<S> where S::Elem: Clone {
     }
     fn generators_with_cod(&self, _: &S::Elem) -> impl Iterator<Item=S::Elem> {
         std::iter::empty::<S::Elem>()
+    }
+}
+
+impl<G: FinGraph> FgCategory for FreeCategory<G> where G::V: Eq+Clone {
+    fn has_ob_generator(&self, x: &G::V) -> bool {
+        self.0.has_vertex(x)
+    }
+    fn has_hom_generator(&self, path: &Path<G::V,G::E>) -> bool {
+        match path {
+            Path::Id(_) => false,
+            Path::Seq(es) => es.len() == 1 && self.0.has_edge(es.first()),
+        }
+    }
+    fn ob_generators(&self) -> impl Iterator<Item = Self::Ob> {
+        self.0.vertices()
+    }
+    fn hom_generators(&self) -> impl Iterator<Item = Self::Hom> {
+        self.0.edges().map(|e| Path::single(e))
+    }
+    fn generators_with_dom(&self, x: &G::V) -> impl Iterator<Item = Self::Hom> {
+        self.0.out_edges(x).map(|e| Path::single(e))
+    }
+    fn generators_with_cod(&self, x: &G::V) -> impl Iterator<Item = Self::Hom> {
+        self.0.in_edges(x).map(|e| Path::single(e))
     }
 }
 
@@ -252,15 +260,22 @@ mod tests {
     fn free_category() {
         let cat = FreeCategory::from(SkelGraph::triangle());
         assert!(cat.has_ob(&2));
+        assert!(cat.has_ob_generator(&2));
+        assert_eq!(cat.ob_generators().count(), 3);
+        assert_eq!(cat.hom_generators().count(), 3);
+        assert_eq!(cat.generators_with_dom(&0).count(), 2);
+        assert_eq!(cat.generators_with_cod(&2).count(), 2);
 
         let id = Path::Id(1);
         assert!(cat.has_hom(&id));
+        assert!(!cat.has_hom_generator(&id));
         assert_eq!(cat.dom(&id), 1);
         assert_eq!(cat.cod(&id), 1);
 
         let path = Path::Seq(nonempty![0,1]);
         assert!(cat.has_hom(&path));
         assert!(!cat.has_hom(&Path::Seq(nonempty![0,2])));
+        assert!(!cat.has_hom_generator(&path));
         assert_eq!(cat.dom(&path), 0);
         assert_eq!(cat.cod(&path), 2);
 

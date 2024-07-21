@@ -1,4 +1,4 @@
-//! Data structures for finite categories.
+//! Data structures for finite and finitely presented categories.
 
 use std::hash::{Hash, BuildHasher, BuildHasherDefault, RandomState};
 
@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use tsify_next::Tsify;
 
 use crate::zero::{Mapping, HashColumn};
-use super::path::Path;
+use super::path::{Path, PathEq};
 use super::graph::*;
 use super::category::*;
 
@@ -153,6 +153,100 @@ where V: Eq+Hash+Clone, E: Eq+Hash+Clone, S: BuildHasher {
     }
 }
 
+
+/** A finitely presented category.
+
+Such a presentation is defined by a finite graph together with a set of path
+equations. A morphism in the presented category is an equivalence class of paths
+in the graph, so strictly speaking we work with representatives rather than
+morphism themselves.
+
+TODO: Add hom generator with optional (co)domain.
+TODO: Validate generators and path equations.
+ */
+#[derive(Clone,Derivative)]
+#[derivative(Default(bound=""))]
+pub struct FpCategory<V,E> {
+    generators: HashGraph<V,E>,
+    equations: Vec<PathEq<V,E>>,
+}
+
+impl<V,E> FpCategory<V,E>
+where V: Eq+Clone+Hash, E: Eq+Clone+Hash {
+    /// Adds an object generator, returning whether it is new.
+    pub fn add_ob_generator(&mut self, v: V) -> bool {
+        self.generators.add_vertex(v)
+    }
+
+    /// Adds multiple object generators.
+    pub fn add_ob_generators<Iter>(&mut self, iter: Iter)
+    where Iter: IntoIterator<Item = V> {
+        self.generators.add_vertices(iter)
+    }
+
+    /// Adds a morphism generator, returning whether it is new.
+    pub fn add_hom_generator(&mut self, e: E, dom: V, cod: V) -> bool {
+        self.generators.add_edge(e, dom, cod)
+    }
+
+    /// Iterates over path equations in the presentation.
+    pub fn equations(&self) -> impl Iterator<Item = &PathEq<V,E>> {
+        self.equations.iter()
+    }
+
+    /// Adds an equation to the presentation.
+    pub fn add_equation(&mut self, eq: PathEq<V,E>) {
+        self.equations.push(eq);
+    }
+
+    /// Adds multiple equations to the presentation.
+    pub fn add_equations<Iter>(&mut self, iter: Iter)
+    where Iter: IntoIterator<Item = PathEq<V,E>> {
+        self.equations.extend(iter)
+    }
+}
+
+impl<V,E> Category for FpCategory<V,E>
+where V: Eq+Clone+Hash, E: Eq+Clone+Hash {
+    type Ob = V;
+    type Hom = Path<V,E>;
+
+    fn has_ob(&self, x: &V) -> bool { self.generators.has_vertex(x) }
+    fn has_hom(&self, path: &Path<V,E>) -> bool {
+        path.contained_in(&self.generators)
+    }
+    fn dom(&self, path: &Path<V,E>) -> V { path.src(&self.generators) }
+    fn cod(&self, path: &Path<V,E>) -> V { path.tgt(&self.generators) }
+
+    fn compose(&self, path: Path<V,Path<V,E>>) -> Path<V,E> {
+        path.flatten()
+    }
+}
+
+impl<V,E> FgCategory for FpCategory<V,E>
+where V: Eq+Clone+Hash, E: Eq+Clone+Hash {
+    fn has_ob_generator(&self, x: &V) -> bool { self.generators.has_vertex(x) }
+    fn has_hom_generator(&self, path: &Path<V,E>) -> bool {
+        match path {
+            Path::Id(_) => false,
+            Path::Seq(es) => es.len() == 1 && self.generators.has_edge(es.first()),
+        }
+    }
+    fn ob_generators(&self) -> impl Iterator<Item = Self::Ob> {
+        self.generators.vertices()
+    }
+    fn hom_generators(&self) -> impl Iterator<Item = Self::Hom> {
+        self.generators.edges().map(|e| Path::single(e))
+    }
+    fn generators_with_dom(&self, x: &V) -> impl Iterator<Item = Self::Hom> {
+        self.generators.out_edges(x).map(|e| Path::single(e))
+    }
+    fn generators_with_cod(&self, x: &V) -> impl Iterator<Item = Self::Hom> {
+        self.generators.in_edges(x).map(|e| Path::single(e))
+    }
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -182,5 +276,27 @@ mod tests {
             Hom::Generator('i'), Hom::Generator('s'),
         ]);
         assert_eq!(sch_sgraph.compose(path), Hom::Generator('t'));
+    }
+
+    #[test]
+    fn fp_category() {
+        let mut sch_sgraph: FpCategory<char,char> = Default::default();
+        sch_sgraph.add_ob_generators(['V','E']);
+        sch_sgraph.add_hom_generator('s', 'E', 'V');
+        sch_sgraph.add_hom_generator('t', 'E', 'V');
+        sch_sgraph.add_hom_generator('i', 'E', 'E');
+        assert_eq!(sch_sgraph.ob_generators().count(), 2);
+        assert_eq!(sch_sgraph.hom_generators().count(), 3);
+        assert_eq!(sch_sgraph.dom(&Path::single('t')), 'E');
+        assert_eq!(sch_sgraph.cod(&Path::single('t')), 'V');
+
+        sch_sgraph.add_equation(
+            PathEq::new(Path::pair('i', 'i'), Path::empty('E'))
+        );
+        sch_sgraph.add_equations(vec![
+            PathEq::new(Path::pair('i', 's'), Path::single('t')),
+            PathEq::new(Path::pair('i', 't'), Path::single('s')),
+        ]);
+        assert_eq!(sch_sgraph.equations().count(), 3);
     }
 }

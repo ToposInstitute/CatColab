@@ -515,7 +515,7 @@ mod tests {
     }
 
     #[test]
-    fn validate_graph_moprhism() {
+    fn validate_graph_morphism() {
         let g = SkelGraph::path(3);
         let h = SkelGraph::path(4);
         let f = ColumnarGraphMapping::new(
