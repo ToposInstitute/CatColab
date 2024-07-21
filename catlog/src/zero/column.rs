@@ -45,7 +45,21 @@ pub trait Mapping {
     */
     fn unset(&mut self, x: &Self::Dom) -> Option<Self::Cod>;
 
-    /// Is the mapping defined at a value?
+    /** Updates the mapping at a point, setting or unsetting it.
+
+    The old value is returned, if one was set.
+     */
+    fn update(
+        &mut self, x: Self::Dom,
+        maybe_y: Option<Self::Cod>
+    ) -> Option<Self::Cod> {
+        match maybe_y {
+            Some(y) => self.set(x, y),
+            None => self.unset(&x),
+        }
+    }
+
+    /// Is the mapping defined at a point?
     fn is_set(&self, x: &Self::Dom) -> bool {
         self.apply(x).is_some()
     }
@@ -171,7 +185,7 @@ impl<T: Eq> Mapping for VecColumn<T> {
     }
 
     fn is_set(&self, i: &usize) -> bool {
-        return *i < self.0.len();
+        return *i < self.0.len() && self.0[*i].is_some()
     }
 }
 
@@ -471,8 +485,9 @@ mod tests {
         let mut col = VecColumn::new(vec!["foo", "bar", "baz"]);
         assert!(col.is_set(&2));
         assert_eq!(col.apply(&2), Some(&"baz"));
-        assert!(!col.is_set(&3));
         assert_eq!(col.apply(&3), None);
+        assert_eq!(col.update(2, None), Some("baz"));
+        assert!(!col.is_set(&2));
 
         col.set(4, "baz");
         col.set(3, "bar");
