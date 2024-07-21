@@ -161,7 +161,6 @@ equations. A morphism in the presented category is an equivalence class of paths
 in the graph, so strictly speaking we work with representatives rather than
 morphism themselves.
 
-TODO: Add hom generator with optional (co)domain.
 TODO: Validate generators and path equations.
  */
 #[derive(Clone,Derivative)]
@@ -187,6 +186,11 @@ where V: Eq+Clone+Hash, E: Eq+Clone+Hash {
     /// Adds a morphism generator, returning whether it is new.
     pub fn add_hom_generator(&mut self, e: E, dom: V, cod: V) -> bool {
         self.generators.add_edge(e, dom, cod)
+    }
+
+    /// Adds a morphism generator without initializing its (co)domain.
+    pub fn make_hom_generator(&mut self, e: E) -> bool {
+        self.generators.make_edge(e)
     }
 
     /// Iterates over path equations in the presentation.

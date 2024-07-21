@@ -235,10 +235,16 @@ impl SkelGraph {
 
     /// Adds a new edge to the graph and returns it.
     pub fn add_edge(&mut self, src: usize, tgt: usize) -> usize {
-        let e = self.ne;
-        self.ne += 1;
+        let e = self.make_edge();
         self.src_map.set(e, src);
         self.tgt_map.set(e, tgt);
+        e
+    }
+
+    /// Adds a new edge without initializing its source or target.
+    pub fn make_edge(&mut self) -> usize {
+        let e = self.ne;
+        self.ne += 1;
         e
     }
 
@@ -320,6 +326,11 @@ where V: Eq+Hash+Clone, E: Eq+Hash+Clone, S: BuildHasher {
     pub fn add_edge(&mut self, e: E, src: V, tgt: V) -> bool {
         self.src_map.set(e.clone(), src);
         self.tgt_map.set(e.clone(), tgt);
+        self.make_edge(e)
+    }
+
+    /// Adds an edge without initializing its source or target.
+    pub fn make_edge(&mut self, e: E) -> bool {
         self.edge_set.insert(e)
     }
 }
