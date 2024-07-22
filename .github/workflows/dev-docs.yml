@@ -1,4 +1,4 @@
-name: DevDocs
+name: dev-docs
 
 on:
   push:
@@ -7,8 +7,8 @@ on:
   pull_request:
 
 jobs:
-  build_devdocs:
-    name: Build DevDocs
+  build_dev-docs:
+    name: Build dev-docs
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,4 +16,4 @@ jobs:
         with:
           scheme: small
           run: |
-            bash scripts/devdocs.sh
+            bash scripts/dev-docs.sh
