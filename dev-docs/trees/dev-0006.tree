@@ -22,6 +22,13 @@ and [discussion](https://discuss.yjs.dev/t/separating-the-application-model-from
 and [Jupyter YDoc](https://jupyter-ydoc.readthedocs.io/)}
 \li{Code: the heart is [\code{YNotebook}](https://github.com/jupyter-server/jupyter_ydoc/blob/main/javascript/src/ynotebook.ts)}
 }}
+
+\p{We ended up deciding instead to go with [Automerge](https://automerge.org/). There are two main reasons for this
+\ol{
+  \li{The interface to Automerge is via immutable, typed snapshots. This makes reasoning about a deeply nested Automerge document much easier than reasoning about a deeply nested Y.js document.}
+  \li{We have several connections to Martin Kleppmann, and may want to collaborate with him in the future. At a personal level, it seems like he has thought deeply about some of the design issues in this space, which resulted in a recent complete refactor of automerge. Thus, it makes sense to long-term invest in automerge, as it might result in a productive collaboration, and it is more likely that desired features from CatColab could end up influencing the long term direction of Automerge.}
+}
+}
 }
 
 \subtree{

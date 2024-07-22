@@ -20,6 +20,13 @@ Lezer is web native and is directly inspired by Tree-sitter.
 Both are based on the same parsing algorithm.}
 }
 
+\p{Incremental parsing algorithms/design notes:
+\ol{
+  \li{[Monoidal Parsing](https://youtu.be/Txf7swrcLYs). Idea: your parser should be a monoid homomorphism from the free monoid on `Char` to "partial parses". You can then store your parses in a [sumtree](https://zed.dev/blog/zed-decoded-rope-sumtree), and then reparsing on a single edit should only be O(log(size of text)) rather than O(size of text).}
+  \li{[Resilient LL Parsing Tutorial](https://matklad.github.io/2023/05/21/resilient-ll-parsing-tutorial.html)}
+}
+}
+
 \subtree{
 \title{Rich-text editors}
 
