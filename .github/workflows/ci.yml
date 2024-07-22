@@ -2,6 +2,7 @@ name: Cargo Build & Test
 
 on:
   push:
+    - main
   pull_request:
 
 env:
