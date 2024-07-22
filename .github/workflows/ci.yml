@@ -19,7 +19,4 @@ jobs:
           - nightly
     steps:
       - uses: actions/checkout@v4
-      - run: cd catlog
-      - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
-      - run: cargo build --verbose
-      - run: cargo test --verbose
+      - run: bash scripts/ci.sh
