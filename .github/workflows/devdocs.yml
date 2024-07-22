@@ -1,0 +1,19 @@
+name: DevDocs
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build_devdocs:
+    name: Build DevDocs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: xu-cheng/texlive-action@v2
+        with:
+          scheme: small
+          run: |
+            bash scripts/devdocs.sh
