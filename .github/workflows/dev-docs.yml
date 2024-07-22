@@ -12,8 +12,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: xu-cheng/texlive-action@v2
-        with:
-          scheme: full
-          run: |
-            bash scripts/dev-docs.sh
+      - uses: r-lib/actions/setup-tinytex@v2
+      - run: |
+          tlmgr update --self
+          tlmgr install dvisvgm
+          tlmgr install standalone
+          tlmgr install pgf
+          tlmgr install tikz-cd
+          tlmgr install amsmath
+      - run: bash scripts/dev-docs.sh
