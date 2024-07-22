@@ -193,6 +193,16 @@ where V: Eq+Clone+Hash, E: Eq+Clone+Hash {
         self.generators.make_edge(e)
     }
 
+    /// Updates the domain of a morphism generator, setting or unsetting it.
+    pub fn update_dom(&mut self, e: E, v: Option<V>) -> Option<V> {
+        self.generators.update_src(e, v)
+    }
+
+    /// Updates the codomain of a morphism generator, setting or unsetting it.
+    pub fn update_cod(&mut self, e: E, v: Option<V>) -> Option<V> {
+        self.generators.update_tgt(e, v)
+    }
+
     /// Iterates over path equations in the presentation.
     pub fn equations(&self) -> impl Iterator<Item = &PathEq<V,E>> {
         self.equations.iter()
