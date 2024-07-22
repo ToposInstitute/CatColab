@@ -1,0 +1,123 @@
+name: deploy
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+env:
+  BRANCH_NAME: ${{ github.ref_name }}
+
+permissions:
+  pull-requests: write
+
+jobs:
+  build_catcolab:
+    name: Build catcolab
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Setup Rust
+        run: |
+          rustup toolchain install stable
+          rustup target add wasm32-unknown-unknown
+
+      - name: Build
+        run: |
+          cd frontend
+          npm install
+          npm run build
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: catcolab
+          path: frontend/dist
+
+  build_dev-docs:
+    name: Build dev-docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup TinyTeX
+        uses: r-lib/actions/setup-tinytex@v2
+
+      - name: Install TeX Packages
+        run: |
+          tlmgr update --self
+          tlmgr install dvisvgm
+          tlmgr install standalone
+          tlmgr install pgf
+          tlmgr install tikz-cd
+          tlmgr install amsmath
+
+      - name: Build
+        run: bash scripts/dev-docs.sh
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: dev-docs
+          path: dev-docs/output
+
+  deploy:
+    name: Deploy to netlify
+    runs-on: ubuntu-latest
+    needs: [build_dev-docs, build_catcolab]
+    steps:
+      - name: Repository Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: scripts/package-lock.json
+
+      - name: Install Netlify
+        run: |
+          cd scripts
+          npm install
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Consolidate
+        run: |
+          mv catcolab site
+          mv dev-docs site/
+
+      - name: Deploy
+        id: netlify_deploy
+        run: |
+          cd scripts
+          prod_flag=""
+          if [ "$BRANCH_NAME" = "main" ]; then prod_flag="--prod"; fi
+          npx netlify deploy --dir ../site --site ${{ secrets.NETLIFY_SITE_ID }} --auth ${{ secrets.NETLIFY_API_TOKEN }} $prod_flag --json > ../deploy_output.json
+
+      - name: Generate URL Preview
+        id: url_preview
+        if: ${{ env.BRANCH_NAME != 'main' }}
+        run: |
+          NETLIFY_PREVIEW_URL=$(jq -r '.deploy_url' deploy_output.json)
+          echo "NETLIFY_PREVIEW_URL=$NETLIFY_PREVIEW_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Comment URL Preview on PR
+        uses: mshick/add-pr-comment@v2
+        if: ${{ env.BRANCH_NAME != 'main' }}
+        with:
+          message: |
+            Preview url: ${{ steps.url_preview.outputs.NETLIFY_PREVIEW_URL }}

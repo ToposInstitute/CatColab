@@ -130,7 +130,15 @@ code {
 body {
   font-family: "Inria Sans";
   font-size: 12pt;
-  line-height: 1.5em;
+  line-height: 1.55;
+}
+
+math {
+ font-size: 1.12em;
+}
+
+mrow:hover {
+ background-color: rgba(0, 100, 255, 0.04);
 }
 
 .logo {
@@ -198,7 +206,7 @@ footer h2 {
 
   #grid-wrapper {
     display: grid;
-    grid-template-columns: 110ex;
+    grid-template-columns: 90ex;
   }
 }
 
@@ -207,7 +215,7 @@ body>header {
 }
 
 #grid-wrapper>article {
-  max-width: 110ex;
+  max-width: 90ex;
   margin-right: auto;
   grid-column: 1;
 }
@@ -557,10 +565,13 @@ img {
   max-width: 100%;
 }
 
+figure {
+  text-align: center;
+}
+
 figcaption {
   font-style: italic;
   padding: 3px;
-  text-align: center;
 }
 
 mark {
