@@ -13,8 +13,8 @@ permissions:
   pull-requests: write
 
 jobs:
-  build_catcolab:
-    name: Build catcolab
+  build_frontend:
+    name: Build Frontend
     runs-on: ubuntu-latest
     steps:
       - name: Repository Checkout
@@ -41,8 +41,41 @@ jobs:
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: catcolab
+          name: app
           path: frontend/dist
+
+      - name: Build Docs
+        run: |
+          cd frontend
+          npx typedoc --entryPointStrategy expand ./src
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend_docs
+          path: frontend/docs
+
+  build_catlog_docs:
+    name: Build Catlog Docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        run: |
+          rustup toolchain install stable
+
+      - name: Build
+        run: |
+          cd catlog
+          cargo doc
+
+      - name: Upload Frontend Docs
+        uses: actions/upload-artifact@v4
+        with:
+          name: catlog_docs
+          path: catlog/target/doc
 
   build_dev-docs:
     name: Build dev-docs
@@ -75,7 +108,7 @@ jobs:
   deploy:
     name: Deploy to netlify
     runs-on: ubuntu-latest
-    needs: [build_dev-docs, build_catcolab]
+    needs: [build_dev-docs, build_frontend, build_catlog_docs]
     steps:
       - name: Repository Checkout
         uses: actions/checkout@v4
@@ -97,8 +130,11 @@ jobs:
 
       - name: Consolidate
         run: |
-          mv catcolab site
-          mv dev-docs site/
+          mv app site/
+          mv dev-docs site/dev
+          mv catlog_docs site/dev/catlog
+          mv frontend_docs site/dev/frontend
+          echo "/dev /dev/index.xml" > site/_redirects
 
       - name: Deploy
         id: netlify_deploy

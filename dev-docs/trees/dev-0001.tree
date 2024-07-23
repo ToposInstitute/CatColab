@@ -2,6 +2,15 @@
 \import{macros}
 
 \subtree{
+\title{API Docs}
+
+\ul{
+  \li{[catlog](/dev/catlog/catlog)}
+  \li{[frontend](/dev/frontend)}
+}
+}
+
+\subtree{
 \title{Mathematics}
 
 \table{
