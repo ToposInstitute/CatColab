@@ -1,19 +1,26 @@
-import { Prop } from "@automerge/automerge";
-import { DocHandle, DocHandleChangePayload } from "@automerge/automerge-repo";
+import type { Prop } from "@automerge/automerge";
+import type {
+    DocHandle,
+    DocHandleChangePayload,
+} from "@automerge/automerge-repo";
 
-import { Schema } from "prosemirror-model";
-import { Command, EditorState, Plugin, Transaction } from "prosemirror-state";
-import { EditorView } from "prosemirror-view";
-import { keymap } from "prosemirror-keymap";
-import { baseKeymap, toggleMark } from "prosemirror-commands";
 import { AutoMirror } from "@automerge/prosemirror";
+import { baseKeymap, toggleMark } from "prosemirror-commands";
+import { keymap } from "prosemirror-keymap";
+import type { Schema } from "prosemirror-model";
+import {
+    type Command,
+    EditorState,
+    Plugin,
+    type Transaction,
+} from "prosemirror-state";
+import { EditorView } from "prosemirror-view";
 
 import { createEffect, onCleanup } from "solid-js";
 import { useDocHandleReady } from "../util/automerge_solid";
 
 import "prosemirror-view/style/prosemirror.css";
 import "./rich_text_editor.css";
-
 
 /** Optional props for `RichTextEditor` component.
  */
@@ -37,10 +44,12 @@ Adapted from:
 - https://github.com/automerge/prosemirror-quickstart/
 - https://github.com/automerge/automerge-prosemirror/tree/main/playground/
  */
-export const RichTextEditor = (props: {
-    handle: DocHandle<unknown>;
-    path: Prop[];
-} & RichTextEditorOptions) => {
+export const RichTextEditor = (
+    props: {
+        handle: DocHandle<unknown>;
+        path: Prop[];
+    } & RichTextEditorOptions,
+) => {
     let editorRoot!: HTMLDivElement;
 
     const isReady = useDocHandleReady(() => props.handle);
@@ -51,7 +60,9 @@ export const RichTextEditor = (props: {
         // same but the path refers to a different object in the document.
         props.id;
 
-        if (!isReady()) { return; }
+        if (!isReady()) {
+            return;
+        }
 
         const autoMirror = new AutoMirror(props.path);
         const schema = autoMirror.schema;
@@ -73,14 +84,17 @@ export const RichTextEditor = (props: {
             }),
             dispatchTransaction: (tx: Transaction) => {
                 const newState = autoMirror.intercept(
-                    props.handle, tx, view.state);
+                    props.handle,
+                    tx,
+                    view.state,
+                );
                 view.updateState(newState);
             },
             handleDOMEvents: {
-              focus: () => {
-                  props.onFocus && props.onFocus();
-                  return false;
-              },
+                focus: () => {
+                    props.onFocus?.();
+                    return false;
+                },
             },
         });
         if (props.ref) {
@@ -91,8 +105,10 @@ export const RichTextEditor = (props: {
             // XXX: Quit if a higher-level node is being deleted. Otherwise,
             // `reconcilePatch` can error, a bug in `automerge-prosemirror`.
             for (const patch of payload.patches) {
-                if (patch.action === "del" &&
-                    patch.path.length < props.path.length) {
+                if (
+                    patch.action === "del" &&
+                    patch.path.length < props.path.length
+                ) {
                     return;
                 }
             }
@@ -113,14 +129,14 @@ export const RichTextEditor = (props: {
         });
     });
 
-    return <div class="rich-text-editor" ref={editorRoot}></div>;
-}
+    return <div class="rich-text-editor" ref={editorRoot} />;
+};
 
 function richTextEditorKeymap(schema: Schema, props: RichTextEditorOptions) {
-    const bindings: {[key: string]: Command} = {
+    const bindings: { [key: string]: Command } = {
         "Mod-b": toggleMark(schema.marks.strong),
         "Mod-i": toggleMark(schema.marks.em),
-    }
+    };
     if (props.deleteBackward) {
         bindings["Backspace"] = doIfEmpty(props.deleteBackward);
     }
@@ -136,10 +152,11 @@ function richTextEditorKeymap(schema: Schema, props: RichTextEditorOptions) {
     return bindings;
 }
 
-
 /** ProseMirror command invoked if the document is empty.
  */
-function doIfEmpty(callback: (dispatch: (tr: Transaction) => void) => void): Command {
+function doIfEmpty(
+    callback: (dispatch: (tr: Transaction) => void) => void,
+): Command {
     return (state, dispatch?) => {
         if (hasContent(state)) {
             return false;
@@ -151,11 +168,19 @@ function doIfEmpty(callback: (dispatch: (tr: Transaction) => void) => void): Com
 
 /** ProseMirror command invoked if the cursor is at the top of the document.
  */
-function doIfAtTop(callback: (dispatch: (tr: Transaction) => void) => void): Command {
+function doIfAtTop(
+    callback: (dispatch: (tr: Transaction) => void) => void,
+): Command {
     return (state, dispatch?, view?) => {
         const sel = state.selection;
-        if (!(sel.empty && sel.$anchor.parent === state.doc.firstChild &&
-              view && view.endOfTextblock("up"))) {
+        if (
+            !(
+                sel.empty &&
+                sel.$anchor.parent === state.doc.firstChild &&
+                view &&
+                view.endOfTextblock("up")
+            )
+        ) {
             return false;
         }
         dispatch && callback(dispatch);
@@ -165,11 +190,19 @@ function doIfAtTop(callback: (dispatch: (tr: Transaction) => void) => void): Com
 
 /** ProseMirror command invoked if the cursor is at the bottom of the document.
  */
-function doIfAtBottom(callback: (dispatch: (tr: Transaction) => void) => void): Command {
+function doIfAtBottom(
+    callback: (dispatch: (tr: Transaction) => void) => void,
+): Command {
     return (state, dispatch?, view?) => {
         const sel = state.selection;
-        if (!(sel.empty && sel.$anchor.parent === state.doc.lastChild &&
-              view && view.endOfTextblock("down"))) {
+        if (
+            !(
+                sel.empty &&
+                sel.$anchor.parent === state.doc.lastChild &&
+                view &&
+                view.endOfTextblock("down")
+            )
+        ) {
             return false;
         }
         dispatch && callback(dispatch);
@@ -185,25 +218,26 @@ Source:
 - https://gist.github.com/amk221/1f9657e92e003a3725aaa4cf86a07cc0
  */
 function placeholder(text: string) {
-  const update = (view: EditorView) => {
-    if (hasContent(view.state)) {
-      view.dom.removeAttribute('data-placeholder');
-    } else {
-      view.dom.setAttribute('data-placeholder', text);
-    }
-  };
+    const update = (view: EditorView) => {
+        if (hasContent(view.state)) {
+            view.dom.removeAttribute("data-placeholder");
+        } else {
+            view.dom.setAttribute("data-placeholder", text);
+        }
+    };
 
-  return new Plugin({
-    view(view) {
-      update(view);
+    return new Plugin({
+        view(view) {
+            update(view);
 
-      return { update };
-    }
-  });
+            return { update };
+        },
+    });
 }
 
 const hasContent = (state: EditorState) => {
     const doc = state.doc;
-    return (doc.textContent ||
-            (doc.firstChild && doc.firstChild.content.size > 0));
-}
+    return (
+        doc.textContent || (doc.firstChild && doc.firstChild.content.size > 0)
+    );
+};

@@ -1,5 +1,8 @@
-import { DocHandle, DocHandleChangePayload } from "@automerge/automerge-repo";
-import { Accessor, createEffect, createSignal, onCleanup } from "solid-js";
+import type {
+    DocHandle,
+    DocHandleChangePayload,
+} from "@automerge/automerge-repo";
+import { type Accessor, createEffect, createSignal, onCleanup } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 
 /** Create Solid-compatible getter/setter from an Automerge document handle.
@@ -51,9 +54,11 @@ export function useDocHandleReady(
     createEffect(() => {
         setIsReady(false);
 
-        getHandle().whenReady().then(() => {
-            setIsReady(true);
-        });
+        getHandle()
+            .whenReady()
+            .then(() => {
+                setIsReady(true);
+            });
     });
 
     return isReady;

@@ -1,13 +1,15 @@
-import { DocHandle } from "@automerge/automerge-repo";
-import { createMemo, createSignal, Show } from "solid-js";
+import type { DocHandle } from "@automerge/automerge-repo";
 import Resizable from "@corvu/resizable";
+import { Show, createMemo, createSignal } from "solid-js";
 
+import type { TheoryId, TheoryMeta } from "../theory";
 import { GraphvizSVG } from "../visualization";
-import { TheoryId, TheoryMeta } from "../theory";
-import { ModelNotebook } from "./types";
-import { ModelNotebookEditor, ModelNotebookRef } from "./model_notebook_editor";
 import { modelToGraphviz } from "./model_graph";
-
+import {
+    ModelNotebookEditor,
+    type ModelNotebookRef,
+} from "./model_notebook_editor";
+import type { ModelNotebook } from "./types";
 
 /** Editor for a model of a discrete double theory.
 
@@ -27,23 +29,37 @@ export function ModelEditor(props: {
         return model && theory && modelToGraphviz(model, theory);
     });
 
-    return <Resizable class="growable-container">
-        <Resizable.Panel class="content-panel" collapsible
-            initialSize={1} minSize={0.25}
-        >
-            <ModelNotebookEditor ref={setEditorRef}
-                handle={props.handle} init={props.init}
-                theories={props.theories} />
-        </Resizable.Panel>
-        <Resizable.Handle />
-        <Resizable.Panel class="content-panel" collapsible
-            initialSize={0} minSize={0.25}
-        >
-            <Show when={editorRef()?.theory()}>
-                <GraphvizSVG graph={modelGraph()} options={{
-                    engine: "dot",
-                }}/>
-            </Show>
-        </Resizable.Panel>
-    </Resizable>;
+    return (
+        <Resizable class="growable-container">
+            <Resizable.Panel
+                class="content-panel"
+                collapsible
+                initialSize={1}
+                minSize={0.25}
+            >
+                <ModelNotebookEditor
+                    ref={setEditorRef}
+                    handle={props.handle}
+                    init={props.init}
+                    theories={props.theories}
+                />
+            </Resizable.Panel>
+            <Resizable.Handle />
+            <Resizable.Panel
+                class="content-panel"
+                collapsible
+                initialSize={0}
+                minSize={0.25}
+            >
+                <Show when={editorRef()?.theory()}>
+                    <GraphvizSVG
+                        graph={modelGraph()}
+                        options={{
+                            engine: "dot",
+                        }}
+                    />
+                </Show>
+            </Resizable.Panel>
+        </Resizable>
+    );
 }

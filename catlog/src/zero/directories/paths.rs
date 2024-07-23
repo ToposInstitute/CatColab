@@ -11,6 +11,7 @@ use archery::{SharedPointer, SharedPointerKind};
 ///
 /// NOTE: It might be more efficient to use a SmallVec instead of a linked list?
 #[derive(Debug)]
+#[allow(clippy::type_complexity)]
 pub struct Path<K: Clone, P: SharedPointerKind>(Option<(K, SharedPointer<Path<K, P>, P>)>);
 
 impl<K, P> PartialEq for Path<K, P>

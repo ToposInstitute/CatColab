@@ -30,9 +30,7 @@ pub trait Validate {
 It is common to implement [`Validate`] by constructing an iterator over
 validation errors and then calling this convenience function.
 */
-pub fn collect_errors<Error>(
-    iter: impl Iterator<Item = Error>,
-) -> Result<(), NonEmpty<Error>> {
+pub fn collect_errors<Error>(iter: impl Iterator<Item = Error>) -> Result<(), NonEmpty<Error>> {
     match NonEmpty::collect(iter) {
         Some(errors) => Err(errors),
         None => Ok(()),

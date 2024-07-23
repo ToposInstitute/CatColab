@@ -1,10 +1,9 @@
 import type * as Viz from "@viz-js/viz";
 
-import { ArrowStyle } from "./types";
-import * as GraphvizJSON from "./graphviz_json";
-import { Point } from "./graph_layout";
-import * as GraphLayout from "./graph_layout";
-
+import type { Point } from "./graph_layout";
+import type * as GraphLayout from "./graph_layout";
+import type * as GraphvizJSON from "./graphviz_json";
+import type { ArrowStyle } from "./types";
 
 /** Asynchronously import and load Viz.js.
  */
@@ -16,8 +15,11 @@ export async function loadViz() {
 
 /** Render a Graphviz graph using the Graphviz `json0` format.
  */
-export function vizRenderJSON0(viz: Viz.Viz, graph: Viz.Graph,
-                               options?: Viz.RenderOptions) {
+export function vizRenderJSON0(
+    viz: Viz.Viz,
+    graph: Viz.Graph,
+    options?: Viz.RenderOptions,
+) {
     // We use `renderString` rather than the convenience method `renderJSON`
     // since we need only `json0` output, not the full `json` output.
     const result = viz.renderString(graph, {
@@ -27,14 +29,13 @@ export function vizRenderJSON0(viz: Viz.Viz, graph: Viz.Graph,
     return JSON.parse(result) as GraphvizJSON.Graph;
 }
 
-
 /** Parse a graph layout from Graphviz `json0` output.
 
 The predecessor to this code is Evan's defunct package
 [`wiring-diagram-canvas`](https://github.com/epatters/wiring-diagram-canvas/blob/master/src/graphviz.ts).
  */
 export function parseGraphvizJSON(
-    graphviz: GraphvizJSON.Graph
+    graphviz: GraphvizJSON.Graph,
 ): GraphLayout.Graph<string> {
     // Parse bounding box and padding and use them to transform coordinates.
     //
@@ -43,27 +44,30 @@ export function parseGraphvizJSON(
     // in top left corner). It seems, but is not documented, that the first two
     // numbers in the Graphviz bounding box are always (0,0).
     const bb = parseFloatArray(graphviz.bb);
-    const pad: Point = {x: 0, y: 0};
+    const pad: Point = { x: 0, y: 0 };
     if (graphviz.pad) {
         const gvPad = parsePoint(graphviz.pad);
         [pad.x, pad.y] = [inchesToPoints(gvPad.x), inchesToPoints(gvPad.y)];
     }
-    const transformPoint = (point: Point): Point =>
-        ({ x: point.x + pad.x, y: bb[3] - point.y + pad.y });
-    const [width, height] = [bb[2] + 2*pad.x, bb[3] + 2*pad.y];
+    const transformPoint = (point: Point): Point => ({
+        x: point.x + pad.x,
+        y: bb[3] - point.y + pad.y,
+    });
+    const [width, height] = [bb[2] + 2 * pad.x, bb[3] + 2 * pad.y];
 
     // Parse nodes of graph, ignoring any subgraphs.
     const nodes: GraphLayout.Node<string>[] = [];
     const offset = graphviz._subgraph_cnt;
     const nodeByNumber = (i: number) => nodes[i - offset];
-    for (const node of
-         graphviz.objects?.slice(offset) as GraphvizJSON.Node[] ?? []) {
+    for (const node of (graphviz.objects?.slice(
+        offset,
+    ) as GraphvizJSON.Node[]) ?? []) {
         const id = node.id || node.name;
         nodes.push({
             id,
             pos: transformPoint(parsePoint(node.pos)),
-            width: inchesToPoints(parseFloat(node.width)),
-            height: inchesToPoints(parseFloat(node.height)),
+            width: inchesToPoints(Number.parseFloat(node.width)),
+            height: inchesToPoints(Number.parseFloat(node.height)),
             label: node.label,
             cssClass: node.class,
         });
@@ -98,7 +102,6 @@ export function parseGraphvizJSON(
     return { width, height, nodes, edges };
 }
 
-
 /* Parse Graphviz spline.
 
    In Graphviz, a "spline" is a cubic B-spline of overlapping cubic Bezier
@@ -111,7 +114,7 @@ export function parseGraphvizJSON(
  */
 function parseSpline(
     spline: string,
-    transformPoint?: (pt: Point) => Point
+    transformPoint?: (pt: Point) => Point,
 ): GraphvizSpline {
     const points: Point[] = [];
     let startPoint: Point | undefined;
@@ -145,7 +148,7 @@ function splineToPath(spline: GraphvizSpline): string {
 
     // Bezier curves for intermediate segments.
     for (let i = 1; i < points.length; i += 3) {
-        const [p1, p2, p3] = [points[i], points[i+1], points[i+2]];
+        const [p1, p2, p3] = [points[i], points[i + 1], points[i + 2]];
         stmts.push("C", p1.x, `${p1.y},`, p2.x, `${p2.y},`, p3.x, p3.y);
     }
 
@@ -162,11 +165,10 @@ type GraphvizSpline = {
     endPoint?: Point;
 };
 
-
 /** Parse array of floats in Graphviz's comma-separated format.
  */
 function parseFloatArray(s: string): number[] {
-    return s.split(",").map(parseFloat);
+    return s.split(",").map(Number.parseFloat);
 }
 
 /** Parse a Graphviz point.
@@ -174,7 +176,7 @@ function parseFloatArray(s: string): number[] {
 function parsePoint(s: string): Point {
     const point = parseFloatArray(s);
     console.assert(point.length === 2);
-    return { x: point[0], y: point[1] }
+    return { x: point[0], y: point[1] };
 }
 
 // 72 points per inch in Graphviz.

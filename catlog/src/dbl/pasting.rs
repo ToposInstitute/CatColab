@@ -26,8 +26,8 @@ establishing its correctness.
 
 use nonempty::NonEmpty;
 
-use crate::one::path::Path;
 use super::diagram::{DblDiagram, SkelDblDiagram};
+use crate::one::path::Path;
 
 /** A pasting in a double category, with specialization for identity cells.
 
@@ -37,7 +37,8 @@ as variants of an enum, even though in this case the final variant does actually
 encompass the others. However, the data of a generic identity cell is so much
 simpler than a general composite that the redundancy seems justified.
 */
-pub enum DblPasting<Ob,Arr,Pro,Cell> {
+#[allow(clippy::large_enum_variant)]
+pub enum DblPasting<Ob, Arr, Pro, Cell> {
     /// Identity cell on an object.
     ObId(Ob),
 
@@ -48,7 +49,7 @@ pub enum DblPasting<Ob,Arr,Pro,Cell> {
     ProId(NonEmpty<Pro>),
 
     /// General composite cell specified by a double pasting diagram.
-    Diagram(DblPastingDiagram<Ob,Arr,Pro,Cell>)
+    Diagram(DblPastingDiagram<Ob, Arr, Pro, Cell>),
 }
 
 /// Reference to edge or proedge in boundary of square in pasting diagram.
@@ -69,8 +70,8 @@ This is essentially the [quad-edge](https://en.wikipedia.org/wiki/Quad-edge)
 data structure used in computer graphics.
 */
 #[allow(dead_code)] // FIXME
-pub struct DblPastingDiagram<Ob,Arr,Pro,Cell> {
-    diagram: SkelDblDiagram<Ob,Arr,Pro,Cell>,
+pub struct DblPastingDiagram<Ob, Arr, Pro, Cell> {
+    diagram: SkelDblDiagram<Ob, Arr, Pro, Cell>,
     dom: Path<usize, usize>,
     cod: Path<usize, usize>,
     src: Path<usize, usize>,
@@ -81,12 +82,18 @@ pub struct DblPastingDiagram<Ob,Arr,Pro,Cell> {
     tgt_of: Vec<BoundaryRef>,
 }
 
-impl<Ob,Arr,Pro,Cell> DblPastingDiagram<Ob,Arr,Pro,Cell>
-where Ob: Eq+Clone, Arr: Eq+Clone, Pro: Eq+Clone, Cell: Eq+Clone {
+impl<Ob, Arr, Pro, Cell> DblPastingDiagram<Ob, Arr, Pro, Cell>
+where
+    Ob: Eq + Clone,
+    Arr: Eq + Clone,
+    Pro: Eq + Clone,
+    Cell: Eq + Clone,
+{
     /// Domain of pasting diagram, a path of arrows.
-    pub fn dom(&self) -> Path<Ob,Arr> {
-        self.dom.clone().map(|x| self.diagram.object(&x),
-                             |f| self.diagram.arrow(&f))
+    pub fn dom(&self) -> Path<Ob, Arr> {
+        self.dom
+            .clone()
+            .map(|x| self.diagram.object(&x), |f| self.diagram.arrow(&f))
     }
     // TODO
 }

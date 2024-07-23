@@ -22,12 +22,11 @@ packages.
 // Unicode identifiers.
 #![allow(mixed_script_confusables)]
 #![allow(confusable_idents)]
-
 #![warn(missing_docs)]
 
 pub mod validate;
 
-pub mod zero;
-pub mod one;
 pub mod dbl;
+pub mod one;
 pub mod stdlib;
+pub mod zero;

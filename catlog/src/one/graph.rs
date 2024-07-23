@@ -6,13 +6,13 @@ flexible set of traits and structs for graphs as they are used in category
 theory.
  */
 
-use std::hash::{Hash, BuildHasher, BuildHasherDefault, RandomState};
+use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
 
 use derivative::Derivative;
 use nonempty::NonEmpty;
-use thiserror::Error;
 use ref_cast::RefCast;
-use ustr::{Ustr, IdentityHasher};
+use thiserror::Error;
+use ustr::{IdentityHasher, Ustr};
 
 use crate::validate::{self, Validate};
 use crate::zero::*;
@@ -119,14 +119,14 @@ pub trait ColumnarGraph {
     }
 
     /// Iterates over failures to be a valid graph.
-    fn iter_invalid(
-        &self
-    ) -> impl Iterator<Item = InvalidGraphData<Self::E>> {
+    fn iter_invalid(&self) -> impl Iterator<Item = InvalidGraphData<Self::E>> {
         let (dom, cod) = (self.edge_set(), self.vertex_set());
-        let srcs = Function(self.src_map(), dom, cod).iter_invalid().map(
-            |e| InvalidGraphData::Src(e.take()));
-        let tgts = Function(self.tgt_map(), dom, cod).iter_invalid().map(
-            |e| InvalidGraphData::Tgt(e.take()));
+        let srcs = Function(self.src_map(), dom, cod)
+            .iter_invalid()
+            .map(|e| InvalidGraphData::Src(e.take()));
+        let tgts = Function(self.tgt_map(), dom, cod)
+            .iter_invalid()
+            .map(|e| InvalidGraphData::Tgt(e.take()));
         srcs.chain(tgts)
     }
 }
@@ -181,10 +181,14 @@ impl<G: ColumnarGraphImplGraph> Graph for G {
         self.edge_set().contains(e)
     }
     fn src(&self, e: &Self::E) -> Self::V {
-        self.get_src(e).expect("Source of edge should be set").clone()
+        self.get_src(e)
+            .expect("Source of edge should be set")
+            .clone()
     }
     fn tgt(&self, e: &Self::E) -> Self::V {
-        self.get_tgt(e).expect("Target of edge should be set").clone()
+        self.get_tgt(e)
+            .expect("Target of edge should be set")
+            .clone()
     }
 }
 
@@ -214,7 +218,7 @@ impl<G: ColumnarGraphImplGraph> FinGraph for G {
 For [columnar graphs](ColumnarGraph) and other such graphs, it is possible that
 the data is incomplete or inconsistent.
 */
-#[derive(Debug,Error)]
+#[derive(Debug, Error)]
 pub enum InvalidGraphData<E> {
     /// Edge assigned a source that is not a vertex contained in the graph.
     #[error("Source of edge `{0}` is not a vertex in the graph")]
@@ -230,7 +234,7 @@ pub enum InvalidGraphData<E> {
 The data structure is the same as the standard `Graph` type in
 [Catlab.jl](https://github.com/AlgebraicJulia/Catlab.jl).
  */
-#[derive(Clone,Default)]
+#[derive(Clone, Default)]
 pub struct SkelGraph {
     nv: usize,
     ne: usize,
@@ -251,7 +255,7 @@ impl ColumnarGraph for SkelGraph {
     fn src_map(&self) -> &impl Column<Dom = usize, Cod = usize> {
         &self.src_map
     }
-    fn tgt_map(&self) -> &impl Column<Dom = usize, Cod = usize > {
+    fn tgt_map(&self) -> &impl Column<Dom = usize, Cod = usize> {
         &self.tgt_map
     }
 }
@@ -302,7 +306,7 @@ impl SkelGraph {
     pub fn path(n: usize) -> Self {
         let mut g: Self = Default::default();
         g.add_vertices(n);
-        for (i, j) in std::iter::zip(0..(n-1), 1..n) {
+        for (i, j) in std::iter::zip(0..(n - 1), 1..n) {
             g.add_edge(i, j);
         }
         g
@@ -313,7 +317,9 @@ impl SkelGraph {
     pub fn triangle() -> Self {
         let mut g: Self = Default::default();
         g.add_vertices(3);
-        g.add_edge(0,1); g.add_edge(1,2); g.add_edge(0,2);
+        g.add_edge(0, 1);
+        g.add_edge(1, 2);
+        g.add_edge(0, 2);
         g
     }
 }
@@ -331,31 +337,47 @@ impl Validate for SkelGraph {
 Unlike in a skeletal finite graph, the vertices and edges can have arbitrary
 hashable types.
 */
-#[derive(Clone,Derivative)]
-#[derivative(Default(bound="S: Default"))]
+#[derive(Clone, Derivative)]
+#[derivative(Default(bound = "S: Default"))]
 pub struct HashGraph<V, E, S = RandomState> {
-    vertex_set: HashFinSet<V,S>,
-    edge_set: HashFinSet<E,S>,
-    src_map: IndexedHashColumn<E,V,S>,
-    tgt_map: IndexedHashColumn<E,V,S>,
+    vertex_set: HashFinSet<V, S>,
+    edge_set: HashFinSet<E, S>,
+    src_map: IndexedHashColumn<E, V, S>,
+    tgt_map: IndexedHashColumn<E, V, S>,
 }
 
 /// A finite graph with vertices and edges of type `Ustr`.
 pub type UstrGraph = HashGraph<Ustr, Ustr, BuildHasherDefault<IdentityHasher>>;
 
-impl<V,E,S> ColumnarGraph for HashGraph<V,E,S>
-where V: Eq+Hash+Clone, E: Eq+Hash+Clone, S: BuildHasher {
+impl<V, E, S> ColumnarGraph for HashGraph<V, E, S>
+where
+    V: Eq + Hash + Clone,
+    E: Eq + Hash + Clone,
+    S: BuildHasher,
+{
     type V = V;
     type E = E;
 
-    fn vertex_set(&self) -> &impl FinSet<Elem = V> { &self.vertex_set }
-    fn edge_set(&self) -> &impl FinSet<Elem = E> { &self.edge_set }
-    fn src_map(&self) -> &impl Column<Dom = E, Cod = V> { &self.src_map }
-    fn tgt_map(&self) -> &impl Column<Dom = E, Cod = V> { &self.tgt_map }
+    fn vertex_set(&self) -> &impl FinSet<Elem = V> {
+        &self.vertex_set
+    }
+    fn edge_set(&self) -> &impl FinSet<Elem = E> {
+        &self.edge_set
+    }
+    fn src_map(&self) -> &impl Column<Dom = E, Cod = V> {
+        &self.src_map
+    }
+    fn tgt_map(&self) -> &impl Column<Dom = E, Cod = V> {
+        &self.tgt_map
+    }
 }
 
-impl<V,E,S> ColumnarGraphMut for HashGraph<V,E,S>
-where V: Eq+Hash+Clone, E: Eq+Hash+Clone, S: BuildHasher {
+impl<V, E, S> ColumnarGraphMut for HashGraph<V, E, S>
+where
+    V: Eq + Hash + Clone,
+    E: Eq + Hash + Clone,
+    S: BuildHasher,
+{
     fn src_map_mut(&mut self) -> &mut impl Column<Dom = E, Cod = V> {
         &mut self.src_map
     }
@@ -364,18 +386,30 @@ where V: Eq+Hash+Clone, E: Eq+Hash+Clone, S: BuildHasher {
     }
 }
 
-impl<V,E,S> ColumnarGraphImplGraph for HashGraph<V,E,S>
-where V: Eq+Hash+Clone, E: Eq+Hash+Clone, S: BuildHasher {}
+impl<V, E, S> ColumnarGraphImplGraph for HashGraph<V, E, S>
+where
+    V: Eq + Hash + Clone,
+    E: Eq + Hash + Clone,
+    S: BuildHasher,
+{
+}
 
-impl<V,E,S> HashGraph<V,E,S>
-where V: Eq+Hash+Clone, E: Eq+Hash+Clone, S: BuildHasher {
+impl<V, E, S> HashGraph<V, E, S>
+where
+    V: Eq + Hash + Clone,
+    E: Eq + Hash + Clone,
+    S: BuildHasher,
+{
     /// Adds a vertex to the graph, returning whether the vertex is new.
     pub fn add_vertex(&mut self, v: V) -> bool {
         self.vertex_set.insert(v)
     }
 
     /// Adds multiple vertices to the graph.
-    pub fn add_vertices<T>(&mut self, iter: T) where T: IntoIterator<Item = V> {
+    pub fn add_vertices<T>(&mut self, iter: T)
+    where
+        T: IntoIterator<Item = V>,
+    {
         self.vertex_set.extend(iter)
     }
 
@@ -395,8 +429,12 @@ where V: Eq+Hash+Clone, E: Eq+Hash+Clone, S: BuildHasher {
     }
 }
 
-impl<V,E,S> Validate for HashGraph<V,E,S>
-where V: Eq+Hash+Clone, E: Eq+Hash+Clone, S: BuildHasher {
+impl<V, E, S> Validate for HashGraph<V, E, S>
+where
+    V: Eq + Hash + Clone,
+    E: Eq + Hash + Clone,
+    S: BuildHasher,
+{
     type ValidationError = InvalidGraphData<E>;
 
     fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
@@ -437,24 +475,25 @@ This struct borrows its data to perform validation. The domain and codomain are
 assumed to be valid graphs. If that is in question, the graphs should be
 validated *before* valiating this object.
  */
-pub struct GraphMorphism<'a,Map,Dom,Cod>(
-    pub &'a Map,
-    pub &'a Dom,
-    pub &'a Cod,
-);
+pub struct GraphMorphism<'a, Map, Dom, Cod>(pub &'a Map, pub &'a Dom, pub &'a Cod);
 
-impl<'a,Map,Dom,Cod> GraphMorphism<'a,Map,Dom,Cod>
-where Map: GraphMapping, Map::DomE: Clone,
-      Dom: FinGraph<V=Map::DomV, E=Map::DomE>,
-      Cod: Graph<V=Map::CodV, E=Map::CodE> {
-
+impl<'a, Map, Dom, Cod> GraphMorphism<'a, Map, Dom, Cod>
+where
+    Map: GraphMapping,
+    Map::DomE: Clone,
+    Dom: FinGraph<V = Map::DomV, E = Map::DomE>,
+    Cod: Graph<V = Map::CodV, E = Map::CodE>,
+{
     /// Iterates over failues of the mapping to be a graph homomorphism.
     pub fn iter_invalid(
-        &self
+        &self,
     ) -> impl Iterator<Item = InvalidGraphMorphism<Map::DomV, Map::DomE>> + 'a {
         let GraphMorphism(mapping, dom, cod) = *self;
         let vertex_errors = dom.vertices().filter_map(|v| {
-            if mapping.apply_vertex(&v).map_or(false, |w| cod.has_vertex(w)) {
+            if mapping
+                .apply_vertex(&v)
+                .map_or(false, |w| cod.has_vertex(w))
+            {
                 None
             } else {
                 Some(InvalidGraphMorphism::Vertex(v))
@@ -465,15 +504,19 @@ where Map: GraphMapping, Map::DomE: Clone,
             if let Some(f) = mapping.apply_edge(&e) {
                 if cod.has_edge(f) {
                     let mut errs = Vec::new();
-                    if !mapping.apply_vertex(&dom.src(&e))
-                           .map_or(true, |v| *v == cod.src(f)) {
+                    if !mapping
+                        .apply_vertex(&dom.src(&e))
+                        .map_or(true, |v| *v == cod.src(f))
+                    {
                         errs.push(InvalidGraphMorphism::Src(e.clone()))
                     }
-                    if !mapping.apply_vertex(&dom.tgt(&e))
-                            .map_or(true, |v| *v == cod.tgt(f)) {
+                    if !mapping
+                        .apply_vertex(&dom.tgt(&e))
+                        .map_or(true, |v| *v == cod.tgt(f))
+                    {
                         errs.push(InvalidGraphMorphism::Tgt(e.clone()))
                     }
-                    return errs
+                    return errs;
                 }
             }
             vec![InvalidGraphMorphism::Edge(e)]
@@ -483,10 +526,13 @@ where Map: GraphMapping, Map::DomE: Clone,
     }
 }
 
-impl<Map,Dom,Cod> Validate for GraphMorphism<'_,Map,Dom,Cod>
-where Map: GraphMapping, Map::DomE: Clone,
-      Dom: FinGraph<V=Map::DomV, E=Map::DomE>,
-      Cod: Graph<V=Map::CodV, E=Map::CodE> {
+impl<Map, Dom, Cod> Validate for GraphMorphism<'_, Map, Dom, Cod>
+where
+    Map: GraphMapping,
+    Map::DomE: Clone,
+    Dom: FinGraph<V = Map::DomV, E = Map::DomE>,
+    Cod: Graph<V = Map::CodV, E = Map::CodE>,
+{
     type ValidationError = InvalidGraphMorphism<Map::DomV, Map::DomE>;
 
     fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
@@ -496,8 +542,8 @@ where Map: GraphMapping, Map::DomE: Clone,
 
 /// A failure of a [mapping](GraphMapping) between graphs to define a graph
 /// homomorphism.
-#[derive(Debug,Error)]
-pub enum InvalidGraphMorphism<V,E> {
+#[derive(Debug, Error)]
+pub enum InvalidGraphMorphism<V, E> {
     /// A vertex in the domain graph not mapped to a vertex in the codomain.
     #[error("Vertex `{0}` is not mapped to a vertex in the codomain")]
     Vertex(V),
@@ -512,7 +558,7 @@ pub enum InvalidGraphMorphism<V,E> {
 
     /// An edge in the domain graph whose target is not preserved.
     #[error("Mapping of edge `{0}` does not preserve its target")]
-    Tgt(E)
+    Tgt(E),
 }
 
 /** A graph mapping backed by columns.
@@ -520,21 +566,27 @@ pub enum InvalidGraphMorphism<V,E> {
 That is, the data of the graph mapping is defined by two columns. The mapping
 can be between arbitrary graphs with compatible vertex and edge types.
 */
-#[derive(Clone,Default)]
-pub struct ColumnarGraphMapping<ColV,ColE> {
+#[derive(Clone, Default)]
+pub struct ColumnarGraphMapping<ColV, ColE> {
     vertex_map: ColV,
     edge_map: ColE,
 }
 
-impl<ColV,ColE> ColumnarGraphMapping<ColV,ColE> {
+impl<ColV, ColE> ColumnarGraphMapping<ColV, ColE> {
     /// Constructs a new graph mapping from existing columns.
     pub fn new(vertex_map: ColV, edge_map: ColE) -> Self {
-        Self { vertex_map, edge_map }
+        Self {
+            vertex_map,
+            edge_map,
+        }
     }
 }
 
-impl<ColV,ColE> GraphMapping for ColumnarGraphMapping<ColV,ColE>
-where ColV: Mapping, ColE: Mapping {
+impl<ColV, ColE> GraphMapping for ColumnarGraphMapping<ColV, ColE>
+where
+    ColV: Mapping,
+    ColE: Mapping,
+{
     type DomV = ColV::Dom;
     type DomE = ColE::Dom;
     type CodV = ColV::Cod;
@@ -559,13 +611,13 @@ mod tests {
         assert_eq!(g.ne(), 3);
         assert_eq!(g.src(&1), 1);
         assert_eq!(g.tgt(&1), 2);
-        assert_eq!(g.out_edges(&0).collect::<Vec<_>>(), vec![0,2]);
-        assert_eq!(g.in_edges(&2).collect::<Vec<_>>(), vec![1,2]);
+        assert_eq!(g.out_edges(&0).collect::<Vec<_>>(), vec![0, 2]);
+        assert_eq!(g.in_edges(&2).collect::<Vec<_>>(), vec![1, 2]);
     }
 
     #[test]
     fn hash_graph() {
-        let mut g: HashGraph<char,&str> = Default::default();
+        let mut g: HashGraph<char, &str> = Default::default();
         assert!(g.add_vertex('x'));
         g.add_vertices(['y', 'z'].into_iter());
         assert!(g.add_edge("f", 'x', 'y'));
@@ -591,14 +643,12 @@ mod tests {
     fn validate_graph_morphism() {
         let g = SkelGraph::path(3);
         let h = SkelGraph::path(4);
-        let f = ColumnarGraphMapping::new(
-            VecColumn::new(vec![1,2,3]), VecColumn::new(vec![1,2])
-        );
+        let f =
+            ColumnarGraphMapping::new(VecColumn::new(vec![1, 2, 3]), VecColumn::new(vec![1, 2]));
         assert!(GraphMorphism(&f, &g, &h).validate().is_ok());
 
-        let f = ColumnarGraphMapping::new(
-            VecColumn::new(vec![1,2,3]), VecColumn::new(vec![2,1])
-        ); // Not a homomorphism.
+        let f =
+            ColumnarGraphMapping::new(VecColumn::new(vec![1, 2, 3]), VecColumn::new(vec![2, 1])); // Not a homomorphism.
         assert!(GraphMorphism(&f, &g, &h).validate().is_err());
     }
 }

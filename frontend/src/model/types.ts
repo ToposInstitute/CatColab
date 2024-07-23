@@ -1,9 +1,8 @@
 import { uuidv7 } from "uuidv7";
 
-import { MorDecl, MorType, ObDecl, ObType } from "catlog-wasm";
-import { TheoryId } from "../theory";
-import { Notebook } from "../notebook";
-
+import type { MorDecl, MorType, ObDecl, ObType } from "catlog-wasm";
+import type { Notebook } from "../notebook";
+import type { TheoryId } from "../theory";
 
 /** A model of a discrete double theory in notebook form.
  */
@@ -16,8 +15,7 @@ export type ModelNotebook = {
 
     // Content of the model, formal and informal.
     notebook: Notebook<ModelJudgment>;
-}
-
+};
 
 /** A judgment in the definition of a model.
 

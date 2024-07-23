@@ -1,6 +1,6 @@
 //! Paths in graphs and categories.
 
-use nonempty::{NonEmpty, nonempty};
+use nonempty::{nonempty, NonEmpty};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -29,20 +29,20 @@ case analysis on the edge sequence anyway to determine whether, say,
 [`reduce`](std::iter::Iterator::reduce) is valid. Thus, it seems better to reify
 the two cases in the data structure itself.
 */
-#[derive(Clone,Debug,PartialEq,Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize,Deserialize))]
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(tag = "tag", content = "content"))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
-pub enum Path<V,E> {
+pub enum Path<V, E> {
     /// The identity, or empty, path at a vertex.
     Id(V),
 
     /// A nontrivial path, comprising a *non-empty* vector of consecutive edges.
-    Seq(NonEmpty<E>)
+    Seq(NonEmpty<E>),
 }
 
-impl<V,E> Path<V,E> {
+impl<V, E> Path<V, E> {
     /// Constructs the empty or identity path.
     pub fn empty(v: V) -> Self {
         Path::Id(v)
@@ -66,11 +66,24 @@ impl<V,E> Path<V,E> {
         }
     }
 
+    /// Is the path empty?
+    /// Note: It is conventional to have an is_empty() method whenever there is a len() method
+    pub fn is_empty(&self) -> bool {
+        match self {
+            Path::Id(_) => true,
+            Path::Seq(_) => false,
+        }
+    }
+
     /** Source of the path in the given graph.
 
     Assumes that the path is [contained in](Path::contained_in) the graph.
     */
-    pub fn src<G>(&self, graph: &G) -> V where V: Clone, G: Graph<V=V, E=E> {
+    pub fn src<G>(&self, graph: &G) -> V
+    where
+        V: Clone,
+        G: Graph<V = V, E = E>,
+    {
         match self {
             Path::Id(v) => v.clone(),
             Path::Seq(edges) => graph.src(edges.first()),
@@ -81,7 +94,11 @@ impl<V,E> Path<V,E> {
 
     Assumes that the path is [contained in](Path::contained_in) the graph.
     */
-    pub fn tgt<G>(&self, graph: &G) -> V where V: Clone, G: Graph<V=V, E=E> {
+    pub fn tgt<G>(&self, graph: &G) -> V
+    where
+        V: Clone,
+        G: Graph<V = V, E = E>,
+    {
         match self {
             Path::Id(v) => v.clone(),
             Path::Seq(edges) => graph.tgt(edges.last()),
@@ -90,7 +107,10 @@ impl<V,E> Path<V,E> {
 
     /// Is the path contained in the given graph?
     pub fn contained_in<G>(&self, graph: &G) -> bool
-    where V: Eq, G: Graph<V=V, E=E> {
+    where
+        V: Eq,
+        G: Graph<V = V, E = E>,
+    {
         match self {
             Path::Id(v) => graph.has_vertex(v),
             Path::Seq(edges) => {
@@ -104,9 +124,11 @@ impl<V,E> Path<V,E> {
     }
 
     /// Maps a path over functions on vertices and edges.
-    pub fn map<CodV, CodE, FnV, FnE>(self, fv: FnV, fe: FnE
-    ) -> Path<CodV, CodE>
-    where FnV: FnOnce(V) -> CodV, FnE: FnMut(E) -> CodE {
+    pub fn map<CodV, CodE, FnV, FnE>(self, fv: FnV, fe: FnE) -> Path<CodV, CodE>
+    where
+        FnV: FnOnce(V) -> CodV,
+        FnE: FnMut(E) -> CodE,
+    {
         match self {
             Path::Id(v) => Path::Id(fv(v)),
             Path::Seq(edges) => Path::Seq(edges.map(fe)),
@@ -114,14 +136,16 @@ impl<V,E> Path<V,E> {
     }
 
     /// Maps a path over fallible functions on vertices and edges.
-    pub fn try_map<CodV, CodE, FnV, FnE>(self, fv: FnV, fe: FnE
-    ) -> Option<Path<CodV, CodE>>
-    where FnV: FnOnce(V) -> Option<CodV>, FnE: FnMut(E) -> Option<CodE> {
+    pub fn try_map<CodV, CodE, FnV, FnE>(self, fv: FnV, fe: FnE) -> Option<Path<CodV, CodE>>
+    where
+        FnV: FnOnce(V) -> Option<CodV>,
+        FnE: FnMut(E) -> Option<CodE>,
+    {
         match self {
             Path::Id(v) => {
                 let w = fv(v)?;
                 Some(Path::Id(w))
-            },
+            }
             Path::Seq(edges) => {
                 let edges: Option<Vec<_>> = edges.into_iter().map(fe).collect();
                 let edges = edges?;
@@ -131,18 +155,16 @@ impl<V,E> Path<V,E> {
     }
 }
 
-impl<V, E> Path<V,Path<V,E>> {
+impl<V, E> Path<V, Path<V, E>> {
     /// Flatten a path of paths into a single path.
-    pub fn flatten(self) -> Path<V,E> {
+    pub fn flatten(self) -> Path<V, E> {
         match self {
             Path::Id(x) => Path::Id(x),
             Path::Seq(fs) => {
                 if fs.iter().any(|p| matches!(p, Path::Seq(_))) {
-                    let seqs = NonEmpty::collect(fs.into_iter().filter_map(|p| {
-                        match p {
-                            Path::Id(_) => None,
-                            Path::Seq(gs) => Some(gs)
-                        }
+                    let seqs = NonEmpty::collect(fs.into_iter().filter_map(|p| match p {
+                        Path::Id(_) => None,
+                        Path::Seq(gs) => Some(gs),
                     }));
                     Path::Seq(NonEmpty::flatten(seqs.unwrap()))
                 } else {
@@ -156,37 +178,44 @@ impl<V, E> Path<V,Path<V,E>> {
 /// A path in a graph with skeletal vertex and edge sets.
 pub type SkelPath = Path<usize, usize>;
 
-
 /// Assertion of an equation between the composites of two paths in a category.
-#[derive(Clone,Debug,PartialEq,Eq)]
-pub struct PathEq<V,E> {
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PathEq<V, E> {
     /// Left hand side of equation.
-    pub lhs: Path<V,E>,
+    pub lhs: Path<V, E>,
 
     /// Right hand side of equation.
-    pub rhs: Path<V,E>,
+    pub rhs: Path<V, E>,
 }
 
-impl<V,E> PathEq<V,E> {
+impl<V, E> PathEq<V, E> {
     /// Constructs a path equation with the given left- and right-hand sides.
-    pub fn new(lhs: Path<V,E>, rhs: Path<V,E>) -> PathEq<V,E> {
+    pub fn new(lhs: Path<V, E>, rhs: Path<V, E>) -> PathEq<V, E> {
         PathEq { lhs, rhs }
     }
 
     /// Is the path equation well defined in the given graph?
     pub fn valid_in<G>(&self, graph: &G) -> bool
-    where V: Eq+Clone, G: Graph<V=V, E=E> {
+    where
+        V: Eq + Clone,
+        G: Graph<V = V, E = E>,
+    {
         // TODO: Should be `validate_in` with validation errors.
-        self.lhs.contained_in(graph) && self.rhs.contained_in(graph) &&
-            self.lhs.src(graph) == self.rhs.src(graph) &&
-            self.lhs.tgt(graph) == self.rhs.tgt(graph)
+        self.lhs.contained_in(graph)
+            && self.rhs.contained_in(graph)
+            && self.lhs.src(graph) == self.rhs.src(graph)
+            && self.lhs.tgt(graph) == self.rhs.tgt(graph)
     }
 
     /** Source of the path equation in the given graph.
 
     Only well defined when the path equation is valid.
     */
-    pub fn src<G>(&self, graph: &G) -> V where V: Clone, G: Graph<V=V, E=E> {
+    pub fn src<G>(&self, graph: &G) -> V
+    where
+        V: Clone,
+        G: Graph<V = V, E = E>,
+    {
         self.lhs.src(graph) // == self.rhs.src(graph)
     }
 
@@ -194,47 +223,55 @@ impl<V,E> PathEq<V,E> {
 
     Only well defined when the path equation is valid.
     */
-    pub fn tgt<G>(&self, graph: &G) -> V where V: Clone, G: Graph<V=V, E=E> {
+    pub fn tgt<G>(&self, graph: &G) -> V
+    where
+        V: Clone,
+        G: Graph<V = V, E = E>,
+    {
         self.lhs.tgt(graph) // == self.rhs.tgt(graph)
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use std::convert::identity;
-    use super::*;
     use super::super::graph::SkelGraph;
+    use super::*;
+    use std::convert::identity;
 
     #[test]
     fn path_in_graph() {
         let g = SkelGraph::triangle();
         assert!(Path::Id(2).contained_in(&g));
         assert!(!Path::Id(3).contained_in(&g));
-        assert!(Path::pair(0,1).contained_in(&g));
-        assert!(!Path::pair(1,0).contained_in(&g));
+        assert!(Path::pair(0, 1).contained_in(&g));
+        assert!(!Path::pair(1, 0).contained_in(&g));
 
-        let path = Path::pair(0,1);
+        let path = Path::pair(0, 1);
         assert_eq!(path.src(&g), 0);
         assert_eq!(path.tgt(&g), 2);
     }
 
     #[test]
     fn map_path() {
-        assert_eq!(SkelPath::Id(1).map(|v| v+1, identity),
-                   Path::Id(2));
-        assert_eq!(SkelPath::pair(0,1).map(identity, |e| e+1),
-                   Path::pair(1,2));
-        assert_eq!(SkelPath::Id(1).try_map(|v| Some(v+1), |e| Some(e)),
-                   Some(Path::Id(2)));
-        assert_eq!(SkelPath::pair(0,1).try_map(|v| Some(v), |e| Some(e+1)),
-                   Some(Path::pair(1,2)));
+        assert_eq!(SkelPath::Id(1).map(|v| v + 1, identity), Path::Id(2));
+        assert_eq!(
+            SkelPath::pair(0, 1).map(identity, |e| e + 1),
+            Path::pair(1, 2)
+        );
+        assert_eq!(
+            SkelPath::Id(1).try_map(|v| Some(v + 1), |e| Some(e)),
+            Some(Path::Id(2))
+        );
+        assert_eq!(
+            SkelPath::pair(0, 1).try_map(|v| Some(v), |e| Some(e + 1)),
+            Some(Path::pair(1, 2))
+        );
     }
 
     #[test]
     fn path_eq() {
         let g = SkelGraph::triangle();
-        let eq = PathEq::new(Path::pair(0,1), Path::single(2));
+        let eq = PathEq::new(Path::pair(0, 1), Path::single(2));
         assert_eq!(eq.src(&g), 0);
         assert_eq!(eq.tgt(&g), 2);
         assert!(eq.valid_in(&g));

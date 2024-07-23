@@ -38,11 +38,10 @@ In addition, a model has the following operations:
 use std::hash::Hash;
 use std::sync::Arc;
 
-use crate::zero::{Mapping, Column, IndexedHashColumn};
-use crate::one::{Category, FgCategory, Path};
-use crate::one::fin_category::FpCategory;
 use super::theory::{DblTheory, DiscreteDblTheory};
-
+use crate::one::fin_category::FpCategory;
+use crate::one::{Category, FgCategory, Path};
+use crate::zero::{Column, IndexedHashColumn, Mapping};
 
 /** A model of a double theory.
 
@@ -110,7 +109,7 @@ pub trait DblModel {
     fn cod(&self, m: &Self::Mor) -> Self::Ob;
 
     /// Composes a path of morphisms in the model.
-    fn compose(&self, path: Path<Self::Ob,Self::Mor>) -> Self::Mor;
+    fn compose(&self, path: Path<Self::Ob, Self::Mor>) -> Self::Mor;
 
     /// Composes a pair of morphisms in the model.
     fn compose2(&self, m: Self::Mor, n: Self::Mor) -> Self::Mor {
@@ -147,30 +146,17 @@ pub trait DblModel {
     fn morphisms(&self) -> impl Iterator<Item = Self::Mor>;
 
     /// Iterates over basic objects of the given type.
-    fn objects_with_type(
-        &self,
-        typ: &Self::ObType
-    ) -> impl Iterator<Item = Self::Ob>;
+    fn objects_with_type(&self, typ: &Self::ObType) -> impl Iterator<Item = Self::Ob>;
 
     /// Iterates over basic morphisms of the given type.
-    fn morphisms_with_type(
-        &self,
-        typ: &Self::MorType
-    ) -> impl Iterator<Item = Self::Mor>;
+    fn morphisms_with_type(&self, typ: &Self::MorType) -> impl Iterator<Item = Self::Mor>;
 
     /// Iterates over basic morphisms with the given domain.
-    fn morphisms_with_dom(
-        &self,
-        x: &Self::Ob
-    ) -> impl Iterator<Item = Self::Mor>;
+    fn morphisms_with_dom(&self, x: &Self::Ob) -> impl Iterator<Item = Self::Mor>;
 
     /// Iterates over basic morphisms with the given codomain.
-    fn morphisms_with_cod(
-        &self,
-        x: &Self::Ob
-    ) -> impl Iterator<Item = Self::Mor>;
+    fn morphisms_with_cod(&self, x: &Self::Ob) -> impl Iterator<Item = Self::Mor>;
 }
-
 
 /** A finitely presented model of a discrete double theory.
 
@@ -182,19 +168,27 @@ category"](https://ncatlab.org/nlab/show/displayed+category).
 #[derive(Clone)]
 pub struct DiscreteDblModel<V, E, Cat: FgCategory> {
     theory: Arc<DiscreteDblTheory<Cat>>,
-    category: FpCategory<V,E>,
-    ob_types: IndexedHashColumn<V,Cat::Ob>,
-    mor_types: IndexedHashColumn<E,Cat::Hom>,
+    category: FpCategory<V, E>,
+    ob_types: IndexedHashColumn<V, Cat::Ob>,
+    mor_types: IndexedHashColumn<E, Cat::Hom>,
 }
 
-impl<V,E,Cat> DiscreteDblModel<V,E,Cat>
-where V: Eq+Clone+Hash, E: Eq+Clone+Hash, Cat: FgCategory,
-      Cat::Ob: Eq+Clone+Hash, Cat::Hom: Eq+Clone+Hash {
-
+impl<V, E, Cat> DiscreteDblModel<V, E, Cat>
+where
+    V: Eq + Clone + Hash,
+    E: Eq + Clone + Hash,
+    Cat: FgCategory,
+    Cat::Ob: Eq + Clone + Hash,
+    Cat::Hom: Eq + Clone + Hash,
+{
     /// Creates an empty model of the given theory.
     pub fn new(theory: Arc<DiscreteDblTheory<Cat>>) -> Self {
-        Self { theory, category: Default::default(),
-               ob_types: Default::default(), mor_types: Default::default() }
+        Self {
+            theory,
+            category: Default::default(),
+            ob_types: Default::default(),
+            mor_types: Default::default(),
+        }
     }
 
     /// Adds a basic object to the model.
@@ -220,34 +214,60 @@ where V: Eq+Clone+Hash, E: Eq+Clone+Hash, Cat: FgCategory,
     }
 }
 
-impl<V,E,Cat> DblModel for DiscreteDblModel<V,E,Cat>
-where V: Eq+Clone+Hash, E: Eq+Clone+Hash, Cat: FgCategory,
-      Cat::Ob: Eq+Clone+Hash, Cat::Hom: Eq+Clone+Hash {
+impl<V, E, Cat> DblModel for DiscreteDblModel<V, E, Cat>
+where
+    V: Eq + Clone + Hash,
+    E: Eq + Clone + Hash,
+    Cat: FgCategory,
+    Cat::Ob: Eq + Clone + Hash,
+    Cat::Hom: Eq + Clone + Hash,
+{
     type Ob = V;
-    type Mor = Path<V,E>;
+    type Mor = Path<V, E>;
     type ObType = Cat::Ob;
     type MorType = Cat::Hom;
     type ObOp = Cat::Ob;
     type MorOp = Cat::Hom;
 
-    fn has_ob(&self, x: &Self::Ob) -> bool { self.category.has_ob(x) }
-    fn has_mor(&self, m: &Self::Mor) -> bool { self.category.has_hom(m) }
-    fn dom(&self, m: &Self::Mor) -> Self::Ob { self.category.dom(m) }
-    fn cod(&self, m: &Self::Mor) -> Self::Ob { self.category.cod(m) }
-    fn compose(&self, path: Path<Self::Ob,Self::Mor>) -> Self::Mor {
+    fn has_ob(&self, x: &Self::Ob) -> bool {
+        self.category.has_ob(x)
+    }
+    fn has_mor(&self, m: &Self::Mor) -> bool {
+        self.category.has_hom(m)
+    }
+    fn dom(&self, m: &Self::Mor) -> Self::Ob {
+        self.category.dom(m)
+    }
+    fn cod(&self, m: &Self::Mor) -> Self::Ob {
+        self.category.cod(m)
+    }
+    fn compose(&self, path: Path<Self::Ob, Self::Mor>) -> Self::Mor {
         self.category.compose(path)
     }
-    fn ob_act(&self, x: Self::Ob, _: &Self::ObOp) -> Self::Ob { x }
-    fn mor_act(&self, m: Self::Mor, _: &Self::MorOp) -> Self::Mor { m }
+    fn ob_act(&self, x: Self::Ob, _: &Self::ObOp) -> Self::Ob {
+        x
+    }
+    fn mor_act(&self, m: Self::Mor, _: &Self::MorOp) -> Self::Mor {
+        m
+    }
 
     fn ob_type(&self, x: &Self::Ob) -> Self::ObType {
-        self.ob_types.apply(x).expect("Object type should be set").clone()
+        self.ob_types
+            .apply(x)
+            .expect("Object type should be set")
+            .clone()
     }
 
     fn mor_type(&self, m: &Self::Mor) -> Self::MorType {
-        let types = m.clone().map(|x| self.ob_type(&x), |n| {
-            self.mor_types.apply(&n).expect("Morphism type should be set").clone()
-        });
+        let types = m.clone().map(
+            |x| self.ob_type(&x),
+            |n| {
+                self.mor_types
+                    .apply(&n)
+                    .expect("Morphism type should be set")
+                    .clone()
+            },
+        );
         self.theory.compose_types(types)
     }
 

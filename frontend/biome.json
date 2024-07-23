@@ -1,0 +1,36 @@
+{
+    "files": {
+        "ignore": ["dist/**", "docs/**", "catlog-wasm/**"]
+    },
+    "$schema": "https://biomejs.dev/schemas/1.8.3/schema.json",
+    "organizeImports": {
+        "enabled": true
+    },
+    "formatter": {
+        "indentStyle": "space",
+        "indentWidth": 4
+    },
+    "linter": {
+        "enabled": true,
+        "rules": {
+            "a11y": {
+                "all": false
+            },
+            "recommended": true,
+            "suspicious": {
+                "noExplicitAny": "warn"
+            },
+            "complexity": {
+                "noForEach": "warn",
+                "useLiteralKeys": {
+                    "level": "off"
+                }
+            },
+            "style": {
+                "noParameterAssign": {
+                    "level": "off"
+                }
+            }
+        }
+    }
+}

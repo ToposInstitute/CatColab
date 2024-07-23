@@ -4,14 +4,14 @@ This module provides interfaces and simple wrapper types to enable sets to be
 treated in a generic way.
  */
 
-use std::ops::Range;
-use std::hash::{Hash, BuildHasher, BuildHasherDefault, RandomState};
 use std::collections::HashSet;
+use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
+use std::ops::Range;
 
 use derivative::Derivative;
 use derive_more::{From, Into};
 use ref_cast::RefCast;
-use ustr::{Ustr, IdentityHasher};
+use ustr::{IdentityHasher, Ustr};
 
 /** A set.
 
@@ -64,7 +64,7 @@ pub trait FinSet: Set {
 The elements of the skeletal finite set of size `n` are the numbers `0..n`
 (excluding `n`).
  */
-#[derive(Clone,Copy,From,Into,RefCast)]
+#[derive(Clone, Copy, From, Into, RefCast)]
 #[repr(transparent)]
 pub struct SkelFinSet(usize);
 
@@ -85,7 +85,9 @@ impl SkelFinSet {
 }
 
 impl Default for SkelFinSet {
-    fn default() -> Self { Self::from(0) }
+    fn default() -> Self {
+        Self::from(0)
+    }
 }
 
 impl Set for SkelFinSet {
@@ -97,64 +99,102 @@ impl Set for SkelFinSet {
 }
 
 impl FinSet for SkelFinSet {
-    fn iter(&self) -> impl Iterator<Item = usize> { 0..(self.0) }
-    fn len(&self) -> usize { self.0 }
+    fn iter(&self) -> impl Iterator<Item = usize> {
+        0..(self.0)
+    }
+    fn len(&self) -> usize {
+        self.0
+    }
 }
 
 impl IntoIterator for SkelFinSet {
     type Item = usize;
     type IntoIter = Range<usize>;
 
-    fn into_iter(self) -> Self::IntoIter { 0..(self.0) }
+    fn into_iter(self) -> Self::IntoIter {
+        0..(self.0)
+    }
 }
 
 /// A finite set backed by a hash set.
-#[derive(Clone,From,Into,Derivative)]
-#[derivative(Default(bound="S: Default"))]
-pub struct HashFinSet<T, S = RandomState>(HashSet<T,S>);
+#[derive(Clone, From, Into, Derivative)]
+#[derivative(Default(bound = "S: Default"))]
+pub struct HashFinSet<T, S = RandomState>(HashSet<T, S>);
 
 /// A finite set with elements of type `Ustr`.
 pub type UstrFinSet = HashFinSet<Ustr, BuildHasherDefault<IdentityHasher>>;
 
-impl<T,S> HashFinSet<T,S> where T: Eq + Hash, S: BuildHasher {
+impl<T, S> HashFinSet<T, S>
+where
+    T: Eq + Hash,
+    S: BuildHasher,
+{
     /// Adds an element to the set.
     pub fn insert(&mut self, x: T) -> bool {
         self.0.insert(x)
     }
 }
 
-impl<T,S> Extend<T> for HashFinSet<T,S> where T: Eq + Hash, S: BuildHasher {
-    fn extend<Iter>(&mut self, iter: Iter) where Iter: IntoIterator<Item = T> {
+impl<T, S> Extend<T> for HashFinSet<T, S>
+where
+    T: Eq + Hash,
+    S: BuildHasher,
+{
+    fn extend<Iter>(&mut self, iter: Iter)
+    where
+        Iter: IntoIterator<Item = T>,
+    {
         self.0.extend(iter)
     }
 }
 
-impl<T,S> Set for HashFinSet<T,S> where T: Eq + Hash, S: BuildHasher {
+impl<T, S> Set for HashFinSet<T, S>
+where
+    T: Eq + Hash,
+    S: BuildHasher,
+{
     type Elem = T;
 
-    fn contains(&self, x: &T) -> bool { self.0.contains(x) }
+    fn contains(&self, x: &T) -> bool {
+        self.0.contains(x)
+    }
 }
 
-impl<T,S> FinSet for HashFinSet<T,S>
-where T: Eq + Hash + Clone, S: BuildHasher {
-    fn iter(&self) -> impl Iterator<Item = T> { self.0.iter().cloned() }
-    fn len(&self) -> usize { self.0.len() }
-    fn is_empty(&self) -> bool { self.0.is_empty() }
+impl<T, S> FinSet for HashFinSet<T, S>
+where
+    T: Eq + Hash + Clone,
+    S: BuildHasher,
+{
+    fn iter(&self) -> impl Iterator<Item = T> {
+        self.0.iter().cloned()
+    }
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+    fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
-impl<T,S> IntoIterator for HashFinSet<T,S> where T: Eq + Hash, S: BuildHasher {
+impl<T, S> IntoIterator for HashFinSet<T, S>
+where
+    T: Eq + Hash,
+    S: BuildHasher,
+{
     type Item = T;
     type IntoIter = std::collections::hash_set::IntoIter<T>;
 
-    fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
 }
 
 /** A skeletal finite set with a data attribute.
 
 The internal representation is simply a vector.
 */
-#[derive(Clone,From,Derivative)]
-#[derivative(Default(bound=""))]
+#[derive(Clone, From, Derivative)]
+#[derivative(Default(bound = ""))]
 pub struct AttributedSkelSet<T>(Vec<T>);
 
 impl<T> AttributedSkelSet<T> {
@@ -167,7 +207,9 @@ impl<T> AttributedSkelSet<T> {
 
     /// Adds multiple new elements with associated values.
     pub fn extend<Iter>(&mut self, iter: Iter) -> Range<usize>
-    where Iter: IntoIterator<Item = T> {
+    where
+        Iter: IntoIterator<Item = T>,
+    {
         let start = self.0.len();
         self.0.extend(iter);
         start..(self.0.len())
@@ -182,13 +224,21 @@ impl<T> AttributedSkelSet<T> {
 impl<T> Set for AttributedSkelSet<T> {
     type Elem = usize;
 
-    fn contains(&self, x: &usize) -> bool { *x < self.0.len() }
+    fn contains(&self, x: &usize) -> bool {
+        *x < self.0.len()
+    }
 }
 
 impl<T> FinSet for AttributedSkelSet<T> {
-    fn iter(&self) -> impl Iterator<Item = usize> { 0..(self.0.len()) }
-    fn len(&self) -> usize { self.0.len() }
-    fn is_empty(&self) -> bool { self.0.is_empty() }
+    fn iter(&self) -> impl Iterator<Item = usize> {
+        0..(self.0.len())
+    }
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+    fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
 #[cfg(test)]
@@ -212,7 +262,7 @@ mod tests {
         let sum: usize = s.iter().sum();
         assert_eq!(sum, 3);
         let elems: Vec<usize> = s.into_iter().collect();
-        assert_eq!(elems, vec![0,1,2]);
+        assert_eq!(elems, vec![0, 1, 2]);
     }
 
     #[test]
@@ -238,7 +288,7 @@ mod tests {
         let mut s: AttributedSkelSet<char> = Default::default();
         assert!(s.is_empty());
         assert_eq!(s.insert('a'), 0);
-        assert_eq!(s.extend(['b','c'].into_iter()), 1..3);
+        assert_eq!(s.extend(['b', 'c'].into_iter()), 1..3);
         assert!(!s.is_empty());
         assert_eq!(s.len(), 3);
         assert!(s.contains(&2));

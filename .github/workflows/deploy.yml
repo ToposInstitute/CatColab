@@ -97,7 +97,9 @@ jobs:
           tlmgr install amsmath
 
       - name: Build
-        run: bash scripts/dev-docs.sh
+        run: |
+          cd dev-docs
+          bash ci-build.sh
 
       - name: Upload
         uses: actions/upload-artifact@v4
@@ -118,11 +120,11 @@ jobs:
         with:
           node-version: 20
           cache: "npm"
-          cache-dependency-path: scripts/package-lock.json
+          cache-dependency-path: netlify-env/package-lock.json
 
       - name: Install Netlify
         run: |
-          cd scripts
+          cd netlify-env
           npm install
 
       - name: Download artifacts
@@ -139,7 +141,7 @@ jobs:
       - name: Deploy
         id: netlify_deploy
         run: |
-          cd scripts
+          cd netlify-env
           prod_flag=""
           if [ "$BRANCH_NAME" = "main" ]; then prod_flag="--prod"; fi
           npx netlify deploy --dir ../site --site ${{ secrets.NETLIFY_SITE_ID }} --auth ${{ secrets.NETLIFY_API_TOKEN }} $prod_flag --json > ../deploy_output.json
