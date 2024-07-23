@@ -187,6 +187,39 @@ pub struct DiscreteDblModel<V, E, Cat: FgCategory> {
     mor_types: IndexedHashColumn<E,Cat::Hom>,
 }
 
+impl<V,E,Cat> DiscreteDblModel<V,E,Cat>
+where V: Eq+Clone+Hash, E: Eq+Clone+Hash, Cat: FgCategory,
+      Cat::Ob: Eq+Clone+Hash, Cat::Hom: Eq+Clone+Hash {
+
+    /// Creates an empty model of the given theory.
+    pub fn new(theory: Arc<DiscreteDblTheory<Cat>>) -> Self {
+        Self { theory, category: Default::default(),
+               ob_types: Default::default(), mor_types: Default::default() }
+    }
+
+    /// Adds a basic object to the model.
+    pub fn add_ob(&mut self, x: V, typ: Cat::Ob) {
+        self.category.add_ob_generator(x.clone());
+        self.ob_types.set(x, typ);
+    }
+
+    /// Adds a basic morphism to the model.
+    pub fn add_mor(&mut self, f: E, typ: Cat::Hom) {
+        self.category.make_hom_generator(f.clone());
+        self.mor_types.set(f, typ);
+    }
+
+    /// Updates the domain of a morphism, setting or unsetting it.
+    pub fn update_dom(&mut self, f: E, x: Option<V>) -> Option<V> {
+        self.category.update_dom(f, x)
+    }
+
+    /// Updates the codomain of a morphism, setting or unsetting it.
+    pub fn update_cod(&mut self, f: E, x: Option<V>) -> Option<V> {
+        self.category.update_cod(f, x)
+    }
+}
+
 impl<V,E,Cat> DblModel for DiscreteDblModel<V,E,Cat>
 where V: Eq+Clone+Hash, E: Eq+Clone+Hash, Cat: FgCategory,
       Cat::Ob: Eq+Clone+Hash, Cat::Hom: Eq+Clone+Hash {

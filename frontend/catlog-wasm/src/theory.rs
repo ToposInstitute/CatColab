@@ -2,6 +2,7 @@
 
 use std::hash::Hash;
 use std::collections::HashMap;
+use std::sync::Arc;
 use ustr::Ustr;
 
 use serde::{Deserialize, Serialize};
@@ -40,14 +41,14 @@ of hash maps with arbitrary keys in JavaScript.
 */
 #[wasm_bindgen]
 pub struct DiscreteDblTheory {
-    theory: &'static UstrDiscreteDblThy,
+    pub(crate) theory: Arc<UstrDiscreteDblThy>,
     ob_type_index: HashMap<ObType, usize>,
     mor_type_index: HashMap<MorType, usize>,
 }
 
 #[wasm_bindgen]
 impl DiscreteDblTheory {
-    pub(crate) fn new(theory: &'static UstrDiscreteDblThy) -> DiscreteDblTheory {
+    pub(crate) fn new(theory: Arc<UstrDiscreteDblThy>) -> DiscreteDblTheory {
         DiscreteDblTheory {
             theory: theory, ob_type_index: Default::default(),
             mor_type_index: Default::default(),

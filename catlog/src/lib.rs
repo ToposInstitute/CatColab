@@ -19,7 +19,10 @@ sufficiently useful in their own right, they may be spun off into their own
 packages.
 */
 
-#![allow(mixed_script_confusables)] // Unicode identifiers.
+// Unicode identifiers.
+#![allow(mixed_script_confusables)]
+#![allow(confusable_idents)]
+
 #![warn(missing_docs)]
 
 pub mod validate;
