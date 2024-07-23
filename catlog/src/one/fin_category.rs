@@ -250,13 +250,13 @@ where V: Eq+Clone+Hash, E: Eq+Clone+Hash {
         self.generators.vertices()
     }
     fn hom_generators(&self) -> impl Iterator<Item = Self::Hom> {
-        self.generators.edges().map(|e| Path::single(e))
+        self.generators.edges().map(Path::single)
     }
     fn generators_with_dom(&self, x: &V) -> impl Iterator<Item = Self::Hom> {
-        self.generators.out_edges(x).map(|e| Path::single(e))
+        self.generators.out_edges(x).map(Path::single)
     }
     fn generators_with_cod(&self, x: &V) -> impl Iterator<Item = Self::Hom> {
-        self.generators.in_edges(x).map(|e| Path::single(e))
+        self.generators.in_edges(x).map(Path::single)
     }
 }
 

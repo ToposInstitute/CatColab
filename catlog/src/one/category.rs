@@ -194,13 +194,13 @@ impl<G: FinGraph> FgCategory for FreeCategory<G> where G::V: Eq+Clone {
         self.0.vertices()
     }
     fn hom_generators(&self) -> impl Iterator<Item = Self::Hom> {
-        self.0.edges().map(|e| Path::single(e))
+        self.0.edges().map(Path::single)
     }
     fn generators_with_dom(&self, x: &G::V) -> impl Iterator<Item = Self::Hom> {
-        self.0.out_edges(x).map(|e| Path::single(e))
+        self.0.out_edges(x).map(Path::single)
     }
     fn generators_with_cod(&self, x: &G::V) -> impl Iterator<Item = Self::Hom> {
-        self.0.in_edges(x).map(|e| Path::single(e))
+        self.0.in_edges(x).map(Path::single)
     }
 }
 

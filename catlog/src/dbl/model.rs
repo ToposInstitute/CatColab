@@ -5,11 +5,11 @@ operations specified by the theory, categorifying the familiar idea from logic
 that a model of a theory is a set (or sets) equipped with operations. For
 background on double theories, see the [`theory`](super::theory) module.
 
-In the case of a *simple* double theory, which is just a small double category,
-a **model** of the theory is a span-valued *lax* double functor out of it. Such
-a model is a "lax copresheaf," categorifying the notion of a copresheaf or
-set-valued functor. Though they are "just" lax double functors, models are a
-[concept with an
+In the case of a *simple* double theory, which amounts to a small double
+category, a **model** of the theory is a span-valued *lax* double functor out of
+the theory. Such a model is a "lax copresheaf," categorifying the notion of a
+copresheaf or set-valued functor. Though they are "just" lax double functors,
+models are a [concept with an
 attitude](https://ncatlab.org/nlab/show/concept+with+an+attitude). To bring out
 the intended intuition we introduce new jargon, building on that for double
 theories.
@@ -38,7 +38,7 @@ In addition, a model has the following operations:
 use std::hash::Hash;
 use std::sync::Arc;
 
-use crate::zero::{Mapping, IndexedHashColumn};
+use crate::zero::{Mapping, Column, IndexedHashColumn};
 use crate::one::{Category, FgCategory, Path};
 use crate::one::fin_category::FpCategory;
 use super::theory::{DblTheory, DiscreteDblTheory};
@@ -47,9 +47,28 @@ use super::theory::{DblTheory, DiscreteDblTheory};
 /** A model of a double theory.
 
 As always in logic, a model makes sense only relative to a theory, but a theory
-can have many different models. Thus, in Rust, a model generally needs access to
-its theory but should not own its theory. Implementors of this trait can use an
+can have many different models. So, in Rust, a model needs access to its theory
+but should not *own* its theory. Implementors of this trait might use an
 immutable shared reference to the theory.
+
+Objects and morphisms in a model are typed by object types and morphism types in
+the theory. There is a design choice about whether identifiers for objects
+([`Ob`](Self::Ob)) and morphisms ([`Mor`](Self::Mor)) are unique relative to
+their types or globally within the model. In the first approach (which we take
+in [ACSets.jl](https://github.com/AlgebraicJulia/ACSets.jl)), one can only make
+sense of objects and morphisms when their types are provided, so the early
+methods in the trait would look like this:
+
+```ignore
+fn has_ob(&self, x: &Self::Ob, t: &Self::ObType) -> bool;
+fn has_mor(&self, m: &Self::Mor, t: &Self::MorType) -> bool;
+fn dom(&self, m: &Self::Mor, t: &Self::MorType) -> Self::Ob;
+fn cod(&self, m: &Self::Mor, t: &Self::MorType) -> Self::Ob;
+```
+
+It will be more convenient for us to take the second approach since in our usage
+object and morphism identifiers will be globally unique in a very strong sense
+(something like UUIDs).
  */
 pub trait DblModel {
     /** Type of objects in the model.
@@ -119,19 +138,37 @@ pub trait DblModel {
 
     These usually coincide with all of the objects.
     */
-    fn basic_objects(&self) -> impl Iterator<Item = Self::Ob>;
+    fn objects(&self) -> impl Iterator<Item = Self::Ob>;
 
     /** Iterates over the basic morphisms, aka morphism generators.
 
     These rarely exhaust all of the morphisms.
     */
-    fn basic_morphisms(&self) -> impl Iterator<Item = Self::Mor>;
+    fn morphisms(&self) -> impl Iterator<Item = Self::Mor>;
+
+    /// Iterates over basic objects of the given type.
+    fn objects_with_type(
+        &self,
+        typ: &Self::ObType
+    ) -> impl Iterator<Item = Self::Ob>;
+
+    /// Iterates over basic morphisms of the given type.
+    fn morphisms_with_type(
+        &self,
+        typ: &Self::MorType
+    ) -> impl Iterator<Item = Self::Mor>;
 
     /// Iterates over basic morphisms with the given domain.
-    fn morphisms_with_dom(&self, x: &Self::Ob) -> impl Iterator<Item = Self::Mor>;
+    fn morphisms_with_dom(
+        &self,
+        x: &Self::Ob
+    ) -> impl Iterator<Item = Self::Mor>;
 
     /// Iterates over basic morphisms with the given codomain.
-    fn morphisms_with_cod(&self, x: &Self::Ob) -> impl Iterator<Item = Self::Mor>;
+    fn morphisms_with_cod(
+        &self,
+        x: &Self::Ob
+    ) -> impl Iterator<Item = Self::Mor>;
 }
 
 
@@ -141,7 +178,7 @@ Since discrete double theory has only identity operations, such a model is a
 finite presentation of a category sliced over the object and morphism types
 comprising the theory. A type theorist would call it a ["displayed
 category"](https://ncatlab.org/nlab/show/displayed+category).
- */
+*/
 #[derive(Clone)]
 pub struct DiscreteDblModel<V, E, Cat: FgCategory> {
     theory: Arc<DiscreteDblTheory<Cat>>,
@@ -181,11 +218,17 @@ where V: Eq+Clone+Hash, E: Eq+Clone+Hash, Cat: FgCategory,
         self.theory.compose_types(types)
     }
 
-    fn basic_objects(&self) -> impl Iterator<Item = Self::Ob> {
+    fn objects(&self) -> impl Iterator<Item = Self::Ob> {
         self.category.ob_generators()
     }
-    fn basic_morphisms(&self) -> impl Iterator<Item = Self::Mor> {
+    fn morphisms(&self) -> impl Iterator<Item = Self::Mor> {
         self.category.hom_generators()
+    }
+    fn objects_with_type(&self, typ: &Self::ObType) -> impl Iterator<Item = Self::Ob> {
+        self.ob_types.preimage(typ)
+    }
+    fn morphisms_with_type(&self, typ: &Self::MorType) -> impl Iterator<Item = Self::Mor> {
+        self.mor_types.preimage(typ).map(Path::single)
     }
     fn morphisms_with_dom(&self, x: &Self::Ob) -> impl Iterator<Item = Self::Mor> {
         self.category.generators_with_dom(x)
