@@ -5,8 +5,9 @@ import { MultiProvider } from "@solid-primitives/context";
 import { IndexedMap, indexMap } from "../util/indexing";
 import { useDoc } from "../util/automerge_solid";
 
+import { ObId } from "catlog-wasm";
 import { isoTheoryId, TheoryId, TheoryMeta } from "../theory";
-import { ModelJudgment, MorphismDecl, newMorphismDecl, newObjectDecl, ModelNotebook, ObjectDecl, ObjectId } from "./types";
+import { ModelJudgment, MorphismDecl, newMorphismDecl, newObjectDecl, ModelNotebook, ObjectDecl } from "./types";
 import { CellActions, CellConstructor, newFormalCell, newRichTextCell, NotebookEditor } from "../notebook";
 import { InlineInput } from "../components";
 import { ObjectIndexContext, TheoryContext } from "./model_context";
@@ -80,8 +81,8 @@ export function ModelNotebookEditor(props: {
         setTheory(id && props.theories.get(id));
     });
 
-    const objectIndex = createMemo<IndexedMap<ObjectId,string>>(() => {
-        const map = new Map<ObjectId,string>();
+    const objectIndex = createMemo<IndexedMap<ObId,string>>(() => {
+        const map = new Map<ObId,string>();
         for (const cell of model().notebook.cells) {
             if (cell.tag == "formal" && cell.content.tag == "object") {
                 map.set(cell.content.id, cell.content.name);
