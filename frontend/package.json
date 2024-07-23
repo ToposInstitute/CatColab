@@ -23,7 +23,6 @@
     "@solid-primitives/pointer": "^0.2.19",
     "@viz-js/viz": "^3.7.0",
     "catlog-wasm": "file:catlog-wasm/pkg",
-    "newtype-ts": "^0.3.5",
     "prosemirror-commands": "^1.5.2",
     "prosemirror-keymap": "^1.2.2",
     "prosemirror-model": "^1.21.3",

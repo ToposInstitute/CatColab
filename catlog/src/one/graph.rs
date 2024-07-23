@@ -1,4 +1,10 @@
-//! Graphs, finite and infinite.
+/*! Graphs, finite and infinite.
+
+Graphs are the fundamental combinatorial structure in category theory and a
+basic building block for higher dimensional categories. We thus aim to provide a
+flexible set of traits and structs for graphs as they are used in category
+theory.
+ */
 
 use std::hash::{Hash, BuildHasher, BuildHasherDefault, RandomState};
 
@@ -80,7 +86,8 @@ pub trait FinGraph: Graph {
 Such a graph is defined in the styles of "C-sets" by two [finite sets](FinSet)
 and two [columns](Column). Note that this trait does *not* extend [`Graph`]. To
 derive an implementation, implement the further trait
-[`ColumnarGraphImplGraph`].
+[`ColumnarGraphImplGraph`]. It also does not assume that the graph is mutable;
+for that, implement the trait [`ColumnarGraphMut`].
  */
 pub trait ColumnarGraph {
     /// Type of vertices in the columnar graph.
@@ -121,6 +128,38 @@ pub trait ColumnarGraph {
         let tgts = Function(self.tgt_map(), dom, cod).iter_invalid().map(
             |e| InvalidGraphData::Tgt(e.take()));
         srcs.chain(tgts)
+    }
+}
+
+/** Columnar graph with mutable columns.
+ */
+pub trait ColumnarGraphMut: ColumnarGraph {
+    /// Variant of [`src_map`](ColumnarGraph::src_map) that returns a mutable
+    /// reference.
+    fn src_map_mut(&mut self) -> &mut impl Column<Dom = Self::E, Cod = Self::V>;
+
+    /// Variant of [`tgt_map`](ColumnarGraph::tgt_map) that returns a mutable
+    /// reference.
+    fn tgt_map_mut(&mut self) -> &mut impl Column<Dom = Self::E, Cod = Self::V>;
+
+    /// Sets the source of an edge.
+    fn set_src(&mut self, e: Self::E, v: Self::V) -> Option<Self::V> {
+        self.src_map_mut().set(e, v)
+    }
+
+    /// Sets the target of an edge.
+    fn set_tgt(&mut self, e: Self::E, v: Self::V) -> Option<Self::V> {
+        self.tgt_map_mut().set(e, v)
+    }
+
+    /// Updates the source of an edge, setting or unsetting it.
+    fn update_src(&mut self, e: Self::E, v: Option<Self::V>) -> Option<Self::V> {
+        self.src_map_mut().update(e, v)
+    }
+
+    /// Updates the source of an edge, setting or unsetting it.
+    fn update_tgt(&mut self, e: Self::E, v: Option<Self::V>) -> Option<Self::V> {
+        self.tgt_map_mut().update(e, v)
     }
 }
 
@@ -212,10 +251,20 @@ impl ColumnarGraph for SkelGraph {
     fn src_map(&self) -> &impl Column<Dom = usize, Cod = usize> {
         &self.src_map
     }
-    fn tgt_map(&self) -> &impl Column<Dom = usize, Cod =usize > {
+    fn tgt_map(&self) -> &impl Column<Dom = usize, Cod = usize > {
         &self.tgt_map
     }
 }
+
+impl ColumnarGraphMut for SkelGraph {
+    fn src_map_mut(&mut self) -> &mut impl Column<Dom = usize, Cod = usize> {
+        &mut self.src_map
+    }
+    fn tgt_map_mut(&mut self) -> &mut impl Column<Dom = usize, Cod = usize> {
+        &mut self.tgt_map
+    }
+}
+
 impl ColumnarGraphImplGraph for SkelGraph {}
 
 impl SkelGraph {
@@ -235,10 +284,16 @@ impl SkelGraph {
 
     /// Adds a new edge to the graph and returns it.
     pub fn add_edge(&mut self, src: usize, tgt: usize) -> usize {
-        let e = self.ne;
-        self.ne += 1;
+        let e = self.make_edge();
         self.src_map.set(e, src);
         self.tgt_map.set(e, tgt);
+        e
+    }
+
+    /// Adds a new edge without initializing its source or target.
+    pub fn make_edge(&mut self) -> usize {
+        let e = self.ne;
+        self.ne += 1;
         e
     }
 
@@ -298,6 +353,17 @@ where V: Eq+Hash+Clone, E: Eq+Hash+Clone, S: BuildHasher {
     fn src_map(&self) -> &impl Column<Dom = E, Cod = V> { &self.src_map }
     fn tgt_map(&self) -> &impl Column<Dom = E, Cod = V> { &self.tgt_map }
 }
+
+impl<V,E,S> ColumnarGraphMut for HashGraph<V,E,S>
+where V: Eq+Hash+Clone, E: Eq+Hash+Clone, S: BuildHasher {
+    fn src_map_mut(&mut self) -> &mut impl Column<Dom = E, Cod = V> {
+        &mut self.src_map
+    }
+    fn tgt_map_mut(&mut self) -> &mut impl Column<Dom = E, Cod = V> {
+        &mut self.tgt_map
+    }
+}
+
 impl<V,E,S> ColumnarGraphImplGraph for HashGraph<V,E,S>
 where V: Eq+Hash+Clone, E: Eq+Hash+Clone, S: BuildHasher {}
 
@@ -320,6 +386,11 @@ where V: Eq+Hash+Clone, E: Eq+Hash+Clone, S: BuildHasher {
     pub fn add_edge(&mut self, e: E, src: V, tgt: V) -> bool {
         self.src_map.set(e.clone(), src);
         self.tgt_map.set(e.clone(), tgt);
+        self.make_edge(e)
+    }
+
+    /// Adds an edge without initializing its source or target.
+    pub fn make_edge(&mut self, e: E) -> bool {
         self.edge_set.insert(e)
     }
 }
@@ -458,7 +529,7 @@ pub struct ColumnarGraphMapping<ColV,ColE> {
 impl<ColV,ColE> ColumnarGraphMapping<ColV,ColE> {
     /// Constructs a new graph mapping from existing columns.
     pub fn new(vertex_map: ColV, edge_map: ColE) -> Self {
-        Self { vertex_map: vertex_map, edge_map: edge_map }
+        Self { vertex_map, edge_map }
     }
 }
 
@@ -499,7 +570,9 @@ mod tests {
         g.add_vertices(['y', 'z'].into_iter());
         assert!(g.add_edge("f", 'x', 'y'));
         assert!(g.add_edge("g", 'y', 'z'));
-        assert!(g.add_edge("fg", 'x', 'z'));
+        assert!(g.make_edge("fg"));
+        g.set_src(&"fg", 'x');
+        g.set_tgt(&"fg", 'z');
         assert_eq!(g.src(&"fg"), 'x');
         assert_eq!(g.tgt(&"fg"), 'z');
     }

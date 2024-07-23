@@ -1,7 +1,7 @@
 import type * as Viz from "@viz-js/viz";
 
 import { TheoryMeta, TypeMeta } from "../theory";
-import { isoObjectId, isoMorphismId, ModelNotebook } from "./types";
+import { ModelNotebook } from "./types";
 
 import styles from "../theory/styles.module.css";
 
@@ -31,11 +31,11 @@ export function modelToGraphviz(
 
         if (judgment.tag === "object") {
             const { id, name } = judgment;
-            const meta = theory.getObTypeMeta(judgment.type);
+            const meta = theory.getObTypeMeta(judgment.obType);
             nodes.push({
-                name: isoObjectId.unwrap(id),
+                name: id,
                 attributes: {
-                    id: isoObjectId.unwrap(id),
+                    id,
                     label: name,
                     class: cssClass(meta),
                     fontname: fontname(meta),
@@ -44,12 +44,12 @@ export function modelToGraphviz(
         } else if (judgment.tag === "morphism") {
             const { id, name, dom, cod } = judgment;
             if (!dom || !cod) { continue; }
-            const meta = theory.getMorTypeMeta(judgment.type);
+            const meta = theory.getMorTypeMeta(judgment.morType);
             edges.push({
-                head: isoObjectId.unwrap(cod),
-                tail: isoObjectId.unwrap(dom),
+                head: cod,
+                tail: dom,
                 attributes: {
-                    id: isoMorphismId.unwrap(id),
+                    id,
                     label: name,
                     class: cssClass(meta),
                     fontname: fontname(meta),

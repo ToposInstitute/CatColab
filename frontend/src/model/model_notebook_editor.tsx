@@ -5,8 +5,9 @@ import { MultiProvider } from "@solid-primitives/context";
 import { IndexedMap, indexMap } from "../util/indexing";
 import { useDoc } from "../util/automerge_solid";
 
-import { isoTheoryId, TheoryId, TheoryMeta } from "../theory";
-import { ModelJudgment, MorphismDecl, newMorphismDecl, newObjectDecl, ModelNotebook, ObjectDecl, ObjectId } from "./types";
+import { ObId } from "catlog-wasm";
+import { TheoryId, TheoryMeta } from "../theory";
+import { ModelJudgment, MorphismDecl, newMorphismDecl, newObjectDecl, ModelNotebook, ObjectDecl } from "./types";
 import { CellActions, CellConstructor, newFormalCell, newRichTextCell, NotebookEditor } from "../notebook";
 import { InlineInput } from "../components";
 import { ObjectIndexContext, TheoryContext } from "./model_context";
@@ -77,11 +78,11 @@ export function ModelNotebookEditor(props: {
 
     createEffect(() => {
         const id = model().theory;
-        setTheory(id && props.theories.get(id));
+        setTheory(id !== undefined ? props.theories.get(id) : undefined);
     });
 
-    const objectIndex = createMemo<IndexedMap<ObjectId,string>>(() => {
-        const map = new Map<ObjectId,string>();
+    const objectIndex = createMemo<IndexedMap<ObId,string>>(() => {
+        const map = new Map<ObId,string>();
         for (const cell of model().notebook.cells) {
             if (cell.tag == "formal" && cell.content.tag == "object") {
                 map.set(cell.content.id, cell.content.name);
@@ -104,11 +105,11 @@ export function ModelNotebookEditor(props: {
                 <select required
                     disabled={model().notebook.cells.some(
                         cell => cell.tag === "formal")}
-                    value={(id => id ? isoTheoryId.unwrap(id) : "")(model().theory)}
+                    value={model().theory ?? ""}
                     onInput={(evt) => {
                         let id = evt.target.value;
                         changeModel((model) => {
-                            model.theory = id ? isoTheoryId.wrap(id) : undefined;
+                            model.theory = id ? id : undefined;
                         });
                     }}
                 >
@@ -117,7 +118,7 @@ export function ModelNotebookEditor(props: {
                     </option>
                     <For each={Array.from(props.theories.values())}>
                     {(theory) =>
-                        <option value={isoTheoryId.unwrap(theory.id)}>
+                        <option value={theory.id}>
                             {theory.name}
                         </option>}
                     </For>

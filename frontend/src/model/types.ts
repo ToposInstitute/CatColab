@@ -1,7 +1,6 @@
-import { Newtype, iso } from "newtype-ts";
 import { uuidv7 } from "uuidv7";
 
-import { MorType, ObType } from "catlog-wasm";
+import { MorDecl, MorType, ObDecl, ObType } from "catlog-wasm";
 import { TheoryId } from "../theory";
 import { Notebook } from "../notebook";
 
@@ -30,62 +29,34 @@ export type ModelDecl = ObjectDecl | MorphismDecl;
 
 /** Declaration of an object in a model.
  */
-export type ObjectDecl = {
+export type ObjectDecl = ObDecl & {
     tag: "object";
-
-    // Globally unique identifier of declaration.
-    id: ObjectId;
 
     // Human-readable name of object.
     name: string;
-
-    // Identifier of object type in double theory.
-    type: ObType;
 };
 
 export const newObjectDecl = (type: ObType): ObjectDecl => ({
     tag: "object",
-    id: isoObjectId.wrap(uuidv7()),
+    id: uuidv7(),
     name: "",
-    type: type,
+    obType: type,
 });
-
-export interface ObjectId
-extends Newtype<{ readonly ObjectId: unique symbol }, string> {}
-
-export const isoObjectId = iso<ObjectId>();
 
 /** Declaration of a morphim in a model.
  */
-export type MorphismDecl = {
+export type MorphismDecl = MorDecl & {
     tag: "morphism";
 
-    // Globally unique identifier of declaration.
-    id: MorphismId;
-
-    // Human-readable name of object.
+    // Human-readable name of morphism.
     name: string;
-
-    // Identifier of morphism type in double theory.
-    type: MorType;
-
-    // Domain of morphism.
-    dom: ObjectId | null;
-
-    // Codmain of morphism.
-    cod: ObjectId | null;
 };
 
 export const newMorphismDecl = (type: MorType): MorphismDecl => ({
     tag: "morphism",
-    id: isoMorphismId.wrap(uuidv7()),
+    id: uuidv7(),
     name: "",
-    type: type,
+    morType: type,
     dom: null,
     cod: null,
 });
-
-export interface MorphismId
-extends Newtype<{ readonly MorphismId: unique symbol }, string> {}
-
-export const isoMorphismId = iso<MorphismId>();

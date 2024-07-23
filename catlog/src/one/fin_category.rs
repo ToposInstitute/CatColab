@@ -161,7 +161,6 @@ equations. A morphism in the presented category is an equivalence class of paths
 in the graph, so strictly speaking we work with representatives rather than
 morphism themselves.
 
-TODO: Add hom generator with optional (co)domain.
 TODO: Validate generators and path equations.
  */
 #[derive(Clone,Derivative)]
@@ -187,6 +186,21 @@ where V: Eq+Clone+Hash, E: Eq+Clone+Hash {
     /// Adds a morphism generator, returning whether it is new.
     pub fn add_hom_generator(&mut self, e: E, dom: V, cod: V) -> bool {
         self.generators.add_edge(e, dom, cod)
+    }
+
+    /// Adds a morphism generator without initializing its (co)domain.
+    pub fn make_hom_generator(&mut self, e: E) -> bool {
+        self.generators.make_edge(e)
+    }
+
+    /// Updates the domain of a morphism generator, setting or unsetting it.
+    pub fn update_dom(&mut self, e: E, v: Option<V>) -> Option<V> {
+        self.generators.update_src(e, v)
+    }
+
+    /// Updates the codomain of a morphism generator, setting or unsetting it.
+    pub fn update_cod(&mut self, e: E, v: Option<V>) -> Option<V> {
+        self.generators.update_tgt(e, v)
     }
 
     /// Iterates over path equations in the presentation.
@@ -236,13 +250,13 @@ where V: Eq+Clone+Hash, E: Eq+Clone+Hash {
         self.generators.vertices()
     }
     fn hom_generators(&self) -> impl Iterator<Item = Self::Hom> {
-        self.generators.edges().map(|e| Path::single(e))
+        self.generators.edges().map(Path::single)
     }
     fn generators_with_dom(&self, x: &V) -> impl Iterator<Item = Self::Hom> {
-        self.generators.out_edges(x).map(|e| Path::single(e))
+        self.generators.out_edges(x).map(Path::single)
     }
     fn generators_with_cod(&self, x: &V) -> impl Iterator<Item = Self::Hom> {
-        self.generators.in_edges(x).map(|e| Path::single(e))
+        self.generators.in_edges(x).map(Path::single)
     }
 }
 

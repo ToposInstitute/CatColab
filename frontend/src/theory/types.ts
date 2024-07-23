@@ -1,4 +1,3 @@
-import { Newtype, iso } from "newtype-ts";
 import { KbdKey } from "@solid-primitives/keyboard";
 
 import { DiscreteDblTheory, ObType, MorType } from "catlog-wasm";
@@ -38,10 +37,9 @@ export class TheoryMeta {
         this.types = [];
         props.types?.forEach(this.bindType, this);
 
-        const {name, description} = props;
+        const {id, name, description} = props;
         Object.assign(this, {
-            id: isoTheoryId.wrap(props.id),
-            name, description,
+            id, name, description,
             onlyFree: props.onlyFree ?? false,
         });
     }
@@ -67,10 +65,7 @@ export class TheoryMeta {
     }
 }
 
-export interface TheoryId
-extends Newtype<{ readonly TheoryId: unique symbol }, string> {}
-
-export const isoTheoryId = iso<TheoryId>();
+export type TheoryId = string;
 
 
 /** A type in a double theory with frontend metadata.

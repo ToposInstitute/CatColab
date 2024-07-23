@@ -4,7 +4,7 @@ import { MorphismDecl } from "./types";
 import { CellActions } from "../notebook";
 import { InlineInput } from "../components";
 import { ObjectIndexContext, TheoryContext } from "./model_context";
-import { ObjectIdInput} from "./object_cell_editor";
+import { ObjectIdInput } from "./object_cell_editor";
 
 
 import "./morphism_cell_editor.css";
@@ -30,7 +30,7 @@ export function MorphismCellEditor(props: {
     const theory = useContext(TheoryContext);
     const objectIndex = useContext(ObjectIndexContext);
 
-    const typeMeta = () => theory?.()?.getMorTypeMeta(props.morphism.type);
+    const typeMeta = () => theory?.()?.getMorTypeMeta(props.morphism.morType);
     const nameClasses = () =>
         ["morphism-decl-name", ...typeMeta()?.textClasses ?? []];
     const arrowClasses = () => {
@@ -44,7 +44,7 @@ export function MorphismCellEditor(props: {
             setObjectId={(id) => {
                 props.modifyMorphism((mor) => (mor.dom = id));
             }}
-            objectType={theory?.()?.theory.src(props.morphism.type)}
+            objectType={theory?.()?.theory.src(props.morphism.morType)}
             objectIndex={objectIndex && objectIndex()}
             deleteForward={() => nameRef.focus()}
             exitBackward={() => nameRef.focus()}
@@ -77,7 +77,7 @@ export function MorphismCellEditor(props: {
             setObjectId={(id) => {
                 props.modifyMorphism((mor) => (mor.cod = id));
             }}
-            objectType={theory?.()?.theory.tgt(props.morphism.type)}
+            objectType={theory?.()?.theory.tgt(props.morphism.morType)}
             objectIndex={objectIndex && objectIndex()}
             deleteBackward={() => nameRef.focus()}
             exitBackward={() => domRef.focus()}

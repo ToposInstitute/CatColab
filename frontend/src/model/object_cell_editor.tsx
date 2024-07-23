@@ -1,8 +1,8 @@
 import { createEffect, createSignal, splitProps, useContext } from "solid-js";
 
-import { ObType } from "catlog-wasm";
+import { ObId, ObType } from "catlog-wasm";
 import { IndexedMap } from "../util/indexing";
-import { ObjectDecl, ObjectId } from "./types";
+import { ObjectDecl } from "./types";
 import { CellActions } from "../notebook";
 import { InlineInput, InlineInputOptions } from "../components";
 import { TheoryMeta } from "../theory";
@@ -28,7 +28,7 @@ export function ObjectCellEditor(props: {
 
     const theory = useContext(TheoryContext);
     const cssClasses = (): string[] =>
-        ["object-decl", ...extraClasses(theory?.(), props.object.type)];
+        ["object-decl", ...extraClasses(theory?.(), props.object.obType)];
 
     return <div class={cssClasses().join(" ")}>
         <InlineInput ref={nameRef} placeholder="Unnamed"
@@ -48,10 +48,10 @@ export function ObjectCellEditor(props: {
 }
 
 export function ObjectIdInput(allProps: {
-    objectId: ObjectId | null;
-    setObjectId: (id: ObjectId | null) => void;
+    objectId: ObId | null;
+    setObjectId: (id: ObId | null) => void;
     objectType?: ObType;
-    objectIndex?: IndexedMap<ObjectId,string>;
+    objectIndex?: IndexedMap<ObId,string>;
 } & InlineInputOptions) {
     const [props, inputProps] = splitProps(allProps, [
         "objectId", "setObjectId", "objectIndex", "objectType",
