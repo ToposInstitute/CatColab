@@ -1,4 +1,3 @@
-import { Newtype, iso } from "newtype-ts";
 import { uuidv7 } from "uuidv7";
 
 
@@ -20,7 +19,7 @@ export type RichTextCell = {
 
 export const newRichTextCell = (): RichTextCell => ({
     tag: "rich-text",
-    id: isoCellId.wrap(uuidv7()),
+    id: uuidv7(),
     content: "",
 });
 
@@ -32,11 +31,8 @@ export type FormalCell<T> = {
 
 export const newFormalCell = <T>(content: T): FormalCell<T> => ({
     tag: "formal",
-    id: isoCellId.wrap(uuidv7()),
+    id: uuidv7(),
     content: content,
 });
 
-export interface CellId
-extends Newtype<{ readonly CellId: unique symbol }, string> {}
-
-const isoCellId = iso<CellId>();
+export type CellId = string;

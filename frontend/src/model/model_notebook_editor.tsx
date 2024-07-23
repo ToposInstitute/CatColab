@@ -6,7 +6,7 @@ import { IndexedMap, indexMap } from "../util/indexing";
 import { useDoc } from "../util/automerge_solid";
 
 import { ObId } from "catlog-wasm";
-import { isoTheoryId, TheoryId, TheoryMeta } from "../theory";
+import { TheoryId, TheoryMeta } from "../theory";
 import { ModelJudgment, MorphismDecl, newMorphismDecl, newObjectDecl, ModelNotebook, ObjectDecl } from "./types";
 import { CellActions, CellConstructor, newFormalCell, newRichTextCell, NotebookEditor } from "../notebook";
 import { InlineInput } from "../components";
@@ -78,7 +78,7 @@ export function ModelNotebookEditor(props: {
 
     createEffect(() => {
         const id = model().theory;
-        setTheory(id && props.theories.get(id));
+        setTheory(id !== undefined ? props.theories.get(id) : undefined);
     });
 
     const objectIndex = createMemo<IndexedMap<ObId,string>>(() => {
@@ -105,11 +105,11 @@ export function ModelNotebookEditor(props: {
                 <select required
                     disabled={model().notebook.cells.some(
                         cell => cell.tag === "formal")}
-                    value={(id => id ? isoTheoryId.unwrap(id) : "")(model().theory)}
+                    value={model().theory ?? ""}
                     onInput={(evt) => {
                         let id = evt.target.value;
                         changeModel((model) => {
-                            model.theory = id ? isoTheoryId.wrap(id) : undefined;
+                            model.theory = id ? id : undefined;
                         });
                     }}
                 >
@@ -118,7 +118,7 @@ export function ModelNotebookEditor(props: {
                     </option>
                     <For each={Array.from(props.theories.values())}>
                     {(theory) =>
-                        <option value={isoTheoryId.unwrap(theory.id)}>
+                        <option value={theory.id}>
                             {theory.name}
                         </option>}
                     </For>
