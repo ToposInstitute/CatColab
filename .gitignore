@@ -78,3 +78,4 @@ web_modules/
 
 # Local Netlify folder
 .netlify
+/frontend/docs/

@@ -32,6 +32,7 @@
     "uuidv7": "^1.0.1"
   },
   "devDependencies": {
+    "typedoc": "^0.26.5",
     "typescript": "^5.2.2",
     "vite": "^5.3.1",
     "vite-plugin-solid": "^2.10.2",
