@@ -3,13 +3,12 @@
 use uuid::Uuid;
 
 use serde::{Deserialize, Serialize};
-use wasm_bindgen::prelude::*;
 use tsify_next::{declare, Tsify};
+use wasm_bindgen::prelude::*;
 
-use catlog::one::fin_category::UstrFinCategory;
-use catlog::dbl::model::{self as dbl_model};
 use super::theory::*;
-
+use catlog::dbl::model::{self as dbl_model};
+use catlog::one::fin_category::UstrFinCategory;
 
 /// Identifier of object in model of double theory.
 #[declare]
@@ -27,7 +26,7 @@ pub struct ObDecl {
     pub id: ObId,
 
     /// Object type in double theory.
-    #[serde(rename="obType")]
+    #[serde(rename = "obType")]
     pub ob_type: ObType,
 }
 
@@ -39,7 +38,7 @@ pub struct MorDecl {
     pub id: MorId,
 
     /// Morphism type in double theory.
-    #[serde(rename="morType")]
+    #[serde(rename = "morType")]
     pub mor_type: MorType,
 
     /// Domain of morphism, if defined.
@@ -48,7 +47,6 @@ pub struct MorDecl {
     /// Codomain of morphism, if defined.
     pub cod: Option<ObId>,
 }
-
 
 type UuidDiscreteDblModel = dbl_model::DiscreteDblModel<Uuid, Uuid, UstrFinCategory>;
 
@@ -61,7 +59,7 @@ impl DiscreteDblModel {
     /// Creates an empty model of the given theory.
     #[wasm_bindgen(constructor)]
     pub fn new(theory: &DiscreteDblTheory) -> Self {
-        Self { 0: UuidDiscreteDblModel::new(theory.theory.clone()) }
+        Self(UuidDiscreteDblModel::new(theory.theory.clone()))
     }
 
     /// Adds an object to the model.
@@ -79,28 +77,27 @@ impl DiscreteDblModel {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use catlog::one::fin_category::FinHom;
-    use catlog::dbl::model::DblModel;
-    use crate::theories::*;
     use super::*;
+    use crate::theories::*;
+    use catlog::dbl::model::DblModel;
+    use catlog::one::fin_category::FinHom;
 
     #[test]
     fn model_schema() {
         let mut model = DiscreteDblModel::new(&th_schema());
         let x = Uuid::now_v7();
         let y = Uuid::now_v7();
-        model.add_ob(ObDecl{
+        model.add_ob(ObDecl {
             id: x,
             ob_type: ObType("entity".into()),
         });
-        model.add_ob(ObDecl{
+        model.add_ob(ObDecl {
             id: y,
             ob_type: ObType("attr_type".into()),
         });
-        model.add_mor(MorDecl{
+        model.add_mor(MorDecl {
             id: Uuid::now_v7(),
             mor_type: MorType(FinHom::Generator("attr".into())),
             dom: Some(x),

@@ -68,14 +68,14 @@ jobs:
 
       - name: Build
         run: |
-          cd catlog
+          cd frontend/catlog-wasm
           cargo doc
 
-      - name: Upload Frontend Docs
+      - name: Upload catlog docs
         uses: actions/upload-artifact@v4
         with:
           name: catlog_docs
-          path: catlog/target/doc
+          path: frontend/catlog-wasm/target/doc
 
   build_dev-docs:
     name: Build dev-docs

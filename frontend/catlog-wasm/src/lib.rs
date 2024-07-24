@@ -1,9 +1,8 @@
-pub mod theory;
-pub mod theories;
 pub mod model;
+pub mod theories;
+pub mod theory;
 
 use wasm_bindgen::prelude::*;
-
 
 /** Produce type defs for dependencies supporting `serde` but not `tsify`.
 
@@ -21,7 +20,6 @@ export type Ustr = string;
 
 export type NonEmpty<T> = Array<T>;
 "#;
-
 
 pub fn set_panic_hook() {
     // When the `console_error_panic_hook` feature is enabled, we can call the
