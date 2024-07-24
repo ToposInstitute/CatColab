@@ -1,9 +1,8 @@
-import { JSX } from "solid-js";
 import { focus } from "@solid-primitives/active-element";
+import type { JSX } from "solid-js";
 focus;
 
 import "./inline_input.css";
-
 
 /** Optional props for `InlineInput` component.
  */
@@ -23,12 +22,14 @@ export type InlineInputOptions = {
     exitRight?: () => void;
 
     onFocus?: () => void;
-}
+};
 
-export function InlineInput(props: {
-    text: string,
-    setText: (text: string) => void;
-} & InlineInputOptions) {
+export function InlineInput(
+    props: {
+        text: string;
+        setText: (text: string) => void;
+    } & InlineInputOptions,
+) {
     const onKeyDown: JSX.EventHandlerUnion<HTMLInputElement, KeyboardEvent> = (evt) => {
         const value = evt.currentTarget.value;
         if (props.deleteBackward && evt.key === "Backspace" && !value) {
@@ -39,11 +40,17 @@ export function InlineInput(props: {
             props.exitBackward();
         } else if (props.exitForward && evt.key === "Tab" && !evt.shiftKey) {
             props.exitForward();
-        } else if (props.exitLeft && evt.key === "ArrowLeft" &&
-                   evt.currentTarget.selectionEnd == 0) {
+        } else if (
+            props.exitLeft &&
+            evt.key === "ArrowLeft" &&
+            evt.currentTarget.selectionEnd === 0
+        ) {
             props.exitLeft();
-        } else if (props.exitRight && evt.key === "ArrowRight" &&
-                   evt.currentTarget.selectionStart == value.length) {
+        } else if (
+            props.exitRight &&
+            evt.key === "ArrowRight" &&
+            evt.currentTarget.selectionStart === value.length
+        ) {
             props.exitRight();
         } else if (props.exitUp && evt.key === "ArrowUp") {
             props.exitUp();
@@ -56,20 +63,23 @@ export function InlineInput(props: {
     };
 
     // Uses a hidden filler element: https://stackoverflow.com/a/41389961
-    return <div class="inline-input-container">
-        <span class="inline-input-filler">
-            {props.text || props.placeholder}
-        </span>
-        <input class="inline-input" type="text" size="1"
-            ref={props.ref}
-            classList={{ invalid: props.invalid }}
-            value={props.text}
-            placeholder={props.placeholder}
-            use:focus={(isFocused) => {
-                isFocused && props.onFocus && props.onFocus();
-            }}
-            onInput={(evt) => props.setText(evt.target.value)}
-            onKeyDown={onKeyDown}
-        ></input>
-    </div>;
+    return (
+        <div class="inline-input-container">
+            <span class="inline-input-filler">{props.text || props.placeholder}</span>
+            <input
+                class="inline-input"
+                type="text"
+                size="1"
+                ref={props.ref}
+                classList={{ invalid: props.invalid }}
+                value={props.text}
+                placeholder={props.placeholder}
+                use:focus={(isFocused) => {
+                    isFocused && props.onFocus && props.onFocus();
+                }}
+                onInput={(evt) => props.setText(evt.target.value)}
+                onKeyDown={onKeyDown}
+            />
+        </div>
+    );
 }

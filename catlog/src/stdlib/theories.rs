@@ -2,11 +2,10 @@
 
 use ustr::ustr;
 
-use crate::one::fin_category::*;
 use crate::dbl::theory::DiscreteDblTheory;
+use crate::one::fin_category::*;
 
 type UstrDiscreteDblThy = DiscreteDblTheory<UstrFinCategory>;
-
 
 /** The theory of categories, aka the trivial double theory.
 

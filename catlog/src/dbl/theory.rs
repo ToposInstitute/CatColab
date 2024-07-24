@@ -72,12 +72,12 @@ composed:
 */
 
 use derive_more::From;
-use ref_cast::RefCast;
 use nonempty::nonempty;
+use ref_cast::RefCast;
 
-use crate::one::path::Path;
-use crate::one::category::*;
 use super::pasting::DblPasting;
+use crate::one::category::*;
+use crate::one::path::Path;
 
 /** A double theory.
 
@@ -146,10 +146,7 @@ pub trait DblTheory {
     fn basic_mor_types(&self) -> impl Iterator<Item = Self::MorType>;
 
     /// Composes a sequence of morphism types.
-    fn compose_types(
-        &self,
-        path: Path<Self::ObType, Self::MorType>
-    ) -> Self::MorType;
+    fn compose_types(&self, path: Path<Self::ObType, Self::MorType>) -> Self::MorType;
 
     /** Hom type of an object type.
 
@@ -161,10 +158,7 @@ pub trait DblTheory {
     }
 
     /// Compose a sequence of operations on objects.
-    fn compose_ob_ops(
-        &self,
-        path: Path<Self::ObType, Self::ObOp>
-    ) -> Self::ObOp;
+    fn compose_ob_ops(&self, path: Path<Self::ObType, Self::ObOp>) -> Self::ObOp;
 
     /** Identity operation on an object type.
 
@@ -178,7 +172,7 @@ pub trait DblTheory {
     /// Compose a pasting diagram of operations on morphisms.
     fn compose_mor_ops(
         &self,
-        pasting: DblPasting<Self::ObType, Self::ObOp, Self::MorType, Self::MorOp>
+        pasting: DblPasting<Self::ObType, Self::ObOp, Self::MorType, Self::MorOp>,
     ) -> Self::MorOp;
 
     /** Hom operation for an object operation.
@@ -209,29 +203,52 @@ indeed **discrete**, which can equivalently be defined as
 - a discrete object in the 2-category of double categories
 - a double category whose underlying categories are both discrete categories
 */
-#[derive(From,RefCast)]
+#[derive(From, RefCast)]
 #[repr(transparent)]
 pub struct DiscreteDblTheory<Cat: FgCategory>(Cat);
 
 impl<C: FgCategory> DblTheory for DiscreteDblTheory<C>
-where C::Ob: Clone, C::Hom: Clone, {
+where
+    C::Ob: Clone,
+    C::Hom: Clone,
+{
     type ObType = C::Ob;
     type ObOp = C::Ob;
     type MorType = C::Hom;
     type MorOp = C::Hom;
 
-    fn has_ob_type(&self, x: &Self::ObType) -> bool { self.0.has_ob(x) }
-    fn has_mor_type(&self, m: &Self::MorType) -> bool {self.0.has_hom(m) }
+    fn has_ob_type(&self, x: &Self::ObType) -> bool {
+        self.0.has_ob(x)
+    }
+    fn has_mor_type(&self, m: &Self::MorType) -> bool {
+        self.0.has_hom(m)
+    }
 
-    fn src(&self, m: &Self::MorType) -> Self::ObType { self.0.dom(m) }
-    fn tgt(&self, m: &Self::MorType) -> Self::ObType { self.0.cod(m) }
-    fn dom(&self, x: &Self::ObOp) -> Self::ObType { x.clone() }
-    fn cod(&self, x: &Self::ObOp) -> Self::ObType { x.clone() }
+    fn src(&self, m: &Self::MorType) -> Self::ObType {
+        self.0.dom(m)
+    }
+    fn tgt(&self, m: &Self::MorType) -> Self::ObType {
+        self.0.cod(m)
+    }
+    fn dom(&self, x: &Self::ObOp) -> Self::ObType {
+        x.clone()
+    }
+    fn cod(&self, x: &Self::ObOp) -> Self::ObType {
+        x.clone()
+    }
 
-    fn op_src(&self, m: &Self::MorOp) -> Self::ObOp { self.0.dom(m) }
-    fn op_tgt(&self, m: &Self::MorOp) -> Self::ObOp { self.0.cod(m) }
-    fn op_dom(&self, m: &Self::MorOp) -> Self::MorType { m.clone() }
-    fn op_cod(&self, m: &Self::MorOp) -> Self::MorType { m.clone() }
+    fn op_src(&self, m: &Self::MorOp) -> Self::ObOp {
+        self.0.dom(m)
+    }
+    fn op_tgt(&self, m: &Self::MorOp) -> Self::ObOp {
+        self.0.cod(m)
+    }
+    fn op_dom(&self, m: &Self::MorOp) -> Self::MorType {
+        m.clone()
+    }
+    fn op_cod(&self, m: &Self::MorOp) -> Self::MorType {
+        m.clone()
+    }
 
     fn basic_ob_types(&self) -> impl Iterator<Item = Self::ObType> {
         self.0.ob_generators()
@@ -250,17 +267,12 @@ where C::Ob: Clone, C::Hom: Clone, {
         disc.compose(path)
     }
 
-    fn compose_mor_ops(
-        &self,
-        pasting: DblPasting<C::Ob, C::Ob, C::Hom, C::Hom>
-    ) -> C::Hom {
+    fn compose_mor_ops(&self, pasting: DblPasting<C::Ob, C::Ob, C::Hom, C::Hom>) -> C::Hom {
         match pasting {
             DblPasting::ObId(x) => self.0.id(x),
-            DblPasting::ArrId(fs) => {
-                self.0.id(self.compose_ob_ops(Path::Seq(fs)))
-            },
+            DblPasting::ArrId(fs) => self.0.id(self.compose_ob_ops(Path::Seq(fs))),
             DblPasting::ProId(ms) => self.compose_types(Path::Seq(ms)),
-            DblPasting::Diagram(_) => panic!("General pasting not implemented")
+            DblPasting::Diagram(_) => panic!("General pasting not implemented"),
         }
     }
 }
@@ -272,9 +284,9 @@ mod tests {
 
     #[test]
     fn discrete_dbl_theory() {
-        type Hom<V,E> = FinHom<V,E>;
+        type Hom<V, E> = FinHom<V, E>;
 
-        let mut sgn: FinCategory<char,char> = Default::default();
+        let mut sgn: FinCategory<char, char> = Default::default();
         sgn.add_ob_generator('*');
         sgn.add_hom_generator('n', '*', '*');
         sgn.set_composite('n', 'n', Hom::Id('*'));

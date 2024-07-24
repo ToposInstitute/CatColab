@@ -1,18 +1,17 @@
 import { createEffect, createSignal, splitProps, useContext } from "solid-js";
 
-import { ObId, ObType } from "catlog-wasm";
-import { IndexedMap } from "../util/indexing";
-import { ObjectDecl } from "./types";
-import { CellActions } from "../notebook";
-import { InlineInput, InlineInputOptions } from "../components";
-import { TheoryMeta } from "../theory";
+import type { ObId, ObType } from "catlog-wasm";
+import { InlineInput, type InlineInputOptions } from "../components";
+import type { CellActions } from "../notebook";
+import type { TheoryMeta } from "../theory";
+import type { IndexedMap } from "../util/indexing";
 import { TheoryContext } from "./model_context";
+import type { ObjectDecl } from "./types";
 
 import "./object_cell_editor.css";
 
-
 export function ObjectCellEditor(props: {
-    object: ObjectDecl,
+    object: ObjectDecl;
     modifyObject: (f: (decl: ObjectDecl) => void) => void;
     isActive: boolean;
     actions: CellActions;
@@ -27,34 +26,47 @@ export function ObjectCellEditor(props: {
     });
 
     const theory = useContext(TheoryContext);
-    const cssClasses = (): string[] =>
-        ["object-decl", ...extraClasses(theory?.(), props.object.obType)];
+    const cssClasses = (): string[] => [
+        "object-decl",
+        ...extraClasses(theory?.(), props.object.obType),
+    ];
 
-    return <div class={cssClasses().join(" ")}>
-        <InlineInput ref={nameRef} placeholder="Unnamed"
-            text={props.object.name}
-            setText={(text) => {
-                props.modifyObject((ob) => (ob.name = text));
-            }}
-            deleteBackward={props.actions.deleteBackward}
-            deleteForward={props.actions.deleteForward}
-            exitBackward={props.actions.activateAbove}
-            exitForward={props.actions.activateBelow}
-            exitUp={props.actions.activateAbove}
-            exitDown={props.actions.activateBelow}
-            onFocus={props.actions.hasFocused}
-        />
-    </div>;
+    return (
+        <div class={cssClasses().join(" ")}>
+            <InlineInput
+                ref={nameRef}
+                placeholder="Unnamed"
+                text={props.object.name}
+                setText={(text) => {
+                    props.modifyObject((ob) => {
+                        ob.name = text;
+                    });
+                }}
+                deleteBackward={props.actions.deleteBackward}
+                deleteForward={props.actions.deleteForward}
+                exitBackward={props.actions.activateAbove}
+                exitForward={props.actions.activateBelow}
+                exitUp={props.actions.activateAbove}
+                exitDown={props.actions.activateBelow}
+                onFocus={props.actions.hasFocused}
+            />
+        </div>
+    );
 }
 
-export function ObjectIdInput(allProps: {
-    objectId: ObId | null;
-    setObjectId: (id: ObId | null) => void;
-    objectType?: ObType;
-    objectIndex?: IndexedMap<ObId,string>;
-} & InlineInputOptions) {
+export function ObjectIdInput(
+    allProps: {
+        objectId: ObId | null;
+        setObjectId: (id: ObId | null) => void;
+        objectType?: ObType;
+        objectIndex?: IndexedMap<ObId, string>;
+    } & InlineInputOptions,
+) {
     const [props, inputProps] = splitProps(allProps, [
-        "objectId", "setObjectId", "objectIndex", "objectType",
+        "objectId",
+        "setObjectId",
+        "objectIndex",
+        "objectType",
     ]);
 
     const [text, setText] = createSignal("");
@@ -81,25 +93,26 @@ export function ObjectIdInput(allProps: {
     };
 
     const isValid = () => {
-        const objectName = props.objectId ?
-            props.objectIndex?.map.get(props.objectId) : "";
+        const objectName = props.objectId ? props.objectIndex?.map.get(props.objectId) : "";
         return text() === objectName;
     };
 
     const theory = useContext(TheoryContext);
     const cssClasses = () => extraClasses(theory?.(), props.objectType);
 
-    return <div class={cssClasses().join(" ")}>
-        <InlineInput text={text()} setText={handleNewText}
-            invalid={!isValid()} {...inputProps} />
-    </div>;
+    return (
+        <div class={cssClasses().join(" ")}>
+            <InlineInput
+                text={text()}
+                setText={handleNewText}
+                invalid={!isValid()}
+                {...inputProps}
+            />
+        </div>
+    );
 }
-
 
 function extraClasses(theory: TheoryMeta | undefined, typ?: ObType): string[] {
     const typeMeta = typ ? theory?.getObTypeMeta(typ) : undefined;
-    return [
-        ...typeMeta?.cssClasses ?? [],
-        ...typeMeta?.textClasses ?? [],
-    ];
+    return [...(typeMeta?.cssClasses ?? []), ...(typeMeta?.textClasses ?? [])];
 }

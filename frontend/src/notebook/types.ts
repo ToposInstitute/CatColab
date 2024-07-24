@@ -1,9 +1,8 @@
 import { uuidv7 } from "uuidv7";
 
-
 export type Notebook<T> = {
     cells: Cell<T>[];
-}
+};
 
 export type Cell<T> = RichTextCell | FormalCell<T>;
 

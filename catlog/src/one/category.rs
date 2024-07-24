@@ -4,9 +4,9 @@
 use derive_more::From;
 use ref_cast::RefCast;
 
-use crate::zero::{Set, FinSet};
-use super::graph::{Graph, FinGraph};
+use super::graph::{FinGraph, Graph};
 use super::path::Path;
+use crate::zero::{FinSet, Set};
 
 /** A category.
 
@@ -40,7 +40,7 @@ pub trait Category {
     fn cod(&self, f: &Self::Hom) -> Self::Ob;
 
     /// Composes a path of morphisms in the category.
-    fn compose(&self, path: Path<Self::Ob,Self::Hom>) -> Self::Hom;
+    fn compose(&self, path: Path<Self::Ob, Self::Hom>) -> Self::Hom;
 
     /// Composes a pair of morphisms with compatible (co)domains.
     fn compose2(&self, f: Self::Hom, g: Self::Hom) -> Self::Hom {
@@ -54,14 +54,16 @@ pub trait Category {
 }
 
 /// The set of objects of a category.
-#[derive(From,RefCast)]
+#[derive(From, RefCast)]
 #[repr(transparent)]
 pub struct ObSet<Cat: Category>(Cat);
 
 impl<Cat: Category> Set for ObSet<Cat> {
     type Elem = Cat::Ob;
 
-    fn contains(&self, x: &Cat::Ob) -> bool { self.0.has_ob(x) }
+    fn contains(&self, x: &Cat::Ob) -> bool {
+        self.0.has_ob(x)
+    }
 }
 
 /** The discrete category on a set.
@@ -69,26 +71,39 @@ impl<Cat: Category> Set for ObSet<Cat> {
 The objects of the category are the elements of the set, and the only morphisms
 are the identities, which can thus be identified with the objects.
  */
-#[derive(From,RefCast)]
+#[derive(From, RefCast)]
 #[repr(transparent)]
 pub struct DiscreteCategory<S: Set>(S);
 
-impl<S: Set> Category for DiscreteCategory<S> where S::Elem: Clone {
+impl<S: Set> Category for DiscreteCategory<S>
+where
+    S::Elem: Clone,
+{
     type Ob = S::Elem;
     type Hom = S::Elem;
 
-    fn has_ob(&self, x: &S::Elem) -> bool { self.0.contains(x) }
-    fn has_hom(&self, f: &S::Elem) -> bool { self.0.contains(f) }
-    fn dom(&self, x: &S::Elem) -> S::Elem { x.clone() }
-    fn cod(&self, x: &S::Elem) -> S::Elem { x.clone() }
+    fn has_ob(&self, x: &S::Elem) -> bool {
+        self.0.contains(x)
+    }
+    fn has_hom(&self, f: &S::Elem) -> bool {
+        self.0.contains(f)
+    }
+    fn dom(&self, x: &S::Elem) -> S::Elem {
+        x.clone()
+    }
+    fn cod(&self, x: &S::Elem) -> S::Elem {
+        x.clone()
+    }
 
-    fn compose(&self, path: Path<S::Elem,S::Elem>) -> S::Elem {
+    fn compose(&self, path: Path<S::Elem, S::Elem>) -> S::Elem {
         match path {
             Path::Id(x) => x,
             Path::Seq(xs) => {
                 let x = xs.head;
-                assert!(xs.tail.into_iter().all(|y| x == y),
-                        "Cannot compose identities on different objects");
+                assert!(
+                    xs.tail.into_iter().all(|y| x == y),
+                    "Cannot compose identities on different objects"
+                );
                 x
             }
         }
@@ -100,7 +115,7 @@ impl<S: Set> Category for DiscreteCategory<S> where S::Elem: Clone {
 The vertices and edges of the graph are the objects and morphisms of the
 category, respectively.
  */
-#[derive(From,RefCast)]
+#[derive(From, RefCast)]
 #[repr(transparent)]
 pub struct UnderlyingGraph<Cat: Category>(Cat);
 
@@ -108,10 +123,18 @@ impl<Cat: Category> Graph for UnderlyingGraph<Cat> {
     type V = Cat::Ob;
     type E = Cat::Hom;
 
-    fn has_vertex(&self, x: &Self::V) -> bool { self.0.has_ob(x) }
-    fn has_edge(&self, f: &Self::E) -> bool { self.0.has_hom(f) }
-    fn src(&self, f: &Self::E) -> Self::V { self.0.dom(f) }
-    fn tgt(&self, f: &Self::E) -> Self::V { self.0.cod(f) }
+    fn has_vertex(&self, x: &Self::V) -> bool {
+        self.0.has_ob(x)
+    }
+    fn has_edge(&self, f: &Self::E) -> bool {
+        self.0.has_hom(f)
+    }
+    fn src(&self, f: &Self::E) -> Self::V {
+        self.0.dom(f)
+    }
+    fn tgt(&self, f: &Self::E) -> Self::V {
+        self.0.cod(f)
+    }
 }
 
 /** The free category on a graph.
@@ -119,22 +142,31 @@ impl<Cat: Category> Graph for UnderlyingGraph<Cat> {
 The objects and morphisms of the free category are the vertices and *paths* in
 the graph, respectively. Paths compose by concatenation.
  */
-#[derive(From,RefCast)]
+#[derive(From, RefCast)]
 #[repr(transparent)]
 pub struct FreeCategory<G: Graph>(G);
 
-impl<G: Graph> Category for FreeCategory<G> where G::V: Clone {
+impl<G: Graph> Category for FreeCategory<G>
+where
+    G::V: Clone,
+{
     type Ob = G::V;
-    type Hom = Path<G::V,G::E>;
+    type Hom = Path<G::V, G::E>;
 
-    fn has_ob(&self, x: &G::V) -> bool { self.0.has_vertex(x) }
-    fn has_hom(&self, path: &Path<G::V,G::E>) -> bool {
+    fn has_ob(&self, x: &G::V) -> bool {
+        self.0.has_vertex(x)
+    }
+    fn has_hom(&self, path: &Path<G::V, G::E>) -> bool {
         path.contained_in(&self.0)
     }
-    fn dom(&self, path: &Path<G::V,G::E>) -> G::V { path.src(&self.0) }
-    fn cod(&self, path: &Path<G::V,G::E>) -> G::V { path.tgt(&self.0) }
+    fn dom(&self, path: &Path<G::V, G::E>) -> G::V {
+        path.src(&self.0)
+    }
+    fn cod(&self, path: &Path<G::V, G::E>) -> G::V {
+        path.tgt(&self.0)
+    }
 
-    fn compose(&self, path: Path<G::V,Path<G::V,G::E>>) -> Path<G::V,G::E> {
+    fn compose(&self, path: Path<G::V, Path<G::V, G::E>>) -> Path<G::V, G::E> {
         path.flatten()
     }
 }
@@ -165,26 +197,38 @@ pub trait FgCategory: Category {
     fn generators_with_cod(&self, x: &Self::Ob) -> impl Iterator<Item = Self::Hom>;
 }
 
-impl<S: FinSet> FgCategory for DiscreteCategory<S> where S::Elem: Clone {
-    fn has_ob_generator(&self, x: &S::Elem) -> bool { self.0.contains(x) }
-    fn has_hom_generator(&self, _: &S::Elem) -> bool { false }
-    fn ob_generators(&self) -> impl Iterator<Item=S::Elem> { self.0.iter() }
-    fn hom_generators(&self) -> impl Iterator<Item=S::Elem> {
+impl<S: FinSet> FgCategory for DiscreteCategory<S>
+where
+    S::Elem: Clone,
+{
+    fn has_ob_generator(&self, x: &S::Elem) -> bool {
+        self.0.contains(x)
+    }
+    fn has_hom_generator(&self, _: &S::Elem) -> bool {
+        false
+    }
+    fn ob_generators(&self) -> impl Iterator<Item = S::Elem> {
+        self.0.iter()
+    }
+    fn hom_generators(&self) -> impl Iterator<Item = S::Elem> {
         std::iter::empty::<S::Elem>()
     }
-    fn generators_with_dom(&self, _: &S::Elem) -> impl Iterator<Item=S::Elem> {
+    fn generators_with_dom(&self, _: &S::Elem) -> impl Iterator<Item = S::Elem> {
         std::iter::empty::<S::Elem>()
     }
-    fn generators_with_cod(&self, _: &S::Elem) -> impl Iterator<Item=S::Elem> {
+    fn generators_with_cod(&self, _: &S::Elem) -> impl Iterator<Item = S::Elem> {
         std::iter::empty::<S::Elem>()
     }
 }
 
-impl<G: FinGraph> FgCategory for FreeCategory<G> where G::V: Eq+Clone {
+impl<G: FinGraph> FgCategory for FreeCategory<G>
+where
+    G::V: Eq + Clone,
+{
     fn has_ob_generator(&self, x: &G::V) -> bool {
         self.0.has_vertex(x)
     }
-    fn has_hom_generator(&self, path: &Path<G::V,G::E>) -> bool {
+    fn has_hom_generator(&self, path: &Path<G::V, G::E>) -> bool {
         match path {
             Path::Id(_) => false,
             Path::Seq(es) => es.len() == 1 && self.0.has_edge(es.first()),
@@ -208,7 +252,7 @@ impl<G: FinGraph> FgCategory for FreeCategory<G> where G::V: Eq+Clone {
 
 The vertices and edges of the graph are the object and morphism generators.
 */
-#[derive(From,RefCast)]
+#[derive(From, RefCast)]
 #[repr(transparent)]
 pub struct GeneratingGraph<Cat: FgCategory>(Cat);
 
@@ -216,10 +260,18 @@ impl<Cat: FgCategory> Graph for GeneratingGraph<Cat> {
     type V = Cat::Ob;
     type E = Cat::Hom;
 
-    fn has_vertex(&self, x: &Self::V) -> bool { self.0.has_ob_generator(x) }
-    fn has_edge(&self, f: &Self::E) -> bool { self.0.has_hom_generator(f) }
-    fn src(&self, f: &Self::E) -> Self::V { self.0.dom(f) }
-    fn tgt(&self, f: &Self::E) -> Self::V { self.0.cod(f) }
+    fn has_vertex(&self, x: &Self::V) -> bool {
+        self.0.has_ob_generator(x)
+    }
+    fn has_edge(&self, f: &Self::E) -> bool {
+        self.0.has_hom_generator(f)
+    }
+    fn src(&self, f: &Self::E) -> Self::V {
+        self.0.dom(f)
+    }
+    fn tgt(&self, f: &Self::E) -> Self::V {
+        self.0.cod(f)
+    }
 }
 
 impl<Cat: FgCategory> FinGraph for GeneratingGraph<Cat> {
@@ -241,9 +293,9 @@ impl<Cat: FgCategory> FinGraph for GeneratingGraph<Cat> {
 mod tests {
     use nonempty::nonempty;
 
-    use crate::zero::SkelFinSet;
-    use super::*;
     use super::super::graph::SkelGraph;
+    use super::*;
+    use crate::zero::SkelFinSet;
 
     #[test]
     fn discrete_category() {
@@ -272,18 +324,21 @@ mod tests {
         assert_eq!(cat.dom(&id), 1);
         assert_eq!(cat.cod(&id), 1);
 
-        let path = Path::Seq(nonempty![0,1]);
+        let path = Path::Seq(nonempty![0, 1]);
         assert!(cat.has_hom(&path));
-        assert!(!cat.has_hom(&Path::Seq(nonempty![0,2])));
+        assert!(!cat.has_hom(&Path::Seq(nonempty![0, 2])));
         assert!(!cat.has_hom_generator(&path));
         assert_eq!(cat.dom(&path), 0);
         assert_eq!(cat.cod(&path), 2);
 
         let cat = FreeCategory::from(SkelGraph::path(5));
         let path = Path::Seq(nonempty![
-            Path::Id(0), Path::Seq(nonempty![0,1]),
-            Path::Id(2), Path::Seq(nonempty![2,3]), Path::Id(4),
+            Path::Id(0),
+            Path::Seq(nonempty![0, 1]),
+            Path::Id(2),
+            Path::Seq(nonempty![2, 3]),
+            Path::Id(4),
         ]);
-        assert_eq!(cat.compose(path), Path::Seq(nonempty![0,1,2,3]));
+        assert_eq!(cat.compose(path), Path::Seq(nonempty![0, 1, 2, 3]));
     }
 }

@@ -1,8 +1,7 @@
-import { KbdKey } from "@solid-primitives/keyboard";
+import type { KbdKey } from "@solid-primitives/keyboard";
 
-import { DiscreteDblTheory, ObType, MorType } from "catlog-wasm";
-import { ArrowStyle } from "../visualization/types";
-
+import type { DiscreteDblTheory, MorType, ObType } from "catlog-wasm";
+import type { ArrowStyle } from "../visualization/types";
 
 /** A double theory with frontend metadata.
  */
@@ -37,9 +36,11 @@ export class TheoryMeta {
         this.types = [];
         props.types?.forEach(this.bindType, this);
 
-        const {id, name, description} = props;
+        const { id, name, description } = props;
         Object.assign(this, {
-            id, name, description,
+            id,
+            name,
+            description,
             onlyFree: props.onlyFree ?? false,
         });
     }
@@ -66,7 +67,6 @@ export class TheoryMeta {
 }
 
 export type TheoryId = string;
-
 
 /** A type in a double theory with frontend metadata.
  */

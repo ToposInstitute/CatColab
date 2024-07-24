@@ -1,5 +1,4 @@
-import { ArrowStyle } from "./types";
-
+import type { ArrowStyle } from "./types";
 
 /** Graph with a layout.
 
@@ -40,10 +39,10 @@ export interface Edge<Id> extends GraphElement {
     id?: Id;
 
     /** Source node of edge. */
-    source: Id,
+    source: Id;
 
     /**  Target node of edge. */
-    target: Id,
+    target: Id;
 
     /** Edge label, if any. */
     label?: string;
@@ -72,6 +71,6 @@ export interface GraphElement {
 /** Point in a 2D cartesian coordinate system.
  */
 export type Point = {
-    x: number,
-    y: number,
+    x: number;
+    y: number;
 };
