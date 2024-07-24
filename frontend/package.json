@@ -7,7 +7,9 @@
     "scripts": {
         "dev": "vite",
         "build": "wasm-pack build catlog-wasm && tsc -b && vite build",
-        "preview": "vite preview"
+        "preview": "vite preview",
+        "format": "biome format",
+        "lint": "biome lint"
     },
     "dependencies": {
         "@automerge/automerge": "^2.2.4",
