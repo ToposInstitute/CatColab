@@ -15,11 +15,7 @@ export async function loadViz() {
 
 /** Render a Graphviz graph using the Graphviz `json0` format.
  */
-export function vizRenderJSON0(
-    viz: Viz.Viz,
-    graph: Viz.Graph,
-    options?: Viz.RenderOptions,
-) {
+export function vizRenderJSON0(viz: Viz.Viz, graph: Viz.Graph, options?: Viz.RenderOptions) {
     // We use `renderString` rather than the convenience method `renderJSON`
     // since we need only `json0` output, not the full `json` output.
     const result = viz.renderString(graph, {
@@ -34,9 +30,7 @@ export function vizRenderJSON0(
 The predecessor to this code is Evan's defunct package
 [`wiring-diagram-canvas`](https://github.com/epatters/wiring-diagram-canvas/blob/master/src/graphviz.ts).
  */
-export function parseGraphvizJSON(
-    graphviz: GraphvizJSON.Graph,
-): GraphLayout.Graph<string> {
+export function parseGraphvizJSON(graphviz: GraphvizJSON.Graph): GraphLayout.Graph<string> {
     // Parse bounding box and padding and use them to transform coordinates.
     //
     // Graphviz uses the standard Cartesian coordinate system (origin in bottom
@@ -59,9 +53,7 @@ export function parseGraphvizJSON(
     const nodes: GraphLayout.Node<string>[] = [];
     const offset = graphviz._subgraph_cnt;
     const nodeByNumber = (i: number) => nodes[i - offset];
-    for (const node of (graphviz.objects?.slice(
-        offset,
-    ) as GraphvizJSON.Node[]) ?? []) {
+    for (const node of (graphviz.objects?.slice(offset) as GraphvizJSON.Node[]) ?? []) {
         const id = node.id || node.name;
         nodes.push({
             id,
@@ -112,10 +104,7 @@ export function parseGraphvizJSON(
    - https://graphviz.org/docs/attr-types/splineType/
    - https://cprimozic.net/notes/posts/graphviz-spline-drawing/
  */
-function parseSpline(
-    spline: string,
-    transformPoint?: (pt: Point) => Point,
-): GraphvizSpline {
+function parseSpline(spline: string, transformPoint?: (pt: Point) => Point): GraphvizSpline {
     const points: Point[] = [];
     let startPoint: Point | undefined;
     let endPoint: Point | undefined;

@@ -5,10 +5,7 @@ import { Show, createMemo, createSignal } from "solid-js";
 import type { TheoryId, TheoryMeta } from "../theory";
 import { GraphvizSVG } from "../visualization";
 import { modelToGraphviz } from "./model_graph";
-import {
-    ModelNotebookEditor,
-    type ModelNotebookRef,
-} from "./model_notebook_editor";
+import { ModelNotebookEditor, type ModelNotebookRef } from "./model_notebook_editor";
 import type { ModelNotebook } from "./types";
 
 /** Editor for a model of a discrete double theory.
@@ -31,12 +28,7 @@ export function ModelEditor(props: {
 
     return (
         <Resizable class="growable-container">
-            <Resizable.Panel
-                class="content-panel"
-                collapsible
-                initialSize={1}
-                minSize={0.25}
-            >
+            <Resizable.Panel class="content-panel" collapsible initialSize={1} minSize={0.25}>
                 <ModelNotebookEditor
                     ref={setEditorRef}
                     handle={props.handle}
@@ -45,12 +37,7 @@ export function ModelEditor(props: {
                 />
             </Resizable.Panel>
             <Resizable.Handle />
-            <Resizable.Panel
-                class="content-panel"
-                collapsible
-                initialSize={0}
-                minSize={0.25}
-            >
+            <Resizable.Panel class="content-panel" collapsible initialSize={0} minSize={0.25}>
                 <Show when={editorRef()?.theory()}>
                     <GraphvizSVG
                         graph={modelGraph()}

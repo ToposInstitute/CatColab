@@ -21,8 +21,7 @@ export function MorphismCellEditor(props: {
     createEffect(() => {
         if (props.isActive) {
             nameRef.focus();
-            nameRef.selectionStart = nameRef.selectionEnd =
-                nameRef.value.length;
+            nameRef.selectionStart = nameRef.selectionEnd = nameRef.value.length;
         }
     });
 
@@ -30,10 +29,7 @@ export function MorphismCellEditor(props: {
     const objectIndex = useContext(ObjectIndexContext);
 
     const typeMeta = () => theory?.()?.getMorTypeMeta(props.morphism.morType);
-    const nameClasses = () => [
-        "morphism-decl-name",
-        ...(typeMeta()?.textClasses ?? []),
-    ];
+    const nameClasses = () => ["morphism-decl-name", ...(typeMeta()?.textClasses ?? [])];
     const arrowClasses = () => {
         const style = typeMeta()?.arrowStyle ?? "to";
         return ["morphism-decl-arrow", style];

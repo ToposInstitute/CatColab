@@ -1,8 +1,4 @@
-import {
-    type DocHandle,
-    Repo,
-    isValidAutomergeUrl,
-} from "@automerge/automerge-repo";
+import { type DocHandle, Repo, isValidAutomergeUrl } from "@automerge/automerge-repo";
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
 import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb";
 
@@ -19,9 +15,7 @@ function App() {
 
     const repo = new Repo({
         storage: new IndexedDBStorageAdapter("catcolab-demo"),
-        network: [
-            new BrowserWebSocketClientAdapter("wss://sync.automerge.org"),
-        ],
+        network: [new BrowserWebSocketClientAdapter("wss://sync.automerge.org")],
     });
 
     const handleId = document.location.hash.substring(1);

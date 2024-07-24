@@ -1,7 +1,4 @@
-import type {
-    DocHandle,
-    DocHandleChangePayload,
-} from "@automerge/automerge-repo";
+import type { DocHandle, DocHandleChangePayload } from "@automerge/automerge-repo";
 import { type Accessor, createEffect, createSignal, onCleanup } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 
@@ -46,9 +43,7 @@ export function useDoc<T extends object>(
 
 /** Create boolean signal for whether an Automerge document handle is ready.
  */
-export function useDocHandleReady(
-    getHandle: () => DocHandle<unknown>,
-): Accessor<boolean> {
+export function useDocHandleReady(getHandle: () => DocHandle<unknown>): Accessor<boolean> {
     const [isReady, setIsReady] = createSignal<boolean>(false);
 
     createEffect(() => {

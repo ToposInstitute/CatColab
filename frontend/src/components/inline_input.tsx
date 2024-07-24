@@ -30,9 +30,7 @@ export function InlineInput(
         setText: (text: string) => void;
     } & InlineInputOptions,
 ) {
-    const onKeyDown: JSX.EventHandlerUnion<HTMLInputElement, KeyboardEvent> = (
-        evt,
-    ) => {
+    const onKeyDown: JSX.EventHandlerUnion<HTMLInputElement, KeyboardEvent> = (evt) => {
         const value = evt.currentTarget.value;
         if (props.deleteBackward && evt.key === "Backspace" && !value) {
             props.deleteBackward();
@@ -67,9 +65,7 @@ export function InlineInput(
     // Uses a hidden filler element: https://stackoverflow.com/a/41389961
     return (
         <div class="inline-input-container">
-            <span class="inline-input-filler">
-                {props.text || props.placeholder}
-            </span>
+            <span class="inline-input-filler">{props.text || props.placeholder}</span>
             <input
                 class="inline-input"
                 type="text"

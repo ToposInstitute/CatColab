@@ -21,8 +21,7 @@ export function ObjectCellEditor(props: {
     createEffect(() => {
         if (props.isActive) {
             nameRef.focus();
-            nameRef.selectionStart = nameRef.selectionEnd =
-                nameRef.value.length;
+            nameRef.selectionStart = nameRef.selectionEnd = nameRef.value.length;
         }
     });
 
@@ -94,9 +93,7 @@ export function ObjectIdInput(
     };
 
     const isValid = () => {
-        const objectName = props.objectId
-            ? props.objectIndex?.map.get(props.objectId)
-            : "";
+        const objectName = props.objectId ? props.objectIndex?.map.get(props.objectId) : "";
         return text() === objectName;
     };
 

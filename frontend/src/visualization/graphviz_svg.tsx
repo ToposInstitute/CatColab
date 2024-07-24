@@ -19,18 +19,12 @@ export function GraphvizSVG(props: {
 
     const render = () => {
         const viz = vizResource();
-        return (
-            viz &&
-            props.graph &&
-            vizRenderJSON0(viz, props.graph, props.options)
-        );
+        return viz && props.graph && vizRenderJSON0(viz, props.graph, props.options);
     };
 
     return (
         <div class="graphviz-container">
-            <Show when={vizResource.loading && props.fallback}>
-                {props.fallback}
-            </Show>
+            <Show when={vizResource.loading && props.fallback}>{props.fallback}</Show>
             <Show when={vizResource()}>
                 <GraphvizOutputSVG graph={render() as GraphvizJSON.Graph} />
             </Show>

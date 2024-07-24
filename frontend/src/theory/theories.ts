@@ -11,10 +11,7 @@ import svgStyles from "./svg_styles.module.css";
 TODO: Should the underlying theories be lazy loaded?
  */
 export const stdTheories = () =>
-    uniqueIndexArray(
-        [thSimpleOlog(), thSimpleSchema(), thRegNet()],
-        (th) => th.id,
-    );
+    uniqueIndexArray([thSimpleOlog(), thSimpleSchema(), thRegNet()], (th) => th.id);
 
 const thSimpleOlog = () =>
     new TheoryMeta({

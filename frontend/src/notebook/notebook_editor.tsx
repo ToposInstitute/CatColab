@@ -3,15 +3,7 @@ import Popover from "@corvu/popover";
 import type { FloatingOptions } from "@corvu/popover";
 import { type KbdKey, createShortcut } from "@solid-primitives/keyboard";
 import type { EditorView } from "prosemirror-view";
-import {
-    type Component,
-    For,
-    Match,
-    Show,
-    Switch,
-    createEffect,
-    createSignal,
-} from "solid-js";
+import { type Component, For, Match, Show, Switch, createEffect, createSignal } from "solid-js";
 
 import { type Command, CommandMenu, RichTextEditor } from "../components";
 import type { Cell, CellId, Notebook } from "./types";
@@ -165,9 +157,7 @@ export function NotebookEditor<T>(props: {
                         floatingOptions={cellMenuFloatingOptions}
                     >
                         <Popover.Anchor>
-                            <span class="placeholder">
-                                Press Shift-Enter to create a cell
-                            </span>
+                            <span class="placeholder">Press Shift-Enter to create a cell</span>
                         </Popover.Anchor>
                         <Popover.Portal>
                             <Popover.Content class="notebook-cell-menu">
@@ -217,18 +207,12 @@ export function NotebookEditor<T>(props: {
                                 >
                                     <Popover.Anchor>
                                         <Switch>
-                                            <Match
-                                                when={cell.tag === "rich-text"}
-                                            >
+                                            <Match when={cell.tag === "rich-text"}>
                                                 <div class="cell markup-cell">
                                                     <RichTextCellEditor
                                                         cell_id={cell.id}
                                                         handle={props.handle}
-                                                        path={[
-                                                            ...props.path,
-                                                            "cells",
-                                                            i(),
-                                                        ]}
+                                                        path={[...props.path, "cells", i()]}
                                                         isActive={isActive()}
                                                         actions={cellActions}
                                                     />
@@ -237,21 +221,11 @@ export function NotebookEditor<T>(props: {
                                             <Match when={cell.tag === "formal"}>
                                                 <div class="cell formal-cell">
                                                     <props.formalCellEditor
-                                                        content={
-                                                            cell.content as T
-                                                        }
+                                                        content={cell.content as T}
                                                         changeContent={(f) => {
-                                                            props.changeNotebook(
-                                                                (nb) => {
-                                                                    f(
-                                                                        nb
-                                                                            .cells[
-                                                                            i()
-                                                                        ]
-                                                                            .content as T,
-                                                                    );
-                                                                },
-                                                            );
+                                                            props.changeNotebook((nb) => {
+                                                                f(nb.cells[i()].content as T);
+                                                            });
                                                         }}
                                                         isActive={isActive()}
                                                         actions={cellActions}
@@ -264,9 +238,7 @@ export function NotebookEditor<T>(props: {
                                         <Popover.Content class="notebook-cell-menu">
                                             <CommandMenu
                                                 commands={commands()}
-                                                onExecuted={() =>
-                                                    setIsCellMenuOpen(false)
-                                                }
+                                                onExecuted={() => setIsCellMenuOpen(false)}
                                             />
                                         </Popover.Content>
                                     </Popover.Portal>

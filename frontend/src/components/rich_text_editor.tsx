@@ -1,19 +1,11 @@
 import type { Prop } from "@automerge/automerge";
-import type {
-    DocHandle,
-    DocHandleChangePayload,
-} from "@automerge/automerge-repo";
+import type { DocHandle, DocHandleChangePayload } from "@automerge/automerge-repo";
 
 import { AutoMirror } from "@automerge/prosemirror";
 import { baseKeymap, toggleMark } from "prosemirror-commands";
 import { keymap } from "prosemirror-keymap";
 import type { Schema } from "prosemirror-model";
-import {
-    type Command,
-    EditorState,
-    Plugin,
-    type Transaction,
-} from "prosemirror-state";
+import { type Command, EditorState, Plugin, type Transaction } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
 
 import { createEffect, onCleanup } from "solid-js";
@@ -67,10 +59,7 @@ export const RichTextEditor = (
         const autoMirror = new AutoMirror(props.path);
         const schema = autoMirror.schema;
 
-        const plugins: Plugin[] = [
-            keymap(richTextEditorKeymap(schema, props)),
-            keymap(baseKeymap),
-        ];
+        const plugins: Plugin[] = [keymap(richTextEditorKeymap(schema, props)), keymap(baseKeymap)];
         if (props.placeholder) {
             plugins.push(placeholder(props.placeholder));
         }
@@ -83,11 +72,7 @@ export const RichTextEditor = (
                 doc: autoMirror.initialize(props.handle),
             }),
             dispatchTransaction: (tx: Transaction) => {
-                const newState = autoMirror.intercept(
-                    props.handle,
-                    tx,
-                    view.state,
-                );
+                const newState = autoMirror.intercept(props.handle, tx, view.state);
                 view.updateState(newState);
             },
             handleDOMEvents: {
@@ -105,10 +90,7 @@ export const RichTextEditor = (
             // XXX: Quit if a higher-level node is being deleted. Otherwise,
             // `reconcilePatch` can error, a bug in `automerge-prosemirror`.
             for (const patch of payload.patches) {
-                if (
-                    patch.action === "del" &&
-                    patch.path.length < props.path.length
-                ) {
+                if (patch.action === "del" && patch.path.length < props.path.length) {
                     return;
                 }
             }
@@ -154,9 +136,7 @@ function richTextEditorKeymap(schema: Schema, props: RichTextEditorOptions) {
 
 /** ProseMirror command invoked if the document is empty.
  */
-function doIfEmpty(
-    callback: (dispatch: (tr: Transaction) => void) => void,
-): Command {
+function doIfEmpty(callback: (dispatch: (tr: Transaction) => void) => void): Command {
     return (state, dispatch?) => {
         if (hasContent(state)) {
             return false;
@@ -168,9 +148,7 @@ function doIfEmpty(
 
 /** ProseMirror command invoked if the cursor is at the top of the document.
  */
-function doIfAtTop(
-    callback: (dispatch: (tr: Transaction) => void) => void,
-): Command {
+function doIfAtTop(callback: (dispatch: (tr: Transaction) => void) => void): Command {
     return (state, dispatch?, view?) => {
         const sel = state.selection;
         if (
@@ -190,9 +168,7 @@ function doIfAtTop(
 
 /** ProseMirror command invoked if the cursor is at the bottom of the document.
  */
-function doIfAtBottom(
-    callback: (dispatch: (tr: Transaction) => void) => void,
-): Command {
+function doIfAtBottom(callback: (dispatch: (tr: Transaction) => void) => void): Command {
     return (state, dispatch?, view?) => {
         const sel = state.selection;
         if (
@@ -237,7 +213,5 @@ function placeholder(text: string) {
 
 const hasContent = (state: EditorState) => {
     const doc = state.doc;
-    return (
-        doc.textContent || (doc.firstChild && doc.firstChild.content.size > 0)
-    );
+    return doc.textContent || (doc.firstChild && doc.firstChild.content.size > 0);
 };

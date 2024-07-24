@@ -56,16 +56,12 @@ export function CommandMenu(props: {
                             <div class="command-name">{command.name}</div>
                             <Show when={command.shortcut}>
                                 <div class="command-shortcut">
-                                    <KbdShortcut
-                                        shortcut={command.shortcut as KbdKey[]}
-                                    />
+                                    <KbdShortcut shortcut={command.shortcut as KbdKey[]} />
                                 </div>
                             </Show>
                         </div>
                         <Show when={command.description}>
-                            <div class="command-description">
-                                {command.description}
-                            </div>
+                            <div class="command-description">{command.description}</div>
                         </Show>
                     </li>
                 )}

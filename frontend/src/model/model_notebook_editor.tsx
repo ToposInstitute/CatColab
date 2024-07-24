@@ -1,14 +1,6 @@
 import type { DocHandle } from "@automerge/automerge-repo";
 import { MultiProvider } from "@solid-primitives/context";
-import {
-    For,
-    Match,
-    Switch,
-    createEffect,
-    createMemo,
-    createSignal,
-    onMount,
-} from "solid-js";
+import { For, Match, Switch, createEffect, createMemo, createSignal, onMount } from "solid-js";
 
 import { useDoc } from "../util/automerge_solid";
 import { type IndexedMap, indexMap } from "../util/indexing";
@@ -50,11 +42,7 @@ export function ModelCellEditor(props: {
             <Match when={props.content.tag === "object"}>
                 <ObjectCellEditor
                     object={props.content as ObjectDecl}
-                    modifyObject={(f) =>
-                        props.changeContent((content) =>
-                            f(content as ObjectDecl),
-                        )
-                    }
+                    modifyObject={(f) => props.changeContent((content) => f(content as ObjectDecl))}
                     isActive={props.isActive}
                     actions={props.actions}
                 />
@@ -63,9 +51,7 @@ export function ModelCellEditor(props: {
                 <MorphismCellEditor
                     morphism={props.content as MorphismDecl}
                     modifyMorphism={(f) =>
-                        props.changeContent((content) =>
-                            f(content as MorphismDecl),
-                        )
+                        props.changeContent((content) => f(content as MorphismDecl))
                     }
                     isActive={props.isActive}
                     actions={props.actions}
@@ -133,9 +119,7 @@ export function ModelNotebookEditor(props: {
                 <div class="model-theory">
                     <select
                         required
-                        disabled={model().notebook.cells.some(
-                            (cell) => cell.tag === "formal",
-                        )}
+                        disabled={model().notebook.cells.some((cell) => cell.tag === "formal")}
                         value={model().theory ?? ""}
                         onInput={(evt) => {
                             const id = evt.target.value;
@@ -148,9 +132,7 @@ export function ModelNotebookEditor(props: {
                             Choose a logic
                         </option>
                         <For each={Array.from(props.theories.values())}>
-                            {(theory) => (
-                                <option value={theory.id}>{theory.name}</option>
-                            )}
+                            {(theory) => <option value={theory.id}>{theory.name}</option>}
                         </For>
                     </select>
                 </div>

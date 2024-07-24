@@ -19,15 +19,9 @@ export function GraphSVG<Id>(props: {
     };
 
     return (
-        <svg
-            class="graph"
-            width={props.graph.width}
-            height={props.graph.height}
-        >
+        <svg class="graph" width={props.graph.width} height={props.graph.height}>
             <defs>
-                <For each={Array.from(markerSet())}>
-                    {(marker) => markerComponents[marker]}
-                </For>
+                <For each={Array.from(markerSet())}>{(marker) => markerComponents[marker]}</For>
             </defs>
             <For each={props.graph.nodes}>
                 {(node) => {
@@ -59,8 +53,7 @@ export function GraphSVG<Id>(props: {
             </For>
             <For each={props.graph.edges}>
                 {(edge) => {
-                    const { label, sourcePos, targetPos, labelPos, path } =
-                        edge;
+                    const { label, sourcePos, targetPos, labelPos, path } = edge;
                     const marker = styleMarkers[edge.style ?? "to"];
                     const markerURL = `url(#arrowhead-${marker})`;
                     return (
