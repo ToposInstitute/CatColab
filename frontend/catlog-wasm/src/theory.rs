@@ -1,19 +1,18 @@
 //! Wasm bindings for double theories.
 
-use std::hash::Hash;
 use std::collections::HashMap;
+use std::hash::Hash;
 use std::sync::Arc;
 use ustr::Ustr;
 
 use serde::{Deserialize, Serialize};
-use wasm_bindgen::prelude::*;
 use tsify_next::Tsify;
+use wasm_bindgen::prelude::*;
 
-use catlog::one::fin_category::*;
 use catlog::dbl::theory::{self as dbl_theory, DblTheory};
+use catlog::one::fin_category::*;
 
 type UstrDiscreteDblThy = dbl_theory::DiscreteDblTheory<UstrFinCategory>;
-
 
 // XXX: It seems like tsify should find the following on its own.
 #[wasm_bindgen]
@@ -21,7 +20,6 @@ extern "C" {
     #[wasm_bindgen]
     fn tsFinHom() -> FinHom<Ustr, Ustr>;
 }
-
 
 /// Object type in discrete double theory.
 #[derive(Eq, Hash, PartialEq, Serialize, Deserialize, Tsify)]
@@ -50,7 +48,8 @@ pub struct DiscreteDblTheory {
 impl DiscreteDblTheory {
     pub(crate) fn new(theory: Arc<UstrDiscreteDblThy>) -> DiscreteDblTheory {
         DiscreteDblTheory {
-            theory: theory, ob_type_index: Default::default(),
+            theory,
+            ob_type_index: Default::default(),
             mor_type_index: Default::default(),
         }
     }

@@ -3,9 +3,8 @@
 use std::sync::Arc;
 use wasm_bindgen::prelude::*;
 
-use catlog::stdlib::theories;
 use super::theory::DiscreteDblTheory;
-
+use catlog::stdlib::theories;
 
 /// The theory of categories.
 #[wasm_bindgen(js_name = thCategory)]
