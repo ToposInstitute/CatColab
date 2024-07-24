@@ -181,14 +181,10 @@ impl<G: ColumnarGraphImplGraph> Graph for G {
         self.edge_set().contains(e)
     }
     fn src(&self, e: &Self::E) -> Self::V {
-        self.get_src(e)
-            .expect("Source of edge should be set")
-            .clone()
+        self.get_src(e).expect("Source of edge should be set").clone()
     }
     fn tgt(&self, e: &Self::E) -> Self::V {
-        self.get_tgt(e)
-            .expect("Target of edge should be set")
-            .clone()
+        self.get_tgt(e).expect("Target of edge should be set").clone()
     }
 }
 
@@ -490,10 +486,7 @@ where
     ) -> impl Iterator<Item = InvalidGraphMorphism<Map::DomV, Map::DomE>> + 'a {
         let GraphMorphism(mapping, dom, cod) = *self;
         let vertex_errors = dom.vertices().filter_map(|v| {
-            if mapping
-                .apply_vertex(&v)
-                .map_or(false, |w| cod.has_vertex(w))
-            {
+            if mapping.apply_vertex(&v).map_or(false, |w| cod.has_vertex(w)) {
                 None
             } else {
                 Some(InvalidGraphMorphism::Vertex(v))
@@ -504,16 +497,10 @@ where
             if let Some(f) = mapping.apply_edge(&e) {
                 if cod.has_edge(f) {
                     let mut errs = Vec::new();
-                    if !mapping
-                        .apply_vertex(&dom.src(&e))
-                        .map_or(true, |v| *v == cod.src(f))
-                    {
+                    if !mapping.apply_vertex(&dom.src(&e)).map_or(true, |v| *v == cod.src(f)) {
                         errs.push(InvalidGraphMorphism::Src(e.clone()))
                     }
-                    if !mapping
-                        .apply_vertex(&dom.tgt(&e))
-                        .map_or(true, |v| *v == cod.tgt(f))
-                    {
+                    if !mapping.apply_vertex(&dom.tgt(&e)).map_or(true, |v| *v == cod.tgt(f)) {
                         errs.push(InvalidGraphMorphism::Tgt(e.clone()))
                     }
                     return errs;

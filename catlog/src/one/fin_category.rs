@@ -114,10 +114,7 @@ where
     fn compose(&self, path: Path<V, FinHom<V, E>>) -> FinHom<V, E> {
         match path {
             Path::Id(x) => self.id(x),
-            Path::Seq(fs) => fs
-                .tail
-                .into_iter()
-                .fold(fs.head, |f, g| self.compose2(f, g)),
+            Path::Seq(fs) => fs.tail.into_iter().fold(fs.head, |f, g| self.compose2(f, g)),
         }
     }
 
@@ -130,10 +127,7 @@ where
                     self.generators.tgt(&d) == self.generators.src(&e),
                     "(Co)domains should be equal"
                 );
-                self.compose_map
-                    .apply(&(d, e))
-                    .expect("Composition should be defined")
-                    .clone()
+                self.compose_map.apply(&(d, e)).expect("Composition should be defined").clone()
             }
         }
     }
@@ -321,10 +315,7 @@ mod tests {
         sch_sgraph.set_composite('i', 'i', Hom::Id('E'));
         sch_sgraph.set_composite('i', 's', Hom::Generator('t'));
         sch_sgraph.set_composite('i', 't', Hom::Generator('s'));
-        assert_eq!(
-            sch_sgraph.compose2(Hom::Generator('i'), Hom::Generator('i')),
-            Hom::Id('E')
-        );
+        assert_eq!(sch_sgraph.compose2(Hom::Generator('i'), Hom::Generator('i')), Hom::Id('E'));
         let path = Path::Seq(nonempty![
             Hom::Generator('i'),
             Hom::Id('E'),

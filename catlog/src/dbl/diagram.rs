@@ -267,20 +267,8 @@ mod tests {
         let fcmp = diag.add_proarrow("f!", x, w);
         let gcnj = diag.add_proarrow("g*", z, y);
         diag.add_proarrow("n", w, z);
-        diag.add_cell(
-            "f_res",
-            Path::single(fcmp),
-            Path::Id(w),
-            Path::single(f),
-            Path::Id(w),
-        );
-        diag.add_cell(
-            "g_res",
-            Path::single(gcnj),
-            Path::Id(z),
-            Path::Id(z),
-            Path::single(g),
-        );
+        diag.add_cell("f_res", Path::single(fcmp), Path::Id(w), Path::single(f), Path::Id(w));
+        diag.add_cell("g_res", Path::single(gcnj), Path::Id(z), Path::Id(z), Path::single(g));
         assert!(diag.validate().is_ok());
         assert!(DblComputadMorphism(&diag, &diag, &cptd).validate().is_ok());
     }

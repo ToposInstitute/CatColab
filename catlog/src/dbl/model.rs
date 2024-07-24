@@ -252,21 +252,13 @@ where
     }
 
     fn ob_type(&self, x: &Self::Ob) -> Self::ObType {
-        self.ob_types
-            .apply(x)
-            .expect("Object type should be set")
-            .clone()
+        self.ob_types.apply(x).expect("Object type should be set").clone()
     }
 
     fn mor_type(&self, m: &Self::Mor) -> Self::MorType {
         let types = m.clone().map(
             |x| self.ob_type(&x),
-            |n| {
-                self.mor_types
-                    .apply(&n)
-                    .expect("Morphism type should be set")
-                    .clone()
-            },
+            |n| self.mor_types.apply(&n).expect("Morphism type should be set").clone(),
         );
         self.theory.compose_types(types)
     }

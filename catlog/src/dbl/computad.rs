@@ -299,35 +299,20 @@ impl<Cptd: ColumnarDblComputad> DblComputad for Cptd {
     }
 
     fn dom(&self, e: &Self::E) -> Self::V {
-        self.dom_map()
-            .apply(e)
-            .expect("Domain of edge should be set")
-            .clone()
+        self.dom_map().apply(e).expect("Domain of edge should be set").clone()
     }
     fn cod(&self, e: &Self::E) -> Self::V {
-        self.cod_map()
-            .apply(e)
-            .expect("Codomain of edge should be set")
-            .clone()
+        self.cod_map().apply(e).expect("Codomain of edge should be set").clone()
     }
     fn src(&self, p: &Self::ProE) -> Self::V {
-        self.src_map()
-            .apply(p)
-            .expect("Source of proedge should be set")
-            .clone()
+        self.src_map().apply(p).expect("Source of proedge should be set").clone()
     }
     fn tgt(&self, p: &Self::ProE) -> Self::V {
-        self.tgt_map()
-            .apply(p)
-            .expect("Target of proedge should be set")
-            .clone()
+        self.tgt_map().apply(p).expect("Target of proedge should be set").clone()
     }
 
     fn square_dom(&self, α: &Self::Sq) -> Path<Self::V, Self::ProE> {
-        self.square_dom_map()
-            .apply(α)
-            .expect("Domain of square should be set")
-            .clone()
+        self.square_dom_map().apply(α).expect("Domain of square should be set").clone()
     }
     fn square_cod(&self, α: &Self::Sq) -> Path<Self::V, Self::ProE> {
         self.square_cod_map()
@@ -336,16 +321,10 @@ impl<Cptd: ColumnarDblComputad> DblComputad for Cptd {
             .clone()
     }
     fn square_src(&self, α: &Self::Sq) -> Path<Self::V, Self::E> {
-        self.square_src_map()
-            .apply(α)
-            .expect("Source of square should be set")
-            .clone()
+        self.square_src_map().apply(α).expect("Source of square should be set").clone()
     }
     fn square_tgt(&self, α: &Self::Sq) -> Path<Self::V, Self::E> {
-        self.square_tgt_map()
-            .apply(α)
-            .expect("Target of square should be set")
-            .clone()
+        self.square_tgt_map().apply(α).expect("Target of square should be set").clone()
     }
 }
 
@@ -661,10 +640,7 @@ pub trait DblComputadMapping {
         &self,
         path: Path<Self::DomV, Self::DomE>,
     ) -> Option<Path<Self::CodV, Self::CodE>> {
-        path.try_map(
-            |v| self.apply_vertex(&v).cloned(),
-            |e| self.apply_edge(&e).cloned(),
-        )
+        path.try_map(|v| self.apply_vertex(&v).cloned(), |e| self.apply_edge(&e).cloned())
     }
 
     /// Aplies the computad mapping to a path of proedges.
@@ -672,10 +648,7 @@ pub trait DblComputadMapping {
         &self,
         path: Path<Self::DomV, Self::DomProE>,
     ) -> Option<Path<Self::CodV, Self::CodProE>> {
-        path.try_map(
-            |v| self.apply_vertex(&v).cloned(),
-            |p| self.apply_proedge(&p).cloned(),
-        )
+        path.try_map(|v| self.apply_vertex(&v).cloned(), |p| self.apply_proedge(&p).cloned())
     }
 }
 
@@ -890,13 +863,7 @@ mod tests {
             Path::pair('t', 't'),
             Path::single('t'),
         );
-        sig_monad.add_square(
-            'η',
-            Path::Id('x'),
-            Path::Id('x'),
-            Path::Id('x'),
-            Path::single('t'),
-        );
+        sig_monad.add_square('η', Path::Id('x'), Path::Id('x'), Path::Id('x'), Path::single('t'));
         assert_eq!(sig_monad.square_dom(&'μ'), Path::Id('x'));
         assert_eq!(sig_monad.square_cod(&'μ'), Path::Id('x'));
         assert_eq!(sig_monad.square_src(&'μ').len(), 2);

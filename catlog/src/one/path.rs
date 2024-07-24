@@ -254,14 +254,8 @@ mod tests {
     #[test]
     fn map_path() {
         assert_eq!(SkelPath::Id(1).map(|v| v + 1, identity), Path::Id(2));
-        assert_eq!(
-            SkelPath::pair(0, 1).map(identity, |e| e + 1),
-            Path::pair(1, 2)
-        );
-        assert_eq!(
-            SkelPath::Id(1).try_map(|v| Some(v + 1), |e| Some(e)),
-            Some(Path::Id(2))
-        );
+        assert_eq!(SkelPath::pair(0, 1).map(identity, |e| e + 1), Path::pair(1, 2));
+        assert_eq!(SkelPath::Id(1).try_map(|v| Some(v + 1), |e| Some(e)), Some(Path::Id(2)));
         assert_eq!(
             SkelPath::pair(0, 1).try_map(|v| Some(v), |e| Some(e + 1)),
             Some(Path::pair(1, 2))

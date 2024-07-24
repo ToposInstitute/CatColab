@@ -91,9 +91,7 @@ where
 {
     /// Domain of pasting diagram, a path of arrows.
     pub fn dom(&self) -> Path<Ob, Arr> {
-        self.dom
-            .clone()
-            .map(|x| self.diagram.object(&x), |f| self.diagram.arrow(&f))
+        self.dom.clone().map(|x| self.diagram.object(&x), |f| self.diagram.arrow(&f))
     }
     // TODO
 }

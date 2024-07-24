@@ -100,18 +100,13 @@ mod tests {
 
     #[test]
     fn cons_and_uncons() {
-        assert_eq!(
-            Path::<usize, RcK>::root().cons(1).uncons().map(|p| p.0),
-            Some(1)
-        )
+        assert_eq!(Path::<usize, RcK>::root().cons(1).uncons().map(|p| p.0), Some(1))
     }
 
     #[test]
     fn concat() {
         assert_eq!(
-            Path::<usize, RcK>::root()
-                .cons(1)
-                .concat(&Path::root().cons(2)),
+            Path::<usize, RcK>::root().cons(1).concat(&Path::root().cons(2)),
             Path::root().cons(2).cons(1)
         )
     }

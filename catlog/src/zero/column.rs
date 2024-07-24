@@ -642,13 +642,7 @@ mod tests {
         let col = VecColumn::new(vec![1, 2, 4]);
         let validate = |m, n| Function(&col, &SkelFinSet::from(m), &SkelFinSet::from(n)).validate();
         assert!(validate(3, 5).is_ok());
-        assert_eq!(
-            validate(4, 5).unwrap_err(),
-            NonEmpty::new(InvalidFunction::Dom::<usize>(3))
-        );
-        assert_eq!(
-            validate(3, 4).unwrap_err(),
-            NonEmpty::new(InvalidFunction::Cod::<usize>(2))
-        );
+        assert_eq!(validate(4, 5).unwrap_err(), NonEmpty::new(InvalidFunction::Dom::<usize>(3)));
+        assert_eq!(validate(3, 4).unwrap_err(), NonEmpty::new(InvalidFunction::Cod::<usize>(2)));
     }
 }
