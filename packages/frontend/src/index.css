@@ -5,6 +5,14 @@
   --light-color: black;
   --dark-color: rgba(255, 255, 255, 0.87);
 
+  --gray50:  rgb(249 250 251);
+  --gray100: rgb(243 244 246);
+  --gray200: rgb(229 231 235);
+
+  --notebook-width: 40em;
+  --std-padding: 0.25rem;
+  --std-border-radius: 0.25rem;
+
   /*color-scheme: light dark;*/
   color-scheme: light;
   color: light-dark(var(--light-color), var(--dark-color));

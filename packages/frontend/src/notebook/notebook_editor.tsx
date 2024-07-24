@@ -1,12 +1,20 @@
 import type { DocHandle, Prop } from "@automerge/automerge-repo";
-import Popover from "@corvu/popover";
-import type { FloatingOptions } from "@corvu/popover";
 import { type KbdKey, createShortcut } from "@solid-primitives/keyboard";
 import type { EditorView } from "prosemirror-view";
-import { type Component, For, Match, Show, Switch, createEffect, createSignal } from "solid-js";
+import {
+    type Component,
+    For,
+    Match,
+    Show,
+    Switch,
+    createEffect,
+    createMemo,
+    createSignal,
+    onMount,
+} from "solid-js";
 
-import { type Command, CommandMenu, RichTextEditor } from "../components";
-import type { Cell, CellId, Notebook } from "./types";
+import { type Completion, InlineInput, RichTextEditor } from "../components";
+import { type Cell, type CellId, type FormalCell, type Notebook, newStemCell } from "./types";
 
 import "./notebook_editor.css";
 
@@ -54,7 +62,7 @@ export type CellConstructor<T> = {
 /** Editor for rich text cells, a simple wrapper around `RichTextEditor`.
  */
 export function RichTextCellEditor(props: {
-    cell_id: CellId;
+    cellId: CellId;
     handle: DocHandle<unknown>;
     path: Prop[];
     isActive: boolean;
@@ -72,7 +80,7 @@ export function RichTextCellEditor(props: {
     return (
         <RichTextEditor
             ref={(view) => setEditorView(view)}
-            id={props.cell_id}
+            id={props.cellId}
             handle={props.handle}
             path={[...props.path, "content"]}
             placeholder="…"
@@ -81,6 +89,41 @@ export function RichTextCellEditor(props: {
             exitUp={props.actions.activateAbove}
             exitDown={props.actions.activateBelow}
             onFocus={props.actions.hasFocused}
+        />
+    );
+}
+
+/** Editor for stem cells; cells that have not been differentiated yet.
+ */
+export function StemCellEditor(props: {
+    completions: Completion[];
+    isActive: boolean;
+    actions: CellActions;
+}) {
+    const [text, setText] = createSignal("");
+
+    let ref!: HTMLInputElement;
+
+    onMount(() => ref.focus());
+
+    createEffect(() => {
+        if (props.isActive) {
+            ref.focus();
+        }
+    });
+
+    return (
+        <InlineInput
+            ref={ref}
+            text={text()}
+            setText={setText}
+            completions={props.completions}
+            deleteBackward={props.actions.deleteBackward}
+            deleteForward={props.actions.deleteForward}
+            exitUp={props.actions.activateAbove}
+            exitDown={props.actions.activateBelow}
+            onFocus={props.actions.hasFocused}
+            placeholder="select cell type"
         />
     );
 }
@@ -113,61 +156,84 @@ export function NotebookEditor<T>(props: {
     formalCellEditor: Component<FormalCellEditorProps<T>>;
     cellConstructors: CellConstructor<T>[];
 }) {
-    const [activeCell, setActiveCell] = createSignal(0);
+    const [activeCell, setActiveCell] = createSignal(props.notebook.cells.length > 0 ? 0 : -1);
+
+    const insertPos = createMemo(() => {
+        return activeCell() + 1;
+    });
 
     // Set up commands and their keyboard shortcuts.
+
     const addAfterActiveCell = (cell: Cell<T>) => {
         props.changeNotebook((nb) => {
-            const n = nb.cells.length;
-            const i = Math.min(Math.max(activeCell() + 1, 0), n);
-            nb.cells.splice(i, 0, cell);
-            setActiveCell(i);
+            nb.cells.splice(insertPos(), 0, cell);
+            setActiveCell(insertPos());
         });
     };
-    const commands = (): Command[] =>
+
+    const addOrReplaceActiveCell = (cell: Cell<T>) => {
+        if (props.notebook.cells.length > 0) {
+            const c = props.notebook.cells[activeCell()];
+            if (c.tag === "formal" || c.tag === "rich-text") {
+                addAfterActiveCell(cell);
+            } else if (c.tag === "stem") {
+                replaceCellWith(activeCell(), cell);
+            }
+        } else {
+            addAfterActiveCell(cell);
+        }
+    };
+
+    const insertCommands = (): Completion[] =>
         props.cellConstructors.map((cc) => {
             const { name, description, shortcut } = cc;
             return {
                 name,
                 description,
                 shortcut,
-                execute: () => addAfterActiveCell(cc.construct()),
+                onComplete: () => addOrReplaceActiveCell(cc.construct()),
             };
         });
+
+    const replaceCellWith = (i: number, cell: Cell<T>) => {
+        props.changeNotebook((nb) => {
+            nb.cells[i] = cell;
+        });
+    };
+
+    const replaceCommands = (i: number): Completion[] =>
+        props.cellConstructors.map((cc) => {
+            const { name, description, shortcut } = cc;
+            return {
+                name,
+                description,
+                shortcut,
+                onComplete: () => replaceCellWith(i, cc.construct()),
+            };
+        });
+
     createEffect(() => {
-        for (const command of commands()) {
+        for (const command of insertCommands()) {
             if (command.shortcut) {
-                createShortcut(command.shortcut, command.execute);
+                createShortcut(command.shortcut, () => command.onComplete?.());
             }
         }
     });
 
-    // Set up popup menu to create new cells.
-    const [isCellMenuOpen, setIsCellMenuOpen] = createSignal(false);
-
-    createShortcut(["Shift", "Enter"], () => setIsCellMenuOpen(true));
+    createShortcut(["Shift", "Enter"], () => addAfterActiveCell(newStemCell()));
 
     return (
         <div class="notebook">
             <Show when={props.notebook.cells.length === 0}>
                 <div class="notebook-empty">
-                    <Popover
-                        open={isCellMenuOpen()}
-                        onOpenChange={setIsCellMenuOpen}
-                        floatingOptions={cellMenuFloatingOptions}
+                    <span
+                        class="placeholder"
+                        onclick={(_) => {
+                            addAfterActiveCell(newStemCell());
+                        }}
                     >
-                        <Popover.Anchor>
-                            <span class="placeholder">Press Shift-Enter to create a cell</span>
-                        </Popover.Anchor>
-                        <Popover.Portal>
-                            <Popover.Content class="notebook-cell-menu">
-                                <CommandMenu
-                                    commands={commands()}
-                                    onExecuted={() => setIsCellMenuOpen(false)}
-                                />
-                            </Popover.Content>
-                        </Popover.Portal>
-                    </Popover>
+                        Press Shift-Enter to create a cell, or click here
+                    </span>
                 </div>
             </Show>
             <ul class="notebook-cells">
@@ -199,50 +265,42 @@ export function NotebookEditor<T>(props: {
 
                         return (
                             <li>
-                                <Popover
-                                    open={isCellMenuOpen() && isActive()}
-                                    onOpenChange={setIsCellMenuOpen}
-                                    restoreFocus={isActive()}
-                                    floatingOptions={cellMenuFloatingOptions}
-                                >
-                                    <Popover.Anchor>
-                                        <Switch>
-                                            <Match when={cell.tag === "rich-text"}>
-                                                <div class="cell markup-cell">
-                                                    <RichTextCellEditor
-                                                        cell_id={cell.id}
-                                                        handle={props.handle}
-                                                        path={[...props.path, "cells", i()]}
-                                                        isActive={isActive()}
-                                                        actions={cellActions}
-                                                    />
-                                                </div>
-                                            </Match>
-                                            <Match when={cell.tag === "formal"}>
-                                                <div class="cell formal-cell">
-                                                    <props.formalCellEditor
-                                                        content={cell.content as T}
-                                                        changeContent={(f) => {
-                                                            props.changeNotebook((nb) => {
-                                                                f(nb.cells[i()].content as T);
-                                                            });
-                                                        }}
-                                                        isActive={isActive()}
-                                                        actions={cellActions}
-                                                    />
-                                                </div>
-                                            </Match>
-                                        </Switch>
-                                    </Popover.Anchor>
-                                    <Popover.Portal>
-                                        <Popover.Content class="notebook-cell-menu">
-                                            <CommandMenu
-                                                commands={commands()}
-                                                onExecuted={() => setIsCellMenuOpen(false)}
+                                <Switch>
+                                    <Match when={cell.tag === "rich-text"}>
+                                        <div class="cell markup-cell">
+                                            <RichTextCellEditor
+                                                cellId={cell.id}
+                                                handle={props.handle}
+                                                path={[...props.path, "cells", i()]}
+                                                isActive={isActive()}
+                                                actions={cellActions}
                                             />
-                                        </Popover.Content>
-                                    </Popover.Portal>
-                                </Popover>
+                                        </div>
+                                    </Match>
+                                    <Match when={cell.tag === "formal" && cell}>
+                                        <div class="cell formal-cell">
+                                            <props.formalCellEditor
+                                                content={(cell as FormalCell<T>).content}
+                                                changeContent={(f) => {
+                                                    props.changeNotebook((nb) => {
+                                                        f((nb.cells[i()] as FormalCell<T>).content);
+                                                    });
+                                                }}
+                                                isActive={isActive()}
+                                                actions={cellActions}
+                                            />
+                                        </div>
+                                    </Match>
+                                    <Match when={cell.tag === "stem"}>
+                                        <div class="cell stem-cell">
+                                            <StemCellEditor
+                                                completions={replaceCommands(i())}
+                                                isActive={isActive()}
+                                                actions={cellActions}
+                                            />
+                                        </div>
+                                    </Match>
+                                </Switch>
                             </li>
                         );
                     }}
@@ -251,9 +309,3 @@ export function NotebookEditor<T>(props: {
         </div>
     );
 }
-
-const cellMenuFloatingOptions: FloatingOptions = {
-    autoPlacement: {
-        allowedPlacements: ["bottom-start", "top-start"],
-    },
-};
