@@ -1,4 +1,8 @@
-//! Paths in graphs and categories.
+/*! Paths in graphs and categories.
+
+The central data type is [`Path`]. In addition, this module provides a simple
+data type for [path equations](`PathEq`).
+*/
 
 use nonempty::{nonempty, NonEmpty};
 
@@ -8,6 +12,7 @@ use serde::{Deserialize, Serialize};
 use tsify_next::Tsify;
 
 use super::graph::Graph;
+use crate::validate;
 
 /** A path in a [graph](Graph) or [category](crate::one::category::Category).
 
@@ -194,19 +199,6 @@ impl<V, E> PathEq<V, E> {
         PathEq { lhs, rhs }
     }
 
-    /// Is the path equation well defined in the given graph?
-    pub fn valid_in<G>(&self, graph: &G) -> bool
-    where
-        V: Eq + Clone,
-        G: Graph<V = V, E = E>,
-    {
-        // TODO: Should be `validate_in` with validation errors.
-        self.lhs.contained_in(graph)
-            && self.rhs.contained_in(graph)
-            && self.lhs.src(graph) == self.rhs.src(graph)
-            && self.lhs.tgt(graph) == self.rhs.tgt(graph)
-    }
-
     /** Source of the path equation in the given graph.
 
     Only well defined when the path equation is valid.
@@ -230,6 +222,55 @@ impl<V, E> PathEq<V, E> {
     {
         self.lhs.tgt(graph) // == self.rhs.tgt(graph)
     }
+
+    /// Validates that the path equation is well defined in the given graph.
+    pub fn validate_in<G>(&self, graph: &G) -> Result<(), NonEmpty<InvalidPathEq>>
+    where
+        V: Eq + Clone,
+        G: Graph<V = V, E = E>,
+    {
+        validate::collect_errors(self.iter_invalid_in(graph))
+    }
+
+    /// Iterators over failures of the path equation to be well defined.
+    pub fn iter_invalid_in<G>(&self, graph: &G) -> impl Iterator<Item = InvalidPathEq>
+    where
+        V: Eq + Clone,
+        G: Graph<V = V, E = E>,
+    {
+        let mut errs = Vec::new();
+        if !self.lhs.contained_in(graph) {
+            errs.push(InvalidPathEq::Lhs());
+        }
+        if !self.rhs.contained_in(graph) {
+            errs.push(InvalidPathEq::Rhs());
+        }
+        if errs.is_empty() {
+            if self.lhs.src(graph) != self.rhs.src(graph) {
+                errs.push(InvalidPathEq::Src());
+            }
+            if self.lhs.tgt(graph) != self.rhs.tgt(graph) {
+                errs.push(InvalidPathEq::Tgt());
+            }
+        }
+        return errs.into_iter();
+    }
+}
+
+/// A failure of a path equation to be well defined in a graph.
+#[derive(Debug)]
+pub enum InvalidPathEq {
+    /// Path in left hand side of equation not contained in the graph.
+    Lhs(),
+
+    /// Path in right hand side of equation not contained in the graph.
+    Rhs(),
+
+    /// Sources of left and right hand sides of path equation are not equal.
+    Src(),
+
+    /// Targets of left and right hand sides of path equation are not equal.
+    Tgt(),
 }
 
 #[cfg(test)]
@@ -268,6 +309,6 @@ mod tests {
         let eq = PathEq::new(Path::pair(0, 1), Path::single(2));
         assert_eq!(eq.src(&g), 0);
         assert_eq!(eq.tgt(&g), 2);
-        assert!(eq.valid_in(&g));
+        assert!(eq.validate_in(&g).is_ok());
     }
 }

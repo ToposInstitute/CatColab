@@ -14,7 +14,7 @@ use tsify_next::Tsify;
 
 use super::category::*;
 use super::graph::*;
-use super::path::{Path, PathEq};
+use super::path::*;
 use crate::validate::{self, Validate};
 use crate::zero::{HashColumn, Mapping};
 
@@ -256,22 +256,12 @@ where
             InvalidGraphData::Tgt(e) => InvalidFpCategory::Cod(e),
         });
         let equation_errors = self.equations.iter().enumerate().flat_map(|(i, eq)| {
-            let mut errs = Vec::new();
-            if !eq.lhs.contained_in(&self.generators) {
-                errs.push(InvalidFpCategory::EqLhs(i));
-            }
-            if !eq.rhs.contained_in(&self.generators) {
-                errs.push(InvalidFpCategory::EqRhs(i));
-            }
-            if errs.is_empty() {
-                if eq.lhs.src(&self.generators) != eq.rhs.src(&self.generators) {
-                    errs.push(InvalidFpCategory::EqSrc(i));
-                }
-                if eq.lhs.tgt(&self.generators) != eq.rhs.tgt(&self.generators) {
-                    errs.push(InvalidFpCategory::EqTgt(i));
-                }
-            }
-            return errs;
+            eq.iter_invalid_in(&self.generators).map(move |err| match err {
+                InvalidPathEq::Lhs() => InvalidFpCategory::EqLhs(i),
+                InvalidPathEq::Rhs() => InvalidFpCategory::EqRhs(i),
+                InvalidPathEq::Src() => InvalidFpCategory::EqSrc(i),
+                InvalidPathEq::Tgt() => InvalidFpCategory::EqTgt(i),
+            })
         });
         return generator_errors.chain(equation_errors);
     }
@@ -343,10 +333,10 @@ where
     }
 }
 
-/// An invalid assignment or equation in a finitely presented category.
+/// An invalid generator or equation in a finitely presented category.
 #[derive(Debug, Error)]
 pub enum InvalidFpCategory<E> {
-    /// Morphism generator assigned a domain not contained  in the category.
+    /// Morphism generator assigned a domain not contained in the category.
     #[error("Domain of morphism generator `{0}` is not in the category")]
     Dom(E),
 
