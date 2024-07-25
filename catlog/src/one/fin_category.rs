@@ -3,6 +3,8 @@
 use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
 
 use derivative::Derivative;
+use nonempty::NonEmpty;
+use thiserror::Error;
 use ustr::{IdentityHasher, Ustr};
 
 #[cfg(feature = "serde")]
@@ -13,6 +15,7 @@ use tsify_next::Tsify;
 use super::category::*;
 use super::graph::*;
 use super::path::{Path, PathEq};
+use crate::validate::{self, Validate};
 use crate::zero::{HashColumn, Mapping};
 
 /// Morphism in a finite category.
@@ -172,8 +175,6 @@ Such a presentation is defined by a finite graph together with a set of path
 equations. A morphism in the presented category is an equivalence class of paths
 in the graph, so strictly speaking we work with representatives rather than
 morphism themselves.
-
-TODO: Validate generators and path equations.
  */
 #[derive(Clone, Derivative)]
 #[derivative(Default(bound = ""))]
@@ -210,6 +211,16 @@ where
         self.generators.make_edge(e)
     }
 
+    /// Sets the domain of a morphism generator.
+    pub fn set_dom(&mut self, e: E, v: V) -> Option<V> {
+        self.generators.set_src(e, v)
+    }
+
+    /// Sets the codomain of a morphism generator.
+    pub fn set_cod(&mut self, e: E, v: V) -> Option<V> {
+        self.generators.set_tgt(e, v)
+    }
+
     /// Updates the domain of a morphism generator, setting or unsetting it.
     pub fn update_dom(&mut self, e: E, v: Option<V>) -> Option<V> {
         self.generators.update_src(e, v)
@@ -236,6 +247,45 @@ where
         Iter: IntoIterator<Item = PathEq<V, E>>,
     {
         self.equations.extend(iter)
+    }
+
+    /// Iterates over failures to be well-defined presentation of a category.
+    pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidFpCategory<E>> + '_ {
+        let generator_errors = self.generators.iter_invalid().map(|err| match err {
+            InvalidGraphData::Src(e) => InvalidFpCategory::Dom(e),
+            InvalidGraphData::Tgt(e) => InvalidFpCategory::Cod(e),
+        });
+        let equation_errors = self.equations.iter().enumerate().flat_map(|(i, eq)| {
+            let mut errs = Vec::new();
+            if !eq.lhs.contained_in(&self.generators) {
+                errs.push(InvalidFpCategory::EqLhs(i));
+            }
+            if !eq.rhs.contained_in(&self.generators) {
+                errs.push(InvalidFpCategory::EqRhs(i));
+            }
+            if errs.is_empty() {
+                if eq.lhs.src(&self.generators) != eq.rhs.src(&self.generators) {
+                    errs.push(InvalidFpCategory::EqSrc(i));
+                }
+                if eq.lhs.tgt(&self.generators) != eq.rhs.tgt(&self.generators) {
+                    errs.push(InvalidFpCategory::EqTgt(i));
+                }
+            }
+            return errs;
+        });
+        return generator_errors.chain(equation_errors);
+    }
+}
+
+impl<V, E> Validate for FpCategory<V, E>
+where
+    V: Eq + Clone + Hash,
+    E: Eq + Clone + Hash,
+{
+    type ValidationError = InvalidFpCategory<E>;
+
+    fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
+        validate::collect_errors(self.iter_invalid())
     }
 }
 
@@ -293,6 +343,34 @@ where
     }
 }
 
+/// An invalid assignment or equation in a finitely presented category.
+#[derive(Debug, Error)]
+pub enum InvalidFpCategory<E> {
+    /// Morphism generator assigned a domain not contained  in the category.
+    #[error("Domain of morphism generator `{0}` is not in the category")]
+    Dom(E),
+
+    /// Morphism generator assigned a codomain not contained in the category.
+    #[error("Codomain of morphism generator `{0}` is not in the category")]
+    Cod(E),
+
+    /// Path in left hand side of equation not contained in the category.
+    #[error("LHS of path equation `{0}` is not in the category")]
+    EqLhs(usize),
+
+    /// Path in right hand side of equation not contained in the category.
+    #[error("RHS of path equation `{0}` is not in the category")]
+    EqRhs(usize),
+
+    /// Sources of left and right hand sides of path equation are not equal.
+    #[error("Path equation `{0}` has sources that are not equal")]
+    EqSrc(usize),
+
+    /// Targets of left and right hand sides of path equation are not equal.
+    #[error("Path equation `{0}` has targets that are not equal")]
+    EqTgt(usize),
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -337,6 +415,7 @@ mod tests {
         assert_eq!(sch_sgraph.hom_generators().count(), 3);
         assert_eq!(sch_sgraph.dom(&Path::single('t')), 'E');
         assert_eq!(sch_sgraph.cod(&Path::single('t')), 'V');
+        assert!(sch_sgraph.validate().is_ok());
 
         sch_sgraph.add_equation(PathEq::new(Path::pair('i', 'i'), Path::empty('E')));
         sch_sgraph.add_equations(vec![
@@ -344,5 +423,17 @@ mod tests {
             PathEq::new(Path::pair('i', 't'), Path::single('s')),
         ]);
         assert_eq!(sch_sgraph.equations().count(), 3);
+        assert!(sch_sgraph.validate().is_ok());
+
+        let mut sch_bad: FpCategory<char, char> = Default::default();
+        sch_bad.add_ob_generators(['x', 'y']);
+        sch_bad.make_hom_generator('f');
+        assert_eq!(sch_bad.validate().unwrap_err().len(), 2);
+        sch_bad.set_dom('f', 'x');
+        sch_bad.set_cod('f', 'y');
+        assert!(sch_bad.validate().is_ok());
+        sch_bad.add_hom_generator('g', 'y', 'x');
+        sch_bad.add_equation(PathEq::new(Path::single('f'), Path::single('g')));
+        assert_eq!(sch_bad.validate().unwrap_err().len(), 2);
     }
 }
