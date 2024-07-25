@@ -5,7 +5,7 @@ export type IndexedMap<K, V> = {
     index: Map<V, Array<K>>;
 };
 
-/** Create an indexed map from a plain map.
+/** Create an indexed map from an ordinary map.
  */
 export function indexMap<K, V>(map: Map<K, V>) {
     const index = new Map<V, Array<K>>();
@@ -20,11 +20,27 @@ export function indexMap<K, V>(map: Map<K, V>) {
     return { map, index };
 }
 
+/** Index an arrow by a key, not necessarily unique.
+ */
+export function indexArray<K, V>(array: Array<V>, by: (x: V) => K) {
+    const index = new Map<K, Array<V>>();
+    for (const x of array) {
+        const key = by(x);
+        const vals = index.get(key);
+        if (vals === undefined) {
+            index.set(key, [x]);
+        } else {
+            vals.push(x);
+        }
+    }
+    return index;
+}
+
 /** Index an array by a unique key.
  */
-export function uniqueIndexArray<K, V>(arr: Array<V>, by: (x: V) => K) {
+export function uniqueIndexArray<K, V>(array: Array<V>, by: (x: V) => K) {
     const index = new Map<K, V>();
-    for (const x of arr) {
+    for (const x of array) {
         const key = by(x);
         console.assert(!index.has(key));
         index.set(key, x);
