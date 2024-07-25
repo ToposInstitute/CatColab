@@ -15,9 +15,9 @@ export function modelToGraphviz(
     model: Array<ModelJudgment>,
     theory: TheoryMeta,
     attributes?: {
-        graph?: { [name: string]: any };
-        node?: { [name: string]: any };
-        edge?: { [name: string]: any };
+        graph?: Viz.Graph["graphAttributes"];
+        node?: Viz.Graph["nodeAttributes"];
+        edge?: Viz.Graph["edgeAttributes"];
     },
 ): Viz.Graph {
     const nodes = [];
