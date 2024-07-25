@@ -8,22 +8,22 @@ import "./graph_svg.css";
 /** Draw a graph that has a layout using SVG.
  */
 export function GraphSVG<Id>(props: {
-    graph: GraphLayout.Graph<Id>;
+    graph?: GraphLayout.Graph<Id>;
 }) {
     const markerSet = () => {
         const markers = new Set<ArrowMarker>();
-        for (const edge of props.graph.edges) {
+        for (const edge of props.graph?.edges ?? []) {
             markers.add(styleMarkers[edge.style ?? "to"]);
         }
         return markers;
     };
 
     return (
-        <svg class="graph" width={props.graph.width} height={props.graph.height}>
+        <svg class="graph" width={props.graph?.width} height={props.graph?.height}>
             <defs>
                 <For each={Array.from(markerSet())}>{(marker) => markerComponents[marker]}</For>
             </defs>
-            <For each={props.graph.nodes}>
+            <For each={props.graph?.nodes ?? []}>
                 {(node) => {
                     const {
                         pos: { x, y },
@@ -51,7 +51,7 @@ export function GraphSVG<Id>(props: {
                     );
                 }}
             </For>
-            <For each={props.graph.edges}>
+            <For each={props.graph?.edges ?? []}>
                 {(edge) => {
                     const { label, sourcePos, targetPos, labelPos, path } = edge;
                     const marker = styleMarkers[edge.style ?? "to"];
