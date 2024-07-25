@@ -38,6 +38,11 @@ In addition, a model has the following operations:
 use std::hash::Hash;
 use std::sync::Arc;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+#[cfg(feature = "serde-wasm")]
+use tsify_next::Tsify;
+
 use super::theory::{DblTheory, DiscreteDblTheory};
 use crate::one::fin_category::{FpCategory, InvalidFpCategory};
 use crate::one::{Category, FgCategory, Path};
@@ -332,7 +337,7 @@ where
     type ValidationError = InvalidDiscreteDblModel<Name>;
 
     fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
-        validate::collect_errors(self.iter_invalid())
+        validate::wrap_errors(self.iter_invalid())
     }
 }
 
@@ -342,6 +347,10 @@ TODO: Missing case that equation has different composite morphism types on left
 and right hand sides.
 */
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(tag = "tag", content = "content"))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
 pub enum InvalidDiscreteDblModel<Name> {
     /// Domain of basic morphism is undefined or invalid.
     Dom(Name),

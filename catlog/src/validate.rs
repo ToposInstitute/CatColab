@@ -25,14 +25,23 @@ pub trait Validate {
     fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>>;
 }
 
-/** Collect iterator of validation errors into a `Result`.
+/** Wrap iterator of validation errors into a `Result`.
 
 It is common to implement [`Validate`] by constructing an iterator over
 validation errors and then calling this convenience function.
 */
-pub fn collect_errors<Error>(iter: impl Iterator<Item = Error>) -> Result<(), NonEmpty<Error>> {
+pub fn wrap_errors<Error>(iter: impl Iterator<Item = Error>) -> Result<(), NonEmpty<Error>> {
     match NonEmpty::collect(iter) {
         Some(errors) => Err(errors),
         None => Ok(()),
+    }
+}
+
+/**  Unwrap `Result` with validation errors into a list of errors.
+ */
+pub fn unwrap_errors<Error>(result: Result<(), NonEmpty<Error>>) -> Vec<Error> {
+    match result {
+        Ok(()) => Vec::new(),
+        Err(errs) => errs.into(),
     }
 }

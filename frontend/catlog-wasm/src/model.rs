@@ -7,8 +7,9 @@ use tsify_next::{declare, Tsify};
 use wasm_bindgen::prelude::*;
 
 use super::theory::*;
-use catlog::dbl::model::{self as dbl_model};
+use catlog::dbl::model::{self as dbl_model, InvalidDiscreteDblModel};
 use catlog::one::fin_category::UstrFinCategory;
+use catlog::validate::{self, Validate};
 
 /// Identifier of object in model of double theory.
 #[declare]
@@ -48,6 +49,11 @@ pub struct MorDecl {
     pub cod: Option<ObId>,
 }
 
+/// Wasm bindings for validation errors in a model of a discrete double theory.
+#[derive(Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct DiscreteDblModelErrors(Vec<InvalidDiscreteDblModel<Uuid>>);
+
 type UuidDiscreteDblModel = dbl_model::DiscreteDblModel<Uuid, UstrFinCategory>;
 
 /// Wasm bindings for a model of a discrete double theory.
@@ -74,6 +80,11 @@ impl DiscreteDblModel {
         self.0.make_mor(decl.id, decl.mor_type.0);
         self.0.update_dom(decl.id, decl.dom);
         self.0.update_cod(decl.id, decl.cod);
+    }
+
+    #[wasm_bindgen]
+    pub fn validate(&self) -> DiscreteDblModelErrors {
+        DiscreteDblModelErrors(validate::unwrap_errors(self.0.validate()))
     }
 }
 
@@ -105,5 +116,6 @@ mod tests {
         });
         assert_eq!(model.0.objects().count(), 2);
         assert_eq!(model.0.morphisms().count(), 1);
+        assert!(model.validate().0.is_empty());
     }
 }

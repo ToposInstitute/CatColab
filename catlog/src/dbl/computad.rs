@@ -593,7 +593,7 @@ where
     type ValidationError = InvalidDblComputadData<E, ProE, Sq>;
 
     fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
-        validate::collect_errors(self.iter_invalid())
+        validate::wrap_errors(self.iter_invalid())
     }
 }
 
@@ -749,7 +749,7 @@ where
         InvalidDblComputadMorphism<Map::DomV, Map::DomE, Map::DomProE, Map::DomSq>;
 
     fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
-        validate::collect_errors(self.iter_invalid())
+        validate::wrap_errors(self.iter_invalid())
     }
 }
 

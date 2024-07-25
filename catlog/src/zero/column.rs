@@ -125,7 +125,7 @@ where
     type ValidationError = InvalidFunction<Map::Dom>;
 
     fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
-        validate::collect_errors(self.iter_invalid())
+        validate::wrap_errors(self.iter_invalid())
     }
 }
 

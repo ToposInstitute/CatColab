@@ -324,7 +324,7 @@ impl Validate for SkelGraph {
     type ValidationError = InvalidGraphData<usize>;
 
     fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
-        validate::collect_errors(self.iter_invalid())
+        validate::wrap_errors(self.iter_invalid())
     }
 }
 
@@ -434,7 +434,7 @@ where
     type ValidationError = InvalidGraphData<E>;
 
     fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
-        validate::collect_errors(self.iter_invalid())
+        validate::wrap_errors(self.iter_invalid())
     }
 }
 
@@ -523,7 +523,7 @@ where
     type ValidationError = InvalidGraphMorphism<Map::DomV, Map::DomE>;
 
     fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
-        validate::collect_errors(self.iter_invalid())
+        validate::wrap_errors(self.iter_invalid())
     }
 }
 

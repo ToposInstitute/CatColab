@@ -15,6 +15,7 @@ catlog = { path = "../../catlog", features = ["serde-wasm"] }
 console_error_panic_hook = { version = "0.1.7", optional = true }
 getrandom = { version = "0.2", features = ["js"] }
 js-sys = "0.3.69"
+nonempty = { version = "0.10", features = ["serialize"] }
 serde = { version = "1", features = ["derive"] }
 tsify-next = { version = "0.5", features = ["js"] }
 ustr = "1"
