@@ -1,15 +1,15 @@
-import { DocHandle } from "@automerge/automerge-repo";
+import type { DocHandle } from "@automerge/automerge-repo";
+import { MultiProvider } from "@solid-primitives/context";
 import {
-    Accessor,
+    type Accessor,
+    For,
+    Match,
+    Switch,
     createEffect,
     createMemo,
     createSignal,
-    For,
-    Match,
     onMount,
-    Switch,
 } from "solid-js";
-import { MultiProvider } from "@solid-primitives/context";
 
 import { useDoc } from "../util/automerge_solid";
 import { type IndexedMap, indexMap } from "../util/indexing";
@@ -103,7 +103,7 @@ export function ModelNotebookEditor(props: {
     const objectIndex = createMemo<IndexedMap<ObId, string>>(() => {
         const map = new Map<ObId, string>();
         for (const judgment of model()) {
-            if (judgment.tag == "object") {
+            if (judgment.tag === "object") {
                 map.set(judgment.id, judgment.name);
             }
         }
@@ -124,7 +124,9 @@ export function ModelNotebookEditor(props: {
                     <InlineInput
                         text={modelNb().name}
                         setText={(text) => {
-                            changeModelNb((model) => (model.name = text));
+                            changeModelNb((model) => {
+                                model.name = text;
+                            });
                         }}
                     />
                 </div>

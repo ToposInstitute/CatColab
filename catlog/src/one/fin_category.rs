@@ -216,6 +216,16 @@ where
         self.generators.make_edge(e)
     }
 
+    /// Gets the domain of a morphism generator.
+    pub fn get_dom(&self, e: &E) -> Option<&V> {
+        self.generators.get_src(e)
+    }
+
+    /// Gets the codomain of a morphism generator.
+    pub fn get_cod(&self, e: &E) -> Option<&V> {
+        self.generators.get_tgt(e)
+    }
+
     /// Sets the domain of a morphism generator.
     pub fn set_dom(&mut self, e: E, v: V) -> Option<V> {
         self.generators.set_src(e, v)
@@ -265,7 +275,7 @@ where
                 InvalidPathEq::Tgt() => InvalidFpCategory::EqTgt(key.clone()),
             })
         });
-        return generator_errors.chain(equation_errors);
+        generator_errors.chain(equation_errors)
     }
 }
 

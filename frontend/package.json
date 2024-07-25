@@ -9,7 +9,7 @@
         "build": "wasm-pack build catlog-wasm && tsc -b && vite build",
         "preview": "vite preview",
         "format": "biome format --write",
-        "lint": "biome lint"
+        "lint": "biome lint --write && biome check --write"
     },
     "dependencies": {
         "@automerge/automerge": "^2.2.4",

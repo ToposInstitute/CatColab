@@ -72,11 +72,27 @@ impl<V, E> Path<V, E> {
     }
 
     /// Is the path empty?
-    /// Note: It is conventional to have an is_empty() method whenever there is a len() method
     pub fn is_empty(&self) -> bool {
         match self {
             Path::Id(_) => true,
             Path::Seq(_) => false,
+        }
+    }
+
+    /** Returns the unique edge in a path of length 1.
+
+    This method is a one-sided inverse to [`Path::single`].
+     */
+    pub fn only(&self) -> Option<&E> {
+        match self {
+            Path::Id(_) => None,
+            Path::Seq(edges) => {
+                if edges.len() == 1 {
+                    Some(edges.first())
+                } else {
+                    None
+                }
+            }
         }
     }
 
@@ -253,7 +269,7 @@ impl<V, E> PathEq<V, E> {
                 errs.push(InvalidPathEq::Tgt());
             }
         }
-        return errs.into_iter();
+        errs.into_iter()
     }
 }
 
@@ -293,14 +309,17 @@ mod tests {
     }
 
     #[test]
+    fn singleton_path() {
+        let e = 1;
+        assert_eq!(SkelPath::single(e).only(), Some(&e));
+    }
+
+    #[test]
     fn map_path() {
         assert_eq!(SkelPath::Id(1).map(|v| v + 1, identity), Path::Id(2));
         assert_eq!(SkelPath::pair(0, 1).map(identity, |e| e + 1), Path::pair(1, 2));
-        assert_eq!(SkelPath::Id(1).try_map(|v| Some(v + 1), |e| Some(e)), Some(Path::Id(2)));
-        assert_eq!(
-            SkelPath::pair(0, 1).try_map(|v| Some(v), |e| Some(e + 1)),
-            Some(Path::pair(1, 2))
-        );
+        assert_eq!(SkelPath::Id(1).try_map(|v| Some(v + 1), Some), Some(Path::Id(2)));
+        assert_eq!(SkelPath::pair(0, 1).try_map(Some, |e| Some(e + 1)), Some(Path::pair(1, 2)));
     }
 
     #[test]

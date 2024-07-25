@@ -606,12 +606,12 @@ mod tests {
     fn hash_graph() {
         let mut g: HashGraph<char, &str> = Default::default();
         assert!(g.add_vertex('x'));
-        g.add_vertices(['y', 'z'].into_iter());
+        g.add_vertices(['y', 'z']);
         assert!(g.add_edge("f", 'x', 'y'));
         assert!(g.add_edge("g", 'y', 'z'));
         assert!(g.make_edge("fg"));
-        g.set_src(&"fg", 'x');
-        g.set_tgt(&"fg", 'z');
+        g.set_src("fg", 'x');
+        g.set_tgt("fg", 'z');
         assert_eq!(g.src(&"fg"), 'x');
         assert_eq!(g.tgt(&"fg"), 'z');
     }
