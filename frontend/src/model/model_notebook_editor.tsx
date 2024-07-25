@@ -14,7 +14,7 @@ import {
 import { useDoc } from "../util/automerge_solid";
 import { type IndexedMap, indexArray, indexMap } from "../util/indexing";
 
-import { DiscreteDblModel, InvalidDiscreteDblModel, type ObId, type Uuid } from "catlog-wasm";
+import { DiscreteDblModel, type InvalidDiscreteDblModel, type ObId, type Uuid } from "catlog-wasm";
 import { InlineInput } from "../components";
 import {
     type CellActions,

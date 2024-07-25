@@ -2,7 +2,7 @@ import { createEffect, useContext } from "solid-js";
 
 import { InlineInput } from "../components";
 import type { CellActions } from "../notebook";
-import { ObjectIndexContext, TheoryContext } from "./model_context";
+import { ModelErrorsContext, ObjectIndexContext, TheoryContext } from "./model_context";
 import { ObjectIdInput } from "./object_cell_editor";
 import type { MorphismDecl } from "./types";
 
@@ -27,11 +27,12 @@ export function MorphismCellEditor(props: {
 
     const theory = useContext(TheoryContext);
     const objectIndex = useContext(ObjectIndexContext);
+    const modelErrors = useContext(ModelErrorsContext);
 
-    const typeMeta = () => theory?.()?.getMorTypeMeta(props.morphism.morType);
-    const nameClasses = () => ["morphism-decl-name", ...(typeMeta()?.textClasses ?? [])];
+    const morTypeMeta = () => theory?.()?.getMorTypeMeta(props.morphism.morType);
+    const nameClasses = () => ["morphism-decl-name", ...(morTypeMeta()?.textClasses ?? [])];
     const arrowClasses = () => {
-        const style = typeMeta()?.arrowStyle ?? "to";
+        const style = morTypeMeta()?.arrowStyle ?? "to";
         return ["morphism-decl-arrow", style];
     };
 
@@ -48,6 +49,9 @@ export function MorphismCellEditor(props: {
                 }}
                 objectType={theory?.()?.theory.src(props.morphism.morType)}
                 objectIndex={objectIndex?.()}
+                objectInvalid={(modelErrors?.().get(props.morphism.id) ?? []).some(
+                    (err) => err.tag === "Dom" || err.tag === "DomType",
+                )}
                 deleteForward={() => nameRef.focus()}
                 exitBackward={() => nameRef.focus()}
                 exitForward={() => codRef.focus()}
@@ -89,6 +93,9 @@ export function MorphismCellEditor(props: {
                 }}
                 objectType={theory?.()?.theory.tgt(props.morphism.morType)}
                 objectIndex={objectIndex?.()}
+                objectInvalid={(modelErrors?.().get(props.morphism.id) ?? []).some(
+                    (err) => err.tag === "Cod" || err.tag === "CodType",
+                )}
                 deleteBackward={() => nameRef.focus()}
                 exitBackward={() => domRef.focus()}
                 exitForward={props.actions.activateBelow}

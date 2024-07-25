@@ -28,6 +28,10 @@
     font: inherit;
 }
 
+.inline-input.incomplete {
+    border-bottom: 3px solid sandybrown;
+}
+
 .inline-input.invalid {
     border-bottom: 3px solid indianred;
 }

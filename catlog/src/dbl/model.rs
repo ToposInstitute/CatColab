@@ -251,7 +251,7 @@ where
                 .get_cod(e)
                 .map_or(false, |x| self.ob_type(x) != self.theory.tgt(&mor_type))
             {
-                errs.push(Invalid::DomType(e.clone()));
+                errs.push(Invalid::CodType(e.clone()));
             }
             errs.into_iter()
         });

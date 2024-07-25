@@ -9,7 +9,7 @@ import "./inline_input.css";
 export type InlineInputOptions = {
     ref?: HTMLInputElement;
     placeholder?: string;
-    invalid?: boolean;
+    status?: InlineInputErrorStatus;
 
     deleteBackward?: () => void;
     deleteForward?: () => void;
@@ -24,6 +24,12 @@ export type InlineInputOptions = {
     onFocus?: () => void;
 };
 
+/** Error status for `InlineInput` component.
+ */
+export type InlineInputErrorStatus = null | "incomplete" | "invalid";
+
+/** An input component that is displayed inline.
+ */
 export function InlineInput(
     props: {
         text: string;
@@ -71,7 +77,10 @@ export function InlineInput(
                 type="text"
                 size="1"
                 ref={props.ref}
-                classList={{ invalid: props.invalid }}
+                classList={{
+                    incomplete: props.status === "incomplete",
+                    invalid: props.status === "invalid",
+                }}
                 value={props.text}
                 placeholder={props.placeholder}
                 use:focus={(isFocused) => {
