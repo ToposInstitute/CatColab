@@ -1,7 +1,7 @@
 import type * as Viz from "@viz-js/viz";
 
 import type { TheoryMeta, TypeMeta } from "../theory";
-import type { ModelNotebook } from "./types";
+import type { ModelJudgment } from "./types";
 
 import styles from "../theory/styles.module.css";
 
@@ -10,11 +10,9 @@ import styles from "../theory/styles.module.css";
 Such a visualization makes sense for any discrete double theory since the
 generators of such a model are just a typed graph. For a general double theory,
 there is no single recipe to visualize its models.
-
-FIXME: Should take a generic model object, not the notebook-specific one.
  */
 export function modelToGraphviz(
-    model: ModelNotebook,
+    model: Array<ModelJudgment>,
     theory: TheoryMeta,
     attributes?: {
         graph?: { [name: string]: any };
@@ -24,12 +22,7 @@ export function modelToGraphviz(
 ): Viz.Graph {
     const nodes = [];
     const edges = [];
-    for (const cell of model.notebook.cells) {
-        if (cell.tag !== "formal") {
-            continue;
-        }
-        const judgment = cell.content;
-
+    for (const judgment of model) {
         if (judgment.tag === "object") {
             const { id, name } = judgment;
             const meta = theory.getObTypeMeta(judgment.obType);

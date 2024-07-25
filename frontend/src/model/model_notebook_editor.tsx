@@ -1,6 +1,15 @@
 import type { DocHandle } from "@automerge/automerge-repo";
 import { MultiProvider } from "@solid-primitives/context";
-import { For, Match, Switch, createEffect, createMemo, createSignal, onMount } from "solid-js";
+import {
+    type Accessor,
+    For,
+    Match,
+    Switch,
+    createEffect,
+    createMemo,
+    createSignal,
+    onMount,
+} from "solid-js";
 
 import { useDoc } from "../util/automerge_solid";
 import { type IndexedMap, indexMap } from "../util/indexing";
@@ -64,14 +73,11 @@ export function ModelCellEditor(props: {
 /** Reference to a `ModelNotebookEditor`.
  */
 export type ModelNotebookRef = {
-    // Get the current model data.
-    model: () => ModelNotebook;
-
-    // Make a change to the model data.
-    changeModel: (f: (model: ModelNotebook) => void) => void;
+    // Get the data of the model.
+    model: Accessor<Array<ModelJudgment>>;
 
     // Get the double theory that the model is of, if defined.
-    theory: () => TheoryMeta | undefined;
+    theory: Accessor<TheoryMeta | undefined>;
 };
 
 /** Notebook-based editor for a model of a discrete double theory.
@@ -84,23 +90,31 @@ export function ModelNotebookEditor(props: {
 }) {
     const [theory, setTheory] = createSignal<TheoryMeta | undefined>();
 
-    const [model, changeModel] = useDoc(() => props.handle, props.init);
+    const [modelNb, changeModelNb] = useDoc(() => props.handle, props.init);
 
-    onMount(() => props.ref?.({ model, changeModel, theory }));
-
-    createEffect(() => {
-        const id = model().theory;
-        setTheory(id !== undefined ? props.theories.get(id) : undefined);
-    });
+    // Memo-ize the *formal* content of the notebook, since most derived objects
+    // will not depend on the informal (rich-text) content in notebook.
+    const model = createMemo<Array<ModelJudgment>>(() =>
+        modelNb()
+            .notebook.cells.filter((cell) => cell.tag === "formal")
+            .map((cell) => cell.content),
+    );
 
     const objectIndex = createMemo<IndexedMap<ObId, string>>(() => {
         const map = new Map<ObId, string>();
-        for (const cell of model().notebook.cells) {
-            if (cell.tag === "formal" && cell.content.tag === "object") {
-                map.set(cell.content.id, cell.content.name);
+        for (const judgment of model()) {
+            if (judgment.tag === "object") {
+                map.set(judgment.id, judgment.name);
             }
         }
         return indexMap(map);
+    });
+
+    onMount(() => props.ref?.({ model, theory }));
+
+    createEffect(() => {
+        const id = modelNb().theory;
+        setTheory(id !== undefined ? props.theories.get(id) : undefined);
     });
 
     return (
@@ -108,9 +122,9 @@ export function ModelNotebookEditor(props: {
             <div class="model-head">
                 <div class="model-title">
                     <InlineInput
-                        text={model().name}
+                        text={modelNb().name}
                         setText={(text) => {
-                            changeModel((model) => {
+                            changeModelNb((model) => {
                                 model.name = text;
                             });
                         }}
@@ -119,11 +133,11 @@ export function ModelNotebookEditor(props: {
                 <div class="model-theory">
                     <select
                         required
-                        disabled={model().notebook.cells.some((cell) => cell.tag === "formal")}
-                        value={model().theory ?? ""}
+                        disabled={modelNb().notebook.cells.some((cell) => cell.tag === "formal")}
+                        value={modelNb().theory ?? ""}
                         onInput={(evt) => {
                             const id = evt.target.value;
-                            changeModel((model) => {
+                            changeModelNb((model) => {
                                 model.theory = id ? id : undefined;
                             });
                         }}
@@ -146,9 +160,9 @@ export function ModelNotebookEditor(props: {
                 <NotebookEditor
                     handle={props.handle}
                     path={["notebook"]}
-                    notebook={model().notebook}
+                    notebook={modelNb().notebook}
                     changeNotebook={(f) => {
-                        changeModel((model) => f(model.notebook));
+                        changeModelNb((model) => f(model.notebook));
                     }}
                     formalCellEditor={ModelCellEditor}
                     cellConstructors={modelCellConstructors(theory())}

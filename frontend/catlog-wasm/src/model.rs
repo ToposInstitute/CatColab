@@ -48,7 +48,7 @@ pub struct MorDecl {
     pub cod: Option<ObId>,
 }
 
-type UuidDiscreteDblModel = dbl_model::DiscreteDblModel<Uuid, Uuid, UstrFinCategory>;
+type UuidDiscreteDblModel = dbl_model::DiscreteDblModel<Uuid, UstrFinCategory>;
 
 /// Wasm bindings for a model of a discrete double theory.
 #[wasm_bindgen]
@@ -71,7 +71,7 @@ impl DiscreteDblModel {
     /// Adds a morphism to the model.
     #[wasm_bindgen(js_name = "addMor")]
     pub fn add_mor(&mut self, decl: MorDecl) {
-        self.0.add_mor(decl.id, decl.mor_type.0);
+        self.0.make_mor(decl.id, decl.mor_type.0);
         self.0.update_dom(decl.id, decl.dom);
         self.0.update_cod(decl.id, decl.cod);
     }

@@ -39,8 +39,9 @@ use std::hash::Hash;
 use std::sync::Arc;
 
 use super::theory::{DblTheory, DiscreteDblTheory};
-use crate::one::fin_category::FpCategory;
+use crate::one::fin_category::{FpCategory, InvalidFpCategory};
 use crate::one::{Category, FgCategory, Path};
+use crate::validate::{self, Validate};
 use crate::zero::{Column, IndexedHashColumn, Mapping};
 
 /** A model of a double theory.
@@ -166,17 +167,16 @@ comprising the theory. A type theorist would call it a ["displayed
 category"](https://ncatlab.org/nlab/show/displayed+category).
 */
 #[derive(Clone)]
-pub struct DiscreteDblModel<V, E, Cat: FgCategory> {
+pub struct DiscreteDblModel<Name, Cat: FgCategory> {
     theory: Arc<DiscreteDblTheory<Cat>>,
-    category: FpCategory<V, E>,
-    ob_types: IndexedHashColumn<V, Cat::Ob>,
-    mor_types: IndexedHashColumn<E, Cat::Hom>,
+    category: FpCategory<Name, Name, Name>,
+    ob_types: IndexedHashColumn<Name, Cat::Ob>,
+    mor_types: IndexedHashColumn<Name, Cat::Hom>,
 }
 
-impl<V, E, Cat> DiscreteDblModel<V, E, Cat>
+impl<Name, Cat> DiscreteDblModel<Name, Cat>
 where
-    V: Eq + Clone + Hash,
-    E: Eq + Clone + Hash,
+    Name: Eq + Clone + Hash,
     Cat: FgCategory,
     Cat::Ob: Eq + Clone + Hash,
     Cat::Hom: Eq + Clone + Hash,
@@ -192,38 +192,77 @@ where
     }
 
     /// Adds a basic object to the model.
-    pub fn add_ob(&mut self, x: V, typ: Cat::Ob) {
+    pub fn add_ob(&mut self, x: Name, typ: Cat::Ob) {
         self.category.add_ob_generator(x.clone());
         self.ob_types.set(x, typ);
     }
 
     /// Adds a basic morphism to the model.
-    pub fn add_mor(&mut self, f: E, typ: Cat::Hom) {
+    pub fn add_mor(&mut self, f: Name, dom: Name, cod: Name, typ: Cat::Hom) {
+        self.category.add_hom_generator(f.clone(), dom, cod);
+        self.mor_types.set(f, typ);
+    }
+
+    /// Adds a basic morphism to the model without setting its (co)domain.
+    pub fn make_mor(&mut self, f: Name, typ: Cat::Hom) {
         self.category.make_hom_generator(f.clone());
         self.mor_types.set(f, typ);
     }
 
     /// Updates the domain of a morphism, setting or unsetting it.
-    pub fn update_dom(&mut self, f: E, x: Option<V>) -> Option<V> {
+    pub fn update_dom(&mut self, f: Name, x: Option<Name>) -> Option<Name> {
         self.category.update_dom(f, x)
     }
 
     /// Updates the codomain of a morphism, setting or unsetting it.
-    pub fn update_cod(&mut self, f: E, x: Option<V>) -> Option<V> {
+    pub fn update_cod(&mut self, f: Name, x: Option<Name>) -> Option<Name> {
         self.category.update_cod(f, x)
+    }
+
+    /// Iterates over failures to be well-defined model.
+    pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidDiscreteDblModel<Name>> + '_ {
+        type Invalid<Name> = InvalidDiscreteDblModel<Name>;
+        let category_errors = self.category.iter_invalid().map(|err| match err {
+            InvalidFpCategory::Dom(e) => Invalid::Dom(e),
+            InvalidFpCategory::Cod(e) => Invalid::Cod(e),
+            InvalidFpCategory::EqLhs(eq) => Invalid::EqLhs(eq),
+            InvalidFpCategory::EqRhs(eq) => Invalid::EqRhs(eq),
+            InvalidFpCategory::EqSrc(eq) => Invalid::EqSrc(eq),
+            InvalidFpCategory::EqTgt(eq) => Invalid::EqTgt(eq),
+        });
+        let type_errors = self.category.hom_generators().flat_map(|f| {
+            let mut errs = Vec::new();
+            let mor_type = self.mor_type(&f);
+            let e = f.only().unwrap();
+            if self
+                .category
+                .get_dom(e)
+                .map_or(false, |x| self.ob_type(x) != self.theory.src(&mor_type))
+            {
+                errs.push(Invalid::DomType(e.clone()));
+            }
+            if self
+                .category
+                .get_cod(e)
+                .map_or(false, |x| self.ob_type(x) != self.theory.tgt(&mor_type))
+            {
+                errs.push(Invalid::DomType(e.clone()));
+            }
+            errs.into_iter()
+        });
+        category_errors.chain(type_errors)
     }
 }
 
-impl<V, E, Cat> DblModel for DiscreteDblModel<V, E, Cat>
+impl<Name, Cat> DblModel for DiscreteDblModel<Name, Cat>
 where
-    V: Eq + Clone + Hash,
-    E: Eq + Clone + Hash,
+    Name: Eq + Clone + Hash,
     Cat: FgCategory,
     Cat::Ob: Eq + Clone + Hash,
     Cat::Hom: Eq + Clone + Hash,
 {
-    type Ob = V;
-    type Mor = Path<V, E>;
+    type Ob = Name;
+    type Mor = Path<Name, Name>;
     type ObType = Cat::Ob;
     type MorType = Cat::Hom;
     type ObOp = Cat::Ob;
@@ -280,5 +319,70 @@ where
     }
     fn morphisms_with_cod(&self, x: &Self::Ob) -> impl Iterator<Item = Self::Mor> {
         self.category.generators_with_cod(x)
+    }
+}
+
+impl<Name, Cat> Validate for DiscreteDblModel<Name, Cat>
+where
+    Name: Eq + Clone + Hash,
+    Cat: FgCategory,
+    Cat::Ob: Eq + Clone + Hash,
+    Cat::Hom: Eq + Clone + Hash,
+{
+    type ValidationError = InvalidDiscreteDblModel<Name>;
+
+    fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
+        validate::collect_errors(self.iter_invalid())
+    }
+}
+
+/** A failure of a model of a discrete double theory to be well defined.
+
+TODO: Missing case that equation has different composite morphism types on left
+and right hand sides.
+*/
+#[derive(Debug)]
+pub enum InvalidDiscreteDblModel<Name> {
+    /// Domain of basic morphism is undefined or invalid.
+    Dom(Name),
+
+    /// Codomain of basic morphism is missing or invalid.
+    Cod(Name),
+
+    /// Domain of basic morphism has type incompatible with morphism type.
+    DomType(Name),
+
+    /// Codomain of basic morphism has type incompatible with morphism type.
+    CodType(Name),
+
+    /// Equation has left hand side that is not a well defined path.
+    EqLhs(Name),
+
+    /// Equation has right hand side that is not a well defined path.
+    EqRhs(Name),
+
+    /// Equation has different sources on left and right hand sides.
+    EqSrc(Name),
+
+    /// Equation has different sources on left and right hand sides.
+    EqTgt(Name),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::one::fin_category::FinHom;
+    use crate::stdlib::theories::*;
+
+    #[test]
+    fn validate_discrete_dbl_model() {
+        let th = Arc::new(th_schema());
+        let mut model = DiscreteDblModel::new(th);
+        model.add_ob('E', "entity".into());
+        model.add_ob('A', "attr_type".into());
+        model.add_mor('a', 'E', 'A', FinHom::Generator("attr".into()));
+        assert!(model.validate().is_ok());
+        model.add_mor('b', 'E', 'A', FinHom::Id("entity".into()));
+        assert_eq!(model.validate().unwrap_err().len(), 1);
     }
 }

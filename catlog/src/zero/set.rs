@@ -270,7 +270,7 @@ mod tests {
         let mut s: HashFinSet<i32> = Default::default();
         assert!(s.is_empty());
         s.insert(3);
-        s.extend([5, 7].into_iter());
+        s.extend([5, 7]);
         assert!(!s.is_empty());
         assert_eq!(s.len(), 3);
         assert!(s.contains(&3));

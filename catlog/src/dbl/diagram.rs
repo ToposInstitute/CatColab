@@ -238,7 +238,7 @@ mod tests {
         // Formula for general restriction in an equipment (see, for example,
         // Lambert & Patterson 2024, Equation 4.7).
         let mut cptd: HashDblComputad<&str, &str, &str, &str> = Default::default();
-        cptd.add_vertices(["w", "x", "y", "z"].into_iter());
+        cptd.add_vertices(["w", "x", "y", "z"]);
         cptd.add_edge("f", "x", "w");
         cptd.add_edge("g", "y", "z");
         cptd.add_proedge("f!", "x", "w");
