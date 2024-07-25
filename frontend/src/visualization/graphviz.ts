@@ -110,7 +110,7 @@ function parseSpline(spline: string, transformPoint?: (pt: Point) => Point): Gra
     let endPoint: Point | undefined;
     transformPoint = transformPoint || ((pt: Point) => pt);
 
-    spline.split(" ").forEach((s) => {
+    for (const s of spline.split(" ")) {
         if (s.startsWith("s,")) {
             startPoint = transformPoint(parsePoint(s.slice(2)));
         } else if (s.startsWith("e,")) {
@@ -118,7 +118,7 @@ function parseSpline(spline: string, transformPoint?: (pt: Point) => Point): Gra
         } else {
             points.push(transformPoint(parsePoint(s)));
         }
-    });
+    }
 
     return { points, startPoint, endPoint };
 }

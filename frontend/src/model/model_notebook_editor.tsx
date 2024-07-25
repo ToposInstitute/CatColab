@@ -12,9 +12,9 @@ import {
 } from "solid-js";
 
 import { useDoc } from "../util/automerge_solid";
-import { type IndexedMap, indexMap } from "../util/indexing";
+import { type IndexedMap, indexArray, indexMap } from "../util/indexing";
 
-import type { ObId } from "catlog-wasm";
+import { DiscreteDblModel, type InvalidDiscreteDblModel, type ObId, type Uuid } from "catlog-wasm";
 import { InlineInput } from "../components";
 import {
     type CellActions,
@@ -24,7 +24,7 @@ import {
     newRichTextCell,
 } from "../notebook";
 import type { TheoryId, TheoryMeta } from "../theory";
-import { ObjectIndexContext, TheoryContext } from "./model_context";
+import { ModelErrorsContext, ObjectIndexContext, TheoryContext } from "./model_context";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
 import {
@@ -110,6 +110,23 @@ export function ModelNotebookEditor(props: {
         return indexMap(map);
     });
 
+    const modelErrors = createMemo<Map<Uuid, InvalidDiscreteDblModel<Uuid>[]>>(() => {
+        let errs: InvalidDiscreteDblModel<Uuid>[] = [];
+        const th = theory();
+        if (th) {
+            const coreModel = new DiscreteDblModel(th.theory);
+            for (const judgment of model()) {
+                if (judgment.tag === "object") {
+                    coreModel.addOb(judgment);
+                } else if (judgment.tag === "morphism") {
+                    coreModel.addMor(judgment);
+                }
+            }
+            errs = coreModel.validate();
+        }
+        return indexArray(errs, (err) => err.content);
+    });
+
     onMount(() => props.ref?.({ model, theory }));
 
     createEffect(() => {
@@ -155,6 +172,7 @@ export function ModelNotebookEditor(props: {
                 values={[
                     [TheoryContext, theory],
                     [ObjectIndexContext, objectIndex],
+                    [ModelErrorsContext, modelErrors],
                 ]}
             >
                 <NotebookEditor

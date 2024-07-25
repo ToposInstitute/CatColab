@@ -192,7 +192,7 @@ where
     type ValidationError = InvalidDblComputadData<usize, usize, usize>;
 
     fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
-        validate::collect_errors(self.iter_invalid())
+        validate::wrap_errors(self.iter_invalid())
     }
 }
 

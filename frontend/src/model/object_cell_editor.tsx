@@ -1,7 +1,7 @@
 import { createEffect, createSignal, splitProps, useContext } from "solid-js";
 
 import type { ObId, ObType } from "catlog-wasm";
-import { InlineInput, type InlineInputOptions } from "../components";
+import { InlineInput, type InlineInputErrorStatus, type InlineInputOptions } from "../components";
 import type { CellActions } from "../notebook";
 import type { TheoryMeta } from "../theory";
 import type { IndexedMap } from "../util/indexing";
@@ -60,6 +60,7 @@ export function ObjectIdInput(
         setObjectId: (id: ObId | null) => void;
         objectType?: ObType;
         objectIndex?: IndexedMap<ObId, string>;
+        objectInvalid?: boolean;
     } & InlineInputOptions,
 ) {
     const [props, inputProps] = splitProps(allProps, [
@@ -67,6 +68,7 @@ export function ObjectIdInput(
         "setObjectId",
         "objectIndex",
         "objectType",
+        "objectInvalid",
     ]);
 
     const [text, setText] = createSignal("");
@@ -92,9 +94,18 @@ export function ObjectIdInput(
         setText(text);
     };
 
-    const isValid = () => {
+    const isComplete = () => {
         const objectName = props.objectId ? props.objectIndex?.map.get(props.objectId) : "";
         return text() === objectName;
+    };
+    const status = (): InlineInputErrorStatus => {
+        if (!isComplete()) {
+            return "incomplete";
+        }
+        if (props.objectInvalid) {
+            return "invalid";
+        }
+        return null;
     };
 
     const theory = useContext(TheoryContext);
@@ -102,12 +113,7 @@ export function ObjectIdInput(
 
     return (
         <div class={cssClasses().join(" ")}>
-            <InlineInput
-                text={text()}
-                setText={handleNewText}
-                invalid={!isValid()}
-                {...inputProps}
-            />
+            <InlineInput text={text()} setText={handleNewText} status={status()} {...inputProps} />
         </div>
     );
 }

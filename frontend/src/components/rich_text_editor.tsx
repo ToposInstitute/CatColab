@@ -17,7 +17,7 @@ import "./rich_text_editor.css";
 /** Optional props for `RichTextEditor` component.
  */
 export type RichTextEditorOptions = {
-    id?: any;
+    id?: unknown;
     ref?: (ref: EditorView) => void;
     placeholder?: string;
 

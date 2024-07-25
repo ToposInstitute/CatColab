@@ -245,7 +245,7 @@ impl<V, E> PathEq<V, E> {
         V: Eq + Clone,
         G: Graph<V = V, E = E>,
     {
-        validate::collect_errors(self.iter_invalid_in(graph))
+        validate::wrap_errors(self.iter_invalid_in(graph))
     }
 
     /// Iterators over failures of the path equation to be well defined.
