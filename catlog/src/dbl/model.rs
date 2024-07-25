@@ -166,17 +166,16 @@ comprising the theory. A type theorist would call it a ["displayed
 category"](https://ncatlab.org/nlab/show/displayed+category).
 */
 #[derive(Clone)]
-pub struct DiscreteDblModel<V, E, Cat: FgCategory> {
+pub struct DiscreteDblModel<Name, Cat: FgCategory> {
     theory: Arc<DiscreteDblTheory<Cat>>,
-    category: FpCategory<V, E>,
-    ob_types: IndexedHashColumn<V, Cat::Ob>,
-    mor_types: IndexedHashColumn<E, Cat::Hom>,
+    category: FpCategory<Name, Name, Name>,
+    ob_types: IndexedHashColumn<Name, Cat::Ob>,
+    mor_types: IndexedHashColumn<Name, Cat::Hom>,
 }
 
-impl<V, E, Cat> DiscreteDblModel<V, E, Cat>
+impl<Name, Cat> DiscreteDblModel<Name, Cat>
 where
-    V: Eq + Clone + Hash,
-    E: Eq + Clone + Hash,
+    Name: Eq + Clone + Hash,
     Cat: FgCategory,
     Cat::Ob: Eq + Clone + Hash,
     Cat::Hom: Eq + Clone + Hash,
@@ -192,38 +191,37 @@ where
     }
 
     /// Adds a basic object to the model.
-    pub fn add_ob(&mut self, x: V, typ: Cat::Ob) {
+    pub fn add_ob(&mut self, x: Name, typ: Cat::Ob) {
         self.category.add_ob_generator(x.clone());
         self.ob_types.set(x, typ);
     }
 
     /// Adds a basic morphism to the model.
-    pub fn add_mor(&mut self, f: E, typ: Cat::Hom) {
+    pub fn add_mor(&mut self, f: Name, typ: Cat::Hom) {
         self.category.make_hom_generator(f.clone());
         self.mor_types.set(f, typ);
     }
 
     /// Updates the domain of a morphism, setting or unsetting it.
-    pub fn update_dom(&mut self, f: E, x: Option<V>) -> Option<V> {
+    pub fn update_dom(&mut self, f: Name, x: Option<Name>) -> Option<Name> {
         self.category.update_dom(f, x)
     }
 
     /// Updates the codomain of a morphism, setting or unsetting it.
-    pub fn update_cod(&mut self, f: E, x: Option<V>) -> Option<V> {
+    pub fn update_cod(&mut self, f: Name, x: Option<Name>) -> Option<Name> {
         self.category.update_cod(f, x)
     }
 }
 
-impl<V, E, Cat> DblModel for DiscreteDblModel<V, E, Cat>
+impl<Name, Cat> DblModel for DiscreteDblModel<Name, Cat>
 where
-    V: Eq + Clone + Hash,
-    E: Eq + Clone + Hash,
+    Name: Eq + Clone + Hash,
     Cat: FgCategory,
     Cat::Ob: Eq + Clone + Hash,
     Cat::Hom: Eq + Clone + Hash,
 {
-    type Ob = V;
-    type Mor = Path<V, E>;
+    type Ob = Name;
+    type Mor = Path<Name, Name>;
     type ObType = Cat::Ob;
     type MorType = Cat::Hom;
     type ObOp = Cat::Ob;

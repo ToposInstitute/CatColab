@@ -72,6 +72,11 @@ pub trait Column: Mapping {
     /// Iterates over pairs stored by the column.
     fn iter(&self) -> impl Iterator<Item = (Self::Dom, &Self::Cod)>;
 
+    /// Iterates over values stored by the column.
+    fn values(&self) -> impl Iterator<Item = &Self::Cod> {
+        self.iter().map(|(_, y)| y)
+    }
+
     /** Computes the preimage of the mapping at a value in the codomain.
 
     Depending on whether the implementation maintains a reverse index for the
@@ -194,6 +199,10 @@ impl<T: Eq> Column for VecColumn<T> {
         let filtered = self.0.iter().enumerate().filter(|(_, y)| y.is_some());
         filtered.map(|(i, y)| (i, y.as_ref().unwrap()))
     }
+
+    fn values(&self) -> impl Iterator<Item = &Self::Cod> {
+        self.0.iter().flatten()
+    }
 }
 
 /** An unindexed column backed by a hash map.
@@ -236,6 +245,10 @@ where
 {
     fn iter(&self) -> impl Iterator<Item = (K, &V)> {
         self.0.iter().map(|(k, v)| (k.clone(), v))
+    }
+
+    fn values(&self) -> impl Iterator<Item = &Self::Cod> {
+        self.0.values()
     }
 }
 
@@ -408,7 +421,9 @@ where
     fn iter(&self) -> impl Iterator<Item = (Dom, &Cod)> {
         self.mapping.iter()
     }
-
+    fn values(&self) -> impl Iterator<Item = &Self::Cod> {
+        self.mapping.values()
+    }
     fn preimage(&self, y: &Cod) -> impl Iterator<Item = Dom> {
         self.index.preimage(y)
     }
@@ -455,6 +470,9 @@ impl Column for SkelIndexedColumn {
     fn iter(&self) -> impl Iterator<Item = (usize, &usize)> {
         self.0.iter()
     }
+    fn values(&self) -> impl Iterator<Item = &Self::Cod> {
+        self.0.values()
+    }
     fn preimage(&self, y: &usize) -> impl Iterator<Item = usize> {
         self.0.preimage(y)
     }
@@ -500,6 +518,9 @@ impl<T: Eq + Hash + Clone> Mapping for IndexedVecColumn<T> {
 impl<T: Eq + Hash + Clone> Column for IndexedVecColumn<T> {
     fn iter(&self) -> impl Iterator<Item = (usize, &T)> {
         self.0.iter()
+    }
+    fn values(&self) -> impl Iterator<Item = &Self::Cod> {
+        self.0.values()
     }
     fn preimage(&self, y: &T) -> impl Iterator<Item = usize> {
         self.0.preimage(y)
@@ -548,6 +569,9 @@ where
 {
     fn iter(&self) -> impl Iterator<Item = (K, &V)> {
         self.0.iter()
+    }
+    fn values(&self) -> impl Iterator<Item = &Self::Cod> {
+        self.0.values()
     }
     fn preimage(&self, y: &V) -> impl Iterator<Item = K> {
         self.0.preimage(y)

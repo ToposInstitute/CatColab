@@ -48,7 +48,7 @@ pub struct MorDecl {
     pub cod: Option<ObId>,
 }
 
-type UuidDiscreteDblModel = dbl_model::DiscreteDblModel<Uuid, Uuid, UstrFinCategory>;
+type UuidDiscreteDblModel = dbl_model::DiscreteDblModel<Uuid, UstrFinCategory>;
 
 /// Wasm bindings for a model of a discrete double theory.
 #[wasm_bindgen]
