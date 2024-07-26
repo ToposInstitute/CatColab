@@ -1,0 +1,2 @@
+DROP TABLE witnesses CASCADE;
+DROP TABLE refs;

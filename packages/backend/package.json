@@ -1,0 +1,37 @@
+{
+    "name": "backend",
+    "version": "0.0.1",
+    "description": "The backend for catcolab",
+    "type": "module",
+    "scripts": {
+        "server": "tsx src/index.ts",
+        "test": "tsc; node --test",
+        "migrate": "tsx src/migrate.ts",
+        "teardown": "tsx src/teardown.ts",
+        "compileSql": "pgtyped -c pgtyped.config.json",
+        "format": "biome format --write",
+        "lint": "biome lint --write && biome check --write",
+        "ci": "biome ci",
+        "doc": "typedoc --entryPointStrategy expand ./src"
+    },
+    "author": "CatColab developers",
+    "license": "MIT",
+    "dependencies": {
+        "@automerge/automerge-repo": "^1.2.1",
+        "@automerge/automerge-repo-network-websocket": "^1.2.1",
+        "@trpc/server": "^11.0.0-rc.467",
+        "@types/morgan": "^1.9.9",
+        "express": "^4.19.2",
+        "morgan": "^1.10.0",
+        "pg": "^8.12.0",
+        "ws": "^8.18.0",
+        "zod": "^3.23.8"
+    },
+    "devDependencies": {
+        "@pgtyped/cli": "^2.3.0",
+        "@types/express": "^4.17.21",
+        "@types/pg": "^8.11.6",
+        "@types/ws": "^8.5.12",
+        "squawk-cli": "^1.1.2"
+    }
+}
