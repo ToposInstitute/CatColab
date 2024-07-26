@@ -1,0 +1,18 @@
+{
+    "name": "backend",
+    "version": "0.0.1",
+    "description": "The backend for catcolab",
+    "type": "module",
+    "scripts": {
+        "server": "tsx src/index.ts"
+    },
+    "author": "CatColab developers",
+    "license": "MIT",
+    "dependencies": {
+        "fastify": "^4.28.1",
+        "pg": "^8.12.0"
+    },
+    "devDependencies": {
+        "tsx": "^4.16.2"
+    }
+}
