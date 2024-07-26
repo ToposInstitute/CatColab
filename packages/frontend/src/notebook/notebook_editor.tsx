@@ -151,6 +151,7 @@ export function NotebookEditor<T>(props: {
     handle: DocHandle<unknown>;
     path: Prop[];
     notebook: Notebook<T>;
+    cellType: (content: T) => string;
     changeNotebook: (f: (nb: Notebook<T>) => void) => void;
     formalCellEditor: Component<FormalCellEditorProps<T>>;
     cellConstructors: CellConstructor<T>[];
@@ -267,27 +268,38 @@ export function NotebookEditor<T>(props: {
                                 <Switch>
                                     <Match when={cell.tag === "rich-text"}>
                                         <div class="cell markup-cell">
-                                            <RichTextCellEditor
-                                                cellId={cell.id}
-                                                handle={props.handle}
-                                                path={[...props.path, "cells", i()]}
-                                                isActive={isActive()}
-                                                actions={cellActions}
-                                            />
+                                            <div class="cell-content">
+                                                <RichTextCellEditor
+                                                    cellId={cell.id}
+                                                    handle={props.handle}
+                                                    path={[...props.path, "cells", i()]}
+                                                    isActive={isActive()}
+                                                    actions={cellActions}
+                                                />
+                                            </div>
+                                            <div class="cell-tag">Text</div>
                                         </div>
                                     </Match>
                                     <Match when={cell.tag === "formal" && cell}>
                                         <div class="cell formal-cell">
-                                            <props.formalCellEditor
-                                                content={(cell as FormalCell<T>).content}
-                                                changeContent={(f) => {
-                                                    props.changeNotebook((nb) => {
-                                                        f((nb.cells[i()] as FormalCell<T>).content);
-                                                    });
-                                                }}
-                                                isActive={isActive()}
-                                                actions={cellActions}
-                                            />
+                                            <div class="cell-content">
+                                                <props.formalCellEditor
+                                                    content={(cell as FormalCell<T>).content}
+                                                    changeContent={(f) => {
+                                                        props.changeNotebook((nb) => {
+                                                            f(
+                                                                (nb.cells[i()] as FormalCell<T>)
+                                                                    .content,
+                                                            );
+                                                        });
+                                                    }}
+                                                    isActive={isActive()}
+                                                    actions={cellActions}
+                                                />
+                                            </div>
+                                            <div class="cell-tag">
+                                                {props.cellType((cell as FormalCell<T>).content)}
+                                            </div>
                                         </div>
                                     </Match>
                                     <Match when={cell.tag === "stem"}>
