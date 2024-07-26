@@ -25,7 +25,7 @@ jobs:
         with:
           node-version: 20
           cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Setup Rust
         run: |
@@ -34,29 +34,27 @@ jobs:
 
       - name: Build
         run: |
-          cd frontend
           npm install
-          npm run build
+          npm run build --workspace=frontend
 
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: app
-          path: frontend/dist
+          path: packages/frontend/dist
 
-      - name: Build Docs
+      - name: Build Frontend Docs
         run: |
-          cd frontend
-          npx typedoc --entryPointStrategy expand ./src
+          npm run doc --workspace=frontend
 
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: frontend_docs
-          path: frontend/docs
+          path: packages/frontend/docs
 
-  build_catlog_docs:
-    name: Build Catlog Docs
+  build_rust_docs:
+    name: Build Rust Docs
     runs-on: ubuntu-latest
     steps:
       - name: Repository Checkout
@@ -68,14 +66,13 @@ jobs:
 
       - name: Build
         run: |
-          cd frontend/catlog-wasm
           cargo doc
 
-      - name: Upload catlog docs
+      - name: Upload rust docs
         uses: actions/upload-artifact@v4
         with:
-          name: catlog_docs
-          path: frontend/catlog-wasm/target/doc
+          name: rust_docs
+          path: target/doc
 
   build_dev-docs:
     name: Build dev-docs
@@ -110,7 +107,7 @@ jobs:
   deploy:
     name: Deploy to netlify
     runs-on: ubuntu-latest
-    needs: [build_dev-docs, build_frontend, build_catlog_docs]
+    needs: [build_dev-docs, build_frontend, build_rust_docs]
     steps:
       - name: Repository Checkout
         uses: actions/checkout@v4
@@ -120,11 +117,11 @@ jobs:
         with:
           node-version: 20
           cache: "npm"
-          cache-dependency-path: netlify-env/package-lock.json
+          cache-dependency-path: .netlify-env/package-lock.json
 
       - name: Install Netlify
         run: |
-          cd netlify-env
+          cd .netlify-env
           npm install
 
       - name: Download artifacts
@@ -134,14 +131,14 @@ jobs:
         run: |
           mv app site/
           mv dev-docs site/dev
-          mv catlog_docs site/dev/catlog
+          mv rust_docs site/dev/rust
           mv frontend_docs site/dev/frontend
           echo "/dev /dev/index.xml" > site/_redirects
 
       - name: Deploy
         id: netlify_deploy
         run: |
-          cd netlify-env
+          cd .netlify-env
           prod_flag=""
           if [ "$BRANCH_NAME" = "main" ]; then prod_flag="--prod"; fi
           npx netlify deploy --dir ../site --site ${{ secrets.NETLIFY_SITE_ID }} --auth ${{ secrets.NETLIFY_API_TOKEN }} $prod_flag --json > ../deploy_output.json

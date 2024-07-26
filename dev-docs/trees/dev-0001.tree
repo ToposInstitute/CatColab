@@ -5,7 +5,7 @@
 \title{API Docs}
 
 \ul{
-  \li{[catlog](/dev/catlog/catlog)}
+  \li{[catlog](/dev/rust/catlog)}
   \li{[frontend](/dev/frontend)}
 }
 }
