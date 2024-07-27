@@ -29,3 +29,13 @@
     line-height: 1.1;
     margin: 0.7em 0;
 }
+
+.cell {
+    padding-left: 0.5em;
+    border-left: solid dimgray 2px;
+    border-radius: 2px;
+}
+
+.stem-cell {
+    margin: 0.7em 0;
+}

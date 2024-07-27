@@ -16,7 +16,8 @@
     },
     "homepage": "https://next.catcolab.org",
     "devDependencies": {
-        "@biomejs/biome": "^1.8.3"
+        "@biomejs/biome": "^1.8.3",
+        "depcheck": "^1.4.7"
     },
     "workspaces": [
         "packages/frontend"
