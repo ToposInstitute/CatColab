@@ -42,12 +42,12 @@ import "./model_notebook_editor.css";
 function judgementType(j: ModelJudgment): string | undefined {
     const theory = useContext(TheoryContext);
 
-    if (j.tag == "object") {
+    if (j.tag === "object") {
         return theory?.()?.getObTypeMeta(j.obType)?.name;
-    } else if (j.tag == "morphism") {
+    }
+
+    if (j.tag === "morphism") {
         return theory?.()?.getMorTypeMeta(j.morType)?.name;
-    } else {
-        throw "unexpected judgement tag";
     }
 }
 

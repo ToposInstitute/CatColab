@@ -151,7 +151,7 @@ export function NotebookEditor<T>(props: {
     handle: DocHandle<unknown>;
     path: Prop[];
     notebook: Notebook<T>;
-    cellType: (content: T) => string;
+    cellType: (content: T) => string | undefined;
     changeNotebook: (f: (nb: Notebook<T>) => void) => void;
     formalCellEditor: Component<FormalCellEditorProps<T>>;
     cellConstructors: CellConstructor<T>[];
