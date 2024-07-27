@@ -8,7 +8,6 @@ import {
     Show,
     Switch,
     createEffect,
-    createMemo,
     createSignal,
     onMount,
 } from "solid-js";
@@ -158,9 +157,9 @@ export function NotebookEditor<T>(props: {
 }) {
     const [activeCell, setActiveCell] = createSignal(props.notebook.cells.length > 0 ? 0 : -1);
 
-    const insertPos = createMemo(() => {
+    const insertPos = () => {
         return activeCell() + 1;
-    });
+    };
 
     // Set up commands and their keyboard shortcuts.
 
