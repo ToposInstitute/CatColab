@@ -130,15 +130,7 @@ code {
 body {
   font-family: "Inria Sans";
   font-size: 12pt;
-  line-height: 1.55;
-}
-
-math {
- font-size: 1.12em;
-}
-
-mrow:hover {
- background-color: rgba(0, 100, 255, 0.04);
+  line-height: 1.5em;
 }
 
 .logo {
@@ -565,13 +557,10 @@ img {
   max-width: 100%;
 }
 
-figure {
-  text-align: center;
-}
-
 figcaption {
   font-style: italic;
   padding: 3px;
+  text-align: center;
 }
 
 mark {
