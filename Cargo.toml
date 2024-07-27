@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+    "packages/catlog",
+    "packages/catlog-wasm",
+]

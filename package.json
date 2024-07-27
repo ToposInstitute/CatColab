@@ -1,0 +1,24 @@
+{
+    "name": "catcolab-monorepo",
+    "version": "0.0.1",
+    "description": "The catcolab monorepo",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/ToposInstitute/CatColab.git"
+    },
+    "author": "The CatColab Developers",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/ToposInstitute/CatColab/issues"
+    },
+    "homepage": "https://next.catcolab.org",
+    "devDependencies": {
+        "@biomejs/biome": "^1.8.3"
+    },
+    "workspaces": [
+        "packages/frontend"
+    ]
+}

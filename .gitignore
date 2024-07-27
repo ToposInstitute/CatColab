@@ -78,4 +78,5 @@ web_modules/
 
 # Local Netlify folder
 .netlify
-/frontend/docs/
+/packages/frontend/docs/
+/target/
