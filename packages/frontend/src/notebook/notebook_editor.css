@@ -34,6 +34,21 @@
     padding-left: 0.5em;
     border-left: solid dimgray 2px;
     border-radius: 2px;
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-right: 1em;
+}
+
+.cell-tag {
+    color: dimgray;
+    font-size: 11pt;
+}
+
+.cell-content {
+    flex-grow: 1;
+    height: auto;
 }
 
 .stem-cell {

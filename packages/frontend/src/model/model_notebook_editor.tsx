@@ -9,6 +9,7 @@ import {
     createMemo,
     createSignal,
     onMount,
+    useContext,
 } from "solid-js";
 
 import { useDoc } from "../util/automerge_solid";
@@ -37,6 +38,18 @@ import {
 } from "./types";
 
 import "./model_notebook_editor.css";
+
+function judgementType(j: ModelJudgment): string | undefined {
+    const theory = useContext(TheoryContext);
+
+    if (j.tag === "object") {
+        return theory?.()?.getObTypeMeta(j.obType)?.name;
+    }
+
+    if (j.tag === "morphism") {
+        return theory?.()?.getMorTypeMeta(j.morType)?.name;
+    }
+}
 
 /** Editor for a cell in a model of a discrete double theory.
  */
@@ -177,6 +190,7 @@ export function ModelNotebookEditor(props: {
             >
                 <NotebookEditor
                     handle={props.handle}
+                    cellType={judgementType}
                     path={["notebook"]}
                     notebook={modelNb().notebook}
                     changeNotebook={(f) => {
