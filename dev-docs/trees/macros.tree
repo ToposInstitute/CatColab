@@ -15,7 +15,7 @@
 % Figures
 
 \def\quiver[body]{
-  \tex{\usepackage{quiver,amsopn,amssymb}}{\body}
+  \<html:center>{\tex{\usepackage{quiver,amsopn,amssymb}}{\body}}
 }
 
 % Theorems

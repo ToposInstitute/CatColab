@@ -7,4 +7,8 @@ invented by Grandis and Paré and are described in the textbook by
 
 \p{The interaction between double functors and tabulators seems not be discussed
 at all in the literature. We record the basic notions here needed to make sense
-of double theories with tabulators and models of such theories.}
+of double theories with tabulators and models of such theories. For motivation,
+we recall two fundamental examples of tabulators.}
+
+\transclude{dbl-0002}
+\transclude{dbl-0003}
