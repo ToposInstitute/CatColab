@@ -14,8 +14,14 @@
 
 % Figures
 
-\def\quiver[body]{
-  \<html:center>{\tex{\usepackage{quiver,amsopn,amssymb}}{\body}}
+\def\quiverinline[body]{
+  \tex{\usepackage{quiver,amsopn,amssymb}}{\body}
+}
+
+\def\quiver[body]{\<html:center>{\quiverinline{\body}}}
+
+\def\centerfigs[body]{
+    \<html:div>[class]{centerfigs}{\body}
 }
 
 % Theorems

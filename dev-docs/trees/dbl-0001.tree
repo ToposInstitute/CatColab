@@ -7,8 +7,64 @@ invented by Grandis and Paré and are described in the textbook by
 
 \p{The interaction between double functors and tabulators seems not be discussed
 at all in the literature. We record the basic notions here needed to make sense
-of double theories with tabulators and models of such theories. For motivation,
-we recall two fundamental examples of tabulators.}
+of double theories with tabulators and models of such theories. To set the
+stage, we recall two of the most important examples of tabulators.}
 
 \transclude{dbl-0002}
 \transclude{dbl-0003}
+
+\p{The following definition is provisional but it's what you get by following
+your nose.}
+
+\subtree{
+\title{Preserving tabulators}
+\taxon{definition}
+
+\p{Let \dbl{D} and \dbl{E} be double categories with tabulators. A lax double
+functor #{F: \dbl{D} \to \dbl{E}} \define{preserves tabulators} if for every
+proarrow #{m: x \proto y} in \dbl{D}, the canonical comparison map
+
+##{\phi_m: F(\top M) \to \top(Fm),}
+
+defined as shown below by the universal property of the tabulator #{\top(Fm)},
+is an isomorphism.}
+
+\centerfigs{
+\quiverinline{
+% https://q.uiver.app/#q=WzAsNixbMCwwLCJGXFx0b3AgbSJdLFsxLDAsIkZcXHRvcCBtIl0sWzAsMSwiRlxcdG9wIG0iXSxbMSwxLCJGXFx0b3AgbSJdLFswLDIsIkZ4Il0sWzEsMiwiRnkiXSxbMCwxLCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMCwyLCIiLDIseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxLDMsIiIsMCx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzIsNCwiRlxccGlfMCIsMl0sWzMsNSwiRlxccGlfMSJdLFs0LDUsIkZtIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzIsMywiRiBcXG1hdGhybXtpZH1fe1xcdG9wIG19IiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzEyLDExLCJGXFxwaSIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs2LDEyLCJGX3tcXHRvcCBtfSIsMSx7ImxhYmVsX3Bvc2l0aW9uIjo0MCwic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV1d
+\begin{tikzcd}
+	{F\top m} & {F\top m} \\
+	{F\top m} & {F\top m} \\
+	Fx & Fy
+	\arrow[""{name=0, anchor=center, inner sep=0}, "\shortmid"{marking}, Rightarrow, no head, from=1-1, to=1-2]
+	\arrow[Rightarrow, no head, from=1-1, to=2-1]
+	\arrow[Rightarrow, no head, from=1-2, to=2-2]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "{F \mathrm{id}_{\top m}}", "\shortmid"{marking}, from=2-1, to=2-2]
+	\arrow["{F\pi_0}"', from=2-1, to=3-1]
+	\arrow["{F\pi_1}", from=2-2, to=3-2]
+	\arrow[""{name=2, anchor=center, inner sep=0}, "Fm"', "\shortmid"{marking}, from=3-1, to=3-2]
+	\arrow["{F_{\top m}}"{description, pos=0.4}, draw=none, from=0, to=1]
+	\arrow["{F\pi}"{description}, draw=none, from=1, to=2]
+\end{tikzcd}
+}
+#{\qquad=\qquad}
+\quiverinline{
+% https://q.uiver.app/#q=WzAsNixbMCwwLCJGXFx0b3AgbSJdLFsxLDAsIkZcXHRvcCBtIl0sWzAsMiwiRngiXSxbMSwyLCJGeSJdLFswLDEsIlxcdG9wIEZtIl0sWzEsMSwiXFx0b3AgRm0iXSxbMCwxLCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMiwzLCJGbSIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFs0LDIsIlxccGlfMCIsMl0sWzUsMywiXFxwaV8xIl0sWzQsNSwiIiwwLHsibGV2ZWwiOjIsInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzAsNCwiXFxwaGlfbSIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImRhc2hlZCJ9fX1dLFsxLDUsIlxccGhpX20iLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJkYXNoZWQifX19XSxbNiwxMCwiXFxtYXRocm17aWR9X3tcXHBoaV9tfSIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxMCw3LCJcXHBpIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV1d
+\begin{tikzcd}
+	{F\top m} & {F\top m} \\
+	{\top Fm} & {\top Fm} \\
+	Fx & Fy
+	\arrow[""{name=0, anchor=center, inner sep=0}, "\shortmid"{marking}, Rightarrow, no head, from=1-1, to=1-2]
+	\arrow["{\phi_m}"', dashed, from=1-1, to=2-1]
+	\arrow["{\phi_m}", dashed, from=1-2, to=2-2]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "\shortmid"{marking}, Rightarrow, no head, from=2-1, to=2-2]
+	\arrow["{\pi_0}"', from=2-1, to=3-1]
+	\arrow["{\pi_1}", from=2-2, to=3-2]
+	\arrow[""{name=2, anchor=center, inner sep=0}, "Fm"', "\shortmid"{marking}, from=3-1, to=3-2]
+	\arrow["{\mathrm{id}_{\phi_m}}"{description}, draw=none, from=0, to=1]
+	\arrow["\pi"{description}, draw=none, from=1, to=2]
+\end{tikzcd}
+}
+}
+
+}

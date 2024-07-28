@@ -1,5 +1,6 @@
 \title{Tabulator of span}
 \taxon{example}
 
-\p{The tabulator of a span is the apex of the span, and its two projection
-arrows are the legs of the span.}
+\p{The tabulator of a span is the apex of the span. Its two projection arrows
+are the legs of the span, and its projection cell is the evident one with
+identity map between apexes.}

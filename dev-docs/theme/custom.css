@@ -5,3 +5,10 @@ span.nlab > span > a {
 span.wikipedia > span > a {
   color: #3366cc;
 }
+
+.centerfigs {
+  text-align: center;
+}
+.centerfigs > img {
+  vertical-align: middle;
+}
