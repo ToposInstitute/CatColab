@@ -55,7 +55,6 @@
 
 \def\cat[name]{#{\mathsf{\name}}}
 \def\Set{#{\mathsf{Set}}}
-\def\Tw{#{\operatorname{Tw}}}
 
 % Double category theory
 
@@ -64,3 +63,4 @@
 \def\tabulator[ob]{#{\top\ob}}
 
 \def\dbl[name]{#{\mathbb{\name}}}
+\def\Span{#{\mathbb{S}\mathsf{pan}}}

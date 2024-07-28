@@ -5,10 +5,10 @@
 invented by Grandis and Paré and are described in the textbook by
 [Grandis](grandis-2019).}
 
-\p{The interaction between double functors and tabulators seems not be discussed
-at all in the literature. We record the basic notions here needed to make sense
-of double theories with tabulators and models of such theories. To set the
-stage, we recall two of the most important examples of tabulators.}
+\p{The interaction between double functors and tabulators is not discussed in
+the literature. Here we record the basic notions needed to make sense of double
+theories with tabulators and models of such theories. To set the stage, we
+recall the two most important examples of tabulators.}
 
 \transclude{dbl-0002}
 \transclude{dbl-0003}
@@ -68,3 +68,120 @@ is an isomorphism.}
 }
 
 }
+
+\p{A lax functor that preserves tabulators ought to determine not just the image
+of any tabulator but also the image of any external identity on a tabulator.
+That's certainly the case if the lax functor is \em{normal} but I can't see a
+reason why it should be in general. The next definition attempts to fix this
+assuming that the codomain double category has pullbacks.}
+
+\subtree{
+\title{Category-like tabulators}
+\taxon{definition}
+
+\p{Let \dbl{D} be a double category with tabulators, and let \dbl{E} be a double
+category with pullbacks and tabulators. A lax double functor #{F: \dbl{D} \to
+\dbl{E}} induces \define{category-like tabulators} if for every proarrow #{m: x
+\proto y} in \dbl{D}, the comparison cell
+
+\centerfigs{
+\quiverinline{
+% https://q.uiver.app/#q=WzAsNCxbMCwwLCJGXFx0b3AgbSJdLFsxLDAsIkZcXHRvcCBtIl0sWzAsMSwiRngiXSxbMSwxLCJGeSJdLFswLDEsIkZcXG1hdGhybXtpZH1fe1xcdG9wIG19IiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzIsMywiXFxtYXRocm17cGJ9IiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzAsMiwiRlxccGlfMCIsMl0sWzEsMywiRlxccGlfMSJdLFs0LDUsIlxcTG9uZ3JpZ2h0YXJyb3ciLDMseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
+\begin{tikzcd}
+	{F\top m} & {F\top m} \\
+	Fx & Fy
+	\arrow[""{name=0, anchor=center, inner sep=0}, "{F\mathrm{id}_{\top m}}", "\shortmid"{marking}, from=1-1, to=1-2]
+	\arrow["{F\pi_0}"', from=1-1, to=2-1]
+	\arrow["{F\pi_1}", from=1-2, to=2-2]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "{\mathrm{pb}}"', "\shortmid"{marking}, from=2-1, to=2-2]
+	\arrow["\Longrightarrow"{marking, allow upside down}, draw=none, from=0, to=1]
+\end{tikzcd}
+}
+#{\qquad \text{where} \qquad
+\mathrm{pb} \coloneqq (Fm \odot F\mathrm{id}_y) \times_{Fm} (F\mathrm{id}_x \odot Fm)}
+}
+
+constructed as follows is an extension cell in \dbl{E}.}
+
+\p{A short calculation using the naturality and unitality of the laxators of
+#{F} yields the equation
+
+\centerfigs{
+\quiverinline{
+% https://q.uiver.app/#q=WzAsMTAsWzAsMCwiRlxcdG9wIG0iXSxbMSwwLCJGXFx0b3AgbSJdLFswLDEsIkZcXHRvcCBtIl0sWzEsMSwiRlxcdG9wIG0iXSxbMCwyLCJGeCJdLFsxLDIsIkZ5Il0sWzIsMCwiRlxcdG9wIG0iXSxbMiwyLCJGeSJdLFswLDMsIkZ4Il0sWzIsMywiRnkiXSxbMCwxLCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMCwyLCIiLDIseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxLDMsIiIsMCx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzIsNCwiRlxccGlfMCIsMl0sWzMsNSwiRlxccGlfMSJdLFs0LDUsIkZtIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzIsMywiRiBcXG1hdGhybXtpZH1fe1xcdG9wIG19IiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzEsNiwiRlxcbWF0aHJte2lkfV97XFx0b3AgbX0iLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbNiw3LCJGXFxwaV8xIl0sWzUsNywiRlxcbWF0aHJte2lkfV95IiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzQsOCwiIiwxLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNyw5LCIiLDEseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs4LDksIkZtIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzE2LDE1LCJGXFxwaSIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxMCwxNiwiRl97XFx0b3AgbX0iLDEseyJsYWJlbF9wb3NpdGlvbiI6NDAsInNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxNywxOSwiRlxcbWF0aHJte2lkfV97XFxwaV8xfSIsMSx7Im9mZnNldCI6LTEsInNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs1LDIyLCJGX3ttLHl9IiwxLHsic2hvcnRlbiI6eyJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV1d
+\begin{tikzcd}
+	{F\top m} & {F\top m} & {F\top m} \\
+	{F\top m} & {F\top m} \\
+	Fx & Fy & Fy \\
+	Fx && Fy
+	\arrow[""{name=0, anchor=center, inner sep=0}, "\shortmid"{marking}, Rightarrow, no head, from=1-1, to=1-2]
+	\arrow[Rightarrow, no head, from=1-1, to=2-1]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "{F\mathrm{id}_{\top m}}", "\shortmid"{marking}, from=1-2, to=1-3]
+	\arrow[Rightarrow, no head, from=1-2, to=2-2]
+	\arrow["{F\pi_1}", from=1-3, to=3-3]
+	\arrow[""{name=2, anchor=center, inner sep=0}, "{F \mathrm{id}_{\top m}}", "\shortmid"{marking}, from=2-1, to=2-2]
+	\arrow["{F\pi_0}"', from=2-1, to=3-1]
+	\arrow["{F\pi_1}", from=2-2, to=3-2]
+	\arrow[""{name=3, anchor=center, inner sep=0}, "Fm"', "\shortmid"{marking}, from=3-1, to=3-2]
+	\arrow[Rightarrow, no head, from=3-1, to=4-1]
+	\arrow[""{name=4, anchor=center, inner sep=0}, "{F\mathrm{id}_y}"', "\shortmid"{marking}, from=3-2, to=3-3]
+	\arrow[Rightarrow, no head, from=3-3, to=4-3]
+	\arrow[""{name=5, anchor=center, inner sep=0}, "Fm"', "\shortmid"{marking}, from=4-1, to=4-3]
+	\arrow["{F_{\top m}}"{description, pos=0.4}, draw=none, from=0, to=2]
+	\arrow["{F\mathrm{id}_{\pi_1}}"{description}, shift left, draw=none, from=1, to=4]
+	\arrow["{F\pi}"{description}, draw=none, from=2, to=3]
+	\arrow["{F_{m,y}}"{description}, draw=none, from=3-2, to=5]
+\end{tikzcd}
+}
+#{= \quad Fm \quad =}
+\quiverinline{
+% https://q.uiver.app/#q=WzAsMTAsWzEsMCwiRlxcdG9wIG0iXSxbMiwwLCJGXFx0b3AgbSJdLFsxLDEsIkZcXHRvcCBtIl0sWzIsMSwiRlxcdG9wIG0iXSxbMSwyLCJGeCJdLFsyLDIsIkZ5Il0sWzAsMywiRngiXSxbMiwzLCJGeSJdLFswLDAsIkZcXHRvcCBtIl0sWzAsMiwiRngiXSxbMCwxLCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMCwyLCIiLDIseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxLDMsIiIsMCx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzIsNCwiRlxccGlfMCIsMl0sWzMsNSwiRlxccGlfMSJdLFs0LDUsIkZtIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzIsMywiRiBcXG1hdGhybXtpZH1fe1xcdG9wIG19IiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzYsNywiRm0iLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbNSw3LCIiLDEseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs4LDAsIkZcXG1hdGhybXtpZH1fe1xcdG9wIG19IiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzksNCwiRlxcbWF0aHJte2lkfV94IiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzksNiwiIiwxLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbOCw5LCJGXFxwaV8wIiwyXSxbMTYsMTUsIkZcXHBpIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzEwLDE2LCJGX3tcXHRvcCBtfSIsMSx7ImxhYmVsX3Bvc2l0aW9uIjo0MCwic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzQsMTcsIkZfe3gsbX0iLDEseyJzaG9ydGVuIjp7InRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMTksMjAsIkZcXG1hdGhybXtpZH1fe1xccGlfMH0iLDEseyJvZmZzZXQiOjEsInNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dXQ==
+\begin{tikzcd}
+	{F\top m} & {F\top m} & {F\top m} \\
+	& {F\top m} & {F\top m} \\
+	Fx & Fx & Fy \\
+	Fx && Fy
+	\arrow[""{name=0, anchor=center, inner sep=0}, "{F\mathrm{id}_{\top m}}", "\shortmid"{marking}, from=1-1, to=1-2]
+	\arrow["{F\pi_0}"', from=1-1, to=3-1]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "\shortmid"{marking}, Rightarrow, no head, from=1-2, to=1-3]
+	\arrow[Rightarrow, no head, from=1-2, to=2-2]
+	\arrow[Rightarrow, no head, from=1-3, to=2-3]
+	\arrow[""{name=2, anchor=center, inner sep=0}, "{F \mathrm{id}_{\top m}}", "\shortmid"{marking}, from=2-2, to=2-3]
+	\arrow["{F\pi_0}"', from=2-2, to=3-2]
+	\arrow["{F\pi_1}", from=2-3, to=3-3]
+	\arrow[""{name=3, anchor=center, inner sep=0}, "{F\mathrm{id}_x}"', "\shortmid"{marking}, from=3-1, to=3-2]
+	\arrow[Rightarrow, no head, from=3-1, to=4-1]
+	\arrow[""{name=4, anchor=center, inner sep=0}, "Fm"', "\shortmid"{marking}, from=3-2, to=3-3]
+	\arrow[Rightarrow, no head, from=3-3, to=4-3]
+	\arrow[""{name=5, anchor=center, inner sep=0}, "Fm"', "\shortmid"{marking}, from=4-1, to=4-3]
+	\arrow["{F\mathrm{id}_{\pi_0}}"{description}, shift right, draw=none, from=0, to=3]
+	\arrow["{F_{\top m}}"{description, pos=0.4}, draw=none, from=1, to=2]
+	\arrow["{F\pi}"{description}, draw=none, from=2, to=4]
+	\arrow["{F_{x,m}}"{description}, draw=none, from=3-2, to=5]
+\end{tikzcd}
+}
+}
+The comparison cell follows from this equation using the universal property of
+the pullback:
+\quiver{
+% https://q.uiver.app/#q=WzAsNCxbMCwxLCJGbSBcXG9kb3QgRlxcbWF0aHJte2lkfV95Il0sWzEsMiwiRm0iXSxbMiwxLCJGXFxtYXRocm17aWR9X3ggXFxvZG90IEZtIl0sWzEsMCwiXFxtYXRocm17cGJ9Il0sWzAsMSwiRl97bSx5fSIsMl0sWzIsMSwiRl97eCxtfSJdLFszLDBdLFszLDJdLFszLDEsIiIsMSx7InN0eWxlIjp7Im5hbWUiOiJjb3JuZXIifX1dXQ==
+\begin{tikzcd}[column sep=small]
+	& {\mathrm{pb}} \\
+	{Fm \odot F\mathrm{id}_y} && {F\mathrm{id}_x \odot Fm} \\
+	& Fm
+	\arrow[from=1-2, to=2-1]
+	\arrow[from=1-2, to=2-3]
+	\arrow["\lrcorner"{anchor=center, pos=0.125, rotate=-45}, draw=none, from=1-2, to=3-2]
+	\arrow["{F_{m,y}}"', from=2-1, to=3-2]
+	\arrow["{F_{x,m}}", from=2-3, to=3-2]
+\end{tikzcd}
+}
+}
+}
+
+\p{The definition is inspired by the example of [tabulators of
+profunctors](dbl-0003). As expected, then, it has the intended effect when the
+codomain \dbl{E} is the double category \Span, or more generally
+#{\Span(\cat{C})} for any category \cat{C} with pullbacks. That suffices for
+models of double theories with their default semantics. Whether the definition
+is good outside of this setting is unclear.}

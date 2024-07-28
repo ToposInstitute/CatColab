@@ -8,7 +8,8 @@ span.wikipedia > span > a {
 
 .centerfigs {
   text-align: center;
-}
-.centerfigs > img {
-  vertical-align: middle;
+
+  & > img {
+    vertical-align: middle;
+  }
 }
