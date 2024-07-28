@@ -1,0 +1,10 @@
+\title{Tabulators}
+\import{macros}
+
+\p{A \nlab{tabulator} is a kind of limit in a double category. Tabulators were
+invented by Grandis and Paré and are described in the textbook by
+[Grandis](grandis-2019).}
+
+\p{The interaction between double functors and tabulators seems not be discussed
+at all in the literature. We record the basic notions here needed to make sense
+of double theories with tabulators and models of such theories.}

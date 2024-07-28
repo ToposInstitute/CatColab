@@ -56,13 +56,14 @@ always implicitly regulated by their source.}
 \title{Arrows versus twisted arrows}
 \taxon{Warning}
 
-\p{The tabulator #{\top P} of a profunctor #{P: \cat{C} \proto \cat{D}} is its
-\nlab{category of elements}, defined in such a way that there are projection
-functors #{\top P \to \cat{C}} and #{\top P \to \cat{D}}. This category is
-\em{not} the same as the category of elements of #{P} viewed as a copresheaf on
-#{\cat{C}^\op \times \cat{D}}, which has projections #{\int P \to \cat{C}^\op}
-and #{\int P \to \cat{D}}. Thus, the tabulator of the hom-profunctor on \cat{C}
-is the \nlab{arrow category}, \em{not} the \nlab{twisted arrow category}, of
-\cat{C}. See also the discussion of the \nlab{graph of a profunctor} on the
-nLab.}
+\p{The [tabulator](dbl-0001) #{\top P} of a profunctor #{P: \cat{C} \proto
+\cat{D}} is its \nlab{category of elements}, defined such that there are
+projection functors #{\top P \to \cat{C}} and #{\top P \to \cat{D}}. This
+category is \em{not} the same as the category of elements of #{P} viewed as a
+copresheaf on #{\cat{C}^\op \times \cat{D}}, which has projections #{\int P \to
+\cat{C}^\op} and #{\int P \to \cat{D}}. In particular, the tabulator of the
+hom-profunctor on \cat{C} is the \nlab{arrow category}, \em{not} the
+\nlab{twisted arrow category}, of \cat{C}. See also the discussion of the
+\nlab{graph of a profunctor} on the nLab.}
+
 }
