@@ -64,3 +64,4 @@
 
 \def\dbl[name]{#{\mathbb{\name}}}
 \def\Span{#{\mathbb{S}\mathsf{pan}}}
+\def\Mod{#{\mathbb{M}}\mathsf{od}}

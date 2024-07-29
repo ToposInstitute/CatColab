@@ -81,7 +81,7 @@ assuming that the codomain double category has pullbacks.}
 
 \p{Let \dbl{D} be a double category with tabulators, and let \dbl{E} be a double
 category with pullbacks and tabulators. A lax double functor #{F: \dbl{D} \to
-\dbl{E}} induces \define{category-like tabulators} if for every proarrow #{m: x
+\dbl{E}} has \define{category-like tabulators} if for every proarrow #{m: x
 \proto y} in \dbl{D}, the comparison cell
 
 \centerfigs{
@@ -180,8 +180,20 @@ the pullback:
 }
 
 \p{The definition is inspired by the example of [tabulators of
-profunctors](dbl-0003). As expected, then, it has the intended effect when the
+profunctors](dbl-0003). As expected, it has the intended effect when the
 codomain \dbl{E} is the double category \Span, or more generally
 #{\Span(\cat{C})} for any category \cat{C} with pullbacks. That suffices for
-models of double theories with their default semantics. Whether the definition
-is good outside of this setting is unclear.}
+models of double theories with their default semantics. The definition would be
+fully justified by verifying the following hypothesis.}
+
+\subtree{
+\title{Tabulator of bimodule}
+\taxon{hypothesis}
+
+\p{If a double category \dbl{E} has tabulators, pullbacks, and local
+coequalizers, then its double category of bimodules, #{\Mod(\dbl{E})}, also has
+tabulators. A tabulator in #{\Mod(\dbl{E})} has as its object carrier a
+tabulator in \dbl{E} and as its morphism carrier a pullback in \dbl{E} as
+above.}
+
+}
