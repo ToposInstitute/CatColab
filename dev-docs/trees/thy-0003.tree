@@ -8,5 +8,5 @@
   \li{a proarrow #{\ell: c \proto \tabulator{\id_c}}.}
 }}
 
-\p{This theory is an example of a "simple double theory with tabulators," a
-notion that is fairly evident even if it has not yet been formally defined.}
+\p{The theory of categories with links is an example of a "simple tabulator
+theory," i.e., a small double category with [tabulators](dbl-0001).}

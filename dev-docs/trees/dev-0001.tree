@@ -5,8 +5,8 @@
 \title{API Docs}
 
 \ul{
-  \li{[catlog](/dev/rust/catlog)}
-  \li{[frontend](/dev/frontend)}
+  \li{[\code{catlog}](/dev/rust/catlog): Categorical logic core, in Rust}
+  \li{[\code{frontend}](/dev/frontend): Web frontend, in TypeScript and Solidjs}
 }
 }
 
