@@ -115,10 +115,7 @@ where
     }
 
     fn compose(&self, path: Path<V, FinHom<V, E>>) -> FinHom<V, E> {
-        match path {
-            Path::Id(x) => self.id(x),
-            Path::Seq(fs) => fs.tail.into_iter().fold(fs.head, |f, g| self.compose2(f, g)),
-        }
+        path.reduce(|x| self.id(x), |f, g| self.compose2(f, g))
     }
 
     fn compose2(&self, f: FinHom<V, E>, g: FinHom<V, E>) -> FinHom<V, E> {

@@ -1,11 +1,13 @@
 //! Standard library of double theories.
 
-use ustr::ustr;
+use std::hash::BuildHasherDefault;
+use ustr::{ustr, IdentityHasher, Ustr};
 
-use crate::dbl::theory::DiscreteDblTheory;
+use crate::dbl::theory::{DblTheory, DiscreteDblTheory, DiscreteTabTheory, TabObType};
 use crate::one::fin_category::*;
 
 type UstrDiscreteDblThy = DiscreteDblTheory<UstrFinCategory>;
+type UstrDiscreteTabThy = DiscreteTabTheory<Ustr, Ustr, BuildHasherDefault<IdentityHasher>>;
 
 /** The theory of categories, aka the trivial double theory.
 
@@ -43,6 +45,23 @@ pub fn th_signed_category() -> UstrDiscreteDblThy {
     DiscreteDblTheory::from(sgn)
 }
 
+/** The theory of categories with links.
+
+A category with links is a category `C` together with a profunctor from `C` to
+`Arr(C)`, the arrow category of C.
+ */
+pub fn th_category_links() -> UstrDiscreteTabThy {
+    let mut th: UstrDiscreteTabThy = Default::default();
+    let x = ustr("object");
+    th.add_ob_type(x);
+    th.add_mor_type(
+        ustr("link"),
+        TabObType::Basic(x),
+        th.tabulator(th.hom_type(TabObType::Basic(x))),
+    );
+    th
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -53,5 +72,6 @@ mod tests {
         assert_eq!(th_category().basic_ob_types().count(), 1);
         assert_eq!(th_schema().basic_ob_types().count(), 2);
         assert_eq!(th_signed_category().basic_mor_types().count(), 1);
+        assert_eq!(th_category_links().basic_mor_types().count(), 1);
     }
 }
