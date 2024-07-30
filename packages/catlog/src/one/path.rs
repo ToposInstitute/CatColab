@@ -144,6 +144,19 @@ impl<V, E> Path<V, E> {
         }
     }
 
+    /// Reduces a path using functions on vertices and edges.
+    pub fn reduce<FnV, FnE>(self, fv: FnV, fe: FnE) -> E
+    where
+        FnV: FnOnce(V) -> E,
+        FnE: FnMut(E, E) -> E,
+    {
+        match self {
+            Path::Id(v) => fv(v),
+            // `reduce` cannot fail since edge sequence is nonempty.
+            Path::Seq(edges) => edges.into_iter().reduce(fe).unwrap(),
+        }
+    }
+
     /// Maps a path over functions on vertices and edges.
     pub fn map<CodV, CodE, FnV, FnE>(self, fv: FnV, fe: FnE) -> Path<CodV, CodE>
     where
