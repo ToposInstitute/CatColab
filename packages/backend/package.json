@@ -17,6 +17,7 @@
     },
     "devDependencies": {
         "@types/express": "^4.17.21",
+        "@types/pg": "^8.11.6",
         "@types/ws": "^8.5.12",
         "tsx": "^4.16.2"
     }
