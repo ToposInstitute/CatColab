@@ -1,13 +1,16 @@
 {
-    "compilerOptions": {
-        "composite": true,
-        "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
-        "skipLibCheck": true,
-        "module": "ESNext",
-        "moduleResolution": "bundler",
-        "allowSyntheticDefaultImports": true,
-        "strict": true,
-        "noEmit": true,
-    },
-    "include": ["src"]
+  "compilerOptions": {
+    "target": "ESNext",
+    "jsx": "react",
+    "module": "NodeNext",
+    "moduleResolution": "Node16",
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "./dist",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*.ts"]
 }

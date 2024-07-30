@@ -15,7 +15,7 @@ function App() {
 
     const repo = new Repo({
         storage: new IndexedDBStorageAdapter("catcolab-demo"),
-        network: [new BrowserWebSocketClientAdapter("wss://sync.automerge.org")],
+        network: [new BrowserWebSocketClientAdapter("ws://localhost:3000")],
     });
 
     const handleId = document.location.hash.substring(1);
