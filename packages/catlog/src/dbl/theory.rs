@@ -73,6 +73,7 @@ composed:
 
 use std::hash::{BuildHasher, Hash, RandomState};
 
+use derivative::Derivative;
 use derive_more::From;
 use nonempty::nonempty;
 use ref_cast::RefCast;
@@ -303,7 +304,7 @@ pub enum TabMorType<V, E> {
 /// Object operation in a discrete tabulator theory.
 #[derive(Clone, PartialEq, Eq)]
 pub enum TabObOp<V, E> {
-    /// Identity operation.
+    /// Identity operation on an object type.
     Id(TabObType<V, E>),
 
     /// Projection from tabulator onto source of morphism type.
@@ -336,6 +337,8 @@ nontrivial discrete double category. A **discrete tabulator theory** is rather a
 small double category with tabulators and with no arrows or cells beyond the
 identities and tabulator projections.
  */
+#[derive(Clone, Derivative)]
+#[derivative(Default(bound = "S: Default"))]
 pub struct DiscreteTabTheory<V, E, S = RandomState> {
     ob_types: HashFinSet<V>,
     mor_types: HashFinSet<E>,
@@ -350,9 +353,34 @@ where
     E: Eq + Clone + Hash,
     S: BuildHasher,
 {
-    /// Constructs the tabulator of a morphism type.
+    /// Creates an empty discrete tabulator theory.
+    pub fn new() -> Self
+    where
+        S: Default,
+    {
+        Default::default()
+    }
+
+    /// Convenience method to construct the tabulator of a morphism type.
     pub fn tabulator(&self, m: TabMorType<V, E>) -> TabObType<V, E> {
         TabObType::Tabulator(Box::new(m))
+    }
+
+    /// Adds a basic object type to the theory.
+    pub fn add_ob_type(&mut self, v: V) -> bool {
+        self.ob_types.insert(v)
+    }
+
+    /// Adds a basic morphism type to the theory.
+    pub fn add_mor_type(&mut self, e: E, src: TabObType<V, E>, tgt: TabObType<V, E>) -> bool {
+        self.src.set(e.clone(), src);
+        self.tgt.set(e.clone(), tgt);
+        self.make_mor_type(e)
+    }
+
+    /// Adds a basic morphim type without initializing its source or target.
+    pub fn make_mor_type(&mut self, e: E) -> bool {
+        self.mor_types.insert(e)
     }
 
     fn compose2_types(&self, m: TabMorType<V, E>, n: TabMorType<V, E>) -> TabMorType<V, E> {
@@ -427,14 +455,14 @@ where
     fn cod(&self, ob_op: &Self::ObOp) -> Self::ObType {
         match ob_op {
             TabObOp::Id(x) => x.clone(),
-            TabObOp::ProjSrc(m) => self.src(&m),
-            TabObOp::ProjTgt(m) => self.tgt(&m),
+            TabObOp::ProjSrc(m) => self.src(m),
+            TabObOp::ProjTgt(m) => self.tgt(m),
         }
     }
 
     fn op_src(&self, mor_op: &Self::MorOp) -> Self::ObOp {
         match mor_op {
-            TabMorOp::Id(m) => TabObOp::Id(self.src(&m)),
+            TabMorOp::Id(m) => TabObOp::Id(self.src(m)),
             TabMorOp::Hom(f) => f.clone(),
             TabMorOp::Proj(m) => TabObOp::ProjSrc(m.clone()),
         }
@@ -442,7 +470,7 @@ where
 
     fn op_tgt(&self, mor_op: &Self::MorOp) -> Self::ObOp {
         match mor_op {
-            TabMorOp::Id(m) => TabObOp::Id(self.tgt(&m)),
+            TabMorOp::Id(m) => TabObOp::Id(self.tgt(m)),
             TabMorOp::Hom(f) => f.clone(),
             TabMorOp::Proj(m) => TabObOp::ProjTgt(m.clone()),
         }
@@ -451,7 +479,7 @@ where
     fn op_dom(&self, mor_op: &Self::MorOp) -> Self::MorType {
         match mor_op {
             TabMorOp::Id(m) => m.clone(),
-            TabMorOp::Hom(f) => TabMorType::Hom(Box::new(self.dom(&f))),
+            TabMorOp::Hom(f) => TabMorType::Hom(Box::new(self.dom(f))),
             TabMorOp::Proj(m) => TabMorType::Hom(Box::new(self.tabulator(m.clone()))),
         }
     }
@@ -459,7 +487,7 @@ where
     fn op_cod(&self, mor_op: &Self::MorOp) -> Self::MorType {
         match mor_op {
             TabMorOp::Id(m) | TabMorOp::Proj(m) => m.clone(),
-            TabMorOp::Hom(f) => TabMorType::Hom(Box::new(self.cod(&f))),
+            TabMorOp::Hom(f) => TabMorType::Hom(Box::new(self.cod(f))),
         }
     }
 
@@ -506,7 +534,7 @@ mod tests {
     use crate::one::fin_category::*;
 
     #[test]
-    fn discrete_dbl_theory() {
+    fn discrete_double_theory() {
         type Hom<V, E> = FinHom<V, E>;
 
         let mut sgn: FinCategory<char, char> = Default::default();
@@ -514,12 +542,23 @@ mod tests {
         sgn.add_hom_generator('n', '*', '*');
         sgn.set_composite('n', 'n', Hom::Id('*'));
 
-        let thy = DiscreteDblTheory::from(sgn);
-        assert!(thy.has_ob_type(&'*'));
-        assert!(thy.has_mor_type(&Hom::Generator('n')));
-        assert_eq!(thy.basic_ob_types().count(), 1);
-        assert_eq!(thy.basic_mor_types().count(), 1);
+        let th = DiscreteDblTheory::from(sgn);
+        assert!(th.has_ob_type(&'*'));
+        assert!(th.has_mor_type(&Hom::Generator('n')));
+        assert_eq!(th.basic_ob_types().count(), 1);
+        assert_eq!(th.basic_mor_types().count(), 1);
         let path = Path::pair(Hom::Generator('n'), Hom::Generator('n'));
-        assert_eq!(thy.compose_types(path), Hom::Id('*'));
+        assert_eq!(th.compose_types(path), Hom::Id('*'));
+    }
+
+    #[test]
+    fn discrete_tabulator_theory() {
+        let mut th = DiscreteTabTheory::<char, char>::new();
+        th.add_ob_type('*');
+        let x = TabObType::Basic('*');
+        assert!(th.has_ob_type(&x));
+        let tab = th.tabulator(th.hom_type(x));
+        assert!(th.has_ob_type(&tab));
+        assert!(th.has_mor_type(&th.hom_type(tab)));
     }
 }
