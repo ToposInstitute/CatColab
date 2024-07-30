@@ -71,6 +71,8 @@ composed:
   - Section 10: Finite-product double theories
 */
 
+use std::hash::{BuildHasher, Hash, RandomState};
+
 use derive_more::From;
 use nonempty::nonempty;
 use ref_cast::RefCast;
@@ -78,6 +80,7 @@ use ref_cast::RefCast;
 use super::pasting::DblPasting;
 use crate::one::category::*;
 use crate::one::path::Path;
+use crate::zero::*;
 
 /** A double theory.
 
@@ -194,6 +197,19 @@ pub trait DblTheory {
     }
 }
 
+/// The set of object types of a double theory.
+#[derive(From, RefCast)]
+#[repr(transparent)]
+pub struct ObTypeSet<Th: DblTheory>(Th);
+
+impl<Th: DblTheory> Set for ObTypeSet<Th> {
+    type Elem = Th::ObType;
+
+    fn contains(&self, x: &Th::ObType) -> bool {
+        self.0.has_ob_type(x)
+    }
+}
+
 /** A discrete double theory.
 
 A **discrete double theory** is a double theory with no nontrivial operations on
@@ -271,6 +287,161 @@ where
         match pasting {
             DblPasting::ObId(x) => self.0.id(x),
             DblPasting::ArrId(fs) => self.0.id(self.compose_ob_ops(Path::Seq(fs))),
+            DblPasting::ProId(ms) => self.compose_types(Path::Seq(ms)),
+            DblPasting::Diagram(_) => panic!("General pasting not implemented"),
+        }
+    }
+}
+
+/// Object type in a [discrete tabulator theory](DiscreteTabTheory).
+#[derive(Eq, PartialEq, Clone)]
+pub enum TabObType<V, E> {
+    /// Basic or generating object type.
+    Basic(V),
+
+    /// Object type for the tabulator of a morphism type.
+    Tabulator(Box<TabMorType<V, E>>),
+}
+
+/// Morphism type in a [discrete tabulator theory](DiscreteTabTheory).
+#[derive(Eq, PartialEq, Clone)]
+pub enum TabMorType<V, E> {
+    /// Basic or generating morphism type.
+    Basic(E),
+
+    /// Hom or identity type on an object type.
+    Hom(Box<TabObType<V, E>>),
+}
+
+/** A discrete tabulator theory.
+
+Loosely speaking, a discrete tabulator theory is a [discrete double
+theory](DiscreteDblTheory) extended to allow tabulators. That doesn't quite make
+sense as stated because a [tabulator](https://ncatlab.org/nlab/show/tabulator)
+comes with two projection arrows and a projection cell, so cannot exist in a
+nontrivial discrete double category. A **discrete tabulator theory** is rather a
+small double category with tabulators and with no arrows or cells except the
+identities and tabulator projections.
+
+NOTE: In defining `ObOp` and `MorOp`, we are pretending that the tabulator
+projections don't exist, which seems inocuous because the projections aren't
+much use on their own, but it would be more correct to put them in.
+ */
+pub struct DiscreteTabTheory<V, E, S = RandomState> {
+    ob_types: HashFinSet<V>,
+    mor_types: HashFinSet<E>,
+    src: HashColumn<E, TabObType<V, E>, S>,
+    tgt: HashColumn<E, TabObType<V, E>, S>,
+    compose_map: HashColumn<(E, E), TabMorType<V, E>>,
+}
+
+impl<V, E, S> DiscreteTabTheory<V, E, S>
+where
+    V: Eq + Clone + Hash,
+    E: Eq + Clone + Hash,
+    S: BuildHasher,
+{
+    fn compose2_types(&self, f: TabMorType<V, E>, g: TabMorType<V, E>) -> TabMorType<V, E> {
+        match (f, g) {
+            (TabMorType::Hom(_), g) => g,
+            (f, TabMorType::Hom(_)) => f,
+            (TabMorType::Basic(d), TabMorType::Basic(e)) => {
+                self.compose_map.apply(&(d, e)).expect("Composition should be defined").clone()
+            }
+        }
+    }
+}
+
+impl<V, E, S> DblTheory for DiscreteTabTheory<V, E, S>
+where
+    V: Eq + Clone + Hash,
+    E: Eq + Clone + Hash,
+    S: BuildHasher,
+{
+    type ObType = TabObType<V, E>;
+    type MorType = TabMorType<V, E>;
+    type ObOp = TabObType<V, E>;
+    type MorOp = TabMorType<V, E>;
+
+    fn has_ob_type(&self, ob_type: &Self::ObType) -> bool {
+        match ob_type {
+            TabObType::Basic(x) => self.ob_types.contains(x),
+            TabObType::Tabulator(f) => self.has_mor_type(f.as_ref()),
+        }
+    }
+
+    fn has_mor_type(&self, mor_type: &Self::MorType) -> bool {
+        match mor_type {
+            TabMorType::Basic(e) => self.mor_types.contains(e),
+            TabMorType::Hom(x) => self.has_ob_type(x.as_ref()),
+        }
+    }
+
+    fn src(&self, mor_type: &Self::MorType) -> Self::ObType {
+        match mor_type {
+            TabMorType::Basic(e) => {
+                self.src.apply(e).expect("Source of morphism type should be defined").clone()
+            }
+            TabMorType::Hom(x) => x.as_ref().clone(),
+        }
+    }
+
+    fn tgt(&self, mor_type: &Self::MorType) -> Self::ObType {
+        match mor_type {
+            TabMorType::Basic(e) => {
+                self.tgt.apply(e).expect("Target of morphism type should be defined").clone()
+            }
+            TabMorType::Hom(x) => x.as_ref().clone(),
+        }
+    }
+
+    fn dom(&self, f: &Self::ObOp) -> Self::ObType {
+        f.clone()
+    }
+    fn cod(&self, f: &Self::ObOp) -> Self::ObType {
+        f.clone()
+    }
+    fn op_src(&self, α: &Self::MorOp) -> Self::ObOp {
+        self.src(α)
+    }
+    fn op_tgt(&self, α: &Self::MorOp) -> Self::ObOp {
+        self.tgt(α)
+    }
+    fn op_dom(&self, α: &Self::MorOp) -> Self::MorType {
+        α.clone()
+    }
+    fn op_cod(&self, α: &Self::MorOp) -> Self::MorType {
+        α.clone()
+    }
+
+    fn basic_ob_types(&self) -> impl Iterator<Item = Self::ObType> {
+        self.ob_types.iter().map(TabObType::Basic)
+    }
+
+    fn basic_mor_types(&self) -> impl Iterator<Item = Self::MorType> {
+        self.mor_types.iter().map(TabMorType::Basic)
+    }
+
+    fn compose_types(&self, path: Path<Self::ObType, Self::MorType>) -> Self::MorType {
+        path.reduce(|x| self.hom_type(x), |f, g| self.compose2_types(f, g))
+    }
+
+    fn hom_type(&self, x: Self::ObType) -> Self::MorType {
+        TabMorType::Hom(Box::new(x))
+    }
+
+    fn compose_ob_ops(&self, path: Path<Self::ObType, Self::ObOp>) -> Self::ObOp {
+        let disc = DiscreteCategory::ref_cast(ObTypeSet::ref_cast(self));
+        disc.compose(path)
+    }
+
+    fn compose_mor_ops(
+        &self,
+        pasting: DblPasting<Self::ObType, Self::ObOp, Self::MorType, Self::MorOp>,
+    ) -> Self::MorOp {
+        match pasting {
+            DblPasting::ObId(x) => self.hom_type(x),
+            DblPasting::ArrId(fs) => self.hom_type(self.compose_ob_ops(Path::Seq(fs))),
             DblPasting::ProId(ms) => self.compose_types(Path::Seq(ms)),
             DblPasting::Diagram(_) => panic!("General pasting not implemented"),
         }
