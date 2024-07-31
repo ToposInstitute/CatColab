@@ -1,0 +1,26 @@
+\title{Backend design}
+\date{2024-07-30}
+
+\p{The flow of state through the backend is the most important thing to design first.}
+
+\p{The document storage consists of:}
+
+\ol{
+  \li{A content-addressed collection of document snapshots. Each document snapshot also has metadata, such as the theory that it corresponds to, when it was created, etc.}
+  \li{A collection of refs. Refs are identified by UUID, but also have editable metadata such as title, author(s), tags, etc. Each ref points to a linked list of document snapshots. Each node in this linked list has an optional "memo" which describes that snapshot. The head of the linked list can mutate its snapshot and memo (as an "autosave"), but later nodes may not.}
+}
+
+\p{We think of a ref as a "write head" for a stream of snapshots. A running CatColab server has an in-memory map from refs to automerge documents; there can be at most a single automerge document that is "controlling" a ref at a given time.}
+
+\p{The frontend can search for refs via their metadata.}
+
+\p{Given a ref, the frontend can can request the current automerge document for a ref. When this happens, the backend will either:}
+
+\ol{
+  \li{Produce the document from the in-memory map, if it exists in the in-memory map.}
+  \li{Create a new document (with a new ID!) with state given by the head snapshot for the ref.}
+}
+
+\p{The frontend can also query all snapshots connected to a ref.}
+
+\p{The frontend can push an arbitrary snapshot onto the head of an arbitrary ref. This can be used to "branch off" from a point in the history of any ref, by creating a new ref, and then setting its head to an earlier snapshot.}
