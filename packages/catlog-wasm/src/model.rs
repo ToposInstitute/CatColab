@@ -65,7 +65,10 @@ impl DiscreteDblModel {
     /// Creates an empty model of the given theory.
     #[wasm_bindgen(constructor)]
     pub fn new(theory: &DblTheory) -> Self {
-        Self(UuidDiscreteDblModel::new(theory.theory.clone()))
+        let th = match &theory.theory {
+            DblTheoryWrapper::Discrete(th) => th.clone(),
+        };
+        Self(UuidDiscreteDblModel::new(th))
     }
 
     /// Adds an object to the model.

@@ -13,7 +13,7 @@ use catlog::dbl::theory::{self as dbl_theory, DblTheory as BaseDblTheory};
 use catlog::one::fin_category::*;
 
 /// Object type in a double theory.
-#[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Tsify)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Serialize, Deserialize, Tsify)]
 #[serde(tag = "tag", content = "content")]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum ObType {
@@ -25,7 +25,7 @@ pub enum ObType {
 }
 
 /// Morphism type in a double theory.
-#[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Tsify)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Serialize, Deserialize, Tsify)]
 #[serde(tag = "tag", content = "content")]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum MorType {
@@ -77,7 +77,6 @@ impl TryFrom<MorType> for FinHom<Ustr, Ustr> {
     }
 }
 
-#[allow(dead_code)]
 trait BindableDblTheory:
     dbl_theory::DblTheory<ObType = Self::BindableObType, MorType = Self::BindableMorType>
 {
@@ -85,9 +84,27 @@ trait BindableDblTheory:
     type BindableMorType: Into<MorType> + TryFrom<MorType, Error = ()>;
 }
 
-impl BindableDblTheory for dbl_theory::UstrDiscreteDblThy {
-    type BindableObType = Ustr;
-    type BindableMorType = FinHom<Ustr, Ustr>;
+impl<Th> BindableDblTheory for Th
+where
+    Th: dbl_theory::DblTheory,
+    Th::ObType: Into<ObType> + TryFrom<ObType, Error = ()>,
+    Th::MorType: Into<MorType> + TryFrom<MorType, Error = ()>,
+{
+    type BindableObType = Th::ObType;
+    type BindableMorType = Th::MorType;
+}
+
+pub(crate) enum DblTheoryWrapper {
+    Discrete(Arc<dbl_theory::UstrDiscreteDblTheory>),
+    //DiscreteTab(Arc<dbl_theory::UstrDiscreteTabTheory>),
+}
+
+impl DblTheoryWrapper {
+    fn unwrap(&self) -> &impl BindableDblTheory {
+        match self {
+            DblTheoryWrapper::Discrete(th) => th.as_ref(),
+        }
+    }
 }
 
 /** Wasm bindings for a double theory.
@@ -98,19 +115,28 @@ of hash maps with arbitrary keys in JavaScript.
 */
 #[wasm_bindgen]
 pub struct DblTheory {
-    pub(crate) theory: Arc<dbl_theory::UstrDiscreteDblThy>,
+    pub(crate) theory: DblTheoryWrapper,
     ob_type_index: HashMap<ObType, usize>,
     mor_type_index: HashMap<MorType, usize>,
 }
 
 #[wasm_bindgen]
 impl DblTheory {
-    pub(crate) fn new(theory: dbl_theory::UstrDiscreteDblThy) -> DblTheory {
+    pub(crate) fn new(theory: DblTheoryWrapper) -> Self {
         DblTheory {
-            theory: Arc::new(theory),
+            theory,
             ob_type_index: Default::default(),
             mor_type_index: Default::default(),
         }
+    }
+
+    pub(crate) fn from_discrete(theory: dbl_theory::UstrDiscreteDblTheory) -> Self {
+        Self::new(DblTheoryWrapper::Discrete(Arc::new(theory)))
+    }
+
+    /// Gets the underlying double theory.
+    fn theory(&self) -> &impl BindableDblTheory {
+        self.theory.unwrap()
     }
 
     /// Index of an object type, if set.
@@ -141,13 +167,13 @@ impl DblTheory {
     #[wasm_bindgen]
     pub fn src(&self, mor_type: MorType) -> Option<ObType> {
         let m = mor_type.try_into().ok()?;
-        Some(self.theory.src(&m).into())
+        Some(self.theory().src(&m).into())
     }
 
     /// Target of a morphism type.
     #[wasm_bindgen]
     pub fn tgt(&self, mor_type: MorType) -> Option<ObType> {
         let m = mor_type.try_into().ok()?;
-        Some(self.theory.tgt(&m).into())
+        Some(self.theory().tgt(&m).into())
     }
 }

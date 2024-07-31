@@ -214,7 +214,7 @@ indeed **discrete**, which can equivalently be defined as
 pub struct DiscreteDblTheory<Cat: FgCategory>(Cat);
 
 /// Discrete double theory with names of the type `Ustr`.
-pub type UstrDiscreteDblThy = DiscreteDblTheory<UstrFinCategory>;
+pub type UstrDiscreteDblTheory = DiscreteDblTheory<UstrFinCategory>;
 
 impl<C: FgCategory> DblTheory for DiscreteDblTheory<C>
 where
@@ -353,7 +353,7 @@ pub struct DiscreteTabTheory<V, E, S = RandomState> {
 }
 
 /// Discrete tabulator theory with names of type `Ustr`.
-pub type UstrDiscreteTabThy = DiscreteTabTheory<Ustr, Ustr, BuildHasherDefault<IdentityHasher>>;
+pub type UstrDiscreteTabTheory = DiscreteTabTheory<Ustr, Ustr, BuildHasherDefault<IdentityHasher>>;
 
 impl<V, E, S> DiscreteTabTheory<V, E, S>
 where
