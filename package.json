@@ -4,7 +4,7 @@
     "description": "The catcolab monorepo",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
-        "build": "cd packages/frontend && npm run build && cd ../..",
+        "build": "npm run build --workspace=frontend",
         "dev": "vite packages/frontend"
     },
     "repository": {
