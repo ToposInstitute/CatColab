@@ -12,8 +12,6 @@ use wasm_bindgen::prelude::*;
 use catlog::dbl::theory::{self as dbl_theory, DblTheory};
 use catlog::one::fin_category::*;
 
-type UstrDiscreteDblThy = dbl_theory::DiscreteDblTheory<UstrFinCategory>;
-
 // XXX: It seems like tsify should find the following on its own.
 #[wasm_bindgen]
 extern "C" {
@@ -39,14 +37,14 @@ of hash maps with arbitrary keys in JavaScript.
 */
 #[wasm_bindgen]
 pub struct DiscreteDblTheory {
-    pub(crate) theory: Arc<UstrDiscreteDblThy>,
+    pub(crate) theory: Arc<dbl_theory::UstrDiscreteDblThy>,
     ob_type_index: HashMap<ObType, usize>,
     mor_type_index: HashMap<MorType, usize>,
 }
 
 #[wasm_bindgen]
 impl DiscreteDblTheory {
-    pub(crate) fn new(theory: Arc<UstrDiscreteDblThy>) -> DiscreteDblTheory {
+    pub(crate) fn new(theory: Arc<dbl_theory::UstrDiscreteDblThy>) -> DiscreteDblTheory {
         DiscreteDblTheory {
             theory,
             ob_type_index: Default::default(),

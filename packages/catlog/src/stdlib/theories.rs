@@ -1,13 +1,9 @@
 //! Standard library of double theories.
 
-use std::hash::BuildHasherDefault;
-use ustr::{ustr, IdentityHasher, Ustr};
+use ustr::ustr;
 
-use crate::dbl::theory::{DblTheory, DiscreteDblTheory, DiscreteTabTheory, TabObType};
-use crate::one::fin_category::*;
-
-type UstrDiscreteDblThy = DiscreteDblTheory<UstrFinCategory>;
-type UstrDiscreteTabThy = DiscreteTabTheory<Ustr, Ustr, BuildHasherDefault<IdentityHasher>>;
+use crate::dbl::theory::*;
+use crate::one::fin_category::{FinHom, UstrFinCategory};
 
 /** The theory of categories, aka the trivial double theory.
 

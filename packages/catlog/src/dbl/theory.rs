@@ -71,15 +71,17 @@ composed:
   - Section 10: Finite-product double theories
 */
 
-use std::hash::{BuildHasher, Hash, RandomState};
+use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
 
 use derivative::Derivative;
 use derive_more::From;
 use nonempty::nonempty;
 use ref_cast::RefCast;
+use ustr::{IdentityHasher, Ustr};
 
 use super::pasting::DblPasting;
 use crate::one::category::*;
+use crate::one::fin_category::UstrFinCategory;
 use crate::one::path::Path;
 use crate::zero::*;
 
@@ -210,6 +212,9 @@ indeed **discrete**, which can equivalently be defined as
 #[derive(From, RefCast)]
 #[repr(transparent)]
 pub struct DiscreteDblTheory<Cat: FgCategory>(Cat);
+
+/// Discrete double theory with names of the type `Ustr`.
+pub type UstrDiscreteDblThy = DiscreteDblTheory<UstrFinCategory>;
 
 impl<C: FgCategory> DblTheory for DiscreteDblTheory<C>
 where
@@ -346,6 +351,9 @@ pub struct DiscreteTabTheory<V, E, S = RandomState> {
     tgt: HashColumn<E, TabObType<V, E>, S>,
     compose_map: HashColumn<(E, E), TabMorType<V, E>>,
 }
+
+/// Discrete tabulator theory with names of type `Ustr`.
+pub type UstrDiscreteTabThy = DiscreteTabTheory<Ustr, Ustr, BuildHasherDefault<IdentityHasher>>;
 
 impl<V, E, S> DiscreteTabTheory<V, E, S>
 where
