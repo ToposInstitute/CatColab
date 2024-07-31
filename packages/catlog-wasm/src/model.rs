@@ -64,20 +64,24 @@ pub struct DiscreteDblModel(UuidDiscreteDblModel);
 impl DiscreteDblModel {
     /// Creates an empty model of the given theory.
     #[wasm_bindgen(constructor)]
-    pub fn new(theory: &DiscreteDblTheory) -> Self {
+    pub fn new(theory: &DblTheory) -> Self {
         Self(UuidDiscreteDblModel::new(theory.theory.clone()))
     }
 
     /// Adds an object to the model.
     #[wasm_bindgen(js_name = "addOb")]
     pub fn add_ob(&mut self, decl: ObDecl) {
-        self.0.add_ob(decl.id, decl.ob_type.0);
+        // FIXME: Don't just unwrap.
+        let ob_type = decl.ob_type.try_into().unwrap();
+        self.0.add_ob(decl.id, ob_type);
     }
 
     /// Adds a morphism to the model.
     #[wasm_bindgen(js_name = "addMor")]
     pub fn add_mor(&mut self, decl: MorDecl) {
-        self.0.make_mor(decl.id, decl.mor_type.0);
+        // FIXME: Don't just unwrap.
+        let mor_type = decl.mor_type.try_into().unwrap();
+        self.0.make_mor(decl.id, mor_type);
         self.0.update_dom(decl.id, decl.dom);
         self.0.update_cod(decl.id, decl.cod);
     }
@@ -93,7 +97,6 @@ mod tests {
     use super::*;
     use crate::theories::*;
     use catlog::dbl::model::DblModel;
-    use catlog::one::fin_category::FinHom;
 
     #[test]
     fn model_schema() {
@@ -102,15 +105,15 @@ mod tests {
         let y = Uuid::now_v7();
         model.add_ob(ObDecl {
             id: x,
-            ob_type: ObType("entity".into()),
+            ob_type: ObType::Basic("entity".into()),
         });
         model.add_ob(ObDecl {
             id: y,
-            ob_type: ObType("attr_type".into()),
+            ob_type: ObType::Basic("attr_type".into()),
         });
         model.add_mor(MorDecl {
             id: Uuid::now_v7(),
-            mor_type: MorType(FinHom::Generator("attr".into())),
+            mor_type: MorType::Basic("attr".into()),
             dom: Some(x),
             cod: Some(y),
         });

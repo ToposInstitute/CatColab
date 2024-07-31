@@ -9,44 +9,105 @@ use serde::{Deserialize, Serialize};
 use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
-use catlog::dbl::theory::{self as dbl_theory, DblTheory};
+use catlog::dbl::theory::{self as dbl_theory, DblTheory as BaseDblTheory};
 use catlog::one::fin_category::*;
 
-// XXX: It seems like tsify should find the following on its own.
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen]
-    fn tsFinHom() -> FinHom<Ustr, Ustr>;
+/// Object type in a double theory.
+#[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Tsify)]
+#[serde(tag = "tag", content = "content")]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub enum ObType {
+    /// Basic or generating object type.
+    Basic(Ustr),
+
+    /// Tabulator of a morphism type.
+    Tabulator(Box<MorType>),
 }
 
-/// Object type in discrete double theory.
-#[derive(Eq, Hash, PartialEq, Serialize, Deserialize, Tsify)]
+/// Morphism type in a double theory.
+#[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Tsify)]
+#[serde(tag = "tag", content = "content")]
 #[tsify(into_wasm_abi, from_wasm_abi)]
-pub struct ObType(pub Ustr);
+pub enum MorType {
+    /// Basic or generating morphism type.
+    Basic(Ustr),
 
-/// Morphism type in discrete double theory.
-#[derive(Eq, Hash, PartialEq, Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
-pub struct MorType(pub FinHom<Ustr, Ustr>);
+    /// Hom type on an object type.
+    Hom(Box<ObType>),
+}
 
-/** Wasm bindings for a discrete double theory.
+/// Convert from object type in discrete double theory.
+impl From<Ustr> for ObType {
+    fn from(value: Ustr) -> Self {
+        ObType::Basic(value)
+    }
+}
 
-Besides being a thin wrapper around the theory from `catlog`, this struct allows
+/// Convert from morphism type in discrete double theory.
+impl From<FinHom<Ustr, Ustr>> for MorType {
+    fn from(hom: FinHom<Ustr, Ustr>) -> Self {
+        match hom {
+            FinHom::Generator(e) => MorType::Basic(e),
+            FinHom::Id(v) => MorType::Hom(Box::new(ObType::Basic(v))),
+        }
+    }
+}
+
+/// Convert to object type in discrete double theory.
+impl TryFrom<ObType> for Ustr {
+    type Error = ();
+
+    fn try_from(ob_type: ObType) -> Result<Self, Self::Error> {
+        match ob_type {
+            ObType::Basic(name) => Ok(name),
+            _ => Err(()),
+        }
+    }
+}
+
+/// Convert to morphism type in discrete double theory.
+impl TryFrom<MorType> for FinHom<Ustr, Ustr> {
+    type Error = ();
+
+    fn try_from(mor_type: MorType) -> Result<Self, Self::Error> {
+        match mor_type {
+            MorType::Basic(name) => Ok(FinHom::Generator(name)),
+            MorType::Hom(ob_type) => (*ob_type).try_into().map(FinHom::Id),
+        }
+    }
+}
+
+#[allow(dead_code)]
+trait BindableDblTheory:
+    dbl_theory::DblTheory<ObType = Self::BindableObType, MorType = Self::BindableMorType>
+{
+    type BindableObType: Into<ObType> + TryFrom<ObType, Error = ()>;
+    type BindableMorType: Into<MorType> + TryFrom<MorType, Error = ()>;
+}
+
+impl BindableDblTheory for dbl_theory::UstrDiscreteDblThy {
+    type BindableObType = Ustr;
+    type BindableMorType = FinHom<Ustr, Ustr>;
+}
+
+/** Wasm bindings for a double theory.
+
+Besides being a thin wrapper around a theory from `catlog`, this struct allows
 numerical indices to be set for types in the theory, compensating for the lack
 of hash maps with arbitrary keys in JavaScript.
 */
 #[wasm_bindgen]
-pub struct DiscreteDblTheory {
+pub struct DblTheory {
     pub(crate) theory: Arc<dbl_theory::UstrDiscreteDblThy>,
     ob_type_index: HashMap<ObType, usize>,
     mor_type_index: HashMap<MorType, usize>,
 }
 
 #[wasm_bindgen]
-impl DiscreteDblTheory {
-    pub(crate) fn new(theory: Arc<dbl_theory::UstrDiscreteDblThy>) -> DiscreteDblTheory {
-        DiscreteDblTheory {
-            theory,
+impl DblTheory {
+    pub(crate) fn new(theory: dbl_theory::UstrDiscreteDblThy) -> DblTheory {
+        DblTheory {
+            theory: Arc::new(theory),
             ob_type_index: Default::default(),
             mor_type_index: Default::default(),
         }
@@ -78,13 +139,15 @@ impl DiscreteDblTheory {
 
     /// Source of a morphism type.
     #[wasm_bindgen]
-    pub fn src(&self, m: MorType) -> ObType {
-        ObType(self.theory.src(&m.0))
+    pub fn src(&self, mor_type: MorType) -> Option<ObType> {
+        let m = mor_type.try_into().ok()?;
+        Some(self.theory.src(&m).into())
     }
 
     /// Target of a morphism type.
     #[wasm_bindgen]
-    pub fn tgt(&self, m: MorType) -> ObType {
-        ObType(self.theory.tgt(&m.0))
+    pub fn tgt(&self, mor_type: MorType) -> Option<ObType> {
+        let m = mor_type.try_into().ok()?;
+        Some(self.theory.tgt(&m).into())
     }
 }

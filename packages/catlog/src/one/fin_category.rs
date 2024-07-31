@@ -7,11 +7,6 @@ use nonempty::NonEmpty;
 use thiserror::Error;
 use ustr::{IdentityHasher, Ustr};
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-#[cfg(feature = "serde-wasm")]
-use tsify_next::Tsify;
-
 use super::category::*;
 use super::graph::*;
 use super::path::*;
@@ -19,11 +14,7 @@ use crate::validate::{self, Validate};
 use crate::zero::{Column, HashColumn, Mapping};
 
 /// Morphism in a finite category.
-#[derive(Clone, Debug, Copy, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde", serde(tag = "tag", content = "content"))]
-#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
-#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum FinHom<V, E> {
     /// Identity morphism on an object.
     Id(V),

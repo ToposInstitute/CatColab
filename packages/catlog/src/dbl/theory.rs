@@ -292,7 +292,7 @@ pub enum TabObType<V, E> {
     /// Basic or generating object type.
     Basic(V),
 
-    /// Object type for the tabulator of a morphism type.
+    /// Tabulator of a morphism type.
     Tabulator(Box<TabMorType<V, E>>),
 }
 

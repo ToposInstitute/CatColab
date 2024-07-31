@@ -22,7 +22,7 @@ const thSimpleOlog = () =>
         types: [
             {
                 tag: "ob_type",
-                obType: "object",
+                obType: { tag: "Basic", content: "object" },
                 name: "Type",
                 description: "Type or class of things",
                 shortcut: ["O"],
@@ -31,7 +31,10 @@ const thSimpleOlog = () =>
             },
             {
                 tag: "mor_type",
-                morType: { tag: "Id", content: "object" },
+                morType: {
+                    tag: "Hom",
+                    content: { tag: "Basic", content: "object" },
+                },
                 name: "Aspect",
                 description: "Aspect or property of a thing",
                 shortcut: ["M"],
@@ -48,7 +51,7 @@ const thSimpleSchema = () =>
         types: [
             {
                 tag: "ob_type",
-                obType: "entity",
+                obType: { tag: "Basic", content: "entity" },
                 name: "Entity",
                 description: "Type of entity or thing",
                 shortcut: ["O"],
@@ -58,7 +61,10 @@ const thSimpleSchema = () =>
             },
             {
                 tag: "mor_type",
-                morType: { tag: "Id", content: "entity" },
+                morType: {
+                    tag: "Hom",
+                    content: { tag: "Basic", content: "entity" },
+                },
                 name: "Mapping",
                 description: "Many-to-one relation between entities",
                 shortcut: ["M"],
@@ -66,7 +72,7 @@ const thSimpleSchema = () =>
             },
             {
                 tag: "mor_type",
-                morType: { tag: "Generator", content: "attr" },
+                morType: { tag: "Basic", content: "attr" },
                 name: "Attribute",
                 description: "Data attribute of an entity",
                 shortcut: ["A"],
@@ -74,14 +80,17 @@ const thSimpleSchema = () =>
             },
             {
                 tag: "ob_type",
-                obType: "attr_type",
+                obType: { tag: "Basic", content: "attr_type" },
                 name: "Attribute type",
                 description: "Data type for an attribute",
                 textClasses: [styles.code],
             },
             {
                 tag: "mor_type",
-                morType: { tag: "Id", content: "attr_type" },
+                morType: {
+                    tag: "Hom",
+                    content: { tag: "Basic", content: "attr_type" },
+                },
                 name: "Operation",
                 description: "Operation on data types for attributes",
                 textClasses: [styles.code],
@@ -98,20 +107,23 @@ const thRegNet = () =>
         types: [
             {
                 tag: "ob_type",
-                obType: "object",
+                obType: { tag: "Basic", content: "object" },
                 name: "Species",
                 description: "Biochemical species in the network",
             },
             {
                 tag: "mor_type",
-                morType: { tag: "Id", content: "object" },
+                morType: {
+                    tag: "Hom",
+                    content: { tag: "Basic", content: "object" },
+                },
                 name: "Promotion",
                 description: "Positive interaction: activates or promotes",
                 arrowStyle: "to",
             },
             {
                 tag: "mor_type",
-                morType: { tag: "Generator", content: "negative" },
+                morType: { tag: "Basic", content: "negative" },
                 name: "Inhibition",
                 description: "Negative interaction: represses or inhibits",
                 arrowStyle: "flat",
