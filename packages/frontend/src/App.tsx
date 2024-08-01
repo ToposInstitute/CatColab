@@ -64,8 +64,8 @@ function App() {
 
         return {
             handle: repo.find(docId) as DocHandle<ModelNotebook>,
-            refId: refId
-        }
+            refId: refId,
+        };
     });
 
     return (
@@ -77,7 +77,13 @@ function App() {
                 <span>Error: {handle.error}</span>
             </Match>
             <Match when={handle()}>
-                <ModelEditor handle={handle()!.handle} refId={handle()!.refId} client={client} init={init} theories={theories} />
+                <ModelEditor
+                    handle={handle()!.handle}
+                    refId={handle()!.refId}
+                    client={client}
+                    init={init}
+                    theories={theories}
+                />
             </Match>
         </Switch>
     );
