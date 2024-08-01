@@ -29,13 +29,21 @@ test("Persistence API", async (_t) => {
         assert.notDeepStrictEqual(s1, s3);
     });
 
-    const r1 = await p.newRef(s1, "", "init");
+    const r1 = await p.newRef("");
+
+    await p.autosave(r1, "snapshot1");
+
+    await p.saveRef(r1, "init");
 
     await it("newRef should return UUID as a string", () => {
         assert.strictEqual(typeof r1, "string");
     });
 
-    const r2 = await p.newRef(s1, "My Document", "init");
+    const r2 = await p.newRef("My Document");
+
+    await p.autosave(r2, "snapshot1")
+
+    const w1 = await p.saveRef(r2, "init")
 
     p.autosave(r2, "snapshot2");
 
@@ -48,6 +56,7 @@ test("Persistence API", async (_t) => {
     })
 
     await it("witnesses stored correctly", () => {
+        assert.strictEqual(m2.witnesses[0].id, w1);
         assert.strictEqual(m2.witnesses[0].snapshot, s1);
         assert.strictEqual(m2.witnesses[1].id, w2);
         assert.strictEqual(m2.witnesses[1].snapshot, s3);

@@ -1,26 +1,15 @@
-import express from "express"
-import { Repo } from '@automerge/automerge-repo'
-import { NodeWSServerAdapter } from '@automerge/automerge-repo-network-websocket'
-import { WebSocketServer } from "ws"
+import { Server } from "./server.js"
 
-const app = express()
+const server = new Server()
 
-app.get("/", (_req, res) => {
-    res.send(`👍 backend is running`)
-})
+export type AppRouter = typeof server.appRouter;
 
-const wss = new WebSocketServer({
-    noServer: true
-})
+process.once('SIGINT', function (_code) {
+    console.log('SIGINT received...');
+    server.close();
+});
 
-const repo = new Repo({
-    network: [new NodeWSServerAdapter(wss)]
-})
-
-const server = app.listen(3000)
-
-server.on("upgrade", (request, socket, head) => {
-    wss.handleUpgrade(request, socket, head, (socket) => {
-        wss.emit("connection", socket, request)
-    })
-})
+process.once('SIGTERM', function (_code) {
+    console.log('SIGTERM received...');
+    server.close();
+});

@@ -22,6 +22,7 @@
         "depcheck": "^1.4.7"
     },
     "workspaces": [
+        "packages/backend",
         "packages/frontend"
     ]
 }

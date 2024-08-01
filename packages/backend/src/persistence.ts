@@ -45,10 +45,10 @@ const queries = {
     // We should run update_ref in the same transaction but I can't figure out
     // how to get it to run correctly in another WITH clause
     new_ref: `
-    INSERT INTO refs(id, title, autosave)
-    VALUES (gen_random_uuid(), $2, $1)
+    INSERT INTO refs(id, title)
+    VALUES (gen_random_uuid(), $1)
     RETURNING id
-    ` as Query1<[SnapshotId, string | null], { id: RefId }>,
+    ` as Query1<[string | null], { id: RefId }>,
 
     save_ref: `
     INSERT INTO witnesses(snapshot, forRef, note, atTime)
@@ -140,9 +140,8 @@ export class Persistence {
         return (await this.query1(queries.new_snapshot, [snapshot])).id;
     }
 
-    async newRef(snapshotId: SnapshotId, title: string | null, note: string | null): Promise<RefId> {
-        const refId = (await this.query1(queries.new_ref, [snapshotId, title])).id;
-        this.saveRef(refId, note);
+    async newRef(title: string | null): Promise<RefId> {
+        const refId = (await this.query1(queries.new_ref, [title])).id;
         return refId;
     }
 
