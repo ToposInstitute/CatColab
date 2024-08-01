@@ -15,7 +15,7 @@ import {
 import { useDoc } from "../util/automerge_solid";
 import { type IndexedMap, indexArray, indexMap } from "../util/indexing";
 
-import { DiscreteDblModel, type InvalidDiscreteDblModel, type ObId, type Uuid } from "catlog-wasm";
+import { DblModel, type InvalidDiscreteDblModel, type ObId, type Uuid } from "catlog-wasm";
 import { InlineInput } from "../components";
 import {
     type CellActions,
@@ -127,7 +127,7 @@ export function ModelNotebookEditor(props: {
         let errs: InvalidDiscreteDblModel<Uuid>[] = [];
         const th = theory();
         if (th) {
-            const coreModel = new DiscreteDblModel(th.theory);
+            const coreModel = new DblModel(th.theory);
             for (const judgment of model()) {
                 if (judgment.tag === "object") {
                     coreModel.addOb(judgment);
