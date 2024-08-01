@@ -1,6 +1,6 @@
 import { createEffect, createSignal, splitProps, useContext } from "solid-js";
 
-import type { ObId, ObType } from "catlog-wasm";
+import type { ObType, Uuid } from "catlog-wasm";
 import { InlineInput, type InlineInputErrorStatus, type InlineInputOptions } from "../components";
 import type { CellActions } from "../notebook";
 import type { TheoryMeta } from "../theory";
@@ -56,10 +56,10 @@ export function ObjectCellEditor(props: {
 
 export function ObjectIdInput(
     allProps: {
-        objectId: ObId | null;
-        setObjectId: (id: ObId | null) => void;
+        objectId: Uuid | null;
+        setObjectId: (id: Uuid | null) => void;
         objectType?: ObType;
-        objectIndex?: IndexedMap<ObId, string>;
+        objectIndex?: IndexedMap<Uuid, string>;
         objectInvalid?: boolean;
     } & InlineInputOptions,
 ) {

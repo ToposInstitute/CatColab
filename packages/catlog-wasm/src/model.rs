@@ -3,7 +3,7 @@
 use uuid::Uuid;
 
 use serde::{Deserialize, Serialize};
-use tsify_next::{declare, Tsify};
+use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
 use super::theory::*;
@@ -14,20 +14,12 @@ use catlog::validate::{self, Validate};
 #[cfg(test)]
 use catlog::dbl::model::DblModel as BaseDblModel;
 
-/// Identifier of object in model of double theory.
-#[declare]
-pub type ObId = Uuid;
-
-/// Identifier of morphism in model of double theory.
-#[declare]
-pub type MorId = Uuid;
-
 /// Declaration of object in model of double theory.
 #[derive(Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
 pub struct ObDecl {
     /// Globally unique identifier of object.
-    pub id: ObId,
+    pub id: Uuid,
 
     /// Object type in double theory.
     #[serde(rename = "obType")]
@@ -39,17 +31,17 @@ pub struct ObDecl {
 #[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
 pub struct MorDecl {
     /// Globally unique identifier of morphism.
-    pub id: MorId,
+    pub id: Uuid,
 
     /// Morphism type in double theory.
     #[serde(rename = "morType")]
     pub mor_type: MorType,
 
     /// Domain of morphism, if defined.
-    pub dom: Option<ObId>,
+    pub dom: Option<Uuid>,
 
     /// Codomain of morphism, if defined.
-    pub cod: Option<ObId>,
+    pub cod: Option<Uuid>,
 }
 
 /// Wasm bindings for validation errors in a model of a discrete double theory.

@@ -15,7 +15,7 @@ import {
 import { useDoc } from "../util/automerge_solid";
 import { type IndexedMap, indexArray, indexMap } from "../util/indexing";
 
-import { DblModel, type InvalidDiscreteDblModel, type ObId, type Uuid } from "catlog-wasm";
+import { DblModel, type InvalidDiscreteDblModel, type Uuid } from "catlog-wasm";
 import { InlineInput } from "../components";
 import {
     type CellActions,
@@ -113,8 +113,8 @@ export function ModelNotebookEditor(props: {
             .map((cell) => cell.content),
     );
 
-    const objectIndex = createMemo<IndexedMap<ObId, string>>(() => {
-        const map = new Map<ObId, string>();
+    const objectIndex = createMemo<IndexedMap<Uuid, string>>(() => {
+        const map = new Map<Uuid, string>();
         for (const judgment of model()) {
             if (judgment.tag === "object") {
                 map.set(judgment.id, judgment.name);
