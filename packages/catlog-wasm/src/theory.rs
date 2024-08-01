@@ -1,5 +1,6 @@
 //! Wasm bindings for double theories.
 
+use all_the_same::all_the_same;
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::Arc;
@@ -9,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
-use catlog::dbl::theory::{self as dbl_theory, DblTheory as BaseDblTheory};
+use catlog::dbl::theory::{self as dbl_theory, DblTheory as BaseDblTheory, TabMorType, TabObType};
 use catlog::one::fin_category::*;
 
 /// Object type in a double theory.
@@ -36,14 +37,14 @@ pub enum MorType {
     Hom(Box<ObType>),
 }
 
-/// Convert from object type in discrete double theory.
+/// Convert from object type in a discrete double theory.
 impl From<Ustr> for ObType {
     fn from(value: Ustr) -> Self {
         ObType::Basic(value)
     }
 }
 
-/// Convert from morphism type in discrete double theory.
+/// Convert from morphism type in a discrete double theory.
 impl From<FinHom<Ustr, Ustr>> for MorType {
     fn from(hom: FinHom<Ustr, Ustr>) -> Self {
         match hom {
@@ -53,7 +54,7 @@ impl From<FinHom<Ustr, Ustr>> for MorType {
     }
 }
 
-/// Convert to object type in discrete double theory.
+/// Convert into object type in a discrete double theory.
 impl TryFrom<ObType> for Ustr {
     type Error = ();
 
@@ -65,46 +66,71 @@ impl TryFrom<ObType> for Ustr {
     }
 }
 
-/// Convert to morphism type in discrete double theory.
+/// Convert into morphism type in a discrete double theory.
 impl TryFrom<MorType> for FinHom<Ustr, Ustr> {
     type Error = ();
 
     fn try_from(mor_type: MorType) -> Result<Self, Self::Error> {
         match mor_type {
             MorType::Basic(name) => Ok(FinHom::Generator(name)),
-            MorType::Hom(ob_type) => (*ob_type).try_into().map(FinHom::Id),
+            MorType::Hom(x) => (*x).try_into().map(FinHom::Id),
         }
     }
 }
 
-trait BindableDblTheory:
-    dbl_theory::DblTheory<ObType = Self::BindableObType, MorType = Self::BindableMorType>
-{
-    type BindableObType: Into<ObType> + TryFrom<ObType, Error = ()>;
-    type BindableMorType: Into<MorType> + TryFrom<MorType, Error = ()>;
+/// Convert from object type in a discrete tabulator theory.
+impl From<TabObType<Ustr, Ustr>> for ObType {
+    fn from(ob_type: TabObType<Ustr, Ustr>) -> Self {
+        match ob_type {
+            TabObType::Basic(name) => ObType::Basic(name),
+            TabObType::Tabulator(m) => ObType::Tabulator(Box::new((*m).into())),
+        }
+    }
 }
 
-impl<Th> BindableDblTheory for Th
-where
-    Th: dbl_theory::DblTheory,
-    Th::ObType: Into<ObType> + TryFrom<ObType, Error = ()>,
-    Th::MorType: Into<MorType> + TryFrom<MorType, Error = ()>,
-{
-    type BindableObType = Th::ObType;
-    type BindableMorType = Th::MorType;
+/// Convert from morphism type in a discrete tabulator theory.
+impl From<TabMorType<Ustr, Ustr>> for MorType {
+    fn from(mor_type: TabMorType<Ustr, Ustr>) -> Self {
+        match mor_type {
+            TabMorType::Basic(name) => MorType::Basic(name),
+            TabMorType::Hom(x) => MorType::Hom(Box::new((*x).into())),
+        }
+    }
 }
 
+/// Convert into object type in a discrete tabulator theory.
+impl TryFrom<ObType> for TabObType<Ustr, Ustr> {
+    type Error = ();
+
+    fn try_from(ob_type: ObType) -> Result<Self, Self::Error> {
+        match ob_type {
+            ObType::Basic(name) => Ok(TabObType::Basic(name)),
+            ObType::Tabulator(m) => (*m).try_into().map(|m| TabObType::Tabulator(Box::new(m))),
+        }
+    }
+}
+
+/// Convert into morphism type in a discrete tabulator theory.
+impl TryFrom<MorType> for TabMorType<Ustr, Ustr> {
+    type Error = ();
+
+    fn try_from(mor_type: MorType) -> Result<Self, Self::Error> {
+        match mor_type {
+            MorType::Basic(name) => Ok(TabMorType::Basic(name)),
+            MorType::Hom(x) => (*x).try_into().map(|x| TabMorType::Hom(Box::new(x))),
+        }
+    }
+}
+
+/** Wrapper for double theories of various kinds.
+
+Ideally the Wasm-bound `DblTheory` would just have a type parameter for the
+underlying double theory, but `wasm-bindgen` does not support
+[generics](https://github.com/rustwasm/wasm-bindgen/issues/3309).
+ */
 pub(crate) enum DblTheoryWrapper {
     Discrete(Arc<dbl_theory::UstrDiscreteDblTheory>),
-    //DiscreteTab(Arc<dbl_theory::UstrDiscreteTabTheory>),
-}
-
-impl DblTheoryWrapper {
-    fn unwrap(&self) -> &impl BindableDblTheory {
-        match self {
-            DblTheoryWrapper::Discrete(th) => th.as_ref(),
-        }
-    }
+    DiscreteTab(Arc<dbl_theory::UstrDiscreteTabTheory>),
 }
 
 /** Wasm bindings for a double theory.
@@ -134,9 +160,8 @@ impl DblTheory {
         Self::new(DblTheoryWrapper::Discrete(Arc::new(theory)))
     }
 
-    /// Gets the underlying double theory.
-    fn theory(&self) -> &impl BindableDblTheory {
-        self.theory.unwrap()
+    pub(crate) fn from_discrete_tabulator(theory: dbl_theory::UstrDiscreteTabTheory) -> Self {
+        Self::new(DblTheoryWrapper::DiscreteTab(Arc::new(theory)))
     }
 
     /// Index of an object type, if set.
@@ -166,14 +191,22 @@ impl DblTheory {
     /// Source of a morphism type.
     #[wasm_bindgen]
     pub fn src(&self, mor_type: MorType) -> Option<ObType> {
-        let m = mor_type.try_into().ok()?;
-        Some(self.theory().src(&m).into())
+        all_the_same!(match &self.theory {
+            DblTheoryWrapper::[Discrete, DiscreteTab](th) => {
+                let m = mor_type.try_into().ok()?;
+                Some(th.src(&m).into())
+            }
+        })
     }
 
     /// Target of a morphism type.
     #[wasm_bindgen]
     pub fn tgt(&self, mor_type: MorType) -> Option<ObType> {
-        let m = mor_type.try_into().ok()?;
-        Some(self.theory().tgt(&m).into())
+        all_the_same!(match &self.theory {
+            DblTheoryWrapper::[Discrete, DiscreteTab](th) => {
+                let m = mor_type.try_into().ok()?;
+                Some(th.tgt(&m).into())
+            }
+        })
     }
 }

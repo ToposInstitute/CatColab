@@ -23,6 +23,12 @@ pub fn th_signed_category() -> DblTheory {
     DblTheory::from_discrete(theories::th_signed_category())
 }
 
+/// The theory of categories with links.
+#[wasm_bindgen(js_name = thCategoryLinks)]
+pub fn th_category_links() -> DblTheory {
+    DblTheory::from_discrete_tabulator(theories::th_category_links())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -35,7 +41,16 @@ mod tests {
         let entity = ObType::Basic(ustr("entity"));
         let attr_type = ObType::Basic(ustr("attr_type"));
         let attr = MorType::Basic(ustr("attr"));
-        assert_eq!(th.src(attr.clone()).unwrap(), entity);
-        assert_eq!(th.tgt(attr).unwrap(), attr_type);
+        assert_eq!(th.src(attr.clone()), Some(entity));
+        assert_eq!(th.tgt(attr), Some(attr_type));
+    }
+
+    #[test]
+    fn discrete_tab_theory() {
+        let th = th_category_links();
+        let x = ObType::Basic(ustr("object"));
+        let link = MorType::Basic(ustr("link"));
+        assert_eq!(th.src(link.clone()), Some(x));
+        assert!(matches!(th.tgt(link), Some(ObType::Tabulator(_))));
     }
 }

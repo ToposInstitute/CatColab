@@ -67,6 +67,9 @@ impl DiscreteDblModel {
     pub fn new(theory: &DblTheory) -> Self {
         let th = match &theory.theory {
             DblTheoryWrapper::Discrete(th) => th.clone(),
+            DblTheoryWrapper::DiscreteTab(_) => {
+                panic!("Models of discrete tabulator theories not implemented")
+            }
         };
         Self(UuidDiscreteDblModel::new(th))
     }
