@@ -16,6 +16,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "all-the-same"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8fe9b89a827fde9dfc1f5f9d97e01ad37dde493b2d13560f07f218f11617e0a4"
+dependencies = [
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "archery"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -68,6 +78,7 @@ dependencies = [
 name = "catlog-wasm"
 version = "0.1.0"
 dependencies = [
+ "all-the-same",
  "catlog",
  "console_error_panic_hook",
  "getrandom",

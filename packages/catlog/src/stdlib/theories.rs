@@ -1,19 +1,15 @@
 //! Standard library of double theories.
 
-use std::hash::BuildHasherDefault;
-use ustr::{ustr, IdentityHasher, Ustr};
+use ustr::ustr;
 
-use crate::dbl::theory::{DblTheory, DiscreteDblTheory, DiscreteTabTheory, TabObType};
-use crate::one::fin_category::*;
-
-type UstrDiscreteDblThy = DiscreteDblTheory<UstrFinCategory>;
-type UstrDiscreteTabThy = DiscreteTabTheory<Ustr, Ustr, BuildHasherDefault<IdentityHasher>>;
+use crate::dbl::theory::*;
+use crate::one::fin_category::{FinHom, UstrFinCategory};
 
 /** The theory of categories, aka the trivial double theory.
 
 As a double category, this is the terminal double category.
  */
-pub fn th_category() -> UstrDiscreteDblThy {
+pub fn th_category() -> UstrDiscreteDblTheory {
     let mut cat: UstrFinCategory = Default::default();
     cat.add_ob_generator(ustr("object"));
     DiscreteDblTheory::from(cat)
@@ -23,7 +19,7 @@ pub fn th_category() -> UstrDiscreteDblThy {
 
 As a double category, this is the "walking proarrow".
  */
-pub fn th_schema() -> UstrDiscreteDblThy {
+pub fn th_schema() -> UstrDiscreteDblTheory {
     let mut cat: UstrFinCategory = Default::default();
     let (x, y, p) = (ustr("entity"), ustr("attr_type"), ustr("attr"));
     cat.add_ob_generator(x);
@@ -36,7 +32,7 @@ pub fn th_schema() -> UstrDiscreteDblThy {
 
 A signed category is a category sliced over the group of signs.
  */
-pub fn th_signed_category() -> UstrDiscreteDblThy {
+pub fn th_signed_category() -> UstrDiscreteDblTheory {
     let mut sgn: UstrFinCategory = Default::default();
     let (x, n) = (ustr("object"), ustr("negative"));
     sgn.add_ob_generator(x);
@@ -50,8 +46,8 @@ pub fn th_signed_category() -> UstrDiscreteDblThy {
 A category with links is a category `C` together with a profunctor from `C` to
 `Arr(C)`, the arrow category of C.
  */
-pub fn th_category_links() -> UstrDiscreteTabThy {
-    let mut th: UstrDiscreteTabThy = Default::default();
+pub fn th_category_links() -> UstrDiscreteTabTheory {
+    let mut th: UstrDiscreteTabTheory = Default::default();
     let x = ustr("object");
     th.add_ob_type(x);
     th.add_mor_type(

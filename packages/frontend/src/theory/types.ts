@@ -1,6 +1,6 @@
 import type { KbdKey } from "@solid-primitives/keyboard";
 
-import type { DiscreteDblTheory, MorType, ObType } from "catlog-wasm";
+import type { DblTheory, MorType, ObType } from "catlog-wasm";
 import type { ArrowStyle } from "../visualization/types";
 
 /** A double theory with frontend metadata.
@@ -16,7 +16,7 @@ export class TheoryMeta {
     readonly description?: string;
 
     // The underlying double theory.
-    readonly theory: DiscreteDblTheory;
+    readonly theory: DblTheory;
 
     // Types in theory bound with metadata, to be displayed in this order.
     readonly types: TypeMeta[];
@@ -28,7 +28,7 @@ export class TheoryMeta {
         id: string;
         name: string;
         description?: string;
-        theory: () => DiscreteDblTheory;
+        theory: () => DblTheory;
         types?: TypeMeta[];
         onlyFree?: boolean;
     }) {
