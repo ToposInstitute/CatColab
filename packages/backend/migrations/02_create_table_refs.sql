@@ -1,11 +1,18 @@
-CREATE TABLE history (
-    id serial primary key,
-    snapshot int references snapshots(id),
-    prev int references history(id)
+CREATE TABLE witnesses (
+    id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    snapshot INT REFERENCES snapshots (id),
+    forRef UUID NOT NULL,
+    note TEXT,
+    atTime TIMESTAMPTZ NOT NULL
 );
 
 CREATE TABLE refs (
-    id uuid primary key,
-    title text,
-    history int references history(id)
+    id UUID PRIMARY KEY,
+    title TEXT,
+    autosave INT REFERENCES snapshots (id),
+    latest INT REFERENCES witnesses (id)
 );
+
+ALTER TABLE witnesses ADD CONSTRAINT forRefForeignKey
+    FOREIGN KEY (forRef)
+    REFERENCES refs (id);

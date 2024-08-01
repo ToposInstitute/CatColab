@@ -1,0 +1,7 @@
+\date{2024-07-31}
+\taxon{table}
+\title{Refs}
+
+\p{We think of a ref as a "write head" for a stream of snapshots. A running CatColab server has an in-memory map from refs to automerge documents; there can be at most a single automerge document that is "controlling" a ref at a given time.}
+
+\p{Refs are identified by UUID, but also have editable metadata such as title, author(s), tags, etc. Refs are linked to snapshots via [witnesses](dev-000D).}

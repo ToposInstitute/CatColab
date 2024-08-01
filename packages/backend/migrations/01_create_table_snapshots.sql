@@ -1,5 +1,5 @@
 CREATE TABLE snapshots (
-    id serial primary key,
-    hash bytea unique,
-    content text
+    id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    hash BYTEA UNIQUE,
+    content TEXT
 );

@@ -55,7 +55,12 @@ export async function migrate(client: pg.Client | pg.Pool, migration_dir_path: s
             { encoding: 'utf8' }
         );
         console.info(`${verb}: ${todo}`)
-        await client.query(contents);
+        try {
+            await client.query(contents);
+        } catch (e) {
+            console.error(`failed to run migration ${todo}`)
+            throw(e)
+        }
         if (teardown) {
             await client.query(remove_migration_query, [todo.replace(/.undo.sql$/, ".sql")]);
         } else {
