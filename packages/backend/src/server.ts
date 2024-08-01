@@ -43,7 +43,6 @@ export class Server {
             newRef: publicProcedure
                 .input(z.object({ title: z.string(), docId: z.string() }))
                 .mutation(async (opts) => {
-                    console.log("client asked for new ref")
                     const { input: { title, docId } } = opts;
                     const refId = await this.db.newRef(title);
                     const handle = this.repo.find(docId as A.DocumentId);
@@ -51,12 +50,25 @@ export class Server {
                     this.docMap.set(refId, handle);
                     return refId;
                 }),
+
             docIdFor: publicProcedure
                 .input(z.string())
                 .query(async (opts) => {
                     const { input: refId } = opts;
                     const handle = await this.getDocHandle(refId as RefId);
                     return handle?.documentId;
+                }),
+
+            saveRef: publicProcedure
+                .input(z.object({ refId: z.string(), note: z.string() }))
+                .mutation(async (opts) => {
+                    const { input: { refId, note } } = opts;
+                    await this.db.saveRef(refId as RefId, note);
+                }),
+
+            getRefs: publicProcedure
+                .query(async () => {
+                    return (await this.db.allRefs())
                 })
         });
 
@@ -86,7 +98,6 @@ export class Server {
 
     setHandleCallback(refId: RefId, handle: A.DocHandle<any>) {
         handle.on("change", async (payload) => {
-            console.log("autosave")
             const doc = payload.doc;
             this.db.autosave(refId, JSON.stringify(doc));
         });

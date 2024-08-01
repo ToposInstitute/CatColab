@@ -12,7 +12,7 @@ import * as trpc from "@trpc/client";
 import type { AppRouter } from "backend/src/index.js";
 import { createResource, Match, Switch } from "solid-js";
 
-const serverHost = "localhost:5173";
+const serverHost = window.location.host;
 
 function App() {
     const theories = stdTheories();
@@ -20,7 +20,7 @@ function App() {
     const http_url = `http://${serverHost}/api`;
     const ws_url = `ws://${serverHost}/api`;
 
-    const api = trpc.createTRPCClient<AppRouter>({
+    const client = trpc.createTRPCClient<AppRouter>({
         links: [
             trpc.httpBatchLink({
                 url: http_url,
@@ -42,15 +42,17 @@ function App() {
 
     const [handle] = createResource(async () => {
         let docId: A.DocumentId;
+        let refId: string;
 
         if (uuid.validate(urlHash)) {
-            docId = (await api.docIdFor.query(urlHash))!;
+            refId = urlHash;
+            docId = (await client.docIdFor.query(urlHash))!;
         } else {
             const doc = repo.create(init);
 
             docId = doc.documentId;
 
-            const refId = await api.newRef.mutate({
+            refId = await client.newRef.mutate({
                 docId,
                 title: init.name,
             });
@@ -58,7 +60,12 @@ function App() {
             document.location.hash = refId;
         }
 
-        return repo.find(docId) as DocHandle<ModelNotebook>;
+        console.log(await client.getRefs.query());
+
+        return {
+            handle: repo.find(docId) as DocHandle<ModelNotebook>,
+            refId: refId
+        }
     });
 
     return (
@@ -70,7 +77,7 @@ function App() {
                 <span>Error: {handle.error}</span>
             </Match>
             <Match when={handle()}>
-                <ModelEditor handle={handle()!} init={init} theories={theories} />
+                <ModelEditor handle={handle()!.handle} refId={handle()!.refId} client={client} init={init} theories={theories} />
             </Match>
         </Switch>
     );

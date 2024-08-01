@@ -87,14 +87,14 @@ const queries = {
     INNER JOIN witnesses ON refs.latest = witnesses.id
     INNER JOIN snapshots ON witnesses.snapshot = snapshots.id
     WHERE refs.id = $1;
-    ` as Query<[RefId], { content: string }>,
+    ` as Query1<[RefId], { content: string }>,
 
     get_autosave: `
     SELECT snapshots.content as content
     FROM refs
     INNER JOIN snapshots ON refs.autosave = snapshots.id
     WHERE refs.id = $1;
-    ` as Query<[RefId], { content: string }>,
+    ` as Query1<[RefId], { content: string }>,
 
     get_ref_meta: `
     SELECT title, latest FROM refs WHERE id = $1
