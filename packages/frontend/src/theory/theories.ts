@@ -21,7 +21,7 @@ const thSimpleOlog = () =>
         theory: catlog.thCategory,
         types: [
             {
-                tag: "ob_type",
+                tag: "ObType",
                 obType: { tag: "Basic", content: "object" },
                 name: "Type",
                 description: "Type or class of things",
@@ -30,7 +30,7 @@ const thSimpleOlog = () =>
                 svgClasses: [svgStyles.box],
             },
             {
-                tag: "mor_type",
+                tag: "MorType",
                 morType: {
                     tag: "Hom",
                     content: { tag: "Basic", content: "object" },
@@ -50,7 +50,7 @@ const thSimpleSchema = () =>
         theory: catlog.thSchema,
         types: [
             {
-                tag: "ob_type",
+                tag: "ObType",
                 obType: { tag: "Basic", content: "entity" },
                 name: "Entity",
                 description: "Type of entity or thing",
@@ -60,7 +60,7 @@ const thSimpleSchema = () =>
                 textClasses: [styles.code],
             },
             {
-                tag: "mor_type",
+                tag: "MorType",
                 morType: {
                     tag: "Hom",
                     content: { tag: "Basic", content: "entity" },
@@ -71,7 +71,7 @@ const thSimpleSchema = () =>
                 textClasses: [styles.code],
             },
             {
-                tag: "mor_type",
+                tag: "MorType",
                 morType: { tag: "Basic", content: "attr" },
                 name: "Attribute",
                 description: "Data attribute of an entity",
@@ -79,14 +79,14 @@ const thSimpleSchema = () =>
                 textClasses: [styles.code],
             },
             {
-                tag: "ob_type",
+                tag: "ObType",
                 obType: { tag: "Basic", content: "attr_type" },
                 name: "Attribute type",
                 description: "Data type for an attribute",
                 textClasses: [styles.code],
             },
             {
-                tag: "mor_type",
+                tag: "MorType",
                 morType: {
                     tag: "Hom",
                     content: { tag: "Basic", content: "attr_type" },
@@ -106,13 +106,13 @@ const thRegNet = () =>
         onlyFree: true,
         types: [
             {
-                tag: "ob_type",
+                tag: "ObType",
                 obType: { tag: "Basic", content: "object" },
                 name: "Species",
                 description: "Biochemical species in the network",
             },
             {
-                tag: "mor_type",
+                tag: "MorType",
                 morType: {
                     tag: "Hom",
                     content: { tag: "Basic", content: "object" },
@@ -122,7 +122,7 @@ const thRegNet = () =>
                 arrowStyle: "to",
             },
             {
-                tag: "mor_type",
+                tag: "MorType",
                 morType: { tag: "Basic", content: "negative" },
                 name: "Inhibition",
                 description: "Negative interaction: represses or inhibits",

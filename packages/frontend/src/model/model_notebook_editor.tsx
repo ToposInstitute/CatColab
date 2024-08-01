@@ -227,7 +227,7 @@ function modelCellConstructors(theory?: TheoryMeta): ModelCellConstructor[] {
             description,
             shortcut: shortcut && [modifier, ...shortcut],
             construct:
-                typ.tag === "ob_type"
+                typ.tag === "ObType"
                     ? () => newFormalCell(newObjectDecl(typ.obType))
                     : () => newFormalCell(newMorphismDecl(typ.morType)),
         });

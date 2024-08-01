@@ -47,9 +47,9 @@ export class TheoryMeta {
 
     bindType(meta: TypeMeta) {
         const index = this.types.length;
-        if (meta.tag === "ob_type") {
+        if (meta.tag === "ObType") {
             this.theory.setObTypeIndex(meta.obType, index);
-        } else if (meta.tag === "mor_type") {
+        } else if (meta.tag === "MorType") {
             this.theory.setMorTypeIndex(meta.morType, index);
         }
         this.types.push(meta);
@@ -93,14 +93,14 @@ type BaseTypeMeta = {
 };
 
 export type ObTypeMeta = BaseTypeMeta & {
-    tag: "ob_type";
+    tag: "ObType";
 
     // Object type in underlying theory.
     obType: ObType;
 };
 
 export type MorTypeMeta = BaseTypeMeta & {
-    tag: "mor_type";
+    tag: "MorType";
 
     // Morphism type in underlying theory.
     morType: MorType;
