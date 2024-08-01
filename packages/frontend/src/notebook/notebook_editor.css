@@ -24,7 +24,7 @@
 
 .formal-cell {
     --formal-font-size: 1.3em;
-
+    padding-right: 1em;
     font-size: var(--formal-font-size);
     line-height: 1.1;
     margin: 0.7em 0;

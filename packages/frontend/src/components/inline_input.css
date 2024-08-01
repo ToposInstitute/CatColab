@@ -12,6 +12,8 @@
     display: inline-block;
     visibility: hidden;
     white-space-collapse: preserve;
+    padding-left: 5px;
+    padding-right: 5px;
     min-width: 1ex;
 }
 
@@ -24,7 +26,8 @@
 
     background: transparent;
     outline: none;
-    padding: 0;
+    padding-left: 5px;
+    padding-right: 5px;
     font: inherit;
 }
 
