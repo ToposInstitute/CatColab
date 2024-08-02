@@ -1,18 +1,14 @@
-CREATE TABLE witnesses (
-    id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    snapshot INT REFERENCES snapshots (id),
-    forRef UUID NOT NULL,
-    note TEXT,
-    atTime TIMESTAMPTZ NOT NULL
-);
-
 CREATE TABLE refs (
     id UUID PRIMARY KEY,
     title TEXT,
     autosave INT REFERENCES snapshots (id),
-    latest INT REFERENCES witnesses (id)
+    lastUpdated TIMESTAMPTZ NOT NULL
 );
 
-ALTER TABLE witnesses ADD CONSTRAINT forRefForeignKey
-    FOREIGN KEY (forRef)
-    REFERENCES refs (id);
+CREATE TABLE witnesses (
+    id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    snapshot INT NOT NULL REFERENCES snapshots (id),
+    forRef UUID NOT NULL REFERENCES refs (id),
+    note TEXT,
+    atTime TIMESTAMPTZ NOT NULL
+);

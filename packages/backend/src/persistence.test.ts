@@ -60,7 +60,6 @@ test("Persistence API", async (_t) => {
         assert.strictEqual(m2.witnesses[0].snapshot, s1);
         assert.strictEqual(m2.witnesses[1].id, w2);
         assert.strictEqual(m2.witnesses[1].snapshot, s3);
-        assert.strictEqual(m2.latest, w2);
     });
 
     await it("latest snapshot is correct", async () => {

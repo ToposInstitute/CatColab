@@ -1,5 +1,5 @@
 CREATE TABLE snapshots (
     id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     hash BYTEA UNIQUE,
-    content TEXT
+    content TEXT NOT NULL
 );

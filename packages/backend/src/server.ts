@@ -1,4 +1,4 @@
-import { Persistence, RefId } from "./persistence.js";
+import { Persistence } from "./persistence.js";
 import * as A from "@automerge/automerge-repo";
 import { NodeWSServerAdapter } from "@automerge/automerge-repo-network-websocket";
 import express from "express";
@@ -17,7 +17,7 @@ export const publicProcedure = t.procedure;
 
 export class Server {
     db: Persistence
-    docMap: Map<RefId, A.DocHandle<any>>
+    docMap: Map<string, A.DocHandle<any>>
     app: express.Express
     server: http.Server
     wss: ws.WebSocketServer
@@ -55,7 +55,7 @@ export class Server {
                 .input(z.string())
                 .query(async (opts) => {
                     const { input: refId } = opts;
-                    const handle = await this.getDocHandle(refId as RefId);
+                    const handle = await this.getDocHandle(refId);
                     return handle?.documentId;
                 }),
 
@@ -63,7 +63,7 @@ export class Server {
                 .input(z.object({ refId: z.string(), note: z.string() }))
                 .mutation(async (opts) => {
                     const { input: { refId, note } } = opts;
-                    await this.db.saveRef(refId as RefId, note);
+                    await this.db.saveRef(refId, note);
                 }),
 
             getRefs: publicProcedure
@@ -96,14 +96,14 @@ export class Server {
         this.server.listen(PORT);
     }
 
-    setHandleCallback(refId: RefId, handle: A.DocHandle<any>) {
+    setHandleCallback(refId: string, handle: A.DocHandle<any>) {
         handle.on("change", async (payload) => {
             const doc = payload.doc;
             this.db.autosave(refId, JSON.stringify(doc));
         });
     }
 
-    async getDocHandle(refId: RefId): Promise<A.DocHandle<any> | undefined> {
+    async getDocHandle(refId: string): Promise<A.DocHandle<any> | undefined> {
         if (this.docMap.has(refId)) {
             return this.docMap.get(refId)
         } else {
