@@ -3,7 +3,7 @@ import { createEffect, useContext } from "solid-js";
 import { InlineInput } from "../components";
 import type { CellActions } from "../notebook";
 import { ModelErrorsContext, TheoryContext } from "./model_context";
-import { ObjectInput } from "./object_input";
+import { ObInput } from "./object_input";
 import type { MorphismDecl } from "./types";
 
 import "./morphism_cell_editor.css";
@@ -39,7 +39,7 @@ export function MorphismCellEditor(props: {
 
     return (
         <div class="morphism-decl">
-            <ObjectInput
+            <ObInput
                 ref={domRef}
                 placeholder="..."
                 ob={props.morphism.dom}
@@ -82,7 +82,7 @@ export function MorphismCellEditor(props: {
                 </div>
                 <div class={arrowClasses().join(" ")} />
             </div>
-            <ObjectInput
+            <ObInput
                 ref={codRef}
                 placeholder="..."
                 ob={props.morphism.cod}

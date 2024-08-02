@@ -126,7 +126,8 @@ impl TryFrom<MorType> for TabMorType<Ustr, Ustr> {
 
 Ideally the Wasm-bound `DblTheory` would just have a type parameter for the
 underlying double theory, but `wasm-bindgen` does not support
-[generics](https://github.com/rustwasm/wasm-bindgen/issues/3309).
+[generics](https://github.com/rustwasm/wasm-bindgen/issues/3309). Instead, we
+explicitly enumerate the supported kinds of double theories in this enum.
  */
 pub(crate) enum DblTheoryWrapper {
     Discrete(Arc<dbl_theory::UstrDiscreteDblTheory>),
@@ -162,6 +163,17 @@ impl DblTheory {
 
     pub(crate) fn from_discrete_tabulator(theory: dbl_theory::UstrDiscreteTabTheory) -> Self {
         Self::new(DblTheoryWrapper::DiscreteTab(Arc::new(theory)))
+    }
+
+    /// Kind of double theory ("double doctrine").
+    #[wasm_bindgen(getter)]
+    pub fn kind(&self) -> String {
+        // TODO: Should return an enum so that we get type defs.
+        match &self.theory {
+            DblTheoryWrapper::Discrete(_) => "Discrete",
+            DblTheoryWrapper::DiscreteTab(_) => "DiscreteTab",
+        }
+        .into()
     }
 
     /// Index of an object type, if set.

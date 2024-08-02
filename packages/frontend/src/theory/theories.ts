@@ -11,7 +11,7 @@ import svgStyles from "./svg_styles.module.css";
 TODO: Should the underlying theories be lazy loaded?
  */
 export const stdTheories = () =>
-    uniqueIndexArray([thSimpleOlog(), thSimpleSchema(), thRegNet()], (th) => th.id);
+    uniqueIndexArray([thSimpleOlog(), thSimpleSchema(), thRegNet(), thStockFlow()], (th) => th.id);
 
 const thSimpleOlog = () =>
     new TheoryMeta({
@@ -127,6 +127,42 @@ const thRegNet = () =>
                 name: "Inhibition",
                 description: "Negative interaction: represses or inhibits",
                 arrowStyle: "flat",
+            },
+        ],
+    });
+
+const thStockFlow = () =>
+    new TheoryMeta({
+        id: "stock-flow",
+        name: "Stock-flow diagram",
+        theory: catlog.thCategoryLinks,
+        onlyFree: true,
+        types: [
+            {
+                tag: "ObType",
+                obType: { tag: "Basic", content: "object" },
+                name: "Stock",
+                description: "Thing with an amount",
+                shortcut: ["S"],
+                cssClasses: [styles.box],
+                svgClasses: [svgStyles.box],
+            },
+            {
+                tag: "MorType",
+                morType: {
+                    tag: "Hom",
+                    content: { tag: "Basic", content: "object" },
+                },
+                name: "Flow",
+                description: "Flow from one stock to another",
+                shortcut: ["F"],
+            },
+            {
+                tag: "MorType",
+                morType: { tag: "Basic", content: "link" },
+                name: "Link",
+                description: "Influence of a stock on a flow",
+                shortcut: ["L"],
             },
         ],
     });

@@ -25,7 +25,12 @@ import {
     newRichTextCell,
 } from "../notebook";
 import type { TheoryId, TheoryMeta } from "../theory";
-import { ModelErrorsContext, ObjectIndexContext, TheoryContext } from "./model_context";
+import {
+    ModelErrorsContext,
+    MorphismIndexContext,
+    ObjectIndexContext,
+    TheoryContext,
+} from "./model_context";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
 import {
@@ -123,10 +128,20 @@ export function ModelNotebookEditor(props: {
         return indexMap(map);
     });
 
+    const morphismIndex = createMemo<IndexedMap<Uuid, string>>(() => {
+        const map = new Map<Uuid, string>();
+        for (const judgment of model()) {
+            if (judgment.tag === "morphism") {
+                map.set(judgment.id, judgment.name);
+            }
+        }
+        return indexMap(map);
+    });
+
     const modelErrors = createMemo<Map<Uuid, InvalidDiscreteDblModel<Uuid>[]>>(() => {
         let errs: InvalidDiscreteDblModel<Uuid>[] = [];
         const th = theory();
-        if (th) {
+        if (th && th.theory.kind === "Discrete") {
             const coreModel = new DblModel(th.theory);
             for (const judgment of model()) {
                 if (judgment.tag === "object") {
@@ -185,6 +200,7 @@ export function ModelNotebookEditor(props: {
                 values={[
                     [TheoryContext, theory],
                     [ObjectIndexContext, objectIndex],
+                    [MorphismIndexContext, morphismIndex],
                     [ModelErrorsContext, modelErrors],
                 ]}
             >
