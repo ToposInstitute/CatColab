@@ -2,8 +2,8 @@ import { createEffect, useContext } from "solid-js";
 
 import { InlineInput } from "../components";
 import type { CellActions } from "../notebook";
-import { ObjectIdInput } from "./id_input";
 import { ModelErrorsContext, TheoryContext } from "./model_context";
+import { ObjectInput } from "./object_input";
 import type { MorphismDecl } from "./types";
 
 import "./morphism_cell_editor.css";
@@ -39,16 +39,16 @@ export function MorphismCellEditor(props: {
 
     return (
         <div class="morphism-decl">
-            <ObjectIdInput
+            <ObjectInput
                 ref={domRef}
                 placeholder="..."
-                objectId={props.morphism.dom}
-                setObjectId={(id) => {
+                ob={props.morphism.dom}
+                setOb={(ob) => {
                     props.modifyMorphism((mor) => {
-                        mor.dom = id;
+                        mor.dom = ob;
                     });
                 }}
-                objectType={theory?.()?.theory.src(props.morphism.morType)}
+                obType={theory?.()?.theory.src(props.morphism.morType)}
                 invalid={(modelErrors?.().get(props.morphism.id) ?? []).some(
                     (err) => err.tag === "Dom" || err.tag === "DomType",
                 )}
@@ -82,16 +82,16 @@ export function MorphismCellEditor(props: {
                 </div>
                 <div class={arrowClasses().join(" ")} />
             </div>
-            <ObjectIdInput
+            <ObjectInput
                 ref={codRef}
                 placeholder="..."
-                objectId={props.morphism.cod}
-                setObjectId={(id) => {
+                ob={props.morphism.cod}
+                setOb={(ob) => {
                     props.modifyMorphism((mor) => {
-                        mor.cod = id;
+                        mor.cod = ob;
                     });
                 }}
-                objectType={theory?.()?.theory.tgt(props.morphism.morType)}
+                obType={theory?.()?.theory.tgt(props.morphism.morType)}
                 invalid={(modelErrors?.().get(props.morphism.id) ?? []).some(
                     (err) => err.tag === "Cod" || err.tag === "CodType",
                 )}

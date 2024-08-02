@@ -2,8 +2,8 @@ import { createEffect, useContext } from "solid-js";
 
 import { InlineInput } from "../components";
 import type { CellActions } from "../notebook";
-import { obClasses } from "./id_input";
 import { TheoryContext } from "./model_context";
+import { obClasses } from "./object_input";
 import type { ObjectDecl } from "./types";
 
 import "./object_cell_editor.css";

@@ -1,10 +1,8 @@
-import { createEffect, createSignal, splitProps, useContext } from "solid-js";
+import { createEffect, createSignal, splitProps } from "solid-js";
 
-import type { ObType, Uuid } from "catlog-wasm";
+import type { Uuid } from "catlog-wasm";
 import { InlineInput, type InlineInputErrorStatus, type InlineInputOptions } from "../components";
-import type { TheoryMeta } from "../theory";
 import type { IndexedMap } from "../util/indexing";
-import { ObjectIndexContext, TheoryContext } from "./model_context";
 
 /** Optional props for `IdInput` component.
  */
@@ -61,36 +59,4 @@ export function IdInput(
     };
 
     return <InlineInput text={text()} setText={handleNewText} status={status()} {...inputProps} />;
-}
-
-/** Input the ID of an object in a model.
- */
-export function ObjectIdInput(
-    allProps: {
-        objectId: Uuid | null;
-        setObjectId: (id: Uuid | null) => void;
-        objectType?: ObType;
-    } & IdInputOptions,
-) {
-    const [props, idProps] = splitProps(allProps, ["objectId", "setObjectId", "objectType"]);
-
-    const objectIndex = useContext(ObjectIndexContext);
-    const theory = useContext(TheoryContext);
-    const cssClasses = () => obClasses(theory?.(), props.objectType);
-
-    return (
-        <div class={cssClasses().join(" ")}>
-            <IdInput
-                id={props.objectId}
-                setId={props.setObjectId}
-                nameMap={objectIndex?.()}
-                {...idProps}
-            />
-        </div>
-    );
-}
-
-export function obClasses(theory: TheoryMeta | undefined, typ?: ObType): string[] {
-    const typeMeta = typ ? theory?.getObTypeMeta(typ) : undefined;
-    return [...(typeMeta?.cssClasses ?? []), ...(typeMeta?.textClasses ?? [])];
 }
