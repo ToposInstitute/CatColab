@@ -18,7 +18,7 @@ function App() {
     const theories = stdTheories();
 
     if (!serverHost) {
-        throw "Must set environment variable BACKEND_HOST"
+        throw "Must set environment variable BACKEND_HOST";
     }
 
     const http_url = `https://${serverHost}`;
