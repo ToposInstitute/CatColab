@@ -32,9 +32,6 @@
         "@types/express": "^4.17.21",
         "@types/pg": "^8.11.6",
         "@types/ws": "^8.5.12",
-        "biome": "^0.3.3",
-        "squawk-cli": "^1.1.2",
-        "tsx": "^4.16.2",
-        "typedoc": "^0.26.5"
+        "squawk-cli": "^1.1.2"
     }
 }

@@ -1,6 +1,6 @@
+import assert from "node:assert";
+import { it, test } from "node:test";
 import { Persistence } from "./persistence.js";
-import { test, it } from "node:test"
-import assert from "node:assert"
 
 test("Persistence API", async (_t) => {
     const url = process.env.TEST_DATABASE_URL;
@@ -20,7 +20,7 @@ test("Persistence API", async (_t) => {
     });
 
     await it("saveSnapshot should deduplicate", () => {
-        assert.strictEqual(s1, s2)
+        assert.strictEqual(s1, s2);
     });
 
     const s3 = await p.saveSnapshot("snapshot2");
@@ -41,9 +41,9 @@ test("Persistence API", async (_t) => {
 
     const r2 = await p.newRef("My Document");
 
-    await p.autosave(r2, "snapshot1")
+    await p.autosave(r2, "snapshot1");
 
-    const w1 = await p.saveRef(r2, "init")
+    const w1 = await p.saveRef(r2, "init");
 
     p.autosave(r2, "snapshot2");
 
@@ -53,7 +53,7 @@ test("Persistence API", async (_t) => {
 
     await it("title stored correctly", () => {
         assert.strictEqual(m2.title, "My Document");
-    })
+    });
 
     await it("witnesses stored correctly", () => {
         assert.strictEqual(m2.witnesses[0].id, w1);
@@ -67,10 +67,10 @@ test("Persistence API", async (_t) => {
     });
 
     await it("all refs returns all refs ordered by last update", async () => {
-        const refs = await p.allRefs()
+        const refs = await p.allRefs();
         assert.strictEqual(refs[1].id, r1);
         assert.strictEqual(refs[0].id, r2);
-    })
+    });
 
     p.close();
-})
+});

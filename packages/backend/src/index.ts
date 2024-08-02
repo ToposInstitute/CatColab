@@ -1,15 +1,15 @@
-import { Server } from "./server.js"
+import { Server } from "./server.js";
 
-const server = new Server()
+const server = new Server();
 
 export type AppRouter = typeof server.appRouter;
 
-process.once('SIGINT', function (_code) {
-    console.log('SIGINT received...');
+process.once("SIGINT", (_code) => {
+    console.log("SIGINT received...");
     server.close();
 });
 
-process.once('SIGTERM', function (_code) {
-    console.log('SIGTERM received...');
+process.once("SIGTERM", (_code) => {
+    console.log("SIGTERM received...");
     server.close();
 });
