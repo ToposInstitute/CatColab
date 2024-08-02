@@ -89,7 +89,7 @@ export class Server {
         });
 
         this.server.on("listening", () => {
-            console.log("server running on port $port")
+            console.log(`server running on port ${port}`)
         });
 
         this.server.listen(port);
