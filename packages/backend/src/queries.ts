@@ -189,13 +189,13 @@ export interface INewSnapshotQuery {
   result: INewSnapshotResult;
 }
 
-const newSnapshotIR: any = {"usedParamSet":{"content":true},"params":[{"name":"content","required":false,"transform":{"type":"scalar"},"locs":[{"a":55,"b":62},{"a":76,"b":83}]}],"statement":"INSERT INTO snapshots(hash, content)\n    VALUES(digest(:content, 'sha256'), :content)\n    ON CONFLICT (hash) DO UPDATE SET\n    hash = EXCLUDED.hash\n    RETURNING id"};
+const newSnapshotIR: any = {"usedParamSet":{"content":true},"params":[{"name":"content","required":false,"transform":{"type":"scalar"},"locs":[{"a":55,"b":62},{"a":88,"b":95}]}],"statement":"INSERT INTO snapshots(hash, content)\n    VALUES(digest(:content::text, 'sha256'::text), :content)\n    ON CONFLICT (hash) DO UPDATE SET\n    hash = EXCLUDED.hash\n    RETURNING id"};
 
 /**
  * Query generated from SQL:
  * ```
  * INSERT INTO snapshots(hash, content)
- *     VALUES(digest(:content, 'sha256'), :content)
+ *     VALUES(digest(:content::text, 'sha256'::text), :content)
  *     ON CONFLICT (hash) DO UPDATE SET
  *     hash = EXCLUDED.hash
  *     RETURNING id

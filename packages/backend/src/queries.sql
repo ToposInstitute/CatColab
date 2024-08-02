@@ -27,7 +27,7 @@ RETURNING id;
 
 /* @name NewSnapshot */
 INSERT INTO snapshots(hash, content)
-    VALUES(digest(:content, 'sha256'), :content)
+    VALUES(digest(:content::text, 'sha256'::text), :content)
     ON CONFLICT (hash) DO UPDATE SET
     hash = EXCLUDED.hash
     RETURNING id;

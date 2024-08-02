@@ -23,7 +23,7 @@ in {
             extraConfig = ''
                 error_log syslog:server=unix:/dev/log;
                 access_log syslog:server=unix:/dev/log;
-                rewrite ^/api / break;
+                rewrite ^/api/(.*) /$1 break;
                 proxy_http_version 1.1;
                 proxy_set_header Upgrade $http_upgrade;
                 proxy_set_header Connection "upgrade";
