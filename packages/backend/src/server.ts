@@ -2,19 +2,20 @@ import { Persistence } from "./persistence.js";
 import * as A from "@automerge/automerge-repo";
 import { NodeWSServerAdapter } from "@automerge/automerge-repo-network-websocket";
 import express from "express";
+import morgan from 'morgan'
 import * as http from "http";
 import * as ws from "ws";
 import { z } from "zod";
 
 import * as trpc from "@trpc/server";
-import * as trpcStandalone from "@trpc/server/adapters/standalone";
+import * as trpcExpress from "@trpc/server/adapters/express";
 import { getDatabaseUrl } from "./database_url.js";
+
 
 const t = trpc.initTRPC.create();
 
 export const router = t.router;
 export const publicProcedure = t.procedure;
-
 
 export class Server {
     db: Persistence
@@ -67,9 +68,16 @@ export class Server {
                 })
         });
 
-        this.server = trpcStandalone.createHTTPServer({
-            router: this.appRouter
-        });
+        this.app.use(morgan('tiny'));
+
+        this.app.use(
+            '/',
+            trpcExpress.createExpressMiddleware({
+                router: this.appRouter
+            })
+        );
+
+        this.server = this.app.listen(port);
 
         this.wss = new ws.WebSocketServer({
             noServer: true
@@ -91,8 +99,6 @@ export class Server {
         this.server.on("listening", () => {
             console.log(`server running on port ${port}`)
         });
-
-        this.server.listen(port);
     }
 
     setHandleCallback(refId: string, handle: A.DocHandle<any>) {
