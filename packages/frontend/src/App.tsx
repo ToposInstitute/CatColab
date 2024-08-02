@@ -1,4 +1,4 @@
-import { type DocHandle, Repo, isValidAutomergeUrl } from "@automerge/automerge-repo";
+import { type DocHandle, Repo } from "@automerge/automerge-repo";
 import type * as A from "@automerge/automerge-repo";
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
 import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb";

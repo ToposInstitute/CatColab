@@ -8,8 +8,6 @@ import { modelToGraphviz } from "./model_graph";
 import { ModelNotebookEditor, type ModelNotebookRef } from "./model_notebook_editor";
 import type { ModelNotebook } from "./types";
 
-import * as trpc from "@trpc/client";
-import type { AppRouter } from "backend/src/index.js";
 import type { RPCClient } from "../api";
 
 /** Editor for a model of a discrete double theory.
