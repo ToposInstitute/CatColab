@@ -25,7 +25,7 @@ export class Server {
     repo: A.Repo
     appRouter
 
-    constructor() {
+    constructor(port = process.env.PORT || 8000) {
         const url = getDatabaseUrl()
 
         this.db = new Persistence(url);
@@ -33,8 +33,6 @@ export class Server {
         this.docMap = new Map();
 
         this.app = express()
-
-        const PORT = 8000
 
         this.appRouter = router({
             newRef: publicProcedure
@@ -94,7 +92,7 @@ export class Server {
             console.log("server running")
         });
 
-        this.server.listen(PORT);
+        this.server.listen(port);
     }
 
     setHandleCallback(refId: string, handle: A.DocHandle<any>) {

@@ -25,7 +25,7 @@ in {
     };
 
     systemd.services.catcolab = {
-        enable = false;
+        enable = true;
         wantedBy = ["multi-user.target"];
 
         environment = {
@@ -52,6 +52,8 @@ in {
         git
         stdenv.cc
     ];
+
+    environment.variables.DATABASE_URL_PATH = config.age.secrets.DATABASE_URL.path;
 
     users.groups.catcolab = {};
 }
