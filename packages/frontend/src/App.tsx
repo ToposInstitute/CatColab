@@ -10,7 +10,7 @@ import { stdTheories } from "./theory";
 
 import * as trpc from "@trpc/client";
 import type { AppRouter } from "backend/src/index.js";
-import { createResource, Match, Switch } from "solid-js";
+import { Match, Switch, createResource } from "solid-js";
 
 const serverHost = import.meta.env.VITE_BACKEND_HOST;
 
@@ -50,7 +50,11 @@ function App() {
 
         if (uuid.validate(urlHash)) {
             refId = urlHash;
-            docId = (await client.docIdFor.query(urlHash))!;
+            const res = await client.docIdFor.query(urlHash);
+            if (!res) {
+                throw `Failed to get documentId for ref ${refId}`;
+            }
+            docId = res;
         } else {
             const doc = repo.create(init);
 
@@ -81,13 +85,15 @@ function App() {
                 <span>Error: {handle.error}</span>
             </Match>
             <Match when={handle()}>
-                <ModelEditor
-                    handle={handle()!.handle}
-                    refId={handle()!.refId}
-                    client={client}
-                    init={init}
-                    theories={theories}
-                />
+                {(h) => (
+                    <ModelEditor
+                        handle={h().handle}
+                        refId={h().refId}
+                        client={client}
+                        init={init}
+                        theories={theories}
+                    />
+                )}
             </Match>
         </Switch>
     );
