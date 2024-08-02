@@ -35,6 +35,7 @@ jobs:
       - name: Build
         run: |
           npm install
+          export VITE_BACKEND_HOST=backend-next.catcolab.org
           npm run build --workspace=frontend
 
       - name: Upload

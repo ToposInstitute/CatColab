@@ -12,13 +12,17 @@ import * as trpc from "@trpc/client";
 import type { AppRouter } from "backend/src/index.js";
 import { createResource, Match, Switch } from "solid-js";
 
-const serverHost = window.location.host;
+const serverHost = import.meta.env.VITE_BACKEND_HOST;
 
 function App() {
     const theories = stdTheories();
 
-    const http_url = `http://${serverHost}/api`;
-    const ws_url = `ws://${serverHost}/api`;
+    if (!serverHost) {
+        throw "Must set environment variable BACKEND_HOST"
+    }
+
+    const http_url = `https://${serverHost}`;
+    const ws_url = `wss://${serverHost}`;
 
     const client = trpc.createTRPCClient<AppRouter>({
         links: [

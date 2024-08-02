@@ -12,22 +12,23 @@ in {
     services.postgresql.enable = true;
     services.nginx.enable = true;
 
-    services.nginx.virtualHosts."next.catcolab.org" = {
-        # forceSSL = true;
-        # enableACME = true;
-        root = "/var/lib/catcolab/packages/frontend/dist";
+    services.nginx.virtualHosts."backend-next.catcolab.org" = {
+        forceSSL = true;
+        enableACME = true;
         locations."/" = {
-            tryFiles = "$uri /index.html";
-        };
-        locations."/api" = {
             extraConfig = ''
+                if ($request_method = OPTIONS) {
+                    return 204;
+                }
+                add_header 'Access-Control-Allow-Origin' '*' always;
+                add_header 'Access-Control-Allow-Methods' 'GET, POST, DELETE, PUT, OPTIONS' always;
+                add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
+                proxy_pass http://localhost:${port};
                 error_log syslog:server=unix:/dev/log;
                 access_log syslog:server=unix:/dev/log;
-                rewrite ^/api/(.*) /$1 break;
                 proxy_http_version 1.1;
                 proxy_set_header Upgrade $http_upgrade;
                 proxy_set_header Connection "upgrade";
-                proxy_pass http://localhost:${port};
             '';
         };
     };
