@@ -8,6 +8,7 @@ import { z } from "zod";
 
 import * as trpc from "@trpc/server";
 import * as trpcStandalone from "@trpc/server/adapters/standalone";
+import { getDatabaseUrl } from "./database_url.js";
 
 const t = trpc.initTRPC.create();
 
@@ -25,11 +26,7 @@ export class Server {
     appRouter
 
     constructor() {
-        const url = process.env.DATABASE_URL
-
-        if (!url) {
-            throw("Must set environment DATABASE_URL to a postgresql connection string");
-        }
+        const url = getDatabaseUrl()
 
         this.db = new Persistence(url);
 
@@ -91,6 +88,10 @@ export class Server {
             this.wss.handleUpgrade(request, socket, head, (socket) => {
                 this.wss.emit("connection", socket, request)
             })
+        });
+
+        this.server.on("listening", () => {
+            console.log("server running")
         });
 
         this.server.listen(PORT);

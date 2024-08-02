@@ -1,0 +1,57 @@
+{ inputs, pkgs, config, ... }:
+
+let
+    port = "8000";
+in {
+    age.secrets.DATABASE_URL = {
+        file = "${inputs.self}/secrets/DATABASE_URL.age";
+        mode = "400";
+        owner = "catcolab";
+    };
+
+    services.postgresql.enable = true;
+    services.nginx.enable = true;
+
+    services.nginx.virtualHosts."next.catcolab.org" = {
+        # forceSSL = true;
+        # enableACME = true;
+        root = "/var/lib/catcolab/packages/frontend/dist";
+        locations."/" = {
+            tryFiles = "$uri /index.html";
+        };
+        locations."/api" = {
+            proxyPass = "http://localhost:${port}/";
+        };
+    };
+
+    systemd.services.catcolab = {
+        enable = false;
+        wantedBy = ["multi-user.target"];
+
+        environment = {
+            PORT = port;
+            DATABASE_URL_PATH = config.age.secrets.DATABASE_URL.path;
+        };
+
+        serviceConfig = {
+            User = "catcolab";
+            ExecStart = "${pkgs.nodejs}/bin/node dist/index.js";
+            Type="simple";
+            WorkingDirectory = "/var/lib/catcolab/packages/backend/";
+        };
+    };
+
+    users.users.catcolab = {
+        isNormalUser = true;
+        group = "catcolab";
+    };
+
+    environment.systemPackages = with pkgs; [
+        rustup
+        nodejs
+        git
+        stdenv.cc
+    ];
+
+    users.groups.catcolab = {};
+}
