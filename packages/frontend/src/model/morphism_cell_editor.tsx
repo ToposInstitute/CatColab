@@ -2,12 +2,14 @@ import { createEffect, useContext } from "solid-js";
 
 import { InlineInput } from "../components";
 import type { CellActions } from "../notebook";
-import { ModelErrorsContext, ObjectIndexContext, TheoryContext } from "./model_context";
-import { ObjectIdInput } from "./object_cell_editor";
+import { ObjectIdInput } from "./id_input";
+import { ModelErrorsContext, TheoryContext } from "./model_context";
 import type { MorphismDecl } from "./types";
 
 import "./morphism_cell_editor.css";
 
+/** Editor for a moprhism declaration cell in a model.
+ */
 export function MorphismCellEditor(props: {
     morphism: MorphismDecl;
     modifyMorphism: (f: (decl: MorphismDecl) => void) => void;
@@ -26,7 +28,6 @@ export function MorphismCellEditor(props: {
     });
 
     const theory = useContext(TheoryContext);
-    const objectIndex = useContext(ObjectIndexContext);
     const modelErrors = useContext(ModelErrorsContext);
 
     const morTypeMeta = () => theory?.()?.getMorTypeMeta(props.morphism.morType);
@@ -48,8 +49,7 @@ export function MorphismCellEditor(props: {
                     });
                 }}
                 objectType={theory?.()?.theory.src(props.morphism.morType)}
-                objectIndex={objectIndex?.()}
-                objectInvalid={(modelErrors?.().get(props.morphism.id) ?? []).some(
+                invalid={(modelErrors?.().get(props.morphism.id) ?? []).some(
                     (err) => err.tag === "Dom" || err.tag === "DomType",
                 )}
                 deleteForward={() => nameRef.focus()}
@@ -92,8 +92,7 @@ export function MorphismCellEditor(props: {
                     });
                 }}
                 objectType={theory?.()?.theory.tgt(props.morphism.morType)}
-                objectIndex={objectIndex?.()}
-                objectInvalid={(modelErrors?.().get(props.morphism.id) ?? []).some(
+                invalid={(modelErrors?.().get(props.morphism.id) ?? []).some(
                     (err) => err.tag === "Cod" || err.tag === "CodType",
                 )}
                 deleteBackward={() => nameRef.focus()}
