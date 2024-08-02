@@ -640,7 +640,7 @@ pub trait DblComputadMapping {
         &self,
         path: Path<Self::DomV, Self::DomE>,
     ) -> Option<Path<Self::CodV, Self::CodE>> {
-        path.try_map(|v| self.apply_vertex(&v).cloned(), |e| self.apply_edge(&e).cloned())
+        path.partial_map(|v| self.apply_vertex(&v).cloned(), |e| self.apply_edge(&e).cloned())
     }
 
     /// Aplies the computad mapping to a path of proedges.
@@ -648,7 +648,7 @@ pub trait DblComputadMapping {
         &self,
         path: Path<Self::DomV, Self::DomProE>,
     ) -> Option<Path<Self::CodV, Self::CodProE>> {
-        path.try_map(|v| self.apply_vertex(&v).cloned(), |p| self.apply_proedge(&p).cloned())
+        path.partial_map(|v| self.apply_vertex(&v).cloned(), |p| self.apply_proedge(&p).cloned())
     }
 }
 

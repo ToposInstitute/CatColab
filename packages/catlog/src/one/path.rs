@@ -169,8 +169,8 @@ impl<V, E> Path<V, E> {
         }
     }
 
-    /// Maps a path over fallible functions on vertices and edges.
-    pub fn try_map<CodV, CodE, FnV, FnE>(self, fv: FnV, fe: FnE) -> Option<Path<CodV, CodE>>
+    /// Maps a path over partial functions on vertices and edges.
+    pub fn partial_map<CodV, CodE, FnV, FnE>(self, fv: FnV, fe: FnE) -> Option<Path<CodV, CodE>>
     where
         FnV: FnOnce(V) -> Option<CodV>,
         FnE: FnMut(E) -> Option<CodE>,
@@ -184,6 +184,29 @@ impl<V, E> Path<V, E> {
                 let edges: Option<Vec<_>> = edges.into_iter().map(fe).collect();
                 let edges = edges?;
                 Some(Path::Seq(NonEmpty::from_vec(edges).unwrap()))
+            }
+        }
+    }
+
+    /// Maps a path over fallible functions on vertices and edges.
+    pub fn try_map<CodV, CodE, FnV, FnE, Err>(
+        self,
+        fv: FnV,
+        fe: FnE,
+    ) -> Result<Path<CodV, CodE>, Err>
+    where
+        FnV: FnOnce(V) -> Result<CodV, Err>,
+        FnE: FnMut(E) -> Result<CodE, Err>,
+    {
+        match self {
+            Path::Id(v) => {
+                let w = fv(v)?;
+                Ok(Path::Id(w))
+            }
+            Path::Seq(edges) => {
+                let edges: Result<Vec<_>, _> = edges.into_iter().map(fe).collect();
+                let edges = edges?;
+                Ok(Path::Seq(NonEmpty::from_vec(edges).unwrap()))
             }
         }
     }
@@ -331,8 +354,8 @@ mod tests {
     fn map_path() {
         assert_eq!(SkelPath::Id(1).map(|v| v + 1, identity), Path::Id(2));
         assert_eq!(SkelPath::pair(0, 1).map(identity, |e| e + 1), Path::pair(1, 2));
-        assert_eq!(SkelPath::Id(1).try_map(|v| Some(v + 1), Some), Some(Path::Id(2)));
-        assert_eq!(SkelPath::pair(0, 1).try_map(Some, |e| Some(e + 1)), Some(Path::pair(1, 2)));
+        assert_eq!(SkelPath::Id(1).partial_map(|v| Some(v + 1), Some), Some(Path::Id(2)));
+        assert_eq!(SkelPath::pair(0, 1).partial_map(Some, |e| Some(e + 1)), Some(Path::pair(1, 2)));
     }
 
     #[test]
