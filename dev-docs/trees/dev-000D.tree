@@ -1,0 +1,7 @@
+\date{2024-07-31}
+\title{Witnesses}
+\taxon{table}
+
+\p{A witness declares that a certain ref at a certain point of time has state given by a certain snapshot.}
+
+\p{We originally thought about doing this "linked list" style, where each witness had a "prev" foreign key, but it's easier to query with a many-to-one relation; we can simply say "get me all of the witnesses for a given ref".}

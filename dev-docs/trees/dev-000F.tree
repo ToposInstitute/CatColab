@@ -1,0 +1,20 @@
+\title{Capabilities of the backend}
+\date{2024-08-02}
+
+\p{This tree documents current functionality of the backend, and planned future functionality.}
+
+\p{\strong{Currently implemented API:}}
+
+\ul{
+\li{\code{newRef({ title: string, docId: string })}. Creates a new [ref](dev-000B) and associate it with \code{docId}. Returns the id of the newly created ref as a string representation of the UUID. The state of the document associated with docId will then propagate to the automerge document created on the backend, and eventually be saved in the database on the autosave field for the ref.}
+\li{\code{docIdFor(refId: string)}. Returns the automerge document id associated with a refId. If the hashmap in the backend doesn't contain an association for that ref, then a fresh DocHandle is produced with initial state given by the autosave for that ref.}
+\li{\code{saveRef(refId: string)}. Saves the ref, as described in [refs](dev-000B).}
+\li{\code{getRefs()}. Returns a list of all refs with their titles.}
+}
+
+\p{\strong{API to implement in the future:}}
+
+\ul{
+\li{Searching for refs via their metadata.}
+\li{Displaying all of the witnesses for a ref, sorted by timestamp.}
+}

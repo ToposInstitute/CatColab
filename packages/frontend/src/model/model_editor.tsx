@@ -8,6 +8,8 @@ import { modelToGraphviz } from "./model_graph";
 import { ModelNotebookEditor, type ModelNotebookRef } from "./model_notebook_editor";
 import type { ModelNotebook } from "./types";
 
+import type { RPCClient } from "../api";
+
 /** Editor for a model of a discrete double theory.
 
 For now it just wraps a notebook-style editor but eventually it should not be
@@ -16,6 +18,8 @@ tied to the notebook format.
 export function ModelEditor(props: {
     handle: DocHandle<ModelNotebook>;
     init: ModelNotebook;
+    client: RPCClient;
+    refId: string;
     theories: Map<TheoryId, TheoryMeta>;
 }) {
     const [editorRef, setEditorRef] = createSignal<ModelNotebookRef>();
@@ -28,6 +32,11 @@ export function ModelEditor(props: {
     return (
         <Resizable class="growable-container">
             <Resizable.Panel class="content-panel" collapsible initialSize={1} minSize={0.25}>
+                <button
+                    onClick={() => props.client.saveRef.mutate({ refId: props.refId, note: "" })}
+                >
+                    Save
+                </button>
                 <ModelNotebookEditor
                     ref={setEditorRef}
                     handle={props.handle}
