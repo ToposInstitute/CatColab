@@ -1,26 +1,37 @@
-\title{Backend design}
+\title{Backend}
 \date{2024-07-30}
 
-\p{The flow of state through the backend is the most important thing to design first.}
+\subtree{
+\title{Concepts and overview}
 
-\p{The database consists of}
+\p{The main pieces of state in the backend are the [database](dev-000E) and a in-memory hashmap from [ref](dev-000B) to automerge dochandle. The important thing to realize is that nothing from automerge is persisted through restart of the backend; the only thing that is persisted is serializations the automerge document at various points in time. Thus, when the server restarts, clients must request new automerge documents. Currently, this is not implemented: you must refresh the client after a server restart.}
 
-\transclude{dev-000C}
+\p{With this in mind, in this tree we give an overview of the database schema and the operations currently supported on the backend.}
 
-\transclude{dev-000B}
+\transclude{dev-000E}
 
-\transclude{dev-000D}
-
-
-\p{The frontend can search for refs via their metadata.}
-
-\p{Given a ref, the frontend can can request the current automerge document for a ref. When this happens, the backend will either:}
-
-\ol{
-  \li{Produce the document from the in-memory map, if it exists in the in-memory map.}
-  \li{Create a new document (with a new ID!) with state given by the head snapshot for the ref.}
+\transclude{dev-000F}
 }
 
-\p{The frontend can also query all snapshots connected to a ref.}
+\subtree{
+\title{Implementation details and dependencies}
 
-\p{The frontend can push an arbitrary snapshot onto the head of an arbitrary ref. This can be used to "branch off" from a point in the history of any ref, by creating a new ref, and then setting its head to an earlier snapshot.}
+\p{We have endeavored to keep the number of dependencies low, and the implementation simple. However, we do use some libraries. In this section, we document what those libraries are, and how we use them.}
+
+\ul{
+\li{[automerge-repo](https://github.com/automerge/automerge-repo/). We use automerge-repo in order to manage the websocket-based syncing of automerge documents, but we do \em{not} use its storage facilities.}
+\li{[express](http://expressjs.com/). The "default choice" of nodejs http servers. We use this to host our [trpc](https://trpc.io) api.}
+\li{[morgan](https://github.com/expressjs/morgan). A fairly simple request logger for express: this helps in debugging.}
+\li{[pg](https://node-postgres.com/). The standard choice for using postgresql in nodejs.}
+\li{[pgtyped](https://pgtyped.dev/). A program that generates typescript wrappers for postgresql queries. Use with \code{npm run compileSql}.}
+\li{[zod](https://zod.dev). A validator for the input data to our queries.}
+\li{[trpc](https://trpc.io). "Typed remote procedure calls". We use this so that we can access the backend from the frontend in a well-typed way.}
+}
+}
+
+\subtree{
+\title{Infrastructure}
+
+}
+
+
