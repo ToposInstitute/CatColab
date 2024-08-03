@@ -1,11 +1,28 @@
 import type * as Viz from "@viz-js/viz";
 
-import type { TheoryMeta, TypeMeta } from "../theory";
-import type { ModelJudgment } from "./types";
+import type { ModelJudgment } from "../../model";
+import type { TheoryMeta, TypeMeta } from "../../theory";
+import { GraphvizSVG } from "../../visualization";
 
-import styles from "../stdlib/styles.module.css";
+import styles from "../styles.module.css";
 
-/** Visualize a model of a double theory as a graph.
+/** Visualize a model of a double theory as a graph using Graphviz.
+ */
+export function ModelGraphviz(props: {
+    model: Array<ModelJudgment>;
+    theory: TheoryMeta;
+}) {
+    return (
+        <GraphvizSVG
+            graph={modelToGraphviz(props.model, props.theory)}
+            options={{
+                engine: "dot",
+            }}
+        />
+    );
+}
+
+/** Convert a model of a double theory a Graphviz graph.
 
 Such a visualization makes sense for any discrete double theory since the
 generators of such a model are just a typed graph. In general, any basic

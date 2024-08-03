@@ -1,16 +1,18 @@
 import type { KbdKey } from "@solid-primitives/keyboard";
+import type { Component } from "solid-js";
 
 import type { DblTheory, MorType, ObType } from "catlog-wasm";
+import type { ModelJudgment } from "../model";
 import type { ArrowStyle } from "../visualization/types";
 
 /** A double theory equipped with metadata for use in frontend.
  */
 export class TheoryMeta {
     /** Unique identifier of theory. */
-    readonly id!: TheoryId;
+    readonly id: TheoryId;
 
     /** Human-readable name for models of theory. */
-    readonly name!: string;
+    readonly name: string;
 
     /** Short description of models of theory. */
     readonly description?: string;
@@ -21,8 +23,11 @@ export class TheoryMeta {
     /** Types in theory bound with metadata, to be displayed in this order. */
     readonly types: TypeMeta[];
 
+    /** Theory-specific views onto models of the theory. */
+    readonly modelViews: ModelView[];
+
     /** Whether models of the double theory are constrained to be free. */
-    readonly onlyFree!: boolean;
+    readonly onlyFreeModels!: boolean;
 
     constructor(props: {
         id: string;
@@ -30,19 +35,19 @@ export class TheoryMeta {
         description?: string;
         theory: () => DblTheory;
         types?: TypeMeta[];
-        onlyFree?: boolean;
+        modelViews?: ModelView[];
+        onlyFreeModels?: boolean;
     }) {
+        this.id = props.id;
+        this.name = props.name;
+        this.description = props.description;
+
         this.theory = props.theory();
         this.types = [];
         props.types?.forEach(this.bindType, this);
 
-        const { id, name, description } = props;
-        Object.assign(this, {
-            id,
-            name,
-            description,
-            onlyFree: props.onlyFree ?? false,
-        });
+        this.modelViews = props.modelViews ?? [];
+        this.onlyFreeModels = props.onlyFreeModels ?? false;
     }
 
     private bindType(meta: TypeMeta) {
@@ -68,6 +73,8 @@ export class TheoryMeta {
     }
 }
 
+/** Unique identifier of a theory exposed to the frontend.
+ */
 export type TheoryId = string;
 
 /** A type in a double theory equipped with frontend metadata.
@@ -115,4 +122,37 @@ export type MorTypeMeta = BaseTypeMeta & {
 
     /** Style of arrow to use for morphisms of this type. */
     arrowStyle?: ArrowStyle;
+};
+
+/** View of a model of a theory.
+
+Such a view might be a visualization, a simulation, or a translation of the
+model to another format. Views onto a model are read-only.
+
+For now, views are assumed to be ephemeral, meaning that they do not persist
+any state.
+ */
+export type ModelView = {
+    /** Human-readable name of view. */
+    name: string;
+
+    /** Short description of view. */
+    description?: string;
+
+    /** Component that renders the view. */
+    component: Component<ModelViewProps>;
+};
+
+/** Props passed to a view of model.
+ */
+export type ModelViewProps = {
+    /** The model to view. */
+    model: Array<ModelJudgment>;
+
+    /** Theory that the model is of.
+
+    The theory may well be assumed fixed for certain views but it is passed
+    regardless.
+     */
+    theory: TheoryMeta;
 };

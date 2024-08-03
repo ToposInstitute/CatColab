@@ -2,6 +2,7 @@ import * as catlog from "catlog-wasm";
 
 import { TheoryMeta } from "../theory";
 import { uniqueIndexArray } from "../util/indexing";
+import { ModelGraphviz } from "./visualizations";
 
 import styles from "./styles.module.css";
 import svgStyles from "./svg_styles.module.css";
@@ -38,6 +39,13 @@ const thSimpleOlog = () =>
                 name: "Aspect",
                 description: "Aspect or property of a thing",
                 shortcut: ["M"],
+            },
+        ],
+        modelViews: [
+            {
+                name: "Diagram",
+                description: "Visualize the olog as a diagram",
+                component: ModelGraphviz,
             },
         ],
     });
@@ -96,6 +104,13 @@ const thSimpleSchema = () =>
                 textClasses: [styles.code],
             },
         ],
+        modelViews: [
+            {
+                name: "Diagram",
+                description: "Visualize the schema as a diagram",
+                component: ModelGraphviz,
+            },
+        ],
     });
 
 const thRegNet = () =>
@@ -103,7 +118,7 @@ const thRegNet = () =>
         id: "reg-net",
         name: "Regulatory network",
         theory: catlog.thSignedCategory,
-        onlyFree: true,
+        onlyFreeModels: true,
         types: [
             {
                 tag: "ObType",
@@ -128,6 +143,13 @@ const thRegNet = () =>
                 arrowStyle: "flat",
             },
         ],
+        modelViews: [
+            {
+                name: "Network",
+                description: "Visualize the regulatory network",
+                component: ModelGraphviz,
+            },
+        ],
     });
 
 const thStockFlow = () =>
@@ -135,7 +157,7 @@ const thStockFlow = () =>
         id: "stock-flow",
         name: "Stock and flow",
         theory: catlog.thCategoryLinks,
-        onlyFree: true,
+        onlyFreeModels: true,
         types: [
             {
                 tag: "ObType",
