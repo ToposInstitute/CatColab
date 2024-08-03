@@ -13,7 +13,7 @@ export function GraphSVG<Id>(props: {
     const markerSet = () => {
         const markers = new Set<ArrowMarker>();
         for (const edge of props.graph?.edges ?? []) {
-            markers.add(styleMarkers[edge.style ?? "to"]);
+            markers.add(styleMarkers[edge.style ?? "default"]);
         }
         return markers;
     };
@@ -23,6 +23,38 @@ export function GraphSVG<Id>(props: {
             <defs>
                 <For each={Array.from(markerSet())}>{(marker) => markerComponents[marker]}</For>
             </defs>
+            <For each={props.graph?.edges ?? []}>
+                {(edge) => {
+                    const { label, labelPos, path } = edge;
+                    const style = edge.style ?? "default";
+                    const marker = styleMarkers[style];
+                    const markerURL = `url(#arrowhead-${marker})`;
+                    return (
+                        <g class={`edge ${edge.cssClass ?? ""}`}>
+                            {style === "double" ? (
+                                <>
+                                    <path class="double-outer" d={path} />
+                                    <path class="double-inner" d={path} />
+                                    <path class="double-marker" marker-end={markerURL} d={path} />
+                                </>
+                            ) : (
+                                <path marker-end={markerURL} d={path} />
+                            )}
+                            {label && (
+                                <text
+                                    class="label"
+                                    x={labelPos?.x}
+                                    y={labelPos?.y}
+                                    dominant-baseline="middle"
+                                    text-anchor="middle"
+                                >
+                                    {label}
+                                </text>
+                            )}
+                        </g>
+                    );
+                }}
+            </For>
             <For each={props.graph?.nodes ?? []}>
                 {(node) => {
                     const {
@@ -51,50 +83,17 @@ export function GraphSVG<Id>(props: {
                     );
                 }}
             </For>
-            <For each={props.graph?.edges ?? []}>
-                {(edge) => {
-                    const { label, sourcePos, targetPos, labelPos, path } = edge;
-                    const marker = styleMarkers[edge.style ?? "to"];
-                    const markerURL = `url(#arrowhead-${marker})`;
-                    return (
-                        <g class={`edge ${edge.cssClass ?? ""}`}>
-                            {path ? (
-                                <path marker-end={markerURL} d={path} />
-                            ) : (
-                                <line
-                                    marker-end={markerURL}
-                                    x1={sourcePos.x}
-                                    y1={sourcePos.y}
-                                    x2={targetPos.x}
-                                    y2={targetPos.y}
-                                />
-                            )}
-                            {label && (
-                                <text
-                                    class="label"
-                                    x={labelPos?.x}
-                                    y={labelPos?.y}
-                                    dominant-baseline="middle"
-                                    text-anchor="middle"
-                                >
-                                    {label}
-                                </text>
-                            )}
-                        </g>
-                    );
-                }}
-            </For>
         </svg>
     );
 }
 
-/** SVG marker for a standard arrowhead formed by two angled lines.
+/** SVG marker for a standard V-shaped arrowhead.
  */
-const ArrowMarker = (props: { id: string }) => (
+const VeeMarker = (props: { id: string; offset?: number }) => (
     <marker
         id={props.id}
         viewBox="0 0 5 10"
-        refX="5"
+        refX={5 + (props.offset ?? 0)}
         refY="5"
         markerWidth="10"
         markerHeight="10"
@@ -138,15 +137,17 @@ const FlatMarker = (props: { id: string }) => (
     </marker>
 );
 
-type ArrowMarker = "default" | "triangle" | "flat";
+type ArrowMarker = "vee" | "double" | "triangle" | "flat";
 
 const styleMarkers: Record<ArrowStyle, ArrowMarker> = {
-    to: "default",
+    default: "vee",
+    double: "double",
     flat: "flat",
 };
 
 const markerComponents: Record<ArrowMarker, JSX.Element> = {
-    default: <ArrowMarker id="arrowhead-default" />,
+    vee: <VeeMarker id="arrowhead-vee" />,
+    double: <VeeMarker id="arrowhead-double" offset={-2} />,
     triangle: <TriangleMarker id="arrowhead-triangle" />,
     flat: <FlatMarker id="arrowhead-flat" />,
 };

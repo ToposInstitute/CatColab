@@ -119,7 +119,6 @@ const thRegNet = () =>
                 },
                 name: "Promotion",
                 description: "Positive interaction: activates or promotes",
-                arrowStyle: "to",
             },
             {
                 tag: "MorType",
@@ -134,7 +133,7 @@ const thRegNet = () =>
 const thStockFlow = () =>
     new TheoryMeta({
         id: "stock-flow",
-        name: "Stock-flow diagram",
+        name: "Stock and flow",
         theory: catlog.thCategoryLinks,
         onlyFree: true,
         types: [
@@ -156,6 +155,7 @@ const thStockFlow = () =>
                 name: "Flow",
                 description: "Flow from one stock to another",
                 shortcut: ["F"],
+                arrowStyle: "double",
             },
             {
                 tag: "MorType",

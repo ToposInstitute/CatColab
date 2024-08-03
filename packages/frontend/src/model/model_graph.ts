@@ -50,7 +50,7 @@ export function modelToGraphviz(
                     class: cssClass(meta),
                     fontname: fontname(meta),
                     // Not recognized by Graphviz but will be passed through!
-                    arrowstyle: meta?.arrowStyle ?? "to",
+                    arrowstyle: meta?.arrowStyle ?? "default",
                 },
             });
         }

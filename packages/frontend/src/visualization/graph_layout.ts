@@ -57,7 +57,7 @@ export interface Edge<Id> extends GraphElement {
     labelPos?: Point;
 
     /** Path for the edge in SVG path data format. */
-    path?: string;
+    path: string;
 
     /** Style of edge, according to our own taxonomy. */
     style?: ArrowStyle;
