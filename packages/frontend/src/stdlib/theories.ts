@@ -1,7 +1,7 @@
 import * as catlog from "catlog-wasm";
 
+import { TheoryMeta } from "../theory";
 import { uniqueIndexArray } from "../util/indexing";
-import { TheoryMeta } from "./types";
 
 import styles from "./styles.module.css";
 import svgStyles from "./svg_styles.module.css";

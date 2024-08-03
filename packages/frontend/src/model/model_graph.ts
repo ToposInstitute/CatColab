@@ -3,7 +3,7 @@ import type * as Viz from "@viz-js/viz";
 import type { TheoryMeta, TypeMeta } from "../theory";
 import type { ModelJudgment } from "./types";
 
-import styles from "../theory/styles.module.css";
+import styles from "../stdlib/styles.module.css";
 
 /** Visualize a model of a double theory as a graph.
 
