@@ -1,3 +1,4 @@
+import { destructure } from "@solid-primitives/destructure";
 import { For, type JSX } from "solid-js";
 
 import type * as GraphLayout from "./graph_layout";
@@ -5,7 +6,7 @@ import type { ArrowStyle } from "./types";
 
 import "./graph_svg.css";
 
-/** Draw a graph that has a layout using SVG.
+/** Draw a graph with a layout using SVG.
  */
 export function GraphSVG<Id>(props: {
     graph?: GraphLayout.Graph<Id>;
@@ -23,67 +24,71 @@ export function GraphSVG<Id>(props: {
             <defs>
                 <For each={Array.from(markerSet())}>{(marker) => markerComponents[marker]}</For>
             </defs>
-            <For each={props.graph?.edges ?? []}>
-                {(edge) => {
-                    const { label, labelPos, path } = edge;
-                    const style = edge.style ?? "default";
-                    const marker = styleMarkers[style];
-                    const markerURL = `url(#arrowhead-${marker})`;
-                    return (
-                        <g class={`edge ${edge.cssClass ?? ""}`}>
-                            {style === "double" ? (
-                                <>
-                                    <path class="double-outer" d={path} />
-                                    <path class="double-inner" d={path} />
-                                    <path class="double-marker" marker-end={markerURL} d={path} />
-                                </>
-                            ) : (
-                                <path marker-end={markerURL} d={path} />
-                            )}
-                            {label && (
-                                <text
-                                    class="label"
-                                    x={labelPos?.x}
-                                    y={labelPos?.y}
-                                    dominant-baseline="middle"
-                                    text-anchor="middle"
-                                >
-                                    {label}
-                                </text>
-                            )}
-                        </g>
-                    );
-                }}
-            </For>
-            <For each={props.graph?.nodes ?? []}>
-                {(node) => {
-                    const {
-                        pos: { x, y },
-                        width,
-                        height,
-                    } = node;
-                    return (
-                        <g class={`node ${node.cssClass ?? ""}`}>
-                            <rect
-                                x={x - width / 2}
-                                y={y - height / 2}
-                                width={width}
-                                height={height}
-                            />
-                            <text
-                                class="label"
-                                x={x}
-                                y={y}
-                                dominant-baseline="middle"
-                                text-anchor="middle"
-                            >
-                                {node.label}
-                            </text>
-                        </g>
-                    );
-                }}
-            </For>
+            <For each={props.graph?.edges ?? []}>{(edge) => <EdgeSVG edge={edge} />}</For>
+            <For each={props.graph?.nodes ?? []}>{(node) => <NodeSVG node={node} />}</For>
         </svg>
+    );
+}
+
+/** Draw a node with a layout using SVG.
+ */
+export function NodeSVG<Id>(props: { node: GraphLayout.Node<Id> }) {
+    const {
+        node: {
+            pos: { x, y },
+            width,
+            height,
+        },
+    } = destructure(props, { deep: true });
+
+    return (
+        <g class={`node ${props.node.cssClass ?? ""}`}>
+            <rect x={x() - width() / 2} y={y() - height() / 2} width={width()} height={height()} />
+            {props.node.label && (
+                <text class="label" x={x()} y={y()} dominant-baseline="middle" text-anchor="middle">
+                    {props.node.label}
+                </text>
+            )}
+        </g>
+    );
+}
+
+/** Draw an edge with a layout using SVG.
+ */
+export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
+    const {
+        edge: { path },
+    } = destructure(props, { deep: true });
+
+    const markerUrl = () => {
+        const style = props.edge.style ?? "default";
+        const marker = styleMarkers[style];
+        return `url(#arrowhead-${marker})`;
+    };
+
+    return (
+        <g class={`edge ${props.edge.cssClass ?? ""}`}>
+            {props.edge.style === "double" ? (
+                <>
+                    <path class="double-outer" d={path()} />
+                    <path class="double-inner" d={path()} />
+                    <path class="double-marker" marker-end={markerUrl()} d={path()} />
+                </>
+            ) : (
+                <path marker-end={markerUrl()} d={path()} />
+            )}
+            {props.edge.label && (
+                <text
+                    class="label"
+                    x={props.edge.labelPos?.x}
+                    y={props.edge.labelPos?.y}
+                    dominant-baseline="middle"
+                    text-anchor="middle"
+                >
+                    {props.edge.label}
+                </text>
+            )}
+        </g>
     );
 }
 
@@ -137,6 +142,8 @@ const FlatMarker = (props: { id: string }) => (
     </marker>
 );
 
+/** Supported markers serving as arrowheads.
+ */
 type ArrowMarker = "vee" | "double" | "triangle" | "flat";
 
 const styleMarkers: Record<ArrowStyle, ArrowMarker> = {

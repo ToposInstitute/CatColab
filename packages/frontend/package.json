@@ -22,6 +22,7 @@
         "@corvu/resizable": "^0.2.2",
         "@solid-primitives/active-element": "^2.0.20",
         "@solid-primitives/context": "^0.2.3",
+        "@solid-primitives/destructure": "^0.1.17",
         "@solid-primitives/keyboard": "^1.2.8",
         "@viz-js/viz": "^3.7.0",
         "catlog-wasm": "file:../catlog-wasm/pkg",
