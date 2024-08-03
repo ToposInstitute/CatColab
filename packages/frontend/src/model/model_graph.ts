@@ -5,11 +5,11 @@ import type { ModelJudgment } from "./types";
 
 import styles from "../theory/styles.module.css";
 
-/** Visualize a model of a discrete double theory as a graph.
+/** Visualize a model of a double theory as a graph.
 
 Such a visualization makes sense for any discrete double theory since the
-generators of such a model are just a typed graph. For a general double theory,
-there is no single recipe to visualize its models.
+generators of such a model are just a typed graph. In general, any basic
+morphism whose domain or codomain is not a basic object will be ignored.
  */
 export function modelToGraphviz(
     model: Array<ModelJudgment>,
@@ -37,20 +37,20 @@ export function modelToGraphviz(
             });
         } else if (judgment.tag === "morphism") {
             const { id, name, dom, cod } = judgment;
-            if (!dom || !cod) {
+            if (!(dom?.tag === "Basic" && cod?.tag === "Basic")) {
                 continue;
             }
             const meta = theory.getMorTypeMeta(judgment.morType);
             edges.push({
-                head: cod,
-                tail: dom,
+                head: cod.content,
+                tail: dom.content,
                 attributes: {
                     id,
                     label: name,
                     class: cssClass(meta),
                     fontname: fontname(meta),
                     // Not recognized by Graphviz but will be passed through!
-                    arrowstyle: meta?.arrowStyle ?? "to",
+                    arrowstyle: meta?.arrowStyle ?? "default",
                 },
             });
         }

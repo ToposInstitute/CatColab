@@ -11,7 +11,7 @@ import svgStyles from "./svg_styles.module.css";
 TODO: Should the underlying theories be lazy loaded?
  */
 export const stdTheories = () =>
-    uniqueIndexArray([thSimpleOlog(), thSimpleSchema(), thRegNet()], (th) => th.id);
+    uniqueIndexArray([thSimpleOlog(), thSimpleSchema(), thRegNet(), thStockFlow()], (th) => th.id);
 
 const thSimpleOlog = () =>
     new TheoryMeta({
@@ -21,7 +21,7 @@ const thSimpleOlog = () =>
         theory: catlog.thCategory,
         types: [
             {
-                tag: "ob_type",
+                tag: "ObType",
                 obType: { tag: "Basic", content: "object" },
                 name: "Type",
                 description: "Type or class of things",
@@ -30,7 +30,7 @@ const thSimpleOlog = () =>
                 svgClasses: [svgStyles.box],
             },
             {
-                tag: "mor_type",
+                tag: "MorType",
                 morType: {
                     tag: "Hom",
                     content: { tag: "Basic", content: "object" },
@@ -50,7 +50,7 @@ const thSimpleSchema = () =>
         theory: catlog.thSchema,
         types: [
             {
-                tag: "ob_type",
+                tag: "ObType",
                 obType: { tag: "Basic", content: "entity" },
                 name: "Entity",
                 description: "Type of entity or thing",
@@ -60,7 +60,7 @@ const thSimpleSchema = () =>
                 textClasses: [styles.code],
             },
             {
-                tag: "mor_type",
+                tag: "MorType",
                 morType: {
                     tag: "Hom",
                     content: { tag: "Basic", content: "entity" },
@@ -71,7 +71,7 @@ const thSimpleSchema = () =>
                 textClasses: [styles.code],
             },
             {
-                tag: "mor_type",
+                tag: "MorType",
                 morType: { tag: "Basic", content: "attr" },
                 name: "Attribute",
                 description: "Data attribute of an entity",
@@ -79,14 +79,14 @@ const thSimpleSchema = () =>
                 textClasses: [styles.code],
             },
             {
-                tag: "ob_type",
+                tag: "ObType",
                 obType: { tag: "Basic", content: "attr_type" },
                 name: "Attribute type",
                 description: "Data type for an attribute",
                 textClasses: [styles.code],
             },
             {
-                tag: "mor_type",
+                tag: "MorType",
                 morType: {
                     tag: "Hom",
                     content: { tag: "Basic", content: "attr_type" },
@@ -106,27 +106,63 @@ const thRegNet = () =>
         onlyFree: true,
         types: [
             {
-                tag: "ob_type",
+                tag: "ObType",
                 obType: { tag: "Basic", content: "object" },
                 name: "Species",
                 description: "Biochemical species in the network",
             },
             {
-                tag: "mor_type",
+                tag: "MorType",
                 morType: {
                     tag: "Hom",
                     content: { tag: "Basic", content: "object" },
                 },
                 name: "Promotion",
                 description: "Positive interaction: activates or promotes",
-                arrowStyle: "to",
             },
             {
-                tag: "mor_type",
+                tag: "MorType",
                 morType: { tag: "Basic", content: "negative" },
                 name: "Inhibition",
                 description: "Negative interaction: represses or inhibits",
                 arrowStyle: "flat",
+            },
+        ],
+    });
+
+const thStockFlow = () =>
+    new TheoryMeta({
+        id: "stock-flow",
+        name: "Stock and flow",
+        theory: catlog.thCategoryLinks,
+        onlyFree: true,
+        types: [
+            {
+                tag: "ObType",
+                obType: { tag: "Basic", content: "object" },
+                name: "Stock",
+                description: "Thing with an amount",
+                shortcut: ["S"],
+                cssClasses: [styles.box],
+                svgClasses: [svgStyles.box],
+            },
+            {
+                tag: "MorType",
+                morType: {
+                    tag: "Hom",
+                    content: { tag: "Basic", content: "object" },
+                },
+                name: "Flow",
+                description: "Flow from one stock to another",
+                shortcut: ["F"],
+                arrowStyle: "double",
+            },
+            {
+                tag: "MorType",
+                morType: { tag: "Basic", content: "link" },
+                name: "Link",
+                description: "Influence of a stock on a flow",
+                shortcut: ["L"],
             },
         ],
     });

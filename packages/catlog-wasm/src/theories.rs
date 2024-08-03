@@ -41,8 +41,8 @@ mod tests {
         let entity = ObType::Basic(ustr("entity"));
         let attr_type = ObType::Basic(ustr("attr_type"));
         let attr = MorType::Basic(ustr("attr"));
-        assert_eq!(th.src(attr.clone()), Some(entity));
-        assert_eq!(th.tgt(attr), Some(attr_type));
+        assert_eq!(th.src(attr.clone()), Ok(entity));
+        assert_eq!(th.tgt(attr), Ok(attr_type));
     }
 
     #[test]
@@ -50,7 +50,7 @@ mod tests {
         let th = th_category_links();
         let x = ObType::Basic(ustr("object"));
         let link = MorType::Basic(ustr("link"));
-        assert_eq!(th.src(link.clone()), Some(x));
-        assert!(matches!(th.tgt(link), Some(ObType::Tabulator(_))));
+        assert_eq!(th.src(link.clone()), Ok(x));
+        assert!(matches!(th.tgt(link), Ok(ObType::Tabulator(_))));
     }
 }

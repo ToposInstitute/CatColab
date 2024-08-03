@@ -56,19 +56,19 @@ impl From<FinHom<Ustr, Ustr>> for MorType {
 
 /// Convert into object type in a discrete double theory.
 impl TryFrom<ObType> for Ustr {
-    type Error = ();
+    type Error = String;
 
     fn try_from(ob_type: ObType) -> Result<Self, Self::Error> {
         match ob_type {
             ObType::Basic(name) => Ok(name),
-            _ => Err(()),
+            _ => Err(format!("Cannot cast object type for discrete double theory: {:#?}", ob_type)),
         }
     }
 }
 
 /// Convert into morphism type in a discrete double theory.
 impl TryFrom<MorType> for FinHom<Ustr, Ustr> {
-    type Error = ();
+    type Error = String;
 
     fn try_from(mor_type: MorType) -> Result<Self, Self::Error> {
         match mor_type {
@@ -100,7 +100,7 @@ impl From<TabMorType<Ustr, Ustr>> for MorType {
 
 /// Convert into object type in a discrete tabulator theory.
 impl TryFrom<ObType> for TabObType<Ustr, Ustr> {
-    type Error = ();
+    type Error = String;
 
     fn try_from(ob_type: ObType) -> Result<Self, Self::Error> {
         match ob_type {
@@ -112,7 +112,7 @@ impl TryFrom<ObType> for TabObType<Ustr, Ustr> {
 
 /// Convert into morphism type in a discrete tabulator theory.
 impl TryFrom<MorType> for TabMorType<Ustr, Ustr> {
-    type Error = ();
+    type Error = String;
 
     fn try_from(mor_type: MorType) -> Result<Self, Self::Error> {
         match mor_type {
@@ -126,7 +126,8 @@ impl TryFrom<MorType> for TabMorType<Ustr, Ustr> {
 
 Ideally the Wasm-bound `DblTheory` would just have a type parameter for the
 underlying double theory, but `wasm-bindgen` does not support
-[generics](https://github.com/rustwasm/wasm-bindgen/issues/3309).
+[generics](https://github.com/rustwasm/wasm-bindgen/issues/3309). Instead, we
+explicitly enumerate the supported kinds of double theories in this enum.
  */
 pub(crate) enum DblTheoryWrapper {
     Discrete(Arc<dbl_theory::UstrDiscreteDblTheory>),
@@ -164,6 +165,17 @@ impl DblTheory {
         Self::new(DblTheoryWrapper::DiscreteTab(Arc::new(theory)))
     }
 
+    /// Kind of double theory ("double doctrine").
+    #[wasm_bindgen(getter)]
+    pub fn kind(&self) -> String {
+        // TODO: Should return an enum so that we get type defs.
+        match &self.theory {
+            DblTheoryWrapper::Discrete(_) => "Discrete",
+            DblTheoryWrapper::DiscreteTab(_) => "DiscreteTab",
+        }
+        .into()
+    }
+
     /// Index of an object type, if set.
     #[wasm_bindgen(js_name = "obTypeIndex")]
     pub fn ob_type_index(&self, x: &ObType) -> Option<usize> {
@@ -190,22 +202,22 @@ impl DblTheory {
 
     /// Source of a morphism type.
     #[wasm_bindgen]
-    pub fn src(&self, mor_type: MorType) -> Option<ObType> {
+    pub fn src(&self, mor_type: MorType) -> Result<ObType, String> {
         all_the_same!(match &self.theory {
             DblTheoryWrapper::[Discrete, DiscreteTab](th) => {
-                let m = mor_type.try_into().ok()?;
-                Some(th.src(&m).into())
+                let m = mor_type.try_into()?;
+                Ok(th.src(&m).into())
             }
         })
     }
 
     /// Target of a morphism type.
     #[wasm_bindgen]
-    pub fn tgt(&self, mor_type: MorType) -> Option<ObType> {
+    pub fn tgt(&self, mor_type: MorType) -> Result<ObType, String> {
         all_the_same!(match &self.theory {
             DblTheoryWrapper::[Discrete, DiscreteTab](th) => {
-                let m = mor_type.try_into().ok()?;
-                Some(th.tgt(&m).into())
+                let m = mor_type.try_into()?;
+                Ok(th.tgt(&m).into())
             }
         })
     }

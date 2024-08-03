@@ -13,7 +13,21 @@
     stroke: black;
 }
 
-#arrowhead-default, #arrowhead-flat {
+.edge path.double-outer {
+    stroke-width: 6;
+    stroke-linecap: round;
+}
+.edge path.double-inner {
+    stroke: white;
+    stroke-width: 3.5;
+    stroke-linecap: round;
+}
+.edge path.double-marker {
+    stroke: white;
+    stroke-width: 1.5;
+}
+
+#arrowhead-vee, #arrowhead-flat, #arrowhead-double {
     fill: none;
     stroke: black;
 }

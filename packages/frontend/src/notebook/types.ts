@@ -6,6 +6,8 @@ export type Notebook<T> = {
 
 export type Cell<T> = RichTextCell | FormalCell<T> | StemCell;
 
+export type CellId = string;
+
 export const newNotebook = <T>(): Notebook<T> => ({
     cells: [],
 });
@@ -33,8 +35,6 @@ export const newFormalCell = <T>(content: T): FormalCell<T> => ({
     id: uuidv7(),
     content: content,
 });
-
-export type CellId = string;
 
 export type StemCell = {
     tag: "stem";

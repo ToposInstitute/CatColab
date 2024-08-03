@@ -15,7 +15,7 @@ import {
 import { useDoc } from "../util/automerge_solid";
 import { type IndexedMap, indexArray, indexMap } from "../util/indexing";
 
-import { DblModel, type InvalidDiscreteDblModel, type ObId, type Uuid } from "catlog-wasm";
+import { DblModel, type InvalidDiscreteDblModel, type Uuid } from "catlog-wasm";
 import { InlineInput } from "../components";
 import {
     type CellActions,
@@ -25,7 +25,12 @@ import {
     newRichTextCell,
 } from "../notebook";
 import type { TheoryId, TheoryMeta } from "../theory";
-import { ModelErrorsContext, ObjectIndexContext, TheoryContext } from "./model_context";
+import {
+    ModelErrorsContext,
+    MorphismIndexContext,
+    ObjectIndexContext,
+    TheoryContext,
+} from "./model_context";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
 import {
@@ -113,10 +118,20 @@ export function ModelNotebookEditor(props: {
             .map((cell) => cell.content),
     );
 
-    const objectIndex = createMemo<IndexedMap<ObId, string>>(() => {
-        const map = new Map<ObId, string>();
+    const objectIndex = createMemo<IndexedMap<Uuid, string>>(() => {
+        const map = new Map<Uuid, string>();
         for (const judgment of model()) {
             if (judgment.tag === "object") {
+                map.set(judgment.id, judgment.name);
+            }
+        }
+        return indexMap(map);
+    });
+
+    const morphismIndex = createMemo<IndexedMap<Uuid, string>>(() => {
+        const map = new Map<Uuid, string>();
+        for (const judgment of model()) {
+            if (judgment.tag === "morphism") {
                 map.set(judgment.id, judgment.name);
             }
         }
@@ -126,7 +141,7 @@ export function ModelNotebookEditor(props: {
     const modelErrors = createMemo<Map<Uuid, InvalidDiscreteDblModel<Uuid>[]>>(() => {
         let errs: InvalidDiscreteDblModel<Uuid>[] = [];
         const th = theory();
-        if (th) {
+        if (th && th.theory.kind === "Discrete") {
             const coreModel = new DblModel(th.theory);
             for (const judgment of model()) {
                 if (judgment.tag === "object") {
@@ -185,6 +200,7 @@ export function ModelNotebookEditor(props: {
                 values={[
                     [TheoryContext, theory],
                     [ObjectIndexContext, objectIndex],
+                    [MorphismIndexContext, morphismIndex],
                     [ModelErrorsContext, modelErrors],
                 ]}
             >
@@ -227,7 +243,7 @@ function modelCellConstructors(theory?: TheoryMeta): ModelCellConstructor[] {
             description,
             shortcut: shortcut && [modifier, ...shortcut],
             construct:
-                typ.tag === "ob_type"
+                typ.tag === "ObType"
                     ? () => newFormalCell(newObjectDecl(typ.obType))
                     : () => newFormalCell(newMorphismDecl(typ.morType)),
         });

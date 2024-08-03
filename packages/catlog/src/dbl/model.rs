@@ -197,21 +197,21 @@ where
     }
 
     /// Adds a basic object to the model.
-    pub fn add_ob(&mut self, x: Name, typ: Cat::Ob) {
-        self.category.add_ob_generator(x.clone());
-        self.ob_types.set(x, typ);
+    pub fn add_ob(&mut self, x: Name, typ: Cat::Ob) -> bool {
+        self.ob_types.set(x.clone(), typ);
+        self.category.add_ob_generator(x)
     }
 
     /// Adds a basic morphism to the model.
-    pub fn add_mor(&mut self, f: Name, dom: Name, cod: Name, typ: Cat::Hom) {
-        self.category.add_hom_generator(f.clone(), dom, cod);
-        self.mor_types.set(f, typ);
+    pub fn add_mor(&mut self, f: Name, dom: Name, cod: Name, typ: Cat::Hom) -> bool {
+        self.mor_types.set(f.clone(), typ);
+        self.category.add_hom_generator(f, dom, cod)
     }
 
     /// Adds a basic morphism to the model without setting its (co)domain.
-    pub fn make_mor(&mut self, f: Name, typ: Cat::Hom) {
-        self.category.make_hom_generator(f.clone());
-        self.mor_types.set(f, typ);
+    pub fn make_mor(&mut self, f: Name, typ: Cat::Hom) -> bool {
+        self.mor_types.set(f.clone(), typ);
+        self.category.make_hom_generator(f)
     }
 
     /// Updates the domain of a morphism, setting or unsetting it.

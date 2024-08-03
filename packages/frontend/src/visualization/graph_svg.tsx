@@ -1,3 +1,4 @@
+import { destructure } from "@solid-primitives/destructure";
 import { For, type JSX } from "solid-js";
 
 import type * as GraphLayout from "./graph_layout";
@@ -5,7 +6,7 @@ import type { ArrowStyle } from "./types";
 
 import "./graph_svg.css";
 
-/** Draw a graph that has a layout using SVG.
+/** Draw a graph with a layout using SVG.
  */
 export function GraphSVG<Id>(props: {
     graph?: GraphLayout.Graph<Id>;
@@ -13,7 +14,7 @@ export function GraphSVG<Id>(props: {
     const markerSet = () => {
         const markers = new Set<ArrowMarker>();
         for (const edge of props.graph?.edges ?? []) {
-            markers.add(styleMarkers[edge.style ?? "to"]);
+            markers.add(styleMarkers[edge.style ?? "default"]);
         }
         return markers;
     };
@@ -23,78 +24,81 @@ export function GraphSVG<Id>(props: {
             <defs>
                 <For each={Array.from(markerSet())}>{(marker) => markerComponents[marker]}</For>
             </defs>
-            <For each={props.graph?.nodes ?? []}>
-                {(node) => {
-                    const {
-                        pos: { x, y },
-                        width,
-                        height,
-                    } = node;
-                    return (
-                        <g class={`node ${node.cssClass ?? ""}`}>
-                            <rect
-                                x={x - width / 2}
-                                y={y - height / 2}
-                                width={width}
-                                height={height}
-                            />
-                            <text
-                                class="label"
-                                x={x}
-                                y={y}
-                                dominant-baseline="middle"
-                                text-anchor="middle"
-                            >
-                                {node.label}
-                            </text>
-                        </g>
-                    );
-                }}
-            </For>
-            <For each={props.graph?.edges ?? []}>
-                {(edge) => {
-                    const { label, sourcePos, targetPos, labelPos, path } = edge;
-                    const marker = styleMarkers[edge.style ?? "to"];
-                    const markerURL = `url(#arrowhead-${marker})`;
-                    return (
-                        <g class={`edge ${edge.cssClass ?? ""}`}>
-                            {path ? (
-                                <path marker-end={markerURL} d={path} />
-                            ) : (
-                                <line
-                                    marker-end={markerURL}
-                                    x1={sourcePos.x}
-                                    y1={sourcePos.y}
-                                    x2={targetPos.x}
-                                    y2={targetPos.y}
-                                />
-                            )}
-                            {label && (
-                                <text
-                                    class="label"
-                                    x={labelPos?.x}
-                                    y={labelPos?.y}
-                                    dominant-baseline="middle"
-                                    text-anchor="middle"
-                                >
-                                    {label}
-                                </text>
-                            )}
-                        </g>
-                    );
-                }}
-            </For>
+            <For each={props.graph?.edges ?? []}>{(edge) => <EdgeSVG edge={edge} />}</For>
+            <For each={props.graph?.nodes ?? []}>{(node) => <NodeSVG node={node} />}</For>
         </svg>
     );
 }
 
-/** SVG marker for a standard arrowhead formed by two angled lines.
+/** Draw a node with a layout using SVG.
  */
-const ArrowMarker = (props: { id: string }) => (
+export function NodeSVG<Id>(props: { node: GraphLayout.Node<Id> }) {
+    const {
+        node: {
+            pos: { x, y },
+            width,
+            height,
+        },
+    } = destructure(props, { deep: true });
+
+    return (
+        <g class={`node ${props.node.cssClass ?? ""}`}>
+            <rect x={x() - width() / 2} y={y() - height() / 2} width={width()} height={height()} />
+            {props.node.label && (
+                <text class="label" x={x()} y={y()} dominant-baseline="middle" text-anchor="middle">
+                    {props.node.label}
+                </text>
+            )}
+        </g>
+    );
+}
+
+/** Draw an edge with a layout using SVG.
+ */
+export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
+    const {
+        edge: { path },
+    } = destructure(props, { deep: true });
+
+    const markerUrl = () => {
+        const style = props.edge.style ?? "default";
+        const marker = styleMarkers[style];
+        return `url(#arrowhead-${marker})`;
+    };
+
+    return (
+        <g class={`edge ${props.edge.cssClass ?? ""}`}>
+            {props.edge.style === "double" ? (
+                <>
+                    <path class="double-outer" d={path()} />
+                    <path class="double-inner" d={path()} />
+                    <path class="double-marker" marker-end={markerUrl()} d={path()} />
+                </>
+            ) : (
+                <path marker-end={markerUrl()} d={path()} />
+            )}
+            {props.edge.label && (
+                <text
+                    class="label"
+                    x={props.edge.labelPos?.x}
+                    y={props.edge.labelPos?.y}
+                    dominant-baseline="middle"
+                    text-anchor="middle"
+                >
+                    {props.edge.label}
+                </text>
+            )}
+        </g>
+    );
+}
+
+/** SVG marker for a standard V-shaped arrowhead.
+ */
+const VeeMarker = (props: { id: string; offset?: number }) => (
     <marker
         id={props.id}
         viewBox="0 0 5 10"
-        refX="5"
+        refX={5 + (props.offset ?? 0)}
         refY="5"
         markerWidth="10"
         markerHeight="10"
@@ -138,15 +142,19 @@ const FlatMarker = (props: { id: string }) => (
     </marker>
 );
 
-type ArrowMarker = "default" | "triangle" | "flat";
+/** Supported markers serving as arrowheads.
+ */
+type ArrowMarker = "vee" | "double" | "triangle" | "flat";
 
 const styleMarkers: Record<ArrowStyle, ArrowMarker> = {
-    to: "default",
+    default: "vee",
+    double: "double",
     flat: "flat",
 };
 
 const markerComponents: Record<ArrowMarker, JSX.Element> = {
-    default: <ArrowMarker id="arrowhead-default" />,
+    vee: <VeeMarker id="arrowhead-vee" />,
+    double: <VeeMarker id="arrowhead-double" offset={-2} />,
     triangle: <TriangleMarker id="arrowhead-triangle" />,
     flat: <FlatMarker id="arrowhead-flat" />,
 };
