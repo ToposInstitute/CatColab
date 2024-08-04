@@ -14,7 +14,7 @@ export function GraphSVG<Id>(props: {
     const markerSet = () => {
         const markers = new Set<ArrowMarker>();
         for (const edge of props.graph?.edges ?? []) {
-            markers.add(styleMarkers[edge.style ?? "default"]);
+            markers.add(styleToMarker[edge.style ?? "default"]);
         }
         return markers;
     };
@@ -22,7 +22,7 @@ export function GraphSVG<Id>(props: {
     return (
         <svg class="graph" width={props.graph?.width} height={props.graph?.height}>
             <defs>
-                <For each={Array.from(markerSet())}>{(marker) => markerComponents[marker]}</For>
+                <For each={Array.from(markerSet())}>{(marker) => arrowMarkerSVG[marker]}</For>
             </defs>
             <For each={props.graph?.edges ?? []}>{(edge) => <EdgeSVG edge={edge} />}</For>
             <For each={props.graph?.nodes ?? []}>{(node) => <NodeSVG node={node} />}</For>
@@ -62,7 +62,7 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
 
     const markerUrl = () => {
         const style = props.edge.style ?? "default";
-        const marker = styleMarkers[style];
+        const marker = styleToMarker[style];
         return `url(#arrowhead-${marker})`;
     };
 
@@ -144,15 +144,17 @@ const FlatMarker = (props: { id: string }) => (
 
 /** Supported markers serving as arrowheads.
  */
-type ArrowMarker = "vee" | "double" | "triangle" | "flat";
+export type ArrowMarker = "vee" | "double" | "triangle" | "flat";
 
-const styleMarkers: Record<ArrowStyle, ArrowMarker> = {
+const styleToMarker: Record<ArrowStyle, ArrowMarker> = {
     default: "vee",
     double: "double",
     flat: "flat",
 };
 
-const markerComponents: Record<ArrowMarker, JSX.Element> = {
+/** SVG markers for arrow heads.
+ */
+export const arrowMarkerSVG: Record<ArrowMarker, JSX.Element> = {
     vee: <VeeMarker id="arrowhead-vee" />,
     double: <VeeMarker id="arrowhead-double" offset={-2} />,
     triangle: <TriangleMarker id="arrowhead-triangle" />,

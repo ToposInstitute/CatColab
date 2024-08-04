@@ -13,6 +13,12 @@ export async function loadViz() {
     return viz;
 }
 
+/** Lay out a graph using Graphviz.
+ */
+export function vizLayoutGraph(viz: Viz.Viz, graph: Viz.Graph, options?: Viz.RenderOptions) {
+    return parseGraphvizJSON(vizRenderJSON0(viz, graph, options));
+}
+
 /** Render a Graphviz graph using the Graphviz `json0` format.
 
 Graphviz is invoked with "inverted y coordinates" for compatibility with the
@@ -36,16 +42,13 @@ The predecessor to this code is Evan's defunct package
  */
 export function parseGraphvizJSON(graphviz: GraphvizJSON.Graph): GraphLayout.Graph<string> {
     // Parse bounding box and padding.
-    //
-    // Apparently the first two numbers in the Graphviz bounding box are always
-    // (0,0) but that is not documented.
     const bb = parseFloatArray(graphviz.bb);
     const pad: Point = { x: 0, y: 0 };
     if (graphviz.pad) {
         const gvPad = parsePoint(graphviz.pad);
         [pad.x, pad.y] = [inchesToPoints(gvPad.x), inchesToPoints(gvPad.y)];
     }
-    const [width, height] = [bb[2] + 2 * pad.x, bb[3] + 2 * pad.y];
+    const [width, height] = [bb[2] + 2 * pad.x, bb[1] + 2 * pad.y];
 
     // Parse nodes of graph, ignoring any subgraphs.
     const nodes: GraphLayout.Node<string>[] = [];

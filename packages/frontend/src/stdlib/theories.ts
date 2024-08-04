@@ -2,7 +2,7 @@ import * as catlog from "catlog-wasm";
 
 import { TheoryMeta } from "../theory";
 import { uniqueIndexArray } from "../util/indexing";
-import { ModelGraphviz } from "./visualizations";
+import { ModelGraphviz, StockFlowDiagram } from "./visualizations";
 
 import styles from "./styles.module.css";
 import svgStyles from "./svg_styles.module.css";
@@ -185,6 +185,13 @@ const thStockFlow = () =>
                 name: "Link",
                 description: "Influence of a stock on a flow",
                 shortcut: ["L"],
+            },
+        ],
+        modelViews: [
+            {
+                name: "Diagram",
+                description: "Visualize the stock and flow diagram",
+                component: StockFlowDiagram,
             },
         ],
     });

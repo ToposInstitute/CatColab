@@ -77,7 +77,7 @@ export function modelToGraphviz(
         directed: true,
         nodes,
         edges,
-        graphAttributes: attributes?.graph,
+        graphAttributes: { ...defaultGraphAttributes, ...attributes?.graph },
         nodeAttributes: { ...defaultNodeAttributes, ...attributes?.node },
         edgeAttributes: { ...defaultEdgeAttributes, ...attributes?.edge },
     };
@@ -91,8 +91,12 @@ const cssClass = (meta?: TypeMeta): string =>
 const fontname = (meta?: TypeMeta) =>
     meta?.textClasses?.includes(styles.code) ? "Courier" : "Helvetica";
 
+const defaultGraphAttributes = {
+    nodesep: "0.5",
+};
+
 const defaultNodeAttributes = {
-    // FIXME: How to set the font size?
+    // XXX: How to set the font size?
     fontsize: "20",
     shape: "box",
     width: 0,
