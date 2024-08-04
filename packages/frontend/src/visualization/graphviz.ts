@@ -42,13 +42,17 @@ The predecessor to this code is Evan's defunct package
  */
 export function parseGraphvizJSON(graphviz: GraphvizJSON.Graph): GraphLayout.Graph<string> {
     // Parse bounding box and padding.
+    //
+    // Apparently one corner of the bounding box is always the origin (0,0),
+    // though that is not documented. Which of the y coordinates is zero depends
+    // on whether the Graphviz option to invert the y axis has been set.
     const bb = parseFloatArray(graphviz.bb);
     const pad: Point = { x: 0, y: 0 };
     if (graphviz.pad) {
         const gvPad = parsePoint(graphviz.pad);
         [pad.x, pad.y] = [inchesToPoints(gvPad.x), inchesToPoints(gvPad.y)];
     }
-    const [width, height] = [bb[2] + 2 * pad.x, bb[1] + 2 * pad.y];
+    const [width, height] = [bb[2] + 2 * pad.x, Math.max(bb[1], bb[3]) + 2 * pad.y];
 
     // Parse nodes of graph, ignoring any subgraphs.
     const nodes: GraphLayout.Node<string>[] = [];
