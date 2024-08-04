@@ -1,5 +1,6 @@
 import type * as Viz from "@viz-js/viz";
 import { For, createResource } from "solid-js";
+import { P, match } from "ts-pattern";
 
 import type { ModelJudgment } from "../../model";
 import type { TheoryMeta } from "../../theory";
@@ -49,28 +50,36 @@ function StockFlowSVG(props: {
         const nodeMap = uniqueIndexArray(props.layout?.nodes ?? [], (node) => node.id);
         const edgeMap = uniqueIndexArray(props.layout?.edges ?? [], (edge) => edge.id);
         for (const judgment of props.model) {
-            if (
-                // XXX: Pattern matching would help here.
-                judgment.tag === "morphism" &&
-                judgment.dom?.tag === "Basic" &&
-                judgment.cod?.tag === "Tabulated" &&
-                judgment.cod.content.tag === "Basic"
-            ) {
-                const srcId = judgment.dom.content;
-                const tgtId = judgment.cod.content.content;
-                const srcNode = nodeMap.get(srcId);
-                const tgtEdge = edgeMap.get(tgtId);
-                if (!srcNode || !tgtEdge) {
-                    continue;
-                }
-                pathElem.setAttribute("d", tgtEdge.path);
-                const midpoint = pathElem.getPointAtLength(pathElem.getTotalLength() / 2);
-                const path =
-                    tgtEdge.source === srcId || tgtEdge.target === srcId
-                        ? quadraticCurve(srcNode.pos, midpoint, 1.0)
-                        : linearPath(srcNode.pos, midpoint);
-                result.push(path.join(" "));
-            }
+            match(judgment).with(
+                {
+                    tag: "morphism",
+                    dom: {
+                        tag: "Basic",
+                        content: P.select("srcId"),
+                    },
+                    cod: {
+                        tag: "Tabulated",
+                        content: {
+                            tag: "Basic",
+                            content: P.select("tgtId"),
+                        },
+                    },
+                },
+                ({ srcId, tgtId }) => {
+                    const srcNode = nodeMap.get(srcId);
+                    const tgtEdge = edgeMap.get(tgtId);
+                    if (!srcNode || !tgtEdge) {
+                        return;
+                    }
+                    pathElem.setAttribute("d", tgtEdge.path);
+                    const midpoint = pathElem.getPointAtLength(pathElem.getTotalLength() / 2);
+                    const path =
+                        tgtEdge.source === srcId || tgtEdge.target === srcId
+                            ? quadraticCurve(srcNode.pos, midpoint, 1.0)
+                            : linearPath(srcNode.pos, midpoint);
+                    result.push(path.join(" "));
+                },
+            );
         }
         return result;
     };
