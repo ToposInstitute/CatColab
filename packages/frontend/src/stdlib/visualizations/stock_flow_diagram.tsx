@@ -56,14 +56,19 @@ function StockFlowSVG(props: {
                 judgment.cod?.tag === "Tabulated" &&
                 judgment.cod.content.tag === "Basic"
             ) {
-                const srcNode = nodeMap.get(judgment.dom.content);
-                const tgtEdge = edgeMap.get(judgment.cod.content.content);
+                const srcId = judgment.dom.content;
+                const tgtId = judgment.cod.content.content;
+                const srcNode = nodeMap.get(srcId);
+                const tgtEdge = edgeMap.get(tgtId);
                 if (!srcNode || !tgtEdge) {
                     continue;
                 }
                 pathElem.setAttribute("d", tgtEdge.path);
-                const mid = pathElem.getPointAtLength(pathElem.getTotalLength() / 2);
-                const path = ["M", srcNode.pos.x, srcNode.pos.y, "L", mid.x, mid.y];
+                const midpoint = pathElem.getPointAtLength(pathElem.getTotalLength() / 2);
+                const path =
+                    tgtEdge.source === srcId || tgtEdge.target === srcId
+                        ? quadraticCurve(srcNode.pos, midpoint, 1.0)
+                        : linearPath(srcNode.pos, midpoint);
                 result.push(path.join(" "));
             }
         }
@@ -87,6 +92,21 @@ function StockFlowSVG(props: {
             <For each={props.layout?.nodes ?? []}>{(node) => <NodeSVG node={node} />}</For>
         </svg>
     );
+}
+
+/** Linear path from one point to another.
+ */
+function linearPath(src: GraphLayout.Point, tgt: GraphLayout.Point) {
+    return ["M", src.x, tgt.x, "L", tgt.x, tgt.y];
+}
+
+/** Quadratic Bezier curve from one point to another.
+ */
+function quadraticCurve(src: GraphLayout.Point, tgt: GraphLayout.Point, ratio: number) {
+    const vec = { x: tgt.x - src.x, y: tgt.y - src.y };
+    const mid = { x: (src.x + tgt.x) / 2, y: (src.y + tgt.y) / 2 };
+    const ctrl = { x: mid.x + ratio * vec.y, y: mid.y - ratio * vec.x };
+    return ["M", src.x, src.y, "Q", ctrl.x, `${ctrl.y},`, tgt.x, tgt.y];
 }
 
 const flowMarker: ArrowMarker = "double";
