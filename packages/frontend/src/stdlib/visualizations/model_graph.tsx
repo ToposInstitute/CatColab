@@ -1,11 +1,28 @@
 import type * as Viz from "@viz-js/viz";
 
-import type { TheoryMeta, TypeMeta } from "../theory";
-import type { ModelJudgment } from "./types";
+import type { ModelJudgment } from "../../model";
+import type { TheoryMeta, TypeMeta } from "../../theory";
+import { GraphvizSVG } from "../../visualization";
 
-import styles from "../theory/styles.module.css";
+import styles from "../styles.module.css";
 
-/** Visualize a model of a double theory as a graph.
+/** Visualize a model of a double theory as a graph using Graphviz.
+ */
+export function ModelGraphviz(props: {
+    model: Array<ModelJudgment>;
+    theory: TheoryMeta;
+}) {
+    return (
+        <GraphvizSVG
+            graph={modelToGraphviz(props.model, props.theory)}
+            options={{
+                engine: "dot",
+            }}
+        />
+    );
+}
+
+/** Convert a model of a double theory a Graphviz graph.
 
 Such a visualization makes sense for any discrete double theory since the
 generators of such a model are just a typed graph. In general, any basic
@@ -60,7 +77,7 @@ export function modelToGraphviz(
         directed: true,
         nodes,
         edges,
-        graphAttributes: attributes?.graph,
+        graphAttributes: { ...defaultGraphAttributes, ...attributes?.graph },
         nodeAttributes: { ...defaultNodeAttributes, ...attributes?.node },
         edgeAttributes: { ...defaultEdgeAttributes, ...attributes?.edge },
     };
@@ -74,8 +91,12 @@ const cssClass = (meta?: TypeMeta): string =>
 const fontname = (meta?: TypeMeta) =>
     meta?.textClasses?.includes(styles.code) ? "Courier" : "Helvetica";
 
+const defaultGraphAttributes = {
+    nodesep: "0.5",
+};
+
 const defaultNodeAttributes = {
-    // FIXME: How to set the font size?
+    // XXX: How to set the font size?
     fontsize: "20",
     shape: "box",
     width: 0,

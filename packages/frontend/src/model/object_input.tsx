@@ -1,5 +1,6 @@
 import { splitProps, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
+import { P, match } from "ts-pattern";
 
 import type { Ob, ObType } from "catlog-wasm";
 import type { TheoryMeta } from "../theory";
@@ -46,7 +47,15 @@ function BasicObInput(
     return (
         <div class={cssClasses().join(" ")}>
             <IdInput
-                id={props.ob?.tag === "Basic" ? props.ob.content : null}
+                id={match(props.ob)
+                    .with(
+                        {
+                            tag: "Basic",
+                            content: P.select(),
+                        },
+                        (id) => id,
+                    )
+                    .otherwise(() => null)}
                 setId={(id) => {
                     props.setOb(
                         id === null
@@ -87,12 +96,18 @@ function TabulatedMorInput(
 
     return (
         <IdInput
-            id={
-                /// XXX: Would be nice to have a match statement here!
-                props.ob?.tag === "Tabulated" && props.ob.content.tag === "Basic"
-                    ? props.ob.content.content
-                    : null
-            }
+            id={match(props.ob)
+                .with(
+                    {
+                        tag: "Tabulated",
+                        content: {
+                            tag: "Basic",
+                            content: P.select(),
+                        },
+                    },
+                    (id) => id,
+                )
+                .otherwise(() => null)}
             setId={(id) => {
                 props.setOb(
                     id === null

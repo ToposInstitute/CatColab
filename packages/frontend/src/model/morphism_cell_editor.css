@@ -5,6 +5,10 @@
     column-gap: 1ex;
 }
 
+.morphism-decl-name-container {
+    min-width: 2.5ex;
+}
+
 .morphism-decl-name input {
     text-align: center;
 }

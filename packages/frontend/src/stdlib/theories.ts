@@ -1,7 +1,8 @@
 import * as catlog from "catlog-wasm";
 
+import { TheoryMeta } from "../theory";
 import { uniqueIndexArray } from "../util/indexing";
-import { TheoryMeta } from "./types";
+import { ModelGraphviz, StockFlowDiagram } from "./visualizations";
 
 import styles from "./styles.module.css";
 import svgStyles from "./svg_styles.module.css";
@@ -38,6 +39,13 @@ const thSimpleOlog = () =>
                 name: "Aspect",
                 description: "Aspect or property of a thing",
                 shortcut: ["M"],
+            },
+        ],
+        modelViews: [
+            {
+                name: "Diagram",
+                description: "Visualize the olog as a diagram",
+                component: ModelGraphviz,
             },
         ],
     });
@@ -96,6 +104,13 @@ const thSimpleSchema = () =>
                 textClasses: [styles.code],
             },
         ],
+        modelViews: [
+            {
+                name: "Diagram",
+                description: "Visualize the schema as a diagram",
+                component: ModelGraphviz,
+            },
+        ],
     });
 
 const thRegNet = () =>
@@ -103,7 +118,7 @@ const thRegNet = () =>
         id: "reg-net",
         name: "Regulatory network",
         theory: catlog.thSignedCategory,
-        onlyFree: true,
+        onlyFreeModels: true,
         types: [
             {
                 tag: "ObType",
@@ -119,6 +134,7 @@ const thRegNet = () =>
                 },
                 name: "Promotion",
                 description: "Positive interaction: activates or promotes",
+                preferUnnamed: true,
             },
             {
                 tag: "MorType",
@@ -126,6 +142,14 @@ const thRegNet = () =>
                 name: "Inhibition",
                 description: "Negative interaction: represses or inhibits",
                 arrowStyle: "flat",
+                preferUnnamed: true,
+            },
+        ],
+        modelViews: [
+            {
+                name: "Network",
+                description: "Visualize the regulatory network",
+                component: ModelGraphviz,
             },
         ],
     });
@@ -135,7 +159,7 @@ const thStockFlow = () =>
         id: "stock-flow",
         name: "Stock and flow",
         theory: catlog.thCategoryLinks,
-        onlyFree: true,
+        onlyFreeModels: true,
         types: [
             {
                 tag: "ObType",
@@ -162,7 +186,15 @@ const thStockFlow = () =>
                 morType: { tag: "Basic", content: "link" },
                 name: "Link",
                 description: "Influence of a stock on a flow",
+                preferUnnamed: true,
                 shortcut: ["L"],
+            },
+        ],
+        modelViews: [
+            {
+                name: "Diagram",
+                description: "Visualize the stock and flow diagram",
+                component: StockFlowDiagram,
             },
         ],
     });

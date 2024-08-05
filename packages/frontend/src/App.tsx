@@ -4,7 +4,7 @@ import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-index
 
 import { ModelEditor, type ModelNotebook } from "./model";
 import { newNotebook } from "./notebook";
-import { stdTheories } from "./theory";
+import { stdTheories } from "./stdlib";
 
 function App() {
     const theories = stdTheories();

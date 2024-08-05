@@ -13,7 +13,16 @@ export async function loadViz() {
     return viz;
 }
 
+/** Lay out a graph using Graphviz.
+ */
+export function vizLayoutGraph(viz: Viz.Viz, graph: Viz.Graph, options?: Viz.RenderOptions) {
+    return parseGraphvizJSON(vizRenderJSON0(viz, graph, options));
+}
+
 /** Render a Graphviz graph using the Graphviz `json0` format.
+
+Graphviz is invoked with "inverted y coordinates" for compatibility with the
+coordinate systems in SVG and HTML Canvas.
  */
 export function vizRenderJSON0(viz: Viz.Viz, graph: Viz.Graph, options?: Viz.RenderOptions) {
     // We use `renderString` rather than the convenience method `renderJSON`
@@ -21,6 +30,7 @@ export function vizRenderJSON0(viz: Viz.Viz, graph: Viz.Graph, options?: Viz.Ren
     const result = viz.renderString(graph, {
         ...options,
         format: "json0",
+        yInvert: true,
     });
     return JSON.parse(result) as GraphvizJSON.Graph;
 }
@@ -31,23 +41,18 @@ The predecessor to this code is Evan's defunct package
 [`wiring-diagram-canvas`](https://github.com/epatters/wiring-diagram-canvas/blob/master/src/graphviz.ts).
  */
 export function parseGraphvizJSON(graphviz: GraphvizJSON.Graph): GraphLayout.Graph<string> {
-    // Parse bounding box and padding and use them to transform coordinates.
+    // Parse bounding box and padding.
     //
-    // Graphviz uses the standard Cartesian coordinate system (origin in bottom
-    // left corner), whereas SVG uses the HTML canvas coordinate system (origin
-    // in top left corner). It seems, but is not documented, that the first two
-    // numbers in the Graphviz bounding box are always (0,0).
+    // Apparently one corner of the bounding box is always the origin (0,0),
+    // though that is not documented. Which of the y coordinates is zero depends
+    // on whether the Graphviz option to invert the y axis has been set.
     const bb = parseFloatArray(graphviz.bb);
     const pad: Point = { x: 0, y: 0 };
     if (graphviz.pad) {
         const gvPad = parsePoint(graphviz.pad);
         [pad.x, pad.y] = [inchesToPoints(gvPad.x), inchesToPoints(gvPad.y)];
     }
-    const transformPoint = (point: Point): Point => ({
-        x: point.x + pad.x,
-        y: bb[3] - point.y + pad.y,
-    });
-    const [width, height] = [bb[2] + 2 * pad.x, bb[3] + 2 * pad.y];
+    const [width, height] = [bb[2] + 2 * pad.x, Math.max(bb[1], bb[3]) + 2 * pad.y];
 
     // Parse nodes of graph, ignoring any subgraphs.
     const nodes: GraphLayout.Node<string>[] = [];
@@ -57,7 +62,7 @@ export function parseGraphvizJSON(graphviz: GraphvizJSON.Graph): GraphLayout.Gra
         const id = node.id || node.name;
         nodes.push({
             id,
-            pos: transformPoint(parsePoint(node.pos)),
+            pos: parsePoint(node.pos),
             width: inchesToPoints(Number.parseFloat(node.width)),
             height: inchesToPoints(Number.parseFloat(node.height)),
             label: node.label,
@@ -72,7 +77,7 @@ export function parseGraphvizJSON(graphviz: GraphvizJSON.Graph): GraphLayout.Gra
             // Omit invisible edges, used to tweak the layout in Graphviz.
             continue;
         }
-        const spline = parseSpline(edge.pos, transformPoint);
+        const spline = parseSpline(edge.pos);
         const { points } = spline;
         edges.push({
             id: edge.id,
@@ -82,9 +87,7 @@ export function parseGraphvizJSON(graphviz: GraphvizJSON.Graph): GraphLayout.Gra
             sourcePos: spline.startPoint || points[0],
             targetPos: spline.endPoint || points[points.length - 1],
             labelPos:
-                (edge.xlp && transformPoint(parsePoint(edge.xlp))) ||
-                (edge.lp && transformPoint(parsePoint(edge.lp))) ||
-                undefined,
+                (edge.xlp && parsePoint(edge.xlp)) || (edge.lp && parsePoint(edge.lp)) || undefined,
             path: splineToPath(spline),
             cssClass: edge.class,
             style: edge.arrowstyle as ArrowStyle,
@@ -104,19 +107,18 @@ export function parseGraphvizJSON(graphviz: GraphvizJSON.Graph): GraphLayout.Gra
    - https://graphviz.org/docs/attr-types/splineType/
    - https://cprimozic.net/notes/posts/graphviz-spline-drawing/
  */
-function parseSpline(spline: string, transformPoint?: (pt: Point) => Point): GraphvizSpline {
+function parseSpline(spline: string): GraphvizSpline {
     const points: Point[] = [];
     let startPoint: Point | undefined;
     let endPoint: Point | undefined;
-    transformPoint = transformPoint || ((pt: Point) => pt);
 
     for (const s of spline.split(" ")) {
         if (s.startsWith("s,")) {
-            startPoint = transformPoint(parsePoint(s.slice(2)));
+            startPoint = parsePoint(s.slice(2));
         } else if (s.startsWith("e,")) {
-            endPoint = transformPoint(parsePoint(s.slice(2)));
+            endPoint = parsePoint(s.slice(2));
         } else {
-            points.push(transformPoint(parsePoint(s)));
+            points.push(parsePoint(s));
         }
     }
 
