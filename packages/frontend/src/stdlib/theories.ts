@@ -134,6 +134,7 @@ const thRegNet = () =>
                 },
                 name: "Promotion",
                 description: "Positive interaction: activates or promotes",
+                preferUnnamed: true,
             },
             {
                 tag: "MorType",
@@ -141,6 +142,7 @@ const thRegNet = () =>
                 name: "Inhibition",
                 description: "Negative interaction: represses or inhibits",
                 arrowStyle: "flat",
+                preferUnnamed: true,
             },
         ],
         modelViews: [
@@ -184,6 +186,7 @@ const thStockFlow = () =>
                 morType: { tag: "Basic", content: "link" },
                 name: "Link",
                 description: "Influence of a stock on a flow",
+                preferUnnamed: true,
                 shortcut: ["L"],
             },
         ],

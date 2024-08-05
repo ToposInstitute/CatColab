@@ -103,7 +103,7 @@ export type BaseTypeMeta = {
     textClasses?: string[];
 };
 
-/** Frontend metadata for object types in a double theory.
+/** Frontend metadata for an object type in a double theory.
  */
 export type ObTypeMeta = BaseTypeMeta & {
     tag: "ObType";
@@ -112,7 +112,7 @@ export type ObTypeMeta = BaseTypeMeta & {
     obType: ObType;
 };
 
-/** Frontend metadata for morphism types in a double theory.
+/** Frontend metadata for a morphism type in a double theory.
  */
 export type MorTypeMeta = BaseTypeMeta & {
     tag: "MorType";
@@ -122,6 +122,13 @@ export type MorTypeMeta = BaseTypeMeta & {
 
     /** Style of arrow to use for morphisms of this type. */
     arrowStyle?: ArrowStyle;
+
+    /** Whether morphisms of this type are typically unnamed.
+
+    By default, morphisms (like objects) have names but for certain morphism
+    types in certain domains, it is common to leave them unnamed.
+     */
+    preferUnnamed?: boolean;
 };
 
 /** View of a model of a theory.

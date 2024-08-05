@@ -62,7 +62,7 @@ export function MorphismCellEditor(props: {
                 <div class={nameClasses().join(" ")}>
                     <InlineInput
                         ref={nameRef}
-                        placeholder="Unnamed"
+                        placeholder={morTypeMeta()?.preferUnnamed ? undefined : "Unnamed"}
                         text={props.morphism.name}
                         setText={(text) => {
                             props.modifyMorphism((mor) => {
