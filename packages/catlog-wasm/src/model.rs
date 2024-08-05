@@ -115,11 +115,6 @@ pub struct MorDecl {
     pub cod: Option<Ob>,
 }
 
-/// Wasm bindings for validation errors in a model of a discrete double theory.
-#[derive(Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
-pub struct DiscreteDblModelErrors(Vec<InvalidDiscreteDblModel<Uuid>>);
-
 type UuidDiscreteDblModel = dbl_model::DiscreteDblModel<Uuid, UstrFinCategory>;
 
 /// Wrapper for models of double theories of various kinds.
@@ -176,10 +171,10 @@ impl DblModel {
 
     /// Validates that the model is well defined.
     #[wasm_bindgen]
-    pub fn validate(&self) -> DiscreteDblModelErrors {
-        DiscreteDblModelErrors(all_the_same!(match &self.0 {
+    pub fn validate(&self) -> Vec<InvalidDiscreteDblModel<Uuid>> {
+        all_the_same!(match &self.0 {
             DblModelWrapper::[Discrete](model) => validate::unwrap_errors(model.validate())
-        }))
+        })
     }
 
     #[cfg(test)]
@@ -229,6 +224,6 @@ mod tests {
             .is_ok());
         assert_eq!(model.ob_count(), 2);
         assert_eq!(model.mor_count(), 1);
-        assert!(model.validate().0.is_empty());
+        assert!(model.validate().is_empty());
     }
 }
