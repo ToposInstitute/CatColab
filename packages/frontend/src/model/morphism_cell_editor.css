@@ -13,6 +13,12 @@
     text-align: center;
 }
 
+.morphism-decl-arrow-container {
+    margin-top: 0.3em;
+    margin-bottom: calc(var(--formal-font-size) + 0.3em);
+    position: relative;
+}
+
 .morphism-decl-arrow {
     --stroke-color: light-dark(var(--light-color), var(--dark-color));
 
@@ -20,12 +26,9 @@
     min-width: 1ex;
     height: 2px;
     border-radius: 3px;
-    margin-top: 0.3em;
-    margin-bottom: calc(var(--formal-font-size) + 0.3em);
-    position: relative;
 }
 
-.morphism-decl-arrow.default {
+.morphism-decl-arrow.default, .morphism-decl-arrow.plus, .morphism-decl-arrow.minus {
     &:before, &:after {
         content: "";
         background: var(--stroke-color);
@@ -48,6 +51,26 @@
     }
 }
 
+.morphism-decl-arrow-container.plus {
+    &:after {
+        content: "+";
+        transform: none;
+        position: absolute;
+        right: -7.5px;
+        bottom: 0px;
+    }
+}
+
+.morphism-decl-arrow-container.minus {
+    &:after {
+        content: "-";
+        transform: none;
+        position: absolute;
+        right: -7.5px;
+        bottom: 0px;
+    }
+}
+
 .morphism-decl-arrow.double {
     background: transparent;
     height: 6px;
@@ -66,13 +89,13 @@
 
     &:before {
         right: -6px;
-        bottom: -3px;
+        bottom: -1px;
         transform: rotate(-45deg);
     }
 
     &:after {
         right: -6px;
-        top: -3px;
+        top: -1px;
         transform: rotate(45deg);
     }
 }

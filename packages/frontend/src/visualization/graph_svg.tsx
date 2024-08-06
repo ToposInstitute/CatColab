@@ -1,5 +1,5 @@
 import { destructure } from "@solid-primitives/destructure";
-import { For, type JSX } from "solid-js";
+import { For, type JSX, Match, Switch } from "solid-js";
 
 import type * as GraphLayout from "./graph_layout";
 import type { ArrowStyle } from "./types";
@@ -65,18 +65,37 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
         const marker = styleToMarker[style];
         return `url(#arrowhead-${marker})`;
     };
+    const defaultPath = () => <path marker-end={markerUrl()} d={path()} />;
+
+    const tgtLabel = (text: string) => {
+        const [srcPos, tgtPos] = [props.edge.sourcePos, props.edge.targetPos];
+        const vec = { x: tgtPos.x - srcPos.x, y: tgtPos.y - srcPos.y };
+        const scale = 10 / Math.sqrt(vec.x ** 2 + vec.y ** 2);
+        const pos = { x: tgtPos.x + scale * vec.y, y: tgtPos.y - scale * vec.x };
+        return (
+            <text class="label" x={pos.x} y={pos.y} dominant-baseline="middle" text-anchor="middle">
+                {text}
+            </text>
+        );
+    };
 
     return (
         <g class={`edge ${props.edge.cssClass ?? ""}`}>
-            {props.edge.style === "double" ? (
-                <>
+            <Switch fallback={defaultPath()}>
+                <Match when={props.edge.style === "double"}>
                     <path class="double-outer" d={path()} />
                     <path class="double-inner" d={path()} />
                     <path class="double-marker" marker-end={markerUrl()} d={path()} />
-                </>
-            ) : (
-                <path marker-end={markerUrl()} d={path()} />
-            )}
+                </Match>
+                <Match when={props.edge.style === "plus"}>
+                    {defaultPath()}
+                    {tgtLabel("+")}
+                </Match>
+                <Match when={props.edge.style === "minus"}>
+                    {defaultPath()}
+                    {tgtLabel("-")}
+                </Match>
+            </Switch>
             {props.edge.label && (
                 <text
                     class="label"
@@ -150,6 +169,8 @@ const styleToMarker: Record<ArrowStyle, ArrowMarker> = {
     default: "vee",
     double: "double",
     flat: "flat",
+    plus: "triangle",
+    minus: "triangle",
 };
 
 /** SVG markers for arrow heads.
