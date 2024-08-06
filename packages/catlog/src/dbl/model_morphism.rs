@@ -1,4 +1,18 @@
-//! Morphisms between models of double theories.
+/*! Morphisms between models of double theories.
+
+A morphism between [models](super::model) consists of functions between objects
+and between morphisms that are:
+
+1. *Well-typed*: preserve object and morphism types
+2. *Functorial*: preserve composition and identities
+3. *Natural*: commute with object operations and morphism operations, possibly up
+   to comparison maps
+
+In mathematical terms, a model morphism is a natural transformation between lax
+double functors. The natural transformation can be strict, pseudo, lax, or
+oplax. For details, see (Lambert & Patterson 2024, Section 7: Lax
+transformations).
+ */
 
 use std::hash::Hash;
 
@@ -43,7 +57,11 @@ pub trait DblModelMapping {
     }
 }
 
-/// A mapping between models of a discrete double theory.
+/** A mapping between models of a discrete double theory.
+
+Because a discrete double theory has only trivial operations, the naturality
+axioms for a model morphism also become trivial.
+ */
 #[derive(Clone, Derivative)]
 #[derivative(Default(bound = ""))]
 pub struct DiscreteDblModelMapping<DomId, CodId> {
