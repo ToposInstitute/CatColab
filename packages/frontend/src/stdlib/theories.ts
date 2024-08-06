@@ -12,7 +12,10 @@ import svgStyles from "./svg_styles.module.css";
 TODO: Should the underlying theories be lazy loaded?
  */
 export const stdTheories = () =>
-    uniqueIndexArray([thSimpleOlog(), thSimpleSchema(), thRegNet(), thStockFlow()], (th) => th.id);
+    uniqueIndexArray(
+        [thSimpleOlog(), thSimpleSchema(), thRegNet(), thCausalLoop(), thStockFlow()],
+        (th) => th.id,
+    );
 
 const thSimpleOlog = () =>
     new TheoryMeta({
@@ -149,6 +152,48 @@ const thRegNet = () =>
             {
                 name: "Network",
                 description: "Visualize the regulatory network",
+                component: ModelGraphviz,
+            },
+        ],
+    });
+
+const thCausalLoop = () =>
+    new TheoryMeta({
+        id: "causal-loop",
+        name: "Causal loop diagram",
+        theory: catlog.thSignedCategory,
+        onlyFreeModels: true,
+        types: [
+            {
+                tag: "ObType",
+                obType: { tag: "Basic", content: "object" },
+                name: "Variable",
+                description: "Variable quantity",
+            },
+            {
+                tag: "MorType",
+                morType: {
+                    tag: "Hom",
+                    content: { tag: "Basic", content: "object" },
+                },
+                name: "Positive link",
+                description: "Variables change in the same direction",
+                arrowStyle: "plus",
+                preferUnnamed: true,
+            },
+            {
+                tag: "MorType",
+                morType: { tag: "Basic", content: "negative" },
+                name: "Negative link",
+                description: "Variables change in the opposite direction",
+                arrowStyle: "minus",
+                preferUnnamed: true,
+            },
+        ],
+        modelViews: [
+            {
+                name: "Diagram",
+                description: "Visualize the causal loop diagram",
                 component: ModelGraphviz,
             },
         ],

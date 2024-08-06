@@ -32,10 +32,7 @@ export function MorphismCellEditor(props: {
 
     const morTypeMeta = () => theory?.()?.getMorTypeMeta(props.morphism.morType);
     const nameClasses = () => ["morphism-decl-name", ...(morTypeMeta()?.textClasses ?? [])];
-    const arrowClasses = () => {
-        const style = morTypeMeta()?.arrowStyle ?? "default";
-        return ["morphism-decl-arrow", style];
-    };
+    const arrowStyle = () => morTypeMeta()?.arrowStyle ?? "default";
 
     return (
         <div class="morphism-decl">
@@ -80,7 +77,9 @@ export function MorphismCellEditor(props: {
                         onFocus={props.actions.hasFocused}
                     />
                 </div>
-                <div class={arrowClasses().join(" ")} />
+                <div class={`morphism-decl-arrow-container ${arrowStyle()}`}>
+                    <div class={`morphism-decl-arrow ${arrowStyle()}`} />
+                </div>
             </div>
             <ObInput
                 ref={codRef}

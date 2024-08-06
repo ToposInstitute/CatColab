@@ -1,5 +1,5 @@
 import { destructure } from "@solid-primitives/destructure";
-import { For, type JSX } from "solid-js";
+import { For, type JSX, Match, Show, Switch } from "solid-js";
 
 import type * as GraphLayout from "./graph_layout";
 import type { ArrowStyle } from "./types";
@@ -44,11 +44,11 @@ export function NodeSVG<Id>(props: { node: GraphLayout.Node<Id> }) {
     return (
         <g class={`node ${props.node.cssClass ?? ""}`}>
             <rect x={x() - width() / 2} y={y() - height() / 2} width={width()} height={height()} />
-            {props.node.label && (
+            <Show when={props.node.label}>
                 <text class="label" x={x()} y={y()} dominant-baseline="middle" text-anchor="middle">
                     {props.node.label}
                 </text>
-            )}
+            </Show>
         </g>
     );
 }
@@ -65,19 +65,40 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
         const marker = styleToMarker[style];
         return `url(#arrowhead-${marker})`;
     };
+    const defaultPath = () => <path marker-end={markerUrl()} d={path()} />;
+
+    const tgtLabel = (text: string) => {
+        // Place the target label offset from the target in the direction
+        // orthogonal to the vector from the source to the target.
+        const [srcPos, tgtPos] = [props.edge.sourcePos, props.edge.targetPos];
+        const vec = { x: tgtPos.x - srcPos.x, y: tgtPos.y - srcPos.y };
+        const scale = 10 / Math.sqrt(vec.x ** 2 + vec.y ** 2);
+        const pos = { x: tgtPos.x - scale * vec.y, y: tgtPos.y + scale * vec.x };
+        return (
+            <text class="label" x={pos.x} y={pos.y} dominant-baseline="middle" text-anchor="middle">
+                {text}
+            </text>
+        );
+    };
 
     return (
         <g class={`edge ${props.edge.cssClass ?? ""}`}>
-            {props.edge.style === "double" ? (
-                <>
+            <Switch fallback={defaultPath()}>
+                <Match when={props.edge.style === "double"}>
                     <path class="double-outer" d={path()} />
                     <path class="double-inner" d={path()} />
                     <path class="double-marker" marker-end={markerUrl()} d={path()} />
-                </>
-            ) : (
-                <path marker-end={markerUrl()} d={path()} />
-            )}
-            {props.edge.label && (
+                </Match>
+                <Match when={props.edge.style === "plus"}>
+                    {defaultPath()}
+                    {tgtLabel("+")}
+                </Match>
+                <Match when={props.edge.style === "minus"}>
+                    {defaultPath()}
+                    {tgtLabel("-")}
+                </Match>
+            </Switch>
+            <Show when={props.edge.label}>
                 <text
                     class="label"
                     x={props.edge.labelPos?.x}
@@ -87,7 +108,7 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
                 >
                     {props.edge.label}
                 </text>
-            )}
+            </Show>
         </g>
     );
 }
@@ -150,6 +171,8 @@ const styleToMarker: Record<ArrowStyle, ArrowMarker> = {
     default: "vee",
     double: "double",
     flat: "flat",
+    plus: "triangle",
+    minus: "triangle",
 };
 
 /** SVG markers for arrow heads.
