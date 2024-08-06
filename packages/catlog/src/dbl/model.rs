@@ -59,10 +59,11 @@ immutable shared reference to the theory.
 Objects and morphisms in a model are typed by object types and morphism types in
 the theory. There is a design choice about whether identifiers for objects
 ([`Ob`](Self::Ob)) and morphisms ([`Mor`](Self::Mor)) are unique relative to
-their types or globally within the model. In the first approach (which we take
-in [ACSets.jl](https://github.com/AlgebraicJulia/ACSets.jl)), one can only make
-sense of objects and morphisms when their types are provided, so the early
-methods in the trait would look like this:
+their types or globally within the model. If we took the first approach (as we
+do in the Julia package
+[ACSets.jl](https://github.com/AlgebraicJulia/ACSets.jl)), one could only make
+sense of objects and morphisms when their types are known, so the early methods
+in the trait would look like this:
 
 ```ignore
 fn has_ob(&self, x: &Self::Ob, t: &Self::ObType) -> bool;
@@ -172,16 +173,16 @@ comprising the theory. A type theorist would call it a ["displayed
 category"](https://ncatlab.org/nlab/show/displayed+category).
 */
 #[derive(Clone)]
-pub struct DiscreteDblModel<Name, Cat: FgCategory> {
+pub struct DiscreteDblModel<Id, Cat: FgCategory> {
     theory: Arc<DiscreteDblTheory<Cat>>,
-    category: FpCategory<Name, Name, Name>,
-    ob_types: IndexedHashColumn<Name, Cat::Ob>,
-    mor_types: IndexedHashColumn<Name, Cat::Hom>,
+    category: FpCategory<Id, Id, Id>,
+    ob_types: IndexedHashColumn<Id, Cat::Ob>,
+    mor_types: IndexedHashColumn<Id, Cat::Hom>,
 }
 
-impl<Name, Cat> DiscreteDblModel<Name, Cat>
+impl<Id, Cat> DiscreteDblModel<Id, Cat>
 where
-    Name: Eq + Clone + Hash,
+    Id: Eq + Clone + Hash,
     Cat: FgCategory,
     Cat::Ob: Eq + Clone + Hash,
     Cat::Hom: Eq + Clone + Hash,
@@ -197,36 +198,36 @@ where
     }
 
     /// Adds a basic object to the model.
-    pub fn add_ob(&mut self, x: Name, typ: Cat::Ob) -> bool {
+    pub fn add_ob(&mut self, x: Id, typ: Cat::Ob) -> bool {
         self.ob_types.set(x.clone(), typ);
         self.category.add_ob_generator(x)
     }
 
     /// Adds a basic morphism to the model.
-    pub fn add_mor(&mut self, f: Name, dom: Name, cod: Name, typ: Cat::Hom) -> bool {
+    pub fn add_mor(&mut self, f: Id, dom: Id, cod: Id, typ: Cat::Hom) -> bool {
         self.mor_types.set(f.clone(), typ);
         self.category.add_hom_generator(f, dom, cod)
     }
 
     /// Adds a basic morphism to the model without setting its (co)domain.
-    pub fn make_mor(&mut self, f: Name, typ: Cat::Hom) -> bool {
+    pub fn make_mor(&mut self, f: Id, typ: Cat::Hom) -> bool {
         self.mor_types.set(f.clone(), typ);
         self.category.make_hom_generator(f)
     }
 
     /// Updates the domain of a morphism, setting or unsetting it.
-    pub fn update_dom(&mut self, f: Name, x: Option<Name>) -> Option<Name> {
+    pub fn update_dom(&mut self, f: Id, x: Option<Id>) -> Option<Id> {
         self.category.update_dom(f, x)
     }
 
     /// Updates the codomain of a morphism, setting or unsetting it.
-    pub fn update_cod(&mut self, f: Name, x: Option<Name>) -> Option<Name> {
+    pub fn update_cod(&mut self, f: Id, x: Option<Id>) -> Option<Id> {
         self.category.update_cod(f, x)
     }
 
     /// Iterates over failures to be well-defined model.
-    pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidDiscreteDblModel<Name>> + '_ {
-        type Invalid<Name> = InvalidDiscreteDblModel<Name>;
+    pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidDiscreteDblModel<Id>> + '_ {
+        type Invalid<Id> = InvalidDiscreteDblModel<Id>;
         let category_errors = self.category.iter_invalid().map(|err| match err {
             InvalidFpCategory::Dom(e) => Invalid::Dom(e),
             InvalidFpCategory::Cod(e) => Invalid::Cod(e),
@@ -259,15 +260,15 @@ where
     }
 }
 
-impl<Name, Cat> DblModel for DiscreteDblModel<Name, Cat>
+impl<Id, Cat> DblModel for DiscreteDblModel<Id, Cat>
 where
-    Name: Eq + Clone + Hash,
+    Id: Eq + Clone + Hash,
     Cat: FgCategory,
     Cat::Ob: Eq + Clone + Hash,
     Cat::Hom: Eq + Clone + Hash,
 {
-    type Ob = Name;
-    type Mor = Path<Name, Name>;
+    type Ob = Id;
+    type Mor = Path<Id, Id>;
     type ObType = Cat::Ob;
     type MorType = Cat::Hom;
     type ObOp = Cat::Ob;
@@ -327,14 +328,14 @@ where
     }
 }
 
-impl<Name, Cat> Validate for DiscreteDblModel<Name, Cat>
+impl<Id, Cat> Validate for DiscreteDblModel<Id, Cat>
 where
-    Name: Eq + Clone + Hash,
+    Id: Eq + Clone + Hash,
     Cat: FgCategory,
     Cat::Ob: Eq + Clone + Hash,
     Cat::Hom: Eq + Clone + Hash,
 {
-    type ValidationError = InvalidDiscreteDblModel<Name>;
+    type ValidationError = InvalidDiscreteDblModel<Id>;
 
     fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
         validate::wrap_errors(self.iter_invalid())
@@ -351,30 +352,30 @@ and right hand sides.
 #[cfg_attr(feature = "serde", serde(tag = "tag", content = "content"))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
-pub enum InvalidDiscreteDblModel<Name> {
+pub enum InvalidDiscreteDblModel<Id> {
     /// Domain of basic morphism is undefined or invalid.
-    Dom(Name),
+    Dom(Id),
 
     /// Codomain of basic morphism is missing or invalid.
-    Cod(Name),
+    Cod(Id),
 
     /// Domain of basic morphism has type incompatible with morphism type.
-    DomType(Name),
+    DomType(Id),
 
     /// Codomain of basic morphism has type incompatible with morphism type.
-    CodType(Name),
+    CodType(Id),
 
     /// Equation has left hand side that is not a well defined path.
-    EqLhs(Name),
+    EqLhs(Id),
 
     /// Equation has right hand side that is not a well defined path.
-    EqRhs(Name),
+    EqRhs(Id),
 
     /// Equation has different sources on left and right hand sides.
-    EqSrc(Name),
+    EqSrc(Id),
 
     /// Equation has different sources on left and right hand sides.
-    EqTgt(Name),
+    EqTgt(Id),
 }
 
 #[cfg(test)]
