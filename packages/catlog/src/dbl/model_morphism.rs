@@ -31,6 +31,16 @@ pub trait DblModelMapping {
 
     /// Applies the mapping to a morphism in the domain model.
     fn apply_mor(&self, m: &Self::DomMor) -> Option<Self::CodMor>;
+
+    /// Is the mapping defined at an object?
+    fn is_ob_assigned(&self, x: &Self::DomOb) -> bool {
+        self.apply_ob(x).is_some()
+    }
+
+    /// Is the mapping defined at a morphism?
+    fn is_mor_assigned(&self, m: &Self::DomMor) -> bool {
+        self.apply_mor(m).is_some()
+    }
 }
 
 /// A mapping between models of a discrete double theory.
@@ -39,6 +49,46 @@ pub trait DblModelMapping {
 pub struct DiscreteDblModelMapping<DomId, CodId> {
     ob_map: HashColumn<DomId, CodId>,
     mor_map: HashColumn<DomId, Path<CodId, CodId>>,
+}
+
+impl<DomId, CodId> DiscreteDblModelMapping<DomId, CodId>
+where
+    DomId: Clone + Eq + Hash,
+    CodId: Clone + Eq + Hash,
+{
+    /// Applies the mapping at a basic morphism in the domain model.
+    pub fn apply_basic_mor(&self, e: &DomId) -> Option<Path<CodId, CodId>> {
+        self.mor_map.apply(e).cloned()
+    }
+
+    /// Is the mapping defined at a basic morphism?
+    pub fn is_basic_mor_assigned(&self, e: &DomId) -> bool {
+        self.mor_map.is_set(e)
+    }
+
+    /// Assigns the mapping at an object, returning the previous assignment.
+    pub fn assign_ob(&mut self, x: DomId, y: CodId) -> Option<CodId> {
+        self.ob_map.set(x, y)
+    }
+
+    /// Assigns the mapping at a basic morphism, returning the previous assignment.
+    pub fn assign_basic_mor(
+        &mut self,
+        e: DomId,
+        n: Path<CodId, CodId>,
+    ) -> Option<Path<CodId, CodId>> {
+        self.mor_map.set(e, n)
+    }
+
+    /// Unassigns the mapping at an object, returning the previous assignment.
+    pub fn unassign_ob(&mut self, x: &DomId) -> Option<CodId> {
+        self.ob_map.unset(x)
+    }
+
+    /// Unassigns the mapping a basic morphism, returning the previous assignment.
+    pub fn unassign_basic_mor(&mut self, e: &DomId) -> Option<Path<CodId, CodId>> {
+        self.mor_map.unset(e)
+    }
 }
 
 impl<DomId, CodId> DblModelMapping for DiscreteDblModelMapping<DomId, CodId>
@@ -57,7 +107,36 @@ where
 
     fn apply_mor(&self, m: &Self::DomMor) -> Option<Self::CodMor> {
         m.clone()
-            .partial_map(|x| self.apply_ob(&x), |e| self.mor_map.apply(&e).cloned())
+            .partial_map(|x| self.apply_ob(&x), |e| self.apply_basic_mor(&e))
             .map(|path| path.flatten())
+    }
+
+    fn is_ob_assigned(&self, x: &Self::DomOb) -> bool {
+        self.ob_map.is_set(x)
+    }
+
+    fn is_mor_assigned(&self, m: &Self::DomMor) -> bool {
+        match m {
+            Path::Id(x) => self.is_ob_assigned(x),
+            Path::Seq(edges) => edges.iter().all(|e| self.is_basic_mor_assigned(e)),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn discrete_dbl_model_mapping() {
+        let mut f: DiscreteDblModelMapping<_, _> = Default::default();
+        f.assign_ob('a', 'x');
+        f.assign_ob('b', 'y');
+        assert!(f.is_ob_assigned(&'a'));
+        assert_eq!(f.apply_ob(&'b'), Some('y'));
+        f.assign_basic_mor('f', Path::pair('p', 'q'));
+        f.assign_basic_mor('g', Path::pair('r', 's'));
+        assert!(f.is_mor_assigned(&Path::single('f')));
+        assert_eq!(f.apply_mor(&Path::pair('f', 'g')), Path::from_vec(vec!['p', 'q', 'r', 's']));
     }
 }

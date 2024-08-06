@@ -461,8 +461,18 @@ pub trait GraphMapping {
     /// Applies the graph mapping at a vertex.
     fn apply_vertex(&self, v: &Self::DomV) -> Option<&Self::CodV>;
 
-    /// Applies the graph mappting at an edge.
+    /// Applies the graph mapping at an edge.
     fn apply_edge(&self, e: &Self::DomE) -> Option<&Self::CodE>;
+
+    /// Is the mapping defined at a vertex?
+    fn is_vertex_assigned(&self, v: &Self::DomV) -> bool {
+        self.apply_vertex(v).is_some()
+    }
+
+    /// Is the mapping defined at an edge?
+    fn is_edge_assigned(&self, e: &Self::DomE) -> bool {
+        self.apply_edge(e).is_some()
+    }
 }
 
 /** A homomorphism between graphs defined by a [mapping](GraphMapping).
@@ -584,6 +594,12 @@ where
     }
     fn apply_edge(&self, e: &Self::DomE) -> Option<&Self::CodE> {
         self.edge_map.apply(e)
+    }
+    fn is_vertex_assigned(&self, v: &Self::DomV) -> bool {
+        self.vertex_map.is_set(v)
+    }
+    fn is_edge_assigned(&self, e: &Self::DomE) -> bool {
+        self.edge_map.is_set(e)
     }
 }
 
