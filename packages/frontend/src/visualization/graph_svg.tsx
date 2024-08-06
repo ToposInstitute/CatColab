@@ -68,10 +68,12 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
     const defaultPath = () => <path marker-end={markerUrl()} d={path()} />;
 
     const tgtLabel = (text: string) => {
+        // Place the target label offset from the target in the direction
+        // orthogonal to the vector from the source to the target.
         const [srcPos, tgtPos] = [props.edge.sourcePos, props.edge.targetPos];
         const vec = { x: tgtPos.x - srcPos.x, y: tgtPos.y - srcPos.y };
         const scale = 10 / Math.sqrt(vec.x ** 2 + vec.y ** 2);
-        const pos = { x: tgtPos.x + scale * vec.y, y: tgtPos.y - scale * vec.x };
+        const pos = { x: tgtPos.x - scale * vec.y, y: tgtPos.y + scale * vec.x };
         return (
             <text class="label" x={pos.x} y={pos.y} dominant-baseline="middle" text-anchor="middle">
                 {text}
