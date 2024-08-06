@@ -1,5 +1,5 @@
 import { destructure } from "@solid-primitives/destructure";
-import { For, type JSX, Match, Switch } from "solid-js";
+import { For, type JSX, Match, Show, Switch } from "solid-js";
 
 import type * as GraphLayout from "./graph_layout";
 import type { ArrowStyle } from "./types";
@@ -44,11 +44,11 @@ export function NodeSVG<Id>(props: { node: GraphLayout.Node<Id> }) {
     return (
         <g class={`node ${props.node.cssClass ?? ""}`}>
             <rect x={x() - width() / 2} y={y() - height() / 2} width={width()} height={height()} />
-            {props.node.label && (
+            <Show when={props.node.label}>
                 <text class="label" x={x()} y={y()} dominant-baseline="middle" text-anchor="middle">
                     {props.node.label}
                 </text>
-            )}
+            </Show>
         </g>
     );
 }
@@ -98,7 +98,7 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
                     {tgtLabel("-")}
                 </Match>
             </Switch>
-            {props.edge.label && (
+            <Show when={props.edge.label}>
                 <text
                     class="label"
                     x={props.edge.labelPos?.x}
@@ -108,7 +108,7 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
                 >
                     {props.edge.label}
                 </text>
-            )}
+            </Show>
         </g>
     );
 }
