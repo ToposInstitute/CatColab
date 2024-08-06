@@ -324,9 +324,9 @@ mod tests {
         assert_eq!(cat.dom(&id), 1);
         assert_eq!(cat.cod(&id), 1);
 
-        let path = Path::Seq(nonempty![0, 1]);
+        let path = Path::pair(0, 1);
         assert!(cat.has_hom(&path));
-        assert!(!cat.has_hom(&Path::Seq(nonempty![0, 2])));
+        assert!(!cat.has_hom(&Path::pair(0, 2)));
         assert!(!cat.has_hom_generator(&path));
         assert_eq!(cat.dom(&path), 0);
         assert_eq!(cat.cod(&path), 2);
@@ -334,9 +334,9 @@ mod tests {
         let cat = FreeCategory::from(SkelGraph::path(5));
         let path = Path::Seq(nonempty![
             Path::Id(0),
-            Path::Seq(nonempty![0, 1]),
+            Path::pair(0, 1),
             Path::Id(2),
-            Path::Seq(nonempty![2, 3]),
+            Path::pair(2, 3),
             Path::Id(4),
         ]);
         assert_eq!(cat.compose(path), Path::Seq(nonempty![0, 1, 2, 3]));

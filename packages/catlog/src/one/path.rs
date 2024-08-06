@@ -63,6 +63,14 @@ impl<V, E> Path<V, E> {
         Path::Seq(nonempty![e, f])
     }
 
+    /** Constructs a path from a vector of consecutive edges.
+
+    Returns `None` if the vector is empty.
+     */
+    pub fn from_vec(vec: Vec<E>) -> Option<Self> {
+        NonEmpty::from_vec(vec).map(Path::Seq)
+    }
+
     /// Length of the path.
     pub fn len(&self) -> usize {
         match self {
@@ -183,7 +191,7 @@ impl<V, E> Path<V, E> {
             Path::Seq(edges) => {
                 let edges: Option<Vec<_>> = edges.into_iter().map(fe).collect();
                 let edges = edges?;
-                Some(Path::Seq(NonEmpty::from_vec(edges).unwrap()))
+                Path::from_vec(edges)
             }
         }
     }
@@ -206,7 +214,7 @@ impl<V, E> Path<V, E> {
             Path::Seq(edges) => {
                 let edges: Result<Vec<_>, _> = edges.into_iter().map(fe).collect();
                 let edges = edges?;
-                Ok(Path::Seq(NonEmpty::from_vec(edges).unwrap()))
+                Ok(Path::from_vec(edges).unwrap())
             }
         }
     }
