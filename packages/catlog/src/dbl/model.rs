@@ -242,17 +242,17 @@ where
             let e = f.only().unwrap();
             if self
                 .category
-                .get_dom(e)
+                .get_dom(&e)
                 .map_or(false, |x| self.ob_type(x) != self.theory.src(&mor_type))
             {
                 errs.push(Invalid::DomType(e.clone()));
             }
             if self
                 .category
-                .get_cod(e)
+                .get_cod(&e)
                 .map_or(false, |x| self.ob_type(x) != self.theory.tgt(&mor_type))
             {
-                errs.push(Invalid::CodType(e.clone()));
+                errs.push(Invalid::CodType(e));
             }
             errs.into_iter()
         });
