@@ -66,7 +66,7 @@ jobs:
 
       - name: Build
         run: |
-          cargo doc
+          cargo doc --no-deps
 
       - name: Upload rust docs
         uses: actions/upload-artifact@v4

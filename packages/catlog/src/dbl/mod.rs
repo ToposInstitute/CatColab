@@ -5,4 +5,5 @@ pub mod diagram;
 pub mod pasting;
 
 pub mod model;
+pub mod model_morphism;
 pub mod theory;
