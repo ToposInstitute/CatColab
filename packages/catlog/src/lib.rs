@@ -24,6 +24,9 @@ packages.
 #![allow(confusable_idents)]
 #![warn(missing_docs)]
 
+#[cfg(doc)]
+pub mod refs;
+
 pub mod validate;
 
 pub mod dbl;

@@ -852,7 +852,8 @@ mod tests {
 
     #[test]
     fn hash_dbl_computad() {
-        // The signature for monads (Lambert & Patterson 2024, Theory 3.8).
+        // The signature for monads ([Lambert & Patterson
+        // 2024](crate::refs::CartDblTheories), Theory 3.8).
         let mut sig_monad: HashDblComputad<char, char, char, char> = Default::default();
         assert!(sig_monad.add_vertex('x'));
         assert!(sig_monad.add_edge('t', 'x', 'x'));
