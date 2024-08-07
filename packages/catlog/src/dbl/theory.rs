@@ -62,13 +62,9 @@ composed:
 
 # References
 
-- Lambert & Patterson, 2024: Cartesian double theories: A double-categorical
-  framework for categorical doctrines
-  ([DOI](https://doi.org/10.1016/j.aim.2024.109630),
-   [arXiv](https://arxiv.org/abs/2310.05384))
-- Patterson, 2024: Products in double categories, revisited
-  ([arXiv](https://arxiv.org/abs/2401.08990))
-  - Section 10: Finite-product double theories
+- [Lambert & Patterson, 2024](crate::refs::CartDblTheories)
+- [Patterson, 2024](crate::refs::DblProducts),
+  Section 10: Finite-product double theories
 */
 
 use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};

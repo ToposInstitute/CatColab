@@ -10,8 +10,12 @@ and between morphisms that are:
 
 In mathematical terms, a model morphism is a natural transformation between lax
 double functors. The natural transformation can be strict, pseudo, lax, or
-oplax. For details, see (Lambert & Patterson 2024, Section 7: Lax
-transformations).
+oplax.
+
+# References
+
+- [Lambert & Patterson 2024](crate::refs::CartDblTheories),
+  Section 7: Lax transformations
  */
 
 use std::hash::Hash;

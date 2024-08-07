@@ -8,18 +8,12 @@ data that generates a free double category.
 Though the term "double computad" is not standard, it is the obvious analogue
 for double categories of a [2-computad](https://ncatlab.org/nlab/show/computad),
 the generating data for a free 2-category or bicategory. Double computads have
-also been called "double signatures" (Delpeuch 2020, Definition 2.1). They are
-the special case of "double derivation schemes" in which the categories of
-objects and arrows, and of objects and proarrows, are both free categories
-(Fiore et al 2008, Definition 3.3).
-
-# References
-
-- Fiore, Paoli, Pronk, 2008: Model structures on the category of small double
-  categories ([arXiv](https://arxiv.org/abs/0711.0473))
-- Delpeuch, 2020: The word problem for double categories
-  ([arXiv](https://arxiv.org/abs/1907.09927))
-*/
+also been called "double signatures" ([Delpeuch
+2020](crate::refs::WordProblemDblCats), Definition 2.1). They are the special
+case of "double derivation schemes" in which the categories of objects and
+arrows, and of objects and proarrows, are both free categories ([Fiore et al
+2008](crate::refs::ModelStructureDblCat), Definition 3.3).
+ */
 
 use derivative::Derivative;
 use derive_more::From;
@@ -852,7 +846,8 @@ mod tests {
 
     #[test]
     fn hash_dbl_computad() {
-        // The signature for monads (Lambert & Patterson 2024, Theory 3.8).
+        // The signature for monads ([Lambert & Patterson
+        // 2024](crate::refs::CartDblTheories), Theory 3.8).
         let mut sig_monad: HashDblComputad<char, char, char, char> = Default::default();
         assert!(sig_monad.add_vertex('x'));
         assert!(sig_monad.add_edge('t', 'x', 'x'));
