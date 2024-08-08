@@ -79,6 +79,24 @@ pub trait FinGraph: Graph {
     fn ne(&self) -> usize {
         self.edges().count()
     }
+
+    /// Number of edges incoming to a vertex.
+    fn in_degree(&self, v: &Self::V) -> usize {
+        self.in_edges(v).count()
+    }
+
+    /// Number of edges outgoing from a vertex.
+    fn out_degree(&self, v: &Self::V) -> usize {
+        self.out_edges(v).count()
+    }
+
+    /** Number of edges incoming to or outgoing from a vertex.
+
+    Self-loops are counted twice.
+     */
+    fn degree(&self, v: &Self::V) -> usize {
+        self.in_degree(v) + self.out_degree(v)
+    }
 }
 
 /** A finite graph backed by columns.
@@ -616,6 +634,9 @@ mod tests {
         assert_eq!(g.tgt(&1), 2);
         assert_eq!(g.out_edges(&0).collect::<Vec<_>>(), vec![0, 2]);
         assert_eq!(g.in_edges(&2).collect::<Vec<_>>(), vec![1, 2]);
+        assert_eq!(g.out_degree(&0), 2);
+        assert_eq!(g.in_degree(&2), 2);
+        assert_eq!(g.degree(&1), 2);
     }
 
     #[test]
