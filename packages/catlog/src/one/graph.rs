@@ -630,6 +630,20 @@ where
     }
 }
 
+/** An element in a graph.
+
+This type plays no role in the core API for graphs but is useful on rare
+occasion when heterogeneous collection of vertices *and* edges is needed.
+ */
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum GraphElem<V, E> {
+    /// A vertex in a graph.
+    Vertex(V),
+
+    /// An edge in a graph.
+    Edge(E),
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -22,7 +22,7 @@ use std::hash::Hash;
 
 use derivative::Derivative;
 
-use crate::one::graph_algorithms::{spec_order, GraphElem};
+use crate::one::graph_algorithms::spec_order;
 use crate::one::*;
 use crate::zero::{HashColumn, Mapping};
 
