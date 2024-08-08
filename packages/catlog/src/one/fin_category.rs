@@ -47,6 +47,11 @@ where
     E: Eq + Hash + Clone,
     S: BuildHasher,
 {
+    /// Graph of generators of the finite category.
+    pub fn generators(&self) -> &impl FinGraph<V = V, E = E> {
+        &self.generators
+    }
+
     /// Adds an object generator, returning whether it is new.
     pub fn add_ob_generator(&mut self, v: V) -> bool {
         self.generators.add_vertex(v)
@@ -181,6 +186,21 @@ where
     E: Eq + Clone + Hash,
     EqKey: Eq + Clone + Hash,
 {
+    /// Graph of generators of the finitely presented category.
+    pub fn generators(&self) -> &impl FinGraph<V = V, E = E> {
+        &self.generators
+    }
+
+    /// Get a path equation by key.
+    pub fn get_equation(&self, key: &EqKey) -> Option<&PathEq<V, E>> {
+        self.equations.apply(key)
+    }
+
+    /// Iterates over path equations in the presentation.
+    pub fn equations(&self) -> impl Iterator<Item = &PathEq<V, E>> {
+        self.equations.values()
+    }
+
     /// Adds an object generator, returning whether it is new.
     pub fn add_ob_generator(&mut self, v: V) -> bool {
         self.generators.add_vertex(v)
@@ -232,16 +252,6 @@ where
     /// Updates the codomain of a morphism generator, setting or unsetting it.
     pub fn update_cod(&mut self, e: E, v: Option<V>) -> Option<V> {
         self.generators.update_tgt(e, v)
-    }
-
-    /// Get path equation by key.
-    pub fn get_equation(&self, key: &EqKey) -> Option<&PathEq<V, E>> {
-        self.equations.apply(key)
-    }
-
-    /// Iterates over path equations in the presentation.
-    pub fn equations(&self) -> impl Iterator<Item = &PathEq<V, E>> {
-        self.equations.values()
     }
 
     /// Adds a path equation to the presentation.

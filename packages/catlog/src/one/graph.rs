@@ -336,6 +336,15 @@ impl SkelGraph {
         g.add_edge(0, 2);
         g
     }
+
+    /// Make a loop, the terminal graph.
+    #[cfg(test)]
+    pub fn self_loop() -> Self {
+        let mut g: Self = Default::default();
+        g.add_vertex();
+        g.add_edge(0, 0);
+        g
+    }
 }
 
 impl Validate for SkelGraph {

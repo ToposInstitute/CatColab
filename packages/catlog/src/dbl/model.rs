@@ -45,7 +45,7 @@ use tsify_next::Tsify;
 
 use super::theory::{DblTheory, DiscreteDblTheory};
 use crate::one::fin_category::{FpCategory, InvalidFpCategory};
-use crate::one::{Category, FgCategory, Path};
+use crate::one::*;
 use crate::validate::{self, Validate};
 use crate::zero::{Column, IndexedHashColumn, Mapping};
 
@@ -195,6 +195,11 @@ where
             ob_types: Default::default(),
             mor_types: Default::default(),
         }
+    }
+
+    /// Graph that generates the object and morphisms of the model.
+    pub fn generating_graph(&self) -> &impl FinGraph<V = Id, E = Id> {
+        self.category.generators()
     }
 
     /// Adds a basic object to the model.

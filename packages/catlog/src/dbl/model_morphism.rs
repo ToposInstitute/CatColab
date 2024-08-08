@@ -18,12 +18,12 @@ oplax.
   Section 7: Lax transformations
  */
 
-use std::collections::{HashSet, VecDeque};
 use std::hash::Hash;
 
 use derivative::Derivative;
 
-use crate::one::{FgCategory, Path};
+use crate::one::graph_algorithms::{spec_order, GraphElem};
+use crate::one::*;
 use crate::zero::{HashColumn, Mapping};
 
 use super::model::{DblModel, DiscreteDblModel};
@@ -167,7 +167,7 @@ struct BacktrackingSearch<'a, DomId, CodId, Cat: FgCategory> {
     cod: &'a DiscreteDblModel<CodId, Cat>,
     map: DiscreteDblModelMapping<DomId, CodId>,
     results: Vec<DiscreteDblModelMapping<DomId, CodId>>,
-    var_order: Vec<DblModelVariable<DomId>>,
+    var_order: Vec<GraphElem<DomId, DomId>>,
 }
 
 impl<'a, DomId, CodId, Cat> BacktrackingSearch<'a, DomId, CodId, Cat>
@@ -179,43 +179,14 @@ where
     Cat::Hom: Eq + Clone + Hash,
 {
     fn new(dom: &'a DiscreteDblModel<DomId, Cat>, cod: &'a DiscreteDblModel<CodId, Cat>) -> Self {
-        // TODO: Search order.
-        let mut var_order = Vec::new();
-        let mut visited = HashSet::new();
-        let mut to_visit = VecDeque::new();
-        for x in dom.objects() {
-            if !visited.contains(&x) {
-                to_visit.push_back(x);
-            }
-            while let Some(x) = to_visit.pop_front() {
-                if visited.contains(&x) {
-                    continue;
-                }
-                var_order.push(DblModelVariable::Ob(x.clone()));
-                for m in dom.morphisms_with_dom(&x) {
-                    let y = dom.cod(&m);
-                    if y == x || visited.contains(&y) {
-                        // Include endomorphisms of x.
-                        var_order.push(DblModelVariable::Mor(m.only().unwrap()));
-                    } else {
-                        to_visit.push_back(y);
-                    }
-                }
-                for m in dom.morphisms_with_cod(&x) {
-                    let y = dom.dom(&m);
-                    if y == x {
-                        // Exclude endomorphisms of x.
-                        continue;
-                    }
-                    if visited.contains(&y) {
-                        var_order.push(DblModelVariable::Mor(m.only().unwrap()));
-                    } else {
-                        to_visit.push_back(y);
-                    }
-                }
-                visited.insert(x);
-            }
-        }
+        // Compute a search ordering for the variables of the CSP, which are the
+        // elements of the domain graph. Prioritize vertices with high degree
+        // since they will more constrained. This is a version of the well known
+        // "most constrained variable" heuristic in CSP.
+        let dom_graph = dom.generating_graph();
+        let mut vertices: Vec<_> = dom_graph.vertices().collect();
+        vertices.sort_by_key(|v| std::cmp::Reverse(dom_graph.degree(v)));
+        let var_order = spec_order(dom_graph, vertices.into_iter());
 
         Self {
             dom,
@@ -228,7 +199,7 @@ where
 
     fn find_all(&mut self) -> Vec<DiscreteDblModelMapping<DomId, CodId>> {
         self.search(0);
-        std::mem::replace(&mut self.results, Vec::new())
+        std::mem::take(&mut self.results)
     }
 
     fn search(&mut self, depth: usize) {
@@ -238,13 +209,13 @@ where
         }
         let var = &self.var_order[depth];
         match var.clone() {
-            DblModelVariable::Ob(x) => {
+            GraphElem::Vertex(x) => {
                 for y in self.cod.objects_with_type(&self.dom.ob_type(&x)) {
                     self.map.assign_ob(x.clone(), y);
                     self.search(depth + 1);
                 }
             }
-            DblModelVariable::Mor(m) => {
+            GraphElem::Edge(m) => {
                 let path = Path::single(m);
                 let _w = self
                     .map
@@ -259,12 +230,6 @@ where
             }
         }
     }
-}
-
-#[derive(Clone)]
-enum DblModelVariable<Id> {
-    Ob(Id),
-    Mor(Id),
 }
 
 #[cfg(test)]
