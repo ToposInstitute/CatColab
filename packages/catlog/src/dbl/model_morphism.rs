@@ -18,12 +18,15 @@ oplax.
   Section 7: Lax transformations
  */
 
+use std::collections::{HashSet, VecDeque};
 use std::hash::Hash;
 
 use derivative::Derivative;
 
-use crate::one::Path;
+use crate::one::{FgCategory, Path};
 use crate::zero::{HashColumn, Mapping};
+
+use super::model::{DblModel, DiscreteDblModel};
 
 /** A mapping between models of a double theory.
 
@@ -111,6 +114,20 @@ where
     pub fn unassign_basic_mor(&mut self, e: &DomId) -> Option<Path<CodId, CodId>> {
         self.mor_map.unset(e)
     }
+
+    /// Returns all morphisms between two models of a discrete double theory.
+    pub fn morphisms<Cat>(
+        dom: &DiscreteDblModel<DomId, Cat>,
+        cod: &DiscreteDblModel<CodId, Cat>,
+    ) -> Vec<Self>
+    where
+        Cat: FgCategory,
+        Cat::Ob: Eq + Clone + Hash,
+        Cat::Hom: Eq + Clone + Hash,
+    {
+        let mut search = BacktrackingSearch::new(dom, cod);
+        search.find_all()
+    }
 }
 
 impl<DomId, CodId> DblModelMapping for DiscreteDblModelMapping<DomId, CodId>
@@ -143,6 +160,111 @@ where
             Path::Seq(edges) => edges.iter().all(|e| self.is_basic_mor_assigned(e)),
         }
     }
+}
+
+struct BacktrackingSearch<'a, DomId, CodId, Cat: FgCategory> {
+    dom: &'a DiscreteDblModel<DomId, Cat>,
+    cod: &'a DiscreteDblModel<CodId, Cat>,
+    map: DiscreteDblModelMapping<DomId, CodId>,
+    results: Vec<DiscreteDblModelMapping<DomId, CodId>>,
+    var_order: Vec<DblModelVariable<DomId>>,
+}
+
+impl<'a, DomId, CodId, Cat> BacktrackingSearch<'a, DomId, CodId, Cat>
+where
+    DomId: Clone + Eq + Hash,
+    CodId: Clone + Eq + Hash,
+    Cat: FgCategory,
+    Cat::Ob: Eq + Clone + Hash,
+    Cat::Hom: Eq + Clone + Hash,
+{
+    fn new(dom: &'a DiscreteDblModel<DomId, Cat>, cod: &'a DiscreteDblModel<CodId, Cat>) -> Self {
+        // TODO: Search order.
+        let mut var_order = Vec::new();
+        let mut visited = HashSet::new();
+        let mut to_visit = VecDeque::new();
+        for x in dom.objects() {
+            if !visited.contains(&x) {
+                to_visit.push_back(x);
+            }
+            while let Some(x) = to_visit.pop_front() {
+                if visited.contains(&x) {
+                    continue;
+                }
+                var_order.push(DblModelVariable::Ob(x.clone()));
+                for m in dom.morphisms_with_dom(&x) {
+                    let y = dom.cod(&m);
+                    if y == x || visited.contains(&y) {
+                        // Include endomorphisms of x.
+                        var_order.push(DblModelVariable::Mor(m.only().unwrap()));
+                    } else {
+                        to_visit.push_back(y);
+                    }
+                }
+                for m in dom.morphisms_with_cod(&x) {
+                    let y = dom.dom(&m);
+                    if y == x {
+                        // Exclude endomorphisms of x.
+                        continue;
+                    }
+                    if visited.contains(&y) {
+                        var_order.push(DblModelVariable::Mor(m.only().unwrap()));
+                    } else {
+                        to_visit.push_back(y);
+                    }
+                }
+                visited.insert(x);
+            }
+        }
+
+        Self {
+            dom,
+            cod,
+            map: Default::default(),
+            results: Default::default(),
+            var_order,
+        }
+    }
+
+    fn find_all(&mut self) -> Vec<DiscreteDblModelMapping<DomId, CodId>> {
+        self.search(0);
+        std::mem::replace(&mut self.results, Vec::new())
+    }
+
+    fn search(&mut self, depth: usize) {
+        if depth >= self.var_order.len() {
+            self.results.push(self.map.clone());
+            return;
+        }
+        let var = &self.var_order[depth];
+        match var.clone() {
+            DblModelVariable::Ob(x) => {
+                for y in self.cod.objects_with_type(&self.dom.ob_type(&x)) {
+                    self.map.assign_ob(x.clone(), y);
+                    self.search(depth + 1);
+                }
+            }
+            DblModelVariable::Mor(m) => {
+                let path = Path::single(m);
+                let _w = self
+                    .map
+                    .apply_ob(&self.dom.dom(&path))
+                    .expect("Domain has already been assigned");
+                let _z = self
+                    .map
+                    .apply_ob(&self.dom.cod(&path))
+                    .expect("Codomain has already been assigned");
+                let _m = path.only();
+                // TODO: Iterate over all paths.
+            }
+        }
+    }
+}
+
+#[derive(Clone)]
+enum DblModelVariable<Id> {
+    Ob(Id),
+    Mor(Id),
 }
 
 #[cfg(test)]
