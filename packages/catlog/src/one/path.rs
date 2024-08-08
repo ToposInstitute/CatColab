@@ -63,7 +63,18 @@ impl<V, E> Path<V, E> {
         Path::Seq(nonempty![e, f])
     }
 
-    /** Constructs a path from a vector of consecutive edges.
+    /** Constructs a path from an iterator over edges.
+
+    Returns `None` if the iterator is empty.
+     */
+    pub fn collect<I>(iter: I) -> Option<Self>
+    where
+        I: IntoIterator<Item = E>,
+    {
+        NonEmpty::collect(iter).map(Path::Seq)
+    }
+
+    /** Constructs a path from a vector of edges.
 
     Returns `None` if the vector is empty.
      */

@@ -315,7 +315,7 @@ impl SkelGraph {
         e
     }
 
-    /// Makes a path graph of length `n`.
+    /// Makes a path graph with `n` vertices.
     #[cfg(test)]
     pub fn path(n: usize) -> Self {
         let mut g: Self = Default::default();
@@ -337,12 +337,12 @@ impl SkelGraph {
         g
     }
 
-    /// Make a loop, the terminal graph.
+    /// Make a cycle graph with `n` vertices.
     #[cfg(test)]
-    pub fn self_loop() -> Self {
-        let mut g: Self = Default::default();
-        g.add_vertex();
-        g.add_edge(0, 0);
+    pub fn cycle(n: usize) -> Self {
+        assert!(n > 0);
+        let mut g = SkelGraph::path(n);
+        g.add_edge(n - 1, 0);
         g
     }
 }
