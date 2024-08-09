@@ -197,6 +197,11 @@ where
         }
     }
 
+    /// Discrete double theory that the model is of.
+    pub fn theory(&self) -> &Arc<DiscreteDblTheory<Cat>> {
+        &self.theory
+    }
+
     /// Graph that generates the object and morphisms of the model.
     pub fn generating_graph(&self) -> &impl FinGraph<V = Id, E = Id> {
         self.category.generators()

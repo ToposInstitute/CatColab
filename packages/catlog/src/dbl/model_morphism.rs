@@ -19,10 +19,11 @@ oplax.
  */
 
 use std::hash::Hash;
+use std::sync::Arc;
 
 use derivative::Derivative;
 
-use crate::one::graph_algorithms::spec_order;
+use crate::one::graph_algorithms::{simple_paths, spec_order};
 use crate::one::*;
 use crate::zero::{HashColumn, Mapping};
 
@@ -115,7 +116,10 @@ where
         self.mor_map.unset(e)
     }
 
-    /// Returns all morphisms between two models of a discrete double theory.
+    /** Finds morphisms between two models of a discrete double theory.
+
+    TODO
+    */
     pub fn morphisms<Cat>(
         dom: &DiscreteDblModel<DomId, Cat>,
         cod: &DiscreteDblModel<CodId, Cat>,
@@ -179,12 +183,16 @@ where
     Cat::Hom: Eq + Clone + Hash,
 {
     fn new(dom: &'a DiscreteDblModel<DomId, Cat>, cod: &'a DiscreteDblModel<CodId, Cat>) -> Self {
-        assert!(dom.is_free(), "Morphism search requires domain model to be free");
+        assert!(
+            Arc::ptr_eq(dom.theory(), cod.theory()),
+            "Domain and codomain model should have the same theory"
+        );
+        assert!(dom.is_free(), "Domain model should be free");
 
-        // Compute a search ordering for the variables of the CSP, which are the
-        // elements of the domain graph. Prioritize vertices with high degree
-        // since they will more constrained. This is a version of the well known
-        // "most constrained variable" heuristic in CSP.
+        // Order the variables of the CSP, which are the elements of the domain
+        // graph. Prefer vertices with high degree since they are more
+        // constrained. This is a version of the well known "most constrained
+        // variable" heuristic in CSP.
         let dom_graph = dom.generating_graph();
         let mut vertices: Vec<_> = dom_graph.vertices().collect();
         vertices.sort_by_key(|v| std::cmp::Reverse(dom_graph.degree(v)));
@@ -219,16 +227,24 @@ where
             }
             GraphElem::Edge(m) => {
                 let path = Path::single(m);
-                let _w = self
+                let mor_type = self.dom.mor_type(&path);
+                let w = self
                     .map
                     .apply_ob(&self.dom.dom(&path))
                     .expect("Domain has already been assigned");
-                let _z = self
+                let z = self
                     .map
                     .apply_ob(&self.dom.cod(&path))
                     .expect("Codomain has already been assigned");
-                let _m = path.only();
-                // TODO: Iterate over all paths.
+                let m = path.only().unwrap();
+
+                let cod_graph = self.cod.generating_graph();
+                for path in simple_paths(cod_graph, &w, &z) {
+                    if self.cod.mor_type(&path) == mor_type {
+                        self.map.assign_basic_mor(m.clone(), path);
+                        self.search(depth + 1);
+                    }
+                }
             }
         }
     }
@@ -249,5 +265,10 @@ mod tests {
         f.assign_basic_mor('g', Path::pair('r', 's'));
         assert!(f.is_mor_assigned(&Path::single('f')));
         assert_eq!(f.apply_mor(&Path::pair('f', 'g')), Path::from_vec(vec!['p', 'q', 'r', 's']));
+    }
+
+    #[test]
+    fn discrete_dbl_model_hom_search() {
+        // TODO
     }
 }
