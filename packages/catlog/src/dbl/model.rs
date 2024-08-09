@@ -45,7 +45,7 @@ use tsify_next::Tsify;
 
 use super::theory::{DblTheory, DiscreteDblTheory};
 use crate::one::fin_category::{FpCategory, InvalidFpCategory};
-use crate::one::{Category, FgCategory, Path};
+use crate::one::*;
 use crate::validate::{self, Validate};
 use crate::zero::{Column, IndexedHashColumn, Mapping};
 
@@ -197,6 +197,21 @@ where
         }
     }
 
+    /// Discrete double theory that the model is of.
+    pub fn theory(&self) -> &Arc<DiscreteDblTheory<Cat>> {
+        &self.theory
+    }
+
+    /// Graph that generates the object and morphisms of the model.
+    pub fn generating_graph(&self) -> &impl FinGraph<V = Id, E = Id> {
+        self.category.generators()
+    }
+
+    /// Is the model freely generated?
+    pub fn is_free(&self) -> bool {
+        self.category.is_free()
+    }
+
     /// Adds a basic object to the model.
     pub fn add_ob(&mut self, x: Id, typ: Cat::Ob) -> bool {
         self.ob_types.set(x.clone(), typ);
@@ -242,17 +257,17 @@ where
             let e = f.only().unwrap();
             if self
                 .category
-                .get_dom(e)
+                .get_dom(&e)
                 .map_or(false, |x| self.ob_type(x) != self.theory.src(&mor_type))
             {
                 errs.push(Invalid::DomType(e.clone()));
             }
             if self
                 .category
-                .get_cod(e)
+                .get_cod(&e)
                 .map_or(false, |x| self.ob_type(x) != self.theory.tgt(&mor_type))
             {
-                errs.push(Invalid::CodType(e.clone()));
+                errs.push(Invalid::CodType(e));
             }
             errs.into_iter()
         });
@@ -388,11 +403,11 @@ mod tests {
     fn validate_discrete_dbl_model() {
         let th = Arc::new(th_schema());
         let mut model = DiscreteDblModel::new(th);
-        model.add_ob('E', "entity".into());
-        model.add_ob('A', "attr_type".into());
-        model.add_mor('a', 'E', 'A', FinHom::Generator("attr".into()));
+        model.add_ob('x', "Entity".into());
+        model.add_ob('t', "AttrType".into());
+        model.add_mor('a', 'x', 't', FinHom::Generator("Attr".into()));
         assert!(model.validate().is_ok());
-        model.add_mor('b', 'E', 'A', FinHom::Id("entity".into()));
+        model.add_mor('b', 'x', 't', FinHom::Id("Entity".into()));
         assert_eq!(model.validate().unwrap_err().len(), 1);
     }
 }

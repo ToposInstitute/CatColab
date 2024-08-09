@@ -26,7 +26,7 @@ const thSimpleOlog = () =>
         types: [
             {
                 tag: "ObType",
-                obType: { tag: "Basic", content: "object" },
+                obType: { tag: "Basic", content: "Object" },
                 name: "Type",
                 description: "Type or class of things",
                 shortcut: ["O"],
@@ -37,7 +37,7 @@ const thSimpleOlog = () =>
                 tag: "MorType",
                 morType: {
                     tag: "Hom",
-                    content: { tag: "Basic", content: "object" },
+                    content: { tag: "Basic", content: "Object" },
                 },
                 name: "Aspect",
                 description: "Aspect or property of a thing",
@@ -62,7 +62,7 @@ const thSimpleSchema = () =>
         types: [
             {
                 tag: "ObType",
-                obType: { tag: "Basic", content: "entity" },
+                obType: { tag: "Basic", content: "Entity" },
                 name: "Entity",
                 description: "Type of entity or thing",
                 shortcut: ["O"],
@@ -74,7 +74,7 @@ const thSimpleSchema = () =>
                 tag: "MorType",
                 morType: {
                     tag: "Hom",
-                    content: { tag: "Basic", content: "entity" },
+                    content: { tag: "Basic", content: "Entity" },
                 },
                 name: "Mapping",
                 description: "Many-to-one relation between entities",
@@ -83,7 +83,7 @@ const thSimpleSchema = () =>
             },
             {
                 tag: "MorType",
-                morType: { tag: "Basic", content: "attr" },
+                morType: { tag: "Basic", content: "Attr" },
                 name: "Attribute",
                 description: "Data attribute of an entity",
                 shortcut: ["A"],
@@ -91,7 +91,7 @@ const thSimpleSchema = () =>
             },
             {
                 tag: "ObType",
-                obType: { tag: "Basic", content: "attr_type" },
+                obType: { tag: "Basic", content: "AttrType" },
                 name: "Attribute type",
                 description: "Data type for an attribute",
                 textClasses: [styles.code],
@@ -100,7 +100,7 @@ const thSimpleSchema = () =>
                 tag: "MorType",
                 morType: {
                     tag: "Hom",
-                    content: { tag: "Basic", content: "attr_type" },
+                    content: { tag: "Basic", content: "AttrType" },
                 },
                 name: "Operation",
                 description: "Operation on data types for attributes",
@@ -125,7 +125,7 @@ const thRegNet = () =>
         types: [
             {
                 tag: "ObType",
-                obType: { tag: "Basic", content: "object" },
+                obType: { tag: "Basic", content: "Object" },
                 name: "Species",
                 description: "Biochemical species in the network",
             },
@@ -133,7 +133,7 @@ const thRegNet = () =>
                 tag: "MorType",
                 morType: {
                     tag: "Hom",
-                    content: { tag: "Basic", content: "object" },
+                    content: { tag: "Basic", content: "Object" },
                 },
                 name: "Promotion",
                 description: "Positive interaction: activates or promotes",
@@ -141,7 +141,7 @@ const thRegNet = () =>
             },
             {
                 tag: "MorType",
-                morType: { tag: "Basic", content: "negative" },
+                morType: { tag: "Basic", content: "Negative" },
                 name: "Inhibition",
                 description: "Negative interaction: represses or inhibits",
                 arrowStyle: "flat",
@@ -166,7 +166,7 @@ const thCausalLoop = () =>
         types: [
             {
                 tag: "ObType",
-                obType: { tag: "Basic", content: "object" },
+                obType: { tag: "Basic", content: "Object" },
                 name: "Variable",
                 description: "Variable quantity",
             },
@@ -174,7 +174,7 @@ const thCausalLoop = () =>
                 tag: "MorType",
                 morType: {
                     tag: "Hom",
-                    content: { tag: "Basic", content: "object" },
+                    content: { tag: "Basic", content: "Object" },
                 },
                 name: "Positive link",
                 description: "Variables change in the same direction",
@@ -183,7 +183,7 @@ const thCausalLoop = () =>
             },
             {
                 tag: "MorType",
-                morType: { tag: "Basic", content: "negative" },
+                morType: { tag: "Basic", content: "Negative" },
                 name: "Negative link",
                 description: "Variables change in the opposite direction",
                 arrowStyle: "minus",
@@ -208,7 +208,7 @@ const thStockFlow = () =>
         types: [
             {
                 tag: "ObType",
-                obType: { tag: "Basic", content: "object" },
+                obType: { tag: "Basic", content: "Object" },
                 name: "Stock",
                 description: "Thing with an amount",
                 shortcut: ["S"],
@@ -219,7 +219,7 @@ const thStockFlow = () =>
                 tag: "MorType",
                 morType: {
                     tag: "Hom",
-                    content: { tag: "Basic", content: "object" },
+                    content: { tag: "Basic", content: "Object" },
                 },
                 name: "Flow",
                 description: "Flow from one stock to another",
@@ -228,7 +228,7 @@ const thStockFlow = () =>
             },
             {
                 tag: "MorType",
-                morType: { tag: "Basic", content: "link" },
+                morType: { tag: "Basic", content: "Link" },
                 name: "Link",
                 description: "Influence of a stock on a flow",
                 preferUnnamed: true,

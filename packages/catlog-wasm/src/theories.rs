@@ -38,9 +38,9 @@ mod tests {
     #[test]
     fn discrete_dbl_theory() {
         let th = th_schema();
-        let entity = ObType::Basic(ustr("entity"));
-        let attr_type = ObType::Basic(ustr("attr_type"));
-        let attr = MorType::Basic(ustr("attr"));
+        let entity = ObType::Basic(ustr("Entity"));
+        let attr_type = ObType::Basic(ustr("AttrType"));
+        let attr = MorType::Basic(ustr("Attr"));
         assert_eq!(th.src(attr.clone()), Ok(entity));
         assert_eq!(th.tgt(attr), Ok(attr_type));
     }
@@ -48,8 +48,8 @@ mod tests {
     #[test]
     fn discrete_tab_theory() {
         let th = th_category_links();
-        let x = ObType::Basic(ustr("object"));
-        let link = MorType::Basic(ustr("link"));
+        let x = ObType::Basic(ustr("Object"));
+        let link = MorType::Basic(ustr("Link"));
         assert_eq!(th.src(link.clone()), Ok(x));
         assert!(matches!(th.tgt(link), Ok(ObType::Tabulator(_))));
     }

@@ -63,7 +63,18 @@ impl<V, E> Path<V, E> {
         Path::Seq(nonempty![e, f])
     }
 
-    /** Constructs a path from a vector of consecutive edges.
+    /** Constructs a path from an iterator over edges.
+
+    Returns `None` if the iterator is empty.
+     */
+    pub fn collect<I>(iter: I) -> Option<Self>
+    where
+        I: IntoIterator<Item = E>,
+    {
+        NonEmpty::collect(iter).map(Path::Seq)
+    }
+
+    /** Constructs a path from a vector of edges.
 
     Returns `None` if the vector is empty.
      */
@@ -91,12 +102,12 @@ impl<V, E> Path<V, E> {
 
     This method is a one-sided inverse to [`Path::single`].
      */
-    pub fn only(&self) -> Option<&E> {
+    pub fn only(self) -> Option<E> {
         match self {
             Path::Id(_) => None,
             Path::Seq(edges) => {
-                if edges.len() == 1 {
-                    Some(edges.first())
+                if edges.tail.is_empty() {
+                    Some(edges.head)
                 } else {
                     None
                 }
@@ -355,7 +366,7 @@ mod tests {
     #[test]
     fn singleton_path() {
         let e = 1;
-        assert_eq!(SkelPath::single(e).only(), Some(&e));
+        assert_eq!(SkelPath::single(e).only(), Some(e));
     }
 
     #[test]
