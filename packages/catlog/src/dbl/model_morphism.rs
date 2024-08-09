@@ -179,6 +179,8 @@ where
     Cat::Hom: Eq + Clone + Hash,
 {
     fn new(dom: &'a DiscreteDblModel<DomId, Cat>, cod: &'a DiscreteDblModel<CodId, Cat>) -> Self {
+        assert!(dom.is_free(), "Morphism search requires domain model to be free");
+
         // Compute a search ordering for the variables of the CSP, which are the
         // elements of the domain graph. Prioritize vertices with high degree
         // since they will more constrained. This is a version of the well known

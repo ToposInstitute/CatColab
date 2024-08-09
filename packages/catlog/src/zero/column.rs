@@ -85,6 +85,11 @@ pub trait Column: Mapping {
     fn preimage(&self, y: &Self::Cod) -> impl Iterator<Item = Self::Dom> {
         self.iter().filter(|&(_, z)| *z == *y).map(|(x, _)| x)
     }
+
+    /// Is the mapping not defined anywhere?
+    fn is_empty(&self) -> bool {
+        self.iter().next().is_none()
+    }
 }
 
 /** A function between sets defined by a [mapping](Mapping).
@@ -203,6 +208,10 @@ impl<T: Eq> Column for VecColumn<T> {
     fn values(&self) -> impl Iterator<Item = &Self::Cod> {
         self.0.iter().flatten()
     }
+
+    fn is_empty(&self) -> bool {
+        self.0.iter().all(|y| y.is_none())
+    }
 }
 
 /** An unindexed column backed by a hash map.
@@ -249,6 +258,10 @@ where
 
     fn values(&self) -> impl Iterator<Item = &Self::Cod> {
         self.0.values()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.0.is_empty()
     }
 }
 
@@ -427,6 +440,9 @@ where
     fn preimage(&self, y: &Cod) -> impl Iterator<Item = Dom> {
         self.index.preimage(y)
     }
+    fn is_empty(&self) -> bool {
+        self.mapping.is_empty()
+    }
 }
 
 /** An indexed column backed by an integer-valued vector.
@@ -476,6 +492,9 @@ impl Column for SkelIndexedColumn {
     fn preimage(&self, y: &usize) -> impl Iterator<Item = usize> {
         self.0.preimage(y)
     }
+    fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
 /** An indexed column backed by a vector.
@@ -524,6 +543,9 @@ impl<T: Eq + Hash + Clone> Column for IndexedVecColumn<T> {
     }
     fn preimage(&self, y: &T) -> impl Iterator<Item = usize> {
         self.0.preimage(y)
+    }
+    fn is_empty(&self) -> bool {
+        self.0.is_empty()
     }
 }
 
@@ -576,6 +598,9 @@ where
     fn preimage(&self, y: &V) -> impl Iterator<Item = K> {
         self.0.preimage(y)
     }
+    fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
 #[cfg(test)]
@@ -586,6 +611,7 @@ mod tests {
     #[test]
     fn vec_column() {
         let mut col = VecColumn::new(vec!["foo", "bar", "baz"]);
+        assert!(!col.is_empty());
         assert!(col.is_set(&2));
         assert_eq!(col.apply(&2), Some(&"baz"));
         assert_eq!(col.apply(&3), None);
@@ -601,9 +627,11 @@ mod tests {
     #[test]
     fn hash_column() {
         let mut col: HashColumn<char, &str> = Default::default();
+        assert!(col.is_empty());
         col.set('a', "foo");
         col.set('b', "bar");
         col.set('c', "baz");
+        assert!(!col.is_empty());
         assert_eq!(col.apply(&'c'), Some(&"baz"));
         assert_eq!(col.unset(&'c'), Some("baz"));
         assert!(!col.is_set(&'c'));
@@ -617,6 +645,7 @@ mod tests {
     #[test]
     fn skel_indexed_column() {
         let mut col = SkelIndexedColumn::new(&[1, 3, 5]);
+        assert!(!col.is_empty());
         assert!(col.is_set(&2));
         assert_eq!(col.apply(&2), Some(&5));
         let preimage: Vec<_> = col.preimage(&5).collect();
@@ -632,6 +661,7 @@ mod tests {
     #[test]
     fn indexed_vec_column() {
         let mut col = IndexedVecColumn::new(&["foo", "bar", "baz"]);
+        assert!(!col.is_empty());
         assert!(col.is_set(&2));
         assert_eq!(col.apply(&2), Some(&"baz"));
         let preimage: Vec<_> = col.preimage(&"baz").collect();
@@ -647,9 +677,11 @@ mod tests {
     #[test]
     fn indexed_hash_column() {
         let mut col: IndexedHashColumn<char, &str> = Default::default();
+        assert!(col.is_empty());
         col.set('a', "foo");
         col.set('b', "bar");
         col.set('c', "baz");
+        assert!(!col.is_empty());
         assert_eq!(col.apply(&'c'), Some(&"baz"));
         let preimage: Vec<_> = col.preimage(&"baz").collect();
         assert_eq!(preimage, vec!['c']);

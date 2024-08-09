@@ -202,6 +202,11 @@ where
         self.category.generators()
     }
 
+    /// Is the model freely generated?
+    pub fn is_free(&self) -> bool {
+        self.category.is_free()
+    }
+
     /// Adds a basic object to the model.
     pub fn add_ob(&mut self, x: Id, typ: Cat::Ob) -> bool {
         self.ob_types.set(x.clone(), typ);

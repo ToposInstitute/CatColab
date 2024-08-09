@@ -259,6 +259,11 @@ where
         self.equations.set(key, eq);
     }
 
+    /// Is the category freely generated?
+    pub fn is_free(&self) -> bool {
+        self.equations.is_empty()
+    }
+
     /// Iterates over failures to be well-defined presentation of a category.
     pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidFpCategory<E, EqKey>> + '_ {
         let generator_errors = self.generators.iter_invalid().map(|err| match err {
@@ -414,6 +419,7 @@ mod tests {
         sch_sgraph.add_hom_generator('s', 'E', 'V');
         sch_sgraph.add_hom_generator('t', 'E', 'V');
         sch_sgraph.add_hom_generator('i', 'E', 'E');
+        assert!(sch_sgraph.is_free());
         assert_eq!(sch_sgraph.ob_generators().count(), 2);
         assert_eq!(sch_sgraph.hom_generators().count(), 3);
         assert_eq!(sch_sgraph.dom(&Path::single('t')), 'E');
@@ -423,6 +429,7 @@ mod tests {
         sch_sgraph.add_equation("inv", PathEq::new(Path::pair('i', 'i'), Path::empty('E')));
         sch_sgraph.add_equation("rev_src", PathEq::new(Path::pair('i', 's'), Path::single('t')));
         sch_sgraph.add_equation("rev_tgt", PathEq::new(Path::pair('i', 't'), Path::single('s')));
+        assert!(!sch_sgraph.is_free());
         assert_eq!(sch_sgraph.equations().count(), 3);
         assert!(sch_sgraph.validate().is_ok());
 
