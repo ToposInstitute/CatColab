@@ -398,11 +398,11 @@ mod tests {
     fn validate_discrete_dbl_model() {
         let th = Arc::new(th_schema());
         let mut model = DiscreteDblModel::new(th);
-        model.add_ob('E', "entity".into());
-        model.add_ob('A', "attr_type".into());
-        model.add_mor('a', 'E', 'A', FinHom::Generator("attr".into()));
+        model.add_ob('x', "Entity".into());
+        model.add_ob('t', "AttrType".into());
+        model.add_mor('a', 'x', 't', FinHom::Generator("Attr".into()));
         assert!(model.validate().is_ok());
-        model.add_mor('b', 'E', 'A', FinHom::Id("entity".into()));
+        model.add_mor('b', 'x', 't', FinHom::Id("Entity".into()));
         assert_eq!(model.validate().unwrap_err().len(), 1);
     }
 }
