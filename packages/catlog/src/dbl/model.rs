@@ -35,8 +35,10 @@ In addition, a model has the following operations:
   whose type is the composite of the corresponding morphism types.
  */
 
-use std::hash::Hash;
+use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
 use std::sync::Arc;
+
+use ustr::{IdentityHasher, Ustr};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -44,7 +46,7 @@ use serde::{Deserialize, Serialize};
 use tsify_next::Tsify;
 
 use super::theory::{DblTheory, DiscreteDblTheory};
-use crate::one::fin_category::{FpCategory, InvalidFpCategory};
+use crate::one::fin_category::{FpCategory, InvalidFpCategory, UstrFinCategory};
 use crate::one::*;
 use crate::validate::{self, Validate};
 use crate::zero::{Column, IndexedHashColumn, Mapping};
@@ -173,22 +175,33 @@ comprising the theory. A type theorist would call it a ["displayed
 category"](https://ncatlab.org/nlab/show/displayed+category).
 */
 #[derive(Clone)]
-pub struct DiscreteDblModel<Id, Cat: FgCategory> {
+pub struct DiscreteDblModel<Id, Cat: FgCategory, S = RandomState> {
     theory: Arc<DiscreteDblTheory<Cat>>,
-    category: FpCategory<Id, Id, Id>,
+    category: FpCategory<Id, Id, Id, S>,
+    // NOTE: We're currently leaving a small optimization on the table since
+    // indexed columns don't expose separate hashers for keys and values.
     ob_types: IndexedHashColumn<Id, Cat::Ob>,
     mor_types: IndexedHashColumn<Id, Cat::Hom>,
 }
 
-impl<Id, Cat> DiscreteDblModel<Id, Cat>
+/// A model of a discrete double theory where both the model and theory have
+/// keys of type `Ustr`.
+pub type UstrDiscreteDblModel =
+    DiscreteDblModel<Ustr, UstrFinCategory, BuildHasherDefault<IdentityHasher>>;
+
+impl<Id, Cat, S> DiscreteDblModel<Id, Cat, S>
 where
     Id: Eq + Clone + Hash,
     Cat: FgCategory,
     Cat::Ob: Eq + Clone + Hash,
     Cat::Hom: Eq + Clone + Hash,
+    S: BuildHasher,
 {
     /// Creates an empty model of the given theory.
-    pub fn new(theory: Arc<DiscreteDblTheory<Cat>>) -> Self {
+    pub fn new(theory: Arc<DiscreteDblTheory<Cat>>) -> Self
+    where
+        S: Default,
+    {
         Self {
             theory,
             category: Default::default(),
@@ -251,36 +264,48 @@ where
             InvalidFpCategory::EqSrc(eq) => Invalid::EqSrc(eq),
             InvalidFpCategory::EqTgt(eq) => Invalid::EqTgt(eq),
         });
-        let type_errors = self.category.hom_generators().flat_map(|f| {
+        let ob_type_errors = self.category.ob_generators().filter_map(|x| {
+            if self.theory.has_ob_type(&self.ob_type(&x)) {
+                None
+            } else {
+                Some(Invalid::ObType(x))
+            }
+        });
+        let mor_type_errors = self.category.hom_generators().flat_map(|f| {
             let mut errs = Vec::new();
             let mor_type = self.mor_type(&f);
             let e = f.only().unwrap();
-            if self
-                .category
-                .get_dom(&e)
-                .map_or(false, |x| self.ob_type(x) != self.theory.src(&mor_type))
-            {
-                errs.push(Invalid::DomType(e.clone()));
-            }
-            if self
-                .category
-                .get_cod(&e)
-                .map_or(false, |x| self.ob_type(x) != self.theory.tgt(&mor_type))
-            {
-                errs.push(Invalid::CodType(e));
+            if self.theory.has_mor_type(&mor_type) {
+                if self
+                    .category
+                    .get_dom(&e)
+                    .map_or(false, |x| self.ob_type(x) != self.theory.src(&mor_type))
+                {
+                    errs.push(Invalid::DomType(e.clone()));
+                }
+                if self
+                    .category
+                    .get_cod(&e)
+                    .map_or(false, |x| self.ob_type(x) != self.theory.tgt(&mor_type))
+                {
+                    errs.push(Invalid::CodType(e));
+                }
+            } else {
+                errs.push(Invalid::MorType(e));
             }
             errs.into_iter()
         });
-        category_errors.chain(type_errors)
+        category_errors.chain(ob_type_errors).chain(mor_type_errors)
     }
 }
 
-impl<Id, Cat> DblModel for DiscreteDblModel<Id, Cat>
+impl<Id, Cat, S> DblModel for DiscreteDblModel<Id, Cat, S>
 where
     Id: Eq + Clone + Hash,
     Cat: FgCategory,
     Cat::Ob: Eq + Clone + Hash,
     Cat::Hom: Eq + Clone + Hash,
+    S: BuildHasher,
 {
     type Ob = Id;
     type Mor = Path<Id, Id>;
@@ -343,12 +368,13 @@ where
     }
 }
 
-impl<Id, Cat> Validate for DiscreteDblModel<Id, Cat>
+impl<Id, Cat, S> Validate for DiscreteDblModel<Id, Cat, S>
 where
     Id: Eq + Clone + Hash,
     Cat: FgCategory,
     Cat::Ob: Eq + Clone + Hash,
     Cat::Hom: Eq + Clone + Hash,
+    S: BuildHasher,
 {
     type ValidationError = InvalidDiscreteDblModel<Id>;
 
@@ -374,6 +400,12 @@ pub enum InvalidDiscreteDblModel<Id> {
     /// Codomain of basic morphism is missing or invalid.
     Cod(Id),
 
+    /// Basic object has invalid object type.
+    ObType(Id),
+
+    /// Basic morphism has invalid morphism type.
+    MorType(Id),
+
     /// Domain of basic morphism has type incompatible with morphism type.
     DomType(Id),
 
@@ -395,6 +427,8 @@ pub enum InvalidDiscreteDblModel<Id> {
 
 #[cfg(test)]
 mod tests {
+    use ustr::ustr;
+
     use super::*;
     use crate::one::fin_category::FinHom;
     use crate::stdlib::theories::*;
@@ -402,12 +436,22 @@ mod tests {
     #[test]
     fn validate_discrete_dbl_model() {
         let th = Arc::new(th_schema());
-        let mut model = DiscreteDblModel::new(th);
-        model.add_ob('x', "Entity".into());
-        model.add_ob('t', "AttrType".into());
-        model.add_mor('a', 'x', 't', FinHom::Generator("Attr".into()));
+        let mut model = UstrDiscreteDblModel::new(th.clone());
+        let entity = ustr("entity");
+        model.add_ob(entity, ustr("NotObType"));
+        assert_eq!(model.validate().unwrap_err().len(), 1);
+
+        let mut model = UstrDiscreteDblModel::new(th.clone());
+        model.add_ob(entity, ustr("Entity"));
+        model.add_mor(ustr("map"), entity, entity, FinHom::Generator(ustr("NotMorType")));
+        assert_eq!(model.validate().unwrap_err().len(), 1);
+
+        let mut model = UstrDiscreteDblModel::new(th);
+        model.add_ob(entity, ustr("Entity"));
+        model.add_ob(ustr("type"), ustr("AttrType"));
+        model.add_mor(ustr("a"), entity, ustr("type"), FinHom::Generator(ustr("Attr")));
         assert!(model.validate().is_ok());
-        model.add_mor('b', 'x', 't', FinHom::Id("Entity".into()));
+        model.add_mor(ustr("b"), entity, ustr("type"), FinHom::Id(ustr("Entity")));
         assert_eq!(model.validate().unwrap_err().len(), 1);
     }
 }

@@ -170,21 +170,25 @@ paths in the graph, so strictly speaking we work with morphism representatives
 rather than morphism themselves.
 
 Like the object and morphism generators, the equations are identified by keys.
-Depending on the application, these could be meaningful names for the axioms or
-meaningless unique identifiers.
+Depending on the application, these could be axiom names or meaningless IDs.
  */
 #[derive(Clone, Derivative)]
-#[derivative(Default(bound = ""))]
-pub struct FpCategory<V, E, EqKey> {
-    generators: HashGraph<V, E>,
-    equations: HashColumn<EqKey, PathEq<V, E>>,
+#[derivative(Default(bound = "S: Default"))]
+pub struct FpCategory<V, E, EqKey, S = RandomState> {
+    generators: HashGraph<V, E, S>,
+    equations: HashColumn<EqKey, PathEq<V, E>, S>,
 }
 
-impl<V, E, EqKey> FpCategory<V, E, EqKey>
+/// A finitely presented category with generators and equation keys of type
+/// `Ustr`.
+pub type UstrFpCategory = FpCategory<Ustr, Ustr, Ustr, BuildHasherDefault<IdentityHasher>>;
+
+impl<V, E, EqKey, S> FpCategory<V, E, EqKey, S>
 where
     V: Eq + Clone + Hash,
     E: Eq + Clone + Hash,
     EqKey: Eq + Clone + Hash,
+    S: BuildHasher,
 {
     /// Graph of generators of the finitely presented category.
     pub fn generators(&self) -> &impl FinGraph<V = V, E = E> {
@@ -282,11 +286,12 @@ where
     }
 }
 
-impl<V, E, EqKey> Validate for FpCategory<V, E, EqKey>
+impl<V, E, EqKey, S> Validate for FpCategory<V, E, EqKey, S>
 where
     V: Eq + Clone + Hash,
     E: Eq + Clone + Hash,
     EqKey: Eq + Clone + Hash,
+    S: BuildHasher,
 {
     type ValidationError = InvalidFpCategory<E, EqKey>;
 
@@ -295,11 +300,12 @@ where
     }
 }
 
-impl<V, E, EqKey> Category for FpCategory<V, E, EqKey>
+impl<V, E, EqKey, S> Category for FpCategory<V, E, EqKey, S>
 where
     V: Eq + Clone + Hash,
     E: Eq + Clone + Hash,
     EqKey: Eq + Clone + Hash,
+    S: BuildHasher,
 {
     type Ob = V;
     type Hom = Path<V, E>;
@@ -322,11 +328,12 @@ where
     }
 }
 
-impl<V, E, EqKey> FgCategory for FpCategory<V, E, EqKey>
+impl<V, E, EqKey, S> FgCategory for FpCategory<V, E, EqKey, S>
 where
     V: Eq + Clone + Hash,
     E: Eq + Clone + Hash,
     EqKey: Eq + Clone + Hash,
+    S: BuildHasher,
 {
     fn has_ob_generator(&self, x: &V) -> bool {
         self.generators.has_vertex(x)

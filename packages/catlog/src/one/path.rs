@@ -34,7 +34,7 @@ case analysis on the edge sequence anyway to determine whether, say,
 [`reduce`](std::iter::Iterator::reduce) is valid. Thus, it seems better to reify
 the two cases in the data structure itself.
 */
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(tag = "tag", content = "content"))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
