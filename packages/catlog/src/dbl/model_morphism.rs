@@ -70,7 +70,7 @@ pub trait DblModelMapping {
 Because a discrete double theory has only trivial operations, the naturality
 axioms for a model morphism also become trivial.
  */
-#[derive(Clone, Derivative)]
+#[derive(Clone, Debug, Derivative)]
 #[derivative(Default(bound = ""))]
 pub struct DiscreteDblModelMapping<DomId, CodId> {
     ob_map: HashColumn<DomId, CodId>,
@@ -252,7 +252,12 @@ where
 
 #[cfg(test)]
 mod tests {
+    use ustr::ustr;
+
     use super::*;
+    use crate::one::fin_category::FinHom;
+    use crate::stdlib::*;
+    use crate::validate::Validate;
 
     #[test]
     fn discrete_dbl_model_mapping() {
@@ -268,7 +273,20 @@ mod tests {
     }
 
     #[test]
-    fn discrete_dbl_model_hom_search() {
-        // TODO
+    fn find_negative_loops() {
+        let th = Arc::new(th_signed_category());
+        let dom = negative_loop(th.clone());
+        let ob = dom.objects().next().unwrap();
+
+        let mut cod = DiscreteDblModel::new(th.clone());
+        cod.add_ob('x', ustr("Object"));
+        cod.add_ob('y', ustr("Object"));
+        cod.add_mor('f', 'x', 'y', FinHom::Id(ustr("Object")));
+        cod.add_mor('g', 'y', 'x', FinHom::Generator(ustr("Negative")));
+        assert!(cod.validate().is_ok());
+        let maps = DiscreteDblModelMapping::morphisms(&dom, &cod);
+        assert_eq!(maps.len(), 2);
+        assert_eq!(maps[0].apply_ob(&ob), Some('x'));
+        assert_eq!(maps[1].apply_ob(&ob), Some('y'));
     }
 }

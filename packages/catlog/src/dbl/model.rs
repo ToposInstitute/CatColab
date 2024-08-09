@@ -35,10 +35,10 @@ In addition, a model has the following operations:
   whose type is the composite of the corresponding morphism types.
  */
 
-use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
+use std::hash::Hash;
 use std::sync::Arc;
 
-use ustr::{IdentityHasher, Ustr};
+use ustr::Ustr;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -175,33 +175,29 @@ comprising the theory. A type theorist would call it a ["displayed
 category"](https://ncatlab.org/nlab/show/displayed+category).
 */
 #[derive(Clone)]
-pub struct DiscreteDblModel<Id, Cat: FgCategory, S = RandomState> {
+pub struct DiscreteDblModel<Id, Cat: FgCategory> {
     theory: Arc<DiscreteDblTheory<Cat>>,
-    category: FpCategory<Id, Id, Id, S>,
-    // NOTE: We're currently leaving a small optimization on the table since
-    // indexed columns don't expose separate hashers for keys and values.
+    category: FpCategory<Id, Id, Id>,
     ob_types: IndexedHashColumn<Id, Cat::Ob>,
     mor_types: IndexedHashColumn<Id, Cat::Hom>,
 }
 
 /// A model of a discrete double theory where both the model and theory have
 /// keys of type `Ustr`.
-pub type UstrDiscreteDblModel =
-    DiscreteDblModel<Ustr, UstrFinCategory, BuildHasherDefault<IdentityHasher>>;
+pub type UstrDiscreteDblModel = DiscreteDblModel<Ustr, UstrFinCategory>;
+// NOTE: We are leaving a small optimization on the table by not using the
+// `IdentityHasher` but adding that extra type parameter quickly gets annoying
+// because it has to be propagated everywhere, including into model morphisms.
 
-impl<Id, Cat, S> DiscreteDblModel<Id, Cat, S>
+impl<Id, Cat> DiscreteDblModel<Id, Cat>
 where
     Id: Eq + Clone + Hash,
     Cat: FgCategory,
     Cat::Ob: Eq + Clone + Hash,
     Cat::Hom: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     /// Creates an empty model of the given theory.
-    pub fn new(theory: Arc<DiscreteDblTheory<Cat>>) -> Self
-    where
-        S: Default,
-    {
+    pub fn new(theory: Arc<DiscreteDblTheory<Cat>>) -> Self {
         Self {
             theory,
             category: Default::default(),
@@ -299,13 +295,12 @@ where
     }
 }
 
-impl<Id, Cat, S> DblModel for DiscreteDblModel<Id, Cat, S>
+impl<Id, Cat> DblModel for DiscreteDblModel<Id, Cat>
 where
     Id: Eq + Clone + Hash,
     Cat: FgCategory,
     Cat::Ob: Eq + Clone + Hash,
     Cat::Hom: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     type Ob = Id;
     type Mor = Path<Id, Id>;
@@ -368,13 +363,12 @@ where
     }
 }
 
-impl<Id, Cat, S> Validate for DiscreteDblModel<Id, Cat, S>
+impl<Id, Cat> Validate for DiscreteDblModel<Id, Cat>
 where
     Id: Eq + Clone + Hash,
     Cat: FgCategory,
     Cat::Ob: Eq + Clone + Hash,
     Cat::Hom: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     type ValidationError = InvalidDiscreteDblModel<Id>;
 
@@ -436,17 +430,17 @@ mod tests {
     #[test]
     fn validate_discrete_dbl_model() {
         let th = Arc::new(th_schema());
-        let mut model = UstrDiscreteDblModel::new(th.clone());
+        let mut model = DiscreteDblModel::new(th.clone());
         let entity = ustr("entity");
         model.add_ob(entity, ustr("NotObType"));
         assert_eq!(model.validate().unwrap_err().len(), 1);
 
-        let mut model = UstrDiscreteDblModel::new(th.clone());
+        let mut model = DiscreteDblModel::new(th.clone());
         model.add_ob(entity, ustr("Entity"));
         model.add_mor(ustr("map"), entity, entity, FinHom::Generator(ustr("NotMorType")));
         assert_eq!(model.validate().unwrap_err().len(), 1);
 
-        let mut model = UstrDiscreteDblModel::new(th);
+        let mut model = DiscreteDblModel::new(th);
         model.add_ob(entity, ustr("Entity"));
         model.add_ob(ustr("type"), ustr("AttrType"));
         model.add_mor(ustr("a"), entity, ustr("type"), FinHom::Generator(ustr("Attr")));

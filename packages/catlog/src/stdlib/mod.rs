@@ -2,3 +2,6 @@
 
 pub mod models;
 pub mod theories;
+
+pub use models::*;
+pub use theories::*;

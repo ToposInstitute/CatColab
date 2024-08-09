@@ -156,7 +156,7 @@ impl<T> InvalidFunction<T> {
 
 /** An unindexed column backed by a vector.
  */
-#[derive(Clone, Derivative)]
+#[derive(Clone, Debug, Derivative)]
 #[derivative(Default(bound = ""))]
 pub struct VecColumn<T>(Vec<Option<T>>);
 
@@ -216,7 +216,7 @@ impl<T: Eq> Column for VecColumn<T> {
 
 /** An unindexed column backed by a hash map.
  */
-#[derive(Clone, From, Derivative)]
+#[derive(Clone, From, Debug, Derivative)]
 #[derivative(Default(bound = "S: Default"))]
 pub struct HashColumn<K, V, S = RandomState>(HashMap<K, V, S>);
 
