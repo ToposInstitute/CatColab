@@ -1,0 +1,60 @@
+\title{Backend}
+\date{2024-07-30}
+
+\subtree{
+\title{Concepts and overview}
+
+\p{The main pieces of state in the backend are the [database](dev-000E) and a in-memory hashmap from [ref](dev-000B) to automerge dochandle. The important thing to realize is that nothing from automerge is persisted through restart of the backend; the only thing that is persisted is serializations the automerge document at various points in time. Thus, when the server restarts, clients must request new automerge documents. Currently, this is not implemented: you must refresh the client after a server restart.}
+
+\p{With this in mind, in this tree we give an overview of the database schema and the operations currently supported on the backend.}
+
+\transclude{dev-000E}
+
+\transclude{dev-000F}
+}
+
+\subtree{
+\title{Implementation details and dependencies}
+
+\p{We have endeavored to keep the number of dependencies low, and the implementation simple. However, we do use some libraries. In this section, we document what those libraries are, and how we use them.}
+
+\ul{
+\li{[automerge-repo](https://github.com/automerge/automerge-repo/). We use automerge-repo in order to manage the websocket-based syncing of automerge documents, but we do \em{not} use its storage facilities.}
+\li{[express](http://expressjs.com/). The "default choice" of nodejs http servers. We use this to host our [trpc](https://trpc.io) api.}
+\li{[morgan](https://github.com/expressjs/morgan). A fairly simple request logger for express: this helps in debugging.}
+\li{[pg](https://node-postgres.com/). The standard choice for using postgresql in nodejs.}
+\li{[pgtyped](https://pgtyped.dev/). A program that generates typescript wrappers for postgresql queries. Use with \code{npm run compileSql}.}
+\li{[zod](https://zod.dev). A validator for the input data to our queries.}
+\li{[trpc](https://trpc.io). "Typed remote procedure calls". We use this so that we can access the backend from the frontend in a well-typed way.}
+}
+}
+
+\subtree{
+\title{Infrastructure}
+
+\p{We have an AWS server that is pointed to by the domain name backend-next.catcolab.org. This runs an instance of the backend. This backend can be used by the frontend hosted at next.catcolab.org, or by a dev server. Note that this means that PR previews only are for the frontend. So if a PR introduces significant changes to the backend, the PR preview won't see those backend changes because it will still be pointing to whatever version of the backend is running on the server. Fortunately, we don't expect the backend to change all too much, at least compared to the frontend; it just serves blobs without caring about what's in the blobs.}
+
+\p{The system configuration of this server is configured via nix, in the \code{infrastructure/} part of the repo. In order to change the system configuration, make sure that your ssh key is enabled for root access to the server (ask Owen for this). Then run:}
+
+\ol{
+\li{\code{nix develop}}
+\li{\code{deploy .#catcolab}}
+}
+
+\p{However, this will not update the version of catcolab that is running on the server. There is currently a somewhat manual process to do this, because Owen believes that it is important for people to understand the steps of the manual process so that they can debug things when they go wrong.}
+
+\p{On backend-next.catcolab.org, there is a git clone of the catcolab repository in \code{/var/lib/catcolab}. There is a daemon (managed via systemd) that runs \code{node dist/index.js} in \code{/var/lib/catcolab/packages/backend}. In order to upgrade the version of catcolab that is running on the server, one should:}
+
+\ol{
+\li{Log in via \code{ssh} into backend-next.catcolab.org (if you don't have an account with administrator access, ask Owen)}
+\li{Use \code{su} to become the user \code{catcolab}.}
+\li{\code{cd} into \code{/var/lib/catcolab/packages/backend}.}
+\li{Use \code{git} to checkout the desired version of catcolab.}
+\li{Run \code{npm run build} to produce a new \code{dist/index.js} file.}
+\li{Run as user root \code{systemctl stop catcolab}; this will temporarily stop the backend.}
+\li{Run as user catcolab in \code{/var/lib/catcolab/packages/backend} \code{npm run migrate}. This will update the database with new any migrations that have been added since the last time the database was migrated.}
+\li{Run as user root \code{systemctl start catcolab}; this will start back up the backend.}
+\li{(If there are no new migrations, the previous three commands can simply be accomplished via \code{systemctl restart catcolab})}
+\li{You can check the status of the catcolab daemon with \code{systemctl status catcolab}, or look at the log messages with \code{journalctl -u catcolab}.}
+}
+}

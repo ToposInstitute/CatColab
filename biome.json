@@ -1,6 +1,6 @@
 {
     "files": {
-        "ignore": ["dist/**", "docs/**", "catlog-wasm/**"]
+        "ignore": ["dist/**", "docs/**", "catlog-wasm/**", "**/queries.ts"]
     },
     "$schema": "https://biomejs.dev/schemas/1.8.3/schema.json",
     "organizeImports": {
@@ -29,6 +29,9 @@
             },
             "style": {
                 "noParameterAssign": {
+                    "level": "off"
+                },
+                "noUselessElse": {
                     "level": "off"
                 }
             }

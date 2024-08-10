@@ -1,0 +1,9 @@
+\date{2024-07-31}
+\taxon{table}
+\title{Refs}
+
+\p{We think of a ref as a "write head" for a stream of snapshots. A running CatColab server has an in-memory map from refs to automerge documents; there can be at most a single automerge document that is "controlling" a ref at a given time.}
+
+\p{Refs are identified by UUID, but also have editable metadata such as title, author(s), tags, etc (currently just title). Refs are linked to snapshots via [witnesses](dev-000D).}
+
+\p{Additionally, a ref has an "autosave" field which points to a snapshot. This autosave field is updated every time the automerge document connected to a ref updates. "Saving" a ref just means making a new [witness](dev-000D) that points to the ref and to the current autosave of the ref. The ref autosave then may update in the future, but witness's snapshot will remain unchanged, thus "saving" that the ref pointed to a certain snapshot at a certain point in time.}
