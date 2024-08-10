@@ -68,8 +68,6 @@ function App() {
             document.location.hash = refId;
         }
 
-        console.log(await client.getRefs.query());
-
         return {
             handle: repo.find(docId) as DocHandle<ModelNotebook>,
             refId: refId,
