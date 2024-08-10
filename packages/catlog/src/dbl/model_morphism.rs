@@ -118,7 +118,12 @@ where
 
     /** Finds morphisms between two models of a discrete double theory.
 
-    TODO
+    Morphisms are found using backtracking search. In general, there can be
+    infinitely many morphisms between two models, so not all of them can be
+    reported. The search is restricted to morphisms that send each basic
+    morphism in the domain to a [simple
+    path](crate::one::graph_algorithms::simple_paths) of basic morphisms in the
+    codomain.
     */
     pub fn morphisms<Cat>(
         dom: &DiscreteDblModel<DomId, Cat>,
@@ -273,20 +278,32 @@ mod tests {
     }
 
     #[test]
+    fn find_positive_loops() {
+        let th = Arc::new(th_signed_category());
+        let positive_loop = positive_loop(th.clone());
+        let pos = positive_loop.morphisms().next().unwrap();
+
+        let maps = DiscreteDblModelMapping::morphisms(&positive_loop, &positive_loop);
+        assert_eq!(maps.len(), 2);
+        assert!(matches!(maps[0].apply_mor(&pos), Some(Path::Id(_))));
+        assert!(matches!(maps[1].apply_mor(&pos), Some(Path::Seq(_))));
+    }
+
+    #[test]
     fn find_negative_loops() {
         let th = Arc::new(th_signed_category());
-        let dom = negative_loop(th.clone());
-        let ob = dom.objects().next().unwrap();
+        let negative_loop = negative_loop(th.clone());
+        let base_pt = negative_loop.objects().next().unwrap();
 
-        let mut cod = DiscreteDblModel::new(th.clone());
-        cod.add_ob('x', ustr("Object"));
-        cod.add_ob('y', ustr("Object"));
-        cod.add_mor('f', 'x', 'y', FinHom::Id(ustr("Object")));
-        cod.add_mor('g', 'y', 'x', FinHom::Generator(ustr("Negative")));
-        assert!(cod.validate().is_ok());
-        let maps = DiscreteDblModelMapping::morphisms(&dom, &cod);
+        let mut model = DiscreteDblModel::new(th);
+        model.add_ob('x', ustr("Object"));
+        model.add_ob('y', ustr("Object"));
+        model.add_mor('f', 'x', 'y', FinHom::Id(ustr("Object")));
+        model.add_mor('g', 'y', 'x', FinHom::Generator(ustr("Negative")));
+        assert!(model.validate().is_ok());
+        let maps = DiscreteDblModelMapping::morphisms(&negative_loop, &model);
         assert_eq!(maps.len(), 2);
-        assert_eq!(maps[0].apply_ob(&ob), Some('x'));
-        assert_eq!(maps[1].apply_ob(&ob), Some('y'));
+        assert_eq!(maps[0].apply_ob(&base_pt), Some('x'));
+        assert_eq!(maps[1].apply_ob(&base_pt), Some('y'));
     }
 }
