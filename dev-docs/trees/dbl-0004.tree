@@ -1,0 +1,26 @@
+\title{Tabulator of profunctor}
+\taxon{example}
+\import{macros}
+
+\p{The tabulator #{\top P} of a profunctor #{P: \cat{C} \proto \cat{D}} is its
+\nlab{category of elements}, defined such that there are projection functors
+#{\top P \to \cat{C}} and #{\top P \to \cat{D}}. Spelling this out, an object of
+#{\top P} is a triple #{(c,d,p)} such that #{c \in \cat{C}}, #{d \in \cat{D}},
+and #{p \in P(c,d)}, and a morphism #{(c,d,p) \to (c',d',p')} in #{\top P}
+consists of a morphisms #{f: c \to c'} and #{g: d \to d'} such that the square
+commutes:
+
+\quiver{
+% https://q.uiver.app/#q=WzAsNCxbMCwwLCJjIl0sWzEsMCwiZCJdLFsxLDEsImQnIl0sWzAsMSwiYyciXSxbMCwxLCJwIiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiZGFzaGVkIn19fV0sWzEsMiwiZyJdLFswLDMsImYiLDJdLFszLDIsInAnIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiZGFzaGVkIn19fV1d
+\begin{tikzcd}
+	c & d \\
+	{c'} & {d'}
+	\arrow["p", dashed, from=1-1, to=1-2]
+	\arrow["f"', from=1-1, to=2-1]
+	\arrow["g", from=1-2, to=2-2]
+	\arrow["{p'}"', dashed, from=2-1, to=2-2]
+\end{tikzcd}
+}}
+
+\p{Be warned that this is only of four possible ways to define the
+\nlab{graph of a profunctor}, as discussed on the nLab.}

@@ -1,8 +1,8 @@
-\title{CatColab: Design Documents}
+\title{CatColab: Developer Documentation}
 \import{macros}
 
 \subtree{
-\title{API Docs}
+\title{API Documentation}
 
 \ul{
   \li{[\code{catlog}](/dev/rust/catlog): Categorical logic core, in Rust}
@@ -22,6 +22,7 @@
   \tr{\td{[[dct-0004]]} \td{Sets} \td{Labels}}
   \tr{\td{[[dct-0005]]} \td{Deterministic transition systems, aka semiautomata} \td{State diagrams}}
 }
+\p{Background: [[dbl-0001]]}
 }
 
 \subtree{
