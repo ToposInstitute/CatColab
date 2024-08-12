@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
-FORESTER_TARBALL=forester-4.2.0-prerelease-x86_64-unknown-linux-musl.tar.gz
-FORESTER_URL=http://bafybeigtximvb4skcxbcynkx3asjtvkflwwnrig6aknmr4icpj2j44op3a.ipfs.w3s.link/$FORESTER_TARBALL
+FORESTER_URL=https://git.sr.ht/~jonsterling/ocaml-forester/archive/10e7c43441eddee5525f7967fa90496a4f1b4691.tar.gz
 
 curl -L -O $FORESTER_URL
 tar -xf $FORESTER_TARBALL
