@@ -1,0 +1,10 @@
+\title{Discrete object}
+\taxon{definition}
+\import{macros}
+
+\p{An object #{x} in a 2-category #{\mathcal{K}} is \define{discrete} if for any
+object #{y}, the hom-category #{\mathcal{K}(y,x)} is a discrete category.}
+
+\p{Similarly, an object in a double category (or a unital virtual double
+category) is \define{discrete} if it is a discrete object in the underlying
+2-category.}
