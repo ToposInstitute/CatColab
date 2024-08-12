@@ -1,10 +1,15 @@
-\title{Discrete object}
-\taxon{definition}
+\title{Some discrete models}
+\taxon{example}
 \import{macros}
 
-\p{An object #{x} in a 2-category #{\mathcal{K}} is \define{discrete} if for any
-object #{y}, the hom-category #{\mathcal{K}(y,x)} is a discrete category.}
+\ul{
 
-\p{Similarly, an object in a double category (or a unital virtual double
-category) is \define{discrete} if it is a discrete object in the underlying
-2-category.}
+\li{A discrete model of the trivial double theory is a \nlab{discrete category},
+which amounts to a set}
+\li{A discrete model of a discrete double theory amounts to a typed set}
+\li{A discrete model of the theory of pseudomonoids is a discrete monoidal category,
+which amounts to a monoid}
+\li{A discrete model of the theory of symmetric pseudomonoids is a discrete
+symmetric monoidal category, which amounts to a commutative monoid}
+
+}

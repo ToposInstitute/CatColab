@@ -1,9 +1,12 @@
 \title{Discrete models}
 \import{macros}
 
-\p{A model of a double theory is \em{discrete} if it has no nontrivial
-morphisms, generalizing a \nlab{discrete category}. To define discreteness
-formally, we can use a bit of abstract nonsense, the notion of a
-\nlab{discrete object in a 2-category}.}
+\p{A model of a double theory is \em{discrete} if it has no morphisms except
+those that it must, such as identities.}
 
 \transclude{dbl-0006}
+
+\p{To define discreteness formally, we can use a bit of abstract nonsense, the
+notion of a \nlab{discrete object in a 2-category}.}
+
+\transclude{dbl-0007}
