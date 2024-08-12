@@ -56,6 +56,10 @@
 \def\cat[name]{#{\mathsf{\name}}}
 \def\Set{#{\mathsf{Set}}}
 
+% 2-category theory
+
+\def\Cat{#{\mathbf{Cat}}}
+
 % Double category theory
 
 \def\proto{#{\mathrel{\mkern3mu\vcenter{\hbox{$\shortmid$}}\mkern-10mu{\to}}}}
