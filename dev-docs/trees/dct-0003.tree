@@ -56,7 +56,7 @@ always implicitly regulated by their source.}
 \title{Arrows versus twisted arrows}
 \taxon{Warning}
 
-\p{Recall that the [tabulator of a profunctor](dbl-0003) is its category of
+\p{Recall that the [tabulator of a profunctor](dbl-0004) is its category of
 elements, in the form where both projection functors are covariant. This
 category differs from the category of elements of the profunctor viewed as a
 copresheaf on a product category, which has one projection functor be covariant

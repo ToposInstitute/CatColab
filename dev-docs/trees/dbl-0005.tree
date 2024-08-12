@@ -1,0 +1,25 @@
+\title{Discrete models}
+\import{macros}
+
+\p{A model of a double theory is \em{discrete} if it has no morphisms except
+those that it must, such as identities.}
+
+\transclude{dbl-0006}
+
+\p{Discreteness is not defined as directly as one might think because, at least
+if we allow terminal objects in double theories, discrete models may be forced
+to include non-identity morphisms as constants. An example is the unit in the
+[double theory of monoids](thy-0004). This theory has exactly one discrete
+model, the trivial monoid. Thus, we cannot simply define a discrete model to be
+one with no non-identity morphisms. Rather than starting with a concrete
+definition, we define discreteness by the universal property it is supposed to
+satisfy.}
+
+\transclude{dbl-0007}
+
+\p{In the 2-categorical special case, discrete models can formulated using an
+existing bit of abstract nonsense, the notion of a
+\nlab{discrete object in a 2-category}.}
+
+\transclude{dbl-0008}
+\transclude{dbl-0009}

@@ -1,0 +1,8 @@
+\title{Profunctors}
+\taxon{doctrine}
+
+\p{Profunctors form a doctrine, being the models of the following simple double
+theory. Note that profunctors are viewed here as objects rather than morphisms,
+as for example in their role as database schemas.}
+
+\transclude{thy-0006}
