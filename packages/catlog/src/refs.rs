@@ -5,7 +5,7 @@ built when the crate is compiled with the `doc` feature and is not intended for
 any purpose besides documentation.
  */
 
-// NOTE: Preferably this data would be recorded in a structured way, e.g., as
+// NOTE: Bibliographic data ought to be recorded in a structured way, e.g., as
 // constant structs of some type `Reference`. This works fine in Rust but it
 // doesn't produce usable docs because rustdoc doesn't display constants except
 // in certain special cases.
@@ -65,3 +65,14 @@ Makkai, 2007: Computads and 2-dimensional pasting diagrams.
 <https://www.math.mcgill.ca/makkai/2dcomputads/>
  */
 pub const MakkaiComputadsPasting: () = ();
+
+/** Reference: Compositional account of biochemical regulatory networks.
+
+Rebekah Aduddell, James Fairbanks, Amit Kumar, Pablo S. Ocal, Evan Patterson,
+Brandon T. Shapiro, 2024: A compositional account of motifs, mechanisms, and
+dynamics in biochemical regulatory networks.
+
+- [DOI:10.32408/compositionality-6-2](https://doi.org/10.32408/compositionality-6-2)
+- [arXiv:2301.01445](https://arxiv.org/abs/2301.01445)
+ */
+pub const RegNets: () = ();

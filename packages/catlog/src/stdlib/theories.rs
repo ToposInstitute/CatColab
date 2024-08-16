@@ -30,7 +30,8 @@ pub fn th_schema() -> UstrDiscreteDblTheory {
 
 /** The theory of signed categories.
 
-A signed category is a category sliced over the group of signs.
+A [signed category](crate::refs::RegNets) is a category sliced over the group of
+nonzero signs.
  */
 pub fn th_signed_category() -> UstrDiscreteDblTheory {
     let mut sgn: UstrFinCategory = Default::default();
