@@ -209,7 +209,7 @@ indeed **discrete**, which can equivalently be defined as
 #[repr(transparent)]
 pub struct DiscreteDblTheory<Cat: FgCategory>(Cat);
 
-/// Discrete double theory with names of the type `Ustr`.
+/// A discrete double theory with keys of type `Ustr`.
 pub type UstrDiscreteDblTheory = DiscreteDblTheory<UstrFinCategory>;
 
 impl<C: FgCategory> DblTheory for DiscreteDblTheory<C>

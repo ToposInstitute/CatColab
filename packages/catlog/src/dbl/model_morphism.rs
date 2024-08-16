@@ -19,11 +19,15 @@ oplax.
  */
 
 use std::hash::Hash;
+use std::sync::Arc;
 
 use derivative::Derivative;
 
-use crate::one::Path;
+use crate::one::graph_algorithms::{simple_paths, spec_order};
+use crate::one::*;
 use crate::zero::{HashColumn, Mapping};
+
+use super::model::{DblModel, DiscreteDblModel};
 
 /** A mapping between models of a double theory.
 
@@ -66,7 +70,7 @@ pub trait DblModelMapping {
 Because a discrete double theory has only trivial operations, the naturality
 axioms for a model morphism also become trivial.
  */
-#[derive(Clone, Derivative)]
+#[derive(Clone, Debug, Derivative)]
 #[derivative(Default(bound = ""))]
 pub struct DiscreteDblModelMapping<DomId, CodId> {
     ob_map: HashColumn<DomId, CodId>,
@@ -111,6 +115,28 @@ where
     pub fn unassign_basic_mor(&mut self, e: &DomId) -> Option<Path<CodId, CodId>> {
         self.mor_map.unset(e)
     }
+
+    /** Finds morphisms between two models of a discrete double theory.
+
+    Morphisms are found using backtracking search. In general, there can be
+    infinitely many morphisms between two models, so not all of them can be
+    reported. The search is restricted to morphisms that send each basic
+    morphism in the domain to a [simple
+    path](crate::one::graph_algorithms::simple_paths) of basic morphisms in the
+    codomain.
+    */
+    pub fn morphisms<Cat>(
+        dom: &DiscreteDblModel<DomId, Cat>,
+        cod: &DiscreteDblModel<CodId, Cat>,
+    ) -> Vec<Self>
+    where
+        Cat: FgCategory,
+        Cat::Ob: Eq + Clone + Hash,
+        Cat::Hom: Eq + Clone + Hash,
+    {
+        let mut search = BacktrackingSearch::new(dom, cod);
+        search.find_all()
+    }
 }
 
 impl<DomId, CodId> DblModelMapping for DiscreteDblModelMapping<DomId, CodId>
@@ -145,9 +171,98 @@ where
     }
 }
 
+struct BacktrackingSearch<'a, DomId, CodId, Cat: FgCategory> {
+    dom: &'a DiscreteDblModel<DomId, Cat>,
+    cod: &'a DiscreteDblModel<CodId, Cat>,
+    map: DiscreteDblModelMapping<DomId, CodId>,
+    results: Vec<DiscreteDblModelMapping<DomId, CodId>>,
+    var_order: Vec<GraphElem<DomId, DomId>>,
+}
+
+impl<'a, DomId, CodId, Cat> BacktrackingSearch<'a, DomId, CodId, Cat>
+where
+    DomId: Clone + Eq + Hash,
+    CodId: Clone + Eq + Hash,
+    Cat: FgCategory,
+    Cat::Ob: Eq + Clone + Hash,
+    Cat::Hom: Eq + Clone + Hash,
+{
+    fn new(dom: &'a DiscreteDblModel<DomId, Cat>, cod: &'a DiscreteDblModel<CodId, Cat>) -> Self {
+        assert!(
+            Arc::ptr_eq(dom.theory(), cod.theory()),
+            "Domain and codomain model should have the same theory"
+        );
+        assert!(dom.is_free(), "Domain model should be free");
+
+        // Order the variables of the CSP, which are the elements of the domain
+        // graph. Prefer vertices with high degree since they are more
+        // constrained. This is a version of the well known "most constrained
+        // variable" heuristic in CSP.
+        let dom_graph = dom.generating_graph();
+        let mut vertices: Vec<_> = dom_graph.vertices().collect();
+        vertices.sort_by_key(|v| std::cmp::Reverse(dom_graph.degree(v)));
+        let var_order = spec_order(dom_graph, vertices.into_iter());
+
+        Self {
+            dom,
+            cod,
+            map: Default::default(),
+            results: Default::default(),
+            var_order,
+        }
+    }
+
+    fn find_all(&mut self) -> Vec<DiscreteDblModelMapping<DomId, CodId>> {
+        self.search(0);
+        std::mem::take(&mut self.results)
+    }
+
+    fn search(&mut self, depth: usize) {
+        if depth >= self.var_order.len() {
+            self.results.push(self.map.clone());
+            return;
+        }
+        let var = &self.var_order[depth];
+        match var.clone() {
+            GraphElem::Vertex(x) => {
+                for y in self.cod.objects_with_type(&self.dom.ob_type(&x)) {
+                    self.map.assign_ob(x.clone(), y);
+                    self.search(depth + 1);
+                }
+            }
+            GraphElem::Edge(m) => {
+                let path = Path::single(m);
+                let mor_type = self.dom.mor_type(&path);
+                let w = self
+                    .map
+                    .apply_ob(&self.dom.dom(&path))
+                    .expect("Domain has already been assigned");
+                let z = self
+                    .map
+                    .apply_ob(&self.dom.cod(&path))
+                    .expect("Codomain has already been assigned");
+                let m = path.only().unwrap();
+
+                let cod_graph = self.cod.generating_graph();
+                for path in simple_paths(cod_graph, &w, &z) {
+                    if self.cod.mor_type(&path) == mor_type {
+                        self.map.assign_basic_mor(m.clone(), path);
+                        self.search(depth + 1);
+                    }
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use ustr::ustr;
+
     use super::*;
+    use crate::one::fin_category::FinHom;
+    use crate::stdlib::*;
+    use crate::validate::Validate;
 
     #[test]
     fn discrete_dbl_model_mapping() {
@@ -160,5 +275,35 @@ mod tests {
         f.assign_basic_mor('g', Path::pair('r', 's'));
         assert!(f.is_mor_assigned(&Path::single('f')));
         assert_eq!(f.apply_mor(&Path::pair('f', 'g')), Path::from_vec(vec!['p', 'q', 'r', 's']));
+    }
+
+    #[test]
+    fn find_positive_loops() {
+        let th = Arc::new(th_signed_category());
+        let positive_loop = positive_loop(th.clone());
+        let pos = positive_loop.morphisms().next().unwrap();
+
+        let maps = DiscreteDblModelMapping::morphisms(&positive_loop, &positive_loop);
+        assert_eq!(maps.len(), 2);
+        assert!(matches!(maps[0].apply_mor(&pos), Some(Path::Id(_))));
+        assert!(matches!(maps[1].apply_mor(&pos), Some(Path::Seq(_))));
+    }
+
+    #[test]
+    fn find_negative_loops() {
+        let th = Arc::new(th_signed_category());
+        let negative_loop = negative_loop(th.clone());
+        let base_pt = negative_loop.objects().next().unwrap();
+
+        let mut model = DiscreteDblModel::new(th);
+        model.add_ob('x', ustr("Object"));
+        model.add_ob('y', ustr("Object"));
+        model.add_mor('f', 'x', 'y', FinHom::Id(ustr("Object")));
+        model.add_mor('g', 'y', 'x', FinHom::Generator(ustr("Negative")));
+        assert!(model.validate().is_ok());
+        let maps = DiscreteDblModelMapping::morphisms(&negative_loop, &model);
+        assert_eq!(maps.len(), 2);
+        assert_eq!(maps[0].apply_ob(&base_pt), Some('x'));
+        assert_eq!(maps[1].apply_ob(&base_pt), Some('y'));
     }
 }

@@ -50,8 +50,8 @@ impl From<Uuid> for Ob {
 /// Convert from morphism in a model of a discrete double theory.
 impl From<Path<Uuid, Uuid>> for Mor {
     fn from(path: Path<Uuid, Uuid>) -> Self {
-        if let Some(e) = path.only() {
-            Mor::Basic(*e)
+        if path.len() == 1 {
+            Mor::Basic(path.only().unwrap())
         } else {
             Mor::Composite(Box::new(path.map(Ob::Basic, Mor::Basic)))
         }
@@ -205,19 +205,19 @@ mod tests {
         assert!(model
             .add_ob(ObDecl {
                 id: x,
-                ob_type: ObType::Basic("entity".into()),
+                ob_type: ObType::Basic("Entity".into()),
             })
             .is_ok());
         assert!(model
             .add_ob(ObDecl {
                 id: y,
-                ob_type: ObType::Basic("attr_type".into()),
+                ob_type: ObType::Basic("AttrType".into()),
             })
             .is_ok());
         assert!(model
             .add_mor(MorDecl {
                 id: Uuid::now_v7(),
-                mor_type: MorType::Basic("attr".into()),
+                mor_type: MorType::Basic("Attr".into()),
                 dom: Some(Ob::Basic(x)),
                 cod: Some(Ob::Basic(y)),
             })

@@ -79,6 +79,24 @@ pub trait FinGraph: Graph {
     fn ne(&self) -> usize {
         self.edges().count()
     }
+
+    /// Number of edges incoming to a vertex.
+    fn in_degree(&self, v: &Self::V) -> usize {
+        self.in_edges(v).count()
+    }
+
+    /// Number of edges outgoing from a vertex.
+    fn out_degree(&self, v: &Self::V) -> usize {
+        self.out_edges(v).count()
+    }
+
+    /** Number of edges incoming to or outgoing from a vertex.
+
+    Self-loops are counted twice.
+     */
+    fn degree(&self, v: &Self::V) -> usize {
+        self.in_degree(v) + self.out_degree(v)
+    }
 }
 
 /** A finite graph backed by columns.
@@ -297,7 +315,7 @@ impl SkelGraph {
         e
     }
 
-    /// Makes a path graph of length `n`.
+    /// Makes a path graph with `n` vertices.
     #[cfg(test)]
     pub fn path(n: usize) -> Self {
         let mut g: Self = Default::default();
@@ -316,6 +334,15 @@ impl SkelGraph {
         g.add_edge(0, 1);
         g.add_edge(1, 2);
         g.add_edge(0, 2);
+        g
+    }
+
+    /// Make a cycle graph with `n` vertices.
+    #[cfg(test)]
+    pub fn cycle(n: usize) -> Self {
+        assert!(n > 0);
+        let mut g = SkelGraph::path(n);
+        g.add_edge(n - 1, 0);
         g
     }
 }
@@ -603,6 +630,20 @@ where
     }
 }
 
+/** An element in a graph.
+
+This type plays no role in the core API for graphs but is useful on rare
+occasion when heterogeneous collection of vertices *and* edges is needed.
+ */
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum GraphElem<V, E> {
+    /// A vertex in a graph.
+    Vertex(V),
+
+    /// An edge in a graph.
+    Edge(E),
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -616,6 +657,9 @@ mod tests {
         assert_eq!(g.tgt(&1), 2);
         assert_eq!(g.out_edges(&0).collect::<Vec<_>>(), vec![0, 2]);
         assert_eq!(g.in_edges(&2).collect::<Vec<_>>(), vec![1, 2]);
+        assert_eq!(g.out_degree(&0), 2);
+        assert_eq!(g.in_degree(&2), 2);
+        assert_eq!(g.degree(&1), 2);
     }
 
     #[test]

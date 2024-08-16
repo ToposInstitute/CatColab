@@ -47,6 +47,11 @@ where
     E: Eq + Hash + Clone,
     S: BuildHasher,
 {
+    /// Graph of generators of the finite category.
+    pub fn generators(&self) -> &impl FinGraph<V = V, E = E> {
+        &self.generators
+    }
+
     /// Adds an object generator, returning whether it is new.
     pub fn add_ob_generator(&mut self, v: V) -> bool {
         self.generators.add_vertex(v)
@@ -165,22 +170,41 @@ paths in the graph, so strictly speaking we work with morphism representatives
 rather than morphism themselves.
 
 Like the object and morphism generators, the equations are identified by keys.
-Depending on the application, these could be meaningful names for the axioms or
-meaningless unique identifiers.
+Depending on the application, these could be axiom names or meaningless IDs.
  */
 #[derive(Clone, Derivative)]
-#[derivative(Default(bound = ""))]
-pub struct FpCategory<V, E, EqKey> {
-    generators: HashGraph<V, E>,
-    equations: HashColumn<EqKey, PathEq<V, E>>,
+#[derivative(Default(bound = "S: Default"))]
+pub struct FpCategory<V, E, EqKey, S = RandomState> {
+    generators: HashGraph<V, E, S>,
+    equations: HashColumn<EqKey, PathEq<V, E>, S>,
 }
 
-impl<V, E, EqKey> FpCategory<V, E, EqKey>
+/// A finitely presented category with generators and equation keys of type
+/// `Ustr`.
+pub type UstrFpCategory = FpCategory<Ustr, Ustr, Ustr, BuildHasherDefault<IdentityHasher>>;
+
+impl<V, E, EqKey, S> FpCategory<V, E, EqKey, S>
 where
     V: Eq + Clone + Hash,
     E: Eq + Clone + Hash,
     EqKey: Eq + Clone + Hash,
+    S: BuildHasher,
 {
+    /// Graph of generators of the finitely presented category.
+    pub fn generators(&self) -> &impl FinGraph<V = V, E = E> {
+        &self.generators
+    }
+
+    /// Get a path equation by key.
+    pub fn get_equation(&self, key: &EqKey) -> Option<&PathEq<V, E>> {
+        self.equations.apply(key)
+    }
+
+    /// Iterates over path equations in the presentation.
+    pub fn equations(&self) -> impl Iterator<Item = &PathEq<V, E>> {
+        self.equations.values()
+    }
+
     /// Adds an object generator, returning whether it is new.
     pub fn add_ob_generator(&mut self, v: V) -> bool {
         self.generators.add_vertex(v)
@@ -234,19 +258,14 @@ where
         self.generators.update_tgt(e, v)
     }
 
-    /// Get path equation by key.
-    pub fn get_equation(&self, key: &EqKey) -> Option<&PathEq<V, E>> {
-        self.equations.apply(key)
-    }
-
-    /// Iterates over path equations in the presentation.
-    pub fn equations(&self) -> impl Iterator<Item = &PathEq<V, E>> {
-        self.equations.values()
-    }
-
     /// Adds a path equation to the presentation.
     pub fn add_equation(&mut self, key: EqKey, eq: PathEq<V, E>) {
         self.equations.set(key, eq);
+    }
+
+    /// Is the category freely generated?
+    pub fn is_free(&self) -> bool {
+        self.equations.is_empty()
     }
 
     /// Iterates over failures to be well-defined presentation of a category.
@@ -267,11 +286,12 @@ where
     }
 }
 
-impl<V, E, EqKey> Validate for FpCategory<V, E, EqKey>
+impl<V, E, EqKey, S> Validate for FpCategory<V, E, EqKey, S>
 where
     V: Eq + Clone + Hash,
     E: Eq + Clone + Hash,
     EqKey: Eq + Clone + Hash,
+    S: BuildHasher,
 {
     type ValidationError = InvalidFpCategory<E, EqKey>;
 
@@ -280,11 +300,12 @@ where
     }
 }
 
-impl<V, E, EqKey> Category for FpCategory<V, E, EqKey>
+impl<V, E, EqKey, S> Category for FpCategory<V, E, EqKey, S>
 where
     V: Eq + Clone + Hash,
     E: Eq + Clone + Hash,
     EqKey: Eq + Clone + Hash,
+    S: BuildHasher,
 {
     type Ob = V;
     type Hom = Path<V, E>;
@@ -307,11 +328,12 @@ where
     }
 }
 
-impl<V, E, EqKey> FgCategory for FpCategory<V, E, EqKey>
+impl<V, E, EqKey, S> FgCategory for FpCategory<V, E, EqKey, S>
 where
     V: Eq + Clone + Hash,
     E: Eq + Clone + Hash,
     EqKey: Eq + Clone + Hash,
+    S: BuildHasher,
 {
     fn has_ob_generator(&self, x: &V) -> bool {
         self.generators.has_vertex(x)
@@ -404,6 +426,7 @@ mod tests {
         sch_sgraph.add_hom_generator('s', 'E', 'V');
         sch_sgraph.add_hom_generator('t', 'E', 'V');
         sch_sgraph.add_hom_generator('i', 'E', 'E');
+        assert!(sch_sgraph.is_free());
         assert_eq!(sch_sgraph.ob_generators().count(), 2);
         assert_eq!(sch_sgraph.hom_generators().count(), 3);
         assert_eq!(sch_sgraph.dom(&Path::single('t')), 'E');
@@ -413,6 +436,7 @@ mod tests {
         sch_sgraph.add_equation("inv", PathEq::new(Path::pair('i', 'i'), Path::empty('E')));
         sch_sgraph.add_equation("rev_src", PathEq::new(Path::pair('i', 's'), Path::single('t')));
         sch_sgraph.add_equation("rev_tgt", PathEq::new(Path::pair('i', 't'), Path::single('s')));
+        assert!(!sch_sgraph.is_free());
         assert_eq!(sch_sgraph.equations().count(), 3);
         assert!(sch_sgraph.validate().is_ok());
 
