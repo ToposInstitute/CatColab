@@ -62,13 +62,14 @@ pub fn th_category_links() -> UstrDiscreteTabTheory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dbl::theory::DblTheory;
+    use crate::validate::Validate;
 
     #[test]
     fn theories() {
-        assert_eq!(th_category().basic_ob_types().count(), 1);
-        assert_eq!(th_schema().basic_ob_types().count(), 2);
-        assert_eq!(th_signed_category().basic_mor_types().count(), 1);
-        assert_eq!(th_category_links().basic_mor_types().count(), 1);
+        assert!(th_category().validate().is_ok());
+        assert!(th_schema().validate().is_ok());
+        assert!(th_signed_category().validate().is_ok());
+        // TODO: Validate discrete tabulator theories.
+        th_category_links();
     }
 }

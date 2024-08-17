@@ -79,6 +79,7 @@ use super::pasting::DblPasting;
 use crate::one::category::*;
 use crate::one::fin_category::UstrFinCategory;
 use crate::one::path::Path;
+use crate::validate::Validate;
 use crate::zero::*;
 
 /** A double theory.
@@ -279,6 +280,14 @@ where
             DblPasting::ProId(ms) => self.compose_types(Path::Seq(ms)),
             DblPasting::Diagram(_) => panic!("General pasting not implemented"),
         }
+    }
+}
+
+impl<C: FgCategory + Validate> Validate for DiscreteDblTheory<C> {
+    type ValidationError = C::ValidationError;
+
+    fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
+        self.0.validate()
     }
 }
 
