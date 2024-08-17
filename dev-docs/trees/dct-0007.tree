@@ -25,3 +25,10 @@ Nullable signed category generalize [signed categories](dct-0002).
 They are examples of "categories with null morphisms" in the sense of
 [Grandis](grandis-2013-homological).
 }
+
+\p{From a systems perspective, null morphisms appear in certain flavors of
+system map, such as the Participatory System Maps of [Barbrook-Johnson and
+Penn](barbrook-johnson-2022). In this context, the null morphisms do not mean
+"no effect" but rather an effect with a complex or unknown direction. It then
+makes sense that the composite of a null morphism with any other morphism
+(positive, negative, or null) is again null.}
