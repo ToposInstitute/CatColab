@@ -1,0 +1,27 @@
+\title{Nullable signed categories}
+\taxon{doctrine}
+\import{macros}
+
+\p{
+A nullable signed category is a category graded by possibly vanishing signs.
+
+To be more precise:
+}
+
+\subtree{
+\title{Nullable signed category}
+\taxon{definition}
+
+\p{A \define{nullable signed category} is a category sliced over the monoid
+#{\{+1,-1,0\}} of signs, including zero, under their usual multiplication.}
+
+}
+
+\transclude{thy-0007}
+
+\p{
+Nullable signed category generalize [signed categories](dct-0002).
+
+They are examples of "categories with null morphisms" in the sense of
+[Grandis](grandis-2013-homological).
+}
