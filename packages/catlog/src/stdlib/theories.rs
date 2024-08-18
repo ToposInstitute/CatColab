@@ -30,7 +30,8 @@ pub fn th_schema() -> UstrDiscreteDblTheory {
 
 /** The theory of signed categories.
 
-A signed category is a category sliced over the group of signs.
+A [signed category](crate::refs::RegNets) is a category sliced over the group of
+(nonzero) signs.
  */
 pub fn th_signed_category() -> UstrDiscreteDblTheory {
     let mut sgn: UstrFinCategory = Default::default();
@@ -38,6 +39,24 @@ pub fn th_signed_category() -> UstrDiscreteDblTheory {
     sgn.add_ob_generator(x);
     sgn.add_hom_generator(n, x, x);
     sgn.set_composite(n, n, FinHom::Id(x));
+    DiscreteDblTheory::from(sgn)
+}
+
+/** The theory of nullable signed categories.
+
+A nullable signed category is a category sliced over the monoid of signs,
+including zero.
+ */
+pub fn th_nullable_signed_category() -> UstrDiscreteDblTheory {
+    let mut sgn: UstrFinCategory = Default::default();
+    let (x, n, z) = (ustr("Object"), ustr("Negative"), ustr("Zero"));
+    sgn.add_ob_generator(x);
+    sgn.add_hom_generator(n, x, x);
+    sgn.add_hom_generator(z, x, x);
+    sgn.set_composite(n, n, FinHom::Id(x));
+    sgn.set_composite(z, z, FinHom::Generator(z));
+    sgn.set_composite(n, z, FinHom::Generator(z));
+    sgn.set_composite(z, n, FinHom::Generator(z));
     DiscreteDblTheory::from(sgn)
 }
 
@@ -61,13 +80,15 @@ pub fn th_category_links() -> UstrDiscreteTabTheory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dbl::theory::DblTheory;
+    use crate::validate::Validate;
 
     #[test]
     fn theories() {
-        assert_eq!(th_category().basic_ob_types().count(), 1);
-        assert_eq!(th_schema().basic_ob_types().count(), 2);
-        assert_eq!(th_signed_category().basic_mor_types().count(), 1);
-        assert_eq!(th_category_links().basic_mor_types().count(), 1);
+        assert!(th_category().validate().is_ok());
+        assert!(th_schema().validate().is_ok());
+        assert!(th_signed_category().validate().is_ok());
+        assert!(th_nullable_signed_category().validate().is_ok());
+        // TODO: Validate discrete tabulator theories.
+        th_category_links();
     }
 }

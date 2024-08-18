@@ -18,6 +18,7 @@
   \tr{\td{[[dct-0001]]} \td{Graphs} \td{...}}
   \tr{\td{[[dct-0006]]} \td{Bridges between graphs} \td{Database schemas}}
   \tr{\td{[[dct-0002]]} \td{Signed graphs} \td{Regulatory networks/causal loop diagrams}}
+  \tr{\td{[[dct-0007]]} \td{Nullable signed graphs} \td{Flavors of system maps}}
   \tr{\td{[[dct-0003]]} \td{Graphs with links} \td{Stock-flow diagrams}}
   \tr{\td{Commutative monoidal categories} \td{Petri nets} \td{Reaction networks}}
   \tr{\td{[[dct-0004]]} \td{Sets} \td{Labels}}

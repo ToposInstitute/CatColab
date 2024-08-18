@@ -74,6 +74,48 @@ where
     pub fn set_composite(&mut self, d: E, e: E, f: FinHom<V, E>) {
         self.compose_map.set((d, e), f);
     }
+
+    /// Iterates over failures to be a well-defined finite category.
+    pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidFinCategory<E>> + '_ {
+        let generator_errors = self.generators.iter_invalid().map(|err| match err {
+            InvalidGraphData::Src(e) => InvalidFinCategory::Dom(e),
+            InvalidGraphData::Tgt(e) => InvalidFinCategory::Cod(e),
+        });
+        let compose_errors = self.generators.edges().flat_map(move |e1| {
+            self.generators.edges().flat_map(move |e2| {
+                let mut errs = Vec::new();
+                if self.generators.tgt(&e1) != self.generators.src(&e2) {
+                    return errs;
+                }
+                let pair = (e1.clone(), e2.clone());
+                if let Some(composite) = self.compose_map.apply(&pair) {
+                    if self.dom(composite) != self.generators.src(&e1) {
+                        errs.push(InvalidFinCategory::CompositeDom(e1.clone(), e2.clone()));
+                    }
+                    if self.cod(composite) != self.generators.tgt(&e2) {
+                        errs.push(InvalidFinCategory::CompositeCod(pair.0, pair.1));
+                    }
+                } else {
+                    errs.push(InvalidFinCategory::Composite(pair.0, pair.1));
+                }
+                errs
+            })
+        });
+        generator_errors.chain(compose_errors)
+    }
+}
+
+impl<V, E, S> Validate for FinCategory<V, E, S>
+where
+    V: Eq + Hash + Clone,
+    E: Eq + Hash + Clone,
+    S: BuildHasher,
+{
+    type ValidationError = InvalidFinCategory<E>;
+
+    fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
+        validate::wrap_errors(self.iter_invalid())
+    }
 }
 
 impl<V, E, S> Category for FinCategory<V, E, S>
@@ -160,6 +202,30 @@ where
     fn generators_with_cod(&self, x: &V) -> impl Iterator<Item = FinHom<V, E>> {
         self.generators.in_edges(x).map(FinHom::Generator)
     }
+}
+
+/// A failure of a finite category to be well defined.
+#[derive(Debug, Error)]
+pub enum InvalidFinCategory<E> {
+    /// Morphism assigned a domain not contained in the category.
+    #[error("Domain of morphism `{0}` is not in the category")]
+    Dom(E),
+
+    /// Morphism assigned a codomain not contained in the category.
+    #[error("Codomain of morphism `{0}` is not in the category")]
+    Cod(E),
+
+    /// Composite of a pair of morphisms is not defined.
+    #[error("Composite of morphisms `{0}` and `{1}` is not defined")]
+    Composite(E, E),
+
+    /// Composite of a pair of morphisms has incompatible domain.
+    #[error("Composite of morphisms `{0}` and `{1}` has incompatible domain")]
+    CompositeDom(E, E),
+
+    /// Composite of a pair of morphisms has incompatible codomain.
+    #[error("Composite of morphisms `{0}` and `{1}` has incompatible codomain")]
+    CompositeCod(E, E),
 }
 
 /** A finitely presented category.
@@ -268,7 +334,7 @@ where
         self.equations.is_empty()
     }
 
-    /// Iterates over failures to be well-defined presentation of a category.
+    /// Iterates over failures to be a well-defined presentation of a category.
     pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidFpCategory<E, EqKey>> + '_ {
         let generator_errors = self.generators.iter_invalid().map(|err| match err {
             InvalidGraphData::Src(e) => InvalidFpCategory::Dom(e),
@@ -358,7 +424,7 @@ where
     }
 }
 
-/// An invalid generator or equation in a finitely presented category.
+/// A failure of a finite presentation of a category to be well defined.
 #[derive(Debug, Error)]
 pub enum InvalidFpCategory<E, EqKey> {
     /// Morphism generator assigned a domain not contained in the category.
@@ -404,10 +470,12 @@ mod tests {
         assert_eq!(sch_sgraph.hom_generators().count(), 3);
         assert_eq!(sch_sgraph.dom(&Hom::Generator('t')), 'E');
         assert_eq!(sch_sgraph.cod(&Hom::Generator('t')), 'V');
+        assert_eq!(sch_sgraph.validate().unwrap_err().len(), 3);
 
         sch_sgraph.set_composite('i', 'i', Hom::Id('E'));
         sch_sgraph.set_composite('i', 's', Hom::Generator('t'));
         sch_sgraph.set_composite('i', 't', Hom::Generator('s'));
+        assert!(sch_sgraph.validate().is_ok());
         assert_eq!(sch_sgraph.compose2(Hom::Generator('i'), Hom::Generator('i')), Hom::Id('E'));
         let path = Path::Seq(nonempty![
             Hom::Generator('i'),

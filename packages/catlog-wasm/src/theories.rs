@@ -23,6 +23,12 @@ pub fn th_signed_category() -> DblTheory {
     DblTheory::from_discrete(theories::th_signed_category())
 }
 
+/// The theory of nullable signed categories.
+#[wasm_bindgen(js_name = thNullableSignedCategory)]
+pub fn th_nullable_signed_category() -> DblTheory {
+    DblTheory::from_discrete(theories::th_nullable_signed_category())
+}
+
 /// The theory of categories with links.
 #[wasm_bindgen(js_name = thCategoryLinks)]
 pub fn th_category_links() -> DblTheory {
