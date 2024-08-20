@@ -14,7 +14,11 @@ serde-wasm = ["serde", "dep:wasm-bindgen", "dep:tsify-next"]
 archery = "1"
 derivative = "2"
 derive_more = { version = "1", features = ["from", "into"] }
+<<<<<<< HEAD
 either = "1"
+=======
+indoc = "2.0.5"
+>>>>>>> 2dba867 (basic math expression compiler + evaluator)
 nonempty = "0.10"
 ref-cast = "1"
 serde = { version = "1", features = ["derive"], optional = true }
