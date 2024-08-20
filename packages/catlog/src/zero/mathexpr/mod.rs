@@ -1,6 +1,6 @@
 //! Compilation and evaluation for simple mathematical expressions
 
-mod check;
+mod compiler;
 mod eval;
 mod lexer;
 mod parser;
@@ -9,5 +9,5 @@ mod span;
 mod syntax;
 mod token;
 
-pub use check::{compile, Context, Prog};
-pub use eval::{eval, Env};
+pub use compiler::{compile, Context, Prog};
+pub use eval::{run, Env, VecEnv};

@@ -3,6 +3,7 @@
 pub mod column;
 pub mod directories;
 pub mod mathexpr;
+pub mod ode;
 pub mod set;
 
 pub use self::column::*;

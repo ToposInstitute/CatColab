@@ -3,7 +3,7 @@ use super::pprint::DisplayWithSource;
 use super::pprint::WithSource;
 use super::span::Span;
 use super::syntax::*;
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::fmt::Write as _;
 use ustr::{ustr, Ustr};
 
@@ -24,51 +24,62 @@ impl DisplayWithSource for Error {
 }
 
 /// A context listing variables in scope
-pub struct Context {
-    vars: HashSet<Ustr>,
+pub struct Context<T: Clone> {
+    vars: HashMap<Ustr, T>,
 }
 
-impl Context {
+impl<T> Context<T>
+where
+    T: Clone,
+{
     /// Creates a new context with the given variables
-    pub fn new(vars: &[&str]) -> Self {
+    pub fn new(vars: &[(&str, T)]) -> Self {
         Self {
-            vars: HashSet::from_iter(vars.iter().map(|s| ustr(s))),
+            vars: HashMap::from_iter(vars.iter().map(|(s, v)| (ustr(s), v.clone()))),
         }
     }
 }
 
-fn check_accum(e: &Context, t: &Term, errors: &mut Vec<Error>) {
+pub(super) enum Compiled<T> {
+    Sum(Vec<(Sign, Compiled<T>)>),
+    Product(Vec<(LogSign, Compiled<T>)>),
+    Const(f32),
+    Var(T),
+}
+
+fn compile_term<T: Clone>(
+    e: &Context<T>,
+    t: &Term,
+    errors: &mut Vec<Error>,
+) -> Option<Compiled<T>> {
     match t {
-        Term::Sum(ts) => {
-            ts.iter().for_each(|(_, t)| check_accum(e, t, errors));
-        }
-        Term::Product(ts) => {
-            ts.iter().for_each(|(_, t)| check_accum(e, t, errors));
-        }
-        Term::Const(_) => (),
-        Term::Var(v, s) => {
-            if !e.vars.contains(v) {
+        Term::Sum(ts) => Some(Compiled::Sum(
+            ts.iter()
+                .map(|(s, t)| compile_term(e, t, errors).map(|c| (*s, c)))
+                .collect::<Option<Vec<(Sign, Compiled<T>)>>>()?,
+        )),
+        Term::Product(ts) => Some(Compiled::Product(
+            ts.iter()
+                .map(|(s, t)| compile_term(e, t, errors).map(|c| (*s, c)))
+                .collect::<Option<Vec<(LogSign, Compiled<T>)>>>()?,
+        )),
+        Term::Const(x) => Some(Compiled::Const(*x)),
+        Term::Var(v, s) => match e.vars.get(v) {
+            Some(t) => Some(Compiled::Var(t.clone())),
+            None => {
                 errors.push(Error::InvalidVariable(*s));
+                None
             }
-        }
-    };
-}
-
-pub(super) fn check(e: &Context, t: &Term) -> Result<(), Vec<Error>> {
-    let mut errors = Vec::new();
-    check_accum(e, t, &mut errors);
-    if !errors.is_empty() {
-        Err(errors)
-    } else {
-        Ok(())
+        },
     }
 }
 
-/// A program that computes some value given values for the free variables in the program.
+/// A program that computes some value given values for the free variables in the program,
+/// where the free variables are indexed by T.
 ///
 /// Currently, this is just a wrapper around a term, but in the future we could compile further,
 /// to a virtual machine or to webassembly.
-pub struct Prog(pub(super) Term);
+pub struct Prog<T>(pub(super) Compiled<T>);
 
 /// Compile a string to a program that will run in a environment where the free variables in e
 /// have been given value.
@@ -79,19 +90,20 @@ pub struct Prog(pub(super) Term);
 /// We currently don't expose these errors in a fine-grained way: we just return how they are
 /// displayed as strings so that we are free to change their internal representation; in the future
 /// we might think about how to expose more detailed errors to the user.
-pub fn compile(e: &Context, src: &str) -> Result<Prog, String> {
+pub fn compile<T: Clone>(e: &Context<T>, src: &str) -> Result<Prog<T>, String> {
     let t = match parser::parse(src) {
         Ok(t) => t,
         Err(e) => {
             return Err(format!("{}", WithSource::new(src, &e)));
         }
     };
-    match check(e, &t) {
-        Ok(_) => Ok(Prog(t)),
-        Err(errs) => {
+    let mut errors = Vec::new();
+    match compile_term(e, &t, &mut errors) {
+        Some(c) => Ok(Prog(c)),
+        None => {
             let mut s = String::new();
-            for err in errs {
-                writeln!(s, "{}", WithSource::new(src, &err)).unwrap();
+            for err in errors {
+                write!(s, "{}", WithSource::new(src, &err)).unwrap();
             }
             Err(s)
         }
@@ -100,34 +112,22 @@ pub fn compile(e: &Context, src: &str) -> Result<Prog, String> {
 
 #[cfg(test)]
 mod test {
-    use super::WithSource;
     use indoc::indoc;
 
-    use super::super::parser;
-    use super::{check, Context};
-    use std::fmt::Write as _;
+    use super::{compile, Context};
 
-    fn passes_check(e: &Context, src: &str) {
-        let t = parser::parse(src).unwrap();
-
-        assert!(check(e, &t).is_ok());
+    fn passes_check(e: &Context<()>, src: &str) {
+        assert!(compile(e, src).is_ok());
     }
 
-    fn fails_check(e: &Context, src: &str, message: &str) {
-        let t = parser::parse(src).unwrap();
-
-        let errors = check(e, &t).err().unwrap();
-
-        let mut s = String::new();
-        for error in errors.iter() {
-            write!(s, "{}", WithSource::new(src, error)).unwrap();
-        }
-        assert_eq!(&s, message);
+    fn fails_check(e: &Context<()>, src: &str, expected: &str) {
+        let error = compile(e, src).err().unwrap();
+        assert_eq!(&error, expected);
     }
 
     #[test]
     fn basic_check() {
-        let e = Context::new(&["a", "b"]);
+        let e = Context::new(&[("a", ()), ("b", ())]);
 
         passes_check(&e, "2 + a * b");
 

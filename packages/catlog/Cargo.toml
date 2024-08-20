@@ -18,10 +18,16 @@ derive_more = { version = "1", features = ["from", "into"] }
 either = "1"
 =======
 indoc = "2.0.5"
+<<<<<<< HEAD
 >>>>>>> 2dba867 (basic math expression compiler + evaluator)
+=======
+nalgebra = "^0.32.3"                                                 # specific version to be compatible with ode_solvers
+>>>>>>> 00338d3 (solve ODEs from user-provided expressions)
 nonempty = "0.10"
+ode_solvers = "0.4.0"
 ref-cast = "1"
 serde = { version = "1", features = ["derive"], optional = true }
+textplots = "0.8.6"
 thiserror = "1"
 tsify-next = { version = "0.5", features = ["js"], optional = true }
 ustr = "1"
