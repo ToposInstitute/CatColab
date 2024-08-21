@@ -1,7 +1,7 @@
 /*! Wasm bindings for double theories from the `catlog` standard library.
 
 Each struct in this modules provides a [`DblTheory`] plus possibly
-theory-specific analysis features for use in the frontend.
+theory-specific analysis methods.
  */
 
 use std::sync::Arc;

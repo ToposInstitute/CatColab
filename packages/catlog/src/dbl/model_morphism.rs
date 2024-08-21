@@ -25,7 +25,7 @@ use derivative::Derivative;
 
 use crate::one::graph_algorithms::{simple_paths, spec_order};
 use crate::one::*;
-use crate::zero::{HashColumn, Mapping};
+use crate::zero::{Column, HashColumn, Mapping};
 
 use super::model::{DblModel, DiscreteDblModel};
 
@@ -114,6 +114,45 @@ where
     /// Unassigns the mapping a basic morphism, returning the previous assignment.
     pub fn unassign_basic_mor(&mut self, e: &DomId) -> Option<Path<CodId, CodId>> {
         self.mor_map.unset(e)
+    }
+
+    /** Basic objects and morphisms in the image of the model morphism.
+
+    Note this method does not compute the set-theoretic image of the model
+    morphism, as the image of a functor need not even form a category
+    ([Math.SE](https://math.stackexchange.com/a/4399114)), nor does it compute
+    submodel spanned by the image, generalizing the subcategory spanned by the
+    image of a functor. Instead, this method constructs a "syntactical image"
+    comprising all *basic* objects and morphisms appearing in the image of the
+    model morphism, possibly inside composites.
+     */
+    pub fn syntactic_image<Cat>(
+        &self,
+        cod: &DiscreteDblModel<CodId, Cat>,
+    ) -> DiscreteDblModel<CodId, Cat>
+    where
+        Cat: FgCategory,
+        Cat::Ob: Eq + Clone + Hash,
+        Cat::Hom: Eq + Clone + Hash,
+    {
+        // TODO: For non-free models, we should filter the equations to those
+        // involving only generators that appear in the image.
+        assert!(cod.is_free(), "Codomain model should be free");
+
+        let mut im = DiscreteDblModel::new(cod.theory().clone());
+        for x in self.ob_map.values() {
+            im.add_ob(x.clone(), cod.ob_type(x));
+        }
+        for path in self.mor_map.values() {
+            for e in path.iter() {
+                let p = Path::single(e.clone());
+                let (x, y) = (cod.dom(&p), cod.cod(&p));
+                im.add_ob(x.clone(), cod.ob_type(&x));
+                im.add_ob(y.clone(), cod.ob_type(&y));
+                im.add_mor(e.clone(), x, y, cod.mor_type(&p));
+            }
+        }
+        im
     }
 
     /** Finds morphisms between two models of a discrete double theory.
@@ -260,12 +299,11 @@ mod tests {
     use ustr::ustr;
 
     use super::*;
-    use crate::one::fin_category::FinHom;
     use crate::stdlib::*;
     use crate::validate::Validate;
 
     #[test]
-    fn discrete_dbl_model_mapping() {
+    fn discrete_model_mapping() {
         let mut f: DiscreteDblModelMapping<_, _> = Default::default();
         f.assign_ob('a', 'x');
         f.assign_ob('b', 'y');
@@ -295,15 +333,15 @@ mod tests {
         let negative_loop = negative_loop(th.clone());
         let base_pt = negative_loop.objects().next().unwrap();
 
-        let mut model = DiscreteDblModel::new(th);
-        model.add_ob('x', ustr("Object"));
-        model.add_ob('y', ustr("Object"));
-        model.add_mor('f', 'x', 'y', FinHom::Id(ustr("Object")));
-        model.add_mor('g', 'y', 'x', FinHom::Generator(ustr("Negative")));
-        assert!(model.validate().is_ok());
-        let maps = DiscreteDblModelMapping::morphisms(&negative_loop, &model);
+        let negative_feedback = negative_feedback(th);
+        let maps = DiscreteDblModelMapping::morphisms(&negative_loop, &negative_feedback);
         assert_eq!(maps.len(), 2);
-        assert_eq!(maps[0].apply_ob(&base_pt), Some('x'));
-        assert_eq!(maps[1].apply_ob(&base_pt), Some('y'));
+        assert_eq!(maps[0].apply_ob(&base_pt), Some(ustr("x")));
+        assert_eq!(maps[1].apply_ob(&base_pt), Some(ustr("y")));
+
+        let im = maps[0].syntactic_image(&negative_feedback);
+        assert!(im.validate().is_ok());
+        assert!(im.has_mor(&Path::single(ustr("positive"))));
+        assert!(im.has_mor(&Path::single(ustr("negative"))));
     }
 }
