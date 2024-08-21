@@ -1,11 +1,7 @@
 After thoroughly considering our options, we have decided to use no ORMs and to
-roll our own migration library. It was not that hard, and all of the ORMs and
-standalone migration tools that we looked at were bad. PostgreSQL has a lot of
-really neat features that would probably be hidden from us by an ORM that was
-database-agnostic.
-
-Our migration library is probably also bad, but at least it is very easy to
-understand. It creates a table called "migrations" in the database, if such a
+roll our own migration library. Our migration library is probably bad, but 
+at least it is very easy to understand. 
+It creates a table called "migrations" in the database, if such a
 table doesn't already exist. It then runs, in alphabetical order, every
 migration in `migrations/` that doesn't end in `.undo.sql` and that doesn't
 exist in the migrations table; when migrations are run successfully they are
