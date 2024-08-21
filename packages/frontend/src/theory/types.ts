@@ -37,7 +37,7 @@ export class TheoryMeta {
         id: string;
         name: string;
         description?: string;
-        theory: () => DblTheory;
+        theory: DblTheory;
         types?: TypeMeta[];
         modelViews?: ModelView[];
         onlyFreeModels?: boolean;
@@ -48,7 +48,7 @@ export class TheoryMeta {
 
         this.obTypeIndex = new ObTypeIndex();
         this.morTypeIndex = new MorTypeIndex();
-        this.theory = props.theory();
+        this.theory = props.theory;
         this.types = [];
         props.types?.forEach(this.bindType, this);
 

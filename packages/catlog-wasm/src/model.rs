@@ -199,7 +199,8 @@ mod tests {
 
     #[test]
     fn model_schema() {
-        let mut model = DblModel::new(&th_schema());
+        let th = ThSchema::new().theory();
+        let mut model = DblModel::new(&th);
         let x = Uuid::now_v7();
         let y = Uuid::now_v7();
         assert!(model

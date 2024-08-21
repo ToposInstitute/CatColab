@@ -1,38 +1,100 @@
-//! Wasm bindings for double theories from the standard library in `catlog`.
+/*! Wasm bindings for double theories from the `catlog` standard library.
+
+Each struct in this modules provides a [`DblTheory`] plus possibly
+theory-specific analysis features for use in the frontend.
+ */
+
+use std::sync::Arc;
 
 use wasm_bindgen::prelude::*;
 
 use super::theory::DblTheory;
+use catlog::dbl::theory;
 use catlog::stdlib::theories;
 
 /// The theory of categories.
-#[wasm_bindgen(js_name = thCategory)]
-pub fn th_category() -> DblTheory {
-    DblTheory::from_discrete(theories::th_category())
+#[wasm_bindgen]
+pub struct ThCategory(Arc<theory::UstrDiscreteDblTheory>);
+
+#[wasm_bindgen]
+impl ThCategory {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self(Arc::new(theories::th_category()))
+    }
+
+    #[wasm_bindgen]
+    pub fn theory(&self) -> DblTheory {
+        DblTheory::from_discrete(self.0.clone())
+    }
 }
 
 /// The theory of database schemas with attributes.
-#[wasm_bindgen(js_name = thSchema)]
-pub fn th_schema() -> DblTheory {
-    DblTheory::from_discrete(theories::th_schema())
+#[wasm_bindgen]
+pub struct ThSchema(Arc<theory::UstrDiscreteDblTheory>);
+
+#[wasm_bindgen]
+impl ThSchema {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self(Arc::new(theories::th_schema()))
+    }
+
+    #[wasm_bindgen]
+    pub fn theory(&self) -> DblTheory {
+        DblTheory::from_discrete(self.0.clone())
+    }
 }
 
 /// The theory of signed categories.
-#[wasm_bindgen(js_name = thSignedCategory)]
-pub fn th_signed_category() -> DblTheory {
-    DblTheory::from_discrete(theories::th_signed_category())
+#[wasm_bindgen]
+pub struct ThSignedCategory(Arc<theory::UstrDiscreteDblTheory>);
+
+#[wasm_bindgen]
+impl ThSignedCategory {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self(Arc::new(theories::th_signed_category()))
+    }
+
+    #[wasm_bindgen]
+    pub fn theory(&self) -> DblTheory {
+        DblTheory::from_discrete(self.0.clone())
+    }
 }
 
 /// The theory of nullable signed categories.
-#[wasm_bindgen(js_name = thNullableSignedCategory)]
-pub fn th_nullable_signed_category() -> DblTheory {
-    DblTheory::from_discrete(theories::th_nullable_signed_category())
+#[wasm_bindgen]
+pub struct ThNullableSignedCategory(Arc<theory::UstrDiscreteDblTheory>);
+
+#[wasm_bindgen]
+impl ThNullableSignedCategory {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self(Arc::new(theories::th_nullable_signed_category()))
+    }
+
+    #[wasm_bindgen]
+    pub fn theory(&self) -> DblTheory {
+        DblTheory::from_discrete(self.0.clone())
+    }
 }
 
 /// The theory of categories with links.
-#[wasm_bindgen(js_name = thCategoryLinks)]
-pub fn th_category_links() -> DblTheory {
-    DblTheory::from_discrete_tabulator(theories::th_category_links())
+#[wasm_bindgen]
+pub struct ThCategoryLinks(Arc<theory::UstrDiscreteTabTheory>);
+
+#[wasm_bindgen]
+impl ThCategoryLinks {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self(Arc::new(theories::th_category_links()))
+    }
+
+    #[wasm_bindgen]
+    pub fn theory(&self) -> DblTheory {
+        DblTheory::from_discrete_tabulator(self.0.clone())
+    }
 }
 
 #[cfg(test)]
@@ -43,7 +105,7 @@ mod tests {
 
     #[test]
     fn discrete_dbl_theory() {
-        let th = th_schema();
+        let th = ThSchema::new().theory();
         let entity = ObType::Basic(ustr("Entity"));
         let attr_type = ObType::Basic(ustr("AttrType"));
         let attr = MorType::Basic(ustr("Attr"));
@@ -53,7 +115,7 @@ mod tests {
 
     #[test]
     fn discrete_tab_theory() {
-        let th = th_category_links();
+        let th = ThCategoryLinks::new().theory();
         let x = ObType::Basic(ustr("Object"));
         let link = MorType::Basic(ustr("Link"));
         assert_eq!(th.src(link.clone()), Ok(x));

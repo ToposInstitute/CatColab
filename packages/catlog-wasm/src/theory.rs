@@ -10,7 +10,8 @@ use serde::{Deserialize, Serialize};
 use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
-use catlog::dbl::theory::{self as dbl_theory, DblTheory as BaseDblTheory, TabMorType, TabObType};
+use catlog::dbl::theory;
+use catlog::dbl::theory::{DblTheory as BaseDblTheory, TabMorType, TabObType};
 use catlog::one::fin_category::*;
 
 /// Object type in a double theory.
@@ -130,8 +131,8 @@ underlying double theory, but `wasm-bindgen` does not support
 explicitly enumerate the supported kinds of double theories in this enum.
  */
 pub(crate) enum DblTheoryWrapper {
-    Discrete(Arc<dbl_theory::UstrDiscreteDblTheory>),
-    DiscreteTab(Arc<dbl_theory::UstrDiscreteTabTheory>),
+    Discrete(Arc<theory::UstrDiscreteDblTheory>),
+    DiscreteTab(Arc<theory::UstrDiscreteTabTheory>),
 }
 
 /** Wasm bindings for a double theory.
@@ -141,12 +142,12 @@ pub struct DblTheory(pub(crate) DblTheoryWrapper);
 
 #[wasm_bindgen]
 impl DblTheory {
-    pub(crate) fn from_discrete(theory: dbl_theory::UstrDiscreteDblTheory) -> Self {
-        Self(DblTheoryWrapper::Discrete(Arc::new(theory)))
+    pub(crate) fn from_discrete(theory: Arc<theory::UstrDiscreteDblTheory>) -> Self {
+        Self(DblTheoryWrapper::Discrete(theory))
     }
 
-    pub(crate) fn from_discrete_tabulator(theory: dbl_theory::UstrDiscreteTabTheory) -> Self {
-        Self(DblTheoryWrapper::DiscreteTab(Arc::new(theory)))
+    pub(crate) fn from_discrete_tabulator(theory: Arc<theory::UstrDiscreteTabTheory>) -> Self {
+        Self(DblTheoryWrapper::DiscreteTab(theory))
     }
 
     /// Kind of double theory ("double doctrine").
