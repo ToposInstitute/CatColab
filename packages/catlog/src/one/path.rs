@@ -4,6 +4,7 @@ The central data type is [`Path`]. In addition, this module provides a simple
 data type for [path equations](`PathEq`).
 */
 
+use either::Either;
 use nonempty::{nonempty, NonEmpty};
 
 #[cfg(feature = "serde")]
@@ -95,6 +96,17 @@ impl<V, E> Path<V, E> {
         match self {
             Path::Id(_) => true,
             Path::Seq(_) => false,
+        }
+    }
+
+    /** Iterates over edges in the path, if any.
+
+    This method is a one-sided inverse to [`Path::collect`].
+     */
+    pub fn iter(&self) -> impl Iterator<Item = &E> {
+        match self {
+            Path::Id(_) => Either::Left(std::iter::empty()),
+            Path::Seq(edges) => Either::Right(edges.iter()),
         }
     }
 
@@ -371,10 +383,15 @@ mod tests {
 
     #[test]
     fn map_path() {
-        assert_eq!(SkelPath::Id(1).map(|v| v + 1, identity), Path::Id(2));
-        assert_eq!(SkelPath::pair(0, 1).map(identity, |e| e + 1), Path::pair(1, 2));
-        assert_eq!(SkelPath::Id(1).partial_map(|v| Some(v + 1), Some), Some(Path::Id(2)));
-        assert_eq!(SkelPath::pair(0, 1).partial_map(Some, |e| Some(e + 1)), Some(Path::pair(1, 2)));
+        let id = SkelPath::Id(1);
+        assert_eq!(id.iter().count(), 0);
+        assert_eq!(id.clone().map(|v| v + 1, identity), Path::Id(2));
+        assert_eq!(id.partial_map(|v| Some(v + 1), Some), Some(Path::Id(2)));
+
+        let pair = SkelPath::pair(0, 1);
+        assert_eq!(pair.iter().count(), 2);
+        assert_eq!(pair.clone().map(identity, |e| e + 1), Path::pair(1, 2));
+        assert_eq!(pair.partial_map(Some, |e| Some(e + 1)), Some(Path::pair(1, 2)));
     }
 
     #[test]
