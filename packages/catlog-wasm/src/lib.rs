@@ -1,6 +1,8 @@
 pub mod model;
-pub mod theories;
 pub mod theory;
+
+#[allow(clippy::new_without_default)]
+pub mod theories;
 
 use wasm_bindgen::prelude::*;
 

@@ -123,14 +123,14 @@ impl TryFrom<MorType> for TabMorType<Ustr, Ustr> {
     }
 }
 
-/** Wrapper for double theories of various kinds.
+/** A box containing a double theory of any kind.
 
-Ideally the Wasm-bound `DblTheory` would just have a type parameter for the
+Ideally the Wasm-bound [`DblTheory`] would just have a type parameter for the
 underlying double theory, but `wasm-bindgen` does not support
 [generics](https://github.com/rustwasm/wasm-bindgen/issues/3309). Instead, we
 explicitly enumerate the supported kinds of double theories in this enum.
  */
-pub(crate) enum DblTheoryWrapper {
+pub enum DblTheoryBox {
     Discrete(Arc<theory::UstrDiscreteDblTheory>),
     DiscreteTab(Arc<theory::UstrDiscreteTabTheory>),
 }
@@ -138,16 +138,18 @@ pub(crate) enum DblTheoryWrapper {
 /** Wasm bindings for a double theory.
  */
 #[wasm_bindgen]
-pub struct DblTheory(pub(crate) DblTheoryWrapper);
+pub struct DblTheory(#[wasm_bindgen(skip)] pub DblTheoryBox);
 
 #[wasm_bindgen]
 impl DblTheory {
+    /// Wraps a discrete double theory.
     pub(crate) fn from_discrete(theory: Arc<theory::UstrDiscreteDblTheory>) -> Self {
-        Self(DblTheoryWrapper::Discrete(theory))
+        Self(DblTheoryBox::Discrete(theory))
     }
 
+    /// Wraps a discrete tabulator theory.
     pub(crate) fn from_discrete_tabulator(theory: Arc<theory::UstrDiscreteTabTheory>) -> Self {
-        Self(DblTheoryWrapper::DiscreteTab(theory))
+        Self(DblTheoryBox::DiscreteTab(theory))
     }
 
     /// Kind of double theory ("double doctrine").
@@ -155,8 +157,8 @@ impl DblTheory {
     pub fn kind(&self) -> String {
         // TODO: Should return an enum so that we get type defs.
         match &self.0 {
-            DblTheoryWrapper::Discrete(_) => "Discrete",
-            DblTheoryWrapper::DiscreteTab(_) => "DiscreteTab",
+            DblTheoryBox::Discrete(_) => "Discrete",
+            DblTheoryBox::DiscreteTab(_) => "DiscreteTab",
         }
         .into()
     }
@@ -165,7 +167,7 @@ impl DblTheory {
     #[wasm_bindgen]
     pub fn src(&self, mor_type: MorType) -> Result<ObType, String> {
         all_the_same!(match &self.0 {
-            DblTheoryWrapper::[Discrete, DiscreteTab](th) => {
+            DblTheoryBox::[Discrete, DiscreteTab](th) => {
                 let m = mor_type.try_into()?;
                 Ok(th.src(&m).into())
             }
@@ -176,7 +178,7 @@ impl DblTheory {
     #[wasm_bindgen]
     pub fn tgt(&self, mor_type: MorType) -> Result<ObType, String> {
         all_the_same!(match &self.0 {
-            DblTheoryWrapper::[Discrete, DiscreteTab](th) => {
+            DblTheoryBox::[Discrete, DiscreteTab](th) => {
                 let m = mor_type.try_into()?;
                 Ok(th.tgt(&m).into())
             }
