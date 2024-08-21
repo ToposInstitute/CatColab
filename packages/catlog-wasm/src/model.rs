@@ -133,7 +133,7 @@ impl DblModel {
     /// Creates an empty model of the given theory.
     #[wasm_bindgen(constructor)]
     pub fn new(theory: &DblTheory) -> Self {
-        let wrapper = match &theory.theory {
+        let wrapper = match &theory.0 {
             DblTheoryWrapper::Discrete(th) => {
                 DblModelWrapper::Discrete(UuidDiscreteDblModel::new(th.clone()))
             }

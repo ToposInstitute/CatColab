@@ -2,6 +2,7 @@ import type { KbdKey } from "@solid-primitives/keyboard";
 import type { Component } from "solid-js";
 
 import type { DblTheory, MorType, ObType } from "catlog-wasm";
+import { MorTypeIndex, ObTypeIndex } from "catlog-wasm";
 import type { ModelJudgment } from "../model";
 import type { ArrowStyle } from "../visualization/types";
 
@@ -29,6 +30,9 @@ export class TheoryMeta {
     /** Whether models of the double theory are constrained to be free. */
     readonly onlyFreeModels!: boolean;
 
+    private readonly obTypeIndex: ObTypeIndex;
+    private readonly morTypeIndex: MorTypeIndex;
+
     constructor(props: {
         id: string;
         name: string;
@@ -42,6 +46,8 @@ export class TheoryMeta {
         this.name = props.name;
         this.description = props.description;
 
+        this.obTypeIndex = new ObTypeIndex();
+        this.morTypeIndex = new MorTypeIndex();
         this.theory = props.theory();
         this.types = [];
         props.types?.forEach(this.bindType, this);
@@ -53,22 +59,22 @@ export class TheoryMeta {
     private bindType(meta: TypeMeta) {
         const index = this.types.length;
         if (meta.tag === "ObType") {
-            this.theory.setObTypeIndex(meta.obType, index);
+            this.obTypeIndex.set(meta.obType, index);
         } else if (meta.tag === "MorType") {
-            this.theory.setMorTypeIndex(meta.morType, index);
+            this.morTypeIndex.set(meta.morType, index);
         }
         this.types.push(meta);
     }
 
     /** Get metadata associated with object type. */
     getObTypeMeta(typ: ObType): ObTypeMeta | undefined {
-        const i = this.theory.obTypeIndex(typ);
+        const i = this.obTypeIndex.get(typ);
         return i != null ? (this.types[i] as ObTypeMeta) : undefined;
     }
 
     /** Get metadata associated with morphism type. */
     getMorTypeMeta(typ: MorType): MorTypeMeta | undefined {
-        const i = this.theory.morTypeIndex(typ);
+        const i = this.morTypeIndex.get(typ);
         return i != null ? (this.types[i] as MorTypeMeta) : undefined;
     }
 }
