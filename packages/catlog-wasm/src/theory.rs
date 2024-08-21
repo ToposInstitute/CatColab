@@ -140,18 +140,22 @@ pub enum DblTheoryBox {
 #[wasm_bindgen]
 pub struct DblTheory(#[wasm_bindgen(skip)] pub DblTheoryBox);
 
-#[wasm_bindgen]
-impl DblTheory {
-    /// Wraps a discrete double theory.
-    pub(crate) fn from_discrete(theory: Arc<theory::UstrDiscreteDblTheory>) -> Self {
+/// Converts from a discrete double theory.
+impl From<Arc<theory::UstrDiscreteDblTheory>> for DblTheory {
+    fn from(theory: Arc<theory::UstrDiscreteDblTheory>) -> Self {
         Self(DblTheoryBox::Discrete(theory))
     }
+}
 
-    /// Wraps a discrete tabulator theory.
-    pub(crate) fn from_discrete_tabulator(theory: Arc<theory::UstrDiscreteTabTheory>) -> Self {
+/// Converts from a discrete tabulator theory.
+impl From<Arc<theory::UstrDiscreteTabTheory>> for DblTheory {
+    fn from(theory: Arc<theory::UstrDiscreteTabTheory>) -> Self {
         Self(DblTheoryBox::DiscreteTab(theory))
     }
+}
 
+#[wasm_bindgen]
+impl DblTheory {
     /// Kind of double theory ("double doctrine").
     #[wasm_bindgen(getter)]
     pub fn kind(&self) -> String {

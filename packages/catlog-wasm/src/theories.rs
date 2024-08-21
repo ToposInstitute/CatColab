@@ -25,7 +25,7 @@ impl ThCategory {
 
     #[wasm_bindgen]
     pub fn theory(&self) -> DblTheory {
-        DblTheory::from_discrete(self.0.clone())
+        self.0.clone().into()
     }
 }
 
@@ -42,7 +42,7 @@ impl ThSchema {
 
     #[wasm_bindgen]
     pub fn theory(&self) -> DblTheory {
-        DblTheory::from_discrete(self.0.clone())
+        self.0.clone().into()
     }
 }
 
@@ -59,7 +59,7 @@ impl ThSignedCategory {
 
     #[wasm_bindgen]
     pub fn theory(&self) -> DblTheory {
-        DblTheory::from_discrete(self.0.clone())
+        self.0.clone().into()
     }
 }
 
@@ -76,7 +76,7 @@ impl ThNullableSignedCategory {
 
     #[wasm_bindgen]
     pub fn theory(&self) -> DblTheory {
-        DblTheory::from_discrete(self.0.clone())
+        self.0.clone().into()
     }
 }
 
@@ -93,7 +93,7 @@ impl ThCategoryLinks {
 
     #[wasm_bindgen]
     pub fn theory(&self) -> DblTheory {
-        DblTheory::from_discrete_tabulator(self.0.clone())
+        self.0.clone().into()
     }
 }
 
