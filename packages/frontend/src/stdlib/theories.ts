@@ -9,7 +9,7 @@ import svgStyles from "./svg_styles.module.css";
 
 /** Standard library of double theories supported by frontend.
 
-TODO: Should the underlying theories be lazy loaded?
+TODO: the theories be lazily constructed apart from top-level metadata.
  */
 export const stdTheories = () =>
     uniqueIndexArray(
@@ -17,12 +17,13 @@ export const stdTheories = () =>
         (th) => th.id,
     );
 
-const thSimpleOlog = () =>
-    new TheoryMeta({
+const thSimpleOlog = () => {
+    const thCategory = new catlog.ThCategory();
+    return new TheoryMeta({
         id: "simple-olog",
         name: "Olog",
         description: "Ontology log, a simple conceptual model",
-        theory: catlog.thCategory,
+        theory: thCategory.theory(),
         types: [
             {
                 tag: "ObType",
@@ -52,13 +53,15 @@ const thSimpleOlog = () =>
             },
         ],
     });
+};
 
-const thSimpleSchema = () =>
-    new TheoryMeta({
+const thSimpleSchema = () => {
+    const thSchema = new catlog.ThSchema();
+    return new TheoryMeta({
         id: "schema",
         name: "Schema",
         description: "Schema for a categorical database",
-        theory: catlog.thSchema,
+        theory: thSchema.theory(),
         types: [
             {
                 tag: "ObType",
@@ -115,12 +118,14 @@ const thSimpleSchema = () =>
             },
         ],
     });
+};
 
-const thRegNet = () =>
-    new TheoryMeta({
+const thRegNet = () => {
+    const thSignedCategory = new catlog.ThSignedCategory();
+    return new TheoryMeta({
         id: "reg-net",
         name: "Regulatory network",
-        theory: catlog.thSignedCategory,
+        theory: thSignedCategory.theory(),
         onlyFreeModels: true,
         types: [
             {
@@ -159,12 +164,14 @@ const thRegNet = () =>
             },
         ],
     });
+};
 
-const thCausalLoop = () =>
-    new TheoryMeta({
+const thCausalLoop = () => {
+    const thSignedCategory = new catlog.ThSignedCategory();
+    return new TheoryMeta({
         id: "causal-loop",
         name: "Causal loop diagram",
-        theory: catlog.thSignedCategory,
+        theory: thSignedCategory.theory(),
         onlyFreeModels: true,
         types: [
             {
@@ -204,12 +211,14 @@ const thCausalLoop = () =>
             },
         ],
     });
+};
 
-const thStockFlow = () =>
-    new TheoryMeta({
+const thStockFlow = () => {
+    const thCategoryLinks = new catlog.ThCategoryLinks();
+    return new TheoryMeta({
         id: "stock-flow",
         name: "Stock and flow",
-        theory: catlog.thCategoryLinks,
+        theory: thCategoryLinks.theory(),
         onlyFreeModels: true,
         types: [
             {
@@ -249,3 +258,4 @@ const thStockFlow = () =>
             },
         ],
     });
+};

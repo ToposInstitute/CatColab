@@ -211,7 +211,7 @@ where
         &self.theory
     }
 
-    /// Graph that generates the object and morphisms of the model.
+    /// Graph of object and morphism generators for the model.
     pub fn generating_graph(&self) -> &impl FinGraph<V = Id, E = Id> {
         self.category.generators()
     }

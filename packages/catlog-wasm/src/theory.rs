@@ -10,7 +10,8 @@ use serde::{Deserialize, Serialize};
 use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
-use catlog::dbl::theory::{self as dbl_theory, DblTheory as BaseDblTheory, TabMorType, TabObType};
+use catlog::dbl::theory;
+use catlog::dbl::theory::{DblTheory as BaseDblTheory, TabMorType, TabObType};
 use catlog::one::fin_category::*;
 
 /// Object type in a double theory.
@@ -122,89 +123,55 @@ impl TryFrom<MorType> for TabMorType<Ustr, Ustr> {
     }
 }
 
-/** Wrapper for double theories of various kinds.
+/** A box containing a double theory of any kind.
 
-Ideally the Wasm-bound `DblTheory` would just have a type parameter for the
+Ideally the Wasm-bound [`DblTheory`] would just have a type parameter for the
 underlying double theory, but `wasm-bindgen` does not support
 [generics](https://github.com/rustwasm/wasm-bindgen/issues/3309). Instead, we
 explicitly enumerate the supported kinds of double theories in this enum.
  */
-pub(crate) enum DblTheoryWrapper {
-    Discrete(Arc<dbl_theory::UstrDiscreteDblTheory>),
-    DiscreteTab(Arc<dbl_theory::UstrDiscreteTabTheory>),
+pub enum DblTheoryBox {
+    Discrete(Arc<theory::UstrDiscreteDblTheory>),
+    DiscreteTab(Arc<theory::UstrDiscreteTabTheory>),
 }
 
 /** Wasm bindings for a double theory.
-
-Besides being a thin wrapper around a theory from `catlog`, this struct allows
-numerical indices to be set for types in the theory, compensating for the lack
-of hash maps with arbitrary keys in JavaScript.
-*/
+ */
 #[wasm_bindgen]
-pub struct DblTheory {
-    pub(crate) theory: DblTheoryWrapper,
-    ob_type_index: HashMap<ObType, usize>,
-    mor_type_index: HashMap<MorType, usize>,
+pub struct DblTheory(#[wasm_bindgen(skip)] pub DblTheoryBox);
+
+/// Converts from a discrete double theory.
+impl From<Arc<theory::UstrDiscreteDblTheory>> for DblTheory {
+    fn from(theory: Arc<theory::UstrDiscreteDblTheory>) -> Self {
+        Self(DblTheoryBox::Discrete(theory))
+    }
+}
+
+/// Converts from a discrete tabulator theory.
+impl From<Arc<theory::UstrDiscreteTabTheory>> for DblTheory {
+    fn from(theory: Arc<theory::UstrDiscreteTabTheory>) -> Self {
+        Self(DblTheoryBox::DiscreteTab(theory))
+    }
 }
 
 #[wasm_bindgen]
 impl DblTheory {
-    pub(crate) fn new(theory: DblTheoryWrapper) -> Self {
-        DblTheory {
-            theory,
-            ob_type_index: Default::default(),
-            mor_type_index: Default::default(),
-        }
-    }
-
-    pub(crate) fn from_discrete(theory: dbl_theory::UstrDiscreteDblTheory) -> Self {
-        Self::new(DblTheoryWrapper::Discrete(Arc::new(theory)))
-    }
-
-    pub(crate) fn from_discrete_tabulator(theory: dbl_theory::UstrDiscreteTabTheory) -> Self {
-        Self::new(DblTheoryWrapper::DiscreteTab(Arc::new(theory)))
-    }
-
     /// Kind of double theory ("double doctrine").
     #[wasm_bindgen(getter)]
     pub fn kind(&self) -> String {
         // TODO: Should return an enum so that we get type defs.
-        match &self.theory {
-            DblTheoryWrapper::Discrete(_) => "Discrete",
-            DblTheoryWrapper::DiscreteTab(_) => "DiscreteTab",
+        match &self.0 {
+            DblTheoryBox::Discrete(_) => "Discrete",
+            DblTheoryBox::DiscreteTab(_) => "DiscreteTab",
         }
         .into()
-    }
-
-    /// Index of an object type, if set.
-    #[wasm_bindgen(js_name = "obTypeIndex")]
-    pub fn ob_type_index(&self, x: &ObType) -> Option<usize> {
-        self.ob_type_index.get(x).copied()
-    }
-
-    /// Index of a morphism type, if set.
-    #[wasm_bindgen(js_name = "morTypeIndex")]
-    pub fn mor_type_index(&self, m: &MorType) -> Option<usize> {
-        self.mor_type_index.get(m).copied()
-    }
-
-    /// Set the index of an object type.
-    #[wasm_bindgen(js_name = "setObTypeIndex")]
-    pub fn set_ob_type_index(&mut self, x: ObType, i: usize) {
-        self.ob_type_index.insert(x, i);
-    }
-
-    /// Set the index of a morphism type.
-    #[wasm_bindgen(js_name = "setMorTypeIndex")]
-    pub fn set_mor_type_index(&mut self, m: MorType, i: usize) {
-        self.mor_type_index.insert(m, i);
     }
 
     /// Source of a morphism type.
     #[wasm_bindgen]
     pub fn src(&self, mor_type: MorType) -> Result<ObType, String> {
-        all_the_same!(match &self.theory {
-            DblTheoryWrapper::[Discrete, DiscreteTab](th) => {
+        all_the_same!(match &self.0 {
+            DblTheoryBox::[Discrete, DiscreteTab](th) => {
                 let m = mor_type.try_into()?;
                 Ok(th.src(&m).into())
             }
@@ -214,11 +181,71 @@ impl DblTheory {
     /// Target of a morphism type.
     #[wasm_bindgen]
     pub fn tgt(&self, mor_type: MorType) -> Result<ObType, String> {
-        all_the_same!(match &self.theory {
-            DblTheoryWrapper::[Discrete, DiscreteTab](th) => {
+        all_the_same!(match &self.0 {
+            DblTheoryBox::[Discrete, DiscreteTab](th) => {
                 let m = mor_type.try_into()?;
                 Ok(th.tgt(&m).into())
             }
         })
+    }
+}
+
+/** Mapping from object types to numerical indices.
+
+Like [`MorTypeIndex`], this struct just compensates for the lack of hash maps
+with arbitrary keys in JavaScript.
+ */
+#[wasm_bindgen]
+#[derive(Clone, Default)]
+pub struct ObTypeIndex(HashMap<ObType, usize>);
+
+#[wasm_bindgen]
+impl ObTypeIndex {
+    /// Creates a new object type index.
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Default::default()
+    }
+
+    /// Gets the index of an object type, if set.
+    #[wasm_bindgen]
+    pub fn get(&self, x: &ObType) -> Option<usize> {
+        self.0.get(x).copied()
+    }
+
+    /// Sets the index of an object type.
+    #[wasm_bindgen]
+    pub fn set(&mut self, x: ObType, i: usize) {
+        self.0.insert(x, i);
+    }
+}
+
+/** Mapping from morphism types to numerical indices.
+
+Like [`ObTypeIndex`], this struct just compensates for the lack of hash maps
+with arbitrary keys in JavaScript.
+ */
+#[wasm_bindgen]
+#[derive(Clone, Default)]
+pub struct MorTypeIndex(HashMap<MorType, usize>);
+
+#[wasm_bindgen]
+impl MorTypeIndex {
+    /// Creates a new morphism type index.
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Default::default()
+    }
+
+    /// Gets the index of a morphism type, if set.
+    #[wasm_bindgen]
+    pub fn get(&self, m: &MorType) -> Option<usize> {
+        self.0.get(m).copied()
+    }
+
+    /// Sets the index of a morphsim type.
+    #[wasm_bindgen]
+    pub fn set(&mut self, m: MorType, i: usize) {
+        self.0.insert(m, i);
     }
 }

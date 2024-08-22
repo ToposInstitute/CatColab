@@ -8,13 +8,10 @@ use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
 use super::theory::*;
-use catlog::dbl::model::{self as dbl_model, InvalidDiscreteDblModel};
+use catlog::dbl::model::{self as dbl_model, DblModel as BaseDblModel, InvalidDiscreteDblModel};
 use catlog::one::fin_category::UstrFinCategory;
 use catlog::one::Path;
 use catlog::validate::{self, Validate};
-
-#[cfg(test)]
-use catlog::dbl::model::DblModel as BaseDblModel;
 
 /// An object in a model of a double theory.
 #[derive(Debug, Serialize, Deserialize, Tsify)]
@@ -117,36 +114,56 @@ pub struct MorDecl {
 
 type UuidDiscreteDblModel = dbl_model::DiscreteDblModel<Uuid, UstrFinCategory>;
 
-/// Wrapper for models of double theories of various kinds.
-#[allow(clippy::large_enum_variant)]
-enum DblModelWrapper {
+/** A box containing a model of a double theory of any kind.
+
+See [`DblTheoryBox`] for motivation.
+ */
+pub enum DblModelBox {
     Discrete(UuidDiscreteDblModel),
     // DiscreteTab(()), // TODO: Not yet implemented.
 }
 
+/// Converts from a model of a discrete double theory.
+impl From<UuidDiscreteDblModel> for DblModel {
+    fn from(model: UuidDiscreteDblModel) -> Self {
+        DblModel(DblModelBox::Discrete(model))
+    }
+}
+
+/// Converts into a model of a dicrete double theory.
+impl TryFrom<DblModel> for UuidDiscreteDblModel {
+    type Error = String;
+
+    fn try_from(model: DblModel) -> Result<Self, Self::Error> {
+        match model.0 {
+            DblModelBox::Discrete(model) => Ok(model),
+            //_ => Err("Cannot cast into a model of a discrete double theory".into()),
+        }
+    }
+}
+
 /// Wasm bindings for a model of a double theory.
 #[wasm_bindgen]
-pub struct DblModel(DblModelWrapper);
+pub struct DblModel(#[wasm_bindgen(skip)] pub DblModelBox);
 
 #[wasm_bindgen]
 impl DblModel {
     /// Creates an empty model of the given theory.
     #[wasm_bindgen(constructor)]
     pub fn new(theory: &DblTheory) -> Self {
-        let wrapper = match &theory.theory {
-            DblTheoryWrapper::Discrete(th) => {
-                DblModelWrapper::Discrete(UuidDiscreteDblModel::new(th.clone()))
+        Self(match &theory.0 {
+            DblTheoryBox::Discrete(th) => {
+                DblModelBox::Discrete(UuidDiscreteDblModel::new(th.clone()))
             }
-            DblTheoryWrapper::DiscreteTab(_) => panic!("Not implemented"),
-        };
-        Self(wrapper)
+            DblTheoryBox::DiscreteTab(_) => panic!("Not implemented"),
+        })
     }
 
     /// Adds an object to the model.
     #[wasm_bindgen(js_name = "addOb")]
     pub fn add_ob(&mut self, decl: ObDecl) -> Result<bool, String> {
         all_the_same!(match &mut self.0 {
-            DblModelWrapper::[Discrete](model) => {
+            DblModelBox::[Discrete](model) => {
                 let ob_type = decl.ob_type.try_into()?;
                 Ok(model.add_ob(decl.id, ob_type))
             }
@@ -157,7 +174,7 @@ impl DblModel {
     #[wasm_bindgen(js_name = "addMor")]
     pub fn add_mor(&mut self, decl: MorDecl) -> Result<bool, String> {
         all_the_same!(match &mut self.0 {
-            DblModelWrapper::[Discrete](model) => {
+            DblModelBox::[Discrete](model) => {
                 let mor_type = decl.mor_type.try_into()?;
                 let res = model.make_mor(decl.id, mor_type);
                 let dom = decl.dom.map(|ob| ob.try_into()).transpose()?;
@@ -169,25 +186,27 @@ impl DblModel {
         })
     }
 
+    /// Basic objects in the model.
+    #[wasm_bindgen]
+    pub fn objects(&self) -> Vec<Ob> {
+        all_the_same!(match &self.0 {
+            DblModelBox::[Discrete](model) => model.objects().map(|x| x.into()).collect()
+        })
+    }
+
+    /// Basic morphisms in the model.
+    #[wasm_bindgen]
+    pub fn morphisms(&self) -> Vec<Mor> {
+        all_the_same!(match &self.0 {
+            DblModelBox::[Discrete](model) => model.morphisms().map(|f| f.into()).collect()
+        })
+    }
+
     /// Validates that the model is well defined.
     #[wasm_bindgen]
     pub fn validate(&self) -> Vec<InvalidDiscreteDblModel<Uuid>> {
         all_the_same!(match &self.0 {
-            DblModelWrapper::[Discrete](model) => validate::unwrap_errors(model.validate())
-        })
-    }
-
-    #[cfg(test)]
-    fn ob_count(&self) -> usize {
-        all_the_same!(match &self.0 {
-            DblModelWrapper::[Discrete](model) => model.objects().count()
-        })
-    }
-
-    #[cfg(test)]
-    fn mor_count(&self) -> usize {
-        all_the_same!(match &self.0 {
-            DblModelWrapper::[Discrete](model) => model.morphisms().count()
+            DblModelBox::[Discrete](model) => validate::unwrap_errors(model.validate())
         })
     }
 }
@@ -199,7 +218,8 @@ mod tests {
 
     #[test]
     fn model_schema() {
-        let mut model = DblModel::new(&th_schema());
+        let th = ThSchema::new().theory();
+        let mut model = DblModel::new(&th);
         let x = Uuid::now_v7();
         let y = Uuid::now_v7();
         assert!(model
@@ -222,8 +242,8 @@ mod tests {
                 cod: Some(Ob::Basic(y)),
             })
             .is_ok());
-        assert_eq!(model.ob_count(), 2);
-        assert_eq!(model.mor_count(), 1);
+        assert_eq!(model.objects().len(), 2);
+        assert_eq!(model.morphisms().len(), 1);
         assert!(model.validate().is_empty());
     }
 }
