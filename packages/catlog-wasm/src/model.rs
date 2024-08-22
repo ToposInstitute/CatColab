@@ -123,6 +123,25 @@ pub enum DblModelBox {
     // DiscreteTab(()), // TODO: Not yet implemented.
 }
 
+/// Converts from a model of a discrete double theory.
+impl From<UuidDiscreteDblModel> for DblModel {
+    fn from(model: UuidDiscreteDblModel) -> Self {
+        DblModel(DblModelBox::Discrete(model))
+    }
+}
+
+/// Converts into a model of a dicrete double theory.
+impl TryFrom<DblModel> for UuidDiscreteDblModel {
+    type Error = String;
+
+    fn try_from(model: DblModel) -> Result<Self, Self::Error> {
+        match model.0 {
+            DblModelBox::Discrete(model) => Ok(model),
+            //_ => Err("Cannot cast into a model of a discrete double theory".into()),
+        }
+    }
+}
+
 /// Wasm bindings for a model of a double theory.
 #[wasm_bindgen]
 pub struct DblModel(#[wasm_bindgen(skip)] pub DblModelBox);
