@@ -11,13 +11,13 @@ import styles from "../styles.module.css";
 export function ModelGraphviz(props: {
     model: Array<ModelJudgment>;
     theory: TheoryMeta;
+    attributes?: GraphvizAttributes;
+    options?: Viz.RenderOptions;
 }) {
     return (
         <GraphvizSVG
-            graph={modelToGraphviz(props.model, props.theory)}
-            options={{
-                engine: "dot",
-            }}
+            graph={modelToGraphviz(props.model, props.theory, props.attributes)}
+            options={props.options}
         />
     );
 }
@@ -31,11 +31,7 @@ morphism whose domain or codomain is not a basic object will be ignored.
 export function modelToGraphviz(
     model: Array<ModelJudgment>,
     theory: TheoryMeta,
-    attributes?: {
-        graph?: Viz.Graph["graphAttributes"];
-        node?: Viz.Graph["nodeAttributes"];
-        edge?: Viz.Graph["edgeAttributes"];
-    },
+    attributes?: GraphvizAttributes,
 ): Viz.Graph {
     const nodes = [];
     const edges = [];
@@ -82,6 +78,12 @@ export function modelToGraphviz(
         edgeAttributes: { ...defaultEdgeAttributes, ...attributes?.edge },
     };
 }
+
+export type GraphvizAttributes = {
+    graph?: Viz.Graph["graphAttributes"];
+    node?: Viz.Graph["nodeAttributes"];
+    edge?: Viz.Graph["edgeAttributes"];
+};
 
 const cssClass = (meta?: TypeMeta): string =>
     [...(meta?.svgClasses ?? []), ...(meta?.textClasses ?? [])].join(" ");

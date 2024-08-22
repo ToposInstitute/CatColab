@@ -131,11 +131,11 @@ impl From<UuidDiscreteDblModel> for DblModel {
 }
 
 /// Converts into a model of a dicrete double theory.
-impl TryFrom<DblModel> for UuidDiscreteDblModel {
+impl<'a> TryFrom<&'a DblModel> for &'a UuidDiscreteDblModel {
     type Error = String;
 
-    fn try_from(model: DblModel) -> Result<Self, Self::Error> {
-        match model.0 {
+    fn try_from(model: &'a DblModel) -> Result<Self, Self::Error> {
+        match &model.0 {
             DblModelBox::Discrete(model) => Ok(model),
             //_ => Err("Cannot cast into a model of a discrete double theory".into()),
         }
@@ -186,7 +186,29 @@ impl DblModel {
         })
     }
 
-    /// Basic objects in the model.
+    /// Is the object contained in the model?
+    #[wasm_bindgen(js_name = "hasOb")]
+    pub fn has_ob(&self, ob: Ob) -> Result<bool, String> {
+        all_the_same!(match &self.0 {
+            DblModelBox::[Discrete](model) => {
+                let ob = ob.try_into()?;
+                Ok(model.has_ob(&ob))
+            }
+        })
+    }
+
+    /// Is the morphism contained in the model?
+    #[wasm_bindgen(js_name = "hasMor")]
+    pub fn has_mor(&self, mor: Mor) -> Result<bool, String> {
+        all_the_same!(match &self.0 {
+            DblModelBox::[Discrete](model) => {
+                let mor = mor.try_into()?;
+                Ok(model.has_mor(&mor))
+            }
+        })
+    }
+
+    /// Returns array of all basic objects in the model.
     #[wasm_bindgen]
     pub fn objects(&self) -> Vec<Ob> {
         all_the_same!(match &self.0 {
@@ -194,7 +216,7 @@ impl DblModel {
         })
     }
 
-    /// Basic morphisms in the model.
+    /// Returns array of all basic morphisms in the model.
     #[wasm_bindgen]
     pub fn morphisms(&self) -> Vec<Mor> {
         all_the_same!(match &self.0 {
@@ -220,8 +242,7 @@ mod tests {
     fn model_schema() {
         let th = ThSchema::new().theory();
         let mut model = DblModel::new(&th);
-        let x = Uuid::now_v7();
-        let y = Uuid::now_v7();
+        let (x, y, a) = (Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7());
         assert!(model
             .add_ob(ObDecl {
                 id: x,
@@ -236,12 +257,14 @@ mod tests {
             .is_ok());
         assert!(model
             .add_mor(MorDecl {
-                id: Uuid::now_v7(),
+                id: a,
                 mor_type: MorType::Basic("Attr".into()),
                 dom: Some(Ob::Basic(x)),
                 cod: Some(Ob::Basic(y)),
             })
             .is_ok());
+        assert_eq!(model.has_ob(Ob::Basic(x)), Ok(true));
+        assert_eq!(model.has_mor(Mor::Basic(a)), Ok(true));
         assert_eq!(model.objects().len(), 2);
         assert_eq!(model.morphisms().len(), 1);
         assert!(model.validate().is_empty());

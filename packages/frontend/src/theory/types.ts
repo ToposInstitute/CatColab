@@ -1,7 +1,7 @@
 import type { KbdKey } from "@solid-primitives/keyboard";
 import type { Component } from "solid-js";
 
-import type { DblTheory, MorType, ObType } from "catlog-wasm";
+import type { DblModel, DblTheory, MorType, ObType } from "catlog-wasm";
 import { MorTypeIndex, ObTypeIndex } from "catlog-wasm";
 import type { ModelJudgment } from "../model";
 import type { ArrowStyle } from "../visualization/types";
@@ -168,4 +168,7 @@ export type ModelViewProps = {
     regardless.
      */
     theory: TheoryMeta;
+
+    /** The `catlog` model object, if it is valid. */
+    validatedModel: DblModel | null;
 };

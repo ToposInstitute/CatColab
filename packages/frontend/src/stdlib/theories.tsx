@@ -2,7 +2,7 @@ import * as catlog from "catlog-wasm";
 
 import { TheoryMeta } from "../theory";
 import { uniqueIndexArray } from "../util/indexing";
-import { ModelGraphviz, StockFlowDiagram } from "./visualizations";
+import { ModelGraphviz, StockFlowDiagram, SubmodelsGraphviz } from "./views";
 
 import styles from "./styles.module.css";
 import svgStyles from "./svg_styles.module.css";
@@ -168,6 +168,12 @@ const thRegNet = () => {
 
 const thCausalLoop = () => {
     const thSignedCategory = new catlog.ThSignedCategory();
+
+    const positiveLoops = (model: catlog.DblModel | null) =>
+        model ? thSignedCategory.positiveLoops(model) : [];
+    const negativeLoops = (model: catlog.DblModel | null) =>
+        model ? thSignedCategory.negativeLoops(model) : [];
+
     return new TheoryMeta({
         id: "causal-loop",
         name: "Causal loop diagram",
@@ -209,8 +215,44 @@ const thCausalLoop = () => {
                 description: "Visualize the causal loop diagram",
                 component: ModelGraphviz,
             },
+            {
+                name: "Balancing loops",
+                description: "Analyze the diagram for balancing loops",
+                component: (props) => (
+                    <SubmodelsGraphviz
+                        model={props.model}
+                        submodels={negativeLoops(props.validatedModel)}
+                        theory={props.theory}
+                        {...loopGraphvizConfig}
+                    />
+                ),
+            },
+            {
+                name: "Reinforcing loops",
+                description: "Analyze the diagram for reinforcing loops",
+                component: (props) => (
+                    <SubmodelsGraphviz
+                        model={props.model}
+                        submodels={positiveLoops(props.validatedModel)}
+                        theory={props.theory}
+                        {...loopGraphvizConfig}
+                    />
+                ),
+            },
         ],
     });
+};
+
+const loopGraphvizConfig = {
+    options: {
+        engine: "circo",
+    },
+    attributes: {
+        graph: {
+            oneblock: "true",
+            splines: "curved",
+        },
+    },
 };
 
 const thStockFlow = () => {

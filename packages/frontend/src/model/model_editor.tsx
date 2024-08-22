@@ -47,6 +47,7 @@ export function ModelEditor(props: {
                                 <view.component
                                     model={editorRef()?.model() ?? []}
                                     theory={theory}
+                                    validatedModel={editorRef()?.validatedModel() ?? null}
                                 />
                             )
                         );

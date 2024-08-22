@@ -1,6 +1,7 @@
 import { uuidv7 } from "uuidv7";
 
-import type { MorDecl, MorType, ObDecl, ObType } from "catlog-wasm";
+import { DblModel } from "catlog-wasm";
+import type { DblTheory, MorDecl, MorType, ObDecl, ObType } from "catlog-wasm";
 import type { Notebook } from "../notebook";
 import type { TheoryId } from "../theory";
 
@@ -58,3 +59,17 @@ export const newMorphismDecl = (type: MorType): MorphismDecl => ({
     dom: null,
     cod: null,
 });
+
+/** Construct a `catlog` model from a sequence of model judgments.
+ */
+export function catlogModel(theory: DblTheory, judgments: Array<ModelJudgment>): DblModel {
+    const model = new DblModel(theory);
+    for (const judgment of judgments) {
+        if (judgment.tag === "object") {
+            model.addOb(judgment);
+        } else if (judgment.tag === "morphism") {
+            model.addMor(judgment);
+        }
+    }
+    return model;
+}
