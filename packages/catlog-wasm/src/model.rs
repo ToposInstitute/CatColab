@@ -8,8 +8,9 @@ use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
 use super::theory::*;
-use catlog::dbl::model::{self as dbl_model, DblModel as BaseDblModel, InvalidDiscreteDblModel};
+use catlog::dbl::model::{self as dbl_model, FgDblModel, InvalidDiscreteDblModel};
 use catlog::one::fin_category::UstrFinCategory;
+use catlog::one::Category as _;
 use catlog::one::Path;
 use catlog::validate::{self, Validate};
 
@@ -220,7 +221,7 @@ impl DblModel {
     #[wasm_bindgen]
     pub fn morphisms(&self) -> Vec<Mor> {
         all_the_same!(match &self.0 {
-            DblModelBox::[Discrete](model) => model.morphisms().map(|f| f.into()).collect()
+            DblModelBox::[Discrete](model) => model.morphisms().map( Mor::Basic).collect()
         })
     }
 

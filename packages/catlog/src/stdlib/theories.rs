@@ -3,7 +3,7 @@
 use ustr::ustr;
 
 use crate::dbl::theory::*;
-use crate::one::fin_category::{FinHom, UstrFinCategory};
+use crate::one::fin_category::{FinMor, UstrFinCategory};
 
 /** The theory of categories, aka the trivial double theory.
 
@@ -24,7 +24,7 @@ pub fn th_schema() -> UstrDiscreteDblTheory {
     let (x, y, p) = (ustr("Entity"), ustr("AttrType"), ustr("Attr"));
     cat.add_ob_generator(x);
     cat.add_ob_generator(y);
-    cat.add_hom_generator(p, x, y);
+    cat.add_mor_generator(p, x, y);
     DiscreteDblTheory::from(cat)
 }
 
@@ -37,8 +37,8 @@ pub fn th_signed_category() -> UstrDiscreteDblTheory {
     let mut sgn: UstrFinCategory = Default::default();
     let (x, n) = (ustr("Object"), ustr("Negative"));
     sgn.add_ob_generator(x);
-    sgn.add_hom_generator(n, x, x);
-    sgn.set_composite(n, n, FinHom::Id(x));
+    sgn.add_mor_generator(n, x, x);
+    sgn.set_composite(n, n, FinMor::Id(x));
     DiscreteDblTheory::from(sgn)
 }
 
@@ -51,12 +51,12 @@ pub fn th_nullable_signed_category() -> UstrDiscreteDblTheory {
     let mut sgn: UstrFinCategory = Default::default();
     let (x, n, z) = (ustr("Object"), ustr("Negative"), ustr("Zero"));
     sgn.add_ob_generator(x);
-    sgn.add_hom_generator(n, x, x);
-    sgn.add_hom_generator(z, x, x);
-    sgn.set_composite(n, n, FinHom::Id(x));
-    sgn.set_composite(z, z, FinHom::Generator(z));
-    sgn.set_composite(n, z, FinHom::Generator(z));
-    sgn.set_composite(z, n, FinHom::Generator(z));
+    sgn.add_mor_generator(n, x, x);
+    sgn.add_mor_generator(z, x, x);
+    sgn.set_composite(n, n, FinMor::Id(x));
+    sgn.set_composite(z, z, FinMor::Generator(z));
+    sgn.set_composite(n, z, FinMor::Generator(z));
+    sgn.set_composite(z, n, FinMor::Generator(z));
     DiscreteDblTheory::from(sgn)
 }
 
@@ -72,7 +72,7 @@ pub fn th_category_links() -> UstrDiscreteTabTheory {
     th.add_mor_type(
         ustr("Link"),
         TabObType::Basic(x),
-        th.tabulator(th.hom_type(TabObType::Basic(x))),
+        th.tabulator(th.mor_type(TabObType::Basic(x))),
     );
     th
 }

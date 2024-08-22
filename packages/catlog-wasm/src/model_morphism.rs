@@ -1,7 +1,7 @@
 use std::hash::Hash;
 
 use super::model::DblModel;
-use catlog::dbl::model::{self, DblModel as BaseDblModel};
+use catlog::dbl::model::{self, FgDblModel};
 use catlog::dbl::model_morphism::DiscreteDblModelMapping;
 use catlog::one::fin_category::UstrFinCategory;
 

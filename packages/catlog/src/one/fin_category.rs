@@ -15,7 +15,7 @@ use crate::zero::{Column, HashColumn, Mapping};
 
 /// Morphism in a finite category.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum FinHom<V, E> {
+pub enum FinMor<V, E> {
     /// Identity morphism on an object.
     Id(V),
 
@@ -31,13 +31,13 @@ very special, finite categories show up surprisingly often as schemas or
 theories. For example, the schemas for graphs, symmetric graphs, reflexive
 graphs, and symmetric reflexive graphs are all finite.
  */
-#[derive(Clone, Derivative)]
+#[derive(Clone, Derivative, Debug)]
 #[derivative(Default(bound = "S: Default"))]
 #[derivative(PartialEq(bound = "V: Eq + Hash, E: Eq + Hash, S: BuildHasher"))]
 #[derivative(Eq(bound = "V: Eq + Hash, E: Eq + Hash, S: BuildHasher"))]
 pub struct FinCategory<V, E, S = RandomState> {
     generators: HashGraph<V, E, S>,
-    compose_map: HashColumn<(E, E), FinHom<V, E>>,
+    compose_map: HashColumn<(E, E), FinMor<V, E>>,
 }
 
 /// A finite category with objects and morphisms of type `Ustr`.
@@ -68,12 +68,12 @@ where
     }
 
     /// Adds a morphism generator, returning whether it is new.
-    pub fn add_hom_generator(&mut self, e: E, dom: V, cod: V) -> bool {
+    pub fn add_mor_generator(&mut self, e: E, dom: V, cod: V) -> bool {
         self.generators.add_edge(e, dom, cod)
     }
 
     /// Sets the value of a binary composite.
-    pub fn set_composite(&mut self, d: E, e: E, f: FinHom<V, E>) {
+    pub fn set_composite(&mut self, d: E, e: E, f: FinMor<V, E>) {
         self.compose_map.set((d, e), f);
     }
 
@@ -127,42 +127,42 @@ where
     S: BuildHasher,
 {
     type Ob = V;
-    type Hom = FinHom<V, E>;
+    type Mor = FinMor<V, E>;
 
     fn has_ob(&self, x: &V) -> bool {
         self.generators.has_vertex(x)
     }
 
-    fn has_hom(&self, f: &FinHom<V, E>) -> bool {
+    fn has_mor(&self, f: &FinMor<V, E>) -> bool {
         match f {
-            FinHom::Id(v) => self.generators.has_vertex(v),
-            FinHom::Generator(e) => self.generators.has_edge(e),
+            FinMor::Id(v) => self.generators.has_vertex(v),
+            FinMor::Generator(e) => self.generators.has_edge(e),
         }
     }
 
-    fn dom(&self, f: &FinHom<V, E>) -> V {
+    fn dom(&self, f: &FinMor<V, E>) -> V {
         match f {
-            FinHom::Id(v) => v.clone(),
-            FinHom::Generator(e) => self.generators.src(e),
+            FinMor::Id(v) => v.clone(),
+            FinMor::Generator(e) => self.generators.src(e),
         }
     }
 
-    fn cod(&self, f: &FinHom<V, E>) -> V {
+    fn cod(&self, f: &FinMor<V, E>) -> V {
         match f {
-            FinHom::Id(v) => v.clone(),
-            FinHom::Generator(e) => self.generators.tgt(e),
+            FinMor::Id(v) => v.clone(),
+            FinMor::Generator(e) => self.generators.tgt(e),
         }
     }
 
-    fn compose(&self, path: Path<V, FinHom<V, E>>) -> FinHom<V, E> {
+    fn compose(&self, path: Path<V, FinMor<V, E>>) -> FinMor<V, E> {
         path.reduce(|x| self.id(x), |f, g| self.compose2(f, g))
     }
 
-    fn compose2(&self, f: FinHom<V, E>, g: FinHom<V, E>) -> FinHom<V, E> {
+    fn compose2(&self, f: FinMor<V, E>, g: FinMor<V, E>) -> FinMor<V, E> {
         match (f, g) {
-            (FinHom::Id(_), g) => g,
-            (f, FinHom::Id(_)) => f,
-            (FinHom::Generator(d), FinHom::Generator(e)) => {
+            (FinMor::Id(_), g) => g,
+            (f, FinMor::Id(_)) => f,
+            (FinMor::Generator(d), FinMor::Generator(e)) => {
                 assert!(
                     self.generators.tgt(&d) == self.generators.src(&e),
                     "(Co)domains should be equal"
@@ -172,8 +172,8 @@ where
         }
     }
 
-    fn id(&self, x: V) -> FinHom<V, E> {
-        FinHom::Id(x)
+    fn id(&self, x: V) -> FinMor<V, E> {
+        FinMor::Id(x)
     }
 }
 
@@ -183,26 +183,10 @@ where
     E: Eq + Hash + Clone,
     S: BuildHasher,
 {
-    fn has_ob_generator(&self, x: &V) -> bool {
-        self.generators.has_vertex(x)
-    }
-    fn has_hom_generator(&self, f: &FinHom<V, E>) -> bool {
-        match f {
-            FinHom::Id(_) => false,
-            FinHom::Generator(e) => self.generators.has_edge(e),
-        }
-    }
-    fn ob_generators(&self) -> impl Iterator<Item = V> {
-        self.generators.vertices()
-    }
-    fn hom_generators(&self) -> impl Iterator<Item = FinHom<V, E>> {
-        self.generators.edges().map(FinHom::Generator)
-    }
-    fn generators_with_dom(&self, x: &V) -> impl Iterator<Item = FinHom<V, E>> {
-        self.generators.out_edges(x).map(FinHom::Generator)
-    }
-    fn generators_with_cod(&self, x: &V) -> impl Iterator<Item = FinHom<V, E>> {
-        self.generators.in_edges(x).map(FinHom::Generator)
+    type MorGen = E;
+
+    fn generating_graph(&self) -> &impl FinGraph<V = Self::Ob, E = Self::MorGen> {
+        &self.generators
     }
 }
 
@@ -240,7 +224,7 @@ rather than morphism themselves.
 Like the object and morphism generators, the equations are identified by keys.
 Depending on the application, these could be axiom names or meaningless IDs.
  */
-#[derive(Clone, Derivative)]
+#[derive(Clone, Derivative, Debug)]
 #[derivative(Default(bound = "S: Default"))]
 #[derivative(PartialEq(bound = "V: Eq + Hash, E: Eq + Hash, EqKey: Eq + Hash, S: BuildHasher"))]
 #[derivative(Eq(bound = "V: Eq + Hash, E: Eq + Hash, EqKey: Eq + Hash, S: BuildHasher"))]
@@ -289,12 +273,12 @@ where
     }
 
     /// Adds a morphism generator, returning whether it is new.
-    pub fn add_hom_generator(&mut self, e: E, dom: V, cod: V) -> bool {
+    pub fn add_mor_generator(&mut self, e: E, dom: V, cod: V) -> bool {
         self.generators.add_edge(e, dom, cod)
     }
 
     /// Adds a morphism generator without initializing its (co)domain.
-    pub fn make_hom_generator(&mut self, e: E) -> bool {
+    pub fn make_mor_generator(&mut self, e: E) -> bool {
         self.generators.make_edge(e)
     }
 
@@ -378,12 +362,12 @@ where
     S: BuildHasher,
 {
     type Ob = V;
-    type Hom = Path<V, E>;
+    type Mor = Path<V, E>;
 
     fn has_ob(&self, x: &V) -> bool {
         self.generators.has_vertex(x)
     }
-    fn has_hom(&self, path: &Path<V, E>) -> bool {
+    fn has_mor(&self, path: &Path<V, E>) -> bool {
         path.contained_in(&self.generators)
     }
     fn dom(&self, path: &Path<V, E>) -> V {
@@ -405,26 +389,10 @@ where
     EqKey: Eq + Clone + Hash,
     S: BuildHasher,
 {
-    fn has_ob_generator(&self, x: &V) -> bool {
-        self.generators.has_vertex(x)
-    }
-    fn has_hom_generator(&self, path: &Path<V, E>) -> bool {
-        match path {
-            Path::Id(_) => false,
-            Path::Seq(es) => es.len() == 1 && self.generators.has_edge(es.first()),
-        }
-    }
-    fn ob_generators(&self) -> impl Iterator<Item = Self::Ob> {
-        self.generators.vertices()
-    }
-    fn hom_generators(&self) -> impl Iterator<Item = Self::Hom> {
-        self.generators.edges().map(Path::single)
-    }
-    fn generators_with_dom(&self, x: &V) -> impl Iterator<Item = Self::Hom> {
-        self.generators.out_edges(x).map(Path::single)
-    }
-    fn generators_with_cod(&self, x: &V) -> impl Iterator<Item = Self::Hom> {
-        self.generators.in_edges(x).map(Path::single)
+    type MorGen = E;
+
+    fn generating_graph(&self) -> &impl FinGraph<V = Self::Ob, E = Self::MorGen> {
+        &self.generators
     }
 }
 
@@ -463,44 +431,44 @@ mod tests {
 
     #[test]
     fn fin_category() {
-        type Hom<V, E> = FinHom<V, E>;
+        type Mor<V, E> = FinMor<V, E>;
 
         let mut sch_sgraph: FinCategory<char, char> = Default::default();
         sch_sgraph.add_ob_generators(['V', 'E']);
-        sch_sgraph.add_hom_generator('s', 'E', 'V');
-        sch_sgraph.add_hom_generator('t', 'E', 'V');
-        sch_sgraph.add_hom_generator('i', 'E', 'E');
-        assert_eq!(sch_sgraph.ob_generators().count(), 2);
-        assert_eq!(sch_sgraph.hom_generators().count(), 3);
-        assert_eq!(sch_sgraph.dom(&Hom::Generator('t')), 'E');
-        assert_eq!(sch_sgraph.cod(&Hom::Generator('t')), 'V');
+        sch_sgraph.add_mor_generator('s', 'E', 'V');
+        sch_sgraph.add_mor_generator('t', 'E', 'V');
+        sch_sgraph.add_mor_generator('i', 'E', 'E');
+        assert_eq!(sch_sgraph.generating_graph().vertices().count(), 2);
+        assert_eq!(sch_sgraph.generating_graph().edges().count(), 3);
+        assert_eq!(sch_sgraph.dom(&Mor::Generator('t')), 'E');
+        assert_eq!(sch_sgraph.cod(&Mor::Generator('t')), 'V');
         assert_eq!(sch_sgraph.validate().unwrap_err().len(), 3);
 
-        sch_sgraph.set_composite('i', 'i', Hom::Id('E'));
-        sch_sgraph.set_composite('i', 's', Hom::Generator('t'));
-        sch_sgraph.set_composite('i', 't', Hom::Generator('s'));
+        sch_sgraph.set_composite('i', 'i', Mor::Id('E'));
+        sch_sgraph.set_composite('i', 's', Mor::Generator('t'));
+        sch_sgraph.set_composite('i', 't', Mor::Generator('s'));
         assert!(sch_sgraph.validate().is_ok());
-        assert_eq!(sch_sgraph.compose2(Hom::Generator('i'), Hom::Generator('i')), Hom::Id('E'));
+        assert_eq!(sch_sgraph.compose2(Mor::Generator('i'), Mor::Generator('i')), Mor::Id('E'));
         let path = Path::Seq(nonempty![
-            Hom::Generator('i'),
-            Hom::Id('E'),
-            Hom::Generator('i'),
-            Hom::Generator('i'),
-            Hom::Generator('s'),
+            Mor::Generator('i'),
+            Mor::Id('E'),
+            Mor::Generator('i'),
+            Mor::Generator('i'),
+            Mor::Generator('s'),
         ]);
-        assert_eq!(sch_sgraph.compose(path), Hom::Generator('t'));
+        assert_eq!(sch_sgraph.compose(path), Mor::Generator('t'));
     }
 
     #[test]
     fn fp_category() {
         let mut sch_sgraph: FpCategory<_, _, _> = Default::default();
         sch_sgraph.add_ob_generators(['V', 'E']);
-        sch_sgraph.add_hom_generator('s', 'E', 'V');
-        sch_sgraph.add_hom_generator('t', 'E', 'V');
-        sch_sgraph.add_hom_generator('i', 'E', 'E');
+        sch_sgraph.add_mor_generator('s', 'E', 'V');
+        sch_sgraph.add_mor_generator('t', 'E', 'V');
+        sch_sgraph.add_mor_generator('i', 'E', 'E');
         assert!(sch_sgraph.is_free());
-        assert_eq!(sch_sgraph.ob_generators().count(), 2);
-        assert_eq!(sch_sgraph.hom_generators().count(), 3);
+        assert_eq!(sch_sgraph.generating_graph().vertices().count(), 2);
+        assert_eq!(sch_sgraph.generating_graph().edges().count(), 3);
         assert_eq!(sch_sgraph.dom(&Path::single('t')), 'E');
         assert_eq!(sch_sgraph.cod(&Path::single('t')), 'V');
         assert!(sch_sgraph.validate().is_ok());
@@ -514,12 +482,12 @@ mod tests {
 
         let mut sch_bad: FpCategory<_, _, _> = Default::default();
         sch_bad.add_ob_generators(['x', 'y']);
-        sch_bad.make_hom_generator('f');
+        sch_bad.make_mor_generator('f');
         assert_eq!(sch_bad.validate().unwrap_err().len(), 2);
         sch_bad.set_dom('f', 'x');
         sch_bad.set_cod('f', 'y');
         assert!(sch_bad.validate().is_ok());
-        sch_bad.add_hom_generator('g', 'y', 'x');
+        sch_bad.add_mor_generator('g', 'y', 'x');
         sch_bad.add_equation('α', PathEq::new(Path::single('f'), Path::single('g')));
         assert_eq!(sch_bad.validate().unwrap_err().len(), 2);
     }

@@ -50,7 +50,8 @@ use super::theory::{DblTheory, DiscreteDblTheory};
 use crate::one::fin_category::{FpCategory, InvalidFpCategory, UstrFinCategory};
 use crate::one::*;
 use crate::validate::{self, Validate};
-use crate::zero::{Column, IndexedHashColumn, Mapping};
+use crate::zero::{IndexedHashColumn, Mapping};
+use std::iter::Iterator;
 
 /** A model of a double theory.
 
@@ -79,21 +80,7 @@ It will be more convenient for us to take the second approach since in our usage
 object and morphism identifiers will be globally unique in a very strong sense
 (something like UUIDs).
  */
-pub trait DblModel {
-    /** Type of objects in the model.
-
-    Viewing the model as a span-valued double functor, this is the type of
-    elements in the sets in the image of the functor.
-    */
-    type Ob: Eq;
-
-    /** Type of morphisms in the model.
-
-    Viewing the model as a span-valued double functor, this is the type of
-    elements in the apexes of the spans in the image of the functor.
-    */
-    type Mor: Eq;
-
+pub trait DblModel: Category {
     /// Rust type of object types defined in the theory.
     type ObType: Eq;
 
@@ -106,30 +93,16 @@ pub trait DblModel {
     /// Type of operations on morphisms defined in the theory.
     type MorOp: Eq;
 
-    /// Does the model contain the value as an object?
-    fn has_ob(&self, x: &Self::Ob) -> bool;
+    /// The type of theories that Self could be models of
+    type Theory: DblTheory<
+        ObType = Self::ObType,
+        MorType = Self::MorType,
+        ObOp = Self::ObOp,
+        MorOp = Self::MorOp,
+    >;
 
-    /// Does the model contain the value as a morphism?
-    fn has_mor(&self, m: &Self::Mor) -> bool;
-
-    /// Domain of morphism.
-    fn dom(&self, m: &Self::Mor) -> Self::Ob;
-
-    /// Codomain of morphism.
-    fn cod(&self, m: &Self::Mor) -> Self::Ob;
-
-    /// Composes a path of morphisms in the model.
-    fn compose(&self, path: Path<Self::Ob, Self::Mor>) -> Self::Mor;
-
-    /// Composes a pair of morphisms in the model.
-    fn compose2(&self, m: Self::Mor, n: Self::Mor) -> Self::Mor {
-        self.compose(Path::pair(m, n))
-    }
-
-    /// Constructs the identity morphism at an object.
-    fn id(&self, x: Self::Ob) -> Self::Mor {
-        self.compose(Path::empty(x))
-    }
+    /// The underlying theory that this is a model of
+    fn theory(&self) -> &Self::Theory;
 
     /// Type of object.
     fn ob_type(&self, x: &Self::Ob) -> Self::ObType;
@@ -142,30 +115,32 @@ pub trait DblModel {
 
     /// Acts on a morphism with a morphism operation.
     fn mor_act(&self, m: Self::Mor, α: &Self::MorOp) -> Self::Mor;
+}
 
-    /** Iterates over the basic objects, aka object generators.
+/// A finitely-generated double model
+pub trait FgDblModel: DblModel + FgCategory {
+    /// get the type of a morphism generator
+    fn mor_gen_type(&self, mor: &Self::MorGen) -> Self::MorType;
 
-    These usually coincide with all of the objects.
-    */
-    fn objects(&self) -> impl Iterator<Item = Self::Ob>;
+    /// an iterator over the objects in the model
+    fn objects(&self) -> impl Iterator<Item = Self::Ob> {
+        self.generating_graph().vertices()
+    }
 
-    /** Iterates over the basic morphisms, aka morphism generators.
+    /// an iterator over the objects in the model of a given object type
+    fn objects_with_type(&self, obtype: Self::ObType) -> impl Iterator<Item = Self::Ob> {
+        self.objects().filter(move |ob| self.ob_type(ob) == obtype)
+    }
 
-    These rarely exhaust all of the morphisms.
-    */
-    fn morphisms(&self) -> impl Iterator<Item = Self::Mor>;
+    /// an iterator over the morphism generators in the model
+    fn morphisms(&self) -> impl Iterator<Item = Self::MorGen> {
+        self.generating_graph().edges()
+    }
 
-    /// Iterates over basic objects of the given type.
-    fn objects_with_type(&self, typ: &Self::ObType) -> impl Iterator<Item = Self::Ob>;
-
-    /// Iterates over basic morphisms of the given type.
-    fn morphisms_with_type(&self, typ: &Self::MorType) -> impl Iterator<Item = Self::Mor>;
-
-    /// Iterates over basic morphisms with the given domain.
-    fn morphisms_with_dom(&self, x: &Self::Ob) -> impl Iterator<Item = Self::Mor>;
-
-    /// Iterates over basic morphisms with the given codomain.
-    fn morphisms_with_cod(&self, x: &Self::Ob) -> impl Iterator<Item = Self::Mor>;
+    /// an iterator over the morphisms in the model of a given morphism type
+    fn morphisms_with_type(&self, mortype: Self::MorType) -> impl Iterator<Item = Self::MorGen> {
+        self.morphisms().filter(move |mor| self.mor_gen_type(mor) == mortype)
+    }
 }
 
 /** A finitely presented model of a discrete double theory.
@@ -175,7 +150,7 @@ finite presentation of a category sliced over the object and morphism types
 comprising the theory. A type theorist would call it a ["displayed
 category"](https://ncatlab.org/nlab/show/displayed+category).
 */
-#[derive(Clone, Derivative)]
+#[derive(Clone, Derivative, Debug)]
 #[derivative(PartialEq(bound = "Id: Eq + Hash"))]
 #[derivative(Eq(bound = "Id: Eq + Hash"))]
 pub struct DiscreteDblModel<Id, Cat: FgCategory> {
@@ -183,7 +158,7 @@ pub struct DiscreteDblModel<Id, Cat: FgCategory> {
     theory: Arc<DiscreteDblTheory<Cat>>,
     category: FpCategory<Id, Id, Id>,
     ob_types: IndexedHashColumn<Id, Cat::Ob>,
-    mor_types: IndexedHashColumn<Id, Cat::Hom>,
+    mor_types: IndexedHashColumn<Id, Cat::Mor>,
 }
 
 /// A model of a discrete double theory where both the model and theory have
@@ -198,7 +173,7 @@ where
     Id: Eq + Clone + Hash,
     Cat: FgCategory,
     Cat::Ob: Eq + Clone + Hash,
-    Cat::Hom: Eq + Clone + Hash,
+    Cat::Mor: Eq + Clone + Hash,
 {
     /// Creates an empty model of the given theory.
     pub fn new(theory: Arc<DiscreteDblTheory<Cat>>) -> Self {
@@ -210,14 +185,9 @@ where
         }
     }
 
-    /// Discrete double theory that the model is of.
-    pub fn theory(&self) -> &Arc<DiscreteDblTheory<Cat>> {
-        &self.theory
-    }
-
-    /// Graph of object and morphism generators for the model.
-    pub fn generating_graph(&self) -> &impl FinGraph<V = Id, E = Id> {
-        self.category.generators()
+    /// get the Arc for the theory of this model
+    pub fn theory_arc(&self) -> Arc<DiscreteDblTheory<Cat>> {
+        self.theory.clone()
     }
 
     /// Is the model freely generated?
@@ -232,15 +202,15 @@ where
     }
 
     /// Adds a basic morphism to the model.
-    pub fn add_mor(&mut self, f: Id, dom: Id, cod: Id, typ: Cat::Hom) -> bool {
+    pub fn add_mor(&mut self, f: Id, dom: Id, cod: Id, typ: Cat::Mor) -> bool {
         self.mor_types.set(f.clone(), typ);
-        self.category.add_hom_generator(f, dom, cod)
+        self.category.add_mor_generator(f, dom, cod)
     }
 
     /// Adds a basic morphism to the model without setting its (co)domain.
-    pub fn make_mor(&mut self, f: Id, typ: Cat::Hom) -> bool {
+    pub fn make_mor(&mut self, f: Id, typ: Cat::Mor) -> bool {
         self.mor_types.set(f.clone(), typ);
-        self.category.make_hom_generator(f)
+        self.category.make_mor_generator(f)
     }
 
     /// Updates the domain of a morphism, setting or unsetting it.
@@ -264,17 +234,17 @@ where
             InvalidFpCategory::EqSrc(eq) => Invalid::EqSrc(eq),
             InvalidFpCategory::EqTgt(eq) => Invalid::EqTgt(eq),
         });
-        let ob_type_errors = self.category.ob_generators().filter_map(|x| {
+        let ob_type_errors = self.category.generating_graph().vertices().filter_map(|x| {
             if self.theory.has_ob_type(&self.ob_type(&x)) {
                 None
             } else {
                 Some(Invalid::ObType(x))
             }
         });
-        let mor_type_errors = self.category.hom_generators().flat_map(|f| {
+        let mor_type_errors = self.category.generating_graph().edges().flat_map(|f| {
             let mut errs = Vec::new();
-            let mor_type = self.mor_type(&f);
-            let e = f.only().unwrap();
+            let e = f.clone();
+            let mor_type = self.mor_type(&f.into());
             if self.theory.has_mor_type(&mor_type) {
                 if self
                     .category
@@ -299,25 +269,21 @@ where
     }
 }
 
-impl<Id, Cat> DblModel for DiscreteDblModel<Id, Cat>
+impl<Id, Cat> Category for DiscreteDblModel<Id, Cat>
 where
     Id: Eq + Clone + Hash,
     Cat: FgCategory,
     Cat::Ob: Eq + Clone + Hash,
-    Cat::Hom: Eq + Clone + Hash,
+    Cat::Mor: Eq + Clone + Hash,
 {
     type Ob = Id;
     type Mor = Path<Id, Id>;
-    type ObType = Cat::Ob;
-    type MorType = Cat::Hom;
-    type ObOp = Cat::Ob;
-    type MorOp = Cat::Hom;
 
     fn has_ob(&self, x: &Self::Ob) -> bool {
         self.category.has_ob(x)
     }
     fn has_mor(&self, m: &Self::Mor) -> bool {
-        self.category.has_hom(m)
+        self.category.has_mor(m)
     }
     fn dom(&self, m: &Self::Mor) -> Self::Ob {
         self.category.dom(m)
@@ -328,6 +294,41 @@ where
     fn compose(&self, path: Path<Self::Ob, Self::Mor>) -> Self::Mor {
         self.category.compose(path)
     }
+}
+
+impl<Id, Cat> FgCategory for DiscreteDblModel<Id, Cat>
+where
+    Id: Eq + Clone + Hash,
+    Cat: FgCategory,
+    Cat::Ob: Eq + Clone + Hash,
+    Cat::Mor: Eq + Clone + Hash,
+{
+    type MorGen = Id;
+
+    fn generating_graph(&self) -> &impl FinGraph<V = Id, E = Id> {
+        self.category.generating_graph()
+    }
+}
+
+impl<Id, Cat> DblModel for DiscreteDblModel<Id, Cat>
+where
+    Id: Eq + Clone + Hash,
+    Cat: FgCategory,
+    Cat::Ob: Eq + Clone + Hash,
+    Cat::Mor: Eq + Clone + Hash,
+{
+    type ObType = Cat::Ob;
+    type MorType = Cat::Mor;
+
+    type ObOp = Cat::Ob;
+    type MorOp = Cat::Mor;
+
+    type Theory = DiscreteDblTheory<Cat>;
+
+    fn theory(&self) -> &Self::Theory {
+        &self.theory
+    }
+
     fn ob_act(&self, x: Self::Ob, _: &Self::ObOp) -> Self::Ob {
         x
     }
@@ -346,24 +347,17 @@ where
         );
         self.theory.compose_types(types)
     }
+}
 
-    fn objects(&self) -> impl Iterator<Item = Self::Ob> {
-        self.category.ob_generators()
-    }
-    fn morphisms(&self) -> impl Iterator<Item = Self::Mor> {
-        self.category.hom_generators()
-    }
-    fn objects_with_type(&self, typ: &Self::ObType) -> impl Iterator<Item = Self::Ob> {
-        self.ob_types.preimage(typ)
-    }
-    fn morphisms_with_type(&self, typ: &Self::MorType) -> impl Iterator<Item = Self::Mor> {
-        self.mor_types.preimage(typ).map(Path::single)
-    }
-    fn morphisms_with_dom(&self, x: &Self::Ob) -> impl Iterator<Item = Self::Mor> {
-        self.category.generators_with_dom(x)
-    }
-    fn morphisms_with_cod(&self, x: &Self::Ob) -> impl Iterator<Item = Self::Mor> {
-        self.category.generators_with_cod(x)
+impl<Id, Cat> FgDblModel for DiscreteDblModel<Id, Cat>
+where
+    Id: Eq + Clone + Hash,
+    Cat: FgCategory,
+    Cat::Ob: Eq + Clone + Hash,
+    Cat::Mor: Eq + Clone + Hash,
+{
+    fn mor_gen_type(&self, mor: &Self::MorGen) -> Self::MorType {
+        self.mor_types.apply(mor).unwrap().clone()
     }
 }
 
@@ -372,7 +366,7 @@ where
     Id: Eq + Clone + Hash,
     Cat: FgCategory,
     Cat::Ob: Eq + Clone + Hash,
-    Cat::Hom: Eq + Clone + Hash,
+    Cat::Mor: Eq + Clone + Hash,
 {
     type ValidationError = InvalidDiscreteDblModel<Id>;
 
@@ -428,7 +422,7 @@ mod tests {
     use ustr::ustr;
 
     use super::*;
-    use crate::one::fin_category::FinHom;
+    use crate::one::fin_category::FinMor;
     use crate::stdlib::theories::*;
 
     #[test]
@@ -441,15 +435,15 @@ mod tests {
 
         let mut model = DiscreteDblModel::new(th.clone());
         model.add_ob(entity, ustr("Entity"));
-        model.add_mor(ustr("map"), entity, entity, FinHom::Generator(ustr("NotMorType")));
+        model.add_mor(ustr("map"), entity, entity, FinMor::Generator(ustr("NotMorType")));
         assert_eq!(model.validate().unwrap_err().len(), 1);
 
         let mut model = DiscreteDblModel::new(th);
         model.add_ob(entity, ustr("Entity"));
         model.add_ob(ustr("type"), ustr("AttrType"));
-        model.add_mor(ustr("a"), entity, ustr("type"), FinHom::Generator(ustr("Attr")));
+        model.add_mor(ustr("a"), entity, ustr("type"), FinMor::Generator(ustr("Attr")));
         assert!(model.validate().is_ok());
-        model.add_mor(ustr("b"), entity, ustr("type"), FinHom::Id(ustr("Entity")));
+        model.add_mor(ustr("b"), entity, ustr("type"), FinMor::Id(ustr("Entity")));
         assert_eq!(model.validate().unwrap_err().len(), 1);
     }
 }
