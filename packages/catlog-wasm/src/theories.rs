@@ -9,9 +9,9 @@ use std::sync::Arc;
 use wasm_bindgen::prelude::*;
 
 use super::model::DblModel;
+use super::model_morphism::motifs;
 use super::theory::DblTheory;
-use catlog::dbl::model_morphism::DiscreteDblModelMapping;
-use catlog::dbl::{model, theory};
+use catlog::dbl::theory;
 use catlog::stdlib::{models, theories};
 
 /// The theory of categories.
@@ -68,26 +68,14 @@ impl ThSignedCategory {
     #[wasm_bindgen(js_name = "positiveLoops")]
     pub fn positive_loops(&self, model: &DblModel) -> Result<Vec<DblModel>, String> {
         let positive_loop = models::positive_loop(self.0.clone());
-        let model: &model::DiscreteDblModel<_, _> = model.try_into()?;
-        Ok(DiscreteDblModelMapping::morphisms(&positive_loop, model)
-            .monic()
-            .find_all()
-            .into_iter()
-            .map(|mapping| mapping.syntactic_image(model).into())
-            .collect())
+        motifs(&positive_loop, model)
     }
 
     /// Find negative feedback loops in a model.
     #[wasm_bindgen(js_name = "negativeLoops")]
     pub fn negative_loops(&self, model: &DblModel) -> Result<Vec<DblModel>, String> {
         let negative_loop = models::negative_loop(self.0.clone());
-        let model: &model::DiscreteDblModel<_, _> = model.try_into()?;
-        Ok(DiscreteDblModelMapping::morphisms(&negative_loop, model)
-            .monic()
-            .find_all()
-            .into_iter()
-            .map(|mapping| mapping.syntactic_image(model).into())
-            .collect())
+        motifs(&negative_loop, model)
     }
 }
 

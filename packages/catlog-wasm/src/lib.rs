@@ -1,4 +1,5 @@
 pub mod model;
+pub mod model_morphism;
 pub mod theory;
 
 #[allow(clippy::new_without_default)]
