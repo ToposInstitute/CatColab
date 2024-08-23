@@ -70,6 +70,8 @@ impl ThSignedCategory {
         let positive_loop = models::positive_loop(self.0.clone());
         let model: &model::DiscreteDblModel<_, _> = model.try_into()?;
         Ok(DiscreteDblModelMapping::morphisms(&positive_loop, model)
+            .monic()
+            .find_all()
             .into_iter()
             .map(|mapping| mapping.syntactic_image(model).into())
             .collect())
@@ -81,6 +83,8 @@ impl ThSignedCategory {
         let negative_loop = models::negative_loop(self.0.clone());
         let model: &model::DiscreteDblModel<_, _> = model.try_into()?;
         Ok(DiscreteDblModelMapping::morphisms(&negative_loop, model)
+            .monic()
+            .find_all()
             .into_iter()
             .map(|mapping| mapping.syntactic_image(model).into())
             .collect())
