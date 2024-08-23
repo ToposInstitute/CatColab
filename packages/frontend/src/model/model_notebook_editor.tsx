@@ -130,7 +130,9 @@ export function ModelNotebookEditor(props: {
         return indexMap(map);
     });
 
-    const [modelErrors, setModelErrors] = createSignal<Map<Uuid, InvalidDiscreteDblModel<Uuid>[]>>(new Map());
+    const [modelErrors, setModelErrors] = createSignal<Map<Uuid, InvalidDiscreteDblModel<Uuid>[]>>(
+        new Map(),
+    );
     const [validatedModel, setValidatedModel] = createSignal<DblModel | null>(null);
 
     onMount(() => props.ref?.({ model, theory, validatedModel }));

@@ -1,5 +1,5 @@
 import type * as Viz from "@viz-js/viz";
-import { For, createResource } from "solid-js";
+import { type Component, For, createResource } from "solid-js";
 import { P, match } from "ts-pattern";
 
 import type { ModelJudgment } from "../../model";
@@ -87,8 +87,8 @@ function StockFlowSVG(props: {
     return (
         <svg class="graph stock-flow" width={props.layout?.width} height={props.layout?.height}>
             <defs>
-                {arrowMarkerSVG[flowMarker]}
-                {arrowMarkerSVG[linkMarker]}
+                <FlowMarker />
+                <LinkMarker />
             </defs>
             <For each={props.layout?.edges ?? []}>{(edge) => <EdgeSVG edge={edge} />}</For>
             <For each={linkPaths()}>
@@ -120,3 +120,6 @@ function quadraticCurve(src: GraphLayout.Point, tgt: GraphLayout.Point, ratio: n
 
 const flowMarker: ArrowMarker = "double";
 const linkMarker: ArrowMarker = "vee";
+
+const FlowMarker: Component = arrowMarkerSVG[flowMarker];
+const LinkMarker: Component = arrowMarkerSVG[linkMarker];

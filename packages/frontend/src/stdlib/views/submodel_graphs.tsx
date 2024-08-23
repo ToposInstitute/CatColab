@@ -1,5 +1,5 @@
 import type * as Viz from "@viz-js/viz";
-import { Show, createMemo, createSignal } from "solid-js";
+import { createSignal } from "solid-js";
 
 import type { DblModel } from "catlog-wasm";
 import type { ModelJudgment } from "../../model";
@@ -20,7 +20,7 @@ export function SubmodelsGraphviz(props: {
     const decIndex = () => setIndex(Math.max(0, index() - 1));
     const incIndex = () => setIndex(Math.min(index() + 1, props.submodels.length - 1));
 
-    const submodel = createMemo<Array<ModelJudgment>>(() => {
+    const filteredModel = () => {
         if (index() >= props.submodels.length) {
             return [];
         }
@@ -34,7 +34,7 @@ export function SubmodelsGraphviz(props: {
                 return false;
             }
         });
-    });
+    };
 
     return (
         <div class="submodels">
@@ -46,14 +46,12 @@ export function SubmodelsGraphviz(props: {
                     Next
                 </button>
             </div>
-            <Show when={submodel()}>
-                <ModelGraphviz
-                    model={submodel()}
-                    theory={props.theory}
-                    attributes={props.attributes}
-                    options={props.options}
-                />
-            </Show>
+            <ModelGraphviz
+                model={filteredModel()}
+                theory={props.theory}
+                attributes={props.attributes}
+                options={props.options}
+            />
         </div>
     );
 }
