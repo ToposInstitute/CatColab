@@ -1,0 +1,11 @@
+.icon-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+
+    &:hover:enabled {
+        background: lightgray;
+        border-radius: 5px;
+    }
+}

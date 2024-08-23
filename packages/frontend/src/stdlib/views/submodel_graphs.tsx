@@ -1,10 +1,15 @@
 import type * as Viz from "@viz-js/viz";
-import { createSignal } from "solid-js";
+import ChevronLeft from "lucide-solid/icons/chevron-left";
+import ChevronRight from "lucide-solid/icons/chevron-right";
+import { Show, createSignal } from "solid-js";
 
 import type { DblModel } from "catlog-wasm";
+import { IconButton } from "../../components";
 import type { ModelJudgment } from "../../model";
 import type { TheoryMeta } from "../../theory";
 import { type GraphvizAttributes, ModelGraphviz } from "./model_graph";
+
+import "./submodel_graphs.css";
 
 /** Visualize submodels of a model of a double theory using Graphviz.
  */
@@ -12,6 +17,7 @@ export function SubmodelsGraphviz(props: {
     model: Array<ModelJudgment>;
     submodels: Array<DblModel>;
     theory: TheoryMeta;
+    title?: string;
     attributes?: GraphvizAttributes;
     options?: Viz.RenderOptions;
 }) {
@@ -37,14 +43,22 @@ export function SubmodelsGraphviz(props: {
     };
 
     return (
-        <div class="submodels">
+        <div class="submodel-graphs">
             <div class="panel">
-                <button onClick={decIndex} disabled={index() <= 0}>
-                    Previous
-                </button>
-                <button onClick={incIndex} disabled={index() >= props.submodels.length - 1}>
-                    Next
-                </button>
+                <span class="title">{props.title}</span>
+                <IconButton onClick={decIndex} disabled={index() <= 0}>
+                    <ChevronLeft />
+                </IconButton>
+                <Show when={props.submodels.length}>
+                    {(length) => (
+                        <span>
+                            {index() + 1} / {length()}
+                        </span>
+                    )}
+                </Show>
+                <IconButton onClick={incIndex} disabled={index() >= props.submodels.length - 1}>
+                    <ChevronRight />
+                </IconButton>
             </div>
             <ModelGraphviz
                 model={filteredModel()}

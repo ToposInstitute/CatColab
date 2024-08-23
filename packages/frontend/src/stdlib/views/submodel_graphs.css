@@ -1,0 +1,7 @@
+.submodel-graphs .panel {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    column-gap: 1ex;
+    margin: 1em;
+}

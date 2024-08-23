@@ -28,6 +28,7 @@
         "@viz-js/viz": "^3.7.0",
         "backend": "file:../backend",
         "catlog-wasm": "file:../catlog-wasm/pkg",
+        "lucide-solid": "^0.435.0",
         "prosemirror-commands": "^1.5.2",
         "prosemirror-keymap": "^1.2.2",
         "prosemirror-model": "^1.21.3",

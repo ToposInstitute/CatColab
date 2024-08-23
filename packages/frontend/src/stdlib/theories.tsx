@@ -220,6 +220,7 @@ const thCausalLoop = () => {
                 description: "Analyze the diagram for balancing loops",
                 component: (props) => (
                     <SubmodelsGraphviz
+                        title="Balancing loops"
                         model={props.model}
                         submodels={negativeLoops(props.validatedModel)}
                         theory={props.theory}
@@ -232,6 +233,7 @@ const thCausalLoop = () => {
                 description: "Analyze the diagram for reinforcing loops",
                 component: (props) => (
                     <SubmodelsGraphviz
+                        title="Reinforcing loops"
                         model={props.model}
                         submodels={positiveLoops(props.validatedModel)}
                         theory={props.theory}
@@ -245,12 +247,11 @@ const thCausalLoop = () => {
 
 const loopGraphvizConfig = {
     options: {
-        engine: "circo",
+        engine: "dot",
     },
     attributes: {
         graph: {
-            oneblock: "true",
-            splines: "curved",
+            rankdir: "LR",
         },
     },
 };
