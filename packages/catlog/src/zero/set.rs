@@ -64,7 +64,7 @@ pub trait FinSet: Set {
 The elements of the skeletal finite set of size `n` are the numbers `0..n`
 (excluding `n`).
  */
-#[derive(Clone, Copy, Debug, From, Into, RefCast)]
+#[derive(Clone, Copy, Debug, From, Into, PartialEq, Eq, RefCast)]
 #[repr(transparent)]
 pub struct SkelFinSet(usize);
 
@@ -119,6 +119,8 @@ impl IntoIterator for SkelFinSet {
 /// A finite set backed by a hash set.
 #[derive(Clone, Debug, From, Into, Derivative)]
 #[derivative(Default(bound = "S: Default"))]
+#[derivative(PartialEq(bound = "T: Eq + Hash, S: BuildHasher"))]
+#[derivative(Eq(bound = "T: Eq + Hash, S: BuildHasher"))]
 pub struct HashFinSet<T, S = RandomState>(HashSet<T, S>);
 
 /// A finite set with elements of type `Ustr`.
@@ -195,6 +197,8 @@ The internal representation is simply a vector.
 */
 #[derive(Clone, Debug, From, Derivative)]
 #[derivative(Default(bound = ""))]
+#[derivative(PartialEq(bound = "T: PartialEq"))]
+#[derivative(Eq(bound = "T: Eq"))]
 pub struct AttributedSkelSet<T>(Vec<T>);
 
 impl<T> AttributedSkelSet<T> {
