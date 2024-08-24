@@ -71,12 +71,12 @@ pub trait FinGraph: Graph {
     }
 
     /// Number of vertices in the graph.
-    fn nv(&self) -> usize {
+    fn vertex_count(&self) -> usize {
         self.vertices().count()
     }
 
     /// Number of edges in the graph.
-    fn ne(&self) -> usize {
+    fn edge_count(&self) -> usize {
         self.edges().count()
     }
 
@@ -219,10 +219,10 @@ impl<G: ColumnarGraphImplGraph> FinGraph for G {
     fn out_edges(&self, v: &Self::V) -> impl Iterator<Item = Self::E> {
         self.src_map().preimage(v)
     }
-    fn nv(&self) -> usize {
+    fn vertex_count(&self) -> usize {
         self.vertex_set().len()
     }
-    fn ne(&self) -> usize {
+    fn edge_count(&self) -> usize {
         self.edge_set().len()
     }
 }
@@ -653,8 +653,8 @@ mod tests {
     #[test]
     fn skel_graph() {
         let g = SkelGraph::triangle();
-        assert_eq!(g.nv(), 3);
-        assert_eq!(g.ne(), 3);
+        assert_eq!(g.vertex_count(), 3);
+        assert_eq!(g.edge_count(), 3);
         assert_eq!(g.src(&1), 1);
         assert_eq!(g.tgt(&1), 2);
         assert_eq!(g.out_edges(&0).collect::<Vec<_>>(), vec![0, 2]);
