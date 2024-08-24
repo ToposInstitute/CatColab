@@ -36,6 +36,7 @@ In addition, a model has the following operations:
  */
 
 use std::hash::Hash;
+use std::iter::Iterator;
 use std::sync::Arc;
 
 use derivative::Derivative;
@@ -51,7 +52,6 @@ use crate::one::fin_category::{FpCategory, InvalidFpCategory, UstrFinCategory};
 use crate::one::*;
 use crate::validate::{self, Validate};
 use crate::zero::{IndexedHashColumn, Mapping};
-use std::iter::Iterator;
 
 /** A model of a double theory.
 
@@ -119,10 +119,10 @@ pub trait DblModel: Category {
 
 /// A finitely-generated double model
 pub trait FgDblModel: DblModel + FgCategory {
-    /// get the type of a morphism generator
+    /// Type of a morphism generator
     fn mor_gen_type(&self, mor: &Self::MorGen) -> Self::MorType;
 
-    /// an iterator over the objects in the model
+    /// Iterates over the objects in the model
     fn objects(&self) -> impl Iterator<Item = Self::Ob> {
         self.generating_graph().vertices()
     }

@@ -38,9 +38,9 @@ summarized by the table:
 Models of a double theory are automatically *categorical* structures, rather
 than merely *set-theoretical* ones, because each object type is assigned not
 just a set of objects but also a span of morphisms between those objects,
-constituting a category. The morphism data comes from a distinguished "Mor" type
+constituting a category. The morphism data comes from a distinguished "Id" type
 for each object type in the double theory. Similarly, each object operation is
-automatically functorial since it comes with a "Mor" operation between the Mor
+automatically functorial since it comes with a "Id" operation between the Mor
 types. Morphism types can also be composed to give new ones, as summarized by
 the table:
 

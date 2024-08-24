@@ -334,6 +334,9 @@ mod tests {
 
         let maps = DiscreteDblModelMapping::morphisms(&positive_loop, &positive_loop).find_all();
         assert_eq!(maps.len(), 2);
+        let map_obs = maps.iter().map(|ob| ob.apply_ob(&pos)).collect::<Vec<_>>();
+        assert!(map_obs.contains(&Some(ustr("x"))));
+        assert!(map_obs.contains(&Some(ustr("y"))));
 
         let maps = DiscreteDblModelMapping::morphisms(&positive_loop, &positive_loop)
             .monic()
