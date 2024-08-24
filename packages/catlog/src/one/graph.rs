@@ -71,12 +71,12 @@ pub trait FinGraph: Graph {
     }
 
     /// Number of vertices in the graph.
-    fn nv(&self) -> usize {
+    fn vertex_count(&self) -> usize {
         self.vertices().count()
     }
 
     /// Number of edges in the graph.
-    fn ne(&self) -> usize {
+    fn edge_count(&self) -> usize {
         self.edges().count()
     }
 
@@ -219,10 +219,10 @@ impl<G: ColumnarGraphImplGraph> FinGraph for G {
     fn out_edges(&self, v: &Self::V) -> impl Iterator<Item = Self::E> {
         self.src_map().preimage(v)
     }
-    fn nv(&self) -> usize {
+    fn vertex_count(&self) -> usize {
         self.vertex_set().len()
     }
-    fn ne(&self) -> usize {
+    fn edge_count(&self) -> usize {
         self.edge_set().len()
     }
 }
@@ -248,7 +248,7 @@ pub enum InvalidGraphData<E> {
 The data structure is the same as the standard `Graph` type in
 [Catlab.jl](https://github.com/AlgebraicJulia/Catlab.jl).
  */
-#[derive(Clone, Default)]
+#[derive(Clone, Default, PartialEq, Eq)]
 pub struct SkelGraph {
     nv: usize,
     ne: usize,
@@ -362,6 +362,8 @@ hashable types.
 */
 #[derive(Clone, Derivative)]
 #[derivative(Default(bound = "S: Default"))]
+#[derivative(PartialEq(bound = "V: Eq + Hash, E: Eq + Hash, S: BuildHasher"))]
+#[derivative(Eq(bound = "V: Eq + Hash, E: Eq + Hash, S: BuildHasher"))]
 pub struct HashGraph<V, E, S = RandomState> {
     vertex_set: HashFinSet<V, S>,
     edge_set: HashFinSet<E, S>,
@@ -651,8 +653,8 @@ mod tests {
     #[test]
     fn skel_graph() {
         let g = SkelGraph::triangle();
-        assert_eq!(g.nv(), 3);
-        assert_eq!(g.ne(), 3);
+        assert_eq!(g.vertex_count(), 3);
+        assert_eq!(g.edge_count(), 3);
         assert_eq!(g.src(&1), 1);
         assert_eq!(g.tgt(&1), 2);
         assert_eq!(g.out_edges(&0).collect::<Vec<_>>(), vec![0, 2]);

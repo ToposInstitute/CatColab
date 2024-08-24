@@ -158,6 +158,8 @@ impl<T> InvalidFunction<T> {
  */
 #[derive(Clone, Debug, Derivative)]
 #[derivative(Default(bound = ""))]
+#[derivative(PartialEq(bound = "T: PartialEq"))]
+#[derivative(Eq(bound = "T: Eq"))]
 pub struct VecColumn<T>(Vec<Option<T>>);
 
 impl<T> VecColumn<T> {
@@ -218,6 +220,8 @@ impl<T: Eq> Column for VecColumn<T> {
  */
 #[derive(Clone, From, Debug, Derivative)]
 #[derivative(Default(bound = "S: Default"))]
+#[derivative(PartialEq(bound = "K: Eq + Hash, V: PartialEq, S: BuildHasher"))]
+#[derivative(Eq(bound = "K: Eq + Hash, V: Eq, S: BuildHasher"))]
 pub struct HashColumn<K, V, S = RandomState>(HashMap<K, V, S>);
 
 /// An unindexed column with keys of type `Ustr`.
@@ -367,9 +371,11 @@ where
 This common pattern is used to implement more specific columns but, like the
 `Index` trait, is not directly exposed.
  */
-#[derive(Clone)]
+#[derive(Clone, Derivative)]
+#[derivative(PartialEq, Eq)]
 struct IndexedColumn<Dom, Cod, Col, Ind> {
     mapping: Col,
+    #[derivative(PartialEq = "ignore")]
     index: Ind,
     dom_type: PhantomData<Dom>,
     cod_type: PhantomData<Cod>,
@@ -450,7 +456,7 @@ where
 The column has the natural numbers (`usize`) as both its domain and codomain,
 making it suitable for use with skeletal finite sets.
 */
-#[derive(Clone, Derivative)]
+#[derive(Clone, Derivative, PartialEq, Eq)]
 #[derivative(Default(bound = ""))]
 pub struct SkelIndexedColumn(IndexedColumn<usize, usize, VecColumn<usize>, VecIndex<usize>>);
 
@@ -502,7 +508,7 @@ impl Column for SkelIndexedColumn {
 The domain of the column is the natural numbers (`usize`). Since the codomain is
 an arbitrary type (`T`), the index is implemented using a hash map.
 */
-#[derive(Clone, Derivative)]
+#[derive(Clone, Derivative, PartialEq, Eq)]
 #[derivative(Default(bound = ""))]
 pub struct IndexedVecColumn<T>(IndexedColumn<usize, T, VecColumn<T>, HashIndex<usize, T>>);
 
@@ -552,6 +558,8 @@ impl<T: Eq + Hash + Clone> Column for IndexedVecColumn<T> {
 /// An indexed column backed by hash maps.
 #[derive(Clone, Derivative)]
 #[derivative(Default(bound = "S: Default"))]
+#[derivative(PartialEq(bound = "K: Eq + Hash, V: PartialEq, S: BuildHasher"))]
+#[derivative(Eq(bound = "K: Eq + Hash, V: Eq, S: BuildHasher"))]
 #[allow(clippy::type_complexity)]
 pub struct IndexedHashColumn<K, V, S = RandomState>(
     IndexedColumn<K, V, HashColumn<K, V, S>, HashIndex<K, V, S>>,

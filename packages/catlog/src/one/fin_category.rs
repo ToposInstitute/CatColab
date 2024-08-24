@@ -33,6 +33,8 @@ graphs, and symmetric reflexive graphs are all finite.
  */
 #[derive(Clone, Derivative)]
 #[derivative(Default(bound = "S: Default"))]
+#[derivative(PartialEq(bound = "V: Eq + Hash, E: Eq + Hash, S: BuildHasher"))]
+#[derivative(Eq(bound = "V: Eq + Hash, E: Eq + Hash, S: BuildHasher"))]
 pub struct FinCategory<V, E, S = RandomState> {
     generators: HashGraph<V, E, S>,
     compose_map: HashColumn<(E, E), FinHom<V, E>>,
@@ -240,6 +242,8 @@ Depending on the application, these could be axiom names or meaningless IDs.
  */
 #[derive(Clone, Derivative)]
 #[derivative(Default(bound = "S: Default"))]
+#[derivative(PartialEq(bound = "V: Eq + Hash, E: Eq + Hash, EqKey: Eq + Hash, S: BuildHasher"))]
+#[derivative(Eq(bound = "V: Eq + Hash, E: Eq + Hash, EqKey: Eq + Hash, S: BuildHasher"))]
 pub struct FpCategory<V, E, EqKey, S = RandomState> {
     generators: HashGraph<V, E, S>,
     equations: HashColumn<EqKey, PathEq<V, E>, S>,
