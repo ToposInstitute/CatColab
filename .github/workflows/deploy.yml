@@ -155,14 +155,14 @@ jobs:
 
       - name: Generate URL Preview
         id: url_preview
-        if: ${{ env.BRANCH_NAME != 'main' }}
+        if: ${{ env.BRANCH_NAME != 'main' }} && (github.event_name == 'push' || github.event_name == 'pull_request')
         run: |
           NETLIFY_PREVIEW_URL=$(jq -r '.deploy_url' deploy_output.json)
           echo "NETLIFY_PREVIEW_URL=$NETLIFY_PREVIEW_URL" >> "$GITHUB_OUTPUT"
 
       - name: Comment URL Preview on PR
         uses: mshick/add-pr-comment@v2
-        if: ${{ env.BRANCH_NAME != 'main' }}
+        if: ${{ env.BRANCH_NAME != 'main' }} && (github.event_name == 'push' || github.event_name == 'pull_request')
         with:
           message: |
             Preview url: ${{ steps.url_preview.outputs.NETLIFY_PREVIEW_URL }}
