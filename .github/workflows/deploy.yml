@@ -5,6 +5,8 @@ on:
     branches:
       - main
   pull_request:
+  release:
+    types: [published]
 
 env:
   BRANCH_NAME: ${{ github.ref_name }}
@@ -136,13 +138,20 @@ jobs:
           mv frontend_docs site/dev/frontend
           echo "/dev /dev/index.xml" > site/_redirects
 
-      - name: Deploy
+      - name: Deploy to Staging
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
         id: netlify_deploy
         run: |
           cd .netlify-env
           prod_flag=""
           if [ "$BRANCH_NAME" = "main" ]; then prod_flag="--prod"; fi
           npx netlify deploy --dir ../site --site ${{ secrets.NETLIFY_SITE_ID }} --auth ${{ secrets.NETLIFY_API_TOKEN }} $prod_flag --json > ../deploy_output.json
+
+      - name: Deploy to Prod
+        if: github.event_name == 'release'
+        run: |
+          cd .netlify-env
+          npx netlify deploy --dir ../site --site ${{ secrets.NETLIFY_PROD_SITE_ID }} --auth ${{ secrets.NETLIFY_API_TOKEN }} --prod
 
       - name: Generate URL Preview
         id: url_preview
