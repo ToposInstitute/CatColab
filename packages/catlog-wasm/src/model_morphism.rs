@@ -24,5 +24,26 @@ where
     // Order motifs from small to large.
     images.sort_by_key(|im| (im.objects().count(), im.morphisms().count()));
 
+    // Remove duplicates: different morphisms can have the same image.
+    retain_unique(&mut images);
+
     Ok(images.into_iter().map(|im| im.into()).collect())
+}
+
+/** Remove duplicate elements from a vector.
+
+This is the naive quadratic algorithm that only uses equality tests.
+ */
+fn retain_unique<T>(vec: &mut Vec<T>)
+where
+    T: Eq,
+{
+    let mut i = 0;
+    while i < vec.len() {
+        if (0..i).any(|j| vec[j] == vec[i]) {
+            vec.remove(i);
+        } else {
+            i += 1;
+        }
+    }
 }
