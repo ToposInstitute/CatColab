@@ -4,7 +4,13 @@ CatColab (working name) is a collaborative environment for
 
 > formal, interoperable, conceptual modeling.
 
-An early demo is available at <https://next.catcolab.org>.
+As the name suggests, CatColab is based on ideas from category theory,
+yet it is a specific design goal that the system be usable without
+any knowledge of such ideas.
+
+## For users
+
+An early demo is available at <https://catcolab.org>.
 
 > [!WARNING]
 > CatColab is a pre-alpha software under active development.
@@ -13,7 +19,8 @@ An early demo is available at <https://next.catcolab.org>.
 
 ## For developers
 
-Documentation for developers is available at <https://next.catcolab.org/dev/>.
+The staging deployment, synced to the `main` branch, is available at <https://next.catcolab.org>.
+Documentation for developers is browsable at <https://next.catcolab.org/dev/>.
 
 To build locally, clone the repository and run
 
