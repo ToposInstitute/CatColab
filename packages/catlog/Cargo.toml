@@ -14,15 +14,9 @@ serde-wasm = ["serde", "dep:wasm-bindgen", "dep:tsify-next"]
 archery = "1"
 derivative = "2"
 derive_more = { version = "1", features = ["from", "into"] }
-<<<<<<< HEAD
 either = "1"
-=======
 indoc = "2.0.5"
-<<<<<<< HEAD
->>>>>>> 2dba867 (basic math expression compiler + evaluator)
-=======
 nalgebra = "^0.32.3"                                                 # specific version to be compatible with ode_solvers
->>>>>>> 00338d3 (solve ODEs from user-provided expressions)
 nonempty = "0.10"
 ode_solvers = "0.4.0"
 ref-cast = "1"
