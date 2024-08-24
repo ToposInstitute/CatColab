@@ -15,7 +15,7 @@ import {
 import { useDoc } from "../util/automerge_solid";
 import { type IndexedMap, indexArray, indexMap } from "../util/indexing";
 
-import { DblModel, type InvalidDiscreteDblModel, type Uuid } from "catlog-wasm";
+import type { DblModel, InvalidDiscreteDblModel, Uuid } from "catlog-wasm";
 import { InlineInput } from "../components";
 import {
     type CellActions,
@@ -38,23 +38,12 @@ import {
     type ModelNotebook,
     type MorphismDecl,
     type ObjectDecl,
+    catlogModel,
     newMorphismDecl,
     newObjectDecl,
 } from "./types";
 
 import "./model_notebook_editor.css";
-
-function judgementType(j: ModelJudgment): string | undefined {
-    const theory = useContext(TheoryContext);
-
-    if (j.tag === "object") {
-        return theory?.()?.getObTypeMeta(j.obType)?.name;
-    }
-
-    if (j.tag === "morphism") {
-        return theory?.()?.getMorTypeMeta(j.morType)?.name;
-    }
-}
 
 /** Editor for a cell in a model of a discrete double theory.
  */
@@ -91,11 +80,14 @@ export function ModelCellEditor(props: {
 /** Reference to a `ModelNotebookEditor`.
  */
 export type ModelNotebookRef = {
-    // Get the data of the model.
+    // Get the data of the model in the notebook.
     model: Accessor<Array<ModelJudgment>>;
 
-    // Get the double theory that the model is of, if defined.
+    // Get the double theory that the model is of, if it is defined.
     theory: Accessor<TheoryMeta | undefined>;
+
+    // Get the `catlog` model object, if it is valid.
+    validatedModel: Accessor<DblModel | null>;
 };
 
 /** Notebook-based editor for a model of a discrete double theory.
@@ -138,28 +130,32 @@ export function ModelNotebookEditor(props: {
         return indexMap(map);
     });
 
-    const modelErrors = createMemo<Map<Uuid, InvalidDiscreteDblModel<Uuid>[]>>(() => {
-        let errs: InvalidDiscreteDblModel<Uuid>[] = [];
-        const th = theory();
-        if (th && th.theory.kind === "Discrete") {
-            const coreModel = new DblModel(th.theory);
-            for (const judgment of model()) {
-                if (judgment.tag === "object") {
-                    coreModel.addOb(judgment);
-                } else if (judgment.tag === "morphism") {
-                    coreModel.addMor(judgment);
-                }
-            }
-            errs = coreModel.validate();
-        }
-        return indexArray(errs, (err) => err.content);
-    });
+    const [modelErrors, setModelErrors] = createSignal<Map<Uuid, InvalidDiscreteDblModel<Uuid>[]>>(
+        new Map(),
+    );
+    const [validatedModel, setValidatedModel] = createSignal<DblModel | null>(null);
 
-    onMount(() => props.ref?.({ model, theory }));
+    onMount(() => props.ref?.({ model, theory, validatedModel }));
 
     createEffect(() => {
         const id = modelNb().theory;
         setTheory(id !== undefined ? props.theories.get(id) : undefined);
+    });
+
+    createEffect(() => {
+        let errs: InvalidDiscreteDblModel<Uuid>[] = [];
+        let validatedModel = null;
+        const th = theory();
+        if (th && th.theory.kind === "Discrete") {
+            // NOTE: Validation not yet implemented for other theory kinds.
+            const dblModel = catlogModel(th.theory, model());
+            errs = dblModel.validate();
+            if (errs.length === 0) {
+                validatedModel = dblModel;
+            }
+        }
+        setModelErrors(indexArray(errs, (err) => err.content));
+        setValidatedModel(validatedModel);
     });
 
     return (
@@ -206,7 +202,7 @@ export function ModelNotebookEditor(props: {
             >
                 <NotebookEditor
                     handle={props.handle}
-                    cellType={judgementType}
+                    cellType={judgmentType}
                     path={["notebook"]}
                     notebook={modelNb().notebook}
                     changeNotebook={(f) => {
@@ -218,6 +214,16 @@ export function ModelNotebookEditor(props: {
             </MultiProvider>
         </div>
     );
+}
+
+function judgmentType(judgment: ModelJudgment): string | undefined {
+    const theory = useContext(TheoryContext);
+    if (judgment.tag === "object") {
+        return theory?.()?.getObTypeMeta(judgment.obType)?.name;
+    }
+    if (judgment.tag === "morphism") {
+        return theory?.()?.getMorTypeMeta(judgment.morType)?.name;
+    }
 }
 
 type ModelCellConstructor = CellConstructor<ModelJudgment>;

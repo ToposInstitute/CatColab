@@ -1,9 +1,9 @@
 import { focus } from "@solid-primitives/active-element";
+import type { KbdKey } from "@solid-primitives/keyboard";
 import { For, type JSX, Show, createMemo, createSignal } from "solid-js";
 focus;
 
 import "./inline_input.css";
-import type { KbdKey } from "@solid-primitives/keyboard";
 
 export const KbdShortcut = (props: {
     shortcut: KbdKey[];

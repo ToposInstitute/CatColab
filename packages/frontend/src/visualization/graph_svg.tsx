@@ -1,5 +1,6 @@
 import { destructure } from "@solid-primitives/destructure";
-import { For, type JSX, Match, Show, Switch } from "solid-js";
+import { type Component, For, Index, Match, Show, Switch } from "solid-js";
+import { Dynamic } from "solid-js/web";
 
 import type * as GraphLayout from "./graph_layout";
 import type { ArrowStyle } from "./types";
@@ -11,18 +12,20 @@ import "./graph_svg.css";
 export function GraphSVG<Id>(props: {
     graph?: GraphLayout.Graph<Id>;
 }) {
-    const markerSet = () => {
+    const edgeMarkers = () => {
         const markers = new Set<ArrowMarker>();
         for (const edge of props.graph?.edges ?? []) {
             markers.add(styleToMarker[edge.style ?? "default"]);
         }
-        return markers;
+        return Array.from(markers);
     };
 
     return (
         <svg class="graph" width={props.graph?.width} height={props.graph?.height}>
             <defs>
-                <For each={Array.from(markerSet())}>{(marker) => arrowMarkerSVG[marker]}</For>
+                <Index each={edgeMarkers()}>
+                    {(marker) => <Dynamic component={arrowMarkerSVG[marker()]} />}
+                </Index>
             </defs>
             <For each={props.graph?.edges ?? []}>{(edge) => <EdgeSVG edge={edge} />}</For>
             <For each={props.graph?.nodes ?? []}>{(node) => <NodeSVG node={node} />}</For>
@@ -177,9 +180,9 @@ const styleToMarker: Record<ArrowStyle, ArrowMarker> = {
 
 /** SVG markers for arrow heads.
  */
-export const arrowMarkerSVG: Record<ArrowMarker, JSX.Element> = {
-    vee: <VeeMarker id="arrowhead-vee" />,
-    double: <VeeMarker id="arrowhead-double" offset={-2} />,
-    triangle: <TriangleMarker id="arrowhead-triangle" />,
-    flat: <FlatMarker id="arrowhead-flat" />,
+export const arrowMarkerSVG: Record<ArrowMarker, Component> = {
+    vee: () => <VeeMarker id="arrowhead-vee" />,
+    double: () => <VeeMarker id="arrowhead-double" offset={-2} />,
+    triangle: () => <TriangleMarker id="arrowhead-triangle" />,
+    flat: () => <FlatMarker id="arrowhead-flat" />,
 };

@@ -155,26 +155,17 @@ where
         im
     }
 
-    /** Finds morphisms between two models of a discrete double theory.
-
-    Morphisms are found using backtracking search. In general, there can be
-    infinitely many morphisms between two models, so not all of them can be
-    reported. The search is restricted to morphisms that send each basic
-    morphism in the domain to a [simple
-    path](crate::one::graph_algorithms::simple_paths) of basic morphisms in the
-    codomain.
-    */
-    pub fn morphisms<Cat>(
-        dom: &DiscreteDblModel<DomId, Cat>,
-        cod: &DiscreteDblModel<CodId, Cat>,
-    ) -> Vec<Self>
+    /// Finder of morphisms between two models of a discrete double theory.
+    pub fn morphisms<'a, Cat>(
+        dom: &'a DiscreteDblModel<DomId, Cat>,
+        cod: &'a DiscreteDblModel<CodId, Cat>,
+    ) -> DiscreteDblModelMorphismFinder<'a, DomId, CodId, Cat>
     where
         Cat: FgCategory,
         Cat::Ob: Eq + Clone + Hash,
         Cat::Hom: Eq + Clone + Hash,
     {
-        let mut search = BacktrackingSearch::new(dom, cod);
-        search.find_all()
+        DiscreteDblModelMorphismFinder::new(dom, cod)
     }
 }
 
@@ -210,15 +201,24 @@ where
     }
 }
 
-struct BacktrackingSearch<'a, DomId, CodId, Cat: FgCategory> {
+/** Finds morphisms between two models of a discrete double theory.
+
+Morphisms are found using backtracking search. In general, there can be
+infinitely many morphisms between two models, so not all of them can be
+reported. The search is restricted to morphisms that send each basic morphism in
+the domain to a [simple path](crate::one::graph_algorithms::simple_paths) of
+basic morphisms in the codomain.
+*/
+pub struct DiscreteDblModelMorphismFinder<'a, DomId, CodId, Cat: FgCategory> {
     dom: &'a DiscreteDblModel<DomId, Cat>,
     cod: &'a DiscreteDblModel<CodId, Cat>,
     map: DiscreteDblModelMapping<DomId, CodId>,
     results: Vec<DiscreteDblModelMapping<DomId, CodId>>,
     var_order: Vec<GraphElem<DomId, DomId>>,
+    monic: bool,
 }
 
-impl<'a, DomId, CodId, Cat> BacktrackingSearch<'a, DomId, CodId, Cat>
+impl<'a, DomId, CodId, Cat> DiscreteDblModelMorphismFinder<'a, DomId, CodId, Cat>
 where
     DomId: Clone + Eq + Hash,
     CodId: Clone + Eq + Hash,
@@ -248,10 +248,20 @@ where
             map: Default::default(),
             results: Default::default(),
             var_order,
+            monic: false,
         }
     }
 
-    fn find_all(&mut self) -> Vec<DiscreteDblModelMapping<DomId, CodId>> {
+    /// Restrict to the search to monomorphisms between models.
+    ///
+    /// TODO: Implement this feature! It doesn't work yet.
+    pub fn monic(&mut self) -> &mut Self {
+        self.monic = true;
+        self
+    }
+
+    /// Finds all morphisms.
+    pub fn find_all(&mut self) -> Vec<DiscreteDblModelMapping<DomId, CodId>> {
         self.search(0);
         std::mem::take(&mut self.results)
     }
@@ -284,7 +294,7 @@ where
 
                 let cod_graph = self.cod.generating_graph();
                 for path in simple_paths(cod_graph, &w, &z) {
-                    if self.cod.mor_type(&path) == mor_type {
+                    if self.cod.mor_type(&path) == mor_type && !(self.monic && path.is_empty()) {
                         self.map.assign_basic_mor(m.clone(), path);
                         self.search(depth + 1);
                     }
@@ -321,10 +331,16 @@ mod tests {
         let positive_loop = positive_loop(th.clone());
         let pos = positive_loop.morphisms().next().unwrap();
 
-        let maps = DiscreteDblModelMapping::morphisms(&positive_loop, &positive_loop);
+        let maps = DiscreteDblModelMapping::morphisms(&positive_loop, &positive_loop).find_all();
         assert_eq!(maps.len(), 2);
         assert!(matches!(maps[0].apply_mor(&pos), Some(Path::Id(_))));
         assert!(matches!(maps[1].apply_mor(&pos), Some(Path::Seq(_))));
+
+        let maps = DiscreteDblModelMapping::morphisms(&positive_loop, &positive_loop)
+            .monic()
+            .find_all();
+        assert_eq!(maps.len(), 1);
+        assert!(matches!(maps[0].apply_mor(&pos), Some(Path::Seq(_))));
     }
 
     #[test]
@@ -334,7 +350,8 @@ mod tests {
         let base_pt = negative_loop.objects().next().unwrap();
 
         let negative_feedback = negative_feedback(th);
-        let maps = DiscreteDblModelMapping::morphisms(&negative_loop, &negative_feedback);
+        let maps =
+            DiscreteDblModelMapping::morphisms(&negative_loop, &negative_feedback).find_all();
         assert_eq!(maps.len(), 2);
         assert_eq!(maps[0].apply_ob(&base_pt), Some(ustr("x")));
         assert_eq!(maps[1].apply_ob(&base_pt), Some(ustr("y")));
