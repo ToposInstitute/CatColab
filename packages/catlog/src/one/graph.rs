@@ -248,7 +248,7 @@ pub enum InvalidGraphData<E> {
 The data structure is the same as the standard `Graph` type in
 [Catlab.jl](https://github.com/AlgebraicJulia/Catlab.jl).
  */
-#[derive(Clone, Default)]
+#[derive(Clone, Default, PartialEq, Eq)]
 pub struct SkelGraph {
     nv: usize,
     ne: usize,
@@ -362,6 +362,8 @@ hashable types.
 */
 #[derive(Clone, Derivative)]
 #[derivative(Default(bound = "S: Default"))]
+#[derivative(PartialEq(bound = "V: Eq + Hash, E: Eq + Hash, S: BuildHasher"))]
+#[derivative(Eq(bound = "V: Eq + Hash, E: Eq + Hash, S: BuildHasher"))]
 pub struct HashGraph<V, E, S = RandomState> {
     vertex_set: HashFinSet<V, S>,
     edge_set: HashFinSet<E, S>,

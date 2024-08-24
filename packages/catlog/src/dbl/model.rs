@@ -38,6 +38,7 @@ In addition, a model has the following operations:
 use std::hash::Hash;
 use std::sync::Arc;
 
+use derivative::Derivative;
 use ustr::Ustr;
 
 #[cfg(feature = "serde")]
@@ -174,8 +175,11 @@ finite presentation of a category sliced over the object and morphism types
 comprising the theory. A type theorist would call it a ["displayed
 category"](https://ncatlab.org/nlab/show/displayed+category).
 */
-#[derive(Clone)]
+#[derive(Clone, Derivative)]
+#[derivative(PartialEq(bound = "Id: Eq + Hash"))]
+#[derivative(Eq(bound = "Id: Eq + Hash"))]
 pub struct DiscreteDblModel<Id, Cat: FgCategory> {
+    #[derivative(PartialEq(compare_with = "Arc::ptr_eq"))]
     theory: Arc<DiscreteDblTheory<Cat>>,
     category: FpCategory<Id, Id, Id>,
     ob_types: IndexedHashColumn<Id, Cat::Ob>,
