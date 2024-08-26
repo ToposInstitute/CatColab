@@ -330,19 +330,19 @@ mod tests {
     fn find_positive_loops() {
         let th = Arc::new(th_signed_category());
         let positive_loop = positive_loop(th.clone());
-        let pos = positive_loop.morphisms().next().unwrap();
+        let pos = positive_loop.morphisms().next().unwrap().into();
 
         let maps = DiscreteDblModelMapping::morphisms(&positive_loop, &positive_loop).find_all();
         assert_eq!(maps.len(), 2);
-        let map_obs = maps.iter().map(|ob| ob.apply_ob(&pos)).collect::<Vec<_>>();
-        assert!(map_obs.contains(&Some(ustr("x"))));
-        assert!(map_obs.contains(&Some(ustr("y"))));
+        let mors: Vec<_> = maps.into_iter().map(|mor| mor.apply_mor(&pos)).collect();
+        assert!(mors.iter().any(|mor| matches!(mor, Some(Path::Id(_)))));
+        assert!(mors.iter().any(|mor| matches!(mor, Some(Path::Seq(_)))));
 
         let maps = DiscreteDblModelMapping::morphisms(&positive_loop, &positive_loop)
             .monic()
             .find_all();
         assert_eq!(maps.len(), 1);
-        assert!(matches!(maps[0].apply_mor(&pos.into()), Some(Path::Seq(_))));
+        assert!(matches!(maps[0].apply_mor(&pos), Some(Path::Seq(_))));
     }
 
     #[test]
@@ -355,9 +355,9 @@ mod tests {
         let maps =
             DiscreteDblModelMapping::morphisms(&negative_loop, &negative_feedback).find_all();
         assert_eq!(maps.len(), 2);
-        let map_obs = maps.iter().map(|ob| ob.apply_ob(&base_pt)).collect::<Vec<_>>();
-        assert!(map_obs.contains(&Some(ustr("x"))));
-        assert!(map_obs.contains(&Some(ustr("y"))));
+        let obs: Vec<_> = maps.iter().map(|mor| mor.apply_ob(&base_pt)).collect();
+        assert!(obs.contains(&Some(ustr("x"))));
+        assert!(obs.contains(&Some(ustr("y"))));
 
         let im = maps[0].syntactic_image(&negative_feedback);
         assert!(im.validate().is_ok());
