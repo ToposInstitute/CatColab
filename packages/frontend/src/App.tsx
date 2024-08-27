@@ -15,8 +15,6 @@ import { Match, Switch, createResource } from "solid-js";
 const serverHost = import.meta.env.VITE_BACKEND_HOST;
 
 function App() {
-    const theories = stdTheories();
-
     if (!serverHost) {
         throw "Must set environment variable BACKEND_HOST";
     }
@@ -89,7 +87,7 @@ function App() {
                         refId={h().refId}
                         client={client}
                         init={init}
-                        theories={theories}
+                        theories={stdTheories}
                     />
                 )}
             </Match>

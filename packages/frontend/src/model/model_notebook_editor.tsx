@@ -24,7 +24,8 @@ import {
     newFormalCell,
     newRichTextCell,
 } from "../notebook";
-import type { TheoryId, Theory } from "../theory";
+import type { TheoryLibrary } from "../stdlib";
+import type { Theory } from "../theory";
 import {
     ModelErrorsContext,
     MorphismIndexContext,
@@ -95,7 +96,7 @@ export type ModelNotebookRef = {
 export function ModelNotebookEditor(props: {
     handle: DocHandle<ModelNotebook>;
     init: ModelNotebook;
-    theories: Map<TheoryId, Theory>;
+    theories: TheoryLibrary;
     ref?: (ref: ModelNotebookRef) => void;
 }) {
     const [theory, setTheory] = createSignal<Theory | undefined>();
@@ -186,8 +187,8 @@ export function ModelNotebookEditor(props: {
                         <option value="" disabled selected hidden>
                             Choose a logic
                         </option>
-                        <For each={Array.from(props.theories.values())}>
-                            {(theory) => <option value={theory.id}>{theory.name}</option>}
+                        <For each={Array.from(props.theories.metadata())}>
+                            {(meta) => <option value={meta.id}>{meta.name}</option>}
                         </For>
                     </select>
                 </div>
