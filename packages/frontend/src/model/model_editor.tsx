@@ -2,7 +2,7 @@ import type { DocHandle } from "@automerge/automerge-repo";
 import Resizable from "@corvu/resizable";
 import { For, createSignal } from "solid-js";
 
-import type { TheoryId, TheoryMeta } from "../theory";
+import type { TheoryId, Theory } from "../theory";
 import { ModelNotebookEditor, type ModelNotebookRef } from "./model_notebook_editor";
 import type { ModelNotebook } from "./types";
 
@@ -18,7 +18,7 @@ export function ModelEditor(props: {
     init: ModelNotebook;
     client: RPCClient;
     refId: string;
-    theories: Map<TheoryId, TheoryMeta>;
+    theories: Map<TheoryId, Theory>;
 }) {
     const [editorRef, setEditorRef] = createSignal<ModelNotebookRef>();
 

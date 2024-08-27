@@ -1,12 +1,12 @@
 import { type Accessor, createContext } from "solid-js";
 
 import type { InvalidDiscreteDblModel, Uuid } from "catlog-wasm";
-import type { TheoryMeta } from "../theory";
+import type { Theory } from "../theory";
 import type { IndexedMap } from "../util/indexing";
 
 /** The theory that the model is a model of.
  */
-export const TheoryContext = createContext<Accessor<TheoryMeta | undefined>>();
+export const TheoryContext = createContext<Accessor<Theory | undefined>>();
 
 /** Indexed mapping from object IDs to human-readable names.
  */

@@ -6,9 +6,9 @@ import { MorTypeIndex, ObTypeIndex } from "catlog-wasm";
 import type { ModelJudgment } from "../model";
 import type { ArrowStyle } from "../visualization/types";
 
-/** A double theory equipped with metadata for use in frontend.
+/** A double theory configured for use in the frontend.
  */
-export class TheoryMeta {
+export class Theory {
     /** Unique identifier of theory. */
     readonly id: TheoryId;
 
@@ -167,7 +167,7 @@ export type ModelViewProps = {
     The theory may well be assumed fixed for certain views but it is passed
     regardless.
      */
-    theory: TheoryMeta;
+    theory: Theory;
 
     /** The `catlog` model object, if it is valid. */
     validatedModel: DblModel | null;

@@ -24,7 +24,7 @@ import {
     newFormalCell,
     newRichTextCell,
 } from "../notebook";
-import type { TheoryId, TheoryMeta } from "../theory";
+import type { TheoryId, Theory } from "../theory";
 import {
     ModelErrorsContext,
     MorphismIndexContext,
@@ -84,7 +84,7 @@ export type ModelNotebookRef = {
     model: Accessor<Array<ModelJudgment>>;
 
     // Get the double theory that the model is of, if it is defined.
-    theory: Accessor<TheoryMeta | undefined>;
+    theory: Accessor<Theory | undefined>;
 
     // Get the `catlog` model object, if it is valid.
     validatedModel: Accessor<DblModel | null>;
@@ -95,10 +95,10 @@ export type ModelNotebookRef = {
 export function ModelNotebookEditor(props: {
     handle: DocHandle<ModelNotebook>;
     init: ModelNotebook;
-    theories: Map<TheoryId, TheoryMeta>;
+    theories: Map<TheoryId, Theory>;
     ref?: (ref: ModelNotebookRef) => void;
 }) {
-    const [theory, setTheory] = createSignal<TheoryMeta | undefined>();
+    const [theory, setTheory] = createSignal<Theory | undefined>();
 
     const [modelNb, changeModelNb] = useDoc(() => props.handle, props.init);
 
@@ -228,7 +228,7 @@ function judgmentType(judgment: ModelJudgment): string | undefined {
 
 type ModelCellConstructor = CellConstructor<ModelJudgment>;
 
-function modelCellConstructors(theory?: TheoryMeta): ModelCellConstructor[] {
+function modelCellConstructors(theory?: Theory): ModelCellConstructor[] {
     // On Mac, the Alt/Option key remaps keys, whereas on other platforms
     // Control tends to be already bound in other shortcuts.
     const modifier = navigator.userAgent.includes("Mac") ? "Control" : "Alt";

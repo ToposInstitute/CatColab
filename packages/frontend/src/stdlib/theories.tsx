@@ -1,6 +1,6 @@
 import * as catlog from "catlog-wasm";
 
-import { TheoryMeta } from "../theory";
+import { Theory } from "../theory";
 import { uniqueIndexArray } from "../util/indexing";
 import { ModelGraphviz, StockFlowDiagram, SubmodelsGraphviz } from "./views";
 
@@ -19,7 +19,7 @@ export const stdTheories = () =>
 
 const thSimpleOlog = () => {
     const thCategory = new catlog.ThCategory();
-    return new TheoryMeta({
+    return new Theory({
         id: "simple-olog",
         name: "Olog",
         description: "Ontology log, a simple conceptual model",
@@ -57,7 +57,7 @@ const thSimpleOlog = () => {
 
 const thSimpleSchema = () => {
     const thSchema = new catlog.ThSchema();
-    return new TheoryMeta({
+    return new Theory({
         id: "schema",
         name: "Schema",
         description: "Schema for a categorical database",
@@ -122,7 +122,7 @@ const thSimpleSchema = () => {
 
 const thRegNet = () => {
     const thSignedCategory = new catlog.ThSignedCategory();
-    return new TheoryMeta({
+    return new Theory({
         id: "reg-net",
         name: "Regulatory network",
         theory: thSignedCategory.theory(),
@@ -174,7 +174,7 @@ const thCausalLoop = () => {
     const negativeLoops = (model: catlog.DblModel | null) =>
         model ? thSignedCategory.negativeLoops(model) : [];
 
-    return new TheoryMeta({
+    return new Theory({
         id: "causal-loop",
         name: "Causal loop diagram",
         theory: thSignedCategory.theory(),
@@ -258,7 +258,7 @@ const loopGraphvizConfig = {
 
 const thStockFlow = () => {
     const thCategoryLinks = new catlog.ThCategoryLinks();
-    return new TheoryMeta({
+    return new Theory({
         id: "stock-flow",
         name: "Stock and flow",
         theory: thCategoryLinks.theory(),

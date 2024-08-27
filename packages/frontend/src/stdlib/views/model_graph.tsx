@@ -1,7 +1,7 @@
 import type * as Viz from "@viz-js/viz";
 
 import type { ModelJudgment } from "../../model";
-import type { TheoryMeta, TypeMeta } from "../../theory";
+import type { Theory, TypeMeta } from "../../theory";
 import { GraphvizSVG } from "../../visualization";
 
 import styles from "../styles.module.css";
@@ -10,7 +10,7 @@ import styles from "../styles.module.css";
  */
 export function ModelGraphviz(props: {
     model: Array<ModelJudgment>;
-    theory: TheoryMeta;
+    theory: Theory;
     attributes?: GraphvizAttributes;
     options?: Viz.RenderOptions;
 }) {
@@ -30,7 +30,7 @@ morphism whose domain or codomain is not a basic object will be ignored.
  */
 export function modelToGraphviz(
     model: Array<ModelJudgment>,
-    theory: TheoryMeta,
+    theory: Theory,
     attributes?: GraphvizAttributes,
 ): Viz.Graph {
     const nodes = [];
