@@ -5,10 +5,17 @@
 }
 
 .notebook-empty {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    column-gap: 0.5ex;
     margin: 1rem 0;
 }
 
-.notebook-empty .placeholder {
+.notebook .placeholder {
+    color: darkgray;
+}
+.notebook .placeholder .lucide {
     color: darkgray;
 }
 
@@ -32,7 +39,7 @@
 
 .cell {
     padding-left: 0.5em;
-    border-left: solid dimgray 2px;
+    border-left: solid darkgray 2px;
     border-radius: 2px;
     display: flex;
     flex-direction: row;
@@ -42,7 +49,7 @@
 }
 
 .cell-tag {
-    color: dimgray;
+    color: darkgray;
     font-size: 11pt;
 }
 
