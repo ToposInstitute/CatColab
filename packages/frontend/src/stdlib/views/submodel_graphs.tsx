@@ -6,7 +6,7 @@ import { Show, createSignal } from "solid-js";
 import type { DblModel } from "catlog-wasm";
 import { IconButton } from "../../components";
 import type { ModelJudgment } from "../../model";
-import type { TheoryMeta } from "../../theory";
+import type { Theory } from "../../theory";
 import { type GraphvizAttributes, ModelGraphviz } from "./model_graph";
 
 import "./submodel_graphs.css";
@@ -16,7 +16,7 @@ import "./submodel_graphs.css";
 export function SubmodelsGraphviz(props: {
     model: Array<ModelJudgment>;
     submodels: Array<DblModel>;
-    theory: TheoryMeta;
+    theory: Theory;
     title?: string;
     attributes?: GraphvizAttributes;
     options?: Viz.RenderOptions;

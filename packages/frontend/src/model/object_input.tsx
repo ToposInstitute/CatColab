@@ -3,7 +3,7 @@ import { Dynamic } from "solid-js/web";
 import { P, match } from "ts-pattern";
 
 import type { Ob, ObType } from "catlog-wasm";
-import type { TheoryMeta } from "../theory";
+import type { Theory } from "../theory";
 import { IdInput, type IdInputOptions } from "./id_input";
 import { MorphismIndexContext, ObjectIndexContext, TheoryContext } from "./model_context";
 
@@ -73,7 +73,7 @@ function BasicObInput(
     );
 }
 
-export function obClasses(theory: TheoryMeta | undefined, typ?: ObType): string[] {
+export function obClasses(theory: Theory | undefined, typ?: ObType): string[] {
     const typeMeta = typ ? theory?.getObTypeMeta(typ) : undefined;
     return [...(typeMeta?.cssClasses ?? []), ...(typeMeta?.textClasses ?? [])];
 }

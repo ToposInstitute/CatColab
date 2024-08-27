@@ -24,7 +24,8 @@ import {
     newFormalCell,
     newRichTextCell,
 } from "../notebook";
-import type { TheoryId, TheoryMeta } from "../theory";
+import type { TheoryLibrary } from "../stdlib";
+import type { Theory } from "../theory";
 import {
     ModelErrorsContext,
     MorphismIndexContext,
@@ -84,7 +85,7 @@ export type ModelNotebookRef = {
     model: Accessor<Array<ModelJudgment>>;
 
     // Get the double theory that the model is of, if it is defined.
-    theory: Accessor<TheoryMeta | undefined>;
+    theory: Accessor<Theory | undefined>;
 
     // Get the `catlog` model object, if it is valid.
     validatedModel: Accessor<DblModel | null>;
@@ -95,10 +96,10 @@ export type ModelNotebookRef = {
 export function ModelNotebookEditor(props: {
     handle: DocHandle<ModelNotebook>;
     init: ModelNotebook;
-    theories: Map<TheoryId, TheoryMeta>;
+    theories: TheoryLibrary;
     ref?: (ref: ModelNotebookRef) => void;
 }) {
-    const [theory, setTheory] = createSignal<TheoryMeta | undefined>();
+    const [theory, setTheory] = createSignal<Theory | undefined>();
 
     const [modelNb, changeModelNb] = useDoc(() => props.handle, props.init);
 
@@ -186,8 +187,8 @@ export function ModelNotebookEditor(props: {
                         <option value="" disabled selected hidden>
                             Choose a logic
                         </option>
-                        <For each={Array.from(props.theories.values())}>
-                            {(theory) => <option value={theory.id}>{theory.name}</option>}
+                        <For each={Array.from(props.theories.metadata())}>
+                            {(meta) => <option value={meta.id}>{meta.name}</option>}
                         </For>
                     </select>
                 </div>
@@ -228,7 +229,7 @@ function judgmentType(judgment: ModelJudgment): string | undefined {
 
 type ModelCellConstructor = CellConstructor<ModelJudgment>;
 
-function modelCellConstructors(theory?: TheoryMeta): ModelCellConstructor[] {
+function modelCellConstructors(theory?: Theory): ModelCellConstructor[] {
     // On Mac, the Alt/Option key remaps keys, whereas on other platforms
     // Control tends to be already bound in other shortcuts.
     const modifier = navigator.userAgent.includes("Mac") ? "Control" : "Alt";

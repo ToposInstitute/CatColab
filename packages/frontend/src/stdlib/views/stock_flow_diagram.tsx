@@ -3,7 +3,7 @@ import { type Component, For, createResource } from "solid-js";
 import { P, match } from "ts-pattern";
 
 import type { ModelJudgment } from "../../model";
-import type { TheoryMeta } from "../../theory";
+import type { Theory } from "../../theory";
 import { uniqueIndexArray } from "../../util/indexing";
 import {
     type ArrowMarker,
@@ -23,7 +23,7 @@ links from stocks to flows using our own layout heuristics.
  */
 export function StockFlowDiagram(props: {
     model: Array<ModelJudgment>;
-    theory: TheoryMeta;
+    theory: Theory;
     vizOptions?: Viz.RenderOptions;
 }) {
     const [vizResource] = createResource(loadViz);
