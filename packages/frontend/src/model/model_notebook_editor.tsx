@@ -203,7 +203,6 @@ export function ModelNotebookEditor(props: {
             >
                 <NotebookEditor
                     handle={props.handle}
-                    cellType={judgmentType}
                     path={["notebook"]}
                     notebook={modelNb().notebook}
                     changeNotebook={(f) => {
@@ -211,13 +210,14 @@ export function ModelNotebookEditor(props: {
                     }}
                     formalCellEditor={ModelCellEditor}
                     cellConstructors={modelCellConstructors(theory())}
+                    cellLabel={judgmentLabel}
                 />
             </MultiProvider>
         </div>
     );
 }
 
-function judgmentType(judgment: ModelJudgment): string | undefined {
+function judgmentLabel(judgment: ModelJudgment): string | undefined {
     const theory = useContext(TheoryContext);
     if (judgment.tag === "object") {
         return theory?.()?.getObTypeMeta(judgment.obType)?.name;

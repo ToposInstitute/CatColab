@@ -151,10 +151,10 @@ export function NotebookEditor<T>(props: {
     handle: DocHandle<unknown>;
     path: Prop[];
     notebook: Notebook<T>;
-    cellType: (content: T) => string | undefined;
     changeNotebook: (f: (nb: Notebook<T>) => void) => void;
     formalCellEditor: Component<FormalCellEditorProps<T>>;
     cellConstructors: CellConstructor<T>[];
+    cellLabel?: (content: T) => string | undefined;
 }) {
     const [activeCell, setActiveCell] = createSignal(props.notebook.cells.length > 0 ? 0 : -1);
 
@@ -277,7 +277,6 @@ export function NotebookEditor<T>(props: {
                                                     actions={cellActions}
                                                 />
                                             </div>
-                                            <div class="cell-tag">Text</div>
                                         </div>
                                     </Match>
                                     <Match when={cell.tag === "formal" && cell}>
@@ -297,9 +296,13 @@ export function NotebookEditor<T>(props: {
                                                     actions={cellActions}
                                                 />
                                             </div>
-                                            <div class="cell-tag">
-                                                {props.cellType((cell as FormalCell<T>).content)}
-                                            </div>
+                                            <Show when={props.cellLabel}>
+                                                <div class="cell-tag">
+                                                    {props.cellLabel?.(
+                                                        (cell as FormalCell<T>).content,
+                                                    )}
+                                                </div>
+                                            </Show>
                                         </div>
                                     </Match>
                                     <Match when={cell.tag === "stem"}>
