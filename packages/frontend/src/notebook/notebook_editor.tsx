@@ -1,5 +1,6 @@
 import type { DocHandle, Prop } from "@automerge/automerge-repo";
 import { type KbdKey, createShortcut } from "@solid-primitives/keyboard";
+import ListPlus from "lucide-solid/icons/list-plus";
 import type { EditorView } from "prosemirror-view";
 import {
     type Component,
@@ -12,7 +13,7 @@ import {
     onMount,
 } from "solid-js";
 
-import { type Completion, InlineInput, RichTextEditor } from "../components";
+import { type Completion, IconButton, InlineInput, RichTextEditor } from "../components";
 import { type Cell, type CellId, type FormalCell, type Notebook, newStemCell } from "./types";
 
 import "./notebook_editor.css";
@@ -225,15 +226,11 @@ export function NotebookEditor<T>(props: {
     return (
         <div class="notebook">
             <Show when={props.notebook.cells.length === 0}>
-                <div class="notebook-empty">
-                    <span
-                        class="placeholder"
-                        onclick={(_) => {
-                            addAfterActiveCell(newStemCell());
-                        }}
-                    >
-                        Press Shift-Enter to create a cell, or click here
-                    </span>
+                <div class="notebook-empty placeholder">
+                    <IconButton onClick={() => addAfterActiveCell(newStemCell())}>
+                        <ListPlus />
+                    </IconButton>
+                    <span>Click button or press Shift-Enter to create a cell</span>
                 </div>
             </Show>
             <ul class="notebook-cells">
@@ -320,6 +317,13 @@ export function NotebookEditor<T>(props: {
                     }}
                 </For>
             </ul>
+            <Show when={props.notebook.cells.some((cell) => cell.tag !== "stem")}>
+                <div class="placeholder">
+                    <IconButton onClick={() => addAfterActiveCell(newStemCell())}>
+                        <ListPlus />
+                    </IconButton>
+                </div>
+            </Show>
         </div>
     );
 }
