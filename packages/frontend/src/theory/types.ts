@@ -3,8 +3,8 @@ import type { KbdKey } from "@solid-primitives/keyboard";
 import type { DblTheory, MorType, ObType } from "catlog-wasm";
 import { MorTypeIndex, ObTypeIndex } from "catlog-wasm";
 import type { ModelViewComponent } from "../model";
-import type { ArrowStyle } from "../visualization/types";
 import { uniqueIndexArray } from "../util/indexing";
+import type { ArrowStyle } from "../visualization";
 
 /** A double theory configured for use in the frontend.
  */
@@ -29,7 +29,7 @@ export class Theory {
 
     private readonly obTypeIndex: ObTypeIndex;
     private readonly morTypeIndex: MorTypeIndex;
-    private readonly modelViewMap: Map<string, ModelViewMeta<unknown>>;
+    private readonly modelViewMap: Map<string, ModelViewMeta>;
 
     constructor(props: {
         id: string;
@@ -37,7 +37,7 @@ export class Theory {
         description?: string;
         theory: DblTheory;
         types?: TypeMeta[];
-        modelViews?: ModelViewMeta<unknown>[];
+        modelViews?: ModelViewMeta[];
         onlyFreeModels?: boolean;
     }) {
         this.id = props.id;
@@ -50,7 +50,7 @@ export class Theory {
         this.types = [];
         props.types?.forEach(this.bindType, this);
 
-        this.modelViewMap = uniqueIndexArray(props.modelViews ?? [], meta => meta.id);
+        this.modelViewMap = uniqueIndexArray(props.modelViews ?? [], (meta) => meta.id);
         this.onlyFreeModels = props.onlyFreeModels ?? false;
     }
 
@@ -77,12 +77,12 @@ export class Theory {
     }
 
     /** Get metadata for a model view. */
-    getModelView(id: string): ModelViewMeta<unknown> | undefined {
+    getModelView(id: string): ModelViewMeta | undefined {
         return this.modelViewMap.get(id);
     }
 
     /** Iterate over model views. */
-    modelViews(): IterableIterator<ModelViewMeta<unknown>> {
+    modelViews(): IterableIterator<ModelViewMeta> {
         return this.modelViewMap.values();
     }
 }
@@ -147,7 +147,8 @@ export type MorTypeMeta = BaseTypeMeta & {
 
 /** A model view along with descriptive metadata.
  */
-export type ModelViewMeta<T> = {
+// biome-ignore lint/suspicious/noExplicitAny: content type is data dependent.
+export type ModelViewMeta<T = any> = {
     /** Identifier of view, unique relative to the theory. */
     id: string;
 

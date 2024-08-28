@@ -1,3 +1,8 @@
+/** Contexts available to formal cells in a model notebook.
+
+@module
+ */
+
 import { type Accessor, createContext } from "solid-js";
 
 import type { InvalidDiscreteDblModel, Uuid } from "catlog-wasm";
@@ -16,5 +21,7 @@ export const ObjectIndexContext = createContext<Accessor<IndexedMap<Uuid, string
  */
 export const MorphismIndexContext = createContext<Accessor<IndexedMap<Uuid, string>>>();
 
+/** Mapping from object/morphisms ID to errors with those declarations.
+ */
 export const ModelErrorsContext =
     createContext<Accessor<Map<Uuid, InvalidDiscreteDblModel<Uuid>[]>>>();

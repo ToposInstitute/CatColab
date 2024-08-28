@@ -18,8 +18,8 @@ import { type IndexedMap, indexArray, indexMap } from "../util/indexing";
 import type { DblModel, InvalidDiscreteDblModel, Uuid } from "catlog-wasm";
 import { InlineInput } from "../components";
 import {
-    type CellActions,
     type CellConstructor,
+    type FormalCellEditorProps,
     NotebookEditor,
     newFormalCell,
     newRichTextCell,
@@ -46,42 +46,16 @@ import {
 
 import "./model_notebook_editor.css";
 
-/** Editor for a cell in a model of a discrete double theory.
- */
-export function ModelCellEditor(props: {
-    content: ModelJudgment;
-    changeContent: (f: (content: ModelJudgment) => void) => void;
-    isActive: boolean;
-    actions: CellActions;
-}) {
-    return (
-        <Switch>
-            <Match when={props.content.tag === "object"}>
-                <ObjectCellEditor
-                    object={props.content as ObjectDecl}
-                    modifyObject={(f) => props.changeContent((content) => f(content as ObjectDecl))}
-                    isActive={props.isActive}
-                    actions={props.actions}
-                />
-            </Match>
-            <Match when={props.content.tag === "morphism"}>
-                <MorphismCellEditor
-                    morphism={props.content as MorphismDecl}
-                    modifyMorphism={(f) =>
-                        props.changeContent((content) => f(content as MorphismDecl))
-                    }
-                    isActive={props.isActive}
-                    actions={props.actions}
-                />
-            </Match>
-        </Switch>
-    );
-}
-
 /** Reference to a `ModelNotebookEditor`.
  */
 export type ModelNotebookRef = {
-    // Get the data of the model in the notebook.
+    // Get the model notebook.
+    modelNotebook: Accessor<ModelNotebook>;
+
+    // Change the model notebook.
+    changeModelNotebook: (f: (data: ModelNotebook) => void) => void;
+
+    // Get the formal content of the model.
     model: Accessor<Array<ModelJudgment>>;
 
     // Get the double theory that the model is of, if it is defined.
@@ -91,7 +65,7 @@ export type ModelNotebookRef = {
     validatedModel: Accessor<DblModel | null>;
 };
 
-/** Notebook-based editor for a model of a discrete double theory.
+/** Notebook-based editor for a model of a double theory.
  */
 export function ModelNotebookEditor(props: {
     handle: DocHandle<ModelNotebook>;
@@ -101,12 +75,12 @@ export function ModelNotebookEditor(props: {
 }) {
     const [theory, setTheory] = createSignal<Theory | undefined>();
 
-    const [modelNb, changeModelNb] = useDoc(() => props.handle, props.init);
+    const [modelNotebook, changeModelNotebook] = useDoc(() => props.handle, props.init);
 
     // Memo-ize the *formal* content of the notebook, since most derived objects
     // will not depend on the informal (rich-text) content in notebook.
     const model = createMemo<Array<ModelJudgment>>(() =>
-        modelNb()
+        modelNotebook()
             .notebook.cells.filter((cell) => cell.tag === "formal")
             .map((cell) => cell.content),
     );
@@ -136,10 +110,12 @@ export function ModelNotebookEditor(props: {
     );
     const [validatedModel, setValidatedModel] = createSignal<DblModel | null>(null);
 
-    onMount(() => props.ref?.({ model, theory, validatedModel }));
+    onMount(() =>
+        props.ref?.({ modelNotebook, changeModelNotebook, model, theory, validatedModel }),
+    );
 
     createEffect(() => {
-        const id = modelNb().theory;
+        const id = modelNotebook().theory;
         setTheory(id !== undefined ? props.theories.get(id) : undefined);
     });
 
@@ -164,9 +140,9 @@ export function ModelNotebookEditor(props: {
             <div class="model-head">
                 <div class="model-title">
                     <InlineInput
-                        text={modelNb().name}
+                        text={modelNotebook().name}
                         setText={(text) => {
-                            changeModelNb((model) => {
+                            changeModelNotebook((model) => {
                                 model.name = text;
                             });
                         }}
@@ -175,11 +151,13 @@ export function ModelNotebookEditor(props: {
                 <div class="model-theory">
                     <select
                         required
-                        disabled={modelNb().notebook.cells.some((cell) => cell.tag === "formal")}
-                        value={modelNb().theory ?? ""}
+                        disabled={modelNotebook().notebook.cells.some(
+                            (cell) => cell.tag === "formal",
+                        )}
+                        value={modelNotebook().theory ?? ""}
                         onInput={(evt) => {
                             const id = evt.target.value;
-                            changeModelNb((model) => {
+                            changeModelNotebook((model) => {
                                 model.theory = id ? id : undefined;
                             });
                         }}
@@ -204,9 +182,9 @@ export function ModelNotebookEditor(props: {
                 <NotebookEditor
                     handle={props.handle}
                     path={["notebook"]}
-                    notebook={modelNb().notebook}
+                    notebook={modelNotebook().notebook}
                     changeNotebook={(f) => {
-                        changeModelNb((model) => f(model.notebook));
+                        changeModelNotebook((model) => f(model.notebook));
                     }}
                     formalCellEditor={ModelCellEditor}
                     cellConstructors={modelCellConstructors(theory())}
@@ -217,14 +195,31 @@ export function ModelNotebookEditor(props: {
     );
 }
 
-function judgmentLabel(judgment: ModelJudgment): string | undefined {
-    const theory = useContext(TheoryContext);
-    if (judgment.tag === "object") {
-        return theory?.()?.getObTypeMeta(judgment.obType)?.name;
-    }
-    if (judgment.tag === "morphism") {
-        return theory?.()?.getMorTypeMeta(judgment.morType)?.name;
-    }
+/** Editor for a cell in a model of a double theory.
+ */
+export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
+    return (
+        <Switch>
+            <Match when={props.content.tag === "object"}>
+                <ObjectCellEditor
+                    object={props.content as ObjectDecl}
+                    modifyObject={(f) => props.changeContent((content) => f(content as ObjectDecl))}
+                    isActive={props.isActive}
+                    actions={props.actions}
+                />
+            </Match>
+            <Match when={props.content.tag === "morphism"}>
+                <MorphismCellEditor
+                    morphism={props.content as MorphismDecl}
+                    modifyMorphism={(f) =>
+                        props.changeContent((content) => f(content as MorphismDecl))
+                    }
+                    isActive={props.isActive}
+                    actions={props.actions}
+                />
+            </Match>
+        </Switch>
+    );
 }
 
 type ModelCellConstructor = CellConstructor<ModelJudgment>;
@@ -257,4 +252,14 @@ function modelCellConstructors(theory?: Theory): ModelCellConstructor[] {
     }
 
     return result;
+}
+
+function judgmentLabel(judgment: ModelJudgment): string | undefined {
+    const theory = useContext(TheoryContext);
+    if (judgment.tag === "object") {
+        return theory?.()?.getObTypeMeta(judgment.obType)?.name;
+    }
+    if (judgment.tag === "morphism") {
+        return theory?.()?.getMorTypeMeta(judgment.morType)?.name;
+    }
 }

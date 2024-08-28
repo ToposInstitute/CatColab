@@ -18,8 +18,8 @@ export type ModelNotebook = {
     /** Content of the model, formal and informal. */
     notebook: Notebook<ModelJudgment>;
 
-    /** Views onto the model, a separate notebook. */
-    views?: Notebook<ModelView<unknown>>;
+    /** Analysis of the model, a separate notebook. */
+    analysis: Notebook<ModelView<unknown>>;
 };
 
 /** A judgment in the definition of a model.
@@ -35,7 +35,7 @@ export type ModelDecl = ObjectDecl | MorphismDecl;
 export type ObjectDecl = ObDecl & {
     tag: "object";
 
-    // Human-readable name of object.
+    /** Human-readable name of object. */
     name: string;
 };
 
@@ -51,7 +51,7 @@ export const newObjectDecl = (type: ObType): ObjectDecl => ({
 export type MorphismDecl = MorDecl & {
     tag: "morphism";
 
-    // Human-readable name of morphism.
+    /** Human-readable name of morphism. */
     name: string;
 };
 

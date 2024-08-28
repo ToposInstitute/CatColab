@@ -1,10 +1,55 @@
 import type * as Viz from "@viz-js/viz";
 
-import type { ModelJudgment } from "../../model";
-import type { Theory, TypeMeta } from "../../theory";
+import type { ModelJudgment, ModelViewProps } from "../../model";
+import type { ModelViewMeta, Theory, TypeMeta } from "../../theory";
 import { GraphvizSVG } from "../../visualization";
 
 import styles from "../styles.module.css";
+
+/** Configure a graph view for use with models of a double theory. */
+export function configureModelGraph(options: {
+    id: string;
+    name: string;
+    description?: string;
+}): ModelViewMeta<ModelGraphViewContent> {
+    const { id, name, description } = options;
+    return {
+        id,
+        name,
+        description,
+        component: ModelGraphView,
+        initialContent: () => ({
+            layout: "graphviz-directed",
+        }),
+    };
+}
+
+/** Visualize a model of a double theory as a graph.
+
+Such a visualization makes sense for any discrete double theory since the
+generators of such a model are just a typed graph. For other kinds of double
+theories, any basic morphism whose domain or codomain is not a basic object will
+be ignored.
+
+For now, Graphviz computes the layout of the graph. Other layout engines may be
+added in the future.
+ */
+export function ModelGraphView(props: ModelViewProps<ModelGraphViewContent>) {
+    return (
+        <ModelGraphviz
+            model={props.model}
+            theory={props.theory}
+            options={{
+                engine: props.content.layout === "graphviz-directed" ? "dot" : "neato",
+            }}
+        />
+    );
+}
+
+/** Configuration for a graph view of a model. */
+export type ModelGraphViewContent = {
+    layout: "graphviz-directed" | "graphviz-undirected";
+};
 
 /** Visualize a model of a double theory as a graph using Graphviz.
  */
@@ -22,11 +67,7 @@ export function ModelGraphviz(props: {
     );
 }
 
-/** Convert a model of a double theory a Graphviz graph.
-
-Such a visualization makes sense for any discrete double theory since the
-generators of such a model are just a typed graph. In general, any basic
-morphism whose domain or codomain is not a basic object will be ignored.
+/** Convert a model of a double theory into a Graphviz graph.
  */
 export function modelToGraphviz(
     model: Array<ModelJudgment>,

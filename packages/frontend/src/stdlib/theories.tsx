@@ -2,7 +2,11 @@ import * as catlog from "catlog-wasm";
 
 import { Theory } from "../theory";
 import { TheoryLibrary } from "./types";
-import { ModelGraphviz, StockFlowDiagram, SubmodelsGraphviz } from "./views";
+import {
+    configureModelGraph,
+    configureStockFlowDiagram,
+    configureSubmodelsAnalysis,
+} from "./views";
 
 import styles from "./styles.module.css";
 import svgStyles from "./svg_styles.module.css";
@@ -43,11 +47,11 @@ stdTheories.add(
                 },
             ],
             modelViews: [
-                {
+                configureModelGraph({
+                    id: "diagram",
                     name: "Diagram",
                     description: "Visualize the olog as a diagram",
-                    component: ModelGraphviz,
-                },
+                }),
             ],
         });
     },
@@ -113,11 +117,11 @@ stdTheories.add(
                 },
             ],
             modelViews: [
-                {
+                configureModelGraph({
+                    id: "diagram",
                     name: "Diagram",
                     description: "Visualize the schema as a diagram",
-                    component: ModelGraphviz,
-                },
+                }),
             ],
         });
     },
@@ -164,11 +168,11 @@ stdTheories.add(
                 },
             ],
             modelViews: [
-                {
+                configureModelGraph({
+                    id: "diagram",
                     name: "Network",
                     description: "Visualize the regulatory network",
-                    component: ModelGraphviz,
-                },
+                }),
             ],
         });
     },
@@ -181,10 +185,6 @@ stdTheories.add(
     },
     (meta) => {
         const thSignedCategory = new catlog.ThSignedCategory();
-        const positiveLoops = (model: catlog.DblModel | null) =>
-            model ? thSignedCategory.positiveLoops(model) : [];
-        const negativeLoops = (model: catlog.DblModel | null) =>
-            model ? thSignedCategory.negativeLoops(model) : [];
 
         return new Theory({
             ...meta,
@@ -221,52 +221,27 @@ stdTheories.add(
                 },
             ],
             modelViews: [
-                {
+                configureModelGraph({
+                    id: "diagram",
                     name: "Diagram",
                     description: "Visualize the causal loop diagram",
-                    component: ModelGraphviz,
-                },
-                {
+                }),
+                configureSubmodelsAnalysis({
+                    id: "negative-loops",
                     name: "Balancing loops",
                     description: "Analyze the diagram for balancing loops",
-                    component: (props) => (
-                        <SubmodelsGraphviz
-                            title="Balancing loops"
-                            model={props.model}
-                            submodels={negativeLoops(props.validatedModel)}
-                            theory={props.theory}
-                            {...loopGraphvizConfig}
-                        />
-                    ),
-                },
-                {
+                    findSubmodels: thSignedCategory.negativeLoops,
+                }),
+                configureSubmodelsAnalysis({
+                    id: "positive-loops",
                     name: "Reinforcing loops",
                     description: "Analyze the diagram for reinforcing loops",
-                    component: (props) => (
-                        <SubmodelsGraphviz
-                            title="Reinforcing loops"
-                            model={props.model}
-                            submodels={positiveLoops(props.validatedModel)}
-                            theory={props.theory}
-                            {...loopGraphvizConfig}
-                        />
-                    ),
-                },
+                    findSubmodels: thSignedCategory.positiveLoops,
+                }),
             ],
         });
     },
 );
-
-const loopGraphvizConfig = {
-    options: {
-        engine: "dot",
-    },
-    attributes: {
-        graph: {
-            rankdir: "LR",
-        },
-    },
-};
 
 stdTheories.add(
     {
@@ -310,11 +285,11 @@ stdTheories.add(
                 },
             ],
             modelViews: [
-                {
+                configureStockFlowDiagram({
+                    id: "diagram",
                     name: "Diagram",
                     description: "Visualize the stock and flow diagram",
-                    component: StockFlowDiagram,
-                },
+                }),
             ],
         });
     },

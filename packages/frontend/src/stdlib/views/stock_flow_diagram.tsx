@@ -3,7 +3,7 @@ import { type Component, For, createResource } from "solid-js";
 import { P, match } from "ts-pattern";
 
 import type { ModelJudgment } from "../../model";
-import type { Theory } from "../../theory";
+import type { ModelViewMeta, Theory } from "../../theory";
 import { uniqueIndexArray } from "../../util/indexing";
 import {
     type ArrowMarker,
@@ -14,7 +14,25 @@ import {
     loadViz,
     vizLayoutGraph,
 } from "../../visualization";
-import { modelToGraphviz } from "./model_graph";
+import { type ModelGraphViewContent, modelToGraphviz } from "./model_graph";
+
+/** Configure a stock flow diagram view for use with models of a theory. */
+export function configureStockFlowDiagram(options: {
+    id: string;
+    name: string;
+    description?: string;
+}): ModelViewMeta<ModelGraphViewContent> {
+    const { id, name, description } = options;
+    return {
+        id,
+        name,
+        description,
+        component: StockFlowDiagram,
+        initialContent: () => ({
+            layout: "graphviz-directed",
+        }),
+    };
+}
 
 /** Visualize a stock flow diagram.
 
