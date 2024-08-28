@@ -1,10 +1,10 @@
 import type { KbdKey } from "@solid-primitives/keyboard";
-import type { Component } from "solid-js";
 
-import type { DblModel, DblTheory, MorType, ObType } from "catlog-wasm";
+import type { DblTheory, MorType, ObType } from "catlog-wasm";
 import { MorTypeIndex, ObTypeIndex } from "catlog-wasm";
-import type { ModelJudgment } from "../model";
+import type { ModelViewComponent } from "../model";
 import type { ArrowStyle } from "../visualization/types";
+import { uniqueIndexArray } from "../util/indexing";
 
 /** A double theory configured for use in the frontend.
  */
@@ -24,14 +24,12 @@ export class Theory {
     /** Types in theory bound with metadata, to be displayed in this order. */
     readonly types: TypeMeta[];
 
-    /** Theory-specific views onto models of the theory. */
-    readonly modelViews: ModelView[];
-
     /** Whether models of the double theory are constrained to be free. */
     readonly onlyFreeModels!: boolean;
 
     private readonly obTypeIndex: ObTypeIndex;
     private readonly morTypeIndex: MorTypeIndex;
+    private readonly modelViewMap: Map<string, ModelViewMeta<unknown>>;
 
     constructor(props: {
         id: string;
@@ -39,7 +37,7 @@ export class Theory {
         description?: string;
         theory: DblTheory;
         types?: TypeMeta[];
-        modelViews?: ModelView[];
+        modelViews?: ModelViewMeta<unknown>[];
         onlyFreeModels?: boolean;
     }) {
         this.id = props.id;
@@ -52,7 +50,7 @@ export class Theory {
         this.types = [];
         props.types?.forEach(this.bindType, this);
 
-        this.modelViews = props.modelViews ?? [];
+        this.modelViewMap = uniqueIndexArray(props.modelViews ?? [], meta => meta.id);
         this.onlyFreeModels = props.onlyFreeModels ?? false;
     }
 
@@ -66,16 +64,26 @@ export class Theory {
         this.types.push(meta);
     }
 
-    /** Get metadata associated with object type. */
+    /** Get metadata for an object type. */
     getObTypeMeta(typ: ObType): ObTypeMeta | undefined {
         const i = this.obTypeIndex.get(typ);
         return i != null ? (this.types[i] as ObTypeMeta) : undefined;
     }
 
-    /** Get metadata associated with morphism type. */
+    /** Get metadata for an morphism type. */
     getMorTypeMeta(typ: MorType): MorTypeMeta | undefined {
         const i = this.morTypeIndex.get(typ);
         return i != null ? (this.types[i] as MorTypeMeta) : undefined;
+    }
+
+    /** Get metadata for a model view. */
+    getModelView(id: string): ModelViewMeta<unknown> | undefined {
+        return this.modelViewMap.get(id);
+    }
+
+    /** Iterate over model views. */
+    modelViews(): IterableIterator<ModelViewMeta<unknown>> {
+        return this.modelViewMap.values();
     }
 }
 
@@ -137,15 +145,12 @@ export type MorTypeMeta = BaseTypeMeta & {
     preferUnnamed?: boolean;
 };
 
-/** View of a model of a theory.
-
-Such a view might be a visualization, a simulation, or a translation of the
-model to another format. Views onto a model are read-only.
-
-For now, views are assumed to be ephemeral, meaning that they do not persist
-any state.
+/** A model view along with descriptive metadata.
  */
-export type ModelView = {
+export type ModelViewMeta<T> = {
+    /** Identifier of view, unique relative to the theory. */
+    id: string;
+
     /** Human-readable name of view. */
     name: string;
 
@@ -153,22 +158,8 @@ export type ModelView = {
     description?: string;
 
     /** Component that renders the view. */
-    component: Component<ModelViewProps>;
-};
+    component: ModelViewComponent<T>;
 
-/** Props passed to a view of model.
- */
-export type ModelViewProps = {
-    /** The model to view. */
-    model: Array<ModelJudgment>;
-
-    /** Theory that the model is of.
-
-    The theory may well be assumed fixed for certain views but it is passed
-    regardless.
-     */
-    theory: Theory;
-
-    /** The `catlog` model object, if it is valid. */
-    validatedModel: DblModel | null;
+    /** Default content created when the view is added. */
+    initialContent: () => T;
 };

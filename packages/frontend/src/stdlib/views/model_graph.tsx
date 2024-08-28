@@ -68,7 +68,6 @@ export function modelToGraphviz(
             });
         }
     }
-
     return {
         directed: true,
         nodes,
@@ -79,6 +78,7 @@ export function modelToGraphviz(
     };
 }
 
+/** Top-level attributes of a Graphviz graph. */
 export type GraphvizAttributes = {
     graph?: Viz.Graph["graphAttributes"];
     node?: Viz.Graph["nodeAttributes"];
