@@ -35,7 +35,8 @@ pub enum MorType {
     Basic(Ustr),
 
     /// Mor type on an object type.
-    Mor(Box<ObType>),
+    #[serde(rename = "Hom")]
+    Identity(Box<ObType>),
 }
 
 /// Convert from object type in a discrete double theory.
@@ -50,7 +51,7 @@ impl From<FinMor<Ustr, Ustr>> for MorType {
     fn from(mor: FinMor<Ustr, Ustr>) -> Self {
         match mor {
             FinMor::Generator(e) => MorType::Basic(e),
-            FinMor::Id(v) => MorType::Mor(Box::new(ObType::Basic(v))),
+            FinMor::Id(v) => MorType::Identity(Box::new(ObType::Basic(v))),
         }
     }
 }
@@ -74,7 +75,7 @@ impl TryFrom<MorType> for FinMor<Ustr, Ustr> {
     fn try_from(mor_type: MorType) -> Result<Self, Self::Error> {
         match mor_type {
             MorType::Basic(name) => Ok(FinMor::Generator(name)),
-            MorType::Mor(x) => (*x).try_into().map(FinMor::Id),
+            MorType::Identity(x) => (*x).try_into().map(FinMor::Id),
         }
     }
 }
@@ -94,7 +95,7 @@ impl From<TabMorType<Ustr, Ustr>> for MorType {
     fn from(mor_type: TabMorType<Ustr, Ustr>) -> Self {
         match mor_type {
             TabMorType::Basic(name) => MorType::Basic(name),
-            TabMorType::Mor(x) => MorType::Mor(Box::new((*x).into())),
+            TabMorType::Mor(x) => MorType::Identity(Box::new((*x).into())),
         }
     }
 }
@@ -118,7 +119,7 @@ impl TryFrom<MorType> for TabMorType<Ustr, Ustr> {
     fn try_from(mor_type: MorType) -> Result<Self, Self::Error> {
         match mor_type {
             MorType::Basic(name) => Ok(TabMorType::Basic(name)),
-            MorType::Mor(x) => (*x).try_into().map(|x| TabMorType::Mor(Box::new(x))),
+            MorType::Identity(x) => (*x).try_into().map(|x| TabMorType::Mor(Box::new(x))),
         }
     }
 }
