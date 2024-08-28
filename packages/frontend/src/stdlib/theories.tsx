@@ -34,7 +34,7 @@ stdTheories.add(
                 {
                     tag: "MorType",
                     morType: {
-                        tag: "Hom",
+                        tag: "Mor",
                         content: { tag: "Basic", content: "Object" },
                     },
                     name: "Aspect",
@@ -78,7 +78,7 @@ stdTheories.add(
                 {
                     tag: "MorType",
                     morType: {
-                        tag: "Hom",
+                        tag: "Mor",
                         content: { tag: "Basic", content: "Entity" },
                     },
                     name: "Mapping",
@@ -104,7 +104,7 @@ stdTheories.add(
                 {
                     tag: "MorType",
                     morType: {
-                        tag: "Hom",
+                        tag: "Mor",
                         content: { tag: "Basic", content: "AttrType" },
                     },
                     name: "Operation",
@@ -145,7 +145,7 @@ stdTheories.add(
                 {
                     tag: "MorType",
                     morType: {
-                        tag: "Hom",
+                        tag: "Mor",
                         content: { tag: "Basic", content: "Object" },
                     },
                     name: "Promotion",
@@ -201,7 +201,7 @@ stdTheories.add(
                 {
                     tag: "MorType",
                     morType: {
-                        tag: "Hom",
+                        tag: "Mor",
                         content: { tag: "Basic", content: "Object" },
                     },
                     name: "Positive link",
@@ -292,7 +292,7 @@ stdTheories.add(
                 {
                     tag: "MorType",
                     morType: {
-                        tag: "Hom",
+                        tag: "Mor",
                         content: { tag: "Basic", content: "Object" },
                     },
                     name: "Flow",
