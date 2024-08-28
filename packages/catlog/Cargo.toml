@@ -4,6 +4,7 @@ description = "A toolbox for catgorical logic based on double theories"
 authors = ["Evan Patterson"]
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.76"
 
 [features]
 serde = ["dep:serde", "nonempty/serialize", "ustr/serde"]
