@@ -119,17 +119,20 @@ pub trait DblModel: Category {
 
 /// A finitely-generated double model
 pub trait FgDblModel: DblModel + FgCategory {
+    /// Type of a object generator
+    fn ob_gen_type(&self, ob: &Self::ObGen) -> Self::ObType;
+
     /// Type of a morphism generator
     fn mor_gen_type(&self, mor: &Self::MorGen) -> Self::MorType;
 
     /// Iterates over the objects in the model
-    fn objects(&self) -> impl Iterator<Item = Self::Ob> {
+    fn objects(&self) -> impl Iterator<Item = Self::ObGen> {
         self.generating_graph().vertices()
     }
 
     /// an iterator over the objects in the model of a given object type
-    fn objects_with_type(&self, obtype: Self::ObType) -> impl Iterator<Item = Self::Ob> {
-        self.objects().filter(move |ob| self.ob_type(ob) == obtype)
+    fn objects_with_type(&self, obtype: Self::ObType) -> impl Iterator<Item = Self::ObGen> {
+        self.objects().filter(move |ob| self.ob_gen_type(ob) == obtype)
     }
 
     /// an iterator over the morphism generators in the model
@@ -303,6 +306,7 @@ where
     Cat::Ob: Eq + Clone + Hash,
     Cat::Mor: Eq + Clone + Hash,
 {
+    type ObGen = Id;
     type MorGen = Id;
 
     fn generating_graph(&self) -> &impl FinGraph<V = Id, E = Id> {
@@ -356,6 +360,10 @@ where
     Cat::Ob: Eq + Clone + Hash,
     Cat::Mor: Eq + Clone + Hash,
 {
+    fn ob_gen_type(&self, ob: &Self::ObGen) -> Self::ObType {
+        self.ob_types.apply(ob).unwrap().clone()
+    }
+
     fn mor_gen_type(&self, mor: &Self::MorGen) -> Self::MorType {
         self.mor_types.apply(mor).unwrap().clone()
     }

@@ -178,11 +178,14 @@ object generators (unless there are nontrivial equations between objects), but
 can have infinitely many morphisms.
  */
 pub trait FgCategory: Category {
+    /// The type of object generators.
+    type ObGen: Eq + Into<Self::Ob>;
+
     /// The type of morphism generators. Often Mor = Path<Ob, MorGen>
-    type MorGen: Eq;
+    type MorGen: Eq + Into<Self::Mor>;
 
     /// The graph of generating morphisms and objects
-    fn generating_graph(&self) -> &impl FinGraph<V = Self::Ob, E = Self::MorGen>;
+    fn generating_graph(&self) -> &impl FinGraph<V = Self::ObGen, E = Self::MorGen>;
 }
 
 impl<S: FinSet> Graph for DiscreteCategory<S>
@@ -246,6 +249,7 @@ impl<S: FinSet> FgCategory for DiscreteCategory<S>
 where
     S::Elem: Clone,
 {
+    type ObGen = S::Elem;
     type MorGen = S::Elem;
 
     fn generating_graph(&self) -> &impl FinGraph<V = Self::Ob, E = Self::MorGen> {
@@ -257,9 +261,10 @@ impl<G: FinGraph> FgCategory for FreeCategory<G>
 where
     G::V: Eq + Clone,
 {
+    type ObGen = G::V;
     type MorGen = G::E;
 
-    fn generating_graph(&self) -> &impl FinGraph<V = Self::Ob, E = Self::MorGen> {
+    fn generating_graph(&self) -> &impl FinGraph<V = Self::ObGen, E = Self::MorGen> {
         &self.0
     }
 }

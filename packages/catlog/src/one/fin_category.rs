@@ -23,6 +23,12 @@ pub enum FinMor<V, E> {
     Generator(E),
 }
 
+impl<V, E> From<E> for FinMor<V, E> {
+    fn from(value: E) -> Self {
+        FinMor::Generator(value)
+    }
+}
+
 /** A finite category with explicitly defined composition law.
 
 Such a category is not just finitely presented, but actually finite. The
@@ -183,6 +189,7 @@ where
     E: Eq + Hash + Clone,
     S: BuildHasher,
 {
+    type ObGen = V;
     type MorGen = E;
 
     fn generating_graph(&self) -> &impl FinGraph<V = Self::Ob, E = Self::MorGen> {
@@ -389,6 +396,7 @@ where
     EqKey: Eq + Clone + Hash,
     S: BuildHasher,
 {
+    type ObGen = V;
     type MorGen = E;
 
     fn generating_graph(&self) -> &impl FinGraph<V = Self::Ob, E = Self::MorGen> {
