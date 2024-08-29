@@ -163,6 +163,8 @@ export function NotebookEditor<T>(props: {
     formalCellEditor: Component<FormalCellEditorProps<T>>;
     cellConstructors: CellConstructor<T>[];
     cellLabel?: (content: T) => string | undefined;
+    // FIXME: Remove this option once we fix focus management.
+    noShortcuts?: boolean;
 }) {
     const [activeCell, setActiveCell] = createSignal(props.notebook.cells.length > 0 ? 0 : -1);
 
@@ -227,14 +229,16 @@ export function NotebookEditor<T>(props: {
         });
 
     createEffect(() => {
+        if (props.noShortcuts) {
+            return;
+        }
         for (const command of insertCommands()) {
             if (command.shortcut) {
                 createShortcut(command.shortcut, () => command.onComplete?.());
             }
         }
+        createShortcut(["Shift", "Enter"], () => addAfterActiveCell(newStemCell()));
     });
-
-    createShortcut(["Shift", "Enter"], () => addAfterActiveCell(newStemCell()));
 
     return (
         <div class="notebook">

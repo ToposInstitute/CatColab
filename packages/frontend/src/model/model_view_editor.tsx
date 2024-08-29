@@ -39,6 +39,7 @@ export function ModelViewEditor(props: {
                 }
                 formalCellEditor={ModelViewCellEditor}
                 cellConstructors={modelViewCellConstructors(props.modelNotebookRef.theory())}
+                noShortcuts={true}
             />
         </MultiProvider>
     );
