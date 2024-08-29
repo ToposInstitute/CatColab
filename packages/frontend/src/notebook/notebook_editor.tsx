@@ -190,6 +190,13 @@ export function NotebookEditor<T>(props: {
         }
     };
 
+    const appendCell = (cell: Cell<T>) => {
+        props.changeNotebook((nb) => {
+            nb.cells.push(cell);
+            setActiveCell(nb.cells.length - 1);
+        });
+    };
+
     const insertCommands = (): Completion[] =>
         cellConstructors().map((cc) => {
             const { name, description, shortcut } = cc;
@@ -244,7 +251,7 @@ export function NotebookEditor<T>(props: {
         <div class="notebook">
             <Show when={props.notebook.cells.length === 0}>
                 <div class="notebook-empty placeholder">
-                    <IconButton onClick={() => addAfterActiveCell(newStemCell())}>
+                    <IconButton onClick={() => appendCell(newStemCell())}>
                         <ListPlus />
                     </IconButton>
                     <span>Click button or press Shift-Enter to create a cell</span>
@@ -336,7 +343,7 @@ export function NotebookEditor<T>(props: {
             </ul>
             <Show when={props.notebook.cells.some((cell) => cell.tag !== "stem")}>
                 <div class="placeholder">
-                    <IconButton onClick={() => addAfterActiveCell(newStemCell())}>
+                    <IconButton onClick={() => appendCell(newStemCell())}>
                         <ListPlus />
                     </IconButton>
                 </div>
