@@ -2,7 +2,7 @@ import type { KbdKey } from "@solid-primitives/keyboard";
 
 import type { DblTheory, MorType, ObType } from "catlog-wasm";
 import { MorTypeIndex, ObTypeIndex } from "catlog-wasm";
-import type { ModelViewComponent } from "../model";
+import type { ModelAnalysisComponent } from "../model";
 import { uniqueIndexArray } from "../util/indexing";
 import type { ArrowStyle } from "../visualization";
 
@@ -29,7 +29,7 @@ export class Theory {
 
     private readonly obTypeIndex: ObTypeIndex;
     private readonly morTypeIndex: MorTypeIndex;
-    private readonly modelViewMap: Map<string, ModelViewMeta>;
+    private readonly modelAnalysisMap: Map<string, ModelAnalysisMeta>;
 
     constructor(props: {
         id: string;
@@ -37,7 +37,7 @@ export class Theory {
         description?: string;
         theory: DblTheory;
         types?: TypeMeta[];
-        modelViews?: ModelViewMeta[];
+        modelAnalyses?: ModelAnalysisMeta[];
         onlyFreeModels?: boolean;
     }) {
         this.id = props.id;
@@ -50,7 +50,7 @@ export class Theory {
         this.types = [];
         props.types?.forEach(this.bindType, this);
 
-        this.modelViewMap = uniqueIndexArray(props.modelViews ?? [], (meta) => meta.id);
+        this.modelAnalysisMap = uniqueIndexArray(props.modelAnalyses ?? [], (meta) => meta.id);
         this.onlyFreeModels = props.onlyFreeModels ?? false;
     }
 
@@ -76,14 +76,14 @@ export class Theory {
         return i != null ? (this.types[i] as MorTypeMeta) : undefined;
     }
 
-    /** Get metadata for a model view. */
-    getModelView(id: string): ModelViewMeta | undefined {
-        return this.modelViewMap.get(id);
+    /** Get metadata for an analysis of a model. */
+    getModelAnalysis(id: string): ModelAnalysisMeta | undefined {
+        return this.modelAnalysisMap.get(id);
     }
 
-    /** List of model views. */
-    get modelViews(): Array<ModelViewMeta> {
-        return Array.from(this.modelViewMap.values());
+    /** List of available model analyses. */
+    get modelAnalyses(): Array<ModelAnalysisMeta> {
+        return Array.from(this.modelAnalysisMap.values());
     }
 }
 
@@ -145,22 +145,22 @@ export type MorTypeMeta = BaseTypeMeta & {
     preferUnnamed?: boolean;
 };
 
-/** A model view along with descriptive metadata.
+/** Specifies an analysis of model with descriptive metadata.
  */
 // biome-ignore lint/suspicious/noExplicitAny: content type is data dependent.
-export type ModelViewMeta<T = any> = {
-    /** Identifier of view, unique relative to the theory. */
+export type ModelAnalysisMeta<T = any> = {
+    /** Identifier of analysis, unique relative to the theory. */
     id: string;
 
-    /** Human-readable name of view. */
+    /** Human-readable name of analysis. */
     name: string;
 
-    /** Short description of view. */
+    /** Short description of analysis. */
     description?: string;
 
-    /** Component that renders the view. */
-    component: ModelViewComponent<T>;
+    /** Component that renders the analysis. */
+    component: ModelAnalysisComponent<T>;
 
-    /** Default content created when the view is added. */
+    /** Default content created when the analysis is added. */
     initialContent: () => T;
 };

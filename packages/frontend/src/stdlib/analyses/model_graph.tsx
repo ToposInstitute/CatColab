@@ -1,23 +1,23 @@
 import type * as Viz from "@viz-js/viz";
 
-import type { ModelJudgment, ModelViewProps } from "../../model";
-import type { ModelViewMeta, Theory, TypeMeta } from "../../theory";
+import type { ModelAnalysisProps, ModelJudgment } from "../../model";
+import type { ModelAnalysisMeta, Theory, TypeMeta } from "../../theory";
 import { GraphvizSVG } from "../../visualization";
 
 import styles from "../styles.module.css";
 
-/** Configure a graph view for use with models of a double theory. */
+/** Configure a graph visualization for use with models of a double theory. */
 export function configureModelGraph(options: {
     id: string;
     name: string;
     description?: string;
-}): ModelViewMeta<ModelGraphViewContent> {
+}): ModelAnalysisMeta<ModelGraphContent> {
     const { id, name, description } = options;
     return {
         id,
         name,
         description,
-        component: ModelGraphView,
+        component: ModelGraph,
         initialContent: () => ({
             layout: "graphviz-directed",
         }),
@@ -34,7 +34,7 @@ be ignored.
 For now, Graphviz computes the layout of the graph. Other layout engines may be
 added in the future.
  */
-export function ModelGraphView(props: ModelViewProps<ModelGraphViewContent>) {
+export function ModelGraph(props: ModelAnalysisProps<ModelGraphContent>) {
     return (
         <ModelGraphviz
             model={props.model}
@@ -46,8 +46,8 @@ export function ModelGraphView(props: ModelViewProps<ModelGraphViewContent>) {
     );
 }
 
-/** Configuration for a graph view of a model. */
-export type ModelGraphViewContent = {
+/** Configuration for a graph visualization of a model. */
+export type ModelGraphContent = {
     layout: "graphviz-directed" | "graphviz-undirected";
 };
 

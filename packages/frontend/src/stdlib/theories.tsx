@@ -1,12 +1,12 @@
 import * as catlog from "catlog-wasm";
 
 import { Theory } from "../theory";
-import { TheoryLibrary } from "./types";
 import {
     configureModelGraph,
     configureStockFlowDiagram,
     configureSubmodelsAnalysis,
-} from "./views";
+} from "./analyses";
+import { TheoryLibrary } from "./types";
 
 import styles from "./styles.module.css";
 import svgStyles from "./svg_styles.module.css";
@@ -46,7 +46,7 @@ stdTheories.add(
                     shortcut: ["M"],
                 },
             ],
-            modelViews: [
+            modelAnalyses: [
                 configureModelGraph({
                     id: "diagram",
                     name: "Diagram",
@@ -116,7 +116,7 @@ stdTheories.add(
                     textClasses: [styles.code],
                 },
             ],
-            modelViews: [
+            modelAnalyses: [
                 configureModelGraph({
                     id: "diagram",
                     name: "Diagram",
@@ -167,7 +167,7 @@ stdTheories.add(
                     preferUnnamed: true,
                 },
             ],
-            modelViews: [
+            modelAnalyses: [
                 configureModelGraph({
                     id: "diagram",
                     name: "Network",
@@ -220,7 +220,7 @@ stdTheories.add(
                     preferUnnamed: true,
                 },
             ],
-            modelViews: [
+            modelAnalyses: [
                 configureModelGraph({
                     id: "diagram",
                     name: "Diagram",
@@ -284,7 +284,7 @@ stdTheories.add(
                     shortcut: ["L"],
                 },
             ],
-            modelViews: [
+            modelAnalyses: [
                 configureStockFlowDiagram({
                     id: "diagram",
                     name: "Diagram",

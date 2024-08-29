@@ -5,26 +5,26 @@ import { Show } from "solid-js";
 
 import type { DblModel } from "catlog-wasm";
 import { IconButton } from "../../components";
-import type { ModelJudgment, ModelViewProps } from "../../model";
-import type { ModelViewMeta, Theory } from "../../theory";
+import type { ModelAnalysisProps, ModelJudgment } from "../../model";
+import type { ModelAnalysisMeta, Theory } from "../../theory";
 import { type GraphvizAttributes, ModelGraphviz } from "./model_graph";
 
 import "./submodel_graphs.css";
 
-/** Configure a submodels view for use with models of a double theory. */
+/** Configure a submodel analysis for use with a double theory. */
 export function configureSubmodelsAnalysis(options: {
     id: string;
     name: string;
     description?: string;
     findSubmodels: (model: DblModel) => Array<DblModel>;
-}): ModelViewMeta<SubmodelsViewContent> {
+}): ModelAnalysisMeta<SubmodelsAnalysisContent> {
     const { id, name, description, findSubmodels } = options;
     return {
         id,
         name,
         description,
         component: (props) => (
-            <SubmodelsView title={name} findSubmodels={findSubmodels} {...props} />
+            <SubmodelsAnalysis title={name} findSubmodels={findSubmodels} {...props} />
         ),
         initialContent: () => ({
             activeIndex: 0,
@@ -32,11 +32,11 @@ export function configureSubmodelsAnalysis(options: {
     };
 }
 
-function SubmodelsView(
+function SubmodelsAnalysis(
     props: {
         findSubmodels: (model: DblModel) => Array<DblModel>;
         title?: string;
-    } & ModelViewProps<SubmodelsViewContent>,
+    } & ModelAnalysisProps<SubmodelsAnalysisContent>,
 ) {
     return (
         <SubmodelsGraphviz
@@ -64,7 +64,7 @@ function SubmodelsView(
     );
 }
 
-type SubmodelsViewContent = {
+type SubmodelsAnalysisContent = {
     /** Index of active submodel. */
     activeIndex: number;
 };

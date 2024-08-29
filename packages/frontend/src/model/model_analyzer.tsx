@@ -13,11 +13,11 @@ import {
 import type { Theory } from "../theory";
 import { TheoryContext } from "./model_context";
 import type { ModelNotebookRef } from "./model_notebook_editor";
-import type { ModelJudgment, ModelView } from "./types";
+import type { ModelAnalysis, ModelJudgment } from "./types";
 
-/** Notebook editor for model views.
+/** Notebook editor for analyses of models of double theories.
  */
-export function ModelViewEditor(props: {
+export function ModelAnalyzer(props: {
     handle: DocHandle<unknown>;
     path: Prop[];
     modelNotebookRef: ModelNotebookRef;
@@ -37,15 +37,15 @@ export function ModelViewEditor(props: {
                 changeNotebook={(f) =>
                     props.modelNotebookRef.changeModelNotebook((model) => f(model.analysis))
                 }
-                formalCellEditor={ModelViewCellEditor}
-                cellConstructors={modelViewCellConstructors(props.modelNotebookRef.theory())}
+                formalCellEditor={ModelAnalysisCellEditor}
+                cellConstructors={modelAnalysisCellConstructors(props.modelNotebookRef.theory())}
                 noShortcuts={true}
             />
         </MultiProvider>
     );
 }
 
-function ModelViewCellEditor(props: FormalCellEditorProps<ModelView<unknown>>) {
+function ModelAnalysisCellEditor(props: FormalCellEditorProps<ModelAnalysis<unknown>>) {
     const theory = useContext(TheoryContext);
     const model = useContext(ModelContext);
     const validatedModel = useContext(ValidatedModelContext);
@@ -54,7 +54,7 @@ function ModelViewCellEditor(props: FormalCellEditorProps<ModelView<unknown>>) {
         <Show when={theory?.()}>
             {(theory) => (
                 <Show
-                    when={theory().getModelView(props.content.tag)}
+                    when={theory().getModelAnalysis(props.content.tag)}
                     fallback={<span>Internal error: model view not defined</span>}
                 >
                     {(meta) => (
@@ -75,8 +75,8 @@ function ModelViewCellEditor(props: FormalCellEditorProps<ModelView<unknown>>) {
     );
 }
 
-function modelViewCellConstructors(theory?: Theory): CellConstructor<ModelView<unknown>>[] {
-    return (theory?.modelViews ?? []).map((meta) => {
+function modelAnalysisCellConstructors(theory?: Theory): CellConstructor<ModelAnalysis<unknown>>[] {
+    return (theory?.modelAnalyses ?? []).map((meta) => {
         const { id, name, description, initialContent } = meta;
         return {
             name,
@@ -90,7 +90,7 @@ function modelViewCellConstructors(theory?: Theory): CellConstructor<ModelView<u
     });
 }
 
-/** The model being viewed. */
+/** The model being analyzed. */
 const ModelContext = createContext<Accessor<Array<ModelJudgment>>>();
 
 /** The `catlog` representation of the model, if the model is valid. */

@@ -4,14 +4,14 @@ import { Show, createSignal } from "solid-js";
 
 import type { RPCClient } from "../api";
 import type { TheoryLibrary } from "../stdlib";
+import { ModelAnalyzer } from "./model_analyzer";
 import { ModelNotebookEditor, type ModelNotebookRef } from "./model_notebook_editor";
-import { ModelViewEditor } from "./model_view_editor";
 import type { ModelNotebook } from "./types";
 
 /** Editor for a model of a double theory.
 
 The editor includes a notebook for the model itself plus another pane for
-analyses of the model.
+performing analysis of the model.
  */
 export function ModelEditor(props: {
     handle: DocHandle<ModelNotebook>;
@@ -41,7 +41,7 @@ export function ModelEditor(props: {
             <Resizable.Panel class="content-panel" collapsible initialSize={0} minSize={0.25}>
                 <Show when={editorRef()}>
                     {(ref) => (
-                        <ModelViewEditor
+                        <ModelAnalyzer
                             handle={props.handle}
                             path={["analysis"]}
                             modelNotebookRef={ref()}

@@ -19,7 +19,7 @@ export type ModelNotebook = {
     notebook: Notebook<ModelJudgment>;
 
     /** Analysis of the model, a separate notebook. */
-    analysis: Notebook<ModelView<unknown>>;
+    analysis: Notebook<ModelAnalysis<unknown>>;
 };
 
 /** A judgment in the definition of a model.
@@ -78,26 +78,26 @@ export function catlogModel(theory: DblTheory, judgments: Array<ModelJudgment>):
     return model;
 }
 
-/** View onto a model of a theory.
+/** Analysis of a model of a double theory.
 
-Such a view could be a visualization, a simulation, or a translation of the
-model into another format. Views onto a model can have their own content or
-state beyond the data of the model.
+Such an analysis could be a visualization, a simulation, or a translation of the
+model into another format. Analyses can have their own content or state going
+beyond the data of the model, such as numerical parameters for a simulation.
  */
-export type ModelView<T> = {
-    /** Identifier of view, unique relative to the theory. */
+export type ModelAnalysis<T> = {
+    /** Identifier of the analysis, unique relative to the theory. */
     tag: string;
 
-    /** Content associated with the view (not the model). */
+    /** Content associated with the analysis (not the model). */
     content: T;
 };
 
-/** Component that renders a view onto a model. */
-export type ModelViewComponent<T> = Component<ModelViewProps<T>>;
+/** Component that renders an analysis of a model. */
+export type ModelAnalysisComponent<T> = Component<ModelAnalysisProps<T>>;
 
-/** Props passed to a view onto a model. */
-export type ModelViewProps<T> = {
-    /** The model being viewed. */
+/** Props passed to an analysis of a model. */
+export type ModelAnalysisProps<T> = {
+    /** The model being analyzed. */
     model: Array<ModelJudgment>;
 
     /** The `catlog` representation of the model, if the model is valid. */
@@ -105,13 +105,14 @@ export type ModelViewProps<T> = {
 
     /** Theory that the model is of.
 
-    Some views only apply to one theory but the theory is passed regardless.
+    Some analyses are only applicable to a single theory but the theory is
+    passed regardless.
      */
     theory: Theory;
 
-    /** Content associated with the view itself. */
+    /** Content associated with the analysis itself. */
     content: T;
 
-    /** Update content associated with the view. */
+    /** Update content associated with the analysis. */
     changeContent: (f: (content: T) => void) => void;
 };
