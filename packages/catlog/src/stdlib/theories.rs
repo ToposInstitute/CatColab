@@ -72,7 +72,7 @@ pub fn th_category_links() -> UstrDiscreteTabTheory {
     th.add_mor_type(
         ustr("Link"),
         TabObType::Basic(x),
-        th.tabulator(th.mor_type(TabObType::Basic(x))),
+        th.tabulator(th.id_type(TabObType::Basic(x))),
     );
     th
 }

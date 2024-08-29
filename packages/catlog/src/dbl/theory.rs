@@ -38,17 +38,17 @@ summarized by the table:
 Models of a double theory are automatically *categorical* structures, rather
 than merely *set-theoretical* ones, because each object type is assigned not
 just a set of objects but also a span of morphisms between those objects,
-constituting a category. The morphism data comes from a distinguished "Id" type
+constituting a category. The morphisms come from a distinguished "identity type"
 for each object type in the double theory. Similarly, each object operation is
-automatically functorial since it comes with a "Id" operation between the Mor
-types. Morphism types can also be composed to give new ones, as summarized by
-the table:
+automatically functorial since it comes with an "identity operation" between the
+identity types. Morphism types can also be composed to give new ones, as
+summarized by the table:
 
-| Method                                      | Double theory               | Double category        |
-|---------------------------------------------|-----------------------------|------------------------|
-| [`mor_type`](DblTheory::mor_type)           | Mor type                    | Identity proarrow      |
-| [`mor_op`](DblTheory::mor_op)               | Mor operation               | Identity cell on arrow |
-| [`compose_types`](DblTheory::compose_types) | Compose morphism types      | Compose proarrows      |
+| Method                                      | Double theory                | Double category        |
+|---------------------------------------------|------------------------------|------------------------|
+| [`id_type`](DblTheory::id_type)             | Identity type                | Identity proarrow      |
+| [`op_id`](DblTheory::op_id)                 | Identity on object operation | Identity cell on arrow |
+| [`compose_types`](DblTheory::compose_types) | Compose morphism types       | Compose proarrows      |
 
 Finally, operations on both objects and morphisms have identities and can be
 composed:
@@ -145,12 +145,12 @@ pub trait DblTheory {
     /// Composes a sequence of morphism types.
     fn compose_types(&self, path: Path<Self::ObType, Self::MorType>) -> Self::MorType;
 
-    /** Mor type of an object type.
+    /** Identity morphism type on an object type.
 
     Viewing the theory as a double category, this is the identity proarrow on an
     object.
     */
-    fn mor_type(&self, x: Self::ObType) -> Self::MorType {
+    fn id_type(&self, x: Self::ObType) -> Self::MorType {
         self.compose_types(Path::Id(x))
     }
 
@@ -172,12 +172,12 @@ pub trait DblTheory {
         pasting: DblPasting<Self::ObType, Self::ObOp, Self::MorType, Self::MorOp>,
     ) -> Self::MorOp;
 
-    /** Mor operation for an object operation.
+    /** Identity morphism operation for an object operation.
 
     Viewing the theory as a double category, this is the identity cell on an
     arrow.
     */
-    fn mor_op(&self, f: Self::ObOp) -> Self::MorOp {
+    fn op_id(&self, f: Self::ObOp) -> Self::MorOp {
         self.compose_mor_ops(DblPasting::ArrId(nonempty![f]))
     }
 
@@ -491,10 +491,10 @@ where
     }
 
     fn compose_types(&self, path: Path<Self::ObType, Self::MorType>) -> Self::MorType {
-        path.reduce(|x| self.mor_type(x), |m, n| self.compose2_types(m, n))
+        path.reduce(|x| self.id_type(x), |m, n| self.compose2_types(m, n))
     }
 
-    fn mor_type(&self, x: Self::ObType) -> Self::MorType {
+    fn id_type(&self, x: Self::ObType) -> Self::MorType {
         TabMorType::Mor(Box::new(x))
     }
 
@@ -511,7 +511,7 @@ where
         pasting: DblPasting<Self::ObType, Self::ObOp, Self::MorType, Self::MorOp>,
     ) -> Self::MorOp {
         match pasting {
-            DblPasting::ObId(x) => TabMorOp::Id(self.mor_type(x)),
+            DblPasting::ObId(x) => TabMorOp::Id(self.id_type(x)),
             DblPasting::ArrId(fs) => TabMorOp::Mor(self.compose_ob_ops(Path::Seq(fs))),
             DblPasting::ProId(ms) => TabMorOp::Id(self.compose_types(Path::Seq(ms))),
             DblPasting::Diagram(_) => panic!("General pasting not implemented"),
@@ -546,8 +546,8 @@ mod tests {
         th.add_ob_type('*');
         let x = TabObType::Basic('*');
         assert!(th.has_ob_type(&x));
-        let tab = th.tabulator(th.mor_type(x));
+        let tab = th.tabulator(th.id_type(x));
         assert!(th.has_ob_type(&tab));
-        assert!(th.has_mor_type(&th.mor_type(tab)));
+        assert!(th.has_mor_type(&th.id_type(tab)));
     }
 }

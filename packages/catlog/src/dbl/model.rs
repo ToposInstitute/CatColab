@@ -62,9 +62,9 @@ immutable shared reference to the theory.
 
 Objects and morphisms in a model are typed by object types and morphism types in
 the theory. There is a design choice about whether identifiers for objects
-([`Ob`](Self::Ob)) and morphisms ([`Mor`](Self::Mor)) are unique relative to
-their types or globally within the model. If we took the first approach (as we
-do in the Julia package
+([`Ob`](Category::Ob)) and morphisms ([`Mor`](Category::Mor)) are unique
+relative to their types or globally within the model. If we took the first
+approach (as we do in the Julia package
 [ACSets.jl](https://github.com/AlgebraicJulia/ACSets.jl)), one could only make
 sense of objects and morphisms when their types are known, so the early methods
 in the trait would look like this:
