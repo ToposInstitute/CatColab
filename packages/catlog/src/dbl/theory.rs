@@ -35,20 +35,20 @@ summarized by the table:
 | [`ObOp`](DblTheory::ObOp)       | Object operation   | Arrow (tight morphism)    | Function       |
 | [`MorOp`](DblTheory::MorOp)     | Morphism operation | Cell                      | Map of spans   |
 
-Models of a double theory are automatically *categorical* structures, rather
-than merely *set-theoretical* ones, because each object type is assigned not
-just a set of objects but also a span of morphisms between those objects,
-constituting a category. The morphisms come from a distinguished "identity type"
-for each object type in the double theory. Similarly, each object operation is
-automatically functorial since it comes with an "identity operation" between the
-identity types. Morphism types can also be composed to give new ones, as
-summarized by the table:
+Models of a double theory are *categorical* structures, rather than merely
+*set-theoretical* ones, because each object type is assigned not just a set of
+objects but also a span of morphisms between those objects, constituting a
+category. The morphisms come from a distinguished "Hom" morphism type for each
+object type in the double theory. Similarly, each object operation is not just a
+function but a functor because it comes with an "Hom" operation between the Hom
+types. Moreover, morphism types can be composed to give new ones, as summarized
+by the table:
 
-| Method                                      | Double theory                | Double category        |
-|---------------------------------------------|------------------------------|------------------------|
-| [`id_type`](DblTheory::id_type)             | Identity type                | Identity proarrow      |
-| [`op_id`](DblTheory::op_id)                 | Identity on object operation | Identity cell on arrow |
-| [`compose_types`](DblTheory::compose_types) | Compose morphism types       | Compose proarrows      |
+| Method                                      | Double theory          | Double category        |
+|---------------------------------------------|------------------------|------------------------|
+| [`hom_type`](DblTheory::hom_type)           | Hom type               | Identity proarrow      |
+| [`hom_op`](DblTheory::hom_op)               | Hom operation          | Identity cell on arrow |
+| [`compose_types`](DblTheory::compose_types) | Compose morphism types | Compose proarrows      |
 
 Finally, operations on both objects and morphisms have identities and can be
 composed:
@@ -145,12 +145,12 @@ pub trait DblTheory {
     /// Composes a sequence of morphism types.
     fn compose_types(&self, path: Path<Self::ObType, Self::MorType>) -> Self::MorType;
 
-    /** Identity morphism type on an object type.
+    /** Hom morphism type on an object type.
 
     Viewing the theory as a double category, this is the identity proarrow on an
     object.
     */
-    fn id_type(&self, x: Self::ObType) -> Self::MorType {
+    fn hom_type(&self, x: Self::ObType) -> Self::MorType {
         self.compose_types(Path::Id(x))
     }
 
@@ -172,12 +172,12 @@ pub trait DblTheory {
         pasting: DblPasting<Self::ObType, Self::ObOp, Self::MorType, Self::MorOp>,
     ) -> Self::MorOp;
 
-    /** Identity morphism operation for an object operation.
+    /** Hom morphism operation on an object operation.
 
     Viewing the theory as a double category, this is the identity cell on an
     arrow.
     */
-    fn op_id(&self, f: Self::ObOp) -> Self::MorOp {
+    fn hom_op(&self, f: Self::ObOp) -> Self::MorOp {
         self.compose_mor_ops(DblPasting::ArrId(nonempty![f]))
     }
 
@@ -293,8 +293,8 @@ pub enum TabMorType<V, E> {
     /// Basic or generating morphism type.
     Basic(E),
 
-    /// Mor type on an object type.
-    Mor(Box<TabObType<V, E>>),
+    /// Hom type on an object type.
+    Hom(Box<TabObType<V, E>>),
 }
 
 /// Object operation in a discrete tabulator theory.
@@ -316,8 +316,8 @@ pub enum TabMorOp<V, E> {
     /// Identity operation on a morphism type.
     Id(TabMorType<V, E>),
 
-    /// Mor operation on an object operation.
-    Mor(TabObOp<V, E>),
+    /// Hom operation on an object operation.
+    Hom(TabObOp<V, E>),
 
     /// Projection from tabulator onto morphism type.
     Proj(TabMorType<V, E>),
@@ -384,8 +384,8 @@ where
 
     fn compose2_types(&self, m: TabMorType<V, E>, n: TabMorType<V, E>) -> TabMorType<V, E> {
         match (m, n) {
-            (TabMorType::Mor(_), n) => n,
-            (m, TabMorType::Mor(_)) => m,
+            (TabMorType::Hom(_), n) => n,
+            (m, TabMorType::Hom(_)) => m,
             (TabMorType::Basic(d), TabMorType::Basic(e)) => {
                 self.compose_map.apply(&(d, e)).expect("Composition should be defined").clone()
             }
@@ -422,7 +422,7 @@ where
     fn has_mor_type(&self, mor_type: &Self::MorType) -> bool {
         match mor_type {
             TabMorType::Basic(e) => self.mor_types.contains(e),
-            TabMorType::Mor(x) => self.has_ob_type(x.as_ref()),
+            TabMorType::Hom(x) => self.has_ob_type(x.as_ref()),
         }
     }
 
@@ -431,7 +431,7 @@ where
             TabMorType::Basic(e) => {
                 self.src.apply(e).expect("Source of morphism type should be defined").clone()
             }
-            TabMorType::Mor(x) => x.as_ref().clone(),
+            TabMorType::Hom(x) => x.as_ref().clone(),
         }
     }
 
@@ -440,7 +440,7 @@ where
             TabMorType::Basic(e) => {
                 self.tgt.apply(e).expect("Target of morphism type should be defined").clone()
             }
-            TabMorType::Mor(x) => x.as_ref().clone(),
+            TabMorType::Hom(x) => x.as_ref().clone(),
         }
     }
 
@@ -462,7 +462,7 @@ where
     fn op_src(&self, mor_op: &Self::MorOp) -> Self::ObOp {
         match mor_op {
             TabMorOp::Id(m) => TabObOp::Id(self.src(m)),
-            TabMorOp::Mor(f) => f.clone(),
+            TabMorOp::Hom(f) => f.clone(),
             TabMorOp::Proj(m) => TabObOp::ProjSrc(m.clone()),
         }
     }
@@ -470,7 +470,7 @@ where
     fn op_tgt(&self, mor_op: &Self::MorOp) -> Self::ObOp {
         match mor_op {
             TabMorOp::Id(m) => TabObOp::Id(self.tgt(m)),
-            TabMorOp::Mor(f) => f.clone(),
+            TabMorOp::Hom(f) => f.clone(),
             TabMorOp::Proj(m) => TabObOp::ProjTgt(m.clone()),
         }
     }
@@ -478,24 +478,24 @@ where
     fn op_dom(&self, mor_op: &Self::MorOp) -> Self::MorType {
         match mor_op {
             TabMorOp::Id(m) => m.clone(),
-            TabMorOp::Mor(f) => TabMorType::Mor(Box::new(self.dom(f))),
-            TabMorOp::Proj(m) => TabMorType::Mor(Box::new(self.tabulator(m.clone()))),
+            TabMorOp::Hom(f) => TabMorType::Hom(Box::new(self.dom(f))),
+            TabMorOp::Proj(m) => TabMorType::Hom(Box::new(self.tabulator(m.clone()))),
         }
     }
 
     fn op_cod(&self, mor_op: &Self::MorOp) -> Self::MorType {
         match mor_op {
             TabMorOp::Id(m) | TabMorOp::Proj(m) => m.clone(),
-            TabMorOp::Mor(f) => TabMorType::Mor(Box::new(self.cod(f))),
+            TabMorOp::Hom(f) => TabMorType::Hom(Box::new(self.cod(f))),
         }
     }
 
     fn compose_types(&self, path: Path<Self::ObType, Self::MorType>) -> Self::MorType {
-        path.reduce(|x| self.id_type(x), |m, n| self.compose2_types(m, n))
+        path.reduce(|x| self.hom_type(x), |m, n| self.compose2_types(m, n))
     }
 
-    fn id_type(&self, x: Self::ObType) -> Self::MorType {
-        TabMorType::Mor(Box::new(x))
+    fn hom_type(&self, x: Self::ObType) -> Self::MorType {
+        TabMorType::Hom(Box::new(x))
     }
 
     fn compose_ob_ops(&self, path: Path<Self::ObType, Self::ObOp>) -> Self::ObOp {
@@ -511,8 +511,8 @@ where
         pasting: DblPasting<Self::ObType, Self::ObOp, Self::MorType, Self::MorOp>,
     ) -> Self::MorOp {
         match pasting {
-            DblPasting::ObId(x) => TabMorOp::Id(self.id_type(x)),
-            DblPasting::ArrId(fs) => TabMorOp::Mor(self.compose_ob_ops(Path::Seq(fs))),
+            DblPasting::ObId(x) => TabMorOp::Id(self.hom_type(x)),
+            DblPasting::ArrId(fs) => TabMorOp::Hom(self.compose_ob_ops(Path::Seq(fs))),
             DblPasting::ProId(ms) => TabMorOp::Id(self.compose_types(Path::Seq(ms))),
             DblPasting::Diagram(_) => panic!("General pasting not implemented"),
         }
@@ -546,8 +546,8 @@ mod tests {
         th.add_ob_type('*');
         let x = TabObType::Basic('*');
         assert!(th.has_ob_type(&x));
-        let tab = th.tabulator(th.id_type(x));
+        let tab = th.tabulator(th.hom_type(x));
         assert!(th.has_ob_type(&tab));
-        assert!(th.has_mor_type(&th.id_type(tab)));
+        assert!(th.has_mor_type(&th.hom_type(tab)));
     }
 }
