@@ -222,9 +222,7 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
     );
 }
 
-type ModelCellConstructor = CellConstructor<ModelJudgment>;
-
-function modelCellConstructors(theory?: Theory): ModelCellConstructor[] {
+function modelCellConstructors(theory?: Theory): CellConstructor<ModelJudgment>[] {
     return (theory?.types ?? []).map((typ) => {
         const { name, description, shortcut } = typ;
         return {

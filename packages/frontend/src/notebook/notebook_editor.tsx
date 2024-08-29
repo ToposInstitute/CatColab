@@ -189,7 +189,7 @@ export function NotebookEditor<T>(props: {
     };
 
     const insertCommands = (): Completion[] =>
-        props.cellConstructors.map((cc) => {
+        cellConstructors().map((cc) => {
             const { name, description, shortcut } = cc;
             return {
                 name,

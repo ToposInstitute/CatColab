@@ -10,7 +10,8 @@ import type { ModelNotebook } from "./types";
 
 /** Editor for a model of a double theory.
 
-TODO:
+The editor includes a notebook for the model itself plus another pane for
+analyses of the model.
  */
 export function ModelEditor(props: {
     handle: DocHandle<ModelNotebook>;
@@ -42,7 +43,7 @@ export function ModelEditor(props: {
                     {(ref) => (
                         <ModelViewEditor
                             handle={props.handle}
-                            path={["views"]}
+                            path={["analysis"]}
                             modelNotebookRef={ref()}
                         />
                     )}

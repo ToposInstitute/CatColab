@@ -230,13 +230,13 @@ stdTheories.add(
                     id: "negative-loops",
                     name: "Balancing loops",
                     description: "Analyze the diagram for balancing loops",
-                    findSubmodels: thSignedCategory.negativeLoops,
+                    findSubmodels: (model) => thSignedCategory.negativeLoops(model),
                 }),
                 configureSubmodelsAnalysis({
                     id: "positive-loops",
                     name: "Reinforcing loops",
                     description: "Analyze the diagram for reinforcing loops",
-                    findSubmodels: thSignedCategory.positiveLoops,
+                    findSubmodels: (model) => thSignedCategory.positiveLoops(model),
                 }),
             ],
         });

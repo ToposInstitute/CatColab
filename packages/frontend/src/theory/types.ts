@@ -81,9 +81,9 @@ export class Theory {
         return this.modelViewMap.get(id);
     }
 
-    /** Iterate over model views. */
-    modelViews(): IterableIterator<ModelViewMeta> {
-        return this.modelViewMap.values();
+    /** List of model views. */
+    get modelViews(): Array<ModelViewMeta> {
+        return Array.from(this.modelViewMap.values());
     }
 }
 

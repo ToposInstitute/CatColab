@@ -4,7 +4,13 @@ import { type Accessor, Show, createContext, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
 
 import type { DblModel } from "catlog-wasm";
-import { type FormalCellEditorProps, NotebookEditor } from "../notebook";
+import {
+    type CellConstructor,
+    type FormalCellEditorProps,
+    NotebookEditor,
+    newFormalCell,
+} from "../notebook";
+import type { Theory } from "../theory";
 import { TheoryContext } from "./model_context";
 import type { ModelNotebookRef } from "./model_notebook_editor";
 import type { ModelJudgment, ModelView } from "./types";
@@ -32,7 +38,7 @@ export function ModelViewEditor(props: {
                     props.modelNotebookRef.changeModelNotebook((model) => f(model.analysis))
                 }
                 formalCellEditor={ModelViewCellEditor}
-                cellConstructors={[]}
+                cellConstructors={modelViewCellConstructors(props.modelNotebookRef.theory())}
             />
         </MultiProvider>
     );
@@ -66,6 +72,21 @@ function ModelViewCellEditor(props: FormalCellEditorProps<ModelView<unknown>>) {
             )}
         </Show>
     );
+}
+
+function modelViewCellConstructors(theory?: Theory): CellConstructor<ModelView<unknown>>[] {
+    return (theory?.modelViews ?? []).map((meta) => {
+        const { id, name, description, initialContent } = meta;
+        return {
+            name,
+            description,
+            construct: () =>
+                newFormalCell({
+                    tag: id,
+                    content: initialContent(),
+                }),
+        };
+    });
 }
 
 /** The model being viewed. */
