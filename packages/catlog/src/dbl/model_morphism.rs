@@ -274,7 +274,7 @@ where
         let var = &self.var_order[depth];
         match var.clone() {
             GraphElem::Vertex(x) => {
-                for y in self.cod.objects_with_type(self.dom.ob_type(&x)) {
+                for y in self.cod.objects_with_type(&self.dom.ob_type(&x)) {
                     self.map.assign_ob(x.clone(), y);
                     self.search(depth + 1);
                 }

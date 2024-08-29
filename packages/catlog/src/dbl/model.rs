@@ -51,7 +51,7 @@ use super::theory::{DblTheory, DiscreteDblTheory};
 use crate::one::fin_category::{FpCategory, InvalidFpCategory, UstrFinCategory};
 use crate::one::*;
 use crate::validate::{self, Validate};
-use crate::zero::{IndexedHashColumn, Mapping};
+use crate::zero::{Column, IndexedHashColumn, Mapping};
 
 /** A model of a double theory.
 
@@ -119,30 +119,30 @@ pub trait DblModel: Category {
 
 /// A finitely-generated double model
 pub trait FgDblModel: DblModel + FgCategory {
-    /// Type of a object generator
+    /// Type of an object generator.
     fn ob_gen_type(&self, ob: &Self::ObGen) -> Self::ObType;
 
-    /// Type of a morphism generator
+    /// Type of a morphism generator.
     fn mor_gen_type(&self, mor: &Self::MorGen) -> Self::MorType;
 
-    /// Iterates over the objects in the model
+    /// Iterates over object generators in the model.
     fn objects(&self) -> impl Iterator<Item = Self::ObGen> {
         self.generating_graph().vertices()
     }
 
-    /// an iterator over the objects in the model of a given object type
-    fn objects_with_type(&self, obtype: Self::ObType) -> impl Iterator<Item = Self::ObGen> {
-        self.objects().filter(move |ob| self.ob_gen_type(ob) == obtype)
+    /// Iterates over object generators in the model of a given object type.
+    fn objects_with_type(&self, obtype: &Self::ObType) -> impl Iterator<Item = Self::ObGen> {
+        self.objects().filter(move |ob| self.ob_gen_type(ob) == *obtype)
     }
 
-    /// an iterator over the morphism generators in the model
+    /// Iterates over morphism generators in the model.
     fn morphisms(&self) -> impl Iterator<Item = Self::MorGen> {
         self.generating_graph().edges()
     }
 
-    /// an iterator over the morphisms in the model of a given morphism type
-    fn morphisms_with_type(&self, mortype: Self::MorType) -> impl Iterator<Item = Self::MorGen> {
-        self.morphisms().filter(move |mor| self.mor_gen_type(mor) == mortype)
+    /// Iterates over morphism generators in the model of a given morphism type.
+    fn morphisms_with_type(&self, mortype: &Self::MorType) -> impl Iterator<Item = Self::MorGen> {
+        self.morphisms().filter(move |mor| self.mor_gen_type(mor) == *mortype)
     }
 }
 
@@ -188,7 +188,7 @@ where
         }
     }
 
-    /// get the Arc for the theory of this model
+    /// Returns a reference-counting pointer to the theory for this model.
     pub fn theory_arc(&self) -> Arc<DiscreteDblTheory<Cat>> {
         self.theory.clone()
     }
@@ -366,6 +366,14 @@ where
 
     fn mor_gen_type(&self, mor: &Self::MorGen) -> Self::MorType {
         self.mor_types.apply(mor).unwrap().clone()
+    }
+
+    fn objects_with_type(&self, typ: &Self::ObType) -> impl Iterator<Item = Self::ObGen> {
+        self.ob_types.preimage(typ)
+    }
+
+    fn morphisms_with_type(&self, typ: &Self::MorType) -> impl Iterator<Item = Self::MorGen> {
+        self.mor_types.preimage(typ)
     }
 }
 
