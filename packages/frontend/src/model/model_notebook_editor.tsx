@@ -21,8 +21,8 @@ import {
     type CellConstructor,
     type FormalCellEditorProps,
     NotebookEditor,
+    cellShortcutModifier,
     newFormalCell,
-    newRichTextCell,
 } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
 import type { Theory } from "../theory";
@@ -225,33 +225,18 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
 type ModelCellConstructor = CellConstructor<ModelJudgment>;
 
 function modelCellConstructors(theory?: Theory): ModelCellConstructor[] {
-    // On Mac, the Alt/Option key remaps keys, whereas on other platforms
-    // Control tends to be already bound in other shortcuts.
-    const modifier = navigator.userAgent.includes("Mac") ? "Control" : "Alt";
-
-    const result: ModelCellConstructor[] = [
-        {
-            name: "Text",
-            description: "Start writing ordinary text",
-            shortcut: [modifier, "T"],
-            construct: () => newRichTextCell(),
-        },
-    ];
-
-    for (const typ of theory?.types.values() ?? []) {
+    return (theory?.types ?? []).map((typ) => {
         const { name, description, shortcut } = typ;
-        result.push({
+        return {
             name,
             description,
-            shortcut: shortcut && [modifier, ...shortcut],
+            shortcut: shortcut && [cellShortcutModifier, ...shortcut],
             construct:
                 typ.tag === "ObType"
                     ? () => newFormalCell(newObjectDecl(typ.obType))
                     : () => newFormalCell(newMorphismDecl(typ.morType)),
-        });
-    }
-
-    return result;
+        };
+    });
 }
 
 function judgmentLabel(judgment: ModelJudgment): string | undefined {
