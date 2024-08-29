@@ -51,6 +51,17 @@ jobs:
         run: |
           cargo clippy -- -D warnings
 
+  rust_docs:
+    name: rust docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Check rustdoc warnings
+        run: |
+          RUSTDOCFLAGS='--deny warnings' cargo doc --no-deps
+
   npm_checks:
     name: npm checks
     runs-on: ubuntu-latest
