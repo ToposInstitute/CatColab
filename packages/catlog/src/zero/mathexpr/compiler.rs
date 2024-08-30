@@ -40,6 +40,12 @@ where
     }
 }
 
+impl<T: Clone> From<HashMap<Ustr, T>> for Context<T> {
+    fn from(vars: HashMap<Ustr, T>) -> Self {
+        Context { vars }
+    }
+}
+
 pub(super) enum Compiled<T> {
     Sum(Vec<(Sign, Compiled<T>)>),
     Product(Vec<(LogSign, Compiled<T>)>),
