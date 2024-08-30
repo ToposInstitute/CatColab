@@ -6,7 +6,6 @@ import { type Component, For, Match, Show, Switch, createEffect, createSignal } 
 import { type Completion, IconButton } from "../components";
 import {
     type CellActions,
-    type CellConstructor,
     type FormalCellEditorProps,
     NotebookCell,
     RichTextCellEditor,
@@ -15,6 +14,25 @@ import {
 import { type Cell, type FormalCell, type Notebook, newRichTextCell, newStemCell } from "./types";
 
 import "./notebook_editor.css";
+
+/** Constructor of a cell in a notebook.
+
+A notebook knows how to edit cells, but without cell constructors, it wouldn't
+know how to create them!
+ */
+export type CellConstructor<T> = {
+    // Name of cell constructor, usually naming the cell type.
+    name: string;
+
+    // Tooltip-length description of cell constructor.
+    description?: string;
+
+    // Keyboard shortcut to invoke the constructor.
+    shortcut?: KbdKey[];
+
+    // Function to construct the cell.
+    construct: () => Cell<T>;
+};
 
 /** Notebook editor based on Automerge.
 
@@ -141,6 +159,16 @@ export function NotebookEditor<T>(props: {
                                 const n = props.notebook.cells.length;
                                 i() < n - 1 && setActiveCell(i() + 1);
                             },
+                            createAbove: () =>
+                                props.changeNotebook((nb) => {
+                                    nb.cells.splice(i(), 0, newStemCell());
+                                    setActiveCell(i());
+                                }),
+                            createBelow: () =>
+                                props.changeNotebook((nb) => {
+                                    nb.cells.splice(i() + 1, 0, newStemCell());
+                                    setActiveCell(i() + 1);
+                                }),
                             deleteBackward: () =>
                                 props.changeNotebook((nb) => {
                                     nb.cells.splice(i(), 1);

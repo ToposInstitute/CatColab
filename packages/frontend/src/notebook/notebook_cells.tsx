@@ -1,11 +1,11 @@
 import type { DocHandle, Prop } from "@automerge/automerge-repo";
-import type { KbdKey } from "@solid-primitives/keyboard";
 import GripVertical from "lucide-solid/icons/grip-vertical";
+import Plus from "lucide-solid/icons/plus";
 import type { EditorView } from "prosemirror-view";
 import { type JSX, Show, createEffect, createSignal, onMount } from "solid-js";
 
 import { type Completion, IconButton, InlineInput, RichTextEditor } from "../components";
-import type { Cell, CellId } from "./types";
+import type { CellId } from "./types";
 
 /** Actions invokable *within* a cell but affecting the larger notebook state.
 
@@ -19,6 +19,12 @@ export type CellActions = {
     // Activate the cell below this one.
     activateBelow: () => void;
 
+    // Create a new stem cell above this one.
+    createAbove: () => void;
+
+    // Create  anew stem cell below this one.
+    createBelow: () => void;
+
     // Delete this cell in the backward/upward direction.
     deleteBackward: () => void;
 
@@ -27,25 +33,6 @@ export type CellActions = {
 
     // The cell has received focus.
     hasFocused: () => void;
-};
-
-/** Constructor of a cell in a notebook.
-
-A notebook knows how to edit cells, but without cell constructors, it wouldn't
-know how to create them!
- */
-export type CellConstructor<T> = {
-    // Name of cell constructor, usually naming the cell type.
-    name: string;
-
-    // Tooltip-length description of cell constructor.
-    description?: string;
-
-    // Keyboard shortcut to invoke the constructor.
-    shortcut?: KbdKey[];
-
-    // Function to construct the cell.
-    construct: () => Cell<T>;
 };
 
 /** An individual cell in a notebook.
@@ -66,6 +53,12 @@ export function NotebookCell(props: {
     return (
         <div class="cell" onMouseEnter={showGutter} onMouseLeave={hideGutter}>
             <div class="cell-gutter">
+                <IconButton
+                    onClick={props.actions.createBelow}
+                    style={{ visibility: gutterVisibility() }}
+                >
+                    <Plus />
+                </IconButton>
                 <IconButton style={{ visibility: gutterVisibility() }}>
                     <GripVertical />
                 </IconButton>
