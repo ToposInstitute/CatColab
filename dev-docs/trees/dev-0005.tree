@@ -24,8 +24,8 @@ different backends:
 \subtree{
 \title{Example applications}
 
-\p{Open-source, collaborative, rich-text editors built using
-TypeScript/ProseMirror/TipTap/Yjs:
+\p{Open-source rich-text editors built using
+TypeScript, ProseMirror/TipTap, and in some cases Yjs:
 \ul{
   \li{[Vrite](https://vrite.io/)
   ([demo](https://editor.vrite.io/),
@@ -36,5 +36,9 @@ TypeScript/ProseMirror/TipTap/Yjs:
   ([GitHub](https://github.com/TypeCellOS/BlockNote),
    [HN](https://news.ycombinator.com/item?id=32764493)):
   block-based editor inspired by Notion}
+  \li{[Novel](https://novel.sh/)
+  ([GitHub](https://github.com/steven-tey/novel),
+   [HN](https://news.ycombinator.com/item?id=36360789)):
+  another Notion-style editor}
 }}
 }
