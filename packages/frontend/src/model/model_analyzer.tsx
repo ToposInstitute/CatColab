@@ -10,7 +10,7 @@ import {
     NotebookEditor,
     newFormalCell,
 } from "../notebook";
-import type { Theory } from "../theory";
+import type { ModelAnalysisMeta } from "../theory";
 import { TheoryContext } from "./model_context";
 import type { ModelNotebookRef } from "./model_notebook_editor";
 import type { ModelAnalysis, ModelJudgment } from "./types";
@@ -38,7 +38,9 @@ export function ModelAnalyzer(props: {
                     props.modelNotebookRef.changeModelNotebook((model) => f(model.analysis))
                 }
                 formalCellEditor={ModelAnalysisCellEditor}
-                cellConstructors={modelAnalysisCellConstructors(props.modelNotebookRef.theory())}
+                cellConstructors={modelAnalysisCellConstructors(
+                    props.modelNotebookRef.theory()?.modelAnalyses ?? [],
+                )}
                 noShortcuts={true}
             />
         </MultiProvider>
@@ -57,9 +59,9 @@ function ModelAnalysisCellEditor(props: FormalCellEditorProps<ModelAnalysis<unkn
                     when={theory().getModelAnalysis(props.content.tag)}
                     fallback={<span>Internal error: model view not defined</span>}
                 >
-                    {(meta) => (
+                    {(analysis) => (
                         <Dynamic
-                            component={meta().component}
+                            component={analysis().component}
                             model={model?.() ?? []}
                             validatedModel={validatedModel?.() ?? null}
                             theory={theory()}
@@ -75,9 +77,11 @@ function ModelAnalysisCellEditor(props: FormalCellEditorProps<ModelAnalysis<unkn
     );
 }
 
-function modelAnalysisCellConstructors(theory?: Theory): CellConstructor<ModelAnalysis<unknown>>[] {
-    return (theory?.modelAnalyses ?? []).map((meta) => {
-        const { id, name, description, initialContent } = meta;
+function modelAnalysisCellConstructors(
+    analyses: ModelAnalysisMeta[],
+): CellConstructor<ModelAnalysis<unknown>>[] {
+    return analyses.map((analysis) => {
+        const { id, name, description, initialContent } = analysis;
         return {
             name,
             description,
