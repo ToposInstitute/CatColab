@@ -25,10 +25,10 @@ finite, even locally.
  */
 pub trait Graph {
     /// Type of vertices in graph.
-    type V: Eq;
+    type V: Eq + Clone;
 
     /// Type of edges in graph.
-    type E: Eq;
+    type E: Eq + Clone;
 
     /// Does the graph contain the value as a vertex?
     fn has_vertex(&self, v: &Self::V) -> bool;

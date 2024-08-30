@@ -22,10 +22,10 @@ order](https://en.wikipedia.org/wiki/Matrix_chain_multiplication).
  */
 pub trait Category {
     /// Type of objects in category.
-    type Ob: Eq;
+    type Ob: Eq + Clone;
 
     /// Type of morphisms in category.
-    type Mor: Eq;
+    type Mor: Eq + Clone;
 
     /// Does the category contain the value as an object?
     fn has_ob(&self, x: &Self::Ob) -> bool;
@@ -179,10 +179,10 @@ can have infinitely many morphisms.
  */
 pub trait FgCategory: Category {
     /// The type of object generators.
-    type ObGen: Eq + Into<Self::Ob>;
+    type ObGen: Into<Self::Ob>;
 
     /// The type of morphism generators. Often Mor = Path<Ob, MorGen>.
-    type MorGen: Eq + Into<Self::Mor>;
+    type MorGen: Into<Self::Mor>;
 
     /// An iterator over object generators.
     fn object_generators(&self) -> impl Iterator<Item = Self::ObGen>;
@@ -278,10 +278,7 @@ where
     }
 }
 
-impl<G: FinGraph> FgCategory for FreeCategory<G>
-where
-    G::V: Eq + Clone,
-{
+impl<G: FinGraph> FgCategory for FreeCategory<G> {
     type ObGen = G::V;
     type MorGen = G::E;
 

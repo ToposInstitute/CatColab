@@ -132,8 +132,8 @@ where
     ) -> DiscreteDblModel<CodId, Cat>
     where
         Cat: FgCategory,
-        Cat::Ob: Eq + Clone + Hash,
-        Cat::Mor: Eq + Clone + Hash,
+        Cat::Ob: Hash,
+        Cat::Mor: Hash,
     {
         // TODO: For non-free models, we should filter the equations to those
         // involving only generators that appear in the image.
@@ -162,8 +162,8 @@ where
     ) -> DiscreteDblModelMorphismFinder<'a, DomId, CodId, Cat>
     where
         Cat: FgCategory,
-        Cat::Ob: Eq + Clone + Hash,
-        Cat::Mor: Eq + Clone + Hash,
+        Cat::Ob: Hash,
+        Cat::Mor: Hash,
     {
         DiscreteDblModelMorphismFinder::new(dom, cod)
     }
@@ -223,8 +223,8 @@ where
     DomId: Clone + Eq + Hash,
     CodId: Clone + Eq + Hash,
     Cat: FgCategory,
-    Cat::Ob: Eq + Clone + Hash,
-    Cat::Mor: Eq + Clone + Hash,
+    Cat::Ob: Hash,
+    Cat::Mor: Hash,
 {
     fn new(dom: &'a DiscreteDblModel<DomId, Cat>, cod: &'a DiscreteDblModel<CodId, Cat>) -> Self {
         assert!(
