@@ -5,7 +5,7 @@ use ustr::ustr;
 
 use crate::dbl::model::*;
 use crate::dbl::theory::UstrDiscreteDblTheory;
-use crate::one::fin_category::FinHom;
+use crate::one::fin_category::FinMor;
 
 /** The positive self-loop.
 
@@ -15,7 +15,7 @@ pub fn positive_loop(th: Arc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel {
     let mut model = UstrDiscreteDblModel::new(th);
     let x = ustr("x");
     model.add_ob(x, ustr("Object"));
-    model.add_mor(ustr("positive"), x, x, FinHom::Id(ustr("Object")));
+    model.add_mor(ustr("positive"), x, x, FinMor::Id(ustr("Object")));
     model
 }
 
@@ -27,7 +27,7 @@ pub fn negative_loop(th: Arc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel {
     let mut model = UstrDiscreteDblModel::new(th);
     let x = ustr("x");
     model.add_ob(x, ustr("Object"));
-    model.add_mor(ustr("negative"), x, x, FinHom::Generator(ustr("Negative")));
+    model.add_mor(ustr("negative"), x, x, FinMor::Generator(ustr("Negative")));
     model
 }
 
@@ -40,8 +40,8 @@ pub fn positive_feedback(th: Arc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel
     let (x, y) = (ustr("x"), ustr("y"));
     model.add_ob(x, ustr("Object"));
     model.add_ob(y, ustr("Object"));
-    model.add_mor(ustr("positive"), x, y, FinHom::Id(ustr("Object")));
-    model.add_mor(ustr("positive"), y, x, FinHom::Id(ustr("Object")));
+    model.add_mor(ustr("positive"), x, y, FinMor::Id(ustr("Object")));
+    model.add_mor(ustr("positive"), y, x, FinMor::Id(ustr("Object")));
     model
 }
 
@@ -54,8 +54,8 @@ pub fn negative_feedback(th: Arc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel
     let (x, y) = (ustr("x"), ustr("y"));
     model.add_ob(x, ustr("Object"));
     model.add_ob(y, ustr("Object"));
-    model.add_mor(ustr("positive"), x, y, FinHom::Id(ustr("Object")));
-    model.add_mor(ustr("negative"), y, x, FinHom::Generator(ustr("Negative")));
+    model.add_mor(ustr("positive"), x, y, FinMor::Id(ustr("Object")));
+    model.add_mor(ustr("negative"), y, x, FinMor::Generator(ustr("Negative")));
     model
 }
 

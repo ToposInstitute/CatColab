@@ -27,7 +27,7 @@ use crate::one::graph_algorithms::{simple_paths, spec_order};
 use crate::one::*;
 use crate::zero::{Column, HashColumn, Mapping};
 
-use super::model::{DblModel, DiscreteDblModel};
+use super::model::{DblModel, DiscreteDblModel, FgDblModel};
 
 /** A mapping between models of a double theory.
 
@@ -133,13 +133,13 @@ where
     where
         Cat: FgCategory,
         Cat::Ob: Eq + Clone + Hash,
-        Cat::Hom: Eq + Clone + Hash,
+        Cat::Mor: Eq + Clone + Hash,
     {
         // TODO: For non-free models, we should filter the equations to those
         // involving only generators that appear in the image.
         assert!(cod.is_free(), "Codomain model should be free");
 
-        let mut im = DiscreteDblModel::new(cod.theory().clone());
+        let mut im = DiscreteDblModel::new(cod.theory_arc());
         for x in self.ob_map.values() {
             im.add_ob(x.clone(), cod.ob_type(x));
         }
@@ -163,7 +163,7 @@ where
     where
         Cat: FgCategory,
         Cat::Ob: Eq + Clone + Hash,
-        Cat::Hom: Eq + Clone + Hash,
+        Cat::Mor: Eq + Clone + Hash,
     {
         DiscreteDblModelMorphismFinder::new(dom, cod)
     }
@@ -224,11 +224,11 @@ where
     CodId: Clone + Eq + Hash,
     Cat: FgCategory,
     Cat::Ob: Eq + Clone + Hash,
-    Cat::Hom: Eq + Clone + Hash,
+    Cat::Mor: Eq + Clone + Hash,
 {
     fn new(dom: &'a DiscreteDblModel<DomId, Cat>, cod: &'a DiscreteDblModel<CodId, Cat>) -> Self {
         assert!(
-            Arc::ptr_eq(dom.theory(), cod.theory()),
+            Arc::ptr_eq(&dom.theory_arc(), &cod.theory_arc()),
             "Domain and codomain model should have the same theory"
         );
         assert!(dom.is_free(), "Domain model should be free");
@@ -274,7 +274,7 @@ where
         let var = &self.var_order[depth];
         match var.clone() {
             GraphElem::Vertex(x) => {
-                for y in self.cod.objects_with_type(&self.dom.ob_type(&x)) {
+                for y in self.cod.object_generators_with_type(&self.dom.ob_type(&x)) {
                     self.map.assign_ob(x.clone(), y);
                     self.search(depth + 1);
                 }
@@ -329,12 +329,13 @@ mod tests {
     fn find_positive_loops() {
         let th = Arc::new(th_signed_category());
         let positive_loop = positive_loop(th.clone());
-        let pos = positive_loop.morphisms().next().unwrap();
+        let pos = positive_loop.morphism_generators().next().unwrap().into();
 
         let maps = DiscreteDblModelMapping::morphisms(&positive_loop, &positive_loop).find_all();
         assert_eq!(maps.len(), 2);
-        assert!(matches!(maps[0].apply_mor(&pos), Some(Path::Id(_))));
-        assert!(matches!(maps[1].apply_mor(&pos), Some(Path::Seq(_))));
+        let mors: Vec<_> = maps.into_iter().map(|mor| mor.apply_mor(&pos)).collect();
+        assert!(mors.iter().any(|mor| matches!(mor, Some(Path::Id(_)))));
+        assert!(mors.iter().any(|mor| matches!(mor, Some(Path::Seq(_)))));
 
         let maps = DiscreteDblModelMapping::morphisms(&positive_loop, &positive_loop)
             .monic()
@@ -347,14 +348,15 @@ mod tests {
     fn find_negative_loops() {
         let th = Arc::new(th_signed_category());
         let negative_loop = negative_loop(th.clone());
-        let base_pt = negative_loop.objects().next().unwrap();
+        let base_pt = negative_loop.object_generators().next().unwrap();
 
         let negative_feedback = negative_feedback(th);
         let maps =
             DiscreteDblModelMapping::morphisms(&negative_loop, &negative_feedback).find_all();
         assert_eq!(maps.len(), 2);
-        assert_eq!(maps[0].apply_ob(&base_pt), Some(ustr("x")));
-        assert_eq!(maps[1].apply_ob(&base_pt), Some(ustr("y")));
+        let obs: Vec<_> = maps.iter().map(|mor| mor.apply_ob(&base_pt)).collect();
+        assert!(obs.contains(&Some(ustr("x"))));
+        assert!(obs.contains(&Some(ustr("y"))));
 
         let im = maps[0].syntactic_image(&negative_feedback);
         assert!(im.validate().is_ok());

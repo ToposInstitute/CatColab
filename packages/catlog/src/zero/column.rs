@@ -327,7 +327,7 @@ impl<T: Eq + Clone> Index for VecIndex<T> {
 
 /** An index implemented by a hash map into vectors.
  */
-#[derive(Clone, Derivative)]
+#[derive(Clone, Derivative, Debug)]
 #[derivative(Default(bound = "S: Default"))]
 struct HashIndex<X, Y, S = RandomState>(HashMap<Y, Vec<X>, S>);
 
@@ -371,7 +371,7 @@ where
 This common pattern is used to implement more specific columns but, like the
 `Index` trait, is not directly exposed.
  */
-#[derive(Clone, Derivative)]
+#[derive(Clone, Derivative, Debug)]
 #[derivative(PartialEq, Eq)]
 struct IndexedColumn<Dom, Cod, Col, Ind> {
     mapping: Col,
@@ -556,7 +556,7 @@ impl<T: Eq + Hash + Clone> Column for IndexedVecColumn<T> {
 }
 
 /// An indexed column backed by hash maps.
-#[derive(Clone, Derivative)]
+#[derive(Clone, Derivative, Debug)]
 #[derivative(Default(bound = "S: Default"))]
 #[derivative(PartialEq(bound = "K: Eq + Hash, V: PartialEq, S: BuildHasher"))]
 #[derivative(Eq(bound = "K: Eq + Hash, V: Eq, S: BuildHasher"))]

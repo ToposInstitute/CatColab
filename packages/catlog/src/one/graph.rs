@@ -360,7 +360,7 @@ impl Validate for SkelGraph {
 Unlike in a skeletal finite graph, the vertices and edges can have arbitrary
 hashable types.
 */
-#[derive(Clone, Derivative)]
+#[derive(Clone, Derivative, Debug)]
 #[derivative(Default(bound = "S: Default"))]
 #[derivative(PartialEq(bound = "V: Eq + Hash, E: Eq + Hash, S: BuildHasher"))]
 #[derivative(Eq(bound = "V: Eq + Hash, E: Eq + Hash, S: BuildHasher"))]

@@ -35,20 +35,20 @@ summarized by the table:
 | [`ObOp`](DblTheory::ObOp)       | Object operation   | Arrow (tight morphism)    | Function       |
 | [`MorOp`](DblTheory::MorOp)     | Morphism operation | Cell                      | Map of spans   |
 
-Models of a double theory are automatically *categorical* structures, rather
-than merely *set-theoretical* ones, because each object type is assigned not
-just a set of objects but also a span of morphisms between those objects,
-constituting a category. The morphism data comes from a distinguished "Hom" type
-for each object type in the double theory. Similarly, each object operation is
-automatically functorial since it comes with a "Hom" operation between the Hom
-types. Morphism types can also be composed to give new ones, as summarized by
-the table:
+Models of a double theory are *categorical* structures, rather than merely
+*set-theoretical* ones, because each object type is assigned not just a set of
+objects but also a span of morphisms between those objects, constituting a
+category. The morphisms come from a distinguished "Hom" morphism type for each
+object type in the double theory. Similarly, each object operation is not just a
+function but a functor because it comes with an "Hom" operation between the Hom
+types. Moreover, morphism types can be composed to give new ones, as summarized
+by the table:
 
-| Method                                      | Double theory               | Double category        |
-|---------------------------------------------|-----------------------------|------------------------|
-| [`hom_type`](DblTheory::hom_type)           | Hom type                    | Identity proarrow      |
-| [`hom_op`](DblTheory::hom_op)               | Hom operation               | Identity cell on arrow |
-| [`compose_types`](DblTheory::compose_types) | Compose morphism types      | Compose proarrows      |
+| Method                                      | Double theory          | Double category        |
+|---------------------------------------------|------------------------|------------------------|
+| [`hom_type`](DblTheory::hom_type)           | Hom type               | Identity proarrow      |
+| [`hom_op`](DblTheory::hom_op)               | Hom operation          | Identity cell on arrow |
+| [`compose_types`](DblTheory::compose_types) | Compose morphism types | Compose proarrows      |
 
 Finally, operations on both objects and morphisms have identities and can be
 composed:
@@ -142,16 +142,10 @@ pub trait DblTheory {
     /// Codomain type of operation on morphisms.
     fn op_cod(&self, α: &Self::MorOp) -> Self::MorType;
 
-    /// Basic object types.
-    fn basic_ob_types(&self) -> impl Iterator<Item = Self::ObType>;
-
-    /// Basic morphism types.
-    fn basic_mor_types(&self) -> impl Iterator<Item = Self::MorType>;
-
     /// Composes a sequence of morphism types.
     fn compose_types(&self, path: Path<Self::ObType, Self::MorType>) -> Self::MorType;
 
-    /** Hom type of an object type.
+    /** Hom morphism type on an object type.
 
     Viewing the theory as a double category, this is the identity proarrow on an
     object.
@@ -178,7 +172,7 @@ pub trait DblTheory {
         pasting: DblPasting<Self::ObType, Self::ObOp, Self::MorType, Self::MorOp>,
     ) -> Self::MorOp;
 
-    /** Hom operation for an object operation.
+    /** Hom morphism operation on an object operation.
 
     Viewing the theory as a double category, this is the identity cell on an
     arrow.
@@ -206,7 +200,7 @@ indeed **discrete**, which can equivalently be defined as
 - a discrete object in the 2-category of double categories
 - a double category whose underlying categories are both discrete categories
 */
-#[derive(From, RefCast)]
+#[derive(From, RefCast, Debug)]
 #[repr(transparent)]
 pub struct DiscreteDblTheory<Cat: FgCategory>(Cat);
 
@@ -216,18 +210,18 @@ pub type UstrDiscreteDblTheory = DiscreteDblTheory<UstrFinCategory>;
 impl<C: FgCategory> DblTheory for DiscreteDblTheory<C>
 where
     C::Ob: Clone,
-    C::Hom: Clone,
+    C::Mor: Clone,
 {
     type ObType = C::Ob;
     type ObOp = C::Ob;
-    type MorType = C::Hom;
-    type MorOp = C::Hom;
+    type MorType = C::Mor;
+    type MorOp = C::Mor;
 
     fn has_ob_type(&self, x: &Self::ObType) -> bool {
         self.0.has_ob(x)
     }
     fn has_mor_type(&self, m: &Self::MorType) -> bool {
-        self.0.has_hom(m)
+        self.0.has_mor(m)
     }
 
     fn src(&self, m: &Self::MorType) -> Self::ObType {
@@ -256,15 +250,7 @@ where
         m.clone()
     }
 
-    fn basic_ob_types(&self) -> impl Iterator<Item = Self::ObType> {
-        self.0.ob_generators()
-    }
-
-    fn basic_mor_types(&self) -> impl Iterator<Item = Self::MorType> {
-        self.0.hom_generators()
-    }
-
-    fn compose_types(&self, path: Path<C::Ob, C::Hom>) -> C::Hom {
+    fn compose_types(&self, path: Path<C::Ob, C::Mor>) -> C::Mor {
         self.0.compose(path)
     }
 
@@ -273,7 +259,7 @@ where
         disc.compose(path)
     }
 
-    fn compose_mor_ops(&self, pasting: DblPasting<C::Ob, C::Ob, C::Hom, C::Hom>) -> C::Hom {
+    fn compose_mor_ops(&self, pasting: DblPasting<C::Ob, C::Ob, C::Mor, C::Mor>) -> C::Mor {
         match pasting {
             DblPasting::ObId(x) => self.0.id(x),
             DblPasting::ArrId(fs) => self.0.id(self.compose_ob_ops(Path::Seq(fs))),
@@ -504,14 +490,6 @@ where
         }
     }
 
-    fn basic_ob_types(&self) -> impl Iterator<Item = Self::ObType> {
-        self.ob_types.iter().map(TabObType::Basic)
-    }
-
-    fn basic_mor_types(&self) -> impl Iterator<Item = Self::MorType> {
-        self.mor_types.iter().map(TabMorType::Basic)
-    }
-
     fn compose_types(&self, path: Path<Self::ObType, Self::MorType>) -> Self::MorType {
         path.reduce(|x| self.hom_type(x), |m, n| self.compose2_types(m, n))
     }
@@ -548,20 +526,18 @@ mod tests {
 
     #[test]
     fn discrete_double_theory() {
-        type Hom<V, E> = FinHom<V, E>;
+        type Mor<V, E> = FinMor<V, E>;
 
         let mut sgn: FinCategory<char, char> = Default::default();
         sgn.add_ob_generator('*');
-        sgn.add_hom_generator('n', '*', '*');
-        sgn.set_composite('n', 'n', Hom::Id('*'));
+        sgn.add_mor_generator('n', '*', '*');
+        sgn.set_composite('n', 'n', Mor::Id('*'));
 
         let th = DiscreteDblTheory::from(sgn);
         assert!(th.has_ob_type(&'*'));
-        assert!(th.has_mor_type(&Hom::Generator('n')));
-        assert_eq!(th.basic_ob_types().count(), 1);
-        assert_eq!(th.basic_mor_types().count(), 1);
-        let path = Path::pair(Hom::Generator('n'), Hom::Generator('n'));
-        assert_eq!(th.compose_types(path), Hom::Id('*'));
+        assert!(th.has_mor_type(&Mor::Generator('n')));
+        let path = Path::pair(Mor::Generator('n'), Mor::Generator('n'));
+        assert_eq!(th.compose_types(path), Mor::Id('*'));
     }
 
     #[test]
