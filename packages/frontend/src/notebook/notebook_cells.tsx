@@ -1,7 +1,7 @@
 import type { DocHandle, Prop } from "@automerge/automerge-repo";
 import type { KbdKey } from "@solid-primitives/keyboard";
 import type { EditorView } from "prosemirror-view";
-import { createEffect, createSignal, onMount } from "solid-js";
+import { type JSX, Show, createEffect, createSignal, onMount } from "solid-js";
 
 import { type Completion, InlineInput, RichTextEditor } from "../components";
 import type { Cell, CellId } from "./types";
@@ -46,6 +46,26 @@ export type CellConstructor<T> = {
     // Function to construct the cell.
     construct: () => Cell<T>;
 };
+
+/** An individual cell in a notebook.
+
+This component contains UI elements common to any cell. The actual content of
+the cell is rendered by its children.
+ */
+export function NotebookCell(props: {
+    actions: CellActions;
+    children: JSX.Element;
+    tag?: string;
+}) {
+    return (
+        <div class="cell">
+            <div class="cell-content">{props.children}</div>
+            <Show when={props.tag}>
+                <div class="cell-tag">{props.tag}</div>
+            </Show>
+        </div>
+    );
+}
 
 /** Editor for rich text cells, a simple wrapper around `RichTextEditor`.
  */
@@ -111,7 +131,7 @@ export function StemCellEditor(props: {
             exitUp={props.actions.activateAbove}
             exitDown={props.actions.activateBelow}
             onFocus={props.actions.hasFocused}
-            placeholder="select cell type"
+            placeholder="Select cell type"
         />
     );
 }

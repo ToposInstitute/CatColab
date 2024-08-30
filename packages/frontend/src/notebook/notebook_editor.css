@@ -29,11 +29,8 @@
     box-shadow: rgba(15, 15, 15, 0.05) 0px 0px 0px 1px, rgba(15, 15, 15, 0.1) 0px 3px 6px, rgba(15, 15, 15, 0.2) 0px 9px 24px;
 }
 
-.formal-cell {
-    margin: 0.7em 0;
-}
-
 .cell {
+    margin: 0.7em 0;
     padding-left: 0.5em;
     border-left: solid darkgray 2px;
     border-radius: 2px;
@@ -51,8 +48,4 @@
 .cell-content {
     flex-grow: 1;
     height: auto;
-}
-
-.stem-cell {
-    margin: 0.7em 0;
 }
