@@ -26,7 +26,6 @@ To build locally, given you have npm and Rust installed, clone the repository an
 
 ```bash
 > npm install
-> export VITE_BACKEND_HOST=backend-next.catcolab.org
 > npm run build
 > npm run dev
 ```
