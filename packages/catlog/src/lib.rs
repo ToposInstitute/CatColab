@@ -33,3 +33,5 @@ pub mod dbl;
 pub mod one;
 pub mod stdlib;
 pub mod zero;
+
+pub mod next;
