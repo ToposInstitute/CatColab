@@ -22,10 +22,11 @@ An early demo is available at <https://catcolab.org>.
 The staging deployment, synced to the `main` branch, is available at <https://next.catcolab.org>.
 Documentation for developers is browsable at <https://next.catcolab.org/dev/>.
 
-To build locally, clone the repository and run
+To build locally, given you have npm and Rust installed, clone the repository and run
 
 ```bash
 > npm install
+> export VITE_BACKEND_HOST=backend-next.catcolab.org
 > npm run build
 > npm run dev
 ```
