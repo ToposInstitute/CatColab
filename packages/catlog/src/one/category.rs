@@ -181,11 +181,20 @@ pub trait FgCategory: Category {
     /// The type of object generators.
     type ObGen: Eq + Into<Self::Ob>;
 
-    /// The type of morphism generators. Often Mor = Path<Ob, MorGen>
+    /// The type of morphism generators. Often Mor = Path<Ob, MorGen>.
     type MorGen: Eq + Into<Self::Mor>;
 
-    /// The graph of generating morphisms and objects
-    fn generating_graph(&self) -> &impl FinGraph<V = Self::ObGen, E = Self::MorGen>;
+    /// An iterator over object generators.
+    fn object_generators(&self) -> impl Iterator<Item = Self::ObGen>;
+
+    /// An iterator over morphism generators.
+    fn morphism_generators(&self) -> impl Iterator<Item = Self::MorGen>;
+
+    /// The domain of a morphism generator
+    fn morphism_generator_dom(&self, f: &Self::MorGen) -> Self::Ob;
+
+    /// The codomain of a morphism generator
+    fn morphism_generator_cod(&self, f: &Self::MorGen) -> Self::Ob;
 }
 
 impl<S: FinSet> Graph for DiscreteCategory<S>
@@ -252,8 +261,20 @@ where
     type ObGen = S::Elem;
     type MorGen = S::Elem;
 
-    fn generating_graph(&self) -> &impl FinGraph<V = Self::Ob, E = Self::MorGen> {
-        self
+    fn object_generators(&self) -> impl Iterator<Item = Self::ObGen> {
+        self.0.iter()
+    }
+
+    fn morphism_generators(&self) -> impl Iterator<Item = Self::MorGen> {
+        self.0.iter()
+    }
+
+    fn morphism_generator_dom(&self, f: &Self::MorGen) -> Self::Ob {
+        f.clone()
+    }
+
+    fn morphism_generator_cod(&self, f: &Self::MorGen) -> Self::Ob {
+        f.clone()
     }
 }
 
@@ -264,8 +285,20 @@ where
     type ObGen = G::V;
     type MorGen = G::E;
 
-    fn generating_graph(&self) -> &impl FinGraph<V = Self::ObGen, E = Self::MorGen> {
-        &self.0
+    fn object_generators(&self) -> impl Iterator<Item = Self::ObGen> {
+        self.0.vertices()
+    }
+
+    fn morphism_generators(&self) -> impl Iterator<Item = Self::MorGen> {
+        self.0.edges()
+    }
+
+    fn morphism_generator_dom(&self, f: &Self::MorGen) -> Self::Ob {
+        self.0.src(f)
+    }
+
+    fn morphism_generator_cod(&self, f: &Self::MorGen) -> Self::Ob {
+        self.0.tgt(f)
     }
 }
 
@@ -292,11 +325,8 @@ mod tests {
     fn free_category() {
         let cat = FreeCategory::from(SkelGraph::triangle());
         assert!(cat.has_ob(&2));
-        assert!(cat.generating_graph().has_vertex(&2));
-        assert_eq!(cat.generating_graph().vertices().count(), 3);
-        assert_eq!(cat.generating_graph().edges().count(), 3);
-        assert_eq!(cat.generating_graph().out_edges(&0).count(), 2);
-        assert_eq!(cat.generating_graph().in_edges(&2).count(), 2);
+        assert_eq!(cat.object_generators().count(), 3);
+        assert_eq!(cat.morphism_generators().count(), 3);
 
         let id = Path::Id(1);
         assert!(cat.has_mor(&id));

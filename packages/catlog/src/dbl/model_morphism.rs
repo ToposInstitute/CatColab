@@ -274,7 +274,7 @@ where
         let var = &self.var_order[depth];
         match var.clone() {
             GraphElem::Vertex(x) => {
-                for y in self.cod.objects_with_type(&self.dom.ob_type(&x)) {
+                for y in self.cod.object_generators_with_type(&self.dom.ob_type(&x)) {
                     self.map.assign_ob(x.clone(), y);
                     self.search(depth + 1);
                 }
@@ -309,7 +309,6 @@ mod tests {
     use ustr::ustr;
 
     use super::*;
-    use crate::dbl::model::FgDblModel;
     use crate::stdlib::*;
     use crate::validate::Validate;
 
@@ -330,7 +329,7 @@ mod tests {
     fn find_positive_loops() {
         let th = Arc::new(th_signed_category());
         let positive_loop = positive_loop(th.clone());
-        let pos = positive_loop.morphisms().next().unwrap().into();
+        let pos = positive_loop.morphism_generators().next().unwrap().into();
 
         let maps = DiscreteDblModelMapping::morphisms(&positive_loop, &positive_loop).find_all();
         assert_eq!(maps.len(), 2);
@@ -349,7 +348,7 @@ mod tests {
     fn find_negative_loops() {
         let th = Arc::new(th_signed_category());
         let negative_loop = negative_loop(th.clone());
-        let base_pt = negative_loop.objects().next().unwrap();
+        let base_pt = negative_loop.object_generators().next().unwrap();
 
         let negative_feedback = negative_feedback(th);
         let maps =

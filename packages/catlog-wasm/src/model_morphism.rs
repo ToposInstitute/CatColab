@@ -1,9 +1,10 @@
 use std::hash::Hash;
 
 use super::model::DblModel;
-use catlog::dbl::model::{self, FgDblModel};
+use catlog::dbl::model;
 use catlog::dbl::model_morphism::DiscreteDblModelMapping;
 use catlog::one::fin_category::UstrFinCategory;
+use catlog::one::FgCategory;
 
 /// Find motifs in a model of a discrete double theory.
 pub fn motifs<Id>(
@@ -22,7 +23,7 @@ where
         .collect();
 
     // Order motifs from small to large.
-    images.sort_by_key(|im| (im.objects().count(), im.morphisms().count()));
+    images.sort_by_key(|im| (im.object_generators().count(), im.morphism_generators().count()));
 
     // Remove duplicates: different morphisms can have the same image.
     retain_unique(&mut images);

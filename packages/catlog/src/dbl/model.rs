@@ -125,24 +125,20 @@ pub trait FgDblModel: DblModel + FgCategory {
     /// Type of a morphism generator.
     fn mor_gen_type(&self, mor: &Self::MorGen) -> Self::MorType;
 
-    /// Iterates over object generators in the model.
-    fn objects(&self) -> impl Iterator<Item = Self::ObGen> {
-        self.generating_graph().vertices()
-    }
-
     /// Iterates over object generators in the model of a given object type.
-    fn objects_with_type(&self, obtype: &Self::ObType) -> impl Iterator<Item = Self::ObGen> {
-        self.objects().filter(move |ob| self.ob_gen_type(ob) == *obtype)
-    }
-
-    /// Iterates over morphism generators in the model.
-    fn morphisms(&self) -> impl Iterator<Item = Self::MorGen> {
-        self.generating_graph().edges()
+    fn object_generators_with_type(
+        &self,
+        obtype: &Self::ObType,
+    ) -> impl Iterator<Item = Self::ObGen> {
+        self.object_generators().filter(move |ob| self.ob_gen_type(ob) == *obtype)
     }
 
     /// Iterates over morphism generators in the model of a given morphism type.
-    fn morphisms_with_type(&self, mortype: &Self::MorType) -> impl Iterator<Item = Self::MorGen> {
-        self.morphisms().filter(move |mor| self.mor_gen_type(mor) == *mortype)
+    fn morphism_generators_with_type(
+        &self,
+        mortype: &Self::MorType,
+    ) -> impl Iterator<Item = Self::MorGen> {
+        self.morphism_generators().filter(move |mor| self.mor_gen_type(mor) == *mortype)
     }
 }
 
@@ -193,6 +189,11 @@ where
         self.theory.clone()
     }
 
+    /// Returns the underlying graph of the model
+    pub fn generating_graph(&self) -> &impl FinGraph<V = Id, E = Id> {
+        self.category.generators()
+    }
+
     /// Is the model freely generated?
     pub fn is_free(&self) -> bool {
         self.category.is_free()
@@ -237,14 +238,14 @@ where
             InvalidFpCategory::EqSrc(eq) => Invalid::EqSrc(eq),
             InvalidFpCategory::EqTgt(eq) => Invalid::EqTgt(eq),
         });
-        let ob_type_errors = self.category.generating_graph().vertices().filter_map(|x| {
+        let ob_type_errors = self.category.object_generators().filter_map(|x| {
             if self.theory.has_ob_type(&self.ob_type(&x)) {
                 None
             } else {
                 Some(Invalid::ObType(x))
             }
         });
-        let mor_type_errors = self.category.generating_graph().edges().flat_map(|f| {
+        let mor_type_errors = self.category.morphism_generators().flat_map(|f| {
             let mut errs = Vec::new();
             let e = f.clone();
             let mor_type = self.mor_type(&f.into());
@@ -309,8 +310,20 @@ where
     type ObGen = Id;
     type MorGen = Id;
 
-    fn generating_graph(&self) -> &impl FinGraph<V = Id, E = Id> {
-        self.category.generating_graph()
+    fn object_generators(&self) -> impl Iterator<Item = Self::ObGen> {
+        self.category.object_generators()
+    }
+
+    fn morphism_generators(&self) -> impl Iterator<Item = Self::MorGen> {
+        self.category.morphism_generators()
+    }
+
+    fn morphism_generator_dom(&self, f: &Self::MorGen) -> Self::Ob {
+        self.category.morphism_generator_dom(f)
+    }
+
+    fn morphism_generator_cod(&self, f: &Self::MorGen) -> Self::Ob {
+        self.category.morphism_generator_cod(f)
     }
 }
 
@@ -368,11 +381,14 @@ where
         self.mor_types.apply(mor).unwrap().clone()
     }
 
-    fn objects_with_type(&self, typ: &Self::ObType) -> impl Iterator<Item = Self::ObGen> {
+    fn object_generators_with_type(&self, typ: &Self::ObType) -> impl Iterator<Item = Self::ObGen> {
         self.ob_types.preimage(typ)
     }
 
-    fn morphisms_with_type(&self, typ: &Self::MorType) -> impl Iterator<Item = Self::MorGen> {
+    fn morphism_generators_with_type(
+        &self,
+        typ: &Self::MorType,
+    ) -> impl Iterator<Item = Self::MorGen> {
         self.mor_types.preimage(typ)
     }
 }
