@@ -1,9 +1,10 @@
 import type { DocHandle, Prop } from "@automerge/automerge-repo";
 import type { KbdKey } from "@solid-primitives/keyboard";
+import GripVertical from "lucide-solid/icons/grip-vertical";
 import type { EditorView } from "prosemirror-view";
 import { type JSX, Show, createEffect, createSignal, onMount } from "solid-js";
 
-import { type Completion, InlineInput, RichTextEditor } from "../components";
+import { type Completion, IconButton, InlineInput, RichTextEditor } from "../components";
 import type { Cell, CellId } from "./types";
 
 /** Actions invokable *within* a cell but affecting the larger notebook state.
@@ -57,8 +58,18 @@ export function NotebookCell(props: {
     children: JSX.Element;
     tag?: string;
 }) {
+    const [isGutterVisible, setGutterVisible] = createSignal(false);
+    const showGutter = () => setGutterVisible(true);
+    const hideGutter = () => setGutterVisible(false);
+    const gutterVisibility = () => (isGutterVisible() ? "visible" : "hidden");
+
     return (
-        <div class="cell">
+        <div class="cell" onMouseEnter={showGutter} onMouseLeave={hideGutter}>
+            <div class="cell-gutter">
+                <IconButton style={{ visibility: gutterVisibility() }}>
+                    <GripVertical />
+                </IconButton>
+            </div>
             <div class="cell-content">{props.children}</div>
             <Show when={props.tag}>
                 <div class="cell-tag">{props.tag}</div>

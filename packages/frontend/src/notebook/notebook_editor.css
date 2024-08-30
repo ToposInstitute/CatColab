@@ -14,9 +14,9 @@
 
 .notebook .placeholder {
     color: darkgray;
-}
-.notebook .placeholder .lucide {
-    color: darkgray;
+    & .lucide {
+        color: darkgray;
+    }
 }
 
 .notebook-cell-menu {
@@ -30,14 +30,22 @@
 }
 
 .cell {
+    position: relative;
     margin: 0.7em 0;
-    padding-left: 0.5em;
-    border-left: solid darkgray 2px;
-    border-radius: 2px;
     display: flex;
     flex-direction: row;
     align-items: baseline;
     justify-content: space-between;
+}
+
+.cell-gutter {
+    position: absolute;
+    top: 50%;
+    transform: translate(-100%, -50%);
+    left: 0;
+    & .lucide {
+        color: darkgray;
+    }
 }
 
 .cell-tag {
