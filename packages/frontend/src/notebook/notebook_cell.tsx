@@ -1,10 +1,17 @@
 import type { DocHandle, Prop } from "@automerge/automerge-repo";
+import Popover, { type FloatingOptions } from "@corvu/popover";
 import GripVertical from "lucide-solid/icons/grip-vertical";
 import Plus from "lucide-solid/icons/plus";
 import type { EditorView } from "prosemirror-view";
 import { type JSX, Show, createEffect, createSignal, onMount } from "solid-js";
 
-import { type Completion, IconButton, InlineInput, RichTextEditor } from "../components";
+import {
+    type Completion,
+    Completions,
+    IconButton,
+    InlineInput,
+    RichTextEditor,
+} from "../components";
 import type { CellId } from "./types";
 
 import "./notebook_cell.css";
@@ -52,6 +59,17 @@ export function NotebookCell(props: {
     const hideGutter = () => setGutterVisible(false);
     const visibility = (isVisible: boolean) => (isVisible ? "visible" : "hidden");
 
+    const [isMenuOpen, setMenuOpen] = createSignal(false);
+    const openMenu = () => setMenuOpen(true);
+    const closeMenu = () => setMenuOpen(false);
+
+    const completions = (): Completion[] => [
+        {
+            name: "Delete",
+            onComplete: props.actions.deleteForward,
+        },
+    ];
+
     return (
         <div class="cell" onMouseEnter={showGutter} onMouseLeave={hideGutter}>
             <div class="cell-gutter">
@@ -61,9 +79,25 @@ export function NotebookCell(props: {
                 >
                     <Plus />
                 </IconButton>
-                <IconButton style={{ visibility: visibility(isGutterVisible()) }}>
-                    <GripVertical />
-                </IconButton>
+                <Popover
+                    open={isMenuOpen()}
+                    onOpenChange={setMenuOpen}
+                    floatingOptions={cellMenuFloatingOptions}
+                >
+                    <Popover.Anchor as="span">
+                        <IconButton
+                            onClick={openMenu}
+                            style={{ visibility: visibility(isGutterVisible() || isMenuOpen()) }}
+                        >
+                            <GripVertical />
+                        </IconButton>
+                    </Popover.Anchor>
+                    <Popover.Portal>
+                        <Popover.Content class="popup">
+                            <Completions completions={completions()} onComplete={closeMenu} />
+                        </Popover.Content>
+                    </Popover.Portal>
+                </Popover>
             </div>
             <div class="cell-content">{props.children}</div>
             <Show when={props.tag}>
@@ -72,6 +106,12 @@ export function NotebookCell(props: {
         </div>
     );
 }
+
+const cellMenuFloatingOptions: FloatingOptions = {
+    autoPlacement: {
+        allowedPlacements: ["left"],
+    },
+};
 
 /** Editor for rich text cells, a simple wrapper around `RichTextEditor`.
  */

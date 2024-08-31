@@ -3,10 +3,18 @@ import { For, Show, createMemo, createSignal, onMount } from "solid-js";
 
 import "./completions.css";
 
+/** A possible completion. */
 export type Completion = {
+    /** Short name of completion. */
     name: string;
+
+    /** One-line description of completion. */
     description?: string;
+
+    /** Keyboard shortcut associated with completion. */
     shortcut?: KbdKey[];
+
+    /** Function called when completion is selected. */
     onComplete?: () => void;
 };
 
@@ -21,7 +29,8 @@ export type CompletionsRef = {
 
 export function Completions(props: {
     completions: Completion[];
-    text: string;
+    text?: string;
+    onComplete?: () => void;
     ref?: (ref: CompletionsRef) => void;
 }) {
     const [presumptive, setPresumptive] = createSignal(0);
@@ -32,15 +41,15 @@ export function Completions(props: {
 
     const remainingCompletions = createMemo(() => {
         setPresumptive(0);
-        return props.completions?.filter((c) =>
-            c.name.toLowerCase().startsWith(props.text.toLowerCase()),
-        );
+        const prefix = props.text?.toLowerCase() ?? "";
+        return props.completions?.filter((c) => c.name.toLowerCase().startsWith(prefix));
     });
 
     function selectPresumptive() {
         const completions = remainingCompletions();
         if (completions && completions.length > 0) {
             completions[presumptive()].onComplete?.();
+            props.onComplete?.();
         }
     }
 
