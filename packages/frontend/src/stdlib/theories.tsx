@@ -1,11 +1,11 @@
 import * as catlog from "catlog-wasm";
 
-import { Theory } from "../theory";
 import {
     configureModelGraph,
     configureStockFlowDiagram,
     configureSubmodelsAnalysis,
 } from "../analysis";
+import { Theory } from "../theory";
 import { TheoryLibrary } from "./types";
 
 import styles from "./styles.module.css";

@@ -14,7 +14,8 @@ import {
     loadViz,
     vizLayoutGraph,
 } from "../visualization";
-import { type ModelGraphContent, modelToGraphviz } from "./model_graph";
+import { modelToGraphviz } from "./model_graph";
+import type { ModelGraphContent } from "./types";
 
 /** Configure a visualization of a stock flow diagram. */
 export function configureStockFlowDiagram(options: {
@@ -29,6 +30,7 @@ export function configureStockFlowDiagram(options: {
         description,
         component: StockFlowDiagram,
         initialContent: () => ({
+            tag: "graph",
             layout: "graphviz-directed",
         }),
     };

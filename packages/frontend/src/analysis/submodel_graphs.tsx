@@ -5,9 +5,10 @@ import { Show } from "solid-js";
 
 import type { DblModel } from "catlog-wasm";
 import { IconButton } from "../components";
-import type { ModelAnalysisProps, ModelJudgment } from "../model";
+import type { ModelJudgment } from "../model";
 import type { ModelAnalysisMeta, Theory } from "../theory";
 import { type GraphvizAttributes, ModelGraphviz } from "./model_graph";
+import type { ModelAnalysisProps, SubmodelsAnalysisContent } from "./types";
 
 import "./submodel_graphs.css";
 
@@ -27,6 +28,7 @@ export function configureSubmodelsAnalysis(options: {
             <SubmodelsAnalysis title={name} findSubmodels={findSubmodels} {...props} />
         ),
         initialContent: () => ({
+            tag: "submodels",
             activeIndex: 0,
         }),
     };
@@ -63,11 +65,6 @@ function SubmodelsAnalysis(
         />
     );
 }
-
-type SubmodelsAnalysisContent = {
-    /** Index of active submodel. */
-    activeIndex: number;
-};
 
 /** Display submodels of a model of a double theory using Graphviz.
 

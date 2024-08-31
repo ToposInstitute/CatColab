@@ -1,8 +1,9 @@
 import type * as Viz from "@viz-js/viz";
 
-import type { ModelAnalysisProps, ModelJudgment } from "../model";
+import type { ModelJudgment } from "../model";
 import type { ModelAnalysisMeta, Theory, TypeMeta } from "../theory";
 import { GraphvizSVG } from "../visualization";
+import type { ModelAnalysisProps, ModelGraphContent } from "./types";
 
 import styles from "../stdlib/styles.module.css";
 
@@ -19,6 +20,7 @@ export function configureModelGraph(options: {
         description,
         component: ModelGraph,
         initialContent: () => ({
+            tag: "graph",
             layout: "graphviz-directed",
         }),
     };
@@ -45,11 +47,6 @@ export function ModelGraph(props: ModelAnalysisProps<ModelGraphContent>) {
         />
     );
 }
-
-/** Configuration for a graph visualization of a model. */
-export type ModelGraphContent = {
-    layout: "graphviz-directed" | "graphviz-undirected";
-};
 
 /** Visualize a model of a double theory as a graph using Graphviz.
  */

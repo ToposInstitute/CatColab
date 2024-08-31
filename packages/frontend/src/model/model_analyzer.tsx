@@ -4,6 +4,7 @@ import { type Accessor, Show, createContext, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
 
 import type { DblModel } from "catlog-wasm";
+import type { ModelAnalysis } from "../analysis";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
@@ -13,7 +14,7 @@ import {
 import type { ModelAnalysisMeta } from "../theory";
 import { TheoryContext } from "./model_context";
 import type { ModelNotebookRef } from "./model_notebook_editor";
-import type { ModelAnalysis, ModelJudgment } from "./types";
+import type { ModelJudgment } from "./types";
 
 /** Notebook editor for analyses of models of double theories.
  */
@@ -47,7 +48,7 @@ export function ModelAnalyzer(props: {
     );
 }
 
-function ModelAnalysisCellEditor(props: FormalCellEditorProps<ModelAnalysis<unknown>>) {
+function ModelAnalysisCellEditor(props: FormalCellEditorProps<ModelAnalysis>) {
     const theory = useContext(TheoryContext);
     const model = useContext(ModelContext);
     const validatedModel = useContext(ValidatedModelContext);
@@ -56,7 +57,7 @@ function ModelAnalysisCellEditor(props: FormalCellEditorProps<ModelAnalysis<unkn
         <Show when={theory?.()}>
             {(theory) => (
                 <Show
-                    when={theory().getModelAnalysis(props.content.tag)}
+                    when={theory().getModelAnalysis(props.content.id)}
                     fallback={<span>Internal error: model view not defined</span>}
                 >
                     {(analysis) => (
@@ -79,7 +80,7 @@ function ModelAnalysisCellEditor(props: FormalCellEditorProps<ModelAnalysis<unkn
 
 function modelAnalysisCellConstructors(
     analyses: ModelAnalysisMeta[],
-): CellConstructor<ModelAnalysis<unknown>>[] {
+): CellConstructor<ModelAnalysis>[] {
     return analyses.map((analysis) => {
         const { id, name, description, initialContent } = analysis;
         return {
@@ -87,7 +88,7 @@ function modelAnalysisCellConstructors(
             description,
             construct: () =>
                 newFormalCell({
-                    tag: id,
+                    id,
                     content: initialContent(),
                 }),
         };
