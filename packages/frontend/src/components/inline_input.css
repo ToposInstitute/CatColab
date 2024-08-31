@@ -38,8 +38,3 @@
 .inline-input.invalid {
     border-bottom: 3px solid indianred;
 }
-
-.inline-input-completions {
-    position: absolute;
-    z-index: 10;
-}

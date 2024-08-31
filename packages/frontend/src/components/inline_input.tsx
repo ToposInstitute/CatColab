@@ -1,5 +1,6 @@
+import Popover from "@corvu/popover";
 import { focus } from "@solid-primitives/active-element";
-import { type JSX, Show, createSignal } from "solid-js";
+import { type JSX, createSignal } from "solid-js";
 focus;
 
 import { type Completion, Completions, type CompletionsRef } from "./completions";
@@ -79,52 +80,65 @@ export function InlineInput(
             }
         } else if (evt.key === "Enter" && !evt.shiftKey) {
             completionsRef()?.selectPresumptive();
-        } else if (evt.key === "Escape") {
-            setCompletionsOpen(false);
-            completionsRef()?.setPresumptive(0);
         } else {
-            setCompletionsOpen(true);
             return;
         }
         evt.preventDefault();
     };
 
-    // Uses a hidden filler element: https://stackoverflow.com/a/41389961
+    // Uses a hidden filler element to size the input field:
+    // https://stackoverflow.com/a/41389961
     return (
-        <div>
-            <div class="inline-input-container">
-                <span class="inline-input-filler">{props.text || props.placeholder}</span>
-                <input
-                    class="inline-input"
-                    type="text"
-                    size="1"
-                    ref={props.ref}
-                    classList={{
-                        incomplete: props.status === "incomplete",
-                        invalid: props.status === "invalid",
-                    }}
-                    value={props.text}
-                    placeholder={props.placeholder}
-                    use:focus={(isFocused: boolean) => {
-                        isFocused && props.onFocus && props.onFocus();
-                    }}
-                    onBlur={() => setCompletionsOpen(false)}
-                    onClick={() => setCompletionsOpen(true)}
-                    onInput={(evt) => props.setText(evt.target.value)}
-                    onKeyDown={onKeyDown}
-                />
-            </div>
-            <Show when={isCompletionsOpen() && props.completions}>
-                {(completions) => (
-                    <div class="inline-input-completions popup">
-                        <Completions
-                            completions={completions()}
-                            text={props.text}
-                            ref={setCompletionsRef}
-                        />
-                    </div>
-                )}
-            </Show>
-        </div>
+        <Popover
+            open={props.completions && isCompletionsOpen()}
+            onOpenChange={(open) => {
+                setCompletionsOpen(open);
+                if (!open) {
+                    completionsRef()?.setPresumptive(0);
+                }
+            }}
+            floatingOptions={{
+                autoPlacement: {
+                    allowedPlacements: ["bottom-start", "top-start"],
+                },
+            }}
+            trapFocus={false}
+        >
+            <Popover.Anchor>
+                <div class="inline-input-container">
+                    <span class="inline-input-filler">{props.text || props.placeholder}</span>
+                    <input
+                        class="inline-input"
+                        type="text"
+                        size="1"
+                        ref={props.ref}
+                        classList={{
+                            incomplete: props.status === "incomplete",
+                            invalid: props.status === "invalid",
+                        }}
+                        value={props.text}
+                        placeholder={props.placeholder}
+                        use:focus={(isFocused: boolean) => {
+                            isFocused && props.onFocus && props.onFocus();
+                        }}
+                        onClick={() => setCompletionsOpen(true)}
+                        onInput={(evt) => {
+                            props.setText(evt.target.value);
+                            setCompletionsOpen(true);
+                        }}
+                        onKeyDown={onKeyDown}
+                    />
+                </div>
+            </Popover.Anchor>
+            <Popover.Portal>
+                <Popover.Content class="popup">
+                    <Completions
+                        completions={props.completions ?? []}
+                        text={props.text}
+                        ref={setCompletionsRef}
+                    />
+                </Popover.Content>
+            </Popover.Portal>
+        </Popover>
     );
 }

@@ -26,6 +26,7 @@
 
 .completion-shortcut {
     font-size: 0.9em;
+    padding-left: 2ex;
 }
 
 .completion-empty {

@@ -1,5 +1,5 @@
 import type { DocHandle, Prop } from "@automerge/automerge-repo";
-import Popover, { type FloatingOptions } from "@corvu/popover";
+import Popover from "@corvu/popover";
 import GripVertical from "lucide-solid/icons/grip-vertical";
 import Plus from "lucide-solid/icons/plus";
 import Trash2 from "lucide-solid/icons/trash-2";
@@ -84,7 +84,11 @@ export function NotebookCell(props: {
                 <Popover
                     open={isMenuOpen()}
                     onOpenChange={setMenuOpen}
-                    floatingOptions={cellMenuFloatingOptions}
+                    floatingOptions={{
+                        autoPlacement: {
+                            allowedPlacements: ["left"],
+                        },
+                    }}
                 >
                     <Popover.Anchor as="span">
                         <IconButton
@@ -108,12 +112,6 @@ export function NotebookCell(props: {
         </div>
     );
 }
-
-const cellMenuFloatingOptions: FloatingOptions = {
-    autoPlacement: {
-        allowedPlacements: ["left"],
-    },
-};
 
 /** Editor for rich text cells, a simple wrapper around `RichTextEditor`.
  */
