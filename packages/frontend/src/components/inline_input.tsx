@@ -39,7 +39,7 @@ export function InlineInput(
         setText: (text: string) => void;
     } & InlineInputOptions,
 ) {
-    const [completionsOpened, setCompletionedOpened] = createSignal(true);
+    const [isCompletionsOpen, setCompletionsOpen] = createSignal(true);
     const [completionsRef, setCompletionsRef] = createSignal<CompletionsRef>();
 
     const onKeyDown: JSX.EventHandlerUnion<HTMLInputElement, KeyboardEvent> = (evt) => {
@@ -66,13 +66,13 @@ export function InlineInput(
         ) {
             props.exitRight();
         } else if (evt.key === "ArrowUp") {
-            if (remaining.length > 0 && completionsOpened()) {
+            if (remaining.length > 0 && isCompletionsOpen()) {
                 completionsRef()?.previousPresumptive();
             } else if (props.exitUp) {
                 props.exitUp();
             }
         } else if (evt.key === "ArrowDown") {
-            if (remaining.length > 0 && completionsOpened()) {
+            if (remaining.length > 0 && isCompletionsOpen()) {
                 completionsRef()?.nextPresumptive();
             } else if (props.exitDown) {
                 props.exitDown();
@@ -80,10 +80,10 @@ export function InlineInput(
         } else if (evt.key === "Enter" && !evt.shiftKey) {
             completionsRef()?.selectPresumptive();
         } else if (evt.key === "Escape") {
-            setCompletionedOpened(false);
+            setCompletionsOpen(false);
             completionsRef()?.setPresumptive(0);
         } else {
-            setCompletionedOpened(true);
+            setCompletionsOpen(true);
             return;
         }
         evt.preventDefault();
@@ -108,13 +108,13 @@ export function InlineInput(
                     use:focus={(isFocused: boolean) => {
                         isFocused && props.onFocus && props.onFocus();
                     }}
-                    onBlur={() => setCompletionedOpened(false)}
-                    onClick={() => setCompletionedOpened(true)}
+                    onBlur={() => setCompletionsOpen(false)}
+                    onClick={() => setCompletionsOpen(true)}
                     onInput={(evt) => props.setText(evt.target.value)}
                     onKeyDown={onKeyDown}
                 />
             </div>
-            <Show when={completionsOpened() && props.completions}>
+            <Show when={isCompletionsOpen() && props.completions}>
                 {(completions) => (
                     <div class="inline-input-completions popup">
                         <Completions
