@@ -15,8 +15,7 @@
 
 .completion-head {
     display: flex;
-    gap: 2em;
-    align-items: center;
+    gap: 0.25em;
     justify-content: space-between;
 }
 

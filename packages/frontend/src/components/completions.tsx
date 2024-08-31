@@ -1,5 +1,5 @@
 import type { KbdKey } from "@solid-primitives/keyboard";
-import { For, Show, createMemo, createSignal, onMount } from "solid-js";
+import { For, type JSX, Show, createMemo, createSignal, onMount } from "solid-js";
 
 import "./completions.css";
 
@@ -10,6 +10,9 @@ export type Completion = {
 
     /** One-line description of completion. */
     description?: string;
+
+    /** Icon to show with completion. */
+    icon?: JSX.Element;
 
     /** Keyboard shortcut associated with completion. */
     shortcut?: KbdKey[];
@@ -78,6 +81,9 @@ export function Completions(props: {
                         onMouseDown={() => c.onComplete?.()}
                     >
                         <div class="completion-head">
+                            <Show when={c.icon}>
+                                <div class="completion-icon">{c.icon}</div>
+                            </Show>
                             <div class="completion-name">{c.name}</div>
                             <Show when={c.shortcut}>
                                 <div class="completion-shortcut">

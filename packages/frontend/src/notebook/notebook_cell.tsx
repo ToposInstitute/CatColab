@@ -2,6 +2,7 @@ import type { DocHandle, Prop } from "@automerge/automerge-repo";
 import Popover, { type FloatingOptions } from "@corvu/popover";
 import GripVertical from "lucide-solid/icons/grip-vertical";
 import Plus from "lucide-solid/icons/plus";
+import Trash2 from "lucide-solid/icons/trash-2";
 import type { EditorView } from "prosemirror-view";
 import { type JSX, Show, createEffect, createSignal, onMount } from "solid-js";
 
@@ -66,6 +67,7 @@ export function NotebookCell(props: {
     const completions = (): Completion[] => [
         {
             name: "Delete",
+            icon: <Trash2 size={16} />,
             onComplete: props.actions.deleteForward,
         },
     ];
