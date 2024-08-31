@@ -16,7 +16,7 @@ const serverHost = import.meta.env.VITE_BACKEND_HOST;
 
 function App() {
     if (!serverHost) {
-        throw "Must set environment variable BACKEND_HOST";
+        throw "Must set environment variable VITE_BACKEND_HOST";
     }
 
     const http_url = `https://${serverHost}`;

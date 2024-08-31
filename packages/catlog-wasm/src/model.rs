@@ -8,9 +8,10 @@ use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
 use super::theory::*;
-use catlog::dbl::model::{self as dbl_model, DblModel as BaseDblModel, InvalidDiscreteDblModel};
+use catlog::dbl::model::{self as dbl_model, InvalidDiscreteDblModel};
 use catlog::one::fin_category::UstrFinCategory;
 use catlog::one::Path;
+use catlog::one::{Category as _, FgCategory};
 use catlog::validate::{self, Validate};
 
 /// An object in a model of a double theory.
@@ -212,7 +213,7 @@ impl DblModel {
     #[wasm_bindgen]
     pub fn objects(&self) -> Vec<Ob> {
         all_the_same!(match &self.0 {
-            DblModelBox::[Discrete](model) => model.objects().map(|x| x.into()).collect()
+            DblModelBox::[Discrete](model) => model.object_generators().map(|x| x.into()).collect()
         })
     }
 
@@ -220,7 +221,7 @@ impl DblModel {
     #[wasm_bindgen]
     pub fn morphisms(&self) -> Vec<Mor> {
         all_the_same!(match &self.0 {
-            DblModelBox::[Discrete](model) => model.morphisms().map(|f| f.into()).collect()
+            DblModelBox::[Discrete](model) => model.morphism_generators().map(Mor::Basic).collect()
         })
     }
 
