@@ -37,8 +37,7 @@
         "solid-js": "^1.8.17",
         "ts-pattern": "^5.2.0",
         "uuid": "^10.0.0",
-        "uuidv7": "^1.0.1",
-        "zod": "^3.23.8"
+        "uuidv7": "^1.0.1"
     },
     "devDependencies": {
         "@biomejs/biome": "^1.8.3",
