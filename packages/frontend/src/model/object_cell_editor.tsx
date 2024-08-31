@@ -27,6 +27,7 @@ export function ObjectCellEditor(props: {
 
     const theory = useContext(TheoryContext);
     const cssClasses = (): string[] => [
+        "model-judgment",
         "object-decl",
         ...obClasses(theory?.(), props.object.obType),
     ];

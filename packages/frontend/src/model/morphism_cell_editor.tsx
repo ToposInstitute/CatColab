@@ -35,7 +35,7 @@ export function MorphismCellEditor(props: {
     const arrowStyle = () => morTypeMeta()?.arrowStyle ?? "default";
 
     return (
-        <div class="morphism-decl">
+        <div class="model-judgment morphism-decl">
             <ObInput
                 ref={domRef}
                 placeholder="..."

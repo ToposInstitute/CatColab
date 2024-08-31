@@ -14,7 +14,14 @@ import {
 } from "solid-js";
 
 import { type Completion, IconButton, InlineInput, RichTextEditor } from "../components";
-import { type Cell, type CellId, type FormalCell, type Notebook, newStemCell } from "./types";
+import {
+    type Cell,
+    type CellId,
+    type FormalCell,
+    type Notebook,
+    newRichTextCell,
+    newStemCell,
+} from "./types";
 
 import "./notebook_editor.css";
 
@@ -156,19 +163,17 @@ export function NotebookEditor<T>(props: {
     formalCellEditor: Component<FormalCellEditorProps<T>>;
     cellConstructors: CellConstructor<T>[];
     cellLabel?: (content: T) => string | undefined;
+    // FIXME: Remove this option once we fix focus management.
+    noShortcuts?: boolean;
 }) {
     const [activeCell, setActiveCell] = createSignal(props.notebook.cells.length > 0 ? 0 : -1);
-
-    const insertPos = () => {
-        return activeCell() + 1;
-    };
 
     // Set up commands and their keyboard shortcuts.
 
     const addAfterActiveCell = (cell: Cell<T>) => {
         props.changeNotebook((nb) => {
-            nb.cells.splice(insertPos(), 0, cell);
-            setActiveCell(insertPos());
+            nb.cells.splice(activeCell() + 1, 0, cell);
+            setActiveCell(activeCell() + 1);
         });
     };
 
@@ -185,8 +190,15 @@ export function NotebookEditor<T>(props: {
         }
     };
 
+    const appendCell = (cell: Cell<T>) => {
+        props.changeNotebook((nb) => {
+            nb.cells.push(cell);
+            setActiveCell(nb.cells.length - 1);
+        });
+    };
+
     const insertCommands = (): Completion[] =>
-        props.cellConstructors.map((cc) => {
+        cellConstructors().map((cc) => {
             const { name, description, shortcut } = cc;
             return {
                 name,
@@ -202,8 +214,18 @@ export function NotebookEditor<T>(props: {
         });
     };
 
+    const cellConstructors = (): CellConstructor<T>[] => [
+        {
+            name: "Text",
+            description: "Start writing text",
+            shortcut: [cellShortcutModifier, "T"],
+            construct: () => newRichTextCell(),
+        },
+        ...props.cellConstructors,
+    ];
+
     const replaceCommands = (i: number): Completion[] =>
-        props.cellConstructors.map((cc) => {
+        cellConstructors().map((cc) => {
             const { name, description, shortcut } = cc;
             return {
                 name,
@@ -214,20 +236,22 @@ export function NotebookEditor<T>(props: {
         });
 
     createEffect(() => {
+        if (props.noShortcuts) {
+            return;
+        }
         for (const command of insertCommands()) {
             if (command.shortcut) {
                 createShortcut(command.shortcut, () => command.onComplete?.());
             }
         }
+        createShortcut(["Shift", "Enter"], () => addAfterActiveCell(newStemCell()));
     });
-
-    createShortcut(["Shift", "Enter"], () => addAfterActiveCell(newStemCell()));
 
     return (
         <div class="notebook">
             <Show when={props.notebook.cells.length === 0}>
                 <div class="notebook-empty placeholder">
-                    <IconButton onClick={() => addAfterActiveCell(newStemCell())}>
+                    <IconButton onClick={() => appendCell(newStemCell())}>
                         <ListPlus />
                     </IconButton>
                     <span>Click button or press Shift-Enter to create a cell</span>
@@ -319,7 +343,7 @@ export function NotebookEditor<T>(props: {
             </ul>
             <Show when={props.notebook.cells.some((cell) => cell.tag !== "stem")}>
                 <div class="placeholder">
-                    <IconButton onClick={() => addAfterActiveCell(newStemCell())}>
+                    <IconButton onClick={() => appendCell(newStemCell())}>
                         <ListPlus />
                     </IconButton>
                 </div>
@@ -327,3 +351,11 @@ export function NotebookEditor<T>(props: {
         </div>
     );
 }
+
+/** Modifier key to use in keyboard shortcuts for cell constructors.
+
+The choice is platform-specific: On Mac, the Alt/Option key remaps keys, so we
+use Control, whereas on other platforms Control tends to be already bound in
+other shortcuts, so we Alt.
+ */
+export const cellShortcutModifier: KbdKey = navigator.userAgent.includes("Mac") ? "Control" : "Alt";
