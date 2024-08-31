@@ -42,9 +42,4 @@
 .inline-input-completions {
     position: absolute;
     z-index: 10;
-    background: white;
-    padding: 0.25em;
-    border: solid dimgray 1px;
-    border-radius: 4px;
-    box-shadow: 3px 3px 3px rgba(0, 0, 0, 0.5);
 }

@@ -10,7 +10,7 @@ import {
     NotebookCell,
     RichTextCellEditor,
     StemCellEditor,
-} from "./notebook_cells";
+} from "./notebook_cell";
 import { type Cell, type FormalCell, type Notebook, newRichTextCell, newStemCell } from "./types";
 
 import "./notebook_editor.css";

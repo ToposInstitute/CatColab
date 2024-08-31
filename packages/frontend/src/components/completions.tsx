@@ -13,7 +13,9 @@ export type Completion = {
 export type CompletionsRef = {
     remainingCompletions: () => Completion[];
     presumptive: () => number;
-    setPresumptive: (i: number | ((old: number) => void)) => void;
+    setPresumptive: (i: number) => void;
+    previousPresumptive: () => void;
+    nextPresumptive: () => void;
     selectPresumptive: () => void;
 };
 
@@ -23,6 +25,10 @@ export function Completions(props: {
     ref?: (ref: CompletionsRef) => void;
 }) {
     const [presumptive, setPresumptive] = createSignal(0);
+
+    const previousPresumptive = () => setPresumptive((i) => Math.max(0, i - 1));
+    const nextPresumptive = () =>
+        setPresumptive((i) => Math.min(remainingCompletions().length - 1, i + 1));
 
     const remainingCompletions = createMemo(() => {
         setPresumptive(0);
@@ -39,7 +45,14 @@ export function Completions(props: {
     }
 
     onMount(() =>
-        props.ref?.({ remainingCompletions, presumptive, setPresumptive, selectPresumptive }),
+        props.ref?.({
+            remainingCompletions,
+            presumptive,
+            setPresumptive,
+            previousPresumptive,
+            nextPresumptive,
+            selectPresumptive,
+        }),
     );
 
     return (

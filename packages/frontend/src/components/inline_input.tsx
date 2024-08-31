@@ -66,14 +66,14 @@ export function InlineInput(
         ) {
             props.exitRight();
         } else if (evt.key === "ArrowUp") {
-            if (completionsOpened() && remaining) {
-                completionsRef()?.setPresumptive((i) => Math.max(0, i - 1));
+            if (remaining.length > 0 && completionsOpened()) {
+                completionsRef()?.previousPresumptive();
             } else if (props.exitUp) {
                 props.exitUp();
             }
         } else if (evt.key === "ArrowDown") {
-            if (completionsOpened() && remaining) {
-                completionsRef()?.setPresumptive((i) => Math.min(remaining.length - 1, i + 1));
+            if (remaining.length > 0 && completionsOpened()) {
+                completionsRef()?.nextPresumptive();
             } else if (props.exitDown) {
                 props.exitDown();
             }
@@ -116,7 +116,7 @@ export function InlineInput(
             </div>
             <Show when={completionsOpened() && props.completions}>
                 {(completions) => (
-                    <div class="inline-input-completions">
+                    <div class="inline-input-completions popup">
                         <Completions
                             completions={completions()}
                             text={props.text}

@@ -7,6 +7,8 @@ import { type JSX, Show, createEffect, createSignal, onMount } from "solid-js";
 import { type Completion, IconButton, InlineInput, RichTextEditor } from "../components";
 import type { CellId } from "./types";
 
+import "./notebook_cell.css";
+
 /** Actions invokable *within* a cell but affecting the larger notebook state.
 
 Through these functions, a cell can request to perform an action on the notebook
@@ -48,18 +50,18 @@ export function NotebookCell(props: {
     const [isGutterVisible, setGutterVisible] = createSignal(false);
     const showGutter = () => setGutterVisible(true);
     const hideGutter = () => setGutterVisible(false);
-    const gutterVisibility = () => (isGutterVisible() ? "visible" : "hidden");
+    const visibility = (isVisible: boolean) => (isVisible ? "visible" : "hidden");
 
     return (
         <div class="cell" onMouseEnter={showGutter} onMouseLeave={hideGutter}>
             <div class="cell-gutter">
                 <IconButton
                     onClick={props.actions.createBelow}
-                    style={{ visibility: gutterVisibility() }}
+                    style={{ visibility: visibility(isGutterVisible()) }}
                 >
                     <Plus />
                 </IconButton>
-                <IconButton style={{ visibility: gutterVisibility() }}>
+                <IconButton style={{ visibility: visibility(isGutterVisible()) }}>
                     <GripVertical />
                 </IconButton>
             </div>
