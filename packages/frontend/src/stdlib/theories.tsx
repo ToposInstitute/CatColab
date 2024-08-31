@@ -5,7 +5,7 @@ import {
     configureModelGraph,
     configureStockFlowDiagram,
     configureSubmodelsAnalysis,
-} from "./analyses";
+} from "../analysis";
 import { TheoryLibrary } from "./types";
 
 import styles from "./styles.module.css";

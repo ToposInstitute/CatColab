@@ -1,3 +1,10 @@
+/** Generic tools for graph layout and visualization.
+
+These tools are applied visualize models in the `analysis` module.
+
+@module
+ */
+
 export * from "./types";
 export * from "./graph_svg";
 export * from "./graphviz";

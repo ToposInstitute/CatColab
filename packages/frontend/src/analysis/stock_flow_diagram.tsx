@@ -2,9 +2,9 @@ import type * as Viz from "@viz-js/viz";
 import { type Component, For, createResource } from "solid-js";
 import { P, match } from "ts-pattern";
 
-import type { ModelJudgment } from "../../model";
-import type { ModelAnalysisMeta, Theory } from "../../theory";
-import { uniqueIndexArray } from "../../util/indexing";
+import type { ModelJudgment } from "../model";
+import type { ModelAnalysisMeta, Theory } from "../theory";
+import { uniqueIndexArray } from "../util/indexing";
 import {
     type ArrowMarker,
     EdgeSVG,
@@ -13,7 +13,7 @@ import {
     arrowMarkerSVG,
     loadViz,
     vizLayoutGraph,
-} from "../../visualization";
+} from "../visualization";
 import { type ModelGraphContent, modelToGraphviz } from "./model_graph";
 
 /** Configure a visualization of a stock flow diagram. */
