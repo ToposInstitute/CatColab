@@ -1,64 +1,10 @@
 import { focus } from "@solid-primitives/active-element";
-import type { KbdKey } from "@solid-primitives/keyboard";
-import { For, type JSX, Show, createMemo, createSignal } from "solid-js";
+import { type JSX, Show, createSignal } from "solid-js";
 focus;
 
+import { type Completion, Completions, type CompletionsRef } from "./completions";
+
 import "./inline_input.css";
-
-export const KbdShortcut = (props: {
-    shortcut: KbdKey[];
-}) => (
-    <kbd class="shortcut">
-        <For each={props.shortcut}>{(key) => <kbd class="key">{key}</kbd>}</For>
-    </kbd>
-);
-
-export type Completion = {
-    name: string;
-    description?: string;
-    shortcut?: KbdKey[];
-    onComplete?: () => void;
-};
-
-type CompletionsProps = {
-    completions: Completion[];
-    presumptive: number;
-    setPresumptive: (i: number) => void;
-};
-
-function Completions(props: CompletionsProps) {
-    return (
-        <div class="completions-container">
-            <ul role="listbox" class="completion-list">
-                <For each={props.completions}>
-                    {(c, i) => (
-                        <li
-                            role="option"
-                            classList={{ active: i() === props.presumptive }}
-                            onMouseOver={() => props.setPresumptive(i())}
-                            onMouseDown={() => c.onComplete?.()}
-                        >
-                            <div class="completion-head">
-                                <div class="completion-name">{c.name}</div>
-                                <Show when={c.shortcut}>
-                                    <div class="completion-shortcut">
-                                        <KbdShortcut shortcut={c.shortcut as KbdKey[]} />
-                                    </div>
-                                </Show>
-                            </div>
-                            <Show when={c.description}>
-                                <div class="completion-description">{c.description}</div>
-                            </Show>
-                        </li>
-                    )}
-                </For>
-            </ul>
-            <Show when={props.completions.length === 0}>
-                <span class="completion-empty">No completions</span>
-            </Show>
-        </div>
-    );
-}
 
 /** Optional props for `InlineInput` component.
  */
@@ -66,19 +12,16 @@ export type InlineInputOptions = {
     ref?: HTMLInputElement;
     placeholder?: string;
     status?: InlineInputErrorStatus;
-
     completions?: Completion[];
 
     deleteBackward?: () => void;
     deleteForward?: () => void;
-
     exitBackward?: () => void;
     exitForward?: () => void;
     exitUp?: () => void;
     exitDown?: () => void;
     exitLeft?: () => void;
     exitRight?: () => void;
-
     onFocus?: () => void;
 };
 
@@ -97,24 +40,10 @@ export function InlineInput(
     } & InlineInputOptions,
 ) {
     const [completionsOpened, setCompletionedOpened] = createSignal(true);
-    const [presumptive, setPresumptive] = createSignal(0);
-
-    const remainingCompletions = createMemo(() => {
-        setPresumptive(0);
-        return props.completions?.filter((c) =>
-            c.name.toLowerCase().startsWith(props.text.toLowerCase()),
-        );
-    });
-
-    function selectPresumptive() {
-        const completions = remainingCompletions();
-        if (completions && completions.length > 0) {
-            completions[presumptive()].onComplete?.();
-        }
-    }
+    const [completionsRef, setCompletionsRef] = createSignal<CompletionsRef>();
 
     const onKeyDown: JSX.EventHandlerUnion<HTMLInputElement, KeyboardEvent> = (evt) => {
-        const completions = remainingCompletions();
+        const remaining = completionsRef()?.remainingCompletions() ?? [];
         const value = evt.currentTarget.value;
         if (props.deleteBackward && evt.key === "Backspace" && !value) {
             props.deleteBackward();
@@ -137,22 +66,22 @@ export function InlineInput(
         ) {
             props.exitRight();
         } else if (evt.key === "ArrowUp") {
-            if (completions && completionsOpened()) {
-                setPresumptive((i) => Math.max(0, i - 1));
+            if (completionsOpened() && remaining) {
+                completionsRef()?.setPresumptive((i) => Math.max(0, i - 1));
             } else if (props.exitUp) {
                 props.exitUp();
             }
         } else if (evt.key === "ArrowDown") {
-            if (completions && completionsOpened()) {
-                setPresumptive((i) => Math.min(completions.length - 1, i + 1));
+            if (completionsOpened() && remaining) {
+                completionsRef()?.setPresumptive((i) => Math.min(remaining.length - 1, i + 1));
             } else if (props.exitDown) {
                 props.exitDown();
             }
         } else if (evt.key === "Enter" && !evt.shiftKey) {
-            selectPresumptive();
+            completionsRef()?.selectPresumptive();
         } else if (evt.key === "Escape") {
             setCompletionedOpened(false);
-            setPresumptive(0);
+            completionsRef()?.setPresumptive(0);
         } else {
             setCompletionedOpened(true);
             return;
@@ -185,13 +114,15 @@ export function InlineInput(
                     onKeyDown={onKeyDown}
                 />
             </div>
-            <Show when={completionsOpened() && remainingCompletions()}>
+            <Show when={completionsOpened() && props.completions}>
                 {(completions) => (
-                    <Completions
-                        completions={completions()}
-                        presumptive={presumptive()}
-                        setPresumptive={setPresumptive}
-                    />
+                    <div class="inline-input-completions">
+                        <Completions
+                            completions={completions()}
+                            text={props.text}
+                            ref={setCompletionsRef}
+                        />
+                    </div>
                 )}
             </Show>
         </div>
