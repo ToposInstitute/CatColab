@@ -25,11 +25,6 @@ export function ModelEditor(props: {
     return (
         <Resizable class="growable-container">
             <Resizable.Panel class="content-panel" collapsible initialSize={1} minSize={0.25}>
-                <button
-                    onClick={() => props.client.saveRef.mutate({ refId: props.refId, note: "" })}
-                >
-                    Save
-                </button>
                 <ModelNotebookEditor
                     ref={setEditorRef}
                     handle={props.handle}
