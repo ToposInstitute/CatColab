@@ -1,3 +1,12 @@
+.notebook-container {
+    --gutter-width: 50px;
+
+    max-width: calc(100ex + var(--gutter-width));
+    margin: 0 auto;
+    padding-left: var(--gutter-width);
+    padding-right: 5px;
+}
+
 .notebook-cells {
     list-style: none;
     margin: 1rem 0;

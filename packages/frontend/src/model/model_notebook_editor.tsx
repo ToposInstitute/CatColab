@@ -136,7 +136,7 @@ export function ModelNotebookEditor(props: {
     });
 
     return (
-        <div class="model">
+        <div class="notebook-container">
             <div class="model-head">
                 <div class="model-title">
                     <InlineInput

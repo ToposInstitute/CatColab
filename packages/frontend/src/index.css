@@ -41,9 +41,19 @@ h1 {
 
 .growable-container {
   flex-grow: 1;
-  padding: 1rem;
 }
 
 .content-panel {
   overflow: hidden;
+}
+
+.toolbar {
+  display: flex;
+  flex-direction: row;
+  justify-content: right;
+  padding: 5px;
+
+  & .lucide {
+    color: dimgray;
+  }
 }
