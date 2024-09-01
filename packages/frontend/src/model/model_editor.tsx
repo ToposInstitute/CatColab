@@ -70,22 +70,25 @@ export function ModelEditor(props: {
                         </Resizable.Panel>
                         <Resizable.Handle hidden={!isSidePanelOpen()} />
                         <Resizable.Panel
-                            class="content-panel notebook-container"
+                            class="content-panel"
                             collapsible
                             initialSize={0}
                             minSize={0.25}
                             hidden={!isSidePanelOpen()}
                             onCollapse={() => setSidePanelOpen(false)}
                         >
-                            <Show when={editorRef()}>
-                                {(ref) => (
-                                    <ModelAnalyzer
-                                        handle={props.handle}
-                                        path={["analysis"]}
-                                        modelNotebookRef={ref()}
-                                    />
-                                )}
-                            </Show>
+                            <div class="notebook-container">
+                                <h2>Analysis</h2>
+                                <Show when={editorRef()}>
+                                    {(ref) => (
+                                        <ModelAnalyzer
+                                            handle={props.handle}
+                                            path={["analysis"]}
+                                            modelNotebookRef={ref()}
+                                        />
+                                    )}
+                                </Show>
+                            </div>
                         </Resizable.Panel>
                     </>
                 );

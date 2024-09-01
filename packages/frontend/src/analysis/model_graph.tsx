@@ -18,7 +18,7 @@ export function configureModelGraph(options: {
         id,
         name,
         description,
-        component: ModelGraph,
+        component: (props) => <ModelGraph title={name} {...props} />,
         initialContent: () => ({
             tag: "graph",
             layout: "graphviz-directed",
@@ -33,19 +33,38 @@ generators of such a model are just a typed graph. For other kinds of double
 theories, any basic morphism whose domain or codomain is not a basic object will
 be ignored.
 
-For now, Graphviz computes the layout of the graph. Other layout engines may be
-added in the future.
+For now, the layout of the graph is computed by Graphviz. Other layout engines
+may be added in the future.
  */
-export function ModelGraph(props: ModelAnalysisProps<ModelGraphContent>) {
+export function ModelGraph(
+    props: {
+        title?: string;
+    } & ModelAnalysisProps<ModelGraphContent>,
+) {
     return (
-        <ModelGraphviz
-            model={props.model}
-            theory={props.theory}
-            options={{
-                engine: props.content.layout === "graphviz-directed" ? "dot" : "neato",
-            }}
-        />
+        <div class="model-graph">
+            <div class="panel">
+                <span class="title">{props.title}</span>
+            </div>
+            <ModelGraphviz
+                model={props.model}
+                theory={props.theory}
+                options={{
+                    engine: graphvizEngine(props.content.layout),
+                }}
+            />
+        </div>
     );
+}
+
+export function graphvizEngine(layout: ModelGraphContent["layout"]) {
+    let engine!: Viz.RenderOptions["engine"];
+    if (layout === "graphviz-directed") {
+        engine = "dot";
+    } else if (layout === "graphviz-undirected") {
+        engine = "neato";
+    }
+    return engine;
 }
 
 /** Visualize a model of a double theory as a graph using Graphviz.

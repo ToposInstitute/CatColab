@@ -5,6 +5,10 @@
   --light-color: black;
   --dark-color: rgba(255, 255, 255, 0.87);
 
+  --h1-font-size: 3em;
+  --h2-font-size: 2em;
+  --h3-font-size: 1.5em;
+
   /*color-scheme: light dark;*/
   color-scheme: light;
   color: light-dark(var(--light-color), var(--dark-color));
@@ -26,9 +30,18 @@ html, body, #root {
   flex-direction: column;
 }
 
+h1, h2, h3, h4, h5, h5 {
+  margin: 0;
+  font-weight: normal;
+}
 h1 {
-  font-size: 3em;
-  line-height: 1.1;
+  font-size: var(--h1-font-size);
+}
+h2 {
+  font-size: var(--h2-font-size);
+}
+h3 {
+  font-size: var(--h3-font-size);
 }
 
 .popup {
