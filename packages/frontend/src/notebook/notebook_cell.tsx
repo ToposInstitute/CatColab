@@ -1,10 +1,12 @@
+import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
+import {
+    draggable,
+    dropTargetForElements,
+} from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import type { DocHandle, Prop } from "@automerge/automerge-repo";
 import Popover from "@corvu/popover";
-import GripVertical from "lucide-solid/icons/grip-vertical";
-import Plus from "lucide-solid/icons/plus";
-import Trash2 from "lucide-solid/icons/trash-2";
 import type { EditorView } from "prosemirror-view";
-import { type JSX, Show, createEffect, createSignal, onMount } from "solid-js";
+import { type JSX, Show, createEffect, createSignal, onCleanup, onMount } from "solid-js";
 
 import {
     type Completion,
@@ -14,6 +16,10 @@ import {
     RichTextEditor,
 } from "../components";
 import type { CellId } from "./types";
+
+import GripVertical from "lucide-solid/icons/grip-vertical";
+import Plus from "lucide-solid/icons/plus";
+import Trash2 from "lucide-solid/icons/trash-2";
 
 import "./notebook_cell.css";
 
@@ -45,16 +51,42 @@ export type CellActions = {
     hasFocused: () => void;
 };
 
+const cellDragDataKey = Symbol("notebook-cell");
+
+/** Drag-and-drop data for a notebook cell.
+ */
+export type CellDragData = {
+    [cellDragDataKey]: true;
+
+    /** ID of the cell being dragged. */
+    cellId: CellId;
+};
+
+/** Create drag-and-drop data for a notebook cell. */
+const createCellDragData = (cellId: CellId) => ({
+    [cellDragDataKey]: true,
+    cellId,
+});
+
+/** Check whether the drag data is of notebook cell type. */
+export function isCellDragData(data: Record<string | symbol, unknown>): data is CellDragData {
+    return Boolean(data[cellDragDataKey]);
+}
+
 /** An individual cell in a notebook.
 
 This component contains UI elements common to any cell. The actual content of
 the cell is rendered by its children.
  */
 export function NotebookCell(props: {
+    cellId: CellId;
     actions: CellActions;
     children: JSX.Element;
     tag?: string;
 }) {
+    let rootRef!: HTMLDivElement;
+    let handleRef!: HTMLButtonElement;
+
     const [isGutterVisible, setGutterVisible] = createSignal(false);
     const showGutter = () => setGutterVisible(true);
     const hideGutter = () => setGutterVisible(false);
@@ -72,8 +104,29 @@ export function NotebookCell(props: {
         },
     ];
 
+    createEffect(() => {
+        const cleanup = combine(
+            draggable({
+                element: handleRef,
+                getInitialData: () => createCellDragData(props.cellId),
+            }),
+            dropTargetForElements({
+                element: rootRef,
+                canDrop({ source }) {
+                    // TODO: Reject if cell belongs to a different notebook.
+                    return isCellDragData(source.data);
+                },
+                getData({ input }) {
+                    input;
+                    return createCellDragData(props.cellId);
+                },
+            }),
+        );
+        onCleanup(cleanup);
+    });
+
     return (
-        <div class="cell" onMouseEnter={showGutter} onMouseLeave={hideGutter}>
+        <div class="cell" onMouseEnter={showGutter} onMouseLeave={hideGutter} ref={rootRef}>
             <div class="cell-gutter">
                 <IconButton
                     onClick={props.actions.createBelow}
@@ -94,6 +147,7 @@ export function NotebookCell(props: {
                         <IconButton
                             onClick={openMenu}
                             style={{ visibility: visibility(isGutterVisible() || isMenuOpen()) }}
+                            ref={handleRef}
                         >
                             <GripVertical />
                         </IconButton>

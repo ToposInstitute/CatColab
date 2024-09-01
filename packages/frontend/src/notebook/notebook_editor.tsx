@@ -1,7 +1,17 @@
+import { monitorForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import type { DocHandle, Prop } from "@automerge/automerge-repo";
 import { type KbdKey, createShortcut } from "@solid-primitives/keyboard";
 import ListPlus from "lucide-solid/icons/list-plus";
-import { type Component, For, Match, Show, Switch, createEffect, createSignal } from "solid-js";
+import {
+    type Component,
+    For,
+    Match,
+    Show,
+    Switch,
+    createEffect,
+    createSignal,
+    onCleanup,
+} from "solid-js";
 
 import { type Completion, IconButton } from "../components";
 import {
@@ -10,6 +20,7 @@ import {
     NotebookCell,
     RichTextCellEditor,
     StemCellEditor,
+    isCellDragData,
 } from "./notebook_cell";
 import { type Cell, type FormalCell, type Notebook, newRichTextCell, newStemCell } from "./types";
 
@@ -137,6 +148,38 @@ export function NotebookEditor<T>(props: {
         createShortcut(["Shift", "Enter"], () => addAfterActiveCell(newStemCell()));
     });
 
+    // Set up drag and drop of notebook cells.
+    createEffect(() => {
+        const cleanup = monitorForElements({
+            canMonitor({ source }) {
+                return (
+                    isCellDragData(source.data) &&
+                    props.notebook.cells.some((cell) => cell.id === source.data.cellId)
+                );
+            },
+            onDrop({ location, source }) {
+                const target = location.current.dropTargets[0];
+                if (!(target && isCellDragData(source.data) && isCellDragData(target.data))) {
+                    return;
+                }
+                const [sourceId, targetId] = [source.data.cellId, target.data.cellId];
+                const nb = props.notebook;
+                const sourceIndex = nb.cells.findIndex((cell) => cell.id === sourceId);
+                const targetIndex = nb.cells.findIndex((cell) => cell.id === targetId);
+                if (sourceIndex < 0 || targetIndex < 0) {
+                    return;
+                }
+                props.changeNotebook((nb) => {
+                    let [cell] = nb.cells.splice(sourceIndex, 1);
+                    // XXX: Need a deep copy and `structuredClone` doesn't work.
+                    cell = JSON.parse(JSON.stringify(cell));
+                    nb.cells.splice(targetIndex, 0, cell);
+                });
+            },
+        });
+        onCleanup(cleanup);
+    });
+
     return (
         <div class="notebook">
             <Show when={props.notebook.cells.length === 0}>
@@ -187,6 +230,7 @@ export function NotebookEditor<T>(props: {
                         return (
                             <li>
                                 <NotebookCell
+                                    cellId={cell.id}
                                     actions={cellActions}
                                     tag={
                                         cell.tag === "formal"
