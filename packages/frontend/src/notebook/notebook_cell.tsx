@@ -1,3 +1,4 @@
+import { attachClosestEdge } from "@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import {
     draggable,
@@ -117,8 +118,12 @@ export function NotebookCell(props: {
                     return isCellDragData(source.data);
                 },
                 getData({ input }) {
-                    input;
-                    return createCellDragData(props.cellId);
+                    const data = createCellDragData(props.cellId);
+                    return attachClosestEdge(data, {
+                        element: rootRef,
+                        input,
+                        allowedEdges: ["top", "bottom"],
+                    });
                 },
             }),
         );

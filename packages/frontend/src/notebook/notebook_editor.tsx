@@ -1,3 +1,5 @@
+import { extractClosestEdge } from "@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge";
+import { getReorderDestinationIndex } from "@atlaskit/pragmatic-drag-and-drop-hitbox/util/get-reorder-destination-index";
 import { monitorForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import type { DocHandle, Prop } from "@automerge/automerge-repo";
 import { type KbdKey, createShortcut } from "@solid-primitives/keyboard";
@@ -169,11 +171,17 @@ export function NotebookEditor<T>(props: {
                 if (sourceIndex < 0 || targetIndex < 0) {
                     return;
                 }
+                const finalIndex = getReorderDestinationIndex({
+                    startIndex: sourceIndex,
+                    indexOfTarget: targetIndex,
+                    closestEdgeOfTarget: extractClosestEdge(target.data),
+                    axis: "vertical",
+                });
                 props.changeNotebook((nb) => {
                     let [cell] = nb.cells.splice(sourceIndex, 1);
                     // XXX: Need a deep copy and `structuredClone` doesn't work.
                     cell = JSON.parse(JSON.stringify(cell));
-                    nb.cells.splice(targetIndex, 0, cell);
+                    nb.cells.splice(finalIndex, 0, cell);
                 });
             },
         });
