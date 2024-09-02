@@ -1,19 +1,28 @@
-import { type JSX, splitProps } from "solid-js";
+import {type JSX, splitProps} from "solid-js";
+import Tooltip from "@corvu/tooltip";
 
 import "./icon_button.css";
 
 /** Styled, unobstrusive button intended to include an icon.
  */
 export function IconButton(
-    allProps: {
-        children: JSX.Element;
-    } & JSX.ButtonHTMLAttributes<HTMLButtonElement>,
+  allProps: {
+    children: JSX.Element;
+  } & JSX.ButtonHTMLAttributes<HTMLButtonElement>
 ) {
-    const [props, buttonProps] = splitProps(allProps, ["children"]);
+  const [props, buttonProps] = splitProps(allProps, ["children"]);
 
-    return (
-        <button class="icon-button" {...buttonProps}>
+  return (
+    <Tooltip openOnHover>
+      <Tooltip.Trigger />
+      <Tooltip.Portal>
+        <Tooltip.Content data-corvu-tooltip-content={props}>
+          <button class="icon-button" {...buttonProps}>
             {props.children}
-        </button>
-    );
+          </button>
+          <Tooltip.Arrow />
+        </Tooltip.Content>
+      </Tooltip.Portal>
+    </Tooltip>
+  );
 }
