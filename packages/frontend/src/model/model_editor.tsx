@@ -3,7 +3,7 @@ import Resizable, { type ContextValue } from "@corvu/resizable";
 import { Show, createEffect, createSignal } from "solid-js";
 
 import type { RPCClient } from "../api";
-import { IconButton } from "../components";
+import { IconButton, ResizableHandle } from "../components";
 import type { TheoryLibrary } from "../stdlib";
 import { ModelAnalyzer } from "./model_analyzer";
 import { ModelNotebookEditor, type ModelNotebookRef } from "./model_notebook_editor";
@@ -35,17 +35,22 @@ export function ModelEditor(props: {
 
     const [resizableContext, setResizableContext] = createSignal<ContextValue>();
     const [isSidePanelOpen, setSidePanelOpen] = createSignal(false);
-    const toggleSidePanel = () => setSidePanelOpen(!isSidePanelOpen());
 
     createEffect(() => {
         const context = resizableContext();
         if (isSidePanelOpen()) {
             context?.expand(1);
-            context?.resize(1, 0.33);
         } else {
             context?.collapse(1);
         }
     });
+
+    const toggleSidePanel = () => {
+        const open = setSidePanelOpen(!isSidePanelOpen());
+        if (open) {
+            resizableContext()?.resize(1, 0.33);
+        }
+    };
 
     return (
         <Resizable class="growable-container">
@@ -79,14 +84,15 @@ export function ModelEditor(props: {
                                 theories={props.theories}
                             />
                         </Resizable.Panel>
-                        <Resizable.Handle hidden={!isSidePanelOpen()} />
+                        <ResizableHandle hidden={!isSidePanelOpen()} />
                         <Resizable.Panel
-                            class="content-panel"
+                            class="content-panel side-panel"
                             collapsible
                             initialSize={0}
                             minSize={0.25}
                             hidden={!isSidePanelOpen()}
                             onCollapse={() => setSidePanelOpen(false)}
+                            onExpand={() => setSidePanelOpen(true)}
                         >
                             <div class="notebook-container">
                                 <h2>Analysis</h2>

@@ -60,6 +60,10 @@ h3 {
   overflow: hidden;
 }
 
+.side-panel {
+  background: #f8f8f8;
+}
+
 .toolbar {
   display: flex;
   flex-direction: row;
