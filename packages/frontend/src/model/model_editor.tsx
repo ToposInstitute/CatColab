@@ -9,6 +9,7 @@ import { ModelAnalyzer } from "./model_analyzer";
 import { ModelNotebookEditor, type ModelNotebookRef } from "./model_notebook_editor";
 import type { ModelNotebook } from "./types";
 
+import Camera from "lucide-solid/icons/camera";
 import PanelRight from "lucide-solid/icons/panel-right";
 import PanelRightClose from "lucide-solid/icons/panel-right-close";
 
@@ -24,6 +25,12 @@ export function ModelEditor(props: {
     refId: string;
     theories: TheoryLibrary;
 }) {
+    const snapshotModel = () =>
+        props.client.saveRef.mutate({
+            refId: props.refId,
+            note: "",
+        });
+
     const [editorRef, setEditorRef] = createSignal<ModelNotebookRef>();
 
     const [resizableContext, setResizableContext] = createSignal<ContextValue>();
@@ -55,6 +62,10 @@ export function ModelEditor(props: {
                             minSize={0.25}
                         >
                             <div class="toolbar">
+                                <IconButton onClick={snapshotModel}>
+                                    <Camera />
+                                </IconButton>
+                                <span class="filler" />
                                 <IconButton onClick={toggleSidePanel}>
                                     <Show when={isSidePanelOpen()} fallback={<PanelRight />}>
                                         <PanelRightClose />

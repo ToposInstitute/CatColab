@@ -63,8 +63,11 @@ h3 {
 .toolbar {
   display: flex;
   flex-direction: row;
-  justify-content: right;
   padding: 5px;
+
+  & .filler {
+    flex: 1;
+  }
 
   & .lucide {
     color: dimgray;
