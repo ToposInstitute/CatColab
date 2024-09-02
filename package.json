@@ -27,8 +27,5 @@
     "workspaces": [
         "packages/backend",
         "packages/frontend"
-    ],
-    "dependencies": {
-        "@corvu/tooltip": "^0.2.1"
-    }
+    ]
 }
