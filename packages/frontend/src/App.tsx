@@ -40,6 +40,7 @@ function App() {
     const init: ModelNotebook = {
         name: "Untitled",
         notebook: newNotebook(),
+        analysis: newNotebook(),
     };
 
     const [handle] = createResource(async () => {

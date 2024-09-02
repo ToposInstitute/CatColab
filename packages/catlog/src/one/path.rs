@@ -48,6 +48,12 @@ pub enum Path<V, E> {
     Seq(NonEmpty<E>),
 }
 
+impl<V, E> From<E> for Path<V, E> {
+    fn from(e: E) -> Self {
+        Path::single(e)
+    }
+}
+
 impl<V, E> Path<V, E> {
     /// Constructs the empty or identity path.
     pub fn empty(v: V) -> Self {

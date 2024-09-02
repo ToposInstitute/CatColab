@@ -1,10 +1,10 @@
 import type { KbdKey } from "@solid-primitives/keyboard";
-import type { Component } from "solid-js";
 
-import type { DblModel, DblTheory, MorType, ObType } from "catlog-wasm";
+import type { DblTheory, MorType, ObType } from "catlog-wasm";
 import { MorTypeIndex, ObTypeIndex } from "catlog-wasm";
-import type { ModelJudgment } from "../model";
-import type { ArrowStyle } from "../visualization/types";
+import type { ModelAnalysisComponent, ModelAnalysisContent } from "../analysis";
+import { uniqueIndexArray } from "../util/indexing";
+import type { ArrowStyle } from "../visualization";
 
 /** A double theory configured for use in the frontend.
  */
@@ -24,14 +24,12 @@ export class Theory {
     /** Types in theory bound with metadata, to be displayed in this order. */
     readonly types: TypeMeta[];
 
-    /** Theory-specific views onto models of the theory. */
-    readonly modelViews: ModelView[];
-
     /** Whether models of the double theory are constrained to be free. */
     readonly onlyFreeModels!: boolean;
 
     private readonly obTypeIndex: ObTypeIndex;
     private readonly morTypeIndex: MorTypeIndex;
+    private readonly modelAnalysisMap: Map<string, ModelAnalysisMeta>;
 
     constructor(props: {
         id: string;
@@ -39,7 +37,7 @@ export class Theory {
         description?: string;
         theory: DblTheory;
         types?: TypeMeta[];
-        modelViews?: ModelView[];
+        modelAnalyses?: ModelAnalysisMeta[];
         onlyFreeModels?: boolean;
     }) {
         this.id = props.id;
@@ -52,7 +50,7 @@ export class Theory {
         this.types = [];
         props.types?.forEach(this.bindType, this);
 
-        this.modelViews = props.modelViews ?? [];
+        this.modelAnalysisMap = uniqueIndexArray(props.modelAnalyses ?? [], (meta) => meta.id);
         this.onlyFreeModels = props.onlyFreeModels ?? false;
     }
 
@@ -66,16 +64,26 @@ export class Theory {
         this.types.push(meta);
     }
 
-    /** Get metadata associated with object type. */
+    /** Get metadata for an object type. */
     getObTypeMeta(typ: ObType): ObTypeMeta | undefined {
         const i = this.obTypeIndex.get(typ);
         return i != null ? (this.types[i] as ObTypeMeta) : undefined;
     }
 
-    /** Get metadata associated with morphism type. */
+    /** Get metadata for an morphism type. */
     getMorTypeMeta(typ: MorType): MorTypeMeta | undefined {
         const i = this.morTypeIndex.get(typ);
         return i != null ? (this.types[i] as MorTypeMeta) : undefined;
+    }
+
+    /** Get metadata for an analysis of a model. */
+    getModelAnalysis(id: string): ModelAnalysisMeta | undefined {
+        return this.modelAnalysisMap.get(id);
+    }
+
+    /** List of available model analyses. */
+    get modelAnalyses(): Array<ModelAnalysisMeta> {
+        return Array.from(this.modelAnalysisMap.values());
     }
 }
 
@@ -137,38 +145,22 @@ export type MorTypeMeta = BaseTypeMeta & {
     preferUnnamed?: boolean;
 };
 
-/** View of a model of a theory.
-
-Such a view might be a visualization, a simulation, or a translation of the
-model to another format. Views onto a model are read-only.
-
-For now, views are assumed to be ephemeral, meaning that they do not persist
-any state.
+/** Specifies an analysis of model with descriptive metadata.
  */
-export type ModelView = {
-    /** Human-readable name of view. */
+// biome-ignore lint/suspicious/noExplicitAny: content type is data dependent.
+export type ModelAnalysisMeta<T extends ModelAnalysisContent = any> = {
+    /** Identifier of analysis, unique relative to the theory. */
+    id: string;
+
+    /** Human-readable name of analysis. */
     name: string;
 
-    /** Short description of view. */
+    /** Short description of analysis. */
     description?: string;
 
-    /** Component that renders the view. */
-    component: Component<ModelViewProps>;
-};
+    /** Component that renders the analysis. */
+    component: ModelAnalysisComponent<T>;
 
-/** Props passed to a view of model.
- */
-export type ModelViewProps = {
-    /** The model to view. */
-    model: Array<ModelJudgment>;
-
-    /** Theory that the model is of.
-
-    The theory may well be assumed fixed for certain views but it is passed
-    regardless.
-     */
-    theory: Theory;
-
-    /** The `catlog` model object, if it is valid. */
-    validatedModel: DblModel | null;
+    /** Default content created when the analysis is added. */
+    initialContent: () => T;
 };

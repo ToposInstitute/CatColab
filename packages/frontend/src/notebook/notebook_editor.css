@@ -1,3 +1,12 @@
+.notebook-container {
+    --gutter-width: 50px;
+
+    max-width: calc(100ex + var(--gutter-width));
+    margin: 0 auto;
+    padding-left: var(--gutter-width);
+    padding-right: 5px;
+}
+
 .notebook-cells {
     list-style: none;
     margin: 1rem 0;
@@ -14,50 +23,7 @@
 
 .notebook .placeholder {
     color: darkgray;
-}
-.notebook .placeholder .lucide {
-    color: darkgray;
-}
-
-.notebook-cell-menu {
-    border: none;
-    outline: none;
-    padding: 5px;
-
-    background: white;
-    border-radius: 6px;
-    box-shadow: rgba(15, 15, 15, 0.05) 0px 0px 0px 1px, rgba(15, 15, 15, 0.1) 0px 3px 6px, rgba(15, 15, 15, 0.2) 0px 9px 24px;
-}
-
-.formal-cell {
-    --formal-font-size: 1.3em;
-    padding-right: 1em;
-    font-size: var(--formal-font-size);
-    line-height: 1.1;
-    margin: 0.7em 0;
-}
-
-.cell {
-    padding-left: 0.5em;
-    border-left: solid darkgray 2px;
-    border-radius: 2px;
-    display: flex;
-    flex-direction: row;
-    align-items: baseline;
-    justify-content: space-between;
-    margin-right: 1em;
-}
-
-.cell-tag {
-    color: darkgray;
-    font-size: 11pt;
-}
-
-.cell-content {
-    flex-grow: 1;
-    height: auto;
-}
-
-.stem-cell {
-    margin: 0.7em 0;
+    & .lucide {
+        color: darkgray;
+    }
 }

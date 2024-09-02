@@ -1,49 +1,87 @@
 :root {
-  --main-font: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  --mono-font: Roboto Mono, monospace;
+    --main-font: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+    --mono-font: Roboto Mono, monospace;
 
-  --light-color: black;
-  --dark-color: rgba(255, 255, 255, 0.87);
+    --light-color: black;
+    --dark-color: rgba(255, 255, 255, 0.87);
 
-  --gray50:  rgb(249 250 251);
-  --gray100: rgb(243 244 246);
-  --gray200: rgb(229 231 235);
+    --h1-font-size: 3em;
+    --h2-font-size: 2em;
+    --h3-font-size: 1.5em;
 
-  --notebook-width: 40em;
-  --std-padding: 0.25rem;
-  --std-border-radius: 0.25rem;
+    /*color-scheme: light dark;*/
+    color-scheme: light;
+    color: light-dark(var(--light-color), var(--dark-color));
+    font-family: var(--main-font);
 
-  /*color-scheme: light dark;*/
-  color-scheme: light;
-  color: light-dark(var(--light-color), var(--dark-color));
-  font-family: var(--main-font);
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
-html, body, #root {
-  height: 100%;
-  margin: 0;
+html,
+body,
+#root {
+    height: 100%;
+    margin: 0;
 }
 
 #root {
-  display: flex;
-  flex-direction: column;
+    display: flex;
+    flex-direction: column;
 }
 
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    margin: 0;
+    font-weight: normal;
+}
 h1 {
-  font-size: 3em;
-  line-height: 1.1;
+    font-size: var(--h1-font-size);
+}
+h2 {
+    font-size: var(--h2-font-size);
+}
+h3 {
+    font-size: var(--h3-font-size);
+}
+
+.popup {
+    background: white;
+    padding: 0.25em;
+    border: solid lightgray 1px;
+    border-radius: 6px;
+    box-shadow: rgba(15, 15, 15, 0.05) 0px 0px 0px 1px, rgba(15, 15, 15, 0.1) 0px 3px 6px,
+        rgba(15, 15, 15, 0.2) 0px 9px 24px;
 }
 
 .growable-container {
-  flex-grow: 1;
-  padding: 1rem;
+    flex-grow: 1;
 }
 
 .content-panel {
-  overflow: hidden;
+    overflow: hidden;
+}
+
+.side-panel {
+    background: #f8f8f8;
+}
+
+.toolbar {
+    display: flex;
+    flex-direction: row;
+    padding: 5px;
+
+    & .filler {
+        flex: 1;
+    }
+
+    & .lucide {
+        color: dimgray;
+    }
 }

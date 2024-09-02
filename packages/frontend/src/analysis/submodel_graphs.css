@@ -3,5 +3,5 @@
     flex-direction: row;
     align-items: center;
     column-gap: 1ex;
-    margin: 1em;
+    margin: 1em 0;
 }

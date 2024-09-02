@@ -1,0 +1,28 @@
+.cell {
+    position: relative;
+    margin: 0.25em 0;
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+}
+
+.cell-gutter {
+    position: absolute;
+    top: 50%;
+    transform: translate(-100%, -50%);
+    left: 0;
+    & .lucide {
+        color: darkgray;
+    }
+}
+
+.cell-tag {
+    color: darkgray;
+    font-size: 11pt;
+}
+
+.cell-content {
+    flex-grow: 1;
+    height: auto;
+}

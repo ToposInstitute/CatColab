@@ -46,11 +46,11 @@ impl From<Ustr> for ObType {
 }
 
 /// Convert from morphism type in a discrete double theory.
-impl From<FinHom<Ustr, Ustr>> for MorType {
-    fn from(hom: FinHom<Ustr, Ustr>) -> Self {
-        match hom {
-            FinHom::Generator(e) => MorType::Basic(e),
-            FinHom::Id(v) => MorType::Hom(Box::new(ObType::Basic(v))),
+impl From<FinMor<Ustr, Ustr>> for MorType {
+    fn from(mor: FinMor<Ustr, Ustr>) -> Self {
+        match mor {
+            FinMor::Generator(e) => MorType::Basic(e),
+            FinMor::Id(v) => MorType::Hom(Box::new(ObType::Basic(v))),
         }
     }
 }
@@ -68,13 +68,13 @@ impl TryFrom<ObType> for Ustr {
 }
 
 /// Convert into morphism type in a discrete double theory.
-impl TryFrom<MorType> for FinHom<Ustr, Ustr> {
+impl TryFrom<MorType> for FinMor<Ustr, Ustr> {
     type Error = String;
 
     fn try_from(mor_type: MorType) -> Result<Self, Self::Error> {
         match mor_type {
-            MorType::Basic(name) => Ok(FinHom::Generator(name)),
-            MorType::Hom(x) => (*x).try_into().map(FinHom::Id),
+            MorType::Basic(name) => Ok(FinMor::Generator(name)),
+            MorType::Hom(x) => (*x).try_into().map(FinMor::Id),
         }
     }
 }
