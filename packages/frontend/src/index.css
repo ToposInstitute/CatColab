@@ -1,79 +1,87 @@
 :root {
-  --main-font: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  --mono-font: Roboto Mono, monospace;
+    --main-font: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+    --mono-font: Roboto Mono, monospace;
 
-  --light-color: black;
-  --dark-color: rgba(255, 255, 255, 0.87);
+    --light-color: black;
+    --dark-color: rgba(255, 255, 255, 0.87);
 
-  --h1-font-size: 3em;
-  --h2-font-size: 2em;
-  --h3-font-size: 1.5em;
+    --h1-font-size: 3em;
+    --h2-font-size: 2em;
+    --h3-font-size: 1.5em;
 
-  /*color-scheme: light dark;*/
-  color-scheme: light;
-  color: light-dark(var(--light-color), var(--dark-color));
-  font-family: var(--main-font);
+    /*color-scheme: light dark;*/
+    color-scheme: light;
+    color: light-dark(var(--light-color), var(--dark-color));
+    font-family: var(--main-font);
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
-html, body, #root {
-  height: 100%;
-  margin: 0;
+html,
+body,
+#root {
+    height: 100%;
+    margin: 0;
 }
 
 #root {
-  display: flex;
-  flex-direction: column;
+    display: flex;
+    flex-direction: column;
 }
 
-h1, h2, h3, h4, h5, h5 {
-  margin: 0;
-  font-weight: normal;
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    margin: 0;
+    font-weight: normal;
 }
 h1 {
-  font-size: var(--h1-font-size);
+    font-size: var(--h1-font-size);
 }
 h2 {
-  font-size: var(--h2-font-size);
+    font-size: var(--h2-font-size);
 }
 h3 {
-  font-size: var(--h3-font-size);
+    font-size: var(--h3-font-size);
 }
 
 .popup {
-  background: white;
-  padding: 0.25em;
-  border: solid lightgray 1px;
-  border-radius: 6px;
-  box-shadow: rgba(15, 15, 15, 0.05) 0px 0px 0px 1px, rgba(15, 15, 15, 0.1) 0px 3px 6px, rgba(15, 15, 15, 0.2) 0px 9px 24px;
+    background: white;
+    padding: 0.25em;
+    border: solid lightgray 1px;
+    border-radius: 6px;
+    box-shadow: rgba(15, 15, 15, 0.05) 0px 0px 0px 1px, rgba(15, 15, 15, 0.1) 0px 3px 6px,
+        rgba(15, 15, 15, 0.2) 0px 9px 24px;
 }
 
 .growable-container {
-  flex-grow: 1;
+    flex-grow: 1;
 }
 
 .content-panel {
-  overflow: hidden;
+    overflow: hidden;
 }
 
 .side-panel {
-  background: #f8f8f8;
+    background: #f8f8f8;
 }
 
 .toolbar {
-  display: flex;
-  flex-direction: row;
-  padding: 5px;
+    display: flex;
+    flex-direction: row;
+    padding: 5px;
 
-  & .filler {
-    flex: 1;
-  }
+    & .filler {
+        flex: 1;
+    }
 
-  & .lucide {
-    color: dimgray;
-  }
+    & .lucide {
+        color: dimgray;
+    }
 }

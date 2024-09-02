@@ -8,7 +8,8 @@
     fill: transparent;
 }
 
-.edge line, .edge path {
+.edge line,
+.edge path {
     fill: none;
     stroke: black;
     stroke-width: 1.5;
@@ -28,7 +29,9 @@
     stroke-width: 1.5;
 }
 
-#arrowhead-vee, #arrowhead-flat, #arrowhead-double {
+#arrowhead-vee,
+#arrowhead-flat,
+#arrowhead-double {
     fill: none;
     stroke: black;
 }
