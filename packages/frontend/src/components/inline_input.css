@@ -3,7 +3,8 @@
     position: relative;
 }
 
-.inline-input-filler, .inline-input {
+.inline-input-filler,
+.inline-input {
     border: none;
     border-bottom: 3px solid transparent;
 }
