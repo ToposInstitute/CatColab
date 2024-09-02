@@ -1,10 +1,5 @@
-.model {
-    max-width: 100ex;
-    margin: 0 auto;
-}
-
 .model-title {
-    font-size: 3em;
+    font-size: var(--h1-font-size);
 }
 
 .model-head {
@@ -18,7 +13,7 @@
     border: none;
     background-color: transparent;
     color: var(--light-color);
-    font-size: 1.5em;
+    font-size: var(--h3-font-size);
     text-align-last: right;
 }
 

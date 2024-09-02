@@ -14,8 +14,8 @@ import {
     loadViz,
     vizLayoutGraph,
 } from "../visualization";
-import { modelToGraphviz } from "./model_graph";
-import type { ModelGraphContent } from "./types";
+import { type GraphvizAttributes, graphvizEngine, modelToGraphviz } from "./model_graph";
+import type { ModelAnalysisProps, ModelGraphContent } from "./types";
 
 /** Configure a visualization of a stock flow diagram. */
 export function configureStockFlowDiagram(options: {
@@ -37,21 +37,46 @@ export function configureStockFlowDiagram(options: {
 }
 
 /** Visualize a stock flow diagram.
+ */
+export function StockFlowDiagram(props: ModelAnalysisProps<ModelGraphContent>) {
+    return (
+        <div class="model-graph">
+            <div class="panel">
+                <span class="title">Diagram</span>
+            </div>
+            <StockFlowGraphviz
+                model={props.model}
+                theory={props.theory}
+                options={{
+                    engine: graphvizEngine(props.content.layout),
+                }}
+            />
+        </div>
+    );
+}
+
+/** Visualize a stock flow diagram using Graphviz plus custom layout.
 
 First, Graphviz computes a layout for the stocks and flows. Then we add the
 links from stocks to flows using our own layout heuristics.
  */
-export function StockFlowDiagram(props: {
+export function StockFlowGraphviz(props: {
     model: Array<ModelJudgment>;
     theory: Theory;
-    vizOptions?: Viz.RenderOptions;
+    attributes?: GraphvizAttributes;
+    options?: Viz.RenderOptions;
 }) {
     const [vizResource] = createResource(loadViz);
 
     const vizLayout = () => {
         const viz = vizResource();
         return (
-            viz && vizLayoutGraph(viz, modelToGraphviz(props.model, props.theory), props.vizOptions)
+            viz &&
+            vizLayoutGraph(
+                viz,
+                modelToGraphviz(props.model, props.theory, props.attributes),
+                props.options,
+            )
         );
     };
 

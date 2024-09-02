@@ -1,0 +1,40 @@
+.completion-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.completion-list li {
+    cursor: pointer;
+    padding: 5px;
+}
+
+.completion-list li.active {
+    background: #f1f5f9;
+}
+
+.completion-head {
+    display: flex;
+    gap: 0.25em;
+    justify-content: space-between;
+}
+
+.completion-description {
+    font-size: 0.75em;
+    color: dimgray;
+}
+
+.completion-shortcut {
+    font-size: 0.9em;
+    padding-left: 2ex;
+}
+
+.completion-empty {
+    font-size: 0.75em;
+    color: dimgray;
+}
+
+kbd.shortcut {
+    display: flex;
+    gap: 0.5em
+}
