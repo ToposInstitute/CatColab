@@ -110,6 +110,7 @@ jobs:
     name: Deploy to netlify
     runs-on: ubuntu-latest
     needs: [build_dev-docs, build_frontend, build_rust_docs]
+    if: github.event.pull_request.head.repo.full_name == 'ToposInstitute/CatColab'
     steps:
       - name: Repository Checkout
         uses: actions/checkout@v4
