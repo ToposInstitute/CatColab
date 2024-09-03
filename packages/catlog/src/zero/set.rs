@@ -25,7 +25,7 @@ pub trait Set {
     Elements can be compared for equality and, following the spirit of category
     theory, that is the *only* thing that can be done with elements.
     */
-    type Elem: Eq;
+    type Elem: Eq + Clone;
 
     /// Does the set contain the element `x`?
     fn contains(&self, x: &Self::Elem) -> bool;
@@ -152,7 +152,7 @@ where
 
 impl<T, S> Set for HashFinSet<T, S>
 where
-    T: Eq + Hash,
+    T: Eq + Clone + Hash,
     S: BuildHasher,
 {
     type Elem = T;

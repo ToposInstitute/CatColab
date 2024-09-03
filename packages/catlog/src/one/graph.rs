@@ -508,7 +508,7 @@ pub trait GraphMapping {
 
 This struct borrows its data to perform validation. The domain and codomain are
 assumed to be valid graphs. If that is in question, the graphs should be
-validated *before* valiating this object.
+validated *before* validating this object.
  */
 pub struct GraphMorphism<'a, Map, Dom, Cod>(pub &'a Map, pub &'a Dom, pub &'a Cod);
 
@@ -519,7 +519,7 @@ where
     Dom: FinGraph<V = Map::DomV, E = Map::DomE>,
     Cod: Graph<V = Map::CodV, E = Map::CodE>,
 {
-    /// Iterates over failues of the mapping to be a graph homomorphism.
+    /// Iterates over failures of the mapping to be a graph homomorphism.
     pub fn iter_invalid(
         &self,
     ) -> impl Iterator<Item = InvalidGraphMorphism<Map::DomV, Map::DomE>> + 'a {
