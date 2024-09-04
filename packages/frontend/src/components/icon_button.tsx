@@ -14,12 +14,14 @@ export function IconButton(
 
     return (
         <Tooltip openOnHover>
-            <Tooltip.Trigger />
+            <Tooltip.Trigger>
+                <button class="icon-button" {...buttonProps}>
+                    {props.children}
+                </button>
+            </Tooltip.Trigger>
             <Tooltip.Portal>
                 <Tooltip.Content data-corvu-tooltip-content={props}>
-                    <button class="icon-button" {...buttonProps}>
-                        {props.children}
-                    </button>
+                    Tooltip content
                     <Tooltip.Arrow />
                 </Tooltip.Content>
             </Tooltip.Portal>
