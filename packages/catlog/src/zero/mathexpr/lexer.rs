@@ -1,4 +1,4 @@
-use super::pprint::*;
+use super::error::{Error, Errors};
 use super::span::{self, Span};
 use super::token::{self, Kind, Token};
 use std::fmt;
@@ -9,23 +9,6 @@ fn is_ident_start(c: char) -> bool {
 
 fn is_ident_continue(c: char) -> bool {
     c.is_alphanumeric()
-}
-
-#[derive(Debug)]
-pub(super) enum Error {
-    UnexpectedStartOfToken { location: Span },
-}
-
-impl DisplayWithSource for Error {
-    fn fmt(&self, src: &str, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Error::UnexpectedStartOfToken { location } => {
-                writeln!(f, "lex error: unexpected start of token\n")?;
-                write!(f, "{}", WithSource::new(src, location))?;
-            }
-        };
-        Ok(())
-    }
 }
 
 struct Lexer<'a> {
@@ -86,8 +69,9 @@ impl<'a> Lexer<'a> {
                 ' ' | '\n' | '\t' => self.whitespace(),
                 _ if is_ident_start(c) => self.ident(),
                 _ => {
-                    self.error(Error::UnexpectedStartOfToken {
-                        location: Span::new(self.last_pos, c.len_utf8()),
+                    self.error(Error {
+                        span: Span::new(self.last_pos, c.len_utf8()),
+                        description: super::error::Description::UnexpectedStartOfToken,
                     });
                 }
             }
@@ -172,11 +156,12 @@ impl fmt::Display for Lexed {
     }
 }
 
-pub(super) fn lex(s: &str) -> Lexed {
+pub(super) fn lex(s: &str) -> Result<Vec<Token>, Errors> {
     let mut l = Lexer::new(s);
     l.run();
-    Lexed {
-        tokens: l.out,
-        errors: l.errors,
+    if !l.errors.is_empty() {
+        Err(Errors(l.errors))
+    } else {
+        Ok(l.out)
     }
 }

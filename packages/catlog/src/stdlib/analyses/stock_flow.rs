@@ -1,3 +1,5 @@
+//! Stock-flow semantics for models.
+
 use std::collections::HashMap;
 
 use crate::{
@@ -10,20 +12,54 @@ use ode_solvers::{Rk4, System};
 use textplots::*;
 use ustr::Ustr;
 
+/// An extension for doing stock-flow simulations
 pub struct StockFlowExtension {
+    /// A map from flow id to a flow expression for that flow, which should be an arithmetic
+    /// expression in the stock variables.
     flow_expressions: HashMap<Ustr, String>,
+    /// The initial values of each stock
     initial_values: HashMap<Ustr, f32>,
-    end_time: f32,
+    /// The length of time that we should run the simulation for
+    simulation_length: f32,
+    /// The object type in the double theory, the corresponding objects of which should be
+    /// interpretted as stocks
     stock_object: Ustr,
+    /// The morphism type in the double theory, the corresponding morphisms of which should be
+    /// interpretted as flows
     flow_morphism: FinMor<Ustr, Ustr>,
 }
 
 impl StockFlowExtension {
-    fn validate(&self, model: &UstrDiscreteDblModel) -> bool {
+    /// Create a new StockFlow extension
+    pub fn new(
+        flow_expressions: HashMap<Ustr, String>,
+        initial_values: HashMap<Ustr, f32>,
+        simulation_length: f32,
+        stock_object: Ustr,
+        flow_morphism: FinMor<Ustr, Ustr>,
+    ) -> Self {
+        Self {
+            flow_expressions,
+            initial_values,
+            simulation_length,
+            stock_object,
+            flow_morphism,
+        }
+    }
+
+    /// Check that self is compatible with model, e.g. there is a flow expression for every flow
+    /// and so on.
+    pub fn validate(&self, model: &UstrDiscreteDblModel) -> bool {
         self.compile_system(model).is_ok()
     }
 
-    fn compile_system(&self, model: &UstrDiscreteDblModel) -> Result<StockFlowSystem, String> {
+    /// Compile all of the expressions (parse and lookup the variables),
+    ///
+    /// TODO: this should take a previous StockFlowSystem, and not recompile the expressions if
+    /// the expressions have not changes, only update initial conditions etc.
+    /// TODO: before doing the above, benchmark to see if compiling expressions is actually at all
+    /// expensive.
+    pub fn compile_system(&self, model: &UstrDiscreteDblModel) -> Result<StockFlowSystem, String> {
         let mut stocks = model.object_generators_with_type(&self.stock_object).collect::<Vec<_>>();
         stocks.sort();
         let idx_lookup = stocks
@@ -62,12 +98,14 @@ impl StockFlowExtension {
             stock_names: stocks,
             initial_values,
             flow_progs,
-            end_time: self.end_time,
+            end_time: self.simulation_length,
         })
     }
 }
 
-struct StockFlowSystem {
+/// The compiled version of a StockFlowExtension + model. Has all the data needed to compute the
+/// vector field.
+pub struct StockFlowSystem {
     graph: SkelGraph,
     initial_values: DVector<f32>,
     stock_names: Vec<Ustr>,
@@ -97,7 +135,9 @@ impl System<f32, DVector<f32>> for &StockFlowSystem {
 }
 
 impl StockFlowSystem {
-    fn plot(&self) -> String {
+    /// Solve the ODE given by the system's vector field and initial conditions, and produce an
+    /// ASCII text plot of the solution.
+    pub fn plot(&self) -> String {
         let mut stepper = Rk4::new(self, 0.0, self.initial_values.clone(), self.end_time, 0.1);
 
         stepper.integrate().unwrap();
@@ -160,7 +200,7 @@ mod test {
             initial_values: [(ustr("S"), 4.0), (ustr("I"), 1.0), (ustr("R"), 0.0)]
                 .into_iter()
                 .collect::<HashMap<_, _>>(),
-            end_time: 5.0,
+            simulation_length: 5.0,
             stock_object: ustr("Object"),
             flow_morphism: FinMor::Id(ustr("Object")),
         };

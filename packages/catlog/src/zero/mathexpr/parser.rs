@@ -1,44 +1,11 @@
 use ustr::ustr;
 
+use super::error::{Description, Error, Errors};
 use super::lexer;
-use super::pprint::*;
 use super::span::Span;
 use super::syntax::*;
 use super::token::{self, Token};
 use std::cell::Cell;
-use std::fmt;
-
-#[derive(Debug)]
-pub(super) enum Error {
-    LexErrors { errors: Vec<lexer::Error> },
-    UnexpectedToken { expecting: token::Kind, at: Span },
-    UnexpectedEOF { expecting: token::Kind },
-    Other { message: String, at: Span },
-}
-
-impl DisplayWithSource for Error {
-    fn fmt(&self, source: &str, w: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::LexErrors { errors } => {
-                for error in errors {
-                    writeln!(w, "{}", WithSource::new(source, error))?;
-                }
-            }
-            Self::UnexpectedToken { expecting, at } => {
-                writeln!(w, "parse error: unexpected token, expecting {:?}", expecting)?;
-                write!(w, "{}", WithSource::new(source, at))?;
-            }
-            Self::UnexpectedEOF { expecting } => {
-                writeln!(w, "parse error: unexpected EOF, expecting {:?}", expecting)?;
-            }
-            Self::Other { message, at } => {
-                writeln!(w, "parse error: {}", message)?;
-                write!(w, "{}", WithSource::new(source, at))?;
-            }
-        }
-        Ok(())
-    }
-}
 
 pub struct Parser<'a> {
     source: &'a str,
@@ -111,12 +78,21 @@ impl<'a> Parser<'a> {
         }
 
         if !self.eof() {
-            Err(Error::UnexpectedToken {
-                expecting: kind,
-                at: self.span(),
+            Err(Error {
+                span: self.span(),
+                description: Description::UnexpectedToken {
+                    got: self.nth(0),
+                    expecting: kind,
+                },
             })
         } else {
-            Err(Error::UnexpectedEOF { expecting: kind })
+            Err(Error {
+                span: self.span(),
+                description: Description::UnexpectedToken {
+                    got: token::Eof,
+                    expecting: kind,
+                },
+            })
         }
     }
 }
@@ -136,9 +112,11 @@ fn factor(p: &mut Parser) -> Result<Term, Error> {
         p.eat(token::Ident);
         Ok(t)
     } else {
-        Err(Error::Other {
-            message: "expected start of factor".to_string(),
-            at: p.span(),
+        Err(Error {
+            span: p.span(),
+            description: Description::Other {
+                message: "expected start of factor".to_string(),
+            },
         })
     }
 }
@@ -194,29 +172,27 @@ fn term(p: &mut Parser) -> Result<Term, Error> {
     }
 }
 
-pub(super) fn parse(source: &str) -> Result<Term, Error> {
-    let lexed = lexer::lex(source);
-    if !lexed.errors.is_empty() {
-        return Err(Error::LexErrors {
-            errors: lexed.errors,
-        });
-    }
-    let mut p = Parser::new(source, &lexed.tokens);
-    let t = term(&mut p)?;
+pub(super) fn parse(source: &str) -> Result<Term, Errors> {
+    let lexed = lexer::lex(source)?;
+    let mut p = Parser::new(source, &lexed);
+    let t = term(&mut p).map_err(|e| Errors(vec![e]))?;
     if p.eof() {
         Ok(t)
     } else {
-        Err(Error::UnexpectedToken {
-            expecting: token::Eof,
-            at: p.span(),
-        })
+        Err(Errors(vec![Error {
+            span: p.span(),
+            description: Description::UnexpectedToken {
+                got: p.nth(0),
+                expecting: token::Eof,
+            },
+        }]))
     }
 }
 
 #[cfg(test)]
 mod test {
+    use super::super::pprint::WithSource;
     use super::parse;
-    use super::WithSource;
 
     fn check_parse(source: &str, expected: &str) {
         let res = match parse(source) {

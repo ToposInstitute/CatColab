@@ -1,7 +1,7 @@
 //! Data structures and functions for dynamically solving ODEs from runtime-provided expressions
 //! for vector fields.
 
-use super::mathexpr::{compile, run, Context, Env, Prog};
+use super::mathexpr::{compile, run, Context, Env, Error, Errors, Prog};
 use nalgebra::DVector;
 use ode_solvers;
 use std::fmt::Write as _;
@@ -57,8 +57,8 @@ impl DynamicODE {
     pub fn new(
         params: &[(&str, f32)],
         prog_sources: &[(&str, &str)],
-    ) -> Result<DynamicODE, String> {
-        let mut errors = String::new();
+    ) -> Result<DynamicODE, Errors> {
+        let mut errors = Vec::new();
 
         let ctx = Context::new(
             &params
@@ -74,7 +74,7 @@ impl DynamicODE {
         for (_, src) in prog_sources.iter() {
             match compile(&ctx, src) {
                 Ok(p) => progs.push(p),
-                Err(e) => writeln!(&mut errors, "{}", e).unwrap(),
+                Err(e) => errors.extend(e.0.into_iter()),
             }
         }
 
@@ -84,7 +84,7 @@ impl DynamicODE {
                 progs,
             })
         } else {
-            Err(errors)
+            Err(Errors(errors))
         }
     }
 }

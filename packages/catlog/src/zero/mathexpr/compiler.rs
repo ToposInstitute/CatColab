@@ -1,27 +1,8 @@
+use super::error::{Description, Error, Errors};
 use super::parser;
-use super::pprint::DisplayWithSource;
-use super::pprint::WithSource;
-use super::span::Span;
 use super::syntax::*;
 use std::collections::HashMap;
-use std::fmt::Write as _;
 use ustr::{ustr, Ustr};
-
-pub(super) enum Error {
-    InvalidVariable(Span),
-}
-
-impl DisplayWithSource for Error {
-    fn fmt(&self, src: &str, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            Error::InvalidVariable(s) => {
-                writeln!(f, "error: no such variable")?;
-                write!(f, "{}", WithSource::new(src, s))?;
-            }
-        }
-        Ok(())
-    }
-}
 
 /// A context listing variables in scope
 pub struct Context<T: Clone> {
@@ -73,7 +54,10 @@ fn compile_term<T: Clone>(
         Term::Var(v, s) => match e.vars.get(v) {
             Some(t) => Some(Compiled::Var(t.clone())),
             None => {
-                errors.push(Error::InvalidVariable(*s));
+                errors.push(Error {
+                    span: *s,
+                    description: Description::NameNotFound { name: *v },
+                });
                 None
             }
         },
@@ -96,29 +80,20 @@ pub struct Prog<T>(pub(super) Compiled<T>);
 /// We currently don't expose these errors in a fine-grained way: we just return how they are
 /// displayed as strings so that we are free to change their internal representation; in the future
 /// we might think about how to expose more detailed errors to the user.
-pub fn compile<T: Clone>(e: &Context<T>, src: &str) -> Result<Prog<T>, String> {
-    let t = match parser::parse(src) {
-        Ok(t) => t,
-        Err(e) => {
-            return Err(format!("{}", WithSource::new(src, &e)));
-        }
-    };
+pub fn compile<T: Clone>(e: &Context<T>, src: &str) -> Result<Prog<T>, Errors> {
+    let t = parser::parse(src)?;
     let mut errors = Vec::new();
     match compile_term(e, &t, &mut errors) {
         Some(c) => Ok(Prog(c)),
-        None => {
-            let mut s = String::new();
-            for err in errors {
-                write!(s, "{}", WithSource::new(src, &err)).unwrap();
-            }
-            Err(s)
-        }
+        None => Err(Errors(errors)),
     }
 }
 
 #[cfg(test)]
 mod test {
-    use indoc::indoc;
+    use expect_test::{expect, Expect};
+
+    use super::super::pprint::WithSource;
 
     use super::{compile, Context};
 
@@ -126,9 +101,9 @@ mod test {
         assert!(compile(e, src).is_ok());
     }
 
-    fn fails_check(e: &Context<()>, src: &str, expected: &str) {
-        let error = compile(e, src).err().unwrap();
-        assert_eq!(&error, expected);
+    fn fails_check(e: &Context<()>, src: &str, expected: Expect) {
+        let error = format!("{}", WithSource::new(src, &compile(e, src).err().unwrap()));
+        expected.assert_eq(&error);
     }
 
     #[test]
@@ -140,11 +115,13 @@ mod test {
         fails_check(
             &e,
             "a + x",
-            indoc! { r#"
-                error: no such variable
-                1 | a + x
-                  |     ^
-            "# },
+            expect![[r#"
+            compile error: name not found x
+
+            1 | a + x
+              |     ^
+
+        "#]],
         );
     }
 }
