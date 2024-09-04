@@ -2,25 +2,6 @@ import { uuidv7 } from "uuidv7";
 
 import { DblModel } from "catlog-wasm";
 import type { DblTheory, MorDecl, MorType, ObDecl, ObType } from "catlog-wasm";
-import type { ModelAnalysis } from "../analysis";
-import type { Notebook } from "../notebook";
-import type { TheoryId } from "../theory";
-
-/** A model of a double theory in the form of notebook.
- */
-export type ModelNotebook = {
-    /** User-defined name of model. */
-    name: string;
-
-    /** Identifier of double theory that the model is of. */
-    theory?: TheoryId;
-
-    /** Content of the model, formal and informal. */
-    notebook: Notebook<ModelJudgment>;
-
-    /** Analysis of the model, a separate notebook. */
-    analysis: Notebook<ModelAnalysis>;
-};
 
 /** A judgment in the definition of a model.
 

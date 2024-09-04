@@ -1,26 +1,32 @@
-import { type DocHandle, Repo } from "@automerge/automerge-repo";
-import type * as A from "@automerge/automerge-repo";
+import { Repo } from "@automerge/automerge-repo";
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
 import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb";
-import * as uuid from "uuid";
 
-import { ModelEditor, type ModelNotebook } from "./model";
-import { newNotebook } from "./notebook";
-import { stdTheories } from "./stdlib";
+import { type ModelDocument, ModelPage } from "./document";
 
 import * as trpc from "@trpc/client";
 import type { AppRouter } from "backend/src/index.js";
-import { Match, Switch, createResource } from "solid-js";
 
-const serverHost = import.meta.env.VITE_BACKEND_HOST;
+import { MultiProvider } from "@solid-primitives/context";
+import { Route, type RouteSectionProps, Router, useNavigate } from "@solidjs/router";
+import { Match, Switch, createResource, useContext } from "solid-js";
+import * as uuid from "uuid";
+import { RPCContext, RepoContext } from "./api";
+import { AnalysisPage } from "./document/analysis_document_editor";
+import { newNotebook } from "./notebook";
 
-function App() {
+const serverUrl: string = import.meta.env.VITE_BACKEND_HOST;
+
+const useHttps = serverUrl.match(/^https:\/\//)?.length === 1;
+const serverHost = serverUrl.replace(/^https?:\/\//, "");
+
+const Root = (props: RouteSectionProps<unknown>) => {
     if (!serverHost) {
         throw "Must set environment variable VITE_BACKEND_HOST";
     }
 
-    const http_url = `https://${serverHost}`;
-    const ws_url = `wss://${serverHost}`;
+    const http_url = `http${useHttps ? "s" : ""}://${serverHost}`;
+    const ws_url = `ws${useHttps ? "s" : ""}://${serverHost}`;
 
     const client = trpc.createTRPCClient<AppRouter>({
         links: [
@@ -35,64 +41,68 @@ function App() {
         network: [new BrowserWebSocketClientAdapter(ws_url)],
     });
 
-    const urlHash = document.location.hash.substring(1);
+    return (
+        <MultiProvider
+            values={[
+                [RPCContext, client],
+                [RepoContext, repo],
+            ]}
+        >
+            {props.children}
+        </MultiProvider>
+    );
+};
 
-    const init: ModelNotebook = {
+const refIsUUIDFilter = {
+    ref: (ref: string) => uuid.validate(ref),
+};
+
+function CreateModel() {
+    const client = useContext(RPCContext);
+    if (client === undefined) {
+        throw "Must provide RPCContext";
+    }
+    const repo = useContext(RepoContext);
+    if (repo === undefined) {
+        throw "Must provide RepoContext";
+    }
+
+    const init: ModelDocument = {
         name: "Untitled",
+        type: "model",
         notebook: newNotebook(),
-        analysis: newNotebook(),
     };
 
-    const [handle] = createResource(async () => {
-        let docId: A.DocumentId;
-        let refId: string;
+    const doc = repo.create(init);
 
-        if (uuid.validate(urlHash)) {
-            refId = urlHash;
-            const res = await client.docIdFor.query(urlHash);
-            if (!res) {
-                throw `Failed to get documentId for ref ${refId}`;
-            }
-            docId = res;
-        } else {
-            const doc = repo.create(init);
-
-            docId = doc.documentId;
-
-            refId = await client.newRef.mutate({
-                docId,
-                title: init.name,
-            });
-
-            document.location.hash = refId;
-        }
-
-        return {
-            handle: repo.find(docId) as DocHandle<ModelNotebook>,
-            refId: refId,
-        };
+    const [ref] = createResource<string>(async () => {
+        return await client.newRef.mutate({ title: "Untitled", docId: doc.documentId });
     });
+
+    const navigator = useNavigate();
 
     return (
         <Switch>
-            <Match when={handle.loading}>
+            <Match when={ref.loading}>
                 <p>Loading...</p>
             </Match>
-            <Match when={handle.error}>
-                <span>Error: {handle.error}</span>
+            <Match when={ref.error}>
+                <span>Error: {ref.error}</span>
             </Match>
-            <Match when={handle()}>
-                {(h) => (
-                    <ModelEditor
-                        handle={h().handle}
-                        refId={h().refId}
-                        client={client}
-                        init={init}
-                        theories={stdTheories}
-                    />
-                )}
+            <Match when={ref()}>
+                {(ref) => <div ref={(_) => navigator(`/model/${ref()}`)}>Loading...</div>}
             </Match>
         </Switch>
+    );
+}
+
+function App() {
+    return (
+        <Router root={Root}>
+            <Route path="/" component={CreateModel} />
+            <Route path="/model/:ref" matchFilters={refIsUUIDFilter} component={ModelPage} />
+            <Route path="/analysis/:ref" matchFilters={refIsUUIDFilter} component={AnalysisPage} />
+        </Router>
     );
 }
 

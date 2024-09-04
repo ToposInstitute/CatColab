@@ -7,6 +7,7 @@ import morgan from "morgan";
 import * as ws from "ws";
 import { z } from "zod";
 import { Persistence } from "./persistence.js";
+import cors from "cors";
 
 import * as trpc from "@trpc/server";
 import * as trpcExpress from "@trpc/server/adapters/express";
@@ -41,6 +42,7 @@ export class Server {
         });
 
         Sentry.setupExpressErrorHandler(this.app);
+        this.app.use(cors());
 
         this.appRouter = router({
             newRef: publicProcedure
@@ -65,15 +67,25 @@ export class Server {
             saveRef: publicProcedure
                 .input(z.object({ refId: z.string(), note: z.string() }))
                 .mutation(async (opts) => {
+                    console.log(opts.input);
                     const {
                         input: { refId, note },
                     } = opts;
+                    await this.docMap.get(refId)?.whenReady()
                     await this.db.saveRef(refId, note);
                 }),
 
             getRefs: publicProcedure.query(async () => {
                 return await this.db.allRefs();
             }),
+
+            getBacklinks: publicProcedure
+                .input(z.object({ refId: z.string(), taxon: z.string() }))
+                .query(async (opts) => {
+                    const { input: { refId, taxon } } = opts;
+                    console.log(`getting backlinks for ${refId}`);
+                    return await this.db.getBacklinks(refId, taxon);
+                })
         });
 
         this.app.use(morgan("tiny"));
@@ -111,8 +123,7 @@ export class Server {
 
     setHandleCallback(refId: string, handle: A.DocHandle<any>) {
         handle.on("change", async (payload) => {
-            const doc = payload.doc;
-            this.db.autosave(refId, JSON.stringify(doc));
+            this.db.autosaveWithExterns(refId, payload.doc);
         });
     }
 

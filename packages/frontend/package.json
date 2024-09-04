@@ -28,6 +28,7 @@
         "@solid-primitives/context": "^0.2.3",
         "@solid-primitives/destructure": "^0.1.17",
         "@solid-primitives/keyboard": "^1.2.8",
+        "@solidjs/router": "^0.14.3",
         "@trpc/client": "^11.0.0-rc.467",
         "@viz-js/viz": "^3.7.0",
         "backend": "file:../backend",
