@@ -16,10 +16,6 @@
     transition-duration: 100ms;
 }
 
-[data-corvu-tooltip-trigger]:hover {
-    background-color: hsl(251, 86%, 89%);
-}
-
 [data-corvu-tooltip-trigger]:active {
     transform: translate(0, 0.125rem);
 }
