@@ -2,7 +2,7 @@ use super::span::Span;
 use std::fmt;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub(super) enum Kind {
+pub enum Kind {
     LParen,
     RParen,
     Ident,

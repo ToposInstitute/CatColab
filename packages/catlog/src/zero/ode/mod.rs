@@ -1,10 +1,9 @@
 //! Data structures and functions for dynamically solving ODEs from runtime-provided expressions
 //! for vector fields.
 
-use super::mathexpr::{compile, run, Context, Env, Error, Errors, Prog};
+use super::mathexpr::{compile, run, Context, Env, Errors, Prog};
 use nalgebra::DVector;
 use ode_solvers;
-use std::fmt::Write as _;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Var {

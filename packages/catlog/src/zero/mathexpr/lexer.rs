@@ -1,7 +1,6 @@
 use super::error::{Error, Errors};
 use super::span::{self, Span};
 use super::token::{self, Kind, Token};
-use std::fmt;
 
 fn is_ident_start(c: char) -> bool {
     c.is_alphabetic()
@@ -135,24 +134,6 @@ impl<'a> Lexer<'a> {
             }
         }
         self.emit(token::Decimal);
-    }
-}
-
-pub struct Lexed {
-    pub tokens: Vec<Token>,
-    pub errors: Vec<Error>,
-}
-
-impl fmt::Display for Lexed {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        let mut iter = self.tokens.iter();
-        if let Some(t) = iter.next() {
-            write!(f, "{}", t)?;
-        }
-        for t in iter {
-            write!(f, " {}", t)?;
-        }
-        Ok(())
     }
 }
 

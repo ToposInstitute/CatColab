@@ -1,16 +1,61 @@
 //! Stock-flow semantics for models.
 
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 
 use crate::{
     dbl::model::*,
-    one::{fin_category::FinMor, FinGraph, Graph, SkelGraph},
-    zero::{compile, run, Context, Env, Prog},
+    one::{fin_category::FinMor, FgCategory, FinGraph, SkelGraph},
+    zero::{compile, mathexpr, run, Context, Env, Prog},
 };
 use nalgebra::DVector;
 use ode_solvers::{Rk4, System};
 use textplots::*;
 use ustr::Ustr;
+
+#[derive(Debug)]
+/// A validation error for the stock-flow extension
+pub enum Error {
+    /// An error in compiling a flow expression
+    FlowExpressionCompilation {
+        /// The flow that the expression is attached to
+        flow: Ustr,
+        /// The source code of the expression
+        source: String,
+        /// The compilation errors
+        errors: mathexpr::Errors,
+    },
+    /// A flow that is missing a flow expression
+    MissingFlowExpression {
+        /// The flow
+        flow: Ustr,
+    },
+    /// A stock that is missing an initial value
+    MissingInitialValue {
+        /// The stock
+        stock: Ustr,
+    },
+}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Error::FlowExpressionCompilation {
+                flow,
+                source: flow_expression,
+                errors,
+            } => {
+                writeln!(f, "compilation errors in the flow expression for {}", flow)?;
+                write!(f, "{}", mathexpr::WithSource::new(flow_expression, errors))
+            }
+            Error::MissingFlowExpression { flow } => {
+                writeln!(f, "missing flow expression for {}", flow)
+            }
+            Error::MissingInitialValue { stock } => {
+                writeln!(f, "missing initial value for stock {}", stock)
+            }
+        }
+    }
+}
 
 /// An extension for doing stock-flow simulations
 pub struct StockFlowExtension {
@@ -59,47 +104,70 @@ impl StockFlowExtension {
     /// the expressions have not changes, only update initial conditions etc.
     /// TODO: before doing the above, benchmark to see if compiling expressions is actually at all
     /// expensive.
-    pub fn compile_system(&self, model: &UstrDiscreteDblModel) -> Result<StockFlowSystem, String> {
+    pub fn compile_system(
+        &self,
+        model: &UstrDiscreteDblModel,
+    ) -> Result<StockFlowSystem, Vec<Error>> {
+        let mut graph: SkelGraph = Default::default();
+
         let mut stocks = model.object_generators_with_type(&self.stock_object).collect::<Vec<_>>();
         stocks.sort();
-        let idx_lookup = stocks
+        let vertex_lookup = stocks
             .iter()
             .enumerate()
             .map(|(i, n)| (*n, i))
             .collect::<HashMap<Ustr, usize>>();
-        let generators = model.generating_graph();
-        let mut graph: SkelGraph = Default::default();
         graph.add_vertices(stocks.len());
+
         let mut flows =
             model.morphism_generators_with_type(&self.flow_morphism).collect::<Vec<_>>();
         flows.sort();
         for flow in flows.iter() {
             graph.add_edge(
-                *idx_lookup.get(&generators.src(&flow)).unwrap(),
-                *idx_lookup.get(&generators.tgt(&flow)).unwrap(),
+                *vertex_lookup.get(&model.morphism_generator_dom(flow)).unwrap(),
+                *vertex_lookup.get(&model.morphism_generator_cod(flow)).unwrap(),
             );
         }
-        let ctx = Context::from(idx_lookup);
-        let flow_progs = flows
-            .iter()
-            .map(|name| {
-                let src = self.flow_expressions.get(name)?;
-                compile(&ctx, src.as_str()).ok()
+
+        let ctx = Context::from(vertex_lookup);
+        let mut errors = Vec::new();
+
+        let mut flow_progs = Vec::new();
+
+        for flow in flows.iter() {
+            match self.flow_expressions.get(flow) {
+                Some(src) => match compile(&ctx, src.as_str()) {
+                    Ok(prog) => flow_progs.push(prog),
+                    Err(compilation_errors) => errors.push(Error::FlowExpressionCompilation {
+                        flow: *flow,
+                        source: src.clone(),
+                        errors: compilation_errors,
+                    }),
+                },
+                None => errors.push(Error::MissingFlowExpression { flow: *flow }),
+            }
+        }
+
+        let mut initial_values = Vec::new();
+
+        for stock in stocks.iter() {
+            match self.initial_values.get(stock) {
+                Some(v) => initial_values.push(*v),
+                None => errors.push(Error::MissingInitialValue { stock: *stock }),
+            }
+        }
+
+        if errors.is_empty() {
+            Ok(StockFlowSystem {
+                graph,
+                stock_names: stocks,
+                initial_values: initial_values.into(),
+                flow_progs,
+                end_time: self.simulation_length,
             })
-            .collect::<Option<Vec<Prog<usize>>>>()
-            .unwrap();
-        let initial_values = stocks
-            .iter()
-            .map(|s| *self.initial_values.get(s).unwrap())
-            .collect::<Vec<_>>()
-            .into();
-        Ok(StockFlowSystem {
-            graph,
-            stock_names: stocks,
-            initial_values,
-            flow_progs,
-            end_time: self.simulation_length,
-        })
+        } else {
+            Err(errors)
+        }
     }
 }
 
@@ -181,7 +249,27 @@ mod test {
     use crate::{one::fin_category::FinMor, stdlib};
 
     use super::{StockFlowExtension, UstrDiscreteDblModel};
-    use expect_test::expect;
+    use expect_test::{expect, Expect};
+    use std::fmt::Write as _;
+
+    fn test_stock_flow(
+        extension: &StockFlowExtension,
+        model: &UstrDiscreteDblModel,
+        expected: Expect,
+    ) {
+        match extension.compile_system(&model) {
+            Ok(system) => {
+                expected.assert_eq(&system.plot());
+            }
+            Err(errors) => {
+                let mut s = String::new();
+                for error in errors.iter() {
+                    write!(&mut s, "{}", error).unwrap();
+                }
+                expected.assert_eq(&s)
+            }
+        }
+    }
 
     #[test]
     fn sir_stock_flow() {
@@ -205,9 +293,10 @@ mod test {
             flow_morphism: FinMor::Id(ustr("Object")),
         };
 
-        let system = extension.compile_system(&sir).unwrap();
-
-        let expected = expect![[r#"
+        test_stock_flow(
+            &extension,
+            &sir,
+            expect![[r#"
             ⡁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⣀⠤⠤⠤⠒⠒⠒⠒⠒⠉⠉⠉⠉⠁ 4.9
             ⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⠤⠒⠒⠉⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
             ⠂⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⠤⠒⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
@@ -230,7 +319,115 @@ mod test {
             ⢄⠔⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠒⠒⠤⠤⠤⠤⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣉⣉⣒⣒⣒⣒⣤⣤⣤⣤⠤⣀⣀⣀⣀⡀
             ⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠉⠉⠉⠉⠉⠁ 0.0
             0.0                                            5.0
-        "#]];
-        expected.assert_eq(&system.plot())
+        "#]],
+        );
+
+        let extension = StockFlowExtension {
+            flow_expressions: [(ustr("inf"), "@S * I".to_string()), (ustr("rec"), "I".to_string())]
+                .into_iter()
+                .collect::<HashMap<_, _>>(),
+            initial_values: [(ustr("S"), 4.0), (ustr("I"), 1.0), (ustr("R"), 0.0)]
+                .into_iter()
+                .collect::<HashMap<_, _>>(),
+            simulation_length: 5.0,
+            stock_object: ustr("Object"),
+            flow_morphism: FinMor::Id(ustr("Object")),
+        };
+
+        test_stock_flow(
+            &extension,
+            &sir,
+            expect![[r#"
+            compilation errors in the flow expression for inf
+            lex error: unexpected start of token
+
+            1 | @S * I
+              | ^
+
+        "#]],
+        );
+
+        let extension = StockFlowExtension {
+            flow_expressions: [
+                (ustr("inf"), "S * I".to_string()),
+                (ustr("rec"), "I +".to_string()),
+            ]
+            .into_iter()
+            .collect::<HashMap<_, _>>(),
+            initial_values: [(ustr("S"), 4.0), (ustr("I"), 1.0), (ustr("R"), 0.0)]
+                .into_iter()
+                .collect::<HashMap<_, _>>(),
+            simulation_length: 5.0,
+            stock_object: ustr("Object"),
+            flow_morphism: FinMor::Id(ustr("Object")),
+        };
+
+        test_stock_flow(
+            &extension,
+            &sir,
+            expect![[r#"
+            compilation errors in the flow expression for rec
+            parse error: expected start of factor
+
+            1 | I +
+              |    ^
+
+        "#]],
+        );
+
+        let extension = StockFlowExtension {
+            flow_expressions: [
+                (ustr("inf"), "S *".to_string()),
+                (ustr("rec"), "I + Q".to_string()),
+            ]
+            .into_iter()
+            .collect::<HashMap<_, _>>(),
+            initial_values: [(ustr("S"), 4.0), (ustr("I"), 1.0), (ustr("R"), 0.0)]
+                .into_iter()
+                .collect::<HashMap<_, _>>(),
+            simulation_length: 5.0,
+            stock_object: ustr("Object"),
+            flow_morphism: FinMor::Id(ustr("Object")),
+        };
+
+        test_stock_flow(
+            &extension,
+            &sir,
+            expect![[r#"
+            compilation errors in the flow expression for inf
+            parse error: expected start of factor
+
+            1 | S *
+              |    ^
+
+            compilation errors in the flow expression for rec
+            compile error: name not found Q
+
+            1 | I + Q
+              |     ^
+
+        "#]],
+        );
+
+        let extension = StockFlowExtension {
+            flow_expressions: [(ustr("rec"), "I".to_string())]
+                .into_iter()
+                .collect::<HashMap<_, _>>(),
+            initial_values: [(ustr("I"), 1.0), (ustr("R"), 0.0)]
+                .into_iter()
+                .collect::<HashMap<_, _>>(),
+            simulation_length: 5.0,
+            stock_object: ustr("Object"),
+            flow_morphism: FinMor::Id(ustr("Object")),
+        };
+
+        test_stock_flow(
+            &extension,
+            &sir,
+            expect![[r#"
+                missing flow expression for inf
+                missing initial value for stock S
+            "#]],
+        );
     }
 }

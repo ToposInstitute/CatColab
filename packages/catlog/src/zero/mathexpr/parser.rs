@@ -69,7 +69,11 @@ impl<'a> Parser<'a> {
     }
 
     fn span(&self) -> Span {
-        self.tokens[self.pos].span
+        if self.pos >= self.tokens.len() {
+            Span::new(self.source.len(), 1)
+        } else {
+            self.tokens[self.pos].span
+        }
     }
 
     fn expect(&mut self, kind: token::Kind) -> Result<(), Error> {
@@ -114,7 +118,7 @@ fn factor(p: &mut Parser) -> Result<Term, Error> {
     } else {
         Err(Error {
             span: p.span(),
-            description: Description::Other {
+            description: Description::ParseError {
                 message: "expected start of factor".to_string(),
             },
         })

@@ -1,11 +1,11 @@
 use super::pprint;
 use std::fmt::{self, Formatter};
 
-pub(super) type ByteOffset = usize;
-pub(super) type ByteLength = usize;
+pub type ByteOffset = usize;
+pub type ByteLength = usize;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) struct Span {
+pub struct Span {
     start: ByteOffset,
     length: ByteLength,
 }
@@ -86,6 +86,10 @@ impl pprint::DisplayWithSource for Span {
                 }
                 if b == e {
                     last_char = Some(line.chars().count());
+                }
+                if b >= src.len() && s >= b {
+                    first_char = Some(line.chars().count());
+                    last_char = Some(line.chars().count() + 1);
                 }
                 if let Some(c1) = first_char {
                     p.source_line(i, line)?;

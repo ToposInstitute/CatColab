@@ -1,15 +1,22 @@
 use std::fmt;
 
-pub(super) trait DisplayWithSource {
+pub trait DisplayWithSource {
     fn fmt(&self, src: &str, f: &mut fmt::Formatter) -> fmt::Result;
 }
 
-pub(super) struct WithSource<'a, 'b, T: DisplayWithSource> {
-    pub src: &'a str,
-    pub value: &'b T,
+/// A wrapper around a value that can be displayed via DisplayWithSource
+/// that implements Display, so that one can write
+///
+/// ```rust
+/// write!(f, "{}", WithSource::new(src, &a))
+/// ```
+pub struct WithSource<'a, 'b, T: DisplayWithSource> {
+    src: &'a str,
+    value: &'b T,
 }
 
 impl<'a, 'b, T: DisplayWithSource> WithSource<'a, 'b, T> {
+    /// Returns a new WithSource wrapper
     pub fn new(src: &'a str, value: &'b T) -> Self {
         Self { src, value }
     }

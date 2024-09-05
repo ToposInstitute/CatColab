@@ -13,3 +13,4 @@ mod token;
 pub use compiler::{compile, Context, Prog};
 pub use error::{Description, Error, Errors};
 pub use eval::{run, Env, VecEnv};
+pub use pprint::WithSource;
