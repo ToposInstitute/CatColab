@@ -1,5 +1,5 @@
 import Tooltip from "@corvu/tooltip";
-import { type JSX, splitProps } from "solid-js";
+import { type JSX, children, splitProps } from "solid-js";
 
 import "./icon_button.css";
 
@@ -14,10 +14,8 @@ export function IconButton(
 
     return (
         <Tooltip openOnHover>
-            <Tooltip.Trigger>
-                <button class="icon-button" {...buttonProps}>
-                    {props.children}
-                </button>
+            <Tooltip.Trigger class="icon-button" {...buttonProps}>
+                {props.children}
             </Tooltip.Trigger>
             <Tooltip.Portal>
                 <Tooltip.Content data-corvu-tooltip-content={props}>
