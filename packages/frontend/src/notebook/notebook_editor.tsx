@@ -16,6 +16,7 @@ import {
 } from "solid-js";
 
 import { type Completion, IconButton } from "../components";
+import { deepCopyJSON } from "../util/deepcopy";
 import {
     type CellActions,
     type FormalCellEditorProps,
@@ -178,10 +179,8 @@ export function NotebookEditor<T>(props: {
                     axis: "vertical",
                 });
                 props.changeNotebook((nb) => {
-                    let [cell] = nb.cells.splice(sourceIndex, 1);
-                    // XXX: Need a deep copy and `structuredClone` doesn't work.
-                    cell = JSON.parse(JSON.stringify(cell));
-                    nb.cells.splice(finalIndex, 0, cell);
+                    const [cell] = nb.cells.splice(sourceIndex, 1);
+                    nb.cells.splice(finalIndex, 0, deepCopyJSON(cell));
                 });
             },
         });
