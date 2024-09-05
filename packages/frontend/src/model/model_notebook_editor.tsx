@@ -163,7 +163,7 @@ export function ModelNotebookEditor(props: {
                         }}
                     >
                         <option value="" disabled selected hidden>
-                            Choose a logic
+                            Choose a logic ▾
                         </option>
                         <For each={Array.from(props.theories.metadata())}>
                             {(meta) => <option value={meta.id}>{meta.name}</option>}
