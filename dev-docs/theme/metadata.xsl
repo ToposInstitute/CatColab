@@ -118,6 +118,14 @@
     </li>
   </xsl:template>
 
+  <xsl:template match="f:meta[@name='arxiv']">
+    <li class="meta-item">
+      <a class="doi link" href="{concat('https://arxiv.org/abs/', .)}">
+        <xsl:value-of select="concat('arXiv:', .)" />
+      </a>
+    </li>
+  </xsl:template>
+
   <xsl:template match="f:meta[@name='orcid']">
     <li class="meta-item">
       <a class="orcid" href="{concat('https://orcid.org/', .)}">

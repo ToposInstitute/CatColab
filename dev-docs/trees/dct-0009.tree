@@ -1,0 +1,45 @@
+\title{Conjoints}
+\taxon{doctrine}
+\import{macros}
+
+\p{Conjoints are dual to [companions](dct-0008). We recapitulate the main
+definitions and facts here but see the linked page for further details.}
+
+\definition{Conjoint}{
+
+A \define{conjoint} of an arrow #{f: x \to y} in a double category is a
+proarrow #{f^*: y \proto x} along with a pair of cells
+
+\quiver{
+% https://q.uiver.app/#q=WzAsOCxbMCwwLCJ4Il0sWzEsMCwieCJdLFsxLDEsIngiXSxbMCwxLCJ5Il0sWzMsMCwieSJdLFs0LDAsIngiXSxbMywxLCJ5Il0sWzQsMSwieSJdLFswLDEsIiIsMCx7ImxldmVsIjoyLCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFszLDIsImZeKiIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFs0LDUsImZeKiIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFs2LDcsIiIsMix7ImxldmVsIjoyLCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFswLDMsImYiLDJdLFsxLDIsIiIsMCx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzQsNiwiIiwyLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNSw3LCJmIl0sWzgsOSwiXFxldGEiLDEseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMTAsMTEsIlxcdmFyZXBzaWxvbiIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dXQ==
+\begin{tikzcd}
+	x & x && y & x \\
+	y & x && y & y
+	\arrow[""{name=0, anchor=center, inner sep=0}, "\shortmid"{marking}, Rightarrow, no head, from=1-1, to=1-2]
+	\arrow["f"', from=1-1, to=2-1]
+	\arrow[Rightarrow, no head, from=1-2, to=2-2]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "{f^*}", "\shortmid"{marking}, from=1-4, to=1-5]
+	\arrow[Rightarrow, no head, from=1-4, to=2-4]
+	\arrow["f", from=1-5, to=2-5]
+	\arrow[""{name=2, anchor=center, inner sep=0}, "{f^*}"', "\shortmid"{marking}, from=2-1, to=2-2]
+	\arrow[""{name=3, anchor=center, inner sep=0}, "\shortmid"{marking}, Rightarrow, no head, from=2-4, to=2-5]
+	\arrow["\eta"{description}, draw=none, from=0, to=2]
+	\arrow["\varepsilon"{description}, draw=none, from=1, to=3]
+\end{tikzcd}}
+
+called the \define{unit} and \define{counit}, satisfying the equations #{\eta
+\cdot \varepsilon = \id_f} and #{\varepsilon \odot \eta = 1_{f^*}}.
+
+}
+
+\transclude{thy-0009}
+
+\subtree{
+\title{Models of the theory of conjoint pairs}
+\taxon{theorem}
+
+\p{A model of the theory of conjoint pairs in an equipment \dbl{S} consists of a
+functor internal to \dbl{S} together with a restriction (on the right) of the
+codomain's hom-proarrow along the functor's object map.}
+
+}

@@ -42,6 +42,13 @@
 
 \def\define[name]{\strong{\name}}
 
+\def\proof[body]{
+  \subtree{
+    \taxon{proof}
+    \body
+  }
+}
+
 % Category theory
 
 \def\Ob{#{\operatorname{Ob}}}
