@@ -25,10 +25,10 @@ Neither the domain nor the codomain of the mapping are assumed to be finite.
  */
 pub trait Mapping {
     /// Type of elements in domain of mapping.
-    type Dom: Eq;
+    type Dom: Eq + Clone;
 
     /// Type of elements in codomain of mapping.
-    type Cod: Eq;
+    type Cod: Eq + Clone;
 
     /// Applies the mapping at a point possibly in the domain.
     fn apply(&self, x: &Self::Dom) -> Option<&Self::Cod>;
@@ -169,7 +169,7 @@ impl<T> VecColumn<T> {
     }
 }
 
-impl<T: Eq> Mapping for VecColumn<T> {
+impl<T: Eq + Clone> Mapping for VecColumn<T> {
     type Dom = usize;
     type Cod = T;
 
@@ -201,7 +201,7 @@ impl<T: Eq> Mapping for VecColumn<T> {
     }
 }
 
-impl<T: Eq> Column for VecColumn<T> {
+impl<T: Eq + Clone> Column for VecColumn<T> {
     fn iter(&self) -> impl Iterator<Item = (usize, &T)> {
         let filtered = self.0.iter().enumerate().filter(|(_, y)| y.is_some());
         filtered.map(|(i, y)| (i, y.as_ref().unwrap()))
@@ -229,8 +229,8 @@ pub type UstrColumn<V> = HashColumn<Ustr, V, BuildHasherDefault<IdentityHasher>>
 
 impl<K, V, S> Mapping for HashColumn<K, V, S>
 where
-    K: Eq + Hash,
-    V: Eq,
+    K: Eq + Hash + Clone,
+    V: Eq + Clone,
     S: BuildHasher,
 {
     type Dom = K;
@@ -253,7 +253,7 @@ where
 impl<K, V, S> Column for HashColumn<K, V, S>
 where
     K: Eq + Hash + Clone,
-    V: Eq,
+    V: Eq + Clone,
     S: BuildHasher,
 {
     fn iter(&self) -> impl Iterator<Item = (K, &V)> {
@@ -399,7 +399,7 @@ where
 impl<Dom, Cod, Col, Ind> Mapping for IndexedColumn<Dom, Cod, Col, Ind>
 where
     Dom: Eq + Clone,
-    Cod: Eq,
+    Cod: Eq + Clone,
     Col: Column<Dom = Dom, Cod = Cod>,
     Ind: Index<Dom = Dom, Cod = Cod>,
 {
@@ -433,7 +433,7 @@ where
 impl<Dom, Cod, Col, Ind> Column for IndexedColumn<Dom, Cod, Col, Ind>
 where
     Dom: Eq + Clone,
-    Cod: Eq,
+    Cod: Eq + Clone,
     Col: Column<Dom = Dom, Cod = Cod>,
     Ind: Index<Dom = Dom, Cod = Cod>,
 {

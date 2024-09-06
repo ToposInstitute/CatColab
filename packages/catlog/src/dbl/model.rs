@@ -171,8 +171,8 @@ impl<Id, Cat> DiscreteDblModel<Id, Cat>
 where
     Id: Eq + Clone + Hash,
     Cat: FgCategory,
-    Cat::Ob: Eq + Clone + Hash,
-    Cat::Mor: Eq + Clone + Hash,
+    Cat::Ob: Hash,
+    Cat::Mor: Hash,
 {
     /// Creates an empty model of the given theory.
     pub fn new(theory: Arc<DiscreteDblTheory<Cat>>) -> Self {
@@ -277,8 +277,8 @@ impl<Id, Cat> Category for DiscreteDblModel<Id, Cat>
 where
     Id: Eq + Clone + Hash,
     Cat: FgCategory,
-    Cat::Ob: Eq + Clone + Hash,
-    Cat::Mor: Eq + Clone + Hash,
+    Cat::Ob: Hash,
+    Cat::Mor: Hash,
 {
     type Ob = Id;
     type Mor = Path<Id, Id>;
@@ -304,8 +304,8 @@ impl<Id, Cat> FgCategory for DiscreteDblModel<Id, Cat>
 where
     Id: Eq + Clone + Hash,
     Cat: FgCategory,
-    Cat::Ob: Eq + Clone + Hash,
-    Cat::Mor: Eq + Clone + Hash,
+    Cat::Ob: Hash,
+    Cat::Mor: Hash,
 {
     type ObGen = Id;
     type MorGen = Id;
@@ -331,8 +331,8 @@ impl<Id, Cat> DblModel for DiscreteDblModel<Id, Cat>
 where
     Id: Eq + Clone + Hash,
     Cat: FgCategory,
-    Cat::Ob: Eq + Clone + Hash,
-    Cat::Mor: Eq + Clone + Hash,
+    Cat::Ob: Hash,
+    Cat::Mor: Hash,
 {
     type ObType = Cat::Ob;
     type MorType = Cat::Mor;
@@ -370,8 +370,8 @@ impl<Id, Cat> FgDblModel for DiscreteDblModel<Id, Cat>
 where
     Id: Eq + Clone + Hash,
     Cat: FgCategory,
-    Cat::Ob: Eq + Clone + Hash,
-    Cat::Mor: Eq + Clone + Hash,
+    Cat::Ob: Hash,
+    Cat::Mor: Hash,
 {
     fn ob_gen_type(&self, ob: &Self::ObGen) -> Self::ObType {
         self.ob_types.apply(ob).unwrap().clone()
@@ -397,8 +397,8 @@ impl<Id, Cat> Validate for DiscreteDblModel<Id, Cat>
 where
     Id: Eq + Clone + Hash,
     Cat: FgCategory,
-    Cat::Ob: Eq + Clone + Hash,
-    Cat::Mor: Eq + Clone + Hash,
+    Cat::Ob: Hash,
+    Cat::Mor: Hash,
 {
     type ValidationError = InvalidDiscreteDblModel<Id>;
 

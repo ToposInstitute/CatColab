@@ -36,17 +36,17 @@ and a *target*. A square has all four of those.
 pub trait DblComputad {
     /// Type of vertices in the computad, generating objects in a double
     /// category.
-    type V: Eq;
+    type V: Eq + Clone;
 
     /// Type of edges in the computad, generating arrows in a double category.
-    type E: Eq;
+    type E: Eq + Clone;
 
     /// Type of "pro-edges" in the computad, generating proarrows in a double
     /// category.
-    type ProE: Eq;
+    type ProE: Eq + Clone;
 
     /// Type of squares in the computad, generating cells in a double category.
-    type Sq: Eq;
+    type Sq: Eq + Clone;
 
     /// Does the vertex belong to the computad?
     fn has_vertex(&self, v: &Self::V) -> bool;

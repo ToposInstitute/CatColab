@@ -25,10 +25,10 @@ finite, even locally.
  */
 pub trait Graph {
     /// Type of vertices in graph.
-    type V: Eq;
+    type V: Eq + Clone;
 
     /// Type of edges in graph.
-    type E: Eq;
+    type E: Eq + Clone;
 
     /// Does the graph contain the value as a vertex?
     fn has_vertex(&self, v: &Self::V) -> bool;
@@ -476,16 +476,16 @@ a pair of graphs with a compatible graph mapping.
  */
 pub trait GraphMapping {
     /// Type of vertices in domain graph.
-    type DomV: Eq;
+    type DomV: Eq + Clone;
 
     /// Type of edges in domain graph.
-    type DomE: Eq;
+    type DomE: Eq + Clone;
 
     /// Type of vertices in codomain graph.
-    type CodV: Eq;
+    type CodV: Eq + Clone;
 
     /// Type of edges in codomain graph.
-    type CodE: Eq;
+    type CodE: Eq + Clone;
 
     /// Applies the graph mapping at a vertex.
     fn apply_vertex(&self, v: &Self::DomV) -> Option<&Self::CodV>;
@@ -508,7 +508,7 @@ pub trait GraphMapping {
 
 This struct borrows its data to perform validation. The domain and codomain are
 assumed to be valid graphs. If that is in question, the graphs should be
-validated *before* valiating this object.
+validated *before* validating this object.
  */
 pub struct GraphMorphism<'a, Map, Dom, Cod>(pub &'a Map, pub &'a Dom, pub &'a Cod);
 
@@ -519,7 +519,7 @@ where
     Dom: FinGraph<V = Map::DomV, E = Map::DomE>,
     Cod: Graph<V = Map::CodV, E = Map::CodE>,
 {
-    /// Iterates over failues of the mapping to be a graph homomorphism.
+    /// Iterates over failures of the mapping to be a graph homomorphism.
     pub fn iter_invalid(
         &self,
     ) -> impl Iterator<Item = InvalidGraphMorphism<Map::DomV, Map::DomE>> + 'a {

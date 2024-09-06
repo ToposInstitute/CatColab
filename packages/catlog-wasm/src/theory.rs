@@ -243,7 +243,7 @@ impl MorTypeIndex {
         self.0.get(m).copied()
     }
 
-    /// Sets the index of a morphsim type.
+    /// Sets the index of a morphism type.
     #[wasm_bindgen]
     pub fn set(&mut self, m: MorType, i: usize) {
         self.0.insert(m, i);
