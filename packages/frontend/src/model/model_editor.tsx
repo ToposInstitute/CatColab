@@ -71,7 +71,7 @@ export function ModelEditor(props: {
                                     <Camera />
                                 </IconButton>
                                 <span class="filler" />
-                                <IconButton onClick={toggleSidePanel}>
+                                <IconButton tooltip="Show analysis panel" onClick={toggleSidePanel}>
                                     <Show when={isSidePanelOpen()} fallback={<PanelRight />}>
                                         <PanelRightClose />
                                     </Show>
