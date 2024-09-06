@@ -75,10 +75,7 @@ are the identities, which can thus be identified with the objects.
 #[repr(transparent)]
 pub struct DiscreteCategory<S: Set>(S);
 
-impl<S: Set> Category for DiscreteCategory<S>
-where
-    S::Elem: Clone,
-{
+impl<S: Set> Category for DiscreteCategory<S> {
     type Ob = S::Elem;
     type Mor = S::Elem;
 
@@ -146,10 +143,7 @@ the graph, respectively. Paths compose by concatenation.
 #[repr(transparent)]
 pub struct FreeCategory<G: Graph>(G);
 
-impl<G: Graph> Category for FreeCategory<G>
-where
-    G::V: Clone,
-{
+impl<G: Graph> Category for FreeCategory<G> {
     type Ob = G::V;
     type Mor = Path<G::V, G::E>;
 
@@ -197,10 +191,7 @@ pub trait FgCategory: Category {
     fn morphism_generator_cod(&self, f: &Self::MorGen) -> Self::Ob;
 }
 
-impl<S: FinSet> Graph for DiscreteCategory<S>
-where
-    S::Elem: Clone,
-{
+impl<S: FinSet> Graph for DiscreteCategory<S> {
     type V = S::Elem;
     type E = S::Elem;
 
@@ -221,10 +212,7 @@ where
     }
 }
 
-impl<S: FinSet> FinGraph for DiscreteCategory<S>
-where
-    S::Elem: Clone,
-{
+impl<S: FinSet> FinGraph for DiscreteCategory<S> {
     fn edges(&self) -> impl Iterator<Item = Self::E> {
         self.0.iter()
     }
@@ -254,10 +242,7 @@ where
     }
 }
 
-impl<S: FinSet> FgCategory for DiscreteCategory<S>
-where
-    S::Elem: Clone,
-{
+impl<S: FinSet> FgCategory for DiscreteCategory<S> {
     type ObGen = S::Elem;
     type MorGen = S::Elem;
 

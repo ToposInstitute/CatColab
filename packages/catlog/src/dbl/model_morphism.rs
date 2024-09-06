@@ -37,16 +37,16 @@ of a double theory without specified domain or codomain models.
  */
 pub trait DblModelMapping {
     /// Type of objects in the domain model.
-    type DomOb: Eq;
+    type DomOb: Eq + Clone;
 
     /// Type of morphisms in the domain model.
-    type DomMor: Eq;
+    type DomMor: Eq + Clone;
 
     /// Type of objects in the codomain model.
-    type CodOb: Eq;
+    type CodOb: Eq + Clone;
 
     /// Type of morphisms in the codomain model.
-    type CodMor: Eq;
+    type CodMor: Eq + Clone;
 
     /// Applies the mapping to an object in the domain model.
     fn apply_ob(&self, x: &Self::DomOb) -> Option<Self::CodOb>;

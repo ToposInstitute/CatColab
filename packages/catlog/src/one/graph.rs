@@ -476,16 +476,16 @@ a pair of graphs with a compatible graph mapping.
  */
 pub trait GraphMapping {
     /// Type of vertices in domain graph.
-    type DomV: Eq;
+    type DomV: Eq + Clone;
 
     /// Type of edges in domain graph.
-    type DomE: Eq;
+    type DomE: Eq + Clone;
 
     /// Type of vertices in codomain graph.
-    type CodV: Eq;
+    type CodV: Eq + Clone;
 
     /// Type of edges in codomain graph.
-    type CodE: Eq;
+    type CodE: Eq + Clone;
 
     /// Applies the graph mapping at a vertex.
     fn apply_vertex(&self, v: &Self::DomV) -> Option<&Self::CodV>;

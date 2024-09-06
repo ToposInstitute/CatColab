@@ -22,8 +22,9 @@ to be finite.
 pub trait Set {
     /** Type of elements of the set.
 
-    Elements can be compared for equality and, following the spirit of category
-    theory, that is the *only* thing that can be done with elements.
+    Elements can be compared for equality, as required by ordinary mathematics.
+    Elements can also be cloned and, in practice, we tend to assume that they
+    can be *cheaply* cloned.
     */
     type Elem: Eq + Clone;
 
