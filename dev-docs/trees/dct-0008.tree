@@ -32,34 +32,43 @@ called the \define{unit} and \define{counit}, satisfying the equations #{\eta
 
 \transclude{thy-0008}
 
-\p{Some care is required in interpreting this theory since a lax functor that is
-not normal does not preserve companions (though it does preserve restrictions).
-We give two different proofs of the following theorem since each is instructive
-in its own way.}
+\p{Some care is required in interpreting this theory since a non-normal lax
+functor does not preserve companions (though it does preserve restrictions). We
+give two different proofs of the following theorem since each is instructive in
+its own way. First we record a lemma.}
+
+\subtree{
+\title{Image of counit under lax functor}
+\taxon{lemma}
+
+\p{Let #{\varepsilon} be the counit cell for a companion or conjoint pair in a
+double category \dbl{D}, and let \dbl{E} be an equipment. Then for any lax
+functor #{F: \dbl{D} \to \dbl{E}}, the cell #{F(\varepsilon)} is a restriction
+cell in \dbl{E}.}
+
+\proof{Though \dbl{D} is not assumed to be an equipment, i.e., to have all
+restrictions, the proof of ([Shulman 2008](shulman-2008), Proposition 6.4) still
+goes through to establish this result.}
+
+}
 
 \subtree{
 \title{Models of the theory of companion pairs}
 \taxon{theorem}
 
-\p{For any double category \dbl{S}, a model of the theory of companion pairs in
+\p{For any equipment \dbl{S}, a model of the theory of companion pairs in
 \dbl{S} is precisely a functor internal to \dbl{S} along with a restriction of
-the codomain's hom-proarrow along the functor's object map.
-
-}
+the codomain's hom-proarrow along the functor's object map.}
 
 \proof{
 \p{Let #{\dbl{T}} be the theory of companion pairs and let #{F: \dbl{T} \to
-\dbl{S}} be a model of the theory, namely a lax double functor.}
-
-\p{By the characterization of companions in terms of restriction cells ([Shulman
-2008](shulman-2008), Theorem 4.1), the counit cell #{\varepsilon} is a
-restriction cell in \dbl{T}, so as any lax functor preserves restrictions
-([Shulman 2008](shulman-2008), Proposition 6.2), the image #{F(\varepsilon)} is
-a restriction cell in \dbl{S}. Thus, the proarrow #{F(f_!): Fx \proto Fy} is a
-restriction of the proarrow #{F\id_y: Fy \proto Fy} along #{Ff: Fx \to Fy} on
-the right. Moreover, the equation #{F\eta \cdot F\varepsilon = F\id_f} along
-with the universal property of #{F\varepsilon} as a restriction cell shows that
-#{F\eta} is uniquely determined by #{F\id_f}.}
+\dbl{S}} be a model of the theory in #{\dbl{S}}, which is just a lax double
+functor. By the lemma above, the image #{F(\varepsilon)} of the counit
+#{\varepsilon} is a restriction cell in \dbl{S}. That is, the proarrow #{F(f_!):
+Fx \proto Fy} is a restriction of the proarrow #{F\id_y: Fy \proto Fy} along
+#{Ff: Fx \to Fy} on the right. Moreover, the equation #{F\eta \cdot F\varepsilon
+= F\id_f} along with the universal property of #{F\varepsilon} as a restriction
+cell shows that #{F\eta} is uniquely determined by #{F\id_f}.}
 
 \p{It remains to check that the composition comparisons for #{f_!} are uniquely
 determined by the other data. First, by the naturality of the laxators and the
@@ -108,8 +117,8 @@ equation #{\eta \odot \varepsilon = 1_{f_!}}, we have
 }
 
 and thus the laxator #{F_{x,f_!}} is determined by #{F_{f_!,y}}. But the laxator
-#{F_{f_!,y}} is itself determined by #{F_{y,y}} by the universal property of the
-restriction cell #{F\varepsilon} and the equation:
+#{F_{f_!,y}} is itself determined by #{F_{y,y}} via the universal property of
+the restriction cell #{F\varepsilon} and the equation:
 
 \centerfigs{
 \quiverinline{
@@ -152,6 +161,18 @@ restriction cell #{F\varepsilon} and the equation:
 \end{tikzcd}}
 }
 }
-
 }
+
+\proof{
+\p{We can give a shorter proof under the additional hypothesis that \dbl{S} is
+an equipment with local coequalizers, such as when #{\dbl{S} = \Span}. In this
+case, we can form the double category #{\Mod(\dbl{S})}. Then given a lax functor
+#{F: \dbl{T} \to \dbl{S}}, there is a unique \em{unitary} lax functor #{\bar F:
+\dbl{T} \to \Mod(\dbl{S})} such that #{\Ob \circ \bar F = F} ([Lambert &
+Patterson 2024](cartesian-double-theories-2024), Proposition 5.6). Since any
+unitary (or normal) lax functor preserves companions, the images #{\bar F(\eta)}
+and #{\bar F(\varepsilon)} are the unit and counit for a companion pair in
+#{\Mod(\dbl{S})}.}
+}
+
 }
