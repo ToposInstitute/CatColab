@@ -264,7 +264,7 @@ where
                     if f_type != ff_type {
                         errs.push(InvalidDblModelMorphism::MorType(f.clone().into()))
                     }
-                    return errs;
+                    errs
                 }
             }
         });
