@@ -40,8 +40,8 @@ pub fn positive_feedback(th: Arc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel
     let (x, y) = (ustr("x"), ustr("y"));
     model.add_ob(x, ustr("Object"));
     model.add_ob(y, ustr("Object"));
-    model.add_mor(ustr("positive"), x, y, FinMor::Id(ustr("Object")));
-    model.add_mor(ustr("positive"), y, x, FinMor::Id(ustr("Object")));
+    model.add_mor(ustr("positive1"), x, y, FinMor::Id(ustr("Object")));
+    model.add_mor(ustr("positive2"), y, x, FinMor::Id(ustr("Object")));
     model
 }
 
