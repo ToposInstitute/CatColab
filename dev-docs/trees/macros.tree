@@ -63,6 +63,8 @@
 \def\cat[name]{#{\mathsf{\name}}}
 \def\Set{#{\mathsf{Set}}}
 
+\def\Disc{#{\mathop{\mathrm{Disc}}}}
+
 % 2-category theory
 
 \def\Cat{#{\mathbf{Cat}}}
