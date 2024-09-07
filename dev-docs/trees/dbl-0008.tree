@@ -1,6 +1,0 @@
-\title{Discrete object}
-\taxon{definition}
-\import{macros}
-
-\p{An object #{x} in a 2-category #{\mathcal{K}} is \define{discrete} if for any
-object #{y}, the hom-category #{\mathcal{K}(y,x)} is a discrete category.}
