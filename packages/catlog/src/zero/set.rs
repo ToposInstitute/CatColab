@@ -22,10 +22,11 @@ to be finite.
 pub trait Set {
     /** Type of elements of the set.
 
-    Elements can be compared for equality and, following the spirit of category
-    theory, that is the *only* thing that can be done with elements.
+    Elements can be compared for equality, as required by ordinary mathematics.
+    Elements can also be cloned and, in practice, we tend to assume that they
+    can be *cheaply* cloned.
     */
-    type Elem: Eq;
+    type Elem: Eq + Clone;
 
     /// Does the set contain the element `x`?
     fn contains(&self, x: &Self::Elem) -> bool;
@@ -152,7 +153,7 @@ where
 
 impl<T, S> Set for HashFinSet<T, S>
 where
-    T: Eq + Hash,
+    T: Eq + Clone + Hash,
     S: BuildHasher,
 {
     type Elem = T;

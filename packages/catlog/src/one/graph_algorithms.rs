@@ -29,8 +29,8 @@ pub fn simple_paths<'a, G>(
 ) -> impl Iterator<Item = Path<G::V, G::E>> + 'a
 where
     G: FinGraph,
-    G::V: Clone + Hash,
-    G::E: Clone + Hash,
+    G::V: Hash,
+    G::E: Hash,
 {
     // The current path.
     let mut path: Vec<G::E> = Vec::new();
@@ -91,7 +91,7 @@ targets (while still always being greater than them).
 pub fn spec_order_all<G>(graph: &G) -> Vec<GraphElem<G::V, G::E>>
 where
     G: FinGraph,
-    G::V: Clone + Hash,
+    G::V: Hash,
 {
     spec_order(graph, graph.vertices())
 }
@@ -104,7 +104,7 @@ search starts only from the given vertices.
 pub fn spec_order<G>(graph: &G, vertices: impl Iterator<Item = G::V>) -> Vec<GraphElem<G::V, G::E>>
 where
     G: FinGraph,
-    G::V: Clone + Hash,
+    G::V: Hash,
 {
     let mut result = Vec::new();
     let mut queue = VecDeque::new();

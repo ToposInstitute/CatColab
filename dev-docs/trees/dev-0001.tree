@@ -13,9 +13,11 @@
 \subtree{
 \title{Mathematics}
 
+\p{Doctrines whose free objects have a systems interpretation:}
+
 \table{
   \tr{\th{Doctrine} \th{Free objects} \th{Systems interpretation}}
-  \tr{\td{[[dct-0001]]} \td{Graphs} \td{...}}
+  \tr{\td{[[dct-0001]]} \td{Graphs} \td{[numerous]}}
   \tr{\td{[[dct-0006]]} \td{Bridges between graphs} \td{Database schemas}}
   \tr{\td{[[dct-0002]]} \td{Signed graphs} \td{Regulatory networks/causal loop diagrams}}
   \tr{\td{[[dct-0007]]} \td{Nullable signed graphs} \td{Flavors of system maps}}
@@ -24,7 +26,11 @@
   \tr{\td{[[dct-0004]]} \td{Sets} \td{Labels}}
   \tr{\td{[[dct-0005]]} \td{Deterministic transition systems, aka semiautomata} \td{State diagrams}}
 }
-\p{Background: [[dbl-0001]]}
+
+\ul{
+\li{Additional doctrines: [[dct-0008]], [[dct-0009]]}
+\li{Mathematical background: [[dbl-0001]]}
+}
 }
 
 \subtree{

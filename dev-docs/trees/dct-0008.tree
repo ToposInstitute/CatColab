@@ -1,0 +1,182 @@
+\title{Companions}
+\taxon{doctrine}
+\import{macros}
+
+\definition{Companion}{
+
+A \define{companion} of an arrow #{f: x \to y} in a double category is a
+proarrow #{f_!: x \proto y} along with a pair of cells
+
+\quiver{
+% https://q.uiver.app/#q=WzAsOCxbMCwwLCJ4Il0sWzEsMCwieCJdLFsxLDEsInkiXSxbMCwxLCJ4Il0sWzMsMCwieCJdLFs0LDAsInkiXSxbMywxLCJ5Il0sWzQsMSwieSJdLFswLDEsIiIsMCx7ImxldmVsIjoyLCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFswLDMsIiIsMix7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzEsMiwiZiJdLFszLDIsImZfISIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFs0LDYsImYiLDJdLFs0LDUsImZfISIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFs1LDcsIiIsMCx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzYsNywiIiwyLHsibGV2ZWwiOjIsInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzgsMTEsIlxcZXRhIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzEzLDE1LCJcXHZhcmVwc2lsb24iLDEseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
+\begin{tikzcd}
+	x & x && x & y \\
+	x & y && y & y
+	\arrow[""{name=0, anchor=center, inner sep=0}, "\shortmid"{marking}, Rightarrow, no head, from=1-1, to=1-2]
+	\arrow[Rightarrow, no head, from=1-1, to=2-1]
+	\arrow["f", from=1-2, to=2-2]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "{f_!}", "\shortmid"{marking}, from=1-4, to=1-5]
+	\arrow["f"', from=1-4, to=2-4]
+	\arrow[Rightarrow, no head, from=1-5, to=2-5]
+	\arrow[""{name=2, anchor=center, inner sep=0}, "{f_!}"', "\shortmid"{marking}, from=2-1, to=2-2]
+	\arrow[""{name=3, anchor=center, inner sep=0}, "\shortmid"{marking}, Rightarrow, no head, from=2-4, to=2-5]
+	\arrow["\eta"{description}, draw=none, from=0, to=2]
+	\arrow["\varepsilon"{description}, draw=none, from=1, to=3]
+\end{tikzcd}
+}
+
+called the \define{unit} and \define{counit}, satisfying the equations #{\eta
+\cdot \varepsilon = \id_f} and #{\eta \odot \varepsilon = 1_{f_!}}.
+
+}
+
+\p{The corresponding double theory is not too interesting its own right but it
+is a useful building block for other theories.}
+
+\transclude{thy-0008}
+
+\p{Some care is required in interpreting this theory since a non-normal lax
+functor does not preserve companions (though it does preserve restrictions). We
+give two different proofs of the following theorem since each is instructive in
+its own way. First we record a lemma.}
+
+\subtree{
+\title{Image of counit under lax functor}
+\taxon{lemma}
+
+\p{Let #{\varepsilon} be the counit cell for a companion or [conjoint](dct-0009)
+pair in a double category \dbl{D}, and let \dbl{E} be an equipment. Then for any
+lax functor #{F: \dbl{D} \to \dbl{E}}, the cell #{F(\varepsilon)} is a
+restriction cell in \dbl{E}.}
+
+\proof{Though \dbl{D} is not assumed to be an equipment, i.e., to have all
+restrictions, the proof of ([Shulman 2008](shulman-2008), Proposition 6.4) still
+goes through to establish this result.}
+
+}
+
+\subtree{
+\title{Models of the theory of companion pairs}
+\taxon{theorem}
+
+\p{A model of the theory of companion pairs in an equipment \dbl{S} consists of
+a functor internal to \dbl{S} together with a restriction (on the left) of the
+codomain's hom-proarrow along the functor's object map.}
+
+\proof{
+\p{Let #{\dbl{T}} be the theory of companion pairs and let #{F: \dbl{T} \to
+\dbl{S}} be a model of the theory in #{\dbl{S}}, which is just a lax double
+functor. By the lemma above, the image #{F(\varepsilon)} of the counit
+#{\varepsilon} is a restriction cell in \dbl{S}. That is, the proarrow #{F(f_!):
+Fx \proto Fy} is a restriction on the left of the proarrow #{F\id_y: Fy \proto
+Fy} along the arrow #{Ff: Fx \to Fy}. Moreover, the equation #{F\eta \cdot
+F\varepsilon = F\id_f} along with the universal property of #{F\varepsilon} as a
+restriction cell shows that #{F\eta} is uniquely determined by #{F\id_f}.}
+
+\p{It remains to check that the composition comparisons for #{f_!} are uniquely
+determined by the other data. First, by the naturality of the laxators and the
+equation #{\eta \odot \varepsilon = 1_{f_!}}, we have
+
+\centerfigs{
+#{F_{x,f_!} \quad=\quad}
+\quiverinline{
+% https://q.uiver.app/#q=WzAsNyxbMCwwLCJGeCJdLFsxLDAsIkZ4Il0sWzIsMCwiRnkiXSxbMCwyLCJGeCJdLFsyLDIsIkZ5Il0sWzAsMSwiRngiXSxbMiwxLCJGeSJdLFswLDEsIkZcXG1hdGhybXtpZH1feCIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsxLDIsIkZmXyEiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMyw0LCJGIGZfISIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFs1LDYsIkYgZl8hIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzYsNCwiIiwxLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNSwzLCIiLDEseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFswLDUsIiIsMSx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzIsNiwiIiwxLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMTAsOSwiRihcXGV0YSBcXG9kb3QgXFx2YXJlcHNpbG9uKSIsMSx7ImxhYmVsX3Bvc2l0aW9uIjo2MCwic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzEsMTAsIkZfe3gsZl8hfSIsMSx7InNob3J0ZW4iOnsidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dXQ==
+\begin{tikzcd}
+	Fx & Fx & Fy \\
+	Fx && Fy \\
+	Fx && Fy
+	\arrow["{F\mathrm{id}_x}", "\shortmid"{marking}, from=1-1, to=1-2]
+	\arrow[Rightarrow, no head, from=1-1, to=2-1]
+	\arrow["{Ff_!}", "\shortmid"{marking}, from=1-2, to=1-3]
+	\arrow[Rightarrow, no head, from=1-3, to=2-3]
+	\arrow[""{name=0, anchor=center, inner sep=0}, "{F f_!}"', "\shortmid"{marking}, from=2-1, to=2-3]
+	\arrow[Rightarrow, no head, from=2-1, to=3-1]
+	\arrow[Rightarrow, no head, from=2-3, to=3-3]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "{F f_!}"', "\shortmid"{marking}, from=3-1, to=3-3]
+	\arrow["{F_{x,f_!}}"{description}, draw=none, from=1-2, to=0]
+	\arrow["{F(\eta \odot \varepsilon)}"{description, pos=0.6}, draw=none, from=0, to=1]
+\end{tikzcd}}
+#{\quad=\quad}
+\quiverinline{
+% https://q.uiver.app/#q=WzAsOCxbMCwwLCJGeCJdLFsxLDAsIkZ4Il0sWzIsMCwiRnkiXSxbMCwxLCJGeCJdLFsxLDEsIkZ5Il0sWzIsMSwiRnkiXSxbMCwyLCJGeCJdLFsyLDIsIkZ5Il0sWzAsMSwiRlxcbWF0aHJte2lkfV94IiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzEsMiwiRmZfISIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFszLDQsIkZmXyEiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMCwzLCIiLDIseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxLDQsIkZmIiwxXSxbNCw1LCJGXFxtYXRocm17aWR9X3kiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMiw1LCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFszLDYsIiIsMSx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzUsNywiIiwxLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNiw3LCJGIGZfISIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFs4LDEwLCJGXFxldGEiLDEseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbOSwxMywiRlxcdmFyZXBzaWxvbiIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs0LDE3LCJGX3tmXyEseX0iLDEseyJzaG9ydGVuIjp7InRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
+\begin{tikzcd}
+	Fx & Fx & Fy \\
+	Fx & Fy & Fy \\
+	Fx && Fy
+	\arrow[""{name=0, anchor=center, inner sep=0}, "{F\mathrm{id}_x}", "\shortmid"{marking}, from=1-1, to=1-2]
+	\arrow[Rightarrow, no head, from=1-1, to=2-1]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "{Ff_!}", "\shortmid"{marking}, from=1-2, to=1-3]
+	\arrow["Ff"{description}, from=1-2, to=2-2]
+	\arrow[Rightarrow, no head, from=1-3, to=2-3]
+	\arrow[""{name=2, anchor=center, inner sep=0}, "{Ff_!}"', "\shortmid"{marking}, from=2-1, to=2-2]
+	\arrow[Rightarrow, no head, from=2-1, to=3-1]
+	\arrow[""{name=3, anchor=center, inner sep=0}, "{F\mathrm{id}_y}"', "\shortmid"{marking}, from=2-2, to=2-3]
+	\arrow[Rightarrow, no head, from=2-3, to=3-3]
+	\arrow[""{name=4, anchor=center, inner sep=0}, "{F f_!}"', "\shortmid"{marking}, from=3-1, to=3-3]
+	\arrow["{F\eta}"{description}, draw=none, from=0, to=2]
+	\arrow["{F\varepsilon}"{description}, draw=none, from=1, to=3]
+	\arrow["{F_{f_!,y}}"{description}, draw=none, from=2-2, to=4]
+\end{tikzcd}}
+}
+
+and thus the laxator #{F_{x,f_!}} is determined by #{F_{f_!,y}}. But the laxator
+#{F_{f_!,y}} is itself determined by #{F_{y,y}} via the universal property of
+the restriction cell #{F\varepsilon} and the equation:
+
+\centerfigs{
+\quiverinline{
+% https://q.uiver.app/#q=WzAsNyxbMCwwLCJGeCJdLFsxLDAsIkZ5Il0sWzIsMCwiRnkiXSxbMCwxLCJGeCJdLFsyLDEsIkZ5Il0sWzAsMiwiRnkiXSxbMiwyLCJGeSJdLFswLDEsIkZmXyEiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMSwyLCJGXFxtYXRocm17aWR9X3kiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMCwzLCIiLDIseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsyLDQsIiIsMCx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzMsNCwiRiBmXyEiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMyw1LCJGZiIsMl0sWzQsNiwiIiwyLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNSw2LCJGXFxtYXRocm17aWR9X3kiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMSwxMSwiRl97Zl8hLHl9IiwxLHsic2hvcnRlbiI6eyJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzExLDE0LCJGXFx2YXJlcHNpbG9uIiwxLHsibGFiZWxfcG9zaXRpb24iOjYwLCJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
+\begin{tikzcd}
+	Fx & Fy & Fy \\
+	Fx && Fy \\
+	Fy && Fy
+	\arrow["{Ff_!}", "\shortmid"{marking}, from=1-1, to=1-2]
+	\arrow[Rightarrow, no head, from=1-1, to=2-1]
+	\arrow["{F\mathrm{id}_y}", "\shortmid"{marking}, from=1-2, to=1-3]
+	\arrow[Rightarrow, no head, from=1-3, to=2-3]
+	\arrow[""{name=0, anchor=center, inner sep=0}, "{F f_!}"', "\shortmid"{marking}, from=2-1, to=2-3]
+	\arrow["Ff"', from=2-1, to=3-1]
+	\arrow[Rightarrow, no head, from=2-3, to=3-3]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "{F\mathrm{id}_y}"', "\shortmid"{marking}, from=3-1, to=3-3]
+	\arrow["{F_{f_!,y}}"{description}, draw=none, from=1-2, to=0]
+	\arrow["{F\varepsilon}"{description, pos=0.6}, draw=none, from=0, to=1]
+\end{tikzcd}}
+#{\quad=\quad}
+\quiverinline{
+% https://q.uiver.app/#q=WzAsOCxbMCwwLCJGeCJdLFsxLDAsIkZ5Il0sWzIsMCwiRnkiXSxbMCwyLCJGeSJdLFsyLDIsIkZ5Il0sWzAsMSwiRnkiXSxbMSwxLCJGeSJdLFsyLDEsIkZ5Il0sWzAsMSwiRmZfISIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsxLDIsIkZcXG1hdGhybXtpZH1feSIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFszLDQsIkZcXG1hdGhybXtpZH1feSIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFswLDUsIkZmIiwyXSxbMSw2LCIiLDIseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsyLDcsIiIsMCx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzYsNywiRlxcbWF0aHJte2lkfV95IiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzUsNiwiRiBcXG1hdGhybXtpZH1feSIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFs1LDMsIiIsMix7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzcsNCwiIiwyLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbOSwxNCwiRiBcXG1hdGhybXtpZH1fezFfeX0iLDEseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNiwxMCwiRl97eSx5fSIsMSx7InNob3J0ZW4iOnsidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs4LDE1LCJGXFx2YXJlcHNpbG9uIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV1d
+\begin{tikzcd}
+	Fx & Fy & Fy \\
+	Fy & Fy & Fy \\
+	Fy && Fy
+	\arrow[""{name=0, anchor=center, inner sep=0}, "{Ff_!}", "\shortmid"{marking}, from=1-1, to=1-2]
+	\arrow["Ff"', from=1-1, to=2-1]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "{F\mathrm{id}_y}", "\shortmid"{marking}, from=1-2, to=1-3]
+	\arrow[Rightarrow, no head, from=1-2, to=2-2]
+	\arrow[Rightarrow, no head, from=1-3, to=2-3]
+	\arrow[""{name=2, anchor=center, inner sep=0}, "{F \mathrm{id}_y}"', "\shortmid"{marking}, from=2-1, to=2-2]
+	\arrow[Rightarrow, no head, from=2-1, to=3-1]
+	\arrow[""{name=3, anchor=center, inner sep=0}, "{F\mathrm{id}_y}"', "\shortmid"{marking}, from=2-2, to=2-3]
+	\arrow[Rightarrow, no head, from=2-3, to=3-3]
+	\arrow[""{name=4, anchor=center, inner sep=0}, "{F\mathrm{id}_y}"', "\shortmid"{marking}, from=3-1, to=3-3]
+	\arrow["{F\varepsilon}"{description}, draw=none, from=0, to=2]
+	\arrow["{F \mathrm{id}_{1_y}}"{description}, draw=none, from=1, to=3]
+	\arrow["{F_{y,y}}"{description}, draw=none, from=2-2, to=4]
+\end{tikzcd}}
+}
+}
+}
+
+\proof{
+\p{We can give a shorter proof under the additional hypothesis that \dbl{S} is
+an equipment with local coequalizers, such as when #{\dbl{S} = \Span}. In this
+case, we can form the double category #{\Mod(\dbl{S})}. Then given a lax functor
+#{F: \dbl{T} \to \dbl{S}}, there is a unique \em{unitary} lax functor #{\bar F:
+\dbl{T} \to \Mod(\dbl{S})} such that #{\Ob \circ \bar F = F} ([Lambert &
+Patterson 2024](cartesian-double-theories-2024), Proposition 5.6). Since any
+unitary (or normal) lax functor preserves companions, the images #{\bar F(\eta)}
+and #{\bar{F}(\varepsilon)} are the unit and counit for a companion pair in
+#{\Mod(\dbl{S})} and hence #{F(\varepsilon) = \Ob \bar{F}(\varepsilon)} is the
+restriction of the hom-proarrow.}
+}
+
+}
