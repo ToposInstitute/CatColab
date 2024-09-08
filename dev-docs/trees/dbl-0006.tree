@@ -20,5 +20,5 @@ is the left adjoint to the forgetful functor
 where #{\varepsilon_{\dbl{T_0}}: \dbl{T}_{00} \hookrightarrow \dbl{T}_0} is the
 counit of the adjunction #{\Disc: \Set \rightleftarrows \cat{Cat}: \Ob}.}
 
-\p{A \define{discrete model} of \dbl{T} is a model of \dbl{T} in the image of
-the discrete model functor.}
+\p{A \define{discrete model} of a simple double theory \dbl{T} is a model of
+\dbl{T} in the image of the discrete model functor.}

@@ -1,4 +1,25 @@
 \title{Discrete model of a double Lawvere theory}
 \taxon{definition}
+\import{macros}
 
-\p{\strong{TODO}}
+\p{Let \dbl{T} be a [double Lawvere theory](dbl-0008) with object sorts
+#{\Lambda_0}.
+
+The \define{discrete model functor}
+
+##{
+\Disc: \cat{Fun}(\Lambda_0, \Set) \to \cat{fpLax}(\dbl{T}, \Span)
+}
+
+is the left adjoint to the forgetful functor
+
+##{
+\cat{fpLax}(\dbl{T}, \Span) \xto{(-)_0}
+\cat{fpFun}(\dbl{T}_0, \Set) \to
+\cat{Fun}(\Lambda_0, \Set).
+}
+
+}
+
+\p{A \define{discrete model} of a double Lawvere theory \dbl{T} is a model of
+\dbl{T} in the image of the discrete model functor.}

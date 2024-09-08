@@ -1,0 +1,13 @@
+\title{Multisorted double Lawvere theory}
+\taxon{definition}
+\import{macros}
+
+\p{Given a set #{\Lambda_0}, a \define{double Lawvere theory with object sorts
+#{\Lambda_0}} is a finite-product double theory \dbl{T} equipped with an
+identity-on-objects, finite-product preserving functor
+
+##{
+i_0: \FinFam^*(\Lambda_0) \to \dbl{T}_0.
+}
+
+}

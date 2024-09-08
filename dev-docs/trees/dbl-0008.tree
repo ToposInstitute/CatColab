@@ -7,3 +7,15 @@ precisely in a couple of ways; here is [Todd Trimble's
 definition](https://ncatlab.org/toddtrimble/published/multisorted+Lawvere+theories).}
 
 \transclude{dbl-0009}
+
+\p{Just as a [finite-product double theory](double-products-2024) is a
+categorification of a finite-product theory, so should a "double Lawvere theory"
+be a categorification of a Lawvere theory. Since we think of a double theory as
+having both object types (its objects) and morphism types (its proarrows), a
+multisorted double Lawvere theory ought to have both \em{object sorts} and
+\em{morphism sorts}. But stating this definition is more complicated than simply
+replacing the family construction with the double family construction, because
+the source or target of a morphism sort must be a finite family of object sorts
+rather than a single sort. For now we make the following incomplete definition.}
+
+\transclude{dbl-000A}
