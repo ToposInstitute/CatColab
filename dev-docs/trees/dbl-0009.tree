@@ -1,0 +1,13 @@
+\title{Multisorted Lawvere theory}
+\taxon{definition}
+\import{macros}
+
+\p{Given a set #{\Lambda}, a \define{Lawvere theory with sorts #{\Lambda}} is a
+category #{\cat{T}} with finite products equipped with an identity-on-objects,
+finite-product preserving functor
+
+##{
+i: \FinFam^*(\Lambda) \to \cat{T}.
+}
+
+}

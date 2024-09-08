@@ -1,0 +1,9 @@
+\title{Double Lawvere theories}
+\import{macros}
+
+\p{A multisorted \nlab{Lawvere theory} is a finite-product theory with a
+distinguished set of generating objects/types. This idea can be formulated
+precisely in a couple of ways; here is [Todd Trimble's
+definition](https://ncatlab.org/toddtrimble/published/multisorted+Lawvere+theories).}
+
+\transclude{dbl-0009}

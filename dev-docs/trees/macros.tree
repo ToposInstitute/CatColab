@@ -62,6 +62,8 @@
 
 \def\cat[name]{#{\mathsf{\name}}}
 \def\Set{#{\mathsf{Set}}}
+\def\Fam{#{\mathsf{Fam}}}
+\def\FinFam{#{\mathsf{FinFam}}}
 
 \def\Disc{#{\mathop{\mathrm{Disc}}}}
 
