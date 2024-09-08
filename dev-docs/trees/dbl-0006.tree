@@ -13,12 +13,12 @@ is the left adjoint to the forgetful functor
 
 ##{
     \cat{Lax}(\dbl{T}, \Span) \xto{(-)_0}
-    \cat{Fun}(\dbl{T}_0, \Set) \xto{\varepsilon^*}
+    \cat{Fun}(\dbl{T}_0, \Set) \xto{\varepsilon_{\dbl{T_0}}^*}
     \cat{Fun}(\dbl{T}_{00}, \Set),
 }
 
-where #{\varepsilon: \dbl{T}_{00} \hookrightarrow \dbl{T}_0} is the counit of
-the adjunction #{\Disc: \Set \rightleftarrows \cat{Cat}: \Ob} at #{\dbl{T}_0}.}
+where #{\varepsilon_{\dbl{T_0}}: \dbl{T}_{00} \hookrightarrow \dbl{T}_0} is the
+counit of the adjunction #{\Disc: \Set \rightleftarrows \cat{Cat}: \Ob}.}
 
 \p{A \define{discrete model} of \dbl{T} is a model of \dbl{T} in the image of
 the discrete model functor.}
