@@ -1,16 +1,13 @@
-\title{Discrete models of 2-theories}
-\taxon{conjecture}
+\title{Multisorted Lawvere theory}
+\taxon{definition}
 \import{macros}
 
-\p{
-Let #{M} be a model of a double theory with no nontrivial proarrows, i.e., a
-2-theory. Then the following are equivalent:
+\p{Given a set #{\Lambda}, a \define{Lawvere theory with sorts #{\Lambda}} is a
+category #{\cat{T}} with finite products equipped with an identity-on-objects,
+finite-product preserving functor
 
-\ul{
-\li{#{M} is a discrete model}
-\li{#{M} is a discrete object in the 2-category of
-models, natural transformations, and modulations}
-\li{As a lax functor, #{M} is normal}
+##{
+i: \FinFam^*(\Lambda) \to \cat{T}.
 }
 
 }

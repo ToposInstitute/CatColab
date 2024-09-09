@@ -1,28 +1,25 @@
-\title{Discrete model}
+\title{Discrete model of a double Lawvere theory}
 \taxon{definition}
 \import{macros}
-\def\Disc{#{\mathop{\mathrm{Disc}}}}
-\def\Fun{#{\cat{Fun}}}
 
-\p{
-Let #{\cat{Lax}(\dbl{D},\dbl{E})} be the category of models of a double theory
-\dbl{D} in \dbl{E}, which are structure-preserving lax functors #{F: \dbl{D} \to
-\dbl{E}}, and natural transformations between them.
+\p{Let \dbl{T} be a [double Lawvere theory](dbl-0008) with object sorts
+#{\Lambda_0}.
 
 The \define{discrete model functor}
-##{
-    \Disc: \Fun(\dbl{D}_0, \dbl{E}_0) \to \cat{Lax}(\dbl{D}, \dbl{E})
-}
-is the left adjoint to the underlying category of objects functor
-##{
-    (-)_0: \begin{aligned}
-      \cat{Lax}(\dbl{D}, \dbl{E}) &\to \Fun(\dbl{D}_0, \dbl{E}_0) \\
-      F &\mapsto F_0 \\
-      \alpha &\mapsto \alpha_0
-    \end{aligned},
-}
-assuming the adjoint exists.
 
-A \define{discrete model} of \dbl{D} in \dbl{E} is a model in the
-image of the discrete model functor.
+##{
+\Disc: \cat{Fun}(\Lambda_0, \Set) \to \cat{fpLax}(\dbl{T}, \Span)
 }
+
+is the left adjoint to the forgetful functor
+
+##{
+\cat{fpLax}(\dbl{T}, \Span) \xto{(-)_0}
+\cat{fpFun}(\dbl{T}_0, \Set) \to
+\cat{Fun}(\Lambda_0, \Set).
+}
+
+}
+
+\p{A \define{discrete model} of a double Lawvere theory \dbl{T} is a model of
+\dbl{T} in the image of the discrete model functor.}
