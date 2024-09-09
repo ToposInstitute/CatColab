@@ -40,6 +40,7 @@ in {
         environment = {
             PORT = port;
             DATABASE_URL_PATH = config.age.secrets.DATABASE_URL.path;
+            NODE_OPTIONS="--import ./instrument.mjs";
         };
 
         serviceConfig = {
@@ -47,6 +48,7 @@ in {
             ExecStart = "${pkgs.nodejs}/bin/node dist/index.js";
             Type="simple";
             WorkingDirectory = "/var/lib/catcolab/packages/backend/";
+            Restart = "on-failure";
         };
     };
 
