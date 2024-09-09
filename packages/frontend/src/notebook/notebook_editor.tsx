@@ -74,6 +74,8 @@ export function NotebookEditor<T>(props: {
 
     // Set up commands and their keyboard shortcuts.
 
+
+    // Adds a new cell after the currently active cell
     const addAfterActiveCell = (cell: Cell<T>) => {
         props.changeNotebook((nb) => {
             nb.cells.splice(activeCell() + 1, 0, cell);
@@ -81,6 +83,7 @@ export function NotebookEditor<T>(props: {
         });
     };
 
+    // Adds a new cell or replaces the active cell based on its type
     const addOrReplaceActiveCell = (cell: Cell<T>) => {
         if (props.notebook.cells.length > 0) {
             const c = props.notebook.cells[activeCell()];
@@ -94,6 +97,7 @@ export function NotebookEditor<T>(props: {
         }
     };
 
+    // Appends a new cell to the end of the notebook
     const appendCell = (cell: Cell<T>) => {
         props.changeNotebook((nb) => {
             nb.cells.push(cell);
@@ -112,6 +116,7 @@ export function NotebookEditor<T>(props: {
             };
         });
 
+    // Replaces the cell at index 'i' with a new cell
     const replaceCellWith = (i: number, cell: Cell<T>) => {
         props.changeNotebook((nb) => {
             nb.cells[i] = cell;
@@ -205,34 +210,64 @@ export function NotebookEditor<T>(props: {
                             activateAbove: () => {
                                 i() > 0 && setActiveCell(i() - 1);
                             },
+                            // activates the cell below the current one
                             activateBelow: () => {
                                 const n = props.notebook.cells.length;
                                 i() < n - 1 && setActiveCell(i() + 1);
                             },
+                            // creates a new cell above the current one 
                             createAbove: () =>
                                 props.changeNotebook((nb) => {
                                     nb.cells.splice(i(), 0, newStemCell());
                                     setActiveCell(i());
                                 }),
+                            // creates a new cell below the current one 
                             createBelow: () =>
                                 props.changeNotebook((nb) => {
                                     nb.cells.splice(i() + 1, 0, newStemCell());
                                     setActiveCell(i() + 1);
                                 }),
+                            // deletes the cell behind the current (selected) one, once it is deleted, the cell behind the selected one is activated
                             deleteBackward: () =>
                                 props.changeNotebook((nb) => {
                                     nb.cells.splice(i(), 1);
                                     setActiveCell(i() - 1);
                                 }),
+                            // deletes the cell in front of the current cell, it then keeps the current cell active
                             deleteForward: () =>
                                 props.changeNotebook((nb) => {
                                     nb.cells.splice(i(), 1);
                                     setActiveCell(i());
                                 }),
+                            // activates current cell
                             hasFocused: () => {
                                 setActiveCell(i());
                             },
+                            // moving cell up 
+                            moveCellUp: () => {
+                                if (props.notebook.cells.length > 0 && i() > 0) {
+                                    props.changeNotebook((nb) => {
+                                        const cellToMoveUp = nb.cells[i()]; // declaring the cell to be moved
+                                        nb.cells.splice(i(), 1); // Remove the original cell
+                                        nb.cells.splice(i() - 1, 0, cellToMoveUp); // Insert the cell above
+                                    });
+                                    setActiveCell(i() - 1); // Set the active cell to the new position
+                                }
+                            },
+                            // moving cell down 
+                            moveCellDown: () => {
+                                if (props.notebook.cells.length > 0 && i() < props.notebook.cells.length - 1) {
+                                    props.changeNotebook((nb) => {
+                                        const cellToMoveDown = nb.cells[i()]; // Declare the cell to be moved
+                                        nb.cells.splice(i(), 1); // Remove the original cell
+                                        nb.cells.splice(i() + 1, 0, cellToMoveDown); // Insert the cell below its original position
+                                    });
+                                    setActiveCell(i() + 1); // Set the active cell to the new position
+                                }
+                            },
+                            //// hamidah's additions (end)
                         };
+
 
                         return (
                             <li>
