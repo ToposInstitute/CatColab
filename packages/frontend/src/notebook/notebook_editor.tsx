@@ -210,6 +210,12 @@ export function NotebookEditor<T>(props: {
                             activateAbove: () => {
                                 i() > 0 && setActiveCell(i() - 1);
                             },
+                            duplicate: () => {
+                                props.changeNotebook((nb) => {
+                                    nb.cells.splice(i() + 1, 0, deepCopyJSON(nb.cells[i()])); // Insert a deep copy of the cell below
+                                    setActiveCell(i() + 1); // Set the active cell to the new position
+                                });
+                            },
                             // activates the cell below the current one
                             activateBelow: () => {
                                 const n = props.notebook.cells.length;
