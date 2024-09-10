@@ -161,7 +161,22 @@ export function NotebookCell(props: {
                     style={{ visibility: visibility(isGutterVisible()) }}
                 >
                     <Plus />
+                    </IconButton>
+
+                    <IconButton
+                    onClick={props.actions.moveCellUp} // Call the action to move the cell up
+                    style={{ visibility: visibility(isGutterVisible()) }}
+                >
+                    <ArrowUp />
                 </IconButton>
+                
+                <IconButton
+                    onClick={props.actions.moveCellDown} // Call the action to move the cell down
+                    style={{ visibility: visibility(isGutterVisible()) }}
+                >
+                    <ArrowDown />
+                </IconButton>
+
                 <Popover
                     open={isMenuOpen()}
                     onOpenChange={setMenuOpen}
@@ -225,7 +240,8 @@ export function RichTextCellEditor(props: {
             exitUp={props.actions.activateAbove}
             exitDown={props.actions.activateBelow}
             onFocus={props.actions.hasFocused}
-            // to add 
+            moveCellDown={props.actions.moveCellDown}
+            moveCellUp={props.actions.moveCellUp}
         />
     );
 }
@@ -259,6 +275,8 @@ export function StemCellEditor(props: {
             deleteForward={props.actions.deleteForward}
             exitUp={props.actions.activateAbove}
             exitDown={props.actions.activateBelow}
+            moveCellDown={props.actions.moveCellDown}
+            moveCellUp={props.actions.moveCellUp}
             onFocus={props.actions.hasFocused}
             placeholder="Select cell type"
         />

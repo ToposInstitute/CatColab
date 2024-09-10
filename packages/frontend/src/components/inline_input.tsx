@@ -24,6 +24,8 @@ export type InlineInputOptions = {
     exitLeft?: () => void;
     exitRight?: () => void;
     onFocus?: () => void;
+    moveCellUp?: () => void; 
+    moveCellDown?: () => void;
 };
 
 /** Error status for `InlineInput` component.
@@ -54,7 +56,13 @@ export function InlineInput(
             props.exitBackward();
         } else if (props.exitForward && evt.key === "Tab" && !evt.shiftKey) {
             props.exitForward();
-        } else if (
+        } else if (props.moveCellDown && evt.key === "Tab" && !evt.shiftKey) {
+                props.moveCellDown();
+        }   
+        else if (props.moveCellUp && evt.key === "Tab" && !evt.shiftKey) {
+            props.moveCellUp();
+        }
+         else if (
             props.exitLeft &&
             evt.key === "ArrowLeft" &&
             evt.currentTarget.selectionEnd === 0
@@ -80,7 +88,8 @@ export function InlineInput(
             }
         } else if (evt.key === "Enter" && !evt.shiftKey) {
             completionsRef()?.selectPresumptive();
-        } else {
+        } 
+        else {
             return;
         }
         evt.preventDefault();

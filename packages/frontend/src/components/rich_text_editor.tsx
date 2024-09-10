@@ -25,7 +25,8 @@ export type RichTextEditorOptions = {
     deleteForward?: () => void;
     exitUp?: () => void;
     exitDown?: () => void;
-
+    moveCellUp?:() => void; 
+    moveCellDown?:() => void;
     onFocus?: () => void;
 };
 
