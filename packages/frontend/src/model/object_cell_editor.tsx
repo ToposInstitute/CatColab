@@ -43,6 +43,8 @@ export function ObjectCellEditor(props: {
                         ob.name = text;
                     });
                 }}
+                moveCellDown={props.actions.moveCellDown}
+                moveCellUp={props.actions.moveCellUp}
                 deleteBackward={props.actions.deleteBackward}
                 deleteForward={props.actions.deleteForward}
                 exitBackward={props.actions.activateAbove}
