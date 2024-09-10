@@ -205,7 +205,7 @@ where
     }
 }
 
-/** A functor between models of double theories defined by a [mapping](DblModelMapping).
+/** A functor between models of a double theory defined by a [mapping](DblModelMapping).
 
 This struct borrows its data to perform validation. The domain and codomain are
 assumed to be valid models of double theories. If that is in question, the
@@ -213,25 +213,33 @@ models should be validated *before* validating this object.
  */
 pub struct DblModelMorphism<'a, Map, Dom, Cod>(pub &'a Map, pub &'a Dom, pub &'a Cod);
 
-impl<'a, Map, Dom, Cod> DblModelMorphism<'a, Map, Dom, Cod>
+/// A morphism between models of a discrete double theory.
+pub type DiscreteDblModelMorphism<'a, DomId, CodId, Cat> = DblModelMorphism<
+    'a,
+    DiscreteDblModelMapping<DomId, CodId>,
+    DiscreteDblModel<DomId, Cat>,
+    DiscreteDblModel<CodId, Cat>,
+>;
+
+impl<'a, DomId, CodId, Cat> DiscreteDblModelMorphism<'a, DomId, CodId, Cat>
 where
-    Map: DblModelMapping,
-    Dom: FgDblModel<Ob = Map::DomOb, Mor = Map::DomMor>,
-    Cod: DblModel<Ob = Map::CodOb, Mor = Map::CodMor, ObType = Dom::ObType, MorType = Dom::MorType>,
+    DomId: Eq + Clone + Hash,
+    CodId: Eq + Clone + Hash,
+    Cat: FgCategory,
+    Cat::Ob: Hash,
+    Cat::Mor: Hash,
 {
     /// Iterates over failures of the mapping to be a double model morphism
-    pub fn iter_invalid(
-        &self,
-    ) -> impl Iterator<Item = InvalidDblModelMorphism<Dom::ObGen, Dom::MorGen>> + 'a {
+    pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidDblModelMorphism<DomId, DomId>> + 'a {
         let DblModelMorphism(mapping, dom, cod) = *self;
         let ob_errors = dom.object_generators().filter_map(|v| {
-            if !mapping.is_ob_assigned(&v.clone().into()) {
+            if !mapping.is_ob_assigned(&v) {
                 Some(InvalidDblModelMorphism::MissingOb(v))
             } else {
-                let f_v = mapping.apply_ob(&v.clone().into()).unwrap();
+                let f_v = mapping.apply_ob(&v).unwrap();
                 if !cod.has_ob(&f_v) {
                     Some(InvalidDblModelMorphism::Ob(v))
-                } else if dom.ob_type(&v.clone().into()) != cod.ob_type(&f_v) {
+                } else if dom.ob_type(&v) != cod.ob_type(&f_v) {
                     Some(InvalidDblModelMorphism::ObType(v))
                 } else {
                     None
@@ -240,16 +248,16 @@ where
         });
 
         let mor_errors = dom.morphism_generators().flat_map(|f| {
-            if !mapping.is_mor_assigned(&f.clone().into()) {
+            if !mapping.is_basic_mor_assigned(&f) {
                 [InvalidDblModelMorphism::MissingMor(f)].to_vec()
             } else {
-                let f_f = mapping.apply_mor(&f.clone().into()).unwrap();
+                let f_f = mapping.apply_basic_mor(&f).unwrap();
                 if !cod.has_mor(&f_f) {
                     [InvalidDblModelMorphism::Mor(f)].to_vec()
                 } else {
-                    let dom_f = mapping.apply_ob(&dom.dom(&f.clone().into()));
-                    let cod_f = mapping.apply_ob(&dom.cod(&f.clone().into()));
-                    let f_type = dom.mor_type(&f.clone().into());
+                    let dom_f = mapping.apply_ob(&dom.morphism_generator_dom(&f));
+                    let cod_f = mapping.apply_ob(&dom.morphism_generator_cod(&f));
+                    let f_type = dom.mor_gen_type(&f);
                     let ff_type = cod.mor_type(&f_f);
 
                     let mut errs = vec![];
@@ -257,10 +265,10 @@ where
                         errs.push(InvalidDblModelMorphism::Dom(f.clone()));
                     }
                     if Some(cod.cod(&f_f)) != cod_f {
-                        errs.push(InvalidDblModelMorphism::Cod(f.clone()))
+                        errs.push(InvalidDblModelMorphism::Cod(f.clone()));
                     }
                     if f_type != ff_type {
-                        errs.push(InvalidDblModelMorphism::MorType(f.clone()))
+                        errs.push(InvalidDblModelMorphism::MorType(f));
                     }
                     errs
                 }
@@ -270,13 +278,15 @@ where
     }
 }
 
-impl<Map, Dom, Cod> Validate for DblModelMorphism<'_, Map, Dom, Cod>
+impl<'a, DomId, CodId, Cat> Validate for DiscreteDblModelMorphism<'a, DomId, CodId, Cat>
 where
-    Map: DblModelMapping,
-    Dom: FgDblModel<Ob = Map::DomOb, Mor = Map::DomMor>,
-    Cod: DblModel<Ob = Map::CodOb, Mor = Map::CodMor, ObType = Dom::ObType, MorType = Dom::MorType>,
+    DomId: Eq + Clone + Hash,
+    CodId: Eq + Clone + Hash,
+    Cat: FgCategory,
+    Cat::Ob: Hash,
+    Cat::Mor: Hash,
 {
-    type ValidationError = InvalidDblModelMorphism<Dom::ObGen, Dom::MorGen>;
+    type ValidationError = InvalidDblModelMorphism<DomId, DomId>;
 
     fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
         validate::wrap_errors(self.iter_invalid())
