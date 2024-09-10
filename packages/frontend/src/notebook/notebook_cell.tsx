@@ -183,6 +183,13 @@ export function NotebookCell(props: {
                     <ArrowDown />
                 </IconButton>
 
+                <IconButton 
+                    onClick={props.actions.duplicateCell}
+                    style={{ visibility: visibility(isGutterVisible()) }}
+                >
+                    < Copy />    
+                </IconButton>
+
                 <Popover
                     open={isMenuOpen()}
                     onOpenChange={setMenuOpen}

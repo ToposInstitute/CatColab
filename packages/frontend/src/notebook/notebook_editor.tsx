@@ -46,6 +46,7 @@ export type CellConstructor<T> = {
 
     // Function to construct the cell.
     construct: () => Cell<T>;
+    
 };
 
 /** Notebook editor based on Automerge.
@@ -210,12 +211,6 @@ export function NotebookEditor<T>(props: {
                             activateAbove: () => {
                                 i() > 0 && setActiveCell(i() - 1);
                             },
-                            duplicateCell: () => {
-                                props.changeNotebook((nb) => {
-                                    nb.cells.splice(i() + 1, 0, deepCopyJSON(nb.cells[i()])); // Insert a deep copy of the cell below
-                                    setActiveCell(i() + 1); // Sets the active cell to the new position
-                                });
-                            },
                             // activates the cell below the current one
                             activateBelow: () => {
                                 const n = props.notebook.cells.length;
@@ -248,6 +243,13 @@ export function NotebookEditor<T>(props: {
                             // activates current cell
                             hasFocused: () => {
                                 setActiveCell(i());
+                            },
+
+                            duplicateCell: () => {
+                                props.changeNotebook((nb) => {
+                                    nb.cells.splice(i() + 1, 0, deepCopyJSON(nb.cells[i()])); // Insert a deep copy of the cell below
+                                    setActiveCell(i() + 1); // Sets the active cell to the new position
+                                });
                             },
                             // moving cell up 
                             moveCellUp: () => {
