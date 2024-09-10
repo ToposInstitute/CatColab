@@ -23,12 +23,12 @@ use std::sync::Arc;
 
 use derivative::Derivative;
 
-use crate::validate::{self, Validate};
 use nonempty::NonEmpty;
 use thiserror::Error;
 
 use crate::one::graph_algorithms::{simple_paths, spec_order};
 use crate::one::*;
+use crate::validate::{self, Validate};
 use crate::zero::{Column, HashColumn, Mapping};
 
 use super::model::{DblModel, DiscreteDblModel, FgDblModel};
@@ -217,24 +217,22 @@ impl<'a, Map, Dom, Cod> DblModelMorphism<'a, Map, Dom, Cod>
 where
     Map: DblModelMapping,
     Dom: FgDblModel<Ob = Map::DomOb, Mor = Map::DomMor>,
-    Dom::ObGen: Clone,
-    Dom::MorGen: Clone,
     Cod: DblModel<Ob = Map::CodOb, Mor = Map::CodMor, ObType = Dom::ObType, MorType = Dom::MorType>,
 {
     /// Iterates over failures of the mapping to be a double model morphism
     pub fn iter_invalid(
         &self,
-    ) -> impl Iterator<Item = InvalidDblModelMorphism<Map::DomOb, Map::DomMor>> + 'a {
+    ) -> impl Iterator<Item = InvalidDblModelMorphism<Dom::ObGen, Dom::MorGen>> + 'a {
         let DblModelMorphism(mapping, dom, cod) = *self;
         let ob_errors = dom.object_generators().filter_map(|v| {
             if !mapping.is_ob_assigned(&v.clone().into()) {
-                Some(InvalidDblModelMorphism::MissingOb(v.into()))
+                Some(InvalidDblModelMorphism::MissingOb(v))
             } else {
                 let f_v = mapping.apply_ob(&v.clone().into()).unwrap();
                 if !cod.has_ob(&f_v) {
-                    Some(InvalidDblModelMorphism::Ob(v.into()))
+                    Some(InvalidDblModelMorphism::Ob(v))
                 } else if dom.ob_type(&v.clone().into()) != cod.ob_type(&f_v) {
-                    Some(InvalidDblModelMorphism::ObType(v.into()))
+                    Some(InvalidDblModelMorphism::ObType(v))
                 } else {
                     None
                 }
@@ -243,11 +241,11 @@ where
 
         let mor_errors = dom.morphism_generators().flat_map(|f| {
             if !mapping.is_mor_assigned(&f.clone().into()) {
-                [InvalidDblModelMorphism::MissingMor(f.into())].to_vec()
+                [InvalidDblModelMorphism::MissingMor(f)].to_vec()
             } else {
                 let f_f = mapping.apply_mor(&f.clone().into()).unwrap();
                 if !cod.has_mor(&f_f) {
-                    [InvalidDblModelMorphism::Mor(f.into())].to_vec()
+                    [InvalidDblModelMorphism::Mor(f)].to_vec()
                 } else {
                     let dom_f = mapping.apply_ob(&dom.dom(&f.clone().into()));
                     let cod_f = mapping.apply_ob(&dom.cod(&f.clone().into()));
@@ -256,13 +254,13 @@ where
 
                     let mut errs = vec![];
                     if Some(cod.dom(&f_f)) != dom_f {
-                        errs.push(InvalidDblModelMorphism::Dom(f.clone().into()));
+                        errs.push(InvalidDblModelMorphism::Dom(f.clone()));
                     }
                     if Some(cod.cod(&f_f)) != cod_f {
-                        errs.push(InvalidDblModelMorphism::Cod(f.clone().into()))
+                        errs.push(InvalidDblModelMorphism::Cod(f.clone()))
                     }
                     if f_type != ff_type {
-                        errs.push(InvalidDblModelMorphism::MorType(f.clone().into()))
+                        errs.push(InvalidDblModelMorphism::MorType(f.clone()))
                     }
                     errs
                 }
@@ -276,11 +274,9 @@ impl<Map, Dom, Cod> Validate for DblModelMorphism<'_, Map, Dom, Cod>
 where
     Map: DblModelMapping,
     Dom: FgDblModel<Ob = Map::DomOb, Mor = Map::DomMor>,
-    Dom::ObGen: Clone,
-    Dom::MorGen: Clone,
     Cod: DblModel<Ob = Map::CodOb, Mor = Map::CodMor, ObType = Dom::ObType, MorType = Dom::MorType>,
 {
-    type ValidationError = InvalidDblModelMorphism<Map::DomOb, Map::DomMor>;
+    type ValidationError = InvalidDblModelMorphism<Dom::ObGen, Dom::MorGen>;
 
     fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
         validate::wrap_errors(self.iter_invalid())
@@ -433,13 +429,15 @@ where
 
 #[cfg(test)]
 mod tests {
-    use ustr::{ustr, Ustr};
 
     use super::*;
+
     use crate::stdlib::*;
     use crate::validate::Validate;
+
     use nonempty::nonempty;
     use std::collections::HashMap;
+    use ustr::ustr;
 
     #[test]
     fn discrete_model_mapping() {
@@ -512,9 +510,8 @@ mod tests {
         // A bad map from h to itself that is wrong for the ob (it is in the map
         // but sent to something that doesn't exist) and for the hom generator
         // (not in the map)
-        let bad_ob_assign: HashMap<ustr::Ustr, Ustr> =
-            [(ustr("x"), ustr("y"))].into_iter().collect();
-        let missing_hom_assign: HashMap<Ustr, Path<Ustr, Ustr>> =
+        let bad_ob_assign: HashMap<_, _> = [(ustr("x"), ustr("y"))].into_iter().collect();
+        let missing_hom_assign: HashMap<_, _> =
             [(ustr("y"), Path::Id(ustr("y")))].into_iter().collect();
         let f = DiscreteDblModelMapping {
             ob_map: bad_ob_assign.into(),
@@ -526,16 +523,15 @@ mod tests {
         assert!(
             errs == vec![
                 InvalidDblModelMorphism::Ob(ustr("x")),
-                InvalidDblModelMorphism::MissingMor(Path::Seq(nonempty![ustr("negative")])),
+                InvalidDblModelMorphism::MissingMor(ustr("negative")),
             ]
         );
 
         // A bad map that doesn't preserve dom
-        let omap: HashMap<ustr::Ustr, Ustr> = [(ustr("x"), ustr("x"))].into_iter().collect();
-        let mmap: HashMap<Ustr, Path<Ustr, Ustr>> =
-            [(ustr("negative"), Path::Seq(nonempty![ustr("positive1")]))]
-                .into_iter()
-                .collect();
+        let omap: HashMap<_, _> = [(ustr("x"), ustr("x"))].into_iter().collect();
+        let mmap: HashMap<_, _> = [(ustr("negative"), Path::Seq(nonempty![ustr("positive1")]))]
+            .into_iter()
+            .collect();
         let f = DiscreteDblModelMapping {
             ob_map: omap.into(),
             mor_map: mmap.into(),
@@ -544,17 +540,16 @@ mod tests {
         let errs: Vec<InvalidDblModelMorphism<_, _>> = dmm.iter_invalid().collect();
         assert!(
             errs == vec![
-                InvalidDblModelMorphism::Cod(Path::Seq(nonempty![ustr("negative")])),
-                InvalidDblModelMorphism::MorType(Path::Seq(nonempty![ustr("negative")])),
+                InvalidDblModelMorphism::Cod(ustr("negative")),
+                InvalidDblModelMorphism::MorType(ustr("negative")),
             ]
         );
 
         // A bad map that doesn't preserve codom
-        let omap: HashMap<ustr::Ustr, Ustr> = [(ustr("x"), ustr("x"))].into_iter().collect();
-        let mmap: HashMap<Ustr, Path<Ustr, Ustr>> =
-            [(ustr("negative"), Path::Seq(nonempty![ustr("positive2")]))]
-                .into_iter()
-                .collect();
+        let omap: HashMap<_, _> = [(ustr("x"), ustr("x"))].into_iter().collect();
+        let mmap: HashMap<_, _> = [(ustr("negative"), Path::Seq(nonempty![ustr("positive2")]))]
+            .into_iter()
+            .collect();
         let f = DiscreteDblModelMapping {
             ob_map: omap.into(),
             mor_map: mmap.into(),
@@ -563,8 +558,8 @@ mod tests {
         let errs: Vec<InvalidDblModelMorphism<_, _>> = dmm.iter_invalid().collect();
         assert!(
             errs == vec![
-                InvalidDblModelMorphism::Dom(Path::Seq(nonempty![ustr("negative")])),
-                InvalidDblModelMorphism::MorType(Path::Seq(nonempty![ustr("negative")])),
+                InvalidDblModelMorphism::Dom(ustr("negative")),
+                InvalidDblModelMorphism::MorType(ustr("negative")),
             ]
         );
     }
