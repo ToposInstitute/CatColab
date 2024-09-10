@@ -233,10 +233,7 @@ where
     pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidDblModelMorphism<DomId, DomId>> + 'a {
         let DblModelMorphism(mapping, dom, cod) = *self;
         let ob_errors = dom.object_generators().filter_map(|v| {
-            if !mapping.is_ob_assigned(&v) {
-                Some(InvalidDblModelMorphism::MissingOb(v))
-            } else {
-                let f_v = mapping.apply_ob(&v).unwrap();
+            if let Some(f_v) = mapping.apply_ob(&v) {
                 if !cod.has_ob(&f_v) {
                     Some(InvalidDblModelMorphism::Ob(v))
                 } else if dom.ob_type(&v) != cod.ob_type(&f_v) {
@@ -244,14 +241,13 @@ where
                 } else {
                     None
                 }
+            } else {
+                Some(InvalidDblModelMorphism::MissingOb(v))
             }
         });
 
         let mor_errors = dom.morphism_generators().flat_map(|f| {
-            if !mapping.is_basic_mor_assigned(&f) {
-                [InvalidDblModelMorphism::MissingMor(f)].to_vec()
-            } else {
-                let f_f = mapping.apply_basic_mor(&f).unwrap();
+            if let Some(f_f) = mapping.apply_basic_mor(&f) {
                 if !cod.has_mor(&f_f) {
                     [InvalidDblModelMorphism::Mor(f)].to_vec()
                 } else {
@@ -272,6 +268,8 @@ where
                     }
                     errs
                 }
+            } else {
+                [InvalidDblModelMorphism::MissingMor(f)].to_vec()
             }
         });
         ob_errors.chain(mor_errors)
