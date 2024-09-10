@@ -24,6 +24,7 @@ import Trash2 from "lucide-solid/icons/trash-2";
 // added icons for moving cell up and down
 import ArrowUp from "lucide-solid/icons/arrow-up";
 import ArrowDown from "lucide-solid/icons/arrow-down";
+import Copy from "lucide-solid/icons/copy"
 
 import "./notebook_cell.css";
 
@@ -61,7 +62,7 @@ export type CellActions = {
     moveCellDown: () => void;
 
     // addressing issue 151 
-    duplicate: () => void; // this will allow for duplicate action
+    duplicateCell: () => void; // this will allow for duplicate action
   
 };
 
@@ -125,6 +126,11 @@ export function NotebookCell(props: {
             name: "Move Down",
             icon: <ArrowDown size={16} />,
             onComplete: props.actions.moveCellDown, // Call the moveCellDown action
+        },
+        {
+            name: "Copy", 
+            icon: <Copy size={16} />,
+            onComplete: props.actions.duplicateCell,
         },
     ];
 
@@ -240,8 +246,6 @@ export function RichTextCellEditor(props: {
             exitUp={props.actions.activateAbove}
             exitDown={props.actions.activateBelow}
             onFocus={props.actions.hasFocused}
-            moveCellDown={props.actions.moveCellDown}
-            moveCellUp={props.actions.moveCellUp}
         />
     );
 }
@@ -275,8 +279,6 @@ export function StemCellEditor(props: {
             deleteForward={props.actions.deleteForward}
             exitUp={props.actions.activateAbove}
             exitDown={props.actions.activateBelow}
-            moveCellDown={props.actions.moveCellDown}
-            moveCellUp={props.actions.moveCellUp}
             onFocus={props.actions.hasFocused}
             placeholder="Select cell type"
         />
