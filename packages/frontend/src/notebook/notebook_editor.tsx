@@ -283,7 +283,10 @@ export function NotebookEditor<T>(props: {
             </ul>
             <Show when={props.notebook.cells.some((cell) => cell.tag !== "stem")}>
                 <div class="placeholder">
-                    <IconButton onClick={() => appendCell(newStemCell())}>
+                    <IconButton
+                        onClick={() => appendCell(newStemCell())}
+                        tooltip="Create a new cell"
+                    >
                         <ListPlus />
                     </IconButton>
                 </div>
