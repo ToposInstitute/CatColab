@@ -67,11 +67,21 @@ export function ModelEditor(props: {
                             minSize={0.25}
                         >
                             <div class="toolbar">
-                                <IconButton onClick={snapshotModel}>
+                                <IconButton
+                                    onClick={snapshotModel}
+                                    tooltip="Save a snapshot of the model"
+                                >
                                     <Camera />
                                 </IconButton>
                                 <span class="filler" />
-                                <IconButton tooltip="Show analysis panel" onClick={toggleSidePanel}>
+                                <IconButton
+                                    onClick={toggleSidePanel}
+                                    tooltip={
+                                        isSidePanelOpen()
+                                            ? "Hide the analysis panel"
+                                            : "Show the analysis panel"
+                                    }
+                                >
                                     <Show when={isSidePanelOpen()} fallback={<PanelRight />}>
                                         <PanelRightClose />
                                     </Show>
