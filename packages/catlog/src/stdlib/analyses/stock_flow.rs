@@ -5,7 +5,7 @@ use std::{collections::HashMap, fmt::Display};
 use crate::{
     dbl::model::*,
     one::{fin_category::FinMor, FgCategory, FinGraph, SkelGraph},
-    zero::{compile, mathexpr, run, Context, Env, Prog},
+    simulate::{compile, mathexpr, run, Context, Env, Prog},
 };
 use nalgebra::DVector;
 use ode_solvers::{Rk4, System};

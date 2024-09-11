@@ -2,9 +2,7 @@ use std::fmt::Display;
 
 use ustr::Ustr;
 
-use crate::zero::mathexpr::pprint::WithSource;
-
-use super::pprint::DisplayWithSource;
+use super::pprint::{DisplayWithSource, WithSource};
 use super::span::Span;
 use super::token;
 
