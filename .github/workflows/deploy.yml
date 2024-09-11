@@ -98,7 +98,7 @@ jobs:
       - name: Build
         run: |
           cd dev-docs
-          bash ci-build.sh
+          ./forester build
 
       - name: Upload
         uses: actions/upload-artifact@v4
