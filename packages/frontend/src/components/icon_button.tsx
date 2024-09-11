@@ -1,5 +1,5 @@
 import { Tooltip } from "@kobalte/core/tooltip";
-import { type JSX, Show, splitProps } from "solid-js";
+import { type JSX, Show, createSignal, splitProps } from "solid-js";
 
 import "./icon_button.css";
 
@@ -13,6 +13,8 @@ export function IconButton(
 ) {
     const [props, buttonProps] = splitProps(allProps, ["children", "tooltip"]);
 
+    const [tooltipOpen, setTooltipOpen] = createSignal(false);
+
     return (
         <Show
             when={props.tooltip}
@@ -22,12 +24,17 @@ export function IconButton(
                 </button>
             }
         >
-            <Tooltip openDelay={1000}>
+            <Tooltip open={tooltipOpen()} onOpenChange={setTooltipOpen} openDelay={1000}>
                 <Tooltip.Trigger class="icon-button" {...buttonProps}>
                     {props.children}
                 </Tooltip.Trigger>
                 <Tooltip.Portal>
-                    <Tooltip.Content class="tooltip-content">{props.tooltip}</Tooltip.Content>
+                    <Tooltip.Content
+                        class="tooltip-content"
+                        onMouseEnter={() => setTooltipOpen(false)}
+                    >
+                        {props.tooltip}
+                    </Tooltip.Content>
                 </Tooltip.Portal>
             </Tooltip>
         </Show>
