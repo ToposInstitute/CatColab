@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+
+VERSION=4.3.1
+
+OS_NAME=$(uname)
+
+if [[ "$OS_NAME" == "Darwin" ]]; then
+  OS="macos"
+elif [[ "$OS_NAME" == "Linux" ]]; then
+  OS="linux"
+else
+  echo "Unsupported OS $OS_NAME"
+  exit 1
+fi
+
+ARCH=$(uname -m)
+
+SPEC="$VERSION-$OS-$ARCH"
+
+TARFILE="forester-$SPEC.tar.gz"
+
+FORESTER_URL="http://forester-builds.s3-website.us-east-2.amazonaws.com/$TARFILE"
+
+FORESTER_DIR="$HOME/.forester/$VERSION"
+FORESTER="$FORESTER_DIR/forester"
+
+if [[ ! -f "$FORESTER" ]]; then
+  mkdir -p "$FORESTER_DIR"
+  PREV=$(pwd)
+  TMP=$(mktemp -d)
+  cp checksums.txt $TMP
+  cd $TMP
+  curl -O $FORESTER_URL
+  sha256sum -c checksums.txt --ignore-missing
+  if [[ $? -ne 0 ]]; then
+    print "invalid checksum"
+    exit 1
+  fi
+  tar -xf $TARFILE
+  mv forester "$FORESTER_DIR"
+  cd $PREV
+  rm -rf $TMP
+fi
+
+$FORESTER $@
