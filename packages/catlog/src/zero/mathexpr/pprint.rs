@@ -4,12 +4,8 @@ pub trait DisplayWithSource {
     fn fmt(&self, src: &str, f: &mut fmt::Formatter) -> fmt::Result;
 }
 
-/// A wrapper around a value that can be displayed via DisplayWithSource
-/// that implements Display, so that one can write
-///
-/// ```rust
-/// write!(f, "{}", WithSource::new(src, &a))
-/// ```
+/// A wrapper around a value that can be displayed via DisplayWithSource that
+/// implements Display.
 pub struct WithSource<'a, 'b, T: DisplayWithSource> {
     src: &'a str,
     value: &'b T,

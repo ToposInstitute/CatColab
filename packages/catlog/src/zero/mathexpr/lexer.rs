@@ -30,9 +30,8 @@ impl<'a> Lexer<'a> {
     }
 
     fn next(&mut self) -> Option<char> {
-        self.iter.next().map(|c| {
+        self.iter.next().inspect(|c| {
             self.current_pos += c.len_utf8();
-            c
         })
     }
 
