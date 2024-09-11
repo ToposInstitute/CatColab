@@ -48,6 +48,9 @@ export type CellConstructor<T> = {
     // Function to construct the cell.
     construct: () => Cell<T>;
     
+    // for duplication functionality 
+    duplicate?: (cell: Cell<T>) => Cell<T>;
+    
 };
 
 /** Notebook editor based on Automerge.
