@@ -23,6 +23,7 @@
         "@automerge/prosemirror": "^0.0.12",
         "@corvu/popover": "^0.2.0",
         "@corvu/resizable": "^0.2.2",
+        "@kobalte/core": "^0.13.6",
         "@solid-primitives/active-element": "^2.0.20",
         "@solid-primitives/context": "^0.2.3",
         "@solid-primitives/destructure": "^0.1.17",

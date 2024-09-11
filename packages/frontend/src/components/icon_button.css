@@ -9,3 +9,11 @@
         border-radius: 5px;
     }
 }
+
+.tooltip-content {
+    border-radius: 0.5rem;
+    color: white;
+    background-color: hsl(251, 9%, 23%);
+    padding: 0.5rem;
+    font-size: smaller;
+}
