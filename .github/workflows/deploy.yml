@@ -94,6 +94,7 @@ jobs:
           tlmgr install pgf
           tlmgr install tikz-cd
           tlmgr install amsmath
+          tlmgr install quiver
 
       - name: Build
         run: |
