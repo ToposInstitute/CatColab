@@ -132,65 +132,67 @@ impl pprint::DisplayWithSource for Span {
     }
 }
 
-// #[cfg(test)]
-// mod test {
-//     use super::*;
-//     use indoc::indoc;
-//     use pprint::WithSource;
+#[cfg(test)]
+mod test {
+    use expect_test::{expect, Expect};
 
-//     fn test_printing(span: Span, src: &str, compare: &str) {
-//         assert_eq!(&format!("{}", WithSource::new(src, &span)), compare);
-//     }
+    use super::*;
+    use pprint::WithSource;
 
-//     #[test]
-//     fn single_line() {
-//         test_printing(
-//             Span::new(5, 3),
-//             "hello world!",
-//             indoc! {r#"
-//                 1 | hello world!
-//                   |      ^^^
-//             "#},
-//         );
-//         test_printing(
-//             Span::new(5, 10),
-//             "hello world!",
-//             indoc! {r#"
-//                 1 | hello world!
-//                   |      ^^^^^^^
-//             "#},
-//         );
-//     }
+    fn test_printing(span: Span, src: &str, expected: Expect) {
+        let printed = format!("{}", WithSource::new(src, &span));
+        expected.assert_eq(&printed);
+    }
 
-//     #[test]
-//     fn multi_line() {
-//         test_printing(
-//             Span::new(5, 10),
-//             "hello world!\nprintln(\"foo\")",
-//             indoc! {r#"
-//                 1 | hello world!
-//                   |      ^^^^^^^
-//                 2 | println("foo")
-//                   | ^^
-//             "#},
-//         );
-//         test_printing(
-//             Span::new(11, 2),
-//             "\n\n\n\n\n\n\n\n\n\n\nhi\n\n",
-//             indoc! {r#"
-//                 12 | hi
-//                    | ^^
-//             "#},
-//         );
-//         test_printing(
-//             Span::new(11, 4),
-//             "\n\n\n\n\n\n\n\n\n\n\nhi\nhi\n",
-//             indoc! {r#"
-//                 12 | hi
-//                    | ^^
-//                 13 | hi
-//                    | ^
-//             "#},
-//         );
-//     }
-// }
+    #[test]
+    fn single_line() {
+        test_printing(
+            Span::new(5, 3),
+            "hello world!",
+            expect![["
+                1 | hello world!
+                  |      ^^^
+            "]],
+        );
+        test_printing(
+            Span::new(5, 10),
+            "hello world!",
+            expect![["
+                1 | hello world!
+                  |      ^^^^^^^
+            "]],
+        );
+    }
+
+    #[test]
+    fn multi_line() {
+        test_printing(
+            Span::new(5, 10),
+            "hello world!\nprintln(\"foo\")",
+            expect![[r#"
+                1 | hello world!
+                  |      ^^^^^^^
+                2 | println("foo")
+                  | ^^
+            "#]],
+        );
+        test_printing(
+            Span::new(11, 2),
+            "\n\n\n\n\n\n\n\n\n\n\nhi\n\n",
+            expect![["
+                12 | hi
+                   | ^^
+            "]],
+        );
+        test_printing(
+            Span::new(11, 4),
+            "\n\n\n\n\n\n\n\n\n\n\nhi\nhi\n",
+            expect![["
+                12 | hi
+                   | ^^
+                13 | hi
+                   | ^
+            "]],
+        );
+    }
+}

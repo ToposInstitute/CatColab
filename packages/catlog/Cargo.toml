@@ -16,7 +16,6 @@ derivative = "2"
 derive_more = { version = "1", features = ["from", "into"] }
 either = "1"
 expect-test = "1.5.0"
-indoc = "2.0.5"
 nalgebra = "0.33"
 nonempty = "0.10"
 ode_solvers = { git = "https://github.com/srenevey/ode-solvers.git", version = "0.4.0" }

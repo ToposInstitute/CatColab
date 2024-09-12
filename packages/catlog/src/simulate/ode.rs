@@ -90,18 +90,20 @@ impl DynamicODE {
 
 #[cfg(test)]
 mod test {
-    use super::DynamicODE;
-    use indoc::indoc;
+    use expect_test::{expect, Expect};
     use nalgebra::DVector;
     use ode_solvers::Rk4;
     use ode_solvers::System as _;
     use textplots::{Chart, Plot, Shape};
 
-    fn chart_to_string(c: &mut Chart) -> String {
+    use super::DynamicODE;
+
+    fn check_chart(c: &mut Chart, expected: Expect) {
         c.axis();
         c.figures();
 
-        format!("{}", c)
+        let chart_string = format!("{}", c);
+        expected.assert_eq(&chart_string);
     }
 
     #[test]
@@ -123,7 +125,7 @@ mod test {
 
         stepper.integrate().unwrap();
 
-        let plot = chart_to_string(
+        check_chart(
             Chart::new(100, 80, 0.0, 10.0)
                 .lineplot(&Shape::Lines(
                     &stepper
@@ -141,11 +143,7 @@ mod test {
                         .zip(stepper.y_out().iter().map(|y| y[1]))
                         .collect::<Vec<(f32, f32)>>(),
                 )),
-        );
-
-        assert_eq!(
-            &plot,
-            indoc! { r#"
+            expect![["
                 ⡁⠀⠀⠀⠀⠀⠀⠀⢠⠊⢢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠎⠱⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 3.5
                 ⠄⠀⠀⠀⠀⠀⠀⠀⡇⠀⠈⡆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡜⠀⠀⢣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
                 ⠂⠀⠀⠀⠀⠀⠀⢸⠀⠀⠀⢸⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠇⠀⠀⠘⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
@@ -168,7 +166,7 @@ mod test {
                 ⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠑⢄⡀⠀⠀⢀⡠⠊⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠑⢄⡀⠀⠀⢀⡠⠔⠁⠀⠀⠀⠀⠀⠀⠀
                 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 0.4
                 0.0                                           10.0
-            "#}
+            "]],
         );
     }
 }

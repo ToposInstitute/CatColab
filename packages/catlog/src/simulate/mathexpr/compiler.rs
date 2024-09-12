@@ -94,7 +94,6 @@ mod test {
     use expect_test::{expect, Expect};
 
     use super::super::pprint::WithSource;
-
     use super::{compile, Context};
 
     fn passes_check(e: &Context<()>, src: &str) {
