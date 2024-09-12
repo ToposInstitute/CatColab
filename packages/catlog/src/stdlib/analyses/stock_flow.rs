@@ -1,12 +1,8 @@
 //! Stock-flow semantics for models.
 
-use std::{collections::HashMap, fmt::Display};
+use std::collections::HashMap;
+use thiserror::Error;
 
-use crate::{
-    dbl::model::*,
-    one::{fin_category::FinMor, FgCategory, FinGraph, SkelGraph},
-    simulate::{compile, mathexpr, run, Context, Env, Prog},
-};
 use nalgebra::DVector;
 use ode_solvers::{
     dop_shared::{IntegrationError, SolverResult},
@@ -14,49 +10,40 @@ use ode_solvers::{
 };
 use ustr::Ustr;
 
-#[derive(Debug)]
+use crate::{
+    dbl::model::*,
+    one::{fin_category::FinMor, FgCategory, FinGraph, SkelGraph},
+    simulate::{compile, mathexpr, run, Context, Env, Prog},
+};
+
 /// A validation error for the stock-flow extension
+#[derive(Debug, Error)]
 pub enum Error {
     /// An error in compiling a flow expression
+    #[error("compilation error in the flow expression for {flow}: {}",
+            mathexpr::WithSource::new(.flow_expression, .errors))]
     FlowExpressionCompilation {
         /// The flow that the expression is attached to
         flow: Ustr,
         /// The source code of the expression
-        source: String,
+        flow_expression: String,
         /// The compilation errors
         errors: mathexpr::Errors,
     },
+
     /// A flow that is missing a flow expression
+    #[error("missing flow expression for {flow}")]
     MissingFlowExpression {
         /// The flow
         flow: Ustr,
     },
+
     /// A stock that is missing an initial value
+    #[error("missing initial value for stock {stock}")]
     MissingInitialValue {
         /// The stock
         stock: Ustr,
     },
-}
-
-impl Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Error::FlowExpressionCompilation {
-                flow,
-                source: flow_expression,
-                errors,
-            } => {
-                writeln!(f, "compilation errors in the flow expression for {}", flow)?;
-                write!(f, "{}", mathexpr::WithSource::new(flow_expression, errors))
-            }
-            Error::MissingFlowExpression { flow } => {
-                writeln!(f, "missing flow expression for {}", flow)
-            }
-            Error::MissingInitialValue { stock } => {
-                writeln!(f, "missing initial value for stock {}", stock)
-            }
-        }
-    }
 }
 
 /// An extension for doing stock-flow simulations
@@ -142,7 +129,7 @@ impl StockFlowExtension {
                     Ok(prog) => flow_progs.push(prog),
                     Err(compilation_errors) => errors.push(Error::FlowExpressionCompilation {
                         flow: *flow,
-                        source: src.clone(),
+                        flow_expression: src.clone(),
                         errors: compilation_errors,
                     }),
                 },
@@ -224,7 +211,6 @@ impl StockFlowSystem {
 
 #[cfg(test)]
 mod test {
-    use std::fmt::Write;
     use std::{collections::HashMap, sync::Arc};
 
     use expect_test::{expect, Expect};
@@ -269,10 +255,7 @@ mod test {
                 expected.assert_eq(&plot(&system));
             }
             Err(errors) => {
-                let mut s = String::new();
-                for error in errors.iter() {
-                    write!(&mut s, "{}", error).unwrap();
-                }
+                let s = errors.iter().map(|e| format!("{}", e)).collect::<Vec<_>>().join("\n");
                 expected.assert_eq(&s)
             }
         }
@@ -345,13 +328,12 @@ mod test {
             &extension,
             &sir,
             expect![[r#"
-            compilation errors in the flow expression for inf
-            lex error: unexpected start of token
+                compilation error in the flow expression for inf: lex error: unexpected start of token
 
-            1 | @S * I
-              | ^
+                1 | @S * I
+                  | ^
 
-        "#]],
+            "#]],
         );
 
         let extension = StockFlowExtension {
@@ -373,13 +355,12 @@ mod test {
             &extension,
             &sir,
             expect![[r#"
-            compilation errors in the flow expression for rec
-            parse error: expected start of factor
+                compilation error in the flow expression for rec: parse error: expected start of factor
 
-            1 | I +
-              |    ^
+                1 | I +
+                  |    ^
 
-        "#]],
+            "#]],
         );
 
         let extension = StockFlowExtension {
@@ -401,19 +382,18 @@ mod test {
             &extension,
             &sir,
             expect![[r#"
-            compilation errors in the flow expression for inf
-            parse error: expected start of factor
+                compilation error in the flow expression for inf: parse error: expected start of factor
 
-            1 | S *
-              |    ^
+                1 | S *
+                  |    ^
 
-            compilation errors in the flow expression for rec
-            compile error: name not found Q
 
-            1 | I + Q
-              |     ^
+                compilation error in the flow expression for rec: compile error: name not found Q
 
-        "#]],
+                1 | I + Q
+                  |     ^
+
+            "#]],
         );
 
         let extension = StockFlowExtension {
@@ -433,8 +413,7 @@ mod test {
             &sir,
             expect![[r#"
                 missing flow expression for inf
-                missing initial value for stock S
-            "#]],
+                missing initial value for stock S"#]],
         );
     }
 }
