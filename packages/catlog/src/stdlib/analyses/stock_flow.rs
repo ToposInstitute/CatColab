@@ -1,4 +1,4 @@
-//! Stock-flow semantics for models.
+//! ODE semantics for stock and flow diagrams.
 
 use std::collections::HashMap;
 use thiserror::Error;
@@ -16,7 +16,7 @@ use crate::{
     simulate::{compile, mathexpr, run, Context, Env, Prog},
 };
 
-/// A validation error for the stock-flow extension
+/// A validation error for an ODE analysis of a stock-flow model.
 #[derive(Debug, Error)]
 pub enum Error {
     /// An error in compiling a flow expression
@@ -46,8 +46,8 @@ pub enum Error {
     },
 }
 
-/// An extension for doing stock-flow simulations
-pub struct StockFlowExtension {
+/// Configuration for an ODE analysis of a stock-flow model.
+pub struct StockFlowODEAnalysis {
     /// A map from flow id to a flow expression for that flow, which should be an arithmetic
     /// expression in the stock variables.
     flow_expressions: HashMap<Ustr, String>,
@@ -63,8 +63,8 @@ pub struct StockFlowExtension {
     flow_morphism: FinMor<Ustr, Ustr>,
 }
 
-impl StockFlowExtension {
-    /// Create a new StockFlow extension
+impl StockFlowODEAnalysis {
+    /// Create a new stock-flow ODE analysis.
     pub fn new(
         flow_expressions: HashMap<Ustr, String>,
         initial_values: HashMap<Ustr, f32>,
@@ -160,8 +160,11 @@ impl StockFlowExtension {
     }
 }
 
-/// The compiled version of a StockFlowExtension + model. Has all the data needed to compute the
-/// vector field.
+/** An ODE system for a stock-flow diagram.
+
+The result of compiling a `StockFlowODEAnalysis` for a particular model. Has all
+the data needed to compute the vector field for the ODE.
+ */
 pub struct StockFlowSystem {
     graph: SkelGraph,
     initial_values: DVector<f32>,
@@ -217,7 +220,7 @@ mod test {
     use textplots::*;
     use ustr::ustr;
 
-    use super::{StockFlowExtension, StockFlowSystem, UstrDiscreteDblModel};
+    use super::{StockFlowODEAnalysis, StockFlowSystem, UstrDiscreteDblModel};
     use crate::{one::fin_category::FinMor, stdlib};
 
     fn plot(system: &StockFlowSystem) -> String {
@@ -246,11 +249,11 @@ mod test {
     }
 
     fn test_stock_flow(
-        extension: &StockFlowExtension,
+        analysis: &StockFlowODEAnalysis,
         model: &UstrDiscreteDblModel,
         expected: Expect,
     ) {
-        match extension.compile_system(&model) {
+        match analysis.compile_system(&model) {
             Ok(system) => {
                 expected.assert_eq(&plot(&system));
             }
@@ -271,7 +274,7 @@ mod test {
         sir.add_mor(ustr("inf"), ustr("S"), ustr("I"), FinMor::Id(ustr("Object")));
         sir.add_mor(ustr("rec"), ustr("I"), ustr("R"), FinMor::Id(ustr("Object")));
 
-        let extension = StockFlowExtension {
+        let analysis = StockFlowODEAnalysis {
             flow_expressions: [(ustr("inf"), "S * I".to_string()), (ustr("rec"), "I".to_string())]
                 .into_iter()
                 .collect::<HashMap<_, _>>(),
@@ -284,7 +287,7 @@ mod test {
         };
 
         test_stock_flow(
-            &extension,
+            &analysis,
             &sir,
             expect![[r#"
             ⡁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⣀⠤⠤⠤⠒⠒⠒⠒⠒⠉⠉⠉⠉⠁ 4.9
@@ -312,7 +315,7 @@ mod test {
         "#]],
         );
 
-        let extension = StockFlowExtension {
+        let analysis = StockFlowODEAnalysis {
             flow_expressions: [(ustr("inf"), "@S * I".to_string()), (ustr("rec"), "I".to_string())]
                 .into_iter()
                 .collect::<HashMap<_, _>>(),
@@ -325,7 +328,7 @@ mod test {
         };
 
         test_stock_flow(
-            &extension,
+            &analysis,
             &sir,
             expect![[r#"
                 compilation error in the flow expression for inf: lex error: unexpected start of token
@@ -336,7 +339,7 @@ mod test {
             "#]],
         );
 
-        let extension = StockFlowExtension {
+        let analysis = StockFlowODEAnalysis {
             flow_expressions: [
                 (ustr("inf"), "S * I".to_string()),
                 (ustr("rec"), "I +".to_string()),
@@ -352,7 +355,7 @@ mod test {
         };
 
         test_stock_flow(
-            &extension,
+            &analysis,
             &sir,
             expect![[r#"
                 compilation error in the flow expression for rec: parse error: expected start of factor
@@ -363,7 +366,7 @@ mod test {
             "#]],
         );
 
-        let extension = StockFlowExtension {
+        let analysis = StockFlowODEAnalysis {
             flow_expressions: [
                 (ustr("inf"), "S *".to_string()),
                 (ustr("rec"), "I + Q".to_string()),
@@ -379,7 +382,7 @@ mod test {
         };
 
         test_stock_flow(
-            &extension,
+            &analysis,
             &sir,
             expect![[r#"
                 compilation error in the flow expression for inf: parse error: expected start of factor
@@ -396,7 +399,7 @@ mod test {
             "#]],
         );
 
-        let extension = StockFlowExtension {
+        let analysis = StockFlowODEAnalysis {
             flow_expressions: [(ustr("rec"), "I".to_string())]
                 .into_iter()
                 .collect::<HashMap<_, _>>(),
@@ -409,7 +412,7 @@ mod test {
         };
 
         test_stock_flow(
-            &extension,
+            &analysis,
             &sir,
             expect![[r#"
                 missing flow expression for inf
