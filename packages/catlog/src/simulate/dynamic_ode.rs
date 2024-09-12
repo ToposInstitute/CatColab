@@ -1,51 +1,58 @@
-//! Data structures and functions for dynamically solving ODEs from runtime-provided expressions
-//! for vector fields.
+/*! Solve ODEs specified dynamically.
 
-use super::mathexpr::{compile, run, Context, Env, Errors, Prog};
+By dynamically specified, we mean that vector fields are defined by mathematical
+expressions provided at runtime rather than compile-time.
+ */
+
 use nalgebra::DVector;
 use ode_solvers::{
     self,
     dop_shared::{IntegrationError, SolverResult},
-    Rk4,
 };
 
+use super::mathexpr::{compile, run, Context, Env, Errors, Prog};
+
+/// A numerical quantity in an ODE.
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum Var {
+enum Quantity {
+    /// A parameter, assumed to be constant in time.
     Param(usize),
+
+    /// A state variable.
     State(usize),
 }
 
-struct VFieldEnv<'a, 'b> {
+struct VectorFieldEnv<'a, 'b> {
     params: &'a [f32],
     state: &'b [f32],
 }
 
-impl<'a, 'b> VFieldEnv<'a, 'b> {
+impl<'a, 'b> VectorFieldEnv<'a, 'b> {
     fn new(params: &'a [f32], state: &'b [f32]) -> Self {
         Self { params, state }
     }
 }
 
-impl<'a, 'b> Env for VFieldEnv<'a, 'b> {
-    type Var = Var;
+impl<'a, 'b> Env for VectorFieldEnv<'a, 'b> {
+    type Var = Quantity;
 
     fn lookup(&self, t: &Self::Var) -> f32 {
         match t {
-            Var::Param(i) => self.params[*i],
-            Var::State(i) => self.state[*i],
+            Quantity::Param(i) => self.params[*i],
+            Quantity::State(i) => self.state[*i],
         }
     }
 }
 
-/// An ODE whose corresponding vector field is given by runtime-provided expressions
+/// An ODE whose vector field is defined by expressions provided at runtime.
 pub struct DynamicODE {
     params: Vec<f32>,
-    progs: Vec<Prog<Var>>,
+    progs: Vec<Prog<Quantity>>,
 }
 
 impl ode_solvers::System<f32, DVector<f32>> for &DynamicODE {
     fn system(&self, _: f32, y: &DVector<f32>, dy: &mut DVector<f32>) {
-        let env = VFieldEnv::new(&self.params, y.as_slice());
+        let env = VectorFieldEnv::new(&self.params, y.as_slice());
         for (prog, dyi) in self.progs.iter().zip(dy.as_mut_slice().iter_mut()) {
             *dyi = run(&env, prog);
         }
@@ -53,10 +60,10 @@ impl ode_solvers::System<f32, DVector<f32>> for &DynamicODE {
 }
 
 impl DynamicODE {
-    /// Construct a DynamicODE with given parameters and with given source expressions to compute
-    /// the ODE.
-    ///
-    /// Might return an error message instead.
+    /** Construct a system of ODEs from the given source expressions.
+
+    Returns an error message if the compilation of the mathematical expression fails.
+     */
     pub fn new(
         params: &[(&str, f32)],
         prog_sources: &[(&str, &str)],
@@ -67,13 +74,12 @@ impl DynamicODE {
             &params
                 .iter()
                 .enumerate()
-                .map(|(i, (p, _))| (*p, Var::Param(i)))
-                .chain(prog_sources.iter().enumerate().map(|(i, (v, _))| (*v, Var::State(i))))
-                .collect::<Vec<(&str, Var)>>(),
+                .map(|(i, (p, _))| (*p, Quantity::Param(i)))
+                .chain(prog_sources.iter().enumerate().map(|(i, (v, _))| (*v, Quantity::State(i))))
+                .collect::<Vec<(&str, Quantity)>>(),
         );
 
         let mut progs = Vec::new();
-
         for (_, src) in prog_sources.iter() {
             match compile(&ctx, src) {
                 Ok(p) => progs.push(p),
@@ -91,14 +97,17 @@ impl DynamicODE {
         }
     }
 
-    /// Solves the ODE system using the Runge-Kutta method.
+    /** Solves the ODE system using the Runge-Kutta method.
+
+    Returns the results from the solver if successful and an integration error otherwise.
+     */
     pub fn solve_rk4(
         &self,
         initial_values: DVector<f32>,
         end_time: f32,
         step_size: f32,
     ) -> Result<SolverResult<f32, DVector<f32>>, IntegrationError> {
-        let mut stepper = Rk4::new(self, 0.0, initial_values, end_time, step_size);
+        let mut stepper = ode_solvers::Rk4::new(self, 0.0, initial_values, end_time, step_size);
         stepper.integrate()?;
         Ok(stepper.into())
     }
