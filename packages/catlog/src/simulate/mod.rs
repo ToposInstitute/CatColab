@@ -8,6 +8,8 @@ everything in the same place.
  */
 
 pub mod mathexpr;
-pub mod ode;
+
+#[cfg(feature = "ode")]
+pub mod dynamic_ode;
 
 pub use self::mathexpr::*;

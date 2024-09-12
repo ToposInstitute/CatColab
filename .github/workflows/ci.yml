@@ -25,8 +25,8 @@ jobs:
       - name: Tests
         run: |
           rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
-          cargo build --verbose
-          cargo test --verbose
+          cargo build --all-features --verbose
+          cargo test --all-features --verbose
 
   rust_formatting:
     name: rust formatting

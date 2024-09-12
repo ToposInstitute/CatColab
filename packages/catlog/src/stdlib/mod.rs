@@ -7,5 +7,3 @@ pub mod analyses;
 
 pub use models::*;
 pub use theories::*;
-
-pub use analyses::*;
