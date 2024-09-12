@@ -8,8 +8,10 @@ use crate::{
     simulate::{compile, mathexpr, run, Context, Env, Prog},
 };
 use nalgebra::DVector;
-use ode_solvers::{Rk4, System};
-use textplots::*;
+use ode_solvers::{
+    dop_shared::{IntegrationError, SolverResult},
+    Rk4, System,
+};
 use ustr::Ustr;
 
 #[derive(Debug)]
@@ -203,31 +205,49 @@ impl System<f32, DVector<f32>> for &StockFlowSystem {
 }
 
 impl StockFlowSystem {
-    /// Solve the ODE given by the system's vector field and initial conditions, and produce an
-    /// ASCII text plot of the solution.
-    pub fn plot(&self) -> String {
-        let mut stepper = Rk4::new(self, 0.0, self.initial_values.clone(), self.end_time, 0.1);
+    /// Solves the ODE system using the Runge-Kutta method.
+    pub fn solve_rk4(
+        &self,
+        step_size: f32,
+    ) -> Result<SolverResult<f32, DVector<f32>>, IntegrationError> {
+        let y = self.initial_values.clone();
+        let mut stepper = Rk4::new(self, 0.0, y, self.end_time, step_size);
+        stepper.integrate()?;
+        Ok(stepper.into())
+    }
 
-        stepper.integrate().unwrap();
+    /// Gets names of stocks.
+    pub fn stock_names(&self) -> &Vec<Ustr> {
+        &self.stock_names
+    }
+}
 
-        let mut chart = Chart::new(100, 80, 0.0, self.end_time);
+#[cfg(test)]
+mod test {
+    use std::fmt::Write;
+    use std::{collections::HashMap, sync::Arc};
+
+    use expect_test::{expect, Expect};
+    use textplots::*;
+    use ustr::ustr;
+
+    use super::{StockFlowExtension, StockFlowSystem, UstrDiscreteDblModel};
+    use crate::{one::fin_category::FinMor, stdlib};
+
+    fn plot(system: &StockFlowSystem) -> String {
+        let results = system.solve_rk4(0.1).unwrap();
+        let (x_out, y_out) = results.get();
+
+        let mut chart = Chart::new(100, 80, 0.0, system.end_time);
 
         let mut line_data = Vec::new();
-
-        for (i, _stock) in self.stock_names.iter().enumerate() {
-            line_data.push(
-                stepper
-                    .x_out()
-                    .iter()
-                    .copied()
-                    .zip(stepper.y_out().iter().map(|y| y[i]))
-                    .collect::<Vec<_>>(),
-            );
+        for (i, _stock) in system.stock_names.iter().enumerate() {
+            line_data
+                .push(x_out.iter().copied().zip(y_out.iter().map(|y| y[i])).collect::<Vec<_>>());
         }
 
         let mut lines = Vec::new();
-
-        for (i, _stock) in self.stock_names.iter().enumerate() {
+        for (i, _stock) in system.stock_names().iter().enumerate() {
             lines.push(Shape::Lines(&line_data[i]))
         }
 
@@ -238,19 +258,6 @@ impl StockFlowSystem {
 
         format!("{}", chart)
     }
-}
-
-#[cfg(test)]
-mod test {
-    use std::{collections::HashMap, sync::Arc};
-
-    use ustr::ustr;
-
-    use crate::{one::fin_category::FinMor, stdlib};
-
-    use super::{StockFlowExtension, UstrDiscreteDblModel};
-    use expect_test::{expect, Expect};
-    use std::fmt::Write as _;
 
     fn test_stock_flow(
         extension: &StockFlowExtension,
@@ -259,7 +266,7 @@ mod test {
     ) {
         match extension.compile_system(&model) {
             Ok(system) => {
-                expected.assert_eq(&system.plot());
+                expected.assert_eq(&plot(&system));
             }
             Err(errors) => {
                 let mut s = String::new();

@@ -3,7 +3,11 @@
 
 use super::mathexpr::{compile, run, Context, Env, Errors, Prog};
 use nalgebra::DVector;
-use ode_solvers;
+use ode_solvers::{
+    self,
+    dop_shared::{IntegrationError, SolverResult},
+    Rk4,
+};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Var {
@@ -39,7 +43,7 @@ pub struct DynamicODE {
     progs: Vec<Prog<Var>>,
 }
 
-impl ode_solvers::System<f32, DVector<f32>> for DynamicODE {
+impl ode_solvers::System<f32, DVector<f32>> for &DynamicODE {
     fn system(&self, _: f32, y: &DVector<f32>, dy: &mut DVector<f32>) {
         let env = VFieldEnv::new(&self.params, y.as_slice());
         for (prog, dyi) in self.progs.iter().zip(dy.as_mut_slice().iter_mut()) {
@@ -86,14 +90,25 @@ impl DynamicODE {
             Err(Errors(errors))
         }
     }
+
+    /// Solves the ODE system using the Runge-Kutta method.
+    pub fn solve_rk4(
+        &self,
+        initial_values: DVector<f32>,
+        end_time: f32,
+        step_size: f32,
+    ) -> Result<SolverResult<f32, DVector<f32>>, IntegrationError> {
+        let mut stepper = Rk4::new(self, 0.0, initial_values, end_time, step_size);
+        stepper.integrate()?;
+        Ok(stepper.into())
+    }
 }
 
 #[cfg(test)]
 mod test {
     use expect_test::{expect, Expect};
     use nalgebra::DVector;
-    use ode_solvers::Rk4;
-    use ode_solvers::System as _;
+    use ode_solvers::System;
     use textplots::{Chart, Plot, Shape};
 
     use super::DynamicODE;
@@ -116,32 +131,19 @@ mod test {
 
         let y = DVector::from_column_slice(&[1.0, 1.0]);
         let mut dy = DVector::from_column_slice(&[0.0, 0.0]);
-
-        sys.system(0.0, &y, &mut dy);
-
+        (&sys).system(0.0, &y, &mut dy);
         assert_eq!(dy.as_slice(), &[1.0, 0.0]);
 
-        let mut stepper = Rk4::new(sys, 0.0, y, 10.0, 0.1);
-
-        stepper.integrate().unwrap();
+        let results = sys.solve_rk4(y, 10.0, 0.1).unwrap();
+        let (x_out, y_out) = results.get();
 
         check_chart(
             Chart::new(100, 80, 0.0, 10.0)
                 .lineplot(&Shape::Lines(
-                    &stepper
-                        .x_out()
-                        .iter()
-                        .copied()
-                        .zip(stepper.y_out().iter().map(|y| y[0]))
-                        .collect::<Vec<(f32, f32)>>(),
+                    &x_out.iter().copied().zip(y_out.iter().map(|y| y[0])).collect::<Vec<_>>(),
                 ))
                 .lineplot(&Shape::Lines(
-                    &stepper
-                        .x_out()
-                        .iter()
-                        .copied()
-                        .zip(stepper.y_out().iter().map(|y| y[1]))
-                        .collect::<Vec<(f32, f32)>>(),
+                    &x_out.iter().copied().zip(y_out.iter().map(|y| y[1])).collect::<Vec<_>>(),
                 )),
             expect![["
                 ⡁⠀⠀⠀⠀⠀⠀⠀⢠⠊⢢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠎⠱⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 3.5

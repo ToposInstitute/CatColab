@@ -15,14 +15,16 @@ archery = "1"
 derivative = "2"
 derive_more = { version = "1", features = ["from", "into"] }
 either = "1"
-expect-test = "1.5.0"
 nalgebra = "0.33"
 nonempty = "0.10"
 ode_solvers = { git = "https://github.com/srenevey/ode-solvers.git", version = "0.4.0" }
 ref-cast = "1"
 serde = { version = "1", features = ["derive"], optional = true }
-textplots = "0.8.6"
 thiserror = "1"
 tsify-next = { version = "0.5", features = ["js"], optional = true }
 ustr = "1"
 wasm-bindgen = { version = "0.2.92", optional = true }
+
+[dev-dependencies]
+expect-test = "1.5"
+textplots = "0.8.6"
