@@ -9,6 +9,12 @@ in {
         owner = "catcolab";
     };
 
+    age.secrets."instrument.mjs" = {
+        file = "${inputs.self}/secrets/instrument.mjs.age";
+        mode = "400";
+        owner = "catcolab";
+    };
+
     services.postgresql.enable = true;
     services.nginx.enable = true;
 
@@ -40,7 +46,7 @@ in {
         environment = {
             PORT = port;
             DATABASE_URL_PATH = config.age.secrets.DATABASE_URL.path;
-            NODE_OPTIONS="--import ./instrument.mjs";
+            NODE_OPTIONS = "--import ${config.age.secrets."instrument.mjs".path}";
         };
 
         serviceConfig = {
