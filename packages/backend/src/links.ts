@@ -11,13 +11,14 @@ const Extern = z.object({
     /// A document might import/reference another document multiple times,
     /// this field allows those references to be distinguished,
     /// for instance by the path under which the model is imported
-    via: z.string().or(z.null())
-})
+    via: z.string().or(z.null()),
+});
 
-export type Extern = z.infer<typeof Extern>
+export type Extern = z.infer<typeof Extern>;
 
+// biome-ignore lint/suspicious/noExplicitAny: x can be anything!
 export function traverseExterns(x: any, f: (extern: Extern) => void): void {
-    if (typeof x == "object") {
+    if (typeof x === "object") {
         if (Object.hasOwn(x, "__extern__")) {
             const result = Extern.safeParse(x.__extern__);
             if (result.success) {

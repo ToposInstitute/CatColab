@@ -2,12 +2,12 @@ import type * as http from "node:http";
 import * as A from "@automerge/automerge-repo";
 import { NodeWSServerAdapter } from "@automerge/automerge-repo-network-websocket";
 import * as Sentry from "@sentry/node";
+import cors from "cors";
 import express from "express";
 import morgan from "morgan";
 import * as ws from "ws";
 import { z } from "zod";
 import { Persistence } from "./persistence.js";
-import cors from "cors";
 
 import * as trpc from "@trpc/server";
 import * as trpcExpress from "@trpc/server/adapters/express";
@@ -21,7 +21,7 @@ export const publicProcedure = t.procedure;
 export class Server {
     db: Persistence;
 
-    docMap: Map<string, A.DocHandle<any>>;
+    docMap: Map<string, A.DocHandle<unknown>>;
     app: express.Express;
     server: http.Server;
     wss: ws.WebSocketServer;
@@ -71,7 +71,7 @@ export class Server {
                     const {
                         input: { refId, note },
                     } = opts;
-                    await this.docMap.get(refId)?.whenReady()
+                    await this.docMap.get(refId)?.whenReady();
                     await this.db.saveRef(refId, note);
                 }),
 
@@ -82,10 +82,12 @@ export class Server {
             getBacklinks: publicProcedure
                 .input(z.object({ refId: z.string(), taxon: z.string() }))
                 .query(async (opts) => {
-                    const { input: { refId, taxon } } = opts;
+                    const {
+                        input: { refId, taxon },
+                    } = opts;
                     console.log(`getting backlinks for ${refId}`);
                     return await this.db.getBacklinks(refId, taxon);
-                })
+                }),
         });
 
         this.app.use(morgan("tiny"));
@@ -121,13 +123,13 @@ export class Server {
         });
     }
 
-    setHandleCallback(refId: string, handle: A.DocHandle<any>) {
+    setHandleCallback(refId: string, handle: A.DocHandle<unknown>) {
         handle.on("change", async (payload) => {
             this.db.autosaveWithExterns(refId, payload.doc);
         });
     }
 
-    async getDocHandle(refId: string): Promise<A.DocHandle<any> | undefined> {
+    async getDocHandle(refId: string): Promise<A.DocHandle<unknown> | undefined> {
         if (this.docMap.has(refId)) {
             return this.docMap.get(refId);
         } else {

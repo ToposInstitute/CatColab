@@ -1,7 +1,6 @@
 {
     "compilerOptions": {
         "target": "ESNext",
-        "lib": "es2022",
         "jsx": "react",
         "module": "NodeNext",
         "moduleResolution": "Node16",

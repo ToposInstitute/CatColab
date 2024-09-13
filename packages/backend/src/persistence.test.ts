@@ -73,20 +73,20 @@ test("Persistence API", async (_t) => {
     });
 
     const docWithExtern = {
-        "title": "Untitled",
-        "forRef": {
-            "__extern__": {
-                "refId": r2,
-                "taxon": "analysis",
-                "via": null
-            }
-        }
+        title: "Untitled",
+        forRef: {
+            __extern__: {
+                refId: r2,
+                taxon: "analysis",
+                via: null,
+            },
+        },
     };
 
     await p.autosaveWithExterns(r1, docWithExtern);
 
     await it("correctly saved externs", async () => {
-        assert.deepStrictEqual(await p.getBacklinks(r2, "analysis"), [r1])
+        assert.deepStrictEqual(await p.getBacklinks(r2, "analysis"), [r1]);
     });
 
     p.close();
