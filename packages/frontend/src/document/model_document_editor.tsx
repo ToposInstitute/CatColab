@@ -303,7 +303,7 @@ export function ModelDocumentEditor(props: {
 function AnalysesPane(props: { forRef: string; title: string }) {
     const client = useContext(RPCContext);
     if (client === undefined) {
-        throw "Must provide RPCContext";
+        throw new Error("Must provide RPCContext");
     }
     const [analyses] = createResource(async () => {
         return await client.getBacklinks.query({ refId: props.forRef, taxon: "analysis" });
@@ -311,12 +311,12 @@ function AnalysesPane(props: { forRef: string; title: string }) {
 
     const repo = useContext(RepoContext);
     if (repo === undefined) {
-        throw "Must provide RepoContext";
+        throw new Error("Must provide RepoContext");
     }
 
     const navigator = useNavigate();
 
-    async function createAnalysis() {
+    const createAnalysis = async () => {
         const init: AnalysisDocument = {
             name: "Untitled",
             type: "analysis",
@@ -333,7 +333,7 @@ function AnalysesPane(props: { forRef: string; title: string }) {
         const newRef = await client.newRef.mutate({ title: "Untitled", docId: newDoc.documentId });
 
         navigator(`/analysis/${newRef}`);
-    }
+    };
 
     return (
         <div>
