@@ -2,9 +2,20 @@
 
 let
     port = "8000";
+    startScript = pkgs.writeShellScript "catcolab.sh" ''
+        rm -f instrument.mjs
+        cp ${config.age.secrets."instrument.mjs".path} .
+        ${pkgs.nodejs}/bin/node dist/index.js
+    '';
 in {
     age.secrets.DATABASE_URL = {
         file = "${inputs.self}/secrets/DATABASE_URL.age";
+        mode = "400";
+        owner = "catcolab";
+    };
+
+    age.secrets."instrument.mjs" = {
+        file = "${inputs.self}/secrets/instrument.mjs.age";
         mode = "400";
         owner = "catcolab";
     };
@@ -40,13 +51,15 @@ in {
         environment = {
             PORT = port;
             DATABASE_URL_PATH = config.age.secrets.DATABASE_URL.path;
+            NODE_OPTIONS = "--import ./instrument.mjs";
         };
 
         serviceConfig = {
             User = "catcolab";
-            ExecStart = "${pkgs.nodejs}/bin/node dist/index.js";
+            ExecStart = startScript;
             Type="simple";
             WorkingDirectory = "/var/lib/catcolab/packages/backend/";
+            Restart = "on-failure";
         };
     };
 

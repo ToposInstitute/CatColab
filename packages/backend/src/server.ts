@@ -1,6 +1,7 @@
 import type * as http from "node:http";
 import * as A from "@automerge/automerge-repo";
 import { NodeWSServerAdapter } from "@automerge/automerge-repo-network-websocket";
+import * as Sentry from "@sentry/node";
 import express from "express";
 import morgan from "morgan";
 import * as ws from "ws";
@@ -34,6 +35,12 @@ export class Server {
         this.docMap = new Map();
 
         this.app = express();
+
+        this.app.get("/debug-sentry", function mainHandler(_req, _res) {
+            throw new Error("My first Sentry error!");
+        });
+
+        Sentry.setupExpressErrorHandler(this.app);
 
         this.appRouter = router({
             newRef: publicProcedure
