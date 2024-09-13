@@ -16,7 +16,7 @@ modules according to dimensionality:
 
 The foundational modules make no pretence to completeness, but if they become
 sufficiently useful in their own right, they may be spun off into their own
-packages.
+crates.
 */
 
 // Unicode identifiers.
@@ -31,5 +31,6 @@ pub mod validate;
 
 pub mod dbl;
 pub mod one;
+pub mod simulate;
 pub mod stdlib;
 pub mod zero;
