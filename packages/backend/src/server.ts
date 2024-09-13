@@ -91,10 +91,6 @@ export class Server {
             noServer: true,
         });
 
-        this.wss.on("error", (err) => {
-            throw err;
-        });
-
         const config = {
             network: [new NodeWSServerAdapter(this.wss)],
             sharePolicy: async () => false,
