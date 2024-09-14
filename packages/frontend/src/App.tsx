@@ -1,18 +1,16 @@
 import { Repo } from "@automerge/automerge-repo";
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
 import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb";
-
-import { type ModelDocument, ModelPage } from "./document";
-
 import * as trpc from "@trpc/client";
-import type { AppRouter } from "backend/src/index.js";
+import * as uuid from "uuid";
 
 import { MultiProvider } from "@solid-primitives/context";
 import { Route, type RouteSectionProps, Router, useNavigate } from "@solidjs/router";
 import { Match, Switch, createResource, useContext } from "solid-js";
-import * as uuid from "uuid";
+
+import type { AppRouter } from "backend/src/index.js";
 import { RPCContext, RepoContext } from "./api";
-import { AnalysisPage } from "./document/analysis_document_editor";
+import { AnalysisPage, type ModelDocument, ModelPage } from "./document";
 import { newNotebook } from "./notebook";
 
 const serverUrl: string = import.meta.env.VITE_BACKEND_HOST;
@@ -20,25 +18,25 @@ const serverUrl: string = import.meta.env.VITE_BACKEND_HOST;
 const useHttps = serverUrl.match(/^https:\/\//)?.length === 1;
 const serverHost = serverUrl.replace(/^https?:\/\//, "");
 
+const httpUrl = `http${useHttps ? "s" : ""}://${serverHost}`;
+const wsUrl = `ws${useHttps ? "s" : ""}://${serverHost}`;
+
 const Root = (props: RouteSectionProps<unknown>) => {
     if (!serverHost) {
-        throw "Must set environment variable VITE_BACKEND_HOST";
+        throw new Error("Must set environment variable VITE_BACKEND_HOST");
     }
-
-    const http_url = `http${useHttps ? "s" : ""}://${serverHost}`;
-    const ws_url = `ws${useHttps ? "s" : ""}://${serverHost}`;
 
     const client = trpc.createTRPCClient<AppRouter>({
         links: [
             trpc.httpBatchLink({
-                url: http_url,
+                url: httpUrl,
             }),
         ],
     });
 
     const repo = new Repo({
         storage: new IndexedDBStorageAdapter("catcolab-demo"),
-        network: [new BrowserWebSocketClientAdapter(ws_url)],
+        network: [new BrowserWebSocketClientAdapter(wsUrl)],
     });
 
     return (
@@ -60,11 +58,11 @@ const refIsUUIDFilter = {
 function CreateModel() {
     const client = useContext(RPCContext);
     if (client === undefined) {
-        throw "Must provide RPCContext";
+        throw new Error("Must provide RPCContext");
     }
     const repo = useContext(RepoContext);
     if (repo === undefined) {
-        throw "Must provide RepoContext";
+        throw new Error("Must provide RepoContext");
     }
 
     const init: ModelDocument = {

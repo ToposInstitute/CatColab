@@ -1,26 +1,32 @@
-import type * as A from "@automerge/automerge-repo";
+import type { DocHandle, DocumentId, Repo } from "@automerge/automerge-repo";
 import type * as trpc from "@trpc/client";
-import type { AppRouter } from "backend/src/index.js";
 import { createContext } from "solid-js";
 import * as uuid from "uuid";
-import { makeReactive } from "./util/automerge_solid";
+
+import type { AppRouter } from "backend/src/index";
+import { makeDocReactive } from "./util/automerge_solid";
 
 export type RPCClient = ReturnType<typeof trpc.createTRPCClient<AppRouter>>;
 
 export const RPCContext = createContext<RPCClient>();
-export const RepoContext = createContext<A.Repo>();
+export const RepoContext = createContext<Repo>();
 
-export type RetrievedDocument<T> = {
+/** Automerge document retrieved from the backend. */
+export type RetrievedDoc<T> = {
     doc: T;
-    docHandle: A.DocHandle<T>;
+    docHandle: DocHandle<T>;
 };
 
-export async function retrieve<T extends object>(
+/** Retrieve an Automerge document from the backend.
+
+Returns a document that is reactive along with the Automerge document handle.
+ */
+export async function retrieveDoc<T extends object>(
     client: RPCClient,
     ref: string,
-    repo: A.Repo,
-): Promise<RetrievedDocument<T>> {
-    let docId: A.DocumentId;
+    repo: Repo,
+): Promise<RetrievedDoc<T>> {
+    let docId: DocumentId;
 
     if (uuid.validate(ref)) {
         const res = await client.docIdFor.query(ref);
@@ -29,11 +35,11 @@ export async function retrieve<T extends object>(
         }
         docId = res;
     } else {
-        throw `Invalid ref ${ref}`;
+        throw new Error(`Invalid ref ${ref}`);
     }
 
-    const docHandle = repo.find(docId) as A.DocHandle<T>;
-    const doc = await makeReactive(docHandle);
+    const docHandle = repo.find(docId) as DocHandle<T>;
+    const doc = await makeDocReactive(docHandle);
 
     return { doc, docHandle };
 }

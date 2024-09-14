@@ -1,5 +1,7 @@
 import type { DocHandle } from "@automerge/automerge-repo";
+import Resizable, { type ContextValue } from "@corvu/resizable";
 import { MultiProvider } from "@solid-primitives/context";
+import { useParams } from "@solidjs/router";
 import {
     type Accessor,
     Match,
@@ -14,9 +16,8 @@ import {
 } from "solid-js";
 import { Dynamic } from "solid-js/web";
 
-import Resizable, { type ContextValue } from "@corvu/resizable";
 import type { ModelAnalysis } from "../analysis";
-import { RPCContext, RepoContext, retrieve } from "../api";
+import { RPCContext, RepoContext, retrieveDoc } from "../api";
 import { IconButton, ResizableHandle } from "../components";
 import type { ModelJudgment } from "../model";
 import { TheoryContext } from "../model/model_context";
@@ -32,11 +33,10 @@ import {
     type LiveModelDocument,
     ModelPane,
     type ValidationResult,
-    enliven,
+    enliveModelDocument,
 } from "./model_document_editor";
 import type { AnalysisDocument, ModelDocument } from "./types";
 
-import { useParams } from "@solidjs/router";
 import Camera from "lucide-solid/icons/camera";
 import PanelRight from "lucide-solid/icons/panel-right";
 import PanelRightClose from "lucide-solid/icons/panel-right-close";
@@ -48,7 +48,7 @@ export type LiveAnalysisDocument = {
 
     docHandle: DocHandle<AnalysisDocument>;
 
-    livemodel: LiveModelDocument;
+    liveModel: LiveModelDocument;
 };
 
 export function AnalysisPage() {
@@ -63,36 +63,40 @@ export function AnalysisPage() {
         throw "Must provide a value for RepoContext to use ModelPage";
     }
 
-    const [livedoc] = createResource(async () => {
+    const [liveDoc] = createResource(async () => {
         console.log(`ref: ${params.ref}`);
-        const rdoc = await retrieve<AnalysisDocument>(client, params.ref, repo);
+        const rdoc = await retrieveDoc<AnalysisDocument>(client, params.ref, repo);
         await rdoc.docHandle.whenReady();
         if (rdoc.doc.type !== "analysis") {
             throw `Expected analysis document, got type: ${rdoc.doc.type}`;
         }
-        const rmodeldoc = await retrieve<ModelDocument>(
+        const rmodeldoc = await retrieveDoc<ModelDocument>(
             client,
             rdoc.doc.modelRef.__extern__.refId,
             repo,
         );
-        const livemodel = enliven(rdoc.doc.modelRef.__extern__.refId, rmodeldoc, stdTheories);
+        const liveModel = enliveModelDocument(
+            rdoc.doc.modelRef.__extern__.refId,
+            rmodeldoc,
+            stdTheories,
+        );
         return {
             ...rdoc,
             refId: params.ref,
-            livemodel,
+            liveModel,
         };
     });
 
     return (
         <Switch>
-            <Match when={livedoc.loading}>
+            <Match when={liveDoc.loading}>
                 <p>Loading...</p>
             </Match>
-            <Match when={livedoc.error}>
-                <span>Error: {livedoc.error}</span>
+            <Match when={liveDoc.error}>
+                <span>Error: {liveDoc.error}</span>
             </Match>
-            <Match when={livedoc()}>
-                {(livedoc) => <AnalysisDocumentEditor livedoc={livedoc()} theories={stdTheories} />}
+            <Match when={liveDoc()}>
+                {(liveDoc) => <AnalysisDocumentEditor liveDoc={liveDoc()} theories={stdTheories} />}
             </Match>
         </Switch>
     );
@@ -101,24 +105,24 @@ export function AnalysisPage() {
 /** Notebook editor for analyses of models of double theories.
  */
 export function AnalysisPane(props: {
-    livedoc: LiveAnalysisDocument;
+    liveDoc: LiveAnalysisDocument;
 }) {
     return (
         <MultiProvider
             values={[
-                [TheoryContext, props.livedoc.livemodel.theory],
-                [ModelContext, props.livedoc.livemodel.formalJudgments],
-                [ValidationResultContext, props.livedoc.livemodel.validationResult],
+                [TheoryContext, props.liveDoc.liveModel.theory],
+                [ModelContext, props.liveDoc.liveModel.formalJudgments],
+                [ValidationResultContext, props.liveDoc.liveModel.validationResult],
             ]}
         >
             <NotebookEditor
-                handle={props.livedoc.docHandle}
+                handle={props.liveDoc.docHandle}
                 path={["notebook"]}
-                notebook={props.livedoc.doc.notebook}
-                changeNotebook={(f) => props.livedoc.docHandle.change((doc) => f(doc.notebook))}
+                notebook={props.liveDoc.doc.notebook}
+                changeNotebook={(f) => props.liveDoc.docHandle.change((doc) => f(doc.notebook))}
                 formalCellEditor={ModelAnalysisCellEditor}
                 cellConstructors={modelAnalysisCellConstructors(
-                    props.livedoc.livemodel.theory()?.modelAnalyses ?? [],
+                    props.liveDoc.liveModel.theory()?.modelAnalyses ?? [],
                 )}
                 noShortcuts={true}
             />
@@ -197,7 +201,7 @@ The editor includes a notebook for the model itself plus another pane for
 performing analysis of the model.
  */
 export function AnalysisDocumentEditor(props: {
-    livedoc: LiveAnalysisDocument;
+    liveDoc: LiveAnalysisDocument;
     theories: TheoryLibrary;
 }) {
     const client = useContext(RPCContext);
@@ -207,7 +211,7 @@ export function AnalysisDocumentEditor(props: {
 
     const snapshotModel = () =>
         client.saveRef.mutate({
-            refId: props.livedoc.refId,
+            refId: props.liveDoc.refId,
             note: "",
         });
 
@@ -256,7 +260,7 @@ export function AnalysisDocumentEditor(props: {
                                 </IconButton>
                             </div>
                             <ModelPane
-                                livedoc={props.livedoc.livemodel}
+                                liveDoc={props.liveDoc.liveModel}
                                 theories={props.theories}
                             />
                         </Resizable.Panel>
@@ -272,7 +276,7 @@ export function AnalysisDocumentEditor(props: {
                         >
                             <div class="notebook-container">
                                 <h2>Analysis</h2>
-                                <AnalysisPane livedoc={props.livedoc} />
+                                <AnalysisPane liveDoc={props.liveDoc} />
                             </div>
                         </Resizable.Panel>
                     </>

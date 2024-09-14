@@ -1,4 +1,7 @@
 import type { DocHandle } from "@automerge/automerge-repo";
+import Resizable, { type ContextValue } from "@corvu/resizable";
+import { MultiProvider } from "@solid-primitives/context";
+import { useNavigate, useParams } from "@solidjs/router";
 import {
     type Accessor,
     For,
@@ -13,22 +16,24 @@ import {
 } from "solid-js";
 
 import type { DblModel, InvalidDiscreteDblModel, Uuid } from "catlog-wasm";
+import { RPCContext, RepoContext, type RetrievedDoc, retrieveDoc } from "../api";
+import { IconButton, InlineInput, ResizableHandle } from "../components";
+import {
+    type ModelJudgment,
+    MorphismCellEditor,
+    type MorphismDecl,
+    ObjectCellEditor,
+    type ObjectDecl,
+    catlogModel,
+    newMorphismDecl,
+    newObjectDecl,
+} from "../model";
 import {
     ModelErrorsContext,
     MorphismIndexContext,
     ObjectIndexContext,
     TheoryContext,
 } from "../model/model_context";
-import { MorphismCellEditor } from "../model/morphism_cell_editor";
-import { ObjectCellEditor } from "../model/object_cell_editor";
-import {
-    type ModelJudgment,
-    type MorphismDecl,
-    type ObjectDecl,
-    catlogModel,
-    newMorphismDecl,
-    newObjectDecl,
-} from "../model/types";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
@@ -37,22 +42,16 @@ import {
     newFormalCell,
     newNotebook,
 } from "../notebook";
+import { type TheoryLibrary, stdTheories } from "../stdlib";
 import type { Theory } from "../theory";
-
-import { RPCContext, RepoContext, type RetrievedDocument, retrieve } from "../api";
+import { type IndexedMap, indexArray, indexMap } from "../util/indexing";
 import type { AnalysisDocument, ModelDocument } from "./types";
 
 import "./model_document_editor.css";
-import Resizable from "@corvu/resizable";
-import type { ContextValue } from "@corvu/resizable";
-import { MultiProvider } from "@solid-primitives/context";
-import { useNavigate, useParams } from "@solidjs/router";
+
 import Camera from "lucide-solid/icons/camera";
 import PanelRight from "lucide-solid/icons/panel-right";
 import PanelRightClose from "lucide-solid/icons/panel-right-close";
-import { IconButton, InlineInput, ResizableHandle } from "../components";
-import { type TheoryLibrary, stdTheories } from "../stdlib";
-import { type IndexedMap, indexArray, indexMap } from "../util/indexing";
 
 export type ValidatedModel = {
     tag: "validated";
@@ -64,49 +63,54 @@ export type ValidationErrors = {
     value: Map<Uuid, InvalidDiscreteDblModel<Uuid>[]>;
 };
 
+// TODO: This should go away because all models should support validation!
 export type ValidationNotSupported = {
     tag: "notsupported";
 };
 
 export type ValidationResult = ValidatedModel | ValidationErrors | ValidationNotSupported;
 
-/** A "live" model document, which has an automerge doc handle in order to make
- * changes to it, and also contains various memos for derived data.
+/** A model document "live" for editing.
+
+Contains a model document and Automerge document handle, plus various memos of
+ derived data.
  */
 export type LiveModelDocument = {
-    // The ref for which this is a live document
+    /** The ref for which this is a live document. */
     refId: string;
 
-    // The model document.
-    // This is produced via `makeReactive`, so that accessing fields of this
-    // within subscription contexts will make subscriptions.
+    /** The model document.
+
+    Produced via `makeDocReactive` so that accessing fields of this document in
+    reactive contexts will be appropriately reactive.
+    */
     doc: ModelDocument;
 
-    // The document handle for the model document
+    /** The document handle for the model document.*/
     docHandle: DocHandle<ModelDocument>;
 
-    // A memo of the formal content of the model.
+    /** A memo of the formal content of the model. */
     formalJudgments: Accessor<Array<ModelJudgment>>;
 
-    // A memo of the indexed map from object id to name
+    /** A memo of the indexed map from object ID to name. */
     objectIndex: Accessor<IndexedMap<Uuid, string>>;
 
-    // A memo of the indexed map from morphism id to name
+    /** A memo of the indexed map from morphism ID to name. */
     morphismIndex: Accessor<IndexedMap<Uuid, string>>;
 
-    // A memo of the double theory that the model is of, if it is defined.
+    /** A memo of the double theory that the model is of, if it is defined. */
     theory: Accessor<Theory | undefined>;
 
-    // A memo of the result of validation
+    /** A memo of the result of validation.*/
     validationResult: Accessor<ValidationResult>;
 
-    // The validation errors
+    /** Any validation errors. */
     modelErrors: Accessor<Map<Uuid, InvalidDiscreteDblModel<Uuid>[]>>;
 };
 
-export function enliven(
+export function enliveModelDocument(
     refId: string,
-    rdoc: RetrievedDocument<ModelDocument>,
+    rdoc: RetrievedDoc<ModelDocument>,
     theories: TheoryLibrary,
 ): LiveModelDocument {
     const { doc, docHandle } = rdoc;
@@ -192,28 +196,28 @@ export function ModelPage() {
         throw "Must provide a value for RepoContext to use ModelPage";
     }
 
-    const [livedoc] = createResource(async () => {
-        const rdoc = await retrieve<ModelDocument>(client, params.ref, repo);
-        return enliven(params.ref, rdoc, stdTheories);
+    const [liveDoc] = createResource(async () => {
+        const rdoc = await retrieveDoc<ModelDocument>(client, params.ref, repo);
+        return enliveModelDocument(params.ref, rdoc, stdTheories);
     });
 
     return (
         <Switch>
-            <Match when={livedoc.loading}>
+            <Match when={liveDoc.loading}>
                 <p>Loading...</p>
             </Match>
-            <Match when={livedoc.error}>
-                <span>Error: {livedoc.error}</span>
+            <Match when={liveDoc.error}>
+                <span>Error: {liveDoc.error}</span>
             </Match>
-            <Match when={livedoc()}>
-                {(livedoc) => <ModelDocumentEditor livedoc={livedoc()} theories={stdTheories} />}
+            <Match when={liveDoc()}>
+                {(liveDoc) => <ModelDocumentEditor liveDoc={liveDoc()} theories={stdTheories} />}
             </Match>
         </Switch>
     );
 }
 
 export function ModelDocumentEditor(props: {
-    livedoc: LiveModelDocument;
+    liveDoc: LiveModelDocument;
     theories: TheoryLibrary;
 }) {
     const client = useContext(RPCContext);
@@ -224,7 +228,7 @@ export function ModelDocumentEditor(props: {
 
     const snapshotModel = () =>
         client.saveRef.mutate({
-            refId: props.livedoc.refId,
+            refId: props.liveDoc.refId,
             note: "",
         });
 
@@ -274,7 +278,7 @@ export function ModelDocumentEditor(props: {
                                     </Show>
                                 </IconButton>
                             </div>
-                            <ModelPane livedoc={props.livedoc} theories={props.theories} />
+                            <ModelPane liveDoc={props.liveDoc} theories={props.theories} />
                         </Resizable.Panel>
                         <ResizableHandle hidden={!isSidePanelOpen()} />
                         <Resizable.Panel
@@ -288,8 +292,8 @@ export function ModelDocumentEditor(props: {
                         >
                             <div class="notebook-container">
                                 <AnalysesPane
-                                    forRef={props.livedoc.refId}
-                                    title={props.livedoc.doc.name}
+                                    forRef={props.liveDoc.refId}
+                                    title={props.liveDoc.doc.name}
                                 />
                             </div>
                         </Resizable.Panel>
@@ -359,12 +363,12 @@ function AnalysesPane(props: { forRef: string; title: string }) {
 }
 
 export function ModelPane(props: {
-    livedoc: LiveModelDocument;
+    liveDoc: LiveModelDocument;
     theories: TheoryLibrary;
 }) {
-    const livedoc = () => props.livedoc;
-    const doc = () => props.livedoc.doc;
-    const docHandle = () => props.livedoc.docHandle;
+    const liveDoc = () => props.liveDoc;
+    const doc = () => props.liveDoc.doc;
+    const docHandle = () => props.liveDoc.docHandle;
     return (
         <div class="notebook-container">
             <div class="model-head">
@@ -401,10 +405,10 @@ export function ModelPane(props: {
             </div>
             <MultiProvider
                 values={[
-                    [TheoryContext, livedoc().theory],
-                    [ObjectIndexContext, livedoc().objectIndex],
-                    [MorphismIndexContext, livedoc().morphismIndex],
-                    [ModelErrorsContext, livedoc().modelErrors],
+                    [TheoryContext, liveDoc().theory],
+                    [ObjectIndexContext, liveDoc().objectIndex],
+                    [MorphismIndexContext, liveDoc().morphismIndex],
+                    [ModelErrorsContext, liveDoc().modelErrors],
                 ]}
             >
                 <NotebookEditor
@@ -415,7 +419,7 @@ export function ModelPane(props: {
                         docHandle().change((doc) => f(doc.notebook));
                     }}
                     formalCellEditor={ModelCellEditor}
-                    cellConstructors={modelCellConstructors(livedoc().theory())}
+                    cellConstructors={modelCellConstructors(liveDoc().theory())}
                     cellLabel={judgmentLabel}
                 />
             </MultiProvider>
