@@ -14,6 +14,7 @@ import {
     createSignal,
     useContext,
 } from "solid-js";
+import invariant from "tiny-invariant";
 
 import type { DblModel, InvalidDiscreteDblModel, Uuid } from "catlog-wasm";
 import { RPCContext, RepoContext, type RetrievedDoc, retrieveDoc } from "../api";
@@ -188,13 +189,10 @@ export function ModelPage() {
     const params = useParams();
 
     const client = useContext(RPCContext);
-    if (client === undefined) {
-        throw "Must provide a value for RPCContext to use ModelPage";
-    }
+    invariant(client, "Must provide a value for RPCContext to use ModelPage");
+
     const repo = useContext(RepoContext);
-    if (repo === undefined) {
-        throw "Must provide a value for RepoContext to use ModelPage";
-    }
+    invariant(repo, "Must provide a value for RepoContext to use ModelPage");
 
     const [liveDoc] = createResource(async () => {
         const rdoc = await retrieveDoc<ModelDocument>(client, params.ref, repo);
@@ -221,10 +219,7 @@ export function ModelDocumentEditor(props: {
     theories: TheoryLibrary;
 }) {
     const client = useContext(RPCContext);
-
-    if (client === undefined) {
-        throw "Must provide RPCContext";
-    }
+    invariant(client, "Must provide RPCContext");
 
     const snapshotModel = () =>
         client.saveRef.mutate({
@@ -306,17 +301,14 @@ export function ModelDocumentEditor(props: {
 
 function AnalysesPane(props: { forRef: string; title: string }) {
     const client = useContext(RPCContext);
-    if (client === undefined) {
-        throw new Error("Must provide RPCContext");
-    }
+    invariant(client, "Must provide RPCContext");
+
     const [analyses] = createResource(async () => {
         return await client.getBacklinks.query({ refId: props.forRef, taxon: "analysis" });
     });
 
     const repo = useContext(RepoContext);
-    if (repo === undefined) {
-        throw new Error("Must provide RepoContext");
-    }
+    invariant(repo, "Must provide RepoContext");
 
     const navigator = useNavigate();
 

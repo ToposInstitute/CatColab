@@ -1,3 +1,5 @@
+import invariant from "tiny-invariant";
+
 /** A map together with an index for efficient reverse lookup.
  */
 export type IndexedMap<K, V> = {
@@ -42,7 +44,7 @@ export function uniqueIndexArray<K, V>(array: Array<V>, by: (x: V) => K) {
     const index = new Map<K, V>();
     for (const x of array) {
         const key = by(x);
-        console.assert(!index.has(key));
+        invariant(!index.has(key), () => `Key ${key} is not unique`);
         index.set(key, x);
     }
     return index;

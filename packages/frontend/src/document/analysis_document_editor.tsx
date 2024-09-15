@@ -15,6 +15,7 @@ import {
     useContext,
 } from "solid-js";
 import { Dynamic } from "solid-js/web";
+import invariant from "tiny-invariant";
 
 import type { ModelAnalysis } from "../analysis";
 import { RPCContext, RepoContext, retrieveDoc } from "../api";
@@ -55,21 +56,20 @@ export function AnalysisPage() {
     const params = useParams();
 
     const client = useContext(RPCContext);
-    if (client === undefined) {
-        throw "Must provide a value for RPCContext to use ModelPage";
-    }
+    invariant(client, "Must provide a value for RPCContext to use AnalysisPage");
+
     const repo = useContext(RepoContext);
-    if (repo === undefined) {
-        throw "Must provide a value for RepoContext to use ModelPage";
-    }
+    invariant(repo, "Must provide a value for RepoContext to use AnalysisPage");
 
     const [liveDoc] = createResource(async () => {
         console.log(`ref: ${params.ref}`);
         const rdoc = await retrieveDoc<AnalysisDocument>(client, params.ref, repo);
         await rdoc.docHandle.whenReady();
-        if (rdoc.doc.type !== "analysis") {
-            throw `Expected analysis document, got type: ${rdoc.doc.type}`;
-        }
+        invariant(
+            rdoc.doc.type === "analysis",
+            () => `Expected analysis document, got type: ${rdoc.doc.type}`,
+        );
+
         const rmodeldoc = await retrieveDoc<ModelDocument>(
             client,
             rdoc.doc.modelRef.__extern__.refId,
@@ -134,9 +134,7 @@ function ModelAnalysisCellEditor(props: FormalCellEditorProps<ModelAnalysis>) {
     const theory = useContext(TheoryContext);
     const model = useContext(ModelContext);
     const validationResult = useContext(ValidationResultContext);
-    if (validationResult === undefined) {
-        throw "Must provide ValidationResultContext";
-    }
+    invariant(validationResult, "Must provide ValidationResultContext");
 
     const validatedModel = createMemo(() => {
         const res = validationResult();
@@ -205,9 +203,7 @@ export function AnalysisDocumentEditor(props: {
     theories: TheoryLibrary;
 }) {
     const client = useContext(RPCContext);
-    if (client === undefined) {
-        throw "Must provide RPCContext";
-    }
+    invariant(client, "Must provide RPCContext");
 
     const snapshotModel = () =>
         client.saveRef.mutate({

@@ -2,6 +2,7 @@ import { Repo } from "@automerge/automerge-repo";
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
 import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb";
 import * as trpc from "@trpc/client";
+import invariant from "tiny-invariant";
 import * as uuid from "uuid";
 
 import { MultiProvider } from "@solid-primitives/context";
@@ -22,9 +23,7 @@ const httpUrl = `http${useHttps ? "s" : ""}://${serverHost}`;
 const wsUrl = `ws${useHttps ? "s" : ""}://${serverHost}`;
 
 const Root = (props: RouteSectionProps<unknown>) => {
-    if (!serverHost) {
-        throw new Error("Must set environment variable VITE_BACKEND_HOST");
-    }
+    invariant(serverHost, "Must set environment variable VITE_BACKEND_HOST");
 
     const client = trpc.createTRPCClient<AppRouter>({
         links: [
@@ -57,13 +56,10 @@ const refIsUUIDFilter = {
 
 function CreateModel() {
     const client = useContext(RPCContext);
-    if (client === undefined) {
-        throw new Error("Must provide RPCContext");
-    }
+    invariant(client, "Must provide RPCContext");
+
     const repo = useContext(RepoContext);
-    if (repo === undefined) {
-        throw new Error("Must provide RepoContext");
-    }
+    invariant(repo, "Must provide RepoContext");
 
     const init: ModelDocument = {
         name: "Untitled",

@@ -31,7 +31,7 @@ export async function retrieveDoc<T extends object>(
     if (uuid.validate(ref)) {
         const res = await client.docIdFor.query(ref);
         if (!res) {
-            throw `Failed to get documentId for ref ${ref}`;
+            throw new Error(`Failed to get document ID for ref ${ref}`);
         }
         docId = res;
     } else {
