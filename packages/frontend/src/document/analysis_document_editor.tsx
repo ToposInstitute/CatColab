@@ -52,7 +52,7 @@ export type LiveAnalysisDocument = {
     liveModel: LiveModelDocument;
 };
 
-export function AnalysisPage() {
+export default function AnalysisPage() {
     const params = useParams();
 
     const client = useContext(RPCContext);

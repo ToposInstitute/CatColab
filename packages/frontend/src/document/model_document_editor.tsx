@@ -185,7 +185,7 @@ export function enlivenModelDocument(
     };
 }
 
-export function ModelPage() {
+export default function ModelPage() {
     const params = useParams();
 
     const client = useContext(RPCContext);

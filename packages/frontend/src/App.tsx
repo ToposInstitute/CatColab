@@ -6,12 +6,12 @@ import invariant from "tiny-invariant";
 import * as uuid from "uuid";
 
 import { MultiProvider } from "@solid-primitives/context";
-import { Route, type RouteSectionProps, Router, useNavigate } from "@solidjs/router";
-import { Match, Switch, createResource, useContext } from "solid-js";
+import { type RouteDefinition, type RouteSectionProps, Router, useNavigate } from "@solidjs/router";
+import { Match, Switch, createResource, lazy, useContext } from "solid-js";
 
 import type { AppRouter } from "backend/src/index.js";
 import { RPCContext, RepoContext } from "./api";
-import { AnalysisPage, type ModelDocument, ModelPage } from "./document";
+import type { ModelDocument } from "./document";
 import { newNotebook } from "./notebook";
 import { TheoryLibraryContext, stdTheories } from "./stdlib";
 
@@ -92,14 +92,25 @@ function CreateModel() {
     );
 }
 
+const routes: RouteDefinition[] = [
+    {
+        path: "/",
+        component: CreateModel,
+    },
+    {
+        path: "/model/:ref",
+        matchFilters: refIsUUIDFilter,
+        component: lazy(() => import("./document/model_document_editor")),
+    },
+    {
+        path: "/analysis/:ref",
+        matchFilters: refIsUUIDFilter,
+        component: lazy(() => import("./document/analysis_document_editor")),
+    },
+];
+
 function App() {
-    return (
-        <Router root={Root}>
-            <Route path="/" component={CreateModel} />
-            <Route path="/model/:ref" matchFilters={refIsUUIDFilter} component={ModelPage} />
-            <Route path="/analysis/:ref" matchFilters={refIsUUIDFilter} component={AnalysisPage} />
-        </Router>
-    );
+    return <Router root={Root}>{routes}</Router>;
 }
 
 export default App;
