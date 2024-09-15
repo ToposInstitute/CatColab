@@ -17,7 +17,7 @@ import {
 import invariant from "tiny-invariant";
 
 import type { DblModel, InvalidDiscreteDblModel, Uuid } from "catlog-wasm";
-import { RPCContext, RepoContext, type RetrievedDoc, retrieveDoc } from "../api";
+import { RPCContext, RepoContext, retrieveDoc } from "../api";
 import { IconButton, InlineInput, ResizableHandle } from "../components";
 import {
     type ModelJudgment,
@@ -109,12 +109,14 @@ export type LiveModelDocument = {
     modelErrors: Accessor<Map<Uuid, InvalidDiscreteDblModel<Uuid>[]>>;
 };
 
-export function enliveModelDocument(
-    refId: string,
-    rdoc: RetrievedDoc<ModelDocument>,
-    theories: TheoryLibrary,
-): LiveModelDocument {
-    const { doc, docHandle } = rdoc;
+export function enlivenModelDocument(args: {
+    refId: string;
+    doc: ModelDocument;
+    docHandle: DocHandle<ModelDocument>;
+    theories: TheoryLibrary;
+}): LiveModelDocument {
+    const { refId, doc, docHandle, theories } = args;
+
     // Memo-ize the *formal* content of the notebook, since most derived objects
     // will not depend on the informal (rich-text) content in notebook.
     const formalJudgments = createMemo<Array<ModelJudgment>>(() =>
@@ -194,9 +196,9 @@ export function ModelPage() {
     const repo = useContext(RepoContext);
     invariant(repo, "Must provide a value for RepoContext to use ModelPage");
 
-    const [liveDoc] = createResource(async () => {
-        const rdoc = await retrieveDoc<ModelDocument>(client, params.ref, repo);
-        return enliveModelDocument(params.ref, rdoc, stdTheories);
+    const [liveDoc] = createResource<LiveModelDocument>(async () => {
+        const { doc, docHandle } = await retrieveDoc<ModelDocument>(client, params.ref, repo);
+        return enlivenModelDocument({ refId: params.ref, doc, docHandle, theories: stdTheories });
     });
 
     return (

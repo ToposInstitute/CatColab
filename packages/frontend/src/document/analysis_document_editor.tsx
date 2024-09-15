@@ -34,7 +34,7 @@ import {
     type LiveModelDocument,
     ModelPane,
     type ValidationResult,
-    enliveModelDocument,
+    enlivenModelDocument,
 } from "./model_document_editor";
 import type { AnalysisDocument, ModelDocument } from "./types";
 
@@ -61,28 +61,30 @@ export function AnalysisPage() {
     const repo = useContext(RepoContext);
     invariant(repo, "Must provide a value for RepoContext to use AnalysisPage");
 
-    const [liveDoc] = createResource(async () => {
-        console.log(`ref: ${params.ref}`);
-        const rdoc = await retrieveDoc<AnalysisDocument>(client, params.ref, repo);
-        await rdoc.docHandle.whenReady();
+    const [liveDoc] = createResource<LiveAnalysisDocument>(async () => {
+        const { doc, docHandle } = await retrieveDoc<AnalysisDocument>(client, params.ref, repo);
+        await docHandle.whenReady();
         invariant(
-            rdoc.doc.type === "analysis",
-            () => `Expected analysis document, got type: ${rdoc.doc.type}`,
+            doc.type === "analysis",
+            () => `Expected analysis document, got type: ${doc.type}`,
         );
 
-        const rmodeldoc = await retrieveDoc<ModelDocument>(
+        const { doc: modelDoc, docHandle: modelDocHandle } = await retrieveDoc<ModelDocument>(
             client,
-            rdoc.doc.modelRef.__extern__.refId,
+            doc.modelRef.__extern__.refId,
             repo,
         );
-        const liveModel = enliveModelDocument(
-            rdoc.doc.modelRef.__extern__.refId,
-            rmodeldoc,
-            stdTheories,
-        );
+        const liveModel = enlivenModelDocument({
+            refId: doc.modelRef.__extern__.refId,
+            doc: modelDoc,
+            docHandle: modelDocHandle,
+            theories: stdTheories,
+        });
+
         return {
-            ...rdoc,
             refId: params.ref,
+            doc,
+            docHandle,
             liveModel,
         };
     });
