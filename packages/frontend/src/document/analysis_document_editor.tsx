@@ -28,7 +28,7 @@ import {
     NotebookEditor,
     newFormalCell,
 } from "../notebook";
-import { type TheoryLibrary, stdTheories } from "../stdlib";
+import { TheoryLibraryContext } from "../stdlib";
 import type { ModelAnalysisMeta } from "../theory";
 import {
     type LiveModelDocument,
@@ -61,6 +61,9 @@ export function AnalysisPage() {
     const repo = useContext(RepoContext);
     invariant(repo, "Must provide a value for RepoContext to use AnalysisPage");
 
+    const theories = useContext(TheoryLibraryContext);
+    invariant(theories, "Library of theories should be provided as context");
+
     const [liveDoc] = createResource<LiveAnalysisDocument>(async () => {
         const { doc, docHandle } = await retrieveDoc<AnalysisDocument>(client, params.ref, repo);
         await docHandle.whenReady();
@@ -74,12 +77,12 @@ export function AnalysisPage() {
             doc.modelRef.__extern__.refId,
             repo,
         );
-        const liveModel = enlivenModelDocument({
-            refId: doc.modelRef.__extern__.refId,
-            doc: modelDoc,
-            docHandle: modelDocHandle,
-            theories: stdTheories,
-        });
+        const liveModel = enlivenModelDocument(
+            doc.modelRef.__extern__.refId,
+            modelDoc,
+            modelDocHandle,
+            theories,
+        );
 
         return {
             refId: params.ref,
@@ -98,7 +101,7 @@ export function AnalysisPage() {
                 <span>Error: {liveDoc.error}</span>
             </Match>
             <Match when={liveDoc()}>
-                {(liveDoc) => <AnalysisDocumentEditor liveDoc={liveDoc()} theories={stdTheories} />}
+                {(liveDoc) => <AnalysisDocumentEditor liveDoc={liveDoc()} />}
             </Match>
         </Switch>
     );
@@ -202,7 +205,6 @@ performing analysis of the model.
  */
 export function AnalysisDocumentEditor(props: {
     liveDoc: LiveAnalysisDocument;
-    theories: TheoryLibrary;
 }) {
     const client = useContext(RPCContext);
     invariant(client, "Must provide RPCContext");
@@ -257,10 +259,7 @@ export function AnalysisDocumentEditor(props: {
                                     </Show>
                                 </IconButton>
                             </div>
-                            <ModelPane
-                                liveDoc={props.liveDoc.liveModel}
-                                theories={props.theories}
-                            />
+                            <ModelPane liveDoc={props.liveDoc.liveModel} />
                         </Resizable.Panel>
                         <ResizableHandle hidden={!isSidePanelOpen()} />
                         <Resizable.Panel

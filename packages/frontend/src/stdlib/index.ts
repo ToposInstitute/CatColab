@@ -8,4 +8,5 @@ at present this is the complete set of logics available in the application.
  */
 
 export * from "./types";
+export * from "./context";
 export { stdTheories } from "./theories";

@@ -43,7 +43,7 @@ import {
     newFormalCell,
     newNotebook,
 } from "../notebook";
-import { type TheoryLibrary, stdTheories } from "../stdlib";
+import { type TheoryLibrary, TheoryLibraryContext } from "../stdlib";
 import type { Theory } from "../theory";
 import { type IndexedMap, indexArray, indexMap } from "../util/indexing";
 import type { AnalysisDocument, ModelDocument } from "./types";
@@ -109,14 +109,12 @@ export type LiveModelDocument = {
     modelErrors: Accessor<Map<Uuid, InvalidDiscreteDblModel<Uuid>[]>>;
 };
 
-export function enlivenModelDocument(args: {
-    refId: string;
-    doc: ModelDocument;
-    docHandle: DocHandle<ModelDocument>;
-    theories: TheoryLibrary;
-}): LiveModelDocument {
-    const { refId, doc, docHandle, theories } = args;
-
+export function enlivenModelDocument(
+    refId: string,
+    doc: ModelDocument,
+    docHandle: DocHandle<ModelDocument>,
+    theories: TheoryLibrary,
+): LiveModelDocument {
     // Memo-ize the *formal* content of the notebook, since most derived objects
     // will not depend on the informal (rich-text) content in notebook.
     const formalJudgments = createMemo<Array<ModelJudgment>>(() =>
@@ -196,9 +194,12 @@ export function ModelPage() {
     const repo = useContext(RepoContext);
     invariant(repo, "Must provide a value for RepoContext to use ModelPage");
 
+    const theories = useContext(TheoryLibraryContext);
+    invariant(theories, "Library of theories should be provided as context");
+
     const [liveDoc] = createResource<LiveModelDocument>(async () => {
         const { doc, docHandle } = await retrieveDoc<ModelDocument>(client, params.ref, repo);
-        return enlivenModelDocument({ refId: params.ref, doc, docHandle, theories: stdTheories });
+        return enlivenModelDocument(params.ref, doc, docHandle, theories);
     });
 
     return (
@@ -210,7 +211,7 @@ export function ModelPage() {
                 <span>Error: {liveDoc.error}</span>
             </Match>
             <Match when={liveDoc()}>
-                {(liveDoc) => <ModelDocumentEditor liveDoc={liveDoc()} theories={stdTheories} />}
+                {(liveDoc) => <ModelDocumentEditor liveDoc={liveDoc()} />}
             </Match>
         </Switch>
     );
@@ -218,7 +219,6 @@ export function ModelPage() {
 
 export function ModelDocumentEditor(props: {
     liveDoc: LiveModelDocument;
-    theories: TheoryLibrary;
 }) {
     const client = useContext(RPCContext);
     invariant(client, "Must provide RPCContext");
@@ -275,7 +275,7 @@ export function ModelDocumentEditor(props: {
                                     </Show>
                                 </IconButton>
                             </div>
-                            <ModelPane liveDoc={props.liveDoc} theories={props.theories} />
+                            <ModelPane liveDoc={props.liveDoc} />
                         </Resizable.Panel>
                         <ResizableHandle hidden={!isSidePanelOpen()} />
                         <Resizable.Panel
@@ -358,8 +358,10 @@ function AnalysesPane(props: { forRef: string; title: string }) {
 
 export function ModelPane(props: {
     liveDoc: LiveModelDocument;
-    theories: TheoryLibrary;
 }) {
+    const theories = useContext(TheoryLibraryContext);
+    invariant(theories, "Library of theories should be provided as context");
+
     const liveDoc = () => props.liveDoc;
     const doc = () => props.liveDoc.doc;
     const docHandle = () => props.liveDoc.docHandle;
@@ -391,7 +393,7 @@ export function ModelPane(props: {
                         <option value="" disabled selected hidden>
                             Choose a logic
                         </option>
-                        <For each={Array.from(props.theories.metadata())}>
+                        <For each={Array.from(theories.metadata())}>
                             {(meta) => <option value={meta.id}>{meta.name}</option>}
                         </For>
                     </select>

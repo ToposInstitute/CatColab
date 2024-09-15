@@ -13,6 +13,7 @@ import type { AppRouter } from "backend/src/index.js";
 import { RPCContext, RepoContext } from "./api";
 import { AnalysisPage, type ModelDocument, ModelPage } from "./document";
 import { newNotebook } from "./notebook";
+import { TheoryLibraryContext, stdTheories } from "./stdlib";
 
 const serverUrl: string = import.meta.env.VITE_BACKEND_HOST;
 
@@ -43,6 +44,7 @@ const Root = (props: RouteSectionProps<unknown>) => {
             values={[
                 [RPCContext, client],
                 [RepoContext, repo],
+                [TheoryLibraryContext, stdTheories],
             ]}
         >
             {props.children}

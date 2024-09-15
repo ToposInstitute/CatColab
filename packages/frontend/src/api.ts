@@ -8,7 +8,10 @@ import { makeDocReactive } from "./util/automerge_solid";
 
 export type RPCClient = ReturnType<typeof trpc.createTRPCClient<AppRouter>>;
 
+/** Context containing RPC client to communicate with backend. */
 export const RPCContext = createContext<RPCClient>();
+
+/** Context containing Automerge repo. */
 export const RepoContext = createContext<Repo>();
 
 /** Automerge document retrieved from the backend. */
