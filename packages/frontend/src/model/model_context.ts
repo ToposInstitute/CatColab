@@ -5,23 +5,23 @@
 
 import { type Accessor, createContext } from "solid-js";
 
-import type { InvalidDiscreteDblModel, Uuid } from "catlog-wasm";
+import type { Uuid } from "catlog-wasm";
+import type { ModelValidationResult } from "../document";
 import type { Theory } from "../theory";
 import type { IndexedMap } from "../util/indexing";
 
-/** The theory that the model is a model of.
+/** Context for the theory that the model is a model of.
  */
 export const TheoryContext = createContext<Accessor<Theory | undefined>>();
 
-/** Indexed mapping from object IDs to human-readable names.
+/** Context for indexed mapping from object IDs to human-readable names.
  */
 export const ObjectIndexContext = createContext<Accessor<IndexedMap<Uuid, string>>>();
 
-/** Indexed mapping from morphism IDs to human-readable names.
+/** Context for indexed mapping from morphism IDs to human-readable names.
  */
 export const MorphismIndexContext = createContext<Accessor<IndexedMap<Uuid, string>>>();
 
-/** Mapping from object/morphisms ID to errors with those declarations.
+/** Context for the result of validating the model.
  */
-export const ModelErrorsContext =
-    createContext<Accessor<Map<Uuid, InvalidDiscreteDblModel<Uuid>[]>>>();
+export const ModelValidationContext = createContext<Accessor<ModelValidationResult>>();

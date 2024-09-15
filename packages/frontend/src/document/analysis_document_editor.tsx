@@ -9,7 +9,6 @@ import {
     Switch,
     createContext,
     createEffect,
-    createMemo,
     createResource,
     createSignal,
     useContext,
@@ -21,7 +20,7 @@ import type { ModelAnalysis } from "../analysis";
 import { RPCContext, RepoContext, retrieveDoc } from "../api";
 import { IconButton, ResizableHandle } from "../components";
 import type { ModelJudgment } from "../model";
-import { TheoryContext } from "../model/model_context";
+import { ModelValidationContext, TheoryContext } from "../model/model_context";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
@@ -30,12 +29,7 @@ import {
 } from "../notebook";
 import { TheoryLibraryContext } from "../stdlib";
 import type { ModelAnalysisMeta } from "../theory";
-import {
-    type LiveModelDocument,
-    ModelPane,
-    type ValidationResult,
-    enlivenModelDocument,
-} from "./model_document_editor";
+import { type LiveModelDocument, ModelPane, enlivenModelDocument } from "./model_document_editor";
 import type { AnalysisDocument, ModelDocument } from "./types";
 
 import Camera from "lucide-solid/icons/camera";
@@ -117,7 +111,7 @@ export function AnalysisPane(props: {
             values={[
                 [TheoryContext, props.liveDoc.liveModel.theory],
                 [ModelContext, props.liveDoc.liveModel.formalJudgments],
-                [ValidationResultContext, props.liveDoc.liveModel.validationResult],
+                [ModelValidationContext, props.liveDoc.liveModel.validationResult],
             ]}
         >
             <NotebookEditor
@@ -138,17 +132,18 @@ export function AnalysisPane(props: {
 function ModelAnalysisCellEditor(props: FormalCellEditorProps<ModelAnalysis>) {
     const theory = useContext(TheoryContext);
     const model = useContext(ModelContext);
-    const validationResult = useContext(ValidationResultContext);
-    invariant(validationResult, "Must provide ValidationResultContext");
 
-    const validatedModel = createMemo(() => {
+    const validationResult = useContext(ModelValidationContext);
+    invariant(validationResult, "Result of model validation should be provided as context");
+
+    const validatedModel = () => {
         const res = validationResult();
         if (res.tag === "validated") {
-            return res.value;
+            return res.validatedModel;
         } else {
             return null;
         }
-    });
+    };
 
     return (
         <Show when={theory?.()}>
@@ -192,11 +187,8 @@ function modelAnalysisCellConstructors(
     });
 }
 
-/** The model being analyzed. */
+/** Context for the model being analyzed. */
 const ModelContext = createContext<Accessor<Array<ModelJudgment>>>();
-
-/** The `catlog` representation of the model, if the model is valid. */
-const ValidationResultContext = createContext<Accessor<ValidationResult>>();
 
 /** Editor for a model of a double theory.
 

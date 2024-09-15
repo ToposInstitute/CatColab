@@ -30,7 +30,7 @@ import {
     newObjectDecl,
 } from "../model";
 import {
-    ModelErrorsContext,
+    ModelValidationContext,
     MorphismIndexContext,
     ObjectIndexContext,
     TheoryContext,
@@ -56,20 +56,23 @@ import PanelRightClose from "lucide-solid/icons/panel-right-close";
 
 export type ValidatedModel = {
     tag: "validated";
-    value: DblModel;
+    validatedModel: DblModel;
 };
 
-export type ValidationErrors = {
+export type ModelValidationErrors = {
     tag: "errors";
-    value: Map<Uuid, InvalidDiscreteDblModel<Uuid>[]>;
+    errors: Map<Uuid, InvalidDiscreteDblModel<Uuid>[]>;
 };
 
 // TODO: This should go away because all models should support validation!
-export type ValidationNotSupported = {
+export type ModelValidationNotSupported = {
     tag: "notsupported";
 };
 
-export type ValidationResult = ValidatedModel | ValidationErrors | ValidationNotSupported;
+export type ModelValidationResult =
+    | ValidatedModel
+    | ModelValidationErrors
+    | ModelValidationNotSupported;
 
 /** A model document "live" for editing.
 
@@ -103,10 +106,7 @@ export type LiveModelDocument = {
     theory: Accessor<Theory | undefined>;
 
     /** A memo of the result of validation.*/
-    validationResult: Accessor<ValidationResult>;
-
-    /** Any validation errors. */
-    modelErrors: Accessor<Map<Uuid, InvalidDiscreteDblModel<Uuid>[]>>;
+    validationResult: Accessor<ModelValidationResult>;
 };
 
 export function enlivenModelDocument(
@@ -145,30 +145,21 @@ export function enlivenModelDocument(
         if (doc.theory !== undefined) return theories.get(doc.theory);
     });
 
-    const validationResult: Accessor<ValidationResult> = createMemo(() => {
+    const validationResult: Accessor<ModelValidationResult> = createMemo(() => {
         const th = theory();
         if (th && th.theory.kind === "Discrete") {
             const dblModel = catlogModel(th.theory, formalJudgments());
             const errs: InvalidDiscreteDblModel<Uuid>[] = dblModel.validate();
             if (errs.length === 0) {
-                return { tag: "validated", value: dblModel } as ValidatedModel;
+                return { tag: "validated", validatedModel: dblModel } as ValidatedModel;
             } else {
                 return {
                     tag: "errors",
-                    value: indexArray(errs, (err) => err.content),
-                } as ValidationErrors;
+                    errors: indexArray(errs, (err) => err.content),
+                } as ModelValidationErrors;
             }
         } else {
-            return { tag: "notsupported" } as ValidationNotSupported;
-        }
-    });
-
-    const modelErrors = createMemo(() => {
-        const result = validationResult();
-        if (result.tag === "errors") {
-            return result.value;
-        } else {
-            return new Map();
+            return { tag: "notsupported" } as ModelValidationNotSupported;
         }
     });
 
@@ -181,7 +172,6 @@ export function enlivenModelDocument(
         morphismIndex,
         theory,
         validationResult,
-        modelErrors,
     };
 }
 
@@ -404,7 +394,7 @@ export function ModelPane(props: {
                     [TheoryContext, liveDoc().theory],
                     [ObjectIndexContext, liveDoc().objectIndex],
                     [MorphismIndexContext, liveDoc().morphismIndex],
-                    [ModelErrorsContext, liveDoc().modelErrors],
+                    [ModelValidationContext, liveDoc().validationResult],
                 ]}
             >
                 <NotebookEditor

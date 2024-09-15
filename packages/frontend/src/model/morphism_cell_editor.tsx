@@ -2,7 +2,7 @@ import { createEffect, useContext } from "solid-js";
 
 import { InlineInput } from "../components";
 import type { CellActions } from "../notebook";
-import { ModelErrorsContext, TheoryContext } from "./model_context";
+import { ModelValidationContext, TheoryContext } from "./model_context";
 import { ObInput } from "./object_input";
 import type { MorphismDecl } from "./types";
 
@@ -28,11 +28,19 @@ export function MorphismCellEditor(props: {
     });
 
     const theory = useContext(TheoryContext);
-    const modelErrors = useContext(ModelErrorsContext);
+    const validationResult = useContext(ModelValidationContext);
 
     const morTypeMeta = () => theory?.()?.getMorTypeMeta(props.morphism.morType);
     const nameClasses = () => ["morphism-decl-name", ...(morTypeMeta()?.textClasses ?? [])];
     const arrowStyle = () => morTypeMeta()?.arrowStyle ?? "default";
+
+    const morphismErrors = () => {
+        const res = validationResult?.();
+        if (res?.tag !== "errors") {
+            return [];
+        }
+        return res.errors.get(props.morphism.id) ?? [];
+    };
 
     return (
         <div class="model-judgment morphism-decl">
@@ -46,9 +54,7 @@ export function MorphismCellEditor(props: {
                     });
                 }}
                 obType={theory?.()?.theory.src(props.morphism.morType)}
-                invalid={(modelErrors?.().get(props.morphism.id) ?? []).some(
-                    (err) => err.tag === "Dom" || err.tag === "DomType",
-                )}
+                invalid={morphismErrors().some((err) => err.tag === "Dom" || err.tag === "DomType")}
                 deleteForward={() => nameRef.focus()}
                 exitBackward={() => nameRef.focus()}
                 exitForward={() => codRef.focus()}
@@ -91,9 +97,7 @@ export function MorphismCellEditor(props: {
                     });
                 }}
                 obType={theory?.()?.theory.tgt(props.morphism.morType)}
-                invalid={(modelErrors?.().get(props.morphism.id) ?? []).some(
-                    (err) => err.tag === "Cod" || err.tag === "CodType",
-                )}
+                invalid={morphismErrors().some((err) => err.tag === "Cod" || err.tag === "CodType")}
                 deleteBackward={() => nameRef.focus()}
                 exitBackward={() => domRef.focus()}
                 exitForward={props.actions.activateBelow}
