@@ -4,8 +4,3 @@ command = "rustup toolchain install stable && rustup target add wasm32-unknown-u
 
 [build.environment]
 RUST_VERSION = "1.81.0"
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
