@@ -15,7 +15,7 @@ export const RPCContext = createContext<RPCClient>();
 export const RepoContext = createContext<Repo>();
 
 /** Automerge document retrieved from the backend. */
-type RetrievedDoc<T> = {
+export type RetrievedDoc<T> = {
     doc: T;
     docHandle: DocHandle<T>;
 };
