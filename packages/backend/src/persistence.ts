@@ -1,6 +1,9 @@
 import pg from "pg";
 import * as migration from "./migration.js";
 
+import assert from "node:assert/strict";
+import * as uuid from "uuid";
+import { type Extern, traverseExterns } from "./links.js";
 import * as queries from "./queries.js";
 
 export type Witness = queries.IGetWitnessesResult;
@@ -40,7 +43,9 @@ export class Persistence {
         return (await queries.newRef.run({ title }, this.pool))[0].id;
     }
 
-    async saveRef(refId: string, note: string | null): Promise<number> {
+    async saveRef(refId: string, note: string): Promise<number> {
+        assert(uuid.validate(refId));
+        assert(typeof note === "string");
         return (await queries.saveRef.run({ refId, note }, this.pool))[0].id;
     }
 
@@ -54,7 +59,39 @@ export class Persistence {
 
     async autosave(refId: string, content: string): Promise<void> {
         const snapshotId = await this.saveSnapshot(content);
+        assert.strictEqual(typeof snapshotId, "number");
         await queries.autosave.run({ refId, snapshotId }, this.pool);
+    }
+
+    async autosaveWithExterns(refId: string, doc: unknown): Promise<void> {
+        const externs: Extern[] = [];
+        traverseExterns(doc, (e) => externs.push(e));
+        await this.autosave(refId, JSON.stringify(doc));
+        await this.setExterns(refId, externs);
+    }
+
+    async setExterns(refId: string, externs: Extern[]): Promise<void> {
+        await queries.dropExternsFrom.run({ refId }, this.pool);
+        if (externs.length > 0) {
+            await queries.insertNewExterns.run(
+                {
+                    rows: externs.map((e) => {
+                        return {
+                            fromRef: refId,
+                            toRef: e.refId,
+                            taxon: e.taxon,
+                            via: e.via,
+                        };
+                    }),
+                },
+                this.pool,
+            );
+        }
+    }
+
+    async getBacklinks(refId: string, taxon: string): Promise<string[]> {
+        const result = await queries.getBacklinks.run({ toRef: refId, taxon }, this.pool);
+        return result.map((r) => r.fromref);
     }
 
     async refMeta(refId: string): Promise<RefMeta> {

@@ -1,99 +1,110 @@
-import { type DocHandle, Repo } from "@automerge/automerge-repo";
-import type * as A from "@automerge/automerge-repo";
+import { Repo } from "@automerge/automerge-repo";
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
 import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb";
+import * as trpc from "@trpc/client";
+import invariant from "tiny-invariant";
 import * as uuid from "uuid";
 
-import { ModelEditor, type ModelNotebook } from "./model";
-import { newNotebook } from "./notebook";
-import { stdTheories } from "./stdlib";
+import { MultiProvider } from "@solid-primitives/context";
+import { type RouteDefinition, type RouteSectionProps, Router, useNavigate } from "@solidjs/router";
+import { Match, Switch, createResource, lazy, useContext } from "solid-js";
 
-import * as trpc from "@trpc/client";
 import type { AppRouter } from "backend/src/index.js";
-import { Match, Switch, createResource } from "solid-js";
+import { RPCContext, RepoContext } from "./api";
+import { newModelDocument } from "./document/types";
+import { TheoryLibraryContext, stdTheories } from "./stdlib";
 
-const serverHost = import.meta.env.VITE_BACKEND_HOST;
+const serverUrl: string = import.meta.env.VITE_BACKEND_HOST;
 
-function App() {
-    if (!serverHost) {
-        throw "Must set environment variable VITE_BACKEND_HOST";
-    }
+const useHttps = serverUrl.match(/^https:\/\//)?.length === 1;
+const serverHost = serverUrl.replace(/^https?:\/\//, "");
 
-    const http_url = `https://${serverHost}`;
-    const ws_url = `wss://${serverHost}`;
+const httpUrl = `http${useHttps ? "s" : ""}://${serverHost}`;
+const wsUrl = `ws${useHttps ? "s" : ""}://${serverHost}`;
+
+const Root = (props: RouteSectionProps<unknown>) => {
+    invariant(serverHost, "Must set environment variable VITE_BACKEND_HOST");
 
     const client = trpc.createTRPCClient<AppRouter>({
         links: [
             trpc.httpBatchLink({
-                url: http_url,
+                url: httpUrl,
             }),
         ],
     });
 
     const repo = new Repo({
         storage: new IndexedDBStorageAdapter("catcolab-demo"),
-        network: [new BrowserWebSocketClientAdapter(ws_url)],
-    });
-
-    const urlHash = document.location.hash.substring(1);
-
-    const init: ModelNotebook = {
-        name: "Untitled",
-        notebook: newNotebook(),
-        analysis: newNotebook(),
-    };
-
-    const [handle] = createResource(async () => {
-        let docId: A.DocumentId;
-        let refId: string;
-
-        if (uuid.validate(urlHash)) {
-            refId = urlHash;
-            const res = await client.docIdFor.query(urlHash);
-            if (!res) {
-                throw `Failed to get documentId for ref ${refId}`;
-            }
-            docId = res;
-        } else {
-            const doc = repo.create(init);
-
-            docId = doc.documentId;
-
-            refId = await client.newRef.mutate({
-                docId,
-                title: init.name,
-            });
-
-            document.location.hash = refId;
-        }
-
-        return {
-            handle: repo.find(docId) as DocHandle<ModelNotebook>,
-            refId: refId,
-        };
+        network: [new BrowserWebSocketClientAdapter(wsUrl)],
     });
 
     return (
+        <MultiProvider
+            values={[
+                [RPCContext, client],
+                [RepoContext, repo],
+                [TheoryLibraryContext, stdTheories],
+            ]}
+        >
+            {props.children}
+        </MultiProvider>
+    );
+};
+
+const refIsUUIDFilter = {
+    ref: (ref: string) => uuid.validate(ref),
+};
+
+function CreateModel() {
+    const client = useContext(RPCContext);
+    invariant(client, "Must provide RPCContext");
+
+    const repo = useContext(RepoContext);
+    invariant(repo, "Must provide RepoContext");
+
+    const init = newModelDocument();
+    const doc = repo.create(init);
+
+    const [ref] = createResource<string>(async () => {
+        return await client.newRef.mutate({ title: init.name, docId: doc.documentId });
+    });
+
+    const navigator = useNavigate();
+
+    return (
         <Switch>
-            <Match when={handle.loading}>
+            <Match when={ref.loading}>
                 <p>Loading...</p>
             </Match>
-            <Match when={handle.error}>
-                <span>Error: {handle.error}</span>
+            <Match when={ref.error}>
+                <span>Error: {ref.error}</span>
             </Match>
-            <Match when={handle()}>
-                {(h) => (
-                    <ModelEditor
-                        handle={h().handle}
-                        refId={h().refId}
-                        client={client}
-                        init={init}
-                        theories={stdTheories}
-                    />
-                )}
+            <Match when={ref()}>
+                {(ref) => <div ref={(_) => navigator(`/model/${ref()}`)}>Loading...</div>}
             </Match>
         </Switch>
     );
+}
+
+const routes: RouteDefinition[] = [
+    {
+        path: "/",
+        component: CreateModel,
+    },
+    {
+        path: "/model/:ref",
+        matchFilters: refIsUUIDFilter,
+        component: lazy(() => import("./document/model_document_editor")),
+    },
+    {
+        path: "/analysis/:ref",
+        matchFilters: refIsUUIDFilter,
+        component: lazy(() => import("./document/analysis_document_editor")),
+    },
+];
+
+function App() {
+    return <Router root={Root}>{routes}</Router>;
 }
 
 export default App;

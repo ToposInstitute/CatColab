@@ -1,4 +1,5 @@
 import type * as Viz from "@viz-js/viz";
+import invariant from "tiny-invariant";
 
 import type { Point } from "./graph_layout";
 import type * as GraphLayout from "./graph_layout";
@@ -166,7 +167,7 @@ function parseFloatArray(s: string): number[] {
  */
 function parsePoint(s: string): Point {
     const point = parseFloatArray(s);
-    console.assert(point.length === 2);
+    invariant(point.length === 2, "Point should be array of length 2");
     return { x: point[0], y: point[1] };
 }
 
