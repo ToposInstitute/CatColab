@@ -19,8 +19,7 @@ import invariant from "tiny-invariant";
 import type { ModelAnalysis } from "../analysis";
 import { RPCContext, RepoContext, retrieveDoc } from "../api";
 import { IconButton, ResizableHandle } from "../components";
-import type { ModelJudgment } from "../model";
-import { ModelValidationContext, TheoryContext } from "../model/model_context";
+import { type ModelJudgment, ModelValidationContext, TheoryContext } from "../model";
 import {
     type CellConstructor,
     type FormalCellEditorProps,

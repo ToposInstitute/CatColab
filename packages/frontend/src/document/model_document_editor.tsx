@@ -16,25 +16,24 @@ import {
 } from "solid-js";
 import invariant from "tiny-invariant";
 
-import type { DblModel, InvalidDiscreteDblModel, Uuid } from "catlog-wasm";
+import type { Uuid } from "catlog-wasm";
 import { RPCContext, RepoContext, retrieveDoc } from "../api";
 import { IconButton, InlineInput, ResizableHandle } from "../components";
 import {
     type ModelJudgment,
+    ModelValidationContext,
+    type ModelValidationResult,
     MorphismCellEditor,
     type MorphismDecl,
+    MorphismIndexContext,
     ObjectCellEditor,
     type ObjectDecl,
-    catlogModel,
-    newMorphismDecl,
-    newObjectDecl,
-} from "../model";
-import {
-    ModelValidationContext,
-    MorphismIndexContext,
     ObjectIndexContext,
     TheoryContext,
-} from "../model/model_context";
+    newMorphismDecl,
+    newObjectDecl,
+    validateModel,
+} from "../model";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
@@ -45,7 +44,7 @@ import {
 } from "../notebook";
 import { type TheoryLibrary, TheoryLibraryContext } from "../stdlib";
 import type { Theory } from "../theory";
-import { type IndexedMap, indexArray, indexMap } from "../util/indexing";
+import { type IndexedMap, indexMap } from "../util/indexing";
 import type { AnalysisDocument, ModelDocument } from "./types";
 
 import "./model_document_editor.css";
@@ -53,26 +52,6 @@ import "./model_document_editor.css";
 import Camera from "lucide-solid/icons/camera";
 import PanelRight from "lucide-solid/icons/panel-right";
 import PanelRightClose from "lucide-solid/icons/panel-right-close";
-
-export type ValidatedModel = {
-    tag: "validated";
-    validatedModel: DblModel;
-};
-
-export type ModelValidationErrors = {
-    tag: "errors";
-    errors: Map<Uuid, InvalidDiscreteDblModel<Uuid>[]>;
-};
-
-// TODO: This should go away because all models should support validation!
-export type ModelValidationNotSupported = {
-    tag: "notsupported";
-};
-
-export type ModelValidationResult =
-    | ValidatedModel
-    | ModelValidationErrors
-    | ModelValidationNotSupported;
 
 /** A model document "live" for editing.
 
@@ -106,7 +85,7 @@ export type LiveModelDocument = {
     theory: Accessor<Theory | undefined>;
 
     /** A memo of the result of validation.*/
-    validationResult: Accessor<ModelValidationResult>;
+    validationResult: Accessor<ModelValidationResult | undefined>;
 };
 
 export function enlivenModelDocument(
@@ -141,26 +120,13 @@ export function enlivenModelDocument(
         return indexMap(map);
     });
 
-    const theory = createMemo(() => {
+    const theory = createMemo<Theory | undefined>(() => {
         if (doc.theory !== undefined) return theories.get(doc.theory);
     });
 
-    const validationResult: Accessor<ModelValidationResult> = createMemo(() => {
+    const validationResult = createMemo<ModelValidationResult | undefined>(() => {
         const th = theory();
-        if (th && th.theory.kind === "Discrete") {
-            const dblModel = catlogModel(th.theory, formalJudgments());
-            const errs: InvalidDiscreteDblModel<Uuid>[] = dblModel.validate();
-            if (errs.length === 0) {
-                return { tag: "validated", validatedModel: dblModel } as ValidatedModel;
-            } else {
-                return {
-                    tag: "errors",
-                    errors: indexArray(errs, (err) => err.content),
-                } as ModelValidationErrors;
-            }
-        } else {
-            return { tag: "notsupported" } as ModelValidationNotSupported;
-        }
+        return th ? validateModel(th.theory, formalJudgments()) : undefined;
     });
 
     return {

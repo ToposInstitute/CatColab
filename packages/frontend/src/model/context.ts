@@ -6,9 +6,9 @@
 import { type Accessor, createContext } from "solid-js";
 
 import type { Uuid } from "catlog-wasm";
-import type { ModelValidationResult } from "../document";
 import type { Theory } from "../theory";
 import type { IndexedMap } from "../util/indexing";
+import type { ModelValidationResult } from "./types";
 
 /** Context for the theory that the model is a model of.
  */

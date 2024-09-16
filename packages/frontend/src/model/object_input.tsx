@@ -4,8 +4,8 @@ import { P, match } from "ts-pattern";
 
 import type { Ob, ObType } from "catlog-wasm";
 import type { Theory } from "../theory";
+import { MorphismIndexContext, ObjectIndexContext, TheoryContext } from "./context";
 import { IdInput, type IdInputOptions } from "./id_input";
-import { MorphismIndexContext, ObjectIndexContext, TheoryContext } from "./model_context";
 
 /** Input an object that already exists in a model.
 

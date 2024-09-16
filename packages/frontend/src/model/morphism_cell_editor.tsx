@@ -2,7 +2,7 @@ import { createEffect, useContext } from "solid-js";
 
 import { InlineInput } from "../components";
 import type { CellActions } from "../notebook";
-import { ModelValidationContext, TheoryContext } from "./model_context";
+import { ModelValidationContext, TheoryContext } from "./context";
 import { ObInput } from "./object_input";
 import type { MorphismDecl } from "./types";
 

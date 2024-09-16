@@ -1,7 +1,16 @@
 import { uuidv7 } from "uuidv7";
 
 import { DblModel } from "catlog-wasm";
-import type { DblTheory, MorDecl, MorType, ObDecl, ObType } from "catlog-wasm";
+import type {
+    DblTheory,
+    InvalidDiscreteDblModel,
+    MorDecl,
+    MorType,
+    ObDecl,
+    ObType,
+    Uuid,
+} from "catlog-wasm";
+import { indexArray } from "../util/indexing";
 
 /** A judgment in the definition of a model.
 
@@ -57,4 +66,45 @@ export function catlogModel(theory: DblTheory, judgments: Array<ModelJudgment>):
         }
     }
     return model;
+}
+
+/** Result of validating a model in the categorical core. */
+export type ModelValidationResult =
+    | ValidatedModel
+    | ModelValidationErrors
+    | ModelValidationNotSupported;
+
+/** A valid model as represented in `catlog`. */
+export type ValidatedModel = {
+    tag: "validated";
+
+    validatedModel: DblModel;
+};
+
+/** Errors in a model that did not validate. */
+export type ModelValidationErrors = {
+    tag: "errors";
+
+    errors: Map<Uuid, InvalidDiscreteDblModel<Uuid>[]>;
+};
+
+/** TODO: Make this various go away because all models support validation! */
+export type ModelValidationNotSupported = {
+    tag: "notsupported";
+};
+
+export function validateModel(theory: DblTheory, judgments: Array<ModelJudgment>) {
+    if (theory.kind !== "Discrete") {
+        return { tag: "notsupported" } as ModelValidationNotSupported;
+    }
+    const dblModel = catlogModel(theory, judgments);
+    const errs: InvalidDiscreteDblModel<Uuid>[] = dblModel.validate();
+    if (errs.length === 0) {
+        return { tag: "validated", validatedModel: dblModel } as ValidatedModel;
+    } else {
+        return {
+            tag: "errors",
+            errors: indexArray(errs, (err) => err.content),
+        } as ModelValidationErrors;
+    }
 }
