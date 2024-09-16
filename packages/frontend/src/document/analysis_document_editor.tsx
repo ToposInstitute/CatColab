@@ -35,13 +35,19 @@ import Camera from "lucide-solid/icons/camera";
 import PanelRight from "lucide-solid/icons/panel-right";
 import PanelRightClose from "lucide-solid/icons/panel-right-close";
 
+/** An analysis document "live" for editing.
+ */
 export type LiveAnalysisDocument = {
+    /** The ref for which this is a live document. */
     refId: string;
 
+    /** The analysis document, suitable for use in reactive contexts. */
     doc: AnalysisDocument;
 
+    /** The document handle for the analysis document. */
     docHandle: DocHandle<AnalysisDocument>;
 
+    /** Live model that the analysis is of. */
     liveModel: LiveModelDocument;
 };
 

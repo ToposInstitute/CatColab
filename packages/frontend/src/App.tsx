@@ -11,8 +11,7 @@ import { Match, Switch, createResource, lazy, useContext } from "solid-js";
 
 import type { AppRouter } from "backend/src/index.js";
 import { RPCContext, RepoContext } from "./api";
-import type { ModelDocument } from "./document";
-import { newNotebook } from "./notebook";
+import { newModelDocument } from "./document/types";
 import { TheoryLibraryContext, stdTheories } from "./stdlib";
 
 const serverUrl: string = import.meta.env.VITE_BACKEND_HOST;
@@ -63,16 +62,11 @@ function CreateModel() {
     const repo = useContext(RepoContext);
     invariant(repo, "Must provide RepoContext");
 
-    const init: ModelDocument = {
-        name: "Untitled",
-        type: "model",
-        notebook: newNotebook(),
-    };
-
+    const init = newModelDocument();
     const doc = repo.create(init);
 
     const [ref] = createResource<string>(async () => {
-        return await client.newRef.mutate({ title: "Untitled", docId: doc.documentId });
+        return await client.newRef.mutate({ title: init.name, docId: doc.documentId });
     });
 
     const navigator = useNavigate();

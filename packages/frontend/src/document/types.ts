@@ -1,6 +1,6 @@
 import type { ModelAnalysis } from "../analysis";
 import type { ModelJudgment } from "../model";
-import type { Notebook } from "../notebook";
+import { type Notebook, newNotebook } from "../notebook";
 import type { TheoryId } from "../theory";
 
 /** A document defining a model. */
@@ -17,6 +17,13 @@ export type ModelDocument = {
     notebook: Notebook<ModelJudgment>;
 };
 
+/** Create an empty model document. */
+export const newModelDocument = (): ModelDocument => ({
+    name: "Untitled",
+    type: "model",
+    notebook: newNotebook(),
+});
+
 /** A document defining an analysis of a model. */
 export type AnalysisDocument = {
     type: "analysis";
@@ -30,6 +37,20 @@ export type AnalysisDocument = {
     /** Content of the analysis. */
     notebook: Notebook<ModelAnalysis>;
 };
+
+/** Create an empty analysis of a model. */
+export const newAnalysisDocument = (modelRefId: string): AnalysisDocument => ({
+    name: "Untitled",
+    type: "analysis",
+    modelRef: {
+        __extern__: {
+            refId: modelRefId,
+            taxon: "analysis",
+            via: null,
+        },
+    },
+    notebook: newNotebook(),
+});
 
 /** A reference in a document to another document. */
 export type ExternRef = {

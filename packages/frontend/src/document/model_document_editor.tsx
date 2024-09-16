@@ -40,12 +40,11 @@ import {
     NotebookEditor,
     cellShortcutModifier,
     newFormalCell,
-    newNotebook,
 } from "../notebook";
 import { type TheoryLibrary, TheoryLibraryContext } from "../stdlib";
 import type { Theory } from "../theory";
 import { type IndexedMap, indexMap } from "../util/indexing";
-import type { AnalysisDocument, ModelDocument } from "./types";
+import { type ModelDocument, newAnalysisDocument } from "./types";
 
 import "./model_document_editor.css";
 
@@ -271,20 +270,9 @@ function AnalysesPane(props: { forRef: string; title: string }) {
     const navigator = useNavigate();
 
     const createAnalysis = async () => {
-        const init: AnalysisDocument = {
-            name: "Untitled",
-            type: "analysis",
-            modelRef: {
-                __extern__: {
-                    refId: props.forRef,
-                    taxon: "analysis",
-                    via: null,
-                },
-            },
-            notebook: newNotebook(),
-        };
+        const init = newAnalysisDocument(props.forRef);
         const newDoc = repo.create(init);
-        const newRef = await client.newRef.mutate({ title: "Untitled", docId: newDoc.documentId });
+        const newRef = await client.newRef.mutate({ title: init.name, docId: newDoc.documentId });
 
         navigator(`/analysis/${newRef}`);
     };
