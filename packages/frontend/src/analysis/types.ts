@@ -1,8 +1,6 @@
 import type { Component } from "solid-js";
 
-import type { DblModel } from "catlog-wasm";
-import type { ModelJudgment } from "../model";
-import type { Theory } from "../theory";
+import type { LiveModelDocument } from "../document";
 
 /** Analysis of a model of a double theory.
 
@@ -26,17 +24,7 @@ export type ModelAnalysisComponent<T extends ModelAnalysisContent> = Component<
 /** Props passed to a model analysis component. */
 export type ModelAnalysisProps<T> = {
     /** The model being analyzed. */
-    model: Array<ModelJudgment>;
-
-    /** The `catlog` representation of the model, if the model is valid. */
-    validatedModel: DblModel | null;
-
-    /** Theory that the model is of.
-
-    Some analyses are only applicable to a single theory but the theory is
-    passed regardless.
-     */
-    theory: Theory;
+    liveModel: LiveModelDocument;
 
     /** Content associated with the analysis itself. */
     content: T;
