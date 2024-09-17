@@ -35,10 +35,13 @@ export type ModelAnalysisProps<T> = {
 
 /** Content associated with an analysis of a model.
 
-This content is in addition to the data of the model and can include
+Such content is in addition to the data of the model and can include
 configuration or state for the analysis.
  */
-export type ModelAnalysisContent = ModelGraphContent | SubmodelsAnalysisContent;
+export type ModelAnalysisContent =
+    | ModelGraphContent
+    | SubmodelsAnalysisContent
+    | LotkaVolterraContent;
 
 /** Configuration of a graph visualization of a model. */
 export type ModelGraphContent = {
@@ -54,4 +57,18 @@ export type SubmodelsAnalysisContent = {
 
     /** Index of active submodel. */
     activeIndex: number;
+};
+
+/** Configuration of a Lotka-Volterra ODE analysis of a model. */
+export type LotkaVolterraContent = {
+    tag: "lotka-volterra";
+
+    /** Map from object IDs to initial values (nonnegative reals). */
+    initialValues: { [id: string]: number };
+
+    /** Map from object IDs to growth rates (real numbers). */
+    growthRates: { [id: string]: number };
+
+    /** Map from morphism IDs to interaction coefficients (nonnegative reals). */
+    interactionCoefficients: { [id: string]: number };
 };

@@ -1,6 +1,8 @@
 import { destructure } from "@solid-primitives/destructure";
 import { For, Match, Show, Switch, createEffect, createSignal } from "solid-js";
 
+import "./fixed_table_editor.css";
+
 /** Schema for a column in a table editor. */
 export type ColumnSchema<Row> = {
     /** Name of column. */
@@ -25,6 +27,33 @@ export type ColumnSchema<Row> = {
      */
     setContent?: (row: Row, text: string) => boolean;
 };
+
+/** Create schema for a column with numerical (floating point) data. */
+export const createNumericalColumn = <Row,>(args: {
+    name?: string;
+    header?: boolean;
+    data: (row: Row) => number;
+    validate?: (row: Row, data: number) => boolean;
+    setData?: (row: Row, data: number) => void;
+}): ColumnSchema<Row> => ({
+    name: args.name,
+    header: args.header,
+    content: (row) => args.data(row).toString(),
+    validate: (row, text) => {
+        const parsed = Number.parseFloat(text);
+        return !Number.isNaN(parsed) && (args.validate?.(row, parsed) ?? true);
+    },
+    setContent:
+        args.setData &&
+        ((row, text) => {
+            const parsed = Number.parseFloat(text);
+            const valid = !Number.isNaN(parsed) && (args.validate?.(row, parsed) ?? true);
+            if (valid) {
+                args.setData?.(row, parsed);
+            }
+            return valid;
+        }),
+});
 
 /** Edit tabular data given by a fixed list of rows.
 

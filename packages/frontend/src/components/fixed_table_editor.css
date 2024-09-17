@@ -1,0 +1,31 @@
+.fixed-table-editor {
+    background: white;
+    border-collapse: collapse;
+    --border-color: lightgray;
+
+    & th {
+        font-weight: normal;
+    }
+    & tr {
+        border-top: 1px solid var(--border-color);
+        border-bottom: 1px solid var(--border-color);
+    }
+    & td {
+        border-left: 1px solid var(--border-color);
+    }
+    & th[scope="col"] {
+        border-right: 1px solid var(--border-color);
+    }
+    & th[scope="col"]:last-child {
+        border-right: none;
+    }
+}
+
+.fixed-table-cell-input {
+    background: transparent;
+    border: none;
+    outline: none;
+    font: inherit;
+
+    width: 100%;
+}
