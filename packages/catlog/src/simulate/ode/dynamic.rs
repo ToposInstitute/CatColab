@@ -1,15 +1,12 @@
-/*! Solve ODEs specified dynamically.
+/*! Ordinary differential equations specified dynamically.
 
-By dynamically specified, we mean that vector fields are defined by mathematical
-expressions provided at runtime rather than compile-time.
+By specified dynamically, we mean that the vector fields are defined by
+mathematical expressions provided at runtime rather than compile-time.
  */
 
 use nalgebra::DVector;
-use ode_solvers::{
-    self,
-    dop_shared::{IntegrationError, SolverResult},
-};
 
+use super::ODESystem;
 use crate::simulate::mathexpr::{compile, run, Context, Env, Errors, Prog};
 
 /// A numerical quantity in an ODE.
@@ -50,15 +47,6 @@ pub struct DynamicODE {
     progs: Vec<Prog<Quantity>>,
 }
 
-impl ode_solvers::System<f32, DVector<f32>> for &DynamicODE {
-    fn system(&self, _: f32, y: &DVector<f32>, dy: &mut DVector<f32>) {
-        let env = VectorFieldEnv::new(&self.params, y.as_slice());
-        for (prog, dyi) in self.progs.iter().zip(dy.as_mut_slice().iter_mut()) {
-            *dyi = run(&env, prog);
-        }
-    }
-}
-
 impl DynamicODE {
     /** Construct a system of ODEs from the given source expressions.
 
@@ -96,20 +84,14 @@ impl DynamicODE {
             Err(Errors(errors))
         }
     }
+}
 
-    /** Solves the ODE system using the Runge-Kutta method.
-
-    Returns the results from the solver if successful and an integration error otherwise.
-     */
-    pub fn solve_rk4(
-        &self,
-        initial_values: DVector<f32>,
-        end_time: f32,
-        step_size: f32,
-    ) -> Result<SolverResult<f32, DVector<f32>>, IntegrationError> {
-        let mut stepper = ode_solvers::Rk4::new(self, 0.0, initial_values, end_time, step_size);
-        stepper.integrate()?;
-        Ok(stepper.into())
+impl ODESystem for DynamicODE {
+    fn vector_field(&self, dy: &mut DVector<f32>, y: &DVector<f32>, _: f32) {
+        let env = VectorFieldEnv::new(&self.params, y.as_slice());
+        for (prog, dyi) in self.progs.iter().zip(dy.as_mut_slice().iter_mut()) {
+            *dyi = run(&env, prog);
+        }
     }
 }
 
@@ -117,9 +99,9 @@ impl DynamicODE {
 mod test {
     use expect_test::{expect, Expect};
     use nalgebra::DVector;
-    use ode_solvers::System;
     use textplots::{Chart, Plot, Shape};
 
+    use super::super::ODEProblem;
     use super::*;
 
     fn check_chart(chart: &mut Chart, expected: Expect) {
@@ -138,10 +120,11 @@ mod test {
 
         let y = DVector::from_column_slice(&[1.0, 1.0]);
         let mut dy = DVector::from_column_slice(&[0.0, 0.0]);
-        (&sys).system(0.0, &y, &mut dy);
+        sys.vector_field(&mut dy, &y, 0.0);
         assert_eq!(dy.as_slice(), &[1.0, 0.0]);
 
-        let result = sys.solve_rk4(y, 10.0, 0.1).unwrap();
+        let problem = ODEProblem::new(sys, y).end_time(10.0);
+        let result = problem.solve_rk4(0.1).unwrap();
         let (x_out, y_out) = result.get();
 
         check_chart(

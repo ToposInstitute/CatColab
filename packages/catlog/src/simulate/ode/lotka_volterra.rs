@@ -1,12 +1,13 @@
-//! Solve Lotka-Volterra differential equations.
+//! Lotka-Volterra differential equations.
 
 use nalgebra::{DMatrix, DVector};
 
-use ode_solvers;
+use super::ODESystem;
 
 /** A Lotka-Volterra dynamical system.
 
-A system of ODEs that is affine in its *logarithmic* derivative. For more, see
+A system of ODEs that is affine in its *logarithmic* derivative. These are
+sometimes called the "generalized Lotka-Volterra equations." For more, see
 [Wikipedia](https://en.wikipedia.org/wiki/Generalized_Lotka%E2%80%93Volterra_equation).
 */
 #[derive(Clone, PartialEq)]
@@ -25,8 +26,8 @@ impl LotkaVolterraSystem {
     }
 }
 
-impl ode_solvers::System<f32, DVector<f32>> for &LotkaVolterraSystem {
-    fn system(&self, _: f32, x: &DVector<f32>, dx: &mut DVector<f32>) {
+impl ODESystem for LotkaVolterraSystem {
+    fn vector_field(&self, dx: &mut DVector<f32>, x: &DVector<f32>, _: f32) {
         let A = &self.interaction_coeffs;
         let b = &self.growth_rates;
         *dx = (A * x + b).component_mul(x);
@@ -36,9 +37,9 @@ impl ode_solvers::System<f32, DVector<f32>> for &LotkaVolterraSystem {
 #[cfg(test)]
 mod test {
     use expect_test::{expect, Expect};
-    use ode_solvers::dop_shared::SolverResult;
     use textplots::{Chart, Plot, Shape};
 
+    use super::super::ODEProblem;
     use super::*;
 
     fn check_chart(chart: &mut Chart, expected: Expect) {
@@ -53,10 +54,9 @@ mod test {
         let b = DVector::from_column_slice(&[2.0, -1.0]);
         let sys = LotkaVolterraSystem::new(A, b);
 
-        let initial_values = DVector::from_column_slice(&[1.0, 1.0]);
-        let mut stepper = ode_solvers::Rk4::new(&sys, 0.0, initial_values, 10.0, 0.1);
-        assert!(stepper.integrate().is_ok());
-        let result: SolverResult<_, _> = stepper.into();
+        let x0 = DVector::from_column_slice(&[1.0, 1.0]);
+        let problem = ODEProblem::new(sys, x0).end_time(10.0);
+        let result = problem.solve_rk4(0.1).unwrap();
         let (t_out, x_out) = result.get();
 
         check_chart(
