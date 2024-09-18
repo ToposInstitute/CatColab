@@ -21,6 +21,7 @@
         "@automerge/automerge-repo-network-websocket": "^1.2.0",
         "@automerge/automerge-repo-storage-indexeddb": "^1.2.0",
         "@automerge/prosemirror": "^0.0.12",
+        "@corvu/disclosure": "^0.2.0",
         "@corvu/popover": "^0.2.0",
         "@corvu/resizable": "^0.2.2",
         "@kobalte/core": "^0.13.6",

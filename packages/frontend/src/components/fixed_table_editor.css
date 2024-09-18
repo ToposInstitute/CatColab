@@ -1,20 +1,24 @@
 .fixed-table-editor {
     background: white;
     --border-color: lightgray;
+    --cell-padding: 5px;
 
     border-collapse: collapse;
 
-    & th {
-        font-weight: normal;
-    }
     & tr {
         border-top: 1px solid var(--border-color);
         border-bottom: 1px solid var(--border-color);
     }
     & td {
+        padding: var(--cell-padding);
         border-left: 1px solid var(--border-color);
     }
+    & th {
+        font-weight: normal;
+        padding: var(--cell-padding);
+    }
     & th[scope="col"] {
+        font-weight: 500;
         border-right: 1px solid var(--border-color);
     }
     & th[scope="col"]:last-child {

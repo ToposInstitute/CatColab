@@ -1,0 +1,11 @@
+.simulation {
+    width: 100%;
+}
+
+.parameters {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 1em;
+    justify-content: space-around;
+}

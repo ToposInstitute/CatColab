@@ -1,19 +1,33 @@
 import { createEffect, createMemo } from "solid-js";
 
-import { type ColumnSchema, FixedTableEditor, createNumericalColumn } from "../components";
+import {
+    type ColumnSchema,
+    FixedTableEditor,
+    Foldable,
+    createNumericalColumn,
+} from "../components";
 import type { MorphismDecl, ObjectDecl } from "../model";
 import type { ModelAnalysisMeta } from "../theory";
 import type { LotkaVolterraContent, ModelAnalysisProps } from "./types";
 
+import "./simulation.css";
+
 /** Configure a Lotka-Volterra ODE analysis for use with models of a theory. */
 export function configureLotkaVolterra(options?: {
     id?: string;
+    name?: string;
+    description?: string;
 }): ModelAnalysisMeta<LotkaVolterraContent> {
+    const {
+        id = "lotka-volterra",
+        name = "Lotka-Volterra dynamics",
+        description = "Simulate the system using a Lotka-Volterra ODE",
+    } = options ?? {};
     return {
-        id: options?.id ?? "lotka-volterra",
-        name: "Lotka-Volterra dynamics",
-        description: "Simulate the system using a Lotka-Volterra ODE",
-        component: LotkaVolterra,
+        id,
+        name,
+        description,
+        component: (props) => <LotkaVolterra title={name} {...props} />,
         initialContent: () => ({
             tag: "lotka-volterra",
             initialValues: {},
@@ -25,7 +39,11 @@ export function configureLotkaVolterra(options?: {
 
 /** Analyze a signed graph using Lotka-Volterra dynamics.
  */
-export function LotkaVolterra(props: ModelAnalysisProps<LotkaVolterraContent>) {
+export function LotkaVolterra(
+    props: {
+        title?: string;
+    } & ModelAnalysisProps<LotkaVolterraContent>,
+) {
     const obDecls = createMemo<ObjectDecl[]>(() => {
         return props.liveModel.formalJudgments().filter((jgmt) => jgmt.tag === "object");
     }, []);
@@ -96,8 +114,12 @@ export function LotkaVolterra(props: ModelAnalysisProps<LotkaVolterraContent>) {
 
     return (
         <div class="simulation">
-            <FixedTableEditor rows={obDecls()} schema={obSchema} />
-            <FixedTableEditor rows={morDecls()} schema={morSchema} />
+            <Foldable header={<span class="title">{props.title}</span>}>
+                <div class="parameters">
+                    <FixedTableEditor rows={obDecls()} schema={obSchema} />
+                    <FixedTableEditor rows={morDecls()} schema={morSchema} />
+                </div>
+            </Foldable>
         </div>
     );
 }

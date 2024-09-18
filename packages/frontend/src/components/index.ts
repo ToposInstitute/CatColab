@@ -1,5 +1,6 @@
 export * from "./completions";
 export * from "./fixed_table_editor";
+export * from "./foldable";
 export * from "./icon_button";
 export * from "./inline_input";
 export * from "./resizable";
