@@ -12,4 +12,6 @@ pub mod mathexpr;
 #[cfg(feature = "ode")]
 pub mod dynamic_ode;
 
-pub use self::mathexpr::*;
+#[cfg(feature = "ode")]
+#[allow(non_snake_case)]
+pub mod lotka_volterra;

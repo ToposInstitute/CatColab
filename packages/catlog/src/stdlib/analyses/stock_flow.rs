@@ -13,7 +13,7 @@ use ustr::Ustr;
 use crate::{
     dbl::model::*,
     one::{fin_category::FinMor, FgCategory, FinGraph, SkelGraph},
-    simulate::{compile, mathexpr, run, Context, Env, Prog},
+    simulate::mathexpr::{self, compile, run, Context, Env, Prog},
 };
 
 /// A validation error for an ODE analysis of a stock-flow model.
