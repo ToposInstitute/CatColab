@@ -10,7 +10,7 @@ use ode_solvers::{
     dop_shared::{IntegrationError, SolverResult},
 };
 
-use super::mathexpr::{compile, run, Context, Env, Errors, Prog};
+use crate::simulate::mathexpr::{compile, run, Context, Env, Errors, Prog};
 
 /// A numerical quantity in an ODE.
 #[derive(Clone, Copy, PartialEq, Eq)]
