@@ -1,7 +1,8 @@
 .fixed-table-editor {
     background: white;
-    border-collapse: collapse;
     --border-color: lightgray;
+
+    border-collapse: collapse;
 
     & th {
         font-weight: normal;
@@ -28,4 +29,8 @@
     font: inherit;
 
     width: 100%;
+}
+
+.fixed-table-cell-input.invalid {
+    background: #f8d7da;
 }
