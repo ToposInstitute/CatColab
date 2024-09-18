@@ -39,26 +39,21 @@ export const createNumericalColumn = <Row,>(args: {
     name: args.name,
     header: args.header,
     content: (row) => args.data(row).toString(),
-    validate: (row, text) =>
-        floatRegExp.test(text) && (args.validate?.(row, Number.parseFloat(text)) ?? true),
+    validate: (row, text) => {
+        const parsed = Number(text);
+        return !Number.isNaN(parsed) && (args.validate?.(row, parsed) ?? true);
+    },
     setContent:
         args.setData &&
         ((row, text) => {
-            const parsed = Number.parseFloat(text);
-            const isValid = floatRegExp.test(text) && (args.validate?.(row, parsed) ?? true);
+            const parsed = Number(text);
+            const isValid = !Number.isNaN(parsed) && (args.validate?.(row, parsed) ?? true);
             if (isValid) {
                 args.setData?.(row, parsed);
             }
             return isValid;
         }),
 });
-
-/** Needed because JavaScript's `parseFloat` has crazy behavior.
-
-The reg exp is copied from
-[validator.js](https://github.com/validatorjs/validator.js/blob/master/src/lib/isFloat.js).
- */
-const floatRegExp = /^(?:[-+])?(?:[0-9]+)?(?:\.[0-9]*)?(?:[eE][\+\-]?(?:[0-9]+))?$/;
 
 /** Edit tabular data given by a fixed list of rows.
 
