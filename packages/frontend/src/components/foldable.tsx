@@ -16,9 +16,14 @@ export function Foldable(props: {
 }) {
     const [isExpanded, setIsExpanded] = createSignal(false);
 
+    // NOTE: Set the collapse behavior to "hide" to get a smooth animation.
     return (
         <div class="foldable">
-            <Discloure expanded={isExpanded()} onExpandedChange={setIsExpanded}>
+            <Discloure
+                expanded={isExpanded()}
+                onExpandedChange={setIsExpanded}
+                collapseBehavior="hide"
+            >
                 <Discloure.Trigger>
                     <span class="panel">
                         {props.header}
