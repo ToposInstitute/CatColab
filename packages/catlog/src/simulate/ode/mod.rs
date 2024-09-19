@@ -11,8 +11,15 @@ use ode_solvers::{
 An ODE system is anything that can compute a vector field.
  */
 pub trait ODESystem {
-    /// Evaluate the vector field at the given time and state.
+    /// Compute the vector field at the given time and state in place.
     fn vector_field(&self, dx: &mut DVector<f32>, x: &DVector<f32>, t: f32);
+
+    /// Compute and return the vector field at the given time and state.
+    fn eval_vector_field(&self, x: &DVector<f32>, t: f32) -> DVector<f32> {
+        let mut dx = DVector::from_element(x.len(), 0.0f32);
+        self.vector_field(&mut dx, x, t);
+        dx
+    }
 }
 
 /** An ODE problem ready to be solved.

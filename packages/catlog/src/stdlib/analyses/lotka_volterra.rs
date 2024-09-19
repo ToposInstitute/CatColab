@@ -76,16 +76,12 @@ impl LotkaVolterraAnalysis {
         self
     }
 
-    /** Create a Lotka-Volterra system from a model.
-
-    Returns an `Option` but should never fail provided that the theory config
-    and the model are valid.
-     */
+    /// Creates a Lotka-Volterra system from a model.
     pub fn create_system<Id>(
         &self,
         model: &Model<Id>,
         data: LotkaVolterraProblemData<Id>,
-    ) -> Option<ODEProblem<LotkaVolterraSystem>>
+    ) -> ODEProblem<LotkaVolterraSystem>
     where
         Id: Eq + Clone + Hash + Ord + Debug,
     {
@@ -99,15 +95,15 @@ impl LotkaVolterraAnalysis {
         let mut A = DMatrix::from_element(n, n, 0.0f32);
         for mor_type in self.positive_mor_types.iter() {
             for mor in model.morphism_generators_with_type(&mor_type) {
-                let i = *ob_index.get(&model.morphism_generator_dom(&mor))?;
-                let j = *ob_index.get(&model.morphism_generator_cod(&mor))?;
+                let i = *ob_index.get(&model.morphism_generator_dom(&mor)).unwrap();
+                let j = *ob_index.get(&model.morphism_generator_cod(&mor)).unwrap();
                 A[(j, i)] += data.interaction_coeffs[&mor];
             }
         }
         for mor_type in self.negative_mor_types.iter() {
             for mor in model.morphism_generators_with_type(&mor_type) {
-                let i = *ob_index.get(&model.morphism_generator_dom(&mor))?;
-                let j = *ob_index.get(&model.morphism_generator_cod(&mor))?;
+                let i = *ob_index.get(&model.morphism_generator_dom(&mor)).unwrap();
+                let j = *ob_index.get(&model.morphism_generator_cod(&mor)).unwrap();
                 A[(j, i)] -= data.interaction_coeffs[&mor];
             }
         }
@@ -122,8 +118,7 @@ impl LotkaVolterraAnalysis {
         let x0 = DVector::from_iterator(n, initial_values);
 
         let system = LotkaVolterraSystem::new(A, b);
-        let problem = ODEProblem::new(system, x0).end_time(data.duration);
-        Some(problem)
+        ODEProblem::new(system, x0).end_time(data.duration)
     }
 }
 
@@ -151,8 +146,7 @@ mod test {
         let problem = LotkaVolterraAnalysis::new(ustr("Object"))
             .add_positive(FinMor::Id(ustr("Object")))
             .add_negative(FinMor::Generator(ustr("Negative")))
-            .create_system(&neg_feedback, data)
-            .unwrap();
+            .create_system(&neg_feedback, data);
         assert_eq!(problem, lotka_volterra::create_predator_prey());
     }
 }
