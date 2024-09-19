@@ -1,5 +1,6 @@
 import type { Component } from "solid-js";
 
+import type * as catlog from "catlog-wasm";
 import type { LiveModelDocument } from "../document";
 
 /** Analysis of a model of a double theory.
@@ -43,7 +44,7 @@ export type ModelAnalysisContent =
     | SubmodelsAnalysisContent
     | LotkaVolterraContent;
 
-/** Configuration of a graph visualization of a model. */
+/** Configuration for a graph visualization of a model. */
 export type ModelGraphContent = {
     tag: "graph";
 
@@ -59,16 +60,7 @@ export type SubmodelsAnalysisContent = {
     activeIndex: number;
 };
 
-/** Configuration of a Lotka-Volterra ODE analysis of a model. */
+/** Configuration for a Lotka-Volterra ODE analysis of a model. */
 export type LotkaVolterraContent = {
     tag: "lotka-volterra";
-
-    /** Map from object IDs to initial values (nonnegative reals). */
-    initialValues: { [id: string]: number };
-
-    /** Map from object IDs to growth rates (real numbers). */
-    growthRates: { [id: string]: number };
-
-    /** Map from morphism IDs to interaction coefficients (nonnegative reals). */
-    interactionCoefficients: { [id: string]: number };
-};
+} & catlog.LotkaVolterraConfig<string>;

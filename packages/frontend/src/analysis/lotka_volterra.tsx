@@ -30,9 +30,10 @@ export function configureLotkaVolterra(options?: {
         component: (props) => <LotkaVolterra title={name} {...props} />,
         initialContent: () => ({
             tag: "lotka-volterra",
-            initialValues: {},
-            growthRates: {},
             interactionCoefficients: {},
+            growthRates: {},
+            initialValues: {},
+            duration: 10,
         }),
     };
 }
