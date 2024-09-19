@@ -1,8 +1,9 @@
 //! Lotka-Volterra ODE analysis of models.
 
-use std::{collections::HashMap, fmt::Debug, hash::Hash};
+use std::{collections::HashMap, hash::Hash};
 
 use nalgebra::{DMatrix, DVector};
+use ode_solvers::dop_shared::IntegrationError;
 use ustr::Ustr;
 
 #[cfg(feature = "serde")]
@@ -45,6 +46,25 @@ where
     duration: f32,
 }
 
+/// Simulation results for a Lotka-Volterra ODE analysis.
+#[derive(Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(
+    feature = "serde-wasm",
+    tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
+)]
+pub struct LotkaVolterraResult<Id>
+where
+    Id: Eq + Hash,
+{
+    /// Values of time variable for the duration of the simulation.
+    time: Vec<f32>,
+
+    /// Values of state variables for the duration of the simulation.
+    states: HashMap<Id, Vec<f32>>,
+}
+
 type Model<Id> = DiscreteDblModel<Id, UstrFinCategory>;
 
 /// Lotka-Volterra ODE analysis for models of a double theory.
@@ -76,14 +96,18 @@ impl LotkaVolterraAnalysis {
         self
     }
 
-    /// Creates a Lotka-Volterra system from a model.
+    /** Creates a Lotka-Volterra system from a model.
+
+    Returns an ODE problem together with a mapping from object IDs to indices of
+    variables in the ODE.
+    */
     pub fn create_system<Id>(
         &self,
         model: &Model<Id>,
         data: LotkaVolterraProblemData<Id>,
-    ) -> ODEProblem<LotkaVolterraSystem>
+    ) -> (ODEProblem<LotkaVolterraSystem>, HashMap<Id, usize>)
     where
-        Id: Eq + Clone + Hash + Ord + Debug,
+        Id: Eq + Clone + Hash + Ord,
     {
         let mut objects: Vec<_> = model.object_generators_with_type(&self.var_ob_type).collect();
         objects.sort();
@@ -118,7 +142,30 @@ impl LotkaVolterraAnalysis {
         let x0 = DVector::from_iterator(n, initial_values);
 
         let system = LotkaVolterraSystem::new(A, b);
-        ODEProblem::new(system, x0).end_time(data.duration)
+        let problem = ODEProblem::new(system, x0).end_time(data.duration);
+        (problem, ob_index)
+    }
+
+    /// Solves the Lotka-Volterra ODE system created from a model.
+    pub fn solve_rk4<Id>(
+        &self,
+        model: &Model<Id>,
+        data: LotkaVolterraProblemData<Id>,
+    ) -> Result<LotkaVolterraResult<Id>, IntegrationError>
+    where
+        Id: Eq + Clone + Hash + Ord,
+    {
+        let step_size = 0.01; // FIXME: Don't hard code the step size.
+        let (problem, ob_index) = self.create_system(model, data);
+        let result = problem.solve_rk4(step_size)?;
+        let (t_out, x_out) = result.get();
+        Ok(LotkaVolterraResult {
+            time: t_out.clone(),
+            states: ob_index
+                .into_iter()
+                .map(|(ob, i)| (ob, x_out[i].as_slice().to_vec()))
+                .collect(),
+        })
     }
 }
 
@@ -143,7 +190,7 @@ mod test {
             initial_values: [(prey, 1.0), (pred, 1.0)].into_iter().collect(),
             duration: 10.0,
         };
-        let problem = LotkaVolterraAnalysis::new(ustr("Object"))
+        let (problem, _) = LotkaVolterraAnalysis::new(ustr("Object"))
             .add_positive(FinMor::Id(ustr("Object")))
             .add_negative(FinMor::Generator(ustr("Negative")))
             .create_system(&neg_feedback, data);

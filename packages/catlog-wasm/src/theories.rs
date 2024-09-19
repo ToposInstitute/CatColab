@@ -6,13 +6,18 @@ theory-specific analysis methods.
 
 use std::sync::Arc;
 
+use ustr::ustr;
+use uuid::Uuid;
 use wasm_bindgen::prelude::*;
+
+use catlog::dbl::{model::DiscreteDblModel, theory};
+use catlog::one::fin_category::FinMor;
+use catlog::stdlib::analyses::lotka_volterra::*;
+use catlog::stdlib::{models, theories};
 
 use super::model::DblModel;
 use super::model_morphism::motifs;
 use super::theory::DblTheory;
-use catlog::dbl::theory;
-use catlog::stdlib::{models, theories};
 
 /// The theory of categories.
 #[wasm_bindgen]
@@ -76,6 +81,21 @@ impl ThSignedCategory {
     pub fn negative_loops(&self, model: &DblModel) -> Result<Vec<DblModel>, String> {
         let negative_loop = models::negative_loop(self.0.clone());
         motifs(&negative_loop, model)
+    }
+
+    /// Simulate Lotka-Volterra system derived from a model.
+    #[wasm_bindgen(js_name = "lotkaVolterra")]
+    pub fn lotka_volterra(
+        &self,
+        model: &DblModel,
+        data: LotkaVolterraProblemData<Uuid>,
+    ) -> Result<LotkaVolterraResult<Uuid>, String> {
+        let model: &DiscreteDblModel<_, _> = model.try_into()?;
+        LotkaVolterraAnalysis::new(ustr("Object"))
+            .add_positive(FinMor::Id(ustr("Object")))
+            .add_negative(FinMor::Generator(ustr("Negative")))
+            .solve_rk4(&model, data)
+            .map_err(|err| format!("Integration error: {:?}", err))
     }
 }
 
