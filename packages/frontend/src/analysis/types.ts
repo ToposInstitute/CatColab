@@ -63,4 +63,4 @@ export type SubmodelsAnalysisContent = {
 /** Configuration for a Lotka-Volterra ODE analysis of a model. */
 export type LotkaVolterraContent = {
     tag: "lotka-volterra";
-} & catlog.LotkaVolterraConfig<string>;
+} & catlog.LotkaVolterraProblemData<string>;

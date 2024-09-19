@@ -20,7 +20,7 @@ pub trait ODESystem {
 An ODE problem comprises an [ODE system](ODESystem) plus the extra information
 needed to solve the system, namely the initial values and the time span.
  */
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ODEProblem<Sys> {
     pub(crate) system: Sys,
     pub(crate) initial_values: DVector<f32>,
