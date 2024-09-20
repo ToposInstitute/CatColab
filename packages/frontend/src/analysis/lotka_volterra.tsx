@@ -120,6 +120,18 @@ export function LotkaVolterra(
         }),
     ];
 
+    const toplevelSchema: ColumnSchema<null>[] = [
+        createNumericalColumn({
+            name: "Duration",
+            data: (_) => props.content.duration,
+            validate: (_, data) => data >= 0,
+            setData: (_, data) =>
+                props.changeContent((content) => {
+                    content.duration = data;
+                }),
+        }),
+    ];
+
     const simulationData = createMemo<ODEModelResult | undefined>(
         () => {
             const result = props.liveModel.validationResult();
@@ -155,6 +167,7 @@ export function LotkaVolterra(
                 <div class="parameters">
                     <FixedTableEditor rows={obDecls()} schema={obSchema} />
                     <FixedTableEditor rows={morDecls()} schema={morSchema} />
+                    <FixedTableEditor rows={[null]} schema={toplevelSchema} />
                 </div>
             </Foldable>
             <Show when={plotData()}>
