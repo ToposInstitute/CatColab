@@ -1,0 +1,44 @@
+.foldable button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    outline: none;
+    font: inherit;
+    width: 100%;
+    padding: 5px;
+}
+
+.foldable button .panel {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: none;
+    justify-content: space-between;
+}
+
+[data-corvu-disclosure-content] {
+    overflow: hidden;
+}
+[data-corvu-disclosure-content][data-collapsed] {
+    animation: collapse 200ms linear;
+}
+[data-corvu-disclosure-content][data-expanded] {
+    animation: expand 200ms linear;
+}
+
+@keyframes collapse {
+    0% {
+        height: var(--corvu-disclosure-content-height);
+    }
+    100% {
+        height: 0px;
+    }
+}
+
+@keyframes expand {
+    0% {
+        height: 0px;
+    }
+    100% {
+        height: var(--corvu-disclosure-content-height);
+    }
+}

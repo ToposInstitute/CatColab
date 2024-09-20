@@ -95,9 +95,11 @@ export function enlivenModelDocument(
 ): LiveModelDocument {
     // Memo-ize the *formal* content of the notebook, since most derived objects
     // will not depend on the informal (rich-text) content in notebook.
-    const formalJudgments = createMemo<Array<ModelJudgment>>(() =>
-        doc.notebook.cells.filter((cell) => cell.tag === "formal").map((cell) => cell.content),
-    );
+    const formalJudgments = createMemo<Array<ModelJudgment>>(() => {
+        return doc.notebook.cells
+            .filter((cell) => cell.tag === "formal")
+            .map((cell) => cell.content);
+    }, []);
 
     const objectIndex = createMemo<IndexedMap<Uuid, string>>(() => {
         const map = new Map<Uuid, string>();
@@ -107,7 +109,7 @@ export function enlivenModelDocument(
             }
         }
         return indexMap(map);
-    });
+    }, indexMap(new Map()));
 
     const morphismIndex = createMemo<IndexedMap<Uuid, string>>(() => {
         const map = new Map<Uuid, string>();
@@ -117,7 +119,7 @@ export function enlivenModelDocument(
             }
         }
         return indexMap(map);
-    });
+    }, indexMap(new Map()));
 
     const theory = createMemo<Theory | undefined>(() => {
         if (doc.theory !== undefined) return theories.get(doc.theory);

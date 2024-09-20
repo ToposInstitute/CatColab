@@ -4,16 +4,13 @@ use std::collections::HashMap;
 use thiserror::Error;
 
 use nalgebra::DVector;
-use ode_solvers::{
-    dop_shared::{IntegrationError, SolverResult},
-    Rk4, System,
-};
 use ustr::Ustr;
 
-use crate::{
-    dbl::model::*,
-    one::{fin_category::FinMor, FgCategory, FinGraph, SkelGraph},
-    simulate::{compile, mathexpr, run, Context, Env, Prog},
+use crate::dbl::model::*;
+use crate::one::{fin_category::FinMor, FgCategory, FinGraph, SkelGraph};
+use crate::simulate::{
+    mathexpr::{self, compile, run, Context, Env, Prog},
+    ode::{ODEProblem, ODESystem},
 };
 
 /// A validation error for an ODE analysis of a stock-flow model.
@@ -96,7 +93,7 @@ impl StockFlowODEAnalysis {
     pub fn compile_system(
         &self,
         model: &UstrDiscreteDblModel,
-    ) -> Result<StockFlowSystem, Vec<Error>> {
+    ) -> Result<ODEProblem<StockFlowSystem>, Vec<Error>> {
         let mut graph: SkelGraph = Default::default();
 
         let mut stocks = model.object_generators_with_type(&self.stock_object).collect::<Vec<_>>();
@@ -147,13 +144,12 @@ impl StockFlowODEAnalysis {
         }
 
         if errors.is_empty() {
-            Ok(StockFlowSystem {
+            let system = StockFlowSystem {
                 graph,
                 stock_names: stocks,
-                initial_values: initial_values.into(),
                 flow_progs,
-                end_time: self.simulation_length,
-            })
+            };
+            Ok(ODEProblem::new(system, initial_values.into()).end_time(self.simulation_length))
         } else {
             Err(errors)
         }
@@ -167,10 +163,9 @@ the data needed to compute the vector field for the ODE.
  */
 pub struct StockFlowSystem {
     graph: SkelGraph,
-    initial_values: DVector<f32>,
+    #[allow(dead_code)]
     stock_names: Vec<Ustr>,
     flow_progs: Vec<Prog<usize>>,
-    end_time: f32,
 }
 
 struct DVectorEnv<'a>(&'a DVector<f32>);
@@ -183,32 +178,14 @@ impl<'a> Env for DVectorEnv<'a> {
     }
 }
 
-impl System<f32, DVector<f32>> for &StockFlowSystem {
-    fn system(&self, _x: f32, y: &DVector<f32>, dy: &mut DVector<f32>) {
+impl ODESystem for StockFlowSystem {
+    fn vector_field(&self, dy: &mut DVector<f32>, y: &DVector<f32>, _: f32) {
         let env = DVectorEnv(y);
         let flows = self.flow_progs.iter().map(|p| run(&env, p)).collect::<Vec<_>>();
         for i in self.graph.vertices() {
             dy[i] = self.graph.in_edges(&i).map(|j| flows[j]).sum::<f32>()
                 - self.graph.out_edges(&i).map(|j| flows[j]).sum::<f32>();
         }
-    }
-}
-
-impl StockFlowSystem {
-    /// Solves the ODE system using the Runge-Kutta method.
-    pub fn solve_rk4(
-        &self,
-        step_size: f32,
-    ) -> Result<SolverResult<f32, DVector<f32>>, IntegrationError> {
-        let y = self.initial_values.clone();
-        let mut stepper = Rk4::new(self, 0.0, y, self.end_time, step_size);
-        stepper.integrate()?;
-        Ok(stepper.into())
-    }
-
-    /// Gets names of stocks.
-    pub fn stock_names(&self) -> &Vec<Ustr> {
-        &self.stock_names
     }
 }
 
@@ -220,23 +197,24 @@ mod test {
     use textplots::*;
     use ustr::ustr;
 
-    use super::{StockFlowODEAnalysis, StockFlowSystem, UstrDiscreteDblModel};
+    use super::*;
+    use crate::simulate::ode::ODEProblem;
     use crate::{one::fin_category::FinMor, stdlib};
 
-    fn plot(system: &StockFlowSystem) -> String {
-        let results = system.solve_rk4(0.1).unwrap();
+    fn plot(problem: &ODEProblem<StockFlowSystem>) -> String {
+        let results = problem.solve_rk4(0.1).unwrap();
         let (x_out, y_out) = results.get();
 
-        let mut chart = Chart::new(100, 80, 0.0, system.end_time);
+        let mut chart = Chart::new(100, 80, 0.0, problem.end_time);
 
         let mut line_data = Vec::new();
-        for (i, _stock) in system.stock_names.iter().enumerate() {
+        for (i, _stock) in problem.system.stock_names.iter().enumerate() {
             line_data
                 .push(x_out.iter().copied().zip(y_out.iter().map(|y| y[i])).collect::<Vec<_>>());
         }
 
         let mut lines = Vec::new();
-        for (i, _stock) in system.stock_names().iter().enumerate() {
+        for (i, _stock) in problem.system.stock_names.iter().enumerate() {
             lines.push(Shape::Lines(&line_data[i]))
         }
 
@@ -254,8 +232,8 @@ mod test {
         expected: Expect,
     ) {
         match analysis.compile_system(&model) {
-            Ok(system) => {
-                expected.assert_eq(&plot(&system));
+            Ok(problem) => {
+                expected.assert_eq(&plot(&problem));
             }
             Err(errors) => {
                 let s = errors.iter().map(|e| format!("{}", e)).collect::<Vec<_>>().join("\n");

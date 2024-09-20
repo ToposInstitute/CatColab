@@ -1,6 +1,7 @@
 import * as catlog from "catlog-wasm";
 
 import {
+    configureLotkaVolterra,
     configureModelGraph,
     configureStockFlowDiagram,
     configureSubmodelsAnalysis,
@@ -185,6 +186,9 @@ stdTheories.add(
                     description: "Analyze the network for negative feedback loops",
                     findSubmodels: (model) => thSignedCategory.negativeLoops(model),
                 }),
+                configureLotkaVolterra({
+                    simulate: (model, data) => thSignedCategory.lotkaVolterra(model, data),
+                }),
             ],
         });
     },
@@ -249,6 +253,9 @@ stdTheories.add(
                     name: "Reinforcing loops",
                     description: "Analyze the diagram for reinforcing loops",
                     findSubmodels: (model) => thSignedCategory.positiveLoops(model),
+                }),
+                configureLotkaVolterra({
+                    simulate: (model, data) => thSignedCategory.lotkaVolterra(model, data),
                 }),
             ],
         });

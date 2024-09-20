@@ -1,4 +1,5 @@
 import type * as Viz from "@viz-js/viz";
+import { Show } from "solid-js";
 
 import type { ModelJudgment } from "../model";
 import type { ModelAnalysisMeta, Theory, TypeMeta } from "../theory";
@@ -46,13 +47,17 @@ export function ModelGraph(
             <div class="panel">
                 <span class="title">{props.title}</span>
             </div>
-            <ModelGraphviz
-                model={props.model}
-                theory={props.theory}
-                options={{
-                    engine: graphvizEngine(props.content.layout),
-                }}
-            />
+            <Show when={props.liveModel.theory()}>
+                {(theory) => (
+                    <ModelGraphviz
+                        model={props.liveModel.formalJudgments()}
+                        theory={theory()}
+                        options={{
+                            engine: graphvizEngine(props.content.layout),
+                        }}
+                    />
+                )}
+            </Show>
         </div>
     );
 }

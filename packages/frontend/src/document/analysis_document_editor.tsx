@@ -1,9 +1,7 @@
 import type { DocHandle } from "@automerge/automerge-repo";
 import Resizable, { type ContextValue } from "@corvu/resizable";
-import { MultiProvider } from "@solid-primitives/context";
 import { useParams } from "@solidjs/router";
 import {
-    type Accessor,
     Match,
     Show,
     Switch,
@@ -19,7 +17,6 @@ import invariant from "tiny-invariant";
 import type { ModelAnalysis } from "../analysis";
 import { RPCContext, RepoContext, retrieveDoc } from "../api";
 import { IconButton, ResizableHandle } from "../components";
-import { type ModelJudgment, ModelValidationContext, TheoryContext } from "../model";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
@@ -112,13 +109,7 @@ export function AnalysisPane(props: {
     liveDoc: LiveAnalysisDocument;
 }) {
     return (
-        <MultiProvider
-            values={[
-                [TheoryContext, props.liveDoc.liveModel.theory],
-                [ModelContext, props.liveDoc.liveModel.formalJudgments],
-                [ModelValidationContext, props.liveDoc.liveModel.validationResult],
-            ]}
-        >
+        <LiveModelContext.Provider value={props.liveDoc.liveModel}>
             <NotebookEditor
                 handle={props.liveDoc.docHandle}
                 path={["notebook"]}
@@ -130,46 +121,25 @@ export function AnalysisPane(props: {
                 )}
                 noShortcuts={true}
             />
-        </MultiProvider>
+        </LiveModelContext.Provider>
     );
 }
 
 function ModelAnalysisCellEditor(props: FormalCellEditorProps<ModelAnalysis>) {
-    const theory = useContext(TheoryContext);
-    const model = useContext(ModelContext);
-
-    const validationResult = useContext(ModelValidationContext);
-    invariant(validationResult, "Result of model validation should be provided as context");
-
-    const validatedModel = () => {
-        const res = validationResult();
-        if (res.tag === "validated") {
-            return res.validatedModel;
-        } else {
-            return null;
-        }
-    };
+    const liveModel = useContext(LiveModelContext);
+    invariant(liveModel, "Model should be provided as context for analysis");
 
     return (
-        <Show when={theory?.()}>
-            {(theory) => (
-                <Show
-                    when={theory().getModelAnalysis(props.content.id)}
-                    fallback={<span>Internal error: model view not defined</span>}
-                >
-                    {(analysis) => (
-                        <Dynamic
-                            component={analysis().component}
-                            model={model?.() ?? []}
-                            validatedModel={validatedModel()}
-                            theory={theory()}
-                            content={props.content.content}
-                            changeContent={(f: (c: unknown) => void) =>
-                                props.changeContent((content) => f(content.content))
-                            }
-                        />
-                    )}
-                </Show>
+        <Show when={liveModel.theory()?.getModelAnalysis(props.content.id)}>
+            {(analysis) => (
+                <Dynamic
+                    component={analysis().component}
+                    liveModel={liveModel}
+                    content={props.content.content}
+                    changeContent={(f: (c: unknown) => void) =>
+                        props.changeContent((content) => f(content.content))
+                    }
+                />
             )}
         </Show>
     );
@@ -193,7 +163,7 @@ function modelAnalysisCellConstructors(
 }
 
 /** Context for the model being analyzed. */
-const ModelContext = createContext<Accessor<Array<ModelJudgment>>>();
+const LiveModelContext = createContext<LiveModelDocument>();
 
 /** Editor for a model of a double theory.
 
