@@ -33,6 +33,8 @@ pub struct ODEProblem<Sys> {
     pub(crate) initial_values: DVector<f32>,
     pub(crate) start_time: f32,
     pub(crate) end_time: f32,
+    rtol: f32,
+    atol: f32,
 }
 
 impl<Sys> ODEProblem<Sys> {
@@ -43,6 +45,9 @@ impl<Sys> ODEProblem<Sys> {
             initial_values,
             start_time: 0.0,
             end_time: 0.0,
+            // Same defaults as `scipy.integrate.RK45`.
+            rtol: 0.001,
+            atol: 1e-6,
         }
     }
 
@@ -71,7 +76,7 @@ where
 {
     /** Solves the ODE system using the Runge-Kutta method.
 
-    Returns the results from the solver if successful and an integration error otherwise.
+    Returns the solver results if successful and an integration error otherwise.
      */
     pub fn solve_rk4(
         &self,
@@ -83,6 +88,28 @@ where
             self.initial_values.clone(),
             self.end_time,
             step_size,
+        );
+        stepper.integrate()?;
+        Ok(stepper.into())
+    }
+
+    /** Solves the ODE system using the Dormand-Prince method.
+
+    A variant of Runge-Kutta with adaptive step size control and automatic
+    selection of initial step size.
+    */
+    pub fn solve_dopri5(
+        &self,
+        output_step_size: f32,
+    ) -> Result<SolverResult<f32, DVector<f32>>, IntegrationError> {
+        let mut stepper = ode_solvers::Dopri5::new(
+            self,
+            self.start_time,
+            self.end_time,
+            output_step_size,
+            self.initial_values.clone(),
+            self.rtol,
+            self.atol,
         );
         stepper.integrate()?;
         Ok(stepper.into())

@@ -134,7 +134,7 @@ impl LotkaVolterraAnalysis {
     }
 
     /// Solves the Lotka-Volterra ODE system created from a model.
-    pub fn solve_rk4<Id>(
+    pub fn solve<Id>(
         &self,
         model: &Model<Id>,
         data: LotkaVolterraProblemData<Id>,
@@ -142,9 +142,9 @@ impl LotkaVolterraAnalysis {
     where
         Id: Eq + Clone + Hash + Ord,
     {
-        let step_size = 0.01; // FIXME: Don't hard code the step size.
+        let output_step_size = (data.duration / 100.0).min(0.01f32);
         let (problem, ob_index) = self.create_system(model, data);
-        let result = problem.solve_rk4(step_size)?;
+        let result = problem.solve_dopri5(output_step_size)?;
         let (t_out, x_out) = result.get();
         Ok(ODEResult {
             time: t_out.clone(),
