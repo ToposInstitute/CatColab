@@ -91,7 +91,7 @@ impl ThSignedCategory {
         analyses::ode::LotkaVolterraAnalysis::new(ustr("Object"))
             .add_positive(FinMor::Id(ustr("Object")))
             .add_negative(FinMor::Generator(ustr("Negative")))
-            .solve_rk4(model, data.0)
+            .solve(model, data.0)
             .map(ODEModelResult)
             .map_err(|err| format!("Integration error: {:?}", err))
     }
