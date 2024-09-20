@@ -145,7 +145,7 @@ impl LotkaVolterraAnalysis {
             time: t_out.clone(),
             states: ob_index
                 .into_iter()
-                .map(|(ob, i)| (ob, x_out[i].as_slice().to_vec()))
+                .map(|(ob, i)| (ob, x_out.iter().map(|x| x[i]).collect()))
                 .collect(),
         })
     }

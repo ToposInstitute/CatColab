@@ -8,4 +8,10 @@
     flex-wrap: wrap;
     gap: 1em;
     justify-content: space-around;
+    padding-bottom: 1em;
+}
+
+.simulation .plot {
+    width: 100%;
+    height: 400px;
 }

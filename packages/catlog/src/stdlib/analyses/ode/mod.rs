@@ -11,10 +11,7 @@ use tsify_next::Tsify;
 #[derive(Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
-#[cfg_attr(
-    feature = "serde-wasm",
-    tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
-)]
+#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
 pub struct ODEResult<Id>
 where
     Id: Eq + Hash,

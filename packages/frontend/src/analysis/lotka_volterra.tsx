@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal } from "solid-js";
+import { Show, createEffect, createMemo, lazy } from "solid-js";
 
 import type { DblModel, LotkaVolterraModelData, ODEModelResult } from "catlog-wasm";
 import {
@@ -9,7 +9,10 @@ import {
 } from "../components";
 import type { MorphismDecl, ObjectDecl } from "../model";
 import type { ModelAnalysisMeta } from "../theory";
+import type { ODEPlotData } from "../visualization/ode_plot";
 import type { LotkaVolterraContent, ModelAnalysisProps } from "./types";
+
+const ODEPlot = lazy(() => import("../visualization/ode_plot"));
 
 import "./simulation.css";
 
@@ -79,18 +82,6 @@ export function LotkaVolterra(
         });
     });
 
-    const [numPoints, setNumPoints] = createSignal(0);
-
-    createEffect(() => {
-        const validationResult = props.liveModel.validationResult();
-        if (validationResult?.tag === "validated") {
-            const simulationResult = props.simulate(validationResult.validatedModel, props.content);
-            setNumPoints(simulationResult.time.length);
-        } else {
-            setNumPoints(0);
-        }
-    });
-
     const obSchema: ColumnSchema<ObjectDecl>[] = [
         {
             header: true,
@@ -131,6 +122,35 @@ export function LotkaVolterra(
         }),
     ];
 
+    const simulationData = createMemo<ODEModelResult | undefined>(
+        () => {
+            const result = props.liveModel.validationResult();
+            if (result?.tag === "validated") {
+                return props.simulate(result.validatedModel, props.content);
+            }
+        },
+        undefined,
+        { equals: false },
+    );
+
+    const plotData = createMemo<ODEPlotData | undefined>(
+        () => {
+            const data = simulationData();
+            if (data) {
+                const obIndex = props.liveModel.objectIndex();
+                return {
+                    time: data.time,
+                    states: Array.from(data.states.entries()).map(([id, data]) => ({
+                        name: obIndex.map.get(id) ?? "",
+                        data,
+                    })),
+                };
+            }
+        },
+        undefined,
+        { equals: false },
+    );
+
     return (
         <div class="simulation">
             <Foldable header={<span class="title">{props.title}</span>}>
@@ -139,7 +159,13 @@ export function LotkaVolterra(
                     <FixedTableEditor rows={morDecls()} schema={morSchema} />
                 </div>
             </Foldable>
-            <span>{`Number of points: ${numPoints()}`}</span>
+            <Show when={plotData()}>
+                {(d) => (
+                    <div class="plot">
+                        <ODEPlot data={d()} />
+                    </div>
+                )}
+            </Show>
         </div>
     );
 }
