@@ -1,4 +1,4 @@
-import { Show, createEffect, createMemo, lazy } from "solid-js";
+import { Show, createEffect, createMemo } from "solid-js";
 
 import type { DblModel, LotkaVolterraModelData, ODEModelResult } from "catlog-wasm";
 import {
@@ -9,10 +9,8 @@ import {
 } from "../components";
 import type { MorphismDecl, ObjectDecl } from "../model";
 import type { ModelAnalysisMeta } from "../theory";
-import type { ODEPlotData } from "../visualization/ode_plot";
+import { ODEPlot, type ODEPlotData } from "../visualization";
 import type { LotkaVolterraContent, ModelAnalysisProps } from "./types";
-
-const ODEPlot = lazy(() => import("../visualization/ode_plot"));
 
 import "./simulation.css";
 

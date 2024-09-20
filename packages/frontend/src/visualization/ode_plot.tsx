@@ -1,5 +1,7 @@
 import type { EChartsOption } from "echarts";
-import { EChartsAutoSize } from "echarts-solid";
+import { lazy } from "solid-js";
+
+const ECharts = lazy(() => import("./echarts"));
 
 /** Values of a state variable over time. */
 export type StateVarData = {
@@ -14,7 +16,7 @@ export type ODEPlotData = {
 };
 
 /** Plot the results of an ODE simulation. */
-export default function ODEPlot(props: {
+export function ODEPlot(props: {
     data: ODEPlotData;
 }) {
     const options = (): EChartsOption => ({
@@ -39,7 +41,7 @@ export default function ODEPlot(props: {
         })),
     });
 
-    return <EChartsAutoSize option={options()} />;
+    return <ECharts option={options()} />;
 }
 
 const formatTimeLabel = (x: number): string => {
