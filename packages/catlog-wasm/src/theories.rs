@@ -7,7 +7,6 @@ theory-specific analysis methods.
 use std::sync::Arc;
 
 use ustr::ustr;
-use uuid::Uuid;
 use wasm_bindgen::prelude::*;
 
 use catlog::dbl::{model::DiscreteDblModel, theory};
@@ -15,9 +14,8 @@ use catlog::one::fin_category::FinMor;
 use catlog::stdlib::analyses::lotka_volterra::*;
 use catlog::stdlib::{models, theories};
 
-use super::model::DblModel;
 use super::model_morphism::motifs;
-use super::theory::DblTheory;
+use super::{analyses::*, model::DblModel, theory::DblTheory};
 
 /// The theory of categories.
 #[wasm_bindgen]
@@ -88,13 +86,14 @@ impl ThSignedCategory {
     pub fn lotka_volterra(
         &self,
         model: &DblModel,
-        data: LotkaVolterraProblemData<Uuid>,
-    ) -> Result<LotkaVolterraResult<Uuid>, String> {
+        data: LotkaVolterraModelData,
+    ) -> Result<LotkaVolterraModelResult, String> {
         let model: &DiscreteDblModel<_, _> = model.try_into()?;
         LotkaVolterraAnalysis::new(ustr("Object"))
             .add_positive(FinMor::Id(ustr("Object")))
             .add_negative(FinMor::Generator(ustr("Negative")))
-            .solve_rk4(&model, data)
+            .solve_rk4(model, data.0)
+            .map(LotkaVolterraModelResult)
             .map_err(|err| format!("Integration error: {:?}", err))
     }
 }

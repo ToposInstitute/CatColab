@@ -186,7 +186,9 @@ stdTheories.add(
                     description: "Analyze the network for negative feedback loops",
                     findSubmodels: (model) => thSignedCategory.negativeLoops(model),
                 }),
-                configureLotkaVolterra(),
+                configureLotkaVolterra({
+                    simulate: (model, data) => thSignedCategory.lotkaVolterra(model, data),
+                }),
             ],
         });
     },
@@ -252,7 +254,9 @@ stdTheories.add(
                     description: "Analyze the diagram for reinforcing loops",
                     findSubmodels: (model) => thSignedCategory.positiveLoops(model),
                 }),
-                configureLotkaVolterra(),
+                configureLotkaVolterra({
+                    simulate: (model, data) => thSignedCategory.lotkaVolterra(model, data),
+                }),
             ],
         });
     },

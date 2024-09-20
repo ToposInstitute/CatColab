@@ -1,5 +1,6 @@
-import { createEffect, createMemo } from "solid-js";
+import { createEffect, createMemo, createSignal } from "solid-js";
 
+import type { DblModel, LotkaVolterraModelData, LotkaVolterraModelResult } from "catlog-wasm";
 import {
     type ColumnSchema,
     FixedTableEditor,
@@ -12,22 +13,26 @@ import type { LotkaVolterraContent, ModelAnalysisProps } from "./types";
 
 import "./simulation.css";
 
+type Simulator = (model: DblModel, data: LotkaVolterraModelData) => LotkaVolterraModelResult;
+
 /** Configure a Lotka-Volterra ODE analysis for use with models of a theory. */
-export function configureLotkaVolterra(options?: {
+export function configureLotkaVolterra(options: {
     id?: string;
     name?: string;
     description?: string;
+    simulate: Simulator;
 }): ModelAnalysisMeta<LotkaVolterraContent> {
     const {
         id = "lotka-volterra",
         name = "Lotka-Volterra dynamics",
         description = "Simulate the system using a Lotka-Volterra ODE",
-    } = options ?? {};
+        simulate,
+    } = options;
     return {
         id,
         name,
         description,
-        component: (props) => <LotkaVolterra title={name} {...props} />,
+        component: (props) => <LotkaVolterra simulate={simulate} title={name} {...props} />,
         initialContent: () => ({
             tag: "lotka-volterra",
             interactionCoefficients: {},
@@ -42,6 +47,7 @@ export function configureLotkaVolterra(options?: {
  */
 export function LotkaVolterra(
     props: {
+        simulate: Simulator;
         title?: string;
     } & ModelAnalysisProps<LotkaVolterraContent>,
 ) {
@@ -71,6 +77,18 @@ export function LotkaVolterra(
                 content.interactionCoefficients[mor.id] ??= 1;
             }
         });
+    });
+
+    const [numPoints, setNumPoints] = createSignal(0);
+
+    createEffect(() => {
+        const validationResult = props.liveModel.validationResult();
+        if (validationResult?.tag === "validated") {
+            const simulationResult = props.simulate(validationResult.validatedModel, props.content);
+            setNumPoints(simulationResult.time.length);
+        } else {
+            setNumPoints(0);
+        }
     });
 
     const obSchema: ColumnSchema<ObjectDecl>[] = [
@@ -121,6 +139,7 @@ export function LotkaVolterra(
                     <FixedTableEditor rows={morDecls()} schema={morSchema} />
                 </div>
             </Foldable>
+            <span>{`Number of points: ${numPoints()}`}</span>
         </div>
     );
 }
