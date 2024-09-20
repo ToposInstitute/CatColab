@@ -7,6 +7,7 @@ export default defineConfig({
     plugins: [wasm(), topLevelAwait(), solid()],
     build: {
         chunkSizeWarningLimit: 2000,
+        sourcemap: true,
     },
     server: {
         proxy: {
