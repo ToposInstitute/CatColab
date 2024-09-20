@@ -49,7 +49,12 @@ where
 
 type Model<Id> = DiscreteDblModel<Id, UstrFinCategory>;
 
-/// Lotka-Volterra ODE analysis for models of a double theory.
+/** Lotka-Volterra ODE analysis for models of a double theory.
+
+The main situation we have in mind is the Lotka-Volterra ODE semantics for
+regulatory networks (signed graphs) described in our [*Compositionality*
+paper](crate::refs::RegNets).
+*/
 pub struct LotkaVolterraAnalysis {
     var_ob_type: Ustr,
     positive_mor_types: Vec<FinMor<Ustr, Ustr>>,
