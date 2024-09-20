@@ -11,11 +11,12 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify_next::Tsify;
 
+use super::ODEResult;
 use crate::{
     dbl::model::{DiscreteDblModel, FgDblModel},
     one::fin_category::{FinMor, UstrFinCategory},
     one::FgCategory,
-    simulate::ode::{lotka_volterra::LotkaVolterraSystem, ODEProblem},
+    simulate::ode::{LotkaVolterraSystem, ODEProblem},
 };
 
 /// Data defining a Lotka-Volterra ODE problem for a model.
@@ -44,25 +45,6 @@ where
 
     /// Duration of simulation.
     duration: f32,
-}
-
-/// Simulation results for a Lotka-Volterra ODE analysis.
-#[derive(Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
-#[cfg_attr(
-    feature = "serde-wasm",
-    tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
-)]
-pub struct LotkaVolterraResult<Id>
-where
-    Id: Eq + Hash,
-{
-    /// Values of time variable for the duration of the simulation.
-    time: Vec<f32>,
-
-    /// Values of state variables for the duration of the simulation.
-    states: HashMap<Id, Vec<f32>>,
 }
 
 type Model<Id> = DiscreteDblModel<Id, UstrFinCategory>;
@@ -151,7 +133,7 @@ impl LotkaVolterraAnalysis {
         &self,
         model: &Model<Id>,
         data: LotkaVolterraProblemData<Id>,
-    ) -> Result<LotkaVolterraResult<Id>, IntegrationError>
+    ) -> Result<ODEResult<Id>, IntegrationError>
     where
         Id: Eq + Clone + Hash + Ord,
     {
@@ -159,7 +141,7 @@ impl LotkaVolterraAnalysis {
         let (problem, ob_index) = self.create_system(model, data);
         let result = problem.solve_rk4(step_size)?;
         let (t_out, x_out) = result.get();
-        Ok(LotkaVolterraResult {
+        Ok(ODEResult {
             time: t_out.clone(),
             states: ob_index
                 .into_iter()

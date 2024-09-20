@@ -11,8 +11,7 @@ use wasm_bindgen::prelude::*;
 
 use catlog::dbl::{model::DiscreteDblModel, theory};
 use catlog::one::fin_category::FinMor;
-use catlog::stdlib::analyses::lotka_volterra::*;
-use catlog::stdlib::{models, theories};
+use catlog::stdlib::{analyses, models, theories};
 
 use super::model_morphism::motifs;
 use super::{analyses::*, model::DblModel, theory::DblTheory};
@@ -87,13 +86,13 @@ impl ThSignedCategory {
         &self,
         model: &DblModel,
         data: LotkaVolterraModelData,
-    ) -> Result<LotkaVolterraModelResult, String> {
+    ) -> Result<ODEModelResult, String> {
         let model: &DiscreteDblModel<_, _> = model.try_into()?;
-        LotkaVolterraAnalysis::new(ustr("Object"))
+        analyses::ode::LotkaVolterraAnalysis::new(ustr("Object"))
             .add_positive(FinMor::Id(ustr("Object")))
             .add_negative(FinMor::Generator(ustr("Negative")))
             .solve_rk4(model, data.0)
-            .map(LotkaVolterraModelResult)
+            .map(ODEModelResult)
             .map_err(|err| format!("Integration error: {:?}", err))
     }
 }

@@ -1,6 +1,6 @@
 import { createEffect, createMemo, createSignal } from "solid-js";
 
-import type { DblModel, LotkaVolterraModelData, LotkaVolterraModelResult } from "catlog-wasm";
+import type { DblModel, LotkaVolterraModelData, ODEModelResult } from "catlog-wasm";
 import {
     type ColumnSchema,
     FixedTableEditor,
@@ -13,7 +13,7 @@ import type { LotkaVolterraContent, ModelAnalysisProps } from "./types";
 
 import "./simulation.css";
 
-type Simulator = (model: DblModel, data: LotkaVolterraModelData) => LotkaVolterraModelResult;
+type Simulator = (model: DblModel, data: LotkaVolterraModelData) => ODEModelResult;
 
 /** Configure a Lotka-Volterra ODE analysis for use with models of a theory. */
 export function configureLotkaVolterra(options: {

@@ -102,3 +102,6 @@ pub mod dynamic;
 
 #[allow(non_snake_case)]
 pub mod lotka_volterra;
+
+pub use dynamic::*;
+pub use lotka_volterra::*;
