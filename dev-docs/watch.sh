@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 watch_directory="trees"  
 build_command="forester build"  
 
