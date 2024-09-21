@@ -1,20 +1,5 @@
 \title{Mathematical bibliography}
+\taxon{bibliography}
 
-\subtree{
-\title{Double category theory}
-
-\ul{
-\li{General reference: [[grandis-2019]]}
-\li{[[cartesian-double-theories-2024]]}
-\li{[[double-products-2024]]}
-}
-}
-
-\subtree{
-\title{Modeling frameworks}
-
-\ul{
-\li{Regulatory networks and causal loop diagrams: [[reg-nets-2024]]}
-\li{Stock-flow diagrams: [[stock-flow-2023]]}
-}
-}
+\transclude{bib-0002}
+\transclude{bib-0003}

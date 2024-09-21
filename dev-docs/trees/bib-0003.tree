@@ -1,0 +1,18 @@
+\title{Modeling frameworks}
+\taxon{bibliography}
+
+\subtree{
+\title{Knowledge and data}
+\ul{
+\li{[[ologs-2012]]}
+\li{[[alg-databases-2017]]; see also [[acsets-2022]]}
+}
+}
+
+\subtree{
+\title{Dynamical systems}
+\ul{
+\li{Regulatory networks and causal loop diagrams: [[reg-nets-2024]]}
+\li{Stock-flow diagrams: [[stock-flow-2023]]}
+}
+}
