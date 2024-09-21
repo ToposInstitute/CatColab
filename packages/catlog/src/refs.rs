@@ -1,12 +1,12 @@
 /*! References to the literature (docs only).
 
-This module contains references cited in the docs for this crate. It is only
-built when the crate is compiled with the `doc` feature and is not intended for
-any purpose besides documentation.
+This module contains references cited in the docs for this crate. It is compiled
+only when the crate the `doc` feature is enabled, and it is not intended for any
+purpose besides documentation.
  */
 
-// NOTE: Bibliographic data ought to be recorded in a structured way, e.g., as
-// constant structs of some type `Reference`. This works fine in Rust but it
+// NOTE: It would be fun to record bibliographic data in a structured way, e.g.,
+// as constant structs of some type `Reference`. This works fine in Rust but it
 // doesn't produce usable docs because rustdoc doesn't display constants except
 // in certain special cases.
 //
@@ -76,3 +76,13 @@ dynamics in biochemical regulatory networks.
 - [arXiv:2301.01445](https://arxiv.org/abs/2301.01445)
  */
 pub const RegNets: () = ();
+
+/** Reference: Compositional modeling with stock and flow diagrams.
+
+John Baez, Xiaoyan Li, Sophie Libkind, Nathaniel Osgood, Evan Patterson, 2024:
+Compositional modeling with stock and flow diagrams.
+
+- [DOI:10.4204/EPTCS.380.5](https://doi.org/10.4204/EPTCS.380.5)
+- [arXiv:2205.08373](https://arxiv.org/abs/2205.08373)
+ */
+pub const StockFlow: () = ();
