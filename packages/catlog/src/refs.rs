@@ -79,7 +79,7 @@ pub const RegNets: () = ();
 
 /** Reference: Compositional modeling with stock and flow diagrams.
 
-John Baez, Xiaoyan Li, Sophie Libkind, Nathaniel Osgood, Evan Patterson, 2024:
+John Baez, Xiaoyan Li, Sophie Libkind, Nathaniel Osgood, Evan Patterson, 2023:
 Compositional modeling with stock and flow diagrams.
 
 - [DOI:10.4204/EPTCS.380.5](https://doi.org/10.4204/EPTCS.380.5)

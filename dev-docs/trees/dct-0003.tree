@@ -4,7 +4,8 @@
 
 \p{A category with links is a category equipped with heteromorphisms that "link"
 objects to morphisms. The idea is that a category with links is related to a
-stock-flow diagram in the same way that a category is related to a graph.}
+[stock-flow diagram](stock-flow-2023) in the same way that a category is related
+to a graph.}
 
 \definition{Category with links}{
   A \define{category with links} is a category \cat{C} equipped with a profunctor

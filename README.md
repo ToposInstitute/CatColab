@@ -49,5 +49,5 @@ models of double theories.
 
 The various domain-specific logics available in CatColab are inspired by a wide
 range of works from applied category theory and beyond. For incomplete
-bibliographies, see the [dev docs](https://next.catcolab.org/dev/) and the [core
-docs](https://next.catcolab.org/dev/rust/catlog/refs/).
+bibliographies, see the [dev docs](https://next.catcolab.org/dev/bib-0001.xml)
+and the [core docs](https://next.catcolab.org/dev/rust/catlog/refs/).
