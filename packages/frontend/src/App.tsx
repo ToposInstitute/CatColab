@@ -86,6 +86,8 @@ function CreateModel() {
     );
 }
 
+import Docs from "./docs/index.mdx";
+
 const routes: RouteDefinition[] = [
     {
         path: "/",
@@ -101,6 +103,10 @@ const routes: RouteDefinition[] = [
         matchFilters: refIsUUIDFilter,
         component: lazy(() => import("./document/analysis_document_editor")),
     },
+    {
+        path: "/docs",
+        component: (_) => <Docs />,
+    }
 ];
 
 function App() {
