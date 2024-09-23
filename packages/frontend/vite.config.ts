@@ -5,7 +5,7 @@ import solid from "vite-plugin-solid";
 import topLevelAwait from "vite-plugin-top-level-await";
 import wasm from "vite-plugin-wasm";
 
-// @ts-expect-error missing types
+// @ts-expect-error Types are missing.
 // *Also*, this plugin causes Vite 5 to complain about CJS.
 // https://github.com/nksaraf/vinxi/issues/289
 import pkg from "@vinxi/plugin-mdx";
