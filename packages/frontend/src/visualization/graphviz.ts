@@ -178,7 +178,10 @@ function parseFloatArray(s: string): number[] {
  */
 function parsePoint(s: string): Point {
     const point = parseFloatArray(s);
-    invariant(point[0] && point[1], "Point should be array of length 2");
+    invariant(
+        point[0] !== undefined && point[1] !== undefined,
+        "Point should be array of length 2",
+    );
     return { x: point[0], y: point[1] };
 }
 
