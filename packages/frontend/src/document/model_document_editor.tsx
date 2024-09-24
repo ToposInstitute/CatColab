@@ -19,6 +19,7 @@ import invariant from "tiny-invariant";
 import type { Uuid } from "catlog-wasm";
 import { RPCContext, RepoContext, retrieveDoc } from "../api";
 import { IconButton, InlineInput, ResizableHandle } from "../components";
+import { HelpButton } from "../help";
 import {
     type ModelJudgment,
     ModelValidationContext,
@@ -48,7 +49,6 @@ import { type ModelDocument, newAnalysisDocument } from "./types";
 
 import "./model_document_editor.css";
 
-import CircleHelp from "lucide-solid/icons/circle-help";
 import PanelRight from "lucide-solid/icons/panel-right";
 import PanelRightClose from "lucide-solid/icons/panel-right-close";
 
@@ -186,8 +186,6 @@ export function ModelDocumentEditor(props: {
         });
     */
 
-    const navigate = useNavigate();
-
     const [resizableContext, setResizableContext] = createSignal<ContextValue>();
     const [isSidePanelOpen, setSidePanelOpen] = createSignal(false);
 
@@ -224,10 +222,8 @@ export function ModelDocumentEditor(props: {
                             minSize={0.25}
                         >
                             <div class="toolbar">
-                                <IconButton onClick={() => navigate("/help")}>
-                                    <CircleHelp />
-                                </IconButton>
                                 <span class="filler" />
+                                <HelpButton />
                                 <IconButton onClick={toggleSidePanel}>
                                     <Show when={isSidePanelOpen()} fallback={<PanelRight />}>
                                         <PanelRightClose />

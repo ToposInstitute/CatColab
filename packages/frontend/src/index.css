@@ -75,6 +75,7 @@ h3 {
 .toolbar {
     display: flex;
     flex-direction: row;
+    gap: 5px;
     padding: 5px;
 
     & .filler {

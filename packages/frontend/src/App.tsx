@@ -12,7 +12,7 @@ import { Match, Switch, createResource, lazy, useContext } from "solid-js";
 import type { AppRouter } from "backend/src/index.js";
 import { RPCContext, RepoContext } from "./api";
 import { newModelDocument } from "./document/types";
-import { helpPage } from "./help/help_page";
+import { helpPage } from "./help";
 import { TheoryLibraryContext, stdTheories } from "./stdlib";
 
 const serverUrl: string = import.meta.env.VITE_BACKEND_HOST;
