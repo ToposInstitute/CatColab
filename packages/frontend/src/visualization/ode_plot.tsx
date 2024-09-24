@@ -27,7 +27,10 @@ export function ODEPlot(props: {
             name: "time",
             data: props.data.time,
             axisLabel: {
-                formatter: (_: string, i: number) => formatTimeLabel(props.data.time[i]),
+                formatter: (_: string, i: number) => {
+                    const x = props.data.time[i];
+                    return x ? formatTimeLabel(x) : "";
+                },
             },
         },
         yAxis: {

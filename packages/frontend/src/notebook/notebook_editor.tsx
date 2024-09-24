@@ -82,8 +82,8 @@ export function NotebookEditor<T>(props: {
     };
 
     const addOrReplaceActiveCell = (cell: Cell<T>) => {
-        if (props.notebook.cells.length > 0) {
-            const c = props.notebook.cells[activeCell()];
+        const c = props.notebook.cells[activeCell()];
+        if (c) {
             if (c.tag === "formal" || c.tag === "rich-text") {
                 addAfterActiveCell(cell);
             } else if (c.tag === "stem") {

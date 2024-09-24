@@ -51,7 +51,7 @@ export function Completions(props: {
     function selectPresumptive() {
         const completions = remainingCompletions();
         if (completions && completions.length > 0) {
-            completions[presumptive()].onComplete?.();
+            completions[presumptive()]?.onComplete?.();
             props.onComplete?.();
         }
     }

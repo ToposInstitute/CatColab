@@ -33,9 +33,10 @@ export function IdInput(
 
     const handleNewText = (text: string) => {
         const possibleIds = props.nameMap?.index.get(text);
-        if (possibleIds && possibleIds.length > 0) {
+        const firstId = possibleIds?.[0];
+        if (firstId) {
             // TODO: Warn the user when the names are not unique.
-            props.setId(possibleIds[0]);
+            props.setId(firstId);
         } else if (text === "") {
             // To avoid erasing incompletely entered text, only reset the ID
             // to null when the text is also empty.

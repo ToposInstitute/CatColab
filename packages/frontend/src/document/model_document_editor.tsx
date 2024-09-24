@@ -144,19 +144,17 @@ export function enlivenModelDocument(
 
 export default function ModelPage() {
     const params = useParams();
+    const ref = params.ref;
+    invariant(ref, "Must provide model ref as parameter to model page");
 
     const client = useContext(RPCContext);
-    invariant(client, "Must provide a value for RPCContext to use ModelPage");
-
     const repo = useContext(RepoContext);
-    invariant(repo, "Must provide a value for RepoContext to use ModelPage");
-
     const theories = useContext(TheoryLibraryContext);
-    invariant(theories, "Library of theories should be provided as context");
+    invariant(client && repo && theories, "Missing context for model page");
 
     const [liveDoc] = createResource<LiveModelDocument>(async () => {
-        const { doc, docHandle } = await retrieveDoc<ModelDocument>(client, params.ref, repo);
-        return enlivenModelDocument(params.ref, doc, docHandle, theories);
+        const { doc, docHandle } = await retrieveDoc<ModelDocument>(client, ref, repo);
+        return enlivenModelDocument(ref, doc, docHandle, theories);
     });
 
     return (

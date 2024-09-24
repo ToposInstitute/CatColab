@@ -36,17 +36,17 @@ export class Persistence {
     }
 
     async saveSnapshot(content: string): Promise<number> {
-        return (await queries.newSnapshot.run({ content }, this.pool))[0].id;
+        return first(await queries.newSnapshot.run({ content }, this.pool)).id;
     }
 
     async newRef(title: string | null): Promise<string> {
-        return (await queries.newRef.run({ title }, this.pool))[0].id;
+        return first(await queries.newRef.run({ title }, this.pool)).id;
     }
 
     async saveRef(refId: string, note: string): Promise<number> {
         assert(uuid.validate(refId));
         assert(typeof note === "string");
-        return (await queries.saveRef.run({ refId, note }, this.pool))[0].id;
+        return first(await queries.saveRef.run({ refId, note }, this.pool)).id;
     }
 
     async allRefs(): Promise<Ref[]> {
@@ -54,7 +54,7 @@ export class Persistence {
     }
 
     async getAutosave(refId: string): Promise<string> {
-        return (await queries.getAutosave.run({ refId }, this.pool))[0].content;
+        return first(await queries.getAutosave.run({ refId }, this.pool)).content;
     }
 
     async autosave(refId: string, content: string): Promise<void> {
@@ -95,7 +95,7 @@ export class Persistence {
     }
 
     async refMeta(refId: string): Promise<RefMeta> {
-        const meta = (await queries.getRefMeta.run({ refId }, this.pool))[0];
+        const meta = first(await queries.getRefMeta.run({ refId }, this.pool));
         const witnesses = await queries.getWitnesses.run({ refId }, this.pool);
         return { ...meta, witnesses };
     }
@@ -103,4 +103,9 @@ export class Persistence {
     async close() {
         this.pool.end();
     }
+}
+
+function first<T>(array: Array<T>): T {
+    assert(array[0]);
+    return array[0];
 }

@@ -96,6 +96,9 @@ export function SubmodelsGraphviz(props: {
             return [];
         }
         const submodel = props.submodels[index()];
+        if (!submodel) {
+            return [];
+        }
         return props.model.filter((judgment) => {
             if (judgment.tag === "object") {
                 return submodel.hasOb({ tag: "Basic", content: judgment.id });
