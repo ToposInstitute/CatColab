@@ -1,6 +1,6 @@
 import type { DocHandle } from "@automerge/automerge-repo";
 import Resizable, { type ContextValue } from "@corvu/resizable";
-import { useParams } from "@solidjs/router";
+import { useNavigate, useParams } from "@solidjs/router";
 import {
     Match,
     Show,
@@ -28,7 +28,7 @@ import type { ModelAnalysisMeta } from "../theory";
 import { type LiveModelDocument, ModelPane, enlivenModelDocument } from "./model_document_editor";
 import type { AnalysisDocument, ModelDocument } from "./types";
 
-import Camera from "lucide-solid/icons/camera";
+import CircleHelp from "lucide-solid/icons/circle-help";
 import PanelRight from "lucide-solid/icons/panel-right";
 import PanelRightClose from "lucide-solid/icons/panel-right-close";
 
@@ -174,11 +174,7 @@ export function AnalysisDocumentEditor(props: {
     const client = useContext(RPCContext);
     invariant(client, "Must provide RPCContext");
 
-    const snapshotModel = () =>
-        client.saveRef.mutate({
-            refId: props.liveDoc.refId,
-            note: "",
-        });
+    const navigate = useNavigate();
 
     const [resizableContext, setResizableContext] = createSignal<ContextValue>();
     const [isSidePanelOpen, setSidePanelOpen] = createSignal(true);
@@ -214,8 +210,8 @@ export function AnalysisDocumentEditor(props: {
                             minSize={0.25}
                         >
                             <div class="toolbar">
-                                <IconButton onClick={snapshotModel}>
-                                    <Camera />
+                                <IconButton onClick={() => navigate("/help")}>
+                                    <CircleHelp />
                                 </IconButton>
                                 <span class="filler" />
                                 <IconButton onClick={toggleSidePanel}>
