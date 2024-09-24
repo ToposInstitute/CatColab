@@ -7,12 +7,12 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify_next::Tsify;
 
-/// Results from an ODE simulation.
+/// Solution to an ODE problem.
 #[derive(Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
-pub struct ODEResult<Id>
+pub struct ODESolution<Id>
 where
     Id: Eq + Hash,
 {

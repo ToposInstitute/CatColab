@@ -86,14 +86,16 @@ impl ThSignedCategory {
         &self,
         model: &DblModel,
         data: LotkaVolterraModelData,
-    ) -> Result<ODEModelResult, String> {
+    ) -> Result<ODEResult, String> {
         let model: &DiscreteDblModel<_, _> = model.try_into()?;
-        analyses::ode::LotkaVolterraAnalysis::new(ustr("Object"))
-            .add_positive(FinMor::Id(ustr("Object")))
-            .add_negative(FinMor::Generator(ustr("Negative")))
-            .solve(model, data.0)
-            .map(ODEModelResult)
-            .map_err(|err| format!("Integration error: {:?}", err))
+        Ok(ODEResult(
+            analyses::ode::LotkaVolterraAnalysis::new(ustr("Object"))
+                .add_positive(FinMor::Id(ustr("Object")))
+                .add_negative(FinMor::Generator(ustr("Negative")))
+                .solve(model, data.0)
+                .map_err(|err| format!("Integration error: {:?}", err))
+                .into(),
+        ))
     }
 }
 

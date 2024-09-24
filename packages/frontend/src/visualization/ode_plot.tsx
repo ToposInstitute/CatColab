@@ -1,5 +1,7 @@
 import type { EChartsOption } from "echarts";
-import { lazy } from "solid-js";
+import { Match, Switch, lazy } from "solid-js";
+
+import type { JsResult } from "catlog-wasm";
 
 const ECharts = lazy(() => import("./echarts"));
 
@@ -15,7 +17,31 @@ export type ODEPlotData = {
     states: StateVarData[];
 };
 
-/** Plot the results of an ODE simulation. */
+/** Display the results from an ODE simulation.
+
+Plots the output data if the simulation was successful and shows an error
+message otherwise.
+ */
+export function ODEResultPlot(props: {
+    result?: JsResult<ODEPlotData, string>;
+}) {
+    return (
+        <Switch>
+            <Match when={props.result?.tag === "Ok" && props.result.content}>
+                {(data) => (
+                    <div class="plot">
+                        <ODEPlot data={data()} />
+                    </div>
+                )}
+            </Match>
+            <Match when={props.result?.tag === "Err" && props.result.content}>
+                {(err) => <div class="error">{err()}</div>}
+            </Match>
+        </Switch>
+    );
+}
+
+/** Plot the output data from an ODE simulation. */
 export function ODEPlot(props: {
     data: ODEPlotData;
 }) {

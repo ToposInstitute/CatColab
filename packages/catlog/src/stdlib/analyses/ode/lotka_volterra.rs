@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify_next::Tsify;
 
-use super::ODEResult;
+use super::ODESolution;
 use crate::{
     dbl::model::{DiscreteDblModel, FgDblModel},
     one::fin_category::{FinMor, UstrFinCategory},
@@ -138,7 +138,7 @@ impl LotkaVolterraAnalysis {
         &self,
         model: &Model<Id>,
         data: LotkaVolterraProblemData<Id>,
-    ) -> Result<ODEResult<Id>, IntegrationError>
+    ) -> Result<ODESolution<Id>, IntegrationError>
     where
         Id: Eq + Clone + Hash + Ord,
     {
@@ -146,7 +146,7 @@ impl LotkaVolterraAnalysis {
         let (problem, ob_index) = self.create_system(model, data);
         let result = problem.solve_dopri5(output_step_size)?;
         let (t_out, x_out) = result.get();
-        Ok(ODEResult {
+        Ok(ODESolution {
             time: t_out.clone(),
             states: ob_index
                 .into_iter()

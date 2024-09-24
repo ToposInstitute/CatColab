@@ -1,6 +1,6 @@
-import { Show, createMemo } from "solid-js";
+import { createMemo } from "solid-js";
 
-import type { DblModel, LotkaVolterraModelData, ODEModelResult } from "catlog-wasm";
+import type { DblModel, JsResult, LotkaVolterraModelData, ODEResult } from "catlog-wasm";
 import {
     type ColumnSchema,
     FixedTableEditor,
@@ -9,12 +9,12 @@ import {
 } from "../components";
 import type { MorphismDecl, ObjectDecl } from "../model";
 import type { ModelAnalysisMeta } from "../theory";
-import { ODEPlot, type ODEPlotData } from "../visualization";
+import { type ODEPlotData, ODEResultPlot } from "../visualization";
 import type { LotkaVolterraContent, ModelAnalysisProps } from "./types";
 
 import "./simulation.css";
 
-type Simulator = (model: DblModel, data: LotkaVolterraModelData) => ODEModelResult;
+type Simulator = (model: DblModel, data: LotkaVolterraModelData) => ODEResult;
 
 /** Configure a Lotka-Volterra ODE analysis for use with models of a theory. */
 export function configureLotkaVolterra(options: {
@@ -113,7 +113,7 @@ export function LotkaVolterra(
         }),
     ];
 
-    const simulationData = createMemo<ODEModelResult | undefined>(
+    const simulationResult = createMemo<ODEResult | undefined>(
         () => {
             const result = props.liveModel.validationResult();
             if (result?.tag === "validated") {
@@ -124,19 +124,22 @@ export function LotkaVolterra(
         { equals: false },
     );
 
-    const plotData = createMemo<ODEPlotData | undefined>(
+    const plotResult = createMemo<JsResult<ODEPlotData, string> | undefined>(
         () => {
-            const data = simulationData();
-            if (data) {
+            const result = simulationResult();
+            if (result?.tag === "Ok") {
+                const solution = result.content;
                 const obIndex = props.liveModel.objectIndex();
-                return {
-                    time: data.time,
-                    states: Array.from(data.states.entries()).map(([id, data]) => ({
+                const content = {
+                    time: solution.time,
+                    states: Array.from(solution.states.entries()).map(([id, data]) => ({
                         name: obIndex.map.get(id) ?? "",
                         data,
                     })),
                 };
+                return { tag: "Ok", content };
             }
+            return result;
         },
         undefined,
         { equals: false },
@@ -151,13 +154,7 @@ export function LotkaVolterra(
                     <FixedTableEditor rows={[null]} schema={toplevelSchema} />
                 </div>
             </Foldable>
-            <Show when={plotData()}>
-                {(d) => (
-                    <div class="plot">
-                        <ODEPlot data={d()} />
-                    </div>
-                )}
-            </Show>
+            <ODEResultPlot result={plotResult()} />
         </div>
     );
 }
