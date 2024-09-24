@@ -1,4 +1,4 @@
-import { Show, createEffect, createMemo } from "solid-js";
+import { Show, createMemo } from "solid-js";
 
 import type { DblModel, LotkaVolterraModelData, ODEModelResult } from "catlog-wasm";
 import {
@@ -60,26 +60,6 @@ export function LotkaVolterra(
         return props.liveModel.formalJudgments().filter((jgmt) => jgmt.tag === "morphism");
     }, []);
 
-    // Set default values of parameters whenever we get new objects/morphisms.
-    // Q: Should we "garbage collect" parameters for deleted objects/morphisms?
-
-    createEffect(() => {
-        props.changeContent((content) => {
-            for (const ob of obDecls()) {
-                content.initialValues[ob.id] ??= 0;
-                content.growthRates[ob.id] ??= 0;
-            }
-        });
-    });
-
-    createEffect(() => {
-        props.changeContent((content) => {
-            for (const mor of morDecls()) {
-                content.interactionCoefficients[mor.id] ??= 1;
-            }
-        });
-    });
-
     const obSchema: ColumnSchema<ObjectDecl>[] = [
         {
             header: true,
@@ -112,6 +92,7 @@ export function LotkaVolterra(
         createNumericalColumn({
             name: "Interaction",
             data: (mor) => props.content.interactionCoefficients[mor.id],
+            default: 1,
             validate: (_, data) => data >= 0,
             setData: (mor, data) =>
                 props.changeContent((content) => {

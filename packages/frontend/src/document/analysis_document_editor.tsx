@@ -50,18 +50,16 @@ export type LiveAnalysisDocument = {
 
 export default function AnalysisPage() {
     const params = useParams();
+    const ref = params.ref;
+    invariant(ref, "Must provide analysis ref as parameter to analysis page");
 
     const client = useContext(RPCContext);
-    invariant(client, "Must provide a value for RPCContext to use AnalysisPage");
-
     const repo = useContext(RepoContext);
-    invariant(repo, "Must provide a value for RepoContext to use AnalysisPage");
-
     const theories = useContext(TheoryLibraryContext);
-    invariant(theories, "Library of theories should be provided as context");
+    invariant(client && repo && theories, "Missing context for analysis page");
 
     const [liveDoc] = createResource<LiveAnalysisDocument>(async () => {
-        const { doc, docHandle } = await retrieveDoc<AnalysisDocument>(client, params.ref, repo);
+        const { doc, docHandle } = await retrieveDoc<AnalysisDocument>(client, ref, repo);
         await docHandle.whenReady();
         invariant(
             doc.type === "analysis",
@@ -81,7 +79,7 @@ export default function AnalysisPage() {
         );
 
         return {
-            refId: params.ref,
+            refId: ref,
             doc,
             docHandle,
             liveModel,

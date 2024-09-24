@@ -32,13 +32,21 @@ export type ColumnSchema<Row> = {
 export const createNumericalColumn = <Row,>(args: {
     name?: string;
     header?: boolean;
-    data: (row: Row) => number;
+    data: (row: Row) => number | undefined;
+    default?: number;
     validate?: (row: Row, data: number) => boolean;
     setData?: (row: Row, data: number) => void;
 }): ColumnSchema<Row> => ({
     name: args.name,
     header: args.header,
-    content: (row) => args.data(row).toString(),
+    content: (row) => {
+        let value = args.data(row);
+        if (value === undefined) {
+            value = args.default ?? 0;
+            args.setData?.(row, value);
+        }
+        return value.toString();
+    },
     validate: (row, text) => {
         const parsed = Number(text);
         return !Number.isNaN(parsed) && (args.validate?.(row, parsed) ?? true);
