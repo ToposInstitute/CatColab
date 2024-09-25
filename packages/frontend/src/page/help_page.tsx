@@ -1,6 +1,8 @@
 import type { MDXProps } from "mdx/types";
 import { type Component, type JSX, lazy } from "solid-js";
 
+import { BrandedToolbar } from "./toolbar";
+
 import "./help_page.css";
 
 export function HelperContainer(props: {
@@ -8,6 +10,7 @@ export function HelperContainer(props: {
 }) {
     return (
         <div class="growable-container">
+            <BrandedToolbar />
             <div class="help-container">{props.children}</div>
         </div>
     );
