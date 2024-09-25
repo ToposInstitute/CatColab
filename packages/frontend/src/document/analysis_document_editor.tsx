@@ -17,13 +17,13 @@ import invariant from "tiny-invariant";
 import type { ModelAnalysis } from "../analysis";
 import { RPCContext, RepoContext, retrieveDoc } from "../api";
 import { IconButton, ResizableHandle } from "../components";
-import { HelpButton } from "../help";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
     NotebookEditor,
     newFormalCell,
 } from "../notebook";
+import { BrandedToolbar, HelpButton } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { ModelAnalysisMeta } from "../theory";
 import { type LiveModelDocument, ModelPane, enlivenModelDocument } from "./model_document_editor";
@@ -207,8 +207,7 @@ export function AnalysisDocumentEditor(props: {
                             initialSize={0.66}
                             minSize={0.25}
                         >
-                            <div class="toolbar">
-                                <span class="filler" />
+                            <BrandedToolbar>
                                 <HelpButton />
                                 <IconButton
                                     onClick={toggleSidePanel}
@@ -222,7 +221,7 @@ export function AnalysisDocumentEditor(props: {
                                         <PanelRightClose />
                                     </Show>
                                 </IconButton>
-                            </div>
+                            </BrandedToolbar>
                             <ModelPane liveDoc={props.liveDoc.liveModel} />
                         </Resizable.Panel>
                         <ResizableHandle hidden={!isSidePanelOpen()} />
