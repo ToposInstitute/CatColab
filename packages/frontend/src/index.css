@@ -32,6 +32,10 @@ body,
     flex-direction: column;
 }
 
+a {
+    color: #007481;
+}
+
 h1,
 h2,
 h3,
@@ -75,6 +79,7 @@ h3 {
 .toolbar {
     display: flex;
     flex-direction: row;
+    gap: 5px;
     padding: 5px;
 
     & .filler {

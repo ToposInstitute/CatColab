@@ -17,6 +17,7 @@ import invariant from "tiny-invariant";
 import type { ModelAnalysis } from "../analysis";
 import { RPCContext, RepoContext, retrieveDoc } from "../api";
 import { IconButton, ResizableHandle } from "../components";
+import { HelpButton } from "../help";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
@@ -28,7 +29,6 @@ import type { ModelAnalysisMeta } from "../theory";
 import { type LiveModelDocument, ModelPane, enlivenModelDocument } from "./model_document_editor";
 import type { AnalysisDocument, ModelDocument } from "./types";
 
-import Camera from "lucide-solid/icons/camera";
 import PanelRight from "lucide-solid/icons/panel-right";
 import PanelRightClose from "lucide-solid/icons/panel-right-close";
 
@@ -174,12 +174,6 @@ export function AnalysisDocumentEditor(props: {
     const client = useContext(RPCContext);
     invariant(client, "Must provide RPCContext");
 
-    const snapshotModel = () =>
-        client.saveRef.mutate({
-            refId: props.liveDoc.refId,
-            note: "",
-        });
-
     const [resizableContext, setResizableContext] = createSignal<ContextValue>();
     const [isSidePanelOpen, setSidePanelOpen] = createSignal(true);
 
@@ -214,11 +208,16 @@ export function AnalysisDocumentEditor(props: {
                             minSize={0.25}
                         >
                             <div class="toolbar">
-                                <IconButton onClick={snapshotModel}>
-                                    <Camera />
-                                </IconButton>
                                 <span class="filler" />
-                                <IconButton onClick={toggleSidePanel}>
+                                <HelpButton />
+                                <IconButton
+                                    onClick={toggleSidePanel}
+                                    tooltip={
+                                        isSidePanelOpen()
+                                            ? "Hide the analysis panel"
+                                            : "Show the analysis panel"
+                                    }
+                                >
                                     <Show when={isSidePanelOpen()} fallback={<PanelRight />}>
                                         <PanelRightClose />
                                     </Show>

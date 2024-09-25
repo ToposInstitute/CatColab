@@ -19,6 +19,7 @@ import invariant from "tiny-invariant";
 import type { Uuid } from "catlog-wasm";
 import { RPCContext, RepoContext, retrieveDoc } from "../api";
 import { IconButton, InlineInput, ResizableHandle } from "../components";
+import { HelpButton } from "../help";
 import {
     type ModelJudgment,
     ModelValidationContext,
@@ -48,7 +49,6 @@ import { type ModelDocument, newAnalysisDocument } from "./types";
 
 import "./model_document_editor.css";
 
-import Camera from "lucide-solid/icons/camera";
 import PanelRight from "lucide-solid/icons/panel-right";
 import PanelRightClose from "lucide-solid/icons/panel-right-close";
 
@@ -178,11 +178,13 @@ export function ModelDocumentEditor(props: {
     const client = useContext(RPCContext);
     invariant(client, "Must provide RPCContext");
 
+    /* TODO: Restore this action once saving properly integrated into UI.
     const snapshotModel = () =>
         client.saveRef.mutate({
             refId: props.liveDoc.refId,
             note: "",
         });
+    */
 
     const [resizableContext, setResizableContext] = createSignal<ContextValue>();
     const [isSidePanelOpen, setSidePanelOpen] = createSignal(false);
@@ -220,10 +222,8 @@ export function ModelDocumentEditor(props: {
                             minSize={0.25}
                         >
                             <div class="toolbar">
-                                <IconButton onClick={snapshotModel}>
-                                    <Camera />
-                                </IconButton>
                                 <span class="filler" />
+                                <HelpButton />
                                 <IconButton onClick={toggleSidePanel}>
                                     <Show when={isSidePanelOpen()} fallback={<PanelRight />}>
                                         <PanelRightClose />
@@ -258,23 +258,21 @@ export function ModelDocumentEditor(props: {
 
 function AnalysesPane(props: { forRef: string; title: string }) {
     const client = useContext(RPCContext);
-    invariant(client, "Must provide RPCContext");
+    const repo = useContext(RepoContext);
+    invariant(client && repo, "Missing context for analyses pane");
 
     const [analyses] = createResource(async () => {
         return await client.getBacklinks.query({ refId: props.forRef, taxon: "analysis" });
     });
 
-    const repo = useContext(RepoContext);
-    invariant(repo, "Must provide RepoContext");
-
-    const navigator = useNavigate();
+    const navigate = useNavigate();
 
     const createAnalysis = async () => {
         const init = newAnalysisDocument(props.forRef);
         const newDoc = repo.create(init);
         const newRef = await client.newRef.mutate({ title: init.name, docId: newDoc.documentId });
 
-        navigator(`/analysis/${newRef}`);
+        navigate(`/analysis/${newRef}`);
     };
 
     return (

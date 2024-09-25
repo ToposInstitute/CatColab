@@ -1,0 +1,12 @@
+.help-container {
+    max-width: 100ex;
+    margin: 0 auto;
+
+    & h1 {
+        margin: 0.5em 0;
+    }
+
+    & li:not(:last-child) {
+        margin-bottom: 0.2em;
+    }
+}
