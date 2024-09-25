@@ -32,6 +32,10 @@ body,
     flex-direction: column;
 }
 
+a {
+    color: #007481;
+}
+
 h1,
 h2,
 h3,

@@ -104,7 +104,7 @@ const routes: RouteDefinition[] = [
     },
     {
         path: "/help",
-        component: helpPage(lazy(() => import("./help/about.mdx"))),
+        component: helpPage(lazy(() => import("./help/pages/index.mdx"))),
     },
 ];
 
