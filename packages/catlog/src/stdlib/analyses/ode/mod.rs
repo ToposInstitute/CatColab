@@ -2,13 +2,15 @@
 
 use std::{collections::HashMap, hash::Hash};
 
+use derivative::Derivative;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify_next::Tsify;
 
 /// Solution to an ODE problem.
-#[derive(Clone)]
+#[derive(Clone, Derivative)]
+#[derivative(Default(bound = ""))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
