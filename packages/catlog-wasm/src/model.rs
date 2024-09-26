@@ -269,5 +269,16 @@ mod tests {
         assert_eq!(model.objects().len(), 2);
         assert_eq!(model.morphisms().len(), 1);
         assert!(model.validate().is_empty());
+
+        let mut model = DblModel::new(&th);
+        assert!(model
+            .add_mor(MorDecl {
+                id: a,
+                mor_type: MorType::Basic("Attr".into()),
+                dom: None,
+                cod: Some(Ob::Basic(y)),
+            })
+            .is_ok());
+        assert_eq!(model.validate().len(), 2);
     }
 }
