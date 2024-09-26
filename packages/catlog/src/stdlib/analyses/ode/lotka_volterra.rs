@@ -144,6 +144,10 @@ impl LotkaVolterraAnalysis {
     {
         let output_step_size = (data.duration / 100.0).min(0.01f32);
         let (problem, ob_index) = self.create_system(model, data);
+        if ob_index.is_empty() {
+            return Ok(Default::default());
+        }
+
         let result = problem.solve_dopri5(output_step_size)?;
         let (t_out, x_out) = result.get();
         Ok(ODESolution {
