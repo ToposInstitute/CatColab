@@ -19,7 +19,7 @@ export type ModelDocument = {
 
 /** Create an empty model document. */
 export const newModelDocument = (): ModelDocument => ({
-    name: "Untitled",
+    name: "",
     type: "model",
     notebook: newNotebook(),
 });
@@ -40,7 +40,7 @@ export type AnalysisDocument = {
 
 /** Create an empty analysis of a model. */
 export const newAnalysisDocument = (modelRefId: string): AnalysisDocument => ({
-    name: "Untitled",
+    name: "",
     type: "analysis",
     modelRef: {
         __extern__: {
