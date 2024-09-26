@@ -6,7 +6,7 @@ import invariant from "tiny-invariant";
 import * as uuid from "uuid";
 
 import { MultiProvider } from "@solid-primitives/context";
-import { type RouteDefinition, type RouteSectionProps, Router, useNavigate } from "@solidjs/router";
+import { Navigate, type RouteDefinition, type RouteSectionProps, Router } from "@solidjs/router";
 import { Match, Switch, createResource, lazy, useContext } from "solid-js";
 
 import type { AppRouter } from "backend/src/index.js";
@@ -52,16 +52,10 @@ const Root = (props: RouteSectionProps<unknown>) => {
     );
 };
 
-const refIsUUIDFilter = {
-    ref: (ref: string) => uuid.validate(ref),
-};
-
 function CreateModel() {
     const client = useContext(RPCContext);
-    invariant(client, "Must provide RPCContext");
-
     const repo = useContext(RepoContext);
-    invariant(repo, "Must provide RepoContext");
+    invariant(client && repo, "Missing context to create model");
 
     const init = newModelDocument();
     const doc = repo.create(init);
@@ -70,22 +64,19 @@ function CreateModel() {
         return await client.newRef.mutate({ title: init.name, docId: doc.documentId });
     });
 
-    const navigator = useNavigate();
-
     return (
         <Switch>
-            <Match when={ref.loading}>
-                <p>Loading...</p>
-            </Match>
             <Match when={ref.error}>
                 <span>Error: {ref.error}</span>
             </Match>
-            <Match when={ref()}>
-                {(ref) => <div ref={(_) => navigator(`/model/${ref()}`)}>Loading...</div>}
-            </Match>
+            <Match when={ref()}>{(ref) => <Navigate href={`/model/${ref()}`} />}</Match>
         </Switch>
     );
 }
+
+const refIsUUIDFilter = {
+    ref: (ref: string) => uuid.validate(ref),
+};
 
 const routes: RouteDefinition[] = [
     {
