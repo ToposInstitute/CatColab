@@ -81,14 +81,14 @@
 .morphism-decl-arrow.double {
     background: transparent;
     height: 6px;
-    border-top: 2px solid var(--stroke-color);
-    border-bottom: 2px solid var(--stroke-color);
+    border-top: 2px solid var(--main-color);
+    border-bottom: 2px solid var(--main-color);
     border-radius: 1px;
 
     &:before,
     &:after {
         content: "";
-        background: var(--stroke-color);
+        background: var(--main-color);
         position: absolute;
         height: 2px;
         width: 16px;
@@ -110,7 +110,7 @@
 
 .morphism-decl-arrow.flat:after {
     content: "";
-    background: var(--stroke-color);
+    background: var(--main-color);
     position: absolute;
     border-radius: 3px;
     height: 14px;
