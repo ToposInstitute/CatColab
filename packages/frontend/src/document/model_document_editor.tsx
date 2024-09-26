@@ -242,10 +242,7 @@ export function ModelDocumentEditor(props: {
                             onExpand={() => setSidePanelOpen(true)}
                         >
                             <div class="notebook-container">
-                                <AnalysesPane
-                                    forRef={props.liveDoc.refId}
-                                    title={props.liveDoc.doc.name}
-                                />
+                                <AnalysesPane forRef={props.liveDoc.refId} />
                             </div>
                         </Resizable.Panel>
                     </>
@@ -255,7 +252,7 @@ export function ModelDocumentEditor(props: {
     );
 }
 
-function AnalysesPane(props: { forRef: string; title: string }) {
+function AnalysesPane(props: { forRef: string }) {
     const client = useContext(RPCContext);
     const repo = useContext(RepoContext);
     invariant(client && repo, "Missing context for analyses pane");
@@ -276,7 +273,7 @@ function AnalysesPane(props: { forRef: string; title: string }) {
 
     return (
         <div>
-            <h2>Analyses for {props.title}</h2>
+            <h2>Analyses</h2>
             <Show when={analyses()}>
                 {(analyses) => {
                     return (
@@ -317,6 +314,7 @@ export function ModelPane(props: {
                                 doc.name = text;
                             });
                         }}
+                        placeholder="Untitled"
                     />
                 </div>
                 <div class="model-theory">
