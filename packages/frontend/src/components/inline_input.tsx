@@ -40,7 +40,7 @@ export function InlineInput(
         setText: (text: string) => void;
     } & InlineInputOptions,
 ) {
-    const [isCompletionsOpen, setCompletionsOpen] = createSignal(true);
+    const [isCompletionsOpen, setCompletionsOpen] = createSignal(false);
     const [completionsRef, setCompletionsRef] = createSignal<CompletionsRef>();
 
     const onKeyDown: JSX.EventHandlerUnion<HTMLInputElement, KeyboardEvent> = (evt) => {
@@ -102,6 +102,8 @@ export function InlineInput(
                     allowedPlacements: ["bottom-start", "top-start"],
                 },
             }}
+            closeOnOutsideFocus={false}
+            closeOnOutsidePointer={false}
             trapFocus={false}
         >
             <Popover.Anchor>
@@ -120,8 +122,8 @@ export function InlineInput(
                         placeholder={props.placeholder}
                         use:focus={(isFocused: boolean) => {
                             isFocused && props.onFocus && props.onFocus();
+                            setCompletionsOpen(isFocused);
                         }}
-                        onClick={() => setCompletionsOpen(true)}
                         onInput={(evt) => {
                             props.setText(evt.target.value);
                             setCompletionsOpen(true);
