@@ -6,7 +6,7 @@ import invariant from "tiny-invariant";
 import * as uuid from "uuid";
 
 import { MultiProvider } from "@solid-primitives/context";
-import { type RouteDefinition, type RouteSectionProps, Router, useNavigate } from "@solidjs/router";
+import { Navigate, type RouteDefinition, type RouteSectionProps, Router } from "@solidjs/router";
 import { Match, Switch, createResource, lazy, useContext } from "solid-js";
 
 import type { AppRouter } from "backend/src/index.js";
@@ -52,10 +52,6 @@ const Root = (props: RouteSectionProps<unknown>) => {
     );
 };
 
-const refIsUUIDFilter = {
-    ref: (ref: string) => uuid.validate(ref),
-};
-
 function CreateModel() {
     const client = useContext(RPCContext);
     const repo = useContext(RepoContext);
@@ -68,17 +64,19 @@ function CreateModel() {
         return await client.newRef.mutate({ title: init.name, docId: doc.documentId });
     });
 
-    const navigate = useNavigate();
-
     return (
         <Switch>
             <Match when={ref.error}>
                 <span>Error: {ref.error}</span>
             </Match>
-            <Match when={ref()}>{(ref) => <div ref={(_) => navigate(`/model/${ref()}`)} />}</Match>
+            <Match when={ref()}>{(ref) => <Navigate href={`/model/${ref()}`} />}</Match>
         </Switch>
     );
 }
+
+const refIsUUIDFilter = {
+    ref: (ref: string) => uuid.validate(ref),
+};
 
 const routes: RouteDefinition[] = [
     {
