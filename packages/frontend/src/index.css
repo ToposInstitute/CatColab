@@ -2,16 +2,13 @@
     --main-font: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
     --mono-font: Roboto Mono, monospace;
 
-    --light-color: black;
-    --dark-color: rgba(255, 255, 255, 0.87);
+    --main-color: black;
 
     --h1-font-size: 3em;
     --h2-font-size: 2em;
     --h3-font-size: 1.5em;
 
-    /*color-scheme: light dark;*/
-    color-scheme: light;
-    color: light-dark(var(--light-color), var(--dark-color));
+    color: var(--main-color);
     font-family: var(--main-font);
 
     font-synthesis: none;
