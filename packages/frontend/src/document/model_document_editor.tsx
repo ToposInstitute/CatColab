@@ -19,7 +19,6 @@ import invariant from "tiny-invariant";
 import type { Uuid } from "catlog-wasm";
 import { RPCContext, RepoContext, retrieveDoc } from "../api";
 import { IconButton, InlineInput, ResizableHandle } from "../components";
-import { HelpButton } from "../help";
 import {
     type ModelJudgment,
     ModelValidationContext,
@@ -42,6 +41,7 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
+import { BrandedToolbar, HelpButton } from "../page";
 import { type TheoryLibrary, TheoryLibraryContext } from "../stdlib";
 import type { Theory } from "../theory";
 import { type IndexedMap, indexMap } from "../util/indexing";
@@ -221,15 +221,14 @@ export function ModelDocumentEditor(props: {
                             initialSize={1}
                             minSize={0.25}
                         >
-                            <div class="toolbar">
-                                <span class="filler" />
+                            <BrandedToolbar>
                                 <HelpButton />
                                 <IconButton onClick={toggleSidePanel}>
                                     <Show when={isSidePanelOpen()} fallback={<PanelRight />}>
                                         <PanelRightClose />
                                     </Show>
                                 </IconButton>
-                            </div>
+                            </BrandedToolbar>
                             <ModelPane liveDoc={props.liveDoc} />
                         </Resizable.Panel>
                         <ResizableHandle hidden={!isSidePanelOpen()} />

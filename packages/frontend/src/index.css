@@ -34,6 +34,7 @@ body,
 
 a {
     color: #007481;
+    text-decoration: none;
 }
 
 h1,
@@ -74,19 +75,4 @@ h3 {
 
 .side-panel {
     background: #f8f8f8;
-}
-
-.toolbar {
-    display: flex;
-    flex-direction: row;
-    gap: 5px;
-    padding: 5px;
-
-    & .filler {
-        flex: 1;
-    }
-
-    & .lucide {
-        color: dimgray;
-    }
 }
