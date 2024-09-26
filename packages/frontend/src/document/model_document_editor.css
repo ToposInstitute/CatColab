@@ -12,7 +12,7 @@
     appearance: none;
     border: none;
     background-color: transparent;
-    color: var(--light-color);
+    color: var(--main-color);
     font-size: var(--h3-font-size);
     text-align-last: right;
 }
