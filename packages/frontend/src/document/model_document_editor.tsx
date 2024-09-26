@@ -159,9 +159,6 @@ export default function ModelPage() {
 
     return (
         <Switch>
-            <Match when={liveDoc.loading}>
-                <p>Loading...</p>
-            </Match>
             <Match when={liveDoc.error}>
                 <span>Error: {liveDoc.error}</span>
             </Match>

@@ -58,10 +58,8 @@ const refIsUUIDFilter = {
 
 function CreateModel() {
     const client = useContext(RPCContext);
-    invariant(client, "Must provide RPCContext");
-
     const repo = useContext(RepoContext);
-    invariant(repo, "Must provide RepoContext");
+    invariant(client && repo, "Missing context to create model");
 
     const init = newModelDocument();
     const doc = repo.create(init);
@@ -70,19 +68,14 @@ function CreateModel() {
         return await client.newRef.mutate({ title: init.name, docId: doc.documentId });
     });
 
-    const navigator = useNavigate();
+    const navigate = useNavigate();
 
     return (
         <Switch>
-            <Match when={ref.loading}>
-                <p>Loading...</p>
-            </Match>
             <Match when={ref.error}>
                 <span>Error: {ref.error}</span>
             </Match>
-            <Match when={ref()}>
-                {(ref) => <div ref={(_) => navigator(`/model/${ref()}`)}>Loading...</div>}
-            </Match>
+            <Match when={ref()}>{(ref) => <div ref={(_) => navigate(`/model/${ref()}`)} />}</Match>
         </Switch>
     );
 }
