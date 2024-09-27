@@ -1,24 +1,20 @@
 import type { DocHandle } from "@automerge/automerge-repo";
-import Resizable, { type ContextValue } from "@corvu/resizable";
 import { MultiProvider } from "@solid-primitives/context";
 import { useNavigate, useParams } from "@solidjs/router";
 import {
     type Accessor,
     For,
     Match,
-    Show,
     Switch,
-    createEffect,
     createMemo,
     createResource,
-    createSignal,
     useContext,
 } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { Uuid } from "catlog-wasm";
 import { RPCContext, RepoContext, retrieveDoc } from "../api";
-import { IconButton, InlineInput, ResizableHandle } from "../components";
+import { IconButton, InlineInput } from "../components";
 import {
     type ModelJudgment,
     ModelValidationContext,
@@ -49,8 +45,7 @@ import { type ModelDocument, newAnalysisDocument } from "./types";
 
 import "./model_document_editor.css";
 
-import PanelRight from "lucide-solid/icons/panel-right";
-import PanelRightClose from "lucide-solid/icons/panel-right-close";
+import ChartNetwork from "lucide-solid/icons/chart-network";
 
 /** A model document "live" for editing.
 
@@ -173,7 +168,8 @@ export function ModelDocumentEditor(props: {
     liveDoc: LiveModelDocument;
 }) {
     const client = useContext(RPCContext);
-    invariant(client, "Must provide RPCContext");
+    const repo = useContext(RepoContext);
+    invariant(client && repo, "Missing context for model document editor");
 
     /* TODO: Restore this action once saving properly integrated into UI.
     const snapshotModel = () =>
@@ -183,85 +179,10 @@ export function ModelDocumentEditor(props: {
         });
     */
 
-    const [resizableContext, setResizableContext] = createSignal<ContextValue>();
-    const [isSidePanelOpen, setSidePanelOpen] = createSignal(false);
-
-    createEffect(() => {
-        const context = resizableContext();
-        if (context !== undefined) {
-            if (isSidePanelOpen()) {
-                context.expand(1);
-            } else {
-                context.collapse(1);
-            }
-        }
-    });
-
-    const toggleSidePanel = () => {
-        const open = setSidePanelOpen(!isSidePanelOpen());
-        if (open) {
-            resizableContext()?.resize(1, 0.33);
-        }
-    };
-
-    return (
-        <Resizable class="growable-container">
-            {() => {
-                const context = Resizable.useContext();
-                setResizableContext(context);
-
-                return (
-                    <>
-                        <Resizable.Panel
-                            class="content-panel"
-                            collapsible
-                            initialSize={1}
-                            minSize={0.25}
-                        >
-                            <BrandedToolbar>
-                                <HelpButton />
-                                <IconButton onClick={toggleSidePanel}>
-                                    <Show when={isSidePanelOpen()} fallback={<PanelRight />}>
-                                        <PanelRightClose />
-                                    </Show>
-                                </IconButton>
-                            </BrandedToolbar>
-                            <ModelPane liveDoc={props.liveDoc} />
-                        </Resizable.Panel>
-                        <ResizableHandle hidden={!isSidePanelOpen()} />
-                        <Resizable.Panel
-                            class="content-panel side-panel"
-                            collapsible
-                            initialSize={0}
-                            minSize={0.25}
-                            hidden={!isSidePanelOpen()}
-                            onCollapse={() => setSidePanelOpen(false)}
-                            onExpand={() => setSidePanelOpen(true)}
-                        >
-                            <div class="notebook-container">
-                                <AnalysesPane forRef={props.liveDoc.refId} />
-                            </div>
-                        </Resizable.Panel>
-                    </>
-                );
-            }}
-        </Resizable>
-    );
-}
-
-function AnalysesPane(props: { forRef: string }) {
-    const client = useContext(RPCContext);
-    const repo = useContext(RepoContext);
-    invariant(client && repo, "Missing context for analyses pane");
-
-    const [analyses] = createResource(async () => {
-        return await client.getBacklinks.query({ refId: props.forRef, taxon: "analysis" });
-    });
-
     const navigate = useNavigate();
 
     const createAnalysis = async () => {
-        const init = newAnalysisDocument(props.forRef);
+        const init = newAnalysisDocument(props.liveDoc.refId);
         const newDoc = repo.create(init);
         const newRef = await client.newRef.mutate({ title: init.name, docId: newDoc.documentId });
 
@@ -269,24 +190,14 @@ function AnalysesPane(props: { forRef: string }) {
     };
 
     return (
-        <div>
-            <h2>Analyses</h2>
-            <Show when={analyses()}>
-                {(analyses) => {
-                    return (
-                        <ul>
-                            <For each={analyses()}>
-                                {(ref) => (
-                                    <li>
-                                        <a href={`/analysis/${ref}`}>{ref}</a>
-                                    </li>
-                                )}
-                            </For>
-                        </ul>
-                    );
-                }}
-            </Show>
-            <button onclick={createAnalysis}>New analysis</button>
+        <div class="growable-container">
+            <BrandedToolbar>
+                <HelpButton />
+                <IconButton onClick={createAnalysis} tooltip="Analyze this model">
+                    <ChartNetwork />
+                </IconButton>
+            </BrandedToolbar>
+            <ModelPane liveDoc={props.liveDoc} />
         </div>
     );
 }
