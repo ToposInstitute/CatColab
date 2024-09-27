@@ -74,6 +74,7 @@
 % Double category theory
 
 \def\proto{#{\mathrel{\mkern3mu\vcenter{\hbox{$\shortmid$}}\mkern-10mu{\to}}}}
+\def\proTo{#{\mathrel{\mkern3mu\vcenter{\hbox{$\shortmid$}}\mkern-10mu{\Rightarrow}}}}
 
 \def\tabulator[ob]{#{\top\ob}}
 

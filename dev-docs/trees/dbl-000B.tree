@@ -1,0 +1,46 @@
+\title{An undesirable kind of bimodule}
+\taxon{example}
+\import{macros}
+
+\p{Consider a multicategory #{\cat{M}} as a model of the following theory:}
+\transclude{thy-000A}
+\p{The terminal multicategory #{1} has a single object #{\bullet} and a single multimorphism 
+#{(\bullet)^k\to \bullet} for each #{k}. 
+
+A (bi)module #{H:\cat{M}\proTo 1} contains, by definition,
+spans #{H_p: 1^m\proto M_0^n} for each #{p:x^m\proto x^n} in #{\mathbb{T}_{\mathrm{pm}}}. For a cartesian #{H}, 
+these are all uniquely determined by the choices of 
+#{H_{\mu_m}:1^m\proto M_0}, and most of the action cells will be similarly
+redundant. 
+
+Taking this reduction into account, the only other data is the action 
+cells, fixing some #{p:\ell\proto m}, which we'll draw non-vertically as there are no nonstructural arrows in #{\mathbb{T}_{\mathrm{pm}}}:
+}
+\quiver{
+    % https://q.uiver.app/#q=WzAsNCxbMCwwLCIxXlxcZWxsIl0sWzEsMCwiMV5tIl0sWzEsMSwiTV5uIl0sWzAsMSwiTV5tIl0sWzAsMywiSF97XFxlbGwsbX0iLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMywyLCJNX3ttLG59IiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzEsMiwiSF97bSxufSIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFswLDEsIjFfe1xcZWxsLG19IiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzAsMiwiSF97XFxlbGwsbn0iLDEseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMSw4LCIiLDEseyJzaG9ydGVuIjp7InRhcmdldCI6MjB9fV0sWzMsOCwiIiwxLHsic2hvcnRlbiI6eyJ0YXJnZXQiOjIwfX1dXQ==
+\begin{tikzcd}
+	{1^\ell} & {1^m} \\
+	{M^m} & {M}
+	\arrow["{1_{p}}", "\shortmid"{marking}, from=1-1, to=1-2]
+	\arrow["{H_{p}}"', "\shortmid"{marking}, from=1-1, to=2-1]
+	\arrow[""{name=0, anchor=center, inner sep=0}, "{H_{\mu_\ell}}"{description}, "\shortmid"{marking}, from=1-1, to=2-2]
+	\arrow["{H_{\mu_m}}", "\shortmid"{marking}, from=1-2, to=2-2]
+	\arrow["{M_{\mu_m}}"', "\shortmid"{marking}, from=2-1, to=2-2]
+	\arrow[shorten >=2pt, Rightarrow, from=1-2, to=0]
+	\arrow[shorten >=2pt, Rightarrow, from=2-1, to=0]
+\end{tikzcd}
+}
+\p{We can thus think of #{H} as, first, equipping each object #{x:\cat{M}} with 
+a set of hetero-multimorphisms #{(\bullet)^k\to x} for each #{k\ge 0}. The 
+lower-left action cell says how to compose #{m} such heteromorphisms whose 
+codomain is a list #{(x_i)} with a morphism #{(x_i)\to y} in #{M}. 
+This much is a multifunctor from #{\cat{M}} into a multicategory
+of #{\mathbb{N}}-graded sets corresponding to the monoidal product on
+such sets in which #{(A\otimes B)_c=\sum_{a+b=c} A_a\times B_b}; this
+is the Day convolution product for presheaves on the discrete monoidal 
+category #{\mathbb{N}}.}
+
+\p{The upper-right action cell shows how every map #{p:\ell\to m} in
+the augmented simplex category produces a corresponding map from #{m}-ary 
+to #{\ell}-ary heteromorphisms into each object. This upgrades the 
+#{\mathbb N}-graded sets #{(X_m)} discussed above into augmented simplicial sets! That is, a bimodule out of #{1} is a multifunctor into augmented simplicial sets. This is cool, but probably a bit much for most purposes.}
