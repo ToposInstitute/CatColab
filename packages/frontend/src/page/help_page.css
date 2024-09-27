@@ -1,12 +1,31 @@
 .help-container {
     max-width: 100ex;
     margin: 0 auto;
+    padding-bottom: 10ex;
 
     & h1 {
         margin: 0.5em 0;
     }
+    & h1:first-child {
+        /* Title heading for page. */
+        margin-top: 0;
+    }
+
+    & h2 {
+        margin: 0.67em 0;
+    }
 
     & li:not(:last-child) {
         margin-bottom: 0.2em;
+    }
+
+    & dt {
+        font-weight: bold;
+    }
+    & dd {
+        margin-left: 0;
+    }
+    & dd:not(:last-child) {
+        margin-bottom: 0.67em;
     }
 }
