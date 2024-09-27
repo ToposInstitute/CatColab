@@ -1,0 +1,26 @@
+.alert {
+    --alert-color: black;
+
+    box-sizing: border-box;
+    border-left: 4px solid var(--alert-color);
+    border-radius: 4px;
+    padding-left: 1ex;
+}
+
+.alert-heading {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 5px;
+
+    color: var(--alert-color);
+    font-weight: 500;
+}
+
+.alert-warning {
+    --alert-color: rgb(102, 77, 3);
+}
+
+.alert-error {
+    --alert-color: maroon;
+}
