@@ -2,6 +2,7 @@ import type { EChartsOption } from "echarts";
 import { Match, Switch, lazy } from "solid-js";
 
 import type { JsResult } from "catlog-wasm";
+import { ErrorAlert } from "../components";
 
 const ECharts = lazy(() => import("./echarts"));
 
@@ -35,7 +36,7 @@ export function ODEResultPlot(props: {
                 )}
             </Match>
             <Match when={props.result?.tag === "Err" && props.result.content}>
-                {(err) => <div class="error">{err()}</div>}
+                {(err) => <ErrorAlert title="Integration error">{err()}</ErrorAlert>}
             </Match>
         </Switch>
     );
