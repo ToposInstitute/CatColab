@@ -10,11 +10,11 @@ Patterson 2024](cartesian-double-theories-2024), Definition 9.1). In loc. cit. t
 are known to be a good notion of copresheaf for various purposes. To this end we make the following definition:}
 
 \subtree{
-    \title{Right module over a model}
+    \title{Right and left modules over a model}
     \taxon{definition}
 
-    \p{Let \dbl{D} be a double theory and let \dbl{E} be a double category with a terminal object. A \define{right module} over a model #{X} of \dbl{D} in \dbl{E} is a bimodule #{H:1\proTo X} out of the terminal model #{1} of \dbl{D} in \dbl{E} such that "#{1} acts trivially on the left", 
-    in that:
+    \p{Let \dbl{D} be a double theory and let \dbl{E} be a double category with a terminal object. A \define{right module} over a model #{X} of \dbl{D} in \dbl{E} is a bimodule #{H:1\proTo X} out of the terminal model #{1} of \dbl{D} in \dbl{E} such that "#{1} acts trivially on the left" in the sense that:
+    \ul{
     \li{The action cells below are isomorphisms:
     \quiver{% https://q.uiver.app/#q=WzAsNSxbMCwwLCIxKHgpIl0sWzEsMCwiMSh5KSJdLFsyLDAsIlgoeikiXSxbMCwxLCIxKHgpIl0sWzIsMSwiWCh6KSJdLFswLDEsIjEobSkiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMSwyLCJYKG4pIiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzMsNCwiWChtbikiXSxbMCwzLCI9IiwxXSxbMiw0LCI9IiwxXV0=
     \begin{tikzcd}
@@ -26,10 +26,12 @@ are known to be a good notion of copresheaf for various purposes. To this end we
 	\arrow["{=}"{description}, from=1-3, to=2-3]
 	\arrow["{X(mn)}", from=2-1, to=2-3]
     \end{tikzcd}}
-    }}
+    }
     \li{#{X} sends all cells of \dbl{D} to isomorphisms in \dbl{E}.}
-    \p{One checks that the second condition is in fact redundant. A \em{left module} is,
-    of course, such a bimodule #{X\proTo 1}.}
+    }
+    The second condition turns out to be redundant, as one can check.}
+
+    \p{A \define{left module} is, of course, a bimodule #{X\proTo 1} satisfying analogous conditions.}
 }
 
 \subtree{
