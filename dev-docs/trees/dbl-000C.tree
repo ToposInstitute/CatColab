@@ -1,0 +1,89 @@
+\title{Modules over models of double theories}
+\import{macros}
+
+\p{A right module over a model of a double theory is a special kind of bimodule out of #{1}. Recall the definition of bimodule from ([Lambert &
+Patterson 2024](cartesian-double-theories-2024), Definition 9.1). In loc. cit. the word module is used where we use bimodule here. The aim is to define a structure that is to arbitrary bimodules as, for categories (models of the terminal double theory), #{C}-sets and presheaves are to arbitrary profunctors. An extra constraint is necessary to achieve this, as we see in the example below:}
+
+\transclude{dbl-000B}
+
+\p{In the case of multicategories, we'd like to recover plain multifunctors into \Set, which
+are known to be a good notion of copresheaf for various purposes. To this end we make the following definition:}
+
+\subtree{
+    \title{Right module over a model}
+    \taxon{definition}
+
+    \p{Let \dbl{D} be a double theory and let \dbl{E} be a double category with a terminal object. A \define{right module} over a model #{X} of \dbl{D} in \dbl{E} is a bimodule #{H:1\proTo X} out of the terminal model #{1} of \dbl{D} in \dbl{E} such that "#{1} acts trivially on the left", 
+    in that:
+    \li{The action cells below are isomorphisms:
+    \quiver{% https://q.uiver.app/#q=WzAsNSxbMCwwLCIxKHgpIl0sWzEsMCwiMSh5KSJdLFsyLDAsIlgoeikiXSxbMCwxLCIxKHgpIl0sWzIsMSwiWCh6KSJdLFswLDEsIjEobSkiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMSwyLCJYKG4pIiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzMsNCwiWChtbikiXSxbMCwzLCI9IiwxXSxbMiw0LCI9IiwxXV0=
+    \begin{tikzcd}
+	{1(x)} & {1(y)} & {X(z)} \\
+	{1(x)} && {X(z)}
+	\arrow["{1(m)}", "\shortmid"{marking}, from=1-1, to=1-2]
+	\arrow["{=}"{description}, from=1-1, to=2-1]
+	\arrow["{X(n)}", "\shortmid"{marking}, from=1-2, to=1-3]
+	\arrow["{=}"{description}, from=1-3, to=2-3]
+	\arrow["{X(mn)}", from=2-1, to=2-3]
+    \end{tikzcd}}
+    }}
+    \li{#{X} sends all cells of \dbl{D} to isomorphisms in \dbl{E}.}
+    \p{One checks that the second condition is in fact redundant. A \em{left module} is,
+    of course, such a bimodule #{X\proTo 1}.}
+}
+
+\subtree{
+    \title{Right modules over multicategories}
+    \taxon{example}
+    \p{A right module over a multicategory #{M}, viewed as a model of the theory of promonoids 
+    in \Span, is a multifunctor #{M\to \Set}, because the invertibility of the action cells 
+    means every heteromorphism span #{H_n:1^m\proto M_0} is isomorphic, and we can consider just
+    the unary heteromorphisms with their right action by #{M}; this is precisely a multifunctor. 
+    Similarly, a left module over a multicategory is a multifunctor #{M^\op\to \Set}, noting
+    that #{M^\op} is not a multi- but a co-multicategory.}
+}
+
+\subtree{
+    \title{Modules over categories}
+    \taxon{example}
+    \p{As has been suggested, a left or right module over a model of the terminal double theory is 
+a presheaf, respectively, a copresheaf. Note that these are the same as bimodules in this case, 
+as is true whenever the double theory lacks nontrivial proarrows.}
+}
+
+\subtree{
+    \title{Modules over profunctors}
+    \taxon{example}
+\p{For an example intermediate in complexity, consider the theory of a proarrow. A bimodule 
+#{M:H\proTo K} looks like this:
+\quiver{
+    % https://q.uiver.app/#q=WzAsNCxbMCwwLCJYIl0sWzEsMCwiWSJdLFswLDEsIloiXSxbMSwxLCJXIl0sWzAsMSwiSCIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsyLDMsIksiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMCwyLCIiLDEseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMSwzLCIiLDEseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMCwzLCIiLDEseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMSw4LCIiLDEseyJzaG9ydGVuIjp7InRhcmdldCI6MjB9fV0sWzIsOCwiIiwxLHsic2hvcnRlbiI6eyJ0YXJnZXQiOjIwfX1dXQ==
+  \begin{tikzcd}
+	X & Y \\
+	Z & W
+	\arrow["H", "\shortmid"{marking}, from=1-1, to=1-2]
+	\arrow["\shortmid"{marking}, from=1-1, to=2-1]
+	\arrow[""{name=0, anchor=center, inner sep=0}, "\shortmid"{marking}, from=1-1, to=2-2]
+	\arrow["\shortmid"{marking}, from=1-2, to=2-2]
+	\arrow["K", "\shortmid"{marking}, from=2-1, to=2-2]
+	\arrow[shorten >=2pt, Rightarrow, from=1-2, to=0]
+	\arrow[shorten >=2pt, Rightarrow, from=2-1, to=0]
+  \end{tikzcd}
+}
+If #{H=1} is trivial, then such a bimodule is a profunctor #{K:Z\proto W} together with 
+copresheaves #{Z',W'} on #{Z} and on #{W} and a morphism #{Z'K\To W'},  \em{plus} a mysterious endomorphism of #{W'}. A right module over #{K} throws away precisely this unwanted endomorphism,
+making a right module over #{K} into precisely a pair of right modules over #{Z} and #{W} on which #{K} acts, which seems to be the right notion in this case.}
+}
+
+\subtree{
+    \title{Modules over monoidal categories}
+    \taxon{example}
+    \p{}
+}
+
+
+\subtree{
+    \taxon{remark}
+    \p{There should be some sense in which the category of right modules is the coslice of modules under #{1}. Considering [Lambert & Patterson 2024](cartesian-double-theories-2024), Theory 6.3 and Theory 6.12, it might be best to take this coslice at the \em{theory} level.}
+}
+
