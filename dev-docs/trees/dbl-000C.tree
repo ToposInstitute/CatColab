@@ -2,7 +2,7 @@
 \import{macros}
 
 \p{A right module over a model of a double theory is a special kind of bimodule out of #{1}. Recall the definition of bimodule from ([Lambert &
-Patterson 2024](cartesian-double-theories-2024), Definition 9.1). In loc. cit. the word module is used where we use bimodule here. The aim is to define a structure that is to arbitrary bimodules as, for categories (models of the terminal double theory), #{C}-sets and presheaves are to arbitrary profunctors. An extra constraint is necessary to achieve this, as we see in the example below:}
+Patterson 2024](cartesian-double-theories-2024), Definition 9.1). In loc. cit. the word module is used where we use bimodule here. The aim here is to define a notion of module that is to arbitrary bimodules as, in the case of categories (models of the terminal double theory), #{C}-sets and presheaves are to arbitrary profunctors. An extra constraint is necessary to achieve this, as we see in the example below:}
 
 \transclude{dbl-000B}
 
