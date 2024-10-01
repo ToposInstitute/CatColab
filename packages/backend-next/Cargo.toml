@@ -1,0 +1,9 @@
+[package]
+name = "backend"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = "0.7.7"
+socketioxide = "0.14.1"
+tokio = { version = "1.40.0", features = ["full"] }
