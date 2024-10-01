@@ -4,8 +4,8 @@
     "description": "The catcolab monorepo",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
-        "build": "npm run build --workspace=frontend",
-        "dev": "vite packages/frontend"
+        "build": "pnpm --filter ./packages/frontend run build",
+        "dev": "pnpm --filter ./packages/frontend run dev"
     },
     "repository": {
         "type": "git",
@@ -24,8 +24,5 @@
         "tsx": "^4.16.5",
         "typedoc": "^0.26.5"
     },
-    "workspaces": [
-        "packages/backend",
-        "packages/frontend"
-    ]
+    "packageManager": "pnpm@9.11.0"
 }

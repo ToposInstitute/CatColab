@@ -32,13 +32,13 @@ The staging deployment, synced to the `main` branch, is available at
 
 CatColab is written in a mix of [Rust](https://www.rust-lang.org/) and
 [TypeScript](https://www.typescriptlang.org/). To build it locally, first
-install Rust (say by using [rustup](https://rustup.rs/)) and install npm (say by
-using [nvm](https://github.com/nvm-sh/nvm)), then clone the repository and run
+install Rust (say by using [rustup](https://rustup.rs/)) and install
+[pnpm](https://pnpm.io/), then clone the repository and run
 
 ```bash
-> npm install
-> npm run build
-> npm run dev
+> pnpm install
+> pnpm run build
+> pnpm run dev
 ```
 
 Finally, navigate your browser to the URL provided by Vite.
