@@ -65,20 +65,22 @@ jobs:
     name: npm checks
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
 
       - name: Setup NodeJS
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "npm"
-          cache-dependency-path: package-lock.json
+          cache: "pnpm"
 
       - name: Install NodeJS dependencies
         run: |
-          npm install
+          pnpm install
 
       - name: Format/linting/import sorting
         run: |
-          npm run ci --workspaces
+          pnpm --filter "./packages/*" run ci
