@@ -134,6 +134,7 @@ dependencies = [
  "axum",
  "socketioxide",
  "tokio",
+ "uuid",
 ]
 
 [[package]]

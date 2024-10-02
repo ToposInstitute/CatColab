@@ -1,13 +1,18 @@
-use axum::{extract::State, routing::get, Router};
+use axum::{
+    extract::{Path, State},
+    routing::get,
+    Router,
+};
 use socketioxide::{extract::SocketRef, SocketIo};
+use uuid::Uuid;
 
 #[derive(Clone)]
 struct AppState {
     automerge_io: SocketIo,
 }
 
-async fn get_doc(State(state): State<AppState>) -> String {
-    let ack = state.automerge_io.emit_with_ack::<Vec<String>>("get_doc", ()).unwrap();
+async fn doc_id(State(state): State<AppState>, Path(ref_id): Path<Uuid>) -> String {
+    let ack = state.automerge_io.emit_with_ack::<Vec<String>>("doc_id", ref_id).unwrap();
     let response = ack.await.unwrap();
     format!("Received doc ID {}", response.data[0])
 }
@@ -26,7 +31,7 @@ async fn main() {
 
     let web_task = tokio::task::spawn(async {
         let listener = tokio::net::TcpListener::bind("0.0.0.0:8000").await.unwrap();
-        let app = Router::new().route("/", get(get_doc)).with_state(state);
+        let app = Router::new().route("/doc_id/:ref_id", get(doc_id)).with_state(state);
         axum::serve(listener, app).await.unwrap()
     });
 

@@ -1,7 +1,8 @@
 {
     "name": "automerge-doc-server",
     "version": "0.1.0",
-    "main": "src/main.ts",
+    "type": "module",
+    "main": "dist/main.js",
     "scripts": {
         "main": "tsx src/main.ts",
         "format": "biome format --write",
@@ -10,10 +11,17 @@
     "author": "CatColab developer team",
     "license": "MIT",
     "dependencies": {
-        "socket.io-client": "^4.8.0"
+        "@automerge/automerge-repo": "^1.2.1",
+        "@automerge/automerge-repo-network-websocket": "^1.2.1",
+        "express": "^4.19.2",
+        "socket.io-client": "^4.8.0",
+        "ws": "^8.18.0"
     },
     "devDependencies": {
         "@biomejs/biome": "^1.8.3",
+        "@types/express": "^4.17.21",
+        "@types/node": "^22.7.4",
+        "@types/ws": "^8.5.12",
         "tsx": "^4.19.1",
         "typescript": "^5.6.2"
     }

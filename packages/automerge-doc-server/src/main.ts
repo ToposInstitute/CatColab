@@ -1,12 +1,25 @@
-import { io, type Socket } from "socket.io-client";
+import { AutomergeServer } from "./server.js";
+import { SocketServer } from "./socket.js";
 
-type SocketHandlers = {
-    get_doc: (data: string, callback: (docId: string) => void) => void;
-};
+const internal_port = process.env.AUTOMERGE_INTERNAL_PORT || 3000;
+const port = process.env.AUTOMERGE_PORT || 8010;
 
-const socket: Socket<SocketHandlers> = io("http://localhost:3000");
+const server = new AutomergeServer(port);
 
-socket.on("get_doc", (data, callback) => {
-    console.log(`Handling get_doc with data ${data}`);
-    callback("#12345");
+const socket_server = new SocketServer(internal_port, {
+    docId(refId) {
+        return server.getDocId(refId);
+    },
+});
+
+server.handleChange = (refId, data) => socket_server.autosave(refId, data);
+
+process.once("SIGINT", () => {
+    socket_server.close();
+    server.close();
+});
+
+process.once("SIGTERM", () => {
+    socket_server.close();
+    server.close();
 });
