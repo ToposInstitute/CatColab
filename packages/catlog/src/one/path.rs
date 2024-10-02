@@ -6,6 +6,7 @@ data type for [path equations](`PathEq`).
 
 use either::Either;
 use nonempty::{nonempty, NonEmpty};
+use std::collections::HashSet;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -35,7 +36,7 @@ case analysis on the edge sequence anyway to determine whether, say,
 [`reduce`](std::iter::Iterator::reduce) is valid. Thus, it seems better to reify
 the two cases in the data structure itself.
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(tag = "tag", content = "content"))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
@@ -177,6 +178,20 @@ impl<V, E> Path<V, E> {
                 // ...and their sources and target are compatible. Too strict?
                 std::iter::zip(edges.iter(), edges.iter().skip(1)).all(
                     |(e,f)| graph.tgt(e) == graph.src(f))
+            }
+        }
+    }
+
+    /// Returns whether or not there are repeated edges in the path.
+    pub fn is_simple(&self) -> bool
+    where
+        E: Eq + std::hash::Hash,
+    {
+        match self {
+            Path::Id(_) => true,
+            Path::Seq(edges) => {
+                let edges: HashSet<_> = edges.into_iter().collect();
+                edges.len() == self.len()
             }
         }
     }
@@ -407,5 +422,15 @@ mod tests {
         assert_eq!(eq.src(&g), 0);
         assert_eq!(eq.tgt(&g), 2);
         assert!(eq.validate_in(&g).is_ok());
+    }
+
+    #[test]
+    fn is_simple() {
+        let p1: Path<i32, i32> = Path::pair(0, 1);
+        let p2: Path<i32, i32> = Path::pair(0, 0);
+        let p3: Path<i32, i32> = Path::Id(0);
+        assert!(p1.is_simple());
+        assert!(!p2.is_simple());
+        assert!(p3.is_simple());
     }
 }

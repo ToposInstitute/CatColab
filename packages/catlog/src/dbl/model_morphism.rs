@@ -18,6 +18,7 @@ oplax.
   Section 7: Lax transformations
  */
 
+use std::collections::HashSet;
 use std::hash::Hash;
 use std::sync::Arc;
 
@@ -76,6 +77,7 @@ axioms for a model morphism also become trivial.
  */
 #[derive(Clone, Debug, Derivative)]
 #[derivative(Default(bound = ""))]
+#[derivative(PartialEq(bound = "DomId: Eq + Hash, CodId: PartialEq"))]
 pub struct DiscreteDblModelMapping<DomId, CodId> {
     ob_map: HashColumn<DomId, CodId>,
     mor_map: HashColumn<DomId, Path<CodId, CodId>>,
@@ -232,6 +234,9 @@ where
     /// Iterates over failures of the mapping to be a double model morphism
     pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidDblModelMorphism<DomId, DomId>> + 'a {
         let DblModelMorphism(mapping, dom, cod) = *self;
+        // We don't yet have the ability to solve word problems
+        // Equations in the domain induce equations to check in the codomain
+        assert!(dom.is_free());
         let ob_errors = dom.object_generators().filter_map(|v| {
             if let Some(f_v) = mapping.apply_ob(&v) {
                 if !cod.has_ob(&f_v) {
@@ -273,6 +278,56 @@ where
             }
         });
         ob_errors.chain(mor_errors)
+    }
+
+    /// Are morphism generators sent to simple compositions of morphisms in the
+    /// codomain? This function assumes the morphism has been validated.
+    fn is_simple(&self) -> bool {
+        let DblModelMorphism(mapping, dom, _cod) = *self;
+        dom.morphism_generators()
+            .all(|e| mapping.apply_basic_mor(&e).unwrap().is_simple())
+    }
+
+    /// A restricted check to see if model morphism X -> Y is monic.
+    /// A monomorphism in Cat is an injective-on-morphisms functor.
+    /// However, we cannot enumerate all the morphisms of the domain category.
+    /// We restrict the problem by only considering X and Y as free models.
+    /// Furthermore, we restrict the mapping to send generating morphisms in X
+    /// to simple paths in Y.
+    /// Under these conditions, it is intuitive that the morphism should be
+    /// monic iff it is monic on the simple paths of X.
+    /// This function assumes the morphism has been validated.
+    pub fn is_free_simple_monic(&self) -> bool {
+        let DblModelMorphism(mapping, dom, cod) = *self;
+
+        assert!(dom.is_free());
+        assert!(cod.is_free());
+        assert!(&self.is_simple());
+
+        let mut seen_obs: HashSet<_> = HashSet::new();
+        for x in dom.object_generators() {
+            let f_x = mapping.apply_ob(&x).unwrap();
+            if seen_obs.contains(&f_x) {
+                return false; // not monic
+            } else {
+                seen_obs.insert(f_x);
+            }
+        }
+
+        for x in dom.object_generators() {
+            for y in dom.object_generators() {
+                let mut seen: HashSet<_> = HashSet::new();
+                for path in simple_paths(dom.generating_graph(), &x, &y) {
+                    let f_path = mapping.apply_mor(&path).unwrap();
+                    if seen.contains(&f_path) {
+                        return false; // not monic
+                    } else {
+                        seen.insert(f_path);
+                    }
+                }
+            }
+        }
+        true
     }
 }
 
@@ -347,6 +402,8 @@ pub struct DiscreteDblModelMorphismFinder<'a, DomId, CodId, Cat: FgCategory> {
     results: Vec<DiscreteDblModelMapping<DomId, CodId>>,
     var_order: Vec<GraphElem<DomId, DomId>>,
     monic: bool,
+    ob_init: HashColumn<DomId, CodId>,
+    mor_init: HashColumn<DomId, Path<CodId, CodId>>,
 }
 
 impl<'a, DomId, CodId, Cat> DiscreteDblModelMorphismFinder<'a, DomId, CodId, Cat>
@@ -372,7 +429,8 @@ where
         let mut vertices: Vec<_> = dom_graph.vertices().collect();
         vertices.sort_by_key(|v| std::cmp::Reverse(dom_graph.degree(v)));
         let var_order = spec_order(dom_graph, vertices.into_iter());
-
+        let ob_init: HashColumn<_, _, _> = HashColumn::default();
+        let mor_init: HashColumn<_, _, _> = HashColumn::default();
         Self {
             dom,
             cod,
@@ -380,6 +438,8 @@ where
             results: Default::default(),
             var_order,
             monic: false,
+            ob_init,
+            mor_init,
         }
     }
 
@@ -388,6 +448,18 @@ where
     /// TODO: Implement this feature! It doesn't work yet.
     pub fn monic(&mut self) -> &mut Self {
         self.monic = true;
+        self
+    }
+
+    /// Require morphism to send Object `ob` in domain to `val` in codomain.
+    pub fn initialize_ob(&mut self, ob: DomId, val: CodId) -> &mut Self {
+        self.ob_init.set(ob, val);
+        self
+    }
+
+    /// Require morphism to send morphism `m` in domain to `val` in codomain.
+    pub fn initialize_mor(&mut self, m: DomId, val: Path<CodId, CodId>) -> &mut Self {
+        self.mor_init.set(m, val);
         self
     }
 
@@ -405,29 +477,42 @@ where
         let var = &self.var_order[depth];
         match var.clone() {
             GraphElem::Vertex(x) => {
-                for y in self.cod.object_generators_with_type(&self.dom.ob_type(&x)) {
-                    self.map.assign_ob(x.clone(), y);
+                if self.ob_init.is_set(&x) {
+                    let y = self.ob_init.apply(&x).unwrap();
+                    self.map.assign_ob(x.clone(), y.clone());
                     self.search(depth + 1);
+                } else {
+                    for y in self.cod.object_generators_with_type(&self.dom.ob_type(&x)) {
+                        self.map.assign_ob(x.clone(), y);
+                        self.search(depth + 1);
+                    }
                 }
             }
             GraphElem::Edge(m) => {
-                let path = Path::single(m);
-                let mor_type = self.dom.mor_type(&path);
-                let w = self
-                    .map
-                    .apply_ob(&self.dom.dom(&path))
-                    .expect("Domain has already been assigned");
-                let z = self
-                    .map
-                    .apply_ob(&self.dom.cod(&path))
-                    .expect("Codomain has already been assigned");
-                let m = path.only().unwrap();
+                if self.mor_init.is_set(&m) {
+                    let path = self.mor_init.apply(&m).unwrap();
+                    self.map.assign_basic_mor(m.clone(), path.clone());
+                    self.search(depth + 1);
+                } else {
+                    let path = Path::single(m);
+                    let mor_type = self.dom.mor_type(&path);
+                    let w = self
+                        .map
+                        .apply_ob(&self.dom.dom(&path))
+                        .expect("Domain has already been assigned");
+                    let z = self
+                        .map
+                        .apply_ob(&self.dom.cod(&path))
+                        .expect("Codomain has already been assigned");
+                    let m = path.only().unwrap();
 
-                let cod_graph = self.cod.generating_graph();
-                for path in simple_paths(cod_graph, &w, &z) {
-                    if self.cod.mor_type(&path) == mor_type && !(self.monic && path.is_empty()) {
-                        self.map.assign_basic_mor(m.clone(), path);
-                        self.search(depth + 1);
+                    let cod_graph = self.cod.generating_graph();
+                    for path in simple_paths(cod_graph, &w, &z) {
+                        if self.cod.mor_type(&path) == mor_type && !(self.monic && path.is_empty())
+                        {
+                            self.map.assign_basic_mor(m.clone(), path);
+                            self.search(depth + 1);
+                        }
                     }
                 }
             }
@@ -442,6 +527,9 @@ mod tests {
 
     use crate::stdlib::*;
     use crate::validate::Validate;
+
+    use crate::dbl::model::UstrDiscreteDblModel;
+    use crate::one::fin_category::FinMor;
 
     use nonempty::nonempty;
     use std::collections::HashMap;
@@ -478,6 +566,51 @@ mod tests {
         assert_eq!(maps.len(), 1);
         assert!(matches!(maps[0].apply_mor(&pos), Some(Path::Seq(_))));
     }
+    /// The [simple path](crate::one::graph_algorithms::simple_paths) should
+    /// give identical results to hom search from a walking morphism (assuming
+    /// all the object/morphism types are the same).   
+    #[test]
+    fn find_simple_paths() {
+        let th = Arc::new(th_signed_category());
+
+        let mut walking = UstrDiscreteDblModel::new(th.clone());
+        let (a, b) = (ustr("A"), ustr("B"));
+        walking.add_ob(a, ustr("Object"));
+        walking.add_ob(b, ustr("Object"));
+        walking.add_mor(ustr("f"), a, b, FinMor::Id(ustr("Object")));
+        let w: Path<ustr::Ustr, ustr::Ustr> = Path::from_vec(vec![ustr("f")]).unwrap();
+
+        //     y         Graph with lots of cyclic paths.
+        //   ↗  ↘
+        // ↻x ⇆ z
+        let mut model = UstrDiscreteDblModel::new(th);
+        let (x, y, z) = (ustr("X"), ustr("Y"), ustr("Z"));
+        model.add_ob(x, ustr("Object"));
+        model.add_ob(y, ustr("Object"));
+        model.add_ob(z, ustr("Object"));
+        model.add_mor(ustr("xy"), x, y, FinMor::Id(ustr("Object")));
+        model.add_mor(ustr("yz"), y, z, FinMor::Id(ustr("Object")));
+        model.add_mor(ustr("zx"), z, x, FinMor::Id(ustr("Object")));
+        model.add_mor(ustr("xz"), x, z, FinMor::Id(ustr("Object")));
+        model.add_mor(ustr("xx"), x, x, FinMor::Id(ustr("Object")));
+
+        for i in model.object_generators() {
+            for j in model.object_generators() {
+                let maps: HashSet<Path<ustr::Ustr, ustr::Ustr>> =
+                    DiscreteDblModelMapping::morphisms(&walking, &model)
+                        .initialize_ob(ustr("A"), i)
+                        .initialize_ob(ustr("B"), j)
+                        .find_all()
+                        .into_iter()
+                        .map(|f| f.apply_mor(&w).unwrap())
+                        .collect();
+                // for m in maps {println!("m: {:?}", &m);}
+                let spaths: HashSet<Path<ustr::Ustr, ustr::Ustr>> =
+                    simple_paths(model.generating_graph(), &i, &j).collect();
+                assert_eq!(maps, spaths);
+            }
+        }
+    }
 
     #[test]
     fn find_negative_loops() {
@@ -505,7 +638,6 @@ mod tests {
         let negloop = negative_loop(theory.clone());
         let posfeed = positive_feedback(theory.clone());
 
-        // A good map from h to itself
         let omap: HashMap<_, _> = [(ustr("x"), ustr("x"))].into_iter().collect();
         let mmap: HashMap<_, _> = [(ustr(""), Path::Id(ustr("negative")))].into_iter().collect();
         let f = DiscreteDblModelMapping {
@@ -570,5 +702,38 @@ mod tests {
                 InvalidDblModelMorphism::MorType(ustr("negative")),
             ]
         );
+    }
+
+    #[test]
+    fn validate_is_free_simple_monic() {
+        let theory = Arc::new(th_signed_category());
+        let negloop = positive_loop(theory.clone());
+
+        // Identity map
+        let omap: HashMap<_, _> = [(ustr("x"), ustr("x"))].into_iter().collect();
+        let mmap: HashMap<_, _> = [(ustr("positive"), Path::Seq(nonempty![ustr("positive")]))]
+            .into_iter()
+            .collect();
+        let f = DiscreteDblModelMapping {
+            ob_map: omap.into(),
+            mor_map: mmap.into(),
+        };
+        let dmm = DblModelMorphism(&f, &negloop, &negloop);
+        assert!(!dmm.validate().is_err());
+        assert!(dmm.is_free_simple_monic());
+
+        // Send generator to identity
+        let omap: HashMap<_, _> = [(ustr("x"), ustr("x"))].into_iter().collect();
+        let mmap: HashMap<_, _> = [(ustr("positive"), Path::Id(ustr("x")))].into_iter().collect();
+        let f = DiscreteDblModelMapping {
+            ob_map: omap.into(),
+            mor_map: mmap.into(),
+        };
+        let dmm = DblModelMorphism(&f, &negloop, &negloop);
+        for e in dmm.iter_invalid() {
+            println!("{}", e);
+        }
+        assert!(!dmm.validate().is_err());
+        assert!(!dmm.is_free_simple_monic());
     }
 }
