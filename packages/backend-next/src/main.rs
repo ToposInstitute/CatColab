@@ -6,9 +6,10 @@ struct AppState {
     automerge_io: SocketIo,
 }
 
-async fn new_doc(State(state): State<AppState>) -> &'static str {
-    state.automerge_io.emit("new_doc", ()).unwrap();
-    "Emitted `new_doc`"
+async fn get_doc(State(state): State<AppState>) -> String {
+    let ack = state.automerge_io.emit_with_ack::<Vec<String>>("get_doc", ()).unwrap();
+    let response = ack.await.unwrap();
+    format!("Received doc ID {}", response.data[0])
 }
 
 fn on_connect(socket: SocketRef) {
@@ -25,7 +26,7 @@ async fn main() {
 
     let web_task = tokio::task::spawn(async {
         let listener = tokio::net::TcpListener::bind("0.0.0.0:8000").await.unwrap();
-        let app = Router::new().route("/", get(new_doc)).with_state(state);
+        let app = Router::new().route("/", get(get_doc)).with_state(state);
         axum::serve(listener, app).await.unwrap()
     });
 
