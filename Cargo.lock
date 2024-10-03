@@ -3,6 +3,12 @@
 version = 3
 
 [[package]]
+name = "Inflector"
+version = "0.11.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fe438c63458706e03479442743baae6c88256498e6431708f6dfc520a26515d3"
+
+[[package]]
 name = "addr2line"
 version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -132,7 +138,10 @@ name = "backend"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "rspc",
+ "rspc-axum",
  "socketioxide",
+ "specta",
  "tokio",
  "uuid",
 ]
@@ -347,6 +356,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "59f8e79d1fbf76bdfbde321e902714bf6c49df88a7dda6fc682fc2979226962d"
 
 [[package]]
+name = "document-features"
+version = "0.2.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb6969eaabd2421f8a2775cfd2471a2b634372b4a25d41e3bd647b79912850a0"
+dependencies = [
+ "litrs",
+]
+
+[[package]]
 name = "drawille"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -414,12 +432,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "futures"
+version = "0.3.30"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "645c6916888f6cb6350d2550b80fb63e734897a8498abe35cfb732b6487804b0"
+dependencies = [
+ "futures-channel",
+ "futures-core",
+ "futures-executor",
+ "futures-io",
+ "futures-sink",
+ "futures-task",
+ "futures-util",
+]
+
+[[package]]
 name = "futures-channel"
 version = "0.3.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eac8f7d7865dcb88bd4373ab671c8cf4508703796caa2b1985a9ca867b3fcb78"
 dependencies = [
  "futures-core",
+ "futures-sink",
 ]
 
 [[package]]
@@ -427,6 +461,34 @@ name = "futures-core"
 version = "0.3.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dfc6580bb841c5a68e9ef15c77ccc837b40a7504914d52e47b8b0e9bbda25a1d"
+
+[[package]]
+name = "futures-executor"
+version = "0.3.30"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a576fc72ae164fca6b9db127eaa9a9dda0d61316034f33a0a0d4eda41f02b01d"
+dependencies = [
+ "futures-core",
+ "futures-task",
+ "futures-util",
+]
+
+[[package]]
+name = "futures-io"
+version = "0.3.30"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a44623e20b9681a318efdd71c299b6b222ed6f231972bfe2f224ebad6311f0c1"
+
+[[package]]
+name = "futures-macro"
+version = "0.3.30"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "87750cf4b7a4c0625b1529e4c543c2182106e4dedc60a2a6455e00d212c489ac"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.77",
+]
 
 [[package]]
 name = "futures-sink"
@@ -446,9 +508,13 @@ version = "0.3.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d6401deb83407ab3da39eba7e33987a73c3df0c82b4bb5813ee871c19c41d48"
 dependencies = [
+ "futures-channel",
  "futures-core",
+ "futures-io",
+ "futures-macro",
  "futures-sink",
  "futures-task",
+ "memchr",
  "pin-project-lite",
  "pin-utils",
  "slab",
@@ -584,6 +650,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "indoc"
+version = "1.0.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bfa799dd5ed20a7e349f3b4639aa80d74549c81716d9ec4f994c9b5815598306"
+
+[[package]]
+name = "itertools"
+version = "0.10.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b0fd2260e829bddf4cb6ea802289de2f86d6a7a690192fbe91b3f46e0f2c8473"
+dependencies = [
+ "either",
+]
+
+[[package]]
 name = "itoa"
 version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -609,6 +690,12 @@ name = "libc"
 version = "0.2.158"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d8adc4bb1803a324070e64a98ae98f38934d91957a99cfb3a43dcbc01bc56439"
+
+[[package]]
+name = "litrs"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b4ce301924b7887e9d637144fdade93f9dfff9b60981d4ac161db09720d39aa5"
 
 [[package]]
 name = "lock_api"
@@ -950,6 +1037,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "rspc"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7e058686e5fd778bae4f6e8ebae041dc58ce60479a686f11002d146c9e59c2ab"
+dependencies = [
+ "futures",
+ "serde",
+ "serde_json",
+ "specta",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
+name = "rspc-axum"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5b2777acaba784e448bfb96992df39b0b1d225be80307a944ca39baafece4ad3"
+dependencies = [
+ "axum",
+ "form_urlencoded",
+ "futures",
+ "rspc",
+ "serde_json",
+]
+
+[[package]]
 name = "rustc-demangle"
 version = "0.1.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1161,6 +1275,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "specta"
+version = "1.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c2240c3aa020aa61d2c569087d213baafbb212f4ceb9de9dd162376ea6aa0fe3"
+dependencies = [
+ "document-features",
+ "indoc",
+ "once_cell",
+ "paste",
+ "serde",
+ "serde_json",
+ "specta-macros",
+ "thiserror",
+ "uuid",
+]
+
+[[package]]
+name = "specta-macros"
+version = "1.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4605306321c356e03873b8ee71d7592a5e7c508add325c3ed0677c16fdf1bcfb"
+dependencies = [
+ "Inflector",
+ "itertools",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+ "termcolor",
+]
+
+[[package]]
 name = "syn"
 version = "1.0.109"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1193,6 +1338,15 @@ name = "sync_wrapper"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a7065abeca94b6a8a577f9bd45aa0867a2238b74e8eb67cf10d492bc39351394"
+
+[[package]]
+name = "termcolor"
+version = "1.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "06794f8f6c5c898b3275aebefa6b8a1cb24cd2c6c79397ab15774837a0bc5755"
+dependencies = [
+ "winapi-util",
+]
 
 [[package]]
 name = "textplots"
