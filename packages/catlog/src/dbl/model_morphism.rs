@@ -288,22 +288,9 @@ where
             .all(|e| mapping.apply_basic_mor(&e).unwrap().is_simple())
     }
 
-    /// A restricted check to see if model morphism X -> Y is monic.
-    /// A monomorphism in Cat is an injective-on-morphisms functor.
-    /// However, we cannot enumerate all the morphisms of the domain category.
-    /// We restrict the problem by only considering X and Y as free models.
-    /// Furthermore, we restrict the mapping to send generating morphisms in X
-    /// to simple paths in Y.
-    /// Under these conditions, it is intuitive that the morphism should be
-    /// monic iff it is monic on the simple paths of X.
-    /// This function assumes the morphism has been validated.
-    pub fn is_free_simple_monic(&self) -> bool {
-        let DblModelMorphism(mapping, dom, cod) = *self;
-
-        assert!(dom.is_free());
-        assert!(cod.is_free());
-        assert!(&self.is_simple());
-
+    /// Check is model morphism is injective on objects
+    pub fn is_injective_objects(&self) -> bool {
+        let DblModelMorphism(mapping, dom, _cod) = *self;
         let mut seen_obs: HashSet<_> = HashSet::new();
         for x in dom.object_generators() {
             let f_x = mapping.apply_ob(&x).unwrap();
@@ -313,6 +300,21 @@ where
                 seen_obs.insert(f_x);
             }
         }
+        true
+    }
+
+    /// A restricted check to see if model morphism X -> Y is faithful.
+    /// However, we cannot enumerate all the morphisms of the domain category.
+    /// We restrict the problem by only considering X and Y as free models.
+    /// Furthermore, we restrict the mapping to send generating morphisms in X
+    /// to simple paths in Y.
+    /// This function assumes the morphism has been validated.
+    pub fn is_free_simple_faithful(&self) -> bool {
+        let DblModelMorphism(mapping, dom, cod) = *self;
+
+        assert!(dom.is_free());
+        assert!(cod.is_free());
+        assert!(&self.is_simple());
 
         for x in dom.object_generators() {
             for y in dom.object_generators() {
@@ -320,7 +322,7 @@ where
                 for path in simple_paths(dom.generating_graph(), &x, &y) {
                     let f_path = mapping.apply_mor(&path).unwrap();
                     if seen.contains(&f_path) {
-                        return false; // not monic
+                        return false; // not faithful
                     } else {
                         seen.insert(f_path);
                     }
@@ -328,6 +330,15 @@ where
             }
         }
         true
+    }
+
+    /// A monomorphism in Cat is an injective-on-morphisms functor.
+    /// This is checked by checking injectivity on objects and faithfulness.
+    /// The faithful check can only be made for morphisms with free domain
+    /// with morphisms being sent only to simple paths.
+    /// This function assumes the morphism has been validated.
+    pub fn is_free_simple_monic(&self) -> bool {
+        self.is_injective_objects() && self.is_free_simple_faithful()
     }
 }
 
@@ -401,9 +412,11 @@ pub struct DiscreteDblModelMorphismFinder<'a, DomId, CodId, Cat: FgCategory> {
     map: DiscreteDblModelMapping<DomId, CodId>,
     results: Vec<DiscreteDblModelMapping<DomId, CodId>>,
     var_order: Vec<GraphElem<DomId, DomId>>,
-    monic: bool,
+    injective_ob: bool,
+    faithful: bool,
     ob_init: HashColumn<DomId, CodId>,
     mor_init: HashColumn<DomId, Path<CodId, CodId>>,
+    ob_inv: HashColumn<CodId, DomId>,
 }
 
 impl<'a, DomId, CodId, Cat> DiscreteDblModelMorphismFinder<'a, DomId, CodId, Cat>
@@ -431,23 +444,40 @@ where
         let var_order = spec_order(dom_graph, vertices.into_iter());
         let ob_init: HashColumn<_, _, _> = HashColumn::default();
         let mor_init: HashColumn<_, _, _> = HashColumn::default();
+        let ob_inv: HashColumn<CodId, DomId> = HashColumn::default();
         Self {
             dom,
             cod,
             map: Default::default(),
             results: Default::default(),
             var_order,
-            monic: false,
+            injective_ob: false,
+            faithful: false,
             ob_init,
             mor_init,
+            ob_inv,
         }
     }
 
     /// Restrict to the search to monomorphisms between models.
-    ///
-    /// TODO: Implement this feature! It doesn't work yet.
     pub fn monic(&mut self) -> &mut Self {
-        self.monic = true;
+        self.injective_ob = true;
+        self.faithful = true;
+        self
+    }
+
+    /// Restrict to the search to injective maps on objects.
+    pub fn injective_ob(&mut self) -> &mut Self {
+        self.injective_ob = true;
+        self
+    }
+    /// Restrict to the search to injective maps on morphisms (for each dom/cod
+    /// pair of objects in the domain).
+    /// In future work, this will be efficiently checked for early search tree
+    /// pruning; however, this is currently enforced by filtering with  
+    /// [is_free_simple_faithful](DiscreteDblModelMorphism::is_free_simple_faithful).
+    pub fn faithful(&mut self) -> &mut Self {
+        self.faithful = true;
         self
     }
 
@@ -471,20 +501,30 @@ where
 
     fn search(&mut self, depth: usize) {
         if depth >= self.var_order.len() {
-            self.results.push(self.map.clone());
+            if !self.faithful
+                || DblModelMorphism(&self.map, self.dom, self.cod).is_free_simple_faithful()
+            {
+                self.results.push(self.map.clone());
+            }
             return;
         }
         let var = &self.var_order[depth];
         match var.clone() {
             GraphElem::Vertex(x) => {
                 if self.ob_init.is_set(&x) {
-                    let y = self.ob_init.apply(&x).unwrap();
-                    self.map.assign_ob(x.clone(), y.clone());
-                    self.search(depth + 1);
+                    let y = self.ob_init.apply(&x).cloned().unwrap();
+                    let can_assign = self.assign_ob(x.clone(), y.clone());
+                    if can_assign {
+                        self.search(depth + 1);
+                        self.unassign_ob(x.clone(), y.clone())
+                    }
                 } else {
                     for y in self.cod.object_generators_with_type(&self.dom.ob_type(&x)) {
-                        self.map.assign_ob(x.clone(), y);
-                        self.search(depth + 1);
+                        let can_assign = self.assign_ob(x.clone(), y.clone());
+                        if can_assign {
+                            self.search(depth + 1);
+                            self.unassign_ob(x.clone(), y.clone())
+                        }
                     }
                 }
             }
@@ -508,7 +548,8 @@ where
 
                     let cod_graph = self.cod.generating_graph();
                     for path in simple_paths(cod_graph, &w, &z) {
-                        if self.cod.mor_type(&path) == mor_type && !(self.monic && path.is_empty())
+                        if self.cod.mor_type(&path) == mor_type
+                            && !(self.faithful && path.is_empty())
                         {
                             self.map.assign_basic_mor(m.clone(), path);
                             self.search(depth + 1);
@@ -517,6 +558,25 @@ where
                 }
             }
         }
+    }
+
+    /// Attempt an object assignment, returning true iff successful
+    fn assign_ob(&mut self, x: DomId, y: CodId) -> bool {
+        if self.injective_ob {
+            if let Some(y_inv) = self.ob_inv.apply(&y) {
+                if y_inv != &x {
+                    return false;
+                }
+            }
+        }
+        self.map.assign_ob(x.clone(), y.clone());
+        self.ob_inv.set(y.clone(), x.clone());
+        true
+    }
+
+    /// Undo an object assignment
+    fn unassign_ob(&mut self, _: DomId, y: CodId) {
+        self.ob_inv.unset(&y);
     }
 }
 
@@ -604,7 +664,6 @@ mod tests {
                         .into_iter()
                         .map(|f| f.apply_mor(&w).unwrap())
                         .collect();
-                // for m in maps {println!("m: {:?}", &m);}
                 let spaths: HashSet<Path<ustr::Ustr, ustr::Ustr>> =
                     simple_paths(model.generating_graph(), &i, &j).collect();
                 assert_eq!(maps, spaths);
@@ -735,5 +794,56 @@ mod tests {
         }
         assert!(!dmm.validate().is_err());
         assert!(!dmm.is_free_simple_monic());
+    }
+
+    #[test]
+    fn monic_constraint() {
+        // The number of endomonomorphisms of a set |N| is N!.
+        let theory = Arc::new(th_signed_category());
+        let mut model = UstrDiscreteDblModel::new(theory.clone());
+        let (q, x, y, z) = (ustr("Q"), ustr("X"), ustr("Y"), ustr("Z"));
+        let ob = ustr("Object");
+        model.add_ob(q, ob);
+        model.add_ob(x, ob);
+        model.add_ob(y, ob);
+        model.add_ob(z, ob);
+        assert_eq!(
+            DiscreteDblModelMapping::morphisms(&model, &model)
+                .monic()
+                .find_all()
+                .into_iter()
+                .len(),
+            4 * 3 * 2
+        );
+
+        // Hom from noncommuting triangle into a pair of triangles, only one one
+        // of which commutes. There is only one morphism that is faithful.
+        let (f, g, h, i, j) = (ustr("f"), ustr("g"), ustr("h"), ustr("i"), ustr("j"));
+        let mut freetri = UstrDiscreteDblModel::new(theory.clone());
+        freetri.add_ob(x, ob);
+        freetri.add_ob(y, ob);
+        freetri.add_ob(z, ob);
+        freetri.add_mor(f, x, y, FinMor::Id(ob));
+        freetri.add_mor(g, y, z, FinMor::Id(ob));
+        freetri.add_mor(h, x, z, FinMor::Id(ob));
+
+        let mut quad = UstrDiscreteDblModel::new(theory);
+        quad.add_ob(q, ob);
+        quad.add_ob(x, ob);
+        quad.add_ob(y, ob);
+        quad.add_ob(z, ob);
+        quad.add_mor(f, x, y, FinMor::Id(ob));
+        quad.add_mor(g, y, z, FinMor::Id(ob));
+        quad.add_mor(i, y, q, FinMor::Id(ob));
+        quad.add_mor(j, x, q, FinMor::Id(ob));
+
+        assert_eq!(
+            DiscreteDblModelMapping::morphisms(&freetri, &quad)
+                .faithful()
+                .find_all()
+                .into_iter()
+                .len(),
+            1
+        );
     }
 }
