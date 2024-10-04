@@ -1,10 +1,12 @@
 use rspc::Router;
 use socketioxide::SocketIo;
+use sqlx::PgPool;
 use uuid::Uuid;
 
 #[derive(Clone, Debug)]
 pub struct AppCtx {
     pub automerge_io: SocketIo,
+    pub db: PgPool,
 }
 
 pub fn router() -> Router<AppCtx> {
