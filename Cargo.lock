@@ -192,6 +192,7 @@ dependencies = [
  "dotenvy",
  "rspc",
  "rspc-axum",
+ "serde",
  "socketioxide",
  "specta",
  "sqlx",

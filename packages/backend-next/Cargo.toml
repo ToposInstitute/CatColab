@@ -8,6 +8,7 @@ axum = "0.7.7"
 dotenvy = "0.15.7"
 rspc = "0.2.0"
 rspc-axum = "0.1.1"
+serde = { version = "1.0.210", features = ["derive"] }
 socketioxide = "0.14.1"
 specta = { version = "1.0.5", features = ["uuid"] }
 sqlx = { version = "0.8.2", features = ["runtime-tokio", "tls-rustls-aws-lc-rs", "postgres", "uuid", "json"] }

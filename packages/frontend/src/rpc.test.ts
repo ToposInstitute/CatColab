@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { it, test } from "node:test";
 import { FetchTransport, createClient } from "@rspc/client";
-import { uuidv7 } from "uuidv7";
+import * as uuid from "uuid";
 
 import type { Procedures } from "backend-next";
 
@@ -11,9 +11,14 @@ const client = createClient<Procedures>({
 });
 
 test("Automerge RPC", async () => {
-    const refId = uuidv7();
-    const docId = await client.query(["doc_id", refId]);
-    await it("should get document ID", () => {
+    const { refId, docId } = await client.mutation(["new_ref", "model"]);
+    await it("should get valid UUID", () => {
+        assert(uuid.validate(refId));
         assert(typeof docId === "string");
+    });
+
+    const newDocId = await client.query(["doc_id", refId]);
+    await it("should get document ID", () => {
+        assert(newDocId === docId);
     });
 });

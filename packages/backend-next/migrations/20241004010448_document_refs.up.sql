@@ -5,6 +5,7 @@ CREATE TABLE snapshots (
 
 CREATE TABLE refs (
     id UUID PRIMARY KEY,
+    taxon TEXT NOT NULL,
     autosave INT REFERENCES snapshots (id),
     last_updated TIMESTAMPTZ NOT NULL
 );

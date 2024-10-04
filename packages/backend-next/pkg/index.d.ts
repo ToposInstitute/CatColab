@@ -3,6 +3,9 @@
 export type Procedures = {
     queries: 
         { key: "doc_id", input: string, result: string },
-    mutations: never,
+    mutations: 
+        { key: "new_ref", input: string, result: NewRef },
     subscriptions: never
 };
+
+export type NewRef = { refId: string; docId: string }
