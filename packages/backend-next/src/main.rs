@@ -1,8 +1,10 @@
 use axum::{routing::get, Router};
-use socketioxide::{extract::SocketRef, SocketIo};
+use socketioxide::SocketIo;
 use sqlx::postgres::PgPoolOptions;
 
+mod app;
 mod rpc;
+mod socket;
 
 #[tokio::main]
 async fn main() {
@@ -14,14 +16,12 @@ async fn main() {
 
     let (io_layer, io) = SocketIo::new_layer();
 
-    io.ns("/", |socket: SocketRef| {
-        println!("Automerge socket connected: {:?}", socket.ns());
-    });
-
-    let ctx = rpc::AppCtx {
+    let ctx = app::AppCtx {
         automerge_io: io,
         db,
     };
+
+    socket::setup_automerge_socket(ctx.clone());
 
     let main_task = tokio::task::spawn(async {
         let listener = tokio::net::TcpListener::bind("localhost:8000").await.unwrap();

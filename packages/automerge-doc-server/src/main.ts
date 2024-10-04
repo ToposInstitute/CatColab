@@ -12,7 +12,7 @@ const socket_server = new SocketServer(internal_port, {
     },
 });
 
-server.handleChange = (refId, data) => socket_server.autosave(refId, data);
+server.handleChange = (refId, content) => socket_server.autosave(refId, content);
 
 process.once("SIGINT", () => {
     socket_server.close();

@@ -7,7 +7,7 @@ export type Handlers = {
 
 /** Messages emitted by the `SocketServer`. */
 export type Requests = {
-    autosave: (refId: string, data: unknown) => void;
+    autosave: (data: {refId: string; content: unknown}) => void;
 };
 
 /** Encapsulates socket.io for internal communication with the backend.
@@ -31,8 +31,8 @@ export class SocketServer {
         this.socket = socket;
     }
 
-    autosave(refId: string, data: unknown) {
-        this.socket.emit("autosave", refId, data);
+    autosave(refId: string, content: unknown) {
+        this.socket.emit("autosave", { refId, content });
     }
 
     close() {

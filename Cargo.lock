@@ -193,6 +193,7 @@ dependencies = [
  "rspc",
  "rspc-axum",
  "serde",
+ "serde_json",
  "socketioxide",
  "specta",
  "sqlx",
