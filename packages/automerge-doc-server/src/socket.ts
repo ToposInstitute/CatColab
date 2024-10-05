@@ -1,13 +1,16 @@
-import { io, type Socket } from "socket.io-client";
+import { type Socket, io } from "socket.io-client";
+
+import type { RefContent } from "../../backend-next/pkg/types.ts";
 
 /** Messages handled by the `SocketServer`. */
 export type Handlers = {
-    doc_id: (refId: string, callback: (docId: string) => void) => void;
+    create_doc: (data: RefContent, callback: (docId: string) => void) => void;
+    get_doc: (refId: string, callback: (docId: string | null) => void) => void;
 };
 
 /** Messages emitted by the `SocketServer`. */
 export type Requests = {
-    autosave: (data: {refId: string; content: unknown}) => void;
+    autosave: (data: RefContent) => void;
 };
 
 /** Encapsulates socket.io for internal communication with the backend.
@@ -21,12 +24,14 @@ export class SocketServer {
     constructor(
         port: number | string,
         handlers: {
-            docId: (refId: string) => string;
+            createDoc: (data: RefContent) => string;
+            getDoc: (refId: string) => string | null;
         },
     ) {
         const socket: Socket<Handlers, Requests> = io(`http://localhost:${port}`);
 
-        socket.on("doc_id", (refId, callback) => callback(handlers.docId(refId)));
+        socket.on("create_doc", (data, callback) => callback(handlers.createDoc(data)));
+        socket.on("get_doc", (refId, callback) => callback(handlers.getDoc(refId)));
 
         this.socket = socket;
     }

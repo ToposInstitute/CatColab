@@ -4,6 +4,8 @@
         "module": "NodeNext",
         "moduleResolution": "Node16",
         "esModuleInterop": true,
+        "noEmit": true,
+        "allowImportingTsExtensions": true,
         "outDir": "./dist",
 
         "strict": true,

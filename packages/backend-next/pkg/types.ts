@@ -4,8 +4,9 @@ export type Procedures = {
     queries: 
         { key: "doc_id", input: string, result: string },
     mutations: 
-        { key: "new_ref", input: string, result: NewRef },
+        { key: "new_ref", input: any, result: string } | 
+        { key: "save_snapshot", input: RefContent, result: null },
     subscriptions: never
 };
 
-export type NewRef = { refId: string; docId: string }
+export type RefContent = { refId: string; content: any }

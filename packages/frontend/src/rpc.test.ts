@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { it, test } from "node:test";
+import { isValidDocumentId } from "@automerge/automerge-repo";
 import { FetchTransport, createClient } from "@rspc/client";
 import * as uuid from "uuid";
 
@@ -11,14 +12,22 @@ const client = createClient<Procedures>({
 });
 
 test("Automerge RPC", async () => {
-    const { refId, docId } = await client.mutation(["new_ref", "model"]);
-    await it("should get valid UUID", () => {
+    const content = {
+        type: "model",
+        name: "Test model",
+    };
+    const refId = await client.mutation(["new_ref", content]);
+    await it("should get a valid UUID", () => {
         assert(uuid.validate(refId));
-        assert(typeof docId === "string");
+    });
+
+    const docId = await client.query(["doc_id", refId]);
+    await it("should get a valid document ID", () => {
+        assert(isValidDocumentId(docId));
     });
 
     const newDocId = await client.query(["doc_id", refId]);
-    await it("should get document ID", () => {
+    await it("should get the same document ID as before", () => {
         assert(newDocId === docId);
     });
 });

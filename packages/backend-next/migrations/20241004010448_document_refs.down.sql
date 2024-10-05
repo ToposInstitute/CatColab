@@ -1,1 +1,1 @@
-DROP TABLE snapshots, refs, witnesses;
+DROP TABLE refs, snapshots;

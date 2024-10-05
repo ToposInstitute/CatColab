@@ -1,7 +1,7 @@
-import { DocHandle, Repo } from "@automerge/automerge-repo";
+import type * as http from "node:http";
+import { type DocHandle, Repo } from "@automerge/automerge-repo";
 import { NodeWSServerAdapter } from "@automerge/automerge-repo-network-websocket";
 import express from "express";
-import type * as http from "http";
 import * as ws from "ws";
 
 export class AutomergeServer {
@@ -40,22 +40,21 @@ export class AutomergeServer {
         });
     }
 
-    getDocHandle(refId: string): DocHandle<unknown> {
+    createDocHandle(refId: string, content: unknown): DocHandle<unknown> {
         let handle = this.docMap.get(refId);
         if (handle === undefined) {
-            const content = null; // TODO: Need content.
             handle = this.repo.create(content);
-            this.setHandleCallback(refId, handle);
+            this.setDocHandleCallback(refId, handle);
             this.docMap.set(refId, handle);
         }
         return handle;
     }
 
-    getDocId(refId: string) {
-        return this.getDocHandle(refId).documentId;
+    getDocHandle(refId: string): DocHandle<unknown> | undefined {
+        return this.docMap.get(refId);
     }
 
-    setHandleCallback(refId: string, handle: DocHandle<unknown>) {
+    setDocHandleCallback(refId: string, handle: DocHandle<unknown>) {
         handle.on("change", async (payload) => {
             this.handleChange?.(refId, payload.doc);
         });
