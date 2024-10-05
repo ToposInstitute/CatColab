@@ -6,13 +6,15 @@ edition = "2021"
 [dependencies]
 axum = "0.7.7"
 dotenvy = "0.15.7"
-rspc = "0.2.0"
+rspc = { version = "0.2.0", features = ["tracing"] }
 rspc-axum = "0.1.1"
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0.128"
-socketioxide = "0.14.1"
+socketioxide = { version = "0.14.1", features = ["tracing"] }
 specta = { version = "1.0.5", features = ["uuid"] }
 sqlx = { version = "0.8.2", features = ["runtime-tokio", "tls-rustls-aws-lc-rs", "postgres", "uuid", "json"] }
 thiserror = "1.0.64"
 tokio = { version = "1.40.0", features = ["full"] }
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
 uuid = { version = "1.10.0", features = ["v7", "serde"] }
