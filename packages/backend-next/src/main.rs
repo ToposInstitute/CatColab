@@ -3,6 +3,7 @@ use socketioxide::SocketIo;
 use sqlx::postgres::PgPoolOptions;
 
 mod app;
+mod document;
 mod rpc;
 mod socket;
 
@@ -16,19 +17,19 @@ async fn main() {
 
     let (io_layer, io) = SocketIo::new_layer();
 
-    let ctx = app::AppCtx {
+    let state = app::AppState {
         automerge_io: io,
         db,
     };
 
-    socket::setup_automerge_socket(ctx.clone());
+    socket::setup_automerge_socket(state.clone());
 
     let main_task = tokio::task::spawn(async {
         let listener = tokio::net::TcpListener::bind("localhost:8000").await.unwrap();
         let router = rpc::router().arced();
         let app = Router::new()
             .route("/", get(|| async { "Hello! The CatColab server is running" }))
-            .nest("/rpc", rspc_axum::endpoint(router, || ctx));
+            .nest("/rpc", rspc_axum::endpoint(router, || state));
         axum::serve(listener, app).await.unwrap()
     });
 

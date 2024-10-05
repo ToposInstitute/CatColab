@@ -1,14 +1,32 @@
-use rspc::Router;
+use rspc::{Error, ErrorCode, Router};
 use serde_json::Value;
 use uuid::Uuid;
 
-use super::app::{AppCtx, RefContent};
+use super::app::{AppError, AppState};
+use super::document as doc;
 
-pub fn router() -> Router<AppCtx> {
-    Router::<AppCtx>::new()
-        .mutation("new_ref", |t| t(|ctx, content: Value| ctx.new_ref(content)))
-        .mutation("save_snapshot", |t| t(|ctx, data: RefContent| ctx.save_snapshot(data)))
-        .query("doc_id", |t| t(|ctx, ref_id: Uuid| ctx.doc_id(ref_id)))
+impl From<AppError> for Error {
+    fn from(error: AppError) -> Self {
+        let message = error.to_string();
+        Error::with_cause(ErrorCode::InternalServerError, message, error)
+    }
+}
+
+pub fn router() -> Router<AppState> {
+    Router::<AppState>::new()
+        .mutation("new_ref", |t| {
+            t(|state, content: Value| async move {
+                Ok(doc::new_ref(state, content).await?)
+            })
+        })
+        .mutation("save_snapshot", |t| {
+            t(|state, data: doc::RefContent| async move {
+                Ok(doc::save_snapshot(state, data).await?)
+            })
+        })
+        .query("doc_id", |t| t(|state, ref_id: Uuid| async move {
+            Ok(doc::doc_id(state, ref_id).await?)
+        }))
         .build()
 }
 
