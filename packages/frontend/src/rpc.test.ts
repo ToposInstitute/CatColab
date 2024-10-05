@@ -8,7 +8,7 @@ import type { Procedures } from "backend-next";
 
 const client = createClient<Procedures>({
     // Refer to the integration your using for the correct transport.
-    transport: new FetchTransport("http://localhost:8000/rpc"),
+    transport: new FetchTransport("http://127.0.0.1:8000/rpc"),
 });
 
 test("Automerge RPC", async () => {

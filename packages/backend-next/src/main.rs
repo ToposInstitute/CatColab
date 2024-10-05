@@ -1,6 +1,7 @@
 use axum::{routing::get, Router};
 use socketioxide::SocketIo;
 use sqlx::postgres::PgPoolOptions;
+use tower_http::cors::CorsLayer;
 use tracing::info;
 
 mod app;
@@ -42,11 +43,12 @@ async fn main() {
 
     let main_task = tokio::task::spawn(async {
         let port = web_port();
-        let listener = tokio::net::TcpListener::bind(format!("localhost:{}", port)).await.unwrap();
+        let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port)).await.unwrap();
         let router = rpc::router().arced();
         let app = Router::new()
             .route("/", get(|| async { "Hello! The CatColab server is running" }))
-            .nest("/rpc", rspc_axum::endpoint(router, || state));
+            .nest("/rpc", rspc_axum::endpoint(router, || state))
+            .layer(CorsLayer::permissive());
         info!("Web server listening at port {}", port);
         axum::serve(listener, app).await.unwrap();
     });
