@@ -1,16 +1,54 @@
 \title{Backend design}
-\date{2024-07-30}
 
 \subtree{
 \title{Concepts and overview}
 
-\p{The main pieces of state in the backend are the [database](dev-000E) and a in-memory hashmap from [ref](dev-000B) to automerge dochandle. The important thing to realize is that nothing from automerge is persisted through restart of the backend; the only thing that is persisted is serializations the automerge document at various points in time. Thus, when the server restarts, clients must request new automerge documents. Currently, this is not implemented: you must refresh the client after a server restart.}
+\p{The main pieces of state in the backend are the [database](dev-000B) and an
+in-memory hash map from [refs](dev-000D) to Automerge [document
+handles](https://automerge.org/docs/repositories/dochandles/). The important
+thing to realize is that nothing from Automerge is persisted through a restart
+of the backend; the only thing that is persisted are serializations of the
+Automerge document at various points in time. Thus, when the server restarts,
+clients must request new Automerge documents. (Currently, this is not
+implemented: you must refresh the client after a server restart.)}
 
-\p{With this in mind, in this tree we give an overview of the database schema and the operations currently supported on the backend.}
+\p{With this in mind, we outline the database schema and the operations
+currently supported on the backend.}
 
-\transclude{dev-000E}
+\transclude{dev-000B}
 
-\transclude{dev-000F}
+\subtree{
+\title{Capabilities of the backend}
+
+\p{The backend has the following current and future capabilities.}
+
+\p{\strong{Currently implemented RPC API:}}
+
+\ul{
+
+\li{\code{mutate new_ref(content: any): string}. Creates a new [ref](dev-000D)
+with the given initial content. Returns the ID of the newly created ref as a
+string representation of the UUID.}
+
+\li{\code{query doc_id(ref_id: string): string}. Returns the Automerge document
+ID associated with the given ref. If the hashmap in the backend doesn't contain
+an association for that ref, then a fresh document handle is created with
+initial state given by the current autosave for that ref.}
+
+\li{\code{query head_snapshot(ref_id: string): any}. Gets the content of the
+current head of a ref. This content is just a JSON object, not a live Automerge
+document.}
+
+\li{\code{mutate save_snapshot(ref_id: string, content: any)}. Saves the ref
+with the given content, as described in [refs](dev-000D).} }
+
+\p{\strong{API to implement in the future:}}
+
+\ul{
+\li{Searching for refs via their metadata.}
+\li{Displaying all of the snapshots for a ref, sorted by timestamp.}
+}
+}
 }
 
 \subtree{

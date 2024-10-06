@@ -1,5 +1,5 @@
-\date{2024-07-31}
 \taxon{table}
 \title{Snapshots}
 
-\p{A document snapshot is simply an arbitrary blob. These blobs are stored in a table with primary key given by the sha256 hash of the blob. A document snapshot will eventually also have metadata, such as the theory to which it corresponds, when it was created, etc.}
+\p{A document snapshot is an arbitrary JSON object stored in binary format.
+Every snapshot has a timestamp and is associated with a single [ref](dev-000D).}
