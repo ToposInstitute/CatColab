@@ -2,7 +2,7 @@
 resolver="2"
 
 members = [
-    "packages/backend-next",
+    "packages/backend",
     "packages/catlog",
     "packages/catlog-wasm",
 ]

@@ -6,7 +6,7 @@ import { FetchTransport, createClient } from "@rspc/client";
 import pRetry from "p-retry";
 import * as uuid from "uuid";
 
-import type { Procedures } from "backend-next";
+import type { Procedures } from "backend";
 
 const client = createClient<Procedures>({
     transport: new FetchTransport("http://127.0.0.1:8000/rpc"),
