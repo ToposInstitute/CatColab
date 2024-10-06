@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE snapshots\n        SET content = $2, at_time = NOW()\n        WHERE id = (SELECT head FROM refs WHERE id = $1)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3ff151bee5fdfa5f4afb19f39ce1e401902ba8c63b2a66b0243836e1bdd42aae"
+}
