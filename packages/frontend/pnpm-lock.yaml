@@ -68,9 +68,6 @@ importers:
       '@viz-js/viz':
         specifier: ^3.7.0
         version: 3.9.0
-      backend:
-        specifier: workspace:*
-        version: link:../backend
       backend-next:
         specifier: link:../backend-next/pkg
         version: link:../backend-next/pkg

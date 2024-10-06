@@ -1,4 +1,3 @@
 packages:
   - "packages/automerge-doc-server"
   - "packages/frontend"
-  - "packages/backend"

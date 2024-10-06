@@ -36,7 +36,6 @@
         "@trpc/client": "^11.0.0-rc.467",
         "@trpc/server": "^11.0.0-rc.467",
         "@viz-js/viz": "^3.7.0",
-        "backend": "workspace:*",
         "backend-next": "link:../backend-next/pkg",
         "catlog-wasm": "link:../catlog-wasm/pkg",
         "echarts": "^5.5.1",
