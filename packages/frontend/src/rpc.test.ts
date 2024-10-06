@@ -1,20 +1,30 @@
 import assert from "node:assert";
-import { it, test } from "node:test";
-import { isValidDocumentId } from "@automerge/automerge-repo";
+import { after, it, test } from "node:test";
+import { type DocHandle, Repo, isValidDocumentId } from "@automerge/automerge-repo";
+import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
 import { FetchTransport, createClient } from "@rspc/client";
 import * as uuid from "uuid";
 
 import type { Procedures } from "backend-next";
 
 const client = createClient<Procedures>({
-    // Refer to the integration your using for the correct transport.
     transport: new FetchTransport("http://127.0.0.1:8000/rpc"),
 });
 
+const repo = new Repo({
+    network: [new BrowserWebSocketClientAdapter("ws://127.0.0.1:8010")],
+});
+
 test("Automerge RPC", async () => {
+    // XXX: Proper shutdown requires Automerge v2.
+    //after(() => repo.shutdown());
+    after(() => {
+        setTimeout(() => process.exit(), 1000);
+    });
+
     const content = {
         type: "model",
-        name: "Test model",
+        name: "My model",
     };
     const refId = await client.mutation(["new_ref", content]);
     await it("should get a valid UUID", () => {
@@ -29,5 +39,15 @@ test("Automerge RPC", async () => {
     const newDocId = await client.query(["doc_id", refId]);
     await it("should get the same document ID as before", () => {
         assert(newDocId === docId);
+    });
+
+    if (!isValidDocumentId(docId)) {
+        return;
+    }
+    const docHandle = repo.find(docId) as DocHandle<typeof content>;
+    const doc = await docHandle.doc();
+
+    await it("should get the original document data", () => {
+        assert.deepStrictEqual(doc, content);
     });
 });
