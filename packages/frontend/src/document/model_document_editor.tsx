@@ -168,23 +168,13 @@ export function ModelDocumentEditor(props: {
     liveDoc: LiveModelDocument;
 }) {
     const client = useContext(RPCContext);
-    const repo = useContext(RepoContext);
-    invariant(client && repo, "Missing context for model document editor");
-
-    /* TODO: Restore this action once saving properly integrated into UI.
-    const snapshotModel = () =>
-        client.saveRef.mutate({
-            refId: props.liveDoc.refId,
-            note: "",
-        });
-    */
+    invariant(client, "Missing context for model document editor");
 
     const navigate = useNavigate();
 
     const createAnalysis = async () => {
         const init = newAnalysisDocument(props.liveDoc.refId);
-        const newDoc = repo.create(init);
-        const newRef = await client.newRef.mutate({ title: init.name, docId: newDoc.documentId });
+        const newRef = await client.mutation(["new_ref", init]);
 
         navigate(`/analysis/${newRef}`);
     };
