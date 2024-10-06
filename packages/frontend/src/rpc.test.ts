@@ -3,6 +3,7 @@ import { after, it, test } from "node:test";
 import { type DocHandle, Repo, isValidDocumentId } from "@automerge/automerge-repo";
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
 import { FetchTransport, createClient } from "@rspc/client";
+import pRetry from "p-retry";
 import * as uuid from "uuid";
 
 import type { Procedures } from "backend-next";
@@ -38,7 +39,7 @@ test("Automerge RPC", async () => {
 
     const newDocId = await client.query(["doc_id", refId]);
     await it("should get the same document ID as before", () => {
-        assert(newDocId === docId);
+        assert.strictEqual(newDocId, docId);
     });
 
     if (!isValidDocumentId(docId)) {
@@ -49,5 +50,20 @@ test("Automerge RPC", async () => {
 
     await it("should get the original document data", () => {
         assert.deepStrictEqual(doc, content);
+    });
+
+    const newName = "Renamed model";
+    docHandle.change((data) => {
+        data.name = newName;
+    });
+
+    await it("should update content in database", async () => {
+        const check = async () => {
+            const newContent = await client.query(["head_snapshot", refId]);
+            if (newContent.name !== newName) {
+                throw new Error();
+            }
+        };
+        await pRetry(check, { retries: 3, minTimeout: 10 });
     });
 });

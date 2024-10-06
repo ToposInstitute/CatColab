@@ -2,7 +2,8 @@
 
 export type Procedures = {
     queries: 
-        { key: "doc_id", input: string, result: string },
+        { key: "doc_id", input: string, result: string } | 
+        { key: "head_snapshot", input: string, result: any },
     mutations: 
         { key: "new_ref", input: any, result: string } | 
         { key: "save_snapshot", input: RefContent, result: null },

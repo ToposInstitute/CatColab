@@ -27,6 +27,18 @@ pub async fn new_ref(state: AppState, content: Value) -> Result<Uuid, AppError> 
     Ok(ref_id)
 }
 
+/// Gets the content of the head snapshot for a document ref.
+pub async fn head_snapshot(state: AppState, ref_id: Uuid) -> Result<Value, AppError> {
+    let query = sqlx::query!(
+        "
+        SELECT content FROM snapshots
+        WHERE id = (SELECT head FROM refs WHERE id = $1)
+        ",
+        ref_id
+    );
+    Ok(query.fetch_one(&state.db).await?.content)
+}
+
 /// Saves the document by overwriting the snapshot at the current head.
 pub async fn autosave(state: AppState, data: RefContent) -> Result<(), AppError> {
     let RefContent { ref_id, content } = data;
@@ -81,14 +93,7 @@ pub async fn doc_id(state: AppState, ref_id: Uuid) -> Result<String, AppError> {
     } else {
         // Otherwise, fetch the content from the database and create a new
         // Automerge doc handle.
-        let query = sqlx::query!(
-            "
-            SELECT content FROM snapshots
-            WHERE id = (SELECT head FROM refs WHERE id = $1)
-            ",
-            ref_id
-        );
-        let content = query.fetch_one(&state.db).await?.content;
+        let content = head_snapshot(state.clone(), ref_id).await?;
         let data = RefContent { ref_id, content };
         let ack = state.automerge_io.emit_with_ack::<Vec<String>>("create_doc", data).unwrap();
         let response = ack.await?;
