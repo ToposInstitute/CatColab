@@ -23,6 +23,7 @@ import ArrowUp from "lucide-solid/icons/arrow-up";
 import GripVertical from "lucide-solid/icons/grip-vertical";
 import Plus from "lucide-solid/icons/plus";
 import Trash2 from "lucide-solid/icons/trash-2";
+import Copy from "lucide-solid/icons/copy"
 
 import "./notebook_cell.css";
 
@@ -123,6 +124,11 @@ export function NotebookCell(props: {
             name: "Move Down",
             icon: <ArrowDown size={16} />,
             onComplete: props.actions.moveCellDown, // Call the moveCellDown action
+        },
+        {
+            name: "Copy", 
+            icon: <Copy size={16} />,
+            onComplete: props.actions.duplicateCell,
         },
     ];
 
