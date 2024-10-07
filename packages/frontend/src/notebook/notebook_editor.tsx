@@ -209,29 +209,31 @@ export function NotebookEditor<T>(props: {
                                 const n = props.notebook.cells.length;
                                 i() < n - 1 && setActiveCell(i() + 1);
                             },
-                            createAbove: () =>
-                                props.changeNotebook((nb) => {
-                                    nb.cells.splice(i(), 0, newStemCell());
-                                    setActiveCell(i());
-                                }),
-                            createBelow: () =>
-                                props.changeNotebook((nb) => {
-                                    nb.cells.splice(i() + 1, 0, newStemCell());
-                                    setActiveCell(i() + 1);
-                                }),
-                            deleteBackward: () =>
-                                props.changeNotebook((nb) => {
-                                    nb.cells.splice(i(), 1);
-                                    setActiveCell(i() - 1);
-                                }),
-                            deleteForward: () =>
-                                props.changeNotebook((nb) => {
-                                    nb.cells.splice(i(), 1);
-                                    setActiveCell(i());
-                                }),
+                            createAbove: () => props.changeNotebook((nb) => {
+                                nb.cells.splice(i(), 0, newStemCell());
+                                setActiveCell(i());
+                            }),
+                            createBelow: () => props.changeNotebook((nb) => {
+                                nb.cells.splice(i() + 1, 0, newStemCell());
+                                setActiveCell(i() + 1);
+                            }),
+                            deleteBackward: () => props.changeNotebook((nb) => {
+                                nb.cells.splice(i(), 1);
+                                setActiveCell(i() - 1);
+                            }),
+                            deleteForward: () => props.changeNotebook((nb) => {
+                                nb.cells.splice(i(), 1);
+                                setActiveCell(i());
+                            }),
                             hasFocused: () => {
                                 setActiveCell(i());
                             },
+                            moveCellUp: function (): void {
+                                throw new Error("Function not implemented.");
+                            },
+                            moveCellDown: function (): void {
+                                throw new Error("Function not implemented.");
+                            }
                         };
 
                         return (

@@ -21,6 +21,8 @@ import type { CellId } from "./types";
 import GripVertical from "lucide-solid/icons/grip-vertical";
 import Plus from "lucide-solid/icons/plus";
 import Trash2 from "lucide-solid/icons/trash-2";
+import ArrowUp from "lucide-solid/icons/arrow-up";
+import ArrowDown from "lucide-solid/icons/arrow-down";
 
 import "./notebook_cell.css";
 
@@ -50,6 +52,13 @@ export type CellActions = {
 
     // The cell has received focus.
     hasFocused: () => void;
+
+    // Move Cell Up
+    moveCellUp: () => void;
+
+    // Move Cell Down
+    moveCellDown: () => void;
+   
 };
 
 const cellDragDataKey = Symbol("notebook-cell");
@@ -67,7 +76,8 @@ export type CellDragData = {
 const createCellDragData = (cellId: CellId) => ({
     [cellDragDataKey]: true,
     cellId,
-});
+})
+;
 
 /** Check whether the drag data is of notebook cell type. */
 export function isCellDragData(data: Record<string | symbol, unknown>): data is CellDragData {
@@ -102,6 +112,16 @@ export function NotebookCell(props: {
             name: "Delete",
             icon: <Trash2 size={16} />,
             onComplete: props.actions.deleteForward,
+        },
+        {
+            name: "Move Up",
+            icon: <ArrowUp size={16} />,
+            onComplete: props.actions.moveCellUp, // Call the moveCellUp action
+        },
+        {
+            name: "Move Down",
+            icon: <ArrowDown size={16} />,
+            onComplete: props.actions.moveCellDown, // Call the moveCellDown action
         },
     ];
 
