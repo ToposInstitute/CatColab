@@ -20,10 +20,10 @@ import type { CellId } from "./types";
 
 import ArrowDown from "lucide-solid/icons/arrow-down";
 import ArrowUp from "lucide-solid/icons/arrow-up";
+import Copy from "lucide-solid/icons/copy";
 import GripVertical from "lucide-solid/icons/grip-vertical";
 import Plus from "lucide-solid/icons/plus";
 import Trash2 from "lucide-solid/icons/trash-2";
-import Copy from "lucide-solid/icons/copy"
 
 import "./notebook_cell.css";
 
@@ -126,7 +126,7 @@ export function NotebookCell(props: {
             onComplete: props.actions.moveCellDown, // Call the moveCellDown action
         },
         {
-            name: "Copy", 
+            name: "Copy",
             icon: <Copy size={16} />,
             onComplete: props.actions.duplicateCell,
         },
@@ -168,13 +168,13 @@ export function NotebookCell(props: {
                     <Plus />
                 </IconButton>
 
-                <IconButton 
+                <IconButton
                     onClick={props.actions.duplicateCell}
                     style={{ visibility: visibility(isGutterVisible()) }}
                 >
-                    < Copy />    
+                    <Copy />
                 </IconButton>
-                
+
                 <Popover
                     open={isMenuOpen()}
                     onOpenChange={setMenuOpen}
