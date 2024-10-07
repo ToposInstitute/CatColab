@@ -1,0 +1,34 @@
+.toolbar {
+    display: flex;
+    flex-direction: row;
+    gap: 5px;
+    padding: 5px;
+
+    & .filler {
+        flex: 1;
+    }
+
+    & .lucide {
+        color: dimgray;
+    }
+}
+
+.brand {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 5px;
+
+    color: dimgray;
+    font-size: 1.3rem;
+
+    &:hover {
+        background: whitesmoke;
+        border-radius: 5px;
+    }
+
+    & img {
+        width: 24px;
+        height: 24px;
+    }
+}

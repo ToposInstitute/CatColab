@@ -19,15 +19,17 @@ jobs:
     name: Build Frontend
     runs-on: ubuntu-latest
     steps:
-      - name: Repository Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
 
       - name: Setup NodeJS
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "npm"
-          cache-dependency-path: package-lock.json
+          cache: "pnpm"
 
       - name: Setup Rust
         run: |
@@ -36,8 +38,8 @@ jobs:
 
       - name: Build
         run: |
-          npm install
-          npm run build --workspace=frontend
+          pnpm install
+          pnpm --filter ./packages/frontend run build
 
       - name: Upload
         uses: actions/upload-artifact@v4
@@ -47,7 +49,7 @@ jobs:
 
       - name: Build Frontend Docs
         run: |
-          npm run doc --workspace=frontend
+          pnpm --filter ./packages/frontend run doc
 
       - name: Upload
         uses: actions/upload-artifact@v4
@@ -68,7 +70,7 @@ jobs:
 
       - name: Build
         run: |
-          cargo doc --no-deps
+          cargo doc --all-features --no-deps
 
       - name: Upload rust docs
         uses: actions/upload-artifact@v4
@@ -94,11 +96,12 @@ jobs:
           tlmgr install pgf
           tlmgr install tikz-cd
           tlmgr install amsmath
+          tlmgr install quiver
 
       - name: Build
         run: |
           cd dev-docs
-          bash ci-build.sh
+          ./forester build
 
       - name: Upload
         uses: actions/upload-artifact@v4
@@ -112,20 +115,22 @@ jobs:
     needs: [build_dev-docs, build_frontend, build_rust_docs]
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == 'ToposInstitute/CatColab'
     steps:
-      - name: Repository Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
 
       - name: Setup NodeJS
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "npm"
-          cache-dependency-path: .netlify-env/package-lock.json
+          cache: "pnpm"
 
       - name: Install Netlify
         run: |
           cd .netlify-env
-          npm install
+          pnpm install
 
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -136,7 +141,8 @@ jobs:
           mv dev-docs site/dev
           mv rust_docs site/dev/rust
           mv frontend_docs site/dev/frontend
-          echo "/dev /dev/index.xml" > site/_redirects
+          echo '/dev /dev/index.xml' >> site/_redirects
+          echo '/* /index.html 200' >> site/_redirects
 
       - name: Deploy to Staging
         if: github.event_name == 'push' || github.event_name == 'pull_request'

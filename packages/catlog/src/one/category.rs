@@ -173,10 +173,10 @@ can have infinitely many morphisms.
  */
 pub trait FgCategory: Category {
     /// The type of object generators.
-    type ObGen: Into<Self::Ob>;
+    type ObGen: Eq + Clone + Into<Self::Ob>;
 
     /// The type of morphism generators. Often Mor = Path<Ob, MorGen>.
-    type MorGen: Into<Self::Mor>;
+    type MorGen: Eq + Clone + Into<Self::Mor>;
 
     /// An iterator over object generators.
     fn object_generators(&self) -> impl Iterator<Item = Self::ObGen>;

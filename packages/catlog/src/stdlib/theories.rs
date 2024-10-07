@@ -30,8 +30,9 @@ pub fn th_schema() -> UstrDiscreteDblTheory {
 
 /** The theory of signed categories.
 
-A [signed category](crate::refs::RegNets) is a category sliced over the group of
-(nonzero) signs.
+A *signed category* is a category sliced over the group of (nonzero) signs. Free
+signed categories are signed graphs, a simple mathematical model of [regulatory
+networks](crate::refs::RegNets) and causal loop diagrams.
  */
 pub fn th_signed_category() -> UstrDiscreteDblTheory {
     let mut sgn: UstrFinCategory = Default::default();
@@ -44,7 +45,7 @@ pub fn th_signed_category() -> UstrDiscreteDblTheory {
 
 /** The theory of nullable signed categories.
 
-A nullable signed category is a category sliced over the monoid of signs,
+A *nullable signed category* is a category sliced over the monoid of signs,
 including zero.
  */
 pub fn th_nullable_signed_category() -> UstrDiscreteDblTheory {
@@ -62,8 +63,11 @@ pub fn th_nullable_signed_category() -> UstrDiscreteDblTheory {
 
 /** The theory of categories with links.
 
-A category with links is a category `C` together with a profunctor from `C` to
+A *category with links* is a category `C` together with a profunctor from `C` to
 `Arr(C)`, the arrow category of C.
+
+[Primitive stock and flow diagrams](crate::refs::StockFlow) are free categories
+with links.
  */
 pub fn th_category_links() -> UstrDiscreteTabTheory {
     let mut th: UstrDiscreteTabTheory = Default::default();

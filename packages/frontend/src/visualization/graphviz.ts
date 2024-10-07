@@ -1,4 +1,5 @@
 import type * as Viz from "@viz-js/viz";
+import invariant from "tiny-invariant";
 
 import type { Point } from "./graph_layout";
 import type * as GraphLayout from "./graph_layout";
@@ -52,7 +53,8 @@ export function parseGraphvizJSON(graphviz: GraphvizJSON.Graph): GraphLayout.Gra
         const gvPad = parsePoint(graphviz.pad);
         [pad.x, pad.y] = [inchesToPoints(gvPad.x), inchesToPoints(gvPad.y)];
     }
-    const [width, height] = [bb[2] + 2 * pad.x, Math.max(bb[1], bb[3]) + 2 * pad.y];
+    const width = (bb[2] ?? 0) + 2 * pad.x;
+    const height = Math.max(bb[1] ?? 0, bb[3] ?? 0) + 2 * pad.y;
 
     // Parse nodes of graph, ignoring any subgraphs.
     const nodes: GraphLayout.Node<string>[] = [];
@@ -77,15 +79,22 @@ export function parseGraphvizJSON(graphviz: GraphvizJSON.Graph): GraphLayout.Gra
             // Omit invisible edges, used to tweak the layout in Graphviz.
             continue;
         }
+        const [sourceNode, targetNode] = [nodeByNumber(edge.head), nodeByNumber(edge.tail)];
+        invariant(sourceNode && targetNode, "Source and target nodes should be defined");
+
         const spline = parseSpline(edge.pos);
-        const { points } = spline;
+        const { points, startPoint, endPoint } = spline;
+        const sourcePos = startPoint ?? points[0];
+        const targetPos = endPoint ?? points[points.length - 1];
+        invariant(sourcePos && targetPos, "Source and target positions should be defined");
+
         edges.push({
             id: edge.id,
-            source: nodeByNumber(edge.head).id,
-            target: nodeByNumber(edge.tail).id,
+            source: sourceNode.id,
+            target: targetNode.id,
             label: edge.xlabel ?? edge.label,
-            sourcePos: spline.startPoint || points[0],
-            targetPos: spline.endPoint || points[points.length - 1],
+            sourcePos,
+            targetPos,
             labelPos:
                 (edge.xlp && parsePoint(edge.xlp)) || (edge.lp && parsePoint(edge.lp)) || undefined,
             path: splineToPath(spline),
@@ -135,11 +144,14 @@ function splineToPath(spline: GraphvizSpline): string {
     if (startPoint) {
         stmts.push(startPoint.x, startPoint.y, "L");
     }
-    stmts.push(points[0].x, points[0].y);
+    const p0 = points[0];
+    invariant(p0, "Spline should have at least one point");
+    stmts.push(p0.x, p0.y);
 
     // Bezier curves for intermediate segments.
     for (let i = 1; i < points.length; i += 3) {
         const [p1, p2, p3] = [points[i], points[i + 1], points[i + 2]];
+        invariant(p1 && p2 && p3, "Expecting sequence of three points in spline");
         stmts.push("C", p1.x, `${p1.y},`, p2.x, `${p2.y},`, p3.x, p3.y);
     }
 
@@ -166,7 +178,10 @@ function parseFloatArray(s: string): number[] {
  */
 function parsePoint(s: string): Point {
     const point = parseFloatArray(s);
-    console.assert(point.length === 2);
+    invariant(
+        point[0] !== undefined && point[1] !== undefined,
+        "Point should be array of length 2",
+    );
     return { x: point[0], y: point[1] };
 }
 

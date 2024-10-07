@@ -165,6 +165,7 @@ export function NotebookCell(props: {
                 <IconButton
                     onClick={props.actions.createBelow}
                     style={{ visibility: visibility(isGutterVisible()) }}
+                    tooltip="Create a new cell below this one"
                 >
                     <Plus />
                     </IconButton>
@@ -203,6 +204,7 @@ export function NotebookCell(props: {
                         <IconButton
                             onClick={openMenu}
                             style={{ visibility: visibility(isGutterVisible() || isMenuOpen()) }}
+                            tooltip="Drag to move cell or click to open menu"
                             ref={handleRef}
                         >
                             <GripVertical />

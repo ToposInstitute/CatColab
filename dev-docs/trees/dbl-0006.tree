@@ -1,16 +1,24 @@
-\title{Some discrete models}
-\taxon{example}
+\title{Discrete model of a simple double theory}
+\taxon{definition}
 \import{macros}
 
-\ul{
+\p{Let \dbl{T} be a simple double theory.
 
-\li{A discrete model of the [trivial double theory](thy-0001) is a
-\nlab{discrete category}, which amounts to a set}
-\li{A discrete model of the [theory of profunctors](thy-0006) amounts to
-a pair of sets}
-\li{A discrete model of the theory of pseudomonoids is a discrete monoidal category,
-which amounts to a monoid}
-\li{A discrete model of the theory of symmetric pseudomonoids is a discrete
-symmetric monoidal category, which amounts to a commutative monoid}
+The \define{discrete model functor}
 
+##{
+    \Disc: \cat{Fun}(\dbl{T}_{00}, \Set) \to \cat{Lax}(\dbl{T}, \Span)
 }
+is the left adjoint to the forgetful functor
+
+##{
+    \cat{Lax}(\dbl{T}, \Span) \xto{(-)_0}
+    \cat{Fun}(\dbl{T}_0, \Set) \xto{\varepsilon_{\dbl{T_0}}^*}
+    \cat{Fun}(\dbl{T}_{00}, \Set),
+}
+
+where #{\varepsilon_{\dbl{T_0}}: \dbl{T}_{00} \hookrightarrow \dbl{T}_0} is the
+counit of the adjunction #{\Disc: \Set \rightleftarrows \cat{Cat}: \Ob}.}
+
+\p{A \define{discrete model} of a simple double theory \dbl{T} is a model of
+\dbl{T} in the image of the discrete model functor.}

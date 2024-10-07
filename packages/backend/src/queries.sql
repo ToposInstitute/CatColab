@@ -27,7 +27,7 @@ RETURNING id;
 
 /* @name NewSnapshot */
 INSERT INTO snapshots(hash, content)
-    VALUES(digest(:content::text, 'sha256'::text), :content)
+    VALUES (digest(:content::text, 'sha256'::text), :content)
     ON CONFLICT (hash) DO UPDATE SET
     hash = EXCLUDED.hash
     RETURNING id;
@@ -36,3 +36,19 @@ INSERT INTO snapshots(hash, content)
 INSERT INTO witnesses(snapshot, forRef, note, atTime)
 SELECT autosave, :refId, :note, NOW() FROM refs WHERE refs.id = :refId
 RETURNING id;
+
+/* @name DropExternsFrom */
+DELETE FROM externs
+WHERE fromRef = :refId;
+
+/* 
+  @name InsertNewExterns
+  @param rows -> ((fromRef, toRef, taxon, via)...)
+*/
+INSERT INTO externs(fromRef, toRef, taxon, via)
+VALUES :rows;
+
+/* @name GetBacklinks */
+SELECT fromRef
+FROM externs
+WHERE toRef = :toRef AND taxon = :taxon;

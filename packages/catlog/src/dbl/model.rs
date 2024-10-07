@@ -250,18 +250,14 @@ where
             let e = f.clone();
             let mor_type = self.mor_type(&f.into());
             if self.theory.has_mor_type(&mor_type) {
-                if self
-                    .category
-                    .get_dom(&e)
-                    .map_or(false, |x| self.ob_type(x) != self.theory.src(&mor_type))
-                {
+                if self.category.get_dom(&e).map_or(false, |x| {
+                    self.has_ob(x) && self.ob_type(x) != self.theory.src(&mor_type)
+                }) {
                     errs.push(Invalid::DomType(e.clone()));
                 }
-                if self
-                    .category
-                    .get_cod(&e)
-                    .map_or(false, |x| self.ob_type(x) != self.theory.tgt(&mor_type))
-                {
+                if self.category.get_cod(&e).map_or(false, |x| {
+                    self.has_ob(x) && self.ob_type(x) != self.theory.tgt(&mor_type)
+                }) {
                     errs.push(Invalid::CodType(e));
                 }
             } else {

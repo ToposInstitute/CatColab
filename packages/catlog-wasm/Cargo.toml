@@ -12,7 +12,7 @@ default = ["console_error_panic_hook"]
 
 [dependencies]
 all-the-same = "1.1.0"
-catlog = { path = "../catlog", features = ["serde-wasm"] }
+catlog = { path = "../catlog", features = ["ode", "serde-wasm"] }
 console_error_panic_hook = { version = "0.1.7", optional = true }
 getrandom = { version = "0.2", features = ["js"] }
 js-sys = "0.3.69"
@@ -21,7 +21,7 @@ serde = { version = "1", features = ["derive"] }
 tsify-next = { version = "0.5.4", features = ["js"] }
 ustr = "1"
 uuid = { version = "1.10", features = ["v7", "serde", "js"] }
-wasm-bindgen = "0.2.92"
+wasm-bindgen = "0.2.93"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.34"

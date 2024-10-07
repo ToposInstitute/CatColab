@@ -7,6 +7,7 @@ edition = "2021"
 rust-version = "1.76"
 
 [features]
+ode = ["dep:ode_solvers", "dep:nalgebra"]
 serde = ["dep:serde", "nonempty/serialize", "ustr/serde"]
 serde-wasm = ["serde", "dep:wasm-bindgen", "dep:tsify-next"]
 
@@ -15,10 +16,16 @@ archery = "1"
 derivative = "2"
 derive_more = { version = "1", features = ["from", "into"] }
 either = "1"
+nalgebra = { version = "0.33", optional = true }
 nonempty = "0.10"
+ode_solvers = { git = "https://github.com/srenevey/ode-solvers.git", version = "0.4.0", optional = true }
 ref-cast = "1"
 serde = { version = "1", features = ["derive"], optional = true }
 thiserror = "1"
 tsify-next = { version = "0.5", features = ["js"], optional = true }
 ustr = "1"
-wasm-bindgen = { version = "0.2.92", optional = true }
+wasm-bindgen = { version = "0.2.93", optional = true }
+
+[dev-dependencies]
+expect-test = "1.5"
+textplots = "0.8.6"

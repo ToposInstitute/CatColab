@@ -26,9 +26,7 @@
 }
 
 .morphism-decl-arrow {
-    --stroke-color: light-dark(var(--light-color), var(--dark-color));
-
-    background: var(--stroke-color);
+    background: var(--main-color);
     min-width: 1ex;
     height: 2px;
     border-radius: 3px;
@@ -40,7 +38,7 @@
     &:before,
     &:after {
         content: "";
-        background: var(--stroke-color);
+        background: var(--main-color);
         position: absolute;
         height: 2px;
         width: 10px;
@@ -83,14 +81,14 @@
 .morphism-decl-arrow.double {
     background: transparent;
     height: 6px;
-    border-top: 2px solid var(--stroke-color);
-    border-bottom: 2px solid var(--stroke-color);
+    border-top: 2px solid var(--main-color);
+    border-bottom: 2px solid var(--main-color);
     border-radius: 1px;
 
     &:before,
     &:after {
         content: "";
-        background: var(--stroke-color);
+        background: var(--main-color);
         position: absolute;
         height: 2px;
         width: 16px;
@@ -112,7 +110,7 @@
 
 .morphism-decl-arrow.flat:after {
     content: "";
-    background: var(--stroke-color);
+    background: var(--main-color);
     position: absolute;
     border-radius: 3px;
     height: 14px;

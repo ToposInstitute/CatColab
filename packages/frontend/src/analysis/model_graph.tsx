@@ -1,4 +1,5 @@
 import type * as Viz from "@viz-js/viz";
+import { Show } from "solid-js";
 
 import type { ModelJudgment } from "../model";
 import type { ModelAnalysisMeta, Theory, TypeMeta } from "../theory";
@@ -46,13 +47,17 @@ export function ModelGraph(
             <div class="panel">
                 <span class="title">{props.title}</span>
             </div>
-            <ModelGraphviz
-                model={props.model}
-                theory={props.theory}
-                options={{
-                    engine: graphvizEngine(props.content.layout),
-                }}
-            />
+            <Show when={props.liveModel.theory()}>
+                {(theory) => (
+                    <ModelGraphviz
+                        model={props.liveModel.formalJudgments()}
+                        theory={theory()}
+                        options={{
+                            engine: graphvizEngine(props.content.layout),
+                        }}
+                    />
+                )}
+            </Show>
         </div>
     );
 }
@@ -90,13 +95,12 @@ export function modelToGraphviz(
     theory: Theory,
     attributes?: GraphvizAttributes,
 ): Viz.Graph {
-    const nodes = [];
-    const edges = [];
+    const nodes = new Map<string, Required<Viz.Graph>["nodes"][0]>();
     for (const judgment of model) {
         if (judgment.tag === "object") {
             const { id, name } = judgment;
             const meta = theory.getObTypeMeta(judgment.obType);
-            nodes.push({
+            nodes.set(id, {
                 name: id,
                 attributes: {
                     id,
@@ -105,9 +109,19 @@ export function modelToGraphviz(
                     fontname: fontname(meta),
                 },
             });
-        } else if (judgment.tag === "morphism") {
+        }
+    }
+
+    const edges: Required<Viz.Graph>["edges"] = [];
+    for (const judgment of model) {
+        if (judgment.tag === "morphism") {
             const { id, name, dom, cod } = judgment;
-            if (!(dom?.tag === "Basic" && cod?.tag === "Basic")) {
+            if (
+                dom?.tag !== "Basic" ||
+                cod?.tag !== "Basic" ||
+                !nodes.has(dom.content) ||
+                !nodes.has(cod.content)
+            ) {
                 continue;
             }
             const meta = theory.getMorTypeMeta(judgment.morType);
@@ -125,9 +139,10 @@ export function modelToGraphviz(
             });
         }
     }
+
     return {
         directed: true,
-        nodes,
+        nodes: Array.from(nodes.values()),
         edges,
         graphAttributes: { ...defaultGraphAttributes, ...attributes?.graph },
         nodeAttributes: { ...defaultNodeAttributes, ...attributes?.node },

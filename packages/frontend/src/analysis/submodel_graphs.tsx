@@ -40,11 +40,16 @@ function SubmodelsAnalysis(
         title?: string;
     } & ModelAnalysisProps<SubmodelsAnalysisContent>,
 ) {
+    const submodels = () => {
+        const res = props.liveModel.validationResult();
+        return res?.tag === "validated" ? props.findSubmodels(res.validatedModel) : [];
+    };
+
     return (
         <SubmodelsGraphviz
-            model={props.model}
-            submodels={props.validatedModel ? props.findSubmodels(props.validatedModel) : []}
-            theory={props.theory}
+            model={props.liveModel.formalJudgments()}
+            submodels={submodels()}
+            theory={props.liveModel.theory()}
             activeIndex={props.content.activeIndex}
             setActiveIndex={(index: number) =>
                 props.changeContent((content) => {
@@ -74,7 +79,7 @@ the component.
 export function SubmodelsGraphviz(props: {
     model: Array<ModelJudgment>;
     submodels: Array<DblModel>;
-    theory: Theory;
+    theory?: Theory;
     activeIndex: number;
     setActiveIndex: (index: number) => void;
     title?: string;
@@ -91,6 +96,9 @@ export function SubmodelsGraphviz(props: {
             return [];
         }
         const submodel = props.submodels[index()];
+        if (!submodel) {
+            return [];
+        }
         return props.model.filter((judgment) => {
             if (judgment.tag === "object") {
                 return submodel.hasOb({ tag: "Basic", content: judgment.id });
@@ -120,12 +128,16 @@ export function SubmodelsGraphviz(props: {
                     <ChevronRight />
                 </IconButton>
             </div>
-            <ModelGraphviz
-                model={filteredModel()}
-                theory={props.theory}
-                attributes={props.attributes}
-                options={props.options}
-            />
+            <Show when={props.theory}>
+                {(theory) => (
+                    <ModelGraphviz
+                        model={filteredModel()}
+                        theory={theory()}
+                        attributes={props.attributes}
+                        options={props.options}
+                    />
+                )}
+            </Show>
         </div>
     );
 }

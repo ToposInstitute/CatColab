@@ -1,5 +1,5 @@
 import type * as Viz from "@viz-js/viz";
-import { type Component, For, createResource } from "solid-js";
+import { type Component, For, Show, createResource } from "solid-js";
 import { P, match } from "ts-pattern";
 
 import type { ModelJudgment } from "../model";
@@ -44,13 +44,17 @@ export function StockFlowDiagram(props: ModelAnalysisProps<ModelGraphContent>) {
             <div class="panel">
                 <span class="title">Diagram</span>
             </div>
-            <StockFlowGraphviz
-                model={props.model}
-                theory={props.theory}
-                options={{
-                    engine: graphvizEngine(props.content.layout),
-                }}
-            />
+            <Show when={props.liveModel.theory()}>
+                {(theory) => (
+                    <StockFlowGraphviz
+                        model={props.liveModel.formalJudgments()}
+                        theory={theory()}
+                        options={{
+                            engine: graphvizEngine(props.content.layout),
+                        }}
+                    />
+                )}
+            </Show>
         </div>
     );
 }

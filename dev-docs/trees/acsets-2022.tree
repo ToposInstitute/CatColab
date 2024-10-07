@@ -1,0 +1,9 @@
+\title{Categorical data structures for technical computing}
+\author{Evan Patterson}
+\author{Owen Lynch}
+\author{James Fairbanks}
+\date{2022}
+\taxon{reference}
+\meta{external}{https://github.com/AlgebraicJulia/ACSets.jl}
+\meta{doi}{10.32408/compositionality-4-5}
+\meta{arxiv}{2106.04703}

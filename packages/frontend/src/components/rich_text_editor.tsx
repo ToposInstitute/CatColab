@@ -116,10 +116,13 @@ export const RichTextEditor = (
 };
 
 function richTextEditorKeymap(schema: Schema, props: RichTextEditorOptions) {
-    const bindings: { [key: string]: Command } = {
-        "Mod-b": toggleMark(schema.marks.strong),
-        "Mod-i": toggleMark(schema.marks.em),
-    };
+    const bindings: { [key: string]: Command } = {};
+    if (schema.marks.strong) {
+        bindings["Mod-b"] = toggleMark(schema.marks.strong);
+    }
+    if (schema.marks.em) {
+        bindings["Mod-i"] = toggleMark(schema.marks.em);
+    }
     if (props.deleteBackward) {
         bindings["Backspace"] = doIfEmpty(props.deleteBackward);
     }

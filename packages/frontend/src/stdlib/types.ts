@@ -32,7 +32,7 @@ export class TheoryLibrary {
     /** Add a theory to the library. */
     add(meta: TheoryMeta, cons: (meta: TheoryMeta) => Theory) {
         if (this.metaMap.has(meta.id)) {
-            throw Error(`Theory with ID ${meta.id} already defined`);
+            throw new Error(`Theory with ID ${meta.id} already defined`);
         }
         this.metaMap.set(meta.id, meta);
         this.theoryMap.set(meta.id, cons);
@@ -46,7 +46,7 @@ export class TheoryLibrary {
         const meta = this.metaMap.get(id);
         const theoryOrCons = this.theoryMap.get(id);
         if (meta === undefined || theoryOrCons === undefined) {
-            throw Error(`No theory with ID ${id}`);
+            throw new Error(`No theory with ID ${id}`);
         } else if (theoryOrCons instanceof Theory) {
             return theoryOrCons;
         } else {

@@ -1,8 +1,7 @@
 import type { Component } from "solid-js";
 
-import type { DblModel } from "catlog-wasm";
-import type { ModelJudgment } from "../model";
-import type { Theory } from "../theory";
+import type * as catlog from "catlog-wasm";
+import type { LiveModelDocument } from "../document";
 
 /** Analysis of a model of a double theory.
 
@@ -26,17 +25,7 @@ export type ModelAnalysisComponent<T extends ModelAnalysisContent> = Component<
 /** Props passed to a model analysis component. */
 export type ModelAnalysisProps<T> = {
     /** The model being analyzed. */
-    model: Array<ModelJudgment>;
-
-    /** The `catlog` representation of the model, if the model is valid. */
-    validatedModel: DblModel | null;
-
-    /** Theory that the model is of.
-
-    Some analyses are only applicable to a single theory but the theory is
-    passed regardless.
-     */
-    theory: Theory;
+    liveModel: LiveModelDocument;
 
     /** Content associated with the analysis itself. */
     content: T;
@@ -47,12 +36,15 @@ export type ModelAnalysisProps<T> = {
 
 /** Content associated with an analysis of a model.
 
-This content is in addition to the data of the model and can include
+Such content is in addition to the data of the model and can include
 configuration or state for the analysis.
  */
-export type ModelAnalysisContent = ModelGraphContent | SubmodelsAnalysisContent;
+export type ModelAnalysisContent =
+    | ModelGraphContent
+    | SubmodelsAnalysisContent
+    | LotkaVolterraContent;
 
-/** Configuration of a graph visualization of a model. */
+/** Configuration for a graph visualization of a model. */
 export type ModelGraphContent = {
     tag: "graph";
 
@@ -67,3 +59,8 @@ export type SubmodelsAnalysisContent = {
     /** Index of active submodel. */
     activeIndex: number;
 };
+
+/** Configuration for a Lotka-Volterra ODE analysis of a model. */
+export type LotkaVolterraContent = {
+    tag: "lotka-volterra";
+} & catlog.LotkaVolterraProblemData<string>;

@@ -90,8 +90,8 @@ export function NotebookEditor<T>(props: {
 
     // Adds a new cell or replaces the active cell based on its type
     const addOrReplaceActiveCell = (cell: Cell<T>) => {
-        if (props.notebook.cells.length > 0) {
-            const c = props.notebook.cells[activeCell()];
+        const c = props.notebook.cells[activeCell()];
+        if (c) {
             if (c.tag === "formal" || c.tag === "rich-text") {
                 addAfterActiveCell(cell);
             } else if (c.tag === "stem") {
@@ -333,7 +333,10 @@ export function NotebookEditor<T>(props: {
             </ul>
             <Show when={props.notebook.cells.some((cell) => cell.tag !== "stem")}>
                 <div class="placeholder">
-                    <IconButton onClick={() => appendCell(newStemCell())}>
+                    <IconButton
+                        onClick={() => appendCell(newStemCell())}
+                        tooltip="Create a new cell"
+                    >
                         <ListPlus />
                     </IconButton>
                 </div>
