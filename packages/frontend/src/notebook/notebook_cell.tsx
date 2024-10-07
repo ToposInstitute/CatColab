@@ -166,14 +166,14 @@ export function NotebookCell(props: {
                     tooltip="Create a new cell below this one"
                 >
                     <IconButton
-                        onClick={props.actions.moveCellUp} 
+                        onClick={props.actions.moveCellUp}
                         style={{ visibility: visibility(isGutterVisible()) }}
                     >
                         <ArrowUp />
                     </IconButton>
 
                     <IconButton
-                        onClick={props.actions.moveCellDown} 
+                        onClick={props.actions.moveCellDown}
                         style={{ visibility: visibility(isGutterVisible()) }}
                     >
                         <ArrowDown />
