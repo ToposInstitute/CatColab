@@ -1,12 +1,18 @@
 import type { DocHandle, DocumentId, Repo } from "@automerge/automerge-repo";
-import type * as trpc from "@trpc/client";
+import { type Client, FetchTransport, createClient } from "@rspc/client";
 import { createContext } from "solid-js";
 import * as uuid from "uuid";
 
-import type { AppRouter } from "backend/src/index";
+import type { Procedures } from "backend";
 import { makeDocReactive } from "./util/automerge_solid";
 
-export type RPCClient = ReturnType<typeof trpc.createTRPCClient<AppRouter>>;
+export type RPCClient = Client<Procedures>;
+
+export function createRPCClient(serverUrl: string): RPCClient {
+    return createClient<Procedures>({
+        transport: new FetchTransport(`${serverUrl}/rpc`),
+    });
+}
 
 /** Context for the RPC client to communicate with backend. */
 export const RPCContext = createContext<RPCClient>();
@@ -26,19 +32,15 @@ Returns a document that is reactive along with the Automerge document handle.
  */
 export async function retrieveDoc<T extends object>(
     client: RPCClient,
-    ref: string,
+    refId: string,
     repo: Repo,
 ): Promise<RetrievedDoc<T>> {
     let docId: DocumentId;
 
-    if (uuid.validate(ref)) {
-        const res = await client.docIdFor.query(ref);
-        if (!res) {
-            throw new Error(`Failed to get document ID for ref ${ref}`);
-        }
-        docId = res;
+    if (uuid.validate(refId)) {
+        docId = (await client.query(["doc_id", refId])) as DocumentId;
     } else {
-        throw new Error(`Invalid ref ${ref}`);
+        throw new Error(`Invalid ref ${refId}`);
     }
 
     const docHandle = repo.find(docId) as DocHandle<T>;
