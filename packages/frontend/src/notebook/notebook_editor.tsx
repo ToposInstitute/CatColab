@@ -46,6 +46,9 @@ export type CellConstructor<T> = {
 
     // Function to construct the cell.
     construct: () => Cell<T>;
+
+    // Duplication functionality.
+    duplicate?: (cell: Cell<T>) => Cell<T>;
 };
 
 /** Notebook editor based on Automerge.
@@ -209,31 +212,74 @@ export function NotebookEditor<T>(props: {
                                 const n = props.notebook.cells.length;
                                 i() < n - 1 && setActiveCell(i() + 1);
                             },
-                            createAbove: () => props.changeNotebook((nb) => {
-                                nb.cells.splice(i(), 0, newStemCell());
-                                setActiveCell(i());
-                            }),
-                            createBelow: () => props.changeNotebook((nb) => {
-                                nb.cells.splice(i() + 1, 0, newStemCell());
-                                setActiveCell(i() + 1);
-                            }),
-                            deleteBackward: () => props.changeNotebook((nb) => {
-                                nb.cells.splice(i(), 1);
-                                setActiveCell(i() - 1);
-                            }),
-                            deleteForward: () => props.changeNotebook((nb) => {
-                                nb.cells.splice(i(), 1);
-                                setActiveCell(i());
-                            }),
+                            createAbove: () =>
+                                props.changeNotebook((nb) => {
+                                    nb.cells.splice(i(), 0, newStemCell());
+                                    setActiveCell(i());
+                                }),
+                            createBelow: () =>
+                                props.changeNotebook((nb) => {
+                                    nb.cells.splice(i() + 1, 0, newStemCell());
+                                    setActiveCell(i() + 1);
+                                }),
+                            deleteBackward: () =>
+                                props.changeNotebook((nb) => {
+                                    nb.cells.splice(i(), 1);
+                                    setActiveCell(i() - 1);
+                                }),
+                            deleteForward: () =>
+                                props.changeNotebook((nb) => {
+                                    nb.cells.splice(i(), 1);
+                                    setActiveCell(i());
+                                }),
                             hasFocused: () => {
                                 setActiveCell(i());
                             },
-                            moveCellUp: function (): void {
-                                throw new Error("Function not implemented.");
+                            // moving cell up
+                            moveCellUp: () => {
+                                const currentIndex = i();
+                                if (props.notebook.cells.length > 0 && currentIndex > 0) {
+                                    props.changeNotebook((nb) => {
+                                        const newCells = [...nb.cells]; // Create a new array to avoid direct mutation
+                                        const cellToMoveUp = newCells[currentIndex]; // Get the cell to be moved
+                                        newCells.splice(currentIndex, 1); // Remove the original cell
+                                        newCells.splice(
+                                            currentIndex - 1,
+                                            0,
+                                            deepCopyJSON(cellToMoveUp),
+                                        ); // Insert a deep copy of the cell above
+                                        nb.cells = newCells; // Assign the new array back to the notebook
+                                    });
+                                    setActiveCell(currentIndex - 1); // Set the active cell to the new position
+                                }
                             },
-                            moveCellDown: function (): void {
-                                throw new Error("Function not implemented.");
-                            }
+                            // moving cell down
+                            moveCellDown: () => {
+                                const currentIndex = i();
+                                if (
+                                    props.notebook.cells.length > 0 &&
+                                    currentIndex < props.notebook.cells.length - 1
+                                ) {
+                                    props.changeNotebook((nb) => {
+                                        const newCells = [...nb.cells]; // Create a new array to avoid direct mutation
+                                        const cellToMoveDown = newCells[currentIndex]; // Get the cell to be moved
+                                        newCells.splice(currentIndex, 1); // Remove the original cell
+                                        newCells.splice(
+                                            currentIndex + 1,
+                                            0,
+                                            deepCopyJSON(cellToMoveDown),
+                                        ); // Insert a deep copy of the cell below
+                                        nb.cells = newCells; // Assign the new array back to the notebook
+                                    });
+                                    setActiveCell(currentIndex + 1); // Set the active cell to the new position
+                                }
+                            },
+                            duplicateCell: () => {
+                                props.changeNotebook((nb) => {
+                                    nb.cells.splice(i() + 1, 0, deepCopyJSON(nb.cells[i()])); // Insert a deep copy of the cell below
+                                    setActiveCell(i() + 1); // Set the active cell to the new position
+                                });
+                            },
                         };
 
                         return (

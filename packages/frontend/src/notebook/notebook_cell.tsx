@@ -18,11 +18,12 @@ import {
 } from "../components";
 import type { CellId } from "./types";
 
+import ArrowDown from "lucide-solid/icons/arrow-down";
+import ArrowUp from "lucide-solid/icons/arrow-up";
+import Copy from "lucide-solid/icons/copy";
 import GripVertical from "lucide-solid/icons/grip-vertical";
 import Plus from "lucide-solid/icons/plus";
 import Trash2 from "lucide-solid/icons/trash-2";
-import ArrowUp from "lucide-solid/icons/arrow-up";
-import ArrowDown from "lucide-solid/icons/arrow-down";
 
 import "./notebook_cell.css";
 
@@ -58,7 +59,9 @@ export type CellActions = {
 
     // Move Cell Down
     moveCellDown: () => void;
-   
+
+    // toDuplicate
+    duplicateCell: () => void;
 };
 
 const cellDragDataKey = Symbol("notebook-cell");
@@ -76,8 +79,7 @@ export type CellDragData = {
 const createCellDragData = (cellId: CellId) => ({
     [cellDragDataKey]: true,
     cellId,
-})
-;
+});
 
 /** Check whether the drag data is of notebook cell type. */
 export function isCellDragData(data: Record<string | symbol, unknown>): data is CellDragData {
@@ -116,12 +118,17 @@ export function NotebookCell(props: {
         {
             name: "Move Up",
             icon: <ArrowUp size={16} />,
-            onComplete: props.actions.moveCellUp, // Call the moveCellUp action
+            onComplete: props.actions.moveCellUp,
         },
         {
             name: "Move Down",
             icon: <ArrowDown size={16} />,
-            onComplete: props.actions.moveCellDown, // Call the moveCellDown action
+            onComplete: props.actions.moveCellDown,
+        },
+        {
+            name: "Copy",
+            icon: <Copy size={16} />,
+            onComplete: props.actions.duplicateCell,
         },
     ];
 
@@ -158,6 +165,27 @@ export function NotebookCell(props: {
                     style={{ visibility: visibility(isGutterVisible()) }}
                     tooltip="Create a new cell below this one"
                 >
+                    <IconButton
+                        onClick={props.actions.moveCellUp} // Call the action to move the cell up
+                        style={{ visibility: visibility(isGutterVisible()) }}
+                    >
+                        <ArrowUp />
+                    </IconButton>
+
+                    <IconButton
+                        onClick={props.actions.moveCellDown} // Call the action to move the cell down
+                        style={{ visibility: visibility(isGutterVisible()) }}
+                    >
+                        <ArrowDown />
+                    </IconButton>
+
+                    <IconButton
+                        onClick={props.actions.duplicateCell}
+                        style={{ visibility: visibility(isGutterVisible()) }}
+                    >
+                        <Copy />
+                    </IconButton>
+
                     <Plus />
                 </IconButton>
                 <Popover
