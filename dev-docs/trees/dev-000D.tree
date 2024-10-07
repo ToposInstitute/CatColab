@@ -13,5 +13,4 @@ metadata such as taxon, title, author(s), tags, and so on.}
 of this snapshot every time the Automerge document connected to the ref is
 mutated. "Saving" a ref just means creating a new snapshot and making it the
 head. The previous head will continue to exist as a snapshot, and can be used to
-revert the ref to its state at a previous point in time. In the current design,
-old snapshots are persisted for all time.}
+revert the ref to its state at a previous point in time.}

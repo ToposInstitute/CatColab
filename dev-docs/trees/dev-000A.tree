@@ -3,14 +3,14 @@
 \subtree{
 \title{Concepts and overview}
 
-\p{The main pieces of state in the backend are the [database](dev-000B) and an
-in-memory hash map from [refs](dev-000D) to Automerge [document
+\p{The main pieces of state in the backend are the SQL [database](dev-000B) and
+an in-memory hash map from [refs](dev-000D) to Automerge [document
 handles](https://automerge.org/docs/repositories/dochandles/). The important
 thing to realize is that nothing from Automerge is persisted through a restart
 of the backend; the only thing that is persisted are serializations of the
-Automerge document at various points in time. Thus, when the server restarts,
-clients must request new Automerge documents. (Currently, this is not
-implemented: you must refresh the client after a server restart.)}
+Automerge documents at different points in time. Thus, when the server restarts,
+clients must request new document handles. (Currently, this is not implemented:
+you must refresh the client after a server restart.)}
 
 \p{With this in mind, we outline the database schema and the operations
 currently supported on the backend.}
@@ -25,22 +25,22 @@ currently supported on the backend.}
 \p{\strong{Currently implemented RPC API:}}
 
 \ul{
+\li{\strong{Mutation}: \code{new_ref(content: any): string}. Creates a new
+[ref](dev-000D) with the given initial content. Returns the ID of the newly
+created ref as a string representation of the UUID.}
 
-\li{\code{mutate new_ref(content: any): string}. Creates a new [ref](dev-000D)
-with the given initial content. Returns the ID of the newly created ref as a
-string representation of the UUID.}
+\li{\strong{Query}: \code{doc_id(ref_id: string): string}. Returns the Automerge
+document ID associated with the given ref. If the hash map in the backend
+doesn't contain an association for that ref, then a fresh document handle is
+created with initial state given by the current autosave for that ref.}
 
-\li{\code{query doc_id(ref_id: string): string}. Returns the Automerge document
-ID associated with the given ref. If the hashmap in the backend doesn't contain
-an association for that ref, then a fresh document handle is created with
-initial state given by the current autosave for that ref.}
+\li{\strong{Query}: \code{head_snapshot(ref_id: string): any}. Gets the content
+of the current head of a ref. The result is a plain JSON object, not a live
+Automerge document.}
 
-\li{\code{query head_snapshot(ref_id: string): any}. Gets the content of the
-current head of a ref. This content is just a JSON object, not a live Automerge
-document.}
-
-\li{\code{mutate save_snapshot(ref_id: string, content: any)}. Saves the ref
-with the given content, as described in [refs](dev-000D).} }
+\li{\strong{Mutation}: \code{save_snapshot(ref_id: string, content: any)}. Saves
+the ref with the given content, as described in [refs](dev-000D).}
+}
 
 \p{\strong{API to implement in the future:}}
 
@@ -52,18 +52,64 @@ with the given content, as described in [refs](dev-000D).} }
 }
 
 \subtree{
-\title{Implementation details and dependencies}
+\title{Implementation}
 
-\p{We have endeavored to keep the number of dependencies low, and the implementation simple. However, we do use some libraries. In this section, we document what those libraries are, and how we use them.}
+\p{The backend consists of two services running in independent processes
+(possibly on different machines).
+
+\ol{
+\li{\strong{Web server}, written in Rust}
+\li{\strong{Automerge document server}, written in TypeScript and running in Node}
+}
+
+The services communicate bidirectionally using [SocketIO](https://socket.io/), a
+simple protocol that extends WebSockets with niceties such as automatic
+reconnection and message acknowledgments.}
+
+\subtree{
+\title{Dependencies}
+
+\p{Without attempting to be exhaustive, we summarize the backend's most
+important dependencies.}
+
+\p{\strong{Web server} uses the crates:
 
 \ul{
-\li{[automerge-repo](https://github.com/automerge/automerge-repo/). We use automerge-repo in order to manage the websocket-based syncing of automerge documents, but we do \em{not} use its storage facilities.}
-\li{[express](http://expressjs.com/). The "default choice" of nodejs http servers. We use this to host our [trpc](https://trpc.io) api.}
-\li{[morgan](https://github.com/expressjs/morgan). A fairly simple request logger for express: this helps in debugging.}
-\li{[pg](https://node-postgres.com/). The standard choice for using postgresql in nodejs.}
-\li{[pgtyped](https://pgtyped.dev/). A program that generates typescript wrappers for postgresql queries. Use with \code{npm run compileSql}.}
-\li{[zod](https://zod.dev). A validator for the input data to our queries.}
-\li{[trpc](https://trpc.io). "Typed remote procedure calls". We use this so that we can access the backend from the frontend in a well-typed way.}
+
+\li{[\code{axum}](https://github.com/tokio-rs/axum): web application framework
+built on the popular [Tokio](https://tokio.rs/) stack}
+
+\li{[\code{rspc}](https://www.rspc.dev/) with its \code{rspc-axum} integration:
+generates a type-safe RPC client for the frontend}
+
+\li{[\code{sqlx}](https://github.com/launchbadge/sqlx): type-safe queries for
+Postgres (and other SQL databases)}
+
+\li{[\code{socketioxide}](https://github.com/Totodore/socketioxide): Rust
+implementation of a SocketIO server}
+
+}}
+
+\p{\strong{Automerge document server} uses the packages:
+
+\ul{
+
+\li{[\code{automerge-repo}](https://github.com/automerge/automerge-repo/):
+Manages the websocket-based syncing of Automerge documents. Note that we do
+\em{not} use its storage facilities. That's what the database is for. We would
+prefer to use
+[\code{automerge-repo-rs}](https://github.com/automerge/automerge-repo-rs), the
+Rust implementation of the protocol, but at the time of this writing it is not
+stable. That's why this service is written in TypeScript instead of Rust.}
+
+\li{[\code{express}](https://expressjs.com/): The default choice of web
+framework for a Node.js server. We use it only to upgrade from HTTP to the
+WebSocket protocol.}
+
+\li{\code{socket.io-client}: The official client for the SocketIO protocol.}
+
+}}
+
 }
 }
 
