@@ -45,7 +45,11 @@ Finally, navigate your browser to the URL provided by Vite.
 
 ### Using the Dev Container
 
-CatColab has experimental support for development using a dev container, which simplifies the setup process by providing a pre-configured environment via a Dockerfile. This is particularly useful for developers using [Visual Studio Code](https://code.visualstudio.com/) or other editors that support the [dev containers standard](https://containers.dev/).
+CatColab has experimental support for development using a dev container, which
+simplifies the setup process by providing a pre-configured environment via a
+Dockerfile. This is most useful for developers using [Visual Studio
+Code](https://code.visualstudio.com/) or other editors that support the [dev
+containers standard](https://containers.dev/).
 
 To use the dev container:
 
