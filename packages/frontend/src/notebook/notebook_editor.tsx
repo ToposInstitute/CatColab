@@ -28,6 +28,7 @@ import {
 import { type Cell, type FormalCell, type Notebook, newRichTextCell, newStemCell } from "./types";
 
 import "./notebook_editor.css";
+import { v7 as uuidv7 } from 'uuid';
 
 /** Constructor of a cell in a notebook.:wq
  * 
@@ -275,11 +276,14 @@ export function NotebookEditor<T>(props: {
                                     setActiveCell(currentIndex + 1); // Set the active cell to the new position
                                 }
                             },
-                            // duplicate cell
-                            duplicateCell: () => {
+                             // duplicate cell
+                             duplicateCell: () => {
                                 props.changeNotebook((nb) => {
+                                    const currentCell = nb.cells[i()];
+                                    const newCell = deepCopyJSON(currentCell);
+                                    newCell.id = uuidv7(); // Generate a new UUID for the duplicated cell
                                     nb.cells.splice(i() + 1, 0, deepCopyJSON(nb.cells[i()])); // Insert a deep copy of the cell below
-                                    setActiveCell(i() + 1); // Set the active cell to the new position
+                                    setActiveCell(i() + 1); // Sets the active cell to the new position
                                 });
                             },
                         };
