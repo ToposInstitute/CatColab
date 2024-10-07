@@ -58,6 +58,9 @@ export type CellActions = {
 
     // Move Cell Down
     moveCellDown: () => void;
+
+    // Duplicate Cell
+    duplicateCell: () => void;
 };
 
 const cellDragDataKey = Symbol("notebook-cell");
