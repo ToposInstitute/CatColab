@@ -215,7 +215,7 @@ export function NotebookEditor<T>(props: {
                             createAbove: () =>
                                 props.changeNotebook((nb) => {
                                     nb.cells.splice(i(), 0, newStemCell());
-                                    setActiveCell(i());
+                                    setActiveCell(i() - 1);
                                 }),
                             createBelow: () =>
                                 props.changeNotebook((nb) => {
