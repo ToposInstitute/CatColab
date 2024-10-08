@@ -7,8 +7,12 @@ use super::document as doc;
 
 impl From<AppError> for Error {
     fn from(error: AppError) -> Self {
+        let code = match error {
+            AppError::Db(sqlx::Error::RowNotFound) => ErrorCode::NotFound,
+            _ => ErrorCode::InternalServerError,
+        };
         let message = error.to_string();
-        Error::with_cause(ErrorCode::InternalServerError, message, error)
+        Error::with_cause(code, message, error)
     }
 }
 
