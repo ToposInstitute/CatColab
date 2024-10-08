@@ -235,45 +235,26 @@ export function NotebookEditor<T>(props: {
                             hasFocused: () => {
                                 setActiveCell(i());
                             },
-                            // moving cell up
-                            moveCellUp: () => {
-                                const currentIndex = i();
-                                if (props.notebook.cells.length > 0 && currentIndex > 0) {
-                                    props.changeNotebook((nb) => {
-                                        const newCells = [...nb.cells]; // Create a new array to avoid direct mutation
-                                        const cellToMoveUp = newCells[currentIndex]; // Get the cell to be moved
-                                        newCells.splice(currentIndex, 1); // Remove the original cell
-                                        newCells.splice(
-                                            currentIndex - 1,
-                                            0,
-                                            deepCopyJSON(cellToMoveUp),
-                                        ); // Insert a deep copy of the cell above
-                                        nb.cells = newCells; // Assign the new array back to the notebook
-                                    });
-                                    setActiveCell(currentIndex - 1); // Set the active cell to the new position
-                                }
+                            // Move Cell Up
+                               moveCellUp: () => {
+                                props.changeNotebook((nb) => {   
+                                    if (i() > 0) {
+                                        const [cellToMoveUp] = nb.cells.splice(i(), 1);
+                                        nb.cells.splice(i() - 1, 0, deepCopyJSON(cellToMoveUp)); 
+                                        setActiveCell(i() - 1);
+                                    }
+                                });
                             },
-                            // moving cell down
+                            // Move Cell Down
                             moveCellDown: () => {
-                                const currentIndex = i();
-                                if (
-                                    props.notebook.cells.length > 0 &&
-                                    currentIndex < props.notebook.cells.length - 1
-                                ) {
-                                    props.changeNotebook((nb) => {
-                                        const newCells = [...nb.cells]; // Create a new array to avoid direct mutation
-                                        const cellToMoveDown = newCells[currentIndex]; // Get the cell to be moved
-                                        newCells.splice(currentIndex, 1); // Remove the original cell
-                                        newCells.splice(
-                                            currentIndex + 1,
-                                            0,
-                                            deepCopyJSON(cellToMoveDown),
-                                        ); // Insert a deep copy of the cell below
-                                        nb.cells = newCells; // Assign the new array back to the notebook
-                                    });
-                                    setActiveCell(currentIndex + 1); // Set the active cell to the new position
-                                }
-                            },
+                                props.changeNotebook((nb) => {
+                                    if (i() < nb.cells.length - 1) {
+                                        const [cellToMoveDown] = nb.cells.splice(i(), 1);
+                                        nb.cells.splice(i() + 1, 0, deepCopyJSON(cellToMoveDown)); 
+                                        setActiveCell(i() + 1);
+                                    }
+                                });
+                            },   
                             duplicateCell: () => {
                                 props.changeNotebook((nb) => {
                                     nb.cells.splice(i() + 1, 0, deepCopyJSON(nb.cells[i()])); // Insert a deep copy of the cell below
