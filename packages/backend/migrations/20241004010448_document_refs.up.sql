@@ -2,7 +2,8 @@ CREATE TABLE snapshots (
     id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     for_ref UUID NOT NULL,
     content JSONB NOT NULL,
-    at_time TIMESTAMPTZ NOT NULL
+    created TIMESTAMPTZ NOT NULL,
+    last_updated TIMESTAMPTZ NOT NULL
 );
 
 CREATE TABLE refs (
