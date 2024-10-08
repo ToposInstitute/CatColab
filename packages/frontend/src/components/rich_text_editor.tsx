@@ -25,7 +25,6 @@ export type RichTextEditorOptions = {
     deleteForward?: () => void;
     exitUp?: () => void;
     exitDown?: () => void;
-
     onFocus?: () => void;
 };
 

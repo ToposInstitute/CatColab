@@ -26,7 +26,7 @@ import {
     StemCellEditor,
     isCellDragData,
 } from "./notebook_cell";
-import { type Cell, type FormalCell, type Notebook, newFormalCell, newRichTextCell, newStemCell } from "./types";
+import { type Cell, type FormalCell, type Notebook, newRichTextCell, newStemCell } from "./types";
 
 import "./notebook_editor.css";
 import { uuidv7 } from "uuidv7";
@@ -50,7 +50,7 @@ export type CellConstructor<T> = {
     construct: () => Cell<T>;
 
     // Duplication functionality.
-    duplicateCell?: (cell: Cell<T>) => FormalCell<T>;
+    duplicateCell?: (cell: Cell<T>) => Cell<T>;
 };
 
 /** Notebook editor based on Automerge.
@@ -264,10 +264,9 @@ export function NotebookEditor<T>(props: {
                                 const currentCell = nb.cells[i()]; // Declare the cell to be duplicated
                                 const newCell =  deepCopyJSON(currentCell);
                                 newCell.id = uuidv7(); // Generate a new UUID for the duplicated cell
-                                const finalNewCell = newFormalCell(newCell.content || {});
-                                console.log(finalNewCell.content);
-                                console.log(finalNewCell.id);
-                                nb.cells.splice(i() + 1, 0, finalNewCell); // Insert a deep copy of the cell below
+                                console.log(newCell.content);
+                                console.log(newCell.id);
+                                nb.cells.splice(i() + 1, 0, newCell); // Insert a deep copy of the cell below
                                
                             });
                                 setActiveCell(i() + 1); // Sets the active cell to the new position

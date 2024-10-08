@@ -6,6 +6,7 @@ focus;
 import { type Completion, Completions, type CompletionsRef } from "./completions";
 
 import "./inline_input.css";
+import { ViteModuleRunner } from "vite/runtime";
 
 /** Optional props for `InlineInput` component.
  */
@@ -24,6 +25,7 @@ export type InlineInputOptions = {
     exitLeft?: () => void;
     exitRight?: () => void;
     onFocus?: () => void;
+    duplicateCell?: () => void;
 };
 
 /** Error status for `InlineInput` component.

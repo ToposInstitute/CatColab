@@ -50,6 +50,7 @@ export function ObjectCellEditor(props: {
                 exitUp={props.actions.activateAbove}
                 exitDown={props.actions.activateBelow}
                 onFocus={props.actions.hasFocused}
+                duplicateCell={props.actions.duplicateCell}
             />
         </div>
     );
