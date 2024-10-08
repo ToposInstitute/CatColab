@@ -59,9 +59,6 @@ export type CellActions = {
 
     // Move Cell Down
     moveCellDown: () => void;
-
-    // toDuplicate
-    duplicateCell: () => void;
 };
 
 const cellDragDataKey = Symbol("notebook-cell");
@@ -125,11 +122,6 @@ export function NotebookCell(props: {
             icon: <ArrowDown size={16} />,
             onComplete: props.actions.moveCellDown,
         },
-        {
-            name: "Copy",
-            icon: <Copy size={16} />,
-            onComplete: props.actions.duplicateCell,
-        },
     ];
 
     createEffect(() => {
@@ -178,13 +170,6 @@ export function NotebookCell(props: {
                         style={{ visibility: visibility(isGutterVisible()) }}
                     >
                         <ArrowDown />
-                    </IconButton>
-
-                    <IconButton
-                        onClick={props.actions.duplicateCell}
-                        style={{ visibility: visibility(isGutterVisible()) }}
-                    >
-                        <Copy />
                     </IconButton>
 
                     <Plus />
