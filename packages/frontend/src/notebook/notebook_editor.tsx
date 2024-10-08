@@ -17,6 +17,7 @@ import {
 
 import { type Completion, IconButton } from "../components";
 import { deepCopyJSON } from "../util/deepcopy";
+
 import {
     type CellActions,
     type FormalCellEditorProps,
@@ -28,6 +29,7 @@ import {
 import { type Cell, type FormalCell, type Notebook, newRichTextCell, newStemCell } from "./types";
 
 import "./notebook_editor.css";
+import { uuidv7 } from "uuidv7";
 
 /** Constructor of a cell in a notebook.
 
@@ -46,6 +48,9 @@ export type CellConstructor<T> = {
 
     // Function to construct the cell.
     construct: () => Cell<T>;
+
+    // Duplication functionality.
+    duplicateCell?: (cell: Cell<T>) => Cell<T>;
 };
 
 /** Notebook editor based on Automerge.
@@ -232,6 +237,41 @@ export function NotebookEditor<T>(props: {
                             hasFocused: () => {
                                 setActiveCell(i());
                             },
+                            // Move Cell Up
+                            moveCellUp: () => {
+                                props.changeNotebook((nb) => {
+                                    if (i() > 0) {
+                                        const [cellToMoveUp] = nb.cells.splice(i(), 1);
+                                        nb.cells.splice(i() - 1, 0, deepCopyJSON(cellToMoveUp));
+                                        setActiveCell(i() - 1);
+                                    }
+                                });
+                            },
+                            // Move Cell Down
+                            moveCellDown: () => {
+                                props.changeNotebook((nb) => {
+                                    if (i() < nb.cells.length - 1) {
+                                        const [cellToMoveDown] = nb.cells.splice(i(), 1);
+                                        nb.cells.splice(i() + 1, 0, deepCopyJSON(cellToMoveDown));
+                                        setActiveCell(i() + 1);
+                                    }
+                                });
+                            },
+                        // Duplicate Cell 
+                        duplicateCell: () => {
+                            if (props.notebook.cells.length > 0 && i() > 0 && i() < props.notebook.cells.length) {
+                            props.changeNotebook((nb) => {
+                                const currentCell = nb.cells[i()]; // Declare the cell to be duplicated
+                                const newCell =  deepCopyJSON(currentCell);
+                                newCell.id = uuidv7(); // Generate a new UUID for the duplicated cell
+                                console.log(newCell.content);
+                                console.log(newCell.id);
+                                nb.cells.splice(i() + 1, 0, newCell); // Insert a deep copy of the cell below
+                               
+                            });
+                                setActiveCell(i() + 1); // Sets the active cell to the new position
+                        }
+                        },
                         };
 
                         return (

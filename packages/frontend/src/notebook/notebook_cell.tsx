@@ -18,6 +18,9 @@ import {
 } from "../components";
 import type { CellId } from "./types";
 
+import ArrowDown from "lucide-solid/icons/arrow-down";
+import ArrowUp from "lucide-solid/icons/arrow-up";
+import Copy from "lucide-solid/icons/copy";
 import GripVertical from "lucide-solid/icons/grip-vertical";
 import Plus from "lucide-solid/icons/plus";
 import Trash2 from "lucide-solid/icons/trash-2";
@@ -50,6 +53,15 @@ export type CellActions = {
 
     // The cell has received focus.
     hasFocused: () => void;
+
+    // Move Cell Up
+    moveCellUp: () => void;
+
+    // Move Cell Down
+    moveCellDown: () => void;
+
+    // Duplicate Cell
+    duplicateCell: () => void;
 };
 
 const cellDragDataKey = Symbol("notebook-cell");
@@ -103,6 +115,21 @@ export function NotebookCell(props: {
             icon: <Trash2 size={16} />,
             onComplete: props.actions.deleteForward,
         },
+        {
+            name: "Move Up",
+            icon: <ArrowUp size={16} />,
+            onComplete: props.actions.moveCellUp, // Call the moveCellUp action
+        },
+        {
+            name: "Move Down",
+            icon: <ArrowDown size={16} />,
+            onComplete: props.actions.moveCellDown, // Call the moveCellDown action
+        },
+        {
+            name: "Copy",
+            icon: <Copy size={16} />,
+            onComplete: props.actions.duplicateCell,
+        },
     ];
 
     createEffect(() => {
@@ -140,6 +167,14 @@ export function NotebookCell(props: {
                 >
                     <Plus />
                 </IconButton>
+
+                <IconButton
+                    onClick={props.actions.duplicateCell}
+                    style={{ visibility: visibility(isGutterVisible()) }}
+                >
+                    <Copy />
+                </IconButton>
+
                 <Popover
                     open={isMenuOpen()}
                     onOpenChange={setMenuOpen}
@@ -238,6 +273,7 @@ export function StemCellEditor(props: {
             exitUp={props.actions.activateAbove}
             exitDown={props.actions.activateBelow}
             onFocus={props.actions.hasFocused}
+            duplicateCell={props.actions.duplicateCell}
             placeholder="Select cell type"
         />
     );
