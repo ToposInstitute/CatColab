@@ -168,7 +168,7 @@ export function NotebookCell(props: {
                     <IconButton
                         onClick={props.actions.createAbove}
                         style={{ visibility: visibility(isGutterVisible()) }}
-                         tooltip="Create a new cell above this one"
+                        tooltip="Create a new cell above this one"
                     >
                         <ArrowUp />
                     </IconButton>
