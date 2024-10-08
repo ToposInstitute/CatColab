@@ -17,7 +17,9 @@ Elaborating on these keywords, CatColab aims to be:
 
 ## For users
 
-An early demo is available at <https://catcolab.org>.
+An early demo is available at <https://catcolab.org>. For more about where the
+project is going, try this [blog
+post](https://topos.site/blog/2024-10-02-introducing-catcolab/).
 
 > [!WARNING]
 > CatColab is a pre-alpha software under active development.
