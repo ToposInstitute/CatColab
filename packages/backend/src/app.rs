@@ -18,6 +18,6 @@ pub enum AppError {
     #[error("Database error: {0}")]
     Db(#[from] sqlx::Error),
 
-    #[error("Error receiving socketio acknowledgment: {0}")]
+    #[error("Error receiving socket.io acknowledgment: {0}")]
     Ack(#[from] socketioxide::AckError<()>),
 }

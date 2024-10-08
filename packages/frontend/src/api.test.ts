@@ -1,5 +1,6 @@
 import { type DocHandle, Repo, isValidDocumentId } from "@automerge/automerge-repo";
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
+import type { RSPCError } from "@rspc/client";
 import * as uuid from "uuid";
 import { assert, describe, test } from "vitest";
 
@@ -16,7 +17,7 @@ const repo = new Repo({
 // XXX: Proper shutdown requires Automerge v2.
 //afterAll(() => repo.shutdown());
 
-describe("Automerge RPC", async () => {
+describe("Document RPC", async () => {
     const content = {
         type: "model",
         name: "My model",
@@ -34,6 +35,17 @@ describe("Automerge RPC", async () => {
     const newDocId = await client.query(["doc_id", refId]);
     test.sequential("should get the same document ID as before", () => {
         assert.strictEqual(newDocId, docId);
+    });
+
+    const badRefId = uuid.v7();
+    test("should get 404 when document does not exist", async () => {
+        try {
+            await client.query(["doc_id", badRefId]);
+        } catch (err) {
+            assert.strictEqual((err as RSPCError).code, 404);
+            return;
+        }
+        assert.fail();
     });
 
     if (!isValidDocumentId(docId)) {
