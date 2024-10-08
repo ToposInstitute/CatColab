@@ -13,8 +13,8 @@ pub async fn new_ref(state: AppState, content: Value) -> Result<Uuid, AppError> 
     let query = sqlx::query!(
         "
         WITH snapshot AS (
-            INSERT INTO snapshots(for_ref, content, at_time)
-            VALUES ($1, $2, NOW())
+            INSERT INTO snapshots(for_ref, content, created, last_updated)
+            VALUES ($1, $2, NOW(), NOW())
             RETURNING id
         )
         INSERT INTO refs(id, head)
@@ -45,7 +45,7 @@ pub async fn autosave(state: AppState, data: RefContent) -> Result<(), AppError>
     let query = sqlx::query!(
         "
         UPDATE snapshots
-        SET content = $2, at_time = NOW()
+        SET content = $2, last_updated = NOW()
         WHERE id = (SELECT head FROM refs WHERE id = $1)
         ",
         ref_id,
@@ -64,8 +64,8 @@ pub async fn save_snapshot(state: AppState, data: RefContent) -> Result<(), AppE
     let query = sqlx::query!(
         "
         WITH snapshot AS (
-            INSERT INTO snapshots(for_ref, content, at_time)
-            VALUES ($1, $2, NOW())
+            INSERT INTO snapshots(for_ref, content, created, last_updated)
+            VALUES ($1, $2, NOW(), NOW())
             RETURNING id
         )
         UPDATE refs
