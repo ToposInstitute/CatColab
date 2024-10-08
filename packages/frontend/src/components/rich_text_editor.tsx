@@ -1,7 +1,7 @@
 import type { Prop } from "@automerge/automerge";
-import type { DocHandle, DocHandleChangePayload } from "@automerge/automerge-repo";
+import type { DocHandle } from "@automerge/automerge-repo";
 
-import { AutoMirror } from "@automerge/prosemirror";
+import { init } from "@automerge/prosemirror";
 import { baseKeymap, toggleMark } from "prosemirror-commands";
 import { keymap } from "prosemirror-keymap";
 import type { Schema } from "prosemirror-model";
@@ -56,24 +56,21 @@ export const RichTextEditor = (
             return;
         }
 
-        const autoMirror = new AutoMirror(props.path);
-        const schema = autoMirror.schema;
+        const { schema, pmDoc, plugin } = init(props.handle, props.path);
 
-        const plugins: Plugin[] = [keymap(richTextEditorKeymap(schema, props)), keymap(baseKeymap)];
-        if (props.placeholder) {
-            plugins.push(placeholder(props.placeholder));
-        }
+        const plugins: Plugin[] = [
+            keymap(richTextEditorKeymap(schema, props)),
+            keymap(baseKeymap),
+            ...(props.placeholder ? [placeholder(props.placeholder)] : []),
+            plugin,
+        ];
 
-        let view: EditorView;
-        view = new EditorView(editorRoot, {
-            state: EditorState.create({
-                schema,
-                plugins,
-                doc: autoMirror.initialize(props.handle),
-            }),
+        const view = new EditorView(editorRoot, {
+            state: EditorState.create({ schema, plugins, doc: pmDoc }),
             dispatchTransaction: (tx: Transaction) => {
-                const newState = autoMirror.intercept(props.handle, tx, view.state);
-                view.updateState(newState);
+                // XXX: It appears that automerge-prosemirror can dispatch
+                // transactions even after the view has been destroyed.
+                !view.isDestroyed && view.updateState(view.state.apply(tx));
             },
             handleDOMEvents: {
                 focus: () => {
@@ -86,29 +83,7 @@ export const RichTextEditor = (
             props.ref(view);
         }
 
-        const onPatch = (payload: DocHandleChangePayload<unknown>) => {
-            // XXX: Quit if a higher-level node is being deleted. Otherwise,
-            // `reconcilePatch` can error, a bug in `automerge-prosemirror`.
-            for (const patch of payload.patches) {
-                if (patch.action === "del" && patch.path.length < props.path.length) {
-                    return;
-                }
-            }
-
-            const newState = autoMirror.reconcilePatch(
-                payload.patchInfo.before,
-                payload.doc,
-                payload.patches,
-                view.state,
-            );
-            view.updateState(newState);
-        };
-        props.handle.on("change", onPatch);
-
-        onCleanup(() => {
-            props.handle.off("change", onPatch);
-            view.destroy();
-        });
+        onCleanup(() => view.destroy());
     });
 
     return <div class="rich-text-editor" ref={editorRoot} />;
