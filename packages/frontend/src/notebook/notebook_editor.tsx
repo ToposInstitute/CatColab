@@ -255,12 +255,6 @@ export function NotebookEditor<T>(props: {
                                     }
                                 });
                             },
-                            duplicateCell: () => {
-                                props.changeNotebook((nb) => {
-                                    nb.cells.splice(i() + 1, 0, deepCopyJSON(nb.cells[i()])); // Insert a deep copy of the cell below
-                                    setActiveCell(i() + 1); // Set the active cell to the new position
-                                });
-                            },
                         };
 
                         return (
