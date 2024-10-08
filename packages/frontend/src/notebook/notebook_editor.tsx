@@ -236,11 +236,11 @@ export function NotebookEditor<T>(props: {
                                 setActiveCell(i());
                             },
                             // Move Cell Up
-                               moveCellUp: () => {
-                                props.changeNotebook((nb) => {   
+                            moveCellUp: () => {
+                                props.changeNotebook((nb) => {
                                     if (i() > 0) {
                                         const [cellToMoveUp] = nb.cells.splice(i(), 1);
-                                        nb.cells.splice(i() - 1, 0, deepCopyJSON(cellToMoveUp)); 
+                                        nb.cells.splice(i() - 1, 0, deepCopyJSON(cellToMoveUp));
                                         setActiveCell(i() - 1);
                                     }
                                 });
@@ -250,11 +250,11 @@ export function NotebookEditor<T>(props: {
                                 props.changeNotebook((nb) => {
                                     if (i() < nb.cells.length - 1) {
                                         const [cellToMoveDown] = nb.cells.splice(i(), 1);
-                                        nb.cells.splice(i() + 1, 0, deepCopyJSON(cellToMoveDown)); 
+                                        nb.cells.splice(i() + 1, 0, deepCopyJSON(cellToMoveDown));
                                         setActiveCell(i() + 1);
                                     }
                                 });
-                            },   
+                            },
                             duplicateCell: () => {
                                 props.changeNotebook((nb) => {
                                     nb.cells.splice(i() + 1, 0, deepCopyJSON(nb.cells[i()])); // Insert a deep copy of the cell below
