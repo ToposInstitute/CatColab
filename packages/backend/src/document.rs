@@ -13,12 +13,12 @@ pub async fn new_ref(state: AppState, content: Value) -> Result<Uuid, AppError> 
     let query = sqlx::query!(
         "
         WITH snapshot AS (
-            INSERT INTO snapshots(for_ref, content, created, last_updated)
-            VALUES ($1, $2, NOW(), NOW())
+            INSERT INTO snapshots(for_ref, content, last_updated)
+            VALUES ($1, $2, NOW())
             RETURNING id
         )
-        INSERT INTO refs(id, head)
-        VALUES ($1, (SELECT id FROM snapshot))
+        INSERT INTO refs(id, head, created)
+        VALUES ($1, (SELECT id FROM snapshot), NOW())
         ",
         ref_id,
         content
@@ -64,8 +64,8 @@ pub async fn save_snapshot(state: AppState, data: RefContent) -> Result<(), AppE
     let query = sqlx::query!(
         "
         WITH snapshot AS (
-            INSERT INTO snapshots(for_ref, content, created, last_updated)
-            VALUES ($1, $2, NOW(), NOW())
+            INSERT INTO snapshots(for_ref, content, last_updated)
+            VALUES ($1, $2, NOW())
             RETURNING id
         )
         UPDATE refs
