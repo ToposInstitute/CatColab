@@ -48,13 +48,15 @@ export function Completions(props: {
         return props.completions?.filter((c) => c.name.toLowerCase().startsWith(prefix));
     });
 
-    function selectPresumptive() {
-        const completions = remainingCompletions();
-        if (completions && completions.length > 0) {
-            completions[presumptive()]?.onComplete?.();
-            props.onComplete?.();
-        }
-    }
+    const selectPresumptive = () => {
+        const completion = remainingCompletions()[presumptive()];
+        completion && select(completion);
+    };
+
+    const select = (completion: Completion) => {
+        completion.onComplete?.();
+        props.onComplete?.();
+    };
 
     onMount(() =>
         props.ref?.({
@@ -78,7 +80,7 @@ export function Completions(props: {
                         role="option"
                         classList={{ active: i() === presumptive() }}
                         onMouseOver={() => setPresumptive(i())}
-                        onMouseDown={() => c.onComplete?.()}
+                        onMouseDown={() => select(c)}
                     >
                         <div class="completion-head">
                             <Show when={c.icon}>
