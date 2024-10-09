@@ -232,6 +232,22 @@ export function NotebookEditor<T>(props: {
                             hasFocused: () => {
                                 setActiveCell(i());
                             },
+                            moveCellUp: () => {
+                                props.changeNotebook((nb) => {
+                                    if (i() > 0) {
+                                        const [cellToMoveUp] = nb.cells.splice(i(), 1);
+                                        nb.cells.splice(i() - 1, 0, deepCopyJSON(cellToMoveUp));
+                                    }
+                                });
+                            },
+                            moveCellDown: () => {
+                                props.changeNotebook((nb) => {
+                                    if (i() < nb.cells.length - 1) {
+                                        const [cellToMoveDown] = nb.cells.splice(i(), 1);
+                                        nb.cells.splice(i() + 1, 0, deepCopyJSON(cellToMoveDown));
+                                    }
+                                });
+                            },
                         };
 
                         return (
