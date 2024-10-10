@@ -1,4 +1,4 @@
-import { type SubmitHandler, createForm, getValues } from "@modular-forms/solid";
+import { type SubmitHandler, createForm } from "@modular-forms/solid";
 import {
     GithubAuthProvider,
     GoogleAuthProvider,
@@ -9,11 +9,9 @@ import {
     signInWithPopup,
 } from "firebase/auth";
 import { useFirebaseApp } from "solid-firebase";
-import type { ComponentProps } from "solid-js";
 
-import { Dialog, IconButton } from "../components";
+import { IconButton } from "../components";
 
-import Globe from "lucide-solid/icons/globe";
 import SignInIcon from "lucide-solid/icons/log-in";
 import SignUpIcon from "lucide-solid/icons/user-pen";
 
@@ -123,28 +121,3 @@ export function Login(props: {
         </div>
     );
 }
-
-export function AnonLoginButton() {
-    return (
-        <Dialog title="Login" trigger={AnonButton}>
-            <p>
-                This document can be <strong>edited by anyone</strong> with the link.
-            </p>
-            <p>To create restricted documents, you must login.</p>
-            <Login />
-        </Dialog>
-    );
-}
-
-const AnonButton = (props: ComponentProps<"button">) => (
-    <IconButton
-        {...props}
-        tooltip={
-            <>
-                This document is <strong>editable by anyone</strong> with the link
-            </>
-        }
-    >
-        <Globe />
-    </IconButton>
-);

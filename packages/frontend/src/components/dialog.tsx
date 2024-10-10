@@ -11,12 +11,14 @@ import "./dialog.css";
 This component is a styled wrapper around corvu's `Dialog`.
  */
 export function Dialog(props: {
+    open?: boolean;
+    onOpenChange: (open: boolean) => void;
     children: JSX.Element;
     title?: JSX.Element | "string";
     trigger?: Component<ComponentProps<"button">>;
 }) {
     return (
-        <Root>
+        <Root open={props.open} onOpenChange={props.onOpenChange}>
             <Trigger as={props.trigger} />
             <Portal>
                 <Overlay />
