@@ -7,8 +7,8 @@ import "./foldable.css";
 
 /** A component whose contents can be expanded or folded.
 
-This component is lightly styled wrapper around corvu's `Disclosure`.
-We could just as well have used kobalte's `Collapsible`.
+This component is a styled wrapper around corvu's `Disclosure`. We could likely
+just as well have used kobalte's `Collapsible`.
  */
 export function Foldable(props: {
     header?: JSX.Element;

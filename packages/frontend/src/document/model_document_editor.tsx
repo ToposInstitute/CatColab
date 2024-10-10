@@ -40,6 +40,7 @@ import {
 import { BrandedToolbar, HelpButton } from "../page";
 import { type TheoryLibrary, TheoryLibraryContext } from "../stdlib";
 import type { Theory } from "../theory";
+import { AnonLoginButton } from "../user";
 import { type IndexedMap, indexMap } from "../util/indexing";
 import { type ModelDocument, newAnalysisDocument } from "./types";
 
@@ -183,6 +184,7 @@ export function ModelDocumentEditor(props: {
         <div class="growable-container">
             <BrandedToolbar>
                 <HelpButton />
+                <AnonLoginButton />
                 <IconButton onClick={createAnalysis} tooltip="Analyze this model">
                     <ChartNetwork />
                 </IconButton>

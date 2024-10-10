@@ -1,5 +1,5 @@
 import { Tooltip } from "@kobalte/core/tooltip";
-import { type JSX, Show, createSignal, splitProps } from "solid-js";
+import { type ComponentProps, type JSX, Show, createSignal, splitProps } from "solid-js";
 
 import "./icon_button.css";
 
@@ -8,8 +8,8 @@ import "./icon_button.css";
 export function IconButton(
     allProps: {
         children: JSX.Element;
-        tooltip?: string;
-    } & JSX.ButtonHTMLAttributes<HTMLButtonElement>,
+        tooltip?: JSX.Element | string;
+    } & ComponentProps<"button">,
 ) {
     const [props, buttonProps] = splitProps(allProps, ["children", "tooltip"]);
 
