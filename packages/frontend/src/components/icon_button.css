@@ -1,8 +1,15 @@
 .icon-button {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 0.25rem;
+
     background: none;
     border: none;
     cursor: pointer;
     padding: 0;
+    font-size: 1rem;
 
     &:hover:enabled {
         background: whitesmoke;

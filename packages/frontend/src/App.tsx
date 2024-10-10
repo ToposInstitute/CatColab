@@ -1,11 +1,13 @@
 import { Repo } from "@automerge/automerge-repo";
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
 import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb";
+import { initializeApp } from "firebase/app";
 import invariant from "tiny-invariant";
 import * as uuid from "uuid";
 
 import { MultiProvider } from "@solid-primitives/context";
 import { Navigate, type RouteDefinition, type RouteSectionProps, Router } from "@solidjs/router";
+import { FirebaseProvider } from "solid-firebase";
 import { Match, Switch, createResource, lazy, useContext } from "solid-js";
 
 import { RPCContext, RepoContext, createRPCClient } from "./api";
@@ -13,18 +15,32 @@ import { newModelDocument } from "./document/types";
 import { HelperContainer, lazyMdx } from "./page/help_page";
 import { TheoryLibraryContext, stdTheories } from "./stdlib";
 
-const serverUrl: string = import.meta.env.VITE_SERVER_URL;
-const repoUrl: string = import.meta.env.VITE_AUTOMERGE_REPO_URL;
+const serverUrl = import.meta.env.VITE_SERVER_URL;
+const repoUrl = import.meta.env.VITE_AUTOMERGE_REPO_URL;
+
+// TODO: Move to vite env.
+const firebaseConfig = {
+    apiKey: "AIzaSyAsFvrzQg_V8cVhGi9PNkZiueGF0iDH9Ws",
+    authDomain: "catcolab-next.firebaseapp.com",
+    projectId: "catcolab-next",
+    storageBucket: "catcolab-next.appspot.com",
+    messagingSenderId: "666779369059",
+    appId: "1:666779369059:web:f0319c1513d77996650256",
+    measurementId: "G-WKFYSTDYLF",
+};
 
 const Root = (props: RouteSectionProps<unknown>) => {
     invariant(serverUrl, "Must set environment variable VITE_SERVER_URL");
     invariant(repoUrl, "Must set environment variable VITE_AUTOMERGE_REPO_URL");
 
     const client = createRPCClient(serverUrl);
+
     const repo = new Repo({
         storage: new IndexedDBStorageAdapter("catcolab"),
         network: [new BrowserWebSocketClientAdapter(repoUrl)],
     });
+
+    const firebaseApp = initializeApp(firebaseConfig);
 
     return (
         <MultiProvider
@@ -34,7 +50,7 @@ const Root = (props: RouteSectionProps<unknown>) => {
                 [TheoryLibraryContext, stdTheories],
             ]}
         >
-            {props.children}
+            <FirebaseProvider app={firebaseApp}>{props.children}</FirebaseProvider>
         </MultiProvider>
     );
 };

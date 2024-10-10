@@ -1,0 +1,52 @@
+.login {
+    & form {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    & form .buttons {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+    }
+
+    & input {
+        border: 1px solid gray;
+        border-radius: 3px;
+        outline: none;
+        padding: 10px;
+    }
+
+    & .provider-list {
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        gap: 2rem;
+    }
+
+    & .separator {
+        margin: 1rem 0;
+    }
+}
+
+.separator {
+    display: flex;
+    align-items: center;
+    text-align: center;
+}
+
+.separator::before,
+.separator::after {
+    content: "";
+    flex: 1;
+    border-bottom: 2px solid gray;
+}
+
+.separator:not(:empty)::before {
+    margin-right: 0.5em;
+}
+
+.separator:not(:empty)::after {
+    margin-left: 0.5em;
+}

@@ -1,5 +1,6 @@
 export * from "./alert";
 export * from "./completions";
+export * from "./dialog";
 export * from "./fixed_table_editor";
 export * from "./foldable";
 export * from "./icon_button";
