@@ -1,10 +1,10 @@
 \title{Modules over models of double theories}
 \import{macros}
 
-\p{A \em{module} over a model of a double theory is a special kind of bimodule out of #{1}, the terminal model. Recall the definition of bimodule from ([Lambert &
-Patterson 2024](cartesian-double-theories-2024), Definition 9.1). In loc. cit. the word "module" is used where we use "bimodule" here. In this page the aim is to define a notion of module that is to arbitrary bimodules as, in the case of categories (models of the terminal double theory), #{C}-sets and presheaves are to arbitrary profunctors.}
+\p{A \em{module} over a model of a double theory is a special kind of bimodule out of #{1}, the terminal model. Recall that bimodules are defined in ([Lambert &
+Patterson 2024](cartesian-double-theories-2024), Definition 9.1). In loc. cit. the word "module" is used where we use "bimodule" here. Here we aim to define a notion of module that is to arbitrary bimodules as, in the case of categories (models of the terminal double theory), #{C}-sets and presheaves are to arbitrary profunctors.}
 
-\p{An extra constraint is necessary to achieve this for models of arbitrary double theories. For instance, in the case of multicategories we'd like to recover plain multifunctors into \Set, which are known to be a good notion of copresheaf. However, without any constraints, there are [[dbl-000B]]. To solve this problem, we make the following definition, using "instance" as a synonym for "module."}
+\p{An extra constraint is needed to obtain such a definition for models of arbitrary double theories. For instance, in the case of multicategories we'd like to recover multifunctors into \Set, which are known to be a good notion of copresheaf. However, without any constraints, there are [[dbl-000B]]. To solve this problem, we make the following definition, using "instance" as a synonym for "module."}
 
 \subtree{
     \title{Instance of a model}
@@ -26,11 +26,12 @@ Patterson 2024](cartesian-double-theories-2024), Definition 9.1). In loc. cit. t
     \p{A \define{co-instance} is a bimodule #{X\proTo 1} satisfying the dual conditions.}
 }
 \subtree{
+    \taxon{Explanation}
     \title{Explication of the definition of instance}
     \p{
         Let us unfold this example using the definition cited above. Then we have:
         \ul{
-            \li{For each proarrow #{m:x\proto y} in \dbl{D}, a proarrow #{H_m:1\proto X(y)} in \dbl{E}.}
+            \li{For each proarrow #{m:x\proto y} in \dbl{D}, a proarrow #{H(m):1\proto X(y)} in \dbl{E}.}
             \li{For every cell as on the left below in \dbl{D}, a corresponding cell as on the right in \cat{E}:
             \quiver{\begin{tikzcd}
                     x & y & 1 & Xy \\
@@ -48,24 +49,24 @@ Patterson 2024](cartesian-double-theories-2024), Definition 9.1). In loc. cit. t
                 \end{tikzcd}}
                 }
             \li{For every composable pair #{x \xproto{m} y \xproto{n} z} in \dbl{D}, action cells in \dbl{E} as below:
-            \quiver{% % https://q.uiver.app/#q=WzAsMTAsWzAsMCwiMXgiXSxbMSwwLCIxeSJdLFsyLDAsIlh6Il0sWzAsMSwiMXgiXSxbMiwxLCJYeiJdLFszLDAsIjF4Il0sWzQsMCwiWHkiXSxbNSwwLCJYeiJdLFszLDEsIjF4Il0sWzUsMSwiWHoiXSxbMCwxLCIxbSIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsxLDIsIkhuIiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzMsNCwiSChtbikiLDJdLFswLDMsIj0iLDFdLFsyLDQsIj0iLDFdLFs1LDYsIkhtIiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzYsNywiWG4iLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbNSw4LCI9IiwxXSxbNyw5LCI9IiwxXSxbOCw5LCJIKG1uKSIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsxLDEyLCJIXlxcZWxsX3ttLG59IiwxLHsibGFiZWxfcG9zaXRpb24iOjMwLCJzaG9ydGVuIjp7InRhcmdldCI6MzB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNiwxOSwiSF5yX3ttLG59IiwxLHsibGFiZWxfcG9zaXRpb24iOjMwLCJzaG9ydGVuIjp7InRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
-            \begin{tikzcd}
-                1x & 1y & Xz & 1x & Xy & Xz \\
-                1x && Xz & 1x && Xz
-                \arrow["1m", "\shortmid"{marking}, from=1-1, to=1-2]
-                \arrow["{=}"{description}, from=1-1, to=2-1]
-                \arrow["Hn", "\shortmid"{marking}, from=1-2, to=1-3]
-                \arrow["{=}"{description}, from=1-3, to=2-3]
-                \arrow["Hm", "\shortmid"{marking}, from=1-4, to=1-5]
-                \arrow["{=}"{description}, from=1-4, to=2-4]
-                \arrow["Xn", "\shortmid"{marking}, from=1-5, to=1-6]
-                \arrow["{=}"{description}, from=1-6, to=2-6]
-                \arrow[""{name=0, anchor=center, inner sep=0}, "{H(mn)}"', from=2-1, to=2-3]
-                \arrow[""{name=1, anchor=center, inner sep=0}, "{H(mn)}"', "\shortmid"{marking}, from=2-4, to=2-6]
-                \arrow["{H^\ell_{m,n}}"{description, pos=0.3}, draw=none, from=1-2, to=0]
-                \arrow["{H^r_{m,n}}"{description, pos=0.3}, draw=none, from=1-5, to=1]
-            \end{tikzcd}}}
-        }
+            \quiver{% https://q.uiver.app/#q=WzAsMTAsWzAsMCwiMXgiXSxbMSwwLCIxeSJdLFsyLDAsIlh6Il0sWzAsMSwiMXgiXSxbMiwxLCJYeiJdLFszLDAsIjF4Il0sWzQsMCwiWHkiXSxbNSwwLCJYeiJdLFszLDEsIjF4Il0sWzUsMSwiWHoiXSxbMCwxLCIxbSIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsxLDIsIkhuIiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzMsNCwiSChtbikiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbNSw2LCJIbSIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFs2LDcsIlhuIiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzgsOSwiSChtbikiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMCwzLCIiLDIseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsyLDQsIiIsMCx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzUsOCwiIiwyLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNyw5LCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxLDEyLCJIXlxcZWxsX3ttLG59IiwxLHsibGFiZWxfcG9zaXRpb24iOjMwLCJzaG9ydGVuIjp7InRhcmdldCI6MzB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNiwxNSwiSF5yX3ttLG59IiwxLHsibGFiZWxfcG9zaXRpb24iOjMwLCJzaG9ydGVuIjp7InRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
+\begin{tikzcd}
+	1x & 1y & Xz & 1x & Xy & Xz \\
+	1x && Xz & 1x && Xz
+	\arrow["1m", "\shortmid"{marking}, from=1-1, to=1-2]
+	\arrow[Rightarrow, no head, from=1-1, to=2-1]
+	\arrow["Hn", "\shortmid"{marking}, from=1-2, to=1-3]
+	\arrow[Rightarrow, no head, from=1-3, to=2-3]
+	\arrow["Hm", "\shortmid"{marking}, from=1-4, to=1-5]
+	\arrow[Rightarrow, no head, from=1-4, to=2-4]
+	\arrow["Xn", "\shortmid"{marking}, from=1-5, to=1-6]
+	\arrow[Rightarrow, no head, from=1-6, to=2-6]
+	\arrow[""{name=0, anchor=center, inner sep=0}, "{H(mn)}"', "\shortmid"{marking}, from=2-1, to=2-3]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "{H(mn)}"', "\shortmid"{marking}, from=2-4, to=2-6]
+	\arrow["{H^\ell_{m,n}}"{description, pos=0.3}, draw=none, from=1-2, to=0]
+	\arrow["{H^r_{m,n}}"{description, pos=0.3}, draw=none, from=1-5, to=1]
+\end{tikzcd}}
+        }}
         Along with the various usual axioms of a bimodule, we have added the assumption that #{H^\ell_{m,n}} be invertible.
         As an abuse of notation, probably justified by a coherence theorem if pressed, we shall write #{H^\ell_{m,n}} as an identity.
         This leads to several reductions of structure, as follows:}
@@ -77,46 +78,46 @@ Patterson 2024](cartesian-double-theories-2024), Definition 9.1). In loc. cit. t
 
 
     \li{Similarly, consider the condition of naturality of left actions, which says that given horizontally composable cells in \dbl{D}, we have the equality below:
-       % https://q.uiver.app/#q=WzAsMjIsWzIsMCwieCJdLFszLDAsInkiXSxbMiwxLCJ4JyJdLFszLDEsInknIl0sWzQsMCwieiJdLFs0LDEsInonIl0sWzMsMywiPSJdLFswLDIsIjF4Il0sWzEsMiwiMXkiXSxbMiwyLCJYeiJdLFswLDMsIjF4JyJdLFsxLDMsIjF5JyJdLFsyLDMsIlh6JyJdLFswLDQsIjF4JyJdLFsyLDQsIlh6JyJdLFs0LDIsIjF4Il0sWzUsMiwiMXkiXSxbNiwyLCJYeiJdLFs0LDMsIjF4Il0sWzYsMywiWHoiXSxbNCw0LCIxeCciXSxbNiw0LCJYeiciXSxbMCwyLCJmIiwyXSxbMSwzLCJnIiwxXSxbMCwxLCJtIiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzIsMywibiIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsxLDQsIm0nIiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzQsNSwiaCJdLFszLDUsIm4nIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzcsMTAsIjFmIiwyXSxbMTAsMTMsIj0iLDFdLFs5LDEyLCJYaCJdLFsxMiwxNCwiPSIsMV0sWzEwLDExLCIxbSciLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMTEsMTIsIkhuJyIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFs4LDExLCIxZyIsMV0sWzcsOCwiMW0iLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbOCw5LCJIbiIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsxMywxNCwiSChtJ24nKSIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsxNSwxOCwiPSIsMV0sWzE4LDIwLCIxZiIsMV0sWzE3LDE5LCI9IiwxXSxbMTksMjEsIlhoIiwxXSxbMjAsMjEsIkgobSduJykiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMTgsMTksIkgobW4pIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzE1LDE2LCIxbSIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsxNiwxNywiSG4iLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMjQsMjUsIlxcYWxwaGEiLDEseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMjYsMjgsIlxcYmV0YSIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs0NCw0MywiSChcXGFscGhhXFxiZXRhKSIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxNiw0NCwiSF5cXGVsbF97bSxufSIsMSx7InNob3J0ZW4iOnsidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxMSwzOCwiSF5cXGVsbF97bScsbid9IiwxLHsic2hvcnRlbiI6eyJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzM3LDM0LCJIXFxiZXRhIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzM2LDMzLCIxXFxhbHBoYSIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dXQ==
-        \quiver{\begin{tikzcd}
-            && x & y & z \\
-            && {x'} & {y'} & {z'} \\
-            1x & 1y & Xz && 1x & 1y & Xz \\
-            {1x'} & {1y'} & {Xz'} & {=} & 1x && Xz \\
-            {1x'} && {Xz'} && {1x'} && {Xz'}
-            \arrow[""{name=0, anchor=center, inner sep=0}, "m", "\shortmid"{marking}, from=1-3, to=1-4]
-            \arrow["f"', from=1-3, to=2-3]
-            \arrow[""{name=1, anchor=center, inner sep=0}, "{m'}", "\shortmid"{marking}, from=1-4, to=1-5]
-            \arrow["g"{description}, from=1-4, to=2-4]
-            \arrow["h", from=1-5, to=2-5]
-            \arrow[""{name=2, anchor=center, inner sep=0}, "n"', "\shortmid"{marking}, from=2-3, to=2-4]
-            \arrow[""{name=3, anchor=center, inner sep=0}, "{n'}"', "\shortmid"{marking}, from=2-4, to=2-5]
-            \arrow[""{name=4, anchor=center, inner sep=0}, "1m", "\shortmid"{marking}, from=3-1, to=3-2]
-            \arrow["1f"', from=3-1, to=4-1]
-            \arrow[""{name=5, anchor=center, inner sep=0}, "Hn", "\shortmid"{marking}, from=3-2, to=3-3]
-            \arrow["1g"{description}, from=3-2, to=4-2]
-            \arrow["Xh", from=3-3, to=4-3]
-            \arrow["1m", "\shortmid"{marking}, from=3-5, to=3-6]
-            \arrow["{=}"{description}, from=3-5, to=4-5]
-            \arrow["Hn", "\shortmid"{marking}, from=3-6, to=3-7]
-            \arrow["{=}"{description}, from=3-7, to=4-7]
-            \arrow[""{name=6, anchor=center, inner sep=0}, "{1m'}"', "\shortmid"{marking}, from=4-1, to=4-2]
-            \arrow["{=}"{description}, from=4-1, to=5-1]
-            \arrow[""{name=7, anchor=center, inner sep=0}, "{Hn'}"', "\shortmid"{marking}, from=4-2, to=4-3]
-            \arrow["{=}"{description}, from=4-3, to=5-3]
-            \arrow[""{name=8, anchor=center, inner sep=0}, "{H(mn)}"', "\shortmid"{marking}, from=4-5, to=4-7]
-            \arrow["1f"{description}, from=4-5, to=5-5]
-            \arrow["Xh"{description}, from=4-7, to=5-7]
-            \arrow[""{name=9, anchor=center, inner sep=0}, "{H(m'n')}"', "\shortmid"{marking}, from=5-1, to=5-3]
-            \arrow[""{name=10, anchor=center, inner sep=0}, "{H(m'n')}"', "\shortmid"{marking}, from=5-5, to=5-7]
-            \arrow["\alpha"{description}, draw=none, from=0, to=2]
-            \arrow["\beta"{description}, draw=none, from=1, to=3]
-            \arrow["{1\alpha}"{description}, draw=none, from=4, to=6]
-            \arrow["{H\beta}"{description}, draw=none, from=5, to=7]
-            \arrow["{H^\ell_{m,n}}"{description}, draw=none, from=3-6, to=8]
-            \arrow["{H^\ell_{m',n'}}"{description}, draw=none, from=4-2, to=9]
-            \arrow["{H(\alpha\beta)}"{description}, draw=none, from=8, to=10]
-        \end{tikzcd}}
+        \quiver{% https://q.uiver.app/#q=WzAsMjIsWzIsMCwieCJdLFszLDAsInkiXSxbMiwxLCJ4JyJdLFszLDEsInknIl0sWzQsMCwieiJdLFs0LDEsInonIl0sWzMsMywiPSJdLFswLDIsIjF4Il0sWzEsMiwiMXkiXSxbMiwyLCJYeiJdLFswLDMsIjF4JyJdLFsxLDMsIjF5JyJdLFsyLDMsIlh6JyJdLFswLDQsIjF4JyJdLFsyLDQsIlh6JyJdLFs0LDIsIjF4Il0sWzUsMiwiMXkiXSxbNiwyLCJYeiJdLFs0LDMsIjF4Il0sWzYsMywiWHoiXSxbNCw0LCIxeCciXSxbNiw0LCJYeiciXSxbMCwyLCJmIiwyXSxbMSwzLCJnIiwxXSxbMCwxLCJtIiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzIsMywibSciLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMSw0LCJuIiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzQsNSwiaCJdLFszLDUsIm4nIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzcsMTAsIjFmIiwyXSxbOSwxMiwiWGgiXSxbMTAsMTEsIjFtJyIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsxMSwxMiwiSG4nIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzgsMTEsIjFnIiwxXSxbNyw4LCIxbSIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFs4LDksIkhuIiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzEzLDE0LCJIKG0nbicpIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzE4LDIwLCIxZiIsMV0sWzE5LDIxLCJYaCIsMV0sWzIwLDIxLCJIKG0nbicpIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzE4LDE5LCJIKG1uKSIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsxNSwxNiwiMW0iLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMTYsMTcsIkhuIiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzEwLDEzLCIiLDEseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxMiwxNCwiIiwxLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMTUsMTgsIiIsMSx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzE3LDE5LCIiLDEseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsyNCwyNSwiXFxhbHBoYSIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsyNiwyOCwiXFxiZXRhIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzQwLDM5LCJIKFxcYWxwaGFcXGJldGEpIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzE2LDQwLCJIXlxcZWxsX3ttLG59IiwxLHsic2hvcnRlbiI6eyJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzExLDM2LCJIXlxcZWxsX3ttJyxuJ30iLDEseyJzaG9ydGVuIjp7InRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMzUsMzIsIkhcXGJldGEiLDEseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMzQsMzEsIjFcXGFscGhhIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV1d
+\begin{tikzcd}
+	&& x & y & z \\
+	&& {x'} & {y'} & {z'} \\
+	1x & 1y & Xz && 1x & 1y & Xz \\
+	{1x'} & {1y'} & {Xz'} & {=} & 1x && Xz \\
+	{1x'} && {Xz'} && {1x'} && {Xz'}
+	\arrow[""{name=0, anchor=center, inner sep=0}, "m", "\shortmid"{marking}, from=1-3, to=1-4]
+	\arrow["f"', from=1-3, to=2-3]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "n", "\shortmid"{marking}, from=1-4, to=1-5]
+	\arrow["g"{description}, from=1-4, to=2-4]
+	\arrow["h", from=1-5, to=2-5]
+	\arrow[""{name=2, anchor=center, inner sep=0}, "{m'}"', "\shortmid"{marking}, from=2-3, to=2-4]
+	\arrow[""{name=3, anchor=center, inner sep=0}, "{n'}"', "\shortmid"{marking}, from=2-4, to=2-5]
+	\arrow[""{name=4, anchor=center, inner sep=0}, "1m", "\shortmid"{marking}, from=3-1, to=3-2]
+	\arrow["1f"', from=3-1, to=4-1]
+	\arrow[""{name=5, anchor=center, inner sep=0}, "Hn", "\shortmid"{marking}, from=3-2, to=3-3]
+	\arrow["1g"{description}, from=3-2, to=4-2]
+	\arrow["Xh", from=3-3, to=4-3]
+	\arrow["1m", "\shortmid"{marking}, from=3-5, to=3-6]
+	\arrow[Rightarrow, no head, from=3-5, to=4-5]
+	\arrow["Hn", "\shortmid"{marking}, from=3-6, to=3-7]
+	\arrow[Rightarrow, no head, from=3-7, to=4-7]
+	\arrow[""{name=6, anchor=center, inner sep=0}, "{1m'}"', "\shortmid"{marking}, from=4-1, to=4-2]
+	\arrow[Rightarrow, no head, from=4-1, to=5-1]
+	\arrow[""{name=7, anchor=center, inner sep=0}, "{Hn'}"', "\shortmid"{marking}, from=4-2, to=4-3]
+	\arrow[Rightarrow, no head, from=4-3, to=5-3]
+	\arrow[""{name=8, anchor=center, inner sep=0}, "{H(mn)}"', "\shortmid"{marking}, from=4-5, to=4-7]
+	\arrow["1f"{description}, from=4-5, to=5-5]
+	\arrow["Xh"{description}, from=4-7, to=5-7]
+	\arrow[""{name=9, anchor=center, inner sep=0}, "{H(m'n')}"', "\shortmid"{marking}, from=5-1, to=5-3]
+	\arrow[""{name=10, anchor=center, inner sep=0}, "{H(m'n')}"', "\shortmid"{marking}, from=5-5, to=5-7]
+	\arrow["\alpha"{description}, draw=none, from=0, to=2]
+	\arrow["\beta"{description}, draw=none, from=1, to=3]
+	\arrow["{1\alpha}"{description}, draw=none, from=4, to=6]
+	\arrow["{H\beta}"{description}, draw=none, from=5, to=7]
+	\arrow["{H^\ell_{m,n}}"{description}, draw=none, from=3-6, to=8]
+	\arrow["{H^\ell_{m',n'}}"{description}, draw=none, from=4-2, to=9]
+	\arrow["{H(\alpha\beta)}"{description}, draw=none, from=8, to=10]
+\end{tikzcd}}
     Since #{1\alpha} and the #{H^\ell}s are all identities, this amounts to the condition that #{H\beta=H(\alpha\beta)} and in particular, #{H\alpha=H(\id_g)}. 
     We can again thus forget about #{H\alpha} except in the case #{\alpha=\id_f} for a tight morphism #{f}. 
     We therefore again shift notation and write #{H(f)} for #{H(\id_f)}.
@@ -307,7 +308,7 @@ Patterson 2024](cartesian-double-theories-2024), Definition 9.1). In loc. cit. t
 \subtree{
     \title{Instances of multicategories}
     \taxon{example}
-    \p{An instance of a multicategory #{M}, viewed as a model of the theory of promonoids 
+    \p{An instance of a multicategory #{M}, viewed as a model of the [theory of promonoids](thy-000A)
     in \Span, is a multifunctor #{M\to \Set}, because the invertibility of the action cells 
     means every heteromorphism span #{H_n:1^m\proto M_0} is isomorphic, and we can consider just
     the unary heteromorphisms with their right action by #{M}; this is precisely a multifunctor. 
@@ -326,7 +327,7 @@ in this case, as is true whenever the double theory being modeled lacks nontrivi
 \subtree{
     \title{Instances profunctors}
     \taxon{example}
-\p{For an example intermediate in complexity, consider the theory of a proarrow. A bimodule 
+\p{For an example intermediate in complexity, consider the [theory of a proarrow](thy-0006). A bimodule
 #{M:H\proTo K} looks like this:
 \quiver{
     % https://q.uiver.app/#q=WzAsNCxbMCwwLCJYIl0sWzEsMCwiWSJdLFswLDEsIloiXSxbMSwxLCJXIl0sWzAsMSwiSCIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsyLDMsIksiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMCwyLCIiLDEseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMSwzLCIiLDEseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMCwzLCIiLDEseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMSw4LCIiLDEseyJzaG9ydGVuIjp7InRhcmdldCI6MjB9fV0sWzIsOCwiIiwxLHsic2hvcnRlbiI6eyJ0YXJnZXQiOjIwfX1dXQ==
@@ -352,7 +353,7 @@ which seems to be the right notion in this case.}
 \subtree{
     \title{Modules over monoidal categories}
     \taxon{example}
-    \p{}
+    \p{\strong{TODO}}
 }
 
 
