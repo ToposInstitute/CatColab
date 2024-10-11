@@ -2,7 +2,7 @@
 \taxon{example}
 \import{macros}
 
-\p{Consider aa [multicategory](dct-000A) #{\cat{M}} as a model of the following theory:}
+\p{Consider a [multicategory](dct-000A) #{\cat{M}} as a model of the following theory:}
 \transclude{thy-000A}
 \p{The terminal multicategory \cat{1} has a single object #{\bullet} and a single multimorphism
 #{(\bullet)^k\to \bullet} for each arity #{k}.
