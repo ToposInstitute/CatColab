@@ -4,7 +4,7 @@ import * as uuid from "uuid";
 import { assert, describe, test } from "vitest";
 
 import type { RpcResult } from "catcolab-api";
-import { createRpcClient } from "./api.ts";
+import { createRpcClient } from "./rpc.ts";
 
 const serverUrl: string = import.meta.env.VITE_SERVER_URL;
 const repoUrl: string = import.meta.env.VITE_AUTOMERGE_REPO_URL;
