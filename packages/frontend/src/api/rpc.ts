@@ -4,7 +4,7 @@ import { createContext } from "solid-js";
 import * as uuid from "uuid";
 
 import type { QubitServer } from "catcolab-api";
-import { makeDocReactive } from "./util/automerge_solid";
+import { makeDocReactive } from "./automerge";
 
 /** RPC client for communicating with the CatColab backend. */
 export type RpcClient = QubitServer;
@@ -15,9 +15,6 @@ export const createRpcClient = (serverUrl: string) =>
 
 /** Context for the RPC client. */
 export const RpcContext = createContext<RpcClient>();
-
-/** Context for the Automerge repo. */
-export const RepoContext = createContext<Repo>();
 
 /** Automerge document retrieved from the backend. */
 export type RetrievedDoc<T> = {

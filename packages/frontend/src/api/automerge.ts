@@ -1,6 +1,9 @@
-import type { DocHandle, DocHandleChangePayload } from "@automerge/automerge-repo";
-import { type Accessor, createEffect, createSignal } from "solid-js";
+import type { DocHandle, DocHandleChangePayload, Repo } from "@automerge/automerge-repo";
+import { type Accessor, createContext, createEffect, createSignal } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
+
+/** Context for the Automerge repo. */
+export const RepoContext = createContext<Repo>();
 
 /** Create a Solid Store that tracks an Automerge document.
  */
