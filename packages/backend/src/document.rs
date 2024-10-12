@@ -5,10 +5,10 @@ use serde_json::Value;
 use ts_rs::TS;
 use uuid::Uuid;
 
-use super::app::{AppError, AppState};
+use super::app::{AppCtx, AppError, AppState};
 
 /// Creates a new document ref with initial content.
-pub async fn new_ref(state: AppState, content: Value) -> Result<Uuid, AppError> {
+pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
     let ref_id = Uuid::now_v7();
     let query = sqlx::query!(
         "
@@ -23,12 +23,12 @@ pub async fn new_ref(state: AppState, content: Value) -> Result<Uuid, AppError> 
         ref_id,
         content
     );
-    query.execute(&state.db).await?;
+    query.execute(&ctx.state.db).await?;
     Ok(ref_id)
 }
 
 /// Gets the content of the head snapshot for a document ref.
-pub async fn head_snapshot(state: AppState, ref_id: Uuid) -> Result<Value, AppError> {
+pub async fn head_snapshot(ctx: AppCtx, ref_id: Uuid) -> Result<Value, AppError> {
     let query = sqlx::query!(
         "
         SELECT content FROM snapshots
@@ -36,7 +36,7 @@ pub async fn head_snapshot(state: AppState, ref_id: Uuid) -> Result<Value, AppEr
         ",
         ref_id
     );
-    Ok(query.fetch_one(&state.db).await?.content)
+    Ok(query.fetch_one(&ctx.state.db).await?.content)
 }
 
 /// Saves the document by overwriting the snapshot at the current head.
@@ -59,7 +59,7 @@ pub async fn autosave(state: AppState, data: RefContent) -> Result<(), AppError>
 
 The snapshot at the previous head is *not* deleted.
 */
-pub async fn save_snapshot(state: AppState, data: RefContent) -> Result<(), AppError> {
+pub async fn save_snapshot(ctx: AppCtx, data: RefContent) -> Result<(), AppError> {
     let RefContent { ref_id, content } = data;
     let query = sqlx::query!(
         "
@@ -75,17 +75,16 @@ pub async fn save_snapshot(state: AppState, data: RefContent) -> Result<(), AppE
         ref_id,
         content
     );
-    query.execute(&state.db).await?;
+    query.execute(&ctx.state.db).await?;
     Ok(())
 }
 
 /// Gets an Automerge document ID for the document ref.
-pub async fn doc_id(state: AppState, ref_id: Uuid) -> Result<String, AppError> {
-    let ack = state
-        .automerge_io
-        .emit_with_ack::<Vec<Option<String>>>("get_doc", ref_id)
-        .unwrap();
+pub async fn doc_id(ctx: AppCtx, ref_id: Uuid) -> Result<String, AppError> {
+    let automerge_io = &ctx.state.automerge_io;
+    let ack = automerge_io.emit_with_ack::<Vec<Option<String>>>("get_doc", ref_id).unwrap();
     let mut response = ack.await?;
+
     let maybe_doc_id = response.data.pop().flatten();
     if let Some(doc_id) = maybe_doc_id {
         // If an Automerge doc handle for this ref already exists, return it.
@@ -93,9 +92,9 @@ pub async fn doc_id(state: AppState, ref_id: Uuid) -> Result<String, AppError> {
     } else {
         // Otherwise, fetch the content from the database and create a new
         // Automerge doc handle.
-        let content = head_snapshot(state.clone(), ref_id).await?;
+        let content = head_snapshot(ctx.clone(), ref_id).await?;
         let data = RefContent { ref_id, content };
-        let ack = state.automerge_io.emit_with_ack::<Vec<String>>("create_doc", data).unwrap();
+        let ack = automerge_io.emit_with_ack::<Vec<String>>("create_doc", data).unwrap();
         let response = ack.await?;
         Ok(response.data[0].to_string())
     }

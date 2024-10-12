@@ -1,10 +1,13 @@
 use axum::{routing::get, Router};
+use firebase_auth::FirebaseAuth;
 use socketioxide::SocketIo;
 use sqlx::postgres::PgPoolOptions;
+use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
-use tracing::info;
+use tracing::{error, info};
 
 mod app;
+mod auth;
 mod document;
 mod rpc;
 mod socket;
@@ -42,10 +45,31 @@ async fn main() {
     socket::setup_automerge_socket(state.clone());
 
     let main_task = tokio::task::spawn(async {
+        let firebase_auth = FirebaseAuth::new(
+            &dotenvy::var("FIREBASE_PROJECT_ID").expect("`FIREBASE_PROJECT_ID` should be set"),
+        )
+        .await;
+
         let port = web_port();
         let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port)).await.unwrap();
+
         let router = rpc::router();
         let (qubit_service, qubit_handle) = router.to_service(state);
+        let qubit_service = ServiceBuilder::new()
+            .map_request(move |mut req: hyper::Request<_>| {
+                match auth::verify_request(&firebase_auth, &req) {
+                    Ok(Some(user)) => {
+                        req.extensions_mut().insert(user);
+                    }
+                    Ok(None) => {}
+                    Err(err) => {
+                        error!("Authentication error: {}", err);
+                    }
+                };
+                req
+            })
+            .service(qubit_service);
+
         let app = Router::new()
             .route("/", get(|| async { "Hello! The CatColab server is running" }))
             .nest_service("/rpc", qubit_service)
