@@ -56,13 +56,15 @@ const Root = (props: RouteSectionProps<unknown>) => {
 };
 
 function CreateModel() {
-    const client = useContext(RPCContext);
-    invariant(client, "Missing context to create model");
+    const rpc = useContext(RPCContext);
+    invariant(rpc, "Missing context to create model");
 
     const init = newModelDocument();
 
     const [ref] = createResource<string>(async () => {
-        return await client.mutation(["new_ref", init]);
+        const result = await rpc.new_ref.mutate(init as any);
+        invariant(result.tag === "Ok", "Failed to create model");
+        return result.content;
     });
 
     return (

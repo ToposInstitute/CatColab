@@ -168,14 +168,17 @@ export default function ModelPage() {
 export function ModelDocumentEditor(props: {
     liveDoc: LiveModelDocument;
 }) {
-    const client = useContext(RPCContext);
-    invariant(client, "Missing context for model document editor");
+    const rpc = useContext(RPCContext);
+    invariant(rpc, "Missing context for model document editor");
 
     const navigate = useNavigate();
 
     const createAnalysis = async () => {
         const init = newAnalysisDocument(props.liveDoc.refId);
-        const newRef = await client.mutation(["new_ref", init]);
+
+        const result = await rpc.new_ref.mutate(init as any);
+        invariant(result.tag === "Ok", "Failed to create analysis");
+        const newRef = result.content;
 
         navigate(`/analysis/${newRef}`);
     };

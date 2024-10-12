@@ -1,18 +1,15 @@
 import type { DocHandle, DocumentId, Repo } from "@automerge/automerge-repo";
-import { type Client, FetchTransport, createClient } from "@rspc/client";
+import { http, build_client } from "@qubit-rs/client";
 import { createContext } from "solid-js";
 import * as uuid from "uuid";
 
-import type { Procedures } from "backend";
+import type { QubitServer } from "catcolab-api";
 import { makeDocReactive } from "./util/automerge_solid";
 
-export type RPCClient = Client<Procedures>;
+export const createRPCClient = (serverUrl: string) =>
+    build_client<QubitServer>(http(`${serverUrl}/rpc`));
 
-export function createRPCClient(serverUrl: string): RPCClient {
-    return createClient<Procedures>({
-        transport: new FetchTransport(`${serverUrl}/rpc`),
-    });
-}
+export type RPCClient = QubitServer;
 
 /** Context for the RPC client to communicate with backend. */
 export const RPCContext = createContext<RPCClient>();
@@ -38,9 +35,14 @@ export async function retrieveDoc<T extends object>(
     let docId: DocumentId;
 
     if (uuid.validate(refId)) {
-        docId = (await client.query(["doc_id", refId])) as DocumentId;
+        const result = await client.doc_id.query(refId);
+        if (result.tag === "Ok") {
+            docId = result.content as DocumentId;
+        } else {
+            throw new Error(`Failed to retrieve document: ${result.message}`);
+        }
     } else {
-        throw new Error(`Invalid ref ${refId}`);
+        throw new Error(`Invalid document ref ${refId}`);
     }
 
     const docHandle = repo.find(docId) as DocHandle<T>;
