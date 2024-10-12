@@ -3,9 +3,9 @@
     "version": "0.1.0",
     "author": "Evan Patterson <evan@epatters.org>",
     "license": "MIT",
-    "main": "src/index.ts",
+    "main": "index.ts",
     "scripts": {
-        "build": "tsc"
+        "build": "tsc -b"
     },
     "dependencies": {
         "@qubit-rs/client": "^0.4.4",
