@@ -1,51 +1,35 @@
-import type { DocHandle, DocumentId, Repo } from "@automerge/automerge-repo";
 import { http, build_client } from "@qubit-rs/client";
+import type { FirebaseApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
 import { createContext } from "solid-js";
-import * as uuid from "uuid";
 
 import type { QubitServer } from "catcolab-api";
-import { makeDocReactive } from "./automerge";
 
 /** RPC client for communicating with the CatColab backend. */
 export type RpcClient = QubitServer;
 
-/** Create the RPC client for communication with the backend. */
-export const createRpcClient = (serverUrl: string) =>
-    build_client<QubitServer>(http(`${serverUrl}/rpc`));
+/** Create the RPC client for communicating with the backend. */
+export function createRpcClient(serverUrl: string, firebaseApp?: FirebaseApp) {
+    const fetchWithAuth: typeof fetch = async (input, init?) => {
+        const user = firebaseApp && getAuth(firebaseApp).currentUser;
+        if (user) {
+            const token = await user.getIdToken();
+            init = {
+                ...init,
+                headers: {
+                    ...init?.headers,
+                    Authorization: `Bearer ${token}`,
+                    "Access-Control-Allow-Headers": "Authorization,Content-Type",
+                },
+            };
+        }
+        return await fetch(input, init);
+    };
+    const transport = http(`${serverUrl}/rpc`, {
+        fetch: fetchWithAuth,
+    });
+    return build_client<QubitServer>(transport);
+}
 
 /** Context for the RPC client. */
 export const RpcContext = createContext<RpcClient>();
-
-/** Automerge document retrieved from the backend. */
-export type RetrievedDoc<T> = {
-    doc: T;
-    docHandle: DocHandle<T>;
-};
-
-/** Retrieve an Automerge document from the backend.
-
-Returns a document that is reactive along with the Automerge document handle.
- */
-export async function retrieveDoc<T extends object>(
-    rpc: RpcClient,
-    refId: string,
-    repo: Repo,
-): Promise<RetrievedDoc<T>> {
-    let docId: DocumentId;
-
-    if (uuid.validate(refId)) {
-        const result = await rpc.doc_id.query(refId);
-        if (result.tag === "Ok") {
-            docId = result.content as DocumentId;
-        } else {
-            throw new Error(`Failed to retrieve document: ${result.message}`);
-        }
-    } else {
-        throw new Error(`Invalid document ref ${refId}`);
-    }
-
-    const docHandle = repo.find(docId) as DocHandle<T>;
-    const doc = await makeDocReactive(docHandle);
-
-    return { doc, docHandle };
-}
