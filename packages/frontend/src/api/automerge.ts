@@ -1,9 +1,51 @@
-import type { DocHandle, DocHandleChangePayload, Repo } from "@automerge/automerge-repo";
+import type {
+    DocHandle,
+    DocHandleChangePayload,
+    DocumentId,
+    Repo,
+} from "@automerge/automerge-repo";
 import { type Accessor, createContext, createEffect, createSignal } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
+import * as uuid from "uuid";
+
+import type { RpcClient } from "./rpc";
 
 /** Context for the Automerge repo. */
 export const RepoContext = createContext<Repo>();
+
+/** Automerge document retrieved from the backend. */
+export type RetrievedDoc<T> = {
+    doc: T;
+    docHandle: DocHandle<T>;
+};
+
+/** Retrieve an Automerge document from the backend.
+
+Returns a document that is reactive along with the Automerge document handle.
+ */
+export async function retrieveDoc<T extends object>(
+    rpc: RpcClient,
+    refId: string,
+    repo: Repo,
+): Promise<RetrievedDoc<T>> {
+    let docId: DocumentId;
+
+    if (uuid.validate(refId)) {
+        const result = await rpc.doc_id.query(refId);
+        if (result.tag === "Ok") {
+            docId = result.content as DocumentId;
+        } else {
+            throw new Error(`Failed to retrieve document: ${result.message}`);
+        }
+    } else {
+        throw new Error(`Invalid document ref ${refId}`);
+    }
+
+    const docHandle = repo.find(docId) as DocHandle<T>;
+    const doc = await makeDocReactive(docHandle);
+
+    return { doc, docHandle };
+}
 
 /** Create a Solid Store that tracks an Automerge document.
  */

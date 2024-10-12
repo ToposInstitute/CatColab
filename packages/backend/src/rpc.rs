@@ -1,7 +1,9 @@
+use firebase_auth::FirebaseUser;
 use http::StatusCode;
 use qubit::{handler, Extensions, FromRequestExtensions, Router, RpcError};
 use serde::Serialize;
 use serde_json::Value;
+use tracing::info;
 use ts_rs::TS;
 use uuid::Uuid;
 
@@ -72,10 +74,11 @@ impl FromRequestExtensions<AppState> for AppCtx {
         state: AppState,
         mut extensions: Extensions,
     ) -> Result<Self, RpcError> {
-        Ok(AppCtx {
-            state,
-            user: extensions.remove(),
-        })
+        let user: Option<FirebaseUser> = extensions.remove();
+        if let Some(some_user) = &user {
+            info!("Handling request from user: {}", some_user.user_id);
+        }
+        Ok(AppCtx { state, user })
     }
 }
 

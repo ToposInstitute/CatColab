@@ -34,14 +34,13 @@ const Root = (props: RouteSectionProps<unknown>) => {
     invariant(serverUrl, "Must set environment variable VITE_SERVER_URL");
     invariant(repoUrl, "Must set environment variable VITE_AUTOMERGE_REPO_URL");
 
-    const client = createRpcClient(serverUrl);
+    const firebaseApp = initializeApp(firebaseConfig);
+    const client = createRpcClient(serverUrl, firebaseApp);
 
     const repo = new Repo({
         storage: new IndexedDBStorageAdapter("catcolab"),
         network: [new BrowserWebSocketClientAdapter(repoUrl)],
     });
-
-    const firebaseApp = initializeApp(firebaseConfig);
 
     return (
         <MultiProvider

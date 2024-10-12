@@ -57,7 +57,7 @@ async fn main() {
         let (qubit_service, qubit_handle) = router.to_service(state);
         let qubit_service = ServiceBuilder::new()
             .map_request(move |mut req: hyper::Request<_>| {
-                match auth::verify_request(&firebase_auth, &req) {
+                match auth::authorize_user_from_request(&firebase_auth, &req) {
                     Ok(Some(user)) => {
                         req.extensions_mut().insert(user);
                     }

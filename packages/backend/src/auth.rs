@@ -1,7 +1,12 @@
 use firebase_auth::{FirebaseAuth, FirebaseUser};
 
-/// TODO
-pub fn verify_request<T>(
+/** Extracts an authorized user from an HTTP request.
+
+Note that the `firebase_auth` crate has an Axum feature with similar
+functionality, but we don't use it because it doesn't integrate well with the
+RPC service.
+ */
+pub fn authorize_user_from_request<T>(
     firebase_auth: &FirebaseAuth,
     req: &hyper::Request<T>,
 ) -> Result<Option<FirebaseUser>, String> {
