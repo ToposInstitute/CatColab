@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use specta::Type;
+use ts_rs::TS;
 use uuid::Uuid;
 
 use super::app::{AppError, AppState};
@@ -101,7 +101,7 @@ pub async fn doc_id(state: AppState, ref_id: Uuid) -> Result<String, AppError> {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Type)]
+#[derive(Debug, Serialize, Deserialize, TS)]
 pub struct RefContent {
     #[serde(rename = "refId")]
     ref_id: Uuid,

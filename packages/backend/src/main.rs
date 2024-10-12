@@ -44,13 +44,16 @@ async fn main() {
     let main_task = tokio::task::spawn(async {
         let port = web_port();
         let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port)).await.unwrap();
-        let router = rpc::router().arced();
+        let router = rpc::router();
+        let (qubit_service, qubit_handle) = router.to_service(state);
         let app = Router::new()
             .route("/", get(|| async { "Hello! The CatColab server is running" }))
-            .nest("/rpc", rspc_axum::endpoint(router, || state))
+            .nest_service("/rpc", qubit_service)
             .layer(CorsLayer::permissive());
         info!("Web server listening at port {}", port);
         axum::serve(listener, app).await.unwrap();
+
+        qubit_handle.stop().unwrap();
     });
 
     let automerge_io_task = tokio::task::spawn(async {

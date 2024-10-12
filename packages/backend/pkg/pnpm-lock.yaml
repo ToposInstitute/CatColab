@@ -1,0 +1,32 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    dependencies:
+      '@qubit-rs/client':
+        specifier: ^0.4.4
+        version: 0.4.4
+      typescript:
+        specifier: ^5.6.3
+        version: 5.6.3
+
+packages:
+
+  '@qubit-rs/client@0.4.4':
+    resolution: {integrity: sha512-AdaF25aGRU4YkYYxxARH3eYlezzHhGECTFGZ5/zEc9y+iPxdIaaWf4/m8uEtdbzjMEsGaA4vVVd1kuriK6sDzQ==}
+
+  typescript@5.6.3:
+    resolution: {integrity: sha512-hjcS1mhfuyi4WW8IWtjP7brDrG2cuDZukyrYrSauoXGNgx0S7zceP07adYkJycEr56BOUTNPzbInooiN3fn1qw==}
+    engines: {node: '>=14.17'}
+    hasBin: true
+
+snapshots:
+
+  '@qubit-rs/client@0.4.4': {}
+
+  typescript@5.6.3: {}
