@@ -212,10 +212,10 @@ export function ModelPane(props: {
     const doc = () => props.liveDoc.doc;
     const docHandle = () => props.liveDoc.docHandle;
     return (
-        <div class="notebook-container">
-            <div class="model-head">
+      <div class="notebook-container">
+        <div class="model-head">
                 <div class="model-title">
-                    <InlineInput
+                    <InlineInput // for model selection
                         text={doc().name}
                         setText={(text) => {
                             docHandle().change((doc) => {
@@ -225,27 +225,32 @@ export function ModelPane(props: {
                         placeholder="Untitled"
                     />
                 </div>
-                <div class="model-theory">
-                    <select
-                        required
-                        disabled={doc().notebook.cells.some((cell) => cell.tag === "formal")}
-                        value={doc().theory ?? ""}
-                        onInput={(evt) => {
-                            const id = evt.target.value;
-                            docHandle().change((model) => {
-                                model.theory = id ? id : undefined;
-                            });
-                        }}
-                    >
-                        <option value="" disabled selected hidden>
-                            Choose a logic
-                        </option>
-                        <For each={Array.from(theories.metadata())}>
-                            {(meta) => <option value={meta.id}>{meta.name}</option>}
-                        </For>
-                    </select>
-                </div>
             </div>
+           <div class="input-selections">
+            <hr></hr>
+                        <For each={Array.from(theories.metadata())}>
+                            {(meta) => (
+                                <label>
+                                    <input
+                                        type="radio"
+                                        name="theory"
+                                        value={meta.id}
+                                        // checked={doc().theory === meta.id}
+                                        onchange={(evt) => {
+                                            const id = evt.target.value;
+                                            docHandle().change((model) => {
+                                           // model.theory = meta.id; // Set the selected theory
+                                           model.theory = id ? id : undefined
+                                            });
+                                        }}
+                                    />
+                                    <span class="selection-items">{meta.name}</span>
+                                </label>
+                            )}
+                        </For>
+                </div>
+            
+
             <MultiProvider
                 values={[
                     [TheoryContext, liveDoc().theory],
