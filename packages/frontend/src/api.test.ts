@@ -3,13 +3,13 @@ import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network
 import * as uuid from "uuid";
 import { assert, describe, test } from "vitest";
 
-import type { RpcResult } from "catcolab-api/src/RpcResult.ts";
-import { createRPCClient } from "./api.ts";
+import type { RpcResult } from "catcolab-api";
+import { createRpcClient } from "./api.ts";
 
 const serverUrl: string = import.meta.env.VITE_SERVER_URL;
 const repoUrl: string = import.meta.env.VITE_AUTOMERGE_REPO_URL;
 
-const rpc = createRPCClient(serverUrl);
+const rpc = createRpcClient(serverUrl);
 const repo = new Repo({
     network: [new BrowserWebSocketClientAdapter(repoUrl)],
 });

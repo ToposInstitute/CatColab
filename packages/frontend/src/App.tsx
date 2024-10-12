@@ -10,7 +10,8 @@ import { Navigate, type RouteDefinition, type RouteSectionProps, Router } from "
 import { FirebaseProvider } from "solid-firebase";
 import { Match, Switch, createResource, lazy, useContext } from "solid-js";
 
-import { RPCContext, RepoContext, createRPCClient } from "./api";
+import type { JsonValue } from "catcolab-api";
+import { RepoContext, RpcContext, createRpcClient } from "./api";
 import { newModelDocument } from "./document/types";
 import { HelperContainer, lazyMdx } from "./page/help_page";
 import { TheoryLibraryContext, stdTheories } from "./stdlib";
@@ -33,7 +34,7 @@ const Root = (props: RouteSectionProps<unknown>) => {
     invariant(serverUrl, "Must set environment variable VITE_SERVER_URL");
     invariant(repoUrl, "Must set environment variable VITE_AUTOMERGE_REPO_URL");
 
-    const client = createRPCClient(serverUrl);
+    const client = createRpcClient(serverUrl);
 
     const repo = new Repo({
         storage: new IndexedDBStorageAdapter("catcolab"),
@@ -45,7 +46,7 @@ const Root = (props: RouteSectionProps<unknown>) => {
     return (
         <MultiProvider
             values={[
-                [RPCContext, client],
+                [RpcContext, client],
                 [RepoContext, repo],
                 [TheoryLibraryContext, stdTheories],
             ]}
@@ -56,13 +57,13 @@ const Root = (props: RouteSectionProps<unknown>) => {
 };
 
 function CreateModel() {
-    const rpc = useContext(RPCContext);
+    const rpc = useContext(RpcContext);
     invariant(rpc, "Missing context to create model");
 
     const init = newModelDocument();
 
     const [ref] = createResource<string>(async () => {
-        const result = await rpc.new_ref.mutate(init as any);
+        const result = await rpc.new_ref.mutate(init as JsonValue);
         invariant(result.tag === "Ok", "Failed to create model");
         return result.content;
     });

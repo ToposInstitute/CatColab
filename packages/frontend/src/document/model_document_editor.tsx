@@ -12,8 +12,9 @@ import {
 } from "solid-js";
 import invariant from "tiny-invariant";
 
+import type { JsonValue } from "catcolab-api";
 import type { Uuid } from "catlog-wasm";
-import { RPCContext, RepoContext, retrieveDoc } from "../api";
+import { RepoContext, RpcContext, retrieveDoc } from "../api";
 import { IconButton, InlineInput } from "../components";
 import {
     type ModelJudgment,
@@ -143,13 +144,13 @@ export default function ModelPage() {
     const ref = params.ref;
     invariant(ref, "Must provide model ref as parameter to model page");
 
-    const client = useContext(RPCContext);
+    const rpc = useContext(RpcContext);
     const repo = useContext(RepoContext);
     const theories = useContext(TheoryLibraryContext);
-    invariant(client && repo && theories, "Missing context for model page");
+    invariant(rpc && repo && theories, "Missing context for model page");
 
     const [liveDoc] = createResource<LiveModelDocument>(async () => {
-        const { doc, docHandle } = await retrieveDoc<ModelDocument>(client, ref, repo);
+        const { doc, docHandle } = await retrieveDoc<ModelDocument>(rpc, ref, repo);
         return enlivenModelDocument(ref, doc, docHandle, theories);
     });
 
@@ -168,7 +169,7 @@ export default function ModelPage() {
 export function ModelDocumentEditor(props: {
     liveDoc: LiveModelDocument;
 }) {
-    const rpc = useContext(RPCContext);
+    const rpc = useContext(RpcContext);
     invariant(rpc, "Missing context for model document editor");
 
     const navigate = useNavigate();
@@ -176,7 +177,9 @@ export function ModelDocumentEditor(props: {
     const createAnalysis = async () => {
         const init = newAnalysisDocument(props.liveDoc.refId);
 
-        const result = await rpc.new_ref.mutate(init as any);
+        // @ts-expect-error Work around upstream bug:
+        // https://github.com/Aleph-Alpha/ts-rs/pull/359
+        const result = await rpc.new_ref.mutate(init as JsonValue);
         invariant(result.tag === "Ok", "Failed to create analysis");
         const newRef = result.content;
 
