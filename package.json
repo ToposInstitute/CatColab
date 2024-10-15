@@ -19,10 +19,16 @@
     "homepage": "https://next.catcolab.org",
     "devDependencies": {
         "@biomejs/biome": "^1.8.3",
+        "autoprefixer": "^10.4.20",
         "biome": "^0.3.3",
         "depcheck": "^1.4.7",
+        "postcss": "^8.4.47",
+        "tailwindcss": "^3.4.13",
         "tsx": "^4.16.5",
         "typedoc": "^0.26.5"
     },
-    "packageManager": "pnpm@9.11.0"
+    "packageManager": "pnpm@9.11.0",
+    "dependencies": {
+        "@corvu/popover": "^0.2.0"
+    }
 }

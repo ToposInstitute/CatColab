@@ -2,6 +2,10 @@
     font-size: var(--h1-font-size);
 }
 
+.model-theory select:invalid {
+    color: darkgray; /* Color for invalid selection */
+}
+
 .model-head {
     display: flex;
     align-items: center;
@@ -23,24 +27,88 @@
 }
        */
     
-.input-selections input[type="radio"] {
+
+
+/* .input-selections input[type="radio"] {
         position: relative;
-        margin: 3;
-        padding: 0;
+        border-radius: 0;
+        width: 0;
+        opacity: 0;
     }
+*/
 
-.selection-items {
-    margin-top: 5px;
-    padding: 0.5%;
-    background-color: transparent;
+
+#input-selections {
+    display: flex;
+    flex-direction: column;
+    max-width: 30ch;
+    padding: 15px;
+}
+
+#input-selections label {
+    position: relative;
+    cursor: pointer; 
+    margin: 0 0 5% 0;
+}
+
+
+#input-selections input[type="radio"] {
+    position: absolute; 
+    opacity: 0; 
+    width: 0; 
+    height: 0; 
+}
+
+#input-selections label:hover {
+    color: #272727;
+    border-radius: 5%;
+}
+
+#input-selections input[type="radio"]:active + span, #input-selections input[type="radio"]:checked + span {
+    padding: 4px;
+    border-radius: 3%;
+    padding: 8px;
+    font-weight: bold;
+}
+
+
+.selectTriggerButton {
+    border: none;
+    font-size: var(--h3-font-size);
+    background-color: rgb(243, 243, 243);
+    border-radius: 5%;
+    padding: 10px;
+  
+}
+
+.selectTriggerButton:active {
+    border: none;
+    font-size: var(--h3-font-size);
+    border-radius: 5%;
+    padding: 10px;
     color: var(--main-color);
-    font-size: var(--p-font-size);
-    border-radius: 10%;
+    
 }
 
-.selection-items:hover {
-    color: blue;
-    background-color: aliceblue;
-    margin: 2%;
+.subtitle {
+    font-size: var(--h4-font-size);
+    text-align: left;
+    font-weight: bold; 
+    padding: 0 0 3px 0;
 }
 
+.description {
+    color: darkgray;
+    font-size: 11px;
+    text-align: left;
+    padding-bottom: 5%;
+    line-height: 1px;
+}
+
+#divisionCategoryHeader {
+    font-size: var(--h4-font-size);
+    padding: 3% 0 3% 0;
+    text-align: center;
+    color: #717171;
+    text-decoration: underline;
+}

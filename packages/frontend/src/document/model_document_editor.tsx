@@ -11,7 +11,8 @@ import {
     useContext,
 } from "solid-js";
 import invariant from "tiny-invariant";
-
+import { TheoryLibraryContext } from "../stdlib";
+import { TheoryLibrary } from "../stdlib/types";
 import type { Uuid } from "catlog-wasm";
 import { RPCContext, RepoContext, retrieveDoc } from "../api";
 import { IconButton, InlineInput } from "../components";
@@ -38,14 +39,14 @@ import {
     newFormalCell,
 } from "../notebook";
 import { BrandedToolbar, HelpButton } from "../page";
-import { type TheoryLibrary, TheoryLibraryContext } from "../stdlib";
-import type { Theory } from "../theory";
+import { Theory } from "../theory";
 import { type IndexedMap, indexMap } from "../util/indexing";
 import { type ModelDocument, newAnalysisDocument } from "./types";
-
+import Popover from '@corvu/popover'
 import "./model_document_editor.css";
 
 import ChartNetwork from "lucide-solid/icons/chart-network";
+
 
 /** A model document "live" for editing.
 
@@ -207,13 +208,15 @@ export function ModelPane(props: {
 }) {
     const theories = useContext(TheoryLibraryContext);
     invariant(theories, "Library of theories should be provided as context");
-
+    //   const [filteredTheories, setFilteredTheories] = createSignal(theories.metadata());
     const liveDoc = () => props.liveDoc;
     const doc = () => props.liveDoc.doc;
     const docHandle = () => props.liveDoc.docHandle;
+
+
     return (
-      <div class="notebook-container">
-        <div class="model-head">
+        <div class="notebook-container">
+            <div class="model-head">
                 <div class="model-title">
                     <InlineInput // for model selection
                         text={doc().name}
@@ -225,31 +228,84 @@ export function ModelPane(props: {
                         placeholder="Untitled"
                     />
                 </div>
+                <Popover
+                    floatingOptions={{
+                        flip: false,
+                        shift: false,
+                        offset: 10,
+                    }}>
+                    <Popover.Trigger class="selectTriggerButton"> 
+                        <span>{doc().theory ? theories.get(doc().theory)?.name : "Theory"}</span> 
+                    </Popover.Trigger>
+                    <Popover.Portal>
+                        <Popover.Content>
+
+                            <div id="input-selections" class="popup">
+                                <h4 id="divisionCategoryHeader">Data and knowledge</h4>
+                                <div>
+                                    <For each={Array.from(theories.metadata()).filter(meta => meta.divisionCategory === 'Data and knowledge')}>
+                                        {(meta) => (
+
+                                            <label>
+                                                <input
+                                                    type="radio"
+                                                    name="theory"
+                                                    value={meta.id}
+                                                    // checked={doc().theory === meta.id}
+                                                    onchange={(evt) => {
+                                                        const id = evt.target.value;
+                                                        docHandle().change((model) => {
+                                                            // model.theory = meta.id; // Set the selected theory
+                                                            model.theory = id ? id : undefined
+                                                        });
+                                                    }}
+                                                />
+
+                                                <span id="selection-items">{meta.name} <div><span class="description">{meta.description}</span></div></span>
+
+                                            </label>
+                                        )}
+                                    </For>
+                                </div>
+                                <h4 id="divisionCategoryHeader"> Systems Dynamics</h4>
+                                <div>
+                                    <For each={Array.from(theories.metadata()).filter(meta => meta.divisionCategory === 'System Dynamics')}>
+                                        {(meta) => (
+
+                                            <label>
+                                                <input
+                                                    type="radio"
+                                                    name="theory"
+                                                    value={meta.id}
+                                                    // checked={doc().theory === meta.id}
+                                                    onchange={(evt) => {
+                                                        const id = evt.target.value;
+                                                        docHandle().change((model) => {
+                                                            model.theory = id ? id : undefined
+                                                        });
+                                                    }}
+                                                />
+
+                                                <span id="selection-items">{meta.name} <div>
+                                                    <span class="description">{meta.description}</span>
+                                                </div></span>
+
+                                            </label>
+                                        )}
+                                    </For>
+                                </div>
+                            </div>
+                        </Popover.Content>
+                    </Popover.Portal>
+                </Popover>
+
             </div>
-           <div class="input-selections">
-            <hr></hr>
-                        <For each={Array.from(theories.metadata())}>
-                            {(meta) => (
-                                <label>
-                                    <input
-                                        type="radio"
-                                        name="theory"
-                                        value={meta.id}
-                                        // checked={doc().theory === meta.id}
-                                        onchange={(evt) => {
-                                            const id = evt.target.value;
-                                            docHandle().change((model) => {
-                                           // model.theory = meta.id; // Set the selected theory
-                                           model.theory = id ? id : undefined
-                                            });
-                                        }}
-                                    />
-                                    <span class="selection-items">{meta.name}</span>
-                                </label>
-                            )}
-                        </For>
-                </div>
-            
+
+
+
+
+
+
 
             <MultiProvider
                 values={[
@@ -274,6 +330,12 @@ export function ModelPane(props: {
         </div>
     );
 }
+
+
+/* To add search functionality over theory options 
+export function genericSearch<T>( ): boolean {
+
+} */
 
 /** Editor for a cell in a model of a double theory.
  */

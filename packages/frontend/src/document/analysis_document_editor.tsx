@@ -242,3 +242,4 @@ export function AnalysisDocumentEditor(props: {
         </Resizable>
     );
 }
+

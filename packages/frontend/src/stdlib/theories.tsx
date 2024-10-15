@@ -7,7 +7,7 @@ import {
     configureSubmodelsAnalysis,
 } from "../analysis";
 import { Theory } from "../theory";
-import { TheoryLibrary } from "./types";
+import { TheoryLibrary } from "../stdlib/types";
 
 import styles from "./styles.module.css";
 import svgStyles from "./svg_styles.module.css";
@@ -20,6 +20,7 @@ stdTheories.add(
         id: "simple-olog",
         name: "Olog",
         description: "Ontology log, a simple conceptual model",
+        divisionCategory: "Data and knowledge"
     },
     (meta) => {
         const thCategory = new catlog.ThCategory();
@@ -63,6 +64,7 @@ stdTheories.add(
         id: "schema",
         name: "Schema",
         description: "Schema for a categorical database",
+        divisionCategory: "Data and knowledge"
     },
     (meta) => {
         const thSchema = new catlog.ThSchema();
@@ -132,6 +134,8 @@ stdTheories.add(
     {
         id: "reg-net",
         name: "Regulatory network",
+        description: "Model biochemical systems",
+        divisionCategory:"Data and knowledge"
     },
     (meta) => {
         const thSignedCategory = new catlog.ThSignedCategory();
@@ -198,6 +202,8 @@ stdTheories.add(
     {
         id: "causal-loop",
         name: "Causal loop diagram",
+        description: "Model a causal system",
+        divisionCategory: "Data and knowledge",
     },
     (meta) => {
         const thSignedCategory = new catlog.ThSignedCategory();
@@ -266,6 +272,8 @@ stdTheories.add(
     {
         id: "stock-flow",
         name: "Stock and flow",
+        description: "For more detailed, directed causal models",
+        divisionCategory: "System Dynamics",
     },
     (meta) => {
         const thCategoryLinks = new catlog.ThCategoryLinks();
