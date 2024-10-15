@@ -1,6 +1,8 @@
 import type { DocHandle } from "@automerge/automerge-repo";
+import Popover from "@corvu/popover";
 import { MultiProvider } from "@solid-primitives/context";
 import { useNavigate, useParams } from "@solidjs/router";
+import type { Uuid } from "catlog-wasm";
 import {
     type Accessor,
     For,
@@ -11,9 +13,6 @@ import {
     useContext,
 } from "solid-js";
 import invariant from "tiny-invariant";
-import { TheoryLibraryContext } from "../stdlib";
-import { TheoryLibrary } from "../stdlib/types";
-import type { Uuid } from "catlog-wasm";
 import { RPCContext, RepoContext, retrieveDoc } from "../api";
 import { IconButton, InlineInput } from "../components";
 import {
@@ -39,14 +38,14 @@ import {
     newFormalCell,
 } from "../notebook";
 import { BrandedToolbar, HelpButton } from "../page";
-import { Theory } from "../theory";
+import { TheoryLibraryContext } from "../stdlib";
+import type { TheoryLibrary } from "../stdlib/types";
+import type { Theory } from "../theory";
 import { type IndexedMap, indexMap } from "../util/indexing";
 import { type ModelDocument, newAnalysisDocument } from "./types";
-import Popover from '@corvu/popover'
 import "./model_document_editor.css";
 
 import ChartNetwork from "lucide-solid/icons/chart-network";
-
 
 /** A model document "live" for editing.
 
@@ -213,7 +212,6 @@ export function ModelPane(props: {
     const doc = () => props.liveDoc.doc;
     const docHandle = () => props.liveDoc.docHandle;
 
-
     return (
         <div class="notebook-container">
             <div class="model-head">
@@ -233,19 +231,23 @@ export function ModelPane(props: {
                         flip: false,
                         shift: false,
                         offset: 10,
-                    }}>
-                    <Popover.Trigger class="selectTriggerButton"> 
-                        <span>{doc().theory ? theories.get(doc().theory)?.name : "Theory"}</span> 
+                    }}
+                >
+                    <Popover.Trigger class="selectTriggerButton">
+                        <span>{doc().theory ? theories.get(doc().theory)?.name : "Theory"}</span>
                     </Popover.Trigger>
                     <Popover.Portal>
                         <Popover.Content>
-
                             <div id="input-selections" class="popup">
                                 <h4 id="divisionCategoryHeader">Data and knowledge</h4>
                                 <div>
-                                    <For each={Array.from(theories.metadata()).filter(meta => meta.divisionCategory === 'Data and knowledge')}>
+                                    <For
+                                        each={Array.from(theories.metadata()).filter(
+                                            (meta) =>
+                                                meta.divisionCategory === "Data and knowledge",
+                                        )}
+                                    >
                                         {(meta) => (
-
                                             <label>
                                                 <input
                                                     type="radio"
@@ -256,22 +258,31 @@ export function ModelPane(props: {
                                                         const id = evt.target.value;
                                                         docHandle().change((model) => {
                                                             // model.theory = meta.id; // Set the selected theory
-                                                            model.theory = id ? id : undefined
+                                                            model.theory = id ? id : undefined;
                                                         });
                                                     }}
                                                 />
 
-                                                <span id="selection-items">{meta.name} <div><span class="description">{meta.description}</span></div></span>
-
+                                                <span id="selection-items">
+                                                    {meta.name}{" "}
+                                                    <div>
+                                                        <span class="description">
+                                                            {meta.description}
+                                                        </span>
+                                                    </div>
+                                                </span>
                                             </label>
                                         )}
                                     </For>
                                 </div>
                                 <h4 id="divisionCategoryHeader"> Systems Dynamics</h4>
                                 <div>
-                                    <For each={Array.from(theories.metadata()).filter(meta => meta.divisionCategory === 'System Dynamics')}>
+                                    <For
+                                        each={Array.from(theories.metadata()).filter(
+                                            (meta) => meta.divisionCategory === "System Dynamics",
+                                        )}
+                                    >
                                         {(meta) => (
-
                                             <label>
                                                 <input
                                                     type="radio"
@@ -281,15 +292,19 @@ export function ModelPane(props: {
                                                     onchange={(evt) => {
                                                         const id = evt.target.value;
                                                         docHandle().change((model) => {
-                                                            model.theory = id ? id : undefined
+                                                            model.theory = id ? id : undefined;
                                                         });
                                                     }}
                                                 />
 
-                                                <span id="selection-items">{meta.name} <div>
-                                                    <span class="description">{meta.description}</span>
-                                                </div></span>
-
+                                                <span id="selection-items">
+                                                    {meta.name}{" "}
+                                                    <div>
+                                                        <span class="description">
+                                                            {meta.description}
+                                                        </span>
+                                                    </div>
+                                                </span>
                                             </label>
                                         )}
                                     </For>
@@ -298,14 +313,7 @@ export function ModelPane(props: {
                         </Popover.Content>
                     </Popover.Portal>
                 </Popover>
-
             </div>
-
-
-
-
-
-
 
             <MultiProvider
                 values={[
@@ -330,7 +338,6 @@ export function ModelPane(props: {
         </div>
     );
 }
-
 
 /* To add search functionality over theory options 
 export function genericSearch<T>( ): boolean {

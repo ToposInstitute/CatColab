@@ -12,7 +12,7 @@
     justify-content: space-between;
 }
 
- /* .model-theory select {
+/* .model-theory select {
     appearance: none;
     border: none;
     background-color: transparent;
@@ -26,8 +26,6 @@
     color: darkgray;
 }
        */
-    
-
 
 /* .input-selections input[type="radio"] {
         position: relative;
@@ -36,7 +34,6 @@
         opacity: 0;
     }
 */
-
 
 #input-selections {
     display: flex;
@@ -47,16 +44,15 @@
 
 #input-selections label {
     position: relative;
-    cursor: pointer; 
+    cursor: pointer;
     margin: 0 0 5% 0;
 }
 
-
 #input-selections input[type="radio"] {
-    position: absolute; 
-    opacity: 0; 
-    width: 0; 
-    height: 0; 
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
 }
 
 #input-selections label:hover {
@@ -64,13 +60,13 @@
     border-radius: 5%;
 }
 
-#input-selections input[type="radio"]:active + span, #input-selections input[type="radio"]:checked + span {
+#input-selections input[type="radio"]:active + span,
+#input-selections input[type="radio"]:checked + span {
     padding: 4px;
     border-radius: 3%;
     padding: 8px;
     font-weight: bold;
 }
-
 
 .selectTriggerButton {
     border: none;
@@ -78,7 +74,6 @@
     background-color: rgb(243, 243, 243);
     border-radius: 5%;
     padding: 10px;
-  
 }
 
 .selectTriggerButton:active {
@@ -87,13 +82,12 @@
     border-radius: 5%;
     padding: 10px;
     color: var(--main-color);
-    
 }
 
 .subtitle {
     font-size: var(--h4-font-size);
     text-align: left;
-    font-weight: bold; 
+    font-weight: bold;
     padding: 0 0 3px 0;
 }
 

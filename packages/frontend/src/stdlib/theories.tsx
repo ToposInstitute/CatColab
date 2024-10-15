@@ -6,8 +6,8 @@ import {
     configureStockFlowDiagram,
     configureSubmodelsAnalysis,
 } from "../analysis";
-import { Theory } from "../theory";
 import { TheoryLibrary } from "../stdlib/types";
+import { Theory } from "../theory";
 
 import styles from "./styles.module.css";
 import svgStyles from "./svg_styles.module.css";
@@ -20,7 +20,7 @@ stdTheories.add(
         id: "simple-olog",
         name: "Olog",
         description: "Ontology log, a simple conceptual model",
-        divisionCategory: "Data and knowledge"
+        divisionCategory: "Data and knowledge",
     },
     (meta) => {
         const thCategory = new catlog.ThCategory();
@@ -64,7 +64,7 @@ stdTheories.add(
         id: "schema",
         name: "Schema",
         description: "Schema for a categorical database",
-        divisionCategory: "Data and knowledge"
+        divisionCategory: "Data and knowledge",
     },
     (meta) => {
         const thSchema = new catlog.ThSchema();
@@ -135,7 +135,7 @@ stdTheories.add(
         id: "reg-net",
         name: "Regulatory network",
         description: "Model biochemical systems",
-        divisionCategory:"Data and knowledge"
+        divisionCategory: "Data and knowledge",
     },
     (meta) => {
         const thSignedCategory = new catlog.ThSignedCategory();
