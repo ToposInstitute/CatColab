@@ -38,5 +38,8 @@ export default defineConfig({
                 rewrite: (path) => path.replace(/^\/api/, ""),
             },
         },
+        watch: {
+            usePolling: true, // polling may be more reliable within the container
+        },
     },
 });
