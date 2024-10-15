@@ -23,7 +23,6 @@
         "biome": "^0.3.3",
         "depcheck": "^1.4.7",
         "postcss": "^8.4.47",
-        "tailwindcss": "^3.4.13",
         "tsx": "^4.16.5",
         "typedoc": "^0.26.5"
     },
