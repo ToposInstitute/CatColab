@@ -19,10 +19,8 @@
     "homepage": "https://next.catcolab.org",
     "devDependencies": {
         "@biomejs/biome": "^1.8.3",
-        "autoprefixer": "^10.4.20",
         "biome": "^0.3.3",
         "depcheck": "^1.4.7",
-        "postcss": "^8.4.47",
         "tsx": "^4.16.5",
         "typedoc": "^0.26.5"
     },
