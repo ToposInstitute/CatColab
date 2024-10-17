@@ -8,44 +8,12 @@
 
 /* To prevent selection after content has been added. To lock-in selection*/
 
-.model-theory select:invalid.disabled {
-    color: darkgray;
-}
-
-.model-theory select.disabled {
-    pointer-events: none;
-    background-color: lightgray;
-    color: darkgray;
-}
 
 .model-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
 }
-
-/* .model-theory select {
-    appearance: none;
-    border: none;
-    background-color: transparent;
-    color: var(--main-color);
-    font-size: var(--h3-font-size);
-    text-align-last: right;
-}
-
-
-.model-theory select:invalid {
-    color: darkgray;
-}
-       */
-
-/* .input-selections input[type="radio"] {
-        position: relative;
-        border-radius: 0;
-        width: 0;
-        opacity: 0;
-    }
-*/
 
 #input-selections {
     display: flex;
@@ -72,29 +40,6 @@
     border-radius: 5%;
 }
 
-#input-selections input[type="radio"]:active + span,
-#input-selections input[type="radio"]:checked + span {
-    padding: 4px;
-    border-radius: 3%;
-    padding: 8px;
-    font-weight: bold;
-}
-
-.selectTriggerButton {
-    border: none;
-    font-size: var(--h3-font-size);
-    background-color: rgb(243, 243, 243);
-    border-radius: 5%;
-    padding: 10px;
-}
-
-.selectTriggerButton:active {
-    border: none;
-    font-size: var(--h3-font-size);
-    border-radius: 5%;
-    padding: 10px;
-    color: var(--main-color);
-}
 
 .subtitle {
     font-size: var(--h4-font-size);
