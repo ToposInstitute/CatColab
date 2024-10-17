@@ -5,7 +5,6 @@ import { useNavigate, useParams } from "@solidjs/router";
 import type { Uuid } from "catlog-wasm";
 import {
     type Accessor,
-    For,
     Match,
     Switch,
     createMemo,
@@ -46,6 +45,7 @@ import { type ModelDocument, newAnalysisDocument } from "./types";
 import "./model_document_editor.css";
 
 import ChartNetwork from "lucide-solid/icons/chart-network";
+import TheorySelector from './theoryselector'; // Import the new component
 
 /** A model document "live" for editing.
 
@@ -238,78 +238,7 @@ export function ModelPane(props: {
                     </Popover.Trigger>
                     <Popover.Portal>
                         <Popover.Content>
-                            <div id="input-selections" class="popup">
-                                <h4 id="divisionCategoryHeader">Data and Knowledge</h4>
-                                <div>
-                                    <For
-                                        each={Array.from(theories.metadata()).filter(
-                                            (meta) =>
-                                                meta.divisionCategory === "Data and knowledge",
-                                        )}
-                                    >
-                                        {(meta) => (
-                                            <label>
-                                                <input
-                                                    type="radio"
-                                                    name="theory"
-                                                    value={meta.id}
-                                                    // checked={doc().theory === meta.id}
-                                                    onchange={(evt) => {
-                                                        const id = evt.target.value;
-                                                        docHandle().change((model) => {
-                                                            // model.theory = meta.id; // Set the selected theory
-                                                            model.theory = id ? id : undefined;
-                                                        });
-                                                    }}
-                                                />
-
-                                                <span id="selection-items">
-                                                    {meta.name}{" "}
-                                                    <div>
-                                                        <span class="description">
-                                                            {meta.description}
-                                                        </span>
-                                                    </div>
-                                                </span>
-                                            </label>
-                                        )}
-                                    </For>
-                                </div>
-                                <h4 id="divisionCategoryHeader"> System Dynamics</h4>
-                                <div>
-                                    <For
-                                        each={Array.from(theories.metadata()).filter(
-                                            (meta) => meta.divisionCategory === "System Dynamics",
-                                        )}
-                                    >
-                                        {(meta) => (
-                                            <label>
-                                                <input
-                                                    type="radio"
-                                                    name="theory"
-                                                    value={meta.id}
-                                                    // checked={doc().theory === meta.id}
-                                                    onchange={(evt) => {
-                                                        const id = evt.target.value;
-                                                        docHandle().change((model) => {
-                                                            model.theory = id ? id : undefined;
-                                                        });
-                                                    }}
-                                                />
-
-                                                <span id="selection-items">
-                                                    {meta.name}{" "}
-                                                    <div>
-                                                        <span class="description">
-                                                            {meta.description}
-                                                        </span>
-                                                    </div>
-                                                </span>
-                                            </label>
-                                        )}
-                                    </For>
-                                </div>
-                            </div>
+                            <TheorySelector docHandle={docHandle} theories={theories} doc={doc()} />
                         </Popover.Content>
                     </Popover.Portal>
                 </Popover>
