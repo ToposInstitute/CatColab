@@ -23,6 +23,6 @@
 
 body {
     overflow-x: auto;
-    white-space: nowrap;
-    height: auto;
+    white-space: no-wrap;
+
 }
