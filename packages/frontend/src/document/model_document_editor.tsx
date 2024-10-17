@@ -1,18 +1,10 @@
 import type { DocHandle } from "@automerge/automerge-repo";
+import Popover from "@corvu/popover";
 import { MultiProvider } from "@solid-primitives/context";
 import { useNavigate, useParams } from "@solidjs/router";
-import {
-    type Accessor,
-    For,
-    Match,
-    Switch,
-    createMemo,
-    createResource,
-    useContext,
-} from "solid-js";
-import invariant from "tiny-invariant";
-
 import type { Uuid } from "catlog-wasm";
+import { type Accessor, Match, Switch, createMemo, createResource, useContext } from "solid-js";
+import invariant from "tiny-invariant";
 import { RPCContext, RepoContext, retrieveDoc } from "../api";
 import { IconButton, InlineInput } from "../components";
 import {
@@ -38,14 +30,15 @@ import {
     newFormalCell,
 } from "../notebook";
 import { BrandedToolbar, HelpButton } from "../page";
-import { type TheoryLibrary, TheoryLibraryContext } from "../stdlib";
+import { TheoryLibraryContext } from "../stdlib";
+import type { TheoryLibrary } from "../stdlib/types";
 import type { Theory } from "../theory";
 import { type IndexedMap, indexMap } from "../util/indexing";
 import { type ModelDocument, newAnalysisDocument } from "./types";
-
 import "./model_document_editor.css";
 
 import ChartNetwork from "lucide-solid/icons/chart-network";
+import TheorySelector from "./theoryselector"; // Import the new component
 
 /** A model document "live" for editing.
 
@@ -207,15 +200,16 @@ export function ModelPane(props: {
 }) {
     const theories = useContext(TheoryLibraryContext);
     invariant(theories, "Library of theories should be provided as context");
-
+    //   const [filteredTheories, setFilteredTheories] = createSignal(theories.metadata());
     const liveDoc = () => props.liveDoc;
     const doc = () => props.liveDoc.doc;
     const docHandle = () => props.liveDoc.docHandle;
+
     return (
         <div class="notebook-container">
             <div class="model-head">
                 <div class="model-title">
-                    <InlineInput
+                    <InlineInput // for model selection
                         text={doc().name}
                         setText={(text) => {
                             docHandle().change((doc) => {
@@ -225,27 +219,24 @@ export function ModelPane(props: {
                         placeholder="Untitled"
                     />
                 </div>
-                <div class="model-theory">
-                    <select
-                        required
-                        disabled={doc().notebook.cells.some((cell) => cell.tag === "formal")}
-                        value={doc().theory ?? ""}
-                        onInput={(evt) => {
-                            const id = evt.target.value;
-                            docHandle().change((model) => {
-                                model.theory = id ? id : undefined;
-                            });
-                        }}
-                    >
-                        <option value="" disabled selected hidden>
-                            Choose a logic
-                        </option>
-                        <For each={Array.from(theories.metadata())}>
-                            {(meta) => <option value={meta.id}>{meta.name}</option>}
-                        </For>
-                    </select>
-                </div>
+                <Popover
+                    floatingOptions={{
+                        flip: false,
+                        shift: false,
+                        offset: 10,
+                    }}
+                >
+                    <Popover.Trigger>
+                        <p> Theory: {doc().theory}</p>
+                    </Popover.Trigger>
+                    <Popover.Portal>
+                        <Popover.Content>
+                            <TheorySelector docHandle={docHandle} theories={theories} doc={doc()} />
+                        </Popover.Content>
+                    </Popover.Portal>
+                </Popover>
             </div>
+
             <MultiProvider
                 values={[
                     [TheoryContext, liveDoc().theory],
@@ -269,6 +260,11 @@ export function ModelPane(props: {
         </div>
     );
 }
+
+/* To add search functionality over theory options 
+export function genericSearch<T>( ): boolean {
+
+} */
 
 /** Editor for a cell in a model of a double theory.
  */
