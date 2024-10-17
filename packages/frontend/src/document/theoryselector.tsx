@@ -26,17 +26,17 @@ const TheorySelector = (props: TheorySelectorProps) => {
                                 value={meta.id}
                                 onchange={(evt) => {
                                     const id = evt.target.value;
-                                    props.docHandle().change((model: { theory: string | undefined; }) => {
-                                        model.theory = id ? id : undefined;
-                                    });
+                                    props
+                                        .docHandle()
+                                        .change((model: { theory: string | undefined }) => {
+                                            model.theory = id ? id : undefined;
+                                        });
                                 }}
                             />
                             <span id="selection-items">
                                 {meta.name}{" "}
                                 <div>
-                                    <span class="description">
-                                        {meta.description}
-                                    </span>
+                                    <span class="description">{meta.description}</span>
                                 </div>
                             </span>
                         </label>
@@ -58,17 +58,17 @@ const TheorySelector = (props: TheorySelectorProps) => {
                                 value={meta.id}
                                 onchange={(evt) => {
                                     const id = evt.target.value;
-                                    props.docHandle().change((model: { theory: string | undefined; }) => {
-                                        model.theory = id ? id : undefined;
-                                    });
+                                    props
+                                        .docHandle()
+                                        .change((model: { theory: string | undefined }) => {
+                                            model.theory = id ? id : undefined;
+                                        });
                                 }}
                             />
                             <span id="selection-items">
                                 {meta.name}{" "}
                                 <div>
-                                    <span class="description">
-                                        {meta.description}
-                                    </span>
+                                    <span class="description">{meta.description}</span>
                                 </div>
                             </span>
                         </label>
@@ -80,4 +80,3 @@ const TheorySelector = (props: TheorySelectorProps) => {
 };
 
 export default TheorySelector;
-

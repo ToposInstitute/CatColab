@@ -3,14 +3,7 @@ import Popover from "@corvu/popover";
 import { MultiProvider } from "@solid-primitives/context";
 import { useNavigate, useParams } from "@solidjs/router";
 import type { Uuid } from "catlog-wasm";
-import {
-    type Accessor,
-    Match,
-    Switch,
-    createMemo,
-    createResource,
-    useContext,
-} from "solid-js";
+import { type Accessor, Match, Switch, createMemo, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 import { RPCContext, RepoContext, retrieveDoc } from "../api";
 import { IconButton, InlineInput } from "../components";
@@ -45,7 +38,7 @@ import { type ModelDocument, newAnalysisDocument } from "./types";
 import "./model_document_editor.css";
 
 import ChartNetwork from "lucide-solid/icons/chart-network";
-import TheorySelector from './theoryselector'; // Import the new component
+import TheorySelector from "./theoryselector"; // Import the new component
 
 /** A model document "live" for editing.
 
