@@ -8,10 +8,12 @@ use super::path::*;
 
 /** Iterates over all simple paths between two vertices of a finite graph.
 
-A **simple path** is a path in which all vertices and edges are distinct, except
-possibly its source and target vertices. A **simple cycle** is a simple path in
-which the source and target coincide. This being a category theory library, we
-do consider the empty/identity path at a vertex to be a simple cycle.
+A **simple path** is a path in which all edges are distinct.
+
+A **simple cycle** is a simple path in which the source and target coincide.
+
+This being a category theory library, we do consider the empty/identity path at
+a vertex to be a simple cycle.
 
 # References
 
@@ -50,13 +52,15 @@ where
         while let Some(out_edges) = stack.last_mut() {
             if let Some(e) = out_edges.pop() {
                 let tgt = graph.tgt(&e);
-                if tgt == *to {
-                    let result = Path::collect(path.iter().cloned().chain(Some(e)));
-                    return Some(result.unwrap());
-                } else if !visited.contains(&e) {
+                if !visited.contains(&e) {
                     path.push(e.clone());
-                    visited.insert(e);
+                    visited.insert(e.clone());
                     stack.push(graph.out_edges(&tgt).collect());
+                    if tgt == *to {
+                        let result: Option<Path<<G as Graph>::V, <G as Graph>::E>> =
+                            Path::collect(path.iter().cloned());
+                        return Some(result.unwrap());
+                    }
                 }
             } else {
                 stack.pop();
@@ -168,6 +172,22 @@ mod tests {
         assert_eq!(paths, vec![Path::Id(0), Path::Seq(nonempty![0, 1, 2])]);
         let paths: Vec<_> = simple_paths(&g, &0, &2).collect();
         assert_eq!(paths, vec![Path::Seq(nonempty![0, 1])]);
+
+        let mut g: HashGraph<char, &str> = Default::default();
+        assert!(g.add_vertex('x'));
+        assert!(g.add_edge("f", 'x', 'x'));
+        assert!(g.add_edge("g", 'x', 'x'));
+        let paths: Vec<_> = simple_paths(&g, &'x', &'x').collect();
+        assert_eq!(
+            paths,
+            vec![
+                Path::Id('x'),
+                Path::Seq(nonempty!["g"]),
+                Path::Seq(nonempty!["g", "f"]),
+                Path::Seq(nonempty!["f"]),
+                Path::Seq(nonempty!["f", "g"]),
+            ]
+        );
     }
 
     #[test]
