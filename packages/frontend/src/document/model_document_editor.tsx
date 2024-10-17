@@ -239,7 +239,7 @@ export function ModelPane(props: {
                     <Popover.Portal>
                         <Popover.Content>
                             <div id="input-selections" class="popup">
-                                <h4 id="divisionCategoryHeader">Data and knowledge</h4>
+                                <h4 id="divisionCategoryHeader">Data and Knowledge</h4>
                                 <div>
                                     <For
                                         each={Array.from(theories.metadata()).filter(
@@ -275,7 +275,7 @@ export function ModelPane(props: {
                                         )}
                                     </For>
                                 </div>
-                                <h4 id="divisionCategoryHeader"> Systems Dynamics</h4>
+                                <h4 id="divisionCategoryHeader"> System Dynamics</h4>
                                 <div>
                                     <For
                                         each={Array.from(theories.metadata()).filter(
