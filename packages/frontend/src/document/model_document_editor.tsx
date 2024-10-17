@@ -234,7 +234,7 @@ export function ModelPane(props: {
                     }}
                 >
                     <Popover.Trigger class="selectTriggerButton">
-                        <span>Theory</span>
+                        <span>{doc().theory}</span>
                     </Popover.Trigger>
                     <Popover.Portal>
                         <Popover.Content>
