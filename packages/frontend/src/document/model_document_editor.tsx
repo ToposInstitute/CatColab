@@ -233,9 +233,8 @@ export function ModelPane(props: {
                         offset: 10,
                     }}
                 >
-        
                     <Popover.Trigger>
-                       <p> Theory: {doc().theory}</p>
+                        <p> Theory: {doc().theory}</p>
                     </Popover.Trigger>
                     <Popover.Portal>
                         <Popover.Content>

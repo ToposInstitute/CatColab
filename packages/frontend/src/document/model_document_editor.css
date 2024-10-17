@@ -8,7 +8,6 @@
 
 /* To prevent selection after content has been added. To lock-in selection*/
 
-
 .model-head {
     display: flex;
     align-items: center;
@@ -39,7 +38,6 @@
     color: #272727;
     border-radius: 5%;
 }
-
 
 .subtitle {
     font-size: var(--h4-font-size);
