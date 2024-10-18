@@ -1,14 +1,7 @@
 import type { DocHandle } from "@automerge/automerge-repo";
 import { MultiProvider } from "@solid-primitives/context";
 import { useNavigate, useParams } from "@solidjs/router";
-import {
-    type Accessor,
-    Match,
-    Switch,
-    createMemo,
-    createResource,
-    useContext,
-} from "solid-js";
+import { type Accessor, Match, Switch, createMemo, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import Popover from "@corvu/popover";
@@ -234,13 +227,20 @@ export function ModelPane(props: {
                     }}
                 >
                     <div>
-                    <Popover.Trigger  class="selector">
-                    <span>{liveDoc().theory()?.name}</span>
-                    </Popover.Trigger>
+                        <Popover.Trigger class="selector">
+                            <span>{liveDoc().theory()?.name}</span>
+                        </Popover.Trigger>
                     </div>
                     <Popover.Portal>
                         <Popover.Content>
-                           <span> <TheorySelector docHandle={docHandle} theories={theories} doc={doc()} /> </span>
+                            <span>
+                                {" "}
+                                <TheorySelector
+                                    docHandle={docHandle}
+                                    theories={theories}
+                                    doc={doc()}
+                                />{" "}
+                            </span>
                         </Popover.Content>
                     </Popover.Portal>
                 </Popover>

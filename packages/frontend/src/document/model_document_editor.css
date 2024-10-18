@@ -45,13 +45,11 @@
     color: #717171;
 }
 
-
 #input-selections input[type="radio"] {
     position: absolute;
     opacity: 0;
     width: 0;
     height: 0;
-
 }
 
 #input-selections input[type="radio"]:active + span,
