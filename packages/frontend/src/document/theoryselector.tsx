@@ -3,7 +3,7 @@ import type { TheoryLibrary } from "../stdlib/types";
 import type { ModelDocument } from "./types";
 
 interface TheorySelectorProps {
-    docHandle: any; 
+    docHandle: any;
     theories: TheoryLibrary;
     doc: ModelDocument;
 }
