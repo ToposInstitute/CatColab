@@ -20,8 +20,3 @@
 .model-theory select:invalid {
     color: darkgray;
 }
-
-body {
-    overflow-x: auto;
-    white-space: no-wrap;
-}
