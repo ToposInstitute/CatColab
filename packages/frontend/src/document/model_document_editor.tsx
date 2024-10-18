@@ -1,17 +1,10 @@
 import type { DocHandle } from "@automerge/automerge-repo";
 import { MultiProvider } from "@solid-primitives/context";
 import { useNavigate, useParams } from "@solidjs/router";
-import {
-    type Accessor,
-    For,
-    Match,
-    Switch,
-    createMemo,
-    createResource,
-    useContext,
-} from "solid-js";
+import { type Accessor, Match, Switch, createMemo, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
+import Popover from "@corvu/popover";
 import type { Uuid } from "catlog-wasm";
 import { RPCContext, RepoContext, retrieveDoc } from "../api";
 import { IconButton, InlineInput } from "../components";
@@ -41,6 +34,7 @@ import { BrandedToolbar, HelpButton } from "../page";
 import { type TheoryLibrary, TheoryLibraryContext } from "../stdlib";
 import type { Theory } from "../theory";
 import { type IndexedMap, indexMap } from "../util/indexing";
+import TheorySelector from "./theoryselector";
 import { type ModelDocument, newAnalysisDocument } from "./types";
 
 import "./model_document_editor.css";
@@ -225,26 +219,31 @@ export function ModelPane(props: {
                         placeholder="Untitled"
                     />
                 </div>
-                <div class="model-theory">
-                    <select
-                        required
-                        disabled={doc().notebook.cells.some((cell) => cell.tag === "formal")}
-                        value={doc().theory ?? ""}
-                        onInput={(evt) => {
-                            const id = evt.target.value;
-                            docHandle().change((model) => {
-                                model.theory = id ? id : undefined;
-                            });
-                        }}
-                    >
-                        <option value="" disabled selected hidden>
-                            Choose a logic
-                        </option>
-                        <For each={Array.from(theories.metadata())}>
-                            {(meta) => <option value={meta.id}>{meta.name}</option>}
-                        </For>
-                    </select>
-                </div>
+                <Popover
+                    floatingOptions={{
+                        flip: false,
+                        shift: false,
+                        offset: 10,
+                    }}
+                >
+                    <div>
+                        <Popover.Trigger class="selector">
+                            <span>{liveDoc().theory()?.name || "Theory"}</span>
+                        </Popover.Trigger>
+                    </div>
+                    <Popover.Portal>
+                        <Popover.Content>
+                            <span>
+                                {""}
+                                <TheorySelector
+                                    docHandle={docHandle}
+                                    theories={theories}
+                                    doc={doc()}
+                                />{" "}
+                            </span>
+                        </Popover.Content>
+                    </Popover.Portal>
+                </Popover>
             </div>
             <MultiProvider
                 values={[

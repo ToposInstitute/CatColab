@@ -20,3 +20,44 @@
 .model-theory select:invalid {
     color: darkgray;
 }
+
+.selector {
+    background-color: rgb(245, 245, 245);
+    color: rgb(73, 73, 73);
+    border: none;
+    font-size: var(--h3-font-size);
+    font-family: inter;
+    padding: 14px;
+    border-radius: 3%;
+}
+
+.description {
+    color: darkgray;
+    font-size: 11px;
+    text-align: left;
+    line-height: 1px;
+}
+
+#divisionCategoryHeader {
+    font-size: var(--h4-font-size);
+    padding: 3% 0 4% 0;
+    text-align: center;
+    color: #717171;
+}
+
+#input-selections input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+#input-selections input[type="radio"]:active + span,
+#input-selections input[type="radio"]:checked + span {
+    border-radius: 3%;
+    font-weight: bold;
+}
+
+#input-selections {
+    padding: 14px;
+}
