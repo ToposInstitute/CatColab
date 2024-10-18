@@ -66,10 +66,6 @@ h3 {
     flex-grow: 1;
 }
 
-.content-panel {
-    overflow: hidden;
-}
-
 .side-panel {
     background: #f8f8f8;
 }
