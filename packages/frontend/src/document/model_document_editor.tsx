@@ -42,6 +42,8 @@ import { type TheoryLibrary, TheoryLibraryContext } from "../stdlib";
 import type { Theory } from "../theory";
 import { type IndexedMap, indexMap } from "../util/indexing";
 import { type ModelDocument, newAnalysisDocument } from "./types";
+import Popover from "@corvu/popover";
+import TheorySelector from "./theoryselector";
 
 import "./model_document_editor.css";
 
@@ -225,6 +227,22 @@ export function ModelPane(props: {
                         placeholder="Untitled"
                     />
                 </div>
+                <Popover
+                    floatingOptions={{
+                        flip: false,
+                        shift: false,
+                        offset: 10,
+                    }}
+                >
+                    <Popover.Trigger>
+                        <p> Theory: {doc().theory}</p>
+                    </Popover.Trigger>
+                    <Popover.Portal>
+                        <Popover.Content>
+                            <TheorySelector docHandle={docHandle} theories={theories} doc={doc()} />
+                        </Popover.Content>
+                    </Popover.Portal>
+                </Popover>
                 <div class="model-theory">
                     <select
                         required
