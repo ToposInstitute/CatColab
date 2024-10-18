@@ -3,7 +3,6 @@ import { MultiProvider } from "@solid-primitives/context";
 import { useNavigate, useParams } from "@solidjs/router";
 import {
     type Accessor,
-    For,
     Match,
     Switch,
     createMemo,
@@ -234,35 +233,17 @@ export function ModelPane(props: {
                         offset: 10,
                     }}
                 >
-                    <Popover.Trigger>
-                        <p> Theory: {doc().theory}</p>
+                    <div>
+                    <Popover.Trigger  class="selector">
+                    <span>{liveDoc().theory()?.name}</span>
                     </Popover.Trigger>
+                    </div>
                     <Popover.Portal>
                         <Popover.Content>
-                            <TheorySelector docHandle={docHandle} theories={theories} doc={doc()} />
+                           <span> <TheorySelector docHandle={docHandle} theories={theories} doc={doc()} /> </span>
                         </Popover.Content>
                     </Popover.Portal>
                 </Popover>
-                <div class="model-theory">
-                    <select
-                        required
-                        disabled={doc().notebook.cells.some((cell) => cell.tag === "formal")}
-                        value={doc().theory ?? ""}
-                        onInput={(evt) => {
-                            const id = evt.target.value;
-                            docHandle().change((model) => {
-                                model.theory = id ? id : undefined;
-                            });
-                        }}
-                    >
-                        <option value="" disabled selected hidden>
-                            Choose a logic
-                        </option>
-                        <For each={Array.from(theories.metadata())}>
-                            {(meta) => <option value={meta.id}>{meta.name}</option>}
-                        </For>
-                    </select>
-                </div>
             </div>
             <MultiProvider
                 values={[

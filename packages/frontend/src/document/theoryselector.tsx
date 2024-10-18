@@ -1,6 +1,7 @@
 import { For } from "solid-js";
 import type { TheoryLibrary } from "../stdlib/types";
 import type { ModelDocument } from "./types";
+import "./model_document_editor.css";
 
 interface TheorySelectorProps {
     docHandle: any;

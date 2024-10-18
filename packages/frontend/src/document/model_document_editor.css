@@ -21,50 +21,45 @@
     color: darkgray;
 }
 
-#input-selections {
-    display: flex;
-    flex-direction: column;
-    max-width: 30ch;
-    padding: 15px;
-}
-
-#input-selections label {
-    position: relative;
-    cursor: pointer;
-    margin: 0 0 5% 0;
-}
-
-#input-selections input[type="radio"] {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-#input-selections label:hover {
-    color: #272727;
-    border-radius: 5%;
-}
-
-.subtitle {
-    font-size: var(--h4-font-size);
-    text-align: left;
-    font-weight: bold;
-    padding: 0 0 3px 0;
+.selector {
+    background-color: rgb(245, 245, 245);
+    color: rgb(73, 73, 73);
+    border: none;
+    font-size: var(--h3-font-size);
+    font-family: inter;
+    padding: 14px;
+    border-radius: 3%;
 }
 
 .description {
     color: darkgray;
     font-size: 11px;
     text-align: left;
-    padding-bottom: 5%;
     line-height: 1px;
 }
 
 #divisionCategoryHeader {
     font-size: var(--h4-font-size);
-    padding: 3% 0 3% 0;
+    padding: 3% 0 4% 0;
     text-align: center;
     color: #717171;
-    text-decoration: underline;
+}
+
+
+#input-selections input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+
+}
+
+#input-selections input[type="radio"]:active + span,
+#input-selections input[type="radio"]:checked + span {
+    border-radius: 3%;
+    font-weight: bold;
+}
+
+#input-selections {
+    padding: 14px;
 }
