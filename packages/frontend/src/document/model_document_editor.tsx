@@ -228,13 +228,13 @@ export function ModelPane(props: {
                 >
                     <div>
                         <Popover.Trigger class="selector">
-                            <span>{liveDoc().theory()?.name}</span>
+                            <span>{liveDoc().theory()?.name || "Theory"}</span>
                         </Popover.Trigger>
                     </div>
                     <Popover.Portal>
                         <Popover.Content>
                             <span>
-                                {" "}
+                                {""}
                                 <TheorySelector
                                     docHandle={docHandle}
                                     theories={theories}
