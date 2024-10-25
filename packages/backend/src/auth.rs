@@ -14,23 +14,48 @@ pub enum PermissionLevel {
     Own,
 }
 
-/// Attempts to authorize a user to access a ref at the given permission level.
+/** Verify that user is authorized to access a ref at a given permission level.
+
+It is safe to proceed if the result is `Ok`; otherwise, the intended action
+should be aborted.
+ */
 pub async fn authorize(ctx: &AppCtx, ref_id: Uuid, level: PermissionLevel) -> Result<(), AppError> {
+    let authorized = is_authorized(ctx, ref_id, level).await?;
+    if authorized {
+        Ok(())
+    } else {
+        Err(AppError::Unauthorized)
+    }
+}
+
+/** Is the user authorized to access a ref at a given permission level?
+
+If the ref itself doesn't exist, then the result is an error.
+ */
+pub async fn is_authorized(
+    ctx: &AppCtx,
+    ref_id: Uuid,
+    level: PermissionLevel,
+) -> Result<bool, AppError> {
     let query = sqlx::query_scalar!(
         "SELECT EXISTS(
             SELECT 1 FROM permissions
-            WHERE object = $1 AND (subject IS NULL OR subject = $2) AND level >= $3
+            WHERE object = $1 AND (subject = '*' OR subject = $2) AND level >= $3
         )",
         ref_id,
         ctx.user.as_ref().map(|user| user.user_id.clone()),
         level as _
     );
-    let authorized = query.fetch_one(&ctx.state.db).await?;
-    if authorized.unwrap_or(false) {
-        Ok(())
-    } else {
-        Err(AppError::Unauthorized)
+    let authorized = query.fetch_one(&ctx.state.db).await?.unwrap_or(false);
+
+    // If the ref doesn't exist at all, then the error should be NOT_FOUND
+    // instead of UNAUTHORIZED.
+    if !authorized {
+        let query = sqlx::query_scalar!("SELECT 1 FROM refs WHERE id = $1", ref_id);
+        query.fetch_one(&ctx.state.db).await?;
     }
+
+    Ok(authorized)
 }
 
 /** Extracts an authenticated user from an HTTP request.
@@ -39,7 +64,7 @@ Note that the `firebase_auth` crate has an Axum feature with similar
 functionality, but we don't use it because it doesn't integrate well with the
 RPC service.
  */
-pub fn authenticate_user<T>(
+pub fn authenticate_from_request<T>(
     firebase_auth: &FirebaseAuth,
     req: &hyper::Request<T>,
 ) -> Result<Option<FirebaseUser>, String> {

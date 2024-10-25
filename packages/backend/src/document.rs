@@ -6,11 +6,11 @@ use ts_rs::TS;
 use uuid::Uuid;
 
 use super::app::{AppCtx, AppError, AppState};
-use super::auth::{authorize, PermissionLevel};
 
 /// Creates a new document ref with initial content.
 pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
     let ref_id = Uuid::now_v7();
+
     let query = sqlx::query!(
         "
         WITH snapshot AS (
@@ -18,20 +18,30 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
             VALUES ($1, $2, NOW())
             RETURNING id
         )
-        INSERT INTO refs(id, head, created)
-        VALUES ($1, (SELECT id FROM snapshot), NOW())
+        INSERT INTO refs(id, head, created, creator)
+        VALUES ($1, (SELECT id FROM snapshot), NOW(), $3)
         ",
         ref_id,
-        content
+        content,
+        ctx.user.as_ref().map(|user| user.user_id.clone())
     );
     query.execute(&ctx.state.db).await?;
+
+    let query = sqlx::query!(
+        "
+        INSERT INTO permissions(object, subject, level)
+        VALUES ($1, $2, 'own')
+        ",
+        ref_id,
+        ctx.user.map(|user| user.user_id).unwrap_or_else(|| "*".into())
+    );
+    query.execute(&ctx.state.db).await?;
+
     Ok(ref_id)
 }
 
 /// Gets the content of the head snapshot for a document ref.
-pub async fn head_snapshot(ctx: AppCtx, ref_id: Uuid) -> Result<Value, AppError> {
-    authorize(&ctx, ref_id, PermissionLevel::Read).await?;
-
+pub async fn head_snapshot(state: AppState, ref_id: Uuid) -> Result<Value, AppError> {
     let query = sqlx::query!(
         "
         SELECT content FROM snapshots
@@ -39,7 +49,7 @@ pub async fn head_snapshot(ctx: AppCtx, ref_id: Uuid) -> Result<Value, AppError>
         ",
         ref_id
     );
-    Ok(query.fetch_one(&ctx.state.db).await?.content)
+    Ok(query.fetch_one(&state.db).await?.content)
 }
 
 /// Saves the document by overwriting the snapshot at the current head.
@@ -62,10 +72,8 @@ pub async fn autosave(state: AppState, data: RefContent) -> Result<(), AppError>
 
 The snapshot at the previous head is *not* deleted.
 */
-pub async fn save_snapshot(ctx: AppCtx, data: RefContent) -> Result<(), AppError> {
+pub async fn save_snapshot(state: AppState, data: RefContent) -> Result<(), AppError> {
     let RefContent { ref_id, content } = data;
-    authorize(&ctx, ref_id, PermissionLevel::Write).await?;
-
     let query = sqlx::query!(
         "
         WITH snapshot AS (
@@ -80,17 +88,13 @@ pub async fn save_snapshot(ctx: AppCtx, data: RefContent) -> Result<(), AppError
         ref_id,
         content
     );
-    query.execute(&ctx.state.db).await?;
+    query.execute(&state.db).await?;
     Ok(())
 }
 
 /// Gets an Automerge document ID for the document ref.
-pub async fn doc_id(ctx: AppCtx, ref_id: Uuid) -> Result<String, AppError> {
-    // Requires write permissions since any changes will be autosaved once the
-    // user has access to the Automerge doc.
-    authorize(&ctx, ref_id, PermissionLevel::Write).await?;
-
-    let automerge_io = &ctx.state.automerge_io;
+pub async fn doc_id(state: AppState, ref_id: Uuid) -> Result<String, AppError> {
+    let automerge_io = &state.automerge_io;
     let ack = automerge_io.emit_with_ack::<Vec<Option<String>>>("get_doc", ref_id).unwrap();
     let mut response = ack.await?;
 
@@ -101,7 +105,7 @@ pub async fn doc_id(ctx: AppCtx, ref_id: Uuid) -> Result<String, AppError> {
     } else {
         // Otherwise, fetch the content from the database and create a new
         // Automerge doc handle.
-        let content = head_snapshot(ctx.clone(), ref_id).await?;
+        let content = head_snapshot(state.clone(), ref_id).await?;
         let data = RefContent { ref_id, content };
         let ack = automerge_io.emit_with_ack::<Vec<String>>("create_doc", data).unwrap();
         let response = ack.await?;
@@ -112,6 +116,6 @@ pub async fn doc_id(ctx: AppCtx, ref_id: Uuid) -> Result<String, AppError> {
 #[derive(Debug, Serialize, Deserialize, TS)]
 pub struct RefContent {
     #[serde(rename = "refId")]
-    ref_id: Uuid,
-    content: Value,
+    pub ref_id: Uuid,
+    pub content: Value,
 }

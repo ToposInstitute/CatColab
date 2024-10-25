@@ -8,6 +8,7 @@ use ts_rs::TS;
 use uuid::Uuid;
 
 use super::app::{AppCtx, AppError, AppState};
+use super::auth::{authorize, PermissionLevel};
 use super::document as doc;
 
 #[handler(mutation)]
@@ -17,17 +18,31 @@ async fn new_ref(ctx: AppCtx, content: Value) -> RpcResult<Uuid> {
 
 #[handler(query)]
 async fn head_snapshot(ctx: AppCtx, ref_id: Uuid) -> RpcResult<Value> {
-    doc::head_snapshot(ctx, ref_id).await.into()
+    _head_snapshot(ctx, ref_id).await.into()
+}
+async fn _head_snapshot(ctx: AppCtx, ref_id: Uuid) -> Result<Value, AppError> {
+    authorize(&ctx, ref_id, PermissionLevel::Read).await?;
+    doc::head_snapshot(ctx.state, ref_id).await
 }
 
 #[handler(mutation)]
 async fn save_snapshot(ctx: AppCtx, data: doc::RefContent) -> RpcResult<()> {
-    doc::save_snapshot(ctx, data).await.into()
+    _save_snapshot(ctx, data).await.into()
+}
+async fn _save_snapshot(ctx: AppCtx, data: doc::RefContent) -> Result<(), AppError> {
+    authorize(&ctx, data.ref_id, PermissionLevel::Write).await?;
+    doc::save_snapshot(ctx.state, data).await
 }
 
 #[handler(query)]
 async fn doc_id(ctx: AppCtx, ref_id: Uuid) -> RpcResult<String> {
-    doc::doc_id(ctx, ref_id).await.into()
+    _doc_id(ctx, ref_id).await.into()
+}
+async fn _doc_id(ctx: AppCtx, ref_id: Uuid) -> Result<String, AppError> {
+    // Require write permissions since any changes made through Automerge will
+    // be autosaved to the database.
+    authorize(&ctx, ref_id, PermissionLevel::Write).await?;
+    doc::doc_id(ctx.state, ref_id).await
 }
 
 pub fn router() -> Router<AppState> {
@@ -50,6 +65,7 @@ impl<T> From<AppError> for RpcResult<T> {
     fn from(error: AppError) -> Self {
         let code = match error {
             AppError::Db(sqlx::Error::RowNotFound) => StatusCode::NOT_FOUND,
+            AppError::Unauthorized => StatusCode::UNAUTHORIZED,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         };
         RpcResult::Err {
