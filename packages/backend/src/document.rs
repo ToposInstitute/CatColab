@@ -6,6 +6,7 @@ use ts_rs::TS;
 use uuid::Uuid;
 
 use super::app::{AppCtx, AppError, AppState};
+use super::auth::{authorize, PermissionLevel};
 
 /// Creates a new document ref with initial content.
 pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
@@ -29,6 +30,8 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
 
 /// Gets the content of the head snapshot for a document ref.
 pub async fn head_snapshot(ctx: AppCtx, ref_id: Uuid) -> Result<Value, AppError> {
+    authorize(&ctx, ref_id, PermissionLevel::Read).await?;
+
     let query = sqlx::query!(
         "
         SELECT content FROM snapshots
@@ -61,6 +64,8 @@ The snapshot at the previous head is *not* deleted.
 */
 pub async fn save_snapshot(ctx: AppCtx, data: RefContent) -> Result<(), AppError> {
     let RefContent { ref_id, content } = data;
+    authorize(&ctx, ref_id, PermissionLevel::Write).await?;
+
     let query = sqlx::query!(
         "
         WITH snapshot AS (
@@ -81,6 +86,10 @@ pub async fn save_snapshot(ctx: AppCtx, data: RefContent) -> Result<(), AppError
 
 /// Gets an Automerge document ID for the document ref.
 pub async fn doc_id(ctx: AppCtx, ref_id: Uuid) -> Result<String, AppError> {
+    // Requires write permissions since any changes will be autosaved once the
+    // user has access to the Automerge doc.
+    authorize(&ctx, ref_id, PermissionLevel::Write).await?;
+
     let automerge_io = &ctx.state.automerge_io;
     let ack = automerge_io.emit_with_ack::<Vec<Option<String>>>("get_doc", ref_id).unwrap();
     let mut response = ack.await?;

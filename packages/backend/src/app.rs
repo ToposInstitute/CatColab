@@ -34,4 +34,7 @@ pub enum AppError {
 
     #[error("Error receiving socket.io acknowledgment: {0}")]
     Ack(#[from] socketioxide::AckError<()>),
+
+    #[error("Attempted to perform unauthorized action")]
+    Unauthorized,
 }
