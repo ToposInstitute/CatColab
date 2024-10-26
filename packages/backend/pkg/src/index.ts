@@ -16,4 +16,4 @@ import type { Mutation } from "@qubit-rs/client";
 import type { Query } from "@qubit-rs/client";
 import type { RefContent } from "./RefContent.ts";
 
-export type QubitServer = { new_ref: Mutation<[content: JsonValue, ], RpcResult<string>>, head_snapshot: Query<[ref_id: string, ], RpcResult<JsonValue>>, save_snapshot: Mutation<[data: RefContent, ], RpcResult<null>>, doc_id: Query<[ref_id: string, ], RpcResult<string>> };
+export type QubitServer = { new_ref: Mutation<[content: JsonValue, ], RpcResult<string>>, head_snapshot: Query<[ref_id: string, ], RpcResult<JsonValue>>, save_snapshot: Mutation<[data: RefContent, ], RpcResult<null>>, doc_id: Query<[ref_id: string, ], RpcResult<string>>, sign_up_or_sign_in: Mutation<[], RpcResult<null>> };

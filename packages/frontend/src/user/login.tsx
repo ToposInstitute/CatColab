@@ -3,13 +3,17 @@ import {
     GithubAuthProvider,
     GoogleAuthProvider,
     type User,
+    type UserCredential,
     createUserWithEmailAndPassword,
     getAuth,
     signInWithEmailAndPassword,
     signInWithPopup,
 } from "firebase/auth";
 import { useFirebaseApp } from "solid-firebase";
+import { useContext } from "solid-js";
+import invariant from "tiny-invariant";
 
+import { RpcContext } from "../api";
 import { IconButton } from "../components";
 
 import SignInIcon from "lucide-solid/icons/log-in";
@@ -26,6 +30,8 @@ export function Login(props: {
     onComplete?: (user: User) => void;
 }) {
     const firebaseApp = useFirebaseApp();
+    const rpc = useContext(RpcContext);
+    invariant(rpc);
 
     const [, { Form, Field }] = createForm<EmailAndPassword>();
 
@@ -42,27 +48,33 @@ export function Login(props: {
 
     const signIn = async (values: EmailAndPassword) => {
         const { email, password } = values;
-        const result = await signInWithEmailAndPassword(getAuth(firebaseApp), email, password);
-        props.onComplete?.(result.user);
+        const cred = await signInWithEmailAndPassword(getAuth(firebaseApp), email, password);
+        await completeSignUpOrSignIn(cred);
     };
 
     const signUp = async (values: EmailAndPassword) => {
         console.log(values);
         const { email, password } = values;
-        const result = await createUserWithEmailAndPassword(getAuth(firebaseApp), email, password);
-        props.onComplete?.(result.user);
+        const cred = await createUserWithEmailAndPassword(getAuth(firebaseApp), email, password);
+        await completeSignUpOrSignIn(cred);
     };
 
     const signInWithGoogle = async () => {
         const provider = new GoogleAuthProvider();
-        const result = await signInWithPopup(getAuth(firebaseApp), provider);
-        props.onComplete?.(result.user);
+        const cred = await signInWithPopup(getAuth(firebaseApp), provider);
+        await completeSignUpOrSignIn(cred);
     };
 
     const signInWithGitHub = async () => {
         const provider = new GithubAuthProvider();
-        const result = await signInWithPopup(getAuth(firebaseApp), provider);
-        props.onComplete?.(result.user);
+        const cred = await signInWithPopup(getAuth(firebaseApp), provider);
+        await completeSignUpOrSignIn(cred);
+    };
+
+    const completeSignUpOrSignIn = async (cred: UserCredential) => {
+        const result = await rpc.sign_up_or_sign_in.mutate();
+        invariant(result.tag === "Ok");
+        props.onComplete?.(cred.user);
     };
 
     return (

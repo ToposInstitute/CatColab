@@ -1,15 +1,26 @@
 import { type DocHandle, Repo, isValidDocumentId } from "@automerge/automerge-repo";
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
+import { type FirebaseOptions, initializeApp } from "firebase/app";
+import {
+    createUserWithEmailAndPassword,
+    deleteUser,
+    getAuth,
+    signInWithEmailAndPassword,
+    signOut,
+} from "firebase/auth";
 import * as uuid from "uuid";
-import { assert, describe, test } from "vitest";
+import { assert, afterAll, describe, test } from "vitest";
 
 import type { RpcResult } from "catcolab-api";
 import { createRpcClient } from "./rpc.ts";
 
-const serverUrl: string = import.meta.env.VITE_SERVER_URL;
-const repoUrl: string = import.meta.env.VITE_AUTOMERGE_REPO_URL;
+const serverUrl = import.meta.env.VITE_SERVER_URL;
+const repoUrl = import.meta.env.VITE_AUTOMERGE_REPO_URL;
+const firebaseOptions = JSON.parse(import.meta.env.VITE_FIREBASE_OPTIONS) as FirebaseOptions;
 
-const rpc = createRpcClient(serverUrl);
+const firebaseApp = initializeApp(firebaseOptions);
+const rpc = createRpcClient(serverUrl, firebaseApp);
+
 const repo = new Repo({
     network: [new BrowserWebSocketClientAdapter(repoUrl)],
 });
@@ -17,18 +28,13 @@ const repo = new Repo({
 // XXX: Proper shutdown requires Automerge v2.
 //afterAll(() => repo.shutdown());
 
-function unwrap<T>(result: RpcResult<T>): T {
-    assert(result.tag === "Ok");
-    return result.content;
-}
-
-describe("Document RPC", async () => {
+describe("RPC for documents", async () => {
     const content = {
         type: "model",
         name: "My model",
     };
     const refId = unwrap(await rpc.new_ref.mutate(content));
-    test.sequential("should get a valid UUID", () => {
+    test.sequential("should get a valid ref UUID", () => {
         assert(uuid.validate(refId));
     });
 
@@ -67,3 +73,61 @@ describe("Document RPC", async () => {
         assert.strictEqual(newContent.name, newName);
     });
 });
+
+describe("Authorized RPC", async () => {
+    const auth = getAuth(firebaseApp);
+    const email = "test@catcolab.org";
+    const password = "foobar";
+    await createUserWithEmailAndPassword(auth, email, password);
+
+    const user = auth.currentUser;
+    afterAll(async () => user && (await deleteUser(user)));
+
+    const signUpResult = await rpc.sign_up_or_sign_in.mutate();
+    test.sequential("should allow sign up when authenticated", () => {
+        assert.strictEqual(signUpResult.tag, "Ok");
+    });
+
+    const content = {
+        type: "model",
+        name: "My private model",
+    };
+    const refId = unwrap(await rpc.new_ref.mutate(content));
+    test.sequential("should get a valid ref UUID when authenticated", () => {
+        assert(uuid.validate(refId));
+    });
+
+    const fetchedContent = unwrap(await rpc.head_snapshot.query(refId));
+    test.sequential("should allow document access when authenticated", () => {
+        assert.deepStrictEqual(fetchedContent, content);
+    });
+
+    await signOut(auth);
+
+    const unauthorizedResult = await rpc.sign_up_or_sign_in.mutate();
+    test.sequential("should prohibit sign in when unauthenticated", () => {
+        assert.strictEqual(unwrapErr(unauthorizedResult).code, 401);
+    });
+
+    const forbiddenResult = await rpc.head_snapshot.query(refId);
+    test.sequential("should prohibit document access when unauthenticated", () => {
+        assert.strictEqual(unwrapErr(forbiddenResult).code, 403);
+    });
+
+    await signInWithEmailAndPassword(auth, email, password);
+
+    const signInResult = await rpc.sign_up_or_sign_in.mutate();
+    test.sequential("should allow sign in when authenticated", () => {
+        assert.strictEqual(signInResult.tag, "Ok");
+    });
+});
+
+function unwrap<T>(result: RpcResult<T>): T {
+    assert.strictEqual(result.tag, "Ok");
+    return (result as RpcResult<T> & { tag: "Ok" }).content;
+}
+
+function unwrapErr<T>(result: RpcResult<T>): { code: number; message: string } {
+    assert.strictEqual(result.tag, "Err");
+    return result as RpcResult<T> & { tag: "Err" };
+}

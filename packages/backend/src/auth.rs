@@ -24,7 +24,7 @@ pub async fn authorize(ctx: &AppCtx, ref_id: Uuid, level: PermissionLevel) -> Re
     if authorized {
         Ok(())
     } else {
-        Err(AppError::Unauthorized)
+        Err(AppError::Forbidden(ref_id))
     }
 }
 

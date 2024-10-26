@@ -3,13 +3,23 @@ use http::StatusCode;
 use qubit::{handler, Extensions, FromRequestExtensions, Router, RpcError};
 use serde::Serialize;
 use serde_json::Value;
-use tracing::info;
+use tracing::debug;
 use ts_rs::TS;
 use uuid::Uuid;
 
 use super::app::{AppCtx, AppError, AppState};
 use super::auth::{authorize, PermissionLevel};
-use super::document as doc;
+use super::{document as doc, user};
+
+/// Create router for RPC API.
+pub fn router() -> Router<AppState> {
+    Router::new()
+        .handler(new_ref)
+        .handler(head_snapshot)
+        .handler(save_snapshot)
+        .handler(doc_id)
+        .handler(sign_up_or_sign_in)
+}
 
 #[handler(mutation)]
 async fn new_ref(ctx: AppCtx, content: Value) -> RpcResult<Uuid> {
@@ -45,12 +55,9 @@ async fn _doc_id(ctx: AppCtx, ref_id: Uuid) -> Result<String, AppError> {
     doc::doc_id(ctx.state, ref_id).await
 }
 
-pub fn router() -> Router<AppState> {
-    Router::new()
-        .handler(new_ref)
-        .handler(head_snapshot)
-        .handler(save_snapshot)
-        .handler(doc_id)
+#[handler(mutation)]
+async fn sign_up_or_sign_in(ctx: AppCtx) -> RpcResult<()> {
+    user::sign_up_or_sign_in(ctx).await.into()
 }
 
 /// Result returned by an RPC handler.
@@ -64,8 +71,9 @@ enum RpcResult<T> {
 impl<T> From<AppError> for RpcResult<T> {
     fn from(error: AppError) -> Self {
         let code = match error {
-            AppError::Db(sqlx::Error::RowNotFound) => StatusCode::NOT_FOUND,
             AppError::Unauthorized => StatusCode::UNAUTHORIZED,
+            AppError::Forbidden(_) => StatusCode::FORBIDDEN,
+            AppError::Db(sqlx::Error::RowNotFound) => StatusCode::NOT_FOUND,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         };
         RpcResult::Err {
@@ -92,7 +100,7 @@ impl FromRequestExtensions<AppState> for AppCtx {
     ) -> Result<Self, RpcError> {
         let user: Option<FirebaseUser> = extensions.remove();
         if let Some(some_user) = &user {
-            info!("Handling request from user: {}", some_user.user_id);
+            debug!("Handling request from user: {}", some_user.user_id);
         }
         Ok(AppCtx { state, user })
     }

@@ -11,6 +11,7 @@ mod auth;
 mod document;
 mod rpc;
 mod socket;
+mod user;
 
 /// Port for the web server providing the RPC API.
 fn web_port() -> String {

@@ -2,6 +2,7 @@ use firebase_auth::FirebaseUser;
 use socketioxide::SocketIo;
 use sqlx::PgPool;
 use thiserror::Error;
+use uuid::Uuid;
 
 /** Top-level application state.
 
@@ -29,12 +30,15 @@ pub struct AppCtx {
 /// Top-level application error.
 #[derive(Error, Debug)]
 pub enum AppError {
-    #[error("Database error: {0}")]
+    #[error("SQL database error: {0}")]
     Db(#[from] sqlx::Error),
 
-    #[error("Error receiving socket.io acknowledgment: {0}")]
+    #[error("Error receiving acknowledgment from socket: {0}")]
     Ack(#[from] socketioxide::AckError<()>),
 
-    #[error("Attempted to perform unauthorized action")]
+    #[error("Authentication credentials were not provided")]
     Unauthorized,
+
+    #[error("Not authorized to access ref: {0}")]
+    Forbidden(Uuid),
 }

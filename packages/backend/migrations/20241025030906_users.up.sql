@@ -1,5 +1,7 @@
 CREATE TABLE users (
     id TEXT PRIMARY KEY,
+    created TIMESTAMPTZ NOT NULL,
+    signed_in TIMESTAMPTZ NOT NULL,
     username TEXT UNIQUE,
     display_name TEXT
 );
