@@ -1,6 +1,6 @@
 import { http, build_client } from "@qubit-rs/client";
 import type { FirebaseApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { type User, getAuth } from "firebase/auth";
 import { createContext } from "solid-js";
 
 import type { QubitServer } from "catcolab-api";
@@ -10,10 +10,22 @@ export type RpcClient = QubitServer;
 
 /** Create the RPC client for communicating with the backend. */
 export function createRpcClient(serverUrl: string, firebaseApp?: FirebaseApp) {
+    let currentUser: User | null = null;
+    const authInitialized = new Promise<null>((resolve) => {
+        if (firebaseApp) {
+            getAuth(firebaseApp).onAuthStateChanged((user) => {
+                currentUser = user;
+                resolve(null);
+            });
+        } else {
+            resolve(null);
+        }
+    });
+
     const fetchWithAuth: typeof fetch = async (input, init?) => {
-        const user = firebaseApp && getAuth(firebaseApp).currentUser;
-        if (user) {
-            const token = await user.getIdToken();
+        await authInitialized;
+        if (currentUser) {
+            const token = await currentUser.getIdToken();
             init = {
                 ...init,
                 headers: {
