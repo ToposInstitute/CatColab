@@ -5,7 +5,9 @@ use uuid::Uuid;
 use super::app::{AppCtx, AppError};
 
 /// Levels of permission that a user can have on a document.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize, sqlx::Type)]
+#[derive(
+    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize, sqlx::Type,
+)]
 #[sqlx(type_name = "permission_level", rename_all = "lowercase")]
 pub enum PermissionLevel {
     Read,
@@ -16,7 +18,7 @@ pub enum PermissionLevel {
 
 /** Verify that user is authorized to access a ref at a given permission level.
 
-It is safe to proceed if the result is `Ok`; otherwise, the intended action
+It is safe to proceed if the result is `Ok`; otherwise, the requested action
 should be aborted.
  */
 pub async fn authorize(ctx: &AppCtx, ref_id: Uuid, level: PermissionLevel) -> Result<(), AppError> {
@@ -28,34 +30,43 @@ pub async fn authorize(ctx: &AppCtx, ref_id: Uuid, level: PermissionLevel) -> Re
     }
 }
 
-/** Is the user authorized to access a ref at a given permission level?
-
-If the ref itself doesn't exist, then the result is an error.
- */
+/// Is the user authorized to access a ref at a given permission level?
 pub async fn is_authorized(
     ctx: &AppCtx,
     ref_id: Uuid,
     level: PermissionLevel,
 ) -> Result<bool, AppError> {
-    let query = sqlx::query_scalar!(
-        "SELECT EXISTS(
-            SELECT 1 FROM permissions
-            WHERE object = $1 AND (subject IS NULL OR subject = $2) AND level >= $3
-        )",
-        ref_id,
-        ctx.user.as_ref().map(|user| user.user_id.clone()),
-        level as _
-    );
-    let authorized = query.fetch_one(&ctx.state.db).await?.unwrap_or(false);
+    match permission_level(ctx, ref_id).await? {
+        Some(max_level) => Ok(level <= max_level),
+        None => Ok(false),
+    }
+}
 
-    // If the ref doesn't exist at all, then the error should be NOT_FOUND
-    // instead of UNAUTHORIZED.
-    if !authorized {
+/** Gets the highest permission level available for a ref.
+
+The result is an error if the ref does not exist.
+ */
+pub async fn permission_level(
+    ctx: &AppCtx,
+    ref_id: Uuid,
+) -> Result<Option<PermissionLevel>, AppError> {
+    let query = sqlx::query!(
+        r#"
+        SELECT MAX(level) AS "max: PermissionLevel" FROM permissions
+        WHERE object = $1 AND (subject IS NULL OR subject = $2)
+        "#,
+        ref_id,
+        ctx.user.as_ref().map(|user| user.user_id.clone())
+    );
+    let level = query.fetch_one(&ctx.state.db).await?.max;
+
+    // Yield a NOT_FOUND error if the ref doesn't exist at all.
+    if level.is_none() {
         let query = sqlx::query_scalar!("SELECT 1 FROM refs WHERE id = $1", ref_id);
         query.fetch_one(&ctx.state.db).await?;
     }
 
-    Ok(authorized)
+    Ok(level)
 }
 
 /** Extracts an authenticated user from an HTTP request.

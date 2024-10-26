@@ -1,19 +1,12 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT EXISTS(\n            SELECT 1 FROM permissions\n            WHERE object = $1 AND (subject IS NULL OR subject = $2) AND level >= $3\n        )",
+  "query": "\n        SELECT MAX(level) AS \"max: PermissionLevel\" FROM permissions\n        WHERE object = $1 AND (subject IS NULL OR subject = $2)\n        ",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "exists",
-        "type_info": "Bool"
-      }
-    ],
-    "parameters": {
-      "Left": [
-        "Uuid",
-        "Text",
-        {
+        "name": "max: PermissionLevel",
+        "type_info": {
           "Custom": {
             "name": "permission_level",
             "kind": {
@@ -26,11 +19,17 @@
             }
           }
         }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
       ]
     },
     "nullable": [
       null
     ]
   },
-  "hash": "1fe3dcf7d82a45432f1f3c9d312f0f0165122f28ea811549348180f82be9a0b8"
+  "hash": "e75b5c0a7da4bc3c0f52a62179d15289fd31d08d48d7a99d37cb1a6414656e7d"
 }
