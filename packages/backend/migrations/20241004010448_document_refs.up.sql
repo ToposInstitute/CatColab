@@ -8,8 +8,7 @@ CREATE TABLE snapshots (
 CREATE TABLE refs (
     id UUID PRIMARY KEY,
     head INT NOT NULL REFERENCES snapshots (id),
-    created TIMESTAMPTZ NOT NULL,
-    creator TEXT
+    created TIMESTAMPTZ NOT NULL
 );
 
 ALTER TABLE snapshots

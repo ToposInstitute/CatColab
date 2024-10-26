@@ -18,12 +18,11 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
             VALUES ($1, $2, NOW())
             RETURNING id
         )
-        INSERT INTO refs(id, head, created, creator)
-        VALUES ($1, (SELECT id FROM snapshot), NOW(), $3)
+        INSERT INTO refs(id, head, created)
+        VALUES ($1, (SELECT id FROM snapshot), NOW())
         ",
         ref_id,
-        content,
-        ctx.user.as_ref().map(|user| user.user_id.clone())
+        content
     );
     query.execute(&ctx.state.db).await?;
 
@@ -33,7 +32,7 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
         VALUES ($1, $2, 'own')
         ",
         ref_id,
-        ctx.user.map(|user| user.user_id).unwrap_or_else(|| "*".into())
+        ctx.user.map(|user| user.user_id)
     );
     query.execute(&ctx.state.db).await?;
 

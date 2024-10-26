@@ -40,7 +40,7 @@ pub async fn is_authorized(
     let query = sqlx::query_scalar!(
         "SELECT EXISTS(
             SELECT 1 FROM permissions
-            WHERE object = $1 AND (subject = '*' OR subject = $2) AND level >= $3
+            WHERE object = $1 AND (subject IS NULL OR subject = $2) AND level >= $3
         )",
         ref_id,
         ctx.user.as_ref().map(|user| user.user_id.clone()),
