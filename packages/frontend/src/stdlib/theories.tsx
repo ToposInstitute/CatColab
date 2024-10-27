@@ -263,6 +263,66 @@ stdTheories.add(
 );
 
 stdTheories.add(
+	{
+		id: "nullable-causal-loop",
+		name: "Nullable Causal Loop",
+	},
+	(meta) => {
+		const thNullableSignedCategory = new catlog.ThNullableSignedCategory();
+	    return new Theory({
+			    ...meta,
+			    theory: thNullableSignedCategory.theory(),
+			    onlyFreeModels: true,
+			    types: [
+				    {
+				        tag: "ObType",
+					      obType: { tag: "Basic", content: "Object" },
+					      name: "Type",
+					      description: "Type or class of things",
+					      shortcut: ["V"],
+				    },
+				    {
+					      tag: "MorType",
+					      morType: {
+						        tag: "Hom",
+						        content: { tag: "Basic", content: "Object" },
+					      },
+					      name: "Plus",
+					      description: "Positively-signed morphism",
+					      shortcut: ["P"],
+					      arrowStyle: "plus",
+				    },
+				    {
+					      tag: "MorType",
+					      morType: { tag: "Basic", content: "Negative" },
+					      name: "Minus",
+					      description: "Negatively-signed morphism",
+					      preferUnnamed: true,
+					      shortcut: ["N"],
+						  arrowStyle: "minus"
+				    },
+					{
+					      tag: "MorType",
+					      morType: { tag: "Basic", content: "Zero" },
+					      name: "Zero",
+					      description: "Null-signed morphism",
+					      preferUnnamed: true,
+					      shortcut: ["Z"],
+						  arrowStyle: "indeterminate",
+				    }, 
+			],
+			modelAnalyses: [
+			    configureModelGraph({
+					    id: "diagram",
+					    name: "Network",
+					    description: "visualize the regulatory network",
+				  }),
+			],
+		});
+	},
+);
+
+stdTheories.add(
     {
         id: "stock-flow",
         name: "Stock and flow",

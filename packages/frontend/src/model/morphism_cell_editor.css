@@ -78,6 +78,16 @@
     }
 }
 
+.morphism-decl-arrow-container.indeterminate {
+    &:after {
+        content: "?";
+        transform: none;
+        position: absolute;
+        right: -7.5px;
+        bottom: 0px;
+    }
+}
+
 .morphism-decl-arrow.double {
     background: transparent;
     height: 6px;
