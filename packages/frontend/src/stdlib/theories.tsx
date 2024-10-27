@@ -304,7 +304,7 @@ stdTheories.add(
 					{
 					      tag: "MorType",
 					      morType: { tag: "Basic", content: "Zero" },
-					      name: "Zero",
+					      name: "Unknown polarity",
 					      description: "Null-signed morphism",
 					      preferUnnamed: true,
 					      shortcut: ["Z"],

@@ -34,7 +34,8 @@
 
 .morphism-decl-arrow.default,
 .morphism-decl-arrow.plus,
-.morphism-decl-arrow.minus {
+.morphism-decl-arrow.minus,
+.morphism-decl-arrow.indeterminate {
     &:before,
     &:after {
         content: "";
