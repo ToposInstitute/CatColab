@@ -12,9 +12,9 @@ import {
 } from "solid-js";
 import invariant from "tiny-invariant";
 
-import type { JsonValue } from "catcolab-api";
+import type { JsonValue, Permissions } from "catcolab-api";
 import type { Uuid } from "catlog-wasm";
-import { RepoContext, RpcContext, getReactiveDoc } from "../api";
+import { type ReactiveDoc, RepoContext, RpcContext, getReactiveDoc } from "../api";
 import { IconButton, InlineInput } from "../components";
 import {
     type ModelJudgment,
@@ -41,7 +41,7 @@ import {
 import { BrandedToolbar, HelpButton } from "../page";
 import { type TheoryLibrary, TheoryLibraryContext } from "../stdlib";
 import type { Theory } from "../theory";
-import { AnonDocButton } from "../user";
+import { PermissionsButton } from "../user";
 import { type IndexedMap, indexMap } from "../util/indexing";
 import { type ModelDocument, newAnalysisDocument } from "./types";
 
@@ -58,15 +58,14 @@ export type LiveModelDocument = {
     /** The ref for which this is a live document. */
     refId: string;
 
-    /** The model document.
-
-    Produced via `makeDocReactive` so that accessing fields of this document in
-    reactive contexts will be appropriately reactive.
-    */
+    /** The model document, suitable for use in reactive contexts. */
     doc: ModelDocument;
 
     /** The document handle for the model document.*/
     docHandle: DocHandle<ModelDocument>;
+
+    /** Permissions for the ref retrieved from the backend. */
+    permissions: Permissions;
 
     /** A memo of the formal content of the model. */
     formalJudgments: Accessor<Array<ModelJudgment>>;
@@ -86,10 +85,12 @@ export type LiveModelDocument = {
 
 export function enlivenModelDocument(
     refId: string,
-    doc: ModelDocument,
-    docHandle: DocHandle<ModelDocument>,
+    reactiveDoc: ReactiveDoc<ModelDocument>,
     theories: TheoryLibrary,
 ): LiveModelDocument {
+    const { doc, docHandle, permissions } = reactiveDoc;
+    invariant(docHandle, "Read-only mode not yet implemented");
+
     // Memo-ize the *formal* content of the notebook, since most derived objects
     // will not depend on the informal (rich-text) content in notebook.
     const formalJudgments = createMemo<Array<ModelJudgment>>(() => {
@@ -131,6 +132,7 @@ export function enlivenModelDocument(
         refId,
         doc,
         docHandle,
+        permissions,
         formalJudgments,
         objectIndex,
         morphismIndex,
@@ -150,9 +152,8 @@ export default function ModelPage() {
     invariant(rpc && repo && theories, "Missing context for model page");
 
     const [liveDoc] = createResource<LiveModelDocument>(async () => {
-        const { doc, docHandle } = await getReactiveDoc<ModelDocument>(rpc, ref, repo);
-        invariant(docHandle, "Read-only mode not yet implemented");
-        return enlivenModelDocument(ref, doc, docHandle, theories);
+        const reactiveDoc = await getReactiveDoc<ModelDocument>(rpc, ref, repo);
+        return enlivenModelDocument(ref, reactiveDoc, theories);
     });
 
     return (
@@ -191,7 +192,7 @@ export function ModelDocumentEditor(props: {
         <div class="growable-container">
             <BrandedToolbar>
                 <HelpButton />
-                <AnonDocButton />
+                <PermissionsButton permissions={props.liveDoc.permissions} />
                 <IconButton onClick={createAnalysis} tooltip="Analyze this model">
                     <ChartNetwork />
                 </IconButton>

@@ -67,16 +67,14 @@ export default function AnalysisPage() {
             () => `Expected analysis document, got type: ${doc.type}`,
         );
 
-        const { doc: modelDoc, docHandle: modelDocHandle } = await getReactiveDoc<ModelDocument>(
+        const modelReactiveDoc = await getReactiveDoc<ModelDocument>(
             rpc,
             doc.modelRef.__extern__.refId,
             repo,
         );
-        invariant(modelDocHandle, "Read-only mode not yet implemented");
         const liveModel = enlivenModelDocument(
             doc.modelRef.__extern__.refId,
-            modelDoc,
-            modelDocHandle,
+            modelReactiveDoc,
             theories,
         );
 
