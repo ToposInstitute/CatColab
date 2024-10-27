@@ -1,2 +1,2 @@
-export * from "./automerge";
+export * from "./document";
 export * from "./rpc";

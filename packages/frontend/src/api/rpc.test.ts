@@ -28,7 +28,7 @@ const repo = new Repo({
 // XXX: Proper shutdown requires Automerge v2.
 //afterAll(() => repo.shutdown());
 
-describe("RPC for documents", async () => {
+describe("RPC for Automerge documents", async () => {
     const content = {
         type: "model",
         name: "My model",
@@ -38,25 +38,29 @@ describe("RPC for documents", async () => {
         assert(uuid.validate(refId));
     });
 
-    const docId = unwrap(await rpc.doc_id.query(refId));
+    const refDoc = unwrap(await rpc.get_doc.query(refId));
+    assert(refDoc.tag === "Live");
     test.sequential("should get a valid document ID", () => {
-        assert(isValidDocumentId(docId));
+        assert(isValidDocumentId(refDoc.docId));
+        assert.strictEqual(refDoc.permissions.anyone, "Own");
+        assert.strictEqual(refDoc.permissions.user, null);
     });
 
-    const newDocId = unwrap(await rpc.doc_id.query(refId));
+    const newRefDoc = unwrap(await rpc.get_doc.query(refId));
     test.sequential("should get the same document ID as before", () => {
-        assert.strictEqual(newDocId, docId);
+        assert(newRefDoc.tag === "Live");
+        assert.strictEqual(newRefDoc.docId, refDoc.docId);
     });
 
-    const result = await rpc.doc_id.query(uuid.v7());
+    const result = await rpc.get_doc.query(uuid.v7());
     test("should get 404 when document does not exist", async () => {
         assert(result.tag === "Err" && result.code === 404);
     });
 
-    if (!isValidDocumentId(docId)) {
+    if (!isValidDocumentId(refDoc.docId)) {
         return;
     }
-    const docHandle = repo.find(docId) as DocHandle<typeof content>;
+    const docHandle = repo.find(refDoc.docId) as DocHandle<typeof content>;
     const doc = await docHandle.doc();
 
     test.sequential("should get the original document data", () => {
@@ -68,7 +72,7 @@ describe("RPC for documents", async () => {
         data.name = newName;
     });
 
-    test.sequential("should update content in database", { timeout: 1000, retry: 5 }, async () => {
+    test.sequential("should autosave to the database", { timeout: 1000, retry: 5 }, async () => {
         const newContent = unwrap(await rpc.head_snapshot.query(refId)) as typeof content;
         assert.strictEqual(newContent.name, newName);
     });
@@ -98,8 +102,16 @@ describe("Authorized RPC", async () => {
     });
 
     const fetchedContent = unwrap(await rpc.head_snapshot.query(refId));
-    test.sequential("should allow document access when authenticated", () => {
+    test.sequential("should get document content when authenticated", () => {
         assert.deepStrictEqual(fetchedContent, content);
+    });
+
+    const refDoc = unwrap(await rpc.get_doc.query(refId));
+    test.sequential("should get a live document when authenticated", () => {
+        assert(refDoc.tag === "Live");
+        assert(isValidDocumentId(refDoc.docId));
+        assert.strictEqual(refDoc.permissions.anyone, null);
+        assert.strictEqual(refDoc.permissions.user, "Own");
     });
 
     await signOut(auth);
@@ -109,9 +121,11 @@ describe("Authorized RPC", async () => {
         assert.strictEqual(unwrapErr(unauthorizedResult).code, 401);
     });
 
-    const forbiddenResult = await rpc.head_snapshot.query(refId);
+    const forbiddenResult1 = await rpc.head_snapshot.query(refId);
+    const forbiddenResult2 = await rpc.get_doc.query(refId);
     test.sequential("should prohibit document access when unauthenticated", () => {
-        assert.strictEqual(unwrapErr(forbiddenResult).code, 403);
+        assert.strictEqual(unwrapErr(forbiddenResult1).code, 403);
+        assert.strictEqual(unwrapErr(forbiddenResult2).code, 403);
     });
 
     await signInWithEmailAndPassword(auth, email, password);

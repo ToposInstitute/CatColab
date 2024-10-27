@@ -14,7 +14,7 @@ import invariant from "tiny-invariant";
 
 import type { JsonValue } from "catcolab-api";
 import type { Uuid } from "catlog-wasm";
-import { RepoContext, RpcContext, retrieveDoc } from "../api";
+import { RepoContext, RpcContext, getReactiveDoc } from "../api";
 import { IconButton, InlineInput } from "../components";
 import {
     type ModelJudgment,
@@ -150,7 +150,8 @@ export default function ModelPage() {
     invariant(rpc && repo && theories, "Missing context for model page");
 
     const [liveDoc] = createResource<LiveModelDocument>(async () => {
-        const { doc, docHandle } = await retrieveDoc<ModelDocument>(rpc, ref, repo);
+        const { doc, docHandle } = await getReactiveDoc<ModelDocument>(rpc, ref, repo);
+        invariant(docHandle, "Read-only mode not yet implemented");
         return enlivenModelDocument(ref, doc, docHandle, theories);
     });
 

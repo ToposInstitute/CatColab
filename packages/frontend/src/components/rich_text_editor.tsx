@@ -9,7 +9,7 @@ import { type Command, EditorState, Plugin, type Transaction } from "prosemirror
 import { EditorView } from "prosemirror-view";
 
 import { createEffect, onCleanup } from "solid-js";
-import { useDocHandleReady } from "../api/automerge";
+import { useDocHandleReady } from "../api/document";
 
 import "prosemirror-view/style/prosemirror.css";
 import "./rich_text_editor.css";

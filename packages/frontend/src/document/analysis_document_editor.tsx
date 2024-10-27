@@ -15,7 +15,7 @@ import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
 import type { ModelAnalysis } from "../analysis";
-import { RepoContext, RpcContext, retrieveDoc } from "../api";
+import { RepoContext, RpcContext, getReactiveDoc } from "../api";
 import { IconButton, ResizableHandle } from "../components";
 import {
     type CellConstructor,
@@ -59,18 +59,20 @@ export default function AnalysisPage() {
     invariant(rpc && repo && theories, "Missing context for analysis page");
 
     const [liveDoc] = createResource<LiveAnalysisDocument>(async () => {
-        const { doc, docHandle } = await retrieveDoc<AnalysisDocument>(rpc, ref, repo);
+        const { doc, docHandle } = await getReactiveDoc<AnalysisDocument>(rpc, ref, repo);
+        invariant(docHandle, "Read-only mode not yet implemented");
         await docHandle.whenReady();
         invariant(
             doc.type === "analysis",
             () => `Expected analysis document, got type: ${doc.type}`,
         );
 
-        const { doc: modelDoc, docHandle: modelDocHandle } = await retrieveDoc<ModelDocument>(
+        const { doc: modelDoc, docHandle: modelDocHandle } = await getReactiveDoc<ModelDocument>(
             rpc,
             doc.modelRef.__extern__.refId,
             repo,
         );
+        invariant(modelDocHandle, "Read-only mode not yet implemented");
         const liveModel = enlivenModelDocument(
             doc.modelRef.__extern__.refId,
             modelDoc,

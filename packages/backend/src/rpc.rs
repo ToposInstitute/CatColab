@@ -8,16 +8,16 @@ use ts_rs::TS;
 use uuid::Uuid;
 
 use super::app::{AppCtx, AppError, AppState};
-use super::auth::{authorize, PermissionLevel};
-use super::{document as doc, user};
+use super::auth::{PermissionLevel, Permissions};
+use super::{auth, document as doc, user};
 
 /// Create router for RPC API.
 pub fn router() -> Router<AppState> {
     Router::new()
         .handler(new_ref)
+        .handler(get_doc)
         .handler(head_snapshot)
         .handler(save_snapshot)
-        .handler(doc_id)
         .handler(sign_up_or_sign_in)
 }
 
@@ -27,11 +27,53 @@ async fn new_ref(ctx: AppCtx, content: Value) -> RpcResult<Uuid> {
 }
 
 #[handler(query)]
+async fn get_doc(ctx: AppCtx, ref_id: Uuid) -> RpcResult<RefDoc> {
+    _get_doc(ctx, ref_id).await.into()
+}
+
+async fn _get_doc(ctx: AppCtx, ref_id: Uuid) -> Result<RefDoc, AppError> {
+    let permissions = auth::permissions(&ctx, ref_id).await?;
+    let max_level = permissions.clone().max_level();
+    if max_level >= Some(PermissionLevel::Write) {
+        let doc_id = doc::doc_id(ctx.state, ref_id).await?;
+        Ok(RefDoc::Live {
+            doc_id,
+            permissions,
+        })
+    } else if max_level >= Some(PermissionLevel::Read) {
+        let content = doc::head_snapshot(ctx.state, ref_id).await?;
+        Ok(RefDoc::Readonly {
+            content,
+            permissions,
+        })
+    } else {
+        Err(AppError::Forbidden(ref_id))
+    }
+}
+
+/// Document identified by a ref.
+#[derive(Clone, Debug, Serialize, TS)]
+#[serde(tag = "tag")]
+enum RefDoc {
+    /// Readonly document, containing content at current head.
+    Readonly {
+        content: Value,
+        permissions: Permissions,
+    },
+    /// Live document, containing an Automerge document ID.
+    Live {
+        #[serde(rename = "docId")]
+        doc_id: String,
+        permissions: Permissions,
+    },
+}
+
+#[handler(query)]
 async fn head_snapshot(ctx: AppCtx, ref_id: Uuid) -> RpcResult<Value> {
     _head_snapshot(ctx, ref_id).await.into()
 }
 async fn _head_snapshot(ctx: AppCtx, ref_id: Uuid) -> Result<Value, AppError> {
-    authorize(&ctx, ref_id, PermissionLevel::Read).await?;
+    auth::authorize(&ctx, ref_id, PermissionLevel::Read).await?;
     doc::head_snapshot(ctx.state, ref_id).await
 }
 
@@ -40,19 +82,8 @@ async fn save_snapshot(ctx: AppCtx, data: doc::RefContent) -> RpcResult<()> {
     _save_snapshot(ctx, data).await.into()
 }
 async fn _save_snapshot(ctx: AppCtx, data: doc::RefContent) -> Result<(), AppError> {
-    authorize(&ctx, data.ref_id, PermissionLevel::Write).await?;
+    auth::authorize(&ctx, data.ref_id, PermissionLevel::Write).await?;
     doc::save_snapshot(ctx.state, data).await
-}
-
-#[handler(query)]
-async fn doc_id(ctx: AppCtx, ref_id: Uuid) -> RpcResult<String> {
-    _doc_id(ctx, ref_id).await.into()
-}
-async fn _doc_id(ctx: AppCtx, ref_id: Uuid) -> Result<String, AppError> {
-    // Require write permissions since any changes made through Automerge will
-    // be autosaved to the database.
-    authorize(&ctx, ref_id, PermissionLevel::Write).await?;
-    doc::doc_id(ctx.state, ref_id).await
 }
 
 #[handler(mutation)]
