@@ -36,21 +36,21 @@ pub async fn is_authorized(
     ref_id: Uuid,
     level: PermissionLevel,
 ) -> Result<bool, AppError> {
-    match permission_level(ctx, ref_id).await? {
+    match max_permission_level(ctx, ref_id).await? {
         Some(max_level) => Ok(level <= max_level),
         None => Ok(false),
     }
 }
 
-/** Gets the highest permission level available for a ref.
+/** Gets the highest level of permissions allowed for a ref.
 
 The result is an error if the ref does not exist.
  */
-pub async fn permission_level(
+pub async fn max_permission_level(
     ctx: &AppCtx,
     ref_id: Uuid,
 ) -> Result<Option<PermissionLevel>, AppError> {
-    let query = sqlx::query!(
+    let query = sqlx::query_scalar!(
         r#"
         SELECT MAX(level) AS "max: PermissionLevel" FROM permissions
         WHERE object = $1 AND (subject IS NULL OR subject = $2)
@@ -58,7 +58,7 @@ pub async fn permission_level(
         ref_id,
         ctx.user.as_ref().map(|user| user.user_id.clone())
     );
-    let level = query.fetch_one(&ctx.state.db).await?.max;
+    let level = query.fetch_one(&ctx.state.db).await?;
 
     // Yield a NOT_FOUND error if the ref doesn't exist at all.
     if level.is_none() {

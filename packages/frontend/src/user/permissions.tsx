@@ -7,7 +7,7 @@ import { Login } from "./login";
 
 import Globe from "lucide-solid/icons/globe";
 
-export function AnonDocButon() {
+export function AnonDocButton() {
     const firebaseApp = useFirebaseApp();
     const user = useAuth(getAuth(firebaseApp));
 
