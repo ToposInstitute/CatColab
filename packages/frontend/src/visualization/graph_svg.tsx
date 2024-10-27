@@ -100,10 +100,10 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
                     {defaultPath()}
                     {tgtLabel("-")}
                 </Match>
-				<Match when={props.edge.style === "indeterminate"}>
-					{defaultPath()}
-					{tgtLabel("?")}
-				</Match>
+                <Match when={props.edge.style === "indeterminate"}>
+                    {defaultPath()}
+                    {tgtLabel("?")}
+                </Match>
             </Switch>
             <Show when={props.edge.label}>
                 <text
@@ -180,7 +180,7 @@ const styleToMarker: Record<ArrowStyle, ArrowMarker> = {
     flat: "flat",
     plus: "triangle",
     minus: "triangle",
-	indeterminate: "triangle",
+    indeterminate: "triangle",
 };
 
 /** SVG markers for arrow heads.
