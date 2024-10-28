@@ -264,6 +264,67 @@ stdTheories.add(
 
 stdTheories.add(
     {
+        id: "nullable-causal-loop",
+        name: "Causal loops with indeterminates",
+    },
+    (meta) => {
+        const thNullableSignedCategory = new catlog.ThNullableSignedCategory();
+        return new Theory({
+            ...meta,
+            theory: thNullableSignedCategory.theory(),
+            onlyFreeModels: true,
+            types: [
+                {
+                    tag: "ObType",
+                    obType: { tag: "Basic", content: "Object" },
+                    name: "Variable",
+                    shortcut: ["V"],
+                    description: "Variable quantity",
+                },
+                {
+                    tag: "MorType",
+                    morType: {
+                        tag: "Hom",
+                        content: { tag: "Basic", content: "Object" },
+                    },
+                    name: "Positive link",
+                    description: "Variables change in the same direction",
+                    shortcut: ["P"],
+                    arrowStyle: "plus",
+                    preferUnnamed: true,
+                },
+                {
+                    tag: "MorType",
+                    morType: { tag: "Basic", content: "Negative" },
+                    name: "Negative link",
+                    shortcut: ["N"],
+                    description: "Variables change in the opposite direction",
+                    arrowStyle: "minus",
+                    preferUnnamed: true,
+                },
+                {
+                    tag: "MorType",
+                    morType: { tag: "Basic", content: "Zero" },
+                    name: "Indeterminate link",
+                    description: "The direction that variables change is indeterminate",
+                    shortcut: ["Z"],
+                    arrowStyle: "indeterminate",
+                    preferUnnamed: true,
+                },
+            ],
+            modelAnalyses: [
+                configureModelGraph({
+                    id: "diagram",
+                    name: "Diagram",
+                    description: "Visualize the causal loop diagram",
+                }),
+            ],
+        });
+    },
+);
+
+stdTheories.add(
+    {
         id: "stock-flow",
         name: "Stock and flow",
     },
