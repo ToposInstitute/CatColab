@@ -265,7 +265,7 @@ stdTheories.add(
 stdTheories.add(
     {
         id: "nullable-causal-loop",
-        name: "Causal loop diagram with indeterminate casuality",
+        name: "Causal loops with indeterminates",
     },
     (meta) => {
         const thNullableSignedCategory = new catlog.ThNullableSignedCategory();
@@ -305,8 +305,8 @@ stdTheories.add(
                 {
                     tag: "MorType",
                     morType: { tag: "Basic", content: "Zero" },
-                    name: "Unknown polarity",
-                    description: "The direction variables change is indeterminate",
+                    name: "Indeterminate link",
+                    description: "The direction that variables change is indeterminate",
                     shortcut: ["Z"],
                     arrowStyle: "indeterminate",
                     preferUnnamed: true,
@@ -315,8 +315,8 @@ stdTheories.add(
             modelAnalyses: [
                 configureModelGraph({
                     id: "diagram",
-                    name: "Network",
-                    description: "visualize the regulatory network",
+                    name: "Diagram",
+                    description: "Visualize the causal loop diagram",
                 }),
             ],
         });
