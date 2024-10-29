@@ -115,7 +115,6 @@ function StockFlowSVG(props: {
                     },
                 },
                 ({ srcId, tgtId }) => {
-                    console.log("nodeMap", nodeMap);
                     const srcNode = nodeMap.get(srcId);
                     const tgtEdge = edgeMap.get(tgtId);
                     if (!srcNode || !tgtEdge) {
@@ -123,7 +122,7 @@ function StockFlowSVG(props: {
                     }
                     pathElem.setAttribute("d", tgtEdge.path);
                     const midpoint = pathElem.getPointAtLength(pathElem.getTotalLength() / 2);
-                    const path = quadraticCurve(srcNode.pos, midpoint, 1.0)
+                    const path = quadraticCurve(srcNode.pos, midpoint, 1.0);
                     result.push(path.join(" "));
                 },
             );

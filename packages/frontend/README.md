@@ -1,7 +1,8 @@
-## Usage
+## Contributing
 
-```bash
-$ npm install # or pnpm install or yarn install
-$ npm run build
-$ vite
-```
+Please run 
+
+``pnpm run format
+pnpm run lint``
+
+before submitting a PR.
