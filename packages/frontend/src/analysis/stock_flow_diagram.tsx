@@ -122,10 +122,7 @@ function StockFlowSVG(props: {
                     }
                     pathElem.setAttribute("d", tgtEdge.path);
                     const midpoint = pathElem.getPointAtLength(pathElem.getTotalLength() / 2);
-                    const path =
-                        tgtEdge.source === srcId || tgtEdge.target === srcId
-                            ? quadraticCurve(srcNode.pos, midpoint, 1.0)
-                            : linearPath(srcNode.pos, midpoint);
+                    const path = quadraticCurve(srcNode.pos, midpoint, 1.0);
                     result.push(path.join(" "));
                 },
             );
@@ -151,13 +148,6 @@ function StockFlowSVG(props: {
         </svg>
     );
 }
-
-/** Linear path from one point to another.
- */
-function linearPath(src: GraphLayout.Point, tgt: GraphLayout.Point) {
-    return ["M", src.x, tgt.x, "L", tgt.x, tgt.y];
-}
-
 /** Quadratic Bezier curve from one point to another.
  */
 function quadraticCurve(src: GraphLayout.Point, tgt: GraphLayout.Point, ratio: number) {
