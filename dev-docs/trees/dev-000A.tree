@@ -44,17 +44,59 @@
 \p{However, this will not update the version of catcolab that is running on the server. There is currently a somewhat manual process to do this, because Owen believes that it is important for people to understand the steps of the manual process so that they can debug things when they go wrong.}
 
 \p{On backend-next.catcolab.org, there is a git clone of the catcolab repository in \code{/var/lib/catcolab}. There is a daemon (managed via systemd) that runs \code{node dist/index.js} in \code{/var/lib/catcolab/packages/backend}. In order to upgrade the version of catcolab that is running on the server, one should:}
-
 \ol{
-\li{Log in via \code{ssh} into backend-next.catcolab.org (if you don't have an account with administrator access, ask Owen)}
-\li{Use \code{su} to become the user \code{catcolab}.}
+\li{Log in via \code{ssh root@backend-next.catcolab.org}. If you don't have access, ask Shaowei.}
+\li{Use \code{su - catcolab} to become the user \code{catcolab}.}
 \li{\code{cd} into \code{/var/lib/catcolab/packages/backend}.}
 \li{Use \code{git} to checkout the desired version of catcolab.}
 \li{Run \code{npm run build} to produce a new \code{dist/index.js} file.}
-\li{Run as user root \code{systemctl stop catcolab}; this will temporarily stop the backend.}
+\li{Run as user root \code{systemctl stop catcolab}; this will temporarily stop the backend. It is helpful to do this in another terminal window.}
 \li{Run as user catcolab in \code{/var/lib/catcolab/packages/backend} \code{npm run migrate}. This will update the database with new any migrations that have been added since the last time the database was migrated.}
 \li{Run as user root \code{systemctl start catcolab}; this will start back up the backend.}
 \li{(If there are no new migrations, the previous three commands can simply be accomplished via \code{systemctl restart catcolab})}
-\li{You can check the status of the catcolab daemon with \code{systemctl status catcolab}, or look at the log messages with \code{journalctl -u catcolab}.}
+\li{You can check the status of the catcolab daemon with \code{systemctl status catcolab}, or look at the log messages with \code{journalctl -eu catcolab}.}
 }
+
+\p{To give a new user access to the servers:}
+\ol{
+\li{Update the public keys in \code{infrastructure/hosts/catcolab/default.nix}.}
+\li{Get someone with server access to run \code{nix develop; deploy .#catcolab}.}
+}
+
+\p{To give a new user access to the secrets:}
+\ol{
+\li{Update the public keys in \code{infrastructure/secrets/secrets.nix}.}
+\li{Get someone with secret access to run \code{nix develop; agenix -r}.}
+}
+
+\p{If you are creating an AWS instance and setting up a CatColab backend, e.g. \code{backend-next}, for the first time:}
+\ol{
+\li{Use the \code{nixos/24.05.3348.7e5afd404b62-x86_64-linux} community AMI.}
+\li{Add 50GB of storage to the instance.}
+\li{Open ports 80, 443 for HTTP, HTTPS in addition to port 22 for SSH.}
+\li{Add a public key of the machine to \code{infrastructure/secrets/secrets.nix}. You can get the public keys by running \code{ssh-keyscan <machine-ip-address>}.}
+\li{In the \code{namecheap} domain name hosting service, point \code{backend-next.catcolab.org} to the instance's IP address.}
+\li{Log in via \code{ssh root@backend-next.catcolab.org}. If you don't have access, ask Shaowei.}
+\li{Use \code{git} to clone the catcolab repo in \code{/var/lib}. Rename the directory with \code{mv CatColab catcolab} and change ownership with \code{chown -R catcolab:catcolab catcolab}.}
+\li{Use \code{su - catcolab} to become the user \code{catcolab}.}
+\li{\code{cd} into \code{/var/lib/catcolab/packages/backend}.}
+\li{Use \code{git} to checkout the desired version of catcolab.}
+\li{Run \code{pnpm install} to install dependencies.}
+}
+
+\p{Setting up the Postgres database:}
+\ol{
+\li{\code{su - postgres}}
+\li{\code{createuser catcolab}}
+\li{\code{createdb catcolab}}
+\li{\code{psql}}
+  \ul{
+  \li{\code{alter user catcolab with encrypted password '<password>';}}
+  \li{\code{grant all privileges on database catcolab to catcolab;}}
+  \li{\code{﹨c catcolab postgres}}
+  \li{\code{grant all on schema public to catcolab;}}
+  \li{\code{exit}}
+  }
+}
+
 }

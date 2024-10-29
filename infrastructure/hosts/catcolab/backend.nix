@@ -31,6 +31,7 @@ in {
                 if ($request_method = OPTIONS) {
                     return 204;
                 }
+                proxy_hide_header 'Access-Control-Allow-Origin';
                 add_header 'Access-Control-Allow-Origin' '*' always;
                 add_header 'Access-Control-Allow-Methods' 'GET, POST, DELETE, PUT, OPTIONS' always;
                 add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
@@ -71,6 +72,7 @@ in {
     environment.systemPackages = with pkgs; [
         rustup
         nodejs
+        nodejs.pkgs.pnpm
         git
         stdenv.cc
     ];

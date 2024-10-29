@@ -39,6 +39,12 @@
               sshUser = "root";
             };
           };
+          catcolab-next = {
+            hostname = "ec2-18-191-165-64.us-east-2.compute.amazonaws.com";
+            profiles.system = mkSystemProfile "catcolab-next" // {
+              sshUser = "root";
+            };
+          };
         };
 
         devShells.${system}.default = import ./shell { inherit self pkgs inputs; };

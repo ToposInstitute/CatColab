@@ -11,7 +11,7 @@ in
       "${inputs.nixpkgs}/nixos/modules/virtualisation/amazon-image.nix"
   ];
 
-  networking.hostName = "catcolab";
+  networking.hostName = "catcolab-next";
 
   security.sudo.wheelNeedsPassword = false;
 
