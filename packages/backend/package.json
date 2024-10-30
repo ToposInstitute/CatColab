@@ -5,6 +5,7 @@
     "type": "module",
     "scripts": {
         "server": "tsx src/index.ts",
+        "build": "tsc",
         "test": "tsc; node --test",
         "migrate": "tsx src/migrate.ts",
         "teardown": "tsx src/teardown.ts",
