@@ -59,7 +59,7 @@ in {
             User = "catcolab";
             ExecStart = startScript;
             Type="simple";
-            WorkingDirectory = "/var/lib/catcolab/packages/backend";
+            WorkingDirectory = "/var/lib/catcolab/packages/backend/";
             Restart = "on-failure";
         };
     };

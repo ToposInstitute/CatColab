@@ -21,8 +21,8 @@ in {
     };
 
     services.postgresql.enable = true;
-    services.nginx.enable = true;
 
+    services.nginx.enable = true;
     services.nginx.virtualHosts."backend.catcolab.org" = {
         forceSSL = true;
         enableACME = true;
