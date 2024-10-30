@@ -36,10 +36,17 @@ jobs:
           rustup toolchain install stable
           rustup target add wasm32-unknown-unknown
 
-      - name: Build
+      - name: Build for Prod
+        if: github.event_name == 'release'
         run: |
           pnpm install
           pnpm --filter ./packages/frontend run build
+
+      - name: Build for Staging
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        run: |
+          pnpm install
+          pnpm --filter ./packages/frontend run build --mode staging
 
       - name: Upload
         uses: actions/upload-artifact@v4
