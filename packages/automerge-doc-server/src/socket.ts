@@ -1,6 +1,6 @@
 import { type Socket, io } from "socket.io-client";
 
-import type { RefContent } from "../../backend-next/pkg/types.ts";
+import type { JsonValue, RefContent } from "../../backend/pkg/index.ts";
 
 /** Messages handled by the `SocketServer`. */
 export type Handlers = {
@@ -36,7 +36,7 @@ export class SocketServer {
         this.socket = socket;
     }
 
-    autosave(refId: string, content: unknown) {
+    autosave(refId: string, content: JsonValue) {
         this.socket.emit("autosave", { refId, content });
     }
 

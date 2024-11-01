@@ -4,6 +4,8 @@ import { NodeWSServerAdapter } from "@automerge/automerge-repo-network-websocket
 import express from "express";
 import * as ws from "ws";
 
+import type { JsonValue } from "../../backend/pkg/index.ts";
+
 export class AutomergeServer {
     private docMap: Map<string, DocHandle<unknown>>;
     private app: express.Express;
@@ -11,7 +13,7 @@ export class AutomergeServer {
     private wss: ws.WebSocketServer;
     private repo: Repo;
 
-    public handleChange?: (refId: string, data: unknown) => void;
+    public handleChange?: (refId: string, content: JsonValue) => void;
 
     constructor(port: number | string) {
         this.docMap = new Map();
