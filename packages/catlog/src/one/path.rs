@@ -7,6 +7,7 @@ data type for [path equations](`PathEq`).
 use either::Either;
 use nonempty::{nonempty, NonEmpty};
 use std::collections::HashSet;
+use std::hash::Hash;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -36,7 +37,7 @@ case analysis on the edge sequence anyway to determine whether, say,
 [`reduce`](std::iter::Iterator::reduce) is valid. Thus, it seems better to reify
 the two cases in the data structure itself.
 */
-#[derive(Clone, Debug, PartialEq, PartialOrd, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(tag = "tag", content = "content"))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
@@ -185,7 +186,7 @@ impl<V, E> Path<V, E> {
     /// Returns whether or not there are repeated edges in the path.
     pub fn is_simple(&self) -> bool
     where
-        E: Eq + std::hash::Hash,
+        E: Eq + Hash,
     {
         match self {
             Path::Id(_) => true,
@@ -425,12 +426,9 @@ mod tests {
     }
 
     #[test]
-    fn is_simple() {
-        let p1: Path<i32, i32> = Path::pair(0, 1);
-        let p2: Path<i32, i32> = Path::pair(0, 0);
-        let p3: Path<i32, i32> = Path::Id(0);
-        assert!(p1.is_simple());
-        assert!(!p2.is_simple());
-        assert!(p3.is_simple());
+    fn path_is_simple() {
+        assert!(SkelPath::pair(0, 1).is_simple());
+        assert!(!SkelPath::pair(0, 0).is_simple());
+        assert!(SkelPath::Id(0).is_simple());
     }
 }

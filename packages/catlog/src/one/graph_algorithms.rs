@@ -8,10 +8,9 @@ use super::path::*;
 
 /** Iterates over all simple paths between two vertices of a finite graph.
 
-A **simple path** is a path in which all edges are distinct.
+On our definition, a **simple path** is a path in which all edges are distinct.
 
 A **simple cycle** is a simple path in which the source and target coincide.
-
 This being a category theory library, we do consider the empty/identity path at
 a vertex to be a simple cycle.
 
@@ -54,11 +53,10 @@ where
                 let tgt = graph.tgt(&e);
                 if !visited.contains(&e) {
                     path.push(e.clone());
-                    visited.insert(e.clone());
+                    visited.insert(e);
                     stack.push(graph.out_edges(&tgt).collect());
                     if tgt == *to {
-                        let result: Option<Path<<G as Graph>::V, <G as Graph>::E>> =
-                            Path::collect(path.iter().cloned());
+                        let result = Path::collect(path.iter().cloned());
                         return Some(result.unwrap());
                     }
                 }
@@ -173,21 +171,19 @@ mod tests {
         let paths: Vec<_> = simple_paths(&g, &0, &2).collect();
         assert_eq!(paths, vec![Path::Seq(nonempty![0, 1])]);
 
-        let mut g: HashGraph<char, &str> = Default::default();
+        let mut g: HashGraph<_, _> = Default::default();
         assert!(g.add_vertex('x'));
-        assert!(g.add_edge("f", 'x', 'x'));
-        assert!(g.add_edge("g", 'x', 'x'));
-        let paths: Vec<_> = simple_paths(&g, &'x', &'x').collect();
-        assert_eq!(
-            paths,
-            vec![
-                Path::Id('x'),
-                Path::Seq(nonempty!["g"]),
-                Path::Seq(nonempty!["g", "f"]),
-                Path::Seq(nonempty!["f"]),
-                Path::Seq(nonempty!["f", "g"]),
-            ]
-        );
+        assert!(g.add_edge('f', 'x', 'x'));
+        assert!(g.add_edge('g', 'x', 'x'));
+        let paths: HashSet<_> = simple_paths(&g, &'x', &'x').collect();
+        let target = HashSet::from([
+            Path::Id('x'),
+            Path::Seq(nonempty!['f']),
+            Path::Seq(nonempty!['g']),
+            Path::Seq(nonempty!['f', 'g']),
+            Path::Seq(nonempty!['g', 'f']),
+        ]);
+        assert_eq!(paths, target);
     }
 
     #[test]
