@@ -1,5 +1,5 @@
-import { AutomergeServer } from "./server.ts";
-import { SocketServer } from "./socket.ts";
+import { AutomergeServer } from "./server.js";
+import { SocketServer } from "./socket.js";
 
 const internal_port = process.env.AUTOMERGE_INTERNAL_PORT || 3000;
 const port = process.env.AUTOMERGE_PORT || 8010;
