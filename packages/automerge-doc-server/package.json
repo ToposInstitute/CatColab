@@ -5,6 +5,7 @@
     "main": "dist/main.js",
     "scripts": {
         "main": "tsx src/main.ts",
+        "build": "tsc",
         "format": "biome format --write",
         "lint": "biome lint --write && biome check --write"
     },
