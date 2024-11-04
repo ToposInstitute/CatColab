@@ -231,12 +231,13 @@ where
     Cat::Ob: Hash,
     Cat::Mor: Hash,
 {
-    /// Iterates over failures of the mapping to be a double model morphism
+    /// Iterates over failures of the mapping to be a model morphism.
     pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidDblModelMorphism<DomId, DomId>> + 'a {
         let DblModelMorphism(mapping, dom, cod) = *self;
-        // We don't yet have the ability to solve word problems
-        // Equations in the domain induce equations to check in the codomain
-        assert!(dom.is_free());
+        // TODO: We don't yet have the ability to solve word problems.
+        // Equations in the domain induce equations to check in the codomain.
+        assert!(dom.is_free(), "Domain model should be free");
+
         let ob_errors = dom.object_generators().filter_map(|v| {
             if let Some(f_v) = mapping.apply_ob(&v) {
                 if !cod.has_ob(&f_v) {
@@ -280,51 +281,55 @@ where
         ob_errors.chain(mor_errors)
     }
 
-    /// Are morphism generators sent to simple compositions of morphisms in the
-    /// codomain? This function assumes the morphism has been validated.
+    /// Are morphism generators sent to simple composites of morphisms in the
+    /// codomain?
     fn is_simple(&self) -> bool {
-        let DblModelMorphism(mapping, dom, _cod) = *self;
+        let DblModelMorphism(mapping, dom, _) = *self;
         dom.morphism_generators()
-            .all(|e| mapping.apply_basic_mor(&e).unwrap().is_simple())
+            .all(|e| mapping.apply_basic_mor(&e).map(|p| p.is_simple()).unwrap_or(true))
     }
 
-    /// Check is model morphism is injective on objects
+    /// Is the model morphism injective on objects?
     pub fn is_injective_objects(&self) -> bool {
-        let DblModelMorphism(mapping, dom, _cod) = *self;
+        let DblModelMorphism(mapping, dom, _) = *self;
         let mut seen_obs: HashSet<_> = HashSet::new();
         for x in dom.object_generators() {
-            let f_x = mapping.apply_ob(&x).unwrap();
-            if seen_obs.contains(&f_x) {
-                return false; // not monic
-            } else {
-                seen_obs.insert(f_x);
+            if let Some(f_x) = mapping.apply_ob(&x) {
+                if seen_obs.contains(&f_x) {
+                    return false; // not monic
+                } else {
+                    seen_obs.insert(f_x);
+                }
             }
         }
         true
     }
 
-    /// A restricted check to see if model morphism X -> Y is faithful.
-    /// However, we cannot enumerate all the morphisms of the domain category.
-    /// We restrict the problem by only considering X and Y as free models.
-    /// Furthermore, we restrict the mapping to send generating morphisms in X
-    /// to simple paths in Y.
-    /// This function assumes the morphism has been validated.
+    /** Is the model morphism faithful?
+
+    This check is a nontrivial computation since we cannot enumerate all of the
+    morphisms of the domain category. We simplify the problem by only allowing
+    free models. Furthermore, we restrict the mapping to send generating
+    morphisms in the domain to simple paths in the codomain. If any of these
+    assumptions are violated, the function will panic.
+     */
     pub fn is_free_simple_faithful(&self) -> bool {
         let DblModelMorphism(mapping, dom, cod) = *self;
 
-        assert!(dom.is_free());
-        assert!(cod.is_free());
-        assert!(&self.is_simple());
+        assert!(dom.is_free(), "Domain model should be free");
+        assert!(cod.is_free(), "Codomain model should be free");
+        assert!(&self.is_simple(), "Morphism assignments should be simple");
 
         for x in dom.object_generators() {
             for y in dom.object_generators() {
                 let mut seen: HashSet<_> = HashSet::new();
                 for path in simple_paths(dom.generating_graph(), &x, &y) {
-                    let f_path = mapping.apply_mor(&path).unwrap();
-                    if seen.contains(&f_path) {
-                        return false; // not faithful
-                    } else {
-                        seen.insert(f_path);
+                    if let Some(f_path) = mapping.apply_mor(&path) {
+                        if seen.contains(&f_path) {
+                            return false; // not faithful
+                        } else {
+                            seen.insert(f_path);
+                        }
                     }
                 }
             }
@@ -332,11 +337,13 @@ where
         true
     }
 
-    /// A monomorphism in Cat is an injective-on-morphisms functor.
-    /// This is checked by checking injectivity on objects and faithfulness.
-    /// The faithful check can only be made for morphisms with free domain
-    /// with morphisms being sent only to simple paths.
-    /// This function assumes the morphism has been validated.
+    /** Is the model morphism a monomorphism?
+
+    A monomorphism in Cat is an injective on objects and faithful functor. Thus,
+    we check injectivity on objects and faithfulness. Note that the latter check
+    is subject to the same limitations as
+    [`is_free_simple_faithful`](DblModelMorphism::is_free_simple_faithful).
+     */
     pub fn is_free_simple_monic(&self) -> bool {
         self.is_injective_objects() && self.is_free_simple_faithful()
     }
@@ -442,9 +449,7 @@ where
         let mut vertices: Vec<_> = dom_graph.vertices().collect();
         vertices.sort_by_key(|v| std::cmp::Reverse(dom_graph.degree(v)));
         let var_order = spec_order(dom_graph, vertices.into_iter());
-        let ob_init: HashColumn<_, _, _> = HashColumn::default();
-        let mor_init: HashColumn<_, _, _> = HashColumn::default();
-        let ob_inv: HashColumn<CodId, DomId> = HashColumn::default();
+
         Self {
             dom,
             cod,
@@ -453,41 +458,46 @@ where
             var_order,
             injective_ob: false,
             faithful: false,
-            ob_init,
-            mor_init,
-            ob_inv,
+            ob_init: HashColumn::default(),
+            mor_init: HashColumn::default(),
+            ob_inv: HashColumn::default(),
         }
     }
 
-    /// Restrict to the search to monomorphisms between models.
+    /// Restrict the search to monomorphisms between models.
     pub fn monic(&mut self) -> &mut Self {
         self.injective_ob = true;
         self.faithful = true;
         self
     }
 
-    /// Restrict to the search to injective maps on objects.
+    /// Restrict the search to model morphisms that are injective on objects.
     pub fn injective_ob(&mut self) -> &mut Self {
         self.injective_ob = true;
         self
     }
-    /// Restrict to the search to injective maps on morphisms (for each dom/cod
-    /// pair of objects in the domain).
-    /// In future work, this will be efficiently checked for early search tree
-    /// pruning; however, this is currently enforced by filtering with  
-    /// [is_free_simple_faithful](DiscreteDblModelMorphism::is_free_simple_faithful).
+
+    /** Restrict the search to model morphisms that are faithful.
+
+    A faithful morphism is an injective map on morphisms when restricted to any
+    domain/codomain pair of objects in the domain.
+
+    In future work, this will be efficiently checked for early search tree
+    pruning; however, this is currently enforced by filtering with
+    [is_free_simple_faithful](DiscreteDblModelMorphism::is_free_simple_faithful).
+     */
     pub fn faithful(&mut self) -> &mut Self {
         self.faithful = true;
         self
     }
 
-    /// Require morphism to send Object `ob` in domain to `val` in codomain.
+    /// Require morphisms to send object `ob` in domain to `val` in codomain.
     pub fn initialize_ob(&mut self, ob: DomId, val: CodId) -> &mut Self {
         self.ob_init.set(ob, val);
         self
     }
 
-    /// Require morphism to send morphism `m` in domain to `val` in codomain.
+    /// Require morphisms to send morphism `m` in domain to `val` in codomain.
     pub fn initialize_mor(&mut self, m: DomId, val: Path<CodId, CodId>) -> &mut Self {
         self.mor_init.set(m, val);
         self
@@ -516,22 +526,22 @@ where
                     let can_assign = self.assign_ob(x.clone(), y.clone());
                     if can_assign {
                         self.search(depth + 1);
-                        self.unassign_ob(x.clone(), y.clone())
+                        self.unassign_ob(x, y)
                     }
                 } else {
                     for y in self.cod.object_generators_with_type(&self.dom.ob_type(&x)) {
                         let can_assign = self.assign_ob(x.clone(), y.clone());
                         if can_assign {
                             self.search(depth + 1);
-                            self.unassign_ob(x.clone(), y.clone())
+                            self.unassign_ob(x.clone(), y)
                         }
                     }
                 }
             }
             GraphElem::Edge(m) => {
                 if self.mor_init.is_set(&m) {
-                    let path = self.mor_init.apply(&m).unwrap();
-                    self.map.assign_basic_mor(m.clone(), path.clone());
+                    let path = self.mor_init.apply(&m).cloned().unwrap();
+                    self.map.assign_basic_mor(m, path);
                     self.search(depth + 1);
                 } else {
                     let path = Path::single(m);
@@ -560,21 +570,21 @@ where
         }
     }
 
-    /// Attempt an object assignment, returning true iff successful
+    /// Attempt an object assignment, returning true iff successful.
     fn assign_ob(&mut self, x: DomId, y: CodId) -> bool {
         if self.injective_ob {
             if let Some(y_inv) = self.ob_inv.apply(&y) {
-                if y_inv != &x {
+                if *y_inv != x {
                     return false;
                 }
             }
         }
         self.map.assign_ob(x.clone(), y.clone());
-        self.ob_inv.set(y.clone(), x.clone());
+        self.ob_inv.set(y, x);
         true
     }
 
-    /// Undo an object assignment
+    /// Undo an object assignment.
     fn unassign_ob(&mut self, _: DomId, y: CodId) {
         self.ob_inv.unset(&y);
     }
@@ -582,16 +592,13 @@ where
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
-
-    use crate::stdlib::*;
-    use crate::validate::Validate;
 
     use crate::dbl::model::UstrDiscreteDblModel;
     use crate::one::fin_category::FinMor;
+    use crate::stdlib::*;
+    use crate::validate::Validate;
 
-    use nonempty::nonempty;
     use std::collections::HashMap;
     use ustr::ustr;
 
@@ -626,6 +633,7 @@ mod tests {
         assert_eq!(maps.len(), 1);
         assert!(matches!(maps[0].apply_mor(&pos), Some(Path::Seq(_))));
     }
+
     /// The [simple path](crate::one::graph_algorithms::simple_paths) should
     /// give identical results to hom search from a walking morphism (assuming
     /// all the object/morphism types are the same).   
@@ -638,7 +646,7 @@ mod tests {
         walking.add_ob(a, ustr("Object"));
         walking.add_ob(b, ustr("Object"));
         walking.add_mor(ustr("f"), a, b, FinMor::Id(ustr("Object")));
-        let w: Path<ustr::Ustr, ustr::Ustr> = Path::from_vec(vec![ustr("f")]).unwrap();
+        let w = Path::single(ustr("f"));
 
         //     y         Graph with lots of cyclic paths.
         //   ↗  ↘
@@ -656,16 +664,14 @@ mod tests {
 
         for i in model.object_generators() {
             for j in model.object_generators() {
-                let maps: HashSet<Path<ustr::Ustr, ustr::Ustr>> =
-                    DiscreteDblModelMapping::morphisms(&walking, &model)
-                        .initialize_ob(ustr("A"), i)
-                        .initialize_ob(ustr("B"), j)
-                        .find_all()
-                        .into_iter()
-                        .map(|f| f.apply_mor(&w).unwrap())
-                        .collect();
-                let spaths: HashSet<Path<ustr::Ustr, ustr::Ustr>> =
-                    simple_paths(model.generating_graph(), &i, &j).collect();
+                let maps: HashSet<_> = DiscreteDblModelMapping::morphisms(&walking, &model)
+                    .initialize_ob(ustr("A"), i)
+                    .initialize_ob(ustr("B"), j)
+                    .find_all()
+                    .into_iter()
+                    .map(|f| f.apply_mor(&w).unwrap())
+                    .collect();
+                let spaths: HashSet<_> = simple_paths(model.generating_graph(), &i, &j).collect();
                 assert_eq!(maps, spaths);
             }
         }
@@ -697,11 +703,9 @@ mod tests {
         let negloop = negative_loop(theory.clone());
         let posfeed = positive_feedback(theory.clone());
 
-        let omap: HashMap<_, _> = [(ustr("x"), ustr("x"))].into_iter().collect();
-        let mmap: HashMap<_, _> = [(ustr(""), Path::Id(ustr("negative")))].into_iter().collect();
         let f = DiscreteDblModelMapping {
-            ob_map: omap.into(),
-            mor_map: mmap.into(),
+            ob_map: HashMap::from([(ustr("x"), ustr("x"))]).into(),
+            mor_map: HashMap::from([(ustr(""), Path::Id(ustr("negative")))]).into(),
         };
         let dmm = DblModelMorphism(&f, &negloop, &negloop);
         assert!(dmm.validate().is_err());
@@ -709,16 +713,12 @@ mod tests {
         // A bad map from h to itself that is wrong for the ob (it is in the map
         // but sent to something that doesn't exist) and for the hom generator
         // (not in the map)
-        let bad_ob_assign: HashMap<_, _> = [(ustr("x"), ustr("y"))].into_iter().collect();
-        let missing_hom_assign: HashMap<_, _> =
-            [(ustr("y"), Path::Id(ustr("y")))].into_iter().collect();
         let f = DiscreteDblModelMapping {
-            ob_map: bad_ob_assign.into(),
-            mor_map: missing_hom_assign.into(),
+            ob_map: HashMap::from([(ustr("x"), ustr("y"))]).into(),
+            mor_map: HashMap::from([(ustr("y"), Path::Id(ustr("y")))]).into(),
         };
         let dmm = DblModelMorphism(&f, &negloop, &negloop);
-        assert!(dmm.validate().is_err());
-        let errs: Vec<InvalidDblModelMorphism<_, _>> = dmm.iter_invalid().collect();
+        let errs: Vec<_> = dmm.validate().expect_err("should be invalid").into();
         assert!(
             errs == vec![
                 InvalidDblModelMorphism::Ob(ustr("x")),
@@ -727,16 +727,12 @@ mod tests {
         );
 
         // A bad map that doesn't preserve dom
-        let omap: HashMap<_, _> = [(ustr("x"), ustr("x"))].into_iter().collect();
-        let mmap: HashMap<_, _> = [(ustr("negative"), Path::Seq(nonempty![ustr("positive1")]))]
-            .into_iter()
-            .collect();
         let f = DiscreteDblModelMapping {
-            ob_map: omap.into(),
-            mor_map: mmap.into(),
+            ob_map: HashMap::from([(ustr("x"), ustr("x"))]).into(),
+            mor_map: HashMap::from([(ustr("negative"), Path::single(ustr("positive1")))]).into(),
         };
         let dmm = DblModelMorphism(&f, &negloop, &posfeed);
-        let errs: Vec<InvalidDblModelMorphism<_, _>> = dmm.iter_invalid().collect();
+        let errs: Vec<_> = dmm.validate().expect_err("should be invalid").into();
         assert!(
             errs == vec![
                 InvalidDblModelMorphism::Cod(ustr("negative")),
@@ -745,16 +741,12 @@ mod tests {
         );
 
         // A bad map that doesn't preserve codom
-        let omap: HashMap<_, _> = [(ustr("x"), ustr("x"))].into_iter().collect();
-        let mmap: HashMap<_, _> = [(ustr("negative"), Path::Seq(nonempty![ustr("positive2")]))]
-            .into_iter()
-            .collect();
         let f = DiscreteDblModelMapping {
-            ob_map: omap.into(),
-            mor_map: mmap.into(),
+            ob_map: HashMap::from([(ustr("x"), ustr("x"))]).into(),
+            mor_map: HashMap::from([(ustr("negative"), Path::single(ustr("positive2")))]).into(),
         };
         let dmm = DblModelMorphism(&f, &negloop, &posfeed);
-        let errs: Vec<InvalidDblModelMorphism<_, _>> = dmm.iter_invalid().collect();
+        let errs: Vec<_> = dmm.validate().expect_err("should be invalid").into();
         assert!(
             errs == vec![
                 InvalidDblModelMorphism::Dom(ustr("negative")),
@@ -769,30 +761,21 @@ mod tests {
         let negloop = positive_loop(theory.clone());
 
         // Identity map
-        let omap: HashMap<_, _> = [(ustr("x"), ustr("x"))].into_iter().collect();
-        let mmap: HashMap<_, _> = [(ustr("positive"), Path::Seq(nonempty![ustr("positive")]))]
-            .into_iter()
-            .collect();
         let f = DiscreteDblModelMapping {
-            ob_map: omap.into(),
-            mor_map: mmap.into(),
+            ob_map: HashMap::from([(ustr("x"), ustr("x"))]).into(),
+            mor_map: HashMap::from([(ustr("positive"), Path::single(ustr("positive")))]).into(),
         };
         let dmm = DblModelMorphism(&f, &negloop, &negloop);
-        assert!(!dmm.validate().is_err());
+        assert!(dmm.validate().is_ok());
         assert!(dmm.is_free_simple_monic());
 
         // Send generator to identity
-        let omap: HashMap<_, _> = [(ustr("x"), ustr("x"))].into_iter().collect();
-        let mmap: HashMap<_, _> = [(ustr("positive"), Path::Id(ustr("x")))].into_iter().collect();
         let f = DiscreteDblModelMapping {
-            ob_map: omap.into(),
-            mor_map: mmap.into(),
+            ob_map: HashMap::from([(ustr("x"), ustr("x"))]).into(),
+            mor_map: HashMap::from([(ustr("positive"), Path::Id(ustr("x")))]).into(),
         };
         let dmm = DblModelMorphism(&f, &negloop, &negloop);
-        for e in dmm.iter_invalid() {
-            println!("{}", e);
-        }
-        assert!(!dmm.validate().is_err());
+        assert!(dmm.validate().is_ok());
         assert!(!dmm.is_free_simple_monic());
     }
 
