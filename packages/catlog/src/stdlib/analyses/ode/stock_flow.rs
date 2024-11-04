@@ -231,7 +231,7 @@ mod test {
         model: &UstrDiscreteDblModel,
         expected: Expect,
     ) {
-        match analysis.compile_system(&model) {
+        match analysis.compile_system(model) {
             Ok(problem) => {
                 expected.assert_eq(&plot(&problem));
             }

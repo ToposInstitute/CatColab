@@ -211,6 +211,11 @@ where
         self.category.add_mor_generator(f, dom, cod)
     }
 
+    /// Adds an equation to the model, making it not free.
+    pub fn add_equation(&mut self, key: Id, eq: PathEq<Id, Id>) {
+        self.category.add_equation(key, eq);
+    }
+
     /// Adds a basic morphism to the model without setting its (co)domain.
     pub fn make_mor(&mut self, f: Id, typ: Cat::Mor) -> bool {
         self.mor_types.set(f.clone(), typ);
@@ -473,5 +478,11 @@ mod tests {
         assert!(model.validate().is_ok());
         model.add_mor(ustr("b"), entity, ustr("type"), FinMor::Id(ustr("Entity")));
         assert_eq!(model.validate().unwrap_err().len(), 1);
+
+        assert!(model.is_free());
+
+        let peq = PathEq::new(Path::single(ustr("a")), Path::single(ustr("b")));
+        model.add_equation(ustr("e"), peq);
+        assert!(!model.is_free());
     }
 }
