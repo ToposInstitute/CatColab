@@ -12,6 +12,10 @@
     top: 50%;
     transform: translate(-100%, -50%);
     left: 0;
+
+    display: flex;
+    flex-direction: row;
+
     & .lucide {
         color: darkgray;
     }
