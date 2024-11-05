@@ -36,6 +36,7 @@
         "@viz-js/viz": "^3.7.0",
         "backend": "workspace:*",
         "catlog-wasm": "link:../catlog-wasm/pkg",
+        "computed-style-to-inline-style": "^4.0.0",
         "echarts": "^5.5.1",
         "echarts-solid": "^0.2.0",
         "lucide-solid": "^0.435.0",
