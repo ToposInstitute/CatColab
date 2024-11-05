@@ -237,7 +237,6 @@ export function AnalysisDocumentEditor(props: {
                                 <AnalysisPane liveDoc={props.liveDoc} />
                                 <div class="export-buttons">
                                 <button onClick={handleExportSVG}>Export SVG</button>
-                                <button>Export PNG</button>
                                 </div>
                             </div>
                         </Resizable.Panel>

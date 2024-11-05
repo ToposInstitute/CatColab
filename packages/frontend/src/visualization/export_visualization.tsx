@@ -3,9 +3,8 @@ Get a handle to SVG DOM element once Solid has constructed it (using the ref mec
 Use XMLSerializer to write that DOM node to a string
 Save that string as a file
  */
-import { graphToDot, renderDot } from "render-dot"
 import computedStyleToInlineStyle from 'computed-style-to-inline-style';
-import { GraphvizSVG } from "../visualization";
+
 
 export function exportVisualizationSVG(visualization: HTMLDivElement) {
     computedStyleToInlineStyle(visualization, { recursive: true });
@@ -21,10 +20,10 @@ export function exportVisualizationSVG(visualization: HTMLDivElement) {
         source = source.replace(/^<svg/, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"')
     }
     // Add xml declaration
-    source = '<?xml version="1.0" standalone="no"?>\r\n' + source
+    source = '<?xml version="1.0" standalone="no"?>\r\n' + source;
 
     // Convert SVG source to URI data scheme
-    const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(source)
+    const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(source);
 
     const link = document.createElement("a");
     link.href = url;
@@ -38,3 +37,5 @@ export function exportVisualizationSVG(visualization: HTMLDivElement) {
 
 }
 
+
+   

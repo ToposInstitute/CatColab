@@ -1,10 +1,9 @@
 import type * as Viz from "@viz-js/viz";
 import { type JSX, Suspense, createResource } from "solid-js";
-
 import { GraphSVG } from "./graph_svg";
 import { loadViz, parseGraphvizJSON, vizRenderJSON0 } from "./graphviz";
 import type * as GraphvizJSON from "./graphviz_json";
-
+import { exportVisualizationSVG } from "./export_visualization";
 /** Visualize a graph using Graphviz and SVG.
 
 The layout is performed by Graphviz and then the rendering is done by custom SVG
@@ -31,12 +30,26 @@ export function GraphvizSVG(props: {
     );
 }
 
+ // Create a ref for the visualization container
+ let visualizationRef: HTMLDivElement | undefined;
+
+// export handling 
+export const handleExportSVG = () => {
+    if (visualizationRef) {
+      exportVisualizationSVG(visualizationRef);
+    }
+  };
+
+
 function GraphvizOutputSVG(props: {
     graph?: GraphvizJSON.Graph;
+    
 }) {
     return (
-        <div class="graphviz">
+        <div class="graphviz" ref={visualizationRef}>
             <GraphSVG graph={props.graph && parseGraphvizJSON(props.graph)} />
         </div>
     );
 }
+
+
