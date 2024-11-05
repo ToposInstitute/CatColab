@@ -54,6 +54,9 @@ function CreateModel() {
     const [ref] = createResource<string>(async () => {
         const result = await rpc.new_ref.mutate({
             content: init as JsonValue,
+            permissions: {
+                anyone: "Read",
+            },
         });
         invariant(result.tag === "Ok", "Failed to create model");
         return result.content;

@@ -60,7 +60,6 @@ export default function AnalysisPage() {
 
     const [liveDoc] = createResource<LiveAnalysisDocument>(async () => {
         const { doc, docHandle } = await getReactiveDoc<AnalysisDocument>(rpc, ref, repo);
-        invariant(docHandle, "Read-only mode not yet implemented");
         await docHandle.whenReady();
         invariant(
             doc.type === "analysis",

@@ -1,31 +1,34 @@
-import { destructure } from "@solid-primitives/destructure";
 import { getAuth, signOut } from "firebase/auth";
 import { useAuth, useFirebaseApp } from "solid-firebase";
 import { type ComponentProps, Match, Switch, createSignal } from "solid-js";
 
-import type { Permissions } from "catcolab-api";
+import type { PermissionLevel, Permissions } from "catcolab-api";
 import { Dialog, IconButton } from "../components";
 import { Login } from "./login";
 
 import Globe from "lucide-solid/icons/globe";
+import Lock from "lucide-solid/icons/lock";
 import User from "lucide-solid/icons/user";
+import Users from "lucide-solid/icons/users";
 
 /** Toolbar button summarizing the document's permissions.
  */
 export function PermissionsButton(props: {
     permissions: Permissions;
 }) {
-    const {
-        permissions: { anyone, user },
-    } = destructure(props, { deep: true });
+    const anyone = () => props.permissions.anyone;
+    const user = () => props.permissions.user;
 
     return (
-        <Switch>
-            <Match when={anyone?.() === "Own"}>
+        <Switch fallback={<SharedPermissionsButton permissions={props.permissions} />}>
+            <Match when={anyone() === "Own"}>
                 <AnonPermissionsButton />
             </Match>
-            <Match when={user?.() === "Own" && anyone?.() === null}>
-                <PrivatePermissionsButton />
+            <Match when={!user() || user() === "Read"}>
+                <ReadonlyPermissionsButton />
+            </Match>
+            <Match when={!anyone()}>
+                <PrivatePermissionsButton permissions={props.permissions} />
             </Match>
         </Switch>
     );
@@ -85,11 +88,59 @@ const AnonPermissionsTrigger = (props: ComponentProps<"button">) => {
     );
 };
 
-const PrivatePermissionsButton = (props: ComponentProps<"button">) => {
-    const tooltip = "This document is owned by you and viewable only by you";
+const ReadonlyPermissionsButton = () => {
+    const tooltip = (
+        <>
+            <p>
+                This document is <strong>read-only</strong>.
+            </p>
+            <p>Any changes that you make will be temporary.</p>
+        </>
+    );
     return (
-        <IconButton {...props} tooltip={tooltip}>
+        <IconButton tooltip={tooltip}>
+            <Lock />
+        </IconButton>
+    );
+};
+
+const SharedPermissionsButton = (props: {
+    permissions: Permissions;
+}) => {
+    const tooltip = (permissions: Permissions) => (
+        <>
+            This document is <strong>{permissionAdjective(permissions.user)}</strong> by you and{" "}
+            {permissionAdjective()} by anyone.
+        </>
+    );
+    return (
+        <IconButton tooltip={tooltip(props.permissions)}>
+            <Users />
+        </IconButton>
+    );
+};
+
+const PrivatePermissionsButton = (props: {
+    permissions: Permissions;
+}) => {
+    const tooltip = (permissions: Permissions) => (
+        <>
+            This document is <strong>{permissionAdjective(permissions.user)}</strong> by you and is
+            not publicly viewable.
+        </>
+    );
+    return (
+        <IconButton tooltip={tooltip(props.permissions)}>
             <User />
         </IconButton>
     );
+};
+
+const permissionAdjective = (level?: PermissionLevel) => permissionAdjectives[level ?? "Read"];
+
+const permissionAdjectives: { [level in PermissionLevel]: string } = {
+    Read: "viewable",
+    Write: "editable",
+    Maintain: "maintained",
+    Own: "owned",
 };

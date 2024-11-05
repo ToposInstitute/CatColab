@@ -1,7 +1,7 @@
-import type {
-    DocHandle,
-    DocHandleChangePayload,
-    DocumentId,
+import {
+    type DocHandle,
+    type DocHandleChangePayload,
+    type DocumentId,
     Repo,
 } from "@automerge/automerge-repo";
 import { type Accessor, createContext, createEffect, createSignal } from "solid-js";
@@ -18,9 +18,12 @@ export const RepoContext = createContext<Repo>();
 /** Reactive document retrieved from the backend. */
 export type ReactiveDoc<T> = {
     doc: T;
-    docHandle?: DocHandle<T>;
+    docHandle: DocHandle<T>;
     permissions: Permissions;
 };
+
+/** Automerge repo with no networking, used for read-only documents. */
+const localRepo = new Repo();
 
 /** Retrieve a reactive document from the backend.
 
@@ -38,23 +41,20 @@ export async function getReactiveDoc<T extends object>(
     if (result.tag !== "Ok") {
         throw new Error(`Failed to retrieve document: ${result.message}`);
     }
-
     const refDoc = result.content;
-    const permissions = refDoc.permissions;
+
+    let docHandle: DocHandle<T>;
     if (refDoc.tag === "Live") {
         const docId = refDoc.docId as DocumentId;
-        const docHandle = repo.find(docId) as DocHandle<T>;
-
-        const doc = await makeDocHandleReactive(docHandle);
-        return { doc, docHandle, permissions };
+        docHandle = repo.find(docId) as DocHandle<T>;
     } else {
         const init = refDoc.content as T;
-
-        // TODO: Handle reactivity in read-only case using
-        // [`produce`](https://docs.solidjs.com/reference/store-utilities/produce).
-        const [doc, _] = createStore<T>(init);
-        return { doc, permissions };
+        docHandle = localRepo.create(init);
     }
+    const doc = await makeDocHandleReactive(docHandle);
+
+    const permissions = refDoc.permissions;
+    return { doc, docHandle, permissions };
 }
 
 /** Create a Solid Store that tracks an Automerge document.

@@ -1,4 +1,4 @@
-import type { DocHandle } from "@automerge/automerge-repo";
+import type { ChangeFn, DocHandle } from "@automerge/automerge-repo";
 import { MultiProvider } from "@solid-primitives/context";
 import { useNavigate, useParams } from "@solidjs/router";
 import {
@@ -51,17 +51,24 @@ import ChartNetwork from "lucide-solid/icons/chart-network";
 
 /** A model document "live" for editing.
 
-Contains a model document and Automerge document handle, plus various memos of
- derived data.
+Contains a reactive model document and an Automerge document handle, plus
+various memos of derived data.
  */
 export type LiveModelDocument = {
     /** The ref for which this is a live document. */
     refId: string;
 
-    /** The model document, suitable for use in reactive contexts. */
+    /** The model document, suitable for use in reactive contexts.
+
+    This data should never be directly mutated. Instead, call `changeDoc` or
+    interact directly with the Automerge document handle.
+     */
     doc: ModelDocument;
 
-    /** The document handle for the model document.*/
+    /** Make a change to the model document. */
+    changeDoc: (f: ChangeFn<ModelDocument>) => void;
+
+    /** The Automerge document handle for the model document. */
     docHandle: DocHandle<ModelDocument>;
 
     /** Permissions for the ref retrieved from the backend. */
@@ -89,7 +96,8 @@ export function enlivenModelDocument(
     theories: TheoryLibrary,
 ): LiveModelDocument {
     const { doc, docHandle, permissions } = reactiveDoc;
-    invariant(docHandle, "Read-only mode not yet implemented");
+
+    const changeDoc = (f: ChangeFn<ModelDocument>) => docHandle.change(f);
 
     // Memo-ize the *formal* content of the notebook, since most derived objects
     // will not depend on the informal (rich-text) content in notebook.
@@ -131,6 +139,7 @@ export function enlivenModelDocument(
     return {
         refId,
         doc,
+        changeDoc,
         docHandle,
         permissions,
         formalJudgments,
@@ -183,6 +192,9 @@ export function ModelDocumentEditor(props: {
             // @ts-expect-error Work around upstream bug:
             // https://github.com/Aleph-Alpha/ts-rs/pull/359
             content: init as JsonValue,
+            permissions: {
+                anyone: "Read",
+            },
         });
         invariant(result.tag === "Ok", "Failed to create analysis");
         const newRef = result.content;
@@ -212,7 +224,7 @@ export function ModelPane(props: {
 
     const liveDoc = () => props.liveDoc;
     const doc = () => props.liveDoc.doc;
-    const docHandle = () => props.liveDoc.docHandle;
+    const changeDoc = (f: (doc: ModelDocument) => void) => props.liveDoc.changeDoc(f);
     return (
         <div class="notebook-container">
             <div class="model-head">
@@ -220,7 +232,7 @@ export function ModelPane(props: {
                     <InlineInput
                         text={doc().name}
                         setText={(text) => {
-                            docHandle().change((doc) => {
+                            changeDoc((doc) => {
                                 doc.name = text;
                             });
                         }}
@@ -234,7 +246,7 @@ export function ModelPane(props: {
                         value={doc().theory ?? ""}
                         onInput={(evt) => {
                             const id = evt.target.value;
-                            docHandle().change((model) => {
+                            changeDoc((model) => {
                                 model.theory = id ? id : undefined;
                             });
                         }}
@@ -257,11 +269,11 @@ export function ModelPane(props: {
                 ]}
             >
                 <NotebookEditor
-                    handle={docHandle()}
+                    handle={props.liveDoc.docHandle}
                     path={["notebook"]}
                     notebook={doc().notebook}
                     changeNotebook={(f) => {
-                        docHandle().change((doc) => f(doc.notebook));
+                        changeDoc((doc) => f(doc.notebook));
                     }}
                     formalCellEditor={ModelCellEditor}
                     cellConstructors={modelCellConstructors(liveDoc().theory())}
