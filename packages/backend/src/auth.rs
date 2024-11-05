@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 use uuid::Uuid;
 
-use super::app::{AppCtx, AppError};
+use super::app::{AppCtx, AppError, AppState};
 
 /// Levels of permission that a user can have on a document.
 #[derive(
@@ -108,6 +108,28 @@ pub async fn permissions(ctx: &AppCtx, ref_id: Uuid) -> Result<Permissions, AppE
     }
 
     Ok(Permissions { anyone, user })
+}
+
+/// Inserts or updates permissions for a ref-user pair.
+pub async fn upsert_permission(
+    state: &AppState,
+    ref_id: Uuid,
+    user_id: Option<String>,
+    level: PermissionLevel,
+) -> Result<(), AppError> {
+    let query = sqlx::query!(
+        "
+        INSERT INTO permissions(object, subject, level)
+        VALUES ($1, $2, $3)
+        ON CONFLICT(object, subject)
+        DO UPDATE SET level = EXCLUDED.level;
+        ",
+        ref_id,
+        user_id,
+        level as PermissionLevel,
+    );
+    query.execute(&state.db).await?;
+    Ok(())
 }
 
 /// Verify that the given ref exists.

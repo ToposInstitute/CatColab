@@ -6,6 +6,7 @@ use ts_rs::TS;
 use uuid::Uuid;
 
 use super::app::{AppCtx, AppError, AppState};
+use super::auth::{upsert_permission, PermissionLevel};
 
 /// Creates a new document ref with initial content.
 pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
@@ -26,15 +27,8 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
     );
     query.execute(&ctx.state.db).await?;
 
-    let query = sqlx::query!(
-        "
-        INSERT INTO permissions(object, subject, level)
-        VALUES ($1, $2, 'own')
-        ",
-        ref_id,
-        ctx.user.map(|user| user.user_id)
-    );
-    query.execute(&ctx.state.db).await?;
+    let user_id = ctx.user.map(|user| user.user_id);
+    upsert_permission(&ctx.state, ref_id, user_id, PermissionLevel::Own).await?;
 
     Ok(ref_id)
 }
