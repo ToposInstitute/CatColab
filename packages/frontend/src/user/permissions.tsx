@@ -21,10 +21,10 @@ export function PermissionsButton(props: {
 
     return (
         <Switch>
-            <Match when={anyone() === "Own"}>
+            <Match when={anyone?.() === "Own"}>
                 <AnonPermissionsButton />
             </Match>
-            <Match when={user() === "Own" && anyone() === null}>
+            <Match when={user?.() === "Own" && anyone?.() === null}>
                 <PrivatePermissionsButton />
             </Match>
         </Switch>

@@ -18,10 +18,12 @@ pub enum PermissionLevel {
 }
 
 /// Global and user permission levels on a document.
-#[derive(Clone, Debug, Deserialize, Serialize, TS)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, TS)]
 pub struct Permissions {
-    anyone: Option<PermissionLevel>,
-    user: Option<PermissionLevel>,
+    #[ts(optional)]
+    pub anyone: Option<PermissionLevel>,
+    #[ts(optional)]
+    pub user: Option<PermissionLevel>,
 }
 
 impl Permissions {

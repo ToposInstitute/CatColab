@@ -179,9 +179,11 @@ export function ModelDocumentEditor(props: {
     const createAnalysis = async () => {
         const init = newAnalysisDocument(props.liveDoc.refId);
 
-        // @ts-expect-error Work around upstream bug:
-        // https://github.com/Aleph-Alpha/ts-rs/pull/359
-        const result = await rpc.new_ref.mutate(init as JsonValue);
+        const result = await rpc.new_ref.mutate({
+            // @ts-expect-error Work around upstream bug:
+            // https://github.com/Aleph-Alpha/ts-rs/pull/359
+            content: init as JsonValue,
+        });
         invariant(result.tag === "Ok", "Failed to create analysis");
         const newRef = result.content;
 

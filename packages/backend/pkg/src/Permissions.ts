@@ -4,4 +4,4 @@ import type { PermissionLevel } from "./PermissionLevel";
 /**
  * Global and user permission levels on a document.
  */
-export type Permissions = { anyone: PermissionLevel | null, user: PermissionLevel | null, };
+export type Permissions = { anyone?: PermissionLevel, user?: PermissionLevel, };

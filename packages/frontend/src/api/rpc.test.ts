@@ -33,7 +33,7 @@ describe("RPC for Automerge documents", async () => {
         type: "model",
         name: "My model",
     };
-    const refId = unwrap(await rpc.new_ref.mutate(content));
+    const refId = unwrap(await rpc.new_ref.mutate({ content }));
     test.sequential("should get a valid ref UUID", () => {
         assert(uuid.validate(refId));
     });
@@ -96,23 +96,35 @@ describe("Authorized RPC", async () => {
         type: "model",
         name: "My private model",
     };
-    const refId = unwrap(await rpc.new_ref.mutate(content));
+    const privateId = unwrap(await rpc.new_ref.mutate({ content }));
     test.sequential("should get a valid ref UUID when authenticated", () => {
-        assert(uuid.validate(refId));
+        assert(uuid.validate(privateId));
     });
 
-    const fetchedContent = unwrap(await rpc.head_snapshot.query(refId));
+    const fetchedContent = unwrap(await rpc.head_snapshot.query(privateId));
     test.sequential("should get document content when authenticated", () => {
         assert.deepStrictEqual(fetchedContent, content);
     });
 
-    const refDoc = unwrap(await rpc.get_doc.query(refId));
+    const refDoc = unwrap(await rpc.get_doc.query(privateId));
     test.sequential("should get a live document when authenticated", () => {
         assert(refDoc.tag === "Live");
         assert(isValidDocumentId(refDoc.docId));
         assert.strictEqual(refDoc.permissions.anyone, null);
         assert.strictEqual(refDoc.permissions.user, "Own");
     });
+
+    const readonlyId = unwrap(
+        await rpc.new_ref.mutate({
+            content: {
+                type: "model",
+                name: "My readonly model",
+            },
+            permissions: {
+                anyone: "Read",
+            },
+        }),
+    );
 
     await signOut(auth);
 
@@ -121,11 +133,16 @@ describe("Authorized RPC", async () => {
         assert.strictEqual(unwrapErr(unauthorizedResult).code, 401);
     });
 
-    const forbiddenResult1 = await rpc.head_snapshot.query(refId);
-    const forbiddenResult2 = await rpc.get_doc.query(refId);
+    const forbiddenResult1 = await rpc.head_snapshot.query(privateId);
+    const forbiddenResult2 = await rpc.get_doc.query(privateId);
     test.sequential("should prohibit document access when unauthenticated", () => {
         assert.strictEqual(unwrapErr(forbiddenResult1).code, 403);
         assert.strictEqual(unwrapErr(forbiddenResult2).code, 403);
+    });
+
+    const readonlyDoc = unwrap(await rpc.get_doc.query(readonlyId));
+    test.sequential("should allow read-only document access when unauthenticated", () => {
+        assert.strictEqual(readonlyDoc.tag, "Readonly");
     });
 
     await signInWithEmailAndPassword(auth, email, password);

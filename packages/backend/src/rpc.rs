@@ -22,8 +22,8 @@ pub fn router() -> Router<AppState> {
 }
 
 #[handler(mutation)]
-async fn new_ref(ctx: AppCtx, content: Value) -> RpcResult<Uuid> {
-    doc::new_ref(ctx, content).await.into()
+async fn new_ref(ctx: AppCtx, input: doc::NewRef) -> RpcResult<Uuid> {
+    doc::new_ref(ctx, input).await.into()
 }
 
 #[handler(query)]
