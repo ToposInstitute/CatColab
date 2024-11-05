@@ -5,7 +5,6 @@ Save that string as a file
  */
 import computedStyleToInlineStyle from 'computed-style-to-inline-style';
 
-
 export function exportVisualizationSVG(visualization: HTMLDivElement) {
     computedStyleToInlineStyle(visualization, { recursive: true });
 
@@ -20,10 +19,10 @@ export function exportVisualizationSVG(visualization: HTMLDivElement) {
         source = source.replace(/^<svg/, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"')
     }
     // Add xml declaration
-    source = '<?xml version="1.0" standalone="no"?>\r\n' + source;
+    source = '<?xml version="1.0" standalone="no"?>\r\n' + source
 
     // Convert SVG source to URI data scheme
-    const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(source);
+    const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(source)
 
     const link = document.createElement("a");
     link.href = url;
@@ -37,5 +36,3 @@ export function exportVisualizationSVG(visualization: HTMLDivElement) {
 
 }
 
-
-   
