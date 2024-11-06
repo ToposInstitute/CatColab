@@ -12,7 +12,7 @@ import { Match, Switch, createResource, lazy, useContext } from "solid-js";
 
 import type { JsonValue } from "catcolab-api";
 import { RepoContext, RpcContext, createRpcClient } from "./api";
-import { newModelDocument } from "./document/types";
+import { newModelDocument } from "./model/document";
 import { HelperContainer, lazyMdx } from "./page/help_page";
 import { TheoryLibraryContext, stdTheories } from "./stdlib";
 
@@ -84,12 +84,12 @@ const routes: RouteDefinition[] = [
     {
         path: "/model/:ref",
         matchFilters: refIsUUIDFilter,
-        component: lazy(() => import("./document/model_document_editor")),
+        component: lazy(() => import("./model/model_editor")),
     },
     {
         path: "/analysis/:ref",
         matchFilters: refIsUUIDFilter,
-        component: lazy(() => import("./document/analysis_document_editor")),
+        component: lazy(() => import("./analysis/analysis_editor")),
     },
     {
         path: "/help",

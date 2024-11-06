@@ -14,9 +14,14 @@ import {
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
-import type { ModelAnalysis } from "../analysis";
 import { RepoContext, RpcContext, getReactiveDoc } from "../api";
 import { IconButton, ResizableHandle } from "../components";
+import {
+    type LiveModelDocument,
+    type ModelDocument,
+    ModelPane,
+    enlivenModelDocument,
+} from "../model";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
@@ -26,8 +31,8 @@ import {
 import { BrandedToolbar, HelpButton } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { ModelAnalysisMeta } from "../theory";
-import { type LiveModelDocument, ModelPane, enlivenModelDocument } from "./model_document_editor";
-import type { AnalysisDocument, ModelDocument } from "./types";
+import type { AnalysisDocument } from "./document";
+import type { ModelAnalysis } from "./types";
 
 import PanelRight from "lucide-solid/icons/panel-right";
 import PanelRightClose from "lucide-solid/icons/panel-right-close";

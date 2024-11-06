@@ -1,4 +1,6 @@
 export * from "./types";
+export * from "./document";
+export * from "./analysis_editor";
 
 export * from "./lotka_volterra";
 export * from "./model_graph";

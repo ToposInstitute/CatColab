@@ -1,28 +1,5 @@
-import type { ModelAnalysis } from "../analysis";
-import type { ModelJudgment } from "../model";
 import { type Notebook, newNotebook } from "../notebook";
-import type { TheoryId } from "../theory";
-
-/** A document defining a model. */
-export type ModelDocument = {
-    type: "model";
-
-    /** User-defined name of model. */
-    name: string;
-
-    /** Identifier of double theory that the model is of. */
-    theory?: TheoryId;
-
-    /** Content of the model, formal and informal. */
-    notebook: Notebook<ModelJudgment>;
-};
-
-/** Create an empty model document. */
-export const newModelDocument = (): ModelDocument => ({
-    name: "",
-    type: "model",
-    notebook: newNotebook(),
-});
+import type { ModelAnalysis } from "./types";
 
 /** A document defining an analysis of a model. */
 export type AnalysisDocument = {

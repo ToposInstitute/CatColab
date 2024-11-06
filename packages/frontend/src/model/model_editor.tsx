@@ -6,8 +6,6 @@ import invariant from "tiny-invariant";
 
 import type { JsonValue, Permissions } from "catcolab-api";
 import type { Uuid } from "catlog-wasm";
-import { type ReactiveDoc, RepoContext, RpcContext, getReactiveDoc } from "../api";
-import { IconButton, InlineInput } from "../components";
 import {
     type ModelJudgment,
     ModelValidationContext,
@@ -22,7 +20,10 @@ import {
     newMorphismDecl,
     newObjectDecl,
     validateModel,
-} from "../model";
+} from ".";
+import { newAnalysisDocument } from "../analysis/document";
+import { type ReactiveDoc, RepoContext, RpcContext, getReactiveDoc } from "../api";
+import { IconButton, InlineInput } from "../components";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
@@ -35,10 +36,10 @@ import { type TheoryLibrary, TheoryLibraryContext } from "../stdlib";
 import type { Theory } from "../theory";
 import { PermissionsButton } from "../user";
 import { type IndexedMap, indexMap } from "../util/indexing";
+import type { ModelDocument } from "./document";
 import { TheorySelectorDialog } from "./theory_selector";
-import { type ModelDocument, newAnalysisDocument } from "./types";
 
-import "./model_document_editor.css";
+import "./model_editor.css";
 
 import ChartNetwork from "lucide-solid/icons/chart-network";
 
