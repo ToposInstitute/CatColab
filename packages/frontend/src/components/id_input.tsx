@@ -1,8 +1,8 @@
 import { createEffect, createSignal, splitProps } from "solid-js";
 
 import type { Uuid } from "catlog-wasm";
-import { InlineInput, type InlineInputErrorStatus, type InlineInputOptions } from "../components";
 import type { IndexedMap } from "../util/indexing";
+import { InlineInput, type InlineInputErrorStatus, type InlineInputOptions } from "./inline_input";
 
 /** Optional props for `IdInput` component.
  */
@@ -10,7 +10,9 @@ export type IdInputOptions = {
     invalid?: boolean;
 } & InlineInputOptions;
 
-/** Input an ID by specifying its human-readable name.
+/** Input a UUID by specifying its human-readable alias.
+
+The mapping between UUID and human-readable names is a prop to this component.
  */
 export function IdInput(
     allProps: {
