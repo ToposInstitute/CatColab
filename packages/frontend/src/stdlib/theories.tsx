@@ -1,12 +1,12 @@
 import * as catlog from "catlog-wasm";
 
+import { Theory } from "../theory";
 import {
     configureLotkaVolterra,
     configureModelGraph,
     configureStockFlowDiagram,
     configureSubmodelsAnalysis,
-} from "../analysis";
-import { Theory } from "../theory";
+} from "./analyses";
 import { TheoryLibrary } from "./types";
 
 import styles from "./styles.module.css";

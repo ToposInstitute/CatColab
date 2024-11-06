@@ -16,12 +16,8 @@ import invariant from "tiny-invariant";
 
 import { RepoContext, RpcContext, getReactiveDoc } from "../api";
 import { IconButton, ResizableHandle } from "../components";
-import {
-    type LiveModelDocument,
-    type ModelDocument,
-    ModelPane,
-    enlivenModelDocument,
-} from "../model";
+import type { ModelDocument } from "../model";
+import { type LiveModelDocument, ModelPane, enlivenModelDocument } from "../model/model_editor";
 import {
     type CellConstructor,
     type FormalCellEditorProps,

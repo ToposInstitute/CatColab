@@ -1,12 +1,12 @@
 import type * as Viz from "@viz-js/viz";
 import { Show } from "solid-js";
 
-import type { ModelJudgment } from "../model";
-import type { ModelAnalysisMeta, Theory, TypeMeta } from "../theory";
-import { GraphvizSVG } from "../visualization";
-import type { ModelAnalysisProps, ModelGraphContent } from "./types";
+import type { ModelAnalysisProps, ModelGraphContent } from "../../analysis";
+import type { ModelJudgment } from "../../model";
+import type { ModelAnalysisMeta, Theory, TypeMeta } from "../../theory";
+import { GraphvizSVG } from "../../visualization";
 
-import styles from "../stdlib/styles.module.css";
+import styles from "../styles.module.css";
 
 /** Configure a graph visualization for use with models of a double theory. */
 export function configureModelGraph(options: {

@@ -1,7 +1,7 @@
 import type { Component } from "solid-js";
 
 import type * as catlog from "catlog-wasm";
-import type { LiveModelDocument } from "../model";
+import type { LiveModelDocument } from "../model/model_editor";
 
 /** Analysis of a model of a double theory.
 

@@ -6,21 +6,6 @@ import invariant from "tiny-invariant";
 
 import type { JsonValue, Permissions } from "catcolab-api";
 import type { Uuid } from "catlog-wasm";
-import {
-    type ModelJudgment,
-    ModelValidationContext,
-    type ModelValidationResult,
-    MorphismCellEditor,
-    type MorphismDecl,
-    MorphismIndexContext,
-    ObjectCellEditor,
-    type ObjectDecl,
-    ObjectIndexContext,
-    TheoryContext,
-    newMorphismDecl,
-    newObjectDecl,
-    validateModel,
-} from ".";
 import { newAnalysisDocument } from "../analysis/document";
 import { type ReactiveDoc, RepoContext, RpcContext, getReactiveDoc } from "../api";
 import { IconButton, InlineInput } from "../components";
@@ -36,8 +21,25 @@ import { type TheoryLibrary, TheoryLibraryContext } from "../stdlib";
 import type { Theory } from "../theory";
 import { PermissionsButton } from "../user";
 import { type IndexedMap, indexMap } from "../util/indexing";
+import {
+    ModelValidationContext,
+    MorphismIndexContext,
+    ObjectIndexContext,
+    TheoryContext,
+} from "./context";
 import type { ModelDocument } from "./document";
+import { MorphismCellEditor } from "./morphism_cell_editor";
+import { ObjectCellEditor } from "./object_cell_editor";
 import { TheorySelectorDialog } from "./theory_selector";
+import {
+    type ModelJudgment,
+    type ModelValidationResult,
+    type MorphismDecl,
+    type ObjectDecl,
+    newMorphismDecl,
+    newObjectDecl,
+    validateModel,
+} from "./types";
 
 import "./model_editor.css";
 
