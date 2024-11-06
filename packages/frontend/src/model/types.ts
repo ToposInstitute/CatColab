@@ -14,7 +14,7 @@ import { indexArray } from "../util/indexing";
 
 /** A judgment in the definition of a model.
 
-TODO: Judgments can be declarations *or* morphism equations.
+TODO: Judgments should be declarations *or* morphism equations.
  */
 export type ModelJudgment = ModelDecl;
 

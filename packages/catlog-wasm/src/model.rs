@@ -83,7 +83,7 @@ impl TryFrom<Mor> for Path<Uuid, Uuid> {
     }
 }
 
-/// Declaration of an object in a model of a double theory.
+/// Declares an object in a model of a double theory.
 #[derive(Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
 pub struct ObDecl {
@@ -95,7 +95,7 @@ pub struct ObDecl {
     pub ob_type: ObType,
 }
 
-/// Declaration of a morphism in a model of a double theory.
+/// Declares a morphism in a model of a double theory.
 #[derive(Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
 pub struct MorDecl {
