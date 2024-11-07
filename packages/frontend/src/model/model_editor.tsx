@@ -1,7 +1,15 @@
 import type { ChangeFn, DocHandle } from "@automerge/automerge-repo";
 import { MultiProvider } from "@solid-primitives/context";
 import { useNavigate, useParams } from "@solidjs/router";
-import { type Accessor, Match, Switch, createMemo, createResource, useContext } from "solid-js";
+import {
+    type Accessor,
+    Match,
+    Show,
+    Switch,
+    createMemo,
+    createResource,
+    useContext,
+} from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { JsonValue, Permissions } from "catcolab-api";
@@ -161,16 +169,7 @@ export default function ModelPage() {
         return enlivenModelDocument(ref, reactiveDoc, theories);
     });
 
-    return (
-        <Switch>
-            <Match when={liveDoc.error}>
-                <span>Error: {liveDoc.error}</span>
-            </Match>
-            <Match when={liveDoc()}>
-                {(liveDoc) => <ModelDocumentEditor liveDoc={liveDoc()} />}
-            </Match>
-        </Switch>
-    );
+    return <Show when={liveDoc()}>{(liveDoc) => <ModelDocumentEditor liveDoc={liveDoc()} />}</Show>;
 }
 
 export function ModelDocumentEditor(props: {

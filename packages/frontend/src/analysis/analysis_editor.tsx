@@ -2,9 +2,7 @@ import type { DocHandle } from "@automerge/automerge-repo";
 import Resizable, { type ContextValue } from "@corvu/resizable";
 import { useParams } from "@solidjs/router";
 import {
-    Match,
     Show,
-    Switch,
     createContext,
     createEffect,
     createResource,
@@ -61,11 +59,7 @@ export default function AnalysisPage() {
 
     const [liveDoc] = createResource<LiveAnalysisDocument>(async () => {
         const { doc, docHandle } = await getReactiveDoc<AnalysisDocument>(rpc, ref, repo);
-        await docHandle.whenReady();
-        invariant(
-            doc.type === "analysis",
-            () => `Expected analysis document, got type: ${doc.type}`,
-        );
+        invariant(doc.type === "analysis", () => `Expected analysis, got type: ${doc.type}`);
 
         const modelReactiveDoc = await getReactiveDoc<ModelDocument>(rpc, doc.modelRef.refId, repo);
         const liveModel = enlivenModelDocument(doc.modelRef.refId, modelReactiveDoc, theories);
@@ -79,14 +73,7 @@ export default function AnalysisPage() {
     });
 
     return (
-        <Switch>
-            <Match when={liveDoc.error}>
-                <span>Error: {liveDoc.error}</span>
-            </Match>
-            <Match when={liveDoc()}>
-                {(liveDoc) => <AnalysisDocumentEditor liveDoc={liveDoc()} />}
-            </Match>
-        </Switch>
+        <Show when={liveDoc()}>{(liveDoc) => <AnalysisDocumentEditor liveDoc={liveDoc()} />}</Show>
     );
 }
 
