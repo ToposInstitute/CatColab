@@ -1,4 +1,3 @@
-import type { DocHandle } from "@automerge/automerge-repo";
 import Resizable, { type ContextValue } from "@corvu/resizable";
 import { useParams } from "@solidjs/router";
 import {
@@ -14,8 +13,8 @@ import invariant from "tiny-invariant";
 
 import { RepoContext, RpcContext, getReactiveDoc } from "../api";
 import { IconButton, ResizableHandle } from "../components";
-import type { ModelDocument } from "../model";
-import { type LiveModelDocument, ModelPane, enlivenModelDocument } from "../model/model_editor";
+import { type LiveModelDocument, type ModelDocument, enlivenModelDocument } from "../model";
+import { ModelPane } from "../model/model_editor";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
@@ -25,32 +24,16 @@ import {
 import { BrandedToolbar, HelpButton } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { ModelAnalysisMeta } from "../theory";
-import type { AnalysisDocument } from "./document";
+import type { AnalysisDocument, LiveAnalysisDocument } from "./document";
 import type { ModelAnalysis } from "./types";
 
 import PanelRight from "lucide-solid/icons/panel-right";
 import PanelRightClose from "lucide-solid/icons/panel-right-close";
 
-/** An analysis document "live" for editing.
- */
-export type LiveAnalysisDocument = {
-    /** The ref for which this is a live document. */
-    refId: string;
-
-    /** The analysis document, suitable for use in reactive contexts. */
-    doc: AnalysisDocument;
-
-    /** The document handle for the analysis document. */
-    docHandle: DocHandle<AnalysisDocument>;
-
-    /** Live model that the analysis is of. */
-    liveModel: LiveModelDocument;
-};
-
 export default function AnalysisPage() {
     const params = useParams();
-    const ref = params.ref;
-    invariant(ref, "Must provide analysis ref as parameter to analysis page");
+    const refId = params.ref;
+    invariant(refId, "Must provide document ref as parameter to analysis page");
 
     const rpc = useContext(RpcContext);
     const repo = useContext(RepoContext);
@@ -58,18 +41,13 @@ export default function AnalysisPage() {
     invariant(rpc && repo && theories, "Missing context for analysis page");
 
     const [liveDoc] = createResource<LiveAnalysisDocument>(async () => {
-        const { doc, docHandle } = await getReactiveDoc<AnalysisDocument>(rpc, ref, repo);
+        const { doc, docHandle } = await getReactiveDoc<AnalysisDocument>(rpc, repo, refId);
         invariant(doc.type === "analysis", () => `Expected analysis, got type: ${doc.type}`);
 
-        const modelReactiveDoc = await getReactiveDoc<ModelDocument>(rpc, doc.modelRef.refId, repo);
+        const modelReactiveDoc = await getReactiveDoc<ModelDocument>(rpc, repo, doc.modelRef.refId);
         const liveModel = enlivenModelDocument(doc.modelRef.refId, modelReactiveDoc, theories);
 
-        return {
-            refId: ref,
-            doc,
-            docHandle,
-            liveModel,
-        };
+        return { refId, doc, docHandle, liveModel };
     });
 
     return (

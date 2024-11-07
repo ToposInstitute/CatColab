@@ -1,4 +1,7 @@
+import type { DocHandle } from "@automerge/automerge-repo";
+
 import type { ExternRef } from "../api";
+import type { LiveModelDocument } from "../model";
 import { type Notebook, newNotebook } from "../notebook";
 import type { ModelAnalysis } from "./types";
 
@@ -27,3 +30,19 @@ export const newAnalysisDocument = (modelRefId: string): AnalysisDocument => ({
     },
     notebook: newNotebook(),
 });
+
+/** An analysis document "live" for editing.
+ */
+export type LiveAnalysisDocument = {
+    /** The ref for which this is a live document. */
+    refId: string;
+
+    /** The analysis document, suitable for use in reactive contexts. */
+    doc: AnalysisDocument;
+
+    /** The document handle for the analysis document. */
+    docHandle: DocHandle<AnalysisDocument>;
+
+    /** Live model that the analysis is of. */
+    liveModel: LiveModelDocument;
+};

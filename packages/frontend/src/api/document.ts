@@ -32,8 +32,8 @@ Automerge document handle.
  */
 export async function getReactiveDoc<T extends object>(
     rpc: RpcClient,
-    refId: string,
     repo: Repo,
+    refId: string,
 ): Promise<ReactiveDoc<T>> {
     invariant(uuid.validate(refId), () => `Invalid document ref ${refId}`);
 
