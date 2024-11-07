@@ -77,18 +77,17 @@ export type ModelValidationResult =
 /** A valid model as represented in `catlog`. */
 export type ValidatedModel = {
     tag: "validated";
-
-    validatedModel: DblModel;
+    model: DblModel;
 };
 
 /** Errors in a model that did not validate. */
 export type ModelValidationErrors = {
     tag: "errors";
-
+    model: DblModel;
     errors: Map<Uuid, InvalidDiscreteDblModel<Uuid>[]>;
 };
 
-/** TODO: Make this various go away because all models support validation! */
+/** TODO: Make this variant go away because all models support validation! */
 export type ModelValidationNotSupported = {
     tag: "notsupported";
 };
@@ -97,13 +96,14 @@ export function validateModel(theory: DblTheory, judgments: Array<ModelJudgment>
     if (theory.kind !== "Discrete") {
         return { tag: "notsupported" } as ModelValidationNotSupported;
     }
-    const dblModel = catlogModel(theory, judgments);
-    const errs: InvalidDiscreteDblModel<Uuid>[] = dblModel.validate();
+    const model = catlogModel(theory, judgments);
+    const errs: InvalidDiscreteDblModel<Uuid>[] = model.validate();
     if (errs.length === 0) {
-        return { tag: "validated", validatedModel: dblModel } as ValidatedModel;
+        return { tag: "validated", model } as ValidatedModel;
     } else {
         return {
             tag: "errors",
+            model,
             errors: indexArray(errs, (err) => err.content),
         } as ModelValidationErrors;
     }

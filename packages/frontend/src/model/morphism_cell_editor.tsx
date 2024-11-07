@@ -35,11 +35,11 @@ export function MorphismCellEditor(props: {
     const arrowStyle = () => morTypeMeta()?.arrowStyle ?? "default";
 
     const morphismErrors = () => {
-        const res = validationResult?.();
-        if (res?.tag !== "errors") {
+        const result = validationResult?.();
+        if (result?.tag !== "errors") {
             return [];
         }
-        return res.errors.get(props.morphism.id) ?? [];
+        return result.errors.get(props.morphism.id) ?? [];
     };
 
     return (

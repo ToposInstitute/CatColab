@@ -42,7 +42,7 @@ function SubmodelsAnalysis(
 ) {
     const submodels = () => {
         const res = props.liveModel.validationResult();
-        return res?.tag === "validated" ? props.findSubmodels(res.validatedModel) : [];
+        return res?.tag === "validated" ? props.findSubmodels(res.model) : [];
     };
 
     return (

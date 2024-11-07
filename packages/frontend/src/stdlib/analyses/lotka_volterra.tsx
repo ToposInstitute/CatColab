@@ -117,7 +117,7 @@ export function LotkaVolterra(
         () => {
             const result = props.liveModel.validationResult();
             if (result?.tag === "validated") {
-                return props.simulate(result.validatedModel, props.content);
+                return props.simulate(result.model, props.content);
             }
         },
         undefined,
