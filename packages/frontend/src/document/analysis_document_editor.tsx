@@ -234,8 +234,6 @@ export function AnalysisDocumentEditor(props: {
                             <div class="notebook-container">
                                 <h2>Analysis</h2>
                                 <AnalysisPane liveDoc={props.liveDoc} />
-                                <div>
-                                </div>
                             </div>
                         </Resizable.Panel>
                     </>
@@ -244,6 +242,3 @@ export function AnalysisDocumentEditor(props: {
         </Resizable>
     );
 }
-
-
-

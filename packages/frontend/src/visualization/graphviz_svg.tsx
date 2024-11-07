@@ -1,10 +1,10 @@
 import type * as Viz from "@viz-js/viz";
-import { type JSX, Suspense, createResource, createSignal, createEffect } from "solid-js";
+import { type JSX, Suspense, createEffect, createResource, createSignal } from "solid-js";
 
+import { exportVisualizationSVG } from "./export_visualization";
 import { GraphSVG } from "./graph_svg";
 import { loadViz, parseGraphvizJSON, vizRenderJSON0 } from "./graphviz";
 import type * as GraphvizJSON from "./graphviz_json";
-import { exportVisualizationSVG } from "./export_visualization";
 
 export function GraphvizSVG(props: {
     graph?: Viz.Graph;
@@ -23,7 +23,7 @@ export function GraphvizSVG(props: {
     // Effect to check if the graphviz element exists
     createEffect(() => {
         if (visualizationRef) {
-            setGraphvizExists(!!visualizationRef.querySelector('.graphviz'));
+            setGraphvizExists(!!visualizationRef.querySelector(".graphviz"));
         }
     });
 
@@ -38,11 +38,8 @@ export function GraphvizSVG(props: {
             <Suspense fallback={props.fallback}>
                 <GraphvizOutputSVG graph={render()} />
             </Suspense>
-            <button class="export-button"
-                onClick={handleExportSVG} 
-                disabled={graphvizExists()}
-            >
-                Export SVG 
+            <button class="export-button" onClick={handleExportSVG} disabled={graphvizExists()}>
+                Export SVG
             </button>
         </div>
     );
