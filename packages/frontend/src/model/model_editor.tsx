@@ -185,8 +185,6 @@ export function ModelDocumentEditor(props: {
         const init = newAnalysisDocument(props.liveDoc.refId);
 
         const result = await rpc.new_ref.mutate({
-            // @ts-expect-error Work around upstream bug:
-            // https://github.com/Aleph-Alpha/ts-rs/pull/359
             content: init as JsonValue,
             permissions: {
                 anyone: "Read",

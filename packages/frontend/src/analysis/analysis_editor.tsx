@@ -67,16 +67,8 @@ export default function AnalysisPage() {
             () => `Expected analysis document, got type: ${doc.type}`,
         );
 
-        const modelReactiveDoc = await getReactiveDoc<ModelDocument>(
-            rpc,
-            doc.modelRef.__extern__.refId,
-            repo,
-        );
-        const liveModel = enlivenModelDocument(
-            doc.modelRef.__extern__.refId,
-            modelReactiveDoc,
-            theories,
-        );
+        const modelReactiveDoc = await getReactiveDoc<ModelDocument>(rpc, doc.modelRef.refId, repo);
+        const liveModel = enlivenModelDocument(doc.modelRef.refId, modelReactiveDoc, theories);
 
         return {
             refId: ref,

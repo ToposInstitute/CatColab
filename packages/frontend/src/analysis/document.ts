@@ -1,3 +1,4 @@
+import type { ExternRef } from "../api";
 import { type Notebook, newNotebook } from "../notebook";
 import type { ModelAnalysis } from "./types";
 
@@ -9,7 +10,7 @@ export type AnalysisDocument = {
     name: string;
 
     /** Reference to the model that the analysis is of. */
-    modelRef: ExternRef & { __extern__: { taxon: "analysis"; via: null } };
+    modelRef: ExternRef & { taxon: "model" };
 
     /** Content of the analysis. */
     notebook: Notebook<ModelAnalysis>;
@@ -20,20 +21,9 @@ export const newAnalysisDocument = (modelRefId: string): AnalysisDocument => ({
     name: "",
     type: "analysis",
     modelRef: {
-        __extern__: {
-            refId: modelRefId,
-            taxon: "analysis",
-            via: null,
-        },
+        tag: "extern-ref",
+        refId: modelRefId,
+        taxon: "model",
     },
     notebook: newNotebook(),
 });
-
-/** A reference in a document to another document. */
-export type ExternRef = {
-    __extern__: {
-        refId: string;
-        taxon: string;
-        via: string | null;
-    };
-};
