@@ -42,7 +42,7 @@ export function GraphvizSVG(props: {
                 onClick={handleExportSVG} 
                 disabled={graphvizExists()}
             >
-                Export SVG
+                Export SVG 
             </button>
         </div>
     );

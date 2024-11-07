@@ -24,10 +24,21 @@
 
 .export-button {
     font-family: var(--main-font);
-    padding: 4px;
+    color: var(--main-color);
+    padding: 6px;
     font-weight: 600;
     cursor: pointer;
-    margin: 10px;
-    font-size: 15px;
+    font-size: 14px;
+    border: none;  
+    border-radius: 3px;
+    color: #53b6b2;
+    background-color: #e7f2f2;
+    content: "Export SVG";
+    overflow: hidden;
+}
+
+/* Remove display none on hover */
+.export-button:hover {
+    color: #3f938f; /* Change color on hover */
 }
 
