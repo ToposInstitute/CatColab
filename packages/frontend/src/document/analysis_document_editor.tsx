@@ -31,8 +31,6 @@ import type { AnalysisDocument, ModelDocument } from "./types";
 
 import PanelRight from "lucide-solid/icons/panel-right";
 import PanelRightClose from "lucide-solid/icons/panel-right-close";
-import { handleExportSVG } from "../visualization";
-import { exportVisualizationPNG } from "../visualization/export_visualization";
 
 /** An analysis document "live" for editing.
  */
@@ -237,8 +235,6 @@ export function AnalysisDocumentEditor(props: {
                                 <h2>Analysis</h2>
                                 <AnalysisPane liveDoc={props.liveDoc} />
                                 <div>
-                                <button class="export-button" onClick={handleExportSVG}>Export SVG</button>
-                                <button class="export-button" onClick={exportVisualizationPNG}>Export PNG</button>
                                 </div>
                             </div>
                         </Resizable.Panel>
@@ -248,5 +244,6 @@ export function AnalysisDocumentEditor(props: {
         </Resizable>
     );
 }
+
 
 
