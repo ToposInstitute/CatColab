@@ -32,15 +32,6 @@ export function GraphvizSVG(props: {
     );
 }
 
- // Create a ref for the visualization container
- let visualizationRef: HTMLDivElement | undefined;
-
-// export handling 
-export const handleExportSVG = () => {
-    if (visualizationRef) {
-      exportVisualizationSVG(visualizationRef);
-    }
-  };
 
 
 function GraphvizOutputSVG(props: {
@@ -54,4 +45,12 @@ function GraphvizOutputSVG(props: {
     );
 }
 
+ // Create a ref for the visualization container
+ let visualizationRef: HTMLDivElement | undefined;
 
+// export handling 
+export const handleExportSVG = () => {
+    if (visualizationRef) {
+      exportVisualizationSVG(visualizationRef);
+    }
+  };
