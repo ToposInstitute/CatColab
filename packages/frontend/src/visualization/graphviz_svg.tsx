@@ -1,7 +1,7 @@
 import type * as Viz from "@viz-js/viz";
 import { type JSX, Suspense, createEffect, createResource, createSignal } from "solid-js";
 
-import { exportVisualizationSVG } from "./export_visualization";
+import { exportVisualizationSVG } from "./export_visualization_svg";
 import { GraphSVG } from "./graph_svg";
 import { loadViz, parseGraphvizJSON, vizRenderJSON0 } from "./graphviz";
 import type * as GraphvizJSON from "./graphviz_json";
