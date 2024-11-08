@@ -349,7 +349,7 @@ where
     }
 }
 
-impl<'a, DomId, CodId, Cat> Validate for DiscreteDblModelMorphism<'a, DomId, CodId, Cat>
+impl<DomId, CodId, Cat> Validate for DiscreteDblModelMorphism<'_, DomId, CodId, Cat>
 where
     DomId: Eq + Clone + Hash,
     CodId: Eq + Clone + Hash,
