@@ -1,7 +1,6 @@
 import { http, build_client } from "@qubit-rs/client";
 import type { FirebaseApp } from "firebase/app";
 import { type User, getAuth } from "firebase/auth";
-import { createContext } from "solid-js";
 
 import type { QubitServer } from "catcolab-api";
 
@@ -41,6 +40,3 @@ export function createRpcClient(serverUrl: string, firebaseApp?: FirebaseApp) {
     });
     return build_client<QubitServer>(transport);
 }
-
-/** Context for the RPC client. */
-export const RpcContext = createContext<RpcClient>();

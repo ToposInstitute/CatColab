@@ -5,7 +5,7 @@ import invariant from "tiny-invariant";
 
 import type { JsonValue } from "catcolab-api";
 import { newAnalysisDocument } from "../analysis/document";
-import { RepoContext, RpcContext, getReactiveDoc } from "../api";
+import { RepoContext, RpcContext, getLiveDoc } from "../api";
 import { IconButton, InlineInput } from "../components";
 import {
     type CellConstructor,
@@ -50,16 +50,20 @@ export default function ModelPage() {
     const theories = useContext(TheoryLibraryContext);
     invariant(rpc && repo && theories, "Missing context for model page");
 
-    const [liveDoc] = createResource<LiveModelDocument>(async () => {
-        const reactiveDoc = await getReactiveDoc<ModelDocument>(rpc, repo, refId);
-        return enlivenModelDocument(refId, reactiveDoc, theories);
+    const [liveModel] = createResource<LiveModelDocument>(async () => {
+        const liveDoc = await getLiveDoc<ModelDocument>(rpc, repo, refId);
+        return enlivenModelDocument(refId, liveDoc, theories);
     });
 
-    return <Show when={liveDoc()}>{(liveDoc) => <ModelDocumentEditor liveDoc={liveDoc()} />}</Show>;
+    return (
+        <Show when={liveModel()}>
+            {(liveModel) => <ModelDocumentEditor liveModel={liveModel()} />}
+        </Show>
+    );
 }
 
 export function ModelDocumentEditor(props: {
-    liveDoc: LiveModelDocument;
+    liveModel: LiveModelDocument;
 }) {
     const rpc = useContext(RpcContext);
     invariant(rpc, "Missing context for model document editor");
@@ -67,7 +71,7 @@ export function ModelDocumentEditor(props: {
     const navigate = useNavigate();
 
     const createAnalysis = async () => {
-        const init = newAnalysisDocument(props.liveDoc.refId);
+        const init = newAnalysisDocument(props.liveModel.refId);
 
         const result = await rpc.new_ref.mutate({
             content: init as JsonValue,
@@ -85,25 +89,25 @@ export function ModelDocumentEditor(props: {
         <div class="growable-container">
             <BrandedToolbar>
                 <HelpButton />
-                <PermissionsButton permissions={props.liveDoc.permissions} />
+                <PermissionsButton permissions={props.liveModel.liveDoc.permissions} />
                 <IconButton onClick={createAnalysis} tooltip="Analyze this model">
                     <ChartNetwork />
                 </IconButton>
             </BrandedToolbar>
-            <ModelPane liveDoc={props.liveDoc} />
+            <ModelPane liveModel={props.liveModel} />
         </div>
     );
 }
 
 export function ModelPane(props: {
-    liveDoc: LiveModelDocument;
+    liveModel: LiveModelDocument;
 }) {
     const theories = useContext(TheoryLibraryContext);
     invariant(theories, "Library of theories should be provided as context");
 
-    const liveDoc = () => props.liveDoc;
-    const doc = () => props.liveDoc.doc;
-    const changeDoc = (f: (doc: ModelDocument) => void) => props.liveDoc.changeDoc(f);
+    const liveModel = () => props.liveModel;
+    const doc = () => props.liveModel.liveDoc.doc;
+    const changeDoc = (f: (doc: ModelDocument) => void) => props.liveModel.liveDoc.changeDoc(f);
     return (
         <div class="notebook-container">
             <div class="model-head">
@@ -131,21 +135,21 @@ export function ModelPane(props: {
             </div>
             <MultiProvider
                 values={[
-                    [TheoryContext, liveDoc().theory],
-                    [ObjectIndexContext, liveDoc().objectIndex],
-                    [MorphismIndexContext, liveDoc().morphismIndex],
-                    [ModelValidationContext, liveDoc().validationResult],
+                    [TheoryContext, liveModel().theory],
+                    [ObjectIndexContext, liveModel().objectIndex],
+                    [MorphismIndexContext, liveModel().morphismIndex],
+                    [ModelValidationContext, liveModel().validationResult],
                 ]}
             >
                 <NotebookEditor
-                    handle={props.liveDoc.docHandle}
+                    handle={liveModel().liveDoc.docHandle}
                     path={["notebook"]}
                     notebook={doc().notebook}
                     changeNotebook={(f) => {
                         changeDoc((doc) => f(doc.notebook));
                     }}
                     formalCellEditor={ModelCellEditor}
-                    cellConstructors={modelCellConstructors(liveDoc().theory())}
+                    cellConstructors={modelCellConstructors(liveModel().theory())}
                     cellLabel={judgmentLabel}
                 />
             </MultiProvider>

@@ -1,9 +1,7 @@
-import type { ChangeFn, DocHandle } from "@automerge/automerge-repo";
 import { type Accessor, createMemo } from "solid-js";
 
-import type { Permissions } from "catcolab-api";
 import type { Uuid } from "catlog-wasm";
-import type { ReactiveDoc } from "../api";
+import type { LiveDoc } from "../api";
 import { type Notebook, newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
 import type { Theory, TheoryId } from "../theory";
@@ -33,28 +31,14 @@ export const newModelDocument = (): ModelDocument => ({
 
 /** A model document "live" for editing.
 
-Contains a reactive model document and an Automerge document handle, plus
-various memos of derived data.
+Contains a live document for the model, plus various memos of derived data.
  */
 export type LiveModelDocument = {
     /** The ref for which this is a live document. */
     refId: string;
 
-    /** The model document, suitable for use in reactive contexts.
-
-    This data should never be directly mutated. Instead, call `changeDoc` or
-    interact directly with the Automerge document handle.
-     */
-    doc: ModelDocument;
-
-    /** Make a change to the model document. */
-    changeDoc: (f: ChangeFn<ModelDocument>) => void;
-
-    /** The Automerge document handle for the model document. */
-    docHandle: DocHandle<ModelDocument>;
-
-    /** Permissions for the ref retrieved from the backend. */
-    permissions: Permissions;
+    /** Live document with the model data. */
+    liveDoc: LiveDoc<ModelDocument>;
 
     /** A memo of the formal content of the model. */
     formalJudgments: Accessor<Array<ModelJudgment>>;
@@ -74,12 +58,10 @@ export type LiveModelDocument = {
 
 export function enlivenModelDocument(
     refId: string,
-    reactiveDoc: ReactiveDoc<ModelDocument>,
+    liveDoc: LiveDoc<ModelDocument>,
     theories: TheoryLibrary,
 ): LiveModelDocument {
-    const { doc, docHandle, permissions } = reactiveDoc;
-
-    const changeDoc = (f: ChangeFn<ModelDocument>) => docHandle.change(f);
+    const { doc } = liveDoc;
 
     // Memo-ize the *formal* content of the notebook, since most derived objects
     // will not depend on the informal (rich-text) content in notebook.
@@ -120,10 +102,7 @@ export function enlivenModelDocument(
 
     return {
         refId,
-        doc,
-        changeDoc,
-        docHandle,
-        permissions,
+        liveDoc,
         formalJudgments,
         objectIndex,
         morphismIndex,

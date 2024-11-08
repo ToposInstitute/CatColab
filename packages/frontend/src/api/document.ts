@@ -1,10 +1,11 @@
 import {
+    type ChangeFn,
     type DocHandle,
     type DocHandleChangePayload,
     type DocumentId,
     Repo,
 } from "@automerge/automerge-repo";
-import { type Accessor, createContext, createEffect, createSignal } from "solid-js";
+import { type Accessor, createEffect, createSignal } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 import invariant from "tiny-invariant";
 import * as uuid from "uuid";
@@ -12,29 +13,45 @@ import * as uuid from "uuid";
 import type { Permissions } from "catcolab-api";
 import type { RpcClient } from "./rpc";
 
-/** Context for the Automerge repo. */
-export const RepoContext = createContext<Repo>();
+/** An Automerge repo with no networking, used for read-only documents. */
+const localRepo = new Repo();
 
-/** Reactive document retrieved from the backend. */
-export type ReactiveDoc<T> = {
+/** Live document retrieved from the backend.
+
+A live document can be used in reactive contexts and is connected to an
+Automerge document handle.
+ */
+export type LiveDoc<T> = {
+    /** The document data, suitable for use in reactive contexts.
+
+    This data should never be mutated directly. Instead, call `changeDoc` or, if
+    necessary, interact with the Automerge document handle.
+     */
     doc: T;
+
+    /** Call this function to make changes to the document. */
+    changeDoc: (f: ChangeFn<T>) => void;
+
+    /** The Automerge document handle for the document. */
     docHandle: DocHandle<T>;
+
+    /** Permissions for the document retrieved from the backend. */
     permissions: Permissions;
 };
 
-/** Automerge repo with no networking, used for read-only documents. */
-const localRepo = new Repo();
+/** Retrieve a live document from the backend.
 
-/** Retrieve a reactive document from the backend.
-
-When the user has write permissions, the document will connected to a live
-Automerge document handle.
+When the user has write permissions, changes to the document will be propagated
+by Automerge to the backend and to other clients. When the user has only read
+permissions, the Automerge doc handle will be "fake", existing only locally in
+the client. And if the user doesn't even have read permissions, this function
+will yield an unauthorized error!
  */
-export async function getReactiveDoc<T extends object>(
+export async function getLiveDoc<T extends object>(
     rpc: RpcClient,
     repo: Repo,
     refId: string,
-): Promise<ReactiveDoc<T>> {
+): Promise<LiveDoc<T>> {
     invariant(uuid.validate(refId), () => `Invalid document ref ${refId}`);
 
     const result = await rpc.get_doc.query(refId);
@@ -52,9 +69,10 @@ export async function getReactiveDoc<T extends object>(
         docHandle = localRepo.create(init);
     }
     const doc = await makeDocHandleReactive(docHandle);
+    const changeDoc = (f: ChangeFn<T>) => docHandle.change(f);
 
     const permissions = refDoc.permissions;
-    return { doc, docHandle, permissions };
+    return { doc, changeDoc, docHandle, permissions };
 }
 
 /** Create a Solid Store that tracks an Automerge document.

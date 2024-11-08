@@ -1,8 +1,7 @@
-import type { DocHandle } from "@automerge/automerge-repo";
 import type { Accessor } from "solid-js";
 
 import type { Uuid } from "catlog-wasm";
-import type { ExternRef, ReactiveDoc } from "../api";
+import type { ExternRef, LiveDoc } from "../api";
 import type { LiveModelDocument } from "../model";
 import { type Notebook, newNotebook } from "../notebook";
 import type { IndexedMap } from "../util/indexing";
@@ -40,11 +39,8 @@ export type LiveDiagramDocument = {
     /** The ref for which this is a live document. */
     refId: string;
 
-    /** The diagram document, suitable for use in reactive contexts. */
-    doc: DiagramDocument;
-
-    /** The document handle for the diagram document. */
-    docHandle: DocHandle<DiagramDocument>;
+    /** Live document containing the diagram data. */
+    liveDoc: LiveDoc<DiagramDocument>;
 
     /** Live model that the diagram is in. */
     liveModel: LiveModelDocument;
@@ -55,10 +51,8 @@ export type LiveDiagramDocument = {
 
 export function enlivenDiagramDocument(
     refId: string,
-    reactiveDoc: ReactiveDoc<DiagramDocument>,
+    liveDoc: LiveDoc<DiagramDocument>,
     liveModel: LiveModelDocument,
 ): LiveDiagramDocument {
-    const { doc, docHandle } = reactiveDoc;
-
-    return { refId, doc, docHandle, liveModel };
+    return { refId, liveDoc, liveModel };
 }

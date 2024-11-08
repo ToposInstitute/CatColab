@@ -11,7 +11,7 @@ import {
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
-import { RepoContext, RpcContext, getReactiveDoc } from "../api";
+import { RepoContext, RpcContext, getLiveDoc } from "../api";
 import { IconButton, ResizableHandle } from "../components";
 import { type LiveModelDocument, type ModelDocument, enlivenModelDocument } from "../model";
 import { ModelPane } from "../model/model_editor";
@@ -40,36 +40,40 @@ export default function AnalysisPage() {
     const theories = useContext(TheoryLibraryContext);
     invariant(rpc && repo && theories, "Missing context for analysis page");
 
-    const [liveDoc] = createResource<LiveAnalysisDocument>(async () => {
-        const { doc, docHandle } = await getReactiveDoc<AnalysisDocument>(rpc, repo, refId);
+    const [liveAnalysis] = createResource<LiveAnalysisDocument>(async () => {
+        const liveDoc = await getLiveDoc<AnalysisDocument>(rpc, repo, refId);
+        const { doc } = liveDoc;
         invariant(doc.type === "analysis", () => `Expected analysis, got type: ${doc.type}`);
 
-        const modelReactiveDoc = await getReactiveDoc<ModelDocument>(rpc, repo, doc.modelRef.refId);
-        const liveModel = enlivenModelDocument(doc.modelRef.refId, modelReactiveDoc, theories);
+        const liveModelDoc = await getLiveDoc<ModelDocument>(rpc, repo, doc.modelRef.refId);
+        const liveModel = enlivenModelDocument(doc.modelRef.refId, liveModelDoc, theories);
 
-        return { refId, doc, docHandle, liveModel };
+        return { refId, liveDoc, liveModel };
     });
 
     return (
-        <Show when={liveDoc()}>{(liveDoc) => <AnalysisDocumentEditor liveDoc={liveDoc()} />}</Show>
+        <Show when={liveAnalysis()}>
+            {(liveAnalysis) => <AnalysisDocumentEditor liveAnalysis={liveAnalysis()} />}
+        </Show>
     );
 }
 
 /** Notebook editor for analyses of models of double theories.
  */
 export function AnalysisPane(props: {
-    liveDoc: LiveAnalysisDocument;
+    liveAnalysis: LiveAnalysisDocument;
 }) {
+    const liveDoc = () => props.liveAnalysis.liveDoc;
     return (
-        <LiveModelContext.Provider value={props.liveDoc.liveModel}>
+        <LiveModelContext.Provider value={props.liveAnalysis.liveModel}>
             <NotebookEditor
-                handle={props.liveDoc.docHandle}
+                handle={liveDoc().docHandle}
                 path={["notebook"]}
-                notebook={props.liveDoc.doc.notebook}
-                changeNotebook={(f) => props.liveDoc.docHandle.change((doc) => f(doc.notebook))}
+                notebook={liveDoc().doc.notebook}
+                changeNotebook={(f) => liveDoc().changeDoc((doc) => f(doc.notebook))}
                 formalCellEditor={ModelAnalysisCellEditor}
                 cellConstructors={modelAnalysisCellConstructors(
-                    props.liveDoc.liveModel.theory()?.modelAnalyses ?? [],
+                    props.liveAnalysis.liveModel.theory()?.modelAnalyses ?? [],
                 )}
                 noShortcuts={true}
             />
@@ -123,7 +127,7 @@ The editor includes a notebook for the model itself plus another pane for
 performing analysis of the model.
  */
 export function AnalysisDocumentEditor(props: {
-    liveDoc: LiveAnalysisDocument;
+    liveAnalysis: LiveAnalysisDocument;
 }) {
     const rpc = useContext(RpcContext);
     invariant(rpc, "Must provide RPC context");
@@ -176,7 +180,7 @@ export function AnalysisDocumentEditor(props: {
                                     </Show>
                                 </IconButton>
                             </BrandedToolbar>
-                            <ModelPane liveDoc={props.liveDoc.liveModel} />
+                            <ModelPane liveModel={props.liveAnalysis.liveModel} />
                         </Resizable.Panel>
                         <ResizableHandle hidden={!isSidePanelOpen()} />
                         <Resizable.Panel
@@ -190,7 +194,7 @@ export function AnalysisDocumentEditor(props: {
                         >
                             <div class="notebook-container">
                                 <h2>Analysis</h2>
-                                <AnalysisPane liveDoc={props.liveDoc} />
+                                <AnalysisPane liveAnalysis={props.liveAnalysis} />
                             </div>
                         </Resizable.Panel>
                     </>
