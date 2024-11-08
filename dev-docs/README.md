@@ -13,4 +13,4 @@ To build this forest, you need to have a working installation of the following s
 
 To build the forest, then simply run `./forester build`. To view the forest, run `./serve.sh` and go to `http://localhost:8080/index.xml` in your web browser. Note that you will need python installed for `./serve.sh` to work properly.
 
-You can run `./watch.sh` to watch for changes to the `trees` directory and rebuild accordingly.
+If you have `inotifywait` installed, you can run `./watch.sh` to watch for changes to the `trees` directory and rebuild accordingly.

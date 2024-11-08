@@ -66,11 +66,10 @@ h3 {
     flex-grow: 1;
 }
 
-.side-panel {
-    background: #f8f8f8;
+.content-panel {
+    overflow: hidden;
 }
 
-.content-panel {
-    overflow-x: scroll;
-    overflow-y: hidden;
+.side-panel {
+    background: #f8f8f8;
 }
