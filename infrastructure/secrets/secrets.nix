@@ -9,5 +9,6 @@ in
 builtins.mapAttrs (_: publicKeys: {inherit publicKeys;})
   ({
       "DATABASE_URL.age"   = [ catcolab catcolab-next owen epatters shaowei ];
+      ".env.age"           = [ catcolab catcolab-next owen epatters shaowei ];
       "instrument.mjs.age" = [ catcolab catcolab-next owen epatters shaowei ];
   })
