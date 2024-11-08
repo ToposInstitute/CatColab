@@ -7,6 +7,7 @@ import type { JsonValue } from "catcolab-api";
 import { newAnalysisDocument } from "../analysis/document";
 import { RepoContext, RpcContext, getLiveDoc } from "../api";
 import { IconButton, InlineInput } from "../components";
+import { newDiagramDocument } from "../diagram";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
@@ -16,7 +17,7 @@ import {
 } from "../notebook";
 import { BrandedToolbar, HelpButton } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
-import type { Theory } from "../theory";
+import type { ModelTypeMeta } from "../theory";
 import { PermissionsButton } from "../user";
 import {
     ModelValidationContext,
@@ -38,7 +39,8 @@ import {
 
 import "./model_editor.css";
 
-import ChartNetwork from "lucide-solid/icons/chart-network";
+import ChartSpline from "lucide-solid/icons/chart-spline";
+import Network from "lucide-solid/icons/network";
 
 export default function ModelPage() {
     const params = useParams();
@@ -70,6 +72,21 @@ export function ModelDocumentEditor(props: {
 
     const navigate = useNavigate();
 
+    const createDiagram = async () => {
+        const init = newDiagramDocument(props.liveModel.refId);
+
+        const result = await rpc.new_ref.mutate({
+            content: init as JsonValue,
+            permissions: {
+                anyone: "Read",
+            },
+        });
+        invariant(result.tag === "Ok", "Failed to create a new diagram");
+        const newRef = result.content;
+
+        navigate(`/diagram/${newRef}`);
+    };
+
     const createAnalysis = async () => {
         const init = newAnalysisDocument(props.liveModel.refId);
 
@@ -79,7 +96,7 @@ export function ModelDocumentEditor(props: {
                 anyone: "Read",
             },
         });
-        invariant(result.tag === "Ok", "Failed to create analysis");
+        invariant(result.tag === "Ok", "Failed to create a new analysis");
         const newRef = result.content;
 
         navigate(`/analysis/${newRef}`);
@@ -90,8 +107,13 @@ export function ModelDocumentEditor(props: {
             <BrandedToolbar>
                 <HelpButton />
                 <PermissionsButton permissions={props.liveModel.liveDoc.permissions} />
+                <Show when={props.liveModel.theory()?.instanceTypes.length}>
+                    <IconButton onClick={createDiagram} tooltip="Create a diagram in this model">
+                        <Network />
+                    </IconButton>
+                </Show>
                 <IconButton onClick={createAnalysis} tooltip="Analyze this model">
-                    <ChartNetwork />
+                    <ChartSpline />
                 </IconButton>
             </BrandedToolbar>
             <ModelPane liveModel={props.liveModel} />
@@ -123,7 +145,7 @@ export function ModelPane(props: {
                     />
                 </div>
                 <TheorySelectorDialog
-                    theory={props.liveDoc.theory()}
+                    theory={props.liveModel.theory()}
                     setTheory={(id) => {
                         changeDoc((model) => {
                             model.theory = id;
@@ -149,7 +171,7 @@ export function ModelPane(props: {
                         changeDoc((doc) => f(doc.notebook));
                     }}
                     formalCellEditor={ModelCellEditor}
-                    cellConstructors={modelCellConstructors(liveModel().theory())}
+                    cellConstructors={modelCellConstructors(liveModel().theory()?.modelTypes ?? [])}
                     cellLabel={judgmentLabel}
                 />
             </MultiProvider>
@@ -184,17 +206,18 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
     );
 }
 
-function modelCellConstructors(theory?: Theory): CellConstructor<ModelJudgment>[] {
-    return (theory?.types ?? []).map((typ) => {
-        const { name, description, shortcut } = typ;
+function modelCellConstructors(modelTypes: ModelTypeMeta[]): CellConstructor<ModelJudgment>[] {
+    return modelTypes.map((meta) => {
+        const { name, description, shortcut } = meta;
         return {
             name,
             description,
             shortcut: shortcut && [cellShortcutModifier, ...shortcut],
-            construct:
-                typ.tag === "ObType"
-                    ? () => newFormalCell(newObjectDecl(typ.obType))
-                    : () => newFormalCell(newMorphismDecl(typ.morType)),
+            construct() {
+                return meta.tag === "ObType"
+                    ? newFormalCell(newObjectDecl(meta.obType))
+                    : newFormalCell(newMorphismDecl(meta.morType));
+            },
         };
     });
 }
@@ -202,9 +225,9 @@ function modelCellConstructors(theory?: Theory): CellConstructor<ModelJudgment>[
 function judgmentLabel(judgment: ModelJudgment): string | undefined {
     const theory = useContext(TheoryContext);
     if (judgment.tag === "object") {
-        return theory?.()?.getObTypeMeta(judgment.obType)?.name;
+        return theory?.()?.modelObTypeMeta(judgment.obType)?.name;
     }
     if (judgment.tag === "morphism") {
-        return theory?.()?.getMorTypeMeta(judgment.morType)?.name;
+        return theory?.()?.modelMorTypeMeta(judgment.morType)?.name;
     }
 }

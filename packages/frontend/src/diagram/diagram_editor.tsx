@@ -1,11 +1,26 @@
 import { useParams } from "@solidjs/router";
-import { createResource, useContext } from "solid-js";
+import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { RepoContext, RpcContext, getLiveDoc } from "../api";
 import { type ModelDocument, enlivenModelDocument } from "../model";
+import {
+    type CellConstructor,
+    type FormalCellEditorProps,
+    NotebookEditor,
+    cellShortcutModifier,
+    newFormalCell,
+} from "../notebook";
 import { TheoryLibraryContext } from "../stdlib";
+import type { InstanceTypeMeta } from "../theory";
 import { type DiagramDocument, type LiveDiagramDocument, enlivenDiagramDocument } from "./document";
+import { DiagramObjectCellEditor } from "./object_cell_editor";
+import {
+    type DiagramJudgment,
+    type DiagramObjectDecl,
+    newDiagramMorphismDecl,
+    newDiagramObjectDecl,
+} from "./types";
 
 export default function DiagramPage() {
     const params = useParams();
@@ -17,7 +32,7 @@ export default function DiagramPage() {
     const theories = useContext(TheoryLibraryContext);
     invariant(rpc && repo && theories, "Missing context for diagram page");
 
-    const [_liveDoc] = createResource<LiveDiagramDocument>(async () => {
+    const [liveDiagram] = createResource<LiveDiagramDocument>(async () => {
         const liveDoc = await getLiveDoc<DiagramDocument>(rpc, repo, refId);
         const { doc } = liveDoc;
         invariant(doc.type === "diagram", () => `Expected diagram, got type: ${doc.type}`);
@@ -26,5 +41,74 @@ export default function DiagramPage() {
         const liveModel = enlivenModelDocument(doc.modelRef.refId, modelReactiveDoc, theories);
 
         return enlivenDiagramDocument(refId, liveDoc, liveModel);
+    });
+
+    return (
+        <Show when={liveDiagram()}>
+            {(liveDiagram) => (
+                <div class="notebook-container">
+                    <DiagramNotebookEditor liveDiagram={liveDiagram()} />
+                </div>
+            )}
+        </Show>
+    );
+}
+
+/** Editor for a notebook defining a diagram in a model.
+ */
+export function DiagramNotebookEditor(props: {
+    liveDiagram: LiveDiagramDocument;
+}) {
+    const liveDoc = () => props.liveDiagram.liveDoc;
+
+    return (
+        <NotebookEditor
+            handle={liveDoc().docHandle}
+            path={["notebook"]}
+            notebook={liveDoc().doc.notebook}
+            changeNotebook={(f) => {
+                liveDoc().changeDoc((doc) => f(doc.notebook));
+            }}
+            formalCellEditor={DiagramCellEditor}
+            cellConstructors={instanceCellConstructors(
+                props.liveDiagram.liveModel.theory()?.instanceTypes ?? [],
+            )}
+        />
+    );
+}
+
+/** Editor for a notebook cell in a diagram notebook.
+ */
+export function DiagramCellEditor(props: FormalCellEditorProps<DiagramJudgment>) {
+    return (
+        <Switch>
+            <Match when={props.content.tag === "object"}>
+                <DiagramObjectCellEditor
+                    decl={props.content as DiagramObjectDecl}
+                    modifyDecl={(f) =>
+                        props.changeContent((content) => f(content as DiagramObjectDecl))
+                    }
+                    actions={props.actions}
+                />
+            </Match>
+        </Switch>
+    );
+}
+
+function instanceCellConstructors(
+    instanceTypes: InstanceTypeMeta[],
+): CellConstructor<DiagramJudgment>[] {
+    return instanceTypes.map((meta) => {
+        const { name, description, shortcut } = meta;
+        return {
+            name,
+            description,
+            shortcut: shortcut && [cellShortcutModifier, ...shortcut],
+            construct() {
+                return meta.tag === "ObType"
+                    ? newFormalCell(newDiagramObjectDecl(meta.obType))
+                    : newFormalCell(newDiagramMorphismDecl(meta.morType));
+            },
+        };
     });
 }

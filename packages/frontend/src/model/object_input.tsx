@@ -91,7 +91,7 @@ function BasicObInput(allProps: ObInputProps & IdInputOptions) {
 }
 
 export function obClasses(theory: Theory | undefined, typ?: ObType): string[] {
-    const typeMeta = typ ? theory?.getObTypeMeta(typ) : undefined;
+    const typeMeta = typ ? theory?.modelObTypeMeta(typ) : undefined;
     return [...(typeMeta?.cssClasses ?? []), ...(typeMeta?.textClasses ?? [])];
 }
 

@@ -29,11 +29,11 @@ export type ObjectDecl = ObDecl & {
     name: string;
 };
 
-export const newObjectDecl = (type: ObType): ObjectDecl => ({
+export const newObjectDecl = (obType: ObType): ObjectDecl => ({
     tag: "object",
     id: uuidv7(),
     name: "",
-    obType: type,
+    obType,
 });
 
 /** Declaration of a morphim in a model.
@@ -45,11 +45,11 @@ export type MorphismDecl = MorDecl & {
     name: string;
 };
 
-export const newMorphismDecl = (type: MorType): MorphismDecl => ({
+export const newMorphismDecl = (morType: MorType): MorphismDecl => ({
     tag: "morphism",
     id: uuidv7(),
     name: "",
-    morType: type,
+    morType,
     dom: null,
     cod: null,
 });

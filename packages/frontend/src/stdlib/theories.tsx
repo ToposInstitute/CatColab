@@ -27,7 +27,7 @@ stdTheories.add(
         return new Theory({
             ...meta,
             theory: thCategory.theory(),
-            types: [
+            modelTypes: [
                 {
                     tag: "ObType",
                     obType: { tag: "Basic", content: "Object" },
@@ -44,7 +44,26 @@ stdTheories.add(
                         content: { tag: "Basic", content: "Object" },
                     },
                     name: "Aspect",
-                    description: "Aspect or property of a thing",
+                    description: "Aspect or property of a type",
+                    shortcut: ["M"],
+                },
+            ],
+            instanceTypes: [
+                {
+                    tag: "ObType",
+                    obType: { tag: "Basic", content: "Object" },
+                    name: "Individual",
+                    description: "Individual thing of a certain type",
+                    shortcut: ["I"],
+                },
+                {
+                    tag: "MorType",
+                    morType: {
+                        tag: "Hom",
+                        content: { tag: "Basic", content: "Object" },
+                    },
+                    name: "Aspect",
+                    description: "Aspect or property of an individual",
                     shortcut: ["M"],
                 },
             ],
@@ -71,7 +90,7 @@ stdTheories.add(
         return new Theory({
             ...meta,
             theory: thSchema.theory(),
-            types: [
+            modelTypes: [
                 {
                     tag: "ObType",
                     obType: { tag: "Basic", content: "Entity" },
@@ -143,7 +162,7 @@ stdTheories.add(
             ...meta,
             theory: thSignedCategory.theory(),
             onlyFreeModels: true,
-            types: [
+            modelTypes: [
                 {
                     tag: "ObType",
                     obType: { tag: "Basic", content: "Object" },
@@ -212,7 +231,7 @@ stdTheories.add(
             ...meta,
             theory: thSignedCategory.theory(),
             onlyFreeModels: true,
-            types: [
+            modelTypes: [
                 {
                     tag: "ObType",
                     obType: { tag: "Basic", content: "Object" },
@@ -281,7 +300,7 @@ stdTheories.add(
             ...meta,
             theory: thNullableSignedCategory.theory(),
             onlyFreeModels: true,
-            types: [
+            modelTypes: [
                 {
                     tag: "ObType",
                     obType: { tag: "Basic", content: "Object" },
@@ -344,7 +363,7 @@ stdTheories.add(
             ...meta,
             theory: thCategoryLinks.theory(),
             onlyFreeModels: true,
-            types: [
+            modelTypes: [
                 {
                     tag: "ObType",
                     obType: { tag: "Basic", content: "Object" },

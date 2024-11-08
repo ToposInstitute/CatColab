@@ -65,7 +65,7 @@ export function NotebookEditor<T>(props: {
     notebook: Notebook<T>;
     changeNotebook: (f: (nb: Notebook<T>) => void) => void;
     formalCellEditor: Component<FormalCellEditorProps<T>>;
-    cellConstructors: CellConstructor<T>[];
+    cellConstructors?: CellConstructor<T>[];
     cellLabel?: (content: T) => string | undefined;
     // FIXME: Remove this option once we fix focus management.
     noShortcuts?: boolean;
@@ -125,7 +125,7 @@ export function NotebookEditor<T>(props: {
             shortcut: [cellShortcutModifier, "T"],
             construct: () => newRichTextCell(),
         },
-        ...props.cellConstructors,
+        ...(props.cellConstructors ?? []),
     ];
 
     const replaceCommands = (i: number): Completion[] =>

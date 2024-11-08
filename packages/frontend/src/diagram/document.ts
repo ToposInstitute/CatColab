@@ -1,10 +1,8 @@
-import type { Accessor } from "solid-js";
+import { type Accessor, createMemo } from "solid-js";
 
-import type { Uuid } from "catlog-wasm";
 import type { ExternRef, LiveDoc } from "../api";
 import type { LiveModelDocument } from "../model";
 import { type Notebook, newNotebook } from "../notebook";
-import type { IndexedMap } from "../util/indexing";
 import type { DiagramJudgment } from "./types";
 
 /** A document defining a diagram in a model. */
@@ -45,8 +43,8 @@ export type LiveDiagramDocument = {
     /** Live model that the diagram is in. */
     liveModel: LiveModelDocument;
 
-    /** A memo of the indexed map from object ID to name. */
-    objectIndex?: Accessor<IndexedMap<Uuid, string>>;
+    /** A memo of the formal content of the model. */
+    formalJudgments: Accessor<Array<DiagramJudgment>>;
 };
 
 export function enlivenDiagramDocument(
@@ -54,5 +52,13 @@ export function enlivenDiagramDocument(
     liveDoc: LiveDoc<DiagramDocument>,
     liveModel: LiveModelDocument,
 ): LiveDiagramDocument {
-    return { refId, liveDoc, liveModel };
+    const { doc } = liveDoc;
+
+    const formalJudgments = createMemo<Array<DiagramJudgment>>(() => {
+        return doc.notebook.cells
+            .filter((cell) => cell.tag === "formal")
+            .map((cell) => cell.content);
+    }, []);
+
+    return { refId, liveDoc, liveModel, formalJudgments };
 }

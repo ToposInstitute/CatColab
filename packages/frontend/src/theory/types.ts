@@ -6,7 +6,10 @@ import type { ModelAnalysisComponent, ModelAnalysisContent } from "../analysis";
 import { uniqueIndexArray } from "../util/indexing";
 import type { ArrowStyle } from "../visualization";
 
-/** A double theory configured for use in the frontend.
+/** A double theory configured for the frontend.
+
+This class augments a double theory as defined in the core with metadata about
+how to display models of the theory and instances of models.
  */
 export class Theory {
     /** Unique identifier of theory. */
@@ -21,14 +24,11 @@ export class Theory {
     /** Underlying double theory in the core. */
     readonly theory: DblTheory;
 
-    /** Types in theory bound with metadata, to be displayed in this order. */
-    readonly types: TypeMeta[];
-
     /** Whether models of the double theory are constrained to be free. */
     readonly onlyFreeModels!: boolean;
 
-    private readonly obTypeIndex: ObTypeIndex;
-    private readonly morTypeIndex: MorTypeIndex;
+    private readonly modelTypeMeta: TypeMetadata<ModelObTypeMeta, ModelMorTypeMeta>;
+    private readonly instanceTypeMeta: TypeMetadata<InstanceObTypeMeta, InstanceMorTypeMeta>;
     private readonly modelAnalysisMap: Map<string, ModelAnalysisMeta>;
 
     constructor(props: {
@@ -36,25 +36,92 @@ export class Theory {
         name: string;
         description?: string;
         theory: DblTheory;
-        types?: TypeMeta[];
+        modelTypes?: ModelTypeMeta[];
+        instanceTypes?: InstanceTypeMeta[];
         modelAnalyses?: ModelAnalysisMeta[];
         onlyFreeModels?: boolean;
     }) {
         this.id = props.id;
         this.name = props.name;
         this.description = props.description;
-
-        this.obTypeIndex = new ObTypeIndex();
-        this.morTypeIndex = new MorTypeIndex();
         this.theory = props.theory;
-        this.types = [];
-        props.types?.forEach(this.bindType, this);
+
+        this.modelTypeMeta = new TypeMetadata<ModelObTypeMeta, ModelMorTypeMeta>(props.modelTypes);
+        this.instanceTypeMeta = new TypeMetadata<InstanceObTypeMeta, InstanceMorTypeMeta>(
+            props.instanceTypes,
+        );
 
         this.modelAnalysisMap = uniqueIndexArray(props.modelAnalyses ?? [], (meta) => meta.id);
         this.onlyFreeModels = props.onlyFreeModels ?? false;
     }
 
-    private bindType(meta: TypeMeta) {
+    /** Metadata for types in the theory, as used in models.
+
+    In a model editor, the types are listed in this order.
+     */
+    get modelTypes(): Array<ModelTypeMeta> {
+        return this.modelTypeMeta.types;
+    }
+
+    /** Get metadata for an object type as used in models. */
+    modelObTypeMeta(typ: ObType): ModelObTypeMeta | undefined {
+        return this.modelTypeMeta.obTypeMeta(typ);
+    }
+
+    /** Get metadata for a morphism type as used in models. */
+    modelMorTypeMeta(typ: MorType): ModelMorTypeMeta | undefined {
+        return this.modelTypeMeta.morTypeMeta(typ);
+    }
+
+    /** Metadata for types in the theory, as used in instances of models.
+
+    In an instance editor, the types are listed in this order. If the list is
+    empty, then instances will not be considered for models of this theory.
+     */
+    get instanceTypes(): Array<InstanceTypeMeta> {
+        return this.instanceTypeMeta.types;
+    }
+
+    /** Get metadata for an object type as used in instances. */
+    instanceObTypeMeta(typ: ObType): InstanceObTypeMeta | undefined {
+        return this.instanceTypeMeta.obTypeMeta(typ);
+    }
+
+    /** Get metadata for a morphism type as used in instances. */
+    instanceMorTypeMeta(typ: MorType): InstanceMorTypeMeta | undefined {
+        return this.instanceTypeMeta.morTypeMeta(typ);
+    }
+
+    /** List of analyses defined for models. */
+    get modelAnalyses(): Array<ModelAnalysisMeta> {
+        return Array.from(this.modelAnalysisMap.values());
+    }
+
+    /** Get metadata for a model analysis. */
+    modelAnalysis(id: string): ModelAnalysisMeta | undefined {
+        return this.modelAnalysisMap.get(id);
+    }
+}
+
+/** Unique identifier of a theory configured for the frontend.
+ */
+export type TheoryId = string;
+
+/** Helper class to index and lookup metadata for object and morphism types. */
+class TypeMetadata<ObMeta extends HasObTypeMeta, MorMeta extends HasMorTypeMeta> {
+    readonly types: Array<ObMeta | MorMeta>;
+
+    private readonly obTypeIndex: ObTypeIndex;
+    private readonly morTypeIndex: MorTypeIndex;
+
+    constructor(types?: Array<ObMeta | MorMeta>) {
+        this.types = [];
+        this.obTypeIndex = new ObTypeIndex();
+        this.morTypeIndex = new MorTypeIndex();
+        types?.forEach(this.bindMeta, this);
+    }
+
+    private bindMeta(meta: ObMeta | MorMeta) {
         const index = this.types.length;
         if (meta.tag === "ObType") {
             this.obTypeIndex.set(meta.obType, index);
@@ -64,40 +131,33 @@ export class Theory {
         this.types.push(meta);
     }
 
-    /** Get metadata for an object type. */
-    getObTypeMeta(typ: ObType): ObTypeMeta | undefined {
+    obTypeMeta(typ: ObType): ObMeta | undefined {
         const i = this.obTypeIndex.get(typ);
-        return i != null ? (this.types[i] as ObTypeMeta) : undefined;
+        return i !== undefined ? (this.types[i] as ObMeta) : undefined;
     }
 
-    /** Get metadata for an morphism type. */
-    getMorTypeMeta(typ: MorType): MorTypeMeta | undefined {
+    morTypeMeta(typ: MorType): MorMeta | undefined {
         const i = this.morTypeIndex.get(typ);
-        return i != null ? (this.types[i] as MorTypeMeta) : undefined;
-    }
-
-    /** Get metadata for an analysis of a model. */
-    getModelAnalysis(id: string): ModelAnalysisMeta | undefined {
-        return this.modelAnalysisMap.get(id);
-    }
-
-    /** List of available model analyses. */
-    get modelAnalyses(): Array<ModelAnalysisMeta> {
-        return Array.from(this.modelAnalysisMap.values());
+        return i !== undefined ? (this.types[i] as MorMeta) : undefined;
     }
 }
 
-/** Unique identifier of a theory exposed to the frontend.
- */
-export type TheoryId = string;
+type HasObTypeMeta = {
+    tag: "ObType";
 
-/** A type in a double theory equipped with frontend metadata.
- */
-export type TypeMeta = ObTypeMeta | MorTypeMeta;
+    /** Object type in the underlying double theory. */
+    obType: ObType;
+};
 
-/** Frontend metadata applicable to any type in a double theory.
- */
-export type BaseTypeMeta = {
+type HasMorTypeMeta = {
+    tag: "MorType";
+
+    /** Morphism type in the underlying double theory. */
+    morType: MorType;
+};
+
+/** Frontend metadata applicable to any type in a double theory. */
+type BaseTypeMeta = {
     /** Human-readable name of type. */
     name: string;
 
@@ -117,33 +177,34 @@ export type BaseTypeMeta = {
     textClasses?: string[];
 };
 
-/** Frontend metadata for an object type in a double theory.
- */
-export type ObTypeMeta = BaseTypeMeta & {
-    tag: "ObType";
+/** Metadata for a type as used in models. */
+export type ModelTypeMeta = ModelObTypeMeta | ModelMorTypeMeta;
 
-    /** Object type in underlying theory. */
-    obType: ObType;
-};
+/** Metadata for an object type as used in models. */
+export type ModelObTypeMeta = BaseTypeMeta & HasObTypeMeta;
 
-/** Frontend metadata for a morphism type in a double theory.
- */
-export type MorTypeMeta = BaseTypeMeta & {
-    tag: "MorType";
+/** Metadata for aa morphism type as used in models. */
+export type ModelMorTypeMeta = BaseTypeMeta &
+    HasMorTypeMeta & {
+        /** Style of arrow to use for morphisms of this type. */
+        arrowStyle?: ArrowStyle;
 
-    /** Morphism type in underlying theory. */
-    morType: MorType;
-
-    /** Style of arrow to use for morphisms of this type. */
-    arrowStyle?: ArrowStyle;
-
-    /** Whether morphisms of this type are typically unnamed.
+        /** Whether morphisms of this type are typically unnamed.
 
     By default, morphisms (like objects) have names but for certain morphism
     types in certain domains, it is common to leave them unnamed.
      */
-    preferUnnamed?: boolean;
-};
+        preferUnnamed?: boolean;
+    };
+
+/** Metadata for a type as used in instances of a model. */
+export type InstanceTypeMeta = InstanceObTypeMeta | InstanceMorTypeMeta;
+
+/** Metadata for an object type as used in instances. */
+export type InstanceObTypeMeta = BaseTypeMeta & HasObTypeMeta;
+
+/** Metadata for a morphism type as used in instances. */
+export type InstanceMorTypeMeta = BaseTypeMeta & HasMorTypeMeta;
 
 /** Specifies an analysis of model with descriptive metadata.
  */

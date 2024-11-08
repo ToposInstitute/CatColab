@@ -7,6 +7,7 @@ use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
 use super::model::{Mor, Ob};
+use super::theory::{MorType, ObType};
 
 /// An object of a diagram in a model of a double theory.
 #[derive(Debug, Serialize, Deserialize, Tsify)]
@@ -37,6 +38,10 @@ pub struct DiagramObDecl {
     /// Globally unique identifier of object.
     pub id: Uuid,
 
+    /// The object's type in the double theory.
+    #[serde(rename = "obType")]
+    pub ob_type: ObType,
+
     /// Object in the model that this object is over, if defined.
     pub over: Option<Ob>,
 }
@@ -47,6 +52,10 @@ pub struct DiagramObDecl {
 pub struct DiagramMorDecl {
     /// Globally unique identifier of morphism.
     pub id: Uuid,
+
+    /// The morphism's type in the double theory.
+    #[serde(rename = "morType")]
+    pub mor_type: MorType,
 
     /// Morphism in the model that this morphism is over, if defined.
     pub over: Option<Mor>,

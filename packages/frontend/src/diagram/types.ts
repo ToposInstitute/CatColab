@@ -1,4 +1,6 @@
-import type { DiagramMorDecl, DiagramObDecl } from "catlog-wasm";
+import { uuidv7 } from "uuidv7";
+
+import type { DiagramMorDecl, DiagramObDecl, Mor, MorType, Ob, ObType } from "catlog-wasm";
 
 /** A judgment in the definition of a diagram in a model.
 
@@ -20,6 +22,14 @@ export type DiagramObjectDecl = DiagramObDecl & {
     name: string;
 };
 
+export const newDiagramObjectDecl = (obType: ObType, over?: Ob): DiagramObjectDecl => ({
+    tag: "object",
+    id: uuidv7(),
+    name: "",
+    obType,
+    over: over ?? null,
+});
+
 /** Declaration of a morphism in a diagram in a model.
  */
 export type DiagramMorphismDecl = DiagramMorDecl & {
@@ -28,3 +38,13 @@ export type DiagramMorphismDecl = DiagramMorDecl & {
     /** Human-readable name of object. */
     name: string;
 };
+
+export const newDiagramMorphismDecl = (morType: MorType, over?: Mor): DiagramMorphismDecl => ({
+    tag: "morphism",
+    id: uuidv7(),
+    name: "",
+    morType,
+    over: over ?? null,
+    dom: null,
+    cod: null,
+});

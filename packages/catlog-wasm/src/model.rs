@@ -90,7 +90,7 @@ pub struct ObDecl {
     /// Globally unique identifier of object.
     pub id: Uuid,
 
-    /// Object type in double theory.
+    /// The object's type in the double theory.
     #[serde(rename = "obType")]
     pub ob_type: ObType,
 }
@@ -102,7 +102,7 @@ pub struct MorDecl {
     /// Globally unique identifier of morphism.
     pub id: Uuid,
 
-    /// Morphism type in double theory.
+    /// The morphism's type in the double theory.
     #[serde(rename = "morType")]
     pub mor_type: MorType,
 

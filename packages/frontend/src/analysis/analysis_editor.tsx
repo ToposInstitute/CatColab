@@ -86,7 +86,7 @@ function ModelAnalysisCellEditor(props: FormalCellEditorProps<ModelAnalysis>) {
     invariant(liveModel, "Model should be provided as context for analysis");
 
     return (
-        <Show when={liveModel.theory()?.getModelAnalysis(props.content.id)}>
+        <Show when={liveModel.theory()?.modelAnalysis(props.content.id)}>
             {(analysis) => (
                 <Dynamic
                     component={analysis().component}

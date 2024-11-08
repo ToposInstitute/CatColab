@@ -3,7 +3,7 @@ import { Show } from "solid-js";
 
 import type { ModelAnalysisProps, ModelGraphContent } from "../../analysis";
 import type { ModelJudgment } from "../../model";
-import type { ModelAnalysisMeta, Theory, TypeMeta } from "../../theory";
+import type { ModelAnalysisMeta, ModelTypeMeta, Theory } from "../../theory";
 import { GraphvizSVG } from "../../visualization";
 
 import styles from "../styles.module.css";
@@ -99,7 +99,7 @@ export function modelToGraphviz(
     for (const judgment of model) {
         if (judgment.tag === "object") {
             const { id, name } = judgment;
-            const meta = theory.getObTypeMeta(judgment.obType);
+            const meta = theory.modelObTypeMeta(judgment.obType);
             nodes.set(id, {
                 name: id,
                 attributes: {
@@ -124,7 +124,7 @@ export function modelToGraphviz(
             ) {
                 continue;
             }
-            const meta = theory.getMorTypeMeta(judgment.morType);
+            const meta = theory.modelMorTypeMeta(judgment.morType);
             edges.push({
                 head: cod.content,
                 tail: dom.content,
@@ -157,12 +157,12 @@ export type GraphvizAttributes = {
     edge?: Viz.Graph["edgeAttributes"];
 };
 
-const cssClass = (meta?: TypeMeta): string =>
+const cssClass = (meta?: ModelTypeMeta): string =>
     [...(meta?.svgClasses ?? []), ...(meta?.textClasses ?? [])].join(" ");
 
 // XXX: Precise font matching seems impossible here but we'll at least give
 // Graphviz a monospace font if and only if we're using one.
-const fontname = (meta?: TypeMeta) =>
+const fontname = (meta?: ModelTypeMeta) =>
     meta?.textClasses?.includes(styles.code) ? "Courier" : "Helvetica";
 
 const defaultGraphAttributes = {

@@ -13,7 +13,7 @@ import { Show, createResource, lazy, useContext } from "solid-js";
 import type { JsonValue } from "catcolab-api";
 import { RepoContext, RpcContext, createRpcClient } from "./api";
 import { newModelDocument } from "./model/document";
-import { HelperContainer, lazyMdx } from "./page/help_page";
+import { HelpContainer, lazyMdx } from "./page/help_page";
 import { TheoryLibraryContext, stdTheories } from "./stdlib";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
@@ -80,13 +80,18 @@ const routes: RouteDefinition[] = [
         component: lazy(() => import("./model/model_editor")),
     },
     {
+        path: "/diagram/:ref",
+        matchFilters: refIsUUIDFilter,
+        component: lazy(() => import("./diagram/diagram_editor")),
+    },
+    {
         path: "/analysis/:ref",
         matchFilters: refIsUUIDFilter,
         component: lazy(() => import("./analysis/analysis_editor")),
     },
     {
         path: "/help",
-        component: HelperContainer,
+        component: HelpContainer,
         children: [
             {
                 path: "/",

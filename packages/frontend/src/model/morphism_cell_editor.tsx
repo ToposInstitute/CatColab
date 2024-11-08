@@ -30,7 +30,7 @@ export function MorphismCellEditor(props: {
     const theory = useContext(TheoryContext);
     const validationResult = useContext(ModelValidationContext);
 
-    const morTypeMeta = () => theory?.()?.getMorTypeMeta(props.morphism.morType);
+    const morTypeMeta = () => theory?.()?.modelMorTypeMeta(props.morphism.morType);
     const nameClasses = () => ["morphism-decl-name", ...(morTypeMeta()?.textClasses ?? [])];
     const arrowStyle = () => morTypeMeta()?.arrowStyle ?? "default";
 
