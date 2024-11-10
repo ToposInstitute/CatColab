@@ -1,67 +1,65 @@
 import { Repo } from "@automerge/automerge-repo";
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
 import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb";
-import * as trpc from "@trpc/client";
+import { type FirebaseOptions, initializeApp } from "firebase/app";
 import invariant from "tiny-invariant";
 import * as uuid from "uuid";
 
 import { MultiProvider } from "@solid-primitives/context";
 import { Navigate, type RouteDefinition, type RouteSectionProps, Router } from "@solidjs/router";
+import { FirebaseProvider } from "solid-firebase";
 import { Match, Switch, createResource, lazy, useContext } from "solid-js";
 
-import type { AppRouter } from "backend/src/index.js";
-import { RPCContext, RepoContext } from "./api";
+import type { JsonValue } from "catcolab-api";
+import { RepoContext, RpcContext, createRpcClient } from "./api";
 import { newModelDocument } from "./document/types";
 import { HelperContainer, lazyMdx } from "./page/help_page";
 import { TheoryLibraryContext, stdTheories } from "./stdlib";
 
-const serverUrl: string = import.meta.env.VITE_BACKEND_HOST;
-
-const useHttps = serverUrl.match(/^https:\/\//)?.length === 1;
-const serverHost = serverUrl.replace(/^https?:\/\//, "");
-
-const httpUrl = `http${useHttps ? "s" : ""}://${serverHost}`;
-const wsUrl = `ws${useHttps ? "s" : ""}://${serverHost}`;
+const serverUrl = import.meta.env.VITE_SERVER_URL;
+const repoUrl = import.meta.env.VITE_AUTOMERGE_REPO_URL;
+const firebaseOptions = JSON.parse(import.meta.env.VITE_FIREBASE_OPTIONS) as FirebaseOptions;
 
 const Root = (props: RouteSectionProps<unknown>) => {
-    invariant(serverHost, "Must set environment variable VITE_BACKEND_HOST");
+    invariant(serverUrl, "Must set environment variable VITE_SERVER_URL");
+    invariant(repoUrl, "Must set environment variable VITE_AUTOMERGE_REPO_URL");
 
-    const client = trpc.createTRPCClient<AppRouter>({
-        links: [
-            trpc.httpBatchLink({
-                url: httpUrl,
-            }),
-        ],
-    });
+    const firebaseApp = initializeApp(firebaseOptions);
+    const client = createRpcClient(serverUrl, firebaseApp);
 
     const repo = new Repo({
-        storage: new IndexedDBStorageAdapter("catcolab-demo"),
-        network: [new BrowserWebSocketClientAdapter(wsUrl)],
+        storage: new IndexedDBStorageAdapter("catcolab"),
+        network: [new BrowserWebSocketClientAdapter(repoUrl)],
     });
 
     return (
         <MultiProvider
             values={[
-                [RPCContext, client],
+                [RpcContext, client],
                 [RepoContext, repo],
                 [TheoryLibraryContext, stdTheories],
             ]}
         >
-            {props.children}
+            <FirebaseProvider app={firebaseApp}>{props.children}</FirebaseProvider>
         </MultiProvider>
     );
 };
 
 function CreateModel() {
-    const client = useContext(RPCContext);
-    const repo = useContext(RepoContext);
-    invariant(client && repo, "Missing context to create model");
+    const rpc = useContext(RpcContext);
+    invariant(rpc, "Missing context to create model");
 
     const init = newModelDocument();
-    const doc = repo.create(init);
 
     const [ref] = createResource<string>(async () => {
-        return await client.newRef.mutate({ title: init.name, docId: doc.documentId });
+        const result = await rpc.new_ref.mutate({
+            content: init as JsonValue,
+            permissions: {
+                anyone: "Read",
+            },
+        });
+        invariant(result.tag === "Ok", "Failed to create model");
+        return result.content;
     });
 
     return (

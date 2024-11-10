@@ -1,7 +1,16 @@
-\date{2024-07-31}
-\title{Witnesses}
 \taxon{table}
+\title{Refs}
 
-\p{A witness declares that a certain ref at a certain point of time has state given by a certain snapshot.}
+\p{A "ref" is a persistent reference to a document. A running CatColab server
+maintains an in-memory hash map from refs to Automerge documents; there can be
+at most one Automerge document that is "controlling" a ref at a given time.}
 
-\p{We originally thought about doing this "linked list" style, where each witness had a "prev" foreign key, but it's easier to query with a many-to-one relation; we can simply say "get me all of the witnesses for a given ref".}
+\p{Refs are identified by UUIDs. In the future, they will also have editable
+metadata such as taxon, title, author(s), tags, and so on.}
+
+\p{Additionally, a ref has a \code{head} field that points to a particular
+[snapshot](dev-000C) for the ref. The "autosave" mechanism updates the content
+of this snapshot every time the Automerge document connected to the ref is
+mutated. "Saving" a ref just means creating a new snapshot and making it the
+head. The previous head will continue to exist as a snapshot, and can be used to
+revert the ref to its state at a previous point in time.}

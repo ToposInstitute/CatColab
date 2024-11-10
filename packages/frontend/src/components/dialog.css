@@ -1,0 +1,31 @@
+[data-corvu-dialog-overlay] {
+    position: fixed;
+    inset: 0px;
+}
+
+[data-corvu-dialog-content] {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+
+    &.popup {
+        padding: 1rem;
+    }
+
+    & .title-bar {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+    }
+}
+
+[data-corvu-dialog-label] {
+    font-size: larger;
+}
+
+[data-corvu-dialog-close] {
+    & .lucide {
+        color: dimgray;
+    }
+}

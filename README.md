@@ -33,17 +33,24 @@ The staging deployment, synced to the `main` branch, is available at
 <https://next.catcolab.org/dev/>.
 
 CatColab is written in a mix of [Rust](https://www.rust-lang.org/) and
-[TypeScript](https://www.typescriptlang.org/). To build it locally, first
+[TypeScript](https://www.typescriptlang.org/). To start developing, install
 install Rust (say by using [rustup](https://rustup.rs/)) and install
-[pnpm](https://pnpm.io/), then clone the repository and run
+[pnpm](https://pnpm.io/), or use the dev container (see below).
+
+### Frontend development
+
+To develop the frontend locally, clone the repository and run
 
 ```bash
 > pnpm install
 > pnpm run build
-> pnpm run dev
+> pnpm run dev --mode staging
 ```
 
-Finally, navigate your browser to the URL provided by Vite.
+Then navigate your browser to the URL provided by Vite.
+
+Note that the flag `--mode staging` uses the staging deployment of the backend.
+When this flag is omitted, the command `pnpm run dev` uses a local backend.
 
 ### Using the Dev Container
 

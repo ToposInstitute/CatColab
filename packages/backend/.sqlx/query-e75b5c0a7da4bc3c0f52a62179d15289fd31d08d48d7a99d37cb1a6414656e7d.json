@@ -1,0 +1,35 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT MAX(level) AS \"max: PermissionLevel\" FROM permissions\n        WHERE object = $1 AND (subject IS NULL OR subject = $2)\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "max: PermissionLevel",
+        "type_info": {
+          "Custom": {
+            "name": "permission_level",
+            "kind": {
+              "Enum": [
+                "read",
+                "write",
+                "maintain",
+                "own"
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "e75b5c0a7da4bc3c0f52a62179d15289fd31d08d48d7a99d37cb1a6414656e7d"
+}

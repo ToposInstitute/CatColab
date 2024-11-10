@@ -15,7 +15,7 @@ import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
 import type { ModelAnalysis } from "../analysis";
-import { RPCContext, RepoContext, retrieveDoc } from "../api";
+import { RepoContext, RpcContext, getReactiveDoc } from "../api";
 import { IconButton, ResizableHandle } from "../components";
 import {
     type CellConstructor,
@@ -53,28 +53,27 @@ export default function AnalysisPage() {
     const ref = params.ref;
     invariant(ref, "Must provide analysis ref as parameter to analysis page");
 
-    const client = useContext(RPCContext);
+    const rpc = useContext(RpcContext);
     const repo = useContext(RepoContext);
     const theories = useContext(TheoryLibraryContext);
-    invariant(client && repo && theories, "Missing context for analysis page");
+    invariant(rpc && repo && theories, "Missing context for analysis page");
 
     const [liveDoc] = createResource<LiveAnalysisDocument>(async () => {
-        const { doc, docHandle } = await retrieveDoc<AnalysisDocument>(client, ref, repo);
+        const { doc, docHandle } = await getReactiveDoc<AnalysisDocument>(rpc, ref, repo);
         await docHandle.whenReady();
         invariant(
             doc.type === "analysis",
             () => `Expected analysis document, got type: ${doc.type}`,
         );
 
-        const { doc: modelDoc, docHandle: modelDocHandle } = await retrieveDoc<ModelDocument>(
-            client,
+        const modelReactiveDoc = await getReactiveDoc<ModelDocument>(
+            rpc,
             doc.modelRef.__extern__.refId,
             repo,
         );
         const liveModel = enlivenModelDocument(
             doc.modelRef.__extern__.refId,
-            modelDoc,
-            modelDocHandle,
+            modelReactiveDoc,
             theories,
         );
 
@@ -168,8 +167,8 @@ performing analysis of the model.
 export function AnalysisDocumentEditor(props: {
     liveDoc: LiveAnalysisDocument;
 }) {
-    const client = useContext(RPCContext);
-    invariant(client, "Must provide RPCContext");
+    const rpc = useContext(RpcContext);
+    invariant(rpc, "Must provide RPC context");
 
     const [resizableContext, setResizableContext] = createSignal<ContextValue>();
     const [isSidePanelOpen, setSidePanelOpen] = createSignal(true);

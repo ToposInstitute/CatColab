@@ -1,4 +1,4 @@
-import type { DocHandle } from "@automerge/automerge-repo";
+import type { ChangeFn, DocHandle } from "@automerge/automerge-repo";
 import { MultiProvider } from "@solid-primitives/context";
 import { useNavigate, useParams } from "@solidjs/router";
 import {
@@ -12,8 +12,9 @@ import {
 } from "solid-js";
 import invariant from "tiny-invariant";
 
+import type { JsonValue, Permissions } from "catcolab-api";
 import type { Uuid } from "catlog-wasm";
-import { RPCContext, RepoContext, retrieveDoc } from "../api";
+import { type ReactiveDoc, RepoContext, RpcContext, getReactiveDoc } from "../api";
 import { IconButton, InlineInput } from "../components";
 import {
     type ModelJudgment,
@@ -40,6 +41,7 @@ import {
 import { BrandedToolbar, HelpButton } from "../page";
 import { type TheoryLibrary, TheoryLibraryContext } from "../stdlib";
 import type { Theory } from "../theory";
+import { PermissionsButton } from "../user";
 import { type IndexedMap, indexMap } from "../util/indexing";
 import { type ModelDocument, newAnalysisDocument } from "./types";
 
@@ -49,22 +51,28 @@ import ChartNetwork from "lucide-solid/icons/chart-network";
 
 /** A model document "live" for editing.
 
-Contains a model document and Automerge document handle, plus various memos of
- derived data.
+Contains a reactive model document and an Automerge document handle, plus
+various memos of derived data.
  */
 export type LiveModelDocument = {
     /** The ref for which this is a live document. */
     refId: string;
 
-    /** The model document.
+    /** The model document, suitable for use in reactive contexts.
 
-    Produced via `makeDocReactive` so that accessing fields of this document in
-    reactive contexts will be appropriately reactive.
-    */
+    This data should never be directly mutated. Instead, call `changeDoc` or
+    interact directly with the Automerge document handle.
+     */
     doc: ModelDocument;
 
-    /** The document handle for the model document.*/
+    /** Make a change to the model document. */
+    changeDoc: (f: ChangeFn<ModelDocument>) => void;
+
+    /** The Automerge document handle for the model document. */
     docHandle: DocHandle<ModelDocument>;
+
+    /** Permissions for the ref retrieved from the backend. */
+    permissions: Permissions;
 
     /** A memo of the formal content of the model. */
     formalJudgments: Accessor<Array<ModelJudgment>>;
@@ -84,10 +92,13 @@ export type LiveModelDocument = {
 
 export function enlivenModelDocument(
     refId: string,
-    doc: ModelDocument,
-    docHandle: DocHandle<ModelDocument>,
+    reactiveDoc: ReactiveDoc<ModelDocument>,
     theories: TheoryLibrary,
 ): LiveModelDocument {
+    const { doc, docHandle, permissions } = reactiveDoc;
+
+    const changeDoc = (f: ChangeFn<ModelDocument>) => docHandle.change(f);
+
     // Memo-ize the *formal* content of the notebook, since most derived objects
     // will not depend on the informal (rich-text) content in notebook.
     const formalJudgments = createMemo<Array<ModelJudgment>>(() => {
@@ -128,7 +139,9 @@ export function enlivenModelDocument(
     return {
         refId,
         doc,
+        changeDoc,
         docHandle,
+        permissions,
         formalJudgments,
         objectIndex,
         morphismIndex,
@@ -142,14 +155,14 @@ export default function ModelPage() {
     const ref = params.ref;
     invariant(ref, "Must provide model ref as parameter to model page");
 
-    const client = useContext(RPCContext);
+    const rpc = useContext(RpcContext);
     const repo = useContext(RepoContext);
     const theories = useContext(TheoryLibraryContext);
-    invariant(client && repo && theories, "Missing context for model page");
+    invariant(rpc && repo && theories, "Missing context for model page");
 
     const [liveDoc] = createResource<LiveModelDocument>(async () => {
-        const { doc, docHandle } = await retrieveDoc<ModelDocument>(client, ref, repo);
-        return enlivenModelDocument(ref, doc, docHandle, theories);
+        const reactiveDoc = await getReactiveDoc<ModelDocument>(rpc, ref, repo);
+        return enlivenModelDocument(ref, reactiveDoc, theories);
     });
 
     return (
@@ -167,24 +180,24 @@ export default function ModelPage() {
 export function ModelDocumentEditor(props: {
     liveDoc: LiveModelDocument;
 }) {
-    const client = useContext(RPCContext);
-    const repo = useContext(RepoContext);
-    invariant(client && repo, "Missing context for model document editor");
-
-    /* TODO: Restore this action once saving properly integrated into UI.
-    const snapshotModel = () =>
-        client.saveRef.mutate({
-            refId: props.liveDoc.refId,
-            note: "",
-        });
-    */
+    const rpc = useContext(RpcContext);
+    invariant(rpc, "Missing context for model document editor");
 
     const navigate = useNavigate();
 
     const createAnalysis = async () => {
         const init = newAnalysisDocument(props.liveDoc.refId);
-        const newDoc = repo.create(init);
-        const newRef = await client.newRef.mutate({ title: init.name, docId: newDoc.documentId });
+
+        const result = await rpc.new_ref.mutate({
+            // @ts-expect-error Work around upstream bug:
+            // https://github.com/Aleph-Alpha/ts-rs/pull/359
+            content: init as JsonValue,
+            permissions: {
+                anyone: "Read",
+            },
+        });
+        invariant(result.tag === "Ok", "Failed to create analysis");
+        const newRef = result.content;
 
         navigate(`/analysis/${newRef}`);
     };
@@ -193,6 +206,7 @@ export function ModelDocumentEditor(props: {
         <div class="growable-container">
             <BrandedToolbar>
                 <HelpButton />
+                <PermissionsButton permissions={props.liveDoc.permissions} />
                 <IconButton onClick={createAnalysis} tooltip="Analyze this model">
                     <ChartNetwork />
                 </IconButton>
@@ -210,7 +224,7 @@ export function ModelPane(props: {
 
     const liveDoc = () => props.liveDoc;
     const doc = () => props.liveDoc.doc;
-    const docHandle = () => props.liveDoc.docHandle;
+    const changeDoc = (f: (doc: ModelDocument) => void) => props.liveDoc.changeDoc(f);
     return (
         <div class="notebook-container">
             <div class="model-head">
@@ -218,7 +232,7 @@ export function ModelPane(props: {
                     <InlineInput
                         text={doc().name}
                         setText={(text) => {
-                            docHandle().change((doc) => {
+                            changeDoc((doc) => {
                                 doc.name = text;
                             });
                         }}
@@ -232,7 +246,7 @@ export function ModelPane(props: {
                         value={doc().theory ?? ""}
                         onInput={(evt) => {
                             const id = evt.target.value;
-                            docHandle().change((model) => {
+                            changeDoc((model) => {
                                 model.theory = id ? id : undefined;
                             });
                         }}
@@ -255,11 +269,11 @@ export function ModelPane(props: {
                 ]}
             >
                 <NotebookEditor
-                    handle={docHandle()}
+                    handle={props.liveDoc.docHandle}
                     path={["notebook"]}
                     notebook={doc().notebook}
                     changeNotebook={(f) => {
-                        docHandle().change((doc) => f(doc.notebook));
+                        changeDoc((doc) => f(doc.notebook));
                     }}
                     formalCellEditor={ModelCellEditor}
                     cellConstructors={modelCellConstructors(liveDoc().theory())}

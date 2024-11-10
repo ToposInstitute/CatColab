@@ -1,0 +1,14 @@
+{
+    "name": "catcolab-api",
+    "version": "0.1.0",
+    "author": "Evan Patterson <evan@epatters.org>",
+    "license": "MIT",
+    "main": "index.ts",
+    "scripts": {
+        "build": "tsc -b"
+    },
+    "dependencies": {
+        "@qubit-rs/client": "^0.4.4",
+        "typescript": "^5.6.3"
+    }
+}
