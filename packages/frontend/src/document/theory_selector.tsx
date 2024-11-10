@@ -49,23 +49,21 @@ export function TheorySelectorDialog(
 export function TheorySelector(props: TheorySelectorProps) {
     const groupedTheories = createMemo(() => {
         const grouped = new Map<string, TheoryMeta[]>();
-
         for (const theory of props.theories.metadata()) {
-            const category = theory.divisionCategory ?? "Other";
-            const group = grouped.get(category) || [];
+            const groupName = theory.group ?? "Other";
+            const group = grouped.get(groupName) || [];
             group.push(theory);
-            grouped.set(category, group);
+            grouped.set(groupName, group);
         }
-
-        return Array.from(grouped.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+        return Array.from(grouped.entries());
     });
 
     return (
         <div class="theory-selector">
             <For each={groupedTheories()}>
-                {([category, theories]) => (
-                    <div class="division">
-                        <h4 class="division-name">{category}</h4>
+                {([group, theories]) => (
+                    <div class="group">
+                        <h4 class="group-name">{group}</h4>
                         <For each={theories}>
                             {(meta) => (
                                 <div class="theory">

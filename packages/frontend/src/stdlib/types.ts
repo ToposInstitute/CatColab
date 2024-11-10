@@ -15,8 +15,8 @@ export type TheoryMeta = {
     /** Short description of models of theory. */
     description?: string;
 
-    /** division Category */
-    divisionCategory?: string;
+    /** Group to which the theory belongs */
+    group?: string;
 };
 
 /** Library of double theories configured for the frontend.

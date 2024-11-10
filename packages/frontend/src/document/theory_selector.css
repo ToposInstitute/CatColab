@@ -38,13 +38,13 @@
         cursor: pointer;
     }
 
-    & .division {
+    & .group {
         display: flex;
         flex-direction: column;
         gap: 5px;
     }
 
-    & .division-name {
+    & .group-name {
         font-weight: 600;
         padding-bottom: 1px;
         opacity: 35%;

@@ -20,7 +20,7 @@ stdTheories.add(
         id: "simple-olog",
         name: "Olog",
         description: "Ontology log, a simple conceptual model",
-        divisionCategory: "Knowledge and Data",
+        group: "Knowledge and Data",
     },
     (meta) => {
         const thCategory = new catlog.ThCategory();
@@ -61,10 +61,10 @@ stdTheories.add(
 
 stdTheories.add(
     {
-        id: "schema",
+        id: "simple-schema",
         name: "Schema",
         description: "Schema for a categorical database",
-        divisionCategory: "Knowledge and Data",
+        group: "Knowledge and Data",
     },
     (meta) => {
         const thSchema = new catlog.ThSchema();
@@ -134,8 +134,8 @@ stdTheories.add(
     {
         id: "reg-net",
         name: "Regulatory network",
-        description: "Signed graphs to model networks",
-        divisionCategory: "Life Sciences",
+        description: "Biochemical species that promote or inhibit each other",
+        group: "Biology",
     },
     (meta) => {
         const thSignedCategory = new catlog.ThSignedCategory();
@@ -202,8 +202,8 @@ stdTheories.add(
     {
         id: "causal-loop",
         name: "Causal loop diagram",
-        description: "Model cause-and-effect relationships",
-        divisionCategory: "System Dynamics",
+        description: "Positive and negative causal relationships",
+        group: "System Dynamics",
     },
     (meta) => {
         const thSignedCategory = new catlog.ThSignedCategory();
@@ -270,8 +270,10 @@ stdTheories.add(
 
 stdTheories.add(
     {
-        id: "nullable-causal-loop",
-        name: "Causal loops with indeterminates",
+        id: "indeterminate-causal-loop",
+        name: "Causal loop diagram with indeterminates",
+        description: "Positive, negative, and indeterminate causal relationships",
+        group: "System Dynamics",
     },
     (meta) => {
         const thNullableSignedCategory = new catlog.ThNullableSignedCategory();
@@ -331,10 +333,10 @@ stdTheories.add(
 
 stdTheories.add(
     {
-        id: "stock-flow",
+        id: "primitive-stock-flow",
         name: "Stock and flow",
         description: "Model accumulation (stocks) and change (flows)",
-        divisionCategory: "System Dynamics",
+        group: "System Dynamics",
     },
     (meta) => {
         const thCategoryLinks = new catlog.ThCategoryLinks();
