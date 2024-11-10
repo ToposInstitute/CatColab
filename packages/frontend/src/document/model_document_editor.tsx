@@ -1,15 +1,7 @@
 import type { ChangeFn, DocHandle } from "@automerge/automerge-repo";
 import { MultiProvider } from "@solid-primitives/context";
 import { useNavigate, useParams } from "@solidjs/router";
-import {
-    type Accessor,
-    For,
-    Match,
-    Switch,
-    createMemo,
-    createResource,
-    useContext,
-} from "solid-js";
+import { type Accessor, Match, Switch, createMemo, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { JsonValue, Permissions } from "catcolab-api";
@@ -43,6 +35,7 @@ import { type TheoryLibrary, TheoryLibraryContext } from "../stdlib";
 import type { Theory } from "../theory";
 import { PermissionsButton } from "../user";
 import { type IndexedMap, indexMap } from "../util/indexing";
+import { TheorySelectorDialog } from "./theory_selector";
 import { type ModelDocument, newAnalysisDocument } from "./types";
 
 import "./model_document_editor.css";
@@ -239,26 +232,16 @@ export function ModelPane(props: {
                         placeholder="Untitled"
                     />
                 </div>
-                <div class="model-theory">
-                    <select
-                        required
-                        disabled={doc().notebook.cells.some((cell) => cell.tag === "formal")}
-                        value={doc().theory ?? ""}
-                        onInput={(evt) => {
-                            const id = evt.target.value;
-                            changeDoc((model) => {
-                                model.theory = id ? id : undefined;
-                            });
-                        }}
-                    >
-                        <option value="" disabled selected hidden>
-                            Choose a logic
-                        </option>
-                        <For each={Array.from(theories.metadata())}>
-                            {(meta) => <option value={meta.id}>{meta.name}</option>}
-                        </For>
-                    </select>
-                </div>
+                <TheorySelectorDialog
+                    theory={props.liveDoc.theory()}
+                    setTheory={(id) => {
+                        changeDoc((model) => {
+                            model.theory = id;
+                        });
+                    }}
+                    theories={theories}
+                    disabled={doc().notebook.cells.some((cell) => cell.tag === "formal")}
+                />
             </div>
             <MultiProvider
                 values={[

@@ -1,0 +1,62 @@
+.theory-selector-button {
+    border: none;
+    font-size: 1.25em;
+    padding: 16px;
+    background-color: transparent;
+    font-family: var(--main-font);
+    cursor: pointer;
+    font-weight: 500;
+
+    & .placeholder {
+        color: darkgray;
+    }
+
+    &:hover,
+    & .placeholder:hover {
+        color: var(--topos-color);
+    }
+}
+
+.theory-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+
+    background-color: transparent;
+    text-align: left;
+    border-top: transparent;
+    border-left: transparent;
+    min-height: 30vh;
+
+    & input[type="radio"] {
+        position: absolute;
+        opacity: 0;
+    }
+
+    & label:hover {
+        color: var(--topos-color);
+        cursor: pointer;
+    }
+
+    & .division {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    & .division-name {
+        font-weight: 600;
+        padding-bottom: 1px;
+        opacity: 35%;
+    }
+
+    & .theory {
+        margin-left: 2ex;
+    }
+
+    & .description {
+        color: rgb(106, 106, 106);
+        font-size: 11px;
+        text-align: left;
+    }
+}
