@@ -7,7 +7,12 @@
     cursor: pointer;
     font-weight: 500;
 
-    &:hover {
+    & .placeholder {
+        color: darkgray;
+    }
+
+    &:hover,
+    & .placeholder:hover {
         color: var(--topos-color);
     }
 }
@@ -15,7 +20,8 @@
 .theory-selector {
     display: flex;
     flex-direction: column;
-    margin: 5px;
+    gap: 10px;
+
     background-color: transparent;
     text-align: left;
     border-top: transparent;
@@ -27,20 +33,25 @@
         opacity: 0;
     }
 
+    & label:hover {
+        color: var(--topos-color);
+        cursor: pointer;
+    }
+
     & .division {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    & .division-name {
         font-weight: 600;
         padding-bottom: 1px;
         opacity: 35%;
     }
 
     & .theory {
-        margin: 5px;
-        padding: 5px;
-    }
-
-    & .theory:hover {
-        color: var(--topos-color);
-        cursor: pointer;
+        margin-left: 2ex;
     }
 
     & .description {

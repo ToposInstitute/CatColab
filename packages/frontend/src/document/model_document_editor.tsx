@@ -1,16 +1,7 @@
 import type { ChangeFn, DocHandle } from "@automerge/automerge-repo";
-import Dialog from "@corvu/dialog";
 import { MultiProvider } from "@solid-primitives/context";
 import { useNavigate, useParams } from "@solidjs/router";
-import {
-    type Accessor,
-    Match,
-    Switch,
-    createMemo,
-    createResource,
-    createSignal,
-    useContext,
-} from "solid-js";
+import { type Accessor, Match, Switch, createMemo, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { JsonValue, Permissions } from "catcolab-api";
@@ -44,7 +35,7 @@ import { type TheoryLibrary, TheoryLibraryContext } from "../stdlib";
 import type { Theory } from "../theory";
 import { PermissionsButton } from "../user";
 import { type IndexedMap, indexMap } from "../util/indexing";
-import { TheorySelector } from "./theory_selector";
+import { TheorySelectorDialog } from "./theory_selector";
 import { type ModelDocument, newAnalysisDocument } from "./types";
 
 import "./model_document_editor.css";
@@ -223,7 +214,6 @@ export function ModelPane(props: {
 }) {
     const theories = useContext(TheoryLibraryContext);
     invariant(theories, "Library of theories should be provided as context");
-    const [theorySelectorOpen, setTheorySelectorOpen] = createSignal(false);
 
     const liveDoc = () => props.liveDoc;
     const doc = () => props.liveDoc.doc;
@@ -242,26 +232,16 @@ export function ModelPane(props: {
                         placeholder="Untitled"
                     />
                 </div>
-                <Dialog open={theorySelectorOpen()} onOpenChange={setTheorySelectorOpen}>
-                    <Dialog.Trigger class="theory-selector-button">
-                        {liveDoc().theory()?.name || "Theory"}
-                    </Dialog.Trigger>
-                    <Dialog.Portal>
-                        <Dialog.Overlay class="overlay" />
-                        <Dialog.Content class="popup">
-                            <TheorySelector
-                                theory={props.liveDoc.theory()?.id}
-                                setTheory={(id) => {
-                                    changeDoc((model) => {
-                                        model.theory = id;
-                                    });
-                                    setTheorySelectorOpen(false);
-                                }}
-                                theories={theories}
-                            />
-                        </Dialog.Content>
-                    </Dialog.Portal>
-                </Dialog>
+                <TheorySelectorDialog
+                    theory={props.liveDoc.theory()}
+                    setTheory={(id) => {
+                        changeDoc((model) => {
+                            model.theory = id;
+                        });
+                    }}
+                    theories={theories}
+                    disabled={doc().notebook.cells.some((cell) => cell.tag === "formal")}
+                />
             </div>
             <MultiProvider
                 values={[
