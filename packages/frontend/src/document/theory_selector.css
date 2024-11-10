@@ -1,0 +1,80 @@
+.theory-selector {
+    text-transform: capitalize;
+    border: none;
+    font-size: 17px;
+    padding: 16px;
+    background-color: transparent;
+    font-family: var(--main-font);
+    cursor: pointer;
+    font-weight: 600;
+    opacity: 70%;
+}
+
+.theory-selector:hover {
+    color: var(--topos-color);
+}
+
+.description {
+    color: rgb(106, 106, 106);
+    font-size: 11px;
+    text-align: left;
+}
+
+#input-selections input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+}
+
+#input-selections {
+    display: flex;
+    flex-direction: column;
+    margin: 5px;
+    background-color: transparent;
+    text-align: left;
+    border-top: transparent;
+    border-left: transparent;
+    min-height: 30vh;
+}
+
+#selection-items:hover {
+    color: var(--topos-color);
+    cursor: pointer;
+}
+
+ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+
+ul li {
+    margin: 5px;
+    padding: 6px;
+}
+
+#division-category {
+    font-weight: 600;
+    padding-bottom: 1px;
+    opacity: 35%;
+}
+
+.overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+#theory-selector-popup {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 20px;
+}

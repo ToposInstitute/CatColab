@@ -1,15 +1,8 @@
 import type { ChangeFn, DocHandle } from "@automerge/automerge-repo";
+import Dialog from "@corvu/dialog";
 import { MultiProvider } from "@solid-primitives/context";
 import { useNavigate, useParams } from "@solidjs/router";
-import {
-    type Accessor,
-    For,
-    Match,
-    Switch,
-    createMemo,
-    createResource,
-    useContext,
-} from "solid-js";
+import { type Accessor, Match, Switch, createMemo, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { JsonValue, Permissions } from "catcolab-api";
@@ -43,10 +36,11 @@ import { type TheoryLibrary, TheoryLibraryContext } from "../stdlib";
 import type { Theory } from "../theory";
 import { PermissionsButton } from "../user";
 import { type IndexedMap, indexMap } from "../util/indexing";
+import TheorySelector from "./theory_selector";
 import { type ModelDocument, newAnalysisDocument } from "./types";
 
 import "./model_document_editor.css";
-
+import "./theory_selector.css";
 import ChartNetwork from "lucide-solid/icons/chart-network";
 
 /** A model document "live" for editing.
@@ -239,26 +233,31 @@ export function ModelPane(props: {
                         placeholder="Untitled"
                     />
                 </div>
-                <div class="model-theory">
-                    <select
-                        required
-                        disabled={doc().notebook.cells.some((cell) => cell.tag === "formal")}
-                        value={doc().theory ?? ""}
-                        onInput={(evt) => {
-                            const id = evt.target.value;
-                            changeDoc((model) => {
-                                model.theory = id ? id : undefined;
-                            });
-                        }}
-                    >
-                        <option value="" disabled selected hidden>
-                            Choose a logic
-                        </option>
-                        <For each={Array.from(theories.metadata())}>
-                            {(meta) => <option value={meta.id}>{meta.name}</option>}
-                        </For>
-                    </select>
-                </div>
+                <Dialog
+                    initialOpen={false}
+                    modal={true}
+                    closeOnEscapeKeyDown={true}
+                    trapFocus={true}
+                >
+                    <div>
+                        <Dialog.Trigger class="theory-selector">
+                            <span> {liveDoc().theory()?.name || "Theory"} </span>
+                        </Dialog.Trigger>
+                    </div>
+                    <Dialog.Portal>
+                        <div class="overlay">
+                            <Dialog.Content class="popup" id="theory-selector-popup">
+                                <span>
+                                    <TheorySelector
+                                        docHandle={props.liveDoc.docHandle}
+                                        theories={theories}
+                                        doc={doc()}
+                                    />
+                                </span>
+                            </Dialog.Content>
+                        </div>
+                    </Dialog.Portal>
+                </Dialog>
             </div>
             <MultiProvider
                 values={[

@@ -20,6 +20,7 @@ stdTheories.add(
         id: "simple-olog",
         name: "Olog",
         description: "Ontology log, a simple conceptual model",
+        divisionCategory: "Knowledge and Data",
     },
     (meta) => {
         const thCategory = new catlog.ThCategory();
@@ -63,6 +64,7 @@ stdTheories.add(
         id: "schema",
         name: "Schema",
         description: "Schema for a categorical database",
+        divisionCategory: "Knowledge and Data",
     },
     (meta) => {
         const thSchema = new catlog.ThSchema();
@@ -132,6 +134,8 @@ stdTheories.add(
     {
         id: "reg-net",
         name: "Regulatory network",
+        description: "Signed graphs to model networks",
+        divisionCategory: "Life Sciences",
     },
     (meta) => {
         const thSignedCategory = new catlog.ThSignedCategory();
@@ -198,6 +202,8 @@ stdTheories.add(
     {
         id: "causal-loop",
         name: "Causal loop diagram",
+        description: "Model cause-and-effect relationships",
+        divisionCategory: "System Dynamics",
     },
     (meta) => {
         const thSignedCategory = new catlog.ThSignedCategory();
@@ -327,6 +333,8 @@ stdTheories.add(
     {
         id: "stock-flow",
         name: "Stock and flow",
+        description: "Model accumulation (stocks) and change (flows)",
+        divisionCategory: "System Dynamics",
     },
     (meta) => {
         const thCategoryLinks = new catlog.ThCategoryLinks();

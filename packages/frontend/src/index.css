@@ -3,6 +3,7 @@
     --mono-font: Roboto Mono, monospace;
 
     --main-color: black;
+    --topos-color: #53b6b2;
 
     --h1-font-size: 3em;
     --h2-font-size: 2em;
@@ -60,6 +61,7 @@ h3 {
     border-radius: 6px;
     box-shadow: rgba(15, 15, 15, 0.05) 0px 0px 0px 1px, rgba(15, 15, 15, 0.1) 0px 3px 6px,
         rgba(15, 15, 15, 0.2) 0px 9px 24px;
+    overflow-y: auto;
 }
 
 .growable-container {
