@@ -1,25 +1,21 @@
-import type { DocHandle } from "@automerge/automerge-repo";
 import { For, createMemo } from "solid-js";
 
 import type { TheoryLibrary, TheoryMeta } from "../stdlib";
-import type { ModelDocument } from "./types";
+import type { TheoryId } from "../theory";
 
 import "./theory_selector.css";
 
-interface TheorySelectorProps {
-    docHandle: DocHandle<ModelDocument>;
+type TheorySelectorProps = {
+    theory: TheoryId | undefined;
+    setTheory: (theory: TheoryId | undefined) => void;
     theories: TheoryLibrary;
-    doc: ModelDocument;
-}
+};
 
-const TheorySelector = (props: TheorySelectorProps) => {
+export const TheorySelector = (props: TheorySelectorProps) => {
     const groupedTheories = createMemo(() => {
-        const theories = Array.from(props.theories.metadata()).filter(
-            (meta) => meta.divisionCategory,
-        );
         const grouped = new Map<string, TheoryMeta[]>();
 
-        for (const theory of theories) {
+        for (const theory of props.theories.metadata()) {
             const category = theory.divisionCategory ?? "Other";
             const group = grouped.get(category) || [];
             group.push(theory);
@@ -37,23 +33,22 @@ const TheorySelector = (props: TheorySelectorProps) => {
                         <h4 class="division">{category}</h4>
                         <For each={theories}>
                             {(meta) => (
-                                <label>
+                                <div class="theory">
                                     <input
                                         type="radio"
                                         name="theory"
+                                        id={meta.id}
                                         value={meta.id}
                                         onchange={(evt) => {
-                                            const id = (evt.target as HTMLInputElement).value;
-                                            props.docHandle.change((model) => {
-                                                model.theory = id ? id : undefined;
-                                            });
+                                            const id = evt.target.value as TheoryId;
+                                            props.setTheory(id ? id : undefined);
                                         }}
                                     />
-                                    <div class="theory">
-                                        {meta.name}
+                                    <label for={meta.id}>
+                                        <div class="name">{meta.name}</div>
                                         <div class="description">{meta.description}</div>
-                                    </div>
-                                </label>
+                                    </label>
+                                </div>
                             )}
                         </For>
                     </>
@@ -62,4 +57,3 @@ const TheorySelector = (props: TheorySelectorProps) => {
         </div>
     );
 };
-export default TheorySelector;
