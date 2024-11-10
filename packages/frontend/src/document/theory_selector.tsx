@@ -1,9 +1,10 @@
-import { For, createMemo } from "solid-js";
-import type { TheoryLibrary } from "../stdlib/types";
-import type { ModelDocument } from "./types";
-import "./model_document_editor.css";
 import type { DocHandle } from "@automerge/automerge-repo";
-import type { TheoryMeta } from "../stdlib/types";
+import { For, createMemo } from "solid-js";
+
+import type { TheoryLibrary, TheoryMeta } from "../stdlib";
+import type { ModelDocument } from "./types";
+
+import "./theory_selector.css";
 
 interface TheorySelectorProps {
     docHandle: DocHandle<ModelDocument>;
@@ -20,18 +21,20 @@ const TheorySelector = (props: TheorySelectorProps) => {
 
         for (const theory of theories) {
             const category = theory.divisionCategory ?? "Other";
-            grouped.set(category, [...(grouped.get(category) || []), theory]);
+            const group = grouped.get(category) || [];
+            group.push(theory);
+            grouped.set(category, group);
         }
 
         return Array.from(grouped.entries()).sort((a, b) => a[0].localeCompare(b[0]));
     });
 
     return (
-        <div id="input-selections">
+        <div class="theory-selector">
             <For each={groupedTheories()}>
                 {([category, theories]) => (
-                    <div class="selection-items">
-                        <h4 id="division-category">{category}</h4>
+                    <>
+                        <h4 class="division">{category}</h4>
                         <For each={theories}>
                             {(meta) => (
                                 <label>
@@ -46,22 +49,14 @@ const TheorySelector = (props: TheorySelectorProps) => {
                                             });
                                         }}
                                     />
-                                    <div>
-                                        <ul>
-                                            <li id="selection-items">
-                                                {meta.name}{" "}
-                                                <div>
-                                                    <span class="description">
-                                                        {meta.description}
-                                                    </span>
-                                                </div>
-                                            </li>
-                                        </ul>
+                                    <div class="theory">
+                                        {meta.name}
+                                        <div class="description">{meta.description}</div>
                                     </div>
                                 </label>
                             )}
                         </For>
-                    </div>
+                    </>
                 )}
             </For>
         </div>

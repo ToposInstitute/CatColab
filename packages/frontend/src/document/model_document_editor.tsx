@@ -40,7 +40,7 @@ import TheorySelector from "./theory_selector";
 import { type ModelDocument, newAnalysisDocument } from "./types";
 
 import "./model_document_editor.css";
-import "./theory_selector.css";
+
 import ChartNetwork from "lucide-solid/icons/chart-network";
 
 /** A model document "live" for editing.
@@ -240,22 +240,19 @@ export function ModelPane(props: {
                     trapFocus={true}
                 >
                     <div>
-                        <Dialog.Trigger class="theory-selector">
-                            <span> {liveDoc().theory()?.name || "Theory"} </span>
+                        <Dialog.Trigger class="theory-selector-button">
+                            {liveDoc().theory()?.name || "Theory"}
                         </Dialog.Trigger>
                     </div>
                     <Dialog.Portal>
-                        <div class="overlay">
-                            <Dialog.Content class="popup" id="theory-selector-popup">
-                                <span>
-                                    <TheorySelector
-                                        docHandle={props.liveDoc.docHandle}
-                                        theories={theories}
-                                        doc={doc()}
-                                    />
-                                </span>
-                            </Dialog.Content>
-                        </div>
+                        <Dialog.Overlay class="overlay" />
+                        <Dialog.Content class="popup">
+                            <TheorySelector
+                                docHandle={props.liveDoc.docHandle}
+                                theories={theories}
+                                doc={doc()}
+                            />
+                        </Dialog.Content>
                     </Dialog.Portal>
                 </Dialog>
             </div>
