@@ -31,7 +31,6 @@ export function createRpcClient(serverUrl: string, firebaseApp?: FirebaseApp) {
                 headers: {
                     ...init?.headers,
                     Authorization: `Bearer ${token}`,
-                    "Access-Control-Allow-Headers": "Authorization,Content-Type",
                 },
             };
         }
