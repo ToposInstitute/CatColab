@@ -3,7 +3,7 @@ import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { RepoContext, RpcContext, getLiveDoc } from "../api";
-import { type ModelDocument, enlivenModelDocument } from "../model";
+import { LiveModelContext, type ModelDocument, enlivenModelDocument } from "../model";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
@@ -46,8 +46,10 @@ export default function DiagramPage() {
     return (
         <Show when={liveDiagram()}>
             {(liveDiagram) => (
-                <div class="notebook-container">
-                    <DiagramNotebookEditor liveDiagram={liveDiagram()} />
+                <div class="growable-container">
+                    <div class="notebook-container">
+                        <DiagramNotebookEditor liveDiagram={liveDiagram()} />
+                    </div>
                 </div>
             )}
         </Show>
@@ -62,18 +64,21 @@ export function DiagramNotebookEditor(props: {
     const liveDoc = () => props.liveDiagram.liveDoc;
 
     return (
-        <NotebookEditor
-            handle={liveDoc().docHandle}
-            path={["notebook"]}
-            notebook={liveDoc().doc.notebook}
-            changeNotebook={(f) => {
-                liveDoc().changeDoc((doc) => f(doc.notebook));
-            }}
-            formalCellEditor={DiagramCellEditor}
-            cellConstructors={instanceCellConstructors(
-                props.liveDiagram.liveModel.theory()?.instanceTypes ?? [],
-            )}
-        />
+        <LiveModelContext.Provider value={props.liveDiagram.liveModel}>
+            <NotebookEditor
+                handle={liveDoc().docHandle}
+                path={["notebook"]}
+                notebook={liveDoc().doc.notebook}
+                changeNotebook={(f) => {
+                    liveDoc().changeDoc((doc) => f(doc.notebook));
+                }}
+                formalCellEditor={DiagramCellEditor}
+                cellConstructors={diagramCellConstructors(
+                    props.liveDiagram.liveModel.theory()?.instanceTypes ?? [],
+                )}
+                cellLabel={judgmentLabel}
+            />
+        </LiveModelContext.Provider>
     );
 }
 
@@ -88,6 +93,7 @@ export function DiagramCellEditor(props: FormalCellEditorProps<DiagramJudgment>)
                     modifyDecl={(f) =>
                         props.changeContent((content) => f(content as DiagramObjectDecl))
                     }
+                    isActive={props.isActive}
                     actions={props.actions}
                 />
             </Match>
@@ -95,7 +101,7 @@ export function DiagramCellEditor(props: FormalCellEditorProps<DiagramJudgment>)
     );
 }
 
-function instanceCellConstructors(
+function diagramCellConstructors(
     instanceTypes: InstanceTypeMeta[],
 ): CellConstructor<DiagramJudgment>[] {
     return instanceTypes.map((meta) => {
@@ -111,4 +117,15 @@ function instanceCellConstructors(
             },
         };
     });
+}
+
+function judgmentLabel(judgment: DiagramJudgment): string | undefined {
+    const liveModel = useContext(LiveModelContext);
+    const theory = liveModel?.theory();
+    if (judgment.tag === "object") {
+        return theory?.instanceObTypeMeta(judgment.obType)?.name;
+    }
+    if (judgment.tag === "morphism") {
+        return theory?.instanceMorTypeMeta(judgment.morType)?.name;
+    }
 }

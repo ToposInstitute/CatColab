@@ -1,4 +1,3 @@
-import { MultiProvider } from "@solid-primitives/context";
 import { useNavigate, useParams } from "@solidjs/router";
 import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
@@ -19,12 +18,7 @@ import { BrandedToolbar, HelpButton } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
 import { PermissionsButton } from "../user";
-import {
-    ModelValidationContext,
-    MorphismIndexContext,
-    ObjectIndexContext,
-    TheoryContext,
-} from "./context";
+import { LiveModelContext } from "./context";
 import { type LiveModelDocument, type ModelDocument, enlivenModelDocument } from "./document";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
@@ -155,14 +149,7 @@ export function ModelPane(props: {
                     disabled={doc().notebook.cells.some((cell) => cell.tag === "formal")}
                 />
             </div>
-            <MultiProvider
-                values={[
-                    [TheoryContext, liveModel().theory],
-                    [ObjectIndexContext, liveModel().objectIndex],
-                    [MorphismIndexContext, liveModel().morphismIndex],
-                    [ModelValidationContext, liveModel().validationResult],
-                ]}
-            >
+            <LiveModelContext.Provider value={props.liveModel}>
                 <NotebookEditor
                     handle={liveModel().liveDoc.docHandle}
                     path={["notebook"]}
@@ -174,7 +161,7 @@ export function ModelPane(props: {
                     cellConstructors={modelCellConstructors(liveModel().theory()?.modelTypes ?? [])}
                     cellLabel={judgmentLabel}
                 />
-            </MultiProvider>
+            </LiveModelContext.Provider>
         </div>
     );
 }
@@ -223,11 +210,12 @@ function modelCellConstructors(modelTypes: ModelTypeMeta[]): CellConstructor<Mod
 }
 
 function judgmentLabel(judgment: ModelJudgment): string | undefined {
-    const theory = useContext(TheoryContext);
+    const liveModel = useContext(LiveModelContext);
+    const theory = liveModel?.theory();
     if (judgment.tag === "object") {
-        return theory?.()?.modelObTypeMeta(judgment.obType)?.name;
+        return theory?.modelObTypeMeta(judgment.obType)?.name;
     }
     if (judgment.tag === "morphism") {
-        return theory?.()?.modelMorTypeMeta(judgment.morType)?.name;
+        return theory?.modelMorTypeMeta(judgment.morType)?.name;
     }
 }

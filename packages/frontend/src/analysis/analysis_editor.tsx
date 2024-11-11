@@ -1,19 +1,12 @@
 import Resizable, { type ContextValue } from "@corvu/resizable";
 import { useParams } from "@solidjs/router";
-import {
-    Show,
-    createContext,
-    createEffect,
-    createResource,
-    createSignal,
-    useContext,
-} from "solid-js";
+import { Show, createEffect, createResource, createSignal, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
 import { RepoContext, RpcContext, getLiveDoc } from "../api";
 import { IconButton, ResizableHandle } from "../components";
-import { type LiveModelDocument, type ModelDocument, enlivenModelDocument } from "../model";
+import { LiveModelContext, type ModelDocument, enlivenModelDocument } from "../model";
 import { ModelPane } from "../model/model_editor";
 import {
     type CellConstructor,
@@ -83,7 +76,7 @@ export function AnalysisPane(props: {
 
 function ModelAnalysisCellEditor(props: FormalCellEditorProps<ModelAnalysis>) {
     const liveModel = useContext(LiveModelContext);
-    invariant(liveModel, "Model should be provided as context for analysis");
+    invariant(liveModel, "Live model should be provided as context for analysis");
 
     return (
         <Show when={liveModel.theory()?.modelAnalysis(props.content.id)}>
@@ -117,9 +110,6 @@ function modelAnalysisCellConstructors(
         };
     });
 }
-
-/** Context for the model being analyzed. */
-const LiveModelContext = createContext<LiveModelDocument>();
 
 /** Editor for a model of a double theory.
 

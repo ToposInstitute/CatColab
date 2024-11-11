@@ -1,16 +1,11 @@
 import { splitProps, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
+import invariant from "tiny-invariant";
 import { P, match } from "ts-pattern";
 
 import type { Ob, ObType, Uuid } from "catlog-wasm";
 import { IdInput, type IdInputOptions } from "../components";
-import type { Theory } from "../theory";
-import {
-    ModelValidationContext,
-    MorphismIndexContext,
-    ObjectIndexContext,
-    TheoryContext,
-} from "./context";
+import { LiveModelContext } from "./context";
 
 type ObInputProps = {
     ob: Ob | null;
@@ -37,12 +32,11 @@ export function ObInput(allProps: ObInputProps & IdInputOptions) {
 function BasicObInput(allProps: ObInputProps & IdInputOptions) {
     const [props, inputProps] = splitProps(allProps, ["ob", "setOb", "obType"]);
 
-    const theory = useContext(TheoryContext);
-    const validationResult = useContext(ModelValidationContext);
-    const objectIndex = useContext(ObjectIndexContext);
+    const liveModel = useContext(LiveModelContext);
+    invariant(liveModel, "Live model should be provided as context");
 
     const completions = (): Uuid[] => {
-        const result = validationResult?.();
+        const result = liveModel.validationResult();
         return props.obType && result && result.tag !== "notsupported"
             ? result.model
                   .objectsWithType(props.obType)
@@ -50,8 +44,6 @@ function BasicObInput(allProps: ObInputProps & IdInputOptions) {
                   .filter((id) => id !== null)
             : [];
     };
-
-    const cssClasses = () => obClasses(theory?.(), props.obType);
 
     const getId = (ob: Ob | null): string | null =>
         match(ob)
@@ -78,21 +70,14 @@ function BasicObInput(allProps: ObInputProps & IdInputOptions) {
     };
 
     return (
-        <div class={cssClasses().join(" ")}>
-            <IdInput
-                id={id()}
-                setId={setId}
-                nameMap={objectIndex?.()}
-                completions={completions()}
-                {...inputProps}
-            />
-        </div>
+        <IdInput
+            id={id()}
+            setId={setId}
+            nameMap={liveModel.objectIndex()}
+            completions={completions()}
+            {...inputProps}
+        />
     );
-}
-
-export function obClasses(theory: Theory | undefined, typ?: ObType): string[] {
-    const typeMeta = typ ? theory?.modelObTypeMeta(typ) : undefined;
-    return [...(typeMeta?.cssClasses ?? []), ...(typeMeta?.textClasses ?? [])];
 }
 
 /** Input an object that is a tabulated morphism.
@@ -103,7 +88,8 @@ human-readable name. However, there is no such restriction on tabulators.
 function TabulatedMorInput(allProps: ObInputProps & IdInputOptions) {
     const [props, inputProps] = splitProps(allProps, ["ob", "setOb", "obType"]);
 
-    const morphismIndex = useContext(MorphismIndexContext);
+    const liveModel = useContext(LiveModelContext);
+    invariant(liveModel, "Live model should be provided as context");
 
     const id = (): string | null =>
         match(props.ob)
@@ -133,7 +119,7 @@ function TabulatedMorInput(allProps: ObInputProps & IdInputOptions) {
         );
     };
 
-    return <IdInput id={id()} setId={setId} nameMap={morphismIndex?.()} {...inputProps} />;
+    return <IdInput id={id()} setId={setId} nameMap={liveModel.morphismIndex()} {...inputProps} />;
 }
 
 const object_input_components = {
