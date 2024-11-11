@@ -3,7 +3,7 @@ import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 import { P, match } from "ts-pattern";
 
-import type { Ob, ObType, Uuid } from "catlog-wasm";
+import type { MorType, Ob, ObType, Uuid } from "catlog-wasm";
 import { IdInput, type IdInputOptions } from "../components";
 import { LiveModelContext } from "./context";
 
@@ -35,17 +35,18 @@ function BasicObInput(allProps: ObInputProps & IdInputOptions) {
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
 
-    const completions = (): Uuid[] => {
+    const completions = (): Uuid[] | undefined => {
         const result = liveModel.validationResult();
-        return props.obType && result && result.tag !== "notsupported"
-            ? result.model
-                  .objectsWithType(props.obType)
-                  .map(getId)
-                  .filter((id) => id !== null)
-            : [];
+        if (!(props.obType && result && result.tag !== "notsupported")) {
+            return undefined;
+        }
+        return result.model
+            .objectsWithType(props.obType)
+            .map(getId)
+            .filter((id) => id !== null);
     };
 
-    const getId = (ob: Ob | null): string | null =>
+    const getId = (ob: Ob | null): Uuid | null =>
         match(ob)
             .with(
                 {
@@ -56,9 +57,9 @@ function BasicObInput(allProps: ObInputProps & IdInputOptions) {
             )
             .otherwise(() => null);
 
-    const id = (): string | null => getId(props.ob);
+    const id = (): Uuid | null => getId(props.ob);
 
-    const setId = (id: string | null) => {
+    const setId = (id: Uuid | null) => {
         props.setOb(
             id === null
                 ? null
@@ -82,8 +83,9 @@ function BasicObInput(allProps: ObInputProps & IdInputOptions) {
 
 /** Input an object that is a tabulated morphism.
 
-TODO: Assumes that the morphism is basic and thus will be input by its
-human-readable name. However, there is no such restriction on tabulators.
+TODO: We are assuming that the morphism is basic and so will be specified by its
+human-readable name. However, in a general double theory, there is no such
+restriction on tabulated morphisms.
  */
 function TabulatedMorInput(allProps: ObInputProps & IdInputOptions) {
     const [props, inputProps] = splitProps(allProps, ["ob", "setOb", "obType"]);
@@ -91,7 +93,40 @@ function TabulatedMorInput(allProps: ObInputProps & IdInputOptions) {
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
 
-    const id = (): string | null =>
+    const tabulatedType = (): MorType | null =>
+        match(props.obType)
+            .with(
+                {
+                    tag: "Tabulator",
+                    content: P.select(),
+                },
+                (content) => content,
+            )
+            .otherwise(() => null);
+
+    const completions = (): Uuid[] | undefined => {
+        const morType = tabulatedType();
+        const result = liveModel.validationResult();
+        if (!(morType && result && result.tag !== "notsupported")) {
+            return undefined;
+        }
+        return result.model
+            .morphismsWithType(morType)
+            .map((mor) =>
+                match(mor)
+                    .with(
+                        {
+                            tag: "Basic",
+                            content: P.select(),
+                        },
+                        (id) => id,
+                    )
+                    .otherwise(() => null),
+            )
+            .filter((id) => id !== null);
+    };
+
+    const id = (): Uuid | null =>
         match(props.ob)
             .with(
                 {
@@ -105,7 +140,7 @@ function TabulatedMorInput(allProps: ObInputProps & IdInputOptions) {
             )
             .otherwise(() => null);
 
-    const setId = (id: string | null) => {
+    const setId = (id: Uuid | null) => {
         props.setOb(
             id === null
                 ? null
@@ -119,7 +154,15 @@ function TabulatedMorInput(allProps: ObInputProps & IdInputOptions) {
         );
     };
 
-    return <IdInput id={id()} setId={setId} nameMap={liveModel.morphismIndex()} {...inputProps} />;
+    return (
+        <IdInput
+            id={id()}
+            setId={setId}
+            nameMap={liveModel.morphismIndex()}
+            completions={completions()}
+            {...inputProps}
+        />
+    );
 }
 
 const object_input_components = {
