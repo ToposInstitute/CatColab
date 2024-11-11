@@ -51,7 +51,7 @@ export function MorphismCellEditor(props: {
     };
 
     return (
-        <div class="model-judgment morphism-decl">
+        <div class="formal-judgment morphism-decl">
             <div class={domClasses().join(" ")}>
                 <ObInput
                     ref={domRef}

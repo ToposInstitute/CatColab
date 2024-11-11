@@ -31,7 +31,7 @@ export function ObjectCellEditor(props: {
     invariant(liveModel, "Live model should be provided as context");
 
     const cssClasses = () => [
-        "model-judgment",
+        "formal-judgment",
         "object-decl",
         ...obClasses(liveModel.theory(), props.object.obType),
     ];

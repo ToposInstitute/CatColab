@@ -6,6 +6,5 @@
 
     & .is-a:before {
         content: ":";
-        font-size: larger;
     }
 }

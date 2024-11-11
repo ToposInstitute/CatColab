@@ -31,7 +31,7 @@ export function DiagramObjectCellEditor(props: {
     invariant(liveModel, "Live model should be provided as context");
 
     return (
-        <div class="diagram-object-decl">
+        <div class="formal-judgment diagram-object-decl">
             <InlineInput
                 ref={nameRef}
                 text={props.decl.name}

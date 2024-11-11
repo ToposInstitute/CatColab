@@ -7,16 +7,3 @@
     align-items: center;
     justify-content: space-between;
 }
-
-.model-theory select {
-    appearance: none;
-    border: none;
-    background-color: transparent;
-    color: var(--main-color);
-    font-size: var(--h3-font-size);
-    text-align-last: right;
-}
-
-.model-theory select:invalid {
-    color: darkgray;
-}
