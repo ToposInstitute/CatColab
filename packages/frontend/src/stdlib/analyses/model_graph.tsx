@@ -6,7 +6,7 @@ import type { ModelJudgment } from "../../model";
 import type { ModelAnalysisMeta, ModelTypeMeta, Theory } from "../../theory";
 import { GraphvizSVG } from "../../visualization";
 
-import styles from "../styles.module.css";
+import textStyles from "../text_styles.module.css";
 
 /** Configure a graph visualization for use with models of a double theory. */
 export function configureModelGraph(options: {
@@ -163,7 +163,7 @@ const cssClass = (meta?: ModelTypeMeta): string =>
 // XXX: Precise font matching seems impossible here but we'll at least give
 // Graphviz a monospace font if and only if we're using one.
 const fontname = (meta?: ModelTypeMeta) =>
-    meta?.textClasses?.includes(styles.code) ? "Courier" : "Helvetica";
+    meta?.textClasses?.includes(textStyles.code) ? "Courier" : "Helvetica";
 
 const defaultGraphAttributes = {
     nodesep: "0.5",

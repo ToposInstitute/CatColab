@@ -11,6 +11,7 @@ import { TheoryLibrary } from "./types";
 
 import styles from "./styles.module.css";
 import svgStyles from "./svg_styles.module.css";
+import textStyles from "./text_styles.module.css";
 
 /** Standard library of double theories supported by the frontend. */
 export const stdTheories = new TheoryLibrary();
@@ -34,7 +35,7 @@ stdTheories.add(
                     name: "Type",
                     description: "Type or class of things",
                     shortcut: ["O"],
-                    cssClasses: [styles["corner-box"]],
+                    cssClasses: [styles.cornerBox],
                     svgClasses: [svgStyles.box],
                 },
                 {
@@ -99,7 +100,7 @@ stdTheories.add(
                     shortcut: ["O"],
                     cssClasses: [styles.box],
                     svgClasses: [svgStyles.box],
-                    textClasses: [styles.code],
+                    textClasses: [textStyles.code],
                 },
                 {
                     tag: "MorType",
@@ -110,7 +111,7 @@ stdTheories.add(
                     name: "Mapping",
                     description: "Many-to-one relation between entities",
                     shortcut: ["M"],
-                    textClasses: [styles.code],
+                    textClasses: [textStyles.code],
                 },
                 {
                     tag: "MorType",
@@ -118,14 +119,14 @@ stdTheories.add(
                     name: "Attribute",
                     description: "Data attribute of an entity",
                     shortcut: ["A"],
-                    textClasses: [styles.code],
+                    textClasses: [textStyles.code],
                 },
                 {
                     tag: "ObType",
                     obType: { tag: "Basic", content: "AttrType" },
                     name: "Attribute type",
                     description: "Data type for an attribute",
-                    textClasses: [styles.code],
+                    textClasses: [textStyles.code],
                 },
                 {
                     tag: "MorType",
@@ -135,7 +136,7 @@ stdTheories.add(
                     },
                     name: "Operation",
                     description: "Operation on data types for attributes",
-                    textClasses: [styles.code],
+                    textClasses: [textStyles.code],
                 },
             ],
             modelAnalyses: [

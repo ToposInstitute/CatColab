@@ -8,6 +8,7 @@ import { obClasses } from "./object_cell_editor";
 import { ObInput } from "./object_input";
 import type { MorphismDecl } from "./types";
 
+import arrowStyles from "../stdlib/arrow_styles.module.css";
 import "./morphism_cell_editor.css";
 
 /** Editor for a moprhism declaration cell in a model.
@@ -39,8 +40,12 @@ export function MorphismCellEditor(props: {
     const codClasses = () => ["morphism-decl-cod", ...obClasses(theory(), codType())];
 
     const morTypeMeta = () => theory()?.modelMorTypeMeta(props.morphism.morType);
-    const nameClasses = () => ["morphism-decl-name", ...(morTypeMeta()?.textClasses ?? [])];
-    const arrowStyle = () => morTypeMeta()?.arrowStyle ?? "default";
+    const nameClasses = () => [
+        "morphism-decl-name",
+        arrowStyles.arrowName,
+        ...(morTypeMeta()?.textClasses ?? []),
+    ];
+    const arrowClass = () => arrowStyles[morTypeMeta()?.arrowStyle ?? "default"];
 
     const morphismErrors = () => {
         const result = liveModel.validationResult();
@@ -73,7 +78,7 @@ export function MorphismCellEditor(props: {
                     onFocus={props.actions.hasFocused}
                 />
             </div>
-            <div class="morphism-decl-name-container">
+            <div class={arrowStyles.arrowWithName}>
                 <div class={nameClasses().join(" ")}>
                     <InlineInput
                         ref={nameRef}
@@ -95,8 +100,8 @@ export function MorphismCellEditor(props: {
                         onFocus={props.actions.hasFocused}
                     />
                 </div>
-                <div class={`morphism-decl-arrow-container ${arrowStyle()}`}>
-                    <div class={`morphism-decl-arrow ${arrowStyle()}`} />
+                <div class={[arrowStyles.arrowContainer, arrowClass()].join(" ")}>
+                    <div class={[arrowStyles.arrow, arrowClass()].join(" ")} />
                 </div>
             </div>
             <div class={codClasses().join(" ")}>

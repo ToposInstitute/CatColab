@@ -1,0 +1,118 @@
+.arrowWithName {
+    min-width: 2.5ex;
+}
+
+.arrowName input {
+    text-align: center;
+}
+
+.arrowContainer {
+    margin-top: 0.3em;
+    margin-bottom: calc(var(--formal-judgment-font-size) + 0.3em);
+    position: relative;
+}
+
+.arrow {
+    background: var(--main-color);
+    min-width: 1ex;
+    height: 2px;
+    border-radius: 3px;
+}
+
+.arrow.default,
+.arrow.plus,
+.arrow.minus,
+.arrow.indeterminate {
+    &:before,
+    &:after {
+        content: "";
+        background: var(--main-color);
+        position: absolute;
+        height: 2px;
+        width: 10px;
+        border-radius: 3px;
+    }
+
+    &:before {
+        right: -1px;
+        bottom: -3px;
+        transform: rotate(-45deg);
+    }
+
+    &:after {
+        right: -1px;
+        top: -3px;
+        transform: rotate(45deg);
+    }
+}
+
+.arrowContainer.plus {
+    &:after {
+        content: "+";
+        transform: none;
+        position: absolute;
+        right: -7.5px;
+        bottom: 0px;
+    }
+}
+
+.arrowContainer.minus {
+    &:after {
+        content: "-";
+        transform: none;
+        position: absolute;
+        right: -7.5px;
+        bottom: 0px;
+    }
+}
+
+.arrowContainer.indeterminate {
+    &:after {
+        content: "?";
+        transform: none;
+        position: absolute;
+        right: -7.5px;
+        bottom: 0px;
+    }
+}
+
+.arrow.double {
+    background: transparent;
+    height: 6px;
+    border-top: 2px solid var(--main-color);
+    border-bottom: 2px solid var(--main-color);
+    border-radius: 1px;
+
+    &:before,
+    &:after {
+        content: "";
+        background: var(--main-color);
+        position: absolute;
+        height: 2px;
+        width: 16px;
+        border-radius: 3px;
+    }
+
+    &:before {
+        right: -6px;
+        bottom: -1px;
+        transform: rotate(-45deg);
+    }
+
+    &:after {
+        right: -6px;
+        top: -1px;
+        transform: rotate(45deg);
+    }
+}
+
+.arrow.flat:after {
+    content: "";
+    background: var(--main-color);
+    position: absolute;
+    border-radius: 3px;
+    height: 14px;
+    width: 2px;
+    bottom: -6px;
+    right: 0;
+}
