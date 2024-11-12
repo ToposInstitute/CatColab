@@ -4,7 +4,7 @@ import invariant from "tiny-invariant";
 import { P, match } from "ts-pattern";
 
 import type { MorType, Ob, ObType, Uuid } from "catlog-wasm";
-import { IdInput, type IdInputOptions } from "../components";
+import { IdInput, type IdInputOptions, ObIdInput } from "../components";
 import { LiveModelContext } from "./context";
 
 type ObInputProps = {
@@ -30,54 +30,18 @@ export function ObInput(allProps: ObInputProps & IdInputOptions) {
 /** Input a basic object via its human-readable name.
  */
 function BasicObInput(allProps: ObInputProps & IdInputOptions) {
-    const [props, inputProps] = splitProps(allProps, ["ob", "setOb", "obType"]);
+    const [props, otherProps] = splitProps(allProps, ["obType"]);
 
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
 
-    const completions = (): Uuid[] | undefined => {
+    const completions = (): Ob[] | undefined => {
         const result = liveModel.validationResult();
-        if (!(props.obType && result)) {
-            return undefined;
-        }
-        return result.model
-            .objectsWithType(props.obType)
-            .map(getId)
-            .filter((id) => id !== null);
-    };
-
-    const getId = (ob: Ob | null): Uuid | null =>
-        match(ob)
-            .with(
-                {
-                    tag: "Basic",
-                    content: P.select(),
-                },
-                (id) => id,
-            )
-            .otherwise(() => null);
-
-    const id = (): Uuid | null => getId(props.ob);
-
-    const setId = (id: Uuid | null) => {
-        props.setOb(
-            id === null
-                ? null
-                : {
-                      tag: "Basic",
-                      content: id,
-                  },
-        );
+        return props.obType && result && result.model.objectsWithType(props.obType);
     };
 
     return (
-        <IdInput
-            id={id()}
-            setId={setId}
-            nameMap={liveModel.objectIndex()}
-            completions={completions()}
-            {...inputProps}
-        />
+        <ObIdInput completions={completions()} nameMap={liveModel.objectIndex()} {...otherProps} />
     );
 }
 

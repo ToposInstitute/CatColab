@@ -1,6 +1,7 @@
 import { createEffect, createSignal, splitProps } from "solid-js";
+import { P, match } from "ts-pattern";
 
-import type { Uuid } from "catlog-wasm";
+import type { Mor, Ob, Uuid } from "catlog-wasm";
 import type { IndexedMap } from "../util/indexing";
 import type { Completion } from "./completions";
 import { InlineInput, type InlineInputErrorStatus, type InlineInputOptions } from "./inline_input";
@@ -8,11 +9,11 @@ import { InlineInput, type InlineInputErrorStatus, type InlineInputOptions } fro
 /** Optional props for `IdInput` component.
  */
 export type IdInputOptions = {
-    completions?: Uuid[];
+    nameMap?: IndexedMap<Uuid, string>;
     invalid?: boolean;
 } & Omit<InlineInputOptions, "completions">;
 
-/** Input a UUID by specifying its human-readable alias.
+/** Input a UUID by specifying its human-readable name.
 
 The mapping between UUID and human-readable names is a prop to this component.
  */
@@ -20,15 +21,15 @@ export function IdInput(
     allProps: {
         id: Uuid | null;
         setId: (id: Uuid | null) => void;
-        nameMap?: IndexedMap<Uuid, string>;
+        completions?: Uuid[];
     } & IdInputOptions,
 ) {
     const [props, inputProps] = splitProps(allProps, [
         "id",
         "setId",
+        "completions",
         "nameMap",
         "invalid",
-        "completions",
     ]);
 
     const [text, setText] = createSignal("");
@@ -89,4 +90,86 @@ export function IdInput(
             {...inputProps}
         />
     );
+}
+
+/** Input a basic object by specifying its human-readable name.
+ */
+export function ObIdInput(
+    allProps: {
+        ob: Ob | null;
+        setOb: (ob: Ob | null) => void;
+        completions?: Ob[];
+    } & IdInputOptions,
+) {
+    const [props, inputProps] = splitProps(allProps, ["ob", "setOb", "completions"]);
+
+    const getId = (ob: Ob | null): Uuid | null =>
+        match(ob)
+            .with(
+                {
+                    tag: "Basic",
+                    content: P.select(),
+                },
+                (id) => id,
+            )
+            .otherwise(() => null);
+
+    const id = (): Uuid | null => getId(props.ob);
+
+    const setId = (id: Uuid | null) => {
+        props.setOb(
+            id === null
+                ? null
+                : {
+                      tag: "Basic",
+                      content: id,
+                  },
+        );
+    };
+
+    const completions = (): Uuid[] | undefined =>
+        props.completions?.map(getId).filter((id) => id !== null);
+
+    return <IdInput id={id()} setId={setId} completions={completions()} {...inputProps} />;
+}
+
+/** Input a basic morphism by specifying its human-readable name.
+ */
+export function MorIdInput(
+    allProps: {
+        mor: Mor | null;
+        setMor: (mor: Mor | null) => void;
+        completions?: Mor[];
+    } & IdInputOptions,
+) {
+    const [props, inputProps] = splitProps(allProps, ["mor", "setMor", "completions"]);
+
+    const getId = (mor: Mor | null): Uuid | null =>
+        match(mor)
+            .with(
+                {
+                    tag: "Basic",
+                    content: P.select(),
+                },
+                (id) => id,
+            )
+            .otherwise(() => null);
+
+    const id = (): Uuid | null => getId(props.mor);
+
+    const setId = (id: Uuid | null) => {
+        props.setMor(
+            id === null
+                ? null
+                : {
+                      tag: "Basic",
+                      content: id,
+                  },
+        );
+    };
+
+    const completions = (): Uuid[] | undefined =>
+        props.completions?.map(getId).filter((id) => id !== null);
+
+    return <IdInput id={id()} setId={setId} completions={completions()} {...inputProps} />;
 }

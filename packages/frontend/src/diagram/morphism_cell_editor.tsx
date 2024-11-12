@@ -6,7 +6,9 @@ import type { CellActions } from "../notebook";
 import { LiveDiagramContext } from "./context";
 import type { DiagramMorphismDecl } from "./types";
 
-//import arrowStyles from "../stdlib/arrow_styles.module.css";
+import arrowStyles from "../stdlib/arrow_styles.module.css";
+import "./morphism_cell_editor.css";
+import { BasicObInput } from "./object_input";
 
 /** Editor for a morphism declaration cell in a diagram in a model.
  */
@@ -17,6 +19,8 @@ export function DiagramMorphismCellEditor(props: {
     actions: CellActions;
 }) {
     let morRef!: HTMLInputElement;
+    let domRef!: HTMLInputElement;
+    let codRef!: HTMLInputElement;
 
     const liveDiagram = useContext(LiveDiagramContext);
     invariant(liveDiagram, "Live diagram should be provided as context");
@@ -24,16 +28,43 @@ export function DiagramMorphismCellEditor(props: {
 
     return (
         <div class="formal-judgment diagram-morphism-decl">
-            <BasicMorInput
-                ref={morRef}
-                mor={props.decl.over}
-                setMor={(mor) => {
+            <BasicObInput
+                ref={domRef}
+                placeholder="..."
+                ob={props.decl.dom}
+                setOb={(ob) => {
                     props.modifyDecl((decl) => {
-                        decl.over = mor;
+                        decl.dom = ob;
                     });
                 }}
-                morType={props.decl.morType}
-                placeholder={theory()?.modelMorTypeMeta(props.decl.morType)?.name}
+            />
+            <div class={arrowStyles.arrowWithName}>
+                <div class={arrowStyles.arrowName}>
+                    <BasicMorInput
+                        ref={morRef}
+                        mor={props.decl.over}
+                        setMor={(mor) => {
+                            props.modifyDecl((decl) => {
+                                decl.over = mor;
+                            });
+                        }}
+                        morType={props.decl.morType}
+                        placeholder={theory()?.modelMorTypeMeta(props.decl.morType)?.name}
+                    />
+                </div>
+                <div class={[arrowStyles.arrowContainer, arrowStyles.default].join(" ")}>
+                    <div class={[arrowStyles.arrow, arrowStyles.default].join(" ")} />
+                </div>
+            </div>
+            <BasicObInput
+                ref={codRef}
+                placeholder="..."
+                ob={props.decl.cod}
+                setOb={(ob) => {
+                    props.modifyDecl((decl) => {
+                        decl.cod = ob;
+                    });
+                }}
             />
         </div>
     );
