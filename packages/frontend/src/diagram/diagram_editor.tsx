@@ -1,3 +1,4 @@
+import { MultiProvider } from "@solid-primitives/context";
 import { useParams } from "@solidjs/router";
 import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
@@ -13,10 +14,13 @@ import {
 } from "../notebook";
 import { TheoryLibraryContext } from "../stdlib";
 import type { InstanceTypeMeta } from "../theory";
+import { LiveDiagramContext } from "./context";
 import { type DiagramDocument, type LiveDiagramDocument, enlivenDiagramDocument } from "./document";
+import { DiagramMorphismCellEditor } from "./morphism_cell_editor";
 import { DiagramObjectCellEditor } from "./object_cell_editor";
 import {
     type DiagramJudgment,
+    type DiagramMorphismDecl,
     type DiagramObjectDecl,
     newDiagramMorphismDecl,
     newDiagramObjectDecl,
@@ -64,7 +68,12 @@ export function DiagramNotebookEditor(props: {
     const liveDoc = () => props.liveDiagram.liveDoc;
 
     return (
-        <LiveModelContext.Provider value={props.liveDiagram.liveModel}>
+        <MultiProvider
+            values={[
+                [LiveModelContext, props.liveDiagram.liveModel],
+                [LiveDiagramContext, props.liveDiagram],
+            ]}
+        >
             <NotebookEditor
                 handle={liveDoc().docHandle}
                 path={["notebook"]}
@@ -78,7 +87,7 @@ export function DiagramNotebookEditor(props: {
                 )}
                 cellLabel={judgmentLabel}
             />
-        </LiveModelContext.Provider>
+        </MultiProvider>
     );
 }
 
@@ -92,6 +101,16 @@ export function DiagramCellEditor(props: FormalCellEditorProps<DiagramJudgment>)
                     decl={props.content as DiagramObjectDecl}
                     modifyDecl={(f) =>
                         props.changeContent((content) => f(content as DiagramObjectDecl))
+                    }
+                    isActive={props.isActive}
+                    actions={props.actions}
+                />
+            </Match>
+            <Match when={props.content.tag === "morphism"}>
+                <DiagramMorphismCellEditor
+                    decl={props.content as DiagramMorphismDecl}
+                    modifyDecl={(f) =>
+                        props.changeContent((content) => f(content as DiagramMorphismDecl))
                     }
                     isActive={props.isActive}
                     actions={props.actions}

@@ -37,7 +37,7 @@ function BasicObInput(allProps: ObInputProps & IdInputOptions) {
 
     const completions = (): Uuid[] | undefined => {
         const result = liveModel.validationResult();
-        if (!(props.obType && result && result.tag !== "notsupported")) {
+        if (!(props.obType && result)) {
             return undefined;
         }
         return result.model
@@ -107,7 +107,7 @@ function TabulatedMorInput(allProps: ObInputProps & IdInputOptions) {
     const completions = (): Uuid[] | undefined => {
         const morType = tabulatedType();
         const result = liveModel.validationResult();
-        if (!(morType && result && result.tag !== "notsupported")) {
+        if (!(morType && result)) {
             return undefined;
         }
         return result.model

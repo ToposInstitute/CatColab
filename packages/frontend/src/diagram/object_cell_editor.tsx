@@ -2,9 +2,9 @@ import { createEffect, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { InlineInput } from "../components";
-import { LiveModelContext } from "../model";
 import { ObInput } from "../model/object_input";
 import type { CellActions } from "../notebook";
+import { LiveDiagramContext } from "./context";
 import type { DiagramObjectDecl } from "./types";
 
 import "./object_cell_editor.css";
@@ -27,8 +27,9 @@ export function DiagramObjectCellEditor(props: {
         }
     });
 
-    const liveModel = useContext(LiveModelContext);
-    invariant(liveModel, "Live model should be provided as context");
+    const liveDiagram = useContext(LiveDiagramContext);
+    invariant(liveDiagram, "Live diagram should be provided as context");
+    const theory = () => liveDiagram.liveModel.theory();
 
     return (
         <div class="formal-judgment diagram-object-decl">
@@ -58,7 +59,7 @@ export function DiagramObjectCellEditor(props: {
                     });
                 }}
                 obType={props.decl.obType}
-                placeholder={liveModel.theory()?.modelObTypeMeta(props.decl.obType)?.name}
+                placeholder={theory()?.modelObTypeMeta(props.decl.obType)?.name}
                 exitUp={props.actions.activateAbove}
                 exitDown={props.actions.activateBelow}
                 exitLeft={() => nameRef.focus()}
