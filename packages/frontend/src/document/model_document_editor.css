@@ -37,7 +37,7 @@
 }
 
 
-.analysis-nav {
+#analysis-nav {
     display: flex;
     flex-direction: row;
 }

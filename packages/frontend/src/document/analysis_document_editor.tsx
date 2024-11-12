@@ -236,7 +236,7 @@ export function AnalysisDocumentEditor(props: {
                             <div class="notebook-container">
                                 <div id="analysis-nav">
                                 <h2>Analysis</h2>
-                                <button class="export-button" onClick={handleExportSVG}>Export Diagram</button>
+                                <IconButton class="export-button" onClick={handleExportSVG}><Download size={17}/></IconButton>
                                 </div>
                                 <AnalysisPane liveDoc={props.liveDoc} />
                             </div>
