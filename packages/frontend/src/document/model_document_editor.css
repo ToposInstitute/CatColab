@@ -28,5 +28,16 @@
     font-weight: 600;
     cursor: pointer;
     margin: 10px;
+    border: none;
 }
 
+.export-button:hover {
+    color:  #53b6b2;
+    background-color: #dff1f0;
+}
+
+
+.analysis-nav {
+    display: flex;
+    flex-direction: row;
+}
