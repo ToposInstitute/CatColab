@@ -32,11 +32,8 @@ export function GraphvizSVG(props: {
     );
 }
 
-
-
 function GraphvizOutputSVG(props: {
     graph?: GraphvizJSON.Graph;
-    
 }) {
     return (
         <div class="graphviz" ref={visualizationRef}>
@@ -45,12 +42,12 @@ function GraphvizOutputSVG(props: {
     );
 }
 
- // Create a ref for the visualization container
- let visualizationRef: HTMLDivElement | undefined;
+// Create a ref for the visualization container
+let visualizationRef: HTMLDivElement | undefined;
 
-// export handling 
+// export handling
 export const handleExportSVG = () => {
     if (visualizationRef) {
-      exportVisualizationSVG(visualizationRef);
+        exportVisualizationSVG(visualizationRef);
     }
-  };
+};

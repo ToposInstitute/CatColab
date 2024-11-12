@@ -21,7 +21,6 @@
     color: darkgray;
 }
 
-
 .export-button {
     font-family: var(--main-font);
     padding: 4px;
@@ -32,10 +31,9 @@
 }
 
 .export-button:hover {
-    color:  #53b6b2;
+    color: #53b6b2;
     background-color: #dff1f0;
 }
-
 
 #analysis-nav {
     display: flex;
