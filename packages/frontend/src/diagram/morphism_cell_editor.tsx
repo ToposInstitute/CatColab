@@ -4,11 +4,11 @@ import invariant from "tiny-invariant";
 import { BasicMorInput } from "../model/morphism_input";
 import type { CellActions } from "../notebook";
 import { LiveDiagramContext } from "./context";
+import { BasicObInput } from "./object_input";
 import type { DiagramMorphismDecl } from "./types";
 
 import arrowStyles from "../stdlib/arrow_styles.module.css";
 import "./morphism_cell_editor.css";
-import { BasicObInput } from "./object_input";
 
 /** Editor for a morphism declaration cell in a diagram in a model.
  */

@@ -139,6 +139,38 @@ stdTheories.add(
                     textClasses: [textStyles.code],
                 },
             ],
+            instanceTypes: [
+                {
+                    tag: "ObType",
+                    obType: { tag: "Basic", content: "Entity" },
+                    name: "Individual",
+                    description: "Individual entity of a certain type",
+                    shortcut: ["I"],
+                },
+                {
+                    tag: "MorType",
+                    morType: {
+                        tag: "Hom",
+                        content: { tag: "Basic", content: "Entity" },
+                    },
+                    name: "Maps to",
+                    description: "One individual mapped to another",
+                    shortcut: ["M"],
+                },
+                {
+                    tag: "MorType",
+                    morType: { tag: "Basic", content: "Attr" },
+                    name: "Attribute",
+                    description: "Data attribute of an individual",
+                    shortcut: ["A"],
+                },
+                {
+                    tag: "ObType",
+                    obType: { tag: "Basic", content: "AttrType" },
+                    name: "Attribute variable",
+                    description: "Variable that can be bound to attribute values",
+                },
+            ],
             modelAnalyses: [
                 configureModelGraph({
                     id: "diagram",
