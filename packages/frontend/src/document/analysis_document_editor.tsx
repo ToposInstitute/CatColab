@@ -29,10 +29,10 @@ import type { ModelAnalysisMeta } from "../theory";
 import { type LiveModelDocument, ModelPane, enlivenModelDocument } from "./model_document_editor";
 import type { AnalysisDocument, ModelDocument } from "./types";
 
+import { Download } from "lucide-solid";
 import PanelRight from "lucide-solid/icons/panel-right";
 import PanelRightClose from "lucide-solid/icons/panel-right-close";
 import { handleExportSVG } from "../visualization";
-import { Download } from "lucide-solid";
 
 /** An analysis document "live" for editing.
  */
