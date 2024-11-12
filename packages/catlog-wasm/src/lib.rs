@@ -1,10 +1,11 @@
 pub mod result;
 
-pub mod analyses;
+pub mod diagram;
 pub mod model;
 pub mod model_morphism;
 pub mod theory;
 
+pub mod analyses;
 #[allow(clippy::new_without_default)]
 pub mod theories;
 

@@ -5,7 +5,7 @@ import { BrandedToolbar } from "./toolbar";
 
 import "./help_page.css";
 
-export function HelperContainer(props: {
+export function HelpContainer(props: {
     children?: JSX.Element;
 }) {
     return (

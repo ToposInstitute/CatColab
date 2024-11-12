@@ -1,6 +1,5 @@
 declare const styles: {
     readonly box: string;
-    readonly code: string;
-    readonly "corner-box": string;
+    readonly cornerBox: string;
 };
 export = styles;

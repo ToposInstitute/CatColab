@@ -1,16 +1,16 @@
 import { createMemo } from "solid-js";
 
 import type { DblModel, JsResult, LotkaVolterraModelData, ODEResult } from "catlog-wasm";
+import type { LotkaVolterraContent, ModelAnalysisProps } from "../../analysis";
 import {
     type ColumnSchema,
     FixedTableEditor,
     Foldable,
     createNumericalColumn,
-} from "../components";
-import type { MorphismDecl, ObjectDecl } from "../model";
-import type { ModelAnalysisMeta } from "../theory";
-import { type ODEPlotData, ODEResultPlot } from "../visualization";
-import type { LotkaVolterraContent, ModelAnalysisProps } from "./types";
+} from "../../components";
+import type { MorphismDecl, ObjectDecl } from "../../model";
+import type { ModelAnalysisMeta } from "../../theory";
+import { type ODEPlotData, ODEResultPlot } from "../../visualization";
 
 import "./simulation.css";
 
@@ -117,7 +117,7 @@ export function LotkaVolterra(
         () => {
             const result = props.liveModel.validationResult();
             if (result?.tag === "validated") {
-                return props.simulate(result.validatedModel, props.content);
+                return props.simulate(result.model, props.content);
             }
         },
         undefined,

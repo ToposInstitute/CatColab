@@ -166,8 +166,8 @@ importers:
         specifier: ^2.1.2
         version: 2.1.2(@types/node@22.7.4)
       wasm-pack:
-        specifier: ^0.13.0
-        version: 0.13.0
+        specifier: ^0.13.1
+        version: 0.13.1
 
 packages:
 
@@ -2751,8 +2751,8 @@ packages:
   w3c-keyname@2.2.8:
     resolution: {integrity: sha512-dpojBhNsCNN7T82Tm7k26A6G9ML3NkhDsnw9n/eoxSRlVBB4CEtIQ/KTCLI2Fwf3ataSXRhYFkQi3SlnFwPvPQ==}
 
-  wasm-pack@0.13.0:
-    resolution: {integrity: sha512-AmboGZEnZoIcVCzSlkLEmNFEqJN+IwgshJ5S7pi30uNUTce4LvWkifQzsQRxnWj47G8gkqZxlyGlyQplsnIS7w==}
+  wasm-pack@0.13.1:
+    resolution: {integrity: sha512-P9exD4YkjpDbw68xUhF3MDm/CC/3eTmmthyG5bHJ56kalxOTewOunxTke4SyF8MTXV6jUtNjXggPgrGmMtczGg==}
     hasBin: true
 
   web-namespaces@2.0.1:
@@ -5851,7 +5851,7 @@ snapshots:
 
   w3c-keyname@2.2.8: {}
 
-  wasm-pack@0.13.0:
+  wasm-pack@0.13.1:
     dependencies:
       binary-install: 1.1.0
     transitivePeerDependencies:

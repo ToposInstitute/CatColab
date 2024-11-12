@@ -1,23 +1,21 @@
 import { splitProps, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
+import invariant from "tiny-invariant";
 import { P, match } from "ts-pattern";
 
-import type { Ob, ObType } from "catlog-wasm";
-import type { Theory } from "../theory";
-import { MorphismIndexContext, ObjectIndexContext, TheoryContext } from "./context";
-import { IdInput, type IdInputOptions } from "./id_input";
+import type { MorType, Ob, ObType, Uuid } from "catlog-wasm";
+import { IdInput, type IdInputOptions, ObIdInput } from "../components";
+import { LiveModelContext } from "./context";
+
+type ObInputProps = {
+    ob: Ob | null;
+    setOb: (ob: Ob | null) => void;
+    obType?: ObType;
+};
 
 /** Input an object that already exists in a model.
-
-FIXME: Don't assume that underlying component is an ID input.
  */
-export function ObInput(
-    allProps: {
-        ob: Ob | null;
-        setOb: (ob: Ob | null) => void;
-        obType?: ObType;
-    } & IdInputOptions,
-) {
+export function ObInput(allProps: ObInputProps & IdInputOptions) {
     const [props, otherProps] = splitProps(allProps, ["obType"]);
 
     return (
@@ -31,23 +29,55 @@ export function ObInput(
 
 /** Input a basic object via its human-readable name.
  */
-function BasicObInput(
-    allProps: {
-        ob: Ob | null;
-        setOb: (ob: Ob | null) => void;
-        obType?: ObType;
-    } & IdInputOptions,
-) {
-    const [props, inputProps] = splitProps(allProps, ["ob", "setOb", "obType"]);
+function BasicObInput(allProps: ObInputProps & IdInputOptions) {
+    const [props, otherProps] = splitProps(allProps, ["obType"]);
 
-    const objectIndex = useContext(ObjectIndexContext);
-    const theory = useContext(TheoryContext);
-    const cssClasses = () => obClasses(theory?.(), props.obType);
+    const liveModel = useContext(LiveModelContext);
+    invariant(liveModel, "Live model should be provided as context");
+
+    const completions = (): Ob[] | undefined => {
+        const result = liveModel.validationResult();
+        return props.obType && result && result.model.objectsWithType(props.obType);
+    };
 
     return (
-        <div class={cssClasses().join(" ")}>
-            <IdInput
-                id={match(props.ob)
+        <ObIdInput completions={completions()} nameMap={liveModel.objectIndex()} {...otherProps} />
+    );
+}
+
+/** Input an object that is a tabulated morphism.
+
+TODO: We are assuming that the morphism is basic and so will be specified by its
+human-readable name. However, in a general double theory, there is no such
+restriction on tabulated morphisms.
+ */
+function TabulatedMorInput(allProps: ObInputProps & IdInputOptions) {
+    const [props, inputProps] = splitProps(allProps, ["ob", "setOb", "obType"]);
+
+    const liveModel = useContext(LiveModelContext);
+    invariant(liveModel, "Live model should be provided as context");
+
+    const tabulatedType = (): MorType | null =>
+        match(props.obType)
+            .with(
+                {
+                    tag: "Tabulator",
+                    content: P.select(),
+                },
+                (content) => content,
+            )
+            .otherwise(() => null);
+
+    const completions = (): Uuid[] | undefined => {
+        const morType = tabulatedType();
+        const result = liveModel.validationResult();
+        if (!(morType && result)) {
+            return undefined;
+        }
+        return result.model
+            .morphismsWithType(morType)
+            .map((mor) =>
+                match(mor)
                     .with(
                         {
                             tag: "Basic",
@@ -55,73 +85,45 @@ function BasicObInput(
                         },
                         (id) => id,
                     )
-                    .otherwise(() => null)}
-                setId={(id) => {
-                    props.setOb(
-                        id === null
-                            ? null
-                            : {
-                                  tag: "Basic",
-                                  content: id,
-                              },
-                    );
-                }}
-                nameMap={objectIndex?.()}
-                {...inputProps}
-            />
-        </div>
-    );
-}
+                    .otherwise(() => null),
+            )
+            .filter((id) => id !== null);
+    };
 
-export function obClasses(theory: Theory | undefined, typ?: ObType): string[] {
-    const typeMeta = typ ? theory?.getObTypeMeta(typ) : undefined;
-    return [...(typeMeta?.cssClasses ?? []), ...(typeMeta?.textClasses ?? [])];
-}
+    const id = (): Uuid | null =>
+        match(props.ob)
+            .with(
+                {
+                    tag: "Tabulated",
+                    content: {
+                        tag: "Basic",
+                        content: P.select(),
+                    },
+                },
+                (id) => id,
+            )
+            .otherwise(() => null);
 
-/** Input an object that is a tabulated morphism.
-
-TODO: Assumes that the morphism is basic and thus will be input by its
-human-readable name. However, there is no such restriction on tabulators.
- */
-function TabulatedMorInput(
-    allProps: {
-        ob: Ob | null;
-        setOb: (ob: Ob | null) => void;
-        obType?: ObType;
-    } & IdInputOptions,
-) {
-    const [props, inputProps] = splitProps(allProps, ["ob", "setOb", "obType"]);
-
-    const morphismIndex = useContext(MorphismIndexContext);
+    const setId = (id: Uuid | null) => {
+        props.setOb(
+            id === null
+                ? null
+                : {
+                      tag: "Tabulated",
+                      content: {
+                          tag: "Basic",
+                          content: id,
+                      },
+                  },
+        );
+    };
 
     return (
         <IdInput
-            id={match(props.ob)
-                .with(
-                    {
-                        tag: "Tabulated",
-                        content: {
-                            tag: "Basic",
-                            content: P.select(),
-                        },
-                    },
-                    (id) => id,
-                )
-                .otherwise(() => null)}
-            setId={(id) => {
-                props.setOb(
-                    id === null
-                        ? null
-                        : {
-                              tag: "Tabulated",
-                              content: {
-                                  tag: "Basic",
-                                  content: id,
-                              },
-                          },
-                );
-            }}
-            nameMap={morphismIndex?.()}
+            id={id()}
+            setId={setId}
+            nameMap={liveModel.morphismIndex()}
+            completions={completions()}
             {...inputProps}
         />
     );

@@ -4,11 +4,11 @@ import ChevronRight from "lucide-solid/icons/chevron-right";
 import { Show } from "solid-js";
 
 import type { DblModel } from "catlog-wasm";
-import { IconButton } from "../components";
-import type { ModelJudgment } from "../model";
-import type { ModelAnalysisMeta, Theory } from "../theory";
+import type { ModelAnalysisProps, SubmodelsAnalysisContent } from "../../analysis";
+import { IconButton } from "../../components";
+import type { ModelJudgment } from "../../model";
+import type { ModelAnalysisMeta, Theory } from "../../theory";
 import { type GraphvizAttributes, ModelGraphviz } from "./model_graph";
-import type { ModelAnalysisProps, SubmodelsAnalysisContent } from "./types";
 
 import "./submodel_graphs.css";
 
@@ -42,7 +42,7 @@ function SubmodelsAnalysis(
 ) {
     const submodels = () => {
         const res = props.liveModel.validationResult();
-        return res?.tag === "validated" ? props.findSubmodels(res.validatedModel) : [];
+        return res?.tag === "validated" ? props.findSubmodels(res.model) : [];
     };
 
     return (

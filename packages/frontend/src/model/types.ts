@@ -14,7 +14,7 @@ import { indexArray } from "../util/indexing";
 
 /** A judgment in the definition of a model.
 
-TODO: Judgments can be declarations *or* morphism equations.
+TODO: Judgments should be declarations *or* morphism equations.
  */
 export type ModelJudgment = ModelDecl;
 
@@ -29,11 +29,11 @@ export type ObjectDecl = ObDecl & {
     name: string;
 };
 
-export const newObjectDecl = (type: ObType): ObjectDecl => ({
+export const newObjectDecl = (obType: ObType): ObjectDecl => ({
     tag: "object",
     id: uuidv7(),
     name: "",
-    obType: type,
+    obType,
 });
 
 /** Declaration of a morphim in a model.
@@ -45,11 +45,11 @@ export type MorphismDecl = MorDecl & {
     name: string;
 };
 
-export const newMorphismDecl = (type: MorType): MorphismDecl => ({
+export const newMorphismDecl = (morType: MorType): MorphismDecl => ({
     tag: "morphism",
     id: uuidv7(),
     name: "",
-    morType: type,
+    morType,
     dom: null,
     cod: null,
 });
@@ -69,42 +69,38 @@ export function catlogModel(theory: DblTheory, judgments: Array<ModelJudgment>):
 }
 
 /** Result of validating a model in the categorical core. */
-export type ModelValidationResult =
-    | ValidatedModel
-    | ModelValidationErrors
-    | ModelValidationNotSupported;
+export type ModelValidationResult = ValidatedModel | ModelValidationErrors;
 
 /** A valid model as represented in `catlog`. */
 export type ValidatedModel = {
     tag: "validated";
-
-    validatedModel: DblModel;
+    model: DblModel;
 };
 
 /** Errors in a model that did not validate. */
 export type ModelValidationErrors = {
     tag: "errors";
-
+    model: DblModel;
     errors: Map<Uuid, InvalidDiscreteDblModel<Uuid>[]>;
 };
 
-/** TODO: Make this various go away because all models support validation! */
-export type ModelValidationNotSupported = {
-    tag: "notsupported";
-};
-
-export function validateModel(theory: DblTheory, judgments: Array<ModelJudgment>) {
+/** Validate a model in the categorical core. */
+export function validateModel(
+    theory: DblTheory,
+    judgments: Array<ModelJudgment>,
+): ModelValidationResult | undefined {
     if (theory.kind !== "Discrete") {
-        return { tag: "notsupported" } as ModelValidationNotSupported;
+        // TODO: Validation should be implemented for all kinds of theories.
+        return undefined;
     }
-    const dblModel = catlogModel(theory, judgments);
-    const errs: InvalidDiscreteDblModel<Uuid>[] = dblModel.validate();
+    const model = catlogModel(theory, judgments);
+    const errs: InvalidDiscreteDblModel<Uuid>[] = model.validate();
     if (errs.length === 0) {
-        return { tag: "validated", validatedModel: dblModel } as ValidatedModel;
-    } else {
-        return {
-            tag: "errors",
-            errors: indexArray(errs, (err) => err.content),
-        } as ModelValidationErrors;
+        return { tag: "validated", model };
     }
+    return {
+        tag: "errors",
+        model,
+        errors: indexArray(errs, (err) => err.content),
+    };
 }

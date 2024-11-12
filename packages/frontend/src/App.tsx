@@ -8,12 +8,12 @@ import * as uuid from "uuid";
 import { MultiProvider } from "@solid-primitives/context";
 import { Navigate, type RouteDefinition, type RouteSectionProps, Router } from "@solidjs/router";
 import { FirebaseProvider } from "solid-firebase";
-import { Match, Switch, createResource, lazy, useContext } from "solid-js";
+import { Show, createResource, lazy, useContext } from "solid-js";
 
 import type { JsonValue } from "catcolab-api";
 import { RepoContext, RpcContext, createRpcClient } from "./api";
-import { newModelDocument } from "./document/types";
-import { HelperContainer, lazyMdx } from "./page/help_page";
+import { newModelDocument } from "./model/document";
+import { HelpContainer, lazyMdx } from "./page/help_page";
 import { TheoryLibraryContext, stdTheories } from "./stdlib";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
@@ -62,14 +62,7 @@ function CreateModel() {
         return result.content;
     });
 
-    return (
-        <Switch>
-            <Match when={ref.error}>
-                <span>Error: {ref.error}</span>
-            </Match>
-            <Match when={ref()}>{(ref) => <Navigate href={`/model/${ref()}`} />}</Match>
-        </Switch>
-    );
+    return <Show when={ref()}>{(ref) => <Navigate href={`/model/${ref()}`} />}</Show>;
 }
 
 const refIsUUIDFilter = {
@@ -84,16 +77,21 @@ const routes: RouteDefinition[] = [
     {
         path: "/model/:ref",
         matchFilters: refIsUUIDFilter,
-        component: lazy(() => import("./document/model_document_editor")),
+        component: lazy(() => import("./model/model_editor")),
+    },
+    {
+        path: "/diagram/:ref",
+        matchFilters: refIsUUIDFilter,
+        component: lazy(() => import("./diagram/diagram_editor")),
     },
     {
         path: "/analysis/:ref",
         matchFilters: refIsUUIDFilter,
-        component: lazy(() => import("./document/analysis_document_editor")),
+        component: lazy(() => import("./analysis/analysis_editor")),
     },
     {
         path: "/help",
-        component: HelperContainer,
+        component: HelpContainer,
         children: [
             {
                 path: "/",

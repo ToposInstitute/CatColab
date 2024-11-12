@@ -1,22 +1,13 @@
-import type { DocHandle } from "@automerge/automerge-repo";
 import Resizable, { type ContextValue } from "@corvu/resizable";
 import { useParams } from "@solidjs/router";
-import {
-    Match,
-    Show,
-    Switch,
-    createContext,
-    createEffect,
-    createResource,
-    createSignal,
-    useContext,
-} from "solid-js";
+import { Show, createEffect, createResource, createSignal, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
-import type { ModelAnalysis } from "../analysis";
-import { RepoContext, RpcContext, getReactiveDoc } from "../api";
+import { RepoContext, RpcContext, getLiveDoc } from "../api";
 import { IconButton, ResizableHandle } from "../components";
+import { LiveModelContext, type ModelDocument, enlivenModelDocument } from "../model";
+import { ModelPane } from "../model/model_editor";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
@@ -26,92 +17,56 @@ import {
 import { BrandedToolbar, HelpButton } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { ModelAnalysisMeta } from "../theory";
-import { type LiveModelDocument, ModelPane, enlivenModelDocument } from "./model_document_editor";
-import type { AnalysisDocument, ModelDocument } from "./types";
+import type { AnalysisDocument, LiveAnalysisDocument } from "./document";
+import type { ModelAnalysis } from "./types";
 
 import PanelRight from "lucide-solid/icons/panel-right";
 import PanelRightClose from "lucide-solid/icons/panel-right-close";
 
-/** An analysis document "live" for editing.
- */
-export type LiveAnalysisDocument = {
-    /** The ref for which this is a live document. */
-    refId: string;
-
-    /** The analysis document, suitable for use in reactive contexts. */
-    doc: AnalysisDocument;
-
-    /** The document handle for the analysis document. */
-    docHandle: DocHandle<AnalysisDocument>;
-
-    /** Live model that the analysis is of. */
-    liveModel: LiveModelDocument;
-};
-
 export default function AnalysisPage() {
     const params = useParams();
-    const ref = params.ref;
-    invariant(ref, "Must provide analysis ref as parameter to analysis page");
+    const refId = params.ref;
+    invariant(refId, "Must provide document ref as parameter to analysis page");
 
     const rpc = useContext(RpcContext);
     const repo = useContext(RepoContext);
     const theories = useContext(TheoryLibraryContext);
     invariant(rpc && repo && theories, "Missing context for analysis page");
 
-    const [liveDoc] = createResource<LiveAnalysisDocument>(async () => {
-        const { doc, docHandle } = await getReactiveDoc<AnalysisDocument>(rpc, ref, repo);
-        await docHandle.whenReady();
-        invariant(
-            doc.type === "analysis",
-            () => `Expected analysis document, got type: ${doc.type}`,
-        );
+    const [liveAnalysis] = createResource<LiveAnalysisDocument>(async () => {
+        const liveDoc = await getLiveDoc<AnalysisDocument>(rpc, repo, refId);
+        const { doc } = liveDoc;
+        invariant(doc.type === "analysis", () => `Expected analysis, got type: ${doc.type}`);
 
-        const modelReactiveDoc = await getReactiveDoc<ModelDocument>(
-            rpc,
-            doc.modelRef.__extern__.refId,
-            repo,
-        );
-        const liveModel = enlivenModelDocument(
-            doc.modelRef.__extern__.refId,
-            modelReactiveDoc,
-            theories,
-        );
+        const liveModelDoc = await getLiveDoc<ModelDocument>(rpc, repo, doc.modelRef.refId);
+        const liveModel = enlivenModelDocument(doc.modelRef.refId, liveModelDoc, theories);
 
-        return {
-            refId: ref,
-            doc,
-            docHandle,
-            liveModel,
-        };
+        return { refId, liveDoc, liveModel };
     });
 
     return (
-        <Switch>
-            <Match when={liveDoc.error}>
-                <span>Error: {liveDoc.error}</span>
-            </Match>
-            <Match when={liveDoc()}>
-                {(liveDoc) => <AnalysisDocumentEditor liveDoc={liveDoc()} />}
-            </Match>
-        </Switch>
+        <Show when={liveAnalysis()}>
+            {(liveAnalysis) => <AnalysisDocumentEditor liveAnalysis={liveAnalysis()} />}
+        </Show>
     );
 }
 
 /** Notebook editor for analyses of models of double theories.
  */
 export function AnalysisPane(props: {
-    liveDoc: LiveAnalysisDocument;
+    liveAnalysis: LiveAnalysisDocument;
 }) {
+    const liveDoc = () => props.liveAnalysis.liveDoc;
     return (
-        <LiveModelContext.Provider value={props.liveDoc.liveModel}>
+        <LiveModelContext.Provider value={props.liveAnalysis.liveModel}>
             <NotebookEditor
-                handle={props.liveDoc.docHandle}
+                handle={liveDoc().docHandle}
                 path={["notebook"]}
-                notebook={props.liveDoc.doc.notebook}
-                changeNotebook={(f) => props.liveDoc.docHandle.change((doc) => f(doc.notebook))}
+                notebook={liveDoc().doc.notebook}
+                changeNotebook={(f) => liveDoc().changeDoc((doc) => f(doc.notebook))}
                 formalCellEditor={ModelAnalysisCellEditor}
                 cellConstructors={modelAnalysisCellConstructors(
-                    props.liveDoc.liveModel.theory()?.modelAnalyses ?? [],
+                    props.liveAnalysis.liveModel.theory()?.modelAnalyses ?? [],
                 )}
                 noShortcuts={true}
             />
@@ -121,10 +76,10 @@ export function AnalysisPane(props: {
 
 function ModelAnalysisCellEditor(props: FormalCellEditorProps<ModelAnalysis>) {
     const liveModel = useContext(LiveModelContext);
-    invariant(liveModel, "Model should be provided as context for analysis");
+    invariant(liveModel, "Live model should be provided as context for analysis");
 
     return (
-        <Show when={liveModel.theory()?.getModelAnalysis(props.content.id)}>
+        <Show when={liveModel.theory()?.modelAnalysis(props.content.id)}>
             {(analysis) => (
                 <Dynamic
                     component={analysis().component}
@@ -156,16 +111,13 @@ function modelAnalysisCellConstructors(
     });
 }
 
-/** Context for the model being analyzed. */
-const LiveModelContext = createContext<LiveModelDocument>();
-
 /** Editor for a model of a double theory.
 
 The editor includes a notebook for the model itself plus another pane for
 performing analysis of the model.
  */
 export function AnalysisDocumentEditor(props: {
-    liveDoc: LiveAnalysisDocument;
+    liveAnalysis: LiveAnalysisDocument;
 }) {
     const rpc = useContext(RpcContext);
     invariant(rpc, "Must provide RPC context");
@@ -218,7 +170,7 @@ export function AnalysisDocumentEditor(props: {
                                     </Show>
                                 </IconButton>
                             </BrandedToolbar>
-                            <ModelPane liveDoc={props.liveDoc.liveModel} />
+                            <ModelPane liveModel={props.liveAnalysis.liveModel} />
                         </Resizable.Panel>
                         <ResizableHandle hidden={!isSidePanelOpen()} />
                         <Resizable.Panel
@@ -232,7 +184,7 @@ export function AnalysisDocumentEditor(props: {
                         >
                             <div class="notebook-container">
                                 <h2>Analysis</h2>
-                                <AnalysisPane liveDoc={props.liveDoc} />
+                                <AnalysisPane liveAnalysis={props.liveAnalysis} />
                             </div>
                         </Resizable.Panel>
                     </>

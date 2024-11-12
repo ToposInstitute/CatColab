@@ -1,9 +1,11 @@
 import { createEffect, useContext } from "solid-js";
+import invariant from "tiny-invariant";
 
+import type { ObType } from "catlog-wasm";
 import { InlineInput } from "../components";
 import type { CellActions } from "../notebook";
-import { TheoryContext } from "./context";
-import { obClasses } from "./object_input";
+import type { Theory } from "../theory";
+import { LiveModelContext } from "./context";
 import type { ObjectDecl } from "./types";
 
 import "./object_cell_editor.css";
@@ -25,11 +27,13 @@ export function ObjectCellEditor(props: {
         }
     });
 
-    const theory = useContext(TheoryContext);
-    const cssClasses = (): string[] => [
-        "model-judgment",
+    const liveModel = useContext(LiveModelContext);
+    invariant(liveModel, "Live model should be provided as context");
+
+    const cssClasses = () => [
+        "formal-judgment",
         "object-decl",
-        ...obClasses(theory?.(), props.object.obType),
+        ...obClasses(liveModel.theory(), props.object.obType),
     ];
 
     return (
@@ -53,4 +57,9 @@ export function ObjectCellEditor(props: {
             />
         </div>
     );
+}
+
+export function obClasses(theory: Theory | undefined, typ?: ObType): string[] {
+    const typeMeta = typ ? theory?.modelObTypeMeta(typ) : undefined;
+    return [...(typeMeta?.cssClasses ?? []), ...(typeMeta?.textClasses ?? [])];
 }

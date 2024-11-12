@@ -84,3 +84,9 @@ h3 {
     overflow-x: scroll;
     overflow-y: hidden;
 }
+
+.formal-judgment {
+    --formal-judgment-font-size: 1.3em;
+    font-size: var(--formal-judgment-font-size);
+    line-height: 1.1;
+}

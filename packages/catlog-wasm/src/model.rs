@@ -8,7 +8,7 @@ use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
 use super::theory::*;
-use catlog::dbl::model::{self as dbl_model, InvalidDiscreteDblModel};
+use catlog::dbl::model::{self as dbl_model, FgDblModel, InvalidDiscreteDblModel};
 use catlog::one::fin_category::UstrFinCategory;
 use catlog::one::Path;
 use catlog::one::{Category as _, FgCategory};
@@ -83,26 +83,26 @@ impl TryFrom<Mor> for Path<Uuid, Uuid> {
     }
 }
 
-/// Declaration of an object in a model of a double theory.
+/// Declares an object in a model of a double theory.
 #[derive(Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
 pub struct ObDecl {
     /// Globally unique identifier of object.
     pub id: Uuid,
 
-    /// Object type in double theory.
+    /// The object's type in the double theory.
     #[serde(rename = "obType")]
     pub ob_type: ObType,
 }
 
-/// Declaration of a morphism in a model of a double theory.
+/// Declares a morphism in a model of a double theory.
 #[derive(Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
 pub struct MorDecl {
     /// Globally unique identifier of morphism.
     pub id: Uuid,
 
-    /// Morphism type in double theory.
+    /// The morphism's type in the double theory.
     #[serde(rename = "morType")]
     pub mor_type: MorType,
 
@@ -222,6 +222,28 @@ impl DblModel {
     pub fn morphisms(&self) -> Vec<Mor> {
         all_the_same!(match &self.0 {
             DblModelBox::[Discrete](model) => model.morphism_generators().map(Mor::Basic).collect()
+        })
+    }
+
+    /// Returns array of basic objects with the given type.
+    #[wasm_bindgen(js_name = "objectsWithType")]
+    pub fn objects_with_type(&self, ob_type: ObType) -> Result<Vec<Ob>, String> {
+        all_the_same!(match &self.0 {
+            DblModelBox::[Discrete](model) => {
+                let ob_type = ob_type.try_into()?;
+                Ok(model.object_generators_with_type(&ob_type).map(Ob::Basic).collect())
+            }
+        })
+    }
+
+    /// Returns array of basic morphisms with the given type.
+    #[wasm_bindgen(js_name = "morphismsWithType")]
+    pub fn morphisms_with_type(&self, mor_type: MorType) -> Result<Vec<Mor>, String> {
+        all_the_same!(match &self.0 {
+            DblModelBox::[Discrete](model) => {
+                let mor_type = mor_type.try_into()?;
+                Ok(model.morphism_generators_with_type(&mor_type).map(Mor::Basic).collect())
+            }
         })
     }
 

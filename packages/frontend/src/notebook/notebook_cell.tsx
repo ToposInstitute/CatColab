@@ -251,6 +251,7 @@ export function StemCellEditor(props: {
             text={text()}
             setText={setText}
             completions={props.completions}
+            showCompletionsOnFocus={true}
             deleteBackward={props.actions.deleteBackward}
             deleteForward={props.actions.deleteForward}
             exitUp={props.actions.activateAbove}

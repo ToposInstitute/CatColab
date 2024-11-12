@@ -3,7 +3,7 @@
     padding: 2px;
 }
 
-.corner-box {
+.cornerBox {
     border: 1px solid black;
     padding: 2px;
 
@@ -11,8 +11,4 @@
     --corner: 8px;
     -webkit-mask: conic-gradient(at var(--corner) var(--corner), #0000 75%, #000 0) 0 0 /
         calc(100% - var(--corner)) calc(100% - var(--corner)), linear-gradient(#000 0 0) content-box;
-}
-
-.code {
-    font-family: var(--mono-font);
 }

@@ -14,6 +14,7 @@ export type InlineInputOptions = {
     placeholder?: string;
     status?: InlineInputErrorStatus;
     completions?: Completion[];
+    showCompletionsOnFocus?: boolean;
 
     deleteBackward?: () => void;
     deleteForward?: () => void;
@@ -122,7 +123,8 @@ export function InlineInput(
                         placeholder={props.placeholder}
                         use:focus={(isFocused: boolean) => {
                             isFocused && props.onFocus && props.onFocus();
-                            setCompletionsOpen(isFocused);
+                            (!isFocused || props.showCompletionsOnFocus) &&
+                                setCompletionsOpen(isFocused);
                         }}
                         onInput={(evt) => {
                             props.setText(evt.target.value);
@@ -138,6 +140,7 @@ export function InlineInput(
                         completions={props.completions ?? []}
                         text={props.text}
                         ref={setCompletionsRef}
+                        onComplete={() => setCompletionsOpen(false)}
                     />
                 </Popover.Content>
             </Popover.Portal>

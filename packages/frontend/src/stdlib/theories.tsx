@@ -1,16 +1,17 @@
 import * as catlog from "catlog-wasm";
 
+import { Theory } from "../theory";
 import {
     configureLotkaVolterra,
     configureModelGraph,
     configureStockFlowDiagram,
     configureSubmodelsAnalysis,
-} from "../analysis";
-import { Theory } from "../theory";
+} from "./analyses";
 import { TheoryLibrary } from "./types";
 
 import styles from "./styles.module.css";
 import svgStyles from "./svg_styles.module.css";
+import textStyles from "./text_styles.module.css";
 
 /** Standard library of double theories supported by the frontend. */
 export const stdTheories = new TheoryLibrary();
@@ -27,14 +28,14 @@ stdTheories.add(
         return new Theory({
             ...meta,
             theory: thCategory.theory(),
-            types: [
+            modelTypes: [
                 {
                     tag: "ObType",
                     obType: { tag: "Basic", content: "Object" },
                     name: "Type",
                     description: "Type or class of things",
                     shortcut: ["O"],
-                    cssClasses: [styles["corner-box"]],
+                    cssClasses: [styles.cornerBox],
                     svgClasses: [svgStyles.box],
                 },
                 {
@@ -44,7 +45,26 @@ stdTheories.add(
                         content: { tag: "Basic", content: "Object" },
                     },
                     name: "Aspect",
-                    description: "Aspect or property of a thing",
+                    description: "Aspect or property of a type",
+                    shortcut: ["M"],
+                },
+            ],
+            instanceTypes: [
+                {
+                    tag: "ObType",
+                    obType: { tag: "Basic", content: "Object" },
+                    name: "Individual",
+                    description: "Individual thing of a certain type",
+                    shortcut: ["I"],
+                },
+                {
+                    tag: "MorType",
+                    morType: {
+                        tag: "Hom",
+                        content: { tag: "Basic", content: "Object" },
+                    },
+                    name: "Aspect",
+                    description: "Aspect or property of an individual",
                     shortcut: ["M"],
                 },
             ],
@@ -71,7 +91,7 @@ stdTheories.add(
         return new Theory({
             ...meta,
             theory: thSchema.theory(),
-            types: [
+            modelTypes: [
                 {
                     tag: "ObType",
                     obType: { tag: "Basic", content: "Entity" },
@@ -80,7 +100,7 @@ stdTheories.add(
                     shortcut: ["O"],
                     cssClasses: [styles.box],
                     svgClasses: [svgStyles.box],
-                    textClasses: [styles.code],
+                    textClasses: [textStyles.code],
                 },
                 {
                     tag: "MorType",
@@ -91,7 +111,7 @@ stdTheories.add(
                     name: "Mapping",
                     description: "Many-to-one relation between entities",
                     shortcut: ["M"],
-                    textClasses: [styles.code],
+                    textClasses: [textStyles.code],
                 },
                 {
                     tag: "MorType",
@@ -99,14 +119,14 @@ stdTheories.add(
                     name: "Attribute",
                     description: "Data attribute of an entity",
                     shortcut: ["A"],
-                    textClasses: [styles.code],
+                    textClasses: [textStyles.code],
                 },
                 {
                     tag: "ObType",
                     obType: { tag: "Basic", content: "AttrType" },
                     name: "Attribute type",
                     description: "Data type for an attribute",
-                    textClasses: [styles.code],
+                    textClasses: [textStyles.code],
                 },
                 {
                     tag: "MorType",
@@ -116,7 +136,39 @@ stdTheories.add(
                     },
                     name: "Operation",
                     description: "Operation on data types for attributes",
-                    textClasses: [styles.code],
+                    textClasses: [textStyles.code],
+                },
+            ],
+            instanceTypes: [
+                {
+                    tag: "ObType",
+                    obType: { tag: "Basic", content: "Entity" },
+                    name: "Individual",
+                    description: "Individual entity of a certain type",
+                    shortcut: ["I"],
+                },
+                {
+                    tag: "MorType",
+                    morType: {
+                        tag: "Hom",
+                        content: { tag: "Basic", content: "Entity" },
+                    },
+                    name: "Maps to",
+                    description: "One individual mapped to another",
+                    shortcut: ["M"],
+                },
+                {
+                    tag: "MorType",
+                    morType: { tag: "Basic", content: "Attr" },
+                    name: "Attribute",
+                    description: "Data attribute of an individual",
+                    shortcut: ["A"],
+                },
+                {
+                    tag: "ObType",
+                    obType: { tag: "Basic", content: "AttrType" },
+                    name: "Attribute variable",
+                    description: "Variable that can be bound to attribute values",
                 },
             ],
             modelAnalyses: [
@@ -143,7 +195,7 @@ stdTheories.add(
             ...meta,
             theory: thSignedCategory.theory(),
             onlyFreeModels: true,
-            types: [
+            modelTypes: [
                 {
                     tag: "ObType",
                     obType: { tag: "Basic", content: "Object" },
@@ -212,7 +264,7 @@ stdTheories.add(
             ...meta,
             theory: thSignedCategory.theory(),
             onlyFreeModels: true,
-            types: [
+            modelTypes: [
                 {
                     tag: "ObType",
                     obType: { tag: "Basic", content: "Object" },
@@ -281,7 +333,7 @@ stdTheories.add(
             ...meta,
             theory: thNullableSignedCategory.theory(),
             onlyFreeModels: true,
-            types: [
+            modelTypes: [
                 {
                     tag: "ObType",
                     obType: { tag: "Basic", content: "Object" },
@@ -344,7 +396,7 @@ stdTheories.add(
             ...meta,
             theory: thCategoryLinks.theory(),
             onlyFreeModels: true,
-            types: [
+            modelTypes: [
                 {
                     tag: "ObType",
                     obType: { tag: "Basic", content: "Object" },
