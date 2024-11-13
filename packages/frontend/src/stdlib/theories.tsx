@@ -436,3 +436,57 @@ stdTheories.add(
         });
     },
 );
+
+stdTheories.add(
+    {
+        id: "diagrammatic-equations",
+        name: "Equational theory",
+        description: "Systems of equations specified diagrammatically",
+        group: "Applied Mathematics",
+    },
+    (meta) => {
+        const thCategory = new catlog.ThCategory();
+        return new Theory({
+            ...meta,
+            theory: thCategory.theory(),
+            modelTypes: [
+                {
+                    tag: "ObType",
+                    obType: { tag: "Basic", content: "Object" },
+                    name: "Type",
+                    description: "Type of quantity",
+                    shortcut: ["Q"],
+                },
+                {
+                    tag: "MorType",
+                    morType: {
+                        tag: "Hom",
+                        content: { tag: "Basic", content: "Object" },
+                    },
+                    name: "Operation",
+                    description: "Arithmetical operation or differential operator",
+                    shortcut: ["A"],
+                },
+            ],
+            instanceTypes: [
+                {
+                    tag: "ObType",
+                    obType: { tag: "Basic", content: "Object" },
+                    name: "Quantity",
+                    description: "Variables and other numerical quantities",
+                    shortcut: ["Q"],
+                },
+                {
+                    tag: "MorType",
+                    morType: {
+                        tag: "Hom",
+                        content: { tag: "Basic", content: "Object" },
+                    },
+                    name: "Application",
+                    description: "Apply an operation to quantities",
+                    shortcut: ["A"],
+                },
+            ],
+        });
+    },
+);
