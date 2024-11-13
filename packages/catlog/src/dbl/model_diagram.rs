@@ -45,6 +45,21 @@ impl<Map, Dom> DblModelDiagram<Map, Dom> {
     }
 }
 
+impl<Map, Dom> DblModelDiagram<Map, Dom>
+where
+    Map: DblModelMapping,
+{
+    /// Gets an object indexed by the diagram.
+    pub fn ob(&self, i: &Map::DomOb) -> Map::CodOb {
+        self.0.apply_ob(i).expect("Diagram should be defined at object")
+    }
+
+    /// Gets a morphism indexed by the diagram.
+    pub fn mor(&self, h: &Map::DomMor) -> Map::CodMor {
+        self.0.apply_mor(h).expect("Diagram should be defined at morphism")
+    }
+}
+
 /// A diagram in a model of a discrete double theory.
 pub type DiscreteDblModelDiagram<DomId, CodId, Cat> =
     DblModelDiagram<DiscreteDblModelMapping<DomId, CodId>, DiscreteDblModel<DomId, Cat>>;
@@ -132,16 +147,16 @@ mod tests {
         let entity = ustr("entity");
         model.add_ob(entity, ustr("Entity"));
         model.add_ob(ustr("type"), ustr("AttrType"));
-        model.add_mor(ustr("a"), entity, ustr("type"), FinMor::Generator(ustr("Attr")));
+        model.add_mor(ustr("attr"), entity, ustr("type"), FinMor::Generator(ustr("Attr")));
 
         let mut f: DiscreteDblModelMapping<_, _> = Default::default();
         f.assign_ob(entity, 'x');
         f.assign_ob(ustr("type"), 'y');
-        f.assign_basic_mor(ustr("a"), Path::pair('p', 'q'));
+        f.assign_basic_mor(ustr("attr"), Path::pair('p', 'q'));
 
-        let diagram = DblModelDiagram(f.clone(), model.clone());
-        assert_eq!(diagram.domain(), &model);
-        assert_eq!(diagram.mapping(), &f);
+        let diagram = DblModelDiagram(f, model);
+        assert_eq!(diagram.ob(&entity), 'x');
+        assert_eq!(diagram.mor(&Path::single(ustr("attr"))), Path::pair('p', 'q'));
     }
 
     #[test]
