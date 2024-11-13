@@ -214,6 +214,13 @@ models should be validated *before* validating this object.
  */
 pub struct DblModelMorphism<'a, Map, Dom, Cod>(&'a Map, &'a Dom, &'a Cod);
 
+impl<'a, Map, Dom, Cod> DblModelMorphism<'a, Map, Dom, Cod> {
+    /// Constructs a new morphism between models.
+    pub fn new(map: &'a Map, dom: &'a Dom, cod: &'a Cod) -> Self {
+        Self(map, dom, cod)
+    }
+}
+
 /// A morphism between models of a discrete double theory.
 pub type DiscreteDblModelMorphism<'a, DomId, CodId, Cat> = DblModelMorphism<
     'a,
