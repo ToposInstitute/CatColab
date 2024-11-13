@@ -18,7 +18,7 @@ impl<'a, 'b, T: DisplayWithSource> WithSource<'a, 'b, T> {
     }
 }
 
-impl<'a, 'b, T> fmt::Display for WithSource<'a, 'b, T>
+impl<T> fmt::Display for WithSource<'_, '_, T>
 where
     T: DisplayWithSource,
 {
