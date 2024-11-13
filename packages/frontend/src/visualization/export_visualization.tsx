@@ -4,7 +4,7 @@ Use XMLSerializer to write that DOM node to a stringhttps://statmodeling.stat.co
 Save that string as a file
  */
 import computedStyleToInlineStyle from "computed-style-to-inline-style";
-import { handleExportSVG } from "./graphviz_svg";
+
 
 export function exportVisualizationSVG(visualization: HTMLDivElement) {
     computedStyleToInlineStyle(visualization, { recursive: true });
