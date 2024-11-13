@@ -41,8 +41,8 @@ export default function DiagramPage() {
         const { doc } = liveDoc;
         invariant(doc.type === "diagram", () => `Expected diagram, got type: ${doc.type}`);
 
-        const modelReactiveDoc = await getLiveDoc<ModelDocument>(rpc, repo, doc.modelRef.refId);
-        const liveModel = enlivenModelDocument(doc.modelRef.refId, modelReactiveDoc, theories);
+        const modelLiveDoc = await getLiveDoc<ModelDocument>(rpc, repo, doc.modelRef.refId);
+        const liveModel = enlivenModelDocument(doc.modelRef.refId, modelLiveDoc, theories);
 
         return enlivenDiagramDocument(refId, liveDoc, liveModel);
     });
