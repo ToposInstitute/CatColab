@@ -23,7 +23,6 @@ use std::hash::Hash;
 use std::sync::Arc;
 
 use derivative::Derivative;
-
 use nonempty::NonEmpty;
 use thiserror::Error;
 
@@ -213,7 +212,7 @@ This struct borrows its data to perform validation. The domain and codomain are
 assumed to be valid models of double theories. If that is in question, the
 models should be validated *before* validating this object.
  */
-pub struct DblModelMorphism<'a, Map, Dom, Cod>(pub &'a Map, pub &'a Dom, pub &'a Cod);
+pub struct DblModelMorphism<'a, Map, Dom, Cod>(&'a Map, &'a Dom, &'a Cod);
 
 /// A morphism between models of a discrete double theory.
 pub type DiscreteDblModelMorphism<'a, DomId, CodId, Cat> = DblModelMorphism<

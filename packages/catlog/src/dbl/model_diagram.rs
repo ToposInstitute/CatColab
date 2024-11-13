@@ -1,14 +1,16 @@
 /*! Diagrams in models of a double theory.
 
-A diagram in a [model](super::model) consists of a [morphism](super::model_morphism)
-of models together with its domain, which is a free mode.
+A **diagram** in a [model](super::model) is simply a
+[morphism](super::model_morphism) into that model. This includes the domain of
+that morphism, which is assumed to be a free model.
 
-Diagrams are currently used primarily to represent instances of models from
-a fibered perspective.
+Diagrams are currently used primarily to represent instances of models from a
+fibered perspective, generalizing how a diagram in a category can be used to
+represent a copresheaf over that category.
 
 # References
 
-- TODO dev-docs
+TODO: Document in devs docs and link here.
  */
 
 use std::hash::Hash;
@@ -16,42 +18,36 @@ use std::hash::Hash;
 use nonempty::NonEmpty;
 use thiserror::Error;
 
-use super::model::DiscreteDblModel;
-use super::model_morphism::{DblModelMapping, DiscreteDblModelMapping};
 use crate::one::*;
 use crate::validate::{self, Validate};
 
-/**  A diagram in a model of a double theory defined by a [mapping](DblModelMapping).
+use super::model::DiscreteDblModel;
+use super::model_morphism::{DblModelMapping, DiscreteDblModelMapping};
+
+/** A diagram in a model of a double theory.
 
 This struct owns its data, namely, the domain model and the model
-mapping. The domain is assumed to
-be a valid model of a double theory. If that is in question, the
-model should be validated *before* validating this object.
+[mapping](DblModelMapping). The domain is assumed to be a valid model of a
+double theory. If that is in question, then the model should be validated
+*before* validating this object.
 */
-pub struct DblModelDiagram<Map, Dom>(pub Map, pub Dom);
+pub struct DblModelDiagram<Map, Dom>(Map, Dom);
+
+impl<Map, Dom> DblModelDiagram<Map, Dom> {
+    /// The mapping underlying the diagram.
+    pub fn mapping(&self) -> &Map {
+        &self.0
+    }
+
+    /// The domain, or shape, of the diagram.
+    pub fn domain(&self) -> &Dom {
+        &self.1
+    }
+}
 
 /// A diagram in a model of a discrete double theory.
 pub type DiscreteDblModelDiagram<DomId, CodId, Cat> =
     DblModelDiagram<DiscreteDblModelMapping<DomId, CodId>, DiscreteDblModel<DomId, Cat>>;
-
-impl<DomId, CodId, Cat> DiscreteDblModelDiagram<DomId, CodId, Cat>
-where
-    DomId: Eq + Clone + Hash,
-    CodId: Eq + Clone + Hash,
-    Cat: FgCategory,
-    Cat::Ob: Hash,
-    Cat::Mor: Hash,
-{
-    /// The domain of the diagram.
-    pub fn domain(&self) -> &DiscreteDblModel<DomId, Cat> {
-        &self.1
-    }
-
-    /// The mapping of the diagram.
-    pub fn mapping(&self) -> &DiscreteDblModelMapping<DomId, CodId> {
-        &self.0
-    }
-}
 
 /** An invalid assignment in a double model diagram defined explicitly by data.
  *
