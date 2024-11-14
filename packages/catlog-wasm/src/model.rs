@@ -1,18 +1,19 @@
 //! Wasm bindings for models of double theories.
 
 use all_the_same::all_the_same;
+use derive_more::{From, TryInto};
 use uuid::Uuid;
 
 use serde::{Deserialize, Serialize};
 use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
-use super::theory::*;
 use catlog::dbl::model::{self as dbl_model, FgDblModel, InvalidDiscreteDblModel};
 use catlog::one::fin_category::UstrFinCategory;
-use catlog::one::Path;
-use catlog::one::{Category as _, FgCategory};
+use catlog::one::{Category as _, FgCategory, Path};
 use catlog::validate::{self, Validate};
+
+use super::theory::{DblTheory, DblTheoryBox, MorType, ObType};
 
 /// An object in a model of a double theory.
 #[derive(Debug, Serialize, Deserialize, Tsify)]
@@ -113,34 +114,17 @@ pub struct MorDecl {
     pub cod: Option<Ob>,
 }
 
-type UuidDiscreteDblModel = dbl_model::DiscreteDblModel<Uuid, UstrFinCategory>;
+type DiscreteDblModel = dbl_model::DiscreteDblModel<Uuid, UstrFinCategory>;
 
 /** A box containing a model of a double theory of any kind.
 
 See [`DblTheoryBox`] for motivation.
  */
+#[derive(From, TryInto)]
+#[try_into(ref)]
 pub enum DblModelBox {
-    Discrete(UuidDiscreteDblModel),
+    Discrete(DiscreteDblModel),
     // DiscreteTab(()), // TODO: Not yet implemented.
-}
-
-/// Converts from a model of a discrete double theory.
-impl From<UuidDiscreteDblModel> for DblModel {
-    fn from(model: UuidDiscreteDblModel) -> Self {
-        DblModel(DblModelBox::Discrete(model))
-    }
-}
-
-/// Converts into a model of a dicrete double theory.
-impl<'a> TryFrom<&'a DblModel> for &'a UuidDiscreteDblModel {
-    type Error = String;
-
-    fn try_from(model: &'a DblModel) -> Result<Self, Self::Error> {
-        match &model.0 {
-            DblModelBox::Discrete(model) => Ok(model),
-            //_ => Err("Cannot cast into a model of a discrete double theory".into()),
-        }
-    }
 }
 
 /// Wasm bindings for a model of a double theory.
@@ -153,9 +137,7 @@ impl DblModel {
     #[wasm_bindgen(constructor)]
     pub fn new(theory: &DblTheory) -> Self {
         Self(match &theory.0 {
-            DblTheoryBox::Discrete(th) => {
-                DblModelBox::Discrete(UuidDiscreteDblModel::new(th.clone()))
-            }
+            DblTheoryBox::Discrete(th) => DblModelBox::Discrete(DiscreteDblModel::new(th.clone())),
             DblTheoryBox::DiscreteTab(_) => panic!("Not implemented"),
         })
     }

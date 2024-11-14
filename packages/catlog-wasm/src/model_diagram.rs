@@ -6,30 +6,11 @@ use serde::{Deserialize, Serialize};
 use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
+use catlog::dbl;
+use catlog::one::fin_category::UstrFinCategory;
+
 use super::model::{Mor, Ob};
 use super::theory::{MorType, ObType};
-
-/// An object of a diagram in a model of a double theory.
-#[derive(Debug, Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
-pub struct DiagramOb {
-    /// Indexing object.
-    pub ob: Ob,
-
-    /// Object in the model that the indexing object is over.
-    pub over: Ob,
-}
-
-/// A morphism of a diagram in a model of a double theory.
-#[derive(Debug, Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
-pub struct DiagramMor {
-    /// Indexing morphism.
-    pub mor: Mor,
-
-    /// Morphism that the indexing morphism is over (mapped to).
-    pub over: Mor,
-}
 
 /// Declares an object of a diagram in a model.
 #[derive(Serialize, Deserialize, Tsify)]
@@ -65,4 +46,11 @@ pub struct DiagramMorDecl {
 
     /// Codomain of this morphism, if defined.
     pub cod: Option<Ob>,
+}
+
+type DiscreteDblModelDiagram = dbl::model_diagram::DblModelDiagram<Uuid, UstrFinCategory>;
+
+/// A box containing a diagram in a model of a double theory.
+pub enum DblModelDiagramBox {
+    Discrete(DiscreteDblModelDiagram),
 }

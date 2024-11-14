@@ -1,7 +1,7 @@
 pub mod result;
 
-pub mod diagram;
 pub mod model;
+pub mod model_diagram;
 pub mod model_morphism;
 pub mod theory;
 

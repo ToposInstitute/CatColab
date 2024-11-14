@@ -14,7 +14,9 @@ pub fn motifs<Id>(
 where
     Id: Clone + Eq + Hash,
 {
-    let model: &model::DiscreteDblModel<_, _> = model.try_into()?;
+    let model: &model::DiscreteDblModel<_, _> = (&model.0)
+        .try_into()
+        .map_err(|_| "Motif finding expects a discrete double model")?;
     let mut images: Vec<_> = DiscreteDblModelMapping::morphisms(motif, model)
         .monic()
         .find_all()
@@ -28,7 +30,7 @@ where
     // Remove duplicates: different morphisms can have the same image.
     retain_unique(&mut images);
 
-    Ok(images.into_iter().map(|im| im.into()).collect())
+    Ok(images.into_iter().map(|im| DblModel(im.into())).collect())
 }
 
 /** Remove duplicate elements from a vector.
