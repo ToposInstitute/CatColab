@@ -26,6 +26,11 @@ use derivative::Derivative;
 use nonempty::NonEmpty;
 use thiserror::Error;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+#[cfg(feature = "serde-wasm")]
+use tsify_next::Tsify;
+
 use crate::one::graph_algorithms::{simple_paths, spec_order};
 use crate::one::*;
 use crate::validate::{self, Validate};
@@ -212,14 +217,7 @@ This struct borrows its data to perform validation. The domain and codomain are
 assumed to be valid models of double theories. If that is in question, the
 models should be validated *before* validating this object.
  */
-pub struct DblModelMorphism<'a, Map, Dom, Cod>(&'a Map, &'a Dom, &'a Cod);
-
-impl<'a, Map, Dom, Cod> DblModelMorphism<'a, Map, Dom, Cod> {
-    /// Constructs a new morphism between models.
-    pub fn new(map: &'a Map, dom: &'a Dom, cod: &'a Cod) -> Self {
-        Self(map, dom, cod)
-    }
-}
+pub struct DblModelMorphism<'a, Map, Dom, Cod>(pub &'a Map, pub &'a Dom, pub &'a Cod);
 
 /// A morphism between models of a discrete double theory.
 pub type DiscreteDblModelMorphism<'a, DomId, CodId, Cat> = DblModelMorphism<
@@ -376,7 +374,11 @@ where
  * obtain for free that identities are sent to identities and composites of
  * generators are sent to their composites in the codomain.
 */
-#[derive(Debug, Error, PartialEq, Clone)]
+#[derive(Clone, Debug, Error, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(tag = "tag", content = "content"))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
 pub enum InvalidDblModelMorphism<Ob, Mor> {
     /// Invalid data
     #[error("Object `{0}` is mapped to an object not in the codomain")]

@@ -1,10 +1,13 @@
 use std::hash::Hash;
 
+use uuid::Uuid;
+
+use catlog::dbl::{model, model_morphism};
+use catlog::one::{fin_category::UstrFinCategory, FgCategory};
+
 use super::model::DblModel;
-use catlog::dbl::model;
-use catlog::dbl::model_morphism::DiscreteDblModelMapping;
-use catlog::one::fin_category::UstrFinCategory;
-use catlog::one::FgCategory;
+
+pub(crate) type DiscreteDblModelMapping = model_morphism::DiscreteDblModelMapping<Uuid, Uuid>;
 
 /// Find motifs in a model of a discrete double theory.
 pub fn motifs<Id>(
@@ -17,7 +20,7 @@ where
     let model: &model::DiscreteDblModel<_, _> = (&model.0)
         .try_into()
         .map_err(|_| "Motif finding expects a discrete double model")?;
-    let mut images: Vec<_> = DiscreteDblModelMapping::morphisms(motif, model)
+    let mut images: Vec<_> = model_morphism::DiscreteDblModelMapping::morphisms(motif, model)
         .monic()
         .find_all()
         .into_iter()

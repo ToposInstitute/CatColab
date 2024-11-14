@@ -15,6 +15,7 @@ TODO: Document in devs docs and link here.
 
 use std::hash::Hash;
 
+use derive_more::Into;
 use nonempty::NonEmpty;
 
 use crate::one::FgCategory;
@@ -31,24 +32,9 @@ This struct owns its data, namely, the domain model and the model
 double theory. If that is in question, then the model should be validated
 *before* validating this object.
 */
-pub struct DblModelDiagram<Map, Dom>(Map, Dom);
-
-impl<Map, Dom> DblModelDiagram<Map, Dom> {
-    /// Constructs a new diagram from the given mapping and domain model.
-    pub fn new(map: Map, dom: Dom) -> Self {
-        Self(map, dom)
-    }
-
-    /// The mapping underlying the diagram.
-    pub fn mapping(&self) -> &Map {
-        &self.0
-    }
-
-    /// The domain, or shape, of the diagram.
-    pub fn domain(&self) -> &Dom {
-        &self.1
-    }
-}
+#[derive(Clone, Into)]
+#[into(owned, ref, ref_mut)]
+pub struct DblModelDiagram<Map, Dom>(pub Map, pub Dom);
 
 impl<Map, Dom> DblModelDiagram<Map, Dom>
 where
@@ -90,7 +76,7 @@ where
         &'a self,
         model: &'a DiscreteDblModel<CodId, Cat>,
     ) -> impl Iterator<Item = InvalidDblModelMorphism<DomId, DomId>> + '_ {
-        let morphism = DblModelMorphism::new(self.mapping(), self.domain(), model);
+        let morphism = DblModelMorphism(&self.0, &self.1, model);
         morphism.iter_invalid()
     }
 }
@@ -119,7 +105,7 @@ mod tests {
         f.assign_ob(ustr("type"), 'y');
         f.assign_basic_mor(ustr("attr"), Path::pair('p', 'q'));
 
-        let diagram = DblModelDiagram::new(f, model);
+        let diagram = DblModelDiagram(f, model);
         assert_eq!(diagram.ob(&entity), 'x');
         assert_eq!(diagram.mor(&Path::single(ustr("attr"))), Path::pair('p', 'q'));
     }
@@ -133,7 +119,7 @@ mod tests {
         let mut f: DiscreteDblModelMapping<_, _> = Default::default();
         f.assign_ob(ustr("x"), ustr("x"));
         f.assign_basic_mor(ustr("positive"), Path::pair(ustr("negative"), ustr("negative")));
-        let diagram = DblModelDiagram::new(f, pos_loop);
+        let diagram = DblModelDiagram(f, pos_loop);
         assert!(diagram.validate_in(&neg_loop).is_ok());
     }
 }
