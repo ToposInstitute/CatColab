@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
+use catlog::dbl::model::FgDblModel;
 use catlog::dbl::model_diagram as diagram;
 use catlog::dbl::model_morphism::InvalidDblModelMorphism;
 use catlog::one::FgCategory;
@@ -132,6 +133,30 @@ impl DblModelDiagram {
             DblModelDiagramBox::[Discrete](diagram) => {
                 let (_, model) = diagram.into();
                 model.morphism_generators().map(Mor::Basic).collect()
+            }
+        })
+    }
+
+    /// Returns array of basic objects with the given type.
+    #[wasm_bindgen(js_name = "objectsWithType")]
+    pub fn objects_with_type(&self, ob_type: ObType) -> Result<Vec<Ob>, String> {
+        all_the_same!(match &self.0 {
+            DblModelDiagramBox::[Discrete](diagram) => {
+                let (_, model) = diagram.into();
+                let ob_type = ob_type.try_into()?;
+                Ok(model.object_generators_with_type(&ob_type).map(Ob::Basic).collect())
+            }
+        })
+    }
+
+    /// Returns array of basic morphisms with the given type.
+    #[wasm_bindgen(js_name = "morphismsWithType")]
+    pub fn morphisms_with_type(&self, mor_type: MorType) -> Result<Vec<Mor>, String> {
+        all_the_same!(match &self.0 {
+            DblModelDiagramBox::[Discrete](diagram) => {
+                let (_, model) = diagram.into();
+                let mor_type = mor_type.try_into()?;
+                Ok(model.morphism_generators_with_type(&mor_type).map(Mor::Basic).collect())
             }
         })
     }

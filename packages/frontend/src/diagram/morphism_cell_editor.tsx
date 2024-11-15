@@ -26,6 +26,9 @@ export function DiagramMorphismCellEditor(props: {
     invariant(liveDiagram, "Live diagram should be provided as context");
     const theory = () => liveDiagram.liveModel.theory();
 
+    const domType = () => theory()?.theory.src(props.decl.morType);
+    const codType = () => theory()?.theory.tgt(props.decl.morType);
+
     return (
         <div class="formal-judgment diagram-morphism-decl">
             <BasicObInput
@@ -37,6 +40,7 @@ export function DiagramMorphismCellEditor(props: {
                         decl.dom = ob;
                     });
                 }}
+                obType={domType()}
             />
             <div class={arrowStyles.arrowWithName}>
                 <div class={arrowStyles.arrowName}>
@@ -65,6 +69,7 @@ export function DiagramMorphismCellEditor(props: {
                         decl.cod = ob;
                     });
                 }}
+                obType={codType()}
             />
         </div>
     );
