@@ -1,4 +1,4 @@
-import { useContext } from "solid-js";
+import { createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { ObType } from "catlog-wasm";
@@ -19,11 +19,8 @@ export function ObjectCellEditor(props: {
     isActive: boolean;
     actions: CellActions;
 }) {
-    let nameRef!: HTMLInputElement;
-    focusInputWhen(
-        () => nameRef,
-        () => props.isActive,
-    );
+    const [nameRef, setNameRef] = createSignal<HTMLInputElement>();
+    focusInputWhen(nameRef, () => props.isActive);
 
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
@@ -37,7 +34,7 @@ export function ObjectCellEditor(props: {
     return (
         <div class={cssClasses().join(" ")}>
             <InlineInput
-                ref={nameRef}
+                ref={setNameRef}
                 placeholder="Unnamed"
                 text={props.object.name}
                 setText={(text) => {

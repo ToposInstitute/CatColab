@@ -235,19 +235,15 @@ export function StemCellEditor(props: {
     actions: CellActions;
 }) {
     const [text, setText] = createSignal("");
+    const [ref, setRef] = createSignal<HTMLInputElement>();
 
-    let ref!: HTMLInputElement;
+    onMount(() => ref()?.focus());
 
-    onMount(() => ref.focus());
-
-    focusInputWhen(
-        () => ref,
-        () => props.isActive,
-    );
+    focusInputWhen(ref, () => props.isActive);
 
     return (
         <InlineInput
-            ref={ref}
+            ref={setRef}
             text={text()}
             setText={setText}
             completions={props.completions}

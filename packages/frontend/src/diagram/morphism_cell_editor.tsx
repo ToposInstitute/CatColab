@@ -1,4 +1,4 @@
-import { useContext } from "solid-js";
+import { createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { BasicMorInput } from "../model/morphism_input";
@@ -19,13 +19,10 @@ export function DiagramMorphismCellEditor(props: {
     isActive: boolean;
     actions: CellActions;
 }) {
-    let morRef!: HTMLInputElement;
+    const [morRef, setMorRef] = createSignal<HTMLInputElement>();
     let domRef!: HTMLInputElement;
     let codRef!: HTMLInputElement;
-    focusInputWhen(
-        () => morRef,
-        () => props.isActive,
-    );
+    focusInputWhen(morRef, () => props.isActive);
 
     const liveDiagram = useContext(LiveDiagramContext);
     invariant(liveDiagram, "Live diagram should be provided as context");
@@ -51,7 +48,7 @@ export function DiagramMorphismCellEditor(props: {
             <div class={arrowStyles.arrowWithName}>
                 <div class={arrowStyles.arrowName}>
                     <BasicMorInput
-                        ref={morRef}
+                        ref={setMorRef}
                         mor={props.decl.over}
                         setMor={(mor) => {
                             props.modifyDecl((decl) => {

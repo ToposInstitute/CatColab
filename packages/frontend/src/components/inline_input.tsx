@@ -1,6 +1,6 @@
 import Popover from "@corvu/popover";
 import { focus } from "@solid-primitives/active-element";
-import { type JSX, createSignal } from "solid-js";
+import { type JSX, type Setter, createSignal } from "solid-js";
 focus;
 
 import { type Completion, Completions, type CompletionsRef } from "./completions";
@@ -10,7 +10,7 @@ import "./inline_input.css";
 /** Optional props for `InlineInput` component.
  */
 export type InlineInputOptions = {
-    ref?: HTMLInputElement;
+    ref?: HTMLInputElement | Setter<HTMLInputElement | undefined>;
     placeholder?: string;
     status?: InlineInputErrorStatus;
     completions?: Completion[];
