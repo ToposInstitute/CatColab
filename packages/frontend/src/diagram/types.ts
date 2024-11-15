@@ -1,6 +1,15 @@
 import { uuidv7 } from "uuidv7";
 
-import type { DiagramMorDecl, DiagramObDecl, Mor, MorType, Ob, ObType } from "catlog-wasm";
+import { DblModelDiagram } from "catlog-wasm";
+import type {
+    DblTheory,
+    DiagramMorDecl,
+    DiagramObDecl,
+    Mor,
+    MorType,
+    Ob,
+    ObType,
+} from "catlog-wasm";
 
 /** A judgment in the definition of a diagram in a model.
 
@@ -48,3 +57,16 @@ export const newDiagramMorphismDecl = (morType: MorType, over?: Mor): DiagramMor
     dom: null,
     cod: null,
 });
+
+/** Construct a `catlog` diagram in a model from a sequence of judgments. */
+export function catlogDiagram(theory: DblTheory, judgments: Array<DiagramJudgment>) {
+    const diagram = new DblModelDiagram(theory);
+    for (const judgment of judgments) {
+        if (judgment.tag === "object") {
+            diagram.addOb(judgment);
+        } else if (judgment.tag === "morphism") {
+            diagram.addMor(judgment);
+        }
+    }
+    return diagram;
+}

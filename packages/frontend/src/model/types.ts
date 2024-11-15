@@ -1,14 +1,7 @@
 import { uuidv7 } from "uuidv7";
 
 import { DblModel } from "catlog-wasm";
-import type {
-    DblTheory,
-    ModelValidationResult,
-    MorDecl,
-    MorType,
-    ObDecl,
-    ObType,
-} from "catlog-wasm";
+import type { DblTheory, MorDecl, MorType, ObDecl, ObType } from "catlog-wasm";
 
 /** A judgment in the definition of a model.
 
@@ -52,8 +45,7 @@ export const newMorphismDecl = (morType: MorType): MorphismDecl => ({
     cod: null,
 });
 
-/** Construct a `catlog` model from a sequence of model judgments.
- */
+/** Construct a `catlog` model from a sequence of model judgments. */
 export function catlogModel(theory: DblTheory, judgments: Array<ModelJudgment>): DblModel {
     const model = new DblModel(theory);
     for (const judgment of judgments) {
@@ -64,24 +56,4 @@ export function catlogModel(theory: DblTheory, judgments: Array<ModelJudgment>):
         }
     }
     return model;
-}
-
-/** A validated model as represented in `catlog`. */
-export type ValidatedModel = {
-    model: DblModel;
-    result: ModelValidationResult;
-};
-
-/** Construct and validate a model in the categorical core. */
-export function validateModel(
-    theory: DblTheory,
-    judgments: Array<ModelJudgment>,
-): ValidatedModel | undefined {
-    if (theory.kind !== "Discrete") {
-        // TODO: Validation should be implemented for all kinds of theories.
-        return undefined;
-    }
-    const model = catlogModel(theory, judgments);
-    const result = model.validate();
-    return { model, result };
 }

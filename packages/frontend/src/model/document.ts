@@ -1,12 +1,12 @@
 import { type Accessor, createMemo } from "solid-js";
 
-import type { Uuid } from "catlog-wasm";
+import type { DblModel, ModelValidationResult, Uuid } from "catlog-wasm";
 import type { LiveDoc } from "../api";
 import { type Notebook, newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
 import type { Theory, TheoryId } from "../theory";
 import { type IndexedMap, indexMap } from "../util/indexing";
-import { type ModelJudgment, type ValidatedModel, validateModel } from "./types";
+import { type ModelJudgment, catlogModel } from "./types";
 
 /** A document defining a model. */
 export type ModelDocument = {
@@ -56,6 +56,12 @@ export type LiveModelDocument = {
     validatedModel: Accessor<ValidatedModel | undefined>;
 };
 
+/** A validated model as represented in `catlog`. */
+export type ValidatedModel = {
+    model: DblModel;
+    result: ModelValidationResult;
+};
+
 export function enlivenModelDocument(
     refId: string,
     liveDoc: LiveDoc<ModelDocument>,
@@ -98,7 +104,13 @@ export function enlivenModelDocument(
     const validatedModel = createMemo<ValidatedModel | undefined>(
         () => {
             const th = theory();
-            return th ? validateModel(th.theory, formalJudgments()) : undefined;
+            if (th?.theory.kind !== "Discrete") {
+                // TODO: Currently only implemented for discrete theories.
+                return undefined;
+            }
+            const model = catlogModel(th.theory, formalJudgments());
+            const result = model.validate();
+            return { model, result };
         },
         undefined,
         { equals: false },

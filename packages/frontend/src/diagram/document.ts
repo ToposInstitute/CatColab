@@ -1,11 +1,11 @@
 import { type Accessor, createMemo } from "solid-js";
 
-import type { Uuid } from "catlog-wasm";
+import type { DblModelDiagram, ModelDiagramValidationResult, Uuid } from "catlog-wasm";
 import type { ExternRef, LiveDoc } from "../api";
 import type { LiveModelDocument } from "../model";
 import { type Notebook, newNotebook } from "../notebook";
 import { type IndexedMap, indexMap } from "../util/indexing";
-import type { DiagramJudgment } from "./types";
+import { type DiagramJudgment, catlogDiagram } from "./types";
 
 /** A document defining a diagram in a model. */
 export type DiagramDocument = {
@@ -50,6 +50,15 @@ export type LiveDiagramDocument = {
 
     /** A memo of the indexed map from object ID to name. */
     objectIndex: Accessor<IndexedMap<Uuid, string>>;
+
+    /** A memo of the diagram constructed and validated in the core. */
+    validatedDiagram: Accessor<ValidatedDiagram | undefined>;
+};
+
+/** A validated diagram as represented in `catlog`. */
+export type ValidatedDiagram = {
+    diagram: DblModelDiagram;
+    result: ModelDiagramValidationResult;
 };
 
 export function enlivenDiagramDocument(
@@ -75,5 +84,21 @@ export function enlivenDiagramDocument(
         return indexMap(map);
     }, indexMap(new Map()));
 
-    return { refId, liveDoc, liveModel, formalJudgments, objectIndex };
+    const validatedDiagram = createMemo<ValidatedDiagram | undefined>(
+        () => {
+            const th = liveModel.theory();
+            const validatedModel = liveModel.validatedModel();
+            if (!(th && validatedModel?.result.tag === "Ok")) {
+                // Abort immediately if the model itself is invalid.
+                return undefined;
+            }
+            const diagram = catlogDiagram(th.theory, formalJudgments());
+            const result = diagram.validate_in(validatedModel.model);
+            return { diagram, result };
+        },
+        undefined,
+        { equals: false },
+    );
+
+    return { refId, liveDoc, liveModel, formalJudgments, objectIndex, validatedDiagram };
 }
