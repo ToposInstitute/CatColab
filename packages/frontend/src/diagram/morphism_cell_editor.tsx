@@ -3,6 +3,7 @@ import invariant from "tiny-invariant";
 
 import { BasicMorInput } from "../model/morphism_input";
 import type { CellActions } from "../notebook";
+import { focusInputWhen } from "../util/focus";
 import { LiveDiagramContext } from "./context";
 import { BasicObInput } from "./object_input";
 import type { DiagramMorphismDecl } from "./types";
@@ -21,6 +22,10 @@ export function DiagramMorphismCellEditor(props: {
     let morRef!: HTMLInputElement;
     let domRef!: HTMLInputElement;
     let codRef!: HTMLInputElement;
+    focusInputWhen(
+        () => morRef,
+        () => props.isActive,
+    );
 
     const liveDiagram = useContext(LiveDiagramContext);
     invariant(liveDiagram, "Live diagram should be provided as context");
@@ -41,6 +46,7 @@ export function DiagramMorphismCellEditor(props: {
                     });
                 }}
                 obType={domType()}
+                onFocus={props.actions.hasFocused}
             />
             <div class={arrowStyles.arrowWithName}>
                 <div class={arrowStyles.arrowName}>
@@ -54,6 +60,7 @@ export function DiagramMorphismCellEditor(props: {
                         }}
                         morType={props.decl.morType}
                         placeholder={theory()?.modelMorTypeMeta(props.decl.morType)?.name}
+                        onFocus={props.actions.hasFocused}
                     />
                 </div>
                 <div class={[arrowStyles.arrowContainer, arrowStyles.default].join(" ")}>
@@ -70,6 +77,7 @@ export function DiagramMorphismCellEditor(props: {
                     });
                 }}
                 obType={codType()}
+                onFocus={props.actions.hasFocused}
             />
         </div>
     );

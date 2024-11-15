@@ -16,6 +16,7 @@ import {
     InlineInput,
     RichTextEditor,
 } from "../components";
+import { focusInputWhen } from "../util/focus";
 import type { CellId } from "./types";
 
 import ArrowDown from "lucide-solid/icons/arrow-down";
@@ -239,11 +240,10 @@ export function StemCellEditor(props: {
 
     onMount(() => ref.focus());
 
-    createEffect(() => {
-        if (props.isActive) {
-            ref.focus();
-        }
-    });
+    focusInputWhen(
+        () => ref,
+        () => props.isActive,
+    );
 
     return (
         <InlineInput

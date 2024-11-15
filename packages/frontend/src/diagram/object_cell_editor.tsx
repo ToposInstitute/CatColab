@@ -1,9 +1,10 @@
-import { createEffect, useContext } from "solid-js";
+import { useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { InlineInput } from "../components";
 import { ObInput } from "../model/object_input";
 import type { CellActions } from "../notebook";
+import { focusInputWhen } from "../util/focus";
 import { LiveDiagramContext } from "./context";
 import type { DiagramObjectDecl } from "./types";
 
@@ -19,13 +20,10 @@ export function DiagramObjectCellEditor(props: {
 }) {
     let nameRef!: HTMLInputElement;
     let obRef!: HTMLInputElement;
-
-    createEffect(() => {
-        if (props.isActive) {
-            nameRef.focus();
-            nameRef.selectionStart = nameRef.selectionEnd = nameRef.value.length;
-        }
-    });
+    focusInputWhen(
+        () => nameRef,
+        () => props.isActive,
+    );
 
     const liveDiagram = useContext(LiveDiagramContext);
     invariant(liveDiagram, "Live diagram should be provided as context");

@@ -1,8 +1,9 @@
-import { createEffect, useContext } from "solid-js";
+import { useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { InlineInput } from "../components";
 import type { CellActions } from "../notebook";
+import { focusInputWhen } from "../util/focus";
 import { LiveModelContext } from "./context";
 import { obClasses } from "./object_cell_editor";
 import { ObInput } from "./object_input";
@@ -22,13 +23,10 @@ export function MorphismCellEditor(props: {
     let nameRef!: HTMLInputElement;
     let domRef!: HTMLInputElement;
     let codRef!: HTMLInputElement;
-
-    createEffect(() => {
-        if (props.isActive) {
-            nameRef.focus();
-            nameRef.selectionStart = nameRef.selectionEnd = nameRef.value.length;
-        }
-    });
+    focusInputWhen(
+        () => nameRef,
+        () => props.isActive,
+    );
 
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");

@@ -76,8 +76,9 @@ export function NotebookEditor<T>(props: {
 
     const addAfterActiveCell = (cell: Cell<T>) => {
         props.changeNotebook((nb) => {
-            nb.cells.splice(activeCell() + 1, 0, cell);
-            setActiveCell(activeCell() + 1);
+            const i = Math.min(activeCell() + 1, nb.cells.length);
+            nb.cells.splice(i, 0, cell);
+            setActiveCell(i);
         });
     };
 

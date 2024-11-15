@@ -1,10 +1,11 @@
-import { createEffect, useContext } from "solid-js";
+import { useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { ObType } from "catlog-wasm";
 import { InlineInput } from "../components";
 import type { CellActions } from "../notebook";
 import type { Theory } from "../theory";
+import { focusInputWhen } from "../util/focus";
 import { LiveModelContext } from "./context";
 import type { ObjectDecl } from "./types";
 
@@ -19,13 +20,10 @@ export function ObjectCellEditor(props: {
     actions: CellActions;
 }) {
     let nameRef!: HTMLInputElement;
-
-    createEffect(() => {
-        if (props.isActive) {
-            nameRef.focus();
-            nameRef.selectionStart = nameRef.selectionEnd = nameRef.value.length;
-        }
-    });
+    focusInputWhen(
+        () => nameRef,
+        () => props.isActive,
+    );
 
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
