@@ -13,7 +13,7 @@ the `Err` variant is given:
 When an error should be handled in the UI, it is often more convenient to return
 an error value than to raise an exception. That's what this enum does.
 */
-#[derive(Debug, Serialize, Deserialize, Tsify)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
 #[serde(tag = "tag", content = "content")]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum JsResult<T, E> {

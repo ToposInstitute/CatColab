@@ -11,10 +11,10 @@ use wasm_bindgen::prelude::*;
 use catlog::dbl::model_diagram as diagram;
 use catlog::dbl::model_morphism::InvalidDblModelMorphism;
 use catlog::one::FgCategory;
-use catlog::validate;
 
 use super::model::{DblModel, DblModelBox, DiscreteDblModel, Mor, Ob};
 use super::model_morphism::DiscreteDblModelMapping;
+use super::result::JsResult;
 use super::theory::{DblTheory, MorType, ObType};
 
 /// Declares an object of a diagram in a model.
@@ -138,19 +138,22 @@ impl DblModelDiagram {
 
     /// Validates that the diagram is well defined in a model.
     #[wasm_bindgen]
-    pub fn validate_in(
-        &self,
-        model: &DblModel,
-    ) -> Result<Vec<InvalidDblModelMorphism<Uuid, Uuid>>, String> {
+    pub fn validate_in(&self, model: &DblModel) -> Result<ModelDiagramValidationResult, String> {
         all_the_same!(match &self.0 {
             DblModelDiagramBox::[Discrete](diagram) => {
                 let model = (&model.0).try_into().map_err(
                     |_| "Type of model should match type of diagram")?;
-                Ok(validate::unwrap_errors(diagram.validate_in(model)))
+                let res = diagram.validate_in(model);
+                Ok(ModelDiagramValidationResult(res.map_err(|errs| errs.into()).into()))
             }
         })
     }
 }
+
+/// Result of validating a diagram in a model.
+#[derive(Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct ModelDiagramValidationResult(pub JsResult<(), Vec<InvalidDblModelMorphism<Uuid, Uuid>>>);
 
 #[cfg(test)]
 mod tests {
@@ -193,6 +196,6 @@ mod tests {
         }
         assert_eq!(diagram.objects().len(), 3);
         assert_eq!(diagram.morphisms().len(), 2);
-        assert!(diagram.validate_in(&model).is_ok());
+        assert_eq!(diagram.validate_in(&model).unwrap().0, JsResult::Ok(()));
     }
 }

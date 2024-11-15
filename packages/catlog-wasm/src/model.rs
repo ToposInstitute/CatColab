@@ -11,8 +11,9 @@ use wasm_bindgen::prelude::*;
 use catlog::dbl::model::{self as dbl_model, FgDblModel, InvalidDiscreteDblModel};
 use catlog::one::fin_category::UstrFinCategory;
 use catlog::one::{Category as _, FgCategory, Path};
-use catlog::validate::{self, Validate};
+use catlog::validate::Validate;
 
+use super::result::JsResult;
 use super::theory::{DblTheory, DblTheoryBox, MorType, ObType};
 
 /// An object in a model of a double theory.
@@ -233,12 +234,20 @@ impl DblModel {
 
     /// Validates that the model is well defined.
     #[wasm_bindgen]
-    pub fn validate(&self) -> Vec<InvalidDiscreteDblModel<Uuid>> {
+    pub fn validate(&self) -> ModelValidationResult {
         all_the_same!(match &self.0 {
-            DblModelBox::[Discrete](model) => validate::unwrap_errors(model.validate())
+            DblModelBox::[Discrete](model) => {
+                let res = model.validate();
+                ModelValidationResult(res.map_err(|errs| errs.into()).into())
+            }
         })
     }
 }
+
+/// Result of validating a model of a double theory.
+#[derive(Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct ModelValidationResult(pub JsResult<(), Vec<InvalidDiscreteDblModel<Uuid>>>);
 
 #[cfg(test)]
 pub(crate) mod tests {
@@ -286,7 +295,7 @@ pub(crate) mod tests {
             model.morphisms_with_type(MorType::Basic("Attr".into())),
             Ok(vec![Mor::Basic(a)])
         );
-        assert!(model.validate().is_empty());
+        assert_eq!(model.validate().0, JsResult::Ok(()));
 
         let mut model = DblModel::new(&th);
         assert!(model
@@ -297,6 +306,9 @@ pub(crate) mod tests {
                 cod: Some(Ob::Basic(y)),
             })
             .is_ok());
-        assert_eq!(model.validate().len(), 2);
+        let JsResult::Err(errs) = model.validate().0 else {
+            panic!("Model should not validate")
+        };
+        assert_eq!(errs.len(), 2);
     }
 }

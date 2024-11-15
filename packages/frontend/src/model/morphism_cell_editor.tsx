@@ -48,11 +48,11 @@ export function MorphismCellEditor(props: {
     const arrowClass = () => arrowStyles[morTypeMeta()?.arrowStyle ?? "default"];
 
     const morphismErrors = () => {
-        const result = liveModel.validationResult();
-        if (result?.tag !== "errors") {
+        const validated = liveModel.validatedModel();
+        if (validated?.result.tag !== "Err") {
             return [];
         }
-        return result.errors.get(props.morphism.id) ?? [];
+        return validated.result.content.filter((err) => err.content === props.morphism.id);
     };
 
     return (

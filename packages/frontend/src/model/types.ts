@@ -3,14 +3,12 @@ import { uuidv7 } from "uuidv7";
 import { DblModel } from "catlog-wasm";
 import type {
     DblTheory,
-    InvalidDiscreteDblModel,
+    ModelValidationResult,
     MorDecl,
     MorType,
     ObDecl,
     ObType,
-    Uuid,
 } from "catlog-wasm";
-import { indexArray } from "../util/indexing";
 
 /** A judgment in the definition of a model.
 
@@ -68,39 +66,22 @@ export function catlogModel(theory: DblTheory, judgments: Array<ModelJudgment>):
     return model;
 }
 
-/** Result of validating a model in the categorical core. */
-export type ModelValidationResult = ValidatedModel | ModelValidationErrors;
-
-/** A valid model as represented in `catlog`. */
+/** A validated model as represented in `catlog`. */
 export type ValidatedModel = {
-    tag: "validated";
     model: DblModel;
+    result: ModelValidationResult;
 };
 
-/** Errors in a model that did not validate. */
-export type ModelValidationErrors = {
-    tag: "errors";
-    model: DblModel;
-    errors: Map<Uuid, InvalidDiscreteDblModel<Uuid>[]>;
-};
-
-/** Validate a model in the categorical core. */
+/** Construct and validate a model in the categorical core. */
 export function validateModel(
     theory: DblTheory,
     judgments: Array<ModelJudgment>,
-): ModelValidationResult | undefined {
+): ValidatedModel | undefined {
     if (theory.kind !== "Discrete") {
         // TODO: Validation should be implemented for all kinds of theories.
         return undefined;
     }
     const model = catlogModel(theory, judgments);
-    const errs: InvalidDiscreteDblModel<Uuid>[] = model.validate();
-    if (errs.length === 0) {
-        return { tag: "validated", model };
-    }
-    return {
-        tag: "errors",
-        model,
-        errors: indexArray(errs, (err) => err.content),
-    };
+    const result = model.validate();
+    return { model, result };
 }
