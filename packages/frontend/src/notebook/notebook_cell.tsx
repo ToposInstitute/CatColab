@@ -6,8 +6,9 @@ import {
 } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import type { DocHandle, Prop } from "@automerge/automerge-repo";
 import Popover from "@corvu/popover";
+import { createAutofocus } from "@solid-primitives/autofocus";
 import type { EditorView } from "prosemirror-view";
-import { type JSX, Show, createEffect, createSignal, onCleanup, onMount } from "solid-js";
+import { type JSX, Show, createEffect, createSignal, onCleanup } from "solid-js";
 
 import {
     type Completion,
@@ -235,10 +236,9 @@ export function StemCellEditor(props: {
     actions: CellActions;
 }) {
     const [text, setText] = createSignal("");
+
     const [ref, setRef] = createSignal<HTMLInputElement>();
-
-    onMount(() => ref()?.focus());
-
+    createAutofocus(ref);
     focusInputWhen(ref, () => props.isActive);
 
     return (

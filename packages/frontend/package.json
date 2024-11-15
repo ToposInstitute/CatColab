@@ -31,6 +31,7 @@
         "@modular-forms/solid": "^0.24.1",
         "@qubit-rs/client": "^0.4.4",
         "@solid-primitives/active-element": "^2.0.20",
+        "@solid-primitives/autofocus": "^0.0.111",
         "@solid-primitives/context": "^0.2.3",
         "@solid-primitives/destructure": "^0.1.17",
         "@solid-primitives/keyboard": "^1.2.8",
