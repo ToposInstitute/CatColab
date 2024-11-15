@@ -169,9 +169,9 @@ impl PRO for AugSimplexCat {
     /// Because Rust 0-indexes, a "-1" is needed.
     fn hcompose(&self, path: Path<usize, CloneableFinFn>) -> CloneableFinFn {
         match path {
-            Path::Id(x) => CloneableFinFn((1..x+1).collect(), x),
+            Path::Id(x) => CloneableFinFn((1..x + 1).collect(), x),
             Path::Seq(xs) => xs.tail.into_iter().fold(xs.head, |acc, nxt| {
-                CloneableFinFn(acc.0.into_iter().map(|x| nxt.0[x-1]).collect(), nxt.1)
+                CloneableFinFn(acc.0.into_iter().map(|x| nxt.0[x - 1]).collect(), nxt.1)
             }),
         }
     }
@@ -181,10 +181,7 @@ impl PRO for AugSimplexCat {
         path.into_iter().fold(Default::default(), |acc, nxt| {
             let previous_cod = acc.1;
             let transposed_fn = nxt.into_iter().map(|i| i + previous_cod);
-            CloneableFinFn(
-                acc.0.into_iter().chain(transposed_fn).collect(),
-                previous_cod + nxt.1,
-            )
+            CloneableFinFn(acc.0.into_iter().chain(transposed_fn).collect(), previous_cod + nxt.1)
         })
     }
 }
@@ -200,7 +197,7 @@ mod tests {
         assert!(PRO::has_ob(&s, &3000));
 
         let f: CloneableFinFn = CloneableFinFn(vec![1, 3], 4);
-        let domf = PRO::dom(&s,&f);
+        let domf = PRO::dom(&s, &f);
         assert_eq!(domf, 2);
         let bad_f: CloneableFinFn = CloneableFinFn(vec![3, 1, 4], 4);
         assert!(PRO::has_mor(&s, &f.clone()));
@@ -211,13 +208,12 @@ mod tests {
         let expected = CloneableFinFn(vec![1, 3, 5, 7], 8);
         assert_eq!(expected, ff);
         assert_ne!(f.clone(), ff);
-        assert_eq!(PRO::dom(&s, &ff), s.prod_ob(vec![2,2]));
+        assert_eq!(PRO::dom(&s, &ff), s.prod_ob(vec![2, 2]));
 
         // horizontal composition
         let i2 = s.hcompose(Path::Id(2));
         let expected = CloneableFinFn(vec![1, 2], 2);
         assert_eq!(expected, i2);
         assert_eq!(s.hcompose(Path::Seq(nonempty![i2, f.clone()])), f)
-
     }
 }
