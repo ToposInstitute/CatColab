@@ -10,7 +10,6 @@ use wasm_bindgen::prelude::*;
 
 use catlog::dbl::model::FgDblModel;
 use catlog::dbl::model_diagram as diagram;
-use catlog::dbl::model_morphism::InvalidDblModelMorphism;
 use catlog::one::FgCategory;
 
 use super::model::{DblModel, DblModelBox, DiscreteDblModel, Mor, Ob};
@@ -178,7 +177,9 @@ impl DblModelDiagram {
 /// Result of validating a diagram in a model.
 #[derive(Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
-pub struct ModelDiagramValidationResult(pub JsResult<(), Vec<InvalidDblModelMorphism<Uuid, Uuid>>>);
+pub struct ModelDiagramValidationResult(
+    pub JsResult<(), Vec<diagram::InvalidDiscreteDblModelDiagram<Uuid>>>,
+);
 
 #[cfg(test)]
 mod tests {

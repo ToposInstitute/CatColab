@@ -16,21 +16,23 @@ TODO: Document in devs docs and link here.
 use std::hash::Hash;
 
 use derive_more::Into;
+use either::Either;
 use nonempty::NonEmpty;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+#[cfg(feature = "serde-wasm")]
+use tsify_next::{declare, Tsify};
+
+use super::model::{DiscreteDblModel, InvalidDiscreteDblModel};
+use super::model_morphism::*;
 use crate::one::FgCategory;
 use crate::validate;
 
-use super::model::DiscreteDblModel;
-use super::model_morphism::DblModelMorphism;
-use super::model_morphism::{DblModelMapping, DiscreteDblModelMapping, InvalidDblModelMorphism};
-
 /** A diagram in a model of a double theory.
 
-This struct owns its data, namely, the domain model and the model
-[mapping](DblModelMapping). The domain is assumed to be a valid model of a
-double theory. If that is in question, then the model should be validated
-*before* validating this object.
+This struct owns its data, namely, the domain of the diagram (a model) and the
+model [mapping](DblModelMapping) itself.
 */
 #[derive(Clone, Into)]
 #[into(owned, ref, ref_mut)]
@@ -51,9 +53,28 @@ where
     }
 }
 
+/// A failure of a diagram in a model to be valid.
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(tag = "tag", content = "err"))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
+pub enum InvalidDblModelDiagram<DomErr, MapErr> {
+    /// Domain of the diagram is invalid.
+    Dom(DomErr),
+
+    /// Mapping underlying the diagram is invalid.
+    Map(MapErr),
+}
+
 /// A diagram in a model of a discrete double theory.
 pub type DiscreteDblModelDiagram<DomId, CodId, Cat> =
     DblModelDiagram<DiscreteDblModelMapping<DomId, CodId>, DiscreteDblModel<DomId, Cat>>;
+
+/// A failure to be valid in a diagram in a model of a discrete double theory.
+#[cfg_attr(feature = "serde-wasm", declare)]
+pub type InvalidDiscreteDblModelDiagram<DomId> =
+    InvalidDblModelDiagram<InvalidDiscreteDblModel<DomId>, InvalidDblModelMorphism<DomId, DomId>>;
 
 impl<DomId, CodId, Cat> DiscreteDblModelDiagram<DomId, CodId, Cat>
 where
@@ -63,11 +84,14 @@ where
     Cat::Ob: Hash,
     Cat::Mor: Hash,
 {
-    /// Validates that the diagram is well-defined in the given model.
+    /** Validates that the diagram is well-defined in the given model.
+
+    Assumes that the model is valid. If it is not, this function may panic.
+     */
     pub fn validate_in(
         &self,
         model: &DiscreteDblModel<CodId, Cat>,
-    ) -> Result<(), NonEmpty<InvalidDblModelMorphism<DomId, DomId>>> {
+    ) -> Result<(), NonEmpty<InvalidDiscreteDblModelDiagram<DomId>>> {
         validate::wrap_errors(self.iter_invalid_in(model))
     }
 
@@ -75,9 +99,14 @@ where
     pub fn iter_invalid_in<'a>(
         &'a self,
         model: &'a DiscreteDblModel<CodId, Cat>,
-    ) -> impl Iterator<Item = InvalidDblModelMorphism<DomId, DomId>> + '_ {
-        let morphism = DblModelMorphism(&self.0, &self.1, model);
-        morphism.iter_invalid()
+    ) -> impl Iterator<Item = InvalidDiscreteDblModelDiagram<DomId>> + '_ {
+        let mut dom_errs = self.1.iter_invalid().peekable();
+        if dom_errs.peek().is_some() {
+            Either::Left(dom_errs.map(InvalidDblModelDiagram::Dom))
+        } else {
+            let morphism = DblModelMorphism(&self.0, &self.1, model);
+            Either::Right(morphism.iter_invalid().map(InvalidDblModelDiagram::Map))
+        }
     }
 }
 
