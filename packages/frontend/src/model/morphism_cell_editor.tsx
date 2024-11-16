@@ -42,7 +42,7 @@ export function MorphismCellEditor(props: {
     ];
     const arrowClass = () => arrowStyles[morTypeMeta()?.arrowStyle ?? "default"];
 
-    const morphismErrors = () => {
+    const errors = () => {
         const validated = liveModel.validatedModel();
         if (validated?.result.tag !== "Err") {
             return [];
@@ -63,9 +63,7 @@ export function MorphismCellEditor(props: {
                         });
                     }}
                     obType={domType()}
-                    invalid={morphismErrors().some(
-                        (err) => err.tag === "Dom" || err.tag === "DomType",
-                    )}
+                    invalid={errors().some((err) => err.tag === "Dom" || err.tag === "DomType")}
                     deleteForward={() => nameRef()?.focus()}
                     exitBackward={() => nameRef()?.focus()}
                     exitForward={() => codRef.focus()}
@@ -110,9 +108,7 @@ export function MorphismCellEditor(props: {
                         });
                     }}
                     obType={codType()}
-                    invalid={morphismErrors().some(
-                        (err) => err.tag === "Cod" || err.tag === "CodType",
-                    )}
+                    invalid={errors().some((err) => err.tag === "Cod" || err.tag === "CodType")}
                     deleteBackward={() => nameRef()?.focus()}
                     exitBackward={() => domRef.focus()}
                     exitForward={props.actions.activateBelow}

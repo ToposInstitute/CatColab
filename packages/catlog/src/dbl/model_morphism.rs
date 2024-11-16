@@ -404,12 +404,12 @@ pub enum InvalidDblModelMorphism<Ob, Mor> {
     #[error("Morphism `{0}` is not mapped to a morphism of the same type in the codomain")]
     MorType(Mor),
 
-    /// A morphism in the domain does not have dom preserved in codomain.
-    #[error("Morphism `{0}` domain not preserved in the codomain")]
+    /// Not functorial
+    #[error("Morphism `{0}` has domain not preserved by the mapping")]
     Dom(Mor),
 
-    /// A morphism in the domain does not have codom preserved in codomain
-    #[error("Morphism `{0}` codomain not preserved in the codomain")]
+    /// Not functorial
+    #[error("Morphism `{0}` has codomain not preserved by the mapping")]
     Cod(Mor),
 }
 

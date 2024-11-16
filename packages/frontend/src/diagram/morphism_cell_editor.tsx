@@ -31,6 +31,19 @@ export function DiagramMorphismCellEditor(props: {
     const domType = () => theory()?.theory.src(props.decl.morType);
     const codType = () => theory()?.theory.tgt(props.decl.morType);
 
+    const errors = () => {
+        const validated = liveDiagram.validatedDiagram();
+        if (validated?.result.tag !== "Err") {
+            return [];
+        }
+        return validated.result.content.filter((err) => err.err.content === props.decl.id);
+    };
+
+    const domInvalid = (): boolean =>
+        errors().some((err) => err.err.tag === "Dom" || err.err.tag === "DomType");
+    const codInvalid = (): boolean =>
+        errors().some((err) => err.err.tag === "Cod" || err.err.tag === "CodType");
+
     return (
         <div class="formal-judgment diagram-morphism-decl">
             <BasicObInput
@@ -43,6 +56,7 @@ export function DiagramMorphismCellEditor(props: {
                     });
                 }}
                 obType={domType()}
+                invalid={domInvalid()}
                 deleteForward={() => morRef()?.focus()}
                 exitBackward={() => morRef()?.focus()}
                 exitForward={() => codRef.focus()}
@@ -86,6 +100,7 @@ export function DiagramMorphismCellEditor(props: {
                     });
                 }}
                 obType={codType()}
+                invalid={codInvalid()}
                 deleteBackward={() => morRef()?.focus()}
                 exitBackward={() => domRef.focus()}
                 exitForward={props.actions.activateBelow}
