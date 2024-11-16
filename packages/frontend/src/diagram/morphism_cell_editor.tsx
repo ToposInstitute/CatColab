@@ -43,6 +43,10 @@ export function DiagramMorphismCellEditor(props: {
                     });
                 }}
                 obType={domType()}
+                deleteForward={() => morRef()?.focus()}
+                exitBackward={() => morRef()?.focus()}
+                exitForward={() => codRef.focus()}
+                exitRight={() => morRef()?.focus()}
                 onFocus={props.actions.hasFocused}
             />
             <div class={arrowStyles.arrowWithName}>
@@ -57,6 +61,14 @@ export function DiagramMorphismCellEditor(props: {
                         }}
                         morType={props.decl.morType}
                         placeholder={theory()?.modelMorTypeMeta(props.decl.morType)?.name}
+                        deleteBackward={props.actions.deleteBackward}
+                        deleteForward={props.actions.deleteForward}
+                        exitBackward={props.actions.activateAbove}
+                        exitForward={() => domRef.focus()}
+                        exitUp={props.actions.activateAbove}
+                        exitDown={props.actions.activateBelow}
+                        exitLeft={() => domRef.focus()}
+                        exitRight={() => codRef.focus()}
                         onFocus={props.actions.hasFocused}
                     />
                 </div>
@@ -74,6 +86,10 @@ export function DiagramMorphismCellEditor(props: {
                     });
                 }}
                 obType={codType()}
+                deleteBackward={() => morRef()?.focus()}
+                exitBackward={() => domRef.focus()}
+                exitForward={props.actions.activateBelow}
+                exitLeft={() => morRef()?.focus()}
                 onFocus={props.actions.hasFocused}
             />
         </div>
