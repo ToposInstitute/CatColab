@@ -18,7 +18,7 @@ derive_more = { version = "1", features = ["from", "into"] }
 either = "1"
 nalgebra = { version = "0.33", optional = true }
 nonempty = "0.10"
-ode_solvers = { git = "https://github.com/srenevey/ode-solvers.git", version = "0.4.0", optional = true }
+ode_solvers = { version = "0.5.0", optional = true }
 ref-cast = "1"
 serde = { version = "1", features = ["derive"], optional = true }
 thiserror = "1"
