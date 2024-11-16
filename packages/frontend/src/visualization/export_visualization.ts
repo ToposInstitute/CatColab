@@ -1,11 +1,8 @@
-/**
-Get a handle to SVG DOM element once Solid has constructed it (using the ref mechanism)
-Use XMLSerializer to write that DOM node to a stringhttps://statmodeling.stat.columbia.edu/
-Save that string as a file
- */
 import computedStyleToInlineStyle from "computed-style-to-inline-style";
 
-export function exportVisualizationSVG(visualization: HTMLDivElement) {
+/** Export an `<svg>` element with inlined styles.
+ */
+export function exportVisualizationSVG(visualization: SVGSVGElement) {
     computedStyleToInlineStyle(visualization, { recursive: true });
 
     // ref equivalent of get document element by ID
@@ -19,7 +16,7 @@ export function exportVisualizationSVG(visualization: HTMLDivElement) {
         source = source.replace(/^<svg/, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
     }
     // Add xml declaration
-    source = `<?xml·version="1.0"·standalone="no"?>\r\n${source}`;
+    source = `<?xml version="1.0" encoding="utf-8"?>\n${source}`;
 
     // Convert SVG source to URI data scheme
     const url = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(source)}`;
@@ -31,6 +28,4 @@ export function exportVisualizationSVG(visualization: HTMLDivElement) {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-
-    console.log("SVG file download initiated");
 }
