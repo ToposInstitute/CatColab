@@ -41,8 +41,8 @@ function SubmodelsAnalysis(
     } & ModelAnalysisProps<SubmodelsAnalysisContent>,
 ) {
     const submodels = () => {
-        const res = props.liveModel.validationResult();
-        return res?.tag === "validated" ? props.findSubmodels(res.model) : [];
+        const validated = props.liveModel.validatedModel();
+        return validated?.result.tag === "Ok" ? props.findSubmodels(validated.model) : [];
     };
 
     return (

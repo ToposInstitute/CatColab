@@ -321,16 +321,6 @@ where
         self.generators.set_tgt(e, v)
     }
 
-    /// Updates the domain of a morphism generator, setting or unsetting it.
-    pub fn update_dom(&mut self, e: E, v: Option<V>) -> Option<V> {
-        self.generators.update_src(e, v)
-    }
-
-    /// Updates the codomain of a morphism generator, setting or unsetting it.
-    pub fn update_cod(&mut self, e: E, v: Option<V>) -> Option<V> {
-        self.generators.update_tgt(e, v)
-    }
-
     /// Adds a path equation to the presentation.
     pub fn add_equation(&mut self, key: EqKey, eq: PathEq<V, E>) {
         self.equations.set(key, eq);

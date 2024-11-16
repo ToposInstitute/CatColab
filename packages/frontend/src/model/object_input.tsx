@@ -35,10 +35,8 @@ function BasicObInput(allProps: ObInputProps & IdInputOptions) {
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
 
-    const completions = (): Ob[] | undefined => {
-        const result = liveModel.validationResult();
-        return props.obType && result && result.model.objectsWithType(props.obType);
-    };
+    const completions = (): Ob[] | undefined =>
+        props.obType && liveModel.validatedModel()?.model.objectsWithType(props.obType);
 
     return (
         <ObIdInput completions={completions()} nameMap={liveModel.objectIndex()} {...otherProps} />
@@ -70,12 +68,12 @@ function TabulatedMorInput(allProps: ObInputProps & IdInputOptions) {
 
     const completions = (): Uuid[] | undefined => {
         const morType = tabulatedType();
-        const result = liveModel.validationResult();
-        if (!(morType && result)) {
+        if (!morType) {
             return undefined;
         }
-        return result.model
-            .morphismsWithType(morType)
+        return liveModel
+            .validatedModel()
+            ?.model.morphismsWithType(morType)
             .map((mor) =>
                 match(mor)
                     .with(

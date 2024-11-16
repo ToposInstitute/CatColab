@@ -1,9 +1,11 @@
 //! Wasm bindings for double theories.
 
-use all_the_same::all_the_same;
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::Arc;
+
+use all_the_same::all_the_same;
+use derive_more::From;
 use ustr::Ustr;
 
 use serde::{Deserialize, Serialize};
@@ -11,7 +13,7 @@ use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
 use catlog::dbl::theory;
-use catlog::dbl::theory::{DblTheory as BaseDblTheory, TabMorType, TabObType};
+use catlog::dbl::theory::{DblTheory as _, TabMorType, TabObType};
 use catlog::one::fin_category::*;
 
 /// Object type in a double theory.
@@ -130,6 +132,7 @@ underlying double theory, but `wasm-bindgen` does not support
 [generics](https://github.com/rustwasm/wasm-bindgen/issues/3309). Instead, we
 explicitly enumerate the supported kinds of double theories in this enum.
  */
+#[derive(From)]
 pub enum DblTheoryBox {
     Discrete(Arc<theory::UstrDiscreteDblTheory>),
     DiscreteTab(Arc<theory::UstrDiscreteTabTheory>),
@@ -139,20 +142,6 @@ pub enum DblTheoryBox {
  */
 #[wasm_bindgen]
 pub struct DblTheory(#[wasm_bindgen(skip)] pub DblTheoryBox);
-
-/// Converts from a discrete double theory.
-impl From<Arc<theory::UstrDiscreteDblTheory>> for DblTheory {
-    fn from(theory: Arc<theory::UstrDiscreteDblTheory>) -> Self {
-        Self(DblTheoryBox::Discrete(theory))
-    }
-}
-
-/// Converts from a discrete tabulator theory.
-impl From<Arc<theory::UstrDiscreteTabTheory>> for DblTheory {
-    fn from(theory: Arc<theory::UstrDiscreteTabTheory>) -> Self {
-        Self(DblTheoryBox::DiscreteTab(theory))
-    }
-}
 
 #[wasm_bindgen]
 impl DblTheory {

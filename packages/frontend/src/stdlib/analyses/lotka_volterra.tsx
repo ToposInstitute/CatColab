@@ -115,9 +115,9 @@ export function LotkaVolterra(
 
     const simulationResult = createMemo<ODEResult | undefined>(
         () => {
-            const result = props.liveModel.validationResult();
-            if (result?.tag === "validated") {
-                return props.simulate(result.model, props.content);
+            const validated = props.liveModel.validatedModel();
+            if (validated?.result.tag === "Ok") {
+                return props.simulate(validated.model, props.content);
             }
         },
         undefined,

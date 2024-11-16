@@ -1,8 +1,9 @@
-import { createEffect, useContext } from "solid-js";
+import { createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { InlineInput } from "../components";
 import type { CellActions } from "../notebook";
+import { focusInputWhen } from "../util/focus";
 import { LiveModelContext } from "./context";
 import { obClasses } from "./object_cell_editor";
 import { ObInput } from "./object_input";
@@ -19,16 +20,10 @@ export function MorphismCellEditor(props: {
     isActive: boolean;
     actions: CellActions;
 }) {
-    let nameRef!: HTMLInputElement;
+    const [nameRef, setNameRef] = createSignal<HTMLInputElement>();
     let domRef!: HTMLInputElement;
     let codRef!: HTMLInputElement;
-
-    createEffect(() => {
-        if (props.isActive) {
-            nameRef.focus();
-            nameRef.selectionStart = nameRef.selectionEnd = nameRef.value.length;
-        }
-    });
+    focusInputWhen(nameRef, () => props.isActive);
 
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
@@ -47,12 +42,12 @@ export function MorphismCellEditor(props: {
     ];
     const arrowClass = () => arrowStyles[morTypeMeta()?.arrowStyle ?? "default"];
 
-    const morphismErrors = () => {
-        const result = liveModel.validationResult();
-        if (result?.tag !== "errors") {
+    const errors = () => {
+        const validated = liveModel.validatedModel();
+        if (validated?.result.tag !== "Err") {
             return [];
         }
-        return result.errors.get(props.morphism.id) ?? [];
+        return validated.result.content.filter((err) => err.content === props.morphism.id);
     };
 
     return (
@@ -68,20 +63,18 @@ export function MorphismCellEditor(props: {
                         });
                     }}
                     obType={domType()}
-                    invalid={morphismErrors().some(
-                        (err) => err.tag === "Dom" || err.tag === "DomType",
-                    )}
-                    deleteForward={() => nameRef.focus()}
-                    exitBackward={() => nameRef.focus()}
+                    invalid={errors().some((err) => err.tag === "Dom" || err.tag === "DomType")}
+                    deleteForward={() => nameRef()?.focus()}
+                    exitBackward={() => nameRef()?.focus()}
                     exitForward={() => codRef.focus()}
-                    exitRight={() => nameRef.focus()}
+                    exitRight={() => nameRef()?.focus()}
                     onFocus={props.actions.hasFocused}
                 />
             </div>
             <div class={arrowStyles.arrowWithName}>
                 <div class={nameClasses().join(" ")}>
                     <InlineInput
-                        ref={nameRef}
+                        ref={setNameRef}
                         placeholder={morTypeMeta()?.preferUnnamed ? undefined : "Unnamed"}
                         text={props.morphism.name}
                         setText={(text) => {
@@ -115,13 +108,11 @@ export function MorphismCellEditor(props: {
                         });
                     }}
                     obType={codType()}
-                    invalid={morphismErrors().some(
-                        (err) => err.tag === "Cod" || err.tag === "CodType",
-                    )}
-                    deleteBackward={() => nameRef.focus()}
+                    invalid={errors().some((err) => err.tag === "Cod" || err.tag === "CodType")}
+                    deleteBackward={() => nameRef()?.focus()}
                     exitBackward={() => domRef.focus()}
                     exitForward={props.actions.activateBelow}
-                    exitLeft={() => nameRef.focus()}
+                    exitLeft={() => nameRef()?.focus()}
                     onFocus={props.actions.hasFocused}
                 />
             </div>

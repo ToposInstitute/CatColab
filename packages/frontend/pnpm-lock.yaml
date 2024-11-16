@@ -53,6 +53,9 @@ importers:
       '@solid-primitives/active-element':
         specifier: ^2.0.20
         version: 2.0.20(solid-js@1.9.2)
+      '@solid-primitives/autofocus':
+        specifier: ^0.0.111
+        version: 0.0.111(solid-js@1.9.2)
       '@solid-primitives/context':
         specifier: ^0.2.3
         version: 0.2.3(solid-js@1.9.2)
@@ -1091,6 +1094,11 @@ packages:
 
   '@solid-primitives/active-element@2.0.20':
     resolution: {integrity: sha512-5EEJZ7F9DwzHMqXVTsgfE9egzeN9PhUgEkb3+RCC3FPEiLqLUc6HN+OlEjPqBxWEzsB1H/q7CfYDAJUab4N1EA==}
+    peerDependencies:
+      solid-js: ^1.6.12
+
+  '@solid-primitives/autofocus@0.0.111':
+    resolution: {integrity: sha512-WQUCcBzUmLdmHeyN0Z1lH75IN1IGIbvOMTcBEmuCY5DXeahRJm3riTGqVj+XOA4G+NHCMt7wPOJoYOAuwUov/Q==}
     peerDependencies:
       solid-js: ^1.6.12
 
@@ -3828,6 +3836,11 @@ snapshots:
   '@solid-primitives/active-element@2.0.20(solid-js@1.9.2)':
     dependencies:
       '@solid-primitives/event-listener': 2.3.3(solid-js@1.9.2)
+      '@solid-primitives/utils': 6.2.3(solid-js@1.9.2)
+      solid-js: 1.9.2
+
+  '@solid-primitives/autofocus@0.0.111(solid-js@1.9.2)':
+    dependencies:
       '@solid-primitives/utils': 6.2.3(solid-js@1.9.2)
       solid-js: 1.9.2
 

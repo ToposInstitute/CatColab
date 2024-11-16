@@ -29,7 +29,7 @@ impl ThCategory {
 
     #[wasm_bindgen]
     pub fn theory(&self) -> DblTheory {
-        self.0.clone().into()
+        DblTheory(self.0.clone().into())
     }
 }
 
@@ -46,7 +46,7 @@ impl ThSchema {
 
     #[wasm_bindgen]
     pub fn theory(&self) -> DblTheory {
-        self.0.clone().into()
+        DblTheory(self.0.clone().into())
     }
 }
 
@@ -63,7 +63,7 @@ impl ThSignedCategory {
 
     #[wasm_bindgen]
     pub fn theory(&self) -> DblTheory {
-        self.0.clone().into()
+        DblTheory(self.0.clone().into())
     }
 
     /// Find positive feedback loops in a model.
@@ -87,7 +87,9 @@ impl ThSignedCategory {
         model: &DblModel,
         data: LotkaVolterraModelData,
     ) -> Result<ODEResult, String> {
-        let model: &DiscreteDblModel<_, _> = model.try_into()?;
+        let model: &DiscreteDblModel<_, _> = (&model.0)
+            .try_into()
+            .map_err(|_| "Lotka-Volterra simulation expects a discrete double model")?;
         Ok(ODEResult(
             analyses::ode::LotkaVolterraAnalysis::new(ustr("Object"))
                 .add_positive(FinMor::Id(ustr("Object")))
@@ -112,7 +114,7 @@ impl ThNullableSignedCategory {
 
     #[wasm_bindgen]
     pub fn theory(&self) -> DblTheory {
-        self.0.clone().into()
+        DblTheory(self.0.clone().into())
     }
 }
 
@@ -129,7 +131,7 @@ impl ThCategoryLinks {
 
     #[wasm_bindgen]
     pub fn theory(&self) -> DblTheory {
-        self.0.clone().into()
+        DblTheory(self.0.clone().into())
     }
 }
 

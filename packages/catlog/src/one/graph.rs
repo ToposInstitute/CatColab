@@ -169,16 +169,6 @@ pub trait ColumnarGraphMut: ColumnarGraph {
     fn set_tgt(&mut self, e: Self::E, v: Self::V) -> Option<Self::V> {
         self.tgt_map_mut().set(e, v)
     }
-
-    /// Updates the source of an edge, setting or unsetting it.
-    fn update_src(&mut self, e: Self::E, v: Option<Self::V>) -> Option<Self::V> {
-        self.src_map_mut().update(e, v)
-    }
-
-    /// Updates the source of an edge, setting or unsetting it.
-    fn update_tgt(&mut self, e: Self::E, v: Option<Self::V>) -> Option<Self::V> {
-        self.tgt_map_mut().update(e, v)
-    }
 }
 
 /** Derive implementation of a graph from a columnar graph.

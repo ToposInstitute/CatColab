@@ -307,6 +307,7 @@ dependencies = [
  "all-the-same",
  "catlog",
  "console_error_panic_hook",
+ "derive_more",
  "getrandom",
  "js-sys",
  "nonempty",

@@ -222,14 +222,14 @@ where
         self.category.make_mor_generator(f)
     }
 
-    /// Updates the domain of a morphism, setting or unsetting it.
-    pub fn update_dom(&mut self, f: Id, x: Option<Id>) -> Option<Id> {
-        self.category.update_dom(f, x)
+    /// Sets the domain of a morphism.
+    pub fn set_dom(&mut self, f: Id, x: Id) -> Option<Id> {
+        self.category.set_dom(f, x)
     }
 
     /// Updates the codomain of a morphism, setting or unsetting it.
-    pub fn update_cod(&mut self, f: Id, x: Option<Id>) -> Option<Id> {
-        self.category.update_cod(f, x)
+    pub fn set_cod(&mut self, f: Id, x: Id) -> Option<Id> {
+        self.category.set_cod(f, x)
     }
 
     /// Iterates over failures to be well-defined model.
@@ -413,7 +413,7 @@ where
 TODO: Missing case that equation has different composite morphism types on left
 and right hand sides.
 */
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(tag = "tag", content = "content"))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]

@@ -1,21 +1,23 @@
 //! Wasm bindings for models of double theories.
 
 use all_the_same::all_the_same;
+use derive_more::{From, TryInto};
 use uuid::Uuid;
 
 use serde::{Deserialize, Serialize};
 use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
-use super::theory::*;
 use catlog::dbl::model::{self as dbl_model, FgDblModel, InvalidDiscreteDblModel};
 use catlog::one::fin_category::UstrFinCategory;
-use catlog::one::Path;
-use catlog::one::{Category as _, FgCategory};
-use catlog::validate::{self, Validate};
+use catlog::one::{Category as _, FgCategory, Path};
+use catlog::validate::Validate;
+
+use super::result::JsResult;
+use super::theory::{DblTheory, DblTheoryBox, MorType, ObType};
 
 /// An object in a model of a double theory.
-#[derive(Debug, Serialize, Deserialize, Tsify)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
 #[serde(tag = "tag", content = "content")]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum Ob {
@@ -27,7 +29,7 @@ pub enum Ob {
 }
 
 /// A morphism in a model of a double theory.
-#[derive(Debug, Serialize, Deserialize, Tsify)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
 #[serde(tag = "tag", content = "content")]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum Mor {
@@ -113,34 +115,17 @@ pub struct MorDecl {
     pub cod: Option<Ob>,
 }
 
-type UuidDiscreteDblModel = dbl_model::DiscreteDblModel<Uuid, UstrFinCategory>;
+pub(crate) type DiscreteDblModel = dbl_model::DiscreteDblModel<Uuid, UstrFinCategory>;
 
 /** A box containing a model of a double theory of any kind.
 
 See [`DblTheoryBox`] for motivation.
  */
+#[derive(From, TryInto)]
+#[try_into(ref)]
 pub enum DblModelBox {
-    Discrete(UuidDiscreteDblModel),
+    Discrete(DiscreteDblModel),
     // DiscreteTab(()), // TODO: Not yet implemented.
-}
-
-/// Converts from a model of a discrete double theory.
-impl From<UuidDiscreteDblModel> for DblModel {
-    fn from(model: UuidDiscreteDblModel) -> Self {
-        DblModel(DblModelBox::Discrete(model))
-    }
-}
-
-/// Converts into a model of a dicrete double theory.
-impl<'a> TryFrom<&'a DblModel> for &'a UuidDiscreteDblModel {
-    type Error = String;
-
-    fn try_from(model: &'a DblModel) -> Result<Self, Self::Error> {
-        match &model.0 {
-            DblModelBox::Discrete(model) => Ok(model),
-            //_ => Err("Cannot cast into a model of a discrete double theory".into()),
-        }
-    }
 }
 
 /// Wasm bindings for a model of a double theory.
@@ -153,9 +138,7 @@ impl DblModel {
     #[wasm_bindgen(constructor)]
     pub fn new(theory: &DblTheory) -> Self {
         Self(match &theory.0 {
-            DblTheoryBox::Discrete(th) => {
-                DblModelBox::Discrete(UuidDiscreteDblModel::new(th.clone()))
-            }
+            DblTheoryBox::Discrete(th) => DiscreteDblModel::new(th.clone()).into(),
             DblTheoryBox::DiscreteTab(_) => panic!("Not implemented"),
         })
     }
@@ -178,10 +161,12 @@ impl DblModel {
             DblModelBox::[Discrete](model) => {
                 let mor_type = decl.mor_type.try_into()?;
                 let res = model.make_mor(decl.id, mor_type);
-                let dom = decl.dom.map(|ob| ob.try_into()).transpose()?;
-                let cod = decl.cod.map(|ob| ob.try_into()).transpose()?;
-                model.update_dom(decl.id, dom);
-                model.update_cod(decl.id, cod);
+                if let Some(dom) = decl.dom.map(|ob| ob.try_into()).transpose()? {
+                    model.set_dom(decl.id, dom);
+                }
+                if let Some(cod) = decl.cod.map(|ob| ob.try_into()).transpose()? {
+                    model.set_cod(decl.id, cod);
+                }
                 Ok(res)
             }
         })
@@ -249,48 +234,68 @@ impl DblModel {
 
     /// Validates that the model is well defined.
     #[wasm_bindgen]
-    pub fn validate(&self) -> Vec<InvalidDiscreteDblModel<Uuid>> {
+    pub fn validate(&self) -> ModelValidationResult {
         all_the_same!(match &self.0 {
-            DblModelBox::[Discrete](model) => validate::unwrap_errors(model.validate())
+            DblModelBox::[Discrete](model) => {
+                let res = model.validate();
+                ModelValidationResult(res.map_err(|errs| errs.into()).into())
+            }
         })
     }
 }
 
+/// Result of validating a model of a double theory.
+#[derive(Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct ModelValidationResult(pub JsResult<(), Vec<InvalidDiscreteDblModel<Uuid>>>);
+
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use crate::theories::*;
 
-    #[test]
-    fn model_schema() {
-        let th = ThSchema::new().theory();
-        let mut model = DblModel::new(&th);
-        let (x, y, a) = (Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7());
+    pub(crate) fn sch_walking_attr(th: &DblTheory, ids: [Uuid; 3]) -> DblModel {
+        let mut model = DblModel::new(th);
+        let [attr, entity, attr_type] = ids;
         assert!(model
             .add_ob(ObDecl {
-                id: x,
+                id: entity,
                 ob_type: ObType::Basic("Entity".into()),
             })
             .is_ok());
         assert!(model
             .add_ob(ObDecl {
-                id: y,
+                id: attr_type,
                 ob_type: ObType::Basic("AttrType".into()),
             })
             .is_ok());
         assert!(model
             .add_mor(MorDecl {
-                id: a,
+                id: attr,
                 mor_type: MorType::Basic("Attr".into()),
-                dom: Some(Ob::Basic(x)),
-                cod: Some(Ob::Basic(y)),
+                dom: Some(Ob::Basic(entity)),
+                cod: Some(Ob::Basic(attr_type)),
             })
             .is_ok());
+        model
+    }
+
+    #[test]
+    fn model_schema() {
+        let th = ThSchema::new().theory();
+        let [a, x, y] = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
+        let model = sch_walking_attr(&th, [a, x, y]);
+
         assert_eq!(model.has_ob(Ob::Basic(x)), Ok(true));
         assert_eq!(model.has_mor(Mor::Basic(a)), Ok(true));
         assert_eq!(model.objects().len(), 2);
         assert_eq!(model.morphisms().len(), 1);
-        assert!(model.validate().is_empty());
+        assert_eq!(model.objects_with_type(ObType::Basic("Entity".into())), Ok(vec![Ob::Basic(x)]));
+        assert_eq!(
+            model.morphisms_with_type(MorType::Basic("Attr".into())),
+            Ok(vec![Mor::Basic(a)])
+        );
+        assert_eq!(model.validate().0, JsResult::Ok(()));
 
         let mut model = DblModel::new(&th);
         assert!(model
@@ -301,6 +306,9 @@ mod tests {
                 cod: Some(Ob::Basic(y)),
             })
             .is_ok());
-        assert_eq!(model.validate().len(), 2);
+        let JsResult::Err(errs) = model.validate().0 else {
+            panic!("Model should not validate")
+        };
+        assert_eq!(errs.len(), 2);
     }
 }

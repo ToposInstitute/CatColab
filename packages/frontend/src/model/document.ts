@@ -1,12 +1,12 @@
 import { type Accessor, createMemo } from "solid-js";
 
-import type { Uuid } from "catlog-wasm";
+import type { DblModel, ModelValidationResult, Uuid } from "catlog-wasm";
 import type { LiveDoc } from "../api";
 import { type Notebook, newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
 import type { Theory, TheoryId } from "../theory";
 import { type IndexedMap, indexMap } from "../util/indexing";
-import { type ModelJudgment, type ModelValidationResult, validateModel } from "./types";
+import { type ModelJudgment, catlogModel } from "./types";
 
 /** A document defining a model. */
 export type ModelDocument = {
@@ -52,8 +52,14 @@ export type LiveModelDocument = {
     /** A memo of the double theory that the model is of, if it is defined. */
     theory: Accessor<Theory | undefined>;
 
-    /** A memo of the result of validation.*/
-    validationResult: Accessor<ModelValidationResult | undefined>;
+    /** A memo of the model constructed and validated in the core. */
+    validatedModel: Accessor<ValidatedModel | undefined>;
+};
+
+/** A validated model as represented in `catlog`. */
+export type ValidatedModel = {
+    model: DblModel;
+    result: ModelValidationResult;
 };
 
 export function enlivenModelDocument(
@@ -95,10 +101,20 @@ export function enlivenModelDocument(
         if (doc.theory !== undefined) return theories.get(doc.theory);
     });
 
-    const validationResult = createMemo<ModelValidationResult | undefined>(() => {
-        const th = theory();
-        return th ? validateModel(th.theory, formalJudgments()) : undefined;
-    });
+    const validatedModel = createMemo<ValidatedModel | undefined>(
+        () => {
+            const th = theory();
+            if (th?.theory.kind !== "Discrete") {
+                // TODO: Currently only implemented for discrete theories.
+                return undefined;
+            }
+            const model = catlogModel(th.theory, formalJudgments());
+            const result = model.validate();
+            return { model, result };
+        },
+        undefined,
+        { equals: false },
+    );
 
     return {
         refId,
@@ -107,6 +123,6 @@ export function enlivenModelDocument(
         objectIndex,
         morphismIndex,
         theory,
-        validationResult,
+        validatedModel,
     };
 }

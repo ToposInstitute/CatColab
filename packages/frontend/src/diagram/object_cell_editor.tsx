@@ -1,9 +1,10 @@
-import { createEffect, useContext } from "solid-js";
+import { createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { InlineInput } from "../components";
 import { ObInput } from "../model/object_input";
 import type { CellActions } from "../notebook";
+import { focusInputWhen } from "../util/focus";
 import { LiveDiagramContext } from "./context";
 import type { DiagramObjectDecl } from "./types";
 
@@ -17,15 +18,9 @@ export function DiagramObjectCellEditor(props: {
     isActive: boolean;
     actions: CellActions;
 }) {
-    let nameRef!: HTMLInputElement;
+    const [nameRef, setNameRef] = createSignal<HTMLInputElement>();
     let obRef!: HTMLInputElement;
-
-    createEffect(() => {
-        if (props.isActive) {
-            nameRef.focus();
-            nameRef.selectionStart = nameRef.selectionEnd = nameRef.value.length;
-        }
-    });
+    focusInputWhen(nameRef, () => props.isActive);
 
     const liveDiagram = useContext(LiveDiagramContext);
     invariant(liveDiagram, "Live diagram should be provided as context");
@@ -34,7 +29,7 @@ export function DiagramObjectCellEditor(props: {
     return (
         <div class="formal-judgment diagram-object-decl">
             <InlineInput
-                ref={nameRef}
+                ref={setNameRef}
                 text={props.decl.name}
                 setText={(text) => {
                     props.modifyDecl((decl) => {
@@ -62,7 +57,7 @@ export function DiagramObjectCellEditor(props: {
                 placeholder={theory()?.modelObTypeMeta(props.decl.obType)?.name}
                 exitUp={props.actions.activateAbove}
                 exitDown={props.actions.activateBelow}
-                exitLeft={() => nameRef.focus()}
+                exitLeft={() => nameRef()?.focus()}
                 onFocus={props.actions.hasFocused}
             />
         </div>
