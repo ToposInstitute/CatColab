@@ -6,6 +6,7 @@ These tools are applied visualize models in the `analysis` module.
  */
 
 export * from "./types";
+export * from "./export";
 export * from "./graph_svg";
 export * from "./graphviz";
 export * from "./graphviz_svg";

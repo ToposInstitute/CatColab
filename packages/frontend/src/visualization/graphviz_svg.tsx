@@ -2,7 +2,7 @@ import type * as Viz from "@viz-js/viz";
 import { type JSX, Suspense, createResource, createSignal } from "solid-js";
 
 import { IconButton } from "../components";
-import { exportVisualizationSVG } from "./export_visualization";
+import { downloadSvg } from "./export";
 import { GraphSVG } from "./graph_svg";
 import { loadViz, parseGraphvizJSON, vizRenderJSON0 } from "./graphviz";
 import type * as GraphvizJSON from "./graphviz_json";
@@ -32,8 +32,8 @@ export function GraphvizSVG(props: {
     const [svgRef, setSvgRef] = createSignal<SVGSVGElement>();
 
     const exportSvg = () => {
-        const el = svgRef();
-        el && exportVisualizationSVG(el);
+        const svg = svgRef();
+        svg && downloadSvg(svg, "visualization.svg");
     };
 
     return (
@@ -48,7 +48,7 @@ export function GraphvizSVG(props: {
     );
 }
 
-export function GraphvizOutputSVG(props: {
+function GraphvizOutputSVG(props: {
     graph?: GraphvizJSON.Graph;
     ref?: SVGRefProp;
 }) {

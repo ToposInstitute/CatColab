@@ -6,6 +6,6 @@ Each arrow style has support to be rendered in HTML/CSS and SVG.
  */
 export type ArrowStyle = "default" | "double" | "flat" | "plus" | "minus" | "indeterminate";
 
-/** Type of prop to forward ref to an `<svg>` element.
+/** Prop for forwarding a ref to an `<svg>` element.
  */
 export type SVGRefProp = SVGSVGElement | Setter<SVGSVGElement | undefined>;
