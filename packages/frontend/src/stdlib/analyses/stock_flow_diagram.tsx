@@ -1,5 +1,5 @@
 import type * as Viz from "@viz-js/viz";
-import { type Component, For, Show, createResource } from "solid-js";
+import { type Component, For, Show, createResource, createSignal } from "solid-js";
 import { P, match } from "ts-pattern";
 
 import type { ModelAnalysisProps, ModelGraphContent } from "../../analysis";
@@ -8,14 +8,18 @@ import type { ModelAnalysisMeta, Theory } from "../../theory";
 import { uniqueIndexArray } from "../../util/indexing";
 import {
     type ArrowMarker,
+    DownloadSVGButton,
     EdgeSVG,
     type GraphLayout,
     NodeSVG,
+    type SVGRefProp,
     arrowMarkerSVG,
     loadViz,
     vizLayoutGraph,
 } from "../../visualization";
 import { type GraphvizAttributes, graphvizEngine, modelToGraphviz } from "./model_graph";
+
+import baseStyles from "./base_styles.module.css";
 
 /** Configure a visualization of a stock flow diagram. */
 export function configureStockFlowDiagram(options: {
@@ -39,10 +43,14 @@ export function configureStockFlowDiagram(options: {
 /** Visualize a stock flow diagram.
  */
 export function StockFlowDiagram(props: ModelAnalysisProps<ModelGraphContent>) {
+    const [svgRef, setSvgRef] = createSignal<SVGSVGElement>();
+
     return (
         <div class="model-graph">
-            <div class="panel">
-                <span class="title">Diagram</span>
+            <div class={baseStyles.panel}>
+                <span class={baseStyles.title}>Diagram</span>
+                <span class={baseStyles.filler} />
+                <DownloadSVGButton svg={svgRef()} tooltip="Export the diagram as SVG" size={16} />
             </div>
             <Show when={props.liveModel.theory()}>
                 {(theory) => (
@@ -52,6 +60,7 @@ export function StockFlowDiagram(props: ModelAnalysisProps<ModelGraphContent>) {
                         options={{
                             engine: graphvizEngine(props.content.layout),
                         }}
+                        ref={setSvgRef}
                     />
                 )}
             </Show>
@@ -69,6 +78,7 @@ export function StockFlowGraphviz(props: {
     theory: Theory;
     attributes?: GraphvizAttributes;
     options?: Viz.RenderOptions;
+    ref?: SVGRefProp;
 }) {
     const [vizResource] = createResource(loadViz);
 
@@ -84,12 +94,13 @@ export function StockFlowGraphviz(props: {
         );
     };
 
-    return <StockFlowSVG model={props.model} layout={vizLayout()} />;
+    return <StockFlowSVG model={props.model} layout={vizLayout()} ref={props.ref} />;
 }
 
 function StockFlowSVG(props: {
     model: Array<ModelJudgment>;
     layout?: GraphLayout.Graph<string>;
+    ref?: SVGRefProp;
 }) {
     // Path element used only for computation. Not added to the DOM.
     const pathElem = document.createElementNS("http://www.w3.org/2000/svg", "path");
@@ -131,7 +142,12 @@ function StockFlowSVG(props: {
     };
 
     return (
-        <svg class="graph stock-flow" width={props.layout?.width} height={props.layout?.height}>
+        <svg
+            ref={props.ref}
+            class="graph stock-flow"
+            width={props.layout?.width}
+            height={props.layout?.height}
+        >
             <defs>
                 <FlowMarker />
                 <LinkMarker />

@@ -1,12 +1,14 @@
 import type * as Viz from "@viz-js/viz";
-import { Show } from "solid-js";
+import { Show, createSignal } from "solid-js";
 
 import type { ModelAnalysisProps, ModelGraphContent } from "../../analysis";
+
 import type { ModelJudgment } from "../../model";
 import type { ModelAnalysisMeta, ModelTypeMeta, Theory } from "../../theory";
-import { GraphvizSVG } from "../../visualization";
+import { DownloadSVGButton, GraphvizSVG, type SVGRefProp } from "../../visualization";
 
 import textStyles from "../text_styles.module.css";
+import baseStyles from "./base_styles.module.css";
 
 /** Configure a graph visualization for use with models of a double theory. */
 export function configureModelGraph(options: {
@@ -42,10 +44,20 @@ export function ModelGraph(
         title?: string;
     } & ModelAnalysisProps<ModelGraphContent>,
 ) {
+    const [svgRef, setSvgRef] = createSignal<SVGSVGElement>();
+
+    const title = () => props.title ?? "Graph";
+
     return (
         <div class="model-graph">
-            <div class="panel">
-                <span class="title">{props.title}</span>
+            <div class={baseStyles.panel}>
+                <span class={baseStyles.title}>{title()}</span>
+                <span class={baseStyles.filler} />
+                <DownloadSVGButton
+                    svg={svgRef()}
+                    tooltip={`Export the ${title().toLowerCase()} as SVG`}
+                    size={16}
+                />
             </div>
             <Show when={props.liveModel.theory()}>
                 {(theory) => (
@@ -55,6 +67,7 @@ export function ModelGraph(
                         options={{
                             engine: graphvizEngine(props.content.layout),
                         }}
+                        ref={setSvgRef}
                     />
                 )}
             </Show>
@@ -79,11 +92,13 @@ export function ModelGraphviz(props: {
     theory: Theory;
     attributes?: GraphvizAttributes;
     options?: Viz.RenderOptions;
+    ref?: SVGRefProp;
 }) {
     return (
         <GraphvizSVG
             graph={modelToGraphviz(props.model, props.theory, props.attributes)}
             options={props.options}
+            ref={props.ref}
         />
     );
 }

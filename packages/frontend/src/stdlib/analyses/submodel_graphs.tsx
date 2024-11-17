@@ -10,6 +10,7 @@ import type { ModelJudgment } from "../../model";
 import type { ModelAnalysisMeta, Theory } from "../../theory";
 import { type GraphvizAttributes, ModelGraphviz } from "./model_graph";
 
+import baseStyles from "./base_styles.module.css";
 import "./submodel_graphs.css";
 
 /** Configure a submodel analysis for use with a double theory. */
@@ -112,21 +113,23 @@ export function SubmodelsGraphviz(props: {
 
     return (
         <div class="submodel-graphs">
-            <div class="panel">
-                <span class="title">{props.title}</span>
-                <IconButton onClick={decIndex} disabled={index() <= 0}>
-                    <ChevronLeft />
-                </IconButton>
-                <Show when={props.submodels.length}>
-                    {(length) => (
-                        <span>
-                            {index() + 1} / {length()}
-                        </span>
-                    )}
-                </Show>
-                <IconButton onClick={incIndex} disabled={index() >= props.submodels.length - 1}>
-                    <ChevronRight />
-                </IconButton>
+            <div class={baseStyles.panel}>
+                <span class={baseStyles.title}>{props.title}</span>
+                <div class="index-buttons">
+                    <IconButton onClick={decIndex} disabled={index() <= 0}>
+                        <ChevronLeft />
+                    </IconButton>
+                    <Show when={props.submodels.length}>
+                        {(length) => (
+                            <span>
+                                {index() + 1} / {length()}
+                            </span>
+                        )}
+                    </Show>
+                    <IconButton onClick={incIndex} disabled={index() >= props.submodels.length - 1}>
+                        <ChevronRight />
+                    </IconButton>
+                </div>
             </div>
             <Show when={props.theory}>
                 {(theory) => (

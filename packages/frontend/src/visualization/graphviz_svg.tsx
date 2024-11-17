@@ -4,6 +4,7 @@ import { type JSX, Suspense, createResource } from "solid-js";
 import { GraphSVG } from "./graph_svg";
 import { loadViz, parseGraphvizJSON, vizRenderJSON0 } from "./graphviz";
 import type * as GraphvizJSON from "./graphviz_json";
+import type { SVGRefProp } from "./types";
 
 /** Visualize a graph using Graphviz and SVG.
 
@@ -14,6 +15,7 @@ export function GraphvizSVG(props: {
     graph?: Viz.Graph;
     options?: Viz.RenderOptions;
     fallback?: JSX.Element;
+    ref?: SVGRefProp;
 }) {
     const [vizResource] = createResource(loadViz);
 
@@ -25,7 +27,7 @@ export function GraphvizSVG(props: {
     return (
         <div class="graphviz-container">
             <Suspense fallback={props.fallback}>
-                <GraphvizOutputSVG graph={render()} />
+                <GraphvizOutputSVG graph={render()} ref={props.ref} />
             </Suspense>
         </div>
     );
@@ -33,10 +35,11 @@ export function GraphvizSVG(props: {
 
 function GraphvizOutputSVG(props: {
     graph?: GraphvizJSON.Graph;
+    ref?: SVGRefProp;
 }) {
     return (
         <div class="graphviz">
-            <GraphSVG graph={props.graph && parseGraphvizJSON(props.graph)} />
+            <GraphSVG graph={props.graph && parseGraphvizJSON(props.graph)} ref={props.ref} />
         </div>
     );
 }

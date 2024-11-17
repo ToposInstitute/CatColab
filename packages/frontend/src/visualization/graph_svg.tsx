@@ -3,7 +3,7 @@ import { type Component, For, Index, Match, Show, Switch } from "solid-js";
 import { Dynamic } from "solid-js/web";
 
 import type * as GraphLayout from "./graph_layout";
-import type { ArrowStyle } from "./types";
+import type { ArrowStyle, SVGRefProp } from "./types";
 
 import "./graph_svg.css";
 
@@ -11,6 +11,7 @@ import "./graph_svg.css";
  */
 export function GraphSVG<Id>(props: {
     graph?: GraphLayout.Graph<Id>;
+    ref?: SVGRefProp;
 }) {
     const edgeMarkers = () => {
         const markers = new Set<ArrowMarker>();
@@ -21,7 +22,7 @@ export function GraphSVG<Id>(props: {
     };
 
     return (
-        <svg class="graph" width={props.graph?.width} height={props.graph?.height}>
+        <svg ref={props.ref} class="graph" width={props.graph?.width} height={props.graph?.height}>
             <defs>
                 <Index each={edgeMarkers()}>
                     {(marker) => <Dynamic component={arrowMarkerSVG[marker()]} />}
