@@ -5,7 +5,7 @@ import download from "js-file-download";
 
 Returns the source of an SVG document.
  */
-export function exportSvg(svg: SVGSVGElement): string {
+export function exportSVG(svg: SVGSVGElement): string {
     computedStyleToInlineStyle(svg, { recursive: true });
 
     const serializer = new XMLSerializer();
@@ -27,7 +27,7 @@ export function exportSvg(svg: SVGSVGElement): string {
 
 /** Export and then download an `<svg>` element.
  */
-export function downloadSvg(svg: SVGSVGElement, filename: string) {
-    const source = exportSvg(svg);
+export function downloadSVG(svg: SVGSVGElement, filename: string) {
+    const source = exportSVG(svg);
     return download(source, filename, "image/svg+xml");
 }

@@ -1,0 +1,13 @@
+.panel {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+
+    & .filler {
+        flex: 1;
+    }
+
+    & .title {
+        font-weight: 450;
+    }
+}
