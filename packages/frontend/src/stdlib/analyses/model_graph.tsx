@@ -2,12 +2,10 @@ import type * as Viz from "@viz-js/viz";
 import { Show, createSignal } from "solid-js";
 
 import type { ModelAnalysisProps, ModelGraphContent } from "../../analysis";
-import { IconButton } from "../../components";
+
 import type { ModelJudgment } from "../../model";
 import type { ModelAnalysisMeta, ModelTypeMeta, Theory } from "../../theory";
-import { GraphvizSVG, type SVGRefProp, downloadSVG } from "../../visualization";
-
-import Download from "lucide-solid/icons/download";
+import { DownloadSVGButton, GraphvizSVG, type SVGRefProp } from "../../visualization";
 
 import textStyles from "../text_styles.module.css";
 import baseStyles from "./base_styles.module.css";
@@ -48,11 +46,6 @@ export function ModelGraph(
 ) {
     const [svgRef, setSvgRef] = createSignal<SVGSVGElement>();
 
-    const download = () => {
-        const svg = svgRef();
-        svg && downloadSVG(svg, "diagram.svg");
-    };
-
     const title = () => props.title ?? "Graph";
 
     return (
@@ -60,13 +53,11 @@ export function ModelGraph(
             <div class={baseStyles.panel}>
                 <span class={baseStyles.title}>{title()}</span>
                 <span class={baseStyles.filler} />
-                <IconButton
-                    onClick={download}
-                    disabled={!svgRef()}
-                    tooltip={`Download the ${title().toLowerCase()}`}
-                >
-                    <Download size={16} />
-                </IconButton>
+                <DownloadSVGButton
+                    svg={svgRef()}
+                    tooltip={`Export the ${title().toLowerCase()} as SVG`}
+                    size={16}
+                />
             </div>
             <Show when={props.liveModel.theory()}>
                 {(theory) => (

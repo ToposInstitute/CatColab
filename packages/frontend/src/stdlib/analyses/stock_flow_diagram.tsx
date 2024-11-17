@@ -3,24 +3,21 @@ import { type Component, For, Show, createResource, createSignal } from "solid-j
 import { P, match } from "ts-pattern";
 
 import type { ModelAnalysisProps, ModelGraphContent } from "../../analysis";
-import { IconButton } from "../../components";
 import type { ModelJudgment } from "../../model";
 import type { ModelAnalysisMeta, Theory } from "../../theory";
 import { uniqueIndexArray } from "../../util/indexing";
 import {
     type ArrowMarker,
+    DownloadSVGButton,
     EdgeSVG,
     type GraphLayout,
     NodeSVG,
     type SVGRefProp,
     arrowMarkerSVG,
-    downloadSVG,
     loadViz,
     vizLayoutGraph,
 } from "../../visualization";
 import { type GraphvizAttributes, graphvizEngine, modelToGraphviz } from "./model_graph";
-
-import Download from "lucide-solid/icons/download";
 
 import baseStyles from "./base_styles.module.css";
 
@@ -48,19 +45,12 @@ export function configureStockFlowDiagram(options: {
 export function StockFlowDiagram(props: ModelAnalysisProps<ModelGraphContent>) {
     const [svgRef, setSvgRef] = createSignal<SVGSVGElement>();
 
-    const download = () => {
-        const svg = svgRef();
-        svg && downloadSVG(svg, "diagram.svg");
-    };
-
     return (
         <div class="model-graph">
             <div class={baseStyles.panel}>
                 <span class={baseStyles.title}>Diagram</span>
                 <span class={baseStyles.filler} />
-                <IconButton onClick={download} disabled={!svgRef()} tooltip="Download the diagram">
-                    <Download size={16} />
-                </IconButton>
+                <DownloadSVGButton svg={svgRef()} tooltip="Export the diagram as SVG" size={16} />
             </div>
             <Show when={props.liveModel.theory()}>
                 {(theory) => (
