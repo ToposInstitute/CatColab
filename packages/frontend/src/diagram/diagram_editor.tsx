@@ -1,9 +1,10 @@
 import { MultiProvider } from "@solid-primitives/context";
-import { useParams } from "@solidjs/router";
+import { A, useParams } from "@solidjs/router";
 import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { RepoContext, RpcContext, getLiveDoc } from "../api";
+import { InlineInput } from "../components";
 import { LiveModelContext, type ModelDocument, enlivenModelDocument } from "../model";
 import {
     type CellConstructor,
@@ -25,6 +26,8 @@ import {
     newDiagramMorphismDecl,
     newDiagramObjectDecl,
 } from "./types";
+
+import "./diagram_editor.css";
 
 export default function DiagramPage() {
     const params = useParams();
@@ -51,16 +54,47 @@ export default function DiagramPage() {
         <Show when={liveDiagram()}>
             {(liveDiagram) => (
                 <div class="growable-container">
-                    <div class="notebook-container">
-                        <DiagramNotebookEditor liveDiagram={liveDiagram()} />
-                    </div>
+                    <DiagramPane liveDiagram={liveDiagram()} />
                 </div>
             )}
         </Show>
     );
 }
 
-/** Editor for a notebook defining a diagram in a model.
+/** Pane containing a diagram notebook plus a header for the title and model. */
+export function DiagramPane(props: {
+    liveDiagram: LiveDiagramDocument;
+}) {
+    const liveDoc = () => props.liveDiagram.liveDoc;
+    const liveModel = () => props.liveDiagram.liveModel;
+
+    return (
+        <div class="notebook-container">
+            <div class="diagram-head">
+                <div class="title">
+                    <InlineInput
+                        text={liveDoc().doc.name}
+                        setText={(text) => {
+                            liveDoc().changeDoc((doc) => {
+                                doc.name = text;
+                            });
+                        }}
+                        placeholder="Untitled"
+                    />
+                </div>
+                <div class="instance-of">
+                    <div class="name">{liveModel().theory()?.instanceOfName}</div>
+                    <div class="model">
+                        <A href={`/model/${liveModel().refId}`}>{liveModel().liveDoc.doc.name}</A>
+                    </div>
+                </div>
+            </div>
+            <DiagramNotebookEditor liveDiagram={props.liveDiagram} />
+        </div>
+    );
+}
+
+/** Notebook editor for a diagram in a model.
  */
 export function DiagramNotebookEditor(props: {
     liveDiagram: LiveDiagramDocument;
@@ -93,7 +127,7 @@ export function DiagramNotebookEditor(props: {
 
 /** Editor for a notebook cell in a diagram notebook.
  */
-export function DiagramCellEditor(props: FormalCellEditorProps<DiagramJudgment>) {
+function DiagramCellEditor(props: FormalCellEditorProps<DiagramJudgment>) {
     return (
         <Switch>
             <Match when={props.content.tag === "object"}>

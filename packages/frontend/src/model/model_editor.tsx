@@ -101,7 +101,7 @@ export function ModelDocumentEditor(props: {
             <BrandedToolbar>
                 <HelpButton />
                 <PermissionsButton permissions={props.liveModel.liveDoc.permissions} />
-                <Show when={props.liveModel.theory()?.instanceTypes.length}>
+                <Show when={props.liveModel.theory()?.supportsInstances}>
                     <IconButton onClick={createDiagram} tooltip="Create a diagram in this model">
                         <Network />
                     </IconButton>
@@ -115,23 +115,24 @@ export function ModelDocumentEditor(props: {
     );
 }
 
+/** Pane containing a model notebook plus a header with the title and theory.
+ */
 export function ModelPane(props: {
     liveModel: LiveModelDocument;
 }) {
     const theories = useContext(TheoryLibraryContext);
     invariant(theories, "Library of theories should be provided as context");
 
-    const liveModel = () => props.liveModel;
-    const doc = () => props.liveModel.liveDoc.doc;
-    const changeDoc = (f: (doc: ModelDocument) => void) => props.liveModel.liveDoc.changeDoc(f);
+    const liveDoc = () => props.liveModel.liveDoc;
+
     return (
         <div class="notebook-container">
             <div class="model-head">
-                <div class="model-title">
+                <div class="title">
                     <InlineInput
-                        text={doc().name}
+                        text={liveDoc().doc.name}
                         setText={(text) => {
-                            changeDoc((doc) => {
+                            liveDoc().changeDoc((doc) => {
                                 doc.name = text;
                             });
                         }}
@@ -141,34 +142,46 @@ export function ModelPane(props: {
                 <TheorySelectorDialog
                     theory={props.liveModel.theory()}
                     setTheory={(id) => {
-                        changeDoc((model) => {
+                        liveDoc().changeDoc((model) => {
                             model.theory = id;
                         });
                     }}
                     theories={theories}
-                    disabled={doc().notebook.cells.some((cell) => cell.tag === "formal")}
+                    disabled={liveDoc().doc.notebook.cells.some((cell) => cell.tag === "formal")}
                 />
             </div>
-            <LiveModelContext.Provider value={props.liveModel}>
-                <NotebookEditor
-                    handle={liveModel().liveDoc.docHandle}
-                    path={["notebook"]}
-                    notebook={doc().notebook}
-                    changeNotebook={(f) => {
-                        changeDoc((doc) => f(doc.notebook));
-                    }}
-                    formalCellEditor={ModelCellEditor}
-                    cellConstructors={modelCellConstructors(liveModel().theory()?.modelTypes ?? [])}
-                    cellLabel={judgmentLabel}
-                />
-            </LiveModelContext.Provider>
+            <ModelNotebookEditor liveModel={props.liveModel} />
         </div>
     );
 }
 
-/** Editor for a cell in a model of a double theory.
+/** Notebook editor for a model of a double theory.
  */
-export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
+export function ModelNotebookEditor(props: {
+    liveModel: LiveModelDocument;
+}) {
+    const liveDoc = () => props.liveModel.liveDoc;
+
+    return (
+        <LiveModelContext.Provider value={props.liveModel}>
+            <NotebookEditor
+                handle={liveDoc().docHandle}
+                path={["notebook"]}
+                notebook={liveDoc().doc.notebook}
+                changeNotebook={(f) => {
+                    liveDoc().changeDoc((doc) => f(doc.notebook));
+                }}
+                formalCellEditor={ModelCellEditor}
+                cellConstructors={modelCellConstructors(props.liveModel.theory()?.modelTypes ?? [])}
+                cellLabel={judgmentLabel}
+            />
+        </LiveModelContext.Provider>
+    );
+}
+
+/** Editor for a notebook cell in a model notebook.
+ */
+function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
     return (
         <Switch>
             <Match when={props.content.tag === "object"}>

@@ -15,17 +15,27 @@ export class Theory {
     /** Unique identifier of theory. */
     readonly id: TheoryId;
 
-    /** Human-readable name for models of theory. */
+    /** Underlying double theory in the core. */
+    readonly theory: DblTheory;
+
+    /** Human-readable name for models of theory.
+
+    In the frontend, theories are named after their models, so this name doubles
+    as a name for the theory itself.
+     */
     readonly name: string;
 
     /** Short description of models of theory. */
     readonly description?: string;
 
-    /** Underlying double theory in the core. */
-    readonly theory: DblTheory;
-
     /** Whether models of the double theory are constrained to be free. */
     readonly onlyFreeModels!: boolean;
+
+    /** Human-readable name for instances of models of theory.
+
+    Defaults to "Instance of".
+     */
+    readonly instanceOfName: string;
 
     private readonly modelTypeMeta: TypeMetadata<ModelObTypeMeta, ModelMorTypeMeta>;
     private readonly instanceTypeMeta: TypeMetadata<InstanceObTypeMeta, InstanceMorTypeMeta>;
@@ -33,26 +43,31 @@ export class Theory {
 
     constructor(props: {
         id: string;
+        theory: DblTheory;
         name: string;
         description?: string;
-        theory: DblTheory;
         modelTypes?: ModelTypeMeta[];
-        instanceTypes?: InstanceTypeMeta[];
         modelAnalyses?: ModelAnalysisMeta[];
         onlyFreeModels?: boolean;
+        instanceOfName?: string;
+        instanceTypes?: InstanceTypeMeta[];
     }) {
+        // Theory.
         this.id = props.id;
-        this.name = props.name;
-        this.description = props.description;
         this.theory = props.theory;
 
+        // Models.
+        this.name = props.name;
+        this.description = props.description;
         this.modelTypeMeta = new TypeMetadata<ModelObTypeMeta, ModelMorTypeMeta>(props.modelTypes);
+        this.modelAnalysisMap = uniqueIndexArray(props.modelAnalyses ?? [], (meta) => meta.id);
+        this.onlyFreeModels = props.onlyFreeModels ?? false;
+
+        // Instances.
+        this.instanceOfName = props.instanceOfName ?? "Instance of";
         this.instanceTypeMeta = new TypeMetadata<InstanceObTypeMeta, InstanceMorTypeMeta>(
             props.instanceTypes,
         );
-
-        this.modelAnalysisMap = uniqueIndexArray(props.modelAnalyses ?? [], (meta) => meta.id);
-        this.onlyFreeModels = props.onlyFreeModels ?? false;
     }
 
     /** Metadata for types in the theory, as used in models.
@@ -73,10 +88,15 @@ export class Theory {
         return this.modelTypeMeta.morTypeMeta(typ);
     }
 
+    /** Is the theory configured to support instances of its model? */
+    get supportsInstances(): boolean {
+        return this.instanceTypes.length > 0;
+    }
+
     /** Metadata for types in the theory, as used in instances of models.
 
     In an instance editor, the types are listed in this order. If the list is
-    empty, then instances will not be considered for models of this theory.
+    empty, then instances will not be supported for models of this theory.
      */
     get instanceTypes(): Array<InstanceTypeMeta> {
         return this.instanceTypeMeta.types;
@@ -103,8 +123,7 @@ export class Theory {
     }
 }
 
-/** Unique identifier of a theory configured for the frontend.
- */
+/** Unique identifier of a theory configured for the frontend. */
 export type TheoryId = string;
 
 /** Helper class to index and lookup metadata for object and morphism types. */
