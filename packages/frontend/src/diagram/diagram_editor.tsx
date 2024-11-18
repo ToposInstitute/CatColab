@@ -13,8 +13,10 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
+import { BrandedToolbar, HelpButton } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { InstanceTypeMeta } from "../theory";
+import { MaybePermissionsButton } from "../user";
 import { LiveDiagramContext } from "./context";
 import { type DiagramDocument, type LiveDiagramDocument, enlivenDiagramDocument } from "./document";
 import { DiagramMorphismCellEditor } from "./morphism_cell_editor";
@@ -50,14 +52,22 @@ export default function DiagramPage() {
         return enlivenDiagramDocument(refId, liveDoc, liveModel);
     });
 
+    return <DiagramDocumentEditor liveDiagram={liveDiagram()} />;
+}
+
+export function DiagramDocumentEditor(props: {
+    liveDiagram?: LiveDiagramDocument;
+}) {
     return (
-        <Show when={liveDiagram()}>
-            {(liveDiagram) => (
-                <div class="growable-container">
-                    <DiagramPane liveDiagram={liveDiagram()} />
-                </div>
-            )}
-        </Show>
+        <div class="growable-container">
+            <BrandedToolbar>
+                <HelpButton />
+                <MaybePermissionsButton permissions={props.liveDiagram?.liveDoc.permissions} />
+            </BrandedToolbar>
+            <Show when={props.liveDiagram}>
+                {(liveDiagram) => <DiagramPane liveDiagram={liveDiagram()} />}
+            </Show>
+        </div>
     );
 }
 

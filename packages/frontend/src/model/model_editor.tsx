@@ -17,7 +17,7 @@ import {
 import { BrandedToolbar, HelpButton } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
-import { PermissionsButton } from "../user";
+import { MaybePermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
 import { type LiveModelDocument, type ModelDocument, enlivenModelDocument } from "./document";
 import { MorphismCellEditor } from "./morphism_cell_editor";
@@ -51,23 +51,19 @@ export default function ModelPage() {
         return enlivenModelDocument(refId, liveDoc, theories);
     });
 
-    return (
-        <Show when={liveModel()}>
-            {(liveModel) => <ModelDocumentEditor liveModel={liveModel()} />}
-        </Show>
-    );
+    return <ModelDocumentEditor liveModel={liveModel()} />;
 }
 
 export function ModelDocumentEditor(props: {
-    liveModel: LiveModelDocument;
+    liveModel?: LiveModelDocument;
 }) {
     const rpc = useContext(RpcContext);
     invariant(rpc, "Missing context for model document editor");
 
     const navigate = useNavigate();
 
-    const createDiagram = async () => {
-        const init = newDiagramDocument(props.liveModel.refId);
+    const createDiagram = async (modelRefId: string) => {
+        const init = newDiagramDocument(modelRefId);
 
         const result = await rpc.new_ref.mutate({
             content: init as JsonValue,
@@ -81,8 +77,8 @@ export function ModelDocumentEditor(props: {
         navigate(`/diagram/${newRef}`);
     };
 
-    const createAnalysis = async () => {
-        const init = newAnalysisDocument(props.liveModel.refId);
+    const createAnalysis = async (modelRefId: string) => {
+        const init = newAnalysisDocument(modelRefId);
 
         const result = await rpc.new_ref.mutate({
             content: init as JsonValue,
@@ -100,17 +96,25 @@ export function ModelDocumentEditor(props: {
         <div class="growable-container">
             <BrandedToolbar>
                 <HelpButton />
-                <PermissionsButton permissions={props.liveModel.liveDoc.permissions} />
-                <Show when={props.liveModel.theory()?.supportsInstances}>
-                    <IconButton onClick={createDiagram} tooltip="Create a diagram in this model">
+                <MaybePermissionsButton permissions={props.liveModel?.liveDoc.permissions} />
+                <Show when={props.liveModel?.theory()?.supportsInstances}>
+                    <IconButton
+                        onClick={() => props.liveModel && createDiagram(props.liveModel.refId)}
+                        tooltip="Create a diagram in this model"
+                    >
                         <Network />
                     </IconButton>
                 </Show>
-                <IconButton onClick={createAnalysis} tooltip="Analyze this model">
+                <IconButton
+                    onClick={() => props.liveModel && createAnalysis(props.liveModel.refId)}
+                    tooltip="Analyze this model"
+                >
                     <ChartSpline />
                 </IconButton>
             </BrandedToolbar>
-            <ModelPane liveModel={props.liveModel} />
+            <Show when={props.liveModel}>
+                {(liveModel) => <ModelPane liveModel={liveModel()} />}
+            </Show>
         </div>
     );
 }
