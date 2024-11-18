@@ -3,36 +3,44 @@ import type { Component } from "solid-js";
 import type * as catlog from "catlog-wasm";
 import type { LiveModelDocument } from "../model";
 
-/** Analysis of a model of a double theory.
+/** An analysis of a formal object.
 
-Such an analysis could be a visualization, a simulation, or a translation of the
-model into another format. Analyses can have their own content or state going
-beyond the data of the model, such as numerical parameters for a simulation.
+An analysis is currently a catch-all concept for an output derived from a model,
+an instance, or other formal objects in the system. An analysis could be a
+visualization, a simulation, or a translation of the formal object into another
+format. Analyses can have their own content or internal state, such as numerical
+parameters fo a simulation.
  */
-export type ModelAnalysis = {
+export type Analysis<T> = {
     /** Identifier of the analysis, unique relative to the theory. */
     id: string;
 
     /** Content associated with the analysis. */
-    content: ModelAnalysisContent;
+    content: T;
 };
 
-/** Component that renders an analysis of a model. */
-export type ModelAnalysisComponent<T extends ModelAnalysisContent> = Component<
-    ModelAnalysisProps<T>
->;
+/** An analysis of a model of a double theory. */
+export type ModelAnalysis = Analysis<ModelAnalysisContent>;
 
-/** Props passed to a model analysis component. */
-export type ModelAnalysisProps<T> = {
-    /** The model being analyzed. */
-    liveModel: LiveModelDocument;
-
+/** Props passed to any analysis component. */
+export type AnalysisProps<T> = {
     /** Content associated with the analysis itself. */
     content: T;
 
     /** Update content associated with the analysis. */
     changeContent: (f: (content: T) => void) => void;
 };
+
+/** Props passed to a model analysis component. */
+export type ModelAnalysisProps<T> = AnalysisProps<T> & {
+    /** The model being analyzed. */
+    liveModel: LiveModelDocument;
+};
+
+/** Component that renders an analysis of a model. */
+export type ModelAnalysisComponent<T extends ModelAnalysisContent> = Component<
+    ModelAnalysisProps<T>
+>;
 
 /** Content associated with an analysis of a model.
 

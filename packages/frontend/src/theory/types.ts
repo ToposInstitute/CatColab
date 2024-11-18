@@ -210,9 +210,9 @@ export type ModelMorTypeMeta = BaseTypeMeta &
 
         /** Whether morphisms of this type are typically unnamed.
 
-    By default, morphisms (like objects) have names but for certain morphism
-    types in certain domains, it is common to leave them unnamed.
-     */
+        By default, morphisms (like objects) have names but for certain morphism
+        types in certain domains, it is common to leave them unnamed.
+        */
         preferUnnamed?: boolean;
     };
 
@@ -225,10 +225,8 @@ export type InstanceObTypeMeta = BaseTypeMeta & HasObTypeMeta;
 /** Metadata for a morphism type as used in instances. */
 export type InstanceMorTypeMeta = BaseTypeMeta & HasMorTypeMeta;
 
-/** Specifies an analysis of model with descriptive metadata.
- */
-// biome-ignore lint/suspicious/noExplicitAny: content type is data dependent.
-export type ModelAnalysisMeta<T extends ModelAnalysisContent = any> = {
+/** Specifies an analysis with descriptive metadata. */
+export type AnalysisMeta<T> = {
     /** Identifier of analysis, unique relative to the theory. */
     id: string;
 
@@ -238,9 +236,13 @@ export type ModelAnalysisMeta<T extends ModelAnalysisContent = any> = {
     /** Short description of analysis. */
     description?: string;
 
-    /** Component that renders the analysis. */
-    component: ModelAnalysisComponent<T>;
-
     /** Default content created when the analysis is added. */
     initialContent: () => T;
+};
+
+/** Specifies a model analysis with descriptive metadata. */
+// biome-ignore lint/suspicious/noExplicitAny: content type is data dependent.
+export type ModelAnalysisMeta<T extends ModelAnalysisContent = any> = AnalysisMeta<T> & {
+    /** Component that renders the analysis. */
+    component: ModelAnalysisComponent<T>;
 };

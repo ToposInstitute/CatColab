@@ -3,7 +3,7 @@ import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { JsonValue } from "catcolab-api";
-import { newAnalysisDocument } from "../analysis/document";
+import { newModelAnalysisDocument } from "../analysis/document";
 import { RepoContext, RpcContext, getLiveDoc } from "../api";
 import { IconButton, InlineInput } from "../components";
 import { newDiagramDocument } from "../diagram";
@@ -78,7 +78,7 @@ export function ModelDocumentEditor(props: {
     };
 
     const createAnalysis = async (modelRefId: string) => {
-        const init = newAnalysisDocument(modelRefId);
+        const init = newModelAnalysisDocument(modelRefId);
 
         const result = await rpc.new_ref.mutate({
             content: init as JsonValue,

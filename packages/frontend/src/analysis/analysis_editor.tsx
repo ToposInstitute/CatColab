@@ -16,9 +16,9 @@ import {
 } from "../notebook";
 import { BrandedToolbar, HelpButton } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
-import type { ModelAnalysisMeta } from "../theory";
-import type { AnalysisDocument, LiveAnalysisDocument } from "./document";
-import type { ModelAnalysis } from "./types";
+import type { AnalysisMeta } from "../theory";
+import type { LiveModelAnalysisDocument, ModelAnalysisDocument } from "./document";
+import type { Analysis, ModelAnalysis } from "./types";
 
 import PanelRight from "lucide-solid/icons/panel-right";
 import PanelRightClose from "lucide-solid/icons/panel-right-close";
@@ -33,13 +33,13 @@ export default function AnalysisPage() {
     const theories = useContext(TheoryLibraryContext);
     invariant(rpc && repo && theories, "Missing context for analysis page");
 
-    const [liveAnalysis] = createResource<LiveAnalysisDocument>(async () => {
-        const liveDoc = await getLiveDoc<AnalysisDocument>(rpc, repo, refId);
+    const [liveAnalysis] = createResource<LiveModelAnalysisDocument>(async () => {
+        const liveDoc = await getLiveDoc<ModelAnalysisDocument>(rpc, repo, refId);
         const { doc } = liveDoc;
         invariant(doc.type === "analysis", () => `Expected analysis, got type: ${doc.type}`);
 
-        const liveModelDoc = await getLiveDoc<ModelDocument>(rpc, repo, doc.modelRef.refId);
-        const liveModel = enlivenModelDocument(doc.modelRef.refId, liveModelDoc, theories);
+        const liveModelDoc = await getLiveDoc<ModelDocument>(rpc, repo, doc.analysisOf.refId);
+        const liveModel = enlivenModelDocument(doc.analysisOf.refId, liveModelDoc, theories);
 
         return { refId, liveDoc, liveModel };
     });
@@ -54,7 +54,7 @@ export default function AnalysisPage() {
 /** Notebook editor for analyses of models of double theories.
  */
 export function AnalysisPane(props: {
-    liveAnalysis: LiveAnalysisDocument;
+    liveAnalysis: LiveModelAnalysisDocument;
 }) {
     const liveDoc = () => props.liveAnalysis.liveDoc;
     return (
@@ -65,7 +65,7 @@ export function AnalysisPane(props: {
                 notebook={liveDoc().doc.notebook}
                 changeNotebook={(f) => liveDoc().changeDoc((doc) => f(doc.notebook))}
                 formalCellEditor={ModelAnalysisCellEditor}
-                cellConstructors={modelAnalysisCellConstructors(
+                cellConstructors={analysisCellConstructors(
                     props.liveAnalysis.liveModel.theory()?.modelAnalyses ?? [],
                 )}
                 noShortcuts={true}
@@ -94,9 +94,7 @@ function ModelAnalysisCellEditor(props: FormalCellEditorProps<ModelAnalysis>) {
     );
 }
 
-function modelAnalysisCellConstructors(
-    analyses: ModelAnalysisMeta[],
-): CellConstructor<ModelAnalysis>[] {
+function analysisCellConstructors<T>(analyses: AnalysisMeta<T>[]): CellConstructor<Analysis<T>>[] {
     return analyses.map((analysis) => {
         const { id, name, description, initialContent } = analysis;
         return {
@@ -117,7 +115,7 @@ The editor includes a notebook for the model itself plus another pane for
 performing analysis of the model.
  */
 export function AnalysisDocumentEditor(props: {
-    liveAnalysis: LiveAnalysisDocument;
+    liveAnalysis: LiveModelAnalysisDocument;
 }) {
     const rpc = useContext(RpcContext);
     invariant(rpc, "Must provide RPC context");
