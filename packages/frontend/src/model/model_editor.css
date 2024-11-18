@@ -7,4 +7,9 @@
     & .title {
         font-size: var(--h1-font-size);
     }
+
+    & .theory-selector-button {
+        font-size: var(--h4-font-size);
+        max-width: 25%;
+    }
 }

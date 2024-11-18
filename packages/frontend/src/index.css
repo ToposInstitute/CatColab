@@ -3,11 +3,13 @@
     --mono-font: Roboto Mono, monospace;
 
     --main-color: black;
+    --link-color: dimgray;
     --topos-color: #53b6b2;
 
     --h1-font-size: 3em;
     --h2-font-size: 2em;
     --h3-font-size: 1.5em;
+    --h4-font-size: 1.3em;
 
     color: var(--main-color);
     font-family: var(--main-font);
@@ -31,8 +33,22 @@ body,
 }
 
 a {
-    color: #007481;
-    text-decoration: none;
+    color: var(--link-color);
+    text-decoration: underline;
+}
+
+.link-button {
+    border: none;
+    background-color: transparent;
+    color: var(--link-color);
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+
+    &:disabled {
+        text-decoration: none;
+        cursor: auto;
+    }
 }
 
 h1,
@@ -52,6 +68,9 @@ h2 {
 }
 h3 {
     font-size: var(--h3-font-size);
+}
+h4 {
+    font-size: var(--h4-font-size);
 }
 
 .popup {

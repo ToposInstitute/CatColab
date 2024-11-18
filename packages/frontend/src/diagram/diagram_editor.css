@@ -7,4 +7,8 @@
     & .title {
         font-size: var(--h1-font-size);
     }
+
+    & .instance-of {
+        font-size: var(--h4-font-size);
+    }
 }

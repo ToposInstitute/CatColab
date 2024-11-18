@@ -21,7 +21,7 @@ export function TheorySelectorDialog(
 
     return (
         <Dialog open={theorySelectorOpen()} onOpenChange={setTheorySelectorOpen}>
-            <Dialog.Trigger class="theory-selector-button" disabled={props.disabled}>
+            <Dialog.Trigger class="theory-selector-button link-button" disabled={props.disabled}>
                 <Show
                     when={props.theory}
                     fallback={<span class="placeholder">Choose a logic</span>}
@@ -63,7 +63,7 @@ export function TheorySelector(props: TheorySelectorProps) {
             <For each={groupedTheories()}>
                 {([group, theories]) => (
                     <div class="group">
-                        <h4 class="group-name">{group}</h4>
+                        <div class="group-name">{group}</div>
                         <For each={theories}>
                             {(meta) => (
                                 <div class="theory">
