@@ -3,6 +3,11 @@
     margin: 0 auto;
     padding-bottom: 10ex;
 
+    & a {
+        color: #007481;
+        text-decoration: none;
+    }
+
     & h1 {
         margin: 0.5em 0;
     }

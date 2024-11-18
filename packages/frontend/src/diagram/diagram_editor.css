@@ -1,4 +1,4 @@
-.model-head {
+.diagram-head {
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -8,8 +8,7 @@
         font-size: var(--h1-font-size);
     }
 
-    & .theory-selector-button {
+    & .instance-of {
         font-size: var(--h4-font-size);
-        max-width: 25%;
     }
 }

@@ -468,6 +468,7 @@ stdTheories.add(
                     shortcut: ["A"],
                 },
             ],
+            instanceOfName: "Equations in",
             instanceTypes: [
                 {
                     tag: "ObType",

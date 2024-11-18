@@ -1,6 +1,6 @@
 import { getAuth, signOut } from "firebase/auth";
 import { useAuth, useFirebaseApp } from "solid-firebase";
-import { type ComponentProps, Match, Switch, createSignal } from "solid-js";
+import { type ComponentProps, Match, Show, Switch, createSignal } from "solid-js";
 
 import type { PermissionLevel, Permissions } from "catcolab-api";
 import { Dialog, IconButton } from "../components";
@@ -31,6 +31,25 @@ export function PermissionsButton(props: {
                 <PrivatePermissionsButton permissions={props.permissions} />
             </Match>
         </Switch>
+    );
+}
+
+/** Toolbar button for the document's permission, if available.
+
+Suitable for use while the document is being loaded.
+ */
+export function MaybePermissionsButton(props: {
+    permissions?: Permissions;
+}) {
+    const fallback = () => (
+        <IconButton disabled>
+            <Lock />
+        </IconButton>
+    );
+    return (
+        <Show when={props.permissions} fallback={fallback()}>
+            {(permissions) => <PermissionsButton permissions={permissions()} />}
+        </Show>
     );
 }
 

@@ -17,7 +17,7 @@ import {
 import { BrandedToolbar, HelpButton } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
-import { PermissionsButton } from "../user";
+import { MaybePermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
 import { type LiveModelDocument, type ModelDocument, enlivenModelDocument } from "./document";
 import { MorphismCellEditor } from "./morphism_cell_editor";
@@ -51,23 +51,19 @@ export default function ModelPage() {
         return enlivenModelDocument(refId, liveDoc, theories);
     });
 
-    return (
-        <Show when={liveModel()}>
-            {(liveModel) => <ModelDocumentEditor liveModel={liveModel()} />}
-        </Show>
-    );
+    return <ModelDocumentEditor liveModel={liveModel()} />;
 }
 
 export function ModelDocumentEditor(props: {
-    liveModel: LiveModelDocument;
+    liveModel?: LiveModelDocument;
 }) {
     const rpc = useContext(RpcContext);
     invariant(rpc, "Missing context for model document editor");
 
     const navigate = useNavigate();
 
-    const createDiagram = async () => {
-        const init = newDiagramDocument(props.liveModel.refId);
+    const createDiagram = async (modelRefId: string) => {
+        const init = newDiagramDocument(modelRefId);
 
         const result = await rpc.new_ref.mutate({
             content: init as JsonValue,
@@ -81,8 +77,8 @@ export function ModelDocumentEditor(props: {
         navigate(`/diagram/${newRef}`);
     };
 
-    const createAnalysis = async () => {
-        const init = newAnalysisDocument(props.liveModel.refId);
+    const createAnalysis = async (modelRefId: string) => {
+        const init = newAnalysisDocument(modelRefId);
 
         const result = await rpc.new_ref.mutate({
             content: init as JsonValue,
@@ -100,38 +96,47 @@ export function ModelDocumentEditor(props: {
         <div class="growable-container">
             <BrandedToolbar>
                 <HelpButton />
-                <PermissionsButton permissions={props.liveModel.liveDoc.permissions} />
-                <Show when={props.liveModel.theory()?.instanceTypes.length}>
-                    <IconButton onClick={createDiagram} tooltip="Create a diagram in this model">
+                <MaybePermissionsButton permissions={props.liveModel?.liveDoc.permissions} />
+                <Show when={props.liveModel?.theory()?.supportsInstances}>
+                    <IconButton
+                        onClick={() => props.liveModel && createDiagram(props.liveModel.refId)}
+                        tooltip="Create a diagram in this model"
+                    >
                         <Network />
                     </IconButton>
                 </Show>
-                <IconButton onClick={createAnalysis} tooltip="Analyze this model">
+                <IconButton
+                    onClick={() => props.liveModel && createAnalysis(props.liveModel.refId)}
+                    tooltip="Analyze this model"
+                >
                     <ChartSpline />
                 </IconButton>
             </BrandedToolbar>
-            <ModelPane liveModel={props.liveModel} />
+            <Show when={props.liveModel}>
+                {(liveModel) => <ModelPane liveModel={liveModel()} />}
+            </Show>
         </div>
     );
 }
 
+/** Pane containing a model notebook plus a header with the title and theory.
+ */
 export function ModelPane(props: {
     liveModel: LiveModelDocument;
 }) {
     const theories = useContext(TheoryLibraryContext);
     invariant(theories, "Library of theories should be provided as context");
 
-    const liveModel = () => props.liveModel;
-    const doc = () => props.liveModel.liveDoc.doc;
-    const changeDoc = (f: (doc: ModelDocument) => void) => props.liveModel.liveDoc.changeDoc(f);
+    const liveDoc = () => props.liveModel.liveDoc;
+
     return (
         <div class="notebook-container">
             <div class="model-head">
-                <div class="model-title">
+                <div class="title">
                     <InlineInput
-                        text={doc().name}
+                        text={liveDoc().doc.name}
                         setText={(text) => {
-                            changeDoc((doc) => {
+                            liveDoc().changeDoc((doc) => {
                                 doc.name = text;
                             });
                         }}
@@ -141,34 +146,46 @@ export function ModelPane(props: {
                 <TheorySelectorDialog
                     theory={props.liveModel.theory()}
                     setTheory={(id) => {
-                        changeDoc((model) => {
+                        liveDoc().changeDoc((model) => {
                             model.theory = id;
                         });
                     }}
                     theories={theories}
-                    disabled={doc().notebook.cells.some((cell) => cell.tag === "formal")}
+                    disabled={liveDoc().doc.notebook.cells.some((cell) => cell.tag === "formal")}
                 />
             </div>
-            <LiveModelContext.Provider value={props.liveModel}>
-                <NotebookEditor
-                    handle={liveModel().liveDoc.docHandle}
-                    path={["notebook"]}
-                    notebook={doc().notebook}
-                    changeNotebook={(f) => {
-                        changeDoc((doc) => f(doc.notebook));
-                    }}
-                    formalCellEditor={ModelCellEditor}
-                    cellConstructors={modelCellConstructors(liveModel().theory()?.modelTypes ?? [])}
-                    cellLabel={judgmentLabel}
-                />
-            </LiveModelContext.Provider>
+            <ModelNotebookEditor liveModel={props.liveModel} />
         </div>
     );
 }
 
-/** Editor for a cell in a model of a double theory.
+/** Notebook editor for a model of a double theory.
  */
-export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
+export function ModelNotebookEditor(props: {
+    liveModel: LiveModelDocument;
+}) {
+    const liveDoc = () => props.liveModel.liveDoc;
+
+    return (
+        <LiveModelContext.Provider value={props.liveModel}>
+            <NotebookEditor
+                handle={liveDoc().docHandle}
+                path={["notebook"]}
+                notebook={liveDoc().doc.notebook}
+                changeNotebook={(f) => {
+                    liveDoc().changeDoc((doc) => f(doc.notebook));
+                }}
+                formalCellEditor={ModelCellEditor}
+                cellConstructors={modelCellConstructors(props.liveModel.theory()?.modelTypes ?? [])}
+                cellLabel={judgmentLabel}
+            />
+        </LiveModelContext.Provider>
+    );
+}
+
+/** Editor for a notebook cell in a model notebook.
+ */
+function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
     return (
         <Switch>
             <Match when={props.content.tag === "object"}>
