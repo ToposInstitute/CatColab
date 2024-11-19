@@ -3,7 +3,7 @@ import { A, useNavigate, useParams } from "@solidjs/router";
 import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import type { JsonValue } from "catcolab-api";
+import { createAnalysis } from "../analysis/document";
 import { useApi } from "../api";
 import { IconButton, InlineInput } from "../components";
 import { LiveModelContext } from "../model";
@@ -33,7 +33,6 @@ import {
 import "./diagram_editor.css";
 
 import ChartSpline from "lucide-solid/icons/chart-spline";
-import { newDiagramAnalysisDocument } from "../analysis";
 
 export default function DiagramPage() {
     const params = useParams();
@@ -55,18 +54,8 @@ export function DiagramDocumentEditor(props: {
     const api = useApi();
     const navigate = useNavigate();
 
-    const createAnalysis = async (diagramRefId: string) => {
-        const init = newDiagramAnalysisDocument(diagramRefId);
-
-        const result = await api.rpc.new_ref.mutate({
-            content: init as JsonValue,
-            permissions: {
-                anyone: "Read",
-            },
-        });
-        invariant(result.tag === "Ok", "Failed to create a new analysis");
-        const newRef = result.content;
-
+    const onCreateAnalysis = async (diagramRefId: string) => {
+        const newRef = createAnalysis("diagram", diagramRefId, api);
         navigate(`/analysis/${newRef}`);
     };
 
@@ -76,7 +65,7 @@ export function DiagramDocumentEditor(props: {
                 <HelpButton />
                 <MaybePermissionsButton permissions={props.liveDiagram?.liveDoc.permissions} />
                 <IconButton
-                    onClick={() => props.liveDiagram && createAnalysis(props.liveDiagram.refId)}
+                    onClick={() => props.liveDiagram && onCreateAnalysis(props.liveDiagram.refId)}
                     tooltip="Analyze this diagram"
                 >
                     <ChartSpline />

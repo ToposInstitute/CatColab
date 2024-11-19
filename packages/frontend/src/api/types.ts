@@ -9,8 +9,8 @@ export type Api = {
 };
 
 /** A reference in a document to another document. */
-export type ExternRef = {
+export type ExternRef<T extends string> = {
     tag: "extern-ref";
     refId: string;
-    taxon: string;
+    taxon: T;
 };

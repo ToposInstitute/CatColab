@@ -1,6 +1,7 @@
 import { type Accessor, createMemo } from "solid-js";
 import invariant from "tiny-invariant";
 
+import type { JsonValue } from "catcolab-api";
 import type { DblModelDiagram, ModelDiagramValidationResult, Uuid } from "catlog-wasm";
 import { type Api, type ExternRef, type LiveDoc, getLiveDoc } from "../api";
 import { type LiveModelDocument, getLiveModel } from "../model";
@@ -17,7 +18,7 @@ export type DiagramDocument = {
     name: string;
 
     /** Reference to the model that the diagram is in. */
-    modelRef: ExternRef & { taxon: "model" };
+    modelRef: ExternRef<"model">;
 
     /** Content of the diagram. */
     notebook: Notebook<DiagramJudgment>;
@@ -105,7 +106,22 @@ function enlivenDiagramDocument(
     return { refId, liveDoc, liveModel, formalJudgments, objectIndex, validatedDiagram };
 }
 
-/** Retrieve a diagram and make it "live" for editing. */
+/** Create a new diagram in the backend. */
+export async function createDiagram(modelRefId: string, api: Api): Promise<string> {
+    const init = newDiagramDocument(modelRefId);
+
+    const result = await api.rpc.new_ref.mutate({
+        content: init as JsonValue,
+        permissions: {
+            anyone: "Read",
+        },
+    });
+    invariant(result.tag === "Ok", "Failed to create a new diagram");
+
+    return result.content;
+}
+
+/** Retrieve a diagram from the backend and make it "live" for editing. */
 export async function getLiveDiagram(
     refId: string,
     api: Api,

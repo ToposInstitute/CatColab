@@ -1,5 +1,6 @@
 import invariant from "tiny-invariant";
 
+import type { JsonValue } from "catcolab-api";
 import { type Api, type ExternRef, type LiveDoc, getLiveDoc } from "../api";
 import { type LiveDiagramDocument, getLiveDiagram } from "../diagram";
 import { type LiveModelDocument, getLiveModel } from "../model";
@@ -7,15 +8,17 @@ import { type Notebook, newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
 import type { Analysis } from "./types";
 
+type AnalysisType = "model" | "diagram";
+
 /** Common base type for all analysis documents. */
-export type BaseAnalysisDocument = {
+export type BaseAnalysisDocument<T extends AnalysisType> = {
     type: "analysis";
 
     /** User-defined name of analysis. */
     name: string;
 
     /** Reference to the document that the analysis is of. */
-    analysisOf: ExternRef;
+    analysisOf: ExternRef<T>;
 
     /** Content of the analysis.
 
@@ -27,38 +30,25 @@ export type BaseAnalysisDocument = {
 };
 
 /** A document defining an analysis of a model. */
-export type ModelAnalysisDocument = BaseAnalysisDocument & {
-    analysisOf: { taxon: "model" };
-};
+export type ModelAnalysisDocument = BaseAnalysisDocument<"model">;
 
 /** A document defining an analysis of a diagram. */
-export type DiagramAnalysisDocument = BaseAnalysisDocument & {
-    analysisOf: { taxon: "diagram" };
-};
+export type DiagramAnalysisDocument = BaseAnalysisDocument<"diagram">;
 
 /** A document defining an analysis. */
 export type AnalysisDocument = ModelAnalysisDocument | DiagramAnalysisDocument;
 
-/** Create an empty model analysis. */
-export const newModelAnalysisDocument = (refId: string): ModelAnalysisDocument => ({
+/** Create an empty analysis. */
+export const newAnalysisDocument = (
+    taxon: AnalysisType,
+    refId: string,
+): BaseAnalysisDocument<typeof taxon> => ({
     name: "",
     type: "analysis",
     analysisOf: {
         tag: "extern-ref",
         refId,
-        taxon: "model",
-    },
-    notebook: newNotebook(),
-});
-
-/** Create an empty diagram analysis. */
-export const newDiagramAnalysisDocument = (refId: string): DiagramAnalysisDocument => ({
-    name: "",
-    type: "analysis",
-    analysisOf: {
-        tag: "extern-ref",
-        refId,
-        taxon: "diagram",
+        taxon,
     },
     notebook: newNotebook(),
 });
@@ -93,6 +83,21 @@ export type LiveDiagramAnalysisDocument = {
 
 /** An analysis document "live" for editing. */
 export type LiveAnalysisDocument = LiveModelAnalysisDocument | LiveDiagramAnalysisDocument;
+
+/** Create a new analysis in the backend. */
+export async function createAnalysis(type: AnalysisType, ofRefId: string, api: Api) {
+    const init = newAnalysisDocument(type, ofRefId);
+
+    const result = await api.rpc.new_ref.mutate({
+        content: init as JsonValue,
+        permissions: {
+            anyone: "Read",
+        },
+    });
+    invariant(result.tag === "Ok", "Failed to create a new analysis");
+
+    return result.content;
+}
 
 /** Retrieve an analysis and make it "live" for editing. */
 export async function getLiveAnalysis(

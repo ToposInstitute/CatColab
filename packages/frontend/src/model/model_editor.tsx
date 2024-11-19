@@ -2,11 +2,10 @@ import { useNavigate, useParams } from "@solidjs/router";
 import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import type { JsonValue } from "catcolab-api";
-import { newModelAnalysisDocument } from "../analysis/document";
+import { createAnalysis } from "../analysis/document";
 import { useApi } from "../api";
 import { IconButton, InlineInput } from "../components";
-import { newDiagramDocument } from "../diagram";
+import { createDiagram } from "../diagram/document";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
@@ -56,33 +55,13 @@ export function ModelDocumentEditor(props: {
     const api = useApi();
     const navigate = useNavigate();
 
-    const createDiagram = async (modelRefId: string) => {
-        const init = newDiagramDocument(modelRefId);
-
-        const result = await api.rpc.new_ref.mutate({
-            content: init as JsonValue,
-            permissions: {
-                anyone: "Read",
-            },
-        });
-        invariant(result.tag === "Ok", "Failed to create a new diagram");
-        const newRef = result.content;
-
+    const onCreateDiagram = async (modelRefId: string) => {
+        const newRef = await createDiagram(modelRefId, api);
         navigate(`/diagram/${newRef}`);
     };
 
-    const createAnalysis = async (modelRefId: string) => {
-        const init = newModelAnalysisDocument(modelRefId);
-
-        const result = await api.rpc.new_ref.mutate({
-            content: init as JsonValue,
-            permissions: {
-                anyone: "Read",
-            },
-        });
-        invariant(result.tag === "Ok", "Failed to create a new analysis");
-        const newRef = result.content;
-
+    const onCreateAnalysis = async (modelRefId: string) => {
+        const newRef = await createAnalysis("model", modelRefId, api);
         navigate(`/analysis/${newRef}`);
     };
 
@@ -93,14 +72,14 @@ export function ModelDocumentEditor(props: {
                 <MaybePermissionsButton permissions={props.liveModel?.liveDoc.permissions} />
                 <Show when={props.liveModel?.theory()?.supportsInstances}>
                     <IconButton
-                        onClick={() => props.liveModel && createDiagram(props.liveModel.refId)}
+                        onClick={() => props.liveModel && onCreateDiagram(props.liveModel.refId)}
                         tooltip="Create a diagram in this model"
                     >
                         <Network />
                     </IconButton>
                 </Show>
                 <IconButton
-                    onClick={() => props.liveModel && createAnalysis(props.liveModel.refId)}
+                    onClick={() => props.liveModel && onCreateAnalysis(props.liveModel.refId)}
                     tooltip="Analyze this model"
                 >
                     <ChartSpline />

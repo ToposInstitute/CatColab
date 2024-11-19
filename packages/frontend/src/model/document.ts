@@ -1,6 +1,7 @@
 import { type Accessor, createMemo } from "solid-js";
 import invariant from "tiny-invariant";
 
+import type { JsonValue } from "catcolab-api";
 import type { DblModel, ModelValidationResult, Uuid } from "catlog-wasm";
 import { type Api, type LiveDoc, getLiveDoc } from "../api";
 import { type Notebook, newNotebook } from "../notebook";
@@ -128,7 +129,27 @@ function enlivenModelDocument(
     };
 }
 
-/** Retrieve a model and make it "live" for editing. */
+/** Create a new model in the backend.
+
+Returns the ref ID of the created document.
+ */
+export async function createModel(api: Api, init?: ModelDocument): Promise<string> {
+    if (init === undefined) {
+        init = newModelDocument();
+    }
+
+    const result = await api.rpc.new_ref.mutate({
+        content: init as JsonValue,
+        permissions: {
+            anyone: "Read",
+        },
+    });
+    invariant(result.tag === "Ok", "Failed to create model");
+
+    return result.content;
+}
+
+/** Retrieve a model from the backend and make it "live" for editing. */
 export async function getLiveModel(
     refId: string,
     api: Api,
