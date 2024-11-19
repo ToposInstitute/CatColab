@@ -1,7 +1,13 @@
 import { createMemo } from "solid-js";
 
-import type { DblModel, JsResult, LotkaVolterraModelData, ODEResult } from "catlog-wasm";
-import type { LotkaVolterraContent, ModelAnalysisProps } from "../../analysis";
+import type {
+    DblModel,
+    JsResult,
+    LotkaVolterraModelData,
+    LotkaVolterraProblemData,
+    ODEResult,
+} from "catlog-wasm";
+import type { ModelAnalysisProps } from "../../analysis";
 import {
     type ColumnSchema,
     FixedTableEditor,
@@ -13,6 +19,11 @@ import type { ModelAnalysisMeta } from "../../theory";
 import { type ODEPlotData, ODEResultPlot } from "../../visualization";
 
 import "./simulation.css";
+
+/** Configuration for a Lotka-Volterra ODE analysis of a model. */
+export type LotkaVolterraContent = {
+    tag: "lotka-volterra";
+} & LotkaVolterraProblemData<string>;
 
 type Simulator = (model: DblModel, data: LotkaVolterraModelData) => ODEResult;
 

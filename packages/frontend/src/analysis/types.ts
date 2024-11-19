@@ -1,32 +1,26 @@
 import type { Component } from "solid-js";
 
-import type * as catlog from "catlog-wasm";
+import type { LiveDiagramDocument } from "../diagram";
 import type { LiveModelDocument } from "../model";
 
-/** Analysis of a model of a double theory.
+/** An analysis of a formal object.
 
-Such an analysis could be a visualization, a simulation, or a translation of the
-model into another format. Analyses can have their own content or state going
-beyond the data of the model, such as numerical parameters for a simulation.
+An analysis is currently a catch-all concept for an output derived from a model,
+an instance, or other formal objects in the system. An analysis could be a
+visualization, a simulation, or a translation of the formal object into another
+format. Analyses can have their own content or internal state, such as numerical
+parameters fo a simulation.
  */
-export type ModelAnalysis = {
+export type Analysis<T> = {
     /** Identifier of the analysis, unique relative to the theory. */
     id: string;
 
     /** Content associated with the analysis. */
-    content: ModelAnalysisContent;
+    content: T;
 };
 
-/** Component that renders an analysis of a model. */
-export type ModelAnalysisComponent<T extends ModelAnalysisContent> = Component<
-    ModelAnalysisProps<T>
->;
-
-/** Props passed to a model analysis component. */
-export type ModelAnalysisProps<T> = {
-    /** The model being analyzed. */
-    liveModel: LiveModelDocument;
-
+/** Props passed to any analysis component. */
+export type AnalysisProps<T> = {
     /** Content associated with the analysis itself. */
     content: T;
 
@@ -34,33 +28,20 @@ export type ModelAnalysisProps<T> = {
     changeContent: (f: (content: T) => void) => void;
 };
 
-/** Content associated with an analysis of a model.
-
-Such content is in addition to the data of the model and can include
-configuration or state for the analysis.
- */
-export type ModelAnalysisContent =
-    | ModelGraphContent
-    | SubmodelsAnalysisContent
-    | LotkaVolterraContent;
-
-/** Configuration for a graph visualization of a model. */
-export type ModelGraphContent = {
-    tag: "graph";
-
-    /** Layout engine for graph. */
-    layout: "graphviz-directed" | "graphviz-undirected";
+/** Props passed to a model analysis component. */
+export type ModelAnalysisProps<T> = AnalysisProps<T> & {
+    /** The model being analyzed. */
+    liveModel: LiveModelDocument;
 };
 
-/** State of a submodels analysis. */
-export type SubmodelsAnalysisContent = {
-    tag: "submodels";
+/** Component that renders an analysis of a model. */
+export type ModelAnalysisComponent<T> = Component<ModelAnalysisProps<T>>;
 
-    /** Index of active submodel. */
-    activeIndex: number;
+/** Props passed to a diagram analysis component. */
+export type DiagramAnalysisProps<T> = AnalysisProps<T> & {
+    /** The diagram being analyzed. */
+    liveDiagram: LiveDiagramDocument;
 };
 
-/** Configuration for a Lotka-Volterra ODE analysis of a model. */
-export type LotkaVolterraContent = {
-    tag: "lotka-volterra";
-} & catlog.LotkaVolterraProblemData<string>;
+/** Component that renders an analysis of diagram model. */
+export type DiagramAnalysisComponent<T> = Component<DiagramAnalysisProps<T>>;

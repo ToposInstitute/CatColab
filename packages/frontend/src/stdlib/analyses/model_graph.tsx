@@ -1,14 +1,21 @@
 import type * as Viz from "@viz-js/viz";
 import { Show, createSignal } from "solid-js";
 
-import type { ModelAnalysisProps, ModelGraphContent } from "../../analysis";
-
+import type { ModelAnalysisProps } from "../../analysis";
 import type { ModelJudgment } from "../../model";
 import type { ModelAnalysisMeta, ModelTypeMeta, Theory } from "../../theory";
 import { DownloadSVGButton, GraphvizSVG, type SVGRefProp } from "../../visualization";
 
 import textStyles from "../text_styles.module.css";
 import baseStyles from "./base_styles.module.css";
+
+/** Configuration for a graph visualization of a model. */
+export type ModelGraphContent = {
+    tag: "graph";
+
+    /** Layout engine for graph. */
+    layout: "graphviz-directed" | "graphviz-undirected";
+};
 
 /** Configure a graph visualization for use with models of a double theory. */
 export function configureModelGraph(options: {

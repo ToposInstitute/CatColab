@@ -8,11 +8,10 @@ import * as uuid from "uuid";
 import { MultiProvider } from "@solid-primitives/context";
 import { Navigate, type RouteDefinition, type RouteSectionProps, Router } from "@solidjs/router";
 import { FirebaseProvider } from "solid-firebase";
-import { Show, createResource, lazy, useContext } from "solid-js";
+import { Show, createResource, lazy } from "solid-js";
 
-import type { JsonValue } from "catcolab-api";
-import { RepoContext, RpcContext, createRpcClient } from "./api";
-import { newModelDocument } from "./model/document";
+import { RepoContext, RpcContext, createRpcClient, useApi } from "./api";
+import { createModel } from "./model/document";
 import { HelpContainer, lazyMdx } from "./page/help_page";
 import { TheoryLibraryContext, stdTheories } from "./stdlib";
 
@@ -46,21 +45,9 @@ const Root = (props: RouteSectionProps<unknown>) => {
 };
 
 function CreateModel() {
-    const rpc = useContext(RpcContext);
-    invariant(rpc, "Missing context to create model");
+    const api = useApi();
 
-    const init = newModelDocument();
-
-    const [ref] = createResource<string>(async () => {
-        const result = await rpc.new_ref.mutate({
-            content: init as JsonValue,
-            permissions: {
-                anyone: "Read",
-            },
-        });
-        invariant(result.tag === "Ok", "Failed to create model");
-        return result.content;
-    });
+    const [ref] = createResource<string>(() => createModel(api));
 
     return <Show when={ref()}>{(ref) => <Navigate href={`/model/${ref()}`} />}</Show>;
 }

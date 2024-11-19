@@ -11,7 +11,7 @@ import invariant from "tiny-invariant";
 import * as uuid from "uuid";
 
 import type { Permissions } from "catcolab-api";
-import type { RpcClient } from "./rpc";
+import type { Api } from "./types";
 
 /** An Automerge repo with no networking, used for read-only documents. */
 const localRepo = new Repo();
@@ -47,12 +47,9 @@ permissions, the Automerge doc handle will be "fake", existing only locally in
 the client. And if the user doesn't even have read permissions, this function
 will yield an unauthorized error!
  */
-export async function getLiveDoc<T extends object>(
-    rpc: RpcClient,
-    repo: Repo,
-    refId: string,
-): Promise<LiveDoc<T>> {
+export async function getLiveDoc<T extends object>(api: Api, refId: string): Promise<LiveDoc<T>> {
     invariant(uuid.validate(refId), () => `Invalid document ref ${refId}`);
+    const { rpc, repo } = api;
 
     const result = await rpc.get_doc.query(refId);
     if (result.tag !== "Ok") {

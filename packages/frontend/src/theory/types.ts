@@ -2,7 +2,7 @@ import type { KbdKey } from "@solid-primitives/keyboard";
 
 import type { DblTheory, MorType, ObType } from "catlog-wasm";
 import { MorTypeIndex, ObTypeIndex } from "catlog-wasm";
-import type { ModelAnalysisComponent, ModelAnalysisContent } from "../analysis";
+import type { DiagramAnalysisComponent, ModelAnalysisComponent } from "../analysis";
 import { uniqueIndexArray } from "../util/indexing";
 import type { ArrowStyle } from "../visualization";
 
@@ -40,6 +40,7 @@ export class Theory {
     private readonly modelTypeMeta: TypeMetadata<ModelObTypeMeta, ModelMorTypeMeta>;
     private readonly instanceTypeMeta: TypeMetadata<InstanceObTypeMeta, InstanceMorTypeMeta>;
     private readonly modelAnalysisMap: Map<string, ModelAnalysisMeta>;
+    private readonly diagramAnalysisMap: Map<string, DiagramAnalysisMeta>;
 
     constructor(props: {
         id: string;
@@ -51,6 +52,7 @@ export class Theory {
         onlyFreeModels?: boolean;
         instanceOfName?: string;
         instanceTypes?: InstanceTypeMeta[];
+        diagramAnalyses?: DiagramAnalysisMeta[];
     }) {
         // Theory.
         this.id = props.id;
@@ -68,6 +70,7 @@ export class Theory {
         this.instanceTypeMeta = new TypeMetadata<InstanceObTypeMeta, InstanceMorTypeMeta>(
             props.instanceTypes,
         );
+        this.diagramAnalysisMap = uniqueIndexArray(props.diagramAnalyses ?? [], (meta) => meta.id);
     }
 
     /** Metadata for types in the theory, as used in models.
@@ -120,6 +123,16 @@ export class Theory {
     /** Get metadata for a model analysis. */
     modelAnalysis(id: string): ModelAnalysisMeta | undefined {
         return this.modelAnalysisMap.get(id);
+    }
+
+    /** List of analyses defined for diagrams. */
+    get diagramAnalyses(): Array<DiagramAnalysisMeta> {
+        return Array.from(this.diagramAnalysisMap.values());
+    }
+
+    /** Get metadata for a diagram analysis. */
+    diagramAnalysis(id: string): DiagramAnalysisMeta | undefined {
+        return this.diagramAnalysisMap.get(id);
     }
 }
 
@@ -210,9 +223,9 @@ export type ModelMorTypeMeta = BaseTypeMeta &
 
         /** Whether morphisms of this type are typically unnamed.
 
-    By default, morphisms (like objects) have names but for certain morphism
-    types in certain domains, it is common to leave them unnamed.
-     */
+        By default, morphisms (like objects) have names but for certain morphism
+        types in certain domains, it is common to leave them unnamed.
+        */
         preferUnnamed?: boolean;
     };
 
@@ -225,10 +238,8 @@ export type InstanceObTypeMeta = BaseTypeMeta & HasObTypeMeta;
 /** Metadata for a morphism type as used in instances. */
 export type InstanceMorTypeMeta = BaseTypeMeta & HasMorTypeMeta;
 
-/** Specifies an analysis of model with descriptive metadata.
- */
-// biome-ignore lint/suspicious/noExplicitAny: content type is data dependent.
-export type ModelAnalysisMeta<T extends ModelAnalysisContent = any> = {
+/** Specifies an analysis with descriptive metadata. */
+export type AnalysisMeta<T> = {
     /** Identifier of analysis, unique relative to the theory. */
     id: string;
 
@@ -238,9 +249,20 @@ export type ModelAnalysisMeta<T extends ModelAnalysisContent = any> = {
     /** Short description of analysis. */
     description?: string;
 
-    /** Component that renders the analysis. */
-    component: ModelAnalysisComponent<T>;
-
     /** Default content created when the analysis is added. */
     initialContent: () => T;
+};
+
+/** Specifies a model analysis with descriptive metadata. */
+// biome-ignore lint/suspicious/noExplicitAny: content type is data dependent.
+export type ModelAnalysisMeta<T = any> = AnalysisMeta<T> & {
+    /** Component that renders the analysis. */
+    component: ModelAnalysisComponent<T>;
+};
+
+/** Specifies a diagram analysis with descriptive metadata. */
+// biome-ignore lint/suspicious/noExplicitAny: content type is data dependent.
+export type DiagramAnalysisMeta<T = any> = AnalysisMeta<T> & {
+    /** Component that renders the analysis. */
+    component: DiagramAnalysisComponent<T>;
 };

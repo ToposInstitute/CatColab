@@ -10,10 +10,9 @@ import {
     signInWithPopup,
 } from "firebase/auth";
 import { useFirebaseApp } from "solid-firebase";
-import { useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { RpcContext } from "../api";
+import { useApi } from "../api";
 import { IconButton } from "../components";
 
 import SignInIcon from "lucide-solid/icons/log-in";
@@ -29,9 +28,8 @@ type EmailAndPassword = {
 export function Login(props: {
     onComplete?: (user: User) => void;
 }) {
+    const api = useApi();
     const firebaseApp = useFirebaseApp();
-    const rpc = useContext(RpcContext);
-    invariant(rpc);
 
     const [, { Form, Field }] = createForm<EmailAndPassword>();
 
@@ -72,7 +70,7 @@ export function Login(props: {
     };
 
     const completeSignUpOrSignIn = async (cred: UserCredential) => {
-        const result = await rpc.sign_up_or_sign_in.mutate();
+        const result = await api.rpc.sign_up_or_sign_in.mutate();
         invariant(result.tag === "Ok");
         props.onComplete?.(cred.user);
     };

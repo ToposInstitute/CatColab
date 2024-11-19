@@ -1,11 +1,12 @@
 import { MultiProvider } from "@solid-primitives/context";
-import { A, useParams } from "@solidjs/router";
+import { A, useNavigate, useParams } from "@solidjs/router";
 import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { RepoContext, RpcContext, getLiveDoc } from "../api";
-import { InlineInput } from "../components";
-import { LiveModelContext, type ModelDocument, enlivenModelDocument } from "../model";
+import { createAnalysis } from "../analysis/document";
+import { useApi } from "../api";
+import { IconButton, InlineInput } from "../components";
+import { LiveModelContext } from "../model";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
@@ -18,7 +19,7 @@ import { TheoryLibraryContext } from "../stdlib";
 import type { InstanceTypeMeta } from "../theory";
 import { MaybePermissionsButton } from "../user";
 import { LiveDiagramContext } from "./context";
-import { type DiagramDocument, type LiveDiagramDocument, enlivenDiagramDocument } from "./document";
+import { type LiveDiagramDocument, getLiveDiagram } from "./document";
 import { DiagramMorphismCellEditor } from "./morphism_cell_editor";
 import { DiagramObjectCellEditor } from "./object_cell_editor";
 import {
@@ -31,26 +32,18 @@ import {
 
 import "./diagram_editor.css";
 
+import ChartSpline from "lucide-solid/icons/chart-spline";
+
 export default function DiagramPage() {
     const params = useParams();
     const refId = params.ref;
     invariant(refId, "Must provide document ref as parameter to diagram page");
 
-    const rpc = useContext(RpcContext);
-    const repo = useContext(RepoContext);
+    const api = useApi();
     const theories = useContext(TheoryLibraryContext);
-    invariant(rpc && repo && theories, "Missing context for diagram page");
+    invariant(theories, "Must provide theory library as context to diagram page");
 
-    const [liveDiagram] = createResource<LiveDiagramDocument>(async () => {
-        const liveDoc = await getLiveDoc<DiagramDocument>(rpc, repo, refId);
-        const { doc } = liveDoc;
-        invariant(doc.type === "diagram", () => `Expected diagram, got type: ${doc.type}`);
-
-        const modelLiveDoc = await getLiveDoc<ModelDocument>(rpc, repo, doc.modelRef.refId);
-        const liveModel = enlivenModelDocument(doc.modelRef.refId, modelLiveDoc, theories);
-
-        return enlivenDiagramDocument(refId, liveDoc, liveModel);
-    });
+    const [liveDiagram] = createResource(() => getLiveDiagram(refId, api, theories));
 
     return <DiagramDocumentEditor liveDiagram={liveDiagram()} />;
 }
@@ -58,11 +51,25 @@ export default function DiagramPage() {
 export function DiagramDocumentEditor(props: {
     liveDiagram?: LiveDiagramDocument;
 }) {
+    const api = useApi();
+    const navigate = useNavigate();
+
+    const onCreateAnalysis = async (diagramRefId: string) => {
+        const newRef = createAnalysis("diagram", diagramRefId, api);
+        navigate(`/analysis/${newRef}`);
+    };
+
     return (
         <div class="growable-container">
             <BrandedToolbar>
                 <HelpButton />
                 <MaybePermissionsButton permissions={props.liveDiagram?.liveDoc.permissions} />
+                <IconButton
+                    onClick={() => props.liveDiagram && onCreateAnalysis(props.liveDiagram.refId)}
+                    tooltip="Analyze this diagram"
+                >
+                    <ChartSpline />
+                </IconButton>
             </BrandedToolbar>
             <Show when={props.liveDiagram}>
                 {(liveDiagram) => <DiagramPane liveDiagram={liveDiagram()} />}
@@ -110,11 +117,15 @@ export function DiagramNotebookEditor(props: {
     liveDiagram: LiveDiagramDocument;
 }) {
     const liveDoc = () => props.liveDiagram.liveDoc;
+    const liveModel = () => props.liveDiagram.liveModel;
+
+    const cellConstructors = () =>
+        (liveModel().theory()?.instanceTypes ?? []).map(diagramCellConstructor);
 
     return (
         <MultiProvider
             values={[
-                [LiveModelContext, props.liveDiagram.liveModel],
+                [LiveModelContext, liveModel()],
                 [LiveDiagramContext, props.liveDiagram],
             ]}
         >
@@ -126,9 +137,7 @@ export function DiagramNotebookEditor(props: {
                     liveDoc().changeDoc((doc) => f(doc.notebook));
                 }}
                 formalCellEditor={DiagramCellEditor}
-                cellConstructors={diagramCellConstructors(
-                    props.liveDiagram.liveModel.theory()?.instanceTypes ?? [],
-                )}
+                cellConstructors={cellConstructors()}
                 cellLabel={judgmentLabel}
             />
         </MultiProvider>
@@ -164,22 +173,18 @@ function DiagramCellEditor(props: FormalCellEditorProps<DiagramJudgment>) {
     );
 }
 
-function diagramCellConstructors(
-    instanceTypes: InstanceTypeMeta[],
-): CellConstructor<DiagramJudgment>[] {
-    return instanceTypes.map((meta) => {
-        const { name, description, shortcut } = meta;
-        return {
-            name,
-            description,
-            shortcut: shortcut && [cellShortcutModifier, ...shortcut],
-            construct() {
-                return meta.tag === "ObType"
-                    ? newFormalCell(newDiagramObjectDecl(meta.obType))
-                    : newFormalCell(newDiagramMorphismDecl(meta.morType));
-            },
-        };
-    });
+function diagramCellConstructor(meta: InstanceTypeMeta): CellConstructor<DiagramJudgment> {
+    const { name, description, shortcut } = meta;
+    return {
+        name,
+        description,
+        shortcut: shortcut && [cellShortcutModifier, ...shortcut],
+        construct() {
+            return meta.tag === "ObType"
+                ? newFormalCell(newDiagramObjectDecl(meta.obType))
+                : newFormalCell(newDiagramMorphismDecl(meta.morType));
+        },
+    };
 }
 
 function judgmentLabel(judgment: DiagramJudgment): string | undefined {
