@@ -1,9 +1,11 @@
 import { type Accessor, createMemo } from "solid-js";
+import invariant from "tiny-invariant";
 
 import type { DblModelDiagram, ModelDiagramValidationResult, Uuid } from "catlog-wasm";
-import type { ExternRef, LiveDoc } from "../api";
-import type { LiveModelDocument } from "../model";
+import { type Api, type ExternRef, type LiveDoc, getLiveDoc } from "../api";
+import { type LiveModelDocument, getLiveModel } from "../model";
 import { type Notebook, newNotebook } from "../notebook";
+import type { TheoryLibrary } from "../stdlib";
 import { type IndexedMap, indexMap } from "../util/indexing";
 import { type DiagramJudgment, catlogDiagram } from "./types";
 
@@ -61,7 +63,7 @@ export type ValidatedDiagram = {
     result: ModelDiagramValidationResult;
 };
 
-export function enlivenDiagramDocument(
+function enlivenDiagramDocument(
     refId: string,
     liveDoc: LiveDoc<DiagramDocument>,
     liveModel: LiveModelDocument,
@@ -101,4 +103,19 @@ export function enlivenDiagramDocument(
     );
 
     return { refId, liveDoc, liveModel, formalJudgments, objectIndex, validatedDiagram };
+}
+
+/** Retrieve a diagram and make it "live" for editing. */
+export async function getLiveDiagram(
+    refId: string,
+    api: Api,
+    theories: TheoryLibrary,
+): Promise<LiveDiagramDocument> {
+    const liveDoc = await getLiveDoc<DiagramDocument>(api, refId);
+    const { doc } = liveDoc;
+    invariant(doc.type === "diagram", () => `Expected diagram, got type: ${doc.type}`);
+
+    const liveModel = await getLiveModel(doc.modelRef.refId, api, theories);
+
+    return enlivenDiagramDocument(refId, liveDoc, liveModel);
 }

@@ -4,7 +4,7 @@ import invariant from "tiny-invariant";
 
 import type { JsonValue } from "catcolab-api";
 import { newModelAnalysisDocument } from "../analysis/document";
-import { getLiveDoc, useApi } from "../api";
+import { useApi } from "../api";
 import { IconButton, InlineInput } from "../components";
 import { newDiagramDocument } from "../diagram";
 import {
@@ -19,7 +19,7 @@ import { TheoryLibraryContext } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
 import { MaybePermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
-import { type LiveModelDocument, type ModelDocument, enlivenModelDocument } from "./document";
+import { type LiveModelDocument, getLiveModel } from "./document";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
 import { TheorySelectorDialog } from "./theory_selector";
@@ -45,10 +45,7 @@ export default function ModelPage() {
     const theories = useContext(TheoryLibraryContext);
     invariant(theories, "Must provide theory library as context to model page");
 
-    const [liveModel] = createResource<LiveModelDocument>(async () => {
-        const liveDoc = await getLiveDoc<ModelDocument>(api, refId);
-        return enlivenModelDocument(refId, liveDoc, theories);
-    });
+    const [liveModel] = createResource(() => getLiveModel(refId, api, theories));
 
     return <ModelDocumentEditor liveModel={liveModel()} />;
 }

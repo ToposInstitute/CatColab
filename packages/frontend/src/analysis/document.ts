@@ -1,7 +1,10 @@
-import type { ExternRef, LiveDoc } from "../api";
-import type { LiveDiagramDocument } from "../diagram";
-import type { LiveModelDocument } from "../model";
+import invariant from "tiny-invariant";
+
+import { type Api, type ExternRef, type LiveDoc, getLiveDoc } from "../api";
+import { type LiveDiagramDocument, getLiveDiagram } from "../diagram";
+import { type LiveModelDocument, getLiveModel } from "../model";
 import { type Notebook, newNotebook } from "../notebook";
+import type { TheoryLibrary } from "../stdlib";
 import type { Analysis } from "./types";
 
 /** Common base type for all analysis documents. */
@@ -62,6 +65,8 @@ export const newDiagramAnalysisDocument = (refId: string): DiagramAnalysisDocume
 
 /** A model analysis document "live" for editing. */
 export type LiveModelAnalysisDocument = {
+    analysisType: "model";
+
     /** The ref for which this is a live document. */
     refId: string;
 
@@ -74,6 +79,8 @@ export type LiveModelAnalysisDocument = {
 
 /** A diagram analysis document "live" for editing. */
 export type LiveDiagramAnalysisDocument = {
+    analysisType: "diagram";
+
     /** The ref for which this is a live document. */
     refId: string;
 
@@ -83,3 +90,38 @@ export type LiveDiagramAnalysisDocument = {
     /** Live diagarm that the analysis is of. */
     liveDiagram: LiveDiagramDocument;
 };
+
+/** An analysis document "live" for editing. */
+export type LiveAnalysisDocument = LiveModelAnalysisDocument | LiveDiagramAnalysisDocument;
+
+/** Retrieve an analysis and make it "live" for editing. */
+export async function getLiveAnalysis(
+    refId: string,
+    api: Api,
+    theories: TheoryLibrary,
+): Promise<LiveAnalysisDocument> {
+    const liveDoc = await getLiveDoc<AnalysisDocument>(api, refId);
+    const { doc } = liveDoc;
+    invariant(doc.type === "analysis", () => `Expected analysis, got type: ${doc.type}`);
+
+    const analysisOf = doc.analysisOf;
+    if (analysisOf.taxon === "model") {
+        const liveModel = await getLiveModel(analysisOf.refId, api, theories);
+        return {
+            analysisType: "model",
+            refId,
+            liveDoc: liveDoc as LiveDoc<ModelAnalysisDocument>,
+            liveModel,
+        };
+    } else if (analysisOf.taxon === "diagram") {
+        const liveDiagram = await getLiveDiagram(analysisOf.refId, api, theories);
+        return {
+            analysisType: "diagram",
+            refId,
+            liveDoc: liveDoc as LiveDoc<DiagramAnalysisDocument>,
+            liveDiagram,
+        };
+    } else {
+        throw new Error(`Analysis of unknown document: ${analysisOf}`);
+    }
+}

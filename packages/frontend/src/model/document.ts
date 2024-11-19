@@ -1,7 +1,8 @@
 import { type Accessor, createMemo } from "solid-js";
+import invariant from "tiny-invariant";
 
 import type { DblModel, ModelValidationResult, Uuid } from "catlog-wasm";
-import type { LiveDoc } from "../api";
+import { type Api, type LiveDoc, getLiveDoc } from "../api";
 import { type Notebook, newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
 import type { Theory, TheoryId } from "../theory";
@@ -62,7 +63,7 @@ export type ValidatedModel = {
     result: ModelValidationResult;
 };
 
-export function enlivenModelDocument(
+function enlivenModelDocument(
     refId: string,
     liveDoc: LiveDoc<ModelDocument>,
     theories: TheoryLibrary,
@@ -125,4 +126,17 @@ export function enlivenModelDocument(
         theory,
         validatedModel,
     };
+}
+
+/** Retrieve a model and make it "live" for editing. */
+export async function getLiveModel(
+    refId: string,
+    api: Api,
+    theories: TheoryLibrary,
+): Promise<LiveModelDocument> {
+    const liveDoc = await getLiveDoc<ModelDocument>(api, refId);
+    const { doc } = liveDoc;
+    invariant(doc.type === "model", () => `Expected model, got type: ${doc.type}`);
+
+    return enlivenModelDocument(refId, liveDoc, theories);
 }

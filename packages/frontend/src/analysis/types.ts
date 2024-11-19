@@ -1,5 +1,6 @@
 import type { Component } from "solid-js";
 
+import type { LiveDiagramDocument } from "../diagram";
 import type { LiveModelDocument } from "../model";
 
 /** An analysis of a formal object.
@@ -35,3 +36,12 @@ export type ModelAnalysisProps<T> = AnalysisProps<T> & {
 
 /** Component that renders an analysis of a model. */
 export type ModelAnalysisComponent<T> = Component<ModelAnalysisProps<T>>;
+
+/** Props passed to a diagram analysis component. */
+export type DiagramAnalysisProps<T> = AnalysisProps<T> & {
+    /** The diagram being analyzed. */
+    liveDiagram: LiveDiagramDocument;
+};
+
+/** Component that renders an analysis of diagram model. */
+export type DiagramAnalysisComponent<T> = Component<DiagramAnalysisProps<T>>;

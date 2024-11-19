@@ -1,11 +1,12 @@
 import { MultiProvider } from "@solid-primitives/context";
-import { A, useParams } from "@solidjs/router";
+import { A, useNavigate, useParams } from "@solidjs/router";
 import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { getLiveDoc, useApi } from "../api";
-import { InlineInput } from "../components";
-import { LiveModelContext, type ModelDocument, enlivenModelDocument } from "../model";
+import type { JsonValue } from "catcolab-api";
+import { useApi } from "../api";
+import { IconButton, InlineInput } from "../components";
+import { LiveModelContext } from "../model";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
@@ -18,7 +19,7 @@ import { TheoryLibraryContext } from "../stdlib";
 import type { InstanceTypeMeta } from "../theory";
 import { MaybePermissionsButton } from "../user";
 import { LiveDiagramContext } from "./context";
-import { type DiagramDocument, type LiveDiagramDocument, enlivenDiagramDocument } from "./document";
+import { type LiveDiagramDocument, getLiveDiagram } from "./document";
 import { DiagramMorphismCellEditor } from "./morphism_cell_editor";
 import { DiagramObjectCellEditor } from "./object_cell_editor";
 import {
@@ -31,6 +32,9 @@ import {
 
 import "./diagram_editor.css";
 
+import ChartSpline from "lucide-solid/icons/chart-spline";
+import { newDiagramAnalysisDocument } from "../analysis";
+
 export default function DiagramPage() {
     const params = useParams();
     const refId = params.ref;
@@ -40,16 +44,7 @@ export default function DiagramPage() {
     const theories = useContext(TheoryLibraryContext);
     invariant(theories, "Must provide theory library as context to diagram page");
 
-    const [liveDiagram] = createResource<LiveDiagramDocument>(async () => {
-        const liveDoc = await getLiveDoc<DiagramDocument>(api, refId);
-        const { doc } = liveDoc;
-        invariant(doc.type === "diagram", () => `Expected diagram, got type: ${doc.type}`);
-
-        const modelLiveDoc = await getLiveDoc<ModelDocument>(api, doc.modelRef.refId);
-        const liveModel = enlivenModelDocument(doc.modelRef.refId, modelLiveDoc, theories);
-
-        return enlivenDiagramDocument(refId, liveDoc, liveModel);
-    });
+    const [liveDiagram] = createResource(() => getLiveDiagram(refId, api, theories));
 
     return <DiagramDocumentEditor liveDiagram={liveDiagram()} />;
 }
@@ -57,11 +52,35 @@ export default function DiagramPage() {
 export function DiagramDocumentEditor(props: {
     liveDiagram?: LiveDiagramDocument;
 }) {
+    const api = useApi();
+    const navigate = useNavigate();
+
+    const createAnalysis = async (diagramRefId: string) => {
+        const init = newDiagramAnalysisDocument(diagramRefId);
+
+        const result = await api.rpc.new_ref.mutate({
+            content: init as JsonValue,
+            permissions: {
+                anyone: "Read",
+            },
+        });
+        invariant(result.tag === "Ok", "Failed to create a new analysis");
+        const newRef = result.content;
+
+        navigate(`/analysis/${newRef}`);
+    };
+
     return (
         <div class="growable-container">
             <BrandedToolbar>
                 <HelpButton />
                 <MaybePermissionsButton permissions={props.liveDiagram?.liveDoc.permissions} />
+                <IconButton
+                    onClick={() => props.liveDiagram && createAnalysis(props.liveDiagram.refId)}
+                    tooltip="Analyze this diagram"
+                >
+                    <ChartSpline />
+                </IconButton>
             </BrandedToolbar>
             <Show when={props.liveDiagram}>
                 {(liveDiagram) => <DiagramPane liveDiagram={liveDiagram()} />}

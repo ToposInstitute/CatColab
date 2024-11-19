@@ -1,12 +1,20 @@
 import Resizable, { type ContextValue } from "@corvu/resizable";
 import { useParams } from "@solidjs/router";
-import { Show, createEffect, createResource, createSignal, useContext } from "solid-js";
+import {
+    Match,
+    Show,
+    Switch,
+    createEffect,
+    createResource,
+    createSignal,
+    useContext,
+} from "solid-js";
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
-import { getLiveDoc, useApi } from "../api";
+import { useApi } from "../api";
 import { IconButton, ResizableHandle } from "../components";
-import { LiveModelContext, type ModelDocument, enlivenModelDocument } from "../model";
+import { DiagramPane } from "../diagram/diagram_editor";
 import { ModelPane } from "../model/model_editor";
 import {
     type CellConstructor,
@@ -17,7 +25,13 @@ import {
 import { BrandedToolbar, HelpButton } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { AnalysisMeta } from "../theory";
-import type { LiveModelAnalysisDocument, ModelAnalysisDocument } from "./document";
+import { LiveAnalysisContext } from "./context";
+import {
+    type LiveAnalysisDocument,
+    type LiveDiagramAnalysisDocument,
+    type LiveModelAnalysisDocument,
+    getLiveAnalysis,
+} from "./document";
 import type { Analysis } from "./types";
 
 import PanelRight from "lucide-solid/icons/panel-right";
@@ -32,22 +46,9 @@ export default function AnalysisPage() {
     const theories = useContext(TheoryLibraryContext);
     invariant(theories, "Must provide theory library as context to analysis page");
 
-    const [liveAnalysis] = createResource<LiveModelAnalysisDocument>(async () => {
-        const liveDoc = await getLiveDoc<ModelAnalysisDocument>(api, refId);
-        const { doc } = liveDoc;
-        invariant(doc.type === "analysis", () => `Expected analysis, got type: ${doc.type}`);
+    const [liveAnalysis] = createResource(() => getLiveAnalysis(refId, api, theories));
 
-        const liveModelDoc = await getLiveDoc<ModelDocument>(api, doc.analysisOf.refId);
-        const liveModel = enlivenModelDocument(doc.analysisOf.refId, liveModelDoc, theories);
-
-        return { refId, liveDoc, liveModel };
-    });
-
-    return (
-        <Show when={liveAnalysis()}>
-            {(liveAnalysis) => <AnalysisDocumentEditor liveAnalysis={liveAnalysis()} />}
-        </Show>
-    );
+    return <AnalysisDocumentEditor liveAnalysis={liveAnalysis()} />;
 }
 
 /** Editor for a model of a double theory.
@@ -56,7 +57,7 @@ The editor includes a notebook for the model itself plus another pane for
 performing analysis of the model.
  */
 export function AnalysisDocumentEditor(props: {
-    liveAnalysis: LiveModelAnalysisDocument;
+    liveAnalysis?: LiveAnalysisDocument;
 }) {
     const [resizableContext, setResizableContext] = createSignal<ContextValue>();
     const [isSidePanelOpen, setSidePanelOpen] = createSignal(true);
@@ -106,7 +107,7 @@ export function AnalysisDocumentEditor(props: {
                                     </Show>
                                 </IconButton>
                             </BrandedToolbar>
-                            <ModelPane liveModel={props.liveAnalysis.liveModel} />
+                            <AnalysisOfPane liveAnalysis={props.liveAnalysis} />
                         </Resizable.Panel>
                         <ResizableHandle hidden={!isSidePanelOpen()} />
                         <Resizable.Panel
@@ -120,7 +121,11 @@ export function AnalysisDocumentEditor(props: {
                         >
                             <div class="notebook-container">
                                 <h2>Analysis</h2>
-                                <AnalysisNotebookEditor liveAnalysis={props.liveAnalysis} />
+                                <Show when={props.liveAnalysis}>
+                                    {(liveAnalysis) => (
+                                        <AnalysisNotebookEditor liveAnalysis={liveAnalysis()} />
+                                    )}
+                                </Show>
                             </div>
                         </Resizable.Panel>
                     </>
@@ -130,48 +135,94 @@ export function AnalysisDocumentEditor(props: {
     );
 }
 
+const AnalysisOfPane = (props: {
+    liveAnalysis?: LiveAnalysisDocument;
+}) => (
+    <Switch>
+        <Match when={props.liveAnalysis?.analysisType === "model" && props.liveAnalysis.liveModel}>
+            {(liveModel) => <ModelPane liveModel={liveModel()} />}
+        </Match>
+        <Match
+            when={props.liveAnalysis?.analysisType === "diagram" && props.liveAnalysis.liveDiagram}
+        >
+            {(liveDiagram) => <DiagramPane liveDiagram={liveDiagram()} />}
+        </Match>
+    </Switch>
+);
+
 /** Notebook editor for analyses of models of double theories.
  */
 export function AnalysisNotebookEditor(props: {
-    liveAnalysis: LiveModelAnalysisDocument;
+    liveAnalysis: LiveAnalysisDocument;
 }) {
     const liveDoc = () => props.liveAnalysis.liveDoc;
 
-    const cellConstructors = () =>
-        (props.liveAnalysis.liveModel.theory()?.modelAnalyses ?? []).map(analysisCellConstructor);
+    const cellConstructors = () => {
+        let meta = undefined;
+        if (props.liveAnalysis.analysisType === "model") {
+            meta = props.liveAnalysis.liveModel.theory()?.modelAnalyses;
+        } else if (props.liveAnalysis.analysisType === "diagram") {
+            meta = props.liveAnalysis.liveDiagram.liveModel.theory()?.diagramAnalyses;
+        }
+        return (meta ?? []).map(analysisCellConstructor);
+    };
 
     return (
-        <LiveModelContext.Provider value={props.liveAnalysis.liveModel}>
+        <LiveAnalysisContext.Provider value={props.liveAnalysis}>
             <NotebookEditor
                 handle={liveDoc().docHandle}
                 path={["notebook"]}
                 notebook={liveDoc().doc.notebook}
                 changeNotebook={(f) => liveDoc().changeDoc((doc) => f(doc.notebook))}
-                formalCellEditor={ModelAnalysisCellEditor}
+                formalCellEditor={AnalysisCellEditor}
                 cellConstructors={cellConstructors()}
                 noShortcuts={true}
             />
-        </LiveModelContext.Provider>
+        </LiveAnalysisContext.Provider>
     );
 }
 
-function ModelAnalysisCellEditor(props: FormalCellEditorProps<Analysis<unknown>>) {
-    const liveModel = useContext(LiveModelContext);
-    invariant(liveModel, "Live model should be provided as context for analysis");
+function AnalysisCellEditor(props: FormalCellEditorProps<Analysis<unknown>>) {
+    const liveAnalysis = useContext(LiveAnalysisContext);
+    invariant(liveAnalysis, "Live analysis should be provided as context for cell editor");
 
     return (
-        <Show when={liveModel.theory()?.modelAnalysis(props.content.id)}>
-            {(analysis) => (
-                <Dynamic
-                    component={analysis().component}
-                    liveModel={liveModel}
-                    content={props.content.content}
-                    changeContent={(f: (c: unknown) => void) =>
-                        props.changeContent((content) => f(content.content))
-                    }
-                />
-            )}
-        </Show>
+        <Switch>
+            <Match
+                when={
+                    liveAnalysis.analysisType === "model" &&
+                    liveAnalysis.liveModel.theory()?.modelAnalysis(props.content.id)
+                }
+            >
+                {(analysis) => (
+                    <Dynamic
+                        component={analysis().component}
+                        liveModel={(liveAnalysis as LiveModelAnalysisDocument).liveModel}
+                        content={props.content.content}
+                        changeContent={(f: (c: unknown) => void) =>
+                            props.changeContent((content) => f(content.content))
+                        }
+                    />
+                )}
+            </Match>
+            <Match
+                when={
+                    liveAnalysis.analysisType === "diagram" &&
+                    liveAnalysis.liveDiagram.liveModel.theory()?.diagramAnalysis(props.content.id)
+                }
+            >
+                {(analysis) => (
+                    <Dynamic
+                        component={analysis().component}
+                        liveDiagram={(liveAnalysis as LiveDiagramAnalysisDocument).liveDiagram}
+                        content={props.content.content}
+                        changeContent={(f: (c: unknown) => void) =>
+                            props.changeContent((content) => f(content.content))
+                        }
+                    />
+                )}
+            </Match>
+        </Switch>
     );
 }
 

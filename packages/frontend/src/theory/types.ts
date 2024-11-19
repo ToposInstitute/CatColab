@@ -2,7 +2,7 @@ import type { KbdKey } from "@solid-primitives/keyboard";
 
 import type { DblTheory, MorType, ObType } from "catlog-wasm";
 import { MorTypeIndex, ObTypeIndex } from "catlog-wasm";
-import type { ModelAnalysisComponent } from "../analysis";
+import type { DiagramAnalysisComponent, ModelAnalysisComponent } from "../analysis";
 import { uniqueIndexArray } from "../util/indexing";
 import type { ArrowStyle } from "../visualization";
 
@@ -40,6 +40,7 @@ export class Theory {
     private readonly modelTypeMeta: TypeMetadata<ModelObTypeMeta, ModelMorTypeMeta>;
     private readonly instanceTypeMeta: TypeMetadata<InstanceObTypeMeta, InstanceMorTypeMeta>;
     private readonly modelAnalysisMap: Map<string, ModelAnalysisMeta>;
+    private readonly diagramAnalysisMap: Map<string, DiagramAnalysisMeta>;
 
     constructor(props: {
         id: string;
@@ -51,6 +52,7 @@ export class Theory {
         onlyFreeModels?: boolean;
         instanceOfName?: string;
         instanceTypes?: InstanceTypeMeta[];
+        diagramAnalyses?: DiagramAnalysisMeta[];
     }) {
         // Theory.
         this.id = props.id;
@@ -68,6 +70,7 @@ export class Theory {
         this.instanceTypeMeta = new TypeMetadata<InstanceObTypeMeta, InstanceMorTypeMeta>(
             props.instanceTypes,
         );
+        this.diagramAnalysisMap = uniqueIndexArray(props.diagramAnalyses ?? [], (meta) => meta.id);
     }
 
     /** Metadata for types in the theory, as used in models.
@@ -120,6 +123,16 @@ export class Theory {
     /** Get metadata for a model analysis. */
     modelAnalysis(id: string): ModelAnalysisMeta | undefined {
         return this.modelAnalysisMap.get(id);
+    }
+
+    /** List of analyses defined for diagrams. */
+    get diagramAnalyses(): Array<DiagramAnalysisMeta> {
+        return Array.from(this.diagramAnalysisMap.values());
+    }
+
+    /** Get metadata for a diagram analysis. */
+    diagramAnalysis(id: string): DiagramAnalysisMeta | undefined {
+        return this.diagramAnalysisMap.get(id);
     }
 }
 
@@ -245,4 +258,11 @@ export type AnalysisMeta<T> = {
 export type ModelAnalysisMeta<T = any> = AnalysisMeta<T> & {
     /** Component that renders the analysis. */
     component: ModelAnalysisComponent<T>;
+};
+
+/** Specifies a diagram analysis with descriptive metadata. */
+// biome-ignore lint/suspicious/noExplicitAny: content type is data dependent.
+export type DiagramAnalysisMeta<T = any> = AnalysisMeta<T> & {
+    /** Component that renders the analysis. */
+    component: DiagramAnalysisComponent<T>;
 };
