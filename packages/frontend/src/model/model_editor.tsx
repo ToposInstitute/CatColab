@@ -166,6 +166,9 @@ export function ModelNotebookEditor(props: {
 }) {
     const liveDoc = () => props.liveModel.liveDoc;
 
+    const cellConstructors = () =>
+        (props.liveModel.theory()?.modelTypes ?? []).map(modelCellConstructor);
+
     return (
         <LiveModelContext.Provider value={props.liveModel}>
             <NotebookEditor
@@ -176,7 +179,7 @@ export function ModelNotebookEditor(props: {
                     liveDoc().changeDoc((doc) => f(doc.notebook));
                 }}
                 formalCellEditor={ModelCellEditor}
-                cellConstructors={modelCellConstructors(props.liveModel.theory()?.modelTypes ?? [])}
+                cellConstructors={cellConstructors()}
                 cellLabel={judgmentLabel}
             />
         </LiveModelContext.Provider>
@@ -210,20 +213,18 @@ function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
     );
 }
 
-function modelCellConstructors(modelTypes: ModelTypeMeta[]): CellConstructor<ModelJudgment>[] {
-    return modelTypes.map((meta) => {
-        const { name, description, shortcut } = meta;
-        return {
-            name,
-            description,
-            shortcut: shortcut && [cellShortcutModifier, ...shortcut],
-            construct() {
-                return meta.tag === "ObType"
-                    ? newFormalCell(newObjectDecl(meta.obType))
-                    : newFormalCell(newMorphismDecl(meta.morType));
-            },
-        };
-    });
+function modelCellConstructor(meta: ModelTypeMeta): CellConstructor<ModelJudgment> {
+    const { name, description, shortcut } = meta;
+    return {
+        name,
+        description,
+        shortcut: shortcut && [cellShortcutModifier, ...shortcut],
+        construct() {
+            return meta.tag === "ObType"
+                ? newFormalCell(newObjectDecl(meta.obType))
+                : newFormalCell(newMorphismDecl(meta.morType));
+        },
+    };
 }
 
 function judgmentLabel(judgment: ModelJudgment): string | undefined {

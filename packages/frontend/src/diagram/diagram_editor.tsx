@@ -110,11 +110,15 @@ export function DiagramNotebookEditor(props: {
     liveDiagram: LiveDiagramDocument;
 }) {
     const liveDoc = () => props.liveDiagram.liveDoc;
+    const liveModel = () => props.liveDiagram.liveModel;
+
+    const cellConstructors = () =>
+        (liveModel().theory()?.instanceTypes ?? []).map(diagramCellConstructor);
 
     return (
         <MultiProvider
             values={[
-                [LiveModelContext, props.liveDiagram.liveModel],
+                [LiveModelContext, liveModel()],
                 [LiveDiagramContext, props.liveDiagram],
             ]}
         >
@@ -126,9 +130,7 @@ export function DiagramNotebookEditor(props: {
                     liveDoc().changeDoc((doc) => f(doc.notebook));
                 }}
                 formalCellEditor={DiagramCellEditor}
-                cellConstructors={diagramCellConstructors(
-                    props.liveDiagram.liveModel.theory()?.instanceTypes ?? [],
-                )}
+                cellConstructors={cellConstructors()}
                 cellLabel={judgmentLabel}
             />
         </MultiProvider>
@@ -164,22 +166,18 @@ function DiagramCellEditor(props: FormalCellEditorProps<DiagramJudgment>) {
     );
 }
 
-function diagramCellConstructors(
-    instanceTypes: InstanceTypeMeta[],
-): CellConstructor<DiagramJudgment>[] {
-    return instanceTypes.map((meta) => {
-        const { name, description, shortcut } = meta;
-        return {
-            name,
-            description,
-            shortcut: shortcut && [cellShortcutModifier, ...shortcut],
-            construct() {
-                return meta.tag === "ObType"
-                    ? newFormalCell(newDiagramObjectDecl(meta.obType))
-                    : newFormalCell(newDiagramMorphismDecl(meta.morType));
-            },
-        };
-    });
+function diagramCellConstructor(meta: InstanceTypeMeta): CellConstructor<DiagramJudgment> {
+    const { name, description, shortcut } = meta;
+    return {
+        name,
+        description,
+        shortcut: shortcut && [cellShortcutModifier, ...shortcut],
+        construct() {
+            return meta.tag === "ObType"
+                ? newFormalCell(newDiagramObjectDecl(meta.obType))
+                : newFormalCell(newDiagramMorphismDecl(meta.morType));
+        },
+    };
 }
 
 function judgmentLabel(judgment: DiagramJudgment): string | undefined {

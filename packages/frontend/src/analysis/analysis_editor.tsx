@@ -57,6 +57,10 @@ export function AnalysisPane(props: {
     liveAnalysis: LiveModelAnalysisDocument;
 }) {
     const liveDoc = () => props.liveAnalysis.liveDoc;
+
+    const cellConstructors = () =>
+        (props.liveAnalysis.liveModel.theory()?.modelAnalyses ?? []).map(analysisCellConstructor);
+
     return (
         <LiveModelContext.Provider value={props.liveAnalysis.liveModel}>
             <NotebookEditor
@@ -65,9 +69,7 @@ export function AnalysisPane(props: {
                 notebook={liveDoc().doc.notebook}
                 changeNotebook={(f) => liveDoc().changeDoc((doc) => f(doc.notebook))}
                 formalCellEditor={ModelAnalysisCellEditor}
-                cellConstructors={analysisCellConstructors(
-                    props.liveAnalysis.liveModel.theory()?.modelAnalyses ?? [],
-                )}
+                cellConstructors={cellConstructors()}
                 noShortcuts={true}
             />
         </LiveModelContext.Provider>
@@ -92,21 +94,6 @@ function ModelAnalysisCellEditor(props: FormalCellEditorProps<ModelAnalysis>) {
             )}
         </Show>
     );
-}
-
-function analysisCellConstructors<T>(analyses: AnalysisMeta<T>[]): CellConstructor<Analysis<T>>[] {
-    return analyses.map((analysis) => {
-        const { id, name, description, initialContent } = analysis;
-        return {
-            name,
-            description,
-            construct: () =>
-                newFormalCell({
-                    id,
-                    content: initialContent(),
-                }),
-        };
-    });
 }
 
 /** Editor for a model of a double theory.
@@ -190,4 +177,17 @@ export function AnalysisDocumentEditor(props: {
             }}
         </Resizable>
     );
+}
+
+function analysisCellConstructor<T>(meta: AnalysisMeta<T>): CellConstructor<Analysis<T>> {
+    const { id, name, description, initialContent } = meta;
+    return {
+        name,
+        description,
+        construct: () =>
+            newFormalCell({
+                id,
+                content: initialContent(),
+            }),
+    };
 }
