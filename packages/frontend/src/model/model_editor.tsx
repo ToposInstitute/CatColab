@@ -4,7 +4,7 @@ import invariant from "tiny-invariant";
 
 import type { JsonValue } from "catcolab-api";
 import { newModelAnalysisDocument } from "../analysis/document";
-import { RepoContext, RpcContext, getLiveDoc } from "../api";
+import { getLiveDoc, useApi } from "../api";
 import { IconButton, InlineInput } from "../components";
 import { newDiagramDocument } from "../diagram";
 import {
@@ -41,13 +41,12 @@ export default function ModelPage() {
     const refId = params.ref;
     invariant(refId, "Must provide model ref as parameter to model page");
 
-    const rpc = useContext(RpcContext);
-    const repo = useContext(RepoContext);
+    const api = useApi();
     const theories = useContext(TheoryLibraryContext);
-    invariant(rpc && repo && theories, "Missing context for model page");
+    invariant(theories, "Must provide theory library as context to model page");
 
     const [liveModel] = createResource<LiveModelDocument>(async () => {
-        const liveDoc = await getLiveDoc<ModelDocument>(rpc, repo, refId);
+        const liveDoc = await getLiveDoc<ModelDocument>(api, refId);
         return enlivenModelDocument(refId, liveDoc, theories);
     });
 
@@ -57,15 +56,13 @@ export default function ModelPage() {
 export function ModelDocumentEditor(props: {
     liveModel?: LiveModelDocument;
 }) {
-    const rpc = useContext(RpcContext);
-    invariant(rpc, "Missing context for model document editor");
-
+    const api = useApi();
     const navigate = useNavigate();
 
     const createDiagram = async (modelRefId: string) => {
         const init = newDiagramDocument(modelRefId);
 
-        const result = await rpc.new_ref.mutate({
+        const result = await api.rpc.new_ref.mutate({
             content: init as JsonValue,
             permissions: {
                 anyone: "Read",
@@ -80,7 +77,7 @@ export function ModelDocumentEditor(props: {
     const createAnalysis = async (modelRefId: string) => {
         const init = newModelAnalysisDocument(modelRefId);
 
-        const result = await rpc.new_ref.mutate({
+        const result = await api.rpc.new_ref.mutate({
             content: init as JsonValue,
             permissions: {
                 anyone: "Read",

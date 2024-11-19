@@ -3,7 +3,7 @@ import { A, useParams } from "@solidjs/router";
 import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { RepoContext, RpcContext, getLiveDoc } from "../api";
+import { getLiveDoc, useApi } from "../api";
 import { InlineInput } from "../components";
 import { LiveModelContext, type ModelDocument, enlivenModelDocument } from "../model";
 import {
@@ -36,17 +36,16 @@ export default function DiagramPage() {
     const refId = params.ref;
     invariant(refId, "Must provide document ref as parameter to diagram page");
 
-    const rpc = useContext(RpcContext);
-    const repo = useContext(RepoContext);
+    const api = useApi();
     const theories = useContext(TheoryLibraryContext);
-    invariant(rpc && repo && theories, "Missing context for diagram page");
+    invariant(theories, "Must provide theory library as context to diagram page");
 
     const [liveDiagram] = createResource<LiveDiagramDocument>(async () => {
-        const liveDoc = await getLiveDoc<DiagramDocument>(rpc, repo, refId);
+        const liveDoc = await getLiveDoc<DiagramDocument>(api, refId);
         const { doc } = liveDoc;
         invariant(doc.type === "diagram", () => `Expected diagram, got type: ${doc.type}`);
 
-        const modelLiveDoc = await getLiveDoc<ModelDocument>(rpc, repo, doc.modelRef.refId);
+        const modelLiveDoc = await getLiveDoc<ModelDocument>(api, doc.modelRef.refId);
         const liveModel = enlivenModelDocument(doc.modelRef.refId, modelLiveDoc, theories);
 
         return enlivenDiagramDocument(refId, liveDoc, liveModel);
