@@ -4,7 +4,7 @@ import ChevronRight from "lucide-solid/icons/chevron-right";
 import { Show } from "solid-js";
 
 import type { DblModel } from "catlog-wasm";
-import type { ModelAnalysisProps, SubmodelsAnalysisContent } from "../../analysis";
+import type { ModelAnalysisProps } from "../../analysis";
 import { IconButton } from "../../components";
 import type { ModelJudgment } from "../../model";
 import type { ModelAnalysisMeta, Theory } from "../../theory";
@@ -12,6 +12,14 @@ import { type GraphvizAttributes, ModelGraphviz } from "./model_graph";
 
 import baseStyles from "./base_styles.module.css";
 import "./submodel_graphs.css";
+
+/** State of a submodels analysis. */
+export type SubmodelsAnalysisContent = {
+    tag: "submodels";
+
+    /** Index of active submodel. */
+    activeIndex: number;
+};
 
 /** Configure a submodel analysis for use with a double theory. */
 export function configureSubmodelsAnalysis(options: {

@@ -1,6 +1,5 @@
 import type { Component } from "solid-js";
 
-import type * as catlog from "catlog-wasm";
 import type { LiveModelDocument } from "../model";
 
 /** An analysis of a formal object.
@@ -19,9 +18,6 @@ export type Analysis<T> = {
     content: T;
 };
 
-/** An analysis of a model of a double theory. */
-export type ModelAnalysis = Analysis<ModelAnalysisContent>;
-
 /** Props passed to any analysis component. */
 export type AnalysisProps<T> = {
     /** Content associated with the analysis itself. */
@@ -38,37 +34,4 @@ export type ModelAnalysisProps<T> = AnalysisProps<T> & {
 };
 
 /** Component that renders an analysis of a model. */
-export type ModelAnalysisComponent<T extends ModelAnalysisContent> = Component<
-    ModelAnalysisProps<T>
->;
-
-/** Content associated with an analysis of a model.
-
-Such content is in addition to the data of the model and can include
-configuration or state for the analysis.
- */
-export type ModelAnalysisContent =
-    | ModelGraphContent
-    | SubmodelsAnalysisContent
-    | LotkaVolterraContent;
-
-/** Configuration for a graph visualization of a model. */
-export type ModelGraphContent = {
-    tag: "graph";
-
-    /** Layout engine for graph. */
-    layout: "graphviz-directed" | "graphviz-undirected";
-};
-
-/** State of a submodels analysis. */
-export type SubmodelsAnalysisContent = {
-    tag: "submodels";
-
-    /** Index of active submodel. */
-    activeIndex: number;
-};
-
-/** Configuration for a Lotka-Volterra ODE analysis of a model. */
-export type LotkaVolterraContent = {
-    tag: "lotka-volterra";
-} & catlog.LotkaVolterraProblemData<string>;
+export type ModelAnalysisComponent<T> = Component<ModelAnalysisProps<T>>;

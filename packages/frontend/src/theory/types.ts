@@ -2,7 +2,7 @@ import type { KbdKey } from "@solid-primitives/keyboard";
 
 import type { DblTheory, MorType, ObType } from "catlog-wasm";
 import { MorTypeIndex, ObTypeIndex } from "catlog-wasm";
-import type { ModelAnalysisComponent, ModelAnalysisContent } from "../analysis";
+import type { ModelAnalysisComponent } from "../analysis";
 import { uniqueIndexArray } from "../util/indexing";
 import type { ArrowStyle } from "../visualization";
 
@@ -242,7 +242,7 @@ export type AnalysisMeta<T> = {
 
 /** Specifies a model analysis with descriptive metadata. */
 // biome-ignore lint/suspicious/noExplicitAny: content type is data dependent.
-export type ModelAnalysisMeta<T extends ModelAnalysisContent = any> = AnalysisMeta<T> & {
+export type ModelAnalysisMeta<T = any> = AnalysisMeta<T> & {
     /** Component that renders the analysis. */
     component: ModelAnalysisComponent<T>;
 };

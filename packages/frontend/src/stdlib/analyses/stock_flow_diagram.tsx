@@ -2,7 +2,7 @@ import type * as Viz from "@viz-js/viz";
 import { type Component, For, Show, createResource, createSignal } from "solid-js";
 import { P, match } from "ts-pattern";
 
-import type { ModelAnalysisProps, ModelGraphContent } from "../../analysis";
+import type { ModelAnalysisProps } from "../../analysis";
 import type { ModelJudgment } from "../../model";
 import type { ModelAnalysisMeta, Theory } from "../../theory";
 import { uniqueIndexArray } from "../../util/indexing";
@@ -17,7 +17,12 @@ import {
     loadViz,
     vizLayoutGraph,
 } from "../../visualization";
-import { type GraphvizAttributes, graphvizEngine, modelToGraphviz } from "./model_graph";
+import {
+    type GraphvizAttributes,
+    type ModelGraphContent,
+    graphvizEngine,
+    modelToGraphviz,
+} from "./model_graph";
 
 import baseStyles from "./base_styles.module.css";
 

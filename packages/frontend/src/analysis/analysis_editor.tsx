@@ -18,7 +18,7 @@ import { BrandedToolbar, HelpButton } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { AnalysisMeta } from "../theory";
 import type { LiveModelAnalysisDocument, ModelAnalysisDocument } from "./document";
-import type { Analysis, ModelAnalysis } from "./types";
+import type { Analysis } from "./types";
 
 import PanelRight from "lucide-solid/icons/panel-right";
 import PanelRightClose from "lucide-solid/icons/panel-right-close";
@@ -76,7 +76,7 @@ export function AnalysisPane(props: {
     );
 }
 
-function ModelAnalysisCellEditor(props: FormalCellEditorProps<ModelAnalysis>) {
+function ModelAnalysisCellEditor(props: FormalCellEditorProps<Analysis<unknown>>) {
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context for analysis");
 
