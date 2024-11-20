@@ -17,12 +17,8 @@ import {
     loadViz,
     vizLayoutGraph,
 } from "../../visualization";
-import {
-    type GraphvizAttributes,
-    type ModelGraphContent,
-    graphvizEngine,
-    modelToGraphviz,
-} from "./model_graph";
+import { type GraphContent, type GraphvizAttributes, graphvizEngine } from "./graph";
+import { modelToGraphviz } from "./model_graph";
 
 import baseStyles from "./base_styles.module.css";
 
@@ -31,7 +27,7 @@ export function configureStockFlowDiagram(options: {
     id: string;
     name: string;
     description?: string;
-}): ModelAnalysisMeta<ModelGraphContent> {
+}): ModelAnalysisMeta<GraphContent> {
     const { id, name, description } = options;
     return {
         id,
@@ -47,7 +43,7 @@ export function configureStockFlowDiagram(options: {
 
 /** Visualize a stock flow diagram.
  */
-export function StockFlowDiagram(props: ModelAnalysisProps<ModelGraphContent>) {
+export function StockFlowDiagram(props: ModelAnalysisProps<GraphContent>) {
     const [svgRef, setSvgRef] = createSignal<SVGSVGElement>();
 
     return (
