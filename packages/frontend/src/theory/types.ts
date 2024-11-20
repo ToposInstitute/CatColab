@@ -189,7 +189,7 @@ type HasMorTypeMeta = {
 };
 
 /** Frontend metadata applicable to any type in a double theory. */
-type BaseTypeMeta = {
+export type BaseTypeMeta = {
     /** Human-readable name of type. */
     name: string;
 
