@@ -27,6 +27,7 @@
         "@corvu/disclosure": "^0.2.0",
         "@corvu/popover": "^0.2.0",
         "@corvu/resizable": "^0.2.3",
+        "@jupyterlab/services": "^7.3.1",
         "@kobalte/core": "^0.13.7",
         "@modular-forms/solid": "^0.24.1",
         "@qubit-rs/client": "^0.4.4",
