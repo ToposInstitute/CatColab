@@ -1,9 +1,10 @@
 import type * as Viz from "@viz-js/viz";
 import { Show, createSignal } from "solid-js";
+import { P, match } from "ts-pattern";
 
 import type { ModelAnalysisProps } from "../../analysis";
 import type { ModelJudgment } from "../../model";
-import type { ModelAnalysisMeta, ModelTypeMeta, Theory } from "../../theory";
+import type { ModelAnalysisMeta, Theory } from "../../theory";
 import { DownloadSVGButton, GraphvizSVG, type SVGRefProp } from "../../visualization";
 import {
     type GraphContent,
@@ -12,9 +13,10 @@ import {
     defaultGraphAttributes,
     defaultNodeAttributes,
     graphvizEngine,
+    graphvizFontname,
+    svgCssClasses,
 } from "./graph";
 
-import textStyles from "../text_styles.module.css";
 import baseStyles from "./base_styles.module.css";
 
 /** Configure a graph visualization for use with models of a double theory. */
@@ -85,7 +87,7 @@ export function ModelGraph(
 /** Visualize a model of a double theory as a graph using Graphviz.
  */
 export function ModelGraphviz(props: {
-    model: Array<ModelJudgment>;
+    model: ModelJudgment[];
     theory: Theory;
     attributes?: GraphvizAttributes;
     options?: Viz.RenderOptions;
@@ -103,7 +105,7 @@ export function ModelGraphviz(props: {
 /** Convert a model of a double theory into a Graphviz graph.
  */
 export function modelToGraphviz(
-    model: Array<ModelJudgment>,
+    model: ModelJudgment[],
     theory: Theory,
     attributes?: GraphvizAttributes,
 ): Viz.Graph {
@@ -117,8 +119,8 @@ export function modelToGraphviz(
                 attributes: {
                     id,
                     label: name,
-                    class: cssClass(meta),
-                    fontname: fontname(meta),
+                    class: svgCssClasses(meta).join(" "),
+                    fontname: graphvizFontname(meta),
                 },
             });
         }
@@ -126,30 +128,40 @@ export function modelToGraphviz(
 
     const edges: Required<Viz.Graph>["edges"] = [];
     for (const judgment of model) {
-        if (judgment.tag === "morphism") {
-            const { id, name, dom, cod } = judgment;
-            if (
-                dom?.tag !== "Basic" ||
-                cod?.tag !== "Basic" ||
-                !nodes.has(dom.content) ||
-                !nodes.has(cod.content)
-            ) {
-                continue;
-            }
-            const meta = theory.modelMorTypeMeta(judgment.morType);
-            edges.push({
-                head: cod.content,
-                tail: dom.content,
-                attributes: {
-                    id,
-                    label: name,
-                    class: cssClass(meta),
-                    fontname: fontname(meta),
-                    // Not recognized by Graphviz but will be passed through!
-                    arrowstyle: meta?.arrowStyle ?? "default",
+        const matched = match(judgment)
+            .with(
+                {
+                    tag: "morphism",
+                    morType: P.select("morType"),
+                    dom: {
+                        tag: "Basic",
+                        content: P.select("domId"),
+                    },
+                    cod: {
+                        tag: "Basic",
+                        content: P.select("codId"),
+                    },
                 },
-            });
+                (matched) => matched,
+            )
+            .otherwise(() => null);
+        if (!matched) {
+            continue;
         }
+        const { morType, codId, domId } = matched;
+        const meta = theory.modelMorTypeMeta(morType);
+        edges.push({
+            head: codId,
+            tail: domId,
+            attributes: {
+                id: judgment.id,
+                label: judgment.name,
+                class: svgCssClasses(meta).join(" "),
+                fontname: graphvizFontname(meta),
+                // Not recognized by Graphviz but will be passed through!
+                arrowstyle: meta?.arrowStyle ?? "default",
+            },
+        });
     }
 
     return {
@@ -161,11 +173,3 @@ export function modelToGraphviz(
         edgeAttributes: { ...defaultEdgeAttributes, ...attributes?.edge },
     };
 }
-
-const cssClass = (meta?: ModelTypeMeta): string =>
-    [...(meta?.svgClasses ?? []), ...(meta?.textClasses ?? [])].join(" ");
-
-// XXX: Precise font matching seems impossible here but we'll at least give
-// Graphviz a monospace font if and only if we're using one.
-const fontname = (meta?: ModelTypeMeta) =>
-    meta?.textClasses?.includes(textStyles.code) ? "Courier" : "Helvetica";

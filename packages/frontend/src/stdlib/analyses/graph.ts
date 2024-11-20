@@ -1,5 +1,9 @@
 import type * as Viz from "@viz-js/viz";
 
+import type { BaseTypeMeta } from "../../theory";
+
+import textStyles from "../text_styles.module.css";
+
 /** Graph layout engine supported by CatColab.
 
 Currently we just use Graphviz. In the future we may support other tools.
@@ -48,3 +52,14 @@ export const defaultEdgeAttributes: Required<Viz.Graph>["edgeAttributes"] = {
     fontsize: "20",
     sep: "5",
 };
+
+// XXX: Precise font matching seems impossible here but we'll at least give
+// Graphviz a monospace font if and only if we're using one.
+export const graphvizFontname = (meta?: BaseTypeMeta): string =>
+    meta?.textClasses?.includes(textStyles.code) ? "Courier" : "Helvetica";
+
+// XXX: This should probably go somewhere else.
+export const svgCssClasses = (meta?: BaseTypeMeta): string[] => [
+    ...(meta?.svgClasses ?? []),
+    ...(meta?.textClasses ?? []),
+];

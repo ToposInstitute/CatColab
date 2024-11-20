@@ -2,6 +2,7 @@ import * as catlog from "catlog-wasm";
 
 import { Theory } from "../theory";
 import {
+    configureDiagramGraph,
     configureLotkaVolterra,
     configureModelGraph,
     configureStockFlowDiagram,
@@ -73,6 +74,13 @@ stdTheories.add(
                     id: "diagram",
                     name: "Diagram",
                     description: "Visualize the olog as a diagram",
+                }),
+            ],
+            diagramAnalyses: [
+                configureDiagramGraph({
+                    id: "graph",
+                    name: "Graph",
+                    description: "Visualize the instance as a graph",
                 }),
             ],
         });
@@ -176,6 +184,13 @@ stdTheories.add(
                     id: "diagram",
                     name: "Diagram",
                     description: "Visualize the schema as a diagram",
+                }),
+            ],
+            diagramAnalyses: [
+                configureDiagramGraph({
+                    id: "graph",
+                    name: "Graph",
+                    description: "Visualize the instance as a graph",
                 }),
             ],
         });
@@ -487,6 +502,13 @@ stdTheories.add(
                     description: "Apply an operation to quantities",
                     shortcut: ["A"],
                 },
+            ],
+            diagramAnalyses: [
+                configureDiagramGraph({
+                    id: "graph",
+                    name: "Diagram",
+                    description: "Visualize the equations as a diagram",
+                }),
             ],
         });
     },

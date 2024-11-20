@@ -55,7 +55,7 @@ export function DiagramDocumentEditor(props: {
     const navigate = useNavigate();
 
     const onCreateAnalysis = async (diagramRefId: string) => {
-        const newRef = createAnalysis("diagram", diagramRefId, api);
+        const newRef = await createAnalysis("diagram", diagramRefId, api);
         navigate(`/analysis/${newRef}`);
     };
 
