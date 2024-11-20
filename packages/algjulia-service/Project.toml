@@ -1,0 +1,5 @@
+[deps]
+CombinatorialSpaces = "b1c52339-7909-45ad-8b6a-6e388f7c67f2"
+Decapodes = "679ab3ea-c928-4fe6-8d59-fd451142d391"
+IJulia = "7073ff75-c697-5162-941a-fcdaad2a7d2a"
+JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
