@@ -1,50 +1,60 @@
 using Test
 
+using AlgebraicJuliaService
+using ACSets
+using Decapodes
+using DiagrammaticEquations
+
+using MLStyle
+using JSON3
+
+# load data
+data = open(JSON3.read, joinpath(@__DIR__, "diffusion_data.json"), "r")
+diagram = data[:diagram];
+model = data[:model];
+
 @testset "Text-to-Pode" begin
 
     @test to_pode(Val(:Ob), "0-form") == :Form0
     @test to_pode(Val(:Ob), "1-form") == :Form1
     @test to_pode(Val(:Ob), "2-form") == :Form2
-    @test_throws ImplError to_pode(Val(:Ob), "Constant")
+    @test_throws AlgebraicJuliaService.ImplError to_pode(Val(:Ob), "Constant")
 
     @test to_pode(Val(:Hom), "∂t") == :∂ₜ
     @test to_pode(Val(:Hom), "Δ") == :Δ
-    @test_throws ImplError to_pode(Val(:Hom), "∧") 
+    @test_throws AlgebraicJuliaService.ImplError to_pode(Val(:Hom), "∧") 
 
 end
 
-# TODO bikeshedding: is "theoryobj" the proper term, or should the data loaded be named theoryobj and diagram, and the bound variables here be "thoeryobj" and "podeobj"
-theoryobj = JSON3.read(fragment); # TODO import fragment
-diagram = JSON3.read(pode);
-
 @testset "Parsing the Theory JSON Object" begin
 
-    # @test inbound JSON string
+    @test Set(keys(data)) == Set([:diagram, :model])
 
-    @test Set(keys(theoryobj)) == Set([:name, :notebook, :theory, :type])
+    # the intent was to check that the JSON is coming in with the correct keys
+    # @test_broken Set(keys(model)) == Set([:name, :notebook, :theory, :type])
 
-    @test @match theoryobj[:notebook][:cells][1] begin
+    @test @match model[1] begin
         IsObject(_) => true
         _ => false
     end
     
-    @test @match theoryobj[:notebook][:cells][4] begin
+    @test @match model[4] begin
         IsMorphism(_) => true
         _ => false
     end
 
     theory = Theory();
-    @match theoryobj[:notebook][:cells][1] begin
+    @match model[1] begin
         IsObject(content) => add_to_theory!(theory, content, Val(:Ob))
         _ => nothing
     end
-
+    @test theory.data["019323fa-49cb-7373-8c5d-c395bae4006d"] == TheoryElement(;name=:Form0, val=nothing)
     
 end
 
 @testset "Making the Decapode" begin
    
-    theory = Theory(theoryobj);
+    theory = Theory(model);
     @test Set(nameof.(values(theory))) == Set([:Form0, :Form1, :Form2, :Δ, :∂ₜ])
 
     handcrafted_pode = SummationDecapode(parse_decapode(quote end));
@@ -57,5 +67,12 @@ end
     decapode = Decapode(diagram, theory);
 
     @test decapode == handcrafted_pode 
+
+end
+
+@testset "Simulation" begin
+
+    json_string = read(joinpath(@__DIR__, "diffusion_data.json"), String);
+    json_value = simulate_decapode(json_string);
 
 end
