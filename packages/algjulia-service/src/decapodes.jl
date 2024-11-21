@@ -17,13 +17,14 @@ using ComponentArrays
 using GeometryBasics: Point2, Point3
 using OrdinaryDiffEq
 
-export simulate_decapode
-
 struct ImplError <: Exception
     name::String
 end
 
 Base.showerror(io::IO, e::ImplError) = print("$(e.name) not implemented")
+
+function to_pode end
+export to_pode
 
 """ Helper function to convert CatColab values (Obs) in Decapodes """
 function to_pode(::Val{:Ob}, name::String)
@@ -48,12 +49,14 @@ end
 
 # @active patterns are MLStyle-implementations of F# active patterns that forces us to work in the Maybe/Option design pattern. They make @match statements cleaner.
 @active IsObject(x) begin
-    x[:content][:tag] == "object" ? Some(x[:content]) : nothing
+    x[:tag] == "object" ? Some(x) : nothing
 end
 
 @active IsMorphism(x) begin
-    x[:content][:tag] == "morphism" ? Some(x[:content]) : nothing
+    x[:tag] == "morphism" ? Some(x) : nothing
 end
+
+export IsObject, IsMorphism
 
 """ Obs, Homs """
 abstract type ElementData end
@@ -67,6 +70,7 @@ struct TheoryElement
         new(name, val)
     end
 end
+export TheoryElement
 
 Base.nameof(t::TheoryElement) = t.name
 
@@ -77,6 +81,7 @@ struct HomData <: ElementData
         new(dom,cod)
     end
 end
+export HomData
 
 struct Theory
     data::Dict{String, TheoryElement}
@@ -84,11 +89,15 @@ struct Theory
         new(Dict{String, TheoryElement}())
     end
 end
+export Theory
 
 # TODO engooden
 Base.show(io::IO, theory::Theory) = println(io, theory.data)
 
 Base.values(theory::Theory) = values(theory.data)
+
+function add_to_theory! end
+export add_to_theory!
 
 function add_to_theory!(theory::Theory, content::Any, type::Val{:Ob})
     push!(theory.data, content[:id] => TheoryElement(;name=to_pode(type, content[:name])))
@@ -105,9 +114,9 @@ end
 #   ...an object, we convert its type to a symbol and add it to the theorydict
 #   ...a morphism, we add it to the theorydict with a field for the ids of its
 #       domain and codomain to its
-function Theory(jsontheory::JSON3.Object)
+function Theory(model::AbstractVector{JSON3.Object})
     theory = Theory();
-    foreach(jsontheory[:notebook][:cells]) do cell
+    foreach(model) do cell
         @match cell begin
             IsObject(content) => add_to_theory!(theory, content, Val(:Ob))
             IsMorphism(content) => add_to_theory!(theory, content, Val(:Hom))
@@ -116,6 +125,10 @@ function Theory(jsontheory::JSON3.Object)
     end
     return theory
 end
+export Theory
+
+function add_to_pode! end
+export add_to_pode!
 
 function add_to_pode!(d::SummationDecapode, 
         vars::Dict{String, Int}, # mapping between UUID and ACSet ID
@@ -151,12 +164,12 @@ end
 
 This returns a Decapode given a jsondiagram and a theory.
 """
-function Decapode(dict::AbstractDict{Symbol, Any}, theory::Theory)
+function Decapode(diagram::AbstractVector{JSON3.Object}, theory::Theory)
     # initiatize decapode and its mapping between UUIDs and ACSet IDs
     pode = SummationDecapode(parse_decapode(quote end))
     vars = Dict{String, Int}();
     # for each cell in the notebook, add it to the diagram 
-    foreach(dict[:notebook][:cells]) do cell
+    foreach(diagram) do cell
         @match cell begin
             IsObject(content) => add_to_pode!(pode, vars, theory, content, Val(:Ob))
             IsMorphism(content) => add_to_pode!(pode, vars, theory, content, Val(:Hom))
@@ -165,6 +178,7 @@ function Decapode(dict::AbstractDict{Symbol, Any}, theory::Theory)
     end
     pode
 end
+export Decapode
 # the proper name for this constructor should be "SummationDecapode"
 
 function create_mesh()
@@ -177,11 +191,13 @@ function create_mesh()
 
   return (sd, u0, ())
 end
+export create_mesh
 
 function run_sim(fm, u0, t0, constparam)
     prob = ODEProblem(fm, u0, (0, t0), constparam)
     soln = solve(prob, Tsit5(), saveat=0.1)
 end
+export run_sim
 
 abstract type AbstractPlotType end
 
@@ -199,8 +215,7 @@ struct SimResult
     x::Vector{Float64} # axis
     y::Vector{Float64}
 end
-# TODO serialize to JSON
-# TODO Any is actually Tuple{Axis{(C = 1:2601,)}}
+export SimResult
 
 function SimResult(sol::ODESolution, mesh::EmbeddedDeltaDualComplex2D)
 
@@ -228,14 +243,15 @@ function Base.show(io::IO, result::SimResult)
 end
 
 function simulate_decapode(json_string::String)
-  jsonobj = JSON3.read(json_string)
+    
+  json_object = JSON3.read(json_string);
 
   # converts the JSON of (the fragment of) the theory
   # into theory of the DEC, valued in Julia
-  theory = Theory(jsonobj[:model])
+  theory = Theory(json_object[:model])
 
   # this is a diagram in the model of the DEC. it wants to be a decapode!
-  diagram = jsonobj[:diagram]
+  diagram = json_object[:diagram]
 
   # pode
   decapode = Decapode(diagram, theory);
@@ -245,7 +261,7 @@ function simulate_decapode(json_string::String)
   # TODO enhancement: generalize this
 
   # build simulation
-  simulator = eval(gensim(decapode));
+  simulator = evalsim(decapode);
   f = simulator(sd, default_dec_generate, DiagonalHodge());
   # TODO enhancement: default_dec_generate could be generalized, maybe from the frontend
 
@@ -264,3 +280,4 @@ function simulate_decapode(json_string::String)
   JsonValue(result)
 
 end
+export simulate_decapode
