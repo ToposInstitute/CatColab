@@ -8,8 +8,9 @@ using Decapodes
 using DiagrammaticEquations
 using CombinatorialSpaces
 
-# dependencies 
+# dependencies
 import JSON3
+using StaticArrays
 using MLStyle
 using LinearAlgebra
 using ComponentArrays
@@ -150,12 +151,12 @@ end
 
 This returns a Decapode given a jsondiagram and a theory.
 """
-function Decapode(jsondiagram::JSON3.Object, theory::Theory)
+function Decapode(dict::AbstractDict{Symbol, Any}, theory::Theory)
     # initiatize decapode and its mapping between UUIDs and ACSet IDs
     pode = SummationDecapode(parse_decapode(quote end))
     vars = Dict{String, Int}();
     # for each cell in the notebook, add it to the diagram 
-    foreach(jsondiagram[:notebook][:cells]) do cell
+    foreach(dict[:notebook][:cells]) do cell
         @match cell begin
             IsObject(content) => add_to_pode!(pode, vars, theory, content, Val(:Ob))
             IsMorphism(content) => add_to_pode!(pode, vars, theory, content, Val(:Hom))
@@ -194,19 +195,28 @@ end
 
 struct SimResult
     times::Vector{Float64}
-    x::Vector{Float64}
+    state::Vector{Matrix{SVector{3, Float64}}}
+    x::Vector{Float64} # axis
     y::Vector{Float64}
-    states::Vector{ComponentVector{Float64, Vector{Float64}, <:Tuple{Vararg{AbstractAxis}}}} # TODO to StateVar
 end
 # TODO serialize to JSON
 # TODO Any is actually Tuple{Axis{(C = 1:2601,)}}
 
 function SimResult(sol::ODESolution, mesh::EmbeddedDeltaDualComplex2D)
+
     points = collect(values(mesh.subparts.point.m));
-    SimResult(sol.t, 
-        [pt[1] for pt in points],
-        [pt[2] for pt in points],
-        sol.u)
+
+    function at_time(sol::ODESolution, timeidx::Int)
+        [SVector(i, j, sol.u[timeidx].C[51*(i-1) + j]) for i in 1:51, j in 1:51]
+    end
+    # TODO indexing by "C", more principled way of indexing (not hardcoding 51)
+
+    state_vals = map(1:length(sol.t)) do i
+        at_time(sol, i)
+    end
+
+    # TODO engooden
+    SimResult(sol.t, state_vals, 0:50, 0:50)
 end
 # TODO generalize to HasDeltaSet
 
@@ -252,4 +262,5 @@ function simulate_decapode(json_string::String)
   result = SimResult(out, sd);
 
   JsonValue(result)
+
 end
