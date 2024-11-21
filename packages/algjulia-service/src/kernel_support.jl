@@ -1,9 +1,6 @@
-import IJulia
 import JSON3
 
 export JsonValue
-
-IJulia.register_jsonmime(MIME"application/json"())
 
 """ Container for an arbitrary JSON value. """
 struct JsonValue
