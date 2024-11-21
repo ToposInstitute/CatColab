@@ -19,6 +19,8 @@ diagram = JSON3.read(pode);
 
 @testset "Parsing the Theory JSON Object" begin
 
+    # @test inbound JSON string
+
     @test Set(keys(theoryobj)) == Set([:name, :notebook, :theory, :type])
 
     @test @match theoryobj[:notebook][:cells][1] begin
