@@ -6,16 +6,16 @@ import { ErrorAlert } from "../components";
 
 const ECharts = lazy(() => import("./echarts"));
 
-/** Values of a state variable over time. */
-export type StateVarData = {
-    name: string;
-    data: number[];
-};
-
 /** Data plotted by `ODEPlot` component. */
 export type ODEPlotData = {
     time: number[];
     states: StateVarData[];
+};
+
+/** Values of a state variable over time. */
+type StateVarData = {
+    name: string;
+    data: number[];
 };
 
 /** Display the results from an ODE simulation.
