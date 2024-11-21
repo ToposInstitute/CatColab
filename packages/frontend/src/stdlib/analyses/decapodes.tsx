@@ -1,15 +1,17 @@
 import type { IKernelConnection } from "@jupyterlab/services/lib/kernel/kernel";
 import { Show, createResource, createSignal, onCleanup } from "solid-js";
 
+import type { JsResult } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
 import { IconButton } from "../../components";
 import type { DiagramAnalysisMeta } from "../../theory";
-import { PDEPlot2D, type PDEPlotData2D } from "../../visualization";
+import { type PDEPlotData2D, PDEResultPlot2D } from "../../visualization";
 
 import Loader from "lucide-solid/icons/loader";
 import RotateCw from "lucide-solid/icons/rotate-cw";
 
 import baseStyles from "./base_styles.module.css";
+import "./simulation.css";
 
 type JupyterSettings = {
     baseUrl?: string;
@@ -36,7 +38,7 @@ export function configureDecapodes(options: {
 }
 
 export function Decapodes(props: DiagramAnalysisProps<JupyterSettings>) {
-    const [simulationData, setSimulationData] = createSignal<PDEPlotData2D>();
+    const [simulationResult, setSimulationResult] = createSignal<JsResult<PDEPlotData2D, string>>();
 
     const [kernel] = createResource(async () => {
         const jupyter = await import("@jupyterlab/services");
@@ -53,8 +55,9 @@ export function Decapodes(props: DiagramAnalysisProps<JupyterSettings>) {
         const reply = await future.done;
 
         if (reply.content.status === "error") {
+            // TODO: Handle this error without raising in console.
             const msg = `${reply.content.ename}: ${reply.content.evalue}`;
-            throw new Error(`Failed to import AlgebraicJulia service: ${msg}`);
+            throw new Error(`Failed to initialize AlgebraicJulia service: ${msg}`);
         }
 
         return kernel;
@@ -63,12 +66,12 @@ export function Decapodes(props: DiagramAnalysisProps<JupyterSettings>) {
     onCleanup(() => kernel()?.shutdown());
 
     const simulate = async (kernel: IKernelConnection) => {
-        const diagramData = {
+        const requestData = {
             diagram: props.liveDiagram.formalJudgments(),
             model: props.liveDiagram.liveModel.formalJudgments(),
         };
         const future = kernel.requestExecute({
-            code: `simulate_decapode(raw"""${JSON.stringify(diagramData)}""")`,
+            code: `simulate_decapode(raw"""${JSON.stringify(requestData)}""")`,
         });
 
         future.onIOPub = (msg) => {
@@ -77,22 +80,25 @@ export function Decapodes(props: DiagramAnalysisProps<JupyterSettings>) {
                 msg.parent_header.msg_id === future.msg.header.msg_id
             ) {
                 const content = msg.content as JsonDataContent<PDEPlotData2D>;
-                setSimulationData(content["data"]?.["application/json"]);
+                const data = content["data"]?.["application/json"];
+                if (data) {
+                    setSimulationResult({ tag: "Ok", content: data });
+                }
             }
         };
 
         const reply = await future.done;
-        if (reply.content.status !== "ok") {
-            setSimulationData(undefined);
-        }
         if (reply.content.status === "error") {
             const msg = `${reply.content.ename}: ${reply.content.evalue}`;
-            throw new Error(`Error running simulation: ${msg}`);
+            setSimulationResult({ tag: "Err", content: msg });
+        } else if (reply.content.status !== "ok") {
+            // Execution request was aborted.
+            setSimulationResult(undefined);
         }
     };
 
     return (
-        <div class="decapodes">
+        <div class="simulation">
             <div class={baseStyles.panel}>
                 <span class={baseStyles.title}>Simulation</span>
                 <span class={baseStyles.filler} />
@@ -114,7 +120,7 @@ export function Decapodes(props: DiagramAnalysisProps<JupyterSettings>) {
                     )}
                 </Show>
             </div>
-            <Show when={simulationData()}>{(data) => <PDEPlot2D data={data()} />}</Show>
+            <PDEResultPlot2D result={simulationResult()} />
         </div>
     );
 }

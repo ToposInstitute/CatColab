@@ -1,5 +1,8 @@
 import type { EChartsOption } from "echarts";
-import { lazy } from "solid-js";
+import { Match, Switch, lazy } from "solid-js";
+
+import type { JsResult } from "catlog-wasm";
+import { ErrorAlert } from "../components";
 
 const ECharts = lazy(() => import("./echarts"));
 
@@ -20,6 +23,22 @@ export type PDEPlotData2D = {
 
 /** The data of a state variable at a given time. */
 type StateVarAtTime = Array<[xIndex: number, yIndex: number, value: number]>;
+
+/** Display the results, possibly failed, from a 2D PDE simulation. */
+export function PDEResultPlot2D(props: {
+    result?: JsResult<PDEPlotData2D, string>;
+}) {
+    return (
+        <Switch>
+            <Match when={props.result?.tag === "Ok" && props.result.content}>
+                {(data) => <PDEPlot2D data={data()} />}
+            </Match>
+            <Match when={props.result?.tag === "Err" && props.result.content}>
+                {(err) => <ErrorAlert title="Simulation error">{err()}</ErrorAlert>}
+            </Match>
+        </Switch>
+    );
+}
 
 /** Display the output data from a 2D PDE simulation. */
 export function PDEPlot2D(props: {
@@ -84,5 +103,9 @@ export function PDEPlot2D(props: {
         ],
     });
 
-    return <ECharts option={options()} />;
+    return (
+        <div class="plot">
+            <ECharts option={options()} />
+        </div>
+    );
 }

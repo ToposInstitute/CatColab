@@ -29,11 +29,7 @@ export function ODEResultPlot(props: {
     return (
         <Switch>
             <Match when={props.result?.tag === "Ok" && props.result.content}>
-                {(data) => (
-                    <div class="plot">
-                        <ODEPlot data={data()} />
-                    </div>
-                )}
+                {(data) => <ODEPlot data={data()} />}
             </Match>
             <Match when={props.result?.tag === "Err" && props.result.content}>
                 {(err) => <ErrorAlert title="Integration error">{err()}</ErrorAlert>}
@@ -71,7 +67,11 @@ export function ODEPlot(props: {
         })),
     });
 
-    return <ECharts option={options()} />;
+    return (
+        <div class="plot">
+            <ECharts option={options()} />
+        </div>
+    );
 }
 
 const formatTimeLabel = (x: number): string => {
