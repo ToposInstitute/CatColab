@@ -1,29 +1,43 @@
+# - parameterize by the theory. this is currently fixed to decapodes
+# - switch to different meshes
+# - use enum instead of val
+
+# algebraicjulia dependencies
+using ACSets
+using Decapodes
+using DiagrammaticEquations
+using CombinatorialSpaces
+
+# dependencies 
 import JSON3
+using MLStyle
+using LinearAlgebra
+using ComponentArrays
+using GeometryBasics: Point2, Point3
+using OrdinaryDiffEq
 
 export simulate_decapode
-
-# Text => Pode
 
 struct ImplError <: Exception
     name::String
 end
 
-Base.showerror(io::IO, e::ImplError) = print("$x not implemented")
+Base.showerror(io::IO, e::ImplError) = print("$(e.name) not implemented")
 
-""" Helper function to convert CatColab values in Decapodes """
+""" Helper function to convert CatColab values (Obs) in Decapodes """
 function to_pode(::Val{:Ob}, name::String)
     @match name begin
         "0-form" => :Form0
         "1-form" => :Form1
         "2-form" => :Form2
-        # TODO how do we handle Julia errors in CatColab?
         x => throw(ImplError(x))
     end
 end
 
+""" Helper function to convert CatColab values (Homs) in Decapodes """
 function to_pode(::Val{:Hom}, name::String)
     @match name begin
-        "∂ₜ" => :∂ₜ
+        "∂t" => :∂ₜ
         "Δ" => :Δ
         x => throw(ImplError(x))
     end
@@ -31,66 +45,126 @@ end
 
 # Build the theory
 
+# @active patterns are MLStyle-implementations of F# active patterns that forces us to work in the Maybe/Option design pattern. They make @match statements cleaner.
 @active IsObject(x) begin
-    x["content"]["tag"] == "object" ? Some(x["content"]) : nothing
+    x[:content][:tag] == "object" ? Some(x[:content]) : nothing
 end
 
 @active IsMorphism(x) begin
-    x["content"]["tag"] == "morphism" ? Some(x["content"]) : nothing
+    x[:content][:tag] == "morphism" ? Some(x[:content]) : nothing
 end
 
-function add_to_theory!(theory::Dict{String, Any}, content::Any, type::Val{:Ob})
-    push!(theory, content["id"] => (name=to_pode(type, content["name"])))
+""" Obs, Homs """
+abstract type ElementData end
+
+""" Struct capturing the name of the object and its relevant information. ElementData may be objects or homs, each of which has different data.
+"""
+struct TheoryElement
+    name::Union{Symbol, Nothing}
+    val::Union{ElementData, Nothing}
+    function TheoryElement(;name::Symbol=nothing,val::Any=nothing)
+        new(name, val)
+    end
 end
 
-function add_to_theory!(theory::Dict{String, ANy}, content::Any, type::Val{:Hom})
-    push!(theory, content["id"] => (name=to_pode(type, content["name"]),
-                                    val=(dom=content["dom"]["content"], 
-                                         cod=content["cod"]["content"])))
+Base.nameof(t::TheoryElement) = t.name
+
+struct HomData <: ElementData
+    dom::Any
+    cod::Any
+    function HomData(;dom::Any,cod::Any)
+        new(dom,cod)
+    end
+end
+
+struct Theory
+    data::Dict{String, TheoryElement}
+    function Theory()
+        new(Dict{String, TheoryElement}())
+    end
+end
+
+# TODO engooden
+Base.show(io::IO, theory::Theory) = println(io, theory.data)
+
+Base.values(theory::Theory) = values(theory.data)
+
+function add_to_theory!(theory::Theory, content::Any, type::Val{:Ob})
+    push!(theory.data, content[:id] => TheoryElement(;name=to_pode(type, content[:name])))
+end
+
+function add_to_theory!(theory::Theory, content::Any, type::Val{:Hom})
+    push!(theory.data, content[:id] => 
+          TheoryElement(;name=to_pode(type, content[:name]),
+                        val=HomData(dom=content[:dom][:content], 
+                                    cod=content[:cod][:content])))
 end
 
 # for each cell, if it is...
 #   ...an object, we convert its type to a symbol and add it to the theorydict
 #   ...a morphism, we add it to the theorydict with a field for the ids of its
 #       domain and codomain to its
-function to_theory(json::JSON)
-    theory = Dict{String, Any}();
-    foreach(json["notebook"]["cells"]) do cell
+function Theory(jsontheory::JSON3.Object)
+    theory = Theory();
+    foreach(jsontheory[:notebook][:cells]) do cell
         @match cell begin
             IsObject(content) => add_to_theory!(theory, content, Val(:Ob))
             IsMorphism(content) => add_to_theory!(theory, content, Val(:Hom))
             x => throw(ImplError(x))
         end
     end
+    return theory
 end
 
-function to_pode(json::JSON, theory::Dict{String, Any})
-    d = SummationDecapode(parse_decapode(quote end));
-    vars = Dict{String, Int}();
-    foreach(json["notebook"]["cells"]) do cell
-        @match cell begin
-            IsObject(content) => begin
-                type = theory[content["over"]["content"]]
-                id = add_part!(d, :Var, name=Symbol(content["name"]), type=type)
-                push!(vars, content["id"] => id)
-            end
-            IsMorphism(content) => begin
-                dom = content["dom"]["content"]; cod = content["cod"]["content"]
-                if haskey(vars, dom) && haskey(vars, cod)
-                    op1 = Symbol(theory[content["over"]["content"]].name)
-                    add_part!(d, :Op1, src=vars[dom], tgt=vars[cod], op1=op1)
+function add_to_pode!(d::SummationDecapode, 
+        vars::Dict{String, Int}, # mapping between UUID and ACSet ID
+        theory::Theory, 
+        content::JSON3.Object, 
+        ::Val{:Ob})
+    theory_elem = theory.data[content[:over][:content]] # indexes the theory by UUID
+    id = add_part!(d, :Var, name=Symbol(content[:name]), type=nameof(theory_elem))
+    push!(vars, content[:id] => id)
+    d
+end
 
-                    if op1 == :∂ₜ
-                        add_part!(d, :TVar, incl=vars[cod])
-                    end
-                end
-
-            end
-            _ => throw(ImplError(cell["content"]["tag"]))
+# TODO we are restricted to Op1
+function add_to_pode!(d::SummationDecapode,
+        vars::Dict{String, Int}, # mapping between UUID and ACSet ID
+        theory::Theory,
+        content::JSON3.Object,
+        ::Val{:Hom})
+    dom = content[:dom][:content]
+    cod = content[:cod][:content]
+    if haskey(vars, dom) && haskey(vars, cod)
+        op1 = Symbol(theory.data[content[:over][:content]].name)
+        add_part!(d, :Op1, src=vars[dom], tgt=vars[cod], op1=op1)
+        # we need to add an inclusion to the TVar table
+        if op1 == :∂ₜ
+            add_part!(d, :TVar, incl=vars[cod])
         end
     end
-    return (d, vars)
+    d
 end
+
+"""  Decapode(jsondiagram::JSON3.Object, theory::Theory) => SummationDecapode
+
+This returns a Decapode given a jsondiagram and a theory.
+"""
+function Decapode(jsondiagram::JSON3.Object, theory::Theory)
+    # initiatize decapode and its mapping between UUIDs and ACSet IDs
+    pode = SummationDecapode(parse_decapode(quote end))
+    vars = Dict{String, Int}();
+    # for each cell in the notebook, add it to the diagram 
+    foreach(jsondiagram[:notebook][:cells]) do cell
+        @match cell begin
+            IsObject(content) => add_to_pode!(pode, vars, theory, content, Val(:Ob))
+            IsMorphism(content) => add_to_pode!(pode, vars, theory, content, Val(:Hom))
+            _ => throw(ImplError(cell[:content][:tag]))
+        end
+    end
+    pode
+end
+# the proper name for this constructor should be "SummationDecapode"
 
 function create_mesh()
   s = triangulated_grid(100,100,2,2,Point2{Float64})
@@ -108,30 +182,74 @@ function run_sim(fm, u0, t0, constparam)
     soln = solve(prob, Tsit5(), saveat=0.1)
 end
 
+abstract type AbstractPlotType end
+
+struct Heatmap <: AbstractPlotType end
+
+# TODO make length a conditional value so we can pass it in if we want
+function Base.reshape(::Heatmap, data)
+    l = floor(Int64, sqrt(length(data)))
+    reshape(data, l, l)
+end
+
+struct SimResult
+    times::Vector{Float64}
+    x::Vector{Float64}
+    y::Vector{Float64}
+    states::Vector{ComponentVector{Float64, Vector{Float64}, <:Tuple{Vararg{AbstractAxis}}}} # TODO to StateVar
+end
+# TODO serialize to JSON
+# TODO Any is actually Tuple{Axis{(C = 1:2601,)}}
+
+function SimResult(sol::ODESolution, mesh::EmbeddedDeltaDualComplex2D)
+    points = collect(values(mesh.subparts.point.m));
+    SimResult(sol.t, 
+        [pt[1] for pt in points],
+        [pt[2] for pt in points],
+        sol.u)
+end
+# TODO generalize to HasDeltaSet
+
+function Base.show(io::IO, result::SimResult)
+    println(io, "Time:\n", result.times)
+    println(io, "X-coordinates\n", result.x)
+    println(io, "Y-coordinates\n", result.y)
+    println(io, "States\n", result.states)
+end
+
 function simulate_decapode(json_string::String)
-  data = JSON3.read(json_string)
+  jsonobj = JSON3.read(json_string)
 
-  theory_fragment = data["content"]["model"]
-  diagram = data["content"]["diagram"]
+  # converts the JSON of (the fragment of) the theory
+  # into theory of the DEC, valued in Julia
+  theory = Theory(jsonobj[:model])
 
-  # fragment = JSON3.read(theory_fragment_string)
+  # this is a diagram in the model of the DEC. it wants to be a decapode!
+  diagram = jsonobj[:diagram]
 
-  # theory of the DEC
-  theory = to_theory(theory_fragment);
+  # pode
+  decapode = Decapode(diagram, theory);
 
-  # pode and its variables
-  d, vars = to_pode(diagram, theory);
-
-  # mesh mesh
+  # mesh
   sd, u0, _ = create_mesh();
+  # TODO enhancement: generalize this
 
   # build simulation
-  simulator = eval(gensim(d));
+  simulator = eval(gensim(decapode));
   f = simulator(sd, default_dec_generate, DiagonalHodge());
+  # TODO enhancement: default_dec_generate could be generalized, maybe from the frontend
 
   # time
   t0 = 10.0;
 
-  result = run_sim(fm, u0, t0, ComponentArray(k=0.5,))
+  out = run_sim(f, u0, t0, ComponentArray(k=0.5,));
+  # returns ::ODESolution
+  #     - retcode
+  #     - interpolation
+  #     - t
+  #     - u::Vector{ComponentVector}
+  
+  result = SimResult(out, sd);
+
   JsonValue(result)
 end
