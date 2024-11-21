@@ -4,6 +4,7 @@ import { Show, createResource, createSignal, onCleanup } from "solid-js";
 import type { DiagramAnalysisProps } from "../../analysis";
 import { IconButton } from "../../components";
 import type { DiagramAnalysisMeta } from "../../theory";
+import { PDEPlot2D, type PDEPlotData2D } from "../../visualization";
 
 import Loader from "lucide-solid/icons/loader";
 import RotateCw from "lucide-solid/icons/rotate-cw";
@@ -35,7 +36,7 @@ export function configureDecapodes(options: {
 }
 
 export function Decapodes(props: DiagramAnalysisProps<JupyterSettings>) {
-    const [simulationData, setSimulationData] = createSignal<number[]>();
+    const [simulationData, setSimulationData] = createSignal<PDEPlotData2D>();
 
     const [kernel] = createResource(async () => {
         const jupyter = await import("@jupyterlab/services");
@@ -75,7 +76,7 @@ export function Decapodes(props: DiagramAnalysisProps<JupyterSettings>) {
                 msg.header.msg_type === "execute_result" &&
                 msg.parent_header.msg_id === future.msg.header.msg_id
             ) {
-                const content = msg.content as JsonDataContent<number[]>;
+                const content = msg.content as JsonDataContent<PDEPlotData2D>;
                 setSimulationData(content["data"]?.["application/json"]);
             }
         };
@@ -113,7 +114,7 @@ export function Decapodes(props: DiagramAnalysisProps<JupyterSettings>) {
                     )}
                 </Show>
             </div>
-            <div class="results">{simulationData()}</div>
+            <Show when={simulationData()}>{(data) => <PDEPlot2D data={data()} />}</Show>
         </div>
     );
 }
