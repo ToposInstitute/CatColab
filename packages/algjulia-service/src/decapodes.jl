@@ -17,6 +17,8 @@ using ComponentArrays
 using GeometryBasics: Point2, Point3
 using OrdinaryDiffEq
 
+export evalsim, default_dec_generate, DiagonalHodge, ComponentArray
+
 struct ImplError <: Exception
     name::String
 end
@@ -235,11 +237,30 @@ function SimResult(sol::ODESolution, mesh::EmbeddedDeltaDualComplex2D)
 end
 # TODO generalize to HasDeltaSet
 
-function Base.show(io::IO, result::SimResult)
-    println(io, "Time:\n", result.times)
-    println(io, "X-coordinates\n", result.x)
-    println(io, "Y-coordinates\n", result.y)
-    println(io, "States\n", result.states)
+struct System
+    pode::SummationDecapode
+    mesh::HasDeltaSet
+    init::Any # TODO specify. Is it always ComponentVector?
+end
+export System
+
+function System(json_string::String)
+    json_object = JSON3.read(json_string);
+
+    # converts the JSON of (the fragment of) the theory
+    # into theory of the DEC, valued in Julia
+    theory = Theory(json_object[:model])
+
+    # this is a diagram in the model of the DEC. it wants to be a decapode!
+    diagram = json_object[:diagram]
+
+    # pode
+    decapode = Decapode(diagram, theory);
+
+    # mesh
+    sd, u0, _ = create_mesh();
+
+    return System(decapode, sd, u0)
 end
 
 function simulate_decapode(json_string::String)
@@ -266,9 +287,7 @@ function simulate_decapode(json_string::String)
   # TODO enhancement: default_dec_generate could be generalized, maybe from the frontend
 
   # time
-  t0 = 10.0;
-
-  out = run_sim(f, u0, t0, ComponentArray(k=0.5,));
+  out = run_sim(f, u0, 10.0, ComponentArray(k=0.5,));
   # returns ::ODESolution
   #     - retcode
   #     - interpolation

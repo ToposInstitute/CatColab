@@ -2,11 +2,15 @@ using Test
 
 using AlgebraicJuliaService
 using ACSets
+using CombinatorialSpaces
 using Decapodes
 using DiagrammaticEquations
 
 using MLStyle
 using JSON3
+using ComponentArrays
+using StaticArrays
+import OrdinaryDiffEq: ReturnCode
 
 # load data
 data = open(JSON3.read, joinpath(@__DIR__, "diffusion_data.json"), "r")
@@ -73,6 +77,25 @@ end
 @testset "Simulation" begin
 
     json_string = read(joinpath(@__DIR__, "diffusion_data.json"), String);
-    json_value = simulate_decapode(json_string);
+    system = System(json_string);
+
+    simulator = evalsim(system.pode)
+    f = simulator(system.mesh, default_dec_generate, DiagonalHodge());
+
+    # time
+    soln = run_sim(f, system.init, 10.0, ComponentArray(k=0.5,));
+    # returns ::ODESolution
+    #     - retcode
+    #     - interpolation
+    #     - t
+    #     - u::Vector{ComponentVector}
+
+    @test soln.retcode == ReturnCode.Success
+  
+    result = SimResult(soln, system.mesh);
+
+    @test typeof(result.state) == Vector{Matrix{SVector{3, Float64}}}
+
+    jv = JsonValue(result);
 
 end

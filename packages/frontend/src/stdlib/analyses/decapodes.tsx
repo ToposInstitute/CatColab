@@ -71,7 +71,16 @@ export function Decapodes(props: DiagramAnalysisProps<JupyterSettings>) {
             model: props.liveDiagram.liveModel.formalJudgments(),
         };
         const future = kernel.requestExecute({
-            code: `simulate_decapode(raw"""${JSON.stringify(requestData)}""")`,
+            code: `
+			system = System(raw"""${JSON.stringify(requestData)}""");
+
+			simulator = evalsim(system.pode);
+			f = simulator(system.mesh, default_dec_generate, DiagonalHodge());
+
+			soln = run_sim(f, system.init, 10.0, ComponentArray(k=0.5,));
+
+			JsonValue(SimResult(soln, system.mesh))
+			`,
         });
 
         future.onIOPub = (msg) => {
