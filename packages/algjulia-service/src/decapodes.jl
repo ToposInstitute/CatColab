@@ -17,6 +17,8 @@ using ComponentArrays
 using GeometryBasics: Point2, Point3
 using OrdinaryDiffEq
 
+export evalsim, default_dec_generate, DiagonalHodge, ComponentArray
+
 struct ImplError <: Exception
     name::String
 end
