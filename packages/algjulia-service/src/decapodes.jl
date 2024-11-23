@@ -263,6 +263,7 @@ function System(json_string::String)
     return System(decapode, sd, u0)
 end
 
+# TODO deprecated
 function simulate_decapode(json_string::String)
     
   json_object = JSON3.read(json_string);

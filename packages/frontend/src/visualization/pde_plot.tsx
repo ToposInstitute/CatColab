@@ -1,5 +1,7 @@
 import type { EChartsOption } from "echarts";
 import { Match, Switch, lazy } from "solid-js";
+import { createSignal } from "solid-js";
+import { createTimer } from "@solid-primitives/timer";
 
 import type { JsResult } from "catlog-wasm";
 import { ErrorAlert } from "../components";
@@ -53,7 +55,14 @@ export function PDEPlot2D(props: {
     const maxValue = (): number =>
         props.data.state.map((data) => data.map((triple) => triple[2]).reduce(max)).reduce(max);
 
-    const options = (): EChartsOption => ({
+	// timer
+	let [count, setCount] = createSignal(0);
+	createTimer(() => setCount((count() + 50) % 1001), 0.5, setInterval);
+	// TODO we need to get the length of the time-series
+
+    function options(idx: number): EChartsOption { 
+		console.log(props.data.state[idx][1]);
+	  return {
         xAxis: {
             type: "category",
             data: props.data.x,
@@ -90,7 +99,7 @@ export function PDEPlot2D(props: {
                 name: "Value",
                 type: "heatmap",
                 // FIXME: Only showing first time point.
-                data: props.data.state[0],
+                data: props.data.state[idx],
                 emphasis: {
                     itemStyle: {
                         borderColor: "black",
@@ -101,11 +110,11 @@ export function PDEPlot2D(props: {
                 animation: false,
             },
         ],
-    });
+    }};
 
     return (
         <div class="plot">
-            <ECharts option={options()} />
+            <ECharts option={options(count())} />
         </div>
     );
 }

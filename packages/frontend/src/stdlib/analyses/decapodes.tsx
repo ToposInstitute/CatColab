@@ -77,7 +77,7 @@ export function Decapodes(props: DiagramAnalysisProps<JupyterSettings>) {
 			simulator = evalsim(system.pode);
 			f = simulator(system.mesh, default_dec_generate, DiagonalHodge());
 
-			soln = run_sim(f, system.init, 10.0, ComponentArray(k=0.5,));
+			soln = run_sim(f, system.init, 50.0, ComponentArray(k=0.5,));
 
 			JsonValue(SimResult(soln, system.mesh))
 			`,
