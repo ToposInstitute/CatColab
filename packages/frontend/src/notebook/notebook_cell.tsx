@@ -10,6 +10,7 @@ import { createAutofocus } from "@solid-primitives/autofocus";
 import type { EditorView } from "prosemirror-view";
 import { type JSX, Show, createEffect, createSignal, onCleanup } from "solid-js";
 
+import type { Uuid } from "catlog-wasm";
 import {
     type Completion,
     Completions,
@@ -18,7 +19,6 @@ import {
     RichTextEditor,
 } from "../components";
 import { focusInputWhen } from "../util/focus";
-import type { CellId } from "./types";
 
 import ArrowDown from "lucide-solid/icons/arrow-down";
 import ArrowUp from "lucide-solid/icons/arrow-up";
@@ -70,11 +70,11 @@ export type CellDragData = {
     [cellDragDataKey]: true;
 
     /** ID of the cell being dragged. */
-    cellId: CellId;
+    cellId: Uuid;
 };
 
 /** Create drag-and-drop data for a notebook cell. */
-const createCellDragData = (cellId: CellId) => ({
+const createCellDragData = (cellId: Uuid) => ({
     [cellDragDataKey]: true,
     cellId,
 });
@@ -90,7 +90,7 @@ This component contains UI elements common to any cell. The actual content of
 the cell is rendered by its children.
  */
 export function NotebookCell(props: {
-    cellId: CellId;
+    cellId: Uuid;
     actions: CellActions;
     children: JSX.Element;
     tag?: string;
@@ -197,7 +197,7 @@ export function NotebookCell(props: {
 /** Editor for rich text cells, a simple wrapper around `RichTextEditor`.
  */
 export function RichTextCellEditor(props: {
-    cellId: CellId;
+    cellId: Uuid;
     handle: DocHandle<unknown>;
     path: Prop[];
     isActive: boolean;
