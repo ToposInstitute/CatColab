@@ -55,13 +55,15 @@ export function PDEPlot2D(props: {
     const maxValue = (): number =>
         props.data.state.map((data) => data.map((triple) => triple[2]).reduce(max)).reduce(max);
 
+	const timeLength = props.data.times.length;
+	// console.log(timeLength);
+
 	// timer
 	let [count, setCount] = createSignal(0);
-	createTimer(() => setCount((count() + 50) % 1001), 0.5, setInterval);
-	// TODO we need to get the length of the time-series
+	createTimer(() => setCount((count() + 5) % timeLength), 0.5, setInterval);
 
     function options(idx: number): EChartsOption { 
-		console.log(props.data.state[idx][1]);
+	  // console.log(props.data.state[idx][1]);
 	  return {
         xAxis: {
             type: "category",
@@ -98,7 +100,6 @@ export function PDEPlot2D(props: {
             {
                 name: "Value",
                 type: "heatmap",
-                // FIXME: Only showing first time point.
                 data: props.data.state[idx],
                 emphasis: {
                     itemStyle: {
