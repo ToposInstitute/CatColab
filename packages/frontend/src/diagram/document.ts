@@ -81,21 +81,22 @@ function enlivenDiagramDocument(
     const objectIndex = createMemo<IdToNameMap>(() => {
         const judgments = formalJudgments();
         const map = new Map<Uuid, string | number>();
+
         for (const judgment of judgments) {
             if (judgment.tag === "object") {
                 map.set(judgment.id, judgment.name);
             }
         }
 
-        let nanon = 1;
+        let nanon = 0;
         for (const judgment of judgments) {
             if (judgment.tag === "morphism") {
                 const { dom, cod } = judgment;
                 if (dom?.tag === "Basic" && !map.has(dom.content)) {
-                    map.set(dom.content, nanon++);
+                    map.set(dom.content, ++nanon);
                 }
                 if (cod?.tag === "Basic" && !map.has(cod.content)) {
-                    map.set(cod.content, nanon++);
+                    map.set(cod.content, ++nanon);
                 }
             }
         }

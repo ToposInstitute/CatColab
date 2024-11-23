@@ -30,6 +30,7 @@
     padding-left: 5px;
     padding-right: 5px;
     font: inherit;
+    color: inherit;
 
     &.incomplete {
         border-bottom: 3px solid sandybrown;

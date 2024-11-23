@@ -6,12 +6,26 @@ import type { IndexedMap } from "../util/indexing";
 import type { Completion } from "./completions";
 import { InlineInput, type InlineInputErrorStatus, type InlineInputOptions } from "./inline_input";
 
+import "./id_input.css";
+
 /** A name for the purposes of the `IdInput` component.
 
-A name is either a non-numeral string, representing a meaningful name typically
-created by a human, or a number, representing a "`gensym`-ed" identifier.
+A name is either a string, a meaningful name typically created by a human, or a
+number, a "`gensym`-ed" identifier representing an anonymous entity.
  */
 export type Name = string | number;
+
+type NameType = "named" | "anonymous";
+
+function nameType(name: Name): NameType {
+    if (typeof name === "string") {
+        return "named";
+    }
+    if (typeof name === "number") {
+        return "anonymous";
+    }
+    throw new Error(`Name has invalid type: ${typeof name}`);
+}
 
 /** A UUID-name mapping, as expected by the `IdInput` component.
  */
@@ -45,7 +59,8 @@ export function IdInput(
         "invalid",
     ]);
 
-    const idToText = (id: Uuid): string | undefined => props.idToName?.map.get(id)?.toString();
+    const idToName = (id: Uuid): Name | undefined => props.idToName?.map.get(id);
+    const idToText = (id: Uuid): string | undefined => idToName(id)?.toString();
 
     const textToIds = (text: string): Uuid[] => {
         let name: Name = text;
@@ -107,15 +122,25 @@ export function IdInput(
 
     const setNewId = () => props.generateId && props.setId(props.generateId());
 
+    const maybeNameType = (id: Uuid | null): NameType | "undefined" => {
+        if (id === null) {
+            return "undefined";
+        }
+        const name = idToName(id);
+        return name === undefined ? "undefined" : nameType(name);
+    };
+
     return (
-        <InlineInput
-            text={text()}
-            setText={handleNewText}
-            completions={completions()}
-            status={status()}
-            autofill={props.generateId ? setNewId : undefined}
-            {...inputProps}
-        />
+        <div class={`id-input ${maybeNameType(props.id)}`}>
+            <InlineInput
+                text={text()}
+                setText={handleNewText}
+                completions={completions()}
+                status={status()}
+                autofill={props.generateId ? setNewId : undefined}
+                {...inputProps}
+            />
+        </div>
     );
 }
 

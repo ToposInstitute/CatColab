@@ -1,0 +1,8 @@
+.id-input.anonymous {
+    background-color: color-mix(in srgb, lightsteelblue, black 10%);
+    color: white;
+    font-variant-numeric: tabular-nums;
+
+    padding: 3px;
+    border-radius: 10px;
+}
