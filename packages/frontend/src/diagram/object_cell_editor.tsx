@@ -1,7 +1,7 @@
 import { createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { InlineInput } from "../components";
+import { NameInput } from "../components";
 import { ObInput } from "../model/object_input";
 import type { CellActions } from "../notebook";
 import { focusInputWhen } from "../util/focus";
@@ -28,12 +28,12 @@ export function DiagramObjectCellEditor(props: {
 
     return (
         <div class="formal-judgment diagram-object-decl">
-            <InlineInput
+            <NameInput
                 ref={setNameRef}
-                text={props.decl.name}
-                setText={(text) => {
+                name={props.decl.name}
+                setName={(name) => {
                     props.modifyDecl((decl) => {
-                        decl.name = text;
+                        decl.name = name;
                     });
                 }}
                 placeholder="Unnamed"

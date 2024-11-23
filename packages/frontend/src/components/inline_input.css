@@ -30,12 +30,11 @@
     padding-left: 5px;
     padding-right: 5px;
     font: inherit;
-}
 
-.inline-input.incomplete {
-    border-bottom: 3px solid sandybrown;
-}
-
-.inline-input.invalid {
-    border-bottom: 3px solid indianred;
+    &.incomplete {
+        border-bottom: 3px solid sandybrown;
+    }
+    &.invalid {
+        border-bottom: 3px solid indianred;
+    }
 }

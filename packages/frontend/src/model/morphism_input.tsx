@@ -25,7 +25,7 @@ export function BasicMorInput(
     return (
         <MorIdInput
             completions={completions()}
-            nameMap={liveModel.morphismIndex()}
+            idToName={liveModel.morphismIndex()}
             {...otherProps}
         />
     );
