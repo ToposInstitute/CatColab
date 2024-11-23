@@ -6,7 +6,7 @@ import type { DblModel, ModelValidationResult, Uuid } from "catlog-wasm";
 import { type Api, type LiveDoc, getLiveDoc } from "../api";
 import { type Notebook, newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
-import type { Theory, TheoryId } from "../theory";
+import type { Theory } from "../theory";
 import { type IndexedMap, indexMap } from "../util/indexing";
 import { type ModelJudgment, catlogModel } from "./types";
 
@@ -18,7 +18,7 @@ export type ModelDocument = {
     name: string;
 
     /** Identifier of double theory that the model is of. */
-    theory?: TheoryId;
+    theory?: string;
 
     /** Content of the model, formal and informal. */
     notebook: Notebook<ModelJudgment>;

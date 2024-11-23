@@ -2,13 +2,12 @@ import Dialog from "@corvu/dialog";
 import { For, Show, createMemo, createSignal } from "solid-js";
 
 import type { TheoryLibrary, TheoryMeta } from "../stdlib";
-import type { TheoryId } from "../theory";
 
 import "./theory_selector.css";
 
 type TheorySelectorProps = {
     theory: TheoryMeta | undefined;
-    setTheory: (theory: TheoryId | undefined) => void;
+    setTheory: (theoryId: string | undefined) => void;
     theories: TheoryLibrary;
 };
 
@@ -73,7 +72,7 @@ export function TheorySelector(props: TheorySelectorProps) {
                                         id={meta.id}
                                         value={meta.id}
                                         onchange={(evt) => {
-                                            const id = evt.target.value as TheoryId;
+                                            const id = evt.target.value;
                                             props.setTheory(id ? id : undefined);
                                         }}
                                     />

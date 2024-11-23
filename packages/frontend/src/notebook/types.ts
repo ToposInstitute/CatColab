@@ -1,5 +1,7 @@
 import { uuidv7 } from "uuidv7";
 
+import type { Uuid } from "catlog-wasm";
+
 /** Data type for a notebook.
 
 A notebook is nothing more than a list of cells. Any metadata associated with
@@ -17,9 +19,6 @@ custom type, which is typically formal in contrast to natural text.
  */
 export type Cell<T> = RichTextCell | FormalCell<T> | StemCell;
 
-/** UUID for a cell in a notebook. */
-export type CellId = string;
-
 /** Creates an empty notebook. */
 export const newNotebook = <T>(): Notebook<T> => ({
     cells: [],
@@ -28,7 +27,7 @@ export const newNotebook = <T>(): Notebook<T> => ({
 /** A cell containing rich text. */
 export type RichTextCell = {
     tag: "rich-text";
-    id: CellId;
+    id: Uuid;
     content: string;
 };
 
@@ -42,7 +41,7 @@ export const newRichTextCell = (): RichTextCell => ({
 /** A cell containing custom data, usually a formal object. */
 export type FormalCell<T> = {
     tag: "formal";
-    id: CellId;
+    id: Uuid;
     content: T;
 };
 
@@ -60,7 +59,7 @@ and replaced when a type for the new cell is selected.
  */
 export type StemCell = {
     tag: "stem";
-    id: CellId;
+    id: Uuid;
 };
 
 /** Creates a new stem cell. */
