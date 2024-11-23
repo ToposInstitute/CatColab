@@ -1,6 +1,7 @@
 import { A, useNavigate } from "@solidjs/router";
 import CircleHelp from "lucide-solid/icons/circle-help";
 import type { JSX } from "solid-js";
+import { selectedTheory, setSelectedTheory } from "../model/theory_selector";
 
 import { IconButton } from "../components";
 
@@ -33,13 +34,23 @@ const Brand = () => (
     </A>
 );
 
-/** Button that navigates to the root help page. */
+/** Button that navigates to the root help page or theory documentation page. */
 export function HelpButton() {
     const navigate = useNavigate();
-
-    return (
-        <IconButton onClick={() => navigate("/help")} tooltip="Get help about CatColab">
-            <CircleHelp />
-        </IconButton>
-    );
+    if (selectedTheory() == null) {
+        return (
+            <IconButton onClick={() => navigate("/help")} tooltip="Get help about CatColab">
+                <CircleHelp />
+            </IconButton>
+        );
+    } else {
+        return (
+            <IconButton
+                onClick={() => navigate(`"help/theory_documentation/${setSelectedTheory()}}.mdx"`)}
+                tooltip="Learn more about theory"
+            >
+                <CircleHelp />
+            </IconButton>
+        );
+    }
 }

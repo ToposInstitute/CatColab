@@ -9,6 +9,7 @@ import wasm from "vite-plugin-wasm";
 // *Also*, this plugin causes Vite 5 to complain about CJS.
 // https://github.com/nksaraf/vinxi/issues/289
 import pkg from "@vinxi/plugin-mdx";
+import { documentationFileParser } from "./src/help/theory_documentation/theory_file_parser";
 const { default: mdx } = pkg;
 
 export default defineConfig({
@@ -24,6 +25,7 @@ export default defineConfig({
         solid({
             extensions: [".mdx", ".md"],
         }),
+        documentationFileParser(),
     ],
     build: {
         chunkSizeWarningLimit: 2000,

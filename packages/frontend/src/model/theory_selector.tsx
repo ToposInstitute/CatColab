@@ -45,6 +45,8 @@ export function TheorySelectorDialog(
     );
 }
 
+export const [selectedTheory, setSelectedTheory] = createSignal<string | undefined>(undefined);
+
 export function TheorySelector(props: TheorySelectorProps) {
     const groupedTheories = createMemo(() => {
         const grouped = new Map<string, TheoryMeta[]>();
@@ -74,6 +76,7 @@ export function TheorySelector(props: TheorySelectorProps) {
                                         onchange={(evt) => {
                                             const id = evt.target.value;
                                             props.setTheory(id ? id : undefined);
+                                            setSelectedTheory(id);
                                         }}
                                     />
                                     <label for={meta.id}>
