@@ -13,7 +13,7 @@ how to display models of the theory and instances of models.
  */
 export class Theory {
     /** Unique identifier of theory. */
-    readonly id: TheoryId;
+    readonly id: string;
 
     /** Underlying double theory in the core. */
     readonly theory: DblTheory;
@@ -39,7 +39,11 @@ export class Theory {
 
     private readonly modelTypeMeta: TypeMetadata<ModelObTypeMeta, ModelMorTypeMeta>;
     private readonly instanceTypeMeta: TypeMetadata<InstanceObTypeMeta, InstanceMorTypeMeta>;
+
+    /** Map from theory ID to model analysis metadata. */
     private readonly modelAnalysisMap: Map<string, ModelAnalysisMeta>;
+
+    /** Map from theory ID to diagram analysis metadata. */
     private readonly diagramAnalysisMap: Map<string, DiagramAnalysisMeta>;
 
     constructor(props: {
@@ -135,9 +139,6 @@ export class Theory {
         return this.diagramAnalysisMap.get(id);
     }
 }
-
-/** Unique identifier of a theory configured for the frontend. */
-export type TheoryId = string;
 
 /** Helper class to index and lookup metadata for object and morphism types. */
 class TypeMetadata<ObMeta extends HasObTypeMeta, MorMeta extends HasMorTypeMeta> {

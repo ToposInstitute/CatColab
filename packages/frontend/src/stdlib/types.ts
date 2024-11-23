@@ -1,4 +1,4 @@
-import { Theory, type TheoryId } from "../theory";
+import { Theory } from "../theory";
 
 /** Frontend metadata for a double theory.
 
@@ -7,7 +7,7 @@ identify the theory and display it to the user.
  */
 export type TheoryMeta = {
     /** Unique identifier of theory. */
-    id: TheoryId;
+    id: string;
 
     /** Human-readable name for models of theory. */
     name: string;
@@ -24,8 +24,11 @@ export type TheoryMeta = {
 Theories are lazy loaded.
  */
 export class TheoryLibrary {
-    private readonly metaMap: Map<TheoryId, TheoryMeta>;
-    private readonly theoryMap: Map<TheoryId, Theory | ((meta: TheoryMeta) => Theory)>;
+    /** Map from theory ID to metadata about the theory. */
+    private readonly metaMap: Map<string, TheoryMeta>;
+
+    /** Map from theory ID to the theory itself or the constructor for it. */
+    private readonly theoryMap: Map<string, Theory | ((meta: TheoryMeta) => Theory)>;
 
     constructor() {
         this.metaMap = new Map();
@@ -45,7 +48,7 @@ export class TheoryLibrary {
 
     A theory is instantiated and cached the first time it is retrieved.
      */
-    get(id: TheoryId): Theory {
+    get(id: string): Theory {
         const meta = this.metaMap.get(id);
         const theoryOrCons = this.theoryMap.get(id);
         if (meta === undefined || theoryOrCons === undefined) {
