@@ -23,17 +23,21 @@ struct ImplError <: Exception
     name::String
 end
 
-Base.showerror(io::IO, e::ImplError) = print("$(e.name) not implemented")
+Base.showerror(io::IO, e::ImplError) = print(io, "$(e.name) not implemented")
 
 function to_pode end
 export to_pode
 
 """ Helper function to convert CatColab values (Obs) in Decapodes """
 function to_pode(::Val{:Ob}, name::String)
-    @match name begin
+    @match lowercase(name) begin
         "0-form" => :Form0
         "1-form" => :Form1
         "2-form" => :Form2
+        "dual 0-form" => :DualForm0
+        "dual 1-form" => :DualForm1
+        "dual 2-form" => :DualForm2
+        "constant" => :Constant
         x => throw(ImplError(x))
     end
 end
@@ -263,6 +267,7 @@ function System(json_string::String)
     return System(decapode, sd, u0)
 end
 
+# TODO deprecated
 function simulate_decapode(json_string::String)
     
   json_object = JSON3.read(json_string);

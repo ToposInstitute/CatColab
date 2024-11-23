@@ -80,6 +80,7 @@ export function Decapodes(props: DiagramAnalysisProps<JupyterSettings>) {
 			soln = run_sim(f, system.init, 10.0, ComponentArray(k=0.5,));
 
 			JsonValue(SimResult(soln, system.mesh))
+			#JsonValue([1.0, 2.0, 3.0, 4.0])
 			`,
         });
 

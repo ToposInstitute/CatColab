@@ -83,7 +83,7 @@ end
     f = simulator(system.mesh, default_dec_generate, DiagonalHodge());
 
     # time
-    soln = run_sim(f, system.init, 10.0, ComponentArray(k=0.5,));
+    soln = run_sim(f, system.init, 100.0, ComponentArray(k=0.5,));
     # returns ::ODESolution
     #     - retcode
     #     - interpolation

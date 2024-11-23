@@ -68,6 +68,9 @@ importers:
       '@solid-primitives/keyboard':
         specifier: ^1.2.8
         version: 1.2.8(solid-js@1.9.2)
+      '@solid-primitives/timer':
+        specifier: ^1.3.10
+        version: 1.3.10(solid-js@1.9.2)
       '@solidjs/router':
         specifier: ^0.14.3
         version: 0.14.7(solid-js@1.9.2)
@@ -1221,6 +1224,11 @@ packages:
 
   '@solid-primitives/static-store@0.0.8':
     resolution: {integrity: sha512-ZecE4BqY0oBk0YG00nzaAWO5Mjcny8Fc06CdbXadH9T9lzq/9GefqcSe/5AtdXqjvY/DtJ5C6CkcjPZO0o/eqg==}
+    peerDependencies:
+      solid-js: ^1.6.12
+
+  '@solid-primitives/timer@1.3.10':
+    resolution: {integrity: sha512-mCWUKjkw2oPlcT9SDjziDcz2qO4y6JXcSsmtAePKlfz6vUMIuL+Q+FK1NKUkpH+anMoVBGZLsSxI5P2+Y1RHNw==}
     peerDependencies:
       solid-js: ^1.6.12
 
@@ -4179,6 +4187,10 @@ snapshots:
   '@solid-primitives/static-store@0.0.8(solid-js@1.9.2)':
     dependencies:
       '@solid-primitives/utils': 6.2.3(solid-js@1.9.2)
+      solid-js: 1.9.2
+
+  '@solid-primitives/timer@1.3.10(solid-js@1.9.2)':
+    dependencies:
       solid-js: 1.9.2
 
   '@solid-primitives/trigger@1.1.0(solid-js@1.9.2)':
