@@ -20,6 +20,7 @@ export type IdToNameMap = IndexedMap<Uuid, Name>;
 /** Optional props for `IdInput` component.
  */
 export type IdInputOptions = {
+    generateId?: () => Uuid;
     idToName?: IdToNameMap;
     invalid?: boolean;
 } & Omit<InlineInputOptions, "completions">;
@@ -38,6 +39,7 @@ export function IdInput(
     const [props, inputProps] = splitProps(allProps, [
         "id",
         "setId",
+        "generateId",
         "completions",
         "idToName",
         "invalid",
@@ -103,12 +105,15 @@ export function IdInput(
         return null;
     };
 
+    const setNewId = () => props.generateId && props.setId(props.generateId());
+
     return (
         <InlineInput
             text={text()}
             setText={handleNewText}
             completions={completions()}
             status={status()}
+            autofill={props.generateId ? setNewId : undefined}
             {...inputProps}
         />
     );

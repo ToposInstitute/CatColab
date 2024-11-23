@@ -4,10 +4,11 @@ import invariant from "tiny-invariant";
 import type { JsonValue } from "catcolab-api";
 import type { DblModelDiagram, ModelDiagramValidationResult, Uuid } from "catlog-wasm";
 import { type Api, type ExternRef, type LiveDoc, getLiveDoc } from "../api";
+import type { IdToNameMap } from "../components";
 import { type LiveModelDocument, getLiveModel } from "../model";
 import { type Notebook, newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
-import { type IndexedMap, indexMap } from "../util/indexing";
+import { indexMap } from "../util/indexing";
 import { type DiagramJudgment, catlogDiagram } from "./types";
 
 /** A document defining a diagram in a model. */
@@ -52,7 +53,7 @@ export type LiveDiagramDocument = {
     formalJudgments: Accessor<Array<DiagramJudgment>>;
 
     /** A memo of the indexed map from object ID to name. */
-    objectIndex: Accessor<IndexedMap<Uuid, string>>;
+    objectIndex: Accessor<IdToNameMap>;
 
     /** A memo of the diagram constructed and validated in the core. */
     validatedDiagram: Accessor<ValidatedDiagram | undefined>;
@@ -77,13 +78,28 @@ function enlivenDiagramDocument(
             .map((cell) => cell.content);
     }, []);
 
-    const objectIndex = createMemo<IndexedMap<Uuid, string>>(() => {
-        const map = new Map<Uuid, string>();
-        for (const judgment of formalJudgments()) {
+    const objectIndex = createMemo<IdToNameMap>(() => {
+        const judgments = formalJudgments();
+        const map = new Map<Uuid, string | number>();
+        for (const judgment of judgments) {
             if (judgment.tag === "object") {
                 map.set(judgment.id, judgment.name);
             }
         }
+
+        let nanon = 1;
+        for (const judgment of judgments) {
+            if (judgment.tag === "morphism") {
+                const { dom, cod } = judgment;
+                if (dom?.tag === "Basic" && !map.has(dom.content)) {
+                    map.set(dom.content, nanon++);
+                }
+                if (cod?.tag === "Basic" && !map.has(cod.content)) {
+                    map.set(cod.content, nanon++);
+                }
+            }
+        }
+
         return indexMap(map);
     }, indexMap(new Map()));
 
