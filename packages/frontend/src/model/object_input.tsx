@@ -39,7 +39,7 @@ function BasicObInput(allProps: ObInputProps & IdInputOptions) {
         props.obType && liveModel.validatedModel()?.model.objectsWithType(props.obType);
 
     return (
-        <ObIdInput completions={completions()} nameMap={liveModel.objectIndex()} {...otherProps} />
+        <ObIdInput completions={completions()} idToName={liveModel.objectIndex()} {...otherProps} />
     );
 }
 
@@ -120,7 +120,7 @@ function TabulatedMorInput(allProps: ObInputProps & IdInputOptions) {
         <IdInput
             id={id()}
             setId={setId}
-            nameMap={liveModel.morphismIndex()}
+            idToName={liveModel.morphismIndex()}
             completions={completions()}
             {...inputProps}
         />

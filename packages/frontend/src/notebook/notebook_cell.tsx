@@ -163,10 +163,9 @@ export function NotebookCell(props: {
                 <Popover
                     open={isMenuOpen()}
                     onOpenChange={setMenuOpen}
+                    placement="left"
                     floatingOptions={{
-                        autoPlacement: {
-                            allowedPlacements: ["left"],
-                        },
+                        flip: true,
                     }}
                 >
                     <Popover.Anchor as="span">

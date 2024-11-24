@@ -1,7 +1,7 @@
 import { createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { InlineInput } from "../components";
+import { NameInput } from "../components";
 import type { CellActions } from "../notebook";
 import { focusInputWhen } from "../util/focus";
 import { LiveModelContext } from "./context";
@@ -73,13 +73,13 @@ export function MorphismCellEditor(props: {
             </div>
             <div class={arrowStyles.arrowWithName}>
                 <div class={nameClasses().join(" ")}>
-                    <InlineInput
+                    <NameInput
                         ref={setNameRef}
                         placeholder={morTypeMeta()?.preferUnnamed ? undefined : "Unnamed"}
-                        text={props.morphism.name}
-                        setText={(text) => {
+                        name={props.morphism.name}
+                        setName={(name) => {
                             props.modifyMorphism((mor) => {
-                                mor.name = text;
+                                mor.name = name;
                             });
                         }}
                         deleteBackward={props.actions.deleteBackward}

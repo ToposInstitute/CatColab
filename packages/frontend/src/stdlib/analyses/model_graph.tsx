@@ -15,9 +15,10 @@ import {
     graphvizEngine,
     graphvizFontname,
     svgCssClasses,
-} from "./graph";
+} from "./graph_visualization";
 
 import baseStyles from "./base_styles.module.css";
+import "./graph_visualization.css";
 
 /** Configure a graph visualization for use with models of a double theory. */
 export function configureModelGraph(options: {
@@ -32,7 +33,6 @@ export function configureModelGraph(options: {
         description,
         component: (props) => <ModelGraph title={name} {...props} />,
         initialContent: () => ({
-            tag: "graph",
             layout: "graphviz-directed",
         }),
     };
@@ -58,7 +58,7 @@ export function ModelGraph(
     const title = () => props.title ?? "Graph";
 
     return (
-        <div class="model-graph">
+        <div class="graph-visualization-analysis">
             <div class={baseStyles.panel}>
                 <span class={baseStyles.title}>{title()}</span>
                 <span class={baseStyles.filler} />
@@ -68,18 +68,20 @@ export function ModelGraph(
                     size={16}
                 />
             </div>
-            <Show when={props.liveModel.theory()}>
-                {(theory) => (
-                    <ModelGraphviz
-                        model={props.liveModel.formalJudgments()}
-                        theory={theory()}
-                        options={{
-                            engine: graphvizEngine(props.content.layout),
-                        }}
-                        ref={setSvgRef}
-                    />
-                )}
-            </Show>
+            <div class="graph-visualization">
+                <Show when={props.liveModel.theory()}>
+                    {(theory) => (
+                        <ModelGraphviz
+                            model={props.liveModel.formalJudgments()}
+                            theory={theory()}
+                            options={{
+                                engine: graphvizEngine(props.content.layout),
+                            }}
+                            ref={setSvgRef}
+                        />
+                    )}
+                </Show>
+            </div>
         </div>
     );
 }

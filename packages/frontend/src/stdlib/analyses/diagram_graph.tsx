@@ -2,10 +2,10 @@ import type * as Viz from "@viz-js/viz";
 import { Show, createSignal } from "solid-js";
 import { P, match } from "ts-pattern";
 
-import type { Uuid } from "catlog-wasm";
+import type { DblModelDiagram, Uuid } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
-import type { DiagramJudgment } from "../../diagram";
 import type { DiagramAnalysisMeta, Theory } from "../../theory";
+import type { Name } from "../../util/indexing";
 import { DownloadSVGButton, GraphvizSVG } from "../../visualization";
 import {
     type GraphContent,
@@ -16,9 +16,10 @@ import {
     graphvizEngine,
     graphvizFontname,
     svgCssClasses,
-} from "./graph";
+} from "./graph_visualization";
 
 import baseStyles from "./base_styles.module.css";
+import "./graph_visualization.css";
 
 /** Configure a graph visualization for use with diagrams in a model. */
 export function configureDiagramGraph(options: {
@@ -54,9 +55,14 @@ export function DiagramGraph(
     const graphviz = () => {
         const liveModel = props.liveDiagram.liveModel;
         const theory = liveModel.theory();
+        const validatedDiagram = props.liveDiagram.validatedDiagram();
         return (
             theory &&
-            diagramToGraphviz(props.liveDiagram.formalJudgments(), theory, {
+            validatedDiagram?.result.tag === "Ok" &&
+            diagramToGraphviz(validatedDiagram.diagram, theory, {
+                obName(id) {
+                    return props.liveDiagram.objectIndex().map.get(id);
+                },
                 baseObName(id) {
                     return liveModel.objectIndex().map.get(id);
                 },
@@ -70,7 +76,7 @@ export function DiagramGraph(
     const title = () => props.title ?? "Diagram";
 
     return (
-        <div class="model-graph">
+        <div class="graph-visualization-analysis">
             <div class={baseStyles.panel}>
                 <span class={baseStyles.title}>{title()}</span>
                 <span class={baseStyles.filler} />
@@ -80,17 +86,19 @@ export function DiagramGraph(
                     size={16}
                 />
             </div>
-            <Show when={graphviz()}>
-                {(graph) => (
-                    <GraphvizSVG
-                        graph={graph()}
-                        options={{
-                            engine: graphvizEngine(props.content.layout),
-                        }}
-                        ref={setSvgRef}
-                    />
-                )}
-            </Show>
+            <div class="graph-visualization">
+                <Show when={graphviz()}>
+                    {(graph) => (
+                        <GraphvizSVG
+                            graph={graph()}
+                            options={{
+                                engine: graphvizEngine(props.content.layout),
+                            }}
+                            ref={setSvgRef}
+                        />
+                    )}
+                </Show>
+            </div>
         </div>
     );
 }
@@ -98,20 +106,21 @@ export function DiagramGraph(
 /** Convert a diagram in a model into a Graphviz graph.
  */
 export function diagramToGraphviz(
-    diagram: DiagramJudgment[],
+    diagram: DblModelDiagram,
     theory: Theory,
     options?: {
+        obName?: (id: Uuid) => Name | undefined;
         baseObName?: (id: Uuid) => string | undefined;
         baseMorName: (id: Uuid) => string | undefined;
         attributes?: GraphvizAttributes;
     },
 ): Viz.Graph {
     const nodes = new Map<string, Required<Viz.Graph>["nodes"][0]>();
-    for (const judgment of diagram) {
+    for (const judgment of diagram.objectDeclarations()) {
         const matched = match(judgment)
             .with(
                 {
-                    tag: "object",
+                    id: P.select("id"),
                     obType: P.select("obType"),
                     over: {
                         tag: "Basic",
@@ -124,15 +133,15 @@ export function diagramToGraphviz(
         if (!matched) {
             continue;
         }
-        const { id, name } = judgment;
-        const { obType, overId } = matched;
-        const label = [name, options?.baseObName?.(overId)].filter((s) => s).join(" : ");
+        const { id, obType, overId } = matched;
+        const name = options?.obName?.(id);
+        const overName = options?.baseObName?.(overId);
         const meta = theory.instanceObTypeMeta(obType);
         nodes.set(id, {
             name: id,
             attributes: {
                 id,
-                label,
+                label: [name, overName].filter((s) => s).join(" : "),
                 class: svgCssClasses(meta).join(" "),
                 fontname: graphvizFontname(meta),
             },
@@ -140,11 +149,11 @@ export function diagramToGraphviz(
     }
 
     const edges: Required<Viz.Graph>["edges"] = [];
-    for (const judgment of diagram) {
+    for (const judgment of diagram.morphismDeclarations()) {
         const matched = match(judgment)
             .with(
                 {
-                    tag: "morphism",
+                    id: P.select("id"),
                     morType: P.select("morType"),
                     over: {
                         tag: "Basic",
@@ -165,16 +174,14 @@ export function diagramToGraphviz(
         if (!matched) {
             continue;
         }
-        const { id, name } = judgment;
-        const { morType, overId, codId, domId } = matched;
-        const label = [name, options?.baseMorName?.(overId)].filter((s) => s).join(" : ");
+        const { id, morType, overId, codId, domId } = matched;
         const meta = theory.instanceMorTypeMeta(morType);
         edges.push({
             head: codId,
             tail: domId,
             attributes: {
                 id,
-                label,
+                label: options?.baseMorName?.(overId) ?? "",
                 class: svgCssClasses(meta).join(" "),
                 fontname: graphvizFontname(meta),
             },

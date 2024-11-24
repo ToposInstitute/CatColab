@@ -7,7 +7,7 @@ import { type Api, type ExternRef, type LiveDoc, getLiveDoc } from "../api";
 import { type LiveModelDocument, getLiveModel } from "../model";
 import { type Notebook, newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
-import { type IndexedMap, indexMap } from "../util/indexing";
+import { type IdToNameMap, indexMap } from "../util/indexing";
 import { type DiagramJudgment, catlogDiagram } from "./types";
 
 /** A document defining a diagram in a model. */
@@ -52,7 +52,7 @@ export type LiveDiagramDocument = {
     formalJudgments: Accessor<Array<DiagramJudgment>>;
 
     /** A memo of the indexed map from object ID to name. */
-    objectIndex: Accessor<IndexedMap<Uuid, string>>;
+    objectIndex: Accessor<IdToNameMap>;
 
     /** A memo of the diagram constructed and validated in the core. */
     validatedDiagram: Accessor<ValidatedDiagram | undefined>;
@@ -77,13 +77,29 @@ function enlivenDiagramDocument(
             .map((cell) => cell.content);
     }, []);
 
-    const objectIndex = createMemo<IndexedMap<Uuid, string>>(() => {
-        const map = new Map<Uuid, string>();
-        for (const judgment of formalJudgments()) {
+    const objectIndex = createMemo<IdToNameMap>(() => {
+        const judgments = formalJudgments();
+        const map = new Map<Uuid, string | number>();
+
+        for (const judgment of judgments) {
             if (judgment.tag === "object") {
                 map.set(judgment.id, judgment.name);
             }
         }
+
+        let nanon = 0;
+        for (const judgment of judgments) {
+            if (judgment.tag === "morphism") {
+                const { dom, cod } = judgment;
+                if (dom?.tag === "Basic" && !map.has(dom.content)) {
+                    map.set(dom.content, ++nanon);
+                }
+                if (cod?.tag === "Basic" && !map.has(cod.content)) {
+                    map.set(cod.content, ++nanon);
+                }
+            }
+        }
+
         return indexMap(map);
     }, indexMap(new Map()));
 
@@ -95,8 +111,10 @@ function enlivenDiagramDocument(
                 // Abort immediately if the model itself is invalid.
                 return undefined;
             }
+            const { model } = validatedModel;
             const diagram = catlogDiagram(th.theory, formalJudgments());
-            const result = diagram.validate_in(validatedModel.model);
+            diagram.inferMissingFrom(model);
+            const result = diagram.validateIn(model);
             return { diagram, result };
         },
         undefined,

@@ -1,5 +1,6 @@
 import { createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
+import { uuidv7 } from "uuidv7";
 
 import { BasicMorInput } from "../model/morphism_input";
 import type { CellActions } from "../notebook";
@@ -56,6 +57,7 @@ export function DiagramMorphismCellEditor(props: {
                     });
                 }}
                 obType={domType()}
+                generateId={uuidv7}
                 invalid={domInvalid()}
                 deleteForward={() => morRef()?.focus()}
                 exitBackward={() => morRef()?.focus()}
@@ -100,6 +102,7 @@ export function DiagramMorphismCellEditor(props: {
                     });
                 }}
                 obType={codType()}
+                generateId={uuidv7}
                 invalid={codInvalid()}
                 deleteBackward={() => morRef()?.focus()}
                 exitBackward={() => domRef.focus()}

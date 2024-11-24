@@ -2,7 +2,7 @@ import { createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { ObType } from "catlog-wasm";
-import { InlineInput } from "../components";
+import { NameInput } from "../components";
 import type { CellActions } from "../notebook";
 import type { Theory } from "../theory";
 import { focusInputWhen } from "../util/focus";
@@ -33,13 +33,13 @@ export function ObjectCellEditor(props: {
 
     return (
         <div class={cssClasses().join(" ")}>
-            <InlineInput
+            <NameInput
                 ref={setNameRef}
                 placeholder="Unnamed"
-                text={props.object.name}
-                setText={(text) => {
+                name={props.object.name}
+                setName={(name) => {
                     props.modifyObject((ob) => {
-                        ob.name = text;
+                        ob.name = name;
                     });
                 }}
                 deleteBackward={props.actions.deleteBackward}

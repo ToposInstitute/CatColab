@@ -16,6 +16,7 @@ export type InlineInputOptions = {
     completions?: Completion[];
     showCompletionsOnFocus?: boolean;
 
+    autofill?: () => void;
     deleteBackward?: () => void;
     deleteForward?: () => void;
     exitBackward?: () => void;
@@ -80,7 +81,11 @@ export function InlineInput(
                 props.exitDown();
             }
         } else if (evt.key === "Enter" && !evt.shiftKey) {
-            completionsRef()?.selectPresumptive();
+            if (isCompletionsOpen()) {
+                completionsRef()?.selectPresumptive();
+            } else if (props.autofill) {
+                props.autofill();
+            }
         } else {
             return;
         }

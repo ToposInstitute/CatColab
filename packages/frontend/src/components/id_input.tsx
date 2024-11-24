@@ -2,20 +2,23 @@ import { createEffect, createSignal, splitProps } from "solid-js";
 import { P, match } from "ts-pattern";
 
 import type { Mor, Ob, Uuid } from "catlog-wasm";
-import type { IndexedMap } from "../util/indexing";
+import { type IdToNameMap, type Name, type NameType, nameType } from "../util/indexing";
 import type { Completion } from "./completions";
 import { InlineInput, type InlineInputErrorStatus, type InlineInputOptions } from "./inline_input";
+
+import "./id_input.css";
 
 /** Optional props for `IdInput` component.
  */
 export type IdInputOptions = {
-    nameMap?: IndexedMap<Uuid, string>;
+    generateId?: () => Uuid;
+    idToName?: IdToNameMap;
     invalid?: boolean;
 } & Omit<InlineInputOptions, "completions">;
 
 /** Input a UUID by specifying its human-readable name.
 
-The mapping between UUID and human-readable names is a prop to this component.
+The mapping between UUIDs and names is a prop to this component.
  */
 export function IdInput(
     allProps: {
@@ -27,17 +30,29 @@ export function IdInput(
     const [props, inputProps] = splitProps(allProps, [
         "id",
         "setId",
+        "generateId",
         "completions",
-        "nameMap",
+        "idToName",
         "invalid",
     ]);
+
+    const idToName = (id: Uuid): Name | undefined => props.idToName?.map.get(id);
+    const idToText = (id: Uuid): string | undefined => idToName(id)?.toString();
+
+    const textToIds = (text: string): Uuid[] => {
+        let name: Name = text;
+        if (/^\d+$/.test(text)) {
+            name = Number.parseInt(text);
+        }
+        return props.idToName?.index.get(name) ?? [];
+    };
 
     const [text, setText] = createSignal("");
 
     const updateText = (id: Uuid | null) => {
         let name = "";
         if (id) {
-            name = props.nameMap?.map.get(id) ?? "";
+            name = idToText(id) ?? "";
         }
         setText(name);
     };
@@ -45,7 +60,7 @@ export function IdInput(
     createEffect(() => updateText(props.id));
 
     const handleNewText = (text: string) => {
-        const possibleIds = props.nameMap?.index.get(text);
+        const possibleIds = textToIds(text);
         const firstId = possibleIds?.[0];
         if (firstId) {
             // TODO: Warn the user when the names are not unique.
@@ -60,7 +75,7 @@ export function IdInput(
 
     const completions = (): Completion[] | undefined =>
         props.completions?.map((id) => ({
-            name: props.nameMap?.map.get(id) ?? "",
+            name: idToText(id) ?? "",
             onComplete() {
                 props.setId(id);
                 updateText(id);
@@ -68,9 +83,10 @@ export function IdInput(
         }));
 
     const isComplete = () => {
-        const name = props.id ? props.nameMap?.map.get(props.id) : "";
+        const name = props.id ? idToText(props.id) : "";
         return text() === name;
     };
+
     const status = (): InlineInputErrorStatus => {
         if (!isComplete()) {
             return "incomplete";
@@ -81,14 +97,27 @@ export function IdInput(
         return null;
     };
 
+    const setNewId = () => props.generateId && props.setId(props.generateId());
+
+    const maybeNameType = (id: Uuid | null): NameType | "undefined" => {
+        if (id === null) {
+            return "undefined";
+        }
+        const name = idToName(id);
+        return name === undefined ? "undefined" : nameType(name);
+    };
+
     return (
-        <InlineInput
-            text={text()}
-            setText={handleNewText}
-            completions={completions()}
-            status={status()}
-            {...inputProps}
-        />
+        <div class={`id-input ${maybeNameType(props.id)}`}>
+            <InlineInput
+                text={text()}
+                setText={handleNewText}
+                completions={completions()}
+                status={status()}
+                autofill={props.generateId ? setNewId : undefined}
+                {...inputProps}
+            />
+        </div>
     );
 }
 

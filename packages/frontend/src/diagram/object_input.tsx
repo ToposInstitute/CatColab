@@ -20,5 +20,7 @@ export function BasicObInput(
     const completions = (): Ob[] | undefined =>
         props.obType && liveDiagram.validatedDiagram()?.diagram.objectsWithType(props.obType);
 
-    return <ObIdInput completions={completions()} nameMap={liveDiagram.objectIndex()} {...props} />;
+    return (
+        <ObIdInput completions={completions()} idToName={liveDiagram.objectIndex()} {...props} />
+    );
 }
