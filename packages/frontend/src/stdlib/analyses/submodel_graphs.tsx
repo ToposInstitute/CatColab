@@ -16,8 +16,6 @@ import "./submodel_graphs.css";
 
 /** State of a submodels analysis. */
 export type SubmodelsAnalysisContent = {
-    tag: "submodels";
-
     /** Index of active submodel. */
     activeIndex: number;
 };
@@ -38,7 +36,6 @@ export function configureSubmodelsAnalysis(options: {
             <SubmodelsAnalysis title={name} findSubmodels={findSubmodels} {...props} />
         ),
         initialContent: () => ({
-            tag: "submodels",
             activeIndex: 0,
         }),
     };

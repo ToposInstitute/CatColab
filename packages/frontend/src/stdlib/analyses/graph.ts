@@ -12,8 +12,6 @@ type LayoutEngine = "graphviz-directed" | "graphviz-undirected";
 
 /** Configuration for an analysis that visualizes a graph. */
 export type GraphContent = {
-    tag: "graph";
-
     /** Layout engine for graph. */
     layout: LayoutEngine;
 };

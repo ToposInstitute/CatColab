@@ -35,7 +35,6 @@ export function configureStockFlowDiagram(options: {
         description,
         component: StockFlowDiagram,
         initialContent: () => ({
-            tag: "graph",
             layout: "graphviz-directed",
         }),
     };

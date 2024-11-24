@@ -32,7 +32,6 @@ export function configureModelGraph(options: {
         description,
         component: (props) => <ModelGraph title={name} {...props} />,
         initialContent: () => ({
-            tag: "graph",
             layout: "graphviz-directed",
         }),
     };

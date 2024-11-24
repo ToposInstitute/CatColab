@@ -21,9 +21,7 @@ import { type ODEPlotData, ODEResultPlot } from "../../visualization";
 import "./simulation.css";
 
 /** Configuration for a Lotka-Volterra ODE analysis of a model. */
-export type LotkaVolterraContent = {
-    tag: "lotka-volterra";
-} & LotkaVolterraProblemData<string>;
+export type LotkaVolterraContent = LotkaVolterraProblemData<string>;
 
 type Simulator = (model: DblModel, data: LotkaVolterraModelData) => ODEResult;
 
@@ -46,7 +44,6 @@ export function configureLotkaVolterra(options: {
         description,
         component: (props) => <LotkaVolterra simulate={simulate} title={name} {...props} />,
         initialContent: () => ({
-            tag: "lotka-volterra",
             interactionCoefficients: {},
             growthRates: {},
             initialValues: {},
