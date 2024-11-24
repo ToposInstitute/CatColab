@@ -112,8 +112,10 @@ function enlivenDiagramDocument(
                 // Abort immediately if the model itself is invalid.
                 return undefined;
             }
+            const { model } = validatedModel;
             const diagram = catlogDiagram(th.theory, formalJudgments());
-            const result = diagram.validate_in(validatedModel.model);
+            diagram.inferMissingFrom(model);
+            const result = diagram.validateIn(model);
             return { diagram, result };
         },
         undefined,

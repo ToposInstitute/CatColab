@@ -189,7 +189,7 @@ where
         self.theory.clone()
     }
 
-    /// Returns the underlying graph of the model
+    /// Returns the underlying graph of the model.
     pub fn generating_graph(&self) -> &impl FinGraph<V = Id, E = Id> {
         self.category.generators()
     }
@@ -222,12 +222,22 @@ where
         self.category.make_mor_generator(f)
     }
 
-    /// Sets the domain of a morphism.
+    /// Gets the domain of a basic morphism, if it is set.
+    pub fn get_dom(&self, f: &Id) -> Option<&Id> {
+        self.category.get_dom(f)
+    }
+
+    /// Gets the codomain of a basic morphism, if it is set.
+    pub fn get_cod(&self, f: &Id) -> Option<&Id> {
+        self.category.get_cod(f)
+    }
+
+    /// Sets the domain of a basic morphism.
     pub fn set_dom(&mut self, f: Id, x: Id) -> Option<Id> {
         self.category.set_dom(f, x)
     }
 
-    /// Updates the codomain of a morphism, setting or unsetting it.
+    /// Sets the codomain of a basic morphism.
     pub fn set_cod(&mut self, f: Id, x: Id) -> Option<Id> {
         self.category.set_cod(f, x)
     }
@@ -271,6 +281,27 @@ where
             errs.into_iter()
         });
         category_errors.chain(ob_type_errors).chain(mor_type_errors)
+    }
+
+    /** Infer missing data in the model, where possible.
+
+    Objects used in the domain or codomain of morphisms, but not contained as
+    objects of the model, are added and their types are inferred. It is not
+    always possible to do this consistently, so it is important to `validate`
+    the model even after calling this method.
+    */
+    pub fn infer_missing(&mut self) {
+        let edges: Vec<_> = self.morphism_generators().collect();
+        for e in edges {
+            if let Some(x) = self.get_dom(&e).filter(|x| !self.has_ob(x)) {
+                let ob_type = self.theory.src(&self.mor_type(&e.clone().into()));
+                self.add_ob(x.clone(), ob_type);
+            }
+            if let Some(x) = self.get_cod(&e).filter(|x| !self.has_ob(x)) {
+                let ob_type = self.theory.tgt(&self.mor_type(&e.into()));
+                self.add_ob(x.clone(), ob_type);
+            }
+        }
     }
 }
 
@@ -456,7 +487,7 @@ mod tests {
 
     use super::*;
     use crate::one::fin_category::FinMor;
-    use crate::stdlib::theories::*;
+    use crate::stdlib::{models::*, theories::*};
 
     #[test]
     fn validate_discrete_dbl_model() {
@@ -480,9 +511,17 @@ mod tests {
         assert_eq!(model.validate().unwrap_err().len(), 1);
 
         assert!(model.is_free());
-
         let peq = PathEq::new(Path::single(ustr("a")), Path::single(ustr("b")));
         model.add_equation(ustr("e"), peq);
         assert!(!model.is_free());
+    }
+
+    #[test]
+    fn infer_discrete_dbl_model() {
+        let th = Arc::new(th_schema());
+        let mut model = DiscreteDblModel::new(th.clone());
+        model.add_mor(ustr("attr"), ustr("entity"), ustr("type"), FinMor::Generator(ustr("Attr")));
+        model.infer_missing();
+        assert_eq!(model, walking_attr(th));
     }
 }

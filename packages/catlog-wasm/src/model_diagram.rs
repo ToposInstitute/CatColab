@@ -160,8 +160,21 @@ impl DblModelDiagram {
         })
     }
 
+    /// Infers missing data in the diagram from the model, where possible.
+    #[wasm_bindgen(js_name = "inferMissingFrom")]
+    pub fn infer_missing_from(&mut self, model: &DblModel) -> Result<(), String> {
+        all_the_same!(match &mut self.0 {
+            DblModelDiagramBox::[Discrete](diagram) => {
+                let model = (&model.0).try_into().map_err(
+                    |_| "Type of model should match type of diagram")?;
+                diagram.infer_missing_from(model);
+                Ok(())
+            }
+        })
+    }
+
     /// Validates that the diagram is well defined in a model.
-    #[wasm_bindgen]
+    #[wasm_bindgen(js_name = "validateIn")]
     pub fn validate_in(&self, model: &DblModel) -> Result<ModelDiagramValidationResult, String> {
         all_the_same!(match &self.0 {
             DblModelDiagramBox::[Discrete](diagram) => {

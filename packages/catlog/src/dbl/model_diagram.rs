@@ -26,7 +26,7 @@ use tsify_next::{declare, Tsify};
 
 use super::model::{DiscreteDblModel, InvalidDiscreteDblModel};
 use super::model_morphism::*;
-use crate::one::FgCategory;
+use crate::one::{Category, FgCategory};
 use crate::validate;
 
 /** A diagram in a model of a double theory.
@@ -108,6 +108,26 @@ where
             Either::Right(morphism.iter_invalid().map(InvalidDblModelDiagram::Map))
         }
     }
+
+    /** Infer missing data in the diagram from the model, where possible.
+
+    Assumes that the model is valid.
+     */
+    pub fn infer_missing_from(&mut self, model: &DiscreteDblModel<CodId, Cat>) {
+        let (mapping, domain) = self.into();
+        domain.infer_missing();
+        for e in domain.morphism_generators() {
+            let Some(g) = mapping.apply_basic_mor(&e) else {
+                continue;
+            };
+            if let Some(x) = domain.get_dom(&e).filter(|x| !mapping.is_ob_assigned(x)) {
+                mapping.assign_ob(x.clone(), model.dom(&g));
+            }
+            if let Some(x) = domain.get_cod(&e).filter(|x| !mapping.is_ob_assigned(x)) {
+                mapping.assign_ob(x.clone(), model.cod(&g));
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -141,14 +161,28 @@ mod tests {
 
     #[test]
     fn validate_model_diagram() {
-        let theory = Arc::new(th_signed_category());
-        let pos_loop = positive_loop(theory.clone());
-        let neg_loop = negative_loop(theory.clone());
+        let th = Arc::new(th_signed_category());
+        let pos_loop = positive_loop(th.clone());
+        let neg_loop = negative_loop(th.clone());
 
         let mut f: DiscreteDblModelMapping<_, _> = Default::default();
         f.assign_ob(ustr("x"), ustr("x"));
         f.assign_basic_mor(ustr("positive"), Path::pair(ustr("negative"), ustr("negative")));
         let diagram = DblModelDiagram(f, pos_loop);
         assert!(diagram.validate_in(&neg_loop).is_ok());
+    }
+
+    #[test]
+    fn infer_model_diagram() {
+        let th = Arc::new(th_schema());
+        let mut domain = DiscreteDblModel::new(th.clone());
+        domain.add_mor(0, 0, 1, FinMor::Generator(ustr("Attr")));
+        let mut f: DiscreteDblModelMapping<_, _> = Default::default();
+        f.assign_basic_mor(0, Path::single(ustr("attr")));
+        let mut diagram = DblModelDiagram(f, domain);
+
+        let model = walking_attr(th);
+        diagram.infer_missing_from(&model);
+        assert!(diagram.validate_in(&model).is_ok());
     }
 }

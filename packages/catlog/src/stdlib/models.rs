@@ -59,6 +59,19 @@ pub fn negative_feedback(th: Arc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel
     model
 }
 
+/** The "walking attribute" schema.
+
+A schema with one entity type, one attribute type, and one attribute.
+ */
+pub fn walking_attr(th: Arc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel {
+    let mut model = UstrDiscreteDblModel::new(th);
+    let (entity, attr_type) = (ustr("entity"), ustr("type"));
+    model.add_ob(entity, ustr("Entity"));
+    model.add_ob(attr_type, ustr("AttrType"));
+    model.add_mor(ustr("attr"), entity, attr_type, FinMor::Generator(ustr("Attr")));
+    model
+}
+
 #[cfg(test)]
 mod tests {
     use super::super::theories::*;
@@ -72,5 +85,11 @@ mod tests {
         assert!(negative_loop(th.clone()).validate().is_ok());
         assert!(positive_feedback(th.clone()).validate().is_ok());
         assert!(negative_feedback(th.clone()).validate().is_ok());
+    }
+
+    #[test]
+    fn schemas() {
+        let th = Arc::new(th_schema());
+        assert!(walking_attr(th).validate().is_ok());
     }
 }
