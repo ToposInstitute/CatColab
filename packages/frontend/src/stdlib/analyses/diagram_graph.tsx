@@ -16,9 +16,10 @@ import {
     graphvizEngine,
     graphvizFontname,
     svgCssClasses,
-} from "./graph";
+} from "./graph_visualization";
 
 import baseStyles from "./base_styles.module.css";
+import "./graph_visualization.css";
 
 /** Configure a graph visualization for use with diagrams in a model. */
 export function configureDiagramGraph(options: {
@@ -75,7 +76,7 @@ export function DiagramGraph(
     const title = () => props.title ?? "Diagram";
 
     return (
-        <div class="model-graph">
+        <div class="graph-visualization-analysis">
             <div class={baseStyles.panel}>
                 <span class={baseStyles.title}>{title()}</span>
                 <span class={baseStyles.filler} />
@@ -85,17 +86,19 @@ export function DiagramGraph(
                     size={16}
                 />
             </div>
-            <Show when={graphviz()}>
-                {(graph) => (
-                    <GraphvizSVG
-                        graph={graph()}
-                        options={{
-                            engine: graphvizEngine(props.content.layout),
-                        }}
-                        ref={setSvgRef}
-                    />
-                )}
-            </Show>
+            <div class="graph-visualization">
+                <Show when={graphviz()}>
+                    {(graph) => (
+                        <GraphvizSVG
+                            graph={graph()}
+                            options={{
+                                engine: graphvizEngine(props.content.layout),
+                            }}
+                            ref={setSvgRef}
+                        />
+                    )}
+                </Show>
+            </div>
         </div>
     );
 }

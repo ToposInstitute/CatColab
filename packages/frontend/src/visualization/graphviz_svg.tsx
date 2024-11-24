@@ -25,11 +25,9 @@ export function GraphvizSVG(props: {
     };
 
     return (
-        <div class="graphviz-container">
-            <Suspense fallback={props.fallback}>
-                <GraphvizOutputSVG graph={render()} ref={props.ref} />
-            </Suspense>
-        </div>
+        <Suspense fallback={props.fallback}>
+            <GraphvizOutputSVG graph={render()} ref={props.ref} />
+        </Suspense>
     );
 }
 
@@ -37,9 +35,5 @@ function GraphvizOutputSVG(props: {
     graph?: GraphvizJSON.Graph;
     ref?: SVGRefProp;
 }) {
-    return (
-        <div class="graphviz">
-            <GraphSVG graph={props.graph && parseGraphvizJSON(props.graph)} ref={props.ref} />
-        </div>
-    );
+    return <GraphSVG graph={props.graph && parseGraphvizJSON(props.graph)} ref={props.ref} />;
 }

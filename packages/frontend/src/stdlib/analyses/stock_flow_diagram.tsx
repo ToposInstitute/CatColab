@@ -17,10 +17,11 @@ import {
     loadViz,
     vizLayoutGraph,
 } from "../../visualization";
-import { type GraphContent, type GraphvizAttributes, graphvizEngine } from "./graph";
+import { type GraphContent, type GraphvizAttributes, graphvizEngine } from "./graph_visualization";
 import { modelToGraphviz } from "./model_graph";
 
 import baseStyles from "./base_styles.module.css";
+import "./graph_visualization.css";
 
 /** Configure a visualization of a stock flow diagram. */
 export function configureStockFlowDiagram(options: {
@@ -46,24 +47,26 @@ export function StockFlowDiagram(props: ModelAnalysisProps<GraphContent>) {
     const [svgRef, setSvgRef] = createSignal<SVGSVGElement>();
 
     return (
-        <div class="model-graph">
+        <div class="graph-visualization-analysis">
             <div class={baseStyles.panel}>
                 <span class={baseStyles.title}>Diagram</span>
                 <span class={baseStyles.filler} />
                 <DownloadSVGButton svg={svgRef()} tooltip="Export the diagram as SVG" size={16} />
             </div>
-            <Show when={props.liveModel.theory()}>
-                {(theory) => (
-                    <StockFlowGraphviz
-                        model={props.liveModel.formalJudgments()}
-                        theory={theory()}
-                        options={{
-                            engine: graphvizEngine(props.content.layout),
-                        }}
-                        ref={setSvgRef}
-                    />
-                )}
-            </Show>
+            <div class="graph-visualization">
+                <Show when={props.liveModel.theory()}>
+                    {(theory) => (
+                        <StockFlowGraphviz
+                            model={props.liveModel.formalJudgments()}
+                            theory={theory()}
+                            options={{
+                                engine: graphvizEngine(props.content.layout),
+                            }}
+                            ref={setSvgRef}
+                        />
+                    )}
+                </Show>
+            </div>
         </div>
     );
 }
