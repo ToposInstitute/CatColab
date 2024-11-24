@@ -260,10 +260,9 @@ where
                 Some(Invalid::ObType(x))
             }
         });
-        let mor_type_errors = self.category.morphism_generators().flat_map(|f| {
+        let mor_type_errors = self.category.morphism_generators().flat_map(|e| {
             let mut errs = Vec::new();
-            let e = f.clone();
-            let mor_type = self.mor_type(&f.into());
+            let mor_type = self.mor_gen_type(&e);
             if self.theory.has_mor_type(&mor_type) {
                 if self.category.get_dom(&e).map_or(false, |x| {
                     self.has_ob(x) && self.ob_type(x) != self.theory.src(&mor_type)
@@ -294,11 +293,11 @@ where
         let edges: Vec<_> = self.morphism_generators().collect();
         for e in edges {
             if let Some(x) = self.get_dom(&e).filter(|x| !self.has_ob(x)) {
-                let ob_type = self.theory.src(&self.mor_type(&e.clone().into()));
+                let ob_type = self.theory.src(&self.mor_gen_type(&e));
                 self.add_ob(x.clone(), ob_type);
             }
             if let Some(x) = self.get_cod(&e).filter(|x| !self.has_ob(x)) {
-                let ob_type = self.theory.tgt(&self.mor_type(&e.into()));
+                let ob_type = self.theory.tgt(&self.mor_gen_type(&e));
                 self.add_ob(x.clone(), ob_type);
             }
         }

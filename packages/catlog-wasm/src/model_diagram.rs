@@ -10,6 +10,7 @@ use wasm_bindgen::prelude::*;
 
 use catlog::dbl::model::FgDblModel;
 use catlog::dbl::model_diagram as diagram;
+use catlog::dbl::model_morphism::DblModelMapping;
 use catlog::one::FgCategory;
 
 use super::model::{DblModel, DblModelBox, DiscreteDblModel, Mor, Ob};
@@ -160,6 +161,44 @@ impl DblModelDiagram {
         })
     }
 
+    /// Returns array of declarations of basic objects.
+    #[wasm_bindgen(js_name = "objectDeclarations")]
+    pub fn object_declarations(&self) -> Vec<DiagramObDecl> {
+        all_the_same!(match &self.0 {
+            DblModelDiagramBox::[Discrete](diagram) => {
+                let (mapping, model) = diagram.into();
+                let decls = model.object_generators().map(|x| {
+                    DiagramObDecl {
+                        id: x,
+                        ob_type: model.ob_gen_type(&x).into(),
+                        over: mapping.apply_ob(&x).map(|ob| ob.into())
+                    }
+                });
+                decls.collect()
+            }
+        })
+    }
+
+    /// Returns array of declarations of basic morphisms.
+    #[wasm_bindgen(js_name = "morphismDeclarations")]
+    pub fn morphism_declarations(&self) -> Vec<DiagramMorDecl> {
+        all_the_same!(match &self.0 {
+            DblModelDiagramBox::[Discrete](diagram) => {
+                let (mapping, model) = diagram.into();
+                let decls = model.morphism_generators().map(|f| {
+                    DiagramMorDecl {
+                        id: f,
+                        mor_type: model.mor_gen_type(&f).into(),
+                        over: mapping.apply_basic_mor(&f).map(|mor| mor.into()),
+                        dom: model.get_dom(&f).cloned().map(|ob| ob.into()),
+                        cod: model.get_cod(&f).cloned().map(|ob| ob.into()),
+                    }
+                });
+                decls.collect()
+            }
+        })
+    }
+
     /// Infers missing data in the diagram from the model, where possible.
     #[wasm_bindgen(js_name = "inferMissingFrom")]
     pub fn infer_missing_from(&mut self, model: &DblModel) -> Result<(), String> {
@@ -234,7 +273,9 @@ mod tests {
                 .is_ok());
         }
         assert_eq!(diagram.objects().len(), 3);
+        assert_eq!(diagram.object_declarations().len(), 3);
         assert_eq!(diagram.morphisms().len(), 2);
+        assert_eq!(diagram.morphism_declarations().len(), 2);
         assert_eq!(diagram.validate_in(&model).unwrap().0, JsResult::Ok(()));
     }
 }

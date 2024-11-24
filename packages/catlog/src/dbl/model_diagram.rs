@@ -120,6 +120,9 @@ where
             let Some(g) = mapping.apply_basic_mor(&e) else {
                 continue;
             };
+            if !model.has_mor(&g) {
+                continue;
+            }
             if let Some(x) = domain.get_dom(&e).filter(|x| !mapping.is_ob_assigned(x)) {
                 mapping.assign_ob(x.clone(), model.dom(&g));
             }

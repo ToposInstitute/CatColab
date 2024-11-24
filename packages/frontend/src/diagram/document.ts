@@ -4,11 +4,10 @@ import invariant from "tiny-invariant";
 import type { JsonValue } from "catcolab-api";
 import type { DblModelDiagram, ModelDiagramValidationResult, Uuid } from "catlog-wasm";
 import { type Api, type ExternRef, type LiveDoc, getLiveDoc } from "../api";
-import type { IdToNameMap } from "../components";
 import { type LiveModelDocument, getLiveModel } from "../model";
 import { type Notebook, newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
-import { indexMap } from "../util/indexing";
+import { type IdToNameMap, indexMap } from "../util/indexing";
 import { type DiagramJudgment, catlogDiagram } from "./types";
 
 /** A document defining a diagram in a model. */

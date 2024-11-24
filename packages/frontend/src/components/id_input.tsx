@@ -2,34 +2,11 @@ import { createEffect, createSignal, splitProps } from "solid-js";
 import { P, match } from "ts-pattern";
 
 import type { Mor, Ob, Uuid } from "catlog-wasm";
-import type { IndexedMap } from "../util/indexing";
+import { type IdToNameMap, type Name, type NameType, nameType } from "../util/indexing";
 import type { Completion } from "./completions";
 import { InlineInput, type InlineInputErrorStatus, type InlineInputOptions } from "./inline_input";
 
 import "./id_input.css";
-
-/** A name for the purposes of the `IdInput` component.
-
-A name is either a string, a meaningful name typically created by a human, or a
-number, a "`gensym`-ed" identifier representing an anonymous entity.
- */
-export type Name = string | number;
-
-type NameType = "named" | "anonymous";
-
-function nameType(name: Name): NameType {
-    if (typeof name === "string") {
-        return "named";
-    }
-    if (typeof name === "number") {
-        return "anonymous";
-    }
-    throw new Error(`Name has invalid type: ${typeof name}`);
-}
-
-/** A UUID-name mapping, as expected by the `IdInput` component.
- */
-export type IdToNameMap = IndexedMap<Uuid, Name>;
 
 /** Optional props for `IdInput` component.
  */
