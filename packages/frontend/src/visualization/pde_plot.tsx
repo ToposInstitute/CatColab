@@ -55,7 +55,7 @@ export function PDEPlot2D(props: {
     const maxValue = (): number =>
         props.data.state.map((data) => data.map((triple) => triple[2]).reduce(max)).reduce(max);
 
-    const timeLength = props.data.times.length;
+    const timeLength = props.data.time.length;
 
     // timer
     const [count, setCount] = createSignal(0);
