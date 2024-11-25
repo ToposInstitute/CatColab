@@ -102,7 +102,9 @@ export function DiagramPane(props: {
                 <div class="instance-of">
                     <div class="name">{liveModel().theory()?.instanceOfName}</div>
                     <div class="model">
-                        <A href={`/model/${liveModel().refId}`}>{liveModel().liveDoc.doc.name}</A>
+                        <A href={`/model/${liveModel().refId}`}>
+                            {liveModel().liveDoc.doc.name || "Untitled"}
+                        </A>
                     </div>
                 </div>
             </div>
