@@ -8,7 +8,7 @@ import { type LiveModelDocument, getLiveModel } from "../model";
 import { type Notebook, newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
 import { type IdToNameMap, indexMap } from "../util/indexing";
-import { type DiagramJudgment, catlogDiagram } from "./types";
+import { type DiagramJudgment, toCatlogDiagram } from "./types";
 
 /** A document defining a diagram in a model. */
 export type DiagramDocument = {
@@ -112,7 +112,7 @@ function enlivenDiagramDocument(
                 return undefined;
             }
             const { model } = validatedModel;
-            const diagram = catlogDiagram(th.theory, formalJudgments());
+            const diagram = toCatlogDiagram(th.theory, formalJudgments());
             diagram.inferMissingFrom(model);
             const result = diagram.validateIn(model);
             return { diagram, result };

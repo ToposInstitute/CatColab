@@ -45,8 +45,8 @@ export const newMorphismDecl = (morType: MorType): MorphismDecl => ({
     cod: null,
 });
 
-/** Construct a `catlog` model from a sequence of model judgments. */
-export function catlogModel(theory: DblTheory, judgments: Array<ModelJudgment>): DblModel {
+/** Construct a model in `catlog` from a sequence of judgments. */
+export function toCatlogModel(theory: DblTheory, judgments: Array<ModelJudgment>): DblModel {
     const model = new DblModel(theory);
     for (const judgment of judgments) {
         if (judgment.tag === "object") {
