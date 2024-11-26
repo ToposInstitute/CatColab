@@ -1,11 +1,9 @@
-import type { IKernelConnection } from "@jupyterlab/services/lib/kernel/kernel";
-import { Match, Switch, createResource, createSignal, onCleanup } from "solid-js";
+import { Match, Switch, createResource, onCleanup } from "solid-js";
 
-import type { JsResult } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
-import { IconButton, Warning } from "../../components";
+import { ErrorAlert, IconButton, Warning } from "../../components";
 import type { DiagramAnalysisMeta } from "../../theory";
-import { type PDEPlotData2D, PDEResultPlot2D } from "../../visualization";
+import { PDEPlot2D, type PDEPlotData2D } from "../../visualization";
 
 import Loader from "lucide-solid/icons/loader";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
@@ -38,9 +36,7 @@ export function configureDecapodes(options: {
 }
 
 export function Decapodes(props: DiagramAnalysisProps<JupyterSettings>) {
-    const [simulationResult, setSimulationResult] = createSignal<JsResult<PDEPlotData2D, string>>();
-
-    const [kernel, { refetch: restart }] = createResource(async () => {
+    const [kernel, { refetch: restartKernel }] = createResource(async () => {
         const jupyter = await import("@jupyterlab/services");
 
         const serverSettings = jupyter.ServerConnection.makeSettings({
@@ -64,7 +60,9 @@ export function Decapodes(props: DiagramAnalysisProps<JupyterSettings>) {
 
     onCleanup(() => kernel()?.shutdown());
 
-    const simulate = async (kernel: IKernelConnection) => {
+    const maybeKernel = () => (kernel.error ? undefined : kernel());
+
+    const [result, { refetch: rerunSimulation }] = createResource(maybeKernel, async (kernel) => {
         const simulationData = {
             diagram: props.liveDiagram.formalJudgments(),
             model: props.liveDiagram.liveModel.formalJudgments(),
@@ -73,27 +71,26 @@ export function Decapodes(props: DiagramAnalysisProps<JupyterSettings>) {
             code: makeJuliaSimulationCode(simulationData),
         });
 
+        let result: PDEPlotData2D | undefined;
         future.onIOPub = (msg) => {
             if (
                 msg.header.msg_type === "execute_result" &&
                 msg.parent_header.msg_id === future.msg.header.msg_id
             ) {
                 const content = msg.content as JsonDataContent<PDEPlotData2D>;
-                const data = content["data"]?.["application/json"];
-                if (data) {
-                    setSimulationResult({ tag: "Ok", content: data });
-                }
+                result = content["data"]?.["application/json"];
             }
         };
 
         const reply = await future.done;
         if (reply.content.status === "error") {
-            setSimulationResult({ tag: "Err", content: reply.content.evalue });
-        } else if (reply.content.status !== "ok") {
-            // Execution request was aborted.
-            setSimulationResult(undefined);
+            throw new Error(reply.content.evalue);
         }
-    };
+        if (!result) {
+            throw new Error("Result not received from the simulator");
+        }
+        return result;
+    });
 
     return (
         <div class="simulation">
@@ -101,25 +98,23 @@ export function Decapodes(props: DiagramAnalysisProps<JupyterSettings>) {
                 <span class={baseStyles.title}>Simulation</span>
                 <span class={baseStyles.filler} />
                 <Switch>
-                    <Match when={kernel.loading}>
+                    <Match when={kernel.loading || result.loading}>
                         <IconButton>
                             <Loader size={16} />
                         </IconButton>
                     </Match>
                     <Match when={kernel.error}>
-                        <IconButton onClick={restart} tooltip="Restart the AlgebraicJulia service">
+                        <IconButton
+                            onClick={restartKernel}
+                            tooltip="Restart the AlgebraicJulia service"
+                        >
                             <RotateCcw size={16} />
                         </IconButton>
                     </Match>
-                    <Match when={kernel()}>
-                        {(kernel) => (
-                            <IconButton
-                                onClick={() => simulate(kernel())}
-                                tooltip="Re-run the simulation"
-                            >
-                                <RotateCcw size={16} />
-                            </IconButton>
-                        )}
+                    <Match when={true}>
+                        <IconButton onClick={rerunSimulation} tooltip="Re-run the simulation">
+                            <RotateCcw size={16} />
+                        </IconButton>
                     </Match>
                 </Switch>
             </div>
@@ -132,9 +127,11 @@ export function Decapodes(props: DiagramAnalysisProps<JupyterSettings>) {
                         </Warning>
                     )}
                 </Match>
-                <Match when={kernel()}>
-                    <PDEResultPlot2D result={simulationResult()} />
+                <Match when={result.loading}>{"Running the simulation..."}</Match>
+                <Match when={result.error}>
+                    {(error) => <ErrorAlert title="Simulation error">{error().message}</ErrorAlert>}
                 </Match>
+                <Match when={result()}>{(data) => <PDEPlot2D data={data()} />}</Match>
             </Switch>
         </div>
     );

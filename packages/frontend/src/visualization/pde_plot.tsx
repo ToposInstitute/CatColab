@@ -1,9 +1,6 @@
 import { makeTimer } from "@solid-primitives/timer";
 import type { EChartsOption } from "echarts";
-import { Match, Switch, createMemo, createSignal, lazy } from "solid-js";
-
-import type { JsResult } from "catlog-wasm";
-import { ErrorAlert } from "../components";
+import { createMemo, createSignal, lazy } from "solid-js";
 
 const ECharts = lazy(() => import("./echarts"));
 
@@ -24,22 +21,6 @@ export type PDEPlotData2D = {
 
 /** The data of a state variable at a given time. */
 type StateVarAtTime = Array<[xIndex: number, yIndex: number, value: number]>;
-
-/** Display the results, possibly failed, from a 2D PDE simulation. */
-export function PDEResultPlot2D(props: {
-    result?: JsResult<PDEPlotData2D, string>;
-}) {
-    return (
-        <Switch>
-            <Match when={props.result?.tag === "Ok" && props.result.content}>
-                {(data) => <PDEPlot2D data={data()} />}
-            </Match>
-            <Match when={props.result?.tag === "Err" && props.result.content}>
-                {(err) => <ErrorAlert title="Simulation error">{err()}</ErrorAlert>}
-            </Match>
-        </Switch>
-    );
-}
 
 /** Display the output data from a 2D PDE simulation. */
 export function PDEPlot2D(props: {
