@@ -2,6 +2,7 @@ import * as catlog from "catlog-wasm";
 
 import { Theory } from "../theory";
 import {
+    configureDecapodes,
     configureDiagramGraph,
     configureLotkaVolterra,
     configureModelGraph,
@@ -509,6 +510,7 @@ stdTheories.add(
                     name: "Diagram",
                     description: "Visualize the equations as a diagram",
                 }),
+                configureDecapodes({}),
             ],
         });
     },
