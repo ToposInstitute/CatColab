@@ -142,6 +142,11 @@ export function Decapodes(props: DiagramAnalysisProps<JupyterSettings>) {
                 <Match when={result.error}>
                     {(error) => <ErrorAlert title="Simulation error">{error().message}</ErrorAlert>}
                 </Match>
+                <Match when={props.liveDiagram.validatedDiagram()?.result.tag === "Err"}>
+                    <ErrorAlert title="Modeling error">
+                        {"Cannot run the simulation because the diagram is invalid"}
+                    </ErrorAlert>
+                </Match>
                 <Match when={result()}>{(data) => <PDEPlot2D data={data()} />}</Match>
             </Switch>
         </div>
