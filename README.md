@@ -41,16 +41,38 @@ install Rust (say by using [rustup](https://rustup.rs/)) and install
 
 To develop the frontend locally, clone the repository and run
 
-```bash
-> pnpm install
-> pnpm run build
-> pnpm run dev --mode staging
+```sh
+pnpm install
+pnpm run build
+pnpm run dev --mode staging
 ```
 
 Then navigate your browser to the URL provided by Vite.
 
 Note that the flag `--mode staging` uses the staging deployment of the backend.
 When this flag is omitted, the command `pnpm run dev` uses a local backend.
+
+### Formatting and linting
+
+To maintain a clean and consistent codebase, we follow strict conventions on
+code formatting and style. To format and lint the frontend code, run these
+commands:
+
+```sh
+cd packages/frontend
+pnpm run format
+pnpm run lint
+```
+
+To format and lint the Rust code, run these commands:
+
+```sh
+cargo fmt
+cargo clippy
+```
+
+Try to remember to run these commands before making a PR. (If you forget, the CI
+will remind you.)
 
 ### Using the Dev Container
 
