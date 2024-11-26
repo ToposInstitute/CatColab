@@ -401,9 +401,9 @@ stdTheories.add(
 
 stdTheories.add(
     {
-        id: "unary-DEC",
-        name: "Unary DEC operators",
-        description: "A category of DEC operators, including constants, on some space",
+        id: "unary-dec",
+        name: "Discrete exterior calculus (DEC)",
+        description: "DEC operators on a geometrical space",
         group: "Applied Mathematics",
     },
     (meta) => {
@@ -412,21 +412,20 @@ stdTheories.add(
         return new Theory({
             ...meta,
             theory: thCategoryWithScalars.theory(),
-            onlyFreeModels: true,
             modelTypes: [
                 {
                     tag: "ObType",
                     obType: { tag: "Basic", content: "Object" },
-                    name: "FormType",
+                    name: "Form type",
                     shortcut: ["F"],
                     description: "A type of differential form on the space",
                 },
                 {
                     tag: "MorType",
                     morType: { tag: "Basic", content: "Nonscalar" },
-                    name: "Nonscalar",
-                    shortcut: ["N"],
-                    description: "A nonscalar operator",
+                    name: "Operator",
+                    shortcut: ["D"],
+                    description: "A differential operator",
                 },
                 {
                     tag: "MorType",
@@ -437,9 +436,10 @@ stdTheories.add(
                     name: "Scalar",
                     arrowStyle: "scalar",
                     shortcut: ["S"],
-                    description: "Morphism multiplying by a scalar",
+                    description: "Multiplication by a scalar",
                 },
             ],
+            instanceOfName: "Equations in",
             instanceTypes: [
                 {
                     tag: "ObType",
@@ -451,9 +451,9 @@ stdTheories.add(
                 {
                     tag: "MorType",
                     morType: { tag: "Basic", content: "Nonscalar" },
-                    name: "Nonscalar",
-                    description: "A nonscalar operator acting on some form",
-                    shortcut: ["N"],
+                    name: "Apply operator",
+                    description: "An application of an operator to a form",
+                    shortcut: ["D"],
                 },
                 {
                     tag: "MorType",
@@ -461,8 +461,8 @@ stdTheories.add(
                         tag: "Hom",
                         content: { tag: "Basic", content: "Object" },
                     },
-                    name: "Scalar",
-                    description: "A scalar operator acting on some form",
+                    name: "Scalar multiply",
+                    description: "A scalar multiplication on a form",
                     shortcut: ["S"],
                 },
             ],
@@ -470,15 +470,16 @@ stdTheories.add(
                 configureModelGraph({
                     id: "graph",
                     name: "Graph",
-                    description: "Visualize the category with scalars as a graph",
+                    description: "Visualize the operations as a graph",
                 }),
             ],
             diagramAnalyses: [
                 configureDiagramGraph({
                     id: "graph",
                     name: "Graph",
-                    description: "Visualize the instance as a graph",
+                    description: "Visualize the equations as a diagram",
                 }),
+                configureDecapodes({}),
             ],
         });
     },
@@ -533,69 +534,6 @@ stdTheories.add(
                     name: "Diagram",
                     description: "Visualize the stock and flow diagram",
                 }),
-            ],
-        });
-    },
-);
-
-stdTheories.add(
-    {
-        id: "diagrammatic-equations",
-        name: "Equational theory",
-        description: "Systems of equations specified diagrammatically",
-        group: "Applied Mathematics",
-    },
-    (meta) => {
-        const thCategory = new catlog.ThCategory();
-        return new Theory({
-            ...meta,
-            theory: thCategory.theory(),
-            modelTypes: [
-                {
-                    tag: "ObType",
-                    obType: { tag: "Basic", content: "Object" },
-                    name: "Type",
-                    description: "Type of quantity",
-                    shortcut: ["Q"],
-                },
-                {
-                    tag: "MorType",
-                    morType: {
-                        tag: "Hom",
-                        content: { tag: "Basic", content: "Object" },
-                    },
-                    name: "Operation",
-                    description: "Arithmetical operation or differential operator",
-                    shortcut: ["A"],
-                },
-            ],
-            instanceOfName: "Equations in",
-            instanceTypes: [
-                {
-                    tag: "ObType",
-                    obType: { tag: "Basic", content: "Object" },
-                    name: "Quantity",
-                    description: "Variables and other numerical quantities",
-                    shortcut: ["Q"],
-                },
-                {
-                    tag: "MorType",
-                    morType: {
-                        tag: "Hom",
-                        content: { tag: "Basic", content: "Object" },
-                    },
-                    name: "Application",
-                    description: "Apply an operation to quantities",
-                    shortcut: ["A"],
-                },
-            ],
-            diagramAnalyses: [
-                configureDiagramGraph({
-                    id: "graph",
-                    name: "Diagram",
-                    description: "Visualize the equations as a diagram",
-                }),
-                configureDecapodes({}),
             ],
         });
     },

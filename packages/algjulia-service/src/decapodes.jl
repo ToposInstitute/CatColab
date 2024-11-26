@@ -38,7 +38,6 @@ function to_pode(::Val{:Ob}, name::String)
         "dual 0-form" => :DualForm0
         "dual 1-form" => :DualForm1
         "dual 2-form" => :DualForm2
-        "constant" => :Constant
         x => throw(ImplError(x))
     end
 end

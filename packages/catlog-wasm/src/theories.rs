@@ -160,7 +160,6 @@ mod tests {
 
     #[test]
     fn discrete_dbl_theory() {
-        let _q = ThCategoryWithScalars::new().theory();
         let th = ThSchema::new().theory();
         let entity = ObType::Basic(ustr("Entity"));
         let attr_type = ObType::Basic(ustr("AttrType"));
