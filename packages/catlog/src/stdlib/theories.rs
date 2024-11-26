@@ -62,10 +62,10 @@ pub fn th_nullable_signed_category() -> UstrDiscreteDblTheory {
 }
 
 /** The theory of categories with scalars.
- 
+
 A *category with scalars* is a category sliced over the monoid representing a walking
 idempotent. The morphisms over the identity are interpreted as scalars, which are closed
-under composition, as are the non-scalar morphisms. 
+under composition, as are the non-scalar morphisms.
 
 The main intended application is to categories
 enriched in `M`-sets for a monoid `M` such as the positive real numbers under multiplication,

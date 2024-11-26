@@ -105,6 +105,10 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
                     {defaultPath()}
                     {tgtLabel("?")}
                 </Match>
+                <Match when={props.edge.style === "scalar"}>
+                    {defaultPath()}
+                    {tgtLabel("∝")}
+                </Match>
             </Switch>
             <Show when={props.edge.label}>
                 <text
@@ -182,6 +186,7 @@ const styleToMarker: Record<ArrowStyle, ArrowMarker> = {
     plus: "triangle",
     minus: "triangle",
     indeterminate: "triangle",
+    scalar: "triangle",
 };
 
 /** SVG markers for arrow heads.

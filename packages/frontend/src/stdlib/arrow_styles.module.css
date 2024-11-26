@@ -22,7 +22,8 @@
 .arrow.default,
 .arrow.plus,
 .arrow.minus,
-.arrow.indeterminate {
+.arrow.indeterminate,
+.arrow.scalar {
     &:before,
     &:after {
         content: "";
@@ -69,6 +70,16 @@
 .arrowContainer.indeterminate {
     &:after {
         content: "?";
+        transform: none;
+        position: absolute;
+        right: -7.5px;
+        bottom: 0px;
+    }
+}
+
+.arrowContainer.scalar {
+    &:after {
+        content: "∝";
         transform: none;
         position: absolute;
         right: -7.5px;

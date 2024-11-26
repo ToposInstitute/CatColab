@@ -402,9 +402,9 @@ stdTheories.add(
 stdTheories.add(
     {
         id: "unary-DEC",
-        name: "Unary DEC diagram",
+        name: "Unary DEC operators",
         description: "A category of DEC operators, including constants, on some space",
-        group: "TODO",
+        group: "Applied Mathematics",
     },
     (meta) => {
         const thCategoryWithScalars = new catlog.ThCategoryWithScalars();
@@ -435,6 +435,7 @@ stdTheories.add(
                         content: { tag: "Basic", content: "Object" },
                     },
                     name: "Scalar",
+                    arrowStyle: "scalar",
                     shortcut: ["S"],
                     description: "Morphism multiplying by a scalar",
                 },
@@ -480,7 +481,7 @@ stdTheories.add(
                 }),
             ],
         });
-    }
+    },
 );
 
 stdTheories.add(

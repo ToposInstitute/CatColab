@@ -4,7 +4,14 @@ import type { Setter } from "solid-js";
 
 Each arrow style has support to be rendered in HTML/CSS and SVG.
  */
-export type ArrowStyle = "default" | "double" | "flat" | "plus" | "minus" | "indeterminate";
+export type ArrowStyle =
+    | "default"
+    | "double"
+    | "flat"
+    | "plus"
+    | "minus"
+    | "indeterminate"
+    | "scalar";
 
 /** Prop for forwarding a ref to an `<svg>` element.
  */
