@@ -1,14 +1,14 @@
 import type { IKernelConnection } from "@jupyterlab/services/lib/kernel/kernel";
-import { Show, createResource, createSignal, onCleanup } from "solid-js";
+import { Match, Switch, createResource, createSignal, onCleanup } from "solid-js";
 
 import type { JsResult } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
-import { IconButton } from "../../components";
+import { IconButton, Warning } from "../../components";
 import type { DiagramAnalysisMeta } from "../../theory";
 import { type PDEPlotData2D, PDEResultPlot2D } from "../../visualization";
 
 import Loader from "lucide-solid/icons/loader";
-import RotateCw from "lucide-solid/icons/rotate-cw";
+import RotateCcw from "lucide-solid/icons/rotate-ccw";
 
 import baseStyles from "./base_styles.module.css";
 import "./simulation.css";
@@ -40,7 +40,7 @@ export function configureDecapodes(options: {
 export function Decapodes(props: DiagramAnalysisProps<JupyterSettings>) {
     const [simulationResult, setSimulationResult] = createSignal<JsResult<PDEPlotData2D, string>>();
 
-    const [kernel] = createResource(async () => {
+    const [kernel, { refetch: restart }] = createResource(async () => {
         const jupyter = await import("@jupyterlab/services");
 
         const serverSettings = jupyter.ServerConnection.makeSettings({
@@ -55,9 +55,8 @@ export function Decapodes(props: DiagramAnalysisProps<JupyterSettings>) {
         const reply = await future.done;
 
         if (reply.content.status === "error") {
-            // TODO: Handle this error without raising in console.
-            const msg = `${reply.content.ename}: ${reply.content.evalue}`;
-            throw new Error(`Failed to initialize AlgebraicJulia service: ${msg}`);
+            await kernel.shutdown();
+            throw new Error(reply.content.evalue);
         }
 
         return kernel;
@@ -89,8 +88,7 @@ export function Decapodes(props: DiagramAnalysisProps<JupyterSettings>) {
 
         const reply = await future.done;
         if (reply.content.status === "error") {
-            const msg = `${reply.content.ename}: ${reply.content.evalue}`;
-            setSimulationResult({ tag: "Err", content: msg });
+            setSimulationResult({ tag: "Err", content: reply.content.evalue });
         } else if (reply.content.status !== "ok") {
             // Execution request was aborted.
             setSimulationResult(undefined);
@@ -102,25 +100,42 @@ export function Decapodes(props: DiagramAnalysisProps<JupyterSettings>) {
             <div class={baseStyles.panel}>
                 <span class={baseStyles.title}>Simulation</span>
                 <span class={baseStyles.filler} />
-                <Show
-                    when={kernel()}
-                    fallback={
-                        <IconButton tooltip="Loading the AlgebraicJulia service">
+                <Switch>
+                    <Match when={kernel.loading}>
+                        <IconButton>
                             <Loader size={16} />
                         </IconButton>
-                    }
-                >
-                    {(kernel) => (
-                        <IconButton
-                            onClick={() => simulate(kernel())}
-                            tooltip="Re-run the simulation"
-                        >
-                            <RotateCw size={16} />
+                    </Match>
+                    <Match when={kernel.error}>
+                        <IconButton onClick={restart} tooltip="Restart the AlgebraicJulia service">
+                            <RotateCcw size={16} />
                         </IconButton>
-                    )}
-                </Show>
+                    </Match>
+                    <Match when={kernel()}>
+                        {(kernel) => (
+                            <IconButton
+                                onClick={() => simulate(kernel())}
+                                tooltip="Re-run the simulation"
+                            >
+                                <RotateCcw size={16} />
+                            </IconButton>
+                        )}
+                    </Match>
+                </Switch>
             </div>
-            <PDEResultPlot2D result={simulationResult()} />
+            <Switch>
+                <Match when={kernel.loading}>{"Loading the AlgebraicJulia service..."}</Match>
+                <Match when={kernel.error}>
+                    {(error) => (
+                        <Warning title="Failed to load AlgebraicJulia service">
+                            {error().message}
+                        </Warning>
+                    )}
+                </Match>
+                <Match when={kernel()}>
+                    <PDEResultPlot2D result={simulationResult()} />
+                </Match>
+            </Switch>
         </div>
     );
 }
