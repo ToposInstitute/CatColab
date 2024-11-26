@@ -75,12 +75,11 @@ export function Decapodes(props: DiagramAnalysisProps<JupyterSettings>) {
 			system = System(raw"""${JSON.stringify(requestData)}""");
 
 			simulator = evalsim(system.pode);
-			f = simulator(system.mesh, default_dec_generate, DiagonalHodge());
+			f = simulator(system.dualmesh, default_dec_generate, DiagonalHodge());
 
-			soln = run_sim(f, system.init, 10.0, ComponentArray(k=0.5,));
+			soln = run_sim(f, system.init, 100.0, ComponentArray(k=0.5,));
 
-			JsonValue(SimResult(soln, system.mesh))
-			#JsonValue([1.0, 2.0, 3.0, 4.0])
+			JsonValue(SimResult(soln, system.dualmesh))
 			`,
         });
 

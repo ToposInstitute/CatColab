@@ -14,6 +14,7 @@ using StaticArrays
 using MLStyle
 using LinearAlgebra
 using ComponentArrays
+using Distributions # for initial conditions
 using GeometryBasics: Point2, Point3
 using OrdinaryDiffEq
 
@@ -192,10 +193,13 @@ function create_mesh()
   sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point2{Float64}}(s)
   subdivide_duals!(sd, Circumcenter())
 
-  C = map(sd[:point]) do (x, _); return x end;
-  u0 = ComponentArray(C=C)
+  # C = map(sd[:point]) do (x, _); return x end;
+  
+  c_dist = MvNormal([50, 50], [7.5, 7.5])
+  c = [pdf(c_dist, [p[1], p[2]]) for p in sd[:point]]
+  u0 = ComponentArray(C=c)
 
-  return (sd, u0, ())
+  return (s, sd, u0, ())
 end
 export create_mesh
 
@@ -216,7 +220,7 @@ function Base.reshape(::Heatmap, data)
 end
 
 struct SimResult
-    times::Vector{Float64}
+    time::Vector{Float64}
     state::Vector{Matrix{SVector{3, Float64}}}
     x::Vector{Float64} # axis
     y::Vector{Float64}
@@ -244,6 +248,7 @@ end
 struct System
     pode::SummationDecapode
     mesh::HasDeltaSet
+    dualmesh::HasDeltaSet
     init::Any # TODO specify. Is it always ComponentVector?
 end
 export System
@@ -262,9 +267,9 @@ function System(json_string::String)
     decapode = Decapode(diagram, theory);
 
     # mesh
-    sd, u0, _ = create_mesh();
+    s, sd, u0, _ = create_mesh();
 
-    return System(decapode, sd, u0)
+    return System(decapode, s, sd, u0)
 end
 
 # TODO deprecated
@@ -283,7 +288,7 @@ function simulate_decapode(json_string::String)
   decapode = Decapode(diagram, theory);
 
   # mesh
-  sd, u0, _ = create_mesh();
+  s, sd, u0, _ = create_mesh();
   # TODO enhancement: generalize this
 
   # build simulation

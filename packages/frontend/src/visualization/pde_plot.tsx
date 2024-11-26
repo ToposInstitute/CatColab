@@ -59,7 +59,7 @@ export function PDEPlot2D(props: {
 
     // timer
     const [count, setCount] = createSignal(0);
-    createTimer(() => setCount((count() + 5) % timeLength), 0.5, setInterval);
+    createTimer(() => setCount((count() + 10) % timeLength), 1, setInterval);
 
     function options(idx: number): EChartsOption {
         return {

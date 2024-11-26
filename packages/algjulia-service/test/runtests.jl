@@ -12,6 +12,9 @@ using ComponentArrays
 using StaticArrays
 import OrdinaryDiffEq: ReturnCode
 
+# visualization
+using Plots
+
 # load data
 data = open(JSON3.read, joinpath(@__DIR__, "diffusion_data.json"), "r")
 diagram = data[:diagram];
@@ -19,10 +22,15 @@ model = data[:model];
 
 @testset "Text-to-Pode" begin
 
-    @test to_pode(Val(:Ob), "0-form") == :Form0
-    @test to_pode(Val(:Ob), "1-form") == :Form1
-    @test to_pode(Val(:Ob), "2-form") == :Form2
-    @test_throws AlgebraicJuliaService.ImplError to_pode(Val(:Ob), "Constant")
+    @test to_pode(Val(:Ob), "0-form")      == :Form0
+    @test to_pode(Val(:Ob), "1-form")      == :Form1
+    @test to_pode(Val(:Ob), "2-form")      == :Form2
+    @test to_pode(Val(:Ob), "dual 0-form") == :DualForm0
+    @test to_pode(Val(:Ob), "dual 1-form") == :DualForm1
+    @test to_pode(Val(:Ob), "dual 2-form") == :DualForm2
+    @test to_pode(Val(:Ob), "Constant") == :Constant
+
+    @test_throws AlgebraicJuliaService.ImplError to_pode(Val(:Ob), "Form3")
 
     @test to_pode(Val(:Hom), "∂t") == :∂ₜ
     @test to_pode(Val(:Hom), "Δ") == :Δ
@@ -80,10 +88,10 @@ end
     system = System(json_string);
 
     simulator = evalsim(system.pode)
-    f = simulator(system.mesh, default_dec_generate, DiagonalHodge());
+    f = simulator(system.dualmesh, default_dec_generate, DiagonalHodge());
 
     # time
-    soln = run_sim(f, system.init, 100.0, ComponentArray(k=0.5,));
+    soln = run_sim(f, system.init, 50.0, ComponentArray(k=0.5,));
     # returns ::ODESolution
     #     - retcode
     #     - interpolation
@@ -92,10 +100,42 @@ end
 
     @test soln.retcode == ReturnCode.Success
   
-    result = SimResult(soln, system.mesh);
+    result = SimResult(soln, system.dualmesh);
 
     @test typeof(result.state) == Vector{Matrix{SVector{3, Float64}}}
 
     jv = JsonValue(result);
 
 end
+
+
+function save_fig(file, soln, mesh)
+    time = Observable(0.0)
+    fig = Figure()
+    Label(fig[1,1, Top()], @lift("...at $($time)"), padding = (0, 0, 5, 0))
+    ax = CairoMakie.Axis(fig[1,1])
+    msh = CairoMakie.mesh!(ax, mesh,
+                           color=@lift(soln($time).C),
+                           colormap=Reverse(:redsblues))
+    Colorbar(fig[1,2], msh)
+    record(fig, file, soln.t[1:10:end]; framerate=10) do t
+        time[] = t
+    end
+end
+save_fig("testing_plot.mp4", soln, system.mesh)
+
+# TODO size fixed
+function at_time(sr::SimResult, t::Int)
+    [sr.state[t][i,j][3] for i in 1:51 for j in 1:51]
+end
+
+function show_heatmap(sr::SimResult, t::Int)
+    data = at_time(result, t)
+    ℓ = floor(Int64, sqrt(length(data)));
+    reshaped = reshape(data, ℓ, ℓ)
+    Plots.heatmap(1:51, 1:51, reshaped, clims=(minimum(data), maximum(data)); palette=:redsblues)
+end
+
+@gif for t ∈ 1:length(result.time)
+    show_heatmap(result, t)
+end every 5
