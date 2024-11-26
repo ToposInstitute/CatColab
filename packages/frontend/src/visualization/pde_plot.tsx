@@ -1,7 +1,6 @@
-import { createTimer } from "@solid-primitives/timer";
+import { makeTimer } from "@solid-primitives/timer";
 import type { EChartsOption } from "echarts";
-import { Match, Switch, lazy } from "solid-js";
-import { createSignal } from "solid-js";
+import { Match, Switch, createMemo, createSignal, lazy } from "solid-js";
 
 import type { JsResult } from "catlog-wasm";
 import { ErrorAlert } from "../components";
@@ -50,16 +49,24 @@ export function PDEPlot2D(props: {
     const min = (x: number, y: number) => Math.min(x, y);
     const max = (x: number, y: number) => Math.max(x, y);
 
-    const minValue = (): number =>
-        props.data.state.map((data) => data.map((triple) => triple[2]).reduce(min)).reduce(min);
-    const maxValue = (): number =>
-        props.data.state.map((data) => data.map((triple) => triple[2]).reduce(max)).reduce(max);
+    const minValue = createMemo<number>(() =>
+        props.data.state.map((data) => data.map((triple) => triple[2]).reduce(min)).reduce(min),
+    );
+    const maxValue = createMemo<number>(() =>
+        props.data.state.map((data) => data.map((triple) => triple[2]).reduce(max)).reduce(max),
+    );
 
-    const timeLength = props.data.time.length;
+    const [timeIndex, setTimeIndex] = createSignal(0);
 
-    // timer
-    const [count, setCount] = createSignal(0);
-    createTimer(() => setCount((count() + 10) % timeLength), 1, setInterval);
+    // Animate the heat map by varying the time index to display.
+    makeTimer(
+        () => {
+            const timeLength = props.data.time.length;
+            setTimeIndex((timeIndex() + 5) % timeLength);
+        },
+        10,
+        setInterval,
+    );
 
     function options(idx: number): EChartsOption {
         return {
@@ -74,8 +81,8 @@ export function PDEPlot2D(props: {
             visualMap: {
                 min: minValue(),
                 max: maxValue(),
-                calculable: false,
-                realtime: false,
+                orient: "horizontal",
+                left: "center",
                 inRange: {
                     // Source for colors:
                     // https://echarts.apache.org/examples/en/editor.html?c=heatmap-large
@@ -114,7 +121,7 @@ export function PDEPlot2D(props: {
 
     return (
         <div class="plot">
-            <ECharts option={options(count())} />
+            <ECharts option={options(timeIndex())} />
         </div>
     );
 }
