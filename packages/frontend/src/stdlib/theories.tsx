@@ -401,6 +401,92 @@ stdTheories.add(
 
 stdTheories.add(
     {
+        id: "unary-dec",
+        name: "Discrete exterior calculus (DEC)",
+        description: "DEC operators on a geometrical space",
+        group: "Applied Mathematics",
+    },
+    (meta) => {
+        const thCategoryWithScalars = new catlog.ThCategoryWithScalars();
+
+        return new Theory({
+            ...meta,
+            theory: thCategoryWithScalars.theory(),
+            modelTypes: [
+                {
+                    tag: "ObType",
+                    obType: { tag: "Basic", content: "Object" },
+                    name: "Form type",
+                    shortcut: ["F"],
+                    description: "A type of differential form on the space",
+                },
+                {
+                    tag: "MorType",
+                    morType: { tag: "Basic", content: "Nonscalar" },
+                    name: "Operator",
+                    shortcut: ["D"],
+                    description: "A differential operator",
+                },
+                {
+                    tag: "MorType",
+                    morType: {
+                        tag: "Hom",
+                        content: { tag: "Basic", content: "Object" },
+                    },
+                    name: "Scalar",
+                    arrowStyle: "scalar",
+                    shortcut: ["S"],
+                    description: "Multiplication by a scalar",
+                },
+            ],
+            instanceOfName: "Equations in",
+            instanceTypes: [
+                {
+                    tag: "ObType",
+                    obType: { tag: "Basic", content: "Object" },
+                    name: "Form",
+                    description: "A form on the space",
+                    shortcut: ["F"],
+                },
+                {
+                    tag: "MorType",
+                    morType: { tag: "Basic", content: "Nonscalar" },
+                    name: "Apply operator",
+                    description: "An application of an operator to a form",
+                    shortcut: ["D"],
+                },
+                {
+                    tag: "MorType",
+                    morType: {
+                        tag: "Hom",
+                        content: { tag: "Basic", content: "Object" },
+                    },
+                    name: "Scalar multiply",
+                    description: "A scalar multiplication on a form",
+                    shortcut: ["S"],
+                },
+            ],
+            modelAnalyses: [
+                configureModelGraph({
+                    id: "graph",
+                    name: "Graph",
+                    description: "Visualize the operations as a graph",
+                }),
+            ],
+            diagramAnalyses: [
+                configureDiagramGraph({
+                    id: "graph",
+                    name: "Graph",
+                    description: "Visualize the equations as a diagram",
+                }),
+                configureDecapodes({}),
+            ],
+        });
+    },
+);
+
+stdTheories.add(
+    {
         id: "primitive-stock-flow",
         name: "Stock and flow",
         description: "Model accumulation (stocks) and change (flows)",
@@ -448,69 +534,6 @@ stdTheories.add(
                     name: "Diagram",
                     description: "Visualize the stock and flow diagram",
                 }),
-            ],
-        });
-    },
-);
-
-stdTheories.add(
-    {
-        id: "diagrammatic-equations",
-        name: "Equational theory",
-        description: "Systems of equations specified diagrammatically",
-        group: "Applied Mathematics",
-    },
-    (meta) => {
-        const thCategory = new catlog.ThCategory();
-        return new Theory({
-            ...meta,
-            theory: thCategory.theory(),
-            modelTypes: [
-                {
-                    tag: "ObType",
-                    obType: { tag: "Basic", content: "Object" },
-                    name: "Type",
-                    description: "Type of quantity",
-                    shortcut: ["Q"],
-                },
-                {
-                    tag: "MorType",
-                    morType: {
-                        tag: "Hom",
-                        content: { tag: "Basic", content: "Object" },
-                    },
-                    name: "Operation",
-                    description: "Arithmetical operation or differential operator",
-                    shortcut: ["A"],
-                },
-            ],
-            instanceOfName: "Equations in",
-            instanceTypes: [
-                {
-                    tag: "ObType",
-                    obType: { tag: "Basic", content: "Object" },
-                    name: "Quantity",
-                    description: "Variables and other numerical quantities",
-                    shortcut: ["Q"],
-                },
-                {
-                    tag: "MorType",
-                    morType: {
-                        tag: "Hom",
-                        content: { tag: "Basic", content: "Object" },
-                    },
-                    name: "Application",
-                    description: "Apply an operation to quantities",
-                    shortcut: ["A"],
-                },
-            ],
-            diagramAnalyses: [
-                configureDiagramGraph({
-                    id: "graph",
-                    name: "Diagram",
-                    description: "Visualize the equations as a diagram",
-                }),
-                configureDecapodes({}),
             ],
         });
     },

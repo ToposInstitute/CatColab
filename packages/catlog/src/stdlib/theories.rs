@@ -61,6 +61,25 @@ pub fn th_nullable_signed_category() -> UstrDiscreteDblTheory {
     DiscreteDblTheory::from(sgn)
 }
 
+/** The theory of categories with scalars.
+
+A *category with scalars* is a category sliced over the monoid representing a walking
+idempotent. The morphisms over the identity are interpreted as scalars, which are closed
+under composition, as are the non-scalar morphisms.
+
+The main intended application is to categories
+enriched in `M`-sets for a monoid `M` such as the positive real numbers under multiplication,
+but to remain within simple theories the theory defined here is more general.
+ */
+pub fn th_category_with_scalars() -> UstrDiscreteDblTheory {
+    let mut idem: UstrFinCategory = Default::default();
+    let (x, s) = (ustr("Object"), ustr("Nonscalar"));
+    idem.add_ob_generator(x);
+    idem.add_mor_generator(s, x, x);
+    idem.set_composite(s, s, FinMor::Generator(s));
+    DiscreteDblTheory::from(idem)
+}
+
 /** The theory of categories with links.
 
 A *category with links* is a category `C` together with a profunctor from `C` to
@@ -92,6 +111,7 @@ mod tests {
         assert!(th_schema().validate().is_ok());
         assert!(th_signed_category().validate().is_ok());
         assert!(th_nullable_signed_category().validate().is_ok());
+        assert!(th_category_with_scalars().validate().is_ok());
         // TODO: Validate discrete tabulator theories.
         th_category_links();
     }

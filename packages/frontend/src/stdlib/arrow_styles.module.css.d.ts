@@ -9,5 +9,6 @@ declare const styles: {
     readonly indeterminate: string;
     readonly minus: string;
     readonly plus: string;
+    readonly scalar: string;
 };
 export = styles;
