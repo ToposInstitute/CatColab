@@ -2,6 +2,7 @@ import { Match, Switch, createResource, onCleanup } from "solid-js";
 
 import type { DiagramAnalysisProps } from "../../analysis";
 import { ErrorAlert, IconButton, Warning } from "../../components";
+import { fromCatlogDiagram } from "../../diagram";
 import type { DiagramAnalysisMeta } from "../../theory";
 import { PDEPlot2D, type PDEPlotData2D } from "../../visualization";
 
@@ -63,14 +64,24 @@ export function Decapodes(props: DiagramAnalysisProps<JupyterSettings>) {
     const maybeKernel = () => (kernel.error ? undefined : kernel());
 
     const [result, { refetch: rerunSimulation }] = createResource(maybeKernel, async (kernel) => {
+        // Construct the data to send to kernel.
+        const validatedDiagram = props.liveDiagram.validatedDiagram();
+        if (validatedDiagram?.result.tag !== "Ok") {
+            return undefined;
+        }
         const simulationData = {
-            diagram: props.liveDiagram.formalJudgments(),
+            diagram: fromCatlogDiagram(validatedDiagram.diagram, (id) =>
+                props.liveDiagram.objectIndex().map.get(id),
+            ),
             model: props.liveDiagram.liveModel.formalJudgments(),
         };
+
+        // Request that kernel perform simulation with the given data.
         const future = kernel.requestExecute({
             code: makeJuliaSimulationCode(simulationData),
         });
 
+        // Handle output from the kernel.
         let result: PDEPlotData2D | undefined;
         future.onIOPub = (msg) => {
             if (

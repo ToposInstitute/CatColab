@@ -8,7 +8,7 @@ import { type Notebook, newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
 import type { Theory } from "../theory";
 import { type IndexedMap, indexMap } from "../util/indexing";
-import { type ModelJudgment, catlogModel } from "./types";
+import { type ModelJudgment, toCatlogModel } from "./types";
 
 /** A document defining a model. */
 export type ModelDocument = {
@@ -110,7 +110,7 @@ function enlivenModelDocument(
                 // TODO: Currently only implemented for discrete theories.
                 return undefined;
             }
-            const model = catlogModel(th.theory, formalJudgments());
+            const model = toCatlogModel(th.theory, formalJudgments());
             const result = model.validate();
             return { model, result };
         },
