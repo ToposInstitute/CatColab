@@ -401,6 +401,90 @@ stdTheories.add(
 
 stdTheories.add(
     {
+        id: "unary-DEC",
+        name: "Unary DEC diagram",
+        description: "A category of DEC operators, including constants, on some space",
+        group: "TODO",
+    },
+    (meta) => {
+        const thCategoryWithScalars = new catlog.ThCategoryWithScalars();
+
+        return new Theory({
+            ...meta,
+            theory: thCategoryWithScalars.theory(),
+            onlyFreeModels: true,
+            modelTypes: [
+                {
+                    tag: "ObType",
+                    obType: { tag: "Basic", content: "Object" },
+                    name: "FormType",
+                    shortcut: ["F"],
+                    description: "A type of differential form on the space",
+                },
+                {
+                    tag: "MorType",
+                    morType: { tag: "Basic", content: "Nonscalar" },
+                    name: "Nonscalar",
+                    shortcut: ["N"],
+                    description: "A nonscalar operator",
+                },
+                {
+                    tag: "MorType",
+                    morType: {
+                        tag: "Hom",
+                        content: { tag: "Basic", content: "Object" },
+                    },
+                    name: "Scalar",
+                    shortcut: ["S"],
+                    description: "Morphism multiplying by a scalar",
+                },
+            ],
+            instanceTypes: [
+                {
+                    tag: "ObType",
+                    obType: { tag: "Basic", content: "Object" },
+                    name: "Form",
+                    description: "A form on the space",
+                    shortcut: ["F"],
+                },
+                {
+                    tag: "MorType",
+                    morType: { tag: "Basic", content: "Nonscalar" },
+                    name: "Nonscalar",
+                    description: "A nonscalar operator acting on some form",
+                    shortcut: ["N"],
+                },
+                {
+                    tag: "MorType",
+                    morType: {
+                        tag: "Hom",
+                        content: { tag: "Basic", content: "Object" },
+                    },
+                    name: "Scalar",
+                    description: "A scalar operator acting on some form",
+                    shortcut: ["S"],
+                },
+            ],
+            modelAnalyses: [
+                configureModelGraph({
+                    id: "graph",
+                    name: "Graph",
+                    description: "Visualize the category with scalars as a graph",
+                }),
+            ],
+            diagramAnalyses: [
+                configureDiagramGraph({
+                    id: "graph",
+                    name: "Graph",
+                    description: "Visualize the instance as a graph",
+                }),
+            ],
+        });
+    }
+);
+
+stdTheories.add(
+    {
         id: "primitive-stock-flow",
         name: "Stock and flow",
         description: "Model accumulation (stocks) and change (flows)",

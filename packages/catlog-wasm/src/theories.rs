@@ -1,6 +1,6 @@
 /*! Wasm bindings for double theories from the `catlog` standard library.
 
-Each struct in this modules provides a [`DblTheory`] plus possibly
+Each struct in this module provides a [`DblTheory`] plus possibly
 theory-specific analysis methods.
  */
 
@@ -118,6 +118,23 @@ impl ThNullableSignedCategory {
     }
 }
 
+/// The theory of categories with scalars.
+#[wasm_bindgen]
+pub struct ThCategoryWithScalars(Arc<theory::UstrDiscreteDblTheory>);
+
+#[wasm_bindgen]
+impl ThCategoryWithScalars {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self(Arc::new(theories::th_category_with_scalars()))
+    }
+
+    #[wasm_bindgen]
+    pub fn theory(&self) -> DblTheory {
+        DblTheory(self.0.clone().into())
+    }
+}
+
 /// The theory of categories with links.
 #[wasm_bindgen]
 pub struct ThCategoryLinks(Arc<theory::UstrDiscreteTabTheory>);
@@ -143,6 +160,7 @@ mod tests {
 
     #[test]
     fn discrete_dbl_theory() {
+        let _q = ThCategoryWithScalars::new().theory();
         let th = ThSchema::new().theory();
         let entity = ObType::Basic(ustr("Entity"));
         let attr_type = ObType::Basic(ustr("AttrType"));

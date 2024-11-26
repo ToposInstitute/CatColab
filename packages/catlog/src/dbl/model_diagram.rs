@@ -99,7 +99,7 @@ where
     pub fn iter_invalid_in<'a>(
         &'a self,
         model: &'a DiscreteDblModel<CodId, Cat>,
-    ) -> impl Iterator<Item = InvalidDiscreteDblModelDiagram<DomId>> + '_ {
+    ) -> impl Iterator<Item = InvalidDiscreteDblModelDiagram<DomId>> + 'a {
         let mut dom_errs = self.1.iter_invalid().peekable();
         if dom_errs.peek().is_some() {
             Either::Left(dom_errs.map(InvalidDblModelDiagram::Dom))
