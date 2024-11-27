@@ -46,7 +46,16 @@ end
 function to_pode(::Val{:Hom}, name::String)
     @match name begin
         "∂t" => :∂ₜ
+        "∂ₜ" => :∂ₜ
         "Δ" => :Δ
+        "d" => :d
+        "d*" => :dual_d
+        # \star on LHS
+        "⋆" => :⋆
+        "⋆⁻¹" => :⋆⁻¹
+        # \bigstar on LHS
+        "★" => :⋆
+        "★⁻¹" => :⋆⁻¹
         x => throw(ImplError(x))
     end
 end
