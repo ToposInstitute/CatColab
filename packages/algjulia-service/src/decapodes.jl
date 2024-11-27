@@ -2,6 +2,9 @@
 # - switch to different meshes
 # - use enum instead of val
 
+# NOTES:
+#   TODO "anonymous objects" are •n
+
 # algebraicjulia dependencies
 using ACSets
 using Decapodes
@@ -18,7 +21,7 @@ using Distributions # for initial conditions
 using GeometryBasics: Point2, Point3
 using OrdinaryDiffEq
 
-export evalsim, default_dec_generate, DiagonalHodge, ComponentArray
+export infer_types!, evalsim, default_dec_generate, default_dec_matrix_generate, DiagonalHodge, ComponentArray
 
 struct ImplError <: Exception
     name::String
@@ -48,14 +51,14 @@ function to_pode(::Val{:Hom}, name::String)
         "∂t" => :∂ₜ
         "∂ₜ" => :∂ₜ
         "Δ" => :Δ
-        "d" => :d
-        "d*" => :dual_d
+        "d" => :d₀
+        "d*" => :dual_d₁
         # \star on LHS
-        "⋆" => :⋆
-        "⋆⁻¹" => :⋆⁻¹
+        "⋆" => :⋆₁
+        "⋆⁻¹" => :⋆₂⁻¹
         # \bigstar on LHS
-        "★" => :⋆
-        "★⁻¹" => :⋆⁻¹
+        "★" => :⋆₁
+        "★⁻¹" => :⋆₂⁻¹
         x => throw(ImplError(x))
     end
 end
@@ -142,18 +145,27 @@ function Theory(model::AbstractVector{JSON3.Object})
 end
 export Theory
 
+## BUILDING
+
 function add_to_pode! end
 export add_to_pode!
 
 function add_to_pode!(d::SummationDecapode, 
         vars::Dict{String, Int}, # mapping between UUID and ACSet ID
         theory::Theory, 
-        content::JSON3.Object, 
+        content::JSON3.Object,
+        nc::Vector{Int},
         ::Val{:Ob})
     theory_elem = theory.data[content[:over][:content]] # indexes the theory by UUID
-    id = add_part!(d, :Var, name=Symbol(content[:name]), type=nameof(theory_elem))
+    name = if isempty(content[:name])
+        nc[1] += 1
+        Symbol("•$(nc[1])")
+    else
+        Symbol(content[:name])
+    end 
+    id = add_part!(d, :Var, name=name, type=nameof(theory_elem))
     push!(vars, content[:id] => id)
-    d
+    return d
 end
 
 # TODO we are restricted to Op1
@@ -183,10 +195,12 @@ function Decapode(diagram::AbstractVector{JSON3.Object}, theory::Theory)
     # initiatize decapode and its mapping between UUIDs and ACSet IDs
     pode = SummationDecapode(parse_decapode(quote end))
     vars = Dict{String, Int}();
+    nc = [0]; # array is a mutable container
     # for each cell in the notebook, add it to the diagram 
     foreach(diagram) do cell
         @match cell begin
-            IsObject(content) => add_to_pode!(pode, vars, theory, content, Val(:Ob))
+            # TODO merge nameless_count into vars
+            IsObject(content) => add_to_pode!(pode, vars, theory, content, nc, Val(:Ob))
             IsMorphism(content) => add_to_pode!(pode, vars, theory, content, Val(:Hom))
             _ => throw(ImplError(cell[:content][:tag]))
         end
@@ -201,9 +215,7 @@ function create_mesh()
   sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point2{Float64}}(s)
   subdivide_duals!(sd, Circumcenter())
 
-  # C = map(sd[:point]) do (x, _); return x end;
-  
-  c_dist = MvNormal([50, 50], [7.5, 7.5])
+  c_dist = MvNormal([50, 50], LinearAlgebra.Diagonal(map(abs2, [7.5, 7.5])))
   c = [pdf(c_dist, [p[1], p[2]]) for p in sd[:point]]
   u0 = ComponentArray(C=c)
 
@@ -216,16 +228,6 @@ function run_sim(fm, u0, t0, constparam)
     soln = solve(prob, Tsit5(), saveat=0.1)
 end
 export run_sim
-
-abstract type AbstractPlotType end
-
-struct Heatmap <: AbstractPlotType end
-
-# TODO make length a conditional value so we can pass it in if we want
-function Base.reshape(::Heatmap, data)
-    l = floor(Int64, sqrt(length(data)))
-    reshape(data, l, l)
-end
 
 struct SimResult
     time::Vector{Float64}
@@ -252,6 +254,15 @@ function SimResult(sol::ODESolution, mesh::EmbeddedDeltaDualComplex2D)
     SimResult(sol.t, state_vals, 0:50, 0:50)
 end
 # TODO generalize to HasDeltaSet
+
+function generate(s, my_symbol; hodge=GeometricHodge())
+  op = @match my_symbol begin
+    _ => default_dec_matrix_generate(s, my_symbol, hodge)
+  end
+  return (args...) -> op(args...)
+end
+export generate
+
 
 struct System
     pode::SummationDecapode
@@ -280,41 +291,15 @@ function System(json_string::String)
     return System(decapode, s, sd, u0)
 end
 
-# TODO deprecated
-function simulate_decapode(json_string::String)
-    
-  json_object = JSON3.read(json_string);
 
-  # converts the JSON of (the fragment of) the theory
-  # into theory of the DEC, valued in Julia
-  theory = Theory(json_object[:model])
 
-  # this is a diagram in the model of the DEC. it wants to be a decapode!
-  diagram = json_object[:diagram]
+abstract type AbstractPlotType end
 
-  # pode
-  decapode = Decapode(diagram, theory);
+struct Heatmap <: AbstractPlotType end
 
-  # mesh
-  s, sd, u0, _ = create_mesh();
-  # TODO enhancement: generalize this
-
-  # build simulation
-  simulator = evalsim(decapode);
-  f = simulator(sd, default_dec_generate, DiagonalHodge());
-  # TODO enhancement: default_dec_generate could be generalized, maybe from the frontend
-
-  # time
-  out = run_sim(f, u0, 10.0, ComponentArray(k=0.5,));
-  # returns ::ODESolution
-  #     - retcode
-  #     - interpolation
-  #     - t
-  #     - u::Vector{ComponentVector}
-  
-  result = SimResult(out, sd);
-
-  JsonValue(result)
-
+# TODO make length a conditional value so we can pass it in if we want
+function Base.reshape(::Heatmap, data)
+    l = floor(Int64, sqrt(length(data)))
+    reshape(data, l, l)
 end
-export simulate_decapode
+

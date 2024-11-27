@@ -85,7 +85,8 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
     const [result, { refetch: rerunSimulation }] = createResource(maybeKernel, async (kernel) => {
         // Construct the data to send to kernel.
         const simulationData = makeSimulationData(props.liveDiagram, props.content);
-        if (!simulationData) {
+        console.log(JSON.parse(JSON.stringify(simulationData))); // XXX
+		if (!simulationData) {
             return undefined;
         }
 
@@ -238,7 +239,7 @@ const makeSimulationCode = (data: SimulationData) => `
 system = System(raw"""${JSON.stringify(data)}""");
 
 simulator = evalsim(system.pode);
-f = simulator(system.dualmesh, default_dec_generate, DiagonalHodge());
+f = simulator(system.dualmesh, generate, DiagonalHodge());
 
 soln = run_sim(f, system.init, 100.0, ComponentArray(k=0.5,));
 
