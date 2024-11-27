@@ -29,6 +29,8 @@ import {
     newMorphismDecl,
     newObjectDecl,
 } from "./types";
+import { BookOpenCheck } from 'lucide-solid';
+import { TheoryMeta } from "../stdlib";
 
 import "./model_editor.css";
 
@@ -69,6 +71,7 @@ export function ModelDocumentEditor(props: {
         <div class="growable-container">
             <BrandedToolbar>
                 <HelpButton />
+                <TheoryHelpButton theory={props.liveModel?.theory()} />
                 <MaybePermissionsButton permissions={props.liveModel?.liveDoc.permissions} />
                 <Show when={props.liveModel?.theory()?.supportsInstances}>
                     <IconButton
@@ -208,5 +211,21 @@ function judgmentLabel(judgment: ModelJudgment): string | undefined {
     }
     if (judgment.tag === "morphism") {
         return theory?.modelMorTypeMeta(judgment.morType)?.name;
+    }
+}
+
+function TheoryHelpButton(props: { theory?: TheoryMeta | undefined }) {
+    const navigate = useNavigate();
+    if (props.theory?.id !== undefined) {
+        return (
+            <IconButton
+                onClick={() => navigate(`"/help/${props.theory?.help}"`)}
+                tooltip="Learn about theory"
+            >
+                <BookOpenCheck />
+            </IconButton>
+        );
+    } else {
+        return HelpButton();
     }
 }
