@@ -1,0 +1,195 @@
+{
+  "diagram": [
+    {
+      "tag": "object",
+      "name": "u",
+      "id": "01936f2e-2f39-738d-8af2-5caf75b29f3a",
+      "obType": {
+        "tag": "Basic",
+        "content": "Object"
+      },
+      "over": {
+        "tag": "Basic",
+        "content": "01936f2c-dba6-7c7b-8ec0-811bbe06bad4"
+      }
+    },
+    {
+      "tag": "object",
+      "name": "du/dt",
+      "id": "01936f2e-7291-7755-bbbb-300d5c707b99",
+      "obType": {
+        "tag": "Basic",
+        "content": "Object"
+      },
+      "over": {
+        "tag": "Basic",
+        "content": "01936f2c-dba6-7c7b-8ec0-811bbe06bad4"
+      }
+    },
+    {
+      "tag": "object",
+      "name": "",
+      "id": "01936f2f-7592-7353-921e-55485b463f25",
+      "obType": {
+        "tag": "Basic",
+        "content": "Object"
+      },
+      "over": {
+        "tag": "Basic",
+        "content": "01936f2c-dba6-7c7b-8ec0-811bbe06bad4"
+      }
+    },
+    {
+      "tag": "morphism",
+      "name": "",
+      "id": "01936f2e-8ba9-782f-9499-583c6f88e01d",
+      "morType": {
+        "tag": "Basic",
+        "content": "Nonscalar"
+      },
+      "over": {
+        "tag": "Basic",
+        "content": "01936f2c-f1c0-7008-86c6-da84f93000de"
+      },
+      "dom": {
+        "tag": "Basic",
+        "content": "01936f2e-2f39-738d-8af2-5caf75b29f3a"
+      },
+      "cod": {
+        "tag": "Basic",
+        "content": "01936f2e-7291-7755-bbbb-300d5c707b99"
+      }
+    },
+    {
+      "tag": "morphism",
+      "name": "",
+      "id": "01936f2f-54f1-781f-b4e8-1362f6d8483d",
+      "morType": {
+        "tag": "Hom",
+        "content": {
+          "tag": "Basic",
+          "content": "Object"
+        }
+      },
+      "over": {
+        "tag": "Basic",
+        "content": "01936f2d-9c55-73e3-8c15-dd953e70d232"
+      },
+      "dom": {
+        "tag": "Basic",
+        "content": "01936f2f-7592-7353-921e-55485b463f25"
+      },
+      "cod": {
+        "tag": "Basic",
+        "content": "01936f2e-7291-7755-bbbb-300d5c707b99"
+      }
+    },
+    {
+      "tag": "morphism",
+      "name": "",
+      "id": "01936f2f-2f57-7c04-8d66-4e81610ce35c",
+      "morType": {
+        "tag": "Basic",
+        "content": "Nonscalar"
+      },
+      "over": {
+        "tag": "Basic",
+        "content": "01936f2d-54c8-7ac3-96e5-e84ff86365a0"
+      },
+      "dom": {
+        "tag": "Basic",
+        "content": "01936f2e-2f39-738d-8af2-5caf75b29f3a"
+      },
+      "cod": {
+        "tag": "Basic",
+        "content": "01936f2f-7592-7353-921e-55485b463f25"
+      }
+    }
+  ],
+  "model": [
+    {
+      "id": "01936f2c-dba6-7c7b-8ec0-811bbe06bad4",
+      "name": "0-form",
+      "obType": {
+        "content": "Object",
+        "tag": "Basic"
+      },
+      "tag": "object"
+    },
+    {
+      "id": "01936f2d-0590-76ec-842d-7929c7cac7dd",
+      "name": "1-form",
+      "obType": {
+        "content": "Object",
+        "tag": "Basic"
+      },
+      "tag": "object"
+    },
+    {
+      "id": "01936f2d-1097-7477-b32f-de19a9b4dbfa",
+      "name": "2-form",
+      "obType": {
+        "content": "Object",
+        "tag": "Basic"
+      },
+      "tag": "object"
+    },
+    {
+      "cod": {
+        "content": "01936f2c-dba6-7c7b-8ec0-811bbe06bad4",
+        "tag": "Basic"
+      },
+      "dom": {
+        "content": "01936f2c-dba6-7c7b-8ec0-811bbe06bad4",
+        "tag": "Basic"
+      },
+      "id": "01936f2c-f1c0-7008-86c6-da84f93000de",
+      "morType": {
+        "content": "Nonscalar",
+        "tag": "Basic"
+      },
+      "name": "∂t",
+      "tag": "morphism"
+    },
+    {
+      "cod": {
+        "content": "01936f2c-dba6-7c7b-8ec0-811bbe06bad4",
+        "tag": "Basic"
+      },
+      "dom": {
+        "content": "01936f2c-dba6-7c7b-8ec0-811bbe06bad4",
+        "tag": "Basic"
+      },
+      "id": "01936f2d-54c8-7ac3-96e5-e84ff86365a0",
+      "morType": {
+        "content": "Nonscalar",
+        "tag": "Basic"
+      },
+      "name": "Δ",
+      "tag": "morphism"
+    },
+    {
+      "cod": {
+        "content": "01936f2c-dba6-7c7b-8ec0-811bbe06bad4",
+        "tag": "Basic"
+      },
+      "dom": {
+        "content": "01936f2c-dba6-7c7b-8ec0-811bbe06bad4",
+        "tag": "Basic"
+      },
+      "id": "01936f2d-9c55-73e3-8c15-dd953e70d232",
+      "morType": {
+        "content": {
+          "content": "Object",
+          "tag": "Basic"
+        },
+        "tag": "Hom"
+      },
+      "name": "diffusivity",
+      "tag": "morphism"
+    }
+  ],
+  "scalars": {
+    "01936f2d-9c55-73e3-8c15-dd953e70d232": 1
+  }
+}
