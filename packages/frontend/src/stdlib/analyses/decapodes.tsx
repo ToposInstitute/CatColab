@@ -2,7 +2,8 @@ import { Match, Switch, createResource, onCleanup } from "solid-js";
 
 import type { DiagramAnalysisProps } from "../../analysis";
 import { ErrorAlert, IconButton, Warning } from "../../components";
-import { fromCatlogDiagram } from "../../diagram";
+import { type DiagramJudgment, type LiveDiagramDocument, fromCatlogDiagram } from "../../diagram";
+import type { ModelJudgment } from "../../model";
 import type { DiagramAnalysisMeta } from "../../theory";
 import { PDEPlot2D, type PDEPlotData2D } from "../../visualization";
 
@@ -48,7 +49,7 @@ export function Decapodes(props: DiagramAnalysisProps<JupyterSettings>) {
         const kernelManager = new jupyter.KernelManager({ serverSettings });
         const kernel = await kernelManager.startNew({ name: "julia-1.11" });
 
-        const future = kernel.requestExecute({ code: initJuliaCode });
+        const future = kernel.requestExecute({ code: initCode });
         const reply = await future.done;
 
         if (reply.content.status === "error") {
@@ -65,20 +66,14 @@ export function Decapodes(props: DiagramAnalysisProps<JupyterSettings>) {
 
     const [result, { refetch: rerunSimulation }] = createResource(maybeKernel, async (kernel) => {
         // Construct the data to send to kernel.
-        const validatedDiagram = props.liveDiagram.validatedDiagram();
-        if (validatedDiagram?.result.tag !== "Ok") {
+        const simulationData = makeSimulationData(props.liveDiagram);
+        if (!simulationData) {
             return undefined;
         }
-        const simulationData = {
-            diagram: fromCatlogDiagram(validatedDiagram.diagram, (id) =>
-                props.liveDiagram.objectIndex().map.get(id),
-            ),
-            model: props.liveDiagram.liveModel.formalJudgments(),
-        };
 
-        // Request that kernel perform simulation with the given data.
+        // Request that the kernel run a simulation with the given data.
         const future = kernel.requestExecute({
-            code: makeJuliaSimulationCode(simulationData),
+            code: makeSimulationCode(simulationData),
         });
 
         // Handle output from the kernel.
@@ -153,20 +148,29 @@ export function Decapodes(props: DiagramAnalysisProps<JupyterSettings>) {
     );
 }
 
+/** JSON data returned from a Jupyter kernel. */
 type JsonDataContent<T> = {
     data?: {
         "application/json"?: T;
     };
 };
 
-const initJuliaCode = `
+/** Data send to the Julia kernel defining a simulation. */
+type SimulationData = {
+    diagram: Array<DiagramJudgment>;
+    model: Array<ModelJudgment>;
+};
+
+/** Julia code run after kernel is started. */
+const initCode = `
 import IJulia
 IJulia.register_jsonmime(MIME"application/json"())
 
 using AlgebraicJuliaService
 `;
 
-const makeJuliaSimulationCode = (data: unknown) => `
+/** Julia code run to perform a simulation. */
+const makeSimulationCode = (data: SimulationData) => `
 system = System(raw"""${JSON.stringify(data)}""");
 
 simulator = evalsim(system.pode);
@@ -176,3 +180,17 @@ soln = run_sim(f, system.init, 100.0, ComponentArray(k=0.5,));
 
 JsonValue(SimResult(soln, system.dualmesh))
 `;
+
+/** Create data to send to the Julia kernel. */
+const makeSimulationData = (liveDiagram: LiveDiagramDocument): SimulationData | undefined => {
+    const validatedDiagram = liveDiagram.validatedDiagram();
+    if (validatedDiagram?.result.tag !== "Ok") {
+        return undefined;
+    }
+    return {
+        diagram: fromCatlogDiagram(validatedDiagram.diagram, (id) =>
+            liveDiagram.objectIndex().map.get(id),
+        ),
+        model: liveDiagram.liveModel.formalJudgments(),
+    };
+};
