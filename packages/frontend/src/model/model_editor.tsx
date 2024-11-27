@@ -1,11 +1,14 @@
 import { useNavigate, useParams } from "@solidjs/router";
+import { BookOpenCheck } from "lucide-solid";
+import { CircleHelp } from "lucide-solid";
 import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
-
 import { createAnalysis } from "../analysis/document";
 import { useApi } from "../api";
 import { IconButton, InlineInput } from "../components";
 import { createDiagram } from "../diagram/document";
+import { lazyMdx } from "../page/help_page";
+
 import {
     type CellConstructor,
     type FormalCellEditorProps,
@@ -13,7 +16,7 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
-import { BrandedToolbar, HelpButton } from "../page";
+import { BrandedToolbar } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
 import { MaybePermissionsButton } from "../user";
@@ -34,6 +37,7 @@ import "./model_editor.css";
 
 import ChartSpline from "lucide-solid/icons/chart-spline";
 import Network from "lucide-solid/icons/network";
+import type { TheoryMeta } from "../stdlib/types";
 
 export default function ModelPage() {
     const params = useParams();
@@ -68,7 +72,12 @@ export function ModelDocumentEditor(props: {
     return (
         <div class="growable-container">
             <BrandedToolbar>
-                <HelpButton />
+                <Show when={props?.liveModel?.liveDoc.doc.theory}>
+                    <TheoryHelpButton
+                        theory={props.liveModel?.theory()}
+                        help={props?.liveModel?.theory()?.help}
+                    />
+                </Show>
                 <MaybePermissionsButton permissions={props.liveModel?.liveDoc.permissions} />
                 <Show when={props.liveModel?.theory()?.supportsInstances}>
                     <IconButton
@@ -209,4 +218,41 @@ function judgmentLabel(judgment: ModelJudgment): string | undefined {
     if (judgment.tag === "morphism") {
         return theory?.modelMorTypeMeta(judgment.morType)?.name;
     }
+}
+
+/** Button that navigates to the theory help page if it exists. If not, it naviagtes to the root help page.*/
+
+export function TheoryHelpButton({
+    theory,
+    help,
+}: { theory: TheoryMeta | undefined; help?: string }) {
+    const navigate = useNavigate();
+    if (help !== undefined) {
+        return (
+            <IconButton
+                onClick={() => navigate(`/help/theory/${help}`)}
+                tooltip={`${theory?.name} help`}
+            >
+                <BookOpenCheck />
+            </IconButton>
+        );
+    } else {
+        return (
+            <IconButton onClick={() => navigate("/help")} tooltip="Get help about CatColab">
+                <CircleHelp />
+            </IconButton>
+        );
+    }
+}
+
+export function TheoryHelpPage() {
+    const params = useParams();
+    const page = params.page;
+    invariant(page, "Help page must be provided");
+    const Page = lazyMdx(() => import(`../help/theory_documentation/${page}.mdx`));
+    return (
+        <div class="help-container">
+            <Page />
+        </div>
+    );
 }

@@ -17,6 +17,9 @@ export type TheoryMeta = {
 
     /** Group to which the theory belongs */
     group?: string;
+
+    /* link to the theory documentation */
+    help?: string;
 };
 
 /** Library of double theories configured for the frontend.

@@ -22,7 +22,7 @@ import {
     NotebookEditor,
     newFormalCell,
 } from "../notebook";
-import { BrandedToolbar, HelpButton } from "../page";
+import { BrandedToolbar } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { AnalysisMeta } from "../theory";
 import { LiveAnalysisContext } from "./context";
@@ -93,7 +93,6 @@ export function AnalysisDocumentEditor(props: {
                             minSize={0.25}
                         >
                             <BrandedToolbar>
-                                <HelpButton />
                                 <IconButton
                                     onClick={toggleSidePanel}
                                     tooltip={

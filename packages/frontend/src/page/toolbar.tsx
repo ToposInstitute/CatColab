@@ -1,8 +1,5 @@
-import { A, useNavigate } from "@solidjs/router";
-import CircleHelp from "lucide-solid/icons/circle-help";
+import { A } from "@solidjs/router";
 import type { JSX } from "solid-js";
-
-import { IconButton } from "../components";
 
 import "./toolbar.css";
 
@@ -32,14 +29,3 @@ const Brand = () => (
         <span>CatColab</span>
     </A>
 );
-
-/** Button that navigates to the root help page. */
-export function HelpButton() {
-    const navigate = useNavigate();
-
-    return (
-        <IconButton onClick={() => navigate("/help")} tooltip="Get help about CatColab">
-            <CircleHelp />
-        </IconButton>
-    );
-}
