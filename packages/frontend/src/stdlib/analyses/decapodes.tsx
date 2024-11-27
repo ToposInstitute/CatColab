@@ -1,9 +1,18 @@
-import { Match, Switch, createResource, onCleanup } from "solid-js";
+import { Match, Switch, createMemo, createResource, onCleanup } from "solid-js";
+import { isMatching } from "ts-pattern";
 
 import type { DiagramAnalysisProps } from "../../analysis";
-import { ErrorAlert, IconButton, Warning } from "../../components";
+import {
+    type ColumnSchema,
+    ErrorAlert,
+    FixedTableEditor,
+    Foldable,
+    IconButton,
+    Warning,
+    createNumericalColumn,
+} from "../../components";
 import { type DiagramJudgment, type LiveDiagramDocument, fromCatlogDiagram } from "../../diagram";
-import type { ModelJudgment } from "../../model";
+import type { ModelJudgment, MorphismDecl } from "../../model";
 import type { DiagramAnalysisMeta } from "../../theory";
 import { PDEPlot2D, type PDEPlotData2D } from "../../visualization";
 
@@ -12,6 +21,11 @@ import RotateCcw from "lucide-solid/icons/rotate-ccw";
 
 import baseStyles from "./base_styles.module.css";
 import "./simulation.css";
+
+/** Configuration for a Decapodes analysis of a diagram. */
+export type DecapodesContent = JupyterSettings & {
+    scalars: Record<string, number>;
+};
 
 type JupyterSettings = {
     baseUrl?: string;
@@ -22,7 +36,7 @@ export function configureDecapodes(options: {
     id?: string;
     name?: string;
     description?: string;
-}): DiagramAnalysisMeta<JupyterSettings> {
+}): DiagramAnalysisMeta<DecapodesContent> {
     const {
         id = "decapodes",
         name = "Simulation",
@@ -33,11 +47,15 @@ export function configureDecapodes(options: {
         name,
         description,
         component: (props) => <Decapodes {...props} />,
-        initialContent: () => ({}),
+        initialContent: () => ({
+            scalars: {},
+        }),
     };
 }
 
-export function Decapodes(props: DiagramAnalysisProps<JupyterSettings>) {
+/** Analyze a DEC diagram by performing a simulation using Decapodes.jl.
+ */
+export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
     const [kernel, { refetch: restartKernel }] = createResource(async () => {
         const jupyter = await import("@jupyterlab/services");
 
@@ -66,7 +84,7 @@ export function Decapodes(props: DiagramAnalysisProps<JupyterSettings>) {
 
     const [result, { refetch: rerunSimulation }] = createResource(maybeKernel, async (kernel) => {
         // Construct the data to send to kernel.
-        const simulationData = makeSimulationData(props.liveDiagram);
+        const simulationData = makeSimulationData(props.liveDiagram, props.content);
         if (!simulationData) {
             return undefined;
         }
@@ -98,32 +116,72 @@ export function Decapodes(props: DiagramAnalysisProps<JupyterSettings>) {
         return result;
     });
 
+    const scalarDecls = createMemo<MorphismDecl[]>(() => {
+        const liveModel = props.liveDiagram.liveModel;
+        return liveModel.formalJudgments().filter((jgmt) =>
+            isMatching(
+                {
+                    tag: "morphism",
+                    morType: {
+                        tag: "Hom",
+                        content: { tag: "Basic", content: "Object" },
+                    },
+                },
+                jgmt,
+            ),
+        );
+    });
+
+    const scalarSchema: ColumnSchema<MorphismDecl>[] = [
+        {
+            header: true,
+            name: "Scalar constant",
+            content: (mor) => mor.name,
+        },
+        createNumericalColumn({
+            name: "Value",
+            data: (mor) => props.content.scalars[mor.id],
+            setData: (mor, value) =>
+                props.changeContent((content) => {
+                    content.scalars[mor.id] = value;
+                }),
+        }),
+    ];
+
+    const header = () => (
+        <div class={baseStyles.panel}>
+            <span class={baseStyles.title}>Simulation</span>
+            <span class={baseStyles.filler} />
+            <Switch>
+                <Match when={kernel.loading || result.loading}>
+                    <IconButton>
+                        <Loader size={16} />
+                    </IconButton>
+                </Match>
+                <Match when={kernel.error}>
+                    <IconButton
+                        onClick={restartKernel}
+                        tooltip="Restart the AlgebraicJulia service"
+                    >
+                        <RotateCcw size={16} />
+                    </IconButton>
+                </Match>
+                <Match when={true}>
+                    <IconButton onClick={rerunSimulation} tooltip="Re-run the simulation">
+                        <RotateCcw size={16} />
+                    </IconButton>
+                </Match>
+            </Switch>
+        </div>
+    );
+
     return (
         <div class="simulation">
-            <div class={baseStyles.panel}>
-                <span class={baseStyles.title}>Simulation</span>
-                <span class={baseStyles.filler} />
-                <Switch>
-                    <Match when={kernel.loading || result.loading}>
-                        <IconButton>
-                            <Loader size={16} />
-                        </IconButton>
-                    </Match>
-                    <Match when={kernel.error}>
-                        <IconButton
-                            onClick={restartKernel}
-                            tooltip="Restart the AlgebraicJulia service"
-                        >
-                            <RotateCcw size={16} />
-                        </IconButton>
-                    </Match>
-                    <Match when={true}>
-                        <IconButton onClick={rerunSimulation} tooltip="Re-run the simulation">
-                            <RotateCcw size={16} />
-                        </IconButton>
-                    </Match>
-                </Switch>
-            </div>
+            <Foldable header={header()}>
+                <div class="parameters">
+                    <FixedTableEditor rows={scalarDecls()} schema={scalarSchema} />
+                </div>
+            </Foldable>
             <Switch>
                 <Match when={kernel.loading}>{"Loading the AlgebraicJulia service..."}</Match>
                 <Match when={kernel.error}>
@@ -157,8 +215,14 @@ type JsonDataContent<T> = {
 
 /** Data send to the Julia kernel defining a simulation. */
 type SimulationData = {
+    /** Judgments defining the diagram, including inferred ones. */
     diagram: Array<DiagramJudgment>;
+
+    /** Judgments defining the model. */
     model: Array<ModelJudgment>;
+
+    /** Mapping from IDs of scalar operations to numerical values. */
+    scalars: Record<string, number>;
 };
 
 /** Julia code run after kernel is started. */
@@ -182,7 +246,10 @@ JsonValue(SimResult(soln, system.dualmesh))
 `;
 
 /** Create data to send to the Julia kernel. */
-const makeSimulationData = (liveDiagram: LiveDiagramDocument): SimulationData | undefined => {
+const makeSimulationData = (
+    liveDiagram: LiveDiagramDocument,
+    content: DecapodesContent,
+): SimulationData | undefined => {
     const validatedDiagram = liveDiagram.validatedDiagram();
     if (validatedDiagram?.result.tag !== "Ok") {
         return undefined;
@@ -192,5 +259,6 @@ const makeSimulationData = (liveDiagram: LiveDiagramDocument): SimulationData | 
             liveDiagram.objectIndex().map.get(id),
         ),
         model: liveDiagram.liveModel.formalJudgments(),
+        scalars: content.scalars,
     };
 };
