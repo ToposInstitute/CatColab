@@ -2,6 +2,7 @@ import { useNavigate, useParams } from "@solidjs/router";
 import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
+import { BookOpenCheck } from "lucide-solid";
 import { createAnalysis } from "../analysis/document";
 import { useApi } from "../api";
 import { IconButton, InlineInput } from "../components";
@@ -15,6 +16,7 @@ import {
 } from "../notebook";
 import { BrandedToolbar, HelpButton } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
+import type { TheoryMeta } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
 import { MaybePermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
@@ -29,8 +31,6 @@ import {
     newMorphismDecl,
     newObjectDecl,
 } from "./types";
-import { BookOpenCheck } from 'lucide-solid';
-import { TheoryMeta } from "../stdlib";
 
 import "./model_editor.css";
 
