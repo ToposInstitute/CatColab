@@ -100,7 +100,7 @@ h4 {
 }
 
 .content-panel {
-    overflow-x: scroll;
+    overflow-x: auto;
     overflow-y: hidden;
 }
 

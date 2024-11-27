@@ -18,22 +18,16 @@ export function Foldable(props: {
 
     // NOTE: Set the collapse behavior to "hide" to get a smooth animation.
     return (
-        <div class="foldable">
-            <Discloure
-                expanded={isExpanded()}
-                onExpandedChange={setIsExpanded}
-                collapseBehavior="hide"
-            >
+        <Discloure expanded={isExpanded()} onExpandedChange={setIsExpanded} collapseBehavior="hide">
+            <div class="foldable-header">
+                {props.header}
                 <Discloure.Trigger>
-                    <span class="panel">
-                        {props.header}
-                        <Show when={isExpanded()} fallback={<ChevronDown />}>
-                            <ChevronUp />
-                        </Show>
-                    </span>
+                    <Show when={isExpanded()} fallback={<ChevronDown />}>
+                        <ChevronUp />
+                    </Show>
                 </Discloure.Trigger>
-                <Discloure.Content>{props.children}</Discloure.Content>
-            </Discloure>
-        </div>
+            </div>
+            <Discloure.Content>{props.children}</Discloure.Content>
+        </Discloure>
     );
 }
