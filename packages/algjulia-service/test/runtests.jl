@@ -76,7 +76,8 @@ end
     add_part!(handcrafted_pode, :Op1, src=1, tgt=2, op1=:∂ₜ);
     add_part!(handcrafted_pode, :Op1, src=1, tgt=2, op1=:Δ);
 
-    decapode = Decapode(diagram, theory);
+    # no scalars in second position
+    decapode, _ = Decapode(diagram, theory);
 
     @test decapode == handcrafted_pode 
 
@@ -100,7 +101,7 @@ end
 
     @test soln.retcode == ReturnCode.Success
   
-    result = SimResult(soln, system.dualmesh);
+    result = SimResult(soln, system);
 
     @test typeof(result.state) == Vector{Matrix{SVector{3, Float64}}}
 
@@ -148,11 +149,10 @@ end
     system = System(json_string);
 
     simulator = evalsim(system.pode)
-
     # open("test_sim.jl", "w") do f
     #     write(f, string(gensim(system.pode)))
     # end
-    simulator = include("test_sim.jl") # XXX edited this file so ⋆₂⁻¹ is actually over 0
+    # simulator = include("test_sim.jl") # XXX edited this file so ⋆₂⁻¹ is actually over 0
     f = simulator(system.dualmesh, generate, DiagonalHodge());
 
     # time
@@ -165,7 +165,7 @@ end
 
     @test soln.retcode == ReturnCode.Success
   
-    result = SimResult(soln, system.dualmesh);
+    result = SimResult(soln, system);
 
     @test typeof(result.state) == Vector{Matrix{SVector{3, Float64}}}
 
@@ -173,34 +173,133 @@ end
 
 end
 
-# function save_fig(file, soln, mesh)
-#     time = Observable(0.0)
-#     fig = Figure()
-#     Label(fig[1,1, Top()], @lift("...at $($time)"), padding = (0, 0, 5, 0))
-#     ax = CairoMakie.Axis(fig[1,1])
-#     msh = CairoMakie.mesh!(ax, mesh,
-#                            color=@lift(soln($time).C),
-#                            colormap=Reverse(:redsblues))
-#     Colorbar(fig[1,2], msh)
-#     record(fig, file, soln.t[1:10:end]; framerate=10) do t
-#         time[] = t
-#     end
-# end
-# save_fig("testing_plot.mp4", soln, system.mesh)
+###
+
+data = open(JSON3.read, joinpath(@__DIR__, "diffusivity_constant.json"), "r")
+diagram = data[:diagram];
+model = data[:model];
+scalars = data[:scalars];
+
+@testset "Parsing the Theory JSON Object" begin
+
+    @test Set(keys(data)) == Set([:diagram, :model, :scalars])
+
+    # the intent was to check that the JSON is coming in with the correct keys
+    # @test_broken Set(keys(model)) == Set([:name, :notebook, :theory, :type])
+
+    @test @match model[1] begin
+        IsObject(_) => true
+        _ => false
+    end
+    
+    @test @match model[6] begin
+        IsMorphism(_) => true
+        _ => false
+    end
+
+    theory = Theory();
+    @match model[1] begin
+        IsObject(content) => add_to_theory!(theory, content, Val(:Ob))
+        _ => nothing
+    end
+
+    @test theory.data["01936f2c-dba6-7c7b-8ec0-811bbe06bad4" ] == TheoryElement(;name=:Form0, val=nothing)
+    
+end
+
+@testset "Simulation ..." begin
+
+    json_string = read(joinpath(@__DIR__, "diffusivity_constant.json"), String);
+    system = System(json_string);
+
+    function my_generate(s, my_symbol; hodge=GeometricHodge())
+        op = @match my_symbol begin
+            sym && if sym ∈ keys(system.scalars) end => system.scalars[sym]
+            _ => default_dec_matrix_generate(s, my_symbol, hodge)
+        end
+        return (args...) -> op(args...)
+    end
+    
+    simulator = evalsim(system.pode)
+    # open("test_sim.jl", "w") do f
+        # write(f, string(gensim(system.pode)))
+    # end
+    # simulator = include("test_sim.jl");
+    
+    f = simulator(system.dualmesh, my_generate, DiagonalHodge());
+
+    soln = run_sim(f, system.init, 50.0, ComponentArray(k=0.5,));
+    # returns ::ODESolution
+    #     - retcode
+    #     - interpolation
+    #     - t
+    #     - u::Vector{ComponentVector}
+
+    @test soln.retcode == ReturnCode.Success
+ 
+    result = SimResult(soln, system);
+
+    @test typeof(result.state) == Vector{Matrix{SVector{3, Float64}}}
+
+    jv = JsonValue(result);
+
+end
+
+## EXAMPLE
+
+@testset "Example ..." begin
+
+    json_string = read(joinpath(@__DIR__, "example.json"), String);
+    system = System(json_string);
+
+    function my_generate(s, my_symbol; hodge=GeometricHodge())
+        op = @match my_symbol begin
+            sym && if sym ∈ keys(system.scalars) end => system.scalars[sym]
+            _ => default_dec_matrix_generate(s, my_symbol, hodge)
+        end
+        return (args...) -> op(args...)
+    end
+    
+    # simulator = evalsim(system.pode);
+    open("test_sim.jl", "w") do f
+        write(f, string(gensim(system.pode)))
+    end
+    simulator = include("test_sim.jl");
+    
+    f = simulator(system.dualmesh, my_generate, DiagonalHodge());
+
+    soln = run_sim(f, system.init, 50.0, ComponentArray(k=0.5,));
+    # returns ::ODESolution
+    #     - retcode
+    #     - interpolation
+    #     - t
+    #     - u::Vector{ComponentVector}
+
+    @test soln.retcode == ReturnCode.Success
+ 
+    result = SimResult(soln, system);
+
+    @test typeof(result.state) == Vector{Matrix{SVector{3, Float64}}}
+
+    jv = JsonValue(result);
+
+end
+
+# PLOTTING UTILITIES
 
 # TODO size fixed
-function at_time(sr::SimResult, t::Int)
-    [sr.state[t][i,j][3] for i in 1:51 for j in 1:51]
-end
+# function at_time(sr::SimResult, t::Int)
+#     [sr.state[t][i,j][3] for i in 1:51 for j in 1:51]
+# end
 
-function show_heatmap(sr::SimResult, t::Int)
-    data = at_time(result, t)
-    ℓ = floor(Int64, sqrt(length(data)));
-    reshaped = reshape(data, ℓ, ℓ)
-    Plots.heatmap(1:51, 1:51, reshaped, clims=(minimum(data), maximum(data)); palette=:redsblues)
-end
+# function show_heatmap(sr::SimResult, t::Int)
+#     data = at_time(result, t)
+#     ℓ = floor(Int64, sqrt(length(data)));
+#     reshaped = reshape(data, ℓ, ℓ)
+#     Plots.heatmap(1:51, 1:51, reshaped, clims=(minimum(data), maximum(data)); palette=:redsblues)
+# end
 
-@gif for t ∈ 1:length(result.time)
-    show_heatmap(result, t)
-end every 5
+# @gif for t ∈ 1:length(result.time)
+#     show_heatmap(result, t)
+# end every 5
 
