@@ -85,7 +85,6 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
     const [result, { refetch: rerunSimulation }] = createResource(maybeKernel, async (kernel) => {
         // Construct the data to send to kernel.
         const simulationData = makeSimulationData(props.liveDiagram, props.content);
-        console.log(JSON.parse(JSON.stringify(simulationData))); // XXX
         if (!simulationData) {
             return undefined;
         }

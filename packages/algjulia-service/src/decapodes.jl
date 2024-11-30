@@ -241,6 +241,7 @@ export create_mesh
 
 struct System
     pode::SummationDecapode
+    statevar::Symbol
     scalars::Dict{Symbol, Any} # closures # TODO rename scalars => anons
     mesh::HasDeltaSet
     dualmesh::HasDeltaSet
@@ -279,7 +280,7 @@ function System(json_string::String)
 	    return (args...) -> op(args...)
     end
 
-    return System(decapode, anons, s, sd, u0, sys_generate)
+    return System(decapode, statevar, anons, s, sd, u0, sys_generate)
 end
 
 
@@ -303,11 +304,8 @@ function SimResult(sol::ODESolution, system::System)
 
     xlen = 51; ylen = 51;
 
-    statevars = infer_state_names(system.pode)
-    statevar = length(statevars) == 1 ? first(statevars) : error("$statevars must be length one")
-
     function at_time(sol::ODESolution, timeidx::Int)
-        [SVector(i, j, getproperty(sol.u[timeidx], statevar)[xlen*(i-1) + j]) for i in 1:xlen, j in 1:ylen]
+        [SVector(i, j, getproperty(sol.u[timeidx], system.statevar)[xlen*(i-1) + j]) for i in 1:xlen, j in 1:ylen]
     end
 
     state_vals = map(1:length(sol.t)) do i
@@ -319,14 +317,7 @@ function SimResult(sol::ODESolution, system::System)
 end
 # TODO generalize to HasDeltaSet
 
-function generate(s, my_symbol; hodge=GeometricHodge())
-  op = @match my_symbol begin
-    _ => default_dec_matrix_generate(s, my_symbol, hodge)
-  end
-  return (args...) -> op(args...)
-end
-export generate
-
+## PLOTTING CODE
 
 abstract type AbstractPlotType end
 

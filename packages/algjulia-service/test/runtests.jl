@@ -42,9 +42,6 @@ end
 
     @test Set(keys(data)) == Set([:diagram, :model])
 
-    # the intent was to check that the JSON is coming in with the correct keys
-    # @test_broken Set(keys(model)) == Set([:name, :notebook, :theory, :type])
-
     @test @match model[1] begin
         IsObject(_) => true
         _ => false
@@ -120,9 +117,6 @@ model = data[:model];
 
     @test Set(keys(data)) == Set([:diagram, :model, :scalars])
 
-    # the intent was to check that the JSON is coming in with the correct keys
-    # @test_broken Set(keys(model)) == Set([:name, :notebook, :theory, :type])
-
     @test @match model[1] begin
         IsObject(_) => true
         _ => false
@@ -152,8 +146,8 @@ end
     # open("test_sim.jl", "w") do f
     #     write(f, string(gensim(system.pode)))
     # end
-    # simulator = include("test_sim.jl") # XXX edited this file so ⋆₂⁻¹ is actually over 0
-    f = simulator(system.dualmesh, generate, DiagonalHodge());
+    # simulator = include("test_sim.jl") 
+    f = simulator(system.dualmesh, default_dec_matrix_generate, DiagonalHodge());
 
     # time
     soln = run_sim(f, system.init, 50.0, ComponentArray(k=0.5,));
@@ -183,9 +177,6 @@ scalars = data[:scalars];
 @testset "Parsing the Theory JSON Object" begin
 
     @test Set(keys(data)) == Set([:diagram, :model, :scalars])
-
-    # the intent was to check that the JSON is coming in with the correct keys
-    # @test_broken Set(keys(model)) == Set([:name, :notebook, :theory, :type])
 
     @test @match model[1] begin
         IsObject(_) => true
