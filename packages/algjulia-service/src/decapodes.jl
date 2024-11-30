@@ -21,13 +21,15 @@ using Distributions # for initial conditions
 using GeometryBasics: Point2, Point3
 using OrdinaryDiffEq
 
-export infer_types!, evalsim, default_dec_generate, default_dec_matrix_generate, DiagonalHodge, GeometricHodge, ComponentArray, @match
+export infer_types!, evalsim, default_dec_generate, default_dec_matrix_generate, DiagonalHodge, ComponentArray
 
 struct ImplError <: Exception
     name::String
 end
 
 Base.showerror(io::IO, e::ImplError) = print(io, "$(e.name) not implemented")
+
+## THEORY BUILDING
 
 function to_pode end
 export to_pode
@@ -146,7 +148,7 @@ function Theory(model::AbstractVector{JSON3.Object})
 end
 export Theory
 
-## BUILDING
+## MODEL BUILDING
 
 function add_to_pode! end
 export add_to_pode!
@@ -243,6 +245,7 @@ struct System
     mesh::HasDeltaSet
     dualmesh::HasDeltaSet
     init::Any # TODO specify. Is it always ComponentVector?
+    generate::Any
 end
 export System
 
@@ -267,7 +270,16 @@ function System(json_string::String)
     # mesh and initial conditions
     s, sd, u0, _ = create_mesh(statevar);
 
-    return System(decapode, anons, s, sd, u0)
+    # generate
+    function sys_generate(s, my_symbol; hodge=GeometricHodge())
+	    op = @match my_symbol begin
+		    sym && if sym ∈ keys(anons) end => anons[sym]
+		    _ => default_dec_matrix_generate(s, my_symbol, hodge)
+	    end
+	    return (args...) -> op(args...)
+    end
+
+    return System(decapode, anons, s, sd, u0, sys_generate)
 end
 
 

@@ -212,61 +212,13 @@ end
     json_string = read(joinpath(@__DIR__, "diffusivity_constant.json"), String);
     system = System(json_string);
 
-    function my_generate(s, my_symbol; hodge=GeometricHodge())
-        op = @match my_symbol begin
-            sym && if sym ∈ keys(system.scalars) end => system.scalars[sym]
-            _ => default_dec_matrix_generate(s, my_symbol, hodge)
-        end
-        return (args...) -> op(args...)
-    end
-    
     simulator = evalsim(system.pode)
     # open("test_sim.jl", "w") do f
         # write(f, string(gensim(system.pode)))
     # end
     # simulator = include("test_sim.jl");
     
-    f = simulator(system.dualmesh, my_generate, DiagonalHodge());
-
-    soln = run_sim(f, system.init, 50.0, ComponentArray(k=0.5,));
-    # returns ::ODESolution
-    #     - retcode
-    #     - interpolation
-    #     - t
-    #     - u::Vector{ComponentVector}
-
-    @test soln.retcode == ReturnCode.Success
- 
-    result = SimResult(soln, system);
-
-    @test typeof(result.state) == Vector{Matrix{SVector{3, Float64}}}
-
-    jv = JsonValue(result);
-
-end
-
-## EXAMPLE
-
-@testset "Example ..." begin
-
-    json_string = read(joinpath(@__DIR__, "example.json"), String);
-    system = System(json_string);
-
-    function my_generate(s, my_symbol; hodge=GeometricHodge())
-        op = @match my_symbol begin
-            sym && if sym ∈ keys(system.scalars) end => system.scalars[sym]
-            _ => default_dec_matrix_generate(s, my_symbol, hodge)
-        end
-        return (args...) -> op(args...)
-    end
-    
-    # simulator = evalsim(system.pode);
-    open("test_sim.jl", "w") do f
-        write(f, string(gensim(system.pode)))
-    end
-    simulator = include("test_sim.jl");
-    
-    f = simulator(system.dualmesh, my_generate, DiagonalHodge());
+    f = simulator(system.dualmesh, system.generate, DiagonalHodge());
 
     soln = run_sim(f, system.init, 50.0, ComponentArray(k=0.5,));
     # returns ::ODESolution

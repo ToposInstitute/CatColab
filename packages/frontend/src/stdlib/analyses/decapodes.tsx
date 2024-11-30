@@ -86,7 +86,7 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
         // Construct the data to send to kernel.
         const simulationData = makeSimulationData(props.liveDiagram, props.content);
         console.log(JSON.parse(JSON.stringify(simulationData))); // XXX
-		if (!simulationData) {
+        if (!simulationData) {
             return undefined;
         }
 
@@ -239,16 +239,7 @@ const makeSimulationCode = (data: SimulationData) => `
 system = System(raw"""${JSON.stringify(data)}""");
 simulator = evalsim(system.pode);
 
-# TODO move into system
-function my_generate(s, my_symbol; hodge=GeometricHodge())
-	op = @match my_symbol begin
-		sym && if sym ∈ keys(system.scalars) end => system.scalars[sym]
-		_ => default_dec_matrix_generate(s, my_symbol, hodge)
-	end
-	return (args...) -> op(args...)
-end
-
-f = simulator(system.dualmesh, my_generate, DiagonalHodge());
+f = simulator(system.dualmesh, system.generate, DiagonalHodge());
 
 soln = run_sim(f, system.init, 100.0, ComponentArray(k=0.5,));
 
