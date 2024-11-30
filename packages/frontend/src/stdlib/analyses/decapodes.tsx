@@ -236,13 +236,13 @@ using AlgebraicJuliaService
 /** Julia code run to perform a simulation. */
 const makeSimulationCode = (data: SimulationData) => `
 system = System(raw"""${JSON.stringify(data)}""");
-
 simulator = evalsim(system.pode);
-f = simulator(system.dualmesh, default_dec_generate, DiagonalHodge());
+
+f = simulator(system.dualmesh, system.generate, DiagonalHodge());
 
 soln = run_sim(f, system.init, 100.0, ComponentArray(k=0.5,));
 
-JsonValue(SimResult(soln, system.dualmesh))
+JsonValue(SimResult(soln, system))
 `;
 
 /** Create data to send to the Julia kernel. */
