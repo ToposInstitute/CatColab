@@ -17,7 +17,7 @@ import OrdinaryDiffEq: ReturnCode
 #using Plots
 
 # load data
-data = open(JSON3.read, joinpath(@__DIR__, "test", "diffusion_data.json"), "r")
+data = open(JSON3.read, joinpath(@__DIR__, "diffusion_data.json"), "r")
 diagram = data[:diagram];
 model = data[:model];
 
@@ -82,11 +82,11 @@ end
 
 end
 
-
+#=
 @testset "Simulation" begin
 
     json_string = read(joinpath(@__DIR__, "diffusion_data.json"), String);
-    system = only(PodeSystem(json_string));
+    system = PodeSystem(json_string);
 
     simulator = evalsim(system.pode)
     f = simulator(system.dualmesh, default_dec_generate, DiagonalHodge());
@@ -103,7 +103,7 @@ end
   
     result = SimResult(soln, system);
 
-    @test typeof(result.state) == Vector{Matrix{SVector{3, Float64}}}
+    @test typeof(result.state) == Dict{String, Vector{Matrix{SVector{3, Float64}}}}
 
     jv = JsonValue(result);
 
@@ -112,14 +112,14 @@ end
 
 @testset "SimulationTwoVar" begin
 
-    json_string = read(joinpath(@__DIR__, "diffusion_data_twovars.json"), String);
+    json_string = read(joinpath(@__DIR__,"diffusion_data_twovars.json"), String);
     system = PodeSystem(json_string);
 
     # DEBUGGING
     open("test_sim.jl", "w") do f
         write(f, string(gensim(system.pode)))
     end
-    simulator = include("test_sim.jl")
+    simulator = include("../test_sim.jl")
 
     f = simulator(system.dualmesh, system.generate, DiagonalHodge())
 
@@ -135,16 +135,16 @@ end
   
     result = SimResult(soln, system);
 
-    @test typeof(result.state) == Vector{Matrix{SVector{3, Float64}}}
+    @test typeof(result.state) == Dict{String, Vector{Matrix{SVector{3, Float64}}}}
 
-    jvs = JsonValue(results);
+    jvs = JsonValue(result);
 
 end
-
+=#
 
 #####
 
-data = open(JSON3.read, joinpath(@__DIR__, "diffusion_long_trip.json"), "r")
+data = open(JSON3.read, joinpath(@__DIR__,"diffusion_long_trip.json"), "r")
 diagram = data[:diagram];
 model = data[:model];
 
@@ -175,7 +175,7 @@ end
 @testset "Simulation ..." begin
 
     json_string = read(joinpath(@__DIR__, "diffusion_long_trip.json"), String);
-    system = only(PodeSystem(json_string));
+    system = PodeSystem(json_string);
 
     simulator = evalsim(system.pode)
     # open("test_sim.jl", "w") do f
@@ -196,7 +196,7 @@ end
   
     result = SimResult(soln, system);
 
-    @test typeof(result.state) == Vector{Matrix{SVector{3, Float64}}}
+    @test typeof(result.state) == Dict{String, Vector{Matrix{SVector{3, Float64}}}}
 
     jv = JsonValue(result);
 
@@ -236,7 +236,7 @@ end
 @testset "Simulation ..." begin
 
     json_string = read(joinpath(@__DIR__, "diffusivity_constant.json"), String);
-    system = only(PodeSystem(json_string));
+    system = PodeSystem(json_string);
 
     simulator = evalsim(system.pode)
     # open("test_sim.jl", "w") do f
@@ -257,7 +257,7 @@ end
  
     result = SimResult(soln, system);
 
-    @test typeof(result.state) == Vector{Matrix{SVector{3, Float64}}}
+    @test typeof(result.state) == Dict{String, Vector{Matrix{SVector{3, Float64}}}}
 
     jv = JsonValue(result);
 

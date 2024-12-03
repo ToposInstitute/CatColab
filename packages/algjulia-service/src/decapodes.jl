@@ -302,9 +302,12 @@ function PodeSystem(json_string::String)
 
     # pode, anons, and vars (UUID => ACSetId)
     decapode, anons, vars = Decapode(diagram, theory; scalars=scalars);
+    uuid2symb = Dict(
+        [key => (subpart(decapode, vars[key], :name)) for key ∈ keys(vars)]
+    );
     # plotting variables
-    plotvars = Symbol.(json_object[:plotVariables])
-
+    plotvars = [uuid2symb[uuid] for uuid in json_object[:plotVariables]];
+    
     # mesh and initial conditions
     s, sd = create_mesh()
     u0 = init_conditions(plotvars, sd)
@@ -324,9 +327,7 @@ function PodeSystem(json_string::String)
     end
 
     # symbol => uuid. we need this to reassociate the var 
-    symb2uuid = Dict(
-        [(subpart(decapode, vars[key], :name) => key) for key ∈ keys(vars)]
-    );
+    symb2uuid = Dict([v => k for (k,v) in pairs(uuid2symb)])
 
     return PodeSystem(decapode, plotvars, anons, s, sd, u0, sys_generate, symb2uuid)
 end
