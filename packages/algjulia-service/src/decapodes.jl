@@ -7,8 +7,9 @@
 
 # algebraicjulia dependencies
 using ACSets
-using Decapodes
 using DiagrammaticEquations
+using Decapodes
+using Decapodes: dec_mat_dual_differential, dec_mat_hodge
 using CombinatorialSpaces
 
 # dependencies
@@ -31,11 +32,12 @@ Base.showerror(io::IO, e::ImplError) = print(io, "$(e.name) not implemented")
 
 ## THEORY BUILDING
 
-function to_pode end
-export to_pode
+""" Functions to build a dictionary associating ids in the theory to elements in the model"""
+function to_decapode_theory end
+export to_decapode_theory
 
 """ Helper function to convert CatColab values (Obs) in Decapodes """
-function to_pode(::Val{:Ob}, name::String)
+function to_decapode_theory(::Val{:Ob}, name::String)
     @match lowercase(name) begin
         "0-form" => :Form0
         "1-form" => :Form1
@@ -48,7 +50,7 @@ function to_pode(::Val{:Ob}, name::String)
 end
 
 """ Helper function to convert CatColab values (Homs) in Decapodes """
-function to_pode(::Val{:Hom}, name::String)
+function to_decapode_theory(::Val{:Hom}, name::String)
     @match name begin
         "∂t" => :∂ₜ
         "∂ₜ" => :∂ₜ
@@ -62,13 +64,24 @@ function to_pode(::Val{:Hom}, name::String)
         "★" => :⋆₁
         "★⁻¹" => :⋆₀⁻¹
         "diffusivity" => :diffusivity
+        # new
+        "d01" => :d₀
+        "d12" => :d₁
+        "⋆1" => :⋆₁
+        "⋆2" => :⋆₂
+        "♭♯" => :♭♯
+        "∧ᵈᵖ₁₀(-, ⋆d(-))" => :dpsw # dual-primal self-wedge
         x => throw(ImplError(x))
     end
 end
 
 # Build the theory
 
-# @active patterns are MLStyle-implementations of F# active patterns that forces us to work in the Maybe/Option design pattern. They make @match statements cleaner.
+#=
+@active patterns are MLStyle-implementations of F# active patterns that forces us to work in the Maybe/Option pattern. 
+Practically, yet while a matter of opinion, they make @match statements cleaner; a statement amounts to a helpful pattern
+name and the variables we intend to capture.
+=# 
 @active IsObject(x) begin
     x[:tag] == "object" ? Some(x) : nothing
 end
@@ -95,6 +108,9 @@ export TheoryElement
 
 Base.nameof(t::TheoryElement) = t.name
 
+struct ObData <: ElementData end
+# TODO not being used right now but added for completeness.
+
 struct HomData <: ElementData
     dom::Any
     cod::Any
@@ -103,7 +119,9 @@ struct HomData <: ElementData
     end
 end
 export HomData
+# TODO type dom/cod
 
+"""Struct wrapping a dictionary"""
 struct Theory
     data::Dict{String, TheoryElement}
     function Theory()
@@ -113,7 +131,7 @@ end
 export Theory
 
 # TODO engooden
-Base.show(io::IO, theory::Theory) = println(io, theory.data)
+Base.show(io::IO, theory::Theory) = show(io, theory.data)
 
 Base.values(theory::Theory) = values(theory.data)
 
@@ -121,12 +139,13 @@ function add_to_theory! end
 export add_to_theory!
 
 function add_to_theory!(theory::Theory, content::Any, type::Val{:Ob})
-    push!(theory.data, content[:id] => TheoryElement(;name=to_pode(type, content[:name])))
+    push!(theory.data, 
+          content[:id] => TheoryElement(;name=to_decapode_theory(type, content[:name])))
 end
 
 function add_to_theory!(theory::Theory, content::Any, type::Val{:Hom})
     push!(theory.data, content[:id] => 
-          TheoryElement(;name=to_pode(type, content[:name]),
+          TheoryElement(;name=to_decapode_theory(type, content[:name]),
                         val=HomData(dom=content[:dom][:content], 
                                     cod=content[:cod][:content])))
 end
@@ -160,6 +179,9 @@ function add_to_pode!(d::SummationDecapode,
         nc::Vector{Int},
         ::Val{:Ob})
     theory_elem = theory.data[content[:over][:content]] # indexes the theory by UUID
+    # checks if the cell is an anonymous (intermediate) variable.
+    # if so, we increment the intermediate variable counter and make an intermediate variable name. 
+    # otherwise we use the existing name of the given content.
     name = if isempty(content[:name])
         nc[1] += 1
         Symbol("•$(nc[1])")
@@ -171,6 +193,10 @@ function add_to_pode!(d::SummationDecapode,
     return d
 end
 
+function op1_name(theory::Theory, content::JSON3.Object)
+    Symbol(theory.data[content[:over][:content]].name)
+end
+
 # TODO we are restricted to Op1
 function add_to_pode!(d::SummationDecapode,
         vars::Dict{String, Int}, # mapping between UUID and ACSet ID
@@ -179,10 +205,11 @@ function add_to_pode!(d::SummationDecapode,
         scalars::Any,
         anons::Dict{Symbol, Any},
         ::Val{:Hom})
-    dom = content[:dom][:content]
-    cod = content[:cod][:content]
+    dom = content[:dom][:content]; cod = content[:cod][:content]
+    # TODO we need a safe way to fail this
     if haskey(vars, dom) && haskey(vars, cod)
-        op1 = Symbol(theory.data[content[:over][:content]].name)
+        # get the name of the Op1 and add it to the theory
+        op1 = op1_name(theory, content)
         add_part!(d, :Op1, src=vars[dom], tgt=vars[cod], op1=op1)
         # we need to add an inclusion to the TVar table
         if op1 == :∂ₜ
@@ -238,7 +265,6 @@ function create_mesh(statevar::Symbol)
 end
 export create_mesh
 
-
 struct System
     pode::SummationDecapode
     statevar::Symbol
@@ -271,10 +297,16 @@ function System(json_string::String)
     # mesh and initial conditions
     s, sd, u0, _ = create_mesh(statevar);
 
-    # generate
+    # operators and generate function
+    ♭♯_m = ♭♯_mat(sd);
+    wedge_dp10 = dec_wedge_product_dp(Tuple{1,0}, sd);
+    dual_d1_m = dec_mat_dual_differential(1, sd);
+    star1_m = dec_mat_hodge(1, sd, GeometricHodge()); 
     function sys_generate(s, my_symbol; hodge=GeometricHodge())
 	    op = @match my_symbol begin
 		    sym && if sym ∈ keys(anons) end => anons[sym]
+            :♭♯ => x -> ♭♯_m * x # [1]
+            :dpsw => x -> wedge_dp10(x, star1_m*(dual_d1_m*x))
 		    _ => default_dec_matrix_generate(s, my_symbol, hodge)
 	    end
 	    return (args...) -> op(args...)
@@ -328,4 +360,3 @@ function Base.reshape(::Heatmap, data)
     l = floor(Int64, sqrt(length(data)))
     reshape(data, l, l)
 end
-

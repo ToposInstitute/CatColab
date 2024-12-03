@@ -23,18 +23,18 @@ model = data[:model];
 
 @testset "Text-to-Pode" begin
 
-    @test to_pode(Val(:Ob), "0-form")      == :Form0
-    @test to_pode(Val(:Ob), "1-form")      == :Form1
-    @test to_pode(Val(:Ob), "2-form")      == :Form2
-    @test to_pode(Val(:Ob), "dual 0-form") == :DualForm0
-    @test to_pode(Val(:Ob), "dual 1-form") == :DualForm1
-    @test to_pode(Val(:Ob), "dual 2-form") == :DualForm2
+    @test to_decapode_theory(Val(:Ob), "0-form")      == :Form0
+    @test to_decapode_theory(Val(:Ob), "1-form")      == :Form1
+    @test to_decapode_theory(Val(:Ob), "2-form")      == :Form2
+    @test to_decapode_theory(Val(:Ob), "dual 0-form") == :DualForm0
+    @test to_decapode_theory(Val(:Ob), "dual 1-form") == :DualForm1
+    @test to_decapode_theory(Val(:Ob), "dual 2-form") == :DualForm2
 
-    @test_throws AlgebraicJuliaService.ImplError to_pode(Val(:Ob), "Form3")
+    @test_throws AlgebraicJuliaService.ImplError to_decapode_theory(Val(:Ob), "Form3")
 
-    @test to_pode(Val(:Hom), "∂t") == :∂ₜ
-    @test to_pode(Val(:Hom), "Δ") == :Δ
-    @test_throws AlgebraicJuliaService.ImplError to_pode(Val(:Hom), "∧") 
+    @test to_decapode_theory(Val(:Hom), "∂t") == :∂ₜ
+    @test to_decapode_theory(Val(:Hom), "Δ") == :Δ
+    @test_throws AlgebraicJuliaService.ImplError to_decapode_theory(Val(:Hom), "∧") 
 
 end
 
@@ -57,7 +57,9 @@ end
         IsObject(content) => add_to_theory!(theory, content, Val(:Ob))
         _ => nothing
     end
-    @test theory.data["019323fa-49cb-7373-8c5d-c395bae4006d"] == TheoryElement(;name=:Form0, val=nothing)
+
+    _id = "019323fa-49cb-7373-8c5d-c395bae4006d";
+    @test theory.data[_id] == TheoryElement(;name=:Form0, val=nothing)
     
 end
 
