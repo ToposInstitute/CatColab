@@ -14,7 +14,7 @@ using LinearAlgebra
 import OrdinaryDiffEq: ReturnCode
 
 # visualization
-using Plots
+#using Plots
 
 # load data
 data = open(JSON3.read, joinpath(@__DIR__, "diffusion_data.json"), "r")
@@ -40,7 +40,7 @@ end
 
 @testset "Parsing the Theory JSON Object" begin
 
-    @test Set(keys(data)) == Set([:diagram, :model])
+    @test Set(keys(data)) == Set([:diagram, :model,:plotVariables])
 
     @test @match model[1] begin
         IsObject(_) => true
@@ -82,10 +82,11 @@ end
 
 end
 
+
 @testset "Simulation" begin
 
     json_string = read(joinpath(@__DIR__, "diffusion_data.json"), String);
-    system = System(json_string);
+    system = only(PodeSystems(json_string));
 
     simulator = evalsim(system.pode)
     f = simulator(system.dualmesh, default_dec_generate, DiagonalHodge());
@@ -117,7 +118,7 @@ model = data[:model];
 
 @testset "Parsing the Theory JSON Object" begin
 
-    @test Set(keys(data)) == Set([:diagram, :model, :scalars])
+    @test Set(keys(data)) == Set([:diagram, :model, :scalars,:plotVariables])
 
     @test @match model[1] begin
         IsObject(_) => true
@@ -142,7 +143,7 @@ end
 @testset "Simulation ..." begin
 
     json_string = read(joinpath(@__DIR__, "diffusion_long_trip.json"), String);
-    system = System(json_string);
+    system = only(PodeSystems(json_string));
 
     simulator = evalsim(system.pode)
     # open("test_sim.jl", "w") do f
@@ -178,7 +179,7 @@ scalars = data[:scalars];
 
 @testset "Parsing the Theory JSON Object" begin
 
-    @test Set(keys(data)) == Set([:diagram, :model, :scalars])
+    @test Set(keys(data)) == Set([:diagram, :model, :scalars,:plotVariables])
 
     @test @match model[1] begin
         IsObject(_) => true
@@ -203,7 +204,7 @@ end
 @testset "Simulation ..." begin
 
     json_string = read(joinpath(@__DIR__, "diffusivity_constant.json"), String);
-    system = System(json_string);
+    system = only(PodeSystems(json_string));
 
     simulator = evalsim(system.pode)
     # open("test_sim.jl", "w") do f

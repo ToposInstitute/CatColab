@@ -257,20 +257,20 @@ export Decapode
 # the proper name for this constructor should be "SummationDecapode"
 
 # TODO we need to make this dynamic
-function create_mesh(statevar::Symbol)
+function create_mesh(plotvar::Symbol)
   s = triangulated_grid(100,100,2,2,Point2{Float64})
   sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point2{Float64}}(s)
   subdivide_duals!(sd, Circumcenter())
 
   c_dist = MvNormal([50, 50], LinearAlgebra.Diagonal(map(abs2, [7.5, 7.5])))
   c = [pdf(c_dist, [p[1], p[2]]) for p in sd[:point]]
-  u0 = ComponentArray(; Dict(statevar=>c)...)
+  u0 = ComponentArray(; Dict(plotvar=>c)...)
 
   return (s, sd, u0, ())
 end
 export create_mesh
 
-struct System
+struct PodeSystem
     pode::SummationDecapode
     plotvar::Symbol
     scalars::Dict{Symbol, Any} # closures # TODO rename scalars => anons
@@ -279,9 +279,12 @@ struct System
     init::Any # TODO specify. Is it always ComponentVector?
     generate::Any
 end
-export System
+export PodeSystem
 
-function System(json_string::String)
+"""
+Construct a vector of `PodeSystem` objects from a JSON string.
+"""
+function PodeSystems(json_string::String)
     json_object = JSON3.read(json_string);
 
     # converts the JSON of (the fragment of) the theory
@@ -294,32 +297,34 @@ function System(json_string::String)
     # any scalars?
     scalars = haskey(json_object, :scalars) ? json_object[:scalars] : [];
 
-    # pode, anons, and plotvar
+    # pode, anons, and plotvars
     decapode, anons = Decapode(diagram, theory; scalars=scalars);
-    plotvar = json_object[:plotvar]
+    plotvars = Symbol.(json_object[:plotVariables])
     
 
     # mesh and initial conditions
-    s, sd, u0, _ = create_mesh(plotvar);
+    meshes = create_mesh.(plotvars)
+    ss, sds, u0s = [[m[1] for m in meshes],[m[2] for m in meshes],[m[3] for m in meshes]];
 
     # operators and generate function
-    ♭♯_m = ♭♯_mat(sd);
-    wedge_dp10 = dec_wedge_product_dp(Tuple{1,0}, sd);
-    dual_d1_m = dec_mat_dual_differential(1, sd);
-    star1_m = dec_mat_hodge(1, sd, GeometricHodge()); 
-    function sys_generate(s, my_symbol; hodge=GeometricHodge())
-	    op = @match my_symbol begin
-		    sym && if sym ∈ keys(anons) end => anons[sym]
-            :♭♯ => x -> ♭♯_m * x # [1]
-            :dpsw => x -> wedge_dp10(x, star1_m*(dual_d1_m*x))
-		    _ => default_dec_matrix_generate(s, my_symbol, hodge)
-	    end
-	    return (args...) -> op(args...)
+    map(zip(ss,sds,plotvars,u0s)) do (s,sd,plotvar,u0)
+        ♭♯_m = ♭♯_mat(sd);
+        wedge_dp10 = dec_wedge_product_dp(Tuple{1,0}, sd);
+        dual_d1_m = dec_mat_dual_differential(1, sd);
+        star1_m = dec_mat_hodge(1, sd, GeometricHodge()); 
+        function sys_generate(s, my_symbol; hodge=GeometricHodge())
+            op = @match my_symbol begin
+                sym && if sym ∈ keys(anons) end => anons[sym]
+                :♭♯ => x -> ♭♯_m * x # [1]
+                :dpsw => x -> wedge_dp10(x, star1_m*(dual_d1_m*x))
+                _ => default_dec_matrix_generate(s, my_symbol, hodge)
+            end
+            return (args...) -> op(args...)
+        end
+        return PodeSystem(decapode, plotvar, anons, s, sd, u0, sys_generate)
     end
-
-    return System(decapode, plotvar, anons, s, sd, u0, sys_generate)
 end
-
+export PodeSystems
 
 function run_sim(fm, u0, t0, constparam)
     prob = ODEProblem(fm, u0, (0, t0), constparam)
@@ -335,14 +340,14 @@ struct SimResult
 end
 export SimResult
 
-function SimResult(sol::ODESolution, system::System)
+function SimResult(sol::ODESolution, system::PodeSystem)
 
     points = collect(values(system.mesh.subparts.point.m));
 
     xlen = 51; ylen = 51;
 
     function at_time(sol::ODESolution, timeidx::Int)
-        [SVector(i, j, getproperty(sol.u[timeidx], system.statevar)[xlen*(i-1) + j]) for i in 1:xlen, j in 1:ylen]
+        [SVector(i, j, getproperty(sol.u[timeidx], system.plotvar)[xlen*(i-1) + j]) for i in 1:xlen, j in 1:ylen]
     end
 
     state_vals = map(1:length(sol.t)) do i

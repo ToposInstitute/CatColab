@@ -1,4 +1,4 @@
-{
+{ "plotVariables": ["u"],
   "diagram": [
     {
       "tag": "object",
