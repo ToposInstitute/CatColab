@@ -238,10 +238,9 @@ This returns a Decapode given a jsondiagram and a theory.
 function Decapode(diagram::AbstractVector{JSON3.Object}, theory::Theory; scalars=[])
     # initiatize decapode and its mapping between UUIDs and ACSet IDs
     pode = SummationDecapode(parse_decapode(quote end));
-    vars = Dict{String, Int}();
+    vars = Dict{String, Int}(); # UUID => ACSetID
     nc = [0]; # array is a mutable container
     anons = Dict{Symbol, Any}();
-
     # for each cell in the notebook, add it to the diagram 
     foreach(diagram) do cell
         @match cell begin
@@ -251,40 +250,44 @@ function Decapode(diagram::AbstractVector{JSON3.Object}, theory::Theory; scalars
             _ => throw(ImplError(cell[:content][:tag]))
         end
     end
-    pode, anons
+    return pode, anons, vars
 end
 export Decapode
 # the proper name for this constructor should be "SummationDecapode"
 
 # TODO we need to make this dynamic
-function create_mesh(plotvar::Symbol)
+function create_mesh()
   s = triangulated_grid(100,100,2,2,Point2{Float64})
   sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point2{Float64}}(s)
   subdivide_duals!(sd, Circumcenter())
 
-  c_dist = MvNormal([50, 50], LinearAlgebra.Diagonal(map(abs2, [7.5, 7.5])))
-  c = [pdf(c_dist, [p[1], p[2]]) for p in sd[:point]]
-  u0 = ComponentArray(; Dict(plotvar=>c)...)
-
-  return (s, sd, u0, ())
+  return (s, sd)
 end
 export create_mesh
 
+function init_conditions(plotvars::Vector{Symbol}, sd::HasDeltaSet)
+    c_dist = MvNormal([50, 50], LinearAlgebra.Diagonal(map(abs2, [7.5, 7.5])))
+    c = [pdf(c_dist, [p[1], p[2]]) for p in sd[:point]]
+    u0 = ComponentArray(; Dict([plotvar=>c for plotvar in plotvars])...)
+    return u0
+end
+
 struct PodeSystem
     pode::SummationDecapode
-    plotvar::Symbol
+    plotvar::Vector{Symbol}
     scalars::Dict{Symbol, Any} # closures # TODO rename scalars => anons
     mesh::HasDeltaSet
     dualmesh::HasDeltaSet
     init::Any # TODO specify. Is it always ComponentVector?
     generate::Any
+    uuiddict::Dict{Symbol, String}
 end
 export PodeSystem
 
 """
 Construct a vector of `PodeSystem` objects from a JSON string.
 """
-function PodeSystems(json_string::String)
+function PodeSystem(json_string::String)
     json_object = JSON3.read(json_string);
 
     # converts the JSON of (the fragment of) the theory
@@ -297,34 +300,37 @@ function PodeSystems(json_string::String)
     # any scalars?
     scalars = haskey(json_object, :scalars) ? json_object[:scalars] : [];
 
-    # pode, anons, and plotvars
-    decapode, anons = Decapode(diagram, theory; scalars=scalars);
+    # pode, anons, and vars (UUID => ACSetId)
+    decapode, anons, vars = Decapode(diagram, theory; scalars=scalars);
+    # plotting variables
     plotvars = Symbol.(json_object[:plotVariables])
-    
 
     # mesh and initial conditions
-    meshes = create_mesh.(plotvars)
-    ss, sds, u0s = [[m[1] for m in meshes],[m[2] for m in meshes],[m[3] for m in meshes]];
+    s, sd = create_mesh()
+    u0 = init_conditions(plotvars, sd)
 
-    # operators and generate function
-    map(zip(ss,sds,plotvars,u0s)) do (s,sd,plotvar,u0)
-        ♭♯_m = ♭♯_mat(sd);
-        wedge_dp10 = dec_wedge_product_dp(Tuple{1,0}, sd);
-        dual_d1_m = dec_mat_dual_differential(1, sd);
-        star1_m = dec_mat_hodge(1, sd, GeometricHodge()); 
-        function sys_generate(s, my_symbol; hodge=GeometricHodge())
-            op = @match my_symbol begin
-                sym && if sym ∈ keys(anons) end => anons[sym]
+    ♭♯_m = ♭♯_mat(sd);
+    wedge_dp10 = dec_wedge_product_dp(Tuple{1,0}, sd);
+    dual_d1_m = dec_mat_dual_differential(1, sd);
+    star1_m = dec_mat_hodge(1, sd, GeometricHodge()); 
+    function sys_generate(s, my_symbol; hodge=GeometricHodge())
+        op = @match my_symbol begin
+            sym && if sym ∈ keys(anons) end => anons[sym]
                 :♭♯ => x -> ♭♯_m * x # [1]
                 :dpsw => x -> wedge_dp10(x, star1_m*(dual_d1_m*x))
                 _ => default_dec_matrix_generate(s, my_symbol, hodge)
             end
-            return (args...) -> op(args...)
-        end
-        return PodeSystem(decapode, plotvar, anons, s, sd, u0, sys_generate)
+        return (args...) -> op(args...)
     end
+
+    # symbol => uuid. we need this to reassociate the var 
+    symb2uuid = Dict(
+        [(subpart(decapode, vars[key], :name) => key) for key ∈ keys(vars)]
+    );
+
+    return PodeSystem(decapode, plotvars, anons, s, sd, u0, sys_generate, symb2uuid)
 end
-export PodeSystems
+export PodeSystem
 
 function run_sim(fm, u0, t0, constparam)
     prob = ODEProblem(fm, u0, (0, t0), constparam)
@@ -334,7 +340,7 @@ export run_sim
 
 struct SimResult
     time::Vector{Float64}
-    state::Vector{Matrix{SVector{3, Float64}}}
+    state::Dict{String, Vector{Matrix{SVector{3, Float64}}}}
     x::Vector{Float64} # axis
     y::Vector{Float64}
 end
@@ -346,16 +352,20 @@ function SimResult(sol::ODESolution, system::PodeSystem)
 
     xlen = 51; ylen = 51;
 
-    function at_time(sol::ODESolution, timeidx::Int)
-        [SVector(i, j, getproperty(sol.u[timeidx], system.plotvar)[xlen*(i-1) + j]) for i in 1:xlen, j in 1:ylen]
+    function at_time(sol::ODESolution, plotvar::Symbol, timeidx::Int)
+        [SVector(i, j, getproperty(sol.u[timeidx], plotvar)[xlen*(i-1) + j]) for i in 1:xlen, j in 1:ylen]
     end
 
-    state_vals = map(1:length(sol.t)) do i
-        at_time(sol, i)
+    function state_vals(plotvar::Symbol)
+        map(1:length(sol.t)) do i
+            at_time(sol, plotvar, i)
+        end
     end
+    state_val_dict = Dict([(system.uuiddict[plotvar] => state_vals(plotvar)) for plotvar in system.plotvar])
 
-    # TODO engooden
-    SimResult(sol.t, state_vals, 0:xlen-1, 0:ylen-1)
+    # TODO engooden, return names to UUIDs
+    # Dict("UUID1" => VectorMatrixSVectr...)
+    SimResult(sol.t, state_val_dict, 0:xlen-1, 0:ylen-1)
 end
 # TODO generalize to HasDeltaSet
 
