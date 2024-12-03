@@ -3,8 +3,12 @@ import { For, Match, Show, Switch, createEffect, createSignal } from "solid-js";
 
 import "./fixed_table_editor.css";
 
-/** Schema for a column in a table editor. */
-export type ColumnSchema<Row> = {
+type ContentType = "string" | "boolean";
+
+type BaseColumnSchema<Row, Content> = {
+    /** Type of content displayed in the column. */
+    contentType: ContentType;
+
     /** Name of column. */
     name?: string;
 
@@ -12,21 +16,34 @@ export type ColumnSchema<Row> = {
     header?: boolean;
 
     /** Content of the column at the given row. */
-    content: (row: Row) => string;
+    content: (row: Row) => Content;
 
     /** Is the text valid as content for the column at the given row?
 
     If not specified, any content is considered valid.
      */
-    validate?: (row: Row, text: string) => boolean;
+    validate?: (row: Row, content: Content) => boolean;
 
     /** Sets the content for the columns at the given row, if possible.
 
     Returns whether setting the content was successful. If not specified, the
     column is not editable.
      */
-    setContent?: (row: Row, text: string) => boolean;
+    setContent?: (row: Row, content: Content) => boolean;
 };
+
+/** Schema for a text column in a table editor. */
+export type TextColumnSchema<Row> = BaseColumnSchema<Row, string> & {
+    contentType: "string";
+};
+
+/** Schema for a boolean column in a table editor. */
+export type BooleanColumnSchema<Row> = BaseColumnSchema<Row, boolean> & {
+    contentType: "boolean";
+};
+
+/** Schema for a column in a table editor. */
+export type ColumnSchema<Row> = TextColumnSchema<Row> | BooleanColumnSchema<Row>;
 
 /** Create schema for a column with numerical (floating point) data. */
 export const createNumericalColumn = <Row,>(args: {
@@ -36,7 +53,8 @@ export const createNumericalColumn = <Row,>(args: {
     default?: number;
     validate?: (row: Row, data: number) => boolean;
     setData?: (row: Row, data: number) => void;
-}): ColumnSchema<Row> => ({
+}): TextColumnSchema<Row> => ({
+    contentType: "string",
     name: args.name,
     header: args.header,
     content: (row) => {
@@ -115,14 +133,21 @@ function Cell<Row>(props: {
     const { row, schema } = destructure(props);
     return (
         <Show when={schema().setContent} fallback={schema().content(row())}>
-            <CellEditor row={row()} schema={schema()} />
+            <Switch>
+                <Match when={props.schema.contentType === "string" && props.schema}>
+                    {(schema) => <TextCellEditor row={row()} schema={schema()} />}
+                </Match>
+                <Match when={props.schema.contentType === "boolean" && props.schema}>
+                    {(schema) => <BooleanCellEditor row={row()} schema={schema()} />}
+                </Match>
+            </Switch>
         </Show>
     );
 }
 
-function CellEditor<Row>(props: {
+function TextCellEditor<Row>(props: {
     row: Row;
-    schema: ColumnSchema<Row>;
+    schema: TextColumnSchema<Row>;
 }) {
     const { row, schema } = destructure(props);
 
@@ -149,6 +174,22 @@ function CellEditor<Row>(props: {
             value={text()}
             onInput={(evt) => setText(evt.target.value)}
             onChange={(evt) => applyText(evt.target.value)}
+        />
+    );
+}
+
+function BooleanCellEditor<Row>(props: {
+    row: Row;
+    schema: BooleanColumnSchema<Row>;
+}) {
+    const { row, schema } = destructure(props);
+
+    return (
+        <input
+            class="fixed-table-cell-input"
+            type="checkbox"
+            checked={schema().content(row())}
+            onInput={(evt) => schema().setContent?.(row(), evt.currentTarget.checked)}
         />
     );
 }

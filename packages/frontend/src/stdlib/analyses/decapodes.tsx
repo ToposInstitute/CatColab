@@ -11,7 +11,12 @@ import {
     Warning,
     createNumericalColumn,
 } from "../../components";
-import { type DiagramJudgment, type LiveDiagramDocument, fromCatlogDiagram } from "../../diagram";
+import {
+    type DiagramJudgment,
+    type DiagramObjectDecl,
+    type LiveDiagramDocument,
+    fromCatlogDiagram,
+} from "../../diagram";
 import type { ModelJudgment, MorphismDecl } from "../../model";
 import type { DiagramAnalysisMeta } from "../../theory";
 import { PDEPlot2D, type PDEPlotData2D } from "../../visualization";
@@ -25,6 +30,7 @@ import "./simulation.css";
 /** Configuration for a Decapodes analysis of a diagram. */
 export type DecapodesContent = JupyterSettings & {
     scalars: Record<string, number>;
+    plotVariables: Record<string, boolean>;
 };
 
 type JupyterSettings = {
@@ -49,6 +55,7 @@ export function configureDecapodes(options: {
         component: (props) => <Decapodes {...props} />,
         initialContent: () => ({
             scalars: {},
+            plotVariables: {},
         }),
     };
 }
@@ -116,6 +123,10 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
         return result;
     });
 
+    const obDecls = createMemo<DiagramObjectDecl[]>(() =>
+        props.liveDiagram.formalJudgments().filter((jgmt) => jgmt.tag === "object"),
+    );
+
     const scalarDecls = createMemo<MorphismDecl[]>(() => {
         const liveModel = props.liveDiagram.liveModel;
         return liveModel.formalJudgments().filter((jgmt) =>
@@ -134,6 +145,7 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
 
     const scalarSchema: ColumnSchema<MorphismDecl>[] = [
         {
+            contentType: "string",
             header: true,
             name: "Scalar constant",
             content: (mor) => mor.name,
@@ -146,6 +158,26 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
                     content.scalars[mor.id] = value;
                 }),
         }),
+    ];
+
+    const plotVariableSchema: ColumnSchema<DiagramObjectDecl>[] = [
+        {
+            contentType: "string",
+            header: true,
+            name: "Variable",
+            content: (ob) => ob.name,
+        },
+        {
+            contentType: "boolean",
+            name: "Plot",
+            content: (ob) => props.content.plotVariables[ob.id] ?? false,
+            setContent: (ob, value) => {
+                props.changeContent((content) => {
+                    content.plotVariables[ob.id] = value;
+                });
+                return true;
+            },
+        },
     ];
 
     const header = () => (
@@ -180,6 +212,7 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
             <Foldable header={header()}>
                 <div class="parameters">
                     <FixedTableEditor rows={scalarDecls()} schema={scalarSchema} />
+                    <FixedTableEditor rows={obDecls()} schema={plotVariableSchema} />
                 </div>
             </Foldable>
             <Switch>
@@ -223,6 +256,9 @@ type SimulationData = {
 
     /** Mapping from IDs of scalar operations to numerical values. */
     scalars: Record<string, number>;
+
+    /** Variables to plot. */
+    plotVariables: Array<string>;
 };
 
 /** Julia code run after kernel is started. */
@@ -260,5 +296,6 @@ const makeSimulationData = (
         ),
         model: liveDiagram.liveModel.formalJudgments(),
         scalars: content.scalars,
+        plotVariables: Object.keys(content.plotVariables).filter((v) => content.plotVariables[v]),
     };
 };
