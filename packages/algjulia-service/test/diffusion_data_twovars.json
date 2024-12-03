@@ -1,0 +1,147 @@
+{ "plotVariables": ["C","dC/dt"],
+  "diagram": [
+    {
+      "id": "01932402-bcf5-7432-8d14-dbae9eabf907",
+      "name": "C",
+      "obType": {
+        "content": "Object",
+        "tag": "Basic"
+      },
+      "over": {
+        "content": "019323fa-49cb-7373-8c5d-c395bae4006d",
+        "tag": "Basic"
+      },
+      "tag": "object"
+    },
+    {
+      "id": "01932403-5b6c-7231-90d7-d7cece275eb2",
+      "name": "dC/dt",
+      "obType": {
+        "content": "Object",
+        "tag": "Basic"
+      },
+      "over": {
+        "content": "019323fa-49cb-7373-8c5d-c395bae4006d",
+        "tag": "Basic"
+      },
+      "tag": "object"
+    },
+    {
+      "cod": {
+        "content": "01932403-5b6c-7231-90d7-d7cece275eb2",
+        "tag": "Basic"
+      },
+      "dom": {
+        "content": "01932402-bcf5-7432-8d14-dbae9eabf907",
+        "tag": "Basic"
+      },
+      "id": "01932403-c4cd-7563-8ebd-080dd37a9c7e",
+      "morType": {
+        "content": {
+          "content": "Object",
+          "tag": "Basic"
+        },
+        "tag": "Hom"
+      },
+      "name": "",
+      "over": {
+        "content": "019323fb-3652-7e91-aee9-06187a954fc6",
+        "tag": "Basic"
+      },
+      "tag": "morphism"
+    },
+    {
+      "cod": {
+        "content": "01932403-5b6c-7231-90d7-d7cece275eb2",
+        "tag": "Basic"
+      },
+      "dom": {
+        "content": "01932402-bcf5-7432-8d14-dbae9eabf907",
+        "tag": "Basic"
+      },
+      "id": "01932404-10e5-7128-bb94-835e5d8d643f",
+      "morType": {
+        "content": {
+          "content": "Object",
+          "tag": "Basic"
+        },
+        "tag": "Hom"
+      },
+      "name": "",
+      "over": {
+        "content": "019323ff-1af6-79da-b776-8ee11c88a8a0",
+        "tag": "Basic"
+      },
+      "tag": "morphism"
+    }
+  ],
+  "model": [
+    {
+      "id": "019323fa-49cb-7373-8c5d-c395bae4006d",
+      "name": "0-form",
+      "obType": {
+        "content": "Object",
+        "tag": "Basic"
+      },
+      "tag": "object"
+    },
+    {
+      "id": "019323fa-783b-72c8-af20-c0718fde3ac8",
+      "name": "1-form",
+      "obType": {
+        "content": "Object",
+        "tag": "Basic"
+      },
+      "tag": "object"
+    },
+    {
+      "id": "019323fb-175b-784e-aab8-7b78fa576571",
+      "name": "2-form",
+      "obType": {
+        "content": "Object",
+        "tag": "Basic"
+      },
+      "tag": "object"
+    },
+    {
+      "cod": {
+        "content": "019323fa-49cb-7373-8c5d-c395bae4006d",
+        "tag": "Basic"
+      },
+      "dom": {
+        "content": "019323fa-49cb-7373-8c5d-c395bae4006d",
+        "tag": "Basic"
+      },
+      "id": "019323fb-3652-7e91-aee9-06187a954fc6",
+      "morType": {
+        "content": {
+          "content": "Object",
+          "tag": "Basic"
+        },
+        "tag": "Hom"
+      },
+      "name": "∂t",
+      "tag": "morphism"
+    },
+    {
+      "cod": {
+        "content": "019323fa-49cb-7373-8c5d-c395bae4006d",
+        "tag": "Basic"
+      },
+      "dom": {
+        "content": "019323fa-49cb-7373-8c5d-c395bae4006d",
+        "tag": "Basic"
+      },
+      "id": "019323ff-1af6-79da-b776-8ee11c88a8a0",
+      "morType": {
+        "content": {
+          "content": "Object",
+          "tag": "Basic"
+        },
+        "tag": "Hom"
+      },
+      "name": "Δ",
+      "tag": "morphism"
+    }
+  ]
+}

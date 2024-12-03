@@ -110,6 +110,33 @@ end
 end
 
 
+@testset "SimulationTwoVar" begin
+
+    json_string = read(joinpath(@__DIR__, "diffusion_data_twovars.json"), String);
+    systems = PodeSystems(json_string);
+
+    simulators = map(systems) do system evalsim(system.pode) end
+    fs = map(zip(simulators,systems)) do (simulator,system) simulator(system.dualmesh, default_dec_generate, DiagonalHodge()) end;
+
+    # time
+    solns = map(zip(fs,systems)) do (f,system) run_sim(f, system.init, 50.0, ComponentArray(k=0.5,)) end;
+    # returns ::ODESolution
+    #     - retcode
+    #     - interpolation
+    #     - t
+    #     - u::Vector{ComponentVector}
+
+    for soln in solns @test soln.retcode == ReturnCode.Success end
+  
+    results = map(zip(solns,systems)) do (soln,system) SimResult(soln, system) end;
+
+    for result in results @test typeof(result.state) == Vector{Matrix{SVector{3, Float64}}} end
+
+    jvs = JsonValue.(results);
+
+end
+
+
 #####
 
 data = open(JSON3.read, joinpath(@__DIR__, "diffusion_long_trip.json"), "r")
