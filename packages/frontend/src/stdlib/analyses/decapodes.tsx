@@ -1,3 +1,4 @@
+import type { IReplyErrorContent } from "@jupyterlab/services/lib/kernel/messages";
 import { Match, Switch, createMemo, createResource, onCleanup } from "solid-js";
 import { isMatching } from "ts-pattern";
 
@@ -79,7 +80,7 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
 
         if (reply.content.status === "error") {
             await kernel.shutdown();
-            throw new Error(reply.content.evalue);
+            throw new Error(formatError(reply.content));
         }
 
         return kernel;
@@ -115,7 +116,7 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
 
         const reply = await future.done;
         if (reply.content.status === "error") {
-            throw new Error(reply.content.evalue);
+            throw new Error(formatError(reply.content));
         }
         if (!result) {
             throw new Error("Result not received from the simulator");
@@ -220,13 +221,17 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
                 <Match when={kernel.error}>
                     {(error) => (
                         <Warning title="Failed to load AlgebraicJulia service">
-                            {error().message}
+                            <pre>{error().message}</pre>
                         </Warning>
                     )}
                 </Match>
                 <Match when={result.loading}>{"Running the simulation..."}</Match>
                 <Match when={result.error}>
-                    {(error) => <ErrorAlert title="Simulation error">{error().message}</ErrorAlert>}
+                    {(error) => (
+                        <ErrorAlert title="Simulation error">
+                            <pre>{error().message}</pre>
+                        </ErrorAlert>
+                    )}
                 </Match>
                 <Match when={props.liveDiagram.validatedDiagram()?.result.tag === "Err"}>
                     <ErrorAlert title="Modeling error">
@@ -238,6 +243,10 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
         </div>
     );
 }
+
+const formatError = (content: IReplyErrorContent): string =>
+    // Trackback list already includes `content.evalue`.
+    content.traceback.join("\n");
 
 /** JSON data returned from a Jupyter kernel. */
 type JsonDataContent<T> = {
