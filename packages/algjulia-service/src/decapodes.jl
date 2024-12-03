@@ -42,6 +42,9 @@ function to_decapode_theory(::Val{:Ob}, name::String)
         "0-form" => :Form0
         "1-form" => :Form1
         "2-form" => :Form2
+        "primal 0-form" => :Form0
+        "primal 1-form" => :Form1
+        "primal 2-form" => :Form2
         "dual 0-form" => :DualForm0
         "dual 1-form" => :DualForm1
         "dual 2-form" => :DualForm2
@@ -51,12 +54,13 @@ end
 
 """ Helper function to convert CatColab values (Homs) in Decapodes """
 function to_decapode_theory(::Val{:Hom}, name::String)
-    @match name begin
+    @match replace(name," " => "") begin
         "∂t" => :∂ₜ
         "∂ₜ" => :∂ₜ
         "Δ" => :Δ
         "d" => :d₀
         "d*" => :dual_d₁
+        "d̃₁" => :dual_d₁
         # \star on LHS
         "⋆" => :⋆₁
         "⋆⁻¹" => :⋆₀⁻¹
@@ -70,7 +74,8 @@ function to_decapode_theory(::Val{:Hom}, name::String)
         "⋆1" => :⋆₁
         "⋆2" => :⋆₂
         "♭♯" => :♭♯
-        "∧ᵈᵖ₁₀(-, ⋆d(-))" => :dpsw # dual-primal self-wedge
+        "∧ᵈᵖ₁₀(-,⋆d(-))" => :dpsw # dual-primal self-wedge
+        "-" => :neg
         x => throw(ImplError(x))
     end
 end
@@ -267,7 +272,7 @@ export create_mesh
 
 struct System
     pode::SummationDecapode
-    statevar::Symbol
+    plotvar::Symbol
     scalars::Dict{Symbol, Any} # closures # TODO rename scalars => anons
     mesh::HasDeltaSet
     dualmesh::HasDeltaSet
@@ -289,13 +294,13 @@ function System(json_string::String)
     # any scalars?
     scalars = haskey(json_object, :scalars) ? json_object[:scalars] : [];
 
-    # pode, anons, and statevar
+    # pode, anons, and plotvar
     decapode, anons = Decapode(diagram, theory; scalars=scalars);
-    statevars = infer_state_names(decapode);
-    statevar = length(statevars) == 1 ? first(statevars) : error("$statevars must be length one")
+    plotvar = json_object[:plotvar]
+    
 
     # mesh and initial conditions
-    s, sd, u0, _ = create_mesh(statevar);
+    s, sd, u0, _ = create_mesh(plotvar);
 
     # operators and generate function
     ♭♯_m = ♭♯_mat(sd);
@@ -312,7 +317,7 @@ function System(json_string::String)
 	    return (args...) -> op(args...)
     end
 
-    return System(decapode, statevar, anons, s, sd, u0, sys_generate)
+    return System(decapode, plotvar, anons, s, sd, u0, sys_generate)
 end
 
 
