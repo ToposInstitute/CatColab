@@ -34,3 +34,5 @@ pub mod one;
 pub mod simulate;
 pub mod stdlib;
 pub mod zero;
+
+pub mod next;
