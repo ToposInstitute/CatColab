@@ -11,7 +11,7 @@ http = "1.1.0"
 hyper = { version = "1.4.1", features = ["server"] }
 jsonrpsee = "0.24.6"
 jsonrpsee-server = "0.24.6"
-qubit = "0.10.0"
+qubit = "0.10.2"
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0.128"
 socketioxide = { version = "0.14.1", features = ["tracing"] }
@@ -22,5 +22,5 @@ tower = { version = "0.5.1", features = ["util"] }
 tower-http = { version = "0.6.1", features = ["cors", "trace"] }
 tracing = "0.1.40"
 tracing-subscriber = "0.3.18"
-ts-rs = { version = "9.0.1", features = ["serde-json-impl", "uuid-impl"] }
+ts-rs = { version = "10.1.0", features = ["serde-json-impl", "uuid-impl"] }
 uuid = { version = "1.10.0", features = ["v7", "serde"] }

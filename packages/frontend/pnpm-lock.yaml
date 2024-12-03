@@ -51,8 +51,8 @@ importers:
         specifier: ^0.24.1
         version: 0.24.1(solid-js@1.9.2)(typescript@5.6.2)
       '@qubit-rs/client':
-        specifier: ^0.4.4
-        version: 0.4.4
+        specifier: ^0.4.5
+        version: 0.4.5
       '@solid-primitives/active-element':
         specifier: ^2.0.20
         version: 2.0.20(solid-js@1.9.2)
@@ -1041,8 +1041,8 @@ packages:
   '@protobufjs/utf8@1.1.0':
     resolution: {integrity: sha512-Vvn3zZrhQZkkBE8LSuW3em98c0FwgO4nxzv6OdSxPKJIEKY2bGbHn+mhGIPerzI4twdxaP8/0+06HBpwf345Lw==}
 
-  '@qubit-rs/client@0.4.4':
-    resolution: {integrity: sha512-AdaF25aGRU4YkYYxxARH3eYlezzHhGECTFGZ5/zEc9y+iPxdIaaWf4/m8uEtdbzjMEsGaA4vVVd1kuriK6sDzQ==}
+  '@qubit-rs/client@0.4.5':
+    resolution: {integrity: sha512-L7pBAUs1sPWCkuoRq7rdwqXy1+iLOmOVhADxj+QoNY24yu4J1aiTUSlJJllK9rXRxfvkjRNEPSeUE5H+U3ncug==}
 
   '@rjsf/utils@5.22.4':
     resolution: {integrity: sha512-yQTdz5ryiYy258xCVthVPQ3DeaMzrRNrFcO8xvGHorp0/bLUxdTZ0iidXop49m3y8SaxxTZd398ZKWg2cqxiIA==}
@@ -4020,7 +4020,7 @@ snapshots:
 
   '@protobufjs/utf8@1.1.0': {}
 
-  '@qubit-rs/client@0.4.4': {}
+  '@qubit-rs/client@0.4.5': {}
 
   '@rjsf/utils@5.22.4(react@18.3.1)':
     dependencies:

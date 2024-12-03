@@ -3,7 +3,7 @@
     "version": "0.1.0",
     "author": "Evan Patterson <evan@epatters.org>",
     "license": "MIT",
-    "main": "index.ts",
+    "main": "src/index.ts",
     "scripts": {
         "build": "tsc -b"
     },

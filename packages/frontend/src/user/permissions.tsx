@@ -2,7 +2,7 @@ import { getAuth, signOut } from "firebase/auth";
 import { useAuth, useFirebaseApp } from "solid-firebase";
 import { type ComponentProps, Match, Show, Switch, createSignal } from "solid-js";
 
-import type { PermissionLevel, Permissions } from "catcolab-api";
+import type { Permissions } from "catcolab-api";
 import { Dialog, IconButton } from "../components";
 import { Login } from "./login";
 
@@ -154,6 +154,8 @@ const PrivatePermissionsButton = (props: {
         </IconButton>
     );
 };
+
+type PermissionLevel = Required<Permissions>["user"];
 
 const permissionAdjective = (level?: PermissionLevel) => permissionAdjectives[level ?? "Read"];
 
