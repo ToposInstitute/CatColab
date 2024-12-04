@@ -172,7 +172,7 @@ model = data[:model];
     
 end
 
-@testset "Simulation ..." begin
+@testset "Simulation 2" begin
 
     json_string = read(joinpath(@__DIR__, "diffusion_long_trip.json"), String);
     system = PodeSystem(json_string);
@@ -233,9 +233,39 @@ scalars = data[:scalars];
     
 end
 
-@testset "Simulation ..." begin
+@testset "Simulation 3" begin
 
     json_string = read(joinpath(@__DIR__, "diffusivity_constant.json"), String);
+    system = PodeSystem(json_string);
+
+    simulator = evalsim(system.pode)
+    # open("test_sim.jl", "w") do f
+        # write(f, string(gensim(system.pode)))
+    # end
+    # simulator = include("test_sim.jl");
+    
+    f = simulator(system.dualmesh, system.generate, DiagonalHodge());
+
+    soln = run_sim(f, system.init, 50.0, ComponentArray(k=0.5,));
+    # returns ::ODESolution
+    #     - retcode
+    #     - interpolation
+    #     - t
+    #     - u::Vector{ComponentVector}
+
+    @test soln.retcode == ReturnCode.Success
+ 
+    result = SimResult(soln, system);
+
+    @test typeof(result.state) == Dict{String, Vector{Matrix{SVector{3, Float64}}}}
+
+    jv = JsonValue(result);
+
+end
+
+@testset "Simulation from real front-end data" begin
+
+    json_string = read(joinpath(@__DIR__, "ns_vorticity.json"), String);
     system = PodeSystem(json_string);
 
     simulator = evalsim(system.pode)

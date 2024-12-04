@@ -9,7 +9,7 @@
 using ACSets
 using DiagrammaticEquations
 using Decapodes
-using Decapodes: dec_mat_dual_differential, dec_mat_hodge
+using Decapodes: dec_mat_dual_differential, dec_mat_inverse_hodge
 using CombinatorialSpaces
 
 # dependencies
@@ -58,12 +58,14 @@ function to_decapode_theory(::Val{:Hom}, name::String)
         "∂t" => :∂ₜ
         "∂ₜ" => :∂ₜ
         "Δ" => :Δ
+        "Δ⁻¹" => :Δ⁻¹
         "d" => :d₀
         "d*" => :dual_d₁
         "d̃₁" => :dual_d₁
         # \star on LHS
         "⋆" => :⋆₁
         "⋆⁻¹" => :⋆₀⁻¹
+        "⋆₀⁻¹" => :⋆₀⁻¹
         # \bigstar on LHS
         "★" => :⋆₁
         "★⁻¹" => :⋆₀⁻¹
@@ -265,10 +267,10 @@ function create_mesh()
 end
 export create_mesh
 
-function init_conditions(plotvars::Vector{Symbol}, sd::HasDeltaSet)
+function init_conditions(vars::Vector{Symbol}, sd::HasDeltaSet)
     c_dist = MvNormal([50, 50], LinearAlgebra.Diagonal(map(abs2, [7.5, 7.5])))
     c = [pdf(c_dist, [p[1], p[2]]) for p in sd[:point]]
-    u0 = ComponentArray(; Dict([plotvar=>c for plotvar in plotvars])...)
+    u0 = ComponentArray(; Dict([var=>c for var in vars])...)
     return u0
 end
 
@@ -287,7 +289,7 @@ export PodeSystem
 """
 Construct a vector of `PodeSystem` objects from a JSON string.
 """
-function PodeSystem(json_string::String)
+function PodeSystem(json_string::String,hodge=GeometricHodge())
     json_object = JSON3.read(json_string);
 
     # converts the JSON of (the fragment of) the theory
@@ -302,6 +304,7 @@ function PodeSystem(json_string::String)
 
     # pode, anons, and vars (UUID => ACSetId)
     decapode, anons, vars = Decapode(diagram, theory; scalars=scalars);
+    dot_rename!(decapode)
     uuid2symb = Dict(
         [key => (subpart(decapode, vars[key], :name)) for key ∈ keys(vars)]
     );
@@ -310,17 +313,24 @@ function PodeSystem(json_string::String)
     
     # mesh and initial conditions
     s, sd = create_mesh()
-    u0 = init_conditions(plotvars, sd)
+    u0 = init_conditions([infer_state_names(decapode) ; plotvars], sd)
 
     ♭♯_m = ♭♯_mat(sd);
     wedge_dp10 = dec_wedge_product_dp(Tuple{1,0}, sd);
     dual_d1_m = dec_mat_dual_differential(1, sd);
-    star1_m = dec_mat_hodge(1, sd, GeometricHodge()); 
-    function sys_generate(s, my_symbol; hodge=GeometricHodge())
+    star0_inv_m = dec_mat_inverse_hodge(0, sd, hodge)
+    Δ0 = Δ(0,sd);
+    fΔ0 = factorize(Δ0);
+
+    function sys_generate(s, my_symbol,hodge=hodge)
         op = @match my_symbol begin
             sym && if sym ∈ keys(anons) end => anons[sym]
                 :♭♯ => x -> ♭♯_m * x # [1]
-                :dpsw => x -> wedge_dp10(x, star1_m*(dual_d1_m*x))
+                :dpsw => x -> wedge_dp10(x, star0_inv_m[1]*(dual_d1_m[1]*x))
+                :Δ⁻¹ => x -> begin
+                y = fΔ0 \ x
+                y .- minimum(y)
+              end 
                 _ => default_dec_matrix_generate(s, my_symbol, hodge)
             end
         return (args...) -> op(args...)

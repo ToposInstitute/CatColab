@@ -96,7 +96,7 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
         if (!simulationData) {
             return undefined;
         }
-
+        console.log(JSON.parse(JSON.stringify(simulationData)));
         // Request that the kernel run a simulation with the given data.
         const future = kernel.requestExecute({
             code: makeSimulationCode(simulationData),
@@ -281,7 +281,7 @@ using AlgebraicJuliaService
 /** Julia code run to perform a simulation. */
 const makeSimulationCode = (data: SimulationData) => 
     `
-    system = only(PodeSystems(raw"""${JSON.stringify(data)}"""));
+    system = PodeSystem(raw"""${JSON.stringify(data)}""");
     simulator = evalsim(system.pode);
 
     f = simulator(system.dualmesh, system.generate, DiagonalHodge());
