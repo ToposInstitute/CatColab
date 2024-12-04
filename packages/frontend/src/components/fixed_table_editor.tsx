@@ -5,7 +5,7 @@ import "./fixed_table_editor.css";
 
 type ContentType = "string" | "boolean" | "enum";
 
-type BaseColumnSchema<Row, Content> = {
+type BaseColumnSchema = {
     /** Type of content displayed in the column. */
     contentType: ContentType;
 
@@ -14,49 +14,67 @@ type BaseColumnSchema<Row, Content> = {
 
     /** Is the column a header? */
     header?: boolean;
-
-    /** Content of the column at the given row. */
-    content: (row: Row) => Content;
-
-    /** Sets the content for the columns at the given row, if possible.
-
-    Returns whether setting the content was successful. If not specified, the
-    column is not editable.
-     */
-    setContent?: (row: Row, content: Content) => boolean;
 };
 
 /** Schema for a text column in a table editor.
 
 Each cell editor is a text input field.
  */
-export type TextColumnSchema<Row> = BaseColumnSchema<Row, string> & {
+export type TextColumnSchema<Row> = BaseColumnSchema & {
     contentType: "string";
+
+    /** Text content of the column at the given row. */
+    content: (row: Row) => string;
 
     /** Is the text valid as content for the column at the given row?
 
     If not specified, any content is considered valid.
      */
     validate?: (row: Row, text: string) => boolean;
+
+    /** Sets the content for the column at the given row, if possible.
+
+    Returns whether setting the content was successful. If not specified, the
+    column is not editable.
+     */
+    setContent?: (row: Row, content: string) => boolean;
 };
 
 /** Schema for a boolean column in a table editor.
 
 Each cell editor is a checkbox.
  */
-export type BooleanColumnSchema<Row> = BaseColumnSchema<Row, boolean> & {
+export type BooleanColumnSchema<Row> = BaseColumnSchema & {
     contentType: "boolean";
+
+    /** Content of the column at the given row, if defined. */
+    content: (row: Row) => boolean | null;
+
+    /** Sets the content for the column at the given row.
+
+    If not specified, the column is not editable.
+     */
+    setContent?: (row: Row, content: boolean) => void;
 };
 
 /** Schema for an enum column in a table editor.
 
 Each cell editor is a select box. The enum variants are assumed to be strings.
  */
-export type EnumColumnSchema<Row> = BaseColumnSchema<Row, string> & {
+export type EnumColumnSchema<Row> = BaseColumnSchema & {
     contentType: "enum";
 
     /** List of variants comprising the enum.  */
     variants: (row: Row) => string[];
+
+    /** Content of the column at the given row, if defined. */
+    content: (row: Row) => string | null;
+
+    /** Sets the content for the column at the given row.
+
+    If not specified, the column is not editable.
+     */
+    setContent?: (row: Row, content: string | null) => void;
 };
 
 /** Schema for a column in a table editor. */
@@ -210,7 +228,7 @@ function BooleanCellEditor<Row>(props: {
         <input
             class="fixed-table-cell-input"
             type="checkbox"
-            checked={schema().content(row())}
+            checked={schema().content(row()) ?? false}
             disabled={schema().setContent === undefined}
             onInput={(evt) => schema().setContent?.(row(), evt.currentTarget.checked)}
         />
@@ -226,10 +244,18 @@ function EnumCellEditor<Row>(props: {
     return (
         <select
             class="fixed-table-cell-select"
-            value={schema().content(row())}
+            value={schema().content(row()) ?? undefined}
             disabled={schema().setContent === undefined}
-            onInput={(evt) => schema().setContent?.(row(), evt.currentTarget.value)}
+            hidden={schema().variants(row()).length === 0}
+            onInput={(evt) => {
+                let value: string | null = evt.currentTarget.value;
+                if (value === "") {
+                    value = null;
+                }
+                schema().setContent?.(row(), value);
+            }}
         >
+            <option value="" />
             <For each={schema().variants(row())}>
                 {(variant) => <option value={variant}>{variant}</option>}
             </For>

@@ -201,15 +201,32 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
             content: (ob) => ob.name,
         },
         {
+            contentType: "enum",
+            name: "Initial/boundary",
+            variants() {
+                if (!props.content.domain) {
+                    return [];
+                }
+                return options()?.domains.get(props.content.domain)?.initialConditions ?? [];
+            },
+            content: (ob) => props.content.initialConditions[ob.id] ?? null,
+            setContent: (ob, value) =>
+                props.changeContent((content) => {
+                    if (value === null) {
+                        delete content.initialConditions[ob.id];
+                    } else {
+                        content.initialConditions[ob.id] = value;
+                    }
+                }),
+        },
+        {
             contentType: "boolean",
             name: "Plot",
             content: (ob) => props.content.plotVariables[ob.id] ?? false,
-            setContent: (ob, value) => {
+            setContent: (ob, value) =>
                 props.changeContent((content) => {
                     content.plotVariables[ob.id] = value;
-                });
-                return true;
-            },
+                }),
         },
     ];
 
@@ -247,7 +264,13 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
                 value={props.content.domain ?? undefined}
                 onInput={(evt) =>
                     props.changeContent((content) => {
-                        content.domain = evt.currentTarget.value;
+                        const domain = evt.currentTarget.value;
+                        if (content.domain === domain) {
+                            return;
+                        }
+                        content.domain = domain;
+                        content.mesh = options()?.domains.get(domain)?.meshes[0] ?? null;
+                        content.initialConditions = {};
                     })
                 }
             >
