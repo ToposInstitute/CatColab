@@ -19,7 +19,12 @@ using MLStyle
 using LinearAlgebra
 using ComponentArrays
 using Distributions # for initial conditions
+
+# meshing
+using CoordRefSystems
 using GeometryBasics: Point2, Point3
+Point3D = Point3{Float64};
+
 using OrdinaryDiffEq
 
 export infer_types!, evalsim, default_dec_generate, default_dec_matrix_generate,
@@ -310,15 +315,6 @@ function PodeSystem(json_string::String,hodge=GeometricHodge())
     mesh_builder = predefined_meshes[mesh_name]
     s, sd = create_mesh(mesh_builder)
 
-    # initial conditions
-    # ic_specs = json_object[:initialConditions];
-    # icdata = [];
-    # u0 = initial_conditions(
-    #         # uuid2symb[u 
-    #         Dict([uuid2symb[uuid] => icdata[ic_specs[uuid]] for uuid ∈ keys(ic_specs)]...),
-    #                         sd)
-    u0 = init_conditions(infer_state_names(decapode), sd)
-
     # initialize operators
     ♭♯_m = ♭♯_mat(sd);
     wedge_dp10 = dec_wedge_product_dp(Tuple{1,0}, sd);
@@ -327,6 +323,12 @@ function PodeSystem(json_string::String,hodge=GeometricHodge())
     Δ0 = Δ(0,sd);
     #fΔ0 = factorize(Δ0);
     # end initialize
+
+    # initial conditions
+    ic_specs = json_object[:initialConditions];
+    # Dict(:duu => "TaylorVortex")
+    dict = Dict([uuid2symb[string(uuid)] => ic_specs[string(uuid)] for uuid ∈ keys(ic_specs)]...)
+    u0 = initial_conditions(dict, mesh_builder, sd) 
 
     function sys_generate(s, my_symbol,hodge=hodge)
         op = @match my_symbol begin

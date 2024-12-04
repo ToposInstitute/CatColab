@@ -1,5 +1,3 @@
-# TODO UUID => :Gaussian w default method
-
 ## INTEROP
 
 """ Supported domains. """
@@ -45,12 +43,13 @@ Rectangle() = Rectangle(500, 5000, 1, 1);
 middle(r::Rectangle) = [r.max_x/2, r.max_y/2]
 
 # meshes associated with Spheres
-@data Spherical <: Domain begin
+@data Spheric <: Domain begin
     Sphere(dim::Int, radius::Float64)
     UV(minlat::Int, maxlat::Int, dlat::Float64, minlong::Int, maxlong::Int, dlong::Float64, radius::Float64)
 end
 
 Sphere(dim) = Sphere(dim, 1.0)
+UV() = UV(0, 180, 2.5, 0, 360, 2.5, 1.0)
 # TODO need default method for UV
 
 """ helper function for UV """
@@ -71,8 +70,7 @@ function create_mesh(r::Rectangle, division::SimplexCenter=Circumcenter())
     return (s, sd)
 end
 
-# function create_mesh(r::Periodic, division::SimplexCenter=Circumcenter())
-# end
+# function create_mesh(r::Periodic, division::SimplexCenter=Circumcenter()) end
 
 function create_mesh(m::Sphere, division::SimplexCenter=Circumcenter())
     s = loadmesh(Icosphere(m.dim, m.radius));
@@ -95,17 +93,18 @@ const predefined_meshes = Dict(
     :Icosphere6 => Sphere(6, 1.0),
     :Icosphere7 => Sphere(7, 1.0),
     :Icosphere8 => Sphere(8, 1.0),
-    # TODO
-    # :UV => UV
+    :UV => UV()
 )
 
 ## INITIAL CONDITIONS
 
-# TODO we want a mapping between symbols and their initial conditions, which may vary.
-# i.e. Dict{Symbol, InitialCondition}. This first pass assumes the inverse; InitialConditions carry a reference to their variables. This is a little inflexible.
+# TAYLOR VORTEX CODE
+include("ns_helper.jl")
+####
 
 @data InitialConditionsData begin
     GaussianData(μ::Vector{Float64}, Σ::Diagonal{Float64, Vector{Float64}})
+    TaylorVortexData(lat::Float64, vortices::Int, p::AbstractVortexParams)
 end
 
 function GaussianData(μ::Vector{Float64}, Σ::Vector{Float64})
@@ -118,37 +117,59 @@ function GaussianData(r::Rectangle)
     GaussianData(μ, μ/10)
 end
 
+""" Normal distribution should understand GaussianData """
 Distributions.MvNormal(ξ::GaussianData) = MvNormal(ξ.μ, ξ.Σ)
 
-abstract type InitialConditionData end
+TaylorVortexData() = TaylorVortexData(0.2, 2, TaylorVortexParams(0.5, 0.1))
 
-@data PlanarIC <: InitialConditionData begin
+@data InitialConditions begin
+    # planar
     GaussianIC(r::Rectangle, ξ::GaussianData)
+    # spherical
+    TaylorVortexIC(d::Sphere, ξ::TaylorVortexData)
+    SixVortexIC(m::Sphere, data::Any)
 end
 
 # DEFAULT METHOD
 GaussianIC(r::Rectangle) = GaussianIC(r, GaussianData(r))
+TaylorVortexIC(d::Sphere) = TaylorVortexIC(d, TaylorVortexData())
 
-@data SphericalIC <: InitialConditionData begin
-    TaylorVortexIC(m::Sphere, data::Any)
-    SixVortexIC(m::Sphere, data::Any)
+""" Takes a string, a domain, and a mesh and returns the initial conditios object associated to it.
+
+Example:
+```
+associate("TaylorVortex", Sphere(6, 1.0), sd) == TaylorVortexIC(Sphere(6, 1.0), sd)
+```
+"""
+function associate(str::String, d::Domain, sd::HasDeltaSet)
+   @match str begin
+       "TaylorVortex" => TaylorVortexIC(d)
+       _ => error("$str is not implemented")
+   end
 end
 
+""" default method """
 function initial_conditions end; export initial_conditions
 
-# TODO aspirational method
-function initial_conditions(initial_conditions::Dict{String, Symbol}, uuid2symb::Dict{String, Symbol}, sd::HasDeltaSet)
-    # convert to Dict
+""" associates the values in a dictionary to their initial condition flags, and passes the output to initial_conditions
+"""
+function initial_conditions(ics::Dict{Symbol, String}, d::Domain, sd::HasDeltaSet) 
+    ic_dict = Dict([
+        var => associate(ics[var], d, sd) for var in keys(ics)
+    ]...)
+    # Now we have a mapping between variables and their initial condition specs.
+    initial_conditions(ic_dict, sd)
 end
 
-function initial_conditions(ics::Dict{Symbol, InitialConditionData}, sd::HasDeltaSet)
+function initial_conditions(ics::Dict{Symbol,<:InitialConditions}, sd::HasDeltaSet)
+    # XXX ComponentArray(duu = init0, ψ = init1)
     u0 = ComponentArray(; Dict([
             var => initial_conditions(ics[var], sd) for var ∈ keys(ics)
          ])...)
     return u0
 end
 
-function initial_conditions(x::InitialConditionData, args...)
+function initial_conditions(x::InitialConditions, args...)
     throw(ImplError("These initial conditions ($(x)) are"))
 end
 
@@ -158,11 +179,21 @@ function initial_conditions(ics::GaussianIC, sd::HasDeltaSet)
     return c
 end
 
-function initial_conditions(ics::TaylorVortexIC, sd::HasDeltaSet) end
+function initial_conditions(ics::SixVortexIC, sd::HasDeltaSet) 
+    X = vort_ring(0.4, 6, PointVortexParams(3.0, 0.15), point_vortex) 
+end
 
-function initial_conditions(ics::SixVortexIC, sd::HasDeltaSet) end
+function vort_ring(ics::TaylorVortexIC, sd::HasDeltaSet)
+    vort_ring(ics.d, ics.ξ.lat, ics.ξ.vortices, ics.ξ.p, sd, taylor_vortex)
+end
 
-
+function initial_conditions(ics::TaylorVortexIC, sd::HasDeltaSet)
+    # TODO prefer not to load `sd` but che sara sara
+    s0 = dec_hodge_star(0, sd, GeometricHodge());
+    X = vort_ring(ics, sd)
+    du = s0 * X
+    return du
+end
 
 # XXX
 # function init_conditions(vars::Vector{Symbol}, sd::HasDeltaSet)

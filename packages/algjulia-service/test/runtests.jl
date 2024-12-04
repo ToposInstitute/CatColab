@@ -1,11 +1,11 @@
 using Test
-
+#
 using AlgebraicJuliaService
 using ACSets
 using CombinatorialSpaces
 using Decapodes
 using DiagrammaticEquations
-
+#
 using MLStyle
 using JSON3
 using ComponentArrays
@@ -144,7 +144,7 @@ end
 
 #####
 
-data = open(JSON3.read, joinpath(@__DIR__,"diffusion_long_trip.json"), "r")
+data = open(JSON3.read, joinpath(@__DIR__, "diffusion_long_trip.json"), "r")
 diagram = data[:diagram];
 model = data[:model];
 
