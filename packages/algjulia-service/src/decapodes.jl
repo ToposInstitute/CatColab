@@ -31,83 +31,8 @@ end
 
 Base.showerror(io::IO, e::ImplError) = print(io, "$(e.name) not implemented")
 
-## Geometry
-
-""" Supported domains. """
-const domain_names = [:Plane, :Sphere]
-
-""" Mapping from supported domains to meshes for the domain. """
-const mesh_names = Dict(
-    :Plane => [:Rectangle, :Periodic],
-    :Sphere => [:Icosphere6, :Icosphere7, :Icosphere8, :UV],
-)
-
-""" Mapping from supported domains to initial/boundary conditions. """
-const initial_condition_names = Dict(
-    :Plane => [:Gaussian],
-    :Sphere => [:TaylorVortex, :SixVortex],
-)
-
-""" Supported geometries, in the JSON format expected by the frontend. """
-function supported_decapodes_geometries()
-    domains = map(domain_names) do domain
-        Dict(
-            :name => domain,
-            :meshes => mesh_names[domain],
-            :initialConditions => initial_condition_names[domain],
-        )
-    end
-    Dict(:domains => domains)
-end
-export supported_decapodes_geometries
-
-abstract type Domain end
-
-# meshes associated with Planes
-@data Planar <: Domain begin
-    Rectangle(max_x::Int, max_y::Int, dx::Float64, dy::Float64)
-    Periodic
-end
-
-# meshes associated with Spheres
-@data Spherical <: Domain begin
-    Sphere(dim::Int, radius::Float64) # no default arguments in MLStyle
-    UV
-end
-
-function create_mesh end; export create_mesh
-
-function create_mesh(r::Rectangle, division::SimplexCenter=Circumcenter())
-    s = triangulated_grid(r.max_x, r.max_y, r.dx, r.dy, Point2{Float64})
-    sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point2{Float64}}(s)
-    subdivide_duals!(sd, division)
-    return (s, d)
-end
-
-function create_mesh(r::Periodic, division::SimplexCenter=Circumcenter()) end
-
-function create_mesh(s::Sphere, division::SimplexCenter=Circumcenter())
-    s = loadmesh(Icosphere(s.dim, s.radius));
-    sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point2{Float64}}(s)
-    subdivide_duals!(sd, division)
-    return (s, sd)
-end
-
-function create_mesh(s::UV, division::SimplexCenter=Circumcenter())
-    s, _, _ = makeSphere(0, 180, 2.5, 0, 360, 2.5, RADIUS);
-    sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point2{Float64}}(s)
-    subdivide_duals!(sd, division)
-    return (s, sd)
-end
-
-# XXX old function to be deprecated
-function create_mesh()
-  s = triangulated_grid(100,100,2,2,Point2{Float64})
-  sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point2{Float64}}(s)
-  subdivide_duals!(sd, Circumcenter())
-  return (s, sd)
-end
-export create_mesh
+# funcitons for geometry and initial conditions
+include("geometry_and_init.jl")
 
 ## THEORY BUILDING
 
@@ -349,7 +274,7 @@ struct PodeSystem
     scalars::Dict{Symbol, Any} # closures # TODO rename scalars => anons
     mesh::HasDeltaSet
     dualmesh::HasDeltaSet
-    init::Any # TODO specify. Is it always ComponentVector?
+    init::ComponentArray # TODO Is it always ComponentVector?
     generate::Any
     uuiddict::Dict{Symbol, String}
 end
@@ -380,16 +305,27 @@ function PodeSystem(json_string::String,hodge=GeometricHodge())
     # plotting variables
     plotvars = [uuid2symb[uuid] for uuid in json_object[:plotVariables]];
     
-    # mesh and initial conditions
+    # mesh
+    # TODO pass the domain, mesh data
     s, sd = create_mesh()
+
+    # initial conditions
+    # ic_specs = json_object[:initialConditions];
+    # icdata = [];
+    # u0 = initial_conditions(
+    #         # uuid2symb[u 
+    #         Dict([uuid2symb[uuid] => icdata[ic_specs[uuid]] for uuid ∈ keys(ic_specs)]...),
+    #                         sd)
     u0 = init_conditions(infer_state_names(decapode), sd)
 
+    # initialize operators
     ♭♯_m = ♭♯_mat(sd);
     wedge_dp10 = dec_wedge_product_dp(Tuple{1,0}, sd);
     dual_d1_m = dec_mat_dual_differential(1, sd);
     star0_inv_m = dec_mat_inverse_hodge(0, sd, hodge)
     Δ0 = Δ(0,sd);
     fΔ0 = factorize(Δ0);
+    # end initialize
 
     function sys_generate(s, my_symbol,hodge=hodge)
         op = @match my_symbol begin
