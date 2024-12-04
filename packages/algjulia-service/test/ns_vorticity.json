@@ -532,8 +532,13 @@
             "tag": "morphism"
         }
     ],
-    "scalars": {},
+    "domain": "Sphere",
+    "mesh": "Icosphere6",
+    "initialConditions": {
+        "01938fb0-449c-7614-8086-2384cf6bc784": "TaylorVortex"
+    },
     "plotVariables": [
         "01938fb0-449c-7614-8086-2384cf6bc784"
-    ]
+    ],
+    "scalars": {}
 }
