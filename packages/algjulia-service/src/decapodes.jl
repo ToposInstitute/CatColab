@@ -344,7 +344,7 @@ function PodeSystem(json_string::String,hodge=GeometricHodge())
     
     # mesh and initial conditions
     s, sd = create_mesh()
-    u0 = init_conditions([infer_state_names(decapode) ; plotvars], sd)
+    u0 = init_conditions(infer_state_names(decapode), sd)
 
     ♭♯_m = ♭♯_mat(sd);
     wedge_dp10 = dec_wedge_product_dp(Tuple{1,0}, sd);
