@@ -433,7 +433,7 @@ const makeSimulationData = (
     }
 
     const { domain, mesh, initialConditions, plotVariables, scalars } = content;
-    if (domain === null || mesh === null) {
+    if (domain === null || mesh === null || !Object.values(plotVariables).some((x) => x)) {
         return undefined;
     }
 
