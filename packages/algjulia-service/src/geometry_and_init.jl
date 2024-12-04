@@ -76,7 +76,7 @@ end
 
 function create_mesh(m::Sphere, division::SimplexCenter=Circumcenter())
     s = loadmesh(Icosphere(m.dim, m.radius));
-    sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point2{Float64}}(s)
+    sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point3{Float64}}(s)
     subdivide_duals!(sd, division)
     return (s, sd)
 end
