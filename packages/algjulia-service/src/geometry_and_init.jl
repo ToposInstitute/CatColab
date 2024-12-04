@@ -143,6 +143,7 @@ associate("TaylorVortex", Sphere(6, 1.0), sd) == TaylorVortexIC(Sphere(6, 1.0), 
 """
 function associate(str::String, d::Domain, sd::HasDeltaSet)
    @match str begin
+       "Gaussian" => GaussianIC(d)
        "TaylorVortex" => TaylorVortexIC(d)
        _ => error("$str is not implemented")
    end
@@ -174,7 +175,7 @@ function initial_conditions(x::InitialConditions, args...)
 end
 
 function initial_conditions(ics::GaussianIC, sd::HasDeltaSet)
-    c_dist = MvNormal(ics)
+    c_dist = MvNormal(ics.ξ)
     c = [pdf(c_dist, [p[1], p[2]]) for p ∈ sd[:point]]
     return c
 end
@@ -188,7 +189,7 @@ function vort_ring(ics::TaylorVortexIC, sd::HasDeltaSet)
 end
 
 function initial_conditions(ics::TaylorVortexIC, sd::HasDeltaSet)
-    # TODO prefer not to load `sd` but che sara sara
+    # TODO prefer not to load `s0` here but che sara sara
     s0 = dec_hodge_star(0, sd, GeometricHodge());
     X = vort_ring(ics, sd)
     du = s0 * X
