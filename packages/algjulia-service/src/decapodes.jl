@@ -281,7 +281,7 @@ end
 export PodeSystem
 
 """
-Construct a vector of `PodeSystem` objects from a JSON string.
+Construct a `PodeSystem` object from a JSON string.
 """
 function PodeSystem(json_string::String,hodge=GeometricHodge())
     json_object = JSON3.read(json_string);
@@ -379,7 +379,7 @@ function SimResult(sol::ODESolution, system::PodeSystem)
     end
     state_val_dict = Dict([(system.uuiddict[plotvar] => state_vals(plotvar)) for plotvar in system.plotvar])
 
-    # TODO engooden, return names to UUIDs
+    # TODO engooden
     # Dict("UUID1" => VectorMatrixSVectr...)
     SimResult(sol.t, state_val_dict, 0:xlen-1, 0:ylen-1)
 end
