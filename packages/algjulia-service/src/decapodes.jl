@@ -325,7 +325,7 @@ function PodeSystem(json_string::String,hodge=GeometricHodge())
     dual_d1_m = dec_mat_dual_differential(1, sd);
     star0_inv_m = dec_mat_inverse_hodge(0, sd, hodge)
     Δ0 = Δ(0,sd);
-    fΔ0 = factorize(Δ0);
+    #fΔ0 = factorize(Δ0);
     # end initialize
 
     function sys_generate(s, my_symbol,hodge=hodge)
@@ -334,7 +334,7 @@ function PodeSystem(json_string::String,hodge=GeometricHodge())
                 :♭♯ => x -> ♭♯_m * x # [1]
                 :dpsw => x -> wedge_dp10(x, star0_inv_m[1]*(dual_d1_m[1]*x))
                 :Δ⁻¹ => x -> begin
-                y = fΔ0 \ x
+                y = Δ0 \ x
                 y .- minimum(y)
               end 
                 _ => default_dec_matrix_generate(s, my_symbol, hodge)
@@ -357,7 +357,7 @@ export run_sim
 
 struct SimResult
     time::Vector{Float64}
-    state::Dict{String, Vector{Matrix{SVector{3, Float64}}}}
+    state::Dict{String, Vector{AbstractArray{SVector{3, Float64}}}}
     x::Vector{Float64} # axis
     y::Vector{Float64}
 end
@@ -366,11 +366,25 @@ export SimResult
 function SimResult(sol::ODESolution, system::PodeSystem)
 
     points = collect(values(system.mesh.subparts.point.m));
+    geometry = length(points[1]) == 2 ? :Rect : :Sphere
 
-    xlen = 51; ylen = 51;
-
+    function grid(pt3,grid_size)
+        pt2 = [(pt3[1]+1)/2,(pt3[2]+1)/2]
+        [round(Int,pt2[1]*grid_size[1]),round(Int,pt2[2]*grid_size[2])]
+    end
+    l = 0
     function at_time(sol::ODESolution, plotvar::Symbol, timeidx::Int)
-        [SVector(i, j, getproperty(sol.u[timeidx], plotvar)[xlen*(i-1) + j]) for i in 1:xlen, j in 1:ylen]
+        if geometry == :Rect 
+            l = 51
+            return [SVector(i, j, getproperty(sol.u[timeidx], plotvar)[l*(i-1) + j]) for i in 1:l, j in 1:l]
+        else 
+            northern_indices = filter(i -> points[i][3]>0,keys(points))
+            l = 100
+            return map(northern_indices) do n
+                i,j = grid(points[n], [l,l])
+                SVector(i, j, getproperty(sol.u[timeidx], plotvar)[n])
+            end
+        end
     end
 
     function state_vals(plotvar::Symbol)
@@ -382,7 +396,7 @@ function SimResult(sol::ODESolution, system::PodeSystem)
 
     # TODO engooden
     # Dict("UUID1" => VectorMatrixSVectr...)
-    SimResult(sol.t, state_val_dict, 0:xlen-1, 0:ylen-1)
+    SimResult(sol.t, state_val_dict, 0:l-1, 0:l-1)
 end
 # TODO generalize to HasDeltaSet
 
