@@ -22,13 +22,44 @@ using Distributions # for initial conditions
 using GeometryBasics: Point2, Point3
 using OrdinaryDiffEq
 
-export infer_types!, evalsim, default_dec_generate, default_dec_matrix_generate, DiagonalHodge, ComponentArray
+export infer_types!, evalsim, default_dec_generate, default_dec_matrix_generate,
+    DiagonalHodge, ComponentArray
 
 struct ImplError <: Exception
     name::String
 end
 
 Base.showerror(io::IO, e::ImplError) = print(io, "$(e.name) not implemented")
+
+## Geometry
+
+""" Supported domains. """
+const domain_names = [:Plane, :Sphere]
+
+""" Mapping from supported domains to meshes for the domain. """
+const mesh_names = Dict(
+    :Plane => [:Rectangle, :Periodic],
+    :Sphere => [:Icosphere6, :Icosphere7, :Icosphere8, :UV],
+)
+
+""" Mapping from supported domains to initial/boundary conditions. """
+const initial_condition_names = Dict(
+    :Plane => [:Gaussian],
+    :Sphere => [:TaylorVortex, :SixVortex],
+)
+
+""" Supported geometries, in the JSON format expected by the frontend. """
+function supported_decapodes_geometries()
+    domains = map(domain_names) do domain
+        Dict(
+            :name => domain,
+            :meshes => mesh_names[domain],
+            :initialConditions => initial_condition_names[domain],
+        )
+    end
+    Dict(:domains => domains)
+end
+export supported_decapodes_geometries
 
 ## THEORY BUILDING
 
