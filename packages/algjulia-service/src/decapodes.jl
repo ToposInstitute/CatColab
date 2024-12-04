@@ -61,6 +61,54 @@ function supported_decapodes_geometries()
 end
 export supported_decapodes_geometries
 
+abstract type Domain end
+
+# meshes associated with Planes
+@data Planar <: Domain begin
+    Rectangle(max_x::Int, max_y::Int, dx::Float64, dy::Float64)
+    Periodic
+end
+
+# meshes associated with Spheres
+@data Spherical <: Domain begin
+    Sphere(dim::Int, radius::Float64) # no default arguments in MLStyle
+    UV
+end
+
+function create_mesh end; export create_mesh
+
+function create_mesh(r::Rectangle, division::SimplexCenter=Circumcenter())
+    s = triangulated_grid(r.max_x, r.max_y, r.dx, r.dy, Point2{Float64})
+    sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point2{Float64}}(s)
+    subdivide_duals!(sd, division)
+    return (s, d)
+end
+
+function create_mesh(r::Periodic, division::SimplexCenter=Circumcenter()) end
+
+function create_mesh(s::Sphere, division::SimplexCenter=Circumcenter())
+    s = loadmesh(Icosphere(s.dim, s.radius));
+    sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point2{Float64}}(s)
+    subdivide_duals!(sd, division)
+    return (s, sd)
+end
+
+function create_mesh(s::UV, division::SimplexCenter=Circumcenter())
+    s, _, _ = makeSphere(0, 180, 2.5, 0, 360, 2.5, RADIUS);
+    sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point2{Float64}}(s)
+    subdivide_duals!(sd, division)
+    return (s, sd)
+end
+
+# XXX old function to be deprecated
+function create_mesh()
+  s = triangulated_grid(100,100,2,2,Point2{Float64})
+  sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point2{Float64}}(s)
+  subdivide_duals!(sd, Circumcenter())
+  return (s, sd)
+end
+export create_mesh
+
 ## THEORY BUILDING
 
 """ Functions to build a dictionary associating ids in the theory to elements in the model"""
@@ -287,16 +335,6 @@ function Decapode(diagram::AbstractVector{JSON3.Object}, theory::Theory; scalars
 end
 export Decapode
 # the proper name for this constructor should be "SummationDecapode"
-
-# TODO we need to make this dynamic
-function create_mesh()
-  s = triangulated_grid(100,100,2,2,Point2{Float64})
-  sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point2{Float64}}(s)
-  subdivide_duals!(sd, Circumcenter())
-
-  return (s, sd)
-end
-export create_mesh
 
 function init_conditions(vars::Vector{Symbol}, sd::HasDeltaSet)
     c_dist = MvNormal([50, 50], LinearAlgebra.Diagonal(map(abs2, [7.5, 7.5])))
