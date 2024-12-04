@@ -305,9 +305,10 @@ function PodeSystem(json_string::String,hodge=GeometricHodge())
     # plotting variables
     plotvars = [uuid2symb[uuid] for uuid in json_object[:plotVariables]];
     
-    # mesh
-    # TODO pass the domain, mesh data
-    s, sd = create_mesh()
+    # create the mesh
+    mesh_name = Symbol(json_object[:mesh])
+    mesh_builder = predefined_meshes[mesh_name]
+    s, sd = create_mesh(mesh_builder)
 
     # initial conditions
     # ic_specs = json_object[:initialConditions];

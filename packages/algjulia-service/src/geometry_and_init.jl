@@ -68,7 +68,7 @@ function create_mesh(r::Rectangle, division::SimplexCenter=Circumcenter())
     s = triangulated_grid(r.max_x, r.max_y, r.dx, r.dy, Point2{Float64})
     sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point2{Float64}}(s)
     subdivide_duals!(sd, division)
-    return (s, d)
+    return (s, sd)
 end
 
 # function create_mesh(r::Periodic, division::SimplexCenter=Circumcenter())
@@ -88,14 +88,16 @@ function create_mesh(m::UV, division::SimplexCenter=Circumcenter())
     return (s, sd)
 end
 
-# XXX old function to be deprecated
-function create_mesh()
-  s = triangulated_grid(100,100,2,2,Point2{Float64})
-  sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point2{Float64}}(s)
-  subdivide_duals!(sd, Circumcenter())
-  return (s, sd)
-end
-export create_mesh
+## Prefined meshes
+
+const predefined_meshes = Dict(
+    :Rectangle => Rectangle(100, 100, 2, 2),
+    :Icosphere6 => Sphere(6, 1.0),
+    :Icosphere7 => Sphere(7, 1.0),
+    :Icosphere8 => Sphere(8, 1.0),
+    # TODO
+    # :UV => UV
+)
 
 ## INITIAL CONDITIONS
 
