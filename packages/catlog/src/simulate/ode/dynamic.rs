@@ -30,7 +30,7 @@ impl<'a, 'b> VectorFieldEnv<'a, 'b> {
     }
 }
 
-impl<'a, 'b> Env for VectorFieldEnv<'a, 'b> {
+impl Env for VectorFieldEnv<'_, '_> {
     type Var = Quantity;
 
     fn lookup(&self, t: &Self::Var) -> f32 {
