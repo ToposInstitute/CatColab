@@ -417,7 +417,7 @@ const makeSimulationCode = (data: SimulationData) =>
 
     f = simulator(system.dualmesh, system.generate, DiagonalHodge());
 
-    soln = run_sim(f, system.init, 100.0, ComponentArray(k=0.5,));
+    soln = run_sim(f, system.init, 11.0, ComponentArray(k=0.5,));
 
     JsonValue(SimResult(soln, system))
     `;

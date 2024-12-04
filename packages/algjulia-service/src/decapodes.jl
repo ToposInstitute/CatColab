@@ -80,12 +80,12 @@ function to_decapode_theory(::Val{:Hom}, name::String)
         "★⁻¹" => :⋆₀⁻¹
         "diffusivity" => :diffusivity
         # new
-        "d01" => :d₀
+        "d₀" => :d₀
         "d12" => :d₁
         "⋆1" => :⋆₁
         "⋆2" => :⋆₂
         "♭♯" => :♭♯
-        "∧ᵈᵖ₁₀(-,⋆d(-))" => :dpsw # dual-primal self-wedge
+        "lamb" => :dpsw # dual-primal self-wedge
         "-" => :neg
         x => throw(ImplError(x))
     end
@@ -353,7 +353,7 @@ export PodeSystem
 
 function run_sim(fm, u0, t0, constparam)
     prob = ODEProblem(fm, u0, (0, t0), constparam)
-    soln = solve(prob, Tsit5(), saveat=0.1)
+    soln = solve(prob, Tsit5(), saveat=0.01)
 end
 export run_sim
 
@@ -413,3 +413,4 @@ function Base.reshape(::Heatmap, data)
     l = floor(Int64, sqrt(length(data)))
     reshape(data, l, l)
 end
+#∧ᵈᵖ₁₀(-,⋆d(-))
