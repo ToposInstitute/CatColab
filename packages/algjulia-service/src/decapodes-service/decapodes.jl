@@ -37,7 +37,8 @@ end
 Base.showerror(io::IO, e::ImplError) = print(io, "$(e.name) not implemented")
 
 # funcitons for geometry and initial conditions
-include("geometry_and_init.jl")
+include("geometry.jl")
+include("initial_conditions.jl")
 
 ## THEORY BUILDING
 
@@ -111,8 +112,7 @@ export IsObject, IsMorphism
 """ Obs, Homs """
 abstract type ElementData end
 
-""" Struct capturing the name of the object and its relevant information. ElementData may be objects or homs, each of which has different data.
-"""
+""" Struct capturing the name of the object and its relevant information. ElementData may be objects or homs, each of which has different data. """
 struct TheoryElement
     name::Union{Symbol, Nothing}
     val::Union{ElementData, Nothing}
@@ -137,7 +137,7 @@ end
 export HomData
 # TODO type dom/cod
 
-"""Struct wrapping a dictionary"""
+""" Struct wrapping a dictionary """
 struct Theory
     data::Dict{String, TheoryElement}
     function Theory()
@@ -209,7 +209,7 @@ function add_to_pode!(d::SummationDecapode,
     return d
 end
 
-function op1_name(theory::Theory, content::JSON3.Object)
+function Base.nameof(theory::Theory, content::JSON3.Object)
     Symbol(theory.data[content[:over][:content]].name)
 end
 
@@ -221,11 +221,12 @@ function add_to_pode!(d::SummationDecapode,
         scalars::Any,
         anons::Dict{Symbol, Any},
         ::Val{:Hom})
+
     dom = content[:dom][:content]; cod = content[:cod][:content]
     # TODO we need a safe way to fail this
     if haskey(vars, dom) && haskey(vars, cod)
         # get the name of the Op1 and add it to the theory
-        op1 = op1_name(theory, content)
+        op1 = nameof(theory, content)
         add_part!(d, :Op1, src=vars[dom], tgt=vars[cod], op1=op1)
         # we need to add an inclusion to the TVar table
         if op1 == :∂ₜ
@@ -266,17 +267,11 @@ end
 export Decapode
 # the proper name for this constructor should be "SummationDecapode"
 
-function init_conditions(vars::Vector{Symbol}, sd::HasDeltaSet)
-    c_dist = MvNormal([50, 50], LinearAlgebra.Diagonal(map(abs2, [7.5, 7.5])))
-    c = [pdf(c_dist, [p[1], p[2]]) for p in sd[:point]]
-    u0 = ComponentArray(; Dict([var=>c for var in vars])...)
-    return u0
-end
-
 struct PodeSystem
     pode::SummationDecapode
     plotvar::Vector{Symbol}
     scalars::Dict{Symbol, Any} # closures # TODO rename scalars => anons
+    domain::Domain
     mesh::HasDeltaSet
     dualmesh::HasDeltaSet
     init::ComponentArray # TODO Is it always ComponentVector?
@@ -311,9 +306,10 @@ function PodeSystem(json_string::String,hodge=GeometricHodge())
     plotvars = [uuid2symb[uuid] for uuid in json_object[:plotVariables]];
     
     # create the mesh
-    mesh_name = Symbol(json_object[:mesh])
-    mesh_builder = predefined_meshes[mesh_name]
-    s, sd = create_mesh(mesh_builder)
+    s, sd = create_mesh(json_object);
+    # mesh_name = Symbol(json_object[:mesh]) # returns string
+    # domain = predefined_meshes[mesh_name] # returns Domain
+    # s, sd = create_mesh(domain)
 
     # initialize operators
     ♭♯_m = ♭♯_mat(sd);
@@ -322,14 +318,6 @@ function PodeSystem(json_string::String,hodge=GeometricHodge())
     star0_inv_m = dec_mat_inverse_hodge(0, sd, hodge)
     Δ0 = Δ(0,sd);
     #fΔ0 = factorize(Δ0);
-    # end initialize
-
-    # initial conditions
-    ic_specs = json_object[:initialConditions];
-    # Dict(:duu => "TaylorVortex")
-    dict = Dict([uuid2symb[string(uuid)] => ic_specs[string(uuid)] for uuid ∈ keys(ic_specs)]...)
-    u0 = initial_conditions(dict, mesh_builder, sd) 
-
     function sys_generate(s, my_symbol,hodge=hodge)
         op = @match my_symbol begin
             sym && if sym ∈ keys(anons) end => anons[sym]
@@ -343,13 +331,19 @@ function PodeSystem(json_string::String,hodge=GeometricHodge())
             end
         return (args...) -> op(args...)
     end
+    # end initialize
+
+    # initial conditions
+    u0 = initial_conditions(json_object, uuid2symb, mesh_builder);
 
     # symbol => uuid. we need this to reassociate the var 
     symb2uuid = Dict([v => k for (k,v) in pairs(uuid2symb)])
 
-    return PodeSystem(decapode, plotvars, anons, s, sd, u0, sys_generate, symb2uuid)
+    return PodeSystem(decapode, plotvars, anons, domain, s, sd, u0, sys_generate, symb2uuid)
 end
 export PodeSystem
+
+## SIM HELPERS ##
 
 function run_sim(fm, u0, t0, constparam)
     prob = ODEProblem(fm, u0, (0, t0), constparam)
@@ -365,52 +359,58 @@ struct SimResult
 end
 export SimResult
 
-function SimResult(sol::ODESolution, system::PodeSystem)
+function SimResult(soln::ODESolution, system::PodeSystem)
 
     points = collect(values(system.mesh.subparts.point.m));
-    geometry = length(points[1]) == 2 ? :Rect : :Sphere
 
-    function grid(pt3,grid_size)
-        pt2 = [(pt3[1]+1)/2,(pt3[2]+1)/2]
-        [round(Int,pt2[1]*grid_size[1]),round(Int,pt2[2]*grid_size[2])]
-    end
-    l = 0
-    function at_time(sol::ODESolution, plotvar::Symbol, timeidx::Int)
-        if geometry == :Rect 
-            l = 51
-            return [SVector(i, j, getproperty(sol.u[timeidx], plotvar)[l*(i-1) + j]) for i in 1:l, j in 1:l]
-        else 
-            northern_indices = filter(i -> points[i][3]>0,keys(points))
-            l = 100
-            return map(northern_indices) do n
-                i,j = grid(points[n], [l,l])
-                SVector(i, j, getproperty(sol.u[timeidx], plotvar)[n])
-            end
-        end
-    end
+    idx_bounds = indexing_bounds(system.domain)
+    state_val_dict = variables_state(soln, system)
 
-    function state_vals(plotvar::Symbol)
-        map(1:length(sol.t)) do i
-            at_time(sol, plotvar, i)
-        end
-    end
-    state_val_dict = Dict([(system.uuiddict[plotvar] => state_vals(plotvar)) for plotvar in system.plotvar])
-
-    # TODO engooden
     # Dict("UUID1" => VectorMatrixSVectr...)
-    SimResult(sol.t, state_val_dict, 0:l-1, 0:l-1)
+    SimResult(soln.t, state_val_dict, 0:l-1, 0:l-1)
+    # TODO we need to get the `l` value from somewhere
 end
 # TODO generalize to HasDeltaSet
 
-## PLOTTING CODE
-
-abstract type AbstractPlotType end
-
-struct Heatmap <: AbstractPlotType end
-
-# TODO make length a conditional value so we can pass it in if we want
-function Base.reshape(::Heatmap, data)
-    l = floor(Int64, sqrt(length(data)))
-    reshape(data, l, l)
+""" for the variables in a system, associate them to their state values over the duration of the simulation """
+function variables_state(soln::ODESolution, system::PodeSystem)
+    Dict([ system.uuiddict[var] => state_entire_sim(soln, system.domain, var) for var ∈ system.plotvar ])
 end
-#∧ᵈᵖ₁₀(-,⋆d(-))
+
+""" given a simulation, a domain, and a variable, gets the state values over the duration of a simulation. Called by `variables_state` """
+function state_entire_sim(soln::ODESolution, domain::Domain, var::Symbol)
+    map(1:length(soln.t)) do i
+        state_at_time(soln, domain, var, i)
+    end
+end
+
+# TODO type `points`
+function state_at_time(soln::ODESolution, domain::Domain, plotvar::Symbol, t::Int, points)
+    @match domain begin
+        # TODO check time indexing here
+        Rectangle(x, y, _, _) => state_at_time(soln, domain, plotvar, t, x, y) 
+        ::Sphere => state_at_time(soln, domain, plotvar, t, points) 
+        _ => error("A")
+    end
+end
+
+function state_at_time(soln::ODESolution, domain::Rectangle, var::Symbol, t::Int, x::Int, y::Int) # last two args can be one Point2
+    (x, y) = indexing_points(domain)
+    [SVector(i, j, getproperty(soln.u[t], var)[x*(i-1) + j]) for i in 1:x+1, j in 1:y+1]
+end
+
+# TODO just separated this from the SimResult function and added type parameters, but need to generalize
+function grid(pt3::Point3, grid_size::Vector{Int})
+    pt2 = [(pt3[1]+1)/2, (pt3[2]+1)/2]
+    [round(Int, pt2[1]*grid_size[1]), round(Int, pt2[2]*grid_size[2])]
+end
+
+function state_at_time(soln::ODESolution, domain::Sphere, var::Symbol, t::Int, points)
+    l , _ = indexing_bounds(domain); # TODO this is hardcoded to return 100, 100
+    northern_indices = filter(i -> points[i][3] > 0, keys(points)) 
+    # TODO we don't have access to points in this function yet. need to pass that in
+    map(northern_indices) do n
+        i, j = grid(points[n], [l, l]) # TODO
+        SVector(i, j, getproperty(soln.u[t], plotvar)[n])
+    end
+end
