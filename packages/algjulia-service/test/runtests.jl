@@ -16,33 +16,34 @@ import OrdinaryDiffEq: ReturnCode
 # visualization
 #using Plots
 
+const KEYS = Set([:mesh, :plotVariables, :initialConditions, :domain, :diagram, :model, :scalars])
+
 # load data
-data = open(JSON3.read, joinpath(@__DIR__, "diffusion_data.json"), "r")
+data = open(JSON3.read, joinpath(@__DIR__, "test_jsons", "diffusion_data.json"), "r")
 diagram = data[:diagram];
 model = data[:model];
 
-# # GOOD
 @testset "Text-to-Pode" begin
 
-    @test to_decapode_theory(Val(:Ob), "0-form")      == :Form0
-    @test to_decapode_theory(Val(:Ob), "1-form")      == :Form1
-    @test to_decapode_theory(Val(:Ob), "2-form")      == :Form2
-    @test to_decapode_theory(Val(:Ob), "dual 0-form") == :DualForm0
-    @test to_decapode_theory(Val(:Ob), "dual 1-form") == :DualForm1
-    @test to_decapode_theory(Val(:Ob), "dual 2-form") == :DualForm2
+    @test to_theory(ThDecapode(), ObType(), "0-form")      == :Form0
+    @test to_theory(ThDecapode(), ObType(), "1-form")      == :Form1
+    @test to_theory(ThDecapode(), ObType(), "2-form")      == :Form2
+    @test to_theory(ThDecapode(), ObType(), "dual 0-form") == :DualForm0
+    @test to_theory(ThDecapode(), ObType(), "dual 1-form") == :DualForm1
+    @test to_theory(ThDecapode(), ObType(), "dual 2-form") == :DualForm2
 
-    @test_throws AlgebraicJuliaService.ImplError to_decapode_theory(Val(:Ob), "Form3")
+    @test_throws AlgebraicJuliaService.ImplError to_theory(ThDecapode(), ObType(), "Form3")
 
-    @test to_decapode_theory(Val(:Hom), "∂t") == :∂ₜ
-    @test to_decapode_theory(Val(:Hom), "Δ") == :Δ
-    @test_throws AlgebraicJuliaService.ImplError to_decapode_theory(Val(:Hom), "∧") 
+    @test to_theory(ThDecapode(), HomType(), "∂t") == :∂ₜ
+    @test to_theory(ThDecapode(), HomType(), "Δ") == :Δ
+    @test_throws AlgebraicJuliaService.ImplError to_theory(ThDecapode(), HomType(), "∧") 
 
 end
 
-# # GOOD
+
 @testset "Parsing the Theory JSON Object" begin
 
-    @test Set(keys(data)) == Set([:diagram, :model,:plotVariables])
+    @test Set(keys(data)) == KEYS
 
     @test @match model[1] begin
         IsObject(_) => true
@@ -54,9 +55,9 @@ end
         _ => false
     end
 
-    theory = Theory();
+    theory = Theory(ThDecapode());
     @match model[1] begin
-        IsObject(content) => add_to_theory!(theory, content, Val(:Ob))
+        IsObject(content) => add_to_theory!(theory, content, ObType())
         _ => nothing
     end
 
@@ -84,16 +85,16 @@ end
 
 end
 
-# # GOOD
-@testset "Simulation" begin
+@testset "Simulation - Diffusion" begin
 
-    json_string = read(joinpath(@__DIR__, "diffusion_data.json"), String);
+    json_string = read(joinpath(@__DIR__, "test_jsons", "diffusion_data.json"), String);
+    @test Set(keys(JSON3.read(json_string))) == KEYS
+
     system = PodeSystem(json_string);
+    
+    simulator = evalsim(system.pode);
+    f = simulator(system.geometry.dualmesh, default_dec_generate, DiagonalHodge());
 
-    simulator = evalsim(system.pode)
-    f = simulator(system.dualmesh, default_dec_generate, DiagonalHodge());
-
-    # time
     soln = run_sim(f, system.init, 50.0, ComponentArray(k=0.5,));
     # returns ::ODESolution
     #     - retcode
@@ -111,22 +112,19 @@ end
 
 end
 
-# # XXX named tuple does not have C-dot
-# @testset "SimulationTwoVar" begin
+#= XXX ERRORING
+we are trying to index `soln.u[t]` by `Ċ `, but only `C` is present. I think this is because we generating initial conditions based on what was specified to the `initial_conditions` parameter, whereas in the past we were using `infer_state_names` to obtain that.
+=#
+# @testset "Simulation - Diffusion with Two Variables" begin
 
-#     json_string = read(joinpath(@__DIR__,"diffusion_data_twovars.json"), String);
+#     json_string = read(joinpath(@__DIR__, "test_jsons", "diffusion_data_twovars.json"), String);
+#     @test Set(keys(JSON3.read(json_string))) == KEYS
+
 #     system = PodeSystem(json_string);
 
-#     # DEBUGGING
-#     # open("test_sim.jl", "w") do f
-#     #     write(f, string(gensim(system.pode)))
-#     # end
-#     # simulator = include("../test_sim.jl")
-
 #     simulator = evalsim(system.pode)
-#     f = simulator(system.dualmesh, system.generate, DiagonalHodge())
+#     f = simulator(system.geometry.dualmesh, system.generate, DiagonalHodge())
 
-#     # time
 #     soln = run_sim(f, system.init, 50.0, ComponentArray(k=0.5,)); 
 #     # returns ::ODESolution
 #     #     - retcode
@@ -144,16 +142,12 @@ end
 
 # end
 
-#####
+@testset "Parsing the Theory JSON Object - Diffusion Long Trip" begin
 
-data = open(JSON3.read, joinpath(@__DIR__, "diffusion_long_trip.json"), "r")
-diagram = data[:diagram];
-model = data[:model];
-
-# # GOOD
-@testset "Parsing the Theory JSON Object" begin
-
-    @test Set(keys(data)) == Set([:diagram, :model, :mesh, :initialConditions, :domain, :scalars, :plotVariables])
+    data = open(JSON3.read, joinpath(@__DIR__, "test_jsons", "diffusion_long_trip.json"), "r")
+    diagram = data[:diagram];
+    model = data[:model];
+    @test Set(keys(data)) == KEYS
 
     @test @match model[1] begin
         IsObject(_) => true
@@ -165,9 +159,9 @@ model = data[:model];
         _ => false
     end
 
-    theory = Theory();
+    theory = Theory(ThDecapode());
     @match model[1] begin
-        IsObject(content) => add_to_theory!(theory, content, Val(:Ob))
+        IsObject(content) => add_to_theory!(theory, content, ObType())
         _ => nothing
     end
 
@@ -176,17 +170,15 @@ model = data[:model];
 end
 
 # # GOOD
-@testset "Simulation 2" begin
+@testset "Simulation - Diffusion Long Trip" begin
 
-    json_string = read(joinpath(@__DIR__, "diffusion_long_trip.json"), String);
+    json_string = read(joinpath(@__DIR__, "test_jsons", "diffusion_long_trip.json"), String);
+    @test Set(keys(JSON3.read(json_string))) == KEYS
+
     system = PodeSystem(json_string);
 
     simulator = evalsim(system.pode)
-    # open("test_sim.jl", "w") do f
-    #     write(f, string(gensim(system.pode)))
-    # end
-    # simulator = include("test_sim.jl") 
-    f = simulator(system.dualmesh, default_dec_matrix_generate, DiagonalHodge());
+    f = simulator(system.geometry.dualmesh, default_dec_matrix_generate, DiagonalHodge());
 
     # time
     soln = run_sim(f, system.init, 50.0, ComponentArray(k=0.5,));
@@ -206,17 +198,15 @@ end
 
 end
 
-###
-
-data = open(JSON3.read, joinpath(@__DIR__, "diffusivity_constant.json"), "r")
-diagram = data[:diagram];
-model = data[:model];
-scalars = data[:scalars];
-
 # # GOOD
-@testset "Parsing the Theory JSON Object" begin
+@testset "Parsing the Theory JSON Object - Diffusivity Constant" begin
+    
+    data = open(JSON3.read, joinpath(@__DIR__, "test_jsons", "diffusivity_constant.json"), "r")
+    diagram = data[:diagram];
+    model = data[:model];
+    scalars = data[:scalars];
 
-    @test Set(keys(data)) == Set([:diagram, :model, :scalars,:plotVariables, :domain, :mesh, :initialConditions])
+    @test Set(keys(data)) == KEYS
 
     @test @match model[1] begin
         IsObject(_) => true
@@ -228,9 +218,9 @@ scalars = data[:scalars];
         _ => false
     end
 
-    theory = Theory();
+    theory = Theory(ThDecapode());
     @match model[1] begin
-        IsObject(content) => add_to_theory!(theory, content, Val(:Ob))
+        IsObject(content) => add_to_theory!(theory, content, ObType())
         _ => nothing
     end
 
@@ -238,18 +228,14 @@ scalars = data[:scalars];
     
 end
 
-@testset "Simulation 3" begin
+@testset "Simulation - Diffusivity Constant" begin
 
-    json_string = read(joinpath(@__DIR__, "diffusivity_constant.json"), String);
+    json_string = read(joinpath(@__DIR__, "test_jsons", "diffusivity_constant.json"), String);
     system = PodeSystem(json_string);
 
     simulator = evalsim(system.pode)
-    # open("test_sim.jl", "w") do f
-        # write(f, string(gensim(system.pode)))
-    # end
-    # simulator = include("test_sim.jl");
-    
-    f = simulator(system.dualmesh, system.generate, DiagonalHodge());
+        
+    f = simulator(system.geometry.dualmesh, system.generate, DiagonalHodge());
 
     soln = run_sim(f, system.init, 50.0, ComponentArray(k=0.5,));
     # returns ::ODESolution
@@ -268,18 +254,16 @@ end
 
 end
 
-@testset "Simulation from real front-end data" begin
+@testset "Simulation - Navier-Stokes Vorticity" begin
 
-    json_string = read(joinpath(@__DIR__, "test", "ns_vorticity.json"), String);
+    json_string = read(joinpath(@__DIR__, "test_jsons", "ns_vorticity.json"), String);
+    @test Set(keys(JSON3.read(json_string))) == KEYS
+
     system = PodeSystem(json_string);
 
     simulator = evalsim(system.pode)
-    # open("test_sim.jl", "w") do f
-        # write(f, string(gensim(system.pode)))
-    # end
-    # simulator = include("test_sim.jl");
     
-    f = simulator(system.dualmesh, system.generate, DiagonalHodge());
+    f = simulator(system.geometry.dualmesh, system.generate, DiagonalHodge());
 
     soln = run_sim(f, system.init, 50.0, ComponentArray(k=0.5,));
     # returns ::ODESolution
@@ -297,22 +281,3 @@ end
     jv = JsonValue(result);
 
 end
-
-# PLOTTING UTILITIES
-
-# TODO size fixed
-# function at_time(sr::SimResult, t::Int)
-#     [sr.state[t][i,j][3] for i in 1:51 for j in 1:51]
-# end
-
-# function show_heatmap(sr::SimResult, t::Int)
-#     data = at_time(result, t)
-#     ℓ = floor(Int64, sqrt(length(data)));
-#     reshaped = reshape(data, ℓ, ℓ)
-#     Plots.heatmap(1:51, 1:51, reshaped, clims=(minimum(data), maximum(data)); palette=:redsblues)
-# end
-
-# @gif for t ∈ 1:length(result.time)
-#     show_heatmap(result, t)
-# end every 5
-

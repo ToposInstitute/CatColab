@@ -28,7 +28,7 @@ function supported_decapodes_geometries()
 end
 export supported_decapodes_geometries
 
-## GEOMETRY
+## DOMAINS
 
 abstract type Domain end
 
@@ -56,7 +56,7 @@ end
 # default
 Sphere(dim) = Sphere(dim, 1.0)
 
-# TODO
+# TODO XXX hardcoded alert!
 function indexing_bounds(m::Sphere)
     (x=100, y=100)
 end
@@ -66,39 +66,46 @@ function makeSphere(m::UV)
     makeSphere(m.minlat, m.maxlat, m.dlat, m.minlong, m.maxlong, m.dlong, m.radius)
 end
 
-function create_mesh end; export create_mesh
+## GEOMETRY
 
-function create_mesh(jo::JSON3.Object)
-    mesh_name = Symbol(jo[:mesh])
+struct Geometry
+    domain::Domain
+    mesh::HasDeltaSet
+    dualmesh::HasDeltaSet
+end
+
+function Geometry(json_object::JSON3.Object)
+    mesh_name = Symbol(json_object[:mesh])
     domain = PREDEFINED_MESHES[mesh_name]
-    return create_mesh(domain)
+    Geometry(domain)
 end
+# TODO PREDEFINED_MESHES is a dictionary of default methods
 
-function create_mesh(d::Domain, args...)
-    throw(ImplError("The mesh ($(d)) is"))
-end
+# function Geometry(d::Domain, args...)
+#     throw(ImplError("The mesh ($(d)) is"))
+# end
 
-function create_mesh(r::Rectangle, division::SimplexCenter=Circumcenter())
+function Geometry(r::Rectangle, division::SimplexCenter=Circumcenter())
     s = triangulated_grid(r.max_x, r.max_y, r.dx, r.dy, Point2{Float64})
     sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point2{Float64}}(s)
     subdivide_duals!(sd, division)
-    return (s, sd)
+    Geometry(r, s, sd)
 end
 
-# function create_mesh(r::Periodic, division::SimplexCenter=Circumcenter()) end
+# function Geometry(r::Periodic, division::SimplexCenter=Circumcenter()) end
 
-function create_mesh(m::Sphere, division::SimplexCenter=Circumcenter())
+function Geometry(m::Sphere, division::SimplexCenter=Circumcenter())
     s = loadmesh(Icosphere(m.dim, m.radius));
     sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point3{Float64}}(s)
     subdivide_duals!(sd, division)
-    return (s, sd)
+    Geometry(m, s, sd)
 end
 
-function create_mesh(m::UV, division::SimplexCenter=Circumcenter())
+function Geometry(m::UV, division::SimplexCenter=Circumcenter())
     s, _, _ = makeSphere(m);
     sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point3{Float64}}(s)
     subdivide_duals!(sd, division)
-    return (s, sd)
+    Geometry(m, s, sd)
 end
 
 ## Prefined meshes

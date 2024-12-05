@@ -1,3 +1,6 @@
+### 
+#This code was lifted from the Navier-Stokes simulation `ns.jl` in the Decapodes docs page, originally authored by Luke Morris
+###
 abstract type AbstractVortexParams end
 
 struct TaylorVortexParams <: AbstractVortexParams
