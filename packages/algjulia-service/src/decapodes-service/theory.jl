@@ -22,18 +22,12 @@ function to_theory(theory::ThDecapode, type::HomType, name::String)
         "Δ" => :Δ
         "Δ⁻¹" => :Δ⁻¹
         "d*" || "d̃₁" => :dual_d₁
-        # \star on LHS
-        "⋆" => :⋆₁
+        "⋆" || "⋆₁" || "★₁" || "★1" => :⋆₁
         "⋆⁻¹" || "⋆₀⁻¹" => :⋆₀⁻¹
-         # => :⋆₀⁻¹
-        # \bigstar on LHS
         "★" || "★⁻¹" => :⋆₁
-         # => :⋆₀⁻¹
         "diffusivity" => :diffusivity
-        # new
         "d" || "d₀" || "d01" => :d₀
         "d12" => :d₁
-        "⋆1" => :⋆₁
         "⋆2" => :⋆₂
         "♭♯" => :♭♯
         "lamb" => :dpsw # dual-primal self-wedge
@@ -99,19 +93,16 @@ struct Theory{T<:ThDecapode}
 end
 export Theory
 
-# TODO engooden
-Base.show(io::IO, theory::Theory) = show(io, theory.data)
-
 Base.values(theory::Theory) = values(theory.data)
 
 function add_to_theory! end; export add_to_theory!
 
-function add_to_theory!(theory::Theory{T}, content::Any, type::ObType) where T
+function add_to_theory!(theory::Theory{T}, content::AbstractDict, type::ObType) where T
     push!(theory.data, 
           content[:id] => TheoryElement(;name=to_theory(T(), type, content[:name])))
 end
 
-function add_to_theory!(theory::Theory{T}, content::Any, type::HomType) where T
+function add_to_theory!(theory::Theory{T}, content::AbstractDict, type::HomType) where T
     push!(theory.data, content[:id] => 
           TheoryElement(;name=to_theory(T(), type, content[:name]),
                         val=HomData(dom=content[:dom][:content], 
@@ -122,8 +113,8 @@ end
 #   ...an object, we convert its type to a symbol and add it to the theorydict
 #   ...a morphism, we add it to the theorydict with a field for the ids of its
 #       domain and codomain to its
-function Theory(model::AbstractVector{JSON3.Object})
-    theory = Theory(ThDecapode());
+function Theory(model::AbstractVector{<:AbstractDict})
+    theory = Theory(ThDecapode())
     foreach(model) do cell
         @match cell begin
             IsObject(content) => add_to_theory!(theory, content, ObType())

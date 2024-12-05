@@ -6,7 +6,7 @@ export add_to_pode!
 function add_to_pode!(d::SummationDecapode, 
         vars::Dict{String, Int}, # mapping between UUID and ACSet ID
         theory::Theory, 
-        content::JSON3.Object,
+        content::AbstractDict,
         nc::Vector{Int},
         ::ObType)
     theory_elem = theory.data[content[:over][:content]] # indexes the theory by UUID
@@ -24,7 +24,7 @@ function add_to_pode!(d::SummationDecapode,
     return d
 end
 
-function Base.nameof(theory::Theory, content::JSON3.Object)
+function Base.nameof(theory::Theory, content::AbstractDict)
     Symbol(theory.data[content[:over][:content]].name)
 end
 
@@ -32,12 +32,13 @@ end
 function add_to_pode!(d::SummationDecapode,
         vars::Dict{String, Int}, # mapping between UUID and ACSet ID
         theory::Theory,
-        content::JSON3.Object,
+        content::AbstractDict,
         scalars::Any,
         anons::Dict{Symbol, Any},
         ::HomType)
 
-    dom = content[:dom][:content]; cod = content[:cod][:content]
+    dom = content[:dom][:content]
+    cod = content[:cod][:content]
     # TODO we need a safe way to fail this
     if haskey(vars, dom) && haskey(vars, cod)
         # get the name of the Op1 and add it to the theory
@@ -53,21 +54,23 @@ function add_to_pode!(d::SummationDecapode,
             scalar = scalars[Symbol(content[:over][:content])]
             push!(anons, op1 => x -> scalar * x)
         end
-        # TODO if scalars were typed correctly, we could probably do away with the !isempty check
     end
     d
 end
 
-"""  Decapode(jsondiagram::JSON3.Object, theory::Theory) => SummationDecapode
+"""  Decapode(diagram::AbstractVector{<:AbstractDict}, theory::Theory) => (::SummationDecapode, ::Dict{Symbol, Any}, ::Dict{String, Int}) 
 
-This returns a Decapode given a jsondiagram and a theory.
+This returns
+    1. a Decapode 
+    2. a dictionary of symbols mapped to anonymous functions
+    3. a dictionary of JSON UUIDs mapped to symbols
 """
-function Decapode(diagram::AbstractVector{JSON3.Object}, theory::Theory; scalars=[])
+function Decapode(diagram::AbstractVector{<:AbstractDict}, theory::Theory; scalars=[])
     # initiatize decapode and its mapping between UUIDs and ACSet IDs
-    pode = SummationDecapode(parse_decapode(quote end));
-    vars = Dict{String, Int}(); # UUID => ACSetID
-    nc = [0]; # array is a mutable container
-    anons = Dict{Symbol, Any}();
+    pode = SummationDecapode(parse_decapode(quote end))
+    vars = Dict{String, Int}() # UUID => ACSetID
+    nc = [0] # array is a mutable container
+    anons = Dict{Symbol, Any}()
     # for each cell in the notebook, add it to the diagram 
     foreach(diagram) do cell
         @match cell begin
@@ -80,7 +83,6 @@ function Decapode(diagram::AbstractVector{JSON3.Object}, theory::Theory; scalars
     return pode, anons, vars
 end
 export Decapode
-# the proper name for this constructor should be "SummationDecapode"
 
 function uuid_to_symb(decapode::SummationDecapode, vars::Dict{String, Int})
     Dict([key => (subpart(decapode, vars[key], :name)) for key ∈ keys(vars)])

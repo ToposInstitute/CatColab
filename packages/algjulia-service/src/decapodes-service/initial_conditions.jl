@@ -43,8 +43,8 @@ GaussianIC(r::Rectangle) = GaussianIC(r, GaussianData(r))
 TaylorVortexIC(d::Sphere) = TaylorVortexIC(d, TaylorVortexData())
 
 
-function initial_conditions(json_object::JSON3.Object, geometry::Geometry, uuid2symb::Dict{String, Symbol})
-    ic_specs = json_object[:initialConditions]; # this is "C" 
+function initial_conditions(json_object::AbstractDict, geometry::Geometry, uuid2symb::Dict{String, Symbol})
+    ic_specs = json_object[:initialConditions] # this is "C" 
     dict = Dict([uuid2symb[string(uuid)] => ic_specs[string(uuid)] for uuid ∈ keys(ic_specs)]...)
     initial_conditions(dict, geometry) # the resulting sim will only have (C,) as initial conditions
 end
@@ -99,7 +99,7 @@ end
 
 function initial_conditions(ics::TaylorVortexIC, geometry::Geometry)
     # TODO prefer not to load `s0` here but che sara sara
-    s0 = dec_hodge_star(0, geometry.dualmesh, GeometricHodge());
+    s0 = dec_hodge_star(0, geometry.dualmesh, GeometricHodge())
     X = vort_ring(ics, geometry)
     du = s0 * X
     return du

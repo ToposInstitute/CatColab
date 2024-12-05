@@ -39,7 +39,7 @@ include("model.jl") ## model-building (is this actually a diagram of a model?)
 struct PodeSystem
     pode::SummationDecapode
     plotvar::Vector{Symbol}
-    scalars::Dict{Symbol, Any} # closures # TODO rename scalars => anons
+    scalars::Dict{Symbol, Any} # closures
     geometry::Geometry
     init::ComponentArray # TODO Is it always ComponentVector?
     generate::Any
@@ -47,39 +47,42 @@ struct PodeSystem
 end
 export PodeSystem
 
+function PodeSystem(json_string::String, args...)
+    json_object = JSON3.read(json_string)
+    PodeSystem(json_object, args...)
+end
+
 """
 Construct a `PodeSystem` object from a JSON string.
 """
-function PodeSystem(json_string::String,hodge=GeometricHodge())
-    json_object = JSON3.read(json_string);
-
+function PodeSystem(json_object::AbstractDict, hodge=GeometricHodge())
     # converts the JSON of (the fragment of) the theory
     # into theory of the DEC, valued in Julia
-    theory = Theory(json_object[:model]);
+    theory = Theory(json_object[:model])
 
     # this is a diagram in the model of the DEC. it wants to be a decapode!
-    diagram = json_object[:diagram];
+    diagram = json_object[:diagram]
 
     # any scalars?
-    scalars = haskey(json_object, :scalars) ? json_object[:scalars] : [];
+    scalars = haskey(json_object, :scalars) ? json_object[:scalars] : []
 
     # pode, anons, and vars (UUID => ACSetId)
-    decapode, anons, vars = Decapode(diagram, theory; scalars=scalars);
+    decapode, anons, vars = Decapode(diagram, theory; scalars=scalars)
     dot_rename!(decapode)
-    uuid2symb = uuid_to_symb(decapode, vars);
+    uuid2symb = uuid_to_symb(decapode, vars)
 
     # plotting variables
-    plotvars = [uuid2symb[uuid] for uuid in json_object[:plotVariables]];
+    plotvars = [uuid2symb[uuid] for uuid in json_object[:plotVariables]]
     
     # extract the domain in order to create the mesh, dualmesh
-    geometry = Geometry(json_object);
+    geometry = Geometry(json_object)
 
     # initialize operators
-    ♭♯_m = ♭♯_mat(geometry.dualmesh);
-    wedge_dp10 = dec_wedge_product_dp(Tuple{1,0}, geometry.dualmesh);
-    dual_d1_m = dec_mat_dual_differential(1, geometry.dualmesh);
+    ♭♯_m = ♭♯_mat(geometry.dualmesh)
+    wedge_dp10 = dec_wedge_product_dp(Tuple{1,0}, geometry.dualmesh)
+    dual_d1_m = dec_mat_dual_differential(1, geometry.dualmesh)
     star0_inv_m = dec_mat_inverse_hodge(0, geometry.dualmesh, hodge)
-    Δ0 = Δ(0,geometry.dualmesh);
+    Δ0 = Δ(0,geometry.dualmesh)
     #fΔ0 = factorize(Δ0);
     function sys_generate(s, my_symbol, hodge=hodge)
         op = @match my_symbol begin
@@ -97,7 +100,7 @@ function PodeSystem(json_string::String,hodge=GeometricHodge())
     # end initialize
 
     # initial conditions
-    u0 = initial_conditions(json_object, geometry, uuid2symb);
+    u0 = initial_conditions(json_object, geometry, uuid2symb)
 
     # symbol => uuid. we need this to reassociate the var 
     symb2uuid = Dict([v => k for (k,v) in pairs(uuid2symb)])
@@ -106,7 +109,7 @@ function PodeSystem(json_string::String,hodge=GeometricHodge())
 end
 export PodeSystem
 
-points(system::PodeSystem) = collect(values(system.geometry.mesh.subparts.point.m));
+points(system::PodeSystem) = collect(values(system.geometry.mesh.subparts.point.m))
 indexing_bounds(system::PodeSystem) = indexing_bounds(system.geometry.domain)
 
 ## SIM HELPERS ##
@@ -156,7 +159,7 @@ function state_at_time(soln::ODESolution, system::PodeSystem, plotvar::Symbol, t
 end
 
 function state_at_time(soln::ODESolution, domain::Rectangle, var::Symbol, t::Int) # last two args can be one Point2
-    (x, y) = indexing_bounds(domain);
+    (x, y) = indexing_bounds(domain)
     [SVector(i, j, getproperty(soln.u[t], var)[x*(i-1) + j]) for i in 1:x+1, j in 1:y+1]
 end
 
@@ -167,9 +170,8 @@ function grid(pt3::Point3, grid_size::Vector{Int})
 end
 
 function state_at_time(soln::ODESolution, domain::Sphere, var::Symbol, t::Int, points)
-    l , _ = indexing_bounds(domain); # TODO this is hardcoded to return 100, 100
+    l , _ = indexing_bounds(domain) # TODO this is hardcoded to return 100, 100
     northern_indices = filter(i -> points[i][3] > 0, keys(points)) 
-    # TODO we don't have access to points in this function yet. need to pass that in
     map(northern_indices) do n
         i, j = grid(points[n], [l, l]) # TODO
         SVector(i, j, getproperty(soln.u[t], var)[n])

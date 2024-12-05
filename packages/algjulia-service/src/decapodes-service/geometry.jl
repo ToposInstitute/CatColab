@@ -74,7 +74,7 @@ struct Geometry
     dualmesh::HasDeltaSet
 end
 
-function Geometry(json_object::JSON3.Object)
+function Geometry(json_object::AbstractDict)
     mesh_name = Symbol(json_object[:mesh])
     domain = PREDEFINED_MESHES[mesh_name]
     Geometry(domain)
@@ -95,14 +95,14 @@ end
 # function Geometry(r::Periodic, division::SimplexCenter=Circumcenter()) end
 
 function Geometry(m::Sphere, division::SimplexCenter=Circumcenter())
-    s = loadmesh(Icosphere(m.dim, m.radius));
+    s = loadmesh(Icosphere(m.dim, m.radius))
     sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point3{Float64}}(s)
     subdivide_duals!(sd, division)
     Geometry(m, s, sd)
 end
 
 function Geometry(m::UV, division::SimplexCenter=Circumcenter())
-    s, _, _ = makeSphere(m);
+    s, _, _ = makeSphere(m)
     sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point3{Float64}}(s)
     subdivide_duals!(sd, division)
     Geometry(m, s, sd)

@@ -1,7 +1,0 @@
-Navier-Stokes 
-http://localhost:5173/analysis/01938869-4114-73c0-b412-42d86d941296
-https://tinyurl.com/catcolabns
-
-Diffusion
-http://localhost:5173/analysis/0193937b-0735-72e1-96ee-0f4ae6d46e9f
-https://tinyurl.com/catcolabdiffusion
