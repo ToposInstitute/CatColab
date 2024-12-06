@@ -37,10 +37,19 @@ export function createKernel(
     return [kernel, restartKernel];
 }
 
+/** Create a Julia kernel in a reactive context. */
+export function createJuliaKernel(serverOptions: ServerSettings) {
+    return createKernel(serverOptions, {
+        // XXX: Do I have to specify the Julia version?
+        name: "julia-1.11",
+    });
+}
+
 /** Execute code in a Jupyter kernel and retrieve JSON data reactively.
 
-Returns the post-processed data as a Solid.js resource and a callback to rerun
-the computation.
+Assumes that the computation will return JSON data using the "application/json"
+MIME type in Jupyter. Returns the post-processed data as a Solid.js resource and
+a callback to rerun the computation.
 
 The resource depends reactively on the kernel: if the kernel changes, the code
 will be automatically re-executed. It does *not* depend reactively on the code.

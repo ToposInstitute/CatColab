@@ -21,7 +21,7 @@ import type { ModelJudgment, MorphismDecl } from "../../model";
 import type { DiagramAnalysisMeta } from "../../theory";
 import { uniqueIndexArray } from "../../util/indexing";
 import { PDEPlot2D, type PDEPlotData2D } from "../../visualization";
-import { createKernel, executeAndRetrieve } from "./jupyter";
+import { createJuliaKernel, executeAndRetrieve } from "./jupyter";
 
 import Loader from "lucide-solid/icons/loader";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
@@ -68,15 +68,10 @@ export function configureDecapodes(options: {
  */
 export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
     // Step 1: Start the Julia kernel.
-    const [kernel, restartKernel] = createKernel(
-        {
-            baseUrl: "http://127.0.0.1:8888",
-            token: "",
-        },
-        {
-            name: "julia-1.11",
-        },
-    );
+    const [kernel, restartKernel] = createJuliaKernel({
+        baseUrl: "http://127.0.0.1:8888",
+        token: "",
+    });
 
     // Step 2: Run initialization code in the kernel.
     const startedKernel = () => (kernel.error ? undefined : kernel());
