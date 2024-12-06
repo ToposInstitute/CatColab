@@ -1,5 +1,4 @@
-import type { IReplyErrorContent } from "@jupyterlab/services/lib/kernel/messages";
-import { For, Match, Show, Switch, createMemo, createResource } from "solid-js";
+import { For, Match, Show, Switch, createMemo } from "solid-js";
 import { isMatching } from "ts-pattern";
 
 import type { DiagramAnalysisProps } from "../../analysis";
@@ -22,7 +21,7 @@ import type { ModelJudgment, MorphismDecl } from "../../model";
 import type { DiagramAnalysisMeta } from "../../theory";
 import { uniqueIndexArray } from "../../util/indexing";
 import { PDEPlot2D, type PDEPlotData2D } from "../../visualization";
-import { createKernel } from "./jupyter";
+import { createKernel, executeAndRetrieve } from "./jupyter";
 
 import Loader from "lucide-solid/icons/loader";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
@@ -82,69 +81,29 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
     // Step 2: Run initialization code in the kernel.
     const startedKernel = () => (kernel.error ? undefined : kernel());
 
-    const [options] = createResource(startedKernel, async (kernel) => {
-        // Request that the kernel run code to initialize the service.
-        const future = kernel.requestExecute({ code: initCode });
-
-        // Look for simulation options as output from the kernel.
-        let options: SimulationOptions | undefined;
-        future.onIOPub = (msg) => {
-            if (msg.header.msg_type === "execute_result") {
-                const content = msg.content as JsonDataContent<SimulationOptions>;
-                options = content["data"]?.["application/json"];
-            }
-        };
-
-        const reply = await future.done;
-        if (reply.content.status === "error") {
-            await kernel.shutdown();
-            throw new Error(formatError(reply.content));
-        }
-        if (!options) {
-            throw new Error("Allowed options not received after initialization");
-        }
-        return {
+    const [options] = executeAndRetrieve(
+        startedKernel,
+        makeInitCode,
+        (options: SimulationOptions) => ({
             domains: uniqueIndexArray(options.domains, (domain) => domain.name),
-        };
-    });
+        }),
+    );
 
     // Step 3: Run the simulation in the kernel!
     const initedKernel = () =>
         kernel.error || options.error || options.loading ? undefined : kernel();
 
-    const [result, { refetch: rerunSimulation }] = createResource(initedKernel, async (kernel) => {
-        // Construct the data to send to kernel.
-        const simulationData = makeSimulationData(props.liveDiagram, props.content);
-        if (!simulationData) {
-            return undefined;
-        }
-        console.log(JSON.parse(JSON.stringify(simulationData)));
-        // Request that the kernel run a simulation with the given data.
-        const future = kernel.requestExecute({
-            code: makeSimulationCode(simulationData),
-        });
-
-        // Look for simulation results as output from the kernel.
-        let result: PDEPlotData2D | undefined;
-        future.onIOPub = (msg) => {
-            if (
-                msg.header.msg_type === "execute_result" &&
-                msg.parent_header.msg_id === future.msg.header.msg_id
-            ) {
-                const content = msg.content as JsonDataContent<PDEPlotData2D>;
-                result = content["data"]?.["application/json"];
+    const [result, rerunSimulation] = executeAndRetrieve(
+        initedKernel,
+        () => {
+            const simulationData = makeSimulationData(props.liveDiagram, props.content);
+            if (!simulationData) {
+                return undefined;
             }
-        };
-
-        const reply = await future.done;
-        if (reply.content.status === "error") {
-            throw new Error(formatError(reply.content));
-        }
-        if (!result) {
-            throw new Error("Result not received from the simulator");
-        }
-        return result;
-    });
+            return makeSimulationCode(simulationData);
+        },
+        (data: PDEPlotData2D) => data,
+    );
 
     const obDecls = createMemo<DiagramObjectDecl[]>(() =>
         props.liveDiagram.formalJudgments().filter((jgmt) => jgmt.tag === "object"),
@@ -336,17 +295,6 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
     );
 }
 
-const formatError = (content: IReplyErrorContent): string =>
-    // Trackback list already includes `content.evalue`.
-    content.traceback.join("\n");
-
-/** JSON data returned from a Jupyter kernel. */
-type JsonDataContent<T> = {
-    data?: {
-        "application/json"?: T;
-    };
-};
-
 /** Options supported by Decapodes, defined by the Julia service. */
 type SimulationOptions = {
     /** Geometric domains supported by Decapodes. */
@@ -390,14 +338,15 @@ type SimulationData = {
 };
 
 /** Julia code run after kernel is started. */
-const initCode = `
-import IJulia
-IJulia.register_jsonmime(MIME"application/json"())
+const makeInitCode = () =>
+    `
+    import IJulia
+    IJulia.register_jsonmime(MIME"application/json"())
 
-using AlgebraicJuliaService
+    using AlgebraicJuliaService
 
-JsonValue(supported_decapodes_geometries())
-`;
+    JsonValue(supported_decapodes_geometries())
+    `;
 
 /** Julia code run to perform a simulation. */
 const makeSimulationCode = (data: SimulationData) =>
