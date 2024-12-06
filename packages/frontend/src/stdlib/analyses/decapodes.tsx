@@ -1,5 +1,5 @@
 import type { IReplyErrorContent } from "@jupyterlab/services/lib/kernel/messages";
-import { For, Match, Show, Switch, createMemo, createResource, onCleanup } from "solid-js";
+import { For, Match, Show, Switch, createMemo, createResource } from "solid-js";
 import { isMatching } from "ts-pattern";
 
 import type { DiagramAnalysisProps } from "../../analysis";
@@ -22,6 +22,7 @@ import type { ModelJudgment, MorphismDecl } from "../../model";
 import type { DiagramAnalysisMeta } from "../../theory";
 import { uniqueIndexArray } from "../../util/indexing";
 import { PDEPlot2D, type PDEPlotData2D } from "../../visualization";
+import { createKernel } from "./jupyter";
 
 import Loader from "lucide-solid/icons/loader";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
@@ -31,17 +32,12 @@ import "./decapodes.css";
 import "./simulation.css";
 
 /** Configuration for a Decapodes analysis of a diagram. */
-export type DecapodesContent = JupyterSettings & {
+export type DecapodesContent = {
     domain: string | null;
     mesh: string | null;
     initialConditions: Record<string, string>;
     plotVariables: Record<string, boolean>;
     scalars: Record<string, number>;
-};
-
-type JupyterSettings = {
-    baseUrl?: string;
-    token?: string;
 };
 
 export function configureDecapodes(options: {
@@ -73,21 +69,15 @@ export function configureDecapodes(options: {
  */
 export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
     // Step 1: Start the Julia kernel.
-    const [kernel, { refetch: restartKernel }] = createResource(async () => {
-        const jupyter = await import("@jupyterlab/services");
-
-        const serverSettings = jupyter.ServerConnection.makeSettings({
-            baseUrl: props.content.baseUrl ?? "http://127.0.0.1:8888",
-            token: props.content.token ?? "",
-        });
-
-        const kernelManager = new jupyter.KernelManager({ serverSettings });
-        const kernel = await kernelManager.startNew({ name: "julia-1.11" });
-
-        return kernel;
-    });
-
-    onCleanup(() => kernel()?.shutdown());
+    const [kernel, restartKernel] = createKernel(
+        {
+            baseUrl: "http://127.0.0.1:8888",
+            token: "",
+        },
+        {
+            name: "julia-1.11",
+        },
+    );
 
     // Step 2: Run initialization code in the kernel.
     const startedKernel = () => (kernel.error ? undefined : kernel());
