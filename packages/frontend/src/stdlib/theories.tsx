@@ -94,6 +94,7 @@ stdTheories.add(
         name: "Schema",
         description: "Schema for a categorical database",
         group: "Knowledge and Data",
+        help: "one",
     },
     (meta) => {
         const thSchema = new catlog.ThSchema();

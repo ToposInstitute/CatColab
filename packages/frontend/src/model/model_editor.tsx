@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from "@solidjs/router";
+import { BookOpenCheck } from "lucide-solid";
 import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
-
 import { createAnalysis } from "../analysis/document";
 import { useApi } from "../api";
 import { IconButton, InlineInput } from "../components";
@@ -13,8 +13,9 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
-import { BrandedToolbar, HelpButton } from "../page";
+import { BrandedToolbar } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
+import type { TheoryMeta } from "../stdlib/types";
 import type { ModelTypeMeta } from "../theory";
 import { MaybePermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
@@ -34,6 +35,7 @@ import "./model_editor.css";
 
 import ChartSpline from "lucide-solid/icons/chart-spline";
 import Network from "lucide-solid/icons/network";
+import { HelpButton } from "../page/toolbar";
 
 export default function ModelPage() {
     const params = useParams();
@@ -69,6 +71,10 @@ export function ModelDocumentEditor(props: {
         <div class="growable-container">
             <BrandedToolbar>
                 <HelpButton />
+                <Show when={(props.liveModel?.theory() as TheoryMeta)?.help}>
+                    <TheoryHelpButton theory={props.liveModel?.theory() as TheoryMeta} />
+                </Show>
+
                 <MaybePermissionsButton permissions={props.liveModel?.liveDoc.permissions} />
                 <Show when={props.liveModel?.theory()?.supportsInstances}>
                     <IconButton
@@ -208,5 +214,22 @@ function judgmentLabel(judgment: ModelJudgment): string | undefined {
     }
     if (judgment.tag === "morphism") {
         return theory?.modelMorTypeMeta(judgment.morType)?.name;
+    }
+}
+
+export function TheoryHelpButton(props: { theory: TheoryMeta | undefined }) {
+    const navigate = useNavigate();
+    console.log(props.theory?.name);
+    if (props.theory?.help !== undefined) {
+        return (
+            <IconButton
+                onClick={() => navigate(`/help/theory_documentation/${props.theory?.help}`)}
+                tooltip={`${props.theory?.name} help`}
+            >
+                <BookOpenCheck />
+            </IconButton>
+        );
+    } else {
+        return null;
     }
 }
