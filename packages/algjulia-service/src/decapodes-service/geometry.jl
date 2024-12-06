@@ -79,7 +79,6 @@ function Geometry(json_object::AbstractDict)
     domain = PREDEFINED_MESHES[mesh_name]
     Geometry(domain)
 end
-# TODO PREDEFINED_MESHES is a dictionary of default methods
 
 # function Geometry(d::Domain, args...)
 #     throw(ImplError("The mesh ($(d)) is"))

@@ -14,7 +14,7 @@ function GaussianData(μ::Vector{Float64}, Σ::Vector{Float64})
     GaussianData(μ, LinearAlgebra.Diagonal(abs.(Σ)))
 end
 
-# DEFAULT METHOD. A Moshi-like Default impl. would be nice!
+# default method
 function GaussianData(r::Rectangle)
     μ = middle(r)
     GaussianData(μ, μ/10)
@@ -41,7 +41,6 @@ end
 # DEFAULT METHOD
 GaussianIC(r::Rectangle) = GaussianIC(r, GaussianData(r))
 TaylorVortexIC(d::Sphere) = TaylorVortexIC(d, TaylorVortexData())
-
 
 function initial_conditions(json_object::AbstractDict, geometry::Geometry, uuid2symb::Dict{String, Symbol})
     ic_specs = json_object[:initialConditions] # this is "C" 

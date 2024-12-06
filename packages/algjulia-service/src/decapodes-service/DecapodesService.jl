@@ -56,8 +56,7 @@ end
 Construct a `PodeSystem` object from a JSON string.
 """
 function PodeSystem(json_object::AbstractDict, hodge=GeometricHodge())
-    # converts the JSON of (the fragment of) the theory
-    # into theory of the DEC, valued in Julia
+    # make a theory of the DEC, valued in Julia
     theory = Theory(json_object[:model])
 
     # this is a diagram in the model of the DEC. it wants to be a decapode!
@@ -160,7 +159,7 @@ end
 
 function state_at_time(soln::ODESolution, domain::Rectangle, var::Symbol, t::Int) # last two args can be one Point2
     (x, y) = indexing_bounds(domain)
-    [SVector(i, j, getproperty(soln.u[t], var)[x*(i-1) + j]) for i in 1:x+1, j in 1:y+1]
+    [SVector(i, j, getproperty(soln.u[t], var)[(x+1)*(i-1) + j]) for i in 1:x+1, j in 1:y+1]
 end
 
 # TODO just separated this from the SimResult function and added type parameters, but need to generalize

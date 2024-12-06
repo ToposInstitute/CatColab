@@ -93,11 +93,6 @@ end
     f = simulator(system.geometry.dualmesh, default_dec_generate, DiagonalHodge())
 
     soln = run_sim(f, system.init, 50.0, ComponentArray(k=0.5,));
-    # returns ::ODESolution
-    #     - retcode
-    #     - interpolation
-    #     - t
-    #     - u::Vector{ComponentVector}
 
     @test soln.retcode == ReturnCode.Success
   
