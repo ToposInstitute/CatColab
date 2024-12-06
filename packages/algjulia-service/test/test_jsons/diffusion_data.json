@@ -1,4 +1,11 @@
-{
+{ 
+  "domain": "Plane",
+  "mesh": "Rectangle",
+  "initialConditions": {
+	"01932402-bcf5-7432-8d14-dbae9eabf907": "Gaussian"
+  },
+  "scalars": {},
+  "plotVariables": ["01932402-bcf5-7432-8d14-dbae9eabf907"],
   "diagram": [
     {
       "id": "01932402-bcf5-7432-8d14-dbae9eabf907",

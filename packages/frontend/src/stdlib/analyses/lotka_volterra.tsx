@@ -70,6 +70,7 @@ export function LotkaVolterra(
 
     const obSchema: ColumnSchema<ObjectDecl>[] = [
         {
+            contentType: "string",
             header: true,
             content: (ob) => ob.name,
         },
@@ -94,6 +95,7 @@ export function LotkaVolterra(
 
     const morSchema: ColumnSchema<MorphismDecl>[] = [
         {
+            contentType: "string",
             header: true,
             content: (mor) => mor.name,
         },

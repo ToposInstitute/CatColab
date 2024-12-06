@@ -170,7 +170,7 @@ pub struct StockFlowSystem {
 
 struct DVectorEnv<'a>(&'a DVector<f32>);
 
-impl<'a> Env for DVectorEnv<'a> {
+impl Env for DVectorEnv<'_> {
     type Var = usize;
 
     fn lookup(&self, t: &Self::Var) -> f32 {

@@ -1,6 +1,7 @@
 import { makeTimer } from "@solid-primitives/timer";
 import type { EChartsOption } from "echarts";
 import { createMemo, createSignal, lazy } from "solid-js";
+import invariant from "tiny-invariant";
 
 const ECharts = lazy(() => import("./echarts"));
 
@@ -16,7 +17,7 @@ export type PDEPlotData2D = {
     y: number[];
 
     /** Values of the state variable over time. */
-    state: StateVarAtTime[];
+    state: Record<string, StateVarAtTime[]>;
 };
 
 /** The data of a state variable at a given time. */
@@ -30,11 +31,25 @@ export function PDEPlot2D(props: {
     const min = (x: number, y: number) => Math.min(x, y);
     const max = (x: number, y: number) => Math.max(x, y);
 
+    const firstState = (): StateVarAtTime[] => {
+        // FIXME: Shouldn't just take the first one!
+        const keys = Object.keys(props.data.state);
+        invariant(keys.length === 1);
+        const key = keys[0];
+        const state = key && props.data.state[key];
+        invariant(state);
+        return state;
+    };
+
     const minValue = createMemo<number>(() =>
-        props.data.state.map((data) => data.map((triple) => triple[2]).reduce(min)).reduce(min),
+        firstState()
+            .map((data) => data.map((triple) => triple[2]).reduce(min))
+            .reduce(min),
     );
     const maxValue = createMemo<number>(() =>
-        props.data.state.map((data) => data.map((triple) => triple[2]).reduce(max)).reduce(max),
+        firstState()
+            .map((data) => data.map((triple) => triple[2]).reduce(max))
+            .reduce(max),
     );
 
     const [timeIndex, setTimeIndex] = createSignal(0);
@@ -86,7 +101,7 @@ export function PDEPlot2D(props: {
                 {
                     name: "Value",
                     type: "heatmap",
-                    data: props.data.state[idx],
+                    data: firstState()[idx],
                     emphasis: {
                         itemStyle: {
                             borderColor: "black",

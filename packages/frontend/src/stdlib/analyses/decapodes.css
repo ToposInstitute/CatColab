@@ -1,0 +1,6 @@
+.decapodes-domain {
+    display: flex;
+    flex-direction: row;
+    gap: 1ex;
+    margin-bottom: 1ex;
+}
