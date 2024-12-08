@@ -67,7 +67,7 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
         return `url(#arrowhead-${marker})`;
     };
     const defaultPath = () => <path marker-end={markerUrl()} d={path()} />;
-    
+
     // Function to create a path with caesura
     const createPathWithCaesura = () => {
         const [srcPos, tgtPos] = [props.edge.sourcePos, props.edge.targetPos];
@@ -204,7 +204,7 @@ const styleToMarker: Record<ArrowStyle, ArrowMarker> = {
     plus: "triangle",
     minus: "triangle",
     indeterminate: "triangle",
-    delay: "delay", 
+    delay: "delay",
 };
 
 /** SVG markers for arrow heads. */
@@ -213,5 +213,5 @@ export const arrowMarkerSVG: Record<ArrowMarker, Component> = {
     double: () => <VeeMarker id="arrowhead-double" offset={-2} />,
     triangle: () => <TriangleMarker id="arrowhead-triangle" />,
     flat: () => <FlatMarker id="arrowhead-flat" />,
-    delay: () => <DelayMarker id="arrowhead-delay" />
+    delay: () => <DelayMarker id="arrowhead-delay" />,
 };
