@@ -293,6 +293,15 @@ stdTheories.add(
                     arrowStyle: "minus",
                     preferUnnamed: true,
                 },
+                {
+                    tag: "MorType",
+                    morType: { tag: "Basic", content: "Object" },
+                    name: "Delay",
+                    description: "Causal loop with delays",
+                    arrowStyle: "delay",
+                    shortcut: ["D"],
+                    preferUnnamed: true,
+                },
             ],
             modelAnalyses: [
                 configureModelGraph({

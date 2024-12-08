@@ -21,6 +21,7 @@
 
 .arrow.default,
 .arrow.plus,
+.arrow.delay,
 .arrow.minus,
 .arrow.indeterminate {
     &:before,
@@ -76,6 +77,16 @@
     }
 }
 
+.arrowContainer.delay {
+    &:after {
+        content: "";
+        transform: none;
+        position: absolute;
+        right: -7.5px;
+        bottom: 0px;
+    }
+}
+
 .arrow.double {
     background: transparent;
     height: 6px;
@@ -116,3 +127,4 @@
     bottom: -6px;
     right: 0;
 }
+

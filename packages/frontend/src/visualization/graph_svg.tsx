@@ -7,8 +7,7 @@ import type { ArrowStyle, SVGRefProp } from "./types";
 
 import "./graph_svg.css";
 
-/** Draw a graph with a layout using SVG.
- */
+/** Draw a graph with a layout using SVG. */
 export function GraphSVG<Id>(props: {
     graph?: GraphLayout.Graph<Id>;
     ref?: SVGRefProp;
@@ -34,8 +33,7 @@ export function GraphSVG<Id>(props: {
     );
 }
 
-/** Draw a node with a layout using SVG.
- */
+/** Draw a node with a layout using SVG. */
 export function NodeSVG<Id>(props: { node: GraphLayout.Node<Id> }) {
     const {
         node: {
@@ -57,8 +55,7 @@ export function NodeSVG<Id>(props: { node: GraphLayout.Node<Id> }) {
     );
 }
 
-/** Draw an edge with a layout using SVG.
- */
+/** Draw an edge with a layout using SVG. */
 export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
     const {
         edge: { path },
@@ -70,10 +67,22 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
         return `url(#arrowhead-${marker})`;
     };
     const defaultPath = () => <path marker-end={markerUrl()} d={path()} />;
+    
+    // Function to create a path with caesura
+    const createPathWithCaesura = () => {
+        const [srcPos, tgtPos] = [props.edge.sourcePos, props.edge.targetPos];
+
+        // Calculate mid-point for caesura
+        const midPoint = {
+            x: (srcPos.x + tgtPos.x) / 2,
+            y: (srcPos.y + tgtPos.y) / 2,
+        };
+
+        // Create path with a gap (caesura)
+        return `M ${srcPos.x},${srcPos.y} L ${midPoint.x - 10},${midPoint.y} M ${midPoint.x + 10},${midPoint.y} L ${tgtPos.x},${tgtPos.y}`;
+    };
 
     const tgtLabel = (text: string) => {
-        // Place the target label offset from the target in the direction
-        // orthogonal to the vector from the source to the target.
         const [srcPos, tgtPos] = [props.edge.sourcePos, props.edge.targetPos];
         const vec = { x: tgtPos.x - srcPos.x, y: tgtPos.y - srcPos.y };
         const scale = 10 / Math.sqrt(vec.x ** 2 + vec.y ** 2);
@@ -105,6 +114,11 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
                     {defaultPath()}
                     {tgtLabel("?")}
                 </Match>
+                <Match when={props.edge.style === "delay"}>
+                    {createPathWithCaesura()}
+                    {defaultPath()}
+                    {tgtLabel("")}
+                </Match>
             </Switch>
             <Show when={props.edge.label}>
                 <text
@@ -121,8 +135,7 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
     );
 }
 
-/** SVG marker for a standard V-shaped arrowhead.
- */
+/** SVG marker for a standard V-shaped arrowhead. */
 const VeeMarker = (props: { id: string; offset?: number }) => (
     <marker
         id={props.id}
@@ -137,10 +150,7 @@ const VeeMarker = (props: { id: string; offset?: number }) => (
     </marker>
 );
 
-/** SVG marker for a triangular arrow head.
-
-Source: https://developer.mozilla.org/en-US/docs/Web/SVG/Element/marker
- */
+/** SVG marker for a triangular arrow head. */
 const TriangleMarker = (props: { id: string }) => (
     <marker
         id={props.id}
@@ -155,8 +165,7 @@ const TriangleMarker = (props: { id: string }) => (
     </marker>
 );
 
-/** SVG marker for a flat arrow head, giving a "T-shaped" arrow.
- */
+/** SVG marker for a flat arrow head, giving a "T-shaped" arrow. */
 const FlatMarker = (props: { id: string }) => (
     <marker
         id={props.id}
@@ -171,9 +180,22 @@ const FlatMarker = (props: { id: string }) => (
     </marker>
 );
 
-/** Supported markers serving as arrowheads.
- */
-export type ArrowMarker = "vee" | "double" | "triangle" | "flat";
+const DelayMarker = (props: { id: string }) => (
+    <marker
+        id={props.id}
+        viewBox="0 0 10 10"
+        refX="10"
+        refY="5"
+        markerWidth="6"
+        markerHeight="6"
+        orient="auto-start-reverse"
+    >
+        <path d="M 0 5 L 5 0 L 5 4 L 10 4 L 10 6 L 5 6 L 5 10 Z" />
+    </marker>
+);
+
+/** Supported markers serving as arrowheads. */
+export type ArrowMarker = "vee" | "double" | "triangle" | "flat" | "delay";
 
 const styleToMarker: Record<ArrowStyle, ArrowMarker> = {
     default: "vee",
@@ -182,13 +204,14 @@ const styleToMarker: Record<ArrowStyle, ArrowMarker> = {
     plus: "triangle",
     minus: "triangle",
     indeterminate: "triangle",
+    delay: "delay", 
 };
 
-/** SVG markers for arrow heads.
- */
+/** SVG markers for arrow heads. */
 export const arrowMarkerSVG: Record<ArrowMarker, Component> = {
     vee: () => <VeeMarker id="arrowhead-vee" />,
     double: () => <VeeMarker id="arrowhead-double" offset={-2} />,
     triangle: () => <TriangleMarker id="arrowhead-triangle" />,
     flat: () => <FlatMarker id="arrowhead-flat" />,
+    delay: () => <DelayMarker id="arrowhead-delay" />
 };
