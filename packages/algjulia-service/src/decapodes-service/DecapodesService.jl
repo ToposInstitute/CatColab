@@ -24,7 +24,7 @@ Point3D = Point3{Float64};
 using OrdinaryDiffEq
 
 using ..AlgebraicJuliaService
-import ..AlgebraicJuliaService: to_theory
+import ..AlgebraicJuliaService: Model, to_model
 
 # necessary to export
 export infer_types!, evalsim, default_dec_generate, default_dec_matrix_generate,
@@ -33,8 +33,8 @@ export infer_types!, evalsim, default_dec_generate, default_dec_matrix_generate,
 # funcitons for geometry and initial conditions
 include("geometry.jl")
 include("initial_conditions.jl")
-include("theory.jl") ## theory-building
-include("model.jl") ## model-building (is this actually a diagram of a model?)
+include("model.jl") ## model-building
+include("diagram.jl") ## diagram-building
 
 struct PodeSystem
     pode::SummationDecapode
@@ -56,17 +56,17 @@ end
 Construct a `PodeSystem` object from a JSON string.
 """
 function PodeSystem(json_object::AbstractDict, hodge=GeometricHodge())
-    # make a theory of the DEC, valued in Julia
-    theory = Theory(json_object[:model])
+    # make a model of the DEC, valued in Julia
+    model = Model(ThDecapode(), json_object[:model])
 
     # this is a diagram in the model of the DEC. it wants to be a decapode!
-    diagram = json_object[:diagram]
+    jsondiagram = json_object[:diagram]
 
     # any scalars?
     scalars = haskey(json_object, :scalars) ? json_object[:scalars] : []
 
     # pode, anons, and vars (UUID => ACSetId)
-    decapode, anons, vars = Decapode(diagram, theory; scalars=scalars)
+    decapode, anons, vars = Decapode(jsondiagram, model; scalars=scalars)
     dot_rename!(decapode)
     uuid2symb = uuid_to_symb(decapode, vars)
 

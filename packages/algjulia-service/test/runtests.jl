@@ -17,56 +17,56 @@ const KEYS = Set([:mesh, :plotVariables, :initialConditions, :domain, :diagram, 
 
 # load data
 data = open(JSON3.read, joinpath(@__DIR__, "test_jsons", "diffusion_data.json"), "r")
-diagram = data[:diagram]
-model = data[:model]
+jsondiagram = data[:diagram]
+jsonmodel = data[:model]
 
 @testset "Text-to-Pode" begin
 
-    @test to_theory(ThDecapode(), ObType(), "0-form")      == :Form0
-    @test to_theory(ThDecapode(), ObType(), "1-form")      == :Form1
-    @test to_theory(ThDecapode(), ObType(), "2-form")      == :Form2
-    @test to_theory(ThDecapode(), ObType(), "dual 0-form") == :DualForm0
-    @test to_theory(ThDecapode(), ObType(), "dual 1-form") == :DualForm1
-    @test to_theory(ThDecapode(), ObType(), "dual 2-form") == :DualForm2
+    @test to_model(ThDecapode(), ObTag(), "0-form")      == :Form0
+    @test to_model(ThDecapode(), ObTag(), "1-form")      == :Form1
+    @test to_model(ThDecapode(), ObTag(), "2-form")      == :Form2
+    @test to_model(ThDecapode(), ObTag(), "dual 0-form") == :DualForm0
+    @test to_model(ThDecapode(), ObTag(), "dual 1-form") == :DualForm1
+    @test to_model(ThDecapode(), ObTag(), "dual 2-form") == :DualForm2
 
-    @test_throws AlgebraicJuliaService.ImplError to_theory(ThDecapode(), ObType(), "Form3")
+    @test_throws AlgebraicJuliaService.ImplError to_model(ThDecapode(), ObTag(), "Form3")
 
-    @test to_theory(ThDecapode(), HomType(), "∂t") == :∂ₜ
-    @test to_theory(ThDecapode(), HomType(), "Δ") == :Δ
-    @test_throws AlgebraicJuliaService.ImplError to_theory(ThDecapode(), HomType(), "∧") 
+    @test to_model(ThDecapode(), HomTag(), "∂t") == :∂ₜ
+    @test to_model(ThDecapode(), HomTag(), "Δ") == :Δ
+    @test_throws AlgebraicJuliaService.ImplError to_model(ThDecapode(), HomTag(), "∧") 
 
 end
 
 
-@testset "Parsing the Theory JSON Object" begin
+@testset "Parsing the Model JSON Object" begin
 
     @test Set(keys(data)) == KEYS
 
-    @test @match model[1] begin
+    @test @match jsonmodel[1] begin
         IsObject(_) => true
         _ => false
     end
     
-    @test @match model[4] begin
+    @test @match jsonmodel[4] begin
         IsMorphism(_) => true
         _ => false
     end
 
-    theory = Theory(ThDecapode())
-    @match model[1] begin
-        IsObject(content) => add_to_theory!(theory, content, ObType())
+    model = Model(ThDecapode())
+    @match jsonmodel[1] begin
+        IsObject(content) => add_to_model!(model, content, ObTag())
         _ => nothing
     end
 
     _id = "019323fa-49cb-7373-8c5d-c395bae4006d"
-    @test theory.data[_id] == TheoryElement(;name=:Form0, val=nothing)
+    @test model.data[_id] == ModelElement(;name=:Form0, val=nothing)
     
 end
 
 @testset "Making the Decapode" begin
    
-    theory = Theory(model)
-    @test Set(nameof.(values(theory))) == Set([:Form0, :Form1, :Form2, :Δ, :∂ₜ])
+    model = Model(ThDecapode(), jsonmodel)
+    @test Set(nameof.(values(model))) == Set([:Form0, :Form1, :Form2, :Δ, :∂ₜ])
 
     handcrafted_pode = SummationDecapode(parse_decapode(quote end))
     add_part!(handcrafted_pode, :Var, name=:C, type=:Form0)
@@ -76,7 +76,7 @@ end
     add_part!(handcrafted_pode, :Op1, src=1, tgt=2, op1=:Δ)
 
     # no scalars in second position
-    decapode, _, _ = Decapode(diagram, theory)
+    decapode, _, _ = Decapode(jsondiagram, model)
 
     @test decapode == handcrafted_pode 
 
@@ -129,30 +129,30 @@ we are trying to index `soln.u[t]` by `Ċ `, but only `C` is present. I think t
 
 # end
 
-@testset "Parsing the Theory JSON Object - Diffusion Long Trip" begin
+@testset "Parsing the Model JSON Object - Diffusion Long Trip" begin
 
     data = open(JSON3.read, joinpath(@__DIR__, "test_jsons", "diffusion_long_trip.json"), "r")
-    diagram = data[:diagram]
-    model = data[:model]
+    jsondiagram = data[:diagram]
+    jsonmodel = data[:model]
     @test Set(keys(data)) == KEYS
 
-    @test @match model[1] begin
+    @test @match jsonmodel[1] begin
         IsObject(_) => true
         _ => false
     end
     
-    @test @match model[6] begin
+    @test @match jsonmodel[6] begin
         IsMorphism(_) => true
         _ => false
     end
 
-    theory = Theory(ThDecapode())
-    @match model[1] begin
-        IsObject(content) => add_to_theory!(theory, content, ObType())
+    model = Model(ThDecapode())
+    @match jsonmodel[1] begin
+        IsObject(content) => add_to_model!(model, content, ObTag())
         _ => nothing
     end
 
-    @test theory.data["01936ac6-d1c1-7db1-a3ca-b8678a75299c"] == TheoryElement(;name=:Form0, val=nothing)
+    @test model.data["01936ac6-d1c1-7db1-a3ca-b8678a75299c"] == ModelElement(;name=:Form0, val=nothing)
     
 end
 
@@ -186,32 +186,32 @@ end
 end
 
 # # GOOD
-@testset "Parsing the Theory JSON Object - Diffusivity Constant" begin
+@testset "Parsing the Model JSON Object - Diffusivity Constant" begin
     
     data = open(JSON3.read, joinpath(@__DIR__, "test_jsons", "diffusivity_constant.json"), "r")
-    diagram = data[:diagram]
-    model = data[:model]
-    scalars = data[:scalars]
+    jsondiagram = data[:diagram]
+    jsonmodel = data[:model]
+    jsonscalars = data[:scalars]
 
     @test Set(keys(data)) == KEYS
 
-    @test @match model[1] begin
+    @test @match jsonmodel[1] begin
         IsObject(_) => true
         _ => false
     end
     
-    @test @match model[6] begin
+    @test @match jsonmodel[6] begin
         IsMorphism(_) => true
         _ => false
     end
 
-    theory = Theory(ThDecapode())
-    @match model[1] begin
-        IsObject(content) => add_to_theory!(theory, content, ObType())
+    model = Model(ThDecapode())
+    @match jsonmodel[1] begin
+        IsObject(content) => add_to_model!(model, content, ObTag())
         _ => nothing
     end
 
-    @test theory.data["01936f2c-dba6-7c7b-8ec0-811bbe06bad4" ] == TheoryElement(;name=:Form0, val=nothing)
+    @test model.data["01936f2c-dba6-7c7b-8ec0-811bbe06bad4" ] == ModelElement(;name=:Form0, val=nothing)
     
 end
 
