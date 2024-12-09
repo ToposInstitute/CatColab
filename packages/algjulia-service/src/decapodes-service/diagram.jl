@@ -1,4 +1,4 @@
-## MODEL BUILDING
+## DIAGRAM BUILDING
 
 function add_to_pode! end; export add_to_pode!
 
