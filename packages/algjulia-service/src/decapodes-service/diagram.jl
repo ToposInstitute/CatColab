@@ -1,6 +1,7 @@
 ## DIAGRAM BUILDING
 
-function add_to_pode! end; export add_to_pode!
+function add_to_pode! end
+export add_to_pode!
 
 function add_to_pode!(d::SummationDecapode, 
         vars::Dict{String, Int}, # mapping between UUID and ACSet ID
@@ -81,7 +82,8 @@ function Decapode(diagram::AbstractVector{<:AbstractDict}, model::Model; scalars
         end
     end
     return pode, anons, vars
-end; export Decapode
+end
+export Decapode
 # TODO rename to Diagram
 
 function uuid_to_symb(decapode::SummationDecapode, vars::Dict{String, Int})

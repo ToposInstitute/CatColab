@@ -3,7 +3,8 @@
 export Model
 
 """ 
-A model for the Decapodes integration is the same as the default Model method. A dictionary mapping UUID strings with ModelElements are instantiated. 
+A model for the Decapodes integration is the same as the default Model method. 
+A dictionary mapping UUID strings with ModelElements is instantiated. 
 """
 Model(::ThDecapode) = Model{ThDecapode}(Dict{String, ModelElement}())
 
@@ -46,7 +47,8 @@ end
 
 # add_to_model!
 
-function add_to_model! end; export add_to_model!
+function add_to_model! end
+export add_to_model!
 
 function add_to_model!(model::Model{ThDecapode}, content::AbstractDict, type::ObTag)
     push!(model.data, content[:id] => ModelElement(;name=to_model(ThDecapode(), type, content[:name])))
@@ -55,8 +57,8 @@ end
 function add_to_model!(model::Model{ThDecapode}, content::AbstractDict, type::HomTag)
     push!(model.data, content[:id] => 
           ModelElement(;name=to_model(ThDecapode(), type, content[:name]),
-                        val=HomValue(dom=content[:dom][:content], 
-                                     cod=content[:cod][:content])))
+                        val=HomValue(content[:dom][:content], 
+                                     content[:cod][:content])))
 end
 
 # for each cell, if it is...
@@ -73,4 +75,5 @@ function Model(::ThDecapode, model::AbstractVector{<:AbstractDict}) # AbstractDi
         end
     end
     return newmodel
-end; export Model
+end
+export Model

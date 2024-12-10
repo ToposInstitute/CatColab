@@ -5,15 +5,14 @@ using Reexport
 
 # this code tracks integrations and allows for basic theory/model-building code to dispatch from it.
 # the intent is that this is an interface for AlgebraicJulia code to interoperate with CatColab 
-@data AlgebraicJuliaIntegration begin
-    ThDecapode()
-end; export ThDecapode
+abstract type AlgebraicJuliaIntegration end 
 
 # cells in the JSON are tagged. these are just objects for dispatching `to_model`
-@data ElementTag begin
+@data ModelElementTag begin
     ObTag()
     HomTag()
-end; export ObTag, HomTag
+end
+export ObTag, HomTag
 
 #=
 @active patterns are MLStyle-implementations of F# active patterns that forces us to work in the Maybe/Option pattern. 
@@ -24,8 +23,12 @@ name and the variables we intend to capture.
 @active IsMorphism(x) begin; x[:tag] == "morphism" ? Some(x) : nothing end
 export IsObject, IsMorphism
 
-""" Obs, Homs """
-abstract type ModelElementValue end
+# Obs, Homs
+@data ModelElementValue begin
+    ObValue()
+    HomValue(dom,cod)
+end
+export ObValue, HomValue
 
 """ 
 Struct capturing the name of the object and its relevant information. 
@@ -37,24 +40,16 @@ struct ModelElement
     function ModelElement(;name::Symbol=nothing,val::Any=nothing)
         new(name, val)
     end
-end; export ModelElement
+end
+export ModelElement
 
 Base.nameof(t::ModelElement) = t.name
-
-struct ObValue <: ModelElementValue end
-# TODO not being used right now but added for completeness.
-
-struct HomValue <: ModelElementValue
-    dom::Any
-    cod::Any
-    HomValue(;dom::Any,cod::Any) = new(dom,cod)
-end; export HomValue
-# TODO type dom/cod
 
 """ Struct wrapping a dictionary """
 struct Model{T<:AlgebraicJuliaIntegration}
     data::Dict{String, ModelElement}
-end; export Model
+end
+export Model
 
 function Model(::T) where T<:AlgebraicJuliaIntegration
     Model{T}(Dict{String, ModelElement}())
@@ -69,7 +64,8 @@ function to_model end; export to_model
 
 struct ImplError <: Exception
     name::String
-end; export ImplError
+end
+export ImplError
 
 Base.showerror(io::IO, e::ImplError) = print(io, "$(e.name) not implemented")
 
