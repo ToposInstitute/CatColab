@@ -4,6 +4,7 @@ import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 import { createAnalysis } from "../analysis/document";
 import { useApi } from "../api";
+import { lazy } from "solid-js";
 import { IconButton, InlineInput } from "../components";
 import { createDiagram } from "../diagram/document";
 import {
@@ -15,11 +16,10 @@ import {
 } from "../notebook";
 import { BrandedToolbar } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
-import type { TheoryMeta } from "../stdlib/types";
-import type { ModelTypeMeta } from "../theory";
+import { type ModelTypeMeta } from "../theory";
 import { MaybePermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
-import { type LiveModelDocument, getLiveModel } from "./document";
+import { type LiveModelDocument, getLiveModel } from './document';
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
 import { TheorySelectorDialog } from "./theory_selector";
@@ -36,6 +36,11 @@ import "./model_editor.css";
 import ChartSpline from "lucide-solid/icons/chart-spline";
 import Network from "lucide-solid/icons/network";
 import { HelpButton } from "../page/toolbar";
+import { TheoryMeta } from '../stdlib/types';
+
+
+
+
 
 export default function ModelPage() {
     const params = useParams();
@@ -53,6 +58,7 @@ export default function ModelPage() {
 
 export function ModelDocumentEditor(props: {
     liveModel?: LiveModelDocument;
+    theory?: TheoryMeta;
 }) {
     const api = useApi();
     const navigate = useNavigate();
@@ -71,10 +77,7 @@ export function ModelDocumentEditor(props: {
         <div class="growable-container">
             <BrandedToolbar>
                 <HelpButton />
-                <Show when={(props.liveModel?.theory() as TheoryMeta)?.help}>
-                    <TheoryHelpButton theory={props.liveModel?.theory() as TheoryMeta} />
-                </Show>
-
+                <TheoryHelpButton theory={props.theory as TheoryMeta} />
                 <MaybePermissionsButton permissions={props.liveModel?.liveDoc.permissions} />
                 <Show when={props.liveModel?.theory()?.supportsInstances}>
                     <IconButton
@@ -217,13 +220,21 @@ function judgmentLabel(judgment: ModelJudgment): string | undefined {
     }
 }
 
-export function TheoryHelpButton(props: { theory: TheoryMeta | undefined }) {
+
+export const TheoryDocumentationToolBar = (props: { theory: TheoryMeta | undefined }) => {
+    const MDXComponent = lazy(() => import(`./theory_documentation/${props.theory?.help}.mdx`));
+    return <MDXComponent />;
+    
+};
+
+
+
+export function TheoryHelpButton(props: { theory: TheoryMeta }) {
     const navigate = useNavigate();
-    console.log(props.theory?.name);
-    if (props.theory?.help !== undefined) {
+    if (props.theory.name !== undefined) {
         return (
             <IconButton
-                onClick={() => navigate(`/help/theory_documentation/${props.theory?.help}`)}
+                onClick={() => navigate(`/help/theory_documentation/${props.theory?.id}`)}
                 tooltip={`${props.theory?.name} help`}
             >
                 <BookOpenCheck />
@@ -233,3 +244,9 @@ export function TheoryHelpButton(props: { theory: TheoryMeta | undefined }) {
         return null;
     }
 }
+
+
+
+
+
+
