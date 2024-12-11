@@ -34,6 +34,8 @@ import "./model_editor.css";
 
 import ChartSpline from "lucide-solid/icons/chart-spline";
 import Network from "lucide-solid/icons/network";
+import { sharingLink, sharingLinkPopup } from './share_model';
+import { Copy, Link2 } from "lucide-solid";
 
 export default function ModelPage() {
     const params = useParams();
@@ -67,8 +69,12 @@ export function ModelDocumentEditor(props: {
 
     return (
         <div class="growable-container">
+
             <BrandedToolbar>
                 <HelpButton />
+                <IconButton onClick={() => sharingLinkPopup({sharingLink: sharingLink})} tooltip="Share model">
+                <Link2  />
+                </IconButton>
                 <MaybePermissionsButton permissions={props.liveModel?.liveDoc.permissions} />
                 <Show when={props.liveModel?.theory()?.supportsInstances}>
                     <IconButton
@@ -116,6 +122,7 @@ export function ModelPane(props: {
                         placeholder="Untitled"
                     />
                 </div>
+                
                 <TheorySelectorDialog
                     theory={props.liveModel.theory()}
                     setTheory={(id) => {
@@ -210,3 +217,6 @@ function judgmentLabel(judgment: ModelJudgment): string | undefined {
         return theory?.modelMorTypeMeta(judgment.morType)?.name;
     }
 }
+
+
+
