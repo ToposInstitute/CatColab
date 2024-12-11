@@ -64,7 +64,8 @@ function associate(str::String, geometry::Geometry)
 end
 
 """ Methods for this function implement initial conditions for their given schema. There are also helper functions."""
-function initial_conditions end; export initial_conditions
+function initial_conditions end
+export initial_conditions
 
 """ associates the values in a dictionary to their initial condition flags, and passes the output to initial_conditions
 """
