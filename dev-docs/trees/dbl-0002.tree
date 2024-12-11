@@ -24,7 +24,7 @@ your nose.}
 functor #{F: \dbl{D} \to \dbl{E}} \define{preserves tabulators} if for every
 proarrow #{m: x \proto y} in \dbl{D}, the canonical comparison map
 
-##{\phi_m: F(\top M) \to \top(Fm),}
+##{\phi_m: F(\top m) \to \top(Fm),}
 
 defined as shown below by the universal property of the tabulator #{\top(Fm)},
 is an isomorphism.}

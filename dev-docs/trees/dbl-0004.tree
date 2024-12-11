@@ -3,12 +3,12 @@
 \import{macros}
 
 \p{The tabulator #{\top P} of a profunctor #{P: \cat{C} \proto \cat{D}} is its
-\nlab{category of elements}, defined such that there are projection functors
-#{\top P \to \cat{C}} and #{\top P \to \cat{D}}. Spelling this out, an object of
-#{\top P} is a triple #{(c,d,p)} such that #{c \in \cat{C}}, #{d \in \cat{D}},
-and #{p \in P(c,d)}, and a morphism #{(c,d,p) \to (c',d',p')} in #{\top P}
-consists of a morphisms #{f: c \to c'} and #{g: d \to d'} such that the square
-commutes:
+\nlab{category of elements}, defined such that there are \em{covariant}
+projection functors #{\top P \to \cat{C}} and #{\top P \to \cat{D}}. Spelling
+this out, an object of #{\top P} is a triple #{(c,d,p)} such that #{c \in
+\cat{C}}, #{d \in \cat{D}}, and #{p \in P(c,d)}, and a morphism #{(c,d,p) \to
+(c',d',p')} in #{\top P} consists of morphisms #{f: c \to c'} and #{g: d \to d'}
+such that the square commutes:
 
 \quiver{
 % https://q.uiver.app/#q=WzAsNCxbMCwwLCJjIl0sWzEsMCwiZCJdLFsxLDEsImQnIl0sWzAsMSwiYyciXSxbMCwxLCJwIiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiZGFzaGVkIn19fV0sWzEsMiwiZyJdLFswLDMsImYiLDJdLFszLDIsInAnIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiZGFzaGVkIn19fV1d
@@ -22,5 +22,5 @@ commutes:
 \end{tikzcd}
 }}
 
-\p{Be warned that this is only of four possible ways to define the
-\nlab{graph of a profunctor}, as discussed on the nLab.}
+\p{Be warned that this is only one of four possible ways to define the
+\nlab{graph of a profunctor}, as discussed on nLab.}
