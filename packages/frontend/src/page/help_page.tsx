@@ -20,3 +20,4 @@ export function lazyMdx(fn: () => Promise<{ default: Component<MDXProps> }>) {
     const MDXPage = lazy(fn);
     return () => <MDXPage />;
 }
+
