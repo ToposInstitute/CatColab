@@ -18,12 +18,7 @@ sysimg_path=joinpath(@__DIR__, sysimg);
 Pkg.activate(); Pkg.add("IJulia")
 using IJulia
 
-# let's check if we have a kernel
-if any(!isnothing, match.(r"ajaaskernel", readdir(IJulia.kerneldir(), join=true)))
-	@info "Julia kernel which uses AlgebraicJuliaService sysimage already installed. Skipping..."
-else 
-	installkernel("Julia AJaaSKernel", "--sysimage=$sysimg_path")
-end
+installkernel("Julia AJaaSKernel", "--sysimage=$sysimg_path")
 
 @info "done!"
 exit()
