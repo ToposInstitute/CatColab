@@ -161,7 +161,14 @@ impl<G: Graph> Category for FreeCategory<G> {
     }
 
     fn compose(&self, path: Path<G::V, Path<G::V, G::E>>) -> Path<G::V, G::E> {
+        // TODO: We should be able to call `path.flatten_in(&self.0)` to check
+        // that the composite is well-defined.
         path.flatten()
+    }
+    fn compose2(&self, path1: Path<G::V, G::E>, path2: Path<G::V, G::E>) -> Path<G::V, G::E> {
+        path1
+            .concat_in(&self.0, path2)
+            .expect("Target of first path should equal source of second path")
     }
 }
 
@@ -329,6 +336,8 @@ mod tests {
             Path::pair(2, 3),
             Path::Id(4),
         ]);
-        assert_eq!(cat.compose(path), Path::Seq(nonempty![0, 1, 2, 3]));
+        let result = Path::Seq(nonempty![0, 1, 2, 3]);
+        assert_eq!(cat.compose(path), result);
+        assert_eq!(cat.compose2(Path::pair(0,1), Path::pair(2,3)), result);
     }
 }
