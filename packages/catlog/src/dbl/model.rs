@@ -35,12 +35,12 @@ In addition, a model has the following operations:
   whose type is the composite of the corresponding morphism types.
  */
 
-use std::hash::Hash;
+use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
 use std::iter::Iterator;
 use std::sync::Arc;
 
 use derivative::Derivative;
-use ustr::Ustr;
+use ustr::{IdentityHasher, Ustr};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -95,7 +95,7 @@ pub trait DblModel: Category {
     /// Type of operations on morphisms defined in the theory.
     type MorOp: Eq;
 
-    /// The type of theories that Self could be models of
+    /// The type of double theory that this is a model of.
     type Theory: DblTheory<
         ObType = Self::ObType,
         MorType = Self::MorType,
@@ -162,8 +162,8 @@ pub struct DiscreteDblModel<Id, Cat: FgCategory> {
     mor_types: IndexedHashColumn<Id, Cat::Mor>,
 }
 
-/// A model of a discrete double theory where both the model and theory have
-/// keys of type `Ustr`.
+/// A model of a discrete double theory where both theoy and model have keys of
+/// type `Ustr`.
 pub type UstrDiscreteDblModel = DiscreteDblModel<Ustr, UstrFinCategory>;
 // NOTE: We are leaving a small optimization on the table by not using the
 // `IdentityHasher` but adding that extra type parameter quickly gets annoying
@@ -531,6 +531,7 @@ impl<V, E> From<E> for TabMor<V, E> {
 }
 
 #[derive(Clone, Derivative)]
+#[derivative(Default(bound = ""))]
 #[derivative(PartialEq(bound = "V: Eq + Hash, E: Eq + Hash"))]
 #[derivative(Eq(bound = "V: Eq + Hash, E: Eq + Hash"))]
 struct DiscreteTabGenerators<V, E> {
@@ -593,17 +594,74 @@ where
     }
 }
 
-/// Model of a discrete tabulator theory.
+/** A finitely presented model of a discrete tabulator theory.
+
+A **model** of a [discrete tabulator theory](super::theory::DiscreteTabTheory)
+is a normal lax functor from the theory into the double category of profunctors
+that preserves tabulators. For the definition of "preserving tabulators," see
+the dev docs.
+ */
 #[derive(Clone, Derivative)]
 #[derivative(PartialEq(bound = "Id: Eq + Hash, ThId: Eq + Hash"))]
 #[derivative(Eq(bound = "Id: Eq + Hash, ThId: Eq + Hash"))]
-pub struct DiscreteTabModel<Id, ThId> {
+pub struct DiscreteTabModel<Id, ThId, S = RandomState> {
     #[derivative(PartialEq(compare_with = "Arc::ptr_eq"))]
-    theory: Arc<DiscreteTabTheory<ThId, ThId>>,
+    theory: Arc<DiscreteTabTheory<ThId, ThId, S>>,
     generators: DiscreteTabGenerators<Id, Id>,
     // TODO: Equations
     ob_types: IndexedHashColumn<Id, TabObType<ThId, ThId>>,
     mor_types: IndexedHashColumn<Id, TabMorType<ThId, ThId>>,
+}
+
+/// A model of a discrete tabulator theory where both theory and model have keys
+/// of type `Ustr`.
+pub type UstrDiscreteTabModel = DiscreteTabModel<Ustr, Ustr, BuildHasherDefault<IdentityHasher>>;
+
+impl<Id, ThId, S> DiscreteTabModel<Id, ThId, S>
+where
+    Id: Eq + Clone + Hash,
+    ThId: Eq + Clone + Hash,
+    S: BuildHasher,
+{
+    /// Creates an empty model of the given theory.
+    pub fn new(theory: Arc<DiscreteTabTheory<ThId, ThId, S>>) -> Self {
+        Self {
+            theory,
+            generators: Default::default(),
+            ob_types: Default::default(),
+            mor_types: Default::default(),
+        }
+    }
+
+    /// Convenience method to turn a morphism into an object.
+    pub fn tabulated(&self, mor: TabMor<Id, Id>) -> TabOb<Id, Id> {
+        TabOb::Tabulated(Box::new(mor))
+    }
+
+    /// Convenience method to turn a morphism generator into an object.
+    pub fn tabulated_gen(&self, f: Id) -> TabOb<Id, Id> {
+        self.tabulated(Path::single(TabEdge::Basic(f)))
+    }
+
+    /// Adds a basic object to the model.
+    pub fn add_ob(&mut self, x: Id, typ: TabObType<ThId, ThId>) -> bool {
+        self.ob_types.set(x.clone(), typ);
+        self.generators.objects.insert(x)
+    }
+
+    /// Adds a basic morphism to the model.
+    pub fn add_mor(
+        &mut self,
+        f: Id,
+        dom: TabOb<Id, Id>,
+        cod: TabOb<Id, Id>,
+        typ: TabMorType<ThId, ThId>,
+    ) -> bool {
+        self.mor_types.set(f.clone(), typ);
+        self.generators.dom.set(f.clone(), dom);
+        self.generators.cod.set(f.clone(), cod);
+        self.generators.morphisms.insert(f)
+    }
 }
 
 impl<Id, ThId> Category for DiscreteTabModel<Id, ThId>
