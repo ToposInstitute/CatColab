@@ -387,7 +387,12 @@ where
     }
 
     fn compose(&self, path: Path<V, Path<V, E>>) -> Path<V, E> {
-        path.flatten()
+        path.flatten_in(&self.generators).expect("Paths should be composable")
+    }
+    fn compose2(&self, path1: Path<V, E>, path2: Path<V, E>) -> Path<V, E> {
+        path1
+            .concat_in(&self.generators, path2)
+            .expect("Target of first path should equal source of second path")
     }
 }
 

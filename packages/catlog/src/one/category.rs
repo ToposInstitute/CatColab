@@ -161,9 +161,7 @@ impl<G: Graph> Category for FreeCategory<G> {
     }
 
     fn compose(&self, path: Path<G::V, Path<G::V, G::E>>) -> Path<G::V, G::E> {
-        // TODO: We should be able to call `path.flatten_in(&self.0)` to check
-        // that the composite is well-defined.
-        path.flatten()
+        path.flatten_in(&self.0).expect("Paths should be composable")
     }
     fn compose2(&self, path1: Path<G::V, G::E>, path2: Path<G::V, G::E>) -> Path<G::V, G::E> {
         path1
@@ -338,6 +336,6 @@ mod tests {
         ]);
         let result = Path::Seq(nonempty![0, 1, 2, 3]);
         assert_eq!(cat.compose(path), result);
-        assert_eq!(cat.compose2(Path::pair(0,1), Path::pair(2,3)), result);
+        assert_eq!(cat.compose2(Path::pair(0, 1), Path::pair(2, 3)), result);
     }
 }

@@ -170,8 +170,8 @@ impl<V, E> Path<V, E> {
     This methods *checks* that the two paths are compatible (the target of this
     path equals the source of the other path) and it *assumes* that both paths
     are contained in the graph, which should be checked with
-    [`Self::contained_in`] if in doubt. Thus, when returned, the concatenated
-    path is also a valid path.
+    [`contained_in`](Self::contained_in) if in doubt. Thus, when returned, the
+    concatenated path is also a valid path.
      */
     pub fn concat_in<G>(self, graph: &G, other: Self) -> Option<Self>
     where
@@ -297,22 +297,50 @@ impl<V, E> Path<V, E> {
 }
 
 impl<V, E> Path<V, Path<V, E>> {
-    /// Flatten a path of paths into a single path.
+    /** Flattens a path of paths into a single path.
+
+    Unlike [`flatten_in`](Self::flatten_in), this method does not check that the
+    composite is well typed before computing it.
+     */
     pub fn flatten(self) -> Path<V, E> {
         match self {
             Path::Id(x) => Path::Id(x),
-            Path::Seq(fs) => {
-                if fs.iter().any(|p| matches!(p, Path::Seq(_))) {
-                    let seqs = NonEmpty::collect(fs.into_iter().filter_map(|p| match p {
-                        Path::Id(_) => None,
-                        Path::Seq(gs) => Some(gs),
-                    }));
-                    Path::Seq(NonEmpty::flatten(seqs.unwrap()))
+            Path::Seq(paths) => {
+                if paths.iter().any(|p| matches!(p, Path::Seq(_))) {
+                    // We either have at least one non-empty sequence...
+                    let edges = paths
+                        .into_iter()
+                        .filter_map(|p| match p {
+                            Path::Id(_) => None,
+                            Path::Seq(edges) => Some(edges),
+                        })
+                        .flatten();
+                    Path::Seq(NonEmpty::collect(edges).unwrap())
                 } else {
-                    fs.head // An identity.
+                    // ...or else every path is an identity.
+                    paths.head
                 }
             }
         }
+    }
+
+    /** Flattens a path of paths in a graph into a single path.
+
+    Returns the flattened path just when the original paths have compatible
+    start and end points.
+     */
+    pub fn flatten_in<G>(self, graph: &G) -> Option<Path<V, E>>
+    where
+        V: Eq + Clone,
+        G: Graph<V = V, E = E>,
+    {
+        if let Path::Seq(paths) = &self {
+            let mut pairs = std::iter::zip(paths.iter(), paths.iter().skip(1));
+            if !pairs.all(|(p1, p2)| p1.tgt(graph) == p2.src(graph)) {
+                return None;
+            }
+        }
+        Some(self.flatten())
     }
 }
 
