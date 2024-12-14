@@ -278,7 +278,7 @@ impl<C: FgCategory + Validate> Validate for DiscreteDblTheory<C> {
 }
 
 /// Object type in a discrete tabulator theory.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub enum TabObType<V, E> {
     /// Basic or generating object type.
     Basic(V),
@@ -288,7 +288,7 @@ pub enum TabObType<V, E> {
 }
 
 /// Morphism type in a discrete tabulator theory.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub enum TabMorType<V, E> {
     /// Basic or generating morphism type.
     Basic(E),
@@ -336,8 +336,8 @@ identities and tabulator projections.
 #[derive(Clone, Derivative)]
 #[derivative(Default(bound = "S: Default"))]
 pub struct DiscreteTabTheory<V, E, S = RandomState> {
-    ob_types: HashFinSet<V>,
-    mor_types: HashFinSet<E>,
+    ob_types: HashFinSet<V, S>,
+    mor_types: HashFinSet<E, S>,
     src: HashColumn<E, TabObType<V, E>, S>,
     tgt: HashColumn<E, TabObType<V, E>, S>,
     compose_map: HashColumn<(E, E), TabMorType<V, E>>,
