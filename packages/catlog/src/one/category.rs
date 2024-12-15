@@ -172,28 +172,45 @@ impl<G: Graph> Category for FreeCategory<G> {
 
 /** A finitely generated category with specified object and morphism generators.
 
-Such a category has finitely many objects, which usually coincide with the
-object generators (unless there are nontrivial equations between objects), but
-can have infinitely many morphisms.
+Unless the category has extra structure, a finitely generated (f.g.) category
+has finitely many objects, which coincide with the object generators so long as
+there are no equations between objects. On the other hand, a f.g. category can
+have infinitely many morphisms and often does.
  */
 pub trait FgCategory: Category {
-    /// The type of object generators.
+    /** Type of an object generator.
+
+    In simple cases, `Ob = ObGen`.
+     */
     type ObGen: Eq + Clone + Into<Self::Ob>;
 
-    /// The type of morphism generators. Often Mor = Path<Ob, MorGen>.
+    /** Type of a morphism generator
+
+    Often `Mor = Path<Ob, MorGen>`.
+     */
     type MorGen: Eq + Clone + Into<Self::Mor>;
 
-    /// An iterator over object generators.
-    fn object_generators(&self) -> impl Iterator<Item = Self::ObGen>;
+    /// Iterates over object generators.
+    fn ob_generators(&self) -> impl Iterator<Item = Self::ObGen>;
 
-    /// An iterator over morphism generators.
-    fn morphism_generators(&self) -> impl Iterator<Item = Self::MorGen>;
+    /// Iterates over morphism generators.
+    fn mor_generators(&self) -> impl Iterator<Item = Self::MorGen>;
 
     /// The domain of a morphism generator
-    fn morphism_generator_dom(&self, f: &Self::MorGen) -> Self::Ob;
+    fn mor_generator_dom(&self, f: &Self::MorGen) -> Self::Ob;
 
     /// The codomain of a morphism generator
-    fn morphism_generator_cod(&self, f: &Self::MorGen) -> Self::Ob;
+    fn mor_generator_cod(&self, f: &Self::MorGen) -> Self::Ob;
+
+    /// Iterates over basic objects.
+    fn objects(&self) -> impl Iterator<Item = Self::Ob> {
+        self.ob_generators().map(|ob_gen| ob_gen.into())
+    }
+
+    /// Iterates over basic morphisms.
+    fn morphisms(&self) -> impl Iterator<Item = Self::Mor> {
+        self.mor_generators().map(|mor_gen| mor_gen.into())
+    }
 }
 
 impl<S: FinSet> Graph for DiscreteCategory<S> {
@@ -251,19 +268,19 @@ impl<S: FinSet> FgCategory for DiscreteCategory<S> {
     type ObGen = S::Elem;
     type MorGen = S::Elem;
 
-    fn object_generators(&self) -> impl Iterator<Item = Self::ObGen> {
+    fn ob_generators(&self) -> impl Iterator<Item = Self::ObGen> {
         self.0.iter()
     }
 
-    fn morphism_generators(&self) -> impl Iterator<Item = Self::MorGen> {
+    fn mor_generators(&self) -> impl Iterator<Item = Self::MorGen> {
         self.0.iter()
     }
 
-    fn morphism_generator_dom(&self, f: &Self::MorGen) -> Self::Ob {
+    fn mor_generator_dom(&self, f: &Self::MorGen) -> Self::Ob {
         f.clone()
     }
 
-    fn morphism_generator_cod(&self, f: &Self::MorGen) -> Self::Ob {
+    fn mor_generator_cod(&self, f: &Self::MorGen) -> Self::Ob {
         f.clone()
     }
 }
@@ -272,19 +289,19 @@ impl<G: FinGraph> FgCategory for FreeCategory<G> {
     type ObGen = G::V;
     type MorGen = G::E;
 
-    fn object_generators(&self) -> impl Iterator<Item = Self::ObGen> {
+    fn ob_generators(&self) -> impl Iterator<Item = Self::ObGen> {
         self.0.vertices()
     }
 
-    fn morphism_generators(&self) -> impl Iterator<Item = Self::MorGen> {
+    fn mor_generators(&self) -> impl Iterator<Item = Self::MorGen> {
         self.0.edges()
     }
 
-    fn morphism_generator_dom(&self, f: &Self::MorGen) -> Self::Ob {
+    fn mor_generator_dom(&self, f: &Self::MorGen) -> Self::Ob {
         self.0.src(f)
     }
 
-    fn morphism_generator_cod(&self, f: &Self::MorGen) -> Self::Ob {
+    fn mor_generator_cod(&self, f: &Self::MorGen) -> Self::Ob {
         self.0.tgt(f)
     }
 }
@@ -312,8 +329,8 @@ mod tests {
     fn free_category() {
         let cat = FreeCategory::from(SkelGraph::triangle());
         assert!(cat.has_ob(&2));
-        assert_eq!(cat.object_generators().count(), 3);
-        assert_eq!(cat.morphism_generators().count(), 3);
+        assert_eq!(cat.ob_generators().count(), 3);
+        assert_eq!(cat.mor_generators().count(), 3);
 
         let id = Path::Id(1);
         assert!(cat.has_mor(&id));

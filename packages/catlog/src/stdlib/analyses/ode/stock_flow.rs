@@ -109,8 +109,8 @@ impl StockFlowODEAnalysis {
         flows.sort();
         for flow in flows.iter() {
             graph.add_edge(
-                *vertex_lookup.get(&model.morphism_generator_dom(flow)).unwrap(),
-                *vertex_lookup.get(&model.morphism_generator_cod(flow)).unwrap(),
+                *vertex_lookup.get(&model.mor_generator_dom(flow)).unwrap(),
+                *vertex_lookup.get(&model.mor_generator_cod(flow)).unwrap(),
             );
         }
 

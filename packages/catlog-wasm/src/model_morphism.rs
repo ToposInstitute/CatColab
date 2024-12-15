@@ -28,7 +28,7 @@ where
         .collect();
 
     // Order motifs from small to large.
-    images.sort_by_key(|im| (im.object_generators().count(), im.morphism_generators().count()));
+    images.sort_by_key(|im| (im.ob_generators().count(), im.mor_generators().count()));
 
     // Remove duplicates: different morphisms can have the same image.
     retain_unique(&mut images);

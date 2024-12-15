@@ -106,15 +106,15 @@ impl LotkaVolterraAnalysis {
         let mut A = DMatrix::from_element(n, n, 0.0f32);
         for mor_type in self.positive_mor_types.iter() {
             for mor in model.mor_generators_with_type(mor_type) {
-                let i = *ob_index.get(&model.morphism_generator_dom(&mor)).unwrap();
-                let j = *ob_index.get(&model.morphism_generator_cod(&mor)).unwrap();
+                let i = *ob_index.get(&model.mor_generator_dom(&mor)).unwrap();
+                let j = *ob_index.get(&model.mor_generator_cod(&mor)).unwrap();
                 A[(j, i)] += data.interaction_coeffs.get(&mor).copied().unwrap_or_default();
             }
         }
         for mor_type in self.negative_mor_types.iter() {
             for mor in model.mor_generators_with_type(mor_type) {
-                let i = *ob_index.get(&model.morphism_generator_dom(&mor)).unwrap();
-                let j = *ob_index.get(&model.morphism_generator_cod(&mor)).unwrap();
+                let i = *ob_index.get(&model.mor_generator_dom(&mor)).unwrap();
+                let j = *ob_index.get(&model.mor_generator_cod(&mor)).unwrap();
                 A[(j, i)] -= data.interaction_coeffs.get(&mor).copied().unwrap_or_default();
             }
         }

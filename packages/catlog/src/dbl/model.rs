@@ -127,18 +127,27 @@ pub trait FgDblModel: DblModel + FgCategory {
     /// Type of a morphism generator.
     fn mor_generator_type(&self, mor: &Self::MorGen) -> Self::MorType;
 
-    /// Iterates over object generators in the model of a given object type.
+    /// Iterates over object generators with the given object type.
     fn ob_generators_with_type(&self, obtype: &Self::ObType) -> impl Iterator<Item = Self::ObGen> {
-        self.object_generators().filter(move |ob| self.ob_generator_type(ob) == *obtype)
+        self.ob_generators().filter(|ob| self.ob_generator_type(ob) == *obtype)
     }
 
-    /// Iterates over morphism generators in the model of a given morphism type.
+    /// Iterates over morphism generators with the given morphism type.
     fn mor_generators_with_type(
         &self,
         mortype: &Self::MorType,
     ) -> impl Iterator<Item = Self::MorGen> {
-        self.morphism_generators()
-            .filter(move |mor| self.mor_generator_type(mor) == *mortype)
+        self.mor_generators().filter(|mor| self.mor_generator_type(mor) == *mortype)
+    }
+
+    /// Iterators over basic objects with the given object type.
+    fn objects_with_type(&self, obtype: &Self::ObType) -> impl Iterator<Item = Self::Ob> {
+        self.ob_generators_with_type(obtype).map(|ob_gen| ob_gen.into())
+    }
+
+    /// Iterates over basic morphisms with the given morphism type.
+    fn morphisms_with_type(&self, mortype: &Self::MorType) -> impl Iterator<Item = Self::Mor> {
+        self.mor_generators_with_type(mortype).map(|mor_gen| mor_gen.into())
     }
 }
 
@@ -253,14 +262,14 @@ where
             InvalidFpCategory::EqSrc(eq) => Invalid::EqSrc(eq),
             InvalidFpCategory::EqTgt(eq) => Invalid::EqTgt(eq),
         });
-        let ob_type_errors = self.category.object_generators().filter_map(|x| {
+        let ob_type_errors = self.category.ob_generators().filter_map(|x| {
             if self.theory.has_ob_type(&self.ob_type(&x)) {
                 None
             } else {
                 Some(Invalid::ObType(x))
             }
         });
-        let mor_type_errors = self.category.morphism_generators().flat_map(|e| {
+        let mor_type_errors = self.category.mor_generators().flat_map(|e| {
             let mut errs = Vec::new();
             let mor_type = self.mor_generator_type(&e);
             if self.theory.has_mor_type(&mor_type) {
@@ -290,7 +299,7 @@ where
     the model even after calling this method.
     */
     pub fn infer_missing(&mut self) {
-        let edges: Vec<_> = self.morphism_generators().collect();
+        let edges: Vec<_> = self.mor_generators().collect();
         for e in edges {
             if let Some(x) = self.get_dom(&e).filter(|x| !self.has_ob(x)) {
                 let ob_type = self.theory.src(&self.mor_generator_type(&e));
@@ -341,20 +350,20 @@ where
     type ObGen = Id;
     type MorGen = Id;
 
-    fn object_generators(&self) -> impl Iterator<Item = Self::ObGen> {
-        self.category.object_generators()
+    fn ob_generators(&self) -> impl Iterator<Item = Self::ObGen> {
+        self.category.ob_generators()
     }
 
-    fn morphism_generators(&self) -> impl Iterator<Item = Self::MorGen> {
-        self.category.morphism_generators()
+    fn mor_generators(&self) -> impl Iterator<Item = Self::MorGen> {
+        self.category.mor_generators()
     }
 
-    fn morphism_generator_dom(&self, f: &Self::MorGen) -> Self::Ob {
-        self.category.morphism_generator_dom(f)
+    fn mor_generator_dom(&self, f: &Self::MorGen) -> Self::Ob {
+        self.category.mor_generator_dom(f)
     }
 
-    fn morphism_generator_cod(&self, f: &Self::MorGen) -> Self::Ob {
-        self.category.morphism_generator_cod(f)
+    fn mor_generator_cod(&self, f: &Self::MorGen) -> Self::Ob {
+        self.category.mor_generator_cod(f)
     }
 }
 
@@ -692,17 +701,17 @@ where
     type ObGen = Id;
     type MorGen = Id;
 
-    fn object_generators(&self) -> impl Iterator<Item = Self::ObGen> {
+    fn ob_generators(&self) -> impl Iterator<Item = Self::ObGen> {
         self.generators.objects.iter()
     }
-    fn morphism_generators(&self) -> impl Iterator<Item = Self::MorGen> {
+    fn mor_generators(&self) -> impl Iterator<Item = Self::MorGen> {
         self.generators.morphisms.iter()
     }
 
-    fn morphism_generator_dom(&self, f: &Self::MorGen) -> Self::Ob {
+    fn mor_generator_dom(&self, f: &Self::MorGen) -> Self::Ob {
         self.generators.dom.apply(f).cloned().expect("Domain should be defined")
     }
-    fn morphism_generator_cod(&self, f: &Self::MorGen) -> Self::Ob {
+    fn mor_generator_cod(&self, f: &Self::MorGen) -> Self::Ob {
         self.generators.cod.apply(f).cloned().expect("Codomain should be defined")
     }
 }

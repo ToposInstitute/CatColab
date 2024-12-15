@@ -192,19 +192,19 @@ where
     type ObGen = V;
     type MorGen = E;
 
-    fn object_generators(&self) -> impl Iterator<Item = Self::ObGen> {
+    fn ob_generators(&self) -> impl Iterator<Item = Self::ObGen> {
         self.generators.vertices()
     }
 
-    fn morphism_generators(&self) -> impl Iterator<Item = Self::MorGen> {
+    fn mor_generators(&self) -> impl Iterator<Item = Self::MorGen> {
         self.generators.edges()
     }
 
-    fn morphism_generator_dom(&self, f: &Self::MorGen) -> Self::Ob {
+    fn mor_generator_dom(&self, f: &Self::MorGen) -> Self::Ob {
         self.generators.src(f)
     }
 
-    fn morphism_generator_cod(&self, f: &Self::MorGen) -> Self::Ob {
+    fn mor_generator_cod(&self, f: &Self::MorGen) -> Self::Ob {
         self.generators.tgt(f)
     }
 }
@@ -406,19 +406,19 @@ where
     type ObGen = V;
     type MorGen = E;
 
-    fn object_generators(&self) -> impl Iterator<Item = Self::ObGen> {
+    fn ob_generators(&self) -> impl Iterator<Item = Self::ObGen> {
         self.generators.vertices()
     }
 
-    fn morphism_generators(&self) -> impl Iterator<Item = Self::MorGen> {
+    fn mor_generators(&self) -> impl Iterator<Item = Self::MorGen> {
         self.generators.edges()
     }
 
-    fn morphism_generator_dom(&self, f: &Self::MorGen) -> Self::Ob {
+    fn mor_generator_dom(&self, f: &Self::MorGen) -> Self::Ob {
         self.generators.src(f)
     }
 
-    fn morphism_generator_cod(&self, f: &Self::MorGen) -> Self::Ob {
+    fn mor_generator_cod(&self, f: &Self::MorGen) -> Self::Ob {
         self.generators.tgt(f)
     }
 }
@@ -465,8 +465,8 @@ mod tests {
         sch_sgraph.add_mor_generator('s', 'E', 'V');
         sch_sgraph.add_mor_generator('t', 'E', 'V');
         sch_sgraph.add_mor_generator('i', 'E', 'E');
-        assert_eq!(sch_sgraph.object_generators().count(), 2);
-        assert_eq!(sch_sgraph.morphism_generators().count(), 3);
+        assert_eq!(sch_sgraph.ob_generators().count(), 2);
+        assert_eq!(sch_sgraph.mor_generators().count(), 3);
         assert_eq!(sch_sgraph.dom(&Mor::Generator('t')), 'E');
         assert_eq!(sch_sgraph.cod(&Mor::Generator('t')), 'V');
         assert_eq!(sch_sgraph.validate().unwrap_err().len(), 3);
@@ -494,8 +494,8 @@ mod tests {
         sch_sgraph.add_mor_generator('t', 'E', 'V');
         sch_sgraph.add_mor_generator('i', 'E', 'E');
         assert!(sch_sgraph.is_free());
-        assert_eq!(sch_sgraph.object_generators().count(), 2);
-        assert_eq!(sch_sgraph.morphism_generators().count(), 3);
+        assert_eq!(sch_sgraph.ob_generators().count(), 2);
+        assert_eq!(sch_sgraph.mor_generators().count(), 3);
         assert_eq!(sch_sgraph.dom(&Path::single('t')), 'E');
         assert_eq!(sch_sgraph.cod(&Path::single('t')), 'V');
         assert!(sch_sgraph.validate().is_ok());

@@ -116,7 +116,7 @@ where
     pub fn infer_missing_from(&mut self, model: &DiscreteDblModel<CodId, Cat>) {
         let (mapping, domain) = self.into();
         domain.infer_missing();
-        for e in domain.morphism_generators() {
+        for e in domain.mor_generators() {
             let Some(g) = mapping.apply_basic_mor(&e) else {
                 continue;
             };
