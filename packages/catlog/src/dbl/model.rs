@@ -35,12 +35,12 @@ In addition, a model has the following operations:
   whose type is the composite of the corresponding morphism types.
  */
 
-use std::hash::Hash;
+use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
 use std::iter::Iterator;
 use std::sync::Arc;
 
 use derivative::Derivative;
-use ustr::Ustr;
+use ustr::{IdentityHasher, Ustr};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -51,7 +51,9 @@ use super::theory::{DblTheory, DiscreteDblTheory};
 use crate::one::fin_category::{FpCategory, InvalidFpCategory, UstrFinCategory};
 use crate::one::*;
 use crate::validate::{self, Validate};
-use crate::zero::{Column, IndexedHashColumn, Mapping};
+use crate::zero::{Column, FinSet, HashColumn, HashFinSet, IndexedHashColumn, Mapping, Set};
+
+use super::theory::*;
 
 /** A model of a double theory.
 
@@ -93,7 +95,7 @@ pub trait DblModel: Category {
     /// Type of operations on morphisms defined in the theory.
     type MorOp: Eq;
 
-    /// The type of theories that Self could be models of
+    /// The type of double theory that this is a model of.
     type Theory: DblTheory<
         ObType = Self::ObType,
         MorType = Self::MorType,
@@ -160,8 +162,8 @@ pub struct DiscreteDblModel<Id, Cat: FgCategory> {
     mor_types: IndexedHashColumn<Id, Cat::Mor>,
 }
 
-/// A model of a discrete double theory where both the model and theory have
-/// keys of type `Ustr`.
+/// A model of a discrete double theory where both theoy and model have keys of
+/// type `Ustr`.
 pub type UstrDiscreteDblModel = DiscreteDblModel<Ustr, UstrFinCategory>;
 // NOTE: We are leaving a small optimization on the table by not using the
 // `IdentityHasher` but adding that extra type parameter quickly gets annoying
@@ -367,10 +369,8 @@ where
 {
     type ObType = Cat::Ob;
     type MorType = Cat::Mor;
-
     type ObOp = Cat::Ob;
     type MorOp = Cat::Mor;
-
     type Theory = DiscreteDblTheory<Cat>;
 
     fn theory(&self) -> &Self::Theory {
@@ -384,15 +384,11 @@ where
         m
     }
 
-    fn ob_type(&self, x: &Self::Ob) -> Self::ObType {
-        self.ob_types.apply(x).expect("Object type should be set").clone()
+    fn ob_type(&self, ob: &Self::Ob) -> Self::ObType {
+        self.ob_gen_type(ob)
     }
-
-    fn mor_type(&self, m: &Self::Mor) -> Self::MorType {
-        let types = m.clone().map(
-            |x| self.ob_type(&x),
-            |n| self.mor_types.apply(&n).expect("Morphism type should be set").clone(),
-        );
+    fn mor_type(&self, mor: &Self::Mor) -> Self::MorType {
+        let types = mor.clone().map(|x| self.ob_gen_type(&x), |m| self.mor_gen_type(&m));
         self.theory.compose_types(types)
     }
 }
@@ -405,17 +401,15 @@ where
     Cat::Mor: Hash,
 {
     fn ob_gen_type(&self, ob: &Self::ObGen) -> Self::ObType {
-        self.ob_types.apply(ob).unwrap().clone()
+        self.ob_types.apply(ob).cloned().expect("Object should have type")
     }
-
     fn mor_gen_type(&self, mor: &Self::MorGen) -> Self::MorType {
-        self.mor_types.apply(mor).unwrap().clone()
+        self.mor_types.apply(mor).cloned().expect("Morphism should have type")
     }
 
     fn object_generators_with_type(&self, typ: &Self::ObType) -> impl Iterator<Item = Self::ObGen> {
         self.ob_types.preimage(typ)
     }
-
     fn morphism_generators_with_type(
         &self,
         typ: &Self::MorType,
@@ -478,6 +472,310 @@ pub enum InvalidDiscreteDblModel<Id> {
 
     /// Equation has different sources on left and right hand sides.
     EqTgt(Id),
+}
+
+/// Object in a model of a discrete tabulator theory.
+#[derive(Clone, PartialEq, Eq)]
+pub enum TabOb<V, E> {
+    /// Basic or generating object.
+    Basic(V),
+
+    /// A morphism viewed as an object of a tabulator.
+    Tabulated(Box<TabMor<V, E>>),
+}
+
+impl<V, E> From<V> for TabOb<V, E> {
+    fn from(value: V) -> Self {
+        TabOb::Basic(value)
+    }
+}
+
+/** "Edge" in a model of a discrete tabulator theory.
+
+Morphisms of these two forms generate all the morphisms in the model.
+ */
+#[derive(Clone, PartialEq, Eq)]
+pub enum TabEdge<V, E> {
+    /// Basic morphism between any two objects.
+    Basic(E),
+
+    /// Generating morphism between tabulated morphisms, a commuting square.
+    Square {
+        /// The domain, a tabulated morphism.
+        dom: Box<TabMor<V, E>>,
+
+        /// The codomain, a tabulated morphism.
+        cod: Box<TabMor<V, E>>,
+
+        /// Edge that acts by pre-composition onto codomain.
+        pre: Box<TabEdge<V, E>>,
+
+        /// Edge that acts by post-composition onto domain.
+        post: Box<TabEdge<V, E>>,
+    },
+}
+
+impl<V, E> From<E> for TabEdge<V, E> {
+    fn from(value: E) -> Self {
+        TabEdge::Basic(value)
+    }
+}
+
+/// Morphism in a model of a discrete tabulator theory.
+pub type TabMor<V, E> = Path<TabOb<V, E>, TabEdge<V, E>>;
+
+impl<V, E> From<E> for TabMor<V, E> {
+    fn from(value: E) -> Self {
+        Path::single(value.into())
+    }
+}
+
+#[derive(Clone, Derivative)]
+#[derivative(Default(bound = ""))]
+#[derivative(PartialEq(bound = "V: Eq + Hash, E: Eq + Hash"))]
+#[derivative(Eq(bound = "V: Eq + Hash, E: Eq + Hash"))]
+struct DiscreteTabGenerators<V, E> {
+    objects: HashFinSet<V>,
+    morphisms: HashFinSet<E>,
+    dom: HashColumn<E, TabOb<V, E>>,
+    cod: HashColumn<E, TabOb<V, E>>,
+}
+
+impl<V, E> Graph for DiscreteTabGenerators<V, E>
+where
+    V: Eq + Clone + Hash,
+    E: Eq + Clone + Hash,
+{
+    type V = TabOb<V, E>;
+    type E = TabEdge<V, E>;
+
+    fn has_vertex(&self, ob: &Self::V) -> bool {
+        match ob {
+            TabOb::Basic(v) => self.objects.contains(v),
+            TabOb::Tabulated(p) => (*p).contained_in(self),
+        }
+    }
+
+    fn has_edge(&self, edge: &Self::E) -> bool {
+        match edge {
+            TabEdge::Basic(e) => self.morphisms.contains(e),
+            TabEdge::Square {
+                dom,
+                cod,
+                pre,
+                post,
+            } => {
+                if !(dom.contained_in(self) && cod.contained_in(self)) {
+                    return false;
+                }
+                let path1 = dom.clone().concat_in(self, Path::single(*post.clone()));
+                let path2 = Path::single(*pre.clone()).concat_in(self, *cod.clone());
+                path1.is_some() && path2.is_some() && path1 == path2
+            }
+        }
+    }
+
+    fn src(&self, edge: &Self::E) -> Self::V {
+        match edge {
+            TabEdge::Basic(e) => {
+                self.dom.apply(e).cloned().expect("Domain of morphism should be defined")
+            }
+            TabEdge::Square { dom, .. } => TabOb::Tabulated(dom.clone()),
+        }
+    }
+
+    fn tgt(&self, edge: &Self::E) -> Self::V {
+        match edge {
+            TabEdge::Basic(e) => {
+                self.cod.apply(e).cloned().expect("Codomain of morphism should be defined")
+            }
+            TabEdge::Square { cod, .. } => TabOb::Tabulated(cod.clone()),
+        }
+    }
+}
+
+/** A finitely presented model of a discrete tabulator theory.
+
+A **model** of a [discrete tabulator theory](super::theory::DiscreteTabTheory)
+is a normal lax functor from the theory into the double category of profunctors
+that preserves tabulators. For the definition of "preserving tabulators," see
+the dev docs.
+ */
+#[derive(Clone, Derivative)]
+#[derivative(PartialEq(bound = "Id: Eq + Hash, ThId: Eq + Hash"))]
+#[derivative(Eq(bound = "Id: Eq + Hash, ThId: Eq + Hash"))]
+pub struct DiscreteTabModel<Id, ThId, S = RandomState> {
+    #[derivative(PartialEq(compare_with = "Arc::ptr_eq"))]
+    theory: Arc<DiscreteTabTheory<ThId, ThId, S>>,
+    generators: DiscreteTabGenerators<Id, Id>,
+    // TODO: Equations
+    ob_types: IndexedHashColumn<Id, TabObType<ThId, ThId>>,
+    mor_types: IndexedHashColumn<Id, TabMorType<ThId, ThId>>,
+}
+
+/// A model of a discrete tabulator theory where both theory and model have keys
+/// of type `Ustr`.
+pub type UstrDiscreteTabModel = DiscreteTabModel<Ustr, Ustr, BuildHasherDefault<IdentityHasher>>;
+
+impl<Id, ThId, S> DiscreteTabModel<Id, ThId, S>
+where
+    Id: Eq + Clone + Hash,
+    ThId: Eq + Clone + Hash,
+    S: BuildHasher,
+{
+    /// Creates an empty model of the given theory.
+    pub fn new(theory: Arc<DiscreteTabTheory<ThId, ThId, S>>) -> Self {
+        Self {
+            theory,
+            generators: Default::default(),
+            ob_types: Default::default(),
+            mor_types: Default::default(),
+        }
+    }
+
+    /// Convenience method to turn a morphism into an object.
+    pub fn tabulated(&self, mor: TabMor<Id, Id>) -> TabOb<Id, Id> {
+        TabOb::Tabulated(Box::new(mor))
+    }
+
+    /// Convenience method to turn a morphism generator into an object.
+    pub fn tabulated_gen(&self, f: Id) -> TabOb<Id, Id> {
+        self.tabulated(Path::single(TabEdge::Basic(f)))
+    }
+
+    /// Adds a basic object to the model.
+    pub fn add_ob(&mut self, x: Id, typ: TabObType<ThId, ThId>) -> bool {
+        self.ob_types.set(x.clone(), typ);
+        self.generators.objects.insert(x)
+    }
+
+    /// Adds a basic morphism to the model.
+    pub fn add_mor(
+        &mut self,
+        f: Id,
+        dom: TabOb<Id, Id>,
+        cod: TabOb<Id, Id>,
+        typ: TabMorType<ThId, ThId>,
+    ) -> bool {
+        self.mor_types.set(f.clone(), typ);
+        self.generators.dom.set(f.clone(), dom);
+        self.generators.cod.set(f.clone(), cod);
+        self.generators.morphisms.insert(f)
+    }
+}
+
+impl<Id, ThId> Category for DiscreteTabModel<Id, ThId>
+where
+    Id: Eq + Clone + Hash,
+{
+    type Ob = TabOb<Id, Id>;
+    type Mor = TabMor<Id, Id>;
+
+    fn has_ob(&self, x: &Self::Ob) -> bool {
+        self.generators.has_vertex(x)
+    }
+    fn has_mor(&self, path: &Self::Mor) -> bool {
+        path.contained_in(&self.generators)
+    }
+    fn dom(&self, path: &Self::Mor) -> Self::Ob {
+        path.src(&self.generators)
+    }
+    fn cod(&self, path: &Self::Mor) -> Self::Ob {
+        path.tgt(&self.generators)
+    }
+
+    fn compose(&self, path: Path<Self::Ob, Self::Mor>) -> Self::Mor {
+        path.flatten_in(&self.generators).expect("Paths should be composable")
+    }
+}
+
+impl<Id, ThId> FgCategory for DiscreteTabModel<Id, ThId>
+where
+    Id: Eq + Clone + Hash,
+{
+    type ObGen = Id;
+    type MorGen = Id;
+
+    fn object_generators(&self) -> impl Iterator<Item = Self::ObGen> {
+        self.generators.objects.iter()
+    }
+    fn morphism_generators(&self) -> impl Iterator<Item = Self::MorGen> {
+        self.generators.morphisms.iter()
+    }
+
+    fn morphism_generator_dom(&self, f: &Self::MorGen) -> Self::Ob {
+        self.generators.dom.apply(f).cloned().expect("Domain should be defined")
+    }
+    fn morphism_generator_cod(&self, f: &Self::MorGen) -> Self::Ob {
+        self.generators.cod.apply(f).cloned().expect("Codomain should be defined")
+    }
+}
+
+impl<Id, ThId> DblModel for DiscreteTabModel<Id, ThId>
+where
+    Id: Eq + Clone + Hash,
+    ThId: Eq + Clone + Hash,
+{
+    type ObType = TabObType<ThId, ThId>;
+    type MorType = TabMorType<ThId, ThId>;
+    type ObOp = TabObOp<ThId, ThId>;
+    type MorOp = TabMorOp<ThId, ThId>;
+    type Theory = DiscreteTabTheory<ThId, ThId>;
+
+    fn theory(&self) -> &Self::Theory {
+        &self.theory
+    }
+
+    fn ob_type(&self, ob: &Self::Ob) -> Self::ObType {
+        match ob {
+            TabOb::Basic(x) => self.ob_gen_type(x),
+            TabOb::Tabulated(m) => TabObType::Tabulator(Box::new(self.mor_type(m))),
+        }
+    }
+
+    fn mor_type(&self, mor: &Self::Mor) -> Self::MorType {
+        let types = mor.clone().map(
+            |x| self.ob_type(&x),
+            |edge| match edge {
+                TabEdge::Basic(f) => self.mor_gen_type(&f),
+                TabEdge::Square { dom, .. } => {
+                    let typ = self.mor_type(&dom); // == self.mor_type(&cod)
+                    TabMorType::Hom(Box::new(TabObType::Tabulator(Box::new(typ))))
+                }
+            },
+        );
+        self.theory.compose_types(types)
+    }
+
+    fn ob_act(&self, ob: Self::Ob, op: &Self::ObOp) -> Self::Ob {
+        // Should we type check more rigorously here and in `mor_act`?
+        match (ob, op) {
+            (ob, TabObOp::Id(_)) => ob,
+            (TabOb::Tabulated(m), TabObOp::ProjSrc(_)) => self.dom(&m),
+            (TabOb::Tabulated(m), TabObOp::ProjTgt(_)) => self.cod(&m),
+            _ => panic!("Ill-typed application of object operation"),
+        }
+    }
+
+    fn mor_act(&self, mor: Self::Mor, op: &Self::MorOp) -> Self::Mor {
+        match (mor, op) {
+            (mor, TabMorOp::Id(_)) => mor,
+            _ => panic!("Non-identity morphism operations not implemented"),
+        }
+    }
+}
+
+impl<Id, ThId> FgDblModel for DiscreteTabModel<Id, ThId>
+where
+    Id: Eq + Clone + Hash,
+    ThId: Eq + Clone + Hash,
+{
+    fn ob_gen_type(&self, ob: &Self::ObGen) -> Self::ObType {
+        self.ob_types.apply(ob).cloned().expect("Object should have type")
+    }
+    fn mor_gen_type(&self, mor: &Self::MorGen) -> Self::MorType {
+        self.mor_types.apply(mor).cloned().expect("Morphism should have type")
+    }
 }
 
 #[cfg(test)]

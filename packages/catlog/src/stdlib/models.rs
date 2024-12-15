@@ -3,8 +3,7 @@
 use std::sync::Arc;
 use ustr::ustr;
 
-use crate::dbl::model::*;
-use crate::dbl::theory::UstrDiscreteDblTheory;
+use crate::dbl::{model::*, theory::*};
 use crate::one::fin_category::FinMor;
 
 /** The positive self-loop.
@@ -72,6 +71,33 @@ pub fn walking_attr(th: Arc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel {
     model
 }
 
+/** The "walking" backward link.
+
+The free category with links having a link from the codomain of a morphism back
+to the morphism itself.
+
+In the system dynamics jargon, a backward link defines a "reinforcing loop,"
+assuming the link has a positive effect on the flow. An example is an infection
+flow in a model of an infectious disease, where increasing the number of
+infectives increases the rate of infection of the remaining susceptibles (other
+things equal).
+ */
+pub fn backward_link(th: Arc<UstrDiscreteTabTheory>) -> UstrDiscreteTabModel {
+    let mut model = UstrDiscreteTabModel::new(th.clone());
+    let (x, y, f) = (ustr("x"), ustr("y"), ustr("f"));
+    let ob_type = TabObType::Basic(ustr("Object"));
+    model.add_ob(x, ob_type.clone());
+    model.add_ob(y, ob_type.clone());
+    model.add_mor(f, TabOb::Basic(x), TabOb::Basic(y), th.hom_type(ob_type));
+    model.add_mor(
+        ustr("link"),
+        TabOb::Basic(y),
+        model.tabulated_gen(f),
+        TabMorType::Basic(ustr("Link")),
+    );
+    model
+}
+
 #[cfg(test)]
 mod tests {
     use super::super::theories::*;
@@ -91,5 +117,12 @@ mod tests {
     fn schemas() {
         let th = Arc::new(th_schema());
         assert!(walking_attr(th).validate().is_ok());
+    }
+
+    #[test]
+    fn categories_with_links() {
+        let th = Arc::new(th_category_links());
+        // TODO: Implement validation for models of tabulator theories.
+        backward_link(th);
     }
 }
