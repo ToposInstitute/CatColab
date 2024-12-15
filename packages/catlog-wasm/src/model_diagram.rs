@@ -144,7 +144,7 @@ impl DblModelDiagram {
             DblModelDiagramBox::[Discrete](diagram) => {
                 let (_, model) = diagram.into();
                 let ob_type = ob_type.try_into()?;
-                Ok(model.object_generators_with_type(&ob_type).map(Ob::Basic).collect())
+                Ok(model.ob_generators_with_type(&ob_type).map(Ob::Basic).collect())
             }
         })
     }
@@ -156,7 +156,7 @@ impl DblModelDiagram {
             DblModelDiagramBox::[Discrete](diagram) => {
                 let (_, model) = diagram.into();
                 let mor_type = mor_type.try_into()?;
-                Ok(model.morphism_generators_with_type(&mor_type).map(Mor::Basic).collect())
+                Ok(model.mor_generators_with_type(&mor_type).map(Mor::Basic).collect())
             }
         })
     }
@@ -170,7 +170,7 @@ impl DblModelDiagram {
                 let decls = model.object_generators().map(|x| {
                     DiagramObDecl {
                         id: x,
-                        ob_type: model.ob_gen_type(&x).into(),
+                        ob_type: model.ob_generator_type(&x).into(),
                         over: mapping.apply_ob(&x).map(|ob| ob.into())
                     }
                 });
@@ -188,7 +188,7 @@ impl DblModelDiagram {
                 let decls = model.morphism_generators().map(|f| {
                     DiagramMorDecl {
                         id: f,
-                        mor_type: model.mor_gen_type(&f).into(),
+                        mor_type: model.mor_generator_type(&f).into(),
                         over: mapping.apply_basic_mor(&f).map(|mor| mor.into()),
                         dom: model.get_dom(&f).cloned().map(|ob| ob.into()),
                         cod: model.get_cod(&f).cloned().map(|ob| ob.into()),

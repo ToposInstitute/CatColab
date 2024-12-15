@@ -263,7 +263,7 @@ where
                 } else {
                     let dom_f = mapping.apply_ob(&dom.morphism_generator_dom(&f));
                     let cod_f = mapping.apply_ob(&dom.morphism_generator_cod(&f));
-                    let f_type = dom.mor_gen_type(&f);
+                    let f_type = dom.mor_generator_type(&f);
                     let ff_type = cod.mor_type(&f_f);
 
                     let mut errs = vec![];
@@ -537,7 +537,7 @@ where
                         self.unassign_ob(x, y)
                     }
                 } else {
-                    for y in self.cod.object_generators_with_type(&self.dom.ob_type(&x)) {
+                    for y in self.cod.ob_generators_with_type(&self.dom.ob_type(&x)) {
                         let can_assign = self.assign_ob(x.clone(), y.clone());
                         if can_assign {
                             self.search(depth + 1);

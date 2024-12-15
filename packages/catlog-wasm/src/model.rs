@@ -216,7 +216,7 @@ impl DblModel {
         all_the_same!(match &self.0 {
             DblModelBox::[Discrete](model) => {
                 let ob_type = ob_type.try_into()?;
-                Ok(model.object_generators_with_type(&ob_type).map(Ob::Basic).collect())
+                Ok(model.ob_generators_with_type(&ob_type).map(Ob::Basic).collect())
             }
         })
     }
@@ -227,7 +227,7 @@ impl DblModel {
         all_the_same!(match &self.0 {
             DblModelBox::[Discrete](model) => {
                 let mor_type = mor_type.try_into()?;
-                Ok(model.morphism_generators_with_type(&mor_type).map(Mor::Basic).collect())
+                Ok(model.mor_generators_with_type(&mor_type).map(Mor::Basic).collect())
             }
         })
     }

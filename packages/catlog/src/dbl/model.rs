@@ -103,13 +103,13 @@ pub trait DblModel: Category {
         MorOp = Self::MorOp,
     >;
 
-    /// The underlying theory that this is a model of
+    /// The double theory that this model is a model of.
     fn theory(&self) -> &Self::Theory;
 
-    /// Type of object.
+    /// Type of an object.
     fn ob_type(&self, x: &Self::Ob) -> Self::ObType;
 
-    /// Type of morphism.
+    /// Type of a morphism.
     fn mor_type(&self, m: &Self::Mor) -> Self::MorType;
 
     /// Acts on an object with an object operation.
@@ -119,28 +119,26 @@ pub trait DblModel: Category {
     fn mor_act(&self, m: Self::Mor, α: &Self::MorOp) -> Self::Mor;
 }
 
-/// A finitely-generated double model
+/// A finitely-generated model of a double theory.
 pub trait FgDblModel: DblModel + FgCategory {
     /// Type of an object generator.
-    fn ob_gen_type(&self, ob: &Self::ObGen) -> Self::ObType;
+    fn ob_generator_type(&self, ob: &Self::ObGen) -> Self::ObType;
 
     /// Type of a morphism generator.
-    fn mor_gen_type(&self, mor: &Self::MorGen) -> Self::MorType;
+    fn mor_generator_type(&self, mor: &Self::MorGen) -> Self::MorType;
 
     /// Iterates over object generators in the model of a given object type.
-    fn object_generators_with_type(
-        &self,
-        obtype: &Self::ObType,
-    ) -> impl Iterator<Item = Self::ObGen> {
-        self.object_generators().filter(move |ob| self.ob_gen_type(ob) == *obtype)
+    fn ob_generators_with_type(&self, obtype: &Self::ObType) -> impl Iterator<Item = Self::ObGen> {
+        self.object_generators().filter(move |ob| self.ob_generator_type(ob) == *obtype)
     }
 
     /// Iterates over morphism generators in the model of a given morphism type.
-    fn morphism_generators_with_type(
+    fn mor_generators_with_type(
         &self,
         mortype: &Self::MorType,
     ) -> impl Iterator<Item = Self::MorGen> {
-        self.morphism_generators().filter(move |mor| self.mor_gen_type(mor) == *mortype)
+        self.morphism_generators()
+            .filter(move |mor| self.mor_generator_type(mor) == *mortype)
     }
 }
 
@@ -264,7 +262,7 @@ where
         });
         let mor_type_errors = self.category.morphism_generators().flat_map(|e| {
             let mut errs = Vec::new();
-            let mor_type = self.mor_gen_type(&e);
+            let mor_type = self.mor_generator_type(&e);
             if self.theory.has_mor_type(&mor_type) {
                 if self.category.get_dom(&e).map_or(false, |x| {
                     self.has_ob(x) && self.ob_type(x) != self.theory.src(&mor_type)
@@ -295,11 +293,11 @@ where
         let edges: Vec<_> = self.morphism_generators().collect();
         for e in edges {
             if let Some(x) = self.get_dom(&e).filter(|x| !self.has_ob(x)) {
-                let ob_type = self.theory.src(&self.mor_gen_type(&e));
+                let ob_type = self.theory.src(&self.mor_generator_type(&e));
                 self.add_ob(x.clone(), ob_type);
             }
             if let Some(x) = self.get_cod(&e).filter(|x| !self.has_ob(x)) {
-                let ob_type = self.theory.tgt(&self.mor_gen_type(&e));
+                let ob_type = self.theory.tgt(&self.mor_generator_type(&e));
                 self.add_ob(x.clone(), ob_type);
             }
         }
@@ -385,10 +383,11 @@ where
     }
 
     fn ob_type(&self, ob: &Self::Ob) -> Self::ObType {
-        self.ob_gen_type(ob)
+        self.ob_generator_type(ob)
     }
     fn mor_type(&self, mor: &Self::Mor) -> Self::MorType {
-        let types = mor.clone().map(|x| self.ob_gen_type(&x), |m| self.mor_gen_type(&m));
+        let types =
+            mor.clone().map(|x| self.ob_generator_type(&x), |m| self.mor_generator_type(&m));
         self.theory.compose_types(types)
     }
 }
@@ -400,20 +399,17 @@ where
     Cat::Ob: Hash,
     Cat::Mor: Hash,
 {
-    fn ob_gen_type(&self, ob: &Self::ObGen) -> Self::ObType {
+    fn ob_generator_type(&self, ob: &Self::ObGen) -> Self::ObType {
         self.ob_types.apply(ob).cloned().expect("Object should have type")
     }
-    fn mor_gen_type(&self, mor: &Self::MorGen) -> Self::MorType {
+    fn mor_generator_type(&self, mor: &Self::MorGen) -> Self::MorType {
         self.mor_types.apply(mor).cloned().expect("Morphism should have type")
     }
 
-    fn object_generators_with_type(&self, typ: &Self::ObType) -> impl Iterator<Item = Self::ObGen> {
+    fn ob_generators_with_type(&self, typ: &Self::ObType) -> impl Iterator<Item = Self::ObGen> {
         self.ob_types.preimage(typ)
     }
-    fn morphism_generators_with_type(
-        &self,
-        typ: &Self::MorType,
-    ) -> impl Iterator<Item = Self::MorGen> {
+    fn mor_generators_with_type(&self, typ: &Self::MorType) -> impl Iterator<Item = Self::MorGen> {
         self.mor_types.preimage(typ)
     }
 }
@@ -728,7 +724,7 @@ where
 
     fn ob_type(&self, ob: &Self::Ob) -> Self::ObType {
         match ob {
-            TabOb::Basic(x) => self.ob_gen_type(x),
+            TabOb::Basic(x) => self.ob_generator_type(x),
             TabOb::Tabulated(m) => TabObType::Tabulator(Box::new(self.mor_type(m))),
         }
     }
@@ -737,7 +733,7 @@ where
         let types = mor.clone().map(
             |x| self.ob_type(&x),
             |edge| match edge {
-                TabEdge::Basic(f) => self.mor_gen_type(&f),
+                TabEdge::Basic(f) => self.mor_generator_type(&f),
                 TabEdge::Square { dom, .. } => {
                     let typ = self.mor_type(&dom); // == self.mor_type(&cod)
                     TabMorType::Hom(Box::new(TabObType::Tabulator(Box::new(typ))))
@@ -770,11 +766,21 @@ where
     Id: Eq + Clone + Hash,
     ThId: Eq + Clone + Hash,
 {
-    fn ob_gen_type(&self, ob: &Self::ObGen) -> Self::ObType {
+    fn ob_generator_type(&self, ob: &Self::ObGen) -> Self::ObType {
         self.ob_types.apply(ob).cloned().expect("Object should have type")
     }
-    fn mor_gen_type(&self, mor: &Self::MorGen) -> Self::MorType {
+    fn mor_generator_type(&self, mor: &Self::MorGen) -> Self::MorType {
         self.mor_types.apply(mor).cloned().expect("Morphism should have type")
+    }
+
+    fn ob_generators_with_type(&self, obtype: &Self::ObType) -> impl Iterator<Item = Self::ObGen> {
+        self.ob_types.preimage(obtype)
+    }
+    fn mor_generators_with_type(
+        &self,
+        mortype: &Self::MorType,
+    ) -> impl Iterator<Item = Self::MorGen> {
+        self.mor_types.preimage(mortype)
     }
 }
 
