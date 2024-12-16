@@ -25,22 +25,22 @@ julia --project -e 'import Pkg; Pkg.instantiate()'
 
 ## Usage
 
-Navigate to this directory and run:
+Navigate to this directory and launch the Jupyter serving by running:
 
 ```sh
-jupyter server --IdentityProvider.token="" --ServerApp.disable_check_xsrf=True --ServerApp.allow_origin="http://localhost:5173"
+./jupyter_server.sh
 ```
 
 While the Jupyter server is running, the AlgebraicJulia service will be usable
-by CatColab served locally.
+by CatColab when served locally.
 
 ## Compiling a Sysimage
 
-Julia precompilation for packages like `CairoMakie.jl` and `OrdinaryDiffEq.jl`
-can be time-consuming. A **sysimage** is a file which stores precompilation
-statements, making future invocations of `AlgebraicJuliaService` and its
-dependencies immediate.
+Precompiling dependencies like `CairoMakie.jl` and `OrdinaryDiffEq.jl` can be
+time-consuming. A **sysimage** is a file that stores precompilation statements,
+making future invocations of `AlgebraicJuliaService` and its dependencies
+immediate.
 
-In order to build a sysimage, navigate to `packages/sysimages` and run
-`~/.init-sysimg.jl` as a script. This process may take upwards of six minutes or
-longer, depending on your machine.
+To build a sysimage, run the Julia program `./make_sysimage.jl` as a script.
+This process may take upwards of five minutes or longer, depending on your
+machine.

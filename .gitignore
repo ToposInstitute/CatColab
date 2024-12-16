@@ -81,6 +81,3 @@ web_modules/
 .netlify
 /packages/frontend/docs/
 /target/
-
-# ignore sysimage
-/packages/sysimages/*.so

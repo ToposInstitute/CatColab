@@ -39,9 +39,14 @@ export function createKernel(
 
 /** Create a Julia kernel in a reactive context. */
 export function createJuliaKernel(serverOptions: ServerSettings) {
+    // XXX: How do we know...
+    // - which Julia version to use?
+    // - whether to use the standard kernel or one with our custom sys image?
+    // For now, we are omitting the kernel name completely and thus assuming
+    // that the correct default kernel has been set on the Jupyter server.
+    // Obviously this approach will not extend to multiple languages.
     return createKernel(serverOptions, {
-        // XXX: Do I have to specify the Julia version?
-        name: "julia-1.11",
+        //name: "julia-1.11",
     });
 }
 
