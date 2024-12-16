@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
-use catlog::dbl::model::{self as dbl_model, FgDblModel, InvalidDiscreteDblModel};
+use catlog::dbl::model::{self as dbl_model, FgDblModel, InvalidDblModel};
 use catlog::one::fin_category::UstrFinCategory;
 use catlog::one::{Category as _, FgCategory, Path};
 use catlog::validate::Validate;
@@ -247,7 +247,7 @@ impl DblModel {
 /// Result of validating a model of a double theory.
 #[derive(Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
-pub struct ModelValidationResult(pub JsResult<(), Vec<InvalidDiscreteDblModel<Uuid>>>);
+pub struct ModelValidationResult(pub JsResult<(), Vec<InvalidDblModel<Uuid>>>);
 
 #[cfg(test)]
 pub(crate) mod tests {

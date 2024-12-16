@@ -251,9 +251,9 @@ where
         self.category.set_cod(f, x)
     }
 
-    /// Iterates over failures to be well-defined model.
-    pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidDiscreteDblModel<Id>> + '_ {
-        type Invalid<Id> = InvalidDiscreteDblModel<Id>;
+    /// Iterates over failures of model to be well defined.
+    pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidDblModel<Id>> + '_ {
+        type Invalid<Id> = InvalidDblModel<Id>;
         let category_errors = self.category.iter_invalid().map(|err| match err {
             InvalidFpCategory::Dom(e) => Invalid::Dom(e),
             InvalidFpCategory::Cod(e) => Invalid::Cod(e),
@@ -430,24 +430,27 @@ where
     Cat::Ob: Hash,
     Cat::Mor: Hash,
 {
-    type ValidationError = InvalidDiscreteDblModel<Id>;
+    type ValidationError = InvalidDblModel<Id>;
 
     fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
         validate::wrap_errors(self.iter_invalid())
     }
 }
 
-/** A failure of a model of a discrete double theory to be well defined.
+/** A failure of a model of a double theory to be well defined.
 
-TODO: Missing case that equation has different composite morphism types on left
-and right hand sides.
+We currently are encompassing error variants for all kinds of double theories in
+a single enum. That will likely become unviable but it's convenient for now.
+
+TODO: We are missing the case that an equation has different composite morphism
+types on left and right hand sides.
 */
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(tag = "tag", content = "content"))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
-pub enum InvalidDiscreteDblModel<Id> {
+pub enum InvalidDblModel<Id> {
     /// Domain of basic morphism is undefined or invalid.
     Dom(Id),
 
@@ -563,7 +566,11 @@ where
 
     fn has_edge(&self, edge: &Self::E) -> bool {
         match edge {
-            TabEdge::Basic(e) => self.morphisms.contains(e),
+            TabEdge::Basic(e) => {
+                self.morphisms.contains(e)
+                    && self.dom.apply(e).map_or(false, |x| self.has_vertex(x))
+                    && self.cod.apply(e).map_or(false, |x| self.has_vertex(x))
+            }
             TabEdge::Square {
                 dom,
                 cod,
@@ -667,9 +674,46 @@ where
         self.generators.cod.set(f.clone(), cod);
         self.generators.morphisms.insert(f)
     }
+
+    /// Iterates over failures of model to be well defined.
+    pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidDblModel<Id>> + '_ {
+        type Invalid<Id> = InvalidDblModel<Id>;
+        let ob_errors = self.generators.objects.iter().filter_map(|x| {
+            if self.ob_types.apply(&x).map_or(false, |typ| self.theory.has_ob_type(typ)) {
+                None
+            } else {
+                Some(Invalid::ObType(x))
+            }
+        });
+        let mor_errors = self.generators.morphisms.iter().flat_map(|e| {
+            let mut errs = Vec::new();
+            let dom = self.generators.dom.apply(&e).filter(|x| self.has_ob(x));
+            let cod = self.generators.cod.apply(&e).filter(|x| self.has_ob(x));
+            if dom.is_none() {
+                errs.push(Invalid::Dom(e.clone()));
+            }
+            if cod.is_none() {
+                errs.push(Invalid::Cod(e.clone()));
+            }
+            if let Some(mor_type) =
+                self.mor_types.apply(&e).filter(|typ| self.theory.has_mor_type(typ))
+            {
+                if dom.map_or(false, |x| self.ob_type(x) != self.theory.src(mor_type)) {
+                    errs.push(Invalid::DomType(e.clone()));
+                }
+                if cod.map_or(false, |x| self.ob_type(x) != self.theory.tgt(mor_type)) {
+                    errs.push(Invalid::CodType(e.clone()));
+                }
+            } else {
+                errs.push(Invalid::MorType(e));
+            }
+            errs.into_iter()
+        });
+        ob_errors.chain(mor_errors)
+    }
 }
 
-impl<Id, ThId> Category for DiscreteTabModel<Id, ThId>
+impl<Id, ThId, S> Category for DiscreteTabModel<Id, ThId, S>
 where
     Id: Eq + Clone + Hash,
 {
@@ -694,7 +738,7 @@ where
     }
 }
 
-impl<Id, ThId> FgCategory for DiscreteTabModel<Id, ThId>
+impl<Id, ThId, S> FgCategory for DiscreteTabModel<Id, ThId, S>
 where
     Id: Eq + Clone + Hash,
 {
@@ -716,16 +760,17 @@ where
     }
 }
 
-impl<Id, ThId> DblModel for DiscreteTabModel<Id, ThId>
+impl<Id, ThId, S> DblModel for DiscreteTabModel<Id, ThId, S>
 where
     Id: Eq + Clone + Hash,
     ThId: Eq + Clone + Hash,
+    S: BuildHasher,
 {
     type ObType = TabObType<ThId, ThId>;
     type MorType = TabMorType<ThId, ThId>;
     type ObOp = TabObOp<ThId, ThId>;
     type MorOp = TabMorOp<ThId, ThId>;
-    type Theory = DiscreteTabTheory<ThId, ThId>;
+    type Theory = DiscreteTabTheory<ThId, ThId, S>;
 
     fn theory(&self) -> &Self::Theory {
         &self.theory
@@ -770,10 +815,11 @@ where
     }
 }
 
-impl<Id, ThId> FgDblModel for DiscreteTabModel<Id, ThId>
+impl<Id, ThId, S> FgDblModel for DiscreteTabModel<Id, ThId, S>
 where
     Id: Eq + Clone + Hash,
     ThId: Eq + Clone + Hash,
+    S: BuildHasher,
 {
     fn ob_generator_type(&self, ob: &Self::ObGen) -> Self::ObType {
         self.ob_types.apply(ob).cloned().expect("Object should have type")
@@ -793,8 +839,22 @@ where
     }
 }
 
+impl<Id, ThId, S> Validate for DiscreteTabModel<Id, ThId, S>
+where
+    Id: Eq + Clone + Hash,
+    ThId: Eq + Clone + Hash,
+    S: BuildHasher,
+{
+    type ValidationError = InvalidDblModel<Id>;
+
+    fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
+        validate::wrap_errors(self.iter_invalid())
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use nonempty::nonempty;
     use ustr::ustr;
 
     use super::*;
@@ -807,12 +867,12 @@ mod tests {
         let mut model = DiscreteDblModel::new(th.clone());
         let entity = ustr("entity");
         model.add_ob(entity, ustr("NotObType"));
-        assert_eq!(model.validate().unwrap_err().len(), 1);
+        assert_eq!(model.validate(), Err(nonempty![InvalidDblModel::ObType(entity)]));
 
         let mut model = DiscreteDblModel::new(th.clone());
         model.add_ob(entity, ustr("Entity"));
         model.add_mor(ustr("map"), entity, entity, FinMor::Generator(ustr("NotMorType")));
-        assert_eq!(model.validate().unwrap_err().len(), 1);
+        assert_eq!(model.validate(), Err(nonempty![InvalidDblModel::MorType(ustr("map"))]));
 
         let mut model = DiscreteDblModel::new(th);
         model.add_ob(entity, ustr("Entity"));
@@ -820,12 +880,7 @@ mod tests {
         model.add_mor(ustr("a"), entity, ustr("type"), FinMor::Generator(ustr("Attr")));
         assert!(model.validate().is_ok());
         model.add_mor(ustr("b"), entity, ustr("type"), FinMor::Id(ustr("Entity")));
-        assert_eq!(model.validate().unwrap_err().len(), 1);
-
-        assert!(model.is_free());
-        let peq = PathEq::new(Path::single(ustr("a")), Path::single(ustr("b")));
-        model.add_equation(ustr("e"), peq);
-        assert!(!model.is_free());
+        assert_eq!(model.validate(), Err(nonempty![InvalidDblModel::CodType(ustr("b"))]));
     }
 
     #[test]
@@ -835,5 +890,15 @@ mod tests {
         model.add_mor(ustr("attr"), ustr("entity"), ustr("type"), FinMor::Generator(ustr("Attr")));
         model.infer_missing();
         assert_eq!(model, walking_attr(th));
+    }
+
+    #[test]
+    fn validate_discrete_tab_model() {
+        let th = Arc::new(th_category_links());
+        let mut model = DiscreteTabModel::new(th);
+        let (x, f) = (ustr("x"), ustr("f"));
+        model.add_ob(x, TabObType::Basic(ustr("Object")));
+        model.add_mor(f, TabOb::Basic(x), TabOb::Basic(x), TabMorType::Basic(ustr("Link")));
+        assert_eq!(model.validate(), Err(nonempty![InvalidDblModel::CodType(f)]));
     }
 }
