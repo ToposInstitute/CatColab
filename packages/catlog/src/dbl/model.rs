@@ -157,7 +157,13 @@ pub trait MutDblModel: FgDblModel {
     fn add_ob(&mut self, x: Self::ObGen, ob_type: Self::ObType) -> bool;
 
     /// Adds a basic morphism to the model.
-    fn add_mor(&mut self, f: Self::MorGen, dom: Self::Ob, cod: Self::Ob, mor_type: Self::MorType) -> bool {
+    fn add_mor(
+        &mut self,
+        f: Self::MorGen,
+        dom: Self::Ob,
+        cod: Self::Ob,
+        mor_type: Self::MorType,
+    ) -> bool {
         let is_new = self.make_mor(f.clone(), mor_type);
         self.set_dom(f.clone(), dom);
         self.set_cod(f, cod);
@@ -419,7 +425,7 @@ where
     Id: Eq + Clone + Hash,
     Cat: FgCategory,
     Cat::Ob: Hash,
-    Cat::Mor: Hash
+    Cat::Mor: Hash,
 {
     fn add_ob(&mut self, x: Id, typ: Cat::Ob) -> bool {
         self.ob_types.set(x.clone(), typ);
@@ -534,7 +540,7 @@ pub enum TabEdge<V, E> {
     /// Basic morphism between any two objects.
     Basic(E),
 
-    /// Generating morphism between tabulated morphisms, a commuting square.
+    /// Generating morphism between tabulated morphisms, a commutative square.
     Square {
         /// The domain, a tabulated morphism.
         dom: Box<TabMor<V, E>>,
@@ -594,9 +600,7 @@ where
     fn has_edge(&self, edge: &Self::E) -> bool {
         match edge {
             TabEdge::Basic(e) => {
-                self.morphisms.contains(e)
-                    && self.dom.apply(e).map_or(false, |x| self.has_vertex(x))
-                    && self.cod.apply(e).map_or(false, |x| self.has_vertex(x))
+                self.morphisms.contains(e) && self.dom.is_set(e) && self.cod.is_set(e)
             }
             TabEdge::Square {
                 dom,
