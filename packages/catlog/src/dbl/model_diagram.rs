@@ -24,8 +24,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify_next::{declare, Tsify};
 
-use super::model::{DiscreteDblModel, InvalidDblModel};
-use super::model_morphism::*;
+use super::{model::*, model_morphism::*};
 use crate::one::{Category, FgCategory};
 use crate::validate;
 
