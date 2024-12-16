@@ -103,13 +103,13 @@ pub trait DblModel: Category {
         MorOp = Self::MorOp,
     >;
 
-    /// The underlying theory that this is a model of
+    /// The double theory that this model is a model of.
     fn theory(&self) -> &Self::Theory;
 
-    /// Type of object.
+    /// Type of an object.
     fn ob_type(&self, x: &Self::Ob) -> Self::ObType;
 
-    /// Type of morphism.
+    /// Type of a morphism.
     fn mor_type(&self, m: &Self::Mor) -> Self::MorType;
 
     /// Acts on an object with an object operation.
@@ -119,28 +119,35 @@ pub trait DblModel: Category {
     fn mor_act(&self, m: Self::Mor, α: &Self::MorOp) -> Self::Mor;
 }
 
-/// A finitely-generated double model
+/// A finitely-generated model of a double theory.
 pub trait FgDblModel: DblModel + FgCategory {
     /// Type of an object generator.
-    fn ob_gen_type(&self, ob: &Self::ObGen) -> Self::ObType;
+    fn ob_generator_type(&self, ob: &Self::ObGen) -> Self::ObType;
 
     /// Type of a morphism generator.
-    fn mor_gen_type(&self, mor: &Self::MorGen) -> Self::MorType;
+    fn mor_generator_type(&self, mor: &Self::MorGen) -> Self::MorType;
 
-    /// Iterates over object generators in the model of a given object type.
-    fn object_generators_with_type(
-        &self,
-        obtype: &Self::ObType,
-    ) -> impl Iterator<Item = Self::ObGen> {
-        self.object_generators().filter(move |ob| self.ob_gen_type(ob) == *obtype)
+    /// Iterates over object generators with the given object type.
+    fn ob_generators_with_type(&self, obtype: &Self::ObType) -> impl Iterator<Item = Self::ObGen> {
+        self.ob_generators().filter(|ob| self.ob_generator_type(ob) == *obtype)
     }
 
-    /// Iterates over morphism generators in the model of a given morphism type.
-    fn morphism_generators_with_type(
+    /// Iterates over morphism generators with the given morphism type.
+    fn mor_generators_with_type(
         &self,
         mortype: &Self::MorType,
     ) -> impl Iterator<Item = Self::MorGen> {
-        self.morphism_generators().filter(move |mor| self.mor_gen_type(mor) == *mortype)
+        self.mor_generators().filter(|mor| self.mor_generator_type(mor) == *mortype)
+    }
+
+    /// Iterators over basic objects with the given object type.
+    fn objects_with_type(&self, obtype: &Self::ObType) -> impl Iterator<Item = Self::Ob> {
+        self.ob_generators_with_type(obtype).map(|ob_gen| ob_gen.into())
+    }
+
+    /// Iterates over basic morphisms with the given morphism type.
+    fn morphisms_with_type(&self, mortype: &Self::MorType) -> impl Iterator<Item = Self::Mor> {
+        self.mor_generators_with_type(mortype).map(|mor_gen| mor_gen.into())
     }
 }
 
@@ -244,9 +251,9 @@ where
         self.category.set_cod(f, x)
     }
 
-    /// Iterates over failures to be well-defined model.
-    pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidDiscreteDblModel<Id>> + '_ {
-        type Invalid<Id> = InvalidDiscreteDblModel<Id>;
+    /// Iterates over failures of model to be well defined.
+    pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidDblModel<Id>> + '_ {
+        type Invalid<Id> = InvalidDblModel<Id>;
         let category_errors = self.category.iter_invalid().map(|err| match err {
             InvalidFpCategory::Dom(e) => Invalid::Dom(e),
             InvalidFpCategory::Cod(e) => Invalid::Cod(e),
@@ -255,16 +262,16 @@ where
             InvalidFpCategory::EqSrc(eq) => Invalid::EqSrc(eq),
             InvalidFpCategory::EqTgt(eq) => Invalid::EqTgt(eq),
         });
-        let ob_type_errors = self.category.object_generators().filter_map(|x| {
+        let ob_type_errors = self.category.ob_generators().filter_map(|x| {
             if self.theory.has_ob_type(&self.ob_type(&x)) {
                 None
             } else {
                 Some(Invalid::ObType(x))
             }
         });
-        let mor_type_errors = self.category.morphism_generators().flat_map(|e| {
+        let mor_type_errors = self.category.mor_generators().flat_map(|e| {
             let mut errs = Vec::new();
-            let mor_type = self.mor_gen_type(&e);
+            let mor_type = self.mor_generator_type(&e);
             if self.theory.has_mor_type(&mor_type) {
                 if self.category.get_dom(&e).map_or(false, |x| {
                     self.has_ob(x) && self.ob_type(x) != self.theory.src(&mor_type)
@@ -292,14 +299,14 @@ where
     the model even after calling this method.
     */
     pub fn infer_missing(&mut self) {
-        let edges: Vec<_> = self.morphism_generators().collect();
+        let edges: Vec<_> = self.mor_generators().collect();
         for e in edges {
             if let Some(x) = self.get_dom(&e).filter(|x| !self.has_ob(x)) {
-                let ob_type = self.theory.src(&self.mor_gen_type(&e));
+                let ob_type = self.theory.src(&self.mor_generator_type(&e));
                 self.add_ob(x.clone(), ob_type);
             }
             if let Some(x) = self.get_cod(&e).filter(|x| !self.has_ob(x)) {
-                let ob_type = self.theory.tgt(&self.mor_gen_type(&e));
+                let ob_type = self.theory.tgt(&self.mor_generator_type(&e));
                 self.add_ob(x.clone(), ob_type);
             }
         }
@@ -343,20 +350,20 @@ where
     type ObGen = Id;
     type MorGen = Id;
 
-    fn object_generators(&self) -> impl Iterator<Item = Self::ObGen> {
-        self.category.object_generators()
+    fn ob_generators(&self) -> impl Iterator<Item = Self::ObGen> {
+        self.category.ob_generators()
     }
 
-    fn morphism_generators(&self) -> impl Iterator<Item = Self::MorGen> {
-        self.category.morphism_generators()
+    fn mor_generators(&self) -> impl Iterator<Item = Self::MorGen> {
+        self.category.mor_generators()
     }
 
-    fn morphism_generator_dom(&self, f: &Self::MorGen) -> Self::Ob {
-        self.category.morphism_generator_dom(f)
+    fn mor_generator_dom(&self, f: &Self::MorGen) -> Self::Ob {
+        self.category.mor_generator_dom(f)
     }
 
-    fn morphism_generator_cod(&self, f: &Self::MorGen) -> Self::Ob {
-        self.category.morphism_generator_cod(f)
+    fn mor_generator_cod(&self, f: &Self::MorGen) -> Self::Ob {
+        self.category.mor_generator_cod(f)
     }
 }
 
@@ -385,10 +392,11 @@ where
     }
 
     fn ob_type(&self, ob: &Self::Ob) -> Self::ObType {
-        self.ob_gen_type(ob)
+        self.ob_generator_type(ob)
     }
     fn mor_type(&self, mor: &Self::Mor) -> Self::MorType {
-        let types = mor.clone().map(|x| self.ob_gen_type(&x), |m| self.mor_gen_type(&m));
+        let types =
+            mor.clone().map(|x| self.ob_generator_type(&x), |m| self.mor_generator_type(&m));
         self.theory.compose_types(types)
     }
 }
@@ -400,20 +408,17 @@ where
     Cat::Ob: Hash,
     Cat::Mor: Hash,
 {
-    fn ob_gen_type(&self, ob: &Self::ObGen) -> Self::ObType {
+    fn ob_generator_type(&self, ob: &Self::ObGen) -> Self::ObType {
         self.ob_types.apply(ob).cloned().expect("Object should have type")
     }
-    fn mor_gen_type(&self, mor: &Self::MorGen) -> Self::MorType {
+    fn mor_generator_type(&self, mor: &Self::MorGen) -> Self::MorType {
         self.mor_types.apply(mor).cloned().expect("Morphism should have type")
     }
 
-    fn object_generators_with_type(&self, typ: &Self::ObType) -> impl Iterator<Item = Self::ObGen> {
+    fn ob_generators_with_type(&self, typ: &Self::ObType) -> impl Iterator<Item = Self::ObGen> {
         self.ob_types.preimage(typ)
     }
-    fn morphism_generators_with_type(
-        &self,
-        typ: &Self::MorType,
-    ) -> impl Iterator<Item = Self::MorGen> {
+    fn mor_generators_with_type(&self, typ: &Self::MorType) -> impl Iterator<Item = Self::MorGen> {
         self.mor_types.preimage(typ)
     }
 }
@@ -425,24 +430,27 @@ where
     Cat::Ob: Hash,
     Cat::Mor: Hash,
 {
-    type ValidationError = InvalidDiscreteDblModel<Id>;
+    type ValidationError = InvalidDblModel<Id>;
 
     fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
         validate::wrap_errors(self.iter_invalid())
     }
 }
 
-/** A failure of a model of a discrete double theory to be well defined.
+/** A failure of a model of a double theory to be well defined.
 
-TODO: Missing case that equation has different composite morphism types on left
-and right hand sides.
+We currently are encompassing error variants for all kinds of double theories in
+a single enum. That will likely become unviable but it's convenient for now.
+
+TODO: We are missing the case that an equation has different composite morphism
+types on left and right hand sides.
 */
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(tag = "tag", content = "content"))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
-pub enum InvalidDiscreteDblModel<Id> {
+pub enum InvalidDblModel<Id> {
     /// Domain of basic morphism is undefined or invalid.
     Dom(Id),
 
@@ -558,7 +566,11 @@ where
 
     fn has_edge(&self, edge: &Self::E) -> bool {
         match edge {
-            TabEdge::Basic(e) => self.morphisms.contains(e),
+            TabEdge::Basic(e) => {
+                self.morphisms.contains(e)
+                    && self.dom.apply(e).map_or(false, |x| self.has_vertex(x))
+                    && self.cod.apply(e).map_or(false, |x| self.has_vertex(x))
+            }
             TabEdge::Square {
                 dom,
                 cod,
@@ -662,9 +674,46 @@ where
         self.generators.cod.set(f.clone(), cod);
         self.generators.morphisms.insert(f)
     }
+
+    /// Iterates over failures of model to be well defined.
+    pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidDblModel<Id>> + '_ {
+        type Invalid<Id> = InvalidDblModel<Id>;
+        let ob_errors = self.generators.objects.iter().filter_map(|x| {
+            if self.ob_types.apply(&x).map_or(false, |typ| self.theory.has_ob_type(typ)) {
+                None
+            } else {
+                Some(Invalid::ObType(x))
+            }
+        });
+        let mor_errors = self.generators.morphisms.iter().flat_map(|e| {
+            let mut errs = Vec::new();
+            let dom = self.generators.dom.apply(&e).filter(|x| self.has_ob(x));
+            let cod = self.generators.cod.apply(&e).filter(|x| self.has_ob(x));
+            if dom.is_none() {
+                errs.push(Invalid::Dom(e.clone()));
+            }
+            if cod.is_none() {
+                errs.push(Invalid::Cod(e.clone()));
+            }
+            if let Some(mor_type) =
+                self.mor_types.apply(&e).filter(|typ| self.theory.has_mor_type(typ))
+            {
+                if dom.map_or(false, |x| self.ob_type(x) != self.theory.src(mor_type)) {
+                    errs.push(Invalid::DomType(e.clone()));
+                }
+                if cod.map_or(false, |x| self.ob_type(x) != self.theory.tgt(mor_type)) {
+                    errs.push(Invalid::CodType(e.clone()));
+                }
+            } else {
+                errs.push(Invalid::MorType(e));
+            }
+            errs.into_iter()
+        });
+        ob_errors.chain(mor_errors)
+    }
 }
 
-impl<Id, ThId> Category for DiscreteTabModel<Id, ThId>
+impl<Id, ThId, S> Category for DiscreteTabModel<Id, ThId, S>
 where
     Id: Eq + Clone + Hash,
 {
@@ -689,38 +738,39 @@ where
     }
 }
 
-impl<Id, ThId> FgCategory for DiscreteTabModel<Id, ThId>
+impl<Id, ThId, S> FgCategory for DiscreteTabModel<Id, ThId, S>
 where
     Id: Eq + Clone + Hash,
 {
     type ObGen = Id;
     type MorGen = Id;
 
-    fn object_generators(&self) -> impl Iterator<Item = Self::ObGen> {
+    fn ob_generators(&self) -> impl Iterator<Item = Self::ObGen> {
         self.generators.objects.iter()
     }
-    fn morphism_generators(&self) -> impl Iterator<Item = Self::MorGen> {
+    fn mor_generators(&self) -> impl Iterator<Item = Self::MorGen> {
         self.generators.morphisms.iter()
     }
 
-    fn morphism_generator_dom(&self, f: &Self::MorGen) -> Self::Ob {
+    fn mor_generator_dom(&self, f: &Self::MorGen) -> Self::Ob {
         self.generators.dom.apply(f).cloned().expect("Domain should be defined")
     }
-    fn morphism_generator_cod(&self, f: &Self::MorGen) -> Self::Ob {
+    fn mor_generator_cod(&self, f: &Self::MorGen) -> Self::Ob {
         self.generators.cod.apply(f).cloned().expect("Codomain should be defined")
     }
 }
 
-impl<Id, ThId> DblModel for DiscreteTabModel<Id, ThId>
+impl<Id, ThId, S> DblModel for DiscreteTabModel<Id, ThId, S>
 where
     Id: Eq + Clone + Hash,
     ThId: Eq + Clone + Hash,
+    S: BuildHasher,
 {
     type ObType = TabObType<ThId, ThId>;
     type MorType = TabMorType<ThId, ThId>;
     type ObOp = TabObOp<ThId, ThId>;
     type MorOp = TabMorOp<ThId, ThId>;
-    type Theory = DiscreteTabTheory<ThId, ThId>;
+    type Theory = DiscreteTabTheory<ThId, ThId, S>;
 
     fn theory(&self) -> &Self::Theory {
         &self.theory
@@ -728,7 +778,7 @@ where
 
     fn ob_type(&self, ob: &Self::Ob) -> Self::ObType {
         match ob {
-            TabOb::Basic(x) => self.ob_gen_type(x),
+            TabOb::Basic(x) => self.ob_generator_type(x),
             TabOb::Tabulated(m) => TabObType::Tabulator(Box::new(self.mor_type(m))),
         }
     }
@@ -737,7 +787,7 @@ where
         let types = mor.clone().map(
             |x| self.ob_type(&x),
             |edge| match edge {
-                TabEdge::Basic(f) => self.mor_gen_type(&f),
+                TabEdge::Basic(f) => self.mor_generator_type(&f),
                 TabEdge::Square { dom, .. } => {
                     let typ = self.mor_type(&dom); // == self.mor_type(&cod)
                     TabMorType::Hom(Box::new(TabObType::Tabulator(Box::new(typ))))
@@ -765,21 +815,46 @@ where
     }
 }
 
-impl<Id, ThId> FgDblModel for DiscreteTabModel<Id, ThId>
+impl<Id, ThId, S> FgDblModel for DiscreteTabModel<Id, ThId, S>
 where
     Id: Eq + Clone + Hash,
     ThId: Eq + Clone + Hash,
+    S: BuildHasher,
 {
-    fn ob_gen_type(&self, ob: &Self::ObGen) -> Self::ObType {
+    fn ob_generator_type(&self, ob: &Self::ObGen) -> Self::ObType {
         self.ob_types.apply(ob).cloned().expect("Object should have type")
     }
-    fn mor_gen_type(&self, mor: &Self::MorGen) -> Self::MorType {
+    fn mor_generator_type(&self, mor: &Self::MorGen) -> Self::MorType {
         self.mor_types.apply(mor).cloned().expect("Morphism should have type")
+    }
+
+    fn ob_generators_with_type(&self, obtype: &Self::ObType) -> impl Iterator<Item = Self::ObGen> {
+        self.ob_types.preimage(obtype)
+    }
+    fn mor_generators_with_type(
+        &self,
+        mortype: &Self::MorType,
+    ) -> impl Iterator<Item = Self::MorGen> {
+        self.mor_types.preimage(mortype)
+    }
+}
+
+impl<Id, ThId, S> Validate for DiscreteTabModel<Id, ThId, S>
+where
+    Id: Eq + Clone + Hash,
+    ThId: Eq + Clone + Hash,
+    S: BuildHasher,
+{
+    type ValidationError = InvalidDblModel<Id>;
+
+    fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
+        validate::wrap_errors(self.iter_invalid())
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use nonempty::nonempty;
     use ustr::ustr;
 
     use super::*;
@@ -792,12 +867,12 @@ mod tests {
         let mut model = DiscreteDblModel::new(th.clone());
         let entity = ustr("entity");
         model.add_ob(entity, ustr("NotObType"));
-        assert_eq!(model.validate().unwrap_err().len(), 1);
+        assert_eq!(model.validate(), Err(nonempty![InvalidDblModel::ObType(entity)]));
 
         let mut model = DiscreteDblModel::new(th.clone());
         model.add_ob(entity, ustr("Entity"));
         model.add_mor(ustr("map"), entity, entity, FinMor::Generator(ustr("NotMorType")));
-        assert_eq!(model.validate().unwrap_err().len(), 1);
+        assert_eq!(model.validate(), Err(nonempty![InvalidDblModel::MorType(ustr("map"))]));
 
         let mut model = DiscreteDblModel::new(th);
         model.add_ob(entity, ustr("Entity"));
@@ -805,12 +880,7 @@ mod tests {
         model.add_mor(ustr("a"), entity, ustr("type"), FinMor::Generator(ustr("Attr")));
         assert!(model.validate().is_ok());
         model.add_mor(ustr("b"), entity, ustr("type"), FinMor::Id(ustr("Entity")));
-        assert_eq!(model.validate().unwrap_err().len(), 1);
-
-        assert!(model.is_free());
-        let peq = PathEq::new(Path::single(ustr("a")), Path::single(ustr("b")));
-        model.add_equation(ustr("e"), peq);
-        assert!(!model.is_free());
+        assert_eq!(model.validate(), Err(nonempty![InvalidDblModel::CodType(ustr("b"))]));
     }
 
     #[test]
@@ -820,5 +890,15 @@ mod tests {
         model.add_mor(ustr("attr"), ustr("entity"), ustr("type"), FinMor::Generator(ustr("Attr")));
         model.infer_missing();
         assert_eq!(model, walking_attr(th));
+    }
+
+    #[test]
+    fn validate_discrete_tab_model() {
+        let th = Arc::new(th_category_links());
+        let mut model = DiscreteTabModel::new(th);
+        let (x, f) = (ustr("x"), ustr("f"));
+        model.add_ob(x, TabObType::Basic(ustr("Object")));
+        model.add_mor(f, TabOb::Basic(x), TabOb::Basic(x), TabMorType::Basic(ustr("Link")));
+        assert_eq!(model.validate(), Err(nonempty![InvalidDblModel::CodType(f)]));
     }
 }

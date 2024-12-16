@@ -96,7 +96,7 @@ impl LotkaVolterraAnalysis {
     where
         Id: Eq + Clone + Hash + Ord,
     {
-        let mut objects: Vec<_> = model.object_generators_with_type(&self.var_ob_type).collect();
+        let mut objects: Vec<_> = model.ob_generators_with_type(&self.var_ob_type).collect();
         objects.sort();
         let ob_index: HashMap<_, _> =
             objects.iter().enumerate().map(|(i, x)| (x.clone(), i)).collect();
@@ -105,16 +105,16 @@ impl LotkaVolterraAnalysis {
 
         let mut A = DMatrix::from_element(n, n, 0.0f32);
         for mor_type in self.positive_mor_types.iter() {
-            for mor in model.morphism_generators_with_type(mor_type) {
-                let i = *ob_index.get(&model.morphism_generator_dom(&mor)).unwrap();
-                let j = *ob_index.get(&model.morphism_generator_cod(&mor)).unwrap();
+            for mor in model.mor_generators_with_type(mor_type) {
+                let i = *ob_index.get(&model.mor_generator_dom(&mor)).unwrap();
+                let j = *ob_index.get(&model.mor_generator_cod(&mor)).unwrap();
                 A[(j, i)] += data.interaction_coeffs.get(&mor).copied().unwrap_or_default();
             }
         }
         for mor_type in self.negative_mor_types.iter() {
-            for mor in model.morphism_generators_with_type(mor_type) {
-                let i = *ob_index.get(&model.morphism_generator_dom(&mor)).unwrap();
-                let j = *ob_index.get(&model.morphism_generator_cod(&mor)).unwrap();
+            for mor in model.mor_generators_with_type(mor_type) {
+                let i = *ob_index.get(&model.mor_generator_dom(&mor)).unwrap();
+                let j = *ob_index.get(&model.mor_generator_cod(&mor)).unwrap();
                 A[(j, i)] -= data.interaction_coeffs.get(&mor).copied().unwrap_or_default();
             }
         }

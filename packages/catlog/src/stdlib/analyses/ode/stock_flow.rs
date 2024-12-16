@@ -96,7 +96,7 @@ impl StockFlowODEAnalysis {
     ) -> Result<ODEProblem<StockFlowSystem>, Vec<Error>> {
         let mut graph: SkelGraph = Default::default();
 
-        let mut stocks = model.object_generators_with_type(&self.stock_object).collect::<Vec<_>>();
+        let mut stocks = model.ob_generators_with_type(&self.stock_object).collect::<Vec<_>>();
         stocks.sort();
         let vertex_lookup = stocks
             .iter()
@@ -105,13 +105,12 @@ impl StockFlowODEAnalysis {
             .collect::<HashMap<Ustr, usize>>();
         graph.add_vertices(stocks.len());
 
-        let mut flows =
-            model.morphism_generators_with_type(&self.flow_morphism).collect::<Vec<_>>();
+        let mut flows = model.mor_generators_with_type(&self.flow_morphism).collect::<Vec<_>>();
         flows.sort();
         for flow in flows.iter() {
             graph.add_edge(
-                *vertex_lookup.get(&model.morphism_generator_dom(flow)).unwrap(),
-                *vertex_lookup.get(&model.morphism_generator_cod(flow)).unwrap(),
+                *vertex_lookup.get(&model.mor_generator_dom(flow)).unwrap(),
+                *vertex_lookup.get(&model.mor_generator_cod(flow)).unwrap(),
             );
         }
 

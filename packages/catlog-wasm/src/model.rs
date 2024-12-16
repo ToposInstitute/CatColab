@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
-use catlog::dbl::model::{self as dbl_model, FgDblModel, InvalidDiscreteDblModel};
+use catlog::dbl::model::{self as dbl_model, FgDblModel, InvalidDblModel};
 use catlog::one::fin_category::UstrFinCategory;
 use catlog::one::{Category as _, FgCategory, Path};
 use catlog::validate::Validate;
@@ -198,7 +198,7 @@ impl DblModel {
     #[wasm_bindgen]
     pub fn objects(&self) -> Vec<Ob> {
         all_the_same!(match &self.0 {
-            DblModelBox::[Discrete](model) => model.object_generators().map(|x| x.into()).collect()
+            DblModelBox::[Discrete](model) => model.objects().map(|x| x.into()).collect()
         })
     }
 
@@ -206,7 +206,7 @@ impl DblModel {
     #[wasm_bindgen]
     pub fn morphisms(&self) -> Vec<Mor> {
         all_the_same!(match &self.0 {
-            DblModelBox::[Discrete](model) => model.morphism_generators().map(Mor::Basic).collect()
+            DblModelBox::[Discrete](model) => model.morphisms().map(|f| f.into()).collect()
         })
     }
 
@@ -216,7 +216,7 @@ impl DblModel {
         all_the_same!(match &self.0 {
             DblModelBox::[Discrete](model) => {
                 let ob_type = ob_type.try_into()?;
-                Ok(model.object_generators_with_type(&ob_type).map(Ob::Basic).collect())
+                Ok(model.objects_with_type(&ob_type).map(|ob| ob.into()).collect())
             }
         })
     }
@@ -227,7 +227,7 @@ impl DblModel {
         all_the_same!(match &self.0 {
             DblModelBox::[Discrete](model) => {
                 let mor_type = mor_type.try_into()?;
-                Ok(model.morphism_generators_with_type(&mor_type).map(Mor::Basic).collect())
+                Ok(model.morphisms_with_type(&mor_type).map(|mor| mor.into()).collect())
             }
         })
     }
@@ -247,7 +247,7 @@ impl DblModel {
 /// Result of validating a model of a double theory.
 #[derive(Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
-pub struct ModelValidationResult(pub JsResult<(), Vec<InvalidDiscreteDblModel<Uuid>>>);
+pub struct ModelValidationResult(pub JsResult<(), Vec<InvalidDblModel<Uuid>>>);
 
 #[cfg(test)]
 pub(crate) mod tests {

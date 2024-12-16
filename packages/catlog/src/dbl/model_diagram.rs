@@ -24,7 +24,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify_next::{declare, Tsify};
 
-use super::model::{DiscreteDblModel, InvalidDiscreteDblModel};
+use super::model::{DiscreteDblModel, InvalidDblModel};
 use super::model_morphism::*;
 use crate::one::{Category, FgCategory};
 use crate::validate;
@@ -74,7 +74,7 @@ pub type DiscreteDblModelDiagram<DomId, CodId, Cat> =
 /// A failure to be valid in a diagram in a model of a discrete double theory.
 #[cfg_attr(feature = "serde-wasm", declare)]
 pub type InvalidDiscreteDblModelDiagram<DomId> =
-    InvalidDblModelDiagram<InvalidDiscreteDblModel<DomId>, InvalidDblModelMorphism<DomId, DomId>>;
+    InvalidDblModelDiagram<InvalidDblModel<DomId>, InvalidDblModelMorphism<DomId, DomId>>;
 
 impl<DomId, CodId, Cat> DiscreteDblModelDiagram<DomId, CodId, Cat>
 where
@@ -116,7 +116,7 @@ where
     pub fn infer_missing_from(&mut self, model: &DiscreteDblModel<CodId, Cat>) {
         let (mapping, domain) = self.into();
         domain.infer_missing();
-        for e in domain.morphism_generators() {
+        for e in domain.mor_generators() {
             let Some(g) = mapping.apply_basic_mor(&e) else {
                 continue;
             };

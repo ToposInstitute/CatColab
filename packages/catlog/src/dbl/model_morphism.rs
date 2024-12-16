@@ -242,7 +242,7 @@ where
         // Equations in the domain induce equations to check in the codomain.
         assert!(dom.is_free(), "Domain model should be free");
 
-        let ob_errors = dom.object_generators().filter_map(|v| {
+        let ob_errors = dom.ob_generators().filter_map(|v| {
             if let Some(f_v) = mapping.apply_ob(&v) {
                 if !cod.has_ob(&f_v) {
                     Some(InvalidDblModelMorphism::Ob(v))
@@ -256,14 +256,14 @@ where
             }
         });
 
-        let mor_errors = dom.morphism_generators().flat_map(|f| {
+        let mor_errors = dom.mor_generators().flat_map(|f| {
             if let Some(f_f) = mapping.apply_basic_mor(&f) {
                 if !cod.has_mor(&f_f) {
                     [InvalidDblModelMorphism::Mor(f)].to_vec()
                 } else {
-                    let dom_f = mapping.apply_ob(&dom.morphism_generator_dom(&f));
-                    let cod_f = mapping.apply_ob(&dom.morphism_generator_cod(&f));
-                    let f_type = dom.mor_gen_type(&f);
+                    let dom_f = mapping.apply_ob(&dom.mor_generator_dom(&f));
+                    let cod_f = mapping.apply_ob(&dom.mor_generator_cod(&f));
+                    let f_type = dom.mor_generator_type(&f);
                     let ff_type = cod.mor_type(&f_f);
 
                     let mut errs = vec![];
@@ -289,7 +289,7 @@ where
     /// codomain?
     fn is_simple(&self) -> bool {
         let DblModelMorphism(mapping, dom, _) = *self;
-        dom.morphism_generators()
+        dom.mor_generators()
             .all(|e| mapping.apply_basic_mor(&e).map(|p| p.is_simple()).unwrap_or(true))
     }
 
@@ -297,7 +297,7 @@ where
     pub fn is_injective_objects(&self) -> bool {
         let DblModelMorphism(mapping, dom, _) = *self;
         let mut seen_obs: HashSet<_> = HashSet::new();
-        for x in dom.object_generators() {
+        for x in dom.ob_generators() {
             if let Some(f_x) = mapping.apply_ob(&x) {
                 if seen_obs.contains(&f_x) {
                     return false; // not monic
@@ -324,8 +324,8 @@ where
         assert!(cod.is_free(), "Codomain model should be free");
         assert!(&self.is_simple(), "Morphism assignments should be simple");
 
-        for x in dom.object_generators() {
-            for y in dom.object_generators() {
+        for x in dom.ob_generators() {
+            for y in dom.ob_generators() {
                 let mut seen: HashSet<_> = HashSet::new();
                 for path in simple_paths(dom.generating_graph(), &x, &y) {
                     if let Some(f_path) = mapping.apply_mor(&path) {
@@ -537,7 +537,7 @@ where
                         self.unassign_ob(x, y)
                     }
                 } else {
-                    for y in self.cod.object_generators_with_type(&self.dom.ob_type(&x)) {
+                    for y in self.cod.ob_generators_with_type(&self.dom.ob_type(&x)) {
                         let can_assign = self.assign_ob(x.clone(), y.clone());
                         if can_assign {
                             self.search(depth + 1);
@@ -627,7 +627,7 @@ mod tests {
     fn find_positive_loops() {
         let th = Arc::new(th_signed_category());
         let positive_loop = positive_loop(th.clone());
-        let pos = positive_loop.morphism_generators().next().unwrap().into();
+        let pos = positive_loop.mor_generators().next().unwrap().into();
 
         let maps = DiscreteDblModelMapping::morphisms(&positive_loop, &positive_loop).find_all();
         assert_eq!(maps.len(), 2);
@@ -670,8 +670,8 @@ mod tests {
         model.add_mor(ustr("xz"), x, z, FinMor::Id(ustr("Object")));
         model.add_mor(ustr("xx"), x, x, FinMor::Id(ustr("Object")));
 
-        for i in model.object_generators() {
-            for j in model.object_generators() {
+        for i in model.ob_generators() {
+            for j in model.ob_generators() {
                 let maps: HashSet<_> = DiscreteDblModelMapping::morphisms(&walking, &model)
                     .initialize_ob(ustr("A"), i)
                     .initialize_ob(ustr("B"), j)
@@ -689,7 +689,7 @@ mod tests {
     fn find_negative_loops() {
         let th = Arc::new(th_signed_category());
         let negative_loop = negative_loop(th.clone());
-        let base_pt = negative_loop.object_generators().next().unwrap();
+        let base_pt = negative_loop.ob_generators().next().unwrap();
 
         let negative_feedback = negative_feedback(th);
         let maps =

@@ -122,7 +122,6 @@ mod tests {
     #[test]
     fn categories_with_links() {
         let th = Arc::new(th_category_links());
-        // TODO: Implement validation for models of tabulator theories.
-        backward_link(th);
+        assert!(backward_link(th).validate().is_ok());
     }
 }
