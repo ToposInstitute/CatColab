@@ -1,6 +1,5 @@
 import type { MDXProps } from "mdx/types";
 import { type Component, type JSX, lazy } from "solid-js";
-
 import { BrandedToolbar } from "./toolbar";
 
 import "./help_page.css";
@@ -20,4 +19,3 @@ export function lazyMdx(fn: () => Promise<{ default: Component<MDXProps> }>) {
     const MDXPage = lazy(fn);
     return () => <MDXPage />;
 }
-

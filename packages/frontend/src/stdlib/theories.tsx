@@ -24,7 +24,6 @@ stdTheories.add(
         name: "Olog",
         description: "Ontology log, a simple conceptual model",
         group: "Knowledge and Data",
-        help: "olog.mdx",
     },
     (meta) => {
         const thCategory = new catlog.ThCategory();
@@ -95,7 +94,6 @@ stdTheories.add(
         name: "Schema",
         description: "Schema for a categorical database",
         group: "Knowledge and Data",
-        help: "schema.mdx"
     },
     (meta) => {
         const thSchema = new catlog.ThSchema();

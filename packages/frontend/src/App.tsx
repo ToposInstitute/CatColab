@@ -1,6 +1,7 @@
 import { Repo } from "@automerge/automerge-repo";
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
 import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb";
+import { useParams } from "@solidjs/router";
 import { type FirebaseOptions, initializeApp } from "firebase/app";
 import invariant from "tiny-invariant";
 import * as uuid from "uuid";
@@ -43,6 +44,18 @@ const Root = (props: RouteSectionProps<unknown>) => {
         </MultiProvider>
     );
 };
+
+export function TheoryHelpPage() {
+    const params = useParams();
+    const page = params.page;
+    invariant(page, "Help page must be provided");
+    const Page = lazyMdx(() => import(`./help/theory_documentation/${page}.mdx`));
+    return (
+        <div class="help-container">
+            <Page />
+        </div>
+    );
+}
 
 function CreateModel() {
     const api = useApi();
@@ -87,6 +100,10 @@ const routes: RouteDefinition[] = [
             {
                 path: "/credits",
                 component: lazyMdx(() => import("./help/credits.mdx")),
+            },
+            {
+                path: "/theory/:page",
+                component: TheoryHelpPage,
             },
         ],
     },
