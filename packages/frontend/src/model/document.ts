@@ -106,13 +106,11 @@ function enlivenModelDocument(
     const validatedModel = createMemo<ValidatedModel | undefined>(
         () => {
             const th = theory();
-            if (th?.theory.kind !== "Discrete") {
-                // TODO: Currently only implemented for discrete theories.
-                return undefined;
+            if (th) {
+                const model = toCatlogModel(th.theory, formalJudgments());
+                const result = model.validate();
+                return { model, result };
             }
-            const model = toCatlogModel(th.theory, formalJudgments());
-            const result = model.validate();
-            return { model, result };
         },
         undefined,
         { equals: false },

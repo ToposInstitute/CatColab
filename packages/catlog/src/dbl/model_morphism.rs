@@ -36,7 +36,7 @@ use crate::one::*;
 use crate::validate::{self, Validate};
 use crate::zero::{Column, HashColumn, Mapping};
 
-use super::model::{DblModel, DiscreteDblModel, FgDblModel};
+use super::model::*;
 
 /** A mapping between models of a double theory.
 

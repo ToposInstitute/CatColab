@@ -119,7 +119,7 @@ pub trait DblModel: Category {
     fn mor_act(&self, m: Self::Mor, α: &Self::MorOp) -> Self::Mor;
 }
 
-/// A finitely-generated model of a double theory.
+/// A finitely generated model of a double theory.
 pub trait FgDblModel: DblModel + FgCategory {
     /// Type of an object generator.
     fn ob_generator_type(&self, ob: &Self::ObGen) -> Self::ObType;
@@ -149,6 +149,41 @@ pub trait FgDblModel: DblModel + FgCategory {
     fn morphisms_with_type(&self, mortype: &Self::MorType) -> impl Iterator<Item = Self::Mor> {
         self.mor_generators_with_type(mortype).map(|mor_gen| mor_gen.into())
     }
+}
+
+/// A mutable, finitely generated model of a double theory.
+pub trait MutDblModel: FgDblModel {
+    /// Adds a basic object to the model.
+    fn add_ob(&mut self, x: Self::ObGen, ob_type: Self::ObType) -> bool;
+
+    /// Adds a basic morphism to the model.
+    fn add_mor(
+        &mut self,
+        f: Self::MorGen,
+        dom: Self::Ob,
+        cod: Self::Ob,
+        mor_type: Self::MorType,
+    ) -> bool {
+        let is_new = self.make_mor(f.clone(), mor_type);
+        self.set_dom(f.clone(), dom);
+        self.set_cod(f, cod);
+        is_new
+    }
+
+    /// Adds a basic morphism to the model without setting its (co)domain.
+    fn make_mor(&mut self, f: Self::MorGen, mor_type: Self::MorType) -> bool;
+
+    /// Gets the domain of a basic morphism, if it is set.
+    fn get_dom(&self, f: &Self::MorGen) -> Option<&Self::Ob>;
+
+    /// Gets the codomain of a basic morphism, if it is set.
+    fn get_cod(&self, f: &Self::MorGen) -> Option<&Self::Ob>;
+
+    /// Sets the domain of a basic morphism.
+    fn set_dom(&mut self, f: Self::MorGen, x: Self::Ob) -> Option<Self::Ob>;
+
+    /// Sets the codomain of a basic morphism.
+    fn set_cod(&mut self, f: Self::MorGen, x: Self::Ob) -> Option<Self::Ob>;
 }
 
 /** A finitely presented model of a discrete double theory.
@@ -208,47 +243,9 @@ where
         self.category.is_free()
     }
 
-    /// Adds a basic object to the model.
-    pub fn add_ob(&mut self, x: Id, typ: Cat::Ob) -> bool {
-        self.ob_types.set(x.clone(), typ);
-        self.category.add_ob_generator(x)
-    }
-
-    /// Adds a basic morphism to the model.
-    pub fn add_mor(&mut self, f: Id, dom: Id, cod: Id, typ: Cat::Mor) -> bool {
-        self.mor_types.set(f.clone(), typ);
-        self.category.add_mor_generator(f, dom, cod)
-    }
-
     /// Adds an equation to the model, making it not free.
     pub fn add_equation(&mut self, key: Id, eq: PathEq<Id, Id>) {
         self.category.add_equation(key, eq);
-    }
-
-    /// Adds a basic morphism to the model without setting its (co)domain.
-    pub fn make_mor(&mut self, f: Id, typ: Cat::Mor) -> bool {
-        self.mor_types.set(f.clone(), typ);
-        self.category.make_mor_generator(f)
-    }
-
-    /// Gets the domain of a basic morphism, if it is set.
-    pub fn get_dom(&self, f: &Id) -> Option<&Id> {
-        self.category.get_dom(f)
-    }
-
-    /// Gets the codomain of a basic morphism, if it is set.
-    pub fn get_cod(&self, f: &Id) -> Option<&Id> {
-        self.category.get_cod(f)
-    }
-
-    /// Sets the domain of a basic morphism.
-    pub fn set_dom(&mut self, f: Id, x: Id) -> Option<Id> {
-        self.category.set_dom(f, x)
-    }
-
-    /// Sets the codomain of a basic morphism.
-    pub fn set_cod(&mut self, f: Id, x: Id) -> Option<Id> {
-        self.category.set_cod(f, x)
     }
 
     /// Iterates over failures of model to be well defined.
@@ -423,6 +420,42 @@ where
     }
 }
 
+impl<Id, Cat> MutDblModel for DiscreteDblModel<Id, Cat>
+where
+    Id: Eq + Clone + Hash,
+    Cat: FgCategory,
+    Cat::Ob: Hash,
+    Cat::Mor: Hash,
+{
+    fn add_ob(&mut self, x: Id, typ: Cat::Ob) -> bool {
+        self.ob_types.set(x.clone(), typ);
+        self.category.add_ob_generator(x)
+    }
+
+    fn add_mor(&mut self, f: Id, dom: Id, cod: Id, typ: Cat::Mor) -> bool {
+        self.mor_types.set(f.clone(), typ);
+        self.category.add_mor_generator(f, dom, cod)
+    }
+
+    fn make_mor(&mut self, f: Id, typ: Cat::Mor) -> bool {
+        self.mor_types.set(f.clone(), typ);
+        self.category.make_mor_generator(f)
+    }
+
+    fn get_dom(&self, f: &Id) -> Option<&Id> {
+        self.category.get_dom(f)
+    }
+    fn get_cod(&self, f: &Id) -> Option<&Id> {
+        self.category.get_cod(f)
+    }
+    fn set_dom(&mut self, f: Id, x: Id) -> Option<Id> {
+        self.category.set_dom(f, x)
+    }
+    fn set_cod(&mut self, f: Id, x: Id) -> Option<Id> {
+        self.category.set_cod(f, x)
+    }
+}
+
 impl<Id, Cat> Validate for DiscreteDblModel<Id, Cat>
 where
     Id: Eq + Clone + Hash,
@@ -507,7 +540,7 @@ pub enum TabEdge<V, E> {
     /// Basic morphism between any two objects.
     Basic(E),
 
-    /// Generating morphism between tabulated morphisms, a commuting square.
+    /// Generating morphism between tabulated morphisms, a commutative square.
     Square {
         /// The domain, a tabulated morphism.
         dom: Box<TabMor<V, E>>,
@@ -567,9 +600,7 @@ where
     fn has_edge(&self, edge: &Self::E) -> bool {
         match edge {
             TabEdge::Basic(e) => {
-                self.morphisms.contains(e)
-                    && self.dom.apply(e).map_or(false, |x| self.has_vertex(x))
-                    && self.cod.apply(e).map_or(false, |x| self.has_vertex(x))
+                self.morphisms.contains(e) && self.dom.is_set(e) && self.cod.is_set(e)
             }
             TabEdge::Square {
                 dom,
@@ -653,26 +684,6 @@ where
     /// Convenience method to turn a morphism generator into an object.
     pub fn tabulated_gen(&self, f: Id) -> TabOb<Id, Id> {
         self.tabulated(Path::single(TabEdge::Basic(f)))
-    }
-
-    /// Adds a basic object to the model.
-    pub fn add_ob(&mut self, x: Id, typ: TabObType<ThId, ThId>) -> bool {
-        self.ob_types.set(x.clone(), typ);
-        self.generators.objects.insert(x)
-    }
-
-    /// Adds a basic morphism to the model.
-    pub fn add_mor(
-        &mut self,
-        f: Id,
-        dom: TabOb<Id, Id>,
-        cod: TabOb<Id, Id>,
-        typ: TabMorType<ThId, ThId>,
-    ) -> bool {
-        self.mor_types.set(f.clone(), typ);
-        self.generators.dom.set(f.clone(), dom);
-        self.generators.cod.set(f.clone(), cod);
-        self.generators.morphisms.insert(f)
     }
 
     /// Iterates over failures of model to be well defined.
@@ -836,6 +847,36 @@ where
         mortype: &Self::MorType,
     ) -> impl Iterator<Item = Self::MorGen> {
         self.mor_types.preimage(mortype)
+    }
+}
+
+impl<Id, ThId, S> MutDblModel for DiscreteTabModel<Id, ThId, S>
+where
+    Id: Eq + Clone + Hash,
+    ThId: Eq + Clone + Hash,
+    S: BuildHasher,
+{
+    fn add_ob(&mut self, x: Self::ObGen, ob_type: Self::ObType) -> bool {
+        self.ob_types.set(x.clone(), ob_type);
+        self.generators.objects.insert(x)
+    }
+
+    fn make_mor(&mut self, f: Self::MorGen, mor_type: Self::MorType) -> bool {
+        self.mor_types.set(f.clone(), mor_type);
+        self.generators.morphisms.insert(f)
+    }
+
+    fn get_dom(&self, f: &Self::MorGen) -> Option<&Self::Ob> {
+        self.generators.dom.apply(f)
+    }
+    fn get_cod(&self, f: &Self::MorGen) -> Option<&Self::Ob> {
+        self.generators.cod.apply(f)
+    }
+    fn set_dom(&mut self, f: Self::MorGen, x: Self::Ob) -> Option<Self::Ob> {
+        self.generators.dom.set(f, x)
+    }
+    fn set_cod(&mut self, f: Self::MorGen, x: Self::Ob) -> Option<Self::Ob> {
+        self.generators.cod.set(f, x)
     }
 }
 

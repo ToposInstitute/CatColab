@@ -278,7 +278,7 @@ impl<C: FgCategory + Validate> Validate for DiscreteDblTheory<C> {
 }
 
 /// Object type in a discrete tabulator theory.
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum TabObType<V, E> {
     /// Basic or generating object type.
     Basic(V),
@@ -288,7 +288,7 @@ pub enum TabObType<V, E> {
 }
 
 /// Morphism type in a discrete tabulator theory.
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum TabMorType<V, E> {
     /// Basic or generating morphism type.
     Basic(E),
@@ -298,7 +298,7 @@ pub enum TabMorType<V, E> {
 }
 
 /// Object operation in a discrete tabulator theory.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TabObOp<V, E> {
     /// Identity operation on an object type.
     Id(TabObType<V, E>),
@@ -311,7 +311,7 @@ pub enum TabObOp<V, E> {
 }
 
 /// Morphism operation in a discrete tabulator theory.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TabMorOp<V, E> {
     /// Identity operation on a morphism type.
     Id(TabMorType<V, E>),
@@ -415,32 +415,32 @@ where
     fn has_ob_type(&self, ob_type: &Self::ObType) -> bool {
         match ob_type {
             TabObType::Basic(x) => self.ob_types.contains(x),
-            TabObType::Tabulator(f) => self.has_mor_type(f.as_ref()),
+            TabObType::Tabulator(f) => self.has_mor_type(f),
         }
     }
 
     fn has_mor_type(&self, mor_type: &Self::MorType) -> bool {
         match mor_type {
             TabMorType::Basic(e) => self.mor_types.contains(e),
-            TabMorType::Hom(x) => self.has_ob_type(x.as_ref()),
+            TabMorType::Hom(x) => self.has_ob_type(x),
         }
     }
 
     fn src(&self, mor_type: &Self::MorType) -> Self::ObType {
         match mor_type {
             TabMorType::Basic(e) => {
-                self.src.apply(e).expect("Source of morphism type should be defined").clone()
+                self.src.apply(e).cloned().expect("Source of morphism type should be defined")
             }
-            TabMorType::Hom(x) => x.as_ref().clone(),
+            TabMorType::Hom(x) => (**x).clone(),
         }
     }
 
     fn tgt(&self, mor_type: &Self::MorType) -> Self::ObType {
         match mor_type {
             TabMorType::Basic(e) => {
-                self.tgt.apply(e).expect("Target of morphism type should be defined").clone()
+                self.tgt.apply(e).cloned().expect("Target of morphism type should be defined")
             }
-            TabMorType::Hom(x) => x.as_ref().clone(),
+            TabMorType::Hom(x) => (**x).clone(),
         }
     }
 
@@ -546,8 +546,12 @@ mod tests {
         th.add_ob_type('*');
         let x = TabObType::Basic('*');
         assert!(th.has_ob_type(&x));
-        let tab = th.tabulator(th.hom_type(x));
+        let tab = th.tabulator(th.hom_type(x.clone()));
         assert!(th.has_ob_type(&tab));
-        assert!(th.has_mor_type(&th.hom_type(tab)));
+        assert!(th.has_mor_type(&th.hom_type(tab.clone())));
+
+        th.add_mor_type('m', x, tab);
+        let m = TabMorType::Basic('m');
+        assert!(th.has_mor_type(&m));
     }
 }

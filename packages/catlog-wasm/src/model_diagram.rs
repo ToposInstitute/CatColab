@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
-use catlog::dbl::model::FgDblModel;
+use catlog::dbl::model::{FgDblModel, MutDblModel};
 use catlog::dbl::model_diagram as diagram;
 use catlog::dbl::model_morphism::DblModelMapping;
 use catlog::one::FgCategory;
@@ -58,6 +58,7 @@ pub struct DiagramMorDecl {
 #[derive(From)]
 pub enum DblModelDiagramBox {
     Discrete(diagram::DblModelDiagram<DiscreteDblModelMapping, DiscreteDblModel>),
+    // DiscreteTab(), # TODO: Not implemented.
 }
 
 /// Wasm bindings for a diagram in a model of a double theory.
@@ -70,12 +71,15 @@ impl DblModelDiagram {
     #[wasm_bindgen(constructor)]
     pub fn new(theory: &DblTheory) -> Self {
         let model = DblModel::new(theory);
-        Self(all_the_same!(match model.0 {
-            DblModelBox::[Discrete](model) => {
+        Self(match model.0 {
+            DblModelBox::Discrete(model) => {
                 let mapping = Default::default();
                 diagram::DblModelDiagram(mapping, model).into()
             }
-        }))
+            DblModelBox::DiscreteTab(_) => {
+                panic!("Diagrams not implemented for tabulator theories")
+            }
+        })
     }
 
     /// Adds an object to the diagram.
