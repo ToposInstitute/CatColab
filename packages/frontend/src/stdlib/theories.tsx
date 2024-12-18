@@ -24,6 +24,7 @@ stdTheories.add(
         name: "Olog",
         description: "Ontology log, a simple conceptual model",
         group: "Knowledge and Data",
+        help: "olog",
     },
     (meta) => {
         const thCategory = new catlog.ThCategory();
