@@ -1,0 +1,6 @@
+\title{Double graph}
+\taxon{definition}
+\import{macros}
+
+\p{A \define{double graph} is a graph object \dbl{G} in \Cat, i.e., an endospan
+#{\dbl{G}_0 \xfrom{s} \dbl{G}_1 \xto{t} \dbl{G}_0} of categories.}

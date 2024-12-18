@@ -3,7 +3,28 @@
 
 \p{The free models of a double theory are often singled out in applications. For
 example, free [signed categories](dct-0002) can be interpreted as causal loop
-diagrams or regulatory networks, depending on the application. Here we look for
-a general definition of a free model of an arbitrary double theory. Any such
-definition should recover the familiar free-forgetful adjunction between graphs
-and categories when specialized to the [trivial double theory](thy-0001).}
+diagrams or regulatory networks, depending on the application. Here we seek a
+definition of a free model of an arbitrary double theory. Any such definition
+should recover the familiar free-forgetful adjunction between graphs and
+categories when specialized to the [trivial double theory](thy-0001).}
+
+\p{Our strategy is to use a forgetful 2-functor from double categories to
+"double graphs," as defined below. I don't have a reference for the following
+but I've used it in my unpublished notes on pull-push formalism.}
+
+\transclude{dbl-000E}
+
+\p{There is a 2-category of double graphs, starting with the 2-category
+#{\twocat{K} = \Cat} in the following definition.}
+
+\transclude{dbl-000F}
+
+\p{For any choice of maps between double categories, there is a 2-functor
+
+##{U: \twocat{Dbl} \to \twocat{DblGph}}
+
+that forgets the external composition and identities in a double category (a
+pseudocategory in \Cat). When applied to pseudo, lax, or colax double functors,
+it also forgets the composition and identity comparisons. Crucially, these
+comparisons are what make models of double theories (span-valued lax double
+functors) into structures with composition and identities.}
