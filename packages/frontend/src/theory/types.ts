@@ -18,6 +18,8 @@ export class Theory {
     /** Underlying double theory in the core. */
     readonly theory: DblTheory;
 
+    readonly help?: string;
+
     /** Human-readable name for models of theory.
 
     In the frontend, theories are named after their models, so this name doubles
@@ -50,6 +52,7 @@ export class Theory {
         id: string;
         theory: DblTheory;
         name: string;
+        help?: string;
         description?: string;
         modelTypes?: ModelTypeMeta[];
         modelAnalyses?: ModelAnalysisMeta[];
@@ -61,6 +64,7 @@ export class Theory {
         // Theory.
         this.id = props.id;
         this.theory = props.theory;
+        this.help = props.help;
 
         // Models.
         this.name = props.name;

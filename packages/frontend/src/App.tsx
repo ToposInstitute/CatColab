@@ -4,6 +4,7 @@ import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-index
 import { type FirebaseOptions, initializeApp } from "firebase/app";
 import invariant from "tiny-invariant";
 import * as uuid from "uuid";
+import { TheoryHelpPage } from "./model/model_editor";
 
 import { MultiProvider } from "@solid-primitives/context";
 import { Navigate, type RouteDefinition, type RouteSectionProps, Router } from "@solidjs/router";
@@ -87,6 +88,10 @@ const routes: RouteDefinition[] = [
             {
                 path: "/credits",
                 component: lazyMdx(() => import("./help/credits.mdx")),
+            },
+            {
+                path: "/theory/:page",
+                component: TheoryHelpPage,
             },
         ],
     },

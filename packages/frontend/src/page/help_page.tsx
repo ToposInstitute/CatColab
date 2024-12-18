@@ -1,6 +1,5 @@
 import type { MDXProps } from "mdx/types";
 import { type Component, type JSX, lazy } from "solid-js";
-
 import { BrandedToolbar } from "./toolbar";
 
 import "./help_page.css";
