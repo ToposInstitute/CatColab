@@ -4,27 +4,43 @@
 \p{The free models of a double theory are often singled out in applications. For
 example, free [signed categories](dct-0002) can be interpreted as causal loop
 diagrams or regulatory networks, depending on the application. Here we seek a
-definition of a free model of an arbitrary double theory. Any such definition
-should recover the familiar free-forgetful adjunction between graphs and
-categories when specialized to the [trivial double theory](thy-0001).}
+definition of a free model of an arbitrary double theory. The definition will
+recover the familiar free-forgetful adjunction between graphs and categories
+when specialized to the [trivial double theory](thy-0001).}
 
 \p{Our strategy is to use a forgetful 2-functor from double categories to
 "double graphs," as defined below. I don't have a reference for the following
-but I've used it in my unpublished notes on pull-push formalism.}
+but I've used it before in my unpublished notes on pull-push formalism.}
 
 \transclude{dbl-000E}
 
-\p{There is a 2-category of double graphs, starting with the 2-category
-#{\twocat{K} = \Cat} in the following definition.}
+\p{More generally, we define:}
 
 \transclude{dbl-000F}
 
-\p{For any choice of maps between double categories, there is a 2-functor
+\p{Taking the 2-category #{\twocat{K} = \Cat} in this definition, we obtain a
+2-category of double graphs, call it \twocat{DblGph}. For any choice of maps
+between double categories, there is a 2-functor
 
 ##{U: \twocat{Dbl} \to \twocat{DblGph}}
 
-that forgets the external composition and identities in a double category (a
-pseudocategory in \Cat). When applied to pseudo, lax, or colax double functors,
+that forgets the external composition and identities in a double category
+(pseudocategory in \Cat). When applied to pseudo, lax, or colax double functors,
 it also forgets the composition and identity comparisons. Crucially, these
 comparisons are what make models of double theories (span-valued lax double
-functors) into structures with composition and identities.}
+functors) into categorical structures, i.e., structures with composition and
+identities.}
+
+\p{All of this extends to cartesian double categories and "cartesian double
+graphs," as defined below.}
+
+\transclude{dbl-000G}
+
+\p{There is a 2-category of cartesian double graphs, cartesian morphisms between
+them, and cells between those (with no extra conditions). As before, for any
+choice morphisms between cartesian double categories, we obtain a forgetful
+2-functor
+
+##{U: \twocat{CartDbl} \to \twocat{CartDblGph}.}
+
+}
