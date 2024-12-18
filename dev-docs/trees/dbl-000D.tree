@@ -1,0 +1,9 @@
+\title{Free models of double theories}
+\import{macros}
+
+\p{The free models of a double theory are often singled out in applications. For
+example, free [signed categories](dct-0002) can be interpreted as causal loop
+diagrams or regulatory networks, depending on the application. Here we look for
+a general definition of a free model of an arbitrary double theory. Any such
+definition should recover the familiar free-forgetful adjunction between graphs
+and categories when specialized to the [trivial double theory](thy-0001).}
