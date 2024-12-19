@@ -70,7 +70,7 @@ function PodeSystem(json_object::AbstractDict, hodge=GeometricHodge())
 end
 export PodeSystem
 
-points(system::PodeSystem) = collect(values(system.geometry.mesh.subparts.point.m))
+points(system::PodeSystem) = collect(values(system.geometry.dualmesh.subparts.point.m))
 indexing_bounds(system::PodeSystem) = indexing_bounds(system.geometry.domain)
 
 function run_sim(fm, u0, t0, constparam)

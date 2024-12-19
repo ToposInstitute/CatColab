@@ -70,7 +70,6 @@ end
 
 struct Geometry
     domain::Domain
-    mesh::HasDeltaSet
     dualmesh::HasDeltaSet
 end
 
@@ -88,7 +87,7 @@ function Geometry(r::Rectangle, division::SimplexCenter=Circumcenter())
     s = triangulated_grid(r.max_x, r.max_y, r.dx, r.dy, Point2{Float64})
     sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point2{Float64}}(s)
     subdivide_duals!(sd, division)
-    Geometry(r, s, sd)
+    Geometry(r, sd)
 end
 
 # function Geometry(r::Periodic, division::SimplexCenter=Circumcenter()) end
@@ -97,14 +96,14 @@ function Geometry(m::Sphere, division::SimplexCenter=Circumcenter())
     s = loadmesh(Icosphere(m.dim, m.radius))
     sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point3{Float64}}(s)
     subdivide_duals!(sd, division)
-    Geometry(m, s, sd)
+    Geometry(m, sd)
 end
 
 function Geometry(m::UV, division::SimplexCenter=Circumcenter())
     s, _, _ = makeSphere(m)
     sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point3{Float64}}(s)
     subdivide_duals!(sd, division)
-    Geometry(m, s, sd)
+    Geometry(m, sd)
 end
 
 ## Prefined meshes
