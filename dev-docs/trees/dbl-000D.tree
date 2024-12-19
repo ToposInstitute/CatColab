@@ -44,3 +44,10 @@ choice morphisms between cartesian double categories, we obtain a forgetful
 ##{U: \twocat{CartDbl} \to \twocat{CartDblGph}.}
 
 }
+
+\p{The data that generates a free model we will provisionally call a "network"
+since it will encompass familiar concepts such as graphs and Petri nets.}
+
+\transclude{dbl-000H}
+
+\transclude{dbl-000I}
