@@ -1,16 +1,17 @@
 \title{Free models of double theories}
 \import{macros}
 
-\p{The free models of a double theory are often singled out in applications. For
-example, free [signed categories](dct-0002) can be interpreted as causal loop
-diagrams or regulatory networks, depending on the application. Here we seek a
-definition of a free model of an arbitrary double theory. The definition will
+\p{The \em{free} models of a double theory are often singled out in
+applications. For example, free [signed categories](dct-0002) can be interpreted
+as causal loop diagrams or regulatory networks, depending on the application.
+Here we seek a definition of a free model of an arbitrary double theory. We will
 recover the familiar free-forgetful adjunction between graphs and categories
-when specialized to the [trivial double theory](thy-0001).}
+when the theory is specialized to the [trivial double theory](thy-0001).}
 
 \p{Our strategy is to use a forgetful 2-functor from double categories to
-"double graphs," as defined below. I don't have a reference for the following
-but I've used it before in my unpublished notes on pull-push formalism.}
+"double graphs," as defined below. I (Evan) don't have a reference for the
+following but I've used it before in my unpublished notes on pull-push
+formalism.}
 
 \transclude{dbl-000E}
 
@@ -49,5 +50,23 @@ choice morphisms between cartesian double categories, we obtain a forgetful
 since it will encompass familiar concepts such as graphs and Petri nets.}
 
 \transclude{dbl-000H}
+
+\subtree{
+\title{Examples of networks over double theories}
+\taxon{example}
+
+\ul{
+\li{A network over the [trivial double theory](thy-0001) is a graph}
+
+\li{A network over the [theory of signed categories](thy-0002) is a
+\define{signed graph}: a graph with each edge weighted by a plus or minus sign.}
+
+\li{A network over the theory of commutative monoids, such that the monoids of
+objects and of arrows are both free, is a \define{Petri net}: a pair of sets
+#{S} and #{T} together with a pair of maps #{T \rightrightarrows \N[S]}, where
+#{\N[S]} is the free commutative monoid on #{S} (see, for example, [Baez and
+Pollard 2017](baez-pollard-2017)).}}
+
+}
 
 \transclude{dbl-000I}
