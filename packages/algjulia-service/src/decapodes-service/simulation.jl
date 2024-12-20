@@ -48,14 +48,14 @@ function PodeSystem(json_object::AbstractDict, hodge=GeometricHodge())
     function sys_generate(s, my_symbol, hodge=hodge)
         op = @match my_symbol begin
             sym && if sym ∈ keys(anons) end => anons[sym]
-                :♭♯ => x -> ♭♯_m * x # [1]
-                :dpsw => x -> wedge_dp10(x, star0_inv_m[1]*(dual_d1_m[1]*x))
-                :Δ⁻¹ => x -> begin
-                    y = Δ0 \ x
-                    y .- minimum(y)
-                end 
-                _ => default_dec_matrix_generate(s, my_symbol, hodge)
-            end
+            :♭♯ => x -> ♭♯_m * x # [1]
+            :dpsw => x -> wedge_dp10(x, star0_inv_m[1]*(dual_d1_m[1]*x))
+            :Δ⁻¹ => x -> begin
+                y = Δ0 \ x
+                y .- minimum(y)
+            end 
+            _ => default_dec_matrix_generate(s, my_symbol, hodge)
+        end
         return (args...) -> op(args...)
     end
     # end initialize

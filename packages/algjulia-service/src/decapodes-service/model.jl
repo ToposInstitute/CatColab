@@ -34,7 +34,6 @@ function to_model(model::ThDecapode, type::HomTag, name::String)
         "⋆" || "⋆₁" || "★₁" || "★1" => :⋆₁
         "⋆⁻¹" || "⋆₀⁻¹" => :⋆₀⁻¹
         "★" || "★⁻¹" => :⋆₁
-        "diffusivity" => :diffusivity
         "d" || "d₀" || "d01" => :d₀
         "d12" => :d₁
         "⋆2" => :⋆₂
@@ -47,6 +46,10 @@ end
 
 # add_to_model!
 
+@active IsMorphismNonScalar(x) begin
+    x[:morType][:content] == "Nonscalar" ? Some(x) : nothing
+end
+
 function add_to_model! end
 export add_to_model!
 
@@ -55,11 +58,19 @@ function add_to_model!(model::Model{ThDecapode}, content::AbstractDict, type::Ob
 end
 
 function add_to_model!(model::Model{ThDecapode}, content::AbstractDict, type::HomTag)
-    push!(model.data, content[:id] => 
+    @match content begin
+        IsMorphismNonScalar(x) => push!(model.data, content[:id] => 
           ModelElement(;name=to_model(ThDecapode(), type, content[:name]),
                         val=HomValue(content[:dom][:content], 
                                      content[:cod][:content])))
+        _ => push!(model.data, content[:id] =>
+                   ModelElement(;name=Symbol(content[:name]),
+                                val=HomValue(content[:dom][:content],
+                                             content[:cod][:content])))
+    end
 end
+
+
 
 # for each cell, if it is...
 #   ...an object, we convert its type to a symbol and add it to the modeldict
@@ -71,7 +82,7 @@ function Model(::ThDecapode, model::AbstractVector{<:AbstractDict}) # AbstractDi
         @match cell begin
             IsObject(content) => add_to_model!(newmodel, content, ObTag())
             IsMorphism(content) => add_to_model!(newmodel, content, HomTag())
-            x => throw(ImplError(x))
+            _ => throw(ImplError(cell))
         end
     end
     return newmodel

@@ -16,7 +16,7 @@ import OrdinaryDiffEq: ReturnCode
 const KEYS = Set([:mesh, :plotVariables, :initialConditions, :domain, :diagram, :model, :scalars])
 
 # load data
-data = open(JSON3.read, joinpath(@__DIR__, "test_jsons", "diffusion_data.json"), "r")
+data = open(JSON3.read, joinpath(@__DIR__, "test_jsons", "diffusivity_constant.json"), "r")
 jsondiagram = data[:diagram]
 jsonmodel = data[:model]
 
@@ -58,22 +58,24 @@ end
         _ => nothing
     end
 
-    _id = "019323fa-49cb-7373-8c5d-c395bae4006d"
-    @test model.data[_id] == ModelElement(;name=:Form0, val=nothing)
+    # _id = "019323fa-49cb-7373-8c5d-c395bae4006d"
+    # @test model.data[_id] == ModelElement(;name=:Form0, val=nothing)
     
 end
 
 @testset "Making the Decapode" begin
    
     model = Model(ThDecapode(), jsonmodel)
-    @test Set(nameof.(values(model))) == Set([:Form0, :Form1, :Form2, :Δ, :∂ₜ])
+    @test Set(nameof.(values(model))) == Set([:Form0, :Form1, :Form2, :Δ, :∂ₜ, :diffusivity])
 
     handcrafted_pode = SummationDecapode(parse_decapode(quote end))
-    add_part!(handcrafted_pode, :Var, name=:C, type=:Form0)
-    add_part!(handcrafted_pode, :Var, name=Symbol("dC/dt"), type=:Form0)
+    add_part!(handcrafted_pode, :Var, name=:u, type=:Form0)
+    add_part!(handcrafted_pode, :Var, name=Symbol("du/dt"), type=:Form0)
+    add_part!(handcrafted_pode, :Var, name=Symbol("•1"), type=:Form0)
     add_part!(handcrafted_pode, :TVar, incl=2)
     add_part!(handcrafted_pode, :Op1, src=1, tgt=2, op1=:∂ₜ)
-    add_part!(handcrafted_pode, :Op1, src=1, tgt=2, op1=:Δ)
+    add_part!(handcrafted_pode, :Op1, src=3, tgt=2, op1=:diffusivity)
+    add_part!(handcrafted_pode, :Op1, src=1, tgt=3, op1=:Δ)
 
     # no scalars in second position
     decapode, _, _ = Decapode(jsondiagram, model)
@@ -82,26 +84,34 @@ end
 
 end
 
-@testset "Simulation - Diffusion" begin
-
-    json_string = read(joinpath(@__DIR__, "test_jsons", "diffusion_data.json"), String)
-    @test Set(keys(JSON3.read(json_string))) == KEYS
-
-    system = PodeSystem(json_string)
+# # GOOD
+@testset "Parsing the Model JSON Object - Diffusivity Constant" begin
     
-    simulator = evalsim(system.pode)
-    f = simulator(system.geometry.dualmesh, default_dec_generate, DiagonalHodge())
+    data = open(JSON3.read, joinpath(@__DIR__, "test_jsons", "diffusivity_constant.json"), "r")
+    jsondiagram = data[:diagram]
+    jsonmodel = data[:model]
+    jsonscalars = data[:scalars]
 
-    soln = run_sim(f, system.init, 50.0, ComponentArray(k=0.5,));
+    @test Set(keys(data)) == KEYS
 
-    @test soln.retcode == ReturnCode.Success
-  
-    result = SimResult(soln, system)
+    @test @match jsonmodel[1] begin
+        IsObject(_) => true
+        _ => false
+    end
+    
+    @test @match jsonmodel[6] begin
+        IsMorphism(_) => true
+        _ => false
+    end
 
-    @test typeof(result.state) == Dict{String, Vector{AbstractArray{SVector{3, Float64}}}}
+    model = Model(ThDecapode())
+    @match jsonmodel[1] begin
+        IsObject(content) => add_to_model!(model, content, ObTag())
+        _ => nothing
+    end
 
-    jv = JsonValue(result)
-
+    @test model.data["01936f2c-dba6-7c7b-8ec0-811bbe06bad4" ] == ModelElement(;name=:Form0, val=nothing)
+    
 end
 
 #= XXX ERRORING
@@ -180,35 +190,7 @@ end
 
 end
 
-# # GOOD
-@testset "Parsing the Model JSON Object - Diffusivity Constant" begin
-    
-    data = open(JSON3.read, joinpath(@__DIR__, "test_jsons", "diffusivity_constant.json"), "r")
-    jsondiagram = data[:diagram]
-    jsonmodel = data[:model]
-    jsonscalars = data[:scalars]
 
-    @test Set(keys(data)) == KEYS
-
-    @test @match jsonmodel[1] begin
-        IsObject(_) => true
-        _ => false
-    end
-    
-    @test @match jsonmodel[6] begin
-        IsMorphism(_) => true
-        _ => false
-    end
-
-    model = Model(ThDecapode())
-    @match jsonmodel[1] begin
-        IsObject(content) => add_to_model!(model, content, ObTag())
-        _ => nothing
-    end
-
-    @test model.data["01936f2c-dba6-7c7b-8ec0-811bbe06bad4" ] == ModelElement(;name=:Form0, val=nothing)
-    
-end
 
 @testset "Simulation - Diffusivity Constant" begin
 

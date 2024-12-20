@@ -10,7 +10,9 @@ function add_to_pode!(d::SummationDecapode,
         nc::Vector{Int},
         ::ObTag)
 
-    model_element = model.data[content[:over][:content]] # indexes the model by UUID
+    # indexes the model by UUID
+    model_element = model.data[content[:over][:content]] 
+    
     # checks if the cell is an anonymous (intermediate) variable.
     # if so, we increment the intermediate variable counter and make an intermediate variable name. 
     # otherwise we use the existing name of the given content.
