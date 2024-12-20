@@ -1,11 +1,11 @@
 import { useNavigate, useParams } from "@solidjs/router";
 import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
+
 import { createAnalysis } from "../analysis/document";
 import { useApi } from "../api";
 import { IconButton, InlineInput } from "../components";
 import { createDiagram } from "../diagram/document";
-
 import {
     type CellConstructor,
     type FormalCellEditorProps,

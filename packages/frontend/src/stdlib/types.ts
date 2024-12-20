@@ -15,10 +15,10 @@ export type TheoryMeta = {
     /** Short description of models of theory. */
     description?: string;
 
-    /** Group to which the theory belongs */
+    /** Group to which the theory belongs. */
     group?: string;
 
-    /* link to the theory documentation */
+    /* Name of help page for the theory. */
     help?: string;
 };
 
