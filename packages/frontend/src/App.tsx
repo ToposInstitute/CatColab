@@ -12,7 +12,7 @@ import { Show, createResource, lazy } from "solid-js";
 
 import { RepoContext, RpcContext, createRpcClient, useApi } from "./api";
 import { createModel } from "./model/document";
-import { HelpContainer, lazyMdx } from "./page/help_page";
+import { HelpContainer, TheoryHelpPage, lazyMdx } from "./page/help_page";
 import { TheoryLibraryContext, stdTheories } from "./stdlib";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
@@ -87,6 +87,10 @@ const routes: RouteDefinition[] = [
             {
                 path: "/credits",
                 component: lazyMdx(() => import("./help/credits.mdx")),
+            },
+            {
+                path: "/theory/:page",
+                component: TheoryHelpPage,
             },
         ],
     },

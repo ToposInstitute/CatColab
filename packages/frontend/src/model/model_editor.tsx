@@ -13,7 +13,7 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
-import { BrandedToolbar, HelpButton } from "../page";
+import { BrandedToolbar, TheoryHelpButton } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
 import { MaybePermissionsButton } from "../user";
@@ -68,7 +68,7 @@ export function ModelDocumentEditor(props: {
     return (
         <div class="growable-container">
             <BrandedToolbar>
-                <HelpButton />
+                <TheoryHelpButton theory={props.liveModel?.theory()} />
                 <MaybePermissionsButton permissions={props.liveModel?.liveDoc.permissions} />
                 <Show when={props.liveModel?.theory()?.supportsInstances}>
                     <IconButton
