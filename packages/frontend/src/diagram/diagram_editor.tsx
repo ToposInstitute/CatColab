@@ -14,7 +14,7 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
-import { BrandedToolbar } from "../page";
+import { BrandedToolbar, TheoryHelpButton } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { InstanceTypeMeta } from "../theory";
 import { MaybePermissionsButton } from "../user";
@@ -62,6 +62,7 @@ export function DiagramDocumentEditor(props: {
     return (
         <div class="growable-container">
             <BrandedToolbar>
+                <TheoryHelpButton theory={props.liveDiagram?.liveModel.theory()} />
                 <MaybePermissionsButton permissions={props.liveDiagram?.liveDoc.permissions} />
                 <IconButton
                     onClick={() => props.liveDiagram && onCreateAnalysis(props.liveDiagram.refId)}

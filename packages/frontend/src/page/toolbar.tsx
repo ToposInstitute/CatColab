@@ -1,5 +1,10 @@
-import { A } from "@solidjs/router";
-import type { JSX } from "solid-js";
+import { A, useNavigate } from "@solidjs/router";
+import { type JSX, Show } from "solid-js";
+
+import { IconButton } from "../components";
+import type { Theory } from "../theory";
+
+import CircleHelp from "lucide-solid/icons/circle-help";
 
 import "./toolbar.css";
 
@@ -29,3 +34,32 @@ const Brand = () => (
         <span>CatColab</span>
     </A>
 );
+
+/** Button that navigates to the theory help page if it exists.
+
+If not, it naviagtes to the root help page.
+ */
+export function TheoryHelpButton(props: {
+    theory?: Theory;
+}) {
+    const navigate = useNavigate();
+
+    const defaultButton = () => (
+        <IconButton onClick={() => navigate("/help")} tooltip="Get help about CatColab">
+            <CircleHelp />
+        </IconButton>
+    );
+
+    return (
+        <Show when={props.theory?.help !== undefined && props.theory} fallback={defaultButton()}>
+            {(theory) => (
+                <IconButton
+                    onClick={() => navigate(`/help/theory/${theory().help}`)}
+                    tooltip={`What is a... ${theory().name}?`}
+                >
+                    <CircleHelp />
+                </IconButton>
+            )}
+        </Show>
+    );
+}

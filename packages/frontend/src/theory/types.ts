@@ -18,6 +18,7 @@ export class Theory {
     /** Underlying double theory in the core. */
     readonly theory: DblTheory;
 
+    /** Name of help page (excluding file extension) for theory, if any. */
     readonly help?: string;
 
     /** Human-readable name for models of theory.
@@ -51,8 +52,8 @@ export class Theory {
     constructor(props: {
         id: string;
         theory: DblTheory;
-        name: string;
         help?: string;
+        name: string;
         description?: string;
         modelTypes?: ModelTypeMeta[];
         modelAnalyses?: ModelAnalysisMeta[];

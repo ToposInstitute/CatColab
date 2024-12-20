@@ -22,7 +22,7 @@ import {
     NotebookEditor,
     newFormalCell,
 } from "../notebook";
-import { BrandedToolbar } from "../page";
+import { BrandedToolbar, TheoryHelpButton } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { AnalysisMeta } from "../theory";
 import { LiveAnalysisContext } from "./context";
@@ -93,6 +93,7 @@ export function AnalysisDocumentEditor(props: {
                             minSize={0.25}
                         >
                             <BrandedToolbar>
+                                <TheoryHelpButton theory={theoryForAnalysis(props.liveAnalysis)} />
                                 <IconButton
                                     onClick={toggleSidePanel}
                                     tooltip={
@@ -159,9 +160,9 @@ export function AnalysisNotebookEditor(props: {
     const cellConstructors = () => {
         let meta = undefined;
         if (props.liveAnalysis.analysisType === "model") {
-            meta = props.liveAnalysis.liveModel.theory()?.modelAnalyses;
+            meta = theoryForAnalysis(props.liveAnalysis)?.modelAnalyses;
         } else if (props.liveAnalysis.analysisType === "diagram") {
-            meta = props.liveAnalysis.liveDiagram.liveModel.theory()?.diagramAnalyses;
+            meta = theoryForAnalysis(props.liveAnalysis)?.diagramAnalyses;
         }
         return (meta ?? []).map(analysisCellConstructor);
     };
@@ -190,7 +191,7 @@ function AnalysisCellEditor(props: FormalCellEditorProps<Analysis<unknown>>) {
             <Match
                 when={
                     liveAnalysis.analysisType === "model" &&
-                    liveAnalysis.liveModel.theory()?.modelAnalysis(props.content.id)
+                    theoryForAnalysis(liveAnalysis)?.modelAnalysis(props.content.id)
                 }
             >
                 {(analysis) => (
@@ -207,7 +208,7 @@ function AnalysisCellEditor(props: FormalCellEditorProps<Analysis<unknown>>) {
             <Match
                 when={
                     liveAnalysis.analysisType === "diagram" &&
-                    liveAnalysis.liveDiagram.liveModel.theory()?.diagramAnalysis(props.content.id)
+                    theoryForAnalysis(liveAnalysis)?.diagramAnalysis(props.content.id)
                 }
             >
                 {(analysis) => (
@@ -236,4 +237,13 @@ function analysisCellConstructor<T>(meta: AnalysisMeta<T>): CellConstructor<Anal
                 content: initialContent(),
             }),
     };
+}
+
+function theoryForAnalysis(liveAnalysis?: LiveAnalysisDocument) {
+    if (liveAnalysis?.analysisType === "model") {
+        return liveAnalysis.liveModel.theory();
+    }
+    if (liveAnalysis?.analysisType === "diagram") {
+        return liveAnalysis.liveDiagram.liveModel.theory();
+    }
 }
