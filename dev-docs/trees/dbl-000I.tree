@@ -9,7 +9,7 @@
 is the left adjoint to the forgetful functor
 
 ##{
-G: \cat{Mod}_{\dbl{T}} \coloneqq
+\cat{Mod}_{\dbl{T}} \coloneqq
 \twocat{Dbl}_{\mathrm{lax}}(\dbl{T}, \Span) \xto{U}
 \twocat{DblGraph}(U(\dbl{T}), \Span)
 \eqqcolon \cat{Net}_{\dbl{T}}
