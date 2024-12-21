@@ -12,7 +12,7 @@ import { Show, createResource, lazy } from "solid-js";
 
 import { RepoContext, RpcContext, createRpcClient, useApi } from "./api";
 import { createModel } from "./model/document";
-import { HelpContainer, TheoryHelpPage, lazyMdx } from "./page/help_page";
+import { HelpContainer, lazyMdx } from "./page/help_page";
 import { TheoryLibraryContext, stdTheories } from "./stdlib";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
@@ -56,6 +56,10 @@ const refIsUUIDFilter = {
     ref: (ref: string) => uuid.validate(ref),
 };
 
+const theoryWithIdFilter = {
+    id: (id: string) => stdTheories.has(id),
+};
+
 const routes: RouteDefinition[] = [
     {
         path: "/",
@@ -89,8 +93,9 @@ const routes: RouteDefinition[] = [
                 component: lazyMdx(() => import("./help/credits.mdx")),
             },
             {
-                path: "/theory/:page",
-                component: TheoryHelpPage,
+                path: "/theory/:id",
+                matchFilters: theoryWithIdFilter,
+                component: lazy(() => import("./stdlib/help")),
             },
         ],
     },

@@ -47,6 +47,11 @@ export class TheoryLibrary {
         this.theoryMap.set(meta.id, cons);
     }
 
+    /** Is there a theory with the given ID? */
+    has(id: string): boolean {
+        return this.metaMap.has(id);
+    }
+
     /** Get a theory by ID.
 
     A theory is instantiated and cached the first time it is retrieved.
