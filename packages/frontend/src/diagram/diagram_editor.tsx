@@ -26,6 +26,7 @@ import {
     type DiagramJudgment,
     type DiagramMorphismDecl,
     type DiagramObjectDecl,
+    duplicateDiagramJudgment,
     newDiagramMorphismDecl,
     newDiagramObjectDecl,
 } from "./types";
@@ -141,6 +142,7 @@ export function DiagramNotebookEditor(props: {
                 formalCellEditor={DiagramCellEditor}
                 cellConstructors={cellConstructors()}
                 cellLabel={judgmentLabel}
+                duplicateCell={duplicateDiagramJudgment}
             />
         </MultiProvider>
     );

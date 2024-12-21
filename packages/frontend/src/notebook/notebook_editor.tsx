@@ -25,26 +25,33 @@ import {
     StemCellEditor,
     isCellDragData,
 } from "./notebook_cell";
-import { type Cell, type FormalCell, type Notebook, newRichTextCell, newStemCell } from "./types";
+import {
+    type Cell,
+    type FormalCell,
+    type Notebook,
+    newFormalCell,
+    newRichTextCell,
+    newStemCell,
+} from "./types";
 
 import "./notebook_editor.css";
 
-/** Constructor of a cell in a notebook.
+/** Constructor for a cell in a notebook.
 
 A notebook knows how to edit cells, but without cell constructors, it wouldn't
 know how to create them!
  */
 export type CellConstructor<T> = {
-    // Name of cell constructor, usually naming the cell type.
+    /** Name of cell constructor, usually naming the cell type. */
     name: string;
 
-    // Tooltip-length description of cell constructor.
+    /** Tooltip-length description of cell constructor. */
     description?: string;
 
-    // Keyboard shortcut to invoke the constructor.
+    /** Keyboard shortcut to invoke the constructor. */
     shortcut?: KbdKey[];
 
-    // Function to construct the cell.
+    /** Called to construct a new cell. */
     construct: () => Cell<T>;
 };
 
@@ -64,9 +71,17 @@ export function NotebookEditor<T>(props: {
     path: Prop[];
     notebook: Notebook<T>;
     changeNotebook: (f: (nb: Notebook<T>) => void) => void;
+
     formalCellEditor: Component<FormalCellEditorProps<T>>;
     cellConstructors?: CellConstructor<T>[];
     cellLabel?: (content: T) => string | undefined;
+
+    /** Called to duplicate an existing cell.
+
+    If omitted, a deep copy is performed.
+     */
+    duplicateCell?: (content: T) => T;
+
     // FIXME: Remove this option once we fix focus management.
     noShortcuts?: boolean;
 }) {
@@ -117,6 +132,18 @@ export function NotebookEditor<T>(props: {
         props.changeNotebook((nb) => {
             nb.cells[i] = cell;
         });
+    };
+
+    const duplicateCell = (cell: Cell<T>): Cell<T> => {
+        if (cell.tag === "formal") {
+            const content = (props.duplicateCell ?? deepCopyJSON)(cell.content);
+            return newFormalCell(content);
+        } else if (cell.tag === "rich-text") {
+            return newRichTextCell(cell.content);
+        } else if (cell.tag === "stem") {
+            return newStemCell();
+        }
+        throw new Error(`Cell with unknown tag: ${cell}`);
     };
 
     const cellConstructors = (): CellConstructor<T>[] => [
@@ -203,37 +230,44 @@ export function NotebookEditor<T>(props: {
                     {(cell, i) => {
                         const isActive = () => activeCell() === i();
                         const cellActions: CellActions = {
-                            activateAbove: () => {
+                            activateAbove() {
                                 i() > 0 && setActiveCell(i() - 1);
                             },
-                            activateBelow: () => {
+                            activateBelow() {
                                 const n = props.notebook.cells.length;
                                 i() < n - 1 && setActiveCell(i() + 1);
                             },
-                            createAbove: () =>
+                            createAbove() {
                                 props.changeNotebook((nb) => {
                                     nb.cells.splice(i(), 0, newStemCell());
                                     setActiveCell(i());
-                                }),
-                            createBelow: () =>
+                                });
+                            },
+                            createBelow() {
                                 props.changeNotebook((nb) => {
                                     nb.cells.splice(i() + 1, 0, newStemCell());
                                     setActiveCell(i() + 1);
-                                }),
-                            deleteBackward: () =>
+                                });
+                            },
+                            deleteBackward() {
                                 props.changeNotebook((nb) => {
                                     nb.cells.splice(i(), 1);
                                     setActiveCell(i() - 1);
-                                }),
-                            deleteForward: () =>
+                                });
+                            },
+                            deleteForward() {
                                 props.changeNotebook((nb) => {
                                     nb.cells.splice(i(), 1);
                                     setActiveCell(i());
-                                }),
-                            hasFocused: () => {
-                                setActiveCell(i());
+                                });
                             },
-                            moveCellUp: () => {
+                            duplicate() {
+                                const cell = props.notebook.cells[i()];
+                                props.changeNotebook((nb) => {
+                                    cell && nb.cells.splice(i() + 1, 0, duplicateCell(cell));
+                                });
+                            },
+                            moveUp() {
                                 props.changeNotebook((nb) => {
                                     if (i() > 0) {
                                         const [cellToMoveUp] = nb.cells.splice(i(), 1);
@@ -241,13 +275,16 @@ export function NotebookEditor<T>(props: {
                                     }
                                 });
                             },
-                            moveCellDown: () => {
+                            moveDown() {
                                 props.changeNotebook((nb) => {
                                     if (i() < nb.cells.length - 1) {
                                         const [cellToMoveDown] = nb.cells.splice(i(), 1);
                                         nb.cells.splice(i() + 1, 0, deepCopyJSON(cellToMoveDown));
                                     }
                                 });
+                            },
+                            hasFocused() {
+                                setActiveCell(i());
                             },
                         };
 

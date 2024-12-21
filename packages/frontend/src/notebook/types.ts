@@ -31,11 +31,11 @@ export type RichTextCell = {
     content: string;
 };
 
-/** Creates an empty rich text cell. */
-export const newRichTextCell = (): RichTextCell => ({
+/** Creates a rich text cell with the given content. */
+export const newRichTextCell = (content?: string): RichTextCell => ({
     tag: "rich-text",
     id: uuidv7(),
-    content: "",
+    content: content ?? "",
 });
 
 /** A cell containing custom data, usually a formal object. */
