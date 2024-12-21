@@ -26,6 +26,7 @@ import {
     type ModelJudgment,
     type MorphismDecl,
     type ObjectDecl,
+    duplicateModelJudgment,
     newMorphismDecl,
     newObjectDecl,
 } from "./types";
@@ -154,6 +155,7 @@ export function ModelNotebookEditor(props: {
                 formalCellEditor={ModelCellEditor}
                 cellConstructors={cellConstructors()}
                 cellLabel={judgmentLabel}
+                duplicateCell={duplicateModelJudgment}
             />
         </LiveModelContext.Provider>
     );

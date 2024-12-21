@@ -11,21 +11,20 @@ import type {
     ObType,
     Uuid,
 } from "catlog-wasm";
+import { deepCopyJSON } from "../util/deepcopy";
 import type { Name } from "../util/indexing";
 
 /** A judgment in the definition of a diagram in a model.
 
 Our diagrams are assumed to be free, i.e., we do not allow equations. This means
-that judgments and declarations coincide for diagrams.
+that judgments and declarations coincide for diagrams, in contrast to models.
  */
 export type DiagramJudgment = DiagramDecl;
 
-/** A declaration in the definition of a diagram in a model.
- */
+/** A declaration in the definition of a diagram in a model. */
 export type DiagramDecl = DiagramObjectDecl | DiagramMorphismDecl;
 
-/** Declaration of an object in a diagram in a model.
- */
+/** Declaration of an object in a diagram in a model. */
 export type DiagramObjectDecl = DiagramObDecl & {
     tag: "object";
 
@@ -33,6 +32,7 @@ export type DiagramObjectDecl = DiagramObDecl & {
     name: string;
 };
 
+/** Create a new diagram object declaration with the given object type. */
 export const newDiagramObjectDecl = (obType: ObType, over?: Ob): DiagramObjectDecl => ({
     tag: "object",
     id: uuidv7(),
@@ -41,8 +41,7 @@ export const newDiagramObjectDecl = (obType: ObType, over?: Ob): DiagramObjectDe
     over: over ?? null,
 });
 
-/** Declaration of a morphism in a diagram in a model.
- */
+/** Declaration of a morphism in a diagram in a model. */
 export type DiagramMorphismDecl = DiagramMorDecl & {
     tag: "morphism";
 
@@ -50,6 +49,7 @@ export type DiagramMorphismDecl = DiagramMorDecl & {
     name: string;
 };
 
+/** Create a new diagram morphism declaration with the given morphism type. */
 export const newDiagramMorphismDecl = (morType: MorType, over?: Mor): DiagramMorphismDecl => ({
     tag: "morphism",
     id: uuidv7(),
@@ -58,6 +58,12 @@ export const newDiagramMorphismDecl = (morType: MorType, over?: Mor): DiagramMor
     over: over ?? null,
     dom: null,
     cod: null,
+});
+
+/** Duplicate a diagram judgment, creating a fresh UUID. */
+export const duplicateDiagramJudgment = (jgmt: DiagramJudgment): DiagramJudgment => ({
+    ...deepCopyJSON(jgmt),
+    id: uuidv7(),
 });
 
 /** Construct a diagram in `catlog` from a sequence of judgments. */

@@ -22,6 +22,7 @@ import { focusInputWhen } from "../util/focus";
 
 import ArrowDown from "lucide-solid/icons/arrow-down";
 import ArrowUp from "lucide-solid/icons/arrow-up";
+import Copy from "lucide-solid/icons/copy";
 import GripVertical from "lucide-solid/icons/grip-vertical";
 import Plus from "lucide-solid/icons/plus";
 import Trash2 from "lucide-solid/icons/trash-2";
@@ -43,7 +44,7 @@ export type CellActions = {
     // Create a new stem cell above this one.
     createAbove: () => void;
 
-    // Create  anew stem cell below this one.
+    // Create a new stem cell below this one.
     createBelow: () => void;
 
     // Delete this cell in the backward/upward direction.
@@ -52,14 +53,17 @@ export type CellActions = {
     // Delete this cell in the forward/downward direction.
     deleteForward: () => void;
 
+    // Duplicate this cell, adding the new cell below this one.
+    duplicate: () => void;
+
+    // Move this cell up, if possible.
+    moveUp: () => void;
+
+    // Move this cell down, if possible.
+    moveDown: () => void;
+
     // The cell has received focus.
     hasFocused: () => void;
-
-    // Move Cell Up
-    moveCellUp: () => void;
-
-    // Move Cell Down
-    moveCellDown: () => void;
 };
 
 const cellDragDataKey = Symbol("notebook-cell");
@@ -114,14 +118,19 @@ export function NotebookCell(props: {
             onComplete: props.actions.deleteForward,
         },
         {
+            name: "Duplicate",
+            icon: <Copy size={16} />,
+            onComplete: props.actions.duplicate,
+        },
+        {
             name: "Move Up",
             icon: <ArrowUp size={16} />,
-            onComplete: props.actions.moveCellUp,
+            onComplete: props.actions.moveUp,
         },
         {
             name: "Move Down",
             icon: <ArrowDown size={16} />,
-            onComplete: props.actions.moveCellDown,
+            onComplete: props.actions.moveDown,
         },
     ];
 
