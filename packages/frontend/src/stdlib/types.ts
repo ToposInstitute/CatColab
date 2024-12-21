@@ -13,7 +13,7 @@ export type TheoryMeta = {
     name: string;
 
     /** Short description of models of theory. */
-    description?: string;
+    description: string;
 
     /** Group to which the theory belongs. */
     group?: string;
@@ -45,6 +45,11 @@ export class TheoryLibrary {
         }
         this.metaMap.set(meta.id, meta);
         this.theoryMap.set(meta.id, cons);
+    }
+
+    /** Is there a theory with the given ID? */
+    has(id: string): boolean {
+        return this.metaMap.has(id);
     }
 
     /** Get a theory by ID.

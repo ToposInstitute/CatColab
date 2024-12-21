@@ -35,9 +35,9 @@ const Brand = () => (
     </A>
 );
 
-/** Button that navigates to the theory help page if it exists.
+/** Button that navigates to the help page for a theory.
 
-If not, it naviagtes to the root help page.
+If the theory is not set, it naviagtes instead to the root help page.
  */
 export function TheoryHelpButton(props: {
     theory?: Theory;
@@ -51,10 +51,10 @@ export function TheoryHelpButton(props: {
     );
 
     return (
-        <Show when={props.theory?.help !== undefined && props.theory} fallback={defaultButton()}>
+        <Show when={props.theory} fallback={defaultButton()}>
             {(theory) => (
                 <IconButton
-                    onClick={() => navigate(`/help/theory/${theory().help}`)}
+                    onClick={() => navigate(`/help/theory/${theory().id}`)}
                     tooltip={`What is a... ${theory().name}?`}
                 >
                     <CircleHelp />
