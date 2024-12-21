@@ -1,0 +1,18 @@
+\title{Cartesian double graph}
+\taxon{definition}
+\import{macros}
+
+\p{A [double graph](dbl-000E) \dbl{G} is \define{cartesian} when either of the
+following equivalent conditions hold:
+
+\ul{
+
+\li{\dbl{G} is a \nlab{cartesian object} in the [2-category of double
+graphs](dbl-000F).}
+
+\li{The underlying categories #{\dbl{G}_0} and #{\dbl{G}_1} have finite
+products, which are preserved by the source and target functors #{s,t: \dbl{G}_1
+\rightrightarrows \dbl{G}_0}.}
+
+}
+}
