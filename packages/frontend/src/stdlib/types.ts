@@ -13,7 +13,7 @@ export type TheoryMeta = {
     name: string;
 
     /** Short description of models of theory. */
-    description?: string;
+    description: string;
 
     /** Group to which the theory belongs. */
     group?: string;

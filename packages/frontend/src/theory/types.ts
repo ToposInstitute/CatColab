@@ -28,8 +28,11 @@ export class Theory {
      */
     readonly name: string;
 
-    /** Short description of models of theory. */
-    readonly description?: string;
+    /** Short description of models of theory.
+
+    It should fit confortably in a single line.
+     */
+    readonly description: string;
 
     /** Whether models of the double theory are constrained to be free. */
     readonly onlyFreeModels!: boolean;
@@ -54,7 +57,7 @@ export class Theory {
         theory: DblTheory;
         help?: string;
         name: string;
-        description?: string;
+        description: string;
         modelTypes?: ModelTypeMeta[];
         modelAnalyses?: ModelAnalysisMeta[];
         onlyFreeModels?: boolean;
@@ -200,7 +203,7 @@ export type BaseTypeMeta = {
     name: string;
 
     /** Short description of type. */
-    description?: string;
+    description: string;
 
     /** Keyboard shortcut for type, excluding modifier. */
     shortcut?: KbdKey[];

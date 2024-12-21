@@ -1,5 +1,5 @@
 import { destructure } from "@solid-primitives/destructure";
-import { Show } from "solid-js";
+import { For, Show } from "solid-js";
 
 import { lazyMdx } from "../page/help_page";
 import type { Theory } from "./types";
@@ -15,7 +15,21 @@ export function TheoryHelp(props: {
     return (
         <div class="theory-help">
             <h1>{theory().name}</h1>
+            <h2>Summary</h2>
+            <p>{theory().description}</p>
+            <h4>Definitions</h4>
+            <dl>
+                <For each={theory().modelTypes}>
+                    {(typeMeta) => (
+                        <>
+                            <dt>{typeMeta.name}</dt>
+                            <dd>{typeMeta.description}</dd>
+                        </>
+                    )}
+                </For>
+            </dl>
             <Show when={theory().help}>
+                <h2>Description</h2>
                 <Content />
             </Show>
         </div>
