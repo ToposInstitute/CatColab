@@ -29,7 +29,6 @@ export function TheoryHelp(props: {
                 </For>
             </dl>
             <Show when={theory().help}>
-                <h2>Description</h2>
                 <Content />
             </Show>
         </div>

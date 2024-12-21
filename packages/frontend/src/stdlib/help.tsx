@@ -11,9 +11,11 @@ export default function TheoryHelpPage() {
     invariant(theories, "Library of theories must be provided as context");
 
     const params = useParams();
-    const theoryId = params.id;
-    invariant(theoryId, "Theory ID must be provided as parameter");
-    const theory = theories.get(theoryId);
 
-    return <TheoryHelp theory={theory} />;
+    const theory = () => {
+        invariant(params.id, "Theory ID must be provided as parameter");
+        return theories.get(params.id);
+    };
+
+    return <TheoryHelp theory={theory()} />;
 }
