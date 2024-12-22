@@ -1,0 +1,17 @@
+.menu div[role="menuitem"] {
+    display: flex;
+    flex-direction: row;
+    gap: 1ex;
+    align-items: center;
+
+    padding: 0.5ex;
+    cursor: pointer;
+
+    &[data-highlighted] {
+        background: #f1f5f9;
+    }
+
+    & .lucide {
+        color: dimgray;
+    }
+}

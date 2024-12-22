@@ -15,14 +15,16 @@ import invariant from "tiny-invariant";
 import { useApi } from "../api";
 import { IconButton, ResizableHandle } from "../components";
 import { DiagramPane } from "../diagram/diagram_editor";
+import { DiagramMenuItems } from "../diagram/diagram_menu";
 import { ModelPane } from "../model/model_editor";
+import { ModelMenuItems } from "../model/model_menu";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
     NotebookEditor,
     newFormalCell,
 } from "../notebook";
-import { BrandedToolbar, TheoryHelpButton } from "../page";
+import { HamburgerMenu, TheoryHelpButton, Toolbar } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { AnalysisMeta } from "../theory";
 import { LiveAnalysisContext } from "./context";
@@ -38,15 +40,16 @@ import PanelRight from "lucide-solid/icons/panel-right";
 import PanelRightClose from "lucide-solid/icons/panel-right-close";
 
 export default function AnalysisPage() {
-    const params = useParams();
-    const refId = params.ref;
-    invariant(refId, "Must provide document ref as parameter to analysis page");
-
     const api = useApi();
     const theories = useContext(TheoryLibraryContext);
     invariant(theories, "Must provide theory library as context to analysis page");
 
-    const [liveAnalysis] = createResource(() => getLiveAnalysis(refId, api, theories));
+    const params = useParams();
+
+    const [liveAnalysis] = createResource(
+        () => params.ref,
+        (refId) => getLiveAnalysis(refId, api, theories),
+    );
 
     return <AnalysisDocumentEditor liveAnalysis={liveAnalysis()} />;
 }
@@ -92,7 +95,9 @@ export function AnalysisDocumentEditor(props: {
                             initialSize={0.66}
                             minSize={0.25}
                         >
-                            <BrandedToolbar>
+                            <Toolbar>
+                                <AnalysisMenu liveAnalysis={props.liveAnalysis} />
+                                <span class="filler" />
                                 <TheoryHelpButton theory={theoryForAnalysis(props.liveAnalysis)} />
                                 <IconButton
                                     onClick={toggleSidePanel}
@@ -106,7 +111,7 @@ export function AnalysisDocumentEditor(props: {
                                         <PanelRightClose />
                                     </Show>
                                 </IconButton>
-                            </BrandedToolbar>
+                            </Toolbar>
                             <AnalysisOfPane liveAnalysis={props.liveAnalysis} />
                         </Resizable.Panel>
                         <ResizableHandle hidden={!isSidePanelOpen()} />
@@ -134,6 +139,27 @@ export function AnalysisDocumentEditor(props: {
         </Resizable>
     );
 }
+
+const AnalysisMenu = (props: {
+    liveAnalysis?: LiveAnalysisDocument;
+}) => (
+    <HamburgerMenu disabled={props.liveAnalysis === undefined}>
+        <Switch>
+            <Match
+                when={props.liveAnalysis?.analysisType === "model" && props.liveAnalysis.liveModel}
+            >
+                {(liveModel) => <ModelMenuItems liveModel={liveModel()} />}
+            </Match>
+            <Match
+                when={
+                    props.liveAnalysis?.analysisType === "diagram" && props.liveAnalysis.liveDiagram
+                }
+            >
+                {(liveDiagram) => <DiagramMenuItems liveDiagram={liveDiagram()} />}
+            </Match>
+        </Switch>
+    </HamburgerMenu>
+);
 
 const AnalysisOfPane = (props: {
     liveAnalysis?: LiveAnalysisDocument;

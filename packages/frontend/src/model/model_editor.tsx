@@ -1,11 +1,9 @@
-import { useNavigate, useParams } from "@solidjs/router";
+import { useParams } from "@solidjs/router";
 import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { createAnalysis } from "../analysis/document";
 import { useApi } from "../api";
-import { IconButton, InlineInput } from "../components";
-import { createDiagram } from "../diagram/document";
+import { InlineInput } from "../components";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
@@ -13,12 +11,13 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
-import { BrandedToolbar, TheoryHelpButton } from "../page";
+import { TheoryHelpButton, Toolbar } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
 import { MaybePermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
 import { type LiveModelDocument, getLiveModel } from "./document";
+import { ModelMenu } from "./model_menu";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
 import { TheorySelectorDialog } from "./theory_selector";
@@ -33,19 +32,17 @@ import {
 
 import "./model_editor.css";
 
-import ChartSpline from "lucide-solid/icons/chart-spline";
-import Network from "lucide-solid/icons/network";
-
 export default function ModelPage() {
-    const params = useParams();
-    const refId = params.ref;
-    invariant(refId, "Must provide model ref as parameter to model page");
-
     const api = useApi();
     const theories = useContext(TheoryLibraryContext);
     invariant(theories, "Must provide theory library as context to model page");
 
-    const [liveModel] = createResource(() => getLiveModel(refId, api, theories));
+    const params = useParams();
+
+    const [liveModel] = createResource(
+        () => params.ref,
+        (refId) => getLiveModel(refId, api, theories),
+    );
 
     return <ModelDocumentEditor liveModel={liveModel()} />;
 }
@@ -53,39 +50,14 @@ export default function ModelPage() {
 export function ModelDocumentEditor(props: {
     liveModel?: LiveModelDocument;
 }) {
-    const api = useApi();
-    const navigate = useNavigate();
-
-    const onCreateDiagram = async (modelRefId: string) => {
-        const newRef = await createDiagram(modelRefId, api);
-        navigate(`/diagram/${newRef}`);
-    };
-
-    const onCreateAnalysis = async (modelRefId: string) => {
-        const newRef = await createAnalysis("model", modelRefId, api);
-        navigate(`/analysis/${newRef}`);
-    };
-
     return (
         <div class="growable-container">
-            <BrandedToolbar>
+            <Toolbar>
+                <ModelMenu liveModel={props.liveModel} />
+                <span class="filler" />
                 <TheoryHelpButton theory={props.liveModel?.theory()} />
                 <MaybePermissionsButton permissions={props.liveModel?.liveDoc.permissions} />
-                <Show when={props.liveModel?.theory()?.supportsInstances}>
-                    <IconButton
-                        onClick={() => props.liveModel && onCreateDiagram(props.liveModel.refId)}
-                        tooltip="Create a diagram in this model"
-                    >
-                        <Network />
-                    </IconButton>
-                </Show>
-                <IconButton
-                    onClick={() => props.liveModel && onCreateAnalysis(props.liveModel.refId)}
-                    tooltip="Analyze this model"
-                >
-                    <ChartSpline />
-                </IconButton>
-            </BrandedToolbar>
+            </Toolbar>
             <Show when={props.liveModel}>
                 {(liveModel) => <ModelPane liveModel={liveModel()} />}
             </Show>

@@ -14,11 +14,12 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
-import { BrandedToolbar, TheoryHelpButton } from "../page";
+import { TheoryHelpButton, Toolbar } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { InstanceTypeMeta } from "../theory";
 import { MaybePermissionsButton } from "../user";
 import { LiveDiagramContext } from "./context";
+import { DiagramMenu } from "./diagram_menu";
 import { type LiveDiagramDocument, getLiveDiagram } from "./document";
 import { DiagramMorphismCellEditor } from "./morphism_cell_editor";
 import { DiagramObjectCellEditor } from "./object_cell_editor";
@@ -36,15 +37,16 @@ import "./diagram_editor.css";
 import ChartSpline from "lucide-solid/icons/chart-spline";
 
 export default function DiagramPage() {
-    const params = useParams();
-    const refId = params.ref;
-    invariant(refId, "Must provide document ref as parameter to diagram page");
-
     const api = useApi();
     const theories = useContext(TheoryLibraryContext);
     invariant(theories, "Must provide theory library as context to diagram page");
 
-    const [liveDiagram] = createResource(() => getLiveDiagram(refId, api, theories));
+    const params = useParams();
+
+    const [liveDiagram] = createResource(
+        () => params.ref,
+        (refId) => getLiveDiagram(refId, api, theories),
+    );
 
     return <DiagramDocumentEditor liveDiagram={liveDiagram()} />;
 }
@@ -62,7 +64,9 @@ export function DiagramDocumentEditor(props: {
 
     return (
         <div class="growable-container">
-            <BrandedToolbar>
+            <Toolbar>
+                <DiagramMenu liveDiagram={props.liveDiagram} />
+                <span class="filler" />
                 <TheoryHelpButton theory={props.liveDiagram?.liveModel.theory()} />
                 <MaybePermissionsButton permissions={props.liveDiagram?.liveDoc.permissions} />
                 <IconButton
@@ -71,7 +75,7 @@ export function DiagramDocumentEditor(props: {
                 >
                     <ChartSpline />
                 </IconButton>
-            </BrandedToolbar>
+            </Toolbar>
             <Show when={props.liveDiagram}>
                 {(liveDiagram) => <DiagramPane liveDiagram={liveDiagram()} />}
             </Show>
