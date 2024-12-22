@@ -28,7 +28,7 @@ export function ObjectCellEditor(props: {
     const cssClasses = () => [
         "formal-judgment",
         "object-decl",
-        ...obClasses(liveModel.theory(), props.object.obType),
+        ...obClasses(liveModel().theory(), props.object.obType),
     ];
 
     return (

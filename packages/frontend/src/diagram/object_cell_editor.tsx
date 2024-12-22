@@ -24,7 +24,7 @@ export function DiagramObjectCellEditor(props: {
 
     const liveDiagram = useContext(LiveDiagramContext);
     invariant(liveDiagram, "Live diagram should be provided as context");
-    const theory = () => liveDiagram.liveModel.theory();
+    const theory = () => liveDiagram().liveModel.theory();
 
     return (
         <div class="formal-judgment diagram-object-decl">

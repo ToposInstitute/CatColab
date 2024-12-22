@@ -194,7 +194,7 @@ export function AnalysisNotebookEditor(props: {
     };
 
     return (
-        <LiveAnalysisContext.Provider value={props.liveAnalysis}>
+        <LiveAnalysisContext.Provider value={() => props.liveAnalysis}>
             <NotebookEditor
                 handle={liveDoc().docHandle}
                 path={["notebook"]}
@@ -216,14 +216,14 @@ function AnalysisCellEditor(props: FormalCellEditorProps<Analysis<unknown>>) {
         <Switch>
             <Match
                 when={
-                    liveAnalysis.analysisType === "model" &&
-                    theoryForAnalysis(liveAnalysis)?.modelAnalysis(props.content.id)
+                    liveAnalysis().analysisType === "model" &&
+                    theoryForAnalysis(liveAnalysis())?.modelAnalysis(props.content.id)
                 }
             >
                 {(analysis) => (
                     <Dynamic
                         component={analysis().component}
-                        liveModel={(liveAnalysis as LiveModelAnalysisDocument).liveModel}
+                        liveModel={(liveAnalysis() as LiveModelAnalysisDocument).liveModel}
                         content={props.content.content}
                         changeContent={(f: (c: unknown) => void) =>
                             props.changeContent((content) => f(content.content))
@@ -233,14 +233,14 @@ function AnalysisCellEditor(props: FormalCellEditorProps<Analysis<unknown>>) {
             </Match>
             <Match
                 when={
-                    liveAnalysis.analysisType === "diagram" &&
-                    theoryForAnalysis(liveAnalysis)?.diagramAnalysis(props.content.id)
+                    liveAnalysis().analysisType === "diagram" &&
+                    theoryForAnalysis(liveAnalysis())?.diagramAnalysis(props.content.id)
                 }
             >
                 {(analysis) => (
                     <Dynamic
                         component={analysis().component}
-                        liveDiagram={(liveAnalysis as LiveDiagramAnalysisDocument).liveDiagram}
+                        liveDiagram={(liveAnalysis() as LiveDiagramAnalysisDocument).liveDiagram}
                         content={props.content.content}
                         changeContent={(f: (c: unknown) => void) =>
                             props.changeContent((content) => f(content.content))
