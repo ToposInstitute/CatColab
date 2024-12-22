@@ -1,10 +1,11 @@
+import { Menubar } from "@kobalte/core/menubar";
 import { useNavigate, useParams } from "@solidjs/router";
 import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { createAnalysis } from "../analysis/document";
 import { useApi } from "../api";
-import { IconButton, InlineInput } from "../components";
+import { InlineInput } from "../components";
 import { createDiagram } from "../diagram/document";
 import {
     type CellConstructor,
@@ -13,7 +14,7 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
-import { BrandedToolbar, TheoryHelpButton } from "../page";
+import { HamburgerMenu, TheoryHelpButton, Toolbar } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
 import { MaybePermissionsButton } from "../user";
@@ -66,26 +67,35 @@ export function ModelDocumentEditor(props: {
         navigate(`/analysis/${newRef}`);
     };
 
+    const MenuItems = () => (
+        <>
+            <Menubar.Item
+                onSelect={() => props.liveModel && onCreateAnalysis(props.liveModel.refId)}
+            >
+                <ChartSpline />
+                <Menubar.ItemLabel>{"New analysis of this model"}</Menubar.ItemLabel>
+            </Menubar.Item>
+            <Show when={props.liveModel?.theory()?.supportsInstances}>
+                <Menubar.Item
+                    onSelect={() => props.liveModel && onCreateDiagram(props.liveModel.refId)}
+                >
+                    <Network />
+                    <Menubar.ItemLabel>{"New diagram in this model"}</Menubar.ItemLabel>
+                </Menubar.Item>
+            </Show>
+        </>
+    );
+
     return (
         <div class="growable-container">
-            <BrandedToolbar>
+            <Toolbar>
+                <HamburgerMenu>
+                    <MenuItems />
+                </HamburgerMenu>
+                <span class="filler" />
                 <TheoryHelpButton theory={props.liveModel?.theory()} />
                 <MaybePermissionsButton permissions={props.liveModel?.liveDoc.permissions} />
-                <Show when={props.liveModel?.theory()?.supportsInstances}>
-                    <IconButton
-                        onClick={() => props.liveModel && onCreateDiagram(props.liveModel.refId)}
-                        tooltip="Create a diagram in this model"
-                    >
-                        <Network />
-                    </IconButton>
-                </Show>
-                <IconButton
-                    onClick={() => props.liveModel && onCreateAnalysis(props.liveModel.refId)}
-                    tooltip="Analyze this model"
-                >
-                    <ChartSpline />
-                </IconButton>
-            </BrandedToolbar>
+            </Toolbar>
             <Show when={props.liveModel}>
                 {(liveModel) => <ModelPane liveModel={liveModel()} />}
             </Show>
