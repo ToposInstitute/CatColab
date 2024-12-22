@@ -15,6 +15,7 @@ import invariant from "tiny-invariant";
 import { useApi } from "../api";
 import { IconButton, ResizableHandle } from "../components";
 import { DiagramPane } from "../diagram/diagram_editor";
+import { DiagramMenuItems } from "../diagram/diagram_menu";
 import { ModelPane } from "../model/model_editor";
 import { ModelMenuItems } from "../model/model_menu";
 import {
@@ -148,6 +149,13 @@ const AnalysisMenu = (props: {
                 when={props.liveAnalysis?.analysisType === "model" && props.liveAnalysis.liveModel}
             >
                 {(liveModel) => <ModelMenuItems liveModel={liveModel()} />}
+            </Match>
+            <Match
+                when={
+                    props.liveAnalysis?.analysisType === "diagram" && props.liveAnalysis.liveDiagram
+                }
+            >
+                {(liveDiagram) => <DiagramMenuItems liveDiagram={liveDiagram()} />}
             </Match>
         </Switch>
     </HamburgerMenu>

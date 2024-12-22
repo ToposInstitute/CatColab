@@ -3,30 +3,30 @@ import { Show } from "solid-js";
 
 import { createAnalysis } from "../analysis/document";
 import { useApi } from "../api";
-import { createDiagram } from "../diagram/document";
+import { createModel } from "../model/document";
 import { HamburgerMenu, MenuItem, MenuItemLabel } from "../page";
-import { type LiveModelDocument, createModel } from "./document";
+import { type LiveDiagramDocument, createDiagram } from "./document";
 
 import ChartSpline from "lucide-solid/icons/chart-spline";
 import FilePlus from "lucide-solid/icons/file-plus";
 import Network from "lucide-solid/icons/network";
 
-/** Hamburger menu for a model of a double theory. */
-export function ModelMenu(props: {
-    liveModel?: LiveModelDocument;
+/** Hamburger menu for a diagram in a model. */
+export function DiagramMenu(props: {
+    liveDiagram?: LiveDiagramDocument;
 }) {
     return (
-        <HamburgerMenu disabled={props.liveModel === undefined}>
-            <Show when={props.liveModel}>
-                {(liveModel) => <ModelMenuItems liveModel={liveModel()} />}
+        <HamburgerMenu disabled={props.liveDiagram === undefined}>
+            <Show when={props.liveDiagram}>
+                {(liveDiagram) => <DiagramMenuItems liveDiagram={liveDiagram()} />}
             </Show>
         </HamburgerMenu>
     );
 }
 
-/** Menu items for a model. */
-export function ModelMenuItems(props: {
-    liveModel: LiveModelDocument;
+/** Menu items for a diagram in a model. */
+export function DiagramMenuItems(props: {
+    liveDiagram: LiveDiagramDocument;
 }) {
     const api = useApi();
     const navigate = useNavigate();
@@ -41,8 +41,8 @@ export function ModelMenuItems(props: {
         navigate(`/diagram/${newRef}`);
     };
 
-    const onNewAnalysis = async (modelRefId: string) => {
-        const newRef = await createAnalysis("model", modelRefId, api);
+    const onNewAnalysis = async (diagramRefId: string) => {
+        const newRef = await createAnalysis("diagram", diagramRefId, api);
         navigate(`/analysis/${newRef}`);
     };
 
@@ -52,15 +52,13 @@ export function ModelMenuItems(props: {
                 <FilePlus />
                 <MenuItemLabel>{"New model"}</MenuItemLabel>
             </MenuItem>
-            <Show when={props.liveModel.theory()?.supportsInstances}>
-                <MenuItem onSelect={() => onNewDiagram(props.liveModel.refId)}>
-                    <Network />
-                    <MenuItemLabel>{"New diagram in this model"}</MenuItemLabel>
-                </MenuItem>
-            </Show>
-            <MenuItem onSelect={() => onNewAnalysis(props.liveModel.refId)}>
+            <MenuItem onSelect={() => onNewDiagram(props.liveDiagram.liveModel.refId)}>
+                <Network />
+                <MenuItemLabel>{"New diagram"}</MenuItemLabel>
+            </MenuItem>
+            <MenuItem onSelect={() => onNewAnalysis(props.liveDiagram.refId)}>
                 <ChartSpline />
-                <MenuItemLabel>{"New analysis of this model"}</MenuItemLabel>
+                <MenuItemLabel>{"New analysis of this diagram"}</MenuItemLabel>
             </MenuItem>
         </>
     );
