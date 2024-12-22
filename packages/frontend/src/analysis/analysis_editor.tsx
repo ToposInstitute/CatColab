@@ -16,13 +16,14 @@ import { useApi } from "../api";
 import { IconButton, ResizableHandle } from "../components";
 import { DiagramPane } from "../diagram/diagram_editor";
 import { ModelPane } from "../model/model_editor";
+import { ModelMenuItems } from "../model/model_menu";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
     NotebookEditor,
     newFormalCell,
 } from "../notebook";
-import { BrandedToolbar, TheoryHelpButton } from "../page";
+import { HamburgerMenu, TheoryHelpButton, Toolbar } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { AnalysisMeta } from "../theory";
 import { LiveAnalysisContext } from "./context";
@@ -93,7 +94,9 @@ export function AnalysisDocumentEditor(props: {
                             initialSize={0.66}
                             minSize={0.25}
                         >
-                            <BrandedToolbar>
+                            <Toolbar>
+                                <AnalysisMenu liveAnalysis={props.liveAnalysis} />
+                                <span class="filler" />
                                 <TheoryHelpButton theory={theoryForAnalysis(props.liveAnalysis)} />
                                 <IconButton
                                     onClick={toggleSidePanel}
@@ -107,7 +110,7 @@ export function AnalysisDocumentEditor(props: {
                                         <PanelRightClose />
                                     </Show>
                                 </IconButton>
-                            </BrandedToolbar>
+                            </Toolbar>
                             <AnalysisOfPane liveAnalysis={props.liveAnalysis} />
                         </Resizable.Panel>
                         <ResizableHandle hidden={!isSidePanelOpen()} />
@@ -135,6 +138,20 @@ export function AnalysisDocumentEditor(props: {
         </Resizable>
     );
 }
+
+const AnalysisMenu = (props: {
+    liveAnalysis?: LiveAnalysisDocument;
+}) => (
+    <HamburgerMenu disabled={props.liveAnalysis === undefined}>
+        <Switch>
+            <Match
+                when={props.liveAnalysis?.analysisType === "model" && props.liveAnalysis.liveModel}
+            >
+                {(liveModel) => <ModelMenuItems liveModel={liveModel()} />}
+            </Match>
+        </Switch>
+    </HamburgerMenu>
+);
 
 const AnalysisOfPane = (props: {
     liveAnalysis?: LiveAnalysisDocument;

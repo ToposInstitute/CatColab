@@ -15,6 +15,19 @@ import Network from "lucide-solid/icons/network";
 export function ModelMenu(props: {
     liveModel?: LiveModelDocument;
 }) {
+    return (
+        <HamburgerMenu disabled={props.liveModel === undefined}>
+            <Show when={props.liveModel}>
+                {(liveModel) => <ModelMenuItems liveModel={liveModel()} />}
+            </Show>
+        </HamburgerMenu>
+    );
+}
+
+/** Menu items for a model. */
+export function ModelMenuItems(props: {
+    liveModel: LiveModelDocument;
+}) {
     const api = useApi();
     const navigate = useNavigate();
 
@@ -34,21 +47,21 @@ export function ModelMenu(props: {
     };
 
     return (
-        <HamburgerMenu disabled={props.liveModel === undefined}>
+        <>
             <MenuItem onSelect={onNewModel}>
                 <FilePlus />
                 <MenuItemLabel>{"New model"}</MenuItemLabel>
             </MenuItem>
-            <MenuItem onSelect={() => props.liveModel && onNewAnalysis(props.liveModel.refId)}>
+            <MenuItem onSelect={() => onNewAnalysis(props.liveModel.refId)}>
                 <ChartSpline />
                 <MenuItemLabel>{"New analysis of this model"}</MenuItemLabel>
             </MenuItem>
-            <Show when={props.liveModel?.theory()?.supportsInstances}>
-                <MenuItem onSelect={() => props.liveModel && onNewDiagram(props.liveModel.refId)}>
+            <Show when={props.liveModel.theory()?.supportsInstances}>
+                <MenuItem onSelect={() => onNewDiagram(props.liveModel.refId)}>
                     <Network />
                     <MenuItemLabel>{"New diagram in this model"}</MenuItemLabel>
                 </MenuItem>
             </Show>
-        </HamburgerMenu>
+        </>
     );
 }
