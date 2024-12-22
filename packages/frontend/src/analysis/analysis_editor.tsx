@@ -38,15 +38,16 @@ import PanelRight from "lucide-solid/icons/panel-right";
 import PanelRightClose from "lucide-solid/icons/panel-right-close";
 
 export default function AnalysisPage() {
-    const params = useParams();
-    const refId = params.ref;
-    invariant(refId, "Must provide document ref as parameter to analysis page");
-
     const api = useApi();
     const theories = useContext(TheoryLibraryContext);
     invariant(theories, "Must provide theory library as context to analysis page");
 
-    const [liveAnalysis] = createResource(() => getLiveAnalysis(refId, api, theories));
+    const params = useParams();
+
+    const [liveAnalysis] = createResource(
+        () => params.ref,
+        (refId) => getLiveAnalysis(refId, api, theories),
+    );
 
     return <AnalysisDocumentEditor liveAnalysis={liveAnalysis()} />;
 }

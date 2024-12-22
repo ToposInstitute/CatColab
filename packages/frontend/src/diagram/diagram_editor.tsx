@@ -36,15 +36,16 @@ import "./diagram_editor.css";
 import ChartSpline from "lucide-solid/icons/chart-spline";
 
 export default function DiagramPage() {
-    const params = useParams();
-    const refId = params.ref;
-    invariant(refId, "Must provide document ref as parameter to diagram page");
-
     const api = useApi();
     const theories = useContext(TheoryLibraryContext);
     invariant(theories, "Must provide theory library as context to diagram page");
 
-    const [liveDiagram] = createResource(() => getLiveDiagram(refId, api, theories));
+    const params = useParams();
+
+    const [liveDiagram] = createResource(
+        () => params.ref,
+        (refId) => getLiveDiagram(refId, api, theories),
+    );
 
     return <DiagramDocumentEditor liveDiagram={liveDiagram()} />;
 }

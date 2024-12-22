@@ -10,10 +10,11 @@ import "./menubar.css";
 /** Menu triggered from a hamburger button. */
 export function HamburgerMenu(props: {
     children: JSX.Element;
+    disabled?: boolean;
 }) {
     return (
         <DropdownMenu>
-            <DropdownMenu.Trigger as={IconButton}>
+            <DropdownMenu.Trigger as={IconButton} disabled={props.disabled}>
                 <MenuIcon />
             </DropdownMenu.Trigger>
             <DropdownMenu.Portal>
