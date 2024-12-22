@@ -125,8 +125,16 @@ function enlivenDiagramDocument(
 }
 
 /** Create a new diagram in the backend. */
-export async function createDiagram(modelRefId: string, api: Api): Promise<string> {
-    const init = newDiagramDocument(modelRefId);
+export async function createDiagram(
+    api: Api,
+    initOrModelRef: DiagramDocument | string,
+): Promise<string> {
+    let init: DiagramDocument;
+    if (typeof initOrModelRef === "string") {
+        init = newDiagramDocument(initOrModelRef);
+    } else {
+        init = initOrModelRef;
+    }
 
     const result = await api.rpc.new_ref.mutate({
         content: init as JsonValue,

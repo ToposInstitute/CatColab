@@ -38,7 +38,7 @@ export function ModelMenuItems(props: {
     };
 
     const onNewDiagram = async (modelRefId: string) => {
-        const newRef = await createDiagram(modelRefId, api);
+        const newRef = await createDiagram(api, modelRefId);
         navigate(`/diagram/${newRef}`);
     };
 
