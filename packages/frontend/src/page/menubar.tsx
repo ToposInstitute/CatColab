@@ -1,4 +1,4 @@
-import { Menubar } from "@kobalte/core/menubar";
+import { DropdownMenu } from "@kobalte/core/dropdown-menu";
 import type { JSX } from "solid-js";
 
 import { IconButton } from "../components";
@@ -12,15 +12,16 @@ export function HamburgerMenu(props: {
     children: JSX.Element;
 }) {
     return (
-        <Menubar focusOnAlt={false}>
-            <Menubar.Menu>
-                <Menubar.Trigger as={IconButton}>
-                    <MenuIcon />
-                </Menubar.Trigger>
-                <Menubar.Portal>
-                    <Menubar.Content class="menu popup">{props.children}</Menubar.Content>
-                </Menubar.Portal>
-            </Menubar.Menu>
-        </Menubar>
+        <DropdownMenu>
+            <DropdownMenu.Trigger as={IconButton}>
+                <MenuIcon />
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Portal>
+                <DropdownMenu.Content class="menu popup">{props.children}</DropdownMenu.Content>
+            </DropdownMenu.Portal>
+        </DropdownMenu>
     );
 }
+
+export const MenuItem = DropdownMenu.Item;
+export const MenuItemLabel = DropdownMenu.ItemLabel;

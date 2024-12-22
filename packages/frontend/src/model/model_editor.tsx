@@ -1,4 +1,3 @@
-import { Menubar } from "@kobalte/core/menubar";
 import { useNavigate, useParams } from "@solidjs/router";
 import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
@@ -14,7 +13,7 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
-import { HamburgerMenu, TheoryHelpButton, Toolbar } from "../page";
+import { HamburgerMenu, MenuItem, MenuItemLabel, TheoryHelpButton, Toolbar } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
 import { MaybePermissionsButton } from "../user";
@@ -69,19 +68,17 @@ export function ModelDocumentEditor(props: {
 
     const MenuItems = () => (
         <>
-            <Menubar.Item
-                onSelect={() => props.liveModel && onCreateAnalysis(props.liveModel.refId)}
-            >
+            <MenuItem onSelect={() => props.liveModel && onCreateAnalysis(props.liveModel.refId)}>
                 <ChartSpline />
-                <Menubar.ItemLabel>{"New analysis of this model"}</Menubar.ItemLabel>
-            </Menubar.Item>
+                <MenuItemLabel>{"New analysis of this model"}</MenuItemLabel>
+            </MenuItem>
             <Show when={props.liveModel?.theory()?.supportsInstances}>
-                <Menubar.Item
+                <MenuItem
                     onSelect={() => props.liveModel && onCreateDiagram(props.liveModel.refId)}
                 >
                     <Network />
-                    <Menubar.ItemLabel>{"New diagram in this model"}</Menubar.ItemLabel>
-                </Menubar.Item>
+                    <MenuItemLabel>{"New diagram in this model"}</MenuItemLabel>
+                </MenuItem>
             </Show>
         </>
     );

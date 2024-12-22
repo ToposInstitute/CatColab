@@ -1,4 +1,4 @@
-.menu div[role=menuitem] {
+.menu div[role="menuitem"] {
     display: flex;
     flex-direction: row;
     gap: 1ex;
