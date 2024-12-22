@@ -48,7 +48,10 @@ export function ModelMenuItems(props: {
     };
 
     const onDuplicateModel = async (model: ModelDocument) => {
-        const newRef = await createModel(api, model);
+        const newRef = await createModel(api, {
+            ...model,
+            name: `${model.name} (copy)`,
+        });
         navigate(`/model/${newRef}`);
     };
 

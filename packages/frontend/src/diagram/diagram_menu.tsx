@@ -41,7 +41,10 @@ export function DiagramMenuItems(props: {
     };
 
     const onDuplicateDiagram = async (diagram: DiagramDocument) => {
-        const newRef = await createDiagram(api, diagram);
+        const newRef = await createDiagram(api, {
+            ...diagram,
+            name: `${diagram.name} (copy)`,
+        });
         navigate(`/diagram/${newRef}`);
     };
 
