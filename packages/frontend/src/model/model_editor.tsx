@@ -116,7 +116,7 @@ export function ModelNotebookEditor(props: {
         (props.liveModel.theory()?.modelTypes ?? []).map(modelCellConstructor);
 
     return (
-        <LiveModelContext.Provider value={props.liveModel}>
+        <LiveModelContext.Provider value={() => props.liveModel}>
             <NotebookEditor
                 handle={liveDoc().docHandle}
                 path={["notebook"]}
@@ -176,7 +176,7 @@ function modelCellConstructor(meta: ModelTypeMeta): CellConstructor<ModelJudgmen
 
 function judgmentLabel(judgment: ModelJudgment): string | undefined {
     const liveModel = useContext(LiveModelContext);
-    const theory = liveModel?.theory();
+    const theory = liveModel?.().theory();
     if (judgment.tag === "object") {
         return theory?.modelObTypeMeta(judgment.obType)?.name;
     }

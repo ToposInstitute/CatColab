@@ -132,8 +132,8 @@ export function DiagramNotebookEditor(props: {
     return (
         <MultiProvider
             values={[
-                [LiveModelContext, liveModel()],
-                [LiveDiagramContext, props.liveDiagram],
+                [LiveModelContext, liveModel],
+                [LiveDiagramContext, () => props.liveDiagram],
             ]}
         >
             <NotebookEditor
@@ -197,7 +197,7 @@ function diagramCellConstructor(meta: InstanceTypeMeta): CellConstructor<Diagram
 
 function judgmentLabel(judgment: DiagramJudgment): string | undefined {
     const liveModel = useContext(LiveModelContext);
-    const theory = liveModel?.theory();
+    const theory = liveModel?.().theory();
     if (judgment.tag === "object") {
         return theory?.instanceObTypeMeta(judgment.obType)?.name;
     }

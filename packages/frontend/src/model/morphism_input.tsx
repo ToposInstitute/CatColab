@@ -20,12 +20,12 @@ export function BasicMorInput(
     invariant(liveModel, "Live model should be provided as context");
 
     const completions = (): Mor[] | undefined =>
-        props.morType && liveModel.validatedModel()?.model.morphismsWithType(props.morType);
+        props.morType && liveModel().validatedModel()?.model.morphismsWithType(props.morType);
 
     return (
         <MorIdInput
             completions={completions()}
-            idToName={liveModel.morphismIndex()}
+            idToName={liveModel().morphismIndex()}
             {...otherProps}
         />
     );

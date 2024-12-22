@@ -27,13 +27,13 @@ export function DiagramMorphismCellEditor(props: {
 
     const liveDiagram = useContext(LiveDiagramContext);
     invariant(liveDiagram, "Live diagram should be provided as context");
-    const theory = () => liveDiagram.liveModel.theory();
+    const theory = () => liveDiagram().liveModel.theory();
 
     const domType = () => theory()?.theory.src(props.decl.morType);
     const codType = () => theory()?.theory.tgt(props.decl.morType);
 
     const errors = () => {
-        const validated = liveDiagram.validatedDiagram();
+        const validated = liveDiagram().validatedDiagram();
         if (validated?.result.tag !== "Err") {
             return [];
         }

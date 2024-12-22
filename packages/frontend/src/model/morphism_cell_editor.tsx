@@ -27,7 +27,7 @@ export function MorphismCellEditor(props: {
 
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
-    const theory = () => liveModel.theory();
+    const theory = () => liveModel().theory();
 
     const domType = () => theory()?.theory.src(props.morphism.morType);
     const codType = () => theory()?.theory.tgt(props.morphism.morType);
@@ -43,7 +43,7 @@ export function MorphismCellEditor(props: {
     const arrowClass = () => arrowStyles[morTypeMeta()?.arrowStyle ?? "default"];
 
     const errors = () => {
-        const validated = liveModel.validatedModel();
+        const validated = liveModel().validatedModel();
         if (validated?.result.tag !== "Err") {
             return [];
         }
