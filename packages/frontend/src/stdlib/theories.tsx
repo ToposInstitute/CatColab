@@ -74,14 +74,14 @@ stdTheories.add(
             modelAnalyses: [
                 configureModelGraph({
                     id: "diagram",
-                    name: "Diagram",
+                    name: "Visualization",
                     description: "Visualize the olog as a diagram",
                 }),
             ],
             diagramAnalyses: [
                 configureDiagramGraph({
                     id: "graph",
-                    name: "Graph",
+                    name: "Visualization",
                     description: "Visualize the instance as a graph",
                 }),
             ],
@@ -184,14 +184,14 @@ stdTheories.add(
             modelAnalyses: [
                 configureModelGraph({
                     id: "diagram",
-                    name: "Diagram",
+                    name: "Visualization",
                     description: "Visualize the schema as a diagram",
                 }),
             ],
             diagramAnalyses: [
                 configureDiagramGraph({
                     id: "graph",
-                    name: "Graph",
+                    name: "Visualization",
                     description: "Visualize the instance as a graph",
                 }),
             ],
@@ -244,7 +244,7 @@ stdTheories.add(
             modelAnalyses: [
                 configureModelGraph({
                     id: "diagram",
-                    name: "Network",
+                    name: "Visualization",
                     description: "Visualize the regulatory network",
                 }),
                 configureSubmodelsAnalysis({
@@ -314,7 +314,7 @@ stdTheories.add(
             modelAnalyses: [
                 configureModelGraph({
                     id: "diagram",
-                    name: "Diagram",
+                    name: "Visualization",
                     description: "Visualize the causal loop diagram",
                 }),
                 configureSubmodelsAnalysis({
@@ -392,7 +392,7 @@ stdTheories.add(
             modelAnalyses: [
                 configureModelGraph({
                     id: "diagram",
-                    name: "Diagram",
+                    name: "Visualization",
                     description: "Visualize the causal loop diagram",
                 }),
             ],
@@ -470,14 +470,14 @@ stdTheories.add(
             modelAnalyses: [
                 configureModelGraph({
                     id: "graph",
-                    name: "Graph",
+                    name: "Visualization",
                     description: "Visualize the operations as a graph",
                 }),
             ],
             diagramAnalyses: [
                 configureDiagramGraph({
                     id: "graph",
-                    name: "Graph",
+                    name: "Visualization",
                     description: "Visualize the equations as a diagram",
                 }),
                 configureDecapodes({}),
@@ -532,7 +532,7 @@ stdTheories.add(
             modelAnalyses: [
                 configureStockFlowDiagram({
                     id: "diagram",
-                    name: "Diagram",
+                    name: "Visualization",
                     description: "Visualize the stock and flow diagram",
                 }),
             ],
