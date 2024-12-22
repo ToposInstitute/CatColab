@@ -26,3 +26,4 @@ export function HamburgerMenu(props: {
 
 export const MenuItem = DropdownMenu.Item;
 export const MenuItemLabel = DropdownMenu.ItemLabel;
+export const MenuSeparator = DropdownMenu.Separator;

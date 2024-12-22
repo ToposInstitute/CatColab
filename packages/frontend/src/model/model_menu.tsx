@@ -4,10 +4,11 @@ import { Show } from "solid-js";
 import { createAnalysis } from "../analysis/document";
 import { useApi } from "../api";
 import { createDiagram } from "../diagram/document";
-import { HamburgerMenu, MenuItem, MenuItemLabel } from "../page";
-import { type LiveModelDocument, createModel } from "./document";
+import { HamburgerMenu, MenuItem, MenuItemLabel, MenuSeparator } from "../page";
+import { type LiveModelDocument, type ModelDocument, createModel } from "./document";
 
 import ChartSpline from "lucide-solid/icons/chart-spline";
+import Copy from "lucide-solid/icons/copy";
 import FilePlus from "lucide-solid/icons/file-plus";
 import Network from "lucide-solid/icons/network";
 
@@ -46,6 +47,11 @@ export function ModelMenuItems(props: {
         navigate(`/analysis/${newRef}`);
     };
 
+    const onDuplicateModel = async (model: ModelDocument) => {
+        const newRef = await createModel(api, model);
+        navigate(`/model/${newRef}`);
+    };
+
     return (
         <>
             <MenuItem onSelect={onNewModel}>
@@ -61,6 +67,11 @@ export function ModelMenuItems(props: {
             <MenuItem onSelect={() => onNewAnalysis(props.liveModel.refId)}>
                 <ChartSpline />
                 <MenuItemLabel>{"New analysis of this model"}</MenuItemLabel>
+            </MenuItem>
+            <MenuSeparator />
+            <MenuItem onSelect={() => onDuplicateModel(props.liveModel.liveDoc.doc)}>
+                <Copy />
+                <MenuItemLabel>{"Duplicate model"}</MenuItemLabel>
             </MenuItem>
         </>
     );
