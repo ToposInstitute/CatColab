@@ -99,6 +99,10 @@ const routes: RouteDefinition[] = [
             },
         ],
     },
+    {
+        path: "*",
+        component: lazy(() => import("./page/404_page")),
+    },
 ];
 
 function App() {
