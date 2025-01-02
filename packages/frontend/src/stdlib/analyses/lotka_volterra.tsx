@@ -157,7 +157,7 @@ export function LotkaVolterra(
 
     return (
         <div class="simulation">
-            <Foldable header={<span class="title">{props.title}</span>}>
+            <Foldable title={props.title}>
                 <div class="parameters">
                     <FixedTableEditor rows={obDecls()} schema={obSchema} />
                     <FixedTableEditor rows={morDecls()} schema={morSchema} />

@@ -26,7 +26,6 @@ import { createJuliaKernel, executeAndRetrieve } from "./jupyter";
 import Loader from "lucide-solid/icons/loader";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
 
-import baseStyles from "./base_styles.module.css";
 import "./decapodes.css";
 import "./simulation.css";
 
@@ -174,31 +173,24 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
         },
     ];
 
-    const Header = () => (
-        <div class={baseStyles.panel}>
-            <span class={baseStyles.title}>Simulation</span>
-            <span class={baseStyles.filler} />
-            <Switch>
-                <Match when={kernel.loading || options.loading || result.loading}>
-                    <IconButton>
-                        <Loader size={16} />
-                    </IconButton>
-                </Match>
-                <Match when={kernel.error || options.error}>
-                    <IconButton
-                        onClick={restartKernel}
-                        tooltip="Restart the AlgebraicJulia service"
-                    >
-                        <RotateCcw size={16} />
-                    </IconButton>
-                </Match>
-                <Match when={true}>
-                    <IconButton onClick={rerunSimulation} tooltip="Re-run the simulation">
-                        <RotateCcw size={16} />
-                    </IconButton>
-                </Match>
-            </Switch>
-        </div>
+    const RestartOrRerunButton = () => (
+        <Switch>
+            <Match when={kernel.loading || options.loading || result.loading}>
+                <IconButton>
+                    <Loader size={16} />
+                </IconButton>
+            </Match>
+            <Match when={kernel.error || options.error}>
+                <IconButton onClick={restartKernel} tooltip="Restart the AlgebraicJulia service">
+                    <RotateCcw size={16} />
+                </IconButton>
+            </Match>
+            <Match when={true}>
+                <IconButton onClick={rerunSimulation} tooltip="Re-run the simulation">
+                    <RotateCcw size={16} />
+                </IconButton>
+            </Match>
+        </Switch>
     );
 
     const DomainConfig = (domains: Map<string, Domain>) => (
@@ -246,7 +238,7 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
 
     return (
         <div class="simulation">
-            <Foldable header={Header()}>
+            <Foldable title="Simulation" header={RestartOrRerunButton()}>
                 <Show when={options()}>{(options) => DomainConfig(options().domains)}</Show>
                 <div class="parameters">
                     <FixedTableEditor rows={obDecls()} schema={variableSchema} />

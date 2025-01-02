@@ -1,17 +1,18 @@
-.foldable-header {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    width: 100%;
-    padding: 5px 0;
-}
-
-.foldable-header button {
+.foldable-trigger {
     background: none;
     border: none;
     cursor: pointer;
     outline: none;
     font: inherit;
+    padding: 0;
+
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+
+    & .lucide {
+        color: darkgray;
+    }
 }
 
 [data-corvu-disclosure-content] {

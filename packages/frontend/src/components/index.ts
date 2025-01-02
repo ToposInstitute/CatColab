@@ -7,5 +7,6 @@ export * from "./icon_button";
 export * from "./id_input";
 export * from "./inline_input";
 export * from "./name_input";
+export * from "./panel";
 export * from "./resizable";
 export * from "./rich_text_editor";
