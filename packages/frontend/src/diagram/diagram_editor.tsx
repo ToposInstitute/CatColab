@@ -1,11 +1,10 @@
 import { MultiProvider } from "@solid-primitives/context";
-import { A, useNavigate, useParams } from "@solidjs/router";
+import { A, useParams } from "@solidjs/router";
 import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { createAnalysis } from "../analysis/document";
 import { useApi } from "../api";
-import { IconButton, InlineInput } from "../components";
+import { InlineInput } from "../components";
 import { LiveModelContext } from "../model";
 import {
     type CellConstructor,
@@ -34,8 +33,6 @@ import {
 
 import "./diagram_editor.css";
 
-import ChartSpline from "lucide-solid/icons/chart-spline";
-
 export default function DiagramPage() {
     const api = useApi();
     const theories = useContext(TheoryLibraryContext);
@@ -54,14 +51,6 @@ export default function DiagramPage() {
 export function DiagramDocumentEditor(props: {
     liveDiagram?: LiveDiagramDocument;
 }) {
-    const api = useApi();
-    const navigate = useNavigate();
-
-    const onCreateAnalysis = async (diagramRefId: string) => {
-        const newRef = await createAnalysis("diagram", diagramRefId, api);
-        navigate(`/analysis/${newRef}`);
-    };
-
     return (
         <div class="growable-container">
             <Toolbar>
@@ -69,12 +58,6 @@ export function DiagramDocumentEditor(props: {
                 <span class="filler" />
                 <TheoryHelpButton theory={props.liveDiagram?.liveModel.theory()} />
                 <MaybePermissionsButton permissions={props.liveDiagram?.liveDoc.permissions} />
-                <IconButton
-                    onClick={() => props.liveDiagram && onCreateAnalysis(props.liveDiagram.refId)}
-                    tooltip="Analyze this diagram"
-                >
-                    <ChartSpline />
-                </IconButton>
             </Toolbar>
             <Show when={props.liveDiagram}>
                 {(liveDiagram) => <DiagramPane liveDiagram={liveDiagram()} />}
