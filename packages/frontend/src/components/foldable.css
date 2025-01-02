@@ -1,19 +1,4 @@
-.foldable-header {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    width: 100%;
-
-    & .filler {
-        flex: 1;
-    }
-
-    & .title {
-        font-weight: 450;
-    }
-}
-
-.foldable-header button {
+.foldable-trigger {
     background: none;
     border: none;
     cursor: pointer;

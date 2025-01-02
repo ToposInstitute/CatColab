@@ -5,6 +5,7 @@ import ChevronDown from "lucide-solid/icons/chevron-down";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 
 import "./foldable.css";
+import "./panel.css";
 
 /** A component whose contents can be expanded or folded.
 
@@ -24,8 +25,8 @@ export function Foldable(props: {
     // NOTE: Set the collapse behavior to "hide" to get a smooth animation.
     return (
         <Discloure expanded={isExpanded()} onExpandedChange={setIsExpanded} collapseBehavior="hide">
-            <div class="foldable-header">
-                <Discloure.Trigger>
+            <div class="foldable-header panel-header">
+                <Discloure.Trigger class="foldable-trigger">
                     <Show when={isExpanded()} fallback={<ChevronRight />}>
                         <ChevronDown />
                     </Show>

@@ -3,6 +3,7 @@ import { type Component, For, Show, createResource, createSignal } from "solid-j
 import { P, match } from "ts-pattern";
 
 import type { ModelAnalysisProps } from "../../analysis";
+import { PanelHeader } from "../../components";
 import type { ModelJudgment } from "../../model";
 import type { ModelAnalysisMeta, Theory } from "../../theory";
 import { uniqueIndexArray } from "../../util/indexing";
@@ -20,7 +21,6 @@ import {
 import { type GraphContent, type GraphvizAttributes, graphvizEngine } from "./graph_visualization";
 import { modelToGraphviz } from "./model_graph";
 
-import baseStyles from "./base_styles.module.css";
 import "./graph_visualization.css";
 
 /** Configure a visualization of a stock flow diagram. */
@@ -48,11 +48,9 @@ export function StockFlowDiagram(props: ModelAnalysisProps<GraphContent>) {
 
     return (
         <div class="graph-visualization-analysis">
-            <div class={baseStyles.panel}>
-                <span class={baseStyles.title}>Diagram</span>
-                <span class={baseStyles.filler} />
+            <PanelHeader title="Diagram">
                 <DownloadSVGButton svg={svgRef()} tooltip="Export the diagram as SVG" size={16} />
-            </div>
+            </PanelHeader>
             <div class="graph-visualization">
                 <Show when={props.liveModel.theory()}>
                     {(theory) => (

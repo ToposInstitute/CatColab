@@ -4,6 +4,7 @@ import { P, match } from "ts-pattern";
 
 import type { DblModelDiagram, Uuid } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
+import { PanelHeader } from "../../components";
 import type { DiagramAnalysisMeta, Theory } from "../../theory";
 import type { Name } from "../../util/indexing";
 import { DownloadSVGButton, GraphvizSVG } from "../../visualization";
@@ -18,7 +19,6 @@ import {
     svgCssClasses,
 } from "./graph_visualization";
 
-import baseStyles from "./base_styles.module.css";
 import "./graph_visualization.css";
 
 /** Configure a graph visualization for use with diagrams in a model. */
@@ -77,15 +77,13 @@ export function DiagramGraph(
 
     return (
         <div class="graph-visualization-analysis">
-            <div class={baseStyles.panel}>
-                <span class={baseStyles.title}>{title()}</span>
-                <span class={baseStyles.filler} />
+            <PanelHeader title={title()}>
                 <DownloadSVGButton
                     svg={svgRef()}
                     tooltip={`Export the ${title().toLowerCase()} as SVG`}
                     size={16}
                 />
-            </div>
+            </PanelHeader>
             <div class="graph-visualization">
                 <Show when={graphviz()}>
                     {(graph) => (
