@@ -94,12 +94,12 @@ const routes: RouteDefinition[] = [
             },
             {
                 path: "/theories",
-                component: lazy(() => import("./stdlib/theories_help")),
+                component: lazy(() => import("./help/theories")),
             },
             {
                 path: "/theory/:id",
                 matchFilters: theoryWithIdFilter,
-                component: lazy(() => import("./stdlib/theory_help")),
+                component: lazy(() => import("./help/theory")),
             },
         ],
     },

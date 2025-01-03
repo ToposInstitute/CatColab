@@ -2,8 +2,7 @@ import { A } from "@solidjs/router";
 import { For, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { TheoryLibraryContext } from "./context";
-import type { TheoryLibrary } from "./types";
+import { type TheoryLibrary, TheoryLibraryContext } from "../stdlib";
 
 /** Help page for all theories in the standard library. */
 export default function TheoriesHelpPage() {

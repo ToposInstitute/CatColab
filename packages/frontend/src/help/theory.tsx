@@ -1,8 +1,26 @@
 import { destructure } from "@solid-primitives/destructure";
-import { For, Show } from "solid-js";
+import { useParams } from "@solidjs/router";
+import { For, Show, useContext } from "solid-js";
+import invariant from "tiny-invariant";
 
 import { lazyMdx } from "../page/help_page";
-import type { Theory } from "./types";
+import { TheoryLibraryContext } from "../stdlib";
+import type { Theory } from "../theory";
+
+/** Help page for a theory in the standard library. */
+export default function TheoryHelpPage() {
+    const theories = useContext(TheoryLibraryContext);
+    invariant(theories, "Library of theories must be provided as context");
+
+    const params = useParams();
+
+    const theory = () => {
+        invariant(params.id, "Theory ID must be provided as parameter");
+        return theories.get(params.id);
+    };
+
+    return <TheoryHelp theory={theory()} />;
+}
 
 /** Documentation for a theory. */
 export function TheoryHelp(props: {
@@ -10,7 +28,7 @@ export function TheoryHelp(props: {
 }) {
     const { theory } = destructure(props);
 
-    const Content = lazyMdx(() => import(`../help/theory/${theory().help}.mdx`));
+    const Content = lazyMdx(() => import(`./theory/${theory().help}.mdx`));
 
     return (
         <>
