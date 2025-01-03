@@ -66,7 +66,7 @@ export function ModelMenuItems(props: {
                 <FilePlus />
                 <MenuItemLabel>{"New model"}</MenuItemLabel>
             </MenuItem>
-            <Show when={props.liveModel.theory()?.supportsInstances}>
+            <Show when={props.liveModel.theory().supportsInstances}>
                 <MenuItem onSelect={() => onNewDiagram(props.liveModel.refId)}>
                     <Network />
                     <MenuItemLabel>{"New diagram in this model"}</MenuItemLabel>

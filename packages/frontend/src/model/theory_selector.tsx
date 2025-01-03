@@ -1,5 +1,5 @@
 import Dialog from "@corvu/dialog";
-import { For, Show, createMemo, createSignal } from "solid-js";
+import { For, createMemo, createSignal } from "solid-js";
 
 import type { TheoryLibrary, TheoryMeta } from "../stdlib";
 
@@ -21,12 +21,7 @@ export function TheorySelectorDialog(
     return (
         <Dialog open={theorySelectorOpen()} onOpenChange={setTheorySelectorOpen}>
             <Dialog.Trigger class="theory-selector-button link-button" disabled={props.disabled}>
-                <Show
-                    when={props.theory}
-                    fallback={<span class="placeholder">Choose a logic</span>}
-                >
-                    {props.theory?.name}
-                </Show>
+                {props.theory.name}
             </Dialog.Trigger>
             <Dialog.Portal>
                 <Dialog.Overlay class="overlay" />

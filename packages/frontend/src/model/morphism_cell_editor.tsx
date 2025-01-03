@@ -29,12 +29,12 @@ export function MorphismCellEditor(props: {
     invariant(liveModel, "Live model should be provided as context");
     const theory = () => liveModel().theory();
 
-    const domType = () => theory()?.theory.src(props.morphism.morType);
-    const codType = () => theory()?.theory.tgt(props.morphism.morType);
+    const domType = () => theory().theory.src(props.morphism.morType);
+    const codType = () => theory().theory.tgt(props.morphism.morType);
     const domClasses = () => ["morphism-decl-dom", ...obClasses(theory(), domType())];
     const codClasses = () => ["morphism-decl-cod", ...obClasses(theory(), codType())];
 
-    const morTypeMeta = () => theory()?.modelMorTypeMeta(props.morphism.morType);
+    const morTypeMeta = () => theory().modelMorTypeMeta(props.morphism.morType);
     const nameClasses = () => [
         "morphism-decl-name",
         arrowStyles.arrowName,
