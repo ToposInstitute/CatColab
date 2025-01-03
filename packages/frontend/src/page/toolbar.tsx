@@ -37,7 +37,7 @@ const Brand = () => (
 
 /** Button that navigates to the help page for a theory.
 
-If the theory is not set, it naviagtes instead to the root help page.
+If no theory is set, it naviagtes instead to the list of all theories.
  */
 export function TheoryHelpButton(props: {
     theory?: Theory;
