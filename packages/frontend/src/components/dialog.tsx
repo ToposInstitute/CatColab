@@ -1,6 +1,6 @@
 import { Close, Content, Label, Overlay, Portal, Root, Trigger } from "@corvu/dialog";
 import X from "lucide-solid/icons/x";
-import type { Component, ComponentProps, JSX } from "solid-js";
+import { type Component, type ComponentProps, type JSX, Show } from "solid-js";
 
 import { IconButton } from "../components";
 
@@ -18,8 +18,10 @@ export function Dialog(props: {
     trigger?: Component<ComponentProps<"button">>;
 }) {
     return (
-        <Root open={props.open} onOpenChange={props.onOpenChange}>
-            <Trigger as={props.trigger} />
+        <Root open={props.open} onOpenChange={props.onOpenChange} closeOnOutsideFocus={false}>
+            <Show when={props.trigger}>
+                <Trigger as={props.trigger} />
+            </Show>
             <Portal>
                 <Overlay />
                 <Content class="popup">

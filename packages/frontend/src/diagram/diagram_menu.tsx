@@ -3,7 +3,7 @@ import { Show } from "solid-js";
 
 import { createAnalysis } from "../analysis/document";
 import { useApi } from "../api";
-import { HamburgerMenu, CommonMenuItems, MenuItem, MenuItemLabel, MenuSeparator } from "../page";
+import { AppMenu, MenuItem, MenuItemLabel, MenuSeparator } from "../page";
 import { type DiagramDocument, type LiveDiagramDocument, createDiagram } from "./document";
 
 import ChartSpline from "lucide-solid/icons/chart-spline";
@@ -15,11 +15,11 @@ export function DiagramMenu(props: {
     liveDiagram?: LiveDiagramDocument;
 }) {
     return (
-        <HamburgerMenu disabled={props.liveDiagram === undefined}>
+        <AppMenu disabled={props.liveDiagram === undefined}>
             <Show when={props.liveDiagram}>
                 {(liveDiagram) => <DiagramMenuItems liveDiagram={liveDiagram()} />}
             </Show>
-        </HamburgerMenu>
+        </AppMenu>
     );
 }
 
@@ -63,8 +63,6 @@ export function DiagramMenuItems(props: {
                 <Copy />
                 <MenuItemLabel>{"Duplicate diagram"}</MenuItemLabel>
             </MenuItem>
-            <MenuSeparator />
-            <CommonMenuItems />
         </>
     );
 }

@@ -1,4 +1,6 @@
 .login {
+    min-width: 20em;
+
     & form {
         display: flex;
         flex-direction: column;

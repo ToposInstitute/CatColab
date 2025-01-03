@@ -52,7 +52,6 @@ export function Login(props: {
     };
 
     const signUp = async (values: EmailAndPassword) => {
-        console.log(values);
         const { email, password } = values;
         const cred = await createUserWithEmailAndPassword(getAuth(firebaseApp), email, password);
         await completeSignUpOrSignIn(cred);
@@ -71,9 +70,9 @@ export function Login(props: {
     };
 
     const completeSignUpOrSignIn = async (cred: UserCredential) => {
+        props.onComplete?.(cred.user);
         const result = await api.rpc.sign_up_or_sign_in.mutate();
         invariant(result.tag === "Ok");
-        props.onComplete?.(cred.user);
     };
 
     return (
