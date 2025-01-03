@@ -25,6 +25,7 @@ type EmailAndPassword = {
     password: string;
 };
 
+/** Form to log in using Firebase auth. */
 export function Login(props: {
     onComplete?: (user: User) => void;
 }) {

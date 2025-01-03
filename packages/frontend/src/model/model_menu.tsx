@@ -4,7 +4,7 @@ import { Show } from "solid-js";
 import { createAnalysis } from "../analysis/document";
 import { useApi } from "../api";
 import { createDiagram } from "../diagram/document";
-import { HamburgerMenu, HelpMenuItem, MenuItem, MenuItemLabel, MenuSeparator } from "../page";
+import { HamburgerMenu, CommonMenuItems, MenuItem, MenuItemLabel, MenuSeparator } from "../page";
 import { type LiveModelDocument, type ModelDocument, createModel } from "./document";
 
 import ChartSpline from "lucide-solid/icons/chart-spline";
@@ -77,7 +77,7 @@ export function ModelMenuItems(props: {
                 <MenuItemLabel>{"Duplicate model"}</MenuItemLabel>
             </MenuItem>
             <MenuSeparator />
-            <HelpMenuItem />
+            <CommonMenuItems />
         </>
     );
 }
