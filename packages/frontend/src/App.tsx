@@ -93,9 +93,13 @@ const routes: RouteDefinition[] = [
                 component: lazyMdx(() => import("./help/credits.mdx")),
             },
             {
+                path: "/theories",
+                component: lazy(() => import("./stdlib/theories_help")),
+            },
+            {
                 path: "/theory/:id",
                 matchFilters: theoryWithIdFilter,
-                component: lazy(() => import("./stdlib/help")),
+                component: lazy(() => import("./stdlib/theory_help")),
             },
         ],
     },

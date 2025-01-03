@@ -22,7 +22,7 @@ project is going, try this [blog
 post](https://topos.site/blog/2024-10-02-introducing-catcolab/).
 
 > [!WARNING]
-> CatColab is a pre-alpha software under active development.
+> CatColab is pre-alpha software under active development.
 > You are welcome to experiment but you should not store any important or
 > sensitive data in the system.
 

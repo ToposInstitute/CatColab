@@ -44,10 +44,28 @@ export function TheoryHelpButton(props: {
 }) {
     const navigate = useNavigate();
 
-    const defaultButton = () => (
-        <IconButton onClick={() => navigate("/help")} tooltip="Get help about CatColab">
-            <CircleHelp />
-        </IconButton>
+    const defaultButton = () => {
+        const tooltip = (
+            <>
+                <p>{"You have not selected a logic"}</p>
+                <p>{"Learn more about logics"}</p>
+            </>
+        );
+        return (
+            <IconButton onClick={() => navigate("/help/theories")} tooltip={tooltip}>
+                <CircleHelp />
+            </IconButton>
+        );
+    };
+
+    const tooltip = (theoryName: string) => (
+        <>
+            <p>
+                {"You are using the logic: "}
+                <strong>{theoryName}</strong>
+            </p>
+            <p>{"Learn more about this logic"}</p>
+        </>
     );
 
     return (
@@ -55,7 +73,7 @@ export function TheoryHelpButton(props: {
             {(theory) => (
                 <IconButton
                     onClick={() => navigate(`/help/theory/${theory().id}`)}
-                    tooltip={`What is a... ${theory().name}?`}
+                    tooltip={tooltip(theory().name)}
                 >
                     <CircleHelp />
                 </IconButton>

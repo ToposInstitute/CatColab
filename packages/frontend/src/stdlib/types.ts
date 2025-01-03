@@ -74,4 +74,16 @@ export class TheoryLibrary {
     metadata(): IterableIterator<TheoryMeta> {
         return this.metaMap.values();
     }
+
+    /** Metadata for available theories, clustered by group. */
+    groupedMetadata(): Map<string, TheoryMeta[]> {
+        const grouped = new Map<string, TheoryMeta[]>();
+        for (const theory of this.metadata()) {
+            const groupName = theory.group ?? "Other";
+            const group = grouped.get(groupName) || [];
+            group.push(theory);
+            grouped.set(groupName, group);
+        }
+        return grouped;
+    }
 }

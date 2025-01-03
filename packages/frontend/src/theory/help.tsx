@@ -13,7 +13,7 @@ export function TheoryHelp(props: {
     const Content = lazyMdx(() => import(`../help/theory/${theory().help}.mdx`));
 
     return (
-        <div class="theory-help">
+        <>
             <h1>{theory().name}</h1>
             <h2>Summary</h2>
             <p>{theory().description}</p>
@@ -31,6 +31,6 @@ export function TheoryHelp(props: {
             <Show when={theory().help}>
                 <Content />
             </Show>
-        </div>
+        </>
     );
 }

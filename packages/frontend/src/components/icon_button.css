@@ -23,4 +23,12 @@
     background-color: hsl(251, 9%, 23%);
     padding: 0.5rem;
     font-size: smaller;
+
+    & p:first-child {
+        margin-top: 0;
+    }
+
+    & p:last-child {
+        margin-bottom: 0;
+    }
 }
