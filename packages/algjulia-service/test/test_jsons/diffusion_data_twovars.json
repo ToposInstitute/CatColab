@@ -68,11 +68,8 @@
       },
       "id": "01932404-10e5-7128-bb94-835e5d8d643f",
       "morType": {
-        "content": {
-          "content": "Object",
+          "content": "Nonscalar",
           "tag": "Basic"
-        },
-        "tag": "Hom"
       },
       "name": "",
       "over": {

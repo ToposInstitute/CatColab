@@ -107,27 +107,27 @@ end
 #= XXX ERRORING
 we are trying to index `soln.u[t]` by `Ċ `, but only `C` is present. I think this is because we generating initial conditions based on what was specified to the `initial_conditions` parameter, whereas in the past we were using `infer_state_names` to obtain that.
 =#
-# @testset "Simulation - Diffusion with Two Variables" begin
+@testset "Simulation - Diffusion with Two Variables" begin
 
-#     json_string = read(joinpath(@__DIR__, "test_jsons", "diffusion_data_twovars.json"), String);
-#     @test Set(keys(JSON3.read(json_string))) == KEYS
+    json_string = read(joinpath(@__DIR__, "test_jsons", "diffusion_data_twovars.json"), String);
+    @test Set(keys(JSON3.read(json_string))) == KEYS
 
-#     system = PodeSystem(json_string);
+    system = PodeSystem(json_string);
 
-#     simulator = evalsim(system.pode)
-#     f = simulator(system.geometry.dualmesh, system.generate, DiagonalHodge())
+    simulator = evalsim(system.pode)
+    f = simulator(system.geometry.dualmesh, system.generate, DiagonalHodge())
 
-#     soln = run_sim(f, system.init, 50.0, ComponentArray(k=0.5,)); 
+    soln = run_sim(f, system.init, 50.0, ComponentArray(k=0.5,));
 
-#     @test soln.retcode == ReturnCode.Success
+    @test soln.retcode == ReturnCode.Success
   
-#     result = SimResult(soln, system);
+    result = SimResult(soln, system);
 
-#     @test typeof(result.state) == Dict{String, Vector{AbstractArray{SVector{3, Float64}}}}
+    @test typeof(result.state) == Dict{String, Vector{AbstractArray{SVector{3, Float64}}}}
 
-#     jvs = JsonValue(result);
+    jvs = JsonValue(result);
 
-# end
+end
 
 @testset "Parsing the Model JSON Object - Diffusion Long Trip" begin
 
