@@ -47,7 +47,8 @@ const Root = (props: RouteSectionProps<unknown>) => {
 function CreateModel() {
     const api = useApi();
 
-    const [ref] = createResource<string>(() => createModel(api));
+    const theoryId = stdTheories.getDefault().id;
+    const [ref] = createResource<string>(() => createModel(api, theoryId));
 
     return <Show when={ref()}>{(ref) => <Navigate href={`/model/${ref()}`} />}</Show>;
 }

@@ -5,6 +5,15 @@ use ustr::ustr;
 use crate::dbl::theory::*;
 use crate::one::fin_category::{FinMor, UstrFinCategory};
 
+/** The empty theory, which has a single model, the empty model.
+
+As a double category, this is the initial double category.
+ */
+pub fn th_empty() -> UstrDiscreteDblTheory {
+    let cat: UstrFinCategory = Default::default();
+    DiscreteDblTheory::from(cat)
+}
+
 /** The theory of categories, aka the trivial double theory.
 
 As a double category, this is the terminal double category.
@@ -107,6 +116,7 @@ mod tests {
 
     #[test]
     fn theories() {
+        assert!(th_empty().validate().is_ok());
         assert!(th_category().validate().is_ok());
         assert!(th_schema().validate().is_ok());
         assert!(th_signed_category().validate().is_ok());

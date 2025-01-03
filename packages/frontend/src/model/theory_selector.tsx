@@ -6,8 +6,8 @@ import type { TheoryLibrary, TheoryMeta } from "../stdlib";
 import "./theory_selector.css";
 
 type TheorySelectorProps = {
-    theory: TheoryMeta | undefined;
-    setTheory: (theoryId: string | undefined) => void;
+    theory: TheoryMeta;
+    setTheory: (theoryId: string) => void;
     theories: TheoryLibrary;
 };
 
@@ -64,10 +64,7 @@ export function TheorySelector(props: TheorySelectorProps) {
                                         name="theory"
                                         id={meta.id}
                                         value={meta.id}
-                                        onchange={(evt) => {
-                                            const id = evt.target.value;
-                                            props.setTheory(id ? id : undefined);
-                                        }}
+                                        onchange={(evt) => props.setTheory(evt.target.value)}
                                     />
                                     <label for={meta.id}>
                                         <div class="name">{meta.name}</div>

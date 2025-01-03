@@ -18,16 +18,17 @@ export type ModelDocument = {
     name: string;
 
     /** Identifier of double theory that the model is of. */
-    theory?: string;
+    theory: string;
 
     /** Content of the model, formal and informal. */
     notebook: Notebook<ModelJudgment>;
 };
 
 /** Create an empty model document. */
-export const newModelDocument = (): ModelDocument => ({
+export const newModelDocument = (theory: string): ModelDocument => ({
     name: "",
     type: "model",
+    theory,
     notebook: newNotebook(),
 });
 
@@ -51,8 +52,8 @@ export type LiveModelDocument = {
     /** A memo of the indexed map from morphism ID to name. */
     morphismIndex: Accessor<IndexedMap<Uuid, string>>;
 
-    /** A memo of the double theory that the model is of, if it is defined. */
-    theory: Accessor<Theory | undefined>;
+    /** A memo of the double theory that the model is of. */
+    theory: Accessor<Theory>;
 
     /** A memo of the model constructed and validated in the core. */
     validatedModel: Accessor<ValidatedModel | undefined>;
@@ -99,9 +100,7 @@ function enlivenModelDocument(
         return indexMap(map);
     }, indexMap(new Map()));
 
-    const theory = createMemo<Theory | undefined>(() => {
-        if (doc.theory !== undefined) return theories.get(doc.theory);
-    });
+    const theory = createMemo<Theory>(() => theories.get(doc.theory));
 
     const validatedModel = createMemo<ValidatedModel | undefined>(
         () => {
@@ -131,9 +130,15 @@ function enlivenModelDocument(
 
 Returns the ref ID of the created document.
  */
-export async function createModel(api: Api, init?: ModelDocument): Promise<string> {
-    if (init === undefined) {
-        init = newModelDocument();
+export async function createModel(
+    api: Api,
+    initOrTheoryId: ModelDocument | string,
+): Promise<string> {
+    let init: ModelDocument;
+    if (typeof initOrTheoryId === "string") {
+        init = newModelDocument(initOrTheoryId);
+    } else {
+        init = initOrTheoryId;
     }
 
     const result = await api.rpc.new_ref.mutate({

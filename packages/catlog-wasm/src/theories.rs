@@ -16,6 +16,23 @@ use catlog::stdlib::{analyses, models, theories};
 use super::model_morphism::motifs;
 use super::{analyses::*, model::DblModel, theory::DblTheory};
 
+/// The empty or initial theory.
+#[wasm_bindgen]
+pub struct ThEmpty(Arc<theory::UstrDiscreteDblTheory>);
+
+#[wasm_bindgen]
+impl ThEmpty {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self(Arc::new(theories::th_empty()))
+    }
+
+    #[wasm_bindgen]
+    pub fn theory(&self) -> DblTheory {
+        DblTheory(self.0.clone().into())
+    }
+}
+
 /// The theory of categories.
 #[wasm_bindgen]
 pub struct ThCategory(Arc<theory::UstrDiscreteDblTheory>);
