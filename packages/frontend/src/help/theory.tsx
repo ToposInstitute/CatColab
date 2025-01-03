@@ -3,9 +3,9 @@ import { useParams } from "@solidjs/router";
 import { For, Show, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { lazyMdx } from "../page/help_page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { Theory } from "../theory";
+import { lazyMdx } from "../util/mdx";
 
 /** Help page for a theory in the standard library. */
 export default function TheoryHelpPage() {
