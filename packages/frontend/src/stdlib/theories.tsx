@@ -25,6 +25,7 @@ stdTheories.add(
         description: "The empty logic, allowing only informal content",
         isDefault: true,
         group: "Base",
+        help: "empty",
     },
     (meta) => {
         const thEmpty = new catlog.ThEmpty();

@@ -35,17 +35,19 @@ export function TheoryHelp(props: {
             <h1>{theory().name}</h1>
             <h2>Summary</h2>
             <p>{theory().description}</p>
-            <h4>Definitions</h4>
-            <dl>
-                <For each={theory().modelTypes}>
-                    {(typeMeta) => (
-                        <>
-                            <dt>{typeMeta.name}</dt>
-                            <dd>{typeMeta.description}</dd>
-                        </>
-                    )}
-                </For>
-            </dl>
+            <Show when={theory().modelTypes.length > 0}>
+                <h4>Definitions</h4>
+                <dl>
+                    <For each={theory().modelTypes}>
+                        {(typeMeta) => (
+                            <>
+                                <dt>{typeMeta.name}</dt>
+                                <dd>{typeMeta.description}</dd>
+                            </>
+                        )}
+                    </For>
+                </dl>
+            </Show>
             <Show when={theory().help}>
                 <Content />
             </Show>
