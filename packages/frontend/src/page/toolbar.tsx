@@ -37,17 +37,35 @@ const Brand = () => (
 
 /** Button that navigates to the help page for a theory.
 
-If the theory is not set, it naviagtes instead to the root help page.
+If no theory is set, it naviagtes instead to the list of all theories.
  */
 export function TheoryHelpButton(props: {
     theory?: Theory;
 }) {
     const navigate = useNavigate();
 
-    const defaultButton = () => (
-        <IconButton onClick={() => navigate("/help")} tooltip="Get help about CatColab">
-            <CircleHelp />
-        </IconButton>
+    const defaultButton = () => {
+        const tooltip = (
+            <>
+                <p>{"You have not selected a logic"}</p>
+                <p>{"Learn more about logics"}</p>
+            </>
+        );
+        return (
+            <IconButton onClick={() => navigate("/help/theories")} tooltip={tooltip}>
+                <CircleHelp />
+            </IconButton>
+        );
+    };
+
+    const tooltip = (theoryName: string) => (
+        <>
+            <p>
+                {"You are using the logic: "}
+                <strong>{theoryName}</strong>
+            </p>
+            <p>{"Learn more about this logic"}</p>
+        </>
     );
 
     return (
@@ -55,7 +73,7 @@ export function TheoryHelpButton(props: {
             {(theory) => (
                 <IconButton
                     onClick={() => navigate(`/help/theory/${theory().id}`)}
-                    tooltip={`What is a... ${theory().name}?`}
+                    tooltip={tooltip(theory().name)}
                 >
                     <CircleHelp />
                 </IconButton>

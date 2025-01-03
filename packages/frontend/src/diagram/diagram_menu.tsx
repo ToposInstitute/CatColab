@@ -3,7 +3,7 @@ import { Show } from "solid-js";
 
 import { createAnalysis } from "../analysis/document";
 import { useApi } from "../api";
-import { HamburgerMenu, MenuItem, MenuItemLabel, MenuSeparator } from "../page";
+import { HamburgerMenu, HelpMenuItem, MenuItem, MenuItemLabel, MenuSeparator } from "../page";
 import { type DiagramDocument, type LiveDiagramDocument, createDiagram } from "./document";
 
 import ChartSpline from "lucide-solid/icons/chart-spline";
@@ -63,6 +63,8 @@ export function DiagramMenuItems(props: {
                 <Copy />
                 <MenuItemLabel>{"Duplicate diagram"}</MenuItemLabel>
             </MenuItem>
+            <MenuSeparator />
+            <HelpMenuItem />
         </>
     );
 }

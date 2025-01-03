@@ -11,8 +11,8 @@ import { FirebaseProvider } from "solid-firebase";
 import { Show, createResource, lazy } from "solid-js";
 
 import { RepoContext, RpcContext, createRpcClient, useApi } from "./api";
+import { helpRoutes } from "./help/routes";
 import { createModel } from "./model/document";
-import { HelpContainer, lazyMdx } from "./page/help_page";
 import { TheoryLibraryContext, stdTheories } from "./stdlib";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
@@ -56,10 +56,6 @@ const refIsUUIDFilter = {
     ref: (ref: string) => uuid.validate(ref),
 };
 
-const theoryWithIdFilter = {
-    id: (id: string) => stdTheories.has(id),
-};
-
 const routes: RouteDefinition[] = [
     {
         path: "/",
@@ -82,22 +78,8 @@ const routes: RouteDefinition[] = [
     },
     {
         path: "/help",
-        component: HelpContainer,
-        children: [
-            {
-                path: "/",
-                component: lazyMdx(() => import("./help/index.mdx")),
-            },
-            {
-                path: "/credits",
-                component: lazyMdx(() => import("./help/credits.mdx")),
-            },
-            {
-                path: "/theory/:id",
-                matchFilters: theoryWithIdFilter,
-                component: lazy(() => import("./stdlib/help")),
-            },
-        ],
+        component: lazy(() => import("./help/help_container")),
+        children: helpRoutes,
     },
     {
         path: "*",

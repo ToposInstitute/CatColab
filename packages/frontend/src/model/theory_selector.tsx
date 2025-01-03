@@ -46,16 +46,9 @@ export function TheorySelectorDialog(
 }
 
 export function TheorySelector(props: TheorySelectorProps) {
-    const groupedTheories = createMemo(() => {
-        const grouped = new Map<string, TheoryMeta[]>();
-        for (const theory of props.theories.metadata()) {
-            const groupName = theory.group ?? "Other";
-            const group = grouped.get(groupName) || [];
-            group.push(theory);
-            grouped.set(groupName, group);
-        }
-        return Array.from(grouped.entries());
-    });
+    const groupedTheories = createMemo(() =>
+        Array.from(props.theories.groupedMetadata().entries()),
+    );
 
     return (
         <div class="theory-selector">
