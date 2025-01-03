@@ -88,7 +88,7 @@ export function DiagramPane(props: {
                     />
                 </div>
                 <div class="instance-of">
-                    <div class="name">{liveModel().theory()?.instanceOfName}</div>
+                    <div class="name">{liveModel().theory().instanceOfName}</div>
                     <div class="model">
                         <A href={`/model/${liveModel().refId}`}>
                             {liveModel().liveDoc.doc.name || "Untitled"}
@@ -110,7 +110,7 @@ export function DiagramNotebookEditor(props: {
     const liveModel = () => props.liveDiagram.liveModel;
 
     const cellConstructors = () =>
-        (liveModel().theory()?.instanceTypes ?? []).map(diagramCellConstructor);
+        (liveModel().theory().instanceTypes ?? []).map(diagramCellConstructor);
 
     return (
         <MultiProvider
@@ -180,11 +180,13 @@ function diagramCellConstructor(meta: InstanceTypeMeta): CellConstructor<Diagram
 
 function judgmentLabel(judgment: DiagramJudgment): string | undefined {
     const liveModel = useContext(LiveModelContext);
-    const theory = liveModel?.().theory();
+    invariant(liveModel);
+    const theory = liveModel().theory();
+
     if (judgment.tag === "object") {
-        return theory?.instanceObTypeMeta(judgment.obType)?.name;
+        return theory.instanceObTypeMeta(judgment.obType)?.name;
     }
     if (judgment.tag === "morphism") {
-        return theory?.instanceMorTypeMeta(judgment.morType)?.name;
+        return theory.instanceMorTypeMeta(judgment.morType)?.name;
     }
 }

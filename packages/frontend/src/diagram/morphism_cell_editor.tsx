@@ -29,8 +29,8 @@ export function DiagramMorphismCellEditor(props: {
     invariant(liveDiagram, "Live diagram should be provided as context");
     const theory = () => liveDiagram().liveModel.theory();
 
-    const domType = () => theory()?.theory.src(props.decl.morType);
-    const codType = () => theory()?.theory.tgt(props.decl.morType);
+    const domType = () => theory().theory.src(props.decl.morType);
+    const codType = () => theory().theory.tgt(props.decl.morType);
 
     const errors = () => {
         const validated = liveDiagram().validatedDiagram();
@@ -76,7 +76,7 @@ export function DiagramMorphismCellEditor(props: {
                             });
                         }}
                         morType={props.decl.morType}
-                        placeholder={theory()?.modelMorTypeMeta(props.decl.morType)?.name}
+                        placeholder={theory().modelMorTypeMeta(props.decl.morType)?.name}
                         deleteBackward={props.actions.deleteBackward}
                         deleteForward={props.actions.deleteForward}
                         exitBackward={props.actions.activateAbove}

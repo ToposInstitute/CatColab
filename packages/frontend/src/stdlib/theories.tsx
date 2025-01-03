@@ -20,6 +20,24 @@ export const stdTheories = new TheoryLibrary();
 
 stdTheories.add(
     {
+        id: "empty",
+        name: "Informal",
+        description: "The empty logic, allowing only informal content",
+        isDefault: true,
+        group: "Base",
+        help: "empty",
+    },
+    (meta) => {
+        const thEmpty = new catlog.ThEmpty();
+        return new Theory({
+            ...meta,
+            theory: thEmpty.theory(),
+        });
+    },
+);
+
+stdTheories.add(
+    {
         id: "simple-olog",
         name: "Olog",
         description: "Ontology log, a simple conceptual model",

@@ -1,7 +1,9 @@
 import { A, useNavigate } from "@solidjs/router";
-import { type JSX, Show } from "solid-js";
+import { type JSX, useContext } from "solid-js";
+import invariant from "tiny-invariant";
 
 import { IconButton } from "../components";
+import { TheoryLibraryContext } from "../stdlib";
 import type { Theory } from "../theory";
 
 import CircleHelp from "lucide-solid/icons/circle-help";
@@ -44,40 +46,26 @@ export function TheoryHelpButton(props: {
 }) {
     const navigate = useNavigate();
 
-    const defaultButton = () => {
-        const tooltip = (
-            <>
-                <p>{"You have not selected a logic"}</p>
-                <p>{"Learn more about logics"}</p>
-            </>
-        );
-        return (
-            <IconButton onClick={() => navigate("/help/theories")} tooltip={tooltip}>
-                <CircleHelp />
-            </IconButton>
-        );
-    };
+    const theories = useContext(TheoryLibraryContext);
+    invariant(theories);
+    const theory = (): Theory => props.theory ?? theories.getDefault();
 
-    const tooltip = (theoryName: string) => (
+    const tooltip = (theory: Theory) => (
         <>
             <p>
                 {"You are using the logic: "}
-                <strong>{theoryName}</strong>
+                <strong>{theory.name}</strong>
             </p>
             <p>{"Learn more about this logic"}</p>
         </>
     );
 
     return (
-        <Show when={props.theory} fallback={defaultButton()}>
-            {(theory) => (
-                <IconButton
-                    onClick={() => navigate(`/help/theory/${theory().id}`)}
-                    tooltip={tooltip(theory().name)}
-                >
-                    <CircleHelp />
-                </IconButton>
-            )}
-        </Show>
+        <IconButton
+            onClick={() => navigate(`/help/theory/${theory().id}`)}
+            tooltip={tooltip(theory())}
+        >
+            <CircleHelp />
+        </IconButton>
     );
 }

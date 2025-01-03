@@ -15,6 +15,12 @@ export type TheoryMeta = {
     /** Short description of models of theory. */
     description: string;
 
+    /** Is this theory the default theory for new models?
+
+    It is enforced that at most one theory will have this status.
+     */
+    isDefault?: boolean;
+
     /** Group to which the theory belongs. */
     group?: string;
 
@@ -33,6 +39,9 @@ export class TheoryLibrary {
     /** Map from theory ID to the theory itself or the constructor for it. */
     private readonly theoryMap: Map<string, Theory | ((meta: TheoryMeta) => Theory)>;
 
+    /** ID of the default theory for new models. */
+    private defaultTheoryId: string | undefined;
+
     constructor() {
         this.metaMap = new Map();
         this.theoryMap = new Map();
@@ -40,11 +49,21 @@ export class TheoryLibrary {
 
     /** Add a theory to the library. */
     add(meta: TheoryMeta, cons: (meta: TheoryMeta) => Theory) {
+        if (!meta.id) {
+            throw new Error("The ID of a theory must be a non-empty string");
+        }
         if (this.metaMap.has(meta.id)) {
             throw new Error(`Theory with ID ${meta.id} already defined`);
         }
         this.metaMap.set(meta.id, meta);
         this.theoryMap.set(meta.id, cons);
+
+        if (meta.isDefault) {
+            if (this.defaultTheoryId) {
+                throw new Error(`The default theory is already set to ${this.defaultTheoryId}`);
+            }
+            this.defaultTheoryId = meta.id;
+        }
     }
 
     /** Is there a theory with the given ID? */
@@ -68,6 +87,17 @@ export class TheoryLibrary {
             this.theoryMap.set(id, theory);
             return theory;
         }
+    }
+
+    /** Gets the default theory for new models.
+
+    Throws an error if no default has been set.
+     */
+    getDefault(): Theory {
+        if (!this.defaultTheoryId) {
+            throw new Error("The default theory has not been set");
+        }
+        return this.get(this.defaultTheoryId);
     }
 
     /** Iterator over metadata for available theories. */

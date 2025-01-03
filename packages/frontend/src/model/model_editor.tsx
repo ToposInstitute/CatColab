@@ -113,7 +113,7 @@ export function ModelNotebookEditor(props: {
     const liveDoc = () => props.liveModel.liveDoc;
 
     const cellConstructors = () =>
-        (props.liveModel.theory()?.modelTypes ?? []).map(modelCellConstructor);
+        (props.liveModel.theory().modelTypes ?? []).map(modelCellConstructor);
 
     return (
         <LiveModelContext.Provider value={() => props.liveModel}>
@@ -176,11 +176,13 @@ function modelCellConstructor(meta: ModelTypeMeta): CellConstructor<ModelJudgmen
 
 function judgmentLabel(judgment: ModelJudgment): string | undefined {
     const liveModel = useContext(LiveModelContext);
-    const theory = liveModel?.().theory();
+    invariant(liveModel);
+    const theory = liveModel().theory();
+
     if (judgment.tag === "object") {
-        return theory?.modelObTypeMeta(judgment.obType)?.name;
+        return theory.modelObTypeMeta(judgment.obType)?.name;
     }
     if (judgment.tag === "morphism") {
-        return theory?.modelMorTypeMeta(judgment.morType)?.name;
+        return theory.modelMorTypeMeta(judgment.morType)?.name;
     }
 }

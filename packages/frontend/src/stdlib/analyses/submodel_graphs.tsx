@@ -85,7 +85,7 @@ the component.
 export function SubmodelsGraphviz(props: {
     model: Array<ModelJudgment>;
     submodels: Array<DblModel>;
-    theory?: Theory;
+    theory: Theory;
     activeIndex: number;
     setActiveIndex: (index: number) => void;
     title?: string;
@@ -135,16 +135,12 @@ export function SubmodelsGraphviz(props: {
                     </IconButton>
                 </div>
             </PanelHeader>
-            <Show when={props.theory}>
-                {(theory) => (
-                    <ModelGraphviz
-                        model={filteredModel()}
-                        theory={theory()}
-                        attributes={props.attributes}
-                        options={props.options}
-                    />
-                )}
-            </Show>
+            <ModelGraphviz
+                model={filteredModel()}
+                theory={props.theory}
+                attributes={props.attributes}
+                options={props.options}
+            />
         </div>
     );
 }
