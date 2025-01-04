@@ -1,4 +1,4 @@
-import { uuidv7 } from "uuidv7";
+import { v7 } from "uuid";
 
 import { DblModel } from "catlog-wasm";
 import type { DblTheory, MorDecl, MorType, ObDecl, ObType } from "catlog-wasm";
@@ -24,7 +24,7 @@ export type ObjectDecl = ObDecl & {
 /** Create a new object declaration with the given object type. */
 export const newObjectDecl = (obType: ObType): ObjectDecl => ({
     tag: "object",
-    id: uuidv7(),
+    id: v7(),
     name: "",
     obType,
 });
@@ -40,7 +40,7 @@ export type MorphismDecl = MorDecl & {
 /** Create a new morphism declaration with the given morphism type. */
 export const newMorphismDecl = (morType: MorType): MorphismDecl => ({
     tag: "morphism",
-    id: uuidv7(),
+    id: v7(),
     name: "",
     morType,
     dom: null,
@@ -50,7 +50,7 @@ export const newMorphismDecl = (morType: MorType): MorphismDecl => ({
 /** Duplicate a model judgment, creating a fresh UUID when applicable. */
 export const duplicateModelJudgment = (jgmt: ModelJudgment): ModelJudgment => ({
     ...deepCopyJSON(jgmt),
-    id: uuidv7(),
+    id: v7(),
 });
 
 /** Construct a model in `catlog` from a sequence of judgments. */

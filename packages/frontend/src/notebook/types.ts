@@ -1,4 +1,4 @@
-import { uuidv7 } from "uuidv7";
+import { v7 } from "uuid";
 
 import type { Uuid } from "catlog-wasm";
 
@@ -34,7 +34,7 @@ export type RichTextCell = {
 /** Creates a rich text cell with the given content. */
 export const newRichTextCell = (content?: string): RichTextCell => ({
     tag: "rich-text",
-    id: uuidv7(),
+    id: v7(),
     content: content ?? "",
 });
 
@@ -48,7 +48,7 @@ export type FormalCell<T> = {
 /** Creates a formal cell with the given content. */
 export const newFormalCell = <T>(content: T): FormalCell<T> => ({
     tag: "formal",
-    id: uuidv7(),
+    id: v7(),
     content: content,
 });
 
@@ -65,5 +65,5 @@ export type StemCell = {
 /** Creates a new stem cell. */
 export const newStemCell = (): StemCell => ({
     tag: "stem",
-    id: uuidv7(),
+    id: v7(),
 });
