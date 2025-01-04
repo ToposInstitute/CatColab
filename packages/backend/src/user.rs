@@ -25,14 +25,11 @@ pub async fn sign_up_or_sign_in(ctx: AppCtx) -> Result<(), AppError> {
 /// Get the status of a username.
 pub async fn username_status(state: AppState, username: &str) -> Result<UsernameStatus, AppError> {
     if is_username_valid(username) {
-        let query = sqlx::query_scalar!(
-            "SELECT EXISTS(SELECT 1 FROM users WHERE username = $1)",
-            username,
-        );
-        if query.fetch_one(&state.db).await? == Some(true) {
-            Ok(UsernameStatus::Unavailable)
-        } else {
+        let query = sqlx::query_scalar!("SELECT 1 FROM users WHERE username = $1", username);
+        if query.fetch_optional(&state.db).await?.is_none() {
             Ok(UsernameStatus::Available)
+        } else {
+            Ok(UsernameStatus::Unavailable)
         }
     } else {
         Ok(UsernameStatus::Invalid)
@@ -52,8 +49,8 @@ pub enum UsernameStatus {
     Invalid,
 }
 
-/// Get profile data for a user.
-pub async fn get_user_profile(ctx: AppCtx) -> Result<UserProfile, AppError> {
+/// Get profile data for the active user.
+pub async fn get_active_user_profile(ctx: AppCtx) -> Result<UserProfile, AppError> {
     let Some(user) = ctx.user else {
         return Err(AppError::Unauthorized);
     };
@@ -68,8 +65,8 @@ pub async fn get_user_profile(ctx: AppCtx) -> Result<UserProfile, AppError> {
     Ok(query.fetch_one(&ctx.state.db).await?)
 }
 
-/// Set profile data for a user.
-pub async fn set_user_profile(ctx: AppCtx, profile: UserProfile) -> Result<(), AppError> {
+/// Set profile data for the active user.
+pub async fn set_active_user_profile(ctx: AppCtx, profile: UserProfile) -> Result<(), AppError> {
     let Some(user) = ctx.user else {
         return Err(AppError::Unauthorized);
     };

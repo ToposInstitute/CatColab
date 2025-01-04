@@ -20,8 +20,8 @@ pub fn router() -> Router<AppState> {
         .handler(save_snapshot)
         .handler(sign_up_or_sign_in)
         .handler(username_status)
-        .handler(get_user_profile)
-        .handler(set_user_profile)
+        .handler(get_active_user_profile)
+        .handler(set_active_user_profile)
 }
 
 #[handler(mutation)]
@@ -100,13 +100,13 @@ async fn username_status(ctx: AppCtx, username: &str) -> RpcResult<user::Usernam
 }
 
 #[handler(query)]
-async fn get_user_profile(ctx: AppCtx) -> RpcResult<user::UserProfile> {
-    user::get_user_profile(ctx).await.into()
+async fn get_active_user_profile(ctx: AppCtx) -> RpcResult<user::UserProfile> {
+    user::get_active_user_profile(ctx).await.into()
 }
 
 #[handler(mutation)]
-async fn set_user_profile(ctx: AppCtx, user: user::UserProfile) -> RpcResult<()> {
-    user::set_user_profile(ctx, user).await.into()
+async fn set_active_user_profile(ctx: AppCtx, user: user::UserProfile) -> RpcResult<()> {
+    user::set_active_user_profile(ctx, user).await.into()
 }
 
 /// Result returned by an RPC handler.
