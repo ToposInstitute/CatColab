@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO users(id, created, signed_in)\n        VALUES ($1, NOW(), NOW())\n        ON CONFLICT (id) DO UPDATE\n        SET signed_in = EXCLUDED.signed_in\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3e2b3e63a36ffa59ce60f8df19157edc1dfcee0d876d4b0c22c2db24feee6a3c"
+}

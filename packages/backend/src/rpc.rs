@@ -19,6 +19,7 @@ pub fn router() -> Router<AppState> {
         .handler(head_snapshot)
         .handler(save_snapshot)
         .handler(sign_up_or_sign_in)
+        .handler(username_status)
         .handler(get_user_profile)
         .handler(set_user_profile)
 }
@@ -91,6 +92,11 @@ async fn _save_snapshot(ctx: AppCtx, data: doc::RefContent) -> Result<(), AppErr
 #[handler(mutation)]
 async fn sign_up_or_sign_in(ctx: AppCtx) -> RpcResult<()> {
     user::sign_up_or_sign_in(ctx).await.into()
+}
+
+#[handler(query)]
+async fn username_status(ctx: AppCtx, username: &str) -> RpcResult<user::UsernameStatus> {
+    user::username_status(ctx.state, username).await.into()
 }
 
 #[handler(query)]

@@ -2,7 +2,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use super::app::{AppCtx, AppError};
+use super::app::{AppCtx, AppError, AppState};
 
 /// Notify the backend that a user has signed up or signed in.
 pub async fn sign_up_or_sign_in(ctx: AppCtx) -> Result<(), AppError> {
@@ -20,6 +20,36 @@ pub async fn sign_up_or_sign_in(ctx: AppCtx) -> Result<(), AppError> {
     );
     query.execute(&ctx.state.db).await?;
     Ok(())
+}
+
+/// Get the status of a username.
+pub async fn username_status(state: AppState, username: &str) -> Result<UsernameStatus, AppError> {
+    if is_username_valid(username) {
+        let query = sqlx::query_scalar!(
+            "SELECT EXISTS(SELECT 1 FROM users WHERE username = $1)",
+            username,
+        );
+        if query.fetch_one(&state.db).await? == Some(true) {
+            Ok(UsernameStatus::Unavailable)
+        } else {
+            Ok(UsernameStatus::Available)
+        }
+    } else {
+        Ok(UsernameStatus::Invalid)
+    }
+}
+
+/// Status of a username.
+#[derive(Clone, Debug, Serialize, TS)]
+pub enum UsernameStatus {
+    /// The username is valid and available.
+    Available,
+
+    /// The username is already in use by another user.
+    Unavailable,
+
+    /// The username is invalid.
+    Invalid,
 }
 
 /// Get profile data for a user.
