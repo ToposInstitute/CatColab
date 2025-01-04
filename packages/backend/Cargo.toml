@@ -12,6 +12,7 @@ hyper = { version = "1.4.1", features = ["server"] }
 jsonrpsee = "0.24.6"
 jsonrpsee-server = "0.24.6"
 qubit = "0.10.2"
+regex = "1.11.1"
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0.128"
 socketioxide = { version = "0.14.1", features = ["tracing"] }
