@@ -19,6 +19,8 @@ pub fn router() -> Router<AppState> {
         .handler(head_snapshot)
         .handler(save_snapshot)
         .handler(sign_up_or_sign_in)
+        .handler(get_user_profile)
+        .handler(set_user_profile)
 }
 
 #[handler(mutation)]
@@ -91,6 +93,16 @@ async fn sign_up_or_sign_in(ctx: AppCtx) -> RpcResult<()> {
     user::sign_up_or_sign_in(ctx).await.into()
 }
 
+#[handler(query)]
+async fn get_user_profile(ctx: AppCtx) -> RpcResult<user::UserProfile> {
+    user::get_user_profile(ctx).await.into()
+}
+
+#[handler(mutation)]
+async fn set_user_profile(ctx: AppCtx, user: user::UserProfile) -> RpcResult<()> {
+    user::set_user_profile(ctx, user).await.into()
+}
+
 /// Result returned by an RPC handler.
 #[derive(Debug, Clone, Serialize, TS)]
 #[serde(tag = "tag")]
@@ -102,6 +114,7 @@ enum RpcResult<T> {
 impl<T> From<AppError> for RpcResult<T> {
     fn from(error: AppError) -> Self {
         let code = match error {
+            AppError::Invalid(_) => StatusCode::BAD_REQUEST,
             AppError::Unauthorized => StatusCode::UNAUTHORIZED,
             AppError::Forbidden(_) => StatusCode::FORBIDDEN,
             AppError::Db(sqlx::Error::RowNotFound) => StatusCode::NOT_FOUND,
