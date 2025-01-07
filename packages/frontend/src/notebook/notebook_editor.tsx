@@ -66,6 +66,7 @@ A notebook has two types of cells:
 Rich text cells are the same in all notebooks, whereas formal cells are handled
 by custom components supplied to the notebook.
  */
+
 export function NotebookEditor<T>(props: {
     handle: DocHandle<unknown>;
     path: Prop[];
@@ -225,6 +226,7 @@ export function NotebookEditor<T>(props: {
                     <span>Click button or press Shift-Enter to create a cell</span>
                 </div>
             </Show>
+
             <ul class="notebook-cells">
                 <For each={props.notebook.cells}>
                     {(cell, i) => {
@@ -290,46 +292,52 @@ export function NotebookEditor<T>(props: {
 
                         return (
                             <li>
-                                <NotebookCell
-                                    cellId={cell.id}
-                                    actions={cellActions}
-                                    tag={
-                                        cell.tag === "formal"
-                                            ? props.cellLabel?.(cell.content)
-                                            : undefined
-                                    }
-                                >
-                                    <Switch>
-                                        <Match when={cell.tag === "rich-text"}>
-                                            <RichTextCellEditor
-                                                cellId={cell.id}
-                                                handle={props.handle}
-                                                path={[...props.path, "cells", i()]}
-                                                isActive={isActive()}
-                                                actions={cellActions}
-                                            />
-                                        </Match>
-                                        <Match when={cell.tag === "formal"}>
-                                            <props.formalCellEditor
-                                                content={(cell as FormalCell<T>).content}
-                                                changeContent={(f) => {
-                                                    props.changeNotebook((nb) => {
-                                                        f((nb.cells[i()] as FormalCell<T>).content);
-                                                    });
-                                                }}
-                                                isActive={isActive()}
-                                                actions={cellActions}
-                                            />
-                                        </Match>
-                                        <Match when={cell.tag === "stem"}>
-                                            <StemCellEditor
-                                                completions={replaceCommands(i())}
-                                                isActive={isActive()}
-                                                actions={cellActions}
-                                            />
-                                        </Match>
-                                    </Switch>
-                                </NotebookCell>
+                                <div class="cell-number">
+                                    <p>{i() + 1}</p>
+                                    <NotebookCell
+                                        cellId={cell.id}
+                                        actions={cellActions}
+                                        tag={
+                                            cell.tag === "formal"
+                                                ? props.cellLabel?.(cell.content)
+                                                : undefined
+                                        }
+                                    >
+                                        <Switch>
+                                            <Match when={cell.tag === "rich-text"}>
+                                                <RichTextCellEditor
+                                                    cellId={cell.id}
+                                                    handle={props.handle}
+                                                    path={[...props.path, "cells", i()]}
+                                                    isActive={isActive()}
+                                                    actions={cellActions}
+                                                />
+                                            </Match>
+                                            <Match when={cell.tag === "formal"}>
+                                                <props.formalCellEditor
+                                                    content={(cell as FormalCell<T>).content}
+                                                    changeContent={(f) => {
+                                                        props.changeNotebook((nb) => {
+                                                            f(
+                                                                (nb.cells[i()] as FormalCell<T>)
+                                                                    .content,
+                                                            );
+                                                        });
+                                                    }}
+                                                    isActive={isActive()}
+                                                    actions={cellActions}
+                                                />
+                                            </Match>
+                                            <Match when={cell.tag === "stem"}>
+                                                <StemCellEditor
+                                                    completions={replaceCommands(i())}
+                                                    isActive={isActive()}
+                                                    actions={cellActions}
+                                                />
+                                            </Match>
+                                        </Switch>
+                                    </NotebookCell>
+                                </div>
                             </li>
                         );
                     }}
