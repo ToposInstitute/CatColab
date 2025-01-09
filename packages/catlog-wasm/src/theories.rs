@@ -118,6 +118,23 @@ impl ThSignedCategory {
     }
 }
 
+/// The theory of delayable signed categories.
+#[wasm_bindgen]
+pub struct ThDelayableSignedCategory(Arc<theory::UstrDiscreteDblTheory>);
+
+#[wasm_bindgen]
+impl ThDelayableSignedCategory {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self(Arc::new(theories::th_delayable_signed_category()))
+    }
+
+    #[wasm_bindgen]
+    pub fn theory(&self) -> DblTheory {
+        DblTheory(self.0.clone().into())
+    }
+}
+
 /// The theory of nullable signed categories.
 #[wasm_bindgen]
 pub struct ThNullableSignedCategory(Arc<theory::UstrDiscreteDblTheory>);

@@ -357,6 +357,77 @@ stdTheories.add(
 
 stdTheories.add(
     {
+        id: "causal-loop-delays",
+        name: "Causal loop diagram with delays",
+        description: "Causal relationships: positive or negative, fast or slow",
+        group: "System Dynamics",
+    },
+    (meta) => {
+        const thDelayedSignedCategory = new catlog.ThDelayableSignedCategory();
+
+        return new Theory({
+            ...meta,
+            theory: thDelayedSignedCategory.theory(),
+            onlyFreeModels: true,
+            modelTypes: [
+                {
+                    tag: "ObType",
+                    obType: { tag: "Basic", content: "Object" },
+                    name: "Variable",
+                    shortcut: ["V"],
+                    description: "Variable quantity",
+                },
+                {
+                    tag: "MorType",
+                    morType: {
+                        tag: "Hom",
+                        content: { tag: "Basic", content: "Object" },
+                    },
+                    name: "Positive link",
+                    shortcut: ["P"],
+                    description: "Fast-acting positive influence",
+                    arrowStyle: "plus",
+                    preferUnnamed: true,
+                },
+                {
+                    tag: "MorType",
+                    morType: { tag: "Basic", content: "Negative" },
+                    name: "Negative link",
+                    shortcut: ["N"],
+                    description: "Fast-acting negative influence",
+                    arrowStyle: "minus",
+                    preferUnnamed: true,
+                },
+                {
+                    tag: "MorType",
+                    morType: { tag: "Basic", content: "PositiveSlow" },
+                    name: "Delayed positive link",
+                    description: "Slow-acting positive influence",
+                    arrowStyle: "plus",
+                    preferUnnamed: true,
+                },
+                {
+                    tag: "MorType",
+                    morType: { tag: "Basic", content: "NegativeSlow" },
+                    name: "Delayed negative link",
+                    description: "Slow-acting negative influence",
+                    arrowStyle: "minus",
+                    preferUnnamed: true,
+                },
+            ],
+            modelAnalyses: [
+                configureModelGraph({
+                    id: "diagram",
+                    name: "Visualization",
+                    description: "Visualize the causal loop diagram",
+                }),
+            ],
+        })
+    }
+);
+
+stdTheories.add(
+    {
         id: "indeterminate-causal-loop",
         name: "Causal loop diagram with indeterminates",
         description: "Positive, negative, and indeterminate causal relationships",

@@ -52,6 +52,31 @@ pub fn th_signed_category() -> UstrDiscreteDblTheory {
     DiscreteDblTheory::from(sgn)
 }
 
+/** The theory of delayable signed categories.
+
+Free delayable signed categories are causal loop diagrams with delays, often
+depicted as [caesuras](https://en.wikipedia.org/wiki/Caesura).
+ */
+pub fn th_delayable_signed_category() -> UstrDiscreteDblTheory {
+    let mut cat: UstrFinCategory = Default::default();
+    let (x, neg) = (ustr("Object"), ustr("Negative"));
+    let (pos_slow, neg_slow) = (ustr("PositiveSlow"), ustr("NegativeSlow"));
+    cat.add_ob_generator(x);
+    cat.add_mor_generator(neg, x, x);
+    cat.add_mor_generator(pos_slow, x, x);
+    cat.add_mor_generator(neg_slow, x, x);
+    cat.set_composite(neg, neg, FinMor::Id(x));
+    cat.set_composite(neg, pos_slow, FinMor::Generator(neg_slow));
+    cat.set_composite(neg, neg_slow, FinMor::Generator(pos_slow));
+    cat.set_composite(pos_slow, neg, FinMor::Generator(neg_slow));
+    cat.set_composite(neg_slow, neg, FinMor::Generator(pos_slow));
+    cat.set_composite(pos_slow, pos_slow, FinMor::Generator(pos_slow));
+    cat.set_composite(neg_slow, neg_slow, FinMor::Generator(pos_slow));
+    cat.set_composite(neg_slow, pos_slow, FinMor::Generator(neg_slow));
+    cat.set_composite(pos_slow, neg_slow, FinMor::Generator(neg_slow));
+    DiscreteDblTheory::from(cat)
+}
+
 /** The theory of nullable signed categories.
 
 A *nullable signed category* is a category sliced over the monoid of signs,
@@ -120,6 +145,7 @@ mod tests {
         assert!(th_category().validate().is_ok());
         assert!(th_schema().validate().is_ok());
         assert!(th_signed_category().validate().is_ok());
+        assert!(th_delayable_signed_category().validate().is_ok());
         assert!(th_nullable_signed_category().validate().is_ok());
         assert!(th_category_with_scalars().validate().is_ok());
         // TODO: Validate discrete tabulator theories.
