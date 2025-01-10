@@ -169,7 +169,7 @@ mod tests {
 
         let mut f: DiscreteDblModelMapping<_, _> = Default::default();
         f.assign_ob(ustr("x"), ustr("x"));
-        f.assign_basic_mor(ustr("positive"), Path::pair(ustr("negative"), ustr("negative")));
+        f.assign_basic_mor(ustr("loop"), Path::pair(ustr("loop"), ustr("loop")));
         let diagram = DblModelDiagram(f, pos_loop);
         assert!(diagram.validate_in(&neg_loop).is_ok());
     }

@@ -421,9 +421,33 @@ stdTheories.add(
                     name: "Visualization",
                     description: "Visualize the causal loop diagram",
                 }),
+                configureSubmodelsAnalysis({
+                    id: "negative-loops",
+                    name: "Balancing loops",
+                    description: "Find the fast-acting balancing loops",
+                    findSubmodels: (model) => thDelayedSignedCategory.negativeLoops(model),
+                }),
+                configureSubmodelsAnalysis({
+                    id: "positive-loops",
+                    name: "Reinforcing loops",
+                    description: "Find the fast-acting reinforcing loops",
+                    findSubmodels: (model) => thDelayedSignedCategory.positiveLoops(model),
+                }),
+                configureSubmodelsAnalysis({
+                    id: "delayed-negative-loops",
+                    name: "Delayed balancing loops",
+                    description: "Find the slow-acting balancing loops",
+                    findSubmodels: (model) => thDelayedSignedCategory.delayedNegativeLoops(model),
+                }),
+                configureSubmodelsAnalysis({
+                    id: "delayed-positive-loops",
+                    name: "Delayed reinforcing loops",
+                    description: "Find the slow-acting reinforcing loops",
+                    findSubmodels: (model) => thDelayedSignedCategory.delayedPositiveLoops(model),
+                }),
             ],
-        })
-    }
+        });
+    },
 );
 
 stdTheories.add(
