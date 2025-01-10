@@ -85,6 +85,18 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
         );
     };
 
+	const centerLabel = (text: string) => {
+        // Place the target label offset from the target in the direction
+        // orthogonal to the vector from the source to the target.
+        return (
+			<text class="label" x={props.edge.labelPos?.x} y={props.edge.labelPos?.y} dominant-baseline="middle"
+                    text-anchor="middle"
+                >
+				{text}
+            </text>
+        );
+    };
+
     return (
         <g class={`edge ${props.edge.cssClass ?? ""}`}>
             <Switch fallback={defaultPath()}>
@@ -104,6 +116,16 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
                 <Match when={props.edge.style === "indeterminate"}>
                     {defaultPath()}
                     {tgtLabel("?")}
+                </Match>
+				<Match when={props.edge.style === "plusDelayed"}>
+                    {defaultPath()}
+                    {tgtLabel("+")}
+					{centerLabel("//")}
+                </Match>
+				<Match when={props.edge.style === "minusDelayed"}>
+                    {defaultPath()}
+                    {tgtLabel("-")}
+					{centerLabel("//")}
                 </Match>
                 <Match when={props.edge.style === "scalar"}>
                     {defaultPath()}
@@ -186,6 +208,8 @@ const styleToMarker: Record<ArrowStyle, ArrowMarker> = {
     plus: "triangle",
     minus: "triangle",
     indeterminate: "triangle",
+	plusDelayed: "triangle",
+	minusDelayed: "triangle",
     scalar: "triangle",
 };
 

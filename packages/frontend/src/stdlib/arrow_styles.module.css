@@ -23,6 +23,8 @@
 .arrow.plus,
 .arrow.minus,
 .arrow.indeterminate,
+.arrow.plusDelayed,
+.arrow.minusDelayed,
 .arrow.scalar {
     &:before,
     &:after {
@@ -70,6 +72,40 @@
 .arrowContainer.indeterminate {
     &:after {
         content: "?";
+        transform: none;
+        position: absolute;
+        right: -7.5px;
+        bottom: 0px;
+    }
+}
+
+.arrowContainer.plusDelayed {
+    &:before {
+        content: "//";
+        transform: none;
+        position: absolute;
+        top: -10px;
+		left: 50%;
+    }
+	&:after {
+        content: "+";
+        transform: none;
+        position: absolute;
+        right: -7.5px;
+        bottom: 0px;
+    }
+}
+
+.arrowContainer.minusDelayed {
+	&:before {
+        content: "//";
+        transform: none;
+        position: absolute;
+        top: -10px;
+		left: 50%;
+    }
+	&:after {
+        content: "-";
         transform: none;
         position: absolute;
         right: -7.5px;
