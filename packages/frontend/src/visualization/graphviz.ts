@@ -79,6 +79,9 @@ export function parseGraphvizJSON(graphviz: GraphvizJSON.Graph): GraphLayout.Gra
             // Omit invisible edges, used to tweak the layout in Graphviz.
             continue;
         }
+        const id = edge.id;
+        invariant(id, "Edge ID should be defined");
+
         const [sourceNode, targetNode] = [nodeByNumber(edge.head), nodeByNumber(edge.tail)];
         invariant(sourceNode && targetNode, "Source and target nodes should be defined");
 
@@ -89,7 +92,7 @@ export function parseGraphvizJSON(graphviz: GraphvizJSON.Graph): GraphLayout.Gra
         invariant(sourcePos && targetPos, "Source and target positions should be defined");
 
         edges.push({
-            id: edge.id,
+            id,
             source: sourceNode.id,
             target: targetNode.id,
             label: edge.xlabel ?? edge.label,
