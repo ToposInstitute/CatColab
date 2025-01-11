@@ -81,13 +81,13 @@
 
 .arrowContainer.plusDelayed {
     &:before {
-        content: "//";
+        content: "‖";
         transform: none;
         position: absolute;
-        top: -10px;
-		left: 50%;
+        top: -13px;
+        left: calc(max(29%, 50% - 7px));
     }
-	&:after {
+    &:after {
         content: "+";
         transform: none;
         position: absolute;
@@ -97,14 +97,14 @@
 }
 
 .arrowContainer.minusDelayed {
-	&:before {
-        content: "//";
+    &:before {
+        content: "‖";
         transform: none;
         position: absolute;
-        top: -10px;
-		left: 50%;
+        top: -13px;
+        left: calc(max(29%, 50% - 7px));
     }
-	&:after {
+    &:after {
         content: "-";
         transform: none;
         position: absolute;

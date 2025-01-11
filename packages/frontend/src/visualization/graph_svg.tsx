@@ -69,7 +69,8 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
         const marker = styleToMarker[style];
         return `url(#arrowhead-${marker})`;
     };
-    const defaultPath = () => <path marker-end={markerUrl()} d={path()} />;
+    const pathId = () => `path${props.edge.id}`;
+    const defaultPath = () => <path id={pathId()} marker-end={markerUrl()} d={path()} />;
 
     const tgtLabel = (text: string) => {
         // Place the target label offset from the target in the direction
@@ -81,18 +82,6 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
         return (
             <text class="label" x={pos.x} y={pos.y} dominant-baseline="middle" text-anchor="middle">
                 {text}
-            </text>
-        );
-    };
-
-	const centerLabel = (text: string) => {
-        // Place the target label offset from the target in the direction
-        // orthogonal to the vector from the source to the target.
-        return (
-			<text class="label" x={props.edge.labelPos?.x} y={props.edge.labelPos?.y} dominant-baseline="middle"
-                    text-anchor="middle"
-                >
-				{text}
             </text>
         );
     };
@@ -117,15 +106,23 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
                     {defaultPath()}
                     {tgtLabel("?")}
                 </Match>
-				<Match when={props.edge.style === "plusDelayed"}>
+                <Match when={props.edge.style === "plusDelayed"}>
                     {defaultPath()}
                     {tgtLabel("+")}
-					{centerLabel("//")}
+                    <text style="dominant-baseline: central;">
+                        <textPath href={`#${pathId()}`} startOffset="40%">
+                            {"‖"}
+                        </textPath>
+                    </text>
                 </Match>
-				<Match when={props.edge.style === "minusDelayed"}>
+                <Match when={props.edge.style === "minusDelayed"}>
                     {defaultPath()}
                     {tgtLabel("-")}
-					{centerLabel("//")}
+                    <text style="dominant-baseline: central;">
+                        <textPath href={`#${pathId()}`} startOffset="40%">
+                            {"‖"}
+                        </textPath>
+                    </text>
                 </Match>
                 <Match when={props.edge.style === "scalar"}>
                     {defaultPath()}
@@ -208,8 +205,8 @@ const styleToMarker: Record<ArrowStyle, ArrowMarker> = {
     plus: "triangle",
     minus: "triangle",
     indeterminate: "triangle",
-	plusDelayed: "triangle",
-	minusDelayed: "triangle",
+    plusDelayed: "triangle",
+    minusDelayed: "triangle",
     scalar: "triangle",
 };
 
