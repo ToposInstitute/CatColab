@@ -1,5 +1,5 @@
 import { destructure } from "@solid-primitives/destructure";
-import { type Component, For, Index, Match, Show, Switch } from "solid-js";
+import { type Component, For, Index, Match, Show, Switch, createUniqueId } from "solid-js";
 import { Dynamic } from "solid-js/web";
 
 import type * as GraphLayout from "./graph_layout";
@@ -69,7 +69,9 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
         const marker = styleToMarker[style];
         return `url(#arrowhead-${marker})`;
     };
-    const pathId = () => `path${props.edge.id}`;
+
+    const componentId = createUniqueId();
+    const pathId = () => `edge-path-${componentId}`;
     const defaultPath = () => <path id={pathId()} marker-end={markerUrl()} d={path()} />;
 
     const tgtLabel = (text: string) => {
