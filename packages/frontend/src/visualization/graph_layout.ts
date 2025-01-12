@@ -19,9 +19,7 @@ export interface Graph<Id> {
     edges: Array<Edge<Id>>;
 }
 
-export interface Node<Id> extends GraphElement {
-    id: Id;
-
+export interface Node<Id> extends GraphElement<Id> {
     /** Position of node, with origin at center of node. */
     pos: Point;
 
@@ -35,9 +33,7 @@ export interface Node<Id> extends GraphElement {
     label?: string;
 }
 
-export interface Edge<Id> extends GraphElement {
-    id?: Id;
-
+export interface Edge<Id> extends GraphElement<Id> {
     /** Source node of edge. */
     source: Id;
 
@@ -63,7 +59,10 @@ export interface Edge<Id> extends GraphElement {
     style?: ArrowStyle;
 }
 
-export interface GraphElement {
+export interface GraphElement<Id> {
+    /** ID of element, unique within graph. */
+    id: Id;
+
     /** CSS class (or classes) to apply to element. */
     cssClass?: string;
 }

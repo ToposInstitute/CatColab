@@ -118,6 +118,51 @@ impl ThSignedCategory {
     }
 }
 
+/// The theory of delayable signed categories.
+#[wasm_bindgen]
+pub struct ThDelayableSignedCategory(Arc<theory::UstrDiscreteDblTheory>);
+
+#[wasm_bindgen]
+impl ThDelayableSignedCategory {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self(Arc::new(theories::th_delayable_signed_category()))
+    }
+
+    #[wasm_bindgen]
+    pub fn theory(&self) -> DblTheory {
+        DblTheory(self.0.clone().into())
+    }
+
+    /// Find (fast) positive feedback loops in a model.
+    #[wasm_bindgen(js_name = "positiveLoops")]
+    pub fn positive_loops(&self, model: &DblModel) -> Result<Vec<DblModel>, String> {
+        let positive_loop = models::positive_loop(self.0.clone());
+        motifs(&positive_loop, model)
+    }
+
+    /// Find (fast) negative feedback loops in a model.
+    #[wasm_bindgen(js_name = "negativeLoops")]
+    pub fn negative_loops(&self, model: &DblModel) -> Result<Vec<DblModel>, String> {
+        let negative_loop = models::negative_loop(self.0.clone());
+        motifs(&negative_loop, model)
+    }
+
+    /// Find delayed positive feedback loops in a model.
+    #[wasm_bindgen(js_name = "delayedPositiveLoops")]
+    pub fn delayed_positive_loops(&self, model: &DblModel) -> Result<Vec<DblModel>, String> {
+        let delayed_positive_loop = models::delayed_positive_loop(self.0.clone());
+        motifs(&delayed_positive_loop, model)
+    }
+
+    /// Find delayed negative feedback loops in a model.
+    #[wasm_bindgen(js_name = "delayedNegativeLoops")]
+    pub fn delayed_negative_loops(&self, model: &DblModel) -> Result<Vec<DblModel>, String> {
+        let delayed_negative_loop = models::delayed_negative_loop(self.0.clone());
+        motifs(&delayed_negative_loop, model)
+    }
+}
+
 /// The theory of nullable signed categories.
 #[wasm_bindgen]
 pub struct ThNullableSignedCategory(Arc<theory::UstrDiscreteDblTheory>);

@@ -730,35 +730,35 @@ mod tests {
         assert!(
             errs == vec![
                 InvalidDblModelMorphism::Ob(ustr("x")),
-                InvalidDblModelMorphism::MissingMor(ustr("negative")),
+                InvalidDblModelMorphism::MissingMor(ustr("loop")),
             ]
         );
 
         // A bad map that doesn't preserve dom
         let f = DiscreteDblModelMapping {
             ob_map: HashMap::from([(ustr("x"), ustr("x"))]).into(),
-            mor_map: HashMap::from([(ustr("negative"), Path::single(ustr("positive1")))]).into(),
+            mor_map: HashMap::from([(ustr("loop"), Path::single(ustr("positive1")))]).into(),
         };
         let dmm = DblModelMorphism(&f, &negloop, &posfeed);
         let errs: Vec<_> = dmm.validate().expect_err("should be invalid").into();
         assert!(
             errs == vec![
-                InvalidDblModelMorphism::Cod(ustr("negative")),
-                InvalidDblModelMorphism::MorType(ustr("negative")),
+                InvalidDblModelMorphism::Cod(ustr("loop")),
+                InvalidDblModelMorphism::MorType(ustr("loop")),
             ]
         );
 
         // A bad map that doesn't preserve codom
         let f = DiscreteDblModelMapping {
             ob_map: HashMap::from([(ustr("x"), ustr("x"))]).into(),
-            mor_map: HashMap::from([(ustr("negative"), Path::single(ustr("positive2")))]).into(),
+            mor_map: HashMap::from([(ustr("loop"), Path::single(ustr("positive2")))]).into(),
         };
         let dmm = DblModelMorphism(&f, &negloop, &posfeed);
         let errs: Vec<_> = dmm.validate().expect_err("should be invalid").into();
         assert!(
             errs == vec![
-                InvalidDblModelMorphism::Dom(ustr("negative")),
-                InvalidDblModelMorphism::MorType(ustr("negative")),
+                InvalidDblModelMorphism::Dom(ustr("loop")),
+                InvalidDblModelMorphism::MorType(ustr("loop")),
             ]
         );
     }
@@ -771,7 +771,7 @@ mod tests {
         // Identity map
         let f = DiscreteDblModelMapping {
             ob_map: HashMap::from([(ustr("x"), ustr("x"))]).into(),
-            mor_map: HashMap::from([(ustr("positive"), Path::single(ustr("positive")))]).into(),
+            mor_map: HashMap::from([(ustr("loop"), Path::single(ustr("loop")))]).into(),
         };
         let dmm = DblModelMorphism(&f, &negloop, &negloop);
         assert!(dmm.validate().is_ok());
@@ -780,7 +780,7 @@ mod tests {
         // Send generator to identity
         let f = DiscreteDblModelMapping {
             ob_map: HashMap::from([(ustr("x"), ustr("x"))]).into(),
-            mor_map: HashMap::from([(ustr("positive"), Path::Id(ustr("x")))]).into(),
+            mor_map: HashMap::from([(ustr("loop"), Path::Id(ustr("x")))]).into(),
         };
         let dmm = DblModelMorphism(&f, &negloop, &negloop);
         assert!(dmm.validate().is_ok());

@@ -69,7 +69,8 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
         const marker = styleToMarker[style];
         return `url(#arrowhead-${marker})`;
     };
-    const defaultPath = () => <path marker-end={markerUrl()} d={path()} />;
+    const pathId = () => `path${props.edge.id}`;
+    const defaultPath = () => <path id={pathId()} marker-end={markerUrl()} d={path()} />;
 
     const tgtLabel = (text: string) => {
         // Place the target label offset from the target in the direction
@@ -104,6 +105,24 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
                 <Match when={props.edge.style === "indeterminate"}>
                     {defaultPath()}
                     {tgtLabel("?")}
+                </Match>
+                <Match when={props.edge.style === "plusCaesura"}>
+                    {defaultPath()}
+                    {tgtLabel("+")}
+                    <text style="dominant-baseline: central;">
+                        <textPath href={`#${pathId()}`} startOffset="40%">
+                            {"‖"}
+                        </textPath>
+                    </text>
+                </Match>
+                <Match when={props.edge.style === "minusCaesura"}>
+                    {defaultPath()}
+                    {tgtLabel("-")}
+                    <text style="dominant-baseline: central;">
+                        <textPath href={`#${pathId()}`} startOffset="40%">
+                            {"‖"}
+                        </textPath>
+                    </text>
                 </Match>
                 <Match when={props.edge.style === "scalar"}>
                     {defaultPath()}
@@ -186,6 +205,8 @@ const styleToMarker: Record<ArrowStyle, ArrowMarker> = {
     plus: "triangle",
     minus: "triangle",
     indeterminate: "triangle",
+    plusCaesura: "triangle",
+    minusCaesura: "triangle",
     scalar: "triangle",
 };
 

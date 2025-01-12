@@ -1,32 +1,55 @@
 //! Standard library of models of double theories.
 
 use std::sync::Arc;
-use ustr::ustr;
+use ustr::{ustr, Ustr};
 
 use crate::dbl::{model::*, theory::*};
 use crate::one::fin_category::FinMor;
 
 /** The positive self-loop.
 
-A signed graph or free [signed category](super::theories::th_signed_category).
+A signed graph or free [signed category](super::theories::th_signed_category),
+possibly with delays or indeterminates.
  */
 pub fn positive_loop(th: Arc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel {
-    let mut model = UstrDiscreteDblModel::new(th);
-    let x = ustr("x");
-    model.add_ob(x, ustr("Object"));
-    model.add_mor(ustr("positive"), x, x, FinMor::Id(ustr("Object")));
-    model
+    loop_of_type(th, ustr("Object"), FinMor::Id(ustr("Object")))
 }
 
 /** The negative self-loop.
 
-A signed graph or free [signed category](super::theories::th_signed_category).
+A signed graph or free [signed category](super::theories::th_signed_category),
+possibly with delays or indeterminates.
  */
 pub fn negative_loop(th: Arc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel {
+    loop_of_type(th, ustr("Object"), FinMor::Generator(ustr("Negative")))
+}
+
+/** The delayed positive self-loop.
+
+A free [delayable signed category](super::theories::th_delayable_signed_category).
+ */
+pub fn delayed_positive_loop(th: Arc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel {
+    loop_of_type(th, ustr("Object"), FinMor::Generator(ustr("PositiveSlow")))
+}
+
+/** The delayed negative self-loop.
+
+A free [delayable signed category](super::theories::th_delayable_signed_category).
+ */
+pub fn delayed_negative_loop(th: Arc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel {
+    loop_of_type(th, ustr("Object"), FinMor::Generator(ustr("NegativeSlow")))
+}
+
+/// Creates a self-loop with given object and morphism types.
+fn loop_of_type(
+    th: Arc<UstrDiscreteDblTheory>,
+    ob_type: Ustr,
+    mor_type: FinMor<Ustr, Ustr>,
+) -> UstrDiscreteDblModel {
     let mut model = UstrDiscreteDblModel::new(th);
     let x = ustr("x");
-    model.add_ob(x, ustr("Object"));
-    model.add_mor(ustr("negative"), x, x, FinMor::Generator(ustr("Negative")));
+    model.add_ob(x, ob_type);
+    model.add_mor(ustr("loop"), x, x, mor_type);
     model
 }
 
@@ -111,6 +134,15 @@ mod tests {
         assert!(negative_loop(th.clone()).validate().is_ok());
         assert!(positive_feedback(th.clone()).validate().is_ok());
         assert!(negative_feedback(th.clone()).validate().is_ok());
+    }
+
+    #[test]
+    fn delayable_signed_categories() {
+        let th = Arc::new(th_delayable_signed_category());
+        assert!(positive_loop(th.clone()).validate().is_ok());
+        assert!(negative_loop(th.clone()).validate().is_ok());
+        assert!(delayed_positive_loop(th.clone()).validate().is_ok());
+        assert!(delayed_negative_loop(th.clone()).validate().is_ok());
     }
 
     #[test]
