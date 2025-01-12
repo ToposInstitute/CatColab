@@ -106,7 +106,7 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
                     {defaultPath()}
                     {tgtLabel("?")}
                 </Match>
-                <Match when={props.edge.style === "plusDelayed"}>
+                <Match when={props.edge.style === "plusCaesura"}>
                     {defaultPath()}
                     {tgtLabel("+")}
                     <text style="dominant-baseline: central;">
@@ -115,7 +115,7 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
                         </textPath>
                     </text>
                 </Match>
-                <Match when={props.edge.style === "minusDelayed"}>
+                <Match when={props.edge.style === "minusCaesura"}>
                     {defaultPath()}
                     {tgtLabel("-")}
                     <text style="dominant-baseline: central;">
@@ -205,8 +205,8 @@ const styleToMarker: Record<ArrowStyle, ArrowMarker> = {
     plus: "triangle",
     minus: "triangle",
     indeterminate: "triangle",
-    plusDelayed: "triangle",
-    minusDelayed: "triangle",
+    plusCaesura: "triangle",
+    minusCaesura: "triangle",
     scalar: "triangle",
 };
 

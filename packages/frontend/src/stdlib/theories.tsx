@@ -403,7 +403,7 @@ stdTheories.add(
                     morType: { tag: "Basic", content: "PositiveSlow" },
                     name: "Delayed positive link",
                     description: "Slow-acting positive influence",
-                    arrowStyle: "plusDelayed",
+                    arrowStyle: "plusCaesura",
                     preferUnnamed: true,
                 },
                 {
@@ -411,7 +411,7 @@ stdTheories.add(
                     morType: { tag: "Basic", content: "NegativeSlow" },
                     name: "Delayed negative link",
                     description: "Slow-acting negative influence",
-                    arrowStyle: "minusDelayed",
+                    arrowStyle: "minusCaesura",
                     preferUnnamed: true,
                 },
             ],
