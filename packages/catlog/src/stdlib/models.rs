@@ -40,6 +40,7 @@ pub fn delayed_negative_loop(th: Arc<UstrDiscreteDblTheory>) -> UstrDiscreteDblM
     loop_of_type(th, ustr("Object"), FinMor::Generator(ustr("NegativeSlow")))
 }
 
+/// Creates a self-loop with given object and morphism types.
 fn loop_of_type(
     th: Arc<UstrDiscreteDblTheory>,
     ob_type: Ustr,

@@ -1,0 +1,26 @@
+\title{Delayable signed categories}
+\taxon{doctrine}
+\import{macros}
+
+\p{Informally, a delayable signed category is a category graded by signs (plus
+or minus) and, independently, by speed (fast or slow).}
+
+\subtree{
+\title{Delayable signed category}
+\taxon{definition}
+
+\p{A \define{delayable signed category} is a category sliced over the product
+monoid #{M \coloneqq\{+1,-1\} \times \{1,0\}}, where both component monoids are
+equipped with their usual multiplications.}
+
+}
+
+\p{In the second component of #{M}, we interpret the identity element #{1} as
+"fast" and the absorbing element #{0} as "slow" or "delayed".}
+
+\transclude{thy-000B}
+
+\p{A free model of this double theory a causal loop diagram in which edges can
+be optionally marked as delayed. An example is this causal loop diagram for the
+[temperature control of a
+shower](https://sustainabilitymethods.org/index.php/File:Causal_Loop_Delays.png).}

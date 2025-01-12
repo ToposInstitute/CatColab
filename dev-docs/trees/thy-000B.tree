@@ -1,0 +1,7 @@
+\title{Theory of delayable signed categories}
+\taxon{theory}
+\import{macros}
+
+\p{The \define{theory of delayable signed categories} is the simple double
+theory with a single object and with proarrows given by the elements of the
+monoid #{M} [defined previously](dct-000B).}
