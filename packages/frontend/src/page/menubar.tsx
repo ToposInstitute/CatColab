@@ -44,7 +44,7 @@ export const MenuSeparator = DropdownMenu.Separator;
 Contains menu items common to all pages, plus space for page-specific items.
  */
 export function AppMenu(props: {
-    children: JSX.Element;
+    children?: JSX.Element;
     disabled?: boolean;
 }) {
     const [loginOpen, setLoginOpen] = createSignal(false);
@@ -54,7 +54,9 @@ export function AppMenu(props: {
         <>
             <HamburgerMenu>
                 {props.children}
-                <MenuSeparator />
+                <Show when={props.children}>
+                    <MenuSeparator />
+                </Show>
                 <HelpMenuItem />
                 <LogInOrOutMenuItem showLogin={() => setLoginOpen(true)} />
             </HamburgerMenu>
