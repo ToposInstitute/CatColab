@@ -5,6 +5,7 @@ import invariant from "tiny-invariant";
 import { IconButton } from "../components";
 import { TheoryLibraryContext } from "../stdlib";
 import type { Theory } from "../theory";
+import { AppMenu } from "./menubar";
 
 import CircleHelp from "lucide-solid/icons/circle-help";
 
@@ -17,16 +18,25 @@ export function Toolbar(props: {
     return <div class="toolbar">{props.children}</div>;
 }
 
-/** Toolbar with branding on the left. */
-export function BrandedToolbar(props: {
+/** Toolbar with default application menu. */
+export function DefaultToolbar(props: {
     children?: JSX.Element;
 }) {
     return (
         <Toolbar>
-            <Brand />
+            <AppMenu />
             <span class="filler" />
             {props.children}
         </Toolbar>
+    );
+}
+
+/** Default toolbar with branding on the right. */
+export function BrandedToolbar() {
+    return (
+        <DefaultToolbar>
+            <Brand />
+        </DefaultToolbar>
     );
 }
 

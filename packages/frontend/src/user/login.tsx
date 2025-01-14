@@ -9,7 +9,8 @@ import {
     signInWithEmailAndPassword,
     signInWithPopup,
 } from "firebase/auth";
-import { useFirebaseApp } from "solid-firebase";
+import { useAuth, useFirebaseApp } from "solid-firebase";
+import { type JSX, Match, Switch } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { useApi } from "../api";
@@ -129,5 +130,29 @@ export function Login(props: {
                 </IconButton>
             </div>
         </div>
+    );
+}
+
+/** Content gated by a login panel.
+
+If the user is logged in, the children of this component will be displayed;
+otherwise, a login panel is shown.
+ */
+export function LoginGate(props: {
+    children: JSX.Element;
+}) {
+    const firebaseApp = useFirebaseApp();
+    const auth = useAuth(getAuth(firebaseApp));
+
+    return (
+        <Switch>
+            <Match when={!auth.loading && !auth.data}>
+                <div class="login-gate">
+                    <p>{"To access this page, please log in."}</p>
+                    <Login />
+                </div>
+            </Match>
+            <Match when={auth.data}>{props.children}</Match>
+        </Switch>
     );
 }

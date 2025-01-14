@@ -24,7 +24,7 @@ import {
     NotebookEditor,
     newFormalCell,
 } from "../notebook";
-import { HamburgerMenu, TheoryHelpButton, Toolbar } from "../page";
+import { AppMenu, TheoryHelpButton, Toolbar } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { AnalysisMeta } from "../theory";
 import { LiveAnalysisContext } from "./context";
@@ -143,7 +143,7 @@ export function AnalysisDocumentEditor(props: {
 const AnalysisMenu = (props: {
     liveAnalysis?: LiveAnalysisDocument;
 }) => (
-    <HamburgerMenu disabled={props.liveAnalysis === undefined}>
+    <AppMenu disabled={props.liveAnalysis === undefined}>
         <Switch>
             <Match
                 when={props.liveAnalysis?.analysisType === "model" && props.liveAnalysis.liveModel}
@@ -158,7 +158,7 @@ const AnalysisMenu = (props: {
                 {(liveDiagram) => <DiagramMenuItems liveDiagram={liveDiagram()} />}
             </Match>
         </Switch>
-    </HamburgerMenu>
+    </AppMenu>
 );
 
 const AnalysisOfPane = (props: {

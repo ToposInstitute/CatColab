@@ -1,18 +1,12 @@
 import { type DocHandle, Repo, isValidDocumentId } from "@automerge/automerge-repo";
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
 import { type FirebaseOptions, initializeApp } from "firebase/app";
-import {
-    createUserWithEmailAndPassword,
-    deleteUser,
-    getAuth,
-    signInWithEmailAndPassword,
-    signOut,
-} from "firebase/auth";
+import { createUserWithEmailAndPassword, deleteUser, getAuth, signOut } from "firebase/auth";
 import * as uuid from "uuid";
 import { assert, afterAll, describe, test } from "vitest";
 
-import type { RpcResult } from "catcolab-api";
 import { createRpcClient } from "./rpc.ts";
+import { unwrap, unwrapErr } from "./test_util.ts";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
 const repoUrl = import.meta.env.VITE_AUTOMERGE_REPO_URL;
@@ -80,17 +74,14 @@ describe("RPC for Automerge documents", async () => {
 
 describe("Authorized RPC", async () => {
     const auth = getAuth(firebaseApp);
-    const email = "test@catcolab.org";
+    const email = "test-document-rpc@catcolab.org";
     const password = "foobar";
     await createUserWithEmailAndPassword(auth, email, password);
 
     const user = auth.currentUser;
     afterAll(async () => user && (await deleteUser(user)));
 
-    const signUpResult = await rpc.sign_up_or_sign_in.mutate();
-    test.sequential("should allow sign up when authenticated", () => {
-        assert.strictEqual(signUpResult.tag, "Ok");
-    });
+    unwrap(await rpc.sign_up_or_sign_in.mutate());
 
     const content = {
         type: "model",
@@ -128,11 +119,6 @@ describe("Authorized RPC", async () => {
 
     await signOut(auth);
 
-    const unauthorizedResult = await rpc.sign_up_or_sign_in.mutate();
-    test.sequential("should prohibit sign in when unauthenticated", () => {
-        assert.strictEqual(unwrapErr(unauthorizedResult).code, 401);
-    });
-
     const forbiddenResult1 = await rpc.head_snapshot.query(privateId);
     const forbiddenResult2 = await rpc.get_doc.query(privateId);
     test.sequential("should prohibit document access when unauthenticated", () => {
@@ -144,21 +130,4 @@ describe("Authorized RPC", async () => {
     test.sequential("should allow read-only document access when unauthenticated", () => {
         assert.strictEqual(readonlyDoc.tag, "Readonly");
     });
-
-    await signInWithEmailAndPassword(auth, email, password);
-
-    const signInResult = await rpc.sign_up_or_sign_in.mutate();
-    test.sequential("should allow sign in when authenticated", () => {
-        assert.strictEqual(signInResult.tag, "Ok");
-    });
 });
-
-function unwrap<T>(result: RpcResult<T>): T {
-    assert.strictEqual(result.tag, "Ok");
-    return (result as RpcResult<T> & { tag: "Ok" }).content;
-}
-
-function unwrapErr<T>(result: RpcResult<T>): { code: number; message: string } {
-    assert.strictEqual(result.tag, "Err");
-    return result as RpcResult<T> & { tag: "Err" };
-}

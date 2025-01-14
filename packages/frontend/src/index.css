@@ -95,6 +95,12 @@ h4 {
     flex-grow: 1;
 }
 
+.page-container {
+    max-width: 100ex;
+    margin: 0 auto;
+    padding-bottom: 10ex;
+}
+
 .side-panel {
     background: #f8f8f8;
 }

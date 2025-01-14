@@ -83,6 +83,10 @@ const routes: RouteDefinition[] = [
         children: helpRoutes,
     },
     {
+        path: "/profile",
+        component: lazy(() => import("./user/profile")),
+    },
+    {
         path: "*",
         component: lazy(() => import("./page/404_page")),
     },

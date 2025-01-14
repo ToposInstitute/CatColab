@@ -11,6 +11,7 @@ import CircleHelp from "lucide-solid/icons/circle-help";
 import LogInIcon from "lucide-solid/icons/log-in";
 import LogOutIcon from "lucide-solid/icons/log-out";
 import MenuIcon from "lucide-solid/icons/menu";
+import SettingsIcon from "lucide-solid/icons/settings";
 
 import "./menubar.css";
 
@@ -44,9 +45,12 @@ export const MenuSeparator = DropdownMenu.Separator;
 Contains menu items common to all pages, plus space for page-specific items.
  */
 export function AppMenu(props: {
-    children: JSX.Element;
+    children?: JSX.Element;
     disabled?: boolean;
 }) {
+    const firebaseApp = useFirebaseApp();
+    const auth = useAuth(getAuth(firebaseApp));
+
     const [loginOpen, setLoginOpen] = createSignal(false);
 
     // Root the dialog here so that it is not destroyed when the menu closes.
@@ -54,9 +58,17 @@ export function AppMenu(props: {
         <>
             <HamburgerMenu>
                 {props.children}
-                <MenuSeparator />
+                <Show when={props.children}>
+                    <MenuSeparator />
+                </Show>
                 <HelpMenuItem />
-                <LogInOrOutMenuItem showLogin={() => setLoginOpen(true)} />
+                <Show
+                    when={auth.data}
+                    fallback={<LogInMenuItem showLogin={() => setLoginOpen(true)} />}
+                >
+                    <SettingsMenuItem />
+                    <LogOutMenuItem />
+                </Show>
             </HamburgerMenu>
             <Dialog open={loginOpen()} onOpenChange={setLoginOpen} title="Log in">
                 <Login onComplete={() => setLoginOpen(false)} />
@@ -74,20 +86,6 @@ function HelpMenuItem() {
             <CircleHelp />
             <MenuItemLabel>Help</MenuItemLabel>
         </MenuItem>
-    );
-}
-
-/** Menu item to log in or out, depending on auth state. */
-function LogInOrOutMenuItem(props: {
-    showLogin: () => void;
-}) {
-    const firebaseApp = useFirebaseApp();
-    const state = useAuth(getAuth(firebaseApp));
-
-    return (
-        <Show when={!state.data} fallback={<LogOutMenuItem />}>
-            <LogInMenuItem showLogin={props.showLogin} />
-        </Show>
     );
 }
 
@@ -109,6 +107,17 @@ function LogOutMenuItem() {
         <MenuItem onSelect={() => signOut(getAuth(firebaseApp))}>
             <LogOutIcon />
             <MenuItemLabel>{"Log out"}</MenuItemLabel>
+        </MenuItem>
+    );
+}
+
+function SettingsMenuItem() {
+    const navigate = useNavigate();
+
+    return (
+        <MenuItem onSelect={() => navigate("/profile")}>
+            <SettingsIcon />
+            <MenuItemLabel>Settings</MenuItemLabel>
         </MenuItem>
     );
 }

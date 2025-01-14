@@ -1,4 +1,4 @@
-import { uuidv7 } from "uuidv7";
+import { v7 } from "uuid";
 
 import { DblModelDiagram } from "catlog-wasm";
 import type {
@@ -35,7 +35,7 @@ export type DiagramObjectDecl = DiagramObDecl & {
 /** Create a new diagram object declaration with the given object type. */
 export const newDiagramObjectDecl = (obType: ObType, over?: Ob): DiagramObjectDecl => ({
     tag: "object",
-    id: uuidv7(),
+    id: v7(),
     name: "",
     obType,
     over: over ?? null,
@@ -52,7 +52,7 @@ export type DiagramMorphismDecl = DiagramMorDecl & {
 /** Create a new diagram morphism declaration with the given morphism type. */
 export const newDiagramMorphismDecl = (morType: MorType, over?: Mor): DiagramMorphismDecl => ({
     tag: "morphism",
-    id: uuidv7(),
+    id: v7(),
     name: "",
     morType,
     over: over ?? null,
@@ -63,7 +63,7 @@ export const newDiagramMorphismDecl = (morType: MorType, over?: Mor): DiagramMor
 /** Duplicate a diagram judgment, creating a fresh UUID. */
 export const duplicateDiagramJudgment = (jgmt: DiagramJudgment): DiagramJudgment => ({
     ...deepCopyJSON(jgmt),
-    id: uuidv7(),
+    id: v7(),
 });
 
 /** Construct a diagram in `catlog` from a sequence of judgments. */
