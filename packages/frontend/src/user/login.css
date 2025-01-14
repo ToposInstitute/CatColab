@@ -52,3 +52,9 @@
 .separator:not(:empty)::after {
     margin-left: 0.5em;
 }
+
+.login-gate {
+    max-width: 30em;
+    margin-left: auto;
+    margin-right: auto;
+}
