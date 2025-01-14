@@ -133,7 +133,11 @@ export function Login(props: {
     );
 }
 
-/** Content visible only when the user is logged. */
+/** Content gated by a login panel.
+
+If the user is logged in, the children of this component will be displayed;
+otherwise, a login panel is shown.
+ */
 export function LoginGate(props: {
     children: JSX.Element;
 }) {

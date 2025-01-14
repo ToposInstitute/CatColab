@@ -3,6 +3,7 @@ import { createEffect, createResource } from "solid-js";
 
 import type { UserProfile } from "catcolab-api";
 import { useApi } from "../api";
+import { FormGroup, TextInputItem } from "../components";
 import { BrandedToolbar } from "../page";
 import { LoginGate } from "./login";
 
@@ -11,7 +12,8 @@ export default function UserProfilePage() {
     return (
         <div class="growable-container">
             <BrandedToolbar />
-            <div class="profile-container">
+            <div class="page-container">
+                <h2>Public profile</h2>
                 <UserProfileForm />
             </div>
         </div>
@@ -42,22 +44,28 @@ function UserProfileForm() {
     return (
         <LoginGate>
             <Form onSubmit={onSubmit}>
-                <Field name="username">
-                    {(field, props) => (
-                        <label>
-                            <span>Username</span>
-                            <input {...props} type="text" value={field.value ?? ""} />
-                        </label>
-                    )}
-                </Field>
-                <Field name="display_name">
-                    {(field, props) => (
-                        <label>
-                            <span>Display name</span>
-                            <input {...props} type="text" value={field.value ?? ""} />
-                        </label>
-                    )}
-                </Field>
+                <FormGroup>
+                    <Field name="username">
+                        {(field, props) => (
+                            <TextInputItem
+                                {...props}
+                                id="username"
+                                label="Username"
+                                value={field.value ?? ""}
+                            />
+                        )}
+                    </Field>
+                    <Field name="display_name">
+                        {(field, props) => (
+                            <TextInputItem
+                                {...props}
+                                id="display_name"
+                                label="Display name"
+                                value={field.value ?? ""}
+                            />
+                        )}
+                    </Field>
+                </FormGroup>
                 <button type="submit">Update profile</button>
             </Form>
         </LoginGate>

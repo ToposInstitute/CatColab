@@ -10,7 +10,7 @@ export default function HelpContainer(props: {
     return (
         <div class="growable-container">
             <BrandedToolbar />
-            <div class="help-container">{props.children}</div>
+            <div class="page-container help-container">{props.children}</div>
         </div>
     );
 }

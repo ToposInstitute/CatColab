@@ -1,8 +1,4 @@
 .help-container {
-    max-width: 100ex;
-    margin: 0 auto;
-    padding-bottom: 10ex;
-
     & a {
         color: #007481;
         text-decoration: none;

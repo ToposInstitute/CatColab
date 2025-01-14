@@ -1,0 +1,20 @@
+form input {
+    background: whitesmoke;
+    border: 1px solid lightgray;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: larger;
+}
+
+.form-group {
+    & dt {
+        font-weight: 500;
+        margin-bottom: 0.25rem;
+    }
+    & dd {
+        margin-left: 0;
+    }
+    & dd:not(:last-child) {
+        margin-bottom: 1rem;
+    }
+}
