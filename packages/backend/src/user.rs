@@ -72,9 +72,10 @@ pub async fn set_active_user_profile(ctx: AppCtx, profile: UserProfile) -> Resul
     };
     profile.validate().map_err(AppError::Invalid)?;
 
+    // Once set, a username cannot be unset, only changed to a new name.
     let query = sqlx::query!(
         "
-        UPDATE users SET username = $2, display_name = $3
+        UPDATE users SET username = COALESCE($2, username), display_name = $3
         WHERE id = $1
         ",
         user.user_id,
