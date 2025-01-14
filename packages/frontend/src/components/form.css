@@ -12,9 +12,17 @@ form input {
         margin-bottom: 0.25rem;
     }
     & dd {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
         margin-left: 0;
+        width: fit-content;
     }
     & dd:not(:last-child) {
         margin-bottom: 1rem;
+    }
+
+    & .error {
+        color: firebrick;
     }
 }

@@ -1,4 +1,4 @@
-import { type ComponentProps, type JSX, splitProps } from "solid-js";
+import { type ComponentProps, type JSX, Show, splitProps } from "solid-js";
 
 import "./form.css";
 
@@ -14,9 +14,10 @@ export function TextInputItem(
     allProps: {
         id: string;
         label: string | JSX.Element;
+        error?: string;
     } & ComponentProps<"input">,
 ) {
-    const [props, inputProps] = splitProps(allProps, ["id", "label"]);
+    const [props, inputProps] = splitProps(allProps, ["id", "label", "error"]);
 
     return (
         <>
@@ -25,7 +26,14 @@ export function TextInputItem(
             </dt>
             <dd>
                 <input {...inputProps} id={props.id} type="text" />
+                <InputError error={props.error} />
             </dd>
         </>
     );
 }
+
+const InputError = (props: { error?: string }) => (
+    <Show when={props.error}>
+        <div class="error">{props.error}</div>
+    </Show>
+);
