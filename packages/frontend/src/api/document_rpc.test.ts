@@ -113,6 +113,7 @@ describe("Authorized RPC", async () => {
             },
             permissions: {
                 anyone: "Read",
+                users: {},
             },
         }),
     );

@@ -14,3 +14,5 @@ CREATE TABLE permissions (
     level permission_level NOT NULL,
     CONSTRAINT permissions_is_relation UNIQUE (subject, object)
 );
+
+CREATE INDEX ON permissions (object);

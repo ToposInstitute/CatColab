@@ -1,10 +1,15 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT level as \"level: PermissionLevel\" FROM permissions\n        WHERE object = $1 and subject = $2\n        ",
+  "query": "\n        SELECT subject as \"user\", level as \"level: PermissionLevel\"\n        FROM permissions WHERE object = $1\n        ",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
+        "name": "user",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
         "name": "level: PermissionLevel",
         "type_info": {
           "Custom": {
@@ -23,13 +28,13 @@
     ],
     "parameters": {
       "Left": [
-        "Uuid",
-        "Text"
+        "Uuid"
       ]
     },
     "nullable": [
+      true,
       false
     ]
   },
-  "hash": "c28089f061f8d1442acfb1ee1bf4d9bb51fedeb1689a5e0139d684db471adb01"
+  "hash": "f8133743db19d27c6893e00041dc9b8c5674282bd76bfc3e0d180796a95a927f"
 }

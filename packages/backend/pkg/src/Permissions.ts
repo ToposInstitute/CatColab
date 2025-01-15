@@ -2,6 +2,18 @@
 import type { PermissionLevel } from "./PermissionLevel";
 
 /**
- * Global and user permission levels on a document.
+ * Permissions set on a document.
  */
-export type Permissions = { anyone?: PermissionLevel, user?: PermissionLevel, };
+export type Permissions = { 
+/**
+ * Permission level of anyone, logged in or not.
+ */
+anyone?: PermissionLevel, 
+/**
+ * Permission level of the current user, if any.
+ */
+user?: PermissionLevel, 
+/**
+ * Permission levels of all other users.
+ */
+users: { [key in string]?: PermissionLevel }, };

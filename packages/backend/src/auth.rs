@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use firebase_auth::{FirebaseAuth, FirebaseUser};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
@@ -17,16 +19,49 @@ pub enum PermissionLevel {
     Own,
 }
 
-/// Global and user permission levels on a document.
+/// Permissions set on a document.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, TS)]
 pub struct Permissions {
+    /// Permission level of anyone, logged in or not.
     #[ts(optional)]
     pub anyone: Option<PermissionLevel>,
+
+    /// Permission level of the current user, if any.
     #[ts(optional)]
     pub user: Option<PermissionLevel>,
+
+    /// Permission levels of all other users.
+    pub users: HashMap<String, PermissionLevel>,
+}
+
+/// Permission entry for a document.
+struct PermissionEntry {
+    user: Option<String>,
+    level: PermissionLevel,
 }
 
 impl Permissions {
+    /// Construct from a list of permission entries.
+    fn from_entries(user: Option<String>, mut entries: Vec<PermissionEntry>) -> Self {
+        let mut anyone_level = None;
+        if let Some(i) = entries.iter().position(|entry| entry.user.is_none()) {
+            anyone_level = Some(entries.swap_remove(i).level);
+        }
+        let mut user_level = None;
+        if let Some(i) = entries.iter().position(|entry| entry.user == user) {
+            user_level = Some(entries.swap_remove(i).level);
+        }
+        let other_levels: HashMap<_, _> = entries
+            .into_iter()
+            .filter_map(|entry| entry.user.map(|id| (id, entry.level)))
+            .collect();
+        Self {
+            anyone: anyone_level,
+            user: user_level,
+            users: other_levels,
+        }
+    }
+
     /// Gets the highest level of permissions allowed.
     pub fn max_level(self) -> Option<PermissionLevel> {
         self.anyone.into_iter().chain(self.user).reduce(std::cmp::max)
@@ -86,30 +121,23 @@ pub async fn max_permission_level(
 
 /// Gets the permissions allowed for a ref.
 pub async fn permissions(ctx: &AppCtx, ref_id: Uuid) -> Result<Permissions, AppError> {
-    let query = sqlx::query_scalar!(
+    let query = sqlx::query_as!(
+        PermissionEntry,
         r#"
-        SELECT level as "level: PermissionLevel" FROM permissions
-        WHERE object = $1 and subject iS NULL
+        SELECT subject as "user", level as "level: PermissionLevel"
+        FROM permissions WHERE object = $1
         "#,
         ref_id
     );
-    let anyone = query.fetch_optional(&ctx.state.db).await?;
+    let entries = query.fetch_all(&ctx.state.db).await?;
 
-    let query = sqlx::query_scalar!(
-        r#"
-        SELECT level as "level: PermissionLevel" FROM permissions
-        WHERE object = $1 and subject = $2
-        "#,
-        ref_id,
-        ctx.user.as_ref().map(|user| user.user_id.clone())
-    );
-    let user = query.fetch_optional(&ctx.state.db).await?;
+    let user_id = ctx.user.as_ref().map(|user| user.user_id.clone());
+    let permissions = Permissions::from_entries(user_id, entries);
 
-    if anyone.is_none() && user.is_none() {
+    if permissions.anyone.is_none() && permissions.user.is_none() {
         ref_exists(ctx, ref_id).await?;
     }
-
-    Ok(Permissions { anyone, user })
+    Ok(permissions)
 }
 
 /// Inserts or updates permissions for a ref-user pair.
