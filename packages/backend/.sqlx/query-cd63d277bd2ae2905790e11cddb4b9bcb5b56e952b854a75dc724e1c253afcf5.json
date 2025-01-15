@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        DELETE FROM permissions WHERE object = $1 AND level < 'own'\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "cd63d277bd2ae2905790e11cddb4b9bcb5b56e952b854a75dc724e1c253afcf5"
+}

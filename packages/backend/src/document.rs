@@ -6,15 +6,11 @@ use ts_rs::TS;
 use uuid::Uuid;
 
 use super::app::{AppCtx, AppError, AppState};
-use super::auth::{upsert_permission, PermissionLevel, Permissions};
+use super::auth::{set_permissions, PermissionLevel, Permissions};
 
 /// Creates a new document ref with initial content.
-pub async fn new_ref(ctx: AppCtx, input: NewRef) -> Result<Uuid, AppError> {
+pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
     let ref_id = Uuid::now_v7();
-    let NewRef {
-        content,
-        permissions,
-    } = input;
 
     let query = sqlx::query!(
         "
@@ -31,15 +27,20 @@ pub async fn new_ref(ctx: AppCtx, input: NewRef) -> Result<Uuid, AppError> {
     );
     query.execute(&ctx.state.db).await?;
 
-    // Set initial permissions for ref.
-    let user_id = ctx.user.map(|user| user.user_id);
-    if user_id.is_some() {
-        if let Some(anyone_level) = permissions.anyone {
-            upsert_permission(&ctx.state, ref_id, None, anyone_level).await?;
+    let initial_permissions = if ctx.user.is_some() {
+        Permissions {
+            anyone: None,
+            user: Some(PermissionLevel::Own),
+            users: None,
         }
-    }
-    let user_level = permissions.user.unwrap_or(PermissionLevel::Own);
-    upsert_permission(&ctx.state, ref_id, user_id, user_level).await?;
+    } else {
+        Permissions {
+            anyone: Some(PermissionLevel::Own),
+            user: None,
+            users: None,
+        }
+    };
+    set_permissions(&ctx, ref_id, initial_permissions).await?;
 
     Ok(ref_id)
 }
@@ -115,15 +116,6 @@ pub async fn doc_id(state: AppState, ref_id: Uuid) -> Result<String, AppError> {
         let response = ack.await?;
         Ok(response.data[0].to_string())
     }
-}
-
-/// Input to the [`new_ref`] procedure.
-#[derive(Debug, Deserialize, TS)]
-pub struct NewRef {
-    pub content: Value,
-    #[ts(optional, as = "Option<_>")]
-    #[serde(default)]
-    pub permissions: Permissions,
 }
 
 /// A document ref along with its content.

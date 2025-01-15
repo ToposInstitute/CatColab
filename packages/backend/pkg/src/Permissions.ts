@@ -6,14 +6,15 @@ import type { PermissionLevel } from "./PermissionLevel";
  */
 export type Permissions = { 
 /**
- * Permission level of anyone, logged in or not.
+ * Base permission level for any person, logged in or not.
  */
 anyone?: PermissionLevel, 
 /**
- * Permission level of the current user, if any.
+ * Permission level for the current user.
  */
 user?: PermissionLevel, 
-/**
- * Permission levels of all other users.
- */
-users: { [key in string]?: PermissionLevel }, };
+/** Permission levels for all other users.
+
+    Only owners of the document have access to this information.
+     */
+users?: { [key in string]?: PermissionLevel }, };

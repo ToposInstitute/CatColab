@@ -18,6 +18,8 @@ pub fn router() -> Router<AppState> {
         .handler(get_doc)
         .handler(head_snapshot)
         .handler(save_snapshot)
+        .handler(get_permissions)
+        .handler(set_permissions)
         .handler(sign_up_or_sign_in)
         .handler(username_status)
         .handler(get_active_user_profile)
@@ -25,18 +27,17 @@ pub fn router() -> Router<AppState> {
 }
 
 #[handler(mutation)]
-async fn new_ref(ctx: AppCtx, input: doc::NewRef) -> RpcResult<Uuid> {
-    doc::new_ref(ctx, input).await.into()
+async fn new_ref(ctx: AppCtx, content: Value) -> RpcResult<Uuid> {
+    doc::new_ref(ctx, content).await.into()
 }
 
 #[handler(query)]
 async fn get_doc(ctx: AppCtx, ref_id: Uuid) -> RpcResult<RefDoc> {
     _get_doc(ctx, ref_id).await.into()
 }
-
 async fn _get_doc(ctx: AppCtx, ref_id: Uuid) -> Result<RefDoc, AppError> {
     let permissions = auth::permissions(&ctx, ref_id).await?;
-    let max_level = permissions.clone().max_level();
+    let max_level = permissions.max_level();
     if max_level >= Some(PermissionLevel::Write) {
         let doc_id = doc::doc_id(ctx.state, ref_id).await?;
         Ok(RefDoc::Live {
@@ -58,11 +59,12 @@ async fn _get_doc(ctx: AppCtx, ref_id: Uuid) -> Result<RefDoc, AppError> {
 #[derive(Clone, Debug, Serialize, TS)]
 #[serde(tag = "tag")]
 enum RefDoc {
-    /// Readonly document, containing content at current head.
+    /// Readonly document, containing content at the current head.
     Readonly {
         content: Value,
         permissions: Permissions,
     },
+
     /// Live document, containing an Automerge document ID.
     Live {
         #[serde(rename = "docId")]
@@ -87,6 +89,24 @@ async fn save_snapshot(ctx: AppCtx, data: doc::RefContent) -> RpcResult<()> {
 async fn _save_snapshot(ctx: AppCtx, data: doc::RefContent) -> Result<(), AppError> {
     auth::authorize(&ctx, data.ref_id, PermissionLevel::Write).await?;
     doc::save_snapshot(ctx.state, data).await
+}
+
+#[handler(query)]
+async fn get_permissions(ctx: AppCtx, ref_id: Uuid) -> RpcResult<Permissions> {
+    auth::permissions(&ctx, ref_id).await.into()
+}
+
+#[handler(mutation)]
+async fn set_permissions(ctx: AppCtx, ref_id: Uuid, permissions: Permissions) -> RpcResult<()> {
+    _set_permissions(ctx, ref_id, permissions).await.into()
+}
+async fn _set_permissions(
+    ctx: AppCtx,
+    ref_id: Uuid,
+    permissions: Permissions,
+) -> Result<(), AppError> {
+    auth::authorize(&ctx, ref_id, PermissionLevel::Own).await?;
+    auth::set_permissions(&ctx, ref_id, permissions).await
 }
 
 #[handler(mutation)]

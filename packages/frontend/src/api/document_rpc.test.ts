@@ -27,7 +27,7 @@ describe("RPC for Automerge documents", async () => {
         type: "model",
         name: "My model",
     };
-    const refId = unwrap(await rpc.new_ref.mutate({ content }));
+    const refId = unwrap(await rpc.new_ref.mutate(content));
     test.sequential("should get a valid ref UUID", () => {
         assert(uuid.validate(refId));
     });
@@ -87,7 +87,7 @@ describe("Authorized RPC", async () => {
         type: "model",
         name: "My private model",
     };
-    const privateId = unwrap(await rpc.new_ref.mutate({ content }));
+    const privateId = unwrap(await rpc.new_ref.mutate(content));
     test.sequential("should get a valid ref UUID when authenticated", () => {
         assert(uuid.validate(privateId));
     });
@@ -107,16 +107,13 @@ describe("Authorized RPC", async () => {
 
     const readonlyId = unwrap(
         await rpc.new_ref.mutate({
-            content: {
-                type: "model",
-                name: "My readonly model",
-            },
-            permissions: {
-                anyone: "Read",
-                users: {},
-            },
+            type: "model",
+            name: "My readonly model",
         }),
     );
+    await rpc.set_permissions.mutate(readonlyId, {
+        anyone: "Read",
+    });
 
     await signOut(auth);
 

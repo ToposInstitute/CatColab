@@ -1,0 +1,35 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO permissions(subject, object, level)\n        SELECT * FROM UNNEST($1::text[], $2::uuid[], $3::permission_level[])\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "TextArray",
+        "UuidArray",
+        {
+          "Custom": {
+            "name": "permission_level[]",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "permission_level",
+                  "kind": {
+                    "Enum": [
+                      "read",
+                      "write",
+                      "maintain",
+                      "own"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "eea510d03cc559aa11d46aafe38f57789f5c2e791800f78a751602cc8336c84f"
+}

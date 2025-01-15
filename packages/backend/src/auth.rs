@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 use uuid::Uuid;
 
-use super::app::{AppCtx, AppError, AppState};
+use super::app::{AppCtx, AppError};
 
 /// Levels of permission that a user can have on a document.
 #[derive(
@@ -22,16 +22,74 @@ pub enum PermissionLevel {
 /// Permissions set on a document.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, TS)]
 pub struct Permissions {
-    /// Permission level of anyone, logged in or not.
+    /// Base permission level for any person, logged in or not.
     #[ts(optional)]
     pub anyone: Option<PermissionLevel>,
 
-    /// Permission level of the current user, if any.
+    /// Permission level for the current user.
     #[ts(optional)]
     pub user: Option<PermissionLevel>,
 
-    /// Permission levels of all other users.
-    pub users: HashMap<String, PermissionLevel>,
+    /** Permission levels for all other users.
+
+    Only owners of the document have access to this information.
+     */
+    #[ts(optional)]
+    pub users: Option<HashMap<String, PermissionLevel>>,
+}
+
+impl Permissions {
+    /// Constructs from a list of permission entries.
+    fn from_entries(mut entries: Vec<PermissionEntry>, user_id: Option<String>) -> Self {
+        let mut anyone = None;
+        if let Some(i) = entries.iter().position(|entry| entry.user.is_none()) {
+            anyone = Some(entries.swap_remove(i).level);
+        }
+
+        let mut user = None;
+        if let Some(i) = entries.iter().position(|entry| entry.user == user_id) {
+            user = Some(entries.swap_remove(i).level);
+        }
+
+        let mut users = None;
+        if user == Some(PermissionLevel::Own) {
+            users = Some(
+                entries
+                    .into_iter()
+                    .filter_map(|entry| entry.user.map(|id| (id, entry.level)))
+                    .collect(),
+            );
+        }
+
+        Self {
+            anyone,
+            user,
+            users,
+        }
+    }
+
+    /// Converts into a list of permission entries.
+    fn to_entries(self, user_id: Option<String>) -> Vec<PermissionEntry> {
+        let mut entries = Vec::new();
+        if let Some(users) = self.users {
+            entries = users
+                .into_iter()
+                .map(|(user, level)| PermissionEntry::new(Some(user), level))
+                .collect();
+        }
+        if let Some(level) = self.anyone {
+            entries.push(PermissionEntry::new(None, level));
+        }
+        if let Some(level) = self.user {
+            entries.push(PermissionEntry::new(user_id, level));
+        }
+        entries
+    }
+
+    /// Gets the highest level of permissions allowed.
+    pub fn max_level(&self) -> Option<PermissionLevel> {
+        self.anyone.clone().into_iter().chain(self.user.clone()).reduce(std::cmp::max)
+    }
 }
 
 /// Permission entry for a document.
@@ -40,31 +98,9 @@ struct PermissionEntry {
     level: PermissionLevel,
 }
 
-impl Permissions {
-    /// Construct from a list of permission entries.
-    fn from_entries(user: Option<String>, mut entries: Vec<PermissionEntry>) -> Self {
-        let mut anyone_level = None;
-        if let Some(i) = entries.iter().position(|entry| entry.user.is_none()) {
-            anyone_level = Some(entries.swap_remove(i).level);
-        }
-        let mut user_level = None;
-        if let Some(i) = entries.iter().position(|entry| entry.user == user) {
-            user_level = Some(entries.swap_remove(i).level);
-        }
-        let other_levels: HashMap<_, _> = entries
-            .into_iter()
-            .filter_map(|entry| entry.user.map(|id| (id, entry.level)))
-            .collect();
-        Self {
-            anyone: anyone_level,
-            user: user_level,
-            users: other_levels,
-        }
-    }
-
-    /// Gets the highest level of permissions allowed.
-    pub fn max_level(self) -> Option<PermissionLevel> {
-        self.anyone.into_iter().chain(self.user).reduce(std::cmp::max)
+impl PermissionEntry {
+    fn new(user: Option<String>, level: PermissionLevel) -> Self {
+        Self { user, level }
     }
 }
 
@@ -112,6 +148,7 @@ pub async fn max_permission_level(
     );
     let level = query.fetch_one(&ctx.state.db).await?;
 
+    // Return 404 if the ref does not exist at all.
     if level.is_none() {
         ref_exists(ctx, ref_id).await?;
     }
@@ -131,34 +168,49 @@ pub async fn permissions(ctx: &AppCtx, ref_id: Uuid) -> Result<Permissions, AppE
     );
     let entries = query.fetch_all(&ctx.state.db).await?;
 
-    let user_id = ctx.user.as_ref().map(|user| user.user_id.clone());
-    let permissions = Permissions::from_entries(user_id, entries);
-
-    if permissions.anyone.is_none() && permissions.user.is_none() {
+    // Return 404 if the ref does not exist at all.
+    if entries.is_empty() {
         ref_exists(ctx, ref_id).await?;
     }
-    Ok(permissions)
+
+    let user_id = ctx.user.as_ref().map(|user| user.user_id.clone());
+    Ok(Permissions::from_entries(entries, user_id))
 }
 
-/// Inserts or updates permissions for a ref-user pair.
-pub async fn upsert_permission(
-    state: &AppState,
+/// Sets or updates permissions for a ref.
+pub async fn set_permissions(
+    ctx: &AppCtx,
     ref_id: Uuid,
-    user_id: Option<String>,
-    level: PermissionLevel,
+    permissions: Permissions,
 ) -> Result<(), AppError> {
-    let query = sqlx::query!(
+    let user_id = ctx.user.as_ref().map(|user| user.user_id.clone());
+    let entries = permissions.to_entries(user_id);
+    let objects: Vec<_> = entries.iter().map(|_| ref_id).collect();
+    let levels: Vec<_> = entries.iter().map(|entry| entry.level).collect();
+    let subjects: Vec<_> = entries.into_iter().map(|entry| entry.user).collect();
+
+    let mut transaction = ctx.state.db.begin().await?;
+
+    let delete_query = sqlx::query!(
         "
-        INSERT INTO permissions(object, subject, level)
-        VALUES ($1, $2, $3)
-        ON CONFLICT(object, subject)
-        DO UPDATE SET level = EXCLUDED.level;
+        DELETE FROM permissions WHERE object = $1 AND level < 'own'
         ",
         ref_id,
-        user_id,
-        level as PermissionLevel,
     );
-    query.execute(&state.db).await?;
+    delete_query.execute(&mut *transaction).await?;
+
+    let insert_query = sqlx::query!(
+        "
+        INSERT INTO permissions(subject, object, level)
+        SELECT * FROM UNNEST($1::text[], $2::uuid[], $3::permission_level[])
+        ",
+        &subjects as &[Option<String>],
+        &objects,
+        &levels as &[PermissionLevel],
+    );
+    insert_query.execute(&mut *transaction).await?;
+
+    transaction.commit().await?;
     Ok(())
 }
 
