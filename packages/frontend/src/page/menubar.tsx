@@ -9,6 +9,8 @@ import { useApi } from "../api";
 import { Dialog, IconButton } from "../components";
 import { createModel } from "../model/document";
 import { TheoryLibraryContext } from "../stdlib";
+import { createDiagram } from "../diagram";
+
 import { Login } from "../user";
 
 import FilePlus from "lucide-solid/icons/file-plus";
@@ -173,27 +175,61 @@ function OpenMenuItem(props: {
     );
 }
 
-function Open(props: {
-    onComplete?: () => void;
-}) {
-   return( <div>
-            <JsonImport 
-            onImport={handleImport}
-            validate={validateJson} // Optional
-            />
-            </div>);
-}
-const validateJson = (data: any) => {
-    // Return true if valid
-    if (data.name && data.notebook) {
-      return true;
-    }
-    // Return error message if invalid
-    return 'JSON must include "name" and "notebook" fields';
-  };
+function Open(props: { onComplete?: () => void }) {
+    const api = useApi();
+    const navigate = useNavigate();
+    const handleImport = async (data: any) => {
+        console.log("Imported data:", data);
 
-  const handleImport = (data: any) => {
-    console.log('Imported data:', data);
-    // Update your app state with the imported data
-  };
+        switch (data.type) {
+            case "model": {
+                const newRef = await createModel(api, {
+                    ...data,
+                    name: `${data.name}`,
+                });
+                navigate(`/model/${newRef}`);
+                break;
+            }
+            // XX: Probably won't work yet
+            case "diagram": {
+                const newRef = await createDiagram(api, {
+                    ...data,
+                    name: `${data.name}`,
+                });
+                navigate(`/diagram/${newRef}`);
+                break;
+            }
+
+            case "analysis": {
+                throw new Error(
+                    "Analyses don't currently support initialization."
+                );
+            }
+
+            default:
+                throw new Error("Unknown document type");
+        }
+    };
+
+    const validateJson = (data: any) => {
+        // Return true if valid
+        if (data.name && data.notebook && data.type) {
+            return true;
+        }
+        // Return error message if invalid
+        return 'JSON must include "name", "notebook", and "type" fields';
+    };
+
+    return (
+        <div>
+            <JsonImport
+                onImport={handleImport}
+                validate={validateJson} // Optional
+            />
+        </div>
+    );
+}
+
+
+
 
