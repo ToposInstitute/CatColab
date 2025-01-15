@@ -4,14 +4,13 @@ import { getAuth, signOut } from "firebase/auth";
 import { useAuth, useFirebaseApp } from "solid-firebase";
 import { type JSX, Show, createSignal } from "solid-js";
 
-import { Dialog, IconButton } from "../components";
-import { Login } from "../user";
-
-import CircleHelp from "lucide-solid/icons/circle-help";
+import Info from "lucide-solid/icons/info";
 import LogInIcon from "lucide-solid/icons/log-in";
 import LogOutIcon from "lucide-solid/icons/log-out";
 import MenuIcon from "lucide-solid/icons/menu";
 import SettingsIcon from "lucide-solid/icons/settings";
+import { Dialog, IconButton } from "../components";
+import { Login } from "../user";
 
 import "./menubar.css";
 
@@ -83,8 +82,8 @@ function HelpMenuItem() {
 
     return (
         <MenuItem onSelect={() => navigate("/help")}>
-            <CircleHelp />
-            <MenuItemLabel>Help</MenuItemLabel>
+            <Info />
+            <MenuItemLabel>{"About"}</MenuItemLabel>
         </MenuItem>
     );
 }
@@ -117,7 +116,7 @@ function SettingsMenuItem() {
     return (
         <MenuItem onSelect={() => navigate("/profile")}>
             <SettingsIcon />
-            <MenuItemLabel>Settings</MenuItemLabel>
+            <MenuItemLabel>{"Settings"}</MenuItemLabel>
         </MenuItem>
     );
 }
