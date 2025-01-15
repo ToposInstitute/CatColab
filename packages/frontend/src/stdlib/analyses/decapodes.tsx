@@ -1,5 +1,4 @@
-
-     0.0
+0.0;
 import { For, Match, Show, Switch, createMemo } from "solid-js";
 import { isMatching } from "ts-pattern";
 
@@ -38,7 +37,7 @@ export type DecapodesContent = {
     initialConditions: Record<string, string>;
     plotVariables: Record<string, boolean>;
     scalars: Record<string, number>;
-	duration: number;
+    duration: number;
 };
 
 export function configureDecapodes(options: {
@@ -62,7 +61,7 @@ export function configureDecapodes(options: {
             initialConditions: {},
             plotVariables: {},
             scalars: {},
-			duration: 10,
+            duration: 10,
         }),
     };
 }
@@ -177,17 +176,17 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
         },
     ];
 
-	const toplevelSchema: ColumnSchema<null>[] = [
-		createNumericalColumn({
-			name: "Duration",
-			data: (_) => props.content.duration,
-			validate: (_, data) => data >= 0,
-			setData: (_, data) =>
-				props.changeContent((content) => {
-					content.duration = data;
-				}),
-			}),
-		];
+    const toplevelSchema: ColumnSchema<null>[] = [
+        createNumericalColumn({
+            name: "Duration",
+            data: (_) => props.content.duration,
+            validate: (_, data) => data >= 0,
+            setData: (_, data) =>
+                props.changeContent((content) => {
+                    content.duration = data;
+                }),
+        }),
+    ];
 
     const RestartOrRerunButton = () => (
         <Switch>
@@ -259,7 +258,7 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
                 <div class="parameters">
                     <FixedTableEditor rows={obDecls()} schema={variableSchema} />
                     <FixedTableEditor rows={scalarDecls()} schema={scalarSchema} />
-					<FixedTableEditor rows={[null]} schema={toplevelSchema} />
+                    <FixedTableEditor rows={[null]} schema={toplevelSchema} />
                 </div>
             </Foldable>
             <Switch>
@@ -340,8 +339,8 @@ type SimulationData = {
     /** Mapping from UIIDs of scalar operations to numerical values. */
     scalars: Record<string, number>;
 
-	/** Duration */
-	duration: number;
+    /** Duration */
+    duration: number;
 };
 
 /** Julia code run after kernel is started. */
@@ -393,6 +392,6 @@ const makeSimulationData = (
         initialConditions,
         plotVariables: Object.keys(plotVariables).filter((v) => plotVariables[v]),
         scalars,
-		duration,
+        duration,
     };
 };
