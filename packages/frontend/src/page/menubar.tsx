@@ -83,7 +83,7 @@ function HelpMenuItem() {
     return (
         <MenuItem onSelect={() => navigate("/help")}>
             <Info />
-            <MenuItemLabel>{"About"}</MenuItemLabel>
+            <MenuItemLabel>Info & documentation</MenuItemLabel>
         </MenuItem>
     );
 }
@@ -116,7 +116,7 @@ function SettingsMenuItem() {
     return (
         <MenuItem onSelect={() => navigate("/profile")}>
             <SettingsIcon />
-            <MenuItemLabel>{"Settings"}</MenuItemLabel>
+            <MenuItemLabel>Settings</MenuItemLabel>
         </MenuItem>
     );
 }
