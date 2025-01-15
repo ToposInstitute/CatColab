@@ -27,13 +27,3 @@
         color: darkgray;
     }
 }
-
-.cell-number {
-    display: flex;
-    margin-right: 11px;
-    color: darkgray;
-    p {
-        font-family: monospace;
-        font-size: 11px;
-    }
-}

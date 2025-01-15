@@ -293,7 +293,9 @@ export function NotebookEditor<T>(props: {
                         return (
                             <li>
                                 <div class="cell-number">
-                                    <p>{i() + 1}</p>
+                                    <div class="cell-number-gutter">
+                                        <p>{i() + 1}</p>
+                                    </div>
                                     <NotebookCell
                                         cellId={cell.id}
                                         actions={cellActions}
