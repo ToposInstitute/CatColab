@@ -4,7 +4,7 @@ import { getAuth, signOut } from "firebase/auth";
 import { useAuth, useFirebaseApp } from "solid-firebase";
 import { type JSX, Show, createSignal } from "solid-js";
 
-import { Dialog, IconButton } from "../components";
+import { Dialog, IconButton} from "../components";
 import { Login } from "../user";
 
 import CircleHelp from "lucide-solid/icons/circle-help";
@@ -13,6 +13,7 @@ import LogOutIcon from "lucide-solid/icons/log-out";
 import MenuIcon from "lucide-solid/icons/menu";
 import SettingsIcon from "lucide-solid/icons/settings";
 
+import {JsonImport} from "../components/json_import";  
 import "./menubar.css";
 
 /** Menu triggered from a hamburger button. */
@@ -52,6 +53,7 @@ export function AppMenu(props: {
     const auth = useAuth(getAuth(firebaseApp));
 
     const [loginOpen, setLoginOpen] = createSignal(false);
+    const [openOpen, setOpenOpen] = createSignal(false);
 
     // Root the dialog here so that it is not destroyed when the menu closes.
     return (
@@ -62,6 +64,7 @@ export function AppMenu(props: {
                     <MenuSeparator />
                 </Show>
                 <HelpMenuItem />
+
                 <Show
                     when={auth.data}
                     fallback={<LogInMenuItem showLogin={() => setLoginOpen(true)} />}
@@ -69,9 +72,13 @@ export function AppMenu(props: {
                     <SettingsMenuItem />
                     <LogOutMenuItem />
                 </Show>
+                <OpenMenuItem showOpen={() => setOpenOpen(true)}/>
             </HamburgerMenu>
             <Dialog open={loginOpen()} onOpenChange={setLoginOpen} title="Log in">
                 <Login onComplete={() => setLoginOpen(false)} />
+            </Dialog>
+            <Dialog open={openOpen()} onOpenChange={setOpenOpen} title="Open">
+                <Open onComplete={() => setOpenOpen(false)} />
             </Dialog>
         </>
     );
@@ -121,3 +128,39 @@ function SettingsMenuItem() {
         </MenuItem>
     );
 }
+
+function OpenMenuItem(props: {
+    showOpen: () => void;
+}) {
+    return (
+        <MenuItem onSelect={props.showOpen}>
+            <LogInIcon />
+            <MenuItemLabel>{"Open notebook"}</MenuItemLabel>
+        </MenuItem>
+    );
+}
+
+function Open(props: {
+    onComplete?: () => void;
+}) {
+   return( <div>
+            <JsonImport 
+            onImport={handleImport}
+            validate={validateJson} // Optional
+            />
+            </div>);
+}
+const validateJson = (data: any) => {
+    // Return true if valid
+    if (data.name && data.notebook) {
+      return true;
+    }
+    // Return error message if invalid
+    return 'JSON must include "name" and "notebook" fields';
+  };
+
+  const handleImport = (data: any) => {
+    console.log('Imported data:', data);
+    // Update your app state with the imported data
+  };
+

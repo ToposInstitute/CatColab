@@ -8,6 +8,8 @@ import { createDiagram } from "../diagram/document";
 import { AppMenu, MenuItem, MenuItemLabel, MenuSeparator } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import { type LiveModelDocument, type ModelDocument, createModel } from "./document";
+import {downloadJson, copyToClipboard} from "../components/json_export";
+
 
 import ChartSpline from "lucide-solid/icons/chart-spline";
 import Copy from "lucide-solid/icons/copy";
@@ -59,6 +61,13 @@ export function ModelMenuItems(props: {
         });
         navigate(`/model/${newRef}`);
     };
+    const onDownloadJSON = (model: ModelDocument) => {
+        downloadJson({data: JSON.stringify(model), filename: `${model.name}.json`});
+    };
+    const onCopy = (model: ModelDocument) => {
+        copyToClipboard({data: JSON.stringify(model)});
+    }
+
 
     return (
         <>
@@ -80,6 +89,14 @@ export function ModelMenuItems(props: {
             <MenuItem onSelect={() => onDuplicateModel(props.liveModel.liveDoc.doc)}>
                 <Copy />
                 <MenuItemLabel>{"Duplicate model"}</MenuItemLabel>
+            </MenuItem>
+            <MenuItem onSelect={() => onDownloadJSON(props.liveModel.liveDoc.doc)}>
+                <Copy />
+                <MenuItemLabel>{"Download JSON"}</MenuItemLabel>
+            </MenuItem>
+            <MenuItem onSelect={() => onCopy(props.liveModel.liveDoc.doc)}>
+                <Copy />
+                <MenuItemLabel>{"Copy to clipboard"}</MenuItemLabel>
             </MenuItem>
         </>
     );
