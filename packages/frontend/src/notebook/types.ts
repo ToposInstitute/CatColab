@@ -29,6 +29,11 @@ export type RichTextCell = {
     tag: "rich-text";
     id: Uuid;
     content: string;
+    /* for hyperlinking */
+    link_metadata?: {
+        type: "hyperlink";
+        url: string;
+    };
 };
 
 /** Creates a rich text cell with the given content. */

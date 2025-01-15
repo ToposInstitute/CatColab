@@ -27,6 +27,7 @@ export type RichTextEditorOptions = {
     exitDown?: () => void;
 
     onFocus?: () => void;
+    anchor?: () => void;
 };
 
 /** Rich text editor combining Automerge and ProseMirror.
@@ -109,6 +110,7 @@ function richTextEditorKeymap(schema: Schema, props: RichTextEditorOptions) {
     if (props.exitDown) {
         bindings["ArrowDown"] = doIfAtBottom(props.exitDown);
     }
+
     return bindings;
 }
 
@@ -193,3 +195,36 @@ const hasContent = (state: EditorState) => {
     const doc = state.doc;
     return doc.textContent || (doc.firstChild && doc.firstChild.content.size > 0);
 };
+
+export function addLink(view: EditorView, url: string) {
+    const { state } = view;
+    const { schema, selection } = state;
+
+    if (!schema.marks.link || selection.empty) {
+        return false;
+    }
+
+    const attrs = {
+        href: url.startsWith("http") ? url : `https://${url}`,
+        title: selection.content().content.textBetween(0, selection.content().size),
+    };
+
+    const tr = state.tr.addMark(selection.from, selection.to, schema.marks.link.create(attrs));
+
+    view.dispatch(tr);
+    return true;
+}
+
+export function removeLink(view: EditorView) {
+    const { state } = view;
+    const { schema, selection } = state;
+
+    if (!schema.marks.link || selection.empty) {
+        return false;
+    }
+
+    const tr = state.tr.removeMark(selection.from, selection.to, schema.marks.link);
+
+    view.dispatch(tr);
+    return true;
+}
