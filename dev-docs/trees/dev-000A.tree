@@ -129,15 +129,15 @@ WebSocket protocol.}
 
 \p{On backend-next.catcolab.org, there is a git clone of the catcolab repository in \code{/var/lib/catcolab}. There is a daemon (managed via systemd) that runs \code{node dist/index.js} in \code{/var/lib/catcolab/packages/backend}. In order to upgrade the version of catcolab that is running on the server, one should:}
 \ol{
-\li{Log in via \code{ssh root@backend-next.catcolab.org}. If you don't have access, ask Shaowei.}
+\li{Log in via \code{ssh root@backend-next.catcolab.org}. If you don't have access, ask Evan.}
 \li{Use \code{su - catcolab} to become the user \code{catcolab}.}
 \li{\code{cd} into \code{/var/lib/catcolab/packages/backend}.}
 \li{Use \code{git} to checkout the desired version of catcolab.}
-\li{Run \code{npm run build} to produce a new \code{dist/index.js} file.}
-\li{Run as user root \code{systemctl stop catcolab}; this will temporarily stop the backend. It is helpful to do this in another terminal window.}
-\li{Run as user catcolab in \code{/var/lib/catcolab/packages/backend} \code{npm run migrate}. This will update the database with new any migrations that have been added since the last time the database was migrated.}
-\li{Run as user root \code{systemctl start catcolab}; this will start back up the backend.}
-\li{(If there are no new migrations, the previous three commands can simply be accomplished via \code{systemctl restart catcolab})}
+\li{Run \code{pnpm run build} to produce a new \code{dist/index.js} file.}
+\li{Run \code{sudo systemctl stop catcolab}; this will temporarily stop the backend.}
+\li{Run \code{catcolab-migrate.sh}. This will update the database with new any migrations that have been added since the last time the database was migrated.}
+\li{Run \code{sudo systemctl start catcolab}; this will start back up the backend.}
+\li{(If there are no new migrations, the previous three commands can simply be accomplished via \code{sudo systemctl restart catcolab})}
 \li{You can check the status of the catcolab daemon with \code{systemctl status catcolab}, or look at the log messages with \code{journalctl -eu catcolab}.}
 }
 
@@ -145,42 +145,56 @@ WebSocket protocol.}
 \ol{
 \li{Update the public keys in \code{infrastructure/hosts/catcolab/default.nix}.}
 \li{Get someone with server access to run \code{nix develop; deploy .#catcolab}.}
+\li{Commit and push the changes to the repository.}
 }
 
 \p{To give a new user access to the secrets:}
 \ol{
-\li{Update the public keys in \code{infrastructure/secrets/secrets.nix}.}
-\li{Get someone with secret access to run \code{nix develop; agenix -r}.}
+\li{Update the public keys in \code{infrastructure/secrets/secrets.nix}. Remember to update the permissions for each file as well.}
+\li{Get someone with secret access to run \code{nix develop} in the \code{infrastructure} folder.}
+\li{In the resulting Nix shell, run \code{agenix -r} in the \code{infrastructure/secrets} folder.}
+\li{Commit and push the changes to the repository.}
 }
 
 \p{If you are creating an AWS instance and setting up a CatColab backend, e.g. \code{backend-next}, for the first time:}
 \ol{
-\li{Use the \code{nixos/24.05.3348.7e5afd404b62-x86_64-linux} community AMI.}
-\li{Add 50GB of storage to the instance.}
-\li{Open ports 80, 443 for HTTP, HTTPS in addition to port 22 for SSH.}
-\li{Add a public key of the machine to \code{infrastructure/secrets/secrets.nix}. You can get the public keys by running \code{ssh-keyscan <machine-ip-address>}.}
-\li{In the \code{namecheap} domain name hosting service, point \code{backend-next.catcolab.org} to the instance's IP address.}
-\li{Log in via \code{ssh root@backend-next.catcolab.org}. If you don't have access, ask Shaowei.}
-\li{Use \code{git} to clone the catcolab repo in \code{/var/lib}. Rename the directory with \code{mv CatColab catcolab} and change ownership with \code{chown -R catcolab:catcolab catcolab}.}
-\li{Use \code{su - catcolab} to become the user \code{catcolab}.}
-\li{\code{cd} into \code{/var/lib/catcolab/packages/backend}.}
-\li{Use \code{git} to checkout the desired version of catcolab.}
-\li{Run \code{pnpm install} to install dependencies.}
+\li{Create an instance on AWS:}
+  \ul{
+  \li{Use a community AMI of the form \code{nixos/24.05.????.????????????-x86_64-linux}.}
+  \li{Add 50GB of storage to the instance.}
+  \li{Open ports 80, 443 for HTTP, HTTPS in addition to port 22 for SSH.}
+  }
+\li{Add a public key of the instance to \code{infrastructure/secrets/secrets.nix}. You can get the public keys by running \code{ssh-keyscan <machine-ip-address>}. Follow the instructions above on giving a new user access to the secrets.}
+\li{Add the instance hostname to the desired host under \code{deploy.nodes} in \code{infrastructure/flake.nix}.}
+\li{In \code{infrastructure/}, run \code{nix develop} followed by \code{deploy .#catcolab-next}. The systemd services will fail at the end of the deployment, because the CatColab repo is missing. We will restart the services later after cloning the repo.}
+\li{On the \code{namecheap} domain name hosting service, point \code{backend-next.catcolab.org} to the instance IP address.}
+\li{Access the instance in a new terminal:}
+  \ul{
+  \li{Log in via \code{ssh root@backend-next.catcolab.org}. If you don't have access, ask Evan.}
+  \li{On the instance, run \code{init-catcolab.sh}. This script installs the nodejs dependencies, initializes the postgres database, runs the database migrations, and builds the required binaries. The automerge and backend services should run now.}
+  }
 }
 
-\p{Setting up the Postgres database:}
+\p{Setting up the Postgres database locally:}
 \ol{
-\li{\code{su - postgres}}
-\li{\code{createuser catcolab}}
-\li{\code{createdb catcolab}}
-\li{\code{psql}}
+\li{Get the \code{DATABASE_URL} from the decrypted \code{.env.age} file.}
   \ul{
-  \li{\code{alter user catcolab with encrypted password '<password>';}}
-  \li{\code{grant all privileges on database catcolab to catcolab;}}
-  \li{\code{﹨c catcolab postgres}}
-  \li{\code{grant all on schema public to catcolab;}}
-  \li{\code{exit}}
+  \li{In \code{infrastructure/secrets/}, run \code{nix develop} followed by \code{EDITOR=vim agenix -e .env.age}. You should change the \code{EDITOR} variable to your preferred editor tool.}
   }
+\li{In \code{infrastructure/scripts}, run \code{su -m postgres -- ./initdb.sh "<DATABASE_URL>"}.}
+\li{Run migrations on the database:}
+  \ul{
+  \li{Install \code{sqlx-cli} with \code{cargo install sqlx-cli}}
+  \li{In \code{packages/backend/}, run \code{~/.cargo/bin/sqlx migrate run}}
+  }
+}
+
+\p{Other TODOs:}
+\ol{
+\li{Create function that takes a port and outputs nginx}
+\li{write up pull and build instructions}
+\li{rebase on main}
+\li{test on server}
 }
 
 }
