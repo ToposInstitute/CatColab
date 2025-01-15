@@ -59,6 +59,7 @@ export function DiagramMenuItems(props: {
         navigate(`/diagram/${newRef}`);
     };
 
+    // XX: add JSON and copy menu items for diagrams? A bit repetitive, no?
     return (
         <>
             <MenuItem onSelect={() => onNewDiagram(props.liveDiagram.liveModel.refId)}>
