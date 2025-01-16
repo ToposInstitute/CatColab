@@ -5,7 +5,7 @@ let
     backendPort = "8000";
 
     automergeScript = pkgs.writeShellScript "automerge.sh" ''
-        ln -sf ${config.age.secrets."instrument.mjs".path} /var/lib/catcolab/packages/backend/
+        ln -sf ${config.age.secrets."instrument.mjs".path} /var/lib/catcolab/packages/automerge-doc-server/
         ${pkgs.nodejs}/bin/node dist/automerge-doc-server/src/main.js
     '';
 
@@ -15,36 +15,39 @@ let
     '';
 
     initScript = pkgs.writeShellScriptBin "catcolab-init.sh" ''
-        echo "cloning catcolab repo..."
+        echo -e "\n\n ##### catcolab-init: cloning catcolab repo...\n\n"
         cd /var/lib
         if [ -z "$1" ]; then branch="main"; else branch="$1"; fi
-        echo $branch
         git clone -b $branch https://github.com/ToposInstitute/CatColab.git
         mv CatColab catcolab
         chown -R catcolab:catcolab catcolab
 
-        echo "installing nodejs dependencies..."
-        su -m catcolab -c "cd /var/lib/catcolab/packages/backend; pnpm install"
-
-        echo "installing rust and cargo..."
-        su -m catcolab -c "HOME=/home/catcolab/ rustup default stable"
+        echo -e "\n\n ##### catcolab-init: linking secrets...\n\n"
+        ln -sf ${config.age.secrets."instrument.mjs".path} /var/lib/catcolab/packages/automerge-doc-server/
+        ln -sf ${config.age.secrets.".env".path} /var/lib/catcolab/packages/backend/
         
-        echo "installing sqlx-cli for migrations..."
-        su -m catcolab -c "HOME=/home/catcolab/ cargo install sqlx-cli"
+        echo -e "\n\n ##### catcolab-init: installing nodejs dependencies...\n\n"
+        su -l catcolab -c "cd /var/lib/catcolab/packages/backend; pnpm install"
 
-        echo "setting up postgres user, database, permissions..."
-        su -m postgres -- /var/lib/catcolab/infrastructure/scripts/initdb.sh $(cat ${config.age.secrets.".env".path})
+        echo -e "\n\n ##### catcolab-init: installing rust and cargo...\n\n"
+        su -l catcolab -c "rustup default stable"
+        
+        echo -e "\n\n ##### catcolab-init: installing sqlx-cli for migrations...\n\n"
+        su -l catcolab -c "cargo install sqlx-cli"
 
-        echo "stopping automerge, build services..."
+        echo -e "\n\n ##### catcolab-init: setting up postgres user, database, permissions...\n\n"
+        su -l postgres -- /var/lib/catcolab/infrastructure/scripts/initdb.sh $(cat ${config.age.secrets.".env".path})
+
+        echo -e "\n\n ##### catcolab-init: stopping automerge, build services...\n\n"
         /var/lib/catcolab/infrastructure/scripts/stop.sh
 
-        echo "migrating database..."
-        su -m catcolab -- /var/lib/catcolab/infrastructure/scripts/migrate.sh
+        echo -e "\n\n ##### catcolab-init: migrating database...\n\n"
+        su -l catcolab -- /var/lib/catcolab/infrastructure/scripts/migrate.sh
 
-        echo "building binaries..."
-        su -m catcolab -- /var/lib/catcolab/infrastructure/scripts/build.sh
+        echo -e "\n\n ##### catcolab-init: building binaries...\n\n"
+        su -l catcolab -- /var/lib/catcolab/infrastructure/scripts/build.sh
 
-        echo "start automerge, build services..."
+        echo -e "\n\n ##### catcolab-init: start automerge, build services...\n\n"
         /var/lib/catcolab/infrastructure/scripts/start.sh
     '';
 
@@ -181,7 +184,6 @@ in {
     security.sudo.extraRules = [{
         users = [ "catcolab" ]; 
         commands = [
-            { command = "/run/current-system/sw/bin/mv CatColab /var/lib/catcolab"; options = [ "NOPASSWD" ]; }
             { command = "/run/current-system/sw/bin/systemctl start automerge"; options = [ "NOPASSWD" ]; } 
             { command = "/run/current-system/sw/bin/systemctl stop automerge"; options = [ "NOPASSWD" ]; } 
             { command = "/run/current-system/sw/bin/systemctl restart automerge"; options = [ "NOPASSWD" ]; }

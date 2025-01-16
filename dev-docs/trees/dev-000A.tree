@@ -57,22 +57,22 @@ the ref with the given content, as described in [refs](dev-000D).}
 \p{The backend consists of two services running in independent processes
 (possibly on different machines).
 
-\ol{
-\li{\strong{Web server}, written in Rust}
-\li{\strong{Automerge document server}, written in TypeScript and running in Node}
-}
+\ul{
+\li{\strong{Backend web service}, written in Rust}
+\li{\strong{Automerge document service}, written in TypeScript and running in Node}
+}}
 
-The services communicate bidirectionally using [SocketIO](https://socket.io/), a
+\p{The services communicate bidirectionally using [SocketIO](https://socket.io/), a
 simple protocol that extends WebSockets with niceties such as automatic
 reconnection and message acknowledgments.}
 
-\subtree{
-\title{Dependencies}
-
-\p{Without attempting to be exhaustive, we summarize the backend's most
+\p{Without attempting to be exhaustive, we summarize the backend services' most
 important dependencies.}
 
-\p{\strong{Web server} uses the crates:
+\subtree{
+\title{Backend dependencies}
+
+\p{The backend web server uses the crates:
 
 \ul{
 
@@ -88,9 +88,12 @@ Postgres (and other SQL databases)}
 \li{[\code{socketioxide}](https://github.com/Totodore/socketioxide): Rust
 implementation of a SocketIO server}
 
-}}
+}}}
 
-\p{\strong{Automerge document server} uses the packages:
+\subtree{
+\title{Automerge dependencies}
+
+\p{The automerge document server uses the packages:
 
 \ul{
 
@@ -116,9 +119,29 @@ WebSocket protocol.}
 \subtree{
 \title{Infrastructure}
 
-\p{We have an AWS server that is pointed to by the domain name backend-next.catcolab.org. This runs an instance of the backend. This backend can be used by the frontend hosted at next.catcolab.org, or by a dev server. Note that this means that PR previews only are for the frontend. So if a PR introduces significant changes to the backend, the PR preview won't see those backend changes because it will still be pointing to whatever version of the backend is running on the server. Fortunately, we don't expect the backend to change all too much, at least compared to the frontend; it just serves blobs without caring about what's in the blobs.}
+\p{We have two AWS instances or hosts that each run (possibly different versions of) both the backend web service and the automerge document service. The hosts and services are named:
+  \ul{
+  \li{Production instance \code{catcolab}}
+    \ul{
+    \li{backend.catcolab.org}
+    \li{automerge.catcolab.org}
+    }
+  \li{Development instance \code{catcolab-next}}
+    \ul{
+    \li{backend-next.catcolab.org}
+    \li{automerge-next.catcolab.org}
+    }
+  }
+For example, the domain names \code{backend-next.catcolab.org} and \code{automerge-next.catcolab.org} point to the \code{catcolab-next} instance but are routed to different ports. The web server and document services can be used by the frontend hosted at \code{next.catcolab.org}, or by a dev client.}
 
-\p{The system configuration of this server is configured via nix, in the \code{infrastructure/} part of the repo. In order to change the system configuration, make sure that your ssh key is enabled for root access to the server (ask Owen for this). Then run:}
+\p{Note that this means that PR previews only are for the frontend. So if a PR introduces significant changes to the backend services, the PR preview won't see those backend changes because it will still be pointing to whatever version of the backend is running on the instance. Fortunately, we don't expect the backend to change all too much, at least compared to the frontend; it just serves blobs without caring about what's in the blobs.}
+
+\p{The system configuration of this server is configured via nix, in the \code{infrastructure/} part of the repo.}
+
+\subtree{
+\title{Changing the system configuration}
+
+\p{In order to change the system configuration, make sure that your ssh key is enabled for root access to the server (ask Owen for this). Then run:}
 
 \ol{
 \li{\code{nix develop}}
@@ -126,8 +149,12 @@ WebSocket protocol.}
 }
 
 \p{However, this will not update the version of catcolab that is running on the server. There is currently a somewhat manual process to do this, because Owen believes that it is important for people to understand the steps of the manual process so that they can debug things when they go wrong.}
+}
 
-\p{On backend-next.catcolab.org, there is a git clone of the catcolab repository in \code{/var/lib/catcolab}. There is a daemon (managed via systemd) that runs \code{node dist/index.js} in \code{/var/lib/catcolab/packages/backend}. In order to upgrade the version of catcolab that is running on the server, one should:}
+\subtree{
+\title{Upgrading the CatColab version}
+
+\p{On each AWS instance, there is a git clone of the catcolab repository in \code{/var/lib/catcolab}. There is a daemon (managed via systemd) that runs \code{node dist/index.js} in \code{/var/lib/catcolab/packages/backend}. In order to upgrade the version of catcolab that is running on the server, one should:}
 \ol{
 \li{Log in via \code{ssh root@backend-next.catcolab.org}. If you don't have access, ask Evan.}
 \li{Use \code{su - catcolab} to become the user \code{catcolab}.}
@@ -140,21 +167,32 @@ WebSocket protocol.}
 \li{(If there are no new migrations, the previous three commands can simply be accomplished via \code{sudo systemctl restart catcolab})}
 \li{You can check the status of the catcolab daemon with \code{systemctl status catcolab}, or look at the log messages with \code{journalctl -eu catcolab}.}
 }
+}
 
-\p{To give a new user access to the servers:}
+\subtree{
+\title{Instance access for new users}
+
+\p{To give a new user access to an AWS instance, e.g. \code{catcolab-next}:}
 \ol{
-\li{Update the public keys in \code{infrastructure/hosts/catcolab/default.nix}.}
-\li{Get someone with server access to run \code{nix develop; deploy .#catcolab}.}
+\li{Update the public keys in \code{infrastructure/hosts/catcolab-next/default.nix}. Remember to update the permissions for the new user as well.} 
+\li{Get someone with server access to run \code{nix develop} then \code{deploy .#catcolab-next} in the \code{infrastructure} folder.}
 \li{Commit and push the changes to the repository.}
 }
+}
+
+\subtree{
+\title{Secrets access for new users}
 
 \p{To give a new user access to the secrets:}
 \ol{
-\li{Update the public keys in \code{infrastructure/secrets/secrets.nix}. Remember to update the permissions for each file as well.}
-\li{Get someone with secret access to run \code{nix develop} in the \code{infrastructure} folder.}
-\li{In the resulting Nix shell, run \code{agenix -r} in the \code{infrastructure/secrets} folder.}
+\li{Update the public keys in \code{infrastructure/secrets/secrets.nix}. Remember to update the permissions for the new user as well.}
+\li{Get someone with secret access to run \code{nix develop} in the \code{infrastructure} folder, then \code{agenix -r} in the \code{infrastructure/secrets} folder.}
 \li{Commit and push the changes to the repository.}
 }
+}
+
+\subtree{
+\title{Initializing the AWS instance}
 
 \p{If you are creating an AWS instance and setting up a CatColab backend, e.g. \code{backend-next}, for the first time:}
 \ol{
@@ -174,8 +212,11 @@ WebSocket protocol.}
   \li{Log in via \code{ssh root@<instance IP address>}. If you don't have access, ask Evan.}
   \li{On the instance, run \code{init-catcolab.sh <branch-name>}. If the CatColab github repo branch name is omitted, it will clone the \code{main} branch. This script installs the nodejs dependencies, initializes the postgres database, runs the database migrations, and builds the required binaries. The automerge and backend services should run now.}
   }
-\li{If you ever need to reset an instance to its original launch state when it was first created, you can do it through the online console, select the instance and choose "Actions > Monitor and Troubleshoot > Replace root volume". Make sure that you choose an AMI of the form \code{nixos/24.05.????.????????????-x86_64-linux} as the launch state, and that you select the box for deleting the old volume when the new volume is created.}
 }
+}
+
+\subtree{
+\title{Local dev Postgres database}
 
 \p{Setting up the Postgres database locally:}
 \ol{
@@ -191,13 +232,12 @@ WebSocket protocol.}
   \li{In \code{packages/backend/}, run \code{~/.cargo/bin/sqlx migrate run}}
   }
 }
+}
 
 \p{Other TODOs:}
 \ol{
-\li{Create function that takes a port and outputs nginx}
 \li{write up pull and build instructions, scripts and what they do in the repo.}
-\li{rebase on main}
-\li{test on server}
+\li{rename automerge-doc-server as automerge}
 }
 
 }

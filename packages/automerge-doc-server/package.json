@@ -15,6 +15,7 @@
         "@automerge/automerge-repo": "^1.2.1",
         "@automerge/automerge-repo-network-websocket": "^1.2.1",
         "@sentry/node": "^8.37.1",
+        "@sentry/profiling-node": "^8.50.0",
         "express": "^4.19.2",
         "socket.io-client": "^4.8.0",
         "ws": "^8.18.0"
