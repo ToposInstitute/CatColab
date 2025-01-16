@@ -21,6 +21,7 @@ pub fn router() -> Router<AppState> {
         .handler(get_permissions)
         .handler(set_permissions)
         .handler(sign_up_or_sign_in)
+        .handler(user_by_username)
         .handler(username_status)
         .handler(get_active_user_profile)
         .handler(set_active_user_profile)
@@ -111,6 +112,11 @@ async fn _set_permissions(ctx: AppCtx, ref_id: Uuid, new: NewPermissions) -> Res
 #[handler(mutation)]
 async fn sign_up_or_sign_in(ctx: AppCtx) -> RpcResult<()> {
     user::sign_up_or_sign_in(ctx).await.into()
+}
+
+#[handler(query)]
+async fn user_by_username(ctx: AppCtx, username: &str) -> RpcResult<Option<user::UserSummary>> {
+    user::user_by_username(ctx.state, username).await.into()
 }
 
 #[handler(query)]

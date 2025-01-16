@@ -64,6 +64,12 @@ describe("RPC for user profiles", async () => {
 
     await signOut(auth);
 
+    const summary = unwrap(await rpc.user_by_username.query(username));
+    test.sequential("user summary should be retrieved", () => {
+        assert.strictEqual(summary?.username, username);
+        assert.strictEqual(summary?.displayName, "Test user");
+    });
+
     const unauthorizedResult1 = await rpc.sign_up_or_sign_in.mutate();
     const unauthorizedResult2 = await rpc.get_active_user_profile.query();
     const unauthorizedResult3 = await rpc.set_active_user_profile.mutate({
