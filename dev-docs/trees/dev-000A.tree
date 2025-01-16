@@ -161,22 +161,25 @@ WebSocket protocol.}
 \li{Create an instance on AWS:}
   \ul{
   \li{Use a community AMI of the form \code{nixos/24.05.????.????????????-x86_64-linux}.}
+  \li{Instance type is \code{t3.medium}.}
+  \li{Select "Allow HTTPS traffic.." and "Allow HTTP traffic.." in addition to the already selected "Allow SSH traffic from Anywhere".}
   \li{Add 50GB of storage to the instance.}
-  \li{Open ports 80, 443 for HTTP, HTTPS in addition to port 22 for SSH.}
   }
+\li{On the \code{namecheap} domain name hosting service, point \code{backend-next.catcolab.org} to the instance IP address.}
 \li{Add a public key of the instance to \code{infrastructure/secrets/secrets.nix}. You can get the public keys by running \code{ssh-keyscan <machine-ip-address>}. Follow the instructions above on giving a new user access to the secrets.}
 \li{Add the instance hostname to the desired host under \code{deploy.nodes} in \code{infrastructure/flake.nix}.}
-\li{In \code{infrastructure/}, run \code{nix develop} followed by \code{deploy .#catcolab-next}. The systemd services will fail at the end of the deployment, because the CatColab repo is missing. We will restart the services later after cloning the repo.}
-\li{On the \code{namecheap} domain name hosting service, point \code{backend-next.catcolab.org} to the instance IP address.}
+\li{In \code{infrastructure/}, run \code{nix develop} followed by \code{deploy .#catcolab-next}. The systemd \code{automerge} and \code{backend} services will fail at the end of the deployment, because the CatColab repo is missing. We will restart the services later after cloning the repo.}
 \li{Access the instance in a new terminal:}
   \ul{
-  \li{Log in via \code{ssh root@backend-next.catcolab.org}. If you don't have access, ask Evan.}
-  \li{On the instance, run \code{init-catcolab.sh}. This script installs the nodejs dependencies, initializes the postgres database, runs the database migrations, and builds the required binaries. The automerge and backend services should run now.}
+  \li{Log in via \code{ssh root@<instance IP address>}. If you don't have access, ask Evan.}
+  \li{On the instance, run \code{init-catcolab.sh <branch-name>}. If the CatColab github repo branch name is omitted, it will clone the \code{main} branch. This script installs the nodejs dependencies, initializes the postgres database, runs the database migrations, and builds the required binaries. The automerge and backend services should run now.}
   }
+\li{If you ever need to reset an instance to its original launch state when it was first created, you can do it through the online console, select the instance and choose "Actions > Monitor and Troubleshoot > Replace root volume". Make sure that you choose an AMI of the form \code{nixos/24.05.????.????????????-x86_64-linux} as the launch state, and that you select the box for deleting the old volume when the new volume is created.}
 }
 
 \p{Setting up the Postgres database locally:}
 \ol{
+\li{Assumptions: There is a \code{postgres} user on the machine. The cluster does not contain a \code{catcolab} user or a \code{catcolab} database. Rust and \code{cargo} are installed.}
 \li{Get the \code{DATABASE_URL} from the decrypted \code{.env.age} file.}
   \ul{
   \li{In \code{infrastructure/secrets/}, run \code{nix develop} followed by \code{EDITOR=vim agenix -e .env.age}. You should change the \code{EDITOR} variable to your preferred editor tool.}
@@ -192,7 +195,7 @@ WebSocket protocol.}
 \p{Other TODOs:}
 \ol{
 \li{Create function that takes a port and outputs nginx}
-\li{write up pull and build instructions}
+\li{write up pull and build instructions, scripts and what they do in the repo.}
 \li{rebase on main}
 \li{test on server}
 }

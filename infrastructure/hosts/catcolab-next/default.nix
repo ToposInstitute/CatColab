@@ -20,6 +20,14 @@ in
 
     users.mutableUsers = false;
 
+    users.groups.catcolab = {};
+
+    users.users.catcolab = {
+        isNormalUser = true;
+        group = "catcolab";
+        openssh.authorizedKeys.keys = [ owen epatters shaowei ];
+    };
+
     users.users.owen = {
         isNormalUser = true;
         extraGroups = [ "wheel" ]; # Enable ‘sudo’ for the user.

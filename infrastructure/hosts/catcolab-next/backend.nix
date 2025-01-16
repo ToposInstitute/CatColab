@@ -15,35 +15,36 @@ let
     '';
 
     initScript = pkgs.writeShellScriptBin "catcolab-init.sh" ''
-        # clone catcolab repo
+        echo "cloning catcolab repo..."
         cd /var/lib
-        git clone https://github.com/ToposInstitute/CatColab.git
+        if [ -z "$1" ]; then branch="main"; else branch="$1"; fi
+        echo $branch
+        git clone -b $branch https://github.com/ToposInstitute/CatColab.git
         mv CatColab catcolab
         chown -R catcolab:catcolab catcolab
-        cd catcolab
 
-        # install node dependencies
+        echo "installing nodejs dependencies..."
         su -m catcolab -c "cd /var/lib/catcolab/packages/backend; pnpm install"
 
-        # install rust and cargo
-        su -m catcolab -c "cd /var/lib/catcolab/packages/backend; rustup default stable"
+        echo "installing rust and cargo..."
+        su -m catcolab -c "HOME=/home/catcolab/ rustup default stable"
         
-        # install sqlx-cli for migrations
-        su -m catcolab -c "cd /var/lib/catcolab/packages/backend; cargo install sqlx-cli"
+        echo "installing sqlx-cli for migrations..."
+        su -m catcolab -c "HOME=/home/catcolab/ cargo install sqlx-cli"
 
-        # set up postgres user, database, permissions
+        echo "setting up postgres user, database, permissions..."
         su -m postgres -- /var/lib/catcolab/infrastructure/scripts/initdb.sh $(cat ${config.age.secrets.".env".path})
 
-        # stop automerge, build services if running
+        echo "stopping automerge, build services..."
         /var/lib/catcolab/infrastructure/scripts/stop.sh
 
-        # migrate
+        echo "migrating database..."
         su -m catcolab -- /var/lib/catcolab/infrastructure/scripts/migrate.sh
 
-        # build binaries
+        echo "building binaries..."
         su -m catcolab -- /var/lib/catcolab/infrastructure/scripts/build.sh
 
-        # start automerge, build services
+        echo "start automerge, build services..."
         /var/lib/catcolab/infrastructure/scripts/start.sh
     '';
 
@@ -56,11 +57,11 @@ let
     '';
 
     migrateScript = pkgs.writeShellScriptBin "catcolab-migrate.sh" ''
-        su -m catcolab -- /var/lib/catcolab/infrastructure/scripts/migrate.sh
+        /var/lib/catcolab/infrastructure/scripts/migrate.sh
     '';
 
     buildScript = pkgs.writeShellScriptBin "catcolab-build.sh" ''
-        su -m catcolab -- /var/lib/catcolab/infrastructure/scripts/build.sh
+        /var/lib/catcolab/infrastructure/scripts/build.sh
     '';
 
     packages = with pkgs; [
@@ -177,16 +178,10 @@ in {
         };
     };
 
-    users.users.catcolab = {
-        isNormalUser = true;
-        group = "catcolab";
-    };
-
-    users.groups.catcolab = {};
-
-    security.sudo.extraRules = [{ 
+    security.sudo.extraRules = [{
         users = [ "catcolab" ]; 
         commands = [
+            { command = "/run/current-system/sw/bin/mv CatColab /var/lib/catcolab"; options = [ "NOPASSWD" ]; }
             { command = "/run/current-system/sw/bin/systemctl start automerge"; options = [ "NOPASSWD" ]; } 
             { command = "/run/current-system/sw/bin/systemctl stop automerge"; options = [ "NOPASSWD" ]; } 
             { command = "/run/current-system/sw/bin/systemctl restart automerge"; options = [ "NOPASSWD" ]; }
