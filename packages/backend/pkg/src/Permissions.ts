@@ -9,13 +9,13 @@ export type Permissions = {
 /**
  * Base permission level for any person, logged in or not.
  */
-anyone?: PermissionLevel, 
+anyone: PermissionLevel | null, 
 /**
  * Permission level for the current user.
  */
-user?: PermissionLevel, 
+user: PermissionLevel | null, 
 /** Permission levels for all other users.
 
     Only owners of the document have access to this information.
      */
-users?: Array<UserPermissions>, };
+users: Array<UserPermissions> | null, };

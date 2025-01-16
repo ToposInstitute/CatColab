@@ -2,7 +2,7 @@ import { getAuth, signOut } from "firebase/auth";
 import { useAuth, useFirebaseApp } from "solid-firebase";
 import { type ComponentProps, Match, Show, Switch, createSignal } from "solid-js";
 
-import type { Permissions } from "catcolab-api";
+import type { PermissionLevel, Permissions } from "catcolab-api";
 import { Dialog, IconButton } from "../components";
 import { Login } from "./login";
 
@@ -129,7 +129,7 @@ const SharedPermissionsButton = (props: {
     const tooltip = (permissions: Permissions) => (
         <>
             This document is <strong>{permissionAdjective(permissions.user)}</strong> by you and{" "}
-            {permissionAdjective()} by anyone.
+            {permissionAdjective(permissions.anyone)} by anyone.
         </>
     );
     return (
@@ -155,9 +155,8 @@ const PrivatePermissionsButton = (props: {
     );
 };
 
-type PermissionLevel = Required<Permissions>["user"];
-
-const permissionAdjective = (level?: PermissionLevel) => permissionAdjectives[level ?? "Read"];
+const permissionAdjective = (level: PermissionLevel | null) =>
+    level ? permissionAdjectives[level] : "not viewable";
 
 const permissionAdjectives: { [level in PermissionLevel]: string } = {
     Read: "viewable",

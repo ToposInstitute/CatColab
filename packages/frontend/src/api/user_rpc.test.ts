@@ -152,19 +152,31 @@ describe("Sharing documents between users", async () => {
     });
 
     await signOut(auth);
+
+    // Access the document as the sharee.
     await signInWithEmailAndPassword(auth, shareeEmail, password);
 
     const readonlyDoc = unwrap(await rpc.get_doc.query(refId));
-    test.sequential("should allow read-only document access when unauthenticated", () => {
+    test.sequential("should allow read-only document access when logged in", () => {
         assert.strictEqual(readonlyDoc.tag, "Readonly");
         assert.strictEqual(readonlyDoc.permissions.anyone, null);
         assert.strictEqual(readonlyDoc.permissions.user, "Read");
     });
 
+    const forbiddenResult1 = await rpc.set_permissions.mutate(refId, [
+        {
+            userId: shareeUser.uid,
+            level: "Write",
+        },
+    ]);
+    test.sequential("should prohibit upgrading own permissions", () => {
+        assert.strictEqual(unwrapErr(forbiddenResult1).code, 403);
+    });
+
     await signOut(auth);
 
-    const forbiddenResult = await rpc.get_doc.query(refId);
+    const forbiddenResult2 = await rpc.get_doc.query(refId);
     test.sequential("should prohibit document access when logged out", () => {
-        assert.strictEqual(unwrapErr(forbiddenResult).code, 403);
+        assert.strictEqual(unwrapErr(forbiddenResult2).code, 403);
     });
 });

@@ -29,25 +29,22 @@ pub struct UserPermissions {
 #[derive(Clone, Debug, Default, Serialize, TS)]
 pub struct Permissions {
     /// Base permission level for any person, logged in or not.
-    #[ts(optional)]
     pub anyone: Option<PermissionLevel>,
 
     /// Permission level for the current user.
-    #[ts(optional)]
     pub user: Option<PermissionLevel>,
 
     /** Permission levels for all other users.
 
     Only owners of the document have access to this information.
      */
-    #[ts(optional)]
     pub users: Option<Vec<UserPermissions>>,
 }
 
 impl Permissions {
     /// Gets the highest level of permissions allowed.
     pub fn max_level(&self) -> Option<PermissionLevel> {
-        self.anyone.clone().into_iter().chain(self.user.clone()).reduce(std::cmp::max)
+        self.anyone.into_iter().chain(self.user).reduce(std::cmp::max)
     }
 }
 
