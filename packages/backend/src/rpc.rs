@@ -8,7 +8,7 @@ use ts_rs::TS;
 use uuid::Uuid;
 
 use super::app::{AppCtx, AppError, AppState};
-use super::auth::{PermissionLevel, Permissions};
+use super::auth::{NewPermissions, PermissionLevel, Permissions};
 use super::{auth, document as doc, user};
 
 /// Create router for RPC API.
@@ -97,23 +97,15 @@ async fn get_permissions(ctx: AppCtx, ref_id: Uuid) -> RpcResult<Permissions> {
 }
 
 #[handler(mutation)]
-async fn set_permissions(
-    ctx: AppCtx,
-    ref_id: Uuid,
-    entries: Vec<auth::PermissionToSet>,
-) -> RpcResult<()> {
-    _set_permissions(ctx, ref_id, entries).await.into()
+async fn set_permissions(ctx: AppCtx, ref_id: Uuid, new: NewPermissions) -> RpcResult<()> {
+    _set_permissions(ctx, ref_id, new).await.into()
 }
-async fn _set_permissions(
-    ctx: AppCtx,
-    ref_id: Uuid,
-    entries: Vec<auth::PermissionToSet>,
-) -> Result<(), AppError> {
+async fn _set_permissions(ctx: AppCtx, ref_id: Uuid, new: NewPermissions) -> Result<(), AppError> {
     if ctx.user.is_none() {
         return Err(AppError::Unauthorized);
     }
     auth::authorize(&ctx, ref_id, PermissionLevel::Own).await?;
-    auth::set_permissions(&ctx.state, ref_id, entries).await
+    auth::set_permissions(&ctx.state, ref_id, new).await
 }
 
 #[handler(mutation)]

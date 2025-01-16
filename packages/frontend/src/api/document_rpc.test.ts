@@ -36,8 +36,11 @@ describe("RPC for Automerge documents", async () => {
     assert(refDoc.tag === "Live");
     test.sequential("should get a valid document ID", () => {
         assert(isValidDocumentId(refDoc.docId));
-        assert.strictEqual(refDoc.permissions.anyone, "Own");
-        assert.strictEqual(refDoc.permissions.user, null);
+        assert.deepStrictEqual(refDoc.permissions, {
+            anyone: "Own",
+            user: null,
+            users: null,
+        });
     });
 
     const newRefDoc = unwrap(await rpc.get_doc.query(refId));
@@ -101,8 +104,11 @@ describe("Authorized RPC", async () => {
     test.sequential("should get a live document when authenticated", () => {
         assert(refDoc.tag === "Live");
         assert(isValidDocumentId(refDoc.docId));
-        assert.strictEqual(refDoc.permissions.anyone, null);
-        assert.strictEqual(refDoc.permissions.user, "Own");
+        assert.deepStrictEqual(refDoc.permissions, {
+            anyone: null,
+            user: "Own",
+            users: [],
+        });
     });
 
     const readonlyId = unwrap(
@@ -112,12 +118,10 @@ describe("Authorized RPC", async () => {
         }),
     );
     unwrap(
-        await rpc.set_permissions.mutate(readonlyId, [
-            {
-                userId: null,
-                level: "Read",
-            },
-        ]),
+        await rpc.set_permissions.mutate(readonlyId, {
+            anyone: "Read",
+            users: {},
+        }),
     );
 
     await signOut(auth);
@@ -132,7 +136,10 @@ describe("Authorized RPC", async () => {
     const readonlyDoc = unwrap(await rpc.get_doc.query(readonlyId));
     test.sequential("should allow read-only document access when unauthenticated", () => {
         assert.strictEqual(readonlyDoc.tag, "Readonly");
-        assert.strictEqual(readonlyDoc.permissions.anyone, "Read");
-        assert.strictEqual(readonlyDoc.permissions.user, null);
+        assert.deepStrictEqual(readonlyDoc.permissions, {
+            anyone: "Read",
+            user: null,
+            users: null,
+        });
     });
 });

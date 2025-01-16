@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use firebase_auth::{FirebaseAuth, FirebaseUser};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
@@ -26,7 +28,7 @@ pub struct UserPermissions {
 }
 
 /// Permissions set on a document.
-#[derive(Clone, Debug, Default, Serialize, TS)]
+#[derive(Clone, Debug, Serialize, TS)]
 pub struct Permissions {
     /// Base permission level for any person, logged in or not.
     pub anyone: Option<PermissionLevel>,
@@ -160,24 +162,41 @@ pub async fn permissions(ctx: &AppCtx, ref_id: Uuid) -> Result<Permissions, AppE
     })
 }
 
-/// A permission entry to set on a document.
+/// A new set of permissions to assign to a document.
 #[derive(Debug, Deserialize, TS)]
-pub struct PermissionToSet {
-    #[serde(rename = "userId")]
-    pub user_id: Option<String>,
-    pub level: PermissionLevel,
+pub struct NewPermissions {
+    /// Base permission level for any person, logged in or not.
+    pub anyone: Option<PermissionLevel>,
+
+    /** Permission levels for users.
+
+    A mapping from user IDs to permission levels.
+    */
+    pub users: HashMap<String, PermissionLevel>,
 }
 
-/// Sets or updates permissions for a ref.
+/** Replaces the set of permissions for a ref.
+
+Note that this function does not update/diff the permissions, it replaces them
+entirely. An exception is ownership which can never be revoked once granted.
+*/
 pub async fn set_permissions(
     state: &AppState,
     ref_id: Uuid,
-    entries: Vec<PermissionToSet>,
+    new: NewPermissions,
 ) -> Result<(), AppError> {
-    let objects: Vec<_> = entries.iter().map(|_| ref_id).collect();
-    let levels: Vec<_> = entries.iter().map(|entry| entry.level).collect();
-    let subjects: Vec<_> = entries.into_iter().map(|entry| entry.user_id).collect();
+    let mut levels: Vec<_> = new.users.values().cloned().collect();
+    let mut subjects: Vec<_> = new.users.into_keys().map(Some).collect();
+    if let Some(anyone) = new.anyone {
+        subjects.push(None);
+        levels.push(anyone);
+    }
+    let objects: Vec<_> = std::iter::repeat_n(ref_id, subjects.len()).collect();
 
+    // Because the first query deletes all permission entries for the ref
+    // *except* ownership, the second query will fail, and thus the whole
+    // transaction will fail and be rolled back, if the uniqueness constraint is
+    // violated by attempting to downgrade an ownership permission.
     let mut transaction = state.db.begin().await?;
 
     let delete_query = sqlx::query!(

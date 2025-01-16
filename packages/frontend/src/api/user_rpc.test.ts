@@ -127,28 +127,30 @@ describe("Sharing documents between users", async () => {
 
     // Share the document with read-only permissions.
     unwrap(
-        await rpc.set_permissions.mutate(refId, [
-            {
-                userId: shareeUser.uid,
-                level: "Read",
+        await rpc.set_permissions.mutate(refId, {
+            anyone: null,
+            users: {
+                [shareeUser.uid]: "Read",
             },
-        ]),
+        }),
     );
 
     const permissions = unwrap(await rpc.get_permissions.query(refId));
     test.sequential("should get updated permissions", () => {
-        assert.strictEqual(permissions.anyone, null);
-        assert.strictEqual(permissions.user, "Own");
-        assert.deepStrictEqual(permissions.users, [
-            {
-                user: {
-                    id: shareeUser.uid,
-                    username: shareeUsername,
-                    displayName: "Sharee",
+        assert.deepStrictEqual(permissions, {
+            anyone: null,
+            user: "Own",
+            users: [
+                {
+                    user: {
+                        id: shareeUser.uid,
+                        username: shareeUsername,
+                        displayName: "Sharee",
+                    },
+                    level: "Read",
                 },
-                level: "Read",
-            },
-        ]);
+            ],
+        });
     });
 
     await signOut(auth);
@@ -159,16 +161,19 @@ describe("Sharing documents between users", async () => {
     const readonlyDoc = unwrap(await rpc.get_doc.query(refId));
     test.sequential("should allow read-only document access when logged in", () => {
         assert.strictEqual(readonlyDoc.tag, "Readonly");
-        assert.strictEqual(readonlyDoc.permissions.anyone, null);
-        assert.strictEqual(readonlyDoc.permissions.user, "Read");
+        assert.deepStrictEqual(readonlyDoc.permissions, {
+            anyone: null,
+            user: "Read",
+            users: null,
+        });
     });
 
-    const forbiddenResult1 = await rpc.set_permissions.mutate(refId, [
-        {
-            userId: shareeUser.uid,
-            level: "Write",
+    const forbiddenResult1 = await rpc.set_permissions.mutate(refId, {
+        anyone: null,
+        users: {
+            [shareeUser.uid]: "Write",
         },
-    ]);
+    });
     test.sequential("should prohibit upgrading own permissions", () => {
         assert.strictEqual(unwrapErr(forbiddenResult1).code, 403);
     });
