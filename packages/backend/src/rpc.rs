@@ -97,16 +97,23 @@ async fn get_permissions(ctx: AppCtx, ref_id: Uuid) -> RpcResult<Permissions> {
 }
 
 #[handler(mutation)]
-async fn set_permissions(ctx: AppCtx, ref_id: Uuid, permissions: Permissions) -> RpcResult<()> {
-    _set_permissions(ctx, ref_id, permissions).await.into()
+async fn set_permissions(
+    ctx: AppCtx,
+    ref_id: Uuid,
+    entries: Vec<auth::PermissionToSet>,
+) -> RpcResult<()> {
+    _set_permissions(ctx, ref_id, entries).await.into()
 }
 async fn _set_permissions(
     ctx: AppCtx,
     ref_id: Uuid,
-    permissions: Permissions,
+    entries: Vec<auth::PermissionToSet>,
 ) -> Result<(), AppError> {
+    if ctx.user.is_none() {
+        return Err(AppError::Unauthorized);
+    }
     auth::authorize(&ctx, ref_id, PermissionLevel::Own).await?;
-    auth::set_permissions(&ctx, ref_id, permissions).await
+    auth::set_permissions(&ctx.state, ref_id, entries).await
 }
 
 #[handler(mutation)]

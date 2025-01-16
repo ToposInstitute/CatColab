@@ -6,13 +6,14 @@ use ts_rs::TS;
 use uuid::Uuid;
 
 use super::app::{AppCtx, AppError, AppState};
-use super::auth::{set_permissions, PermissionLevel, Permissions};
 
 /// Creates a new document ref with initial content.
 pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
     let ref_id = Uuid::now_v7();
 
-    let query = sqlx::query!(
+    let mut transaction = ctx.state.db.begin().await?;
+
+    let insert_ref = sqlx::query!(
         "
         WITH snapshot AS (
             INSERT INTO snapshots(for_ref, content, last_updated)
@@ -25,23 +26,20 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
         ref_id,
         content
     );
-    query.execute(&ctx.state.db).await?;
+    insert_ref.execute(&mut *transaction).await?;
 
-    let initial_permissions = if ctx.user.is_some() {
-        Permissions {
-            anyone: None,
-            user: Some(PermissionLevel::Own),
-            users: None,
-        }
-    } else {
-        Permissions {
-            anyone: Some(PermissionLevel::Own),
-            user: None,
-            users: None,
-        }
-    };
-    set_permissions(&ctx, ref_id, initial_permissions).await?;
+    let user_id = ctx.user.map(|user| user.user_id);
+    let insert_permission = sqlx::query!(
+        "
+        INSERT INTO permissions(subject, object, level)
+        VALUES ($1, $2, 'own')
+        ",
+        user_id,
+        ref_id,
+    );
+    insert_permission.execute(&mut *transaction).await?;
 
+    transaction.commit().await?;
     Ok(ref_id)
 }
 

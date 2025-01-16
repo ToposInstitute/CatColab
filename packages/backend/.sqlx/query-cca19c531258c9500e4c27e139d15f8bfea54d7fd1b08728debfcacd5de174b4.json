@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO permissions(subject, object, level)\n        VALUES ($1, $2, 'own')\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "cca19c531258c9500e4c27e139d15f8bfea54d7fd1b08728debfcacd5de174b4"
+}

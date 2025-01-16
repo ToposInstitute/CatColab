@@ -111,9 +111,14 @@ describe("Authorized RPC", async () => {
             name: "My readonly model",
         }),
     );
-    await rpc.set_permissions.mutate(readonlyId, {
-        anyone: "Read",
-    });
+    unwrap(
+        await rpc.set_permissions.mutate(readonlyId, [
+            {
+                userId: null,
+                level: "Read",
+            },
+        ]),
+    );
 
     await signOut(auth);
 
@@ -127,5 +132,7 @@ describe("Authorized RPC", async () => {
     const readonlyDoc = unwrap(await rpc.get_doc.query(readonlyId));
     test.sequential("should allow read-only document access when unauthenticated", () => {
         assert.strictEqual(readonlyDoc.tag, "Readonly");
+        assert.strictEqual(readonlyDoc.permissions.anyone, "Read");
+        assert.strictEqual(readonlyDoc.permissions.user, null);
     });
 });

@@ -86,11 +86,28 @@ pub async fn set_active_user_profile(ctx: AppCtx, profile: UserProfile) -> Resul
     Ok(())
 }
 
+/** Summary of a user.
+
+The minimal information needed to uniquely identify a user and display the user
+in human-readable form.
+ */
+#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+pub struct UserSummary {
+    pub id: String,
+    pub username: Option<String>,
+    #[serde(rename = "displayName")]
+    pub display_name: Option<String>,
+}
+
 /// Data of a user profile.
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 pub struct UserProfile {
     pub username: Option<String>,
+    #[serde(rename = "displayName")]
     pub display_name: Option<String>,
+    // TODO: More fields, such as:
+    // pub bio: Option<String>,
+    // pub url: Option<String>,
 }
 
 impl UserProfile {

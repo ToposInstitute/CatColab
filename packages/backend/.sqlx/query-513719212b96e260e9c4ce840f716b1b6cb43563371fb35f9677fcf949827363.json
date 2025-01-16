@@ -1,15 +1,25 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT subject as \"user\", level as \"level: PermissionLevel\"\n        FROM permissions WHERE object = $1\n        ",
+  "query": "\n        SELECT subject as \"user_id\", username, display_name,\n               level as \"level: PermissionLevel\"\n        FROM permissions\n        LEFT OUTER JOIN users ON id = subject\n        WHERE object = $1\n        ",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "user",
+        "name": "user_id",
         "type_info": "Text"
       },
       {
         "ordinal": 1,
+        "name": "username",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "display_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
         "name": "level: PermissionLevel",
         "type_info": {
           "Custom": {
@@ -33,8 +43,10 @@
     },
     "nullable": [
       true,
+      true,
+      true,
       false
     ]
   },
-  "hash": "f8133743db19d27c6893e00041dc9b8c5674282bd76bfc3e0d180796a95a927f"
+  "hash": "513719212b96e260e9c4ce840f716b1b6cb43563371fb35f9677fcf949827363"
 }

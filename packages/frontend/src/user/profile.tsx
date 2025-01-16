@@ -40,7 +40,7 @@ function UserProfileForm() {
     const onSubmit: SubmitHandler<UserProfile> = async (values) => {
         await api.rpc.set_active_user_profile.mutate({
             username: values.username ? values.username : null,
-            display_name: values.display_name ? values.display_name : null,
+            displayName: values.displayName ? values.displayName : null,
         });
         refetchProfile();
     };
@@ -85,11 +85,11 @@ function UserProfileForm() {
                         />
                     )}
                 </Field>
-                <Field name="display_name">
+                <Field name="displayName">
                     {(field, props) => (
                         <TextInputItem
                             {...props}
-                            id="display_name"
+                            id="displayName"
                             label="Display name"
                             value={field.value ?? ""}
                         />

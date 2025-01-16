@@ -19,7 +19,10 @@
             },
             "recommended": true,
             "suspicious": {
-                "noExplicitAny": "warn"
+                "noExplicitAny": "warn",
+                "noDuplicateTestHooks": {
+                    "level": "off"
+                }
             },
             "complexity": {
                 "noForEach": "warn",
