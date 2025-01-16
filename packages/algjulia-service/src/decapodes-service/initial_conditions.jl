@@ -31,20 +31,24 @@ This IC contains the domain and the initial conditions data.
 While these are currently tightly-interlinked with InitialConditionsData, they are formally separated to distinguish between the initial conditions schema and the data it might be parameterized over. 
 =#
 @data InitialConditions begin
+    Zeroes(r::Domain)
     # planar
     GaussianIC(r::Rectangle, ξ::GaussianData)
-    # spherical
+    # spheric
     TaylorVortexIC(d::Sphere, ξ::TaylorVortexData)
     SixVortexIC(m::Sphere, data::Any)
 end
 
 # DEFAULT METHOD
 GaussianIC(r::Rectangle) = GaussianIC(r, GaussianData(r))
+GaussianIC(s::Sphere) = GaussianIC(s, GaussianData(s)) # TODO this doesn't work
+
 TaylorVortexIC(d::Sphere) = TaylorVortexIC(d, TaylorVortexData())
 
+# since we need to plot non-state variables, we might need to pass in initial conditions for all variables.
 function initial_conditions(json_object::AbstractDict, geometry::Geometry, uuid2symb::Dict{String, Symbol})
-    ic_specs = json_object[:initialConditions] # this is "C" 
-    dict = Dict([uuid2symb[string(uuid)] => ic_specs[string(uuid)] for uuid ∈ keys(ic_specs)]...)
+    ic_specs = json_object[:initialConditions] # this is "C"
+    dict = Dict([uuid2symb[string(uuid)] => haskey(ic_specs, var) ? ic_specs[string(uuid)] : "Default" for uuid ∈ keys(uuid2symb)]...)
     initial_conditions(dict, geometry) # the resulting sim will only have (C,) as initial conditions
 end
 
@@ -59,6 +63,7 @@ function associate(str::String, geometry::Geometry)
    @match str begin
        "Gaussian" => GaussianIC(geometry.domain)
        "TaylorVortex" => TaylorVortexIC(geometry.domain)
+       "Default" => Zeroes(geometry.domain) # XXX create zeros?
        _ => error("$str is not implemented")
    end
 end
@@ -85,6 +90,10 @@ end
 
 function initial_conditions(x::InitialConditions, args...)
     throw(ImplError("These initial conditions ($(x)) are"))
+end
+
+function initial_conditions(ics::Zeroes, geometry::Geometry)
+    zeros(nv(geometry.dualmesh))
 end
 
 function initial_conditions(ics::GaussianIC, geometry::Geometry)
