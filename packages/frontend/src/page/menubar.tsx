@@ -7,14 +7,13 @@ import { type JSX, Show, createSignal } from "solid-js";
 import { Dialog, IconButton } from "../components";
 import { Login } from "../user";
 
-import CircleHelp from "lucide-solid/icons/circle-help";
+import Info from "lucide-solid/icons/info";
 import LogInIcon from "lucide-solid/icons/log-in";
 import LogOutIcon from "lucide-solid/icons/log-out";
 import MenuIcon from "lucide-solid/icons/menu";
 import SettingsIcon from "lucide-solid/icons/settings";
 
 import "./menubar.css";
-
 /** Menu triggered from a hamburger button. */
 export function HamburgerMenu(props: {
     children: JSX.Element;
@@ -83,8 +82,8 @@ function HelpMenuItem() {
 
     return (
         <MenuItem onSelect={() => navigate("/help")}>
-            <CircleHelp />
-            <MenuItemLabel>Help</MenuItemLabel>
+            <Info />
+            <MenuItemLabel>Info & documentation</MenuItemLabel>
         </MenuItem>
     );
 }
