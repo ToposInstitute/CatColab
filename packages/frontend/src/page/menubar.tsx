@@ -5,6 +5,10 @@ import { useAuth, useFirebaseApp } from "solid-firebase";
 import { type JSX, Show, createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
+import { type ModelDocument } from "../model";
+import { type DiagramDocument } from "../diagram";
+import type { AnalysisDocument } from "../analysis";
+
 import { useApi } from "../api";
 import { Dialog, IconButton } from "../components";
 import { createModel } from "../model/document";
@@ -20,9 +24,10 @@ import LogOutIcon from "lucide-solid/icons/log-out";
 import MenuIcon from "lucide-solid/icons/menu";
 import SettingsIcon from "lucide-solid/icons/settings";
 
-import {JsonImport} from "../components/json_import";  
+import { JsonImport } from "../components/json_import";
 import "./menubar.css";
 
+type Document = ModelDocument | DiagramDocument | AnalysisDocument;
 /** Menu triggered from a hamburger button. */
 export function HamburgerMenu(props: {
     children: JSX.Element;
@@ -79,13 +84,13 @@ export function AppMenu(props: {
                     <SettingsMenuItem />
                     <LogOutMenuItem />
                 </Show>
-                <OpenMenuItem showOpen={() => setOpenOpen(true)}/>
+                <OpenMenuItem showOpen={() => setOpenOpen(true)} />
             </HamburgerMenu>
             <Dialog open={loginOpen()} onOpenChange={setLoginOpen} title="Log in">
                 <Login onComplete={() => setLoginOpen(false)} />
             </Dialog>
             <Dialog open={openOpen()} onOpenChange={setOpenOpen} title="Open">
-                <Open onComplete={() => setOpenOpen(false)} />
+                <Open />
             </Dialog>
         </>
     );
@@ -175,10 +180,10 @@ function OpenMenuItem(props: {
     );
 }
 
-function Open(_ : any) {
+function Open() {
     const api = useApi();
     const navigate = useNavigate();
-    const handleImport = async (data: any) => {
+    const handleImport = async (data: Document) => {
         console.log("Imported data:", data);
 
         switch (data.type) {
@@ -201,9 +206,7 @@ function Open(_ : any) {
             }
 
             case "analysis": {
-                throw new Error(
-                    "Analyses don't currently support initialization."
-                );
+                throw new Error("Analyses don't currently support initialization.");
             }
 
             default:
@@ -211,7 +214,9 @@ function Open(_ : any) {
         }
     };
 
-    const validateJson = (data: any) => {
+    // Placeholder, not doing more than typechecking does for now but 
+    // will eventually validate against json schema
+    const validateJson = (data: Document) => {
         // Return true if valid
         if (data.name && data.notebook && data.type) {
             return true;
@@ -229,7 +234,3 @@ function Open(_ : any) {
         </div>
     );
 }
-
-
-
-
