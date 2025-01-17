@@ -532,6 +532,7 @@
             "tag": "morphism"
         }
     ],
+	"duration": 10,
     "domain": "Sphere",
     "mesh": "Icosphere6",
     "initialConditions": {

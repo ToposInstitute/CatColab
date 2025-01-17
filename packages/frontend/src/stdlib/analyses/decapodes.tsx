@@ -1,4 +1,3 @@
-0.0;
 import { For, Match, Show, Switch, createMemo } from "solid-js";
 import { isMatching } from "ts-pattern";
 
@@ -362,7 +361,7 @@ const makeSimulationCode = (data: SimulationData) =>
 
     f = simulator(system.geometry.dualmesh, system.generate, DiagonalHodge());
 
-    soln = run_sim(f, system.init, ${data.duration}, ComponentArray(k=0.5,));
+    soln = run_sim(f, system.init, system.duration, ComponentArray(k=0.5,));
 
     JsonValue(SimResult(soln, system))
     `;
