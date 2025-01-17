@@ -262,12 +262,6 @@ For example, the domain names \code{backend-next.catcolab.org} and \code{automer
   \li{In \code{packages/backend/}, run \code{~/.cargo/bin/sqlx migrate run}}
   }
 }
-
-}
-
-\p{Other TODOs:}
-\ol{
-\li{compile with pnpm}
 }
 
 }
