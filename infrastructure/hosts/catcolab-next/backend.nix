@@ -14,56 +14,64 @@ let
         ../../target/debug/backend
     '';
 
-    initScript = pkgs.writeShellScriptBin "catcolab-init.sh" ''
-        echo -e "\n\n ##### catcolab-init: cloning catcolab repo...\n\n"
+    initScript = pkgs.writeShellScriptBin "catcolab-init" ''
+        echo -e "\n\n##### catcolab-init: cloning catcolab repo...\n\n"
         cd /var/lib
         if [ -z "$1" ]; then branch="main"; else branch="$1"; fi
         git clone -b $branch https://github.com/ToposInstitute/CatColab.git
         mv CatColab catcolab
         chown -R catcolab:catcolab catcolab
 
-        echo -e "\n\n ##### catcolab-init: linking secrets...\n\n"
+        echo -e "\n\n##### catcolab-init: linking secrets...\n\n"
         ln -sf ${config.age.secrets."instrument.mjs".path} /var/lib/catcolab/packages/automerge-doc-server/
         ln -sf ${config.age.secrets.".env".path} /var/lib/catcolab/packages/backend/
         
-        echo -e "\n\n ##### catcolab-init: installing nodejs dependencies...\n\n"
+        echo -e "\n\n##### catcolab-init: installing nodejs dependencies...\n\n"
         su -l catcolab -c "cd /var/lib/catcolab/packages/backend; pnpm install"
 
-        echo -e "\n\n ##### catcolab-init: installing rust and cargo...\n\n"
+        echo -e "\n\n##### catcolab-init: installing rust and cargo...\n\n"
         su -l catcolab -c "rustup default stable"
         
-        echo -e "\n\n ##### catcolab-init: installing sqlx-cli for migrations...\n\n"
+        echo -e "\n\n##### catcolab-init: installing sqlx-cli for migrations...\n\n"
         su -l catcolab -c "cargo install sqlx-cli"
 
-        echo -e "\n\n ##### catcolab-init: setting up postgres user, database, permissions...\n\n"
+        echo -e "\n\n##### catcolab-init: setting up postgres user, database, permissions...\n\n"
         su -l postgres -- /var/lib/catcolab/infrastructure/scripts/initdb.sh $(cat ${config.age.secrets.".env".path})
 
-        echo -e "\n\n ##### catcolab-init: stopping automerge, build services...\n\n"
+        echo -e "\n\n##### catcolab-init: stopping automerge, build services...\n\n"
         /var/lib/catcolab/infrastructure/scripts/stop.sh
 
-        echo -e "\n\n ##### catcolab-init: migrating database...\n\n"
+        echo -e "\n\n##### catcolab-init: migrating database...\n\n"
         su -l catcolab -- /var/lib/catcolab/infrastructure/scripts/migrate.sh
 
-        echo -e "\n\n ##### catcolab-init: building binaries...\n\n"
+        echo -e "\n\n##### catcolab-init: building binaries...\n\n"
         su -l catcolab -- /var/lib/catcolab/infrastructure/scripts/build.sh
 
-        echo -e "\n\n ##### catcolab-init: start automerge, build services...\n\n"
+        echo -e "\n\n##### catcolab-init: start automerge, build services...\n\n"
         /var/lib/catcolab/infrastructure/scripts/start.sh
     '';
 
-    stopScript = pkgs.writeShellScriptBin "catcolab-stop.sh" ''
+    stopScript = pkgs.writeShellScriptBin "catcolab-stop" ''
         /var/lib/catcolab/infrastructure/scripts/stop.sh
     '';
 
-    startScript = pkgs.writeShellScriptBin "catcolab-start.sh" ''
+    startScript = pkgs.writeShellScriptBin "catcolab-start" ''
         /var/lib/catcolab/infrastructure/scripts/start.sh
     '';
 
-    migrateScript = pkgs.writeShellScriptBin "catcolab-migrate.sh" ''
+    restartScript = pkgs.writeShellScriptBin "catcolab-restart" ''
+        /var/lib/catcolab/infrastructure/scripts/restart.sh
+    '';
+
+    statusScript = pkgs.writeShellScriptBin "catcolab-status" ''
+        /var/lib/catcolab/infrastructure/scripts/status.sh
+    '';
+
+    migrateScript = pkgs.writeShellScriptBin "catcolab-migrate" ''
         /var/lib/catcolab/infrastructure/scripts/migrate.sh
     '';
 
-    buildScript = pkgs.writeShellScriptBin "catcolab-build.sh" ''
+    buildScript = pkgs.writeShellScriptBin "catcolab-build" ''
         /var/lib/catcolab/infrastructure/scripts/build.sh
     '';
 
@@ -81,6 +89,8 @@ let
         initScript
         stopScript
         startScript
+        restartScript
+        statusScript
         migrateScript
         buildScript
     ];
@@ -152,7 +162,7 @@ in {
 
         environment = {
             PORT = automergePort;
-            NODE_OPTIONS = "--import ./instrument.mjs";
+            # NODE_OPTIONS = "--import ./instrument.mjs";  # sentry disabled - need Owen to fix
         };
 
         serviceConfig = {
