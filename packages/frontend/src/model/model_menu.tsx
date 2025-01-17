@@ -3,9 +3,9 @@ import { Show } from "solid-js";
 
 import { createAnalysis } from "../analysis/document";
 import { type StableRef, useApi } from "../api";
-import { copyToClipboard, downloadJson } from "../components/json_export";
 import { createDiagram } from "../diagram/document";
-import { AppMenu, MenuItem, MenuItemLabel, MenuSeparator, NewModelItem } from "../page";
+import { AppMenu, MenuItem, MenuItemLabel, MenuSeparator } from "../page";
+import { copyToClipboard, downloadJson } from "../util/json_export";
 import { type LiveModelDocument, type ModelDocument, createModel } from "./document";
 
 import ChartSpline from "lucide-solid/icons/chart-spline";
