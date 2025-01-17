@@ -38,14 +38,14 @@ export const JsonImport: Component<Props> = (props) => {
     if (!input.files?.length) return;
     
     try {
-      const file = input.files[0];
+      const file = input.files[0]!;
       
       // Validate file type
-      if (!file.type && !file.name.endsWith('.json')) {
+      if (!file!.type && !file!.name.endsWith('.json')) {
         throw new Error('Please upload a JSON file');
       }
       
-      const text = await file.text();
+      const text = await file!.text();
       validateAndImport(text);
       
       // Reset file input

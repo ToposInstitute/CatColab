@@ -105,8 +105,8 @@ export const handleFileUpload = async (event: Event) => {
 
   // Handle paste
 export const handlePaste = () => {
-    const [error, setError] = createSignal<string | null>(null);
-    const [pasteValue, setPasteValue] = createSignal('');
+    const setError = createSignal<string | null>(null)[1];
+    const pasteValue = createSignal('')[0];
     if (!pasteValue().trim()) {
       setError('Please enter some JSON');
       return;

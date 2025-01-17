@@ -175,7 +175,7 @@ function OpenMenuItem(props: {
     );
 }
 
-function Open(props: { onComplete?: () => void }) {
+function Open(_ : any) {
     const api = useApi();
     const navigate = useNavigate();
     const handleImport = async (data: any) => {
