@@ -7,7 +7,7 @@ import { type JSX, Show, createSignal } from "solid-js";
 import { Dialog, IconButton } from "../components";
 
 import { Login } from "../user";
-import { Open } from "./import";
+import { Import } from "./import";
 
 import CircleHelp from "lucide-solid/icons/circle-help";
 import LogInIcon from "lucide-solid/icons/log-in";
@@ -54,7 +54,7 @@ export function AppMenu(props: {
     const auth = useAuth(getAuth(firebaseApp));
 
     const [loginOpen, setLoginOpen] = createSignal(false);
-    const [openOpen, setOpenOpen] = createSignal(false);
+    const [openImport, setImportOpen] = createSignal(false);
 
     // Root the dialog here so that it is not destroyed when the menu closes.
     return (
@@ -73,13 +73,13 @@ export function AppMenu(props: {
                     <SettingsMenuItem />
                     <LogOutMenuItem />
                 </Show>
-                <OpenMenuItem showOpen={() => setOpenOpen(true)} />
+                <OpenMenuItem showOpen={() => setImportOpen(true)} />
             </HamburgerMenu>
             <Dialog open={loginOpen()} onOpenChange={setLoginOpen} title="Log in">
                 <Login onComplete={() => setLoginOpen(false)} />
             </Dialog>
-            <Dialog open={openOpen()} onOpenChange={setOpenOpen} title="Open">
-                <Open onComplete={() => setOpenOpen(false)} />
+            <Dialog open={openImport()} onOpenChange={setImportOpen} title="Import">
+                <Import onComplete={() => setImportOpen(false)} />
             </Dialog>
         </>
     );
@@ -136,7 +136,7 @@ function OpenMenuItem(props: {
     return (
         <MenuItem onSelect={props.showOpen}>
             <LogInIcon />
-            <MenuItemLabel>{"Open notebook"}</MenuItemLabel>
+            <MenuItemLabel>{"Import notebook"}</MenuItemLabel>
         </MenuItem>
     );
 }
