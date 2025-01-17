@@ -4,10 +4,10 @@ import { getAuth, signOut } from "firebase/auth";
 import { useAuth, useFirebaseApp } from "solid-firebase";
 import { type JSX, Show, createSignal } from "solid-js";
 
-import { Dialog, IconButton } from "../components";
-import { type ModelDocument, createModel } from "../model";
-import { type DiagramDocument, createDiagram } from "../diagram";
 import type { AnalysisDocument } from "../analysis";
+import { Dialog, IconButton } from "../components";
+import { type DiagramDocument, createDiagram } from "../diagram";
+import { type ModelDocument, createModel } from "../model";
 
 import { useApi } from "../api";
 
@@ -85,7 +85,7 @@ export function AppMenu(props: {
                 <Login onComplete={() => setLoginOpen(false)} />
             </Dialog>
             <Dialog open={openOpen()} onOpenChange={setOpenOpen} title="Open">
-                <Open />
+                <Open onComplete={() => setOpenOpen(false)} />
             </Dialog>
         </>
     );
@@ -147,7 +147,7 @@ function OpenMenuItem(props: {
     );
 }
 
-function Open() {
+function Open(props: { onComplete?: () => void }) {
     const api = useApi();
     const navigate = useNavigate();
     const handleImport = async (data: Document) => {
@@ -179,9 +179,11 @@ function Open() {
             default:
                 throw new Error("Unknown document type");
         }
+
+        props.onComplete?.();
     };
 
-    // Placeholder, not doing more than typechecking does for now but 
+    // Placeholder, not doing more than typechecking does for now but
     // will eventually validate against json schema
     const validateJson = (data: Document) => {
         // Return true if valid
