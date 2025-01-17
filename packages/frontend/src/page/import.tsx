@@ -8,7 +8,7 @@ import { type ModelDocument, createModel } from "../model";
 
 type ccDocument = ModelDocument | DiagramDocument | AnalysisDocument;
 
-export function Open(props: { onComplete?: () => void }) {
+export function Import(props: { onComplete?: () => void }) {
     const api = useApi();
     const navigate = useNavigate();
     const handleImport = async (data: ccDocument) => {
