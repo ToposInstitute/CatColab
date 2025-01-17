@@ -5,9 +5,8 @@ import { useAuth, useFirebaseApp } from "solid-firebase";
 import { type JSX, Show, createSignal } from "solid-js";
 
 import { Dialog, IconButton} from "../components";
-import { ModelDocument, createModel } from "../model";
-import { AnalysisDocument, createAnalysis } from "../analysis";
-import { DiagramDocument, createDiagram } from "../diagram";
+import { createModel } from "../model";
+import { createDiagram } from "../diagram";
 import { useApi } from "../api";
 
 import { Login } from "../user";
@@ -145,7 +144,7 @@ function OpenMenuItem(props: {
     );
 }
 
-function Open(props: { onComplete?: () => void }) {
+function Open(_ : any) {
     const api = useApi();
     const navigate = useNavigate();
     const handleImport = async (data: any) => {
