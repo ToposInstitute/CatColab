@@ -4,12 +4,11 @@ import invariant from "tiny-invariant";
 
 import { createAnalysis } from "../analysis/document";
 import { useApi } from "../api";
+import { copyToClipboard, downloadJson } from "../components/json_export";
 import { createDiagram } from "../diagram/document";
 import { AppMenu, MenuItem, MenuItemLabel, MenuSeparator } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import { type LiveModelDocument, type ModelDocument, createModel } from "./document";
-import {downloadJson, copyToClipboard} from "../components/json_export";
-
 
 import ChartSpline from "lucide-solid/icons/chart-spline";
 import Copy from "lucide-solid/icons/copy";
@@ -62,12 +61,11 @@ export function ModelMenuItems(props: {
         navigate(`/model/${newRef}`);
     };
     const onDownloadJSON = (model: ModelDocument) => {
-        downloadJson({data: JSON.stringify(model), filename: `${model.name}.json`});
+        downloadJson({ data: JSON.stringify(model), filename: `${model.name}.json` });
     };
     const onCopy = (model: ModelDocument) => {
-        copyToClipboard({data: JSON.stringify(model)});
-    }
-
+        copyToClipboard({ data: JSON.stringify(model) });
+    };
 
     return (
         <>
