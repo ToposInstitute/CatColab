@@ -9,7 +9,9 @@ import { Dialog, IconButton } from "../components";
 import { Login } from "../user";
 import { Import } from "./import";
 
+
 import {
+    Info,
     CircleHelp,
     LogInIcon,
     LogOutIcon,
@@ -19,7 +21,6 @@ import {
 } from "lucide-solid";
 
 import "./menubar.css";
-
 /** Menu triggered from a hamburger button. */
 export function HamburgerMenu(props: {
     children: JSX.Element;
@@ -94,8 +95,8 @@ function HelpMenuItem() {
 
     return (
         <MenuItem onSelect={() => navigate("/help")}>
-            <CircleHelp />
-            <MenuItemLabel>Help</MenuItemLabel>
+            <Info />
+            <MenuItemLabel>Info & documentation</MenuItemLabel>
         </MenuItem>
     );
 }
