@@ -1,7 +1,8 @@
-import { type Component, createSignal } from "solid-js";
+import { type Component, createSignal, onCleanup } from "solid-js";
 import type { AnalysisDocument } from "../analysis";
 import type { DiagramDocument } from "../diagram";
 import type { ModelDocument } from "../model";
+import './json_import.css';
 
 interface Props {
     onImport: (data: ModelDocument | DiagramDocument | AnalysisDocument) => void;
@@ -67,8 +68,19 @@ export const JsonImport: Component<Props> = (props) => {
         validateAndImport(pasteValue());
     };
 
+    const autoResizeTextarea = (textarea: HTMLTextAreaElement) => {
+        textarea.style.height = 'auto';
+        textarea.style.height = `${textarea.scrollHeight}px`;
+    };
+
+    const handleInput = (event: Event) => {
+        const textarea = event.target as HTMLTextAreaElement;
+        setPasteValue(textarea.value);
+        autoResizeTextarea(textarea);
+    };
+    
     return (
-        <div class="flex flex-col gap-4">
+        <div class="json_import">
             {/* File upload */}
             <div class="flex flex-col gap-2">
                 <label class="font-medium">Import from file:</label>
@@ -85,9 +97,14 @@ export const JsonImport: Component<Props> = (props) => {
                 <label class="font-medium">Or paste JSON:</label>
                 <textarea
                     value={pasteValue()}
-                    onInput={(e) => setPasteValue(e.target.value)}
+                    onInput={handleInput}
+                    onPaste={handleInput}
                     class="border p-2 rounded h-32 font-mono"
                     placeholder="Paste your JSON here..."
+                    ref={(el) => {
+                        autoResizeTextarea(el);
+                        onCleanup(() => el.removeEventListener('input', handleInput));
+                    }}
                 />
                 <button
                     onClick={handlePaste}
