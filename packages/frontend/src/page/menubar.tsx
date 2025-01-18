@@ -6,21 +6,20 @@ import { type JSX, Show, createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { useApi } from "../api";
+import { Dialog, IconButton } from "../components";
 import { createModel } from "../model/document";
 import { TheoryLibraryContext } from "../stdlib";
-import { Dialog, IconButton } from "../components";
 
 import { Login } from "../user";
 import { Import } from "./import";
 
-import {
-    FilePlus,
-    LogInIcon,
-    LogOutIcon,
-    MenuIcon,
-    SettingsIcon,
-    UploadIcon,
-} from "lucide-solid";
+import FilePlus from "lucide-solid/icons/file-plus";
+import Info from "lucide-solid/icons/info";
+import LogInIcon from "lucide-solid/icons/log-in";
+import LogOutIcon from "lucide-solid/icons/log-out";
+import MenuIcon from "lucide-solid/icons/menu";
+import SettingsIcon from "lucide-solid/icons/settings";
+import UploadIcon from "lucide-solid/icons/upload";
 
 import "./menubar.css";
 

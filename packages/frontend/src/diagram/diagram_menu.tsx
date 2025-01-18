@@ -14,7 +14,9 @@ import {
 import { copyToClipboard, downloadJson } from "../util/json_export";
 
 import ChartSpline from "lucide-solid/icons/chart-spline";
+import CopyToClipboard from "lucide-solid/icons/clipboard-copy";
 import Copy from "lucide-solid/icons/copy";
+import Export from "lucide-solid/icons/download";
 import FilePlus from "lucide-solid/icons/file-plus";
 
 /** Hamburger menu for a diagram in a model. */
@@ -84,11 +86,11 @@ export function DiagramMenuItems(props: {
                 <MenuItemLabel>{"Duplicate diagram"}</MenuItemLabel>
             </MenuItem>
             <MenuItem onSelect={() => onDownloadJSON(props.liveDiagram.liveDoc.doc)}>
-                <Copy />
-                <MenuItemLabel>{"Download JSON"}</MenuItemLabel>
+                <Export />
+                <MenuItemLabel>{"Export JSON"}</MenuItemLabel>
             </MenuItem>
             <MenuItem onSelect={() => onCopy(props.liveDiagram.liveDoc.doc)}>
-                <Copy />
+                <CopyToClipboard />
                 <MenuItemLabel>{"Copy to clipboard"}</MenuItemLabel>
             </MenuItem>
         </>
