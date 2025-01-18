@@ -9,11 +9,14 @@ import { Dialog, IconButton } from "../components";
 import { Login } from "../user";
 import { Import } from "./import";
 
-import CircleHelp from "lucide-solid/icons/circle-help";
-import LogInIcon from "lucide-solid/icons/log-in";
-import LogOutIcon from "lucide-solid/icons/log-out";
-import MenuIcon from "lucide-solid/icons/menu";
-import SettingsIcon from "lucide-solid/icons/settings";
+import {
+    CircleHelp,
+    LogInIcon,
+    LogOutIcon,
+    MenuIcon,
+    SettingsIcon,
+    UploadIcon,
+} from "lucide-solid";
 
 import "./menubar.css";
 
@@ -73,7 +76,7 @@ export function AppMenu(props: {
                     <SettingsMenuItem />
                     <LogOutMenuItem />
                 </Show>
-                <OpenMenuItem showOpen={() => setImportOpen(true)} />
+                <ImportMenuItem showImport={() => setImportOpen(true)} />
             </HamburgerMenu>
             <Dialog open={loginOpen()} onOpenChange={setLoginOpen} title="Log in">
                 <Login onComplete={() => setLoginOpen(false)} />
@@ -130,12 +133,12 @@ function SettingsMenuItem() {
     );
 }
 
-function OpenMenuItem(props: {
-    showOpen: () => void;
+function ImportMenuItem(props: {
+    showImport: () => void;
 }) {
     return (
-        <MenuItem onSelect={props.showOpen}>
-            <LogInIcon />
+        <MenuItem onSelect={props.showImport}>
+            <UploadIcon />
             <MenuItemLabel>{"Import notebook"}</MenuItemLabel>
         </MenuItem>
     );
