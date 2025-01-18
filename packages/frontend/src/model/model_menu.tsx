@@ -8,9 +8,13 @@ import { AppMenu, MenuItem, MenuItemLabel, MenuSeparator } from "../page";
 import { copyToClipboard, downloadJson } from "../util/json_export";
 import { type LiveModelDocument, type ModelDocument, createModel } from "./document";
 
+<<<<<<< HEAD
 import ChartSpline from "lucide-solid/icons/chart-spline";
 import Copy from "lucide-solid/icons/copy";
 import Network from "lucide-solid/icons/network";
+=======
+import { ChartSpline, ClipboardCopy, Copy, Download, FilePlus, Network } from "lucide-solid";
+>>>>>>> 8dd5942 (Fix icons)
 
 /** Hamburger menu for a model of a double theory. */
 export function ModelMenu(props: {
@@ -81,11 +85,11 @@ export function ModelMenuItems(props: {
                 <MenuItemLabel>{"Duplicate model"}</MenuItemLabel>
             </MenuItem>
             <MenuItem onSelect={() => onDownloadJSON(props.liveModel.liveDoc.doc)}>
-                <Copy />
+                <Download />
                 <MenuItemLabel>{"Download JSON"}</MenuItemLabel>
             </MenuItem>
             <MenuItem onSelect={() => onCopy(props.liveModel.liveDoc.doc)}>
-                <Copy />
+                <ClipboardCopy />
                 <MenuItemLabel>{"Copy to clipboard"}</MenuItemLabel>
             </MenuItem>
         </>
