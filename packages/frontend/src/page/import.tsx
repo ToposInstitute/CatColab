@@ -23,7 +23,7 @@ export function Import(props: { onComplete?: () => void }) {
                 navigate(`/model/${newRef}`);
                 break;
             }
-            // XX: Probably won't work yet
+
             case "diagram": {
                 const newRef = await createDiagram(api, {
                     ...data,

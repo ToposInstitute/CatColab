@@ -13,7 +13,6 @@ import {
 
 import { copyToClipboard, downloadJson } from "../util/json_export";
 
-
 import ChartSpline from "lucide-solid/icons/chart-spline";
 import Copy from "lucide-solid/icons/copy";
 import FilePlus from "lucide-solid/icons/file-plus";
@@ -68,7 +67,8 @@ export function DiagramMenuItems(props: {
     };
     const onCopy = (diagram: DiagramDocument) => {
         copyToClipboard({ data: JSON.stringify(diagram) });
-    };    return (
+    };
+    return (
         <>
             <MenuItem onSelect={() => onNewDiagram(props.liveDiagram.liveModel.refId)}>
                 <FilePlus />
