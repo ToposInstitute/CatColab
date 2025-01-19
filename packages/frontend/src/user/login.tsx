@@ -102,14 +102,14 @@ export function Login(props: {
                     )}
                 </Field>
                 <div class="buttons">
-                    <IconButton type="submit" value="sign-in">
+                    <button type="submit" value="sign-in">
                         <SignInIcon />
                         Login
-                    </IconButton>
-                    <IconButton type="submit" value="sign-up">
+                    </button>
+                    <button type="submit" value="sign-up">
                         <SignUpIcon />
                         Sign up
-                    </IconButton>
+                    </button>
                 </div>
             </Form>
             <div class="separator">{"Or continue with"}</div>

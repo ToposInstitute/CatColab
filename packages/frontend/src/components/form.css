@@ -6,18 +6,22 @@ form select {
     padding: 6px 12px;
 }
 
-form input {
-    font-size: larger;
+form button {
+    cursor: pointer;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 0.25rem;
 }
 
-form button[type="submit"] {
-    cursor: pointer;
+form button[type="submit"],
+form button.ok {
     color: white;
     background: #2e8b57;
     border: 1px solid darkgreen;
     border-radius: 6px;
     padding: 6px;
-    font-size: larger;
 }
 
 .form-group {

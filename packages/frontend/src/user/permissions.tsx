@@ -2,6 +2,7 @@ import { getAuth, signOut } from "firebase/auth";
 import { useAuth, useFirebaseApp } from "solid-firebase";
 import {
     type ComponentProps,
+    For,
     Match,
     Show,
     Switch,
@@ -9,12 +10,13 @@ import {
     createResource,
     createSignal,
 } from "solid-js";
-import { createStore } from "solid-js/store";
+import { createStore, produce } from "solid-js/store";
 import invariant from "tiny-invariant";
 
 import type { PermissionLevel, Permissions, UserSummary } from "catcolab-api";
 import { useApi } from "../api";
 import { Dialog, FormGroup, IconButton, SelectItem } from "../components";
+import { UserInput } from "./input";
 import { Login } from "./login";
 
 import File from "lucide-solid/icons/file";
@@ -22,6 +24,8 @@ import FileLock from "lucide-solid/icons/file-lock-2";
 import FilePen from "lucide-solid/icons/file-pen";
 import FileUser from "lucide-solid/icons/file-user";
 import Globe from "lucide-solid/icons/globe";
+
+import "./permissions.css";
 
 type PermissionsState = Partial<Omit<Permissions, "users">> & {
     users?: Array<{
@@ -53,34 +57,44 @@ export function PermissionsForm(props: {
         setState(currentPermissions() ?? {});
     });
 
-    const updatePermissions = async () => {
-        const refId = props.refId;
-        if (!refId) {
+    const addEntry = (user: UserSummary) => {
+        if (state.users?.some((perm) => perm.user.id === user.id)) {
             return;
         }
+        setState(
+            produce((state) => {
+                if (state.users == null) {
+                    state.users = [];
+                }
+                state.users.push({ user, level: null });
+            }),
+        );
+    };
 
+    const updatePermissions = async () => {
         const entries = state.users
             ?.filter((userPerm) => userPerm.level != null)
             .map((userPerm) => [userPerm.user.id, userPerm.level]);
 
-        const result = await api.rpc.set_permissions.mutate(refId, {
+        invariant(props.refId);
+        const result = await api.rpc.set_permissions.mutate(props.refId, {
             anyone: state.anyone ?? null,
             users: entries ? Object.fromEntries(entries) : null,
         });
         invariant(result.tag === "Ok");
     };
 
-    const submitPermissions = async (evt: SubmitEvent) => {
-        evt.preventDefault();
+    const submitPermissions = async () => {
         await updatePermissions();
         props.onComplete?.();
     };
 
+    // Bypass standard form submission so that pressing Enter does not submit.
     return (
-        <form class="permissions" onSubmit={submitPermissions}>
+        <form class="permissions" onSubmit={(evt) => evt.preventDefault()}>
             <FormGroup>
                 <SelectItem
-                    id="anyone"
+                    id="entry-anyone"
                     label="Any person can"
                     value={state.anyone ?? ""}
                     onInput={(evt) => {
@@ -92,10 +106,44 @@ export function PermissionsForm(props: {
                     <option value="Read">View</option>
                     <option value="Write">Edit</option>
                 </SelectItem>
-                <button type="submit" disabled={!props.refId}>
-                    Update
-                </button>
             </FormGroup>
+            <FormGroup>
+                <dt>People with access</dt>
+                <dd class="permission-entries">
+                    <For each={state.users ?? []}>
+                        {(userPerm, i) => (
+                            <div class="permission-entry">
+                                <label for={`entry-${i()}`}>{userPerm.user.username}</label>
+                                <select
+                                    id={`entry-${i()}`}
+                                    value={userPerm.level ?? ""}
+                                    onInput={(evt) => {
+                                        const value = evt.currentTarget.value;
+                                        setState(
+                                            produce((state) => {
+                                                const user = state.users?.[i()];
+                                                invariant(user);
+                                                user.level = value
+                                                    ? (value as PermissionLevel)
+                                                    : null;
+                                            }),
+                                        );
+                                    }}
+                                >
+                                    <option value="">Remove access</option>
+                                    <option value="Read">View</option>
+                                    <option value="Write">Edit</option>
+                                    <option value="Own">Own</option>
+                                </select>
+                            </div>
+                        )}
+                    </For>
+                    <UserInput setUser={addEntry} placeholder="Add a person" />
+                </dd>
+            </FormGroup>
+            <button type="button" class="ok" disabled={!props.refId} onClick={submitPermissions}>
+                Update permissions
+            </button>
         </form>
     );
 }
@@ -251,9 +299,9 @@ const OwnerPermissionsTrigger = (props: ComponentProps<"button">) => {
     const tooltip = (
         <>
             <p>
-                This document is <strong>{permissionAdjective("Own")}</strong> by you
+                You <strong>own</strong> this document.
             </p>
-            <p>Click to change who has access</p>
+            <p>Click to change who has access.</p>
         </>
     );
     return (
