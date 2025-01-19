@@ -1,4 +1,10 @@
 form input,
+form select,
+form button {
+    font-size: inherit;
+}
+
+form input,
 form select {
     background: whitesmoke;
     border: 1px solid lightgray;
@@ -34,7 +40,6 @@ form button.ok {
         flex-direction: column;
         gap: 0.25rem;
         margin-left: 0;
-        width: fit-content;
     }
     & dd:not(:last-child) {
         margin-bottom: 1rem;

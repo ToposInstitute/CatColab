@@ -1,3 +1,11 @@
+.permissions {
+    min-width: 50ex;
+
+    & .alert {
+        font-size: smaller;
+    }
+}
+
 .permission-entry {
     display: flex;
     flex-direction: row;

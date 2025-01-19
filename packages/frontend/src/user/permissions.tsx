@@ -13,11 +13,12 @@ import {
 import { createStore, produce } from "solid-js/store";
 import invariant from "tiny-invariant";
 
-import type { PermissionLevel, Permissions, UserSummary } from "catcolab-api";
+import type { NewPermissions, PermissionLevel, Permissions, UserSummary } from "catcolab-api";
 import { useApi } from "../api";
-import { Dialog, FormGroup, IconButton, SelectItem } from "../components";
-import { UserInput } from "./input";
+import { Dialog, FormGroup, IconButton, SelectItem, Warning } from "../components";
+import { deepCopyJSON } from "../util/deepcopy";
 import { Login } from "./login";
+import { NameUser, UserInput } from "./username";
 
 import File from "lucide-solid/icons/file";
 import FileLock from "lucide-solid/icons/file-lock-2";
@@ -42,6 +43,16 @@ export function PermissionsForm(props: {
 }) {
     const [state, setState] = createStore<PermissionsState>({});
 
+    const pendingPermissions = (): NewPermissions => {
+        const entries = state.users
+            ?.filter((userPerm) => userPerm.level != null)
+            .map((userPerm) => [userPerm.user.id, userPerm.level]);
+        return {
+            anyone: state.anyone ?? null,
+            users: entries ? Object.fromEntries(entries) : null,
+        };
+    };
+
     const api = useApi();
 
     const [currentPermissions] = createResource(
@@ -54,33 +65,28 @@ export function PermissionsForm(props: {
     );
 
     createEffect(() => {
-        setState(currentPermissions() ?? {});
+        const permissions = currentPermissions();
+        if (permissions) {
+            setState(deepCopyJSON(permissions));
+        }
     });
 
     const addEntry = (user: UserSummary) => {
-        if (state.users?.some((perm) => perm.user.id === user.id)) {
+        if (!state.users || state.users.some((perm) => perm.user.id === user.id)) {
             return;
         }
-        setState(
-            produce((state) => {
-                if (state.users == null) {
-                    state.users = [];
-                }
-                state.users.push({ user, level: null });
-            }),
-        );
+        setState(produce((state) => state.users?.push({ user, level: "Read" })));
     };
 
-    const updatePermissions = async () => {
-        const entries = state.users
-            ?.filter((userPerm) => userPerm.level != null)
-            .map((userPerm) => [userPerm.user.id, userPerm.level]);
+    const willAddOwners = (): boolean =>
+        state.users?.some(
+            (perm, i) => perm.level === "Own" && currentPermissions()?.users?.[i]?.level !== "Own",
+        ) ?? false;
 
+    const updatePermissions = async () => {
         invariant(props.refId);
-        const result = await api.rpc.set_permissions.mutate(props.refId, {
-            anyone: state.anyone ?? null,
-            users: entries ? Object.fromEntries(entries) : null,
-        });
+        invariant(!currentPermissions.loading && !currentPermissions.error);
+        const result = await api.rpc.set_permissions.mutate(props.refId, pendingPermissions());
         invariant(result.tag === "Ok");
     };
 
@@ -106,6 +112,14 @@ export function PermissionsForm(props: {
                     <option value="Read">View</option>
                     <option value="Write">Edit</option>
                 </SelectItem>
+                <Show
+                    when={state.anyone === "Write" && state.anyone !== currentPermissions()?.anyone}
+                >
+                    <Warning>
+                        <p>{"Any person with the link will be able to edit the document."}</p>
+                        <p>{"This setting is convenient but it is not secure."}</p>
+                    </Warning>
+                </Show>
             </FormGroup>
             <FormGroup>
                 <dt>People with access</dt>
@@ -113,10 +127,13 @@ export function PermissionsForm(props: {
                     <For each={state.users ?? []}>
                         {(userPerm, i) => (
                             <div class="permission-entry">
-                                <label for={`entry-${i()}`}>{userPerm.user.username}</label>
+                                <label for={`entry-${i()}`}>
+                                    <NameUser {...userPerm.user} />
+                                </label>
                                 <select
                                     id={`entry-${i()}`}
                                     value={userPerm.level ?? ""}
+                                    disabled={currentPermissions()?.users?.[i()]?.level === "Own"}
                                     onInput={(evt) => {
                                         const value = evt.currentTarget.value;
                                         setState(
@@ -138,10 +155,24 @@ export function PermissionsForm(props: {
                             </div>
                         )}
                     </For>
-                    <UserInput setUser={addEntry} placeholder="Add a person" />
+                    <UserInput
+                        setUser={addEntry}
+                        placeholder="Add a person by entering their username"
+                    />
                 </dd>
             </FormGroup>
-            <button type="button" class="ok" disabled={!props.refId} onClick={submitPermissions}>
+            <Show when={willAddOwners()}>
+                <Warning>
+                    <p>{"Setting these permissions will be an irrevocable action."}</p>
+                    <p>{"Ownership, once granted, cannot be revoked."}</p>
+                </Warning>
+            </Show>
+            <button
+                type="button"
+                class="ok"
+                disabled={!props.refId || currentPermissions.loading || currentPermissions.error}
+                onClick={submitPermissions}
+            >
                 Update permissions
             </button>
         </form>
@@ -158,15 +189,15 @@ export function PermissionsButton(props: {
     const user = () => props.permissions.user;
 
     return (
-        <Switch fallback={<GenericPermissionsButton permissions={props.permissions} />}>
+        <Switch fallback={<EditorPermissionsButton permissions={props.permissions} />}>
             <Match when={anyone() === "Own"}>
                 <AnonPermissionsButton />
             </Match>
-            <Match when={!user() || user() === "Read"}>
-                <ReadonlyPermissionsButton />
-            </Match>
             <Match when={user() === "Own"}>
                 <OwnerPermissionsButton refId={props.refId} />
+            </Match>
+            <Match when={[anyone(), user()].every((level) => level === null || level === "Read")}>
+                <ReadonlyPermissionsButton />
             </Match>
         </Switch>
     );
@@ -262,13 +293,16 @@ const ReadonlyPermissionsButton = () => {
     );
 };
 
-const GenericPermissionsButton = (props: {
+const EditorPermissionsButton = (props: {
     permissions: Permissions;
 }) => {
     const tooltip = (permissions: Permissions) => (
         <>
-            This document is <strong>{permissionAdjective(permissions.user)}</strong> by you and is
-            {permissionAdjective(permissions.anyone)} by the public.
+            {"This document "}
+            <Show when={permissions.user}>
+                is <strong>{permissionAdjective(permissions.user)}</strong> by you {"and "}
+            </Show>
+            is <strong>{permissionAdjective(permissions.anyone)}</strong> by the public
         </>
     );
     return (
