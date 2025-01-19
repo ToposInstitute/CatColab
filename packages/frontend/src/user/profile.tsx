@@ -23,12 +23,14 @@ export default function UserProfilePage() {
     );
 }
 
-function UserProfileForm() {
+/** Form to configure user proifle. */
+export function UserProfileForm() {
     const api = useApi();
 
     const [currentProfile, { refetch: refetchProfile }] = createResource(async () => {
         const result = await api.rpc.get_active_user_profile.query();
-        return result.tag === "Ok" ? result.content : undefined;
+        invariant(result.tag === "Ok");
+        return result.content;
     });
 
     const [form, { Form, Field }] = createForm<UserProfile>();

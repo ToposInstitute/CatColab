@@ -1,8 +1,22 @@
-form input {
+form input,
+form select {
     background: whitesmoke;
     border: 1px solid lightgray;
     border-radius: 6px;
     padding: 6px 12px;
+}
+
+form input {
+    font-size: larger;
+}
+
+form button[type="submit"] {
+    cursor: pointer;
+    color: white;
+    background: #2e8b57;
+    border: 1px solid darkgreen;
+    border-radius: 6px;
+    padding: 6px;
     font-size: larger;
 }
 

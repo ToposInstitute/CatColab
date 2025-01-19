@@ -141,9 +141,7 @@ export async function createModel(
         init = initOrTheoryId;
     }
 
-    const result = await api.rpc.new_ref.mutate({
-        content: init as JsonValue,
-    });
+    const result = await api.rpc.new_ref.mutate(init as JsonValue);
     invariant(result.tag === "Ok", "Failed to create model");
 
     return result.content;

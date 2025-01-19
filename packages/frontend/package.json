@@ -45,7 +45,7 @@
         "echarts-solid": "^0.2.0",
         "firebase": "^10.14.0",
         "js-file-download": "^0.4.12",
-        "lucide-solid": "^0.435.0",
+        "lucide-solid": "^0.471.0",
         "prosemirror-commands": "^1.5.2",
         "prosemirror-keymap": "^1.2.2",
         "prosemirror-model": "^1.23.0",

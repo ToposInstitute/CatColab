@@ -56,7 +56,10 @@ export function ModelDocumentEditor(props: {
                 <ModelMenu liveModel={props.liveModel} />
                 <span class="filler" />
                 <TheoryHelpButton theory={props.liveModel?.theory()} />
-                <MaybePermissionsButton permissions={props.liveModel?.liveDoc.permissions} />
+                <MaybePermissionsButton
+                    permissions={props.liveModel?.liveDoc.permissions}
+                    refId={props.liveModel?.refId}
+                />
             </Toolbar>
             <Show when={props.liveModel}>
                 {(liveModel) => <ModelPane liveModel={liveModel()} />}
