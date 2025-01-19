@@ -36,6 +36,7 @@ export type DecapodesContent = {
     initialConditions: Record<string, string>;
     plotVariables: Record<string, boolean>;
     scalars: Record<string, number>;
+    duration: number;
 };
 
 export function configureDecapodes(options: {
@@ -59,6 +60,7 @@ export function configureDecapodes(options: {
             initialConditions: {},
             plotVariables: {},
             scalars: {},
+            duration: 10,
         }),
     };
 }
@@ -173,6 +175,18 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
         },
     ];
 
+    const toplevelSchema: ColumnSchema<null>[] = [
+        createNumericalColumn({
+            name: "Duration",
+            data: (_) => props.content.duration,
+            validate: (_, data) => data >= 0,
+            setData: (_, data) =>
+                props.changeContent((content) => {
+                    content.duration = data;
+                }),
+        }),
+    ];
+
     const RestartOrRerunButton = () => (
         <Switch>
             <Match when={kernel.loading || options.loading || result.loading}>
@@ -243,6 +257,7 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
                 <div class="parameters">
                     <FixedTableEditor rows={obDecls()} schema={variableSchema} />
                     <FixedTableEditor rows={scalarDecls()} schema={scalarSchema} />
+                    <FixedTableEditor rows={[null]} schema={toplevelSchema} />
                 </div>
             </Foldable>
             <Switch>
@@ -322,6 +337,9 @@ type SimulationData = {
 
     /** Mapping from UIIDs of scalar operations to numerical values. */
     scalars: Record<string, number>;
+
+    /** Duration */
+    duration: number;
 };
 
 /** Julia code run after kernel is started. */
@@ -343,7 +361,7 @@ const makeSimulationCode = (data: SimulationData) =>
 
     f = simulator(system.geometry.dualmesh, system.generate, DiagonalHodge());
 
-    soln = run_sim(f, system.init, 50.0, ComponentArray(k=0.5,));
+    soln = run_sim(f, system.init, system.duration, ComponentArray(k=0.5,));
 
     JsonValue(SimResult(soln, system))
     `;
@@ -358,7 +376,7 @@ const makeSimulationData = (
         return undefined;
     }
 
-    const { domain, mesh, initialConditions, plotVariables, scalars } = content;
+    const { domain, mesh, initialConditions, plotVariables, scalars, duration } = content;
     if (domain === null || mesh === null || !Object.values(plotVariables).some((x) => x)) {
         return undefined;
     }
@@ -373,5 +391,6 @@ const makeSimulationData = (
         initialConditions,
         plotVariables: Object.keys(plotVariables).filter((v) => plotVariables[v]),
         scalars,
+        duration,
     };
 };

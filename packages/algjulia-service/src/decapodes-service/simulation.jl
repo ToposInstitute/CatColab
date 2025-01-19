@@ -6,6 +6,7 @@ struct PodeSystem
     init::ComponentArray
     generate::Any
     uuiddict::Dict{Symbol, String}
+    duration::Int
 end
 export PodeSystem
 
@@ -66,7 +67,10 @@ function PodeSystem(json_object::AbstractDict, hodge=GeometricHodge())
     # symbol => uuid. we need this to reassociate the var 
     symb2uuid = Dict([v => k for (k,v) in pairs(uuid2symb)])
 
-    return PodeSystem(decapode, plotvars, anons, geometry, u0, sys_generate, symb2uuid)
+    # duration
+    duration = json_object[:duration]
+
+    return PodeSystem(decapode, plotvars, anons, geometry, u0, sys_generate, symb2uuid, duration)
 end
 export PodeSystem
 

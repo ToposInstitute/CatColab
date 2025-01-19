@@ -13,7 +13,7 @@ using StaticArrays
 using LinearAlgebra
 import OrdinaryDiffEq: ReturnCode
 
-const KEYS = Set([:mesh, :plotVariables, :initialConditions, :domain, :diagram, :model, :scalars])
+const KEYS = Set([:mesh, :plotVariables, :initialConditions, :domain, :diagram, :model, :scalars, :duration])
 
 # load data
 data = open(JSON3.read, joinpath(@__DIR__, "test_jsons", "diffusivity_constant.json"), "r")
