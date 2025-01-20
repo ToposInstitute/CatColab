@@ -57,22 +57,24 @@ the ref with the given content, as described in [refs](dev-000D).}
 \p{The backend consists of two services running in independent processes
 (possibly on different machines).
 
-\ol{
-\li{\strong{Web server}, written in Rust}
-\li{\strong{Automerge document server}, written in TypeScript and running in Node}
-}
+\ul{
+\li{\strong{Backend web service}, written in Rust}
+\li{\strong{Automerge doc service}, written in TypeScript and running in Node}
+}}
 
-The services communicate bidirectionally using [SocketIO](https://socket.io/), a
+\p{The services communicate bidirectionally using [SocketIO](https://socket.io/), a
 simple protocol that extends WebSockets with niceties such as automatic
 reconnection and message acknowledgments.}
 
+\p{We summarize the backend services' source path, compilation targets, as well as their most
+important dependencies below (without attempting to be exhaustive).}
+
 \subtree{
-\title{Dependencies}
+\title{Backend service}
 
-\p{Without attempting to be exhaustive, we summarize the backend's most
-important dependencies.}
+\p{Rust code for the backend service can be found in \code{packages/backend/src}. Running \code{cargo build} will create a binary \code{target/debug/backend} which gets executed eventually in a daemon.}
 
-\p{\strong{Web server} uses the crates:
+\p{The backend web service depends on the crates:
 
 \ul{
 
@@ -88,9 +90,14 @@ Postgres (and other SQL databases)}
 \li{[\code{socketioxide}](https://github.com/Totodore/socketioxide): Rust
 implementation of a SocketIO server}
 
-}}
+}}}
 
-\p{\strong{Automerge document server} uses the packages:
+\subtree{
+\title{Automerge service}
+
+\p{Node.js code for the automerge doc service can be found in \code{packages/automerge-doc-server/src}. Running \code{pnpm run build} will create a file \code{packages/automerge-doc-server/dist/automerge-doc-server/src/main.js} which gets executed eventually by \code{node} in a daemon.}
+
+\p{The automerge doc service depends on the packages:
 
 \ul{
 
@@ -116,71 +123,145 @@ WebSocket protocol.}
 \subtree{
 \title{Infrastructure}
 
-\p{We have an AWS server that is pointed to by the domain name backend-next.catcolab.org. This runs an instance of the backend. This backend can be used by the frontend hosted at next.catcolab.org, or by a dev server. Note that this means that PR previews only are for the frontend. So if a PR introduces significant changes to the backend, the PR preview won't see those backend changes because it will still be pointing to whatever version of the backend is running on the server. Fortunately, we don't expect the backend to change all too much, at least compared to the frontend; it just serves blobs without caring about what's in the blobs.}
+\p{We have two AWS instances or hosts that each run (possibly different versions of) both the backend web service and the automerge doc service. The hosts and services are named:
+  \ul{
+  \li{Production instance \code{catcolab}}
+    \ul{
+    \li{backend.catcolab.org}
+    \li{automerge.catcolab.org}
+    }
+  \li{Development instance \code{catcolab-next}}
+    \ul{
+    \li{backend-next.catcolab.org}
+    \li{automerge-next.catcolab.org}
+    }
+  }
+For example, the domain names \code{backend-next.catcolab.org} and \code{automerge-next.catcolab.org} point to the \code{catcolab-next} instance but are routed to different ports. These web and doc services can be used by the frontend hosted at \code{next.catcolab.org}, or by a dev client.}
 
-\p{The system configuration of this server is configured via nix, in the \code{infrastructure/} part of the repo. In order to change the system configuration, make sure that your ssh key is enabled for root access to the server (ask Owen for this). Then run:}
+\p{Note that this means that PR previews only are for the frontend. So if a PR introduces significant changes to the backend services, the PR preview won't see those backend changes because it will still be pointing to whatever version of the backend is running on the instance. Fortunately, we don't expect the backend to change all too much, at least compared to the frontend; it just serves blobs without caring about what's in the blobs.}
+
+\subtree{
+\title{Changing the system configuration}
+
+\p{The system configuration of this instance is configured via nix, in the \code{infrastructure/} part of the repo. In order to change the system configuration (e.g. add system packages, add new users), make sure that your ssh key is enabled for root access to the instance (ask Evan for this). Then run:}
 
 \ol{
 \li{\code{nix develop}}
 \li{\code{deploy .#catcolab}}
 }
 
-\p{However, this will not update the version of catcolab that is running on the server. There is currently a somewhat manual process to do this, because Owen believes that it is important for people to understand the steps of the manual process so that they can debug things when they go wrong.}
-
-\p{On backend-next.catcolab.org, there is a git clone of the catcolab repository in \code{/var/lib/catcolab}. There is a daemon (managed via systemd) that runs \code{node dist/index.js} in \code{/var/lib/catcolab/packages/backend}. In order to upgrade the version of catcolab that is running on the server, one should:}
-\ol{
-\li{Log in via \code{ssh root@backend-next.catcolab.org}. If you don't have access, ask Shaowei.}
-\li{Use \code{su - catcolab} to become the user \code{catcolab}.}
-\li{\code{cd} into \code{/var/lib/catcolab/packages/backend}.}
-\li{Use \code{git} to checkout the desired version of catcolab.}
-\li{Run \code{npm run build} to produce a new \code{dist/index.js} file.}
-\li{Run as user root \code{systemctl stop catcolab}; this will temporarily stop the backend. It is helpful to do this in another terminal window.}
-\li{Run as user catcolab in \code{/var/lib/catcolab/packages/backend} \code{npm run migrate}. This will update the database with new any migrations that have been added since the last time the database was migrated.}
-\li{Run as user root \code{systemctl start catcolab}; this will start back up the backend.}
-\li{(If there are no new migrations, the previous three commands can simply be accomplished via \code{systemctl restart catcolab})}
-\li{You can check the status of the catcolab daemon with \code{systemctl status catcolab}, or look at the log messages with \code{journalctl -eu catcolab}.}
+\p{However, this will not update the version of catcolab that is running on the instance. There is currently a somewhat manual process to do this, because Owen believes that it is important for people to understand the steps of the manual process so that they can debug things when they go wrong.}
 }
 
-\p{To give a new user access to the servers:}
+\subtree{
+\title{Upgrading the CatColab version}
+
+\p{On each AWS instance, there is a git clone of the catcolab repository in \code{/var/lib/catcolab}. There is a daemon (managed via systemd) that runs the automerge doc service, and another daemon that runs the backend web service. In order to upgrade the version of catcolab associated with both services on the instance, one should:}
 \ol{
-\li{Update the public keys in \code{infrastructure/hosts/catcolab/default.nix}.}
-\li{Get someone with server access to run \code{nix develop; deploy .#catcolab}.}
+\li{Log in via \code{ssh catcolab@backend-next.catcolab.org} or \code{ssh catcolab@<instance ip address>}. Do not log in as \code{root}. If you don't have access, ask Evan.}
+\li{In \code{/var/lib/catcolab/}, use \code{git} to checkout the desired version of catcolab.}
+\li{Run \code{catcolab-build} to produce a new binaries for the automerge doc service (Node) and the backend web service (Rust).}
+\li{Run \code{catcolab-stop}; this will temporarily stop both the automerge and backend services.}
+\li{Run \code{catcolab-migrate}. This will update the database with new any migrations that have been added since the last time the database was migrated.}
+\li{Run \code{catcolab-start}; this will start back up both the automerge and backend services.}
+\li{If there are no new migrations, run \code{catcolab-restart} to simply stop-then-start the services.}
+\li{If you want to check the status of the two services, run \code{catcolab-status}.}
+\li{If you want to look under the hood and see what the above \code{catcolab-*} scripts are doing, check out \code{infrastructure/scripts}.}
 }
+}
+
+\subtree{
+\title{Debugging the backend services}
+
+\ol{
+\li{To look at the log messages, run \code{journalctl -eu automerge} or \code{journalctl -eu backend} depending on the desired service.}
+\li{In the log messages, be aware that the latest error messages may come from systemd trying to restore an old deployment after a new deployment has failed. Scroll up the logs and look at the log timestamps to find the errors that come from your latest tests.}
+\li{To get the path of the script that systemd ran for, say, the automerge service, run \code{systemctl status automerge} and look at the \code{CGroup} field. The script path could be something like \code{/nix/store/4360f6br044ncwzs75qhn79g45j8qss1-automerge.sh}. Running this script separately can help in debugging. Remember to set the working directory and environment variables so that the script runs in the right context. You can get this contextual information from files like \code{infrastructure/hosts/*/backend.nix}.}
+}
+
+}
+
+\subtree{
+\title{Instance access for new users}
+
+\p{To give a new user access to an AWS instance, e.g. \code{catcolab-next}:}
+\ol{
+\li{Update the public keys in \code{infrastructure/hosts/catcolab-next/default.nix}. Remember to update the permissions for the new user as well.} 
+\li{Get someone with instance access to run \code{nix develop} then \code{deploy .#catcolab-next} in the \code{infrastructure} folder.}
+\li{Commit and push the changes to the repository.}
+}
+}
+
+\subtree{
+\title{Secrets access for new users}
 
 \p{To give a new user access to the secrets:}
 \ol{
-\li{Update the public keys in \code{infrastructure/secrets/secrets.nix}.}
-\li{Get someone with secret access to run \code{nix develop; agenix -r}.}
+\li{Update the public keys in \code{infrastructure/secrets/secrets.nix}. Remember to update the permissions for the new user as well.}
+\li{Get someone with secret access to run \code{nix develop} in the \code{infrastructure} folder, then \code{agenix -r} in the \code{infrastructure/secrets} folder.}
+\li{Commit and push the changes to the repository.}
 }
+}
+
+\subtree{
+\title{Initializing the AWS instance}
 
 \p{If you are creating an AWS instance and setting up a CatColab backend, e.g. \code{backend-next}, for the first time:}
 \ol{
-\li{Use the \code{nixos/24.05.3348.7e5afd404b62-x86_64-linux} community AMI.}
-\li{Add 50GB of storage to the instance.}
-\li{Open ports 80, 443 for HTTP, HTTPS in addition to port 22 for SSH.}
-\li{Add a public key of the machine to \code{infrastructure/secrets/secrets.nix}. You can get the public keys by running \code{ssh-keyscan <machine-ip-address>}.}
-\li{In the \code{namecheap} domain name hosting service, point \code{backend-next.catcolab.org} to the instance's IP address.}
-\li{Log in via \code{ssh root@backend-next.catcolab.org}. If you don't have access, ask Shaowei.}
-\li{Use \code{git} to clone the catcolab repo in \code{/var/lib}. Rename the directory with \code{mv CatColab catcolab} and change ownership with \code{chown -R catcolab:catcolab catcolab}.}
-\li{Use \code{su - catcolab} to become the user \code{catcolab}.}
-\li{\code{cd} into \code{/var/lib/catcolab/packages/backend}.}
-\li{Use \code{git} to checkout the desired version of catcolab.}
-\li{Run \code{pnpm install} to install dependencies.}
+\li{Create an instance on AWS:}
+  \ul{
+  \li{Use a community AMI of the form \code{nixos/24.05.????.????????????-x86_64-linux}.}
+  \li{Instance type is \code{t3.medium}.}
+  \li{Select "Allow HTTPS traffic.." and "Allow HTTP traffic.." in addition to the already selected "Allow SSH traffic from Anywhere".}
+  \li{Add 50GB of storage to the instance.}
+  }
+\li{On the \code{namecheap} domain name hosting service, point \code{backend-next.catcolab.org} to the instance IP address.}
+\li{Add a public key of the instance to \code{infrastructure/secrets/secrets.nix}. You can get the public keys by running \code{ssh-keyscan <instance-ip-address>}. Follow the instructions above on giving a new user access to the secrets. In this case, the new user is the instance.}
+\li{Add the instance hostname to the desired host under \code{deploy.nodes} in \code{infrastructure/flake.nix}.}
+\li{In \code{infrastructure/}, run \code{nix develop} followed by \code{deploy .#catcolab-next}. The systemd \code{automerge} and \code{backend} services will fail at the end of the deployment, because the CatColab repo is missing. We will restart the services later after cloning the repo.}
+\li{Access the instance in a new terminal:}
+  \ul{
+  \li{Log in via \code{ssh root@<instance-ip-address>}. Do not log in as \code{catcolab}. If you don't have access, ask Evan.}
+  \li{On the instance, run \code{init-catcolab <branch-name>}. If the CatColab github repo branch name is omitted, it will clone the \code{main} branch. This script installs the nodejs dependencies, initializes the postgres database, runs the database migrations, and builds the required binaries.}
+  }
+\li{The automerge and backend services should run now.}
 }
 
-\p{Setting up the Postgres database:}
+\p{In case you are curious, the \code{catcolab-init} script performs the following tasks. See \code{infrastructure/hosts/*/backend.nix} for more information.
 \ol{
-\li{\code{su - postgres}}
-\li{\code{createuser catcolab}}
-\li{\code{createdb catcolab}}
-\li{\code{psql}}
+\li{Clone the CatColab repo at \code{/var/lib/catcolab/}.}
+\li{Symlink the secrets to the right locations in the cloned repo.}
+\li{Install the Node.js dependencies.}
+\li{Install Rust and Cargo.}
+\li{Install Rust-based \code{sqlx-cli} for migrations.}
+\li{Set up the Postgres user, database and permissions.}
+\li{Stop any automerge or backend service that is running.}
+\li{Run the database migrations.}
+\li{Build the binaries for the automerge and backend services.}
+\li{Start the automerge and backend service daemons.}
+}
+}
+}
+
+\subtree{
+\title{Running the services locally}
+
+\p{If you are doing development work and want to run the automerge doc service and backend web service locally on your machine, you do not need to use systemd to run the services in the background. Instead, it might be easier to use \code{tmux} for running and monitoring the services.}
+
+\p{Setting up the Postgres database locally:}
+\ol{
+\li{Assumptions: There is a \code{postgres} user on the machine. The cluster does not contain a \code{catcolab} user or a \code{catcolab} database. Rust and \code{cargo} are installed.}
+\li{Get the \code{DATABASE_URL} from the decrypted \code{.env.age} file.}
   \ul{
-  \li{\code{alter user catcolab with encrypted password '<password>';}}
-  \li{\code{grant all privileges on database catcolab to catcolab;}}
-  \li{\code{﹨c catcolab postgres}}
-  \li{\code{grant all on schema public to catcolab;}}
-  \li{\code{exit}}
+  \li{In \code{infrastructure/secrets/}, run \code{nix develop} followed by \code{EDITOR=vim agenix -e .env.age}. You should change the \code{EDITOR} variable to your preferred editor tool.}
   }
+\li{In \code{infrastructure/scripts}, run \code{su -m postgres -- ./initdb.sh "<DATABASE_URL>"}.}
+\li{Run migrations on the database:}
+  \ul{
+  \li{Install \code{sqlx-cli} with \code{cargo install sqlx-cli}}
+  \li{In \code{packages/backend/}, run \code{~/.cargo/bin/sqlx migrate run}}
+  }
+}
 }
 
 }

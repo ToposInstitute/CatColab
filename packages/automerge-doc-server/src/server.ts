@@ -5,7 +5,7 @@ import * as sentry from "@sentry/node";
 import express from "express";
 import * as ws from "ws";
 
-import type { JsonValue } from "../../backend/pkg/index.ts";
+import type { JsonValue } from "../../backend/pkg/src/index.ts";
 
 export class AutomergeServer {
     private docMap: Map<string, DocHandle<unknown>>;

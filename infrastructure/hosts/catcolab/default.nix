@@ -17,7 +17,7 @@ in
 
   users.mutableUsers = false;
 
-  users.users.o = {
+  users.users.owen = {
     isNormalUser = true;
     extraGroups = [ "wheel" ]; # Enable ‘sudo’ for the user.
     openssh.authorizedKeys.keys = [ owen ];

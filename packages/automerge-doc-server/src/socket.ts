@@ -1,6 +1,6 @@
 import { type Socket, io } from "socket.io-client";
 
-import type { JsonValue, RefContent } from "../../backend/pkg/index.ts";
+import type { JsonValue, RefContent } from "../../backend/pkg/src/index.ts";
 
 /** Messages handled by the `SocketServer`. */
 export type Handlers = {
