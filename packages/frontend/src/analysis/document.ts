@@ -88,12 +88,7 @@ export type LiveAnalysisDocument = LiveModelAnalysisDocument | LiveDiagramAnalys
 export async function createAnalysis(type: AnalysisType, ofRefId: string, api: Api) {
     const init = newAnalysisDocument(type, ofRefId);
 
-    const result = await api.rpc.new_ref.mutate({
-        content: init as JsonValue,
-        permissions: {
-            anyone: "Read",
-        },
-    });
+    const result = await api.rpc.new_ref.mutate(init as JsonValue);
     invariant(result.tag === "Ok", "Failed to create a new analysis");
 
     return result.content;

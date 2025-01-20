@@ -1,0 +1,15 @@
+.permissions {
+    min-width: 50ex;
+
+    & .alert {
+        font-size: smaller;
+    }
+}
+
+.permission-entry {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 5em;
+}

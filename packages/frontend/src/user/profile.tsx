@@ -23,12 +23,14 @@ export default function UserProfilePage() {
     );
 }
 
-function UserProfileForm() {
+/** Form to configure user proifle. */
+export function UserProfileForm() {
     const api = useApi();
 
     const [currentProfile, { refetch: refetchProfile }] = createResource(async () => {
         const result = await api.rpc.get_active_user_profile.query();
-        return result.tag === "Ok" ? result.content : undefined;
+        invariant(result.tag === "Ok");
+        return result.content;
     });
 
     const [form, { Form, Field }] = createForm<UserProfile>();
@@ -40,7 +42,7 @@ function UserProfileForm() {
     const onSubmit: SubmitHandler<UserProfile> = async (values) => {
         await api.rpc.set_active_user_profile.mutate({
             username: values.username ? values.username : null,
-            display_name: values.display_name ? values.display_name : null,
+            displayName: values.displayName ? values.displayName : null,
         });
         refetchProfile();
     };
@@ -85,11 +87,11 @@ function UserProfileForm() {
                         />
                     )}
                 </Field>
-                <Field name="display_name">
+                <Field name="displayName">
                     {(field, props) => (
                         <TextInputItem
                             {...props}
-                            id="display_name"
+                            id="displayName"
                             label="Display name"
                             value={field.value ?? ""}
                         />

@@ -1,9 +1,12 @@
+use std::collections::HashMap;
+
 use firebase_auth::{FirebaseAuth, FirebaseUser};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 use uuid::Uuid;
 
 use super::app::{AppCtx, AppError, AppState};
+use super::user::UserSummary;
 
 /// Levels of permission that a user can have on a document.
 #[derive(
@@ -17,18 +20,32 @@ pub enum PermissionLevel {
     Own,
 }
 
-/// Global and user permission levels on a document.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, TS)]
+/// Permissions of a user on a document.
+#[derive(Clone, Debug, Serialize, TS)]
+pub struct UserPermissions {
+    pub user: UserSummary,
+    pub level: PermissionLevel,
+}
+
+/// Permissions set on a document.
+#[derive(Clone, Debug, Serialize, TS)]
 pub struct Permissions {
-    #[ts(optional)]
+    /// Base permission level for any person, logged in or not.
     pub anyone: Option<PermissionLevel>,
-    #[ts(optional)]
+
+    /// Permission level for the current user.
     pub user: Option<PermissionLevel>,
+
+    /** Permission levels for all other users.
+
+    Only owners of the document have access to this information.
+     */
+    pub users: Option<Vec<UserPermissions>>,
 }
 
 impl Permissions {
     /// Gets the highest level of permissions allowed.
-    pub fn max_level(self) -> Option<PermissionLevel> {
+    pub fn max_level(&self) -> Option<PermissionLevel> {
         self.anyone.into_iter().chain(self.user).reduce(std::cmp::max)
     }
 }
@@ -77,6 +94,7 @@ pub async fn max_permission_level(
     );
     let level = query.fetch_one(&ctx.state.db).await?;
 
+    // Return 404 if the ref does not exist at all.
     if level.is_none() {
         ref_exists(ctx, ref_id).await?;
     }
@@ -86,51 +104,121 @@ pub async fn max_permission_level(
 
 /// Gets the permissions allowed for a ref.
 pub async fn permissions(ctx: &AppCtx, ref_id: Uuid) -> Result<Permissions, AppError> {
-    let query = sqlx::query_scalar!(
+    let query = sqlx::query!(
         r#"
-        SELECT level as "level: PermissionLevel" FROM permissions
-        WHERE object = $1 and subject iS NULL
+        SELECT subject as "user_id", username, display_name,
+               level as "level: PermissionLevel"
+        FROM permissions
+        LEFT OUTER JOIN users ON id = subject
+        WHERE object = $1
         "#,
         ref_id
     );
-    let anyone = query.fetch_optional(&ctx.state.db).await?;
+    let mut entries = query.fetch_all(&ctx.state.db).await?;
 
-    let query = sqlx::query_scalar!(
-        r#"
-        SELECT level as "level: PermissionLevel" FROM permissions
-        WHERE object = $1 and subject = $2
-        "#,
-        ref_id,
-        ctx.user.as_ref().map(|user| user.user_id.clone())
-    );
-    let user = query.fetch_optional(&ctx.state.db).await?;
-
-    if anyone.is_none() && user.is_none() {
+    // Return 404 if the ref does not exist at all.
+    if entries.is_empty() {
         ref_exists(ctx, ref_id).await?;
     }
 
-    Ok(Permissions { anyone, user })
+    let mut anyone = None;
+    if let Some(i) = entries.iter().position(|entry| entry.user_id.is_none()) {
+        anyone = Some(entries.swap_remove(i).level);
+    }
+
+    let user_id = ctx.user.as_ref().map(|user| user.user_id.clone());
+    let mut user = None;
+    if let Some(i) = entries.iter().position(|entry| entry.user_id == user_id) {
+        user = Some(entries.swap_remove(i).level);
+    }
+
+    let mut users = None;
+    if user == Some(PermissionLevel::Own) {
+        users = Some(
+            entries
+                .into_iter()
+                .filter_map(|entry| {
+                    if let Some(user_id) = entry.user_id {
+                        Some(UserPermissions {
+                            user: UserSummary {
+                                id: user_id,
+                                username: entry.username,
+                                display_name: entry.display_name,
+                            },
+                            level: entry.level,
+                        })
+                    } else {
+                        None
+                    }
+                })
+                .collect(),
+        );
+    }
+
+    Ok(Permissions {
+        anyone,
+        user,
+        users,
+    })
 }
 
-/// Inserts or updates permissions for a ref-user pair.
-pub async fn upsert_permission(
+/// A new set of permissions to assign to a document.
+#[derive(Debug, Deserialize, TS)]
+pub struct NewPermissions {
+    /// Base permission level for any person, logged in or not.
+    pub anyone: Option<PermissionLevel>,
+
+    /** Permission levels for users.
+
+    A mapping from user IDs to permission levels.
+    */
+    pub users: HashMap<String, PermissionLevel>,
+}
+
+/** Replaces the set of permissions for a ref.
+
+Note that this function does not update/diff the permissions, it replaces them
+entirely. An exception is ownership which can never be revoked once granted.
+*/
+pub async fn set_permissions(
     state: &AppState,
     ref_id: Uuid,
-    user_id: Option<String>,
-    level: PermissionLevel,
+    new: NewPermissions,
 ) -> Result<(), AppError> {
-    let query = sqlx::query!(
+    let mut levels: Vec<_> = new.users.values().cloned().collect();
+    let mut subjects: Vec<_> = new.users.into_keys().map(Some).collect();
+    if let Some(anyone) = new.anyone {
+        subjects.push(None);
+        levels.push(anyone);
+    }
+    let objects: Vec<_> = std::iter::repeat_n(ref_id, subjects.len()).collect();
+
+    // Because the first query deletes all permission entries for the ref
+    // *except* ownership, the second query will fail, and thus the whole
+    // transaction will fail and be rolled back, if the uniqueness constraint is
+    // violated by attempting to downgrade an ownership permission.
+    let mut transaction = state.db.begin().await?;
+
+    let delete_query = sqlx::query!(
         "
-        INSERT INTO permissions(object, subject, level)
-        VALUES ($1, $2, $3)
-        ON CONFLICT(object, subject)
-        DO UPDATE SET level = EXCLUDED.level;
+        DELETE FROM permissions WHERE object = $1 AND level < 'own'
         ",
         ref_id,
-        user_id,
-        level as PermissionLevel,
     );
-    query.execute(&state.db).await?;
+    delete_query.execute(&mut *transaction).await?;
+
+    let insert_query = sqlx::query!(
+        "
+        INSERT INTO permissions(subject, object, level)
+        SELECT * FROM UNNEST($1::text[], $2::uuid[], $3::permission_level[])
+        ",
+        &subjects as &[Option<String>],
+        &objects,
+        &levels as &[PermissionLevel],
+    );
+    insert_query.execute(&mut *transaction).await?;
+
+    transaction.commit().await?;
     Ok(())
 }
 

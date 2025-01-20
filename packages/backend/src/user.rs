@@ -22,6 +22,34 @@ pub async fn sign_up_or_sign_in(ctx: AppCtx) -> Result<(), AppError> {
     Ok(())
 }
 
+/// Look up a user by username.
+pub async fn user_by_username(
+    state: AppState,
+    username: &str,
+) -> Result<Option<UserSummary>, AppError> {
+    let query = sqlx::query_as!(
+        UserSummary,
+        "
+        SELECT id, username, display_name FROM users WHERE username = $1
+        ",
+        username
+    );
+    Ok(query.fetch_optional(&state.db).await?)
+}
+
+/** Summary of a user.
+
+The minimal information needed to uniquely identify a user and display the user
+in human-readable form.
+ */
+#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+pub struct UserSummary {
+    pub id: String,
+    pub username: Option<String>,
+    #[serde(rename = "displayName")]
+    pub display_name: Option<String>,
+}
+
 /// Get the status of a username.
 pub async fn username_status(state: AppState, username: &str) -> Result<UsernameStatus, AppError> {
     if is_username_valid(username) {
@@ -72,7 +100,9 @@ pub async fn set_active_user_profile(ctx: AppCtx, profile: UserProfile) -> Resul
     };
     profile.validate().map_err(AppError::Invalid)?;
 
-    // Once set, a username cannot be unset, only changed to a new name.
+    // Once set, a username cannot be unset, only changed to a different name.
+    // This should be validated in the frontend, and it is enforced below by
+    // using `COALESCE`.
     let query = sqlx::query!(
         "
         UPDATE users SET username = COALESCE($2, username), display_name = $3
@@ -90,7 +120,11 @@ pub async fn set_active_user_profile(ctx: AppCtx, profile: UserProfile) -> Resul
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 pub struct UserProfile {
     pub username: Option<String>,
+    #[serde(rename = "displayName")]
     pub display_name: Option<String>,
+    // TODO: More fields, such as:
+    // pub bio: Option<String>,
+    // pub url: Option<String>,
 }
 
 impl UserProfile {

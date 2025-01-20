@@ -6,17 +6,14 @@ use ts_rs::TS;
 use uuid::Uuid;
 
 use super::app::{AppCtx, AppError, AppState};
-use super::auth::{upsert_permission, PermissionLevel, Permissions};
 
 /// Creates a new document ref with initial content.
-pub async fn new_ref(ctx: AppCtx, input: NewRef) -> Result<Uuid, AppError> {
+pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
     let ref_id = Uuid::now_v7();
-    let NewRef {
-        content,
-        permissions,
-    } = input;
 
-    let query = sqlx::query!(
+    let mut transaction = ctx.state.db.begin().await?;
+
+    let insert_ref = sqlx::query!(
         "
         WITH snapshot AS (
             INSERT INTO snapshots(for_ref, content, last_updated)
@@ -29,18 +26,20 @@ pub async fn new_ref(ctx: AppCtx, input: NewRef) -> Result<Uuid, AppError> {
         ref_id,
         content
     );
-    query.execute(&ctx.state.db).await?;
+    insert_ref.execute(&mut *transaction).await?;
 
-    // Set initial permissions for ref.
     let user_id = ctx.user.map(|user| user.user_id);
-    if user_id.is_some() {
-        if let Some(anyone_level) = permissions.anyone {
-            upsert_permission(&ctx.state, ref_id, None, anyone_level).await?;
-        }
-    }
-    let user_level = permissions.user.unwrap_or(PermissionLevel::Own);
-    upsert_permission(&ctx.state, ref_id, user_id, user_level).await?;
+    let insert_permission = sqlx::query!(
+        "
+        INSERT INTO permissions(subject, object, level)
+        VALUES ($1, $2, 'own')
+        ",
+        user_id,
+        ref_id,
+    );
+    insert_permission.execute(&mut *transaction).await?;
 
+    transaction.commit().await?;
     Ok(ref_id)
 }
 
@@ -115,15 +114,6 @@ pub async fn doc_id(state: AppState, ref_id: Uuid) -> Result<String, AppError> {
         let response = ack.await?;
         Ok(response.data[0].to_string())
     }
-}
-
-/// Input to the [`new_ref`] procedure.
-#[derive(Debug, Deserialize, TS)]
-pub struct NewRef {
-    pub content: Value,
-    #[ts(optional, as = "Option<_>")]
-    #[serde(default)]
-    pub permissions: Permissions,
 }
 
 /// A document ref along with its content.

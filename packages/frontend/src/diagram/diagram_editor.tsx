@@ -57,7 +57,10 @@ export function DiagramDocumentEditor(props: {
                 <DiagramMenu liveDiagram={props.liveDiagram} />
                 <span class="filler" />
                 <TheoryHelpButton theory={props.liveDiagram?.liveModel.theory()} />
-                <MaybePermissionsButton permissions={props.liveDiagram?.liveDoc.permissions} />
+                <MaybePermissionsButton
+                    permissions={props.liveDiagram?.liveDoc.permissions}
+                    refId={props.liveDiagram?.refId}
+                />
             </Toolbar>
             <Show when={props.liveDiagram}>
                 {(liveDiagram) => <DiagramPane liveDiagram={liveDiagram()} />}

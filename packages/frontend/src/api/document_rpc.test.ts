@@ -27,7 +27,7 @@ describe("RPC for Automerge documents", async () => {
         type: "model",
         name: "My model",
     };
-    const refId = unwrap(await rpc.new_ref.mutate({ content }));
+    const refId = unwrap(await rpc.new_ref.mutate(content));
     test.sequential("should get a valid ref UUID", () => {
         assert(uuid.validate(refId));
     });
@@ -36,8 +36,11 @@ describe("RPC for Automerge documents", async () => {
     assert(refDoc.tag === "Live");
     test.sequential("should get a valid document ID", () => {
         assert(isValidDocumentId(refDoc.docId));
-        assert.strictEqual(refDoc.permissions.anyone, "Own");
-        assert.strictEqual(refDoc.permissions.user, null);
+        assert.deepStrictEqual(refDoc.permissions, {
+            anyone: "Own",
+            user: null,
+            users: null,
+        });
     });
 
     const newRefDoc = unwrap(await rpc.get_doc.query(refId));
@@ -87,7 +90,7 @@ describe("Authorized RPC", async () => {
         type: "model",
         name: "My private model",
     };
-    const privateId = unwrap(await rpc.new_ref.mutate({ content }));
+    const privateId = unwrap(await rpc.new_ref.mutate(content));
     test.sequential("should get a valid ref UUID when authenticated", () => {
         assert(uuid.validate(privateId));
     });
@@ -101,19 +104,23 @@ describe("Authorized RPC", async () => {
     test.sequential("should get a live document when authenticated", () => {
         assert(refDoc.tag === "Live");
         assert(isValidDocumentId(refDoc.docId));
-        assert.strictEqual(refDoc.permissions.anyone, null);
-        assert.strictEqual(refDoc.permissions.user, "Own");
+        assert.deepStrictEqual(refDoc.permissions, {
+            anyone: null,
+            user: "Own",
+            users: [],
+        });
     });
 
     const readonlyId = unwrap(
         await rpc.new_ref.mutate({
-            content: {
-                type: "model",
-                name: "My readonly model",
-            },
-            permissions: {
-                anyone: "Read",
-            },
+            type: "model",
+            name: "My readonly model",
+        }),
+    );
+    unwrap(
+        await rpc.set_permissions.mutate(readonlyId, {
+            anyone: "Read",
+            users: {},
         }),
     );
 
@@ -129,5 +136,10 @@ describe("Authorized RPC", async () => {
     const readonlyDoc = unwrap(await rpc.get_doc.query(readonlyId));
     test.sequential("should allow read-only document access when unauthenticated", () => {
         assert.strictEqual(readonlyDoc.tag, "Readonly");
+        assert.deepStrictEqual(readonlyDoc.permissions, {
+            anyone: "Read",
+            user: null,
+            users: null,
+        });
     });
 });

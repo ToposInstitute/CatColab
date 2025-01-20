@@ -1,0 +1,15 @@
+.name-user {
+    display: flex;
+    flex-direction: row;
+    gap: 1ex;
+    align-items: center;
+
+    & .username {
+        font-weight: bold;
+    }
+
+    & .display-name {
+        font-size: smaller;
+        color: dimgray;
+    }
+}

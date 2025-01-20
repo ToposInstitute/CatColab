@@ -37,3 +37,27 @@ const InputError = (props: { error?: string }) => (
         <div class="error">{props.error}</div>
     </Show>
 );
+
+/** Select field in a form group. */
+export function SelectItem(
+    allProps: {
+        id: string;
+        label: string | JSX.Element;
+        children?: JSX.Element;
+    } & ComponentProps<"select">,
+) {
+    const [props, selectProps] = splitProps(allProps, ["id", "label", "children"]);
+
+    return (
+        <>
+            <dt>
+                <label for={props.id}>{props.label}</label>
+            </dt>
+            <dd>
+                <select {...selectProps} id={props.id}>
+                    {props.children}
+                </select>
+            </dd>
+        </>
+    );
+}

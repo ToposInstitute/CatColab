@@ -3,4 +3,4 @@
 /**
  * Data of a user profile.
  */
-export type UserProfile = { username: string | null, display_name: string | null, };
+export type UserProfile = { username: string | null, displayName: string | null, };
