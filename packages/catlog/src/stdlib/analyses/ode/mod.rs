@@ -27,6 +27,5 @@ where
 
 #[allow(non_snake_case)]
 pub mod lotka_volterra;
-pub mod stock_flow;
 
 pub use lotka_volterra::*;
