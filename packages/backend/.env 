@@ -1,0 +1,3 @@
+DATABASE_URL=postgres://hamidahoderinwale@localhost:5432/catcolab
+FIREBASE_PROJECT_ID=catcolab-next
+
