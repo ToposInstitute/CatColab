@@ -22,7 +22,6 @@ import { focusInputWhen } from "../util/focus";
 
 import ArrowDown from "lucide-solid/icons/arrow-down";
 import ArrowUp from "lucide-solid/icons/arrow-up";
-import { Link } from "lucide-solid/icons";
 import Copy from "lucide-solid/icons/copy";
 import GripVertical from "lucide-solid/icons/grip-vertical";
 import Plus from "lucide-solid/icons/plus";
@@ -65,9 +64,6 @@ export type CellActions = {
 
     // The cell has received focus.
     hasFocused: () => void;
-
-    // add link
-    anchor: () => void;
 };
 
 const cellDragDataKey = Symbol("notebook-cell");
@@ -136,11 +132,7 @@ export function NotebookCell(props: {
             icon: <ArrowDown size={16} />,
             onComplete: props.actions.moveDown,
         },
-        {
-            name: "Add Link",
-            icon: <Link size={16} />,
-            onComplete: () => props.actions.anchor(),
-        },
+
     ];
 
     createEffect(() => {
@@ -241,7 +233,6 @@ export function RichTextCellEditor(props: {
             exitUp={props.actions.activateAbove}
             exitDown={props.actions.activateBelow}
             onFocus={props.actions.hasFocused}
-            anchor={props.actions.anchor}
         />
     );
 }

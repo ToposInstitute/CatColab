@@ -8,14 +8,15 @@ import type { Schema } from "prosemirror-model";
 import { type Command, EditorState, Plugin, type Transaction } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
 
-import { createEffect, onCleanup } from "solid-js";
+import { createEffect, createSignal, onCleanup } from "solid-js";
 import { useDocHandleReady } from "../api/document";
+import Popover from '@corvu/popover';
+import Link from "lucide-solid/icons/link"
+import { IconButton } from "./icon_button";
 
-import "prosemirror-view/style/prosemirror.css";
 import "./rich_text_editor.css";
 
-/** Optional props for `RichTextEditor` component.
- */
+/** Optional props for `RichTextEditor` component. */
 export type RichTextEditorOptions = {
     id?: unknown;
     ref?: (ref: EditorView) => void;
@@ -27,16 +28,9 @@ export type RichTextEditorOptions = {
     exitDown?: () => void;
 
     onFocus?: () => void;
-    anchor?: () => void;
 };
 
-/** Rich text editor combining Automerge and ProseMirror.
-
-Adapted from:
-
-- https://github.com/automerge/prosemirror-quickstart/
-- https://github.com/automerge/automerge-prosemirror/tree/main/playground/
- */
+/** Rich text editor combining Automerge and ProseMirror. */
 export const RichTextEditor = (
     props: {
         handle: DocHandle<unknown>;
@@ -47,10 +41,11 @@ export const RichTextEditor = (
 
     const isReady = useDocHandleReady(() => props.handle);
 
+    // Signal for managing the popover visibility
+    const [isPopoverOpen, setPopoverOpen] = createSignal(false);
+    const [url, setUrl] = createSignal("");
+
     createEffect(() => {
-        // NOTE: Make the effect depend on the given ID to ensure that this
-        // component updates when the Automerge handle and path both stay the
-        // same but the path refers to a different object in the document.
         props.id;
 
         if (!isReady()) {
@@ -69,8 +64,6 @@ export const RichTextEditor = (
         const view = new EditorView(editorRoot, {
             state: EditorState.create({ schema, plugins, doc: pmDoc }),
             dispatchTransaction: (tx: Transaction) => {
-                // XXX: It appears that automerge-prosemirror can dispatch
-                // transactions even after the view has been destroyed.
                 !view.isDestroyed && view.updateState(view.state.apply(tx));
             },
             handleDOMEvents: {
@@ -85,11 +78,50 @@ export const RichTextEditor = (
         }
 
         onCleanup(() => view.destroy());
-    });
 
-    return <div class="rich-text-editor" ref={editorRoot} />;
-};
+        const handleAddLink = () => {
+            if ( !view ||!url()) return;
+            const success = addLink(view, url());
+            if (!success) {
+                alert("Please select text to apply the link.");
+            }
+            setPopoverOpen(false); // Close the popover after applying the link
+        };
+                <Popover>
+                    <Popover.Anchor as="span">
+                        <IconButton>  <Link />
+                        </IconButton>
+                    </Popover.Anchor>
+                    <Popover.Portal>
+                        <Popover.Overlay />
+                        <Popover.Content>
+                            <Popover.Arrow />
+                            <Popover.Label>Insert Link</Popover.Label>
+                            <Popover.Description>
+                                Add a URL to the selected text.
+                            </Popover.Description>
+                            <input
+                                type="url"
+                                placeholder="Enter URL"
+                                value={url()}
+                                onInput={(e) => setUrl(e.target.value)} // Update the URL state as the user types
+                            />
+                            <button
+                                onClick={handleAddLink} 
+                            >
+                                Add Link
+                            </button>
+                        </Popover.Content>
+                    </Popover.Portal>
+                </Popover>
+    })
 
+
+    
+
+
+
+// Keymap for rich text editor
 function richTextEditorKeymap(schema: Schema, props: RichTextEditorOptions) {
     const bindings: { [key: string]: Command } = {};
     if (schema.marks.strong) {
@@ -114,8 +146,7 @@ function richTextEditorKeymap(schema: Schema, props: RichTextEditorOptions) {
     return bindings;
 }
 
-/** ProseMirror command invoked if the document is empty.
- */
+// ProseMirror command invoked if the document is empty
 function doIfEmpty(callback: (dispatch: (tr: Transaction) => void) => void): Command {
     return (state, dispatch?) => {
         if (hasContent(state)) {
@@ -126,8 +157,7 @@ function doIfEmpty(callback: (dispatch: (tr: Transaction) => void) => void): Com
     };
 }
 
-/** ProseMirror command invoked if the cursor is at the top of the document.
- */
+// ProseMirror command invoked if the cursor is at the top of the document
 function doIfAtTop(callback: (dispatch: (tr: Transaction) => void) => void): Command {
     return (state, dispatch?, view?) => {
         const sel = state.selection;
@@ -146,8 +176,7 @@ function doIfAtTop(callback: (dispatch: (tr: Transaction) => void) => void): Com
     };
 }
 
-/** ProseMirror command invoked if the cursor is at the bottom of the document.
- */
+// ProseMirror command invoked if the cursor is at the bottom of the document
 function doIfAtBottom(callback: (dispatch: (tr: Transaction) => void) => void): Command {
     return (state, dispatch?, view?) => {
         const sel = state.selection;
@@ -166,13 +195,7 @@ function doIfAtBottom(callback: (dispatch: (tr: Transaction) => void) => void): 
     };
 }
 
-/** Placeholder text plugin for ProseMirror.
-
-Source:
-
-- https://discuss.prosemirror.net/t/how-to-input-like-placeholder-behavior/705
-- https://gist.github.com/amk221/1f9657e92e003a3725aaa4cf86a07cc0
- */
+// Placeholder text plugin for ProseMirror
 function placeholder(text: string) {
     const update = (view: EditorView) => {
         if (hasContent(view.state)) {
@@ -185,18 +208,19 @@ function placeholder(text: string) {
     return new Plugin({
         view(view) {
             update(view);
-
             return { update };
         },
     });
 }
 
+// Check if the document has content
 const hasContent = (state: EditorState) => {
     const doc = state.doc;
     return doc.textContent || (doc.firstChild && doc.firstChild.content.size > 0);
 };
 
-export function addLink(view: EditorView, url: string) {
+// Add a link to the selected text
+function addLink(view: EditorView, url: string) {
     const { state } = view;
     const { schema, selection } = state;
 
@@ -214,17 +238,4 @@ export function addLink(view: EditorView, url: string) {
     view.dispatch(tr);
     return true;
 }
-
-export function removeLink(view: EditorView) {
-    const { state } = view;
-    const { schema, selection } = state;
-
-    if (!schema.marks.link || selection.empty) {
-        return false;
-    }
-
-    const tr = state.tr.removeMark(selection.from, selection.to, schema.marks.link);
-
-    view.dispatch(tr);
-    return true;
 }
