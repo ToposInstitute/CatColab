@@ -5,13 +5,20 @@ import { useAuth, useFirebaseApp } from "solid-firebase";
 import { type JSX, Show, createSignal } from "solid-js";
 
 import { Dialog, IconButton } from "../components";
-import { Login } from "../user";
 
-import Info from "lucide-solid/icons/info";
-import LogInIcon from "lucide-solid/icons/log-in";
-import LogOutIcon from "lucide-solid/icons/log-out";
-import MenuIcon from "lucide-solid/icons/menu";
-import SettingsIcon from "lucide-solid/icons/settings";
+import { Login } from "../user";
+import { Import } from "./import";
+
+
+import {
+    Info,
+    CircleHelp,
+    LogInIcon,
+    LogOutIcon,
+    MenuIcon,
+    SettingsIcon,
+    UploadIcon,
+} from "lucide-solid";
 
 import "./menubar.css";
 /** Menu triggered from a hamburger button. */
@@ -51,6 +58,7 @@ export function AppMenu(props: {
     const auth = useAuth(getAuth(firebaseApp));
 
     const [loginOpen, setLoginOpen] = createSignal(false);
+    const [openImport, setImportOpen] = createSignal(false);
 
     // Root the dialog here so that it is not destroyed when the menu closes.
     return (
@@ -61,6 +69,7 @@ export function AppMenu(props: {
                     <MenuSeparator />
                 </Show>
                 <HelpMenuItem />
+
                 <Show
                     when={auth.data}
                     fallback={<LogInMenuItem showLogin={() => setLoginOpen(true)} />}
@@ -68,9 +77,13 @@ export function AppMenu(props: {
                     <SettingsMenuItem />
                     <LogOutMenuItem />
                 </Show>
+                <ImportMenuItem showImport={() => setImportOpen(true)} />
             </HamburgerMenu>
             <Dialog open={loginOpen()} onOpenChange={setLoginOpen} title="Log in">
                 <Login onComplete={() => setLoginOpen(false)} />
+            </Dialog>
+            <Dialog open={openImport()} onOpenChange={setImportOpen} title="Import">
+                <Import onComplete={() => setImportOpen(false)} />
             </Dialog>
         </>
     );
@@ -117,6 +130,17 @@ function SettingsMenuItem() {
         <MenuItem onSelect={() => navigate("/profile")}>
             <SettingsIcon />
             <MenuItemLabel>Settings</MenuItemLabel>
+        </MenuItem>
+    );
+}
+
+function ImportMenuItem(props: {
+    showImport: () => void;
+}) {
+    return (
+        <MenuItem onSelect={props.showImport}>
+            <UploadIcon />
+            <MenuItemLabel>{"Import notebook"}</MenuItemLabel>
         </MenuItem>
     );
 }

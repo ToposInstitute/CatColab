@@ -7,12 +7,10 @@ import { useApi } from "../api";
 import { createDiagram } from "../diagram/document";
 import { AppMenu, MenuItem, MenuItemLabel, MenuSeparator } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
+import { copyToClipboard, downloadJson } from "../util/json_export";
 import { type LiveModelDocument, type ModelDocument, createModel } from "./document";
 
-import ChartSpline from "lucide-solid/icons/chart-spline";
-import Copy from "lucide-solid/icons/copy";
-import FilePlus from "lucide-solid/icons/file-plus";
-import Network from "lucide-solid/icons/network";
+import { ChartSpline, ClipboardCopy, Copy, Download, FilePlus, Network } from "lucide-solid";
 
 /** Hamburger menu for a model of a double theory. */
 export function ModelMenu(props: {
@@ -59,6 +57,12 @@ export function ModelMenuItems(props: {
         });
         navigate(`/model/${newRef}`);
     };
+    const onDownloadJSON = (model: ModelDocument) => {
+        downloadJson({ data: JSON.stringify(model), filename: `${model.name}.json` });
+    };
+    const onCopy = (model: ModelDocument) => {
+        copyToClipboard({ data: JSON.stringify(model) });
+    };
 
     return (
         <>
@@ -80,6 +84,14 @@ export function ModelMenuItems(props: {
             <MenuItem onSelect={() => onDuplicateModel(props.liveModel.liveDoc.doc)}>
                 <Copy />
                 <MenuItemLabel>{"Duplicate model"}</MenuItemLabel>
+            </MenuItem>
+            <MenuItem onSelect={() => onDownloadJSON(props.liveModel.liveDoc.doc)}>
+                <Download />
+                <MenuItemLabel>{"Download JSON"}</MenuItemLabel>
+            </MenuItem>
+            <MenuItem onSelect={() => onCopy(props.liveModel.liveDoc.doc)}>
+                <ClipboardCopy />
+                <MenuItemLabel>{"Copy to clipboard"}</MenuItemLabel>
             </MenuItem>
         </>
     );
