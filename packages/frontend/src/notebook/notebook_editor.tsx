@@ -35,7 +35,6 @@ import {
 } from "./types";
 
 import "./notebook_editor.css";
-import { EditorState } from "prosemirror-state";
 
 /** Constructor for a cell in a notebook.
 
@@ -154,6 +153,7 @@ export function NotebookEditor<T>(props: {
             shortcut: [cellShortcutModifier, "T"],
             construct: () => newRichTextCell(),
         },
+        ...(props.cellConstructors ?? []),
     ];
 
     const replaceCommands = (i: number): Completion[] =>
@@ -285,12 +285,6 @@ export function NotebookEditor<T>(props: {
                             },
                             hasFocused() {
                                 setActiveCell(i());
-                            },
-                            anchor: () => {
-                                const view = editorView();
-                                if (view) {
-                                    anchor(view);
-                                }
                             },
                         };
 
