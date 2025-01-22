@@ -9,7 +9,5 @@ However, if it does stick around it should eventually become its own crate. For
 now it's convenient to keep everything in the same place.
  */
 
-pub mod mathexpr;
-
 #[cfg(feature = "ode")]
 pub mod ode;
