@@ -526,10 +526,10 @@ where
             if let Some(f) = mapping.apply_edge(&e) {
                 if cod.has_edge(f) {
                     let mut errs = Vec::new();
-                    if !mapping.apply_vertex(&dom.src(&e)).map_or(true, |v| *v == cod.src(f)) {
+                    if mapping.apply_vertex(&dom.src(&e)).is_some_and(|v| *v != cod.src(f)) {
                         errs.push(InvalidGraphMorphism::Src(e.clone()))
                     }
-                    if !mapping.apply_vertex(&dom.tgt(&e)).map_or(true, |v| *v == cod.tgt(f)) {
+                    if mapping.apply_vertex(&dom.tgt(&e)).is_some_and(|v| *v != cod.tgt(f)) {
                         errs.push(InvalidGraphMorphism::Tgt(e.clone()))
                     }
                     return errs;

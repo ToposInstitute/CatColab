@@ -37,7 +37,7 @@ impl ODESystem for LotkaVolterraSystem {
 }
 
 #[cfg(test)]
-pub fn create_predator_prey() -> ODEProblem<LotkaVolterraSystem> {
+pub(crate) fn create_predator_prey() -> ODEProblem<LotkaVolterraSystem> {
     let A = DMatrix::from_row_slice(2, 2, &[0.0, -1.0, 1.0, 0.0]);
     let b = DVector::from_column_slice(&[2.0, -1.0]);
     let sys = LotkaVolterraSystem::new(A, b);

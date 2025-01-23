@@ -699,27 +699,27 @@ where
             if let Some(β) = mapping.apply_square(&α) {
                 if cod.has_square(β) {
                     let mut errs = Vec::new();
-                    if !mapping
+                    if mapping
                         .apply_proedge_path(dom.square_dom(&α))
-                        .map_or(true, |path| path == cod.square_dom(β))
+                        .is_some_and(|path| path != cod.square_dom(β))
                     {
                         errs.push(Invalid::SquareDom(α.clone()));
                     }
-                    if !mapping
+                    if mapping
                         .apply_proedge_path(dom.square_cod(&α))
-                        .map_or(true, |path| path == cod.square_cod(β))
+                        .is_some_and(|path| path != cod.square_cod(β))
                     {
                         errs.push(Invalid::SquareCod(α.clone()));
                     }
-                    if !mapping
+                    if mapping
                         .apply_edge_path(dom.square_src(&α))
-                        .map_or(true, |path| path == cod.square_src(β))
+                        .is_some_and(|path| path != cod.square_src(β))
                     {
                         errs.push(Invalid::SquareSrc(α.clone()));
                     }
-                    if !mapping
+                    if mapping
                         .apply_edge_path(dom.square_tgt(&α))
-                        .map_or(true, |path| path == cod.square_tgt(β))
+                        .is_some_and(|path| path != cod.square_tgt(β))
                     {
                         errs.push(Invalid::SquareTgt(α.clone()));
                     }
