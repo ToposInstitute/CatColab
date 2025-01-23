@@ -204,16 +204,16 @@ pub trait ColumnarDblComputad {
             let f = self.square_src_map().apply(&α);
             let g = self.square_tgt_map().apply(&α);
             let mut errs = Vec::new();
-            if !m.map_or(false, |path| path.contained_in(proedge_graph)) {
+            if !m.is_some_and(|path| path.contained_in(proedge_graph)) {
                 errs.push(Invalid::SquareDom(α.clone()));
             }
-            if !n.map_or(false, |path| path.contained_in(proedge_graph)) {
+            if !n.is_some_and(|path| path.contained_in(proedge_graph)) {
                 errs.push(Invalid::SquareCod(α.clone()));
             }
-            if !f.map_or(false, |path| path.contained_in(edge_graph)) {
+            if !f.is_some_and(|path| path.contained_in(edge_graph)) {
                 errs.push(Invalid::SquareSrc(α.clone()));
             }
-            if !g.map_or(false, |path| path.contained_in(edge_graph)) {
+            if !g.is_some_and(|path| path.contained_in(edge_graph)) {
                 errs.push(Invalid::SquareTgt(α.clone()));
             }
             if errs.is_empty() {

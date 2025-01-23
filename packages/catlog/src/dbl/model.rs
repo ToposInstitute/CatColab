@@ -270,12 +270,12 @@ where
             let mut errs = Vec::new();
             let mor_type = self.mor_generator_type(&e);
             if self.theory.has_mor_type(&mor_type) {
-                if self.category.get_dom(&e).map_or(false, |x| {
+                if self.category.get_dom(&e).is_some_and(|x| {
                     self.has_ob(x) && self.ob_type(x) != self.theory.src(&mor_type)
                 }) {
                     errs.push(Invalid::DomType(e.clone()));
                 }
-                if self.category.get_cod(&e).map_or(false, |x| {
+                if self.category.get_cod(&e).is_some_and(|x| {
                     self.has_ob(x) && self.ob_type(x) != self.theory.tgt(&mor_type)
                 }) {
                     errs.push(Invalid::CodType(e));
@@ -690,7 +690,7 @@ where
     pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidDblModel<Id>> + '_ {
         type Invalid<Id> = InvalidDblModel<Id>;
         let ob_errors = self.generators.objects.iter().filter_map(|x| {
-            if self.ob_types.apply(&x).map_or(false, |typ| self.theory.has_ob_type(typ)) {
+            if self.ob_types.apply(&x).is_some_and(|typ| self.theory.has_ob_type(typ)) {
                 None
             } else {
                 Some(Invalid::ObType(x))
@@ -709,10 +709,10 @@ where
             if let Some(mor_type) =
                 self.mor_types.apply(&e).filter(|typ| self.theory.has_mor_type(typ))
             {
-                if dom.map_or(false, |x| self.ob_type(x) != self.theory.src(mor_type)) {
+                if dom.is_some_and(|x| self.ob_type(x) != self.theory.src(mor_type)) {
                     errs.push(Invalid::DomType(e.clone()));
                 }
-                if cod.map_or(false, |x| self.ob_type(x) != self.theory.tgt(mor_type)) {
+                if cod.is_some_and(|x| self.ob_type(x) != self.theory.tgt(mor_type)) {
                     errs.push(Invalid::CodType(e.clone()));
                 }
             } else {
