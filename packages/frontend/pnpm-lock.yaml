@@ -104,9 +104,6 @@ importers:
       prosemirror-keymap:
         specifier: ^1.2.2
         version: 1.2.2
-      prosemirror-link-plugin:
-        specifier: ^1.3.0
-        version: 1.3.0(prosemirror-commands@1.6.0)(prosemirror-model@1.23.0)(prosemirror-state@1.4.3)(prosemirror-view@1.34.3)
       prosemirror-model:
         specifier: ^1.23.0
         version: 1.23.0
@@ -2547,14 +2544,6 @@ packages:
 
   prosemirror-keymap@1.2.2:
     resolution: {integrity: sha512-EAlXoksqC6Vbocqc0GtzCruZEzYgrn+iiGnNjsJsH4mrnIGex4qbLdWWNza3AW5W36ZRrlBID0eM6bdKH4OStQ==}
-
-  prosemirror-link-plugin@1.3.0:
-    resolution: {integrity: sha512-M37UupuJt3FhRsfYoNGbLZRyPZM6Olm6C7HqNhyeZBLtRQAY8klCBUpoAoOIfj54g72Yi1eh3ojyyTNoa9941g==}
-    peerDependencies:
-      prosemirror-commands: ^1.1.4
-      prosemirror-model: ^1.11.0
-      prosemirror-state: ^1.3.3
-      prosemirror-view: ^1.15.5
 
   prosemirror-model@1.23.0:
     resolution: {integrity: sha512-Q/fgsgl/dlOAW9ILu4OOhYWQbc7TQd4BwKH/RwmUjyVf8682Be4zj3rOYdLnYEcGzyg8LL9Q5IWYKD8tdToreQ==}
@@ -5851,17 +5840,6 @@ snapshots:
     dependencies:
       prosemirror-state: 1.4.3
       w3c-keyname: 2.2.8
-
-  prosemirror-link-plugin@1.3.0(prosemirror-commands@1.6.0)(prosemirror-model@1.23.0)(prosemirror-state@1.4.3)(prosemirror-view@1.34.3):
-    dependencies:
-      npm-install-peers: 1.2.2
-      orderedmap: 2.1.1
-      prosemirror-commands: 1.6.0
-      prosemirror-model: 1.23.0
-      prosemirror-state: 1.4.3
-      prosemirror-tables: 1.6.2
-      prosemirror-transform: 1.10.0
-      prosemirror-view: 1.34.3
 
   prosemirror-model@1.23.0:
     dependencies:
