@@ -1,13 +1,13 @@
 // vite.config.ts
 import { nodeTypes } from "file:///Users/hamidahoderinwale/Topos/primary/CatColab/packages/frontend/node_modules/.pnpm/@mdx-js+mdx@2.3.0/node_modules/@mdx-js/mdx/index.js";
+import pkg from "file:///Users/hamidahoderinwale/Topos/primary/CatColab/packages/frontend/node_modules/.pnpm/@vinxi+plugin-mdx@3.7.2_@mdx-js+mdx@2.3.0/node_modules/@vinxi/plugin-mdx/dist/index.cjs";
 import rehypeRaw from "file:///Users/hamidahoderinwale/Topos/primary/CatColab/packages/frontend/node_modules/.pnpm/rehype-raw@7.0.0/node_modules/rehype-raw/index.js";
-import { defineConfig } from "file:///Users/hamidahoderinwale/Topos/primary/CatColab/packages/frontend/node_modules/.pnpm/vite@5.4.8_@types+node@22.7.4/node_modules/vite/dist/node/index.js";
 import solid from "file:///Users/hamidahoderinwale/Topos/primary/CatColab/packages/frontend/node_modules/.pnpm/vite-plugin-solid@2.10.2_solid-js@1.9.2_vite@5.4.8_@types+node@22.7.4_/node_modules/vite-plugin-solid/dist/esm/index.mjs";
 import topLevelAwait from "file:///Users/hamidahoderinwale/Topos/primary/CatColab/packages/frontend/node_modules/.pnpm/vite-plugin-top-level-await@1.4.4_@swc+helpers@0.5.13_rollup@4.22.5_vite@5.4.8_@types+node@22.7.4_/node_modules/vite-plugin-top-level-await/exports/import.mjs";
 import wasm from "file:///Users/hamidahoderinwale/Topos/primary/CatColab/packages/frontend/node_modules/.pnpm/vite-plugin-wasm@3.3.0_vite@5.4.8_@types+node@22.7.4_/node_modules/vite-plugin-wasm/exports/import.mjs";
-import pkg from "file:///Users/hamidahoderinwale/Topos/primary/CatColab/packages/frontend/node_modules/.pnpm/@vinxi+plugin-mdx@3.7.2_@mdx-js+mdx@2.3.0/node_modules/@vinxi/plugin-mdx/dist/index.cjs";
-var { default: mdx } = pkg;
-var vite_config_default = defineConfig({
+import { defineConfig } from "file:///Users/hamidahoderinwale/Topos/primary/CatColab/packages/frontend/node_modules/.pnpm/vite@5.4.8_@types+node@22.7.4/node_modules/vite/dist/node/index.js";
+const { default: mdx } = pkg;
+const vite_config_default = defineConfig({
     plugins: [
         wasm(),
         topLevelAwait(),

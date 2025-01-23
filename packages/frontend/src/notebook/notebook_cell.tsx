@@ -24,6 +24,7 @@ import ArrowDown from "lucide-solid/icons/arrow-down";
 import ArrowUp from "lucide-solid/icons/arrow-up";
 import Copy from "lucide-solid/icons/copy";
 import GripVertical from "lucide-solid/icons/grip-vertical";
+import Link from "lucide-solid/icons/link";
 import Plus from "lucide-solid/icons/plus";
 import Trash2 from "lucide-solid/icons/trash-2";
 
@@ -64,6 +65,9 @@ export type CellActions = {
 
     // The cell has received focus.
     hasFocused: () => void;
+
+    // add link
+    addLink?: (url?: string) => void;
 };
 
 const cellDragDataKey = Symbol("notebook-cell");
@@ -132,7 +136,10 @@ export function NotebookCell(props: {
             icon: <ArrowDown size={16} />,
             onComplete: props.actions.moveDown,
         },
-
+        {
+            name: "Add Link",
+            icon: <Link size={16} />,
+        },
     ];
 
     createEffect(() => {
@@ -226,13 +233,14 @@ export function RichTextCellEditor(props: {
             ref={(view) => setEditorView(view)}
             id={props.cellId}
             handle={props.handle}
-            path={[...props.path, "content"]}
+            path={props.path}
             placeholder="…"
             deleteBackward={props.actions.deleteBackward}
             deleteForward={props.actions.deleteForward}
             exitUp={props.actions.activateAbove}
             exitDown={props.actions.activateBelow}
             onFocus={props.actions.hasFocused}
+            addLink={props.actions.addLink}
         />
     );
 }
@@ -275,74 +283,3 @@ export type FormalCellEditorProps<T> = {
     isActive: boolean;
     actions: CellActions;
 };
-
-// for clickable links that have been pasted into the rich text editor
-export function anchor(props: { view: EditorView }) {
-    const [url, setUrl] = createSignal("");
-    const [isOpen, setIsOpen] = createSignal(true);
-
-    const handleSubmit = () => {
-        const currentUrl = url();
-        if (!currentUrl) return;
-        addLink(props.view, currentUrl);
-        setUrl("");
-        setIsOpen(false);
-    };
-
-    return (
-        <Popover open={isOpen()} onOpenChange={setIsOpen}>
-            <Popover.Content class="popup">
-                <div>
-                    <input
-                        type="text"
-                        value={url()}
-                        onChange={(e) => setUrl(e.currentTarget.value)}
-                        placeholder="Enter URL"
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                                handleSubmit();
-                            }
-                        }}
-                    />
-                    <div>
-                        <button onClick={() => setIsOpen(false)}>Cancel</button>
-                        <button onClick={handleSubmit}>Add Link</button>
-                    </div>
-                </div>
-            </Popover.Content>
-        </Popover>
-    );
-}
-
-export function addLink(view: EditorView, url: string) {
-    const { state } = view;
-    const { schema, selection } = state;
-
-    if (!schema.marks.link || selection.empty) {
-        return false;
-    }
-
-    const attrs = {
-        href: url.startsWith("http") ? url : `https://${url}`,
-        title: selection.content().content.textBetween(0, selection.content().size),
-    };
-
-    const tr = state.tr.addMark(selection.from, selection.to, schema.marks.link.create(attrs));
-
-    view.dispatch(tr);
-    return true;
-}
-
-export function removeLink(view: EditorView) {
-    const { state } = view;
-    const { schema, selection } = state;
-
-    if (!schema.marks.link || selection.empty) {
-        return false;
-    }
-
-    const tr = state.tr.removeMark(selection.from, selection.to, schema.marks.link);
-
-    view.dispatch(tr);
-    return true;
-}
