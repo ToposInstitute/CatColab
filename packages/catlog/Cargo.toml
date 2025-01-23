@@ -24,7 +24,7 @@ serde = { version = "1", features = ["derive"], optional = true }
 thiserror = "1"
 tsify-next = { version = "0.5", features = ["js"], optional = true }
 ustr = "1"
-wasm-bindgen = { version = "0.2.93", optional = true }
+wasm-bindgen = { version = "0.2.100", optional = true }
 
 [dev-dependencies]
 expect-test = "1.5"
