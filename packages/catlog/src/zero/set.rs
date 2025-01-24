@@ -246,6 +246,30 @@ impl<T> FinSet for AttributedSkelSet<T> {
     }
 }
 
+/// A set containing a single element, ().
+#[derive(Clone, Debug, From, Into, Derivative, PartialEq, Eq, Default)]
+pub struct SingletonSet;
+
+impl Set for SingletonSet {
+    type Elem = ();
+
+    fn contains(&self, _: &()) -> bool {
+        true
+    }
+}
+
+impl FinSet for SingletonSet {
+    fn iter(&self) -> impl Iterator<Item = ()> {
+        [()].iter().cloned()
+    }
+    fn len(&self) -> usize {
+        1
+    }
+    fn is_empty(&self) -> bool {
+        false
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
