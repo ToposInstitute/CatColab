@@ -1,9 +1,9 @@
-//! Rigs and rings.
+//! Rigs, rings, and modules over them.
 
 use num_traits::{One, Zero};
 use std::collections::BTreeMap;
 use std::fmt::Display;
-use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub};
+use std::ops::{Add, AddAssign, Mul, MulAssign, Neg};
 
 use duplicate::duplicate_item;
 
@@ -13,8 +13,13 @@ pub trait AdditiveMonoid: Add<Output = Self> + Zero {}
 #[duplicate_item(T; [f32]; [f64]; [i32]; [i64]; [u32]; [u64]; [usize])]
 impl AdditiveMonoid for T {}
 
-/// An abelian group, written additively.
-pub trait AbGroup: AdditiveMonoid + Neg<Output = Self> + Sub<Output = Self> {}
+/** An abelian group, written additively.
+
+Though logically redundant, this trait should also extend `Sub<Output = Self>`.
+So far I've been too lazy to make this change since the extra trait cannot be
+automatically derived without macro magic.
+ */
+pub trait AbGroup: AdditiveMonoid + Neg<Output = Self> {}
 
 #[duplicate_item(T; [f32]; [f64]; [i32]; [i64])]
 impl AbGroup for T {}
@@ -50,13 +55,25 @@ pub trait Ring: Rig + AbGroup {}
 impl Ring for T {}
 
 /// A commutative ring, assumed to be unital.
-pub trait CommRing: Ring + CommMonoid {}
+pub trait CommRing: Ring + CommRig {}
 
 #[duplicate_item(T; [f32]; [f64]; [i32]; [i64])]
 impl CommRing for T {}
 
+/// A module over a commutative rig.
+pub trait RigModule: AdditiveMonoid + Mul<Self::Rig, Output = Self> {
+    /// Base rig for the module.
+    type Rig: CommRig;
+}
+
+/// A module over a commutative ring.
+pub trait Module: RigModule<Rig = Self::Ring> + AbGroup {
+    /// Base ring for the module.
+    type Ring: CommRing;
+}
+
 /// TODO
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Default, PartialEq, Eq)]
 pub struct Combination<Var, Coef>(BTreeMap<Var, Coef>);
 
 impl<Var, Coef> Combination<Var, Coef>
@@ -154,8 +171,61 @@ where
 {
 }
 
+impl<Var, Coef> Mul<Coef> for Combination<Var, Coef>
+where
+    Var: Ord,
+    Coef: Clone + Default + Mul<Output = Coef>,
+{
+    type Output = Self;
+
+    fn mul(mut self, a: Coef) -> Self {
+        for coef in self.0.values_mut() {
+            *coef = std::mem::take(coef) * a.clone();
+        }
+        self
+    }
+}
+
+impl<Var, Coef> RigModule for Combination<Var, Coef>
+where
+    Var: Ord,
+    Coef: Clone + Default + CommRig,
+{
+    type Rig = Coef;
+}
+
+impl<Var, Coef> Neg for Combination<Var, Coef>
+where
+    Var: Ord,
+    Coef: Default + Neg<Output = Coef>,
+{
+    type Output = Self;
+
+    fn neg(mut self) -> Self {
+        for coef in self.0.values_mut() {
+            *coef = std::mem::take(coef).neg();
+        }
+        self
+    }
+}
+
+impl<Var, Coef> AbGroup for Combination<Var, Coef>
+where
+    Var: Ord,
+    Coef: Default + AbGroup,
+{
+}
+
+impl<Var, Coef> Module for Combination<Var, Coef>
+where
+    Var: Ord,
+    Coef: Clone + Default + CommRing,
+{
+    type Ring = Coef;
+}
+
 /// TODO
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Monomial<Var, Exp>(BTreeMap<Var, Exp>);
 
 impl<Var, Exp> Monomial<Var, Exp>
@@ -258,17 +328,22 @@ mod tests {
 
     #[test]
     fn combinations() {
-        let x = Combination::<_, u32>::generator('x');
-        let y = Combination::<_, u32>::generator('y');
-        assert_eq!(format!("{}", x), "x");
-        assert_eq!(format!("{}", x.clone() + y.clone() + y + x), "2 x + 2 y");
+        let x = Combination::generator('x');
+        let y = Combination::generator('y');
+        assert_eq!(x.to_string(), "x");
+        assert_eq!((x.clone() * 2u32 + y.clone() * 3u32).to_string(), "2 x + 3 y");
+        assert_eq!((x.clone() + y.clone() + y + x).to_string(), "2 x + 2 y");
+
+        let x = Combination::generator('x');
+        assert_eq!((x.clone() * -1i32).to_string(), "-1 x");
+        assert_eq!(x.neg().to_string(), "-1 x");
     }
 
     #[test]
     fn monomials() {
         let x = Monomial::<_, u32>::generator('x');
         let y = Monomial::<_, u32>::generator('y');
-        assert_eq!(format!("{}", x), "x");
-        assert_eq!(format!("{}", x.clone() * y.clone() * y * x), "x^2 y^2");
+        assert_eq!(x.clone().to_string(), "x");
+        assert_eq!((x.clone() * y.clone() * y * x).to_string(), "x^2 y^2");
     }
 }
