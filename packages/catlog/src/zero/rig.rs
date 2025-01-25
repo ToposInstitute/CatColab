@@ -1,4 +1,18 @@
-//! Rigs, rings, and modules over them.
+/*! Rigs, rings, and modules over them.
+
+Lots of people have their own versions of a trait hierarchy for abstract
+algebra; see [`noether`](https://crates.io/crates/noether) and links therein.
+Our aim is not to make the most complete or general hierarchy but just to meet
+our own needs, which currently is a bit of [commutative algebra](super::alg),
+especially polynomial algebras over rings. So we avoid slicing the salomi too
+thin with minor concepts like magmas and semigroups. We also take the category
+theorist's attitude that rigs are respectable concept that do not deserve to be
+denigrated as "semirings".
+
+Besides the hierarchy of traits, the data structure provided here for [linear
+combinations](Combination) and [monomials](Monomial). These are actually the
+same data structure, but with different notation!
+ */
 
 use num_traits::{One, Zero};
 use std::collections::BTreeMap;
@@ -72,7 +86,17 @@ pub trait Module: RigModule<Rig = Self::Ring> + AbGroup {
     type Ring: CommRing;
 }
 
-/// TODO
+/** A formal linear combination.
+
+This data structure is for linear combinations of indeterminates/variables
+(`Var`) with coefficients (`Coef`) valued in a [rig](Rig) or at least in an
+[additive monoid](AdditiveMonoid). For example, the coefficients could be
+natural numbers, integers, real numbers, or nonnegative real numbers.
+
+Linear combinations are the data structure for free modules. That is, for any
+rig R, the free R-module on a set consists of formal R-linear combinations on
+elements of the set.
+ */
 #[derive(Clone, Default, PartialEq, Eq)]
 pub struct Combination<Var, Coef>(BTreeMap<Var, Coef>);
 
@@ -89,6 +113,10 @@ where
     }
 }
 
+/** Pretty print the combination using ASCII.
+
+Intended for debugging/testing rather than any serious use.
+ */
 impl<Var, Coef> Display for Combination<Var, Coef>
 where
     Var: Display,
@@ -98,12 +126,21 @@ where
         let mut pairs = self.0.iter();
         let fmt_scalar_mul = |f: &mut std::fmt::Formatter<'_>, coef: &Coef, var: &Var| {
             if !coef.is_one() {
-                write!(f, "{} ", coef)?;
+                let coef = coef.to_string();
+                if coef.chars().all(|c| c.is_alphabetic())
+                    || coef.chars().all(|c| c.is_ascii_digit() || c == '.')
+                {
+                    write!(f, "{} ", coef)?;
+                } else {
+                    write!(f, "({}) ", coef)?;
+                }
             }
             write!(f, "{}", var)
         };
         if let Some((var, coef)) = pairs.next() {
             fmt_scalar_mul(f, coef, var)?;
+        } else {
+            write!(f, "0")?;
         }
         for (var, coef) in pairs {
             write!(f, " + ")?;
@@ -224,7 +261,21 @@ where
     type Ring = Coef;
 }
 
-/// TODO
+/** A monomial in several variables.
+
+This data structure is for monomials in several indeterminates/variables
+(`Var`), having exponents (`Exp`) valued in an [additive
+monoid](AdditiveMonoid). Most standardly, the exponents will be natural numbers
+(say `u32` or `u64`), in which case the monomials in a set of variables, under
+their usual multiplication, comprise the free commutative monoid on that set.
+Other types of coefficents are also allowed, such as negative integers as in
+Laurent polynomials, or real numbers as in
+[S-systems](https://doi.org/10.1016/0895-7177(88)90553-5).
+
+Monomials have exactly the same underlying data structure as
+[combinations](Combination), but are written multiplicatively rather than
+additively.
+ */
 #[derive(Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Monomial<Var, Exp>(BTreeMap<Var, Exp>);
 
@@ -241,6 +292,7 @@ where
     }
 }
 
+/// Pretty print the monomial using ASCII.
 impl<Var, Exp> Display for Monomial<Var, Exp>
 where
     Var: Display,
@@ -251,7 +303,7 @@ where
         let fmt_power = |f: &mut std::fmt::Formatter<'_>, var: &Var, exp: &Exp| {
             write!(f, "{}", var)?;
             if !exp.is_one() {
-                let exp = format!("{}", exp);
+                let exp = exp.to_string();
                 if exp.len() == 1 {
                     write!(f, "^{}", exp)?;
                 } else {
@@ -262,6 +314,8 @@ where
         };
         if let Some((var, exp)) = pairs.next() {
             fmt_power(f, var, exp)?;
+        } else {
+            write!(f, "1")?;
         }
         for (var, exp) in pairs {
             write!(f, " ")?;
@@ -334,9 +388,11 @@ mod tests {
         assert_eq!((x.clone() * 2u32 + y.clone() * 3u32).to_string(), "2 x + 3 y");
         assert_eq!((x.clone() + y.clone() + y + x).to_string(), "2 x + 2 y");
 
+        assert_eq!(Combination::<char, u32>::zero().to_string(), "0");
+
         let x = Combination::generator('x');
-        assert_eq!((x.clone() * -1i32).to_string(), "-1 x");
-        assert_eq!(x.neg().to_string(), "-1 x");
+        assert_eq!((x.clone() * -1i32).to_string(), "(-1) x");
+        assert_eq!(x.neg().to_string(), "(-1) x");
     }
 
     #[test]
@@ -345,5 +401,7 @@ mod tests {
         let y = Monomial::<_, u32>::generator('y');
         assert_eq!(x.clone().to_string(), "x");
         assert_eq!((x.clone() * y.clone() * y * x).to_string(), "x^2 y^2");
+
+        assert_eq!(Monomial::<char, u32>::one().to_string(), "1");
     }
 }

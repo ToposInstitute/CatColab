@@ -10,7 +10,7 @@ graphs that share a set of vertices. The package is organized into top-level
 modules according to dimensionality:
 
 0. [`zero`]: Sets and mappings, known semi-seriously as zero-dimensional
-   category theory.
+   category theory, and a bit of abstract algebra.
 1. [`one`]: Ordinary, or one-dimensional, category theory.
 2. [`dbl`]: Double category theory.
 

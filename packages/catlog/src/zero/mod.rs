@@ -1,4 +1,4 @@
-//! Sets and functions, aka zero-dimensional category theory.
+//! Sets and functions, and a little abstract algebra.
 
 pub mod alg;
 pub mod column;
