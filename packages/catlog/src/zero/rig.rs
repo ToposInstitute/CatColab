@@ -14,9 +14,10 @@ combinations](Combination) and [monomials](Monomial). These are actually the
 same data structure, but with different notation!
  */
 
-use num_traits::{One, Zero};
+use num_traits::{One, Pow, Zero};
 use std::collections::BTreeMap;
 use std::fmt::Display;
+use std::iter::{Product, Sum};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg};
 
 use duplicate::duplicate_item;
@@ -89,13 +90,16 @@ pub trait Module: RigModule<Rig = Self::Ring> + AbGroup {
 /** A formal linear combination.
 
 This data structure is for linear combinations of indeterminates/variables
-(`Var`) with coefficients (`Coef`) valued in a [rig](Rig) or at least in an
+(`Var`) with coefficients (`Coef`) valued in a [rig](Rig) or at minimum in an
 [additive monoid](AdditiveMonoid). For example, the coefficients could be
 natural numbers, integers, real numbers, or nonnegative real numbers.
 
 Linear combinations are the data structure for free modules. That is, for any
 rig R, the free R-module on a set consists of formal R-linear combinations on
 elements of the set.
+
+Combinations have exactly the same underlying data structure as
+[monomials](Monomial), but are written additively rather than multiplicatively.
  */
 #[derive(Clone, Default, PartialEq, Eq)]
 pub struct Combination<Var, Coef>(BTreeMap<Var, Coef>);
@@ -109,7 +113,26 @@ where
     where
         Coef: One,
     {
-        Combination([(var, Coef::one())].into_iter().collect())
+        [(Coef::one(), var)].into_iter().collect()
+    }
+
+    /// Evaluates the combination by substituting for the variables.
+    pub fn eval<A>(&self, values: impl Iterator<Item = A>) -> A
+    where
+        A: Mul<Coef, Output = A> + Sum,
+        Coef: Clone,
+    {
+        self.0.values().zip(values).map(|(coef, val)| val * coef.clone()).sum()
+    }
+}
+
+/// Constructs a combination from a sequence of coefficient-variable pairs.
+impl<Var, Coef> FromIterator<(Coef, Var)> for Combination<Var, Coef>
+where
+    Var: Ord,
+{
+    fn from_iter<T: IntoIterator<Item = (Coef, Var)>>(iter: T) -> Self {
+        Combination(iter.into_iter().map(|(coef, var)| (var, coef)).collect())
     }
 }
 
@@ -267,14 +290,17 @@ This data structure is for monomials in several indeterminates/variables
 (`Var`), having exponents (`Exp`) valued in an [additive
 monoid](AdditiveMonoid). Most standardly, the exponents will be natural numbers
 (say `u32` or `u64`), in which case the monomials in a set of variables, under
-their usual multiplication, comprise the free commutative monoid on that set.
-Other types of coefficents are also allowed, such as negative integers as in
-Laurent polynomials, or real numbers as in
+their usual multiplication, are the free commutative monoid on that set. Other
+types of coefficents are also allowed, such as negative integers as in Laurent
+polynomials, or real numbers as in
 [S-systems](https://doi.org/10.1016/0895-7177(88)90553-5).
 
-Monomials have exactly the same underlying data structure as
-[combinations](Combination), but are written multiplicatively rather than
-additively.
+The underlying data structure is a [B-tree map](std::collections::BTreeMap) from
+variables to exponents. Thus, the variable type is assumed to be ordered.
+Moreover, when the exponents are also ordered, as they almost always are, the
+monomials themselves become ordered under the lexicographic order. This is a
+valid *monomial ordering* as used in Groebner bases
+([*IVA*](crate::refs::IdealsVarietiesAlgorithms), Section 2.2).
  */
 #[derive(Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Monomial<Var, Exp>(BTreeMap<Var, Exp>);
@@ -288,7 +314,26 @@ where
     where
         Exp: One,
     {
-        Monomial([(var, Exp::one())].into_iter().collect())
+        [(var, Exp::one())].into_iter().collect()
+    }
+
+    /// Evaluates the monomial by substituting for the variables.
+    pub fn eval<A>(&self, values: impl Iterator<Item = A>) -> A
+    where
+        A: Pow<Exp, Output = A> + Product,
+        Exp: Clone,
+    {
+        values.zip(self.0.values()).map(|(val, exp)| val.pow(exp.clone())).product()
+    }
+}
+
+/// Constructs a monomial from a sequence of variable-exponent pairs.
+impl<Var, Exp> FromIterator<(Var, Exp)> for Monomial<Var, Exp>
+where
+    Var: Ord,
+{
+    fn from_iter<T: IntoIterator<Item = (Var, Exp)>>(iter: T) -> Self {
+        Monomial(iter.into_iter().collect())
     }
 }
 
@@ -385,8 +430,10 @@ mod tests {
         let x = Combination::generator('x');
         let y = Combination::generator('y');
         assert_eq!(x.to_string(), "x");
-        assert_eq!((x.clone() * 2u32 + y.clone() * 3u32).to_string(), "2 x + 3 y");
+        let combination = x.clone() * 2u32 + y.clone() * 3u32;
+        assert_eq!(combination.to_string(), "2 x + 3 y");
         assert_eq!((x.clone() + y.clone() + y + x).to_string(), "2 x + 2 y");
+        assert_eq!(combination.eval([5, 1].into_iter()), 13);
 
         assert_eq!(Combination::<char, u32>::zero().to_string(), "0");
 
@@ -401,6 +448,10 @@ mod tests {
         let y = Monomial::<_, u32>::generator('y');
         assert_eq!(x.clone().to_string(), "x");
         assert_eq!((x.clone() * y.clone() * y * x).to_string(), "x^2 y^2");
+
+        let monomial: Monomial<_, u32> = [('x', 1), ('y', 2)].into_iter().collect();
+        assert_eq!(monomial.to_string(), "x y^2");
+        assert_eq!(monomial.eval([10, 5].into_iter()), 250);
 
         assert_eq!(Monomial::<char, u32>::one().to_string(), "1");
     }
