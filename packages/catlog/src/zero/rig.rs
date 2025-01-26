@@ -123,25 +123,31 @@ where
         self.0.keys()
     }
 
-    /// Evaluates the combination with a sequence of values.
-    pub fn eval<A>(&self, mut values: impl Iterator<Item = A>) -> A
-    where
-        A: Mul<Coef, Output = A> + Sum,
-        Coef: Clone,
-    {
-        let value = self.eval_with(|_| values.next().unwrap());
-        assert!(values.next().is_none());
-        value
-    }
-
     /// Evaluates the combination by substituting for the variables.
-    pub fn eval_with<A, F>(&self, mut f: F) -> A
+    pub fn eval<A, F>(&self, mut f: F) -> A
     where
         A: Mul<Coef, Output = A> + Sum,
         F: FnMut(&Var) -> A,
         Coef: Clone,
     {
         self.0.iter().map(|(var, coef)| f(var) * coef.clone()).sum()
+    }
+
+    /** Evaluates the combination by substituting from a sequence of values.
+
+    The order of the values should correspond to the order of the variables.
+    Will panic if the number of values does not equal the length of the
+    combination.
+     */
+    pub fn eval_with_order<A>(&self, values: impl IntoIterator<Item = A>) -> A
+    where
+        A: Mul<Coef, Output = A> + Sum,
+        Coef: Clone,
+    {
+        let mut iter = values.into_iter();
+        let value = self.eval(|_| iter.next().expect("Should have enough values"));
+        assert!(iter.next().is_none(), "Too many values");
+        value
     }
 }
 
@@ -381,25 +387,51 @@ where
         Monomial([(var, Exp::one())].into_iter().collect())
     }
 
-    /// Evaluates the monomial with a sequence of values.
-    pub fn eval<A>(&self, mut values: impl Iterator<Item = A>) -> A
-    where
-        A: Pow<Exp, Output = A> + Product,
-        Exp: Clone,
-    {
-        let value = self.eval_with(|_| values.next().unwrap());
-        assert!(values.next().is_none());
-        value
+    /// Iterates over the variables used in the monomial.
+    pub fn variables(&self) -> impl ExactSizeIterator<Item = &Var> {
+        self.0.keys()
     }
 
     /// Evaluates the monomial by substituting for the variables.
-    pub fn eval_with<A, F>(&self, mut f: F) -> A
+    pub fn eval<A, F>(&self, mut f: F) -> A
     where
         A: Pow<Exp, Output = A> + Product,
         F: FnMut(&Var) -> A,
         Exp: Clone,
     {
         self.0.iter().map(|(var, exp)| f(var).pow(exp.clone())).product()
+    }
+
+    /** Evaluates the monomial by substituting from a sequence of values.
+
+    The order of the values should correspond to the order of the variables.
+    Will panic if the number of values does not equal the length of the
+    monomial.
+     */
+    pub fn eval_with_order<A>(&self, values: impl IntoIterator<Item = A>) -> A
+    where
+        A: Pow<Exp, Output = A> + Product,
+        Exp: Clone,
+    {
+        let mut iter = values.into_iter();
+        let value = self.eval(|_| iter.next().expect("Should have enough values"));
+        assert!(iter.next().is_none(), "Too many values");
+        value
+    }
+
+    /** Maps over the variables of the monomial.
+
+    The mapping need not be injective. This is conceptually equivalent to
+    [evaluating](Monomial::eval) the monomial with a map that sends generators
+    to generators.
+     */
+    pub fn map_variables<NewVar, F>(&self, mut f: F) -> Monomial<NewVar, Exp>
+    where
+        Exp: Clone + Add<Output = Exp>,
+        NewVar: Ord,
+        F: FnMut(&Var) -> NewVar,
+    {
+        self.0.iter().map(|(var, exp)| (f(var), exp.clone())).collect()
     }
 }
 
@@ -514,6 +546,21 @@ where
 {
 }
 
+impl<Var, Exp> Pow<Exp> for Monomial<Var, Exp>
+where
+    Var: Ord,
+    Exp: Clone + Default + Mul<Output = Exp>,
+{
+    type Output = Self;
+
+    fn pow(mut self, a: Exp) -> Self::Output {
+        for exp in self.0.values_mut() {
+            *exp = std::mem::take(exp) * a.clone();
+        }
+        self
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -523,10 +570,13 @@ mod tests {
         let x = || Combination::generator('x');
         let y = || Combination::generator('y');
         assert_eq!(x().to_string(), "x");
+        assert_eq!((x() + y() + y() + x()).to_string(), "2 x + 2 y");
+
         let combination = x() * 2u32 + y() * 3u32;
         assert_eq!(combination.to_string(), "2 x + 3 y");
-        assert_eq!((x() + y() + y() + x()).to_string(), "2 x + 2 y");
-        assert_eq!(combination.eval([5, 1].into_iter()), 13);
+        assert_eq!(combination.eval_with_order([5, 1]), 13);
+        let vars: Vec<_> = combination.variables().cloned().collect();
+        assert_eq!(vars, vec!['x', 'y']);
 
         assert_eq!(Combination::<char, u32>::zero().to_string(), "0");
 
@@ -544,7 +594,10 @@ mod tests {
 
         let monomial: Monomial<_, u32> = [('x', 1), ('y', 2)].into_iter().collect();
         assert_eq!(monomial.to_string(), "x y^2");
-        assert_eq!(monomial.eval([10, 5].into_iter()), 250);
+        assert_eq!(monomial.eval_with_order([10, 5]), 250);
+        let vars: Vec<_> = monomial.variables().cloned().collect();
+        assert_eq!(vars, vec!['x', 'y']);
+        assert_eq!(monomial.map_variables(|_| 'x').to_string(), "x^3");
 
         assert_eq!(Monomial::<char, u32>::one().to_string(), "1");
     }

@@ -1,6 +1,7 @@
 //! Commutative algebra and polynomials.
 
 use num_traits::{One, Pow, Zero};
+use std::collections::BTreeMap;
 use std::fmt::Display;
 use std::iter::{Product, Sum};
 use std::ops::{Add, AddAssign, Mul, Neg};
@@ -60,25 +61,51 @@ where
         self.0.variables()
     }
 
-    /// Evaluates the polynomial with a sequence of values.
-    pub fn eval<A>(&self, values: &[A]) -> A
-    where
-        A: Clone + Mul<Coef, Output = A> + Pow<Exp, Output = A> + Sum + Product,
-        Coef: Clone,
-        Exp: Clone,
-    {
-        self.0.eval(self.monomials().map(|m| m.eval(values.iter().cloned())))
-    }
-
     /// Evaluates the polynomial by substituting for the variables.
-    pub fn eval_with<A, F>(&self, f: F) -> A
+    pub fn eval<A, F>(&self, f: F) -> A
     where
         A: Clone + Mul<Coef, Output = A> + Pow<Exp, Output = A> + Sum + Product,
         F: Clone + FnMut(&Var) -> A,
         Coef: Clone,
         Exp: Clone,
     {
-        self.0.eval(self.monomials().map(|m| m.eval_with(f.clone())))
+        self.0.eval_with_order(self.monomials().map(|m| m.eval(f.clone())))
+    }
+
+    /** Evaluates the polynomial on a sequence of variable-value pairs.
+
+    This is a convenient way to evaluate the polynomial at a single point but it
+    is not very efficient.
+    */
+    pub fn eval_pairs<A>(&self, pairs: impl IntoIterator<Item = (Var, A)>) -> A
+    where
+        A: Clone + Mul<Coef, Output = A> + Pow<Exp, Output = A> + Sum + Product,
+        Coef: Clone,
+        Exp: Clone,
+    {
+        let map: BTreeMap<Var, A> = pairs.into_iter().collect();
+        self.eval(|var| map.get(var).cloned().unwrap())
+    }
+
+    /** Maps over the variables in the polynomial.
+
+    The mapping need not be injective. This is conceptually equivalent to
+    [evaluating](Polynomial::eval) the polynomial with a map that sends
+    generators to generators but avoids assuming that an arbitrary polynomial
+    can be exponentiated, which is only makes sense when the exponents are
+    nonnegative integers.
+     */
+    pub fn map_variables<NewVar, F>(&self, mut f: F) -> Polynomial<NewVar, Coef, Exp>
+    where
+        Coef: Clone + Add<Output = Coef>,
+        Exp: Clone + Add<Output = Exp>,
+        NewVar: Clone + Ord,
+        F: FnMut(&Var) -> NewVar,
+    {
+        (&self.0)
+            .into_iter()
+            .map(|(coef, m)| (coef.clone(), m.map_variables(|var| f(var))))
+            .collect()
     }
 }
 
@@ -326,13 +353,14 @@ mod tests {
         assert_eq!(x().to_string(), "x");
 
         let p = Polynomial::<char, i32, u32>::from_scalar(-5);
-        assert_eq!(p.eval::<i32>(&[]), -5);
+        assert_eq!(p.eval_pairs::<i32>([]), -5);
 
         let p = x() * y() * x() * 2 + y() * x() * y() * 3;
         assert_eq!(p.to_string(), "3 x y^2 + 2 x^2 y");
-        assert_eq!(p.eval(&[1, 1]), 5);
-        assert_eq!(p.eval(&[1, 2]), 16);
-        assert_eq!(p.eval(&[2, 1]), 14);
+        assert_eq!(p.map_variables(|_| 'x').to_string(), "5 x^3");
+        assert_eq!(p.eval_pairs([('x', 1), ('y', 1)]), 5);
+        assert_eq!(p.eval_pairs([('x', 1), ('y', 2)]), 16);
+        assert_eq!(p.eval_pairs([('y', 1), ('x', 2)]), 14);
 
         let p = (x() + y()) * (x() + y());
         assert_eq!(p.to_string(), "2 x y + x^2 + y^2");
