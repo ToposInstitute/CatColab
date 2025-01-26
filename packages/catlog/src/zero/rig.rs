@@ -171,7 +171,7 @@ impl<'a, Var, Coef> IntoIterator for &'a Combination<Var, Coef> {
     >;
 
     fn into_iter(self) -> Self::IntoIter {
-        (&self.0).into_iter().map(|(var, coef)| (coef, var))
+        self.0.iter().map(|(var, coef)| (coef, var))
     }
 }
 

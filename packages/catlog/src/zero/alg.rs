@@ -26,7 +26,8 @@ pub trait CommAlg: CommRing + Module<Ring = Self::R> {
 
 /** A polynomial in several variables.
 
-TODO: As free algebras
+In abstract terms, polynomials in a [commutative ring](super::rig::CommRing) R
+are the free [commutative algebra](CommAlg) over R.
  */
 #[derive(Clone, PartialEq, Eq, Derivative)]
 #[derivative(Default(bound = ""))]
@@ -258,6 +259,14 @@ where
 {
 }
 
+impl<Var, Coef, Exp> Ring for Polynomial<Var, Coef, Exp>
+where
+    Var: Clone + Ord,
+    Coef: Clone + Default + Ring,
+    Exp: Clone + Ord + AdditiveMonoid,
+{
+}
+
 impl<Var, Coef, Exp> CommMonoid for Polynomial<Var, Coef, Exp>
 where
     Var: Clone + Ord,
@@ -274,15 +283,39 @@ where
 {
 }
 
+impl<Var, Coef, Exp> CommRing for Polynomial<Var, Coef, Exp>
+where
+    Var: Clone + Ord,
+    Coef: Clone + Default + CommRing,
+    Exp: Clone + Ord + AdditiveMonoid,
+{
+}
+
+impl<Var, Coef, Exp> CommAlg for Polynomial<Var, Coef, Exp>
+where
+    Var: Clone + Ord,
+    Coef: Clone + Default + CommRing,
+    Exp: Clone + Ord + AdditiveMonoid,
+{
+    type R = Coef;
+
+    fn from_scalar(r: Self::R) -> Self {
+        [(r, Monomial::one())].into_iter().collect()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn polynomials() {
-        let x = || { Polynomial::<_, i32, u32>::generator('x') };
-        let y = || { Polynomial::<_, i32, u32>::generator('y') };
+        let x = || Polynomial::<_, i32, u32>::generator('x');
+        let y = || Polynomial::<_, i32, u32>::generator('y');
         assert_eq!(x().to_string(), "x");
+
+        let p = Polynomial::<char, i32, u32>::from_scalar(-5);
+        assert_eq!(p.eval::<i32>(&[]), -5);
 
         let p = x() * y() * x() * 2 + y() * x() * y() * 3;
         assert_eq!(p.to_string(), "3 x y^2 + 2 x^2 y");
