@@ -123,13 +123,25 @@ where
         self.0.keys()
     }
 
-    /// Evaluates the combination by substituting for the variables.
-    pub fn eval<A>(&self, values: impl Iterator<Item = A>) -> A
+    /// Evaluates the combination with a sequence of values.
+    pub fn eval<A>(&self, mut values: impl Iterator<Item = A>) -> A
     where
         A: Mul<Coef, Output = A> + Sum,
         Coef: Clone,
     {
-        self.0.values().zip(values).map(|(coef, val)| val * coef.clone()).sum()
+        let value = self.eval_with(|_| values.next().unwrap());
+        assert!(values.next().is_none());
+        value
+    }
+
+    /// Evaluates the combination by substituting for the variables.
+    pub fn eval_with<A, F>(&self, mut f: F) -> A
+    where
+        A: Mul<Coef, Output = A> + Sum,
+        F: FnMut(&Var) -> A,
+        Coef: Clone,
+    {
+        self.0.iter().map(|(var, coef)| f(var) * coef.clone()).sum()
     }
 }
 
@@ -369,13 +381,25 @@ where
         Monomial([(var, Exp::one())].into_iter().collect())
     }
 
-    /// Evaluates the monomial by substituting for the variables.
-    pub fn eval<A>(&self, values: impl Iterator<Item = A>) -> A
+    /// Evaluates the monomial with a sequence of values.
+    pub fn eval<A>(&self, mut values: impl Iterator<Item = A>) -> A
     where
         A: Pow<Exp, Output = A> + Product,
         Exp: Clone,
     {
-        values.zip(self.0.values()).map(|(val, exp)| val.pow(exp.clone())).product()
+        let value = self.eval_with(|_| values.next().unwrap());
+        assert!(values.next().is_none());
+        value
+    }
+
+    /// Evaluates the monomial by substituting for the variables.
+    pub fn eval_with<A, F>(&self, mut f: F) -> A
+    where
+        A: Pow<Exp, Output = A> + Product,
+        F: FnMut(&Var) -> A,
+        Exp: Clone,
+    {
+        self.0.iter().map(|(var, exp)| f(var).pow(exp.clone())).product()
     }
 }
 

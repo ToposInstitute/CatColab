@@ -60,7 +60,7 @@ where
         self.0.variables()
     }
 
-    /// Evaluates the polynomial by substituting for the variables.
+    /// Evaluates the polynomial with a sequence of values.
     pub fn eval<A>(&self, values: &[A]) -> A
     where
         A: Clone + Mul<Coef, Output = A> + Pow<Exp, Output = A> + Sum + Product,
@@ -68,6 +68,17 @@ where
         Exp: Clone,
     {
         self.0.eval(self.monomials().map(|m| m.eval(values.iter().cloned())))
+    }
+
+    /// Evaluates the polynomial by substituting for the variables.
+    pub fn eval_with<A, F>(&self, f: F) -> A
+    where
+        A: Clone + Mul<Coef, Output = A> + Pow<Exp, Output = A> + Sum + Product,
+        F: Clone + FnMut(&Var) -> A,
+        Coef: Clone,
+        Exp: Clone,
+    {
+        self.0.eval(self.monomials().map(|m| m.eval_with(f.clone())))
     }
 }
 

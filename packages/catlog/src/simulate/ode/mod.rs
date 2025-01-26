@@ -6,6 +6,9 @@ use ode_solvers::{
     dop_shared::{IntegrationError, SolverResult},
 };
 
+#[cfg(test)]
+use textplots::{Chart, Plot, Shape};
+
 /** A system of ordinary differential equations (ODEs).
 
 An ODE system is anything that can compute a vector field.
@@ -125,7 +128,31 @@ where
     }
 }
 
+#[cfg(test)]
+pub(crate) fn textplot_ode_result<Sys>(
+    problem: &ODEProblem<Sys>,
+    result: &SolverResult<f32, DVector<f32>>,
+) -> String {
+    let mut chart = Chart::new(100, 80, 0.0, problem.end_time);
+    let (t_out, x_out) = result.get();
+
+    let dim = problem.initial_values.len();
+    let line_data: Vec<_> = (0..dim)
+        .into_iter()
+        .map(|i| t_out.iter().copied().zip(x_out.iter().map(|x| x[i])).collect::<Vec<_>>())
+        .collect();
+
+    let lines: Vec<_> = line_data.iter().map(|data| Shape::Lines(data)).into_iter().collect();
+
+    let chart = lines.iter().fold(&mut chart, |chart, line| chart.lineplot(line));
+    chart.axis();
+    chart.figures();
+    chart.to_string()
+}
+
 #[allow(non_snake_case)]
 pub mod lotka_volterra;
+pub mod polynomial;
 
 pub use lotka_volterra::*;
+pub use polynomial::*;
