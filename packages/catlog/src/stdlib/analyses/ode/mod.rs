@@ -27,5 +27,7 @@ where
 
 #[allow(non_snake_case)]
 pub mod lotka_volterra;
+pub mod mass_action;
 
 pub use lotka_volterra::*;
+pub use mass_action::*;

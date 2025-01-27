@@ -138,12 +138,12 @@ mod tests {
     use super::super::textplot_ode_result;
     use super::*;
 
-    type Constant<Name> = Polynomial<Name, f32, u8>;
+    type Parameter<Id> = Polynomial<Id, f32, u8>;
 
     #[test]
     fn sir() {
-        let param = |c: char| Constant::<_>::generator(c);
-        let var = |c: char| Polynomial::<_, Constant<_>, u8>::generator(c);
+        let param = |c: char| Parameter::<_>::generator(c);
+        let var = |c: char| Polynomial::<_, Parameter<_>, u8>::generator(c);
         let terms = [
             ('S', -var('S') * var('I') * param('β')),
             ('I', var('S') * var('I') * param('β')),

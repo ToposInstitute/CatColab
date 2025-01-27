@@ -12,12 +12,12 @@ use serde::{Deserialize, Serialize};
 use tsify_next::Tsify;
 
 use super::ODESolution;
-use crate::{
-    dbl::model::{DiscreteDblModel, FgDblModel},
-    one::fin_category::{FinMor, UstrFinCategory},
-    one::FgCategory,
-    simulate::ode::{LotkaVolterraSystem, ODEProblem},
+use crate::dbl::model::{DiscreteDblModel, FgDblModel};
+use crate::one::{
+    fin_category::{FinMor, UstrFinCategory},
+    FgCategory,
 };
+use crate::simulate::ode::{LotkaVolterraSystem, ODEProblem};
 
 /// Data defining a Lotka-Volterra ODE problem for a model.
 #[derive(Clone)]

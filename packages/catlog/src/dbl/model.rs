@@ -531,6 +531,34 @@ impl<V, E> From<V> for TabOb<V, E> {
     }
 }
 
+impl<V, E> TabOb<V, E> {
+    /// Extracts a basic object or nothing.
+    pub fn basic(self) -> Option<V> {
+        match self {
+            TabOb::Basic(v) => Some(v),
+            _ => None,
+        }
+    }
+
+    /// Extracts a tabulated morphism or nothing.
+    pub fn tabulated(self) -> Option<TabMor<V, E>> {
+        match self {
+            TabOb::Tabulated(mor) => Some(*mor),
+            _ => None,
+        }
+    }
+
+    /// Unwraps a basic object, or panics.
+    pub fn unwrap_basic(self) -> V {
+        self.basic().expect("Object should be a basic object")
+    }
+
+    /// Unwraps a tabulated morphism, or panics.
+    pub fn unwrap_tabulated(self) -> TabMor<V, E> {
+        self.tabulated().expect("Object should be a tabulated morphism")
+    }
+}
+
 /** "Edge" in a model of a discrete tabulator theory.
 
 Morphisms of these two forms generate all the morphisms in the model.
