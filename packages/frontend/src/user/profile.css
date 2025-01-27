@@ -1,0 +1,23 @@
+.files {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+    background: whitesmoke;
+    border-radius: 6px;
+    border: 1px solid lightgray;
+}
+
+.filebutton {
+    display: block;
+    padding: 1rem;
+    text-align: center;
+    background: white;
+    border-radius: 4px;
+    border: 1px solid #e1e4e8;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    color: #0366d6;
+    box-shadow: none;
+
+}

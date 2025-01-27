@@ -1,5 +1,5 @@
 import { type SubmitHandler, createForm, reset } from "@modular-forms/solid";
-import { createEffect, createResource } from "solid-js";
+import { createSignal, createEffect, createResource, Show } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { UserProfile } from "catcolab-api";
@@ -8,15 +8,63 @@ import { FormGroup, TextInputItem } from "../components";
 import { BrandedToolbar } from "../page";
 import { LoginGate } from "./login";
 
+import "./profile.css";
+
 /** Page to configure user profile. */
 export default function UserProfilePage() {
+    const [myRefs, setMyRefs] = createSignal<any>(null);
+
     return (
         <div class="growable-container">
             <BrandedToolbar />
             <div class="page-container">
                 <LoginGate>
                     <h2>Public profile</h2>
-                    <UserProfileForm />
+                    <UserProfileForm onRefsLoaded={setMyRefs} />
+                    <div style="margin-top: 1rem;">
+                        <h3
+                            style="
+        margin: 0 0 0.5rem 0;
+        color: #24292e;
+        font-size: 1.25rem;
+        font-weight: 500;
+    "
+                        >
+                            Your Documents
+                        </h3>
+                        <Show
+                            when={myRefs()}
+                            fallback={<div> Loading user files... </div>}
+                            keyed
+                        >
+                            {(items) => {
+                                return (
+                                    <div class="files">
+                                        {items.map(
+                                            ([id, title]: [string, string]) => (
+                                                <a
+                                                    href={`${import.meta.env.VITE_SERVER_URL}/model/${id}`}
+                                                    class="
+                filebutton
+            "
+                                                    onMouseOver={(e) => {
+                                                        e.currentTarget.style.boxShadow =
+                                                            "0 2px 8px rgba(0,0,0,0.1)";
+                                                    }}
+                                                    onMouseOut={(e) => {
+                                                        e.currentTarget.style.boxShadow =
+                                                            "none";
+                                                    }}
+                                                >
+                                                    {title || "(Untitled)"}
+                                                </a>
+                                            )
+                                        )}
+                                    </div>
+                                );
+                            }}
+                        </Show>
+                    </div>
                 </LoginGate>
             </div>
         </div>
@@ -24,15 +72,22 @@ export default function UserProfilePage() {
 }
 
 /** Form to configure user proifle. */
-export function UserProfileForm() {
+export function UserProfileForm(props: { onRefsLoaded?: (refs: any) => void }) {
     const api = useApi();
-
     const [currentProfile, { refetch: refetchProfile }] = createResource(async () => {
         const result = await api.rpc.get_active_user_profile.query();
         invariant(result.tag === "Ok");
         console.log("cpTest",result.content);
         return result.content;
     });
+    const [userRefs, setUserRefs] = createSignal<any>(null); 
+    createEffect(() => {
+        if (userRefs()) {
+          props.onRefsLoaded?.(userRefs());
+        }
+      });
+    
+
 
     const [form, { Form, Field }] = createForm<UserProfile>();
 
@@ -49,6 +104,7 @@ export function UserProfileForm() {
         const result = await api.rpc.get_user_refs_and_titles.query(profile.username);
         invariant(result.tag === "Ok");  
         console.log("get_refs_test",result.content);
+        setUserRefs(result.content);
     });
 
     const onSubmit: SubmitHandler<UserProfile> = async (values) => {
