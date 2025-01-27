@@ -30,6 +30,7 @@ export function UserProfileForm() {
     const [currentProfile, { refetch: refetchProfile }] = createResource(async () => {
         const result = await api.rpc.get_active_user_profile.query();
         invariant(result.tag === "Ok");
+        console.log("cpTest",result.content);
         return result.content;
     });
 
@@ -37,6 +38,17 @@ export function UserProfileForm() {
 
     createEffect(() => {
         reset(form, { initialValues: currentProfile() });
+    });
+
+    createEffect(async () => {
+        const profile = currentProfile();
+        if (!profile) {
+            return;
+        }
+        invariant(profile.username != null, "Profile username must be defined and not null");
+        const result = await api.rpc.get_user_refs_and_titles.query(profile.username);
+        invariant(result.tag === "Ok");  
+        console.log("get_refs_test",result.content);
     });
 
     const onSubmit: SubmitHandler<UserProfile> = async (values) => {

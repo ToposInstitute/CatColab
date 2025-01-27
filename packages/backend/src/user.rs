@@ -1,6 +1,7 @@
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
+use uuid::Uuid;
 
 use super::app::{AppCtx, AppError, AppState};
 
@@ -158,6 +159,25 @@ pub fn is_username_valid(username: &str) -> bool {
     valid_chars.is_match(username)
         && starts_alpha.is_match(username)
         && ends_alpha.is_match(username)
+}
+
+/// Get references and titles for a given username.
+pub async fn get_user_refs_and_titles(ctx: AppCtx, username: &str) -> Result<Vec<(Uuid, String)>, AppError> {
+    let query = sqlx::query!(
+        r#"
+        SELECT snapshots.for_ref, snapshots.content->>'name' as title
+        FROM snapshots
+        JOIN refs ON snapshots.for_ref = refs.id
+        JOIN permissions ON refs.id = permissions.object
+        JOIN users ON permissions.subject = users.id
+        WHERE users.username = $1
+        AND permissions.level = 'own'
+        "#,
+        username
+    );
+
+    let results = query.fetch_all(&ctx.state.db).await?;
+    Ok(results.into_iter().map(|row| (row.for_ref, row.title.unwrap_or("untitled".to_string()))).collect())
 }
 
 #[cfg(test)]

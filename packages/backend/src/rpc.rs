@@ -25,7 +25,10 @@ pub fn router() -> Router<AppState> {
         .handler(username_status)
         .handler(get_active_user_profile)
         .handler(set_active_user_profile)
+        .handler(get_user_refs_and_titles)
 }
+
+
 
 #[handler(mutation)]
 async fn new_ref(ctx: AppCtx, content: Value) -> RpcResult<Uuid> {
@@ -117,6 +120,11 @@ async fn sign_up_or_sign_in(ctx: AppCtx) -> RpcResult<()> {
 #[handler(query)]
 async fn user_by_username(ctx: AppCtx, username: &str) -> RpcResult<Option<user::UserSummary>> {
     user::user_by_username(ctx.state, username).await.into()
+}
+
+#[handler(query)]
+async fn get_user_refs_and_titles(ctx: AppCtx, username: &str) -> RpcResult<Vec<(Uuid, String)>> {
+    user::get_user_refs_and_titles(ctx, username).await.into()
 }
 
 #[handler(query)]
