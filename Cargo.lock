@@ -295,10 +295,12 @@ dependencies = [
  "archery",
  "derivative",
  "derive_more",
+ "duplicate",
  "either",
  "expect-test",
  "nalgebra",
  "nonempty",
+ "num-traits",
  "ode_solvers",
  "ref-cast",
  "serde",
@@ -543,6 +545,17 @@ checksum = "e64e461c3f1e69d99372620640b3fd5f0309eeda2e26e4af69f6760c0e1df845"
 dependencies = [
  "colored",
  "fnv",
+]
+
+[[package]]
+name = "duplicate"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "97af9b5f014e228b33e77d75ee0e6e87960124f0f4b16337b586a6bec91867b1"
+dependencies = [
+ "heck",
+ "proc-macro2",
+ "proc-macro2-diagnostics",
 ]
 
 [[package]]
@@ -1931,6 +1944,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "37d3544b3f2748c54e147655edb5025752e2303145b5aefb3c3ea2c78b973bb0"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "proc-macro2-diagnostics"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af066a9c399a26e020ada66a034357a868728e72cd426f3adcd35f80d88d88c8"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.90",
+ "version_check",
+ "yansi",
 ]
 
 [[package]]
@@ -3740,6 +3766,12 @@ name = "writeable"
 version = "0.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e9df38ee2d2c3c5948ea468a8406ff0db0b29ae1ffde1bcf20ef305bcc95c51"
+
+[[package]]
+name = "yansi"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cfe53a6657fd280eaa890a3bc59152892ffa3e30101319d168b781ed6529b049"
 
 [[package]]
 name = "yoke"

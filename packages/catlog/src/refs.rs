@@ -1,8 +1,8 @@
 /*! References to the literature (docs only).
 
 This module contains references cited in the docs for this crate. It is compiled
-only when the crate the `doc` feature is enabled, and it is not intended for any
-purpose besides documentation.
+only when the crate the `doc` feature is enabled, and it is not intended to be
+used for any purpose besides documentation.
  */
 
 // NOTE: It would be fun to record bibliographic data in a structured way, e.g.,
@@ -86,3 +86,13 @@ Compositional modeling with stock and flow diagrams.
 - [arXiv:2205.08373](https://arxiv.org/abs/2205.08373)
  */
 pub const StockFlow: () = ();
+
+/** Reference: *Ideals, varieties, and algorithms*.
+
+David A. Cox, John B. Little, Don O'Shea, 2015. *Ideals, varieties, and
+algorithms*. Fourth edition.
+
+- [DOI:10.1007/978-3-319-16721-3](https://doi.org/10.1007/978-3-319-16721-3)
+- [Companion website](https://dacox.people.amherst.edu/iva.html)
+ */
+pub const IdealsVarietiesAlgorithms: () = ();
