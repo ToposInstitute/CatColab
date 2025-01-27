@@ -16,6 +16,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify_next::Tsify;
 
+use super::ODEAnalysis;
 use crate::dbl::{
     model::{DiscreteTabModel, FgDblModel, TabEdge},
     theory::{TabMorType, TabObType},
@@ -128,15 +129,12 @@ impl StockFlowMassActionAnalysis {
         sys
     }
 
-    /** Creates a numerical mass-action system from a model.
-
-    Returns an ODE problem plus a mapping from object IDs to variable indices.
-    */
+    /// Creates a numerical mass-action system from a model.
     pub fn create_numerical_system<Id: Eq + Clone + Hash + Ord>(
         &self,
         model: &StockFlowModel<Id>,
         data: MassActionProblemData<Id>,
-    ) -> (ODEProblem<NumericalPolynomialSystem<u8>>, HashMap<Id, usize>) {
+    ) -> ODEAnalysis<Id, NumericalPolynomialSystem<u8>> {
         let sys = self.create_system(model);
 
         let objects: Vec<_> = sys.components.keys().cloned().collect();
@@ -150,12 +148,11 @@ impl StockFlowMassActionAnalysis {
                 poly.eval(|flow| data.rates.get(flow).copied().unwrap_or_default())
             })
             .to_numerical();
-        let problem = ODEProblem::new(sys, x0).end_time(data.duration);
 
+        let problem = ODEProblem::new(sys, x0).end_time(data.duration);
         let ob_index: HashMap<_, _> =
             objects.into_iter().enumerate().map(|(i, x)| (x, i)).collect();
-
-        (problem, ob_index)
+        ODEAnalysis::new(problem, ob_index)
     }
 }
 
@@ -169,8 +166,8 @@ mod tests {
 
     #[test]
     fn backward_link_dynamics() {
-        let th = th_category_links();
-        let model = backward_link(Arc::new(th));
+        let th = Arc::new(th_category_links());
+        let model = backward_link(th);
         let analysis: StockFlowMassActionAnalysis = Default::default();
         let sys = analysis.create_system(&model);
         let expected = expect!([r#"

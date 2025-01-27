@@ -29,28 +29,49 @@ where
     states: HashMap<Id, Vec<f32>>,
 }
 
-/// Solves an ODE problem for an analysis with reasonable default settings.
-pub fn solve_ode_analysis<Id: Eq + Hash, Sys: ODESystem>(
-    problem: ODEProblem<Sys>,
-    var_index: HashMap<Id, usize>,
-) -> Result<ODESolution<Id>, IntegrationError> {
-    // ODE solver will fail in the degenerate case of an empty system.
-    if var_index.is_empty() {
-        return Ok(Default::default());
+/// Data needed to simulate and interpret an ODE analysis of a model.
+pub struct ODEAnalysis<Id, Sys> {
+    /// ODE problem for the analysis.
+    pub problem: ODEProblem<Sys>,
+
+    /// Mapping from IDs in model (usually object IDs) to variable indices.
+    pub variable_index: HashMap<Id, usize>,
+}
+
+impl<Id, Sys> ODEAnalysis<Id, Sys> {
+    /// Constructs a new ODE analysis.
+    pub fn new(problem: ODEProblem<Sys>, variable_index: HashMap<Id, usize>) -> Self {
+        Self {
+            problem,
+            variable_index,
+        }
     }
 
-    let duration = problem.end_time - problem.start_time;
-    let output_step_size = (duration / 100.0).min(0.01f32);
-    let result = problem.solve_dopri5(output_step_size)?;
+    /// Solves the ODE with reasonable default settings and collects results.
+    pub fn default_solve(self) -> Result<ODESolution<Id>, IntegrationError>
+    where
+        Id: Eq + Hash,
+        Sys: ODESystem,
+    {
+        // ODE solver will fail in the degenerate case of an empty system.
+        if self.variable_index.is_empty() {
+            return Ok(Default::default());
+        }
 
-    let (t_out, x_out) = result.get();
-    Ok(ODESolution {
-        time: t_out.clone(),
-        states: var_index
-            .into_iter()
-            .map(|(ob, i)| (ob, x_out.iter().map(|x| x[i]).collect()))
-            .collect(),
-    })
+        let duration = self.problem.end_time - self.problem.start_time;
+        let output_step_size = (duration / 100.0).min(0.01f32);
+        let result = self.problem.solve_dopri5(output_step_size)?;
+
+        let (t_out, x_out) = result.get();
+        Ok(ODESolution {
+            time: t_out.clone(),
+            states: self
+                .variable_index
+                .into_iter()
+                .map(|(ob, i)| (ob, x_out.iter().map(|x| x[i]).collect()))
+                .collect(),
+        })
+    }
 }
 
 #[allow(non_snake_case)]

@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify_next::Tsify;
 
+use super::ODEAnalysis;
 use crate::dbl::model::{DiscreteDblModel, FgDblModel};
 use crate::one::{
     fin_category::{FinMor, UstrFinCategory},
@@ -81,15 +82,12 @@ impl LotkaVolterraAnalysis {
         self
     }
 
-    /** Creates a Lotka-Volterra system from a model.
-
-    Returns an ODE problem plus a mapping from object IDs to variable indices.
-    */
+    /// Creates a Lotka-Volterra system from a model.
     pub fn create_system<Id: Eq + Clone + Hash + Ord>(
         &self,
         model: &Model<Id>,
         data: LotkaVolterraProblemData<Id>,
-    ) -> (ODEProblem<LotkaVolterraSystem>, HashMap<Id, usize>) {
+    ) -> ODEAnalysis<Id, LotkaVolterraSystem> {
         let mut objects: Vec<_> = model.ob_generators_with_type(&self.var_ob_type).collect();
         objects.sort();
         let ob_index: HashMap<_, _> =
@@ -124,7 +122,7 @@ impl LotkaVolterraAnalysis {
 
         let system = LotkaVolterraSystem::new(A, b);
         let problem = ODEProblem::new(system, x0).end_time(data.duration);
-        (problem, ob_index)
+        ODEAnalysis::new(problem, ob_index)
     }
 }
 
@@ -149,10 +147,10 @@ mod test {
             initial_values: [(prey, 1.0), (pred, 1.0)].into_iter().collect(),
             duration: 10.0,
         };
-        let (problem, _) = LotkaVolterraAnalysis::new(ustr("Object"))
+        let analysis = LotkaVolterraAnalysis::new(ustr("Object"))
             .add_positive(FinMor::Id(ustr("Object")))
             .add_negative(FinMor::Generator(ustr("Negative")))
             .create_system(&neg_feedback, data);
-        assert_eq!(problem, lotka_volterra::create_predator_prey());
+        assert_eq!(analysis.problem, lotka_volterra::create_predator_prey());
     }
 }

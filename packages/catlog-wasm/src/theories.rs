@@ -11,7 +11,6 @@ use wasm_bindgen::prelude::*;
 
 use catlog::dbl::{model, theory};
 use catlog::one::fin_category::FinMor;
-use catlog::stdlib::analyses::ode::solve_ode_analysis;
 use catlog::stdlib::{analyses, models, theories};
 
 use super::model_morphism::motifs;
@@ -108,12 +107,12 @@ impl ThSignedCategory {
         let model: &model::DiscreteDblModel<_, _> = (&model.0)
             .try_into()
             .map_err(|_| "Lotka-Volterra simulation expects a discrete double model")?;
-        let (problem, var_index) = analyses::ode::LotkaVolterraAnalysis::new(ustr("Object"))
-            .add_positive(FinMor::Id(ustr("Object")))
-            .add_negative(FinMor::Generator(ustr("Negative")))
-            .create_system(model, data.0);
         Ok(ODEResult(
-            solve_ode_analysis(problem, var_index)
+            analyses::ode::LotkaVolterraAnalysis::new(ustr("Object"))
+                .add_positive(FinMor::Id(ustr("Object")))
+                .add_negative(FinMor::Generator(ustr("Negative")))
+                .create_system(model, data.0)
+                .default_solve()
                 .map_err(|err| format!("{:?}", err))
                 .into(),
         ))
@@ -225,10 +224,10 @@ impl ThCategoryLinks {
         let model: &model::DiscreteTabModel<_, _, _> = (&model.0)
             .try_into()
             .map_err(|_| "Mass-action simulation expects a discrete tabulator model")?;
-        let (problem, var_index) = analyses::ode::StockFlowMassActionAnalysis::default()
-            .create_numerical_system(model, data.0);
         Ok(ODEResult(
-            solve_ode_analysis(problem, var_index)
+            analyses::ode::StockFlowMassActionAnalysis::default()
+                .create_numerical_system(model, data.0)
+                .default_solve()
                 .map_err(|err| format!("{:?}", err))
                 .into(),
         ))
