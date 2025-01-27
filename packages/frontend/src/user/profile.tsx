@@ -1,5 +1,5 @@
 import { type SubmitHandler, createForm, reset } from "@modular-forms/solid";
-import { createSignal, createEffect, createResource, Show } from "solid-js";
+import { Fragment, Show, createEffect, createResource, createSignal } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { UserProfile } from "catcolab-api";
@@ -12,7 +12,7 @@ import "./profile.css";
 
 /** Page to configure user profile. */
 export default function UserProfilePage() {
-    const [myRefs, setMyRefs] = createSignal<any>(null);
+    const [myRefs, setMyRefs] = createSignal<[string, string][] | null>(null);
 
     return (
         <div class="growable-container">
@@ -32,34 +32,27 @@ export default function UserProfilePage() {
                         >
                             Your Documents
                         </h3>
-                        <Show
-                            when={myRefs()}
-                            fallback={<div> Loading user files... </div>}
-                            keyed
-                        >
+                        <Show when={myRefs()} fallback={<div> Loading user files... </div>} keyed>
                             {(items) => {
                                 return (
                                     <div class="files">
-                                        {items.map(
-                                            ([id, title]: [string, string]) => (
+                                        {items.map(([id, title]: [string, string]) => (
+                                            <Fragment key={id}>
                                                 <a
                                                     href={`${import.meta.env.VITE_SERVER_URL}/model/${id}`}
-                                                    class="
-                filebutton
-            "
+                                                    class="filebutton"
                                                     onMouseOver={(e) => {
                                                         e.currentTarget.style.boxShadow =
                                                             "0 2px 8px rgba(0,0,0,0.1)";
                                                     }}
                                                     onMouseOut={(e) => {
-                                                        e.currentTarget.style.boxShadow =
-                                                            "none";
+                                                        e.currentTarget.style.boxShadow = "none";
                                                     }}
                                                 >
                                                     {title || "(Untitled)"}
                                                 </a>
-                                            )
-                                        )}
+                                            </Fragment>
+                                        ))}
                                     </div>
                                 );
                             }}
@@ -72,22 +65,22 @@ export default function UserProfilePage() {
 }
 
 /** Form to configure user proifle. */
-export function UserProfileForm(props: { onRefsLoaded?: (refs: any) => void }) {
+export function UserProfileForm(props: {
+    onRefsLoaded: (refs: [string, string][] | null) => void;
+}) {
     const api = useApi();
     const [currentProfile, { refetch: refetchProfile }] = createResource(async () => {
         const result = await api.rpc.get_active_user_profile.query();
         invariant(result.tag === "Ok");
-        console.log("cpTest",result.content);
+        console.log("cpTest", result.content);
         return result.content;
     });
-    const [userRefs, setUserRefs] = createSignal<any>(null); 
+    const [userRefs, setUserRefs] = createSignal<[string, string][] | null>(null);
     createEffect(() => {
         if (userRefs()) {
-          props.onRefsLoaded?.(userRefs());
+            props.onRefsLoaded?.(userRefs());
         }
-      });
-    
-
+    });
 
     const [form, { Form, Field }] = createForm<UserProfile>();
 
@@ -102,8 +95,8 @@ export function UserProfileForm(props: { onRefsLoaded?: (refs: any) => void }) {
         }
         invariant(profile.username != null, "Profile username must be defined and not null");
         const result = await api.rpc.get_user_refs_and_titles.query(profile.username);
-        invariant(result.tag === "Ok");  
-        console.log("get_refs_test",result.content);
+        invariant(result.tag === "Ok");
+        console.log("get_refs_test", result.content);
         setUserRefs(result.content);
     });
 
