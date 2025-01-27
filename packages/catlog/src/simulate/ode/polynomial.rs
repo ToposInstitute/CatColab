@@ -24,7 +24,6 @@ pub struct PolynomialSystem<Var, Coef, Exp> {
 impl<Var, Coef, Exp> PolynomialSystem<Var, Coef, Exp>
 where
     Var: Ord,
-    Coef: Add<Output = Coef>,
     Exp: Ord,
 {
     /// Constructs a new polynomial system, with no equations.
@@ -33,12 +32,28 @@ where
     }
 
     /// Adds a new term to the system.
-    pub fn add_term(&mut self, var: Var, term: Polynomial<Var, Coef, Exp>) {
+    pub fn add_term(&mut self, var: Var, term: Polynomial<Var, Coef, Exp>)
+    where
+        Coef: Add<Output = Coef>,
+    {
         if let Some(component) = self.components.get_mut(&var) {
             *component = std::mem::take(component) + term;
         } else {
             self.components.insert(var, term);
         }
+    }
+
+    /// Maps the cofficients of the polynomials comprising the system.
+    pub fn extend_scalars<NewCoef, F>(self, f: F) -> PolynomialSystem<Var, NewCoef, Exp>
+    where
+        F: Clone + FnMut(Coef) -> NewCoef,
+    {
+        let components = self
+            .components
+            .into_iter()
+            .map(|(var, poly)| (var, poly.extend_scalars(f.clone())))
+            .collect();
+        PolynomialSystem { components }
     }
 }
 
@@ -123,21 +138,36 @@ mod tests {
     use super::super::textplot_ode_result;
     use super::*;
 
+    type Constant<Name> = Polynomial<Name, f32, u8>;
+
     #[test]
     fn sir() {
-        let x = |c: char| Polynomial::<_, f32, u8>::generator(c);
-        let terms =
-            [('S', -x('S') * x('I')), ('I', x('S') * x('I')), ('I', -x('I')), ('R', x('I'))];
-        let system: PolynomialSystem<_, _, _> = terms.into_iter().collect();
+        let param = |c: char| Constant::<_>::generator(c);
+        let var = |c: char| Polynomial::<_, Constant<_>, u8>::generator(c);
+        let terms = [
+            ('S', -var('S') * var('I') * param('β')),
+            ('I', var('S') * var('I') * param('β')),
+            ('I', -var('I') * param('γ')),
+            ('R', var('I') * param('γ')),
+        ];
+        let sys: PolynomialSystem<_, _, _> = terms.into_iter().collect();
+        let expected = expect![[r#"
+            dI = ((-1) γ) I + β I S
+            dR = γ I
+            dS = ((-1) β) I S
+        "#]];
+        expected.assert_eq(&sys.to_string());
+
+        let sys = sys.extend_scalars(|p| p.eval(|_| 1.0));
         let expected = expect![[r#"
             dI = (-1) I + I S
             dR = I
             dS = (-1) I S
         "#]];
-        expected.assert_eq(&system.to_string());
+        expected.assert_eq(&sys.to_string());
 
         let initial = DVector::from_column_slice(&[1.0, 0.0, 4.0]);
-        let problem = ODEProblem::new(system.to_numerical(), initial).end_time(5.0);
+        let problem = ODEProblem::new(sys.to_numerical(), initial).end_time(5.0);
         let result = problem.solve_rk4(0.1).unwrap();
         let expected = expect![[r#"
             ⡁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⣀⠤⠤⠤⠒⠒⠒⠒⠒⠉⠉⠉⠉⠁ 4.9

@@ -27,8 +27,15 @@ pub trait CommAlg: CommRing + Module<Ring = Self::R> {
 
 /** A polynomial in several variables.
 
-In abstract terms, polynomials in a [commutative ring](super::rig::CommRing) R
-are the free [commutative algebra](CommAlg) over R.
+This data structure is for polynomials in *normal form*: a **polynomial** is a
+formal linear combination of monomials in which no monomial is repeated, and no
+variable is repeated within any monomial. The implementation is indeed a
+[`Combination`] of a [`Monomial`]s. The use of a normal form means that
+polynomial arithmetic automatically performs certain simplifications.
+
+In abstract terms, polynomials with coefficients valued in a [commutative
+ring](super::rig::CommRing) *R* are the free [commutative algebra](CommAlg)
+over *R*.
  */
 #[derive(Clone, PartialEq, Eq, Derivative)]
 #[derivative(Default(bound = ""))]
@@ -59,6 +66,19 @@ where
     /// Iterates over the monomials in the polynomial.
     pub fn monomials(&self) -> impl ExactSizeIterator<Item = &Monomial<Var, Exp>> {
         self.0.variables()
+    }
+
+    /** Maps the coefficients of the polynomial.
+
+    In the usual situations when the coefficients from commutative rigs and the
+    mapping is a rig homomorphism, this operation is extension of scalars
+    applied to free commutative algebras.
+     */
+    pub fn extend_scalars<NewCoef, F>(self, f: F) -> Polynomial<Var, NewCoef, Exp>
+    where
+        F: FnMut(Coef) -> NewCoef,
+    {
+        Polynomial(self.0.extend_scalars(f))
     }
 
     /// Evaluates the polynomial by substituting for the variables.
