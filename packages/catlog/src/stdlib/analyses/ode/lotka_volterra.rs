@@ -3,7 +3,6 @@
 use std::{collections::HashMap, hash::Hash};
 
 use nalgebra::{DMatrix, DVector};
-use ode_solvers::dop_shared::IntegrationError;
 use ustr::Ustr;
 
 #[cfg(feature = "serde")]
@@ -11,7 +10,6 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify_next::Tsify;
 
-use super::ODESolution;
 use crate::dbl::model::{DiscreteDblModel, FgDblModel};
 use crate::one::{
     fin_category::{FinMor, UstrFinCategory},
@@ -85,21 +83,17 @@ impl LotkaVolterraAnalysis {
 
     /** Creates a Lotka-Volterra system from a model.
 
-    Returns an ODE problem together with a mapping from object IDs to indices of
-    variables in the ODE.
+    Returns an ODE problem plus a mapping from object IDs to variable indices.
     */
-    pub fn create_system<Id>(
+    pub fn create_system<Id: Eq + Clone + Hash + Ord>(
         &self,
         model: &Model<Id>,
         data: LotkaVolterraProblemData<Id>,
-    ) -> (ODEProblem<LotkaVolterraSystem>, HashMap<Id, usize>)
-    where
-        Id: Eq + Clone + Hash + Ord,
-    {
+    ) -> (ODEProblem<LotkaVolterraSystem>, HashMap<Id, usize>) {
         let mut objects: Vec<_> = model.ob_generators_with_type(&self.var_ob_type).collect();
         objects.sort();
         let ob_index: HashMap<_, _> =
-            objects.iter().enumerate().map(|(i, x)| (x.clone(), i)).collect();
+            objects.iter().cloned().enumerate().map(|(i, x)| (x, i)).collect();
 
         let n = objects.len();
 
@@ -131,32 +125,6 @@ impl LotkaVolterraAnalysis {
         let system = LotkaVolterraSystem::new(A, b);
         let problem = ODEProblem::new(system, x0).end_time(data.duration);
         (problem, ob_index)
-    }
-
-    /// Solves the Lotka-Volterra ODE system created from a model.
-    pub fn solve<Id>(
-        &self,
-        model: &Model<Id>,
-        data: LotkaVolterraProblemData<Id>,
-    ) -> Result<ODESolution<Id>, IntegrationError>
-    where
-        Id: Eq + Clone + Hash + Ord,
-    {
-        let output_step_size = (data.duration / 100.0).min(0.01f32);
-        let (problem, ob_index) = self.create_system(model, data);
-        if ob_index.is_empty() {
-            return Ok(Default::default());
-        }
-
-        let result = problem.solve_dopri5(output_step_size)?;
-        let (t_out, x_out) = result.get();
-        Ok(ODESolution {
-            time: t_out.clone(),
-            states: ob_index
-                .into_iter()
-                .map(|(ob, i)| (ob, x_out.iter().map(|x| x[i]).collect()))
-                .collect(),
-        })
     }
 }
 

@@ -9,8 +9,9 @@ use std::sync::Arc;
 use ustr::ustr;
 use wasm_bindgen::prelude::*;
 
-use catlog::dbl::{model::DiscreteDblModel, theory};
+use catlog::dbl::{model, theory};
 use catlog::one::fin_category::FinMor;
+use catlog::stdlib::analyses::ode::solve_ode_analysis;
 use catlog::stdlib::{analyses, models, theories};
 
 use super::model_morphism::motifs;
@@ -104,14 +105,15 @@ impl ThSignedCategory {
         model: &DblModel,
         data: LotkaVolterraModelData,
     ) -> Result<ODEResult, String> {
-        let model: &DiscreteDblModel<_, _> = (&model.0)
+        let model: &model::DiscreteDblModel<_, _> = (&model.0)
             .try_into()
             .map_err(|_| "Lotka-Volterra simulation expects a discrete double model")?;
+        let (problem, var_index) = analyses::ode::LotkaVolterraAnalysis::new(ustr("Object"))
+            .add_positive(FinMor::Id(ustr("Object")))
+            .add_negative(FinMor::Generator(ustr("Negative")))
+            .create_system(model, data.0);
         Ok(ODEResult(
-            analyses::ode::LotkaVolterraAnalysis::new(ustr("Object"))
-                .add_positive(FinMor::Id(ustr("Object")))
-                .add_negative(FinMor::Generator(ustr("Negative")))
-                .solve(model, data.0)
+            solve_ode_analysis(problem, var_index)
                 .map_err(|err| format!("{:?}", err))
                 .into(),
         ))
@@ -211,6 +213,25 @@ impl ThCategoryLinks {
     #[wasm_bindgen]
     pub fn theory(&self) -> DblTheory {
         DblTheory(self.0.clone().into())
+    }
+
+    /// Simulates the mass-action system derived from a model.
+    #[wasm_bindgen(js_name = "massAction")]
+    pub fn mass_action(
+        &self,
+        model: &DblModel,
+        data: MassActionModelData,
+    ) -> Result<ODEResult, String> {
+        let model: &model::DiscreteTabModel<_, _, _> = (&model.0)
+            .try_into()
+            .map_err(|_| "Mass-action simulation expects a discrete tabulator model")?;
+        let (problem, var_index) = analyses::ode::StockFlowMassActionAnalysis::default()
+            .create_numerical_system(model, data.0);
+        Ok(ODEResult(
+            solve_ode_analysis(problem, var_index)
+                .map_err(|err| format!("{:?}", err))
+                .into(),
+        ))
     }
 }
 

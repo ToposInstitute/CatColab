@@ -3,12 +3,13 @@
 Such ODEs are based on the *law of mass action* familiar from chemistry and
 mathematical epidemiology.
  */
-use std::{
-    collections::HashMap,
-    hash::{BuildHasher, Hash},
-};
 
-use ustr::{ustr, Ustr};
+use std::collections::HashMap;
+use std::hash::{BuildHasherDefault, Hash};
+
+use nalgebra::DVector;
+use num_traits::Zero;
+use ustr::{ustr, IdentityHasher, Ustr};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -20,7 +21,7 @@ use crate::dbl::{
     theory::{TabMorType, TabObType},
 };
 use crate::one::FgCategory;
-use crate::simulate::ode::PolynomialSystem;
+use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
 use crate::zero::{alg::Polynomial, rig::Monomial};
 
 /// Data defining a mass-action ODE problem for a model.
@@ -47,7 +48,7 @@ where
 }
 
 type Parameter<Id> = Polynomial<Id, f32, u8>;
-type StockFlowModel<Id, S> = DiscreteTabModel<Id, Ustr, S>;
+type StockFlowModel<Id> = DiscreteTabModel<Id, Ustr, BuildHasherDefault<IdentityHasher>>;
 
 /** Mass-action ODE analysis for stock-flow models.
 
@@ -79,16 +80,10 @@ impl StockFlowMassActionAnalysis {
 
     The resulting system has symbolic rate coefficients.
      */
-    pub fn create_system<Id, S: BuildHasher>(
+    pub fn create_system<Id: Eq + Clone + Hash + Ord>(
         &self,
-        model: &StockFlowModel<Id, S>,
-    ) -> PolynomialSystem<Id, Parameter<Id>, u8>
-    where
-        Id: Eq + Clone + Hash + Ord,
-    {
-        let mut objects: Vec<Id> = model.ob_generators_with_type(&self.stock_ob_type).collect();
-        objects.sort();
-
+        model: &StockFlowModel<Id>,
+    ) -> PolynomialSystem<Id, Parameter<Id>, u8> {
         let mut terms: HashMap<Id, Monomial<Id, u8>> = model
             .mor_generators_with_type(&self.flow_mor_type)
             .map(|flow| {
@@ -110,7 +105,7 @@ impl StockFlowMassActionAnalysis {
             };
         }
 
-        let terms: HashMap<Id, Polynomial<Id, Parameter<Id>, u8>> = terms
+        let terms: Vec<(Id, Polynomial<Id, Parameter<Id>, u8>)> = terms
             .into_iter()
             .map(|(flow, term)| {
                 let param = Parameter::generator(flow.clone());
@@ -119,6 +114,9 @@ impl StockFlowMassActionAnalysis {
             .collect();
 
         let mut sys: PolynomialSystem<Id, Parameter<Id>, u8> = PolynomialSystem::new();
+        for ob in model.ob_generators_with_type(&self.stock_ob_type) {
+            sys.add_term(ob, Polynomial::zero());
+        }
         for (flow, term) in terms.iter() {
             let dom = model.mor_generator_dom(flow).unwrap_basic();
             sys.add_term(dom, -term.clone());
@@ -128,6 +126,36 @@ impl StockFlowMassActionAnalysis {
             sys.add_term(cod, term);
         }
         sys
+    }
+
+    /** Creates a numerical mass-action system from a model.
+
+    Returns an ODE problem plus a mapping from object IDs to variable indices.
+    */
+    pub fn create_numerical_system<Id: Eq + Clone + Hash + Ord>(
+        &self,
+        model: &StockFlowModel<Id>,
+        data: MassActionProblemData<Id>,
+    ) -> (ODEProblem<NumericalPolynomialSystem<u8>>, HashMap<Id, usize>) {
+        let sys = self.create_system(model);
+
+        let objects: Vec<_> = sys.components.keys().cloned().collect();
+        let initial_values = objects
+            .iter()
+            .map(|ob| data.initial_values.get(ob).copied().unwrap_or_default());
+        let x0 = DVector::from_iterator(objects.len(), initial_values);
+
+        let sys = sys
+            .extend_scalars(|poly| {
+                poly.eval(|flow| data.rates.get(flow).copied().unwrap_or_default())
+            })
+            .to_numerical();
+        let problem = ODEProblem::new(sys, x0).end_time(data.duration);
+
+        let ob_index: HashMap<_, _> =
+            objects.into_iter().enumerate().map(|(i, x)| (x, i)).collect();
+
+        (problem, ob_index)
     }
 }
 
