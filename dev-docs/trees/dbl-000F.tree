@@ -1,0 +1,24 @@
+\title{Graphs in a 2-category}
+\taxon{definition}
+\import{macros}
+
+\p{Let \twocat{K} be a 2-category. In the \define{2-category of graphs in
+\twocat{K},}
+
+\ul{
+
+\li{an object \dbl{G} is a graph object #{s,t: \dbl{G}_1 \rightrightarrows
+\dbl{G}_0} in \twocat{K}, where #{s} is called the \define{source} map and #{t}
+is called the \define{target} map;}
+
+\li{a morphism #{F: \dbl{G} \to \dbl{H}} is a pair of morphisms #{F_i: \dbl{G}_i
+\to \dbl{H}_i}, for #{i = 0,1}, in \twocat{K} that commute with the source and
+target maps; and}
+
+\li{a cell #{\alpha: F \To G} is a pair of cells #{\alpha_i: F_i \To G_i}, for
+#{i = 0,1}, in \twocat{K} that commute with whiskering by the source and target
+maps.}
+
+}
+
+Composition in this 2-category is inherited componentwise from \twocat{K}.}
