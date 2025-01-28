@@ -26,10 +26,7 @@ export default function PublicProfilePage() {
                         <div class="file_list">
                             <For each={models}>
                                 {([id, title]: [string, string]) => (
-                                    <A
-                                        href={`/model/${id}`}
-                                        class="file_entry"
-                                    >
+                                    <A href={`/model/${id}`} class="file_entry">
                                         {title || "(Untitled)"}
                                     </A>
                                 )}
