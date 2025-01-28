@@ -129,7 +129,10 @@ impl StockFlowMassActionAnalysis {
         sys
     }
 
-    /// Creates a numerical mass-action system from a model.
+    /** Creates a numerical mass-action system from a model.
+
+    The resulting system has numerical rate coefficients and is ready to solve.
+     */
     pub fn create_numerical_system<Id: Eq + Clone + Hash + Ord>(
         &self,
         model: &StockFlowModel<Id>,

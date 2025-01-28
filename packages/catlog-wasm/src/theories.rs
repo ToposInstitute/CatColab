@@ -112,7 +112,7 @@ impl ThSignedCategory {
                 .add_positive(FinMor::Id(ustr("Object")))
                 .add_negative(FinMor::Generator(ustr("Negative")))
                 .create_system(model, data.0)
-                .default_solve()
+                .solve_with_defaults()
                 .map_err(|err| format!("{:?}", err))
                 .into(),
         ))
@@ -227,7 +227,7 @@ impl ThCategoryLinks {
         Ok(ODEResult(
             analyses::ode::StockFlowMassActionAnalysis::default()
                 .create_numerical_system(model, data.0)
-                .default_solve()
+                .solve_with_defaults()
                 .map_err(|err| format!("{:?}", err))
                 .into(),
         ))

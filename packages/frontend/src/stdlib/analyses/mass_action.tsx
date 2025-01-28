@@ -1,11 +1,6 @@
 import { createMemo } from "solid-js";
 
-import type {
-    DblModel,
-    LotkaVolterraModelData,
-    LotkaVolterraProblemData,
-    ODEResult,
-} from "catlog-wasm";
+import type { DblModel, MassActionModelData, MassActionProblemData, ODEResult } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import {
     type ColumnSchema,
@@ -20,41 +15,40 @@ import { createModelODEPlot } from "./simulation";
 
 import "./simulation.css";
 
-/** Configuration for a Lotka-Volterra ODE analysis of a model. */
-export type LotkaVolterraContent = LotkaVolterraProblemData<string>;
+/** Configuration for a mass-action ODE analysis of a model. */
+export type MassActionContent = MassActionProblemData<string>;
 
-type Simulator = (model: DblModel, data: LotkaVolterraModelData) => ODEResult;
+type Simulator = (model: DblModel, data: MassActionModelData) => ODEResult;
 
-/** Configure a Lotka-Volterra ODE analysis for use with models of a theory. */
-export function configureLotkaVolterra(options: {
+/** Configure a mass-action ODE analysis for use with models of a theory. */
+export function configureMassAction(options: {
     id?: string;
     name?: string;
     description?: string;
     simulate: Simulator;
-}): ModelAnalysisMeta<LotkaVolterraContent> {
+}): ModelAnalysisMeta<MassActionContent> {
     const {
-        id = "lotka-volterra",
-        name = "Lotka-Volterra dynamics",
-        description = "Simulate the system using a Lotka-Volterra ODE",
+        id = "mass-action",
+        name = "Mass-action dynamics",
+        description = "Simulate the system using the law of mass action",
         simulate,
     } = options;
     return {
         id,
         name,
         description,
-        component: (props) => <LotkaVolterra simulate={simulate} title={name} {...props} />,
+        component: (props) => <MassAction simulate={simulate} title={name} {...props} />,
         initialContent: () => ({
-            interactionCoefficients: {},
-            growthRates: {},
+            rates: {},
             initialValues: {},
             duration: 10,
         }),
     };
 }
 
-/** Analyze a model using Lotka-Volterra dynamics. */
-export function LotkaVolterra(
-    props: ModelAnalysisProps<LotkaVolterraContent> & {
+/** Analyze a model using mass-action dynamics. */
+export function MassAction(
+    props: ModelAnalysisProps<MassActionContent> & {
         simulate: Simulator;
         title?: string;
     },
@@ -82,14 +76,6 @@ export function LotkaVolterra(
                     content.initialValues[ob.id] = data;
                 }),
         }),
-        createNumericalColumn({
-            name: "Growth/decay",
-            data: (ob) => props.content.growthRates[ob.id],
-            setData: (ob, data) =>
-                props.changeContent((content) => {
-                    content.growthRates[ob.id] = data;
-                }),
-        }),
     ];
 
     const morSchema: ColumnSchema<MorphismDecl>[] = [
@@ -99,13 +85,13 @@ export function LotkaVolterra(
             content: (mor) => mor.name,
         },
         createNumericalColumn({
-            name: "Interaction",
-            data: (mor) => props.content.interactionCoefficients[mor.id],
+            name: "Rate",
+            data: (mor) => props.content.rates[mor.id],
             default: 1,
             validate: (_, data) => data >= 0,
             setData: (mor, data) =>
                 props.changeContent((content) => {
-                    content.interactionCoefficients[mor.id] = data;
+                    content.rates[mor.id] = data;
                 }),
         }),
     ];

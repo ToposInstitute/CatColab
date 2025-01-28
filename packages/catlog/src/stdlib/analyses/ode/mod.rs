@@ -48,7 +48,7 @@ impl<Id, Sys> ODEAnalysis<Id, Sys> {
     }
 
     /// Solves the ODE with reasonable default settings and collects results.
-    pub fn default_solve(self) -> Result<ODESolution<Id>, IntegrationError>
+    pub fn solve_with_defaults(self) -> Result<ODESolution<Id>, IntegrationError>
     where
         Id: Eq + Hash,
         Sys: ODESystem,
