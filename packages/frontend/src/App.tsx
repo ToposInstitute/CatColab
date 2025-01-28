@@ -63,6 +63,10 @@ const routes: RouteDefinition[] = [
         component: CreateModel,
     },
     {
+        path: "/user/:username",
+        component: lazy(() => import("./user/profile_public")), //XX: could this be eager?
+    },
+    {
         path: "/model/:ref",
         matchFilters: refIsUUIDFilter,
         component: lazy(() => import("./model/model_editor")),
@@ -83,8 +87,8 @@ const routes: RouteDefinition[] = [
         children: helpRoutes,
     },
     {
-        path: "/profile",
-        component: lazy(() => import("./user/profile")),
+        path: "/profile_settings",
+        component: lazy(() => import("./user/profile_settings")),
     },
     {
         path: "*",

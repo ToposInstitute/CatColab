@@ -1,5 +1,5 @@
 import { type SubmitHandler, createForm, reset } from "@modular-forms/solid";
-import { Fragment, Show, createEffect, createResource, createSignal } from "solid-js";
+import { createEffect, createResource } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { UserProfile } from "catcolab-api";
@@ -8,56 +8,17 @@ import { FormGroup, TextInputItem } from "../components";
 import { BrandedToolbar } from "../page";
 import { LoginGate } from "./login";
 
-import "./profile.css";
+import "./profile_settings.css";
 
 /** Page to configure user profile. */
 export default function UserProfilePage() {
-    const [myRefs, setMyRefs] = createSignal<[string, string][] | null>(null);
-
     return (
         <div class="growable-container">
             <BrandedToolbar />
             <div class="page-container">
                 <LoginGate>
-                    <h2>Public profile</h2>
-                    <UserProfileForm onRefsLoaded={setMyRefs} />
-                    <div style="margin-top: 1rem;">
-                        <h3
-                            style="
-        margin: 0 0 0.5rem 0;
-        color: #24292e;
-        font-size: 1.25rem;
-        font-weight: 500;
-    "
-                        >
-                            Your Documents
-                        </h3>
-                        <Show when={myRefs()} fallback={<div> Loading user files... </div>} keyed>
-                            {(items) => {
-                                return (
-                                    <div class="files">
-                                        {items.map(([id, title]: [string, string]) => (
-                                            <Fragment key={id}>
-                                                <a
-                                                    href={`${import.meta.env.VITE_SERVER_URL}/model/${id}`}
-                                                    class="filebutton"
-                                                    onMouseOver={(e) => {
-                                                        e.currentTarget.style.boxShadow =
-                                                            "0 2px 8px rgba(0,0,0,0.1)";
-                                                    }}
-                                                    onMouseOut={(e) => {
-                                                        e.currentTarget.style.boxShadow = "none";
-                                                    }}
-                                                >
-                                                    {title || "(Untitled)"}
-                                                </a>
-                                            </Fragment>
-                                        ))}
-                                    </div>
-                                );
-                            }}
-                        </Show>
-                    </div>
+                    <h2>Change profile settings</h2>
+                    <UserProfileForm />
                 </LoginGate>
             </div>
         </div>
@@ -65,39 +26,17 @@ export default function UserProfilePage() {
 }
 
 /** Form to configure user proifle. */
-export function UserProfileForm(props: {
-    onRefsLoaded: (refs: [string, string][] | null) => void;
-}) {
+export function UserProfileForm() {
     const api = useApi();
     const [currentProfile, { refetch: refetchProfile }] = createResource(async () => {
         const result = await api.rpc.get_active_user_profile.query();
         invariant(result.tag === "Ok");
-        console.log("cpTest", result.content);
         return result.content;
     });
-    const [userRefs, setUserRefs] = createSignal<[string, string][] | null>(null);
-    createEffect(() => {
-        if (userRefs()) {
-            props.onRefsLoaded?.(userRefs());
-        }
-    });
-
     const [form, { Form, Field }] = createForm<UserProfile>();
 
     createEffect(() => {
         reset(form, { initialValues: currentProfile() });
-    });
-
-    createEffect(async () => {
-        const profile = currentProfile();
-        if (!profile) {
-            return;
-        }
-        invariant(profile.username != null, "Profile username must be defined and not null");
-        const result = await api.rpc.get_user_refs_and_titles.query(profile.username);
-        invariant(result.tag === "Ok");
-        console.log("get_refs_test", result.content);
-        setUserRefs(result.content);
     });
 
     const onSubmit: SubmitHandler<UserProfile> = async (values) => {

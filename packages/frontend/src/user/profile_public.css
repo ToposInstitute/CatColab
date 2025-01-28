@@ -1,0 +1,31 @@
+.section-title {
+    margin: 0 0 0.5rem 0;
+    color: #24292e;
+    font-size: 1.25rem;
+    font-weight: 500;
+}
+.file_list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.file_entry {
+    display: block;
+    padding: 1rem;
+    text-align: center;
+    background: white;
+    border-radius: 4px;
+    border: 1px solid #e1e4e8;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    color: #0366d6;
+    box-shadow: none;
+}
+
+.file_entry:hover {
+    background-color: #f6f8fa;
+    border-color: #d0d7de;
+}
