@@ -15,7 +15,7 @@ export default function UserProfilePage() {
             <BrandedToolbar />
             <div class="page-container">
                 <LoginGate>
-                    <h2>Public profile</h2>
+                    <h2>Change profile settings</h2>
                     <UserProfileForm />
                 </LoginGate>
             </div>
@@ -26,13 +26,11 @@ export default function UserProfilePage() {
 /** Form to configure user proifle. */
 export function UserProfileForm() {
     const api = useApi();
-
     const [currentProfile, { refetch: refetchProfile }] = createResource(async () => {
         const result = await api.rpc.get_active_user_profile.query();
         invariant(result.tag === "Ok");
         return result.content;
     });
-
     const [form, { Form, Field }] = createForm<UserProfile>();
 
     createEffect(() => {
