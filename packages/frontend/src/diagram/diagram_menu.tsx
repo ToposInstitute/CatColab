@@ -6,6 +6,8 @@ import { useApi } from "../api";
 import { AppMenu, MenuItem, MenuItemLabel, MenuSeparator } from "../page";
 import { type DiagramDocument, type LiveDiagramDocument, createDiagram } from "./document";
 
+import { copyToClipboard, downloadJson } from "../util/json_export";
+
 import ChartSpline from "lucide-solid/icons/chart-spline";
 import Copy from "lucide-solid/icons/copy";
 import FilePlus from "lucide-solid/icons/file-plus";
@@ -48,6 +50,13 @@ export function DiagramMenuItems(props: {
         navigate(`/diagram/${newRef}`);
     };
 
+    //Can this be less repetitive?
+    const onDownloadJSON = (diagram: DiagramDocument) => {
+        downloadJson({ data: JSON.stringify(diagram), filename: `${diagram.name}.json` });
+    };
+    const onCopy = (diagram: DiagramDocument) => {
+        copyToClipboard({ data: JSON.stringify(diagram) });
+    };
     return (
         <>
             <MenuItem onSelect={() => onNewDiagram(props.liveDiagram.liveModel.refId)}>
@@ -62,6 +71,14 @@ export function DiagramMenuItems(props: {
             <MenuItem onSelect={() => onDuplicateDiagram(props.liveDiagram.liveDoc.doc)}>
                 <Copy />
                 <MenuItemLabel>{"Duplicate diagram"}</MenuItemLabel>
+            </MenuItem>
+            <MenuItem onSelect={() => onDownloadJSON(props.liveDiagram.liveDoc.doc)}>
+                <Copy />
+                <MenuItemLabel>{"Download JSON"}</MenuItemLabel>
+            </MenuItem>
+            <MenuItem onSelect={() => onCopy(props.liveDiagram.liveDoc.doc)}>
+                <Copy />
+                <MenuItemLabel>{"Copy to clipboard"}</MenuItemLabel>
             </MenuItem>
         </>
     );
