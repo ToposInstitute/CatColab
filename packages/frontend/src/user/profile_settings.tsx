@@ -8,8 +8,6 @@ import { FormGroup, TextInputItem } from "../components";
 import { BrandedToolbar } from "../page";
 import { LoginGate } from "./login";
 
-import "./profile_settings.css";
-
 /** Page to configure user profile. */
 export default function UserProfilePage() {
     return (
