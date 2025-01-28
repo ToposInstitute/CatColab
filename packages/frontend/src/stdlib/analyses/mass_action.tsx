@@ -26,18 +26,20 @@ export function configureMassAction(options: {
     name?: string;
     description?: string;
     simulate: Simulator;
+    isState?: (ob: ObjectDecl) => boolean;
+    isTransition?: (mor: MorphismDecl) => boolean;
 }): ModelAnalysisMeta<MassActionContent> {
     const {
         id = "mass-action",
         name = "Mass-action dynamics",
         description = "Simulate the system using the law of mass action",
-        simulate,
+        ...otherOptions
     } = options;
     return {
         id,
         name,
         description,
-        component: (props) => <MassAction simulate={simulate} title={name} {...props} />,
+        component: (props) => <MassAction title={name} {...otherOptions} {...props} />,
         initialContent: () => ({
             rates: {},
             initialValues: {},
@@ -50,15 +52,23 @@ export function configureMassAction(options: {
 export function MassAction(
     props: ModelAnalysisProps<MassActionContent> & {
         simulate: Simulator;
+        isState?: (ob: ObjectDecl) => boolean;
+        isTransition?: (mor: MorphismDecl) => boolean;
         title?: string;
     },
 ) {
     const obDecls = createMemo<ObjectDecl[]>(() => {
-        return props.liveModel.formalJudgments().filter((jgmt) => jgmt.tag === "object");
+        return props.liveModel
+            .formalJudgments()
+            .filter((jgmt) => jgmt.tag === "object")
+            .filter((ob) => props.isState?.(ob) ?? true);
     }, []);
 
     const morDecls = createMemo<MorphismDecl[]>(() => {
-        return props.liveModel.formalJudgments().filter((jgmt) => jgmt.tag === "morphism");
+        return props.liveModel
+            .formalJudgments()
+            .filter((jgmt) => jgmt.tag === "morphism")
+            .filter((mor) => props.isTransition?.(mor) ?? true);
     }, []);
 
     const obSchema: ColumnSchema<ObjectDecl>[] = [

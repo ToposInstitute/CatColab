@@ -271,7 +271,9 @@ stdTheories.add(
                     findSubmodels: (model) => thSignedCategory.negativeLoops(model),
                 }),
                 analyses.configureLotkaVolterra({
-                    simulate: (model, data) => thSignedCategory.lotkaVolterra(model, data),
+                    simulate(model, data) {
+                        return thSignedCategory.lotkaVolterra(model, data);
+                    },
                 }),
             ],
         });
@@ -642,7 +644,12 @@ stdTheories.add(
                     description: "Visualize the stock and flow diagram",
                 }),
                 analyses.configureMassAction({
-                    simulate: (model, data) => thCategoryLinks.massAction(model, data),
+                    simulate(model, data) {
+                        return thCategoryLinks.massAction(model, data);
+                    },
+                    isTransition(mor) {
+                        return mor.morType.tag === "Hom";
+                    },
                 }),
             ],
         });
