@@ -1,14 +1,7 @@
 import * as catlog from "catlog-wasm";
 
 import { Theory } from "../theory";
-import {
-    configureDecapodes,
-    configureDiagramGraph,
-    configureLotkaVolterra,
-    configureModelGraph,
-    configureStockFlowDiagram,
-    configureSubmodelsAnalysis,
-} from "./analyses";
+import * as analyses from "./analyses";
 import { TheoryLibrary } from "./types";
 
 import styles from "./styles.module.css";
@@ -90,14 +83,14 @@ stdTheories.add(
                 },
             ],
             modelAnalyses: [
-                configureModelGraph({
+                analyses.configureModelGraph({
                     id: "diagram",
                     name: "Visualization",
                     description: "Visualize the olog as a diagram",
                 }),
             ],
             diagramAnalyses: [
-                configureDiagramGraph({
+                analyses.configureDiagramGraph({
                     id: "graph",
                     name: "Visualization",
                     description: "Visualize the instance as a graph",
@@ -200,14 +193,14 @@ stdTheories.add(
                 },
             ],
             modelAnalyses: [
-                configureModelGraph({
+                analyses.configureModelGraph({
                     id: "diagram",
                     name: "Visualization",
                     description: "Visualize the schema as a diagram",
                 }),
             ],
             diagramAnalyses: [
-                configureDiagramGraph({
+                analyses.configureDiagramGraph({
                     id: "graph",
                     name: "Visualization",
                     description: "Visualize the instance as a graph",
@@ -260,25 +253,27 @@ stdTheories.add(
                 },
             ],
             modelAnalyses: [
-                configureModelGraph({
+                analyses.configureModelGraph({
                     id: "diagram",
                     name: "Visualization",
                     description: "Visualize the regulatory network",
                 }),
-                configureSubmodelsAnalysis({
+                analyses.configureSubmodelsAnalysis({
                     id: "positive-loops",
                     name: "Positive feedback",
                     description: "Analyze the network for positive feedback loops",
                     findSubmodels: (model) => thSignedCategory.positiveLoops(model),
                 }),
-                configureSubmodelsAnalysis({
+                analyses.configureSubmodelsAnalysis({
                     id: "negative-loops",
                     name: "Negative feedback",
                     description: "Analyze the network for negative feedback loops",
                     findSubmodels: (model) => thSignedCategory.negativeLoops(model),
                 }),
-                configureLotkaVolterra({
-                    simulate: (model, data) => thSignedCategory.lotkaVolterra(model, data),
+                analyses.configureLotkaVolterra({
+                    simulate(model, data) {
+                        return thSignedCategory.lotkaVolterra(model, data);
+                    },
                 }),
             ],
         });
@@ -330,24 +325,24 @@ stdTheories.add(
                 },
             ],
             modelAnalyses: [
-                configureModelGraph({
+                analyses.configureModelGraph({
                     id: "diagram",
                     name: "Visualization",
                     description: "Visualize the causal loop diagram",
                 }),
-                configureSubmodelsAnalysis({
+                analyses.configureSubmodelsAnalysis({
                     id: "negative-loops",
                     name: "Balancing loops",
                     description: "Analyze the diagram for balancing loops",
                     findSubmodels: (model) => thSignedCategory.negativeLoops(model),
                 }),
-                configureSubmodelsAnalysis({
+                analyses.configureSubmodelsAnalysis({
                     id: "positive-loops",
                     name: "Reinforcing loops",
                     description: "Analyze the diagram for reinforcing loops",
                     findSubmodels: (model) => thSignedCategory.positiveLoops(model),
                 }),
-                configureLotkaVolterra({
+                analyses.configureLotkaVolterra({
                     simulate: (model, data) => thSignedCategory.lotkaVolterra(model, data),
                 }),
             ],
@@ -416,30 +411,30 @@ stdTheories.add(
                 },
             ],
             modelAnalyses: [
-                configureModelGraph({
+                analyses.configureModelGraph({
                     id: "diagram",
                     name: "Visualization",
                     description: "Visualize the causal loop diagram",
                 }),
-                configureSubmodelsAnalysis({
+                analyses.configureSubmodelsAnalysis({
                     id: "negative-loops",
                     name: "Balancing loops",
                     description: "Find the fast-acting balancing loops",
                     findSubmodels: (model) => thDelayedSignedCategory.negativeLoops(model),
                 }),
-                configureSubmodelsAnalysis({
+                analyses.configureSubmodelsAnalysis({
                     id: "positive-loops",
                     name: "Reinforcing loops",
                     description: "Find the fast-acting reinforcing loops",
                     findSubmodels: (model) => thDelayedSignedCategory.positiveLoops(model),
                 }),
-                configureSubmodelsAnalysis({
+                analyses.configureSubmodelsAnalysis({
                     id: "delayed-negative-loops",
                     name: "Delayed balancing loops",
                     description: "Find the slow-acting balancing loops",
                     findSubmodels: (model) => thDelayedSignedCategory.delayedNegativeLoops(model),
                 }),
-                configureSubmodelsAnalysis({
+                analyses.configureSubmodelsAnalysis({
                     id: "delayed-positive-loops",
                     name: "Delayed reinforcing loops",
                     description: "Find the slow-acting reinforcing loops",
@@ -503,7 +498,7 @@ stdTheories.add(
                 },
             ],
             modelAnalyses: [
-                configureModelGraph({
+                analyses.configureModelGraph({
                     id: "diagram",
                     name: "Visualization",
                     description: "Visualize the causal loop diagram",
@@ -581,19 +576,19 @@ stdTheories.add(
                 },
             ],
             modelAnalyses: [
-                configureModelGraph({
+                analyses.configureModelGraph({
                     id: "graph",
                     name: "Visualization",
                     description: "Visualize the operations as a graph",
                 }),
             ],
             diagramAnalyses: [
-                configureDiagramGraph({
+                analyses.configureDiagramGraph({
                     id: "graph",
                     name: "Visualization",
                     description: "Visualize the equations as a diagram",
                 }),
-                configureDecapodes({}),
+                analyses.configureDecapodes({}),
             ],
         });
     },
@@ -643,10 +638,18 @@ stdTheories.add(
                 },
             ],
             modelAnalyses: [
-                configureStockFlowDiagram({
+                analyses.configureStockFlowDiagram({
                     id: "diagram",
                     name: "Visualization",
                     description: "Visualize the stock and flow diagram",
+                }),
+                analyses.configureMassAction({
+                    simulate(model, data) {
+                        return thCategoryLinks.massAction(model, data);
+                    },
+                    isTransition(mor) {
+                        return mor.morType.tag === "Hom";
+                    },
                 }),
             ],
         });
