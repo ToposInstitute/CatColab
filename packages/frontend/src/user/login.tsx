@@ -10,7 +10,7 @@ import {
     signInWithPopup,
 } from "firebase/auth";
 import { useAuth, useFirebaseApp } from "solid-firebase";
-import { type JSX, Match, Switch } from "solid-js";
+import { createSignal, type JSX, Match, Switch } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { useApi } from "../api";
@@ -30,6 +30,8 @@ type EmailAndPassword = {
 export function Login(props: {
     onComplete?: (user: User) => void;
 }) {
+    const [userAdded, setUserAdded] = createSignal<"Please complete login"| "Please complete signup" | "">(""); 
+
     const api = useApi();
     const firebaseApp = useFirebaseApp();
 
@@ -102,15 +104,20 @@ export function Login(props: {
                     )}
                 </Field>
                 <div class="buttons">
-                    <button type="submit" value="sign-in">
+                    <button type="submit" value="sign-in" onClick={() => setUserAdded("Please complete login")}>
                         <SignInIcon />
                         Login
                     </button>
-                    <button type="submit" value="sign-up">
+                    <button type="submit" value="sign-up" onClick={() => setUserAdded("Please complete signup")}>
                         <SignUpIcon />
                         Sign up
                     </button>
                 </div>
+                {userAdded() && (
+                    <div class="registration-alert">
+                        {userAdded()}
+                    </div>
+                )}
             </Form>
             <div class="separator">{"Or continue with"}</div>
             <div class="provider-list">
@@ -132,6 +139,7 @@ export function Login(props: {
         </div>
     );
 }
+
 
 /** Content gated by a login panel.
 

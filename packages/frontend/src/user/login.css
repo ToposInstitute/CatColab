@@ -23,6 +23,12 @@
     & .separator {
         margin: 1rem 0;
     }
+
+    & .registration-alert {
+        display: flex;
+        flex-direction: column;
+        color: darkgray;
+    }
 }
 
 .separator {
