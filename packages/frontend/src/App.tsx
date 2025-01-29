@@ -83,6 +83,14 @@ const routes: RouteDefinition[] = [
         children: helpRoutes,
     },
     {
+        path: "/dev/*",
+        component: (props) => {
+            const url = `https://next.catcolab.org${props.location.pathname}`;
+            window.location.replace(url);
+            return null;
+        },
+    },
+    {
         path: "/profile",
         component: lazy(() => import("./user/profile")),
     },
