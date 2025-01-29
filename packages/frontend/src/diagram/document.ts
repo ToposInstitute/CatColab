@@ -3,7 +3,7 @@ import invariant from "tiny-invariant";
 
 import type { JsonValue } from "catcolab-api";
 import type { DblModelDiagram, ModelDiagramValidationResult, Uuid } from "catlog-wasm";
-import { type Api, type ExternRef, type LiveDoc, getLiveDoc } from "../api";
+import { type Api, type Document, type Link, type LiveDoc, getLiveDoc } from "../api";
 import { type LiveModelDocument, getLiveModel } from "../model";
 import { type Notebook, newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
@@ -11,14 +11,9 @@ import { type IdToNameMap, indexMap } from "../util/indexing";
 import { type DiagramJudgment, toCatlogDiagram } from "./types";
 
 /** A document defining a diagram in a model. */
-export type DiagramDocument = {
-    type: "diagram";
-
-    /** User-defined name of diagram. */
-    name: string;
-
+export type DiagramDocument = Document<"diagram"> & {
     /** Reference to the model that the diagram is in. */
-    modelRef: ExternRef<"model">;
+    modelRef: Link<"model-of">;
 
     /** Content of the diagram. */
     notebook: Notebook<DiagramJudgment>;
@@ -29,9 +24,9 @@ export const newDiagramDocument = (modelRefId: string): DiagramDocument => ({
     name: "",
     type: "diagram",
     modelRef: {
-        tag: "extern-ref",
-        refId: modelRefId,
-        taxon: "model",
+        _id: modelRefId,
+        _version: null,
+        type: "model-of",
     },
     notebook: newNotebook(),
 });
@@ -148,11 +143,10 @@ export async function getLiveDiagram(
     api: Api,
     theories: TheoryLibrary,
 ): Promise<LiveDiagramDocument> {
-    const liveDoc = await getLiveDoc<DiagramDocument>(api, refId);
+    const liveDoc = await getLiveDoc<DiagramDocument>(api, refId, "diagram");
     const { doc } = liveDoc;
-    invariant(doc.type === "diagram", () => `Expected diagram, got type: ${doc.type}`);
 
-    const liveModel = await getLiveModel(doc.modelRef.refId, api, theories);
+    const liveModel = await getLiveModel(doc.modelRef._id, api, theories);
 
     return enlivenDiagramDocument(refId, liveDoc, liveModel);
 }
