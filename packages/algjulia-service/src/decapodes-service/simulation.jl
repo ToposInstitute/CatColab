@@ -126,18 +126,40 @@ function state_at_time(soln::ODESolution, domain::Rectangle, var::Symbol, t::Int
     [SVector(i, j, getproperty(soln.u[t], var)[(x+1)*(i-1) + j]) for i in 1:x+1, j in 1:y+1]
 end
 
+# getting something at a point, (x+1)*(i-1) + j
+function to_idx(p::Tuple{Int,Int}, domain::Rectangle)
+    (a, b) = p; (x, _) = indexing_bounds(domain) # TODO we can use `y` to check bounds
+    a + b*x
+end
+
+# use Point2D
+function to_point(idx::Int64, domain::Rectangle)
+    (x, y) = indexing_bounds(domain)
+    # first component is column, second component is row
+    (idx % x, max(floor(idx/x), 0)) # TODO check for low indices
+end
+
 # TODO just separated this from the SimResult function and added type parameters, but need to generalize
 function grid(pt3::Point3, grid_size::Vector{Int})
     pt2 = [(pt3[1]+1)/2, (pt3[2]+1)/2]
     [round(Int, pt2[1]*grid_size[1]), round(Int, pt2[2]*grid_size[2])]
 end
 
-function state_at_time(soln::ODESolution, domain::Sphere, var::Symbol, t::Int, points)
+function state_at_time(solution::ODESolution, domain::Sphere, var::Symbol, t::Int, points)
     l , _ = indexing_bounds(domain) # TODO this is hardcoded to return 100, 100
-    northern_indices = filter(i -> points[i][3] > 0, keys(points)) 
-    map(northern_indices) do n
-        i, j = grid(points[n], [l, l]) # TODO
-        SVector(i, j, getproperty(soln.u[t], var)[n])
+    northern_indices = filter(idx -> points[idx][3] > 0 && !isnothing(downsample(grid(points[idx], [l,l]))), keys(points))
+    map(northern_indices) do idx
+        x, y = grid(points[idx], [l, l]) # TODO
+        SVector(x, y, getproperty(solution.u[t], var)[idx]) # TODO downsample if n ...
     end
 end
 
+function downsample(point::Vector{Int})
+    m, n = 50, 50
+    radius = 35; rate = 3;
+    @match point begin
+        [x, y] && if sqrt((x-m)^2 + (y-n)^2) ≤ radius end => point
+        [x, y] && if sqrt((x-m)^2 + (y-n)^2) > radius && ((x % rate == 0) || (y % rate == 0)) end => point
+        _ => nothing
+    end
+end

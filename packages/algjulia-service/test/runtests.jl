@@ -115,7 +115,7 @@ end
 end
 
 #= XXX ERRORING
-we are trying to index `soln.u[t]` by `Ċ `, but only `C` is present. I think this is because we generating initial conditions based on what was specified to the `initial_conditions` parameter, whereas in the past we were using `infer_state_names` to obtain that.
+we are trying to index `solution.u[t]` by `Ċ `, but only `C` is present. I think this is because we generating initial conditions based on what was specified to the `initial_conditions` parameter, whereas in the past we were using `infer_state_names` to obtain that.
 =#
 # @testset "Simulation - Diffusion with Two Variables" begin
 
@@ -127,11 +127,11 @@ we are trying to index `soln.u[t]` by `Ċ `, but only `C` is present. I think t
 #     simulator = evalsim(system.pode)
 #     f = simulator(system.geometry.dualmesh, system.generate, DiagonalHodge())
 
-#     soln = run_sim(f, system.init, 50.0, ComponentArray(k=0.5,)); 
+#     solution = run_sim(f, system.init, 50.0, ComponentArray(k=0.5,)); 
 
-#     @test soln.retcode == ReturnCode.Success
+#     @test solution.retcode == ReturnCode.Success
   
-#     result = SimResult(soln, system);
+#     result = SimResult(solution, system);
 
 #     @test typeof(result.state) == Dict{String, Vector{AbstractArray{SVector{3, Float64}}}}
 
@@ -178,11 +178,11 @@ end
     f = simulator(system.geometry.dualmesh, default_dec_matrix_generate, DiagonalHodge())
 
     # time
-    soln = run_sim(f, system.init, 50.0, ComponentArray(k=0.5,))
+    solution = run_sim(f, system.init, system.duration, ComponentArray(k=0.5,))
 
-    @test soln.retcode == ReturnCode.Success
+    @test solution.retcode == ReturnCode.Success
   
-    result = SimResult(soln, system)
+    result = SimResult(solution, system)
 
     @test typeof(result.state) == Dict{String, Vector{AbstractArray{SVector{3, Float64}}}}
 
@@ -201,11 +201,11 @@ end
         
     f = simulator(system.geometry.dualmesh, system.generate, DiagonalHodge())
 
-    soln = run_sim(f, system.init, 50.0, ComponentArray(k=0.5,))
+    solution = run_sim(f, system.init, 50.0, ComponentArray(k=0.5,))
 
-    @test soln.retcode == ReturnCode.Success
+    @test solution.retcode == ReturnCode.Success
  
-    result = SimResult(soln, system)
+    result = SimResult(solution, system)
 
     @test typeof(result.state) == Dict{String, Vector{AbstractArray{SVector{3, Float64}}}}
 
@@ -215,7 +215,7 @@ end
 
 @testset "Simulation - Navier-Stokes Vorticity" begin
 
-    json_string = read(joinpath(@__DIR__, "test_jsons", "ns_vorticity.json"), String)
+    json_string = read(joinpath(@__DIR__, "test", "test_jsons", "ns_vorticity.json"), String)
     @test Set(keys(JSON3.read(json_string))) == KEYS
 
     system = PodeSystem(json_string)
@@ -224,11 +224,11 @@ end
     
     f = simulator(system.geometry.dualmesh, system.generate, DiagonalHodge())
 
-    soln = run_sim(f, system.init, 50.0, ComponentArray(k=0.5,))
+    solution = run_sim(f, system.init, system.duration, ComponentArray(k=0.5,))
 
-    @test soln.retcode == ReturnCode.Success
+    @test solution.retcode == ReturnCode.Success
  
-    result = SimResult(soln, system);
+    result = SimResult(solution, system);
 
     @test typeof(result.state) == Dict{String, Vector{AbstractArray{SVector{3, Float64}}}}
 
