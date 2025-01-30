@@ -13,7 +13,7 @@ import { type DiagramJudgment, toCatlogDiagram } from "./types";
 /** A document defining a diagram in a model. */
 export type DiagramDocument = Document<"diagram"> & {
     /** Reference to the model that the diagram is in. */
-    modelRef: Link<"model-of">;
+    diagramIn: Link<"diagram-in">;
 
     /** Content of the diagram. */
     notebook: Notebook<DiagramJudgment>;
@@ -23,10 +23,10 @@ export type DiagramDocument = Document<"diagram"> & {
 export const newDiagramDocument = (modelRefId: string): DiagramDocument => ({
     name: "",
     type: "diagram",
-    modelRef: {
+    diagramIn: {
         _id: modelRefId,
         _version: null,
-        type: "model-of",
+        type: "diagram-in",
     },
     notebook: newNotebook(),
 });
@@ -146,7 +146,7 @@ export async function getLiveDiagram(
     const liveDoc = await getLiveDoc<DiagramDocument>(api, refId, "diagram");
     const { doc } = liveDoc;
 
-    const liveModel = await getLiveModel(doc.modelRef._id, api, theories);
+    const liveModel = await getLiveModel(doc.diagramIn._id, api, theories);
 
     return enlivenDiagramDocument(refId, liveDoc, liveModel);
 }
