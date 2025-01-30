@@ -1,7 +1,14 @@
 import invariant from "tiny-invariant";
 
 import type { JsonValue } from "catcolab-api";
-import { type Api, type Document, type Link, type LiveDoc, getLiveDoc } from "../api";
+import {
+    type Api,
+    type Document,
+    type Link,
+    type LiveDoc,
+    type StableRef,
+    getLiveDoc,
+} from "../api";
 import { type LiveDiagramDocument, getLiveDiagram } from "../diagram";
 import { type LiveModelDocument, getLiveModel } from "../model";
 import { type Notebook, newNotebook } from "../notebook";
@@ -39,14 +46,13 @@ export type AnalysisDocument = ModelAnalysisDocument | DiagramAnalysisDocument;
 /** Create an empty analysis. */
 export const newAnalysisDocument = (
     analysisType: AnalysisType,
-    refId: string,
+    analysisOf: StableRef,
 ): BaseAnalysisDocument<typeof analysisType> => ({
     name: "",
     type: "analysis",
     analysisType,
     analysisOf: {
-        _id: refId,
-        _version: null,
+        ...analysisOf,
         type: "analysis-of",
     },
     notebook: newNotebook(),
@@ -83,9 +89,9 @@ export type LiveDiagramAnalysisDocument = {
 /** An analysis document "live" for editing. */
 export type LiveAnalysisDocument = LiveModelAnalysisDocument | LiveDiagramAnalysisDocument;
 
-/** Create a new analysis in the backend. */
-export async function createAnalysis(type: AnalysisType, ofRefId: string, api: Api) {
-    const init = newAnalysisDocument(type, ofRefId);
+/** Create a new, empty analysis in the backend. */
+export async function createAnalysis(api: Api, analysisType: AnalysisType, analysisOf: StableRef) {
+    const init = newAnalysisDocument(analysisType, analysisOf);
 
     const result = await api.rpc.new_ref.mutate(init as JsonValue);
     invariant(result.tag === "Ok", "Failed to create a new analysis");

@@ -3,7 +3,14 @@ import invariant from "tiny-invariant";
 
 import type { JsonValue } from "catcolab-api";
 import type { DblModelDiagram, ModelDiagramValidationResult, Uuid } from "catlog-wasm";
-import { type Api, type Document, type Link, type LiveDoc, getLiveDoc } from "../api";
+import {
+    type Api,
+    type Document,
+    type Link,
+    type LiveDoc,
+    type StableRef,
+    getLiveDoc,
+} from "../api";
 import { type LiveModelDocument, getLiveModel } from "../model";
 import { type Notebook, newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
@@ -20,12 +27,11 @@ export type DiagramDocument = Document<"diagram"> & {
 };
 
 /** Create an empty diagram of a model. */
-export const newDiagramDocument = (modelRefId: string): DiagramDocument => ({
+export const newDiagramDocument = (modelRef: StableRef): DiagramDocument => ({
     name: "",
     type: "diagram",
     diagramIn: {
-        _id: modelRefId,
-        _version: null,
+        ...modelRef,
         type: "diagram-in",
     },
     notebook: newNotebook(),
@@ -119,21 +125,16 @@ function enlivenDiagramDocument(
     return { refId, liveDoc, liveModel, formalJudgments, objectIndex, validatedDiagram };
 }
 
-/** Create a new diagram in the backend. */
-export async function createDiagram(
-    api: Api,
-    initOrModelRef: DiagramDocument | string,
-): Promise<string> {
-    let init: DiagramDocument;
-    if (typeof initOrModelRef === "string") {
-        init = newDiagramDocument(initOrModelRef);
-    } else {
-        init = initOrModelRef;
-    }
+/** Create a new, empty diagram in the backend. */
+export function createDiagram(api: Api, inModel: StableRef): Promise<string> {
+    const init = newDiagramDocument(inModel);
+    return createDiagramFromDocument(api, init);
+}
 
+/** Create a new diagram in the backend from initial data. */
+export async function createDiagramFromDocument(api: Api, init: DiagramDocument): Promise<string> {
     const result = await api.rpc.new_ref.mutate(init as JsonValue);
     invariant(result.tag === "Ok", "Failed to create a new diagram");
-
     return result.content;
 }
 

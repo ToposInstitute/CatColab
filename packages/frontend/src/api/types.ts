@@ -5,6 +5,9 @@ import type { RpcClient } from "./rpc";
 
 /** Bundle of everything needed to interact with the CatColab backend. */
 export type Api = {
+    /** Host part of the URL for the CatColab backend server. */
+    serverHost: string;
+
     /** RPC client for the CatColab backend API. */
     rpc: RpcClient;
 
@@ -30,6 +33,13 @@ export type StableRef = {
     referenced document will receive live updates.
      */
     _version: string | null;
+
+    /** Server containing the document.
+
+    Assuming one of the official deployments is used, this will be either
+    `catcolab.org` or `next.catcolab.org`.
+     */
+    _server: string;
 };
 
 /** Base type for a document persisted in the database. */
