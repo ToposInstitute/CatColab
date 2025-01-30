@@ -116,7 +116,7 @@ function SettingsMenuItem() {
     return (
         <MenuItem onSelect={() => navigate("/profile")}>
             <SettingsIcon />
-            <MenuItemLabel>Settings</MenuItemLabel>
+            <MenuItemLabel>{"Edit user profile"}</MenuItemLabel>
         </MenuItem>
     );
 }
