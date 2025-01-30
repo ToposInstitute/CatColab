@@ -1,17 +1,14 @@
 import { useNavigate } from "@solidjs/router";
-import { Show, useContext } from "solid-js";
-import invariant from "tiny-invariant";
+import { Show } from "solid-js";
 
 import { createAnalysis } from "../analysis/document";
 import { useApi } from "../api";
 import { createDiagram } from "../diagram/document";
-import { AppMenu, MenuItem, MenuItemLabel, MenuSeparator } from "../page";
-import { TheoryLibraryContext } from "../stdlib";
+import { AppMenu, MenuItem, MenuItemLabel, MenuSeparator, NewModelItem } from "../page";
 import { type LiveModelDocument, type ModelDocument, createModel } from "./document";
 
 import ChartSpline from "lucide-solid/icons/chart-spline";
 import Copy from "lucide-solid/icons/copy";
-import FilePlus from "lucide-solid/icons/file-plus";
 import Network from "lucide-solid/icons/network";
 
 /** Hamburger menu for a model of a double theory. */
@@ -34,14 +31,6 @@ export function ModelMenuItems(props: {
     const api = useApi();
     const navigate = useNavigate();
 
-    const theories = useContext(TheoryLibraryContext);
-    invariant(theories, "Theory library must be provided as context");
-
-    const onNewModel = async () => {
-        const newRef = await createModel(api, theories.getDefault().id);
-        navigate(`/model/${newRef}`);
-    };
-
     const onNewDiagram = async (modelRefId: string) => {
         const newRef = await createDiagram(api, modelRefId);
         navigate(`/diagram/${newRef}`);
@@ -62,10 +51,7 @@ export function ModelMenuItems(props: {
 
     return (
         <>
-            <MenuItem onSelect={onNewModel}>
-                <FilePlus />
-                <MenuItemLabel>{"New model"}</MenuItemLabel>
-            </MenuItem>
+            <NewModelItem />
             <Show when={props.liveModel.theory().supportsInstances}>
                 <MenuItem onSelect={() => onNewDiagram(props.liveModel.refId)}>
                     <Network />
