@@ -2,11 +2,16 @@ import { DropdownMenu } from "@kobalte/core/dropdown-menu";
 import { useNavigate } from "@solidjs/router";
 import { getAuth, signOut } from "firebase/auth";
 import { useAuth, useFirebaseApp } from "solid-firebase";
-import { type JSX, Show, createSignal } from "solid-js";
+import { type JSX, Show, createSignal, useContext } from "solid-js";
+import invariant from "tiny-invariant";
 
+import { useApi } from "../api";
 import { Dialog, IconButton } from "../components";
+import { createModel } from "../model/document";
+import { TheoryLibraryContext } from "../stdlib";
 import { Login } from "../user";
 
+import FilePlus from "lucide-solid/icons/file-plus";
 import Info from "lucide-solid/icons/info";
 import LogInIcon from "lucide-solid/icons/log-in";
 import LogOutIcon from "lucide-solid/icons/log-out";
@@ -14,6 +19,7 @@ import MenuIcon from "lucide-solid/icons/menu";
 import SettingsIcon from "lucide-solid/icons/settings";
 
 import "./menubar.css";
+
 /** Menu triggered from a hamburger button. */
 export function HamburgerMenu(props: {
     children: JSX.Element;
@@ -73,6 +79,34 @@ export function AppMenu(props: {
                 <Login onComplete={() => setLoginOpen(false)} />
             </Dialog>
         </>
+    );
+}
+
+/** Default application menu for pages without more specific actions. */
+export const DefaultAppMenu = () => (
+    <AppMenu>
+        <NewModelItem />
+    </AppMenu>
+);
+
+/** Menu item to create a new model. */
+export function NewModelItem() {
+    const api = useApi();
+    const navigate = useNavigate();
+
+    const theories = useContext(TheoryLibraryContext);
+    invariant(theories, "Theory library must be provided as context");
+
+    const onNewModel = async () => {
+        const newRef = await createModel(api, theories.getDefault().id);
+        navigate(`/model/${newRef}`);
+    };
+
+    return (
+        <MenuItem onSelect={onNewModel}>
+            <FilePlus />
+            <MenuItemLabel>{"New model"}</MenuItemLabel>
+        </MenuItem>
     );
 }
 
