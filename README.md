@@ -17,14 +17,15 @@ Elaborating on these keywords, CatColab aims to be:
 
 ## For users
 
-An early demo is available at <https://catcolab.org>. For more about where the
-project is going, try this [blog
-post](https://topos.site/blog/2024-10-02-introducing-catcolab/).
+The production deployment, tracking the latest
+[release](https://github.com/ToposInstitute/CatColab/releases), is available at
+<https://catcolab.org>. For more about where the project is going, try this
+[blog post](https://topos.site/blog/2024-10-02-introducing-catcolab/).
 
 > [!WARNING]
-> CatColab is pre-alpha software under active development.
-> You are welcome to experiment but you should not store any important or
-> sensitive data in the system.
+> CatColab is under active development with new features added regularly. We aim
+> to preserve the integrity of your data but you should not store anything
+> critical or sensitive.
 
 ## For developers
 
