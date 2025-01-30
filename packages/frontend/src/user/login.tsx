@@ -10,7 +10,7 @@ import {
     signInWithPopup,
 } from "firebase/auth";
 import { useAuth, useFirebaseApp } from "solid-firebase";
-import { type JSX, Match, Switch, createSignal } from "solid-js";
+import { type JSX, Match, Switch } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { useApi } from "../api";
@@ -30,10 +30,6 @@ type EmailAndPassword = {
 export function Login(props: {
     onComplete?: (user: User) => void;
 }) {
-    const [userAdded, setUserAdded] = createSignal<
-        "Please complete login" | "Please complete signup" | ""
-    >("");
-
     const api = useApi();
     const firebaseApp = useFirebaseApp();
 
@@ -85,45 +81,44 @@ export function Login(props: {
             <Form onSubmit={onSubmit}>
                 <Field name="email">
                     {(field, props) => (
-                        <input
-                            {...props}
-                            type="email"
-                            required
-                            value={field.value}
-                            placeholder="Email address"
-                        />
+                        <>
+                            <input
+                                {...props}
+                                type="email"
+                                value={field.value}
+                                placeholder="Email address"
+                            />
+                            <span class="inline-input">
+                                {field.error && <div class="error">{field.error}</div>}
+                            </span>
+                        </>
                     )}
                 </Field>
                 <Field name="password">
                     {(field, props) => (
-                        <input
-                            {...props}
-                            type="password"
-                            required
-                            value={field.value}
-                            placeholder="Password"
-                        />
+                        <>
+                            <input
+                                {...props}
+                                type="password"
+                                value={field.value}
+                                placeholder="Password"
+                            />
+                            <span class="inline-input">
+                                {field.error && <div class="error">{field.error}</div>}
+                            </span>
+                        </>
                     )}
                 </Field>
                 <div class="buttons">
-                    <button
-                        type="submit"
-                        value="sign-in"
-                        onClick={() => setUserAdded("Please complete login")}
-                    >
+                    <button type="submit" value="sign-in">
                         <SignInIcon />
                         Login
                     </button>
-                    <button
-                        type="submit"
-                        value="sign-up"
-                        onClick={() => setUserAdded("Please complete signup")}
-                    >
+                    <button type="submit" value="sign-up">
                         <SignUpIcon />
                         Sign up
                     </button>
                 </div>
-                {userAdded() && <div class="registration-alert">{userAdded()}</div>}
             </Form>
             <div class="separator">{"Or continue with"}</div>
             <div class="provider-list">
