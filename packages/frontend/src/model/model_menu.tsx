@@ -2,7 +2,7 @@ import { useNavigate } from "@solidjs/router";
 import { Show } from "solid-js";
 
 import { createAnalysis } from "../analysis/document";
-import { useApi } from "../api";
+import { type StableRef, useApi } from "../api";
 import { createDiagram } from "../diagram/document";
 import { AppMenu, MenuItem, MenuItemLabel, MenuSeparator, NewModelItem } from "../page";
 import { type LiveModelDocument, type ModelDocument, createModel } from "./document";
@@ -31,13 +31,19 @@ export function ModelMenuItems(props: {
     const api = useApi();
     const navigate = useNavigate();
 
+    const unversionedRef = (refId: string): StableRef => ({
+        _id: refId,
+        _version: null,
+        _server: api.serverHost,
+    });
+
     const onNewDiagram = async (modelRefId: string) => {
-        const newRef = await createDiagram(api, modelRefId);
+        const newRef = await createDiagram(api, unversionedRef(modelRefId));
         navigate(`/diagram/${newRef}`);
     };
 
     const onNewAnalysis = async (modelRefId: string) => {
-        const newRef = await createAnalysis("model", modelRefId, api);
+        const newRef = await createAnalysis(api, "model", unversionedRef(modelRefId));
         navigate(`/analysis/${newRef}`);
     };
 

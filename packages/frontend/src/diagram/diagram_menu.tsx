@@ -2,9 +2,14 @@ import { useNavigate } from "@solidjs/router";
 import { Show } from "solid-js";
 
 import { createAnalysis } from "../analysis/document";
-import { useApi } from "../api";
+import { type StableRef, useApi } from "../api";
 import { AppMenu, MenuItem, MenuItemLabel, MenuSeparator } from "../page";
-import { type DiagramDocument, type LiveDiagramDocument, createDiagram } from "./document";
+import {
+    type DiagramDocument,
+    type LiveDiagramDocument,
+    createDiagram,
+    createDiagramFromDocument,
+} from "./document";
 
 import ChartSpline from "lucide-solid/icons/chart-spline";
 import Copy from "lucide-solid/icons/copy";
@@ -30,18 +35,24 @@ export function DiagramMenuItems(props: {
     const api = useApi();
     const navigate = useNavigate();
 
+    const unversionedRef = (refId: string): StableRef => ({
+        _id: refId,
+        _version: null,
+        _server: api.serverHost,
+    });
+
     const onNewDiagram = async (modelRefId: string) => {
-        const newRef = await createDiagram(api, modelRefId);
+        const newRef = await createDiagram(api, unversionedRef(modelRefId));
         navigate(`/diagram/${newRef}`);
     };
 
     const onNewAnalysis = async (diagramRefId: string) => {
-        const newRef = await createAnalysis("diagram", diagramRefId, api);
+        const newRef = await createAnalysis(api, "diagram", unversionedRef(diagramRefId));
         navigate(`/analysis/${newRef}`);
     };
 
     const onDuplicateDiagram = async (diagram: DiagramDocument) => {
-        const newRef = await createDiagram(api, {
+        const newRef = await createDiagramFromDocument(api, {
             ...diagram,
             name: `${diagram.name} (copy)`,
         });
