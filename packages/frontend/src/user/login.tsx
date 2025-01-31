@@ -81,24 +81,32 @@ export function Login(props: {
             <Form onSubmit={onSubmit}>
                 <Field name="email">
                     {(field, props) => (
-                        <input
-                            {...props}
-                            type="email"
-                            required
-                            value={field.value}
-                            placeholder="Email address"
-                        />
+                        <>
+                            <input
+                                {...props}
+                                type="email"
+                                value={field.value}
+                                placeholder="Email address"
+                            />
+                            <span class="inline-input">
+                                {field.error && <div class="error">{field.error}</div>}
+                            </span>
+                        </>
                     )}
                 </Field>
                 <Field name="password">
                     {(field, props) => (
-                        <input
-                            {...props}
-                            type="password"
-                            required
-                            value={field.value}
-                            placeholder="Password"
-                        />
+                        <>
+                            <input
+                                {...props}
+                                type="password"
+                                value={field.value}
+                                placeholder="Password"
+                            />
+                            <span class="inline-input">
+                                {field.error && <div class="error">{field.error}</div>}
+                            </span>
+                        </>
                     )}
                 </Field>
                 <div class="buttons">
