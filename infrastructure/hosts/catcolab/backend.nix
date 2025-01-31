@@ -75,6 +75,10 @@ let
         /var/lib/catcolab/infrastructure/scripts/build.sh
     '';
 
+    backupScript = pkgs.writeShellScriptBin "catcolab-backup" ''
+        /var/lib/catcolab/infrastructure/scripts/backup.sh
+    '';
+
     packages = with pkgs; [
         rustup
         nodejs
@@ -83,6 +87,7 @@ let
         stdenv.cc
         openssl.dev
         pkg-config
+        rclone
     ];
 
     scripts = [
@@ -93,6 +98,7 @@ let
         statusScript
         migrateScript
         buildScript
+        backupScript
     ];
 
 in {
@@ -104,6 +110,12 @@ in {
 
     age.secrets."instrument.mjs" = {
         file = "${inputs.self}/secrets/instrument.mjs.age";
+        mode = "400";
+        owner = "catcolab";
+    };
+
+    age.secrets."rclone.conf" = {
+        file = "${inputs.self}/secrets/rclone.conf.age";
         mode = "400";
         owner = "catcolab";
     };
