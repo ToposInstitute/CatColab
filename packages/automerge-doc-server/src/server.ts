@@ -1,7 +1,6 @@
 import type * as http from "node:http";
 import { type DocHandle, Repo } from "@automerge/automerge-repo";
 import { NodeWSServerAdapter } from "@automerge/automerge-repo-network-websocket";
-import * as sentry from "@sentry/node";
 import express from "express";
 import * as ws from "ws";
 
@@ -20,8 +19,6 @@ export class AutomergeServer {
         this.docMap = new Map();
 
         this.app = express();
-        sentry.setupExpressErrorHandler(this.app);
-
         this.server = this.app.listen(port);
 
         this.wss = new ws.WebSocketServer({
