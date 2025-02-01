@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 set -e
 
 DUMPFILE="db_$(date +%F_%H-%M-%S).sql"

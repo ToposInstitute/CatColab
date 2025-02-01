@@ -197,9 +197,28 @@ in {
         serviceConfig = {
             User = "catcolab";
             ExecStart = backendScript;
-            Type="simple";
+            Type = "simple";
             WorkingDirectory = "/var/lib/catcolab/packages/backend/";
             Restart = "on-failure";
+        };
+    };
+
+    systemd.timers.backupdb = {
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+            OnCalendar = "daily";
+            Persistent = true;
+            Unit = "backupdb.service";
+        };
+    };
+
+    systemd.services.backupdb = {
+        path = [pkgs.bash pkgs.postgresql pkgs.rclone];
+        serviceConfig = {
+            User = "catcolab";
+            ExecStart = "${pkgs.bash}/bin/bash /var/lib/catcolab/infrastructure/scripts/backup.sh";
+            Type = "oneshot";
+            WorkingDirectory = "/var/lib/catcolab/";
         };
     };
 

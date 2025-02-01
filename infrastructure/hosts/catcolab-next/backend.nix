@@ -185,7 +185,7 @@ in {
         serviceConfig = {
             User = "catcolab";
             ExecStart = backendScript;
-            Type="simple";
+            Type = "simple";
             WorkingDirectory = "/var/lib/catcolab/packages/backend/";
             Restart = "on-failure";
         };
