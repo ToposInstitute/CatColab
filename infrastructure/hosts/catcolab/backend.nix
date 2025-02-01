@@ -101,7 +101,7 @@ let
 
 in {
     age.secrets.".env" = {
-        file = "${inputs.self}/secrets/.env.age";
+        file = "${inputs.self}/secrets/.env.prod.age";
         mode = "400";
         owner = "catcolab";
     };
