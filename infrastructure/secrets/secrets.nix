@@ -9,6 +9,5 @@ in
 builtins.mapAttrs (_: publicKeys: {inherit publicKeys;})
   ({
       ".env.age"           = [ catcolab catcolab-next owen epatters shaowei ];
-      "instrument.mjs.age" = [ catcolab catcolab-next owen epatters shaowei ];
       "rclone.conf.age"    = [ catcolab owen epatters ];
   })

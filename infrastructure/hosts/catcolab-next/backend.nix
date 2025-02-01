@@ -5,7 +5,6 @@ let
     backendPort = "8000";
 
     automergeScript = pkgs.writeShellScript "automerge.sh" ''
-        ln -sf ${config.age.secrets."instrument.mjs".path} /var/lib/catcolab/packages/automerge-doc-server/
         ${pkgs.nodejs}/bin/node dist/automerge-doc-server/src/main.js
     '';
 
@@ -23,7 +22,6 @@ let
         chown -R catcolab:catcolab catcolab
 
         echo -e "\n\n##### catcolab-init: linking secrets...\n\n"
-        ln -sf ${config.age.secrets."instrument.mjs".path} /var/lib/catcolab/packages/automerge-doc-server/
         ln -sf ${config.age.secrets.".env".path} /var/lib/catcolab/packages/backend/
         
         echo -e "\n\n##### catcolab-init: installing nodejs dependencies...\n\n"
@@ -102,12 +100,6 @@ in {
         owner = "catcolab";
     };
 
-    age.secrets."instrument.mjs" = {
-        file = "${inputs.self}/secrets/instrument.mjs.age";
-        mode = "400";
-        owner = "catcolab";
-    };
-
     services.postgresql.enable = true;
 
     services.nginx.enable = true;
@@ -162,7 +154,6 @@ in {
 
         environment = {
             PORT = automergePort;
-            # NODE_OPTIONS = "--import ./instrument.mjs";  # sentry disabled - need Owen to fix
         };
 
         serviceConfig = {
