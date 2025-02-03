@@ -1,4 +1,4 @@
-import { type SubmitHandler, createForm } from "@modular-forms/solid";
+import { type SubmitHandler, createForm, email, minLength, required } from "@modular-forms/solid";
 import {
     GithubAuthProvider,
     GoogleAuthProvider,
@@ -79,26 +79,44 @@ export function Login(props: {
     return (
         <div class="login">
             <Form onSubmit={onSubmit}>
-                <Field name="email">
+                <Field
+                    name="email"
+                    validate={[
+                        required("Please enter an email address."),
+                        email("The email address is invalid."),
+                    ]}
+                >
                     {(field, props) => (
-                        <input
-                            {...props}
-                            type="email"
-                            required
-                            value={field.value}
-                            placeholder="Email address"
-                        />
+                        <>
+                            <input
+                                {...props}
+                                type="email"
+                                required
+                                value={field.value}
+                                placeholder="Email address"
+                            />
+                            {field.error && <div class="error">{field.error}</div>}
+                        </>
                     )}
                 </Field>
-                <Field name="password">
+                <Field
+                    name="password"
+                    validate={[
+                        required("Please enter a password."),
+                        minLength(6, "The password must be at least 6 characters long."),
+                    ]}
+                >
                     {(field, props) => (
-                        <input
-                            {...props}
-                            type="password"
-                            required
-                            value={field.value}
-                            placeholder="Password"
-                        />
+                        <>
+                            <input
+                                {...props}
+                                type="password"
+                                required
+                                value={field.value}
+                                placeholder="Password"
+                            />
+                            {field.error && <div class="error">{field.error}</div>}
+                        </>
                     )}
                 </Field>
                 <div class="buttons">
