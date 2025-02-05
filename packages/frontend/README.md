@@ -9,7 +9,7 @@ Install Rust and [pnpm](https://pnpm.io/), then run
 
 ```sh
 cd packages/frontend
-pnpm run install
+pnpm install
 pnpm run build
 ```
 

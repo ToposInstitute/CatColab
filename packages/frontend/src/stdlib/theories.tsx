@@ -106,6 +106,7 @@ stdTheories.add(
         name: "Schema",
         description: "Schema for a categorical database",
         group: "Knowledge and Data",
+        help: "schema",
     },
     (meta) => {
         const thSchema = new catlog.ThSchema();
@@ -216,6 +217,7 @@ stdTheories.add(
         name: "Regulatory network",
         description: "Biochemical species that promote or inhibit each other",
         group: "Biology",
+        help: "reg-net",
     },
     (meta) => {
         const thSignedCategory = new catlog.ThSignedCategory();
@@ -286,6 +288,7 @@ stdTheories.add(
         name: "Causal loop diagram",
         description: "Positive and negative causal relationships",
         group: "System Dynamics",
+        help: "causal-loop",
     },
     (meta) => {
         const thSignedCategory = new catlog.ThSignedCategory();
@@ -356,6 +359,7 @@ stdTheories.add(
         name: "Causal loop diagram with delays",
         description: "Causal relationships: positive or negative, fast or slow",
         group: "System Dynamics",
+        help: "causal-loop-delays",
     },
     (meta) => {
         const thDelayedSignedCategory = new catlog.ThDelayableSignedCategory();
@@ -451,6 +455,7 @@ stdTheories.add(
         name: "Causal loop diagram with indeterminates",
         description: "Positive, negative, and indeterminate causal relationships",
         group: "System Dynamics",
+        help: "indeterminate-causal-loop",
     },
     (meta) => {
         const thNullableSignedCategory = new catlog.ThNullableSignedCategory();
@@ -514,6 +519,7 @@ stdTheories.add(
         name: "Discrete exterior calculus (DEC)",
         description: "DEC operators on a geometrical space",
         group: "Applied Mathematics",
+        help: "unary-dec",
     },
     (meta) => {
         const thCategoryWithScalars = new catlog.ThCategoryWithScalars();
@@ -600,6 +606,7 @@ stdTheories.add(
         name: "Stock and flow",
         description: "Model accumulation (stocks) and change (flows)",
         group: "System Dynamics",
+        help: "stock-flow",
     },
     (meta) => {
         const thCategoryLinks = new catlog.ThCategoryLinks();
