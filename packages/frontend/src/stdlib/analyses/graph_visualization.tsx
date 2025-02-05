@@ -1,6 +1,6 @@
 import type * as Viz from "@viz-js/viz";
 
-import { FormGroup, SelectItem } from "../../components";
+import { FormGroup, SelectField } from "../../components";
 import type { BaseTypeMeta } from "../../theory";
 
 import textStyles from "../text_styles.module.css";
@@ -38,8 +38,7 @@ export function GraphConfig(props: {
 }) {
     return (
         <FormGroup compact>
-            <SelectItem
-                id="layout"
+            <SelectField
                 label="Layout"
                 value={props.content.layout}
                 onChange={(evt) => {
@@ -50,7 +49,7 @@ export function GraphConfig(props: {
             >
                 <option value={LayoutEngine.GvDirected}>{"Directed"}</option>
                 <option value={LayoutEngine.GvUndirected}>{"Undirected"}</option>
-            </SelectItem>
+            </SelectField>
         </FormGroup>
     );
 }

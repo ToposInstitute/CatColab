@@ -1,4 +1,4 @@
-import { type ComponentProps, type JSX, Show, splitProps } from "solid-js";
+import { type ComponentProps, type JSX, Show, createUniqueId, splitProps } from "solid-js";
 
 import "./form.css";
 
@@ -11,21 +11,23 @@ export function FormGroup(props: {
 }
 
 /** Text input field in a form group. */
-export function TextInputItem(
+export function TextInputField(
     allProps: {
         label: string | JSX.Element;
         error?: string;
-    } & ComponentProps<"input">,
+    } & Omit<ComponentProps<"input">, "id">,
 ) {
-    const [props, inputProps] = splitProps(allProps, ["id", "label", "error"]);
+    const fieldId = createUniqueId();
+
+    const [props, inputProps] = splitProps(allProps, ["label", "error"]);
 
     return (
         <>
             <dt>
-                <label for={props.id}>{props.label}</label>
+                <label for={fieldId}>{props.label}</label>
             </dt>
             <dd>
-                <input {...inputProps} id={props.id} type="text" />
+                <input {...inputProps} id={fieldId} type="text" />
                 <InputError error={props.error} />
             </dd>
         </>
@@ -39,21 +41,23 @@ const InputError = (props: { error?: string }) => (
 );
 
 /** Select field in a form group. */
-export function SelectItem(
+export function SelectField(
     allProps: {
         label: string | JSX.Element;
         children?: JSX.Element;
-    } & ComponentProps<"select">,
+    } & Omit<ComponentProps<"select">, "id">,
 ) {
-    const [props, selectProps] = splitProps(allProps, ["id", "label", "children"]);
+    const fieldId = createUniqueId();
+
+    const [props, selectProps] = splitProps(allProps, ["label", "children"]);
 
     return (
         <>
             <dt>
-                <label for={props.id}>{props.label}</label>
+                <label for={fieldId}>{props.label}</label>
             </dt>
             <dd>
-                <select {...selectProps} id={props.id}>
+                <select {...selectProps} id={fieldId}>
                     {props.children}
                 </select>
             </dd>

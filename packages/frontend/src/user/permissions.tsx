@@ -15,7 +15,7 @@ import invariant from "tiny-invariant";
 
 import type { NewPermissions, PermissionLevel, Permissions, UserSummary } from "catcolab-api";
 import { useApi } from "../api";
-import { Dialog, FormGroup, IconButton, SelectItem, Warning } from "../components";
+import { Dialog, FormGroup, IconButton, SelectField, Warning } from "../components";
 import { deepCopyJSON } from "../util/deepcopy";
 import { Login } from "./login";
 import { NameUser, UserInput } from "./username";
@@ -99,8 +99,7 @@ export function PermissionsForm(props: {
     return (
         <form class="permissions" onSubmit={(evt) => evt.preventDefault()}>
             <FormGroup>
-                <SelectItem
-                    id="entry-anyone"
+                <SelectField
                     label="General access"
                     value={state.anyone ?? ""}
                     onInput={(evt) => {
@@ -111,7 +110,7 @@ export function PermissionsForm(props: {
                     <option value="">Only authorized people can access</option>
                     <option value="Read">Anyone can view</option>
                     <option value="Write">Anyone can edit</option>
-                </SelectItem>
+                </SelectField>
                 <Show
                     when={state.anyone === "Write" && state.anyone !== currentPermissions()?.anyone}
                 >
