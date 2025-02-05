@@ -40,12 +40,17 @@ const InputError = (props: { error?: string }) => (
     </Show>
 );
 
-/** Select field in a form group. */
+/** Select field in a form group.
+
+XXX: The props exposed from `select` are limited to a fixed set to work around a
+bad bug in Solid, where using a spread breaks the `value` prop:
+<https://github.com/solidjs/solid/issues/1754>
+ */
 export function SelectField(
     allProps: {
         label: string | JSX.Element;
         children?: JSX.Element;
-    } & Omit<ComponentProps<"select">, "id">,
+    } & Pick<ComponentProps<"select">, "value" | "disabled" | "onChange" | "onInput">,
 ) {
     const fieldId = createUniqueId();
 
@@ -57,7 +62,13 @@ export function SelectField(
                 <label for={fieldId}>{props.label}</label>
             </dt>
             <dd>
-                <select {...selectProps} id={fieldId}>
+                <select
+                    id={fieldId}
+                    value={selectProps.value}
+                    disabled={selectProps.disabled}
+                    onChange={selectProps.onChange}
+                    onInput={selectProps.onInput}
+                >
                     {props.children}
                 </select>
             </dd>
