@@ -4,16 +4,17 @@ import { P, match } from "ts-pattern";
 
 import type { DblModelDiagram, Uuid } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
-import { PanelHeader } from "../../components";
+import { Foldable } from "../../components";
 import type { DiagramAnalysisMeta, Theory } from "../../theory";
 import type { Name } from "../../util/indexing";
 import { DownloadSVGButton, GraphvizSVG } from "../../visualization";
 import {
+    GraphConfig,
     type GraphContent,
     type GraphvizAttributes,
-    LayoutEngine,
     defaultEdgeAttributes,
     defaultGraphAttributes,
+    defaultGraphContent,
     defaultNodeAttributes,
     graphvizEngine,
     graphvizFontname,
@@ -34,10 +35,7 @@ export function configureDiagramGraph(options: {
         name,
         description,
         component: (props) => <DiagramGraph title={name} {...props} />,
-        initialContent: () => ({
-            tag: "graph",
-            layout: LayoutEngine.GvDirected,
-        }),
+        initialContent: defaultGraphContent,
     };
 }
 
@@ -75,16 +73,19 @@ export function DiagramGraph(
     };
 
     const title = () => props.title ?? "Diagram";
+    const header = () => (
+        <DownloadSVGButton
+            svg={svgRef()}
+            tooltip={`Export the ${title().toLowerCase()} as SVG`}
+            size={16}
+        />
+    );
 
     return (
         <div class="graph-visualization-analysis">
-            <PanelHeader title={title()}>
-                <DownloadSVGButton
-                    svg={svgRef()}
-                    tooltip={`Export the ${title().toLowerCase()} as SVG`}
-                    size={16}
-                />
-            </PanelHeader>
+            <Foldable title={title()} header={header()}>
+                <GraphConfig content={props.content} changeContent={props.changeContent} />
+            </Foldable>
             <div class="graph-visualization">
                 <Show when={graphviz()}>
                     {(graph) => (

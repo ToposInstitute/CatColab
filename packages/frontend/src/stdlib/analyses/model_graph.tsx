@@ -3,16 +3,17 @@ import { Show, createSignal } from "solid-js";
 import { P, match } from "ts-pattern";
 
 import type { ModelAnalysisProps } from "../../analysis";
-import { Foldable, FormGroup, SelectItem } from "../../components";
+import { Foldable } from "../../components";
 import type { ModelJudgment } from "../../model";
 import type { ModelAnalysisMeta, Theory } from "../../theory";
 import { DownloadSVGButton, GraphvizSVG, type SVGRefProp } from "../../visualization";
 import {
+    GraphConfig,
     type GraphContent,
     type GraphvizAttributes,
-    LayoutEngine,
     defaultEdgeAttributes,
     defaultGraphAttributes,
+    defaultGraphContent,
     defaultNodeAttributes,
     graphvizEngine,
     graphvizFontname,
@@ -33,9 +34,7 @@ export function configureModelGraph(options: {
         name,
         description,
         component: (props) => <ModelGraph title={name} {...props} />,
-        initialContent: () => ({
-            layout: LayoutEngine.GvDirected,
-        }),
+        initialContent: defaultGraphContent,
     };
 }
 
@@ -68,21 +67,7 @@ export function ModelGraph(
     return (
         <div class="graph-visualization-analysis">
             <Foldable title={title()} header={header()}>
-                <FormGroup compact>
-                    <SelectItem
-                        id="layout"
-                        label="Layout"
-                        value={props.content.layout}
-                        onChange={(evt) => {
-                            props.changeContent((content) => {
-                                content.layout = evt.currentTarget.value as LayoutEngine;
-                            });
-                        }}
-                    >
-                        <option value={LayoutEngine.GvDirected}>{"Directed"}</option>
-                        <option value={LayoutEngine.GvUndirected}>{"Undirected"}</option>
-                    </SelectItem>
-                </FormGroup>
+                <GraphConfig content={props.content} changeContent={props.changeContent} />
             </Foldable>
             <div class="graph-visualization">
                 <Show when={props.liveModel.theory()}>

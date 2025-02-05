@@ -3,7 +3,7 @@ import { type Component, For, Show, createResource, createSignal } from "solid-j
 import { P, match } from "ts-pattern";
 
 import type { ModelAnalysisProps } from "../../analysis";
-import { PanelHeader } from "../../components";
+import { Foldable } from "../../components";
 import type { ModelJudgment } from "../../model";
 import type { ModelAnalysisMeta, Theory } from "../../theory";
 import { uniqueIndexArray } from "../../util/indexing";
@@ -19,9 +19,10 @@ import {
     vizLayoutGraph,
 } from "../../visualization";
 import {
+    GraphConfig,
     type GraphContent,
     type GraphvizAttributes,
-    LayoutEngine,
+    defaultGraphContent,
     graphvizEngine,
 } from "./graph_visualization";
 import { modelToGraphviz } from "./model_graph";
@@ -40,9 +41,7 @@ export function configureStockFlowDiagram(options: {
         name,
         description,
         component: StockFlowDiagram,
-        initialContent: () => ({
-            layout: LayoutEngine.GvDirected,
-        }),
+        initialContent: defaultGraphContent,
     };
 }
 
@@ -51,11 +50,15 @@ export function configureStockFlowDiagram(options: {
 export function StockFlowDiagram(props: ModelAnalysisProps<GraphContent>) {
     const [svgRef, setSvgRef] = createSignal<SVGSVGElement>();
 
+    const header = () => (
+        <DownloadSVGButton svg={svgRef()} tooltip="Export the diagram as SVG" size={16} />
+    );
+
     return (
         <div class="graph-visualization-analysis">
-            <PanelHeader title="Diagram">
-                <DownloadSVGButton svg={svgRef()} tooltip="Export the diagram as SVG" size={16} />
-            </PanelHeader>
+            <Foldable title="Visualization" header={header()}>
+                <GraphConfig content={props.content} changeContent={props.changeContent} />
+            </Foldable>
             <div class="graph-visualization">
                 <Show when={props.liveModel.theory()}>
                     {(theory) => (

@@ -1,5 +1,6 @@
 import type * as Viz from "@viz-js/viz";
 
+import { FormGroup, SelectItem } from "../../components";
 import type { BaseTypeMeta } from "../../theory";
 
 import textStyles from "../text_styles.module.css";
@@ -19,12 +20,39 @@ export type GraphContent = {
     layout: LayoutEngine;
 };
 
+export const defaultGraphContent = (): GraphContent => ({
+    layout: LayoutEngine.GvDirected,
+});
+
 export function graphvizEngine(layout: LayoutEngine): Viz.RenderOptions["engine"] {
     if (layout === "graphviz-directed") {
         return "dot";
     } else if (layout === "graphviz-undirected") {
         return "neato";
     }
+}
+
+export function GraphConfig(props: {
+    content: GraphContent;
+    changeContent: (f: (content: GraphContent) => void) => void;
+}) {
+    return (
+        <FormGroup compact>
+            <SelectItem
+                id="layout"
+                label="Layout"
+                value={props.content.layout}
+                onChange={(evt) => {
+                    props.changeContent((content) => {
+                        content.layout = evt.currentTarget.value as LayoutEngine;
+                    });
+                }}
+            >
+                <option value={LayoutEngine.GvDirected}>{"Directed"}</option>
+                <option value={LayoutEngine.GvUndirected}>{"Undirected"}</option>
+            </SelectItem>
+        </FormGroup>
+    );
 }
 
 /** Top-level attributes of a Graphviz graph. */
