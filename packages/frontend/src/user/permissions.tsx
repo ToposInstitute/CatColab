@@ -101,22 +101,22 @@ export function PermissionsForm(props: {
             <FormGroup>
                 <SelectItem
                     id="entry-anyone"
-                    label="Any person can"
+                    label="General access"
                     value={state.anyone ?? ""}
                     onInput={(evt) => {
                         const value = evt.currentTarget.value;
                         setState({ anyone: value ? (value as PermissionLevel) : null });
                     }}
                 >
-                    <option value="">Not access the document</option>
-                    <option value="Read">View</option>
-                    <option value="Write">Edit</option>
+                    <option value="">Only authorized people can access</option>
+                    <option value="Read">Anyone can view</option>
+                    <option value="Write">Anyone can edit</option>
                 </SelectItem>
                 <Show
                     when={state.anyone === "Write" && state.anyone !== currentPermissions()?.anyone}
                 >
                     <Warning>
-                        <p>{"Any person with the link will be able to edit the document."}</p>
+                        <p>{"Anyone with the link will be able to edit the document."}</p>
                         <p>{"This setting is convenient but it is not secure."}</p>
                     </Warning>
                 </Show>
