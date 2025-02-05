@@ -35,17 +35,10 @@ body,
 a {
     color: var(--link-color);
     text-decoration: underline;
-}
-
-.link-button {
-    border: none;
-    background-color: transparent;
-    color: var(--link-color);
-    font: inherit;
-    text-decoration: underline;
     cursor: pointer;
 
-    &:disabled {
+    &[data-disabled] {
+        pointer-events: none;
         text-decoration: none;
         cursor: auto;
     }

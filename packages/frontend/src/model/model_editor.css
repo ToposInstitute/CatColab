@@ -8,7 +8,7 @@
         font-size: var(--h1-font-size);
     }
 
-    & .theory-selector-button {
+    & .theory-selector-trigger {
         font-size: var(--h4-font-size);
         max-width: 25%;
     }
