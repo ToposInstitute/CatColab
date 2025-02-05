@@ -11,6 +11,7 @@ import { DownloadSVGButton, GraphvizSVG } from "../../visualization";
 import {
     type GraphContent,
     type GraphvizAttributes,
+    LayoutEngine,
     defaultEdgeAttributes,
     defaultGraphAttributes,
     defaultNodeAttributes,
@@ -35,7 +36,7 @@ export function configureDiagramGraph(options: {
         component: (props) => <DiagramGraph title={name} {...props} />,
         initialContent: () => ({
             tag: "graph",
-            layout: "graphviz-directed",
+            layout: LayoutEngine.GvDirected,
         }),
     };
 }

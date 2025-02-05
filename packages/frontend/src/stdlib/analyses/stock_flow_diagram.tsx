@@ -18,7 +18,12 @@ import {
     loadViz,
     vizLayoutGraph,
 } from "../../visualization";
-import { type GraphContent, type GraphvizAttributes, graphvizEngine } from "./graph_visualization";
+import {
+    type GraphContent,
+    type GraphvizAttributes,
+    LayoutEngine,
+    graphvizEngine,
+} from "./graph_visualization";
 import { modelToGraphviz } from "./model_graph";
 
 import "./graph_visualization.css";
@@ -36,7 +41,7 @@ export function configureStockFlowDiagram(options: {
         description,
         component: StockFlowDiagram,
         initialContent: () => ({
-            layout: "graphviz-directed",
+            layout: LayoutEngine.GvDirected,
         }),
     };
 }

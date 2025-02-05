@@ -3,13 +3,14 @@ import { Show, createSignal } from "solid-js";
 import { P, match } from "ts-pattern";
 
 import type { ModelAnalysisProps } from "../../analysis";
-import { PanelHeader } from "../../components";
+import { Foldable, FormGroup, SelectItem } from "../../components";
 import type { ModelJudgment } from "../../model";
 import type { ModelAnalysisMeta, Theory } from "../../theory";
 import { DownloadSVGButton, GraphvizSVG, type SVGRefProp } from "../../visualization";
 import {
     type GraphContent,
     type GraphvizAttributes,
+    LayoutEngine,
     defaultEdgeAttributes,
     defaultGraphAttributes,
     defaultNodeAttributes,
@@ -33,7 +34,7 @@ export function configureModelGraph(options: {
         description,
         component: (props) => <ModelGraph title={name} {...props} />,
         initialContent: () => ({
-            layout: "graphviz-directed",
+            layout: LayoutEngine.GvDirected,
         }),
     };
 }
@@ -56,16 +57,33 @@ export function ModelGraph(
     const [svgRef, setSvgRef] = createSignal<SVGSVGElement>();
 
     const title = () => props.title ?? "Graph";
+    const header = () => (
+        <DownloadSVGButton
+            svg={svgRef()}
+            tooltip={`Export the ${title().toLowerCase()} as SVG`}
+            size={16}
+        />
+    );
 
     return (
         <div class="graph-visualization-analysis">
-            <PanelHeader title={title()}>
-                <DownloadSVGButton
-                    svg={svgRef()}
-                    tooltip={`Export the ${title().toLowerCase()} as SVG`}
-                    size={16}
-                />
-            </PanelHeader>
+            <Foldable title={title()} header={header()}>
+                <FormGroup compact>
+                    <SelectItem
+                        id="layout"
+                        label="Layout"
+                        value={props.content.layout}
+                        onChange={(evt) => {
+                            props.changeContent((content) => {
+                                content.layout = evt.currentTarget.value as LayoutEngine;
+                            });
+                        }}
+                    >
+                        <option value={LayoutEngine.GvDirected}>{"Directed"}</option>
+                        <option value={LayoutEngine.GvUndirected}>{"Undirected"}</option>
+                    </SelectItem>
+                </FormGroup>
+            </Foldable>
             <div class="graph-visualization">
                 <Show when={props.liveModel.theory()}>
                     {(theory) => (

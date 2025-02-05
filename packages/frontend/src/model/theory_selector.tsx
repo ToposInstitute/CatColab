@@ -20,7 +20,11 @@ export function TheorySelectorDialog(
 
     return (
         <Dialog open={theorySelectorOpen()} onOpenChange={setTheorySelectorOpen}>
-            <Dialog.Trigger as="a" class="theory-selector-trigger" data-disabled={props.disabled ? true : undefined}>
+            <Dialog.Trigger
+                as="a"
+                class="theory-selector-trigger"
+                data-disabled={props.disabled ? true : undefined}
+            >
                 {props.theory.name}
             </Dialog.Trigger>
             <Dialog.Portal>

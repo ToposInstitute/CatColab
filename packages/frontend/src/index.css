@@ -44,6 +44,13 @@ a {
     }
 }
 
+input,
+select {
+    background: whitesmoke;
+    border: 1px solid lightgray;
+    border-radius: 6px;
+}
+
 h1,
 h2,
 h3,

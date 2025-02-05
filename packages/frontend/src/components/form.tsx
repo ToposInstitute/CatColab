@@ -5,14 +5,14 @@ import "./form.css";
 /** Group of related fields in a form. */
 export function FormGroup(props: {
     children: JSX.Element;
+    compact?: boolean;
 }) {
-    return <dl class="form-group">{props.children}</dl>;
+    return <dl class={props.compact ? "compact-form-group" : "form-group"}>{props.children}</dl>;
 }
 
 /** Text input field in a form group. */
 export function TextInputItem(
     allProps: {
-        id: string;
         label: string | JSX.Element;
         error?: string;
     } & ComponentProps<"input">,
@@ -41,7 +41,6 @@ const InputError = (props: { error?: string }) => (
 /** Select field in a form group. */
 export function SelectItem(
     allProps: {
-        id: string;
         label: string | JSX.Element;
         children?: JSX.Element;
     } & ComponentProps<"select">,

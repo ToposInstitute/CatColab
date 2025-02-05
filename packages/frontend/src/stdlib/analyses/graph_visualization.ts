@@ -8,7 +8,10 @@ import textStyles from "../text_styles.module.css";
 
 Currently we just use Graphviz. In the future we may support other tools.
  */
-type LayoutEngine = "graphviz-directed" | "graphviz-undirected";
+export enum LayoutEngine {
+    GvDirected = "graphviz-directed",
+    GvUndirected = "graphviz-undirected",
+}
 
 /** Configuration for an analysis that visualizes a graph. */
 export type GraphContent = {
