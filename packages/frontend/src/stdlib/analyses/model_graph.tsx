@@ -7,18 +7,7 @@ import { Foldable } from "../../components";
 import type { ModelJudgment } from "../../model";
 import type { ModelAnalysisMeta, Theory } from "../../theory";
 import { DownloadSVGButton, GraphvizSVG, type SVGRefProp } from "../../visualization";
-import {
-    GraphConfig,
-    type GraphContent,
-    type GraphvizAttributes,
-    defaultEdgeAttributes,
-    defaultGraphAttributes,
-    defaultGraphContent,
-    defaultNodeAttributes,
-    graphvizEngine,
-    graphvizFontname,
-    svgCssClasses,
-} from "./graph_visualization";
+import * as GV from "./graph_visualization";
 
 import "./graph_visualization.css";
 
@@ -27,14 +16,14 @@ export function configureModelGraph(options: {
     id: string;
     name: string;
     description?: string;
-}): ModelAnalysisMeta<GraphContent> {
+}): ModelAnalysisMeta<GV.GraphConfig> {
     const { id, name, description } = options;
     return {
         id,
         name,
         description,
         component: (props) => <ModelGraph title={name} {...props} />,
-        initialContent: defaultGraphContent,
+        initialContent: GV.defaultGraphConfig,
     };
 }
 
@@ -51,7 +40,7 @@ may be added in the future.
 export function ModelGraph(
     props: {
         title?: string;
-    } & ModelAnalysisProps<GraphContent>,
+    } & ModelAnalysisProps<GV.GraphConfig>,
 ) {
     const [svgRef, setSvgRef] = createSignal<SVGSVGElement>();
 
@@ -67,7 +56,7 @@ export function ModelGraph(
     return (
         <div class="graph-visualization-analysis">
             <Foldable title={title()} header={header()}>
-                <GraphConfig content={props.content} changeContent={props.changeContent} />
+                <GV.GraphConfigForm content={props.content} changeContent={props.changeContent} />
             </Foldable>
             <div class="graph-visualization">
                 <Show when={props.liveModel.theory()}>
@@ -75,9 +64,7 @@ export function ModelGraph(
                         <ModelGraphviz
                             model={props.liveModel.formalJudgments()}
                             theory={theory()}
-                            options={{
-                                engine: graphvizEngine(props.content.layout),
-                            }}
+                            options={GV.graphvizOptions(props.content)}
                             ref={setSvgRef}
                         />
                     )}
@@ -92,7 +79,7 @@ export function ModelGraph(
 export function ModelGraphviz(props: {
     model: ModelJudgment[];
     theory: Theory;
-    attributes?: GraphvizAttributes;
+    attributes?: GV.GraphvizAttributes;
     options?: Viz.RenderOptions;
     ref?: SVGRefProp;
 }) {
@@ -110,7 +97,7 @@ export function ModelGraphviz(props: {
 export function modelToGraphviz(
     model: ModelJudgment[],
     theory: Theory,
-    attributes?: GraphvizAttributes,
+    attributes?: GV.GraphvizAttributes,
 ): Viz.Graph {
     const nodes = new Map<string, Required<Viz.Graph>["nodes"][0]>();
     for (const judgment of model) {
@@ -122,8 +109,8 @@ export function modelToGraphviz(
                 attributes: {
                     id,
                     label: name,
-                    class: svgCssClasses(meta).join(" "),
-                    fontname: graphvizFontname(meta),
+                    class: GV.svgCssClasses(meta).join(" "),
+                    fontname: GV.graphvizFontname(meta),
                 },
             });
         }
@@ -159,8 +146,8 @@ export function modelToGraphviz(
             attributes: {
                 id: judgment.id,
                 label: judgment.name,
-                class: svgCssClasses(meta).join(" "),
-                fontname: graphvizFontname(meta),
+                class: GV.svgCssClasses(meta).join(" "),
+                fontname: GV.graphvizFontname(meta),
                 // Not recognized by Graphviz but will be passed through!
                 arrowstyle: meta?.arrowStyle ?? "default",
             },
@@ -171,8 +158,8 @@ export function modelToGraphviz(
         directed: true,
         nodes: Array.from(nodes.values()),
         edges,
-        graphAttributes: { ...defaultGraphAttributes, ...attributes?.graph },
-        nodeAttributes: { ...defaultNodeAttributes, ...attributes?.node },
-        edgeAttributes: { ...defaultEdgeAttributes, ...attributes?.edge },
+        graphAttributes: { ...GV.defaultGraphAttributes, ...attributes?.graph },
+        nodeAttributes: { ...GV.defaultNodeAttributes, ...attributes?.node },
+        edgeAttributes: { ...GV.defaultEdgeAttributes, ...attributes?.edge },
     };
 }

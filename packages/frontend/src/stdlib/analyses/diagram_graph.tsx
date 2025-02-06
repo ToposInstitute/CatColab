@@ -8,18 +8,7 @@ import { Foldable } from "../../components";
 import type { DiagramAnalysisMeta, Theory } from "../../theory";
 import type { Name } from "../../util/indexing";
 import { DownloadSVGButton, GraphvizSVG } from "../../visualization";
-import {
-    GraphConfig,
-    type GraphContent,
-    type GraphvizAttributes,
-    defaultEdgeAttributes,
-    defaultGraphAttributes,
-    defaultGraphContent,
-    defaultNodeAttributes,
-    graphvizEngine,
-    graphvizFontname,
-    svgCssClasses,
-} from "./graph_visualization";
+import * as GV from "./graph_visualization";
 
 import "./graph_visualization.css";
 
@@ -28,14 +17,14 @@ export function configureDiagramGraph(options: {
     id: string;
     name: string;
     description?: string;
-}): DiagramAnalysisMeta<GraphContent> {
+}): DiagramAnalysisMeta<GV.GraphConfig> {
     const { id, name, description } = options;
     return {
         id,
         name,
         description,
         component: (props) => <DiagramGraph title={name} {...props} />,
-        initialContent: defaultGraphContent,
+        initialContent: GV.defaultGraphConfig,
     };
 }
 
@@ -47,7 +36,7 @@ general restricted to basic objects. See `ModelGraph` for more.
 export function DiagramGraph(
     props: {
         title?: string;
-    } & DiagramAnalysisProps<GraphContent>,
+    } & DiagramAnalysisProps<GV.GraphConfig>,
 ) {
     const [svgRef, setSvgRef] = createSignal<SVGSVGElement>();
 
@@ -84,16 +73,14 @@ export function DiagramGraph(
     return (
         <div class="graph-visualization-analysis">
             <Foldable title={title()} header={header()}>
-                <GraphConfig content={props.content} changeContent={props.changeContent} />
+                <GV.GraphConfigForm content={props.content} changeContent={props.changeContent} />
             </Foldable>
             <div class="graph-visualization">
                 <Show when={graphviz()}>
                     {(graph) => (
                         <GraphvizSVG
                             graph={graph()}
-                            options={{
-                                engine: graphvizEngine(props.content.layout),
-                            }}
+                            options={GV.graphvizOptions(props.content)}
                             ref={setSvgRef}
                         />
                     )}
@@ -112,7 +99,7 @@ export function diagramToGraphviz(
         obName?: (id: Uuid) => Name | undefined;
         baseObName?: (id: Uuid) => string | undefined;
         baseMorName: (id: Uuid) => string | undefined;
-        attributes?: GraphvizAttributes;
+        attributes?: GV.GraphvizAttributes;
     },
 ): Viz.Graph {
     const nodes = new Map<string, Required<Viz.Graph>["nodes"][0]>();
@@ -142,8 +129,8 @@ export function diagramToGraphviz(
             attributes: {
                 id,
                 label: [name, overName].filter((s) => s).join(" : "),
-                class: svgCssClasses(meta).join(" "),
-                fontname: graphvizFontname(meta),
+                class: GV.svgCssClasses(meta).join(" "),
+                fontname: GV.graphvizFontname(meta),
             },
         });
     }
@@ -182,8 +169,8 @@ export function diagramToGraphviz(
             attributes: {
                 id,
                 label: options?.baseMorName?.(overId) ?? "",
-                class: svgCssClasses(meta).join(" "),
-                fontname: graphvizFontname(meta),
+                class: GV.svgCssClasses(meta).join(" "),
+                fontname: GV.graphvizFontname(meta),
             },
         });
     }
@@ -193,8 +180,8 @@ export function diagramToGraphviz(
         directed: true,
         nodes: Array.from(nodes.values()),
         edges,
-        graphAttributes: { ...defaultGraphAttributes, ...attributes?.graph },
-        nodeAttributes: { ...defaultNodeAttributes, ...attributes?.node },
-        edgeAttributes: { ...defaultEdgeAttributes, ...attributes?.edge },
+        graphAttributes: { ...GV.defaultGraphAttributes, ...attributes?.graph },
+        nodeAttributes: { ...GV.defaultNodeAttributes, ...attributes?.node },
+        edgeAttributes: { ...GV.defaultEdgeAttributes, ...attributes?.edge },
     };
 }

@@ -47,6 +47,7 @@ form .error {
     display: grid;
     grid-template-columns: max-content auto;
     align-items: center;
+    gap: 0.25rem 1em;
 
     & dt {
         grid-column-start: 1;
@@ -54,5 +55,6 @@ form .error {
 
     & dd {
         grid-column-start: 2;
+        margin-left: 0;
     }
 }

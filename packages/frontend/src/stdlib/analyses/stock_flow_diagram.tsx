@@ -18,13 +18,7 @@ import {
     loadViz,
     vizLayoutGraph,
 } from "../../visualization";
-import {
-    GraphConfig,
-    type GraphContent,
-    type GraphvizAttributes,
-    defaultGraphContent,
-    graphvizEngine,
-} from "./graph_visualization";
+import * as GV from "./graph_visualization";
 import { modelToGraphviz } from "./model_graph";
 
 import "./graph_visualization.css";
@@ -34,20 +28,20 @@ export function configureStockFlowDiagram(options: {
     id: string;
     name: string;
     description?: string;
-}): ModelAnalysisMeta<GraphContent> {
+}): ModelAnalysisMeta<GV.GraphConfig> {
     const { id, name, description } = options;
     return {
         id,
         name,
         description,
         component: StockFlowDiagram,
-        initialContent: defaultGraphContent,
+        initialContent: GV.defaultGraphConfig,
     };
 }
 
 /** Visualize a stock flow diagram.
  */
-export function StockFlowDiagram(props: ModelAnalysisProps<GraphContent>) {
+export function StockFlowDiagram(props: ModelAnalysisProps<GV.GraphConfig>) {
     const [svgRef, setSvgRef] = createSignal<SVGSVGElement>();
 
     const header = () => (
@@ -57,7 +51,7 @@ export function StockFlowDiagram(props: ModelAnalysisProps<GraphContent>) {
     return (
         <div class="graph-visualization-analysis">
             <Foldable title="Visualization" header={header()}>
-                <GraphConfig content={props.content} changeContent={props.changeContent} />
+                <GV.GraphConfigForm content={props.content} changeContent={props.changeContent} />
             </Foldable>
             <div class="graph-visualization">
                 <Show when={props.liveModel.theory()}>
@@ -65,9 +59,7 @@ export function StockFlowDiagram(props: ModelAnalysisProps<GraphContent>) {
                         <StockFlowGraphviz
                             model={props.liveModel.formalJudgments()}
                             theory={theory()}
-                            options={{
-                                engine: graphvizEngine(props.content.layout),
-                            }}
+                            options={GV.graphvizOptions(props.content)}
                             ref={setSvgRef}
                         />
                     )}
@@ -85,7 +77,7 @@ links from stocks to flows using our own layout heuristics.
 export function StockFlowGraphviz(props: {
     model: Array<ModelJudgment>;
     theory: Theory;
-    attributes?: GraphvizAttributes;
+    attributes?: GV.GraphvizAttributes;
     options?: Viz.RenderOptions;
     ref?: SVGRefProp;
 }) {
