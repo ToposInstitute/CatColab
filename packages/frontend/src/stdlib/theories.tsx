@@ -86,7 +86,7 @@ stdTheories.add(
                 analyses.configureModelGraph({
                     id: "diagram",
                     name: "Visualization",
-                    description: "Visualize the olog as a diagram",
+                    description: "Visualize the olog as a graph",
                 }),
             ],
             diagramAnalyses: [
@@ -197,7 +197,7 @@ stdTheories.add(
                 analyses.configureModelGraph({
                     id: "diagram",
                     name: "Visualization",
-                    description: "Visualize the schema as a diagram",
+                    description: "Visualize the schema as a graph",
                 }),
             ],
             diagramAnalyses: [

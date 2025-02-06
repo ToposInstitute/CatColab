@@ -2,14 +2,7 @@ form input,
 form select,
 form button {
     font-size: inherit;
-}
-
-form input,
-form select {
-    background: whitesmoke;
-    border: 1px solid lightgray;
-    border-radius: 6px;
-    padding: 6px 12px;
+    padding: 6px;
 }
 
 form button {
@@ -27,7 +20,6 @@ form button.ok {
     background: #2e8b57;
     border: 1px solid darkgreen;
     border-radius: 6px;
-    padding: 6px;
 }
 
 form .error {
@@ -48,5 +40,21 @@ form .error {
     }
     & dd:not(:last-child) {
         margin-bottom: 1rem;
+    }
+}
+
+.compact-form-group {
+    display: grid;
+    grid-template-columns: max-content auto;
+    align-items: center;
+    gap: 0.25rem 1em;
+
+    & dt {
+        grid-column-start: 1;
+    }
+
+    & dd {
+        grid-column-start: 2;
+        margin-left: 0;
     }
 }

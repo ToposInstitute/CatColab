@@ -1,31 +1,33 @@
-import { type ComponentProps, type JSX, Show, splitProps } from "solid-js";
+import { type ComponentProps, type JSX, Show, createUniqueId, splitProps } from "solid-js";
 
 import "./form.css";
 
 /** Group of related fields in a form. */
 export function FormGroup(props: {
     children: JSX.Element;
+    compact?: boolean;
 }) {
-    return <dl class="form-group">{props.children}</dl>;
+    return <dl class={props.compact ? "compact-form-group" : "form-group"}>{props.children}</dl>;
 }
 
 /** Text input field in a form group. */
-export function TextInputItem(
+export function TextInputField(
     allProps: {
-        id: string;
         label: string | JSX.Element;
         error?: string;
-    } & ComponentProps<"input">,
+    } & Omit<ComponentProps<"input">, "id">,
 ) {
-    const [props, inputProps] = splitProps(allProps, ["id", "label", "error"]);
+    const fieldId = createUniqueId();
+
+    const [props, inputProps] = splitProps(allProps, ["label", "error"]);
 
     return (
         <>
             <dt>
-                <label for={props.id}>{props.label}</label>
+                <label for={fieldId}>{props.label}</label>
             </dt>
             <dd>
-                <input {...inputProps} id={props.id} type="text" />
+                <input {...inputProps} id={fieldId} type="text" />
                 <InputError error={props.error} />
             </dd>
         </>
@@ -38,23 +40,35 @@ const InputError = (props: { error?: string }) => (
     </Show>
 );
 
-/** Select field in a form group. */
-export function SelectItem(
+/** Select field in a form group.
+
+XXX: The props exposed from `select` are limited to a fixed set to work around a
+bad bug in Solid, where using a spread breaks the `value` prop:
+<https://github.com/solidjs/solid/issues/1754>
+ */
+export function SelectField(
     allProps: {
-        id: string;
         label: string | JSX.Element;
         children?: JSX.Element;
-    } & ComponentProps<"select">,
+    } & Pick<ComponentProps<"select">, "value" | "disabled" | "onChange" | "onInput">,
 ) {
-    const [props, selectProps] = splitProps(allProps, ["id", "label", "children"]);
+    const fieldId = createUniqueId();
+
+    const [props, selectProps] = splitProps(allProps, ["label", "children"]);
 
     return (
         <>
             <dt>
-                <label for={props.id}>{props.label}</label>
+                <label for={fieldId}>{props.label}</label>
             </dt>
             <dd>
-                <select {...selectProps} id={props.id}>
+                <select
+                    id={fieldId}
+                    value={selectProps.value}
+                    disabled={selectProps.disabled}
+                    onChange={selectProps.onChange}
+                    onInput={selectProps.onInput}
+                >
                     {props.children}
                 </select>
             </dd>
