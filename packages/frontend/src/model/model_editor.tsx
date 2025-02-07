@@ -12,7 +12,7 @@ import {
     newFormalCell,
 } from "../notebook";
 import { TheoryHelpButton, Toolbar } from "../page";
-import { TheoryLibraryContext } from "../stdlib";
+import { TheoryLibraryContext, allTheories } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
 import { MaybePermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
@@ -77,6 +77,7 @@ export function ModelPane(props: {
     invariant(theories, "Library of theories should be provided as context");
 
     const liveDoc = () => props.liveModel.liveDoc;
+    const hasformal = () => liveDoc().doc.notebook.cells.some((cell) => cell.tag === "formal");
 
     return (
         <div class="notebook-container">
@@ -100,7 +101,9 @@ export function ModelPane(props: {
                         });
                     }}
                     theories={theories}
-                    disabled={liveDoc().doc.notebook.cells.some((cell) => cell.tag === "formal")}
+                    filtered={hasformal() ? props.liveModel.theory().inclusions : allTheories}
+                    disabled={hasformal() ? props.liveModel.theory().inclusions == undefined : false}
+                    //}
                 />
             </div>
             <ModelNotebookEditor liveModel={props.liveModel} />
