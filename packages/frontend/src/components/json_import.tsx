@@ -2,7 +2,7 @@ import { type Component, createSignal, onCleanup } from "solid-js";
 import type { AnalysisDocument } from "../analysis";
 import type { DiagramDocument } from "../diagram";
 import type { ModelDocument } from "../model";
-import './json_import.css';
+import "./json_import.css";
 
 interface Props {
     onImport: (data: ModelDocument | DiagramDocument | AnalysisDocument) => void;
@@ -69,7 +69,7 @@ export const JsonImport: Component<Props> = (props) => {
     };
 
     const autoResizeTextarea = (textarea: HTMLTextAreaElement) => {
-        textarea.style.height = 'auto';
+        textarea.style.height = "auto";
         textarea.style.height = `${textarea.scrollHeight}px`;
     };
 
@@ -78,7 +78,7 @@ export const JsonImport: Component<Props> = (props) => {
         setPasteValue(textarea.value);
         autoResizeTextarea(textarea);
     };
-    
+
     return (
         <div class="json_import">
             {/* File upload */}
@@ -103,7 +103,7 @@ export const JsonImport: Component<Props> = (props) => {
                     placeholder="Paste your JSON here..."
                     ref={(el) => {
                         autoResizeTextarea(el);
-                        onCleanup(() => el.removeEventListener('input', handleInput));
+                        onCleanup(() => el.removeEventListener("input", handleInput));
                     }}
                 />
                 <button

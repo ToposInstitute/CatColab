@@ -3,7 +3,7 @@ import { useNavigate } from "@solidjs/router";
 import type { AnalysisDocument } from "../analysis";
 import { useApi } from "../api";
 import { JsonImport } from "../components/json_import";
-import { type DiagramDocument, createDiagram } from "../diagram";
+import type { DiagramDocument } from "../diagram";
 import { type ModelDocument, createModel } from "../model";
 
 type ccDocument = ModelDocument | DiagramDocument | AnalysisDocument;
@@ -25,11 +25,12 @@ export function Import(props: { onComplete?: () => void }) {
             }
 
             case "diagram": {
-                const newRef = await createDiagram(api, {
-                    ...data,
-                    name: `${data.name}`,
-                });
-                navigate(`/diagram/${newRef}`);
+                //              const newRef = await createDiagram(api, {
+                //                  ...data,
+                //                  name: `${data.name}`,
+                //              });
+                //              navigate(`/diagram/${newRef}`);
+                console.log("Can't do diagrams with refs atm");
                 break;
             }
 
