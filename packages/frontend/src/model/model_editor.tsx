@@ -102,7 +102,9 @@ export function ModelPane(props: {
                     }}
                     theories={theories}
                     filtered={hasformal() ? props.liveModel.theory().inclusions : allTheories}
-                    disabled={hasformal() ? props.liveModel.theory().inclusions == undefined : false}
+                    disabled={
+                        hasformal() ? props.liveModel.theory().inclusions === undefined : false
+                    }
                     //}
                 />
             </div>

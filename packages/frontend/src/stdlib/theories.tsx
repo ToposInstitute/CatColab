@@ -11,7 +11,17 @@ import textStyles from "./text_styles.module.css";
 /** Standard library of double theories supported by the frontend. */
 export const stdTheories = new TheoryLibrary();
 
-export const allTheories = ["empty", "simple-olog","simple-schema","reg-net","causal-loop","causal-loop-delays","indeterminate-causal-loop", "unary-dec", "primitive-stock-flow"]
+export const allTheories = [
+    "empty",
+    "simple-olog",
+    "simple-schema",
+    "reg-net",
+    "causal-loop",
+    "causal-loop-delays",
+    "indeterminate-causal-loop",
+    "unary-dec",
+    "primitive-stock-flow",
+];
 
 stdTheories.add(
     {
@@ -228,7 +238,7 @@ stdTheories.add(
             ...meta,
             theory: thSignedCategory.theory(),
             onlyFreeModels: true,
-            inclusions: ["causal-loop", "causal-loop-delays","indeterminate-causal-loop"],
+            inclusions: ["causal-loop", "causal-loop-delays", "indeterminate-causal-loop"],
             modelTypes: [
                 {
                     tag: "ObType",
@@ -301,7 +311,7 @@ stdTheories.add(
             ...meta,
             theory: thSignedCategory.theory(),
             onlyFreeModels: true,
-            inclusions: ["reg-net", "causal-loop-delays","indeterminate-causal-loop"],
+            inclusions: ["reg-net", "causal-loop-delays", "indeterminate-causal-loop"],
             modelTypes: [
                 {
                     tag: "ObType",
