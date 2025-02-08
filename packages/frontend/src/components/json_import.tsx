@@ -2,14 +2,18 @@ import { createSignal } from "solid-js";
 import type { Document } from "../api";
 import "./json_import.css";
 
-interface Props<T extends string> {
+interface JsonImportProps<T extends string> {
     onImport: (data: Document<T>) => void;
     validate?: (data: Document<T>) => boolean | string;
 }
 
-export const JsonImport = <T extends string>(props: Props<T>) => {
+export const JsonImport = <T extends string>(props: JsonImportProps<T>) => {
     const [error, setError] = createSignal<string | null>(null);
     const [pasteValue, setPasteValue] = createSignal("");
+
+    const handleError = (e: unknown) => {
+        setError(e instanceof Error ? e.message : "Unknown error occurred");
+    };
 
     const validateAndImport = (jsonString: string) => {
         try {
@@ -30,7 +34,7 @@ export const JsonImport = <T extends string>(props: Props<T>) => {
             props.onImport(data);
             setPasteValue(""); // Clear paste area after successful import
         } catch (e) {
-            setError(e instanceof Error ? e.message : "Invalid JSON format");
+            handleError(e);
         }
     };
 
@@ -43,8 +47,13 @@ export const JsonImport = <T extends string>(props: Props<T>) => {
             const file = input.files[0];
 
             // Validate file type
-            if (!file?.type || !file?.name.endsWith(".json")) {
+            if (!(file?.type === "application/json") && !file?.name.endsWith(".json")) {
                 throw new Error("Please upload a JSON file");
+            }
+
+            const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+            if (file.size > MAX_FILE_SIZE) {
+                throw new Error("File size exceeds 5MB limit");
             }
 
             const text = await file?.text();
@@ -53,7 +62,7 @@ export const JsonImport = <T extends string>(props: Props<T>) => {
             // Reset file input
             input.value = "";
         } catch (e) {
-            setError(e instanceof Error ? e.message : "Error reading file");
+            handleError(e);
         }
     };
 
@@ -88,7 +97,9 @@ export const JsonImport = <T extends string>(props: Props<T>) => {
                     onPaste={handleInput}
                     placeholder="Paste your JSON here..."
                 />
-                <button onClick={handlePaste}>Import Pasted JSON</button>
+                <button onClick={handlePaste} aria-label="Import JSON">
+                    Import Pasted JSON
+                </button>
             </div>
 
             {/* Error display */}
