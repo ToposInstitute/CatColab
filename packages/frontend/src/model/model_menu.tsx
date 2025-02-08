@@ -58,10 +58,10 @@ export function ModelMenuItems(props: {
         navigate(`/model/${newRef}`);
     };
     const onDownloadJSON = (model: ModelDocument) => {
-        downloadJson({ data: JSON.stringify(model), filename: `${model.name}.json` });
+        downloadJson(JSON.stringify(model), `${model.name}.json`);
     };
     const onCopy = (model: ModelDocument) => {
-        copyToClipboard({ data: JSON.stringify(model) });
+        copyToClipboard(JSON.stringify(model));
     };
 
     return (

@@ -65,10 +65,10 @@ export function DiagramMenuItems(props: {
 
     //Can this be less repetitive?
     const onDownloadJSON = (diagram: DiagramDocument) => {
-        downloadJson({ data: JSON.stringify(diagram), filename: `${diagram.name}.json` });
+        downloadJson(JSON.stringify(diagram), `${diagram.name}.json`);
     };
     const onCopy = (diagram: DiagramDocument) => {
-        copyToClipboard({ data: JSON.stringify(diagram) });
+        copyToClipboard(JSON.stringify(diagram));
     };
     return (
         <>
