@@ -87,7 +87,7 @@ export function DiagramMenuItems(props: {
             </MenuItem>
             <MenuItem onSelect={() => onDownloadJSON(props.liveDiagram.liveDoc.doc)}>
                 <Export />
-                <MenuItemLabel>{"Export JSON"}</MenuItemLabel>
+                <MenuItemLabel>{"Export notebook"}</MenuItemLabel>
             </MenuItem>
             <MenuItem onSelect={() => onCopy(props.liveDiagram.liveDoc.doc)}>
                 <CopyToClipboard />
