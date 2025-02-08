@@ -21,14 +21,22 @@ export function Import(props: { onComplete?: () => void }) {
 
         switch (data.type) {
             case "model": {
-                const newRef = await createModel(api, data as ModelDocument);
-                navigate(`/model/${newRef}`);
+                const newRef = await createModel(api, data);
+                try {
+                    navigate(`/model/${newRef}`);
+                } catch (e) {
+                    throw new Error(`Failed to navigate to new ${data.type}: ${e}`);
+                }
                 break;
             }
 
             case "diagram": {
-                const newRef = await createDiagramFromDocument(api, data as DiagramDocument);
-                navigate(`/diagram/${newRef}`);
+                const newRef = await createDiagramFromDocument(api, data);
+                try {
+                    navigate(`/diagram/${newRef}`);
+                } catch (e) {
+                    throw new Error(`Failed to navigate to new ${data.type}: ${e}`);
+                }
                 break;
             }
 
@@ -42,16 +50,15 @@ export function Import(props: { onComplete?: () => void }) {
     // Placeholder, not doing more than typechecking does for now but
     // will eventually validate against json schema
     const validateJson = (data: Document<string>) => {
-        invariant(
-            isImportableDocument(data),
-            "Analysis and other document types cannot be imported at this time.",
-        );
+        if (!isImportableDocument(data)) {
+            return "Analysis and other document types cannot be imported at this time.";
+        }
         return true;
     };
 
     return (
         <div>
-            <JsonImport onImport={handleImport} validate={validateJson} />
+            <JsonImport<"model" | "diagram"> onImport={handleImport} validate={validateJson} />
         </div>
     );
 }
