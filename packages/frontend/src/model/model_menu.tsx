@@ -84,7 +84,7 @@ export function ModelMenuItems(props: {
             </MenuItem>
             <MenuItem onSelect={() => onDownloadJSON(props.liveModel.liveDoc.doc)}>
                 <Export />
-                <MenuItemLabel>{"Export JSON"}</MenuItemLabel>
+                <MenuItemLabel>{"Export notebook"}</MenuItemLabel>
             </MenuItem>
             <MenuItem onSelect={() => onCopy(props.liveModel.liveDoc.doc)}>
                 <CopyToClipboard />
