@@ -1,15 +1,13 @@
-import { type Component, createSignal, onCleanup } from "solid-js";
-import type { AnalysisDocument } from "../analysis";
-import type { DiagramDocument } from "../diagram";
-import type { ModelDocument } from "../model";
+import { createSignal } from "solid-js";
+import type { Document } from "../api";
 import "./json_import.css";
 
-interface Props {
-    onImport: (data: ModelDocument | DiagramDocument | AnalysisDocument) => void;
-    validate?: (data: ModelDocument | DiagramDocument | AnalysisDocument) => boolean | string; // Return true if valid, error message if invalid
+interface Props<T extends string> {
+    onImport: (data: Document<T>) => void;
+    validate?: (data: Document<T>) => boolean | string;
 }
 
-export const JsonImport: Component<Props> = (props) => {
+export const JsonImport = <T extends string>(props: Props<T>)  => {
     const [error, setError] = createSignal<string | null>(null);
     const [pasteValue, setPasteValue] = createSignal("");
 
@@ -45,7 +43,7 @@ export const JsonImport: Component<Props> = (props) => {
             const file = input.files[0];
 
             // Validate file type
-            if (!file?.type && !file?.name.endsWith(".json")) {
+            if (!file?.type || !file?.name.endsWith(".json")) {
                 throw new Error("Please upload a JSON file");
             }
 
@@ -68,55 +66,42 @@ export const JsonImport: Component<Props> = (props) => {
         validateAndImport(pasteValue());
     };
 
-    const autoResizeTextarea = (textarea: HTMLTextAreaElement) => {
-        textarea.style.height = "auto";
-        textarea.style.height = `${textarea.scrollHeight}px`;
-    };
-
     const handleInput = (event: Event) => {
         const textarea = event.target as HTMLTextAreaElement;
         setPasteValue(textarea.value);
-        autoResizeTextarea(textarea);
     };
 
     return (
         <div class="json_import">
             {/* File upload */}
-            <div class="flex flex-col gap-2">
-                <label class="font-medium">Import from file:</label>
+            <div class="flex">
+                <label >Import from file:</label>
                 <input
                     type="file"
                     accept=".json,application/json"
                     onChange={handleFileUpload}
-                    class="border p-2 rounded"
                 />
             </div>
 
             {/* JSON paste */}
-            <div class="flex flex-col gap-2">
-                <label class="font-medium">Or paste JSON:</label>
+            <div class="flex">
+                <label >Or paste JSON:</label>
                 <textarea
                     value={pasteValue()}
                     onInput={handleInput}
                     onPaste={handleInput}
-                    class="border p-2 rounded h-32 font-mono"
+                    
                     placeholder="Paste your JSON here..."
-                    ref={(el) => {
-                        autoResizeTextarea(el);
-                        onCleanup(() => el.removeEventListener("input", handleInput));
-                    }}
                 />
                 <button
                     onClick={handlePaste}
-                    class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                    disabled={!pasteValue().trim()}
                 >
                     Import Pasted JSON
                 </button>
             </div>
 
             {/* Error display */}
-            {error() && <div class="text-red-500 mt-2">{error()}</div>}
+            {error() && <div class="error">{error()}</div>}
         </div>
     );
 };

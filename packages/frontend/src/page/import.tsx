@@ -1,41 +1,37 @@
 import { useNavigate } from "@solidjs/router";
+import { JsonImport } from "../components";
+import { useApi, Document } from "../api";
+import { ModelDocument, createModel } from "../model";
+import { DiagramDocument, createDiagramFromDocument } from "../diagram";
+import invariant from "tiny-invariant";
 
-import type { AnalysisDocument } from "../analysis";
-import { useApi } from "../api";
-import { JsonImport } from "../components/json_import";
-import type { DiagramDocument } from "../diagram";
-import { type ModelDocument, createModel } from "../model";
-
-type ccDocument = ModelDocument | DiagramDocument | AnalysisDocument;
+type ImportableDocument = ModelDocument | DiagramDocument;
+function isImportableDocument(
+    doc: Document<string>
+): doc is ImportableDocument {
+    return doc.type === "model" || doc.type === "diagram";
+}
 
 export function Import(props: { onComplete?: () => void }) {
     const api = useApi();
     const navigate = useNavigate();
-    const handleImport = async (data: ccDocument) => {
-        console.log("Imported data:", data);
+    const handleImport = async (data: Document<string>) => {
+        invariant(
+            isImportableDocument(data),
+            "Analysis and other document types cannot be imported at this time."
+        );
 
         switch (data.type) {
             case "model": {
-                const newRef = await createModel(api, {
-                    ...data,
-                    name: `${data.name}`,
-                });
+                const newRef = await createModel(api, data as ModelDocument);
                 navigate(`/model/${newRef}`);
                 break;
             }
 
             case "diagram": {
-                //              const newRef = await createDiagram(api, {
-                //                  ...data,
-                //                  name: `${data.name}`,
-                //              });
-                //              navigate(`/diagram/${newRef}`);
-                console.log("Can't do diagrams with refs atm");
+                const newRef = await createDiagramFromDocument(api, data as DiagramDocument);
+                navigate(`/diagram/${newRef}`);
                 break;
-            }
-
-            case "analysis": {
-                throw new Error("Analyses don't currently support initialization.");
             }
 
             default:
@@ -47,21 +43,17 @@ export function Import(props: { onComplete?: () => void }) {
 
     // Placeholder, not doing more than typechecking does for now but
     // will eventually validate against json schema
-    const validateJson = (data: ccDocument) => {
-        // Return true if valid
-        if (data.name && data.notebook && data.type) {
+    const validateJson = (data: Document<string>) => {
+        invariant(
+            isImportableDocument(data),
+            "Analysis and other document types cannot be imported at this time."
+        );
             return true;
-        }
-        // Return error message if invalid
-        return 'JSON must include "name", "notebook", and "type" fields';
     };
 
     return (
         <div>
-            <JsonImport
-                onImport={handleImport}
-                validate={validateJson} // Optional
-            />
+            <JsonImport onImport={handleImport} validate={validateJson} />
         </div>
     );
 }

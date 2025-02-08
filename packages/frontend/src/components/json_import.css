@@ -1,12 +1,12 @@
 .json_import {
     min-width: 20em;
-    max-width: 80vw; /* Allow the container to expand up to 80% of the viewport width */
+    max-width: 80vw; 
     margin: 0 auto;
     padding: 1rem;
     border: 1px solid #ccc;
     border-radius: 8px;
     background-color: #f9f9f9;
-    width: auto; /* Allow the width to adjust based on content */
+    width: auto;
 }
 
 .json_import .flex {
@@ -33,7 +33,6 @@
     resize: vertical;
     min-height: 10rem;
     max-height: 80vh;
-    width: 100%; /* Allow the textarea to take the full width of the container */
 }
 
 .json_import button {
@@ -55,16 +54,3 @@
     margin-top: 1rem;
 }
 
-.separator {
-    display: flex;
-    align-items: center;
-    text-align: center;
-    margin: 1rem 0;
-}
-
-.separator::before,
-.separator::after {
-    content: "";
-    flex: 1;
-    border-bottom: 2px solid gray;
-}
