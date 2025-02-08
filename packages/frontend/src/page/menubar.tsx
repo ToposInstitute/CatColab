@@ -66,11 +66,12 @@ export function AppMenu(props: {
     return (
         <>
             <HamburgerMenu>
+                <ImportMenuItem showImport={() => setImportOpen(true)} />
                 {props.children}
                 <Show when={props.children}>
                     <MenuSeparator />
                 </Show>
-                <ImportMenuItem showImport={() => setImportOpen(true)} />
+
                 <HelpMenuItem />
 
                 <Show
