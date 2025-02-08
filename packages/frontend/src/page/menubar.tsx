@@ -70,6 +70,7 @@ export function AppMenu(props: {
                 <Show when={props.children}>
                     <MenuSeparator />
                 </Show>
+                <ImportMenuItem showImport={() => setImportOpen(true)} />
                 <HelpMenuItem />
 
                 <Show
@@ -79,7 +80,7 @@ export function AppMenu(props: {
                     <SettingsMenuItem />
                     <LogOutMenuItem />
                 </Show>
-                <ImportMenuItem showImport={() => setImportOpen(true)} />
+
             </HamburgerMenu>
             <Dialog open={loginOpen()} onOpenChange={setLoginOpen} title="Log in">
                 <Login onComplete={() => setLoginOpen(false)} />
