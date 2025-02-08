@@ -1,14 +1,12 @@
 import { useNavigate } from "@solidjs/router";
-import { JsonImport } from "../components";
-import { useApi, Document } from "../api";
-import { ModelDocument, createModel } from "../model";
-import { DiagramDocument, createDiagramFromDocument } from "../diagram";
 import invariant from "tiny-invariant";
+import { type Document, useApi } from "../api";
+import { JsonImport } from "../components";
+import { type DiagramDocument, createDiagramFromDocument } from "../diagram";
+import { type ModelDocument, createModel } from "../model";
 
 type ImportableDocument = ModelDocument | DiagramDocument;
-function isImportableDocument(
-    doc: Document<string>
-): doc is ImportableDocument {
+function isImportableDocument(doc: Document<string>): doc is ImportableDocument {
     return doc.type === "model" || doc.type === "diagram";
 }
 
@@ -18,7 +16,7 @@ export function Import(props: { onComplete?: () => void }) {
     const handleImport = async (data: Document<string>) => {
         invariant(
             isImportableDocument(data),
-            "Analysis and other document types cannot be imported at this time."
+            "Analysis and other document types cannot be imported at this time.",
         );
 
         switch (data.type) {
@@ -46,9 +44,9 @@ export function Import(props: { onComplete?: () => void }) {
     const validateJson = (data: Document<string>) => {
         invariant(
             isImportableDocument(data),
-            "Analysis and other document types cannot be imported at this time."
+            "Analysis and other document types cannot be imported at this time.",
         );
-            return true;
+        return true;
     };
 
     return (
