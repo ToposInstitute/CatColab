@@ -13,11 +13,11 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
-import { ErrorBoundaryDialog } from "../util/errors";
 import { TheoryHelpButton, Toolbar } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { InstanceTypeMeta } from "../theory";
 import { MaybePermissionsButton } from "../user";
+import { ErrorBoundaryDialog } from "../util/errors";
 import { LiveDiagramContext } from "./context";
 import { DiagramMenu } from "./diagram_menu";
 import { type LiveDiagramDocument, getLiveDiagram } from "./document";

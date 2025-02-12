@@ -11,8 +11,8 @@ import invariant from "tiny-invariant";
 import * as uuid from "uuid";
 
 import type { Permissions } from "catcolab-api";
-import type { Api, Document } from "./types";
 import { PermissionsError } from "../util/errors";
+import type { Api, Document } from "./types";
 
 /** An Automerge repo with no networking, used for read-only documents. */
 const localRepo = new Repo();

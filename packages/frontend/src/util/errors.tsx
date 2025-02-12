@@ -2,7 +2,7 @@ import Dialog, { Content, Portal } from "@corvu/dialog";
 
 import "./errors.css";
 
-export class PermissionsError extends Error {  
+export class PermissionsError extends Error {
     constructor(message: string) {
         super(message);
         this.name = "AuthorizationError";
@@ -24,9 +24,7 @@ export function ErrorBoundaryDialog(props: { error: Error }) {
     }
 
     return (
-        <Dialog
-            initialOpen={true}
-        >
+        <Dialog initialOpen={true}>
             <Portal>
                 <Content class="popup error-dialog">
                     <h3>{heading}</h3>
