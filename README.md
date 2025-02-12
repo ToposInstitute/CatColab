@@ -19,8 +19,12 @@ Elaborating on these keywords, CatColab aims to be:
 
 The production deployment, tracking the latest
 [release](https://github.com/ToposInstitute/CatColab/releases), is available at
-<https://catcolab.org>. For more about where the project is going, try this
-[blog post](https://topos.site/blog/2024-10-02-introducing-catcolab/).
+<https://catcolab.org>. For more about the project and where it's going, see the
+[help page](https://catcolab.org/help) and our blog posts about the releases so
+far:
+
+- [v0.1: Hummingbird](https://topos.site/blog/2024-10-02-introducing-catcolab/)
+- [v0.2: Wren](https://topos.institute/blog/2025-02-05-catcolab-0-2-wren/)
 
 > [!WARNING]
 > CatColab is under active development with new features added regularly. We aim
