@@ -16,6 +16,7 @@ import invariant from "tiny-invariant";
 import type { NewPermissions, PermissionLevel, Permissions, UserSummary } from "catcolab-api";
 import { useApi } from "../api";
 import { Dialog, FormGroup, IconButton, SelectItem, Warning } from "../components";
+import { EmbedButton } from "../model/model_editor";
 import { deepCopyJSON } from "../util/deepcopy";
 import { Login } from "./login";
 import { NameUser, UserInput } from "./username";
@@ -235,32 +236,34 @@ function AnonPermissionsButton() {
     };
 
     return (
-        <Dialog
-            open={open()}
-            onOpenChange={setOpen}
-            title="Permissions"
-            trigger={AnonPermissionsTrigger}
-        >
-            <p>
-                This document can be <strong>edited by anyone</strong> with the link.
-            </p>
-            <Switch>
-                <Match when={user.data}>
-                    <p>
-                        Create a new document to restrict permissions, <br /> or{" "}
-                        <a href="#" onClick={logOut}>
-                            log out
-                        </a>{" "}
-                        to create other anonymous documents.
-                    </p>
-                </Match>
-                <Match when={!user.loading}>
-                    <div class="separator" />
-                    <p>To create documents with restricted permissions, log in.</p>
-                    <Login onComplete={() => setOpen(false)} />
-                </Match>
-            </Switch>
-        </Dialog>
+        <>
+            <Dialog open={open()} onOpenChange={setOpen} title="" trigger={AnonPermissionsTrigger}>
+                <div class="embed-button">
+                    <h4>Permissions</h4>
+                    <EmbedButton />
+                </div>
+
+                <p>
+                    This document can be <strong>edited by anyone</strong> with the link.
+                </p>
+                <Switch>
+                    <Match when={user.data}>
+                        <p>
+                            Create a new document to restrict permissions, <br /> or{" "}
+                            <a href="#" onClick={logOut}>
+                                log out
+                            </a>{" "}
+                            to create other anonymous documents.
+                        </p>
+                    </Match>
+                    <Match when={!user.loading}>
+                        <div class="separator" />
+                        <p>To create documents with restricted permissions, log in.</p>
+                        <Login onComplete={() => setOpen(false)} />
+                    </Match>
+                </Switch>
+            </Dialog>
+        </>
     );
 }
 

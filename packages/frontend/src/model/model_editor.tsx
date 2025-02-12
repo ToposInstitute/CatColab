@@ -189,3 +189,64 @@ function judgmentLabel(judgment: ModelJudgment): string | undefined {
         return theory.modelMorTypeMeta(judgment.morType)?.name;
     }
 }
+<<<<<<< HEAD
+=======
+
+export function EmbedButton() {
+    const [isOpen, setIsOpen] = createSignal(false);
+
+    return (
+        <>
+            <IconButton
+                onClick={() => setIsOpen(true)}
+                tooltip="Embed Notebook"
+                class="embed-button"
+            >
+                <CodeXml />
+                <p>Embed</p>
+            </IconButton>
+            <EmbedDialog isOpen={isOpen()} onClose={() => setIsOpen(false)} />
+        </>
+    );
+}
+
+function EmbedDialog(props: { isOpen: boolean; onClose: () => void }) {
+    const [copyStatus, setCopyStatus] = createSignal<"Copied!" | "Please try again later." | "">(
+        "",
+    );
+    const embedLink = createMemo(() => {
+        const pageURL = window.location.href;
+        return `<iframe src="${pageURL}" width="100%" height="500" frameborder="0"></iframe>`;
+    });
+
+    const copyToClipboard = async () => {
+        try {
+            await navigator.clipboard.writeText(embedLink());
+            setCopyStatus("Copied!");
+        } catch (err) {
+            setCopyStatus("Please try again later.");
+        }
+    };
+
+    return (
+        <Dialog open={props.isOpen} onOpenChange={props.onClose}>
+            <Dialog.Portal>
+                <Dialog.Overlay class="overlay" />
+                <Dialog.Content class="popup">
+                    <Dialog.Label>Embed Notebook</Dialog.Label>
+                    <Dialog.Description>Copy iframe Code Below:</Dialog.Description>
+                    <div class="embed-code-container">
+                        <code class="embed-code">{embedLink()}</code>
+                        <div class="copy-status">
+                            <button onClick={copyToClipboard} class="link-button">
+                                Copy
+                            </button>
+                            <span>{copyStatus()}</span>
+                        </div>
+                    </div>
+                </Dialog.Content>
+            </Dialog.Portal>
+        </Dialog>
+    );
+}
+>>>>>>> 5603a07 (embed button in permissions dialog)
