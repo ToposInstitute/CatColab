@@ -1,6 +1,6 @@
 import { MultiProvider } from "@solid-primitives/context";
 import { A, useParams } from "@solidjs/router";
-import { Match, Show, Switch, createResource, useContext } from "solid-js";
+import { ErrorBoundary, Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { useApi } from "../api";
@@ -30,6 +30,7 @@ import {
     newDiagramMorphismDecl,
     newDiagramObjectDecl,
 } from "./types";
+import { ErrorBoundaryDialog } from "../util/errors";
 
 import "./diagram_editor.css";
 
@@ -53,6 +54,7 @@ export function DiagramDocumentEditor(props: {
 }) {
     return (
         <div class="growable-container">
+            <ErrorBoundary fallback={(err) => <ErrorBoundaryDialog error={err} />}>
             <Toolbar>
                 <DiagramMenu liveDiagram={props.liveDiagram} />
                 <span class="filler" />
@@ -65,6 +67,7 @@ export function DiagramDocumentEditor(props: {
             <Show when={props.liveDiagram}>
                 {(liveDiagram) => <DiagramPane liveDiagram={liveDiagram()} />}
             </Show>
+            </ErrorBoundary>
         </div>
     );
 }

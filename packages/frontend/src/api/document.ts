@@ -12,6 +12,7 @@ import * as uuid from "uuid";
 
 import type { Permissions } from "catcolab-api";
 import type { Api, Document } from "./types";
+import { PermissionsError } from "../util/errors";
 
 /** An Automerge repo with no networking, used for read-only documents. */
 const localRepo = new Repo();
@@ -57,7 +58,11 @@ export async function getLiveDoc<Doc extends Document<string>>(
 
     const result = await rpc.get_doc.query(refId);
     if (result.tag !== "Ok") {
-        throw new Error(`Failed to retrieve document: ${result.message}`);
+        if (result.code === 403) {
+            throw new PermissionsError(result.message);
+        } else {
+            throw new Error(`Failed to retrieve document: ${result.message}`);
+        }
     }
     const refDoc = result.content;
 

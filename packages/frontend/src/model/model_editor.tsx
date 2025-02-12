@@ -1,5 +1,5 @@
 import { useParams } from "@solidjs/router";
-import { Match, Show, Switch, createResource, useContext } from "solid-js";
+import { ErrorBoundary, Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { useApi } from "../api";
@@ -29,6 +29,7 @@ import {
     newMorphismDecl,
     newObjectDecl,
 } from "./types";
+import { ErrorBoundaryDialog } from "../util/errors";
 
 import "./model_editor.css";
 
@@ -52,18 +53,20 @@ export function ModelDocumentEditor(props: {
 }) {
     return (
         <div class="growable-container">
-            <Toolbar>
-                <ModelMenu liveModel={props.liveModel} />
-                <span class="filler" />
-                <TheoryHelpButton theory={props.liveModel?.theory()} />
-                <MaybePermissionsButton
-                    permissions={props.liveModel?.liveDoc.permissions}
-                    refId={props.liveModel?.refId}
-                />
-            </Toolbar>
-            <Show when={props.liveModel}>
-                {(liveModel) => <ModelPane liveModel={liveModel()} />}
-            </Show>
+            <ErrorBoundary fallback={(err) => <ErrorBoundaryDialog error={err} />}>
+                <Toolbar>
+                    <ModelMenu liveModel={props.liveModel} />
+                    <span class="filler" />
+                    <TheoryHelpButton theory={props.liveModel?.theory()} />
+                    <MaybePermissionsButton
+                        permissions={props.liveModel?.liveDoc.permissions}
+                        refId={props.liveModel?.refId}
+                    />
+                </Toolbar>
+                <Show when={props.liveModel}>
+                    {(liveModel) => <ModelPane liveModel={liveModel()} />}
+                </Show>
+            </ErrorBoundary>
         </div>
     );
 }
