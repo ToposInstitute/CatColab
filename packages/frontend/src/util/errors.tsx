@@ -26,9 +26,6 @@ export function ErrorBoundaryDialog(props: { error: Error }) {
     return (
         <Dialog
             initialOpen={true}
-            closeOnEscapeKeyDown={false}
-            closeOnOutsideFocus={false}
-            closeOnOutsidePointer={false}
         >
             <Portal>
                 <Content class="popup error-dialog">
