@@ -21,6 +21,7 @@ import { ModelMenu } from "./model_menu";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
 import { TheorySelectorDialog } from "./theory_selector";
+import { ErrorBoundaryDialog } from "../util/errors";
 import {
     type ModelJudgment,
     type MorphismDecl,
@@ -29,7 +30,6 @@ import {
     newMorphismDecl,
     newObjectDecl,
 } from "./types";
-import { ErrorBoundaryDialog } from "../util/errors";
 
 import "./model_editor.css";
 

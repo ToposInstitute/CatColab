@@ -13,6 +13,7 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
+import { ErrorBoundaryDialog } from "../util/errors";
 import { TheoryHelpButton, Toolbar } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { InstanceTypeMeta } from "../theory";
@@ -30,7 +31,6 @@ import {
     newDiagramMorphismDecl,
     newDiagramObjectDecl,
 } from "./types";
-import { ErrorBoundaryDialog } from "../util/errors";
 
 import "./diagram_editor.css";
 
@@ -55,18 +55,18 @@ export function DiagramDocumentEditor(props: {
     return (
         <div class="growable-container">
             <ErrorBoundary fallback={(err) => <ErrorBoundaryDialog error={err} />}>
-            <Toolbar>
-                <DiagramMenu liveDiagram={props.liveDiagram} />
-                <span class="filler" />
-                <TheoryHelpButton theory={props.liveDiagram?.liveModel.theory()} />
-                <MaybePermissionsButton
-                    permissions={props.liveDiagram?.liveDoc.permissions}
-                    refId={props.liveDiagram?.refId}
-                />
-            </Toolbar>
-            <Show when={props.liveDiagram}>
-                {(liveDiagram) => <DiagramPane liveDiagram={liveDiagram()} />}
-            </Show>
+                <Toolbar>
+                    <DiagramMenu liveDiagram={props.liveDiagram} />
+                    <span class="filler" />
+                    <TheoryHelpButton theory={props.liveDiagram?.liveModel.theory()} />
+                    <MaybePermissionsButton
+                        permissions={props.liveDiagram?.liveDoc.permissions}
+                        refId={props.liveDiagram?.refId}
+                    />
+                </Toolbar>
+                <Show when={props.liveDiagram}>
+                    {(liveDiagram) => <DiagramPane liveDiagram={liveDiagram()} />}
+                </Show>
             </ErrorBoundary>
         </div>
     );
