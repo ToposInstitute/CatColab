@@ -1,4 +1,6 @@
 .toolbar {
+    position: sticky;
+    top: 0;
     display: flex;
     flex-direction: row;
     gap: 5px;
