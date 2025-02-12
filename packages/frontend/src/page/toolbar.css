@@ -15,6 +15,12 @@
     }
 }
 
+@media (max-width: 1100px) {
+    .toolbar {
+        position: static;
+    }
+}
+
 .brand {
     display: flex;
     flex-direction: row;
