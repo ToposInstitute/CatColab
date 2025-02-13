@@ -27,7 +27,7 @@ export const helpRoutes: RouteDefinition[] = [
         component: lazy(() => import("./theory")),
     },
     {
-        path: "/demo",
-        component: lazyMdx(() => import("./demo.mdx")),
+        path: "/quick-intro",
+        component: lazyMdx(() => import("./quick_intro.mdx")),
     },
 ];
