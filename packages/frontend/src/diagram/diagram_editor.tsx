@@ -1,6 +1,6 @@
 import { MultiProvider } from "@solid-primitives/context";
 import { A, useParams } from "@solidjs/router";
-import { ErrorBoundary, Match, Show, Switch, createResource, useContext } from "solid-js";
+import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { useApi } from "../api";

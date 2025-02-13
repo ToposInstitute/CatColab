@@ -1,5 +1,5 @@
 import { useParams } from "@solidjs/router";
-import { ErrorBoundary, Match, Show, Switch, createResource, useContext } from "solid-js";
+import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { useApi } from "../api";
@@ -15,7 +15,6 @@ import { TheoryHelpButton, Toolbar } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
 import { MaybePermissionsButton } from "../user";
-import { ErrorBoundaryDialog } from "../util/errors";
 import { LiveModelContext } from "./context";
 import { type LiveModelDocument, getLiveModel } from "./document";
 import { ModelMenu } from "./model_menu";
