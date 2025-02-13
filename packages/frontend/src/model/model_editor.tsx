@@ -1,5 +1,5 @@
 import { useParams } from "@solidjs/router";
-import { Match, Show, Switch, createResource, useContext } from "solid-js";
+import { ErrorBoundary, Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { useApi } from "../api";
@@ -15,6 +15,7 @@ import { TheoryHelpButton, Toolbar } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
 import { MaybePermissionsButton } from "../user";
+import { ErrorBoundaryDialog } from "../util/errors";
 import { LiveModelContext } from "./context";
 import { type LiveModelDocument, getLiveModel } from "./document";
 import { ModelMenu } from "./model_menu";
@@ -52,18 +53,20 @@ export function ModelDocumentEditor(props: {
 }) {
     return (
         <div class="growable-container">
-            <Toolbar>
-                <ModelMenu liveModel={props.liveModel} />
-                <span class="filler" />
-                <TheoryHelpButton theory={props.liveModel?.theory()} />
-                <MaybePermissionsButton
-                    permissions={props.liveModel?.liveDoc.permissions}
-                    refId={props.liveModel?.refId}
-                />
-            </Toolbar>
-            <Show when={props.liveModel}>
-                {(liveModel) => <ModelPane liveModel={liveModel()} />}
-            </Show>
+            <ErrorBoundary fallback={(err) => <ErrorBoundaryDialog error={err} />}>
+                <Toolbar>
+                    <ModelMenu liveModel={props.liveModel} />
+                    <span class="filler" />
+                    <TheoryHelpButton theory={props.liveModel?.theory()} />
+                    <MaybePermissionsButton
+                        permissions={props.liveModel?.liveDoc.permissions}
+                        refId={props.liveModel?.refId}
+                    />
+                </Toolbar>
+                <Show when={props.liveModel}>
+                    {(liveModel) => <ModelPane liveModel={liveModel()} />}
+                </Show>
+            </ErrorBoundary>
         </div>
     );
 }

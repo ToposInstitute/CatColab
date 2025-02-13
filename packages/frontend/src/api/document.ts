@@ -11,6 +11,7 @@ import invariant from "tiny-invariant";
 import * as uuid from "uuid";
 
 import type { Permissions } from "catcolab-api";
+import { PermissionsError } from "../util/errors";
 import type { Api, Document } from "./types";
 
 /** An Automerge repo with no networking, used for read-only documents. */
@@ -57,7 +58,11 @@ export async function getLiveDoc<Doc extends Document<string>>(
 
     const result = await rpc.get_doc.query(refId);
     if (result.tag !== "Ok") {
-        throw new Error(`Failed to retrieve document: ${result.message}`);
+        if (result.code === 403) {
+            throw new PermissionsError(result.message);
+        } else {
+            throw new Error(`Failed to retrieve document: ${result.message}`);
+        }
     }
     const refDoc = result.content;
 

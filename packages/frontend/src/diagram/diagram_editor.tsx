@@ -1,6 +1,6 @@
 import { MultiProvider } from "@solid-primitives/context";
 import { A, useParams } from "@solidjs/router";
-import { Match, Show, Switch, createResource, useContext } from "solid-js";
+import { ErrorBoundary, Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { useApi } from "../api";
@@ -17,6 +17,7 @@ import { TheoryHelpButton, Toolbar } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { InstanceTypeMeta } from "../theory";
 import { MaybePermissionsButton } from "../user";
+import { ErrorBoundaryDialog } from "../util/errors";
 import { LiveDiagramContext } from "./context";
 import { DiagramMenu } from "./diagram_menu";
 import { type LiveDiagramDocument, getLiveDiagram } from "./document";
@@ -53,18 +54,20 @@ export function DiagramDocumentEditor(props: {
 }) {
     return (
         <div class="growable-container">
-            <Toolbar>
-                <DiagramMenu liveDiagram={props.liveDiagram} />
-                <span class="filler" />
-                <TheoryHelpButton theory={props.liveDiagram?.liveModel.theory()} />
-                <MaybePermissionsButton
-                    permissions={props.liveDiagram?.liveDoc.permissions}
-                    refId={props.liveDiagram?.refId}
-                />
-            </Toolbar>
-            <Show when={props.liveDiagram}>
-                {(liveDiagram) => <DiagramPane liveDiagram={liveDiagram()} />}
-            </Show>
+            <ErrorBoundary fallback={(err) => <ErrorBoundaryDialog error={err} />}>
+                <Toolbar>
+                    <DiagramMenu liveDiagram={props.liveDiagram} />
+                    <span class="filler" />
+                    <TheoryHelpButton theory={props.liveDiagram?.liveModel.theory()} />
+                    <MaybePermissionsButton
+                        permissions={props.liveDiagram?.liveDoc.permissions}
+                        refId={props.liveDiagram?.refId}
+                    />
+                </Toolbar>
+                <Show when={props.liveDiagram}>
+                    {(liveDiagram) => <DiagramPane liveDiagram={liveDiagram()} />}
+                </Show>
+            </ErrorBoundary>
         </div>
     );
 }
