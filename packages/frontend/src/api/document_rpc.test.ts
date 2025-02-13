@@ -5,9 +5,8 @@ import { deleteUser, getAuth, signOut } from "firebase/auth";
 import * as uuid from "uuid";
 import { assert, afterAll, describe, test } from "vitest";
 
-import { initTestUserAuth } from "../util/test_util.ts";
+import { initTestUserAuth, unwrap, unwrapErr } from "../util/test_util.ts";
 import { createRpcClient } from "./rpc.ts";
-import { unwrap, unwrapErr } from "./test_util.ts";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
 const repoUrl = import.meta.env.VITE_AUTOMERGE_REPO_URL;
