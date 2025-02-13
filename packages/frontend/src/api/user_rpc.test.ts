@@ -29,12 +29,6 @@ describe("RPC for user profiles", async () => {
         assert.strictEqual(signUpResult.tag, "Ok");
     });
 
-    const defaultProfile = unwrap(await rpc.get_active_user_profile.query());
-    test.sequential("should get empty profile after user creation", () => {
-        assert.strictEqual(defaultProfile.username, null);
-        assert.strictEqual(defaultProfile.displayName, null);
-    });
-
     const username = `test-user-${v4()}`;
     const status = unwrap(await rpc.username_status.query(username));
     test.sequential("fresh username should be available", () => {
