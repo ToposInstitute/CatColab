@@ -26,4 +26,8 @@ export const helpRoutes: RouteDefinition[] = [
         matchFilters: theoryWithIdFilter,
         component: lazy(() => import("./theory")),
     },
+    {
+        path: "/demo",
+        component: lazyMdx(() => import("./demo.mdx")),
+    },
 ];
