@@ -53,20 +53,18 @@ export function ModelDocumentEditor(props: {
 }) {
     return (
         <div class="growable-container">
-            <ErrorBoundary fallback={(err) => <ErrorBoundaryDialog error={err} />}>
-                <Toolbar>
-                    <ModelMenu liveModel={props.liveModel} />
-                    <span class="filler" />
-                    <TheoryHelpButton theory={props.liveModel?.theory()} />
-                    <MaybePermissionsButton
-                        permissions={props.liveModel?.liveDoc.permissions}
-                        refId={props.liveModel?.refId}
-                    />
-                </Toolbar>
-                <Show when={props.liveModel}>
-                    {(liveModel) => <ModelPane liveModel={liveModel()} />}
-                </Show>
-            </ErrorBoundary>
+            <Toolbar>
+                <ModelMenu liveModel={props.liveModel} />
+                <span class="filler" />
+                <TheoryHelpButton theory={props.liveModel?.theory()} />
+                <MaybePermissionsButton
+                    permissions={props.liveModel?.liveDoc.permissions}
+                    refId={props.liveModel?.refId}
+                />
+            </Toolbar>
+            <Show when={props.liveModel}>
+                {(liveModel) => <ModelPane liveModel={liveModel()} />}
+            </Show>
         </div>
     );
 }
