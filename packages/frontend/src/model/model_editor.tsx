@@ -17,7 +17,6 @@ import type { ModelTypeMeta } from "../theory";
 import { MaybePermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
 import { type LiveModelDocument, getLiveModel } from "./document";
-import { ModelMenu } from "./model_menu";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
 import { TheorySelectorDialog } from "./theory_selector";
@@ -31,6 +30,7 @@ import {
 } from "./types";
 
 import "./model_editor.css";
+import { LiveDocumentMenu } from "../components/live_document_menu";
 
 export default function ModelPage() {
     const api = useApi();
@@ -53,7 +53,7 @@ export function ModelDocumentEditor(props: {
     return (
         <div class="growable-container">
             <Toolbar>
-                <ModelMenu liveModel={props.liveModel} />
+                <LiveDocumentMenu liveDocument={props.liveModel} />
                 <span class="filler" />
                 <TheoryHelpButton theory={props.liveModel?.theory()} />
                 <MaybePermissionsButton

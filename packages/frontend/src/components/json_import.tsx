@@ -7,7 +7,7 @@ interface JsonImportProps<T extends string> {
     validate?: (data: Document<T>) => boolean | string;
 }
 
-export const JsonImport = <T extends string>({ onImport, validate}: JsonImportProps<T>) => {
+export const JsonImport = <T extends string>({ onImport, validate }: JsonImportProps<T>) => {
     const [error, setError] = createSignal<string | null>(null);
     const [importValue, setImportValue] = createSignal("");
 
@@ -40,7 +40,7 @@ export const JsonImport = <T extends string>({ onImport, validate}: JsonImportPr
     // Handle file upload
     const handleFileUpload = async (event: Event) => {
         const input = event.target as HTMLInputElement;
-        
+
         const file = input.files?.[0];
         if (!file) return;
 
