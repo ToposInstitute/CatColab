@@ -9,7 +9,7 @@ interface JsonImportProps<T extends string> {
 
 export const JsonImport = <T extends string>(props: JsonImportProps<T>) => {
     const [error, setError] = createSignal<string | null>(null);
-    const [pasteValue, setPasteValue] = createSignal("");
+    const [importValue, setImportValue] = createSignal("");
 
     const handleError = (e: unknown) => {
         setError(e instanceof Error ? e.message : "Unknown error occurred");
@@ -17,7 +17,6 @@ export const JsonImport = <T extends string>(props: JsonImportProps<T>) => {
 
     const validateAndImport = (jsonString: string) => {
         try {
-            // Parse JSON
             const data = JSON.parse(jsonString);
 
             // Run custom validation if provided
@@ -32,7 +31,7 @@ export const JsonImport = <T extends string>(props: JsonImportProps<T>) => {
             // Clear any previous errors and import
             setError(null);
             props.onImport(data);
-            setPasteValue(""); // Clear paste area after successful import
+            setImportValue(""); // Clear paste area after successful import
         } catch (e) {
             handleError(e);
         }
@@ -41,43 +40,41 @@ export const JsonImport = <T extends string>(props: JsonImportProps<T>) => {
     // Handle file upload
     const handleFileUpload = async (event: Event) => {
         const input = event.target as HTMLInputElement;
-        if (!input.files?.length) return;
 
-        try {
-            const file = input.files[0];
+        const file = input.files?.[0];
+        if (!file) return;
 
-            // Validate file type
-            if (!(file?.type === "application/json") && !file?.name.endsWith(".json")) {
-                throw new Error("Please upload a JSON file");
-            }
-
-            const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-            if (file.size > MAX_FILE_SIZE) {
-                throw new Error("File size exceeds 5MB limit");
-            }
-
-            const text = await file?.text();
-            validateAndImport(text);
-
-            // Reset file input
-            input.value = "";
-        } catch (e) {
-            handleError(e);
+        // Validate file type
+        if (file.type !== "application/json" && !file.name.endsWith(".json")) {
+            setError("Please upload a JSON file");
+            return;
         }
+
+        const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+        if (file.size > MAX_FILE_SIZE) {
+            setError("File size exceeds 5MB limit");
+            return;
+        }
+
+        const text = await file.text();
+        validateAndImport(text);
+
+        // Reset file input
+        input.value = "";
     };
 
     // Handle paste
-    const handlePaste = () => {
-        if (!pasteValue().trim()) {
+    const handleTextareaSubmit = () => {
+        if (!importValue().trim()) {
             setError("Please enter some JSON");
             return;
         }
-        validateAndImport(pasteValue());
+        validateAndImport(importValue());
     };
 
     const handleInput = (event: Event) => {
         const textarea = event.target as HTMLTextAreaElement;
-        setPasteValue(textarea.value);
+        setImportValue(textarea.value);
     };
 
     return (
@@ -92,12 +89,12 @@ export const JsonImport = <T extends string>(props: JsonImportProps<T>) => {
             <div class="flex">
                 <label>Or paste JSON:</label>
                 <textarea
-                    value={pasteValue()}
+                    value={importValue()}
                     onInput={handleInput}
                     onPaste={handleInput}
                     placeholder="Paste your JSON here..."
                 />
-                <button onClick={handlePaste} aria-label="Import JSON">
+                <button onClick={handleTextareaSubmit} aria-label="Import JSON">
                     Import Pasted JSON
                 </button>
             </div>
