@@ -24,6 +24,7 @@ import ArrowDown from "lucide-solid/icons/arrow-down";
 import ArrowUp from "lucide-solid/icons/arrow-up";
 import Copy from "lucide-solid/icons/copy";
 import GripVertical from "lucide-solid/icons/grip-vertical";
+import Link from "lucide-solid/icons/link";
 import Plus from "lucide-solid/icons/plus";
 import Trash2 from "lucide-solid/icons/trash-2";
 
@@ -64,6 +65,9 @@ export type CellActions = {
 
     // The cell has received focus.
     hasFocused: () => void;
+
+    // add link
+    addLink?: (url?: string) => void;
 };
 
 const cellDragDataKey = Symbol("notebook-cell");
@@ -131,6 +135,10 @@ export function NotebookCell(props: {
             name: "Move Down",
             icon: <ArrowDown size={16} />,
             onComplete: props.actions.moveDown,
+        },
+        {
+            name: "Add Link",
+            icon: <Link size={16} />,
         },
     ];
 
@@ -225,13 +233,14 @@ export function RichTextCellEditor(props: {
             ref={(view) => setEditorView(view)}
             id={props.cellId}
             handle={props.handle}
-            path={[...props.path, "content"]}
+            path={props.path}
             placeholder="…"
             deleteBackward={props.actions.deleteBackward}
             deleteForward={props.actions.deleteForward}
             exitUp={props.actions.activateAbove}
             exitDown={props.actions.activateBelow}
             onFocus={props.actions.hasFocused}
+            addLink={props.actions.addLink}
         />
     );
 }
