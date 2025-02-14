@@ -8,12 +8,13 @@ import * as uuid from "uuid";
 import { MultiProvider } from "@solid-primitives/context";
 import { Navigate, type RouteDefinition, type RouteSectionProps, Router } from "@solidjs/router";
 import { FirebaseProvider } from "solid-firebase";
-import { Show, createResource, lazy } from "solid-js";
+import { ErrorBoundary, Show, createResource, lazy } from "solid-js";
 
 import { type Api, ApiContext, createRpcClient, useApi } from "./api";
 import { helpRoutes } from "./help/routes";
 import { createModel } from "./model/document";
 import { TheoryLibraryContext, stdTheories } from "./stdlib";
+import { ErrorBoundaryDialog } from "./util/errors";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
 const repoUrl = import.meta.env.VITE_AUTOMERGE_REPO_URL;
@@ -103,7 +104,11 @@ const routes: RouteDefinition[] = [
 ];
 
 function App() {
-    return <Router root={Root}>{routes}</Router>;
+    return (
+        <ErrorBoundary fallback={(err) => <ErrorBoundaryDialog error={err} />}>
+            <Router root={Root}>{routes}</Router>
+        </ErrorBoundary>
+    );
 }
 
 export default App;
