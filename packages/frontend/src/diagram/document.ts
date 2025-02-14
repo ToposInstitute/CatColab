@@ -40,6 +40,9 @@ export const newDiagramDocument = (modelRef: StableRef): DiagramDocument => ({
 /** A diagram document "live" for editing.
  */
 export type LiveDiagramDocument = {
+    /** discriminator for use in union types */
+    type: "diagram";
+
     /** The ref for which this is a live document. */
     refId: string;
 
@@ -122,7 +125,15 @@ function enlivenDiagramDocument(
         { equals: false },
     );
 
-    return { refId, liveDoc, liveModel, formalJudgments, objectIndex, validatedDiagram };
+    return {
+        type: "diagram",
+        refId,
+        liveDoc,
+        liveModel,
+        formalJudgments,
+        objectIndex,
+        validatedDiagram,
+    };
 }
 
 /** Create a new, empty diagram in the backend. */

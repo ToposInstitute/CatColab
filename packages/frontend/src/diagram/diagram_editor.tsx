@@ -18,7 +18,6 @@ import { TheoryLibraryContext } from "../stdlib";
 import type { InstanceTypeMeta } from "../theory";
 import { MaybePermissionsButton } from "../user";
 import { LiveDiagramContext } from "./context";
-import { DiagramMenu } from "./diagram_menu";
 import { type LiveDiagramDocument, getLiveDiagram } from "./document";
 import { DiagramMorphismCellEditor } from "./morphism_cell_editor";
 import { DiagramObjectCellEditor } from "./object_cell_editor";
@@ -32,6 +31,7 @@ import {
 } from "./types";
 
 import "./diagram_editor.css";
+import { LiveDocumentMenu } from "../components/live_document_menu";
 
 export default function DiagramPage() {
     const api = useApi();
@@ -54,7 +54,7 @@ export function DiagramDocumentEditor(props: {
     return (
         <div class="growable-container">
             <Toolbar>
-                <DiagramMenu liveDiagram={props.liveDiagram} />
+                <LiveDocumentMenu liveDocument={props.liveDiagram} />
                 <span class="filler" />
                 <TheoryHelpButton theory={props.liveDiagram?.liveModel.theory()} />
                 <MaybePermissionsButton

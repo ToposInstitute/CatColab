@@ -7,7 +7,7 @@ interface JsonImportProps<T extends string> {
     validate?: (data: Document<T>) => boolean | string;
 }
 
-export const JsonImport = <T extends string>(props: JsonImportProps<T>) => {
+export const JsonImport = <T extends string>({ onImport, validate }: JsonImportProps<T>) => {
     const [error, setError] = createSignal<string | null>(null);
     const [importValue, setImportValue] = createSignal("");
 
@@ -20,8 +20,8 @@ export const JsonImport = <T extends string>(props: JsonImportProps<T>) => {
             const data = JSON.parse(jsonString);
 
             // Run custom validation if provided
-            if (props.validate) {
-                const validationResult = props.validate(data);
+            if (validate) {
+                const validationResult = validate(data);
                 if (typeof validationResult === "string") {
                     setError(validationResult);
                     return;
@@ -30,7 +30,7 @@ export const JsonImport = <T extends string>(props: JsonImportProps<T>) => {
 
             // Clear any previous errors and import
             setError(null);
-            props.onImport(data);
+            onImport(data);
             setImportValue(""); // Clear paste area after successful import
         } catch (e) {
             handleError(e);
