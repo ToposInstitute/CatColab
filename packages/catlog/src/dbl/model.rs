@@ -238,6 +238,21 @@ where
         self.category.generators()
     }
 
+    /// Migrate model along an inclusion (pushforward)
+    pub fn trivial_migrate(
+        &self,
+        supertheory: Arc<DiscreteDblTheory<Cat>>,
+    ) -> DiscreteDblModel<Id, Cat> {
+        DiscreteDblModel {
+            theory: supertheory,
+            category: self.category.clone(),
+            ob_types: self.ob_types.clone(),
+            mor_types: self.mor_types.clone(),
+        }
+
+        // self.category, self.ob_types, self.mor_types
+    }
+
     /// Is the model freely generated?
     pub fn is_free(&self) -> bool {
         self.category.is_free()
@@ -969,5 +984,15 @@ mod tests {
         model.add_ob(x, TabObType::Basic(ustr("Object")));
         model.add_mor(f, TabOb::Basic(x), TabOb::Basic(x), TabMorType::Basic(ustr("Link")));
         assert_eq!(model.validate(), Err(nonempty![InvalidDblModel::CodType(f)]));
+    }
+
+    #[test]
+    fn trivially_migrate_dbl_model() {
+        let th = Arc::new(th_signed_category());
+        let th2 = Arc::new(th_nullable_signed_category());
+        let loop1 = positive_loop(th.clone());
+        let loop2 = positive_loop(th2.clone());
+        assert_ne!(loop1, loop2);
+        assert_eq!(loop1.trivial_migrate(th2), loop2);
     }
 }

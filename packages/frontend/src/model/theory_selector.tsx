@@ -9,11 +9,13 @@ type TheorySelectorProps = {
     theory: TheoryMeta;
     setTheory: (theoryId: string) => void;
     theories: TheoryLibrary;
+    filtered: Array<string>;
 };
 
 export function TheorySelectorDialog(
     props: {
         disabled?: boolean;
+        filtered: Array<string>;
     } & TheorySelectorProps,
 ) {
     const [theorySelectorOpen, setTheorySelectorOpen] = createSignal(false);
@@ -37,6 +39,7 @@ export function TheorySelectorDialog(
                             setTheorySelectorOpen(false);
                         }}
                         theories={props.theories}
+                        filtered={props.filtered}
                     />
                 </Dialog.Content>
             </Dialog.Portal>
@@ -55,7 +58,9 @@ export function TheorySelector(props: TheorySelectorProps) {
                 {([group, theories]) => (
                     <div class="group">
                         <div class="group-name">{group}</div>
-                        <For each={theories}>
+                        <For
+                            each={theories.filter((t: TheoryMeta) => props.filtered.includes(t.id))}
+                        >
                             {(meta) => (
                                 <div class="theory">
                                     <input

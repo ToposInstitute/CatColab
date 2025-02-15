@@ -43,6 +43,9 @@ export class Theory {
      */
     readonly instanceOfName: string;
 
+    /** Privileged migrations along inclusions which need no explicit functor **/
+    readonly inclusions: Array<string>;
+
     private readonly modelTypeMeta: TypeMetadata<ModelObTypeMeta, ModelMorTypeMeta>;
     private readonly instanceTypeMeta: TypeMetadata<InstanceObTypeMeta, InstanceMorTypeMeta>;
 
@@ -62,6 +65,7 @@ export class Theory {
         modelAnalyses?: ModelAnalysisMeta[];
         onlyFreeModels?: boolean;
         instanceOfName?: string;
+        inclusions?: string[];
         instanceTypes?: InstanceTypeMeta[];
         diagramAnalyses?: DiagramAnalysisMeta[];
     }) {
@@ -76,6 +80,7 @@ export class Theory {
         this.modelTypeMeta = new TypeMetadata<ModelObTypeMeta, ModelMorTypeMeta>(props.modelTypes);
         this.modelAnalysisMap = uniqueIndexArray(props.modelAnalyses ?? [], (meta) => meta.id);
         this.onlyFreeModels = props.onlyFreeModels ?? false;
+        this.inclusions = props.inclusions ?? [];
 
         // Instances.
         this.instanceOfName = props.instanceOfName ?? "Instance of";
