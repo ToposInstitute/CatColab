@@ -150,7 +150,10 @@ pub async fn get_ref_stubs(
     ctx: AppCtx,
     search_params: RefQueryParams,
 ) -> Result<Vec<RefStub>, AppError> {
-    let searcher_id = ctx.user.as_ref().map(|user| user.user_id.clone());
+    // TODO: if searcher_id is None, restrict search to only publish documents
+    let searcher_id = ctx.user.as_ref()
+        .map(|user| user.user_id.clone())
+        .ok_or(AppError::Unauthorized)?;
 
     // selects the ref id and ref name (from the most recent snapshot of that ref) for all refs that a user (the searcher) has permission to access. Optionally filter the results by the owner of the refs.
     let results = sqlx::query!(
@@ -211,7 +214,10 @@ pub async fn get_ref_stubs_related_to_user(
     ctx: AppCtx,
     search_params: RefQueryParams,
 ) -> Result<Vec<RefStub>, AppError> {
-    let searcher_id = ctx.user.as_ref().map(|user| user.user_id.clone());
+    // TODO: if searcher_id is None, restrict search to only publish documents
+    let searcher_id = ctx.user.as_ref()
+        .map(|user| user.user_id.clone())
+        .ok_or(AppError::Unauthorized)?;
 
     // for all refs that a user has permissions for, get those that the
     // searcher also has access to and filter those by search params. If no 
