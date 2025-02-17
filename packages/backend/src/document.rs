@@ -248,7 +248,7 @@ pub async fn get_ref_stubs_related_to_user(
             owner.username = COALESCE($2, (SELECT username FROM users WHERE id = $1))  -- Use searcher if owner_username is NULL
         )
         AND p_owner.level IN ('read', 'write', 'maintain', 'own')  -- Owner must have at least one permission
-        AND p_searcher.level IN ('read', 'write', 'maintain')  -- Searcher must have permissions
+        AND p_searcher.level IN ('read', 'write', 'maintain', 'own')  -- Searcher must have permissions
         AND (
             ls.name ILIKE '%' || $3 || '%'  -- Case-insensitive substring search
             OR $3 IS NULL  -- Include all if name filter is NULL
