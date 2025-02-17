@@ -127,16 +127,6 @@ pub struct UserProfile {
     // pub url: Option<String>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, TS)]
-pub struct UserProfile2 {
-    pub username: Option<String>,
-    #[serde(rename = "displayName")]
-    pub display_name: Option<String>,
-    // TODO: More fields, such as:
-    // pub bio: Option<String>,
-    // pub url: Option<String>,
-}
-
 impl UserProfile {
     fn validate(&self) -> Result<(), String> {
         if let Some(username) = self.username.as_ref() {
