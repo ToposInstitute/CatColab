@@ -151,7 +151,9 @@ pub async fn get_ref_stubs(
     search_params: RefQueryParams,
 ) -> Result<Vec<RefStub>, AppError> {
     // TODO: if searcher_id is None, restrict search to only publish documents
-    let searcher_id = ctx.user.as_ref()
+    let searcher_id = ctx
+        .user
+        .as_ref()
         .map(|user| user.user_id.clone())
         .ok_or(AppError::Unauthorized)?;
 
@@ -188,7 +190,7 @@ pub async fn get_ref_stubs(
             ls.name ILIKE '%' || $3 || '%'  -- case-insensitive substring search
             OR $3 IS NULL  -- include all if name filter is NULL
         )
-        LIMIT 100 -- TODO: pagination;
+        LIMIT 100; -- TODO: pagination
         "#,
         searcher_id,
         search_params.owner_username_query,
@@ -215,12 +217,14 @@ pub async fn get_ref_stubs_related_to_user(
     search_params: RefQueryParams,
 ) -> Result<Vec<RefStub>, AppError> {
     // TODO: if searcher_id is None, restrict search to only publish documents
-    let searcher_id = ctx.user.as_ref()
+    let searcher_id = ctx
+        .user
+        .as_ref()
         .map(|user| user.user_id.clone())
         .ok_or(AppError::Unauthorized)?;
 
     // for all refs that a user has permissions for, get those that the
-    // searcher also has access to and filter those by search params. If no 
+    // searcher also has access to and filter those by search params. If no
     // owner is specified, assume that the owner is the same as the searcher.
     let results = sqlx::query!(
         r#"
@@ -249,7 +253,7 @@ pub async fn get_ref_stubs_related_to_user(
             ls.name ILIKE '%' || $3 || '%'  -- Case-insensitive substring search
             OR $3 IS NULL  -- Include all if name filter is NULL
         )
-        LIMIT 100 -- TODO: pagination;
+        LIMIT 100; -- TODO: pagination
         "#,
         searcher_id,
         search_params.owner_username_query,
