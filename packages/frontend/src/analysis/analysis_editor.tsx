@@ -153,8 +153,6 @@ const AnalysisMenu = (props: {
         }
     })();
 
-    console.log("here");
-
     return (
         <AppMenu disabled={liveDocument === undefined}>
             <Show when={liveDocument}>
