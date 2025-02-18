@@ -33,7 +33,7 @@ export function LiveDocumentMenu(props: {
     );
 }
 
-/** Menu items for a diagram in a model. */
+/** Menu items for any live document. */
 export function LiveDocumentMenuItems(props: {
     liveDocument: LiveDiagramDocument | LiveModelDocument;
 }) {
