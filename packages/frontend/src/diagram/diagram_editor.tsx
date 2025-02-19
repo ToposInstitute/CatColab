@@ -31,7 +31,7 @@ import {
 } from "./types";
 
 import "./diagram_editor.css";
-import { LiveDocumentMenu } from "../components/live_document_menu";
+import { LiveDocumentMenu } from "../page/live_document_menu";
 
 export default function DiagramPage() {
     const api = useApi();

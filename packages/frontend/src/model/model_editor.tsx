@@ -30,7 +30,7 @@ import {
 } from "./types";
 
 import "./model_editor.css";
-import { LiveDocumentMenu } from "../components/live_document_menu";
+import { LiveDocumentMenu } from "../page/live_document_menu";
 
 export default function ModelPage() {
     const api = useApi();
