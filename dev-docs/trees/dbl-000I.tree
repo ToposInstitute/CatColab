@@ -1,0 +1,20 @@
+\title{Free model functor}
+\taxon{definition}
+\import{macros}
+
+\p{The \define{free model functor} for a simple double theory \dbl{T}, denoted
+
+##{F: \cat{Net}_{\dbl{T}} \to \cat{Mod}_{\dbl{T}},}
+
+is the left adjoint to the forgetful functor
+
+##{
+\cat{Mod}_{\dbl{T}} \coloneqq
+\twocat{Dbl}_{\mathrm{lax}}(\dbl{T}, \Span) \xto{U}
+\twocat{DblGraph}(U(\dbl{T}), \Span)
+\eqqcolon \cat{Net}_{\dbl{T}}
+}
+
+given by applying the forgetful 2-functor #{U: \twocat{Dbl}_{\mathrm{lax}} \to
+\twocat{DblGph}}. The \define{free model functor} for a cartesian double theory
+is defined similarly, inserting the modifier "cartesian" where appropriate.}
