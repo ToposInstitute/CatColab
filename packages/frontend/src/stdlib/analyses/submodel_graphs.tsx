@@ -3,7 +3,7 @@ import ChevronLeft from "lucide-solid/icons/chevron-left";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import { Show, createMemo } from "solid-js";
 
-import type { DblModel } from "catlog-wasm";
+import type { DblModel, MotifsOptions } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { IconButton, PanelHeader } from "../../components";
 import type { ModelJudgment } from "../../model";
@@ -13,10 +13,15 @@ import { ModelGraphviz } from "./model_graph";
 
 import "./submodel_graphs.css";
 
-/** State of a submodels analysis. */
+type FindSubmodelsFn = (model: DblModel, options: MotifsOptions) => DblModel[];
+
+/** Configuration and state of a submodels analysis. */
 export type SubmodelsAnalysisContent = {
     /** Index of active submodel. */
     activeIndex: number;
+
+    /** Maximum length of paths used in morphism search. */
+    maxPathLength?: number | null;
 };
 
 /** Configure a submodel analysis for use with a double theory. */
@@ -24,7 +29,7 @@ export function configureSubmodelsAnalysis(options: {
     id: string;
     name: string;
     description?: string;
-    findSubmodels: (model: DblModel) => Array<DblModel>;
+    findSubmodels: FindSubmodelsFn;
 }): ModelAnalysisMeta<SubmodelsAnalysisContent> {
     const { id, name, description, findSubmodels } = options;
     return {
@@ -36,20 +41,26 @@ export function configureSubmodelsAnalysis(options: {
         ),
         initialContent: () => ({
             activeIndex: 0,
+            maxPathLength: 5,
         }),
     };
 }
 
 function SubmodelsAnalysis(
     props: {
-        findSubmodels: (model: DblModel) => Array<DblModel>;
+        findSubmodels: FindSubmodelsFn;
         title?: string;
     } & ModelAnalysisProps<SubmodelsAnalysisContent>,
 ) {
     const submodels = createMemo<DblModel[]>(
         () => {
             const validated = props.liveModel.validatedModel();
-            return validated?.result.tag === "Ok" ? props.findSubmodels(validated.model) : [];
+            if (validated?.result.tag !== "Ok") {
+                return [];
+            }
+            return props.findSubmodels(validated.model, {
+                maxPathLength: props.content.maxPathLength ?? null,
+            });
         },
         [],
         { equals: false },
