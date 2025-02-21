@@ -21,6 +21,7 @@ where
         .try_into()
         .map_err(|_| "Motif finding expects a discrete double model")?;
     let mut images: Vec<_> = model_morphism::DiscreteDblModelMapping::morphisms(motif, model)
+        .max_path_len(5) // TODO: Don't hard code this bound!
         .monic()
         .find_all()
         .into_iter()

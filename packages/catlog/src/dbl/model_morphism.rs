@@ -31,7 +31,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify_next::Tsify;
 
-use crate::one::graph_algorithms::{simple_paths, spec_order};
+use crate::one::graph_algorithms::{bounded_simple_paths, simple_paths, spec_order};
 use crate::one::*;
 use crate::validate::{self, Validate};
 use crate::zero::{Column, HashColumn, Mapping};
@@ -321,7 +321,7 @@ where
 
         assert!(dom.is_free(), "Domain model should be free");
         assert!(cod.is_free(), "Codomain model should be free");
-        assert!(&self.is_simple(), "Morphism assignments should be simple");
+        assert!(self.is_simple(), "Morphism assignments should be simple");
 
         for x in dom.ob_generators() {
             for y in dom.ob_generators() {
@@ -426,6 +426,7 @@ pub struct DiscreteDblModelMorphismFinder<'a, DomId, CodId, Cat: FgCategory> {
     map: DiscreteDblModelMapping<DomId, CodId>,
     results: Vec<DiscreteDblModelMapping<DomId, CodId>>,
     var_order: Vec<GraphElem<DomId, DomId>>,
+    max_path_len: Option<usize>,
     injective_ob: bool,
     faithful: bool,
     ob_init: HashColumn<DomId, CodId>,
@@ -463,12 +464,19 @@ where
             map: Default::default(),
             results: Default::default(),
             var_order,
+            max_path_len: None,
             injective_ob: false,
             faithful: false,
             ob_init: Default::default(),
             mor_init: Default::default(),
             ob_inv: Default::default(),
         }
+    }
+
+    /// Restrict the maximum length of the image of a generator.
+    pub fn max_path_len(&mut self, n: usize) -> &mut Self {
+        self.max_path_len = Some(n);
+        self
     }
 
     /// Restrict the search to monomorphisms between models.
@@ -562,7 +570,7 @@ where
                         .expect("Codomain should already be assigned");
 
                     let cod_graph = self.cod.generating_graph();
-                    for path in simple_paths(cod_graph, &w, &z) {
+                    for path in bounded_simple_paths(cod_graph, &w, &z, self.max_path_len) {
                         if self.cod.mor_type(&path) == mor_type
                             && !(self.faithful && path.is_empty())
                         {
@@ -689,8 +697,9 @@ mod tests {
         let base_pt = negative_loop.ob_generators().next().unwrap();
 
         let negative_feedback = negative_feedback(th);
-        let maps =
-            DiscreteDblModelMapping::morphisms(&negative_loop, &negative_feedback).find_all();
+        let maps = DiscreteDblModelMapping::morphisms(&negative_loop, &negative_feedback)
+            .max_path_len(2)
+            .find_all();
         assert_eq!(maps.len(), 2);
         let obs: Vec<_> = maps.iter().map(|mor| mor.apply_ob(&base_pt)).collect();
         assert!(obs.contains(&Some(ustr("x"))));
@@ -700,6 +709,11 @@ mod tests {
         assert!(im.validate().is_ok());
         assert!(im.has_mor(&Path::single(ustr("positive"))));
         assert!(im.has_mor(&Path::single(ustr("negative"))));
+
+        let maps = DiscreteDblModelMapping::morphisms(&negative_loop, &negative_feedback)
+            .max_path_len(1)
+            .find_all();
+        assert!(maps.is_empty());
     }
 
     #[test]
