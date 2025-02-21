@@ -10,13 +10,13 @@ export function FormGroup(props: {
     return <dl class={props.compact ? "compact-form-group" : "form-group"}>{props.children}</dl>;
 }
 
-/** Text input field in a form group. */
-export function TextInputField(
-    allProps: {
-        label: string | JSX.Element;
-        error?: string;
-    } & Omit<ComponentProps<"input">, "id">,
-) {
+type InputFieldProps = {
+    label: string | JSX.Element;
+    error?: string;
+};
+
+/** Input field in a form group. */
+export function InputField(allProps: InputFieldProps & Omit<ComponentProps<"input">, "id">) {
     const fieldId = createUniqueId();
 
     const [props, inputProps] = splitProps(allProps, ["label", "error"]);
@@ -27,11 +27,18 @@ export function TextInputField(
                 <label for={fieldId}>{props.label}</label>
             </dt>
             <dd>
-                <input {...inputProps} id={fieldId} type="text" />
+                <input {...inputProps} id={fieldId} />
                 <InputError error={props.error} />
             </dd>
         </>
     );
+}
+
+/** Text input field in a form group. */
+export function TextInputField(
+    props: InputFieldProps & Omit<ComponentProps<"input">, "id" | "type">,
+) {
+    return <InputField type="text" {...props} />;
 }
 
 const InputError = (props: { error?: string }) => (
