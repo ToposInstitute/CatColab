@@ -1,4 +1,5 @@
 import { createSignal } from "solid-js";
+import type { JSX } from "solid-js";
 import type { Document } from "../api";
 import "./json_import.css";
 
@@ -7,6 +8,12 @@ interface JsonImportProps<T extends string> {
     validate?: (data: Document<T>) => boolean | string;
 }
 
+/**
+ * Component for importing JSON data.
+ * Handles file upload and direct clipboard paste.
+ * File size is currently limited to 5MB.
+ *
+ */
 export const JsonImport = <T extends string>({ onImport, validate }: JsonImportProps<T>) => {
     const [error, setError] = createSignal<string | null>(null);
     const [importValue, setImportValue] = createSignal("");
@@ -38,8 +45,8 @@ export const JsonImport = <T extends string>({ onImport, validate }: JsonImportP
     };
 
     // Handle file upload
-    const handleFileUpload = async (event: Event) => {
-        const input = event.target as HTMLInputElement;
+    const handleFileUpload: JSX.EventHandler<HTMLInputElement, Event> = async (event) => {
+        const input = event.currentTarget;
 
         const file = input.files?.[0];
         if (!file) return;
@@ -72,8 +79,8 @@ export const JsonImport = <T extends string>({ onImport, validate }: JsonImportP
         validateAndImport(importValue());
     };
 
-    const handleInput = (event: Event) => {
-        const textarea = event.target as HTMLTextAreaElement;
+    const handleInput: JSX.EventHandler<HTMLTextAreaElement, Event> = (event) => {
+        const textarea = event.currentTarget;
         setImportValue(textarea.value);
     };
 
