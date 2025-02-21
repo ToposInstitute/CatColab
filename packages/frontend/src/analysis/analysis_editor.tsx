@@ -15,9 +15,7 @@ import invariant from "tiny-invariant";
 import { useApi } from "../api";
 import { IconButton, ResizableHandle } from "../components";
 import { DiagramPane } from "../diagram/diagram_editor";
-import { DiagramMenuItems } from "../diagram/diagram_menu";
 import { ModelPane } from "../model/model_editor";
-import { ModelMenuItems } from "../model/model_menu";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
@@ -38,6 +36,7 @@ import type { Analysis } from "./types";
 
 import PanelRight from "lucide-solid/icons/panel-right";
 import PanelRightClose from "lucide-solid/icons/panel-right-close";
+import { LiveDocumentMenuItems } from "../page/live_document_menu";
 
 export default function AnalysisPage() {
     const api = useApi();
@@ -142,24 +141,26 @@ export function AnalysisDocumentEditor(props: {
 
 const AnalysisMenu = (props: {
     liveAnalysis?: LiveAnalysisDocument;
-}) => (
-    <AppMenu disabled={props.liveAnalysis === undefined}>
-        <Switch>
-            <Match
-                when={props.liveAnalysis?.analysisType === "model" && props.liveAnalysis.liveModel}
-            >
-                {(liveModel) => <ModelMenuItems liveModel={liveModel()} />}
-            </Match>
-            <Match
-                when={
-                    props.liveAnalysis?.analysisType === "diagram" && props.liveAnalysis.liveDiagram
-                }
-            >
-                {(liveDiagram) => <DiagramMenuItems liveDiagram={liveDiagram()} />}
-            </Match>
-        </Switch>
-    </AppMenu>
-);
+}) => {
+    const liveDocument = (() => {
+        switch (props.liveAnalysis?.analysisType) {
+            case "diagram":
+                return props.liveAnalysis.liveDiagram;
+            case "model":
+                return props.liveAnalysis.liveModel;
+            default:
+                return undefined;
+        }
+    })();
+
+    return (
+        <AppMenu disabled={liveDocument === undefined}>
+            <Show when={liveDocument}>
+                {(liveDocument) => <LiveDocumentMenuItems liveDocument={liveDocument()} />}
+            </Show>
+        </AppMenu>
+    );
+};
 
 const AnalysisOfPane = (props: {
     liveAnalysis?: LiveAnalysisDocument;

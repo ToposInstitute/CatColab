@@ -32,6 +32,9 @@ export const newModelDocument = (theory: string): ModelDocument => ({
 Contains a live document for the model, plus various memos of derived data.
  */
 export type LiveModelDocument = {
+    /** discriminator for use in union types */
+    type: "model";
+
     /** The ref for which this is a live document. */
     refId: string;
 
@@ -111,6 +114,7 @@ function enlivenModelDocument(
     );
 
     return {
+        type: "model",
         refId,
         liveDoc,
         formalJudgments,
