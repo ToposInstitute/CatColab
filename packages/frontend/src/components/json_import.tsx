@@ -1,7 +1,8 @@
-import { createSignal } from "solid-js";
+import { ErrorBoundary, createSignal } from "solid-js";
 import type { JSX } from "solid-js";
 import type { Document } from "../api";
 import "./json_import.css";
+import { ErrorBoundaryDialog } from "../util/errors";
 
 interface JsonImportProps<T extends string> {
     onImport: (data: Document<T>) => void;
@@ -86,28 +87,34 @@ export const JsonImport = <T extends string>({ onImport, validate }: JsonImportP
 
     return (
         <div class="json_import">
-            {/* File upload */}
-            <div class="flex">
-                <label>Import from file:</label>
-                <input type="file" accept=".json,application/json" onChange={handleFileUpload} />
-            </div>
+            <ErrorBoundary fallback={(err) => <ErrorBoundaryDialog error={err} />}>
+                {/* File upload */}
+                <div class="flex">
+                    <label>Import from file:</label>
+                    <input
+                        type="file"
+                        accept=".json,application/json"
+                        onChange={handleFileUpload}
+                    />
+                </div>
 
-            {/* JSON paste */}
-            <div class="flex">
-                <label>Or paste JSON:</label>
-                <textarea
-                    value={importValue()}
-                    onInput={handleInput}
-                    onPaste={handleInput}
-                    placeholder="Paste your JSON here..."
-                />
-                <button onClick={handleTextareaSubmit} aria-label="Import JSON">
-                    Import Pasted JSON
-                </button>
-            </div>
+                {/* JSON paste */}
+                <div class="flex">
+                    <label>Or paste JSON:</label>
+                    <textarea
+                        value={importValue()}
+                        onInput={handleInput}
+                        onPaste={handleInput}
+                        placeholder="Paste your JSON here..."
+                    />
+                    <button onClick={handleTextareaSubmit} aria-label="Import JSON">
+                        Import Pasted JSON
+                    </button>
+                </div>
 
-            {/* Error display */}
-            {error() && <div class="error">{error()}</div>}
+                {/* Error display */}
+                {error() && <div class="error">{error()}</div>}
+            </ErrorBoundary>
         </div>
     );
 };
