@@ -1,7 +1,7 @@
 import type * as Viz from "@viz-js/viz";
 import ChevronLeft from "lucide-solid/icons/chevron-left";
 import ChevronRight from "lucide-solid/icons/chevron-right";
-import { Show } from "solid-js";
+import { Show, createMemo } from "solid-js";
 
 import type { DblModel } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
@@ -46,10 +46,14 @@ function SubmodelsAnalysis(
         title?: string;
     } & ModelAnalysisProps<SubmodelsAnalysisContent>,
 ) {
-    const submodels = () => {
-        const validated = props.liveModel.validatedModel();
-        return validated?.result.tag === "Ok" ? props.findSubmodels(validated.model) : [];
-    };
+    const submodels = createMemo<DblModel[]>(
+        () => {
+            const validated = props.liveModel.validatedModel();
+            return validated?.result.tag === "Ok" ? props.findSubmodels(validated.model) : [];
+        },
+        [],
+        { equals: false },
+    );
 
     return (
         <SubmodelsGraphviz
