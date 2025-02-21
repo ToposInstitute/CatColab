@@ -155,11 +155,10 @@ where
         }
         for path in self.mor_map.values() {
             for e in path.iter() {
-                let p = Path::single(e.clone());
-                let (x, y) = (cod.dom(&p), cod.cod(&p));
+                let (x, y) = (cod.mor_generator_dom(e), cod.mor_generator_cod(e));
                 im.add_ob(x.clone(), cod.ob_type(&x));
                 im.add_ob(y.clone(), cod.ob_type(&y));
-                im.add_mor(e.clone(), x, y, cod.mor_type(&p));
+                im.add_mor(e.clone(), x, y, cod.mor_generator_type(e));
             }
         }
         im
@@ -466,9 +465,9 @@ where
             var_order,
             injective_ob: false,
             faithful: false,
-            ob_init: HashColumn::default(),
-            mor_init: HashColumn::default(),
-            ob_inv: HashColumn::default(),
+            ob_init: Default::default(),
+            mor_init: Default::default(),
+            ob_inv: Default::default(),
         }
     }
 
@@ -552,17 +551,15 @@ where
                     self.map.assign_basic_mor(m, path);
                     self.search(depth + 1);
                 } else {
-                    let path = Path::single(m);
-                    let mor_type = self.dom.mor_type(&path);
+                    let mor_type = self.dom.mor_generator_type(&m);
                     let w = self
                         .map
-                        .apply_ob(&self.dom.dom(&path))
-                        .expect("Domain has already been assigned");
+                        .apply_ob(&self.dom.mor_generator_dom(&m))
+                        .expect("Domain should already be assigned");
                     let z = self
                         .map
-                        .apply_ob(&self.dom.cod(&path))
-                        .expect("Codomain has already been assigned");
-                    let m = path.only().unwrap();
+                        .apply_ob(&self.dom.mor_generator_cod(&m))
+                        .expect("Codomain should already be assigned");
 
                     let cod_graph = self.cod.generating_graph();
                     for path in simple_paths(cod_graph, &w, &z) {
