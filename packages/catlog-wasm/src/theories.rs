@@ -13,7 +13,7 @@ use catlog::dbl::{model, theory};
 use catlog::one::fin_category::FinMor;
 use catlog::stdlib::{analyses, models, theories};
 
-use super::model_morphism::motifs;
+use super::model_morphism::{motifs, MotifsOptions};
 use super::{analyses::*, model::DblModel, theory::DblTheory};
 
 /// The empty or initial theory.
@@ -85,16 +85,24 @@ impl ThSignedCategory {
 
     /// Find positive feedback loops in a model.
     #[wasm_bindgen(js_name = "positiveLoops")]
-    pub fn positive_loops(&self, model: &DblModel) -> Result<Vec<DblModel>, String> {
+    pub fn positive_loops(
+        &self,
+        model: &DblModel,
+        options: MotifsOptions,
+    ) -> Result<Vec<DblModel>, String> {
         let positive_loop = models::positive_loop(self.0.clone());
-        motifs(&positive_loop, model)
+        motifs(&positive_loop, model, options)
     }
 
     /// Find negative feedback loops in a model.
     #[wasm_bindgen(js_name = "negativeLoops")]
-    pub fn negative_loops(&self, model: &DblModel) -> Result<Vec<DblModel>, String> {
+    pub fn negative_loops(
+        &self,
+        model: &DblModel,
+        options: MotifsOptions,
+    ) -> Result<Vec<DblModel>, String> {
         let negative_loop = models::negative_loop(self.0.clone());
-        motifs(&negative_loop, model)
+        motifs(&negative_loop, model, options)
     }
 
     /// Simulate Lotka-Volterra system derived from a model.
@@ -137,30 +145,46 @@ impl ThDelayableSignedCategory {
 
     /// Find (fast) positive feedback loops in a model.
     #[wasm_bindgen(js_name = "positiveLoops")]
-    pub fn positive_loops(&self, model: &DblModel) -> Result<Vec<DblModel>, String> {
+    pub fn positive_loops(
+        &self,
+        model: &DblModel,
+        options: MotifsOptions,
+    ) -> Result<Vec<DblModel>, String> {
         let positive_loop = models::positive_loop(self.0.clone());
-        motifs(&positive_loop, model)
+        motifs(&positive_loop, model, options)
     }
 
     /// Find (fast) negative feedback loops in a model.
     #[wasm_bindgen(js_name = "negativeLoops")]
-    pub fn negative_loops(&self, model: &DblModel) -> Result<Vec<DblModel>, String> {
+    pub fn negative_loops(
+        &self,
+        model: &DblModel,
+        options: MotifsOptions,
+    ) -> Result<Vec<DblModel>, String> {
         let negative_loop = models::negative_loop(self.0.clone());
-        motifs(&negative_loop, model)
+        motifs(&negative_loop, model, options)
     }
 
     /// Find delayed positive feedback loops in a model.
     #[wasm_bindgen(js_name = "delayedPositiveLoops")]
-    pub fn delayed_positive_loops(&self, model: &DblModel) -> Result<Vec<DblModel>, String> {
+    pub fn delayed_positive_loops(
+        &self,
+        model: &DblModel,
+        options: MotifsOptions,
+    ) -> Result<Vec<DblModel>, String> {
         let delayed_positive_loop = models::delayed_positive_loop(self.0.clone());
-        motifs(&delayed_positive_loop, model)
+        motifs(&delayed_positive_loop, model, options)
     }
 
     /// Find delayed negative feedback loops in a model.
     #[wasm_bindgen(js_name = "delayedNegativeLoops")]
-    pub fn delayed_negative_loops(&self, model: &DblModel) -> Result<Vec<DblModel>, String> {
+    pub fn delayed_negative_loops(
+        &self,
+        model: &DblModel,
+        options: MotifsOptions,
+    ) -> Result<Vec<DblModel>, String> {
         let delayed_negative_loop = models::delayed_negative_loop(self.0.clone());
-        motifs(&delayed_negative_loop, model)
+        motifs(&delayed_negative_loop, model, options)
     }
 }
 

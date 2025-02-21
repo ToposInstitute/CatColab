@@ -264,13 +264,17 @@ stdTheories.add(
                     id: "positive-loops",
                     name: "Positive feedback",
                     description: "Analyze the network for positive feedback loops",
-                    findSubmodels: (model) => thSignedCategory.positiveLoops(model),
+                    findSubmodels(model, options) {
+                        return thSignedCategory.positiveLoops(model, options);
+                    },
                 }),
                 analyses.configureSubmodelsAnalysis({
                     id: "negative-loops",
                     name: "Negative feedback",
                     description: "Analyze the network for negative feedback loops",
-                    findSubmodels: (model) => thSignedCategory.negativeLoops(model),
+                    findSubmodels(model, options) {
+                        return thSignedCategory.negativeLoops(model, options);
+                    },
                 }),
                 analyses.configureLotkaVolterra({
                     simulate(model, data) {
@@ -337,13 +341,17 @@ stdTheories.add(
                     id: "negative-loops",
                     name: "Balancing loops",
                     description: "Analyze the diagram for balancing loops",
-                    findSubmodels: (model) => thSignedCategory.negativeLoops(model),
+                    findSubmodels(model, options) {
+                        return thSignedCategory.negativeLoops(model, options);
+                    },
                 }),
                 analyses.configureSubmodelsAnalysis({
                     id: "positive-loops",
                     name: "Reinforcing loops",
                     description: "Analyze the diagram for reinforcing loops",
-                    findSubmodels: (model) => thSignedCategory.positiveLoops(model),
+                    findSubmodels(model, options) {
+                        return thSignedCategory.positiveLoops(model, options);
+                    },
                 }),
                 analyses.configureLotkaVolterra({
                     simulate: (model, data) => thSignedCategory.lotkaVolterra(model, data),
@@ -424,25 +432,33 @@ stdTheories.add(
                     id: "negative-loops",
                     name: "Balancing loops",
                     description: "Find the fast-acting balancing loops",
-                    findSubmodels: (model) => thDelayedSignedCategory.negativeLoops(model),
+                    findSubmodels(model, options) {
+                        return thDelayedSignedCategory.negativeLoops(model, options);
+                    },
                 }),
                 analyses.configureSubmodelsAnalysis({
                     id: "positive-loops",
                     name: "Reinforcing loops",
                     description: "Find the fast-acting reinforcing loops",
-                    findSubmodels: (model) => thDelayedSignedCategory.positiveLoops(model),
+                    findSubmodels(model, options) {
+                        return thDelayedSignedCategory.positiveLoops(model, options);
+                    },
                 }),
                 analyses.configureSubmodelsAnalysis({
                     id: "delayed-negative-loops",
                     name: "Delayed balancing loops",
                     description: "Find the slow-acting balancing loops",
-                    findSubmodels: (model) => thDelayedSignedCategory.delayedNegativeLoops(model),
+                    findSubmodels(model, options) {
+                        return thDelayedSignedCategory.delayedNegativeLoops(model, options);
+                    },
                 }),
                 analyses.configureSubmodelsAnalysis({
                     id: "delayed-positive-loops",
                     name: "Delayed reinforcing loops",
                     description: "Find the slow-acting reinforcing loops",
-                    findSubmodels: (model) => thDelayedSignedCategory.delayedPositiveLoops(model),
+                    findSubmodels(model, options) {
+                        return thDelayedSignedCategory.delayedPositiveLoops(model, options);
+                    },
                 }),
             ],
         });
