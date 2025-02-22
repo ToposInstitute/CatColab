@@ -9,7 +9,15 @@ import {
     createDiagramFromDocument,
 } from "../diagram/document";
 import { type LiveModelDocument, createModel } from "../model/document";
-import { AppMenu, MenuItem, MenuItemLabel, MenuSeparator, NewModelItem } from "../page";
+import {
+    AppMenu,
+    ImportMenuItem,
+    MenuItem,
+    MenuItemLabel,
+    MenuSeparator,
+    NewModelItem,
+} from "../page";
+import { assertExhaustive } from "../util/assert_exhaustive";
 import { copyToClipboard, downloadJson } from "../util/json_export";
 
 import ChartSpline from "lucide-solid/icons/chart-spline";
@@ -18,23 +26,22 @@ import Copy from "lucide-solid/icons/copy";
 import Export from "lucide-solid/icons/download";
 import FilePlus from "lucide-solid/icons/file-plus";
 import Network from "lucide-solid/icons/network";
-import { assertExhaustive } from "../util/assert_exhaustive";
 
-/** Hamburger menu for a diagram in a model. */
-export function LiveDocumentMenu(props: {
+/** Hamburger menu for any model or diagram document. */
+export function DocumentMenu(props: {
     liveDocument?: LiveDiagramDocument | LiveModelDocument;
 }) {
     return (
         <AppMenu disabled={props.liveDocument === undefined}>
             <Show when={props.liveDocument}>
-                {(liveDocument) => <LiveDocumentMenuItems liveDocument={liveDocument()} />}
+                {(liveDocument) => <DocumentMenuItems liveDocument={liveDocument()} />}
             </Show>
         </AppMenu>
     );
 }
 
-/** Menu items for any live document. */
-export function LiveDocumentMenuItems(props: {
+/** Menu items for any model or diagram document. */
+export function DocumentMenuItems(props: {
     liveDocument: LiveDiagramDocument | LiveModelDocument;
 }) {
     const api = useApi();
@@ -134,6 +141,7 @@ export function LiveDocumentMenuItems(props: {
                 <ChartSpline />
                 <MenuItemLabel>{`New analysis of this ${props.liveDocument.type}`}</MenuItemLabel>
             </MenuItem>
+            <ImportMenuItem />
             <MenuSeparator />
             <MenuItem onSelect={() => onDuplicateDocument()}>
                 <Copy />
@@ -141,7 +149,7 @@ export function LiveDocumentMenuItems(props: {
             </MenuItem>
             <MenuItem onSelect={() => onDownloadJSON()}>
                 <Export />
-                <MenuItemLabel>{"Export notebook"}</MenuItemLabel>
+                <MenuItemLabel>{`Export ${props.liveDocument.type}`}</MenuItemLabel>
             </MenuItem>
             <MenuItem onSelect={() => onCopy()}>
                 <CopyToClipboard />

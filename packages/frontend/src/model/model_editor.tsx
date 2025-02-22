@@ -11,7 +11,7 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
-import { TheoryHelpButton, Toolbar } from "../page";
+import { DocumentMenu, TheoryHelpButton, Toolbar } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
 import { MaybePermissionsButton } from "../user";
@@ -30,7 +30,6 @@ import {
 } from "./types";
 
 import "./model_editor.css";
-import { LiveDocumentMenu } from "../page/live_document_menu";
 
 export default function ModelPage() {
     const api = useApi();
@@ -53,7 +52,7 @@ export function ModelDocumentEditor(props: {
     return (
         <div class="growable-container">
             <Toolbar>
-                <LiveDocumentMenu liveDocument={props.liveModel} />
+                <DocumentMenu liveDocument={props.liveModel} />
                 <span class="filler" />
                 <TheoryHelpButton theory={props.liveModel?.theory()} />
                 <MaybePermissionsButton

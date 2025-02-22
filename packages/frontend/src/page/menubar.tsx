@@ -2,16 +2,14 @@ import { DropdownMenu } from "@kobalte/core/dropdown-menu";
 import { useNavigate } from "@solidjs/router";
 import { getAuth, signOut } from "firebase/auth";
 import { useAuth, useFirebaseApp } from "solid-firebase";
-import { type JSX, Show, createSignal, useContext } from "solid-js";
+import { type JSX, Show, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { useApi } from "../api";
-import { Dialog, IconButton } from "../components";
+import { IconButton } from "../components";
 import { createModel } from "../model/document";
 import { TheoryLibraryContext } from "../stdlib";
-
-import { Login } from "../user";
-import { Import } from "./import";
+import { PageActionsContext } from "./context";
 
 import FilePlus from "lucide-solid/icons/file-plus";
 import Info from "lucide-solid/icons/info";
@@ -59,14 +57,10 @@ export function AppMenu(props: {
     const firebaseApp = useFirebaseApp();
     const auth = useAuth(getAuth(firebaseApp));
 
-    const [loginOpen, setLoginOpen] = createSignal(false);
-    const [openImport, setImportOpen] = createSignal(false);
-
     // Root the dialog here so that it is not destroyed when the menu closes.
     return (
         <>
-            <HamburgerMenu>
-                <ImportMenuItem showImport={() => setImportOpen(true)} />
+            <HamburgerMenu disabled={props.disabled}>
                 {props.children}
                 <Show when={props.children}>
                     <MenuSeparator />
@@ -74,20 +68,11 @@ export function AppMenu(props: {
 
                 <HelpMenuItem />
 
-                <Show
-                    when={auth.data}
-                    fallback={<LogInMenuItem showLogin={() => setLoginOpen(true)} />}
-                >
+                <Show when={auth.data} fallback={<LogInMenuItem />}>
                     <SettingsMenuItem />
                     <LogOutMenuItem />
                 </Show>
             </HamburgerMenu>
-            <Dialog open={loginOpen()} onOpenChange={setLoginOpen} title="Log in">
-                <Login onComplete={() => setLoginOpen(false)} />
-            </Dialog>
-            <Dialog open={openImport()} onOpenChange={setImportOpen} title="Import">
-                <Import onComplete={() => setImportOpen(false)} />
-            </Dialog>
         </>
     );
 }
@@ -96,6 +81,7 @@ export function AppMenu(props: {
 export const DefaultAppMenu = () => (
     <AppMenu>
         <NewModelItem />
+        <ImportMenuItem />
     </AppMenu>
 );
 
@@ -120,6 +106,19 @@ export function NewModelItem() {
     );
 }
 
+/** Menu item to import a document. */
+export function ImportMenuItem() {
+    const actions = useContext(PageActionsContext);
+    invariant(actions, "Page actions should be provided");
+
+    return (
+        <MenuItem onSelect={actions.showImportDialog}>
+            <UploadIcon />
+            <MenuItemLabel>{"Import notebook"}</MenuItemLabel>
+        </MenuItem>
+    );
+}
+
 /** Menu item navigating to the top-level application help. */
 function HelpMenuItem() {
     const navigate = useNavigate();
@@ -132,11 +131,12 @@ function HelpMenuItem() {
     );
 }
 
-function LogInMenuItem(props: {
-    showLogin: () => void;
-}) {
+function LogInMenuItem() {
+    const actions = useContext(PageActionsContext);
+    invariant(actions, "Page actions should be provided");
+
     return (
-        <MenuItem onSelect={props.showLogin}>
+        <MenuItem onSelect={actions.showLoginDialog}>
             <LogInIcon />
             <MenuItemLabel>{"Log in or sign up"}</MenuItemLabel>
         </MenuItem>
@@ -161,17 +161,6 @@ function SettingsMenuItem() {
         <MenuItem onSelect={() => navigate("/profile")}>
             <SettingsIcon />
             <MenuItemLabel>{"Edit user profile"}</MenuItemLabel>
-        </MenuItem>
-    );
-}
-
-function ImportMenuItem(props: {
-    showImport: () => void;
-}) {
-    return (
-        <MenuItem onSelect={props.showImport}>
-            <UploadIcon />
-            <MenuItemLabel>{"Import notebook"}</MenuItemLabel>
         </MenuItem>
     );
 }

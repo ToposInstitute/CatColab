@@ -22,7 +22,7 @@ import {
     NotebookEditor,
     newFormalCell,
 } from "../notebook";
-import { AppMenu, TheoryHelpButton, Toolbar } from "../page";
+import { AppMenu, DocumentMenuItems, TheoryHelpButton, Toolbar } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { AnalysisMeta } from "../theory";
 import { LiveAnalysisContext } from "./context";
@@ -36,7 +36,6 @@ import type { Analysis } from "./types";
 
 import PanelRight from "lucide-solid/icons/panel-right";
 import PanelRightClose from "lucide-solid/icons/panel-right-close";
-import { LiveDocumentMenuItems } from "../page/live_document_menu";
 
 export default function AnalysisPage() {
     const api = useApi();
@@ -142,7 +141,7 @@ export function AnalysisDocumentEditor(props: {
 const AnalysisMenu = (props: {
     liveAnalysis?: LiveAnalysisDocument;
 }) => {
-    const liveDocument = (() => {
+    const liveDocument = () => {
         switch (props.liveAnalysis?.analysisType) {
             case "diagram":
                 return props.liveAnalysis.liveDiagram;
@@ -151,12 +150,12 @@ const AnalysisMenu = (props: {
             default:
                 return undefined;
         }
-    })();
+    };
 
     return (
-        <AppMenu disabled={liveDocument === undefined}>
-            <Show when={liveDocument}>
-                {(liveDocument) => <LiveDocumentMenuItems liveDocument={liveDocument()} />}
+        <AppMenu disabled={liveDocument() === undefined}>
+            <Show when={liveDocument()}>
+                {(liveDocument) => <DocumentMenuItems liveDocument={liveDocument()} />}
             </Show>
         </AppMenu>
     );
