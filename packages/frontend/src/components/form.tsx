@@ -28,7 +28,7 @@ export function InputField(allProps: InputFieldProps & Omit<ComponentProps<"inpu
             </dt>
             <dd>
                 <input {...inputProps} id={fieldId} />
-                <InputError error={props.error} />
+                <FieldError error={props.error} />
             </dd>
         </>
     );
@@ -40,12 +40,6 @@ export function TextInputField(
 ) {
     return <InputField type="text" {...props} />;
 }
-
-const InputError = (props: { error?: string }) => (
-    <Show when={props.error}>
-        <div class="error">{props.error}</div>
-    </Show>
-);
 
 /** Select field in a form group.
 
@@ -82,3 +76,29 @@ export function SelectField(
         </>
     );
 }
+
+/** Text area field in a form group. */
+export function TextAreaField(allProps: InputFieldProps & Omit<ComponentProps<"textarea">, "id">) {
+    const fieldId = createUniqueId();
+
+    const [props, textProps] = splitProps(allProps, ["label", "error"]);
+
+    return (
+        <>
+            <dt>
+                <label for={fieldId}>{props.label}</label>
+            </dt>
+            <dd>
+                <textarea id={fieldId} {...textProps} />
+                <FieldError error={props.error} />
+            </dd>
+        </>
+    );
+}
+
+/** Validation error for a field. */
+const FieldError = (props: { error?: string }) => (
+    <Show when={props.error}>
+        <div class="error">{props.error}</div>
+    </Show>
+);
