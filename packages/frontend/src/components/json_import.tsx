@@ -108,10 +108,10 @@ export const JsonImport = <T extends string>({ onImport, validate }: JsonImportP
                 <button type="button" class="ok" onClick={handleTextareaSubmit}>
                     Import pasted JSON
                 </button>
-
-                {/* Error display */}
-                {error() && <div class="error">{error()}</div>}
             </FormGroup>
+
+            {/* Error display */}
+            {error() && <div class="error">{error()}</div>}
         </form>
     );
 };
