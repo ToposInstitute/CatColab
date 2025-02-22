@@ -1,8 +1,22 @@
 form input,
 form select,
+form textarea,
 form button {
     font-size: inherit;
     padding: 6px;
+}
+
+form input[type="file"] {
+    border: 1px solid lightgray;
+    border-radius: 6px;
+    padding: 10px;
+}
+
+form textarea {
+    border: 1px solid lightgray;
+    border-radius: 6px;
+    min-height: 5rem;
+    resize: both;
 }
 
 form button {
