@@ -20,7 +20,7 @@ import FilePlus from "lucide-solid/icons/file-plus";
 import Network from "lucide-solid/icons/network";
 import { assertExhaustive } from "../util/assert_exhaustive";
 
-/** Hamburger menu for a diagram in a model. */
+/** Hamburger menu for any live document. */
 export function LiveDocumentMenu(props: {
     liveDocument?: LiveDiagramDocument | LiveModelDocument;
 }) {

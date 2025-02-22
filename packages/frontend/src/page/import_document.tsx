@@ -6,13 +6,16 @@ import { type DiagramDocument, createDiagramFromDocument } from "../diagram";
 import { type ModelDocument, createModel } from "../model";
 
 type ImportableDocument = ModelDocument | DiagramDocument;
+
 function isImportableDocument(doc: Document<string>): doc is ImportableDocument {
     return doc.type === "model" || doc.type === "diagram";
 }
 
-export function Import(props: { onComplete?: () => void }) {
+/** Imports a document and navigates to the newly created page. */
+export function ImportDocument(props: { onComplete?: () => void }) {
     const api = useApi();
     const navigate = useNavigate();
+
     const handleImport = async (data: Document<string>) => {
         invariant(
             isImportableDocument(data),
@@ -56,9 +59,5 @@ export function Import(props: { onComplete?: () => void }) {
         return true;
     };
 
-    return (
-        <div>
-            <JsonImport<"model" | "diagram"> onImport={handleImport} validate={validateJson} />
-        </div>
-    );
+    return <JsonImport<"model" | "diagram"> onImport={handleImport} validate={validateJson} />;
 }
