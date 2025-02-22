@@ -142,7 +142,7 @@ export function AnalysisDocumentEditor(props: {
 const AnalysisMenu = (props: {
     liveAnalysis?: LiveAnalysisDocument;
 }) => {
-    const liveDocument = (() => {
+    const liveDocument = () => {
         switch (props.liveAnalysis?.analysisType) {
             case "diagram":
                 return props.liveAnalysis.liveDiagram;
@@ -151,11 +151,11 @@ const AnalysisMenu = (props: {
             default:
                 return undefined;
         }
-    })();
+    };
 
     return (
-        <AppMenu disabled={liveDocument === undefined}>
-            <Show when={liveDocument}>
+        <AppMenu disabled={liveDocument() === undefined}>
+            <Show when={liveDocument()}>
                 {(liveDocument) => <LiveDocumentMenuItems liveDocument={liveDocument()} />}
             </Show>
         </AppMenu>

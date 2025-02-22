@@ -13,6 +13,7 @@ import { ErrorBoundary, Show, createResource, lazy } from "solid-js";
 import { type Api, ApiContext, createRpcClient, useApi } from "./api";
 import { helpRoutes } from "./help/routes";
 import { createModel } from "./model/document";
+import { PageContainer } from "./page/page_container";
 import { TheoryLibraryContext, stdTheories } from "./stdlib";
 import { ErrorBoundaryDialog } from "./util/errors";
 
@@ -42,7 +43,9 @@ const Root = (props: RouteSectionProps<unknown>) => {
                 [TheoryLibraryContext, stdTheories],
             ]}
         >
-            <FirebaseProvider app={firebaseApp}>{props.children}</FirebaseProvider>
+            <FirebaseProvider app={firebaseApp}>
+                <PageContainer>{props.children}</PageContainer>
+            </FirebaseProvider>
         </MultiProvider>
     );
 };
