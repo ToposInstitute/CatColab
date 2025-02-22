@@ -60,8 +60,7 @@ export function AppMenu(props: {
     // Root the dialog here so that it is not destroyed when the menu closes.
     return (
         <>
-            <HamburgerMenu>
-                <ImportMenuItem />
+            <HamburgerMenu disabled={props.disabled}>
                 {props.children}
                 <Show when={props.children}>
                     <MenuSeparator />
@@ -82,6 +81,7 @@ export function AppMenu(props: {
 export const DefaultAppMenu = () => (
     <AppMenu>
         <NewModelItem />
+        <ImportMenuItem />
     </AppMenu>
 );
 
@@ -102,6 +102,19 @@ export function NewModelItem() {
         <MenuItem onSelect={onNewModel}>
             <FilePlus />
             <MenuItemLabel>{"New model"}</MenuItemLabel>
+        </MenuItem>
+    );
+}
+
+/** Menu item to import a document. */
+export function ImportMenuItem() {
+    const actions = useContext(PageActionsContext);
+    invariant(actions, "Page actions should be provided");
+
+    return (
+        <MenuItem onSelect={actions.showImportDialog}>
+            <UploadIcon />
+            <MenuItemLabel>{"Import notebook"}</MenuItemLabel>
         </MenuItem>
     );
 }
@@ -148,18 +161,6 @@ function SettingsMenuItem() {
         <MenuItem onSelect={() => navigate("/profile")}>
             <SettingsIcon />
             <MenuItemLabel>{"Edit user profile"}</MenuItemLabel>
-        </MenuItem>
-    );
-}
-
-function ImportMenuItem() {
-    const actions = useContext(PageActionsContext);
-    invariant(actions, "Page actions should be provided");
-
-    return (
-        <MenuItem onSelect={actions.showImportDialog}>
-            <UploadIcon />
-            <MenuItemLabel>{"Import notebook"}</MenuItemLabel>
         </MenuItem>
     );
 }
