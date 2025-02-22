@@ -82,3 +82,25 @@ export function SelectField(
         </>
     );
 }
+
+/** Text area field in a form group. */
+export function TextAreaField(
+    allProps: {
+        label: string | JSX.Element;
+    } & Omit<ComponentProps<"textarea">, "id">,
+) {
+    const fieldId = createUniqueId();
+
+    const [props, textProps] = splitProps(allProps, ["label"]);
+
+    return (
+        <>
+            <dt>
+                <label for={fieldId}>{props.label}</label>
+            </dt>
+            <dd>
+                <textarea id={fieldId} {...textProps} />
+            </dd>
+        </>
+    );
+}

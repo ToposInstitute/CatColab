@@ -1,8 +1,9 @@
-import { ErrorBoundary, createSignal } from "solid-js";
+import { createSignal } from "solid-js";
 import type { JSX } from "solid-js";
 import type { Document } from "../api";
+import { FormGroup, InputField, TextAreaField } from "./form";
+
 import "./json_import.css";
-import { ErrorBoundaryDialog } from "../util/errors";
 
 interface JsonImportProps<T extends string> {
     onImport: (data: Document<T>) => void;
@@ -86,35 +87,31 @@ export const JsonImport = <T extends string>({ onImport, validate }: JsonImportP
     };
 
     return (
-        <div class="json_import">
-            <ErrorBoundary fallback={(err) => <ErrorBoundaryDialog error={err} />}>
+        <form class="json_import">
+            <FormGroup>
                 {/* File upload */}
-                <div class="flex">
-                    <label>Import from file:</label>
-                    <input
-                        type="file"
-                        accept=".json,application/json"
-                        onChange={handleFileUpload}
-                    />
-                </div>
+                <InputField
+                    type="file"
+                    label="Import from file"
+                    accept=".json,application/json"
+                    onChange={handleFileUpload}
+                />
 
                 {/* JSON paste */}
-                <div class="flex">
-                    <label>Or paste JSON:</label>
-                    <textarea
-                        value={importValue()}
-                        onInput={handleInput}
-                        onPaste={handleInput}
-                        placeholder="Paste your JSON here..."
-                    />
-                    <button onClick={handleTextareaSubmit} aria-label="Import JSON">
-                        Import Pasted JSON
-                    </button>
-                </div>
+                <TextAreaField
+                    label="Or paste JSON"
+                    value={importValue()}
+                    onInput={handleInput}
+                    onPaste={handleInput}
+                    placeholder="Paste your JSON here..."
+                />
+                <button type="button" class="ok" onClick={handleTextareaSubmit}>
+                    Import pasted JSON
+                </button>
 
                 {/* Error display */}
                 {error() && <div class="error">{error()}</div>}
-            </ErrorBoundary>
-        </div>
+            </FormGroup>
+        </form>
     );
 };
