@@ -512,7 +512,8 @@ where
     /// Iterates over failures of the mapping to be a graph homomorphism.
     pub fn iter_invalid(
         &self,
-    ) -> impl Iterator<Item = InvalidGraphMorphism<Map::DomV, Map::DomE>> + 'a {
+    ) -> impl Iterator<Item = InvalidGraphMorphism<Map::DomV, Map::DomE>> + 'a + use<'a, Map, Dom, Cod>
+    {
         let GraphMorphism(mapping, dom, cod) = *self;
         let vertex_errors = dom.vertices().filter_map(|v| {
             if mapping.apply_vertex(&v).is_some_and(|w| cod.has_vertex(w)) {
