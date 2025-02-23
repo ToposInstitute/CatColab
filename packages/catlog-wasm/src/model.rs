@@ -371,26 +371,32 @@ pub(crate) mod tests {
     pub(crate) fn sch_walking_attr(th: &DblTheory, ids: [Uuid; 3]) -> DblModel {
         let mut model = DblModel::new(th);
         let [attr, entity, attr_type] = ids;
-        assert!(model
-            .add_ob(ObDecl {
-                id: entity,
-                ob_type: ObType::Basic("Entity".into()),
-            })
-            .is_ok());
-        assert!(model
-            .add_ob(ObDecl {
-                id: attr_type,
-                ob_type: ObType::Basic("AttrType".into()),
-            })
-            .is_ok());
-        assert!(model
-            .add_mor(MorDecl {
-                id: attr,
-                mor_type: MorType::Basic("Attr".into()),
-                dom: Some(Ob::Basic(entity)),
-                cod: Some(Ob::Basic(attr_type)),
-            })
-            .is_ok());
+        assert!(
+            model
+                .add_ob(ObDecl {
+                    id: entity,
+                    ob_type: ObType::Basic("Entity".into()),
+                })
+                .is_ok()
+        );
+        assert!(
+            model
+                .add_ob(ObDecl {
+                    id: attr_type,
+                    ob_type: ObType::Basic("AttrType".into()),
+                })
+                .is_ok()
+        );
+        assert!(
+            model
+                .add_mor(MorDecl {
+                    id: attr,
+                    mor_type: MorType::Basic("Attr".into()),
+                    dom: Some(Ob::Basic(entity)),
+                    cod: Some(Ob::Basic(attr_type)),
+                })
+                .is_ok()
+        );
         model
     }
 
@@ -412,14 +418,16 @@ pub(crate) mod tests {
         assert_eq!(model.validate().0, JsResult::Ok(()));
 
         let mut model = DblModel::new(&th);
-        assert!(model
-            .add_mor(MorDecl {
-                id: a,
-                mor_type: MorType::Basic("Attr".into()),
-                dom: None,
-                cod: Some(Ob::Basic(y)),
-            })
-            .is_ok());
+        assert!(
+            model
+                .add_mor(MorDecl {
+                    id: a,
+                    mor_type: MorType::Basic("Attr".into()),
+                    dom: None,
+                    cod: Some(Ob::Basic(y)),
+                })
+                .is_ok()
+        );
         let JsResult::Err(errs) = model.validate().0 else {
             panic!("Model should not validate")
         };
@@ -431,34 +439,42 @@ pub(crate) mod tests {
         let th = ThCategoryLinks::new().theory();
         let mut model = DblModel::new(&th);
         let [f, x, y, link] = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
-        assert!(model
-            .add_ob(ObDecl {
-                id: x,
-                ob_type: ObType::Basic("Object".into()),
-            })
-            .is_ok());
-        assert!(model
-            .add_ob(ObDecl {
-                id: y,
-                ob_type: ObType::Basic("Object".into()),
-            })
-            .is_ok());
-        assert!(model
-            .add_mor(MorDecl {
-                id: f,
-                mor_type: MorType::Hom(Box::new(ObType::Basic("Object".into()))),
-                dom: Some(Ob::Basic(x)),
-                cod: Some(Ob::Basic(y)),
-            })
-            .is_ok());
-        assert!(model
-            .add_mor(MorDecl {
-                id: link,
-                mor_type: MorType::Basic("Link".into()),
-                dom: Some(Ob::Basic(x)),
-                cod: Some(Ob::Tabulated(Mor::Basic(f))),
-            })
-            .is_ok());
+        assert!(
+            model
+                .add_ob(ObDecl {
+                    id: x,
+                    ob_type: ObType::Basic("Object".into()),
+                })
+                .is_ok()
+        );
+        assert!(
+            model
+                .add_ob(ObDecl {
+                    id: y,
+                    ob_type: ObType::Basic("Object".into()),
+                })
+                .is_ok()
+        );
+        assert!(
+            model
+                .add_mor(MorDecl {
+                    id: f,
+                    mor_type: MorType::Hom(Box::new(ObType::Basic("Object".into()))),
+                    dom: Some(Ob::Basic(x)),
+                    cod: Some(Ob::Basic(y)),
+                })
+                .is_ok()
+        );
+        assert!(
+            model
+                .add_mor(MorDecl {
+                    id: link,
+                    mor_type: MorType::Basic("Link".into()),
+                    dom: Some(Ob::Basic(x)),
+                    cod: Some(Ob::Tabulated(Mor::Basic(f))),
+                })
+                .is_ok()
+        );
         assert_eq!(model.objects().len(), 2);
         assert_eq!(model.morphisms().len(), 2);
         assert_eq!(model.validate().0, JsResult::Ok(()));
