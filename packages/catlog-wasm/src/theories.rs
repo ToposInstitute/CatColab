@@ -13,7 +13,7 @@ use catlog::dbl::{model, theory};
 use catlog::one::fin_category::FinMor;
 use catlog::stdlib::{analyses, models, theories};
 
-use super::model_morphism::{motifs, MotifsOptions};
+use super::model_morphism::{MotifsOptions, motifs};
 use super::{analyses::*, model::DblModel, theory::DblTheory};
 
 /// The empty or initial theory.

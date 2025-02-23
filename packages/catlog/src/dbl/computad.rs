@@ -665,7 +665,9 @@ where
         &self,
     ) -> impl Iterator<
         Item = InvalidDblComputadMorphism<Map::DomV, Map::DomE, Map::DomProE, Map::DomSq>,
-    > + 'a {
+    >
+    + 'a
+    + use<'a, Map, Dom, Cod> {
         type Invalid<V, E, ProE, Sq> = InvalidDblComputadMorphism<V, E, ProE, Sq>;
         let DblComputadMorphism(mapping, dom, cod) = *self;
 

@@ -5,7 +5,7 @@ data type for [path equations](`PathEq`).
 */
 
 use either::Either;
-use nonempty::{nonempty, NonEmpty};
+use nonempty::{NonEmpty, nonempty};
 use std::collections::HashSet;
 use std::hash::Hash;
 
@@ -397,7 +397,10 @@ impl<V, E> PathEq<V, E> {
     }
 
     /// Iterators over failures of the path equation to be well defined.
-    pub fn iter_invalid_in<G>(&self, graph: &G) -> impl Iterator<Item = InvalidPathEq>
+    pub fn iter_invalid_in<G>(
+        &self,
+        graph: &G,
+    ) -> impl Iterator<Item = InvalidPathEq> + use<G, V, E>
     where
         V: Eq + Clone,
         G: Graph<V = V, E = E>,

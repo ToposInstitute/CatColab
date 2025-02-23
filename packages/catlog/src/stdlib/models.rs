@@ -1,7 +1,7 @@
 //! Standard library of models of double theories.
 
 use std::sync::Arc;
-use ustr::{ustr, Ustr};
+use ustr::{Ustr, ustr};
 
 use crate::dbl::{model::*, theory::*};
 use crate::one::fin_category::FinMor;
