@@ -101,11 +101,13 @@ pub trait FinGraph: Graph {
 
 /** A finite graph backed by columns.
 
-Such a graph is defined in the styles of "C-sets" by two [finite sets](FinSet)
-and two [columns](Column). Note that this trait does *not* extend [`Graph`]. To
-derive an implementation, implement the further trait
-[`ColumnarGraphImplGraph`]. It also does not assume that the graph is mutable;
-for that, implement the trait [`ColumnarGraphMut`].
+Such a graph is defined in copresheaf style by two [finite sets](FinSet) and two
+[columns](Column). Implementing this trait provides a *blanket implementation*
+of [`Graph`] and [`FinGraph`]. This is the easiest way to define a new finite
+graph type.
+
+This trait does not assume that the graph is mutable; for that, you must also
+implement the trait [`ColumnarGraphMut`].
  */
 pub trait ColumnarGraph {
     /// Type of vertices in the columnar graph.
@@ -149,7 +151,7 @@ pub trait ColumnarGraph {
     }
 }
 
-/** Columnar graph with mutable columns.
+/** A columnar graph with mutable columns.
  */
 pub trait ColumnarGraphMut: ColumnarGraph {
     /// Variant of [`src_map`](ColumnarGraph::src_map) that returns a mutable
@@ -171,14 +173,7 @@ pub trait ColumnarGraphMut: ColumnarGraph {
     }
 }
 
-/** Derive implementation of a graph from a columnar graph.
-
-Implementing this trait provides a *blanket implementation* of [`Graph`] and
-[`FinGraph`].
- */
-pub trait ColumnarGraphImplGraph: ColumnarGraph {}
-
-impl<G: ColumnarGraphImplGraph> Graph for G {
+impl<G: ColumnarGraph> Graph for G {
     type V = G::V;
     type E = G::E;
 
@@ -196,7 +191,7 @@ impl<G: ColumnarGraphImplGraph> Graph for G {
     }
 }
 
-impl<G: ColumnarGraphImplGraph> FinGraph for G {
+impl<G: ColumnarGraph> FinGraph for G {
     fn vertices(&self) -> impl Iterator<Item = Self::V> {
         self.vertex_set().iter()
     }
@@ -272,8 +267,6 @@ impl ColumnarGraphMut for SkelGraph {
         &mut self.tgt_map
     }
 }
-
-impl ColumnarGraphImplGraph for SkelGraph {}
 
 impl SkelGraph {
     /// Adds a new vertex to the graph and returns it.
@@ -399,14 +392,6 @@ where
     fn tgt_map_mut(&mut self) -> &mut impl Column<Dom = E, Cod = V> {
         &mut self.tgt_map
     }
-}
-
-impl<V, E, S> ColumnarGraphImplGraph for HashGraph<V, E, S>
-where
-    V: Eq + Hash + Clone,
-    E: Eq + Hash + Clone,
-    S: BuildHasher,
-{
 }
 
 impl<V, E, S> HashGraph<V, E, S>
