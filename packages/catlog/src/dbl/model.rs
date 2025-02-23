@@ -97,11 +97,11 @@ pub trait DblModel: Category {
 
     /// The type of double theory that this is a model of.
     type Theory: DblTheory<
-        ObType = Self::ObType,
-        MorType = Self::MorType,
-        ObOp = Self::ObOp,
-        MorOp = Self::MorOp,
-    >;
+            ObType = Self::ObType,
+            MorType = Self::MorType,
+            ObOp = Self::ObOp,
+            MorOp = Self::MorOp,
+        >;
 
     /// The double theory that this model is a model of.
     fn theory(&self) -> &Self::Theory;
@@ -234,7 +234,7 @@ where
     }
 
     /// Returns the underlying graph of the model.
-    pub fn generating_graph(&self) -> &impl FinGraph<V = Id, E = Id> {
+    pub fn generating_graph(&self) -> &(impl FinGraph<V = Id, E = Id> + use<Id, Cat>) {
         self.category.generators()
     }
 

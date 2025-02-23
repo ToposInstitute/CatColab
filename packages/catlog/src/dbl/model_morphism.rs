@@ -235,7 +235,10 @@ where
     Cat::Mor: Hash,
 {
     /// Iterates over failures of the mapping to be a model morphism.
-    pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidDblModelMorphism<DomId, DomId>> + 'a {
+    pub fn iter_invalid(
+        &self,
+    ) -> impl Iterator<Item = InvalidDblModelMorphism<DomId, DomId>> + 'a + use<'a, DomId, CodId, Cat>
+    {
         let DblModelMorphism(mapping, dom, cod) = *self;
         // TODO: We don't yet have the ability to solve word problems.
         // Equations in the domain induce equations to check in the codomain.

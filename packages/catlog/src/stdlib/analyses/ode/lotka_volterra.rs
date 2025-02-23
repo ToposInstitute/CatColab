@@ -13,8 +13,8 @@ use tsify_next::Tsify;
 use super::ODEAnalysis;
 use crate::dbl::model::{DiscreteDblModel, FgDblModel};
 use crate::one::{
-    fin_category::{FinMor, UstrFinCategory},
     FgCategory,
+    fin_category::{FinMor, UstrFinCategory},
 };
 use crate::simulate::ode::{LotkaVolterraSystem, ODEProblem};
 

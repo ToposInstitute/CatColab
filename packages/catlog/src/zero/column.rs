@@ -106,7 +106,9 @@ where
     Cod: Set<Elem = Map::Cod>,
 {
     /// Iterates over failures to be a function.
-    pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidFunction<Map::Dom>> + 'a {
+    pub fn iter_invalid(
+        &self,
+    ) -> impl Iterator<Item = InvalidFunction<Map::Dom>> + 'a + use<'a, Map, Dom, Cod> {
         let Function(mapping, dom, cod) = self;
         dom.iter().filter_map(|x| match mapping.apply(&x) {
             Some(y) => {

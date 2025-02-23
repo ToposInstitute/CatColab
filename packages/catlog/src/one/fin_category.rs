@@ -56,7 +56,7 @@ where
     S: BuildHasher,
 {
     /// Graph of generators of the finite category.
-    pub fn generators(&self) -> &impl FinGraph<V = V, E = E> {
+    pub fn generators(&self) -> &(impl FinGraph<V = V, E = E> + use<V, E, S>) {
         &self.generators
     }
 
@@ -264,7 +264,7 @@ where
     S: BuildHasher,
 {
     /// Graph of generators of the finitely presented category.
-    pub fn generators(&self) -> &impl FinGraph<V = V, E = E> {
+    pub fn generators(&self) -> &(impl FinGraph<V = V, E = E> + use<V, E, EqKey, S>) {
         &self.generators
     }
 
