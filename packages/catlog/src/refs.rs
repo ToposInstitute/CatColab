@@ -50,22 +50,6 @@ Delpeuch, 2020: The word problem for double categories.
  */
 pub const WordProblemDblCats: () = ();
 
-/** Reference: Word problem for computads.
-
-Makkai, 2005: The word problem for computads.
-
-<https://www.math.mcgill.ca/makkai/WordProblem/>
- */
-pub const MakkaiComputads: () = ();
-
-/** Reference: Computads and 2-dimensional pasting diagrams.
-
-Makkai, 2007: Computads and 2-dimensional pasting diagrams.
-
-<https://www.math.mcgill.ca/makkai/2dcomputads/>
- */
-pub const MakkaiComputadsPasting: () = ();
-
 /** Reference: Compositional account of biochemical regulatory networks.
 
 Rebekah Aduddell, James Fairbanks, Amit Kumar, Pablo S. Ocal, Evan Patterson,

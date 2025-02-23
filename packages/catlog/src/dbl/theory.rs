@@ -58,7 +58,7 @@ composed:
 | [`id_ob_op`](DblTheory::id_ob_op)               | Identity operation on object type   | Identity arrow            |
 | [`id_mor_op`](DblTheory::id_mor_op)             | Identity operation on morphism type | Identity cell on proarrow |
 | [`compose_ob_ops`](DblTheory::compose_ob_ops)   | Compose object operations           | Compose arrows            |
-| [`compose_mor_ops`](DblTheory::compose_mor_ops) | Compose morphism operations         | Compose cells             |
+| `compose_mor_ops`                               | Compose morphism operations         | Compose cells             |
 
 # References
 
@@ -71,11 +71,9 @@ use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
 
 use derivative::Derivative;
 use derive_more::From;
-use nonempty::nonempty;
 use ref_cast::RefCast;
 use ustr::{IdentityHasher, Ustr};
 
-use super::pasting::DblPasting;
 use crate::one::category::*;
 use crate::one::fin_category::UstrFinCategory;
 use crate::one::path::Path;
@@ -166,29 +164,19 @@ pub trait DblTheory {
         self.compose_ob_ops(Path::Id(x))
     }
 
-    /// Compose a pasting diagram of operations on morphisms.
-    fn compose_mor_ops(
-        &self,
-        pasting: DblPasting<Self::ObType, Self::ObOp, Self::MorType, Self::MorOp>,
-    ) -> Self::MorOp;
-
     /** Hom morphism operation on an object operation.
 
     Viewing the theory as a double category, this is the identity cell on an
     arrow.
     */
-    fn hom_op(&self, f: Self::ObOp) -> Self::MorOp {
-        self.compose_mor_ops(DblPasting::ArrId(nonempty![f]))
-    }
+    fn hom_op(&self, f: Self::ObOp) -> Self::MorOp;
 
     /** Identity operation on a morphism type.
 
     Viewing the theory as a double category, this is the identity cell on a
     proarrow.
     */
-    fn id_mor_op(&self, m: Self::MorType) -> Self::MorOp {
-        self.compose_mor_ops(DblPasting::ProId(nonempty![m]))
-    }
+    fn id_mor_op(&self, m: Self::MorType) -> Self::MorOp;
 }
 
 /** A discrete double theory.
@@ -258,14 +246,11 @@ where
         let disc = DiscreteCategory::ref_cast(ObSet::ref_cast(&self.0));
         disc.compose(path)
     }
-
-    fn compose_mor_ops(&self, pasting: DblPasting<C::Ob, C::Ob, C::Mor, C::Mor>) -> C::Mor {
-        match pasting {
-            DblPasting::ObId(x) => self.0.id(x),
-            DblPasting::ArrId(fs) => self.0.id(self.compose_ob_ops(Path::Seq(fs))),
-            DblPasting::ProId(ms) => self.compose_types(Path::Seq(ms)),
-            DblPasting::Diagram(_) => panic!("General pasting not implemented"),
-        }
+    fn hom_op(&self, f: Self::ObOp) -> Self::MorOp {
+        self.0.id(self.compose_ob_ops(Path::single(f)))
+    }
+    fn id_mor_op(&self, m: Self::MorType) -> Self::MorOp {
+        self.compose_types(Path::single(m))
     }
 }
 
@@ -505,17 +490,11 @@ where
     fn id_ob_op(&self, x: Self::ObType) -> Self::ObOp {
         TabObOp::Id(x)
     }
-
-    fn compose_mor_ops(
-        &self,
-        pasting: DblPasting<Self::ObType, Self::ObOp, Self::MorType, Self::MorOp>,
-    ) -> Self::MorOp {
-        match pasting {
-            DblPasting::ObId(x) => TabMorOp::Id(self.hom_type(x)),
-            DblPasting::ArrId(fs) => TabMorOp::Hom(self.compose_ob_ops(Path::Seq(fs))),
-            DblPasting::ProId(ms) => TabMorOp::Id(self.compose_types(Path::Seq(ms))),
-            DblPasting::Diagram(_) => panic!("General pasting not implemented"),
-        }
+    fn hom_op(&self, f: Self::ObOp) -> Self::MorOp {
+        TabMorOp::Hom(self.compose_ob_ops(Path::single(f)))
+    }
+    fn id_mor_op(&self, m: Self::MorType) -> Self::MorOp {
+        TabMorOp::Id(self.compose_types(Path::single(m)))
     }
 }
 
