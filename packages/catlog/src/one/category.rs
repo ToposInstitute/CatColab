@@ -172,10 +172,11 @@ impl<G: Graph> Category for FreeCategory<G> {
 
 /** A finitely generated category with specified object and morphism generators.
 
-Unless the category has extra structure, a finitely generated (f.g.) category
-has finitely many objects, which coincide with the object generators so long as
-there are no equations between objects. On the other hand, a f.g. category can
-have infinitely many morphisms and often does.
+Unless the category has extra structure like a monoidal product, a finitely
+generated (f.g.) category has finitely many objects. Moreover, the objects will
+coincide with the object generators in the typical case that there are no
+equations between objects. On the other hand, a f.g. category can have
+infinitely many morphisms and often does.
  */
 pub trait FgCategory: Category {
     /** Type of an object generator.
@@ -248,11 +249,11 @@ impl<S: FinSet> FinGraph for DiscreteCategory<S> {
     }
 
     fn in_edges(&self, v: &Self::V) -> impl Iterator<Item = Self::E> {
-        vec![v.clone()].into_iter()
+        std::iter::once(v.clone())
     }
 
     fn out_edges(&self, v: &Self::V) -> impl Iterator<Item = Self::E> {
-        vec![v.clone()].into_iter()
+        std::iter::once(v.clone())
     }
 
     fn in_degree(&self, _v: &Self::V) -> usize {
