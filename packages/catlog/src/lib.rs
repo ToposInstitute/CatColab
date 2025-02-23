@@ -3,8 +3,8 @@
 # Organization
 
 While the purpose of this package is to implement double theories and their
-models and morphisms, having a certain amount of lower-dimensional category
-theory is useful as background. The package is organized into top-level modules
+models and morphisms, a certain amount of lower-dimensional category theory is
+necessary as background. The package is organized into top-level modules
 according to dimensionality:
 
 0. [`zero`]: Sets and mappings, known semi-seriously as zero-dimensional

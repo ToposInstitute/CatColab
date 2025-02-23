@@ -214,57 +214,6 @@ pub trait FgCategory: Category {
     }
 }
 
-impl<S: FinSet> Graph for DiscreteCategory<S> {
-    type V = S::Elem;
-    type E = S::Elem;
-
-    fn has_edge(&self, e: &Self::E) -> bool {
-        self.0.contains(e)
-    }
-
-    fn has_vertex(&self, v: &Self::V) -> bool {
-        self.0.contains(v)
-    }
-
-    fn src(&self, e: &Self::E) -> Self::V {
-        e.clone()
-    }
-
-    fn tgt(&self, e: &Self::E) -> Self::V {
-        e.clone()
-    }
-}
-
-impl<S: FinSet> FinGraph for DiscreteCategory<S> {
-    fn edges(&self) -> impl Iterator<Item = Self::E> {
-        self.0.iter()
-    }
-
-    fn vertices(&self) -> impl Iterator<Item = Self::V> {
-        self.0.iter()
-    }
-
-    fn degree(&self, _v: &Self::V) -> usize {
-        2
-    }
-
-    fn in_edges(&self, v: &Self::V) -> impl Iterator<Item = Self::E> {
-        std::iter::once(v.clone())
-    }
-
-    fn out_edges(&self, v: &Self::V) -> impl Iterator<Item = Self::E> {
-        std::iter::once(v.clone())
-    }
-
-    fn in_degree(&self, _v: &Self::V) -> usize {
-        1
-    }
-
-    fn out_degree(&self, _v: &Self::V) -> usize {
-        1
-    }
-}
-
 impl<S: FinSet> FgCategory for DiscreteCategory<S> {
     type ObGen = S::Elem;
     type MorGen = S::Elem;
