@@ -15,11 +15,11 @@ use crate::validate::{self, Validate};
 
 /** A functional mapping.
 
-A mapping takes values of type [`Dom`](Self::Dom) to values of type
+A mapping sends values of type [`Dom`](Self::Dom) to values of type
 [`Cod`](Self::Cod). Unlike a function, a mapping need not be defined on its
 whole domain. A mapping is thus more like a partial function, but it does not
-actually know its domain of definition. If needed, that information should be
-provided separately, preferably as a [`Set`].
+actually know its intended domain of definition. If needed, that information
+should be provided separately, preferably as a [`Set`].
 
 Neither the domain nor the codomain of the mapping are assumed to be finite.
  */
@@ -31,16 +31,29 @@ pub trait Mapping {
     type Cod: Eq + Clone;
 
     /// Applies the mapping at a point possibly in the domain.
-    fn apply(&self, x: &Self::Dom) -> Option<&Self::Cod>;
+    fn apply(&self, x: &Self::Dom) -> Option<Self::Cod>;
 
-    /// Is the mapping defined at a point?
-    fn is_set(&self, x: &Self::Dom) -> bool {
-        self.apply(x).is_some()
-    }
+    /** Is the mapping defined at a point?
+
+    Given a mapping `m`, the call `m.is_set(x)` is equivalent to
+    `m.apply(x).is_some()` but usually has a more efficient implementation.
+    */
+    fn is_set(&self, x: &Self::Dom) -> bool;
 }
 
-/// A mutable, functional mapping.
+/** A mutable [mapping](Mapping).
+
+Besides being mutable, such a mapping is also assumed to own its values (how
+else could they be mutated?) and thus also allows access by reference.
+ */
 pub trait MutMapping: Mapping {
+    /** Gets the value of the mapping at a point possibly in the domain.
+
+    The same as [`apply`](Mapping::apply) but returns by reference rather than
+    by value.
+    */
+    fn get(&self, x: &Self::Dom) -> Option<&Self::Cod>;
+
     /** Sets the mapping at a point.
 
     The old value is returned, if one was set.
@@ -115,7 +128,7 @@ where
         let Function(mapping, dom, cod) = self;
         dom.iter().filter_map(|x| match mapping.apply(&x) {
             Some(y) => {
-                if cod.contains(y) {
+                if cod.contains(&y) {
                     None
                 } else {
                     Some(InvalidFunction::Cod(x))
@@ -178,12 +191,8 @@ impl<T: Eq + Clone> Mapping for VecColumn<T> {
     type Dom = usize;
     type Cod = T;
 
-    fn apply(&self, i: &usize) -> Option<&T> {
-        if *i < self.0.len() {
-            self.0[*i].as_ref()
-        } else {
-            None
-        }
+    fn apply(&self, i: &usize) -> Option<T> {
+        self.get(i).cloned()
     }
 
     fn is_set(&self, i: &usize) -> bool {
@@ -192,6 +201,14 @@ impl<T: Eq + Clone> Mapping for VecColumn<T> {
 }
 
 impl<T: Eq + Clone> MutMapping for VecColumn<T> {
+    fn get(&self, i: &usize) -> Option<&T> {
+        if *i < self.0.len() {
+            self.0[*i].as_ref()
+        } else {
+            None
+        }
+    }
+
     fn set(&mut self, i: usize, y: T) -> Option<T> {
         if i >= self.0.len() {
             self.0.resize_with(i + 1, Default::default);
@@ -243,8 +260,8 @@ where
     type Dom = K;
     type Cod = V;
 
-    fn apply(&self, x: &K) -> Option<&V> {
-        self.0.get(x)
+    fn apply(&self, x: &K) -> Option<V> {
+        self.0.get(x).cloned()
     }
     fn is_set(&self, x: &K) -> bool {
         self.0.contains_key(x)
@@ -257,6 +274,9 @@ where
     V: Eq + Clone,
     S: BuildHasher,
 {
+    fn get(&self, x: &K) -> Option<&V> {
+        self.0.get(x)
+    }
     fn set(&mut self, x: K, y: V) -> Option<V> {
         self.0.insert(x, y)
     }
@@ -420,10 +440,9 @@ where
     type Dom = Dom;
     type Cod = Cod;
 
-    fn apply(&self, x: &Dom) -> Option<&Cod> {
+    fn apply(&self, x: &Dom) -> Option<Cod> {
         self.mapping.apply(x)
     }
-
     fn is_set(&self, x: &Dom) -> bool {
         self.mapping.is_set(x)
     }
@@ -436,6 +455,10 @@ where
     Col: MutMapping<Dom = Dom, Cod = Cod>,
     Ind: Index<Dom = Dom, Cod = Cod>,
 {
+    fn get(&self, x: &Dom) -> Option<&Cod> {
+        self.mapping.get(x)
+    }
+
     fn set(&mut self, x: Dom, y: Cod) -> Option<Cod> {
         let old = self.unset(&x);
         self.index.insert(x.clone(), &y);
@@ -496,7 +519,7 @@ impl SkelIndexedColumn {
 impl Mapping for SkelIndexedColumn {
     type Dom = usize;
     type Cod = usize;
-    fn apply(&self, x: &usize) -> Option<&usize> {
+    fn apply(&self, x: &usize) -> Option<usize> {
         self.0.apply(x)
     }
     fn is_set(&self, x: &usize) -> bool {
@@ -505,6 +528,9 @@ impl Mapping for SkelIndexedColumn {
 }
 
 impl MutMapping for SkelIndexedColumn {
+    fn get(&self, x: &usize) -> Option<&usize> {
+        self.0.get(x)
+    }
     fn set(&mut self, x: usize, y: usize) -> Option<usize> {
         self.0.set(x, y)
     }
@@ -551,7 +577,7 @@ impl<T: Eq + Hash + Clone> IndexedVecColumn<T> {
 impl<T: Eq + Hash + Clone> Mapping for IndexedVecColumn<T> {
     type Dom = usize;
     type Cod = T;
-    fn apply(&self, x: &usize) -> Option<&T> {
+    fn apply(&self, x: &usize) -> Option<T> {
         self.0.apply(x)
     }
     fn is_set(&self, x: &usize) -> bool {
@@ -560,6 +586,9 @@ impl<T: Eq + Hash + Clone> Mapping for IndexedVecColumn<T> {
 }
 
 impl<T: Eq + Hash + Clone> MutMapping for IndexedVecColumn<T> {
+    fn get(&self, x: &usize) -> Option<&T> {
+        self.0.get(x)
+    }
     fn set(&mut self, x: usize, y: T) -> Option<T> {
         self.0.set(x, y)
     }
@@ -605,7 +634,7 @@ where
 {
     type Dom = K;
     type Cod = V;
-    fn apply(&self, x: &K) -> Option<&V> {
+    fn apply(&self, x: &K) -> Option<V> {
         self.0.apply(x)
     }
     fn is_set(&self, x: &K) -> bool {
@@ -619,6 +648,9 @@ where
     V: Eq + Hash + Clone,
     S: BuildHasher,
 {
+    fn get(&self, x: &K) -> Option<&V> {
+        self.0.get(x)
+    }
     fn set(&mut self, x: K, y: V) -> Option<V> {
         self.0.set(x, y)
     }
@@ -657,7 +689,8 @@ mod tests {
         let mut col = VecColumn::new(vec!["foo", "bar", "baz"]);
         assert!(!col.is_empty());
         assert!(col.is_set(&2));
-        assert_eq!(col.apply(&2), Some(&"baz"));
+        assert_eq!(col.get(&2), Some(&"baz"));
+        assert_eq!(col.apply(&2), Some("baz"));
         assert_eq!(col.apply(&3), None);
         assert_eq!(col.update(2, None), Some("baz"));
         assert!(!col.is_set(&2));
@@ -676,7 +709,8 @@ mod tests {
         col.set('b', "bar");
         col.set('c', "baz");
         assert!(!col.is_empty());
-        assert_eq!(col.apply(&'c'), Some(&"baz"));
+        assert_eq!(col.get(&'c'), Some(&"baz"));
+        assert_eq!(col.apply(&'c'), Some("baz"));
         assert_eq!(col.unset(&'c'), Some("baz"));
         assert!(!col.is_set(&'c'));
         col.set('c', "bar");
@@ -691,7 +725,8 @@ mod tests {
         let mut col = SkelIndexedColumn::new(&[1, 3, 5]);
         assert!(!col.is_empty());
         assert!(col.is_set(&2));
-        assert_eq!(col.apply(&2), Some(&5));
+        assert_eq!(col.get(&2), Some(&5));
+        assert_eq!(col.apply(&2), Some(5));
         let preimage: Vec<_> = col.preimage(&5).collect();
         assert_eq!(preimage, vec![2]);
 
@@ -707,7 +742,7 @@ mod tests {
         let mut col = IndexedVecColumn::new(&["foo", "bar", "baz"]);
         assert!(!col.is_empty());
         assert!(col.is_set(&2));
-        assert_eq!(col.apply(&2), Some(&"baz"));
+        assert_eq!(col.apply(&2), Some("baz"));
         let preimage: Vec<_> = col.preimage(&"baz").collect();
         assert_eq!(preimage, vec![2]);
 
@@ -726,7 +761,7 @@ mod tests {
         col.set('b', "bar");
         col.set('c', "baz");
         assert!(!col.is_empty());
-        assert_eq!(col.apply(&'c'), Some(&"baz"));
+        assert_eq!(col.apply(&'c'), Some("baz"));
         let preimage: Vec<_> = col.preimage(&"baz").collect();
         assert_eq!(preimage, vec!['c']);
 

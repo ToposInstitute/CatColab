@@ -94,7 +94,7 @@ where
 {
     /// Applies the mapping at a basic morphism in the domain model.
     pub fn apply_basic_mor(&self, e: &DomId) -> Option<Path<CodId, CodId>> {
-        self.mor_map.apply(e).cloned()
+        self.mor_map.apply(e)
     }
 
     /// Is the mapping defined at a basic morphism?
@@ -189,7 +189,7 @@ where
     type CodMor = Path<CodId, CodId>;
 
     fn apply_ob(&self, x: &Self::DomOb) -> Option<Self::CodOb> {
-        self.ob_map.apply(x).cloned()
+        self.ob_map.apply(x)
     }
 
     fn apply_mor(&self, m: &Self::DomMor) -> Option<Self::CodMor> {
@@ -540,7 +540,7 @@ where
         match var.clone() {
             GraphElem::Vertex(x) => {
                 if self.ob_init.is_set(&x) {
-                    let y = self.ob_init.apply(&x).cloned().unwrap();
+                    let y = self.ob_init.apply(&x).unwrap();
                     let can_assign = self.assign_ob(x.clone(), y.clone());
                     if can_assign {
                         self.search(depth + 1);
@@ -558,7 +558,7 @@ where
             }
             GraphElem::Edge(m) => {
                 if self.mor_init.is_set(&m) {
-                    let path = self.mor_init.apply(&m).cloned().unwrap();
+                    let path = self.mor_init.apply(&m).unwrap();
                     self.map.assign_basic_mor(m, path);
                     self.search(depth + 1);
                 } else {
@@ -589,7 +589,7 @@ where
     /// Attempt an object assignment, returning true iff successful.
     fn assign_ob(&mut self, x: DomId, y: CodId) -> bool {
         if self.injective_ob {
-            if let Some(y_inv) = self.ob_inv.apply(&y) {
+            if let Some(y_inv) = self.ob_inv.get(&y) {
                 if *y_inv != x {
                     return false;
                 }

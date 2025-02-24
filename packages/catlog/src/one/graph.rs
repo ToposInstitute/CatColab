@@ -122,10 +122,10 @@ pub trait ColumnarGraph {
     type Edges: Set<Elem = Self::E>;
 
     /// The map assigning each edge its source vertex.
-    type Src: Mapping<Dom = Self::E, Cod = Self::V>;
+    type Src: MutMapping<Dom = Self::E, Cod = Self::V>;
 
     /// The map assigning each edge its target vertex.
-    type Tgt: Mapping<Dom = Self::E, Cod = Self::V>;
+    type Tgt: MutMapping<Dom = Self::E, Cod = Self::V>;
 
     /// Gets the set of vertices.
     fn vertex_set(&self) -> &Self::Vertices;
@@ -141,12 +141,12 @@ pub trait ColumnarGraph {
 
     /// Gets the source of an edge, possibly undefined.
     fn get_src(&self, e: &Self::E) -> Option<&Self::V> {
-        self.src_map().apply(e)
+        self.src_map().get(e)
     }
 
     /// Gets the target of an edge, possibly undefined.
     fn get_tgt(&self, e: &Self::E) -> Option<&Self::V> {
-        self.tgt_map().apply(e)
+        self.tgt_map().get(e)
     }
 }
 
@@ -214,10 +214,10 @@ impl<G: ColumnarGraph> Graph for G {
         self.edge_set().contains(e)
     }
     fn src(&self, e: &Self::E) -> Self::V {
-        self.get_src(e).expect("Source of edge should be set").clone()
+        self.get_src(e).cloned().expect("Source of edge should be set")
     }
     fn tgt(&self, e: &Self::E) -> Self::V {
-        self.get_tgt(e).expect("Target of edge should be set").clone()
+        self.get_tgt(e).cloned().expect("Target of edge should be set")
     }
 }
 
@@ -513,20 +513,16 @@ pub trait GraphMapping {
     type CodE: Eq + Clone;
 
     /// Applies the graph mapping at a vertex.
-    fn apply_vertex(&self, v: &Self::DomV) -> Option<&Self::CodV>;
+    fn apply_vertex(&self, v: &Self::DomV) -> Option<Self::CodV>;
 
     /// Applies the graph mapping at an edge.
-    fn apply_edge(&self, e: &Self::DomE) -> Option<&Self::CodE>;
+    fn apply_edge(&self, e: &Self::DomE) -> Option<Self::CodE>;
 
     /// Is the mapping defined at a vertex?
-    fn is_vertex_assigned(&self, v: &Self::DomV) -> bool {
-        self.apply_vertex(v).is_some()
-    }
+    fn is_vertex_assigned(&self, v: &Self::DomV) -> bool;
 
     /// Is the mapping defined at an edge?
-    fn is_edge_assigned(&self, e: &Self::DomE) -> bool {
-        self.apply_edge(e).is_some()
-    }
+    fn is_edge_assigned(&self, e: &Self::DomE) -> bool;
 }
 
 /** A homomorphism between graphs defined by a [mapping](GraphMapping).
@@ -551,7 +547,7 @@ where
     {
         let GraphMorphism(mapping, dom, cod) = *self;
         let vertex_errors = dom.vertices().filter_map(|v| {
-            if mapping.apply_vertex(&v).is_some_and(|w| cod.has_vertex(w)) {
+            if mapping.apply_vertex(&v).is_some_and(|w| cod.has_vertex(&w)) {
                 None
             } else {
                 Some(InvalidGraphMorphism::Vertex(v))
@@ -560,12 +556,12 @@ where
 
         let edge_errors = dom.edges().flat_map(|e| {
             if let Some(f) = mapping.apply_edge(&e) {
-                if cod.has_edge(f) {
+                if cod.has_edge(&f) {
                     let mut errs = Vec::new();
-                    if mapping.apply_vertex(&dom.src(&e)).is_some_and(|v| *v != cod.src(f)) {
+                    if mapping.apply_vertex(&dom.src(&e)).is_some_and(|v| v != cod.src(&f)) {
                         errs.push(InvalidGraphMorphism::Src(e.clone()))
                     }
-                    if mapping.apply_vertex(&dom.tgt(&e)).is_some_and(|v| *v != cod.tgt(f)) {
+                    if mapping.apply_vertex(&dom.tgt(&e)).is_some_and(|v| v != cod.tgt(&f)) {
                         errs.push(InvalidGraphMorphism::Tgt(e.clone()))
                     }
                     return errs;
@@ -636,18 +632,18 @@ impl<ColV, ColE> ColumnarGraphMapping<ColV, ColE> {
 
 impl<ColV, ColE> GraphMapping for ColumnarGraphMapping<ColV, ColE>
 where
-    ColV: Mapping,
-    ColE: Mapping,
+    ColV: MutMapping,
+    ColE: MutMapping,
 {
     type DomV = ColV::Dom;
     type DomE = ColE::Dom;
     type CodV = ColV::Cod;
     type CodE = ColE::Cod;
 
-    fn apply_vertex(&self, v: &Self::DomV) -> Option<&Self::CodV> {
+    fn apply_vertex(&self, v: &Self::DomV) -> Option<Self::CodV> {
         self.vertex_map.apply(v)
     }
-    fn apply_edge(&self, e: &Self::DomE) -> Option<&Self::CodE> {
+    fn apply_edge(&self, e: &Self::DomE) -> Option<Self::CodE> {
         self.edge_map.apply(e)
     }
     fn is_vertex_assigned(&self, v: &Self::DomV) -> bool {
