@@ -372,7 +372,7 @@ where
             (TabMorType::Hom(_), n) => n,
             (m, TabMorType::Hom(_)) => m,
             (TabMorType::Basic(d), TabMorType::Basic(e)) => {
-                self.compose_map.apply(&(d, e)).expect("Composition should be defined").clone()
+                self.compose_map.apply(&(d, e)).expect("Composition should be defined")
             }
         }
     }
@@ -414,7 +414,7 @@ where
     fn src(&self, mor_type: &Self::MorType) -> Self::ObType {
         match mor_type {
             TabMorType::Basic(e) => {
-                self.src.apply(e).cloned().expect("Source of morphism type should be defined")
+                self.src.apply(e).expect("Source of morphism type should be defined")
             }
             TabMorType::Hom(x) => (**x).clone(),
         }
@@ -423,7 +423,7 @@ where
     fn tgt(&self, mor_type: &Self::MorType) -> Self::ObType {
         match mor_type {
             TabMorType::Basic(e) => {
-                self.tgt.apply(e).cloned().expect("Target of morphism type should be defined")
+                self.tgt.apply(e).expect("Target of morphism type should be defined")
             }
             TabMorType::Hom(x) => (**x).clone(),
         }
