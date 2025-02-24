@@ -51,7 +51,7 @@ use super::theory::{DblTheory, DiscreteDblTheory};
 use crate::one::fin_category::{FpCategory, InvalidFpCategory, UstrFinCategory};
 use crate::one::*;
 use crate::validate::{self, Validate};
-use crate::zero::{Column, FinSet, HashColumn, HashFinSet, IndexedHashColumn, Mapping, Set};
+use crate::zero::*;
 
 use super::theory::*;
 

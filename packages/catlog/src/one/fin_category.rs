@@ -11,7 +11,7 @@ use super::category::*;
 use super::graph::*;
 use super::path::*;
 use crate::validate::{self, Validate};
-use crate::zero::{Column, HashColumn, Mapping};
+use crate::zero::{Column, HashColumn, Mapping, MutMapping};
 
 /// Morphism in a finite category.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
