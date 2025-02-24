@@ -106,7 +106,7 @@ Such a graph is defined in copresheaf style by two [sets](Set) and two
 of [`Graph`]. This is the easiest way to define a new graph type.
 
 This trait does not assume that the graph is mutable; for that, you must also
-implement the trait [`ColumnarGraphMut`].
+implement the trait [`MutColumnarGraph`].
  */
 pub trait ColumnarGraph {
     /// Type of vertices in the graph.
@@ -178,7 +178,12 @@ pub trait FiniteColumnarGraph:
 }
 
 /// A columnar graph with mutable columns.
-pub trait ColumnarGraphMut: ColumnarGraph {
+pub trait MutColumnarGraph:
+    ColumnarGraph<
+        Src: MutMapping<Dom = Self::E, Cod = Self::V>,
+        Tgt: MutMapping<Dom = Self::E, Cod = Self::V>,
+    >
+{
     /// Variant of [`src_map`](ColumnarGraph::src_map) that returns a mutable
     /// reference.
     fn src_map_mut(&mut self) -> &mut Self::Src;
@@ -289,7 +294,7 @@ impl ColumnarGraph for SkelGraph {
     }
 }
 
-impl ColumnarGraphMut for SkelGraph {
+impl MutColumnarGraph for SkelGraph {
     fn src_map_mut(&mut self) -> &mut Self::Src {
         &mut self.src_map
     }
@@ -417,7 +422,7 @@ where
     }
 }
 
-impl<V, E, S> ColumnarGraphMut for HashGraph<V, E, S>
+impl<V, E, S> MutColumnarGraph for HashGraph<V, E, S>
 where
     V: Eq + Hash + Clone,
     E: Eq + Hash + Clone,

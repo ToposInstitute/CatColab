@@ -33,6 +33,14 @@ pub trait Mapping {
     /// Applies the mapping at a point possibly in the domain.
     fn apply(&self, x: &Self::Dom) -> Option<&Self::Cod>;
 
+    /// Is the mapping defined at a point?
+    fn is_set(&self, x: &Self::Dom) -> bool {
+        self.apply(x).is_some()
+    }
+}
+
+/// A mutable, functional mapping.
+pub trait MutMapping: Mapping {
     /** Sets the mapping at a point.
 
     The old value is returned, if one was set.
@@ -54,11 +62,6 @@ pub trait Mapping {
             Some(y) => self.set(x, y),
             None => self.unset(&x),
         }
-    }
-
-    /// Is the mapping defined at a point?
-    fn is_set(&self, x: &Self::Dom) -> bool {
-        self.apply(x).is_some()
     }
 }
 
@@ -183,6 +186,12 @@ impl<T: Eq + Clone> Mapping for VecColumn<T> {
         }
     }
 
+    fn is_set(&self, i: &usize) -> bool {
+        *i < self.0.len() && self.0[*i].is_some()
+    }
+}
+
+impl<T: Eq + Clone> MutMapping for VecColumn<T> {
     fn set(&mut self, i: usize, y: T) -> Option<T> {
         if i >= self.0.len() {
             self.0.resize_with(i + 1, Default::default);
@@ -196,10 +205,6 @@ impl<T: Eq + Clone> Mapping for VecColumn<T> {
         } else {
             None
         }
-    }
-
-    fn is_set(&self, i: &usize) -> bool {
-        *i < self.0.len() && self.0[*i].is_some()
     }
 }
 
@@ -241,14 +246,22 @@ where
     fn apply(&self, x: &K) -> Option<&V> {
         self.0.get(x)
     }
+    fn is_set(&self, x: &K) -> bool {
+        self.0.contains_key(x)
+    }
+}
+
+impl<K, V, S> MutMapping for HashColumn<K, V, S>
+where
+    K: Eq + Hash + Clone,
+    V: Eq + Clone,
+    S: BuildHasher,
+{
     fn set(&mut self, x: K, y: V) -> Option<V> {
         self.0.insert(x, y)
     }
     fn unset(&mut self, x: &K) -> Option<V> {
         self.0.remove(x)
-    }
-    fn is_set(&self, x: &K) -> bool {
-        self.0.contains_key(x)
     }
 }
 
@@ -402,8 +415,7 @@ impl<Dom, Cod, Col, Ind> Mapping for IndexedColumn<Dom, Cod, Col, Ind>
 where
     Dom: Eq + Clone,
     Cod: Eq + Clone,
-    Col: Column<Dom = Dom, Cod = Cod>,
-    Ind: Index<Dom = Dom, Cod = Cod>,
+    Col: Mapping<Dom = Dom, Cod = Cod>,
 {
     type Dom = Dom;
     type Cod = Cod;
@@ -415,7 +427,15 @@ where
     fn is_set(&self, x: &Dom) -> bool {
         self.mapping.is_set(x)
     }
+}
 
+impl<Dom, Cod, Col, Ind> MutMapping for IndexedColumn<Dom, Cod, Col, Ind>
+where
+    Dom: Eq + Clone,
+    Cod: Eq + Clone,
+    Col: MutMapping<Dom = Dom, Cod = Cod>,
+    Ind: Index<Dom = Dom, Cod = Cod>,
+{
     fn set(&mut self, x: Dom, y: Cod) -> Option<Cod> {
         let old = self.unset(&x);
         self.index.insert(x.clone(), &y);
@@ -479,14 +499,17 @@ impl Mapping for SkelIndexedColumn {
     fn apply(&self, x: &usize) -> Option<&usize> {
         self.0.apply(x)
     }
+    fn is_set(&self, x: &usize) -> bool {
+        self.0.is_set(x)
+    }
+}
+
+impl MutMapping for SkelIndexedColumn {
     fn set(&mut self, x: usize, y: usize) -> Option<usize> {
         self.0.set(x, y)
     }
     fn unset(&mut self, x: &usize) -> Option<usize> {
         self.0.unset(x)
-    }
-    fn is_set(&self, x: &usize) -> bool {
-        self.0.is_set(x)
     }
 }
 
@@ -531,14 +554,17 @@ impl<T: Eq + Hash + Clone> Mapping for IndexedVecColumn<T> {
     fn apply(&self, x: &usize) -> Option<&T> {
         self.0.apply(x)
     }
+    fn is_set(&self, x: &usize) -> bool {
+        self.0.is_set(x)
+    }
+}
+
+impl<T: Eq + Hash + Clone> MutMapping for IndexedVecColumn<T> {
     fn set(&mut self, x: usize, y: T) -> Option<T> {
         self.0.set(x, y)
     }
     fn unset(&mut self, x: &usize) -> Option<T> {
         self.0.unset(x)
-    }
-    fn is_set(&self, x: &usize) -> bool {
-        self.0.is_set(x)
     }
 }
 
@@ -582,14 +608,22 @@ where
     fn apply(&self, x: &K) -> Option<&V> {
         self.0.apply(x)
     }
+    fn is_set(&self, x: &K) -> bool {
+        self.0.is_set(x)
+    }
+}
+
+impl<K, V, S> MutMapping for IndexedHashColumn<K, V, S>
+where
+    K: Eq + Hash + Clone,
+    V: Eq + Hash + Clone,
+    S: BuildHasher,
+{
     fn set(&mut self, x: K, y: V) -> Option<V> {
         self.0.set(x, y)
     }
     fn unset(&mut self, x: &K) -> Option<V> {
         self.0.unset(x)
-    }
-    fn is_set(&self, x: &K) -> bool {
-        self.0.is_set(x)
     }
 }
 
