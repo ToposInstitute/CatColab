@@ -31,24 +31,15 @@ Patterson, 2024: Products in double categories, revisited.
  */
 pub const DblProducts: () = ();
 
-/** Reference: Model structures for double categories.
+/** Reference: *Higher operads, higher categories*.
 
-Fiore, Paoli, Pronk, 2008: Model structures on the category of small double
-categories.
+Tom Leinster, 2004: *Higher operads, higher categories*. Cambridge University
+Press.
 
-- [DOI:10.2140/agt.2008.8.1855](https://doi.org/10.2140/agt.2008.8.1855)
-- [arXiv:0711.0473](https://arxiv.org/abs/0711.0473)
+- [DOI:10.1017/CBO9780511525896](https://doi.org/10.1017/CBO9780511525896)
+- [arXiv:math/0305049](https://arxiv.org/abs/math/0305049)
  */
-pub const ModelStructureDblCat: () = ();
-
-/** Reference: Word problem for double categories.
-
-Delpeuch, 2020: The word problem for double categories.
-
-- [TAC-35-1](http://www.tac.mta.ca/tac/volumes/35/1/35-01abs.html)
-- [arXiv:1907.09927](https://arxiv.org/abs/1907.09927)
- */
-pub const WordProblemDblCats: () = ();
+pub const HigherOperads: () = ();
 
 /** Reference: Compositional account of biochemical regulatory networks.
 

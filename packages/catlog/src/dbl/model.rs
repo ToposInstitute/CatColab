@@ -648,18 +648,14 @@ where
 
     fn src(&self, edge: &Self::E) -> Self::V {
         match edge {
-            TabEdge::Basic(e) => {
-                self.dom.apply(e).expect("Domain of morphism should be defined")
-            }
+            TabEdge::Basic(e) => self.dom.apply(e).expect("Domain of morphism should be defined"),
             TabEdge::Square { dom, .. } => TabOb::Tabulated(dom.clone()),
         }
     }
 
     fn tgt(&self, edge: &Self::E) -> Self::V {
         match edge {
-            TabEdge::Basic(e) => {
-                self.cod.apply(e).expect("Codomain of morphism should be defined")
-            }
+            TabEdge::Basic(e) => self.cod.apply(e).expect("Codomain of morphism should be defined"),
             TabEdge::Square { cod, .. } => TabOb::Tabulated(cod.clone()),
         }
     }
