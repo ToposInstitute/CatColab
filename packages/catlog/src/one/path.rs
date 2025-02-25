@@ -139,10 +139,9 @@ impl<V, E> Path<V, E> {
 
     Assumes that the path is [contained in](Path::contained_in) the graph.
     */
-    pub fn src<G>(&self, graph: &G) -> V
+    pub fn src(&self, graph: &impl Graph<V = V, E = E>) -> V
     where
         V: Clone,
-        G: Graph<V = V, E = E>,
     {
         match self {
             Path::Id(v) => v.clone(),
@@ -154,10 +153,9 @@ impl<V, E> Path<V, E> {
 
     Assumes that the path is [contained in](Path::contained_in) the graph.
     */
-    pub fn tgt<G>(&self, graph: &G) -> V
+    pub fn tgt(&self, graph: &impl Graph<V = V, E = E>) -> V
     where
         V: Clone,
-        G: Graph<V = V, E = E>,
     {
         match self {
             Path::Id(v) => v.clone(),
@@ -173,10 +171,9 @@ impl<V, E> Path<V, E> {
     [`contained_in`](Self::contained_in) if in doubt. Thus, when returned, the
     concatenated path is also a valid path.
      */
-    pub fn concat_in<G>(self, graph: &G, other: Self) -> Option<Self>
+    pub fn concat_in(self, graph: &impl Graph<V = V, E = E>, other: Self) -> Option<Self>
     where
         V: Eq + Clone,
-        G: Graph<V = V, E = E>,
     {
         if self.tgt(graph) != other.src(graph) {
             return None;
@@ -194,10 +191,9 @@ impl<V, E> Path<V, E> {
     }
 
     /// Is the path contained in the given graph?
-    pub fn contained_in<G>(&self, graph: &G) -> bool
+    pub fn contained_in(&self, graph: &impl Graph<V = V, E = E>) -> bool
     where
         V: Eq,
-        G: Graph<V = V, E = E>,
     {
         match self {
             Path::Id(v) => graph.has_vertex(v),
@@ -329,10 +325,9 @@ impl<V, E> Path<V, Path<V, E>> {
     Returns the flattened path just when the original paths have compatible
     start and end points.
      */
-    pub fn flatten_in<G>(self, graph: &G) -> Option<Path<V, E>>
+    pub fn flatten_in(self, graph: &impl Graph<V = V, E = E>) -> Option<Path<V, E>>
     where
         V: Eq + Clone,
-        G: Graph<V = V, E = E>,
     {
         if let Path::Seq(paths) = &self {
             let mut pairs = std::iter::zip(paths.iter(), paths.iter().skip(1));
@@ -367,10 +362,9 @@ impl<V, E> PathEq<V, E> {
 
     Only well defined when the path equation is valid.
     */
-    pub fn src<G>(&self, graph: &G) -> V
+    pub fn src(&self, graph: &impl Graph<V = V, E = E>) -> V
     where
         V: Clone,
-        G: Graph<V = V, E = E>,
     {
         self.lhs.src(graph) // == self.rhs.src(graph)
     }
@@ -379,10 +373,9 @@ impl<V, E> PathEq<V, E> {
 
     Only well defined when the path equation is valid.
     */
-    pub fn tgt<G>(&self, graph: &G) -> V
+    pub fn tgt(&self, graph: &impl Graph<V = V, E = E>) -> V
     where
         V: Clone,
-        G: Graph<V = V, E = E>,
     {
         self.lhs.tgt(graph) // == self.rhs.tgt(graph)
     }

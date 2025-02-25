@@ -1,14 +1,14 @@
 /*! Virtual double graphs.
 
 Analogous to how a graph is the combinatorial data that underlies a category, a
-*virtual double graph* (nonstandard nomenclature) is the combinatorial data that
-underlies a virtual double category. In Leinster's terminology, a virtual double
-graph is an "fc-graph" ([Leinster 2004](crate::refs::HigherOperads), Section
-5.1).
+*virtual double graph* (nonstandard term) is the combinatorial data that
+underlies a virtual double category.
 
-A virtual double graph is similar to a double graph (a two-dimensional
-semi-cubical set) except that the top boundary is a directed path rather than a
-single edge.
+In Leinster's terminology, a virtual double graph is called an *fc-graph*
+([Leinster 2004](crate::refs::HigherOperads), Section 5.1). A virtual double
+graph is similar to a *double graph*, or two-dimensional semi-cubical set,
+except that the top boundary is a directed path of proedges rather than a single
+proedge.
  */
 
 use crate::one::path::Path;
