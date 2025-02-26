@@ -42,7 +42,7 @@ pub trait VDblGraph {
     fn has_proedge(&self, p: &Self::ProE) -> bool;
 
     /// Does the square belong to the double graph?
-    fn has_square(&self, α: &Self::Sq) -> bool;
+    fn has_square(&self, sq: &Self::Sq) -> bool;
 
     /// Gets the domain of an edge.
     fn dom(&self, e: &Self::E) -> Self::V;
@@ -57,14 +57,14 @@ pub trait VDblGraph {
     fn tgt(&self, p: &Self::ProE) -> Self::V;
 
     /// Gets the domain of a square, a path of proedges.
-    fn square_dom(&self, α: &Self::Sq) -> Path<Self::V, Self::ProE>;
+    fn square_dom(&self, sq: &Self::Sq) -> Path<Self::V, Self::ProE>;
 
     /// Gets the codomain of a square, a single proedge.
-    fn square_cod(&self, α: &Self::Sq) -> Self::ProE;
+    fn square_cod(&self, sq: &Self::Sq) -> Self::ProE;
 
     /// Gets the source of a square, an edge.
-    fn square_src(&self, α: &Self::Sq) -> Self::E;
+    fn square_src(&self, sq: &Self::Sq) -> Self::E;
 
     /// Gets the target of a square, an edge.
-    fn square_tgt(&self, α: &Self::Sq) -> Self::E;
+    fn square_tgt(&self, sq: &Self::Sq) -> Self::E;
 }

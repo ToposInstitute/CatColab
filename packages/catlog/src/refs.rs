@@ -15,8 +15,8 @@ used for any purpose besides documentation.
 
 /** Reference: Cartesian double theories.
 
-Lambert & Patterson, 2024. Cartesian double theories: A double-categorical
-framework for categorical doctrines.
+Michael Lambert & Evan Patterson, 2024. Cartesian double theories: A
+double-categorical framework for categorical doctrines.
 
 - [DOI:10.1016/j.aim.2024.109630](https://doi.org/10.1016/j.aim.2024.109630)
 - [arXiv:2310.05384](https://arxiv.org/abs/2310.05384)
@@ -25,11 +25,21 @@ pub const CartDblTheories: () = ();
 
 /** Reference: Products in double categories, revisited.
 
-Patterson, 2024: Products in double categories, revisited.
+Evan Patterson, 2024: Products in double categories, revisited.
 
 - [arXiv:2401.08990](https://arxiv.org/abs/2401.08990)
  */
 pub const DblProducts: () = ();
+
+/** Reference: A unified framework for generalized multicategories.
+
+G.S.H. Cruttwell & Michael Shulman, 2010: A unified framework for generalized
+multicategories.
+
+- [arXiv:0907.2460](https://arxiv.org/abs/0907.2460)
+- [TAC](http://www.tac.mta.ca/tac/volumes/24/21/24-21.pdf)
+ */
+pub const GeneralizedMulticategories: () = ();
 
 /** Reference: *Higher operads, higher categories*.
 

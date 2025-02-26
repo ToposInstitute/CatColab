@@ -1,9 +1,9 @@
-/*! Double trees: composition patterns in virtual double categories.
+/*! Double trees: pasting diagrams in virtual double categories.
 
 A *double tree* (nonstandard term) is the data structure for a [pasting
 diagram](https://ncatlab.org/nlab/show/pasting+diagram) in a virtual double
-category, i.e., the unbiased specification of a composite of cells in a virtual
-double category.
+category. In other words, a double tree specifies, in the most general and
+unbiased form, a composite of cells in a virtual double category.
  */
 
 use derive_more::From;
@@ -14,7 +14,8 @@ use crate::one::path::Path;
 
 /** A node in a [double tree](DblTree).
 
-More precisely, this is the *value* carried by a node in a double tree.
+To be more precise, this enum is the type of a *value* carried by a node in a
+double tree.
  */
 #[derive(Clone, Debug)]
 pub enum DblNode<E, ProE, Sq> {
@@ -107,9 +108,20 @@ impl<E, ProE, Sq> DblNode<E, ProE, Sq> {
     }
 }
 
-/** A double tree.
+/** A double tree, or pasting diagram in a virtual double category.
 
-TODO: Describe the data structure
+As the name suggests, the underlying data structure of a double tree is a
+[`Tree`] whose [nodes](DblNode) represent cells (or occasionally arrows) in the
+pasting diagram. Not just any underlying tree constitutes a valid pasting. For
+example, the domains/codomains and sources/targets of the cells must compatible,
+and [spines](DblNode::Spine) can only appear in certain configurations.
+Moreover, among the valid trees, invariants are maintained to ensure a normal
+form among equivalent representations of the same pasting.
+
+TODO: Implement validation using breadth-first search to check that
+sources/targets of cells are compatible.
+
+TODO: Enforce invariant with identities when `graft`-ing.
 */
 #[derive(Clone, Debug, From)]
 pub struct DblTree<E, ProE, Sq>(pub Tree<DblNode<E, ProE, Sq>>);
@@ -126,7 +138,7 @@ impl<E, ProE, Sq> DblTree<E, ProE, Sq> {
     }
 
     /// Constructs a tree by grafting trees as subtrees onto a base cell.
-    pub fn graft(base: Sq, subtrees: impl IntoIterator<Item = Self>) -> Self {
+    pub fn graft(subtrees: impl IntoIterator<Item = Self>, base: Sq) -> Self {
         let mut tree = Tree::new(DblNode::Cell(base));
         for subtree in subtrees {
             tree.root_mut().append_subtree(subtree.0);
