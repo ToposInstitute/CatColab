@@ -12,72 +12,97 @@ use ego_tree::Tree;
 use super::graph::VDblGraph;
 use crate::one::path::Path;
 
-/// Value of a node in a [double tree](DblTree).
+/** A node in a [double tree](DblTree).
+
+More precisely, this is the *value* carried by a node in a double tree.
+ */
 #[derive(Clone, Debug)]
-pub enum DblNode<Pro, Sq> {
-    /** The identity cell on a pro-edge in a virtual double graph.
-
-    Any node with an identity as its value should be a leaf node. We enforce
-    this invariant in order to get a normal form for pastings in VDCs.
-     */
-    Id(Pro),
-
+pub enum DblNode<E, ProE, Sq> {
     /// A generic cell, given by a square in a virtual double graph.
     Cell(Sq),
+
+    /** The identity cell on a pro-edge in a virtual double graph.
+
+    Any node with an identity as its value should be a leaf node. While not
+    logically required, we enforce this invariant to obtain a normal form for
+    pastings in VDCs.
+     */
+    Id(ProE),
+
+    /** An edge dangling from a nullary cell.
+
+    In a well-formed double tree, a spine node can be a child only of a nullary
+    cell or of another spine node. Spines represent the operation of
+    precomposing a nullary cell with an arrow to obtain another nullary cell, a
+    degenerate case of composition in a virtual double category.
+     */
+    Spine(E),
 }
 
-impl<Pro, Sq> DblNode<Pro, Sq> {
-    /// Is the node an identity?
-    pub fn is_id(&self) -> bool {
-        matches!(*self, DblNode::Id(_))
-    }
-
+impl<E, ProE, Sq> DblNode<E, ProE, Sq> {
     /// Is the node a generic cell?
     pub fn is_cell(&self) -> bool {
         matches!(*self, DblNode::Cell(_))
     }
 
+    /// Is the node an identity?
+    pub fn is_id(&self) -> bool {
+        matches!(*self, DblNode::Id(_))
+    }
+
+    /// Is the node a spine?
+    pub fn is_spine(&self) -> bool {
+        matches!(*self, DblNode::Spine(_))
+    }
+
     /// Domain of node in the given virtual double graph.
-    pub fn dom<V>(&self, graph: &impl VDblGraph<V = V, ProE = Pro, Sq = Sq>) -> Path<V, Pro>
+    pub fn dom<V>(
+        &self,
+        graph: &impl VDblGraph<V = V, E = E, ProE = ProE, Sq = Sq>,
+    ) -> Path<V, ProE>
     where
-        Pro: Clone,
+        ProE: Clone,
     {
         match self {
-            DblNode::Id(p) => Path::single(p.clone()),
             DblNode::Cell(sq) => graph.square_dom(sq),
+            DblNode::Id(p) => Path::single(p.clone()),
+            DblNode::Spine(e) => Path::empty(graph.dom(e)),
         }
     }
 
     /// Codomain of node in the given virtual double graph.
-    pub fn cod(&self, graph: &impl VDblGraph<ProE = Pro, Sq = Sq>) -> Pro
+    pub fn cod(&self, graph: &impl VDblGraph<E = E, ProE = ProE, Sq = Sq>) -> ProE
     where
-        Pro: Clone,
+        ProE: Clone,
     {
         match self {
-            DblNode::Id(p) => p.clone(),
             DblNode::Cell(sq) => graph.square_cod(sq),
+            DblNode::Id(p) => p.clone(),
+            DblNode::Spine(_) => panic!("A spine node does not have a unary codomain"),
         }
     }
 
     /// Source of node in the given virtual double graph.
-    pub fn src<V, Arr>(
-        &self,
-        graph: &impl VDblGraph<V = V, E = Arr, ProE = Pro, Sq = Sq>,
-    ) -> Path<V, Arr> {
+    pub fn src<V>(&self, graph: &impl VDblGraph<V = V, E = E, ProE = ProE, Sq = Sq>) -> Path<V, E>
+    where
+        E: Clone,
+    {
         match self {
-            DblNode::Id(p) => Path::empty(graph.src(p)),
             DblNode::Cell(sq) => Path::single(graph.square_src(sq)),
+            DblNode::Id(p) => Path::empty(graph.src(p)),
+            DblNode::Spine(e) => Path::single(e.clone()),
         }
     }
 
     /// Target of node in the given virtual double graph.
-    pub fn tgt<V, Arr>(
-        &self,
-        graph: &impl VDblGraph<V = V, E = Arr, ProE = Pro, Sq = Sq>,
-    ) -> Path<V, Arr> {
+    pub fn tgt<V>(&self, graph: &impl VDblGraph<V = V, E = E, ProE = ProE, Sq = Sq>) -> Path<V, E>
+    where
+        E: Clone,
+    {
         match self {
-            DblNode::Id(p) => Path::empty(graph.tgt(p)),
             DblNode::Cell(sq) => Path::single(graph.square_tgt(sq)),
+            DblNode::Id(p) => Path::empty(graph.tgt(p)),
+            DblNode::Spine(e) => Path::single(e.clone()),
         }
     }
 }
@@ -87,11 +112,11 @@ impl<Pro, Sq> DblNode<Pro, Sq> {
 TODO: Describe the data structure
 */
 #[derive(Clone, Debug, From)]
-pub struct DblTree<Pro, Sq>(pub Tree<DblNode<Pro, Sq>>);
+pub struct DblTree<E, ProE, Sq>(pub Tree<DblNode<E, ProE, Sq>>);
 
-impl<Pro, Sq> DblTree<Pro, Sq> {
+impl<E, ProE, Sq> DblTree<E, ProE, Sq> {
     /// Constructs the empty or identity tree.
-    pub fn empty(p: Pro) -> Self {
+    pub fn empty(p: ProE) -> Self {
         Tree::new(DblNode::Id(p)).into()
     }
 
@@ -129,12 +154,12 @@ impl<Pro, Sq> DblTree<Pro, Sq> {
     }
 
     /// Gets the root of the double tree.
-    pub fn root(&self) -> &DblNode<Pro, Sq> {
+    pub fn root(&self) -> &DblNode<E, ProE, Sq> {
         self.0.root().value()
     }
 
     /// Iterates over the leaves of the double tree.
-    pub fn leaves(&self) -> impl Iterator<Item = &DblNode<Pro, Sq>> {
+    pub fn leaves(&self) -> impl Iterator<Item = &DblNode<E, ProE, Sq>> {
         self.0
             .root()
             .descendants()
@@ -142,19 +167,58 @@ impl<Pro, Sq> DblTree<Pro, Sq> {
             .map(|node| node.value())
     }
 
+    /// Iterates over nodes along the source (left) boundary of the double tree.
+    pub fn src_nodes(&self) -> impl Iterator<Item = &DblNode<E, ProE, Sq>> {
+        let mut maybe_node = Some(self.0.root());
+        std::iter::from_fn(move || {
+            let prev = maybe_node;
+            maybe_node = maybe_node.and_then(|node| node.first_child());
+            prev.map(|node| node.value())
+        })
+    }
+
+    /// Iterates over nodes along the target (right) boundary of the double tree.
+    pub fn tgt_nodes(&self) -> impl Iterator<Item = &DblNode<E, ProE, Sq>> {
+        let mut maybe_node = Some(self.0.root());
+        std::iter::from_fn(move || {
+            let prev = maybe_node;
+            maybe_node = maybe_node.and_then(|node| node.last_child());
+            prev.map(|node| node.value())
+        })
+    }
+
     /// Domain of the tree in the given virtual double graph.
-    pub fn dom<V>(&self, graph: &impl VDblGraph<V = V, ProE = Pro, Sq = Sq>) -> Path<V, Pro>
+    pub fn dom<V>(
+        &self,
+        graph: &impl VDblGraph<V = V, E = E, ProE = ProE, Sq = Sq>,
+    ) -> Path<V, ProE>
     where
-        Pro: Clone,
+        ProE: Clone,
     {
         Path::collect(self.leaves().map(|dn| dn.dom(graph))).unwrap().flatten()
     }
 
     /// Codomain of the tree in the given virtual double graph.
-    pub fn cod(&self, graph: &impl VDblGraph<ProE = Pro, Sq = Sq>) -> Pro
+    pub fn cod(&self, graph: &impl VDblGraph<E = E, ProE = ProE, Sq = Sq>) -> ProE
     where
-        Pro: Clone,
+        ProE: Clone,
     {
         self.root().cod(graph)
+    }
+
+    /// Source of the tree in the given virtual double graph.
+    pub fn src<V>(&self, graph: &impl VDblGraph<V = V, E = E, ProE = ProE, Sq = Sq>) -> Path<V, E>
+    where
+        E: Clone,
+    {
+        Path::collect(self.src_nodes().map(|dn| dn.src(graph))).unwrap().flatten()
+    }
+
+    /// Target of the tree in the given virtual double graph.
+    pub fn tgt<V>(&self, graph: &impl VDblGraph<V = V, E = E, ProE = ProE, Sq = Sq>) -> Path<V, E>
+    where
+        E: Clone,
+    {
+        Path::collect(self.tgt_nodes().map(|dn| dn.tgt(graph))).unwrap().flatten()
     }
 }
