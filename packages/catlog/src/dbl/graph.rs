@@ -11,7 +11,10 @@ except that the top boundary is a directed path of proedges rather than a single
 proedge.
  */
 
-use crate::one::path::Path;
+use derive_more::derive::From;
+use ref_cast::RefCast;
+
+use crate::one::{Graph, path::Path};
 
 /** A virtual double graph, the data underlying a virtual double category.
 
@@ -67,4 +70,56 @@ pub trait VDblGraph {
 
     /// Gets the target of a square, an edge.
     fn square_tgt(&self, sq: &Self::Sq) -> Self::E;
+}
+
+/** The underlying graph of vertices and edges in a virtual double graph.
+
+Compare with [`ProedgeGraph`].
+ */
+#[derive(From, RefCast)]
+#[repr(transparent)]
+pub struct EdgeGraph<VDG: VDblGraph>(VDG);
+
+impl<VDG: VDblGraph> Graph for EdgeGraph<VDG> {
+    type V = VDG::V;
+    type E = VDG::E;
+
+    fn has_vertex(&self, v: &Self::V) -> bool {
+        self.0.has_vertex(v)
+    }
+    fn has_edge(&self, e: &Self::E) -> bool {
+        self.0.has_edge(e)
+    }
+    fn src(&self, e: &Self::E) -> Self::V {
+        self.0.dom(e)
+    }
+    fn tgt(&self, e: &Self::E) -> Self::V {
+        self.0.cod(e)
+    }
+}
+
+/** The underlying graph of vertices and pro-edges in a virtual double graph.
+
+Compare with [`EdgeGraph`].
+ */
+#[derive(From, RefCast)]
+#[repr(transparent)]
+pub struct ProedgeGraph<VDG: VDblGraph>(VDG);
+
+impl<VDG: VDblGraph> Graph for ProedgeGraph<VDG> {
+    type V = VDG::V;
+    type E = VDG::ProE;
+
+    fn has_vertex(&self, v: &Self::V) -> bool {
+        self.0.has_vertex(v)
+    }
+    fn has_edge(&self, e: &Self::E) -> bool {
+        self.0.has_proedge(e)
+    }
+    fn src(&self, e: &Self::E) -> Self::V {
+        self.0.src(e)
+    }
+    fn tgt(&self, e: &Self::E) -> Self::V {
+        self.0.tgt(e)
+    }
 }
