@@ -9,13 +9,25 @@ proarrows or cells. Rather, a cell has a domain that is a path of proarrows (a
 has gone by many other names, notably *fc-multicategory* ([Leinster
 2004](crate::refs::HigherOperads)).
 
+*Composites* of proarrows in a VDC, if they exist, are represented by cells
+satisfying a universal property ([Cruttwell-Shulman
+2008](crate::refs::GeneralizedMulticategories), Section 5). In our usage of
+virtual double categories as double theories, we will assume that *units*
+(nullary composites) exist. We will not assume that any other composites exist,
+though they often do. Like anything defined by a universal property, composites
+are not strictly unique but they *are* unique up to unique isomorphism. As often
+when working with (co)limits, our trait for virtual double categories assumes
+that a *choice* of composites has been made whenever they are needed. We do not
+attempt to "recognize" whether an arbitrary cell has the relevant universal
+property.
+
 Virtual double categories have pros and cons compared with ordinary double
 categories. We prefer VDCs in `catlog` because pastings of cells are much
 simpler in a VDC than in a double category: a pasting diagram in VDC is a
 well-typed [tree](super::tree) of cells, rather than a kind of planar string
 diagram, and the notorious
 [pinwheel](https://ncatlab.org/nlab/show/double+category#Unbiased) obstruction
-to composition does not arise.
+to composition in a double category does not arise.
  */
 
 use super::tree::DblTree;
@@ -99,5 +111,34 @@ pub trait VDblCategory {
     /// Constructs the identity cell on a proarrow.
     fn id_cell(&self, m: Self::Pro) -> Self::Cell {
         self.compose_cells(DblTree::empty(m))
+    }
+
+    /** Gets the chosen extension cell for a path of proarrows, if there is one.
+
+    Such a cell is also called an **opcartesian** cell. The default
+    implementation handles the one special case of a composite that always
+    exists: a unary composite.
+     */
+    fn composite_ext(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Cell> {
+        path.only().map(|m| self.id_cell(m))
+    }
+
+    /// Gets the chosen composite for a path of proarrows, if there is one.
+    fn composite(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Pro> {
+        self.composite_ext(path).map(|α| self.cell_cod(&α))
+    }
+
+    /** Gets the chosen extension cell for an object, if there is one.
+
+    Such a cell is an [extension](Self::composite_ext) or opcartesian cell
+    in the nullary case.
+     */
+    fn unit_ext(&self, x: Self::Ob) -> Option<Self::Cell> {
+        self.composite_ext(Path::empty(x))
+    }
+
+    /// Gets the chosen unit for an object, if there is one.
+    fn unit(&self, x: Self::Ob) -> Option<Self::Pro> {
+        self.unit_ext(x).map(|α| self.cell_cod(&α))
     }
 }
