@@ -30,6 +30,10 @@ diagram, and the notorious
 to composition in a double category does not arise.
  */
 
+use derive_more::From;
+use ref_cast::RefCast;
+
+use super::graph::VDblGraph;
 use super::tree::DblTree;
 use crate::one::path::Path;
 
@@ -140,5 +144,56 @@ pub trait VDblCategory {
     /// Gets the chosen unit for an object, if there is one.
     fn unit(&self, x: Self::Ob) -> Option<Self::Pro> {
         self.unit_ext(x).map(|α| self.cell_cod(&α))
+    }
+}
+
+/// The underlying [virtual double graph](VDblGraph) of a VDC.
+#[derive(From, RefCast)]
+#[repr(transparent)]
+pub struct UnderlyingDblGraph<VDC: VDblCategory>(VDC);
+
+impl<VDC: VDblCategory> VDblGraph for UnderlyingDblGraph<VDC> {
+    type V = VDC::Ob;
+    type E = VDC::Arr;
+    type ProE = VDC::Pro;
+    type Sq = VDC::Cell;
+
+    fn has_vertex(&self, v: &Self::V) -> bool {
+        self.0.has_ob(v)
+    }
+    fn has_edge(&self, e: &Self::E) -> bool {
+        self.0.has_arrow(e)
+    }
+    fn has_proedge(&self, p: &Self::ProE) -> bool {
+        self.0.has_proarrow(p)
+    }
+    fn has_square(&self, sq: &Self::Sq) -> bool {
+        self.0.has_cell(sq)
+    }
+
+    fn dom(&self, e: &Self::E) -> Self::V {
+        self.0.dom(e)
+    }
+    fn cod(&self, e: &Self::E) -> Self::V {
+        self.0.cod(e)
+    }
+    fn src(&self, p: &Self::ProE) -> Self::V {
+        self.0.src(p)
+    }
+    fn tgt(&self, p: &Self::ProE) -> Self::V {
+        self.0.tgt(p)
+    }
+
+    fn square_dom(&self, sq: &Self::Sq) -> Path<Self::V, Self::ProE> {
+        self.0.cell_dom(sq)
+    }
+    fn square_cod(&self, sq: &Self::Sq) -> Self::ProE {
+        self.0.cell_cod(sq)
+    }
+    fn square_src(&self, sq: &Self::Sq) -> Self::E {
+        self.0.cell_src(sq)
+    }
+    fn square_tgt(&self, sq: &Self::Sq) -> Self::E {
+        self.0.cell_tgt(sq)
     }
 }
