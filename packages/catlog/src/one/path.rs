@@ -91,6 +91,17 @@ impl<V, E> Path<V, E> {
         NonEmpty::from_vec(vec).map(Path::Seq)
     }
 
+    /** Constructs a path by repeating an edge `n` times.
+
+    The edge should have the same source and target, namely the first argument.
+     */
+    pub fn repeat_n(v: V, e: E, n: usize) -> Self
+    where
+        E: Clone,
+    {
+        Path::collect(std::iter::repeat_n(e, n)).unwrap_or_else(|| Path::empty(v))
+    }
+
     /// Length of the path.
     pub fn len(&self) -> usize {
         match self {

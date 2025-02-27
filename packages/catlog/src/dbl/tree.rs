@@ -106,6 +106,15 @@ impl<E, ProE, Sq> DblNode<E, ProE, Sq> {
             DblNode::Spine(e) => Path::single(e.clone()),
         }
     }
+
+    /// Arity of node in the given virtual double graph.
+    pub fn arity(&self, graph: &impl VDblGraph<E = E, ProE = ProE, Sq = Sq>) -> usize {
+        match self {
+            DblNode::Cell(sq) => graph.arity(sq),
+            DblNode::Id(_) => 1,
+            DblNode::Spine(_) => 0,
+        }
+    }
 }
 
 /** A double tree, or pasting diagram in a virtual double category.
@@ -232,5 +241,10 @@ impl<E, ProE, Sq> DblTree<E, ProE, Sq> {
         E: Clone,
     {
         Path::collect(self.tgt_nodes().map(|dn| dn.tgt(graph))).unwrap().flatten()
+    }
+
+    /// Arity of the composite cell specified by the tree.
+    pub fn arity(&self, graph: &impl VDblGraph<E = E, ProE = ProE, Sq = Sq>) -> usize {
+        self.leaves().map(|dn| dn.arity(graph)).sum()
     }
 }
