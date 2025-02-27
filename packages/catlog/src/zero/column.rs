@@ -35,10 +35,13 @@ pub trait Mapping {
 
     /** Is the mapping defined at a point?
 
-    Given a mapping `m`, the call `m.is_set(x)` is equivalent to
-    `m.apply(x).is_some()` but usually has a more efficient implementation.
+    The default implementation checks whether [`apply`](Self::apply) returns
+    something. Often this method can be given a more efficient implementation
+    that avoids allocating.
     */
-    fn is_set(&self, x: &Self::Dom) -> bool;
+    fn is_set(&self, x: &Self::Dom) -> bool {
+        self.apply(x).is_some()
+    }
 }
 
 /** A mutable [mapping](Mapping).
