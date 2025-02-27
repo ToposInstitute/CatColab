@@ -70,6 +70,14 @@ pub trait VDblGraph {
 
     /// Gets the target of a square, an edge.
     fn square_tgt(&self, sq: &Self::Sq) -> Self::E;
+
+    /** Gets the arity of a square.
+
+    The default implementation returns the length of the square's domain.
+     */
+    fn arity(&self, sq: &Self::Sq) -> usize {
+        self.square_dom(sq).len()
+    }
 }
 
 /** The underlying graph of vertices and edges in a virtual double graph.
