@@ -34,13 +34,18 @@ to composition in a double category does not arise.
 # Examples
 
 A [double theory](super::theory) is "just" a unital virtual double category, so
-all of our double theories provide examples of VDCs. For the purposes of unit
-testing, this module contains several minimal examples of VDCs implemented
+any double theory in the standard library is an example of a VDC. For testing
+purposes, this module provides several minimal examples of VDCs implemented
 directly, namely ["walking"](https://ncatlab.org/nlab/show/walking+structure)
 categorical structures that can be interpreted in any VDC:
 
 - the [walking category](WalkingCategory)
+- the [walking functor](WalkingFunctor)
 - the [walking bimodule](WalkingBimodule) or profunctor
+
+The walking category and bimodule can be seen as discrete double theories, while
+the walking functor is a simple double theory, but here they are implemented at
+the type level rather than as instances of general data structures.
 
  */
 
@@ -131,7 +136,7 @@ pub trait VDblCategory {
         αs: impl IntoIterator<Item = Self::Cell>,
         β: Self::Cell,
     ) -> Self::Cell {
-        self.compose_cells(DblTree::graft(αs.into_iter().map(DblTree::single), β))
+        self.compose_cells(DblTree::two_level(αs, β))
     }
 
     /// Constructs the identity cell on a proarrow.
@@ -191,7 +196,7 @@ pub trait VDblCategory {
 /// The underlying [virtual double graph](VDblGraph) of a VDC.
 #[derive(From, RefCast)]
 #[repr(transparent)]
-pub struct UnderlyingDblGraph<VDC: VDblCategory>(VDC);
+pub struct UnderlyingDblGraph<VDC: VDblCategory>(pub VDC);
 
 impl<VDC: VDblCategory> VDblGraph for UnderlyingDblGraph<VDC> {
     type V = VDC::Ob;
