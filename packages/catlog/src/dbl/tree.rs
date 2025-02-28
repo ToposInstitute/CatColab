@@ -188,7 +188,11 @@ impl<E, ProE, Sq> DblTree<E, ProE, Sq> {
             .map(|node| node.value())
     }
 
-    /// Iterates over nodes along the source (left) boundary of the double tree.
+    /** Iterates over nodes along the source (left) boundary of the double tree.
+
+    *Warning*: iteration proceeds from the tree's root to its left-most leaf,
+    which is the opposite order of the path of edges.
+     */
     pub fn src_nodes(&self) -> impl Iterator<Item = &DblNode<E, ProE, Sq>> {
         let mut maybe_node = Some(self.0.root());
         std::iter::from_fn(move || {
@@ -198,7 +202,11 @@ impl<E, ProE, Sq> DblTree<E, ProE, Sq> {
         })
     }
 
-    /// Iterates over nodes along the target (right) boundary of the double tree.
+    /** Iterates over nodes along the target (right) boundary of the double tree.
+
+    *Warning*: iteration proceeds from the tree's root to its right-most leaf,
+    which is the opposite order of the path of edges.
+     */
     pub fn tgt_nodes(&self) -> impl Iterator<Item = &DblNode<E, ProE, Sq>> {
         let mut maybe_node = Some(self.0.root());
         std::iter::from_fn(move || {
@@ -232,7 +240,9 @@ impl<E, ProE, Sq> DblTree<E, ProE, Sq> {
     where
         E: Clone,
     {
-        Path::collect(self.src_nodes().map(|dn| dn.src(graph))).unwrap().flatten()
+        let mut edges: Vec<_> = self.src_nodes().map(|dn| dn.src(graph)).collect();
+        edges.reverse();
+        Path::from_vec(edges).unwrap().flatten()
     }
 
     /// Target of the tree in the given virtual double graph.
@@ -240,7 +250,9 @@ impl<E, ProE, Sq> DblTree<E, ProE, Sq> {
     where
         E: Clone,
     {
-        Path::collect(self.tgt_nodes().map(|dn| dn.tgt(graph))).unwrap().flatten()
+        let mut edges: Vec<_> = self.tgt_nodes().map(|dn| dn.src(graph)).collect();
+        edges.reverse();
+        Path::from_vec(edges).unwrap().flatten()
     }
 
     /// Arity of the composite cell specified by the tree.
