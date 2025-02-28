@@ -204,7 +204,7 @@ pub struct DiscreteDblModel<Id, Cat: FgCategory> {
     mor_types: IndexedHashColumn<Id, Cat::Mor>,
 }
 
-/// A model of a discrete double theory where both theoy and model have keys of
+/// A model of a discrete double theory where both theory and model have keys of
 /// type `Ustr`.
 pub type UstrDiscreteDblModel = DiscreteDblModel<Ustr, UstrFinCategory>;
 // NOTE: We are leaving a small optimization on the table by not using the
@@ -700,6 +700,11 @@ where
         }
     }
 
+    /// Returns a reference-counting pointer to the theory for this model.
+    pub fn theory_arc(&self) -> Arc<DiscreteTabTheory<ThId, ThId, S>> {
+        self.theory.clone()
+    }
+    
     /// Convenience method to turn a morphism into an object.
     pub fn tabulated(&self, mor: TabMor<Id, Id>) -> TabOb<Id, Id> {
         TabOb::Tabulated(Box::new(mor))

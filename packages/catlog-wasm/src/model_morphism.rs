@@ -5,7 +5,7 @@ use tsify_next::Tsify;
 use uuid::Uuid;
 
 use catlog::dbl::{model, model_morphism};
-use catlog::one::{FgCategory, fin_category::UstrFinCategory};
+use catlog::one::{fin_category::UstrFinCategory, FgCategory};
 
 use super::model::DblModel;
 

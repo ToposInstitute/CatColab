@@ -10,11 +10,16 @@ use uuid::Uuid;
 use serde::{Deserialize, Serialize};
 use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
+use ustr::ustr;
+use std::sync::Arc;
 
 use catlog::dbl::model::{self as dbl_model, FgDblModel, InvalidDblModel, MutDblModel};
-use catlog::one::fin_category::UstrFinCategory;
+use catlog::one::fin_category::{UstrFinCategory,FinCategory};
 use catlog::one::{Category as _, FgCategory, Path};
 use catlog::validate::Validate;
+use catlog::dbl::theory::DiscreteDblTheory; 
+use catlog::zero::Mapping;
+use catlog::dbl::functor::{DiscreteDblTheoryMorphism, FgDiscreteDblTheoryMapping, DblFunctor};
 
 use super::result::JsResult;
 use super::theory::{DblTheory, DblTheoryBox, MorType, ObType};
@@ -257,6 +262,51 @@ impl DblModel {
         })
     }
 
+    // Get the model's theory (todo figure out how to make it work when theories 
+    // have different types, needed for supporting DiscreteTab)
+    fn theory_arc(
+        &self
+    ) -> Arc<DiscreteDblTheory<FinCategory<Ustr, Ustr, BuildHasherDefault<IdentityHasher>>>> {
+        match &self.0 {
+            DblModelBox::Discrete(dblmod) => dblmod.theory_arc(),
+            DblModelBox::DiscreteTab(dblmod) => panic!("Tab theories not yet supported")// dblmod.theory_arc() // HAS A DIFFERENT RETURN TYPE
+        }
+    }
+
+    /// Find negative feedback loops in a model.
+    #[wasm_bindgen]
+    pub fn pushforward(
+        &self,
+        codtheory: &DblTheory,
+        domob: Vec<String>,
+        codob: Vec<String>,
+        domhom: Vec<String>,
+        codhom: Vec<String>,
+    ) -> Result<DblModel, String> {
+        // Parse the string data into a `DiscreteDblTheoryMorphism`
+        let mut v: FgDiscreteDblTheoryMapping<Ustr, _> = Default::default();
+        for (a,b) in domob.into_iter().zip(codob) {
+            v.ob_map.set(ustr(&a),ustr(&b));
+        }
+        for (a,b) in domhom.into_iter().zip(codhom) {
+            v.mor_map.set(ustr(&a),ustr(&b));
+        }
+
+        let cod = match codtheory.0 {
+            DblTheoryBox::Discrete(th) => th ,
+            _ => panic!("Tab not supported")
+        };
+
+        let fun: DiscreteDblTheoryMorphism<_, _> = DblFunctor(&v, &self.theory_arc(), &cod);
+
+        match &mut self.0 {
+            DblModelBox::Discrete(model) => {
+                Ok(DblModel(DblModelBox::Discrete(fun.pushforward(cod, model))))
+            },
+            _ => panic!("Tab not supported")
+        }
+    }
+    
     /// Adds an object to the model.
     #[wasm_bindgen(js_name = "addOb")]
     pub fn add_ob(&mut self, decl: ObDecl) -> Result<bool, String> {

@@ -1,6 +1,6 @@
 import * as catlog from "catlog-wasm";
 
-import { Theory } from "../theory";
+import { MapData, Theory } from "../theory";
 import * as analyses from "./analyses";
 import { TheoryLibrary } from "./types";
 
@@ -10,6 +10,18 @@ import textStyles from "./text_styles.module.css";
 
 /** Standard library of double theories supported by the frontend. */
 export const stdTheories = new TheoryLibrary();
+
+export const allTheories = [
+    "empty",
+    "simple-olog",
+    "simple-schema",
+    "reg-net",
+    "causal-loop",
+    "causal-loop-delays",
+    "indeterminate-causal-loop",
+    "unary-dec",
+    "primitive-stock-flow",
+];
 
 stdTheories.add(
     {
@@ -25,6 +37,7 @@ stdTheories.add(
         return new Theory({
             ...meta,
             theory: thEmpty.theory(),
+            inclusions: new Map<string, MapData>(allTheories.map((t) => [t, new MapData({})])),
         });
     },
 );
@@ -225,6 +238,11 @@ stdTheories.add(
             ...meta,
             theory: thSignedCategory.theory(),
             onlyFreeModels: true,
+            inclusions: new Map<string, MapData>([
+                ["causal-loop", new MapData({})],
+                ["causal-loop-delays", new MapData({})],
+                ["indeterminate-causal-loop", new MapData({})],
+            ]),
             modelTypes: [
                 {
                     tag: "ObType",
@@ -301,6 +319,11 @@ stdTheories.add(
             ...meta,
             theory: thSignedCategory.theory(),
             onlyFreeModels: true,
+            inclusions: new Map<string, MapData>([
+                ["reg-net", new MapData({})],
+                ["causal-loop-delays", new MapData({})],
+                ["indeterminate-causal-loop", new MapData({})],
+            ]),
             modelTypes: [
                 {
                     tag: "ObType",

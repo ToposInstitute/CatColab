@@ -282,6 +282,10 @@ mod tests {
         assert!(s.contains(&7));
         assert!(!s.contains(&2));
 
+        let mut s2: HashFinSet<i32> = Default::default();
+        s2.extend([7, 5, 3]);
+        assert_eq!(s, s2);
+
         let s = HashFinSet::from(HashSet::from([3, 5, 7]));
         let sum: i32 = s.iter().sum();
         assert_eq!(sum, 15);

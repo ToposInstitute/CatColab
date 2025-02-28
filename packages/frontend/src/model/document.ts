@@ -10,6 +10,8 @@ import type { Theory } from "../theory";
 import { type IndexedMap, indexMap } from "../util/indexing";
 import { type ModelJudgment, toCatlogModel } from "./types";
 
+import type { ChangeFn } from "@automerge/automerge-repo";
+
 /** A document defining a model. */
 export type ModelDocument = Document<"model"> & {
     /** Identifier of double theory that the model is of. */
@@ -18,6 +20,25 @@ export type ModelDocument = Document<"model"> & {
     /** Content of the model, formal and informal. */
     notebook: Notebook<ModelJudgment>;
 };
+
+/**
+Going from a ModelDocument to a catlog model throws away info. In the other
+direction, if we want to use a catlog model to update an existing ModelDocument,
+then we need to update the cells based on UUID (and possibly add new ones for 
+UUIDs in `updated_model` not found in the current document)
+*/
+export function updateFromCatlogModel(
+    changeDoc: (f: ChangeFn<ModelDocument>) => void,
+    updated_model: DblModel,
+): void {
+    // ...
+    function my_change_fn(doc: ModelDocument) {
+        // Update cells, add new ones based on `updated_model`
+        console.log("HERE IN MY_CHANGE_FN W ", updated_model);
+        doc;
+    }
+    changeDoc(my_change_fn);
+}
 
 /** Create an empty model document. */
 export const newModelDocument = (theory: string): ModelDocument => ({

@@ -6,6 +6,23 @@ import type { DiagramAnalysisComponent, ModelAnalysisComponent } from "../analys
 import { uniqueIndexArray } from "../util/indexing";
 import type { ArrowStyle } from "../visualization";
 
+/** Data about privileged migrations a frontend theory can have
+ 
+It includes the name of the target theory, as well as any necessary renaming of objects and morphisms (by default, assume name is unchanged)
+ */
+export class MapData {
+    obnames: Map<string, string>;
+    mornames: Map<string, string>;
+    constructor(props: {
+        obnames?: Map<string, string>;
+        mornames?: Map<string, string>;
+    }) {
+        // Theory.
+        this.obnames = props.obnames || new Map<string, string>();
+        this.mornames = props.mornames || new Map<string, string>();
+    }
+}
+
 /** A double theory configured for the frontend.
 
 This class augments a double theory as defined in the core with metadata about
@@ -43,6 +60,9 @@ export class Theory {
      */
     readonly instanceOfName: string;
 
+    /** Privileged sigma migrations along inclusions which need no explicit functor **/
+    inclusions: Map<string, MapData>;
+
     private readonly modelTypeMeta: TypeMetadata<ModelObTypeMeta, ModelMorTypeMeta>;
     private readonly instanceTypeMeta: TypeMetadata<InstanceObTypeMeta, InstanceMorTypeMeta>;
 
@@ -62,6 +82,7 @@ export class Theory {
         modelAnalyses?: ModelAnalysisMeta[];
         onlyFreeModels?: boolean;
         instanceOfName?: string;
+        inclusions?: Map<string, MapData>;
         instanceTypes?: InstanceTypeMeta[];
         diagramAnalyses?: DiagramAnalysisMeta[];
     }) {
@@ -76,7 +97,7 @@ export class Theory {
         this.modelTypeMeta = new TypeMetadata<ModelObTypeMeta, ModelMorTypeMeta>(props.modelTypes);
         this.modelAnalysisMap = uniqueIndexArray(props.modelAnalyses ?? [], (meta) => meta.id);
         this.onlyFreeModels = props.onlyFreeModels ?? false;
-
+        this.inclusions = props.inclusions ?? new Map<string, MapData>();
         // Instances.
         this.instanceOfName = props.instanceOfName ?? "Instance of";
         this.instanceTypeMeta = new TypeMetadata<InstanceObTypeMeta, InstanceMorTypeMeta>(
