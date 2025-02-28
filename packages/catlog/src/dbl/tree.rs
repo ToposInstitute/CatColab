@@ -141,9 +141,19 @@ impl<E, ProE, Sq> DblTree<E, ProE, Sq> {
         Tree::new(DblNode::Id(p)).into()
     }
 
-    /// Constructs a tree with a single node, its root.
+    /// Constructs a tree with a single square, its root.
     pub fn single(sq: Sq) -> Self {
         Tree::new(DblNode::Cell(sq)).into()
+    }
+
+    /// Constructs a tree a single spine node.
+    pub fn spine(e: E) -> Self {
+        Tree::new(DblNode::Spine(e)).into()
+    }
+
+    /// Constructs a tree of a height two.
+    pub fn two_level(leaves: impl IntoIterator<Item = Sq>, base: Sq) -> Self {
+        Self::graft(leaves.into_iter().map(DblTree::single), base)
     }
 
     /// Constructs a tree by grafting trees as subtrees onto a base cell.
@@ -258,5 +268,50 @@ impl<E, ProE, Sq> DblTree<E, ProE, Sq> {
     /// Arity of the composite cell specified by the tree.
     pub fn arity(&self, graph: &impl VDblGraph<E = E, ProE = ProE, Sq = Sq>) -> usize {
         self.leaves().map(|dn| dn.arity(graph)).sum()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use nonempty::nonempty;
+
+    use super::super::category::{WalkingBimodule as Bimod, WalkingFunctor as Funct, *};
+    use super::*;
+
+    #[test]
+    fn tree_boundary() {
+        let bimod = Bimod::Main();
+        let graph = UnderlyingDblGraph(Bimod::Main());
+        let path = Path::Seq(nonempty![Bimod::Pro::Left, Bimod::Pro::Middle, Bimod::Pro::Right]);
+        let mid = bimod.composite_ext(path).unwrap();
+        let tree = DblTree::two_level(
+            vec![bimod.id_cell(Bimod::Pro::Left), mid.clone(), bimod.id_cell(Bimod::Pro::Right)],
+            mid,
+        );
+        assert_eq!(tree.leaves().count(), 3);
+        assert_eq!(tree.arity(&graph), 5);
+        assert_eq!(
+            tree.dom(&graph),
+            Path::Seq(nonempty![
+                Bimod::Pro::Left,
+                Bimod::Pro::Left,
+                Bimod::Pro::Middle,
+                Bimod::Pro::Right,
+                Bimod::Pro::Right
+            ])
+        );
+        assert_eq!(tree.cod(&graph), Bimod::Pro::Middle);
+
+        let funct = Funct::Main();
+        let graph = UnderlyingDblGraph(Funct::Main());
+        let f = Funct::Arr::Arrow;
+        let tree = DblTree::<_, Funct::Ob, _>::graft(
+            vec![DblTree::spine(f), DblTree::spine(f)],
+            funct.composite_ext(Path::pair(Funct::Ob::One, Funct::Ob::One)).unwrap(),
+        );
+        assert_eq!(tree.src_nodes().count(), 2);
+        assert_eq!(tree.tgt_nodes().count(), 2);
+        assert_eq!(tree.src(&graph), Path::pair(f, Funct::Arr::One));
+        assert_eq!(tree.tgt(&graph), Path::pair(f, Funct::Arr::One));
     }
 }
