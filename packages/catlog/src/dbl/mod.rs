@@ -8,3 +8,4 @@ pub mod model;
 pub mod model_diagram;
 pub mod model_morphism;
 pub mod theory;
+pub mod theory_next;
