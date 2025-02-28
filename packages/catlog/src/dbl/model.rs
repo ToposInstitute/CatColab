@@ -51,7 +51,7 @@ use super::theory::{DblTheory, DiscreteDblTheory};
 use crate::one::fin_category::{FpCategory, InvalidFpCategory, UstrFinCategory};
 use crate::one::*;
 use crate::validate::{self, Validate};
-use crate::zero::{Column, FinSet, HashColumn, HashFinSet, IndexedHashColumn, Mapping, Set};
+use crate::zero::*;
 
 use super::theory::*;
 
@@ -406,10 +406,10 @@ where
     Cat::Mor: Hash,
 {
     fn ob_generator_type(&self, ob: &Self::ObGen) -> Self::ObType {
-        self.ob_types.apply(ob).cloned().expect("Object should have type")
+        self.ob_types.apply(ob).expect("Object should have type")
     }
     fn mor_generator_type(&self, mor: &Self::MorGen) -> Self::MorType {
-        self.mor_types.apply(mor).cloned().expect("Morphism should have type")
+        self.mor_types.apply(mor).expect("Morphism should have type")
     }
 
     fn ob_generators_with_type(&self, typ: &Self::ObType) -> impl Iterator<Item = Self::ObGen> {
@@ -648,18 +648,14 @@ where
 
     fn src(&self, edge: &Self::E) -> Self::V {
         match edge {
-            TabEdge::Basic(e) => {
-                self.dom.apply(e).cloned().expect("Domain of morphism should be defined")
-            }
+            TabEdge::Basic(e) => self.dom.apply(e).expect("Domain of morphism should be defined"),
             TabEdge::Square { dom, .. } => TabOb::Tabulated(dom.clone()),
         }
     }
 
     fn tgt(&self, edge: &Self::E) -> Self::V {
         match edge {
-            TabEdge::Basic(e) => {
-                self.cod.apply(e).cloned().expect("Codomain of morphism should be defined")
-            }
+            TabEdge::Basic(e) => self.cod.apply(e).expect("Codomain of morphism should be defined"),
             TabEdge::Square { cod, .. } => TabOb::Tabulated(cod.clone()),
         }
     }
@@ -718,7 +714,7 @@ where
     pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidDblModel<Id>> + '_ {
         type Invalid<Id> = InvalidDblModel<Id>;
         let ob_errors = self.generators.objects.iter().filter_map(|x| {
-            if self.ob_types.apply(&x).is_some_and(|typ| self.theory.has_ob_type(typ)) {
+            if self.ob_types.get(&x).is_some_and(|typ| self.theory.has_ob_type(typ)) {
                 None
             } else {
                 Some(Invalid::ObType(x))
@@ -726,8 +722,8 @@ where
         });
         let mor_errors = self.generators.morphisms.iter().flat_map(|e| {
             let mut errs = Vec::new();
-            let dom = self.generators.dom.apply(&e).filter(|x| self.has_ob(x));
-            let cod = self.generators.cod.apply(&e).filter(|x| self.has_ob(x));
+            let dom = self.generators.dom.get(&e).filter(|x| self.has_ob(x));
+            let cod = self.generators.cod.get(&e).filter(|x| self.has_ob(x));
             if dom.is_none() {
                 errs.push(Invalid::Dom(e.clone()));
             }
@@ -735,7 +731,7 @@ where
                 errs.push(Invalid::Cod(e.clone()));
             }
             if let Some(mor_type) =
-                self.mor_types.apply(&e).filter(|typ| self.theory.has_mor_type(typ))
+                self.mor_types.get(&e).filter(|typ| self.theory.has_mor_type(typ))
             {
                 if dom.is_some_and(|x| self.ob_type(x) != self.theory.src(mor_type)) {
                     errs.push(Invalid::DomType(e.clone()));
@@ -792,10 +788,10 @@ where
     }
 
     fn mor_generator_dom(&self, f: &Self::MorGen) -> Self::Ob {
-        self.generators.dom.apply(f).cloned().expect("Domain should be defined")
+        self.generators.dom.apply(f).expect("Domain should be defined")
     }
     fn mor_generator_cod(&self, f: &Self::MorGen) -> Self::Ob {
-        self.generators.cod.apply(f).cloned().expect("Codomain should be defined")
+        self.generators.cod.apply(f).expect("Codomain should be defined")
     }
 }
 
@@ -861,10 +857,10 @@ where
     S: BuildHasher,
 {
     fn ob_generator_type(&self, ob: &Self::ObGen) -> Self::ObType {
-        self.ob_types.apply(ob).cloned().expect("Object should have type")
+        self.ob_types.apply(ob).expect("Object should have type")
     }
     fn mor_generator_type(&self, mor: &Self::MorGen) -> Self::MorType {
-        self.mor_types.apply(mor).cloned().expect("Morphism should have type")
+        self.mor_types.apply(mor).expect("Morphism should have type")
     }
 
     fn ob_generators_with_type(&self, obtype: &Self::ObType) -> impl Iterator<Item = Self::ObGen> {
@@ -895,10 +891,10 @@ where
     }
 
     fn get_dom(&self, f: &Self::MorGen) -> Option<&Self::Ob> {
-        self.generators.dom.apply(f)
+        self.generators.dom.get(f)
     }
     fn get_cod(&self, f: &Self::MorGen) -> Option<&Self::Ob> {
-        self.generators.cod.apply(f)
+        self.generators.cod.get(f)
     }
     fn set_dom(&mut self, f: Self::MorGen, x: Self::Ob) -> Option<Self::Ob> {
         self.generators.dom.set(f, x)

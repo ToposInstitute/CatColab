@@ -99,43 +99,71 @@ pub trait FinGraph: Graph {
     }
 }
 
-/** A finite graph backed by columns.
+/** A graph backed by sets and mappings.
 
-Such a graph is defined in the styles of "C-sets" by two [finite sets](FinSet)
-and two [columns](Column). Note that this trait does *not* extend [`Graph`]. To
-derive an implementation, implement the further trait
-[`ColumnarGraphImplGraph`]. It also does not assume that the graph is mutable;
-for that, implement the trait [`ColumnarGraphMut`].
+Such a graph is defined in copresheaf style by two [sets](Set) and two
+[mappings](Mapping). Implementing this trait provides a *blanket implementation*
+of [`Graph`]. This is the easiest way to define a new graph type.
+
+This trait does not assume that the graph is mutable; for that, you must also
+implement the trait [`MutColumnarGraph`].
  */
 pub trait ColumnarGraph {
-    /// Type of vertices in the columnar graph.
+    /// Type of vertices in the graph.
     type V: Eq + Clone;
 
-    /// Type of edges in the columnar graph.
+    /// Type of edges in the graph.
     type E: Eq + Clone;
 
+    /// The set of vertices.
+    type Vertices: Set<Elem = Self::V>;
+
+    /// The set of edges.
+    type Edges: Set<Elem = Self::E>;
+
+    /// The map assigning each edge its source vertex.
+    type Src: MutMapping<Dom = Self::E, Cod = Self::V>;
+
+    /// The map assigning each edge its target vertex.
+    type Tgt: MutMapping<Dom = Self::E, Cod = Self::V>;
+
     /// Gets the set of vertices.
-    fn vertex_set(&self) -> &impl FinSet<Elem = Self::V>;
+    fn vertex_set(&self) -> &Self::Vertices;
 
     /// Gets the set of edges.
-    fn edge_set(&self) -> &impl FinSet<Elem = Self::E>;
+    fn edge_set(&self) -> &Self::Edges;
 
     /// Gets the mapping assigning a source vertex to each edge.
-    fn src_map(&self) -> &impl Column<Dom = Self::E, Cod = Self::V>;
+    fn src_map(&self) -> &Self::Src;
 
     /// Gets the mapping assignment a target vertex to each edge.
-    fn tgt_map(&self) -> &impl Column<Dom = Self::E, Cod = Self::V>;
+    fn tgt_map(&self) -> &Self::Tgt;
 
     /// Gets the source of an edge, possibly undefined.
     fn get_src(&self, e: &Self::E) -> Option<&Self::V> {
-        self.src_map().apply(e)
+        self.src_map().get(e)
     }
 
     /// Gets the target of an edge, possibly undefined.
     fn get_tgt(&self, e: &Self::E) -> Option<&Self::V> {
-        self.tgt_map().apply(e)
+        self.tgt_map().get(e)
     }
+}
 
+/** A finite graph backed by columns.
+
+Such a graph is defined in copresheaf style by two [finite sets](FinSet) and two
+[columns](Column). Implementing this trait provides a *blanket implementation*
+of [`FinGraph`].
+ */
+pub trait FiniteColumnarGraph:
+    ColumnarGraph<
+        Vertices: FinSet<Elem = Self::V>,
+        Edges: FinSet<Elem = Self::E>,
+        Src: Column<Dom = Self::E, Cod = Self::V>,
+        Tgt: Column<Dom = Self::E, Cod = Self::V>,
+    >
+{
     /// Iterates over failures to be a valid graph.
     fn iter_invalid(&self) -> impl Iterator<Item = InvalidGraphData<Self::E>> {
         let (dom, cod) = (self.edge_set(), self.vertex_set());
@@ -149,16 +177,20 @@ pub trait ColumnarGraph {
     }
 }
 
-/** Columnar graph with mutable columns.
- */
-pub trait ColumnarGraphMut: ColumnarGraph {
+/// A columnar graph with mutable columns.
+pub trait MutColumnarGraph:
+    ColumnarGraph<
+        Src: MutMapping<Dom = Self::E, Cod = Self::V>,
+        Tgt: MutMapping<Dom = Self::E, Cod = Self::V>,
+    >
+{
     /// Variant of [`src_map`](ColumnarGraph::src_map) that returns a mutable
     /// reference.
-    fn src_map_mut(&mut self) -> &mut impl Column<Dom = Self::E, Cod = Self::V>;
+    fn src_map_mut(&mut self) -> &mut Self::Src;
 
     /// Variant of [`tgt_map`](ColumnarGraph::tgt_map) that returns a mutable
     /// reference.
-    fn tgt_map_mut(&mut self) -> &mut impl Column<Dom = Self::E, Cod = Self::V>;
+    fn tgt_map_mut(&mut self) -> &mut Self::Tgt;
 
     /// Sets the source of an edge.
     fn set_src(&mut self, e: Self::E, v: Self::V) -> Option<Self::V> {
@@ -171,14 +203,7 @@ pub trait ColumnarGraphMut: ColumnarGraph {
     }
 }
 
-/** Derive implementation of a graph from a columnar graph.
-
-Implementing this trait provides a *blanket implementation* of [`Graph`] and
-[`FinGraph`].
- */
-pub trait ColumnarGraphImplGraph: ColumnarGraph {}
-
-impl<G: ColumnarGraphImplGraph> Graph for G {
+impl<G: ColumnarGraph> Graph for G {
     type V = G::V;
     type E = G::E;
 
@@ -189,14 +214,14 @@ impl<G: ColumnarGraphImplGraph> Graph for G {
         self.edge_set().contains(e)
     }
     fn src(&self, e: &Self::E) -> Self::V {
-        self.get_src(e).expect("Source of edge should be set").clone()
+        self.get_src(e).cloned().expect("Source of edge should be set")
     }
     fn tgt(&self, e: &Self::E) -> Self::V {
-        self.get_tgt(e).expect("Target of edge should be set").clone()
+        self.get_tgt(e).cloned().expect("Target of edge should be set")
     }
 }
 
-impl<G: ColumnarGraphImplGraph> FinGraph for G {
+impl<G: FiniteColumnarGraph> FinGraph for G {
     fn vertices(&self) -> impl Iterator<Item = Self::V> {
         self.vertex_set().iter()
     }
@@ -250,30 +275,35 @@ impl ColumnarGraph for SkelGraph {
     type V = usize;
     type E = usize;
 
-    fn vertex_set(&self) -> &impl FinSet<Elem = usize> {
+    type Vertices = SkelFinSet;
+    type Edges = SkelFinSet;
+    type Src = SkelIndexedColumn;
+    type Tgt = SkelIndexedColumn;
+
+    fn vertex_set(&self) -> &Self::Vertices {
         SkelFinSet::ref_cast(&self.nv)
     }
-    fn edge_set(&self) -> &impl FinSet<Elem = usize> {
+    fn edge_set(&self) -> &Self::Edges {
         SkelFinSet::ref_cast(&self.ne)
     }
-    fn src_map(&self) -> &impl Column<Dom = usize, Cod = usize> {
+    fn src_map(&self) -> &Self::Src {
         &self.src_map
     }
-    fn tgt_map(&self) -> &impl Column<Dom = usize, Cod = usize> {
+    fn tgt_map(&self) -> &Self::Tgt {
         &self.tgt_map
     }
 }
 
-impl ColumnarGraphMut for SkelGraph {
-    fn src_map_mut(&mut self) -> &mut impl Column<Dom = usize, Cod = usize> {
+impl MutColumnarGraph for SkelGraph {
+    fn src_map_mut(&mut self) -> &mut Self::Src {
         &mut self.src_map
     }
-    fn tgt_map_mut(&mut self) -> &mut impl Column<Dom = usize, Cod = usize> {
+    fn tgt_map_mut(&mut self) -> &mut Self::Tgt {
         &mut self.tgt_map
     }
 }
 
-impl ColumnarGraphImplGraph for SkelGraph {}
+impl FiniteColumnarGraph for SkelGraph {}
 
 impl SkelGraph {
     /// Adds a new vertex to the graph and returns it.
@@ -373,35 +403,40 @@ where
     type V = V;
     type E = E;
 
-    fn vertex_set(&self) -> &impl FinSet<Elem = V> {
+    type Vertices = HashFinSet<V, S>;
+    type Edges = HashFinSet<E, S>;
+    type Src = IndexedHashColumn<E, V, S>;
+    type Tgt = IndexedHashColumn<E, V, S>;
+
+    fn vertex_set(&self) -> &Self::Vertices {
         &self.vertex_set
     }
-    fn edge_set(&self) -> &impl FinSet<Elem = E> {
+    fn edge_set(&self) -> &Self::Edges {
         &self.edge_set
     }
-    fn src_map(&self) -> &impl Column<Dom = E, Cod = V> {
+    fn src_map(&self) -> &Self::Src {
         &self.src_map
     }
-    fn tgt_map(&self) -> &impl Column<Dom = E, Cod = V> {
+    fn tgt_map(&self) -> &Self::Tgt {
         &self.tgt_map
     }
 }
 
-impl<V, E, S> ColumnarGraphMut for HashGraph<V, E, S>
+impl<V, E, S> MutColumnarGraph for HashGraph<V, E, S>
 where
     V: Eq + Hash + Clone,
     E: Eq + Hash + Clone,
     S: BuildHasher,
 {
-    fn src_map_mut(&mut self) -> &mut impl Column<Dom = E, Cod = V> {
+    fn src_map_mut(&mut self) -> &mut Self::Src {
         &mut self.src_map
     }
-    fn tgt_map_mut(&mut self) -> &mut impl Column<Dom = E, Cod = V> {
+    fn tgt_map_mut(&mut self) -> &mut Self::Tgt {
         &mut self.tgt_map
     }
 }
 
-impl<V, E, S> ColumnarGraphImplGraph for HashGraph<V, E, S>
+impl<V, E, S> FiniteColumnarGraph for HashGraph<V, E, S>
 where
     V: Eq + Hash + Clone,
     E: Eq + Hash + Clone,
@@ -478,20 +513,16 @@ pub trait GraphMapping {
     type CodE: Eq + Clone;
 
     /// Applies the graph mapping at a vertex.
-    fn apply_vertex(&self, v: &Self::DomV) -> Option<&Self::CodV>;
+    fn apply_vertex(&self, v: &Self::DomV) -> Option<Self::CodV>;
 
     /// Applies the graph mapping at an edge.
-    fn apply_edge(&self, e: &Self::DomE) -> Option<&Self::CodE>;
+    fn apply_edge(&self, e: &Self::DomE) -> Option<Self::CodE>;
 
     /// Is the mapping defined at a vertex?
-    fn is_vertex_assigned(&self, v: &Self::DomV) -> bool {
-        self.apply_vertex(v).is_some()
-    }
+    fn is_vertex_assigned(&self, v: &Self::DomV) -> bool;
 
     /// Is the mapping defined at an edge?
-    fn is_edge_assigned(&self, e: &Self::DomE) -> bool {
-        self.apply_edge(e).is_some()
-    }
+    fn is_edge_assigned(&self, e: &Self::DomE) -> bool;
 }
 
 /** A homomorphism between graphs defined by a [mapping](GraphMapping).
@@ -516,7 +547,7 @@ where
     {
         let GraphMorphism(mapping, dom, cod) = *self;
         let vertex_errors = dom.vertices().filter_map(|v| {
-            if mapping.apply_vertex(&v).is_some_and(|w| cod.has_vertex(w)) {
+            if mapping.apply_vertex(&v).is_some_and(|w| cod.has_vertex(&w)) {
                 None
             } else {
                 Some(InvalidGraphMorphism::Vertex(v))
@@ -525,12 +556,12 @@ where
 
         let edge_errors = dom.edges().flat_map(|e| {
             if let Some(f) = mapping.apply_edge(&e) {
-                if cod.has_edge(f) {
+                if cod.has_edge(&f) {
                     let mut errs = Vec::new();
-                    if mapping.apply_vertex(&dom.src(&e)).is_some_and(|v| *v != cod.src(f)) {
+                    if mapping.apply_vertex(&dom.src(&e)).is_some_and(|v| v != cod.src(&f)) {
                         errs.push(InvalidGraphMorphism::Src(e.clone()))
                     }
-                    if mapping.apply_vertex(&dom.tgt(&e)).is_some_and(|v| *v != cod.tgt(f)) {
+                    if mapping.apply_vertex(&dom.tgt(&e)).is_some_and(|v| v != cod.tgt(&f)) {
                         errs.push(InvalidGraphMorphism::Tgt(e.clone()))
                     }
                     return errs;
@@ -601,18 +632,18 @@ impl<ColV, ColE> ColumnarGraphMapping<ColV, ColE> {
 
 impl<ColV, ColE> GraphMapping for ColumnarGraphMapping<ColV, ColE>
 where
-    ColV: Mapping,
-    ColE: Mapping,
+    ColV: MutMapping,
+    ColE: MutMapping,
 {
     type DomV = ColV::Dom;
     type DomE = ColE::Dom;
     type CodV = ColV::Cod;
     type CodE = ColE::Cod;
 
-    fn apply_vertex(&self, v: &Self::DomV) -> Option<&Self::CodV> {
+    fn apply_vertex(&self, v: &Self::DomV) -> Option<Self::CodV> {
         self.vertex_map.apply(v)
     }
-    fn apply_edge(&self, e: &Self::DomE) -> Option<&Self::CodE> {
+    fn apply_edge(&self, e: &Self::DomE) -> Option<Self::CodE> {
         self.edge_map.apply(e)
     }
     fn is_vertex_assigned(&self, v: &Self::DomV) -> bool {

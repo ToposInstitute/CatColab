@@ -11,10 +11,10 @@ serde = ["dep:serde", "nonempty/serialize", "ustr/serde"]
 serde-wasm = ["serde", "dep:wasm-bindgen", "dep:tsify-next"]
 
 [dependencies]
-archery = "1"
 derivative = "2"
 derive_more = { version = "1", features = ["from", "into"] }
 duplicate = "2"
+ego-tree = "0.10"
 either = "1"
 nalgebra = { version = "0.33", optional = true }
 nonempty = "0.10"
