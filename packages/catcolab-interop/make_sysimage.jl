@@ -9,7 +9,7 @@ Pkg.activate(@__DIR__)
 
 @info "Creating the sysimage. This may take a while..."
 sysimg="AlgebraicJuliaService.so"
-create_sysimage(["AlgebraicJuliaService"], sysimage_path=sysimg,
+create_sysimage(["CatColabInterop"], sysimage_path=sysimg,
                 precompile_execution_file="sysimage_precompile.jl")
 sysimg_path=joinpath(@__DIR__, sysimg);
 
