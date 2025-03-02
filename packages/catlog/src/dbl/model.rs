@@ -704,7 +704,7 @@ where
     pub fn theory_arc(&self) -> Arc<DiscreteTabTheory<ThId, ThId, S>> {
         self.theory.clone()
     }
-    
+
     /// Convenience method to turn a morphism into an object.
     pub fn tabulated(&self, mor: TabMor<Id, Id>) -> TabOb<Id, Id> {
         TabOb::Tabulated(Box::new(mor))

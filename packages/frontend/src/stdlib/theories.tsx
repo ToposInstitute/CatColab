@@ -55,6 +55,16 @@ stdTheories.add(
         return new Theory({
             ...meta,
             theory: thCategory.theory(),
+            inclusions: new Map<string, MapData>([
+                [
+                    "simple-schema",
+                    new MapData({
+                        obnames: [["Object", "Entity"]],
+                        mornames: [["Hom", "Mapping"]],
+                    }),
+                ],
+            ]),
+
             modelTypes: [
                 {
                     tag: "ObType",
@@ -234,14 +244,15 @@ stdTheories.add(
     },
     (meta) => {
         const thSignedCategory = new catlog.ThSignedCategory();
+        const md = new MapData({ obnames: ["Object"], mornames: ["Negative"] });
         return new Theory({
             ...meta,
             theory: thSignedCategory.theory(),
             onlyFreeModels: true,
             inclusions: new Map<string, MapData>([
-                ["causal-loop", new MapData({})],
-                ["causal-loop-delays", new MapData({})],
-                ["indeterminate-causal-loop", new MapData({})],
+                ["causal-loop", md],
+                ["causal-loop-delays", md],
+                ["indeterminate-causal-loop", md],
             ]),
             modelTypes: [
                 {
@@ -314,15 +325,14 @@ stdTheories.add(
     },
     (meta) => {
         const thSignedCategory = new catlog.ThSignedCategory();
-
+        const md = new MapData({ obnames: ["Object"], mornames: ["Negative"] });
         return new Theory({
             ...meta,
             theory: thSignedCategory.theory(),
             onlyFreeModels: true,
             inclusions: new Map<string, MapData>([
-                ["reg-net", new MapData({})],
-                ["causal-loop-delays", new MapData({})],
-                ["indeterminate-causal-loop", new MapData({})],
+                ["causal-loop-delays", md],
+                ["indeterminate-causal-loop", md],
             ]),
             modelTypes: [
                 {

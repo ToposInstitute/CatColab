@@ -4,22 +4,23 @@ use std::hash::BuildHasherDefault;
 
 use all_the_same::all_the_same;
 use derive_more::{From, TryInto};
-use ustr::{IdentityHasher, Ustr};
+use ustr::{IdentityHasher, Ustr, ustr};
 use uuid::Uuid;
 
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
-use ustr::ustr;
-use std::sync::Arc;
 
-use catlog::dbl::model::{self as dbl_model, FgDblModel, InvalidDblModel, MutDblModel};
-use catlog::one::fin_category::{UstrFinCategory,FinCategory};
+use catlog::dbl::functor::{DblFunctor, DiscreteDblTheoryMorphism, FgDiscreteDblTheoryMapping};
+use catlog::dbl::model::{
+    self as dbl_model, DblModel as CoreDblModel, FgDblModel, InvalidDblModel, MutDblModel,
+};
+use catlog::dbl::theory::{DiscreteDblTheory, TabMorType, TabObType};
+use catlog::one::fin_category::{FinCategory, FinMor, UstrFinCategory};
 use catlog::one::{Category as _, FgCategory, Path};
 use catlog::validate::Validate;
-use catlog::dbl::theory::DiscreteDblTheory; 
-use catlog::zero::Mapping;
-use catlog::dbl::functor::{DiscreteDblTheoryMorphism, FgDiscreteDblTheoryMapping, DblFunctor};
+use catlog::zero::MutMapping;
 
 use super::result::JsResult;
 use super::theory::{DblTheory, DblTheoryBox, MorType, ObType};
@@ -262,14 +263,14 @@ impl DblModel {
         })
     }
 
-    // Get the model's theory (todo figure out how to make it work when theories 
+    // Get the model's theory (todo figure out how to make it work when theories
     // have different types, needed for supporting DiscreteTab)
     fn theory_arc(
-        &self
+        &self,
     ) -> Arc<DiscreteDblTheory<FinCategory<Ustr, Ustr, BuildHasherDefault<IdentityHasher>>>> {
         match &self.0 {
             DblModelBox::Discrete(dblmod) => dblmod.theory_arc(),
-            DblModelBox::DiscreteTab(dblmod) => panic!("Tab theories not yet supported")// dblmod.theory_arc() // HAS A DIFFERENT RETURN TYPE
+            DblModelBox::DiscreteTab(_) => panic!("Tab theories not yet supported"), // dblmod.theory_arc() // HAS A DIFFERENT RETURN TYPE
         }
     }
 
@@ -284,29 +285,30 @@ impl DblModel {
         codhom: Vec<String>,
     ) -> Result<DblModel, String> {
         // Parse the string data into a `DiscreteDblTheoryMorphism`
-        let mut v: FgDiscreteDblTheoryMapping<Ustr, _> = Default::default();
-        for (a,b) in domob.into_iter().zip(codob) {
-            v.ob_map.set(ustr(&a),ustr(&b));
+        let mut v: FgDiscreteDblTheoryMapping<_, _, _, _> = Default::default();
+        for (a, b) in domob.into_iter().zip(codob) {
+            v.ob_map.set(ustr(&a), ustr(&b));
         }
-        for (a,b) in domhom.into_iter().zip(codhom) {
-            v.mor_map.set(ustr(&a),ustr(&b));
+        for (a, b) in domhom.into_iter().zip(codhom) {
+            v.mor_map.set(ustr(&a), ustr(&b));
         }
 
-        let cod = match codtheory.0 {
-            DblTheoryBox::Discrete(th) => th ,
-            _ => panic!("Tab not supported")
+        let cod = match &codtheory.0 {
+            DblTheoryBox::Discrete(th) => th,
+            _ => panic!("Tab not supported"),
         };
 
-        let fun: DiscreteDblTheoryMorphism<_, _> = DblFunctor(&v, &self.theory_arc(), &cod);
+        let dom = self.theory_arc();
+        let fun: DiscreteDblTheoryMorphism<_, _> = DblFunctor(&v, &dom, cod);
 
-        match &mut self.0 {
+        match &self.0 {
             DblModelBox::Discrete(model) => {
-                Ok(DblModel(DblModelBox::Discrete(fun.pushforward(cod, model))))
-            },
-            _ => panic!("Tab not supported")
+                Ok(DblModel(DblModelBox::Discrete(fun.pushforward(cod.clone(), model))))
+            }
+            _ => panic!("Tab not supported"),
         }
     }
-    
+
     /// Adds an object to the model.
     #[wasm_bindgen(js_name = "addOb")]
     pub fn add_ob(&mut self, decl: ObDecl) -> Result<bool, String> {
@@ -356,6 +358,46 @@ impl DblModel {
                 Ok(model.has_mor(&mor))
             }
         })
+    }
+
+    /// What is the type of this object? Expects `has_ob(ob) == true`
+    #[wasm_bindgen(js_name = "obType")]
+    pub fn ob_type(&self, ob: Ob) -> Result<ObType, String> {
+        match &self.0 {
+            DblModelBox::Discrete(model) => {
+                let ob = ob.try_into()?;
+                Ok(ObType::Basic(model.ob_type(&ob)))
+            }
+            DblModelBox::DiscreteTab(model) => {
+                let ob = ob.try_into()?;
+                Ok(match model.ob_type(&ob) {
+                    TabObType::Basic(x) => ObType::Basic(x),
+                    TabObType::Tabulator(_) => panic!("Not yet treated"),
+                })
+            }
+        }
+    }
+
+    /// What is the type of this object? Expects `has_ob(ob) == true`
+    #[wasm_bindgen(js_name = "morType")]
+    pub fn mor_type(&self, mor: Mor) -> Result<MorType, String> {
+        match &self.0 {
+            DblModelBox::Discrete(model) => {
+                let mor = mor.try_into()?;
+                let m = model.mor_type(&mor);
+                Ok(match m {
+                    FinMor::Id(x) => MorType::Hom(Box::new(ObType::Basic(x))),
+                    FinMor::Generator(x) => MorType::Basic(x),
+                })
+            }
+            DblModelBox::DiscreteTab(model) => {
+                let mor = mor.try_into()?;
+                Ok(match model.mor_type(&mor) {
+                    TabMorType::Basic(x) => MorType::Basic(x),
+                    TabMorType::Hom(_) => panic!("Not yet treated"),
+                })
+            }
+        }
     }
 
     /// Returns array of all basic objects in the model.

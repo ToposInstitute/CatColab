@@ -77,7 +77,19 @@ export function ModelPane(props: {
     invariant(theories, "Library of theories should be provided as context");
 
     const liveDoc = () => props.liveModel.liveDoc;
-    const hasformal = () => liveDoc().doc.notebook.cells.some((cell) => cell.tag === "formal");
+    const formalCells = () =>
+        liveDoc()
+            .doc.notebook.cells.filter((cell) => cell.tag === "formal")
+            .map((cell) => {
+                if (cell.tag === "formal" && cell.content.tag === "object") {
+                    return cell.content.obType.content.toString();
+                }
+                if (cell.tag === "formal" && cell.content.tag === "morphism") {
+                    const j = JSON.parse(JSON.stringify(cell.content.morType.content.valueOf()));
+                    return typeof j === "string" ? j : j.content.toString();
+                }
+                return "";
+            });
 
     return (
         <div class="notebook-container">
@@ -96,7 +108,13 @@ export function ModelPane(props: {
                 </div>
                 <TheorySelectorDialog
                     theory={props.liveModel.theory()}
-                    setTheory={(id, mapdata) => {
+                    setTheory={(id) => {
+                        const doc = liveDoc();
+                        doc.changeDoc((model) => {
+                            model.theory = id;
+                        });
+                    }}
+                    sigma={(id, mapdata) => {
                         const doc = liveDoc();
                         doc.changeDoc((model) => {
                             model.theory = id;
@@ -107,11 +125,17 @@ export function ModelPane(props: {
                         );
                         // apply sigma or delta migration
                         const tgt = theories.get(id).theory;
-                        const migrated = model.pushforward(tgt, [...mapdata.obnames.keys()], [...mapdata.obnames.values()], [...mapdata.mornames.keys()], [...mapdata.mornames.values()])
+                        const migrated = model.pushforward(
+                            tgt,
+                            [...mapdata.obnames.keys()],
+                            [...mapdata.obnames.values()],
+                            [...mapdata.mornames.keys()],
+                            [...mapdata.mornames.values()],
+                        );
                         updateFromCatlogModel(liveDoc().changeDoc, migrated);
                     }}
                     theories={theories}
-                    hasformal={hasformal()}
+                    formalCells={formalCells()}
                 />
             </div>
             <ModelNotebookEditor liveModel={props.liveModel} />

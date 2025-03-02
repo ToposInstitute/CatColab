@@ -11,7 +11,7 @@ use super::theory::DiscreteDblTheory;
 use crate::one::fin_category::FinMor;
 use crate::{
     one::{Category, FgCategory},
-    zero::{HashColumn, Mapping},
+    zero::{HashColumn, Mapping, MutMapping},
 };
 
 /** A mapping between theories of a double theory.
@@ -86,42 +86,47 @@ pub trait DblTheoryMapping {
  */
 #[derive(Clone, Derivative)]
 #[derivative(Default(bound = ""))]
-pub struct FgDiscreteDblTheoryMapping<ObId, MorId>
+pub struct FgDiscreteDblTheoryMapping<DomObId, CodObId, DomMorId, CodMorId>
 where
-    ObId: Clone + Eq + Hash,
-    MorId: Clone + Eq + Hash,
+    DomObId: Clone + Eq + Hash,
+    DomMorId: Clone + Eq + Hash,
+    CodObId: Clone + Eq + Hash,
+    CodMorId: Clone + Eq + Hash,
 {
     /** Mapping on objects */
-    pub ob_map: HashColumn<ObId, ObId>,
+    pub ob_map: HashColumn<DomObId, CodObId>,
 
     /** Mapping on morphisms */
-    pub mor_map: HashColumn<MorId, MorId>,
+    pub mor_map: HashColumn<DomMorId, CodMorId>,
 }
 
-impl<ObId, MorId> DblTheoryMapping for FgDiscreteDblTheoryMapping<ObId, MorId>
+impl<DomObId, CodObId, DomMorId, CodMorId> DblTheoryMapping
+    for FgDiscreteDblTheoryMapping<DomObId, CodObId, DomMorId, CodMorId>
 where
-    ObId: Clone + Eq + Hash,
-    MorId: Clone + Eq + Hash,
+    DomObId: Clone + Eq + Hash,
+    DomMorId: Clone + Eq + Hash,
+    CodObId: Clone + Eq + Hash,
+    CodMorId: Clone + Eq + Hash,
 {
-    type DomOb = ObId;
-    type CodOb = ObId;
-    type DomObOp = ObId;
-    type CodObOp = ObId;
-    type DomMor = MorId;
-    type CodMor = MorId;
-    type DomMorOp = MorId;
-    type CodMorOp = MorId;
-    fn apply_ob(&self, x: &ObId) -> Option<ObId> {
-        self.ob_map.apply(x).cloned()
+    type DomOb = DomObId;
+    type CodOb = CodObId;
+    type DomObOp = DomObId;
+    type CodObOp = CodObId;
+    type DomMor = DomMorId;
+    type CodMor = CodMorId;
+    type DomMorOp = DomMorId;
+    type CodMorOp = CodMorId;
+    fn apply_ob(&self, x: &DomObId) -> Option<CodObId> {
+        self.ob_map.apply(x)
     }
-    fn apply_ob_op(&self, x: &ObId) -> Option<ObId> {
-        self.ob_map.apply(x).cloned()
+    fn apply_ob_op(&self, x: &DomObId) -> Option<CodObId> {
+        self.ob_map.apply(x)
     }
-    fn apply_mor(&self, x: &MorId) -> Option<MorId> {
-        self.mor_map.apply(x).cloned()
+    fn apply_mor(&self, x: &DomMorId) -> Option<CodMorId> {
+        self.mor_map.apply(x)
     }
-    fn apply_mor_op(&self, x: &MorId) -> Option<MorId> {
-        self.mor_map.apply(x).cloned()
+    fn apply_mor_op(&self, x: &DomMorId) -> Option<CodMorId> {
+        self.mor_map.apply(x)
     }
 }
 
@@ -136,7 +141,12 @@ pub struct DblFunctor<'a, Map, Dom, Cod>(pub &'a Map, pub &'a Dom, pub &'a Cod);
 /// A morphism between models of a discrete double theory.
 pub type DiscreteDblTheoryMorphism<'a, DomCat, CodCat> = DblFunctor<
     'a,
-    FgDiscreteDblTheoryMapping<<DomCat as FgCategory>::ObGen, <CodCat as FgCategory>::MorGen>,
+    FgDiscreteDblTheoryMapping<
+        <DomCat as FgCategory>::ObGen,
+        <CodCat as FgCategory>::ObGen,
+        <DomCat as FgCategory>::MorGen,
+        <CodCat as FgCategory>::MorGen,
+    >,
     DiscreteDblTheory<DomCat>,
     DiscreteDblTheory<CodCat>,
 >;
@@ -150,17 +160,17 @@ the ability for interpreting keys not found as unchanged names.
 impl<DomCat, CodCat> DiscreteDblTheoryMorphism<'_, DomCat, CodCat>
 where
     DomCat: FgCategory<
-        ObGen = <DomCat as Category>::Ob,
-        Mor = FinMor<<DomCat as Category>::Ob, <DomCat as FgCategory>::MorGen>,
-    >,
+            ObGen = <DomCat as Category>::Ob,
+            Mor = FinMor<<DomCat as Category>::Ob, <DomCat as FgCategory>::MorGen>,
+        >,
     CodCat: FgCategory<
-        Ob = DomCat::Ob,
-        Mor = DomCat::Mor,
-        ObGen = DomCat::ObGen,
-        MorGen = DomCat::MorGen,
-    >,
+            ObGen = <CodCat as Category>::Ob,
+            Mor = FinMor<<CodCat as Category>::Ob, <CodCat as FgCategory>::MorGen>,
+        >,
     DomCat::ObGen: Hash,
     DomCat::MorGen: Hash,
+    CodCat::ObGen: Hash,
+    CodCat::MorGen: Hash,
 {
     /**
     Push a discrete double model forward along a functor. This can result in
@@ -170,18 +180,20 @@ where
     In the future we could generate a model morphism, too. Alternatively, an
     imperative interface which mutates a model could be implemented.
     */
-    pub fn pushforward(
+    pub fn pushforward<Id>(
         &self,
         cod_theory: Arc<DiscreteDblTheory<CodCat>>,
-        dom_model: &DiscreteDblModel<DomCat::ObGen, DomCat>,
-    ) -> DiscreteDblModel<CodCat::ObGen, CodCat> {
+        dom_model: &DiscreteDblModel<Id, DomCat>,
+    ) -> DiscreteDblModel<Id, CodCat>
+    where
+        Id: Clone + Hash + Eq,
+    {
         // Empty model with the codomain theory
-        let mut m: DiscreteDblModel<CodCat::ObGen, CodCat> = DiscreteDblModel::new(cod_theory);
+        let mut m: DiscreteDblModel<Id, CodCat> = DiscreteDblModel::new(cod_theory);
         // Add pushed-forward object generators
         for o in dom_model.ob_generators() {
             let domtype = dom_model.ob_generator_type(&o.clone());
-            let copy = domtype.clone();
-            let codtype = self.0.ob_map.apply(&domtype.clone()).unwrap_or(&copy);
+            let codtype = self.0.ob_map.apply(&domtype.clone()).expect("Missing key");
             m.add_ob(o, codtype.clone());
         }
         // Add pushed-forward morphism generators
@@ -191,11 +203,11 @@ where
             let cod = dom_model.mor_generator_cod(&f);
             match domtype {
                 FinMor::Id(x) => {
-                    let fx = self.0.ob_map.apply(&x.clone()).unwrap_or(&x);
+                    let fx = self.0.ob_map.apply(&x.clone()).expect("Missing key");
                     m.add_mor(f, dom, cod, FinMor::Id(fx.clone()))
                 }
                 FinMor::Generator(x) => {
-                    let codtype = self.0.mor_map.apply(&x).unwrap_or(&x).clone();
+                    let codtype = self.0.mor_map.apply(&x).expect("Missing key").clone();
                     m.add_mor(f, dom, cod, FinMor::Generator(codtype))
                 }
             };
@@ -209,7 +221,7 @@ mod tests {
     use super::*;
     use crate::one::fin_category::FinMor;
     use crate::stdlib::*;
-    use ustr::{ustr, Ustr};
+    use ustr::ustr;
 
     /*
     This test only uses ob_map of the FgDiscreteDblTheoryMapping
@@ -220,7 +232,7 @@ mod tests {
         let t2 = Arc::new(th_schema());
 
         // Define functor used for pushforward
-        let mut v: FgDiscreteDblTheoryMapping<Ustr, _> = Default::default();
+        let mut v: FgDiscreteDblTheoryMapping<_, _, _, _> = Default::default();
         let (obj, ent) = (ustr("Object"), ustr("Entity"));
         v.ob_map.set(obj, ent);
         let m: DiscreteDblTheoryMorphism<_, _> = DblFunctor(&v, &t1, &t2);
@@ -250,8 +262,9 @@ mod tests {
         let t = Arc::new(th_delayable_signed_category());
 
         // Define functor used for pushforward
-        let mut v: FgDiscreteDblTheoryMapping<Ustr, _> = Default::default();
+        let mut v: FgDiscreteDblTheoryMapping<_, _, _, _> = Default::default();
         let obj = ustr("Object");
+        v.ob_map.set(obj, obj);
         let (pos_slow, neg_slow) = (ustr("PositiveSlow"), ustr("NegativeSlow"));
         v.mor_map.set(pos_slow, neg_slow);
         v.mor_map.set(neg_slow, pos_slow);

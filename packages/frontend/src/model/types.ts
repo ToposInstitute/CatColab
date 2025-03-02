@@ -2,7 +2,6 @@ import { v7 } from "uuid";
 
 import { DblModel } from "catlog-wasm";
 import type { DblTheory, MorDecl, MorType, ObDecl, ObType } from "catlog-wasm";
-import type { MapData } from "../theory";
 import { deepCopyJSON } from "../util/deepcopy";
 
 /** A judgment in the definition of a model.
@@ -64,17 +63,5 @@ export function toCatlogModel(theory: DblTheory, judgments: Array<ModelJudgment>
             model.addMor(judgment);
         }
     }
-    return model;
-}
-
-export function sigma_migrate(model: DblModel, tgt: DblTheory, mapdata: MapData): DblModel {
-    console.log(tgt);
-    console.log(mapdata);
-    return model;
-}
-
-export function delta_migrate(model: DblModel, tgt: DblTheory, mapdata: MapData): DblModel {
-    console.log(tgt);
-    console.log(mapdata);
     return model;
 }

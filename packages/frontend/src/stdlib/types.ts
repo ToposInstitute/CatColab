@@ -58,40 +58,6 @@ export class TheoryLibrary {
         this.metaMap.set(meta.id, meta);
         this.theoryMap.set(meta.id, cons);
 
-        // sigma migrations have implicit mappings, make them explicit
-        // const T = cons(meta);
-        // T.inclusions.forEach((value, _) => {
-        //     for (const ty of T.modelTypes) {
-        //         if (ty.tag === "ObType") {
-        //             let name = ty.obType.content.toString();
-        //             if (!value.obnames.has(name)) {
-        //                 value.obnames.set(name, name);
-        //             }
-        //         }
-        //         else {
-        //             let name = ty.morType.content.toString();
-        //             if (!value.mornames.has(name)) {
-        //                 value.mornames.set(name, name);
-        //             }
-        //         }
-        //     }
-        // });
-
-        // this.theoryMap.forEach((value, key) => {
-        //     let m = this.metaMap.get(key);
-        //     if (!(m === undefined)) {
-        //     if (typeof value === "function") {
-        //         let val = value(m);
-        //             val.inclusions.forEach((inj, k) => {
-        //                 if (k === meta.id) {
-        //                     T.pullbacks.set(val.id, inj);
-        //                 }
-        //             });
-        //         }
-        //     }
-        // });
-        // console.log(T.id, "# of pullbacks",T.pullbacks.size)
-
         if (meta.isDefault) {
             if (this.defaultTheoryId) {
                 throw new Error(`The default theory is already set to ${this.defaultTheoryId}`);
