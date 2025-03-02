@@ -6,6 +6,66 @@ import type { DiagramAnalysisComponent, ModelAnalysisComponent } from "../analys
 import { uniqueIndexArray } from "../util/indexing";
 import type { ArrowStyle } from "../visualization";
 
+/** Data about privileged migrations a frontend theory can have.
+ */
+export class MapData {
+    obnames: Map<string, string>;
+    mornames: Map<string, string>;
+    obnamesRev: Map<string, string>;
+    mornamesRev: Map<string, string>;
+    constructor(props: {
+        obnames?: (string | [string, string])[];
+        mornames?: (string | [string, string])[];
+    }) {
+        this.obnames = new Map<string, string>();
+        this.mornames = new Map<string, string>();
+
+        for (const kv of props.obnames || []) {
+            if (typeof kv === "string") {
+                this.obnames.set(kv, kv);
+            } else {
+                const [k, v] = [kv[0], kv[1]];
+                if (!(k === undefined) && !(v === undefined)) {
+                    this.obnames.set(k, v);
+                }
+            }
+        }
+
+        props.mornames?.forEach((kv) => {
+            if (typeof kv === "string") {
+                this.mornames.set(kv, kv);
+            } else {
+                const [k, v] = [kv[0], kv[1]];
+                if (!(k === undefined) && !(v === undefined)) {
+                    this.mornames.set(k, v);
+                }
+            }
+        });
+
+        this.obnamesRev = new Map<string, string>();
+        this.mornamesRev = new Map<string, string>();
+        for (const [key, value] of this.obnames.entries()) {
+            if (this.obnamesRev.has(value)) {
+                throw Error(`Ob Map must be monic ${key} ${value}`);
+            }
+            this.obnamesRev.set(value, key);
+        }
+        for (const [key, value] of this.mornames.entries()) {
+            if (this.obnamesRev.has(value)) {
+                throw Error(`Mor Map must be monic ${key} ${value}`);
+            }
+            this.mornamesRev.set(value, key);
+        }
+    }
+
+    swap(): MapData {
+        return new MapData({
+            obnames: Array.from(this.obnamesRev.entries()),
+            mornames: Array.from(this.mornamesRev.entries()),
+        });
+    }
+}
+
 /** A double theory configured for the frontend.
 
 This class augments a double theory as defined in the core with metadata about
@@ -43,6 +103,9 @@ export class Theory {
      */
     readonly instanceOfName: string;
 
+    /** Privileged sigma migrations along inclusions which need no explicit functor **/
+    inclusions: Map<string, MapData>;
+
     private readonly modelTypeMeta: TypeMetadata<ModelObTypeMeta, ModelMorTypeMeta>;
     private readonly instanceTypeMeta: TypeMetadata<InstanceObTypeMeta, InstanceMorTypeMeta>;
 
@@ -62,6 +125,7 @@ export class Theory {
         modelAnalyses?: ModelAnalysisMeta[];
         onlyFreeModels?: boolean;
         instanceOfName?: string;
+        inclusions?: Map<string, MapData>;
         instanceTypes?: InstanceTypeMeta[];
         diagramAnalyses?: DiagramAnalysisMeta[];
     }) {
@@ -76,7 +140,7 @@ export class Theory {
         this.modelTypeMeta = new TypeMetadata<ModelObTypeMeta, ModelMorTypeMeta>(props.modelTypes);
         this.modelAnalysisMap = uniqueIndexArray(props.modelAnalyses ?? [], (meta) => meta.id);
         this.onlyFreeModels = props.onlyFreeModels ?? false;
-
+        this.inclusions = props.inclusions ?? new Map<string, MapData>();
         // Instances.
         this.instanceOfName = props.instanceOfName ?? "Instance of";
         this.instanceTypeMeta = new TypeMetadata<InstanceObTypeMeta, InstanceMorTypeMeta>(
