@@ -8,7 +8,7 @@ let
 in
 builtins.mapAttrs (_: publicKeys: {inherit publicKeys;})
   ({
-      ".env.next.age"   = [ catcolab-next owen epatters ];
+      ".env.next.age"   = [ catcolab-next owen epatters jmoggr ];
       ".env.prod.age"   = [ catcolab owen epatters ];
       "rclone.conf.age" = [ catcolab owen epatters ];
   })
