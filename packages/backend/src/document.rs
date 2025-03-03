@@ -198,6 +198,55 @@ pub struct RefQueryParams {
     // TODO: add param for document type
 }
 
+pub async fn get_ref_stub(
+    ctx: AppCtx,
+    ref_id: Uuid,
+) -> Result<RefStub, AppError> {
+    // Ensure the user is authenticated
+    let searcher_id = ctx
+        .user
+        .as_ref()
+        .map(|user| user.user_id.clone())
+        .ok_or(AppError::Unauthorized)?;
+
+    // Query the most recent snapshot of the given ref_id if the user has permission
+    let result = sqlx::query!(
+        r#"
+        WITH latest_snapshot AS (
+            SELECT DISTINCT ON (snapshots.for_ref)
+                refs.id AS ref_id, 
+                snapshots.content->>'name' AS name
+            FROM snapshots
+            JOIN refs ON snapshots.for_ref = refs.id
+            WHERE refs.id = $1
+            ORDER BY snapshots.for_ref, snapshots.id DESC
+        )
+        SELECT 
+            ls.ref_id,
+            ls.name
+        FROM latest_snapshot ls
+        JOIN permissions p_searcher ON ls.ref_id = p_searcher.object
+        WHERE 
+            p_searcher.subject = $2
+            AND p_searcher.level IN ('read', 'write', 'maintain', 'own')
+            OR p_searcher.subject IS NULL -- user is allowed to access public documents
+        LIMIT 1;
+        "#,
+        ref_id,
+        searcher_id
+    )
+    .fetch_optional(&ctx.state.db)
+    .await?;
+
+    // If no result is found, return Not Found error
+    let row = result.ok_or(AppError::Invalid(format!("No ref found for id: {}", ref_id)))?;
+
+    Ok(RefStub {
+        ref_id: row.ref_id,
+        name: row.name.unwrap_or_else(|| "untitled".to_string()),
+    })
+}
+
 /// Gets a vec of user relevant informations about refs that match the query parameters
 pub async fn get_ref_stubs(
     ctx: AppCtx,
