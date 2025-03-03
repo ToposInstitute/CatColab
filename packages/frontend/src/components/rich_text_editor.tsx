@@ -1,20 +1,24 @@
 import type { Prop } from "@automerge/automerge";
 import type { DocHandle } from "@automerge/automerge-repo";
 
-import { basicSchemaAdapter, init, SchemaAdapter } from "@automerge/prosemirror";
+import { SchemaAdapter, basicSchemaAdapter, init } from "@automerge/prosemirror";
 import { baseKeymap, toggleMark } from "prosemirror-commands";
 import { keymap } from "prosemirror-keymap";
 import type { Node as ProseMirrorNode, Schema } from "prosemirror-model";
 import { type Command, EditorState, Plugin, type Transaction } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
 
-import { createEffect, createSignal, onCleanup, onMount } from "solid-js";
+import { Show, createEffect, createResource, createSignal, onCleanup, onMount } from "solid-js";
 import { useDocHandleReady } from "../api/document";
 
 import "prosemirror-view/style/prosemirror.css";
 import "./rich_text_editor.css";
-import { basicSchema } from "./basic_schema";
+import { instance } from "@viz-js/viz";
+import type { RefStub } from "catcolab-api";
 import { render } from "solid-js/web";
+import { type Api, useApi } from "../api";
+import { basicSchema } from "./basic_schema";
+import { SearchSuggest } from "./search_suggest";
 
 /** Optional props for `RichTextEditor` component.
  */
@@ -46,6 +50,7 @@ export const RichTextEditor = (
 ) => {
     let editorRoot!: HTMLDivElement;
 
+    const api = useApi();
     const isReady = useDocHandleReady(() => props.handle);
 
     createEffect(() => {
@@ -82,7 +87,8 @@ export const RichTextEditor = (
         }
 
         const km = richTextEditorKeymap(schema, props);
-        km["ArrowUp"] = insertCatcolabRef();
+        km["Alt-r"] = insertCatcolabRef();
+        km["Mod-r"] = insertCatcolabRef();
 
         const plugins: Plugin[] = [
             keymap(km),
@@ -106,7 +112,7 @@ export const RichTextEditor = (
             },
             nodeViews: {
                 catcolabref(node, view, getPos) {
-                    return new RefView(node, view, getPos);
+                    return new RefView(node, view, getPos, api);
                 },
             },
         });
@@ -121,58 +127,64 @@ export const RichTextEditor = (
 };
 
 interface CustomNodeProps {
-    refId: string;
+    refId: string | null;
     updateRefId: (refId: string) => void;
+    cancelEditing: () => void;
     isEditing: boolean;
+    api: Api;
 }
 
 const CustomNodeComponent = (props: CustomNodeProps) => {
-    const [value, setValue] = createSignal(props.refId);
-    let inputRef: HTMLInputElement | undefined;
-
-    const handleChange = (e: Event) => {
-        const target = e.target as HTMLInputElement;
-        setValue(target.value);
+    const handleRefSelected = (refStub: RefStub) => {
+        props.updateRefId(refStub.ref_id);
     };
 
-    onMount(() => {
-        setTimeout(() => {
-            if (props.isEditing && inputRef) {
-                inputRef.focus();
-            }
-        }, 0); // Let ProseMirror fully render first
-    });
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === "Enter") {
-            e.preventDefault();
-            submit();
-        }
+    const fetchRefStub = async (refId: string | null) => {
+        if (!refId) return null;
+        const response = await props.api.rpc.get_ref_stub.query(refId);
+        if (response.tag === "Ok") return response.content;
+        throw new Error(response.message);
     };
     
-    const submit = () => {
-        props.updateRefId(value())
+    const [refStub] = createResource(() => props.refId, fetchRefStub);
+
+    if (props.isEditing) {
+        return (
+            <SearchSuggest
+                initialQuery={refStub()?.name || null}
+                focusOnFirstRender={true}
+                endpoint={props.api.rpc.get_ref_stubs}
+                onRefSelected={handleRefSelected}
+                onCancel={props.cancelEditing}
+            />
+        );
+    }
+
+    if (props.refId === null) {
+        return <span>No ref set </span>;
     }
 
     return (
-        <span>
-            {props.isEditing ? (
-                <input
-                    ref={(el) => {
-                        inputRef = el;
-                    }}
-                    type="text"
-                    value={value()}
-                    onInput={handleChange}
-                    onKeyDown={handleKeyDown}
-                    onBlur={submit}
-                />
-            ) : (
-                <span class="catcolabrefid" {...{ catcolabrefid: value() }}>
-                    ##{value()}##
-                </span>
-            )}
-        </span>
+        <Show when={!refStub.loading} fallback={<span>Loading...</span>}>
+            <Show
+                when={!refStub.error}
+                fallback={<span class="error">Error: {refStub.error?.message}</span>}
+            >
+                <Show
+                    when={refStub()}
+                    keyed
+                    fallback={
+                        <span class="error">Error: Could not load reference {props.refId}</span>
+                    }
+                >
+                    {(stub) => (
+                        <span class="catcolabrefid" {...{ catcolabrefid: props.refId }}>
+                            {stub.name}
+                        </span>
+                    )}
+                </Show>
+            </Show>
+        </Show>
     );
 };
 
@@ -183,17 +195,24 @@ class RefView {
     getPos: () => number | undefined;
     refId: string;
     isEditing: boolean;
+    api: Api;
 
     // https://prosemirror.net/docs/ref/#view.NodeViewConstructor
-    constructor(node: ProseMirrorNode, view: EditorView, getPos: () => number | undefined) {
+    constructor(
+        node: ProseMirrorNode,
+        view: EditorView,
+        getPos: () => number | undefined,
+        api: Api,
+    ) {
         this.node = node;
         this.view = view;
         this.getPos = getPos;
+        this.api = api;
 
         this.dom = document.createElement("span");
 
-        this.refId = node.attrs.refid || "";
-        this.isEditing = true;
+        this.refId = node.attrs.refid || null;
+        this.isEditing = false;
 
         this.renderSolidComponent();
     }
@@ -206,10 +225,17 @@ class RefView {
                     refId={this.refId}
                     updateRefId={(refId) => this.updateRefId(refId)}
                     isEditing={this.isEditing}
+                    api={this.api}
+                    cancelEditing={() => this.cancelEditing()}
                 />
             ),
             this.dom,
         );
+    }
+
+    cancelEditing() {
+        this.isEditing = false;
+        this.renderSolidComponent();
     }
 
     updateRefId(refId: string) {
@@ -236,7 +262,7 @@ class RefView {
             this.refId = this.node.attrs.refid;
             this.renderSolidComponent();
         }
-        return true
+        return true;
     }
 
     selectNode() {
@@ -250,9 +276,11 @@ class RefView {
     }
 
     stopEvent(event: Event) {
-        // biome-ignore lint/style/noNonNullAssertion: shtsht-
-        // @ts-ignore
-        return this.dom.contains(event.target!);
+        if (!event.target || !(event.target instanceof Node)) {
+            return false;
+        }
+
+        return this.dom.contains(event.target);
     }
 
     destroy() {
@@ -275,7 +303,7 @@ function richTextEditorKeymap(schema: Schema, props: RichTextEditorOptions) {
         bindings["Delete"] = doIfEmpty(props.deleteForward);
     }
     if (props.exitUp) {
-        // bindings["ArrowUp"] = doIfAtTop(props.exitUp);
+        bindings["ArrowUp"] = doIfAtTop(props.exitUp);
     }
     if (props.exitDown) {
         bindings["ArrowDown"] = doIfAtBottom(props.exitDown);

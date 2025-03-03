@@ -1,10 +1,4 @@
-import type {
-    DOMOutputSpec,
-    Mark,
-    MarkSpec,
-    Node,
-    NodeSpec,
-} from "prosemirror-model";
+import type { DOMOutputSpec, Mark, MarkSpec, Node, NodeSpec } from "prosemirror-model";
 
 import { next as am } from "@automerge/automerge/slim";
 import type { MappedSchemaSpec } from "@automerge/prosemirror";
@@ -211,7 +205,7 @@ export const basicSchema: MappedSchemaSpec = {
             toDOM: (node: any) => [
                 "span",
                 {
-                    "catcolabrefid": node.attrs.refid,
+                    catcolabrefid: node.attrs.refid,
                 },
             ],
             // When parsing, such an image, if its type matches one of the known
@@ -244,9 +238,7 @@ export const basicSchema: MappedSchemaSpec = {
                 },
             ],
             toDOM(node) {
-                return node.attrs.order === 1
-                    ? olDOM
-                    : ["ol", { start: node.attrs.order }, 0];
+                return node.attrs.order === 1 ? olDOM : ["ol", { start: node.attrs.order }, 0];
             },
         } as NodeSpec,
 
@@ -327,9 +319,7 @@ export const basicSchema: MappedSchemaSpec = {
                                     title: value.title || "",
                                 };
                             } catch (e) {
-                                console.warn(
-                                    "failed to parse link mark as JSON"
-                                );
+                                console.warn("failed to parse link mark as JSON");
                             }
                         }
                         return {
@@ -376,8 +366,7 @@ export const basicSchema: MappedSchemaSpec = {
                 // tags with a font-weight normal.
                 {
                     tag: "b",
-                    getAttrs: (node: HTMLElement) =>
-                        node.style.fontWeight !== "normal" && null,
+                    getAttrs: (node: HTMLElement) => node.style.fontWeight !== "normal" && null,
                 },
                 {
                     style: "font-weight=400",
@@ -385,8 +374,7 @@ export const basicSchema: MappedSchemaSpec = {
                 },
                 {
                     style: "font-weight",
-                    getAttrs: (value: string) =>
-                        /^(bold(er)?|[5-9]\d{2,})$/.test(value) && null,
+                    getAttrs: (value: string) => /^(bold(er)?|[5-9]\d{2,})$/.test(value) && null,
                 },
             ],
             toDOM() {

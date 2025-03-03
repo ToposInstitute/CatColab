@@ -27,6 +27,7 @@ pub fn router() -> Router<AppState> {
         .handler(set_active_user_profile)
         .handler(get_ref_stubs)
         .handler(get_ref_stubs_related_to_user)
+        .handler(get_ref_stub)
 }
 
 #[handler(mutation)]
@@ -74,6 +75,13 @@ enum RefDoc {
         doc_id: String,
         permissions: Permissions,
     },
+}
+#[handler(query)]
+async fn get_ref_stub(
+    ctx: AppCtx,
+    ref_id: Uuid,
+) -> RpcResult<doc::RefStub> {
+    doc::get_ref_stub(ctx, ref_id).await.into()
 }
 
 #[handler(query)]
