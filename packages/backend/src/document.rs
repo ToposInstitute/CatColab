@@ -157,7 +157,10 @@ pub async fn get_ref_stubs(
         .map(|user| user.user_id.clone())
         .ok_or(AppError::Unauthorized)?;
 
-    // selects the ref id and ref name (from the most recent snapshot of that ref) for all refs that a user (the searcher) has permission to access. Optionally filter the results by the owner of the refs.
+
+    // selects the ref id and ref name (from the most recent snapshot of that
+    // ref) for all refs that a user (the searcher) has permission to access.
+    // Optionally filter the results by the owner of the refs.
     let results = sqlx::query!(
         r#"
         WITH latest_snapshots AS (
@@ -173,19 +176,22 @@ pub async fn get_ref_stubs(
             ls.name
         FROM latest_snapshots ls
         JOIN permissions p_searcher ON ls.ref_id = p_searcher.object
-        JOIN users owner ON owner.id = (
+        LEFT JOIN users owner ON owner.id = (
             SELECT p_owner.subject 
             FROM permissions p_owner 
             WHERE p_owner.object = ls.ref_id 
             AND p_owner.level = 'own' 
             LIMIT 1
         )
-        WHERE p_searcher.subject = $1  -- searcher_id
+        WHERE (
+            (p_searcher.subject = $1
+            AND p_searcher.level IN ('read', 'write', 'maintain', 'own'))
+            OR p_searcher.subject IS NULL -- user is allowed to search public documents
+        )
         AND (
             owner.username = $2  -- owner_username
             OR $2 IS NULL  -- include all owners if owner_username is NULL
         )
-        AND p_searcher.level IN ('read', 'write', 'maintain')
         AND (
             ls.name ILIKE '%' || $3 || '%'  -- case-insensitive substring search
             OR $3 IS NULL  -- include all if name filter is NULL
