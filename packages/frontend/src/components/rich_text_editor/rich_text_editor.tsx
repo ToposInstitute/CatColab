@@ -1,18 +1,14 @@
 import type { Prop } from "@automerge/automerge";
 import type { DocHandle } from "@automerge/automerge-repo";
 
-import {
-    type MappedSchemaSpec,
-    SchemaAdapter,
-    init,
-} from "@automerge/prosemirror";
+import { type MappedSchemaSpec, SchemaAdapter, init } from "@automerge/prosemirror";
 import { baseKeymap, toggleMark } from "prosemirror-commands";
 import { keymap } from "prosemirror-keymap";
 import type { NodeType, Schema } from "prosemirror-model";
 import { type Command, EditorState, Plugin, type Transaction } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
 
-import { createEffect, onCleanup, } from "solid-js";
+import { createEffect, onCleanup } from "solid-js";
 import { useDocHandleReady } from "../../api/document";
 
 import "prosemirror-view/style/prosemirror.css";
