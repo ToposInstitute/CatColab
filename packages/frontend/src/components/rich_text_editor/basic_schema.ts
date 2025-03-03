@@ -1,3 +1,5 @@
+// from https://github.com/automerge/automerge-prosemirror/blob/main/src/basicSchema.ts
+
 import type { DOMOutputSpec, Mark, MarkSpec, Node, NodeSpec } from "prosemirror-model";
 
 import { next as am } from "@automerge/automerge/slim";
@@ -19,8 +21,6 @@ const codeDOM: DOMOutputSpec = ["code", 0];
 const olDOM: DOMOutputSpec = ["ol", 0];
 const ulDOM: DOMOutputSpec = ["ul", 0];
 const liDOM: DOMOutputSpec = ["li", 0];
-
-export const dinos = ["stegosaurus", "triceratops", "tyrannosaurus"] as const;
 
 export const basicSchema: MappedSchemaSpec = {
     nodes: {
@@ -173,51 +173,6 @@ export const basicSchema: MappedSchemaSpec = {
                 const { src, alt, title } = node.attrs;
                 return ["img", { src, alt, title }];
             },
-        } as NodeSpec,
-
-        // TODO: we probably want a better naming scheme
-        // TODO: are capitals allowed?
-        catcolabref: {
-            attrs: {
-                refid: {
-                    default: null,
-                },
-            },
-            atom: true,
-            inline: true,
-            group: "inline",
-            draggable: true,
-            automerge: {
-                block: "catcolabref",
-                isEmbed: true,
-                attrParsers: {
-                    fromAutomerge: (block: BlockMarker) => ({
-                        refid: block.attrs.refid,
-                    }),
-                    fromProsemirror: (node: Node) => ({
-                        refid: node.attrs.refid ? new am.RawString(node.attrs.refid) : null,
-                    }),
-                },
-            },
-
-            // These nodes are rendered as images with a `dino-type` attribute.
-            // There are pictures for all dino types under /img/dino/.
-            toDOM: (node: any) => [
-                "span",
-                {
-                    catcolabrefid: node.attrs.refid,
-                },
-            ],
-            // When parsing, such an image, if its type matches one of the known
-            // types, is converted to a dino node.
-            parseDOM: [
-                {
-                    tag: "span.catcolabrefid",
-                    getAttrs: (dom: any) => {
-                        return dom.getAttribute("catcolabrefid");
-                    },
-                },
-            ],
         } as NodeSpec,
 
         ordered_list: {
