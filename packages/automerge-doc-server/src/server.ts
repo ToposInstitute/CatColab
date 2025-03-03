@@ -58,6 +58,7 @@ export class AutomergeServer {
 
     setDocHandleCallback(refId: string, handle: DocHandle<unknown>) {
         handle.on("change", async (payload) => {
+            console.log(payload.patches);
             this.handleChange?.(refId, payload.doc);
         });
     }
