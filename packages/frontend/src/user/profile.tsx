@@ -5,15 +5,19 @@ import invariant from "tiny-invariant";
 import type { UserProfile } from "catcolab-api";
 import { useApi } from "../api";
 import { FormGroup, TextInputField } from "../components";
+import { SearchSuggest } from "../components/search_suggest";
 import { BrandedToolbar } from "../page";
 import { LoginGate } from "./login";
 
 /** Page to configure user profile. */
 export default function UserProfilePage() {
+    const api = useApi();
     return (
         <div class="growable-container">
             <BrandedToolbar />
             <div class="page-container">
+                <div>TODO: remove search (for testing purposes only)</div>
+                <SearchSuggest endpoint={api.rpc.get_ref_stubs} onRefSelected={() => {}} />
                 <LoginGate>
                     <h2>Public profile</h2>
                     <UserProfileForm />
