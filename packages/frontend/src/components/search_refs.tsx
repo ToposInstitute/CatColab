@@ -2,7 +2,7 @@ import type { RefQueryParams, RefStub } from "catcolab-api";
 import { For, Show, createResource, createSignal, onCleanup, onMount } from "solid-js";
 import { Portal } from "solid-js/web";
 import type { Api } from "../api";
-import "./search_suggest.css";
+import "./search_refs.css";
 
 export function SearchRefs(props: {
     endpoint: Api["rpc"]["get_ref_stubs"] | Api["rpc"]["get_ref_stubs_related_to_user"];
