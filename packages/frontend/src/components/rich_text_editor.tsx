@@ -18,7 +18,7 @@ import type { RefStub } from "catcolab-api";
 import { render } from "solid-js/web";
 import { type Api, useApi } from "../api";
 import { basicSchema } from "./basic_schema";
-import { SearchSuggest } from "./search_suggest";
+import { SearchRefs } from "./search_refs";
 
 /** Optional props for `RichTextEditor` component.
  */
@@ -145,12 +145,12 @@ const CustomNodeComponent = (props: CustomNodeProps) => {
         if (response.tag === "Ok") return response.content;
         throw new Error(response.message);
     };
-    
+
     const [refStub] = createResource(() => props.refId, fetchRefStub);
 
     if (props.isEditing) {
         return (
-            <SearchSuggest
+            <SearchRefs
                 initialQuery={refStub()?.name || null}
                 focusOnFirstRender={true}
                 endpoint={props.api.rpc.get_ref_stubs}

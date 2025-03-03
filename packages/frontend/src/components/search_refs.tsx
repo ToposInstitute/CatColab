@@ -3,9 +3,8 @@ import { For, Show, createResource, createSignal, onCleanup, onMount } from "sol
 import { Portal } from "solid-js/web";
 import type { Api } from "../api";
 import "./search_suggest.css";
-import { E } from "vitest/dist/chunks/reporters.6vxQttCV.js";
 
-export function SearchSuggest(props: {
+export function SearchRefs(props: {
     endpoint: Api["rpc"]["get_ref_stubs"] | Api["rpc"]["get_ref_stubs_related_to_user"];
     onRefSelected: (stub: RefStub) => void;
     focusOnFirstRender: boolean;
