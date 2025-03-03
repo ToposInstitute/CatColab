@@ -1,7 +1,7 @@
 .search-container {
     position: relative;
     width: 100%;
-    max-width: 400px;
+    max-width: 150px;
     display: inline-block;
 }
 
@@ -30,21 +30,22 @@
 .search-item {
     padding: 8px;
     cursor: pointer;
-    transition: background 0.2s;
 }
 
 .search-item {
     padding: 8px;
     cursor: pointer;
-    transition: background 0.2s, color 0.2s;
 }
 
 .search-item:hover {
     background: #f0f0f0;
 }
 
-.search-item:hover {
-    background: #f0f0f0;
+.search-item.selected {
+    background: #007bff; /* Blue background for selection */
+    color: white; /* White text for contrast */
+
+    border-radius: 4px; /* Slight rounding for better look */
 }
 
 .search-error {

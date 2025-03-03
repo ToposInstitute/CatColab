@@ -142,24 +142,24 @@ const RefIdWidget = (props: {
     }
 
     if (props.refId === null) {
-        return <span>No ref set </span>;
+        return <span class="ref-id-view">No ref set </span>;
     }
 
     return (
         <Show when={!refStub.loading} fallback={<span>Loading...</span>}>
             <Show
                 when={!refStub.error}
-                fallback={<span class="error">Error: {refStub.error?.message}</span>}
+                fallback={<span class="error ref-id-view">Error: {refStub.error?.message}</span>}
             >
                 <Show
                     when={refStub()}
                     keyed
                     fallback={
-                        <span class="error">Error: Could not load reference {props.refId}</span>
+                        <span class="error ref-id-view">Error: Could not load reference {props.refId}</span>
                     }
                 >
                     {(stub) => (
-                        <span class="catcolabrefid" {...{ catcolabrefid: props.refId }}>
+                        <span class="catcolabrefid ref-id-view" {...{ catcolabrefid: props.refId }}>
                             {stub.name}
                         </span>
                     )}
