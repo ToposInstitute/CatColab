@@ -1,20 +1,35 @@
 import type { RefQueryParams, RefStub } from "catcolab-api";
-import { For, Show, createResource, createSignal, onCleanup } from "solid-js";
+import { For, Show, createResource, createSignal, onCleanup, onMount } from "solid-js";
 import { Portal } from "solid-js/web";
 import type { Api } from "../api";
 import "./search_suggest.css";
+import { E } from "vitest/dist/chunks/reporters.6vxQttCV.js";
 
 export function SearchSuggest(props: {
     endpoint: Api["rpc"]["get_ref_stubs"] | Api["rpc"]["get_ref_stubs_related_to_user"];
     onRefSelected: (stub: RefStub) => void;
+    focusOnFirstRender: boolean;
+    initialQuery: string | null;
+    onCancel: () => void;
 }) {
-    const [query, setQuery] = createSignal<string | null>(null);
+    const [query, setQuery] = createSignal<string | null>(props.initialQuery);
     const [isPopupOpen, setIsPopupOpen] = createSignal(false);
     const [latestRequestId, setLatestRequestId] = createSignal(0);
     const [inputRef, setInputRef] = createSignal<HTMLInputElement | null>(null);
     const [popupPosition, setPopupPosition] = createSignal({ top: 0, left: 0, width: 0 });
     const [selectedIndex, setSelectedIndex] = createSignal<number | null>(null);
     const [errorMessage, setErrorMessage] = createSignal<string | null>(null);
+
+    if (props.focusOnFirstRender) {
+        onMount(() => {
+            setTimeout(() => {
+                if (inputRef()) {
+                    console.log("focus");
+                    inputRef()?.focus();
+                }
+            }, 0); // Let ProseMirror fully render first
+        });
+    }
 
     // Close the popup when clicking outside
     const handleClickOutside = (event: MouseEvent) => {
@@ -98,6 +113,7 @@ export function SearchSuggest(props: {
         } else if (e.key === "Enter") {
             e.preventDefault();
 
+            // TODO: if enter is pressed while there is a pending request selects the item from the stale list
             const index = selectedIndex() || 0;
             const refStub = items[index];
             if (!refStub) {
@@ -119,6 +135,7 @@ export function SearchSuggest(props: {
                     type="text"
                     onInput={(e) => updateQuery(e.currentTarget.value)}
                     onKeyDown={handleKeyDown}
+                    onBlur={props.onCancel}
                     class="search-input"
                     placeholder="Search..."
                 />
