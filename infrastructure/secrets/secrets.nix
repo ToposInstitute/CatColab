@@ -4,10 +4,11 @@ let
   catcolab-next = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBZaycYjvaZ5XhxVIvFr8zXvcy1GrViCKLIZCalZuk1l root@ip-172-31-9-45.us-east-2.compute.internal";
   owen          = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIF2sBTuqGoEXRWpBRqTBwZZPDdLGGJ0GQcuX5dfIZKb4 o@red-special";
   epatters      = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAKXx6wMJSeYKCHNmbyR803RQ72uto9uYsHhAPPWNl2D evan@epatters.org";
+  jmoggr        = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMiaHaeJ5PQL0mka/lY1yGXIs/bDK85uY1O3mLySnwHd j@jmoggr.com";
 in
 builtins.mapAttrs (_: publicKeys: {inherit publicKeys;})
   ({
-      ".env.next.age"   = [ catcolab-next owen epatters ];
+      ".env.next.age"   = [ catcolab-next owen epatters jmoggr ];
       ".env.prod.age"   = [ catcolab owen epatters ];
       "rclone.conf.age" = [ catcolab owen epatters ];
   })
