@@ -1,6 +1,4 @@
-
-
-import type { Node as ProseMirrorNode} from "prosemirror-model";
+import type { Node as ProseMirrorNode } from "prosemirror-model";
 
 import type { EditorView } from "prosemirror-view";
 
@@ -8,7 +6,7 @@ import { Show, createResource } from "solid-js";
 
 import type { RefStub } from "catcolab-api";
 import { render } from "solid-js/web";
-import type { Api} from "../../api";
+import type { Api } from "../../api";
 import { SearchRefs } from "../search_refs";
 
 export class RefIdView {

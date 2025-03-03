@@ -198,10 +198,7 @@ pub struct RefQueryParams {
     // TODO: add param for document type
 }
 
-pub async fn get_ref_stub(
-    ctx: AppCtx,
-    ref_id: Uuid,
-) -> Result<RefStub, AppError> {
+pub async fn get_ref_stub(ctx: AppCtx, ref_id: Uuid) -> Result<RefStub, AppError> {
     // Ensure the user is authenticated
     let searcher_id = ctx
         .user

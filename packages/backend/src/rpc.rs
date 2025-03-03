@@ -78,10 +78,7 @@ enum RefDoc {
     },
 }
 #[handler(query)]
-async fn get_ref_stub(
-    ctx: AppCtx,
-    ref_id: Uuid,
-) -> RpcResult<doc::RefStub> {
+async fn get_ref_stub(ctx: AppCtx, ref_id: Uuid) -> RpcResult<doc::RefStub> {
     doc::get_ref_stub(ctx, ref_id).await.into()
 }
 
