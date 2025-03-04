@@ -11,7 +11,7 @@ use super::theory::DiscreteDblTheory;
 use crate::one::fin_category::FinMor;
 use crate::{
     one::{Category, FgCategory},
-    zero::{HashColumn, Mapping, MutMapping},
+    zero::{HashColumn, Mapping},
 };
 
 /** A mapping between theories of a double theory.
@@ -79,8 +79,7 @@ pub trait DblTheoryMapping {
 }
 
 /**
- * Finitely generated discrete double theories
- * are presented by a [FgCategory](crate::one::FgCategory).
+ * Finitely generated discrete double theories are presented by a [FgCategory].
  * There *are* Mor and MorOps, but only identities, which are identified with
  * the corresponding objects and object operations.
  */
@@ -221,6 +220,7 @@ mod tests {
     use super::*;
     use crate::one::fin_category::FinMor;
     use crate::stdlib::*;
+    use crate::zero::MutMapping;
     use ustr::ustr;
 
     /*
