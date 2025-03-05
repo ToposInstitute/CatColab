@@ -28,7 +28,6 @@ import {
     newMorphismDecl,
     newObjectDecl,
 } from "./types";
-
 import "./model_editor.css";
 
 export default function ModelPage() {
