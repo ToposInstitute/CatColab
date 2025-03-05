@@ -1,5 +1,7 @@
 /*! Double theories.
 
+TODO: Update docs for virtual double categories.
+
 A double theory equationally specifies a categorical structure: a category (or
 categories) equipped with extra structure. The spirit of the formalism is that a
 double theory is "just" a double category, categorifying Lawvere's idea that a
@@ -74,47 +76,61 @@ use derive_more::From;
 use ref_cast::RefCast;
 use ustr::{IdentityHasher, Ustr};
 
-use crate::one::category::*;
-use crate::one::fin_category::UstrFinCategory;
+use super::{category::*, tree::DblTree};
+use crate::one::{category::*, fin_category::UstrFinCategory};
 use crate::one::path::Path;
 use crate::validate::Validate;
 use crate::zero::*;
 
 /** A double theory.
 
-The terminology used here is explained at greater length in the
+A double theory is "just" a virtual double category (VDC) assumed to have units.
+Reflecting this, this trait has a blanket implementation for any
+[`VDblCategory`]. It is not recommended to implement this trait directly.
+
+The terminology used in this trait is explained at greater length in the
 [module-level](super::theory) docs.
  */
 pub trait DblTheory {
-    /** Rust type of object types in the double theory.
+    /** Rust type of object types in the theory.
 
-    Viewing the theory as a double category, this is the type of objects.
+    Viewing the double theory as a virtual double category, this is the type of
+    objects.
     */
-    type ObType: Eq;
+    type ObType: Eq + Clone;
 
-    /** Rust type of morphism types in the double theory.
+    /** Rust type of morphism types in the theory.
 
-    Viewing the theory as a double category, this is the type of proarrows.
+    Viewing the double theory as a virtual double category, this is the type of
+    proarrows.
     */
-    type MorType: Eq;
+    type MorType: Eq + Clone;
 
     /** Rust type of operations on objects in the double theory.
 
-    Viewing the theory as a double category, this is the type of arrows.
+    Viewing the double theory as a virtual double category, this is the type of
+    arrows.
     */
-    type ObOp: Eq;
+    type ObOp: Eq + Clone;
 
     /** Rust type of operations on morphisms in the double theory.
 
-    Viewing the theory as a double category, this is the type of cells.
+    Viewing the double theory as a virtual double category, this is the type of
+    cells.
     */
-    type MorOp: Eq;
+    type MorOp: Eq + Clone;
 
     /// Does the object type belong to the theory?
     fn has_ob_type(&self, x: &Self::ObType) -> bool;
 
     /// Does the morphism type belong to the theory?
     fn has_mor_type(&self, m: &Self::MorType) -> bool;
+
+    /// Does the object operation belong to the theory?
+    fn has_ob_op(&self, f: &Self::ObOp) -> bool;
+
+    /// Does the morphism operation belong to the theory?
+    fn has_mor_op(&self, α: &Self::MorOp) -> bool;
 
     /// Source of morphism type.
     fn src(&self, m: &Self::MorType) -> Self::ObType;
@@ -134,22 +150,23 @@ pub trait DblTheory {
     /// Target operation of operation on morphisms.
     fn op_tgt(&self, α: &Self::MorOp) -> Self::ObOp;
 
-    /// Domain type of operation on morphisms.
-    fn op_dom(&self, α: &Self::MorOp) -> Self::MorType;
+    /// Domain of operation on morphisms, a path of morphism types.
+    fn op_dom(&self, α: &Self::MorOp) -> Path<Self::ObType, Self::MorType>;
 
-    /// Codomain type of operation on morphisms.
+    /// Codomain of operation on morphisms, a single morphism type.
     fn op_cod(&self, α: &Self::MorOp) -> Self::MorType;
 
-    /// Composes a sequence of morphism types.
-    fn compose_types(&self, path: Path<Self::ObType, Self::MorType>) -> Self::MorType;
+    /// Composes a sequence of morphism types, if they have a composite.
+    fn compose_types(&self, path: Path<Self::ObType, Self::MorType>) -> Option<Self::MorType>;
 
     /** Hom morphism type on an object type.
 
-    Viewing the theory as a double category, this is the identity proarrow on an
-    object.
+    Viewing the double theory as a virtual double category, this is the unit
+    proarrow on an object.
     */
     fn hom_type(&self, x: Self::ObType) -> Self::MorType {
         self.compose_types(Path::Id(x))
+            .expect("A double theory should have all hom types")
     }
 
     /// Compose a sequence of operations on objects.
@@ -157,26 +174,95 @@ pub trait DblTheory {
 
     /** Identity operation on an object type.
 
-    View the theory as a double category, this is the identity arrow on an
-    object.
+    View the double theory as a virtual double category, this is the identity
+    arrow on an object.
     */
     fn id_ob_op(&self, x: Self::ObType) -> Self::ObOp {
         self.compose_ob_ops(Path::Id(x))
     }
 
-    /** Hom morphism operation on an object operation.
-
-    Viewing the theory as a double category, this is the identity cell on an
-    arrow.
-    */
-    fn hom_op(&self, f: Self::ObOp) -> Self::MorOp;
+    /// Compose operations on morphisms.
+    fn compose_mor_ops(&self, tree: DblTree<Self::ObOp, Self::MorType, Self::MorOp>)
+    -> Self::MorOp;
 
     /** Identity operation on a morphism type.
 
-    Viewing the theory as a double category, this is the identity cell on a
-    proarrow.
+    Viewing the double theory as a virtual double category, this is the identity
+    cell on a proarrow.
     */
-    fn id_mor_op(&self, m: Self::MorType) -> Self::MorOp;
+    fn id_mor_op(&self, m: Self::MorType) -> Self::MorOp {
+        self.compose_mor_ops(DblTree::empty(m))
+    }
+}
+
+impl<VDC: VDblCategory> DblTheory for VDC {
+    type ObType = VDC::Ob;
+    type MorType = VDC::Pro;
+    type ObOp = VDC::Arr;
+    type MorOp = VDC::Cell;
+
+    fn has_ob_type(&self, x: &Self::ObType) -> bool {
+        self.has_ob(x)
+    }
+    fn has_mor_type(&self, m: &Self::MorType) -> bool {
+        self.has_proarrow(m)
+    }
+    fn has_ob_op(&self, f: &Self::ObOp) -> bool {
+        self.has_arrow(f)
+    }
+    fn has_mor_op(&self, α: &Self::MorOp) -> bool {
+        self.has_cell(α)
+    }
+
+    fn src(&self, m: &Self::MorType) -> Self::ObType {
+        VDblCategory::src(self, m)
+    }
+    fn tgt(&self, m: &Self::MorType) -> Self::ObType {
+        VDblCategory::tgt(self, m)
+    }
+    fn dom(&self, f: &Self::ObOp) -> Self::ObType {
+        VDblCategory::dom(self, f)
+    }
+    fn cod(&self, f: &Self::ObOp) -> Self::ObType {
+        VDblCategory::dom(self, f)
+    }
+
+    fn op_src(&self, α: &Self::MorOp) -> Self::ObOp {
+        self.cell_src(α)
+    }
+    fn op_tgt(&self, α: &Self::MorOp) -> Self::ObOp {
+        self.cell_tgt(α)
+    }
+    fn op_dom(&self, α: &Self::MorOp) -> Path<Self::ObType, Self::MorType> {
+        self.cell_dom(α)
+    }
+    fn op_cod(&self, α: &Self::MorOp) -> Self::MorType {
+        self.cell_cod(α)
+    }
+
+    fn compose_types(&self, path: Path<Self::ObType, Self::MorType>) -> Option<Self::MorType> {
+        self.composite(path)
+    }
+    fn hom_type(&self, x: Self::ObType) -> Self::MorType {
+        self.unit(x).expect("A double theory should have all hom types")
+    }
+
+    fn compose_ob_ops(&self, path: Path<Self::ObType, Self::ObOp>) -> Self::ObOp {
+        self.compose(path)
+    }
+    fn id_ob_op(&self, x: Self::ObType) -> Self::ObOp {
+        self.id(x)
+    }
+
+    fn compose_mor_ops(
+        &self,
+        tree: DblTree<Self::ObOp, Self::MorType, Self::MorOp>,
+    ) -> Self::MorOp {
+        self.compose_cells(tree)
+    }
+    fn id_mor_op(&self, m: Self::MorType) -> Self::MorOp {
+        self.id_cell(m)
+    }
 }
 
 /** A discrete double theory.
@@ -195,62 +281,66 @@ pub struct DiscreteDblTheory<Cat: FgCategory>(Cat);
 /// A discrete double theory with keys of type `Ustr`.
 pub type UstrDiscreteDblTheory = DiscreteDblTheory<UstrFinCategory>;
 
-impl<C: FgCategory> DblTheory for DiscreteDblTheory<C>
-where
-    C::Ob: Clone,
-    C::Mor: Clone,
-{
-    type ObType = C::Ob;
-    type ObOp = C::Ob;
-    type MorType = C::Mor;
-    type MorOp = C::Mor;
+impl<C: FgCategory> VDblCategory for DiscreteDblTheory<C>
+where C::Ob: Clone, C::Mor: Clone {
+    type Ob = C::Ob;
+    type Arr = C::Ob;
+    type Pro = C::Mor;
+    type Cell = Path<C::Ob, C::Mor>;
 
-    fn has_ob_type(&self, x: &Self::ObType) -> bool {
-        self.0.has_ob(x)
+    fn has_ob(&self, ob: &Self::Ob) -> bool {
+        self.0.has_ob(ob)
     }
-    fn has_mor_type(&self, m: &Self::MorType) -> bool {
-        self.0.has_mor(m)
+    fn has_arrow(&self, arr: &Self::Arr) -> bool {
+        self.0.has_ob(arr)
+    }
+    fn has_proarrow(&self, pro: &Self::Pro) -> bool {
+        self.0.has_mor(pro)
+    }
+    fn has_cell(&self, path: &Self::Cell) -> bool {
+        path.contained_in(UnderlyingGraph::ref_cast(&self.0))
     }
 
-    fn src(&self, m: &Self::MorType) -> Self::ObType {
+    fn dom(&self, f: &Self::Arr) -> Self::Ob {
+        f.clone()
+    }
+    fn cod(&self, f: &Self::Arr) -> Self::Ob {
+        f.clone()
+    }
+    fn src(&self, m: &Self::Pro) -> Self::Ob {
         self.0.dom(m)
     }
-    fn tgt(&self, m: &Self::MorType) -> Self::ObType {
+    fn tgt(&self, m: &Self::Pro) -> Self::Ob {
         self.0.cod(m)
     }
-    fn dom(&self, x: &Self::ObOp) -> Self::ObType {
-        x.clone()
+
+    fn cell_dom(&self, path: &Self::Cell) -> Path<Self::Ob, Self::Pro> {
+        path.clone()
     }
-    fn cod(&self, x: &Self::ObOp) -> Self::ObType {
-        x.clone()
+    fn cell_cod(&self, path: &Self::Cell) -> Self::Pro {
+        self.0.compose(path.clone())
+    }
+    fn cell_src(&self, path: &Self::Cell) -> Self::Arr {
+        path.src(UnderlyingGraph::ref_cast(&self.0))
+    }
+    fn cell_tgt(&self, path: &Self::Cell) -> Self::Arr {
+        path.tgt(UnderlyingGraph::ref_cast(&self.0))
     }
 
-    fn op_src(&self, m: &Self::MorOp) -> Self::ObOp {
-        self.0.dom(m)
-    }
-    fn op_tgt(&self, m: &Self::MorOp) -> Self::ObOp {
-        self.0.cod(m)
-    }
-    fn op_dom(&self, m: &Self::MorOp) -> Self::MorType {
-        m.clone()
-    }
-    fn op_cod(&self, m: &Self::MorOp) -> Self::MorType {
-        m.clone()
-    }
-
-    fn compose_types(&self, path: Path<C::Ob, C::Mor>) -> C::Mor {
-        self.0.compose(path)
-    }
-
-    fn compose_ob_ops(&self, path: Path<C::Ob, C::Ob>) -> C::Ob {
+    fn compose(&self, path: Path<Self::Ob, Self::Arr>) -> Self::Arr {
         let disc = DiscreteCategory::ref_cast(ObSet::ref_cast(&self.0));
         disc.compose(path)
     }
-    fn hom_op(&self, f: Self::ObOp) -> Self::MorOp {
-        self.0.id(self.compose_ob_ops(Path::single(f)))
+
+    fn composite(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Pro> {
+        Some(self.0.compose(path))
     }
-    fn id_mor_op(&self, m: Self::MorType) -> Self::MorOp {
-        self.compose_types(Path::single(m))
+    fn composite_ext(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Cell> {
+        Some(path)
+    }
+
+    fn compose_cells(&self, tree: DblTree<Self::Arr, Self::Pro, Self::Cell>) -> Self::Cell {
+        tree.dom(UnderlyingDblGraph::ref_cast(self))
     }
 }
 
