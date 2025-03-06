@@ -178,6 +178,11 @@ pub trait VDblCategory {
         self.composite_ext(path).map(|α| self.cell_cod(&α))
     }
 
+    /// Gets the chosen composite for a pair of consecutive proarrows, if there is one.
+    fn composite2(&self, m: Self::Pro, n: Self::Pro) -> Option<Self::Pro> {
+        self.composite(Path::pair(m, n))
+    }
+
     /** Gets the chosen extension cell for an object, if there is one.
 
     Such a cell is an [extension](Self::composite_ext) or opcartesian cell

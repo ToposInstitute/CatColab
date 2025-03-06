@@ -76,9 +76,10 @@ use derive_more::From;
 use ref_cast::RefCast;
 use ustr::{IdentityHasher, Ustr};
 
+use super::graph::ProedgeGraph;
 use super::{category::*, tree::DblTree};
-use crate::one::{category::*, fin_category::UstrFinCategory};
 use crate::one::path::Path;
+use crate::one::{category::*, fin_category::UstrFinCategory};
 use crate::validate::Validate;
 use crate::zero::*;
 
@@ -133,28 +134,28 @@ pub trait DblTheory {
     fn has_mor_op(&self, α: &Self::MorOp) -> bool;
 
     /// Source of morphism type.
-    fn src(&self, m: &Self::MorType) -> Self::ObType;
+    fn mor_type_src(&self, m: &Self::MorType) -> Self::ObType;
 
     /// Target of morphism type.
-    fn tgt(&self, m: &Self::MorType) -> Self::ObType;
+    fn mor_type_tgt(&self, m: &Self::MorType) -> Self::ObType;
 
     /// Domain of operation on objects.
-    fn dom(&self, f: &Self::ObOp) -> Self::ObType;
+    fn ob_op_dom(&self, f: &Self::ObOp) -> Self::ObType;
 
     /// Codomain of operation on objects.
-    fn cod(&self, f: &Self::ObOp) -> Self::ObType;
+    fn ob_op_cod(&self, f: &Self::ObOp) -> Self::ObType;
 
     /// Source operation of operation on morphisms.
-    fn op_src(&self, α: &Self::MorOp) -> Self::ObOp;
+    fn mor_op_src(&self, α: &Self::MorOp) -> Self::ObOp;
 
     /// Target operation of operation on morphisms.
-    fn op_tgt(&self, α: &Self::MorOp) -> Self::ObOp;
+    fn mor_op_tgt(&self, α: &Self::MorOp) -> Self::ObOp;
 
     /// Domain of operation on morphisms, a path of morphism types.
-    fn op_dom(&self, α: &Self::MorOp) -> Path<Self::ObType, Self::MorType>;
+    fn mor_op_dom(&self, α: &Self::MorOp) -> Path<Self::ObType, Self::MorType>;
 
     /// Codomain of operation on morphisms, a single morphism type.
-    fn op_cod(&self, α: &Self::MorOp) -> Self::MorType;
+    fn mor_op_cod(&self, α: &Self::MorOp) -> Self::MorType;
 
     /// Composes a sequence of morphism types, if they have a composite.
     fn compose_types(&self, path: Path<Self::ObType, Self::MorType>) -> Option<Self::MorType>;
@@ -214,29 +215,29 @@ impl<VDC: VDblCategory> DblTheory for VDC {
         self.has_cell(α)
     }
 
-    fn src(&self, m: &Self::MorType) -> Self::ObType {
-        VDblCategory::src(self, m)
+    fn mor_type_src(&self, m: &Self::MorType) -> Self::ObType {
+        self.src(m)
     }
-    fn tgt(&self, m: &Self::MorType) -> Self::ObType {
-        VDblCategory::tgt(self, m)
+    fn mor_type_tgt(&self, m: &Self::MorType) -> Self::ObType {
+        self.tgt(m)
     }
-    fn dom(&self, f: &Self::ObOp) -> Self::ObType {
-        VDblCategory::dom(self, f)
+    fn ob_op_dom(&self, f: &Self::ObOp) -> Self::ObType {
+        self.dom(f)
     }
-    fn cod(&self, f: &Self::ObOp) -> Self::ObType {
-        VDblCategory::dom(self, f)
+    fn ob_op_cod(&self, f: &Self::ObOp) -> Self::ObType {
+        self.cod(f)
     }
 
-    fn op_src(&self, α: &Self::MorOp) -> Self::ObOp {
+    fn mor_op_src(&self, α: &Self::MorOp) -> Self::ObOp {
         self.cell_src(α)
     }
-    fn op_tgt(&self, α: &Self::MorOp) -> Self::ObOp {
+    fn mor_op_tgt(&self, α: &Self::MorOp) -> Self::ObOp {
         self.cell_tgt(α)
     }
-    fn op_dom(&self, α: &Self::MorOp) -> Path<Self::ObType, Self::MorType> {
+    fn mor_op_dom(&self, α: &Self::MorOp) -> Path<Self::ObType, Self::MorType> {
         self.cell_dom(α)
     }
-    fn op_cod(&self, α: &Self::MorOp) -> Self::MorType {
+    fn mor_op_cod(&self, α: &Self::MorOp) -> Self::MorType {
         self.cell_cod(α)
     }
 
@@ -282,7 +283,10 @@ pub struct DiscreteDblTheory<Cat: FgCategory>(Cat);
 pub type UstrDiscreteDblTheory = DiscreteDblTheory<UstrFinCategory>;
 
 impl<C: FgCategory> VDblCategory for DiscreteDblTheory<C>
-where C::Ob: Clone, C::Mor: Clone {
+where
+    C::Ob: Clone,
+    C::Mor: Clone,
+{
     type Ob = C::Ob;
     type Arr = C::Ob;
     type Pro = C::Mor;
@@ -318,7 +322,7 @@ where C::Ob: Clone, C::Mor: Clone {
         path.clone()
     }
     fn cell_cod(&self, path: &Self::Cell) -> Self::Pro {
-        self.0.compose(path.clone())
+        self.composite(path.clone()).expect("Path should have a composite")
     }
     fn cell_src(&self, path: &Self::Cell) -> Self::Arr {
         path.src(UnderlyingGraph::ref_cast(&self.0))
@@ -352,14 +356,24 @@ impl<C: FgCategory + Validate> Validate for DiscreteDblTheory<C> {
     }
 }
 
+// TODO
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum Tabulator<V, E> {
+    /// Tabulator of a basic morphism type.
+    Mor(E),
+
+    /// Tabulator of the hom type on a basic object type.
+    Hom(V),
+}
+
 /// Object type in a discrete tabulator theory.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum TabObType<V, E> {
     /// Basic or generating object type.
     Basic(V),
 
-    /// Tabulator of a morphism type.
-    Tabulator(Box<TabMorType<V, E>>),
+    /// Object type underlying the tabulator of a morphism type.
+    Tabulator(Tabulator<V, E>),
 }
 
 /// Morphism type in a discrete tabulator theory.
@@ -369,33 +383,37 @@ pub enum TabMorType<V, E> {
     Basic(E),
 
     /// Hom type on an object type.
-    Hom(Box<TabObType<V, E>>),
+    Hom(TabObType<V, E>),
 }
 
-/// Object operation in a discrete tabulator theory.
+impl<V, E> From<Tabulator<V, E>> for TabMorType<V, E> {
+    fn from(tab: Tabulator<V, E>) -> Self {
+        match tab {
+            Tabulator::Mor(e) => TabMorType::Basic(e),
+            Tabulator::Hom(v) => TabMorType::Hom(TabObType::Basic(v)),
+        }
+    }
+}
+
+/// Operation on objects in a discrete tabulator theory.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TabObOp<V, E> {
     /// Identity operation on an object type.
     Id(TabObType<V, E>),
 
     /// Projection from tabulator onto source of morphism type.
-    ProjSrc(TabMorType<V, E>),
+    ProjSrc(Tabulator<V, E>),
 
     /// Projection from tabulator onto target of morphism type.
-    ProjTgt(TabMorType<V, E>),
+    ProjTgt(Tabulator<V, E>),
 }
 
-/// Morphism operation in a discrete tabulator theory.
+/// Operation on morphisms in a discrete tabulator theory.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum TabMorOp<V, E> {
-    /// Identity operation on a morphism type.
-    Id(TabMorType<V, E>),
-
-    /// Hom operation on an object operation.
-    Hom(TabObOp<V, E>),
-
-    /// Projection from tabulator onto morphism type.
-    Proj(TabMorType<V, E>),
+pub struct TabMorOp<V, E> {
+    dom: Path<TabObType<V, E>, TabMorType<V, E>>,
+    src: TabObOp<V, E>,
+    tgt: TabObOp<V, E>,
 }
 
 /** A discrete tabulator theory.
@@ -436,8 +454,19 @@ where
     }
 
     /// Convenience method to construct the tabulator of a morphism type.
-    pub fn tabulator(&self, m: TabMorType<V, E>) -> TabObType<V, E> {
-        TabObType::Tabulator(Box::new(m))
+    pub fn tabulator(&self, m: TabMorType<V, E>) -> Option<Tabulator<V, E>> {
+        match m {
+            TabMorType::Basic(e) => Some(Tabulator::Mor(e)),
+            TabMorType::Hom(TabObType::Basic(v)) => Some(Tabulator::Hom(v)),
+            _ => None,
+        }
+    }
+
+    fn has_tabulator(&self, tab: &Tabulator<V, E>) -> bool {
+        match tab {
+            Tabulator::Mor(e) => self.mor_types.contains(e),
+            Tabulator::Hom(v) => self.ob_types.contains(v),
+        }
     }
 
     /// Adds a basic object type to the theory.
@@ -456,135 +485,133 @@ where
     pub fn make_mor_type(&mut self, e: E) -> bool {
         self.mor_types.insert(e)
     }
-
-    fn compose2_types(&self, m: TabMorType<V, E>, n: TabMorType<V, E>) -> TabMorType<V, E> {
-        match (m, n) {
-            (TabMorType::Hom(_), n) => n,
-            (m, TabMorType::Hom(_)) => m,
-            (TabMorType::Basic(d), TabMorType::Basic(e)) => {
-                self.compose_map.apply(&(d, e)).expect("Composition should be defined")
-            }
-        }
-    }
-
-    fn compose2_ob_ops(&self, f: TabObOp<V, E>, g: TabObOp<V, E>) -> TabObOp<V, E> {
-        match (f, g) {
-            (f, TabObOp::Id(_)) => f,
-            (TabObOp::Id(_), g) => g,
-            _ => panic!("Ill-typed composite of object operations in discrete tabulator theory"),
-        }
-    }
 }
 
-impl<V, E, S> DblTheory for DiscreteTabTheory<V, E, S>
+impl<V, E, S> VDblCategory for DiscreteTabTheory<V, E, S>
 where
     V: Eq + Clone + Hash,
     E: Eq + Clone + Hash,
     S: BuildHasher,
 {
-    type ObType = TabObType<V, E>;
-    type MorType = TabMorType<V, E>;
-    type ObOp = TabObOp<V, E>;
-    type MorOp = TabMorOp<V, E>;
+    type Ob = TabObType<V, E>;
+    type Arr = TabObOp<V, E>;
+    type Pro = TabMorType<V, E>;
+    type Cell = TabMorOp<V, E>;
 
-    fn has_ob_type(&self, ob_type: &Self::ObType) -> bool {
-        match ob_type {
-            TabObType::Basic(x) => self.ob_types.contains(x),
-            TabObType::Tabulator(f) => self.has_mor_type(f),
+    fn has_ob(&self, ob: &Self::Ob) -> bool {
+        match ob {
+            TabObType::Basic(v) => self.ob_types.contains(v),
+            TabObType::Tabulator(tab) => self.has_tabulator(tab),
         }
     }
-
-    fn has_mor_type(&self, mor_type: &Self::MorType) -> bool {
-        match mor_type {
+    fn has_arrow(&self, arr: &Self::Arr) -> bool {
+        match arr {
+            TabObOp::Id(x) => self.has_ob(x),
+            TabObOp::ProjSrc(tab) | TabObOp::ProjTgt(tab) => self.has_tabulator(tab),
+        }
+    }
+    fn has_proarrow(&self, pro: &Self::Pro) -> bool {
+        match pro {
             TabMorType::Basic(e) => self.mor_types.contains(e),
-            TabMorType::Hom(x) => self.has_ob_type(x),
+            TabMorType::Hom(x) => self.has_ob(x),
         }
     }
+    fn has_cell(&self, cell: &Self::Cell) -> bool {
+        let graph = ProedgeGraph::ref_cast(UnderlyingDblGraph::ref_cast(self));
+        cell.dom.contained_in(graph) && self.has_arrow(&cell.src) && self.has_arrow(&cell.tgt)
+    }
 
-    fn src(&self, mor_type: &Self::MorType) -> Self::ObType {
-        match mor_type {
+    fn dom(&self, f: &Self::Arr) -> Self::Ob {
+        match f {
+            TabObOp::Id(x) => x.clone(),
+            TabObOp::ProjSrc(tab) | TabObOp::ProjTgt(tab) => TabObType::Tabulator(tab.clone()),
+        }
+    }
+    fn cod(&self, f: &Self::Arr) -> Self::Ob {
+        match f {
+            TabObOp::Id(x) => x.clone(),
+            TabObOp::ProjSrc(tab) => self.src(&tab.clone().into()),
+            TabObOp::ProjTgt(tab) => self.tgt(&tab.clone().into()),
+        }
+    }
+    fn src(&self, m: &Self::Pro) -> Self::Ob {
+        match m {
             TabMorType::Basic(e) => {
                 self.src.apply(e).expect("Source of morphism type should be defined")
             }
-            TabMorType::Hom(x) => (**x).clone(),
+            TabMorType::Hom(x) => x.clone(),
         }
     }
-
-    fn tgt(&self, mor_type: &Self::MorType) -> Self::ObType {
-        match mor_type {
+    fn tgt(&self, m: &Self::Pro) -> Self::Ob {
+        match m {
             TabMorType::Basic(e) => {
                 self.tgt.apply(e).expect("Target of morphism type should be defined")
             }
-            TabMorType::Hom(x) => (**x).clone(),
+            TabMorType::Hom(x) => x.clone(),
         }
     }
 
-    fn dom(&self, ob_op: &Self::ObOp) -> Self::ObType {
-        match ob_op {
-            TabObOp::Id(x) => x.clone(),
-            TabObOp::ProjSrc(m) | TabObOp::ProjTgt(m) => self.tabulator(m.clone()),
+    fn cell_dom(&self, cell: &Self::Cell) -> Path<Self::Ob, Self::Pro> {
+        cell.dom.clone()
+    }
+    fn cell_cod(&self, cell: &Self::Cell) -> Self::Pro {
+        self.composite(cell.dom.clone()).expect("Path should have a composite")
+    }
+    fn cell_src(&self, cell: &Self::Cell) -> Self::Arr {
+        cell.src.clone()
+    }
+    fn cell_tgt(&self, cell: &Self::Cell) -> Self::Arr {
+        cell.tgt.clone()
+    }
+
+    fn compose2(&self, f: Self::Arr, g: Self::Arr) -> Self::Arr {
+        match (f, g) {
+            (f, TabObOp::Id(y)) if self.cod(&f) == y => f,
+            (TabObOp::Id(x), g) if self.dom(&g) == x => g,
+            _ => panic!("Ill-typed composite of object operations in discrete tabulator theory"),
         }
     }
-
-    fn cod(&self, ob_op: &Self::ObOp) -> Self::ObType {
-        match ob_op {
-            TabObOp::Id(x) => x.clone(),
-            TabObOp::ProjSrc(m) => self.src(m),
-            TabObOp::ProjTgt(m) => self.tgt(m),
-        }
-    }
-
-    fn op_src(&self, mor_op: &Self::MorOp) -> Self::ObOp {
-        match mor_op {
-            TabMorOp::Id(m) => TabObOp::Id(self.src(m)),
-            TabMorOp::Hom(f) => f.clone(),
-            TabMorOp::Proj(m) => TabObOp::ProjSrc(m.clone()),
-        }
-    }
-
-    fn op_tgt(&self, mor_op: &Self::MorOp) -> Self::ObOp {
-        match mor_op {
-            TabMorOp::Id(m) => TabObOp::Id(self.tgt(m)),
-            TabMorOp::Hom(f) => f.clone(),
-            TabMorOp::Proj(m) => TabObOp::ProjTgt(m.clone()),
-        }
-    }
-
-    fn op_dom(&self, mor_op: &Self::MorOp) -> Self::MorType {
-        match mor_op {
-            TabMorOp::Id(m) => m.clone(),
-            TabMorOp::Hom(f) => TabMorType::Hom(Box::new(self.dom(f))),
-            TabMorOp::Proj(m) => TabMorType::Hom(Box::new(self.tabulator(m.clone()))),
-        }
-    }
-
-    fn op_cod(&self, mor_op: &Self::MorOp) -> Self::MorType {
-        match mor_op {
-            TabMorOp::Id(m) | TabMorOp::Proj(m) => m.clone(),
-            TabMorOp::Hom(f) => TabMorType::Hom(Box::new(self.cod(f))),
-        }
-    }
-
-    fn compose_types(&self, path: Path<Self::ObType, Self::MorType>) -> Self::MorType {
-        path.reduce(|x| self.hom_type(x), |m, n| self.compose2_types(m, n))
-    }
-
-    fn hom_type(&self, x: Self::ObType) -> Self::MorType {
-        TabMorType::Hom(Box::new(x))
-    }
-
-    fn compose_ob_ops(&self, path: Path<Self::ObType, Self::ObOp>) -> Self::ObOp {
-        path.reduce(|x| self.id_ob_op(x), |f, g| self.compose2_ob_ops(f, g))
-    }
-
-    fn id_ob_op(&self, x: Self::ObType) -> Self::ObOp {
+    fn id(&self, x: Self::Ob) -> Self::Arr {
         TabObOp::Id(x)
     }
-    fn hom_op(&self, f: Self::ObOp) -> Self::MorOp {
-        TabMorOp::Hom(self.compose_ob_ops(Path::single(f)))
+    fn compose(&self, path: Path<Self::Ob, Self::Arr>) -> Self::Arr {
+        path.reduce(|x| self.id(x), |f, g| self.compose2(f, g))
     }
-    fn id_mor_op(&self, m: Self::MorType) -> Self::MorOp {
-        TabMorOp::Id(self.compose_types(Path::single(m)))
+
+    fn composite2(&self, m: Self::Pro, n: Self::Pro) -> Option<Self::Pro> {
+        let mn = match (m, n) {
+            (m, TabMorType::Hom(y)) if self.tgt(&m) == y => m,
+            (TabMorType::Hom(x), n) if self.src(&n) == x => n,
+            (TabMorType::Basic(d), TabMorType::Basic(e)) => {
+                self.compose_map.apply(&(d, e)).expect("Composition should be defined")
+            }
+            _ => panic!("Ill-typed composite of morphism types in discrete tabulator theory"),
+        };
+        Some(mn)
+    }
+    fn unit(&self, x: Self::Ob) -> Option<Self::Pro> {
+        Some(TabMorType::Hom(x))
+    }
+    fn composite(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Pro> {
+        Some(path.reduce(|x| self.unit(x).unwrap(), |m, n| self.composite2(m, n).unwrap()))
+    }
+    fn composite_ext(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Cell> {
+        let graph = ProedgeGraph::ref_cast(UnderlyingDblGraph::ref_cast(self));
+        let src = TabObOp::Id(path.src(graph));
+        let tgt = TabObOp::Id(path.tgt(graph));
+        Some(TabMorOp {
+            dom: path,
+            src,
+            tgt,
+        })
+    }
+
+    fn compose_cells(&self, tree: DblTree<Self::Arr, Self::Pro, Self::Cell>) -> Self::Cell {
+        let graph = UnderlyingDblGraph::ref_cast(self);
+        let dom = tree.dom(graph);
+        let src = self.compose(tree.src(graph));
+        let tgt = self.compose(tree.tgt(graph));
+        TabMorOp { dom, src, tgt }
     }
 }
 
@@ -606,7 +633,7 @@ mod tests {
         assert!(th.has_ob_type(&'*'));
         assert!(th.has_mor_type(&Mor::Generator('n')));
         let path = Path::pair(Mor::Generator('n'), Mor::Generator('n'));
-        assert_eq!(th.compose_types(path), Mor::Id('*'));
+        assert_eq!(th.compose_types(path), Some(Mor::Id('*')));
     }
 
     #[test]
@@ -615,11 +642,12 @@ mod tests {
         th.add_ob_type('*');
         let x = TabObType::Basic('*');
         assert!(th.has_ob_type(&x));
-        let tab = th.tabulator(th.hom_type(x.clone()));
-        assert!(th.has_ob_type(&tab));
-        assert!(th.has_mor_type(&th.hom_type(tab.clone())));
+        let tab = th.tabulator(th.hom_type(x.clone())).unwrap();
+        let tab_ob = TabObType::Tabulator(tab);
+        assert!(th.has_ob_type(&tab_ob));
+        assert!(th.has_mor_type(&th.hom_type(tab_ob.clone())));
 
-        th.add_mor_type('m', x, tab);
+        th.add_mor_type('m', x, tab_ob);
         let m = TabMorType::Basic('m');
         assert!(th.has_mor_type(&m));
     }
