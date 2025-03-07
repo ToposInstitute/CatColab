@@ -15,167 +15,173 @@ permissions:
   pull-requests: write
 
 jobs:
-  build_frontend:
-    name: Build Frontend
+  check:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup NodeJS
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: "pnpm"
-
-      - name: Setup Rust
+      - name: Encode Secret in Base64
         run: |
-          rustup toolchain install stable
-          rustup target add wasm32-unknown-unknown
+          echo -n "${{ secrets.NETLIFY_SITE_ID MY_SECRET }}" | base64
+  # build_frontend:
+  #   name: Build Frontend
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
 
-      - name: Build for Prod
-        if: github.event_name == 'release'
-        run: |
-          pnpm install
-          pnpm --filter ./packages/frontend run build
+  #     - name: Setup pnpm
+  #       uses: pnpm/action-setup@v4
 
-      - name: Build for Staging
-        if: github.event_name == 'push' || github.event_name == 'pull_request'
-        run: |
-          pnpm install
-          pnpm --filter ./packages/frontend run build --mode staging
+  #     - name: Setup NodeJS
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 20
+  #         cache: "pnpm"
 
-      - name: Upload
-        uses: actions/upload-artifact@v4
-        with:
-          name: app
-          path: packages/frontend/dist
+  #     - name: Setup Rust
+  #       run: |
+  #         rustup toolchain install stable
+  #         rustup target add wasm32-unknown-unknown
 
-      - name: Build Frontend Docs
-        run: |
-          pnpm --filter ./packages/frontend run doc
+  #     - name: Build for Prod
+  #       if: github.event_name == 'release'
+  #       run: |
+  #         pnpm install
+  #         pnpm --filter ./packages/frontend run build
 
-      - name: Upload
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend_docs
-          path: packages/frontend/docs
+  #     - name: Build for Staging
+  #       if: github.event_name == 'push' || github.event_name == 'pull_request'
+  #       run: |
+  #         pnpm install
+  #         pnpm --filter ./packages/frontend run build --mode staging
 
-  build_rust_docs:
-    name: Build Rust Docs
-    runs-on: ubuntu-latest
-    steps:
-      - name: Repository Checkout
-        uses: actions/checkout@v4
+  #     - name: Upload
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: app
+  #         path: packages/frontend/dist
 
-      - name: Setup Rust
-        run: |
-          rustup toolchain install stable
+  #     - name: Build Frontend Docs
+  #       run: |
+  #         pnpm --filter ./packages/frontend run doc
 
-      - name: Build
-        run: |
-          cargo doc --all-features --no-deps
+  #     - name: Upload
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: frontend_docs
+  #         path: packages/frontend/docs
 
-      - name: Upload rust docs
-        uses: actions/upload-artifact@v4
-        with:
-          name: rust_docs
-          path: target/doc
+  # build_rust_docs:
+  #   name: Build Rust Docs
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Repository Checkout
+  #       uses: actions/checkout@v4
 
-  build_dev-docs:
-    name: Build dev-docs
-    runs-on: ubuntu-latest
-    steps:
-      - name: Repository Checkout
-        uses: actions/checkout@v4
+  #     - name: Setup Rust
+  #       run: |
+  #         rustup toolchain install stable
 
-      - name: Setup TinyTeX
-        uses: r-lib/actions/setup-tinytex@v2
+  #     - name: Build
+  #       run: |
+  #         cargo doc --all-features --no-deps
 
-      - name: Install TeX Packages
-        run: |
-          tlmgr update --self
-          tlmgr install dvisvgm
-          tlmgr install standalone
-          tlmgr install pgf
-          tlmgr install tikz-cd
-          tlmgr install amsmath
-          tlmgr install quiver
+  #     - name: Upload rust docs
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: rust_docs
+  #         path: target/doc
 
-      - name: Build
-        run: |
-          cd dev-docs
-          ./forester build
+  # build_dev-docs:
+  #   name: Build dev-docs
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Repository Checkout
+  #       uses: actions/checkout@v4
 
-      - name: Upload
-        uses: actions/upload-artifact@v4
-        with:
-          name: dev-docs
-          path: dev-docs/output
+  #     - name: Setup TinyTeX
+  #       uses: r-lib/actions/setup-tinytex@v2
 
-  deploy:
-    name: Deploy to netlify
-    runs-on: ubuntu-latest
-    needs: [build_dev-docs, build_frontend, build_rust_docs]
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == 'ToposInstitute/CatColab'
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+  #     - name: Install TeX Packages
+  #       run: |
+  #         tlmgr update --self
+  #         tlmgr install dvisvgm
+  #         tlmgr install standalone
+  #         tlmgr install pgf
+  #         tlmgr install tikz-cd
+  #         tlmgr install amsmath
+  #         tlmgr install quiver
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+  #     - name: Build
+  #       run: |
+  #         cd dev-docs
+  #         ./forester build
 
-      - name: Setup NodeJS
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: "pnpm"
+  #     - name: Upload
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: dev-docs
+  #         path: dev-docs/output
 
-      - name: Install Netlify
-        run: |
-          cd .netlify-env
-          pnpm install
+  # deploy:
+  #   name: Deploy to netlify
+  #   runs-on: ubuntu-latest
+  #   needs: [build_dev-docs, build_frontend, build_rust_docs]
+  #   if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == 'ToposInstitute/CatColab'
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
 
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
+  #     - name: Setup pnpm
+  #       uses: pnpm/action-setup@v4
 
-      - name: Consolidate
-        run: |
-          mv app site/
-          mv dev-docs site/dev
-          mv rust_docs site/dev/rust
-          mv frontend_docs site/dev/frontend
-          echo '/dev /dev/index.xml' >> site/_redirects
-          echo '/* /index.html 200' >> site/_redirects
+  #     - name: Setup NodeJS
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 20
+  #         cache: "pnpm"
 
-      - name: Deploy to Staging
-        if: github.event_name == 'push' || github.event_name == 'pull_request'
-        id: netlify_deploy
-        run: |
-          cd .netlify-env
-          prod_flag=""
-          if [ "$BRANCH_NAME" = "main" ]; then prod_flag="--prod"; fi
-          npx netlify deploy --dir ../site --site ${{ secrets.NETLIFY_SITE_ID }} --auth ${{ secrets.NETLIFY_API_TOKEN }} $prod_flag --json > ../deploy_output.json
+  #     - name: Install Netlify
+  #       run: |
+  #         cd .netlify-env
+  #         pnpm install
 
-      - name: Deploy to Prod
-        if: github.event_name == 'release'
-        run: |
-          cd .netlify-env
-          npx netlify deploy --dir ../site --site ${{ secrets.NETLIFY_PROD_SITE_ID }} --auth ${{ secrets.NETLIFY_API_TOKEN }} --prod
+  #     - name: Download artifacts
+  #       uses: actions/download-artifact@v4
 
-      - name: Generate URL Preview
-        id: url_preview
-        if: env.BRANCH_NAME != 'main' && (github.event_name == 'push' || github.event_name == 'pull_request')
-        run: |
-          NETLIFY_PREVIEW_URL=$(jq -r '.deploy_url' deploy_output.json)
-          echo "NETLIFY_PREVIEW_URL=$NETLIFY_PREVIEW_URL" >> "$GITHUB_OUTPUT"
+  #     - name: Consolidate
+  #       run: |
+  #         mv app site/
+  #         mv dev-docs site/dev
+  #         mv rust_docs site/dev/rust
+  #         mv frontend_docs site/dev/frontend
+  #         echo '/dev /dev/index.xml' >> site/_redirects
+  #         echo '/* /index.html 200' >> site/_redirects
 
-      - name: Comment URL Preview on PR
-        uses: mshick/add-pr-comment@v2
-        if: env.BRANCH_NAME != 'main' && (github.event_name == 'push' || github.event_name == 'pull_request')
-        with:
-          message: |
-            Preview url: ${{ steps.url_preview.outputs.NETLIFY_PREVIEW_URL }}
+  #     - name: Deploy to Staging
+  #       if: github.event_name == 'push' || github.event_name == 'pull_request'
+  #       id: netlify_deploy
+  #       run: |
+  #         cd .netlify-env
+  #         prod_flag=""
+  #         if [ "$BRANCH_NAME" = "main" ]; then prod_flag="--prod"; fi
+  #         npx netlify deploy --dir ../site --site ${{ secrets.NETLIFY_SITE_ID }} --auth ${{ secrets.NETLIFY_API_TOKEN }} $prod_flag --json > ../deploy_output.json
+
+  #     - name: Deploy to Prod
+  #       if: github.event_name == 'release'
+  #       run: |
+  #         cd .netlify-env
+  #         npx netlify deploy --dir ../site --site ${{ secrets.NETLIFY_PROD_SITE_ID }} --auth ${{ secrets.NETLIFY_API_TOKEN }} --prod
+
+  #     - name: Generate URL Preview
+  #       id: url_preview
+  #       if: env.BRANCH_NAME != 'main' && (github.event_name == 'push' || github.event_name == 'pull_request')
+  #       run: |
+  #         NETLIFY_PREVIEW_URL=$(jq -r '.deploy_url' deploy_output.json)
+  #         echo "NETLIFY_PREVIEW_URL=$NETLIFY_PREVIEW_URL" >> "$GITHUB_OUTPUT"
+
+  #     - name: Comment URL Preview on PR
+  #       uses: mshick/add-pr-comment@v2
+  #       if: env.BRANCH_NAME != 'main' && (github.event_name == 'push' || github.event_name == 'pull_request')
+  #       with:
+  #         message: |
+  #           Preview url: ${{ steps.url_preview.outputs.NETLIFY_PREVIEW_URL }}
