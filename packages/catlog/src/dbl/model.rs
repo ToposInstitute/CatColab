@@ -47,6 +47,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify_next::Tsify;
 
+use super::category::VDblCategory;
 use super::theory::{DblTheory, DiscreteDblTheory};
 use crate::one::fin_category::{FpCategory, InvalidFpCategory, UstrFinCategory};
 use crate::one::*;
@@ -374,7 +375,7 @@ where
     type ObType = Cat::Ob;
     type MorType = Cat::Mor;
     type ObOp = Cat::Ob;
-    type MorOp = Cat::Mor;
+    type MorOp = Path<Cat::Ob, Cat::Mor>;
     type Theory = DiscreteDblTheory<Cat>;
 
     fn theory(&self) -> &Self::Theory {
@@ -394,7 +395,7 @@ where
     fn mor_type(&self, mor: &Self::Mor) -> Self::MorType {
         let types =
             mor.clone().map(|x| self.ob_generator_type(&x), |m| self.mor_generator_type(&m));
-        self.theory.compose_types(types)
+        self.theory.compose_types(types).expect("Morphism types should have composite")
     }
 }
 
@@ -829,24 +830,15 @@ where
                 }
             },
         );
-        self.theory.compose_types(types)
+        self.theory.compose_types(types).expect("Morphism types should have composite")
     }
 
-    fn ob_act(&self, ob: Self::Ob, op: &Self::ObOp) -> Self::Ob {
-        // Should we type check more rigorously here and in `mor_act`?
-        match (ob, op) {
-            (ob, TabObOp::Id(_)) => ob,
-            (TabOb::Tabulated(m), TabObOp::ProjSrc(_)) => self.dom(&m),
-            (TabOb::Tabulated(m), TabObOp::ProjTgt(_)) => self.cod(&m),
-            _ => panic!("Ill-typed application of object operation"),
-        }
+    fn ob_act(&self, _ob: Self::Ob, _op: &Self::ObOp) -> Self::Ob {
+        panic!("Action on objects not implemented")
     }
 
-    fn mor_act(&self, mor: Self::Mor, op: &Self::MorOp) -> Self::Mor {
-        match (mor, op) {
-            (mor, TabMorOp::Id(_)) => mor,
-            _ => panic!("Non-identity morphism operations not implemented"),
-        }
+    fn mor_act(&self, _mor: Self::Mor, _op: &Self::MorOp) -> Self::Mor {
+        panic!("Action on morphisms not implemented")
     }
 }
 

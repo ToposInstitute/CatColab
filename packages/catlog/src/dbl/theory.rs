@@ -78,7 +78,7 @@ use ustr::{IdentityHasher, Ustr};
 
 use super::graph::ProedgeGraph;
 use super::{category::*, tree::DblTree};
-use crate::one::path::Path;
+use crate::one::{Graph, path::Path};
 use crate::one::{category::*, fin_category::UstrFinCategory};
 use crate::validate::Validate;
 use crate::zero::*;
@@ -356,24 +356,14 @@ impl<C: FgCategory + Validate> Validate for DiscreteDblTheory<C> {
     }
 }
 
-// TODO
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum Tabulator<V, E> {
-    /// Tabulator of a basic morphism type.
-    Mor(E),
-
-    /// Tabulator of the hom type on a basic object type.
-    Hom(V),
-}
-
 /// Object type in a discrete tabulator theory.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum TabObType<V, E> {
     /// Basic or generating object type.
     Basic(V),
 
-    /// Object type underlying the tabulator of a morphism type.
-    Tabulator(Tabulator<V, E>),
+    /// Tabulator of a morphism type.
+    Tabulator(Box<TabMorType<V, E>>),
 }
 
 /// Morphism type in a discrete tabulator theory.
@@ -383,37 +373,67 @@ pub enum TabMorType<V, E> {
     Basic(E),
 
     /// Hom type on an object type.
-    Hom(TabObType<V, E>),
+    Hom(Box<TabObType<V, E>>),
 }
 
-impl<V, E> From<Tabulator<V, E>> for TabMorType<V, E> {
-    fn from(tab: Tabulator<V, E>) -> Self {
-        match tab {
-            Tabulator::Mor(e) => TabMorType::Basic(e),
-            Tabulator::Hom(v) => TabMorType::Hom(TabObType::Basic(v)),
+/// Projection onto object type in a discrete tabulator theory.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum TabObProj<V, E> {
+    /// Projection from tabulator onto source of morphism type.
+    Src(TabMorType<V, E>),
+
+    /// Projection from tabulator onto target of morphism type.
+    Tgt(TabMorType<V, E>),
+}
+
+impl<V, E> TabObProj<V, E> {
+    /// Morphism type that the tabulator is of.
+    pub fn mor_type(&self) -> &TabMorType<V, E> {
+        match self {
+            TabObProj::Src(m) | TabObProj::Tgt(m) => m,
         }
     }
 }
 
 /// Operation on objects in a discrete tabulator theory.
+pub type TabObOp<V, E> = Path<TabObType<V, E>, TabObProj<V, E>>;
+
+/// Projection onto morphism type in a discrete tabulator theory.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum TabObOp<V, E> {
-    /// Identity operation on an object type.
-    Id(TabObType<V, E>),
+pub enum TabMorProj<V, E> {
+    /// Projection from a tabulator onto the original morphism type.
+    Cone(TabMorType<V, E>),
 
     /// Projection from tabulator onto source of morphism type.
-    ProjSrc(Tabulator<V, E>),
+    Src(TabMorType<V, E>),
 
     /// Projection from tabulator onto target of morphism type.
-    ProjTgt(Tabulator<V, E>),
+    Tgt(TabMorType<V, E>),
+}
+
+impl<V, E> TabMorProj<V, E> {
+    /// Source projection.
+    fn src(self) -> TabObProj<V, E> {
+        match self {
+            TabMorProj::Cone(m) | TabMorProj::Src(m) => TabObProj::Src(m),
+            TabMorProj::Tgt(m) => TabObProj::Tgt(m),
+        }
+    }
+
+    /// Target projection
+    fn tgt(self) -> TabObProj<V, E> {
+        match self {
+            TabMorProj::Src(m) => TabObProj::Src(m),
+            TabMorProj::Cone(m) | TabMorProj::Tgt(m) => TabObProj::Tgt(m),
+        }
+    }
 }
 
 /// Operation on morphisms in a discrete tabulator theory.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TabMorOp<V, E> {
     dom: Path<TabObType<V, E>, TabMorType<V, E>>,
-    src: TabObOp<V, E>,
-    tgt: TabObOp<V, E>,
+    projections: Vec<TabMorProj<V, E>>,
 }
 
 /** A discrete tabulator theory.
@@ -454,19 +474,8 @@ where
     }
 
     /// Convenience method to construct the tabulator of a morphism type.
-    pub fn tabulator(&self, m: TabMorType<V, E>) -> Option<Tabulator<V, E>> {
-        match m {
-            TabMorType::Basic(e) => Some(Tabulator::Mor(e)),
-            TabMorType::Hom(TabObType::Basic(v)) => Some(Tabulator::Hom(v)),
-            _ => None,
-        }
-    }
-
-    fn has_tabulator(&self, tab: &Tabulator<V, E>) -> bool {
-        match tab {
-            Tabulator::Mor(e) => self.mor_types.contains(e),
-            Tabulator::Hom(v) => self.ob_types.contains(v),
-        }
+    pub fn tabulator(&self, m: TabMorType<V, E>) -> TabObType<V, E> {
+        TabObType::Tabulator(Box::new(m))
     }
 
     /// Adds a basic object type to the theory.
@@ -487,6 +496,38 @@ where
     }
 }
 
+/// Graph of objects and projection arrows in discrete tabulator theory.
+#[derive(RefCast)]
+#[repr(transparent)]
+struct DiscTabTheoryProjGraph<V, E, S>(DiscreteTabTheory<V, E, S>);
+
+impl<V, E, S> Graph for DiscTabTheoryProjGraph<V, E, S>
+where
+    V: Eq + Clone + Hash,
+    E: Eq + Clone + Hash,
+    S: BuildHasher,
+{
+    type V = TabObType<V, E>;
+    type E = TabObProj<V, E>;
+
+    fn has_vertex(&self, x: &Self::V) -> bool {
+        self.0.has_ob(x)
+    }
+    fn has_edge(&self, proj: &Self::E) -> bool {
+        self.0.has_proarrow(proj.mor_type())
+    }
+
+    fn src(&self, proj: &Self::E) -> Self::V {
+        TabObType::Tabulator(Box::new(proj.mor_type().clone()))
+    }
+    fn tgt(&self, proj: &Self::E) -> Self::V {
+        match proj {
+            TabObProj::Src(m) => self.0.src(m),
+            TabObProj::Tgt(m) => self.0.tgt(m),
+        }
+    }
+}
+
 impl<V, E, S> VDblCategory for DiscreteTabTheory<V, E, S>
 where
     V: Eq + Clone + Hash,
@@ -501,14 +542,11 @@ where
     fn has_ob(&self, ob: &Self::Ob) -> bool {
         match ob {
             TabObType::Basic(v) => self.ob_types.contains(v),
-            TabObType::Tabulator(tab) => self.has_tabulator(tab),
+            TabObType::Tabulator(m) => self.has_proarrow(m),
         }
     }
-    fn has_arrow(&self, arr: &Self::Arr) -> bool {
-        match arr {
-            TabObOp::Id(x) => self.has_ob(x),
-            TabObOp::ProjSrc(tab) | TabObOp::ProjTgt(tab) => self.has_tabulator(tab),
-        }
+    fn has_arrow(&self, path: &Self::Arr) -> bool {
+        path.contained_in(DiscTabTheoryProjGraph::ref_cast(self))
     }
     fn has_proarrow(&self, pro: &Self::Pro) -> bool {
         match pro {
@@ -518,28 +556,22 @@ where
     }
     fn has_cell(&self, cell: &Self::Cell) -> bool {
         let graph = ProedgeGraph::ref_cast(UnderlyingDblGraph::ref_cast(self));
-        cell.dom.contained_in(graph) && self.has_arrow(&cell.src) && self.has_arrow(&cell.tgt)
+        // TODO: Check `cell.projections`
+        cell.dom.contained_in(graph)
     }
 
-    fn dom(&self, f: &Self::Arr) -> Self::Ob {
-        match f {
-            TabObOp::Id(x) => x.clone(),
-            TabObOp::ProjSrc(tab) | TabObOp::ProjTgt(tab) => TabObType::Tabulator(tab.clone()),
-        }
+    fn dom(&self, path: &Self::Arr) -> Self::Ob {
+        path.src(DiscTabTheoryProjGraph::ref_cast(self))
     }
-    fn cod(&self, f: &Self::Arr) -> Self::Ob {
-        match f {
-            TabObOp::Id(x) => x.clone(),
-            TabObOp::ProjSrc(tab) => self.src(&tab.clone().into()),
-            TabObOp::ProjTgt(tab) => self.tgt(&tab.clone().into()),
-        }
+    fn cod(&self, path: &Self::Arr) -> Self::Ob {
+        path.tgt(DiscTabTheoryProjGraph::ref_cast(self))
     }
     fn src(&self, m: &Self::Pro) -> Self::Ob {
         match m {
             TabMorType::Basic(e) => {
                 self.src.apply(e).expect("Source of morphism type should be defined")
             }
-            TabMorType::Hom(x) => x.clone(),
+            TabMorType::Hom(x) => (**x).clone(),
         }
     }
     fn tgt(&self, m: &Self::Pro) -> Self::Ob {
@@ -547,7 +579,7 @@ where
             TabMorType::Basic(e) => {
                 self.tgt.apply(e).expect("Target of morphism type should be defined")
             }
-            TabMorType::Hom(x) => x.clone(),
+            TabMorType::Hom(x) => (**x).clone(),
         }
     }
 
@@ -558,30 +590,24 @@ where
         self.composite(cell.dom.clone()).expect("Path should have a composite")
     }
     fn cell_src(&self, cell: &Self::Cell) -> Self::Arr {
-        cell.src.clone()
+        let graph = ProedgeGraph::ref_cast(UnderlyingDblGraph::ref_cast(self));
+        Path::collect(cell.projections.iter().cloned().map(|proj| proj.src()))
+            .unwrap_or_else(|| Path::empty(cell.dom.src(graph)))
     }
     fn cell_tgt(&self, cell: &Self::Cell) -> Self::Arr {
-        cell.tgt.clone()
+        let graph = ProedgeGraph::ref_cast(UnderlyingDblGraph::ref_cast(self));
+        Path::collect(cell.projections.iter().cloned().map(|proj| proj.tgt()))
+            .unwrap_or_else(|| Path::empty(cell.dom.tgt(graph)))
     }
 
-    fn compose2(&self, f: Self::Arr, g: Self::Arr) -> Self::Arr {
-        match (f, g) {
-            (f, TabObOp::Id(y)) if self.cod(&f) == y => f,
-            (TabObOp::Id(x), g) if self.dom(&g) == x => g,
-            _ => panic!("Ill-typed composite of object operations in discrete tabulator theory"),
-        }
-    }
-    fn id(&self, x: Self::Ob) -> Self::Arr {
-        TabObOp::Id(x)
-    }
     fn compose(&self, path: Path<Self::Ob, Self::Arr>) -> Self::Arr {
-        path.reduce(|x| self.id(x), |f, g| self.compose2(f, g))
+        path.flatten()
     }
 
     fn composite2(&self, m: Self::Pro, n: Self::Pro) -> Option<Self::Pro> {
         let mn = match (m, n) {
-            (m, TabMorType::Hom(y)) if self.tgt(&m) == y => m,
-            (TabMorType::Hom(x), n) if self.src(&n) == x => n,
+            (m, TabMorType::Hom(y)) if self.tgt(&m) == *y => m,
+            (TabMorType::Hom(x), n) if self.src(&n) == *x => n,
             (TabMorType::Basic(d), TabMorType::Basic(e)) => {
                 self.compose_map.apply(&(d, e)).expect("Composition should be defined")
             }
@@ -590,19 +616,15 @@ where
         Some(mn)
     }
     fn unit(&self, x: Self::Ob) -> Option<Self::Pro> {
-        Some(TabMorType::Hom(x))
+        Some(TabMorType::Hom(Box::new(x)))
     }
     fn composite(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Pro> {
         Some(path.reduce(|x| self.unit(x).unwrap(), |m, n| self.composite2(m, n).unwrap()))
     }
     fn composite_ext(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Cell> {
-        let graph = ProedgeGraph::ref_cast(UnderlyingDblGraph::ref_cast(self));
-        let src = TabObOp::Id(path.src(graph));
-        let tgt = TabObOp::Id(path.tgt(graph));
         Some(TabMorOp {
             dom: path,
-            src,
-            tgt,
+            projections: vec![],
         })
     }
 
@@ -611,7 +633,16 @@ where
         let dom = tree.dom(graph);
         let src = self.compose(tree.src(graph));
         let tgt = self.compose(tree.tgt(graph));
-        TabMorOp { dom, src, tgt }
+        assert_eq!(src.len(), tgt.len(), "Source/target boundaries should have equal length");
+        let projections = std::iter::zip(src.into_iter(), tgt.into_iter())
+            .map(|pair| match pair {
+                (TabObProj::Src(m), TabObProj::Tgt(n)) if m == n => TabMorProj::Cone(m),
+                (TabObProj::Src(m), TabObProj::Src(n)) if m == n => TabMorProj::Src(m),
+                (TabObProj::Tgt(m), TabObProj::Tgt(n)) if m == n => TabMorProj::Tgt(m),
+                _ => panic!("Projection cells should have compatible source/target boundaries"),
+            })
+            .collect();
+        TabMorOp { dom, projections }
     }
 }
 
@@ -642,12 +673,11 @@ mod tests {
         th.add_ob_type('*');
         let x = TabObType::Basic('*');
         assert!(th.has_ob_type(&x));
-        let tab = th.tabulator(th.hom_type(x.clone())).unwrap();
-        let tab_ob = TabObType::Tabulator(tab);
-        assert!(th.has_ob_type(&tab_ob));
-        assert!(th.has_mor_type(&th.hom_type(tab_ob.clone())));
+        let tab = th.tabulator(th.hom_type(x.clone()));
+        assert!(th.has_ob_type(&tab));
+        assert!(th.has_mor_type(&th.hom_type(tab.clone())));
 
-        th.add_mor_type('m', x, tab_ob);
+        th.add_mor_type('m', x, tab);
         let m = TabMorType::Basic('m');
         assert!(th.has_mor_type(&m));
     }

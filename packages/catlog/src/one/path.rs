@@ -50,9 +50,23 @@ pub enum Path<V, E> {
     Seq(NonEmpty<E>),
 }
 
+/// Converts an edge into a path of length one.
 impl<V, E> From<E> for Path<V, E> {
     fn from(e: E) -> Self {
         Path::single(e)
+    }
+}
+
+/// Converts the path into an iterater over its edges.
+impl<V, E> IntoIterator for Path<V, E> {
+    type Item = E;
+    type IntoIter = Either<std::iter::Empty<E>, <NonEmpty<E> as IntoIterator>::IntoIter>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        match self {
+            Path::Id(_) => Either::Left(std::iter::empty()),
+            Path::Seq(edges) => Either::Right(edges.into_iter()),
+        }
     }
 }
 
@@ -474,11 +488,13 @@ mod tests {
     fn map_path() {
         let id = SkelPath::Id(1);
         assert_eq!(id.iter().count(), 0);
+        assert_eq!(id.clone().into_iter().count(), 0);
         assert_eq!(id.clone().map(|v| v + 1, identity), Path::Id(2));
         assert_eq!(id.partial_map(|v| Some(v + 1), Some), Some(Path::Id(2)));
 
         let pair = SkelPath::pair(0, 1);
         assert_eq!(pair.iter().count(), 2);
+        assert_eq!(pair.clone().into_iter().count(), 2);
         assert_eq!(pair.clone().map(identity, |e| e + 1), Path::pair(1, 2));
         assert_eq!(pair.partial_map(Some, |e| Some(e + 1)), Some(Path::pair(1, 2)));
     }
