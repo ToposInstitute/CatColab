@@ -46,7 +46,6 @@ categorical structures that can be interpreted in any VDC:
 The walking category and bimodule can be seen as discrete double theories, while
 the walking functor is a simple double theory, but here they are implemented at
 the type level rather than as instances of general data structures.
-
  */
 
 use derive_more::From;
@@ -56,7 +55,12 @@ use super::graph::VDblGraph;
 use super::tree::DblTree;
 use crate::one::path::Path;
 
-/// A virtual double category (VDC).
+/** A virtual double category (VDC).
+
+See the [module-level docs](super::category) for background on VDCs.
+
+TODO: The universal property of a composite is not part of the interface.
+ */
 pub trait VDblCategory {
     /// Type of objects in the VDC.
     type Ob: Eq + Clone;

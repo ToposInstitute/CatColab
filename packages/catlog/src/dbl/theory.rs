@@ -1,14 +1,13 @@
 /*! Double theories.
 
-TODO: Update docs for virtual double categories.
-
-A double theory equationally specifies a categorical structure: a category (or
+A double theory specifies a categorical structure, meaning a category (or
 categories) equipped with extra structure. The spirit of the formalism is that a
-double theory is "just" a double category, categorifying Lawvere's idea that a
-theory is "just" a category. Nevertheless, double theories come with intuitions
-more specific than those attached to an arbitrary double category. To bring
-these out, the interface for double theories, [`DblTheory`], introduces new
-terminology compared to the references cited below.
+double theory is "just" a [virtual double category](super::category),
+categorifying Lawvere's idea that a theory is "just" a category. Thus, a double
+theory is a [concept with an
+attitude](https://ncatlab.org/nlab/show/concept+with+an+attitude). To bring out
+these intuitions, the interface for double theories, [`DblTheory`], introduces
+new terminology compared to the references cited below.
 
 # Terminology
 
@@ -49,7 +48,7 @@ by the table:
 | Method                                      | Double theory          | Double category        |
 |---------------------------------------------|------------------------|------------------------|
 | [`hom_type`](DblTheory::hom_type)           | Hom type               | Identity proarrow      |
-| [`hom_op`](DblTheory::hom_op)               | Hom operation          | Identity cell on arrow |
+| `hom_op`                                    | Hom operation          | Identity cell on arrow |
 | [`compose_types`](DblTheory::compose_types) | Compose morphism types | Compose proarrows      |
 
 Finally, operations on both objects and morphisms have identities and can be
@@ -60,7 +59,7 @@ composed:
 | [`id_ob_op`](DblTheory::id_ob_op)               | Identity operation on object type   | Identity arrow            |
 | [`id_mor_op`](DblTheory::id_mor_op)             | Identity operation on morphism type | Identity cell on proarrow |
 | [`compose_ob_ops`](DblTheory::compose_ob_ops)   | Compose object operations           | Compose arrows            |
-| `compose_mor_ops`                               | Compose morphism operations         | Compose cells             |
+| [`compose_mor_ops`](DblTheory::compose_mor_ops) | Compose morphism operations         | Compose cells             |
 
 # References
 
@@ -89,8 +88,7 @@ A double theory is "just" a virtual double category (VDC) assumed to have units.
 Reflecting this, this trait has a blanket implementation for any
 [`VDblCategory`]. It is not recommended to implement this trait directly.
 
-The terminology used in this trait is explained at greater length in the
-[module-level](super::theory) docs.
+See the [module-level docs](super::theory) for background on the terminology.
  */
 pub trait DblTheory {
     /** Rust type of object types in the theory.
@@ -167,7 +165,7 @@ pub trait DblTheory {
     */
     fn hom_type(&self, x: Self::ObType) -> Self::MorType {
         self.compose_types(Path::Id(x))
-            .expect("A double theory should have all hom types")
+            .expect("A double theory should have a hom type for each object type")
     }
 
     /// Compose a sequence of operations on objects.
@@ -181,6 +179,16 @@ pub trait DblTheory {
     fn id_ob_op(&self, x: Self::ObType) -> Self::ObOp {
         self.compose_ob_ops(Path::Id(x))
     }
+
+    /* Hom morphism operation on an object operation.
+
+    Viewing the double theory as a virtual double category, this is the unit
+    cell on an arrow.
+
+    TODO: Implementing this requires the VDCs have an interface for the
+    universal property of a unit.
+    */
+    //fn hom_op(&self, f: Self::ObOp) -> Self::MorOp;
 
     /// Compose operations on morphisms.
     fn compose_mor_ops(&self, tree: DblTree<Self::ObOp, Self::MorType, Self::MorOp>)
@@ -571,8 +579,14 @@ where
     }
     fn has_cell(&self, cell: &Self::Cell) -> bool {
         let graph = ProedgeGraph::ref_cast(UnderlyingDblGraph::ref_cast(self));
-        // TODO: Check `cell.projections`
-        cell.dom.contained_in(graph)
+        if !cell.dom.contained_in(graph) {
+            return false;
+        }
+        let (src, tgt) = (self.cell_src(cell), self.cell_tgt(cell));
+        self.has_arrow(&src)
+            && self.has_arrow(&tgt)
+            && cell.dom.src(graph) == self.dom(&src)
+            && cell.dom.tgt(graph) == self.dom(&tgt)
     }
 
     fn dom(&self, path: &Self::Arr) -> Self::Ob {
@@ -649,7 +663,7 @@ where
         let src = self.compose(tree.src(graph));
         let tgt = self.compose(tree.tgt(graph));
         assert_eq!(src.len(), tgt.len(), "Source/target boundaries should have equal length");
-        let projections = std::iter::zip(src.into_iter(), tgt.into_iter())
+        let projections = std::iter::zip(src, tgt)
             .map(|pair| match pair {
                 (TabObProj::Src(m), TabObProj::Tgt(n)) if m == n => TabMorProj::Cone(m),
                 (TabObProj::Src(m), TabObProj::Src(n)) if m == n => TabMorProj::Src(m),

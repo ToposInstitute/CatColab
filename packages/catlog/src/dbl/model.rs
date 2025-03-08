@@ -9,10 +9,8 @@ In the case of a *simple* double theory, which amounts to a small double
 category, a **model** of the theory is a span-valued *lax* double functor out of
 the theory. Such a model is a "lax copresheaf," categorifying the notion of a
 copresheaf or set-valued functor. Though they are "just" lax double functors,
-models are a [concept with an
-attitude](https://ncatlab.org/nlab/show/concept+with+an+attitude). To bring out
-the intended intuition we introduce new jargon, building on that for double
-theories.
+models come with extra intuitions. To bring that out we introduce new jargon,
+building on that for double theories.
 
 # Terminology
 
