@@ -260,7 +260,7 @@ impl<E, ProE, Sq> DblTree<E, ProE, Sq> {
     where
         E: Clone,
     {
-        let mut edges: Vec<_> = self.tgt_nodes().map(|dn| dn.src(graph)).collect();
+        let mut edges: Vec<_> = self.tgt_nodes().map(|dn| dn.tgt(graph)).collect();
         edges.reverse();
         Path::from_vec(edges).unwrap().flatten()
     }

@@ -133,28 +133,28 @@ pub trait DblTheory {
     /// Does the morphism operation belong to the theory?
     fn has_mor_op(&self, α: &Self::MorOp) -> bool;
 
-    /// Source of morphism type.
-    fn mor_type_src(&self, m: &Self::MorType) -> Self::ObType;
+    /// Source of a morphism type.
+    fn src_type(&self, m: &Self::MorType) -> Self::ObType;
 
-    /// Target of morphism type.
-    fn mor_type_tgt(&self, m: &Self::MorType) -> Self::ObType;
+    /// Target of a morphism type.
+    fn tgt_type(&self, m: &Self::MorType) -> Self::ObType;
 
-    /// Domain of operation on objects.
+    /// Domain of an operation on objects.
     fn ob_op_dom(&self, f: &Self::ObOp) -> Self::ObType;
 
-    /// Codomain of operation on objects.
+    /// Codomain of an operation on objects.
     fn ob_op_cod(&self, f: &Self::ObOp) -> Self::ObType;
 
-    /// Source operation of operation on morphisms.
-    fn mor_op_src(&self, α: &Self::MorOp) -> Self::ObOp;
+    /// Source operation of an operation on morphisms.
+    fn src_op(&self, α: &Self::MorOp) -> Self::ObOp;
 
-    /// Target operation of operation on morphisms.
-    fn mor_op_tgt(&self, α: &Self::MorOp) -> Self::ObOp;
+    /// Target operation of an operation on morphisms.
+    fn tgt_op(&self, α: &Self::MorOp) -> Self::ObOp;
 
-    /// Domain of operation on morphisms, a path of morphism types.
+    /// Domain of an operation on morphisms, a path of morphism types.
     fn mor_op_dom(&self, α: &Self::MorOp) -> Path<Self::ObType, Self::MorType>;
 
-    /// Codomain of operation on morphisms, a single morphism type.
+    /// Codomain of an operation on morphisms, a single morphism type.
     fn mor_op_cod(&self, α: &Self::MorOp) -> Self::MorType;
 
     /// Composes a sequence of morphism types, if they have a composite.
@@ -215,10 +215,10 @@ impl<VDC: VDblCategory> DblTheory for VDC {
         self.has_cell(α)
     }
 
-    fn mor_type_src(&self, m: &Self::MorType) -> Self::ObType {
+    fn src_type(&self, m: &Self::MorType) -> Self::ObType {
         self.src(m)
     }
-    fn mor_type_tgt(&self, m: &Self::MorType) -> Self::ObType {
+    fn tgt_type(&self, m: &Self::MorType) -> Self::ObType {
         self.tgt(m)
     }
     fn ob_op_dom(&self, f: &Self::ObOp) -> Self::ObType {
@@ -228,10 +228,10 @@ impl<VDC: VDblCategory> DblTheory for VDC {
         self.cod(f)
     }
 
-    fn mor_op_src(&self, α: &Self::MorOp) -> Self::ObOp {
+    fn src_op(&self, α: &Self::MorOp) -> Self::ObOp {
         self.cell_src(α)
     }
-    fn mor_op_tgt(&self, α: &Self::MorOp) -> Self::ObOp {
+    fn tgt_op(&self, α: &Self::MorOp) -> Self::ObOp {
         self.cell_tgt(α)
     }
     fn mor_op_dom(&self, α: &Self::MorOp) -> Path<Self::ObType, Self::MorType> {
@@ -412,6 +412,13 @@ pub enum TabMorProj<V, E> {
 }
 
 impl<V, E> TabMorProj<V, E> {
+    /// Morphism type that the tabulator is of.
+    pub fn mor_type(&self) -> &TabMorType<V, E> {
+        match self {
+            TabMorProj::Cone(m) | TabMorProj::Src(m) | TabMorProj::Tgt(m) => m,
+        }
+    }
+
     /// Source projection.
     fn src(self) -> TabObProj<V, E> {
         match self {
@@ -473,9 +480,17 @@ where
         Default::default()
     }
 
-    /// Convenience method to construct the tabulator of a morphism type.
+    /// Constructs a tabulator of a morphism type.
     pub fn tabulator(&self, m: TabMorType<V, E>) -> TabObType<V, E> {
         TabObType::Tabulator(Box::new(m))
+    }
+
+    /// Constructs a unary projection cell for a tabulator.
+    pub fn unary_projection(&self, proj: TabMorProj<V, E>) -> TabMorOp<V, E> {
+        TabMorOp {
+            dom: self.hom_type(self.tabulator(proj.mor_type().clone())).into(),
+            projections: vec![proj],
+        }
     }
 
     /// Adds a basic object type to the theory.
@@ -677,8 +692,27 @@ mod tests {
         assert!(th.has_ob_type(&tab));
         assert!(th.has_mor_type(&th.hom_type(tab.clone())));
 
-        th.add_mor_type('m', x, tab);
+        th.add_mor_type('m', x.clone(), tab.clone());
         let m = TabMorType::Basic('m');
         assert!(th.has_mor_type(&m));
+        assert_eq!(th.src_type(&m), x);
+        assert_eq!(th.tgt_type(&m), tab);
+
+        let proj = th.unary_projection(TabMorProj::Cone(th.hom_type(x.clone())));
+        let cell = th.compose_cells2(
+            [th.composite2_ext(th.hom_type(tab.clone()), th.hom_type(tab.clone())).unwrap()],
+            proj.clone(),
+        );
+        assert!(th.has_mor_op(&cell));
+        assert!(matches!(th.src_op(&cell).only(), Some(TabObProj::Src(_))));
+        assert!(matches!(th.tgt_op(&cell).only(), Some(TabObProj::Tgt(_))));
+
+        let proj_src = th.unary_projection(TabMorProj::Src(th.hom_type(x.clone())));
+        let cell_alt = th.compose_cells2(
+            [proj_src, proj],
+            th.composite2_ext(th.hom_type(x.clone()), th.hom_type(x.clone())).unwrap(),
+        );
+        assert!(th.has_mor_op(&cell_alt));
+        assert_eq!(cell, cell_alt);
     }
 }

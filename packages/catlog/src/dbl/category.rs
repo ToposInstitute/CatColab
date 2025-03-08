@@ -173,6 +173,11 @@ pub trait VDblCategory {
         path.only().map(|m| self.id_cell(m))
     }
 
+    /// Gets the chosen cell witnessing a composite of two proarrows, if there is one.
+    fn composite2_ext(&self, m: Self::Pro, n: Self::Pro) -> Option<Self::Cell> {
+        self.composite_ext(Path::pair(m, n))
+    }
+
     /// Gets the chosen composite for a path of proarrows, if there is one.
     fn composite(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Pro> {
         self.composite_ext(path).map(|α| self.cell_cod(&α))
