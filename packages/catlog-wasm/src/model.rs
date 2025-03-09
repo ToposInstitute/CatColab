@@ -16,8 +16,8 @@ use catlog::dbl::functor::{DblFunctor, DiscreteDblTheoryMorphism, FgDiscreteDblT
 use catlog::dbl::model::{
     self as dbl_model, DblModel as CoreDblModel, FgDblModel, InvalidDblModel, MutDblModel,
 };
-use catlog::dbl::theory::{DiscreteDblTheory, TabMorType, TabObType};
-use catlog::one::fin_category::{FinCategory, FinMor, UstrFinCategory};
+use catlog::dbl::theory::DiscreteDblTheory;
+use catlog::one::fin_category::{FinCategory, UstrFinCategory};
 use catlog::one::{Category as _, FgCategory, Path};
 use catlog::validate::Validate;
 use catlog::zero::MutMapping;
@@ -237,6 +237,66 @@ pub(crate) type DiscreteDblModel = dbl_model::DiscreteDblModel<Uuid, UstrFinCate
 pub(crate) type DiscreteTabModel =
     dbl_model::DiscreteTabModel<Uuid, Ustr, BuildHasherDefault<IdentityHasher>>;
 
+#[wasm_bindgen]
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Serialize, Deserialize)]
+pub struct MapData {
+    domob: Vec<ObType>,
+    codob: Vec<ObType>,
+    domhom: Vec<MorType>,
+    codhom: Vec<MorType>,
+}
+
+#[wasm_bindgen]
+impl MapData {
+    #[wasm_bindgen(constructor)]
+    pub fn new(
+        domob: Vec<String>,
+        codob: Vec<String>,
+        domhom: Vec<String>,
+        codhom: Vec<String>,
+    ) -> MapData {
+        MapData {
+            domob: domob.iter().map(|v| ObType::Basic(ustr(v))).collect(),
+            codob: codob.iter().map(|v| ObType::Basic(ustr(v))).collect(),
+            domhom: domhom.iter().map(|v| MorType::Basic(ustr(v))).collect(),
+            codhom: codhom.iter().map(|v| MorType::Basic(ustr(v))).collect(),
+        }
+    }
+    #[wasm_bindgen(getter)]
+    pub fn domob(&self) -> Vec<ObType> {
+        self.domob.clone()
+    }
+    #[wasm_bindgen(getter)]
+    pub fn codob(&self) -> Vec<ObType> {
+        self.codob.clone()
+    }
+    #[wasm_bindgen(getter)]
+    pub fn domhom(&self) -> Vec<MorType> {
+        self.domhom.clone()
+    }
+    #[wasm_bindgen(getter)]
+    pub fn codhom(&self) -> Vec<MorType> {
+        self.codhom.clone()
+    }
+    #[wasm_bindgen]
+    pub fn includes_ob(&self, ob: ObType) -> bool {
+        self.codob.contains(&ob)
+    }
+    #[wasm_bindgen]
+    pub fn includes_mor(&self, mor: MorType) -> bool {
+        self.codhom.contains(&mor)
+    }
+    #[wasm_bindgen]
+    pub fn swap(&self) -> MapData {
+        MapData {
+            domob: self.codob(),
+            codob: self.domob(),
+            domhom: self.codhom(),
+            codhom: self.domhom(),
+        }
+    }
+}
+
 /** A box containing a model of a double theory of any kind.
 
 See [`DblTheoryBox`] for motivation.
@@ -274,23 +334,27 @@ impl DblModel {
         }
     }
 
-    /// Find negative feedback loops in a model.
+    /// Pushforward a model along a theory inclusion implicitly specified by
+    /// ob/hom maps, where maps are given as pairs of vectors.
     #[wasm_bindgen]
-    pub fn pushforward(
-        &self,
-        codtheory: &DblTheory,
-        domob: Vec<String>,
-        codob: Vec<String>,
-        domhom: Vec<String>,
-        codhom: Vec<String>,
-    ) -> Result<DblModel, String> {
+    pub fn pushforward(&self, codtheory: &DblTheory, md: MapData) -> Result<DblModel, String> {
         // Parse the string data into a `DiscreteDblTheoryMorphism`
         let mut v: FgDiscreteDblTheoryMapping<_, _, _, _> = Default::default();
-        for (a, b) in domob.into_iter().zip(codob) {
-            v.ob_map.set(ustr(&a), ustr(&b));
+        for (a, b) in md.domob.into_iter().zip(md.codob) {
+            match (a, b) {
+                (ObType::Basic(x), ObType::Basic(y)) => {
+                    v.ob_map.set(ustr(&x), ustr(&y));
+                }
+                _ => panic!("Tabulators not covered"),
+            }
         }
-        for (a, b) in domhom.into_iter().zip(codhom) {
-            v.mor_map.set(ustr(&a), ustr(&b));
+        for (a, b) in md.domhom.into_iter().zip(md.codhom) {
+            match (a, b) {
+                (MorType::Basic(x), MorType::Basic(y)) => {
+                    v.mor_map.set(ustr(&x), ustr(&y));
+                }
+                _ => panic!("Tabulators not covered"),
+            }
         }
 
         let cod = match &codtheory.0 {
@@ -363,41 +427,23 @@ impl DblModel {
     /// What is the type of this object? Expects `has_ob(ob) == true`
     #[wasm_bindgen(js_name = "obType")]
     pub fn ob_type(&self, ob: Ob) -> Result<ObType, String> {
-        match &self.0 {
-            DblModelBox::Discrete(model) => {
+        all_the_same!(match &self.0 {
+            DblModelBox::[Discrete, DiscreteTab](model) => {
                 let ob = ob.try_into()?;
-                Ok(ObType::Basic(model.ob_type(&ob)))
+                Ok(model.ob_type(&ob).into())
             }
-            DblModelBox::DiscreteTab(model) => {
-                let ob = ob.try_into()?;
-                Ok(match model.ob_type(&ob) {
-                    TabObType::Basic(x) => ObType::Basic(x),
-                    TabObType::Tabulator(_) => panic!("Not yet treated"),
-                })
-            }
-        }
+        })
     }
 
     /// What is the type of this object? Expects `has_ob(ob) == true`
     #[wasm_bindgen(js_name = "morType")]
     pub fn mor_type(&self, mor: Mor) -> Result<MorType, String> {
-        match &self.0 {
-            DblModelBox::Discrete(model) => {
+        all_the_same!(match &self.0 {
+            DblModelBox::[Discrete, DiscreteTab](model) => {
                 let mor = mor.try_into()?;
-                let m = model.mor_type(&mor);
-                Ok(match m {
-                    FinMor::Id(x) => MorType::Hom(Box::new(ObType::Basic(x))),
-                    FinMor::Generator(x) => MorType::Basic(x),
-                })
+                Ok(model.mor_type(&mor).into())
             }
-            DblModelBox::DiscreteTab(model) => {
-                let mor = mor.try_into()?;
-                Ok(match model.mor_type(&mor) {
-                    TabMorType::Basic(x) => MorType::Basic(x),
-                    TabMorType::Hom(_) => panic!("Not yet treated"),
-                })
-            }
-        }
+        })
     }
 
     /// Returns array of all basic objects in the model.

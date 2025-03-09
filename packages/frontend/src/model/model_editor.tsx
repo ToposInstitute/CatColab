@@ -77,19 +77,23 @@ export function ModelPane(props: {
     invariant(theories, "Library of theories should be provided as context");
 
     const liveDoc = () => props.liveModel.liveDoc;
-    const formalCells = () =>
+    const formalObs = () =>
         liveDoc()
-            .doc.notebook.cells.filter((cell) => cell.tag === "formal")
-            .map((cell) => {
+            .doc.notebook.cells.map((cell) => {
                 if (cell.tag === "formal" && cell.content.tag === "object") {
-                    return cell.content.obType.content.toString();
+                    return cell.content.obType;
                 }
+            })
+            .filter((cell) => cell !== null && cell !== undefined);
+
+    const formalMors = () =>
+        liveDoc()
+            .doc.notebook.cells.map((cell) => {
                 if (cell.tag === "formal" && cell.content.tag === "morphism") {
-                    const j = JSON.parse(JSON.stringify(cell.content.morType.content.valueOf()));
-                    return typeof j === "string" ? j : j.content.toString();
+                    return cell.content.morType;
                 }
-                return "";
-            });
+            })
+            .filter((cell) => cell !== null && cell !== undefined);
 
     return (
         <div class="notebook-container">
@@ -125,17 +129,12 @@ export function ModelPane(props: {
                         );
                         // apply sigma or delta migration
                         const tgt = theories.get(id).theory;
-                        const migrated = model.pushforward(
-                            tgt,
-                            [...mapdata.obnames.keys()],
-                            [...mapdata.obnames.values()],
-                            [...mapdata.mornames.keys()],
-                            [...mapdata.mornames.values()],
-                        );
+                        const migrated = model.pushforward(tgt, mapdata);
                         updateFromCatlogModel(liveDoc().changeDoc, migrated);
                     }}
                     theories={theories}
-                    formalCells={formalCells()}
+                    formalObs={formalObs()}
+                    formalMors={formalMors()}
                 />
             </div>
             <ModelNotebookEditor liveModel={props.liveModel} />

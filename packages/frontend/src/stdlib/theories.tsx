@@ -1,6 +1,6 @@
 import * as catlog from "catlog-wasm";
 
-import { MapData, Theory } from "../theory";
+import { Theory } from "../theory";
 import * as analyses from "./analyses";
 import { TheoryLibrary } from "./types";
 
@@ -37,7 +37,9 @@ stdTheories.add(
         return new Theory({
             ...meta,
             theory: thEmpty.theory(),
-            inclusions: new Map<string, MapData>(allTheories.map((t) => [t, new MapData({})])),
+            inclusions: new Map<string, catlog.MapData>(
+                allTheories.map((t) => [t, new catlog.MapData([], [], [], [])]),
+            ),
         });
     },
 );
@@ -55,14 +57,8 @@ stdTheories.add(
         return new Theory({
             ...meta,
             theory: thCategory.theory(),
-            inclusions: new Map<string, MapData>([
-                [
-                    "simple-schema",
-                    new MapData({
-                        obnames: [["Object", "Entity"]],
-                        mornames: [["Hom", "Mapping"]],
-                    }),
-                ],
+            inclusions: new Map<string, catlog.MapData>([
+                ["simple-schema", new catlog.MapData(["Object"], ["Entity"], ["Hom"], ["Mapping"])],
             ]),
 
             modelTypes: [
@@ -244,12 +240,12 @@ stdTheories.add(
     },
     (meta) => {
         const thSignedCategory = new catlog.ThSignedCategory();
-        const md = new MapData({ obnames: ["Object"], mornames: ["Negative"] });
+        const md = new catlog.MapData(["Object"], ["Object"], ["Negative"], ["Negative"]);
         return new Theory({
             ...meta,
             theory: thSignedCategory.theory(),
             onlyFreeModels: true,
-            inclusions: new Map<string, MapData>([
+            inclusions: new Map<string, catlog.MapData>([
                 ["causal-loop", md],
                 ["causal-loop-delays", md],
                 ["indeterminate-causal-loop", md],
@@ -325,12 +321,12 @@ stdTheories.add(
     },
     (meta) => {
         const thSignedCategory = new catlog.ThSignedCategory();
-        const md = new MapData({ obnames: ["Object"], mornames: ["Negative"] });
+        const md = new catlog.MapData(["Object"], ["Object"], ["Negative"], ["Negative"]);
         return new Theory({
             ...meta,
             theory: thSignedCategory.theory(),
             onlyFreeModels: true,
-            inclusions: new Map<string, MapData>([
+            inclusions: new Map<string, catlog.MapData>([
                 ["causal-loop-delays", md],
                 ["indeterminate-causal-loop", md],
             ]),

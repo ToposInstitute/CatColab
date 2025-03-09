@@ -1,8 +1,8 @@
 import Dialog from "@corvu/dialog";
 import { For, createMemo, createSignal } from "solid-js";
 
+import type { MapData, MorType, ObType } from "catlog-wasm";
 import type { TheoryLibrary, TheoryMeta } from "../stdlib";
-import type { MapData } from "../theory";
 
 import "./theory_selector.css";
 
@@ -11,10 +11,13 @@ type TheorySelectorProps = {
     sigma: (theoryId: string, mapdata: MapData) => void;
     setTheory: (theoryId: string) => void;
     theories: TheoryLibrary;
-    formalCells: string[];
+    formalObs: ObType[];
+    formalMors: MorType[];
 };
 
-export function TheorySelectorDialog(props: { formalCells: string[] } & TheorySelectorProps) {
+export function TheorySelectorDialog(
+    props: { formalObs: ObType[]; formalMors: MorType[] } & TheorySelectorProps,
+) {
     const [theorySelectorOpen, setTheorySelectorOpen] = createSignal(false);
     return (
         <Dialog open={theorySelectorOpen()} onOpenChange={setTheorySelectorOpen}>
@@ -35,7 +38,8 @@ export function TheorySelectorDialog(props: { formalCells: string[] } & TheorySe
                             setTheorySelectorOpen(false);
                         }}
                         theories={props.theories}
-                        formalCells={props.formalCells}
+                        formalObs={props.formalObs}
+                        formalMors={props.formalMors}
                     />
                 </Dialog.Content>
             </Dialog.Portal>
@@ -53,33 +57,7 @@ export function TheorySelector(props: TheorySelectorProps) {
                 {([group, theories]) => (
                     <div class="group">
                         <div class="group-name">{group}</div>
-                        <For
-                            each={theories.filter((t) => {
-                                if (props.formalCells.length === 0) {
-                                    return true;
-                                }
-                                const fwd = props.theories
-                                    .get(props.theory.id)
-                                    .inclusions.get(t.id);
-                                if (!(fwd === undefined)) {
-                                    return true;
-                                }
-
-                                const bkwd = props.theories
-                                    .get(t.id)
-                                    .inclusions.get(props.theory.id);
-
-                                if (!(bkwd === undefined)) {
-                                    return props.formalCells.every((fc) => {
-                                        return (
-                                            Array.from(bkwd.obnames.values()).includes(fc) ||
-                                            Array.from(bkwd.mornames.values()).includes(fc)
-                                        );
-                                    });
-                                }
-                                return false;
-                            })}
-                        >
+                        <For each={theories.filter((t) => eachTheory(t, props))}>
                             {(meta) => (
                                 <div class="theory">
                                     <input
@@ -87,29 +65,7 @@ export function TheorySelector(props: TheorySelectorProps) {
                                         name="theory"
                                         id={meta.id}
                                         value={meta.id}
-                                        onchange={(evt) => {
-                                            if (props.formalCells.length > 0) {
-                                                const data = props.theories
-                                                    .get(props.theory.id)
-                                                    .inclusions.get(meta.id);
-                                                if (data) {
-                                                    return props.sigma(evt.target.value, data);
-                                                } else {
-                                                    const data = props.theories
-                                                        .get(meta.id)
-                                                        .inclusions.get(props.theory.id);
-                                                    if (data === undefined) {
-                                                        throw Error("Bad ");
-                                                    } else {
-                                                        return props.sigma(
-                                                            evt.target.value,
-                                                            data.swap(),
-                                                        );
-                                                    }
-                                                }
-                                            }
-                                            return props.setTheory(meta.id); // trivial
-                                        }}
+                                        onchange={(evt) => onChange(props, meta, evt)}
                                     />
                                     <label for={meta.id}>
                                         <div class="name">{meta.name}</div>
@@ -123,4 +79,51 @@ export function TheorySelector(props: TheorySelectorProps) {
             </For>
         </div>
     );
+}
+
+function eachTheory(t: TheoryMeta, props: TheorySelectorProps): boolean {
+    if (props.formalObs.length + props.formalMors.length === 0) {
+        return true;
+    }
+    const fwd = props.theories.get(props.theory.id).inclusions.get(t.id);
+    if (!(fwd === undefined)) {
+        return true;
+    }
+
+    const bkwd = props.theories.get(t.id).inclusions.get(props.theory.id);
+    console.log("props.formalObs", props.formalObs);
+    console.log("props.formalMors", props.formalMors);
+    if (!(bkwd === undefined)) {
+        return (
+            props.formalObs.every((fc: ObType) => {
+                console.log("fc ", fc);
+                bkwd.includes_ob(fc);
+            }) && props.formalMors.every((fc: MorType) => bkwd.includes_mor(fc))
+        );
+    }
+    return false;
+}
+
+function onChange(
+    props: TheorySelectorProps,
+    meta: TheoryMeta,
+    evt: Event & {
+        currentTarget: HTMLInputElement;
+        target: HTMLInputElement;
+    },
+) {
+    if (props.formalObs.length + props.formalMors.length > 0) {
+        const data = props.theories.get(props.theory.id).inclusions.get(meta.id);
+        if (data) {
+            return props.sigma(evt.target.value, data);
+        } else {
+            const data = props.theories.get(meta.id).inclusions.get(props.theory.id);
+            if (data === undefined) {
+                throw Error("Bad ");
+            } else {
+                return props.sigma(evt.target.value, data.swap());
+            }
+        }
+    }
+    return props.setTheory(meta.id); // trivial
 }
