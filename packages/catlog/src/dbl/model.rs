@@ -9,10 +9,8 @@ In the case of a *simple* double theory, which amounts to a small double
 category, a **model** of the theory is a span-valued *lax* double functor out of
 the theory. Such a model is a "lax copresheaf," categorifying the notion of a
 copresheaf or set-valued functor. Though they are "just" lax double functors,
-models are a [concept with an
-attitude](https://ncatlab.org/nlab/show/concept+with+an+attitude). To bring out
-the intended intuition we introduce new jargon, building on that for double
-theories.
+models come with extra intuitions. To bring that out we introduce new jargon,
+building on that for double theories.
 
 # Terminology
 
@@ -47,6 +45,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify_next::Tsify;
 
+use super::category::VDblCategory;
 use super::theory::{DblTheory, DiscreteDblTheory};
 use crate::one::fin_category::{FpCategory, InvalidFpCategory, UstrFinCategory};
 use crate::one::*;
@@ -374,7 +373,7 @@ where
     type ObType = Cat::Ob;
     type MorType = Cat::Mor;
     type ObOp = Cat::Ob;
-    type MorOp = Cat::Mor;
+    type MorOp = Path<Cat::Ob, Cat::Mor>;
     type Theory = DiscreteDblTheory<Cat>;
 
     fn theory(&self) -> &Self::Theory {
@@ -394,7 +393,7 @@ where
     fn mor_type(&self, mor: &Self::Mor) -> Self::MorType {
         let types =
             mor.clone().map(|x| self.ob_generator_type(&x), |m| self.mor_generator_type(&m));
-        self.theory.compose_types(types)
+        self.theory.compose_types(types).expect("Morphism types should have composite")
     }
 }
 
@@ -829,24 +828,15 @@ where
                 }
             },
         );
-        self.theory.compose_types(types)
+        self.theory.compose_types(types).expect("Morphism types should have composite")
     }
 
-    fn ob_act(&self, ob: Self::Ob, op: &Self::ObOp) -> Self::Ob {
-        // Should we type check more rigorously here and in `mor_act`?
-        match (ob, op) {
-            (ob, TabObOp::Id(_)) => ob,
-            (TabOb::Tabulated(m), TabObOp::ProjSrc(_)) => self.dom(&m),
-            (TabOb::Tabulated(m), TabObOp::ProjTgt(_)) => self.cod(&m),
-            _ => panic!("Ill-typed application of object operation"),
-        }
+    fn ob_act(&self, _ob: Self::Ob, _op: &Self::ObOp) -> Self::Ob {
+        panic!("Action on objects not implemented")
     }
 
-    fn mor_act(&self, mor: Self::Mor, op: &Self::MorOp) -> Self::Mor {
-        match (mor, op) {
-            (mor, TabMorOp::Id(_)) => mor,
-            _ => panic!("Non-identity morphism operations not implemented"),
-        }
+    fn mor_act(&self, _mor: Self::Mor, _op: &Self::MorOp) -> Self::Mor {
+        panic!("Action on morphisms not implemented")
     }
 }
 

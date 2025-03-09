@@ -46,7 +46,6 @@ categorical structures that can be interpreted in any VDC:
 The walking category and bimodule can be seen as discrete double theories, while
 the walking functor is a simple double theory, but here they are implemented at
 the type level rather than as instances of general data structures.
-
  */
 
 use derive_more::From;
@@ -56,7 +55,12 @@ use super::graph::VDblGraph;
 use super::tree::DblTree;
 use crate::one::path::Path;
 
-/// A virtual double category (VDC).
+/** A virtual double category (VDC).
+
+See the [module-level docs](super::category) for background on VDCs.
+
+TODO: The universal property of a composite is not part of the interface.
+ */
 pub trait VDblCategory {
     /// Type of objects in the VDC.
     type Ob: Eq + Clone;
@@ -173,9 +177,19 @@ pub trait VDblCategory {
         path.only().map(|m| self.id_cell(m))
     }
 
+    /// Gets the chosen cell witnessing a composite of two proarrows, if there is one.
+    fn composite2_ext(&self, m: Self::Pro, n: Self::Pro) -> Option<Self::Cell> {
+        self.composite_ext(Path::pair(m, n))
+    }
+
     /// Gets the chosen composite for a path of proarrows, if there is one.
     fn composite(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Pro> {
         self.composite_ext(path).map(|α| self.cell_cod(&α))
+    }
+
+    /// Gets the chosen composite for a pair of consecutive proarrows, if there is one.
+    fn composite2(&self, m: Self::Pro, n: Self::Pro) -> Option<Self::Pro> {
+        self.composite(Path::pair(m, n))
     }
 
     /** Gets the chosen extension cell for an object, if there is one.
