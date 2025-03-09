@@ -151,20 +151,21 @@ impl<E, ProE, Sq> DblTree<E, ProE, Sq> {
         Tree::new(DblNode::Spine(e)).into()
     }
 
-    /// Construct a tree from a non-empty path of edges.
-    pub fn spines<V>(path: Path<V, E>) -> Option<Self> {
-        match path {
-            Path::Seq(edges) => {
-                let mut edges: Vec<_> = edges.into_iter().collect();
-                let mut tree = Tree::new(DblNode::Spine(edges.pop().unwrap()));
-                let mut node_id = tree.root().id();
-                for e in edges.into_iter().rev() {
-                    node_id = tree.get_mut(node_id).unwrap().append(DblNode::Spine(e)).id();
-                }
-                Some(tree.into())
-            }
-            Path::Id(_) => None,
+    /// Constructs a linear tree, meaning each node has arity at most one.
+    pub fn linear(mut values: Vec<DblNode<E, ProE, Sq>>) -> Option<Self> {
+        let value = values.pop()?;
+        let mut tree = Tree::new(value);
+        let mut node_id = tree.root().id();
+        for value in values.into_iter().rev() {
+            node_id = tree.get_mut(node_id).unwrap().append(value).id();
         }
+        Some(tree.into())
+    }
+
+    /// Constructs a tree from a non-empty path of edges.
+    pub fn spines<V>(path: Path<V, E>) -> Option<Self> {
+        let values: Vec<_> = path.into_iter().map(DblNode::Spine).collect();
+        DblTree::linear(values)
     }
 
     /// Constructs a tree of a height two.
@@ -402,14 +403,16 @@ mod tests {
         let funct = Funct::Main();
         let graph = UnderlyingDblGraph(Funct::Main());
         let f = Funct::Arr::Arrow;
-        let tree = DblTree::<_, Funct::Ob, _>::graft(
-            vec![DblTree::spine(f), DblTree::spine(f)],
-            funct.composite_ext(Path::pair(Funct::Ob::One, Funct::Ob::One)).unwrap(),
-        );
+        let tree = DblTree::linear(vec![
+            DblNode::Spine(f),
+            DblNode::Cell(funct.unit_ext(Funct::Ob::One).unwrap()),
+        ])
+        .unwrap();
         assert_eq!(tree.src_nodes().count(), 2);
         assert_eq!(tree.tgt_nodes().count(), 2);
         assert_eq!(tree.src(&graph), Path::pair(f, Funct::Arr::One));
         assert_eq!(tree.tgt(&graph), Path::pair(f, Funct::Arr::One));
+        assert!(tree.dom(&graph).is_empty());
     }
 
     #[test]
