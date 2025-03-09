@@ -279,12 +279,12 @@ impl MapData {
         self.codhom.clone()
     }
     #[wasm_bindgen]
-    pub fn includes_ob(&self, ob: ObType) -> bool {
-        self.codob.contains(&ob)
+    pub fn includes_ob(&self, ob: &ObType) -> bool {
+        self.codob.contains(ob)
     }
     #[wasm_bindgen]
-    pub fn includes_mor(&self, mor: MorType) -> bool {
-        self.codhom.contains(&mor)
+    pub fn includes_mor(&self, mor: &MorType) -> bool {
+        self.codhom.contains(mor)
     }
     #[wasm_bindgen]
     pub fn swap(&self) -> MapData {
@@ -337,10 +337,10 @@ impl DblModel {
     /// Pushforward a model along a theory inclusion implicitly specified by
     /// ob/hom maps, where maps are given as pairs of vectors.
     #[wasm_bindgen]
-    pub fn pushforward(&self, codtheory: &DblTheory, md: MapData) -> Result<DblModel, String> {
+    pub fn pushforward(&self, codtheory: &DblTheory, md: &MapData) -> Result<DblModel, String> {
         // Parse the string data into a `DiscreteDblTheoryMorphism`
         let mut v: FgDiscreteDblTheoryMapping<_, _, _, _> = Default::default();
-        for (a, b) in md.domob.into_iter().zip(md.codob) {
+        for (a, b) in md.domob.clone().into_iter().zip(md.codob.clone()) {
             match (a, b) {
                 (ObType::Basic(x), ObType::Basic(y)) => {
                     v.ob_map.set(ustr(&x), ustr(&y));
@@ -348,7 +348,7 @@ impl DblModel {
                 _ => panic!("Tabulators not covered"),
             }
         }
-        for (a, b) in md.domhom.into_iter().zip(md.codhom) {
+        for (a, b) in md.domhom.clone().into_iter().zip(md.codhom.clone()) {
             match (a, b) {
                 (MorType::Basic(x), MorType::Basic(y)) => {
                     v.mor_map.set(ustr(&x), ustr(&y));

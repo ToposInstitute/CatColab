@@ -91,15 +91,15 @@ function eachTheory(t: TheoryMeta, props: TheorySelectorProps): boolean {
     }
 
     const bkwd = props.theories.get(t.id).inclusions.get(props.theory.id);
-    console.log("props.formalObs", props.formalObs);
-    console.log("props.formalMors", props.formalMors);
+    console.log(t.id, "->", props.theory.id);
     if (!(bkwd === undefined)) {
-        return (
-            props.formalObs.every((fc: ObType) => {
-                console.log("fc ", fc);
-                bkwd.includes_ob(fc);
-            }) && props.formalMors.every((fc: MorType) => bkwd.includes_mor(fc))
-        );
+        console.log("formalMors", props.formalMors);
+        console.log("bkwd", bkwd.codhom);
+
+        let o = props.formalObs.every((fc: ObType) => bkwd.includes_ob(fc));
+        let m = props.formalMors.every((fc: MorType) => bkwd.includes_mor(fc));
+        console.log("o ", o, "m", m);
+        return o && m;
     }
     return false;
 }
