@@ -8,8 +8,10 @@ unbiased form, a composite of cells in a virtual double category.
 
 use derive_more::From;
 use ego_tree::Tree;
+use std::collections::VecDeque;
 
 use super::graph::VDblGraph;
+use super::tree_algorithms::*;
 use crate::one::path::Path;
 
 /** A node in a [double tree](DblTree).
@@ -295,22 +297,28 @@ impl<E, ProE, Sq> DblTree<E, ProE, Sq> {
     }
 
     /// Maps over the edges and squares of the tree.
-    pub fn map<CodE, CodSq, FnE, FnSq>(
+    pub fn map<CodE, CodSq>(
         self,
-        mut f_e: FnE,
-        mut f_sq: FnSq,
-    ) -> DblTree<CodE, ProE, CodSq>
-    where
-        FnE: FnMut(E) -> CodE,
-        FnSq: FnMut(Sq) -> CodSq,
-    {
+        mut fn_e: impl FnMut(E) -> CodE,
+        mut fn_sq: impl FnMut(Sq) -> CodSq,
+    ) -> DblTree<CodE, ProE, CodSq> {
         self.0
             .map(|dn| match dn {
-                DblNode::Cell(sq) => DblNode::Cell(f_sq(sq)),
-                DblNode::Spine(e) => DblNode::Spine(f_e(e)),
+                DblNode::Cell(sq) => DblNode::Cell(fn_sq(sq)),
+                DblNode::Spine(e) => DblNode::Spine(fn_e(e)),
                 DblNode::Id(m) => DblNode::Id(m),
             })
             .into()
+    }
+
+    /// Is the double tree isomorphic to another?
+    pub fn is_isomorphic_to(&self, other: &Self) -> bool
+    where
+        E: Eq,
+        ProE: Eq,
+        Sq: Eq,
+    {
+        self.0.is_isomorphic_to(&other.0)
     }
 }
 
@@ -343,17 +351,18 @@ where
         let outer_root = self.0.root();
         let mut tree = outer_root.value().clone().flatten().0;
 
-        // We'll iterate in depth-first order over non-root nodes in outer tree.
-        let mut outer_nodes = outer_root.descendants();
+        // We'll iterate over the outer tree in breadth-first order.
+        let mut outer_nodes = self.0.bfs();
         outer_nodes.next();
 
-        let mut stack = Vec::new();
+        // In parallel order, we'll iterate over the roots of the subtrees added
+        // to the flattened tree.
+        let mut queue = VecDeque::new();
         if outer_root.has_children() {
-            stack.push(tree.root().id());
+            queue.push_back(tree.root().id());
         }
 
-        while let Some(node_id) = stack.pop() {
-            let mut new_subtree_ids = Vec::new();
+        while let Some(node_id) = queue.pop_front() {
             let leaf_ids: Vec<_> = tree
                 .get(node_id)
                 .unwrap()
@@ -370,22 +379,20 @@ where
                 let mut leaf = tree.get_mut(leaf_id).unwrap();
                 for m in leaf.value().dom(graph) {
                     let outer_node =
-                        outer_nodes.next().expect("Should have enough nodes in outer tree");
+                        outer_nodes.next().expect("Outer tree should have enough nodes");
 
                     let inner_tree = outer_node.value().clone().flatten();
                     assert_eq!(m, inner_tree.cod(graph), "(Co)domains should be compatible");
 
                     let subtree_id = leaf.append_subtree(inner_tree.0).id();
                     if outer_node.has_children() {
-                        new_subtree_ids.push(subtree_id);
+                        queue.push_back(subtree_id);
                     }
                 }
             }
-            new_subtree_ids.reverse();
-            stack.append(&mut new_subtree_ids);
         }
 
-        assert!(outer_nodes.next().is_none(), "Should not have extra nodes in outer tree");
+        assert!(outer_nodes.next().is_none(), "Outer tree should not have extra nodes");
         tree.into()
     }
 }
@@ -466,8 +473,8 @@ mod tests {
         assert_eq!(outer.flatten_in(&graph), tree);
 
         // Degenerate case: all inner trees are singletons.
-        // FIXME: test is broke
-        //let outer = tree.clone().map(Path::single, DblTree::single);
-        //assert_eq!(outer.flatten_in(&graph), tree);
+        let outer = tree.clone().map(Path::single, DblTree::single);
+        let result = outer.flatten_in(&graph);
+        assert!(result.is_isomorphic_to(&tree));
     }
 }
