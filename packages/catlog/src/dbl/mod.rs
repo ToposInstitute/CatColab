@@ -3,6 +3,7 @@
 pub mod category;
 pub mod graph;
 pub mod tree;
+pub mod tree_algorithms;
 
 pub mod model;
 pub mod model_diagram;
