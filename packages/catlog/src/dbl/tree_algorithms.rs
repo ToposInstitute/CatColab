@@ -1,9 +1,7 @@
 //! Generic algorithms on [trees](Tree).
 
+use ego_tree::{NodeRef, Tree, iter::Edge};
 use std::collections::VecDeque;
-
-use ego_tree::iter::Edge;
-use ego_tree::{NodeRef, Tree};
 
 /// Extension trait adding traversal algorithms on [trees](Tree).
 pub trait TreeTraversal<T> {

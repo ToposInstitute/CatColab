@@ -399,6 +399,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use ego_tree::tree;
     use nonempty::nonempty;
 
     use super::super::category::{WalkingBimodule as Bimod, WalkingFunctor as Funct, *};
@@ -412,8 +413,16 @@ mod tests {
         let mid = bimod.composite_ext(path).unwrap();
         let tree = DblTree::two_level(
             vec![bimod.id_cell(Bimod::Pro::Left), mid.clone(), bimod.id_cell(Bimod::Pro::Right)],
-            mid,
+            mid.clone(),
         );
+        let tree_alt = tree!(
+            mid.clone() => {
+                bimod.id_cell(Bimod::Pro::Left), mid, bimod.id_cell(Bimod::Pro::Right)
+            }
+        );
+        let tree_alt = DblTree(tree_alt.map(DblNode::Cell));
+        assert_eq!(tree, tree_alt);
+
         assert_eq!(tree.leaves().count(), 3);
         assert_eq!(tree.arity(&graph), 5);
         assert_eq!(
@@ -434,11 +443,14 @@ mod tests {
         let funct = Funct::Main();
         let graph = UnderlyingDblGraph(Funct::Main());
         let f = Funct::Arr::Arrow;
-        let tree = DblTree::from_nodes(vec![
-            DblNode::Spine(f),
-            DblNode::Cell(funct.unit_ext(Funct::Ob::One).unwrap()),
-        ])
-        .unwrap();
+        let unit1 = funct.unit_ext(Funct::Ob::One).unwrap();
+        let tree =
+            DblTree::from_nodes(vec![DblNode::Spine(f), DblNode::Cell(unit1.clone())]).unwrap();
+        let tree_alt = DblTree(tree!(
+            DblNode::Cell(unit1) => { DblNode::Spine(f) }
+        ));
+        assert_eq!(tree, tree_alt);
+
         assert_eq!(tree.src_nodes().count(), 2);
         assert_eq!(tree.tgt_nodes().count(), 2);
         assert_eq!(tree.src(&graph), Path::pair(f, Funct::Arr::One));
@@ -454,17 +466,20 @@ mod tests {
         let unitl = bimod.unit_ext(Bimod::Ob::Left).unwrap();
         let unitr = bimod.unit_ext(Bimod::Ob::Right).unwrap();
         let mid = bimod.composite_ext(path).unwrap();
-        let tree = DblTree::graft(
-            vec![
-                DblTree::linear(vec![unitl.clone(), bimod.id_cell(Bimod::Pro::Left)]).unwrap(),
-                DblTree::two_level(
-                    vec![unitl, bimod.id_cell(Bimod::Pro::Middle), unitr.clone()],
-                    mid.clone(),
-                ),
-                DblTree::linear(vec![unitr, bimod.id_cell(Bimod::Pro::Right)]).unwrap(),
-            ],
-            mid,
+        let tree = tree!(
+            mid.clone() => {
+                bimod.id_cell(Bimod::Pro::Left) => {
+                    unitl.clone(),
+                },
+                mid => {
+                    unitl, bimod.id_cell(Bimod::Pro::Middle), unitr.clone(),
+                },
+                bimod.id_cell(Bimod::Pro::Right) => {
+                    unitr,
+                }
+            }
         );
+        let tree = DblTree(tree.map(DblNode::Cell));
         assert_eq!(tree.dom(&graph), Path::single(Bimod::Pro::Middle));
         assert_eq!(tree.cod(&graph), Bimod::Pro::Middle);
 
