@@ -2,13 +2,15 @@ import { type Accessor, createMemo } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { JsonValue } from "catcolab-api";
-import type { DblModel, ModelValidationResult, Uuid } from "catlog-wasm";
+import type { DblModel, ModelValidationResult, MorType, ObType, Uuid } from "catlog-wasm";
 import { type Api, type Document, type LiveDoc, getLiveDoc } from "../api";
 import { type Notebook, newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
 import type { Theory } from "../theory";
 import { type IndexedMap, indexMap } from "../util/indexing";
 import { type ModelJudgment, toCatlogModel } from "./types";
+
+import type { ChangeFn } from "@automerge/automerge-repo";
 
 /** A document defining a model. */
 export type ModelDocument = Document<"model"> & {
@@ -18,6 +20,44 @@ export type ModelDocument = Document<"model"> & {
     /** Content of the model, formal and informal. */
     notebook: Notebook<ModelJudgment>;
 };
+
+/**
+Going from a ModelDocument to a catlog model throws away info. In the other
+direction, if we want to use a catlog model to update an existing ModelDocument,
+then we need to update the cells based on UUID (and possibly add new ones for 
+UUIDs in `updated_model` not found in the current document)
+*/
+export function updateFromCatlogModel(
+    changeDoc: (f: ChangeFn<ModelDocument>) => void,
+    updated_model: DblModel,
+): void {
+    const object_types = new Map<string, string | MorType>();
+    const mor_types = new Map<string, string | ObType>();
+    for (const ob of updated_model.objects()) {
+        object_types.set(ob.content.toString().substring(0, 16), updated_model.obType(ob).content);
+    }
+    for (const mor of updated_model.morphisms()) {
+        mor_types.set(mor.content.toString().substring(0, 16), updated_model.morType(mor).content);
+    }
+
+    function my_change_fn(doc: ModelDocument) {
+        // Update cells (future: remove / add new ones) based on updated_model
+        for (const cell of doc.notebook.cells) {
+            if (cell.tag === "formal") {
+                if (cell.content.tag === "object") {
+                    const new_ob_type = object_types.get(cell.id.toString().substring(0, 16));
+                    cell.content.obType.content = new_ob_type || cell.content.obType.content;
+                } else if (cell.content.tag === "morphism") {
+                    const new_mor_type = mor_types.get(cell.id.toString().substring(0, 16));
+                    cell.content.morType.content = new_mor_type || cell.content.morType.content;
+                }
+            }
+        }
+
+        doc;
+    }
+    changeDoc(my_change_fn);
+}
 
 /** Create an empty model document. */
 export const newModelDocument = (theory: string): ModelDocument => ({
