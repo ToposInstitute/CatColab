@@ -1,6 +1,6 @@
 // adapted from https://github.com/automerge/automerge-repo/blob/main/packages/automerge-repo/src/helpers/tests/storage-adapter-tests.ts
 
-import { StorageAdapterInterface } from "@automerge/automerge-repo"
+import type { StorageAdapterInterface } from "@automerge/automerge-repo"
 import { describe, expect, it } from "vitest"
 
 

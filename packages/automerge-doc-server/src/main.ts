@@ -7,12 +7,12 @@ const port = process.env.AUTOMERGE_PORT || 8010;
 const server = new AutomergeServer(port);
 
 const socket_server = new SocketServer(internal_port, {
-    createDoc(data) {
+    createDoc: async (data) => {
         const { refId, content } = data;
-        return server.createDocHandle(refId, content).documentId;
+        return await server.createDocHandle(refId, content);
     },
-    getDoc(refId) {
-        return server.getDocHandle(refId)?.documentId ?? null;
+    getDoc: async (refId) => {
+        return await server.getDocHandle(refId);
     },
 });
 
