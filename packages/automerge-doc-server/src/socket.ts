@@ -1,16 +1,12 @@
 import { type Socket, io } from "socket.io-client";
 
 import type { JsonValue, RefContent } from "../../backend/pkg/src/index.ts";
-import type { CreateDocSocketResponse, StartListeningSocketResponse } from "./types.js";
+import type { CreateDocSocketResponse, GetDocSocketResponse } from "./types.js";
 
 /** Messages handled by the `SocketServer`. */
 export type Handlers = {
     create_doc: (data: RefContent, callback: (response: CreateDocSocketResponse) => void) => void;
-    start_listening: (
-        refId: string,
-        docId: string,
-        callback: (response: StartListeningSocketResponse) => void,
-    ) => void;
+    get_doc: (refId: string, callback: (response: GetDocSocketResponse) => void) => void;
 };
 
 /** Messages emitted by the `SocketServer`. */
@@ -30,18 +26,13 @@ export class SocketServer {
         port: number | string,
         handlers: {
             createDoc: (data: RefContent) => Promise<CreateDocSocketResponse>;
-            startListening: (refId: string, docId: string) => StartListeningSocketResponse;
+            getDoc: (refId: string) => Promise<GetDocSocketResponse>;
         },
     ) {
         const socket: Socket<Handlers, Requests> = io(`http://localhost:${port}`);
 
-        socket.on("create_doc", (content, callback) => {
-            handlers.createDoc(content).then((response) => callback(response));
-        });
-
-        socket.on("start_listening", (refId, docId, callback) => {
-            callback(handlers.startListening(refId, docId));
-        });
+        socket.on("create_doc", (data, callback) => handlers.createDoc(data).then(response => callback(response)));
+        socket.on("get_doc", (refId, callback) => handlers.getDoc(refId).then(response => callback(response)));
 
         this.socket = socket;
     }

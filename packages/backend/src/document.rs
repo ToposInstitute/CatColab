@@ -1,27 +1,20 @@
 //! Procedures to create and manipulate documents.
 
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use socketioxide::SocketIo;
 use ts_rs::TS;
 use uuid::Uuid;
 
-use crate::app::{AppCtx, AppError, AppState, CreateDocSocketResponse, GetDocSocketResponse};
-use crate::{auth::PermissionLevel, user::UserSummary};
+use crate::app::{CreateDocSocketResponse, GetDocSocketResponse};
+
+use super::app::{AppCtx, AppError, AppState};
 
 /// Creates a new document ref with initial content.
 pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
     let ref_id = Uuid::now_v7();
 
-    // If the document is created but the db transaction doesn't complete, then the document will be
-    // orphaned. The only negative consequence of that is additional space used, but that should be
-    // negligible and we can later create a service which periodically cleans out the orphans
-    let doc_id = create_automerge_doc(&ctx.state.automerge_io, content.clone()).await?;
-
     let mut transaction = ctx.state.db.begin().await?;
 
-    let user_id = ctx.user.map(|user| user.user_id);
     let insert_ref = sqlx::query!(
         "
         WITH snapshot AS (
@@ -29,15 +22,15 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
             VALUES ($1, $2, NOW())
             RETURNING id
         )
-        INSERT INTO refs(id, head, created, doc_id)
-        VALUES ($1, (SELECT id FROM snapshot), NOW(), $3)
+        INSERT INTO refs(id, head, created)
+        VALUES ($1, (SELECT id FROM snapshot), NOW())
         ",
         ref_id,
-        content,
-        doc_id,
+        content
     );
     insert_ref.execute(&mut *transaction).await?;
 
+    let user_id = ctx.user.map(|user| user.user_id);
     let insert_permission = sqlx::query!(
         "
         INSERT INTO permissions(subject, object, level)
@@ -104,69 +97,29 @@ pub async fn save_snapshot(state: AppState, data: RefContent) -> Result<(), AppE
     Ok(())
 }
 
+/// Gets an Automerge document ID for the document ref.
 pub async fn doc_id(state: AppState, ref_id: Uuid) -> Result<String, AppError> {
-    let query = sqlx::query!(
-        "
-        SELECT doc_id FROM refs
-        WHERE id = $1
-        ",
-        ref_id
-    );
+    let automerge_io = &state.automerge_io;
 
-    let doc_id =
-        query
-            .fetch_one(&state.db)
-            .await?
-            .doc_id
-            .ok_or(AppError::AutomergeServer(format!(
-                "failed to find doc_id for ref_id '{}'",
-                ref_id
-            )))?;
+    let ack = automerge_io.emit_with_ack::<GetDocSocketResponse>("get_doc", ref_id).unwrap();
+    let response = ack.await?;
 
-    start_listening_automerge_doc(&state.automerge_io, ref_id, doc_id.clone()).await?;
+    match response.data {
+        Ok(Some(doc_id)) => Ok(doc_id),
+        Ok(None) => {
+            let content = head_snapshot(state.clone(), ref_id).await?;
+            let data = RefContent { ref_id, content };
 
-    Ok(doc_id)
-}
+            let ack = automerge_io
+                .emit_with_ack::<CreateDocSocketResponse>("create_doc", data)
+                .unwrap();
+            let response = ack.await?;
 
-async fn start_listening_automerge_doc(
-    automerge_io: &SocketIo,
-    ref_id: Uuid,
-    doc_id: String,
-) -> Result<(), AppError> {
-    let ack = automerge_io
-        .emit_with_ack::<Vec<Result<(), String>>>("start_listening", [ref_id.to_string(), doc_id])
-        .map_err(|e| {
-            AppError::AutomergeServer(format!("Failed to call start_listening from backend {}", e))
-        })?;
-
-    let response_array = ack.await?.data;
-    let response = response_array
-        .into_iter()
-        .next()
-        .ok_or_else(|| AppError::AutomergeServer("Empty ack response".to_string()))?;
-
-    match response {
-        Ok(_) => Ok(()),
-        Err(err) => Err(AppError::AutomergeServer(err)),
-    }
-}
-
-async fn create_automerge_doc(automerge_io: &SocketIo, content: Value) -> Result<String, AppError> {
-    let ack = automerge_io
-        // Expecting an array of responses instead of a single response for unknowable reasons
-        .emit_with_ack::<Vec<Result<String, String>>>("create_doc", content)
-        .map_err(|e| {
-            AppError::AutomergeServer(format!("Failed to call create_doc from backend {}", e))
-        })?;
-
-    let response_array = ack.await?.data;
-    let response = response_array
-        .into_iter()
-        .next()
-        .ok_or_else(|| AppError::AutomergeServer("Empty ack response".to_string()))?;
-
-    match response {
-        Ok(doc_id) => Ok(doc_id),
+            match response.data {
+                Ok(doc_id) => Ok(doc_id),
+                Err(err) => Err(AppError::AutomergeServer(err)),
+            }
+        }
         Err(err) => Err(AppError::AutomergeServer(err)),
     }
 }
@@ -177,125 +130,4 @@ pub struct RefContent {
     #[serde(rename = "refId")]
     pub ref_id: Uuid,
     pub content: Value,
-}
-
-/// A subset of user relevant information about a ref. Used for showing
-/// users information on a variety of refs without having to load whole
-/// refs.
-#[derive(Clone, Debug, Serialize, Deserialize, TS)]
-pub struct RefStub {
-    pub name: String,
-    #[serde(rename = "typeName")]
-    pub type_name: String,
-    #[serde(rename = "refId")]
-    pub ref_id: Uuid,
-    // permission level that the current user has on this ref
-    #[serde(rename = "permissionLevel")]
-    pub permission_level: PermissionLevel,
-    pub owner: Option<UserSummary>,
-    #[serde(rename = "createdAt")]
-    pub created_at: DateTime<Utc>,
-}
-
-/// Parameters for filtering a search of refs
-#[derive(Clone, Debug, Serialize, Deserialize, TS)]
-pub struct RefQueryParams {
-    #[serde(rename = "ownerUsernameQuery")]
-    pub owner_username_query: Option<String>,
-    #[serde(rename = "refNameQuery")]
-    pub ref_name_query: Option<String>,
-    #[serde(rename = "searcherMinLevel")]
-    pub searcher_min_level: Option<PermissionLevel>,
-    #[serde(rename = "includePublicDocuments")]
-    pub include_public_documents: Option<bool>,
-    // TODO: add param for document type
-}
-
-/// Searches for `RefStub`s that the current user has permission to access,
-/// returning lightweight metadata about each matching ref
-pub async fn search_ref_stubs(
-    ctx: AppCtx,
-    search_params: RefQueryParams,
-) -> Result<Vec<RefStub>, AppError> {
-    let searcher_id = ctx.user.as_ref().map(|user| user.user_id.clone());
-
-    let min_level = search_params.searcher_min_level.unwrap_or(PermissionLevel::Read);
-
-    let results = sqlx::query!(
-        r#"
-        WITH effective_permissions AS (
-            /*
-              select at most one row per ref, the row is either:
-               - the searcher’s own permission, if it exists
-               - the public permission (subject IS NULL) when include_public_documents = TRUE and the
-                 searcher does not already have a row
-            */
-            SELECT DISTINCT ON (object)
-                   object,
-                   level
-            FROM   permissions
-            WHERE  (subject = $1)
-               OR  ($5 AND subject IS NULL)
-            ORDER BY object,
-                     (subject IS NOT NULL) DESC           -- prefer the user‑specific row
-        )
-        SELECT 
-            refs.id AS ref_id,
-            snapshots.content->>'name' AS name,
-            snapshots.content->>'type' AS type_name,
-            refs.created as created_at,
-            effective_permissions.level AS "permission_level: PermissionLevel",
-            owner.id AS "owner_id?",
-            owner.username AS "owner_username?",
-            owner.display_name AS "owner_display_name?"
-        FROM refs
-        JOIN snapshots ON snapshots.id = refs.head
-        JOIN effective_permissions ON effective_permissions.object = refs.id
-        JOIN permissions AS p_owner 
-            ON p_owner.object = refs.id AND p_owner.level = 'own'
-        LEFT JOIN users AS owner
-            ON owner.id = p_owner.subject
-        WHERE (
-            owner.username = $2
-            OR $2 IS NULL
-        )
-        AND (
-            snapshots.content->>'name' ILIKE '%' || $3 || '%'
-            OR $3 IS NULL
-        )
-        AND (
-            effective_permissions.level >= $4
-        )
-        LIMIT 100;
-        "#,
-        searcher_id,
-        search_params.owner_username_query,
-        search_params.ref_name_query,
-        min_level as PermissionLevel,
-        search_params.include_public_documents.unwrap_or(false),
-    )
-    .fetch_all(&ctx.state.db)
-    .await?;
-
-    // We can't use sqlx::query_as! because name and type_name can be null
-    let stubs = results
-        .into_iter()
-        .map(|row| RefStub {
-            ref_id: row.ref_id,
-            name: row.name.unwrap_or_else(|| "untitled".to_string()),
-            type_name: row.type_name.expect("type_name should never be null"),
-            permission_level: row.permission_level,
-            created_at: row.created_at,
-            owner: match row.owner_id {
-                Some(id) => Some(UserSummary {
-                    id,
-                    username: row.owner_username,
-                    display_name: row.owner_display_name,
-                }),
-                _ => None,
-            },
-        })
-        .collect();
-
-    Ok(stubs)
 }
