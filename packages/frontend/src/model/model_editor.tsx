@@ -189,8 +189,6 @@ function judgmentLabel(judgment: ModelJudgment): string | undefined {
         return theory.modelMorTypeMeta(judgment.morType)?.name;
     }
 }
-<<<<<<< HEAD
-=======
 
 export function EmbedButton() {
     const [isOpen, setIsOpen] = createSignal(false);
@@ -249,4 +247,3 @@ function EmbedDialog(props: { isOpen: boolean; onClose: () => void }) {
         </Dialog>
     );
 }
->>>>>>> 5603a07 (embed button in permissions dialog)
