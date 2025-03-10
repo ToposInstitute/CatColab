@@ -263,14 +263,17 @@ export function WalkthroughOverlay(props: { isOpen: boolean; onClose: () => void
 
                 <div class="footer-container">
                     <div class="progress-bar">
-                        {Array.from({ length: totalSteps }).map((_, step) => (
-                            <div
-                                key={`step-dot-${step + 1}`}
-                                class={`progress-dot ${step === currentStep() ? "active" : ""} 
-               ${step < currentStep() ? "completed" : ""}`}
-                                onClick={() => setCurrentStep(step)}
-                            />
-                        ))}
+                        {Array.from({ length: totalSteps }).map((_, step) => {
+                            const isActive = step === currentStep();
+                            const isCompleted = step < currentStep();
+                            return (
+                                <div
+                                    key={`step-dot-${step + 1}`}
+                                    class={`progress-dot ${isActive ? "active" : ""} ${isCompleted ? "completed" : ""}`}
+                                    onClick={() => setCurrentStep(step)}
+                                />
+                            );
+                        })}
                     </div>
 
                     <div class="navigation-buttons">
