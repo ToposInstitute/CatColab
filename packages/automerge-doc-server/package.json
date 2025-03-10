@@ -6,14 +6,17 @@
     "scripts": {
         "main": "tsx src/main.ts",
         "format": "biome format --write",
-        "lint": "biome lint --write && biome check --write"
+        "lint": "biome lint --write && biome check --write",
+        "test": "vitest --mode development"
     },
     "author": "CatColab developer team",
     "license": "MIT",
     "dependencies": {
         "@automerge/automerge-repo": "^1.2.1",
         "@automerge/automerge-repo-network-websocket": "^1.2.1",
+        "dotenv": "^16.4.7",
         "express": "^4.19.2",
+        "pg": "^8.13.3",
         "socket.io-client": "^4.8.0",
         "ws": "^8.18.0"
     },
@@ -21,8 +24,11 @@
         "@biomejs/biome": "^1.8.3",
         "@types/express": "^4.17.21",
         "@types/node": "^22.7.4",
+        "@types/pg": "^8.11.11",
         "@types/ws": "^8.5.12",
+        "automerge-repo": "^0.1.0",
         "tsx": "^4.19.1",
-        "typescript": "^5.6.2"
+        "typescript": "^5.6.2",
+        "vitest": "^3.0.2"
     }
 }
