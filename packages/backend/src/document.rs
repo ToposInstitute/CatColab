@@ -5,6 +5,8 @@ use serde_json::Value;
 use ts_rs::TS;
 use uuid::Uuid;
 
+use crate::app::{CreateDocSocketResponse, GetDocSocketResponse};
+
 use super::app::{AppCtx, AppError, AppState};
 
 /// Creates a new document ref with initial content.
@@ -98,21 +100,27 @@ pub async fn save_snapshot(state: AppState, data: RefContent) -> Result<(), AppE
 /// Gets an Automerge document ID for the document ref.
 pub async fn doc_id(state: AppState, ref_id: Uuid) -> Result<String, AppError> {
     let automerge_io = &state.automerge_io;
-    let ack = automerge_io.emit_with_ack::<Vec<Option<String>>>("get_doc", ref_id).unwrap();
-    let mut response = ack.await?;
 
-    let maybe_doc_id = response.data.pop().flatten();
-    if let Some(doc_id) = maybe_doc_id {
-        // If an Automerge doc handle for this ref already exists, return it.
-        Ok(doc_id)
-    } else {
-        // Otherwise, fetch the content from the database and create a new
-        // Automerge doc handle.
-        let content = head_snapshot(state.clone(), ref_id).await?;
-        let data = RefContent { ref_id, content };
-        let ack = automerge_io.emit_with_ack::<Vec<String>>("create_doc", data).unwrap();
-        let response = ack.await?;
-        Ok(response.data[0].to_string())
+    let ack = automerge_io.emit_with_ack::<GetDocSocketResponse>("get_doc", ref_id).unwrap();
+    let response = ack.await?;
+
+    match response.data {
+        Ok(Some(doc_id)) => Ok(doc_id),
+        Ok(None) => {
+            let content = head_snapshot(state.clone(), ref_id).await?;
+            let data = RefContent { ref_id, content };
+
+            let ack = automerge_io
+                .emit_with_ack::<CreateDocSocketResponse>("create_doc", data)
+                .unwrap();
+            let response = ack.await?;
+
+            match response.data {
+                Ok(doc_id) => Ok(doc_id),
+                Err(err) => Err(AppError::AutomergeServer(err)),
+            }
+        }
+        Err(err) => Err(AppError::AutomergeServer(err)),
     }
 }
 
