@@ -8,8 +8,10 @@ unbiased form, a composite of cells in a virtual double category.
 
 use derive_more::From;
 use ego_tree::Tree;
+use std::collections::VecDeque;
 
 use super::graph::VDblGraph;
+use super::tree_algorithms::*;
 use crate::one::path::Path;
 
 /** A node in a [double tree](DblTree).
@@ -17,7 +19,7 @@ use crate::one::path::Path;
 To be more precise, this enum is the type of a *value* carried by a node in a
 double tree.
  */
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum DblNode<E, ProE, Sq> {
     /// A generic cell, given by a square in a virtual double graph.
     Cell(Sq),
@@ -132,7 +134,7 @@ sources/targets of cells are compatible.
 
 TODO: Enforce invariant with identities when `graft`-ing.
 */
-#[derive(Clone, Debug, From)]
+#[derive(Clone, Debug, From, PartialEq, Eq)]
 pub struct DblTree<E, ProE, Sq>(pub Tree<DblNode<E, ProE, Sq>>);
 
 impl<E, ProE, Sq> DblTree<E, ProE, Sq> {
@@ -146,9 +148,31 @@ impl<E, ProE, Sq> DblTree<E, ProE, Sq> {
         Tree::new(DblNode::Cell(sq)).into()
     }
 
-    /// Constructs a tree a single spine node.
+    /// Constructs a linear tree from a sequence of squares.
+    pub fn linear(iter: impl IntoIterator<Item = Sq>) -> Option<Self> {
+        DblTree::from_nodes(iter.into_iter().map(DblNode::Cell))
+    }
+
+    /// Constructs a tree with a single spine node.
     pub fn spine(e: E) -> Self {
         Tree::new(DblNode::Spine(e)).into()
+    }
+
+    /// Constructs a tree from a non-empty path of edges.
+    pub fn spines<V>(path: Path<V, E>) -> Option<Self> {
+        DblTree::from_nodes(path.into_iter().map(DblNode::Spine))
+    }
+
+    /// Constructs a linear tree from a sequence of node values.
+    pub fn from_nodes(iter: impl IntoIterator<Item = DblNode<E, ProE, Sq>>) -> Option<Self> {
+        let mut values: Vec<_> = iter.into_iter().collect();
+        let value = values.pop()?;
+        let mut tree = Tree::new(value);
+        let mut node_id = tree.root().id();
+        for value in values.into_iter().rev() {
+            node_id = tree.get_mut(node_id).unwrap().append(value).id();
+        }
+        Some(tree.into())
     }
 
     /// Constructs a tree of a height two.
@@ -191,11 +215,13 @@ impl<E, ProE, Sq> DblTree<E, ProE, Sq> {
 
     /// Iterates over the leaves of the double tree.
     pub fn leaves(&self) -> impl Iterator<Item = &DblNode<E, ProE, Sq>> {
-        self.0
-            .root()
-            .descendants()
-            .filter(|node| !node.has_children())
-            .map(|node| node.value())
+        self.0.root().descendants().filter_map(|node| {
+            if node.has_children() {
+                None
+            } else {
+                Some(node.value())
+            }
+        })
     }
 
     /** Iterates over nodes along the source (left) boundary of the double tree.
@@ -269,25 +295,134 @@ impl<E, ProE, Sq> DblTree<E, ProE, Sq> {
     pub fn arity(&self, graph: &impl VDblGraph<E = E, ProE = ProE, Sq = Sq>) -> usize {
         self.leaves().map(|dn| dn.arity(graph)).sum()
     }
+
+    /// Maps over the edges and squares of the tree.
+    pub fn map<CodE, CodSq>(
+        self,
+        mut fn_e: impl FnMut(E) -> CodE,
+        mut fn_sq: impl FnMut(Sq) -> CodSq,
+    ) -> DblTree<CodE, ProE, CodSq> {
+        self.0
+            .map(|dn| match dn {
+                DblNode::Cell(sq) => DblNode::Cell(fn_sq(sq)),
+                DblNode::Spine(e) => DblNode::Spine(fn_e(e)),
+                DblNode::Id(m) => DblNode::Id(m),
+            })
+            .into()
+    }
+
+    /// Is the double tree isomorphic to another?
+    pub fn is_isomorphic_to(&self, other: &Self) -> bool
+    where
+        E: Eq,
+        ProE: Eq,
+        Sq: Eq,
+    {
+        self.0.is_isomorphic_to(&other.0)
+    }
+}
+
+impl<V, E, ProE, Sq> DblNode<Path<V, E>, ProE, DblTree<E, ProE, Sq>> {
+    /// Flattens a node containing another tree.
+    fn flatten(self) -> DblTree<E, ProE, Sq> {
+        match self {
+            DblNode::Cell(tree) => tree,
+            DblNode::Id(m) => DblTree::empty(m),
+            DblNode::Spine(path) => {
+                DblTree::spines(path).expect("Spine should be a non-empty path")
+            }
+        }
+    }
+}
+
+impl<V, E, ProE, Sq> DblTree<Path<V, E>, ProE, DblTree<E, ProE, Sq>>
+where
+    V: Clone,
+    E: Clone,
+    ProE: Clone + Eq + std::fmt::Debug,
+    Sq: Clone,
+{
+    /// Flattens a tree of trees into a single tree.
+    pub fn flatten_in(
+        &self,
+        graph: &impl VDblGraph<V = V, E = E, ProE = ProE, Sq = Sq>,
+    ) -> DblTree<E, ProE, Sq> {
+        // Initialize flattened tree using the root of the outer tree.
+        let outer_root = self.0.root();
+        let mut tree = outer_root.value().clone().flatten().0;
+
+        // We'll iterate over the outer tree in breadth-first order.
+        let mut outer_nodes = self.0.bfs();
+        outer_nodes.next();
+
+        // In parallel order, we'll iterate over the roots of the subtrees added
+        // to the flattened tree.
+        let mut queue = VecDeque::new();
+        if outer_root.has_children() {
+            queue.push_back(tree.root().id());
+        }
+
+        while let Some(node_id) = queue.pop_front() {
+            let leaf_ids: Vec<_> = tree
+                .get(node_id)
+                .unwrap()
+                .descendants()
+                .filter_map(|node| {
+                    if node.has_children() {
+                        None
+                    } else {
+                        Some(node.id())
+                    }
+                })
+                .collect();
+            for leaf_id in leaf_ids {
+                let mut leaf = tree.get_mut(leaf_id).unwrap();
+                for m in leaf.value().dom(graph) {
+                    let outer_node =
+                        outer_nodes.next().expect("Outer tree should have enough nodes");
+
+                    let inner_tree = outer_node.value().clone().flatten();
+                    assert_eq!(m, inner_tree.cod(graph), "(Co)domains should be compatible");
+
+                    let subtree_id = leaf.append_subtree(inner_tree.0).id();
+                    if outer_node.has_children() {
+                        queue.push_back(subtree_id);
+                    }
+                }
+            }
+        }
+
+        assert!(outer_nodes.next().is_none(), "Outer tree should not have extra nodes");
+        tree.into()
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use ego_tree::tree;
     use nonempty::nonempty;
 
     use super::super::category::{WalkingBimodule as Bimod, WalkingFunctor as Funct, *};
     use super::*;
 
     #[test]
-    fn tree_boundary() {
+    fn tree_dom_cod() {
         let bimod = Bimod::Main();
         let graph = UnderlyingDblGraph(Bimod::Main());
         let path = Path::Seq(nonempty![Bimod::Pro::Left, Bimod::Pro::Middle, Bimod::Pro::Right]);
         let mid = bimod.composite_ext(path).unwrap();
         let tree = DblTree::two_level(
             vec![bimod.id_cell(Bimod::Pro::Left), mid.clone(), bimod.id_cell(Bimod::Pro::Right)],
-            mid,
+            mid.clone(),
         );
+        let tree_alt = tree!(
+            mid.clone() => {
+                bimod.id_cell(Bimod::Pro::Left), mid, bimod.id_cell(Bimod::Pro::Right)
+            }
+        );
+        let tree_alt = DblTree(tree_alt.map(DblNode::Cell));
+        assert_eq!(tree, tree_alt);
+
         assert_eq!(tree.leaves().count(), 3);
         assert_eq!(tree.arity(&graph), 5);
         assert_eq!(
@@ -301,17 +436,60 @@ mod tests {
             ])
         );
         assert_eq!(tree.cod(&graph), Bimod::Pro::Middle);
+    }
 
+    #[test]
+    fn tree_src_tgt() {
         let funct = Funct::Main();
         let graph = UnderlyingDblGraph(Funct::Main());
         let f = Funct::Arr::Arrow;
-        let tree = DblTree::<_, Funct::Ob, _>::graft(
-            vec![DblTree::spine(f), DblTree::spine(f)],
-            funct.composite_ext(Path::pair(Funct::Ob::One, Funct::Ob::One)).unwrap(),
-        );
+        let unit1 = funct.unit_ext(Funct::Ob::One).unwrap();
+        let tree =
+            DblTree::from_nodes(vec![DblNode::Spine(f), DblNode::Cell(unit1.clone())]).unwrap();
+        let tree_alt = DblTree(tree!(
+            DblNode::Cell(unit1) => { DblNode::Spine(f) }
+        ));
+        assert_eq!(tree, tree_alt);
+
         assert_eq!(tree.src_nodes().count(), 2);
         assert_eq!(tree.tgt_nodes().count(), 2);
         assert_eq!(tree.src(&graph), Path::pair(f, Funct::Arr::One));
         assert_eq!(tree.tgt(&graph), Path::pair(f, Funct::Arr::One));
+        assert!(tree.dom(&graph).is_empty());
+    }
+
+    #[test]
+    fn flatten_tree() {
+        let bimod = Bimod::Main();
+        let graph = UnderlyingDblGraph(Bimod::Main());
+        let path = Path::Seq(nonempty![Bimod::Pro::Left, Bimod::Pro::Middle, Bimod::Pro::Right]);
+        let unitl = bimod.unit_ext(Bimod::Ob::Left).unwrap();
+        let unitr = bimod.unit_ext(Bimod::Ob::Right).unwrap();
+        let mid = bimod.composite_ext(path).unwrap();
+        let tree = tree!(
+            mid.clone() => {
+                bimod.id_cell(Bimod::Pro::Left) => {
+                    unitl.clone(),
+                },
+                mid => {
+                    unitl, bimod.id_cell(Bimod::Pro::Middle), unitr.clone(),
+                },
+                bimod.id_cell(Bimod::Pro::Right) => {
+                    unitr,
+                }
+            }
+        );
+        let tree = DblTree(tree.map(DblNode::Cell));
+        assert_eq!(tree.dom(&graph), Path::single(Bimod::Pro::Middle));
+        assert_eq!(tree.cod(&graph), Bimod::Pro::Middle);
+
+        // Degenerate case: the outer tree is a singleton.
+        let outer = DblTree::single(tree.clone());
+        assert_eq!(outer.flatten_in(&graph), tree);
+
+        // Degenerate case: all inner trees are singletons.
+        let outer = tree.clone().map(Path::single, DblTree::single);
+        let result = outer.flatten_in(&graph);
+        assert!(result.is_isomorphic_to(&tree));
     }
 }
