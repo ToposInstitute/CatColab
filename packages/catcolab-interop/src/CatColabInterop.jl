@@ -1,4 +1,4 @@
-module AlgebraicJuliaService
+module CatColabInterop
 
 using MLStyle
 using Reexport
@@ -60,7 +60,8 @@ Base.values(model::Model) = values(model.data)
 """ 
 Functions to build a dictionary associating ids in the theory to elements in the model
 """
-function to_model end; export to_model
+function to_model end
+export to_model
 
 struct ImplError <: Exception
     name::String
