@@ -99,25 +99,32 @@ pub async fn save_snapshot(state: AppState, data: RefContent) -> Result<(), AppE
     Ok(())
 }
 
-/// Gets an Automerge document ID for the document ref.
 pub async fn doc_id(state: AppState, ref_id: Uuid) -> Result<String, AppError> {
     let automerge_io = &state.automerge_io;
 
-    let ack = automerge_io.emit_with_ack::<GetDocSocketResponse>("get_doc", ref_id).unwrap();
-    let response = ack.await?;
+    // Expecting an array of responses instead of a single response for unknowable reasons
+    let ack = automerge_io.emit_with_ack::<Vec<GetDocSocketResponse>>("get_doc", ref_id)
+        .unwrap();
+    let response_array = ack.await?.data;
 
-    match response.data {
+    // Extract the first response
+    let response = response_array.into_iter().next()
+        .ok_or_else(|| AppError::AutomergeServer("Empty ack response".to_string()))?;
+
+    match response {
         Ok(Some(doc_id)) => Ok(doc_id),
         Ok(None) => {
             let content = head_snapshot(state.clone(), ref_id).await?;
             let data = RefContent { ref_id, content };
 
             let ack = automerge_io
-                .emit_with_ack::<CreateDocSocketResponse>("create_doc", data)
+                .emit_with_ack::<Vec<CreateDocSocketResponse>>("create_doc", data)
                 .unwrap();
-            let response = ack.await?;
+            let response_array = ack.await?.data;
+            let response = response_array.into_iter().next()
+                .ok_or_else(|| AppError::AutomergeServer("Empty ack response".to_string()))?;
 
-            match response.data {
+            match response {
                 Ok(doc_id) => Ok(doc_id),
                 Err(err) => Err(AppError::AutomergeServer(err)),
             }
@@ -125,6 +132,7 @@ pub async fn doc_id(state: AppState, ref_id: Uuid) -> Result<String, AppError> {
         Err(err) => Err(AppError::AutomergeServer(err)),
     }
 }
+
 
 /// A document ref along with its content.
 #[derive(Debug, Serialize, Deserialize, TS)]
