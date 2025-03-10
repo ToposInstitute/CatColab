@@ -1,11 +1,8 @@
-import {
-    type SetupFn,
-    runStorageAdapterTests,
-} from "@automerge/automerge-repo/helpers/tests/storage-adapter-tests.js";
-import dotenv from "dotenv";
-import { Pool } from "pg";
-import { afterEach, describe } from "vitest";
+import { describe } from "vitest";
 import { PostgresStorageAdapter } from "./postgres_storage_adapter.js";
+import { Pool } from "pg";
+import dotenv from "dotenv";
+import { runStorageAdapterTests } from "./storage_adapter_tests.js";
 
 dotenv.config();
 
@@ -18,22 +15,17 @@ describe("PostgresStorageAdapter", () => {
         connectionString: process.env.DATABASE_URL,
     });
 
-    const setup: SetupFn = async () => {
-        const adapter = new PostgresStorageAdapter(pool);
-
-        // The type signature indicates that you can optionally return a 'teardown' function which
-        // will be returned at the end of a beforeEach. Functions returned from a beforeEach are cleanup
-        // functions that are equivalent to afterEach, according to vitest docs. However the teardown
-        // function appears to not be awaited, resulting in race conditions. This indicates at a possible
-        // bug in vitest, or maybe I'm just holding it wrong. Anyway, an explicit afterEach still works.
-        return { adapter };
-    };
-
-    afterEach(async () => {
+    const teardown = async () => {
         await deleteDocument(pool, "AAAAA");
         await deleteDocument(pool, "BBBBB");
         await deleteDocument(pool, "storage-adapter-id");
-    });
+    };
+
+    const setup = async () => {
+        const adapter = new PostgresStorageAdapter(pool);
+
+        return { adapter, teardown };
+    };
 
     runStorageAdapterTests(setup);
 });

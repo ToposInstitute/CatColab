@@ -1,5 +1,8 @@
-import type { StorageAdapterInterface, StorageKey } from "@automerge/automerge-repo/slim";
-import type { Pool, QueryResult } from "pg";
+import { Pool, QueryResult } from "pg";
+import {
+  StorageAdapterInterface,
+  type StorageKey,
+} from "@automerge/automerge-repo/slim"
 
 export class PostgresStorageAdapter implements StorageAdapterInterface {
     private pool: Pool;
@@ -10,11 +13,14 @@ export class PostgresStorageAdapter implements StorageAdapterInterface {
 
     // Load the data for an exact key match
     async load(key: StorageKey): Promise<Uint8Array | undefined> {
-        const result = await this.pool.query("SELECT data FROM storage WHERE key = $1", [key]);
-        if (result.rows.length === 0) {
+        const result = await this.pool.query(
+            "SELECT data FROM storage WHERE key = $1",
+            [key]
+        );
+        if (result.rows.length == 0) {
             return;
         }
-
+    
         return new Uint8Array(result.rows[0].data);
     }
 
@@ -26,7 +32,7 @@ export class PostgresStorageAdapter implements StorageAdapterInterface {
       VALUES ($1, $2)
       ON CONFLICT (key) DO UPDATE SET data = $2
       `,
-            [key, data],
+            [key, data]
         );
     }
 
@@ -36,8 +42,9 @@ export class PostgresStorageAdapter implements StorageAdapterInterface {
     }
 
     // Load all entries that have keys starting with the keyPrefix.
-    async loadRange(keyPrefix: StorageKey): Promise<{ key: StorageKey; data: Uint8Array }[]> {
-        // biome-ignore lint/suspicious/noExplicitAny: no typescript database types
+    async loadRange(
+        keyPrefix: StorageKey
+    ): Promise<{ key: StorageKey; data: Uint8Array }[]> {
         let result: QueryResult<any>;
         if (keyPrefix.length === 0) {
             // If prefix is empty, return all rows.
@@ -56,13 +63,13 @@ export class PostgresStorageAdapter implements StorageAdapterInterface {
 
     // Remove all entries that have keys starting with the keyPrefix.
     async removeRange(keyPrefix: StorageKey): Promise<void> {
-        if (keyPrefix.length === 0) {
+        if (keyPrefix.length === 0) {            
             // If prefix is empty, delete all rows.
             await this.pool.query("DELETE FROM storage");
             return;
         }
 
-        const query = "DELETE FROM storage WHERE key[1:cardinality($1::text[])] = $1::text[]";
+        const query = `DELETE FROM storage WHERE key[1:cardinality($1::text[])] = $1::text[]`;
         await this.pool.query(query, [keyPrefix]);
     }
 }
