@@ -11,5 +11,6 @@ CREATE TABLE refs (
     created TIMESTAMPTZ NOT NULL
 );
 
-ALTER TABLE snapshots
-    ADD FOREIGN KEY (for_ref) REFERENCES refs (id) DEFERRABLE INITIALLY DEFERRED;
+
+
+    
