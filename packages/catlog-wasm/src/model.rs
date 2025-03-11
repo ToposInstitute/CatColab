@@ -262,30 +262,40 @@ impl MapData {
             codhom: codhom.iter().map(|v| MorType::Basic(ustr(v))).collect(),
         }
     }
+
     #[wasm_bindgen(getter)]
     pub fn domob(&self) -> Vec<ObType> {
         self.domob.clone()
     }
+
     #[wasm_bindgen(getter)]
     pub fn codob(&self) -> Vec<ObType> {
         self.codob.clone()
     }
+
     #[wasm_bindgen(getter)]
     pub fn domhom(&self) -> Vec<MorType> {
         self.domhom.clone()
     }
+
     #[wasm_bindgen(getter)]
     pub fn codhom(&self) -> Vec<MorType> {
         self.codhom.clone()
     }
+
     #[wasm_bindgen]
     pub fn includes_ob(&self, ob: &ObType) -> bool {
         self.codob.contains(ob)
     }
+
     #[wasm_bindgen]
     pub fn includes_mor(&self, mor: &MorType) -> bool {
-        self.codhom.contains(mor)
+        match mor {
+            MorType::Basic(_) => self.codhom.contains(mor),
+            MorType::Hom(x) => self.codob.contains(x),
+        }
     }
+
     #[wasm_bindgen]
     pub fn swap(&self) -> MapData {
         MapData {
