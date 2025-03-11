@@ -2,7 +2,7 @@ import { type Accessor, createMemo } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { JsonValue } from "catcolab-api";
-import type { DblModel, ModelValidationResult, MorType, ObType, Uuid } from "catlog-wasm";
+import type { DblModel, ModelValidationResult, Mor, MorType, ObType, Uuid } from "catlog-wasm";
 import { type Api, type Document, type LiveDoc, getLiveDoc } from "../api";
 import { type Notebook, newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
@@ -31,13 +31,16 @@ export function updateFromCatlogModel(
     changeDoc: (f: ChangeFn<ModelDocument>) => void,
     updated_model: DblModel,
 ): void {
-    const object_types = new Map<string, string | MorType>();
-    const mor_types = new Map<string, string | ObType>();
+    const object_types = new Map<string | Mor, string | MorType>();
+    const mor_types = new Map<
+        string | { dom: Mor; cod: Mor; pre: Mor; post: Mor },
+        string | ObType
+    >();
     for (const ob of updated_model.objects()) {
-        object_types.set(ob.content.toString().substring(0, 16), updated_model.obType(ob).content);
+        object_types.set(ob.content, updated_model.obType(ob).content);
     }
     for (const mor of updated_model.morphisms()) {
-        mor_types.set(mor.content.toString().substring(0, 16), updated_model.morType(mor).content);
+        mor_types.set(mor.content, updated_model.morType(mor).content);
     }
 
     function my_change_fn(doc: ModelDocument) {
@@ -45,10 +48,10 @@ export function updateFromCatlogModel(
         for (const cell of doc.notebook.cells) {
             if (cell.tag === "formal") {
                 if (cell.content.tag === "object") {
-                    const new_ob_type = object_types.get(cell.id.toString().substring(0, 16));
+                    const new_ob_type = object_types.get(cell.content.id);
                     cell.content.obType.content = new_ob_type || cell.content.obType.content;
                 } else if (cell.content.tag === "morphism") {
-                    const new_mor_type = mor_types.get(cell.id.toString().substring(0, 16));
+                    const new_mor_type = mor_types.get(cell.content.id);
                     cell.content.morType.content = new_mor_type || cell.content.morType.content;
                 }
             }
