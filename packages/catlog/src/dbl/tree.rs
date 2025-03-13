@@ -68,20 +68,23 @@ impl<E, ProE, Sq> DblNode<E, ProE, Sq> {
     {
         match self {
             DblNode::Cell(sq) => graph.square_dom(sq),
-            DblNode::Id(p) => Path::single(p.clone()),
+            DblNode::Id(p) => p.clone().into(),
             DblNode::Spine(e) => Path::empty(graph.dom(e)),
         }
     }
 
     /// Codomain of node in the given virtual double graph.
-    pub fn cod(&self, graph: &impl VDblGraph<E = E, ProE = ProE, Sq = Sq>) -> ProE
+    pub fn cod<V>(
+        &self,
+        graph: &impl VDblGraph<V = V, E = E, ProE = ProE, Sq = Sq>,
+    ) -> Path<V, ProE>
     where
         ProE: Clone,
     {
         match self {
-            DblNode::Cell(sq) => graph.square_cod(sq),
-            DblNode::Id(p) => p.clone(),
-            DblNode::Spine(_) => panic!("A spine node does not have a unary codomain"),
+            DblNode::Cell(sq) => graph.square_cod(sq).into(),
+            DblNode::Id(p) => p.clone().into(),
+            DblNode::Spine(e) => Path::empty(graph.cod(e)),
         }
     }
 
@@ -91,9 +94,9 @@ impl<E, ProE, Sq> DblNode<E, ProE, Sq> {
         E: Clone,
     {
         match self {
-            DblNode::Cell(sq) => Path::single(graph.square_src(sq)),
+            DblNode::Cell(sq) => graph.square_src(sq).into(),
             DblNode::Id(p) => Path::empty(graph.src(p)),
-            DblNode::Spine(e) => Path::single(e.clone()),
+            DblNode::Spine(e) => e.clone().into(),
         }
     }
 
@@ -103,9 +106,9 @@ impl<E, ProE, Sq> DblNode<E, ProE, Sq> {
         E: Clone,
     {
         match self {
-            DblNode::Cell(sq) => Path::single(graph.square_tgt(sq)),
+            DblNode::Cell(sq) => graph.square_tgt(sq).into(),
             DblNode::Id(p) => Path::empty(graph.tgt(p)),
-            DblNode::Spine(e) => Path::single(e.clone()),
+            DblNode::Spine(e) => e.clone().into(),
         }
     }
 
@@ -115,6 +118,15 @@ impl<E, ProE, Sq> DblNode<E, ProE, Sq> {
             DblNode::Cell(sq) => graph.arity(sq),
             DblNode::Id(_) => 1,
             DblNode::Spine(_) => 0,
+        }
+    }
+
+    /// Is the node contained in the given virtual double graph?
+    pub fn contained_in(&self, graph: &impl VDblGraph<E = E, ProE = ProE, Sq = Sq>) -> bool {
+        match self {
+            DblNode::Cell(sq) => graph.has_square(sq),
+            DblNode::Id(p) => graph.has_proedge(p),
+            DblNode::Spine(e) => graph.has_edge(e),
         }
     }
 }
@@ -128,9 +140,6 @@ example, the domains/codomains and sources/targets of the cells must compatible,
 and [spines](DblNode::Spine) can only appear in certain configurations.
 Moreover, among the valid trees, invariants are maintained to ensure a normal
 form among equivalent representations of the same pasting.
-
-TODO: Implement validation using breadth-first search to check that
-sources/targets of cells are compatible.
 
 TODO: Enforce invariant with identities when `graft`-ing.
 */
@@ -268,7 +277,10 @@ impl<E, ProE, Sq> DblTree<E, ProE, Sq> {
     where
         ProE: Clone,
     {
-        self.root().cod(graph)
+        self.root()
+            .cod(graph)
+            .only()
+            .expect("The root of a double tree should not be a spine")
     }
 
     /// Source of the tree in the given virtual double graph.
@@ -296,6 +308,51 @@ impl<E, ProE, Sq> DblTree<E, ProE, Sq> {
         self.leaves().map(|dn| dn.arity(graph)).sum()
     }
 
+    /** Is the double tree contained in the given virtual double graph?
+
+    This includes checking whether the double tree is well-typed, i.e., that the
+    domains and codomains, and sources and targets, of the cells are compatible.
+     */
+    pub fn contained_in(&self, graph: &impl VDblGraph<E = E, ProE = ProE, Sq = Sq>) -> bool
+    where
+        E: Eq + Clone,
+        ProE: Eq + Clone,
+    {
+        let mut traverse = self.0.bfs();
+        while let Some(node) = traverse.next() {
+            let dn = node.value();
+            // The cell itself is contained in the graph.
+            if !dn.contained_in(graph) {
+                return false;
+            }
+            // Source and target edges are compatible.
+            if !traverse
+                .peek_at_same_level()
+                .is_none_or(|next| dn.tgt(graph) == next.value().src(graph))
+            {
+                return false;
+            }
+            // Domain and codomain pro-edges are compatible.
+            if node.has_children() {
+                let codomains = node.children().map(|child| child.value().cod(graph));
+                if Path::collect(codomains).unwrap().flatten() != dn.dom(graph) {
+                    return false;
+                }
+            }
+        }
+        true
+    }
+
+    /// Is the double tree isomorphic to another?
+    pub fn is_isomorphic_to(&self, other: &Self) -> bool
+    where
+        E: Eq,
+        ProE: Eq,
+        Sq: Eq,
+    {
+        self.0.is_isomorphic_to(&other.0)
+    }
+
     /// Maps over the edges and squares of the tree.
     pub fn map<CodE, CodSq>(
         self,
@@ -309,16 +366,6 @@ impl<E, ProE, Sq> DblTree<E, ProE, Sq> {
                 DblNode::Id(m) => DblNode::Id(m),
             })
             .into()
-    }
-
-    /// Is the double tree isomorphic to another?
-    pub fn is_isomorphic_to(&self, other: &Self) -> bool
-    where
-        E: Eq,
-        ProE: Eq,
-        Sq: Eq,
-    {
-        self.0.is_isomorphic_to(&other.0)
     }
 }
 
@@ -417,11 +464,12 @@ mod tests {
         );
         let tree_alt = tree!(
             mid.clone() => {
-                bimod.id_cell(Bimod::Pro::Left), mid, bimod.id_cell(Bimod::Pro::Right)
+                bimod.id_cell(Bimod::Pro::Left), mid.clone(), bimod.id_cell(Bimod::Pro::Right)
             }
         );
         let tree_alt = DblTree(tree_alt.map(DblNode::Cell));
         assert_eq!(tree, tree_alt);
+        assert!(tree.contained_in(&graph));
 
         assert_eq!(tree.leaves().count(), 3);
         assert_eq!(tree.arity(&graph), 5);
@@ -436,6 +484,20 @@ mod tests {
             ])
         );
         assert_eq!(tree.cod(&graph), Bimod::Pro::Middle);
+
+        // Trees with incompatible (co)domains.
+        let tree = tree!(
+            mid.clone() => {
+                bimod.id_cell(Bimod::Pro::Left), mid.clone()
+            }
+        );
+        assert!(!DblTree(tree.map(DblNode::Cell)).contained_in(&graph));
+        let tree = tree!(
+            mid.clone() => {
+                bimod.id_cell(Bimod::Pro::Right), mid.clone(), bimod.id_cell(Bimod::Pro::Left)
+            }
+        );
+        assert!(!DblTree(tree.map(DblNode::Cell)).contained_in(&graph));
     }
 
     #[test]
@@ -444,18 +506,27 @@ mod tests {
         let graph = UnderlyingDblGraph(Funct::Main());
         let f = Funct::Arr::Arrow;
         let unit1 = funct.unit_ext(Funct::Ob::One).unwrap();
-        let tree =
-            DblTree::from_nodes(vec![DblNode::Spine(f), DblNode::Cell(unit1.clone())]).unwrap();
+        let tree = DblTree::from_nodes(vec![DblNode::Spine(f), DblNode::Cell(unit1)]).unwrap();
         let tree_alt = DblTree(tree!(
             DblNode::Cell(unit1) => { DblNode::Spine(f) }
         ));
         assert_eq!(tree, tree_alt);
+        assert!(tree.contained_in(&graph));
 
         assert_eq!(tree.src_nodes().count(), 2);
         assert_eq!(tree.tgt_nodes().count(), 2);
         assert_eq!(tree.src(&graph), Path::pair(f, Funct::Arr::One));
         assert_eq!(tree.tgt(&graph), Path::pair(f, Funct::Arr::One));
         assert!(tree.dom(&graph).is_empty());
+
+        // Trees with incompatible sources and targets.
+        let tree = DblTree(tree!(
+            DblNode::Cell(funct.composite2_ext(Funct::Ob::One, Funct::Ob::One).unwrap()) => {
+                DblNode::Cell(unit1) => { DblNode::Spine(Funct::Arr::One) },
+                DblNode::Cell(unit1) => { DblNode::Spine(f) },
+            }
+        ));
+        assert!(!tree.contained_in(&graph));
     }
 
     #[test]
