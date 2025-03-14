@@ -204,7 +204,7 @@ pub trait DblTheory {
     }
 }
 
-impl<VDC: VDblCategory> DblTheory for VDC {
+impl<VDC: VDCWithComposites> DblTheory for VDC {
     type ObType = VDC::Ob;
     type MorType = VDC::Pro;
     type ObOp = VDC::Arr;
@@ -344,15 +344,23 @@ where
         disc.compose(path)
     }
 
+    fn compose_cells(&self, tree: DblTree<Self::Arr, Self::Pro, Self::Cell>) -> Self::Cell {
+        tree.dom(UnderlyingDblGraph::ref_cast(self))
+    }
+}
+
+impl<C: FgCategory> VDCWithComposites for DiscreteDblTheory<C>
+where
+    C::Ob: Clone,
+    C::Mor: Clone,
+{
     fn composite(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Pro> {
         Some(self.0.compose(path))
     }
+
+    /// In a discrete double theory, every cell is an extension.
     fn composite_ext(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Cell> {
         Some(path)
-    }
-
-    fn compose_cells(&self, tree: DblTree<Self::Arr, Self::Pro, Self::Cell>) -> Self::Cell {
-        tree.dom(UnderlyingDblGraph::ref_cast(self))
     }
 }
 
@@ -633,6 +641,30 @@ where
         path.flatten()
     }
 
+    fn compose_cells(&self, tree: DblTree<Self::Arr, Self::Pro, Self::Cell>) -> Self::Cell {
+        let graph = UnderlyingDblGraph::ref_cast(self);
+        let dom = tree.dom(graph);
+        let src = self.compose(tree.src(graph));
+        let tgt = self.compose(tree.tgt(graph));
+        assert_eq!(src.len(), tgt.len(), "Source/target boundaries should have equal length");
+        let projections = std::iter::zip(src, tgt)
+            .map(|pair| match pair {
+                (TabObProj::Src(m), TabObProj::Tgt(n)) if m == n => TabMorProj::Cone(m),
+                (TabObProj::Src(m), TabObProj::Src(n)) if m == n => TabMorProj::Src(m),
+                (TabObProj::Tgt(m), TabObProj::Tgt(n)) if m == n => TabMorProj::Tgt(m),
+                _ => panic!("Projection cells should have compatible source/target boundaries"),
+            })
+            .collect();
+        TabMorOp { dom, projections }
+    }
+}
+
+impl<V, E, S> VDCWithComposites for DiscreteTabTheory<V, E, S>
+where
+    V: Eq + Clone + Hash,
+    E: Eq + Clone + Hash,
+    S: BuildHasher,
+{
     fn composite2(&self, m: Self::Pro, n: Self::Pro) -> Option<Self::Pro> {
         let mn = match (m, n) {
             (m, TabMorType::Hom(y)) if self.tgt(&m) == *y => m,
@@ -650,28 +682,12 @@ where
     fn composite(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Pro> {
         Some(path.reduce(|x| self.unit(x).unwrap(), |m, n| self.composite2(m, n).unwrap()))
     }
+
     fn composite_ext(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Cell> {
         Some(TabMorOp {
             dom: path,
             projections: vec![],
         })
-    }
-
-    fn compose_cells(&self, tree: DblTree<Self::Arr, Self::Pro, Self::Cell>) -> Self::Cell {
-        let graph = UnderlyingDblGraph::ref_cast(self);
-        let dom = tree.dom(graph);
-        let src = self.compose(tree.src(graph));
-        let tgt = self.compose(tree.tgt(graph));
-        assert_eq!(src.len(), tgt.len(), "Source/target boundaries should have equal length");
-        let projections = std::iter::zip(src, tgt)
-            .map(|pair| match pair {
-                (TabObProj::Src(m), TabObProj::Tgt(n)) if m == n => TabMorProj::Cone(m),
-                (TabObProj::Src(m), TabObProj::Src(n)) if m == n => TabMorProj::Src(m),
-                (TabObProj::Tgt(m), TabObProj::Tgt(n)) if m == n => TabMorProj::Tgt(m),
-                _ => panic!("Projection cells should have compatible source/target boundaries"),
-            })
-            .collect();
-        TabMorOp { dom, projections }
     }
 }
 
