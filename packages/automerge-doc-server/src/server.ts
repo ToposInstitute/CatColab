@@ -1,10 +1,21 @@
 import type * as http from "node:http";
-import { type DocHandle, Repo } from "@automerge/automerge-repo";
+import { type DocHandle, type DocumentId, Repo, type RepoConfig } from "@automerge/automerge-repo";
 import { NodeWSServerAdapter } from "@automerge/automerge-repo-network-websocket";
+import dotenv from "dotenv";
 import express from "express";
 import * as ws from "ws";
 
+// pg is a CommonJS package, and this is likely the least painful way of dealing with that
+import pgPkg from "pg";
+const { Pool } = pgPkg;
+import type { Pool as PoolType } from "pg";
+
 import type { JsonValue } from "../../backend/pkg/src/index.ts";
+import { PostgresStorageAdapter } from "./postgres_storage_adapter.js";
+import type { CreateDocSocketResponse, StartListeningSocketResponse } from "./types.js";
+
+// Load environment variables from .env
+dotenv.config();
 
 export class AutomergeServer {
     private docMap: Map<string, DocHandle<unknown>>;
@@ -12,6 +23,7 @@ export class AutomergeServer {
     private server: http.Server;
     private wss: ws.WebSocketServer;
     private repo: Repo;
+    private pool: PoolType;
 
     public handleChange?: (refId: string, content: JsonValue) => void;
 
@@ -25,9 +37,16 @@ export class AutomergeServer {
             noServer: true,
         });
 
-        const config = {
+        this.pool = new Pool({
+            connectionString: process.env.DATABASE_URL,
+        });
+
+        const storageAdapter = new PostgresStorageAdapter(this.pool);
+
+        const config: RepoConfig = {
             network: [new NodeWSServerAdapter(this.wss)],
             sharePolicy: async () => false,
+            storage: storageAdapter,
         };
         this.repo = new Repo(config);
 
@@ -42,24 +61,35 @@ export class AutomergeServer {
         });
     }
 
-    createDocHandle(refId: string, content: unknown): DocHandle<unknown> {
-        let handle = this.docMap.get(refId);
-        if (handle === undefined) {
-            handle = this.repo.create(content);
-            this.setDocHandleCallback(refId, handle);
-            this.docMap.set(refId, handle);
+    async createDoc(content: unknown): Promise<CreateDocSocketResponse> {
+        const handle = this.repo.create(content);
+        if (!handle) {
+            return {
+                Err: "Failed to create a new document",
+            };
         }
-        return handle;
+
+        return { Ok: handle.documentId };
     }
 
-    getDocHandle(refId: string): DocHandle<unknown> | undefined {
-        return this.docMap.get(refId);
-    }
+    startListening(refId: string, docId: string): StartListeningSocketResponse {
+        let handle = this.docMap.get(refId);
+        if (handle) {
+            return { Ok: null };
+        }
 
-    setDocHandleCallback(refId: string, handle: DocHandle<unknown>) {
+        handle = this.repo.find(docId as DocumentId);
+        if (!handle) {
+            return { Err: `Failed to find doc handle in repo for doc_id '${docId}'` };
+        }
+
         handle.on("change", async (payload) => {
             this.handleChange?.(refId, payload.doc);
         });
+
+        this.docMap.set(refId, handle);
+
+        return { Ok: null };
     }
 
     async close() {

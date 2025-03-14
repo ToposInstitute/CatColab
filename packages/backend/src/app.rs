@@ -46,6 +46,10 @@ pub enum AppError {
     #[error("Authentication credentials were not provided")]
     Unauthorized,
 
+    /// Something went wrong in a socket call to the automerge server
+    #[error("Automerge server error: {0}")]
+    AutomergeServer(String),
+
     /// Client does not have permission to perform the requested action on the
     /// document ref.
     #[error("Not authorized to access ref: {0}")]
