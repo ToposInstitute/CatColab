@@ -1,6 +1,8 @@
-{ inputs, pkgs, config, ... }:
+{ lib, inputs, pkgs, config, ... }:
 
 let
+    catcolabnextDeployuserKey = "";
+
     automergePort = "8010";
     backendPort = "8000";
 
@@ -73,6 +75,30 @@ let
         /var/lib/catcolab/infrastructure/scripts/build.sh
     '';
 
+    updateScript = pkgs.writeShellScriptBin "catcolab-update" ''
+        #!/usr/bin/env bash
+
+        set -e
+
+        echo -e "\n#### stoping services...\n"
+        catcolab-stop
+
+        echo -e "\n#### pulling changes...\n"
+        cd /var/lib/catcolab
+        git pull --force
+
+        echo -e "\n#### applying migrations...\n"
+        catcolab-migrate
+
+        echo -e "\n#### building...\n"
+        catcolab-build
+
+        echo -e "\n#### starting services...\n"
+        catcolab-start
+
+        echo -e "\n#### update finished...\n"
+    '';
+
     packages = with pkgs; [
         rustup
         nodejs
@@ -91,6 +117,7 @@ let
         statusScript
         migrateScript
         buildScript
+        updateScript
     ];
 
 in {
@@ -183,7 +210,7 @@ in {
     };
 
     security.sudo.extraRules = [{
-        users = [ "catcolab" ]; 
+        users = [ "catcolab" "deployuser" ];
         commands = [
             { command = "/run/current-system/sw/bin/systemctl start automerge"; options = [ "NOPASSWD" ]; } 
             { command = "/run/current-system/sw/bin/systemctl stop automerge"; options = [ "NOPASSWD" ]; } 
@@ -193,6 +220,16 @@ in {
             { command = "/run/current-system/sw/bin/systemctl restart backend"; options = [ "NOPASSWD" ]; }
         ]; 
     }];
+
+
+    users.users.deployuser = {
+        isNormalUser = true;
+        openssh.authorizedKeys.keys = [
+            ''
+                command="${lib.getExe updateScript}",no-port-forwarding,no-agent-forwarding,no-X11-forwarding,no-pty ${catcolabnextDeployuserKey}
+            ''
+        ];
+    };
 
     environment.systemPackages = packages ++ scripts;
 
