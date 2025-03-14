@@ -1,4 +1,4 @@
-{ inputs, pkgs, config, ... }:
+{ lib, inputs, pkgs, config, ... }:
 
 let
     catcolabnextDeployuserKey = "";
@@ -218,7 +218,6 @@ in {
             { command = "/run/current-system/sw/bin/systemctl start backend"; options = [ "NOPASSWD" ]; } 
             { command = "/run/current-system/sw/bin/systemctl stop backend"; options = [ "NOPASSWD" ]; } 
             { command = "/run/current-system/sw/bin/systemctl restart backend"; options = [ "NOPASSWD" ]; }
-            { command = "${updateScript}/bin/catcolab-update";  options = [ "NOPASSWD" ]; }
         ]; 
     }];
 
@@ -227,7 +226,7 @@ in {
         isNormalUser = true;
         openssh.authorizedKeys.keys = [
             ''
-                command="${updateScript}/bin/catcolab-update",no-port-forwarding,no-agent-forwarding,no-X11-forwarding,no-pty ${catcolabnextDeployuserKey}
+                command="${lib.getExe updateScript}",no-port-forwarding,no-agent-forwarding,no-X11-forwarding,no-pty ${catcolabnextDeployuserKey}
             ''
         ];
     };
