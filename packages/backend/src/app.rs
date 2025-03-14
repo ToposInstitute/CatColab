@@ -55,6 +55,3 @@ pub enum AppError {
     #[error("Not authorized to access ref: {0}")]
     Forbidden(Uuid),
 }
-
-pub type CreateDocSocketResponse = Result<String, String>;
-pub type GetDocSocketResponse = Result<Option<String>, String>;
