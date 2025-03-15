@@ -1,6 +1,6 @@
 import type { KbdKey } from "@solid-primitives/keyboard";
 
-import type { DblTheory, MorType, ObType } from "catlog-wasm";
+import type { DblTheory, MapData, MorType, ObType } from "catlog-wasm";
 import { MorTypeIndex, ObTypeIndex } from "catlog-wasm";
 import type { DiagramAnalysisComponent, ModelAnalysisComponent } from "../analysis";
 import { uniqueIndexArray } from "../util/indexing";
@@ -43,6 +43,9 @@ export class Theory {
      */
     readonly instanceOfName: string;
 
+    /** Privileged sigma migrations along inclusions which need no explicit functor **/
+    inclusions: Map<string, MapData>;
+
     private readonly modelTypeMeta: TypeMetadata<ModelObTypeMeta, ModelMorTypeMeta>;
     private readonly instanceTypeMeta: TypeMetadata<InstanceObTypeMeta, InstanceMorTypeMeta>;
 
@@ -62,6 +65,7 @@ export class Theory {
         modelAnalyses?: ModelAnalysisMeta[];
         onlyFreeModels?: boolean;
         instanceOfName?: string;
+        inclusions?: Map<string, MapData>;
         instanceTypes?: InstanceTypeMeta[];
         diagramAnalyses?: DiagramAnalysisMeta[];
     }) {
@@ -76,7 +80,7 @@ export class Theory {
         this.modelTypeMeta = new TypeMetadata<ModelObTypeMeta, ModelMorTypeMeta>(props.modelTypes);
         this.modelAnalysisMap = uniqueIndexArray(props.modelAnalyses ?? [], (meta) => meta.id);
         this.onlyFreeModels = props.onlyFreeModels ?? false;
-
+        this.inclusions = props.inclusions ?? new Map<string, MapData>();
         // Instances.
         this.instanceOfName = props.instanceOfName ?? "Instance of";
         this.instanceTypeMeta = new TypeMetadata<InstanceObTypeMeta, InstanceMorTypeMeta>(
