@@ -6,8 +6,8 @@ data type for [path equations](`PathEq`).
 
 use either::Either;
 use nonempty::{NonEmpty, nonempty};
-use std::collections::HashSet;
-use std::hash::Hash;
+use std::ops::Range;
+use std::{collections::HashSet, hash::Hash};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -158,6 +158,29 @@ impl<V, E> Path<V, E> {
                 }
             }
         }
+    }
+
+    /// Inserts an edge into the path at the given index.
+    pub fn insert(&mut self, index: usize, edge: E) {
+        if let Path::Seq(edges) = self {
+            edges.insert(index, edge);
+        } else {
+            *self = Path::single(edge);
+        }
+    }
+
+    /// Splices a path into another path at the given range of indices.
+    pub fn spliced(self, range: Range<usize>, replace_with: Self) -> Self {
+        let new_path = if range.start == 0 && range.end == self.len() + 1 {
+            Some(replace_with)
+        } else if let Path::Seq(edges) = self {
+            let mut edges: Vec<_> = edges.into_iter().collect();
+            edges.splice(range, replace_with);
+            Path::from_vec(edges)
+        } else {
+            None
+        };
+        new_path.expect("Range of indices into path should be valid")
     }
 
     /** Source of the path in the given graph.
@@ -482,6 +505,23 @@ mod tests {
     fn singleton_path() {
         let e = 1;
         assert_eq!(SkelPath::single(e).only(), Some(e));
+    }
+
+    #[test]
+    fn insert_into_path() {
+        let mut path = SkelPath::Id(0);
+        path.insert(0, 2);
+        assert_eq!(path, Path::single(2));
+        path.insert(0, 1);
+        assert_eq!(path, Path::pair(1, 2));
+
+        assert_eq!(SkelPath::empty(0).spliced(0..1, Path::pair(0, 1)), Path::pair(0, 1));
+        assert_eq!(SkelPath::empty(0).spliced(0..1, Path::empty(0)), Path::empty(0));
+        let target = SkelPath::Seq(nonempty![0, 1, 2]);
+        assert_eq!(Path::pair(0, 2).spliced(1..1, Path::single(1)), target);
+        assert_eq!(Path::pair(0, 2).spliced(1..2, Path::pair(1, 2)), target);
+        assert_eq!(target.clone().spliced(1..3, Path::pair(1, 2)), target);
+        assert_eq!(target.clone().spliced(1..1, Path::empty(0)), target);
     }
 
     #[test]
