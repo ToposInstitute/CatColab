@@ -1,7 +1,7 @@
 { lib, inputs, pkgs, config, ... }:
 
 let
-    catcolabnextDeployuserKey = "";
+    catcolabnextDeployuserKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM7AYg1fZM0zMxb/BuZTSwK4O3ycUIHruApr1tKoO8nJ deployuser@next.catcolab.org";
 
     automergePort = "8010";
     backendPort = "8000";
