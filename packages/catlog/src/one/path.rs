@@ -6,6 +6,7 @@ data type for [path equations](`PathEq`).
 
 use either::Either;
 use nonempty::{NonEmpty, nonempty};
+use std::fmt::Debug;
 use std::ops::Range;
 use std::{collections::HashSet, hash::Hash};
 
@@ -211,6 +212,47 @@ impl<V, E> Path<V, E> {
         }
     }
 
+    /** Extracts a subpath of a path in a graph.
+
+    Panics if the range is invalid or an empty subpath would be inconsistent.
+     */
+    pub fn subpath(&self, graph: &impl Graph<V = V, E = E>, range: Range<usize>) -> Self
+    where
+        V: Eq + Clone + Debug,
+        E: Clone,
+    {
+        if let Path::Seq(edges) = self {
+            if range.is_empty() {
+                let index = range.start;
+                let v = if index == 0 {
+                    graph.src(edges.first())
+                } else if index == edges.len() {
+                    graph.tgt(edges.last())
+                } else if index < edges.len() {
+                    let (t, s) = (graph.tgt(&(*edges)[index - 1]), graph.src(&(*edges)[index]));
+                    assert_eq!(t, s, "Inconsistent intermediate vertex in path");
+                    t
+                } else {
+                    panic!("Invalid index for empty subpath of path");
+                };
+                Path::Id(v)
+            } else {
+                let (start, end) = (range.start, range.end);
+                let iter = if start == 0 {
+                    let head = std::iter::once(edges.head.clone());
+                    let tail = edges.tail[0..(end - 1)].iter().cloned();
+                    Either::Left(head.chain(tail))
+                } else {
+                    Either::Right(edges.tail[(start - 1)..(end - 1)].iter().cloned())
+                };
+                Path::collect(iter).unwrap()
+            }
+        } else {
+            assert!(range.start == 0 && range.is_empty(), "Invalid subpath of empty path");
+            self.clone()
+        }
+    }
+
     /** Concatenates this path with another path in the graph.
 
     This methods *checks* that the two paths are compatible (the target of this
@@ -408,24 +450,28 @@ impl<V, E> PathEq<V, E> {
 
     /** Source of the path equation in the given graph.
 
-    Only well defined when the path equation is valid.
+    Panics if the two sides of the path equation have different sources.
     */
     pub fn src(&self, graph: &impl Graph<V = V, E = E>) -> V
     where
-        V: Clone,
+        V: Eq + Clone + Debug,
     {
-        self.lhs.src(graph) // == self.rhs.src(graph)
+        let (x, y) = (self.lhs.src(graph), self.rhs.src(graph));
+        assert_eq!(x, y, "Both sides of path equation should have same source");
+        x
     }
 
     /** Target of the path equation in the given graph.
 
-    Only well defined when the path equation is valid.
+    Panics if the two sides of the path equation have different targets.
     */
     pub fn tgt(&self, graph: &impl Graph<V = V, E = E>) -> V
     where
-        V: Clone,
+        V: Eq + Clone + Debug,
     {
-        self.lhs.tgt(graph) // == self.rhs.tgt(graph)
+        let (x, y) = (self.lhs.tgt(graph), self.rhs.tgt(graph));
+        assert_eq!(x, y, "Both sides of path equation should have same target");
+        x
     }
 
     /// Validates that the path equation is well defined in the given graph.
@@ -522,6 +568,18 @@ mod tests {
         assert_eq!(Path::pair(0, 2).spliced(1..2, Path::pair(1, 2)), target);
         assert_eq!(target.clone().spliced(1..3, Path::pair(1, 2)), target);
         assert_eq!(target.clone().spliced(1..1, Path::empty(0)), target);
+    }
+
+    #[test]
+    fn subpath() {
+        let g = SkelGraph::path(4);
+        assert_eq!(Path::Id(1).subpath(&g, 0..0), Path::Id(1));
+        let path = Path::Seq(nonempty![0, 1, 2]);
+        assert_eq!(path.subpath(&g, 0..0), Path::Id(0));
+        assert_eq!(path.subpath(&g, 1..1), Path::Id(1));
+        assert_eq!(path.subpath(&g, 3..3), Path::Id(3));
+        assert_eq!(path.subpath(&g, 0..2), Path::pair(0, 1));
+        assert_eq!(path.subpath(&g, 1..3), Path::pair(1, 2));
     }
 
     #[test]
