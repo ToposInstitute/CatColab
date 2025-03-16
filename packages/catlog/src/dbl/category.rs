@@ -45,6 +45,7 @@ the type level rather than as instances of general data structures.
 
 use derive_more::From;
 use ref_cast::RefCast;
+use std::ops::Range;
 
 use super::graph::{EdgeGraph, VDblGraph};
 use super::tree::DblTree;
@@ -182,8 +183,8 @@ pub trait VDCWithComposites: VDblCategory {
 
     /** Gets the chosen composite for a path of proarrows, if there is one.
 
-    The default implementation returns the codomain of the extension cell
-    returned by [`composite_ext`](Self::composite_ext).
+    The default implementation returns the codomain of the extension cell from
+    [`composite_ext`](Self::composite_ext).
      */
     fn composite(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Pro> {
         self.composite_ext(path).map(|α| self.cell_cod(&α))
@@ -203,9 +204,30 @@ pub trait VDCWithComposites: VDblCategory {
         self.composite_ext(Path::empty(x))
     }
 
-    /// Gets the chosen unit for an object, if there is one.
+    /** Gets the chosen unit for an object, if there is one.
+
+    The default implementation returns the codomain of the extension cell from
+    [`unit_ext`](Self::unit_ext).
+     */
     fn unit(&self, x: Self::Ob) -> Option<Self::Pro> {
         self.unit_ext(x).map(|α| self.cell_cod(&α))
+    }
+
+    /** Factorizes a cell through a composite of proarrows.
+
+    The subpath of the domain path at the given range is replaced with the
+    composite of that subpath, if the composite exists. This is the universal
+    property of the composite.
+    */
+    fn through_composite(&self, cell: Self::Cell, range: Range<usize>) -> Option<Self::Cell>;
+
+    /** Factorizes a cell through the unit proarrow for an object.
+
+    A unit proarrow is inserted into the domain path at the given index, if the
+    unit exists. This is the universal property of the unit.
+     */
+    fn through_unit(&self, cell: Self::Cell, index: usize) -> Option<Self::Cell> {
+        self.through_composite(cell, index..index)
     }
 }
 
@@ -390,6 +412,10 @@ impl VDCWithComposites for WalkingCategory {
     fn composite_ext(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Cell> {
         Some(path.len())
     }
+
+    fn through_composite(&self, n: Self::Cell, range: Range<usize>) -> Option<Self::Cell> {
+        Some(n + 1 - range.len())
+    }
 }
 
 #[allow(non_snake_case)]
@@ -516,6 +542,11 @@ pub mod WalkingBimodule {
         fn composite_ext(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Cell> {
             Some(path)
         }
+
+        fn through_composite(&self, path: Self::Cell, range: Range<usize>) -> Option<Self::Cell> {
+            let graph = ProedgeGraph::ref_cast(UnderlyingDblGraph::ref_cast(self));
+            Some(path.replace_subpath(graph, range, |subpath| self.cell_cod(&subpath).into()))
+        }
     }
 }
 
@@ -619,6 +650,17 @@ pub mod WalkingFunctor {
         fn tgt(self) -> Arr {
             self.src()
         }
+
+        fn map<F>(self, f: F) -> Self
+        where
+            F: FnOnce(usize) -> usize,
+        {
+            match self {
+                Cell::Zero(n) => Cell::Zero(f(n)),
+                Cell::Arrow(n) => Cell::Arrow(f(n)),
+                Cell::One(n) => Cell::One(f(n)),
+            }
+        }
     }
 
     impl VDblCategory for Main {
@@ -692,6 +734,10 @@ pub mod WalkingFunctor {
             assert_eq!(x, y, "Paths in walking functor have the same source and target");
             Some(Cell::with_src_and_tgt(self.id(x), path.len()))
         }
+
+        fn through_composite(&self, cell: Self::Cell, range: Range<usize>) -> Option<Self::Cell> {
+            Some(cell.map(|n| n + 1 - range.len()))
+        }
     }
 }
 
@@ -705,6 +751,7 @@ mod tests {
         assert!(vdc.has_unit(&()));
         assert_eq!(vdc.unit(()), Some(()));
         assert_eq!(vdc.unit_ext(()), Some(0));
+        assert_eq!(vdc.through_unit(2, 1), Some(3));
         assert_eq!(vdc.cell_dom(&0), Path::empty(()));
         assert_eq!(vdc.cell_dom(&2), Path::pair((), ()));
     }
@@ -727,6 +774,15 @@ mod tests {
         assert_eq!(vdc.composite(Path::empty(Ob::Left)), Some(Pro::Left));
         assert_eq!(vdc.composite(Path::empty(Ob::Right)), Some(Pro::Right));
         assert_eq!(vdc.composite(path), Some(Pro::Middle));
+
+        assert_eq!(
+            vdc.through_unit(Pro::Middle.into(), 0),
+            Some(Path::pair(Pro::Left, Pro::Middle))
+        );
+        assert_eq!(
+            vdc.through_unit(Pro::Middle.into(), 1),
+            Some(Path::pair(Pro::Middle, Pro::Right))
+        );
     }
 
     #[test]
@@ -745,5 +801,7 @@ mod tests {
         assert_eq!(vdc.cell_tgt(&ext), Arr::Zero);
         let new_cell = vdc.compose_cells2(vec![ext, ext], cell);
         assert_eq!(vdc.cell_dom(&new_cell).len(), 4);
+
+        assert_eq!(vdc.through_unit(Cell::Arrow(2), 1), Some(Cell::Arrow(3)));
     }
 }

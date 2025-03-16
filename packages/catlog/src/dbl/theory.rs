@@ -48,7 +48,7 @@ by the table:
 | Method                                      | Double theory          | Double category        |
 |---------------------------------------------|------------------------|------------------------|
 | [`hom_type`](DblTheory::hom_type)           | Hom type               | Identity proarrow      |
-| `hom_op`                                    | Hom operation          | Identity cell on arrow |
+| [`hom_op`](DblTheory::hom_op)               | Hom operation          | Identity cell on arrow |
 | [`compose_types`](DblTheory::compose_types) | Compose morphism types | Compose proarrows      |
 
 Finally, operations on both objects and morphisms have identities and can be
@@ -69,14 +69,16 @@ composed:
 */
 
 use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
+use std::ops::Range;
 
 use derivative::Derivative;
 use derive_more::From;
 use ref_cast::RefCast;
 use ustr::{IdentityHasher, Ustr};
 
+use super::category::*;
 use super::graph::ProedgeGraph;
-use super::{category::*, tree::DblTree};
+use super::tree::{DblNode, DblTree};
 use crate::one::{Graph, path::Path};
 use crate::one::{category::*, fin_category::UstrFinCategory};
 use crate::validate::Validate;
@@ -180,15 +182,12 @@ pub trait DblTheory {
         self.compose_ob_ops(Path::Id(x))
     }
 
-    /* Hom morphism operation on an object operation.
+    /** Hom morphism operation on an object operation.
 
     Viewing the double theory as a virtual double category, this is the unit
     cell on an arrow.
-
-    TODO: Implementing this requires the VDCs have an interface for the
-    universal property of a unit.
-    */
-    //fn hom_op(&self, f: Self::ObOp) -> Self::MorOp;
+     */
+    fn hom_op(&self, f: Self::ObOp) -> Self::MorOp;
 
     /// Compose operations on morphisms.
     fn compose_mor_ops(&self, tree: DblTree<Self::ObOp, Self::MorType, Self::MorOp>)
@@ -254,6 +253,14 @@ impl<VDC: VDCWithComposites> DblTheory for VDC {
     }
     fn hom_type(&self, x: Self::ObType) -> Self::MorType {
         self.unit(x).expect("A double theory should have all hom types")
+    }
+    fn hom_op(&self, f: Self::ObOp) -> Self::MorOp {
+        let y = self.cod(&f);
+        let y_ext = self.unit_ext(y).expect("Codomain of arrow should have hom type");
+        let cell = self.compose_cells(
+            DblTree::from_nodes(vec![DblNode::Spine(f), DblNode::Cell(y_ext)]).unwrap(),
+        );
+        self.through_unit(cell, 0).expect("Domain of arrow should have hom type")
     }
 
     fn compose_ob_ops(&self, path: Path<Self::ObType, Self::ObOp>) -> Self::ObOp {
@@ -361,6 +368,11 @@ where
     /// In a discrete double theory, every cell is an extension.
     fn composite_ext(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Cell> {
         Some(path)
+    }
+
+    fn through_composite(&self, path: Self::Cell, range: Range<usize>) -> Option<Self::Cell> {
+        let graph = UnderlyingGraph::ref_cast(&self.0);
+        Some(path.replace_subpath(graph, range, |subpath| self.0.compose(subpath).into()))
     }
 }
 
@@ -689,6 +701,15 @@ where
             projections: vec![],
         })
     }
+
+    fn through_composite(&self, cell: Self::Cell, range: Range<usize>) -> Option<Self::Cell> {
+        let graph = ProedgeGraph::ref_cast(UnderlyingDblGraph::ref_cast(self));
+        let TabMorOp { dom, projections } = cell;
+        Some(TabMorOp {
+            dom: dom.replace_subpath(graph, range, |sub| self.composite(sub).unwrap().into()),
+            projections,
+        })
+    }
 }
 
 #[cfg(test)]
@@ -710,6 +731,9 @@ mod tests {
         assert!(th.has_mor_type(&Mor::Generator('n')));
         let path = Path::pair(Mor::Generator('n'), Mor::Generator('n'));
         assert_eq!(th.compose_types(path), Some(Mor::Id('*')));
+
+        assert_eq!(th.hom_type('*'), Mor::Id('*'));
+        assert_eq!(th.hom_op('*'), Path::single(Mor::Id('*')));
     }
 
     #[test]
