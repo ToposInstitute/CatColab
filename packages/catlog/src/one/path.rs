@@ -6,7 +6,6 @@ data type for [path equations](`PathEq`).
 
 use either::Either;
 use nonempty::{NonEmpty, nonempty};
-use std::fmt::Debug;
 use std::ops::Range;
 use std::{collections::HashSet, hash::Hash};
 
@@ -171,11 +170,11 @@ impl<V, E> Path<V, E> {
     }
 
     /// Splices a path into another path at the given range of indices.
-    pub fn spliced(self, range: Range<usize>, replace_with: Self) -> Self {
-        let new_path = if range.start == 0 && range.end == self.len() + 1 {
+    pub fn splice(self, range: Range<usize>, replace_with: Self) -> Self {
+        let new_path = if range.start == 0 && range.end == self.len() {
             Some(replace_with)
         } else if let Path::Seq(edges) = self {
-            let mut edges: Vec<_> = edges.into_iter().collect();
+            let mut edges: Vec<_> = edges.into();
             edges.splice(range, replace_with);
             Path::from_vec(edges)
         } else {
@@ -218,7 +217,7 @@ impl<V, E> Path<V, E> {
      */
     pub fn subpath(&self, graph: &impl Graph<V = V, E = E>, range: Range<usize>) -> Self
     where
-        V: Eq + Clone + Debug,
+        V: Eq + Clone,
         E: Clone,
     {
         if let Path::Seq(edges) = self {
@@ -230,7 +229,7 @@ impl<V, E> Path<V, E> {
                     graph.tgt(edges.last())
                 } else if index < edges.len() {
                     let (t, s) = (graph.tgt(&(*edges)[index - 1]), graph.src(&(*edges)[index]));
-                    assert_eq!(t, s, "Inconsistent intermediate vertex in path");
+                    assert!(t == s, "Inconsistent intermediate vertex in path");
                     t
                 } else {
                     panic!("Invalid index for empty subpath of path");
@@ -251,6 +250,25 @@ impl<V, E> Path<V, E> {
             assert!(range.start == 0 && range.is_empty(), "Invalid subpath of empty path");
             self.clone()
         }
+    }
+
+    /** Replaces the subpath at the given range with a function of that subpath.
+
+    Panics under the same conditions as [`subpath`](Self::subpath).
+     */
+    pub fn replace_subpath<F>(
+        self,
+        graph: &impl Graph<V = V, E = E>,
+        range: Range<usize>,
+        f: F,
+    ) -> Self
+    where
+        V: Eq + Clone,
+        E: Clone,
+        F: FnOnce(Self) -> Self,
+    {
+        let subpath = self.subpath(graph, range.clone());
+        self.splice(range, f(subpath))
     }
 
     /** Concatenates this path with another path in the graph.
@@ -454,10 +472,10 @@ impl<V, E> PathEq<V, E> {
     */
     pub fn src(&self, graph: &impl Graph<V = V, E = E>) -> V
     where
-        V: Eq + Clone + Debug,
+        V: Eq + Clone,
     {
         let (x, y) = (self.lhs.src(graph), self.rhs.src(graph));
-        assert_eq!(x, y, "Both sides of path equation should have same source");
+        assert!(x == y, "Both sides of path equation should have same source");
         x
     }
 
@@ -467,10 +485,10 @@ impl<V, E> PathEq<V, E> {
     */
     pub fn tgt(&self, graph: &impl Graph<V = V, E = E>) -> V
     where
-        V: Eq + Clone + Debug,
+        V: Eq + Clone,
     {
         let (x, y) = (self.lhs.tgt(graph), self.rhs.tgt(graph));
-        assert_eq!(x, y, "Both sides of path equation should have same target");
+        assert!(x == y, "Both sides of path equation should have same target");
         x
     }
 
@@ -561,13 +579,13 @@ mod tests {
         path.insert(0, 1);
         assert_eq!(path, Path::pair(1, 2));
 
-        assert_eq!(SkelPath::empty(0).spliced(0..1, Path::pair(0, 1)), Path::pair(0, 1));
-        assert_eq!(SkelPath::empty(0).spliced(0..1, Path::empty(0)), Path::empty(0));
+        assert_eq!(SkelPath::empty(0).splice(0..0, Path::pair(0, 1)), Path::pair(0, 1));
+        assert_eq!(SkelPath::empty(0).splice(0..0, Path::empty(0)), Path::empty(0));
         let target = SkelPath::Seq(nonempty![0, 1, 2]);
-        assert_eq!(Path::pair(0, 2).spliced(1..1, Path::single(1)), target);
-        assert_eq!(Path::pair(0, 2).spliced(1..2, Path::pair(1, 2)), target);
-        assert_eq!(target.clone().spliced(1..3, Path::pair(1, 2)), target);
-        assert_eq!(target.clone().spliced(1..1, Path::empty(0)), target);
+        assert_eq!(Path::pair(0, 2).splice(1..1, Path::single(1)), target);
+        assert_eq!(Path::pair(0, 2).splice(1..2, Path::pair(1, 2)), target);
+        assert_eq!(target.clone().splice(1..3, Path::pair(1, 2)), target);
+        assert_eq!(target.clone().splice(1..1, Path::empty(0)), target);
     }
 
     #[test]
