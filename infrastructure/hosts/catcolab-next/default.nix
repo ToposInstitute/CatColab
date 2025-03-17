@@ -48,6 +48,15 @@ in
 
     users.users.root.openssh.authorizedKeys.keys = [ owen epatters jmoggr ];
 
+    # fixes error 'fatal: detected dubious ownership in repository' caused by git being nervous about
+    # finding files whose ownership is different from the calling user
+    programs.git = {
+      enable = true;
+      config = {
+        safe.directory = "/var/lib/catcolab";
+      };
+    };
+
     time.timeZone = "America/New_York";
 
     services.openssh.enable = true;
