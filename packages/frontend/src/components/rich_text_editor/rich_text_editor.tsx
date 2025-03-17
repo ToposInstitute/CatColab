@@ -1,18 +1,22 @@
 import type { Prop } from "@automerge/automerge";
 import type { DocHandle } from "@automerge/automerge-repo";
 
-import { init } from "@automerge/prosemirror";
+import { type MappedSchemaSpec, SchemaAdapter, init } from "@automerge/prosemirror";
 import { baseKeymap, toggleMark } from "prosemirror-commands";
 import { keymap } from "prosemirror-keymap";
-import type { Schema } from "prosemirror-model";
+import type { NodeType, Schema } from "prosemirror-model";
 import { type Command, EditorState, Plugin, type Transaction } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
 
 import { createEffect, onCleanup } from "solid-js";
-import { useDocHandleReady } from "../api/document";
+import { useDocHandleReady } from "../../api/document";
 
 import "prosemirror-view/style/prosemirror.css";
 import "./rich_text_editor.css";
+import { useApi } from "../../api";
+import { basicSchema } from "./basic_schema";
+import { catcolabSchema } from "./catcolab_schema";
+import { RefIdView } from "./ref_id_view";
 
 /** Optional props for `RichTextEditor` component.
  */
@@ -44,6 +48,7 @@ export const RichTextEditor = (
 ) => {
     let editorRoot!: HTMLDivElement;
 
+    const api = useApi();
     const isReady = useDocHandleReady(() => props.handle);
 
     createEffect(() => {
@@ -56,7 +61,22 @@ export const RichTextEditor = (
             return;
         }
 
-        const { schema, pmDoc, plugin } = init(props.handle, props.path);
+        const customSchema: MappedSchemaSpec = {
+            nodes: {
+                ...basicSchema.nodes,
+                ...catcolabSchema.nodes,
+            },
+            marks: {
+                ...basicSchema.marks,
+                ...catcolabSchema.marks,
+            },
+        };
+
+        const customSchemaAdapter = new SchemaAdapter(customSchema);
+
+        const { schema, pmDoc, plugin } = init(props.handle, props.path, {
+            schemaAdapter: customSchemaAdapter,
+        });
 
         const plugins: Plugin[] = [
             keymap(richTextEditorKeymap(schema, props)),
@@ -76,6 +96,11 @@ export const RichTextEditor = (
                 focus: () => {
                     props.onFocus?.();
                     return false;
+                },
+            },
+            nodeViews: {
+                catcolabref(node, view, getPos) {
+                    return new RefIdView(node, view, getPos, api);
                 },
             },
         });
@@ -109,6 +134,25 @@ function richTextEditorKeymap(schema: Schema, props: RichTextEditorOptions) {
     if (props.exitDown) {
         bindings["ArrowDown"] = doIfAtBottom(props.exitDown);
     }
+
+    function insertCatcolabRef(node: NodeType): Command {
+        return (state, dispatch) => {
+            const { $from } = state.selection;
+            const index = $from.index();
+            if (!$from.parent.canReplaceWith(index, index, node)) {
+                return false;
+            }
+            if (dispatch) {
+                dispatch(state.tr.replaceSelectionWith(node.create()));
+            }
+            return true;
+        };
+    }
+
+    if (schema.nodes.catcolabref) {
+        bindings["Mod-x"] = insertCatcolabRef(schema.nodes.catcolabref);
+    }
+
     return bindings;
 }
 
