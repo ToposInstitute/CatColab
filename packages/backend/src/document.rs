@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use socketioxide::SocketIo;
 use ts_rs::TS;
 use uuid::Uuid;
 
@@ -10,6 +11,11 @@ use super::app::{AppCtx, AppError, AppState};
 /// Creates a new document ref with initial content.
 pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
     let ref_id = Uuid::now_v7();
+
+    // If the document is created but the db transaction doesn't complete, then the document will be
+    // orphaned. The only negative consequence of that is additional space used, but that should be
+    // negligible and we can later create a service which periodically cleans out the orphans
+    let doc_id = create_automerge_doc(&ctx.state.automerge_io, content.clone()).await?;
 
     let mut transaction = ctx.state.db.begin().await?;
 
@@ -20,11 +26,12 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
             VALUES ($1, $2, NOW())
             RETURNING id
         )
-        INSERT INTO refs(id, head, created)
-        VALUES ($1, (SELECT id FROM snapshot), NOW())
+        INSERT INTO refs(id, head, created, doc_id)
+        VALUES ($1, (SELECT id FROM snapshot), NOW(), $3)
         ",
         ref_id,
-        content
+        content,
+        doc_id,
     );
     insert_ref.execute(&mut *transaction).await?;
 
@@ -95,24 +102,70 @@ pub async fn save_snapshot(state: AppState, data: RefContent) -> Result<(), AppE
     Ok(())
 }
 
-/// Gets an Automerge document ID for the document ref.
 pub async fn doc_id(state: AppState, ref_id: Uuid) -> Result<String, AppError> {
-    let automerge_io = &state.automerge_io;
-    let ack = automerge_io.emit_with_ack::<Vec<Option<String>>>("get_doc", ref_id).unwrap();
-    let mut response = ack.await?;
+    let query = sqlx::query!(
+        "
+        SELECT doc_id FROM refs
+        WHERE id = $1
+        ",
+        ref_id
+    );
 
-    let maybe_doc_id = response.data.pop().flatten();
-    if let Some(doc_id) = maybe_doc_id {
-        // If an Automerge doc handle for this ref already exists, return it.
-        Ok(doc_id)
-    } else {
-        // Otherwise, fetch the content from the database and create a new
-        // Automerge doc handle.
-        let content = head_snapshot(state.clone(), ref_id).await?;
-        let data = RefContent { ref_id, content };
-        let ack = automerge_io.emit_with_ack::<Vec<String>>("create_doc", data).unwrap();
-        let response = ack.await?;
-        Ok(response.data[0].to_string())
+    let doc_id =
+        query
+            .fetch_one(&state.db)
+            .await?
+            .doc_id
+            .ok_or(AppError::AutomergeServer(format!(
+                "failed to find doc_id for ref_id '{}'",
+                ref_id
+            )))?;
+
+    start_listening_automerge_doc(&state.automerge_io, ref_id, doc_id.clone()).await?;
+
+    Ok(doc_id)
+}
+
+async fn start_listening_automerge_doc(
+    automerge_io: &SocketIo,
+    ref_id: Uuid,
+    doc_id: String,
+) -> Result<(), AppError> {
+    let ack = automerge_io
+        .emit_with_ack::<Vec<Result<(), String>>>("start_listening", [ref_id.to_string(), doc_id])
+        .map_err(|e| {
+            AppError::AutomergeServer(format!("Failed to call start_listening from backend {}", e))
+        })?;
+
+    let response_array = ack.await?.data;
+    let response = response_array
+        .into_iter()
+        .next()
+        .ok_or_else(|| AppError::AutomergeServer("Empty ack response".to_string()))?;
+
+    match response {
+        Ok(_) => Ok(()),
+        Err(err) => Err(AppError::AutomergeServer(err)),
+    }
+}
+
+async fn create_automerge_doc(automerge_io: &SocketIo, content: Value) -> Result<String, AppError> {
+    let ack = automerge_io
+        // Expecting an array of responses instead of a single response for unknowable reasons
+        .emit_with_ack::<Vec<Result<String, String>>>("create_doc", content)
+        .map_err(|e| {
+            AppError::AutomergeServer(format!("Failed to call create_doc from backend {}", e))
+        })?;
+
+    let response_array = ack.await?.data;
+    let response = response_array
+        .into_iter()
+        .next()
+        .ok_or_else(|| AppError::AutomergeServer("Empty ack response".to_string()))?;
+
+    match response {
+        Ok(doc_id) => Ok(doc_id),
+        Err(err) => Err(AppError::AutomergeServer(err)),
     }
 }
 
