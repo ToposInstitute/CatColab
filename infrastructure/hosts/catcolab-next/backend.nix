@@ -78,7 +78,8 @@ let
     updateScript = pkgs.writeShellScriptBin "catcolab-update" ''
         #!/usr/bin/env bash
 
-        set -e
+        # exit on error and print all commands before they are run
+        set -ex
 
         echo -e "\n#### stoping services...\n"
         catcolab-stop
@@ -88,7 +89,8 @@ let
         git pull --force
 
         echo -e "\n#### applying migrations...\n"
-        catcolab-migrate
+        cd /var/lib/catcolab/packages/backend
+        sqlx migrate run
 
         echo -e "\n#### building...\n"
         catcolab-build
@@ -107,6 +109,7 @@ let
         stdenv.cc
         openssl.dev
         pkg-config
+        sqlx-cli
     ];
 
     scripts = [
