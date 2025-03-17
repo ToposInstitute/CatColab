@@ -48,6 +48,11 @@ in
 
     users.users.root.openssh.authorizedKeys.keys = [ owen epatters jmoggr ];
 
+    # new files should be group writeable. Default is 0022
+    environment.extraInit = ''
+      umask 0002
+    '';
+
     time.timeZone = "America/New_York";
 
     services.openssh.enable = true;
