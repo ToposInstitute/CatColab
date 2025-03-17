@@ -48,6 +48,11 @@ in
 
     users.users.root.openssh.authorizedKeys.keys = [ owen epatters jmoggr ];
 
+    # new files should be group writeable. Default is 0022
+    environment.extraInit = ''
+      umask 0002
+    '';
+
     # fixes error 'fatal: detected dubious ownership in repository' caused by git being nervous about
     # finding files whose ownership is different from the calling user
     programs.git = {
