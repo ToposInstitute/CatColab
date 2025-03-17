@@ -155,7 +155,9 @@ const RefIdWidget = (props: {
                     when={refStub()}
                     keyed
                     fallback={
-                        <span class="error ref-id-view">Error: Could not load reference {props.refId}</span>
+                        <span class="error ref-id-view">
+                            Error: Could not load reference {props.refId}
+                        </span>
                     }
                 >
                     {(stub) => (

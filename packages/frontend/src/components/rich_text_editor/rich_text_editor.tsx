@@ -5,7 +5,13 @@ import { type MappedSchemaSpec, SchemaAdapter, init } from "@automerge/prosemirr
 import { baseKeymap, toggleMark } from "prosemirror-commands";
 import { keymap } from "prosemirror-keymap";
 import type { NodeType, Schema } from "prosemirror-model";
-import { type Command, EditorState, NodeSelection, Plugin, type Transaction } from "prosemirror-state";
+import {
+    type Command,
+    EditorState,
+    NodeSelection,
+    Plugin,
+    type Transaction,
+} from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
 
 import { createEffect, onCleanup } from "solid-js";
@@ -18,13 +24,10 @@ import "./rich_text_editor.css";
 import { useApi } from "../../api";
 import { basicSchema } from "./basic_schema";
 import { catcolabSchema } from "./catcolab_schema";
-import { RefIdView } from "./ref_id_view";
 import { katexSchema } from "./katex_schema";
+import { RefIdView } from "./ref_id_view";
 
-import {
-    mathSerializer,
-    mathPlugin,
-} from "@benrbray/prosemirror-math";
+import { mathPlugin, mathSerializer } from "@benrbray/prosemirror-math";
 
 /** Optional props for `RichTextEditor` component.
  */
@@ -90,12 +93,12 @@ export const RichTextEditor = (
             keymap(baseKeymap),
             ...(props.placeholder ? [placeholder(props.placeholder)] : []),
             plugin,
-            mathPlugin
+            mathPlugin,
         ];
 
         const state = EditorState.create({ schema, plugins, doc: pmDoc });
         const view = new EditorView(editorRoot, {
-            state, 
+            state,
             dispatchTransaction: (tx: Transaction) => {
                 // XXX: It appears that automerge-prosemirror can dispatch
                 // transactions even after the view has been destroyed.
@@ -112,7 +115,9 @@ export const RichTextEditor = (
                     return new RefIdView(node, view, getPos, api);
                 },
             },
-            clipboardTextSerializer: (slice) => { return mathSerializer.serializeSlice(slice) },
+            clipboardTextSerializer: (slice) => {
+                return mathSerializer.serializeSlice(slice);
+            },
         });
         if (props.ref) {
             props.ref(view);
@@ -125,20 +130,23 @@ export const RichTextEditor = (
 };
 
 // copied from "@benrbray/prosemirror-math" to hack on
-export function insertMathCmd(mathNodeType: NodeType, initialText="\\int"): Command {
-	return function(state:EditorState, dispatch:((tr:Transaction)=>void)|undefined){
-		let { $from } = state.selection, index = $from.index();
-		// if (!$from.parent.canReplaceWith(index, index, mathNodeType)) {
-		// 	return false;
-		// }
-		if (dispatch){
-			let mathNode = mathNodeType.create({}, initialText ? state.schema.text(initialText) : null);
-			let tr = state.tr.replaceSelectionWith(mathNode);
-			tr = tr.setSelection(NodeSelection.create(tr.doc, $from.pos));
-			dispatch(tr);
-		}
-		return true;
-	}
+export function insertMathCmd(mathNodeType: NodeType, initialText = "\\int"): Command {
+    return (state: EditorState, dispatch: ((tr: Transaction) => void) | undefined) => {
+        const { $from } = state.selection;
+        // if (!$from.parent.canReplaceWith(index, index, mathNodeType)) {
+        // 	return false;
+        // }
+        if (dispatch) {
+            const mathNode = mathNodeType.create(
+                {},
+                initialText ? state.schema.text(initialText) : null,
+            );
+            let tr = state.tr.replaceSelectionWith(mathNode);
+            tr = tr.setSelection(NodeSelection.create(tr.doc, $from.pos));
+            dispatch(tr);
+        }
+        return true;
+    };
 }
 
 function richTextEditorKeymap(schema: Schema, props: RichTextEditorOptions) {
