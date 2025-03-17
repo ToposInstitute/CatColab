@@ -7,7 +7,7 @@ use socketioxide::SocketIo;
 use ts_rs::TS;
 use uuid::Uuid;
 
-use crate::app::{AppCtx, AppError, AppState, CreateDocSocketResponse, GetDocSocketResponse};
+use crate::app::{AppCtx, AppError, AppState};
 use crate::{auth::PermissionLevel, user::UserSummary};
 
 /// Creates a new document ref with initial content.
