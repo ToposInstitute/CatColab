@@ -229,6 +229,7 @@ in {
                 command="${lib.getExe updateScript}",no-port-forwarding,no-agent-forwarding,no-X11-forwarding,no-pty ${catcolabnextDeployuserKey}
             ''
         ];
+        extraGroups = [ "catcolab" ];
     };
 
     environment.systemPackages = packages ++ scripts;
