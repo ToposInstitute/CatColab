@@ -1,7 +1,7 @@
 { lib, inputs, pkgs, config, ... }:
 
 let
-    catcolabnextDeployuserKey = "";
+    catcolabnextDeployuserKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM7AYg1fZM0zMxb/BuZTSwK4O3ycUIHruApr1tKoO8nJ deployuser@next.catcolab.org";
 
     automergePort = "8010";
     backendPort = "8000";
@@ -78,7 +78,8 @@ let
     updateScript = pkgs.writeShellScriptBin "catcolab-update" ''
         #!/usr/bin/env bash
 
-        set -e
+        # exit on error and print all commands before they are run
+        set -ex
 
         echo -e "\n#### stoping services...\n"
         catcolab-stop
@@ -88,7 +89,8 @@ let
         git pull --force
 
         echo -e "\n#### applying migrations...\n"
-        catcolab-migrate
+        cd /var/lib/catcolab/packages/backend
+        sqlx migrate run
 
         echo -e "\n#### building...\n"
         catcolab-build
@@ -107,6 +109,7 @@ let
         stdenv.cc
         openssl.dev
         pkg-config
+        sqlx-cli
     ];
 
     scripts = [
@@ -229,6 +232,7 @@ in {
                 command="${lib.getExe updateScript}",no-port-forwarding,no-agent-forwarding,no-X11-forwarding,no-pty ${catcolabnextDeployuserKey}
             ''
         ];
+        extraGroups = [ "catcolab" ];
     };
 
     environment.systemPackages = packages ++ scripts;
