@@ -150,8 +150,7 @@ function richTextEditorKeymap(schema: Schema, props: RichTextEditorOptions) {
     }
 
     if (schema.nodes.catcolabref) {
-        bindings["Alt-r"] = insertCatcolabRef(schema.nodes.catcolabref);
-        bindings["Mod-r"] = insertCatcolabRef(schema.nodes.catcolabref);
+        bindings["Mod-x"] = insertCatcolabRef(schema.nodes.catcolabref);
     }
 
     return bindings;
