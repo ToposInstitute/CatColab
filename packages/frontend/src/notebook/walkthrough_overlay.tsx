@@ -1,4 +1,4 @@
-import { Show, createEffect, createSignal } from "solid-js";
+import { For, Show, createEffect, createSignal } from "solid-js";
 import "./walkthrough_overlay.css";
 
 export function WalkthroughOverlay(props: { isOpen: boolean; onClose: () => void }) {
@@ -116,26 +116,25 @@ export function WalkthroughOverlay(props: { isOpen: boolean; onClose: () => void
                             </p>
                         </header>
                         <div class="intro-content carousel">
-                            {introContent.map((content) => (
-                                <div
-                                    key={content.id}
-                                    data-key={content.id}
-                                    classList={{
-                                        "carousel-item": true,
-                                        active:
-                                            currentContentIndex() === introContent.indexOf(content),
-                                    }}
-                                >
-                                    <div class="media-container">
-                                        {content.type === "image" ? (
-                                            <img src={content.src} alt={content.alt} />
-                                        ) : (
-                                            <video src={content.src} autoplay loop muted />
-                                        )}
+                            <For each={introContent}>
+                                {(content, index) => (
+                                    <div
+                                        classList={{
+                                            "carousel-item": true,
+                                            active: currentContentIndex() === index(),
+                                        }}
+                                    >
+                                        <div class="media-container">
+                                            {content.type === "image" ? (
+                                                <img src={content.src} alt={content.alt} />
+                                            ) : (
+                                                <video src={content.src} autoplay loop muted />
+                                            )}
+                                        </div>
+                                        <p class="carousel-caption">{content.caption}</p>
                                     </div>
-                                    <p class="carousel-caption">{content.caption}</p>
-                                </div>
-                            ))}
+                                )}
+                            </For>
                         </div>
                     </div>
                 </Show>
@@ -231,22 +230,23 @@ export function WalkthroughOverlay(props: { isOpen: boolean; onClose: () => void
 
                 <div class="footer-container">
                     <div class="progress-bar">
-                        {Array.from({ length: totalSteps }).map((_, step) => {
-                            const isActive = step === currentStep();
-                            const isCompleted = step < currentStep();
-                            return (
-                                <div
-                                    key={`step-dot-${step + 1}`}
-                                    data-key={`step-dot-${step + 1}`}
-                                    classList={{
-                                        "progress-dot": true,
-                                        active: isActive,
-                                        completed: isCompleted,
-                                    }}
-                                    onClick={() => setCurrentStep(step)}
-                                />
-                            );
-                        })}
+                        <For each={Array.from({ length: totalSteps })}>
+                            {(_, index) => {
+                                const step = index();
+                                const isActive = step === currentStep();
+                                const isCompleted = step < currentStep();
+                                return (
+                                    <div
+                                        classList={{
+                                            "progress-dot": true,
+                                            active: isActive,
+                                            completed: isCompleted,
+                                        }}
+                                        onClick={() => setCurrentStep(step)}
+                                    />
+                                );
+                            }}
+                        </For>
                     </div>
 
                     <div class="navigation-buttons">
