@@ -30,7 +30,7 @@
 .get-started {
     margin-top: 20px;
     padding: 10px 20px;
-    background-color: #53b6b2; /* Example color */
+    background-color: var(--topos-color);
     color: white;
     border: none;
     border-radius: 5px;
@@ -85,8 +85,10 @@
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background: #ddd;
-    transition: all 0.2s ease;
+    background-color: #ddd;
+    margin: 0 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
 }
 
 .progress-dot.active {
@@ -100,7 +102,8 @@
 
 .step-content {
     padding: 25px 35px;
-    min-height: 350px;
+    min-height: 250px;
+    overflow-y: auto;
 }
 
 .fade-in {
@@ -291,7 +294,7 @@
 .carousel-item {
     display: none;
     opacity: 0;
-    transition: opacity 0.5s ease-in-out;
+    transition: opacity 0.7s ease-in-out;
 }
 
 .carousel-item.active {

@@ -233,16 +233,20 @@ export function WalkthroughOverlay(props: { isOpen: boolean; onClose: () => void
                         <For each={Array.from({ length: totalSteps })}>
                             {(_, index) => {
                                 const step = index();
-                                const isActive = step === currentStep();
-                                const isCompleted = step < currentStep();
                                 return (
                                     <div
                                         classList={{
                                             "progress-dot": true,
-                                            active: isActive,
-                                            completed: isCompleted,
+                                            active: currentStep() === step,
+                                            completed: currentStep() > step,
                                         }}
-                                        onClick={() => setCurrentStep(step)}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setCurrentStep(step);
+                                            if (step === 0) {
+                                                setCurrentContentIndex(0);
+                                            }
+                                        }}
                                     />
                                 );
                             }}
