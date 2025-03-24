@@ -64,14 +64,7 @@
         #   };
         # };
         catcolab-jmoggr = {
-          hostname = "ec2-54-160-207-90.compute-1.amazonaws.com";
-          profiles.system = {
-            sshUser = "root";
-            path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.catcolab-jmoggr;
-          };
-        };
-        catcolab-jmoggr3 = {
-          hostname = "ec2-3-89-101-129.compute-1.amazonaws.com";
+          hostname = "backend-next.jmoggr.com";
           profiles.system = {
             sshUser = "root";
             path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.catcolab-jmoggr;
