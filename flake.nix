@@ -31,7 +31,6 @@
       };
 
       catcolabPackages = {
-        # initialize naersk and pass it to build backend
         backend = pkgs.lib.callPackageWith pkgs ./packages/backend/default.nix {
           naersk = pkgs.callPackage naersk { };
         };
