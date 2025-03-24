@@ -3,10 +3,8 @@
   pkgs,
   inputs,
   config,
-  catcolabPackages,
   ...
 }:
-
 let
   # idempotent script for intializing the catcolab database
   databaseSetupScript = pkgs.writeShellScriptBin "database-setup" ''
@@ -39,6 +37,16 @@ let
     cd ${catcolabPackages.backend}
     ${lib.getExe pkgs.sqlx-cli} migrate run
   '';
+
+  catcolabPackages = {
+    backend = pkgs.lib.callPackageWith pkgs ../../packages/backend/default.nix {
+      naersk = pkgs.callPackage inputs.naersk { };
+    };
+
+    automerge-doc-server =
+      pkgs.lib.callPackageWith pkgs ../../packages/automerge-doc-server/default.nix
+        { };
+  };
 in
 with lib;
 {
@@ -171,6 +179,8 @@ with lib;
       ++ [
         databaseSetupScript
         databaseMigrationScript
+        catcolabPackages.automerge-doc-server
+        catcolabPackages.backend
       ];
   };
 }
