@@ -1,237 +1,156 @@
-{ lib, inputs, pkgs, config, ... }:
+{
+  lib,
+  pkgs,
+  inputs,
+  config,
+  catcolabPackages,
+  ...
+}:
 
 let
-    catcolabnextDeployuserKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM7AYg1fZM0zMxb/BuZTSwK4O3ycUIHruApr1tKoO8nJ deployuser@next.catcolab.org";
 
-    automergePort = "8010";
-    backendPort = "8000";
+  automergePort = "8010";
+  backendPort = "8000";
 
-    automergeScript = pkgs.writeShellScript "automerge.sh" ''
-        ${pkgs.nodejs}/bin/node dist/automerge-doc-server/src/main.js
-    '';
+  # idempotent script for intializing the catcolab database
+  databaseSetupScript = pkgs.writeShellScriptBin "database-setup" ''
+    #!/usr/bin/env bash
+    set -ex
 
-    backendScript = pkgs.writeShellScript "backend.sh" ''
-        ln -sf ${config.age.secrets.".env".path} /var/lib/catcolab/packages/backend/
-        ../../target/debug/backend
-    '';
+    # Extract the password from the secret file
+    password=$(cat ${config.age.secrets.backendSecretsForPostgres.path} | sed -n 's|.*://[^:]*:\([^@]*\)@.*|\1|p')
 
-    initScript = pkgs.writeShellScriptBin "catcolab-init" ''
-        echo -e "\n\n##### catcolab-init: cloning catcolab repo...\n\n"
-        cd /var/lib
-        if [ -z "$1" ]; then branch="main"; else branch="$1"; fi
-        git clone -b $branch https://github.com/ToposInstitute/CatColab.git
-        mv CatColab catcolab
-        chown -R catcolab:catcolab catcolab
+    # Create the user only if it doesn't already exist.
+    if ! ${pkgs.postgresql}/bin/psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='catcolab'" | grep -q 1; then
+      ${pkgs.postgresql}/bin/psql -c "CREATE USER catcolab WITH ENCRYPTED PASSWORD '$password';"
+    fi
 
-        echo -e "\n\n##### catcolab-init: linking secrets...\n\n"
-        ln -sf ${config.age.secrets.".env".path} /var/lib/catcolab/packages/backend/
-        
-        echo -e "\n\n##### catcolab-init: installing nodejs dependencies...\n\n"
-        su -l catcolab -c "cd /var/lib/catcolab/packages/backend; pnpm install"
+    # Create the database only if it doesn't already exist.
+    if ! ${pkgs.postgresql}/bin/psql -tAc "SELECT 1 FROM pg_database WHERE datname='catcolab'" | grep -q 1; then
+      ${pkgs.postgresql}/bin/psql -c "CREATE DATABASE catcolab;"
+    fi
 
-        echo -e "\n\n##### catcolab-init: installing rust and cargo...\n\n"
-        su -l catcolab -c "rustup default stable"
-        
-        echo -e "\n\n##### catcolab-init: installing sqlx-cli for migrations...\n\n"
-        su -l catcolab -c "cargo install sqlx-cli"
+    ${pkgs.postgresql}/bin/psql -c "alter database catcolab owner to catcolab;"
+    ${pkgs.postgresql}/bin/psql -c "grant all privileges on database catcolab to catcolab;"
+    ${pkgs.postgresql}/bin/psql -d catcolab -c "grant all on schema public to catcolab;"
+  '';
 
-        echo -e "\n\n##### catcolab-init: setting up postgres user, database, permissions...\n\n"
-        su -l postgres -- /var/lib/catcolab/infrastructure/scripts/initdb.sh $(cat ${config.age.secrets.".env".path})
+  databaseMigrationScript = pkgs.writeShellScriptBin "database-migration" ''
+    #!/usr/bin/env bash
+    set -ex
 
-        echo -e "\n\n##### catcolab-init: stopping automerge, build services...\n\n"
-        /var/lib/catcolab/infrastructure/scripts/stop.sh
-
-        echo -e "\n\n##### catcolab-init: migrating database...\n\n"
-        su -l catcolab -- /var/lib/catcolab/infrastructure/scripts/migrate.sh
-
-        echo -e "\n\n##### catcolab-init: building binaries...\n\n"
-        su -l catcolab -- /var/lib/catcolab/infrastructure/scripts/build.sh
-
-        echo -e "\n\n##### catcolab-init: start automerge, build services...\n\n"
-        /var/lib/catcolab/infrastructure/scripts/start.sh
-    '';
-
-    stopScript = pkgs.writeShellScriptBin "catcolab-stop" ''
-        /var/lib/catcolab/infrastructure/scripts/stop.sh
-    '';
-
-    startScript = pkgs.writeShellScriptBin "catcolab-start" ''
-        /var/lib/catcolab/infrastructure/scripts/start.sh
-    '';
-
-    restartScript = pkgs.writeShellScriptBin "catcolab-restart" ''
-        /var/lib/catcolab/infrastructure/scripts/restart.sh
-    '';
-
-    statusScript = pkgs.writeShellScriptBin "catcolab-status" ''
-        /var/lib/catcolab/infrastructure/scripts/status.sh
-    '';
-
-    migrateScript = pkgs.writeShellScriptBin "catcolab-migrate" ''
-        /var/lib/catcolab/infrastructure/scripts/migrate.sh
-    '';
-
-    buildScript = pkgs.writeShellScriptBin "catcolab-build" ''
-        /var/lib/catcolab/infrastructure/scripts/build.sh
-    '';
-
-    updateScript = pkgs.writeShellScriptBin "catcolab-update" ''
-        #!/usr/bin/env bash
-
-        set -e
-
-        echo -e "\n#### stoping services...\n"
-        catcolab-stop
-
-        echo -e "\n#### pulling changes...\n"
-        cd /var/lib/catcolab
-        git pull --force
-
-        echo -e "\n#### applying migrations...\n"
-        catcolab-migrate
-
-        echo -e "\n#### building...\n"
-        catcolab-build
-
-        echo -e "\n#### starting services...\n"
-        catcolab-start
-
-        echo -e "\n#### update finished...\n"
-    '';
-
-    packages = with pkgs; [
-        rustup
-        nodejs
-        nodejs.pkgs.pnpm
-        git
-        stdenv.cc
-        openssl.dev
-        pkg-config
-    ];
-
-    scripts = [
-        initScript
-        stopScript
-        startScript
-        restartScript
-        statusScript
-        migrateScript
-        buildScript
-        updateScript
-    ];
-
-in {
-    age.secrets.".env" = {
-        file = "${inputs.self}/secrets/.env.next.age";
-        mode = "400";
-        owner = "catcolab";
+    # the migrations directory is copied into the output of backend
+    cd ${catcolabPackages.backend}
+    ${lib.getExe pkgs.sqlx-cli} migrate run
+  '';
+in
+{
+  age.secrets = {
+    backendSecretsForPostgres = {
+      file = "${inputs.self}/infrastructure/secrets/.env.next.age";
+      name = "backend-secrets-for-postgres.env";
+      owner = "postgres";
     };
 
-    services.postgresql.enable = true;
+    backendSecretsForCatcolab = {
+      file = "${inputs.self}/infrastructure/secrets/.env.next.age";
+      name = "backend-secrets-for-catcolab.env";
+      owner = "catcolab";
+    };
+  };
 
-    services.nginx.enable = true;
+  services.postgresql = {
+    enable = true;
+  };
 
-    services.nginx.virtualHosts."automerge-next.catcolab.org" = {
-        forceSSL = true;
-        enableACME = true;
-        locations."/" = {
-            extraConfig = ''
-              if ($request_method = OPTIONS) {
-                return 204;
-              }
-              proxy_hide_header 'Access-Control-Allow-Origin';
-              add_header 'Access-Control-Allow-Origin' '*' always;
-              add_header 'Access-Control-Allow-Methods' 'GET, POST, DELETE, PUT, OPTIONS' always;
-              add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
-              proxy_pass http://localhost:${automergePort};
-              error_log syslog:server=unix:/dev/log;
-              access_log syslog:server=unix:/dev/log;
-              proxy_http_version 1.1;
-              proxy_set_header Upgrade $http_upgrade;
-              proxy_set_header Connection "upgrade";
-            '';
-        };
+  # Database setup and mirgations are run as different services because the database setup requires the
+  # use of the priviledged postgres user and the migrations do not
+  systemd.services.database-setup = {
+    description = "Set up catcolab database and user";
+    after = [ "postgresql.service" ];
+    wants = [ "postgresql.service" ];
+
+    serviceConfig = {
+      Type = "oneshot";
+      User = "postgres";
+      ExecStart = lib.getExe databaseSetupScript;
+    };
+  };
+
+  systemd.services.migrations = {
+    enable = true;
+    after = [ "database-setup.service" ];
+    wants = [ "database-setup.service" ];
+
+    serviceConfig = {
+      User = "catcolab";
+      Type = "oneshot";
+      ExecStart = lib.getExe databaseMigrationScript;
+      EnvironmentFile = config.age.secrets.backendSecretsForCatcolab.path;
+    };
+  };
+
+  systemd.services.backend = {
+    enable = true;
+    wantedBy = [ "multi-user.target" ];
+    after = [ "migrations.service" ];
+    wants = [ "migrations.service" ];
+
+    environment = {
+      PORT = backendPort;
+    };
+
+    serviceConfig = {
+      User = "catcolab";
+      Type = "simple";
+      Restart = "on-failure";
+      ExecStart = lib.getExe catcolabPackages.backend;
+      EnvironmentFile = config.age.secrets.backendSecretsForCatcolab.path;
+    };
+  };
+
+  systemd.services.automerge = {
+    enable = true;
+    wantedBy = [ "multi-user.target" ];
+
+    environment = {
+      PORT = automergePort;
+    };
+
+    serviceConfig = {
+      User = "catcolab";
+      ExecStart = "${lib.getExe pkgs.nodejs_23} ${catcolabPackages.automerge-doc-server}/main.cjs";
+      Type = "simple";
+      Restart = "on-failure";
+    };
+  };
+
+  services.caddy = {
+    enable = true;
+    virtualHosts = {
+      "backend-next.catcolab.com" = {
+        extraConfig = ''
+          reverse_proxy :${backendPort}
+        '';
       };
 
-      services.nginx.virtualHosts."backend-next.catcolab.org" = {
-        forceSSL = true;
-        enableACME = true;
-        locations."/" = {
-          extraConfig = ''
-              if ($request_method = OPTIONS) {
-                return 204;
-              }
-              proxy_hide_header 'Access-Control-Allow-Origin';
-              add_header 'Access-Control-Allow-Origin' '*' always;
-              add_header 'Access-Control-Allow-Methods' 'GET, POST, DELETE, PUT, OPTIONS' always;
-              add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
-              proxy_pass http://localhost:${backendPort};
-              error_log syslog:server=unix:/dev/log;
-              access_log syslog:server=unix:/dev/log;
-              proxy_http_version 1.1;
-              proxy_set_header Upgrade $http_upgrade;
-              proxy_set_header Connection "upgrade";
-          '';
-        };
+      "automerge-next.catcolab.com" = {
+        extraConfig = ''
+          reverse_proxy :${automergePort}
+        '';
       };
-
-    systemd.services.automerge = {
-        enable = true;
-        wantedBy = ["multi-user.target"];
-
-        environment = {
-            PORT = automergePort;
-        };
-
-        serviceConfig = {
-            User = "catcolab";
-            ExecStart = automergeScript;
-            Type = "simple";
-            WorkingDirectory = "/var/lib/catcolab/packages/automerge-doc-server/";
-            Restart = "on-failure";
-        };
     };
+  };
 
-    systemd.services.backend = {
-        enable = true;
-        wantedBy = ["multi-user.target"];
-
-        environment = {
-            PORT = backendPort;
-        };
-
-        serviceConfig = {
-            User = "catcolab";
-            ExecStart = backendScript;
-            Type = "simple";
-            WorkingDirectory = "/var/lib/catcolab/packages/backend/";
-            Restart = "on-failure";
-        };
-    };
-
-    security.sudo.extraRules = [{
-        users = [ "catcolab" "deployuser" ];
-        commands = [
-            { command = "/run/current-system/sw/bin/systemctl start automerge"; options = [ "NOPASSWD" ]; } 
-            { command = "/run/current-system/sw/bin/systemctl stop automerge"; options = [ "NOPASSWD" ]; } 
-            { command = "/run/current-system/sw/bin/systemctl restart automerge"; options = [ "NOPASSWD" ]; }
-            { command = "/run/current-system/sw/bin/systemctl start backend"; options = [ "NOPASSWD" ]; } 
-            { command = "/run/current-system/sw/bin/systemctl stop backend"; options = [ "NOPASSWD" ]; } 
-            { command = "/run/current-system/sw/bin/systemctl restart backend"; options = [ "NOPASSWD" ]; }
-        ]; 
-    }];
-
-
-    users.users.deployuser = {
-        isNormalUser = true;
-        openssh.authorizedKeys.keys = [
-            ''
-                command="${lib.getExe updateScript}",no-port-forwarding,no-agent-forwarding,no-X11-forwarding,no-pty ${catcolabnextDeployuserKey}
-            ''
-        ];
-    };
-
-    environment.systemPackages = packages ++ scripts;
-
-    environment.variables.PKG_CONFIG_PATH = "/run/current-system/sw/lib/pkgconfig";
+  # install any pkgs used in this configuration
+  environment.systemPackages =
+    with pkgs;
+    [
+      nodejs_23
+      sqlx-cli
+    ]
+    ++ [
+      databaseSetupScript
+      databaseMigrationScript
+    ];
 }

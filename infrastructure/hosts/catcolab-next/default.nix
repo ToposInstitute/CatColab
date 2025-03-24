@@ -1,65 +1,38 @@
-{ inputs, ... }:
-
+{
+  inputs,
+  ...
+}:
 let
-    owen     = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIF2sBTuqGoEXRWpBRqTBwZZPDdLGGJ0GQcuX5dfIZKb4 o@red-special";
-    epatters = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAKXx6wMJSeYKCHNmbyR803RQ72uto9uYsHhAPPWNl2D evan@epatters.org";
-    jmoggr   = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMiaHaeJ5PQL0mka/lY1yGXIs/bDK85uY1O3mLySnwHd j@jmoggr.com";
+  owen = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIF2sBTuqGoEXRWpBRqTBwZZPDdLGGJ0GQcuX5dfIZKb4 o@red-special";
+  epatters = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAKXx6wMJSeYKCHNmbyR803RQ72uto9uYsHhAPPWNl2D evan@epatters.org";
+  jmoggr = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMiaHaeJ5PQL0mka/lY1yGXIs/bDK85uY1O3mLySnwHd j@jmoggr.com";
+  catcolab-next-deployuser = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM7AYg1fZM0zMxb/BuZTSwK4O3ycUIHruApr1tKoO8nJ deployuser@next.catcolab.org";
 in
 {
-    imports = [
-        ./backend.nix
-        "${inputs.nixpkgs}/nixos/modules/virtualisation/amazon-image.nix"
-    ];
+  imports = [
+    ../../modules/backend.nix
+    ../../modules/host.nix
+    "${inputs.nixpkgs}/nixos/modules/virtualisation/amazon-image.nix"
+  ];
 
-    networking.hostName = "catcolab-next";
-    networking.firewall.allowedTCPPorts = [ 80 443 ];
-
-    security.sudo.wheelNeedsPassword = false;
-    security.acme.acceptTerms = true;
-    security.acme.defaults.email = "owen@topos.institute";
-
-    users.mutableUsers = false;
-
-    users.groups.catcolab = {};
-
-    users.users.catcolab = {
-        isNormalUser = true;
-        group = "catcolab";
-        openssh.authorizedKeys.keys = [ owen epatters jmoggr ];
+  catcolab = {
+    backend = {
+      backendPort = "8000";
+      automergePort = "8010";
+      backendHostname = "backend-next.catcolab.org";
+      automergeHostname = "automerge-next.catcolab.org";
     };
-
-    users.users.owen = {
-        isNormalUser = true;
-        extraGroups = [ "wheel" ]; # Enable ‘sudo’ for the user.
-        openssh.authorizedKeys.keys = [ owen ];
+    host = {
+      userKeys = [
+        owen
+        epatters
+        jmoggr
+      ];
+      deployuserKey = catcolab-next-deployuser;
     };
+  };
 
-    users.users.epatters = {
-        isNormalUser = true;
-        extraGroups = [ "wheel" ];
-        openssh.authorizedKeys.keys = [ epatters ];
-    };
-
-    users.users.jmoggr = {
-        isNormalUser = true;
-        extraGroups = [ "wheel" ];
-        openssh.authorizedKeys.keys = [ jmoggr ];
-    };
-
-    users.users.root.openssh.authorizedKeys.keys = [ owen epatters jmoggr ];
-
-    # new files should be group writeable. Default is 0022
-    environment.extraInit = ''
-      umask 0002
-    '';
-
-    time.timeZone = "America/New_York";
-
-    services.openssh.enable = true;
-
-    system.stateVersion = "24.05";
-
-    nix.extraOptions = ''
-        experimental-features = nix-command flakes
-    '';
+  networking.hostName = "catcolab-next";
+  time.timeZone = "America/New_York";
+  system.stateVersion = "24.05";
 }
