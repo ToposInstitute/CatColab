@@ -43,3 +43,12 @@ hash = "sha256-tIgtzlslvm2A1UpwfVsYk3E9HkKJntu36gEtsFjswgo=";
 Now the dependencies are correctly tracked, and the build should proceed normally. Make sure to include the updated hash in a commit.
 
 Yes, this is the official way of solving this in nix. No, there is no way to automate this with nix. Nix: where developer experience goes to die.
+
+
+### Frozen lockfile
+The error:
+```
+ERR_PNPM_OUTDATED_LOCKFILE  Cannot install with "frozen-lockfile" because pnpm-lock.yaml is not up to date with <ROOT>/package.json
+```
+
+Means that the `package.json` does not match `pnpm-lock.yaml`, mostly likely because you forgot to run forgot to run `pnpm install` after editting `package.json`.
