@@ -2,8 +2,7 @@
   description = "configurations for deploying catcolab";
 
   inputs = {
-    # we currently need unstable to get the correct version of cargo. This should be changed to 25.05
-    # when the next release comes out.
+    # The version of cargo in 24.11 is too old so we need to use unstable until the next relase (25.05)
     nixpkgs.url = "nixpkgs/nixos-unstable";
 
     # For building rust packages. We need it because the first party `rustPlatform.buildRustPackage` does
@@ -32,20 +31,11 @@
         inherit system;
         config.allowUnfree = true;
       };
-
-      catcolabPackages = {
-        backend = pkgs.lib.callPackageWith pkgs ./packages/backend/default.nix {
-          naersk = pkgs.callPackage naersk { };
-        };
-        automerge-doc-server =
-          pkgs.lib.callPackageWith pkgs ./packages/automerge-doc-server/default.nix
-            { };
-      };
     in
     {
       nixosConfigurations = {
         catcolab = nixpkgs.lib.nixosSystem {
-          specialArgs = { inherit catcolabPackages inputs; };
+          specialArgs = { inherit inputs; };
           system = "x86_64-linux";
           modules = [
             ./infrastructure/hosts/catcolab
@@ -54,7 +44,7 @@
         };
 
         catcolab-next = nixpkgs.lib.nixosSystem {
-          specialArgs = { inherit catcolabPackages inputs; };
+          specialArgs = { inherit inputs; };
           system = "x86_64-linux";
           modules = [
             ./infrastructure/hosts/catcolab-next
@@ -63,7 +53,7 @@
         };
 
         catcolab-jmoggr = nixpkgs.lib.nixosSystem {
-          specialArgs = { inherit catcolabPackages inputs; };
+          specialArgs = { inherit inputs; };
           system = "x86_64-linux";
           modules = [
             ./infrastructure/hosts/catcolab-jmoggr

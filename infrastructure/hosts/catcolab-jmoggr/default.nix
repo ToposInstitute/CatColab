@@ -18,7 +18,7 @@ in
   catcolab = {
     backend = {
       backendPort = "8000";
-      automergePort = "8000";
+      automergePort = "8010";
       backendHostname = "backend-next.jmoggr.com";
       automergeHostname = "automerge-next.jmoggr.com";
     };
@@ -32,7 +32,7 @@ in
     };
   };
 
-  networking.hostName = "catcolab-next";
+  networking.hostName = "catcolab-jmoggr";
   time.timeZone = "America/New_York";
   system.stateVersion = "24.05";
 }
