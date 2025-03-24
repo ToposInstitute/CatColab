@@ -41,11 +41,12 @@ pkgs.stdenv.mkDerivation {
     cp "$automerge_wasm_path" "$out/"
   '';
 
-  # TODO: I have been unable to bust this hash, and I don't know why
   pnpmDeps = pkgs.pnpm_9.fetchDeps {
     pname = name;
     version = version;
     src = ./.;
+
+    # See README.md
     # hash = pkgs.lib.fakeHash;
     hash = "sha256-ADAtb70sy2ORnbyl+DHeVByEigc5e0VXzT4lkhfOdX8=";
   };
