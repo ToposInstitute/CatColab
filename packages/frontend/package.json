@@ -5,6 +5,7 @@
     "version": "0.1.0",
     "type": "module",
     "scripts": {
+        "staging": "vite --mode staging",
         "dev": "vite --host",
         "build": "wasm-pack build ../catlog-wasm && tsc -b && vite build",
         "compile": "tcm -p 'src/**/*.module.css' . && tsc -b",
