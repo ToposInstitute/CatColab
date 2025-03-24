@@ -84,7 +84,7 @@ function initial_conditions(ics::Dict{Symbol,<:InitialConditions}, geometry::Geo
 end
 
 function initial_conditions(x::InitialConditions, args...)
-    throw(ImplError("These initial conditions ($(x)) are"))
+    throw(ImplError("These initial conditions ($(x)) are")) # TODO
 end
 
 function initial_conditions(ics::GaussianIC, geometry::Geometry)

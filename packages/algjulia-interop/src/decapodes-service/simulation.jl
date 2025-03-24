@@ -20,7 +20,7 @@ Construct a `PodeSystem` object from a JSON string.
 """
 function PodeSystem(json_object::AbstractDict, hodge=GeometricHodge())
     # make a model of the DEC, valued in Julia
-    model = Model(ThDecapode(), json_object[:model])
+    model = Model(ThDecapode(), json_object[:notebook][:cells])
 
     # this is a diagram in the model of the DEC. it wants to be a decapode!
     jsondiagram = json_object[:diagram]

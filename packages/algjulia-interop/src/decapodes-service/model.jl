@@ -70,7 +70,10 @@ function add_to_model!(model::Model{ThDecapode}, content::AbstractDict, type::Ho
     end
 end
 
-
+function Model(::ThDecapode, path::String)
+    json = JSON3.read(read(path, String))
+    Model(ThDecapode(), json[:contents][:path])
+end
 
 # for each cell, if it is...
 #   ...an object, we convert its type to a symbol and add it to the modeldict

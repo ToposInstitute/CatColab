@@ -68,7 +68,7 @@ This returns
     2. a dictionary of symbols mapped to anonymous functions
     3. a dictionary of JSON UUIDs mapped to symbols
 """
-function Decapode(diagram::AbstractVector{<:AbstractDict}, model::Model; scalars=[])
+function Diagram(diagram::AbstractVector{<:AbstractDict}, model::Model{ThDecapode}; scalars=[])
     # initiatize decapode and its mapping between UUIDs and ACSet IDs
     pode = SummationDecapode(parse_decapode(quote end))
     vars = Dict{String, Int}() # UUID => ACSetID
@@ -85,7 +85,7 @@ function Decapode(diagram::AbstractVector{<:AbstractDict}, model::Model; scalars
     end
     return pode, anons, vars
 end
-export Decapode
+export Diagram
 # TODO rename to Diagram
 
 function uuid_to_symb(decapode::SummationDecapode, vars::Dict{String, Int})
