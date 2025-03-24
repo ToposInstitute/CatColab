@@ -193,7 +193,7 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.CATCOLAB_NEXT_DEPLOYUSER_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan backend-next.catcolab.org >> ~/.ssh/known_hosts
+          ssh-keyscan backend-next.jmoggr.com >> ~/.ssh/known_hosts
 
       - name: Deploy via SSH
-        run: ssh deployuser@backend-next.catcolab.org
+        run: ssh deployuser@backend-next.jmoggr.com
