@@ -182,7 +182,7 @@ export function AnalysisNotebookEditor(props: {
     liveAnalysis: LiveAnalysisDocument;
 }) {
     const liveDoc = () => props.liveAnalysis.liveDoc;
-
+    console.log(JSON.stringify(liveDoc().doc));
     const cellConstructors = () => {
         let meta = undefined;
         if (props.liveAnalysis.analysisType === "model") {
