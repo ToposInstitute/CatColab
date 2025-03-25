@@ -1,6 +1,7 @@
 //! Double category theory and two-dimensional categorical logic.
 
 pub mod category;
+pub mod equipment;
 pub mod graph;
 pub mod tree;
 pub mod tree_algorithms;
