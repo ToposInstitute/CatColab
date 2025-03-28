@@ -1,26 +1,13 @@
 {
-  naersk,
+  pkgs,
+  ...
 }:
 let
-  cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
-
-  # the nix package name and cargo package name should be the same
-  name = cargoToml.package.name;
-  version = cargoToml.package.version;
+  cargoNix = pkgs.callPackage ../../Cargo.nix { };
+  backend = cargoNix.workspaceMembers.catcolab-backend.build;
 in
-
-naersk.buildPackage {
-  pname = name;
-  version = version;
-
-  src = ./.;
-
-  # set the root to the repository root so Cargo.lock is found there
-  root = ../../.;
-
-  meta.mainProgram = name;
-
+backend.overrideAttrs (attrs: {
   postInstall = ''
     cp -r migrations $out/
   '';
-}
+})

@@ -40,7 +40,6 @@ let
 
   catcolabPackages = {
     backend = pkgs.lib.callPackageWith pkgs ../../packages/backend/default.nix {
-      naersk = pkgs.callPackage inputs.naersk { };
     };
 
     automerge-doc-server =
