@@ -5,11 +5,10 @@
     # The version of cargo in 24.11 is too old so we need to use unstable until the next relase (25.05)
     nixpkgs.url = "nixpkgs/nixos-unstable";
 
-    # For building rust packages. We need it because the first party `rustPlatform.buildRustPackage` does
-    # not work for cargo workspaces: it has a hard requirement that a Cargo.lock exists in the package
-    # directory (even though the docs say otherwise). Working around this is possible, but it would
-    # require using the whole repository as an input.
-    naersk.url = "github:nix-community/naersk";
+    crate2nix = {
+      url = "github:nix-community/crate2nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     agenix.url = "github:ryantm/agenix";
     deploy-rs.url = "github:serokell/deploy-rs";
@@ -19,7 +18,7 @@
     {
       self,
       nixpkgs,
-      naersk,
+      crate2nix,
       agenix,
       deploy-rs,
       ...
@@ -106,6 +105,7 @@
           ++ [
             inputs.agenix.packages.x86_64-linux.agenix
             inputs.deploy-rs.packages.x86_64-linux.default
+            inputs.crate2nix.packages.x86_64-linux.default
           ];
       };
     };
