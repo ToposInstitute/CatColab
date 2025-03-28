@@ -23,9 +23,9 @@ Point3D = Point3{Float64};
 # simulation
 using OrdinaryDiffEq
 
-using ..AlgebraicJuliaService
-using ..AlgebraicJuliaService: AlgebraicJuliaIntegration
-import ..AlgebraicJuliaService: Model, to_model
+using ..CatColabInterop
+using ..CatColabInterop: AlgebraicJuliaIntegration
+import ..CatColabInterop: Model, to_model
 
 # necessary to export
 export infer_types!, evalsim, default_dec_generate, default_dec_matrix_generate,
@@ -39,6 +39,6 @@ include("geometry.jl")
 include("initial_conditions.jl")
 include("model.jl") ## model-building
 include("diagram.jl") ## diagram-building
-include("simulation.jl") ## necessary for the Analysis
+include("analysis.jl")
 
 end
