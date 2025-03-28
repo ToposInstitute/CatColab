@@ -196,4 +196,5 @@ jobs:
           ssh-keyscan backend-next.catcolab.org >> ~/.ssh/known_hosts
 
       - name: Deploy via SSH
-        run: ssh deployuser@backend-next.catcolab.org
+        run: ssh deployuser@backend-next.catcolab.org "${GITHUB_SHA}"
+

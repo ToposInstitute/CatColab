@@ -163,33 +163,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "backend"
-version = "0.1.0"
-dependencies = [
- "axum",
- "dotenvy",
- "firebase-auth",
- "http 1.1.0",
- "hyper 1.5.1",
- "jsonrpsee 0.24.7",
- "jsonrpsee-server 0.24.7",
- "qubit",
- "regex",
- "serde",
- "serde_json",
- "socketioxide",
- "sqlx",
- "thiserror 1.0.69",
- "tokio",
- "tower 0.5.1",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "ts-rs 10.1.0",
- "uuid",
-]
-
-[[package]]
 name = "backtrace"
 version = "0.3.74"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -280,6 +253,33 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "325918d6fe32f23b19878fe4b34794ae41fc19ddbe53b10571a4874d44ffd39b"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "catcolab-backend"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "dotenvy",
+ "firebase-auth",
+ "http 1.1.0",
+ "hyper 1.5.1",
+ "jsonrpsee 0.24.7",
+ "jsonrpsee-server 0.24.7",
+ "qubit",
+ "regex",
+ "serde",
+ "serde_json",
+ "socketioxide",
+ "sqlx",
+ "thiserror 1.0.69",
+ "tokio",
+ "tower 0.5.1",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "ts-rs 10.1.0",
+ "uuid",
 ]
 
 [[package]]
