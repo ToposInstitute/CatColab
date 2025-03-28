@@ -196,4 +196,5 @@ jobs:
           ssh-keyscan backend-next.jmoggr.com >> ~/.ssh/known_hosts
 
       - name: Deploy via SSH
-        run: ssh deployuser@backend-next.jmoggr.com
+        run: ssh deployuser@backend-next.jmoggr.com "${GITHUB_SHA}"
+

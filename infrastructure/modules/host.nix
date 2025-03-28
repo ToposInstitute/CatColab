@@ -13,14 +13,20 @@ let
     #!/usr/bin/env bash
     set -ex
 
-    branch="nixification"
+    commit_sha="$SSH_ORIGINAL_COMMAND"
+
+    if [ -z "$commit_sha" ]; then
+      echo "Missing commit SHA"
+      exit 1
+    fi
 
     if [ -d "catcolab" ]; then
       rm -rf ./catcolab
     fi
 
-    git clone -b "$branch" https://github.com/ToposInstitute/CatColab.git catcolab
+    git clone https://github.com/jmoggr/CatColab.git catcolab
     cd catcolab
+    git checkout "$commit_sha"
 
     sudo /run/current-system/sw/bin/nixos-rebuild switch --flake .#catcolab-jmoggr
   '';
