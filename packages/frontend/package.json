@@ -7,7 +7,7 @@
     "scripts": {
         "staging": "vite --mode staging",
         "dev": "vite --host",
-        "build": "wasm-pack build ../catlog-wasm && tsc -b && vite build",
+        "build": "wasm-pack build ../catlog-wasm && tsc -b && vite build --sourcemap true",
         "compile": "tcm -p 'src/**/*.module.css' . && tsc -b",
         "preview": "vite preview",
         "format": "biome format --write",
