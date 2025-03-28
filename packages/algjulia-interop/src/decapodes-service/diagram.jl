@@ -61,21 +61,28 @@ function add_to_pode!(d::SummationDecapode,
     d
 end
 
-"""  Decapode(diagram::AbstractVector{<:AbstractDict}, model::Model) => (::SummationDecapode, ::Dict{Symbol, Any}, ::Dict{String, Int}) 
+struct DecapodeDiagram <: AbstractDiagram{ThDecapode}
+    pode::SummationDecapode
+    anons::Dict{Symbol, Any}
+    vars::DIct{String, Int}
+end
+
+
+"""  Diagram(diagram::AbstractVector{<:AbstractDict}, model::Model{ThDecapode}) => (::SummationDecapode, ::Dict{Symbol, Any}, ::Dict{String, Int}) 
 
 This returns
     1. a Decapode 
     2. a dictionary of symbols mapped to anonymous functions
     3. a dictionary of JSON UUIDs mapped to symbols
 """
-function Diagram(diagram::AbstractVector{<:AbstractDict}, model::Model{ThDecapode}; scalars=[])
+function Diagram(json_diagram::JSON3.Object, model::Model{ThDecapode}; scalars=[])
     # initiatize decapode and its mapping between UUIDs and ACSet IDs
     pode = SummationDecapode(parse_decapode(quote end))
     vars = Dict{String, Int}() # UUID => ACSetID
     nc = [0] # array is a mutable container
     anons = Dict{Symbol, Any}()
     # for each cell in the notebook, add it to the diagram 
-    foreach(diagram) do cell
+    foreach(json_diagram[:cells]) do cell
         @match cell begin
             # TODO merge nameless_count into vars
             IsObject(content) => add_to_pode!(pode, vars, model, content, nc, ObTag())
@@ -83,7 +90,7 @@ function Diagram(diagram::AbstractVector{<:AbstractDict}, model::Model{ThDecapod
             _ => throw(ImplError(cell[:content][:tag]))
         end
     end
-    return pode, anons, vars
+    return DecapodeDiagram(pode, anons, vars)
 end
 export Diagram
 # TODO rename to Diagram

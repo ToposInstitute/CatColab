@@ -39,6 +39,6 @@ include("geometry.jl")
 include("initial_conditions.jl")
 include("model.jl") ## model-building
 include("diagram.jl") ## diagram-building
-include("simulation.jl") ## necessary for the Analysis
+include("analysis.jl")
 
 end

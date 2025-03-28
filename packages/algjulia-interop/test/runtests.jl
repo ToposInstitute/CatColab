@@ -192,8 +192,8 @@ model = Model(ThDecapode(), joinpath(@__DIR__, "test", "test_jsons", "model_dec.
 
 @testset "Simulation - Diffusivity Constant" begin
 
-    json_string = read(joinpath(@__DIR__, "test_jsons", "diagram_diffusivity_constant.json"), String)
-    system = PodeSystem(json_string)
+    json_string = read(joinpath(@__DIR__, "test", "test_jsons", "diagram_diffusivity_constant.json"), String)
+    system = PodeSystem(json_string, model)
     @info system
 
     simulator = evalsim(system.pode)
