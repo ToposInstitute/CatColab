@@ -1,9 +1,5 @@
 ## INITIAL CONDITIONS
 
-# TAYLOR VORTEX CODE
-include("ns_helper.jl")
-####
-
 # This ADT defines the parameters for initial conditions data.
 @data InitialConditionsData begin
     GaussianData(μ::Vector{Float64}, Σ::Diagonal{Float64, Vector{Float64}})
@@ -42,8 +38,7 @@ end
 GaussianIC(r::Rectangle) = GaussianIC(r, GaussianData(r))
 TaylorVortexIC(d::Sphere) = TaylorVortexIC(d, TaylorVortexData())
 
-function initial_conditions(json_object::AbstractDict, geometry::Geometry, uuid2symb::Dict{String, Symbol})
-    ic_specs = json_object[:initialConditions] # this is "C" 
+function initial_conditions(ic_specs::AbstractDict, geometry::Geometry, uuid2symb::Dict{String, Symbol})
     dict = Dict([uuid2symb[string(uuid)] => ic_specs[string(uuid)] for uuid ∈ keys(ic_specs)]...)
     initial_conditions(dict, geometry) # the resulting sim will only have (C,) as initial conditions
 end

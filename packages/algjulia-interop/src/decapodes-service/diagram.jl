@@ -64,7 +64,7 @@ end
 struct DecapodeDiagram <: AbstractDiagram{ThDecapode}
     pode::SummationDecapode
     anons::Dict{Symbol, Any}
-    vars::DIct{String, Int}
+    vars::Dict{String, Int}
 end
 
 

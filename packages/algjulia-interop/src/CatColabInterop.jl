@@ -67,7 +67,7 @@ export to_model
 # TODO supposes bijection between theories, models, diagrams, etc.
 abstract type AbstractDiagram{T<:AlgebraicJuliaIntegration} end
 
-abstract type AbstractAnalysis{T<:AbstractJuliaIntegration} end
+abstract type AbstractAnalysis{T<:AlgebraicJuliaIntegration} end
 
 struct ImplError <: Exception
     name::String

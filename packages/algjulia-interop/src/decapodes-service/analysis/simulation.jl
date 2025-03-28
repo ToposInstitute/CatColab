@@ -11,7 +11,7 @@ end
 export PodeSystem
 
 """ Constructs an analysis from the diagram of a Decapode Model"""
-function Analysis(analysis::JSON3.Object, diagram::Diagram{ThDecapode}, hodge=GeometricHodge())
+function Analysis(analysis::JSON3.Object, diagram::DecapodeDiagram, hodge=GeometricHodge())
   
     # TODO want a safer way to get this information
     content = analysis[:notebook][:cells][1][:content][:content]
@@ -24,7 +24,7 @@ function Analysis(analysis::JSON3.Object, diagram::Diagram{ThDecapode}, hodge=Ge
     scalars = content[:scalars]
 
     dot_rename!(diagram.pode)
-    uuid2symb = uuid_to_symb(decapode, diagram.vars)
+    uuid2symb = uuid_to_symb(diagram.pode, diagram.vars)
     
     geometry = Geometry(content)
 
@@ -48,13 +48,15 @@ function Analysis(analysis::JSON3.Object, diagram::Diagram{ThDecapode}, hodge=Ge
         return (args...) -> op(args...)
     end
 
-    u0 = initial_conditions(analysis, geometry, uuid2symb)
+    @info uuid2symb
+    u0 = initial_conditions(initialConditions, geometry, uuid2symb)
 
     # reversing `uuid2symb` into `symbol => uuid.` we need this to reassociate the var to its UUID 
     symb2uuid = Dict([v => k for (k,v) in pairs(uuid2symb)])
 
     return PodeSystem(decapode, plotvars, anons, geometry, u0, sys_generate, symb2uuid, duration)
 end
+export Analysis
 
 function PodeSystem(json_string::String, args...)
     analysis = JSON3.read(json_string)

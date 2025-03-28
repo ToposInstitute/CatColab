@@ -24,7 +24,7 @@ Point3D = Point3{Float64};
 using OrdinaryDiffEq
 
 using ..CatColabInterop
-using ..CatColabInterop: AlgebraicJuliaIntegration
+using ..CatColabInterop: AlgebraicJuliaIntegration, AbstractDiagram, AbstractAnalysis
 import ..CatColabInterop: Model, to_model
 
 # necessary to export
@@ -36,9 +36,8 @@ export ThDecapode
 
 # funcitons for geometry and initial conditions
 include("geometry.jl")
-include("initial_conditions.jl")
 include("model.jl") ## model-building
 include("diagram.jl") ## diagram-building
-include("analysis.jl")
+include("analysis/Analysis.jl")
 
 end
