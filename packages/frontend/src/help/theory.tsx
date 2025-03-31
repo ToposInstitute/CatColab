@@ -1,11 +1,11 @@
 import { destructure } from "@solid-primitives/destructure";
 import { useParams } from "@solidjs/router";
-import { For, Show, useContext } from "solid-js";
+import { For, Show, lazy, useContext } from "solid-js";
+import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
 import { TheoryLibraryContext } from "../stdlib";
 import type { Theory } from "../theory";
-import { lazyMdx } from "../util/mdx";
 
 /** Help page for a theory in the standard library. */
 export default function TheoryHelpPage() {
@@ -28,8 +28,6 @@ export function TheoryHelp(props: {
 }) {
     const { theory } = destructure(props);
 
-    const Content = lazyMdx(() => import(`./theory/${theory().help}.mdx`));
-
     return (
         <>
             <h1>{theory().name}</h1>
@@ -49,8 +47,10 @@ export function TheoryHelp(props: {
                 </dl>
             </Show>
             <Show when={theory().help}>
-                <Content />
+                {(name) => <Dynamic component={helpContent(name())} />}
             </Show>
         </>
     );
 }
+
+const helpContent = (name: string) => lazy(() => import(`./theory/${name}.mdx`));

@@ -11,7 +11,8 @@ import invariant from "tiny-invariant";
 import * as uuid from "uuid";
 
 import type { Permissions } from "catcolab-api";
-import type { Api } from "./types";
+import { PermissionsError } from "../util/errors";
+import type { Api, Document } from "./types";
 
 /** An Automerge repo with no networking, used for read-only documents. */
 const localRepo = new Repo();
@@ -21,19 +22,19 @@ const localRepo = new Repo();
 A live document can be used in reactive contexts and is connected to an
 Automerge document handle.
  */
-export type LiveDoc<T> = {
+export type LiveDoc<Doc extends Document<string>> = {
     /** The document data, suitable for use in reactive contexts.
 
     This data should never be mutated directly. Instead, call `changeDoc` or, if
     necessary, interact with the Automerge document handle.
      */
-    doc: T;
+    doc: Doc;
 
     /** Call this function to make changes to the document. */
-    changeDoc: (f: ChangeFn<T>) => void;
+    changeDoc: (f: ChangeFn<Doc>) => void;
 
     /** The Automerge document handle for the document. */
-    docHandle: DocHandle<T>;
+    docHandle: DocHandle<Doc>;
 
     /** Permissions for the document retrieved from the backend. */
     permissions: Permissions;
@@ -47,26 +48,42 @@ permissions, the Automerge doc handle will be "fake", existing only locally in
 the client. And if the user doesn't even have read permissions, this function
 will yield an unauthorized error!
  */
-export async function getLiveDoc<T extends object>(api: Api, refId: string): Promise<LiveDoc<T>> {
+export async function getLiveDoc<Doc extends Document<string>>(
+    api: Api,
+    refId: string,
+    docType?: string,
+): Promise<LiveDoc<Doc>> {
     invariant(uuid.validate(refId), () => `Invalid document ref ${refId}`);
     const { rpc, repo } = api;
 
     const result = await rpc.get_doc.query(refId);
     if (result.tag !== "Ok") {
-        throw new Error(`Failed to retrieve document: ${result.message}`);
+        if (result.code === 403) {
+            throw new PermissionsError(result.message);
+        } else {
+            throw new Error(`Failed to retrieve document: ${result.message}`);
+        }
     }
     const refDoc = result.content;
 
-    let docHandle: DocHandle<T>;
+    let docHandle: DocHandle<Doc>;
     if (refDoc.tag === "Live") {
         const docId = refDoc.docId as DocumentId;
-        docHandle = repo.find(docId) as DocHandle<T>;
+        docHandle = repo.find(docId) as DocHandle<Doc>;
     } else {
-        const init = refDoc.content as T;
+        const init = refDoc.content as Doc;
         docHandle = localRepo.create(init);
     }
+
     const doc = await makeDocHandleReactive(docHandle);
-    const changeDoc = (f: ChangeFn<T>) => docHandle.change(f);
+    if (docType !== undefined) {
+        invariant(
+            doc.type === docType,
+            () => `Expected document of type ${docType}, got ${doc.type}`,
+        );
+    }
+
+    const changeDoc = (f: ChangeFn<Doc>) => docHandle.change(f);
 
     const permissions = refDoc.permissions;
     return { doc, changeDoc, docHandle, permissions };

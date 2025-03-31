@@ -1,18 +1,29 @@
 use std::hash::Hash;
 
+use serde::{Deserialize, Serialize};
+use tsify_next::Tsify;
 use uuid::Uuid;
 
 use catlog::dbl::{model, model_morphism};
-use catlog::one::{fin_category::UstrFinCategory, FgCategory};
+use catlog::one::{FgCategory, fin_category::UstrFinCategory};
 
 use super::model::DblModel;
 
 pub(crate) type DiscreteDblModelMapping = model_morphism::DiscreteDblModelMapping<Uuid, Uuid>;
 
+/// Options for motif finder.
+#[derive(Debug, Deserialize, Serialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
+pub struct MotifsOptions {
+    #[serde(rename = "maxPathLength")]
+    max_path_len: Option<usize>,
+}
+
 /// Find motifs in a model of a discrete double theory.
 pub fn motifs<Id>(
     motif: &model::DiscreteDblModel<Id, UstrFinCategory>,
     model: &DblModel,
+    options: MotifsOptions,
 ) -> Result<Vec<DblModel>, String>
 where
     Id: Clone + Eq + Hash,
@@ -20,7 +31,12 @@ where
     let model: &model::DiscreteDblModel<_, _> = (&model.0)
         .try_into()
         .map_err(|_| "Motif finding expects a discrete double model")?;
-    let mut images: Vec<_> = model_morphism::DiscreteDblModelMapping::morphisms(motif, model)
+
+    let mut finder = model_morphism::DiscreteDblModelMapping::morphisms(motif, model);
+    if let Some(n) = options.max_path_len {
+        finder.max_path_len(n);
+    }
+    let mut images: Vec<_> = finder
         .monic()
         .find_all()
         .into_iter()

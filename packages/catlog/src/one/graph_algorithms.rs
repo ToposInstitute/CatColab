@@ -33,6 +33,26 @@ where
     G::V: Hash,
     G::E: Hash,
 {
+    bounded_simple_paths(graph, from, to, None)
+}
+
+/** Iterates over all simple paths of bounded length between two vertices.
+
+Works like [`simple_paths`], with the same definition of *simple path*, but the
+returned paths are also optionally restricted to those of bounded length. The
+**length** of a path is the number of edges in it.
+ */
+pub fn bounded_simple_paths<'a, G>(
+    graph: &'a G,
+    from: &'a G::V,
+    to: &'a G::V,
+    max_length: Option<usize>,
+) -> impl Iterator<Item = Path<G::V, G::E>> + 'a
+where
+    G: FinGraph,
+    G::V: Hash,
+    G::E: Hash,
+{
     // The current path.
     let mut path: Vec<G::E> = Vec::new();
     // The set of edges in the current path.
@@ -49,22 +69,23 @@ where
 
     let nonempty_paths = std::iter::from_fn(move || {
         while let Some(out_edges) = stack.last_mut() {
-            if let Some(e) = out_edges.pop() {
-                let tgt = graph.tgt(&e);
-                if !visited.contains(&e) {
-                    path.push(e.clone());
-                    visited.insert(e);
-                    stack.push(graph.out_edges(&tgt).collect());
-                    if tgt == *to {
-                        let result = Path::collect(path.iter().cloned());
-                        return Some(result.unwrap());
-                    }
-                }
-            } else {
+            let Some(e) = out_edges.pop() else {
                 stack.pop();
                 if let Some(e) = path.pop() {
                     visited.remove(&e);
                 }
+                continue;
+            };
+            if visited.contains(&e) || max_length.is_some_and(|n| path.len() >= n) {
+                continue;
+            }
+            let tgt = graph.tgt(&e);
+            path.push(e.clone());
+            visited.insert(e);
+            stack.push(graph.out_edges(&tgt).collect());
+            if tgt == *to {
+                let result = Path::collect(path.iter().cloned());
+                return Some(result.unwrap());
             }
         }
         None
@@ -158,6 +179,10 @@ mod tests {
         let mut g = SkelGraph::triangle();
         let paths: Vec<_> = simple_paths(&g, &0, &2).collect();
         assert_eq!(paths, vec![Path::single(2), Path::pair(0, 1)]);
+        assert_eq!(bounded_simple_paths(&g, &0, &2, None).count(), 2);
+        assert_eq!(bounded_simple_paths(&g, &0, &2, Some(2)).count(), 2);
+        assert_eq!(bounded_simple_paths(&g, &0, &2, Some(1)).count(), 1);
+        assert_eq!(bounded_simple_paths(&g, &0, &2, Some(0)).count(), 0);
 
         g.add_vertices(2);
         let s = g.add_edge(3, 0);

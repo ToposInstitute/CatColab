@@ -4,7 +4,7 @@ import invariant from "tiny-invariant";
 
 import type { UserProfile } from "catcolab-api";
 import { useApi } from "../api";
-import { FormGroup, TextInputItem } from "../components";
+import { FormGroup, TextInputField } from "../components";
 import { BrandedToolbar } from "../page";
 import { LoginGate } from "./login";
 
@@ -78,9 +78,8 @@ export function UserProfileForm() {
                     revalidateOn="submit"
                 >
                     {(field, props) => (
-                        <TextInputItem
+                        <TextInputField
                             {...props}
-                            id="username"
                             label="Username"
                             value={field.value ?? ""}
                             error={field.error}
@@ -89,12 +88,7 @@ export function UserProfileForm() {
                 </Field>
                 <Field name="displayName">
                     {(field, props) => (
-                        <TextInputItem
-                            {...props}
-                            id="displayName"
-                            label="Display name"
-                            value={field.value ?? ""}
-                        />
+                        <TextInputField {...props} label="Display name" value={field.value ?? ""} />
                     )}
                 </Field>
             </FormGroup>

@@ -2,7 +2,6 @@ import { nodeTypes } from "@mdx-js/mdx";
 import rehypeRaw from "rehype-raw";
 import { defineConfig } from "vite";
 import solid from "vite-plugin-solid";
-import topLevelAwait from "vite-plugin-top-level-await";
 import wasm from "vite-plugin-wasm";
 
 // @ts-expect-error Types are missing.
@@ -14,7 +13,6 @@ const { default: mdx } = pkg;
 export default defineConfig({
     plugins: [
         wasm(),
-        topLevelAwait(),
         mdx.withImports({})({
             jsx: true,
             jsxImportSource: "solid-js",
@@ -27,7 +25,8 @@ export default defineConfig({
     ],
     build: {
         chunkSizeWarningLimit: 2000,
-        sourcemap: false,
+        sourcemap: true,
+        target: "es2022",
     },
     server: {
         proxy: {

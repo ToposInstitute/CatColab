@@ -1,4 +1,6 @@
 .toolbar {
+    position: sticky;
+    top: 0;
     display: flex;
     flex-direction: row;
     gap: 5px;
@@ -10,6 +12,12 @@
 
     & .lucide {
         color: dimgray;
+    }
+}
+
+@media (max-width: 1100px) {
+    .toolbar {
+        position: static;
     }
 }
 

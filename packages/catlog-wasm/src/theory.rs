@@ -162,7 +162,7 @@ impl DblTheory {
         all_the_same!(match &self.0 {
             DblTheoryBox::[Discrete, DiscreteTab](th) => {
                 let m = mor_type.try_into()?;
-                Ok(th.src(&m).into())
+                Ok(th.src_type(&m).into())
             }
         })
     }
@@ -173,7 +173,7 @@ impl DblTheory {
         all_the_same!(match &self.0 {
             DblTheoryBox::[Discrete, DiscreteTab](th) => {
                 let m = mor_type.try_into()?;
-                Ok(th.tgt(&m).into())
+                Ok(th.tgt_type(&m).into())
             }
         })
     }

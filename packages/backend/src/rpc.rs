@@ -1,6 +1,6 @@
 use firebase_auth::FirebaseUser;
 use http::StatusCode;
-use qubit::{handler, Extensions, FromRequestExtensions, Router, RpcError};
+use qubit::{Extensions, FromRequestExtensions, Router, RpcError, handler};
 use serde::Serialize;
 use serde_json::Value;
 use tracing::debug;

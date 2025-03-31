@@ -166,19 +166,23 @@ mod tests {
 
     #[test]
     fn validate_user_profile() {
-        assert!(UserProfile {
-            username: None,
-            display_name: None
-        }
-        .validate()
-        .is_ok());
+        assert!(
+            UserProfile {
+                username: None,
+                display_name: None
+            }
+            .validate()
+            .is_ok()
+        );
 
-        assert!(UserProfile {
-            username: Some("evan!".into()),
-            display_name: Some("Evan".into()),
-        }
-        .validate()
-        .is_err());
+        assert!(
+            UserProfile {
+                username: Some("evan!".into()),
+                display_name: Some("Evan".into()),
+            }
+            .validate()
+            .is_err()
+        );
     }
 
     #[test]

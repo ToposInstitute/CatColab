@@ -2,7 +2,6 @@ import { createMemo } from "solid-js";
 
 import type {
     DblModel,
-    JsResult,
     LotkaVolterraModelData,
     LotkaVolterraProblemData,
     ODEResult,
@@ -16,7 +15,8 @@ import {
 } from "../../components";
 import type { MorphismDecl, ObjectDecl } from "../../model";
 import type { ModelAnalysisMeta } from "../../theory";
-import { type ODEPlotData, ODEResultPlot } from "../../visualization";
+import { ODEResultPlot } from "../../visualization";
+import { createModelODEPlot } from "./simulation";
 
 import "./simulation.css";
 
@@ -52,13 +52,12 @@ export function configureLotkaVolterra(options: {
     };
 }
 
-/** Analyze a signed graph using Lotka-Volterra dynamics.
- */
+/** Analyze a model using Lotka-Volterra dynamics. */
 export function LotkaVolterra(
-    props: {
+    props: ModelAnalysisProps<LotkaVolterraContent> & {
         simulate: Simulator;
         title?: string;
-    } & ModelAnalysisProps<LotkaVolterraContent>,
+    },
 ) {
     const obDecls = createMemo<ObjectDecl[]>(() => {
         return props.liveModel.formalJudgments().filter((jgmt) => jgmt.tag === "object");
@@ -123,36 +122,9 @@ export function LotkaVolterra(
         }),
     ];
 
-    const simulationResult = createMemo<ODEResult | undefined>(
-        () => {
-            const validated = props.liveModel.validatedModel();
-            if (validated?.result.tag === "Ok") {
-                return props.simulate(validated.model, props.content);
-            }
-        },
-        undefined,
-        { equals: false },
-    );
-
-    const plotResult = createMemo<JsResult<ODEPlotData, string> | undefined>(
-        () => {
-            const result = simulationResult();
-            if (result?.tag === "Ok") {
-                const solution = result.content;
-                const obIndex = props.liveModel.objectIndex();
-                const content = {
-                    time: solution.time,
-                    states: Array.from(solution.states.entries()).map(([id, data]) => ({
-                        name: obIndex.map.get(id) ?? "",
-                        data,
-                    })),
-                };
-                return { tag: "Ok", content };
-            }
-            return result;
-        },
-        undefined,
-        { equals: false },
+    const plotResult = createModelODEPlot(
+        () => props.liveModel,
+        (model: DblModel) => props.simulate(model, props.content),
     );
 
     return (

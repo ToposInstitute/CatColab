@@ -1,0 +1,29 @@
+import { A } from "@solidjs/router";
+
+## Description
+
+Regulatory networks depict promoting or inhibiting interactions between molecules in a biochemical system.
+CatColab's theory for regulatory networks presents *signed categories*, where the objects are molecules and the morphisms are interactions between molecules. The interactions are labeled with a sign, which indicates whether the interaction is promoting or inhibiting. It may be interesting to note that 
+this theory is isomorphic to that of <A
+href="../causal-loop">causal loop diagram,</A>  even though the two are presented in different ways in the system.
+
+Instances of regulatory networks are not currently supported,
+because we don't understand what they mean, biologically. If you have any thoughts,
+we'd love to hear them.
+
+Regulatory networks support an ODE semantics based on the Lotka-Volterra equations, where 
+the derivative of each species is the sum of a linear term proportional to its own value 
+and quadratic terms proportional to the product of its own value and that of the species on the
+other end of an interaction.
+
+## Examples
+
+The classic Lotka-Volterra [model](https://catcolab.org/analysis/0194d42c-6e20-72f1-85c3-21c97724b047) of foxes and rabbits, together with an ODE semantics.
+
+## Further reading
+
+- Wikipedia: [Gene regulatory network](https://en.wikipedia.org/wiki/Gene_regulatory_network)
+- A compositional account of motifs, mechanisms, and dynamics in biochemical
+  regulatory networks
+  [arXiv:2301.01445](https://arxiv.org/abs/2301.01445)
+  [DOI:10.32408/compositionality-6-2](https://doi.org/10.32408/compositionality-6-2)

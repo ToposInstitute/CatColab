@@ -11,13 +11,12 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
-import { TheoryHelpButton, Toolbar } from "../page";
+import { DocumentMenu, TheoryHelpButton, Toolbar } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
 import { MaybePermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
 import { type LiveModelDocument, getLiveModel } from "./document";
-import { ModelMenu } from "./model_menu";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
 import { TheorySelectorDialog } from "./theory_selector";
@@ -53,7 +52,7 @@ export function ModelDocumentEditor(props: {
     return (
         <div class="growable-container">
             <Toolbar>
-                <ModelMenu liveModel={props.liveModel} />
+                <DocumentMenu liveDocument={props.liveModel} />
                 <span class="filler" />
                 <TheoryHelpButton theory={props.liveModel?.theory()} />
                 <MaybePermissionsButton

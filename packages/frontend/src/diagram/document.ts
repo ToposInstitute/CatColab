@@ -3,7 +3,14 @@ import invariant from "tiny-invariant";
 
 import type { JsonValue } from "catcolab-api";
 import type { DblModelDiagram, ModelDiagramValidationResult, Uuid } from "catlog-wasm";
-import { type Api, type ExternRef, type LiveDoc, getLiveDoc } from "../api";
+import {
+    type Api,
+    type Document,
+    type Link,
+    type LiveDoc,
+    type StableRef,
+    getLiveDoc,
+} from "../api";
 import { type LiveModelDocument, getLiveModel } from "../model";
 import { type Notebook, newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
@@ -11,27 +18,21 @@ import { type IdToNameMap, indexMap } from "../util/indexing";
 import { type DiagramJudgment, toCatlogDiagram } from "./types";
 
 /** A document defining a diagram in a model. */
-export type DiagramDocument = {
-    type: "diagram";
-
-    /** User-defined name of diagram. */
-    name: string;
-
+export type DiagramDocument = Document<"diagram"> & {
     /** Reference to the model that the diagram is in. */
-    modelRef: ExternRef<"model">;
+    diagramIn: Link<"diagram-in">;
 
     /** Content of the diagram. */
     notebook: Notebook<DiagramJudgment>;
 };
 
 /** Create an empty diagram of a model. */
-export const newDiagramDocument = (modelRefId: string): DiagramDocument => ({
+export const newDiagramDocument = (modelRef: StableRef): DiagramDocument => ({
     name: "",
     type: "diagram",
-    modelRef: {
-        tag: "extern-ref",
-        refId: modelRefId,
-        taxon: "model",
+    diagramIn: {
+        ...modelRef,
+        type: "diagram-in",
     },
     notebook: newNotebook(),
 });
@@ -39,6 +40,9 @@ export const newDiagramDocument = (modelRefId: string): DiagramDocument => ({
 /** A diagram document "live" for editing.
  */
 export type LiveDiagramDocument = {
+    /** discriminator for use in union types */
+    type: "diagram";
+
     /** The ref for which this is a live document. */
     refId: string;
 
@@ -121,24 +125,27 @@ function enlivenDiagramDocument(
         { equals: false },
     );
 
-    return { refId, liveDoc, liveModel, formalJudgments, objectIndex, validatedDiagram };
+    return {
+        type: "diagram",
+        refId,
+        liveDoc,
+        liveModel,
+        formalJudgments,
+        objectIndex,
+        validatedDiagram,
+    };
 }
 
-/** Create a new diagram in the backend. */
-export async function createDiagram(
-    api: Api,
-    initOrModelRef: DiagramDocument | string,
-): Promise<string> {
-    let init: DiagramDocument;
-    if (typeof initOrModelRef === "string") {
-        init = newDiagramDocument(initOrModelRef);
-    } else {
-        init = initOrModelRef;
-    }
+/** Create a new, empty diagram in the backend. */
+export function createDiagram(api: Api, inModel: StableRef): Promise<string> {
+    const init = newDiagramDocument(inModel);
+    return createDiagramFromDocument(api, init);
+}
 
+/** Create a new diagram in the backend from initial data. */
+export async function createDiagramFromDocument(api: Api, init: DiagramDocument): Promise<string> {
     const result = await api.rpc.new_ref.mutate(init as JsonValue);
     invariant(result.tag === "Ok", "Failed to create a new diagram");
-
     return result.content;
 }
 
@@ -148,11 +155,10 @@ export async function getLiveDiagram(
     api: Api,
     theories: TheoryLibrary,
 ): Promise<LiveDiagramDocument> {
-    const liveDoc = await getLiveDoc<DiagramDocument>(api, refId);
+    const liveDoc = await getLiveDoc<DiagramDocument>(api, refId, "diagram");
     const { doc } = liveDoc;
-    invariant(doc.type === "diagram", () => `Expected diagram, got type: ${doc.type}`);
 
-    const liveModel = await getLiveModel(doc.modelRef.refId, api, theories);
+    const liveModel = await getLiveModel(doc.diagramIn._id, api, theories);
 
     return enlivenDiagramDocument(refId, liveDoc, liveModel);
 }

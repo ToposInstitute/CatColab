@@ -13,12 +13,11 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
-import { TheoryHelpButton, Toolbar } from "../page";
+import { DocumentMenu, TheoryHelpButton, Toolbar } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { InstanceTypeMeta } from "../theory";
 import { MaybePermissionsButton } from "../user";
 import { LiveDiagramContext } from "./context";
-import { DiagramMenu } from "./diagram_menu";
 import { type LiveDiagramDocument, getLiveDiagram } from "./document";
 import { DiagramMorphismCellEditor } from "./morphism_cell_editor";
 import { DiagramObjectCellEditor } from "./object_cell_editor";
@@ -54,7 +53,7 @@ export function DiagramDocumentEditor(props: {
     return (
         <div class="growable-container">
             <Toolbar>
-                <DiagramMenu liveDiagram={props.liveDiagram} />
+                <DocumentMenu liveDocument={props.liveDiagram} />
                 <span class="filler" />
                 <TheoryHelpButton theory={props.liveDiagram?.liveModel.theory()} />
                 <MaybePermissionsButton

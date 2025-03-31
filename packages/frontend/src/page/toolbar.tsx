@@ -5,7 +5,7 @@ import invariant from "tiny-invariant";
 import { IconButton } from "../components";
 import { TheoryLibraryContext } from "../stdlib";
 import type { Theory } from "../theory";
-import { AppMenu } from "./menubar";
+import { DefaultAppMenu } from "./menubar";
 
 import CircleHelp from "lucide-solid/icons/circle-help";
 
@@ -24,7 +24,7 @@ export function DefaultToolbar(props: {
 }) {
     return (
         <Toolbar>
-            <AppMenu />
+            <DefaultAppMenu />
             <span class="filler" />
             {props.children}
         </Toolbar>

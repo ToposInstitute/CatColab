@@ -1,11 +1,8 @@
 import type * as http from "node:http";
 import { type DocHandle, Repo } from "@automerge/automerge-repo";
 import { NodeWSServerAdapter } from "@automerge/automerge-repo-network-websocket";
-import * as sentry from "@sentry/node";
 import express from "express";
 import * as ws from "ws";
-
-import type { JsonValue } from "../../backend/pkg/src/index.ts";
 
 export class AutomergeServer {
     private docMap: Map<string, DocHandle<unknown>>;
@@ -14,14 +11,12 @@ export class AutomergeServer {
     private wss: ws.WebSocketServer;
     private repo: Repo;
 
-    public handleChange?: (refId: string, content: JsonValue) => void;
+    public handleChange?: (refId: string, content: any) => void;
 
     constructor(port: number | string) {
         this.docMap = new Map();
 
         this.app = express();
-        sentry.setupExpressErrorHandler(this.app);
-
         this.server = this.app.listen(port);
 
         this.wss = new ws.WebSocketServer({
