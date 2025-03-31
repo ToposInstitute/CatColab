@@ -50,6 +50,32 @@ impl Permissions {
     }
 }
 
+pub async fn validate_session(ctx: AppCtx) -> Result<(), AppError> {
+    let user_id = match ctx.user.as_ref().map(|u| u.user_id.clone()) {
+        Some(id) => id,
+        None => {
+            return Ok(());
+        }
+    };
+
+    let exists = sqlx::query_scalar!(
+        r#"
+        SELECT EXISTS (
+            SELECT 1 FROM users WHERE id = $1
+        )
+        "#,
+        user_id
+    )
+    .fetch_one(&ctx.state.db)
+    .await?;
+
+    if !exists.unwrap_or(false) {
+        return Err(AppError::Unauthorized);
+    }
+
+    Ok(())
+}
+
 /** Verify that user is authorized to access a ref at a given permission level.
 
 It is safe to proceed if the result is `Ok`; otherwise, the requested action

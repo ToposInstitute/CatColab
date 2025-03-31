@@ -8,8 +8,9 @@ import * as uuid from "uuid";
 import { MultiProvider } from "@solid-primitives/context";
 import { Navigate, type RouteDefinition, type RouteSectionProps, Router } from "@solidjs/router";
 import { FirebaseProvider } from "solid-firebase";
-import { ErrorBoundary, Show, createResource, lazy } from "solid-js";
+import { ErrorBoundary, Show, createEffect, createResource, lazy } from "solid-js";
 
+import { getAuth, signOut } from "firebase/auth";
 import { type Api, ApiContext, createRpcClient, useApi } from "./api";
 import { helpRoutes } from "./help/routes";
 import { createModel } from "./model/document";
@@ -35,6 +36,19 @@ const Root = (props: RouteSectionProps<unknown>) => {
     });
 
     const api: Api = { serverHost, rpc, repo };
+
+    createEffect(() => {
+        (async () => {
+            const result = await rpc.validate_session.query();
+            if (result.tag === "Err") {
+                await signOut(getAuth(firebaseApp));
+                // TODO: we should prompt the user to reload the page to prevent the possiblity of reload
+                // loops. This would be easiest to do in the ErrorBoundary, however it can only display
+                // one error at a time...
+                location.reload();
+            }
+        })();
+    });
 
     return (
         <MultiProvider
