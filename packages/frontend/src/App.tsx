@@ -10,6 +10,7 @@ import { Navigate, type RouteDefinition, type RouteSectionProps, Router } from "
 import { FirebaseProvider } from "solid-firebase";
 import { ErrorBoundary, Show, createEffect, createResource, createSignal, lazy } from "solid-js";
 
+import Dialog, { Content, Portal } from "@corvu/dialog";
 import { getAuth, signOut } from "firebase/auth";
 import { type Api, ApiContext, createRpcClient, useApi } from "./api";
 import { helpRoutes } from "./help/routes";
@@ -75,7 +76,6 @@ const Root = (props: RouteSectionProps<unknown>) => {
 };
 
 export function SessionExpiredModal() {
-    // This isn't actually a modal, it's just an unstyled element that will take up most of the page
     const [reloading, setReloading] = createSignal(false);
 
     const handleReload = () => {
@@ -84,15 +84,17 @@ export function SessionExpiredModal() {
     };
 
     return (
-        <div>
-            <div>
-                <h2>Session Expired</h2>
-                <p>Your session is no longer valid. Please reload the page to continue.</p>
-                <button onClick={handleReload} disabled={reloading()}>
-                    {reloading() ? "Reloading..." : "Reload Page"}
-                </button>
-            </div>
-        </div>
+        <Dialog initialOpen={true}>
+            <Portal>
+                <Content class="popup error-dialog">
+                    <h3>Session Expired</h3>
+                    <p>Your session is no longer valid. Please reload the page to continue.</p>
+                    <button onClick={handleReload} disabled={reloading()}>
+                        {reloading() ? "Reloading..." : "Reload Page"}
+                    </button>
+                </Content>
+            </Portal>
+        </Dialog>
     );
 }
 
