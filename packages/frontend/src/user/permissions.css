@@ -13,3 +13,16 @@
     align-items: center;
     gap: 5em;
 }
+
+.embed-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: none;
+    border: none;
+    padding: none;
+    border-radius: 10%;
+    p {
+        font-family: var(--main-font);
+    }
+}
