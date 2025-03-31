@@ -8,7 +8,7 @@ pub struct Snapshot {
     pub id: i32,
     pub for_ref: Uuid,
     pub content: Value, 
-    pub last_updated: chrono::NaiveDateTime, 
+    pub last_updated: chrono::DateTime<Utc>, 
     pub fts_tsvector: String,
     pub embedding: Option<Vec<f32>>, 
 }
