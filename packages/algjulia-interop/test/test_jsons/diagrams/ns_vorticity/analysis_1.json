@@ -1,0 +1,56 @@
+{
+  "analysisOf": {
+    "_id": "0195c95c-b3eb-7142-8b38-b7287cf2c76f",
+    "_server": "backend.catcolab.org",
+    "_version": null,
+    "type": "analysis-of"
+  },
+  "analysisType": "diagram",
+  "name": "",
+  "notebook": {
+    "cells": [
+      {
+        "content": {
+          "content": {
+            "domain": "Sphere",
+            "duration": 1,
+            "initialConditions": {
+              "0195c95c-c200-73a0-bf58-1cc188ecd0c4": "TaylorVortex",
+              "0195c95c-d4b4-779b-ae65-a89269f63b43": "TaylorVortex",
+              "0195df69-dbe8-72d8-8d6c-22dede60c0a6": "TaylorVortex"
+            },
+            "mesh": "Icosphere6",
+            "plotVariables": {
+              "0195c95c-c200-73a0-bf58-1cc188ecd0c4": true,
+              "0195c95c-d4b4-779b-ae65-a89269f63b43": false,
+              "0195df69-dbe8-72d8-8d6c-22dede60c0a6": true
+            },
+            "scalars": {}
+          },
+          "id": "decapodes"
+        },
+        "id": "0195c95d-3b6b-71cb-8bd2-9fbc90fc609f",
+        "tag": "formal"
+      },
+      {
+        "id": "0195ca0d-166a-7179-87d8-b5cf9dd9eaf1",
+        "tag": "stem"
+      },
+      {
+        "content": {
+          "content": {
+            "layout": "graphviz-directed"
+          },
+          "id": "graph"
+        },
+        "id": "0195ca0d-b210-72c5-a091-3e57ced85ed5",
+        "tag": "formal"
+      },
+      {
+        "id": "0195dddf-faaa-76ea-a966-ba4b9be5b36e",
+        "tag": "stem"
+      }
+    ]
+  },
+  "type": "analysis"
+}

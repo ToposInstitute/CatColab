@@ -30,7 +30,6 @@ end
 
 modeljson = open(JSON3.read, joinpath(@__DIR__, "test", "test_jsons", "models", "model_dec.json"), "r")
 dec_model = Model(ThDecapode(), modeljson)
-
 @testset "Validating the JSON object" begin
     # validate the JSON
     @test keys(modeljson) == Set([:name, :notebook, :theory, :type])
@@ -49,17 +48,96 @@ dec_model = Model(ThDecapode(), modeljson)
         _ => nothing
     end
 end
-
 @testset "Validate model" begin
     # caveat: \star and \bigstar are different, but indistinguishable in some fonts
     @test Set(nameof.(values(dec_model))) == Set([:DualForm1, :⋆₀⁻¹, :dual_d₁, :dpsw, :Form1, :neg, :⋆₁, :DualForm2, :Form0, :Δ⁻¹, :♭♯, :∂ₜ, :d₀])
 end
 
 # ## load diagram
-diagram_json = open(JSON3.read, joinpath(@__DIR__, "test", "test_jsons", "diagrams", "diagram_diffusivity_constant.json"), "r")
+diagram_json = open(JSON3.read, joinpath(@__DIR__, "test", "test_jsons", "diagrams", "inverse_laplacian", "diagram.json"), "r")
 diagram = Diagram(diagram_json[:notebook], dec_model)
+@testset "Diagram - Inverse Laplacian" begin
+    handcrafted_pode = SummationDecapode(parse_decapode(quote end))
+    add_part!(handcrafted_pode, :Var, name=:A, type=:Form0)
+    add_part!(handcrafted_pode, :Var, name=:B, type=:Form0)
+    add_part!(handcrafted_pode, :Op1, src=1, tgt=2, op1=:Δ⁻¹)
+    @test diagram.pode == handcrafted_pode
+end
+# TODO not specifying initial boundary conditions for `B` on the front-end
+# means that it will be automatically specified
+@testset "Analysis - Inverse Laplacian" begin
+    analysis_json = open(JSON3.read, joinpath(@__DIR__, "test", "test_jsons", "diagrams", "inverse_laplacian", "analysis_1.json"), "r")
+    system = Analysis(analysis_json, diagram)
+    simulator = evalsim(system.pode)
+    f = simulator(system.geometry.dualmesh, system.generate, DiagonalHodge())
+    soln = run_sim(f, system.init, 50.0, ComponentArray(k=0.5,))
+    @test soln.retcode == ReturnCode.Success
+    result = SimResult(soln, system)
+    @test typeof(result.state) == Dict{String, Vector{AbstractArray{SVector{3, Float64}}}}
+    jv = JsonValue(result)
+end
 
-@testset "Diagram" begin
+# ## load diagram
+diagram_json = open(JSON3.read, joinpath(@__DIR__, "test", "test_jsons", "diagrams", "inverse_laplacian_longtrip", "diagram.json"), "r")
+diagram = Diagram(diagram_json[:notebook], dec_model)
+@testset "Diagram - Inverse Laplacian - Longtrip" begin
+    handcrafted_pode = SummationDecapode(parse_decapode(quote end))
+    add_part!(handcrafted_pode, :Var, name=:u, type=:Form0)
+    add_part!(handcrafted_pode, :Var, name=:Δu, type=:Form0)
+    add_part!(handcrafted_pode, :Var, name=Symbol("•1"), type=nothing)
+    add_part!(handcrafted_pode, :Var, name=Symbol("•2"), type=nothing)
+    add_part!(handcrafted_pode, :Var, name=Symbol("•3"), type=nothing)
+    add_part!(handcrafted_pode, :Op1, src=1, tgt=3, op1=:d₀)
+    add_part!(handcrafted_pode, :Op1, src=3, tgt=4, op1=:⋆₁)
+    add_part!(handcrafted_pode, :Op1, src=4, tgt=5, op1=:dual_d₁)
+    add_part!(handcrafted_pode, :Op1, src=5, tgt=2, op1=:⋆₀⁻¹)
+    add_part!(handcrafted_pode, :Op1, src=1, tgt=2, op1=:Δ⁻¹)
+    @test diagram.pode == handcrafted_pode
+end
+# TODO not specifying initial boundary conditions for `B` on the front-end means that it will be automatically specified
+# TODO: why isn't the infer_types! working?
+@testset "Analysis - Inverse Laplacian - Longtrip" begin
+    analysis_json = open(JSON3.read, joinpath(@__DIR__, "test", "test_jsons", "diagrams", "inverse_laplacian_longtrip", "analysis.json"), "r")
+    system = Analysis(analysis_json, diagram)
+    simulator = evalsim(system.pode)
+    f = simulator(system.geometry.dualmesh, system.generate, DiagonalHodge())
+    soln = run_sim(f, system.init, 50.0, ComponentArray(k=0.5,))
+    @test soln.retcode == ReturnCode.Success
+    result = SimResult(soln, system)
+    @test typeof(result.state) == Dict{String, Vector{AbstractArray{SVector{3, Float64}}}}
+    jv = JsonValue(result)
+end
+
+# ## load diagram
+diagram_json = open(JSON3.read, joinpath(@__DIR__, "test", "test_jsons", "diagrams", "ns_vort", "diagram.json"), "r")
+diagram = Diagram(diagram_json[:notebook], dec_model)
+# @testset "Diagram - NS Vorticity" begin
+#     # construct a decapode
+#     handcrafted_pode = SummationDecapode(parse_decapode(quote end))
+#     add_part!(handcrafted_pode, :Var, name=:u, type=:Form0)
+#     add_part!(handcrafted_pode, :Var, name=Symbol("du/dt"), type=:Form0)
+#     add_part!(handcrafted_pode, :TVar, incl=2)
+#     add_part!(handcrafted_pode, :Op1, src=1, tgt=2, op1=:∂ₜ)
+#     @test diagram.pode == handcrafted_pode
+# end
+# TODO not specifying initial boundary conditions for `B` on the front-end
+# means that it will be automatically specified
+@testset "Analysis - Navier-Stokes Vorticity" begin
+    analysis_json = open(JSON3.read, joinpath(@__DIR__, "test", "test_jsons", "diagrams", "ns_vort", "analysis.json"), "r")
+    system = Analysis(analysis_json, diagram)
+    simulator = evalsim(system.pode)
+    f = simulator(system.geometry.dualmesh, system.generate, DiagonalHodge())
+    soln = run_sim(f, system.init, system.duration, ComponentArray(k=0.5,))
+    @test soln.retcode == ReturnCode.Success
+    result = SimResult(soln, system)
+    @test typeof(result.state) == Dict{String, Vector{AbstractArray{SVector{3, Float64}}}}
+    jv = JsonValue(result)
+end
+
+# ## load diagram
+diagram_json = open(JSON3.read, joinpath(@__DIR__, "test", "test_jsons", "diagrams", "diffusivity_constant", "diagram.json"), "r")
+diagram = Diagram(diagram_json[:notebook], dec_model)
+@testset "Diagram - Diffusivity Constant" begin
     # construct a decapode
     handcrafted_pode = SummationDecapode(parse_decapode(quote end))
     add_part!(handcrafted_pode, :Var, name=:u, type=:Form0)
@@ -68,127 +146,16 @@ diagram = Diagram(diagram_json[:notebook], dec_model)
     add_part!(handcrafted_pode, :Op1, src=1, tgt=2, op1=:∂ₜ)
     @test diagram.pode == handcrafted_pode
 end
-
+# TODO not specifying initial boundary conditions for `B` on the front-end
+# means that it will be automatically specified
 @testset "Analysis - Diffusivity Constant" begin
-
-    analysis_json = open(JSON3.read, joinpath(@__DIR__, "test", "test_jsons", "analyses", "analysis_1.json"), "r")
+    analysis_json = open(JSON3.read, joinpath(@__DIR__, "test", "test_jsons", "diagrams", "diffusivity_constant", "analysis_1.json"), "r")
     system = Analysis(analysis_json, diagram)
-    @info system
-
     simulator = evalsim(system.pode)
-        
     f = simulator(system.geometry.dualmesh, system.generate, DiagonalHodge())
-
-    soln = run_sim(f, system.init, 50.0, ComponentArray(k=0.5,))
-
+    soln = run_sim(f, system.init, system.duration, ComponentArray(k=0.5,))
     @test soln.retcode == ReturnCode.Success
- 
     result = SimResult(soln, system)
-
     @test typeof(result.state) == Dict{String, Vector{AbstractArray{SVector{3, Float64}}}}
-
     jv = JsonValue(result)
-
-end
-
-#we are trying to index `soln.u[t]` by `Ċ `, but only `C` is present. I think this is because we generating initial conditions based on what was specified to the `initial_conditions` parameter, whereas in the past we were using `infer_state_names` to obtain that.
-@testset "Analysis - Diffusion with Two Variables" begin
-
-    json_string = read(joinpath(@__DIR__, "test", "test_jsons", "diffusion_data_twovars.json"), String);
-    @test Set(keys(JSON3.read(json_string))) == KEYS
-
-    system = PodeSystem(json_string);
-
-    simulator = evalsim(system.pode)
-    f = simulator(system.geometry.dualmesh, system.generate, DiagonalHodge())
-
-    soln = run_sim(f, system.init, 50.0, ComponentArray(k=0.5,)); 
-
-    @test soln.retcode == ReturnCode.Success
-
-    result = SimResult(soln, system);
-
-    @test typeof(result.state) == Dict{String, Vector{AbstractArray{SVector{3, Float64}}}}
-
-    jvs = JsonValue(result);
-
-end
-
-#@testset "Parsing the Model JSON Object - Diffusion Long Trip" begin
-
-#    data = open(JSON3.read, joinpath(@__DIR__, "test_jsons", "diffusion_long_trip.json"), "r")
-#    jsondiagram = data[:diagram]
-#    jsonmodel = data[:model]
-#    @test Set(keys(data)) == KEYS
-
-#    @test @match jsonmodel[1] begin
-#        IsObject(_) => true
-#        _ => false
-#    end
-    
-#    @test @match jsonmodel[6] begin
-#        IsMorphism(_) => true
-#        _ => false
-#    end
-
-#    model = Model(ThDecapode())
-#    @match jsonmodel[1] begin
-#        IsObject(content) => add_to_model!(model, content, ObTag())
-#        _ => nothing
-#    end
-
-#    @test model.data["01936ac6-d1c1-7db1-a3ca-b8678a75299c"] == ModelElement(;name=:Form0, val=nothing)
-    
-#end
-
-## # GOOD
-#@testset "Simulation - Diffusion Long Trip" begin
-
-#    json_string = read(joinpath(@__DIR__, "test_jsons", "diffusion_long_trip.json"), String)
-#    @test Set(keys(JSON3.read(json_string))) == KEYS
-
-#    system = PodeSystem(json_string)
-
-#    simulator = evalsim(system.pode)
-#    f = simulator(system.geometry.dualmesh, default_dec_matrix_generate, DiagonalHodge())
-
-#    # time
-#    soln = run_sim(f, system.init, 50.0, ComponentArray(k=0.5,))
-
-#    @test soln.retcode == ReturnCode.Success
-  
-#    result = SimResult(soln, system)
-
-#    @test typeof(result.state) == Dict{String, Vector{AbstractArray{SVector{3, Float64}}}}
-
-#    jv = JsonValue(result)
-
-#end
-
-model = Model(ThDecapode(), joinpath(@__DIR__, "test", "test_jsons", "model_dec.json"))
-
-
-
-# GOOD
-@testset "Simulation - Navier-Stokes Vorticity" begin
-
-    json_string = read(joinpath(@__DIR__, "test_jsons", "ns_vorticity.json"), String)
-    @test Set(keys(JSON3.read(json_string))) == KEYS
-
-    system = PodeSystem(json_string)
-
-    simulator = evalsim(system.pode)
-    
-    f = simulator(system.geometry.dualmesh, system.generate, DiagonalHodge())
-
-    soln = run_sim(f, system.init, 50.0, ComponentArray(k=0.5,))
-
-    @test soln.retcode == ReturnCode.Success
- 
-    result = SimResult(soln, system);
-
-    @test typeof(result.state) == Dict{String, Vector{AbstractArray{SVector{3, Float64}}}}
-
-    jv = JsonValue(result)
-
 end

@@ -1,6 +1,6 @@
 struct PodeSystem <: AbstractAnalysis{ThDecapode}
     pode::SummationDecapode
-    plotvar::Vector{Symbol}
+    plotVars::Dict{String, Bool}
     scalars::Dict{Symbol, Any} # closures
     geometry::Geometry
     init::ComponentArray
@@ -12,16 +12,18 @@ export PodeSystem
 
 """ Constructs an analysis from the diagram of a Decapode Model"""
 function Analysis(analysis::JSON3.Object, diagram::DecapodeDiagram, hodge=GeometricHodge())
-  
+ 
     # TODO want a safer way to get this information
-    content = analysis[:notebook][:cells][1][:content][:content]
+    id = findfirst(cell -> haskey(cell, :content), analysis[:notebook][:cells])
+    content = analysis[:notebook][:cells][id][:content][:content]
 
     domain = content[:domain]
     duration = content[:duration]
     initialConditions = content[:initialConditions]
     mesh = content[:mesh]
-    plotVars = content[:plotVariables]
+    plotVars = Dict{String, Bool}([ String(k) => v for (k,v) in content[:plotVariables]])
     scalars = content[:scalars]
+    anons = Dict{Symbol, Any}()
 
     dot_rename!(diagram.pode)
     uuid2symb = uuid_to_symb(diagram.pode, diagram.vars)
@@ -34,7 +36,7 @@ function Analysis(analysis::JSON3.Object, diagram::DecapodeDiagram, hodge=Geomet
     star0_inv_m = dec_mat_inverse_hodge(0, geometry.dualmesh, hodge)
     Δ0 = Δ(0,geometry.dualmesh)
     #fΔ0 = factorize(Δ0);
-    function sys_generate(s, my_symbol, hodge=hodge)
+    function sys_generate(s, my_symbol)
         op = @match my_symbol begin
             sym && if sym ∈ keys(anons) end => anons[sym]
             :♭♯ => x -> ♭♯_m * x # [1]
@@ -48,13 +50,14 @@ function Analysis(analysis::JSON3.Object, diagram::DecapodeDiagram, hodge=Geomet
         return (args...) -> op(args...)
     end
 
-    @info uuid2symb
+    @info uuid2symb, initialConditions
     u0 = initial_conditions(initialConditions, geometry, uuid2symb)
 
     # reversing `uuid2symb` into `symbol => uuid.` we need this to reassociate the var to its UUID 
     symb2uuid = Dict([v => k for (k,v) in pairs(uuid2symb)])
 
-    return PodeSystem(decapode, plotvars, anons, geometry, u0, sys_generate, symb2uuid, duration)
+    # TODO return the whole system
+    return PodeSystem(diagram.pode, plotVars, anons, geometry, u0, sys_generate, symb2uuid, duration)
 end
 export Analysis
 
@@ -146,7 +149,9 @@ end
 
 """ for the variables in a system, associate them to their state values over the duration of the simulation """
 function variables_state(soln::ODESolution, system::PodeSystem)
-    Dict([ system.uuiddict[var] => state_entire_sim(soln, system, var) for var ∈ system.plotvar ])
+    plottedVars = [ k for (k, v) in system.plotVars if v == true ]
+    uuid2symb = Dict([ v => k for (k, v) in system.uuiddict]) # TODO why reverse again?
+    Dict([ String(uuid2symb[var]) => state_entire_sim(soln, system, uuid2symb[var]) for var ∈ plottedVars ])
 end
 
 """ given a simulation, a domain, and a variable, gets the state values over the duration of a simulation. 
