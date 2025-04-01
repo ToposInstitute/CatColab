@@ -24,11 +24,13 @@ let
       rm -rf ./catcolab
     fi
 
-    git clone https://github.com/jmoggr/CatColab.git catcolab
+    git clone https://github.com/ToposInstitute/CatColab.git catcolab
     cd catcolab
     git checkout "$commit_sha"
 
-    sudo /run/current-system/sw/bin/nixos-rebuild switch --flake .#catcolab-jmoggr
+    # hostname will return the hosts networking.hostname, which should, by convention match a key in
+    # deploy.nodes in flake.nix
+    sudo /run/current-system/sw/bin/nixos-rebuild switch --flake .#"$(hostname)"
   '';
 in
 with lib;
