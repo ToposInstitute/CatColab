@@ -34,7 +34,7 @@ pub trait VEquipment: VDblCategory {
 }
 
 impl VEquipment for WalkingCategory {
-    fn restrict(&self, n: Niche<Self::Ob, Self::Arr, Self::Pro>) -> Self::Cell {
+    fn restrict(&self, _n: Niche<Self::Ob, Self::Arr, Self::Pro>) -> Self::Cell {
         1
     }
 }
@@ -190,5 +190,15 @@ mod tests {
     #[test]
     fn walking_bimod() {
         let w_bm = WalkingBimodule::Main();
+        let niche = Niche {
+            nw: WalkingBimodule::Ob::Left,
+            ne: WalkingBimodule::Ob::Right,
+            sw: WalkingBimodule::Ob::Left,
+            se: WalkingBimodule::Ob::Right,
+            w: WalkingBimodule::Ob::Left,
+            e: WalkingBimodule::Ob::Right,
+            s: WalkingBimodule::Pro::Middle,
+        };
+        assert_eq!(w_bm.restrict(niche), Path::single(WalkingBimodule::Pro::Middle))
     }
 }
