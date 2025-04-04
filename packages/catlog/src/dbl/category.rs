@@ -16,12 +16,7 @@ satisfying a universal property ([Cruttwell-Shulman
 2008](crate::refs::GeneralizedMulticategories), Section 5). In our usage of
 virtual double categories as double theories, we will assume that *units*
 (nullary composites) exist. We will not assume that any other composites exist,
-though they often do. Like anything defined by a universal property, composites
-are not strictly unique if they exist but they *are* unique up to unique
-isomorphism. As often when working with (co)limits, our trait for virtual double
-categories assumes that a *choice* of composites has been made whenever they are
-needed. We do not attempt to "recognize" whether an arbitrary cell has the
-relevant universal property.
+though often they do.
 
 Virtual double categories have pros and cons compared with ordinary double
 categories. We prefer VDCs in `catlog` because pastings of cells are much
@@ -29,7 +24,7 @@ simpler in a VDC than in a double category: a pasting diagram in VDC is a
 well-typed [tree](super::tree) of cells, rather than a kind of planar string
 diagram, and the notorious
 [pinwheel](https://ncatlab.org/nlab/show/double+category#Unbiased) obstruction
-to composition in a double category does not arise.
+to composition in a double category does not arise in VDCs.
 
 # Examples
 
@@ -50,6 +45,7 @@ the type level rather than as instances of general data structures.
 
 use derive_more::From;
 use ref_cast::RefCast;
+use std::ops::Range;
 
 use super::graph::{EdgeGraph, VDblGraph};
 use super::tree::DblTree;
@@ -58,8 +54,6 @@ use crate::one::path::Path;
 /** A virtual double category (VDC).
 
 See the [module-level docs](super::category) for background on VDCs.
-
-TODO: The universal property of a composite is not part of the interface.
  */
 pub trait VDblCategory {
     /// Type of objects in the VDC.
@@ -147,7 +141,17 @@ pub trait VDblCategory {
     fn id_cell(&self, m: Self::Pro) -> Self::Cell {
         self.compose_cells(DblTree::empty(m))
     }
+}
 
+/** A virtual double category with some or all chosen composites.
+
+Like anything defined by a universal property, composites in a VDC are not
+strictly unique if they exist but they *are* unique up to unique isomorphism. As
+often when working with (co)limits, this trait assumes that a *choice* of
+composites has been made whenever they are exist. We do not attempt to
+"recognize" whether an arbitrary cell has the relevant universal property.
+ */
+pub trait VDCWithComposites: VDblCategory {
     /** Does the path of proarrows have a chosen composite?
 
     The default implementation checks whether [`composite`](Self::composite)
@@ -169,20 +173,19 @@ pub trait VDblCategory {
     /** Gets the chosen cell witnessing a composite of proarrows, if there is one.
 
     Such a cell is called an **extension or **opcartesian** cell.
-
-    The default implementation handles the one special kind of composite that
-    always exist: unary composites.
      */
-    fn composite_ext(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Cell> {
-        path.only().map(|m| self.id_cell(m))
-    }
+    fn composite_ext(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Cell>;
 
     /// Gets the chosen cell witnessing a composite of two proarrows, if there is one.
     fn composite2_ext(&self, m: Self::Pro, n: Self::Pro) -> Option<Self::Cell> {
         self.composite_ext(Path::pair(m, n))
     }
 
-    /// Gets the chosen composite for a path of proarrows, if there is one.
+    /** Gets the chosen composite for a path of proarrows, if there is one.
+
+    The default implementation returns the codomain of the extension cell from
+    [`composite_ext`](Self::composite_ext).
+     */
     fn composite(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Pro> {
         self.composite_ext(path).map(|α| self.cell_cod(&α))
     }
@@ -201,9 +204,30 @@ pub trait VDblCategory {
         self.composite_ext(Path::empty(x))
     }
 
-    /// Gets the chosen unit for an object, if there is one.
+    /** Gets the chosen unit for an object, if there is one.
+
+    The default implementation returns the codomain of the extension cell from
+    [`unit_ext`](Self::unit_ext).
+     */
     fn unit(&self, x: Self::Ob) -> Option<Self::Pro> {
         self.unit_ext(x).map(|α| self.cell_cod(&α))
+    }
+
+    /** Factorizes a cell through a composite of proarrows.
+
+    The subpath of the domain path at the given range is replaced with the
+    composite of that subpath, if the composite exists. This is the universal
+    property of the composite.
+    */
+    fn through_composite(&self, cell: Self::Cell, range: Range<usize>) -> Option<Self::Cell>;
+
+    /** Factorizes a cell through the unit proarrow for an object.
+
+    A unit proarrow is inserted into the domain path at the given index, if the
+    unit exists. This is the universal property of the unit.
+     */
+    fn through_unit(&self, cell: Self::Cell, index: usize) -> Option<Self::Cell> {
+        self.through_composite(cell, index..index)
     }
 }
 
@@ -381,8 +405,16 @@ impl VDblCategory for WalkingCategory {
     fn compose_cells(&self, tree: DblTree<Self::Arr, Self::Pro, Self::Cell>) -> Self::Cell {
         tree.dom(UnderlyingDblGraph::ref_cast(self)).len()
     }
+}
+
+impl VDCWithComposites for WalkingCategory {
+    /// In the walking category, every cell is an extension.
     fn composite_ext(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Cell> {
         Some(path.len())
+    }
+
+    fn through_composite(&self, n: Self::Cell, range: Range<usize>) -> Option<Self::Cell> {
+        Some(n + 1 - range.len())
     }
 }
 
@@ -503,8 +535,17 @@ pub mod WalkingBimodule {
             assert!(self.has_cell(&path));
             path
         }
+    }
+
+    impl VDCWithComposites for Main {
+        /// In the walking bimodule, every cell is an extension.
         fn composite_ext(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Cell> {
             Some(path)
+        }
+
+        fn through_composite(&self, path: Self::Cell, range: Range<usize>) -> Option<Self::Cell> {
+            let graph = ProedgeGraph::ref_cast(UnderlyingDblGraph::ref_cast(self));
+            Some(path.replace_subpath(graph, range, |subpath| self.cell_cod(&subpath).into()))
         }
     }
 }
@@ -609,6 +650,17 @@ pub mod WalkingFunctor {
         fn tgt(self) -> Arr {
             self.src()
         }
+
+        fn map<F>(self, f: F) -> Self
+        where
+            F: FnOnce(usize) -> usize,
+        {
+            match self {
+                Cell::Zero(n) => Cell::Zero(f(n)),
+                Cell::Arrow(n) => Cell::Arrow(f(n)),
+                Cell::One(n) => Cell::One(f(n)),
+            }
+        }
     }
 
     impl VDblCategory for Main {
@@ -673,11 +725,18 @@ pub mod WalkingFunctor {
             assert_eq!(f, g, "Cells in walking functor have the same source and target");
             Cell::with_src_and_tgt(f, n)
         }
+    }
+
+    impl VDCWithComposites for Main {
         fn composite_ext(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Cell> {
             let graph = ProedgeGraph::ref_cast(UnderlyingDblGraph::ref_cast(self));
             let (x, y) = (path.src(graph), path.tgt(graph));
             assert_eq!(x, y, "Paths in walking functor have the same source and target");
             Some(Cell::with_src_and_tgt(self.id(x), path.len()))
+        }
+
+        fn through_composite(&self, cell: Self::Cell, range: Range<usize>) -> Option<Self::Cell> {
+            Some(cell.map(|n| n + 1 - range.len()))
         }
     }
 }
@@ -692,6 +751,7 @@ mod tests {
         assert!(vdc.has_unit(&()));
         assert_eq!(vdc.unit(()), Some(()));
         assert_eq!(vdc.unit_ext(()), Some(0));
+        assert_eq!(vdc.through_unit(2, 1), Some(3));
         assert_eq!(vdc.cell_dom(&0), Path::empty(()));
         assert_eq!(vdc.cell_dom(&2), Path::pair((), ()));
     }
@@ -714,6 +774,15 @@ mod tests {
         assert_eq!(vdc.composite(Path::empty(Ob::Left)), Some(Pro::Left));
         assert_eq!(vdc.composite(Path::empty(Ob::Right)), Some(Pro::Right));
         assert_eq!(vdc.composite(path), Some(Pro::Middle));
+
+        assert_eq!(
+            vdc.through_unit(Pro::Middle.into(), 0),
+            Some(Path::pair(Pro::Left, Pro::Middle))
+        );
+        assert_eq!(
+            vdc.through_unit(Pro::Middle.into(), 1),
+            Some(Path::pair(Pro::Middle, Pro::Right))
+        );
     }
 
     #[test]
@@ -732,5 +801,7 @@ mod tests {
         assert_eq!(vdc.cell_tgt(&ext), Arr::Zero);
         let new_cell = vdc.compose_cells2(vec![ext, ext], cell);
         assert_eq!(vdc.cell_dom(&new_cell).len(), 4);
+
+        assert_eq!(vdc.through_unit(Cell::Arrow(2), 1), Some(Cell::Arrow(3)));
     }
 }
