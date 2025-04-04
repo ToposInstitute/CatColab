@@ -29,7 +29,11 @@ function add_to_pode!(d::SummationDecapode,
 end
 
 function Base.nameof(model::Model, content::AbstractDict)
-    Symbol(model.data[content[:over][:content]].name)
+    if isnothing(content[:over])
+        :no_name
+    else
+        Symbol(model.data[content[:over][:content]].name)
+    end
 end
 
 # TODO we are restricted to Op1
@@ -52,7 +56,7 @@ function add_to_pode!(d::SummationDecapode,
         if dom ∉ values(nc)
             id = isempty(keys(nc)) ? 1 : length(keys(nc)) + 1
             name = Symbol("•$id")
-            acset_id = add_part!(d, :Var, name=name)
+            acset_id = add_part!(d, :Var, name=name, type=:infer)
             push!(nc, acset_id => dom)
             acset_id
         else
@@ -66,12 +70,12 @@ function add_to_pode!(d::SummationDecapode,
         if cod ∉ values(nc)
             id = isempty(keys(nc)) ? 1 : length(keys(nc)) + 1
             name = Symbol("•$id")
-            acset_id = add_part!(d, :Var, name=name)
+            acset_id = add_part!(d, :Var, name=name, type=:infer)
             push!(nc, acset_id => cod)
             acset_id
         else
-            out = first(keys(filter(x -> x[2] == cod, pairs(nc))))
-            out
+            out = filter(x -> x[2] == cod, pairs(nc))
+            first(keys(out))
         end
     end
 

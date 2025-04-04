@@ -50,7 +50,6 @@ function Analysis(analysis::JSON3.Object, diagram::DecapodeDiagram, hodge=Geomet
         return (args...) -> op(args...)
     end
 
-    @info uuid2symb, initialConditions
     u0 = initial_conditions(initialConditions, geometry, uuid2symb)
 
     # reversing `uuid2symb` into `symbol => uuid.` we need this to reassociate the var to its UUID 
