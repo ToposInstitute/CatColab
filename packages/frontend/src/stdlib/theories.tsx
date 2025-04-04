@@ -678,3 +678,69 @@ stdTheories.add(
         });
     },
 );
+
+
+stdTheories.add(
+    {
+        id: "primitive-system-structure",
+        name: "System Structure Diagrams",
+        description: "Model relationships among accumulation (stocks) and change (flows) and feedback loops",
+        group: "System Dynamics",
+        help: "system-structure",
+    },
+    (meta) => {
+        const thCategorySignedLinks = new catlog.ThCategorySignedLinks();
+        return new Theory({
+            ...meta,
+            theory: thCategorySignedLinks.theory(),
+            onlyFreeModels: true,
+            modelTypes: [
+                {
+                    tag: "ObType",
+                    obType: { tag: "Basic", content: "Object" },
+                    name: "Stock",
+                    description: "Thing with an amount",
+                    shortcut: ["S"],
+                    cssClasses: [styles.box],
+                    svgClasses: [svgStyles.box],
+                },
+                {
+                    tag: "MorType",
+                    morType: {
+                        tag: "Hom",
+                        content: { tag: "Basic", content: "Object" },
+                    },
+                    name: "Flow",
+                    description: "Flow from one stock to another",
+                    shortcut: ["F"],
+                    arrowStyle: "double",
+                },
+                {
+                    tag: "MorType",
+                    morType: { tag: "Basic", content: "Positive" },
+                    name: "Positive Link",
+                    description: "The target flow changes in the same direction of the source stock",
+                    arrowStyle: "plus",
+                    preferUnnamed: true,
+                    shortcut: ["P"],
+                },
+                {
+                    tag: "MorType",
+                    morType: { tag: "Basic", content: "Negative" },
+                    name: "Negative Link",
+                    description: "The target flow changes in the opposite direction of the source stock",
+                    arrowStyle: "minus",
+                    preferUnnamed: true,
+                    shortcut: ["N"],
+                },
+            ],
+            modelAnalyses: [
+                analyses.configureStockFlowDiagram({
+                    id: "diagram",
+                    name: "Visualization",
+                    description: "Visualize the stock and flow diagram",
+                }),
+            ],
+        });
+    },
+);

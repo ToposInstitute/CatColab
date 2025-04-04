@@ -134,6 +134,51 @@ pub fn th_category_links() -> UstrDiscreteTabTheory {
     th
 }
 
+/** The theory of categories with signed links.
+
+A *category with signed links* is a category `C` together with a profunctor from `C` to
+`Arr(C)`, the arrow category of C. 
+
+It include two profunctors:
+
+1. Positive links l+: c -> Tabulator(id(c))
+2. Negative links l-: c -> Tabulator(id(c))
+
+The composition rules:
+
+1. If we have a link (stock s -> flow f (stock x-> stock y)) and labelled as l_i, followed by the downstream stock y of flow f, followed by 
+a link from stock y to flow g (stock y -> flow g) and labelled as l_j, we can get a composed link (stock s -> flow g) by
+
+L_i ; cod^f ; L_j
+
+and the sign of the link from stock s to flow g is "l_i * l_j";
+
+2. If we have a link (stock s -> flow f (stock x-> stock y)) and labelled as l_i, followed by the upstream stock x of flow f, followed by 
+a link from stock x to flow g (stock x -> flow g) and labelled as l_j, we can get a composed link (stock s -> flow g) by
+
+L_i ; dom^f ; L_j
+
+and the sign of the link from stock s to flow g is "(-1) * l_i * l_j";
+
+ */
+
+pub fn th_category_signed_links() -> UstrDiscreteTabTheory {
+    let mut th: UstrDiscreteTabTheory = Default::default();
+    let x = ustr("Object");
+    th.add_ob_type(x);
+    th.add_mor_type(
+        ustr("Positive"),
+        TabObType::Basic(x),
+        th.tabulator(th.hom_type(TabObType::Basic(x))),
+    );
+    th.add_mor_type(
+        ustr("Negative"),
+        TabObType::Basic(x),
+        th.tabulator(th.hom_type(TabObType::Basic(x))),
+    );
+    th
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -150,5 +195,6 @@ mod tests {
         assert!(th_category_with_scalars().validate().is_ok());
         // TODO: Validate discrete tabulator theories.
         th_category_links();
+        th_category_signed_links();
     }
 }

@@ -258,6 +258,26 @@ impl ThCategoryLinks {
     }
 }
 
+
+/// The theory of categories with signed links.
+#[wasm_bindgen]
+pub struct ThCategorySignedLinks(Arc<theory::UstrDiscreteTabTheory>);
+
+#[wasm_bindgen]
+impl ThCategorySignedLinks {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self(Arc::new(theories::th_category_signed_links()))
+    }
+
+    #[wasm_bindgen]
+    pub fn theory(&self) -> DblTheory {
+        DblTheory(self.0.clone().into())
+    }
+
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
