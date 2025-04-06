@@ -16,7 +16,7 @@ import {
 import { DocumentMenu, TheoryHelpButton, Toolbar } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { InstanceTypeMeta } from "../theory";
-import { MaybePermissionsButton } from "../user";
+import { PermissionsButton } from "../user";
 import { LiveDiagramContext } from "./context";
 import { type LiveDiagramDocument, getLiveDiagram } from "./document";
 import { DiagramMorphismCellEditor } from "./morphism_cell_editor";
@@ -31,6 +31,7 @@ import {
 } from "./types";
 
 import "./diagram_editor.css";
+import DocumentLoadingScreen from "../page/document_loading_screen";
 
 export default function DiagramPage() {
     const api = useApi();
@@ -44,26 +45,28 @@ export default function DiagramPage() {
         (refId) => getLiveDiagram(refId, api, theories),
     );
 
-    return <DiagramDocumentEditor liveDiagram={liveDiagram()} />;
+    return (
+        <Show when={liveDiagram()} fallback={<DocumentLoadingScreen />}>
+            {(loadedDiagram) => <DiagramDocumentEditor liveDiagram={loadedDiagram()} />}
+        </Show>
+    );
 }
 
 export function DiagramDocumentEditor(props: {
-    liveDiagram?: LiveDiagramDocument;
+    liveDiagram: LiveDiagramDocument;
 }) {
     return (
         <div class="growable-container">
             <Toolbar>
                 <DocumentMenu liveDocument={props.liveDiagram} />
                 <span class="filler" />
-                <TheoryHelpButton theory={props.liveDiagram?.liveModel.theory()} />
-                <MaybePermissionsButton
-                    permissions={props.liveDiagram?.liveDoc.permissions}
-                    refId={props.liveDiagram?.refId}
+                <TheoryHelpButton theory={props.liveDiagram.liveModel.theory()} />
+                <PermissionsButton
+                    permissions={props.liveDiagram.liveDoc.permissions}
+                    refId={props.liveDiagram.refId}
                 />
             </Toolbar>
-            <Show when={props.liveDiagram}>
-                {(liveDiagram) => <DiagramPane liveDiagram={liveDiagram()} />}
-            </Show>
+            <DiagramPane liveDiagram={props.liveDiagram} />
         </div>
     );
 }

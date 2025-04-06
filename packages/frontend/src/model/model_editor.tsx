@@ -14,7 +14,7 @@ import {
 import { DocumentMenu, TheoryHelpButton, Toolbar } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
-import { MaybePermissionsButton } from "../user";
+import { PermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
 import { type LiveModelDocument, getLiveModel } from "./document";
 import { MorphismCellEditor } from "./morphism_cell_editor";
@@ -30,6 +30,7 @@ import {
 } from "./types";
 
 import "./model_editor.css";
+import DocumentLoadingScreen from "../page/document_loading_screen";
 
 export default function ModelPage() {
     const api = useApi();
@@ -43,26 +44,28 @@ export default function ModelPage() {
         (refId) => getLiveModel(refId, api, theories),
     );
 
-    return <ModelDocumentEditor liveModel={liveModel()} />;
+    return (
+        <Show when={liveModel()} fallback={<DocumentLoadingScreen />}>
+            {(loadedModel) => <ModelDocumentEditor liveModel={loadedModel()} />}
+        </Show>
+    );
 }
 
 export function ModelDocumentEditor(props: {
-    liveModel?: LiveModelDocument;
+    liveModel: LiveModelDocument;
 }) {
     return (
         <div class="growable-container">
             <Toolbar>
                 <DocumentMenu liveDocument={props.liveModel} />
                 <span class="filler" />
-                <TheoryHelpButton theory={props.liveModel?.theory()} />
-                <MaybePermissionsButton
-                    permissions={props.liveModel?.liveDoc.permissions}
-                    refId={props.liveModel?.refId}
+                <TheoryHelpButton theory={props.liveModel.theory()} />
+                <PermissionsButton
+                    permissions={props.liveModel.liveDoc.permissions}
+                    refId={props.liveModel.refId}
                 />
             </Toolbar>
-            <Show when={props.liveModel}>
-                {(liveModel) => <ModelPane liveModel={liveModel()} />}
-            </Show>
+            <ModelPane liveModel={props.liveModel} />
         </div>
     );
 }

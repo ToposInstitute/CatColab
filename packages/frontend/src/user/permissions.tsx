@@ -20,7 +20,6 @@ import { deepCopyJSON } from "../util/deepcopy";
 import { Login } from "./login";
 import { NameUser, UserInput } from "./username";
 
-import File from "lucide-solid/icons/file";
 import FileLock from "lucide-solid/icons/file-lock-2";
 import FilePen from "lucide-solid/icons/file-pen";
 import FileUser from "lucide-solid/icons/file-user";
@@ -199,26 +198,6 @@ export function PermissionsButton(props: {
                 <ReadonlyPermissionsButton />
             </Match>
         </Switch>
-    );
-}
-
-/** Toolbar button summarizing the document's permissions, if available.
-
-Suitable for use while the document is being loaded.
- */
-export function MaybePermissionsButton(props: {
-    permissions?: Permissions;
-    refId?: string;
-}) {
-    const fallback = () => (
-        <IconButton disabled>
-            <File />
-        </IconButton>
-    );
-    return (
-        <Show when={props.permissions} fallback={fallback()}>
-            {(permissions) => <PermissionsButton permissions={permissions()} refId={props.refId} />}
-        </Show>
     );
 }
 
