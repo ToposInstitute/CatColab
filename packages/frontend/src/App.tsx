@@ -8,7 +8,7 @@ import * as uuid from "uuid";
 import { MultiProvider } from "@solid-primitives/context";
 import { Navigate, type RouteDefinition, type RouteSectionProps, Router } from "@solidjs/router";
 import { FirebaseProvider } from "solid-firebase";
-import { ErrorBoundary, Show, createEffect, createResource, createSignal, lazy } from "solid-js";
+import { ErrorBoundary, Show, createResource, createSignal, lazy } from "solid-js";
 
 import Dialog, { Content, Portal } from "@corvu/dialog";
 import { getAuth, signOut } from "firebase/auth";
@@ -38,9 +38,8 @@ const Root = (props: RouteSectionProps<unknown>) => {
 
     const api: Api = { serverHost, rpc, repo };
 
-    const [sessionInvalid, setSessionInvalid] = createSignal(false);
-    createEffect(() => {
-        (async () => {
+    const [isSessionInvalid] = createResource(
+        async () => {
             const result = await rpc.validate_session.query();
             if (result.tag === "Err") {
                 await signOut(getAuth(firebaseApp));
@@ -51,10 +50,15 @@ const Root = (props: RouteSectionProps<unknown>) => {
                 // ErrorBoundary might seem like the natural place to handle this, it only catches the
                 // first error, and there's no guarantee that an error from validate_session will be the
                 // first one encountered.
-                setSessionInvalid(true);
+                return true;
             }
-        })();
-    });
+
+            return false;
+        },
+        {
+            initialValue: false,
+        },
+    );
 
     return (
         <MultiProvider
@@ -67,7 +71,7 @@ const Root = (props: RouteSectionProps<unknown>) => {
                 <ErrorBoundary fallback={(err) => <ErrorBoundaryDialog error={err} />}>
                     <PageContainer>{props.children}</PageContainer>
                 </ErrorBoundary>
-                <Show when={sessionInvalid()}>
+                <Show when={isSessionInvalid()}>
                     <SessionExpiredModal />
                 </Show>
             </FirebaseProvider>
