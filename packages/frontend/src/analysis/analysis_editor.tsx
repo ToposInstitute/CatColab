@@ -22,7 +22,13 @@ import {
     NotebookEditor,
     newFormalCell,
 } from "../notebook";
-import { DocumentLoadingScreen, DocumentMenu, TheoryHelpButton, Toolbar } from "../page";
+import {
+    DocumentBreadcrumbs,
+    DocumentLoadingScreen,
+    DocumentMenu,
+    TheoryHelpButton,
+    Toolbar,
+} from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { AnalysisMeta } from "../theory";
 import { assertExhaustive } from "../util/assert_exhaustive";
@@ -129,6 +135,7 @@ export function AnalysisDocumentEditor(props: {
                         >
                             <div class="notebook-container">
                                 <h2>Analysis</h2>
+                                <DocumentBreadcrumbs document={props.liveAnalysis} />
                                 <AnalysisNotebookEditor liveAnalysis={props.liveAnalysis} />
                             </div>
                         </Resizable.Panel>

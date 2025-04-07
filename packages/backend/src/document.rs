@@ -123,3 +123,65 @@ pub struct RefContent {
     pub ref_id: Uuid,
     pub content: Value,
 }
+
+/// A subset of user relevant information about a ref. Used for showing
+/// users information on a variety of refs without having to load whole
+/// refs.
+#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+pub struct RefStub {
+    pub name: String,
+    pub ref_id: Uuid,
+    // TODO: get the types for these fields serializeable
+    // pub permission_level: PermissionLevel,
+    // pub created_at
+    // pub last_updated
+}
+
+pub async fn get_ref_stubs(ctx: AppCtx, ref_ids: Vec<Uuid>) -> Result<Vec<RefStub>, AppError> {
+    if ref_ids.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let searcher_id = ctx.user.as_ref().map(|user| user.user_id.clone());
+
+    let results = sqlx::query!(
+        r#"
+        WITH latest_snapshots AS (
+            SELECT DISTINCT ON (snapshots.for_ref)
+                snapshots.for_ref AS ref_id,
+                snapshots.content->>'name' AS name
+            FROM snapshots
+            WHERE snapshots.for_ref = ANY($2)
+            ORDER BY snapshots.for_ref, snapshots.id DESC
+        )
+        SELECT 
+            refs.id AS ref_id,
+            latest_snapshots.name
+        FROM refs
+        JOIN permissions AS p_searcher
+            ON refs.id = p_searcher.object
+        LEFT JOIN latest_snapshots
+            ON refs.id = latest_snapshots.ref_id
+        WHERE refs.id = ANY($2)
+          AND (
+              (p_searcher.subject = $1 AND p_searcher.level IN ('read', 'write', 'maintain', 'own'))
+              OR p_searcher.subject IS NULL
+          )
+        ORDER BY array_position($2::uuid[], refs.id);
+        "#,
+        searcher_id,
+        &ref_ids
+    )
+    .fetch_all(&ctx.state.db)
+    .await?;
+
+    let stubs = results
+        .into_iter()
+        .map(|row| RefStub {
+            ref_id: row.ref_id,
+            name: row.name.unwrap_or_else(|| "untitled".to_string()),
+        })
+        .collect();
+
+    Ok(stubs)
+}
