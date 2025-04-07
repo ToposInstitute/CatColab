@@ -6,8 +6,8 @@ data type for [path equations](`PathEq`).
 
 use either::Either;
 use nonempty::{NonEmpty, nonempty};
-use std::collections::HashSet;
-use std::hash::Hash;
+use std::ops::Range;
+use std::{collections::HashSet, hash::Hash};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -50,9 +50,23 @@ pub enum Path<V, E> {
     Seq(NonEmpty<E>),
 }
 
+/// Converts an edge into a path of length one.
 impl<V, E> From<E> for Path<V, E> {
     fn from(e: E) -> Self {
         Path::single(e)
+    }
+}
+
+/// Converts the path into an iterater over its edges.
+impl<V, E> IntoIterator for Path<V, E> {
+    type Item = E;
+    type IntoIter = Either<std::iter::Empty<E>, <NonEmpty<E> as IntoIterator>::IntoIter>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        match self {
+            Path::Id(_) => Either::Left(std::iter::empty()),
+            Path::Seq(edges) => Either::Right(edges.into_iter()),
+        }
     }
 }
 
@@ -146,6 +160,29 @@ impl<V, E> Path<V, E> {
         }
     }
 
+    /// Inserts an edge into the path at the given index.
+    pub fn insert(&mut self, index: usize, edge: E) {
+        if let Path::Seq(edges) = self {
+            edges.insert(index, edge);
+        } else {
+            *self = Path::single(edge);
+        }
+    }
+
+    /// Splices a path into another path at the given range of indices.
+    pub fn splice(self, range: Range<usize>, replace_with: Self) -> Self {
+        let new_path = if range.start == 0 && range.end == self.len() {
+            Some(replace_with)
+        } else if let Path::Seq(edges) = self {
+            let mut edges: Vec<_> = edges.into();
+            edges.splice(range, replace_with);
+            Path::from_vec(edges)
+        } else {
+            None
+        };
+        new_path.expect("Range of indices into path should be valid")
+    }
+
     /** Source of the path in the given graph.
 
     Assumes that the path is [contained in](Path::contained_in) the graph.
@@ -172,6 +209,66 @@ impl<V, E> Path<V, E> {
             Path::Id(v) => v.clone(),
             Path::Seq(edges) => graph.tgt(edges.last()),
         }
+    }
+
+    /** Extracts a subpath of a path in a graph.
+
+    Panics if the range is invalid or an empty subpath would be inconsistent.
+     */
+    pub fn subpath(&self, graph: &impl Graph<V = V, E = E>, range: Range<usize>) -> Self
+    where
+        V: Eq + Clone,
+        E: Clone,
+    {
+        if let Path::Seq(edges) = self {
+            if range.is_empty() {
+                let index = range.start;
+                let v = if index == 0 {
+                    graph.src(edges.first())
+                } else if index == edges.len() {
+                    graph.tgt(edges.last())
+                } else if index < edges.len() {
+                    let (t, s) = (graph.tgt(&(*edges)[index - 1]), graph.src(&(*edges)[index]));
+                    assert!(t == s, "Inconsistent intermediate vertex in path");
+                    t
+                } else {
+                    panic!("Invalid index for empty subpath of path");
+                };
+                Path::Id(v)
+            } else {
+                let (start, end) = (range.start, range.end);
+                let iter = if start == 0 {
+                    let head = std::iter::once(edges.head.clone());
+                    let tail = edges.tail[0..(end - 1)].iter().cloned();
+                    Either::Left(head.chain(tail))
+                } else {
+                    Either::Right(edges.tail[(start - 1)..(end - 1)].iter().cloned())
+                };
+                Path::collect(iter).unwrap()
+            }
+        } else {
+            assert!(range.start == 0 && range.is_empty(), "Invalid subpath of empty path");
+            self.clone()
+        }
+    }
+
+    /** Replaces the subpath at the given range with a function of that subpath.
+
+    Panics under the same conditions as [`subpath`](Self::subpath).
+     */
+    pub fn replace_subpath<F>(
+        self,
+        graph: &impl Graph<V = V, E = E>,
+        range: Range<usize>,
+        f: F,
+    ) -> Self
+    where
+        V: Eq + Clone,
+        E: Clone,
+        F: FnOnce(Self) -> Self,
+    {
+        let subpath = self.subpath(graph, range.clone());
+        self.splice(range, f(subpath))
     }
 
     /** Concatenates this path with another path in the graph.
@@ -371,24 +468,28 @@ impl<V, E> PathEq<V, E> {
 
     /** Source of the path equation in the given graph.
 
-    Only well defined when the path equation is valid.
+    Panics if the two sides of the path equation have different sources.
     */
     pub fn src(&self, graph: &impl Graph<V = V, E = E>) -> V
     where
-        V: Clone,
+        V: Eq + Clone,
     {
-        self.lhs.src(graph) // == self.rhs.src(graph)
+        let (x, y) = (self.lhs.src(graph), self.rhs.src(graph));
+        assert!(x == y, "Both sides of path equation should have same source");
+        x
     }
 
     /** Target of the path equation in the given graph.
 
-    Only well defined when the path equation is valid.
+    Panics if the two sides of the path equation have different targets.
     */
     pub fn tgt(&self, graph: &impl Graph<V = V, E = E>) -> V
     where
-        V: Clone,
+        V: Eq + Clone,
     {
-        self.lhs.tgt(graph) // == self.rhs.tgt(graph)
+        let (x, y) = (self.lhs.tgt(graph), self.rhs.tgt(graph));
+        assert!(x == y, "Both sides of path equation should have same target");
+        x
     }
 
     /// Validates that the path equation is well defined in the given graph.
@@ -471,14 +572,45 @@ mod tests {
     }
 
     #[test]
+    fn insert_into_path() {
+        let mut path = SkelPath::Id(0);
+        path.insert(0, 2);
+        assert_eq!(path, Path::single(2));
+        path.insert(0, 1);
+        assert_eq!(path, Path::pair(1, 2));
+
+        assert_eq!(SkelPath::empty(0).splice(0..0, Path::pair(0, 1)), Path::pair(0, 1));
+        assert_eq!(SkelPath::empty(0).splice(0..0, Path::empty(0)), Path::empty(0));
+        let target = SkelPath::Seq(nonempty![0, 1, 2]);
+        assert_eq!(Path::pair(0, 2).splice(1..1, Path::single(1)), target);
+        assert_eq!(Path::pair(0, 2).splice(1..2, Path::pair(1, 2)), target);
+        assert_eq!(target.clone().splice(1..3, Path::pair(1, 2)), target);
+        assert_eq!(target.clone().splice(1..1, Path::empty(0)), target);
+    }
+
+    #[test]
+    fn subpath() {
+        let g = SkelGraph::path(4);
+        assert_eq!(Path::Id(1).subpath(&g, 0..0), Path::Id(1));
+        let path = Path::Seq(nonempty![0, 1, 2]);
+        assert_eq!(path.subpath(&g, 0..0), Path::Id(0));
+        assert_eq!(path.subpath(&g, 1..1), Path::Id(1));
+        assert_eq!(path.subpath(&g, 3..3), Path::Id(3));
+        assert_eq!(path.subpath(&g, 0..2), Path::pair(0, 1));
+        assert_eq!(path.subpath(&g, 1..3), Path::pair(1, 2));
+    }
+
+    #[test]
     fn map_path() {
         let id = SkelPath::Id(1);
         assert_eq!(id.iter().count(), 0);
+        assert_eq!(id.clone().into_iter().count(), 0);
         assert_eq!(id.clone().map(|v| v + 1, identity), Path::Id(2));
         assert_eq!(id.partial_map(|v| Some(v + 1), Some), Some(Path::Id(2)));
 
         let pair = SkelPath::pair(0, 1);
         assert_eq!(pair.iter().count(), 2);
+        assert_eq!(pair.clone().into_iter().count(), 2);
         assert_eq!(pair.clone().map(identity, |e| e + 1), Path::pair(1, 2));
         assert_eq!(pair.partial_map(Some, |e| Some(e + 1)), Some(Path::pair(1, 2)));
     }

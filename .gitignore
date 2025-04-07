@@ -84,3 +84,9 @@ web_modules/
 
 # Sentry files
 instrument.mjs
+
+# direnv cache
+.direnv
+
+# bild build output
+/infrastructure/result

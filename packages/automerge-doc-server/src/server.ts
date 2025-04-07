@@ -10,7 +10,6 @@ import pgPkg from "pg";
 const { Pool } = pgPkg;
 import type { Pool as PoolType } from "pg";
 
-import type { JsonValue } from "../../backend/pkg/src/index.ts";
 import { PostgresStorageAdapter } from "./postgres_storage_adapter.js";
 import type { CreateDocSocketResponse, StartListeningSocketResponse } from "./types.js";
 
@@ -25,7 +24,7 @@ export class AutomergeServer {
     private repo: Repo;
     private pool: PoolType;
 
-    public handleChange?: (refId: string, content: JsonValue) => void;
+    public handleChange?: (refId: string, content: any) => void;
 
     constructor(port: number | string) {
         this.docMap = new Map();

@@ -8,8 +8,10 @@ import * as uuid from "uuid";
 import { MultiProvider } from "@solid-primitives/context";
 import { Navigate, type RouteDefinition, type RouteSectionProps, Router } from "@solidjs/router";
 import { FirebaseProvider } from "solid-firebase";
-import { ErrorBoundary, Show, createResource, lazy } from "solid-js";
+import { ErrorBoundary, Show, createResource, createSignal, lazy } from "solid-js";
 
+import Dialog, { Content, Portal } from "@corvu/dialog";
+import { getAuth, signOut } from "firebase/auth";
 import { type Api, ApiContext, createRpcClient, useApi } from "./api";
 import { helpRoutes } from "./help/routes";
 import { createModel } from "./model/document";
@@ -36,6 +38,28 @@ const Root = (props: RouteSectionProps<unknown>) => {
 
     const api: Api = { serverHost, rpc, repo };
 
+    const [isSessionInvalid] = createResource(
+        async () => {
+            const result = await rpc.validate_session.query();
+            if (result.tag === "Err") {
+                await signOut(getAuth(firebaseApp));
+
+                // Why this needs to be a separate modal:
+                // We cannot automatically reload the page because a bug in validate_session might
+                // trigger an infinite reload loop, so the reload must be user-triggered. Although
+                // ErrorBoundary might seem like the natural place to handle this, it only catches the
+                // first error, and there's no guarantee that an error from validate_session will be the
+                // first one encountered.
+                return true;
+            }
+
+            return false;
+        },
+        {
+            initialValue: false,
+        },
+    );
+
     return (
         <MultiProvider
             values={[
@@ -44,11 +68,39 @@ const Root = (props: RouteSectionProps<unknown>) => {
             ]}
         >
             <FirebaseProvider app={firebaseApp}>
-                <PageContainer>{props.children}</PageContainer>
+                <ErrorBoundary fallback={(err) => <ErrorBoundaryDialog error={err} />}>
+                    <PageContainer>{props.children}</PageContainer>
+                </ErrorBoundary>
+                <Show when={isSessionInvalid()}>
+                    <SessionExpiredModal />
+                </Show>
             </FirebaseProvider>
         </MultiProvider>
     );
 };
+
+export function SessionExpiredModal() {
+    const [reloading, setReloading] = createSignal(false);
+
+    const handleReload = () => {
+        setReloading(true);
+        location.reload();
+    };
+
+    return (
+        <Dialog initialOpen={true}>
+            <Portal>
+                <Content class="popup error-dialog">
+                    <h3>Session Expired</h3>
+                    <p>Your session is no longer valid. Please reload the page to continue.</p>
+                    <button onClick={handleReload} disabled={reloading()}>
+                        {reloading() ? "Reloading..." : "Reload Page"}
+                    </button>
+                </Content>
+            </Portal>
+        </Dialog>
+    );
+}
 
 function CreateModel() {
     const api = useApi();
@@ -107,6 +159,8 @@ const routes: RouteDefinition[] = [
 ];
 
 function App() {
+    // We need two "top-level" error boundaries in order to display the SessionExpiredModal even after an
+    // error occurs, while also catching error created by the router or other providers
     return (
         <ErrorBoundary fallback={(err) => <ErrorBoundaryDialog error={err} />}>
             <Router root={Root}>{routes}</Router>

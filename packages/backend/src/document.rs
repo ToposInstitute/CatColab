@@ -19,6 +19,7 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
 
     let mut transaction = ctx.state.db.begin().await?;
 
+    let user_id = ctx.user.map(|user| user.user_id);
     let insert_ref = sqlx::query!(
         "
         WITH snapshot AS (
@@ -35,7 +36,6 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
     );
     insert_ref.execute(&mut *transaction).await?;
 
-    let user_id = ctx.user.map(|user| user.user_id);
     let insert_permission = sqlx::query!(
         "
         INSERT INTO permissions(subject, object, level)

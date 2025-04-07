@@ -6,7 +6,7 @@ let
   owen = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIF2sBTuqGoEXRWpBRqTBwZZPDdLGGJ0GQcuX5dfIZKb4 o@red-special";
   epatters = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAKXx6wMJSeYKCHNmbyR803RQ72uto9uYsHhAPPWNl2D evan@epatters.org";
   jmoggr = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMiaHaeJ5PQL0mka/lY1yGXIs/bDK85uY1O3mLySnwHd j@jmoggr.com";
-  catcolab-next-deployuser = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM7AYg1fZM0zMxb/BuZTSwK4O3ycUIHruApr1tKoO8nJ deployuser@next.catcolab.org";
+  catcolab-jmoggr-deployuser = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOXGvHcfDo2aHyLqaMH+POGhySJ4pOmCiL7RRGxboPuK jmoggrDeployuser";
 in
 {
   imports = [
@@ -19,8 +19,8 @@ in
     backend = {
       backendPort = "8000";
       automergePort = "8010";
-      backendHostname = "backend-next.catcolab.org";
-      automergeHostname = "automerge-next.catcolab.org";
+      backendHostname = "backend-next.jmoggr.com";
+      automergeHostname = "automerge-next.jmoggr.com";
     };
     host = {
       userKeys = [
@@ -28,11 +28,11 @@ in
         epatters
         jmoggr
       ];
-      deployuserKey = catcolab-next-deployuser;
+      deployuserKey = catcolab-jmoggr-deployuser;
     };
   };
 
-  networking.hostName = "catcolab-next";
+  networking.hostName = "catcolab-jmoggr";
   time.timeZone = "America/New_York";
   system.stateVersion = "24.05";
 }
