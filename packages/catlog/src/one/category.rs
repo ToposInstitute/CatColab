@@ -172,10 +172,11 @@ impl<G: Graph> Category for FreeCategory<G> {
 
 /** A finitely generated category with specified object and morphism generators.
 
-Unless the category has extra structure, a finitely generated (f.g.) category
-has finitely many objects, which coincide with the object generators so long as
-there are no equations between objects. On the other hand, a f.g. category can
-have infinitely many morphisms and often does.
+Unless the category has extra structure like a monoidal product, a finitely
+generated (f.g.) category has finitely many objects. Moreover, the objects will
+coincide with the object generators in the typical case that there are no
+equations between objects. On the other hand, a f.g. category can have
+infinitely many morphisms and often does.
  */
 pub trait FgCategory: Category {
     /** Type of an object generator.
@@ -210,57 +211,6 @@ pub trait FgCategory: Category {
     /// Iterates over basic morphisms.
     fn morphisms(&self) -> impl Iterator<Item = Self::Mor> {
         self.mor_generators().map(|mor_gen| mor_gen.into())
-    }
-}
-
-impl<S: FinSet> Graph for DiscreteCategory<S> {
-    type V = S::Elem;
-    type E = S::Elem;
-
-    fn has_edge(&self, e: &Self::E) -> bool {
-        self.0.contains(e)
-    }
-
-    fn has_vertex(&self, v: &Self::V) -> bool {
-        self.0.contains(v)
-    }
-
-    fn src(&self, e: &Self::E) -> Self::V {
-        e.clone()
-    }
-
-    fn tgt(&self, e: &Self::E) -> Self::V {
-        e.clone()
-    }
-}
-
-impl<S: FinSet> FinGraph for DiscreteCategory<S> {
-    fn edges(&self) -> impl Iterator<Item = Self::E> {
-        self.0.iter()
-    }
-
-    fn vertices(&self) -> impl Iterator<Item = Self::V> {
-        self.0.iter()
-    }
-
-    fn degree(&self, _v: &Self::V) -> usize {
-        2
-    }
-
-    fn in_edges(&self, v: &Self::V) -> impl Iterator<Item = Self::E> {
-        vec![v.clone()].into_iter()
-    }
-
-    fn out_edges(&self, v: &Self::V) -> impl Iterator<Item = Self::E> {
-        vec![v.clone()].into_iter()
-    }
-
-    fn in_degree(&self, _v: &Self::V) -> usize {
-        1
-    }
-
-    fn out_degree(&self, _v: &Self::V) -> usize {
-        1
     }
 }
 

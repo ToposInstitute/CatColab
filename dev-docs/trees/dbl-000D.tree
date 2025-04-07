@@ -1,0 +1,72 @@
+\title{Free models of double theories}
+\import{macros}
+
+\p{The \em{free} models of a double theory are often singled out in
+applications. For example, free [signed categories](dct-0002) can be interpreted
+as causal loop diagrams or regulatory networks, depending on the application.
+Here we seek a definition of a free model of an arbitrary double theory. We will
+recover the familiar free-forgetful adjunction between graphs and categories
+when the theory is specialized to the [trivial double theory](thy-0001).}
+
+\p{Our strategy is to use a forgetful 2-functor from double categories to
+"double graphs," as defined below. I (Evan) don't have a reference for the
+following but I've used it before in my unpublished notes on pull-push
+formalism.}
+
+\transclude{dbl-000E}
+
+\p{More generally, we define:}
+
+\transclude{dbl-000F}
+
+\p{Taking the 2-category #{\twocat{K} = \Cat} in this definition, we obtain a
+2-category of double graphs, call it \twocat{DblGph}. For any choice of maps
+between double categories, there is a 2-functor
+
+##{U: \twocat{Dbl} \to \twocat{DblGph}}
+
+that forgets the external composition and identities in a double category
+(pseudocategory in \Cat). When applied to pseudo, lax, or colax double functors,
+it also forgets the composition and identity comparisons. Crucially, these
+comparisons are what make models of double theories (span-valued lax double
+functors) into categorical structures, i.e., structures with composition and
+identities.}
+
+\p{All of this extends to cartesian double categories and "cartesian double
+graphs," as defined below.}
+
+\transclude{dbl-000G}
+
+\p{There is a 2-category of cartesian double graphs, cartesian morphisms between
+them, and cells between those (with no extra conditions). As before, for any
+choice morphisms between cartesian double categories, we obtain a forgetful
+2-functor
+
+##{U: \twocat{CartDbl} \to \twocat{CartDblGph}.}
+
+}
+
+\p{The data that generates a free model we will provisionally call a "network"
+since it will encompass familiar concepts such as graphs and Petri nets.}
+
+\transclude{dbl-000H}
+
+\subtree{
+\title{Examples of networks over double theories}
+\taxon{example}
+
+\ul{
+\li{A network over the [trivial double theory](thy-0001) is a graph}
+
+\li{A network over the [theory of signed categories](thy-0002) is a
+\define{signed graph}: a graph with each edge weighted by a plus or minus sign.}
+
+\li{A network over the theory of commutative monoids, such that the monoids of
+objects and of arrows are both free, is a \define{Petri net}: a pair of sets
+#{S} and #{T} together with a pair of maps #{T \rightrightarrows \N[S]}, where
+#{\N[S]} is the free commutative monoid on #{S} (see, for example, [Baez and
+Pollard 2017](baez-pollard-2017)).}}
+
+}
+
+\transclude{dbl-000I}

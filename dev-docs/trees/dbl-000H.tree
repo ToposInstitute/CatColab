@@ -1,0 +1,14 @@
+\title{Network over a double theory}
+\taxon{definition}
+\import{macros}
+
+\p{Let #{\dbl{T}} be a simple or cartesian double theory. A \define{network over
+\dbl{T}}, or \define{\dbl{T}-network}, is a morphism of (cartesian) double
+graphs
+
+##{N: U(\dbl{T}) \to \Span,}
+
+where #{U} is the forgetful 2-functor and, by a harmless abuse of notation,
+\Span also denotes the (cartesian) double graph of spans.
+
+}

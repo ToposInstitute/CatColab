@@ -11,7 +11,7 @@ use super::category::*;
 use super::graph::*;
 use super::path::*;
 use crate::validate::{self, Validate};
-use crate::zero::{Column, HashColumn, Mapping};
+use crate::zero::{Column, HashColumn, Mapping, MutMapping};
 
 /// Morphism in a finite category.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -56,7 +56,7 @@ where
     S: BuildHasher,
 {
     /// Graph of generators of the finite category.
-    pub fn generators(&self) -> &impl FinGraph<V = V, E = E> {
+    pub fn generators(&self) -> &(impl FinGraph<V = V, E = E> + use<V, E, S>) {
         &self.generators
     }
 
@@ -96,7 +96,7 @@ where
                     return errs;
                 }
                 let pair = (e1.clone(), e2.clone());
-                if let Some(composite) = self.compose_map.apply(&pair) {
+                if let Some(composite) = self.compose_map.get(&pair) {
                     if self.dom(composite) != self.generators.src(&e1) {
                         errs.push(InvalidFinCategory::CompositeDom(e1.clone(), e2.clone()));
                     }
@@ -173,7 +173,7 @@ where
                     self.generators.tgt(&d) == self.generators.src(&e),
                     "(Co)domains should be equal"
                 );
-                self.compose_map.apply(&(d, e)).expect("Composition should be defined").clone()
+                self.compose_map.apply(&(d, e)).expect("Composition should be defined")
             }
         }
     }
@@ -264,13 +264,13 @@ where
     S: BuildHasher,
 {
     /// Graph of generators of the finitely presented category.
-    pub fn generators(&self) -> &impl FinGraph<V = V, E = E> {
+    pub fn generators(&self) -> &(impl FinGraph<V = V, E = E> + use<V, E, EqKey, S>) {
         &self.generators
     }
 
     /// Get a path equation by key.
     pub fn get_equation(&self, key: &EqKey) -> Option<&PathEq<V, E>> {
-        self.equations.apply(key)
+        self.equations.get(key)
     }
 
     /// Iterates over path equations in the presentation.

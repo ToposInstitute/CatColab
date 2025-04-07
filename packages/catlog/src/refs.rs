@@ -15,8 +15,8 @@ used for any purpose besides documentation.
 
 /** Reference: Cartesian double theories.
 
-Lambert & Patterson, 2024. Cartesian double theories: A double-categorical
-framework for categorical doctrines.
+Michael Lambert & Evan Patterson, 2024. Cartesian double theories: A
+double-categorical framework for categorical doctrines.
 
 - [DOI:10.1016/j.aim.2024.109630](https://doi.org/10.1016/j.aim.2024.109630)
 - [arXiv:2310.05384](https://arxiv.org/abs/2310.05384)
@@ -25,46 +25,31 @@ pub const CartDblTheories: () = ();
 
 /** Reference: Products in double categories, revisited.
 
-Patterson, 2024: Products in double categories, revisited.
+Evan Patterson, 2024: Products in double categories, revisited.
 
 - [arXiv:2401.08990](https://arxiv.org/abs/2401.08990)
  */
 pub const DblProducts: () = ();
 
-/** Reference: Model structures for double categories.
+/** Reference: A unified framework for generalized multicategories.
 
-Fiore, Paoli, Pronk, 2008: Model structures on the category of small double
-categories.
+G.S.H. Cruttwell & Michael Shulman, 2010: A unified framework for generalized
+multicategories.
 
-- [DOI:10.2140/agt.2008.8.1855](https://doi.org/10.2140/agt.2008.8.1855)
-- [arXiv:0711.0473](https://arxiv.org/abs/0711.0473)
+- [arXiv:0907.2460](https://arxiv.org/abs/0907.2460)
+- [TAC](http://www.tac.mta.ca/tac/volumes/24/21/24-21.pdf)
  */
-pub const ModelStructureDblCat: () = ();
+pub const GeneralizedMulticategories: () = ();
 
-/** Reference: Word problem for double categories.
+/** Reference: *Higher operads, higher categories*.
 
-Delpeuch, 2020: The word problem for double categories.
+Tom Leinster, 2004: *Higher operads, higher categories*. Cambridge University
+Press.
 
-- [TAC-35-1](http://www.tac.mta.ca/tac/volumes/35/1/35-01abs.html)
-- [arXiv:1907.09927](https://arxiv.org/abs/1907.09927)
+- [DOI:10.1017/CBO9780511525896](https://doi.org/10.1017/CBO9780511525896)
+- [arXiv:math/0305049](https://arxiv.org/abs/math/0305049)
  */
-pub const WordProblemDblCats: () = ();
-
-/** Reference: Word problem for computads.
-
-Makkai, 2005: The word problem for computads.
-
-<https://www.math.mcgill.ca/makkai/WordProblem/>
- */
-pub const MakkaiComputads: () = ();
-
-/** Reference: Computads and 2-dimensional pasting diagrams.
-
-Makkai, 2007: Computads and 2-dimensional pasting diagrams.
-
-<https://www.math.mcgill.ca/makkai/2dcomputads/>
- */
-pub const MakkaiComputadsPasting: () = ();
+pub const HigherOperads: () = ();
 
 /** Reference: Compositional account of biochemical regulatory networks.
 

@@ -251,30 +251,36 @@ mod tests {
 
         let mut diagram = DblModelDiagram::new(&th);
         let [x, y, var] = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
-        assert!(diagram
-            .add_ob(DiagramObDecl {
-                id: var,
-                ob_type: ObType::Basic("AttrType".into()),
-                over: Some(Ob::Basic(attr_type))
-            })
-            .is_ok());
-        for indiv in [x, y] {
-            assert!(diagram
+        assert!(
+            diagram
                 .add_ob(DiagramObDecl {
-                    id: indiv,
-                    ob_type: ObType::Basic("Entity".into()),
-                    over: Some(Ob::Basic(entity))
+                    id: var,
+                    ob_type: ObType::Basic("AttrType".into()),
+                    over: Some(Ob::Basic(attr_type))
                 })
-                .is_ok());
-            assert!(diagram
-                .add_mor(DiagramMorDecl {
-                    id: Uuid::now_v7(),
-                    mor_type: MorType::Basic("Attr".into()),
-                    dom: Some(Ob::Basic(indiv)),
-                    cod: Some(Ob::Basic(var)),
-                    over: Some(Mor::Basic(attr)),
-                })
-                .is_ok());
+                .is_ok()
+        );
+        for indiv in [x, y] {
+            assert!(
+                diagram
+                    .add_ob(DiagramObDecl {
+                        id: indiv,
+                        ob_type: ObType::Basic("Entity".into()),
+                        over: Some(Ob::Basic(entity))
+                    })
+                    .is_ok()
+            );
+            assert!(
+                diagram
+                    .add_mor(DiagramMorDecl {
+                        id: Uuid::now_v7(),
+                        mor_type: MorType::Basic("Attr".into()),
+                        dom: Some(Ob::Basic(indiv)),
+                        cod: Some(Ob::Basic(var)),
+                        over: Some(Mor::Basic(attr)),
+                    })
+                    .is_ok()
+            );
         }
         assert_eq!(diagram.objects().len(), 3);
         assert_eq!(diagram.object_declarations().len(), 3);

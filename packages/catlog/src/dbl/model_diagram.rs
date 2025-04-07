@@ -22,7 +22,7 @@ use nonempty::NonEmpty;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
-use tsify_next::{declare, Tsify};
+use tsify_next::{Tsify, declare};
 
 use super::{model::*, model_morphism::*};
 use crate::one::{Category, FgCategory};
@@ -139,7 +139,7 @@ mod tests {
     use std::sync::Arc;
     use ustr::ustr;
 
-    use crate::one::{fin_category::FinMor, Path};
+    use crate::one::{Path, fin_category::FinMor};
     use crate::stdlib::*;
 
     #[test]

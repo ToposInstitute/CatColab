@@ -1,6 +1,6 @@
 use firebase_auth::FirebaseUser;
 use http::StatusCode;
-use qubit::{handler, Extensions, FromRequestExtensions, Router, RpcError};
+use qubit::{Extensions, FromRequestExtensions, Router, RpcError, handler};
 use serde::Serialize;
 use serde_json::Value;
 use tracing::debug;
@@ -21,6 +21,7 @@ pub fn router() -> Router<AppState> {
         .handler(save_snapshot)
         .handler(get_permissions)
         .handler(set_permissions)
+        .handler(validate_session)
         .handler(sign_up_or_sign_in)
         .handler(user_by_username)
         .handler(username_status)
@@ -109,6 +110,11 @@ async fn _set_permissions(ctx: AppCtx, ref_id: Uuid, new: NewPermissions) -> Res
     }
     auth::authorize(&ctx, ref_id, PermissionLevel::Own).await?;
     auth::set_permissions(&ctx.state, ref_id, new).await
+}
+
+#[handler(query)]
+async fn validate_session(ctx: AppCtx) -> RpcResult<()> {
+    auth::validate_session(ctx).await.into()
 }
 
 #[handler(mutation)]

@@ -48,3 +48,25 @@ To launch the frontend using the local backend:
 cd packages/frontend
 pnpm run dev
 ```
+
+## Updating Cargo dependencies
+
+**tl;dr:** Run `crate2nix generate` in the repository root and commit the updated `Cargo.nix` file.
+
+To speed up deployments, [crate2nix](https://nix-community.github.io/crate2nix/) is used to cache the
+build artifacts of Rust dependencies. Without it, dependencies would be rebuilt from scratch on every
+deployment, significantly increasing build times.
+
+`crate2nix` solves this by generating a `Cargo.nix` file, which describes the full dependency graph of
+the project in a reproducible, Nix-compatible format. This file allows Nix to more effectively cache and
+reuse dependency builds across deployments.
+
+Whenever you update your `Cargo.toml` or `Cargo.lock` you should regenerate `Cargo.nix` by running the
+following commands in the repository root:
+
+```bash
+nix develop
+crate2nix generate
+```
+
+And committing the the updated `Cargo.nix` file.
