@@ -11,7 +11,13 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
-import { DocumentLoadingScreen, DocumentMenu, TheoryHelpButton, Toolbar } from "../page";
+import {
+    DocumentBreadcrumbs,
+    DocumentLoadingScreen,
+    DocumentMenu,
+    TheoryHelpButton,
+    Toolbar,
+} from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
 import { PermissionsButton } from "../user";
@@ -57,6 +63,7 @@ export function ModelDocumentEditor(props: {
         <div class="growable-container">
             <Toolbar>
                 <DocumentMenu liveDocument={props.liveModel} />
+                <DocumentBreadcrumbs document={props.liveModel} />
                 <span class="filler" />
                 <TheoryHelpButton theory={props.liveModel.theory()} />
                 <PermissionsButton
