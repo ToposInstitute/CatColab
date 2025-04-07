@@ -60,8 +60,6 @@ export const newAnalysisDocument = (
 
 /** A model analysis document "live" for editing. */
 export type LiveModelAnalysisDocument = {
-    type: "model-analysis";
-
     analysisType: "model";
 
     /** The ref for which this is a live document. */
@@ -76,8 +74,6 @@ export type LiveModelAnalysisDocument = {
 
 /** A diagram analysis document "live" for editing. */
 export type LiveDiagramAnalysisDocument = {
-    type: "diagram-analysis";
-
     analysisType: "diagram";
 
     /** The ref for which this is a live document. */

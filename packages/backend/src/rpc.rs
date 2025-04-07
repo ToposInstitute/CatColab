@@ -18,7 +18,6 @@ pub fn router() -> Router<AppState> {
         .handler(get_doc)
         .handler(head_snapshot)
         .handler(save_snapshot)
-        .handler(get_ref_stubs)
         .handler(get_permissions)
         .handler(set_permissions)
         .handler(validate_session)
@@ -92,11 +91,6 @@ async fn save_snapshot(ctx: AppCtx, data: doc::RefContent) -> RpcResult<()> {
 async fn _save_snapshot(ctx: AppCtx, data: doc::RefContent) -> Result<(), AppError> {
     auth::authorize(&ctx, data.ref_id, PermissionLevel::Write).await?;
     doc::save_snapshot(ctx.state, data).await
-}
-
-#[handler(query)]
-async fn get_ref_stubs(ctx: AppCtx, ref_ids: Vec<Uuid>) -> RpcResult<Vec<doc::RefStub>> {
-    doc::get_ref_stubs(ctx, ref_ids).await.into()
 }
 
 #[handler(query)]
