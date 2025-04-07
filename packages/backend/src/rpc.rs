@@ -10,6 +10,7 @@ use uuid::Uuid;
 use super::app::{AppCtx, AppError, AppState};
 use super::auth::{NewPermissions, PermissionLevel, Permissions};
 use super::{auth, document as doc, user};
+use super::search::search_snapshots;
 
 /// Create router for RPC API.
 pub fn router() -> Router<AppState> {
@@ -25,6 +26,7 @@ pub fn router() -> Router<AppState> {
         .handler(username_status)
         .handler(get_active_user_profile)
         .handler(set_active_user_profile)
+        .handler(search_snapshots_handler)
 }
 
 #[handler(mutation)]
@@ -132,6 +134,14 @@ async fn get_active_user_profile(ctx: AppCtx) -> RpcResult<user::UserProfile> {
 #[handler(mutation)]
 async fn set_active_user_profile(ctx: AppCtx, user: user::UserProfile) -> RpcResult<()> {
     user::set_active_user_profile(ctx, user).await.into()
+}
+
+/// New search handler for full-text search
+#[handler(query)]
+async fn search_snapshots_handler(ctx: AppCtx, search_query: String) -> RpcResult<Vec<Value>> {
+    // Call the search_snapshots function from your search module
+    let results = search_snapshots(&ctx.state, &search_query).await?;
+    Ok(results)
 }
 
 /// Result returned by an RPC handler.
