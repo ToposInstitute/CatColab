@@ -26,8 +26,8 @@ pub fn router() -> Router<AppState> {
         .handler(username_status)
         .handler(get_active_user_profile)
         .handler(set_active_user_profile)
-        .handler(get_ref_stubs)
-        .handler(get_ref_stubs_related_to_user)
+        .handler(search_ref_stubs)
+        .handler(search_ref_stubs_related_to_user)
 }
 
 #[handler(mutation)]
@@ -78,19 +78,19 @@ enum RefDoc {
 }
 
 #[handler(query)]
-async fn get_ref_stubs(
+async fn search_ref_stubs(
     ctx: AppCtx,
     query_params: doc::RefQueryParams,
 ) -> RpcResult<Vec<doc::RefStub>> {
-    doc::get_ref_stubs(ctx, query_params).await.into()
+    doc::search_ref_stubs(ctx, query_params).await.into()
 }
 
 #[handler(query)]
-async fn get_ref_stubs_related_to_user(
+async fn search_ref_stubs_related_to_user(
     ctx: AppCtx,
     query_params: doc::RefQueryParams,
 ) -> RpcResult<Vec<doc::RefStub>> {
-    doc::get_ref_stubs_related_to_user(ctx, query_params).await.into()
+    doc::search_ref_stubs_related_to_user(ctx, query_params).await.into()
 }
 
 #[handler(query)]
