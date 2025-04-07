@@ -221,7 +221,7 @@ pub async fn search_ref_stubs(
         .map(|row| RefStub {
             ref_id: row.ref_id,
             name: row.name.unwrap_or_else(|| "untitled".to_string()),
-            type_name: row.type_name.unwrap_or_else(|| "".to_string()),
+            type_name: row.type_name.expect("type_name should never be null"),
             permission_level: row.permission_level,
             created_at: row.created_at.expect("created_at should never be null"),
             owner: UserSummary {

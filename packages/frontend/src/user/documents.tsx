@@ -1,10 +1,10 @@
+import type { RefStub, RpcResult } from "catcolab-api";
 import { getAuth } from "firebase/auth";
 import { useFirebaseApp } from "solid-firebase";
 import { For, Match, Switch, createResource, createSignal, onMount } from "solid-js";
 import { useApi } from "../api";
 import { BrandedToolbar } from "../page";
 import { LoginGate } from "./login";
-import type { RefStub, RpcResult } from "catcolab-api";
 import "./documents.css";
 
 export default function UserDocuments() {
