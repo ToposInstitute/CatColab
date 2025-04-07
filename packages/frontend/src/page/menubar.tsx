@@ -17,6 +17,7 @@ import LogInIcon from "lucide-solid/icons/log-in";
 import LogOutIcon from "lucide-solid/icons/log-out";
 import MenuIcon from "lucide-solid/icons/menu";
 import SettingsIcon from "lucide-solid/icons/settings";
+import TableOfContentsIcon from "lucide-solid/icons/table-of-contents";
 import UploadIcon from "lucide-solid/icons/upload";
 
 import "./menubar.css";
@@ -69,6 +70,7 @@ export function AppMenu(props: {
                 <HelpMenuItem />
 
                 <Show when={auth.data} fallback={<LogInMenuItem />}>
+                    <DocumentsMenuItem />
                     <SettingsMenuItem />
                     <LogOutMenuItem />
                 </Show>
@@ -161,6 +163,17 @@ function SettingsMenuItem() {
         <MenuItem onSelect={() => navigate("/profile")}>
             <SettingsIcon />
             <MenuItemLabel>{"Edit user profile"}</MenuItemLabel>
+        </MenuItem>
+    );
+}
+
+function DocumentsMenuItem() {
+    const navigate = useNavigate();
+
+    return (
+        <MenuItem onSelect={() => navigate("/documents")}>
+            <TableOfContentsIcon />
+            <MenuItemLabel>{"My documents"}</MenuItemLabel>
         </MenuItem>
     );
 }

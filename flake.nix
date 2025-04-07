@@ -107,6 +107,12 @@
             inputs.deploy-rs.packages.x86_64-linux.default
             inputs.crate2nix.packages.x86_64-linux.default
           ];
+
+        shellHook = ''
+          if [ -f packages/backend/.env ]; then
+            export $(grep -v '^#' packages/backend/.env | xargs)
+          fi
+        '';
       };
     };
 }

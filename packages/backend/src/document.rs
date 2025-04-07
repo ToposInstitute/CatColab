@@ -5,6 +5,8 @@ use serde_json::Value;
 use ts_rs::TS;
 use uuid::Uuid;
 
+use crate::{auth::PermissionLevel, user::UserSummary};
+
 use super::app::{AppCtx, AppError, AppState};
 
 /// Creates a new document ref with initial content.
@@ -130,11 +132,12 @@ pub struct RefContent {
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 pub struct RefStub {
     pub name: String,
+    pub type_name: String,
     pub ref_id: Uuid,
-    // TODO: get the types for these fields serializeable
-    // pub permission_level: PermissionLevel,
-    // pub created_at
-    // pub last_updated
+    // permission level that the current user has on this ref
+    pub permission_level: PermissionLevel,
+    pub owner: UserSummary,
+    pub created_at: String,
 }
 
 /// Parameters for filtering a search of refs
@@ -146,7 +149,7 @@ pub struct RefQueryParams {
 }
 
 /// Gets a vec of user relevant informations about refs that match the query parameters
-pub async fn get_ref_stubs(
+pub async fn search_ref_stubs(
     ctx: AppCtx,
     search_params: RefQueryParams,
 ) -> Result<Vec<RefStub>, AppError> {
@@ -165,14 +168,22 @@ pub async fn get_ref_stubs(
         WITH latest_snapshots AS (
             SELECT DISTINCT ON (snapshots.for_ref) 
                 refs.id AS ref_id, 
-                snapshots.content->>'name' AS name
+                refs.created::TEXT AS created_at,
+                snapshots.content->>'name' AS name,
+                snapshots.content->>'type' AS type_name
             FROM snapshots
             JOIN refs ON snapshots.for_ref = refs.id
             ORDER BY snapshots.for_ref, snapshots.id DESC
         )
         SELECT 
             ls.ref_id,
-            ls.name
+            ls.name,
+            ls.type_name,
+            ls.created_at,
+            p_searcher.level as "permission_level: PermissionLevel",
+            owner.id as owner_id,
+            owner.username as owner_username,
+            owner.display_name as owner_display_name
         FROM latest_snapshots ls
         JOIN permissions p_searcher ON ls.ref_id = p_searcher.object
         LEFT JOIN users owner ON owner.id = (
@@ -210,14 +221,22 @@ pub async fn get_ref_stubs(
         .map(|row| RefStub {
             ref_id: row.ref_id,
             name: row.name.unwrap_or_else(|| "untitled".to_string()),
+            type_name: row.type_name.unwrap_or_else(|| "".to_string()),
+            permission_level: row.permission_level,
+            created_at: row.created_at.expect("created_at should never be null"),
+            owner: UserSummary {
+                id: row.owner_id,
+                username: row.owner_username,
+                display_name: row.owner_display_name,
+            },
         })
         .collect();
 
     Ok(stubs)
 }
 
-/// Gets a vec of user relevant informations about refs that are related to a user and match the search parameters
-pub async fn get_ref_stubs_related_to_user(
+/// Gets a list of RefStubs that a user has permissions for and match the search parameters
+pub async fn search_ref_stubs_related_to_user(
     ctx: AppCtx,
     search_params: RefQueryParams,
 ) -> Result<Vec<RefStub>, AppError> {
@@ -236,21 +255,29 @@ pub async fn get_ref_stubs_related_to_user(
         WITH latest_snapshots AS (
             SELECT DISTINCT ON (snapshots.for_ref) 
                 refs.id AS ref_id, 
-                snapshots.content->>'name' AS name
+                refs.created::TEXT AS created_at,
+                snapshots.content->>'name' AS name,
+                snapshots.content->>'type' AS type_name
             FROM snapshots
             JOIN refs ON snapshots.for_ref = refs.id
             ORDER BY snapshots.for_ref, snapshots.id DESC
         )
         SELECT 
             ls.ref_id,
-            ls.name
+            ls.name,
+            ls.type_name,
+            ls.created_at,
+            p_searcher.level as "permission_level: PermissionLevel",
+            owner.id as owner_id,
+            owner.username as owner_username,
+            owner.display_name as owner_display_name
         FROM latest_snapshots ls
         JOIN permissions p_searcher ON ls.ref_id = p_searcher.object
         JOIN permissions p_owner ON ls.ref_id = p_owner.object  -- Ensure owner has permissions
         JOIN users owner ON owner.id = p_owner.subject  -- Match permissions entry to owner
         WHERE p_searcher.subject = $1  -- searcher_id must have access
         AND (
-            owner.username = COALESCE($2, (SELECT username FROM users WHERE id = $1))  -- Use searcher if owner_username is NULL
+            owner.id = COALESCE($1, (SELECT id FROM users WHERE username = $2))  -- Use searcher if owner_username is NULL
         )
         AND p_owner.level IN ('read', 'write', 'maintain', 'own')  -- Owner must have at least one permission
         AND p_searcher.level IN ('read', 'write', 'maintain', 'own')  -- Searcher must have permissions
@@ -258,6 +285,7 @@ pub async fn get_ref_stubs_related_to_user(
             ls.name ILIKE '%' || $3 || '%'  -- Case-insensitive substring search
             OR $3 IS NULL  -- Include all if name filter is NULL
         )
+        ORDER BY ls.created_at DESC
         LIMIT 100; -- TODO: pagination
         "#,
         searcher_id,
@@ -273,6 +301,14 @@ pub async fn get_ref_stubs_related_to_user(
         .map(|row| RefStub {
             ref_id: row.ref_id,
             name: row.name.unwrap_or_else(|| "untitled".to_string()),
+            type_name: row.type_name.expect("type_name should never be null"),
+            permission_level: row.permission_level,
+            created_at: row.created_at.expect("created_at should never be null"),
+            owner: UserSummary {
+                id: row.owner_id,
+                username: row.owner_username,
+                display_name: row.owner_display_name,
+            },
         })
         .collect();
 
