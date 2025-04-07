@@ -1,6 +1,6 @@
 {
   "diagramIn": {
-    "_id": "0194d398-6e0a-7e41-a547-86e40973e48d",
+    "_id": "0196021c-d1ff-75b1-9f38-bdecdb7680d2",
     "_server": "backend.catcolab.org",
     "_version": null,
     "type": "diagram-in"
@@ -9,188 +9,191 @@
   "notebook": {
     "cells": [
       {
-        "tag": "formal",
-        "id": "0195b96f-e056-738f-946d-2f8a37001700",
         "content": {
-          "tag": "object",
-          "id": "0195b96f-e056-738f-946d-286a4100e05e",
+          "id": "0196021c-f5fe-70f3-ac68-89ae212970ea",
           "name": "u",
           "obType": {
-            "tag": "Basic",
-            "content": "Object"
+            "content": "Object",
+            "tag": "Basic"
           },
           "over": {
-            "tag": "Basic",
-            "content": "0194d398-a28e-7433-89f8-563bae6e6875"
-          }
-        }
+            "content": "0194d398-d0cb-7308-b7e0-eace5b21af24",
+            "tag": "Basic"
+          },
+          "tag": "object"
+        },
+        "id": "0196021c-f5fe-70f3-ac68-8f4da8bb79be",
+        "tag": "formal"
       },
       {
-        "tag": "formal",
-        "id": "0195b970-0d6c-7145-b05e-f885f14e9fd4",
         "content": {
-          "tag": "object",
-          "id": "0195b970-0d6c-7145-b05e-f5d75d1f5535",
+          "id": "0196021d-1aa4-776d-b4fb-05d24d0c6de4",
           "name": "du/dt",
           "obType": {
-            "tag": "Basic",
-            "content": "Object"
+            "content": "Object",
+            "tag": "Basic"
           },
           "over": {
-            "tag": "Basic",
-            "content": "0194d398-a28e-7433-89f8-563bae6e6875"
-          }
-        }
+            "content": "0194d398-d0cb-7308-b7e0-eace5b21af24",
+            "tag": "Basic"
+          },
+          "tag": "object"
+        },
+        "id": "0196021d-1aa4-776d-b4fb-098aea19edd5",
+        "tag": "formal"
       },
       {
-        "tag": "formal",
-        "id": "0195b970-9e28-7529-85a5-30dafedd22b2",
         "content": {
-          "tag": "morphism",
-          "id": "0195b970-9e28-7529-85a5-2eeaf01014dd",
-          "name": "",
-          "morType": {
-            "tag": "Basic",
-            "content": "Nonscalar"
-          },
-          "over": {
-            "tag": "Basic",
-            "content": "0194d39a-6084-7537-aec1-caf560ba416b"
+          "cod": {
+            "content": "0196021e-9635-74de-845a-cee56d3e5cc5",
+            "tag": "Basic"
           },
           "dom": {
-            "tag": "Basic",
-            "content": "0195b96f-e056-738f-946d-286a4100e05e"
+            "content": "0196021c-f5fe-70f3-ac68-89ae212970ea",
+            "tag": "Basic"
           },
-          "cod": {
-            "tag": "Basic",
-            "content": "0195b971-822d-7444-8dd7-3409c8c59cc1"
-          }
-        }
+          "id": "0196021e-848d-704c-a45c-a325b63951e6",
+          "morType": {
+            "content": "Nonscalar",
+            "tag": "Basic"
+          },
+          "name": "",
+          "over": {
+            "content": "0194d399-34f3-773c-91b9-857da9c4311f",
+            "tag": "Basic"
+          },
+          "tag": "morphism"
+        },
+        "id": "0196021e-848d-704c-a45c-a6b09dac0136",
+        "tag": "formal"
       },
       {
-        "tag": "formal",
-        "id": "0195b971-c18e-725e-8464-3b743ec8ab52",
         "content": {
-          "tag": "morphism",
-          "id": "0195b971-c18e-725e-8464-366db107908d",
-          "name": "",
-          "morType": {
-            "tag": "Basic",
-            "content": "Nonscalar"
-          },
-          "over": {
-            "tag": "Basic",
-            "content": "0194d39a-ed25-710f-b53f-89541021281f"
+          "cod": {
+            "content": "0196021e-e55e-764e-85c8-827f94d7f3bd",
+            "tag": "Basic"
           },
           "dom": {
-            "tag": "Basic",
-            "content": "0195b971-822d-7444-8dd7-3409c8c59cc1"
+            "content": "0196021e-9635-74de-845a-cee56d3e5cc5",
+            "tag": "Basic"
           },
-          "cod": {
-            "tag": "Basic",
-            "content": "0195b971-f101-7552-8652-3f5949b7c046"
-          }
-        }
+          "id": "0196021e-c8a6-74df-8194-3ec769ba3d1d",
+          "morType": {
+            "content": "Nonscalar",
+            "tag": "Basic"
+          },
+          "name": "",
+          "over": {
+            "content": "0194d39a-6084-7537-aec1-caf560ba416b",
+            "tag": "Basic"
+          },
+          "tag": "morphism"
+        },
+        "id": "0196021e-c8a6-74df-8194-40ee060a7684",
+        "tag": "formal"
       },
       {
-        "tag": "formal",
-        "id": "0195b971-f7fc-71b6-8a2a-5191a9062483",
         "content": {
-          "tag": "morphism",
-          "id": "0195b971-f7fc-71b6-8a2a-4ca256ccdcd1",
-          "name": "",
-          "morType": {
-            "tag": "Basic",
-            "content": "Nonscalar"
-          },
-          "over": {
-            "tag": "Basic",
-            "content": "0194d39d-d297-77a9-95a2-6ed7105fdca3"
+          "cod": {
+            "content": "0196021f-0a11-7443-b5da-31175c628e3c",
+            "tag": "Basic"
           },
           "dom": {
-            "tag": "Basic",
-            "content": "0195b971-f101-7552-8652-3f5949b7c046"
+            "content": "0196021e-e55e-764e-85c8-827f94d7f3bd",
+            "tag": "Basic"
           },
-          "cod": {
-            "tag": "Basic",
-            "content": "0195b972-11de-75b9-b334-fd89c3c3f011"
-          }
-        }
+          "id": "0196021e-ecf9-7408-b881-d981c4e85222",
+          "morType": {
+            "content": "Nonscalar",
+            "tag": "Basic"
+          },
+          "name": "",
+          "over": {
+            "content": "0194d39a-ed25-710f-b53f-89541021281f",
+            "tag": "Basic"
+          },
+          "tag": "morphism"
+        },
+        "id": "0196021e-ecf9-7408-b881-ddb32ac3d85e",
+        "tag": "formal"
       },
       {
-        "tag": "formal",
-        "id": "0195b972-18ec-71dc-8518-81d851bcf3c8",
         "content": {
-          "tag": "morphism",
-          "id": "0195b972-18ec-71dc-8518-7fc9ff2d04d7",
-          "name": "",
-          "morType": {
-            "tag": "Basic",
-            "content": "Nonscalar"
-          },
-          "over": {
-            "tag": "Basic",
-            "content": "0194d399-34f3-773c-91b9-857da9c4311f"
+          "cod": {
+            "content": "0196021f-4c93-70dc-8e61-24459f79f837",
+            "tag": "Basic"
           },
           "dom": {
-            "tag": "Basic",
-            "content": "0195b972-11de-75b9-b334-fd89c3c3f011"
+            "content": "0196021f-0a11-7443-b5da-31175c628e3c",
+            "tag": "Basic"
           },
-          "cod": {
-            "tag": "Basic",
-            "content": "0195b972-3561-760d-a1f2-8b8ff5bee0c0"
-          }
-        }
+          "id": "0196021f-1ba8-77a5-a635-8b3ca32ae99c",
+          "morType": {
+            "content": "Nonscalar",
+            "tag": "Basic"
+          },
+          "name": "",
+          "over": {
+            "content": "0194d39d-d297-77a9-95a2-6ed7105fdca3",
+            "tag": "Basic"
+          },
+          "tag": "morphism"
+        },
+        "id": "0196021f-1ba8-77a5-a635-8f6c9f8b2c4c",
+        "tag": "formal"
       },
       {
-        "tag": "formal",
-        "id": "0195b972-6b7a-75c9-9ad9-a899ad082fa9",
         "content": {
-          "tag": "morphism",
-          "id": "0195b972-6b7a-75c9-9ad9-a4c678543e18",
-          "name": "",
+          "cod": {
+            "content": "0196021d-1aa4-776d-b4fb-05d24d0c6de4",
+            "tag": "Basic"
+          },
+          "dom": {
+            "content": "0196021f-4c93-70dc-8e61-24459f79f837",
+            "tag": "Basic"
+          },
+          "id": "0196021f-6b45-751e-8313-df1024cd9fa0",
           "morType": {
-            "tag": "Hom",
             "content": {
-              "tag": "Basic",
-              "content": "Object"
-            }
+              "content": "Object",
+              "tag": "Basic"
+            },
+            "tag": "Hom"
           },
-          "over": null,
-          "dom": {
-            "tag": "Basic",
-            "content": "0195b972-3561-760d-a1f2-8b8ff5bee0c0"
+          "name": "",
+          "over": {
+            "content": "01960dde-1193-7132-b662-9bf24ed05264",
+            "tag": "Basic"
           },
-          "cod": {
-            "tag": "Basic",
-            "content": "0195b970-0d6c-7145-b05e-f5d75d1f5535"
-          }
-        }
+          "tag": "morphism"
+        },
+        "id": "0196021f-6b46-73b4-8b8a-1417d000ecfd",
+        "tag": "formal"
       },
       {
-        "tag": "formal",
-        "id": "0195b977-0b32-7252-8aa3-91426ddbac08",
         "content": {
-          "tag": "morphism",
-          "id": "0195b977-0b32-7252-8aa3-8e1b1b91e6b3",
-          "name": "",
-          "morType": {
-            "tag": "Basic",
-            "content": "Nonscalar"
-          },
-          "over": {
-            "tag": "Basic",
-            "content": "0194d39c-622d-7599-bc5c-e7e8208d6cdd"
+          "cod": {
+            "content": "0196021d-1aa4-776d-b4fb-05d24d0c6de4",
+            "tag": "Basic"
           },
           "dom": {
-            "tag": "Basic",
-            "content": "0195b96f-e056-738f-946d-286a4100e05e"
+            "content": "0196021c-f5fe-70f3-ac68-89ae212970ea",
+            "tag": "Basic"
           },
-          "cod": {
-            "tag": "Basic",
-            "content": "0195b970-0d6c-7145-b05e-f5d75d1f5535"
-          }
-        }
+          "id": "01960df4-b95f-7660-90b6-aaf1dc940a15",
+          "morType": {
+            "content": "Nonscalar",
+            "tag": "Basic"
+          },
+          "name": "",
+          "over": {
+            "content": "0194d39c-622d-7599-bc5c-e7e8208d6cdd",
+            "tag": "Basic"
+          },
+          "tag": "morphism"
+        },
+        "id": "01960df4-b95f-7660-90b6-ae21afb022aa",
+        "tag": "formal"
       }
     ]
   },

@@ -41,8 +41,7 @@ function add_to_pode!(d::SummationDecapode,
         vars::Dict{String, Int}, # mapping between UUID and ACSet ID
         model::Model{ThDecapode},
         content::AbstractDict,
-        scalars::Any,
-        anons::Dict{Symbol, Any},
+        scalars::Dict{Symbol, String},
         nc::Dict{Int, String},
         ::HomTag)
 
@@ -87,18 +86,18 @@ function add_to_pode!(d::SummationDecapode,
     if op1 == :∂ₜ
         add_part!(d, :TVar, incl=cod_id)
     end
-    # if the dom is anonymous, we treat it as a something which will receive x -> k * x.
-    # we store its value in another array
-    if !isempty(scalars) && haskey(scalars, Symbol(content[:over][:content]))
-        scalar = scalars[Symbol(content[:over][:content])]
-        push!(anons, op1 => x -> scalar * x)
+
+    if content[:morType][:content] isa JSON3.Object
+        scalar = model.data[content[:over][:content]].name
+        push!(scalars, scalar => content[:over][:content])
     end
+
     d
 end
 
 struct DecapodeDiagram <: AbstractDiagram{ThDecapode}
     pode::SummationDecapode
-    anons::Dict{Symbol, Any}
+    scalars::Dict{Symbol, String}
     vars::Dict{String, Int}
 end
 
@@ -115,17 +114,17 @@ function Diagram(json_diagram::JSON3.Object, model::Model{ThDecapode}; scalars=[
     pode = SummationDecapode(parse_decapode(quote end))
     vars = Dict{String, Int}() # UUID => ACSetID
     nc = Dict{Int, String}() # array is a mutable container
-    anons = Dict{Symbol, Any}()
+    scalars = Dict{Symbol, String}()
     # for each cell in the notebook, add it to the diagram
     foreach(json_diagram[:cells]) do cell
         @match cell begin
             # TODO merge nameless_count into vars
             IsObject(content) => add_to_pode!(pode, vars, model, content, nc, ObTag())
-            IsMorphism(content) => add_to_pode!(pode, vars, model, content, scalars, anons, nc, HomTag())
+            IsMorphism(content) => add_to_pode!(pode, vars, model, content, scalars, nc, HomTag())
             _ => throw(ImplError(cell[:content][:tag]))
         end
     end
-    return DecapodeDiagram(pode, anons, vars)
+    return DecapodeDiagram(pode, scalars, vars)
 end
 export Diagram
 # TODO rename to Diagram

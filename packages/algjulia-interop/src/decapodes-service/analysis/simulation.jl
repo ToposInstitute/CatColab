@@ -38,7 +38,10 @@ function Analysis(analysis::JSON3.Object, diagram::DecapodeDiagram, hodge=Geomet
     #fΔ0 = factorize(Δ0);
     function sys_generate(s, my_symbol)
         op = @match my_symbol begin
-            sym && if sym ∈ keys(anons) end => anons[sym]
+            sym && if haskey(diagram.scalars, sym) end => x -> begin
+                k = scalars[diagram.scalars[sym]]
+                k * x
+            end
             :♭♯ => x -> ♭♯_m * x # [1]
             :dpsw => x -> wedge_dp10(x, star0_inv_m[1]*(dual_d1_m[1]*x))
             :Δ⁻¹ => x -> begin
