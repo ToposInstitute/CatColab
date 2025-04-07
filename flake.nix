@@ -109,6 +109,8 @@
           ];
 
         shellHook = ''
+          # load DATABASE_URL into the environment. This lets the rust lsp work with sqlx when the editor
+          # is opened from the repo root
           if [ -f packages/backend/.env ]; then
             export $(grep -v '^#' packages/backend/.env | xargs)
           fi
