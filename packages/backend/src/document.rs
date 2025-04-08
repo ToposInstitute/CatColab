@@ -126,6 +126,7 @@ pub struct RefContent {
     pub content: Value,
 }
 
+use chrono::{DateTime, Utc};
 /// A subset of user relevant information about a ref. Used for showing
 /// users information on a variety of refs without having to load whole
 /// refs.
@@ -137,7 +138,7 @@ pub struct RefStub {
     // permission level that the current user has on this ref
     pub permission_level: PermissionLevel,
     pub owner: UserSummary,
-    pub created_at: String,
+    pub created_at: DateTime<Utc>,
 }
 
 /// Parameters for filtering a search of refs
@@ -168,7 +169,7 @@ pub async fn search_ref_stubs(
         WITH latest_snapshots AS (
             SELECT DISTINCT ON (snapshots.for_ref) 
                 refs.id AS ref_id, 
-                refs.created::TEXT AS created_at,
+                created as created_at,
                 snapshots.content->>'name' AS name,
                 snapshots.content->>'type' AS type_name
             FROM snapshots
@@ -223,7 +224,7 @@ pub async fn search_ref_stubs(
             name: row.name.unwrap_or_else(|| "untitled".to_string()),
             type_name: row.type_name.expect("type_name should never be null"),
             permission_level: row.permission_level,
-            created_at: row.created_at.expect("created_at should never be null"),
+            created_at: row.created_at,
             owner: UserSummary {
                 id: row.owner_id,
                 username: row.owner_username,
@@ -255,7 +256,7 @@ pub async fn search_ref_stubs_related_to_user(
         WITH latest_snapshots AS (
             SELECT DISTINCT ON (snapshots.for_ref) 
                 refs.id AS ref_id, 
-                refs.created::TEXT AS created_at,
+                created as created_at,
                 snapshots.content->>'name' AS name,
                 snapshots.content->>'type' AS type_name
             FROM snapshots
@@ -303,7 +304,7 @@ pub async fn search_ref_stubs_related_to_user(
             name: row.name.unwrap_or_else(|| "untitled".to_string()),
             type_name: row.type_name.expect("type_name should never be null"),
             permission_level: row.permission_level,
-            created_at: row.created_at.expect("created_at should never be null"),
+            created_at: row.created_at,
             owner: UserSummary {
                 id: row.owner_id,
                 username: row.owner_username,

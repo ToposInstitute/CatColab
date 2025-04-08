@@ -1,0 +1,78 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        WITH latest_snapshots AS (\n            SELECT DISTINCT ON (snapshots.for_ref) \n                refs.id AS ref_id, \n                created as created_at,\n                snapshots.content->>'name' AS name,\n                snapshots.content->>'type' AS type_name\n            FROM snapshots\n            JOIN refs ON snapshots.for_ref = refs.id\n            ORDER BY snapshots.for_ref, snapshots.id DESC\n        )\n        SELECT \n            ls.ref_id,\n            ls.name,\n            ls.type_name,\n            ls.created_at,\n            p_searcher.level as \"permission_level: PermissionLevel\",\n            owner.id as owner_id,\n            owner.username as owner_username,\n            owner.display_name as owner_display_name\n        FROM latest_snapshots ls\n        JOIN permissions p_searcher ON ls.ref_id = p_searcher.object\n        JOIN permissions p_owner ON ls.ref_id = p_owner.object  -- Ensure owner has permissions\n        JOIN users owner ON owner.id = p_owner.subject  -- Match permissions entry to owner\n        WHERE p_searcher.subject = $1  -- searcher_id must have access\n        AND (\n            owner.id = COALESCE($1, (SELECT id FROM users WHERE username = $2))  -- Use searcher if owner_username is NULL\n        )\n        AND p_owner.level IN ('read', 'write', 'maintain', 'own')  -- Owner must have at least one permission\n        AND p_searcher.level IN ('read', 'write', 'maintain', 'own')  -- Searcher must have permissions\n        AND (\n            ls.name ILIKE '%' || $3 || '%'  -- Case-insensitive substring search\n            OR $3 IS NULL  -- Include all if name filter is NULL\n        )\n        ORDER BY ls.created_at DESC\n        LIMIT 100; -- TODO: pagination\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "ref_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "type_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "permission_level: PermissionLevel",
+        "type_info": {
+          "Custom": {
+            "name": "permission_level",
+            "kind": {
+              "Enum": [
+                "read",
+                "write",
+                "maintain",
+                "own"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "owner_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "owner_username",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "owner_display_name",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      null,
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "8b2e319ada21f603c07dae0dd6315e328d44db6573ed332d2b0c9b3538655572"
+}
