@@ -13,7 +13,7 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
-import { DocumentMenu, TheoryHelpButton, Toolbar } from "../page";
+import { DocumentLoadingScreen, DocumentMenu, TheoryHelpButton, Toolbar } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { InstanceTypeMeta } from "../theory";
 import { PermissionsButton } from "../user";
@@ -31,7 +31,6 @@ import {
 } from "./types";
 
 import "./diagram_editor.css";
-import DocumentLoadingScreen from "../page/document_loading_screen";
 
 export default function DiagramPage() {
     const api = useApi();

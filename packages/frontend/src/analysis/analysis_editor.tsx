@@ -22,9 +22,10 @@ import {
     NotebookEditor,
     newFormalCell,
 } from "../notebook";
-import { DocumentMenu, TheoryHelpButton, Toolbar } from "../page";
+import { DocumentLoadingScreen, DocumentMenu, TheoryHelpButton, Toolbar } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { AnalysisMeta } from "../theory";
+import { assertExhaustive } from "../util/assert_exhaustive";
 import { LiveAnalysisContext } from "./context";
 import {
     type LiveAnalysisDocument,
@@ -36,8 +37,6 @@ import type { Analysis } from "./types";
 
 import PanelRight from "lucide-solid/icons/panel-right";
 import PanelRightClose from "lucide-solid/icons/panel-right-close";
-import DocumentLoadingScreen from "../page/document_loading_screen";
-import { assertExhaustive } from "../util/assert_exhaustive";
 
 export default function AnalysisPage() {
     const api = useApi();

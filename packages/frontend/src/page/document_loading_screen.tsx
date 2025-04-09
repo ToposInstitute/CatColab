@@ -1,7 +1,7 @@
 import { HamburgerMenu } from "./menubar";
 import { TheoryHelpButton, Toolbar } from "./toolbar";
 
-export default function DocumentLoadingScreen() {
+export function DocumentLoadingScreen() {
     return (
         <div class="growable-container">
             <Toolbar>

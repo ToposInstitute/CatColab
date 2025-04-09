@@ -11,7 +11,7 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
-import { DocumentMenu, TheoryHelpButton, Toolbar } from "../page";
+import { DocumentLoadingScreen, DocumentMenu, TheoryHelpButton, Toolbar } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
 import { PermissionsButton } from "../user";
@@ -30,7 +30,6 @@ import {
 } from "./types";
 
 import "./model_editor.css";
-import DocumentLoadingScreen from "../page/document_loading_screen";
 
 export default function ModelPage() {
     const api = useApi();
