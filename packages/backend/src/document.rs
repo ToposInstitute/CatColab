@@ -1,5 +1,6 @@
 //! Procedures to create and manipulate documents.
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use ts_rs::TS;
@@ -126,7 +127,6 @@ pub struct RefContent {
     pub content: Value,
 }
 
-use chrono::{DateTime, Utc};
 /// A subset of user relevant information about a ref. Used for showing
 /// users information on a variety of refs without having to load whole
 /// refs.
@@ -137,7 +137,7 @@ pub struct RefStub {
     pub ref_id: Uuid,
     // permission level that the current user has on this ref
     pub permission_level: PermissionLevel,
-    pub owner: UserSummary,
+    pub owner: Option<UserSummary>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -146,77 +146,78 @@ pub struct RefStub {
 pub struct RefQueryParams {
     pub owner_username_query: Option<String>,
     pub ref_name_query: Option<String>,
+    pub searcher_min_level: Option<PermissionLevel>,
+    pub include_public_documents: Option<bool>,
     // TODO: add param for document type
 }
 
-/// Gets a vec of user relevant informations about refs that match the query parameters
+/// Searches for `RefStub`s that the current user has permission to access,
+/// returning lightweight metadata about each matching ref
 pub async fn search_ref_stubs(
     ctx: AppCtx,
     search_params: RefQueryParams,
 ) -> Result<Vec<RefStub>, AppError> {
-    // TODO: if searcher_id is None, restrict search to only publish documents
-    let searcher_id = ctx
-        .user
-        .as_ref()
-        .map(|user| user.user_id.clone())
-        .ok_or(AppError::Unauthorized)?;
+    let searcher_id = ctx.user.as_ref().map(|user| user.user_id.clone());
 
-    // selects the ref id and ref name (from the most recent snapshot of that
-    // ref) for all refs that a user (the searcher) has permission to access.
-    // Optionally filter the results by the owner of the refs.
+    let min_level = search_params.searcher_min_level.unwrap_or(PermissionLevel::Read);
+
     let results = sqlx::query!(
         r#"
-        WITH latest_snapshots AS (
-            SELECT DISTINCT ON (snapshots.for_ref) 
-                refs.id AS ref_id, 
-                created as created_at,
-                snapshots.content->>'name' AS name,
-                snapshots.content->>'type' AS type_name
-            FROM snapshots
-            JOIN refs ON snapshots.for_ref = refs.id
-            ORDER BY snapshots.for_ref, snapshots.id DESC
+        WITH effective_permissions AS (
+            /*
+              select at most one row per ref, the row is either:
+               - the searcher’s own permission, if it exists
+               - the public permission (subject IS NULL) when include_public_documents = TRUE and the
+                 searcher does not already have a row
+            */
+            SELECT DISTINCT ON (object)
+                   object,
+                   level
+            FROM   permissions
+            WHERE  (subject = $1)
+               OR  ($5 AND subject IS NULL)
+            ORDER BY object,
+                     (subject IS NOT NULL) DESC           -- prefer the user‑specific row
         )
         SELECT 
-            ls.ref_id,
-            ls.name,
-            ls.type_name,
-            ls.created_at,
-            p_searcher.level as "permission_level: PermissionLevel",
-            owner.id as owner_id,
-            owner.username as owner_username,
-            owner.display_name as owner_display_name
-        FROM latest_snapshots ls
-        JOIN permissions p_searcher ON ls.ref_id = p_searcher.object
-        LEFT JOIN users owner ON owner.id = (
-            SELECT p_owner.subject 
-            FROM permissions p_owner 
-            WHERE p_owner.object = ls.ref_id 
-            AND p_owner.level = 'own' 
-            LIMIT 1
-        )
+            refs.id AS ref_id,
+            snapshots.content->>'name' AS name,
+            snapshots.content->>'type' AS type_name,
+            refs.created as created_at,
+            effective_permissions.level AS "permission_level: PermissionLevel",
+            owner.id AS "owner_id?",
+            owner.username AS "owner_username?",
+            owner.display_name AS "owner_display_name?"
+        FROM refs
+        JOIN snapshots ON snapshots.id = refs.head
+        JOIN effective_permissions ON effective_permissions.object = refs.id
+        JOIN permissions AS p_owner 
+            ON p_owner.object = refs.id AND p_owner.level = 'own'
+        LEFT JOIN users AS owner
+            ON owner.id = p_owner.subject
         WHERE (
-            (p_searcher.subject = $1
-            AND p_searcher.level IN ('read', 'write', 'maintain', 'own'))
-            OR p_searcher.subject IS NULL -- user is allowed to search public documents
+            owner.username = $2
+            OR $2 IS NULL
         )
         AND (
-            owner.username = $2  -- owner_username
-            OR $2 IS NULL  -- include all owners if owner_username is NULL
+            snapshots.content->>'name' ILIKE '%' || $3 || '%'
+            OR $3 IS NULL
         )
         AND (
-            ls.name ILIKE '%' || $3 || '%'  -- case-insensitive substring search
-            OR $3 IS NULL  -- include all if name filter is NULL
+            effective_permissions.level >= $4
         )
-        LIMIT 100; -- TODO: pagination
+        LIMIT 100;
         "#,
         searcher_id,
         search_params.owner_username_query,
-        search_params.ref_name_query
+        search_params.ref_name_query,
+        min_level as PermissionLevel,
+        search_params.include_public_documents.unwrap_or(false),
     )
     .fetch_all(&ctx.state.db)
     .await?;
 
-    // Map SQL query results to Vec<RefStub>
+    // We can't use sqlx::query_as! because name and type_name can be null
     let stubs = results
         .into_iter()
         .map(|row| RefStub {
@@ -225,90 +226,13 @@ pub async fn search_ref_stubs(
             type_name: row.type_name.expect("type_name should never be null"),
             permission_level: row.permission_level,
             created_at: row.created_at,
-            owner: UserSummary {
-                id: row.owner_id,
-                username: row.owner_username,
-                display_name: row.owner_display_name,
-            },
-        })
-        .collect();
-
-    Ok(stubs)
-}
-
-/// Gets a list of RefStubs that a user has permissions for and match the search parameters
-pub async fn search_ref_stubs_related_to_user(
-    ctx: AppCtx,
-    search_params: RefQueryParams,
-) -> Result<Vec<RefStub>, AppError> {
-    // TODO: if searcher_id is None, restrict search to only publish documents
-    let searcher_id = ctx
-        .user
-        .as_ref()
-        .map(|user| user.user_id.clone())
-        .ok_or(AppError::Unauthorized)?;
-
-    // for all refs that a user has permissions for, get those that the
-    // searcher also has access to and filter those by search params. If no
-    // owner is specified, assume that the owner is the same as the searcher.
-    let results = sqlx::query!(
-        r#"
-        WITH latest_snapshots AS (
-            SELECT DISTINCT ON (snapshots.for_ref) 
-                refs.id AS ref_id, 
-                created as created_at,
-                snapshots.content->>'name' AS name,
-                snapshots.content->>'type' AS type_name
-            FROM snapshots
-            JOIN refs ON snapshots.for_ref = refs.id
-            ORDER BY snapshots.for_ref, snapshots.id DESC
-        )
-        SELECT 
-            ls.ref_id,
-            ls.name,
-            ls.type_name,
-            ls.created_at,
-            p_searcher.level as "permission_level: PermissionLevel",
-            owner.id as owner_id,
-            owner.username as owner_username,
-            owner.display_name as owner_display_name
-        FROM latest_snapshots ls
-        JOIN permissions p_searcher ON ls.ref_id = p_searcher.object
-        JOIN permissions p_owner ON ls.ref_id = p_owner.object  -- Ensure owner has permissions
-        JOIN users owner ON owner.id = p_owner.subject  -- Match permissions entry to owner
-        WHERE p_searcher.subject = $1  -- searcher_id must have access
-        AND (
-            owner.id = COALESCE($1, (SELECT id FROM users WHERE username = $2))  -- Use searcher if owner_username is NULL
-        )
-        AND p_owner.level IN ('read', 'write', 'maintain', 'own')  -- Owner must have at least one permission
-        AND p_searcher.level IN ('read', 'write', 'maintain', 'own')  -- Searcher must have permissions
-        AND (
-            ls.name ILIKE '%' || $3 || '%'  -- Case-insensitive substring search
-            OR $3 IS NULL  -- Include all if name filter is NULL
-        )
-        ORDER BY ls.created_at DESC
-        LIMIT 100; -- TODO: pagination
-        "#,
-        searcher_id,
-        search_params.owner_username_query,
-        search_params.ref_name_query
-    )
-    .fetch_all(&ctx.state.db)
-    .await?;
-
-    // Map SQL query results to Vec<RefStub>
-    let stubs = results
-        .into_iter()
-        .map(|row| RefStub {
-            ref_id: row.ref_id,
-            name: row.name.unwrap_or_else(|| "untitled".to_string()),
-            type_name: row.type_name.expect("type_name should never be null"),
-            permission_level: row.permission_level,
-            created_at: row.created_at,
-            owner: UserSummary {
-                id: row.owner_id,
-                username: row.owner_username,
-                display_name: row.owner_display_name,
+            owner: match row.owner_id {
+                Some(id) => Some(UserSummary {
+                    id,
+                    username: row.owner_username,
+                    display_name: row.owner_display_name,
+                }),
+                _ => None,
             },
         })
         .collect();

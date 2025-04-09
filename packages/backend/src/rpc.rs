@@ -27,7 +27,6 @@ pub fn router() -> Router<AppState> {
         .handler(get_active_user_profile)
         .handler(set_active_user_profile)
         .handler(search_ref_stubs)
-        .handler(search_ref_stubs_related_to_user)
 }
 
 #[handler(mutation)]
@@ -83,14 +82,6 @@ async fn search_ref_stubs(
     query_params: doc::RefQueryParams,
 ) -> RpcResult<Vec<doc::RefStub>> {
     doc::search_ref_stubs(ctx, query_params).await.into()
-}
-
-#[handler(query)]
-async fn search_ref_stubs_related_to_user(
-    ctx: AppCtx,
-    query_params: doc::RefQueryParams,
-) -> RpcResult<Vec<doc::RefStub>> {
-    doc::search_ref_stubs_related_to_user(ctx, query_params).await.into()
 }
 
 #[handler(query)]

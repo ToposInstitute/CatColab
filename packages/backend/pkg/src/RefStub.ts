@@ -7,4 +7,4 @@ import type { UserSummary } from "./UserSummary";
  * users information on a variety of refs without having to load whole
  * refs.
  */
-export type RefStub = { name: string, type_name: string, ref_id: string, permission_level: PermissionLevel, owner: UserSummary, created_at: string, };
+export type RefStub = { name: string, type_name: string, ref_id: string, permission_level: PermissionLevel, owner: UserSummary | null, created_at: string, };

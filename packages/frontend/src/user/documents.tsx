@@ -38,9 +38,11 @@ function DocumentsSearch() {
         const requestId = latestRequestId() + 1;
         setLatestRequestId(requestId);
 
-        const result = await api.rpc.search_ref_stubs_related_to_user.query({
+        const result = await api.rpc.search_ref_stubs.query({
             owner_username_query: null,
             ref_name_query: query,
+            include_public_documents: false,
+            searcher_min_level: null,
         });
 
         if (latestRequestId() !== requestId) {
@@ -124,8 +126,11 @@ export function RefStubRow(props: { stub: RefStub }) {
     const firebaseApp = useFirebaseApp();
     const auth = getAuth(firebaseApp);
 
-    const isOwner = auth.currentUser?.uid === props.stub.owner.id;
-    const ownerName = isOwner ? "me" : props.stub.owner.username;
+    const owner = props.stub.owner;
+    const hasOwner = owner !== null;
+    const isOwner = hasOwner && auth.currentUser?.uid === owner?.id;
+    // biome-ignore lint/style/noNonNullAssertion: type narrowing doesn't work for ternary statements
+    const ownerName = hasOwner ? (isOwner ? "me" : owner!.username) : "public";
 
     const handleClick = () => {
         const url = getUrlForRefStub(props.stub);
