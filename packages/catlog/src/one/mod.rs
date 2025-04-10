@@ -6,6 +6,7 @@ pub mod graph;
 pub mod graph_algorithms;
 pub mod path;
 pub mod tree;
+pub mod tree_algorithms;
 
 pub use self::category::*;
 pub use self::graph::*;

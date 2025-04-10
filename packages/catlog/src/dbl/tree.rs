@@ -11,8 +11,7 @@ use ego_tree::Tree;
 use std::collections::VecDeque;
 
 use super::graph::VDblGraph;
-use super::tree_algorithms::*;
-use crate::one::path::Path;
+use crate::one::{path::Path, tree_algorithms::*};
 
 /** A node in a [double tree](DblTree).
 

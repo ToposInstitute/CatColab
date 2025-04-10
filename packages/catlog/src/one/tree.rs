@@ -5,6 +5,8 @@ use ego_tree::{NodeRef, Tree};
 use itertools::{Itertools, zip_eq};
 use std::collections::VecDeque;
 
+use super::tree_algorithms::TreeIsomorphism;
+
 /// An open tree, or tree with boundary.
 #[derive(Clone, Debug, From, PartialEq, Eq)]
 pub enum OpenTree<Ty, Op> {
@@ -14,6 +16,20 @@ pub enum OpenTree<Ty, Op> {
     /// A nonempty tree, representing a nonempty composite of operations.
     #[from]
     Comp(Tree<Option<Op>>),
+}
+
+impl<Ty, Op> OpenTree<Ty, Op> {
+    pub fn is_isomorphic_to(&self, other: &Self) -> bool
+    where
+        Ty: Eq,
+        Op: Eq,
+    {
+        match (self, other) {
+            (OpenTree::Comp(tree1), OpenTree::Comp(tree2)) => tree1.is_isomorphic_to(tree2),
+            (OpenTree::Id(type1), OpenTree::Id(type2)) => *type1 == *type2,
+            _ => false,
+        }
+    }
 }
 
 /// Extension trait for nodes in an open tree.
@@ -89,5 +105,81 @@ where
         } else {
             tree.into()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ego_tree::tree;
+
+    #[test]
+    fn flatten_tree() {
+        type OT = OpenTree<char, char>;
+
+        // Typical cases.
+        let tree = OT::from(tree!(
+            Some('f') => {
+                Some('h') => {
+                    Some('k') => { None, None},
+                    None,
+                },
+                Some('g') => {
+                    None,
+                    Some('l') => { None, None }
+                },
+            }
+        ));
+
+        let subtree1 = OT::from(tree!(
+            Some('f') => {
+                None,
+                Some('g') => { None, None },
+            }
+        ));
+        let subtree2 = OT::from(tree!(
+            Some('h') => {
+                Some('k') => { None, None },
+                None
+            }
+        ));
+        let subtree3 = OT::from(tree!(
+            Some('l') => { None, None }
+        ));
+
+        let outer_tree: OpenTree<_, _> = tree!(
+            Some(subtree1.clone()) => {
+                Some(subtree2.clone()) => { None, None, None },
+                None,
+                Some(subtree3.clone()) => { None, None },
+            }
+        )
+        .into();
+        assert!(outer_tree.flatten().is_isomorphic_to(&tree));
+
+        let outer_tree: OpenTree<_, _> = tree!(
+            Some(subtree1) => {
+                Some(OpenTree::Id('X')) => {
+                    Some(subtree2) => { None, None, None },
+                },
+                Some(OpenTree::Id('X')) => { None },
+                Some(OpenTree::Id('X')) => {
+                    Some(subtree3) => { None, None },
+                },
+            }
+        )
+        .into();
+        assert!(outer_tree.flatten().is_isomorphic_to(&tree));
+
+        // Special case: outer tree is identity.
+        let outer_tree: OpenTree<_, _> = OpenTree::Id('X');
+        assert_eq!(outer_tree.flatten(), OT::Id('X'));
+
+        // Special case: every inner tree is an identity.
+        let outer_tree: OpenTree<_, _> = tree!(
+            Some(OT::Id('X')) => { Some(OT::Id('x')) => { None } }
+        )
+        .into();
+        assert_eq!(outer_tree.flatten(), OT::Id('X'));
     }
 }
