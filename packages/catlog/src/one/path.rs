@@ -4,7 +4,7 @@ The central data type is [`Path`]. In addition, this module provides a simple
 data type for [path equations](`PathEq`).
 */
 
-use either::Either;
+use itertools::{Either, Itertools};
 use nonempty::{NonEmpty, nonempty};
 use std::ops::Range;
 use std::{collections::HashSet, hash::Hash};
@@ -309,8 +309,7 @@ impl<V, E> Path<V, E> {
                 // All the edges exist in the graph...
                 edges.iter().all(|e| graph.has_edge(e)) &&
                 // ...and their sources and target are compatible.
-                std::iter::zip(edges.iter(), edges.iter().skip(1)).all(
-                    |(e,f)| graph.tgt(e) == graph.src(f))
+                edges.iter().tuple_windows().all(|(e, f)| graph.tgt(e) == graph.src(f))
             }
         }
     }
@@ -438,8 +437,7 @@ impl<V, E> Path<V, Path<V, E>> {
         V: Eq + Clone,
     {
         if let Path::Seq(paths) = &self {
-            let mut pairs = std::iter::zip(paths.iter(), paths.iter().skip(1));
-            if !pairs.all(|(p1, p2)| p1.tgt(graph) == p2.src(graph)) {
+            if !paths.iter().tuple_windows().all(|(p1, p2)| p1.tgt(graph) == p2.src(graph)) {
                 return None;
             }
         }

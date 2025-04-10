@@ -290,8 +290,8 @@ dependencies = [
  "derive_more",
  "duplicate",
  "ego-tree",
- "either",
  "expect-test",
+ "itertools",
  "nalgebra",
  "nonempty",
  "num-traits",
@@ -1252,6 +1252,15 @@ name = "ipnet"
 version = "2.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ddc24109865250148c2e0f3d25d4f0f479571723792d3802153c60922a4fb708"
+
+[[package]]
+name = "itertools"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285"
+dependencies = [
+ "either",
+]
 
 [[package]]
 name = "itoa"

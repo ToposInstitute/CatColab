@@ -2,6 +2,7 @@
 
 use ego_tree::iter::{Descendants, Edge};
 use ego_tree::{NodeId, NodeRef, Tree};
+use itertools::{EitherOrBoth::Both, Itertools};
 use std::collections::VecDeque;
 
 /// Extension trait adding traversal algorithms on [trees](Tree).
@@ -101,21 +102,15 @@ where
     T: Eq,
 {
     fn is_isomorphic_to(&self, other: &Self) -> bool {
-        let mut self_traversal = self.root().traverse();
-        let mut other_traversal = other.root().traverse();
-        loop {
-            match (self_traversal.next(), other_traversal.next()) {
-                (Some(Edge::Open(n1)), Some(Edge::Open(n2))) if n1.value() == n2.value() => {}
-                (Some(Edge::Close(n1)), Some(Edge::Close(n2))) if n1.value() == n2.value() => {}
-                (None, None) => {
-                    break;
+        self.root()
+            .traverse()
+            .zip_longest(other.root().traverse())
+            .all(|pair| match pair {
+                Both(Edge::Open(n1), Edge::Open(n2)) | Both(Edge::Close(n1), Edge::Close(n2)) => {
+                    n1.value() == n2.value()
                 }
-                _ => {
-                    return false;
-                }
-            }
-        }
-        true
+                _ => false,
+            })
     }
 }
 
