@@ -8,8 +8,10 @@ import "./document_breadcrumbs.css";
 
 type AnyDocument = ModelDocument | DiagramDocument | AnalysisDocument;
 type AnyLiveDocument = LiveModelDocument | LiveDiagramDocument | LiveAnalysisDocument;
-// the initializer { ...document, refId: "uuid" } breaks the reactivity of the document
-type AnyDocumentWithRefId = AnyDocument & { refId: string };
+type AnyDocumentWithRefId = {
+    document: AnyDocument;
+    refId: string;
+};
 
 export function DocumentBreadcrumbs(props: {
     document: AnyLiveDocument;
@@ -24,8 +26,11 @@ export function DocumentBreadcrumbs(props: {
                         {(doc, index) => (
                             <>
                                 {index() > 0 && <span class="breadcrumb-spacer">/</span>}
-                                <a class="breadcrumb-link" href={getUrlForDocument(doc)}>
-                                    [{doc.type}] {doc.name || "untitled"}
+                                <a
+                                    class="breadcrumb-link"
+                                    href={`${doc.document.type}/${doc.refId}`}
+                                >
+                                    {doc.document.name || "untitled"}
                                 </a>
                             </>
                         )}
@@ -34,13 +39,6 @@ export function DocumentBreadcrumbs(props: {
             </Show>
         </div>
     );
-}
-
-function getUrlForDocument(document: AnyDocumentWithRefId): string {
-    const hostname = window.location.hostname;
-    const protocol = window.location.protocol;
-    const port = window.location.port;
-    return `${protocol}//${hostname}:${port}/${document.type}/${document.refId}`;
 }
 
 export function getParentRefId(document: AnyDocument): string | null {
@@ -59,12 +57,12 @@ export function getParentRefId(document: AnyDocument): string | null {
 async function getDocumentChain(document: AnyLiveDocument): Promise<AnyDocumentWithRefId[]> {
     const api = useApi();
     const documentChain: AnyDocumentWithRefId[] = [
-        { ...document.liveDoc.doc, refId: document.refId },
+        { document: document.liveDoc.doc, refId: document.refId },
     ];
 
     while (true) {
         // biome-ignore lint/style/noNonNullAssertion: the array initializer guarantees that there will always be at least one item in the array
-        const parentRefId = getParentRefId(documentChain[0]!);
+        const parentRefId = getParentRefId(documentChain[0]?.document!);
         if (!parentRefId) {
             break;
         }
@@ -75,7 +73,7 @@ async function getDocumentChain(document: AnyLiveDocument): Promise<AnyDocumentW
         // apart a JSON blob in postgres, and that sounds neither fun nor maintainable.
         const parentDocument = await getLiveDoc<AnyDocument>(api, parentRefId);
         documentChain.unshift({
-            ...parentDocument.doc,
+            document: parentDocument.doc,
             refId: parentRefId,
         });
     }
