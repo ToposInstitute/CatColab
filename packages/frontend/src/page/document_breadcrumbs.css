@@ -10,3 +10,9 @@
 .breadcrumb-link:hover {
     text-decoration: underline;
 }
+
+.breadcrumbs-wrapper {
+    display: flex;
+    align-items: center;
+    padding-left: 1em;
+}

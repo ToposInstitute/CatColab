@@ -19,23 +19,18 @@ export function DocumentBreadcrumbs(props: {
     const [documentChain] = createResource(() => props.document, getDocumentChain);
 
     return (
-        <div>
+        <div class="breadcrumbs-wrapper">
             <Show when={documentChain()} fallback={<span>Loading...</span>}>
-                <ol>
-                    <For each={documentChain()}>
-                        {(doc, index) => (
-                            <>
-                                {index() > 0 && <span class="breadcrumb-spacer">/</span>}
-                                <a
-                                    class="breadcrumb-link"
-                                    href={`${doc.document.type}/${doc.refId}`}
-                                >
-                                    {doc.document.name || "untitled"}
-                                </a>
-                            </>
-                        )}
-                    </For>
-                </ol>
+                <For each={documentChain()}>
+                    {(doc, index) => (
+                        <>
+                            {index() > 0 && <span class="breadcrumb-spacer">/</span>}
+                            <a class="breadcrumb-link" href={`${doc.document.type}/${doc.refId}`}>
+                                {doc.document.name || "untitled"}
+                            </a>
+                        </>
+                    )}
+                </For>
             </Show>
         </div>
     );
