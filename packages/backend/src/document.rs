@@ -133,20 +133,28 @@ pub struct RefContent {
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 pub struct RefStub {
     pub name: String,
+    #[serde(rename = "typeName")]
     pub type_name: String,
+    #[serde(rename = "refId")]
     pub ref_id: Uuid,
     // permission level that the current user has on this ref
+    #[serde(rename = "permissionLevel")]
     pub permission_level: PermissionLevel,
     pub owner: Option<UserSummary>,
+    #[serde(rename = "createdAt")]
     pub created_at: DateTime<Utc>,
 }
 
 /// Parameters for filtering a search of refs
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 pub struct RefQueryParams {
+    #[serde(rename = "ownerUsernameQuery")]
     pub owner_username_query: Option<String>,
+    #[serde(rename = "refNameQuery")]
     pub ref_name_query: Option<String>,
+    #[serde(rename = "searcherMinLevel")]
     pub searcher_min_level: Option<PermissionLevel>,
+    #[serde(rename = "includePublicDocuments")]
     pub include_public_documents: Option<bool>,
     // TODO: add param for document type
 }

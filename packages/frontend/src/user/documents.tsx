@@ -6,6 +6,7 @@ import { resultErr, resultOk, useApi } from "../api";
 import { BrandedToolbar } from "../page";
 import { LoginGate } from "./login";
 import "./documents.css";
+import { useNavigate } from "@solidjs/router";
 
 export default function UserDocuments() {
     return (
@@ -39,10 +40,10 @@ function DocumentsSearch() {
         setLatestRequestId(requestId);
 
         const result = await api.rpc.search_ref_stubs.query({
-            owner_username_query: null,
-            ref_name_query: query,
-            include_public_documents: false,
-            searcher_min_level: null,
+            ownerUsernameQuery: null,
+            refNameQuery: query,
+            includePublicDocuments: false,
+            searcherMinLevel: null,
         });
 
         if (latestRequestId() !== requestId) {
@@ -120,6 +121,7 @@ function DocumentsSearch() {
 export function RefStubRow(props: { stub: RefStub }) {
     const firebaseApp = useFirebaseApp();
     const auth = getAuth(firebaseApp);
+    const navigate = useNavigate();
 
     const owner = props.stub.owner;
     const hasOwner = owner !== null;
@@ -128,18 +130,17 @@ export function RefStubRow(props: { stub: RefStub }) {
     const ownerName = hasOwner ? (isOwner ? "me" : owner!.username) : "public";
 
     const handleClick = () => {
-        const url = getUrlForRefStub(props.stub);
-        window.location.href = url;
+        navigate(`/${props.stub.typeName}/${props.stub.refId}`);
     };
 
     return (
         <tr class="ref-stub-row" onClick={handleClick}>
-            <td>{props.stub.type_name}</td>
+            <td>{props.stub.typeName}</td>
             <td>{props.stub.name}</td>
             <td>{ownerName}</td>
-            <td>{props.stub.permission_level}</td>
+            <td>{props.stub.permissionLevel}</td>
             <td>
-                {new Date(props.stub.created_at).toLocaleDateString("en-US", {
+                {new Date(props.stub.createdAt).toLocaleDateString("en-US", {
                     year: "numeric",
                     month: "short",
                     day: "numeric",
@@ -147,11 +148,4 @@ export function RefStubRow(props: { stub: RefStub }) {
             </td>
         </tr>
     );
-}
-
-function getUrlForRefStub(refStub: RefStub): string {
-    const hostname = window.location.hostname;
-    const protocol = window.location.protocol;
-    const port = window.location.port;
-    return `${protocol}//${hostname}:${port}/${refStub.type_name}/${refStub.ref_id}`;
 }

@@ -4,4 +4,4 @@ import type { PermissionLevel } from "./PermissionLevel";
 /**
  * Parameters for filtering a search of refs
  */
-export type RefQueryParams = { owner_username_query: string | null, ref_name_query: string | null, searcher_min_level: PermissionLevel | null, include_public_documents: boolean | null, };
+export type RefQueryParams = { ownerUsernameQuery: string | null, refNameQuery: string | null, searcherMinLevel: PermissionLevel | null, includePublicDocuments: boolean | null, };
