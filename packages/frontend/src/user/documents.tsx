@@ -1,8 +1,8 @@
-import type { RefStub, RpcResult } from "catcolab-api";
+import type { RefStub } from "catcolab-api";
 import { getAuth } from "firebase/auth";
 import { useFirebaseApp } from "solid-firebase";
 import { For, Match, Switch, createResource, createSignal, onMount } from "solid-js";
-import { useApi } from "../api";
+import { resultErr, resultOk, useApi } from "../api";
 import { BrandedToolbar } from "../page";
 import { LoginGate } from "./login";
 import "./documents.css";
@@ -49,12 +49,7 @@ function DocumentsSearch() {
             // A newer query was issued — discard this one
             return;
         }
-
-        if (result.tag === "Ok") {
-            return result;
-        } else {
-            throw new Error(result.message);
-        }
+        return result;
     });
 
     onMount(() => {
@@ -97,14 +92,14 @@ function DocumentsSearch() {
                                     </tr>
                                 }
                             >
-                                <Match when={onOk(refStubs())}>
+                                <Match when={resultOk(refStubs())}>
                                     {(okRes) => (
                                         <For each={okRes()}>
                                             {(stub) => <RefStubRow stub={stub} />}
                                         </For>
                                     )}
                                 </Match>
-                                <Match when={onErr(refStubs())}>
+                                <Match when={resultErr(refStubs())}>
                                     {(errRes) => (
                                         <tr>
                                             <td colspan="5">
@@ -152,24 +147,6 @@ export function RefStubRow(props: { stub: RefStub }) {
             </td>
         </tr>
     );
-}
-
-function onErr<T>(
-    res: RpcResult<T> | undefined,
-): Extract<RpcResult<unknown>, { tag: "Err" }> | undefined {
-    if (res?.tag !== "Err") {
-        return undefined;
-    }
-
-    return res;
-}
-
-function onOk<T>(res: RpcResult<T> | undefined): T | undefined {
-    if (res?.tag !== "Ok") {
-        return undefined;
-    }
-
-    return res.content;
 }
 
 function getUrlForRefStub(refStub: RefStub): string {

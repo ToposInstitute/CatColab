@@ -5,8 +5,8 @@ import { v4 } from "uuid";
 import { assert, afterAll, describe, test } from "vitest";
 
 import type { UserProfile } from "catcolab-api";
-import { initTestUserAuth, unwrap, unwrapErr } from "../util/test_util.ts";
-import { createRpcClient } from "./rpc.ts";
+import { initTestUserAuth } from "../util/test_util.ts";
+import { createRpcClient, unwrap, unwrapErr } from "./rpc.ts";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
 const firebaseOptions = JSON.parse(import.meta.env.VITE_FIREBASE_OPTIONS) as FirebaseOptions;
