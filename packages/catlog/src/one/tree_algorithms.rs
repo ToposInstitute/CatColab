@@ -12,6 +12,12 @@ pub trait TreeTraversal<T> {
 
     /// Iterates over descendants of node in breadth-first order.
     fn bfs(&self) -> BreadthFirstTraversal<'_, T>;
+
+    /// Iterates over left boundary of node.
+    fn left_boundary(&self) -> impl Iterator<Item = Self>;
+
+    /// Iterates over right boundary of node.
+    fn right_boundary(&self) -> impl Iterator<Item = Self>;
 }
 
 /// Iterator for traversing a tree in breadth-first order.
@@ -72,6 +78,24 @@ impl<'a, T: 'a> TreeTraversal<T> for NodeRef<'a, T> {
     /// Implements the standard BFS algorithm using a queue.
     fn bfs(&self) -> BreadthFirstTraversal<'a, T> {
         BreadthFirstTraversal::starting_at(*self)
+    }
+
+    fn left_boundary(&self) -> impl Iterator<Item = Self> {
+        let mut maybe_node = Some(*self);
+        std::iter::from_fn(move || {
+            let prev = maybe_node;
+            maybe_node = maybe_node.and_then(|node| node.first_child());
+            prev
+        })
+    }
+
+    fn right_boundary(&self) -> impl Iterator<Item = Self> {
+        let mut maybe_node = Some(*self);
+        std::iter::from_fn(move || {
+            let prev = maybe_node;
+            maybe_node = maybe_node.and_then(|node| node.last_child());
+            prev
+        })
     }
 }
 
