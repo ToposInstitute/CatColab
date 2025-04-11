@@ -70,3 +70,5 @@ crate2nix generate
 ```
 
 And committing the the updated `Cargo.nix` file.
+
+Don't forget to run `cargo sqlx prepare` in `packages/backend`!

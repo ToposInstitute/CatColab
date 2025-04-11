@@ -61,6 +61,11 @@ see the [frontend README](packages/frontend/).
 Developing the backend locally requires more setup. See the instructions in the
 [backend README](packages/backend/).
 
+#### Test build for nixos deployment
+```
+nix build .#nixosConfigurations.catcolab-next.config.system.build.toplevel
+```
+
 ### Formatting and linting
 
 To maintain a clean and consistent codebase, we follow strict conventions on
@@ -101,4 +106,4 @@ The library of domain-specific logics in CatColab, available now and to grow
 over time, is inspired by a wide body of research in applied category theory and
 beyond. Incomplete bibliographies are in the [dev
 docs](https://next.catcolab.org/dev/bib-0001.xml) and the [core
-docs](https://next.catcolab.org/dev/rust/catlog/refs/).
+docs](https://next.catcolab.org/dev/rust/catlog/refs
