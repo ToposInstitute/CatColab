@@ -3,23 +3,30 @@
 Trees are an ubiquitous data structure in computer science and computer algebra.
 This module implements trees with specified boundary, or [*open
 trees*](OpenTree) for short. This is the category theorist's preferred notion of
-tree, since open trees are precisely the morphisms in free multicategories.
+planar tree, since open trees are the morphisms of free multicategories.
 
 To see the difference between (closed) trees and open trees, consider their use
 to represent symbolic expressions. A closed expression tree cannot, except by
 convention, distinguish between free variables and constants (nullary
-operations). By contrast, when boundaries are admitted, the expression `f(x,
-g(y))` with free variables `x` and `y` can be represented as an open tree of
-with arity 2, whereas the expression `f(c, g(d))`, shorthand for `f(c(),
-g(d()))`, is represented as an open tree with arity 0.
+operations). However, when boundaries are admitted, the expression `f(x, g(y))`
+with free variables `x` and `y` can be represented as an open tree of with arity
+2, whereas the expression `f(c, g(d))`, shorthand for `f(c(), g(d()))`, is
+represented as an open tree with arity 0.
 
 A subtle but important feature of open trees is that they include [*identity*
-trees](OpenTree::Id), which carry a type but have no nodes. The computer
-scientist's tree is rooted, which implies that it has at least one node, namely
-it root.
+trees](OpenTree::Id), which carry a type but have no nodes. By contrast, the
+computer scientist's tree is rooted, which implies that it has at least one
+node, namely its root.
 
 The main use of open trees in this crate is to implement [double
 trees](crate::dbl::tree).
+
+# References
+
+Joachim Kock has proposed a combinatorial formalism for open trees ([Kock
+2011](crate::refs::KockTrees)) and open graphs ([Kock
+2016](crate::refs::KockGraphs)). Kock's trees are similar in spirit to these but
+are nonplanar, i.e., are the morphisms of free *symmetric* multicategories.
  */
 
 use derive_more::From;

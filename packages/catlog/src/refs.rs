@@ -81,3 +81,21 @@ algorithms*. Fourth edition.
 - [Companion website](https://dacox.people.amherst.edu/iva.html)
  */
 pub const IdealsVarietiesAlgorithms: () = ();
+
+/** Reference: Polynomial functors and trees.
+
+Joachim Kock, 2011. Polynomial functors and trees.
+
+- [DOI:10.1093/imrn/rnq068](https://doi.org/10.1093/imrn/rnq068)
+- [arXiv:0807.2874](https://arxiv.org/abs/0807.2874)
+ */
+pub const KockTrees: () = ();
+
+/** Reference: Graphs, hypergraphs, and properads.
+
+Joachim Kock, 2016. Graphs, hypergraphs, and properads.
+
+- [DOI:10.1007/s13348-015-0160-0](https://doi.org/10.1007/s13348-015-0160-0)
+- [arXiv:1407.3744](https://arxiv.org/abs/1407.3744)
+ */
+pub const KockGraphs: () = ();
