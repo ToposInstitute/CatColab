@@ -33,16 +33,6 @@ pub enum DblNode<E, Sq> {
 }
 
 impl<E, Sq> DblNode<E, Sq> {
-    /// Is the node a generic cell?
-    pub fn is_cell(&self) -> bool {
-        matches!(*self, DblNode::Cell(_))
-    }
-
-    /// Is the node a spine?
-    pub fn is_spine(&self) -> bool {
-        matches!(*self, DblNode::Spine(_))
-    }
-
     /** Domain of node in the given virtual double graph.
 
     Returns a path of arbitrary length.
@@ -245,14 +235,18 @@ impl<E, ProE, Sq> DblTree<E, ProE, Sq> {
         }
     }
 
-    /// Arity of the composite cell specified by the tree.
-    pub fn arity(&self) -> usize {
+    /** Arity of the cell specified by the double tree.
+
+    Note that this arity can differ from the [arity](OpenTree::arity) of the
+    underlying open tree due to the possibility of spines.
+     */
+    pub fn arity(&self, graph: &impl VDblGraph<E = E, ProE = ProE, Sq = Sq>) -> usize {
         match &self.0 {
             OpenTree::Id(_) => 1,
             OpenTree::Comp(tree) => tree
                 .root()
                 .boundary()
-                .filter(|node| !node.parent_value().unwrap().is_spine())
+                .filter(|node| node.parent_value().unwrap().arity(graph) != 0)
                 .count(),
         }
     }
@@ -383,7 +377,7 @@ mod tests {
         assert_eq!(tree, tree_alt);
         assert!(tree.contained_in(&graph));
 
-        assert_eq!(tree.arity(), 5);
+        assert_eq!(tree.arity(&graph), 5);
         assert_eq!(
             tree.dom(&graph),
             Path::Seq(nonempty![
@@ -482,7 +476,7 @@ mod tests {
 
         // Degenerate case: the outer tree is a singleton.
         let outer: DblTree<Path<Bimod::Ob, Bimod::Ob>, _, _> =
-            OpenTree::single(DblNode::Cell(tree.clone()), tree.arity()).into();
+            OpenTree::single(DblNode::Cell(tree.clone()), tree.arity(&graph)).into();
         assert_eq!(outer.flatten(), tree);
 
         // Degenerate case: all inner trees are singletons.

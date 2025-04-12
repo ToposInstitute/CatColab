@@ -347,7 +347,7 @@ where
         tree.tgt(&self.0)
     }
     fn arity(&self, tree: &Self::Cell) -> usize {
-        tree.arity()
+        tree.arity(&self.0)
     }
 
     fn compose(&self, path: Path<Self::Ob, Self::Arr>) -> Self::Arr {
@@ -724,7 +724,7 @@ pub mod WalkingFunctor {
             let graph = UnderlyingDblGraph::ref_cast(self);
             let (f, g) = (self.compose(tree.src(graph)), self.compose(tree.tgt(graph)));
             assert_eq!(f, g, "Cells in walking functor have the same source and target");
-            Cell::with_src_and_tgt(f, tree.arity())
+            Cell::with_src_and_tgt(f, tree.arity(graph))
         }
     }
 
