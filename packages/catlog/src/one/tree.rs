@@ -1,4 +1,26 @@
-//! Trees with boundary.
+/*! Trees with boundary.
+
+Trees are an ubiquitous data structure in computer science and computer algebra.
+This module implements trees with specified boundary, or [*open
+trees*](OpenTree) for short. This is the category theorist's preferred notion of
+tree, since open trees are precisely the morphisms in free multicategories.
+
+To see the difference between (closed) trees and open trees, consider their use
+to represent symbolic expressions. A closed expression tree cannot, except by
+convention, distinguish between free variables and constants (nullary
+operations). By contrast, when boundaries are admitted, the expression `f(x,
+g(y))` with free variables `x` and `y` can be represented as an open tree of
+with arity 2, whereas the expression `f(c, g(d))`, shorthand for `f(c(),
+g(d()))`, is represented as an open tree with arity 0.
+
+A subtle but important feature of open trees is that they include [*identity*
+trees](OpenTree::Id), which carry a type but have no nodes. The computer
+scientist's tree is rooted, which implies that it has at least one node, namely
+it root.
+
+The main use of open trees in this crate is to implement [double
+trees](crate::dbl::tree).
+ */
 
 use derive_more::From;
 use ego_tree::{NodeRef, Tree};
@@ -7,13 +29,22 @@ use std::collections::VecDeque;
 
 use super::tree_algorithms::TreeIsomorphism;
 
-/// An open tree, or tree with boundary.
+/** An open tree, or tree with boundary.
+
+In a non-empty open tree, backed by a [`Tree`], each node carries either an
+operation or a null value. The null nodes constitute the boundary of the tree.
+It is an error for null nodes to have children or for the root to be null.
+Failure to maintain this invariant may result in panics.
+
+Compare with the [`Path`](super::path::Path) data type, of which this type may
+be considered a generalization.
+ */
 #[derive(Clone, Debug, From, PartialEq, Eq)]
 pub enum OpenTree<Ty, Op> {
     /// The identity, or empty, tree on a type.
     Id(Ty),
 
-    /// A nonempty tree, representing a nonempty composite of operations.
+    /// A rooted tree, representing a nonempty composite of operations.
     #[from]
     Comp(Tree<Option<Op>>),
 }
@@ -96,7 +127,13 @@ impl<Ty, Op> OpenTree<Ty, Op> {
         matches!(self, OpenTree::Id(_))
     }
 
-    /// Is the open tree isomorphic to another?
+    /** Is the open tree isomorphic to another?
+
+    Open trees should generally be compared for
+    [isomorphism](TreeIsomorphism::is_isomorphic_to) rather than equality
+    because, among other reasons, the [`flatten`](OpenTree::flatten) method
+    produces orphaned null nodes.
+     */
     pub fn is_isomorphic_to(&self, other: &Self) -> bool
     where
         Ty: Eq,
@@ -118,7 +155,7 @@ impl<Ty, Op> OpenTree<Ty, Op> {
     }
 }
 
-/// Extension trait for nodes in an open tree.
+/// Extension trait for nodes in an [open tree](OpenTree).
 pub trait OpenNodeRef<T> {
     /// Is this node a boundary node?
     fn is_boundary(&self) -> bool;
@@ -155,7 +192,7 @@ impl<'a, T: 'a> OpenNodeRef<T> for NodeRef<'a, Option<T>> {
 }
 
 impl<Ty, Op> OpenTree<Ty, OpenTree<Ty, Op>> {
-    /// Flattens a tree of trees into a single tree.
+    /// Flattens an open tree of open trees into a single open tree.
     pub fn flatten(self) -> OpenTree<Ty, Op> {
         // Handle degenerate case that outer tree is an identity.
         let mut outer_tree = match self {
