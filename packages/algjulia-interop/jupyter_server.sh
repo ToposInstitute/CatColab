@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-KERNEL="julia-ccl-interop-1.11"
+# KERNEL="julia-ccl-interop-1.11"
+KERNEL="julia-1.11"
 
 ORIGIN="http://localhost:5173"
 

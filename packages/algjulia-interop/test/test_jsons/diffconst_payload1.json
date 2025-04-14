@@ -2,7 +2,7 @@
   "diagram": [
     {
       "tag": "object",
-      "name": "dv/dt",
+      "name": "du/dt",
       "id": "0196021d-1aa4-776d-b4fb-05d24d0c6de4",
       "obType": {
         "tag": "Basic",
@@ -67,7 +67,7 @@
     },
     {
       "tag": "object",
-      "name": "v",
+      "name": "u",
       "id": "0196021c-f5fe-70f3-ac68-89ae212970ea",
       "obType": {
         "tag": "Basic",
@@ -429,7 +429,7 @@
     "0196021c-f5fe-70f3-ac68-89ae212970ea"
   ],
   "scalars": {
-    "01960dde-1193-7132-b662-9bf24ed05264": 1
+    "01960dde-1193-7132-b662-9bf24ed05264": 0.5
   },
   "duration": 10
 }

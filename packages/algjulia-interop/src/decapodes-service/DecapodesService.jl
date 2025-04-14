@@ -4,7 +4,6 @@ module DecapodesService
 using ACSets
 using DiagrammaticEquations
 using Decapodes
-using Decapodes: dec_mat_dual_differential, dec_mat_inverse_hodge
 using CombinatorialSpaces
 
 # dependencies

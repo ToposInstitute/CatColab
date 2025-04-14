@@ -33,6 +33,10 @@ struct PodeSystem <: AbstractAnalysis{ThDecapode}
 end
 export PodeSystem
 
+function Base.show(io::IO, system::PodeSystem)
+    println(io, system.pode)
+end
+
 # the origin is the SimulationData payload 
 function PodeSystem(content::JSON3.Object, diagram::DecapodeDiagram, hodge=GeometricHodge())
 
@@ -42,9 +46,10 @@ function PodeSystem(content::JSON3.Object, diagram::DecapodeDiagram, hodge=Geome
     mesh = content[:mesh]
     # TODO we need a more principled way of defining this
     plotVars = @match content[:plotVariables] begin
-        t::AbstractArray => Dict{String, Bool}([ k => true for k in t])
-        _ => Dict{String, Bool}([ "$k" => v for (k,v) in content[:plotVariables]])
+        vars::AbstractArray => Dict{String, Bool}([ k => k ∈ vars for k in keys(diagram.vars)])
+        vars => Dict{String, Bool}([ "$k" => v for (k,v) in vars])
     end
+    @info plotVars
     scalars = content[:scalars]
     anons = Dict{Symbol, Any}()
 
@@ -55,18 +60,20 @@ function PodeSystem(content::JSON3.Object, diagram::DecapodeDiagram, hodge=Geome
 
     ♭♯_m = ♭♯_mat(geometry.dualmesh)
     wedge_dp10 = dec_wedge_product_dp(Tuple{1,0}, geometry.dualmesh)
-    dual_d1_m = dec_mat_dual_differential(1, geometry.dualmesh)
-    star0_inv_m = dec_mat_inverse_hodge(0, geometry.dualmesh, hodge)
+    dual_d1_m = dec_dual_derivative(1, geometry.dualmesh)
+    star0_inv_m = dec_inv_hodge_star(0, geometry.dualmesh, hodge)
     Δ0 = Δ(0,geometry.dualmesh)
     #fΔ0 = factorize(Δ0);
+    @info size(dual_d1_m)
     function sys_generate(s, my_symbol)
         op = @match my_symbol begin
             sym && if haskey(diagram.scalars, sym) end => x -> begin
                 k = scalars[diagram.scalars[sym]]
                 k * x
             end
-            :♭♯ => x -> ♭♯_m * x # [1]
-            :dpsw => x -> wedge_dp10(x, star0_inv_m[1]*(dual_d1_m[1]*x))
+            :♭♯ => x -> ♭♯_m * x
+            # TODO are we indexing right?
+            :dpsw => x -> wedge_dp10(x, star0_inv_m*(dual_d1_m*x))
             :Δ⁻¹ => x -> begin
                 y = Δ0 \ x
                 y .- minimum(y)
