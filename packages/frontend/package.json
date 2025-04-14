@@ -42,6 +42,7 @@
         "@viz-js/viz": "^3.7.0",
         "catcolab-api": "link:../backend/pkg",
         "catlog-wasm": "link:../catlog-wasm/pkg",
+        "notebook-types": "link:../notebook-types/pkg",
         "echarts": "^5.5.1",
         "echarts-solid": "^0.2.0",
         "firebase": "^10.14.0",

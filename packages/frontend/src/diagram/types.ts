@@ -1,16 +1,7 @@
 import { v7 } from "uuid";
 
-import { DblModelDiagram } from "catlog-wasm";
-import type {
-    DblTheory,
-    DiagramMorDecl,
-    DiagramObDecl,
-    Mor,
-    MorType,
-    Ob,
-    ObType,
-    Uuid,
-} from "catlog-wasm";
+import type { DblModelDiagram } from "catlog-wasm";
+import type { DiagramMorDecl, DiagramObDecl, Mor, MorType, Ob, ObType, Uuid } from "catlog-wasm";
 import { deepCopyJSON } from "../util/deepcopy";
 import type { Name } from "../util/indexing";
 
@@ -65,19 +56,6 @@ export const duplicateDiagramJudgment = (jgmt: DiagramJudgment): DiagramJudgment
     ...deepCopyJSON(jgmt),
     id: v7(),
 });
-
-/** Construct a diagram in `catlog` from a sequence of judgments. */
-export function toCatlogDiagram(theory: DblTheory, judgments: Array<DiagramJudgment>) {
-    const diagram = new DblModelDiagram(theory);
-    for (const judgment of judgments) {
-        if (judgment.tag === "object") {
-            diagram.addOb(judgment);
-        } else if (judgment.tag === "morphism") {
-            diagram.addMor(judgment);
-        }
-    }
-    return diagram;
-}
 
 /** Extract a sequence of judgments from a diagram in `catlog`. */
 export function fromCatlogDiagram(
