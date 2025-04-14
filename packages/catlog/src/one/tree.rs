@@ -24,8 +24,8 @@ trees](crate::dbl::tree).
 # References
 
 Joachim Kock has proposed a combinatorial formalism for open trees ([Kock
-2011](crate::refs::KockTrees)) and open graphs ([Kock
-2016](crate::refs::KockGraphs)). Kock's trees are similar in spirit to these but
+2011](crate::refs::KockTrees)) and, in the same style, open graphs ([Kock
+2016](crate::refs::KockGraphs)). Kock's trees are similar in spirit to ours but
 are nonplanar, i.e., are the morphisms of free *symmetric* multicategories.
  */
 
@@ -139,7 +139,7 @@ impl<Ty, Op> OpenTree<Ty, Op> {
     Open trees should generally be compared for
     [isomorphism](TreeIsomorphism::is_isomorphic_to) rather than equality
     because, among other reasons, the [`flatten`](OpenTree::flatten) method
-    produces orphaned null nodes.
+    produces orphan nodes.
      */
     pub fn is_isomorphic_to(&self, other: &Self) -> bool
     where

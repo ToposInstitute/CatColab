@@ -2,8 +2,30 @@
 
 A *double tree* (nonstandard term) is the data structure for a [pasting
 diagram](https://ncatlab.org/nlab/show/pasting+diagram) in a virtual double
-category. In other words, a double tree specifies, in the most general and
-unbiased form, a composite of cells in a virtual double category.
+category. To be more precise, a double tree is ([up to
+isomorphism](DblTree::is_isomorphic_to)) a normal form for a general composition
+of cells in a VDC. That is, every sequence of composing cells and forming
+identity cells can be represented as a double tree, and, moreover, any two
+sequences equivalent under the associativity and unitality axioms of a VDC are
+represented by the same double tree.
+
+Yet another way to say this is that double trees are the cells of [free
+VDCs](super::category::FreeVDblCategory), generalizing how trees are the
+morphisms of free multicategories. Turning this around, we use our data
+structure for trees, specifically [open trees](crate::one::tree), to implement
+double trees, the idea being that a double tree is an open tree whose types are
+proarrows and operations are cells, subject to additional typing constraints on
+the sources and targets.
+
+The only hitch in this plan is that composition in a VDC includes the degenerate
+case of composing a cell with a zero-length path of cells, which is just a
+single arrow. To accomodate the degenerate case, the [nodes](DblNode) in a
+double tree contain either cells *or* arrows. This complicates the code in a few
+places, since it is now possible for a nullary operation (cell) to have a child
+node, and it gives the data structure something of the spirit of *augmented*
+virtual double categories ([Koudenburg 2020](crate::refs::AugmentedVDCs)). We do
+not however implement pasting diagrams in augmented VDCs, which would introduce
+further complications.
  */
 
 use derive_more::From;
@@ -24,10 +46,10 @@ pub enum DblNode<E, Sq> {
 
     /** An edge on the boundary of the double tree.
 
-    In a well-formed double tree, a spine node must be a child of a nullary cell
-    or another spine node. Spines represent the operation of precomposing a
-    nullary cell with an arrow to obtain another nullary cell, a degenerate case
-    of composition in a virtual double category.
+    In a well-formed double tree, each spine node must be a child of a nullary
+    cell or of another spine node. Spines represent the operation of
+    precomposing a nullary cell with an arrow to obtain another nullary cell, a
+    degenerate case of composition in a virtual double category.
      */
     Spine(E),
 }
@@ -104,11 +126,9 @@ impl<E, Sq> DblNode<E, Sq> {
 
 The underlying data structure of a double tree is a [open tree](OpenTree) whose
 [nodes](DblNode) represent cells (or occasionally arrows) in the pasting
-diagram. Not just any tree constitutes a valid pasting. For example, the
-domains/codomains and sources/targets of the cells must compatible, and
-[spines](DblNode::Spine) can only appear in certain configurations.
-
-Double trees provide a normal form for pastings of cells in a VDC.
+diagram. Not just any tree constitutes a valid pasting. The domains/codomains
+and sources/targets of the cells must compatible, and [spines](DblNode::Spine)
+can only appear in certain configurations.
  */
 #[derive(Clone, Debug, From, PartialEq, Eq)]
 pub struct DblTree<E, ProE, Sq>(pub OpenTree<ProE, DblNode<E, Sq>>);
@@ -310,7 +330,11 @@ impl<E, ProE, Sq> DblTree<E, ProE, Sq> {
         true
     }
 
-    /// Is the double tree isomorphic to another?
+    /** Is the double tree isomorphic to another?
+
+    This method simply checks whether the underlying open trees are
+    [isomorphic](OpenTree::is_isomorphic_to).
+     */
     pub fn is_isomorphic_to(&self, other: &Self) -> bool
     where
         E: Eq,

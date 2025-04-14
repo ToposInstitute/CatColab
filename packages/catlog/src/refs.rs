@@ -51,6 +51,15 @@ Press.
  */
 pub const HigherOperads: () = ();
 
+/** Reference: Augumented virtual double categories.
+
+Seerp Roald Koudenburg, 2020: Augmented virtual double categories.
+
+- [arXiv:1910.11189](https://arxiv.org/abs/1910.11189)
+- [TAC](http://www.tac.mta.ca/tac/volumes/35/10/35-10abs.html)
+ */
+pub const AugmentedVDCs: () = ();
+
 /** Reference: Compositional account of biochemical regulatory networks.
 
 Rebekah Aduddell, James Fairbanks, Amit Kumar, Pablo S. Ocal, Evan Patterson,
