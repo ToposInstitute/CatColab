@@ -78,6 +78,83 @@ pub enum DETMorType<V, E> {
 
     /// Hom type on an object type.
     Hom(Box<DETObType<V, E>>),
+
+    /// restriction along vertical morphisms
+    Res {
+        /// object op to the source of restrictee
+        source_op: Box<DETObOp<V, E>>,
+        /// object op to the target of restrictee
+        target_op: Box<DETObOp<V, E>>,
+        /// morphism to be restricted
+        morph: Box<DETObOp<V, E>>,
+    },
+}
+
+/// Projection onto object type in a DET theory.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum DETObProj<V, E> {
+    /// Projection from tabulator onto source of morphism type.
+    Src(DETMorType<V, E>),
+
+    /// Projection from tabulator onto target of morphism type.
+    Tgt(DETMorType<V, E>),
+}
+
+impl<V, E> DETObProj<V, E> {
+    /// Morphism type that the tabulator is of.
+    pub fn mor_type(&self) -> &DETMorType<V, E> {
+        match self {
+            DETObProj::Src(m) | DETObProj::Tgt(m) => m,
+        }
+    }
+}
+
+/// Operation on objects in a DET theory.
+pub type DETObOp<V, E> = Path<DETObType<V, E>, DETObProj<V, E>>;
+
+/// Projection onto morphism type in a DET theory.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum DETMorProj<V, E> {
+    /// Projection from a tabulator onto the original morphism type.
+    Cone(DETMorType<V, E>),
+
+    /// Projection from tabulator onto source of morphism type.
+    Src(DETMorType<V, E>),
+
+    /// Projection from tabulator onto target of morphism type.
+    Tgt(DETMorType<V, E>),
+}
+
+impl<V, E> DETMorProj<V, E> {
+    /// Morphism type that the tabulator is of.
+    pub fn mor_type(&self) -> &DETMorType<V, E> {
+        match self {
+            DETMorProj::Cone(m) | DETMorProj::Src(m) | DETMorProj::Tgt(m) => m,
+        }
+    }
+
+    /// Source projection.
+    fn src(self) -> DETObProj<V, E> {
+        match self {
+            DETMorProj::Cone(m) | DETMorProj::Src(m) => DETObProj::Src(m),
+            DETMorProj::Tgt(m) => DETObProj::Tgt(m),
+        }
+    }
+
+    /// Target projection
+    fn tgt(self) -> DETObProj<V, E> {
+        match self {
+            DETMorProj::Src(m) => DETObProj::Src(m),
+            DETMorProj::Cone(m) | DETMorProj::Tgt(m) => DETObProj::Tgt(m),
+        }
+    }
+}
+
+/// Operation on morphisms in a DET theory
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DETMorOp<V, E> {
+    dom: Path<DETObType<V, E>, DETMorType<V, E>>,
+    projections: Vec<DETMorProj<V, E>>,
 }
 
 //todo: finish this...
