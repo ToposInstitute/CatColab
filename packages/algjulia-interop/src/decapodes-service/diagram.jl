@@ -127,7 +127,22 @@ function Diagram(json_diagram::JSON3.Object, model::Model{ThDecapode}; scalars=[
     return DecapodeDiagram(pode, scalars, vars)
 end
 export Diagram
-# TODO rename to Diagram
+
+function Diagram(json_array::JSON3.Array{T}, model::Model{ThDecapode}; scalars=[]) where T
+    pode = SummationDecapode(parse_decapode(quote end))
+    vars = Dict{String, Int}()
+    nc = Dict{Int, String}()
+    scalars = Dict{Symbol, String}()
+    foreach(json_array) do cell
+        @match cell begin
+            content && if haskey(content, :obType) end => add_to_pode!(pode, vars, model, content, nc, ObTag())
+            content && if haskey(content, :morType) end => add_to_pode!(pode, vars, model, content, scalars, nc, HomTag())
+            _ => throw(ImplError(cell))
+        end
+    end
+    return DecapodeDiagram(pode, scalars, vars)
+end
+
 
 function uuid_to_symb(decapode::SummationDecapode, vars::Dict{String, Int})
     Dict([key => (subpart(decapode, vars[key], :name)) for key ∈ keys(vars)])

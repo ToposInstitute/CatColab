@@ -82,7 +82,7 @@ end
 #       domain and codomain to its
 function Model(::ThDecapode, json_model::JSON3.Object) # AbstractDict is the JSON
     newmodel = Model(ThDecapode())
-    __name = json_model[:name]
+    __name = json_model[:name] # TODO unused
     foreach(json_model[:notebook][:cells]) do cell
         @match cell begin
             IsObject(content) => add_to_model!(newmodel, content, ObTag())
@@ -93,3 +93,15 @@ function Model(::ThDecapode, json_model::JSON3.Object) # AbstractDict is the JSO
     return newmodel
 end
 export Model
+
+function Model(::ThDecapode, json_array::JSON3.Array{T}; name="model") where T
+    newmodel = Model(ThDecapode())
+    foreach(json_array) do cell
+        @match cell begin
+            content && if haskey(content, :obType) end => add_to_model!(newmodel, content, ObTag())
+            content && if haskey(content, :morType) end => add_to_model!(newmodel, content, HomTag())
+            _ => throw(ImplError(cell))
+        end
+    end
+    return newmodel
+end

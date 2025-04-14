@@ -38,7 +38,7 @@ model_dec = Model(ThDecapode(), modeljson)
         IsObject(_) => true
         _ => false
     end
-    @test_broken @match cells[4] begin
+    @test @match cells[5] begin
         IsMorphism(_) => true
         _ => false
     end
@@ -191,3 +191,6 @@ end
     @test typeof(result.state) == Dict{String, Vector{AbstractArray{SVector{3, Float64}}}}
     jv = JsonValue(result)
 end
+
+# TODO need to parse
+payloadjson = open(JSON3.read, joinpath(@__DIR__, "test", "test_jsons", "payload.json"))
