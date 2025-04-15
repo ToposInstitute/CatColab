@@ -51,6 +51,15 @@ Press.
  */
 pub const HigherOperads: () = ();
 
+/** Reference: Augumented virtual double categories.
+
+Seerp Roald Koudenburg, 2020: Augmented virtual double categories.
+
+- [arXiv:1910.11189](https://arxiv.org/abs/1910.11189)
+- [TAC](http://www.tac.mta.ca/tac/volumes/35/10/35-10abs.html)
+ */
+pub const AugmentedVDCs: () = ();
+
 /** Reference: Compositional account of biochemical regulatory networks.
 
 Rebekah Aduddell, James Fairbanks, Amit Kumar, Pablo S. Ocal, Evan Patterson,
@@ -81,3 +90,21 @@ algorithms*. Fourth edition.
 - [Companion website](https://dacox.people.amherst.edu/iva.html)
  */
 pub const IdealsVarietiesAlgorithms: () = ();
+
+/** Reference: Polynomial functors and trees.
+
+Joachim Kock, 2011. Polynomial functors and trees.
+
+- [DOI:10.1093/imrn/rnq068](https://doi.org/10.1093/imrn/rnq068)
+- [arXiv:0807.2874](https://arxiv.org/abs/0807.2874)
+ */
+pub const KockTrees: () = ();
+
+/** Reference: Graphs, hypergraphs, and properads.
+
+Joachim Kock, 2016. Graphs, hypergraphs, and properads.
+
+- [DOI:10.1007/s13348-015-0160-0](https://doi.org/10.1007/s13348-015-0160-0)
+- [arXiv:1407.3744](https://arxiv.org/abs/1407.3744)
+ */
+pub const KockGraphs: () = ();

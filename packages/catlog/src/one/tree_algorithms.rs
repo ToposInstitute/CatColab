@@ -1,20 +1,23 @@
-//! Generic algorithms on [trees](Tree).
+//! Generic algorithms on trees.
 
 use ego_tree::iter::{Descendants, Edge};
 use ego_tree::{NodeId, NodeRef, Tree};
+use itertools::{EitherOrBoth::Both, Itertools};
 use std::collections::VecDeque;
 
 /// Extension trait adding traversal algorithms on [trees](Tree).
 pub trait TreeTraversal<T> {
-    /// Iterates over nodes of a tree in depth-first order.
-    fn dfs<'a>(&'a self) -> Descendants<'a, T>
-    where
-        T: 'a;
+    /// Iterates over descendants of node in depth-first order.
+    fn dfs(&self) -> Descendants<'_, T>;
 
-    /// Iterates over the nodes in a tree in breadth-first order.
-    fn bfs<'a>(&'a self) -> BreadthFirstTraversal<'a, T>
-    where
-        T: 'a;
+    /// Iterates over descendants of node in breadth-first order.
+    fn bfs(&self) -> BreadthFirstTraversal<'_, T>;
+
+    /// Iterates over left boundary of node.
+    fn left_boundary(&self) -> impl Iterator<Item = Self>;
+
+    /// Iterates over right boundary of node.
+    fn right_boundary(&self) -> impl Iterator<Item = Self>;
 }
 
 /// Iterator for traversing a tree in breadth-first order.
@@ -65,22 +68,34 @@ impl<'a, T: 'a> Iterator for BreadthFirstTraversal<'a, T> {
 
 impl<'a, T: 'a> std::iter::FusedIterator for BreadthFirstTraversal<'a, T> {}
 
-impl<T> TreeTraversal<T> for Tree<T> {
+impl<'a, T: 'a> TreeTraversal<T> for NodeRef<'a, T> {
     /// Uses the built-in traversal algorithm, which is depth-first, though that
     /// is not documented: <https://github.com/rust-scraper/ego-tree/issues/38>
-    fn dfs<'a>(&'a self) -> Descendants<'a, T>
-    where
-        T: 'a,
-    {
-        self.root().descendants()
+    fn dfs(&self) -> Descendants<'a, T> {
+        self.descendants()
     }
 
     /// Implements the standard BFS algorithm using a queue.
-    fn bfs<'a>(&'a self) -> BreadthFirstTraversal<'a, T>
-    where
-        T: 'a,
-    {
-        BreadthFirstTraversal::starting_at(self.root())
+    fn bfs(&self) -> BreadthFirstTraversal<'a, T> {
+        BreadthFirstTraversal::starting_at(*self)
+    }
+
+    fn left_boundary(&self) -> impl Iterator<Item = Self> {
+        let mut maybe_node = Some(*self);
+        std::iter::from_fn(move || {
+            let prev = maybe_node;
+            maybe_node = maybe_node.and_then(|node| node.first_child());
+            prev
+        })
+    }
+
+    fn right_boundary(&self) -> impl Iterator<Item = Self> {
+        let mut maybe_node = Some(*self);
+        std::iter::from_fn(move || {
+            let prev = maybe_node;
+            maybe_node = maybe_node.and_then(|node| node.last_child());
+            prev
+        })
     }
 }
 
@@ -88,10 +103,13 @@ impl<T> TreeTraversal<T> for Tree<T> {
 pub trait TreeIsomorphism<T> {
     /** Is the tree isomorphic to another?
 
-    In the standard data structure for trees based on pointers, there is only
-    one notion of sameness that makes sense, but for vector-backed trees with
-    node IDs, trees can be isomorphic (logically the same) without having
-    underlying data that is equal.
+    The standard data structure for trees based on pointers has only one notion
+    of "sameness" that makes sense, but for vector-backed trees with node IDs,
+    trees can be isomorphic (logically the same) without having underlying data
+    that is equal. This methods checks for logical sameness.
+
+    Note that the isomorphism check ignores orphaned nodes, since those are
+    logically deleted.
      */
     fn is_isomorphic_to(&self, other: &Self) -> bool;
 }
@@ -101,21 +119,15 @@ where
     T: Eq,
 {
     fn is_isomorphic_to(&self, other: &Self) -> bool {
-        let mut self_traversal = self.root().traverse();
-        let mut other_traversal = other.root().traverse();
-        loop {
-            match (self_traversal.next(), other_traversal.next()) {
-                (Some(Edge::Open(n1)), Some(Edge::Open(n2))) if n1.value() == n2.value() => {}
-                (Some(Edge::Close(n1)), Some(Edge::Close(n2))) if n1.value() == n2.value() => {}
-                (None, None) => {
-                    break;
+        self.root()
+            .traverse()
+            .zip_longest(other.root().traverse())
+            .all(|pair| match pair {
+                Both(Edge::Open(n1), Edge::Open(n2)) | Both(Edge::Close(n1), Edge::Close(n2)) => {
+                    n1.value() == n2.value()
                 }
-                _ => {
-                    return false;
-                }
-            }
-        }
-        true
+                _ => false,
+            })
     }
 }
 
@@ -127,18 +139,19 @@ mod tests {
     #[test]
     fn dfs() {
         let tree = tree!('a' => { 'b' => { 'd', 'e' }, 'c' });
-        let values: Vec<_> = tree.dfs().map(|node| *node.value()).collect();
+        let values: Vec<_> = tree.root().dfs().map(|node| *node.value()).collect();
         assert_eq!(values, vec!['a', 'b', 'd', 'e', 'c']);
     }
 
     #[test]
     fn bfs() {
         let tree = tree!('a' => { 'b' => { 'd', 'e' }, 'c' });
-        let values: Vec<_> = tree.bfs().map(|node| *node.value()).collect();
+        let values: Vec<_> = tree.root().bfs().map(|node| *node.value()).collect();
         assert_eq!(values, vec!['a', 'b', 'c', 'd', 'e']);
 
         let tree = tree!('a' => { 'b' => {'d'}, 'c' => {'e'} });
-        let mut traverse = tree.bfs();
+        let root = tree.root();
+        let mut traverse = root.bfs();
         traverse.next();
         assert!(traverse.peek_at_same_level().is_none());
         assert_eq!(traverse.nth(2).map(|node| *node.value()), Some('d'));
@@ -151,8 +164,8 @@ mod tests {
         assert!(tree.is_isomorphic_to(&tree));
 
         let other = tree!('a' => { 'b' => { 'd' }, 'e' => { 'c' }});
-        let tree_dfs_values: Vec<_> = tree.dfs().map(|node| *node.value()).collect();
-        let other_dfs_values: Vec<_> = other.dfs().map(|node| *node.value()).collect();
+        let tree_dfs_values: Vec<_> = tree.root().dfs().map(|node| *node.value()).collect();
+        let other_dfs_values: Vec<_> = other.root().dfs().map(|node| *node.value()).collect();
         assert_eq!(tree_dfs_values, other_dfs_values);
         assert!(!tree.is_isomorphic_to(&other));
     }

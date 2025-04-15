@@ -16,7 +16,7 @@ TODO: Document in devs docs and link here.
 use std::hash::Hash;
 
 use derive_more::Into;
-use either::Either;
+use itertools::Either;
 use nonempty::NonEmpty;
 
 #[cfg(feature = "serde")]

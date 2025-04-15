@@ -79,7 +79,7 @@ use ustr::{IdentityHasher, Ustr};
 use super::category::*;
 use super::graph::ProedgeGraph;
 use super::tree::{DblNode, DblTree};
-use crate::one::{Graph, path::Path};
+use crate::one::{Graph, path::Path, tree::OpenTree};
 use crate::one::{category::*, fin_category::UstrFinCategory};
 use crate::validate::Validate;
 use crate::zero::*;
@@ -257,9 +257,9 @@ impl<VDC: VDCWithComposites> DblTheory for VDC {
     fn hom_op(&self, f: Self::ObOp) -> Self::MorOp {
         let y = self.cod(&f);
         let y_ext = self.unit_ext(y).expect("Codomain of arrow should have hom type");
-        let cell = self.compose_cells(
-            DblTree::from_nodes(vec![DblNode::Spine(f), DblNode::Cell(y_ext)]).unwrap(),
-        );
+        let cell = self.compose_cells(DblTree(
+            OpenTree::linear(vec![DblNode::Spine(f), DblNode::Cell(y_ext)]).unwrap(),
+        ));
         self.through_unit(cell, 0).expect("Domain of arrow should have hom type")
     }
 

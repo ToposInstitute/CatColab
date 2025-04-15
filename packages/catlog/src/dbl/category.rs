@@ -130,11 +130,13 @@ pub trait VDblCategory {
 
     /// Composes a two-layer pasting of cells.
     fn compose_cells2(
-        &self,
-        αs: impl IntoIterator<Item = Self::Cell>,
-        β: Self::Cell,
-    ) -> Self::Cell {
-        self.compose_cells(DblTree::two_level(αs, β))
+        &self, αs: impl IntoIterator<Item = Self::Cell>, β: Self::Cell
+    ) -> Self::Cell
+    where
+        Self: Sized,
+    {
+        let graph = UnderlyingDblGraph::ref_cast(self);
+        self.compose_cells(DblTree::two_level(αs, β, graph))
     }
 
     /// Constructs the identity cell on a proarrow.
@@ -353,7 +355,7 @@ where
             .expect("Path of paths should be valid before flattening")
     }
     fn compose_cells(&self, tree: DblTree<Self::Arr, Self::Pro, Self::Cell>) -> Self::Cell {
-        tree.flatten_in(&self.0)
+        tree.flatten()
     }
 }
 
@@ -720,10 +722,9 @@ pub mod WalkingFunctor {
         }
         fn compose_cells(&self, tree: DblTree<Self::Arr, Self::Pro, Self::Cell>) -> Self::Cell {
             let graph = UnderlyingDblGraph::ref_cast(self);
-            let n = tree.arity(graph);
             let (f, g) = (self.compose(tree.src(graph)), self.compose(tree.tgt(graph)));
             assert_eq!(f, g, "Cells in walking functor have the same source and target");
-            Cell::with_src_and_tgt(f, n)
+            Cell::with_src_and_tgt(f, tree.arity(graph))
         }
     }
 
