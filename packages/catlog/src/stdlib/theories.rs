@@ -3,7 +3,7 @@
 use ustr::ustr;
 
 use crate::dbl::theory::*;
-use crate::one::{Path, fp_category::UstrFpCategory};
+use crate::one::{fp_category::UstrFpCategory, Path};
 
 /** The empty theory, which has a single model, the empty model.
 
@@ -61,11 +61,11 @@ pub fn th_delayable_signed_category() -> UstrDiscreteDblTheory {
     let mut cat: UstrFpCategory = Default::default();
     let (x, neg, slow) = (ustr("Object"), ustr("Negative"), ustr("Slow"));
     cat.add_ob_generator(x);
-    cat.add_mor_generator(neg, x, x);
-    cat.add_mor_generator(slow, x, x);
-    cat.equate(Path::pair(neg, neg), Path::empty(x));
-    cat.equate(Path::pair(slow, slow), slow.into());
-    cat.equate(Path::pair(neg, slow), Path::pair(slow, neg));
+    cat.add_mor_generator(neg, x, x); // b
+    cat.add_mor_generator(slow, x, x); // a
+    cat.equate(Path::pair(neg, neg), Path::empty(x)); // bb = empty
+    cat.equate(Path::pair(slow, slow), slow.into()); // aa = a
+    cat.equate(Path::pair(neg, slow), Path::pair(slow, neg)); // ba = ab
 
     // NOTE: These aliases are superfluous but are included for backwards
     // compatibility with the previous version of the theory, defined by an
@@ -76,6 +76,21 @@ pub fn th_delayable_signed_category() -> UstrDiscreteDblTheory {
     cat.equate(pos_slow.into(), slow.into());
     cat.equate(neg_slow.into(), Path::pair(neg, slow));
 
+    DiscreteDblTheory::from(cat)
+}
+
+/** The theory of N-graded signed categories
+
+todo: description
+ */
+pub fn th_deg_signed_category() -> UstrDiscreteDblTheory {
+    let mut cat: UstrFpCategory = Default::default();
+    let (x, neg, deg) = (ustr("Object"), ustr("Negative"), ustr("Degree"));
+    cat.add_ob_generator(x);
+    cat.add_mor_generator(neg, x, x); // b
+    cat.add_mor_generator(deg, x, x); // n
+    cat.equate(Path::pair(neg, neg), Path::empty(x)); // bb = empty
+    cat.equate(Path::pair(neg, deg), Path::pair(deg, neg)); // ba = ab
     DiscreteDblTheory::from(cat)
 }
 
