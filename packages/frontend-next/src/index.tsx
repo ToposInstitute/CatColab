@@ -1,224 +1,242 @@
-/* @refresh reload */
-import { createSignal, createMemo, For, Show } from "solid-js"
-import { render, Switch, Match } from "solid-js/web";
-import * as uuid from "uuid"
+import { For, Show, createEffect, createSignal } from "solid-js";
+import { createStore, reconcile } from "solid-js/store";
+import { Dynamic, render } from "solid-js/web";
+import {
+    new_shelf,
+    new_notebook,
+    type Notebook,
+    type Shelf,
+    type Metadata,
+    type Cell,
+    type Value
+} from "catlog-next";
+import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb";
+import * as uuid from "uuid";
+import {
+    DocHandle,
+    DocHandleChangePayload,
+    isValidAutomergeUrl,
+    Repo,
+} from "@automerge/automerge-repo";
 
-function Header() {
-    return (<h1>CatColab</h1>)
-}
+type Ref<T> = {
+    value: T;
+};
 
-type Id = string;
+class Var<T> {
+    now: T;
+    update: (f: (r: Ref<T>) => void) => void;
 
-type SimpleCell = {
-    widget: "simple",
-    name: string,
-    tp: string
-}
+    constructor(value: T, update: (f: (r: Ref<T>) => void) => void) {
+        this.now = value;
+        this.update = update;
+    }
 
-type ArrowCell = {
-    widget: "arrow",
-    name: string,
-    src: string,
-    tgt: string,
-    tp: string
-}
-
-type Cell = SimpleCell | ArrowCell
-
-type Notebook = {
-    title: string,
-    cells: Map<string, Cell>,
-    order: string[]
-}
-
-type Shelf = {
-    notebooks: Map<string, Notebook>
-}
-
-type Var<T> = {
-    val: T,
-    update: (f: (x: T) => T) => void
-}
-
-function zoom<T>(v: Var<T>, field: keyof T): Var<any> {
-    return {
-        val: v.val[field],
-        update: (f) => v.update(v => {v[field] = f(v[field]); return v; })
+    zoom<S>(field: any): Var<S> {
+        return new Var((this.now as any)[field] as S, (f) =>
+            this.update((r) => {
+                let inner = { value: (r.value as any)[field] as S };
+                f(inner);
+                if (typeof inner.value != "object") {
+                    (r.value as any)[field] = inner.value;
+                }
+            }),
+        );
     }
 }
 
-function zoomMap<S, T>(v: Var<Map<S, T>>, key: S): Var<T> {
-    return {
-        val: v.val.get(key) as T,
-        update: (f) => v.update(v => { v.set(key, f(v.get(key) as T)); return v; })
+function Metadata(props: { metadata: Var<Metadata> }) {
+    return (
+        <div>
+            <TextInput text={props.metadata.zoom("title")} />
+        </div>
+    );
+}
+
+function TextInput(props: { text: Var<string> }) {
+    return (
+        <input
+            value={props.text.now}
+            onInput={(ev) => props.text.update((r) => (r.value = ev.target.value))}
+        />
+    );
+}
+
+type Widget = {
+    name: string,
+    component: (props: { cell: Var<Cell> }) => any,
+    init: Value
+}
+
+const WIDGETS: Record<string, Widget> = {
+    "institute.topos.picker": {
+        name: "Picker",
+        component: Picker,
+        init: "Empty"
+    },
+    "institute.topos.object": {
+        name: "Object",
+        component: ObjectCell,
+        init: { "Record": { "name": { "Text": "" }, "type": { "Text": "" } } }
     }
 }
 
-function TextField(props: { name: string, label: string, value: Var<string> }) {
-    return (<div>
-        <label for={props.name}>{props.label}</label>
-        <input type="text" name={props.name}
-            value={props.value.val}
-            onInput={ev => props.value.update(_ => ev.target.value)} />
+function ObjectCell(props: { cell: Var<Cell> }) {
+    return (<div class="object">
+        <TextInput text={props.cell.zoom("content").zoom("Record").zoom("name").zoom("Text")} />
+        <span>: </span>
+        <TextInput text={props.cell.zoom("content").zoom("Record").zoom("type").zoom("Text")} />
     </div>)
 }
 
-function SimpleCell(props: { cell: Var<SimpleCell> }) {
-    return (
-        <div class="cell simple">
-            <form>
-                <TextField name="name" label="Name" value={zoom(props.cell, "name")} />
-                <TextField name="type" label="Type" value={zoom(props.cell, "tp")} />
-            </form>
-        </div>
-    )
+function Picker(props: { cell: Var<Cell> }) {
+    return (<div class="picker">
+        <select
+            value={props.cell.now.widget}
+            onChange={ev => {
+                props.cell.update(c => {
+                    let widget = ev.target.value;
+                    c.value.widget = widget;
+                    c.value.content = WIDGETS[widget]!.init;
+                })
+            }}>
+            <For each={Object.entries(WIDGETS)}>
+                {w => <option value={w[0]}>{w[1].name}</option>}
+            </For>
+        </select>
+    </div>)
 }
 
-function ArrowCell(props: { cell: Var<ArrowCell> }) {
+function Cell(props: { cell: Var<Cell>; del: (_: any) => void }) {
     return (
-        <div class="cell arrow">
-            <form>
-                <TextField name="name" label="Name" value={zoom(props.cell, "name")} />
-                <TextField name="src" label="Source" value={zoom(props.cell, "src")} />
-                <TextField name="tgt" label="Target" value={zoom(props.cell, "tgt")} />
-                <TextField name="type" label="Type" value={zoom(props.cell, "tp")} />
-            </form>
+        <div>
+            <button onClick={props.del}>Delete</button>
+            <Dynamic component={WIDGETS[props.cell.now.widget]!.component} cell={props.cell} />
         </div>
-    )
+    );
 }
 
-function Cell(props: { cellId: string, notebook: Var<Notebook> }) {
-    let cell = createMemo(() => {
-        return {
-            val: props.notebook.val.cells.get(props.cellId),
-            update: (f: (c: Cell) => Cell) => {
-                props.notebook.update((n) => {
-                    n.cells.set(props.cellId, f(n.cells.get(props.cellId) as Cell));
-                    return n;
-                });
-            }
-        }
-    }) as () => Var<Cell>;
-    return (
-        <Switch>
-            <Match when={cell().val.widget === 'simple'}>
-                <SimpleCell cell={cell() as Var<SimpleCell>} />
-            </Match>
-            <Match when={cell().val.widget === 'arrow'}>
-                <ArrowCell cell={cell() as Var<ArrowCell>} />
-            </Match>
-        </Switch>
-    )
+function newCell(notebook: Notebook) {
+    let id = uuid.v7();
+    notebook.cells[id] = {
+        widget: "institute.topos.picker",
+        content: "Empty",
+    };
+    notebook.order.push(id);
+}
+
+function deleteCell(notebook: Notebook, id: string) {
+    delete notebook.cells[id];
+    notebook.order = notebook.order.filter((i) => id != i);
 }
 
 function Notebook(props: { notebook: Var<Notebook> }) {
     return (
-        <div class="notebook">
-            <form>
-                <TextField name="title" label="Title" value={zoom(props.notebook, "title")} />
-            </form>
-            <ul class="cells">
-                <For each={props.notebook.val.order}>
-                    {(id: Id,) =>
-                        <li><Cell cellId={id} notebook={props.notebook} /></li>
-                    }
+        <div>
+            <Metadata metadata={props.notebook.zoom("metadata")} />
+            <ul>
+                <For each={props.notebook.now.order}>
+                    {(cellId) => (
+                        <li class="cell">
+                            <Cell
+                                cell={props.notebook.zoom("cells").zoom(cellId)}
+                                del={(_) =>
+                                    props.notebook.update((n) => deleteCell(n.value, cellId))
+                                }
+                            />
+                        </li>
+                    )}
                 </For>
             </ul>
-            <button onClick={_ => props.notebook.update(newSimple)}>New Simple</button>
-            <button onClick={_ => props.notebook.update(newArrow)}>New Arrow</button>
+            <button onClick={(_) => props.notebook.update((n) => newCell(n.value))}>
+                New Cell
+            </button>
         </div>
-    )
+    );
 }
 
-function Shelf(props: { shelf: Var<Shelf> }) {
-    let [notebookId, setNotebookId] = createSignal<string | undefined>(undefined)
+/** Create a Solid Store that tracks an Automerge document.
+ */
+export async function makeDocHandleReactive<T extends object>(handle: DocHandle<T>): Promise<T> {
+    const init = await handle.doc();
+
+    const [store, setStore] = createStore<T>(init as T);
+
+    const onChange = (payload: DocHandleChangePayload<T>) => {
+        // Use [`reconcile`](https://www.solidjs.com/tutorial/stores_immutable)
+        // function to diff the data and thus avoid re-rendering the whole DOM.
+        setStore(reconcile(payload.doc));
+    };
+
+    handle.on("change", onChange);
+
+    return store;
+}
+
+function newNotebook(shelf: Var<Shelf>) {
+    shelf.update((s) => {
+        const id = uuid.v7();
+        s.value.notebooks[id] = new_notebook();
+        s.value.last_opened = id;
+    });
+}
+
+function deleteNotebook(shelf: Var<Shelf>) {
+    shelf.update((r) => {
+        const s = r.value;
+        if (s.last_opened) {
+            delete s.notebooks[s.last_opened];
+            if (Object.entries(s.notebooks).length == 0) {
+                s.last_opened = null;
+            } else {
+                s.last_opened = Object.entries(s.notebooks)[0]![0];
+            }
+        }
+    });
+}
+
+function App(props: { shelf: Var<Shelf> }) {
     return (
-        <div class="shelf">
-            <form>
-                <label for="notebook">Notebook: </label>
-                <select name="notebook"
-                    value={notebookId()}
-                    onInput={ev => { setNotebookId(ev.target.value) }}>
-                    <For each={[...props.shelf.val.notebooks.keys()]}>
-                        {(notebookId) =>
-                            <option value={notebookId}>
-                                {props.shelf.val.notebooks.get(notebookId)?.title}
-                            </option>
-                        }
-                    </For>
-                </select>
-            </form>
-            <button onClick={_ => {
-                let id = uuid.v7()
-                props.shelf.update(s => newNotebook(s, id))
-                setNotebookId(id)
-            }}>New notebook</button>
-            <Show when={notebookId()}>
-                {notebookId =>
-                    <Notebook notebook={zoomMap(zoom(props.shelf, "notebooks"), notebookId())} />
-                }
+        <div>
+            <select
+                onInput={(ev) => props.shelf.update((s) => (s.value.last_opened = ev.target.value))}
+                value={props.shelf.now.last_opened}
+            >
+                <For each={Object.entries(props.shelf.now.notebooks)}>
+                    {(notebook) => (
+                        <option value={notebook[0]}>{notebook[1].metadata.title}</option>
+                    )}
+                </For>
+            </select>
+            <button onClick={(_) => newNotebook(props.shelf)}>New notebook</button>
+            <button onClick={(_) => deleteNotebook(props.shelf)}>Delete notebook</button>
+            <Show when={props.shelf.now.last_opened}>
+                {(id) => (
+                    <Notebook
+                        notebook={props.shelf.zoom("notebooks").zoom(props.shelf.now.last_opened)}
+                    />
+                )}
             </Show>
         </div>
-    )
+    );
 }
 
-function newNotebook(s: Shelf, withId: string): Shelf {
-    let id = withId || uuid.v7()
-    let n = {
-        title: "Untitled",
-        cells: new Map(),
-        order: []
-    }
-    s.notebooks.set(id, n)
-    return s
-}
+const repo = new Repo({
+    network: [],
+    storage: new IndexedDBStorageAdapter("catcolab"),
+});
 
-function newCell(n: Notebook, content: Cell): Notebook {
-    let id = uuid.v7()
-    n.cells.set(id, content)
-    n.order.push(id)
-    return n
+const rootDocUrl = `${document.location.hash.substring(1)}`;
+let handle: DocHandle<Shelf>;
+if (isValidAutomergeUrl(rootDocUrl)) {
+    handle = repo.find(rootDocUrl);
+} else {
+    handle = repo.create<Shelf>(new_shelf());
 }
-
-function newSimple(n: Notebook): Notebook {
-    return newCell(n, {
-        widget: "simple",
-        name: "",
-        tp: ""
-    })
-}
-
-function newArrow(n: Notebook): Notebook {
-    return newCell(n, {
-        widget: "arrow",
-        name: "",
-        src: "",
-        tgt: "",
-        tp: ""
-    })
-}
-
-function newShelf(): Shelf {
-    return {
-        notebooks: new Map()
-    }
-}
-
-function App() {
-    let [shelf, setShelf] = createSignal(newShelf())
-    let updateShelf = (f: (n: Shelf) => void) => {
-        let s = structuredClone(shelf())
-        f(s)
-        setShelf(s)
-    }
-    return (<div>
-        <Header />
-        <Shelf shelf={{ val: shelf(), update: updateShelf }} />
-        <button onClick={_ => console.log(shelf())}>Dump</button>
-    </div>)
-}
+document.location.hash = handle.url;
+const shelf = await makeDocHandleReactive(handle);
 
 const root = document.getElementById("root");
 
 // biome-ignore lint/style/noNonNullAssertion: we know that root exists
-render(() => <App />, root!);
+render(() => <App shelf={new Var(shelf, (f) => handle.change((s) => f({ value: s })))} />, root!);
