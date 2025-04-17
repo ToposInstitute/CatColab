@@ -1,2 +1,3 @@
 mod notebook;
-mod value;
+mod widget_state;
+mod graph;

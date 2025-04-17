@@ -22,6 +22,7 @@ uuid = { version = "1.16.0", features = ["serde", "v7", "js"] }
 tsify = "0.5.5"
 serde = { version = "1.0.219", features = ["derive"] }
 chrono = { version = "0.4.40", features = ["serde"] }
+web-sys = { version = "0.3.77", features = ["console"] }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.34"

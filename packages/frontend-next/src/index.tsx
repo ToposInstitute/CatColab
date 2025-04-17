@@ -1,14 +1,16 @@
-import { For, Show, createEffect, createSignal } from "solid-js";
+import { For, Show, createMemo } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 import { Dynamic, render } from "solid-js/web";
 import {
     new_shelf,
     new_notebook,
+    debug_elab,
+    debug_eval,
     type Notebook,
     type Shelf,
     type Metadata,
     type Cell,
-    type Value
+    type WidgetState
 } from "catlog-next";
 import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb";
 import * as uuid from "uuid";
@@ -18,6 +20,8 @@ import {
     isValidAutomergeUrl,
     Repo,
 } from "@automerge/automerge-repo";
+
+import "./index.css"
 
 type Ref<T> = {
     value: T;
@@ -55,17 +59,25 @@ function Metadata(props: { metadata: Var<Metadata> }) {
 
 function TextInput(props: { text: Var<string> }) {
     return (
-        <input
-            value={props.text.now}
-            onInput={(ev) => props.text.update((r) => (r.value = ev.target.value))}
-        />
+        <div class="inline-input-container">
+            <span class="inline-input-filler">{props.text.now}</span>
+            <input
+                class="inline-input"
+                type="text"
+                size="1"
+                value={props.text.now}
+                onInput={(evt) => {
+                    props.text.update(r => r.value = evt.target.value);
+                }}
+            />
+        </div>
     );
 }
 
 type Widget = {
     name: string,
     component: (props: { cell: Var<Cell> }) => any,
-    init: Value
+    init: WidgetState
 }
 
 const WIDGETS: Record<string, Widget> = {
@@ -77,20 +89,58 @@ const WIDGETS: Record<string, Widget> = {
     "institute.topos.object": {
         name: "Object",
         component: ObjectCell,
-        init: { "Record": { "name": { "Text": "" }, "type": { "Text": "" } } }
+        init: {
+            "Record": {
+                "name": { "Text": "" },
+                "type": { "Tagged": ["object", { "Text": "" }] }
+            }
+        }
+    },
+    "institute.topos.morphism": {
+        name: "Morphism",
+        component: MorphismCell,
+        init: {
+            "Record": {
+                "name": { "Text": "" },
+                "type": {
+                    "Tagged": ["morphism", {
+                        "Record": {
+                            "type": { "Text": "" },
+                            "dom": { "Text": "" },
+                            "codom": { "Text": "" }
+                        }
+                    }]
+                }
+            }
+        }
     }
 }
 
 function ObjectCell(props: { cell: Var<Cell> }) {
-    return (<div class="object">
+    return (<div class="object" style="display: inline">
         <TextInput text={props.cell.zoom("content").zoom("Record").zoom("name").zoom("Text")} />
         <span>: </span>
-        <TextInput text={props.cell.zoom("content").zoom("Record").zoom("type").zoom("Text")} />
+        <TextInput text={props.cell.zoom("content").zoom("Record").zoom("type").zoom("Tagged").zoom(1).zoom("Text")} />
+    </div>)
+}
+
+function MorphismCell(props: { cell: Var<Cell> }) {
+    let content = createMemo(() => props.cell.zoom("content").zoom("Record"))
+    let tp = createMemo(() => content().zoom("type").zoom("Tagged").zoom(1).zoom("Record"))
+    return (<div class="morphism" style="display: inline">
+        <TextInput text={content().zoom("name").zoom("Text")} />
+        <span>: </span>
+        <TextInput text={tp().zoom("type").zoom("Text")} />
+        (
+        <TextInput text={tp().zoom("dom").zoom("Text")} />
+        ,
+        <TextInput text={tp().zoom("codom").zoom("Text")} />
+        )
     </div>)
 }
 
 function Picker(props: { cell: Var<Cell> }) {
-    return (<div class="picker">
+    return (<div class="picker" style="display: inline">
         <select
             value={props.cell.now.widget}
             onChange={ev => {
@@ -109,8 +159,8 @@ function Picker(props: { cell: Var<Cell> }) {
 
 function Cell(props: { cell: Var<Cell>; del: (_: any) => void }) {
     return (
-        <div>
-            <button onClick={props.del}>Delete</button>
+        <div style="display: inline">
+            <button onClick={props.del}>x</button>
             <Dynamic component={WIDGETS[props.cell.now.widget]!.component} cell={props.cell} />
         </div>
     );
@@ -151,6 +201,12 @@ function Notebook(props: { notebook: Var<Notebook> }) {
             <button onClick={(_) => props.notebook.update((n) => newCell(n.value))}>
                 New Cell
             </button>
+            <button onClick={(_) => {
+                debug_elab(props.notebook.now)
+            }}>Debug elab</button>
+            <button onClick={(_) => {
+                debug_eval(props.notebook.now)
+            }}>Debug eval</button>
         </div>
     );
 }
@@ -211,7 +267,7 @@ function App(props: { shelf: Var<Shelf> }) {
             <button onClick={(_) => newNotebook(props.shelf)}>New notebook</button>
             <button onClick={(_) => deleteNotebook(props.shelf)}>Delete notebook</button>
             <Show when={props.shelf.now.last_opened}>
-                {(id) => (
+                {(_id) => (
                     <Notebook
                         notebook={props.shelf.zoom("notebooks").zoom(props.shelf.now.last_opened)}
                     />

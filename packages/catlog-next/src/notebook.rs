@@ -6,21 +6,21 @@ use tsify::Tsify;
 use uuid::Uuid;
 use wasm_bindgen::prelude::*;
 
-use crate::value::Value;
+use crate::widget_state::WidgetState;
 
 #[derive(Tsify, Serialize, Deserialize)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct Cell {
-    widget: String,
-    content: Value,
+    pub widget: String,
+    pub content: WidgetState,
 }
 
 #[derive(Tsify, Serialize, Deserialize)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct Metadata {
-    title: String,
-    created: DateTime<Utc>,
-    modified: DateTime<Utc>,
+    pub title: String,
+    pub created: DateTime<Utc>,
+    pub modified: DateTime<Utc>,
 }
 
 impl Metadata {
@@ -36,9 +36,9 @@ impl Metadata {
 #[derive(Tsify, Serialize, Deserialize)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct Notebook {
-    metadata: Metadata,
-    cells: HashMap<Uuid, Cell>,
-    order: Vec<Uuid>,
+    pub metadata: Metadata,
+    pub cells: HashMap<Uuid, Cell>,
+    pub order: Vec<Uuid>,
 }
 
 impl Notebook {
