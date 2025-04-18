@@ -16,7 +16,7 @@ import { TheoryLibraryContext } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
 import { PermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
-import { type LiveModelDocument, getLiveModel } from "./document";
+import { type LiveModelDocument, getLiveModel, updateFromCatlogModel } from "./document";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
 import { TheorySelectorDialog } from "./theory_selector";
@@ -27,6 +27,7 @@ import {
     duplicateModelJudgment,
     newMorphismDecl,
     newObjectDecl,
+    toCatlogModel,
 } from "./types";
 
 import "./model_editor.css";
@@ -78,6 +79,23 @@ export function ModelPane(props: {
     invariant(theories, "Library of theories should be provided as context");
 
     const liveDoc = () => props.liveModel.liveDoc;
+    const formalObs = () =>
+        liveDoc()
+            .doc.notebook.cells.map((cell) => {
+                if (cell.tag === "formal" && cell.content.tag === "object") {
+                    return cell.content.obType;
+                }
+            })
+            .filter((cell) => cell !== null && cell !== undefined);
+
+    const formalMors = () =>
+        liveDoc()
+            .doc.notebook.cells.map((cell) => {
+                if (cell.tag === "formal" && cell.content.tag === "morphism") {
+                    return cell.content.morType;
+                }
+            })
+            .filter((cell) => cell !== null && cell !== undefined);
 
     return (
         <div class="notebook-container">
@@ -88,6 +106,7 @@ export function ModelPane(props: {
                         setText={(text) => {
                             liveDoc().changeDoc((doc) => {
                                 doc.name = text;
+                                // updateFromCatlogModel(model)
                             });
                         }}
                         placeholder="Untitled"
@@ -96,12 +115,28 @@ export function ModelPane(props: {
                 <TheorySelectorDialog
                     theory={props.liveModel.theory()}
                     setTheory={(id) => {
-                        liveDoc().changeDoc((model) => {
+                        const doc = liveDoc();
+                        doc.changeDoc((model) => {
                             model.theory = id;
                         });
                     }}
+                    sigma={(id, mapdata) => {
+                        const doc = liveDoc();
+                        doc.changeDoc((model) => {
+                            model.theory = id;
+                        });
+                        const model = toCatlogModel(
+                            props.liveModel.theory().theory,
+                            props.liveModel.formalJudgments(),
+                        );
+                        // apply sigma or delta migration
+                        const tgt = theories.get(id).theory;
+                        const migrated = model.pushforward(tgt, mapdata);
+                        updateFromCatlogModel(liveDoc().changeDoc, migrated);
+                    }}
                     theories={theories}
-                    disabled={liveDoc().doc.notebook.cells.some((cell) => cell.tag === "formal")}
+                    formalObs={formalObs()}
+                    formalMors={formalMors()}
                 />
             </div>
             <ModelNotebookEditor liveModel={props.liveModel} />
