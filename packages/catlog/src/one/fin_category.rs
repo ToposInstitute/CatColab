@@ -460,7 +460,7 @@ mod tests {
     fn fin_category() {
         type Mor<V, E> = FinMor<V, E>;
 
-        let mut sch_sgraph: FinCategory<char, char> = Default::default();
+        let mut sch_sgraph: FinCategory<_, _> = Default::default();
         sch_sgraph.add_ob_generators(['V', 'E']);
         sch_sgraph.add_mor_generator('s', 'E', 'V');
         sch_sgraph.add_mor_generator('t', 'E', 'V');
