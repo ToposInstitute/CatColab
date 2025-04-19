@@ -4,19 +4,20 @@ use std::hash::{BuildHasher, Hash, RandomState};
 
 use derivative::Derivative;
 use egglog::ast::{
-    Action, Command, Expr, Fact, GenericRunConfig, Rewrite, Schedule, Schema, Symbol, Variant,
+    Action, Command, Expr, GenericRunConfig, Rewrite, Schedule, Schema, Symbol, Variant,
 };
-use egglog::{EGraph, Error, call, lit, span, var};
-use ustr::Ustr;
+use egglog::{EGraph, call, lit, span, var};
+use ref_cast::RefCast;
 
 use super::{graph::*, path::*};
+use crate::egglog_util::{Program, ToSymbol};
 
 /// A finitely presented category.
 #[derive(Clone, Derivative)]
 #[derivative(Default(bound = "S: Default"))]
-struct FpCategory<V, E, S = RandomState> {
+pub struct FpCategory<V, E, S = RandomState> {
     generators: HashGraph<V, E, S>,
-    program: CategoryProgram,
+    builder: CategoryProgramBuilder,
     egraph: EGraph,
 }
 
@@ -26,15 +27,10 @@ where
     E: Eq + Clone + Hash + ToSymbol,
     S: BuildHasher,
 {
-    /// Rebuilds in the underlying e-graph from the accumulated changes.
-    pub fn rebuild_egraph(&mut self) {
-        assert!(self.egraph.run_program(self.program.program()).is_ok());
-    }
-
     /// Adds an object generator.
     pub fn add_ob_generator(&mut self, v: V) {
         assert!(self.generators.add_vertex(v.clone()));
-        self.program.add_ob_generator(v.to_symbol());
+        self.builder.add_ob_generator(v.to_symbol());
     }
 
     /// Adds several object generators at once.
@@ -47,7 +43,7 @@ where
     /// Adds a morphism generator.
     pub fn add_mor_generator(&mut self, e: E, dom: V, cod: V) {
         assert!(self.generators.add_edge(e.clone(), dom.clone(), cod.clone()));
-        self.program.add_mor_generator(
+        self.builder.add_mor_generator(
             e.to_symbol(),
             self.ob_generator_expr(dom),
             self.ob_generator_expr(cod),
@@ -56,53 +52,43 @@ where
 
     /// Adds a path equation to the presentation.
     pub fn equate(&mut self, eq: PathEq<V, E>) {
-        self.program.equate(self.expr_path(eq.lhs), self.expr_path(eq.rhs));
+        self.builder.equate(self.expr_path(eq.lhs), self.expr_path(eq.rhs));
     }
 
     /// Are two composites in the category equal?
     pub fn is_equal(&mut self, lhs: Path<V, E>, rhs: Path<V, E>) -> bool {
-        self.program.saturate();
-        self.program.check(
-            self.program.compose(self.expr_path(lhs)),
-            self.program.compose(self.expr_path(rhs)),
+        self.builder.check_equal(
+            self.builder.compose(self.expr_path(lhs)),
+            self.builder.compose(self.expr_path(rhs)),
         );
-        match self.run_program() {
-            Ok(_) => true,
-            Err(Error::CheckError(_, _)) => false,
-            Err(err) => panic!("Unexpected error: {}", err),
-        }
+        self.builder
+            .program()
+            .check_in(&mut self.egraph)
+            .expect("Unexpected egglog error")
     }
 
-    fn run_program(&mut self) -> Result<Vec<String>, Error> {
-        self.egraph.run_program(self.program.program())
-    }
     fn ob_generator_expr(&self, v: V) -> Expr {
-        self.program.ob_generator(v.to_symbol())
+        self.builder.ob_generator(v.to_symbol())
     }
     fn mor_generator_expr(&self, e: E) -> Expr {
-        self.program.mor_generator(e.to_symbol())
+        self.builder.mor_generator(e.to_symbol())
     }
     fn expr_path(&self, path: Path<V, E>) -> Path<Expr, Expr> {
         path.map(|v| self.ob_generator_expr(v), |e| self.mor_generator_expr(e))
     }
 }
 
-/// Program builder for categories in egglog.
+/// Program builder for computing with categories in egglog.
 #[derive(Clone)]
-struct CategoryProgram {
+struct CategoryProgramBuilder {
     prog: Vec<Command>,
     sym: CategorySymbols,
 }
 
-impl CategoryProgram {
-    /// Creates a new program builder.
-    pub fn new() -> Self {
-        Default::default()
-    }
-
-    /// Extracts the egglog program statements, consuming them.
-    pub fn program(&mut self) -> Vec<Command> {
-        std::mem::take(&mut self.prog)
+impl CategoryProgramBuilder {
+    /// Extracts the egglog program, consuming the cached statements.
+    pub fn program(&mut self) -> Program {
+        Program(std::mem::take(&mut self.prog))
     }
 
     /// Declares an object generator.
@@ -175,14 +161,15 @@ impl CategoryProgram {
         self.prog.push(Command::Action(Action::Union(span!(), lhs, rhs)));
     }
 
-    /// TODO: Belongs elsewhere.
-    pub fn check(&mut self, lhs: Expr, rhs: Expr) {
-        self.prog.push(Command::Check(span!(), vec![Fact::Eq(span!(), lhs, rhs)]));
+    /// Checks whether the expressions are equal.
+    pub fn check_equal(&mut self, lhs: Expr, rhs: Expr) {
+        let schedule = self.schedule();
+        Program::ref_cast_mut(&mut self.prog).check_equal(lhs, rhs, Some(schedule))
     }
 
-    /// Saturates the category axioms in the e-graph.
-    pub fn saturate(&mut self) {
-        let schedule = Schedule::Saturate(
+    /// Constructs a schedule to saturate the category axioms.
+    fn schedule(&self) -> Schedule {
+        Schedule::Saturate(
             span!(),
             Box::new(Schedule::Run(
                 span!(),
@@ -191,8 +178,7 @@ impl CategoryProgram {
                     until: None,
                 },
             )),
-        );
-        self.prog.push(Command::RunSchedule(schedule));
+        )
     }
 
     /// Generates the preamble for the program.
@@ -348,7 +334,7 @@ impl CategoryProgram {
     }
 }
 
-impl Default for CategoryProgram {
+impl Default for CategoryProgramBuilder {
     fn default() -> Self {
         let mut result = Self {
             prog: vec![],
@@ -388,33 +374,11 @@ impl Default for CategorySymbols {
     }
 }
 
-trait ToSymbol {
-    fn to_symbol(self) -> Symbol;
-}
-
-impl ToSymbol for char {
-    fn to_symbol(self) -> Symbol {
-        self.to_string().into()
-    }
-}
-
-impl ToSymbol for Ustr {
-    fn to_symbol(self) -> Symbol {
-        self.as_str().into()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use expect_test::expect;
-    use itertools::Itertools;
     use nonempty::nonempty;
-
-    /// Format an egglog program as a string.
-    fn format_program(prog: Vec<Command>) -> String {
-        prog.into_iter().map(|command| command.to_string()).join("\n")
-    }
 
     #[test]
     fn sch_sgraph() {
@@ -433,7 +397,7 @@ mod tests {
 
     #[test]
     fn egraph_preamble() {
-        let prog = CategoryProgram::new().program();
+        let prog = CategoryProgramBuilder::default().program();
 
         let expected = expect![[r#"
             (datatype Ob (ObGen String :cost 0))
@@ -450,10 +414,11 @@ mod tests {
             (rewrite (compose (compose f g) h) (compose f (compose g h)) :ruleset CatAxioms)
             (rewrite (compose f (compose g h)) (compose (compose f g) h) :ruleset CatAxioms)
             (rewrite (compose f (id y)) f :ruleset CatAxioms)
-            (rewrite (compose (id x) f) f :ruleset CatAxioms)"#]];
-        expected.assert_eq(&format_program(prog.clone()));
+            (rewrite (compose (id x) f) f :ruleset CatAxioms)
+        "#]];
+        expected.assert_eq(&prog.to_string());
 
         let mut egraph: EGraph = Default::default();
-        assert!(egraph.run_program(prog).is_ok());
+        assert!(prog.run_in(&mut egraph).is_ok());
     }
 }
