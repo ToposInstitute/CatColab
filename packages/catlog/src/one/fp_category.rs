@@ -52,15 +52,12 @@ where
 
     /// Adds a path equation to the presentation.
     pub fn equate(&mut self, eq: PathEq<V, E>) {
-        self.builder.equate(self.expr_path(eq.lhs), self.expr_path(eq.rhs));
+        self.builder.equate(self.path_expr(eq.lhs), self.path_expr(eq.rhs));
     }
 
     /// Are two composites in the category equal?
     pub fn is_equal(&mut self, lhs: Path<V, E>, rhs: Path<V, E>) -> bool {
-        self.builder.check_equal(
-            self.builder.compose(self.expr_path(lhs)),
-            self.builder.compose(self.expr_path(rhs)),
-        );
+        self.builder.check_equal(self.path_expr(lhs), self.path_expr(rhs));
         self.builder
             .program()
             .check_in(&mut self.egraph)
@@ -73,8 +70,12 @@ where
     fn mor_generator_expr(&self, e: E) -> Expr {
         self.builder.mor_generator(e.to_symbol())
     }
-    fn expr_path(&self, path: Path<V, E>) -> Path<Expr, Expr> {
-        path.map(|v| self.ob_generator_expr(v), |e| self.mor_generator_expr(e))
+    fn path_expr(&self, path: Path<V, E>) -> Expr {
+        path.map_reduce(
+            |v| self.builder.id(self.ob_generator_expr(v)),
+            |e| self.mor_generator_expr(e),
+            |fst, snd| self.builder.compose2(fst, snd),
+        )
     }
 }
 
@@ -111,13 +112,15 @@ impl CategoryProgramBuilder {
     }
 
     /// Sets the domain of a morphism.
-    pub fn set_dom(&mut self, mor: Expr, dom: Expr) {
-        self.prog.push(Command::Action(Action::Union(span!(), self.dom(mor), dom)));
+    pub fn set_dom(&mut self, mor: Expr, ob: Expr) {
+        let dom = self.dom(mor);
+        Program::ref_cast_mut(&mut self.prog).union(dom, ob);
     }
 
     /// Sets the codomain of a morphism.
-    pub fn set_cod(&mut self, mor: Expr, cod: Expr) {
-        self.prog.push(Command::Action(Action::Union(span!(), self.cod(mor), cod)));
+    pub fn set_cod(&mut self, mor: Expr, ob: Expr) {
+        let cod = self.cod(mor);
+        Program::ref_cast_mut(&mut self.prog).union(cod, ob);
     }
 
     /// Constructs an object generator expression.
@@ -150,21 +153,15 @@ impl CategoryProgramBuilder {
         call!(self.sym.compose, vec![f, g])
     }
 
-    /// Constructs a generic composite from a path.
-    pub fn compose(&self, path: Path<Expr, Expr>) -> Expr {
-        path.reduce(|x| self.id(x), |f, g| self.compose2(f, g))
-    }
-
-    /// Equates two paths in the category.
-    pub fn equate(&mut self, lhs: Path<Expr, Expr>, rhs: Path<Expr, Expr>) {
-        let (lhs, rhs) = (self.compose(lhs), self.compose(rhs));
-        self.prog.push(Command::Action(Action::Union(span!(), lhs, rhs)));
+    /// Equates two expressions in the category.
+    pub fn equate(&mut self, lhs: Expr, rhs: Expr) {
+        Program::ref_cast_mut(&mut self.prog).union(lhs, rhs);
     }
 
     /// Checks whether the expressions are equal.
     pub fn check_equal(&mut self, lhs: Expr, rhs: Expr) {
         let schedule = self.schedule();
-        Program::ref_cast_mut(&mut self.prog).check_equal(lhs, rhs, Some(schedule))
+        Program::ref_cast_mut(&mut self.prog).check_equal(lhs, rhs, Some(schedule));
     }
 
     /// Constructs a schedule to saturate the category axioms.

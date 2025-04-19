@@ -39,6 +39,11 @@ impl Program {
         prog.push(Command::Check(span!(), vec![Fact::Eq(span!(), lhs, rhs)]));
     }
 
+    /// Unions the two expressions.
+    pub fn union(&mut self, lhs: Expr, rhs: Expr) {
+        self.0.push(Command::Action(Action::Union(span!(), lhs, rhs)));
+    }
+
     /// Runs the program in the given e-graph, consuming the program.
     pub fn run_in(self, egraph: &mut EGraph) -> Result<Vec<String>, Error> {
         egraph.run_program(self.0)
