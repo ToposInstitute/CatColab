@@ -9,7 +9,7 @@ use egglog::ast::{
 use egglog::{EGraph, call, lit, span, var};
 use ref_cast::RefCast;
 
-use super::{graph::*, path::*};
+use super::{category::*, graph::*, path::*};
 use crate::egglog_util::{Program, ToSymbol};
 
 /// A finitely presented category.
@@ -74,8 +74,63 @@ where
         path.map_reduce(
             |v| self.builder.id(self.ob_generator_expr(v)),
             |e| self.mor_generator_expr(e),
-            |fst, snd| self.builder.compose2(fst, snd),
+            |f, g| self.builder.compose2(f, g),
         )
+    }
+}
+
+impl<V, E, S> Category for FpCategory<V, E, S>
+where
+    V: Eq + Clone + Hash + ToSymbol,
+    E: Eq + Clone + Hash + ToSymbol,
+    S: BuildHasher,
+{
+    type Ob = V;
+    type Mor = Path<V, E>;
+
+    fn has_ob(&self, x: &Self::Ob) -> bool {
+        self.generators.has_vertex(x)
+    }
+    fn has_mor(&self, path: &Self::Mor) -> bool {
+        path.contained_in(&self.generators)
+    }
+    fn dom(&self, path: &Self::Mor) -> Self::Ob {
+        path.src(&self.generators)
+    }
+    fn cod(&self, path: &Self::Mor) -> Self::Ob {
+        path.tgt(&self.generators)
+    }
+
+    fn compose(&self, path: Path<Self::Ob, Self::Mor>) -> Self::Mor {
+        path.flatten_in(&self.generators).expect("Paths should be composable")
+    }
+    fn compose2(&self, path1: Self::Mor, path2: Self::Mor) -> Self::Mor {
+        path1
+            .concat_in(&self.generators, path2)
+            .expect("Target of first path should equal source of second path")
+    }
+}
+
+impl<V, E, S> FgCategory for FpCategory<V, E, S>
+where
+    V: Eq + Clone + Hash + ToSymbol,
+    E: Eq + Clone + Hash + ToSymbol,
+    S: BuildHasher,
+{
+    type ObGen = V;
+    type MorGen = E;
+
+    fn ob_generators(&self) -> impl Iterator<Item = Self::ObGen> {
+        self.generators.vertices()
+    }
+    fn mor_generators(&self) -> impl Iterator<Item = Self::MorGen> {
+        self.generators.edges()
+    }
+    fn mor_generator_dom(&self, f: &Self::MorGen) -> Self::Ob {
+        self.generators.src(f)
+    }
+    fn mor_generator_cod(&self, f: &Self::MorGen) -> Self::Ob {
+        self.generators.tgt(f)
     }
 }
 
