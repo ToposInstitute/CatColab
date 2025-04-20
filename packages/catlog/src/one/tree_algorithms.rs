@@ -1,4 +1,4 @@
-//! Generic algorithms on trees.
+//! Algorithms on trees.
 
 use ego_tree::iter::{Descendants, Edge};
 use ego_tree::{NodeId, NodeRef, Tree};
