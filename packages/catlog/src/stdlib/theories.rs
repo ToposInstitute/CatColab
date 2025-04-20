@@ -3,14 +3,14 @@
 use ustr::ustr;
 
 use crate::dbl::theory::*;
-use crate::one::fin_category::{FinMor, UstrFinCategory};
+use crate::one::{Path, fp_category::UstrFpCategory};
 
 /** The empty theory, which has a single model, the empty model.
 
 As a double category, this is the initial double category.
  */
 pub fn th_empty() -> UstrDiscreteDblTheory {
-    let cat: UstrFinCategory = Default::default();
+    let cat: UstrFpCategory = Default::default();
     DiscreteDblTheory::from(cat)
 }
 
@@ -19,7 +19,7 @@ pub fn th_empty() -> UstrDiscreteDblTheory {
 As a double category, this is the terminal double category.
  */
 pub fn th_category() -> UstrDiscreteDblTheory {
-    let mut cat: UstrFinCategory = Default::default();
+    let mut cat: UstrFpCategory = Default::default();
     cat.add_ob_generator(ustr("Object"));
     DiscreteDblTheory::from(cat)
 }
@@ -29,7 +29,7 @@ pub fn th_category() -> UstrDiscreteDblTheory {
 As a double category, this is the "walking proarrow".
  */
 pub fn th_schema() -> UstrDiscreteDblTheory {
-    let mut cat: UstrFinCategory = Default::default();
+    let mut cat: UstrFpCategory = Default::default();
     let (x, y, p) = (ustr("Entity"), ustr("AttrType"), ustr("Attr"));
     cat.add_ob_generator(x);
     cat.add_ob_generator(y);
@@ -44,21 +44,22 @@ signed categories are signed graphs, a simple mathematical model of [regulatory
 networks](crate::refs::RegNets) and causal loop diagrams.
  */
 pub fn th_signed_category() -> UstrDiscreteDblTheory {
-    let mut sgn: UstrFinCategory = Default::default();
+    let mut sgn: UstrFpCategory = Default::default();
     let (x, n) = (ustr("Object"), ustr("Negative"));
     sgn.add_ob_generator(x);
     sgn.add_mor_generator(n, x, x);
-    sgn.set_composite(n, n, FinMor::Id(x));
+    sgn.equate(Path::pair(n, n), Path::empty(x));
     DiscreteDblTheory::from(sgn)
 }
 
+/*
 /** The theory of delayable signed categories.
 
 Free delayable signed categories are causal loop diagrams with delays, often
 depicted as [caesuras](https://en.wikipedia.org/wiki/Caesura).
  */
 pub fn th_delayable_signed_category() -> UstrDiscreteDblTheory {
-    let mut cat: UstrFinCategory = Default::default();
+    let mut cat: UstrFpCategory = Default::default();
     let (x, neg) = (ustr("Object"), ustr("Negative"));
     let (pos_slow, neg_slow) = (ustr("PositiveSlow"), ustr("NegativeSlow"));
     cat.add_ob_generator(x);
@@ -94,6 +95,7 @@ pub fn th_nullable_signed_category() -> UstrDiscreteDblTheory {
     sgn.set_composite(z, n, FinMor::Generator(z));
     DiscreteDblTheory::from(sgn)
 }
+*/
 
 /** The theory of categories with scalars.
 
@@ -106,11 +108,11 @@ enriched in `M`-sets for a monoid `M` such as the positive real numbers under mu
 but to remain within simple theories the theory defined here is more general.
  */
 pub fn th_category_with_scalars() -> UstrDiscreteDblTheory {
-    let mut idem: UstrFinCategory = Default::default();
+    let mut idem: UstrFpCategory = Default::default();
     let (x, s) = (ustr("Object"), ustr("Nonscalar"));
     idem.add_ob_generator(x);
     idem.add_mor_generator(s, x, x);
-    idem.set_composite(s, s, FinMor::Generator(s));
+    idem.equate(Path::pair(s, s), s.into());
     DiscreteDblTheory::from(idem)
 }
 
@@ -145,8 +147,9 @@ mod tests {
         assert!(th_category().validate().is_ok());
         assert!(th_schema().validate().is_ok());
         assert!(th_signed_category().validate().is_ok());
-        assert!(th_delayable_signed_category().validate().is_ok());
-        assert!(th_nullable_signed_category().validate().is_ok());
+        // FIXME: Restore these theories.
+        //assert!(th_delayable_signed_category().validate().is_ok());
+        //assert!(th_nullable_signed_category().validate().is_ok());
         assert!(th_category_with_scalars().validate().is_ok());
         // TODO: Validate discrete tabulator theories.
         th_category_links();

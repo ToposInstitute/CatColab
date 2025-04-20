@@ -47,7 +47,8 @@ use tsify_next::Tsify;
 
 use super::category::VDblCategory;
 use super::theory::{DblTheory, DiscreteDblTheory};
-use crate::one::fin_category::{FpCategory, InvalidFpCategory, UstrFinCategory};
+use crate::egglog_util::ToSymbol;
+use crate::one::fp_category::{FpCategory, InvalidFpCategory, UstrFpCategory};
 use crate::one::*;
 use crate::validate::{self, Validate};
 use crate::zero::*;
@@ -153,24 +154,17 @@ pub trait FgDblModel: DblModel + FgCategory {
 /// A mutable, finitely generated model of a double theory.
 pub trait MutDblModel: FgDblModel {
     /// Adds a basic object to the model.
-    fn add_ob(&mut self, x: Self::ObGen, ob_type: Self::ObType) -> bool;
+    fn add_ob(&mut self, x: Self::ObGen, ob_type: Self::ObType);
 
     /// Adds a basic morphism to the model.
-    fn add_mor(
-        &mut self,
-        f: Self::MorGen,
-        dom: Self::Ob,
-        cod: Self::Ob,
-        mor_type: Self::MorType,
-    ) -> bool {
-        let is_new = self.make_mor(f.clone(), mor_type);
+    fn add_mor(&mut self, f: Self::MorGen, dom: Self::Ob, cod: Self::Ob, mor_type: Self::MorType) {
+        self.make_mor(f.clone(), mor_type);
         self.set_dom(f.clone(), dom);
         self.set_cod(f, cod);
-        is_new
     }
 
     /// Adds a basic morphism to the model without setting its (co)domain.
-    fn make_mor(&mut self, f: Self::MorGen, mor_type: Self::MorType) -> bool;
+    fn make_mor(&mut self, f: Self::MorGen, mor_type: Self::MorType);
 
     /// Gets the domain of a basic morphism, if it is set.
     fn get_dom(&self, f: &Self::MorGen) -> Option<&Self::Ob>;
@@ -179,10 +173,10 @@ pub trait MutDblModel: FgDblModel {
     fn get_cod(&self, f: &Self::MorGen) -> Option<&Self::Ob>;
 
     /// Sets the domain of a basic morphism.
-    fn set_dom(&mut self, f: Self::MorGen, x: Self::Ob) -> Option<Self::Ob>;
+    fn set_dom(&mut self, f: Self::MorGen, x: Self::Ob);
 
     /// Sets the codomain of a basic morphism.
-    fn set_cod(&mut self, f: Self::MorGen, x: Self::Ob) -> Option<Self::Ob>;
+    fn set_cod(&mut self, f: Self::MorGen, x: Self::Ob);
 }
 
 /** A finitely presented model of a discrete double theory.
@@ -192,27 +186,27 @@ finite presentation of a category sliced over the object and morphism types
 comprising the theory. A type theorist would call it a ["displayed
 category"](https://ncatlab.org/nlab/show/displayed+category).
 */
-#[derive(Clone, Derivative, Debug)]
+#[derive(Clone, Debug, Derivative)]
 #[derivative(PartialEq(bound = "Id: Eq + Hash"))]
 #[derivative(Eq(bound = "Id: Eq + Hash"))]
 pub struct DiscreteDblModel<Id, Cat: FgCategory> {
     #[derivative(PartialEq(compare_with = "Arc::ptr_eq"))]
     theory: Arc<DiscreteDblTheory<Cat>>,
-    category: FpCategory<Id, Id, Id>,
+    category: FpCategory<Id, Id>,
     ob_types: IndexedHashColumn<Id, Cat::Ob>,
     mor_types: IndexedHashColumn<Id, Cat::Mor>,
 }
 
 /// A model of a discrete double theory where both theoy and model have keys of
 /// type `Ustr`.
-pub type UstrDiscreteDblModel = DiscreteDblModel<Ustr, UstrFinCategory>;
+pub type UstrDiscreteDblModel = DiscreteDblModel<Ustr, UstrFpCategory>;
 // NOTE: We are leaving a small optimization on the table by not using the
 // `IdentityHasher` but adding that extra type parameter quickly gets annoying
 // because it has to be propagated everywhere, including into model morphisms.
 
 impl<Id, Cat> DiscreteDblModel<Id, Cat>
 where
-    Id: Eq + Clone + Hash,
+    Id: Eq + Clone + Hash + ToSymbol,
     Cat: FgCategory,
     Cat::Ob: Hash,
     Cat::Mor: Hash,
@@ -242,9 +236,9 @@ where
         self.category.is_free()
     }
 
-    /// Adds an equation to the model, making it not free.
-    pub fn add_equation(&mut self, key: Id, eq: PathEq<Id, Id>) {
-        self.category.add_equation(key, eq);
+    /// Adds a path equation to the model.
+    pub fn add_equation(&mut self, eq: PathEq<Id, Id>) {
+        self.category.add_equation(eq);
     }
 
     /// Iterates over failures of model to be well defined.
@@ -311,7 +305,7 @@ where
 
 impl<Id, Cat> Category for DiscreteDblModel<Id, Cat>
 where
-    Id: Eq + Clone + Hash,
+    Id: Eq + Clone + Hash + ToSymbol,
     Cat: FgCategory,
     Cat::Ob: Hash,
     Cat::Mor: Hash,
@@ -338,7 +332,7 @@ where
 
 impl<Id, Cat> FgCategory for DiscreteDblModel<Id, Cat>
 where
-    Id: Eq + Clone + Hash,
+    Id: Eq + Clone + Hash + ToSymbol,
     Cat: FgCategory,
     Cat::Ob: Hash,
     Cat::Mor: Hash,
@@ -365,7 +359,7 @@ where
 
 impl<Id, Cat> DblModel for DiscreteDblModel<Id, Cat>
 where
-    Id: Eq + Clone + Hash,
+    Id: Eq + Clone + Hash + ToSymbol,
     Cat: FgCategory,
     Cat::Ob: Hash,
     Cat::Mor: Hash,
@@ -399,7 +393,7 @@ where
 
 impl<Id, Cat> FgDblModel for DiscreteDblModel<Id, Cat>
 where
-    Id: Eq + Clone + Hash,
+    Id: Eq + Clone + Hash + ToSymbol,
     Cat: FgCategory,
     Cat::Ob: Hash,
     Cat::Mor: Hash,
@@ -421,24 +415,24 @@ where
 
 impl<Id, Cat> MutDblModel for DiscreteDblModel<Id, Cat>
 where
-    Id: Eq + Clone + Hash,
+    Id: Eq + Clone + Hash + ToSymbol,
     Cat: FgCategory,
     Cat::Ob: Hash,
     Cat::Mor: Hash,
 {
-    fn add_ob(&mut self, x: Id, typ: Cat::Ob) -> bool {
+    fn add_ob(&mut self, x: Id, typ: Cat::Ob) {
         self.ob_types.set(x.clone(), typ);
-        self.category.add_ob_generator(x)
+        self.category.add_ob_generator(x);
     }
 
-    fn add_mor(&mut self, f: Id, dom: Id, cod: Id, typ: Cat::Mor) -> bool {
+    fn add_mor(&mut self, f: Id, dom: Id, cod: Id, typ: Cat::Mor) {
         self.mor_types.set(f.clone(), typ);
-        self.category.add_mor_generator(f, dom, cod)
+        self.category.add_mor_generator(f, dom, cod);
     }
 
-    fn make_mor(&mut self, f: Id, typ: Cat::Mor) -> bool {
+    fn make_mor(&mut self, f: Id, typ: Cat::Mor) {
         self.mor_types.set(f.clone(), typ);
-        self.category.make_mor_generator(f)
+        self.category.make_mor_generator(f);
     }
 
     fn get_dom(&self, f: &Id) -> Option<&Id> {
@@ -447,17 +441,17 @@ where
     fn get_cod(&self, f: &Id) -> Option<&Id> {
         self.category.get_cod(f)
     }
-    fn set_dom(&mut self, f: Id, x: Id) -> Option<Id> {
-        self.category.set_dom(f, x)
+    fn set_dom(&mut self, f: Id, x: Id) {
+        self.category.set_dom(f, x);
     }
-    fn set_cod(&mut self, f: Id, x: Id) -> Option<Id> {
-        self.category.set_cod(f, x)
+    fn set_cod(&mut self, f: Id, x: Id) {
+        self.category.set_cod(f, x);
     }
 }
 
 impl<Id, Cat> Validate for DiscreteDblModel<Id, Cat>
 where
-    Id: Eq + Clone + Hash,
+    Id: Eq + Clone + Hash + ToSymbol,
     Cat: FgCategory,
     Cat::Ob: Hash,
     Cat::Mor: Hash,
@@ -502,16 +496,16 @@ pub enum InvalidDblModel<Id> {
     CodType(Id),
 
     /// Equation has left hand side that is not a well defined path.
-    EqLhs(Id),
+    EqLhs(usize),
 
     /// Equation has right hand side that is not a well defined path.
-    EqRhs(Id),
+    EqRhs(usize),
 
     /// Equation has different sources on left and right hand sides.
-    EqSrc(Id),
+    EqSrc(usize),
 
     /// Equation has different sources on left and right hand sides.
-    EqTgt(Id),
+    EqTgt(usize),
 }
 
 /// Object in a model of a discrete tabulator theory.
@@ -870,14 +864,14 @@ where
     ThId: Eq + Clone + Hash,
     S: BuildHasher,
 {
-    fn add_ob(&mut self, x: Self::ObGen, ob_type: Self::ObType) -> bool {
+    fn add_ob(&mut self, x: Self::ObGen, ob_type: Self::ObType) {
         self.ob_types.set(x.clone(), ob_type);
-        self.generators.objects.insert(x)
+        self.generators.objects.insert(x);
     }
 
-    fn make_mor(&mut self, f: Self::MorGen, mor_type: Self::MorType) -> bool {
+    fn make_mor(&mut self, f: Self::MorGen, mor_type: Self::MorType) {
         self.mor_types.set(f.clone(), mor_type);
-        self.generators.morphisms.insert(f)
+        self.generators.morphisms.insert(f);
     }
 
     fn get_dom(&self, f: &Self::MorGen) -> Option<&Self::Ob> {
@@ -886,11 +880,11 @@ where
     fn get_cod(&self, f: &Self::MorGen) -> Option<&Self::Ob> {
         self.generators.cod.get(f)
     }
-    fn set_dom(&mut self, f: Self::MorGen, x: Self::Ob) -> Option<Self::Ob> {
-        self.generators.dom.set(f, x)
+    fn set_dom(&mut self, f: Self::MorGen, x: Self::Ob) {
+        self.generators.dom.set(f, x);
     }
-    fn set_cod(&mut self, f: Self::MorGen, x: Self::Ob) -> Option<Self::Ob> {
-        self.generators.cod.set(f, x)
+    fn set_cod(&mut self, f: Self::MorGen, x: Self::Ob) {
+        self.generators.cod.set(f, x);
     }
 }
 
@@ -913,7 +907,7 @@ mod tests {
     use ustr::ustr;
 
     use super::*;
-    use crate::one::fin_category::FinMor;
+    use crate::one::Path;
     use crate::stdlib::{models::*, theories::*};
 
     #[test]
@@ -926,15 +920,15 @@ mod tests {
 
         let mut model = DiscreteDblModel::new(th.clone());
         model.add_ob(entity, ustr("Entity"));
-        model.add_mor(ustr("map"), entity, entity, FinMor::Generator(ustr("NotMorType")));
+        model.add_mor(ustr("map"), entity, entity, ustr("NotMorType").into());
         assert_eq!(model.validate(), Err(nonempty![InvalidDblModel::MorType(ustr("map"))]));
 
         let mut model = DiscreteDblModel::new(th);
         model.add_ob(entity, ustr("Entity"));
         model.add_ob(ustr("type"), ustr("AttrType"));
-        model.add_mor(ustr("a"), entity, ustr("type"), FinMor::Generator(ustr("Attr")));
+        model.add_mor(ustr("a"), entity, ustr("type"), ustr("Attr").into());
         assert!(model.validate().is_ok());
-        model.add_mor(ustr("b"), entity, ustr("type"), FinMor::Id(ustr("Entity")));
+        model.add_mor(ustr("b"), entity, ustr("type"), Path::Id(ustr("Entity")));
         assert_eq!(model.validate(), Err(nonempty![InvalidDblModel::CodType(ustr("b"))]));
     }
 
@@ -942,7 +936,7 @@ mod tests {
     fn infer_discrete_dbl_model() {
         let th = Arc::new(th_schema());
         let mut model = DiscreteDblModel::new(th.clone());
-        model.add_mor(ustr("attr"), ustr("entity"), ustr("type"), FinMor::Generator(ustr("Attr")));
+        model.add_mor(ustr("attr"), ustr("entity"), ustr("type"), ustr("Attr").into());
         model.infer_missing();
         assert_eq!(model, walking_attr(th));
     }

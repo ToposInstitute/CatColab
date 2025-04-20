@@ -14,7 +14,8 @@ structure in this module uses [e-graphs](https://en.wikipedia.org/wiki/E-graph)
 to check for equivalence of paths under the congruence.
  */
 
-use std::hash::{BuildHasher, Hash, RandomState};
+use std::fmt::Debug;
+use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
 
 use derivative::Derivative;
 use egglog::ast::{
@@ -24,6 +25,7 @@ use egglog::{EGraph, call, lit, span, var};
 use nonempty::NonEmpty;
 use ref_cast::RefCast;
 use thiserror::Error;
+use ustr::{IdentityHasher, Ustr};
 
 use super::{category::*, graph::*, path::*};
 use crate::egglog_util::{Program, ToSymbol};
@@ -36,13 +38,21 @@ by the path equations is maintained by an e-graph. The question of whether paths
 in the presented category are equivalent is referred to the e-graph.
  */
 #[derive(Clone, Derivative)]
+#[derivative(Debug(bound = "V: Debug, E: Debug, S: Debug"))]
 #[derivative(Default(bound = "S: Default"))]
+#[derivative(PartialEq(bound = "V: Eq + Hash, E: Eq + Hash, S: BuildHasher"))]
+#[derivative(Eq(bound = "V: Eq + Hash, E: Eq + Hash, S: BuildHasher"))]
 pub struct FpCategory<V, E, S = RandomState> {
     generators: HashGraph<V, E, S>,
     equations: Vec<PathEq<V, E>>,
+    #[derivative(Debug = "ignore", PartialEq = "ignore")]
     builder: CategoryProgramBuilder,
+    #[derivative(Debug = "ignore", PartialEq = "ignore")]
     egraph: EGraph,
 }
+
+/// A finitely presented category with generators of type `Ustr`.
+pub type UstrFpCategory = FpCategory<Ustr, Ustr, BuildHasherDefault<IdentityHasher>>;
 
 impl<V, E, S> FpCategory<V, E, S>
 where
@@ -86,6 +96,40 @@ where
             self.ob_generator_expr(dom),
             self.ob_generator_expr(cod),
         );
+    }
+
+    /// Adds a morphism generator without declaring its (co)domain.
+    pub fn make_mor_generator(&mut self, e: E) {
+        assert!(self.generators.make_edge(e.clone()));
+        self.builder.make_mor_generator(e.to_symbol());
+    }
+
+    /// Gets the domain of a morphism generator.
+    pub fn get_dom(&self, e: &E) -> Option<&V> {
+        self.generators.get_src(e)
+    }
+
+    /// Gets the codomain of a morphism generator.
+    pub fn get_cod(&self, e: &E) -> Option<&V> {
+        self.generators.get_tgt(e)
+    }
+
+    /// Sets the domain of a morphism generator.
+    pub fn set_dom(&mut self, e: E, v: V) {
+        assert!(
+            self.generators.set_src(e.clone(), v.clone()).is_none(),
+            "Domain of morphism generator should not already be set"
+        );
+        self.builder.set_dom(self.mor_generator_expr(e), self.ob_generator_expr(v));
+    }
+
+    /// Sets the codomain of a morphism generator.
+    pub fn set_cod(&mut self, e: E, v: V) {
+        assert!(
+            self.generators.set_tgt(e.clone(), v.clone()).is_none(),
+            "Codomain of morphism generator should not already be set"
+        );
+        self.builder.set_cod(self.mor_generator_expr(e), self.ob_generator_expr(v));
     }
 
     /// Adds a path equation to the presentation.
@@ -533,24 +577,27 @@ mod tests {
     use super::*;
     use expect_test::expect;
     use nonempty::nonempty;
+    use ustr::ustr;
 
     #[test]
     fn sch_sgraph() {
-        let mut sch_sgraph: FpCategory<_, _, RandomState> = Default::default();
-        sch_sgraph.add_ob_generators(['V', 'E']);
-        sch_sgraph.add_mor_generator('s', 'E', 'V');
-        sch_sgraph.add_mor_generator('t', 'E', 'V');
-        sch_sgraph.add_mor_generator('i', 'E', 'E');
+        let mut sch_sgraph: UstrFpCategory = Default::default();
+        let (v, e) = (ustr("V"), ustr("E"));
+        let (s, t, i) = (ustr("src"), ustr("tgt"), ustr("inv"));
+        sch_sgraph.add_ob_generators([v, e]);
+        sch_sgraph.add_mor_generator(s, e, v);
+        sch_sgraph.add_mor_generator(t, e, v);
+        sch_sgraph.add_mor_generator(i, e, e);
         assert!(sch_sgraph.is_free());
-        sch_sgraph.equate(Path::pair('i', 'i'), Path::empty('E'));
-        sch_sgraph.equate(Path::pair('i', 's'), Path::single('t'));
-        sch_sgraph.equate(Path::pair('i', 't'), Path::single('s'));
+        sch_sgraph.equate(Path::pair(i, i), Path::empty(e));
+        sch_sgraph.equate(Path::pair(i, s), Path::single(t));
+        sch_sgraph.equate(Path::pair(i, t), Path::single(s));
         assert!(!sch_sgraph.is_free());
         assert!(sch_sgraph.validate().is_ok());
 
-        assert!(!sch_sgraph.is_equal(Path::single('s'), Path::single('t')));
-        assert!(sch_sgraph.is_equal(Path::pair('i', 'i'), Path::empty('E')));
-        assert!(sch_sgraph.is_equal(Path::Seq(nonempty!['i', 'i', 'i', 's']), Path::single('t')));
+        assert!(!sch_sgraph.is_equal(Path::single(s), Path::single(t)));
+        assert!(sch_sgraph.is_equal(Path::pair(i, i), Path::empty(e)));
+        assert!(sch_sgraph.is_equal(Path::Seq(nonempty![i, i, i, s]), Path::single(t)));
     }
 
     #[test]

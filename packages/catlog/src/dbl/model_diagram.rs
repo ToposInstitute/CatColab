@@ -25,6 +25,7 @@ use serde::{Deserialize, Serialize};
 use tsify_next::{Tsify, declare};
 
 use super::{model::*, model_morphism::*};
+use crate::egglog_util::ToSymbol;
 use crate::one::{Category, FgCategory};
 use crate::validate;
 
@@ -77,8 +78,8 @@ pub type InvalidDiscreteDblModelDiagram<DomId> =
 
 impl<DomId, CodId, Cat> DiscreteDblModelDiagram<DomId, CodId, Cat>
 where
-    DomId: Eq + Clone + Hash,
-    CodId: Eq + Clone + Hash,
+    DomId: Eq + Clone + Hash + ToSymbol,
+    CodId: Eq + Clone + Hash + ToSymbol,
     Cat: FgCategory,
     Cat::Ob: Hash,
     Cat::Mor: Hash,
@@ -134,12 +135,11 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::sync::Arc;
     use ustr::ustr;
 
-    use crate::one::{Path, fin_category::FinMor};
+    use super::*;
+    use crate::one::Path;
     use crate::stdlib::*;
 
     #[test]
@@ -149,7 +149,7 @@ mod tests {
         let entity = ustr("entity");
         model.add_ob(entity, ustr("Entity"));
         model.add_ob(ustr("type"), ustr("AttrType"));
-        model.add_mor(ustr("attr"), entity, ustr("type"), FinMor::Generator(ustr("Attr")));
+        model.add_mor(ustr("attr"), entity, ustr("type"), ustr("Attr").into());
 
         let mut f: DiscreteDblModelMapping<_, _> = Default::default();
         f.assign_ob(entity, 'x');
@@ -178,9 +178,9 @@ mod tests {
     fn infer_model_diagram() {
         let th = Arc::new(th_schema());
         let mut domain = DiscreteDblModel::new(th.clone());
-        domain.add_mor(0, 0, 1, FinMor::Generator(ustr("Attr")));
+        domain.add_mor('f', 'x', 'y', ustr("Attr").into());
         let mut f: DiscreteDblModelMapping<_, _> = Default::default();
-        f.assign_basic_mor(0, Path::single(ustr("attr")));
+        f.assign_basic_mor('f', Path::single(ustr("attr")));
         let mut diagram = DblModelDiagram(f, domain);
 
         let model = walking_attr(th);

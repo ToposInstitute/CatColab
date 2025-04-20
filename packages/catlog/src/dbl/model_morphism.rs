@@ -31,6 +31,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify_next::Tsify;
 
+use crate::egglog_util::ToSymbol;
 use crate::one::graph_algorithms::{bounded_simple_paths, simple_paths, spec_order};
 use crate::one::*;
 use crate::validate::{self, Validate};
@@ -89,8 +90,8 @@ pub struct DiscreteDblModelMapping<DomId, CodId> {
 
 impl<DomId, CodId> DiscreteDblModelMapping<DomId, CodId>
 where
-    DomId: Clone + Eq + Hash,
-    CodId: Clone + Eq + Hash,
+    DomId: Clone + Eq + Hash + ToSymbol,
+    CodId: Clone + Eq + Hash + ToSymbol,
 {
     /// Applies the mapping at a basic morphism in the domain model.
     pub fn apply_basic_mor(&self, e: &DomId) -> Option<Path<CodId, CodId>> {
@@ -180,8 +181,8 @@ where
 
 impl<DomId, CodId> DblModelMapping for DiscreteDblModelMapping<DomId, CodId>
 where
-    DomId: Clone + Eq + Hash,
-    CodId: Clone + Eq + Hash,
+    DomId: Clone + Eq + Hash + ToSymbol,
+    CodId: Clone + Eq + Hash + ToSymbol,
 {
     type DomOb = DomId;
     type DomMor = Path<DomId, DomId>;
@@ -228,8 +229,8 @@ pub type DiscreteDblModelMorphism<'a, DomId, CodId, Cat> = DblModelMorphism<
 
 impl<'a, DomId, CodId, Cat> DiscreteDblModelMorphism<'a, DomId, CodId, Cat>
 where
-    DomId: Eq + Clone + Hash,
-    CodId: Eq + Clone + Hash,
+    DomId: Eq + Clone + Hash + ToSymbol,
+    CodId: Eq + Clone + Hash + ToSymbol,
     Cat: FgCategory,
     Cat::Ob: Hash,
     Cat::Mor: Hash,
@@ -357,8 +358,8 @@ where
 
 impl<DomId, CodId, Cat> Validate for DiscreteDblModelMorphism<'_, DomId, CodId, Cat>
 where
-    DomId: Eq + Clone + Hash,
-    CodId: Eq + Clone + Hash,
+    DomId: Eq + Clone + Hash + ToSymbol,
+    CodId: Eq + Clone + Hash + ToSymbol,
     Cat: FgCategory,
     Cat::Ob: Hash,
     Cat::Mor: Hash,
@@ -439,8 +440,8 @@ pub struct DiscreteDblModelMorphismFinder<'a, DomId, CodId, Cat: FgCategory> {
 
 impl<'a, DomId, CodId, Cat> DiscreteDblModelMorphismFinder<'a, DomId, CodId, Cat>
 where
-    DomId: Clone + Eq + Hash,
-    CodId: Clone + Eq + Hash,
+    DomId: Clone + Eq + Hash + ToSymbol,
+    CodId: Clone + Eq + Hash + ToSymbol,
     Cat: FgCategory,
     Cat::Ob: Hash,
     Cat::Mor: Hash,
@@ -608,15 +609,14 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
-    use crate::dbl::model::UstrDiscreteDblModel;
-    use crate::one::fin_category::FinMor;
-    use crate::stdlib::*;
-    use crate::validate::Validate;
-
     use std::collections::HashMap;
     use ustr::ustr;
+
+    use super::*;
+    use crate::dbl::model::UstrDiscreteDblModel;
+    use crate::one::Path;
+    use crate::stdlib::*;
+    use crate::validate::Validate;
 
     #[test]
     fn discrete_model_mapping() {
@@ -661,7 +661,7 @@ mod tests {
         let (a, b) = (ustr("A"), ustr("B"));
         walking.add_ob(a, ustr("Object"));
         walking.add_ob(b, ustr("Object"));
-        walking.add_mor(ustr("f"), a, b, FinMor::Id(ustr("Object")));
+        walking.add_mor(ustr("f"), a, b, Path::Id(ustr("Object")));
         let w = Path::single(ustr("f"));
 
         //     y         Graph with lots of cyclic paths.
@@ -672,11 +672,11 @@ mod tests {
         model.add_ob(x, ustr("Object"));
         model.add_ob(y, ustr("Object"));
         model.add_ob(z, ustr("Object"));
-        model.add_mor(ustr("xy"), x, y, FinMor::Id(ustr("Object")));
-        model.add_mor(ustr("yz"), y, z, FinMor::Id(ustr("Object")));
-        model.add_mor(ustr("zx"), z, x, FinMor::Id(ustr("Object")));
-        model.add_mor(ustr("xz"), x, z, FinMor::Id(ustr("Object")));
-        model.add_mor(ustr("xx"), x, x, FinMor::Id(ustr("Object")));
+        model.add_mor(ustr("xy"), x, y, Path::Id(ustr("Object")));
+        model.add_mor(ustr("yz"), y, z, Path::Id(ustr("Object")));
+        model.add_mor(ustr("zx"), z, x, Path::Id(ustr("Object")));
+        model.add_mor(ustr("xz"), x, z, Path::Id(ustr("Object")));
+        model.add_mor(ustr("xx"), x, x, Path::Id(ustr("Object")));
 
         for i in model.ob_generators() {
             for j in model.ob_generators() {
@@ -828,19 +828,19 @@ mod tests {
         freetri.add_ob(x, ob);
         freetri.add_ob(y, ob);
         freetri.add_ob(z, ob);
-        freetri.add_mor(f, x, y, FinMor::Id(ob));
-        freetri.add_mor(g, y, z, FinMor::Id(ob));
-        freetri.add_mor(h, x, z, FinMor::Id(ob));
+        freetri.add_mor(f, x, y, Path::Id(ob));
+        freetri.add_mor(g, y, z, Path::Id(ob));
+        freetri.add_mor(h, x, z, Path::Id(ob));
 
         let mut quad = UstrDiscreteDblModel::new(theory);
         quad.add_ob(q, ob);
         quad.add_ob(x, ob);
         quad.add_ob(y, ob);
         quad.add_ob(z, ob);
-        quad.add_mor(f, x, y, FinMor::Id(ob));
-        quad.add_mor(g, y, z, FinMor::Id(ob));
-        quad.add_mor(i, y, q, FinMor::Id(ob));
-        quad.add_mor(j, x, q, FinMor::Id(ob));
+        quad.add_mor(f, x, y, Path::Id(ob));
+        quad.add_mor(g, y, z, Path::Id(ob));
+        quad.add_mor(i, y, q, Path::Id(ob));
+        quad.add_mor(j, x, q, Path::Id(ob));
 
         assert_eq!(
             DiscreteDblModelMapping::morphisms(&freetri, &quad)

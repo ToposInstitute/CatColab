@@ -12,10 +12,9 @@ use tsify_next::Tsify;
 
 use super::ODEAnalysis;
 use crate::dbl::model::{DiscreteDblModel, FgDblModel};
-use crate::one::{
-    FgCategory,
-    fin_category::{FinMor, UstrFinCategory},
-};
+use crate::egglog_util::ToSymbol;
+use crate::one::fp_category::UstrFpCategory;
+use crate::one::{FgCategory, Path};
 use crate::simulate::ode::{LotkaVolterraSystem, ODEProblem};
 
 /// Data defining a Lotka-Volterra ODE problem for a model.
@@ -46,7 +45,7 @@ where
     duration: f32,
 }
 
-type Model<Id> = DiscreteDblModel<Id, UstrFinCategory>;
+type Model<Id> = DiscreteDblModel<Id, UstrFpCategory>;
 
 /** Lotka-Volterra ODE analysis for models of a double theory.
 
@@ -56,8 +55,8 @@ paper](crate::refs::RegNets).
 */
 pub struct LotkaVolterraAnalysis {
     var_ob_type: Ustr,
-    positive_mor_types: Vec<FinMor<Ustr, Ustr>>,
-    negative_mor_types: Vec<FinMor<Ustr, Ustr>>,
+    positive_mor_types: Vec<Path<Ustr, Ustr>>,
+    negative_mor_types: Vec<Path<Ustr, Ustr>>,
 }
 
 impl LotkaVolterraAnalysis {
@@ -71,23 +70,26 @@ impl LotkaVolterraAnalysis {
     }
 
     /// Adds a morphism type defining a positive interaction between objects.
-    pub fn add_positive(mut self, mor_type: FinMor<Ustr, Ustr>) -> Self {
+    pub fn add_positive(mut self, mor_type: Path<Ustr, Ustr>) -> Self {
         self.positive_mor_types.push(mor_type);
         self
     }
 
     /// Adds a morphism type defining a negative interaction between objects.
-    pub fn add_negative(mut self, mor_type: FinMor<Ustr, Ustr>) -> Self {
+    pub fn add_negative(mut self, mor_type: Path<Ustr, Ustr>) -> Self {
         self.negative_mor_types.push(mor_type);
         self
     }
 
     /// Creates a Lotka-Volterra system from a model.
-    pub fn create_system<Id: Eq + Clone + Hash + Ord>(
+    pub fn create_system<Id>(
         &self,
         model: &Model<Id>,
         data: LotkaVolterraProblemData<Id>,
-    ) -> ODEAnalysis<Id, LotkaVolterraSystem> {
+    ) -> ODEAnalysis<Id, LotkaVolterraSystem>
+    where
+        Id: Eq + Clone + Hash + Ord + ToSymbol,
+    {
         let mut objects: Vec<_> = model.ob_generators_with_type(&self.var_ob_type).collect();
         objects.sort();
         let ob_index: HashMap<_, _> =
@@ -148,8 +150,8 @@ mod test {
             duration: 10.0,
         };
         let analysis = LotkaVolterraAnalysis::new(ustr("Object"))
-            .add_positive(FinMor::Id(ustr("Object")))
-            .add_negative(FinMor::Generator(ustr("Negative")))
+            .add_positive(Path::Id(ustr("Object")))
+            .add_negative(Path::single(ustr("Negative")))
             .create_system(&neg_feedback, data);
         assert_eq!(analysis.problem, lotka_volterra::create_predator_prey());
     }

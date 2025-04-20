@@ -80,7 +80,7 @@ use super::category::*;
 use super::graph::ProedgeGraph;
 use super::tree::{DblNode, DblTree};
 use crate::one::{Graph, path::Path, tree::OpenTree};
-use crate::one::{category::*, fin_category::UstrFinCategory};
+use crate::one::{category::*, fp_category::UstrFpCategory};
 use crate::validate::Validate;
 use crate::zero::*;
 
@@ -295,7 +295,7 @@ indeed **discrete**, which can equivalently be defined as
 pub struct DiscreteDblTheory<Cat: FgCategory>(Cat);
 
 /// A discrete double theory with keys of type `Ustr`.
-pub type UstrDiscreteDblTheory = DiscreteDblTheory<UstrFinCategory>;
+pub type UstrDiscreteDblTheory = DiscreteDblTheory<UstrFpCategory>;
 
 impl<C: FgCategory> VDblCategory for DiscreteDblTheory<C>
 where
@@ -715,25 +715,22 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::one::fin_category::*;
+    use crate::one::{Path, fp_category::FpCategory};
 
     #[test]
     fn discrete_double_theory() {
-        type Mor<V, E> = FinMor<V, E>;
-
-        let mut sgn: FinCategory<char, char> = Default::default();
+        let mut sgn: FpCategory<char, char> = Default::default();
         sgn.add_ob_generator('*');
         sgn.add_mor_generator('n', '*', '*');
-        sgn.set_composite('n', 'n', Mor::Id('*'));
+        sgn.equate(Path::pair('n', 'n'), Path::Id('*'));
 
         let th = DiscreteDblTheory::from(sgn);
         assert!(th.has_ob_type(&'*'));
-        assert!(th.has_mor_type(&Mor::Generator('n')));
-        let path = Path::pair(Mor::Generator('n'), Mor::Generator('n'));
-        assert_eq!(th.compose_types(path), Some(Mor::Id('*')));
+        assert!(th.has_mor_type(&'n'.into()));
+        assert_eq!(th.compose_types(Path::pair('n'.into(), 'n'.into())), Some(Path::Id('*')));
 
-        assert_eq!(th.hom_type('*'), Mor::Id('*'));
-        assert_eq!(th.hom_op('*'), Path::single(Mor::Id('*')));
+        assert_eq!(th.hom_type('*'), Path::Id('*'));
+        assert_eq!(th.hom_op('*'), Path::single(Path::Id('*')));
     }
 
     #[test]
