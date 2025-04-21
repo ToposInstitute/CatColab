@@ -14,6 +14,7 @@ structure in this module uses [e-graphs](https://en.wikipedia.org/wiki/E-graph)
 to check for equivalence of paths under the congruence.
  */
 
+use std::cell::RefCell;
 use std::fmt::Debug;
 use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
 
@@ -33,9 +34,20 @@ use crate::validate::{self, Validate};
 
 /** A finitely presented category backed by an e-graph.
 
-A data structure for a f.p. category in which the congrence relation generated
+A data structure for a f.p. category in which the congruence relation generated
 by the path equations is maintained by an e-graph. The question of whether paths
 in the presented category are equivalent is referred to the e-graph.
+
+# Thread safety
+
+Checking equivalence of paths requires mutating the underlying e-graph. However,
+we do not want to regard this check as mutating, for the theoretical reason that
+the check does not change the category presented and the practical reason that
+it would cause mutable references to be aggressively propagated throughout the
+codebase. Thus, we use the [interior
+mutability](https://doc.rust-lang.org/book/ch15-05-interior-mutability.html)
+pattern to encapsulate the mutability of the e-graph and perform borrow checking
+at runtime. The current implementation allows only *single-threaded* usage.
  */
 #[derive(Clone, Derivative)]
 #[derivative(Debug(bound = "V: Debug, E: Debug, S: Debug"))]
@@ -46,9 +58,9 @@ pub struct FpCategory<V, E, S = RandomState> {
     generators: HashGraph<V, E, S>,
     equations: Vec<PathEq<V, E>>,
     #[derivative(Debug = "ignore", PartialEq = "ignore")]
-    builder: CategoryProgramBuilder,
+    builder: RefCell<CategoryProgramBuilder>,
     #[derivative(Debug = "ignore", PartialEq = "ignore")]
-    egraph: EGraph,
+    egraph: RefCell<EGraph>,
 }
 
 /// A finitely presented category with generators of type `Ustr`.
@@ -78,7 +90,7 @@ where
     /// Adds an object generator.
     pub fn add_ob_generator(&mut self, v: V) {
         assert!(self.generators.add_vertex(v.clone()));
-        self.builder.add_ob_generator(v.to_symbol());
+        self.builder.get_mut().add_ob_generator(v.to_symbol());
     }
 
     /// Adds several object generators at once.
@@ -91,17 +103,14 @@ where
     /// Adds a morphism generator.
     pub fn add_mor_generator(&mut self, e: E, dom: V, cod: V) {
         assert!(self.generators.add_edge(e.clone(), dom.clone(), cod.clone()));
-        self.builder.add_mor_generator(
-            e.to_symbol(),
-            self.ob_generator_expr(dom),
-            self.ob_generator_expr(cod),
-        );
+        let (dom, cod) = (self.ob_generator_expr(dom), self.ob_generator_expr(cod));
+        self.builder.get_mut().add_mor_generator(e.to_symbol(), dom, cod);
     }
 
     /// Adds a morphism generator without declaring its (co)domain.
     pub fn make_mor_generator(&mut self, e: E) {
         assert!(self.generators.make_edge(e.clone()));
-        self.builder.make_mor_generator(e.to_symbol());
+        self.builder.get_mut().make_mor_generator(e.to_symbol());
     }
 
     /// Gets the domain of a morphism generator.
@@ -120,7 +129,8 @@ where
             self.generators.set_src(e.clone(), v.clone()).is_none(),
             "Domain of morphism generator should not already be set"
         );
-        self.builder.set_dom(self.mor_generator_expr(e), self.ob_generator_expr(v));
+        let (mor, ob) = (self.mor_generator_expr(e), self.ob_generator_expr(v));
+        self.builder.get_mut().set_dom(mor, ob);
     }
 
     /// Sets the codomain of a morphism generator.
@@ -129,13 +139,15 @@ where
             self.generators.set_tgt(e.clone(), v.clone()).is_none(),
             "Codomain of morphism generator should not already be set"
         );
-        self.builder.set_cod(self.mor_generator_expr(e), self.ob_generator_expr(v));
+        let (mor, ob) = (self.mor_generator_expr(e), self.ob_generator_expr(v));
+        self.builder.get_mut().set_cod(mor, ob);
     }
 
     /// Adds a path equation to the presentation.
     pub fn add_equation(&mut self, eq: PathEq<V, E>) {
         self.equations.push(eq.clone());
-        self.builder.equate(self.path_expr(eq.lhs), self.path_expr(eq.rhs));
+        let (lhs, rhs) = (self.path_expr(eq.lhs), self.path_expr(eq.rhs));
+        self.builder.get_mut().equate(lhs, rhs);
     }
 
     /// Equates two path in the presentation.
@@ -144,25 +156,28 @@ where
     }
 
     /// Are two composites in the category equal?
-    pub fn is_equal(&mut self, lhs: Path<V, E>, rhs: Path<V, E>) -> bool {
-        self.builder.check_equal(self.path_expr(lhs), self.path_expr(rhs));
+    pub fn is_equal(&self, lhs: Path<V, E>, rhs: Path<V, E>) -> bool {
+        let (lhs, rhs) = (self.path_expr(lhs), self.path_expr(rhs));
+        self.builder.borrow_mut().check_equal(lhs, rhs);
         self.builder
+            .borrow_mut()
             .program()
-            .check_in(&mut self.egraph)
+            .check_in(&mut self.egraph.borrow_mut())
             .expect("Unexpected egglog error")
     }
 
     fn ob_generator_expr(&self, v: V) -> Expr {
-        self.builder.ob_generator(v.to_symbol())
+        self.builder.borrow().ob_generator(v.to_symbol())
     }
     fn mor_generator_expr(&self, e: E) -> Expr {
-        self.builder.mor_generator(e.to_symbol())
+        self.builder.borrow().mor_generator(e.to_symbol())
     }
     fn path_expr(&self, path: Path<V, E>) -> Expr {
+        let builder = self.builder.borrow();
         path.map_reduce(
-            |v| self.builder.id(self.ob_generator_expr(v)),
+            |v| builder.id(self.ob_generator_expr(v)),
             |e| self.mor_generator_expr(e),
-            |f, g| self.builder.compose2(f, g),
+            |f, g| builder.compose2(f, g),
         )
     }
 

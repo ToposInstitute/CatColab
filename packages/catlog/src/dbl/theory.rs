@@ -727,7 +727,8 @@ mod tests {
         let th = DiscreteDblTheory::from(sgn);
         assert!(th.has_ob_type(&'*'));
         assert!(th.has_mor_type(&'n'.into()));
-        assert_eq!(th.compose_types(Path::pair('n'.into(), 'n'.into())), Some(Path::Id('*')));
+        let path = Path::pair('n'.into(), 'n'.into());
+        assert!(th.0.is_equal(th.compose_types(path).unwrap(), Path::Id('*')));
 
         assert_eq!(th.hom_type('*'), Path::Id('*'));
         assert_eq!(th.hom_op('*'), Path::single(Path::Id('*')));
