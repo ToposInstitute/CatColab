@@ -29,7 +29,7 @@ pub fn negative_loop(th: Arc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel {
 A free [delayable signed category](super::theories::th_delayable_signed_category).
  */
 pub fn delayed_positive_loop(th: Arc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel {
-    loop_of_type(th, ustr("Object"), ustr("PositiveSlow").into())
+    loop_of_type(th, ustr("Object"), ustr("Slow").into())
 }
 
 /** The delayed negative self-loop.
@@ -37,7 +37,7 @@ pub fn delayed_positive_loop(th: Arc<UstrDiscreteDblTheory>) -> UstrDiscreteDblM
 A free [delayable signed category](super::theories::th_delayable_signed_category).
  */
 pub fn delayed_negative_loop(th: Arc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel {
-    loop_of_type(th, ustr("Object"), ustr("NegativeSlow").into())
+    loop_of_type(th, ustr("Object"), Path::pair(ustr("Negative"), ustr("Slow")))
 }
 
 /// Creates a self-loop with given object and morphism types.
@@ -136,7 +136,6 @@ mod tests {
         assert!(negative_feedback(th.clone()).validate().is_ok());
     }
 
-    /*
     #[test]
     fn delayable_signed_categories() {
         let th = Arc::new(th_delayable_signed_category());
@@ -145,7 +144,6 @@ mod tests {
         assert!(delayed_positive_loop(th.clone()).validate().is_ok());
         assert!(delayed_negative_loop(th.clone()).validate().is_ok());
     }
-    */
 
     #[test]
     fn schemas() {
