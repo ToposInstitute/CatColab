@@ -297,6 +297,13 @@ pub struct DiscreteDblTheory<Cat: FgCategory>(Cat);
 /// A discrete double theory with keys of type `Ustr`.
 pub type UstrDiscreteDblTheory = DiscreteDblTheory<UstrFpCategory>;
 
+impl<Cat: FgCategory> DiscreteDblTheory<Cat> {
+    /// Gets a reference to the underlying category of object/morphism types.
+    pub fn category(&self) -> &Cat {
+        &self.0
+    }
+}
+
 impl<C: FgCategory> VDblCategory for DiscreteDblTheory<C>
 where
     C::Ob: Clone,
@@ -725,10 +732,11 @@ mod tests {
         sgn.equate(Path::pair('n', 'n'), Path::Id('*'));
 
         let th = DiscreteDblTheory::from(sgn);
+        let sgn = th.category();
         assert!(th.has_ob_type(&'*'));
         assert!(th.has_mor_type(&'n'.into()));
         let path = Path::pair('n'.into(), 'n'.into());
-        assert!(th.0.is_equal(th.compose_types(path).unwrap(), Path::Id('*')));
+        assert!(sgn.morphisms_are_equal(th.compose_types(path).unwrap(), Path::Id('*')));
 
         assert_eq!(th.hom_type('*'), Path::Id('*'));
         assert_eq!(th.hom_op('*'), Path::single(Path::Id('*')));

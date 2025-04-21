@@ -157,8 +157,12 @@ where
         for path in self.mor_map.values() {
             for e in path.iter() {
                 let (x, y) = (cod.mor_generator_dom(e), cod.mor_generator_cod(e));
-                im.add_ob(x.clone(), cod.ob_type(&x));
-                im.add_ob(y.clone(), cod.ob_type(&y));
+                if !im.has_ob(&x) {
+                    im.add_ob(x.clone(), cod.ob_type(&x));
+                }
+                if !im.has_ob(&y) {
+                    im.add_ob(y.clone(), cod.ob_type(&y));
+                }
                 im.add_mor(e.clone(), x, y, cod.mor_generator_type(e));
             }
         }
@@ -241,8 +245,8 @@ where
     ) -> impl Iterator<Item = InvalidDblModelMorphism<DomId, DomId>> + 'a + use<'a, DomId, CodId, Cat>
     {
         let DblModelMorphism(mapping, dom, cod) = *self;
-        // TODO: We don't yet have the ability to solve word problems.
-        // Equations in the domain induce equations to check in the codomain.
+        // TODO: Relax this assumption by verifying that images of path
+        // equations in domain hold in the codomain.
         assert!(dom.is_free(), "Domain model should be free");
 
         let ob_errors = dom.ob_generators().filter_map(|v| {
@@ -259,30 +263,32 @@ where
             }
         });
 
-        let mor_errors = dom.mor_generators().flat_map(|f| {
+        let th = cod.theory_arc();
+        let mor_errors = dom.mor_generators().flat_map(move |f| {
             if let Some(f_f) = mapping.apply_basic_mor(&f) {
                 if !cod.has_mor(&f_f) {
-                    [InvalidDblModelMorphism::Mor(f)].to_vec()
+                    vec![InvalidDblModelMorphism::Mor(f)]
                 } else {
                     let dom_f = mapping.apply_ob(&dom.mor_generator_dom(&f));
                     let cod_f = mapping.apply_ob(&dom.mor_generator_cod(&f));
-                    let f_type = dom.mor_generator_type(&f);
-                    let ff_type = cod.mor_type(&f_f);
 
-                    let mut errs = vec![];
+                    let mut errs = Vec::new();
                     if Some(cod.dom(&f_f)) != dom_f {
                         errs.push(InvalidDblModelMorphism::Dom(f.clone()));
                     }
                     if Some(cod.cod(&f_f)) != cod_f {
                         errs.push(InvalidDblModelMorphism::Cod(f.clone()));
                     }
-                    if f_type != ff_type {
+                    if !th
+                        .category()
+                        .morphisms_are_equal(dom.mor_generator_type(&f), cod.mor_type(&f_f))
+                    {
                         errs.push(InvalidDblModelMorphism::MorType(f));
                     }
                     errs
                 }
             } else {
-                [InvalidDblModelMorphism::MissingMor(f)].to_vec()
+                vec![InvalidDblModelMorphism::MissingMor(f)]
             }
         });
         ob_errors.chain(mor_errors)
@@ -574,8 +580,10 @@ where
                         .expect("Codomain should already be assigned");
 
                     let cod_graph = self.cod.generating_graph();
+                    let th = self.cod.theory_arc();
+                    let th_cat = th.category();
                     for path in bounded_simple_paths(cod_graph, &w, &z, self.max_path_len) {
-                        if self.cod.mor_type(&path) == mor_type
+                        if th_cat.morphisms_are_equal(self.cod.mor_type(&path), mor_type.clone())
                             && !(self.faithful && path.is_empty())
                         {
                             self.map.assign_basic_mor(m.clone(), path);
@@ -740,7 +748,7 @@ mod tests {
             mor_map: HashMap::from([(ustr("y"), Path::Id(ustr("y")))]).into(),
         };
         let dmm = DblModelMorphism(&f, &negloop, &negloop);
-        let errs: Vec<_> = dmm.validate().expect_err("should be invalid").into();
+        let errs: Vec<_> = dmm.validate().unwrap_err().into();
         assert!(
             errs == vec![
                 InvalidDblModelMorphism::Ob(ustr("x")),
@@ -754,7 +762,7 @@ mod tests {
             mor_map: HashMap::from([(ustr("loop"), Path::single(ustr("positive1")))]).into(),
         };
         let dmm = DblModelMorphism(&f, &negloop, &posfeed);
-        let errs: Vec<_> = dmm.validate().expect_err("should be invalid").into();
+        let errs: Vec<_> = dmm.validate().unwrap_err().into();
         assert!(
             errs == vec![
                 InvalidDblModelMorphism::Cod(ustr("loop")),
@@ -768,7 +776,7 @@ mod tests {
             mor_map: HashMap::from([(ustr("loop"), Path::single(ustr("positive2")))]).into(),
         };
         let dmm = DblModelMorphism(&f, &negloop, &posfeed);
-        let errs: Vec<_> = dmm.validate().expect_err("should be invalid").into();
+        let errs: Vec<_> = dmm.validate().unwrap_err().into();
         assert!(
             errs == vec![
                 InvalidDblModelMorphism::Dom(ustr("loop")),

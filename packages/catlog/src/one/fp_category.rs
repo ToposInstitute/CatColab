@@ -89,7 +89,7 @@ where
 
     /// Adds an object generator.
     pub fn add_ob_generator(&mut self, v: V) {
-        assert!(self.generators.add_vertex(v.clone()));
+        assert!(self.generators.add_vertex(v.clone()), "Object generator already exists");
         self.builder.get_mut().add_ob_generator(v.to_symbol());
     }
 
@@ -102,14 +102,17 @@ where
 
     /// Adds a morphism generator.
     pub fn add_mor_generator(&mut self, e: E, dom: V, cod: V) {
-        assert!(self.generators.add_edge(e.clone(), dom.clone(), cod.clone()));
+        assert!(
+            self.generators.add_edge(e.clone(), dom.clone(), cod.clone()),
+            "Morphism generator already exists"
+        );
         let (dom, cod) = (self.ob_generator_expr(dom), self.ob_generator_expr(cod));
         self.builder.get_mut().add_mor_generator(e.to_symbol(), dom, cod);
     }
 
     /// Adds a morphism generator without declaring its (co)domain.
     pub fn make_mor_generator(&mut self, e: E) {
-        assert!(self.generators.make_edge(e.clone()));
+        assert!(self.generators.make_edge(e.clone()), "Morphism generator already exists");
         self.builder.get_mut().make_mor_generator(e.to_symbol());
     }
 
@@ -153,17 +156,6 @@ where
     /// Equates two path in the presentation.
     pub fn equate(&mut self, lhs: Path<V, E>, rhs: Path<V, E>) {
         self.add_equation(PathEq::new(lhs, rhs));
-    }
-
-    /// Are two composites in the category equal?
-    pub fn is_equal(&self, lhs: Path<V, E>, rhs: Path<V, E>) -> bool {
-        let (lhs, rhs) = (self.path_expr(lhs), self.path_expr(rhs));
-        self.builder.borrow_mut().check_equal(lhs, rhs);
-        self.builder
-            .borrow_mut()
-            .program()
-            .check_in(&mut self.egraph.borrow_mut())
-            .expect("Unexpected egglog error")
     }
 
     fn ob_generator_expr(&self, v: V) -> Expr {
@@ -228,6 +220,16 @@ where
         path1
             .concat_in(&self.generators, path2)
             .expect("Target of first path should equal source of second path")
+    }
+
+    fn morphisms_are_equal(&self, path1: Self::Mor, path2: Self::Mor) -> bool {
+        let (lhs, rhs) = (self.path_expr(path1), self.path_expr(path2));
+        self.builder.borrow_mut().check_equal(lhs, rhs);
+        self.builder
+            .borrow_mut()
+            .program()
+            .check_in(&mut self.egraph.borrow_mut())
+            .expect("Unexpected egglog error")
     }
 }
 
@@ -610,9 +612,9 @@ mod tests {
         assert!(!sch_sgraph.is_free());
         assert!(sch_sgraph.validate().is_ok());
 
-        assert!(!sch_sgraph.is_equal(Path::single(s), Path::single(t)));
-        assert!(sch_sgraph.is_equal(Path::pair(i, i), Path::empty(e)));
-        assert!(sch_sgraph.is_equal(Path::Seq(nonempty![i, i, i, s]), Path::single(t)));
+        assert!(!sch_sgraph.morphisms_are_equal(Path::single(s), Path::single(t)));
+        assert!(sch_sgraph.morphisms_are_equal(Path::pair(i, i), Path::empty(e)));
+        assert!(sch_sgraph.morphisms_are_equal(Path::Seq(nonempty![i, i, i, s]), Path::single(t)));
     }
 
     #[test]
