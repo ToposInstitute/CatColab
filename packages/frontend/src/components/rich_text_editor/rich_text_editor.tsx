@@ -10,6 +10,7 @@ import {
     EditorState,
     NodeSelection,
     Plugin,
+    TextSelection,
     type Transaction,
 } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
@@ -130,25 +131,59 @@ export const RichTextEditor = (
 };
 
 // copied from "@benrbray/prosemirror-math" to hack on
-export function insertMathCmd(mathNodeType: NodeType, initialText = "\\int"): Command {
+export function insertMathCmd(mathNodeType: NodeType, initialText = ""): Command {
     return (state: EditorState, dispatch: ((tr: Transaction) => void) | undefined) => {
-        const { $from } = state.selection;
+        const { $from, $to } = state.selection;
+
+        // The idiomatic thing is to do a check with canReplaceWith
         // if (!$from.parent.canReplaceWith(index, index, mathNodeType)) {
         // 	return false;
         // }
         if (dispatch) {
+            let selectedText = state.doc.textBetween($from.pos, $to.pos, " ");
+            let initialTextContent = initialText || selectedText;
+            let initialContent = initialTextContent ? state.schema.text(initialTextContent) : null;
+
             const mathNode = mathNodeType.create(
                 {},
-                initialText ? state.schema.text(initialText) : null,
+                initialContent
             );
-            let tr = state.tr.replaceSelectionWith(mathNode);
-            tr = tr.setSelection(NodeSelection.create(tr.doc, $from.pos));
+
+            let tr = state.tr;
+            if ($from.pos !== $to.pos) {
+                tr = tr.delete($from.pos, $to.pos);
+            }
+
+            // If we 
+            if ($from.parent.type.name === "paragraph" && $from.parent.content.size !== 0) {
+                tr = tr.split($from.pos);
+            }
+
+            tr = tr.insert($from.pos, mathNode);
+            tr = tr.setSelection(NodeSelection.create(tr.doc, $from.pos +1));
+
             dispatch(tr);
         }
         return true;
     };
 }
 
+
+export function insertMathCmd2(mathNodeType: NodeType, initialText=""): Command {
+	return function(state:EditorState, dispatch:((tr:Transaction)=>void)|undefined){
+		let { $from } = state.selection, index = $from.index();
+		if (!$from.parent.canReplaceWith(index, index, mathNodeType)) {
+			return false;
+		}
+		if (dispatch){
+			let mathNode = mathNodeType.create({}, initialText ? state.schema.text(initialText) : null);
+			let tr = state.tr.replaceSelectionWith(mathNode);
+			tr = tr.setSelection(NodeSelection.create(tr.doc, $from.pos));
+			dispatch(tr);
+		}
+		return true;
+	}
+}
 function richTextEditorKeymap(schema: Schema, props: RichTextEditorOptions) {
     const bindings: { [key: string]: Command } = {};
     if (schema.marks.strong) {
@@ -191,6 +226,10 @@ function richTextEditorKeymap(schema: Schema, props: RichTextEditorOptions) {
 
     if (schema.nodes.math_display) {
         bindings["Mod-m"] = insertMathCmd(schema.nodes.math_display);
+    }
+
+    if (schema.nodes.math_inline) {
+        bindings["Mod-i"] = insertMathCmd2(schema.nodes.math_inline);
     }
 
     return bindings;
