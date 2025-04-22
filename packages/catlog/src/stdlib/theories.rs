@@ -66,6 +66,16 @@ pub fn th_delayable_signed_category() -> UstrDiscreteDblTheory {
     cat.equate(Path::pair(neg, neg), Path::empty(x));
     cat.equate(Path::pair(slow, slow), slow.into());
     cat.equate(Path::pair(neg, slow), Path::pair(slow, neg));
+
+    // NOTE: These aliases are superfluous but are included for backwards
+    // compatibility with the previous version of the theory, defined by an
+    // explicit multiplication table.
+    let (pos_slow, neg_slow) = (ustr("PositiveSlow"), ustr("NegativeSlow"));
+    cat.add_mor_generator(pos_slow, x, x);
+    cat.add_mor_generator(neg_slow, x, x);
+    cat.equate(pos_slow.into(), slow.into());
+    cat.equate(neg_slow.into(), Path::pair(neg, slow));
+
     DiscreteDblTheory::from(cat)
 }
 
