@@ -10,7 +10,7 @@ use ustr::ustr;
 use wasm_bindgen::prelude::*;
 
 use catlog::dbl::{model, theory};
-use catlog::one::fin_category::FinMor;
+use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories};
 
 use super::model_morphism::{MotifsOptions, motifs};
@@ -117,8 +117,8 @@ impl ThSignedCategory {
             .map_err(|_| "Lotka-Volterra simulation expects a discrete double model")?;
         Ok(ODEResult(
             analyses::ode::LotkaVolterraAnalysis::new(ustr("Object"))
-                .add_positive(FinMor::Id(ustr("Object")))
-                .add_negative(FinMor::Generator(ustr("Negative")))
+                .add_positive(Path::Id(ustr("Object")))
+                .add_negative(ustr("Negative").into())
                 .create_system(model, data.0)
                 .solve_with_defaults()
                 .map_err(|err| format!("{:?}", err))

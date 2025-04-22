@@ -6,6 +6,8 @@ use egglog::ast::{Action, Command, Expr, Fact, Schedule, Symbol};
 use egglog::{EGraph, Error, span};
 use ref_cast::RefCast;
 use ustr::Ustr;
+#[cfg(feature = "uuid")]
+use uuid::Uuid;
 
 /** An egglog program.
 
@@ -93,3 +95,6 @@ impl ToSymbol for Ustr {
         self.as_str().into()
     }
 }
+
+#[cfg(feature = "uuid")]
+impl ToSymbol for Uuid {}

@@ -5,7 +5,8 @@ use tsify_next::Tsify;
 use uuid::Uuid;
 
 use catlog::dbl::{model, model_morphism};
-use catlog::one::{FgCategory, fin_category::UstrFinCategory};
+use catlog::egglog_util::ToSymbol;
+use catlog::one::{FgCategory, fp_category::UstrFpCategory};
 
 use super::model::DblModel;
 
@@ -21,12 +22,12 @@ pub struct MotifsOptions {
 
 /// Find motifs in a model of a discrete double theory.
 pub fn motifs<Id>(
-    motif: &model::DiscreteDblModel<Id, UstrFinCategory>,
+    motif: &model::DiscreteDblModel<Id, UstrFpCategory>,
     model: &DblModel,
     options: MotifsOptions,
 ) -> Result<Vec<DblModel>, String>
 where
-    Id: Clone + Eq + Hash,
+    Id: Clone + Eq + Hash + ToSymbol,
 {
     let model: &model::DiscreteDblModel<_, _> = (&model.0)
         .try_into()

@@ -328,6 +328,7 @@ dependencies = [
  "thiserror 1.0.69",
  "tsify-next",
  "ustr",
+ "uuid",
  "wasm-bindgen",
 ]
 
@@ -339,6 +340,7 @@ dependencies = [
  "catlog",
  "console_error_panic_hook",
  "derive_more",
+ "egglog",
  "getrandom",
  "js-sys",
  "nonempty",
@@ -600,6 +602,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3906e8f27e882ae5483f47715bd1702423ad4eb90dd4f790009754e180718eb"
 dependencies = [
  "egraph-serialize",
+ "getrandom",
  "hashbrown 0.15.2",
  "im",
  "im-rc",
@@ -1391,6 +1394,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e0242819d153cba4b4b05a5a8f2a7e9bbf97b6055b2a002b395c96b5ff3c0222"
 dependencies = [
  "cfg-if",
+ "js-sys",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
@@ -3596,9 +3602,9 @@ checksum = "b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be"
 
 [[package]]
 name = "uuid"
-version = "1.11.0"
+version = "1.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8c5f0a0af699448548ad1a2fbf920fb4bee257eae39953ba95cb84891a0446a"
+checksum = "b913a3b5fe84142e269d63cc62b64319ccaf89b748fc31fe025177f767a756c4"
 dependencies = [
  "getrandom",
  "serde",
