@@ -83,7 +83,6 @@ export class AutomergeServer {
         }
 
         handle.on("change", async (payload) => {
-            console.log(payload.patches);
             this.handleChange?.(refId, payload.doc);
         });
 
