@@ -1,12 +1,17 @@
 import type { MappedSchemaSpec } from "@automerge/prosemirror";
+import {
+    defaultBlockMathParseRules,
+    defaultInlineMathParseRules,
+} from "@benrbray/prosemirror-math";
 
-export const katexSchema: MappedSchemaSpec = {
+export const katexSchema = {
     nodes: {
         math_inline: {
             automerge: {
                 block: "math_inline",
+                isEmbed: true,
             },
-            group: "inline math",
+            group: "inline",
             content: "text*",
             inline: true,
             atom: true,
@@ -15,6 +20,7 @@ export const katexSchema: MappedSchemaSpec = {
                 {
                     tag: "math-inline",
                 },
+                ...defaultInlineMathParseRules,
             ],
         },
         math_display: {
@@ -30,7 +36,8 @@ export const katexSchema: MappedSchemaSpec = {
                 {
                     tag: "math-display",
                 },
+                ...defaultBlockMathParseRules,
             ],
         },
     },
-};
+} satisfies MappedSchemaSpec;
