@@ -4,7 +4,6 @@
   inputs = {
     # The version of cargo in 24.11 is too old so we need to use unstable until the next relase (25.05)
     nixpkgs.url = "nixpkgs/nixos-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
     crate2nix = {
       url = "github:nix-community/crate2nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -18,15 +17,23 @@
     {
       self,
       nixpkgs,
-      flake-utils,
       crate2nix,
       agenix,
       deploy-rs,
       ...
     }@inputs:
     let
-      # Generate per-system outputs
-      perSystemOutputs = flake-utils.lib.eachDefaultSystem (system:
+          # Linux-specific outputs (NixOS configurations and deploy)
+      linuxSystem = "x86_64-linux";
+
+      devShellSystems = [
+        "x86_64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
+      ];
+
+      # Generate devShells for each system
+      devShellForSystem = system:
         let
           pkgs = import nixpkgs {
             inherit system;
@@ -40,8 +47,7 @@
             pkgs.libiconv
           ] else [];
 
-        in {
-          devShells.default = pkgs.mkShell {
+        in pkgs.mkShell {
             name = "catcolab-devshell";
             buildInputs = with pkgs; [
               rustc
@@ -75,67 +81,64 @@
               fi
             '';
           };
-        });
 
-      # Linux-specific outputs (NixOS configurations and deploy)
-      linuxSystem = "x86_64-linux";
+    in {
+      # Create devShells for all supported systems
+      devShells = builtins.listToAttrs (map (system: {
+        name = system;
+        value = { default = devShellForSystem system; };
+      }) devShellSystems);
 
-      # Linux-specific outputs
-      linuxOutputs = {
-        nixosConfigurations = {
-          catcolab = nixpkgs.lib.nixosSystem {
-            specialArgs = { inherit inputs; };
-            system = linuxSystem;
-            modules = [
-              ./infrastructure/hosts/catcolab
-              agenix.nixosModules.age
-            ];
-          };
-          catcolab-next = nixpkgs.lib.nixosSystem {
-            specialArgs = { inherit inputs; };
-            system = linuxSystem;
-            modules = [
-              ./infrastructure/hosts/catcolab-next
-              agenix.nixosModules.age
-            ];
-          };
-          catcolab-jmoggr = nixpkgs.lib.nixosSystem {
-            specialArgs = { inherit inputs; };
-            system = linuxSystem;
-            modules = [
-              ./infrastructure/hosts/catcolab-jmoggr
-              agenix.nixosModules.age
-            ];
-          };
+      # Create a NixOS configuration for each host
+      nixosConfigurations = {
+        catcolab = nixpkgs.lib.nixosSystem {
+          specialArgs = { inherit inputs; };
+          system = linuxSystem;
+          modules = [
+            ./infrastructure/hosts/catcolab
+            agenix.nixosModules.age
+          ];
         };
-
-        deploy.nodes = {
-          catcolab = {
-            hostname = "backend.catcolab.org";
-            profiles.system = {
-              sshUser = "root";
-              path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab;
-            };
-          };
-          catcolab-next = {
-            hostname = "backend-next.catcolab.org";
-            profiles.system = {
-              sshUser = "root";
-              path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab-next;
-            };
-          };
-          catcolab-jmoggr = {
-            hostname = "backend-next.jmoggr.com";
-            profiles.system = {
-              sshUser = "root";
-              path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab-jmoggr;
-            };
-          };
+        catcolab-next = nixpkgs.lib.nixosSystem {
+          specialArgs = { inherit inputs; };
+          system = linuxSystem;
+          modules = [
+            ./infrastructure/hosts/catcolab-next
+            agenix.nixosModules.age
+          ];
+        };
+        catcolab-jmoggr = nixpkgs.lib.nixosSystem {
+          specialArgs = { inherit inputs; };
+          system = linuxSystem;
+          modules = [
+            ./infrastructure/hosts/catcolab-jmoggr
+            agenix.nixosModules.age
+          ];
         };
       };
 
-    in
-
-      # Merge per-system and Linux-specific outputs
-      perSystemOutputs // linuxOutputs;
+      deploy.nodes = {
+        catcolab = {
+          hostname = "backend.catcolab.org";
+          profiles.system = {
+            sshUser = "root";
+            path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab;
+          };
+        };
+        catcolab-next = {
+          hostname = "backend-next.catcolab.org";
+          profiles.system = {
+            sshUser = "root";
+            path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab-next;
+          };
+        };
+        catcolab-jmoggr = {
+          hostname = "backend-next.jmoggr.com";
+          profiles.system = {
+            sshUser = "root";
+            path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab-jmoggr;
+          };
+        };
+      };
+    };
 }
