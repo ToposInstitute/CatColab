@@ -20,7 +20,7 @@ oplax.
 
 use std::collections::HashSet;
 use std::hash::Hash;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use derivative::Derivative;
 use nonempty::NonEmpty;
@@ -150,7 +150,7 @@ where
         // involving only generators that appear in the image.
         assert!(cod.is_free(), "Codomain model should be free");
 
-        let mut im = DiscreteDblModel::new(cod.theory_arc());
+        let mut im = DiscreteDblModel::new(cod.theory_rc());
         for x in self.ob_map.values() {
             im.add_ob(x.clone(), cod.ob_type(x));
         }
@@ -263,7 +263,7 @@ where
             }
         });
 
-        let th = cod.theory_arc();
+        let th_cat = cod.theory().category();
         let mor_errors = dom.mor_generators().flat_map(move |f| {
             if let Some(f_f) = mapping.apply_basic_mor(&f) {
                 if !cod.has_mor(&f_f) {
@@ -279,10 +279,7 @@ where
                     if Some(cod.cod(&f_f)) != cod_f {
                         errs.push(InvalidDblModelMorphism::Cod(f.clone()));
                     }
-                    if !th
-                        .category()
-                        .morphisms_are_equal(dom.mor_generator_type(&f), cod.mor_type(&f_f))
-                    {
+                    if !th_cat.morphisms_are_equal(dom.mor_generator_type(&f), cod.mor_type(&f_f)) {
                         errs.push(InvalidDblModelMorphism::MorType(f));
                     }
                     errs
@@ -454,7 +451,7 @@ where
 {
     fn new(dom: &'a DiscreteDblModel<DomId, Cat>, cod: &'a DiscreteDblModel<CodId, Cat>) -> Self {
         assert!(
-            Arc::ptr_eq(&dom.theory_arc(), &cod.theory_arc()),
+            Rc::ptr_eq(&dom.theory_rc(), &cod.theory_rc()),
             "Domain and codomain model should have the same theory"
         );
         assert!(dom.is_free(), "Domain model should be free");
@@ -580,8 +577,7 @@ where
                         .expect("Codomain should already be assigned");
 
                     let cod_graph = self.cod.generating_graph();
-                    let th = self.cod.theory_arc();
-                    let th_cat = th.category();
+                    let th_cat = self.cod.theory().category();
                     for path in bounded_simple_paths(cod_graph, &w, &z, self.max_path_len) {
                         if th_cat.morphisms_are_equal(self.cod.mor_type(&path), mor_type.clone())
                             && !(self.faithful && path.is_empty())
@@ -641,7 +637,7 @@ mod tests {
 
     #[test]
     fn find_positive_loops() {
-        let th = Arc::new(th_signed_category());
+        let th = Rc::new(th_signed_category());
         let positive_loop = positive_loop(th.clone());
         let pos = positive_loop.mor_generators().next().unwrap().into();
 
@@ -663,7 +659,7 @@ mod tests {
     /// all the object/morphism types are the same).   
     #[test]
     fn find_simple_paths() {
-        let th = Arc::new(th_signed_category());
+        let th = Rc::new(th_signed_category());
 
         let mut walking = UstrDiscreteDblModel::new(th.clone());
         let (a, b) = (ustr("A"), ustr("B"));
@@ -703,7 +699,7 @@ mod tests {
 
     #[test]
     fn find_negative_loops() {
-        let th = Arc::new(th_signed_category());
+        let th = Rc::new(th_signed_category());
         let negative_loop = negative_loop(th.clone());
         let base_pt = negative_loop.ob_generators().next().unwrap();
 
@@ -729,7 +725,7 @@ mod tests {
 
     #[test]
     fn validate_model_morphism() {
-        let theory = Arc::new(th_signed_category());
+        let theory = Rc::new(th_signed_category());
         let negloop = negative_loop(theory.clone());
         let posfeed = positive_feedback(theory.clone());
 
@@ -787,7 +783,7 @@ mod tests {
 
     #[test]
     fn validate_is_free_simple_monic() {
-        let theory = Arc::new(th_signed_category());
+        let theory = Rc::new(th_signed_category());
         let negloop = positive_loop(theory.clone());
 
         // Identity map
@@ -812,7 +808,7 @@ mod tests {
     #[test]
     fn monic_constraint() {
         // The number of endomonomorphisms of a set |N| is N!.
-        let theory = Arc::new(th_signed_category());
+        let theory = Rc::new(th_signed_category());
         let mut model = UstrDiscreteDblModel::new(theory.clone());
         let (q, x, y, z) = (ustr("Q"), ustr("X"), ustr("Y"), ustr("Z"));
         let ob = ustr("Object");

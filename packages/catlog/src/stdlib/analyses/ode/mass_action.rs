@@ -162,14 +162,14 @@ impl StockFlowMassActionAnalysis {
 #[cfg(test)]
 mod tests {
     use expect_test::expect;
-    use std::sync::Arc;
+    use std::rc::Rc;
 
     use super::*;
     use crate::stdlib::{models::backward_link, theories::th_category_links};
 
     #[test]
     fn backward_link_dynamics() {
-        let th = Arc::new(th_category_links());
+        let th = Rc::new(th_category_links());
         let model = backward_link(th);
         let analysis: StockFlowMassActionAnalysis = Default::default();
         let sys = analysis.create_system(&model);

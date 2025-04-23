@@ -1,6 +1,6 @@
 //! Standard library of models of double theories.
 
-use std::sync::Arc;
+use std::rc::Rc;
 use ustr::{Ustr, ustr};
 
 use crate::dbl::{model::*, theory::*};
@@ -11,7 +11,7 @@ use crate::one::Path;
 A signed graph or free [signed category](super::theories::th_signed_category),
 possibly with delays or indeterminates.
  */
-pub fn positive_loop(th: Arc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel {
+pub fn positive_loop(th: Rc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel {
     loop_of_type(th, ustr("Object"), Path::Id(ustr("Object")))
 }
 
@@ -20,7 +20,7 @@ pub fn positive_loop(th: Arc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel {
 A signed graph or free [signed category](super::theories::th_signed_category),
 possibly with delays or indeterminates.
  */
-pub fn negative_loop(th: Arc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel {
+pub fn negative_loop(th: Rc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel {
     loop_of_type(th, ustr("Object"), ustr("Negative").into())
 }
 
@@ -28,7 +28,7 @@ pub fn negative_loop(th: Arc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel {
 
 A free [delayable signed category](super::theories::th_delayable_signed_category).
  */
-pub fn delayed_positive_loop(th: Arc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel {
+pub fn delayed_positive_loop(th: Rc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel {
     loop_of_type(th, ustr("Object"), ustr("Slow").into())
 }
 
@@ -36,13 +36,13 @@ pub fn delayed_positive_loop(th: Arc<UstrDiscreteDblTheory>) -> UstrDiscreteDblM
 
 A free [delayable signed category](super::theories::th_delayable_signed_category).
  */
-pub fn delayed_negative_loop(th: Arc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel {
+pub fn delayed_negative_loop(th: Rc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel {
     loop_of_type(th, ustr("Object"), Path::pair(ustr("Negative"), ustr("Slow")))
 }
 
 /// Creates a self-loop with given object and morphism types.
 fn loop_of_type(
-    th: Arc<UstrDiscreteDblTheory>,
+    th: Rc<UstrDiscreteDblTheory>,
     ob_type: Ustr,
     mor_type: Path<Ustr, Ustr>,
 ) -> UstrDiscreteDblModel {
@@ -57,7 +57,7 @@ fn loop_of_type(
 
 A signed graph or free [signed category](super::theories::th_signed_category).
  */
-pub fn positive_feedback(th: Arc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel {
+pub fn positive_feedback(th: Rc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel {
     let mut model = UstrDiscreteDblModel::new(th);
     let (x, y) = (ustr("x"), ustr("y"));
     model.add_ob(x, ustr("Object"));
@@ -71,7 +71,7 @@ pub fn positive_feedback(th: Arc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel
 
 A signed graph or free [signed category](super::theories::th_signed_category).
  */
-pub fn negative_feedback(th: Arc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel {
+pub fn negative_feedback(th: Rc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel {
     let mut model = UstrDiscreteDblModel::new(th);
     let (x, y) = (ustr("x"), ustr("y"));
     model.add_ob(x, ustr("Object"));
@@ -85,7 +85,7 @@ pub fn negative_feedback(th: Arc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel
 
 A schema with one entity type, one attribute type, and one attribute.
  */
-pub fn walking_attr(th: Arc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel {
+pub fn walking_attr(th: Rc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel {
     let mut model = UstrDiscreteDblModel::new(th);
     let (entity, attr_type) = (ustr("entity"), ustr("type"));
     model.add_ob(entity, ustr("Entity"));
@@ -105,7 +105,7 @@ flow in a model of an infectious disease, where increasing the number of
 infectives increases the rate of infection of the remaining susceptibles (other
 things equal).
  */
-pub fn backward_link(th: Arc<UstrDiscreteTabTheory>) -> UstrDiscreteTabModel {
+pub fn backward_link(th: Rc<UstrDiscreteTabTheory>) -> UstrDiscreteTabModel {
     let mut model = UstrDiscreteTabModel::new(th.clone());
     let (x, y, f) = (ustr("x"), ustr("y"), ustr("f"));
     let ob_type = TabObType::Basic(ustr("Object"));
@@ -129,7 +129,7 @@ mod tests {
 
     #[test]
     fn signed_categories() {
-        let th = Arc::new(th_signed_category());
+        let th = Rc::new(th_signed_category());
         assert!(positive_loop(th.clone()).validate().is_ok());
         assert!(negative_loop(th.clone()).validate().is_ok());
         assert!(positive_feedback(th.clone()).validate().is_ok());
@@ -138,7 +138,7 @@ mod tests {
 
     #[test]
     fn delayable_signed_categories() {
-        let th = Arc::new(th_delayable_signed_category());
+        let th = Rc::new(th_delayable_signed_category());
         assert!(positive_loop(th.clone()).validate().is_ok());
         assert!(negative_loop(th.clone()).validate().is_ok());
         assert!(delayed_positive_loop(th.clone()).validate().is_ok());
@@ -147,13 +147,13 @@ mod tests {
 
     #[test]
     fn schemas() {
-        let th = Arc::new(th_schema());
+        let th = Rc::new(th_schema());
         assert!(walking_attr(th).validate().is_ok());
     }
 
     #[test]
     fn categories_with_links() {
-        let th = Arc::new(th_category_links());
+        let th = Rc::new(th_category_links());
         assert!(backward_link(th).validate().is_ok());
     }
 }

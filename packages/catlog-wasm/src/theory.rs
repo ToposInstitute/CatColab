@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 use std::hash::Hash;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use all_the_same::all_the_same;
 use derive_more::From;
@@ -86,11 +86,9 @@ impl TryFrom<MorType> for Path<Ustr, Ustr> {
         match mor_type {
             MorType::Basic(name) => Ok(name.into()),
             MorType::Composite(fs) => {
-                let fs: Result<Vec<Self>, _> = fs.into_iter().map(|f| f.try_into()).collect();
-                fs.and_then(|fs| {
-                    let path = Path::from_vec(fs).ok_or("Composite should not be empty")?;
-                    Ok(path.flatten())
-                })
+                let fs: Result<Vec<_>, _> = fs.into_iter().map(|f| f.try_into()).collect();
+                let path = Path::from_vec(fs?).ok_or("Composite should not be empty")?;
+                Ok(path.flatten())
             }
             MorType::Hom(x) => (*x).try_into().map(Path::Id),
         }
@@ -153,8 +151,8 @@ explicitly enumerate the supported kinds of double theories in this enum.
  */
 #[derive(From)]
 pub enum DblTheoryBox {
-    Discrete(Arc<theory::UstrDiscreteDblTheory>),
-    DiscreteTab(Arc<theory::UstrDiscreteTabTheory>),
+    Discrete(Rc<theory::UstrDiscreteDblTheory>),
+    DiscreteTab(Rc<theory::UstrDiscreteTabTheory>),
 }
 
 /** Wasm bindings for a double theory.

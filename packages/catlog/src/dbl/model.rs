@@ -35,7 +35,7 @@ In addition, a model has the following operations:
 
 use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
 use std::iter::Iterator;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use derivative::Derivative;
 use ustr::{IdentityHasher, Ustr};
@@ -190,8 +190,8 @@ category"](https://ncatlab.org/nlab/show/displayed+category).
 #[derivative(PartialEq(bound = "Id: Eq + Hash"))]
 #[derivative(Eq(bound = "Id: Eq + Hash"))]
 pub struct DiscreteDblModel<Id, Cat: FgCategory> {
-    #[derivative(PartialEq(compare_with = "Arc::ptr_eq"))]
-    theory: Arc<DiscreteDblTheory<Cat>>,
+    #[derivative(PartialEq(compare_with = "Rc::ptr_eq"))]
+    theory: Rc<DiscreteDblTheory<Cat>>,
     category: FpCategory<Id, Id>,
     ob_types: IndexedHashColumn<Id, Cat::Ob>,
     mor_types: IndexedHashColumn<Id, Cat::Mor>,
@@ -212,7 +212,7 @@ where
     Cat::Mor: Hash,
 {
     /// Creates an empty model of the given theory.
-    pub fn new(theory: Arc<DiscreteDblTheory<Cat>>) -> Self {
+    pub fn new(theory: Rc<DiscreteDblTheory<Cat>>) -> Self {
         Self {
             theory,
             category: Default::default(),
@@ -221,8 +221,8 @@ where
         }
     }
 
-    /// Returns a reference-counting pointer to the theory for this model.
-    pub fn theory_arc(&self) -> Arc<DiscreteDblTheory<Cat>> {
+    /// Gets reference-counting pointer to the theory that this model is of.
+    pub fn theory_rc(&self) -> Rc<DiscreteDblTheory<Cat>> {
         self.theory.clone()
     }
 
@@ -665,8 +665,8 @@ the dev docs.
 #[derivative(PartialEq(bound = "Id: Eq + Hash, ThId: Eq + Hash"))]
 #[derivative(Eq(bound = "Id: Eq + Hash, ThId: Eq + Hash"))]
 pub struct DiscreteTabModel<Id, ThId, S = RandomState> {
-    #[derivative(PartialEq(compare_with = "Arc::ptr_eq"))]
-    theory: Arc<DiscreteTabTheory<ThId, ThId, S>>,
+    #[derivative(PartialEq(compare_with = "Rc::ptr_eq"))]
+    theory: Rc<DiscreteTabTheory<ThId, ThId, S>>,
     generators: DiscreteTabGenerators<Id, Id>,
     // TODO: Equations
     ob_types: IndexedHashColumn<Id, TabObType<ThId, ThId>>,
@@ -684,7 +684,7 @@ where
     S: BuildHasher,
 {
     /// Creates an empty model of the given theory.
-    pub fn new(theory: Arc<DiscreteTabTheory<ThId, ThId, S>>) -> Self {
+    pub fn new(theory: Rc<DiscreteTabTheory<ThId, ThId, S>>) -> Self {
         Self {
             theory,
             generators: Default::default(),
@@ -912,7 +912,7 @@ mod tests {
 
     #[test]
     fn validate_discrete_dbl_model() {
-        let th = Arc::new(th_schema());
+        let th = Rc::new(th_schema());
         let mut model = DiscreteDblModel::new(th.clone());
         let entity = ustr("entity");
         model.add_ob(entity, ustr("NotObType"));
@@ -934,7 +934,7 @@ mod tests {
 
     #[test]
     fn infer_discrete_dbl_model() {
-        let th = Arc::new(th_schema());
+        let th = Rc::new(th_schema());
         let mut model = DiscreteDblModel::new(th.clone());
         model.add_mor(ustr("attr"), ustr("entity"), ustr("type"), ustr("Attr").into());
         model.infer_missing();
@@ -943,7 +943,7 @@ mod tests {
 
     #[test]
     fn validate_discrete_tab_model() {
-        let th = Arc::new(th_category_links());
+        let th = Rc::new(th_category_links());
         let mut model = DiscreteTabModel::new(th);
         let (x, f) = (ustr("x"), ustr("f"));
         model.add_ob(x, TabObType::Basic(ustr("Object")));

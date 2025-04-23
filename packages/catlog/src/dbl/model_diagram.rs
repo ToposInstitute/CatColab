@@ -135,7 +135,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
+    use std::rc::Rc;
     use ustr::ustr;
 
     use super::*;
@@ -144,7 +144,7 @@ mod tests {
 
     #[test]
     fn discrete_model_diagram() {
-        let th = Arc::new(th_schema());
+        let th = Rc::new(th_schema());
         let mut model = DiscreteDblModel::new(th.clone());
         let entity = ustr("entity");
         model.add_ob(entity, ustr("Entity"));
@@ -163,7 +163,7 @@ mod tests {
 
     #[test]
     fn validate_model_diagram() {
-        let th = Arc::new(th_signed_category());
+        let th = Rc::new(th_signed_category());
         let pos_loop = positive_loop(th.clone());
         let neg_loop = negative_loop(th.clone());
 
@@ -176,7 +176,7 @@ mod tests {
 
     #[test]
     fn infer_model_diagram() {
-        let th = Arc::new(th_schema());
+        let th = Rc::new(th_schema());
         let mut domain = DiscreteDblModel::new(th.clone());
         domain.add_mor('f', 'x', 'y', ustr("Attr").into());
         let mut f: DiscreteDblModelMapping<_, _> = Default::default();

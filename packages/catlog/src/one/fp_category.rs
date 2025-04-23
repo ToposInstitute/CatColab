@@ -38,7 +38,7 @@ A data structure for a f.p. category in which the congruence relation generated
 by the path equations is maintained by an e-graph. The question of whether paths
 in the presented category are equivalent is referred to the e-graph.
 
-# Thread safety
+# Interior mutability
 
 Checking equivalence of paths requires mutating the underlying e-graph. However,
 we do not want to regard this check as mutating, for the theoretical reason that

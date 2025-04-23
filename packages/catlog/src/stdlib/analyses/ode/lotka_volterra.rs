@@ -130,7 +130,7 @@ impl LotkaVolterraAnalysis {
 
 #[cfg(test)]
 mod test {
-    use std::sync::Arc;
+    use std::rc::Rc;
     use ustr::ustr;
 
     use super::*;
@@ -138,7 +138,7 @@ mod test {
 
     #[test]
     fn predator_prey() {
-        let th = Arc::new(stdlib::theories::th_signed_category());
+        let th = Rc::new(stdlib::theories::th_signed_category());
         let neg_feedback = stdlib::models::negative_feedback(th);
 
         let (prey, pred) = (ustr("x"), ustr("y"));
