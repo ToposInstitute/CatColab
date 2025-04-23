@@ -81,6 +81,15 @@ Compositional modeling with stock and flow diagrams.
  */
 pub const StockFlow: () = ();
 
+/** Reference: *Category theory for the sciences*.
+
+David I. Spivak, 2014. *Category theory for the sciences*.
+
+- [Internet Archive](https://archive.org/details/cattheory)
+- [arXiv:1302.6946](https://arxiv.org/abs/1302.6946)
+ */
+pub const CTForTheSciences: () = ();
+
 /** Reference: *Ideals, varieties, and algorithms*.
 
 David A. Cox, John B. Little, Don O'Shea, 2015. *Ideals, varieties, and

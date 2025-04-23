@@ -9,11 +9,13 @@ edition = "2024"
 ode = ["dep:ode_solvers", "dep:nalgebra"]
 serde = ["dep:serde", "nonempty/serialize", "ustr/serde"]
 serde-wasm = ["serde", "dep:wasm-bindgen", "dep:tsify-next"]
+uuid = ["dep:uuid"]
 
 [dependencies]
 derivative = "2"
 derive_more = { version = "1", features = ["from", "into"] }
 duplicate = "2"
+egglog = { version = "0.4", default-features = false }
 ego-tree = "0.10"
 itertools = "0.14"
 nalgebra = { version = "0.33", optional = true }
@@ -25,6 +27,7 @@ serde = { version = "1", features = ["derive"], optional = true }
 thiserror = "1"
 tsify-next = { version = "0.5", features = ["js"], optional = true }
 ustr = "1"
+uuid = { version = "=1.11", optional = true }
 wasm-bindgen = { version = "0.2.100", optional = true }
 
 [dev-dependencies]

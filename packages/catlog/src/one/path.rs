@@ -356,6 +356,23 @@ impl<V, E> Path<V, E> {
         }
     }
 
+    /** Maps and then reduces over a path.
+
+    This equivalent to calling [`map`](Path::map) and then
+    [`reduce`](Path::reduce) but avoids allocating the intermediate path.
+     */
+    pub fn map_reduce<T, FnV, FnE, F>(self, fv: FnV, fe: FnE, f: F) -> T
+    where
+        FnV: FnOnce(V) -> T,
+        FnE: FnMut(E) -> T,
+        F: FnMut(T, T) -> T,
+    {
+        match self {
+            Path::Id(v) => fv(v),
+            Path::Seq(edges) => edges.into_iter().map(fe).reduce(f).unwrap(),
+        }
+    }
+
     /// Maps a path over partial functions on vertices and edges.
     pub fn partial_map<CodV, CodE, FnV, FnE>(self, fv: FnV, fe: FnE) -> Option<Path<CodV, CodE>>
     where
@@ -363,14 +380,10 @@ impl<V, E> Path<V, E> {
         FnE: FnMut(E) -> Option<CodE>,
     {
         match self {
-            Path::Id(v) => {
-                let w = fv(v)?;
-                Some(Path::Id(w))
-            }
+            Path::Id(v) => Some(Path::Id(fv(v)?)),
             Path::Seq(edges) => {
                 let edges: Option<Vec<_>> = edges.into_iter().map(fe).collect();
-                let edges = edges?;
-                Path::from_vec(edges)
+                Path::from_vec(edges?)
             }
         }
     }
@@ -386,14 +399,10 @@ impl<V, E> Path<V, E> {
         FnE: FnMut(E) -> Result<CodE, Err>,
     {
         match self {
-            Path::Id(v) => {
-                let w = fv(v)?;
-                Ok(Path::Id(w))
-            }
+            Path::Id(v) => Ok(Path::Id(fv(v)?)),
             Path::Seq(edges) => {
                 let edges: Result<Vec<_>, _> = edges.into_iter().map(fe).collect();
-                let edges = edges?;
-                Ok(Path::from_vec(edges).unwrap())
+                Ok(Path::from_vec(edges?).unwrap())
             }
         }
     }

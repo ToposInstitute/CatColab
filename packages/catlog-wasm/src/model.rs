@@ -12,7 +12,7 @@ use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
 use catlog::dbl::model::{self as dbl_model, FgDblModel, InvalidDblModel, MutDblModel};
-use catlog::one::fin_category::UstrFinCategory;
+use catlog::one::fp_category::UstrFpCategory;
 use catlog::one::{Category as _, FgCategory, Path};
 use catlog::validate::Validate;
 
@@ -227,7 +227,7 @@ pub struct MorDecl {
     pub cod: Option<Ob>,
 }
 
-pub(crate) type DiscreteDblModel = dbl_model::DiscreteDblModel<Uuid, UstrFinCategory>;
+pub(crate) type DiscreteDblModel = dbl_model::DiscreteDblModel<Uuid, UstrFpCategory>;
 pub(crate) type DiscreteTabModel =
     dbl_model::DiscreteTabModel<Uuid, Ustr, BuildHasherDefault<IdentityHasher>>;
 
@@ -235,6 +235,7 @@ pub(crate) type DiscreteTabModel =
 
 See [`DblTheoryBox`] for motivation.
  */
+#[allow(clippy::large_enum_variant)]
 #[derive(From, TryInto)]
 #[try_into(ref)]
 pub enum DblModelBox {
@@ -259,29 +260,30 @@ impl DblModel {
 
     /// Adds an object to the model.
     #[wasm_bindgen(js_name = "addOb")]
-    pub fn add_ob(&mut self, decl: ObDecl) -> Result<bool, String> {
+    pub fn add_ob(&mut self, decl: ObDecl) -> Result<(), String> {
         all_the_same!(match &mut self.0 {
             DblModelBox::[Discrete, DiscreteTab](model) => {
                 let ob_type = decl.ob_type.try_into()?;
-                Ok(model.add_ob(decl.id, ob_type))
+                model.add_ob(decl.id, ob_type);
+                Ok(())
             }
         })
     }
 
     /// Adds a morphism to the model.
     #[wasm_bindgen(js_name = "addMor")]
-    pub fn add_mor(&mut self, decl: MorDecl) -> Result<bool, String> {
+    pub fn add_mor(&mut self, decl: MorDecl) -> Result<(), String> {
         all_the_same!(match &mut self.0 {
             DblModelBox::[Discrete, DiscreteTab](model) => {
                 let mor_type = decl.mor_type.try_into()?;
-                let res = model.make_mor(decl.id, mor_type);
+                model.make_mor(decl.id, mor_type);
                 if let Some(dom) = decl.dom.map(|ob| ob.try_into()).transpose()? {
                     model.set_dom(decl.id, dom);
                 }
                 if let Some(cod) = decl.cod.map(|ob| ob.try_into()).transpose()? {
                     model.set_cod(decl.id, cod);
                 }
-                Ok(res)
+                Ok(())
             }
         })
     }

@@ -51,6 +51,15 @@ pub trait Category {
     fn id(&self, x: Self::Ob) -> Self::Mor {
         self.compose(Path::empty(x))
     }
+
+    /** Are the two morphisms in the category equal?
+
+    The default implementation compares the morphisms with `==`. In some
+    categories, equality is defined by a weaker equivalence relation.
+     */
+    fn morphisms_are_equal(&self, f: Self::Mor, g: Self::Mor) -> bool {
+        f == g
+    }
 }
 
 /// The set of objects of a category.

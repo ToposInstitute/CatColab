@@ -84,7 +84,7 @@ impl DblModelDiagram {
 
     /// Adds an object to the diagram.
     #[wasm_bindgen(js_name = "addOb")]
-    pub fn add_ob(&mut self, decl: DiagramObDecl) -> Result<bool, String> {
+    pub fn add_ob(&mut self, decl: DiagramObDecl) -> Result<(), String> {
         all_the_same!(match &mut self.0 {
             DblModelDiagramBox::[Discrete](diagram) => {
                 let (mapping, model) = diagram.into();
@@ -92,19 +92,20 @@ impl DblModelDiagram {
                 if let Some(over) = decl.over.map(|ob| ob.try_into()).transpose()? {
                     mapping.assign_ob(decl.id, over);
                 }
-                Ok(model.add_ob(decl.id, ob_type))
+                model.add_ob(decl.id, ob_type);
+                Ok(())
             }
         })
     }
 
     /// Adds a morphism to the diagram.
     #[wasm_bindgen(js_name = "addMor")]
-    pub fn add_mor(&mut self, decl: DiagramMorDecl) -> Result<bool, String> {
+    pub fn add_mor(&mut self, decl: DiagramMorDecl) -> Result<(), String> {
         all_the_same!(match &mut self.0 {
             DblModelDiagramBox::[Discrete](diagram) => {
                 let (mapping, model) = diagram.into();
                 let mor_type = decl.mor_type.try_into()?;
-                let res = model.make_mor(decl.id, mor_type);
+                model.make_mor(decl.id, mor_type);
                 if let Some(dom) = decl.dom.map(|ob| ob.try_into()).transpose()? {
                     model.set_dom(decl.id, dom);
                 }
@@ -114,7 +115,7 @@ impl DblModelDiagram {
                 if let Some(over) = decl.over.map(|mor| mor.try_into()).transpose()? {
                     mapping.assign_basic_mor(decl.id, over);
                 }
-                Ok(res)
+                Ok(())
             }
         })
     }

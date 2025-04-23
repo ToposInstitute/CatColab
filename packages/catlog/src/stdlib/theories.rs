@@ -3,14 +3,14 @@
 use ustr::ustr;
 
 use crate::dbl::theory::*;
-use crate::one::fin_category::{FinMor, UstrFinCategory};
+use crate::one::{Path, fp_category::UstrFpCategory};
 
 /** The empty theory, which has a single model, the empty model.
 
 As a double category, this is the initial double category.
  */
 pub fn th_empty() -> UstrDiscreteDblTheory {
-    let cat: UstrFinCategory = Default::default();
+    let cat: UstrFpCategory = Default::default();
     DiscreteDblTheory::from(cat)
 }
 
@@ -19,7 +19,7 @@ pub fn th_empty() -> UstrDiscreteDblTheory {
 As a double category, this is the terminal double category.
  */
 pub fn th_category() -> UstrDiscreteDblTheory {
-    let mut cat: UstrFinCategory = Default::default();
+    let mut cat: UstrFpCategory = Default::default();
     cat.add_ob_generator(ustr("Object"));
     DiscreteDblTheory::from(cat)
 }
@@ -29,7 +29,7 @@ pub fn th_category() -> UstrDiscreteDblTheory {
 As a double category, this is the "walking proarrow".
  */
 pub fn th_schema() -> UstrDiscreteDblTheory {
-    let mut cat: UstrFinCategory = Default::default();
+    let mut cat: UstrFpCategory = Default::default();
     let (x, y, p) = (ustr("Entity"), ustr("AttrType"), ustr("Attr"));
     cat.add_ob_generator(x);
     cat.add_ob_generator(y);
@@ -44,11 +44,11 @@ signed categories are signed graphs, a simple mathematical model of [regulatory
 networks](crate::refs::RegNets) and causal loop diagrams.
  */
 pub fn th_signed_category() -> UstrDiscreteDblTheory {
-    let mut sgn: UstrFinCategory = Default::default();
-    let (x, n) = (ustr("Object"), ustr("Negative"));
+    let mut sgn: UstrFpCategory = Default::default();
+    let (x, neg) = (ustr("Object"), ustr("Negative"));
     sgn.add_ob_generator(x);
-    sgn.add_mor_generator(n, x, x);
-    sgn.set_composite(n, n, FinMor::Id(x));
+    sgn.add_mor_generator(neg, x, x);
+    sgn.equate(Path::pair(neg, neg), Path::empty(x));
     DiscreteDblTheory::from(sgn)
 }
 
@@ -58,22 +58,24 @@ Free delayable signed categories are causal loop diagrams with delays, often
 depicted as [caesuras](https://en.wikipedia.org/wiki/Caesura).
  */
 pub fn th_delayable_signed_category() -> UstrDiscreteDblTheory {
-    let mut cat: UstrFinCategory = Default::default();
-    let (x, neg) = (ustr("Object"), ustr("Negative"));
-    let (pos_slow, neg_slow) = (ustr("PositiveSlow"), ustr("NegativeSlow"));
+    let mut cat: UstrFpCategory = Default::default();
+    let (x, neg, slow) = (ustr("Object"), ustr("Negative"), ustr("Slow"));
     cat.add_ob_generator(x);
     cat.add_mor_generator(neg, x, x);
+    cat.add_mor_generator(slow, x, x);
+    cat.equate(Path::pair(neg, neg), Path::empty(x));
+    cat.equate(Path::pair(slow, slow), slow.into());
+    cat.equate(Path::pair(neg, slow), Path::pair(slow, neg));
+
+    // NOTE: These aliases are superfluous but are included for backwards
+    // compatibility with the previous version of the theory, defined by an
+    // explicit multiplication table.
+    let (pos_slow, neg_slow) = (ustr("PositiveSlow"), ustr("NegativeSlow"));
     cat.add_mor_generator(pos_slow, x, x);
     cat.add_mor_generator(neg_slow, x, x);
-    cat.set_composite(neg, neg, FinMor::Id(x));
-    cat.set_composite(neg, pos_slow, FinMor::Generator(neg_slow));
-    cat.set_composite(neg, neg_slow, FinMor::Generator(pos_slow));
-    cat.set_composite(pos_slow, neg, FinMor::Generator(neg_slow));
-    cat.set_composite(neg_slow, neg, FinMor::Generator(pos_slow));
-    cat.set_composite(pos_slow, pos_slow, FinMor::Generator(pos_slow));
-    cat.set_composite(neg_slow, neg_slow, FinMor::Generator(pos_slow));
-    cat.set_composite(neg_slow, pos_slow, FinMor::Generator(neg_slow));
-    cat.set_composite(pos_slow, neg_slow, FinMor::Generator(neg_slow));
+    cat.equate(pos_slow.into(), slow.into());
+    cat.equate(neg_slow.into(), Path::pair(neg, slow));
+
     DiscreteDblTheory::from(cat)
 }
 
@@ -83,15 +85,15 @@ A *nullable signed category* is a category sliced over the monoid of signs,
 including zero.
  */
 pub fn th_nullable_signed_category() -> UstrDiscreteDblTheory {
-    let mut sgn: UstrFinCategory = Default::default();
-    let (x, n, z) = (ustr("Object"), ustr("Negative"), ustr("Zero"));
+    let mut sgn: UstrFpCategory = Default::default();
+    let (x, neg, zero) = (ustr("Object"), ustr("Negative"), ustr("Zero"));
     sgn.add_ob_generator(x);
-    sgn.add_mor_generator(n, x, x);
-    sgn.add_mor_generator(z, x, x);
-    sgn.set_composite(n, n, FinMor::Id(x));
-    sgn.set_composite(z, z, FinMor::Generator(z));
-    sgn.set_composite(n, z, FinMor::Generator(z));
-    sgn.set_composite(z, n, FinMor::Generator(z));
+    sgn.add_mor_generator(neg, x, x);
+    sgn.add_mor_generator(zero, x, x);
+    sgn.equate(Path::pair(neg, neg), Path::empty(x));
+    sgn.equate(Path::pair(neg, zero), zero.into());
+    sgn.equate(Path::pair(zero, neg), zero.into());
+    sgn.equate(Path::pair(zero, zero), zero.into());
     DiscreteDblTheory::from(sgn)
 }
 
@@ -106,11 +108,11 @@ enriched in `M`-sets for a monoid `M` such as the positive real numbers under mu
 but to remain within simple theories the theory defined here is more general.
  */
 pub fn th_category_with_scalars() -> UstrDiscreteDblTheory {
-    let mut idem: UstrFinCategory = Default::default();
+    let mut idem: UstrFpCategory = Default::default();
     let (x, s) = (ustr("Object"), ustr("Nonscalar"));
     idem.add_ob_generator(x);
     idem.add_mor_generator(s, x, x);
-    idem.set_composite(s, s, FinMor::Generator(s));
+    idem.equate(Path::pair(s, s), s.into());
     DiscreteDblTheory::from(idem)
 }
 
@@ -137,10 +139,11 @@ pub fn th_category_links() -> UstrDiscreteTabTheory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::validate::Validate;
+    use crate::{one::Category, validate::Validate};
+    use nonempty::nonempty;
 
     #[test]
-    fn theories() {
+    fn validate_theories() {
         assert!(th_empty().validate().is_ok());
         assert!(th_category().validate().is_ok());
         assert!(th_schema().validate().is_ok());
@@ -150,5 +153,16 @@ mod tests {
         assert!(th_category_with_scalars().validate().is_ok());
         // TODO: Validate discrete tabulator theories.
         th_category_links();
+    }
+
+    #[test]
+    fn delayable_signed_categories() {
+        // Check the nontrivial computer algebra in this theory.
+        let th = th_delayable_signed_category();
+        let (neg, slow) = (ustr("Negative"), ustr("Slow"));
+        assert!(th.has_mor_type(&neg.into()));
+        assert!(th.has_mor_type(&slow.into()));
+        let path = Path::Seq(nonempty![neg, slow, neg, slow]);
+        assert!(th.category().morphisms_are_equal(path, slow.into()));
     }
 }
