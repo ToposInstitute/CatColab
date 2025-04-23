@@ -46,6 +46,7 @@ export default function ModelPage() {
 
     const [liveModel] = createResource(
         () => params.ref,
+        // should maybe move the check of docHandleReady here?
         (refId) => getLiveModel(refId, api, theories),
     );
 

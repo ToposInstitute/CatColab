@@ -22,7 +22,7 @@ const olDOM: DOMOutputSpec = ["ol", 0];
 const ulDOM: DOMOutputSpec = ["ul", 0];
 const liDOM: DOMOutputSpec = ["li", 0];
 
-export const basicSchema: MappedSchemaSpec = {
+export const basicSchema = {
     nodes: {
         /// NodeSpec The top level document node.
         doc: {
@@ -348,4 +348,4 @@ export const basicSchema: MappedSchemaSpec = {
             },
         } as MarkSpec,
     },
-};
+} satisfies MappedSchemaSpec;

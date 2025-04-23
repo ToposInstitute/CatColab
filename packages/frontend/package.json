@@ -55,6 +55,7 @@
         "prosemirror-keymap": "^1.2.2",
         "prosemirror-model": "^1.23.0",
         "prosemirror-state": "^1.4.3",
+        "prosemirror-transform": "^1.10.4",
         "prosemirror-view": "^1.33.8",
         "solid-firebase": "^0.3.0",
         "solid-js": "^1.9.2",

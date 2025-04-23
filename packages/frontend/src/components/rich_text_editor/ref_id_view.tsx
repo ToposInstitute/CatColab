@@ -87,6 +87,7 @@ export class RefIdView {
     }
 
     selectNode() {
+        console.log("selecting refid");
         this.isEditing = true;
         this.renderSolidComponent();
     }
