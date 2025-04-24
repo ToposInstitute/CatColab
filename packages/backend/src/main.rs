@@ -5,6 +5,7 @@ use sqlx::postgres::PgPoolOptions;
 use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
 use tracing::{error, info};
+use tracing_subscriber::filter::{EnvFilter, LevelFilter};
 
 mod app;
 mod auth;
@@ -28,7 +29,11 @@ fn automerge_io_port() -> String {
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt().with_max_level(tracing::Level::INFO).init();
+    let env_filter = EnvFilter::builder()
+        .with_default_directive(LevelFilter::INFO.into())
+        .from_env_lossy();
+
+    tracing_subscriber::fmt().with_env_filter(env_filter).init();
 
     let db = PgPoolOptions::new()
         .max_connections(10)
