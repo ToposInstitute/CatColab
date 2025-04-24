@@ -47,7 +47,6 @@ use tsify_next::Tsify;
 
 use super::category::VDblCategory;
 use super::theory::{DblTheory, DiscreteDblTheory};
-use crate::egglog_util::ToSymbol;
 use crate::one::fp_category::{FpCategory, InvalidFpCategory, UstrFpCategory};
 use crate::one::*;
 use crate::validate::{self, Validate};
@@ -206,7 +205,7 @@ pub type UstrDiscreteDblModel = DiscreteDblModel<Ustr, UstrFpCategory>;
 
 impl<Id, Cat> DiscreteDblModel<Id, Cat>
 where
-    Id: Eq + Clone + Hash + ToSymbol,
+    Id: Eq + Clone + Hash,
     Cat: FgCategory,
     Cat::Ob: Hash,
     Cat::Mor: Hash,
@@ -305,7 +304,7 @@ where
 
 impl<Id, Cat> Category for DiscreteDblModel<Id, Cat>
 where
-    Id: Eq + Clone + Hash + ToSymbol,
+    Id: Eq + Clone + Hash,
     Cat: FgCategory,
     Cat::Ob: Hash,
     Cat::Mor: Hash,
@@ -332,7 +331,7 @@ where
 
 impl<Id, Cat> FgCategory for DiscreteDblModel<Id, Cat>
 where
-    Id: Eq + Clone + Hash + ToSymbol,
+    Id: Eq + Clone + Hash,
     Cat: FgCategory,
     Cat::Ob: Hash,
     Cat::Mor: Hash,
@@ -359,7 +358,7 @@ where
 
 impl<Id, Cat> DblModel for DiscreteDblModel<Id, Cat>
 where
-    Id: Eq + Clone + Hash + ToSymbol,
+    Id: Eq + Clone + Hash,
     Cat: FgCategory,
     Cat::Ob: Hash,
     Cat::Mor: Hash,
@@ -393,7 +392,7 @@ where
 
 impl<Id, Cat> FgDblModel for DiscreteDblModel<Id, Cat>
 where
-    Id: Eq + Clone + Hash + ToSymbol,
+    Id: Eq + Clone + Hash,
     Cat: FgCategory,
     Cat::Ob: Hash,
     Cat::Mor: Hash,
@@ -415,7 +414,7 @@ where
 
 impl<Id, Cat> MutDblModel for DiscreteDblModel<Id, Cat>
 where
-    Id: Eq + Clone + Hash + ToSymbol,
+    Id: Eq + Clone + Hash,
     Cat: FgCategory,
     Cat::Ob: Hash,
     Cat::Mor: Hash,
@@ -451,7 +450,7 @@ where
 
 impl<Id, Cat> Validate for DiscreteDblModel<Id, Cat>
 where
-    Id: Eq + Clone + Hash + ToSymbol,
+    Id: Eq + Clone + Hash,
     Cat: FgCategory,
     Cat::Ob: Hash,
     Cat::Mor: Hash,

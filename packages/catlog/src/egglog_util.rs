@@ -2,12 +2,9 @@
 
 use std::fmt::Display;
 
-use egglog::ast::{Action, Command, Expr, Fact, Schedule, Symbol};
+use egglog::ast::{Action, Command, Expr, Fact, Schedule};
 use egglog::{EGraph, Error, span};
 use ref_cast::RefCast;
-use ustr::Ustr;
-#[cfg(feature = "uuid")]
-use uuid::Uuid;
 
 /** An egglog program.
 
@@ -63,38 +60,3 @@ impl Program {
         }
     }
 }
-
-/** A type convertible into an egglog [`Symbol`].
-
-The default implementation converts the object into a `String` and from that
-into a `Symbol`. Some types will allow more efficient conversions.
- */
-pub trait ToSymbol: ToString {
-    /// Converts this object into a `Symbol`.
-    fn to_symbol(&self) -> Symbol {
-        self.to_string().into()
-    }
-}
-
-impl ToSymbol for char {}
-
-impl ToSymbol for String {
-    fn to_symbol(&self) -> Symbol {
-        self.into()
-    }
-}
-
-impl ToSymbol for Symbol {
-    fn to_symbol(&self) -> Symbol {
-        *self
-    }
-}
-
-impl ToSymbol for Ustr {
-    fn to_symbol(&self) -> Symbol {
-        self.as_str().into()
-    }
-}
-
-#[cfg(feature = "uuid")]
-impl ToSymbol for Uuid {}

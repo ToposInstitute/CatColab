@@ -12,7 +12,6 @@ use tsify_next::Tsify;
 
 use super::ODEAnalysis;
 use crate::dbl::model::{DiscreteDblModel, FgDblModel};
-use crate::egglog_util::ToSymbol;
 use crate::one::fp_category::UstrFpCategory;
 use crate::one::{FgCategory, Path};
 use crate::simulate::ode::{LotkaVolterraSystem, ODEProblem};
@@ -88,7 +87,7 @@ impl LotkaVolterraAnalysis {
         data: LotkaVolterraProblemData<Id>,
     ) -> ODEAnalysis<Id, LotkaVolterraSystem>
     where
-        Id: Eq + Clone + Hash + Ord + ToSymbol,
+        Id: Eq + Clone + Hash + Ord,
     {
         let mut objects: Vec<_> = model.ob_generators_with_type(&self.var_ob_type).collect();
         objects.sort();

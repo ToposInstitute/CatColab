@@ -25,7 +25,6 @@ use serde::{Deserialize, Serialize};
 use tsify_next::{Tsify, declare};
 
 use super::{model::*, model_morphism::*};
-use crate::egglog_util::ToSymbol;
 use crate::one::{Category, FgCategory};
 use crate::validate;
 
@@ -78,8 +77,8 @@ pub type InvalidDiscreteDblModelDiagram<DomId> =
 
 impl<DomId, CodId, Cat> DiscreteDblModelDiagram<DomId, CodId, Cat>
 where
-    DomId: Eq + Clone + Hash + ToSymbol,
-    CodId: Eq + Clone + Hash + ToSymbol,
+    DomId: Eq + Clone + Hash,
+    CodId: Eq + Clone + Hash,
     Cat: FgCategory,
     Cat::Ob: Hash,
     Cat::Mor: Hash,

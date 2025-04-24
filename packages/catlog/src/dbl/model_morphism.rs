@@ -31,7 +31,6 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify_next::Tsify;
 
-use crate::egglog_util::ToSymbol;
 use crate::one::graph_algorithms::{bounded_simple_paths, simple_paths, spec_order};
 use crate::one::*;
 use crate::validate::{self, Validate};
@@ -90,8 +89,8 @@ pub struct DiscreteDblModelMapping<DomId, CodId> {
 
 impl<DomId, CodId> DiscreteDblModelMapping<DomId, CodId>
 where
-    DomId: Clone + Eq + Hash + ToSymbol,
-    CodId: Clone + Eq + Hash + ToSymbol,
+    DomId: Clone + Eq + Hash,
+    CodId: Clone + Eq + Hash,
 {
     /// Applies the mapping at a basic morphism in the domain model.
     pub fn apply_basic_mor(&self, e: &DomId) -> Option<Path<CodId, CodId>> {
@@ -185,8 +184,8 @@ where
 
 impl<DomId, CodId> DblModelMapping for DiscreteDblModelMapping<DomId, CodId>
 where
-    DomId: Clone + Eq + Hash + ToSymbol,
-    CodId: Clone + Eq + Hash + ToSymbol,
+    DomId: Clone + Eq + Hash,
+    CodId: Clone + Eq + Hash,
 {
     type DomOb = DomId;
     type DomMor = Path<DomId, DomId>;
@@ -233,8 +232,8 @@ pub type DiscreteDblModelMorphism<'a, DomId, CodId, Cat> = DblModelMorphism<
 
 impl<'a, DomId, CodId, Cat> DiscreteDblModelMorphism<'a, DomId, CodId, Cat>
 where
-    DomId: Eq + Clone + Hash + ToSymbol,
-    CodId: Eq + Clone + Hash + ToSymbol,
+    DomId: Eq + Clone + Hash,
+    CodId: Eq + Clone + Hash,
     Cat: FgCategory,
     Cat::Ob: Hash,
     Cat::Mor: Hash,
@@ -361,8 +360,8 @@ where
 
 impl<DomId, CodId, Cat> Validate for DiscreteDblModelMorphism<'_, DomId, CodId, Cat>
 where
-    DomId: Eq + Clone + Hash + ToSymbol,
-    CodId: Eq + Clone + Hash + ToSymbol,
+    DomId: Eq + Clone + Hash,
+    CodId: Eq + Clone + Hash,
     Cat: FgCategory,
     Cat::Ob: Hash,
     Cat::Mor: Hash,
@@ -443,8 +442,8 @@ pub struct DiscreteDblModelMorphismFinder<'a, DomId, CodId, Cat: FgCategory> {
 
 impl<'a, DomId, CodId, Cat> DiscreteDblModelMorphismFinder<'a, DomId, CodId, Cat>
 where
-    DomId: Clone + Eq + Hash + ToSymbol,
-    CodId: Clone + Eq + Hash + ToSymbol,
+    DomId: Clone + Eq + Hash,
+    CodId: Clone + Eq + Hash,
     Cat: FgCategory,
     Cat::Ob: Hash,
     Cat::Mor: Hash,
