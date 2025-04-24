@@ -2,6 +2,7 @@ use axum::{Router, routing::get};
 use firebase_auth::FirebaseAuth;
 use socketioxide::SocketIo;
 use sqlx::postgres::PgPoolOptions;
+use std::sync::Arc;
 use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
 use tracing::{error, info};
@@ -43,14 +44,16 @@ async fn main() {
         db,
     };
 
+    // We need to wrap FirebaseAuth in an Arc because if it's ever dropped the process which updates it's
+    // jwt keys will be killed. The library is using the anti pattern of implementing both Clone and Drop on the
+    // same struct.
+    // https://github.com/trchopan/firebase-auth/issues/30
+    let firebase_auth =
+        Arc::new(FirebaseAuth::new(&dotenvy::var("FIREBASE_PROJECT_ID").unwrap()).await);
+
     socket::setup_automerge_socket(state.clone());
 
     let main_task = tokio::task::spawn(async {
-        let firebase_auth = FirebaseAuth::new(
-            &dotenvy::var("FIREBASE_PROJECT_ID").expect("`FIREBASE_PROJECT_ID` should be set"),
-        )
-        .await;
-
         let port = web_port();
         let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port)).await.unwrap();
 
