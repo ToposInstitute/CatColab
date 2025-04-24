@@ -9,7 +9,6 @@ edition = "2024"
 ode = ["dep:ode_solvers", "dep:nalgebra"]
 serde = ["dep:serde", "nonempty/serialize", "ustr/serde"]
 serde-wasm = ["serde", "dep:wasm-bindgen", "dep:tsify-next"]
-uuid = ["dep:uuid"]
 
 [dependencies]
 derivative = "2"

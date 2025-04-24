@@ -15,6 +15,7 @@ to check for equivalence of paths under the congruence.
  */
 
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
 
@@ -29,7 +30,7 @@ use thiserror::Error;
 use ustr::{IdentityHasher, Ustr};
 
 use super::{category::*, graph::*, path::*};
-use crate::egglog_util::{Program, ToSymbol};
+use crate::egglog_util::Program;
 use crate::validate::{self, Validate};
 
 /** A finitely presented category backed by an e-graph.
@@ -51,14 +52,14 @@ at runtime. The current implementation allows only *single-threaded* usage.
  */
 #[derive(Clone, Derivative)]
 #[derivative(Debug(bound = "V: Debug, E: Debug, S: Debug"))]
-#[derivative(Default(bound = "S: Default"))]
+#[derivative(Default(bound = "S: Default", new = "true"))]
 #[derivative(PartialEq(bound = "V: Eq + Hash, E: Eq + Hash, S: BuildHasher"))]
 #[derivative(Eq(bound = "V: Eq + Hash, E: Eq + Hash, S: BuildHasher"))]
 pub struct FpCategory<V, E, S = RandomState> {
     generators: HashGraph<V, E, S>,
     equations: Vec<PathEq<V, E>>,
     #[derivative(Debug = "ignore", PartialEq = "ignore")]
-    builder: RefCell<CategoryProgramBuilder>,
+    builder: RefCell<CategoryProgramBuilder<V, E, S>>,
     #[derivative(Debug = "ignore", PartialEq = "ignore")]
     egraph: RefCell<EGraph>,
 }
@@ -68,8 +69,8 @@ pub type UstrFpCategory = FpCategory<Ustr, Ustr, BuildHasherDefault<IdentityHash
 
 impl<V, E, S> FpCategory<V, E, S>
 where
-    V: Eq + Clone + Hash + ToSymbol,
-    E: Eq + Clone + Hash + ToSymbol,
+    V: Eq + Clone + Hash,
+    E: Eq + Clone + Hash,
     S: BuildHasher,
 {
     /// Gets the generating graph of the category presentation.
@@ -90,7 +91,7 @@ where
     /// Adds an object generator.
     pub fn add_ob_generator(&mut self, v: V) {
         assert!(self.generators.add_vertex(v.clone()), "Object generator already exists");
-        self.builder.get_mut().add_ob_generator(v.to_symbol());
+        self.builder.get_mut().add_ob_generator(v);
     }
 
     /// Adds several object generators at once.
@@ -107,13 +108,13 @@ where
             "Morphism generator already exists"
         );
         let (dom, cod) = (self.ob_generator_expr(dom), self.ob_generator_expr(cod));
-        self.builder.get_mut().add_mor_generator(e.to_symbol(), dom, cod);
+        self.builder.get_mut().add_mor_generator(e, dom, cod);
     }
 
     /// Adds a morphism generator without declaring its (co)domain.
     pub fn make_mor_generator(&mut self, e: E) {
         assert!(self.generators.make_edge(e.clone()), "Morphism generator already exists");
-        self.builder.get_mut().make_mor_generator(e.to_symbol());
+        self.builder.get_mut().make_mor_generator(e);
     }
 
     /// Gets the domain of a morphism generator.
@@ -159,17 +160,19 @@ where
     }
 
     fn ob_generator_expr(&self, v: V) -> Expr {
-        self.builder.borrow().ob_generator(v.to_symbol())
+        self.builder.borrow_mut().ob_generator(v)
     }
     fn mor_generator_expr(&self, e: E) -> Expr {
-        self.builder.borrow().mor_generator(e.to_symbol())
+        self.builder.borrow_mut().mor_generator(e)
     }
     fn path_expr(&self, path: Path<V, E>) -> Expr {
-        let builder = self.builder.borrow();
         path.map_reduce(
-            |v| builder.id(self.ob_generator_expr(v)),
+            |v| {
+                let ob = self.ob_generator_expr(v);
+                self.builder.borrow().id(ob)
+            },
             |e| self.mor_generator_expr(e),
-            |f, g| builder.compose2(f, g),
+            |f, g| self.builder.borrow().compose2(f, g),
         )
     }
 
@@ -193,8 +196,8 @@ where
 
 impl<V, E, S> Category for FpCategory<V, E, S>
 where
-    V: Eq + Clone + Hash + ToSymbol,
-    E: Eq + Clone + Hash + ToSymbol,
+    V: Eq + Clone + Hash,
+    E: Eq + Clone + Hash,
     S: BuildHasher,
 {
     type Ob = V;
@@ -235,8 +238,8 @@ where
 
 impl<V, E, S> FgCategory for FpCategory<V, E, S>
 where
-    V: Eq + Clone + Hash + ToSymbol,
-    E: Eq + Clone + Hash + ToSymbol,
+    V: Eq + Clone + Hash,
+    E: Eq + Clone + Hash,
     S: BuildHasher,
 {
     type ObGen = V;
@@ -258,8 +261,8 @@ where
 
 impl<V, E, S> Validate for FpCategory<V, E, S>
 where
-    V: Eq + Clone + Hash + ToSymbol,
-    E: Eq + Clone + Hash + ToSymbol,
+    V: Eq + Clone + Hash,
+    E: Eq + Clone + Hash,
     S: BuildHasher,
 {
     type ValidationError = InvalidFpCategory<E>;
@@ -297,36 +300,49 @@ pub enum InvalidFpCategory<E> {
     EqTgt(usize),
 }
 
-/// Program builder for computing with categories in egglog.
+/** Program builder for computing with categories in egglog.
+
+Maintains an egglog [`Program`] as well as mappings from vertices and edges in
+the category's generating graph to numeric IDs for generator terms in egglog. We
+do not assume that vertices or edges can be converted to strings/symbols since
+we want to support hierarchical naming, where names are a list of symbols.
+ */
 #[derive(Clone)]
-struct CategoryProgramBuilder {
+struct CategoryProgramBuilder<V, E, S = RandomState> {
     prog: Vec<Command>,
     sym: CategorySymbols,
+    ob_generators: HashMap<V, usize, S>,
+    mor_generators: HashMap<E, usize, S>,
 }
 
-impl CategoryProgramBuilder {
-    /// Extracts the egglog program, consuming the cached statements.
-    pub fn program(&mut self) -> Program {
-        Program(std::mem::take(&mut self.prog))
-    }
-
+impl<V, E, S> CategoryProgramBuilder<V, E, S>
+where
+    V: Eq + Hash,
+    E: Eq + Hash,
+    S: BuildHasher,
+{
     /// Declares an object generator.
-    pub fn add_ob_generator(&mut self, name: Symbol) {
-        let action = Action::Expr(span!(), self.ob_generator(name));
+    pub fn add_ob_generator(&mut self, v: V) -> usize {
+        let id = self.ob_generator_id(v);
+        let action = Action::Expr(span!(), self.ob_generator_with_id(id));
         self.prog.push(Command::Action(action));
+        id
     }
 
     /// Declares a morphism generator and sets its domain and codmain.
-    pub fn add_mor_generator(&mut self, name: Symbol, dom: Expr, cod: Expr) {
-        self.make_mor_generator(name);
-        self.set_dom(self.mor_generator(name), dom);
-        self.set_cod(self.mor_generator(name), cod);
+    pub fn add_mor_generator(&mut self, e: E, dom: Expr, cod: Expr) -> usize {
+        let id = self.make_mor_generator(e);
+        self.set_dom(self.mor_generator_with_id(id), dom);
+        self.set_cod(self.mor_generator_with_id(id), cod);
+        id
     }
 
     /// Declares a morphism generator.
-    pub fn make_mor_generator(&mut self, name: Symbol) {
-        let action = Action::Expr(span!(), self.mor_generator(name));
+    pub fn make_mor_generator(&mut self, e: E) -> usize {
+        let id = self.mor_generator_id(e);
+        let action = Action::Expr(span!(), self.mor_generator_with_id(id));
         self.prog.push(Command::Action(action));
+        id
     }
 
     /// Sets the domain of a morphism.
@@ -341,14 +357,47 @@ impl CategoryProgramBuilder {
         Program::ref_cast_mut(&mut self.prog).union(cod, ob);
     }
 
-    /// Constructs an object generator expression.
-    pub fn ob_generator(&self, name: Symbol) -> Expr {
-        call!(self.sym.ob_gen, vec![lit!(name)])
+    /// Constructs an object generator expression for the given vertex.
+    pub fn ob_generator(&mut self, v: V) -> Expr {
+        let id = self.ob_generator_id(v);
+        self.ob_generator_with_id(id)
     }
 
-    /// Constructors a morphism generator expression.
-    pub fn mor_generator(&self, name: Symbol) -> Expr {
-        call!(self.sym.mor_gen, vec![lit!(name)])
+    /// Gets or creates the internal ID for a given vertex.
+    pub fn ob_generator_id(&mut self, v: V) -> usize {
+        let n = self.ob_generators.len();
+        *self.ob_generators.entry(v).or_insert(n)
+    }
+
+    /// Constructs a morphism generator expression for the given edge.
+    pub fn mor_generator(&mut self, e: E) -> Expr {
+        let id = self.mor_generator_id(e);
+        self.mor_generator_with_id(id)
+    }
+
+    /// Gets or creates the internal ID for a given edge.
+    pub fn mor_generator_id(&mut self, e: E) -> usize {
+        let n = self.mor_generators.len();
+        *self.mor_generators.entry(e).or_insert(n)
+    }
+}
+
+impl<V, E, S> CategoryProgramBuilder<V, E, S> {
+    /// Extracts the egglog program, consuming the cached statements.
+    pub fn program(&mut self) -> Program {
+        Program(std::mem::take(&mut self.prog))
+    }
+
+    /// Constructs an object generator call for the given internal ID.
+    fn ob_generator_with_id(&self, id: usize) -> Expr {
+        let id: i64 = id.try_into().expect("Shouldn't have too many object generators");
+        call!(self.sym.ob_gen, vec![lit!(id)])
+    }
+
+    /// Constructs a morphism generator call for the given internal ID.
+    fn mor_generator_with_id(&self, id: usize) -> Expr {
+        let id: i64 = id.try_into().expect("Shouldn't have too many morphism generators");
+        call!(self.sym.mor_gen, vec![lit!(id)])
     }
 
     /// Constructs a domain call.
@@ -407,7 +456,7 @@ impl CategoryProgramBuilder {
                 variants: vec![Variant {
                     span: span!(),
                     name: sym.ob_gen,
-                    types: vec!["String".into()],
+                    types: vec!["i64".into()],
                     cost: Some(0),
                 }],
             },
@@ -417,7 +466,7 @@ impl CategoryProgramBuilder {
                 variants: vec![Variant {
                     span: span!(),
                     name: sym.mor_gen,
-                    types: vec!["String".into()],
+                    types: vec!["i64".into()],
                     cost: Some(0),
                 }],
             },
@@ -549,11 +598,13 @@ impl CategoryProgramBuilder {
     }
 }
 
-impl Default for CategoryProgramBuilder {
+impl<V, E, S: Default> Default for CategoryProgramBuilder<V, E, S> {
     fn default() -> Self {
         let mut result = Self {
-            prog: vec![],
+            prog: Default::default(),
             sym: Default::default(),
+            ob_generators: Default::default(),
+            mor_generators: Default::default(),
         };
         result.preamble();
         result
@@ -598,7 +649,7 @@ mod tests {
 
     #[test]
     fn sch_sgraph() {
-        let mut sch_sgraph: UstrFpCategory = Default::default();
+        let mut sch_sgraph = UstrFpCategory::new();
         let (v, e) = (ustr("V"), ustr("E"));
         let (s, t, i) = (ustr("src"), ustr("tgt"), ustr("inv"));
         sch_sgraph.add_ob_generators([v, e]);
@@ -619,11 +670,12 @@ mod tests {
 
     #[test]
     fn egraph_preamble() {
-        let prog = CategoryProgramBuilder::default().program();
+        let mut builder: CategoryProgramBuilder<char, char, RandomState> = Default::default();
+        let prog = builder.program();
 
         let expected = expect![[r#"
-            (datatype Ob (ObGen String :cost 0))
-            (datatype Mor (MorGen String :cost 0))
+            (datatype Ob (ObGen i64 :cost 0))
+            (datatype Mor (MorGen i64 :cost 0))
             (constructor dom (Mor) Ob :cost 1)
             (constructor cod (Mor) Ob :cost 1)
             (constructor id (Ob) Mor :cost 1)

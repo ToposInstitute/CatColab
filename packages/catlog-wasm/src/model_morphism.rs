@@ -5,7 +5,6 @@ use tsify_next::Tsify;
 use uuid::Uuid;
 
 use catlog::dbl::{model, model_morphism};
-use catlog::egglog_util::ToSymbol;
 use catlog::one::{FgCategory, fp_category::UstrFpCategory};
 
 use super::model::DblModel;
@@ -27,7 +26,7 @@ pub fn motifs<Id>(
     options: MotifsOptions,
 ) -> Result<Vec<DblModel>, String>
 where
-    Id: Clone + Eq + Hash + ToSymbol,
+    Id: Clone + Eq + Hash,
 {
     let model: &model::DiscreteDblModel<_, _> = (&model.0)
         .try_into()
