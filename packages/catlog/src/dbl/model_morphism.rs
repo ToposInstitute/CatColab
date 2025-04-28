@@ -20,7 +20,7 @@ oplax.
 
 use std::collections::HashSet;
 use std::hash::Hash;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use derivative::Derivative;
 use nonempty::NonEmpty;
@@ -149,15 +149,19 @@ where
         // involving only generators that appear in the image.
         assert!(cod.is_free(), "Codomain model should be free");
 
-        let mut im = DiscreteDblModel::new(cod.theory_arc());
+        let mut im = DiscreteDblModel::new(cod.theory_rc());
         for x in self.ob_map.values() {
             im.add_ob(x.clone(), cod.ob_type(x));
         }
         for path in self.mor_map.values() {
             for e in path.iter() {
                 let (x, y) = (cod.mor_generator_dom(e), cod.mor_generator_cod(e));
-                im.add_ob(x.clone(), cod.ob_type(&x));
-                im.add_ob(y.clone(), cod.ob_type(&y));
+                if !im.has_ob(&x) {
+                    im.add_ob(x.clone(), cod.ob_type(&x));
+                }
+                if !im.has_ob(&y) {
+                    im.add_ob(y.clone(), cod.ob_type(&y));
+                }
                 im.add_mor(e.clone(), x, y, cod.mor_generator_type(e));
             }
         }
@@ -240,8 +244,8 @@ where
     ) -> impl Iterator<Item = InvalidDblModelMorphism<DomId, DomId>> + 'a + use<'a, DomId, CodId, Cat>
     {
         let DblModelMorphism(mapping, dom, cod) = *self;
-        // TODO: We don't yet have the ability to solve word problems.
-        // Equations in the domain induce equations to check in the codomain.
+        // TODO: Relax this assumption by verifying that images of path
+        // equations in domain hold in the codomain.
         assert!(dom.is_free(), "Domain model should be free");
 
         let ob_errors = dom.ob_generators().filter_map(|v| {
@@ -258,30 +262,29 @@ where
             }
         });
 
-        let mor_errors = dom.mor_generators().flat_map(|f| {
+        let th_cat = cod.theory().category();
+        let mor_errors = dom.mor_generators().flat_map(move |f| {
             if let Some(f_f) = mapping.apply_basic_mor(&f) {
                 if !cod.has_mor(&f_f) {
-                    [InvalidDblModelMorphism::Mor(f)].to_vec()
+                    vec![InvalidDblModelMorphism::Mor(f)]
                 } else {
                     let dom_f = mapping.apply_ob(&dom.mor_generator_dom(&f));
                     let cod_f = mapping.apply_ob(&dom.mor_generator_cod(&f));
-                    let f_type = dom.mor_generator_type(&f);
-                    let ff_type = cod.mor_type(&f_f);
 
-                    let mut errs = vec![];
+                    let mut errs = Vec::new();
                     if Some(cod.dom(&f_f)) != dom_f {
                         errs.push(InvalidDblModelMorphism::Dom(f.clone()));
                     }
                     if Some(cod.cod(&f_f)) != cod_f {
                         errs.push(InvalidDblModelMorphism::Cod(f.clone()));
                     }
-                    if f_type != ff_type {
+                    if !th_cat.morphisms_are_equal(dom.mor_generator_type(&f), cod.mor_type(&f_f)) {
                         errs.push(InvalidDblModelMorphism::MorType(f));
                     }
                     errs
                 }
             } else {
-                [InvalidDblModelMorphism::MissingMor(f)].to_vec()
+                vec![InvalidDblModelMorphism::MissingMor(f)]
             }
         });
         ob_errors.chain(mor_errors)
@@ -447,7 +450,7 @@ where
 {
     fn new(dom: &'a DiscreteDblModel<DomId, Cat>, cod: &'a DiscreteDblModel<CodId, Cat>) -> Self {
         assert!(
-            Arc::ptr_eq(&dom.theory_arc(), &cod.theory_arc()),
+            Rc::ptr_eq(&dom.theory_rc(), &cod.theory_rc()),
             "Domain and codomain model should have the same theory"
         );
         assert!(dom.is_free(), "Domain model should be free");
@@ -573,8 +576,9 @@ where
                         .expect("Codomain should already be assigned");
 
                     let cod_graph = self.cod.generating_graph();
+                    let th_cat = self.cod.theory().category();
                     for path in bounded_simple_paths(cod_graph, &w, &z, self.max_path_len) {
-                        if self.cod.mor_type(&path) == mor_type
+                        if th_cat.morphisms_are_equal(self.cod.mor_type(&path), mor_type.clone())
                             && !(self.faithful && path.is_empty())
                         {
                             self.map.assign_basic_mor(m.clone(), path);
@@ -608,15 +612,14 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
-    use crate::dbl::model::UstrDiscreteDblModel;
-    use crate::one::fin_category::FinMor;
-    use crate::stdlib::*;
-    use crate::validate::Validate;
-
     use std::collections::HashMap;
     use ustr::ustr;
+
+    use super::*;
+    use crate::dbl::model::UstrDiscreteDblModel;
+    use crate::one::Path;
+    use crate::stdlib::*;
+    use crate::validate::Validate;
 
     #[test]
     fn discrete_model_mapping() {
@@ -633,7 +636,7 @@ mod tests {
 
     #[test]
     fn find_positive_loops() {
-        let th = Arc::new(th_signed_category());
+        let th = Rc::new(th_signed_category());
         let positive_loop = positive_loop(th.clone());
         let pos = positive_loop.mor_generators().next().unwrap().into();
 
@@ -655,13 +658,13 @@ mod tests {
     /// all the object/morphism types are the same).   
     #[test]
     fn find_simple_paths() {
-        let th = Arc::new(th_signed_category());
+        let th = Rc::new(th_signed_category());
 
         let mut walking = UstrDiscreteDblModel::new(th.clone());
         let (a, b) = (ustr("A"), ustr("B"));
         walking.add_ob(a, ustr("Object"));
         walking.add_ob(b, ustr("Object"));
-        walking.add_mor(ustr("f"), a, b, FinMor::Id(ustr("Object")));
+        walking.add_mor(ustr("f"), a, b, Path::Id(ustr("Object")));
         let w = Path::single(ustr("f"));
 
         //     y         Graph with lots of cyclic paths.
@@ -672,11 +675,11 @@ mod tests {
         model.add_ob(x, ustr("Object"));
         model.add_ob(y, ustr("Object"));
         model.add_ob(z, ustr("Object"));
-        model.add_mor(ustr("xy"), x, y, FinMor::Id(ustr("Object")));
-        model.add_mor(ustr("yz"), y, z, FinMor::Id(ustr("Object")));
-        model.add_mor(ustr("zx"), z, x, FinMor::Id(ustr("Object")));
-        model.add_mor(ustr("xz"), x, z, FinMor::Id(ustr("Object")));
-        model.add_mor(ustr("xx"), x, x, FinMor::Id(ustr("Object")));
+        model.add_mor(ustr("xy"), x, y, Path::Id(ustr("Object")));
+        model.add_mor(ustr("yz"), y, z, Path::Id(ustr("Object")));
+        model.add_mor(ustr("zx"), z, x, Path::Id(ustr("Object")));
+        model.add_mor(ustr("xz"), x, z, Path::Id(ustr("Object")));
+        model.add_mor(ustr("xx"), x, x, Path::Id(ustr("Object")));
 
         for i in model.ob_generators() {
             for j in model.ob_generators() {
@@ -695,7 +698,7 @@ mod tests {
 
     #[test]
     fn find_negative_loops() {
-        let th = Arc::new(th_signed_category());
+        let th = Rc::new(th_signed_category());
         let negative_loop = negative_loop(th.clone());
         let base_pt = negative_loop.ob_generators().next().unwrap();
 
@@ -721,7 +724,7 @@ mod tests {
 
     #[test]
     fn validate_model_morphism() {
-        let theory = Arc::new(th_signed_category());
+        let theory = Rc::new(th_signed_category());
         let negloop = negative_loop(theory.clone());
         let posfeed = positive_feedback(theory.clone());
 
@@ -740,7 +743,7 @@ mod tests {
             mor_map: HashMap::from([(ustr("y"), Path::Id(ustr("y")))]).into(),
         };
         let dmm = DblModelMorphism(&f, &negloop, &negloop);
-        let errs: Vec<_> = dmm.validate().expect_err("should be invalid").into();
+        let errs: Vec<_> = dmm.validate().unwrap_err().into();
         assert!(
             errs == vec![
                 InvalidDblModelMorphism::Ob(ustr("x")),
@@ -754,7 +757,7 @@ mod tests {
             mor_map: HashMap::from([(ustr("loop"), Path::single(ustr("positive1")))]).into(),
         };
         let dmm = DblModelMorphism(&f, &negloop, &posfeed);
-        let errs: Vec<_> = dmm.validate().expect_err("should be invalid").into();
+        let errs: Vec<_> = dmm.validate().unwrap_err().into();
         assert!(
             errs == vec![
                 InvalidDblModelMorphism::Cod(ustr("loop")),
@@ -768,7 +771,7 @@ mod tests {
             mor_map: HashMap::from([(ustr("loop"), Path::single(ustr("positive2")))]).into(),
         };
         let dmm = DblModelMorphism(&f, &negloop, &posfeed);
-        let errs: Vec<_> = dmm.validate().expect_err("should be invalid").into();
+        let errs: Vec<_> = dmm.validate().unwrap_err().into();
         assert!(
             errs == vec![
                 InvalidDblModelMorphism::Dom(ustr("loop")),
@@ -779,7 +782,7 @@ mod tests {
 
     #[test]
     fn validate_is_free_simple_monic() {
-        let theory = Arc::new(th_signed_category());
+        let theory = Rc::new(th_signed_category());
         let negloop = positive_loop(theory.clone());
 
         // Identity map
@@ -804,7 +807,7 @@ mod tests {
     #[test]
     fn monic_constraint() {
         // The number of endomonomorphisms of a set |N| is N!.
-        let theory = Arc::new(th_signed_category());
+        let theory = Rc::new(th_signed_category());
         let mut model = UstrDiscreteDblModel::new(theory.clone());
         let (q, x, y, z) = (ustr("Q"), ustr("X"), ustr("Y"), ustr("Z"));
         let ob = ustr("Object");
@@ -828,19 +831,19 @@ mod tests {
         freetri.add_ob(x, ob);
         freetri.add_ob(y, ob);
         freetri.add_ob(z, ob);
-        freetri.add_mor(f, x, y, FinMor::Id(ob));
-        freetri.add_mor(g, y, z, FinMor::Id(ob));
-        freetri.add_mor(h, x, z, FinMor::Id(ob));
+        freetri.add_mor(f, x, y, Path::Id(ob));
+        freetri.add_mor(g, y, z, Path::Id(ob));
+        freetri.add_mor(h, x, z, Path::Id(ob));
 
         let mut quad = UstrDiscreteDblModel::new(theory);
         quad.add_ob(q, ob);
         quad.add_ob(x, ob);
         quad.add_ob(y, ob);
         quad.add_ob(z, ob);
-        quad.add_mor(f, x, y, FinMor::Id(ob));
-        quad.add_mor(g, y, z, FinMor::Id(ob));
-        quad.add_mor(i, y, q, FinMor::Id(ob));
-        quad.add_mor(j, x, q, FinMor::Id(ob));
+        quad.add_mor(f, x, y, Path::Id(ob));
+        quad.add_mor(g, y, z, Path::Id(ob));
+        quad.add_mor(i, y, q, Path::Id(ob));
+        quad.add_mor(j, x, q, Path::Id(ob));
 
         assert_eq!(
             DiscreteDblModelMapping::morphisms(&freetri, &quad)

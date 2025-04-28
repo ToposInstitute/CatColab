@@ -12,6 +12,7 @@ import { TheoryLibraryContext } from "../stdlib";
 import { PageActionsContext } from "./context";
 
 import FilePlus from "lucide-solid/icons/file-plus";
+import Files from "lucide-solid/icons/files";
 import Info from "lucide-solid/icons/info";
 import LogInIcon from "lucide-solid/icons/log-in";
 import LogOutIcon from "lucide-solid/icons/log-out";
@@ -65,13 +66,13 @@ export function AppMenu(props: {
                 <Show when={props.children}>
                     <MenuSeparator />
                 </Show>
-
-                <HelpMenuItem />
-
                 <Show when={auth.data} fallback={<LogInMenuItem />}>
+                    <DocumentsMenuItem />
                     <SettingsMenuItem />
                     <LogOutMenuItem />
                 </Show>
+                <MenuSeparator />
+                <HelpMenuItem />
             </HamburgerMenu>
         </>
     );
@@ -161,6 +162,17 @@ function SettingsMenuItem() {
         <MenuItem onSelect={() => navigate("/profile")}>
             <SettingsIcon />
             <MenuItemLabel>{"Edit user profile"}</MenuItemLabel>
+        </MenuItem>
+    );
+}
+
+function DocumentsMenuItem() {
+    const navigate = useNavigate();
+
+    return (
+        <MenuItem onSelect={() => navigate("/documents")}>
+            <Files />
+            <MenuItemLabel>{"My documents"}</MenuItemLabel>
         </MenuItem>
     );
 }

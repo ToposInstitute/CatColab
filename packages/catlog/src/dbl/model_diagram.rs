@@ -16,7 +16,7 @@ TODO: Document in devs docs and link here.
 use std::hash::Hash;
 
 use derive_more::Into;
-use either::Either;
+use itertools::Either;
 use nonempty::NonEmpty;
 
 #[cfg(feature = "serde")]
@@ -134,22 +134,21 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
-    use std::sync::Arc;
+    use std::rc::Rc;
     use ustr::ustr;
 
-    use crate::one::{Path, fin_category::FinMor};
+    use super::*;
+    use crate::one::Path;
     use crate::stdlib::*;
 
     #[test]
     fn discrete_model_diagram() {
-        let th = Arc::new(th_schema());
+        let th = Rc::new(th_schema());
         let mut model = DiscreteDblModel::new(th.clone());
         let entity = ustr("entity");
         model.add_ob(entity, ustr("Entity"));
         model.add_ob(ustr("type"), ustr("AttrType"));
-        model.add_mor(ustr("attr"), entity, ustr("type"), FinMor::Generator(ustr("Attr")));
+        model.add_mor(ustr("attr"), entity, ustr("type"), ustr("Attr").into());
 
         let mut f: DiscreteDblModelMapping<_, _> = Default::default();
         f.assign_ob(entity, 'x');
@@ -163,7 +162,7 @@ mod tests {
 
     #[test]
     fn validate_model_diagram() {
-        let th = Arc::new(th_signed_category());
+        let th = Rc::new(th_signed_category());
         let pos_loop = positive_loop(th.clone());
         let neg_loop = negative_loop(th.clone());
 
@@ -176,11 +175,11 @@ mod tests {
 
     #[test]
     fn infer_model_diagram() {
-        let th = Arc::new(th_schema());
+        let th = Rc::new(th_schema());
         let mut domain = DiscreteDblModel::new(th.clone());
-        domain.add_mor(0, 0, 1, FinMor::Generator(ustr("Attr")));
+        domain.add_mor('f', 'x', 'y', ustr("Attr").into());
         let mut f: DiscreteDblModelMapping<_, _> = Default::default();
-        f.assign_basic_mor(0, Path::single(ustr("attr")));
+        f.assign_basic_mor('f', Path::single(ustr("attr")));
         let mut diagram = DblModelDiagram(f, domain);
 
         let model = walking_attr(th);

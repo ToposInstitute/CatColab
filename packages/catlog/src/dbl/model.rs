@@ -9,10 +9,8 @@ In the case of a *simple* double theory, which amounts to a small double
 category, a **model** of the theory is a span-valued *lax* double functor out of
 the theory. Such a model is a "lax copresheaf," categorifying the notion of a
 copresheaf or set-valued functor. Though they are "just" lax double functors,
-models are a [concept with an
-attitude](https://ncatlab.org/nlab/show/concept+with+an+attitude). To bring out
-the intended intuition we introduce new jargon, building on that for double
-theories.
+models come with extra intuitions. To bring that out we introduce new jargon,
+building on that for double theories.
 
 # Terminology
 
@@ -37,7 +35,7 @@ In addition, a model has the following operations:
 
 use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
 use std::iter::Iterator;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use derivative::Derivative;
 use ustr::{IdentityHasher, Ustr};
@@ -47,8 +45,9 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify_next::Tsify;
 
+use super::category::VDblCategory;
 use super::theory::{DblTheory, DiscreteDblTheory};
-use crate::one::fin_category::{FpCategory, InvalidFpCategory, UstrFinCategory};
+use crate::one::fp_category::{FpCategory, InvalidFpCategory, UstrFpCategory};
 use crate::one::*;
 use crate::validate::{self, Validate};
 use crate::zero::*;
@@ -154,24 +153,17 @@ pub trait FgDblModel: DblModel + FgCategory {
 /// A mutable, finitely generated model of a double theory.
 pub trait MutDblModel: FgDblModel {
     /// Adds a basic object to the model.
-    fn add_ob(&mut self, x: Self::ObGen, ob_type: Self::ObType) -> bool;
+    fn add_ob(&mut self, x: Self::ObGen, ob_type: Self::ObType);
 
     /// Adds a basic morphism to the model.
-    fn add_mor(
-        &mut self,
-        f: Self::MorGen,
-        dom: Self::Ob,
-        cod: Self::Ob,
-        mor_type: Self::MorType,
-    ) -> bool {
-        let is_new = self.make_mor(f.clone(), mor_type);
+    fn add_mor(&mut self, f: Self::MorGen, dom: Self::Ob, cod: Self::Ob, mor_type: Self::MorType) {
+        self.make_mor(f.clone(), mor_type);
         self.set_dom(f.clone(), dom);
         self.set_cod(f, cod);
-        is_new
     }
 
     /// Adds a basic morphism to the model without setting its (co)domain.
-    fn make_mor(&mut self, f: Self::MorGen, mor_type: Self::MorType) -> bool;
+    fn make_mor(&mut self, f: Self::MorGen, mor_type: Self::MorType);
 
     /// Gets the domain of a basic morphism, if it is set.
     fn get_dom(&self, f: &Self::MorGen) -> Option<&Self::Ob>;
@@ -180,10 +172,10 @@ pub trait MutDblModel: FgDblModel {
     fn get_cod(&self, f: &Self::MorGen) -> Option<&Self::Ob>;
 
     /// Sets the domain of a basic morphism.
-    fn set_dom(&mut self, f: Self::MorGen, x: Self::Ob) -> Option<Self::Ob>;
+    fn set_dom(&mut self, f: Self::MorGen, x: Self::Ob);
 
     /// Sets the codomain of a basic morphism.
-    fn set_cod(&mut self, f: Self::MorGen, x: Self::Ob) -> Option<Self::Ob>;
+    fn set_cod(&mut self, f: Self::MorGen, x: Self::Ob);
 }
 
 /** A finitely presented model of a discrete double theory.
@@ -193,20 +185,20 @@ finite presentation of a category sliced over the object and morphism types
 comprising the theory. A type theorist would call it a ["displayed
 category"](https://ncatlab.org/nlab/show/displayed+category).
 */
-#[derive(Clone, Derivative, Debug)]
+#[derive(Clone, Debug, Derivative)]
 #[derivative(PartialEq(bound = "Id: Eq + Hash"))]
 #[derivative(Eq(bound = "Id: Eq + Hash"))]
 pub struct DiscreteDblModel<Id, Cat: FgCategory> {
-    #[derivative(PartialEq(compare_with = "Arc::ptr_eq"))]
-    theory: Arc<DiscreteDblTheory<Cat>>,
-    category: FpCategory<Id, Id, Id>,
+    #[derivative(PartialEq(compare_with = "Rc::ptr_eq"))]
+    theory: Rc<DiscreteDblTheory<Cat>>,
+    category: FpCategory<Id, Id>,
     ob_types: IndexedHashColumn<Id, Cat::Ob>,
     mor_types: IndexedHashColumn<Id, Cat::Mor>,
 }
 
 /// A model of a discrete double theory where both theoy and model have keys of
 /// type `Ustr`.
-pub type UstrDiscreteDblModel = DiscreteDblModel<Ustr, UstrFinCategory>;
+pub type UstrDiscreteDblModel = DiscreteDblModel<Ustr, UstrFpCategory>;
 // NOTE: We are leaving a small optimization on the table by not using the
 // `IdentityHasher` but adding that extra type parameter quickly gets annoying
 // because it has to be propagated everywhere, including into model morphisms.
@@ -219,7 +211,7 @@ where
     Cat::Mor: Hash,
 {
     /// Creates an empty model of the given theory.
-    pub fn new(theory: Arc<DiscreteDblTheory<Cat>>) -> Self {
+    pub fn new(theory: Rc<DiscreteDblTheory<Cat>>) -> Self {
         Self {
             theory,
             category: Default::default(),
@@ -228,8 +220,8 @@ where
         }
     }
 
-    /// Returns a reference-counting pointer to the theory for this model.
-    pub fn theory_arc(&self) -> Arc<DiscreteDblTheory<Cat>> {
+    /// Gets reference-counting pointer to the theory that this model is of.
+    pub fn theory_rc(&self) -> Rc<DiscreteDblTheory<Cat>> {
         self.theory.clone()
     }
 
@@ -243,9 +235,9 @@ where
         self.category.is_free()
     }
 
-    /// Adds an equation to the model, making it not free.
-    pub fn add_equation(&mut self, key: Id, eq: PathEq<Id, Id>) {
-        self.category.add_equation(key, eq);
+    /// Adds a path equation to the model.
+    pub fn add_equation(&mut self, eq: PathEq<Id, Id>) {
+        self.category.add_equation(eq);
     }
 
     /// Iterates over failures of model to be well defined.
@@ -374,7 +366,7 @@ where
     type ObType = Cat::Ob;
     type MorType = Cat::Mor;
     type ObOp = Cat::Ob;
-    type MorOp = Cat::Mor;
+    type MorOp = Path<Cat::Ob, Cat::Mor>;
     type Theory = DiscreteDblTheory<Cat>;
 
     fn theory(&self) -> &Self::Theory {
@@ -394,7 +386,7 @@ where
     fn mor_type(&self, mor: &Self::Mor) -> Self::MorType {
         let types =
             mor.clone().map(|x| self.ob_generator_type(&x), |m| self.mor_generator_type(&m));
-        self.theory.compose_types(types)
+        self.theory.compose_types(types).expect("Morphism types should have composite")
     }
 }
 
@@ -427,19 +419,19 @@ where
     Cat::Ob: Hash,
     Cat::Mor: Hash,
 {
-    fn add_ob(&mut self, x: Id, typ: Cat::Ob) -> bool {
+    fn add_ob(&mut self, x: Id, typ: Cat::Ob) {
         self.ob_types.set(x.clone(), typ);
-        self.category.add_ob_generator(x)
+        self.category.add_ob_generator(x);
     }
 
-    fn add_mor(&mut self, f: Id, dom: Id, cod: Id, typ: Cat::Mor) -> bool {
+    fn add_mor(&mut self, f: Id, dom: Id, cod: Id, typ: Cat::Mor) {
         self.mor_types.set(f.clone(), typ);
-        self.category.add_mor_generator(f, dom, cod)
+        self.category.add_mor_generator(f, dom, cod);
     }
 
-    fn make_mor(&mut self, f: Id, typ: Cat::Mor) -> bool {
+    fn make_mor(&mut self, f: Id, typ: Cat::Mor) {
         self.mor_types.set(f.clone(), typ);
-        self.category.make_mor_generator(f)
+        self.category.make_mor_generator(f);
     }
 
     fn get_dom(&self, f: &Id) -> Option<&Id> {
@@ -448,11 +440,11 @@ where
     fn get_cod(&self, f: &Id) -> Option<&Id> {
         self.category.get_cod(f)
     }
-    fn set_dom(&mut self, f: Id, x: Id) -> Option<Id> {
-        self.category.set_dom(f, x)
+    fn set_dom(&mut self, f: Id, x: Id) {
+        self.category.set_dom(f, x);
     }
-    fn set_cod(&mut self, f: Id, x: Id) -> Option<Id> {
-        self.category.set_cod(f, x)
+    fn set_cod(&mut self, f: Id, x: Id) {
+        self.category.set_cod(f, x);
     }
 }
 
@@ -503,16 +495,16 @@ pub enum InvalidDblModel<Id> {
     CodType(Id),
 
     /// Equation has left hand side that is not a well defined path.
-    EqLhs(Id),
+    EqLhs(usize),
 
     /// Equation has right hand side that is not a well defined path.
-    EqRhs(Id),
+    EqRhs(usize),
 
     /// Equation has different sources on left and right hand sides.
-    EqSrc(Id),
+    EqSrc(usize),
 
     /// Equation has different sources on left and right hand sides.
-    EqTgt(Id),
+    EqTgt(usize),
 }
 
 /// Object in a model of a discrete tabulator theory.
@@ -672,8 +664,8 @@ the dev docs.
 #[derivative(PartialEq(bound = "Id: Eq + Hash, ThId: Eq + Hash"))]
 #[derivative(Eq(bound = "Id: Eq + Hash, ThId: Eq + Hash"))]
 pub struct DiscreteTabModel<Id, ThId, S = RandomState> {
-    #[derivative(PartialEq(compare_with = "Arc::ptr_eq"))]
-    theory: Arc<DiscreteTabTheory<ThId, ThId, S>>,
+    #[derivative(PartialEq(compare_with = "Rc::ptr_eq"))]
+    theory: Rc<DiscreteTabTheory<ThId, ThId, S>>,
     generators: DiscreteTabGenerators<Id, Id>,
     // TODO: Equations
     ob_types: IndexedHashColumn<Id, TabObType<ThId, ThId>>,
@@ -691,7 +683,7 @@ where
     S: BuildHasher,
 {
     /// Creates an empty model of the given theory.
-    pub fn new(theory: Arc<DiscreteTabTheory<ThId, ThId, S>>) -> Self {
+    pub fn new(theory: Rc<DiscreteTabTheory<ThId, ThId, S>>) -> Self {
         Self {
             theory,
             generators: Default::default(),
@@ -829,24 +821,15 @@ where
                 }
             },
         );
-        self.theory.compose_types(types)
+        self.theory.compose_types(types).expect("Morphism types should have composite")
     }
 
-    fn ob_act(&self, ob: Self::Ob, op: &Self::ObOp) -> Self::Ob {
-        // Should we type check more rigorously here and in `mor_act`?
-        match (ob, op) {
-            (ob, TabObOp::Id(_)) => ob,
-            (TabOb::Tabulated(m), TabObOp::ProjSrc(_)) => self.dom(&m),
-            (TabOb::Tabulated(m), TabObOp::ProjTgt(_)) => self.cod(&m),
-            _ => panic!("Ill-typed application of object operation"),
-        }
+    fn ob_act(&self, _ob: Self::Ob, _op: &Self::ObOp) -> Self::Ob {
+        panic!("Action on objects not implemented")
     }
 
-    fn mor_act(&self, mor: Self::Mor, op: &Self::MorOp) -> Self::Mor {
-        match (mor, op) {
-            (mor, TabMorOp::Id(_)) => mor,
-            _ => panic!("Non-identity morphism operations not implemented"),
-        }
+    fn mor_act(&self, _mor: Self::Mor, _op: &Self::MorOp) -> Self::Mor {
+        panic!("Action on morphisms not implemented")
     }
 }
 
@@ -880,14 +863,14 @@ where
     ThId: Eq + Clone + Hash,
     S: BuildHasher,
 {
-    fn add_ob(&mut self, x: Self::ObGen, ob_type: Self::ObType) -> bool {
+    fn add_ob(&mut self, x: Self::ObGen, ob_type: Self::ObType) {
         self.ob_types.set(x.clone(), ob_type);
-        self.generators.objects.insert(x)
+        self.generators.objects.insert(x);
     }
 
-    fn make_mor(&mut self, f: Self::MorGen, mor_type: Self::MorType) -> bool {
+    fn make_mor(&mut self, f: Self::MorGen, mor_type: Self::MorType) {
         self.mor_types.set(f.clone(), mor_type);
-        self.generators.morphisms.insert(f)
+        self.generators.morphisms.insert(f);
     }
 
     fn get_dom(&self, f: &Self::MorGen) -> Option<&Self::Ob> {
@@ -896,11 +879,11 @@ where
     fn get_cod(&self, f: &Self::MorGen) -> Option<&Self::Ob> {
         self.generators.cod.get(f)
     }
-    fn set_dom(&mut self, f: Self::MorGen, x: Self::Ob) -> Option<Self::Ob> {
-        self.generators.dom.set(f, x)
+    fn set_dom(&mut self, f: Self::MorGen, x: Self::Ob) {
+        self.generators.dom.set(f, x);
     }
-    fn set_cod(&mut self, f: Self::MorGen, x: Self::Ob) -> Option<Self::Ob> {
-        self.generators.cod.set(f, x)
+    fn set_cod(&mut self, f: Self::MorGen, x: Self::Ob) {
+        self.generators.cod.set(f, x);
     }
 }
 
@@ -923,12 +906,12 @@ mod tests {
     use ustr::ustr;
 
     use super::*;
-    use crate::one::fin_category::FinMor;
+    use crate::one::Path;
     use crate::stdlib::{models::*, theories::*};
 
     #[test]
     fn validate_discrete_dbl_model() {
-        let th = Arc::new(th_schema());
+        let th = Rc::new(th_schema());
         let mut model = DiscreteDblModel::new(th.clone());
         let entity = ustr("entity");
         model.add_ob(entity, ustr("NotObType"));
@@ -936,30 +919,30 @@ mod tests {
 
         let mut model = DiscreteDblModel::new(th.clone());
         model.add_ob(entity, ustr("Entity"));
-        model.add_mor(ustr("map"), entity, entity, FinMor::Generator(ustr("NotMorType")));
+        model.add_mor(ustr("map"), entity, entity, ustr("NotMorType").into());
         assert_eq!(model.validate(), Err(nonempty![InvalidDblModel::MorType(ustr("map"))]));
 
         let mut model = DiscreteDblModel::new(th);
         model.add_ob(entity, ustr("Entity"));
         model.add_ob(ustr("type"), ustr("AttrType"));
-        model.add_mor(ustr("a"), entity, ustr("type"), FinMor::Generator(ustr("Attr")));
+        model.add_mor(ustr("a"), entity, ustr("type"), ustr("Attr").into());
         assert!(model.validate().is_ok());
-        model.add_mor(ustr("b"), entity, ustr("type"), FinMor::Id(ustr("Entity")));
+        model.add_mor(ustr("b"), entity, ustr("type"), Path::Id(ustr("Entity")));
         assert_eq!(model.validate(), Err(nonempty![InvalidDblModel::CodType(ustr("b"))]));
     }
 
     #[test]
     fn infer_discrete_dbl_model() {
-        let th = Arc::new(th_schema());
+        let th = Rc::new(th_schema());
         let mut model = DiscreteDblModel::new(th.clone());
-        model.add_mor(ustr("attr"), ustr("entity"), ustr("type"), FinMor::Generator(ustr("Attr")));
+        model.add_mor(ustr("attr"), ustr("entity"), ustr("type"), ustr("Attr").into());
         model.infer_missing();
         assert_eq!(model, walking_attr(th));
     }
 
     #[test]
     fn validate_discrete_tab_model() {
-        let th = Arc::new(th_category_links());
+        let th = Rc::new(th_category_links());
         let mut model = DiscreteTabModel::new(th);
         let (x, f) = (ustr("x"), ustr("f"));
         model.add_ob(x, TabObType::Basic(ustr("Object")));

@@ -29,19 +29,6 @@ import Network from "lucide-solid/icons/network";
 
 /** Hamburger menu for any model or diagram document. */
 export function DocumentMenu(props: {
-    liveDocument?: LiveDiagramDocument | LiveModelDocument;
-}) {
-    return (
-        <AppMenu disabled={props.liveDocument === undefined}>
-            <Show when={props.liveDocument}>
-                {(liveDocument) => <DocumentMenuItems liveDocument={liveDocument()} />}
-            </Show>
-        </AppMenu>
-    );
-}
-
-/** Menu items for any model or diagram document. */
-export function DocumentMenuItems(props: {
     liveDocument: LiveDiagramDocument | LiveModelDocument;
 }) {
     const api = useApi();
@@ -114,7 +101,7 @@ export function DocumentMenuItems(props: {
     };
 
     return (
-        <>
+        <AppMenu>
             <Show when={props.liveDocument.type === "model"}>
                 <NewModelItem />
             </Show>
@@ -155,6 +142,6 @@ export function DocumentMenuItems(props: {
                 <CopyToClipboard />
                 <MenuItemLabel>{"Copy to clipboard"}</MenuItemLabel>
             </MenuItem>
-        </>
+        </AppMenu>
     );
 }

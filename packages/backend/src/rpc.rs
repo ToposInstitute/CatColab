@@ -20,11 +20,13 @@ pub fn router() -> Router<AppState> {
         .handler(save_snapshot)
         .handler(get_permissions)
         .handler(set_permissions)
+        .handler(validate_session)
         .handler(sign_up_or_sign_in)
         .handler(user_by_username)
         .handler(username_status)
         .handler(get_active_user_profile)
         .handler(set_active_user_profile)
+        .handler(search_ref_stubs)
 }
 
 #[handler(mutation)]
@@ -75,6 +77,14 @@ enum RefDoc {
 }
 
 #[handler(query)]
+async fn search_ref_stubs(
+    ctx: AppCtx,
+    query_params: doc::RefQueryParams,
+) -> RpcResult<Vec<doc::RefStub>> {
+    doc::search_ref_stubs(ctx, query_params).await.into()
+}
+
+#[handler(query)]
 async fn head_snapshot(ctx: AppCtx, ref_id: Uuid) -> RpcResult<Value> {
     _head_snapshot(ctx, ref_id).await.into()
 }
@@ -107,6 +117,11 @@ async fn _set_permissions(ctx: AppCtx, ref_id: Uuid, new: NewPermissions) -> Res
     }
     auth::authorize(&ctx, ref_id, PermissionLevel::Own).await?;
     auth::set_permissions(&ctx.state, ref_id, new).await
+}
+
+#[handler(query)]
+async fn validate_session(ctx: AppCtx) -> RpcResult<()> {
+    auth::validate_session(ctx).await.into()
 }
 
 #[handler(mutation)]

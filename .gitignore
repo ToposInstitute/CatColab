@@ -87,3 +87,9 @@ instrument.mjs
 
 # .DS_Store
 *.DS_Store
+
+# direnv cache
+.direnv
+
+# bild build output
+/infrastructure/result

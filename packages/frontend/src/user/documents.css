@@ -1,0 +1,100 @@
+.ref-table-outer {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+}
+
+.ref-table-scroll {
+    overflow: auto;
+    scrollbar-gutter: stable;
+}
+
+.ref-table-header > div {
+    overflow: hidden;
+    scrollbar-gutter: stable;
+}
+
+.ref-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    text-align: left;
+}
+
+.ref-table th,
+.ref-table td {
+    padding: 12px;
+    border-bottom: 1px solid #ccc;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ref-table th:nth-child(1),
+.ref-table td:nth-child(1) {
+    width: 10%;
+    min-width: 100px;
+}
+
+.ref-table th:nth-child(2),
+.ref-table td:nth-child(2) {
+    width: 40%;
+    min-width: 200px;
+}
+
+.ref-table th:nth-child(3),
+.ref-table td:nth-child(3) {
+    width: 20%;
+    min-width: 100px;
+}
+
+.ref-table th:nth-child(4),
+.ref-table td:nth-child(4) {
+    width: 15%;
+    min-width: 80px;
+}
+
+.ref-table th:nth-child(5),
+.ref-table td:nth-child(5) {
+    width: 15%;
+    min-width: 120px;
+}
+
+.ref-table-scroll tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.ref-table-scroll tbody tr:hover {
+    background-color: #f0f0f0;
+    cursor: pointer;
+}
+
+.documents-page {
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.documents-page .page-container {
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.search-input {
+    box-sizing: border-box;
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+}
+
+.search-input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+}
