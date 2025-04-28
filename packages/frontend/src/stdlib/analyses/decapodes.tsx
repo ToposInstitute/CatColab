@@ -356,7 +356,7 @@ const makeInitCode = () =>
 /** Julia code run to perform a simulation. */
 const makeSimulationCode = (data: SimulationData) =>
     `
-    system = PodeSystem(raw"""${JSON.stringify(data)}""");
+    system = Analysis(ThDecapode(), raw"""${JSON.stringify(data)}""");
     simulator = evalsim(system.pode);
 
     f = simulator(system.geometry.dualmesh, system.generate, DiagonalHodge());

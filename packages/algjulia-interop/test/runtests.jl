@@ -164,8 +164,8 @@ infer_types!(diagram.pode)
 @testset "Diagram - Diffusivity Constant" begin
     # construct a decapode
     handcrafted_pode = SummationDecapode(parse_decapode(quote end))
-    add_part!(handcrafted_pode, :Var, name=:v, type=:DualForm2)
-    add_part!(handcrafted_pode, :Var, name=Symbol("dv/dt"), type=:DualForm2)
+    add_part!(handcrafted_pode, :Var, name=:u, type=:DualForm2)
+    add_part!(handcrafted_pode, :Var, name=Symbol("du/dt"), type=:DualForm2)
     add_part!(handcrafted_pode, :Var, name=Symbol("•1"), type=:Form0)
     add_part!(handcrafted_pode, :Var, name=Symbol("•2"), type=:Form1)
     add_part!(handcrafted_pode, :Var, name=Symbol("•3"), type=:DualForm1)
@@ -195,12 +195,12 @@ end
 
 
 # Payload
-payloadjson = open(JSON3.read, joinpath(@__DIR__,  "test_jsons", "payload.json"))
+payloadjson = open(JSON3.read, joinpath(@__DIR__, "test_jsons", "payload.json"))
 model = Model(ThDecapode(), payloadjson.model)
 diagram = Diagram(payloadjson.diagram, model)
 infer_types!(diagram.pode)
 # TODO need to verify
-@testset "Diagram - Diffusivity Constant" begin
+@testset "(Payload) Diagram - Diffusivity Constant" begin
     # construct a decapode
     handcrafted_pode = SummationDecapode(parse_decapode(quote end))
     add_part!(handcrafted_pode, :Var, name=Symbol("dv/dt"), type=:DualForm2)
@@ -223,10 +223,11 @@ end
 @testset "Analysis - Diffusivity Constant" begin
     system = Analysis(ThDecapode(), payloadjson)
     # simulator = evalsim(system.pode)
-    open("testsim.jl", "w") do f
+    path = joinpath(@__DIR__, "testsim.jl")
+    open(path, "w") do f
         write(f, string(gensim(system.pode)))
     end
-    simulator = include("testsim.jl")
+    simulator = include(path)
     f = simulator(system.geometry.dualmesh, system.generate, DiagonalHodge())
     soln = run_sim(f, system.init, system.duration, ComponentArray(k=0.5,))
     @test soln.retcode == ReturnCode.Success
