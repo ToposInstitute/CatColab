@@ -89,11 +89,8 @@ pub fn th_nn2_category() -> UstrDiscreteDblTheory {
     cat.add_ob_generator(x);
     cat.add_mor_generator(neg, x, x);
     cat.add_mor_generator(deg, x, x);
-    cat.add_mor_generator(del, x, x);
     cat.equate(Path::pair(neg, neg), Path::empty(x));
     cat.equate(Path::pair(neg, deg), Path::pair(deg, neg));
-    cat.equate(Path::pair(neg, del), Path::pair(del, neg));
-    cat.equate(Path::pair(del, deg), Path::pair(deg, del));
     DiscreteDblTheory::from(cat)
 }
 
@@ -225,11 +222,8 @@ mod tests {
         assert!(th_delayable_signed_category().validate().is_ok());
         assert!(th_nullable_signed_category().validate().is_ok());
         assert!(th_category_with_scalars().validate().is_ok());
-    }
-
-    #[test]
-    fn validate_discrete_tabulator_theories() {
-        // TODO: Implementation validation for discrete tabulator theories.
+        assert!(th_category_with_scalars().validate().is_ok());
+        // TODO: Validate discrete tabulator theories.
         th_category_links();
     }
 
