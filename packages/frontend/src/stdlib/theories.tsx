@@ -467,6 +467,110 @@ stdTheories.add(
 
 stdTheories.add(
     {
+        id: "graded-causal-loops",
+        name: "Causal loop diagram with differential degree",
+        description: "Causal relationships: positive or negative with differential degree",
+        group: "System Dynamics",
+        help: "graded-causal-loops",
+    },
+    (meta) => {
+        const thDegSignedCategory = new catlog.ThDegSignedCategory();
+
+        return new Theory({
+            ...meta,
+            theory: thDegSignedCategory.theory(),
+            onlyFreeModels: true,
+            modelTypes: [
+                {
+                    tag: "ObType",
+                    obType: { tag: "Basic", content: "Object" },
+                    name: "Variable",
+                    shortcut: ["V"],
+                    description: "Variable quantity",
+                },
+                {
+                    tag: "MorType",
+                    morType: {
+                        tag: "Hom",
+                        content: { tag: "Basic", content: "Object" },
+                    },
+                    name: "Positive degree 0",
+                    shortcut: ["P"],
+                    description: "Immediate positive influence",
+                    arrowStyle: "plus",
+                    preferUnnamed: true,
+                },
+                {
+                    tag: "MorType",
+                    morType: { tag: "Basic", content: "Negative" },
+                    name: "Negative degree 0",
+                    shortcut: ["N"],
+                    description: "Immediate negative influence",
+                    arrowStyle: "minus",
+                    preferUnnamed: true,
+                },
+                {
+                    tag: "MorType",
+                    morType: { tag: "Basic", content: "PositiveSlow" },
+                    name: "Degree 1 positive link",
+                    description: "Positive influence on the derivative",
+                    arrowStyle: "plusCaesura",
+                    preferUnnamed: true,
+                },
+                {
+                    tag: "MorType",
+                    morType: { tag: "Basic", content: "NegativeSlow" },
+                    name: "Degree 1 negative link",
+                    description: "Negative influence on the derivative",
+                    arrowStyle: "minusCaesura",
+                    preferUnnamed: true,
+                },
+            ],
+            modelAnalyses: [
+                analyses.configureModelGraph({
+                    id: "diagram",
+                    name: "Visualization",
+                    description: "Visualize the causal loop diagram",
+                }),
+                analyses.configureSubmodelsAnalysis({
+                    id: "negative-loops",
+                    name: "Balancing loops",
+                    description: "Find the fast-acting balancing loops",
+                    findSubmodels(model, options) {
+                        return thDegSignedCategory.negativeLoops(model, options);
+                    },
+                }),
+                analyses.configureSubmodelsAnalysis({
+                    id: "positive-loops",
+                    name: "Reinforcing loops",
+                    description: "Find the fast-acting reinforcing loops",
+                    findSubmodels(model, options) {
+                        return thDegSignedCategory.positiveLoops(model, options);
+                    },
+                }),
+                analyses.configureSubmodelsAnalysis({
+                    id: "delayed-negative-loops",
+                    name: "Delayed balancing loops",
+                    description: "Find the slow-acting balancing loops",
+                    findSubmodels(model, options) {
+                        return thDegSignedCategory.delayedNegativeLoops(model, options);
+                    },
+                }),
+                analyses.configureSubmodelsAnalysis({
+                    id: "delayed-positive-loops",
+                    name: "Delayed reinforcing loops",
+                    description: "Find the slow-acting reinforcing loops",
+                    findSubmodels(model, options) {
+                        return thDegSignedCategory.delayedPositiveLoops(model, options);
+                    },
+                }),
+            ],
+        });
+    },
+);
+
+stdTheories.add(
+    {
         id: "indeterminate-causal-loop",
         name: "Causal loop diagram with indeterminates",
         description: "Positive, negative, and indeterminate causal relationships",

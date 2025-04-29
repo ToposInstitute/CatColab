@@ -61,11 +61,11 @@ pub fn th_delayable_signed_category() -> UstrDiscreteDblTheory {
     let mut cat: UstrFpCategory = Default::default();
     let (x, neg, slow) = (ustr("Object"), ustr("Negative"), ustr("Slow"));
     cat.add_ob_generator(x);
-    cat.add_mor_generator(neg, x, x); // b
-    cat.add_mor_generator(slow, x, x); // a
-    cat.equate(Path::pair(neg, neg), Path::empty(x)); // bb = empty
-    cat.equate(Path::pair(slow, slow), slow.into()); // aa = a
-    cat.equate(Path::pair(neg, slow), Path::pair(slow, neg)); // ba = ab
+    cat.add_mor_generator(neg, x, x);
+    cat.add_mor_generator(slow, x, x);
+    cat.equate(Path::pair(neg, neg), Path::empty(x));
+    cat.equate(Path::pair(slow, slow), slow.into());
+    cat.equate(Path::pair(neg, slow), Path::pair(slow, neg));
 
     // NOTE: These aliases are superfluous but are included for backwards
     // compatibility with the previous version of the theory, defined by an
@@ -87,10 +87,10 @@ pub fn th_deg_signed_category() -> UstrDiscreteDblTheory {
     let mut cat: UstrFpCategory = Default::default();
     let (x, neg, deg) = (ustr("Object"), ustr("Negative"), ustr("Degree"));
     cat.add_ob_generator(x);
-    cat.add_mor_generator(neg, x, x); // b
-    cat.add_mor_generator(deg, x, x); // n
-    cat.equate(Path::pair(neg, neg), Path::empty(x)); // bb = empty
-    cat.equate(Path::pair(neg, deg), Path::pair(deg, neg)); // ba = ab
+    cat.add_mor_generator(neg, x, x);
+    cat.add_mor_generator(deg, x, x);
+    cat.equate(Path::pair(neg, neg), Path::empty(x));
+    cat.equate(Path::pair(neg, deg), Path::pair(deg, neg));
     DiscreteDblTheory::from(cat)
 }
 
@@ -165,6 +165,7 @@ mod tests {
         assert!(th_signed_category().validate().is_ok());
         assert!(th_delayable_signed_category().validate().is_ok());
         assert!(th_nullable_signed_category().validate().is_ok());
+        assert!(th_category_with_scalars().validate().is_ok());
         assert!(th_category_with_scalars().validate().is_ok());
         // TODO: Validate discrete tabulator theories.
         th_category_links();
