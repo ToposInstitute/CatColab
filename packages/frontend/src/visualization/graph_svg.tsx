@@ -124,7 +124,25 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
                         <textPath href={`#${pathId()}`} startOffset="40%">
                             {"‖"}
                         </textPath>
-                    </text>
+            </text>
+            </Match>
+            <Match when={props.edge.style === "plusOne"}>
+            {defaultPath()}
+        {tgtLabel("+")}
+            <text style="dominant-baseline: central;">
+            <textPath href={`#${pathId()}`} startOffset="40%">
+            {"|"}
+        </textPath>
+            </text>
+            </Match>
+            <Match when={props.edge.style === "minusOne"}>
+            {defaultPath()}
+        {tgtLabel("-")}
+            <text style="dominant-baseline: central;">
+            <textPath href={`#${pathId()}`} startOffset="40%">
+            {"|"}
+        </textPath>
+            </text>            
                 </Match>
                 <Match when={props.edge.style === "scalar"}>
                     {defaultPath()}
@@ -209,6 +227,8 @@ const styleToMarker: Record<ArrowStyle, ArrowMarker> = {
     indeterminate: "triangle",
     plusCaesura: "triangle",
     minusCaesura: "triangle",
+    plusOne: "triangle",
+    minusOne: "triangle",    
     scalar: "triangle",
 };
 

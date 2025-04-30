@@ -1,7 +1,7 @@
 //! Standard library of models of double theories.
 
 use std::rc::Rc;
-use ustr::{Ustr, ustr};
+use ustr::{ustr, Ustr};
 
 use crate::dbl::{model::*, theory::*};
 use crate::one::Path;
@@ -32,12 +32,20 @@ pub fn delayed_positive_loop(th: Rc<UstrDiscreteDblTheory>) -> UstrDiscreteDblMo
     loop_of_type(th, ustr("Object"), ustr("Slow").into())
 }
 
-/** The delayed negative self-loop.
+/** The delayed negative self-loop./
 
 A free [delayable signed category](super::theories::th_delayable_signed_category).
  */
 pub fn delayed_negative_loop(th: Rc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel {
     loop_of_type(th, ustr("Object"), Path::pair(ustr("Negative"), ustr("Slow")))
+}
+
+/** The order one positive self-loop.
+
+A free [N-graded signed category](super::theories::th_deg_signed_category).
+ */
+pub fn degree_one_positive_loop(th: Rc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel {
+    loop_of_type(th, ustr("Object"), ustr("Degree").into())
 }
 
 /// Creates a self-loop with given object and morphism types.

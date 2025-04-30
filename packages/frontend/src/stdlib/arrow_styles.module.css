@@ -25,6 +25,8 @@
 .arrow.indeterminate,
 .arrow.plusCaesura,
 .arrow.minusCaesura,
+.arrow.minusOne,
+.arrow.plusOne,
 .arrow.scalar {
     &:before,
     &:after {
@@ -50,7 +52,9 @@
 }
 
 .arrowContainer.plus,
-.arrowContainer.plusCaesura {
+.arrowContainer.plusCaesura,
+.arrowContainer.plusOne
+{
     &:after {
         content: "+";
         transform: none;
@@ -61,7 +65,9 @@
 }
 
 .arrowContainer.minus,
-.arrowContainer.minusCaesura {
+.arrowContainer.minusCaesura,
+.arrowContainer.minusOne
+ {
     &:after {
         content: "-";
         transform: none;
@@ -85,6 +91,17 @@
 .arrowContainer.minusCaesura {
     &:before {
         content: "‖";
+        position: absolute;
+        transform: translate(-50%, -50%);
+        top: 0;
+        left: 50%;
+    }
+}
+
+.arrowContainer.plusOne,
+.arrowContainer.minusOne {
+    &:before {
+        content: "|";
         position: absolute;
         transform: translate(-50%, -50%);
         top: 0;

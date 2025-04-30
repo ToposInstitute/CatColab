@@ -511,18 +511,22 @@ stdTheories.add(
                 },
                 {
                     tag: "MorType",
-                    morType: { tag: "Basic", content: "PositiveSlow" },
+                    morType: { tag: "Basic", content: "Degree" },
                     name: "Degree 1 positive link",
                     description: "Positive influence on the derivative",
-                    arrowStyle: "plusCaesura",
+                    arrowStyle: "plusOne",
                     preferUnnamed: true,
                 },
                 {
                     tag: "MorType",
-                    morType: { tag: "Basic", content: "NegativeSlow" },
+                    morType: { tag: "Composite", content:
+                               [
+                                   { tag: "Basic", content: "Negative"},
+                                   { tag: "Basic", content: "Degree"},
+                               ] },
                     name: "Degree 1 negative link",
                     description: "Negative influence on the derivative",
-                    arrowStyle: "minusCaesura",
+                    arrowStyle: "minusOne",
                     preferUnnamed: true,
                 },
             ],
@@ -532,38 +536,46 @@ stdTheories.add(
                     name: "Visualization",
                     description: "Visualize the causal loop diagram",
                 }),
+            //     analyses.configureSubmodelsAnalysis({
+            //         id: "negative-loops",
+            //         name: "Balancing loops",
+            //         description: "Find the fast-acting balancing loops",
+            //         findSubmodels(model, options) {
+            //             return thDegSignedCategory.negativeLoops(model, options);
+            //         },
+            //     }),
                 analyses.configureSubmodelsAnalysis({
-                    id: "negative-loops",
-                    name: "Balancing loops",
-                    description: "Find the fast-acting balancing loops",
-                    findSubmodels(model, options) {
-                        return thDegSignedCategory.negativeLoops(model, options);
-                    },
-                }),
-                analyses.configureSubmodelsAnalysis({
-                    id: "positive-loops",
-                    name: "Reinforcing loops",
+                    id: "positive-zero-loops",
+                    name: "Degree Zero Reinforcing loops",
                     description: "Find the fast-acting reinforcing loops",
                     findSubmodels(model, options) {
-                        return thDegSignedCategory.positiveLoops(model, options);
+                        return thDegSignedCategory.positiveZeroLoops(model, options);
                     },
                 }),
                 analyses.configureSubmodelsAnalysis({
-                    id: "delayed-negative-loops",
-                    name: "Delayed balancing loops",
-                    description: "Find the slow-acting balancing loops",
+                    id: "positive-one-loops",
+                    name: "Degree One Reinforcing loops",
+                    description: "Find the degree-one reinforcing loops",
                     findSubmodels(model, options) {
-                        return thDegSignedCategory.delayedNegativeLoops(model, options);
+                        return thDegSignedCategory.positiveOneLoops(model, options);
                     },
                 }),
-                analyses.configureSubmodelsAnalysis({
-                    id: "delayed-positive-loops",
-                    name: "Delayed reinforcing loops",
-                    description: "Find the slow-acting reinforcing loops",
-                    findSubmodels(model, options) {
-                        return thDegSignedCategory.delayedPositiveLoops(model, options);
-                    },
-                }),
+            //     analyses.configureSubmodelsAnalysis({
+            //         id: "delayed-negative-loops",
+            //         name: "Delayed balancing loops",
+            //         description: "Find the slow-acting balancing loops",
+            //         findSubmodels(model, options) {
+            //             return thDegSignedCategory.delayedNegativeLoops(model, options);
+            //         },
+            //     }),
+            //     analyses.configureSubmodelsAnalysis({
+            //         id: "delayed-positive-loops",
+            //         name: "Delayed reinforcing loops",
+            //         description: "Find the slow-acting reinforcing loops",
+            //         findSubmodels(model, options) {
+            //             return thDegSignedCategory.delayedPositiveLoops(model, options);
+            //         },
+            //     }),
             ],
         });
     },

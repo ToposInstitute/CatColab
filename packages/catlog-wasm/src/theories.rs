@@ -204,16 +204,16 @@ impl ThDegSignedCategory {
         DblTheory(self.0.clone().into())
     }
 
-    // Find degree zero positive feedback loops in a model.
-    // #[wasm_bindgen(js_name = "positiveLoops")]
-    // pub fn positive_loops(
-    //     &self,
-    //     model: &DblModel,
-    //     options: MotifsOptions,
-    // ) -> Result<Vec<DblModel>, String> {
-    //     let positive_loop = models::positive_loop(self.0.clone());
-    //     motifs(&positive_loop, model, options)
-    // }
+    /// Find degree zero positive feedback loops in a model.
+    #[wasm_bindgen(js_name = "positiveZeroLoops")]
+    pub fn positive_zero_loops(
+        &self,
+        model: &DblModel,
+        options: MotifsOptions,
+    ) -> Result<Vec<DblModel>, String> {
+        let positive_zero_loop = models::positive_loop(self.0.clone());
+        motifs(&positive_zero_loop, model, options)
+    }
 
     // /// Find (fast) negative feedback loops in a model.
     // #[wasm_bindgen(js_name = "negativeLoops")]
@@ -226,16 +226,16 @@ impl ThDegSignedCategory {
     //     motifs(&negative_loop, model, options)
     // }
 
-    // /// Find delayed positive feedback loops in a model.
-    // #[wasm_bindgen(js_name = "delayedPositiveLoops")]
-    // pub fn delayed_positive_loops(
-    //     &self,
-    //     model: &DblModel,
-    //     options: MotifsOptions,
-    // ) -> Result<Vec<DblModel>, String> {
-    //     let delayed_positive_loop = models::delayed_positive_loop(self.0.clone());
-    //     motifs(&delayed_positive_loop, model, options)
-    // }
+    /// Find degree one positive feedback loops in a model.
+    #[wasm_bindgen(js_name = "positiveOneLoops")]
+    pub fn positive_one_loops(
+        &self,
+        model: &DblModel,
+        options: MotifsOptions,
+    ) -> Result<Vec<DblModel>, String> {
+        let positive_one_loop = models::degree_one_positive_loop(self.0.clone());
+        motifs(&positive_one_loop, model, options)
+    }
 
     // /// Find delayed negative feedback loops in a model.
     // #[wasm_bindgen(js_name = "delayedNegativeLoops")]
