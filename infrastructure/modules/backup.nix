@@ -1,6 +1,7 @@
 {
   pkgs,
   lib,
+  config,
   ...
 }:
 let
@@ -22,14 +23,15 @@ in
 with lib;
 {
   config = {
+    # TODO: secrets should probably be defined in the hosts config
     age.secrets = {
       "rclone.conf" = {
-        file = "${inputs.self}/secrets/rclone.conf.age";
+        file = "${inputs.self}/infrastructure/secrets/rclone.conf.age";
         mode = "400";
         owner = "catcolab";
       };
       backendSecretsForCatcolab = {
-        file = "${inputs.self}/infrastructure/secrets/.env.next.age";
+        file = "${inputs.self}/infrastructure/secrets/.env.prod.age";
         name = "backend-secrets-for-catcolab.env";
         owner = "catcolab";
       };
