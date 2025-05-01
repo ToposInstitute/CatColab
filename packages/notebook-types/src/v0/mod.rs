@@ -4,6 +4,9 @@ mod cell;
 mod model_judgment;
 mod diagram_judgment;
 mod api;
+mod path;
+mod model;
+mod theory;
 
 #[cfg(test)]
 mod test {

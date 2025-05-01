@@ -18,6 +18,7 @@ derive_more = { version = "1", features = ["from", "try_into"] }
 getrandom = { version = "0.2", features = ["js"] }
 js-sys = "0.3.77"
 nonempty = { version = "0.10", features = ["serialize"] }
+notebook-types = { version = "0.1.0", path = "../notebook-types" }
 serde = { version = "1", features = ["derive"] }
 tsify-next = { version = "0.5.4", features = ["js"] }
 ustr = "1"

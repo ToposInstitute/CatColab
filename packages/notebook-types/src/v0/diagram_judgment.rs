@@ -2,7 +2,8 @@ use serde::{Serialize, Deserialize};
 use tsify::Tsify;
 use uuid::Uuid;
 
-use super::model_judgment::{Mor, MorType, Ob, ObType};
+use super::model::{Ob, Mor};
+use super::theory::{ObType, MorType};
 
 pub type DiagramJudgment = DiagramDecl;
 
