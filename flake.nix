@@ -23,7 +23,7 @@
       ...
     }@inputs:
     let
-          # Linux-specific outputs (NixOS configurations and deploy)
+      # Linux-specific outputs (NixOS configurations and deploy)
       linuxSystem = "x86_64-linux";
 
       devShellSystems = [
@@ -33,7 +33,8 @@
       ];
 
       # Generate devShells for each system
-      devShellForSystem = system:
+      devShellForSystem =
+        system:
         let
           pkgs = import nixpkgs {
             inherit system;
@@ -41,15 +42,22 @@
           };
 
           # macOS-specific configurations for libraries
-          darwinDeps = if pkgs.stdenv.isDarwin then [
-            pkgs.darwin.apple_sdk.frameworks.Security
-            pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
-            pkgs.libiconv
-          ] else [];
+          darwinDeps =
+            if pkgs.stdenv.isDarwin then
+              [
+                pkgs.darwin.apple_sdk.frameworks.Security
+                pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
+                pkgs.libiconv
+              ]
+            else
+              [ ];
 
-        in pkgs.mkShell {
-            name = "catcolab-devshell";
-            buildInputs = with pkgs; [
+        in
+        pkgs.mkShell {
+          name = "catcolab-devshell";
+          buildInputs =
+            with pkgs;
+            [
               rustc
               cargo
               openssl
@@ -61,33 +69,45 @@
               nodejs_23
               sqlx-cli
               biome
-            ] ++ darwinDeps ++ [
+            ]
+            ++ darwinDeps
+            ++ [
               inputs.agenix.packages.${system}.agenix
               inputs.deploy-rs.packages.${system}.default
               inputs.crate2nix.packages.${system}.default
             ];
 
-            # macOS-specific environment variables for OpenSSL and pkg-config
-            shellHook = ''
-              ${if pkgs.stdenv.isDarwin then ''
-                export OPENSSL_DIR=${pkgs.openssl.dev}
-                export OPENSSL_LIB_DIR=${pkgs.openssl.out}/lib
-                export OPENSSL_INCLUDE_DIR=${pkgs.openssl.dev}/include
-                export PKG_CONFIG_PATH=${pkgs.openssl.dev}/lib/pkgconfig:$PKG_CONFIG_PATH
-              '' else ""}
-              # Load DATABASE_URL into the environment
-              if [ -f packages/backend/.env ]; then
-                export $(grep -v '^#' packages/backend/.env | xargs)
-              fi
-            '';
-          };
+          # macOS-specific environment variables for OpenSSL and pkg-config
+          shellHook = ''
+            ${
+              if pkgs.stdenv.isDarwin then
+                ''
+                  export OPENSSL_DIR=${pkgs.openssl.dev}
+                  export OPENSSL_LIB_DIR=${pkgs.openssl.out}/lib
+                  export OPENSSL_INCLUDE_DIR=${pkgs.openssl.dev}/include
+                  export PKG_CONFIG_PATH=${pkgs.openssl.dev}/lib/pkgconfig:$PKG_CONFIG_PATH
+                ''
+              else
+                ""
+            }
+            # Load DATABASE_URL into the environment
+            if [ -f packages/backend/.env ]; then
+              export $(grep -v '^#' packages/backend/.env | xargs)
+            fi
+          '';
+        };
 
-    in {
+    in
+    {
       # Create devShells for all supported systems
-      devShells = builtins.listToAttrs (map (system: {
-        name = system;
-        value = { default = devShellForSystem system; };
-      }) devShellSystems);
+      devShells = builtins.listToAttrs (
+        map (system: {
+          name = system;
+          value = {
+            default = devShellForSystem system;
+          };
+        }) devShellSystems
+      );
 
       # Create a NixOS configuration for each host
       nixosConfigurations = {
@@ -107,14 +127,6 @@
             agenix.nixosModules.age
           ];
         };
-        catcolab-jmoggr = nixpkgs.lib.nixosSystem {
-          specialArgs = { inherit inputs; };
-          system = linuxSystem;
-          modules = [
-            ./infrastructure/hosts/catcolab-jmoggr
-            agenix.nixosModules.age
-          ];
-        };
       };
 
       deploy.nodes = {
@@ -130,13 +142,6 @@
           profiles.system = {
             sshUser = "root";
             path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab-next;
-          };
-        };
-        catcolab-jmoggr = {
-          hostname = "backend-next.jmoggr.com";
-          profiles.system = {
-            sshUser = "root";
-            path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab-jmoggr;
           };
         };
       };
