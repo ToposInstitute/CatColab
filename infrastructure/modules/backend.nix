@@ -71,20 +71,6 @@ with lib;
   };
 
   config = {
-    age.secrets = {
-      backendSecretsForPostgres = {
-        file = "${inputs.self}/infrastructure/secrets/.env.next.age";
-        name = "backend-secrets-for-postgres.env";
-        owner = "postgres";
-      };
-
-      backendSecretsForCatcolab = {
-        file = "${inputs.self}/infrastructure/secrets/.env.next.age";
-        name = "backend-secrets-for-catcolab.env";
-        owner = "catcolab";
-      };
-    };
-
     services.postgresql = {
       enable = true;
     };
