@@ -2,7 +2,7 @@ import { type Accessor, createMemo } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { JsonValue } from "catcolab-api";
-import type { DblModel, ModelValidationResult, Uuid } from "catlog-wasm";
+import { type DblModel, type ModelValidationResult, type Uuid, elaborate } from "catlog-wasm";
 import { type Api, type Document, type LiveDoc, getLiveDoc } from "../api";
 import { type Notebook, newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
@@ -104,7 +104,7 @@ function enlivenModelDocument(
         () => {
             const th = theory();
             if (th) {
-                const model = toCatlogModel(th.theory, formalJudgments());
+                const model = elaborate(doc, theory().theory);
                 const result = model.validate();
                 return { model, result };
             }
