@@ -308,7 +308,7 @@ dependencies = [
  "either",
  "expect-test",
  "nalgebra",
- "nonempty 0.10.0",
+ "nonempty",
  "num-traits",
  "ode_solvers",
  "ref-cast",
@@ -344,7 +344,7 @@ dependencies = [
  "derive_more",
  "getrandom 0.2.15",
  "js-sys",
- "nonempty 0.10.0",
+ "nonempty",
  "notebook-types",
  "serde",
  "tsify-next",
@@ -1715,19 +1715,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "nonempty"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "549e471b99ccaf2f89101bec68f4d244457d5a95a9c3d0672e9564124397741d"
-dependencies = [
- "serde",
-]
-
-[[package]]
 name = "notebook-types"
 version = "0.1.0"
 dependencies = [
- "nonempty 0.11.0",
+ "nonempty",
  "serde",
  "serde_json",
  "tsify",

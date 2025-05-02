@@ -13,7 +13,9 @@ use catlog::dbl::model_diagram as diagram;
 use catlog::dbl::model_morphism::DblModelMapping;
 use catlog::one::FgCategory;
 
-use super::model::{DblModel, DblModelBox, DiscreteDblModel, Mor, Ob};
+use notebook_types::current::model::{Mor, Ob};
+
+use super::model::{DblModel, DblModelBox, DiscreteDblModel};
 use super::model_morphism::DiscreteDblModelMapping;
 use super::result::JsResult;
 use super::theory::{DblTheory, MorType, ObType};

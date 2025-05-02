@@ -5,7 +5,7 @@ use uuid::Uuid;
 use super::path::Path;
 
 /// An object in a model of a double theory.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
 #[serde(tag = "tag", content = "content")]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum Ob {
@@ -17,7 +17,7 @@ pub enum Ob {
 }
 
 /// A morphism in a model of a double theory.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
 #[serde(tag = "tag", content = "content")]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum Mor {

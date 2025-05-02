@@ -7,20 +7,28 @@ use serde::{Serialize, Deserialize};
 use tsify::Tsify;
 
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct ModelDocument {
+    pub name: String,
+    pub theory: String,
+    pub notebook: Notebook<ModelJudgment>
+}
+
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct DiagramDocument {
+    pub name: String,
+    #[serde(rename="diagramIn")]
+    pub diagram_in: Link,
+    pub notebook: Notebook<DiagramJudgment>
+}
+
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
 #[serde(tag = "type")]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum Document {
     #[serde(rename="model")]
-    Model {
-        name: String,
-        theory: String,
-        notebook: Notebook<ModelJudgment>
-    },
+    Model(ModelDocument),
     #[serde(rename="diagram")]
-    Diagram {
-        name: String,
-        #[serde(rename="diagramIn")]
-        diagram_in: Link,
-        notebook: Notebook<DiagramJudgment>
-    }
+    Diagram(DiagramDocument)
 }

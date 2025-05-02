@@ -1,12 +1,12 @@
-mod document;
-mod notebook;
-mod cell;
-mod model_judgment;
-mod diagram_judgment;
-mod api;
-mod path;
-mod model;
-mod theory;
+pub mod document;
+pub mod notebook;
+pub mod cell;
+pub mod model_judgment;
+pub mod diagram_judgment;
+pub mod api;
+pub mod path;
+pub mod model;
+pub mod theory;
 
 #[cfg(test)]
 mod test {
