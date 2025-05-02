@@ -34,7 +34,7 @@ in
   catcolab = {
     backend = {
       backendPort = "8000";
-      automergePort = "8000";
+      automergePort = "8010";
       backendHostname = "backend.catcolab.org";
       automergeHostname = "automerge.catcolab.org";
     };
