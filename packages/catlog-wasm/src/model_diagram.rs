@@ -2,6 +2,8 @@
 
 use all_the_same::all_the_same;
 use derive_more::From;
+use notebook_types::current::cell::Cell;
+use notebook_types::current::diagram_judgment::DiagramDecl;
 use notebook_types::current::document::DiagramDocument;
 use ustr::Ustr;
 use uuid::Uuid;
@@ -257,8 +259,34 @@ pub struct ModelDiagramValidationResult(
     pub JsResult<(), Vec<diagram::InvalidDiscreteDblModelDiagram<Uuid>>>,
 );
 
-pub fn elaborate(_doc: &DiagramDocument) {
-    todo!()
+#[wasm_bindgen(js_name = "elaborateDiagram")]
+pub fn elaborate_diagram(doc: &DiagramDocument, theory: &DblTheory) -> DblModelDiagram {
+    let mut model = DblModelDiagram::new(theory);
+    for cell in doc.notebook.cells.iter() {
+        if let Cell::Formal { id: _, content } = cell {
+            match content {
+                DiagramDecl::ObjectDecl {
+                    name: _,
+                    id,
+                    ob_type,
+                    over,
+                } => {
+                    model.add_ob(*id, ob_type, over).unwrap();
+                }
+                DiagramDecl::MorphismDecl {
+                    name: _,
+                    id,
+                    mor_type,
+                    dom,
+                    cod,
+                    over,
+                } => {
+                    model.add_mor(*id, mor_type, dom, cod, over).unwrap();
+                }
+            }
+        }
+    }
+    model
 }
 
 // #[cfg(test)]

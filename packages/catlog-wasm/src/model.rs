@@ -396,8 +396,8 @@ pub struct ModelValidationResult(pub JsResult<(), Vec<InvalidDblModel<Uuid>>>);
 #[wasm_bindgen]
 pub struct TheoryLibrary(#[wasm_bindgen(skip)] pub HashMap<String, DblTheory>);
 
-#[wasm_bindgen]
-pub fn elaborate(doc: &ModelDocument, theory: &DblTheory) -> DblModel {
+#[wasm_bindgen(js_name = "elaborateModel")]
+pub fn elaborate_model(doc: &ModelDocument, theory: &DblTheory) -> DblModel {
     let mut model = DblModel::new(theory);
     for cell in doc.notebook.cells.iter() {
         if let Cell::Formal { id: _, content } = cell {

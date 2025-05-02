@@ -52,16 +52,3 @@ export const duplicateModelJudgment = (jgmt: ModelJudgment): ModelJudgment => ({
     ...deepCopyJSON(jgmt),
     id: v7(),
 });
-
-/** Construct a model in `catlog` from a sequence of judgments. */
-export function toCatlogModel(theory: DblTheory, judgments: Array<ModelJudgment>): DblModel {
-    const model = new DblModel(theory);
-    for (const judgment of judgments) {
-        if (judgment.tag === "object") {
-            model.addOb(judgment);
-        } else if (judgment.tag === "morphism") {
-            model.addMor(judgment);
-        }
-    }
-    return model;
-}

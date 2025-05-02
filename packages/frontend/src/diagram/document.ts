@@ -3,6 +3,7 @@ import invariant from "tiny-invariant";
 
 import type { JsonValue } from "catcolab-api";
 import type { DblModelDiagram, ModelDiagramValidationResult, Uuid } from "catlog-wasm";
+import { elaborateDiagram } from "catlog-wasm";
 import {
     type Api,
     type Document,
@@ -15,7 +16,7 @@ import { type LiveModelDocument, getLiveModel } from "../model";
 import { type Notebook, newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
 import { type IdToNameMap, indexMap } from "../util/indexing";
-import { type DiagramJudgment, toCatlogDiagram } from "./types";
+import type { DiagramJudgment } from "./types";
 
 /** A document defining a diagram in a model. */
 export type DiagramDocument = Document<"diagram"> & {
@@ -116,7 +117,7 @@ function enlivenDiagramDocument(
                 return undefined;
             }
             const { model } = validatedModel;
-            const diagram = toCatlogDiagram(th.theory, formalJudgments());
+            const diagram = elaborateDiagram(doc, th.theory);
             diagram.inferMissingFrom(model);
             const result = diagram.validateIn(model);
             return { diagram, result };

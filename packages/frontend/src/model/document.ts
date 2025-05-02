@@ -2,13 +2,13 @@ import { type Accessor, createMemo } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { JsonValue } from "catcolab-api";
-import { type DblModel, type ModelValidationResult, type Uuid, elaborate } from "catlog-wasm";
+import { type DblModel, type ModelValidationResult, type Uuid, elaborateModel } from "catlog-wasm";
 import { type Api, type Document, type LiveDoc, getLiveDoc } from "../api";
 import { type Notebook, newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
 import type { Theory } from "../theory";
 import { type IndexedMap, indexMap } from "../util/indexing";
-import { type ModelJudgment, toCatlogModel } from "./types";
+import type { ModelJudgment } from "./types";
 
 /** A document defining a model. */
 export type ModelDocument = Document<"model"> & {
@@ -104,7 +104,7 @@ function enlivenModelDocument(
         () => {
             const th = theory();
             if (th) {
-                const model = elaborate(doc, theory().theory);
+                const model = elaborateModel(doc, theory().theory);
                 const result = model.validate();
                 return { model, result };
             }
