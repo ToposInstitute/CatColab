@@ -365,7 +365,7 @@ impl DblModel {
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct ModelValidationResult(pub JsResult<(), Vec<InvalidDblModel<Uuid>>>);
 
-struct ValidatedModel {
+pub struct ValidatedModel {
     pub model: DblModel,
     pub result: ModelValidationResult,
 }
@@ -374,8 +374,8 @@ pub fn elaborate(doc: &ModelDocument, theories: &HashMap<String, DblTheory>) -> 
     let theory = theories.get(&doc.theory).unwrap();
     let mut model = DblModel::new(theory);
     for cell in doc.notebook.cells.iter() {
-        match cell {
-            Cell::Formal { id: _, content } => match content {
+        if let Cell::Formal { id: _, content } = cell {
+            match content {
                 ModelDecl::ObjectDecl {
                     name: _,
                     id,
@@ -392,8 +392,7 @@ pub fn elaborate(doc: &ModelDocument, theories: &HashMap<String, DblTheory>) -> 
                 } => {
                     model.add_mor(*id, mor_type, dom, cod).unwrap();
                 }
-            },
-            _ => {}
+            }
         }
     }
     let result = model.validate();
