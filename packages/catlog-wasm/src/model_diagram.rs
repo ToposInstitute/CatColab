@@ -257,7 +257,7 @@ pub struct ModelDiagramValidationResult(
     pub JsResult<(), Vec<diagram::InvalidDiscreteDblModelDiagram<Uuid>>>,
 );
 
-pub fn elaborate(doc: &DiagramDocument) {
+pub fn elaborate(_doc: &DiagramDocument) {
     todo!()
 }
 
