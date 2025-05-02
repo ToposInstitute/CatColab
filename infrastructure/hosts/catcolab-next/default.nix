@@ -15,6 +15,19 @@ in
     "${inputs.nixpkgs}/nixos/modules/virtualisation/amazon-image.nix"
   ];
 
+  age.secrets = {
+    backendSecretsForCatcolab = {
+      file = "${inputs.self}/infrastructure/secrets/.env.next.age";
+      name = "backend-secrets-for-catcolab.env";
+      owner = "catcolab";
+    };
+    backendSecretsForPostgres = {
+      file = "${inputs.self}/infrastructure/secrets/.env.next.age";
+      name = "backend-secrets-for-postgres.env";
+      owner = "postgres";
+    };
+  };
+
   catcolab = {
     backend = {
       backendPort = "8000";
