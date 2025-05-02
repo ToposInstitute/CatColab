@@ -190,15 +190,21 @@ impl CanElaborate<Mor, TabEdge<Uuid, Uuid>> for Elaborator {
     }
 }
 
-struct Quoter;
+pub struct Quoter;
 
-trait CanQuote<T, S> {
+pub trait CanQuote<T, S> {
     fn quote(&self, x: &T) -> S;
 }
 
 impl CanQuote<Uuid, Ob> for Quoter {
     fn quote(&self, id: &Uuid) -> Ob {
         Ob::Basic(*id)
+    }
+}
+
+impl CanQuote<Ustr, ObType> for Quoter {
+    fn quote(&self, id: &Ustr) -> ObType {
+        ObType::Basic(*id)
     }
 }
 
@@ -252,6 +258,24 @@ impl CanQuote<Path<Uuid, Uuid>, Mor> for Quoter {
     }
 }
 
+impl CanQuote<FinMor<Uuid, Uuid>, Mor> for Quoter {
+    fn quote(&self, x: &FinMor<Uuid, Uuid>) -> Mor {
+        match x {
+            FinMor::Id(id) => Mor::Composite(Box::new(notebook_path::Path::Id(Ob::Basic(*id)))),
+            FinMor::Generator(id) => Mor::Basic(*id),
+        }
+    }
+}
+
+impl CanQuote<FinMor<Ustr, Ustr>, MorType> for Quoter {
+    fn quote(&self, x: &FinMor<Ustr, Ustr>) -> MorType {
+        match x {
+            FinMor::Id(id) => MorType::Hom(Box::new(ObType::Basic(*id))),
+            FinMor::Generator(id) => MorType::Basic(*id),
+        }
+    }
+}
+
 impl DblModel {
     pub fn new(theory: &DblTheory) -> Self {
         Self(match &theory.0 {
@@ -294,6 +318,8 @@ impl DblModel {
 
 #[wasm_bindgen]
 impl DblModel {
+    /// Is the object contained in the model?
+    #[wasm_bindgen(js_name = "hasOb")]
     pub fn has_ob(&self, ob: Ob) -> Result<bool, String> {
         all_the_same!(match &self.0 {
             DblModelBox::[Discrete, DiscreteTab](model) => {
@@ -303,6 +329,8 @@ impl DblModel {
         })
     }
 
+    /// Is the morphism contained in the model?
+    #[wasm_bindgen(js_name = "hasMor")]
     pub fn has_mor(&self, mor: Mor) -> Result<bool, String> {
         all_the_same!(match &self.0 {
             DblModelBox::[Discrete, DiscreteTab](model) => {
@@ -365,13 +393,11 @@ impl DblModel {
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct ModelValidationResult(pub JsResult<(), Vec<InvalidDblModel<Uuid>>>);
 
-pub struct ValidatedModel {
-    pub model: DblModel,
-    pub result: ModelValidationResult,
-}
+#[wasm_bindgen]
+pub struct TheoryLibrary(#[wasm_bindgen(skip)] pub HashMap<String, DblTheory>);
 
-pub fn elaborate(doc: &ModelDocument, theories: &HashMap<String, DblTheory>) -> ValidatedModel {
-    let theory = theories.get(&doc.theory).unwrap();
+#[wasm_bindgen]
+pub fn elaborate(doc: &ModelDocument, theory: &DblTheory) -> DblModel {
     let mut model = DblModel::new(theory);
     for cell in doc.notebook.cells.iter() {
         if let Cell::Formal { id: _, content } = cell {
@@ -395,6 +421,5 @@ pub fn elaborate(doc: &ModelDocument, theories: &HashMap<String, DblTheory>) -> 
             }
         }
     }
-    let result = model.validate();
-    ValidatedModel { model, result }
+    model
 }
