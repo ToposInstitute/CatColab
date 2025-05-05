@@ -62,7 +62,6 @@ export function ModelMenuItems(props: {
         navigate(`/model/${newRef}`);
     };
 
-
     return (
         <>
             <MenuItem onSelect={onNewModel}>

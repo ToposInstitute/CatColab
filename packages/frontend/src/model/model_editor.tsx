@@ -18,7 +18,7 @@ import { TheoryLibraryContext } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
 import { MaybePermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
-import { type LiveModelDocument, getLiveModel } from './document';
+import { type LiveModelDocument, getLiveModel } from "./document";
 import { ModelMenu } from "./model_menu";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
@@ -192,7 +192,6 @@ function judgmentLabel(judgment: ModelJudgment): string | undefined {
     }
 }
 
-
 export function EmbedDialog() {
     const [copyStatus, setCopyStatus] = createSignal<"Copied!" | "Please try again later." | "">(
         "",
@@ -206,33 +205,31 @@ export function EmbedDialog() {
         if (navigator.clipboard) {
             await navigator.clipboard.writeText(embedLink());
             setCopyStatus("Copied!");
-        }
-        else {
+        } else {
             Error("Could not be copied.");
         }
     };
 
-
     return (
         <>
-        <Dialog>
-            <Dialog.Portal>
-                <Dialog.Overlay class="overlay" />
-                <Dialog.Content class="popup">
-                    <Dialog.Label>Embed Notebook</Dialog.Label>
-                    <Dialog.Description>Copy iframe Code Below:</Dialog.Description>
-                    <div class="embed-code-container">
-                        <code class="embed-code">{embedLink()}</code>
-                        <div class="copy-status">
-                            <button onClick={copyToClipboard} class="link-button">
-                                Copy
-                            </button>
-                            <span>{copyStatus()}</span>
+            <Dialog>
+                <Dialog.Portal>
+                    <Dialog.Overlay class="overlay" />
+                    <Dialog.Content class="popup">
+                        <Dialog.Label>Embed Notebook</Dialog.Label>
+                        <Dialog.Description>Copy iframe Code Below:</Dialog.Description>
+                        <div class="embed-code-container">
+                            <code class="embed-code">{embedLink()}</code>
+                            <div class="copy-status">
+                                <button onClick={copyToClipboard} class="link-button">
+                                    Copy
+                                </button>
+                                <span>{copyStatus()}</span>
+                            </div>
                         </div>
-                    </div>
-                </Dialog.Content>
-            </Dialog.Portal>
-        </Dialog>
+                    </Dialog.Content>
+                </Dialog.Portal>
+            </Dialog>
         </>
     );
 }
