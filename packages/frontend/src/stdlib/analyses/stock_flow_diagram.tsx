@@ -44,10 +44,10 @@ const STOCKFLOW_ATTRIBUTES: GV.GraphvizAttributes = {
         splines: "ortho",
     },
     node: {
-        width: .55,
-        height: .55,
+        width: 0.55,
+        height: 0.55,
     },
-}
+};
 
 /** Visualize a stock flow diagram.
  */
