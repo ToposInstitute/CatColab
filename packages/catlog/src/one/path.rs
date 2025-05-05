@@ -5,7 +5,7 @@ data type for [path equations](`PathEq`).
 */
 
 use either::Either;
-use nonempty::{nonempty, NonEmpty};
+use nonempty::{NonEmpty, nonempty};
 use std::collections::HashSet;
 use std::hash::Hash;
 
@@ -50,9 +50,23 @@ pub enum Path<V, E> {
     Seq(NonEmpty<E>),
 }
 
+/// Converts an edge into a path of length one.
 impl<V, E> From<E> for Path<V, E> {
     fn from(e: E) -> Self {
         Path::single(e)
+    }
+}
+
+/// Converts the path into an iterater over its edges.
+impl<V, E> IntoIterator for Path<V, E> {
+    type Item = E;
+    type IntoIter = Either<std::iter::Empty<E>, <NonEmpty<E> as IntoIterator>::IntoIter>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        match self {
+            Path::Id(_) => Either::Left(std::iter::empty()),
+            Path::Seq(edges) => Either::Right(edges.into_iter()),
+        }
     }
 }
 
@@ -89,6 +103,17 @@ impl<V, E> Path<V, E> {
      */
     pub fn from_vec(vec: Vec<E>) -> Option<Self> {
         NonEmpty::from_vec(vec).map(Path::Seq)
+    }
+
+    /** Constructs a path by repeating an edge `n` times.
+
+    The edge should have the same source and target, namely the first argument.
+     */
+    pub fn repeat_n(v: V, e: E, n: usize) -> Self
+    where
+        E: Clone,
+    {
+        Path::collect(std::iter::repeat_n(e, n)).unwrap_or_else(|| Path::empty(v))
     }
 
     /// Length of the path.
@@ -139,10 +164,9 @@ impl<V, E> Path<V, E> {
 
     Assumes that the path is [contained in](Path::contained_in) the graph.
     */
-    pub fn src<G>(&self, graph: &G) -> V
+    pub fn src(&self, graph: &impl Graph<V = V, E = E>) -> V
     where
         V: Clone,
-        G: Graph<V = V, E = E>,
     {
         match self {
             Path::Id(v) => v.clone(),
@@ -154,10 +178,9 @@ impl<V, E> Path<V, E> {
 
     Assumes that the path is [contained in](Path::contained_in) the graph.
     */
-    pub fn tgt<G>(&self, graph: &G) -> V
+    pub fn tgt(&self, graph: &impl Graph<V = V, E = E>) -> V
     where
         V: Clone,
-        G: Graph<V = V, E = E>,
     {
         match self {
             Path::Id(v) => v.clone(),
@@ -173,10 +196,9 @@ impl<V, E> Path<V, E> {
     [`contained_in`](Self::contained_in) if in doubt. Thus, when returned, the
     concatenated path is also a valid path.
      */
-    pub fn concat_in<G>(self, graph: &G, other: Self) -> Option<Self>
+    pub fn concat_in(self, graph: &impl Graph<V = V, E = E>, other: Self) -> Option<Self>
     where
         V: Eq + Clone,
-        G: Graph<V = V, E = E>,
     {
         if self.tgt(graph) != other.src(graph) {
             return None;
@@ -194,10 +216,9 @@ impl<V, E> Path<V, E> {
     }
 
     /// Is the path contained in the given graph?
-    pub fn contained_in<G>(&self, graph: &G) -> bool
+    pub fn contained_in(&self, graph: &impl Graph<V = V, E = E>) -> bool
     where
         V: Eq,
-        G: Graph<V = V, E = E>,
     {
         match self {
             Path::Id(v) => graph.has_vertex(v),
@@ -329,10 +350,9 @@ impl<V, E> Path<V, Path<V, E>> {
     Returns the flattened path just when the original paths have compatible
     start and end points.
      */
-    pub fn flatten_in<G>(self, graph: &G) -> Option<Path<V, E>>
+    pub fn flatten_in(self, graph: &impl Graph<V = V, E = E>) -> Option<Path<V, E>>
     where
         V: Eq + Clone,
-        G: Graph<V = V, E = E>,
     {
         if let Path::Seq(paths) = &self {
             let mut pairs = std::iter::zip(paths.iter(), paths.iter().skip(1));
@@ -367,10 +387,9 @@ impl<V, E> PathEq<V, E> {
 
     Only well defined when the path equation is valid.
     */
-    pub fn src<G>(&self, graph: &G) -> V
+    pub fn src(&self, graph: &impl Graph<V = V, E = E>) -> V
     where
         V: Clone,
-        G: Graph<V = V, E = E>,
     {
         self.lhs.src(graph) // == self.rhs.src(graph)
     }
@@ -379,10 +398,9 @@ impl<V, E> PathEq<V, E> {
 
     Only well defined when the path equation is valid.
     */
-    pub fn tgt<G>(&self, graph: &G) -> V
+    pub fn tgt(&self, graph: &impl Graph<V = V, E = E>) -> V
     where
         V: Clone,
-        G: Graph<V = V, E = E>,
     {
         self.lhs.tgt(graph) // == self.rhs.tgt(graph)
     }
@@ -397,7 +415,10 @@ impl<V, E> PathEq<V, E> {
     }
 
     /// Iterators over failures of the path equation to be well defined.
-    pub fn iter_invalid_in<G>(&self, graph: &G) -> impl Iterator<Item = InvalidPathEq>
+    pub fn iter_invalid_in<G>(
+        &self,
+        graph: &G,
+    ) -> impl Iterator<Item = InvalidPathEq> + use<G, V, E>
     where
         V: Eq + Clone,
         G: Graph<V = V, E = E>,
@@ -467,11 +488,13 @@ mod tests {
     fn map_path() {
         let id = SkelPath::Id(1);
         assert_eq!(id.iter().count(), 0);
+        assert_eq!(id.clone().into_iter().count(), 0);
         assert_eq!(id.clone().map(|v| v + 1, identity), Path::Id(2));
         assert_eq!(id.partial_map(|v| Some(v + 1), Some), Some(Path::Id(2)));
 
         let pair = SkelPath::pair(0, 1);
         assert_eq!(pair.iter().count(), 2);
+        assert_eq!(pair.clone().into_iter().count(), 2);
         assert_eq!(pair.clone().map(identity, |e| e + 1), Path::pair(1, 2));
         assert_eq!(pair.partial_map(Some, |e| Some(e + 1)), Some(Path::pair(1, 2)));
     }

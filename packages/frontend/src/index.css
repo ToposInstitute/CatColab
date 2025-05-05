@@ -35,20 +35,20 @@ body,
 a {
     color: var(--link-color);
     text-decoration: underline;
-}
-
-.link-button {
-    border: none;
-    background-color: transparent;
-    color: var(--link-color);
-    font: inherit;
-    text-decoration: underline;
     cursor: pointer;
 
-    &:disabled {
+    &[data-disabled] {
+        pointer-events: none;
         text-decoration: none;
         cursor: auto;
     }
+}
+
+input,
+select {
+    background: whitesmoke;
+    border: 1px solid lightgray;
+    border-radius: 6px;
 }
 
 h1,

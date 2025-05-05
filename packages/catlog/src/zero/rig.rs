@@ -123,6 +123,20 @@ where
         self.0.keys()
     }
 
+    /** Maps the coefficients in the combination.
+
+    In the usual situation when the coefficients form rigs and the mapping is a
+    rig homomorphism, this operation is [extension of
+    scalars](https://ncatlab.org/nlab/show/extension+of+scalars) applied to
+    free modules.
+     */
+    pub fn extend_scalars<NewCoef, F>(self, mut f: F) -> Combination<Var, NewCoef>
+    where
+        F: FnMut(Coef) -> NewCoef,
+    {
+        Combination(self.0.into_iter().map(|(var, coef)| (var, f(coef))).collect())
+    }
+
     /// Evaluates the combination by substituting for the variables.
     pub fn eval<A, F>(&self, mut f: F) -> A
     where

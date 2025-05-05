@@ -8,12 +8,14 @@ import * as uuid from "uuid";
 import { MultiProvider } from "@solid-primitives/context";
 import { Navigate, type RouteDefinition, type RouteSectionProps, Router } from "@solidjs/router";
 import { FirebaseProvider } from "solid-firebase";
-import { Show, createResource, lazy } from "solid-js";
+import { ErrorBoundary, Show, createResource, lazy } from "solid-js";
 
-import { RepoContext, RpcContext, createRpcClient, useApi } from "./api";
+import { type Api, ApiContext, createRpcClient, useApi } from "./api";
 import { helpRoutes } from "./help/routes";
 import { createModel } from "./model/document";
+import { PageContainer } from "./page/page_container";
 import { TheoryLibraryContext, stdTheories } from "./stdlib";
+import { ErrorBoundaryDialog } from "./util/errors";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
 const repoUrl = import.meta.env.VITE_AUTOMERGE_REPO_URL;
@@ -22,24 +24,28 @@ const firebaseOptions = JSON.parse(import.meta.env.VITE_FIREBASE_OPTIONS) as Fir
 const Root = (props: RouteSectionProps<unknown>) => {
     invariant(serverUrl, "Must set environment variable VITE_SERVER_URL");
     invariant(repoUrl, "Must set environment variable VITE_AUTOMERGE_REPO_URL");
+    const serverHost = new URL(serverUrl).host;
 
     const firebaseApp = initializeApp(firebaseOptions);
-    const client = createRpcClient(serverUrl, firebaseApp);
+    const rpc = createRpcClient(serverUrl, firebaseApp);
 
     const repo = new Repo({
         storage: new IndexedDBStorageAdapter("catcolab"),
         network: [new BrowserWebSocketClientAdapter(repoUrl)],
     });
 
+    const api: Api = { serverHost, rpc, repo };
+
     return (
         <MultiProvider
             values={[
-                [RpcContext, client],
-                [RepoContext, repo],
+                [ApiContext, api],
                 [TheoryLibraryContext, stdTheories],
             ]}
         >
-            <FirebaseProvider app={firebaseApp}>{props.children}</FirebaseProvider>
+            <FirebaseProvider app={firebaseApp}>
+                <PageContainer>{props.children}</PageContainer>
+            </FirebaseProvider>
         </MultiProvider>
     );
 };
@@ -83,6 +89,14 @@ const routes: RouteDefinition[] = [
         children: helpRoutes,
     },
     {
+        path: "/dev/*",
+        component: (props) => {
+            const url = `https://next.catcolab.org${props.location.pathname}`;
+            window.location.replace(url);
+            return null;
+        },
+    },
+    {
         path: "/profile",
         component: lazy(() => import("./user/profile")),
     },
@@ -93,7 +107,11 @@ const routes: RouteDefinition[] = [
 ];
 
 function App() {
-    return <Router root={Root}>{routes}</Router>;
+    return (
+        <ErrorBoundary fallback={(err) => <ErrorBoundaryDialog error={err} />}>
+            <Router root={Root}>{routes}</Router>
+        </ErrorBoundary>
+    );
 }
 
 export default App;

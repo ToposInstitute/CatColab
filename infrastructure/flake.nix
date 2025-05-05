@@ -34,15 +34,13 @@
 
         deploy.nodes = {
           catcolab = {
-            hostname = "ec2-3-129-12-223.us-east-2.compute.amazonaws.com";
+            hostname = "ec2-18-191-165-64.us-east-2.compute.amazonaws.com";
             profiles.system = mkSystemProfile "catcolab" // {
               sshUser = "root";
             };
           };
           catcolab-next = {
-            hostname = "ec2-18-191-165-64.us-east-2.compute.amazonaws.com";
-            # hostname = "ec2-3-141-32-205.us-east-2.compute.amazonaws.com"; # test (terminated)
-            # hostname = "ec2-18-217-205-18.us-east-2.compute.amazonaws.com"; # test (running)
+            hostname = "ec2-18-217-205-18.us-east-2.compute.amazonaws.com";
             profiles.system = mkSystemProfile "catcolab-next" // {
               sshUser = "root";
             };

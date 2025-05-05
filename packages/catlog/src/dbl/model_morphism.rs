@@ -31,10 +31,10 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify_next::Tsify;
 
-use crate::one::graph_algorithms::{simple_paths, spec_order};
+use crate::one::graph_algorithms::{bounded_simple_paths, simple_paths, spec_order};
 use crate::one::*;
 use crate::validate::{self, Validate};
-use crate::zero::{Column, HashColumn, Mapping};
+use crate::zero::{Column, HashColumn, Mapping, MutMapping};
 
 use super::model::*;
 
@@ -94,7 +94,7 @@ where
 {
     /// Applies the mapping at a basic morphism in the domain model.
     pub fn apply_basic_mor(&self, e: &DomId) -> Option<Path<CodId, CodId>> {
-        self.mor_map.apply(e).cloned()
+        self.mor_map.apply(e)
     }
 
     /// Is the mapping defined at a basic morphism?
@@ -155,11 +155,10 @@ where
         }
         for path in self.mor_map.values() {
             for e in path.iter() {
-                let p = Path::single(e.clone());
-                let (x, y) = (cod.dom(&p), cod.cod(&p));
+                let (x, y) = (cod.mor_generator_dom(e), cod.mor_generator_cod(e));
                 im.add_ob(x.clone(), cod.ob_type(&x));
                 im.add_ob(y.clone(), cod.ob_type(&y));
-                im.add_mor(e.clone(), x, y, cod.mor_type(&p));
+                im.add_mor(e.clone(), x, y, cod.mor_generator_type(e));
             }
         }
         im
@@ -190,7 +189,7 @@ where
     type CodMor = Path<CodId, CodId>;
 
     fn apply_ob(&self, x: &Self::DomOb) -> Option<Self::CodOb> {
-        self.ob_map.apply(x).cloned()
+        self.ob_map.apply(x)
     }
 
     fn apply_mor(&self, m: &Self::DomMor) -> Option<Self::CodMor> {
@@ -236,7 +235,10 @@ where
     Cat::Mor: Hash,
 {
     /// Iterates over failures of the mapping to be a model morphism.
-    pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidDblModelMorphism<DomId, DomId>> + 'a {
+    pub fn iter_invalid(
+        &self,
+    ) -> impl Iterator<Item = InvalidDblModelMorphism<DomId, DomId>> + 'a + use<'a, DomId, CodId, Cat>
+    {
         let DblModelMorphism(mapping, dom, cod) = *self;
         // TODO: We don't yet have the ability to solve word problems.
         // Equations in the domain induce equations to check in the codomain.
@@ -322,7 +324,7 @@ where
 
         assert!(dom.is_free(), "Domain model should be free");
         assert!(cod.is_free(), "Codomain model should be free");
-        assert!(&self.is_simple(), "Morphism assignments should be simple");
+        assert!(self.is_simple(), "Morphism assignments should be simple");
 
         for x in dom.ob_generators() {
             for y in dom.ob_generators() {
@@ -427,6 +429,7 @@ pub struct DiscreteDblModelMorphismFinder<'a, DomId, CodId, Cat: FgCategory> {
     map: DiscreteDblModelMapping<DomId, CodId>,
     results: Vec<DiscreteDblModelMapping<DomId, CodId>>,
     var_order: Vec<GraphElem<DomId, DomId>>,
+    max_path_len: Option<usize>,
     injective_ob: bool,
     faithful: bool,
     ob_init: HashColumn<DomId, CodId>,
@@ -464,12 +467,19 @@ where
             map: Default::default(),
             results: Default::default(),
             var_order,
+            max_path_len: None,
             injective_ob: false,
             faithful: false,
-            ob_init: HashColumn::default(),
-            mor_init: HashColumn::default(),
-            ob_inv: HashColumn::default(),
+            ob_init: Default::default(),
+            mor_init: Default::default(),
+            ob_inv: Default::default(),
         }
+    }
+
+    /// Restrict the maximum length of the image of a generator.
+    pub fn max_path_len(&mut self, n: usize) -> &mut Self {
+        self.max_path_len = Some(n);
+        self
     }
 
     /// Restrict the search to monomorphisms between models.
@@ -530,7 +540,7 @@ where
         match var.clone() {
             GraphElem::Vertex(x) => {
                 if self.ob_init.is_set(&x) {
-                    let y = self.ob_init.apply(&x).cloned().unwrap();
+                    let y = self.ob_init.apply(&x).unwrap();
                     let can_assign = self.assign_ob(x.clone(), y.clone());
                     if can_assign {
                         self.search(depth + 1);
@@ -548,24 +558,22 @@ where
             }
             GraphElem::Edge(m) => {
                 if self.mor_init.is_set(&m) {
-                    let path = self.mor_init.apply(&m).cloned().unwrap();
+                    let path = self.mor_init.apply(&m).unwrap();
                     self.map.assign_basic_mor(m, path);
                     self.search(depth + 1);
                 } else {
-                    let path = Path::single(m);
-                    let mor_type = self.dom.mor_type(&path);
+                    let mor_type = self.dom.mor_generator_type(&m);
                     let w = self
                         .map
-                        .apply_ob(&self.dom.dom(&path))
-                        .expect("Domain has already been assigned");
+                        .apply_ob(&self.dom.mor_generator_dom(&m))
+                        .expect("Domain should already be assigned");
                     let z = self
                         .map
-                        .apply_ob(&self.dom.cod(&path))
-                        .expect("Codomain has already been assigned");
-                    let m = path.only().unwrap();
+                        .apply_ob(&self.dom.mor_generator_cod(&m))
+                        .expect("Codomain should already be assigned");
 
                     let cod_graph = self.cod.generating_graph();
-                    for path in simple_paths(cod_graph, &w, &z) {
+                    for path in bounded_simple_paths(cod_graph, &w, &z, self.max_path_len) {
                         if self.cod.mor_type(&path) == mor_type
                             && !(self.faithful && path.is_empty())
                         {
@@ -581,7 +589,7 @@ where
     /// Attempt an object assignment, returning true iff successful.
     fn assign_ob(&mut self, x: DomId, y: CodId) -> bool {
         if self.injective_ob {
-            if let Some(y_inv) = self.ob_inv.apply(&y) {
+            if let Some(y_inv) = self.ob_inv.get(&y) {
                 if *y_inv != x {
                     return false;
                 }
@@ -692,8 +700,9 @@ mod tests {
         let base_pt = negative_loop.ob_generators().next().unwrap();
 
         let negative_feedback = negative_feedback(th);
-        let maps =
-            DiscreteDblModelMapping::morphisms(&negative_loop, &negative_feedback).find_all();
+        let maps = DiscreteDblModelMapping::morphisms(&negative_loop, &negative_feedback)
+            .max_path_len(2)
+            .find_all();
         assert_eq!(maps.len(), 2);
         let obs: Vec<_> = maps.iter().map(|mor| mor.apply_ob(&base_pt)).collect();
         assert!(obs.contains(&Some(ustr("x"))));
@@ -703,6 +712,11 @@ mod tests {
         assert!(im.validate().is_ok());
         assert!(im.has_mor(&Path::single(ustr("positive"))));
         assert!(im.has_mor(&Path::single(ustr("negative"))));
+
+        let maps = DiscreteDblModelMapping::morphisms(&negative_loop, &negative_feedback)
+            .max_path_len(1)
+            .find_all();
+        assert!(maps.is_empty());
     }
 
     #[test]

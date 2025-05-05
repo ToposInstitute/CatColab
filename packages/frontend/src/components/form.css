@@ -1,15 +1,22 @@
 form input,
 form select,
+form textarea,
 form button {
     font-size: inherit;
+    padding: 6px;
 }
 
-form input,
-form select {
-    background: whitesmoke;
+form input[type="file"] {
     border: 1px solid lightgray;
     border-radius: 6px;
-    padding: 6px 12px;
+    padding: 10px;
+}
+
+form textarea {
+    border: 1px solid lightgray;
+    border-radius: 6px;
+    min-height: 5rem;
+    resize: both;
 }
 
 form button {
@@ -27,7 +34,11 @@ form button.ok {
     background: #2e8b57;
     border: 1px solid darkgreen;
     border-radius: 6px;
-    padding: 6px;
+}
+
+form .error {
+    color: firebrick;
+    font-size: smaller;
 }
 
 .form-group {
@@ -44,8 +55,20 @@ form button.ok {
     & dd:not(:last-child) {
         margin-bottom: 1rem;
     }
+}
 
-    & .error {
-        color: firebrick;
+.compact-form-group {
+    display: grid;
+    grid-template-columns: max-content auto;
+    align-items: center;
+    gap: 0.25rem 1em;
+
+    & dt {
+        grid-column-start: 1;
+    }
+
+    & dd {
+        grid-column-start: 2;
+        margin-left: 0;
     }
 }

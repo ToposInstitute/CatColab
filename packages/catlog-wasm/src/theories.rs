@@ -9,11 +9,11 @@ use std::sync::Arc;
 use ustr::ustr;
 use wasm_bindgen::prelude::*;
 
-use catlog::dbl::{model::DiscreteDblModel, theory};
+use catlog::dbl::{model, theory};
 use catlog::one::fin_category::FinMor;
 use catlog::stdlib::{analyses, models, theories};
 
-use super::model_morphism::motifs;
+use super::model_morphism::{MotifsOptions, motifs};
 use super::{analyses::*, model::DblModel, theory::DblTheory};
 
 /// The empty or initial theory.
@@ -85,16 +85,24 @@ impl ThSignedCategory {
 
     /// Find positive feedback loops in a model.
     #[wasm_bindgen(js_name = "positiveLoops")]
-    pub fn positive_loops(&self, model: &DblModel) -> Result<Vec<DblModel>, String> {
+    pub fn positive_loops(
+        &self,
+        model: &DblModel,
+        options: MotifsOptions,
+    ) -> Result<Vec<DblModel>, String> {
         let positive_loop = models::positive_loop(self.0.clone());
-        motifs(&positive_loop, model)
+        motifs(&positive_loop, model, options)
     }
 
     /// Find negative feedback loops in a model.
     #[wasm_bindgen(js_name = "negativeLoops")]
-    pub fn negative_loops(&self, model: &DblModel) -> Result<Vec<DblModel>, String> {
+    pub fn negative_loops(
+        &self,
+        model: &DblModel,
+        options: MotifsOptions,
+    ) -> Result<Vec<DblModel>, String> {
         let negative_loop = models::negative_loop(self.0.clone());
-        motifs(&negative_loop, model)
+        motifs(&negative_loop, model, options)
     }
 
     /// Simulate Lotka-Volterra system derived from a model.
@@ -104,14 +112,15 @@ impl ThSignedCategory {
         model: &DblModel,
         data: LotkaVolterraModelData,
     ) -> Result<ODEResult, String> {
-        let model: &DiscreteDblModel<_, _> = (&model.0)
+        let model: &model::DiscreteDblModel<_, _> = (&model.0)
             .try_into()
             .map_err(|_| "Lotka-Volterra simulation expects a discrete double model")?;
         Ok(ODEResult(
             analyses::ode::LotkaVolterraAnalysis::new(ustr("Object"))
                 .add_positive(FinMor::Id(ustr("Object")))
                 .add_negative(FinMor::Generator(ustr("Negative")))
-                .solve(model, data.0)
+                .create_system(model, data.0)
+                .solve_with_defaults()
                 .map_err(|err| format!("{:?}", err))
                 .into(),
         ))
@@ -136,30 +145,46 @@ impl ThDelayableSignedCategory {
 
     /// Find (fast) positive feedback loops in a model.
     #[wasm_bindgen(js_name = "positiveLoops")]
-    pub fn positive_loops(&self, model: &DblModel) -> Result<Vec<DblModel>, String> {
+    pub fn positive_loops(
+        &self,
+        model: &DblModel,
+        options: MotifsOptions,
+    ) -> Result<Vec<DblModel>, String> {
         let positive_loop = models::positive_loop(self.0.clone());
-        motifs(&positive_loop, model)
+        motifs(&positive_loop, model, options)
     }
 
     /// Find (fast) negative feedback loops in a model.
     #[wasm_bindgen(js_name = "negativeLoops")]
-    pub fn negative_loops(&self, model: &DblModel) -> Result<Vec<DblModel>, String> {
+    pub fn negative_loops(
+        &self,
+        model: &DblModel,
+        options: MotifsOptions,
+    ) -> Result<Vec<DblModel>, String> {
         let negative_loop = models::negative_loop(self.0.clone());
-        motifs(&negative_loop, model)
+        motifs(&negative_loop, model, options)
     }
 
     /// Find delayed positive feedback loops in a model.
     #[wasm_bindgen(js_name = "delayedPositiveLoops")]
-    pub fn delayed_positive_loops(&self, model: &DblModel) -> Result<Vec<DblModel>, String> {
+    pub fn delayed_positive_loops(
+        &self,
+        model: &DblModel,
+        options: MotifsOptions,
+    ) -> Result<Vec<DblModel>, String> {
         let delayed_positive_loop = models::delayed_positive_loop(self.0.clone());
-        motifs(&delayed_positive_loop, model)
+        motifs(&delayed_positive_loop, model, options)
     }
 
     /// Find delayed negative feedback loops in a model.
     #[wasm_bindgen(js_name = "delayedNegativeLoops")]
-    pub fn delayed_negative_loops(&self, model: &DblModel) -> Result<Vec<DblModel>, String> {
+    pub fn delayed_negative_loops(
+        &self,
+        model: &DblModel,
+        options: MotifsOptions,
+    ) -> Result<Vec<DblModel>, String> {
         let delayed_negative_loop = models::delayed_negative_loop(self.0.clone());
-        motifs(&delayed_negative_loop, model)
+        motifs(&delayed_negative_loop, model, options)
     }
 }
 
@@ -211,6 +236,25 @@ impl ThCategoryLinks {
     #[wasm_bindgen]
     pub fn theory(&self) -> DblTheory {
         DblTheory(self.0.clone().into())
+    }
+
+    /// Simulates the mass-action system derived from a model.
+    #[wasm_bindgen(js_name = "massAction")]
+    pub fn mass_action(
+        &self,
+        model: &DblModel,
+        data: MassActionModelData,
+    ) -> Result<ODEResult, String> {
+        let model: &model::DiscreteTabModel<_, _, _> = (&model.0)
+            .try_into()
+            .map_err(|_| "Mass-action simulation expects a discrete tabulator model")?;
+        Ok(ODEResult(
+            analyses::ode::StockFlowMassActionAnalysis::default()
+                .create_numerical_system(model, data.0)
+                .solve_with_defaults()
+                .map_err(|err| format!("{:?}", err))
+                .into(),
+        ))
     }
 }
 

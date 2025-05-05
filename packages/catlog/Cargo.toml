@@ -3,8 +3,7 @@ name = "catlog"
 description = "A toolbox for catgorical logic based on double theories"
 authors = ["Evan Patterson"]
 version = "0.1.0"
-edition = "2021"
-rust-version = "1.76"
+edition = "2024"
 
 [features]
 ode = ["dep:ode_solvers", "dep:nalgebra"]
@@ -12,10 +11,10 @@ serde = ["dep:serde", "nonempty/serialize", "ustr/serde"]
 serde-wasm = ["serde", "dep:wasm-bindgen", "dep:tsify-next"]
 
 [dependencies]
-archery = "1"
 derivative = "2"
 derive_more = { version = "1", features = ["from", "into"] }
 duplicate = "2"
+ego-tree = "0.10"
 either = "1"
 nalgebra = { version = "0.33", optional = true }
 nonempty = "0.10"

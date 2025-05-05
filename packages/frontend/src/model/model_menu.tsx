@@ -87,6 +87,6 @@ export function ModelMenuItems(props: {
                 <CodeXml />
                 <MenuItemLabel>{"Embed this model"}</MenuItemLabel>
             </MenuItem>
-            </>
+        </>
     );
 }

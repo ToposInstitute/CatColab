@@ -1,0 +1,10 @@
+.json_import {
+    min-width: 20em;
+    max-width: 80vw;
+    margin: 0 auto;
+    width: auto;
+}
+
+.json_import textarea {
+    font-family: monospace;
+}

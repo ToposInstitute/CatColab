@@ -1,7 +1,7 @@
-\title{Modules over models of double theories}
+\title{Instances of models}
 \import{macros}
 
-\p{A \em{module} over a model of a double theory is a special kind of bimodule out of #{1}, the terminal model. Recall that bimodules are defined in ([Lambert &
+\p{A \em{module} over a model of a double theory, also called an \em{instance} of the model, is a special kind of bimodule out of #{1}, the terminal model. Recall that bimodules are defined in ([Lambert &
 Patterson 2024](cartesian-double-theories-2024), Definition 9.1). In loc. cit. the word "module" is used where we use "bimodule" here. Here we aim to define a notion of module that is to arbitrary bimodules as, in the case of categories (models of the terminal double theory), #{C}-sets and presheaves are to arbitrary profunctors.}
 
 \p{An extra constraint is needed to obtain such a definition for models of arbitrary double theories. For instance, in the case of multicategories we'd like to recover multifunctors into \Set, which are known to be a good notion of copresheaf. However, without any constraints, there are [[dbl-000B]]. To solve this problem, we make the following definition, using "instance" as a synonym for "module."}
