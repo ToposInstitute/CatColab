@@ -9,10 +9,12 @@ import { AppMenu, MenuItem, MenuItemLabel, MenuSeparator } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import { type LiveModelDocument, type ModelDocument, createModel } from "./document";
 
+import { CodeXml } from "lucide-solid";
 import ChartSpline from "lucide-solid/icons/chart-spline";
 import Copy from "lucide-solid/icons/copy";
 import FilePlus from "lucide-solid/icons/file-plus";
 import Network from "lucide-solid/icons/network";
+import { EmbedDialog } from "./model_editor";
 
 /** Hamburger menu for a model of a double theory. */
 export function ModelMenu(props: {
@@ -60,6 +62,7 @@ export function ModelMenuItems(props: {
         navigate(`/model/${newRef}`);
     };
 
+
     return (
         <>
             <MenuItem onSelect={onNewModel}>
@@ -80,6 +83,10 @@ export function ModelMenuItems(props: {
             <MenuItem onSelect={() => onDuplicateModel(props.liveModel.liveDoc.doc)}>
                 <Copy />
                 <MenuItemLabel>{"Duplicate model"}</MenuItemLabel>
+            </MenuItem>
+            <MenuItem onSelect={EmbedDialog}>
+                <CodeXml />
+                <MenuItemLabel>{"Embed this model"}</MenuItemLabel>
             </MenuItem>
         </>
     );

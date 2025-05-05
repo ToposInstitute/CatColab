@@ -2,6 +2,8 @@ import { useParams } from "@solidjs/router";
 import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
+import Dialog from "@corvu/dialog";
+import { createMemo, createSignal } from "solid-js";
 import { useApi } from "../api";
 import { InlineInput } from "../components";
 import {
@@ -16,7 +18,7 @@ import { TheoryLibraryContext } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
 import { MaybePermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
-import { type LiveModelDocument, getLiveModel } from "./document";
+import { type LiveModelDocument, getLiveModel } from './document';
 import { ModelMenu } from "./model_menu";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
@@ -190,25 +192,8 @@ function judgmentLabel(judgment: ModelJudgment): string | undefined {
     }
 }
 
-export function EmbedButton() {
-    const [isOpen, setIsOpen] = createSignal(false);
 
-    return (
-        <>
-            <IconButton
-                onClick={() => setIsOpen(true)}
-                tooltip="Embed Notebook"
-                class="embed-button"
-            >
-                <CodeXml />
-                <p>Embed</p>
-            </IconButton>
-            <EmbedDialog isOpen={isOpen()} onClose={() => setIsOpen(false)} />
-        </>
-    );
-}
-
-function EmbedDialog(props: { isOpen: boolean; onClose: () => void }) {
+export function EmbedDialog() {
     const [copyStatus, setCopyStatus] = createSignal<"Copied!" | "Please try again later." | "">(
         "",
     );
@@ -218,16 +203,19 @@ function EmbedDialog(props: { isOpen: boolean; onClose: () => void }) {
     });
 
     const copyToClipboard = async () => {
-        try {
+        if (navigator.clipboard) {
             await navigator.clipboard.writeText(embedLink());
             setCopyStatus("Copied!");
-        } catch (err) {
-            setCopyStatus("Please try again later.");
+        }
+        else {
+            Error("Could not be copied.");
         }
     };
 
+
     return (
-        <Dialog open={props.isOpen} onOpenChange={props.onClose}>
+        <>
+        <Dialog>
             <Dialog.Portal>
                 <Dialog.Overlay class="overlay" />
                 <Dialog.Content class="popup">
@@ -245,5 +233,6 @@ function EmbedDialog(props: { isOpen: boolean; onClose: () => void }) {
                 </Dialog.Content>
             </Dialog.Portal>
         </Dialog>
+        </>
     );
 }
