@@ -1,19 +1,17 @@
 import { useNavigate } from "@solidjs/router";
+import { CodeXml } from "lucide-solid";
+import ChartSpline from "lucide-solid/icons/chart-spline";
+import Copy from "lucide-solid/icons/copy";
+import FilePlus from "lucide-solid/icons/file-plus";
+import Network from "lucide-solid/icons/network";
 import { Show, useContext } from "solid-js";
 import invariant from "tiny-invariant";
-
 import { createAnalysis } from "../analysis/document";
 import { useApi } from "../api";
 import { createDiagram } from "../diagram/document";
 import { AppMenu, MenuItem, MenuItemLabel, MenuSeparator } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import { type LiveModelDocument, type ModelDocument, createModel } from "./document";
-
-import { CodeXml } from "lucide-solid";
-import ChartSpline from "lucide-solid/icons/chart-spline";
-import Copy from "lucide-solid/icons/copy";
-import FilePlus from "lucide-solid/icons/file-plus";
-import Network from "lucide-solid/icons/network";
 import { EmbedDialog } from "./model_editor";
 
 /** Hamburger menu for a model of a double theory. */
@@ -35,7 +33,6 @@ export function ModelMenuItems(props: {
 }) {
     const api = useApi();
     const navigate = useNavigate();
-
     const theories = useContext(TheoryLibraryContext);
     invariant(theories, "Theory library must be provided as context");
 
@@ -44,13 +41,13 @@ export function ModelMenuItems(props: {
         navigate(`/model/${newRef}`);
     };
 
-    const onNewDiagram = async (modelRefId: string) => {
+    const onNewDiagram = async (modelRefId: any) => {
         const newRef = await createDiagram(api, modelRefId);
         navigate(`/diagram/${newRef}`);
     };
 
-    const onNewAnalysis = async (modelRefId: string) => {
-        const newRef = await createAnalysis("model", modelRefId, api);
+    const onNewAnalysis = async (modelRefId: any) => {
+        const newRef = await createAnalysis(api, modelRefId, modelRefId);
         navigate(`/analysis/${newRef}`);
     };
 
