@@ -39,6 +39,16 @@ export function configureStockFlowDiagram(options: {
     };
 }
 
+const STOCKFLOW_ATTRIBUTES: GV.GraphvizAttributes = {
+    graph: {
+        splines: "ortho",
+    },
+    node: {
+        width: .55,
+        height: .55,
+    },
+}
+
 /** Visualize a stock flow diagram.
  */
 export function StockFlowDiagram(props: ModelAnalysisProps<GV.GraphConfig>) {
@@ -60,6 +70,7 @@ export function StockFlowDiagram(props: ModelAnalysisProps<GV.GraphConfig>) {
                             model={props.liveModel.formalJudgments()}
                             theory={theory()}
                             options={GV.graphvizOptions(props.content)}
+                            attributes={STOCKFLOW_ATTRIBUTES}
                             ref={setSvgRef}
                         />
                     )}
@@ -165,6 +176,7 @@ function StockFlowSVG(props: {
         </svg>
     );
 }
+
 /** Quadratic Bezier curve from one point to another.
  */
 function quadraticCurve(src: GraphLayout.Point, tgt: GraphLayout.Point, ratio: number) {
