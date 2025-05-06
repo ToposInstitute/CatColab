@@ -12,7 +12,7 @@ has gone by many other names, notably *fc-multicategory* ([Leinster
 2004](crate::refs::HigherOperads)).
 
 *Composites* of proarrows in a VDC, if they exist, are represented by cells
-satsifying a universal property ([Cruttwell-Shulman
+satisfying a universal property ([Cruttwell-Shulman
 2008](crate::refs::GeneralizedMulticategories), Section 5). In our usage of
 virtual double categories as double theories, we will assume that *units*
 (nullary composites) exist. We will not assume that any other composites exist,
@@ -30,9 +30,9 @@ to composition in a double category does not arise in VDCs.
 
 A [double theory](super::theory) is "just" a unital virtual double category, so
 any double theory in the standard library is an example of a VDC. For testing
-purposes, this module directly implements several minimal examples of VDCs,
-namely ["walking"](https://ncatlab.org/nlab/show/walking+structure) categorical
-structures that can be interpreted in any VDC:
+purposes, this module provides several minimal examples of VDCs implemented
+directly, namely ["walking"](https://ncatlab.org/nlab/show/walking+structure)
+categorical structures that can be interpreted in any VDC:
 
 - the [walking category](WalkingCategory)
 - the [walking functor](WalkingFunctor)
@@ -49,7 +49,7 @@ use std::ops::Range;
 
 use super::graph::{EdgeGraph, VDblGraph};
 use super::tree::DblTree;
-use crate::one::{Category, Path};
+use crate::one::path::Path;
 
 /** A virtual double category (VDC).
 
@@ -233,42 +233,10 @@ pub trait VDCWithComposites: VDblCategory {
     }
 }
 
-/// The underlying category of objects and arrows in a VDC.
-#[derive(From, RefCast)]
-#[repr(transparent)]
-pub struct UnderlyingCategory<VDC>(pub VDC);
-
-impl<VDC: VDblCategory> Category for UnderlyingCategory<VDC> {
-    type Ob = VDC::Ob;
-    type Mor = VDC::Arr;
-
-    fn has_ob(&self, x: &Self::Ob) -> bool {
-        self.0.has_ob(x)
-    }
-    fn has_mor(&self, f: &Self::Mor) -> bool {
-        self.0.has_arrow(f)
-    }
-    fn dom(&self, f: &Self::Mor) -> Self::Ob {
-        self.0.dom(f)
-    }
-    fn cod(&self, f: &Self::Mor) -> Self::Ob {
-        self.0.cod(f)
-    }
-    fn compose(&self, path: Path<Self::Ob, Self::Mor>) -> Self::Mor {
-        self.0.compose(path)
-    }
-    fn compose2(&self, f: Self::Mor, g: Self::Mor) -> Self::Mor {
-        self.0.compose2(f, g)
-    }
-    fn id(&self, x: Self::Ob) -> Self::Mor {
-        self.0.id(x)
-    }
-}
-
 /// The underlying [virtual double graph](VDblGraph) of a VDC.
 #[derive(From, RefCast)]
 #[repr(transparent)]
-pub struct UnderlyingDblGraph<VDC>(pub VDC);
+pub struct UnderlyingDblGraph<VDC: VDblCategory>(pub VDC);
 
 impl<VDC: VDblCategory> VDblGraph for UnderlyingDblGraph<VDC> {
     type V = VDC::Ob;

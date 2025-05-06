@@ -1,16 +1,8 @@
-/*! Computads in dimension one.
-
-A 1-computad, in the strictest sense of the term, is the generating data for a
-free category, which is just a [graph](super::graph). This module provides
-simple data structures to aid in defining computads for categories with extra
-structure. For example, a computad for monoidal categories is called a "tensor
-scheme" by Joyal and Street and a "pre-net" in the Petri net literature.
- */
+//! Computads in dimension one.
 
 use std::hash::{BuildHasher, Hash};
 
 use derivative::Derivative;
-use derive_more::Constructor;
 
 use super::graph::ColumnarGraph;
 use crate::zero::*;
@@ -41,16 +33,8 @@ where
     }
 }
 
-/** A 1-computad.
-
-The set of objects is assumed already constructed, possibly from other
-generating data, while the top-dimensional generating data is provided directly.
- */
-#[derive(Constructor)]
-pub struct Computad<'a, Ob, ObSet, E, S> {
-    objects: &'a ObSet,
-    computad: &'a ComputadTop<Ob, E, S>,
-}
+/// TODO
+pub struct Computad<'a, Ob, ObSet, E, S>(pub &'a ObSet, pub &'a ComputadTop<Ob, E, S>);
 
 impl<'a, Ob, ObSet, E, S> ColumnarGraph for Computad<'a, Ob, ObSet, E, S>
 where
@@ -67,15 +51,15 @@ where
     type Tgt = HashColumn<E, Ob, S>;
 
     fn vertex_set(&self) -> &Self::Vertices {
-        self.objects
+        self.0
     }
     fn edge_set(&self) -> &Self::Edges {
-        &self.computad.edges
+        &self.1.edges
     }
     fn src_map(&self) -> &Self::Src {
-        &self.computad.src
+        &self.1.src
     }
     fn tgt_map(&self) -> &Self::Tgt {
-        &self.computad.tgt
+        &self.1.tgt
     }
 }

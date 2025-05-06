@@ -2,9 +2,9 @@ import type * as Viz from "@viz-js/viz";
 import { Show, createSignal } from "solid-js";
 import { P, match } from "ts-pattern";
 
-import type { ModelJudgment } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { Foldable } from "../../components";
+import type { ModelJudgment } from "../../model";
 import type { ModelAnalysisMeta, Theory } from "../../theory";
 import { DownloadSVGButton, GraphvizSVG, type SVGRefProp } from "../../visualization";
 import * as GV from "./graph_visualization";

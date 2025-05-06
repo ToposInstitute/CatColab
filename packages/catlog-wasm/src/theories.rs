@@ -123,7 +123,7 @@ impl ThSignedCategory {
                 .add_negative(ustr("Negative").into())
                 .create_system(model, data.0)
                 .solve_with_defaults()
-                .map_err(|err| format!("{err:?}"))
+                .map_err(|err| format!("{:?}", err))
                 .into(),
         ))
     }
@@ -144,7 +144,7 @@ impl ThSignedCategory {
                 .add_negative(ustr("Negative").into())
                 .create_system(model, data.0)
                 .solve_with_defaults()
-                .map_err(|err| format!("{err:?}"))
+                .map_err(|err| format!("{:?}", err))
                 .into(),
         ))
     }
@@ -214,14 +214,6 @@ impl ThDelayableSignedCategory {
 /// The theory of (N x N)-graded signed categories (for ECLDs).
 #[wasm_bindgen]
 pub struct ThNN2Category(Rc<theory::UstrDiscreteDblTheory>);
-
-// TO-DO: (also move this to graph_algorithms.rs)
-// Data type for max-depth search in DAGs
-enum DAGDepth {
-    Undef,
-    Seen,
-    Depth(usize),
-}
 
 #[wasm_bindgen]
 impl ThNN2Category {
@@ -510,7 +502,7 @@ impl ThCategoryLinks {
             analyses::ode::StockFlowMassActionAnalysis::default()
                 .create_numerical_system(model, data.0)
                 .solve_with_defaults()
-                .map_err(|err| format!("{err:?}"))
+                .map_err(|err| format!("{:?}", err))
                 .into(),
         ))
     }
@@ -519,7 +511,7 @@ impl ThCategoryLinks {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::theory::*;
+    use notebook_types::current::theory::*;
     use ustr::ustr;
 
     #[test]

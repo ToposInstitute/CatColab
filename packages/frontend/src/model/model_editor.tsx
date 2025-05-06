@@ -2,7 +2,6 @@ import { useParams } from "@solidjs/router";
 import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import type { ModelJudgment } from "catlog-wasm";
 import { useApi } from "../api";
 import { InlineInput } from "../components";
 import {
@@ -12,13 +11,7 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
-import {
-    DocumentBreadcrumbs,
-    DocumentLoadingScreen,
-    DocumentMenu,
-    TheoryHelpButton,
-    Toolbar,
-} from "../page";
+import { DocumentLoadingScreen, DocumentMenu, TheoryHelpButton, Toolbar } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
 import { PermissionsButton } from "../user";
@@ -28,6 +21,7 @@ import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
 import { TheorySelectorDialog } from "./theory_selector";
 import {
+    type ModelJudgment,
     type MorphismDecl,
     type ObjectDecl,
     duplicateModelJudgment,
@@ -63,7 +57,6 @@ export function ModelDocumentEditor(props: {
         <div class="growable-container">
             <Toolbar>
                 <DocumentMenu liveDocument={props.liveModel} />
-                <DocumentBreadcrumbs document={props.liveModel} />
                 <span class="filler" />
                 <TheoryHelpButton theory={props.liveModel.theory()} />
                 <PermissionsButton
@@ -81,10 +74,17 @@ export function ModelDocumentEditor(props: {
 export function ModelPane(props: {
     liveModel: LiveModelDocument;
 }) {
-    const theories = useContext(TheoryLibraryContext);
-    invariant(theories, "Library of theories should be provided as context");
-
     const liveDoc = () => props.liveModel.liveDoc;
+
+    const selectableTheories = () => {
+        console.log(props.liveModel.theory().inclusions);
+        if (liveDoc().doc.notebook.cells.some((cell) => cell.tag === "formal")) {
+            return props.liveModel.theory().inclusions;
+        } else {
+            // If the model has no formal cells, allow any theory to be selected.
+            return undefined;
+        }
+    };
 
     return (
         <div class="notebook-container">
@@ -107,8 +107,7 @@ export function ModelPane(props: {
                             model.theory = id;
                         });
                     }}
-                    theories={theories}
-                    disabled={liveDoc().doc.notebook.cells.some((cell) => cell.tag === "formal")}
+                    theories={selectableTheories()}
                 />
             </div>
             <ModelNotebookEditor liveModel={props.liveModel} />

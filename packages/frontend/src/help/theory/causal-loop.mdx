@@ -1,5 +1,3 @@
-import { A } from "@solidjs/router";
-
 ## Description
 
 A causal loop diagram is a fundamental gadget in systems dynamics, 
@@ -22,50 +20,47 @@ curious to learn more about how they might be used in practice.
 ## Analyses
 
 
-### Linear ODE
+### Lotka--Volterra
 
 #### Semantics
 
-Whenever we have *unidirectional* influence between variables, we might want to consider **linear first-order dynamics**, where variables affect the *first derivative* of other variables, with no feedback a priori.
-(For systems where variables directly influence *higher-order* derivatives of other variables, see the linear ODE analysis for <A href="../extended-causal-loop">**extended** causal loop diagrams</A>.)
-
-An arrow $A\xrightarrow{\pm}B$ is interpreted as the equation $\dot{B}=\pm k A$ for some constant $k$.
-Multiple incoming arrows are interpreted additively, so e.g. $A\xrightarrow{+}B\xleftarrow{-}C$ is interpreted as $\dot{B}=kA-\ell C$.
-
-#### User inputs
-
-<dl>
-  <dt>Initial value: $\mathbb{R}_{\geqslant0}$</dt>
-  <dd>The initial value of the variable.</dd>
-  <dt>Coefficient: $\mathbb{R}_{\geqslant0}$</dt>
-  <dd>The coefficient ($k$) corresponding to the arrow.</dd>
-  <dt>Duration: $\mathbb{R}_{\geqslant0}$</dt>
-  <dd>The total duration of the simulation in units of time.</dd>
-</dl>
-
-
-
-### Lotka–Volterra
-
-#### Semantics
-
-In contrast to linear dynamics, we might want to think about **Lotka–Volterra dynamics** whenever influence between variables is *bidirectional*, e.g. for predator–prey models, where higher population of predators means lower population of prey means lower population of predators means ... and so on.
-
-An arrow $A\xrightarrow{\pm}B$ is interpreted as the equation $\dot{B}=\pm (kA + g)B$ for some constant $k$ (the *interaction coefficient*) and $g$ (the *growth rate*).
+An arrow $A\xrightarrow{\pm}B$ is interpreted as the equation $\dot{B}=\pm (kA + g)B$ for some constants $k$ (the *interaction coefficient*) and $g$ (the *growth rate*).
 Multiple incoming arrows are interpreted additively, so e.g. $A\xrightarrow{+}B\xleftarrow{-}C$ is interpreted as $\dot{B}=(kA - \ell C + g)B$.
 
 #### User inputs
 
-<dl>
-  <dt>Initial value: $\mathbb{R}_{\geqslant0}$</dt>
-  <dd>The initial value of the variable.</dd>
-  <dt>Interaction: $\mathbb{R}_{\geqslant0}$</dt>
-  <dd>The interaction coefficient ($k$) corresponding to the arrow.</dd>
-  <dt>Growth/decay: $\mathbb{R}$</dt>
-  <dd>The growth rate ($g$) of the variable.</dd>
-  <dt>Duration: $\mathbb{R}_{\geqslant0}$</dt>
-  <dd>The total duration of the simulation in units of time.</dd>
-</dl>
+- **Initial value.**
+  ($\mathbb{R}_{\geqslant0}$)
+  The initial value of the variable.
+- **Interaction.**
+  ($\mathbb{R}_{\geqslant0}$)
+  The interaction coefficient ($k$) corresponding to the arrow.
+- **Growth/decay.**
+  ($\mathbb{R}$)
+  The growth rate of the variable.
+- **Duration.**
+  ($\mathbb{R}_{\geqslant0}$)
+  The total duration of the simulation in units of time.
+
+
+### Linear ODE
+
+#### Semantics
+
+An arrow $A\xrightarrow{\pm}B$ is interpreted as the equation $\dot{B}=\pm k A$ for some constant $k$.
+Multiple incoming arrows are interpreted additively, so e.g. $A\xrightarrow{+}B\xleftarrow{-}C$ is interpreted as $\dot{B}=kA-\ell B$.
+
+#### User inputs
+
+- **Initial value.**
+  ($\mathbb{R}_{\geqslant0}$)
+  The initial value of the variable.
+- **Coefficient.**
+  ($\mathbb{R}_{\geqslant0}$)
+  The coefficient ($k$) corresponding to the arrow.
+- **Duration.**
+  ($\mathbb{R}_{\geqslant0}$)
+  The total duration of the simulation in units of time.
 
 
 ## Examples

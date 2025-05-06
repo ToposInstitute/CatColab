@@ -1,22 +1,23 @@
 import { type Accessor, createMemo } from "solid-js";
 import invariant from "tiny-invariant";
 
-import {
-    type DblModel,
-    type Document,
-    type ModelJudgment,
-    type ModelValidationResult,
-    type Uuid,
-    elaborateModel,
-} from "catlog-wasm";
-import { type Api, type LiveDoc, getLiveDoc } from "../api";
-import { newNotebook } from "../notebook";
+import type { JsonValue } from "catcolab-api";
+import type { DblModel, ModelValidationResult, Uuid } from "catlog-wasm";
+import { type Api, type Document, type LiveDoc, getLiveDoc } from "../api";
+import { type Notebook, newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
 import type { Theory } from "../theory";
 import { type IndexedMap, indexMap } from "../util/indexing";
-import type { InterfaceToType } from "../util/types";
+import { type ModelJudgment, toCatlogModel } from "./types";
 
-export type ModelDocument = Document & { type: "model" };
+/** A document defining a model. */
+export type ModelDocument = Document<"model"> & {
+    /** Identifier of double theory that the model is of. */
+    theory: string;
+
+    /** Content of the model, formal and informal. */
+    notebook: Notebook<ModelJudgment>;
+};
 
 /** Create an empty model document. */
 export const newModelDocument = (theory: string): ModelDocument => ({
@@ -103,7 +104,7 @@ function enlivenModelDocument(
         () => {
             const th = theory();
             if (th) {
-                const model = elaborateModel(doc, theory().theory);
+                const model = toCatlogModel(th.theory, formalJudgments());
                 const result = model.validate();
                 return { model, result };
             }
@@ -139,7 +140,7 @@ export async function createModel(
         init = initOrTheoryId;
     }
 
-    const result = await api.rpc.new_ref.mutate(init as InterfaceToType<ModelDocument>);
+    const result = await api.rpc.new_ref.mutate(init as JsonValue);
     invariant(result.tag === "Ok", "Failed to create model");
 
     return result.content;

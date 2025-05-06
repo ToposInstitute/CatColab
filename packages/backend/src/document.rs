@@ -3,21 +3,16 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use socketioxide::SocketIo;
 use ts_rs::TS;
 use uuid::Uuid;
 
-use crate::app::{AppCtx, AppError, AppState, Paginated};
 use crate::{auth::PermissionLevel, user::UserSummary};
+
+use super::app::{AppCtx, AppError, AppState};
 
 /// Creates a new document ref with initial content.
 pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
     let ref_id = Uuid::now_v7();
-
-    // If the document is created but the db transaction doesn't complete, then the document will be
-    // orphaned. The only negative consequence of that is additional space used, but that should be
-    // negligible and we can later create a service which periodically cleans out the orphans
-    let new_doc_response = create_automerge_doc(&ctx.state.automerge_io, content.clone()).await?;
 
     let mut transaction = ctx.state.db.begin().await?;
 
@@ -25,17 +20,15 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
     let insert_ref = sqlx::query!(
         "
         WITH snapshot AS (
-            INSERT INTO snapshots(for_ref, content, last_updated, doc_id)
-            VALUES ($1, $2, NOW(), $3)
+            INSERT INTO snapshots(for_ref, content, last_updated)
+            VALUES ($1, $2, NOW())
             RETURNING id
         )
         INSERT INTO refs(id, head, created)
         VALUES ($1, (SELECT id FROM snapshot), NOW())
         ",
         ref_id,
-        // Use the JSON provided by automerge as the authoritative content
-        new_doc_response.doc_json,
-        new_doc_response.doc_id,
+        content
     );
     insert_ref.execute(&mut *transaction).await?;
 
@@ -85,23 +78,13 @@ pub async fn autosave(state: AppState, data: RefContent) -> Result<(), AppError>
 
 The snapshot at the previous head is *not* deleted.
 */
-pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppError> {
-    let head_doc_id_query = sqlx::query!(
-        "
-        SELECT doc_id FROM snapshots
-        WHERE id = (SELECT head FROM refs WHERE id = $1)
-        ",
-        ref_id
-    );
-
-    let head_doc_id = head_doc_id_query.fetch_one(&state.db).await?.doc_id;
-    let new_doc_response = clone_automerge_doc(&state.automerge_io, ref_id, head_doc_id).await?;
-
+pub async fn save_snapshot(state: AppState, data: RefContent) -> Result<(), AppError> {
+    let RefContent { ref_id, content } = data;
     let query = sqlx::query!(
         "
         WITH snapshot AS (
-            INSERT INTO snapshots(for_ref, content, last_updated, doc_id)
-            VALUES ($1, $2, NOW(), $3)
+            INSERT INTO snapshots(for_ref, content, last_updated)
+            VALUES ($1, $2, NOW())
             RETURNING id
         )
         UPDATE refs
@@ -109,94 +92,31 @@ pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppErr
         WHERE id = $1
         ",
         ref_id,
-        new_doc_response.doc_json,
-        new_doc_response.doc_id,
+        content
     );
     query.execute(&state.db).await?;
     Ok(())
 }
 
+/// Gets an Automerge document ID for the document ref.
 pub async fn doc_id(state: AppState, ref_id: Uuid) -> Result<String, AppError> {
-    let query = sqlx::query!(
-        "
-        SELECT doc_id FROM snapshots
-        WHERE id = (SELECT head FROM refs WHERE id = $1)
-        ",
-        ref_id
-    );
+    let automerge_io = &state.automerge_io;
+    let ack = automerge_io.emit_with_ack::<Vec<Option<String>>>("get_doc", ref_id).unwrap();
+    let mut response = ack.await?;
 
-    let doc_id = query.fetch_one(&state.db).await?.doc_id;
-
-    start_listening_automerge_doc(&state.automerge_io, ref_id, doc_id.clone()).await?;
-
-    Ok(doc_id)
-}
-
-async fn call_automerge_io<T, P>(
-    automerge_io: &SocketIo,
-    event: impl Into<String>,
-    payload: P,
-    fail_msg: impl Into<String>,
-) -> Result<T, AppError>
-where
-    P: Serialize,
-    T: for<'de> serde::Deserialize<'de>,
-{
-    let event = event.into();
-    let fail_msg = fail_msg.into();
-
-    let ack = automerge_io
-        .emit_with_ack::<Vec<Result<T, String>>>(event, payload)
-        .map_err(|e| AppError::AutomergeServer(format!("{fail_msg}: {e}")))?;
-
-    let response_array = ack.await?.data;
-    let response = response_array
-        .into_iter()
-        .next()
-        .ok_or_else(|| AppError::AutomergeServer("Empty ack response".to_string()))?;
-
-    response.map_err(AppError::AutomergeServer)
-}
-
-async fn start_listening_automerge_doc(
-    automerge_io: &SocketIo,
-    ref_id: Uuid,
-    doc_id: String,
-) -> Result<(), AppError> {
-    call_automerge_io::<(), _>(
-        automerge_io,
-        "startListening",
-        [ref_id.to_string(), doc_id],
-        "Failed to call startListening from backend".to_string(),
-    )
-    .await
-}
-
-async fn clone_automerge_doc(
-    automerge_io: &SocketIo,
-    ref_id: Uuid,
-    doc_id: String,
-) -> Result<NewDocSocketResponse, AppError> {
-    call_automerge_io::<NewDocSocketResponse, _>(
-        automerge_io,
-        "cloneDoc",
-        [ref_id.to_string(), doc_id],
-        "Failed to call cloneDoc from backend".to_string(),
-    )
-    .await
-}
-
-async fn create_automerge_doc(
-    automerge_io: &SocketIo,
-    content: serde_json::Value,
-) -> Result<NewDocSocketResponse, AppError> {
-    call_automerge_io::<NewDocSocketResponse, _>(
-        automerge_io,
-        "createDoc",
-        content,
-        "Failed to call createDoc from backend".to_string(),
-    )
-    .await
+    let maybe_doc_id = response.data.pop().flatten();
+    if let Some(doc_id) = maybe_doc_id {
+        // If an Automerge doc handle for this ref already exists, return it.
+        Ok(doc_id)
+    } else {
+        // Otherwise, fetch the content from the database and create a new
+        // Automerge doc handle.
+        let content = head_snapshot(state.clone(), ref_id).await?;
+        let data = RefContent { ref_id, content };
+        let ack = automerge_io.emit_with_ack::<Vec<String>>("create_doc", data).unwrap();
+        let response = ack.await?;
+        Ok(response.data[0].to_string())
+    }
 }
 
 /// A document ref along with its content.
@@ -205,14 +125,6 @@ pub struct RefContent {
     #[serde(rename = "refId")]
     pub ref_id: Uuid,
     pub content: Value,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct NewDocSocketResponse {
-    #[serde(rename = "docId")]
-    pub doc_id: String,
-    #[serde(rename = "docJson")]
-    pub doc_json: Value,
 }
 
 /// A subset of user relevant information about a ref. Used for showing
@@ -244,8 +156,6 @@ pub struct RefQueryParams {
     pub searcher_min_level: Option<PermissionLevel>,
     #[serde(rename = "includePublicDocuments")]
     pub include_public_documents: Option<bool>,
-    pub limit: Option<i32>,
-    pub offset: Option<i32>,
     // TODO: add param for document type
 }
 
@@ -254,13 +164,10 @@ pub struct RefQueryParams {
 pub async fn search_ref_stubs(
     ctx: AppCtx,
     search_params: RefQueryParams,
-) -> Result<Paginated<RefStub>, AppError> {
+) -> Result<Vec<RefStub>, AppError> {
     let searcher_id = ctx.user.as_ref().map(|user| user.user_id.clone());
 
     let min_level = search_params.searcher_min_level.unwrap_or(PermissionLevel::Read);
-
-    let limit = search_params.limit.unwrap_or(100);
-    let offset = search_params.offset.unwrap_or(0);
 
     let results = sqlx::query!(
         r#"
@@ -288,8 +195,7 @@ pub async fn search_ref_stubs(
             effective_permissions.level AS "permission_level: PermissionLevel",
             owner.id AS "owner_id?",
             owner.username AS "owner_username?",
-            owner.display_name AS "owner_display_name?",
-            COUNT(*) OVER()::int4 AS total_count
+            owner.display_name AS "owner_display_name?"
         FROM refs
         JOIN snapshots ON snapshots.id = refs.head
         JOIN effective_permissions ON effective_permissions.object = refs.id
@@ -308,25 +214,19 @@ pub async fn search_ref_stubs(
         AND (
             effective_permissions.level >= $4
         )
-        ORDER BY refs.created DESC
-        LIMIT $6::int4
-        OFFSET $7::int4;
+        LIMIT 100;
         "#,
         searcher_id,
         search_params.owner_username_query,
         search_params.ref_name_query,
         min_level as PermissionLevel,
         search_params.include_public_documents.unwrap_or(false),
-        limit,
-        offset,
     )
     .fetch_all(&ctx.state.db)
     .await?;
 
-    let total = results.first().and_then(|r| r.total_count).unwrap_or(0);
-
     // We can't use sqlx::query_as! because name and type_name can be null
-    let items = results
+    let stubs = results
         .into_iter()
         .map(|row| RefStub {
             ref_id: row.ref_id,
@@ -345,9 +245,5 @@ pub async fn search_ref_stubs(
         })
         .collect();
 
-    Ok(Paginated {
-        total,
-        offset,
-        items,
-    })
+    Ok(stubs)
 }

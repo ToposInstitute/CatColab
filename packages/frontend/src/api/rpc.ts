@@ -3,7 +3,6 @@ import type { FirebaseApp } from "firebase/app";
 import { type User, getAuth } from "firebase/auth";
 
 import type { QubitServer, RpcResult } from "catcolab-api";
-import type { Accessor } from "solid-js";
 
 /** RPC client for communicating with the CatColab backend. */
 export type RpcClient = QubitServer;
@@ -42,51 +41,16 @@ export function createRpcClient(serverUrl: string, firebaseApp?: FirebaseApp) {
     return build_client<QubitServer>(transport);
 }
 
-// Type guard for type narrowing inside SolidJS JSX blocks controlled by a `when` attribute.
-//
-// example usage:
-// type Result = { tag: "Ok", content: string } | { tag: "Err", code: number };
-// const [result, setResult] = createSignal<Result>({tag: "Err", code: 0 });
-// ...
-// <Match when={narrow(result, (res) => res.tag === "Ok")}>
-//     {(result) => {
-//         const a = result(); // the type of a is narrowed to { tag: "Ok", content: string }
-// }
-export function narrow<A, B extends A>(accessor: Accessor<A>, guard: (v: A) => v is B): B | null {
-    const val = accessor();
-    if (guard(val)) {
-        return val;
-    }
-
-    return null;
+/** Gets the content an RPC result, if it is `Ok`. */
+export function resultOk<T>(result?: RpcResult<T>): T | undefined {
+    return result?.tag === "Ok" ? result.content : undefined;
 }
 
-// Type guard for narrowing a SolidJS RpcResult resource/signal to it's "Err" variant
-// See comment on `narrow` function
-export function rpcResourceOk<A>(
-    resource: Accessor<RpcResult<A> | undefined>,
-): Extract<RpcResult<A>, { tag: "Ok" }> | null {
-    const result = resource();
-
-    if (result?.tag === "Ok") {
-        return result;
-    }
-
-    return null;
-}
-
-// Type guard for narrowing a SolidJS RpcResult resource/signal to it's "Err" variant
-// See comment on `narrow` function
-export function rpcResourceErr<A>(
-    resource: Accessor<RpcResult<A> | undefined>,
-): Extract<RpcResult<A>, { tag: "Err" }> | null {
-    const result = resource();
-
-    if (result?.tag === "Err") {
-        return result;
-    }
-
-    return null;
+/** Gets the error information from an RPC result, if it is `Err`. */
+export function resultErr<T>(
+    result?: RpcResult<T>,
+): Extract<RpcResult<T>, { tag: "Err" }> | undefined {
+    return result?.tag === "Err" ? result : undefined;
 }
 
 /** Unwraps the `Ok` variant of a RPC result.

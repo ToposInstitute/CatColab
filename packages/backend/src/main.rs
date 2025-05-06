@@ -60,7 +60,7 @@ async fn main() {
 
     let main_task = tokio::task::spawn(async {
         let port = web_port();
-        let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await.unwrap();
+        let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port)).await.unwrap();
 
         let router = rpc::router();
         let (qubit_service, qubit_handle) = router.to_service(state);
@@ -72,7 +72,7 @@ async fn main() {
                     }
                     Ok(None) => {}
                     Err(err) => {
-                        error!("Authentication error: {err}");
+                        error!("Authentication error: {}", err);
                     }
                 };
                 req
@@ -83,7 +83,7 @@ async fn main() {
             .route("/", get(|| async { "Hello! The CatColab server is running" }))
             .nest_service("/rpc", qubit_service)
             .layer(CorsLayer::permissive());
-        info!("Web server listening at port {port}");
+        info!("Web server listening at port {}", port);
         axum::serve(listener, app).await.unwrap();
 
         qubit_handle.stop().unwrap();
@@ -91,9 +91,9 @@ async fn main() {
 
     let automerge_io_task = tokio::task::spawn(async {
         let port = automerge_io_port();
-        let listener = tokio::net::TcpListener::bind(format!("localhost:{port}")).await.unwrap();
+        let listener = tokio::net::TcpListener::bind(format!("localhost:{}", port)).await.unwrap();
         let app = Router::new().layer(io_layer);
-        info!("Automerge socket listening at port {port}");
+        info!("Automerge socket listening at port {}", port);
         axum::serve(listener, app).await.unwrap();
     });
 

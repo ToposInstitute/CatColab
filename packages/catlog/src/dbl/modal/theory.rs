@@ -1,11 +1,6 @@
 /*! Modal double theories.
 
-A **modal double theory** is a unital VDC equipped a family of monads (in the
-2-category of unital VDCs, normal functors, and natural transformations) called
-[modes](Mode). In a model, each monad on the theory is interpreted as a monad on
-the VDC of sets, i.e., as a lax double monad on the double category of sets. The
-monads on the semantics side are fixed across all models and include the double
-list monads and its many variants.
+TODO: Explain implementation strategy.
 */
 
 use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
@@ -16,7 +11,6 @@ use ref_cast::RefCast;
 use ustr::{IdentityHasher, Ustr};
 
 use crate::dbl::computad::{AVDCComputad, AVDCComputadTop};
-use crate::dbl::theory::InvalidDblTheory;
 use crate::dbl::{DblTree, InvalidVDblGraph, VDblCategory, VDblGraph};
 use crate::one::computad::{Computad, ComputadTop};
 use crate::validate::{self, Validate};
@@ -164,8 +158,8 @@ pub struct ModalDblTheory<Id, S = RandomState> {
     arr_generators: ComputadTop<ModalObType<Id>, Id, S>,
     pro_generators: ComputadTop<ModalObType<Id>, Id, S>,
     cell_generators: AVDCComputadTop<ModalObType<Id>, ModalObOp<Id>, ModalMorType<Id>, Id, S>,
-    arr_equations: Vec<PathEq<ModalObType<Id>, ModeApp<ModalEdge<Id>>>>,
-    // TODO: Cell equations and composites
+    // TODO: Arrow equations, cell equations, composites
+    //arr_equations: Vec<PathEq<ModalObType<Id>, ModeApp<Id>>>,
 }
 
 /// A modal double theory with identifiers of type `Ustr`.
@@ -174,9 +168,9 @@ pub type UstrModalDblTheory = ModalDblTheory<Ustr, BuildHasherDefault<IdentityHa
 /// Set of object types in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-struct ModalObTypes<Id, S>(ModalDblTheory<Id, S>);
+struct ModalSet<Id, S>(HashFinSet<Id, S>);
 
-impl<Id, S> Set for ModalObTypes<Id, S>
+impl<Id, S> Set for ModalSet<Id, S>
 where
     Id: Eq + Clone + Hash,
     S: BuildHasher,
@@ -184,7 +178,7 @@ where
     type Elem = ModeApp<Id>;
 
     fn contains(&self, ob: &Self::Elem) -> bool {
-        self.0.ob_generators.contains(&ob.arg)
+        self.0.contains(&ob.arg)
     }
 }
 
@@ -198,8 +192,8 @@ where
     Id: Eq + Clone + Hash,
     S: BuildHasher,
 {
-    fn computad(&self) -> Computad<'_, ModalObType<Id>, ModalObTypes<Id, S>, Id, S> {
-        Computad::new(ModalObTypes::ref_cast(&self.0), &self.0.pro_generators)
+    fn computad(&self) -> Computad<'_, ModalObType<Id>, ModalSet<Id, S>, Id, S> {
+        Computad(ModalSet::ref_cast(&self.0.ob_generators), &self.0.pro_generators)
     }
 }
 
@@ -272,8 +266,8 @@ where
     Id: Eq + Clone + Hash,
     S: BuildHasher,
 {
-    fn computad(&self) -> Computad<'_, ModalObType<Id>, ModalObTypes<Id, S>, Id, S> {
-        Computad::new(ModalObTypes::ref_cast(&self.0), &self.0.arr_generators)
+    fn computad(&self) -> Computad<'_, ModalObType<Id>, ModalSet<Id, S>, Id, S> {
+        Computad(ModalSet::ref_cast(&self.0.ob_generators), &self.0.arr_generators)
     }
 }
 
@@ -348,7 +342,7 @@ type ModalVDblComputad<'a, Id, S> = AVDCComputad<
     ModalObType<Id>,
     ModalObOp<Id>,
     ModalMorType<Id>,
-    ModalObTypes<Id, S>,
+    ModalSet<Id, S>,
     UnderlyingGraph<ModalOneTheory<Id, S>>,
     ModalMorTypeGraph<Id, S>,
     Id,
@@ -361,12 +355,12 @@ where
     S: BuildHasher,
 {
     fn computad(&self) -> ModalVDblComputad<'_, Id, S> {
-        AVDCComputad::new(
-            ModalObTypes::ref_cast(&self.0),
-            UnderlyingGraph::ref_cast(ModalOneTheory::ref_cast(&self.0)),
-            ModalMorTypeGraph::ref_cast(&self.0),
-            &self.0.cell_generators,
-        )
+        AVDCComputad {
+            objects: ModalSet::ref_cast(&self.0.ob_generators),
+            arrows: UnderlyingGraph::ref_cast(ModalOneTheory::ref_cast(&self.0)),
+            proarrows: ModalMorTypeGraph::ref_cast(&self.0),
+            computad: &self.0.cell_generators,
+        }
     }
 }
 
@@ -408,7 +402,7 @@ where
     type Sq = ModeApp<ModalSquare<Id>>;
 
     fn has_vertex(&self, x: &Self::V) -> bool {
-        ModalObTypes::ref_cast(&self.0).contains(x)
+        ModalSet::ref_cast(&self.0.ob_generators).contains(x)
     }
     fn has_edge(&self, path: &Self::E) -> bool {
         ModalOneTheory::ref_cast(&self.0).has_mor(path)
@@ -551,26 +545,16 @@ where
     }
 }
 
+// TODO: Validate the equations, not just the generating data.
 impl<Id, S> Validate for ModalDblTheory<Id, S>
 where
     Id: Eq + Clone + Hash,
     S: BuildHasher,
 {
-    type ValidationError = InvalidDblTheory<Id>;
+    type ValidationError = InvalidVDblGraph<Id, Id, Id>;
 
     fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
-        // Validate generating data.
-        ModalVDblGraph::ref_cast(self)
-            .validate()
-            .map_err(|errs| errs.map(|err| err.into()))?;
-
-        // Validate equations between object operations.
-        let graph = ModalEdgeGraph::ref_cast(self);
-        let arr_errors = self.arr_equations.iter().enumerate().filter_map(|(id, eq)| {
-            let errs = eq.validate_in(graph).err()?;
-            Some(InvalidDblTheory::ObOpEq(id, errs))
-        });
-        validate::wrap_errors(arr_errors)
+        ModalVDblGraph::ref_cast(self).validate()
     }
 }
 
@@ -611,10 +595,5 @@ where
         let dom = self.dom(&src); // == self.dom(&tgt)
         let cod = self.cod(&src); // == self.cod(&tgt)
         self.add_mor_op(id, Path::empty(dom), ShortPath::Zero(cod), src, tgt);
-    }
-
-    /// Equate two object operations in the theory.
-    pub fn equate_ob_ops(&mut self, lhs: ModalObOp<Id>, rhs: ModalObOp<Id>) {
-        self.arr_equations.push(PathEq::new(lhs, rhs))
     }
 }

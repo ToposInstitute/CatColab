@@ -23,7 +23,7 @@ pub enum MorType {
     /// Basic or generating morphism type.
     Basic(Ustr),
 
-    // Composite morphism type.
+    /// Composite of morphism types.
     Composite(Vec<MorType>),
 
     /// Hom type on an object type.

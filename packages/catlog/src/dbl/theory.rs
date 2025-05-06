@@ -68,10 +68,8 @@ composed:
   Section 10: Finite-product double theories
 */
 
-use nonempty::NonEmpty;
-
-use super::{category::*, graph::InvalidVDblGraph, tree::*};
-use crate::one::{InvalidPathEq, Path, tree::OpenTree};
+use super::{category::*, tree::*};
+use crate::one::{Path, tree::OpenTree};
 
 pub use super::discrete::theory::*;
 pub use super::discrete_tabulator::theory::*;
@@ -271,58 +269,5 @@ impl<VDC: VDCWithComposites> DblTheory for VDC {
     }
     fn id_mor_op(&self, m: Self::MorType) -> Self::MorOp {
         self.id_cell(m)
-    }
-}
-
-/// A failure of a double theory to be well defined.
-#[derive(Debug)]
-pub enum InvalidDblTheory<Id> {
-    /// Morphism type with an invalid source type.
-    SrcType(Id),
-
-    /// Morphism type with an invalid target type.
-    TgtType(Id),
-
-    /// Object operation with an invalid domain.
-    ObOpDom(Id),
-
-    /// Object operation with an invalid codomain.
-    ObOpCod(Id),
-
-    /// Morphism operation with an invalid domain.
-    MorOpDom(Id),
-
-    /// Morphism operation with an invalid codomain.
-    MorOpCod(Id),
-
-    /// Morphism operation with an invalid source operation.
-    SrcOp(Id),
-
-    /// Morphism operation with an invalid target operation.
-    TgtOp(Id),
-
-    /// Morphism operation having a boundary with incompatible corners.
-    MorOpBoundary(Id),
-
-    /// Equation between morphism types with one or more errors.
-    MorTypeEq(usize, NonEmpty<InvalidPathEq>),
-
-    /// Equation between object operations with one or more errors.
-    ObOpEq(usize, NonEmpty<InvalidPathEq>),
-}
-
-impl<Id> From<InvalidVDblGraph<Id, Id, Id>> for InvalidDblTheory<Id> {
-    fn from(err: InvalidVDblGraph<Id, Id, Id>) -> Self {
-        match err {
-            InvalidVDblGraph::Dom(id) => InvalidDblTheory::ObOpDom(id),
-            InvalidVDblGraph::Cod(id) => InvalidDblTheory::ObOpCod(id),
-            InvalidVDblGraph::Src(id) => InvalidDblTheory::SrcType(id),
-            InvalidVDblGraph::Tgt(id) => InvalidDblTheory::TgtType(id),
-            InvalidVDblGraph::SquareDom(id) => InvalidDblTheory::MorOpDom(id),
-            InvalidVDblGraph::SquareCod(id) => InvalidDblTheory::MorOpCod(id),
-            InvalidVDblGraph::SquareSrc(id) => InvalidDblTheory::SrcOp(id),
-            InvalidVDblGraph::SquareTgt(id) => InvalidDblTheory::TgtOp(id),
-            InvalidVDblGraph::NotSquare(id) => InvalidDblTheory::MorOpBoundary(id),
-        }
     }
 }

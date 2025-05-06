@@ -15,7 +15,6 @@ import {
     onCleanup,
 } from "solid-js";
 
-import type { Cell, Notebook } from "catlog-wasm";
 import { type Completion, IconButton } from "../components";
 import { deepCopyJSON } from "../util/deepcopy";
 import {
@@ -26,7 +25,14 @@ import {
     StemCellEditor,
     isCellDragData,
 } from "./notebook_cell";
-import { type FormalCell, newFormalCell, newRichTextCell, newStemCell } from "./types";
+import {
+    type Cell,
+    type FormalCell,
+    type Notebook,
+    newFormalCell,
+    newRichTextCell,
+    newStemCell,
+} from "./types";
 
 import "./notebook_editor.css";
 

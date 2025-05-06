@@ -81,7 +81,7 @@ pub fn th_delayable_signed_category() -> UstrDiscreteDblTheory {
 
 /** The theory of (N x N x Z/2Z)-graded categories
 
-TO-DO: description
+todo: description
  */
 pub fn th_nn2_category() -> UstrDiscreteDblTheory {
     let mut cat: UstrFpCategory = Default::default();
@@ -178,14 +178,7 @@ fn th_monad_algebra(mode: Mode) -> UstrModalDblTheory {
     let (x, a) = (ustr("Object"), ustr("Mul"));
     th.add_ob_type(x);
     th.add_ob_op(a, ModeApp::new(x).apply(mode), ModeApp::new(x));
-    th.equate_ob_ops(
-        Path::pair(ModeApp::new(a.into()).apply(mode), ModeApp::new(a.into())),
-        Path::pair(ModeApp::new(ModalEdge::Mul(mode, 2, ModeApp::new(x))), ModeApp::new(a.into())),
-    );
-    th.equate_ob_ops(
-        Path::empty(ModeApp::new(x)),
-        Path::pair(ModeApp::new(ModalEdge::Mul(mode, 0, ModeApp::new(x))), ModeApp::new(a.into())),
-    );
+    // TODO: Monad algebra equations
     th
 }
 
