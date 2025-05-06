@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use tsify_next::Tsify;
+use tsify::Tsify;
 use uuid::Uuid;
 
 use super::result::JsResult;

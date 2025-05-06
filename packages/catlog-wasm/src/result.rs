@@ -1,7 +1,7 @@
 //! Result of fallible computation that translates to/from JavaScript.
 
 use serde::{Deserialize, Serialize};
-use tsify_next::Tsify;
+use tsify::Tsify;
 
 /** A `Result`-like type that translates to/from JavaScript.
 

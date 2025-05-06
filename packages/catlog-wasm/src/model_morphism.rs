@@ -1,7 +1,7 @@
 use std::hash::Hash;
 
 use serde::{Deserialize, Serialize};
-use tsify_next::Tsify;
+use tsify::Tsify;
 use uuid::Uuid;
 
 use catlog::dbl::{model, model_morphism};

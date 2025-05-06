@@ -8,7 +8,7 @@ use ode_solvers::dop_shared::IntegrationError;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
-use tsify_next::Tsify;
+use tsify::Tsify;
 
 use crate::simulate::ode::{ODEProblem, ODESystem};
 
