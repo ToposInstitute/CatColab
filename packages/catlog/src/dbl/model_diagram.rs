@@ -22,7 +22,7 @@ use nonempty::NonEmpty;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
-use tsify_next::{Tsify, declare};
+use tsify::{Tsify, declare};
 
 use super::{model::*, model_morphism::*};
 use crate::one::{Category, FgCategory};

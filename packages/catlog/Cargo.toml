@@ -8,7 +8,7 @@ edition = "2024"
 [features]
 ode = ["dep:ode_solvers", "dep:nalgebra"]
 serde = ["dep:serde", "nonempty/serialize", "ustr/serde"]
-serde-wasm = ["serde", "dep:wasm-bindgen", "dep:tsify-next"]
+serde-wasm = ["serde", "dep:wasm-bindgen", "dep:tsify"]
 
 [dependencies]
 derivative = "2"
@@ -24,7 +24,7 @@ ode_solvers = { version = "0.5.0", optional = true }
 ref-cast = "1"
 serde = { version = "1", features = ["derive"], optional = true }
 thiserror = "1"
-tsify-next = { version = "0.5", features = ["js"], optional = true }
+tsify = { version = "0.5", features = ["js"], optional = true }
 ustr = "1"
 uuid = { version = "=1.11", optional = true }
 wasm-bindgen = { version = "0.2.100", optional = true }

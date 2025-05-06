@@ -326,7 +326,7 @@ dependencies = [
  "serde",
  "textplots",
  "thiserror 1.0.69",
- "tsify-next",
+ "tsify",
  "ustr",
  "uuid",
  "wasm-bindgen",
@@ -345,7 +345,7 @@ dependencies = [
  "js-sys",
  "nonempty",
  "serde",
- "tsify-next",
+ "tsify",
  "ustr",
  "uuid",
  "wasm-bindgen",
@@ -3492,24 +3492,24 @@ dependencies = [
 ]
 
 [[package]]
-name = "tsify-next"
-version = "0.5.4"
+name = "tsify"
+version = "0.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f4a645dca4ee0800f5ab60ce166deba2db6a0315de795a2691e138a3d55d756"
+checksum = "b2ec91b85e6c6592ed28636cb1dd1fac377ecbbeb170ff1d79f97aac5e38926d"
 dependencies = [
  "gloo-utils",
  "serde",
  "serde-wasm-bindgen",
  "serde_json",
- "tsify-next-macros",
+ "tsify-macros",
  "wasm-bindgen",
 ]
 
 [[package]]
-name = "tsify-next-macros"
-version = "0.5.4"
+name = "tsify-macros"
+version = "0.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d5c06f8a51d759bb58129e30b2631739e7e1e4579fad1f30ac09a6c88e488a6"
+checksum = "9a324606929ad11628a19206d7853807481dcaecd6c08be70a235930b8241955"
 dependencies = [
  "proc-macro2",
  "quote",

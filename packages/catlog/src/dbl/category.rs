@@ -12,7 +12,7 @@ has gone by many other names, notably *fc-multicategory* ([Leinster
 2004](crate::refs::HigherOperads)).
 
 *Composites* of proarrows in a VDC, if they exist, are represented by cells
-satisfying a universal property ([Cruttwell-Shulman
+satsifying a universal property ([Cruttwell-Shulman
 2008](crate::refs::GeneralizedMulticategories), Section 5). In our usage of
 virtual double categories as double theories, we will assume that *units*
 (nullary composites) exist. We will not assume that any other composites exist,
