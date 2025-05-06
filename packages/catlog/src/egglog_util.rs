@@ -2,8 +2,7 @@
 
 use std::fmt::Display;
 
-use egglog::ast::{Action, Command, Expr, Fact, Schedule};
-use egglog::{EGraph, Error, span};
+use egglog::{EGraph, Error, ast::*, span};
 use ref_cast::RefCast;
 
 /** An egglog program.
@@ -57,6 +56,55 @@ impl Program {
             Ok(_) => Ok(true),
             Err(Error::CheckError(_, _)) => Ok(false),
             Err(error) => Err(error),
+        }
+    }
+}
+
+/// Simplified egglog AST node for a rewrite.
+pub struct CommandRewrite {
+    /// Rule set to which the rewrite belongs.
+    pub ruleset: Symbol,
+    /// Left-hand side of rewrite.
+    pub lhs: Expr,
+    /// Right-hand side of rewrite.
+    pub rhs: Expr,
+}
+
+impl From<CommandRewrite> for Command {
+    fn from(rule: CommandRewrite) -> Self {
+        Command::Rewrite(
+            rule.ruleset,
+            Rewrite {
+                span: span!(),
+                lhs: rule.lhs,
+                rhs: rule.rhs,
+                conditions: vec![],
+            },
+            false,
+        )
+    }
+}
+
+/// Simplified egglog AST node for a rule.
+pub struct CommandRule {
+    /// Rule set to which the rule belongs.
+    pub ruleset: Symbol,
+    /// Head of rule.
+    pub head: Vec<Action>,
+    /// Body of rule.
+    pub body: Vec<Fact>,
+}
+
+impl From<CommandRule> for Command {
+    fn from(rule: CommandRule) -> Self {
+        Command::Rule {
+            name: "".into(),
+            ruleset: rule.ruleset,
+            rule: Rule {
+                span: span!(),
+                head: Actions::new(rule.head),
+                body: rule.body,
+            },
         }
     }
 }
