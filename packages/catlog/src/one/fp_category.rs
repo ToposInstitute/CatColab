@@ -27,7 +27,7 @@ use thiserror::Error;
 use ustr::{IdentityHasher, Ustr};
 
 use super::{category::*, graph::*, path::*};
-use crate::egglog_util::Program;
+use crate::egglog_util::{CommandRewrite, CommandRule, Program};
 use crate::validate::{self, Validate};
 
 /** A finitely presented category backed by an e-graph.
@@ -521,144 +521,96 @@ impl<V, E, S> CategoryProgramBuilder<V, E, S> {
                 name: sym.mor_is_valid,
                 inputs: vec![sym.mor],
             },
-            // Every morphism generator is well-typed.
-            Command::Rule {
-                name: "".into(),
+            // Rule: every morphism generator is well-typed.
+            Command::from(CommandRule {
                 ruleset: sym.axioms,
-                rule: Rule {
-                    span: span!(),
-                    head: Actions::singleton(Action::Expr(span!(), self.mor_is_valid(var!("f")))),
-                    body: vec![Fact::Eq(
-                        span!(),
-                        var!("f"),
-                        call!(sym.mor_gen, vec![var!("name")]),
-                    )],
-                },
-            },
-            // Every identity morphism is well-typed.
-            Command::Rule {
-                name: "".into(),
+                head: vec![Action::Expr(span!(), self.mor_is_valid(var!("f")))],
+                body: vec![Fact::Eq(span!(), var!("f"), call!(sym.mor_gen, vec![var!("name")]))],
+            }),
+            // Rule: every identity morphism is well-typed.
+            Command::from(CommandRule {
                 ruleset: sym.axioms,
-                rule: Rule {
-                    span: span!(),
-                    head: Actions::singleton(Action::Expr(span!(), self.mor_is_valid(var!("f")))),
-                    body: vec![Fact::Eq(span!(), var!("f"), self.id(var!("x")))],
-                },
-            },
-            // A composite of two morphisms is well-typed if both morphisms are
-            // well-typed and their (co)domains are compatible.
-            Command::Rule {
-                name: "".into(),
+                head: vec![Action::Expr(span!(), self.mor_is_valid(var!("f")))],
+                body: vec![Fact::Eq(span!(), var!("f"), self.id(var!("x")))],
+            }),
+            // Rule: a composite of two morphisms is well-typed if both
+            // morphisms are well-typed and their (co)domains are compatible.
+            Command::from(CommandRule {
                 ruleset: sym.axioms,
-                rule: Rule {
-                    span: span!(),
-                    head: Actions::singleton(Action::Expr(span!(), self.mor_is_valid(var!("fg")))),
-                    body: vec![
-                        Fact::Eq(span!(), var!("fg"), self.compose2(var!("f"), var!("g"))),
-                        Fact::Fact(self.mor_is_valid(var!("f"))),
-                        Fact::Fact(self.mor_is_valid(var!("g"))),
-                        Fact::Eq(span!(), self.cod(var!("f")), self.dom(var!("g"))),
-                    ],
-                },
-            },
+                head: vec![Action::Expr(span!(), self.mor_is_valid(var!("fg")))],
+                body: vec![
+                    Fact::Eq(span!(), var!("fg"), self.compose2(var!("f"), var!("g"))),
+                    Fact::Fact(self.mor_is_valid(var!("f"))),
+                    Fact::Fact(self.mor_is_valid(var!("g"))),
+                    Fact::Eq(span!(), self.cod(var!("f")), self.dom(var!("g"))),
+                ],
+            }),
             // Rules: (co)domains of composites and identities.
-            Command::Rule {
-                name: "".into(),
+            Command::from(CommandRule {
                 ruleset: sym.axioms,
-                rule: Rule {
-                    span: span!(),
-                    head: Actions::new(vec![
-                        Action::Union(span!(), self.dom(var!("fg")), self.dom(var!("f"))),
-                        Action::Union(span!(), self.cod(var!("fg")), self.cod(var!("g"))),
-                    ]),
-                    body: vec![
-                        Fact::Eq(span!(), var!("fg"), self.compose2(var!("f"), var!("g"))),
-                        Fact::Fact(self.mor_is_valid(var!("fg"))),
-                    ],
-                },
-            },
-            Command::Rewrite(
-                sym.axioms,
-                Rewrite {
-                    span: span!(),
-                    lhs: self.dom(self.id(var!("x"))),
-                    rhs: var!("x"),
-                    conditions: vec![],
-                },
-                false,
-            ),
-            Command::Rewrite(
-                sym.axioms,
-                Rewrite {
-                    span: span!(),
-                    lhs: self.cod(self.id(var!("x"))),
-                    rhs: var!("x"),
-                    conditions: vec![],
-                },
-                false,
-            ),
+                head: vec![
+                    Action::Union(span!(), self.dom(var!("fg")), self.dom(var!("f"))),
+                    Action::Union(span!(), self.cod(var!("fg")), self.cod(var!("g"))),
+                ],
+                body: vec![
+                    Fact::Eq(span!(), var!("fg"), self.compose2(var!("f"), var!("g"))),
+                    Fact::Fact(self.mor_is_valid(var!("fg"))),
+                ],
+            }),
+            Command::from(CommandRewrite {
+                ruleset: sym.axioms,
+                lhs: self.dom(self.id(var!("x"))),
+                rhs: var!("x"),
+            }),
+            Command::from(CommandRewrite {
+                ruleset: sym.axioms,
+                lhs: self.cod(self.id(var!("x"))),
+                rhs: var!("x"),
+            }),
             // Associativity and unitality axioms, where associativity is a
             // bidirectional rewrite and unitality is unidirectional rewrites.
-            Command::Rule {
-                name: "".into(),
+            Command::from(CommandRule {
                 ruleset: sym.axioms,
-                rule: Rule {
-                    span: span!(),
-                    head: Actions::singleton(Action::Union(
-                        span!(),
-                        var!("fgh"),
-                        self.compose2(var!("f"), self.compose2(var!("g"), var!("h"))),
-                    )),
-                    body: vec![
-                        Fact::Eq(
-                            span!(),
-                            var!("fgh"),
-                            self.compose2(self.compose2(var!("f"), var!("g")), var!("h")),
-                        ),
-                        Fact::Fact(self.mor_is_valid(var!("fgh"))),
-                    ],
-                },
-            },
-            Command::Rule {
-                name: "".into(),
-                ruleset: sym.axioms,
-                rule: Rule {
-                    span: span!(),
-                    head: Actions::singleton(Action::Union(
+                head: vec![Action::Union(
+                    span!(),
+                    var!("fgh"),
+                    self.compose2(var!("f"), self.compose2(var!("g"), var!("h"))),
+                )],
+                body: vec![
+                    Fact::Eq(
                         span!(),
                         var!("fgh"),
                         self.compose2(self.compose2(var!("f"), var!("g")), var!("h")),
-                    )),
-                    body: vec![
-                        Fact::Eq(
-                            span!(),
-                            var!("fgh"),
-                            self.compose2(var!("f"), self.compose2(var!("g"), var!("h"))),
-                        ),
-                        Fact::Fact(self.mor_is_valid(var!("fgh"))),
-                    ],
-                },
-            },
-            Command::Rewrite(
-                sym.axioms,
-                Rewrite {
-                    span: span!(),
-                    lhs: self.compose2(var!("f"), self.id(self.cod(var!("f")))),
-                    rhs: var!("f"),
-                    conditions: vec![],
-                },
-                false,
-            ),
-            Command::Rewrite(
-                sym.axioms,
-                Rewrite {
-                    span: span!(),
-                    lhs: self.compose2(self.id(self.dom(var!("f"))), var!("f")),
-                    rhs: var!("f"),
-                    conditions: vec![],
-                },
-                false,
-            ),
+                    ),
+                    Fact::Fact(self.mor_is_valid(var!("fgh"))),
+                ],
+            }),
+            Command::from(CommandRule {
+                ruleset: sym.axioms,
+                head: vec![Action::Union(
+                    span!(),
+                    var!("fgh"),
+                    self.compose2(self.compose2(var!("f"), var!("g")), var!("h")),
+                )],
+                body: vec![
+                    Fact::Eq(
+                        span!(),
+                        var!("fgh"),
+                        self.compose2(var!("f"), self.compose2(var!("g"), var!("h"))),
+                    ),
+                    Fact::Fact(self.mor_is_valid(var!("fgh"))),
+                ],
+            }),
+            Command::from(CommandRewrite {
+                ruleset: sym.axioms,
+                lhs: self.compose2(var!("f"), self.id(self.cod(var!("f")))),
+                rhs: var!("f"),
+            }),
+            Command::from(CommandRewrite {
+                ruleset: sym.axioms,
+                lhs: self.compose2(self.id(self.dom(var!("f"))), var!("f")),
+                rhs: var!("f"),
+            }),
         ]
     }
 }
