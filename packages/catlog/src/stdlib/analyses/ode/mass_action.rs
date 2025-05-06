@@ -14,7 +14,7 @@ use ustr::{IdentityHasher, Ustr, ustr};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
-use tsify_next::Tsify;
+use tsify::Tsify;
 
 use super::ODEAnalysis;
 use crate::dbl::{

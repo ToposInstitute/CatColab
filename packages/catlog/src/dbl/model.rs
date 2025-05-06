@@ -43,7 +43,7 @@ use ustr::{IdentityHasher, Ustr};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
-use tsify_next::Tsify;
+use tsify::Tsify;
 
 use super::category::VDblCategory;
 use super::theory::{DblTheory, DiscreteDblTheory};

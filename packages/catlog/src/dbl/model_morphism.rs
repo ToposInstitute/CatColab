@@ -29,7 +29,7 @@ use thiserror::Error;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
-use tsify_next::Tsify;
+use tsify::Tsify;
 
 use crate::one::graph_algorithms::{bounded_simple_paths, simple_paths, spec_order};
 use crate::one::*;

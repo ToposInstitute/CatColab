@@ -5,7 +5,7 @@ use derive_more::From;
 use uuid::Uuid;
 
 use serde::{Deserialize, Serialize};
-use tsify_next::Tsify;
+use tsify::Tsify;
 use wasm_bindgen::prelude::*;
 
 use catlog::dbl::model::{FgDblModel, MutDblModel};
