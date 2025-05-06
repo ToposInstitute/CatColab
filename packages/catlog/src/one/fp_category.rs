@@ -20,17 +20,14 @@ use std::fmt::Debug;
 use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
 
 use derivative::Derivative;
-use egglog::ast::{
-    Action, Command, Expr, GenericRunConfig, Rewrite, Schedule, Schema, Symbol, Variant,
-};
-use egglog::{EGraph, call, lit, span, var};
+use egglog::{EGraph, ast::*, span};
 use nonempty::NonEmpty;
 use ref_cast::RefCast;
 use thiserror::Error;
 use ustr::{IdentityHasher, Ustr};
 
 use super::{category::*, graph::*, path::*};
-use crate::egglog_util::Program;
+use crate::egglog_util::{CommandRewrite, CommandRule, Program};
 use crate::validate::{self, Validate};
 
 /** A finitely presented category backed by an e-graph.
@@ -400,6 +397,11 @@ impl<V, E, S> CategoryProgramBuilder<V, E, S> {
         call!(self.sym.mor_gen, vec![lit!(id)])
     }
 
+    /// Constructs a call of the morphism-is-valid predicate.
+    pub fn mor_is_valid(&self, mor: Expr) -> Expr {
+        call!(self.sym.mor_is_valid, vec![mor])
+    }
+
     /// Constructs a domain call.
     pub fn dom(&self, mor: Expr) -> Expr {
         call!(self.sym.dom, vec![mor])
@@ -449,7 +451,7 @@ impl<V, E, S> CategoryProgramBuilder<V, E, S> {
     fn preamble(&mut self) {
         let sym = &self.sym;
         self.prog = vec![
-            // Type and term constructors.
+            // Types: objects and morphisms.
             Command::Datatype {
                 span: span!(),
                 name: sym.ob,
@@ -470,6 +472,7 @@ impl<V, E, S> CategoryProgramBuilder<V, E, S> {
                     cost: Some(0),
                 }],
             },
+            // Constructors: (co)domain, identity, composition.
             Command::Constructor {
                 span: span!(),
                 name: sym.dom,
@@ -510,90 +513,104 @@ impl<V, E, S> CategoryProgramBuilder<V, E, S> {
                 cost: Some(1),
                 unextractable: false,
             },
-            // Typing axioms for composites and identities.
+            // Rule set: all the axioms for a category.
             Command::AddRuleset(sym.axioms),
-            Command::Rewrite(
-                sym.axioms,
-                Rewrite {
-                    span: span!(),
-                    lhs: self.dom(self.id(var!("x"))),
-                    rhs: var!("x"),
-                    conditions: vec![],
-                },
-                false,
-            ),
-            Command::Rewrite(
-                sym.axioms,
-                Rewrite {
-                    span: span!(),
-                    lhs: self.cod(self.id(var!("x"))),
-                    rhs: var!("x"),
-                    conditions: vec![],
-                },
-                false,
-            ),
-            Command::Rewrite(
-                sym.axioms,
-                Rewrite {
-                    span: span!(),
-                    lhs: self.dom(self.compose2(var!("f"), var!("g"))),
-                    rhs: self.dom(var!("f")),
-                    conditions: vec![],
-                },
-                false,
-            ),
-            Command::Rewrite(
-                sym.axioms,
-                Rewrite {
-                    span: span!(),
-                    lhs: self.cod(self.compose2(var!("f"), var!("g"))),
-                    rhs: self.cod(var!("g")),
-                    conditions: vec![],
-                },
-                false,
-            ),
+            // Predicate: is the morphism well-typed?
+            Command::Relation {
+                span: span!(),
+                name: sym.mor_is_valid,
+                inputs: vec![sym.mor],
+            },
+            // Rule: every morphism generator is well-typed.
+            Command::from(CommandRule {
+                ruleset: sym.axioms,
+                head: vec![Action::Expr(span!(), self.mor_is_valid(var!("f")))],
+                body: vec![Fact::Eq(span!(), var!("f"), call!(sym.mor_gen, vec![var!("name")]))],
+            }),
+            // Rule: every identity morphism is well-typed.
+            Command::from(CommandRule {
+                ruleset: sym.axioms,
+                head: vec![Action::Expr(span!(), self.mor_is_valid(var!("f")))],
+                body: vec![Fact::Eq(span!(), var!("f"), self.id(var!("x")))],
+            }),
+            // Rule: a composite of two morphisms is well-typed if both
+            // morphisms are well-typed and their (co)domains are compatible.
+            Command::from(CommandRule {
+                ruleset: sym.axioms,
+                head: vec![Action::Expr(span!(), self.mor_is_valid(var!("fg")))],
+                body: vec![
+                    Fact::Eq(span!(), var!("fg"), self.compose2(var!("f"), var!("g"))),
+                    Fact::Fact(self.mor_is_valid(var!("f"))),
+                    Fact::Fact(self.mor_is_valid(var!("g"))),
+                    Fact::Eq(span!(), self.cod(var!("f")), self.dom(var!("g"))),
+                ],
+            }),
+            // Rules: (co)domains of composites and identities.
+            Command::from(CommandRule {
+                ruleset: sym.axioms,
+                head: vec![
+                    Action::Union(span!(), self.dom(var!("fg")), self.dom(var!("f"))),
+                    Action::Union(span!(), self.cod(var!("fg")), self.cod(var!("g"))),
+                ],
+                body: vec![
+                    Fact::Eq(span!(), var!("fg"), self.compose2(var!("f"), var!("g"))),
+                    Fact::Fact(self.mor_is_valid(var!("fg"))),
+                ],
+            }),
+            Command::from(CommandRewrite {
+                ruleset: sym.axioms,
+                lhs: self.dom(self.id(var!("x"))),
+                rhs: var!("x"),
+            }),
+            Command::from(CommandRewrite {
+                ruleset: sym.axioms,
+                lhs: self.cod(self.id(var!("x"))),
+                rhs: var!("x"),
+            }),
             // Associativity and unitality axioms, where associativity is a
             // bidirectional rewrite and unitality is unidirectional rewrites.
-            Command::Rewrite(
-                sym.axioms,
-                Rewrite {
-                    span: span!(),
-                    lhs: self.compose2(self.compose2(var!("f"), var!("g")), var!("h")),
-                    rhs: self.compose2(var!("f"), self.compose2(var!("g"), var!("h"))),
-                    conditions: vec![],
-                },
-                false,
-            ),
-            Command::Rewrite(
-                sym.axioms,
-                Rewrite {
-                    span: span!(),
-                    lhs: self.compose2(var!("f"), self.compose2(var!("g"), var!("h"))),
-                    rhs: self.compose2(self.compose2(var!("f"), var!("g")), var!("h")),
-                    conditions: vec![],
-                },
-                false,
-            ),
-            Command::Rewrite(
-                sym.axioms,
-                Rewrite {
-                    span: span!(),
-                    lhs: self.compose2(var!("f"), self.id(var!("y"))),
-                    rhs: var!("f"),
-                    conditions: vec![], // Should we check cod(f) == y?
-                },
-                false,
-            ),
-            Command::Rewrite(
-                sym.axioms,
-                Rewrite {
-                    span: span!(),
-                    lhs: self.compose2(self.id(var!("x")), var!("f")),
-                    rhs: var!("f"),
-                    conditions: vec![], // Should we check dom(f) == x?
-                },
-                false,
-            ),
+            Command::from(CommandRule {
+                ruleset: sym.axioms,
+                head: vec![Action::Union(
+                    span!(),
+                    var!("fgh"),
+                    self.compose2(var!("f"), self.compose2(var!("g"), var!("h"))),
+                )],
+                body: vec![
+                    Fact::Eq(
+                        span!(),
+                        var!("fgh"),
+                        self.compose2(self.compose2(var!("f"), var!("g")), var!("h")),
+                    ),
+                    Fact::Fact(self.mor_is_valid(var!("fgh"))),
+                ],
+            }),
+            Command::from(CommandRule {
+                ruleset: sym.axioms,
+                head: vec![Action::Union(
+                    span!(),
+                    var!("fgh"),
+                    self.compose2(self.compose2(var!("f"), var!("g")), var!("h")),
+                )],
+                body: vec![
+                    Fact::Eq(
+                        span!(),
+                        var!("fgh"),
+                        self.compose2(var!("f"), self.compose2(var!("g"), var!("h"))),
+                    ),
+                    Fact::Fact(self.mor_is_valid(var!("fgh"))),
+                ],
+            }),
+            Command::from(CommandRewrite {
+                ruleset: sym.axioms,
+                lhs: self.compose2(var!("f"), self.id(self.cod(var!("f")))),
+                rhs: var!("f"),
+            }),
+            Command::from(CommandRewrite {
+                ruleset: sym.axioms,
+                lhs: self.compose2(self.id(self.dom(var!("f"))), var!("f")),
+                rhs: var!("f"),
+            }),
         ]
     }
 }
@@ -615,6 +632,7 @@ impl<V, E, S: Default> Default for CategoryProgramBuilder<V, E, S> {
 struct CategorySymbols {
     ob: Symbol,
     mor: Symbol,
+    mor_is_valid: Symbol,
     ob_gen: Symbol,
     mor_gen: Symbol,
     dom: Symbol,
@@ -629,6 +647,7 @@ impl Default for CategorySymbols {
         Self {
             ob: "Ob".into(),
             mor: "Mor".into(),
+            mor_is_valid: "is_mor_valid".into(),
             ob_gen: "ObGen".into(),
             mor_gen: "MorGen".into(),
             dom: "dom".into(),
@@ -681,14 +700,36 @@ mod tests {
             (constructor id (Ob) Mor :cost 1)
             (constructor compose (Mor Mor) Mor :cost 1)
             (ruleset CatAxioms)
+            (relation is_mor_valid (Mor))
+            (rule ((= f (MorGen name)))
+                  ((is_mor_valid f))
+                    :ruleset CatAxioms )
+            (rule ((= f (id x)))
+                  ((is_mor_valid f))
+                    :ruleset CatAxioms )
+            (rule ((= fg (compose f g))
+                   (is_mor_valid f)
+                   (is_mor_valid g)
+                   (= (cod f) (dom g)))
+                  ((is_mor_valid fg))
+                    :ruleset CatAxioms )
+            (rule ((= fg (compose f g))
+                   (is_mor_valid fg))
+                  ((union (dom fg) (dom f))
+                   (union (cod fg) (cod g)))
+                    :ruleset CatAxioms )
             (rewrite (dom (id x)) x :ruleset CatAxioms)
             (rewrite (cod (id x)) x :ruleset CatAxioms)
-            (rewrite (dom (compose f g)) (dom f) :ruleset CatAxioms)
-            (rewrite (cod (compose f g)) (cod g) :ruleset CatAxioms)
-            (rewrite (compose (compose f g) h) (compose f (compose g h)) :ruleset CatAxioms)
-            (rewrite (compose f (compose g h)) (compose (compose f g) h) :ruleset CatAxioms)
-            (rewrite (compose f (id y)) f :ruleset CatAxioms)
-            (rewrite (compose (id x) f) f :ruleset CatAxioms)
+            (rule ((= fgh (compose (compose f g) h))
+                   (is_mor_valid fgh))
+                  ((union fgh (compose f (compose g h))))
+                    :ruleset CatAxioms )
+            (rule ((= fgh (compose f (compose g h)))
+                   (is_mor_valid fgh))
+                  ((union fgh (compose (compose f g) h)))
+                    :ruleset CatAxioms )
+            (rewrite (compose f (id (cod f))) f :ruleset CatAxioms)
+            (rewrite (compose (id (dom f)) f) f :ruleset CatAxioms)
         "#]];
         expected.assert_eq(&prog.to_string());
 
