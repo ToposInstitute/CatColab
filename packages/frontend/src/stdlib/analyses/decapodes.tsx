@@ -195,10 +195,7 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
                 </IconButton>
             </Match>
             <Match when={kernel.error || options.error}>
-                <IconButton
-                    onClick={restartKernel}
-                    tooltip="Restart the Julia kernel"
-                >
+                <IconButton onClick={restartKernel} tooltip="Restart the Julia kernel">
                     <RotateCcw size={16} />
                 </IconButton>
             </Match>

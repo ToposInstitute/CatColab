@@ -1,9 +1,16 @@
 #!/usr/bin/env bash
 
-default_kernel=$(julia -e 'print("julia-$(VERSION.major).$(VERSION.minor)")')
+USAGE=$(cat <<-END
+    \033[1mUsage:\033[0m
+	
+    -k|--kernel: specify the kernel. Defaults to the value of julia-\$(VERSION.major).\$(VERSION.minor). 
+    
+    -m|--mode: a keyword which specifies the domain/port the Jupyter server is accessible. Valid arguments are 'dev', 'staging', and 'production' (default).
+	END
+)
 
-KERNEL=$default_kernel
-MODE="https://catcolab.org"
+KERNEL=$(julia -e 'print("julia-$(VERSION.major).$(VERSION.minor)")')
+ORIGIN="https://catcolab.org"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -17,10 +24,10 @@ while [[ $# -gt 0 ]]; do
 		production)
 		  ;;
 		staging)
-		  MODE="https://next.catcolab.org"
+		  ORIGIN="https://next.catcolab.org"
 		  ;;
 		dev)
-		  MODE="http://localhost:5173"
+		  ORIGIN="http://localhost:5173"
 		  ;;
 		*)
 		  echo "$2 is not an eligible mode. Please provide 'production', 'staging', or 'dev'"
@@ -29,8 +36,13 @@ while [[ $# -gt 0 ]]; do
 	  shift
 	  shift
   	  ;;
+	-h|--help)
+	  echo -e "$USAGE" 
+	  ;;
     *)
-  	  echo "unknown option: $1"
+  	  echo "    Unknown option: $1
+	  "
+	  echo -e "$USAGE"
   	  exit 1
   	  ;;
   esac
