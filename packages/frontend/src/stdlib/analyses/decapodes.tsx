@@ -197,7 +197,7 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
             <Match when={kernel.error || options.error}>
                 <IconButton
                     onClick={restartKernel}
-                    tooltip="Restart the AlgebraicJulia Interop service"
+                    tooltip="Restart the Julia kernel"
                 >
                     <RotateCcw size={16} />
                 </IconButton>
@@ -265,7 +265,7 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
             </Foldable>
             <Switch>
                 <Match when={kernel.loading || options.loading}>
-                    {"Loading the AlgebraicJulia Interop service..."}
+                    {"Loading the Julia kernel..."}
                 </Match>
                 <Match when={kernel.error}>
                     {(error) => (
@@ -276,7 +276,7 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
                 </Match>
                 <Match when={options.error}>
                     {(error) => (
-                        <Warning title="Failed to initialize the AlgebraicJulia Interop service">
+                        <Warning title="Failed to initialize the Julia kernel">
                             <pre>{error().message}</pre>
                         </Warning>
                     )}

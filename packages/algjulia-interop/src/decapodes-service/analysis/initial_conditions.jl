@@ -78,10 +78,6 @@ function initial_conditions(ics::Dict{Symbol,<:InitialConditions}, geometry::Geo
     return u0
 end
 
-function initial_conditions(x::InitialConditions, args...)
-    throw(ImplError("These initial conditions ($(x)) are")) # TODO
-end
-
 function initial_conditions(ics::GaussianIC, geometry::Geometry)
     c_dist = MvNormal(ics.ξ)
     c = [pdf(c_dist, [p[1], p[2]]) for p ∈ geometry.dualmesh[:point]]

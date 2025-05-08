@@ -49,7 +49,6 @@ function PodeSystem(content::JSON3.Object, diagram::DecapodeDiagram, hodge=Geome
         vars::AbstractArray => Dict{String, Bool}([ k => k ∈ vars for k in keys(diagram.vars)])
         vars => Dict{String, Bool}([ "$k" => v for (k,v) in vars])
     end
-    @info plotVars
     scalars = content[:scalars]
     anons = Dict{Symbol, Any}()
 
@@ -64,7 +63,6 @@ function PodeSystem(content::JSON3.Object, diagram::DecapodeDiagram, hodge=Geome
     star0_inv_m = dec_inv_hodge_star(0, geometry.dualmesh, hodge)
     Δ0 = Δ(0,geometry.dualmesh)
     #fΔ0 = factorize(Δ0);
-    @info size(dual_d1_m)
     function sys_generate(s, my_symbol)
         op = @match my_symbol begin
             sym && if haskey(diagram.scalars, sym) end => x -> begin

@@ -1,9 +1,40 @@
 #!/usr/bin/env bash
 
-KERNEL="julia-ccl-interop-1.11"
-# KERNEL="julia-1.11"
+default_kernel=$(julia -e 'print("julia-$(VERSION.major).$(VERSION.minor)")')
 
-ORIGIN="http://localhost:5173"
+KERNEL=$default_kernel
+MODE="https://catcolab.org"
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -k|--kernel)
+	  KERNEL=$2
+  	  shift
+	  shift
+  	  ;;
+    -m|--mode)
+	  case "$2" in
+		production)
+		  ;;
+		staging)
+		  MODE="https://next.catcolab.org"
+		  ;;
+		dev)
+		  MODE="http://localhost:5173"
+		  ;;
+		*)
+		  echo "$2 is not an eligible mode. Please provide 'production', 'staging', or 'dev'"
+		  exit 1
+	  esac
+	  shift
+	  shift
+  	  ;;
+    *)
+  	  echo "unknown option: $1"
+  	  exit 1
+  	  ;;
+  esac
+done
 
 jupyter server \
     --IdentityProvider.token="" \

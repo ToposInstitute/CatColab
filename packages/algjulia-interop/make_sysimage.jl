@@ -18,7 +18,7 @@ Pkg.activate(); Pkg.add("IJulia")
 using IJulia
 Pkg.build("IJulia")
 
-installkernel("Julia CCL Interop", "--project=@.", "--sysimage=$sysimg_path")
+installkernel("Julia CatColab Interop", "--project=@.", "--sysimage=$sysimg_path")
 
 @info "Done!"
 exit()
