@@ -70,15 +70,20 @@ function add_to_model!(model::Model{ThDecapode}, content::AbstractDict, type::Ho
     end
 end
 
-
+# TODO generalize
+function Model(::ThDecapode, path::String)
+    json = JSON3.read(read(path, String))
+    Model(ThDecapode(), json)
+end
 
 # for each cell, if it is...
 #   ...an object, we convert its type to a symbol and add it to the modeldict
 #   ...a morphism, we add it to the modeldict with a field for the ids of its
 #       domain and codomain to its
-function Model(::ThDecapode, model::AbstractVector{<:AbstractDict}) # AbstractDict is the JSON
+function Model(::ThDecapode, json_model::JSON3.Object) # AbstractDict is the JSON
     newmodel = Model(ThDecapode())
-    foreach(model) do cell
+    __name = json_model[:name] # TODO unused
+    for cell in json_model[:notebook][:cells]
         @match cell begin
             IsObject(content) => add_to_model!(newmodel, content, ObTag())
             IsMorphism(content) => add_to_model!(newmodel, content, HomTag())
@@ -88,3 +93,15 @@ function Model(::ThDecapode, model::AbstractVector{<:AbstractDict}) # AbstractDi
     return newmodel
 end
 export Model
+
+function Model(::ThDecapode, json_array::JSON3.Array{T}; name="model") where T
+    newmodel = Model(ThDecapode())
+    for cell in json_array
+        @match cell begin
+            content && if haskey(content, :obType) end => add_to_model!(newmodel, content, ObTag())
+            content && if haskey(content, :morType) end => add_to_model!(newmodel, content, HomTag())
+            _ => throw(ImplError(cell))
+        end
+    end
+    return newmodel
+end

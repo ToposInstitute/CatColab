@@ -1,0 +1,73 @@
+{
+  "diagramIn": {
+    "_id": "0195c95c-9917-7402-82b9-1b6c735258b7",
+    "_server": "backend.catcolab.org",
+    "_version": null,
+    "type": "diagram-in"
+  },
+  "name": "",
+  "notebook": {
+    "cells": [
+      {
+        "content": {
+          "id": "0195c95c-c200-73a0-bf58-1cc188ecd0c4",
+          "name": "A",
+          "obType": {
+            "content": "Object",
+            "tag": "Basic"
+          },
+          "over": {
+            "content": "0194d398-a28e-7433-89f8-563bae6e6875",
+            "tag": "Basic"
+          },
+          "tag": "object"
+        },
+        "id": "0195c95c-c200-73a0-bf58-22914f83428d",
+        "tag": "formal"
+      },
+      {
+        "content": {
+          "id": "0195c95c-d4b4-779b-ae65-a89269f63b43",
+          "name": "B",
+          "obType": {
+            "content": "Object",
+            "tag": "Basic"
+          },
+          "over": {
+            "content": "0194d398-a28e-7433-89f8-563bae6e6875",
+            "tag": "Basic"
+          },
+          "tag": "object"
+        },
+        "id": "0195c95c-d4b4-779b-ae65-ad0a7af96410",
+        "tag": "formal"
+      },
+      {
+        "content": {
+          "cod": {
+            "content": "0195c95c-d4b4-779b-ae65-a89269f63b43",
+            "tag": "Basic"
+          },
+          "dom": {
+            "content": "0195c95c-c200-73a0-bf58-1cc188ecd0c4",
+            "tag": "Basic"
+          },
+          "id": "0195dde5-27aa-72fa-9cde-ff6571346ca7",
+          "morType": {
+            "content": "Nonscalar",
+            "tag": "Basic"
+          },
+          "name": "",
+          "over": {
+            "content": "0194d399-b2a2-73ff-aece-cb0f26644045",
+            "tag": "Basic"
+          },
+          "tag": "morphism"
+        },
+        "id": "0195dde5-27aa-72fa-9cdf-0313e512eb41",
+        "tag": "formal"
+      }
+    ]
+  },
+  "type": "diagram"
+}

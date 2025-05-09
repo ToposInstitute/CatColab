@@ -85,6 +85,9 @@ web_modules/
 # Sentry files
 instrument.mjs
 
+# .DS_Store
+*.DS_Store
+
 # direnv cache
 .direnv
 

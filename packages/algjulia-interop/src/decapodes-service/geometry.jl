@@ -73,6 +73,10 @@ struct Geometry
     dualmesh::HasDeltaSet
 end
 
+function Base.show(io::IO, g::Geometry)
+    println(io, g.domain)
+end
+
 function Geometry(json_object::AbstractDict)
     mesh_name = Symbol(json_object[:mesh])
     domain = PREDEFINED_MESHES[mesh_name]
