@@ -4,6 +4,7 @@ import { monitorForElements } from "@atlaskit/pragmatic-drag-and-drop/element/ad
 import type { DocHandle, Prop } from "@automerge/automerge-repo";
 import { type KbdKey, createShortcut } from "@solid-primitives/keyboard";
 import ListPlus from "lucide-solid/icons/list-plus";
+
 import {
     type Component,
     For,
@@ -33,6 +34,7 @@ import {
     newRichTextCell,
     newStemCell,
 } from "./types";
+import { WalkthroughOverlay } from "./walkthrough_overlay";
 
 import "./notebook_editor.css";
 
@@ -86,6 +88,7 @@ export function NotebookEditor<T>(props: {
     noShortcuts?: boolean;
 }) {
     const [activeCell, setActiveCell] = createSignal(props.notebook.cells.length > 0 ? 0 : -1);
+    const [isOverlayOpen, setOverlayOpen] = createSignal(true); // Open overlay by default
 
     // Set up commands and their keyboard shortcuts.
 
@@ -215,8 +218,13 @@ export function NotebookEditor<T>(props: {
         onCleanup(cleanup);
     });
 
+    const toggleOverlay = () => {
+        setOverlayOpen(!isOverlayOpen());
+    };
+
     return (
         <div class="notebook">
+            <WalkthroughOverlay isOpen={isOverlayOpen()} onClose={toggleOverlay} />
             <Show when={props.notebook.cells.length === 0}>
                 <div class="notebook-empty placeholder">
                     <IconButton onClick={() => appendCell(newStemCell())}>
