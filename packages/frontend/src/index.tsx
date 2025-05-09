@@ -1,7 +1,7 @@
 /* @refresh reload */
 import { render } from "solid-js/web";
 
-import * as catlog from "catlog-wasm";
+import * as catlog from "catlaborator";
 import App from "./App";
 
 import "./index.css";

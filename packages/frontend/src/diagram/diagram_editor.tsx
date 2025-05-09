@@ -3,7 +3,7 @@ import { A, useParams } from "@solidjs/router";
 import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import type { DiagramJudgment } from "catlog-wasm";
+import type { DiagramJudgment } from "catlaborator";
 import { useApi } from "../api";
 import { InlineInput } from "../components";
 import { LiveModelContext } from "../model";

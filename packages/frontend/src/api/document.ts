@@ -11,7 +11,7 @@ import invariant from "tiny-invariant";
 import * as uuid from "uuid";
 
 import type { Permissions } from "catcolab-api";
-import type { Document } from "catlog-wasm";
+import type { Document } from "catlaborator";
 import { PermissionsError } from "../util/errors";
 import type { Api } from "./types";
 

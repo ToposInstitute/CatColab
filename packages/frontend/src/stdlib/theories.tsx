@@ -1,4 +1,4 @@
-import * as catlog from "catlog-wasm";
+import * as catlog from "catlaborator";
 
 import { Theory } from "../theory";
 import * as analyses from "./analyses";
@@ -289,7 +289,7 @@ stdTheories.add(
                 }),
                 analyses.configureLotkaVolterra({
                     simulate(model, data) {
-                        return thSignedCategory.lotkaVolterra(model, data);
+                        return thSignedCategory.lotkaVolterraNext(model, data);
                     },
                 }),
             ],
@@ -372,7 +372,7 @@ stdTheories.add(
                     simulate: (model, data) => thSignedCategory.linearODE(model, data),
                 }),
                 analyses.configureLotkaVolterra({
-                    simulate: (model, data) => thSignedCategory.lotkaVolterra(model, data),
+                    simulate: (model, data) => thSignedCategory.lotkaVolterraNext(model, data),
                 }),
             ],
         });

@@ -1,7 +1,7 @@
 import { v7 } from "uuid";
 
-import type { DblModelDiagram } from "catlog-wasm";
-import type { DiagramJudgment, Mor, MorType, Ob, ObType, Uuid } from "catlog-wasm";
+import type { DblModelDiagram } from "catlaborator";
+import type { DiagramJudgment, Mor, MorType, Ob, ObType, Uuid } from "catlaborator";
 import { deepCopyJSON } from "../util/deepcopy";
 import type { Name } from "../util/indexing";
 

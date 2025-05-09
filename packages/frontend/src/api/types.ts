@@ -1,6 +1,6 @@
 import type { Repo } from "@automerge/automerge-repo";
 
-import type { Uuid } from "catlog-wasm";
+import type { Uuid } from "catlaborator";
 import type { RpcClient } from "./rpc";
 
 /** Bundle of everything needed to interact with the CatColab backend. */

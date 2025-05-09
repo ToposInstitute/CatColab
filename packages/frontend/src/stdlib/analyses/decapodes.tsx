@@ -1,7 +1,7 @@
 import { For, Match, Show, Switch, createMemo } from "solid-js";
 import { isMatching } from "ts-pattern";
 
-import type { DiagramJudgment, ModelJudgment } from "catlog-wasm";
+import type { DiagramJudgment, ModelJudgment } from "catlaborator";
 import type { DiagramAnalysisProps } from "../../analysis";
 import {
     type ColumnSchema,

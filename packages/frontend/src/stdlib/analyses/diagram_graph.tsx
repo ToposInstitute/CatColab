@@ -2,7 +2,7 @@ import type * as Viz from "@viz-js/viz";
 import { Show, createSignal } from "solid-js";
 import { P, match } from "ts-pattern";
 
-import type { DblModelDiagram, Uuid } from "catlog-wasm";
+import type { DblModelDiagram, Uuid } from "catlaborator";
 import type { DiagramAnalysisProps } from "../../analysis";
 import { Foldable } from "../../components";
 import type { DiagramAnalysisMeta, Theory } from "../../theory";

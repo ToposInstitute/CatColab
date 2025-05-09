@@ -9,7 +9,7 @@ import Popover from "@corvu/popover";
 import type { EditorView } from "prosemirror-view";
 import { type JSX, Show, createEffect, createSignal, onCleanup } from "solid-js";
 
-import type { Uuid } from "catlog-wasm";
+import type { Uuid } from "catlaborator";
 import {
     type Completion,
     Completions,

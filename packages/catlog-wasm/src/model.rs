@@ -439,6 +439,7 @@ pub fn elaborate_model(doc: &ModelDocumentContent, theory: &DblTheory) -> DblMod
             match content {
                 ModelJudgment::Object(decl) => model.add_ob(decl).unwrap(),
                 ModelJudgment::Morphism(decl) => model.add_mor(decl).unwrap(),
+                ModelJudgment::Record(_) => {}
             }
         }
     }

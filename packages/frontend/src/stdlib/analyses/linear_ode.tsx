@@ -1,6 +1,6 @@
 import { createMemo } from "solid-js";
 
-import type { DblModel, LinearODEModelData, LinearODEProblemData, ODEResult } from "catlog-wasm";
+import type { DblModel, LinearODEModelData, LinearODEProblemData, ODEResult } from "catlaborator";
 import type { ModelAnalysisProps } from "../../analysis";
 import {
     type ColumnSchema,

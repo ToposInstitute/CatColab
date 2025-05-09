@@ -8,6 +8,7 @@ members = [
   "packages/catlog-wasm",
   "packages/migrator",
   "packages/notebook-types",
+  "packages/catlaborator"
 ]
 
 [profile.release]

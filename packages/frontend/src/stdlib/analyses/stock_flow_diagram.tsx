@@ -2,7 +2,7 @@ import type * as Viz from "@viz-js/viz";
 import { type Component, For, createResource, createSignal } from "solid-js";
 import { P, match } from "ts-pattern";
 
-import type { ModelJudgment } from "catlog-wasm";
+import type { ModelJudgment } from "catlaborator";
 import type { ModelAnalysisProps } from "../../analysis";
 import { Foldable } from "../../components";
 import type { ModelAnalysisMeta, Theory } from "../../theory";

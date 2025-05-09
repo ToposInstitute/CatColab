@@ -1,8 +1,10 @@
 import type * as Viz from "@viz-js/viz";
 import { createSignal } from "solid-js";
 import { P, match } from "ts-pattern";
+import { createSignal, Show } from "solid-js";
+import { match, P } from "ts-pattern";
 
-import type { ModelJudgment } from "catlog-wasm";
+import type { DblModelNext, ModelJudgment } from "catlaborator";
 import type { ModelAnalysisProps } from "../../analysis";
 import { Foldable } from "../../components";
 import type { ModelAnalysisMeta, Theory } from "../../theory";
@@ -61,12 +63,16 @@ export function ModelGraph(
                 <GV.GraphConfigForm content={props.content} changeContent={props.changeContent} />
             </Foldable>
             <div class="graph-visualization">
-                <ModelGraphviz
-                    model={props.liveModel.formalJudgments()}
-                    theory={props.liveModel.theory()}
-                    options={GV.graphvizOptions(props.content)}
-                    ref={setSvgRef}
-                />
+                <Show when={props.liveModel.theory()}>
+                    {(theory) => (
+                        <ModelGraphviz
+                            model={props.liveModel.validatedModelNext()}
+                            theory={theory()}
+                            options={GV.graphvizOptions(props.content)}
+                            ref={setSvgRef}
+                        />
+                    )}
+                </Show>
             </div>
         </div>
     );
@@ -75,75 +81,55 @@ export function ModelGraph(
 /** Visualize a model of a double theory as a graph using Graphviz.
  */
 export function ModelGraphviz(props: {
-    model: ModelJudgment[];
+    model: DblModelNext | undefined;
     theory: Theory;
     attributes?: GV.GraphvizAttributes;
     options?: Viz.RenderOptions;
     ref?: SVGRefProp;
 }) {
     return (
-        <GraphvizSVG
-            graph={modelToGraphviz(props.model, props.theory, props.attributes)}
-            options={props.options}
-            ref={props.ref}
-        />
+        <Show when={props.model}>
+            {(model) => (
+                <GraphvizSVG
+                    graph={modelToGraphviz(model(), props.theory, props.attributes)}
+                    options={props.options}
+                    ref={props.ref}
+                />
+            )}
+        </Show>
     );
 }
 
 /** Convert a model of a double theory into a Graphviz graph.
  */
 export function modelToGraphviz(
-    model: ModelJudgment[],
+    model: DblModelNext,
     theory: Theory,
     attributes?: GV.GraphvizAttributes,
 ): Viz.Graph {
-    const nodes: Required<Viz.Graph>["nodes"] = [];
-    for (const judgment of model) {
-        if (judgment.tag === "object") {
-            const { id, name } = judgment;
-            const meta = theory.modelObTypeMeta(judgment.obType);
-            nodes.push({
-                name: id,
-                attributes: {
-                    id,
-                    label: name,
-                    class: GV.svgCssClasses(meta).join(" "),
-                    fontname: GV.graphvizFontname(meta),
-                },
-            });
-        }
+    const nodes = new Map<string, Required<Viz.Graph>["nodes"][0]>();
+    for (const ob of model.ob_generators()) {
+        const meta = theory.modelObTypeMeta(ob.ob_type);
+        nodes.set(ob.name, {
+            name: ob.name,
+            attributes: {
+                id: ob.name,
+                label: ob.name,
+                class: GV.svgCssClasses(meta).join(" "),
+                fontname: GV.graphvizFontname(meta),
+            },
+        });
     }
 
     const edges: Required<Viz.Graph>["edges"] = [];
-    for (const judgment of model) {
-        const matched = match(judgment)
-            .with(
-                {
-                    tag: "morphism",
-                    morType: P.select("morType"),
-                    dom: {
-                        tag: "Basic",
-                        content: P.select("domId"),
-                    },
-                    cod: {
-                        tag: "Basic",
-                        content: P.select("codId"),
-                    },
-                },
-                (matched) => matched,
-            )
-            .otherwise(() => null);
-        if (!matched) {
-            continue;
-        }
-        const { morType, codId, domId } = matched;
-        const meta = theory.modelMorTypeMeta(morType);
+    for (const mor of model.mor_generators()) {
+        const meta = theory.modelMorTypeMeta(mor.mor_type);
         edges.push({
-            head: codId,
-            tail: domId,
+            head: mor.dom,
+            tail: mor.cod,
             attributes: {
-                id: judgment.id,
-                label: judgment.name,
+                id: mor.name,
+                label: mor.name,
                 class: GV.svgCssClasses(meta).join(" "),
                 fontname: GV.graphvizFontname(meta),
                 // Not recognized by Graphviz but will be passed through!
