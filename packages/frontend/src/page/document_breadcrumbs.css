@@ -1,0 +1,18 @@
+.breadcrumb-spacer {
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+.breadcrumb-link {
+    text-decoration: none;
+}
+
+.breadcrumb-link:hover {
+    text-decoration: underline;
+}
+
+.breadcrumbs-wrapper {
+    display: flex;
+    align-items: center;
+    padding-left: 1em;
+}
