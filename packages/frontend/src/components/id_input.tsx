@@ -84,6 +84,7 @@ export function IdInput(
 
     const isComplete = () => {
         const name = props.id ? idToText(props.id) : "";
+        // This will return true if the text is empty; is this desired behavior?
         return text() === name;
     };
 
