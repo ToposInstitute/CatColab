@@ -3,8 +3,9 @@ resolver="2"
 
 members = [
     "packages/backend",
-    "packages/catlog", "packages/catlog-next",
-    "packages/catlog-wasm", "packages/notebook-types",
+    "packages/catlog",
+    "packages/catlog-wasm",
+    "packages/notebook-types",
 ]
 
 [profile.release]
