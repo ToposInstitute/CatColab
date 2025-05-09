@@ -213,32 +213,29 @@ function AnonPermissionsButton() {
     };
 
     return (
-        <Dialog
-            open={open()}
-            onOpenChange={setOpen}
-            title="Permissions"
-            trigger={AnonPermissionsTrigger}
-        >
-            <p>
-                This document can be <strong>edited by anyone</strong> with the link.
-            </p>
-            <Switch>
-                <Match when={user.data}>
-                    <p>
-                        Create a new document to restrict permissions, <br /> or{" "}
-                        <a href="#" onClick={logOut}>
-                            log out
-                        </a>{" "}
-                        to create other anonymous documents.
-                    </p>
-                </Match>
-                <Match when={!user.loading}>
-                    <div class="separator" />
-                    <p>To create documents with restricted permissions, log in.</p>
-                    <Login onComplete={() => setOpen(false)} />
-                </Match>
-            </Switch>
-        </Dialog>
+        <>
+            <Dialog open={open()} onOpenChange={setOpen} title="" trigger={AnonPermissionsTrigger}>
+                <p>
+                    This document can be <strong>edited by anyone</strong> with the link.
+                </p>
+                <Switch>
+                    <Match when={user.data}>
+                        <p>
+                            Create a new document to restrict permissions, <br /> or{" "}
+                            <a href="#" onClick={logOut}>
+                                log out
+                            </a>{" "}
+                            to create other anonymous documents.
+                        </p>
+                    </Match>
+                    <Match when={!user.loading}>
+                        <div class="separator" />
+                        <p>To create documents with restricted permissions, log in.</p>
+                        <Login onComplete={() => setOpen(false)} />
+                    </Match>
+                </Switch>
+            </Dialog>
+        </>
     );
 }
 
