@@ -4,7 +4,7 @@ use all_the_same::all_the_same;
 use derive_more::From;
 use notebook_types::current::cell::Cell;
 use notebook_types::current::diagram_judgment::DiagramDecl;
-use notebook_types::current::document::DiagramDocument;
+use notebook_types::current::document::DiagramDocumentContent;
 use ustr::Ustr;
 use uuid::Uuid;
 
@@ -260,7 +260,7 @@ pub struct ModelDiagramValidationResult(
 );
 
 #[wasm_bindgen(js_name = "elaborateDiagram")]
-pub fn elaborate_diagram(doc: &DiagramDocument, theory: &DblTheory) -> DblModelDiagram {
+pub fn elaborate_diagram(doc: &DiagramDocumentContent, theory: &DblTheory) -> DblModelDiagram {
     let mut model = DblModelDiagram::new(theory);
     for cell in doc.notebook.cells.iter() {
         if let Cell::Formal { id: _, content } = cell {

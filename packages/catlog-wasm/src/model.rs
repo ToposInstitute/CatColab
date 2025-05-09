@@ -18,7 +18,7 @@ use catlog::{
 use derive_more::{From, TryInto};
 use notebook_types::current::{
     cell::Cell,
-    document::ModelDocument,
+    document::ModelDocumentContent,
     model::{Mor, Ob},
     model_judgment::ModelDecl,
     path as notebook_path,
@@ -397,7 +397,7 @@ pub struct ModelValidationResult(pub JsResult<(), Vec<InvalidDblModel<Uuid>>>);
 pub struct TheoryLibrary(#[wasm_bindgen(skip)] pub HashMap<String, DblTheory>);
 
 #[wasm_bindgen(js_name = "elaborateModel")]
-pub fn elaborate_model(doc: &ModelDocument, theory: &DblTheory) -> DblModel {
+pub fn elaborate_model(doc: &ModelDocumentContent, theory: &DblTheory) -> DblModel {
     let mut model = DblModel::new(theory);
     for cell in doc.notebook.cells.iter() {
         if let Cell::Formal { id: _, content } = cell {

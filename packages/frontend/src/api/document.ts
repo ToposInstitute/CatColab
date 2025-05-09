@@ -11,8 +11,9 @@ import invariant from "tiny-invariant";
 import * as uuid from "uuid";
 
 import type { Permissions } from "catcolab-api";
+import type { Document } from "catlog-wasm";
 import { PermissionsError } from "../util/errors";
-import type { Api, Document } from "./types";
+import type { Api } from "./types";
 
 /** An Automerge repo with no networking, used for read-only documents. */
 const localRepo = new Repo();
@@ -22,7 +23,7 @@ const localRepo = new Repo();
 A live document can be used in reactive contexts and is connected to an
 Automerge document handle.
  */
-export type LiveDoc<Doc extends Document<string>> = {
+export type LiveDoc<Doc extends Document> = {
     /** The document data, suitable for use in reactive contexts.
 
     This data should never be mutated directly. Instead, call `changeDoc` or, if
@@ -47,8 +48,11 @@ by Automerge to the backend and to other clients. When the user has only read
 permissions, the Automerge doc handle will be "fake", existing only locally in
 the client. And if the user doesn't even have read permissions, this function
 will yield an unauthorized error!
+
+TODO: Roundtrip the loaded document throught notebook-types to validate it
+and upgrade it to the latest version.
  */
-export async function getLiveDoc<Doc extends Document<string>>(
+export async function getLiveDoc<Doc extends Document>(
     api: Api,
     refId: string,
     docType?: string,
@@ -71,7 +75,7 @@ export async function getLiveDoc<Doc extends Document<string>>(
         const docId = refDoc.docId as DocumentId;
         docHandle = repo.find(docId) as DocHandle<Doc>;
     } else {
-        const init = refDoc.content as Doc;
+        const init = refDoc.content as any as Doc;
         docHandle = localRepo.create(init);
     }
 

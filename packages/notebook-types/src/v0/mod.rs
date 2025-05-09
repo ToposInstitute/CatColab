@@ -1,18 +1,19 @@
-pub mod document;
-pub mod notebook;
-pub mod cell;
-pub mod model_judgment;
-pub mod diagram_judgment;
+pub mod analysis;
 pub mod api;
-pub mod path;
+pub mod cell;
+pub mod diagram_judgment;
+pub mod document;
 pub mod model;
+pub mod model_judgment;
+pub mod notebook;
+pub mod path;
 pub mod theory;
 
 #[cfg(test)]
 mod test {
+    use super::document::Document;
     use serde_json;
     use std::fs;
-    use super::document::Document;
 
     #[test]
     fn test_v0_examples() {
@@ -27,8 +28,7 @@ mod test {
                             errored = true;
                         }
                     }
-                }
-                else {
+                } else {
                     eprintln!("couldn't read {}", e.path().to_str().unwrap());
                     errored = true;
                 }

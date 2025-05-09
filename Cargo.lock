@@ -1721,7 +1721,7 @@ dependencies = [
  "nonempty",
  "serde",
  "serde_json",
- "tsify",
+ "tsify-next",
  "ustr",
  "uuid",
  "wasm-bindgen",
@@ -3352,7 +3352,6 @@ checksum = "b2ec91b85e6c6592ed28636cb1dd1fac377ecbbeb170ff1d79f97aac5e38926d"
 dependencies = [
  "gloo-utils",
  "serde",
- "serde-wasm-bindgen",
  "serde_json",
  "tsify-macros",
  "wasm-bindgen",
@@ -3372,9 +3371,9 @@ dependencies = [
 
 [[package]]
 name = "tsify-next"
-version = "0.5.4"
+version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f4a645dca4ee0800f5ab60ce166deba2db6a0315de795a2691e138a3d55d756"
+checksum = "7d0f2208feeb5f7a6edb15a2389c14cd42480ef6417318316bb866da5806a61d"
 dependencies = [
  "gloo-utils",
  "serde",
@@ -3386,9 +3385,9 @@ dependencies = [
 
 [[package]]
 name = "tsify-next-macros"
-version = "0.5.4"
+version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d5c06f8a51d759bb58129e30b2631739e7e1e4579fad1f30ac09a6c88e488a6"
+checksum = "f81253930d0d388a3ab8fa4ae56da9973ab171ef833d1be2e9080fc3ce502bd6"
 dependencies = [
  "proc-macro2",
  "quote",

@@ -1,6 +1,7 @@
 import { For, Match, Show, Switch, createMemo } from "solid-js";
 import { isMatching } from "ts-pattern";
 
+import type { ModelJudgment } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
 import {
     type ColumnSchema,
@@ -17,7 +18,7 @@ import {
     type LiveDiagramDocument,
     fromCatlogDiagram,
 } from "../../diagram";
-import type { ModelJudgment, MorphismDecl } from "../../model";
+import type { MorphismDecl } from "../../model";
 import type { DiagramAnalysisMeta } from "../../theory";
 import { uniqueIndexArray } from "../../util/indexing";
 import { PDEPlot2D, type PDEPlotData2D } from "../../visualization";

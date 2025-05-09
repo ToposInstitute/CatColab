@@ -2,30 +2,17 @@ import { type Accessor, createMemo } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { JsonValue } from "catcolab-api";
-import type { DblModelDiagram, ModelDiagramValidationResult, Uuid } from "catlog-wasm";
+import type { DblModelDiagram, Document, ModelDiagramValidationResult, Uuid } from "catlog-wasm";
 import { elaborateDiagram } from "catlog-wasm";
-import {
-    type Api,
-    type Document,
-    type Link,
-    type LiveDoc,
-    type StableRef,
-    getLiveDoc,
-} from "../api";
+import { type Api, type LiveDoc, type StableRef, getLiveDoc } from "../api";
 import { type LiveModelDocument, getLiveModel } from "../model";
-import { type Notebook, newNotebook } from "../notebook";
+import { newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
 import { type IdToNameMap, indexMap } from "../util/indexing";
 import type { DiagramJudgment } from "./types";
 
 /** A document defining a diagram in a model. */
-export type DiagramDocument = Document<"diagram"> & {
-    /** Reference to the model that the diagram is in. */
-    diagramIn: Link<"diagram-in">;
-
-    /** Content of the diagram. */
-    notebook: Notebook<DiagramJudgment>;
-};
+export type DiagramDocument = Document & { type: "diagram" };
 
 /** Create an empty diagram of a model. */
 export const newDiagramDocument = (modelRef: StableRef): DiagramDocument => ({
@@ -145,7 +132,7 @@ export function createDiagram(api: Api, inModel: StableRef): Promise<string> {
 
 /** Create a new diagram in the backend from initial data. */
 export async function createDiagramFromDocument(api: Api, init: DiagramDocument): Promise<string> {
-    const result = await api.rpc.new_ref.mutate(init as JsonValue);
+    const result = await api.rpc.new_ref.mutate(init as any as JsonValue);
     invariant(result.tag === "Ok", "Failed to create a new diagram");
     return result.content;
 }

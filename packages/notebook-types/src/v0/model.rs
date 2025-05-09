@@ -1,8 +1,8 @@
-use serde::{Serialize, Deserialize};
-use tsify::Tsify;
+use serde::{Deserialize, Serialize};
+use tsify_next::Tsify;
 
-use uuid::Uuid;
 use super::path::Path;
+use uuid::Uuid;
 
 /// An object in a model of a double theory.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]

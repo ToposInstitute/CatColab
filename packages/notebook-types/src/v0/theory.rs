@@ -1,5 +1,5 @@
-use serde::{Serialize, Deserialize};
-use tsify::Tsify;
+use serde::{Deserialize, Serialize};
+use tsify_next::Tsify;
 
 use ustr::Ustr;
 
