@@ -512,7 +512,7 @@ stdTheories.add(
                 {
                     tag: "MorType",
                     morType: { tag: "Basic", content: "Degree" },
-                    name: "Degree 1 positive link",
+                    name: "Positive degree 1",
                     description: "Positive influence on the derivative",
                     arrowStyle: "plusOne",
                     preferUnnamed: true,
@@ -524,7 +524,7 @@ stdTheories.add(
                                    { tag: "Basic", content: "Negative"},
                                    { tag: "Basic", content: "Degree"},
                                ] },
-                    name: "Degree 1 negative link",
+                    name: "Negative degree 1",
                     description: "Negative influence on the derivative",
                     arrowStyle: "minusOne",
                     preferUnnamed: true,
