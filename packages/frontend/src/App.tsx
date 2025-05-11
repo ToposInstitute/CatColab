@@ -18,6 +18,7 @@ import { createModel } from "./model/document";
 import { PageContainer } from "./page/page_container";
 import { TheoryLibraryContext, stdTheories } from "./stdlib";
 import { ErrorBoundaryDialog } from "./util/errors";
+import { HamburgerMenu } from "./page";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
 const repoUrl = import.meta.env.VITE_AUTOMERGE_REPO_URL;
@@ -155,6 +156,14 @@ const routes: RouteDefinition[] = [
     {
         path: "/documents",
         component: lazy(() => import("./user/documents")),
+    },
+    {
+        path: "/test-component",
+        component: () => (
+            <HamburgerMenu>
+                <div>Menu Item</div>
+            </HamburgerMenu>
+        ),
     },
     {
         path: "*",
