@@ -106,6 +106,7 @@ export function AnalysisDocumentEditor(props: {
                         >
                             <Toolbar>
                                 <AnalysisMenu liveAnalysis={props.liveAnalysis} />
+                                <DocumentBreadcrumbs document={props.liveAnalysis} />
                                 <span class="filler" />
                                 <TheoryHelpButton theory={theoryForAnalysis(props.liveAnalysis)} />
                                 <IconButton
@@ -134,8 +135,10 @@ export function AnalysisDocumentEditor(props: {
                             onExpand={() => setSidePanelOpen(true)}
                         >
                             <div class="notebook-container">
+                                <div class="toolbar">
+                                    <div class="toolbar-spacer" />
+                                </div>
                                 <h2>Analysis</h2>
-                                <DocumentBreadcrumbs document={props.liveAnalysis} />
                                 <AnalysisNotebookEditor liveAnalysis={props.liveAnalysis} />
                             </div>
                         </Resizable.Panel>
