@@ -1,4 +1,4 @@
-name = "AlgebraicJuliaService"
+name = "CatColabInterop"
 uuid = "9ecda8fb-39ab-46a2-a496-7285fa6368c1"
 license = "MIT"
 authors = ["CatColab team"]
@@ -6,6 +6,7 @@ version = "0.1.0"
 
 [deps]
 ACSets = "227ef7b5-1206-438b-ac65-934d6da304b8"
+Catlab = "134e5e36-593f-5add-ad60-77f754baafbe"
 CombinatorialSpaces = "b1c52339-7909-45ad-8b6a-6e388f7c67f2"
 ComponentArrays = "b0b7db55-cfe3-40fc-9ded-d10e2dbeff66"
 CoordRefSystems = "b46f11dc-f210-4604-bfba-323c1ec968cb"
@@ -23,12 +24,14 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
 ACSets = "0.2.21"
+Catlab = "0.16.19"
+CombinatorialSpaces = "0.7.4"
 ComponentArrays = "0.15"
-CoordRefSystems = "0.16.0"
-Decapodes = "0.5.6"
+CoordRefSystems = "0.17.2"
+Decapodes = "0.6"
 DiagrammaticEquations = "0.1.7"
 Distributions = "0.25"
-GeometryBasics = "0.4"
+GeometryBasics = "0.5.7"
 IJulia = "1.26.0"
 JSON3 = "1"
 LinearAlgebra = "1"

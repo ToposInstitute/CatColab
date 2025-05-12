@@ -1,6 +1,6 @@
 [deps]
 ACSets = "227ef7b5-1206-438b-ac65-934d6da304b8"
-AlgebraicJuliaService = "9ecda8fb-39ab-46a2-a496-7285fa6368c1"
+CatColabInterop = "9ecda8fb-39ab-46a2-a496-7285fa6368c1"
 CombinatorialSpaces = "b1c52339-7909-45ad-8b6a-6e388f7c67f2"
 ComponentArrays = "b0b7db55-cfe3-40fc-9ded-d10e2dbeff66"
 Decapodes = "679ab3ea-c928-4fe6-8d59-fd451142d391"

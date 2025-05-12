@@ -1,6 +1,29 @@
-struct PodeSystem
+""" Constructs an analysis from the diagram of a Decapode Model"""
+function Analysis(analysis::JSON3.Object, diagram::DecapodeDiagram, hodge=GeometricHodge())
+ 
+    # TODO want a safer way to get this information
+    id = findfirst(cell -> haskey(cell, :content), analysis[:notebook][:cells])
+    content = analysis[:notebook][:cells][id][:content][:content]
+
+    PodeSystem(content, diagram, hodge)
+end
+export Analysis
+
+# accepts payload
+function Analysis(::ThDecapode, payload::String, args...)
+    analysis = JSON3.read(payload)
+    Analysis(ThDecapode(), analysis)
+end
+
+function Analysis(::ThDecapode, analysis::JSON3.Object, args...)
+    model = Model(ThDecapode(), analysis.model)
+    diagram = Diagram(analysis.diagram, model)
+    PodeSystem(analysis, diagram, args...)
+end
+
+struct PodeSystem <: AbstractAnalysis{ThDecapode}
     pode::SummationDecapode
-    plotvar::Vector{Symbol}
+    plotVars::Dict{String, Bool}
     scalars::Dict{Symbol, Any} # closures
     geometry::Geometry
     init::ComponentArray
@@ -10,47 +33,45 @@ struct PodeSystem
 end
 export PodeSystem
 
-function PodeSystem(json_string::String, args...)
-    json_object = JSON3.read(json_string)
-    PodeSystem(json_object, args...)
+function Base.show(io::IO, system::PodeSystem)
+    println(io, system.pode)
 end
 
-"""
-Construct a `PodeSystem` object from a JSON string.
-"""
-function PodeSystem(json_object::AbstractDict, hodge=GeometricHodge())
-    # make a model of the DEC, valued in Julia
-    model = Model(ThDecapode(), json_object[:model])
+# the origin is the SimulationData payload 
+function PodeSystem(content::JSON3.Object, diagram::DecapodeDiagram, hodge=GeometricHodge())
 
-    # this is a diagram in the model of the DEC. it wants to be a decapode!
-    jsondiagram = json_object[:diagram]
+    domain = content[:domain]
+    duration = content[:duration]
+    initialConditions = content[:initialConditions]
+    mesh = content[:mesh]
+    # TODO we need a more principled way of defining this
+    plotVars = @match content[:plotVariables] begin
+        vars::AbstractArray => Dict{String, Bool}([ k => k ∈ vars for k in keys(diagram.vars)])
+        vars => Dict{String, Bool}([ "$k" => v for (k,v) in vars])
+    end
+    scalars = content[:scalars]
+    anons = Dict{Symbol, Any}()
 
-    # any scalars?
-    scalars = haskey(json_object, :scalars) ? json_object[:scalars] : []
-
-    # pode, anons, and vars (UUID => ACSetId)
-    decapode, anons, vars = Decapode(jsondiagram, model; scalars=scalars)
-    dot_rename!(decapode)
-    uuid2symb = uuid_to_symb(decapode, vars)
-
-    # plotting variables
-    plotvars = [uuid2symb[uuid] for uuid in json_object[:plotVariables]]
+    dot_rename!(diagram.pode)
+    uuid2symb = uuid_to_symb(diagram.pode, diagram.vars)
     
-    # extract the domain in order to create the mesh, dualmesh
-    geometry = Geometry(json_object)
+    geometry = Geometry(content)
 
-    # initialize operators
     ♭♯_m = ♭♯_mat(geometry.dualmesh)
     wedge_dp10 = dec_wedge_product_dp(Tuple{1,0}, geometry.dualmesh)
-    dual_d1_m = dec_mat_dual_differential(1, geometry.dualmesh)
-    star0_inv_m = dec_mat_inverse_hodge(0, geometry.dualmesh, hodge)
+    dual_d1_m = dec_dual_derivative(1, geometry.dualmesh)
+    star0_inv_m = dec_inv_hodge_star(0, geometry.dualmesh, hodge)
     Δ0 = Δ(0,geometry.dualmesh)
     #fΔ0 = factorize(Δ0);
-    function sys_generate(s, my_symbol, hodge=hodge)
+    function sys_generate(s, my_symbol)
         op = @match my_symbol begin
-            sym && if sym ∈ keys(anons) end => anons[sym]
-            :♭♯ => x -> ♭♯_m * x # [1]
-            :dpsw => x -> wedge_dp10(x, star0_inv_m[1]*(dual_d1_m[1]*x))
+            sym && if haskey(diagram.scalars, sym) end => x -> begin
+                k = scalars[diagram.scalars[sym]]
+                k * x
+            end
+            :♭♯ => x -> ♭♯_m * x
+            # TODO are we indexing right?
+            :dpsw => x -> wedge_dp10(x, star0_inv_m*(dual_d1_m*x))
             :Δ⁻¹ => x -> begin
                 y = Δ0 \ x
                 y .- minimum(y)
@@ -59,20 +80,15 @@ function PodeSystem(json_object::AbstractDict, hodge=GeometricHodge())
         end
         return (args...) -> op(args...)
     end
-    # end initialize
 
-    # initial conditions
-    u0 = initial_conditions(json_object, geometry, uuid2symb)
+    u0 = initial_conditions(initialConditions, geometry, uuid2symb)
 
-    # symbol => uuid. we need this to reassociate the var 
+    # reversing `uuid2symb` into `symbol => uuid.` we need this to reassociate the var to its UUID 
     symb2uuid = Dict([v => k for (k,v) in pairs(uuid2symb)])
 
-    # duration
-    duration = json_object[:duration]
-
-    return PodeSystem(decapode, plotvars, anons, geometry, u0, sys_generate, symb2uuid, duration)
+    # TODO return the whole system
+    return PodeSystem(diagram.pode, plotVars, anons, geometry, u0, sys_generate, symb2uuid, duration)
 end
-export PodeSystem
 
 points(system::PodeSystem) = collect(values(system.geometry.dualmesh.subparts.point.m))
 indexing_bounds(system::PodeSystem) = indexing_bounds(system.geometry.domain)
@@ -100,7 +116,9 @@ end
 
 """ for the variables in a system, associate them to their state values over the duration of the simulation """
 function variables_state(soln::ODESolution, system::PodeSystem)
-    Dict([ system.uuiddict[var] => state_entire_sim(soln, system, var) for var ∈ system.plotvar ])
+    plottedVars = [ k for (k, v) in system.plotVars if v == true ]
+    uuid2symb = Dict([ v => k for (k, v) in system.uuiddict]) # TODO why reverse again?
+    Dict([ String(uuid2symb[var]) => state_entire_sim(soln, system, uuid2symb[var]) for var ∈ plottedVars ])
 end
 
 """ given a simulation, a domain, and a variable, gets the state values over the duration of a simulation. 
