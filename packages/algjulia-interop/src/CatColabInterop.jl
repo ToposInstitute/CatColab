@@ -1,4 +1,4 @@
-module AlgebraicJuliaService
+module CatColabInterop
 
 using MLStyle
 using Reexport
@@ -19,8 +19,8 @@ export ObTag, HomTag
 Practically, yet while a matter of opinion, they make @match statements cleaner; a statement amounts to a helpful pattern
 name and the variables we intend to capture.
 =# 
-@active IsObject(x) begin; x[:tag] == "object" ? Some(x) : nothing end
-@active IsMorphism(x) begin; x[:tag] == "morphism" ? Some(x) : nothing end
+@active IsObject(x) begin; x[:content][:tag] == "object" ? Some(x[:content]) : nothing end
+@active IsMorphism(x) begin; x[:content][:tag] == "morphism" ? Some(x[:content]) : nothing end
 export IsObject, IsMorphism
 
 # Obs, Homs
@@ -60,7 +60,14 @@ Base.values(model::Model) = values(model.data)
 """ 
 Functions to build a dictionary associating ids in the theory to elements in the model
 """
-function to_model end; export to_model
+function to_model end
+export to_model
+
+
+# TODO supposes bijection between theories, models, diagrams, etc.
+abstract type AbstractDiagram{T<:AlgebraicJuliaIntegration} end
+
+abstract type AbstractAnalysis{T<:AlgebraicJuliaIntegration} end
 
 struct ImplError <: Exception
     name::String

@@ -1,0 +1,47 @@
+{
+  "analysisOf": {
+    "_id": "0196021c-dee3-75b3-bb79-2f940651a1a1",
+    "_server": "backend.catcolab.org",
+    "_version": null,
+    "type": "analysis-of"
+  },
+  "analysisType": "diagram",
+  "name": "",
+  "notebook": {
+    "cells": [
+      {
+        "content": {
+          "content": {
+            "domain": "Plane",
+            "duration": 10,
+            "initialConditions": {
+              "0196021c-f5fe-70f3-ac68-89ae212970ea": "Gaussian",
+              "0196021d-1aa4-776d-b4fb-05d24d0c6de4": "Gaussian"
+            },
+            "mesh": "Rectangle",
+            "plotVariables": {
+              "0196021c-f5fe-70f3-ac68-89ae212970ea": true
+            },
+            "scalars": {
+              "01960dde-1193-7132-b662-9bf24ed05264": 1
+            }
+          },
+          "id": "decapodes"
+        },
+        "id": "0196021f-beef-74b0-9103-9ab1982255cf",
+        "tag": "formal"
+      },
+      {
+        "content": {
+          "content": {
+            "layout": "graphviz-directed"
+          },
+          "id": "graph"
+        },
+        "id": "01960ddd-8fc3-7482-a2c8-a0a59ee85709",
+        "tag": "formal"
+      }
+    ]
+  },
+  "type": "analysis"
+}
