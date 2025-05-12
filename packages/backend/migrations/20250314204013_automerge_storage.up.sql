@@ -3,4 +3,4 @@ CREATE TABLE storage (
     data bytea NOT NULL
 );
 
-ALTER TABLE refs ADD COLUMN doc_id TEXT;
+ALTER TABLE snapshots ADD COLUMN doc_id TEXT NOT NULL;
