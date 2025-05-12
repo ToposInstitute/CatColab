@@ -115,3 +115,8 @@ h4 {
     font-size: var(--formal-judgment-font-size);
     line-height: 1.1;
 }
+
+.toolbar-spacer {
+    /* 24px is the height of the icon buttons in the toolbar */
+    height: 24px;
+}
