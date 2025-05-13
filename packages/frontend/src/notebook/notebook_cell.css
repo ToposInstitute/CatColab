@@ -31,3 +31,48 @@
     height: auto;
     max-width: 100%;
 }
+
+.cell-number {
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+.cell-number-gutter p {
+    width: 100%;
+    padding: 0 -1.2rem 0 1.2rem;
+    font-size: 0.85rem;
+    color: --link-color;
+    background-color: transparent;
+    border-radius: 0.125rem;
+    transition: background-color 100ms ease-in-out;
+    color: gray;
+    font-family: monospace;
+}
+
+.cell {
+    position: relative;
+    margin: 0.25em;
+    display: flex;
+    flex-direction: row;
+}
+
+.cell-gutter {
+    position: absolute;
+    transform: translate(-100%, -50%);
+    left: -0.75rem;
+    /* Adjusted to sit between number and content */
+    display: flex;
+    flex-direction: row;
+}
+
+.cell-tag {
+    color: rgb(156, 163, 175);
+    font-size: 11pt;
+}
+
+.cell-content {
+    flex-grow: 1;
+    height: auto;
+    max-width: 100%;
+}
