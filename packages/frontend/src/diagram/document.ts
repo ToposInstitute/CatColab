@@ -132,6 +132,7 @@ export function createDiagram(api: Api, inModel: StableRef): Promise<string> {
 
 /** Create a new diagram in the backend from initial data. */
 export async function createDiagramFromDocument(api: Api, init: DiagramDocument): Promise<string> {
+    // biome-ignore lint/suspicious/noExplicitAny: types are busted?
     const result = await api.rpc.new_ref.mutate(init as any as JsonValue);
     invariant(result.tag === "Ok", "Failed to create a new diagram");
     return result.content;

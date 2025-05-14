@@ -139,6 +139,7 @@ export async function createModel(
         init = initOrTheoryId;
     }
 
+    // biome-ignore lint/suspicious/noExplicitAny: types are busted?
     const result = await api.rpc.new_ref.mutate(init as any as JsonValue);
     invariant(result.tag === "Ok", "Failed to create model");
 

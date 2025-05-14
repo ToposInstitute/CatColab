@@ -75,6 +75,7 @@ export async function getLiveDoc<Doc extends Document>(
         const docId = refDoc.docId as DocumentId;
         docHandle = repo.find(docId) as DocHandle<Doc>;
     } else {
+        // biome-ignore lint/suspicious/noExplicitAny: types are busted?
         const init = refDoc.content as any as Doc;
         docHandle = localRepo.create(init);
     }

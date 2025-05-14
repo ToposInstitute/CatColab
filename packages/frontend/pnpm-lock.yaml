@@ -98,6 +98,9 @@ importers:
       lucide-solid:
         specifier: ^0.471.0
         version: 0.471.0(solid-js@1.9.2)
+      notebook-types:
+        specifier: link:../notebook-types/pkg
+        version: link:../notebook-types/pkg
       prosemirror-commands:
         specifier: ^1.5.2
         version: 1.6.0

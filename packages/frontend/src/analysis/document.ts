@@ -74,6 +74,7 @@ export type LiveAnalysisDocument = LiveModelAnalysisDocument | LiveDiagramAnalys
 export async function createAnalysis(api: Api, analysisType: AnalysisType, analysisOf: StableRef) {
     const init = newAnalysisDocument(analysisType, analysisOf);
 
+    // biome-ignore lint/suspicious/noExplicitAny: types are busted?
     const result = await api.rpc.new_ref.mutate(init as any as JsonValue);
     invariant(result.tag === "Ok", "Failed to create a new analysis");
 

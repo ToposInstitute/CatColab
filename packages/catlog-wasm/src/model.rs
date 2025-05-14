@@ -278,7 +278,8 @@ impl DblModel {
         all_the_same!(match &mut self.0 {
             DblModelBox::[Discrete, DiscreteTab](model) => {
                 let ob_type = Elaborator.elab(ob_type)?;
-                Ok(model.add_ob(id, ob_type))
+                model.add_ob(id, ob_type);
+                Ok(())
             }
         })
     }
