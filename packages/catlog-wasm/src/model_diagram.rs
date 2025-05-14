@@ -100,7 +100,8 @@ impl DblModelDiagram {
                 if let Some(over) = over.as_ref().map(|ob| Elaborator.elab(ob)).transpose()? {
                     mapping.assign_ob(id, over);
                 }
-                Ok(model.add_ob(id, ob_type))
+                model.add_ob(id, ob_type);
+                Ok(())
             }
         })
     }
