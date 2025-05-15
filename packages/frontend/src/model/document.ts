@@ -1,7 +1,6 @@
 import { type Accessor, createMemo } from "solid-js";
 import invariant from "tiny-invariant";
 
-import type { JsonValue } from "catcolab-api";
 import {
     type DblModel,
     type Document,
@@ -15,6 +14,7 @@ import { newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
 import type { Theory } from "../theory";
 import { type IndexedMap, indexMap } from "../util/indexing";
+import type { InterfaceToType } from "../util/types";
 
 export type ModelDocument = Document & { type: "model" };
 
@@ -139,8 +139,7 @@ export async function createModel(
         init = initOrTheoryId;
     }
 
-    // biome-ignore lint/suspicious/noExplicitAny: types are busted?
-    const result = await api.rpc.new_ref.mutate(init as any as JsonValue);
+    const result = await api.rpc.new_ref.mutate(init as InterfaceToType<ModelDocument>);
     invariant(result.tag === "Ok", "Failed to create model");
 
     return result.content;

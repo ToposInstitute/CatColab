@@ -1,12 +1,12 @@
 import invariant from "tiny-invariant";
 
-import type { JsonValue } from "catcolab-api";
 import type { Document } from "catlog-wasm";
 import { type Api, type LiveDoc, type StableRef, getLiveDoc } from "../api";
 import { type LiveDiagramDocument, getLiveDiagram } from "../diagram";
 import { type LiveModelDocument, getLiveModel } from "../model";
 import { newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
+import type { InterfaceToType } from "../util/types";
 
 type AnalysisType = "model" | "diagram";
 
@@ -74,8 +74,7 @@ export type LiveAnalysisDocument = LiveModelAnalysisDocument | LiveDiagramAnalys
 export async function createAnalysis(api: Api, analysisType: AnalysisType, analysisOf: StableRef) {
     const init = newAnalysisDocument(analysisType, analysisOf);
 
-    // biome-ignore lint/suspicious/noExplicitAny: types are busted?
-    const result = await api.rpc.new_ref.mutate(init as any as JsonValue);
+    const result = await api.rpc.new_ref.mutate(init as InterfaceToType<AnalysisDocument>);
     invariant(result.tag === "Ok", "Failed to create a new analysis");
 
     return result.content;
