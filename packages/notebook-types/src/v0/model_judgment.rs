@@ -1,31 +1,36 @@
 use serde::{Deserialize, Serialize};
-use tsify::{Tsify, declare};
+use tsify::Tsify;
 use uuid::Uuid;
 
 use super::model::Ob;
 use super::theory::{MorType, ObType};
 
-#[declare]
-pub type ModelJudgment = ModelDecl;
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
+pub struct ObDecl {
+    pub name: String,
+    pub id: Uuid,
+    #[serde(rename = "obType")]
+    pub ob_type: ObType,
+}
+
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
+pub struct MorDecl {
+    pub name: String,
+    pub id: Uuid,
+    #[serde(rename = "morType")]
+    pub mor_type: MorType,
+    pub dom: Option<Ob>,
+    pub cod: Option<Ob>,
+}
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
 #[serde(tag = "tag")]
-#[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
-pub enum ModelDecl {
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub enum ModelJudgment {
     #[serde(rename = "object")]
-    ObjectDecl {
-        name: String,
-        id: Uuid,
-        #[serde(rename = "obType")]
-        ob_type: ObType,
-    },
+    Object(ObDecl),
     #[serde(rename = "morphism")]
-    MorphismDecl {
-        name: String,
-        id: Uuid,
-        #[serde(rename = "morType")]
-        mor_type: MorType,
-        dom: Option<Ob>,
-        cod: Option<Ob>,
-    },
+    Morphism(MorDecl),
 }

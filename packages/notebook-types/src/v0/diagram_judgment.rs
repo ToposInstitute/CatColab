@@ -5,12 +5,10 @@ use uuid::Uuid;
 use super::model::{Mor, Ob};
 use super::theory::{MorType, ObType};
 
-pub type DiagramJudgment = DiagramDecl;
-
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
 #[serde(tag = "tag")]
 #[tsify(into_wasm_abi, from_wasm_abi)]
-pub enum DiagramDecl {
+pub enum DiagramJudgment {
     #[serde(rename = "object")]
     ObjectDecl {
         name: String,
