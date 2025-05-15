@@ -1,37 +1,24 @@
-use super::result::JsResult;
-use super::theory::{DblTheory, DblTheoryBox};
-
-use catlog::dbl::model::FgDblModel;
-use catlog::one::fp_category::UstrFpCategory;
-use notebook_types::current::model_judgment::{MorDecl, ObDecl};
-use serde::{Deserialize, Serialize};
-use tsify::Tsify;
-use wasm_bindgen::prelude::*;
-
-use all_the_same::all_the_same;
-use catlog::validate::Validate;
-use catlog::{
-    dbl::{
-        model::{self as dbl_model, InvalidDblModel, MutDblModel, TabEdge, TabMor, TabOb},
-        theory::{TabMorType, TabObType},
-    },
-    one::{Category as _, FgCategory, Path},
-};
-use derive_more::{From, TryInto};
-use notebook_types::current::{
-    cell::Cell,
-    document::ModelDocumentContent,
-    model::{Mor, Ob},
-    model_judgment::ModelJudgment,
-    path as notebook_path,
-    theory::{MorType, ObType},
-};
-
-use ustr::{IdentityHasher, Ustr};
-use uuid::Uuid;
-
 use std::collections::HashMap;
 use std::hash::BuildHasherDefault;
+
+use all_the_same::all_the_same;
+use derive_more::{From, TryInto};
+use serde::{Deserialize, Serialize};
+use tsify::Tsify;
+use ustr::{IdentityHasher, Ustr};
+use uuid::Uuid;
+use wasm_bindgen::prelude::*;
+
+use catlog::dbl::{
+    model::{self as dbl_model, FgDblModel, InvalidDblModel, MutDblModel, TabEdge, TabMor, TabOb},
+    theory::{TabMorType, TabObType},
+};
+use catlog::one::{Category as _, FgCategory, Path, fp_category::UstrFpCategory};
+use catlog::validate::Validate;
+use notebook_types::current::{path as notebook_path, *};
+
+use super::result::JsResult;
+use super::theory::{DblTheory, DblTheoryBox};
 
 pub(crate) type DiscreteDblModel = dbl_model::DiscreteDblModel<Uuid, UstrFpCategory>;
 pub(crate) type DiscreteTabModel =

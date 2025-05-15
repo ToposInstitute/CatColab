@@ -9,7 +9,6 @@ use catlog::one::{FgCategory, fp_category::UstrFpCategory};
 
 use super::model::DblModel;
 
-#[allow(dead_code)]
 pub(crate) type DiscreteDblModelMapping = model_morphism::DiscreteDblModelMapping<Uuid, Uuid>;
 
 /// Options for motif finder.
