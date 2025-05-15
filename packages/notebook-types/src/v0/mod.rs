@@ -9,6 +9,16 @@ pub mod notebook;
 pub mod path;
 pub mod theory;
 
+pub use analysis::*;
+pub use api::*;
+pub use cell::*;
+pub use diagram_judgment::*;
+pub use document::*;
+pub use model::*;
+pub use model_judgment::*;
+pub use notebook::*;
+pub use theory::*;
+
 #[cfg(test)]
 mod test {
     use super::document::Document;

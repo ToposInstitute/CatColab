@@ -2,28 +2,19 @@
 
 use all_the_same::all_the_same;
 use derive_more::From;
-use notebook_types::current::cell::Cell;
-use notebook_types::current::diagram_judgment::{DiagramJudgment, DiagramMorDecl, DiagramObDecl};
-use notebook_types::current::document::DiagramDocumentContent;
-use ustr::Ustr;
-use uuid::Uuid;
-
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
+use ustr::Ustr;
+use uuid::Uuid;
 use wasm_bindgen::prelude::*;
 
 use catlog::dbl::model::{FgDblModel, MutDblModel};
 use catlog::dbl::model_diagram as diagram;
 use catlog::dbl::model_morphism::DblModelMapping;
 use catlog::one::FgCategory;
+use notebook_types::current::*;
 
-use notebook_types::current::{
-    model::{Mor, Ob},
-    theory::{MorType, ObType},
-};
-
-use crate::model::{CanElaborate, CanQuote, Elaborator, Quoter};
-
+use super::model::{CanElaborate, CanQuote, Elaborator, Quoter};
 use super::model::{DblModel, DblModelBox, DiscreteDblModel};
 use super::model_morphism::DiscreteDblModelMapping;
 use super::result::JsResult;
