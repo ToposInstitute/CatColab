@@ -5,6 +5,7 @@ members = [
     "packages/backend",
     "packages/catlog",
     "packages/catlog-wasm",
+    "packages/notebook-types",
 ]
 
 [profile.release]
