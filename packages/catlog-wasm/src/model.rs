@@ -3,6 +3,7 @@ use super::theory::{DblTheory, DblTheoryBox};
 
 use catlog::dbl::model::FgDblModel;
 use catlog::one::fp_category::UstrFpCategory;
+use notebook_types::current::model_judgment::{MorDecl, ObDecl};
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 use wasm_bindgen::prelude::*;
@@ -21,7 +22,7 @@ use notebook_types::current::{
     cell::Cell,
     document::ModelDocumentContent,
     model::{Mor, Ob},
-    model_judgment::ModelDecl,
+    model_judgment::ModelJudgment,
     path as notebook_path,
     theory::{MorType, ObType},
 };
@@ -274,32 +275,26 @@ impl DblModel {
         })
     }
 
-    pub fn add_ob(&mut self, id: Uuid, ob_type: &ObType) -> Result<(), String> {
+    pub fn add_ob(&mut self, decl: &ObDecl) -> Result<(), String> {
         all_the_same!(match &mut self.0 {
             DblModelBox::[Discrete, DiscreteTab](model) => {
-                let ob_type = Elaborator.elab(ob_type)?;
-                model.add_ob(id, ob_type);
+                let ob_type = Elaborator.elab(&decl.ob_type)?;
+                model.add_ob(decl.id, ob_type);
                 Ok(())
             }
         })
     }
 
-    pub fn add_mor(
-        &mut self,
-        id: Uuid,
-        mor_type: &MorType,
-        dom: &Option<Ob>,
-        cod: &Option<Ob>,
-    ) -> Result<(), String> {
+    pub fn add_mor(&mut self, decl: &MorDecl) -> Result<(), String> {
         all_the_same!(match &mut self.0 {
             DblModelBox::[Discrete, DiscreteTab](model) => {
-                let mor_type = Elaborator.elab(mor_type)?;
-                model.make_mor(id, mor_type);
-                if let Some(dom) = dom.as_ref().map(|ob| Elaborator.elab(ob)).transpose()? {
-                    model.set_dom(id, dom);
+                let mor_type = Elaborator.elab(&decl.mor_type)?;
+                model.make_mor(decl.id, mor_type);
+                if let Some(dom) = decl.dom.as_ref().map(|ob| Elaborator.elab(ob)).transpose()? {
+                    model.set_dom(decl.id, dom);
                 }
-                if let Some(cod) = cod.as_ref().map(|ob| Elaborator.elab(ob)).transpose()? {
-                    model.set_cod(id, cod);
+                if let Some(cod) = decl.cod.as_ref().map(|ob| Elaborator.elab(ob)).transpose()? {
+                    model.set_cod(decl.id, cod);
                 }
                 Ok(())
             }
@@ -393,22 +388,8 @@ pub fn elaborate_model(doc: &ModelDocumentContent, theory: &DblTheory) -> DblMod
     for cell in doc.notebook.cells.iter() {
         if let Cell::Formal { id: _, content } = cell {
             match content {
-                ModelDecl::ObjectDecl {
-                    name: _,
-                    id,
-                    ob_type,
-                } => {
-                    model.add_ob(*id, ob_type).unwrap();
-                }
-                ModelDecl::MorphismDecl {
-                    name: _,
-                    id,
-                    mor_type,
-                    dom,
-                    cod,
-                } => {
-                    model.add_mor(*id, mor_type, dom, cod).unwrap();
-                }
+                ModelJudgment::Object(decl) => model.add_ob(decl).unwrap(),
+                ModelJudgment::Morphism(decl) => model.add_mor(decl).unwrap(),
             }
         }
     }
@@ -423,16 +404,33 @@ pub(crate) mod tests {
     pub(crate) fn sch_walking_attr(th: &DblTheory, ids: [Uuid; 3]) -> DblModel {
         let mut model = DblModel::new(th);
         let [attr, entity, attr_type] = ids;
-        assert!(model.add_ob(entity, &ObType::Basic("Entity".into())).is_ok());
-        assert!(model.add_ob(attr_type, &ObType::Basic("AttrType".into())).is_ok());
         assert!(
             model
-                .add_mor(
-                    attr,
-                    &MorType::Basic("Attr".into()),
-                    &Some(Ob::Basic(entity)),
-                    &Some(Ob::Basic(attr_type)),
-                )
+                .add_ob(&ObDecl {
+                    name: "entity".into(),
+                    id: entity,
+                    ob_type: ObType::Basic("Entity".into())
+                })
+                .is_ok()
+        );
+        assert!(
+            model
+                .add_ob(&ObDecl {
+                    name: "attr_type".into(),
+                    id: attr_type,
+                    ob_type: ObType::Basic("AttrType".into())
+                })
+                .is_ok()
+        );
+        assert!(
+            model
+                .add_mor(&MorDecl {
+                    name: "attr".into(),
+                    id: attr,
+                    mor_type: MorType::Basic("Attr".into()),
+                    dom: Some(Ob::Basic(entity)),
+                    cod: Some(Ob::Basic(attr_type)),
+                })
                 .is_ok()
         );
         model
@@ -458,7 +456,13 @@ pub(crate) mod tests {
         let mut model = DblModel::new(&th);
         assert!(
             model
-                .add_mor(a, &MorType::Basic("Attr".into()), &None, &Some(Ob::Basic(y)),)
+                .add_mor(&MorDecl {
+                    name: "a".into(),
+                    id: a,
+                    mor_type: MorType::Basic("Attr".into()),
+                    dom: None,
+                    cod: Some(Ob::Basic(y)),
+                })
                 .is_ok()
         );
         let JsResult::Err(errs) = model.validate().0 else {
@@ -472,26 +476,44 @@ pub(crate) mod tests {
         let th = ThCategoryLinks::new().theory();
         let mut model = DblModel::new(&th);
         let [f, x, y, link] = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
-        assert!(model.add_ob(x, &ObType::Basic("Object".into()),).is_ok());
-        assert!(model.add_ob(y, &ObType::Basic("Object".into()),).is_ok());
         assert!(
             model
-                .add_mor(
-                    f,
-                    &MorType::Hom(Box::new(ObType::Basic("Object".into()))),
-                    &Some(Ob::Basic(x)),
-                    &Some(Ob::Basic(y)),
-                )
+                .add_ob(&ObDecl {
+                    name: "x".into(),
+                    id: x,
+                    ob_type: ObType::Basic("Object".into())
+                })
                 .is_ok()
         );
         assert!(
             model
-                .add_mor(
-                    link,
-                    &MorType::Basic("Link".into()),
-                    &Some(Ob::Basic(x)),
-                    &Some(Ob::Tabulated(Mor::Basic(f))),
-                )
+                .add_ob(&ObDecl {
+                    name: "y".into(),
+                    id: y,
+                    ob_type: ObType::Basic("Object".into()),
+                })
+                .is_ok()
+        );
+        assert!(
+            model
+                .add_mor(&MorDecl {
+                    name: "f".into(),
+                    id: f,
+                    mor_type: MorType::Hom(Box::new(ObType::Basic("Object".into()))),
+                    dom: Some(Ob::Basic(x)),
+                    cod: Some(Ob::Basic(y)),
+                })
+                .is_ok()
+        );
+        assert!(
+            model
+                .add_mor(&MorDecl {
+                    name: "link".into(),
+                    id: link,
+                    mor_type: MorType::Basic("Link".into()),
+                    dom: Some(Ob::Basic(x)),
+                    cod: Some(Ob::Tabulated(Mor::Basic(f))),
+                })
                 .is_ok()
         );
         assert_eq!(model.objects().len(), 2);

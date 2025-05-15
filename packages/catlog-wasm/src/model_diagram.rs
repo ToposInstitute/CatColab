@@ -3,7 +3,7 @@
 use all_the_same::all_the_same;
 use derive_more::From;
 use notebook_types::current::cell::Cell;
-use notebook_types::current::diagram_judgment::DiagramDecl;
+use notebook_types::current::diagram_judgment::DiagramJudgment;
 use notebook_types::current::document::DiagramDocumentContent;
 use ustr::Ustr;
 use uuid::Uuid;
@@ -261,7 +261,7 @@ pub fn elaborate_diagram(doc: &DiagramDocumentContent, theory: &DblTheory) -> Db
     for cell in doc.notebook.cells.iter() {
         if let Cell::Formal { id: _, content } = cell {
             match content {
-                DiagramDecl::ObjectDecl {
+                DiagramJudgment::ObjectDecl {
                     name: _,
                     id,
                     ob_type,
@@ -269,7 +269,7 @@ pub fn elaborate_diagram(doc: &DiagramDocumentContent, theory: &DblTheory) -> Db
                 } => {
                     model.add_ob(*id, ob_type, over).unwrap();
                 }
-                DiagramDecl::MorphismDecl {
+                DiagramJudgment::MorphismDecl {
                     name: _,
                     id,
                     mor_type,
