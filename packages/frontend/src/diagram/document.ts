@@ -1,7 +1,13 @@
 import { type Accessor, createMemo } from "solid-js";
 import invariant from "tiny-invariant";
 
-import type { DblModelDiagram, Document, ModelDiagramValidationResult, Uuid } from "catlog-wasm";
+import type {
+    DblModelDiagram,
+    DiagramJudgment,
+    Document,
+    ModelDiagramValidationResult,
+    Uuid,
+} from "catlog-wasm";
 import { elaborateDiagram } from "catlog-wasm";
 import { type Api, type LiveDoc, type StableRef, getLiveDoc } from "../api";
 import { type LiveModelDocument, getLiveModel } from "../model";
@@ -9,7 +15,6 @@ import { newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
 import { type IdToNameMap, indexMap } from "../util/indexing";
 import type { InterfaceToType } from "../util/types";
-import type { DiagramJudgment } from "./types";
 
 /** A document defining a diagram in a model. */
 export type DiagramDocument = Document & { type: "diagram" };
