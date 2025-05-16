@@ -8,7 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_TOOLCHAIN: 1.86.0
+  RUST_TOOLCHAIN: &rust_toolchain 1.86.0
 
 jobs:
   rust_tests:
@@ -17,7 +17,7 @@ jobs:
     strategy:
       matrix:
         toolchain:
-          # - ${{ env.RUST_TOOLCHAIN }}
+          - *rust_toolchain
           - beta
     steps:
       - name: Checkout Repository
