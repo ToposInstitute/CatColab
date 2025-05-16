@@ -8,6 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  RUST_TOOLCHAIN: 1.86.0
 
 jobs:
   rust_tests:
@@ -16,7 +17,7 @@ jobs:
     strategy:
       matrix:
         toolchain:
-          - stable
+          - ${{ env.RUST_TOOLCHAIN }}
           - beta
     steps:
       - name: Checkout Repository
@@ -24,7 +25,9 @@ jobs:
 
       - name: Tests
         run: |
-          rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+          rustup toolchain install ${{ matrix.toolchain }}
+          rustup default ${{ matrix.toolchain }}
+
           cargo build --all-features --verbose
           cargo test --all-features --verbose
 
@@ -37,7 +40,10 @@ jobs:
 
       - name: Check formatting
         run: |
-          rustup update stable && rustup default stable
+          rustup toolchain install ${{ env.RUST_TOOLCHAIN }}
+          rustup default ${{ env.RUST_TOOLCHAIN }}
+          rustup component add rustfmt
+
           cargo fmt --check
 
   rust_lints:
@@ -49,7 +55,10 @@ jobs:
 
       - name: Check clippy warnings
         run: |
-          rustup update stable && rustup default stable
+          rustup toolchain install ${{ env.RUST_TOOLCHAIN }}
+          rustup default ${{ env.RUST_TOOLCHAIN }}
+          rustup component add clippy 
+
           cargo clippy -- -D warnings
 
   rust_docs:
@@ -61,7 +70,9 @@ jobs:
 
       - name: Check rustdoc warnings
         run: |
-          rustup update stable && rustup default stable
+          rustup toolchain install ${{ env.RUST_TOOLCHAIN }}
+          rustup default ${{ env.RUST_TOOLCHAIN }}
+
           RUSTDOCFLAGS='--deny warnings' cargo doc --no-deps
 
   npm_checks:
