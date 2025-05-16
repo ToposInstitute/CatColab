@@ -37,7 +37,8 @@ jobs:
 
       - name: Check formatting
         run: |
-          rustup update stable && rustup default stable
+          rustup toolchain install 1.86.0
+          rustup default 1.86.0
           cargo fmt --check
 
   rust_lints:
@@ -49,7 +50,8 @@ jobs:
 
       - name: Check clippy warnings
         run: |
-          rustup update stable && rustup default stable
+          rustup toolchain install 1.86.0
+          rustup default 1.86.0
           cargo clippy -- -D warnings
 
   rust_docs:
