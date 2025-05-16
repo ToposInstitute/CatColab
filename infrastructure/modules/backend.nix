@@ -105,8 +105,10 @@ with lib;
     systemd.services.backend = {
       enable = true;
       wantedBy = [ "multi-user.target" ];
-      after = [ "migrations.service" ];
-      wants = [ "migrations.service" ];
+      # after = [ "migrations.service" ];
+      # wants = [ "migrations.service" ];
+      after = [ "database-setup.service" ];
+      wants = [ "database-setup.service" ];
 
       environment = {
         PORT = config.catcolab.backend.backendPort;
