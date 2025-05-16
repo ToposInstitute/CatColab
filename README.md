@@ -1,5 +1,7 @@
 # CatColab
 
+plz run CI checks
+
 CatColab (working name) is a collaborative environment for *formal,
 interoperable, conceptual modeling*.
 
