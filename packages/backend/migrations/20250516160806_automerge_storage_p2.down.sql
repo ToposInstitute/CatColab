@@ -1,0 +1,1 @@
+ALTER TABLE snapshots ALTER COLUMN doc_id DROP NOT NULL;
