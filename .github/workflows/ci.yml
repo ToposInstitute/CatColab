@@ -39,6 +39,8 @@ jobs:
         run: |
           rustup toolchain install 1.86.0
           rustup default 1.86.0
+          rustup component add cargo-fmt
+
           cargo fmt --check
 
   rust_lints:
@@ -52,8 +54,8 @@ jobs:
         run: |
           rustup toolchain install 1.86.0
           rustup default 1.86.0
+          rustup component add clippy 
 
-          rustup component add clippy          
           cargo clippy -- -D warnings
 
   rust_docs:
