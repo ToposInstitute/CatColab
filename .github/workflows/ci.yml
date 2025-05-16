@@ -54,6 +54,7 @@ jobs:
           rustup default 1.86.0
 
           rustup component add clippy          
+          cargo clippy -- -D warnings
 
   rust_docs:
     name: rust docs
