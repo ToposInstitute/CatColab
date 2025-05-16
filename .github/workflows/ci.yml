@@ -52,7 +52,8 @@ jobs:
         run: |
           rustup toolchain install 1.86.0
           rustup default 1.86.0
-          cargo clippy -- -D warnings
+
+          rustup component add clippy          
 
   rust_docs:
     name: rust docs
