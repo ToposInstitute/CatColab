@@ -1,4 +1,4 @@
-export * from "./cclfo"
+export * from "./cclfo";
 export * from "./decapodes";
 export * from "./diagram_graph";
 export * from "./ccl"

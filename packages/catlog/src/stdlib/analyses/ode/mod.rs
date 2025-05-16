@@ -75,15 +75,12 @@ impl<Id, Sys> ODEAnalysis<Id, Sys> {
 }
 
 #[allow(non_snake_case)]
-pub mod ccl;
-#[allow(non_snake_case)]
 pub mod cclfo;
 #[allow(non_snake_case)]
 pub mod lotka_volterra;
 #[allow(clippy::type_complexity)]
 pub mod mass_action;
 
-pub use ccl::*;
 pub use cclfo::*;
 pub use lotka_volterra::*;
 pub use mass_action::*;

@@ -90,7 +90,7 @@ export function CCLFO(
             content: (mor) => mor.name,
         },
         createNumericalColumn({
-            name: "Interaction",
+            name: "Coefficient",
             data: (mor) => props.content.interactionCoefficients[mor.id],
             default: 1,
             validate: (_, data) => data >= 0,
