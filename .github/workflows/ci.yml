@@ -61,7 +61,8 @@ jobs:
 
       - name: Check rustdoc warnings
         run: |
-          rustup update stable && rustup default stable
+          rustup toolchain install 1.86.0
+          rustup default 1.86.0
           RUSTDOCFLAGS='--deny warnings' cargo doc --no-deps
 
   npm_checks:
