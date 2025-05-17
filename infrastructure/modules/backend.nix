@@ -1,8 +1,8 @@
 {
   lib,
   pkgs,
-  inputs,
   config,
+  rustToolchain,
   ...
 }:
 let
@@ -40,6 +40,7 @@ let
 
   catcolabPackages = {
     backend = pkgs.lib.callPackageWith pkgs ../../packages/backend/default.nix {
+      inherit rustToolchain;
     };
 
     automerge-doc-server =

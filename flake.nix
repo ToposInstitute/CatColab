@@ -2,15 +2,17 @@
   description = "configurations for deploying catcolab";
 
   inputs = {
-    # The version of cargo in 24.11 is too old so we need to use unstable until the next relase (25.05)
-    nixpkgs.url = "nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-24.11";
     crate2nix = {
       url = "github:nix-community/crate2nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-
     agenix.url = "github:ryantm/agenix";
     deploy-rs.url = "github:serokell/deploy-rs";
+    fenix = {
+      url = "github:nix-community/fenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -20,6 +22,7 @@
       crate2nix,
       agenix,
       deploy-rs,
+      fenix,
       ...
     }@inputs:
     let
@@ -32,14 +35,25 @@
         "aarch64-darwin"
       ];
 
+      rustToolchain = fenix.packages.x86_64-linux.fromToolchainFile {
+        file = ./rust-toolchain.toml;
+        sha256 = "sha256-X/4ZBHO3iW0fOenQ3foEvscgAPJYl2abspaBThDOukI=";
+      };
+
+      nixpkgsFor =
+        system:
+        import nixpkgs {
+          inherit system;
+          config.allowUnfree = true;
+        };
+
+      pkgsLinux = nixpkgsFor linuxSystem;
+
       # Generate devShells for each system
       devShellForSystem =
         system:
         let
-          pkgs = import nixpkgs {
-            inherit system;
-            config.allowUnfree = true;
-          };
+          pkgs = nixpkgsFor system;
 
           # macOS-specific configurations for libraries
           darwinDeps =
@@ -58,8 +72,7 @@
           buildInputs =
             with pkgs;
             [
-              rustc
-              cargo
+              rustToolchain
               openssl
               rust-analyzer
               rustfmt
@@ -112,20 +125,24 @@
       # Create a NixOS configuration for each host
       nixosConfigurations = {
         catcolab = nixpkgs.lib.nixosSystem {
-          specialArgs = { inherit inputs; };
+          specialArgs = {
+            inherit inputs rustToolchain;
+          };
           system = linuxSystem;
           modules = [
             ./infrastructure/hosts/catcolab
             agenix.nixosModules.age
           ];
+          pkgs = pkgsLinux;
         };
         catcolab-next = nixpkgs.lib.nixosSystem {
-          specialArgs = { inherit inputs; };
+          specialArgs = { inherit inputs rustToolchain; };
           system = linuxSystem;
           modules = [
             ./infrastructure/hosts/catcolab-next
             agenix.nixosModules.age
           ];
+          pkgs = pkgsLinux;
         };
       };
 
