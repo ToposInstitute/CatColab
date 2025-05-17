@@ -216,7 +216,7 @@ impl<T: Eq + Clone> MutMapping for VecColumn<T> {
         if i >= self.0.len() {
             self.0.resize_with(i + 1, Default::default);
         }
-        std::mem::replace(&mut self.0[i], Some(y))
+        self.0[i].replace(y)
     }
 
     fn unset(&mut self, i: &usize) -> Option<T> {
