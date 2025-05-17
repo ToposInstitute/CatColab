@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            CREATE TABLE permissions (\n                subject TEXT REFERENCES users (id),\n                object UUID NOT NULL REFERENCES refs (id),\n                level permission_level NOT NULL,\n                CONSTRAINT permissions_is_relation UNIQUE (subject, object)\n            );\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "a1cad744dc992d5cccf3809da6cce3dab5963f21230b2bc05b655a7ac74b8cbe"
+}

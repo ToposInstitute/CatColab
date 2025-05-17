@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            CREATE TYPE permission_level AS ENUM ('read', 'write', 'maintain', 'own');\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "b7422db78286f3734a66bad0d7f318287d970b6aeb61aeaf683c4ca4b724c955"
+}

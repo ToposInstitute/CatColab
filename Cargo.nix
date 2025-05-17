@@ -1063,8 +1063,19 @@ rec {
             path = "src/main.rs";
             requiredFeatures = [ ];
           }
+          {
+            name = "migrate";
+            path = "src/bin/migrate.rs";
+            requiredFeatures = [ ];
+          }
+          {
+            name = "migrator";
+            path = "src/bin/migrator.rs";
+            requiredFeatures = [ ];
+          }
         ];
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./packages/backend; };
+        libName = "catcolab_backend";
         dependencies = [
           {
             name = "async-trait";
@@ -1131,6 +1142,11 @@ rec {
             name = "sqlx";
             packageId = "sqlx";
             features = [ "runtime-tokio" "tls-native-tls" "postgres" "uuid" "json" "chrono" ];
+          }
+          {
+            name = "sqlx_migrator";
+            packageId = "sqlx_migrator";
+            features = [ "postgres" ];
           }
           {
             name = "thiserror";

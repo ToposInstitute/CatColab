@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            DROP INDEX CONCURRENTLY IF EXISTS permissions_object_subject_idx;\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "8d557c764be897e1d75a1cc2f7a78a9c67f8bd3e211e4ae78a5bdd91c74e24fe"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            CREATE INDEX CONCURRENTLY IF NOT EXISTS permissions_object_subject_idx\n                ON permissions (object, subject);\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "8e9160f291b686d7d0ecb9134ca70ed90e72177c0e40483ecde2348d6a44b0c8"
+}

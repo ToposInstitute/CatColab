@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            CREATE TABLE snapshots (\n                id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,\n                for_ref UUID NOT NULL,\n                content JSONB NOT NULL,\n                last_updated TIMESTAMPTZ NOT NULL\n            );\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "37c7dad7ba00f70a4a47be4208805edeeea9dda572da6b7b1a378cdb1882ac7e"
+}

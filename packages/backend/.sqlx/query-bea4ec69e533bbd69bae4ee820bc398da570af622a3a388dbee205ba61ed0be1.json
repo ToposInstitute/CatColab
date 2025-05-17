@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            DROP TABLE permissions, users;\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "bea4ec69e533bbd69bae4ee820bc398da570af622a3a388dbee205ba61ed0be1"
+}

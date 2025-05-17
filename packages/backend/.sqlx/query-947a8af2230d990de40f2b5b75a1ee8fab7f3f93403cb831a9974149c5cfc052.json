@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            CREATE INDEX ON permissions (object);\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "947a8af2230d990de40f2b5b75a1ee8fab7f3f93403cb831a9974149c5cfc052"
+}

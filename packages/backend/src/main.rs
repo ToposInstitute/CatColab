@@ -1,7 +1,9 @@
 use axum::{Router, routing::get};
+use clap::{Parser, Subcommand};
 use firebase_auth::FirebaseAuth;
 use socketioxide::SocketIo;
 use sqlx::postgres::PgPoolOptions;
+use sqlx_migrator::MigrationCommand;
 use std::sync::Arc;
 use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
@@ -30,6 +32,8 @@ fn automerge_io_port() -> String {
 
 #[tokio::main]
 async fn main() {
+    let database_url = std::env::var("DATABASE_URL").expect("`DATABASE_URL` must be set");
+
     let env_filter = EnvFilter::builder()
         .with_default_directive(LevelFilter::INFO.into())
         .from_env_lossy();
@@ -38,7 +42,7 @@ async fn main() {
 
     let db = PgPoolOptions::new()
         .max_connections(10)
-        .connect(&dotenvy::var("DATABASE_URL").expect("`DATABASE_URL` should be set"))
+        .connect(&database_url)
         .await
         .expect("Failed to connect to database");
 

@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DROP TABLE refs, snapshots",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "2ef0dfb6f8f793ca70fa3406c2c38b7c5a88af4a850b1e320ba89f21571227e1"
+}
