@@ -1064,11 +1064,6 @@ rec {
             requiredFeatures = [ ];
           }
           {
-            name = "migrate";
-            path = "src/bin/migrate.rs";
-            requiredFeatures = [ ];
-          }
-          {
             name = "migrator";
             path = "src/bin/migrator.rs";
             requiredFeatures = [ ];

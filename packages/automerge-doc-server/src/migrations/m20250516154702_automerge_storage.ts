@@ -1,13 +1,13 @@
 import { Repo, type RepoConfig } from "@automerge/automerge-repo";
 import dotenv from "dotenv";
 import pgPkg from "pg";
-import { PostgresStorageAdapter } from "./postgres_storage_adapter.js";
+import { PostgresStorageAdapter } from "../postgres_storage_adapter.js";
 
 const { Pool } = pgPkg;
 
 dotenv.config();
 
-async function main() {
+export async function automergeStorage() {
     const pool = new Pool({
         connectionString: process.env.DATABASE_URL,
     });
@@ -41,7 +41,4 @@ async function main() {
     }
 
     console.log("Done!");
-    process.exit(0);
 }
-
-await main();

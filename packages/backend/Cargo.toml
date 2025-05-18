@@ -27,7 +27,6 @@ sqlx = { version = "0.8.2", features = [
   "json",
   "chrono",
 ] }
-sqlx_migrator = { version = "0.17.0", features = ["postgres"] }
 thiserror = "1.0.64"
 tokio = { version = "1.40.0", features = ["full"] }
 tower = { version = "0.5.1", features = ["util"] }
@@ -40,7 +39,3 @@ ts-rs = { version = "10.1.0", features = [
   "chrono-impl",
 ] }
 uuid = { version = "1.10.0", features = ["v7", "serde"] }
-
-[[bin]]
-name = "migrator"
-path = "src/bin/migrator.rs"

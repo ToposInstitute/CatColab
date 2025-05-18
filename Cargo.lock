@@ -348,7 +348,6 @@ dependencies = [
  "serde_json",
  "socketioxide",
  "sqlx",
- "sqlx_migrator",
  "thiserror 1.0.69",
  "tokio",
  "tower 0.5.2",

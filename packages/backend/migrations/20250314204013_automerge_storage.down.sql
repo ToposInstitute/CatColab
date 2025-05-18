@@ -1,3 +1,0 @@
-ALTER TABLE snapshots DROP COLUMN IF EXISTS doc_id;
-
-DROP TABLE IF EXISTS storage;

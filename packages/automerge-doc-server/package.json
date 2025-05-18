@@ -5,7 +5,6 @@
     "main": "dist/main.js",
     "scripts": {
         "main": "tsx src/main.ts",
-        "migrate-storage": "tsx src/populate_automerge_storage.ts",
         "format": "biome format --write",
         "lint": "biome lint --write && biome check --write",
         "test": "vitest --mode development"

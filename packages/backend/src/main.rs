@@ -1,9 +1,7 @@
 use axum::{Router, routing::get};
-use clap::{Parser, Subcommand};
 use firebase_auth::FirebaseAuth;
 use socketioxide::SocketIo;
 use sqlx::postgres::PgPoolOptions;
-use sqlx_migrator::MigrationCommand;
 use std::sync::Arc;
 use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
