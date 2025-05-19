@@ -4,6 +4,6 @@
 }:
 let
   cargoNix = pkgs.callPackage ../../Cargo.nix { };
-  backend = cargoNix.workspaceMembers.catcolab-backend.build;
+  migrator = cargoNix.workspaceMembers.migrator.build;
 in
-backend
+migrator
