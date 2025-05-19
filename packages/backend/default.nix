@@ -23,8 +23,4 @@ let
   cargoNix = import ../../Cargo.nix { inherit pkgs buildRustCrateForPkgs; };
   backend = cargoNix.workspaceMembers.catcolab-backend.build;
 in
-backend.overrideAttrs (attrs: {
-  postInstall = ''
-    cp -r migrations $out/
-  '';
-})
+backend
