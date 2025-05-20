@@ -89,8 +89,11 @@ pub fn th_nn2_category() -> UstrDiscreteDblTheory {
     cat.add_ob_generator(x);
     cat.add_mor_generator(neg, x, x);
     cat.add_mor_generator(deg, x, x);
+    cat.add_mor_generator(del, x, x);
     cat.equate(Path::pair(neg, neg), Path::empty(x));
     cat.equate(Path::pair(neg, deg), Path::pair(deg, neg));
+    cat.equate(Path::pair(neg, del), Path::pair(del, neg));
+    cat.equate(Path::pair(del, deg), Path::pair(deg, del));
     DiscreteDblTheory::from(cat)
 }
 

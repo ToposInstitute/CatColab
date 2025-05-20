@@ -125,6 +125,7 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
                         <textPath href={`#${pathId()}`} startOffset="40%">
                             {"‖"}
                         </textPath>
+<<<<<<< HEAD
                     </text>
                 </Match>
                 <Match when={props.edge.style === "plusDeg"}>
@@ -185,6 +186,50 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
                     {defaultPath()}
                     {tgtLabel("∝")}
                 </Match>
+=======
+            </text>
+            </Match>
+            <Match when={props.edge.style === "plusOne"}>
+                {defaultPath()}
+                {tgtLabel("+")}
+                <text style="dominant-baseline: central;">
+                    <textPath href={`#${pathId()}`} startOffset="20%">
+                        {"𝛿"}
+                    </textPath>
+                </text>
+            </Match>
+            <Match when={props.edge.style === "minusOne"}>
+                {defaultPath()}
+                {tgtLabel("-")}
+                <text style="dominant-baseline: central;">
+                    <textPath href={`#${pathId()}`} startOffset="20%">
+                        {"𝛿"}
+                    </textPath>
+                </text>
+            </Match>
+            <Match when={props.edge.style === "plusDelay"}>
+                {defaultPath()}
+                {tgtLabel("-")}
+                <text style="dominant-baseline: central;">
+                    <textPath href={`#${pathId()}`} startOffset="20%">
+                        {"🐢"}
+                    </textPath>
+                </text>
+            </Match>
+            <Match when={props.edge.style === "minusDelay"}>
+                {defaultPath()}
+                {tgtLabel("-")}
+                <text style="dominant-baseline: central;">
+                    <textPath href={`#${pathId()}`} startOffset="20%">
+                        {"🐢"}
+                    </textPath>
+                </text>
+            </Match>
+            <Match when={props.edge.style === "scalar"}>
+                {defaultPath()}
+                {tgtLabel("∝")}
+            </Match>
+>>>>>>> 3060eab (theory of ECLDs (replacing CLDs with differential degree))
             </Switch>
             <Show when={props.edge.label}>
                 <text
@@ -264,12 +309,19 @@ const styleToMarker: Record<ArrowStyle, ArrowMarker> = {
     indeterminate: "triangle",
     plusCaesura: "triangle",
     minusCaesura: "triangle",
+<<<<<<< HEAD
     plusDeg: "double",
     minusDeg: "double",
     plusDelay: "vee",
     minusDelay: "vee",
     plusDegDelay: "double",
     minusDegDelay: "double",
+=======
+    plusOne: "triangle",
+    minusOne: "triangle",
+    plusDelay: "triangle",
+    minusDelay: "triangle",
+>>>>>>> 3060eab (theory of ECLDs (replacing CLDs with differential degree))
     scalar: "triangle",
 };
 

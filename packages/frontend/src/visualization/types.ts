@@ -13,12 +13,19 @@ export type ArrowStyle =
     | "indeterminate"
     | "plusCaesura"
     | "minusCaesura"
+<<<<<<< HEAD
     | "plusDeg"
     | "minusDeg"
     | "plusDelay"
     | "minusDelay"
     | "plusDegDelay"
     | "minusDegDelay"
+=======
+    | "plusOne"
+    | "minusOne"
+    | "plusDelay"
+    | "minusDelay"
+>>>>>>> 3060eab (theory of ECLDs (replacing CLDs with differential degree))
     | "scalar";
 
 /** Prop for forwarding a ref to an `<svg>` element.

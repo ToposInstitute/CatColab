@@ -236,14 +236,6 @@ impl ThDelayableSignedCategory {
 #[wasm_bindgen]
 pub struct ThNN2Category(Rc<theory::UstrDiscreteDblTheory>);
 
-// TO-DO: (also move this to graph_algorithms.rs)
-// Data type for max-depth search in DAGs
-enum DAGDepth {
-    Undef,
-    Seen,
-    Depth(usize),
-}
-
 #[wasm_bindgen]
 impl ThNN2Category {
     #[wasm_bindgen(constructor)]
@@ -295,6 +287,7 @@ impl ThNN2Category {
             .try_into()
             .map_err(|_| "CCL simulation expects a discrete double model")?;
 
+<<<<<<< HEAD
         let mut debug_log = String::new();
         debug_log.push_str("ECLD to CLD migration for CCL dynamics\n\n");
 
@@ -464,6 +457,29 @@ impl ThNN2Category {
                 .into(),
         ))
     }
+=======
+    // /// Find degree one positive feedback loops in a model.
+    // #[wasm_bindgen(js_name = "positiveOneLoops")]
+    // pub fn positive_one_loops(
+    //     &self,
+    //     model: &DblModel,
+    //     options: MotifsOptions,
+    // ) -> Result<Vec<DblModel>, String> {
+    //     let positive_one_loop = models::degree_one_positive_loop(self.0.clone());
+    //     motifs(&positive_one_loop, model, options)
+    // }
+
+    // /// Find delayed negative feedback loops in a model.
+    // #[wasm_bindgen(js_name = "delayedNegativeLoops")]
+    // pub fn delayed_negative_loops(
+    //     &self,
+    //     model: &DblModel,
+    //     options: MotifsOptions,
+    // ) -> Result<Vec<DblModel>, String> {
+    //     let delayed_negative_loop = models::delayed_negative_loop(self.0.clone());
+    //     motifs(&delayed_negative_loop, model, options)
+    // }
+>>>>>>> 3060eab (theory of ECLDs (replacing CLDs with differential degree))
 }
 
 /// The theory of nullable signed categories.

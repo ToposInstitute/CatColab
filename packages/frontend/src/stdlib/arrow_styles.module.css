@@ -25,6 +25,11 @@
 .arrow.indeterminate,
 .arrow.plusCaesura,
 .arrow.minusCaesura,
+<<<<<<< HEAD
+=======
+.arrow.minusOne,
+.arrow.plusOne,
+>>>>>>> 3060eab (theory of ECLDs (replacing CLDs with differential degree))
 .arrow.minusDelay,
 .arrow.plusDelay,
 .arrow.scalar {
@@ -86,6 +91,10 @@
 
 .arrowContainer.plus,
 .arrowContainer.plusCaesura,
+<<<<<<< HEAD
+=======
+.arrowContainer.plusOne,
+>>>>>>> 3060eab (theory of ECLDs (replacing CLDs with differential degree))
 .arrowContainer.plusDelay
 {
     &:after {
@@ -111,6 +120,10 @@
 
 .arrowContainer.minus,
 .arrowContainer.minusCaesura,
+<<<<<<< HEAD
+=======
+.arrowContainer.minusOne,
+>>>>>>> 3060eab (theory of ECLDs (replacing CLDs with differential degree))
 .arrowContainer.minusDelay
  {
     &:after {
@@ -158,10 +171,29 @@
 .arrowContainer.plusDelay,
 .arrowContainer.minusDelay {
     &:before {
+<<<<<<< HEAD
         content: "‖";
         font-size: 0.75em;
         position: absolute;
         transform: translate(-50%, -55%);
+=======
+        content: "𝛿";
+        font-size: 0.75em;
+        position: absolute;
+        transform: translate(-50%, -100%);
+        top: 0;
+        left: 50%;
+    }
+}
+
+.arrowContainer.plusDelay,
+.arrowContainer.minusDelay {
+    &:before {
+        content: "🐢";
+        font-size: 0.75em;
+        position: absolute;
+        transform: translate(-50%, 15%);
+>>>>>>> 3060eab (theory of ECLDs (replacing CLDs with differential degree))
         top: 0;
         left: 50%;
     }
