@@ -413,7 +413,7 @@ stdTheories.add(
                     morType: { tag: "Basic", content: "Degree" },
                     name: "Positive degree 1",
                     description: "Positive influence on the derivative",
-                    arrowStyle: "plusOne",
+                    arrowStyle: "plusDeg",
                     preferUnnamed: true,
                 },
                 {
@@ -425,7 +425,7 @@ stdTheories.add(
                                ] },
                     name: "Negative degree 1",
                     description: "Negative influence on the derivative",
-                    arrowStyle: "minusOne",
+                    arrowStyle: "minusDeg",
                     preferUnnamed: true,
                 },
                 {
@@ -446,6 +446,31 @@ stdTheories.add(
                     name: "Negative degree 0 with delay",
                     description: "Delayed negative influence",
                     arrowStyle: "minusDelay",
+                    preferUnnamed: true,
+                },
+                {
+                    tag: "MorType",
+                    morType: { tag: "Composite", content:
+                               [
+                                   { tag: "Basic", content: "Degree"},
+                                   { tag: "Basic", content: "Delay"},
+                               ] },
+                    name: "Positive degree 1 with delay",
+                    description: "Delayed positive influence on the derivative",
+                    arrowStyle: "plusDegDelay",
+                    preferUnnamed: true,
+                },
+                {
+                    tag: "MorType",
+                    morType: { tag: "Composite", content:
+                               [
+                                   { tag: "Basic", content: "Negative"},
+                                   { tag: "Basic", content: "Degree"},
+                                   { tag: "Basic", content: "Delay"},
+                               ] },
+                    name: "Negative degree 1 with delay",
+                    description: "Delayed negative influence on the derivative",
+                    arrowStyle: "minusDegDelay",
                     preferUnnamed: true,
                 },
             ],

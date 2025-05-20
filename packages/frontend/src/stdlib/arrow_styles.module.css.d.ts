@@ -12,9 +12,11 @@ declare const styles: {
     readonly plus: string;
     readonly plusCaesura: string;
     readonly scalar: string;
-    readonly plusOne: string;
-    readonly minusOne: string;
+    readonly plusDeg: string;
+    readonly minusDeg: string;
     readonly plusDelay: string;
     readonly minusDelay: string;
+    readonly plusDegDelay: string;
+    readonly minusDegDelay: string;
 };
 export = styles;
