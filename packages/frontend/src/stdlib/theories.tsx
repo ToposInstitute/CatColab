@@ -549,15 +549,15 @@ stdTheories.add(
             //     }),
                 analyses.configureSubmodelsAnalysis({
                     id: "positive-zero-loops",
-                    name: "Degree Zero Reinforcing loops",
-                    description: "Find the fast-acting reinforcing loops",
+                    name: "Degree 0 reinforcing loops",
+                    description: "Find the degree-zero reinforcing loops",
                     findSubmodels(model, options) {
                         return thDegSignedCategory.positiveZeroLoops(model, options);
                     },
                 }),
                 analyses.configureSubmodelsAnalysis({
                     id: "positive-one-loops",
-                    name: "Degree One Reinforcing loops",
+                    name: "Degree 1 reinforcing loops",
                     description: "Find the degree-one reinforcing loops",
                     findSubmodels(model, options) {
                         return thDegSignedCategory.positiveOneLoops(model, options);
