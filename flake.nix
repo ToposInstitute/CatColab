@@ -72,6 +72,7 @@
           buildInputs =
             with pkgs;
             [
+              lld
               rustToolchain
               openssl
               rust-analyzer
