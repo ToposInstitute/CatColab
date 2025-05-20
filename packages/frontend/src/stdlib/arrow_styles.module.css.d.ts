@@ -14,5 +14,7 @@ declare const styles: {
     readonly scalar: string;
     readonly plusOne: string;
     readonly minusOne: string;
+    readonly plusDelay: string;
+    readonly minusDelay: string;
 };
 export = styles;

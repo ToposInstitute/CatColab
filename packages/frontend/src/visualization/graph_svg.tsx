@@ -127,27 +127,45 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
             </text>
             </Match>
             <Match when={props.edge.style === "plusOne"}>
-            {defaultPath()}
-        {tgtLabel("+")}
-            <text style="dominant-baseline: central;">
-            <textPath href={`#${pathId()}`} startOffset="40%">
-            {"|"}
-        </textPath>
-            </text>
+                {defaultPath()}
+                {tgtLabel("+")}
+                <text style="dominant-baseline: central;">
+                    <textPath href={`#${pathId()}`} startOffset="20%">
+                        {"𝛿"}
+                    </textPath>
+                </text>
             </Match>
             <Match when={props.edge.style === "minusOne"}>
-            {defaultPath()}
-        {tgtLabel("-")}
-            <text style="dominant-baseline: central;">
-            <textPath href={`#${pathId()}`} startOffset="40%">
-            {"|"}
-        </textPath>
-            </text>            
-                </Match>
-                <Match when={props.edge.style === "scalar"}>
-                    {defaultPath()}
-                    {tgtLabel("∝")}
-                </Match>
+                {defaultPath()}
+                {tgtLabel("-")}
+                <text style="dominant-baseline: central;">
+                    <textPath href={`#${pathId()}`} startOffset="20%">
+                        {"𝛿"}
+                    </textPath>
+                </text>
+            </Match>
+            <Match when={props.edge.style === "plusDelay"}>
+                {defaultPath()}
+                {tgtLabel("-")}
+                <text style="dominant-baseline: central;">
+                    <textPath href={`#${pathId()}`} startOffset="20%">
+                        {"🐢"}
+                    </textPath>
+                </text>
+            </Match>
+            <Match when={props.edge.style === "minusDelay"}>
+                {defaultPath()}
+                {tgtLabel("-")}
+                <text style="dominant-baseline: central;">
+                    <textPath href={`#${pathId()}`} startOffset="20%">
+                        {"🐢"}
+                    </textPath>
+                </text>
+            </Match>
+            <Match when={props.edge.style === "scalar"}>
+                {defaultPath()}
+                {tgtLabel("∝")}
+            </Match>
             </Switch>
             <Show when={props.edge.label}>
                 <text
@@ -228,7 +246,9 @@ const styleToMarker: Record<ArrowStyle, ArrowMarker> = {
     plusCaesura: "triangle",
     minusCaesura: "triangle",
     plusOne: "triangle",
-    minusOne: "triangle",    
+    minusOne: "triangle",
+    plusDelay: "triangle",
+    minusDelay: "triangle",
     scalar: "triangle",
 };
 

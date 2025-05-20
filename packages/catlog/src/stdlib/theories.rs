@@ -79,18 +79,21 @@ pub fn th_delayable_signed_category() -> UstrDiscreteDblTheory {
     DiscreteDblTheory::from(cat)
 }
 
-/** The theory of N-graded signed categories
+/** The theory of NN2-graded categories
 
 todo: description
  */
-pub fn th_deg_signed_category() -> UstrDiscreteDblTheory {
+pub fn th_nn2_category() -> UstrDiscreteDblTheory {
     let mut cat: UstrFpCategory = Default::default();
-    let (x, neg, deg) = (ustr("Object"), ustr("Negative"), ustr("Degree"));
+    let (x, neg, deg, del) = (ustr("Object"), ustr("Negative"), ustr("Degree"), ustr("Delay"));
     cat.add_ob_generator(x);
     cat.add_mor_generator(neg, x, x);
     cat.add_mor_generator(deg, x, x);
+    cat.add_mor_generator(del, x, x);
     cat.equate(Path::pair(neg, neg), Path::empty(x));
     cat.equate(Path::pair(neg, deg), Path::pair(deg, neg));
+    cat.equate(Path::pair(neg, del), Path::pair(del, neg));
+    cat.equate(Path::pair(del, deg), Path::pair(deg, del));
     DiscreteDblTheory::from(cat)
 }
 
@@ -163,6 +166,7 @@ mod tests {
         assert!(th_category().validate().is_ok());
         assert!(th_schema().validate().is_ok());
         assert!(th_signed_category().validate().is_ok());
+        assert!(th_nn2_category().validate().is_ok());
         assert!(th_delayable_signed_category().validate().is_ok());
         assert!(th_nullable_signed_category().validate().is_ok());
         assert!(th_category_with_scalars().validate().is_ok());

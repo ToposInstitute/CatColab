@@ -27,6 +27,8 @@
 .arrow.minusCaesura,
 .arrow.minusOne,
 .arrow.plusOne,
+.arrow.minusDelay,
+.arrow.plusDelay,
 .arrow.scalar {
     &:before,
     &:after {
@@ -53,7 +55,8 @@
 
 .arrowContainer.plus,
 .arrowContainer.plusCaesura,
-.arrowContainer.plusOne
+.arrowContainer.plusOne,
+.arrowContainer.plusDelay
 {
     &:after {
         content: "+";
@@ -66,7 +69,8 @@
 
 .arrowContainer.minus,
 .arrowContainer.minusCaesura,
-.arrowContainer.minusOne
+.arrowContainer.minusOne,
+.arrowContainer.minusDelay
  {
     &:after {
         content: "-";
@@ -101,9 +105,22 @@
 .arrowContainer.plusOne,
 .arrowContainer.minusOne {
     &:before {
-        content: "|";
+        content: "𝛿";
+        font-size: 0.75em;
         position: absolute;
-        transform: translate(-50%, -50%);
+        transform: translate(-50%, -100%);
+        top: 0;
+        left: 50%;
+    }
+}
+
+.arrowContainer.plusDelay,
+.arrowContainer.minusDelay {
+    &:before {
+        content: "🐢";
+        font-size: 0.75em;
+        position: absolute;
+        transform: translate(-50%, 15%);
         top: 0;
         left: 50%;
     }
