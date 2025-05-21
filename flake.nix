@@ -104,6 +104,9 @@
               else
                 ""
             }
+
+            export PATH=$PWD/infrastructure/scripts:$PATH
+
             # Load DATABASE_URL into the environment
             if [ -f packages/backend/.env ]; then
               export $(grep -v '^#' packages/backend/.env | xargs)

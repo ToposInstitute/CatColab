@@ -91,5 +91,8 @@ instrument.mjs
 # direnv cache
 .direnv
 
-# bild build output
+# nix build output
 /infrastructure/result
+
+# Database dumps
+/dumps
