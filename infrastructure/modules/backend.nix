@@ -71,6 +71,7 @@ let
     };
 
     migrator = pkgs.lib.callPackageWith pkgs ../../packages/migrator/default.nix {
+      inherit rustToolchain;
     };
 
     automerge-doc-server =
