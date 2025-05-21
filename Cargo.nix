@@ -1067,10 +1067,6 @@ rec {
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./packages/backend; };
         dependencies = [
           {
-            name = "async-trait";
-            packageId = "async-trait";
-          }
-          {
             name = "axum";
             packageId = "axum";
           }
