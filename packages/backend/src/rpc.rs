@@ -7,6 +7,8 @@ use tracing::debug;
 use ts_rs::TS;
 use uuid::Uuid;
 
+use crate::app::Paginated;
+
 use super::app::{AppCtx, AppError, AppState};
 use super::auth::{NewPermissions, PermissionLevel, Permissions};
 use super::{auth, document as doc, user};
@@ -80,7 +82,7 @@ enum RefDoc {
 async fn search_ref_stubs(
     ctx: AppCtx,
     query_params: doc::RefQueryParams,
-) -> RpcResult<Vec<doc::RefStub>> {
+) -> RpcResult<Paginated<doc::RefStub>> {
     doc::search_ref_stubs(ctx, query_params).await.into()
 }
 

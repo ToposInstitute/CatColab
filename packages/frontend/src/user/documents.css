@@ -98,3 +98,8 @@
     border-radius: 4px;
     font-size: 16px;
 }
+
+.page-info {
+    padding-left: 1em;
+    padding-right: 1em;
+}

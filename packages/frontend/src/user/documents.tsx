@@ -2,7 +2,7 @@ import type { RefStub } from "catcolab-api";
 import { getAuth } from "firebase/auth";
 import { useFirebaseApp } from "solid-firebase";
 import { For, Match, Switch, createResource, createSignal, onMount } from "solid-js";
-import { resultErr, resultOk, useApi } from "../api";
+import { rpcResourceErr, rpcResourceOk, useApi } from "../api";
 import { BrandedToolbar } from "../page";
 import { LoginGate } from "./login";
 import "./documents.css";
@@ -26,32 +26,32 @@ function DocumentsSearch() {
 
     const [searchQuery, setSearchQuery] = createSignal<string>("");
     const [debouncedQuery, setDebouncedQuery] = createSignal<string | null>(null);
-    const [latestRequestId, setLatestRequestId] = createSignal(0);
+    const [page, setPage] = createSignal(0);
+    const pageSize = 15;
 
     let debounceTimer: ReturnType<typeof setTimeout>;
     const updateQuery = (value: string) => {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => setDebouncedQuery(value), 300);
         setSearchQuery(value);
+        setPage(0);
     };
 
-    const [refStubs] = createResource(debouncedQuery, async (query) => {
-        const requestId = latestRequestId() + 1;
-        setLatestRequestId(requestId);
+    const [pageData] = createResource(
+        () => [debouncedQuery(), page()] as const,
+        async ([debouncedQueryValue, pageValue]) => {
+            const results = await api.rpc.search_ref_stubs.query({
+                ownerUsernameQuery: null,
+                refNameQuery: debouncedQueryValue,
+                includePublicDocuments: false,
+                searcherMinLevel: null,
+                limit: pageSize,
+                offset: pageValue * pageSize,
+            });
 
-        const result = await api.rpc.search_ref_stubs.query({
-            ownerUsernameQuery: null,
-            refNameQuery: query,
-            includePublicDocuments: false,
-            searcherMinLevel: null,
-        });
-
-        if (latestRequestId() !== requestId) {
-            // A newer query was issued — discard this one
-            return;
-        }
-        return result;
-    });
+            return results;
+        },
+    );
 
     onMount(() => {
         setDebouncedQuery(""); // Trigger fetch on page load
@@ -89,24 +89,71 @@ function DocumentsSearch() {
                             <Switch
                                 fallback={
                                     <tr>
-                                        <td colspan="5">Loading...</td>
+                                        {/* I think this is only used if `pageData.state` is "unresolved",
+                                            however the docs are specify which states cause `loading` to be
+                                            true, nor why the state would ever be "unresolved".
+                                        */}
+                                        <td colspan="5">Unknown state...</td>
                                     </tr>
                                 }
                             >
-                                <Match when={resultOk(refStubs())}>
-                                    {(okRes) => (
-                                        <For each={okRes()}>
-                                            {(stub) => <RefStubRow stub={stub} />}
-                                        </For>
-                                    )}
+                                <Match when={pageData.loading}>
+                                    <tr>
+                                        <td colspan="5">Loading...</td>
+                                    </tr>
                                 </Match>
-                                <Match when={resultErr(refStubs())}>
+                                <Match when={rpcResourceErr(pageData)}>
                                     {(errRes) => (
                                         <tr>
                                             <td colspan="5">
-                                                Error loading documents: {errRes().message}
+                                                RPC Error loading documents: {errRes().message}
                                             </td>
                                         </tr>
+                                    )}
+                                </Match>
+                                <Match when={pageData.state === "errored"}>
+                                    <tr>
+                                        <td colspan="5">
+                                            Error caught by fetcher:{" "}
+                                            {JSON.stringify(pageData.error, null, 2)}
+                                        </td>
+                                    </tr>
+                                </Match>
+                                <Match when={rpcResourceOk(pageData)}>
+                                    {(pageData) => (
+                                        <>
+                                            <For each={pageData().content.items}>
+                                                {(stub) => <RefStubRow stub={stub} />}
+                                            </For>
+
+                                            <tr class="pagination-row">
+                                                <td colspan="5" style={{ "text-align": "center" }}>
+                                                    <button
+                                                        disabled={page() === 0}
+                                                        onClick={() => setPage(page() - 1)}
+                                                    >
+                                                        Previous
+                                                    </button>
+
+                                                    <span class="page-info">
+                                                        Page {page() + 1} of{" "}
+                                                        {Math.ceil(
+                                                            pageData().content.total / pageSize,
+                                                        ) || 1}
+                                                    </span>
+
+                                                    <button
+                                                        disabled={
+                                                            (page() + 1) * pageSize >=
+                                                            pageData().content.total
+                                                        }
+                                                        onClick={() => setPage(page() + 1)}
+                                                    >
+                                                        Next
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </>
                                     )}
                                 </Match>
                             </Switch>
