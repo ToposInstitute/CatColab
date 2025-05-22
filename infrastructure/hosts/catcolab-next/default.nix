@@ -12,6 +12,7 @@ in
   imports = [
     ../../modules/backend.nix
     ../../modules/host.nix
+    ../../modules/backup.nix
     "${inputs.nixpkgs}/nixos/modules/virtualisation/amazon-image.nix"
   ];
 
@@ -39,6 +40,9 @@ in
       automergePort = "8010";
       backendHostname = "backend-next.catcolab.org";
       automergeHostname = "automerge-next.catcolab.org";
+    };
+    backup = {
+      backupdbBucket = "catcolab-next";
     };
     host = {
       userKeys = [
