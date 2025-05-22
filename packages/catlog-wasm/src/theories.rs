@@ -128,11 +128,7 @@ impl ThSignedCategory {
 
     /// Simulate the CCLFO system derived from a model.
     #[wasm_bindgen(js_name = "cclfo")]
-    pub fn cclfo(
-        &self,
-        model: &DblModel,
-        data: CCLFOModelData,
-    ) -> Result<ODEResult, String> {
+    pub fn cclfo(&self, model: &DblModel, data: CCLFOModelData) -> Result<ODEResult, String> {
         let model: &model::DiscreteDblModel<_, _> = (&model.0)
             .try_into()
             .map_err(|_| "CCLFO simulation expects a discrete double model")?;

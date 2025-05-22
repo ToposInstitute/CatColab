@@ -1,11 +1,6 @@
 import { createMemo } from "solid-js";
 
-import type {
-    DblModel,
-    CCLFOModelData,
-    CCLFOProblemData,
-    ODEResult,
-} from "catlog-wasm";
+import type { CCLFOModelData, CCLFOProblemData, DblModel, ODEResult } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import {
     type ColumnSchema,
