@@ -1,0 +1,92 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        WITH effective_permissions AS (\n            /*\n              select at most one row per ref, the row is either:\n               - the searcher’s own permission, if it exists\n               - the public permission (subject IS NULL) when include_public_documents = TRUE and the\n                 searcher does not already have a row\n            */\n            SELECT DISTINCT ON (object)\n                   object,\n                   level\n            FROM   permissions\n            WHERE  (subject = $1)\n               OR  ($5 AND subject IS NULL)\n            ORDER BY object,\n                     (subject IS NOT NULL) DESC           -- prefer the user‑specific row\n        )\n        SELECT \n            refs.id AS ref_id,\n            snapshots.content->>'name' AS name,\n            snapshots.content->>'type' AS type_name,\n            refs.created as created_at,\n            effective_permissions.level AS \"permission_level: PermissionLevel\",\n            owner.id AS \"owner_id?\",\n            owner.username AS \"owner_username?\",\n            owner.display_name AS \"owner_display_name?\"\n        FROM refs\n        JOIN snapshots ON snapshots.id = refs.head\n        JOIN effective_permissions ON effective_permissions.object = refs.id\n        JOIN permissions AS p_owner \n            ON p_owner.object = refs.id AND p_owner.level = 'own'\n        LEFT JOIN users AS owner\n            ON owner.id = p_owner.subject\n        WHERE (\n            owner.username = $2\n            OR $2 IS NULL\n        )\n        AND (\n            snapshots.content->>'name' ILIKE '%' || $3 || '%'\n            OR $3 IS NULL\n        )\n        AND (\n            effective_permissions.level >= $4\n        )\n        ORDER BY refs.created DESC\n        LIMIT 1000;\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "ref_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "type_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "permission_level: PermissionLevel",
+        "type_info": {
+          "Custom": {
+            "name": "permission_level",
+            "kind": {
+              "Enum": [
+                "read",
+                "write",
+                "maintain",
+                "own"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "owner_id?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "owner_username?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "owner_display_name?",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        {
+          "Custom": {
+            "name": "permission_level",
+            "kind": {
+              "Enum": [
+                "read",
+                "write",
+                "maintain",
+                "own"
+              ]
+            }
+          }
+        },
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      null,
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "f0a78d402cfa7c841d0feda0d08583006e0314d0a07849c49b9aec55baa93326"
+}
