@@ -19,7 +19,14 @@ builtins.mapAttrs (_: publicKeys: { inherit publicKeys; }) ({
     owen
     epatters
   ];
-  "rclone.conf.age" = [
+  "rclone.conf.next.age" = [
+    catcolab-next
+    owen
+    epatters
+    jmoggr
+    catcolab-next-deployuser
+  ];
+  "rclone.conf.prod.age" = [
     catcolab
     owen
     epatters

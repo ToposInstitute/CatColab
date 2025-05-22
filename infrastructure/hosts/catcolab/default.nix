@@ -15,7 +15,7 @@ in
 
   age.secrets = {
     "rclone.conf" = {
-      file = "${inputs.self}/infrastructure/secrets/rclone.conf.age";
+      file = "${inputs.self}/infrastructure/secrets/rclone.conf.prod.age";
       mode = "400";
       owner = "catcolab";
     };
