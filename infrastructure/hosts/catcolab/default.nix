@@ -38,6 +38,9 @@ in
       backendHostname = "backend.catcolab.org";
       automergeHostname = "automerge.catcolab.org";
     };
+    backup = {
+      backupdbBucket = "catcolab";
+    };
     host = {
       userKeys = [
         owen

@@ -2,7 +2,6 @@
   pkgs,
   lib,
   config,
-  inputs,
   ...
 }:
 let
@@ -15,7 +14,9 @@ let
     cd ~
     pg_dump catcolab > $DUMPFILE
 
-    rclone --config="/run/agenix/rclone.conf" copy "$DUMPFILE" backup:catcolab
+    "${pkgs.postgresql}/bin/pg_dump" catcolab > $DUMPFILE
+
+    ${lib.getExe pkgs.rclone} --config="/run/agenix/rclone.conf" copy "$DUMPFILE" backup:${config.catcolab.backup.backupdbBucket}
 
     echo "Uploaded database dump $DUMPFILE"
     rm $DUMPFILE
@@ -23,6 +24,13 @@ let
 in
 with lib;
 {
+  options.catcolab.backup = {
+    backupdbBucket = mkOption {
+      type = types.str;
+      description = "Name of the Backblaze bucket used for database backups";
+    };
+  };
+
   config = {
     systemd.timers.backupdb = {
       wantedBy = [ "timers.target" ];

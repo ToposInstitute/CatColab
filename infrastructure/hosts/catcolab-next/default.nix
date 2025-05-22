@@ -40,6 +40,9 @@ in
       backendHostname = "backend-next.catcolab.org";
       automergeHostname = "automerge-next.catcolab.org";
     };
+    backup = {
+      backupdbBucket = "catcolab-next";
+    };
     host = {
       userKeys = [
         owen
