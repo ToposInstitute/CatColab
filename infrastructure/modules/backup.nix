@@ -13,7 +13,7 @@ let
 
     cd ~
 
-    "${pkgs.postgresql}/bin/pg_dump" catcolab > $DUMPFILE
+    ${pkgs.postgresql}/bin/pg_dump --clean --if-exists > $DUMPFILE
 
     ${lib.getExe pkgs.rclone} --config="/run/agenix/rclone.conf" copy "$DUMPFILE" backup:${config.catcolab.backup.backupdbBucket}
 
@@ -45,7 +45,6 @@ with lib;
         User = "catcolab";
         ExecStart = getExe backupScript;
         Type = "oneshot";
-        EnvironmentFile = config.age.secrets.backendSecretsForCatcolab.path;
       };
     };
 
@@ -63,7 +62,6 @@ with lib;
           --description="One-off activation backupdb" \
           --property=Type=${config.systemd.services.backupdb.serviceConfig.Type} \
           --property=User=${config.systemd.services.backupdb.serviceConfig.User} \
-          --property=EnvironmentFile=${config.systemd.services.backupdb.serviceConfig.EnvironmentFile} \
           --property=Environment=PATH=/run/current-system/sw/bin \
           ${lib.getExe backupScript}
 
