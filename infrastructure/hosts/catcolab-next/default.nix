@@ -16,6 +16,11 @@ in
   ];
 
   age.secrets = {
+    "rclone.conf" = {
+      file = "${inputs.self}/infrastructure/secrets/rclone.conf.next.age";
+      mode = "400";
+      owner = "catcolab";
+    };
     backendSecretsForCatcolab = {
       file = "${inputs.self}/infrastructure/secrets/.env.next.age";
       name = "backend-secrets-for-catcolab.env";
