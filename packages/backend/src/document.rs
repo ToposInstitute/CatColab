@@ -214,7 +214,8 @@ pub async fn search_ref_stubs(
         AND (
             effective_permissions.level >= $4
         )
-        LIMIT 100;
+        ORDER BY refs.created DESC
+        LIMIT 1000;
         "#,
         searcher_id,
         search_params.owner_username_query,
