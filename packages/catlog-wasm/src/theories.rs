@@ -248,6 +248,7 @@ impl ThNN2Category {
         DblTheory(self.0.clone().into())
     }
 
+<<<<<<< HEAD
     // TO-DO: this could likely be moved to graph_algorithms.rs
     // Just used within cll() to find the depth of a vertex within the forest
     // of degree-zero arrows
@@ -287,7 +288,6 @@ impl ThNN2Category {
             .try_into()
             .map_err(|_| "CCL simulation expects a discrete double model")?;
 
-<<<<<<< HEAD
         let mut debug_log = String::new();
         debug_log.push_str("ECLD to CLD migration for CCL dynamics\n\n");
 
@@ -457,6 +457,7 @@ impl ThNN2Category {
                 .into(),
         ))
     }
+<<<<<<< HEAD
 =======
     // /// Find degree one positive feedback loops in a model.
     // #[wasm_bindgen(js_name = "positiveOneLoops")]
@@ -480,6 +481,8 @@ impl ThNN2Category {
     //     motifs(&delayed_negative_loop, model, options)
     // }
 >>>>>>> 3060eab (theory of ECLDs (replacing CLDs with differential degree))
+=======
+>>>>>>> cbd7f13 (some HORRIBLE code to test fake model migration)
 }
 
 /// The theory of nullable signed categories.

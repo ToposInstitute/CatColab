@@ -433,6 +433,7 @@ stdTheories.add(
                 },
                 {
                     tag: "MorType",
+<<<<<<< HEAD
                     morType: { tag: "Composite", content:
                                [
                                    { tag: "Basic", content: "Degree"},
@@ -470,6 +471,32 @@ stdTheories.add(
                     arrowStyle: "plusDeg",
                     preferUnnamed: true,
                 },
+=======
+                    morType: { tag: "Composite", content:
+                               [
+                                   { tag: "Basic", content: "Degree"},
+                                   { tag: "Basic", content: "Degree"},
+                               ] },
+                    name: "Positive degree 2",
+                    description: "Positive influence on the SECOND derivative 🤯",
+                    arrowStyle: "plusDeg",
+                    preferUnnamed: true,
+                },
+                {
+                    tag: "MorType",
+                    morType: { tag: "Composite", content:
+                               [
+                                   { tag: "Basic", content: "Degree"},
+                                   { tag: "Basic", content: "Degree"},
+                                   { tag: "Basic", content: "Degree"},
+                                   { tag: "Basic", content: "Degree"},
+                               ] },
+                    name: "Positive degree 4",
+                    description: "Positive influence on the FOURTH derivative 🤯🤯",
+                    arrowStyle: "plusDeg",
+                    preferUnnamed: true,
+                },
+>>>>>>> cbd7f13 (some HORRIBLE code to test fake model migration)
                 // {
                 //     tag: "MorType",
                 //     morType: { tag: "Basic", content: "Delay" },
@@ -524,6 +551,9 @@ stdTheories.add(
                 }),
                 analyses.configureCCL({
                     simulate: (model, data) => thNN2Category.ccl(model, data),
+                }),
+                analyses.configureLCC({
+                    simulate: (model, data) => thNN2Category.lcc(model, data),
                 }),
             ],
         });
