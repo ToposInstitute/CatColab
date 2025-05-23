@@ -430,22 +430,14 @@ stdTheories.add(
                 },
                 {
                     tag: "MorType",
-                    morType: { tag: "Basic", content: "Delay" },
-                    name: "Positive degree 0 with delay",
-                    description: "Delayed positive influence",
-                    arrowStyle: "plusDelay",
-                    preferUnnamed: true,
-                },
-                {
-                    tag: "MorType",
                     morType: { tag: "Composite", content:
                                [
-                                   { tag: "Basic", content: "Negative"},
-                                   { tag: "Basic", content: "Delay"},
+                                   { tag: "Basic", content: "Degree"},
+                                   { tag: "Basic", content: "Degree"},
                                ] },
-                    name: "Negative degree 0 with delay",
-                    description: "Delayed negative influence",
-                    arrowStyle: "minusDelay",
+                    name: "Positive degree 2",
+                    description: "Positive influence on the SECOND derivative 🤯",
+                    arrowStyle: "plusDeg",
                     preferUnnamed: true,
                 },
                 {
@@ -453,32 +445,69 @@ stdTheories.add(
                     morType: { tag: "Composite", content:
                                [
                                    { tag: "Basic", content: "Degree"},
-                                   { tag: "Basic", content: "Delay"},
-                               ] },
-                    name: "Positive degree 1 with delay",
-                    description: "Delayed positive influence on the derivative",
-                    arrowStyle: "plusDegDelay",
-                    preferUnnamed: true,
-                },
-                {
-                    tag: "MorType",
-                    morType: { tag: "Composite", content:
-                               [
-                                   { tag: "Basic", content: "Negative"},
                                    { tag: "Basic", content: "Degree"},
-                                   { tag: "Basic", content: "Delay"},
+                                   { tag: "Basic", content: "Degree"},
+                                   { tag: "Basic", content: "Degree"},
                                ] },
-                    name: "Negative degree 1 with delay",
-                    description: "Delayed negative influence on the derivative",
-                    arrowStyle: "minusDegDelay",
+                    name: "Positive degree 4",
+                    description: "Positive influence on the FOURTH derivative 🤯🤯",
+                    arrowStyle: "plusDeg",
                     preferUnnamed: true,
                 },
+                // {
+                //     tag: "MorType",
+                //     morType: { tag: "Basic", content: "Delay" },
+                //     name: "Positive degree 0 with delay",
+                //     description: "Delayed positive influence",
+                //     arrowStyle: "plusDelay",
+                //     preferUnnamed: true,
+                // },
+                // {
+                //     tag: "MorType",
+                //     morType: { tag: "Composite", content:
+                //                [
+                //                    { tag: "Basic", content: "Negative"},
+                //                    { tag: "Basic", content: "Delay"},
+                //                ] },
+                //     name: "Negative degree 0 with delay",
+                //     description: "Delayed negative influence",
+                //     arrowStyle: "minusDelay",
+                //     preferUnnamed: true,
+                // },
+                // {
+                //     tag: "MorType",
+                //     morType: { tag: "Composite", content:
+                //                [
+                //                    { tag: "Basic", content: "Degree"},
+                //                    { tag: "Basic", content: "Delay"},
+                //                ] },
+                //     name: "Positive degree 1 with delay",
+                //     description: "Delayed positive influence on the derivative",
+                //     arrowStyle: "plusDegDelay",
+                //     preferUnnamed: true,
+                // },
+                // {
+                //     tag: "MorType",
+                //     morType: { tag: "Composite", content:
+                //                [
+                //                    { tag: "Basic", content: "Negative"},
+                //                    { tag: "Basic", content: "Degree"},
+                //                    { tag: "Basic", content: "Delay"},
+                //                ] },
+                //     name: "Negative degree 1 with delay",
+                //     description: "Delayed negative influence on the derivative",
+                //     arrowStyle: "minusDegDelay",
+                //     preferUnnamed: true,
+                // },
             ],
             modelAnalyses: [
                 analyses.configureModelGraph({
                     id: "diagram",
                     name: "Visualization",
                     description: "Visualize the enriched causal loop diagram",
+                }),
+                analyses.configureLCC({
+                    simulate: (model, data) => thNN2Category.lcc(model, data),
                 }),
             ],
         });

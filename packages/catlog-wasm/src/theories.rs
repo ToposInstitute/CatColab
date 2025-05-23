@@ -10,6 +10,7 @@ use ustr::ustr;
 use wasm_bindgen::prelude::*;
 
 use catlog::dbl::{model, theory};
+use catlog::dbl::model::MutDblModel;
 use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories};
 
@@ -209,7 +210,7 @@ impl ThDelayableSignedCategory {
     }
 }
 
-/// The theory of N-graded signed categories.
+/// The theory of (N x N)-graded signed categories.
 #[wasm_bindgen]
 pub struct ThNN2Category(Rc<theory::UstrDiscreteDblTheory>);
 
@@ -225,49 +226,30 @@ impl ThNN2Category {
         DblTheory(self.0.clone().into())
     }
 
-    // /// Find degree zero positive feedback loops in a model.
-    // #[wasm_bindgen(js_name = "positiveZeroLoops")]
-    // pub fn positive_zero_loops(
-    //     &self,
-    //     model: &DblModel,
-    //     options: MotifsOptions,
-    // ) -> Result<Vec<DblModel>, String> {
-    //     let positive_zero_loop = models::positive_loop(self.0.clone());
-    //     motifs(&positive_zero_loop, model, options)
-    // }
-
-    // /// Find (fast) negative feedback loops in a model.
-    // #[wasm_bindgen(js_name = "negativeLoops")]
-    // pub fn negative_loops(
-    //     &self,
-    //     model: &DblModel,
-    //     options: MotifsOptions,
-    // ) -> Result<Vec<DblModel>, String> {
-    //     let negative_loop = models::negative_loop(self.0.clone());
-    //     motifs(&negative_loop, model, options)
-    // }
-
-    // /// Find degree one positive feedback loops in a model.
-    // #[wasm_bindgen(js_name = "positiveOneLoops")]
-    // pub fn positive_one_loops(
-    //     &self,
-    //     model: &DblModel,
-    //     options: MotifsOptions,
-    // ) -> Result<Vec<DblModel>, String> {
-    //     let positive_one_loop = models::degree_one_positive_loop(self.0.clone());
-    //     motifs(&positive_one_loop, model, options)
-    // }
-
-    // /// Find delayed negative feedback loops in a model.
-    // #[wasm_bindgen(js_name = "delayedNegativeLoops")]
-    // pub fn delayed_negative_loops(
-    //     &self,
-    //     model: &DblModel,
-    //     options: MotifsOptions,
-    // ) -> Result<Vec<DblModel>, String> {
-    //     let delayed_negative_loop = models::delayed_negative_loop(self.0.clone());
-    //     motifs(&delayed_negative_loop, model, options)
-    // }
+    /// Simulate the LCC system derived from a model.
+    #[wasm_bindgen(js_name = "lcc")]
+    pub fn lcc(
+        &self,
+        model: &DblModel,
+        data: LCCModelData,
+    ) -> Result<ODEResult, String> {
+        let model: &model::DiscreteDblModel<_, _> = (&model.0)
+            .try_into()
+            .map_err(|_| "LCC simulation expects a discrete double model")?;
+        let mut migrated_model = model.clone();
+        let (x, f) = (uuid::Uuid::now_v7(), uuid::Uuid::now_v7());
+        migrated_model.add_ob(x, ustr("Object"));
+        migrated_model.add_mor(f, x, x, catlog::one::Path::Id(ustr("Object")));
+        Ok(ODEResult(
+            analyses::ode::LCCAnalysis::new(ustr("Object"))
+                .add_positive(Path::Id(ustr("Object")))
+                .add_negative(ustr("Negative").into())
+                .create_system(&migrated_model, data.0, x, f)
+                .solve_with_defaults()
+                .map_err(|err| format!("{:?}", err))
+                .into(),
+        ))
+    }
 }
 
 /// The theory of nullable signed categories.

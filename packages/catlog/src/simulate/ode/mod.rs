@@ -153,9 +153,12 @@ pub(crate) fn textplot_ode_result<Sys>(
 #[allow(non_snake_case)]
 pub mod lotka_volterra;
 #[allow(non_snake_case)]
+pub mod lcc;
+#[allow(non_snake_case)]
 pub mod cclfo;
 pub mod polynomial;
 
 pub use lotka_volterra::*;
+pub use lcc::*;
 pub use cclfo::*;
 pub use polynomial::*;
