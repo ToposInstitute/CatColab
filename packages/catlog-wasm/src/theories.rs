@@ -237,9 +237,79 @@ impl ThNN2Category {
             .try_into()
             .map_err(|_| "LCC simulation expects a discrete double model")?;
         let mut migrated_model = model.clone();
+
+        // // 1. build an objects hash
+        // for each x in model.objects {
+        //     model_objects_hash.insert(x, 1)
+        // }
+
+        // // 2. update the hash to have the top-degree morphism's degree
+        // for each f in model.morphisms {
+        //     if (deg(f) > model_objects_hash[cod(f)]) {
+        //         model_objects_hash[cod(f)] = deg(f)
+        //     }
+        //     if (deg(f) > 1) {
+        //         model_morphisms_to_lift.insert(f)
+        //     } else if (deg(f) = 0) {
+        //         model_morphisms_deg_0.insert(f)
+        //         model.morphisms.remove(f)
+        //     }
+        // }
+
+        // // 3. make all the formal derivative objects and the morphisms between them
+        // formal_objects = {}
+        // for each x in model.objects {
+        //     for (i = 1 .. model_objects_hash[x] - 1) {
+        //         model.objects.insert(xi)
+        //         model.morphisms.insert(xi->x(i-1))
+        //     }
+        // }
+
+        // // 4. lift all morphisms to the top of the towers
+        // for each f in model_morphisms_to_lift {
+        //     model.morphisms.insert(dom(f)->xi) where i = deg(f)-1
+        //     model.morphisms.remove(f)
+        // }
+
+        // ---------------------------------------------------------------------
+
+        // create_system(&model, data.0, model_morphisms_deg_zero)
+
+        // // 1.
+        // for each (x, _) in model.objects {
+        //     model_formal_towers.insert(x, [])
+        // }
+
+        // // 2.
+        // for each f in (map fst model.morphisms) {
+        //     case of deg(f):
+        //         deg(f) == 0 {
+        //             model_morphisms_deg_zero.insert(f)
+        //             model.morphisms.remove(f)
+        //         }
+        //         deg(f) > 1 {
+        //             new_cod = get_or_create(cod(f).id, deg(f))
+        //             model.morphisms.insert(new_uuid, cod(f).id, dom(f).id, "Deg")
+        //             model.morphisms.remove(f)
+        //         }
+        //         deg(f) == 1 {
+        //             return
+        //         }
+        // }
+
+        // // 3.
+        // fn get_or_create(base, deg) {
+        //     // TO-DO
+        // }
+
+
+
         let (x, f) = (uuid::Uuid::now_v7(), uuid::Uuid::now_v7());
         migrated_model.add_ob(x, ustr("Object"));
         migrated_model.add_mor(f, x, x, catlog::one::Path::Id(ustr("Object")));
+
+
+
         Ok(ODEResult(
             analyses::ode::LCCAnalysis::new(ustr("Object"))
                 .add_positive(Path::Id(ustr("Object")))
