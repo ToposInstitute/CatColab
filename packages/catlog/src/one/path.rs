@@ -57,7 +57,7 @@ impl<V, E> From<E> for Path<V, E> {
     }
 }
 
-/// Converts the path into an iterater over its edges.
+/// Converts the path into an iterator over its edges.
 impl<V, E> IntoIterator for Path<V, E> {
     type Item = E;
     type IntoIter = Either<std::iter::Empty<E>, <NonEmpty<E> as IntoIterator>::IntoIter>;

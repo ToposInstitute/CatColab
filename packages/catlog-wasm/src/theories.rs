@@ -4,17 +4,20 @@ Each struct in this module provides a [`DblTheory`] plus possibly
 theory-specific analysis methods.
  */
 
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use ustr::ustr;
 use wasm_bindgen::prelude::*;
 
-use catlog::dbl::{model, theory};
 use catlog::dbl::model::MutDblModel;
+use catlog::dbl::model::FgDblModel;
+use catlog::dbl::{model, theory};
+use catlog::one::FgCategory;
 use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories};
 
-use super::model_morphism::{motifs, MotifsOptions};
+use super::model_morphism::{MotifsOptions, motifs};
 use super::{analyses::*, model::DblModel, theory::DblTheory};
 
 /// The empty or initial theory.
@@ -129,11 +132,7 @@ impl ThSignedCategory {
 
     /// Simulate the CCLFO system derived from a model.
     #[wasm_bindgen(js_name = "cclfo")]
-    pub fn cclfo(
-        &self,
-        model: &DblModel,
-        data: CCLFOModelData,
-    ) -> Result<ODEResult, String> {
+    pub fn cclfo(&self, model: &DblModel, data: CCLFOModelData) -> Result<ODEResult, String> {
         let model: &model::DiscreteDblModel<_, _> = (&model.0)
             .try_into()
             .map_err(|_| "CCLFO simulation expects a discrete double model")?;
@@ -228,87 +227,110 @@ impl ThNN2Category {
 
     /// Simulate the LCC system derived from a model.
     #[wasm_bindgen(js_name = "lcc")]
-    pub fn lcc(
-        &self,
-        model: &DblModel,
-        data: LCCModelData,
-    ) -> Result<ODEResult, String> {
+    pub fn lcc(&self, model: &DblModel, data: LCCModelData) -> Result<ODEResult, String> {
         let model: &model::DiscreteDblModel<_, _> = (&model.0)
             .try_into()
             .map_err(|_| "LCC simulation expects a discrete double model")?;
+
+        // Pre-processing the model: creating objects for each derivative and
+        // lifting all morphisms to be degree 1
+
+        // TO-DO: actually make a new model (modified_model) and pass THIS into
+        // the analysis (remember to e.g. not add anything in degree_zeros)
+
+        // tower_heights: [(base, height of corresponding tower)]
+        // in_arrows: [(object, morphisms to this object)]
+        // degree_zeros: [morphisms of degree 0]
+        let mut tower_heights: HashMap<uuid::Uuid, usize> = HashMap::new();
+        let mut in_arrows: HashMap<uuid::Uuid, Vec<uuid::Uuid>> = HashMap::new();
+        for x in model.ob_generators() {
+            tower_heights.insert(x, 0);
+            in_arrows.insert(x, Vec::new());
+        };
+        let mut degree_zeros: Vec<uuid::Uuid> = Vec::new();
+
+        // To start, we have yet to build any of the towers, so everything is
+        // unchecked
+        // TO-DO: consider making this a BinaryHeap ?
+        let mut unchecked_bases: Vec<uuid::Uuid> = model.ob_generators().collect::<Vec<_>>().clone();
+
+        // Given a morphism, return its degree as a usize
+        let deg = |f: uuid::Uuid| {
+            model.mor_generator_type(&f)
+            .into_iter()
+            .filter(|t| *t == ustr("Degree"))
+            .count()
+        };
+
+        // First pass, calculating maximal incoming degree for each base
+        for f in model.mor_generators() {
+            let degree = deg(f);
+            if degree == 0 {
+                degree_zeros.push(f);
+            }
+
+            let f_cod = model
+                .get_cod(&f)
+                .expect("DEV_ERROR: pied wagtail");
+
+            let new_degree = match tower_heights.get(f_cod) {
+                Some(height) => std::cmp::max(*height, degree - 1),
+                None => degree - 1
+            };
+
+            tower_heights.insert(*f_cod, new_degree);
+
+            // While we're here, we might as well also...
+            in_arrows.get_mut(f_cod).expect("DEV_ERROR: coot").push(f);
+        }
+
+        // If a tower isn't big enough, add more floors
+        fn update_tower(x: &uuid::Uuid, h: usize, tower: &mut HashMap<uuid::Uuid, usize>) {
+            let current_height = tower.get(&x).expect("DEV_ERROR: chaffinch");
+            if h > *current_height {
+                tower.insert(*x, h);
+            }
+            return;
+        }
+
+        // Iterate over all unchecked bases, starting with (one of) the one(s)
+        // with greatest current height
+        while !unchecked_bases.is_empty() {
+            unchecked_bases.sort_by(|x, y| {
+                let height = |base| tower_heights
+                    .get(base)
+                    .expect("DEV_ERROR: gosling");
+                // we want to sort small to big, so we can pop later on
+                height(y).cmp(height(x))
+            });
+
+            let current_base = unchecked_bases.pop().expect("DEV_ERROR: emu");
+            // TO-DO: why do we need a .clone() here and nowhere else?
+            let current_height = tower_heights.get(&current_base).expect("DEV_ERROR: lorikeet").clone();
+            for f in in_arrows.get(&current_base).expect("DEV_ERROR: cygnet") {
+                update_tower(model.get_dom(&f).expect("DEV_ERROR: rosella"), current_height - deg(*f) + 1, &mut tower_heights);
+            }
+        }
+
+        let mut derivative_towers: HashMap<uuid::Uuid, Vec<uuid::Uuid>> = HashMap::new();
+        for (x, t) in tower_heights.into_iter() {
+            // derivative_towers.insert(x, )
+        }
+
+
+        // ----------
+
+
+        // add_positive(ustr("Degree").into())
+        // add_negative(????? something about composites ?????)
+        // create_system(&model, degree_zeros, data.0)
+
+        // START TEST CASE
         let mut migrated_model = model.clone();
-
-        // // 1. build an objects hash
-        // for each x in model.objects {
-        //     model_objects_hash.insert(x, 1)
-        // }
-
-        // // 2. update the hash to have the top-degree morphism's degree
-        // for each f in model.morphisms {
-        //     if (deg(f) > model_objects_hash[cod(f)]) {
-        //         model_objects_hash[cod(f)] = deg(f)
-        //     }
-        //     if (deg(f) > 1) {
-        //         model_morphisms_to_lift.insert(f)
-        //     } else if (deg(f) = 0) {
-        //         model_morphisms_deg_0.insert(f)
-        //         model.morphisms.remove(f)
-        //     }
-        // }
-
-        // // 3. make all the formal derivative objects and the morphisms between them
-        // formal_objects = {}
-        // for each x in model.objects {
-        //     for (i = 1 .. model_objects_hash[x] - 1) {
-        //         model.objects.insert(xi)
-        //         model.morphisms.insert(xi->x(i-1))
-        //     }
-        // }
-
-        // // 4. lift all morphisms to the top of the towers
-        // for each f in model_morphisms_to_lift {
-        //     model.morphisms.insert(dom(f)->xi) where i = deg(f)-1
-        //     model.morphisms.remove(f)
-        // }
-
-        // ---------------------------------------------------------------------
-
-        // create_system(&model, data.0, model_morphisms_deg_zero)
-
-        // // 1.
-        // for each (x, _) in model.objects {
-        //     model_formal_towers.insert(x, [])
-        // }
-
-        // // 2.
-        // for each f in (map fst model.morphisms) {
-        //     case of deg(f):
-        //         deg(f) == 0 {
-        //             model_morphisms_deg_zero.insert(f)
-        //             model.morphisms.remove(f)
-        //         }
-        //         deg(f) > 1 {
-        //             new_cod = get_or_create(cod(f).id, deg(f))
-        //             model.morphisms.insert(new_uuid, cod(f).id, dom(f).id, "Deg")
-        //             model.morphisms.remove(f)
-        //         }
-        //         deg(f) == 1 {
-        //             return
-        //         }
-        // }
-
-        // // 3.
-        // fn get_or_create(base, deg) {
-        //     // TO-DO
-        // }
-
-
-
         let (x, f) = (uuid::Uuid::now_v7(), uuid::Uuid::now_v7());
         migrated_model.add_ob(x, ustr("Object"));
         migrated_model.add_mor(f, x, x, catlog::one::Path::Id(ustr("Object")));
-
-
+        // END TEST CASE
 
         Ok(ODEResult(
             analyses::ode::LCCAnalysis::new(ustr("Object"))

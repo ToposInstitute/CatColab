@@ -139,7 +139,7 @@ pub trait FgDblModel: DblModel + FgCategory {
         self.mor_generators().filter(|mor| self.mor_generator_type(mor) == *mortype)
     }
 
-    /// Iterators over basic objects with the given object type.
+    /// Iterates over basic objects with the given object type.
     fn objects_with_type(&self, obtype: &Self::ObType) -> impl Iterator<Item = Self::Ob> {
         self.ob_generators_with_type(obtype).map(|ob_gen| ob_gen.into())
     }
