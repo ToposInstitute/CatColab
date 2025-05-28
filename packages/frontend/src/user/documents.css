@@ -103,3 +103,7 @@
     padding-left: 1em;
     padding-right: 1em;
 }
+
+.ref-table .spinner {
+    display: block;
+}

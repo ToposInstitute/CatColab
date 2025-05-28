@@ -7,6 +7,7 @@ import { BrandedToolbar } from "../page";
 import { LoginGate } from "./login";
 import "./documents.css";
 import { useNavigate } from "@solidjs/router";
+import { Spinner } from "../components/spinner";
 
 export default function UserDocuments() {
     return (
@@ -99,7 +100,9 @@ function DocumentsSearch() {
                             >
                                 <Match when={pageData.loading}>
                                     <tr>
-                                        <td colspan="5">Loading...</td>
+                                        <td colspan="5">
+                                            <Spinner />
+                                        </td>
                                     </tr>
                                 </Match>
                                 <Match when={rpcResourceErr(pageData)}>
