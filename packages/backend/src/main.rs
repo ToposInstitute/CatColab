@@ -36,6 +36,16 @@ async fn main() {
         .await
         .expect("Failed to connect to database");
 
+    let state = app::AppState {
+        db: db.clone(),
+        automerge_io: None,
+    };
+
+    // Create search indexes
+    document::create_search_indexes(&state)
+        .await
+        .expect("Failed to create search indexes");
+
     let (io_layer, io) = SocketIo::new_layer();
 
     let state = app::AppState {

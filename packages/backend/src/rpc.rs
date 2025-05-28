@@ -28,6 +28,7 @@ pub fn router() -> Router<AppState> {
         .handler(get_active_user_profile)
         .handler(set_active_user_profile)
         .handler(search_snapshots_handler)
+        .handler(search_refs)
 }
 
 #[handler(mutation)]
@@ -148,6 +149,12 @@ async fn search_snapshots_handler(ctx: AppCtx, search_query: String) -> RpcResul
     // Call the search_snapshots function from your search module
     let results = search_snapshots(&ctx.state, &search_query).await?;
     Ok(results)
+}
+
+/// Search for document refs based on query parameters
+#[handler(query)]
+async fn search_refs(ctx: AppCtx, params: doc::RefQueryParams) -> RpcResult<Vec<doc::RefStub>> {
+    doc::search_ref_stubs(ctx, params).await.into()
 }
 
 /// Result returned by an RPC handler.
