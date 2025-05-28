@@ -1,0 +1,92 @@
+/* ProseMirror CSS seems not to be documented, but see the following sources:
+
+- https://github.com/ProseMirror/prosemirror-view/blob/master/style/prosemirror.css
+- https://github.com/ProseMirror/prosemirror-example-setup/blob/master/style/style.css
+*/
+
+.ProseMirror {
+    background: transparent;
+}
+
+.ProseMirror-focused {
+    outline: none;
+}
+
+.ProseMirror[data-placeholder]::before {
+    color: darkgray;
+    position: absolute;
+    content: attr(data-placeholder);
+    pointer-events: none;
+}
+
+.ref-id-view {
+    background-color: grey;
+    border-radius: 5px;
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+.menubar {
+    display: flex;
+    flex-direction: column;
+    /* justify-content: space-between; */
+    gap: 10px;
+    flex-direction: row;
+    justify-content: flex-start;
+    /* padding-bottom: 10px; */
+    /* align-items: stretch; */
+    /* gap: 10px; */
+}
+
+.menubar button {
+    padding: 5px;
+    border: none;
+    background-color: #f0f0f0;
+    cursor: pointer;
+}
+
+.menubar button.active {
+    background-color: #ccc;
+}
+
+.menubar .row {
+    display: flex;
+}
+
+.menubar .row select {
+    padding: 0.25em 0.5em;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+.captionedButton {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: stretch;
+    gap: 10px;
+    font-size: 10px;
+}
+
+.captionedButton {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: stretch;
+    gap: 10px;
+    font-size: 10px;
+}
+
+.captionedButton p {
+    visibility: hidden;
+    /* padding: 0; */
+    /* margin: 0; */
+}
+
+blockquote {
+    background: #f9f9f9;
+    border-left: 10px solid #ccc;
+    margin: 1em 10px;
+    padding: 0.5em 10px;
+    quotes: "\201C" "\201D" "\2018" "\2019";
+}
