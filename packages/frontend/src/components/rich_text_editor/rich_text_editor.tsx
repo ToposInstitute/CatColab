@@ -269,7 +269,6 @@ export function MenuBar(props: MenuControls & MarkStates & { headingLevel: numbe
         <div id="menubar" class="menubar">
             <Show when={props.onBoldClicked}>
                 <button
-                    id="bold"
                     onClick={() => props.onBoldClicked?.()}
                     classList={{ active: props.isBoldActive }}
                 >
@@ -278,7 +277,6 @@ export function MenuBar(props: MenuControls & MarkStates & { headingLevel: numbe
             </Show>
             <Show when={props.onItalicClicked}>
                 <button
-                    id="italic"
                     onClick={() => props.onItalicClicked?.()}
                     classList={{ active: props.isEmActive }}
                 >
@@ -292,9 +290,12 @@ export function MenuBar(props: MenuControls & MarkStates & { headingLevel: numbe
                 </button>
             </Show>
             <Show when={props.onMathClicked}>
-                <button onClick={() => props.onMathClicked?.()}>
+                <TooltipButton
+                    tooltip="KaTex block (shortuct: Mod+m)"
+                    onClick={() => props.onMathClicked?.()}
+                >
                     <Sigma />
-                </button>
+                </TooltipButton>
             </Show>
 
             <Show when={props.onHeadingClicked}>
@@ -347,13 +348,13 @@ export function MenuBar(props: MenuControls & MarkStates & { headingLevel: numbe
     );
 }
 
-// TODO: make the tooltip work
 function TooltipButton({
+    tooltip,
     onClick,
     children,
 }: { tooltip: string; onClick: () => void; children: JSX.Element }) {
     return (
-        <div class="captionedButton">
+        <div class="tooltipButton tooltip" data-tooltip={tooltip}>
             <button onClick={onClick}>{children}</button>
         </div>
     );

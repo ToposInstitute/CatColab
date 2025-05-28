@@ -59,34 +59,50 @@
     font-size: 0.9em;
 }
 
-.captionedButton {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    align-items: stretch;
-    gap: 10px;
-    font-size: 10px;
-}
-
-.captionedButton {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    align-items: stretch;
-    gap: 10px;
-    font-size: 10px;
-}
-
-.captionedButton p {
-    visibility: hidden;
-    /* padding: 0; */
-    /* margin: 0; */
-}
-
 blockquote {
     background: #f9f9f9;
     border-left: 10px solid #ccc;
     margin: 1em 10px;
     padding: 0.5em 10px;
     quotes: "\201C" "\201D" "\2018" "\2019";
+}
+
+.tooltipButton {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: stretch;
+    gap: 10px;
+    font-size: 10px;
+}
+
+/* make sure .tooltipButton (or .tooltip) is positioned */
+.tooltipButton.tooltip {
+    position: relative;
+    display: inline-block;
+}
+
+/* create the tooltip bubble */
+.tooltipButton.tooltip::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%; /* sit above the button */
+    left: 50%;
+    transform: translateX(-50%) translateY(-4px);
+    white-space: nowrap;
+    background: rgba(0, 0, 0, 0.75);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease-in-out;
+    z-index: 10;
+}
+
+/* show the tooltip on hover/focus */
+.tooltipButton.tooltip:hover::after,
+.tooltipButton.tooltip:focus-within::after {
+    opacity: 1;
 }
