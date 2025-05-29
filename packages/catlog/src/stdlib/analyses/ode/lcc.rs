@@ -102,7 +102,7 @@ impl LCCAnalysis {
             for mor in model.mor_generators_with_type(mor_type) {
                 let i = *ob_index.get(&model.mor_generator_dom(&mor)).unwrap();
                 let j = *ob_index.get(&model.mor_generator_cod(&mor)).unwrap();
-                A[(j, i)] -= data.interaction_coeffs.get(&mor).copied().unwrap_or_default();
+                A[(j, i)] -= data.interaction_coeffs.get(&mor).copied().unwrap_or(1.0);
             }
         }
 

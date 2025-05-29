@@ -436,8 +436,21 @@ stdTheories.add(
                                    { tag: "Basic", content: "Degree"},
                                ] },
                     name: "Positive degree 2",
-                    description: "Positive influence on the SECOND derivative 🤯",
+                    description: "Positive influence on the SECOND derivative 📈",
                     arrowStyle: "plusDeg",
+                    preferUnnamed: true,
+                },
+                {
+                    tag: "MorType",
+                    morType: { tag: "Composite", content:
+                               [
+                                   { tag: "Basic", content: "Negative"},
+                                   { tag: "Basic", content: "Degree"},
+                                   { tag: "Basic", content: "Degree"},
+                               ] },
+                    name: "Negative degree 2",
+                    description: "Negative influence on the SECOND derivative 📉",
+                    arrowStyle: "minusDeg",
                     preferUnnamed: true,
                 },
                 {

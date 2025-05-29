@@ -275,6 +275,13 @@ impl ThNN2Category {
             .count()
         };
 
+        let mor_sign = |f: &uuid::Uuid| {
+            model.mor_generator_type(f)
+            .into_iter()
+            .filter(|t| *t == ustr("Negative"))
+            .count()%2
+        };
+
         // First pass, calculating maximal incoming degree for each base
         for f in model.mor_generators() {
             let degree = mor_deg(&f);
@@ -366,7 +373,11 @@ impl ThNN2Category {
                 let h = tower_heights.get(x).expect("gull");
                 let new_dom = dom_tower[h - d];
                 let &new_cod = x_tower.last().expect("pelican");
-                cld_model.add_mor(*f, new_dom, new_cod, Path::Id(ustr("Object")));
+                match mor_sign(f) {
+                    0 => cld_model.add_mor(*f, new_dom, new_cod, Path::Id(ustr("Object"))),
+                    1 => cld_model.add_mor(*f, new_dom, new_cod, ustr("Negative").into()),
+                    _ => panic!("an integer was found to be neither odd nor even")
+                }
                 log.push_str(&format!("ADDING MORPHISM {f} OF DEGREE {d}\nFROM {new_dom} TO {new_cod}\n\n"));
             }
         }
