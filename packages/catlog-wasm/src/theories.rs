@@ -232,6 +232,9 @@ impl ThNN2Category {
             .try_into()
             .map_err(|_| "LCC simulation expects a discrete double model")?;
 
+        // TO-DO: DELETE ME
+        let mut log = String::new();
+
         // Pre-processing the model: creating new objects for each derivative
         // and ifting all morphisms to be degree 1
 
@@ -328,12 +331,13 @@ impl ThNN2Category {
         // Now we actually build up the towers of derivatives for each variable
         let mut derivative_towers: HashMap<uuid::Uuid, Vec<uuid::Uuid>> = HashMap::new();
         for (x, h) in tower_heights.iter_mut() {
+            log.push_str(&format!("BUILDING TOWER FOR OBJECT {x} OF HEIGHT {h}\n\n"));
             // First of all, we add the object from our original model
             derivative_towers.insert(*x, vec![*x]);
             cld_model.add_ob(*x, ustr("Object"));
 
             // Now let's build our tower of formal derivatives for the object
-            for _i in 1..=*h {
+            for i in 1..*h {
                 let x_i = fresh_uuid();
                 cld_model.add_ob(x_i, ustr("Object"));
                 let &x_iminusone = derivative_towers
@@ -346,6 +350,7 @@ impl ThNN2Category {
                     .get_mut(&x)
                     .expect("brolga")
                     .push(x_i);
+                log.push_str(&format!("ADDING NEW OBJECT {x_i} AT FLOOR {i}\n\n"));
             }
         }
 
@@ -357,13 +362,16 @@ impl ThNN2Category {
             for f in arrows_into_x {
                 let d = mor_deg(f);
                 let dom = model.get_dom(f).expect("robin");
-                let dom_tower = derivative_towers.get(dom).expect("horse");
+                let dom_tower = derivative_towers.get(dom).expect("penguin");
                 let h = tower_heights.get(x).expect("gull");
-                let new_dom = dom_tower[h - d + 1];
+                let new_dom = dom_tower[h - d];
                 let &new_cod = x_tower.last().expect("pelican");
                 cld_model.add_mor(*f, new_dom, new_cod, Path::Id(ustr("Object")));
+                log.push_str(&format!("ADDING MORPHISM {f} OF DEGREE {d}\nFROM {new_dom} TO {new_cod}\n\n"));
             }
         }
+
+        // panic!("{log}");
 
         Ok(ODEResult(
             analyses::ode::LCCAnalysis::new(ustr("Object"))
@@ -374,27 +382,6 @@ impl ThNN2Category {
                 .map_err(|err| format!("{:?}", err))
                 .into(),
         ))
-
-
-        // ----------
-
-
-        // // START TEST CASE
-        // let mut migrated_model = model.clone();
-        // let (x, f) = (fresh_uuid(), fresh_uuid());
-        // migrated_model.add_ob(x, ustr("Object"));
-        // migrated_model.add_mor(f, x, x, Path::Id(ustr("Object")));
-
-        // Ok(ODEResult(
-        //     analyses::ode::LCCAnalysis::new(ustr("Object"))
-        //         .add_positive(Path::Id(ustr("Object")))
-        //         .add_negative(ustr("Negative").into())
-        //         .create_system(&migrated_model, data.0, x, f)
-        //         .solve_with_defaults()
-        //         .map_err(|err| format!("{:?}", err))
-        //         .into(),
-        // ))
-        // // END TEST CASE
     }
 }
 

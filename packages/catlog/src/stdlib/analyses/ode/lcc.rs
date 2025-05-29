@@ -89,16 +89,13 @@ impl LCCAnalysis {
             objects.iter().cloned().enumerate().map(|(i, x)| (x, i)).collect();
 
         let n = objects.len();
-        
-        // data.initial_values.insert(x, 0.1);
-        // data.interaction_coeffs.insert(f, 1.0);
 
         let mut A = DMatrix::from_element(n, n, 0.0f32);
         for mor_type in self.positive_mor_types.iter() {
             for mor in model.mor_generators_with_type(mor_type) {
                 let i = *ob_index.get(&model.mor_generator_dom(&mor)).unwrap();
                 let j = *ob_index.get(&model.mor_generator_cod(&mor)).unwrap();
-                A[(j, i)] += data.interaction_coeffs.get(&mor).copied().unwrap_or_default();
+                A[(j, i)] += data.interaction_coeffs.get(&mor).copied().unwrap_or(1.0);
             }
         }
         for mor_type in self.negative_mor_types.iter() {
@@ -111,7 +108,7 @@ impl LCCAnalysis {
 
         let initial_values = objects
             .iter()
-            .map(|ob| data.initial_values.get(ob).copied().unwrap_or_default());
+            .map(|ob| data.initial_values.get(ob).copied().unwrap_or(1.0));
         let x0 = DVector::from_iterator(n, initial_values);
 
         let system = LCCSystem::new(A);
