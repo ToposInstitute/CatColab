@@ -78,9 +78,7 @@ impl LCCAnalysis {
     pub fn create_system<Id>(
         &self,
         model: &Model<Id>,
-        mut data: LCCProblemData<Id>,
-        x: Id,
-        f: Id
+        mut data: LCCProblemData<Id>
     ) -> ODEAnalysis<Id, LCCSystem>
     where
         Id: Eq + Clone + Hash + Ord,
@@ -91,9 +89,9 @@ impl LCCAnalysis {
             objects.iter().cloned().enumerate().map(|(i, x)| (x, i)).collect();
 
         let n = objects.len();
-
-        data.initial_values.insert(x, 0.1);
-        data.interaction_coeffs.insert(f, 1.0);
+        
+        // data.initial_values.insert(x, 0.1);
+        // data.interaction_coeffs.insert(f, 1.0);
 
         let mut A = DMatrix::from_element(n, n, 0.0f32);
         for mor_type in self.positive_mor_types.iter() {

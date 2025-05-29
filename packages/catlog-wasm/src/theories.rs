@@ -250,7 +250,7 @@ impl ThNN2Category {
         let mut tower_heights: HashMap<uuid::Uuid, usize> = HashMap::new();
         let mut in_arrows: HashMap<uuid::Uuid, Vec<uuid::Uuid>> = HashMap::new();
         for x in model.ob_generators() {
-            tower_heights.insert(x, 0);
+            tower_heights.insert(x, 1);
             in_arrows.insert(x, Vec::new());
         };
         let mut degree_zeros: Vec<uuid::Uuid> = Vec::new();
@@ -264,8 +264,9 @@ impl ThNN2Category {
             .clone();
 
         // Given a morphism, return its degree as a usize
-        let deg = |f: uuid::Uuid| {
-            model.mor_generator_type(&f)
+        // TO-DO: take a *pointer* to f
+        let mor_deg = |f: &uuid::Uuid| {
+            model.mor_generator_type(f)
             .into_iter()
             .filter(|t| *t == ustr("Degree"))
             .count()
@@ -273,7 +274,7 @@ impl ThNN2Category {
 
         // First pass, calculating maximal incoming degree for each base
         for f in model.mor_generators() {
-            let degree = deg(f);
+            let degree = mor_deg(&f);
             if degree == 0 {
                 degree_zeros.push(f);
             }
@@ -282,10 +283,7 @@ impl ThNN2Category {
                 .get_cod(&f)
                 .expect("pied wagtail");
 
-            let new_degree = match tower_heights.get(f_cod) {
-                Some(height) => std::cmp::max(*height, degree - 1),
-                None => degree - 1
-            };
+            let new_degree = std::cmp::max(*tower_heights.get(f_cod).expect("currawong"), degree);
 
             tower_heights.insert(*f_cod, new_degree);
 
@@ -322,28 +320,28 @@ impl ThNN2Category {
             for f in in_arrows.get(&current_base).expect("cygnet") {
                 update_tower(
                     model.get_dom(&f).expect("rosella"),
-                    current_height - deg(*f) + 1, &mut tower_heights
+                    current_height - mor_deg(f) + 1, &mut tower_heights
                 );
             }
         }
 
         // Now we actually build up the towers of derivatives for each variable
         let mut derivative_towers: HashMap<uuid::Uuid, Vec<uuid::Uuid>> = HashMap::new();
-        for (x, h) in tower_heights.into_iter() {
-            // First of all, let's add the object from our original model
-            derivative_towers.insert(x, vec![x]);
-            cld_model.add_ob(x, ustr("Object"));
+        for (x, h) in tower_heights.iter_mut() {
+            // First of all, we add the object from our original model
+            derivative_towers.insert(*x, vec![*x]);
+            cld_model.add_ob(*x, ustr("Object"));
 
-            // Now let's build all our towers of formal derivatives
-            for _i in 1..=h {
+            // Now let's build our tower of formal derivatives for the object
+            for _i in 1..=*h {
                 let x_i = fresh_uuid();
+                cld_model.add_ob(x_i, ustr("Object"));
                 let &x_iminusone = derivative_towers
                     .get(&x)
                     .expect("peahen")
                     .last()
                     .expect("warbler");
-                cld_model.add_ob(x_i, ustr("Object"));
-                cld_model.add_mor(fresh_uuid(), x_i, x_iminusone, ustr("Degree").into());
+                cld_model.add_mor(fresh_uuid(), x_i, x_iminusone, Path::Id(ustr("Object")));
                 derivative_towers
                     .get_mut(&x)
                     .expect("brolga")
@@ -351,30 +349,52 @@ impl ThNN2Category {
             }
         }
 
-
-        // ----------
-
-
-        // add_positive(ustr("Degree").into())
-        // add_negative(????? something about composites ?????)
-        // create_system(&cld_model, degree_zeros, data.0)
-
-        // START TEST CASE
-        let mut migrated_model = model.clone();
-        let (x, f) = (fresh_uuid(), fresh_uuid());
-        migrated_model.add_ob(x, ustr("Object"));
-        migrated_model.add_mor(f, x, x, Path::Id(ustr("Object")));
-        // END TEST CASE
+        // Lift all morphisms to have codomain as the top degree of the tower
+        // above their current codomain, and then add them to the CLD model
+        for (x, x_tower) in derivative_towers.iter() {
+            // TO-DO: rewrite this to be not terrible
+            let arrows_into_x = in_arrows.get(&x).expect("auk");
+            for f in arrows_into_x {
+                let d = mor_deg(f);
+                let dom = model.get_dom(f).expect("robin");
+                let dom_tower = derivative_towers.get(dom).expect("horse");
+                let h = tower_heights.get(x).expect("gull");
+                let new_dom = dom_tower[h - d + 1];
+                let &new_cod = x_tower.last().expect("pelican");
+                cld_model.add_mor(*f, new_dom, new_cod, Path::Id(ustr("Object")));
+            }
+        }
 
         Ok(ODEResult(
             analyses::ode::LCCAnalysis::new(ustr("Object"))
                 .add_positive(Path::Id(ustr("Object")))
                 .add_negative(ustr("Negative").into())
-                .create_system(&migrated_model, data.0, x, f)
+                .create_system(&cld_model, data.0)
                 .solve_with_defaults()
                 .map_err(|err| format!("{:?}", err))
                 .into(),
         ))
+
+
+        // ----------
+
+
+        // // START TEST CASE
+        // let mut migrated_model = model.clone();
+        // let (x, f) = (fresh_uuid(), fresh_uuid());
+        // migrated_model.add_ob(x, ustr("Object"));
+        // migrated_model.add_mor(f, x, x, Path::Id(ustr("Object")));
+
+        // Ok(ODEResult(
+        //     analyses::ode::LCCAnalysis::new(ustr("Object"))
+        //         .add_positive(Path::Id(ustr("Object")))
+        //         .add_negative(ustr("Negative").into())
+        //         .create_system(&migrated_model, data.0, x, f)
+        //         .solve_with_defaults()
+        //         .map_err(|err| format!("{:?}", err))
+        //         .into(),
+        // ))
+        // // END TEST CASE
     }
 }
 
