@@ -232,11 +232,17 @@ impl ThNN2Category {
             .try_into()
             .map_err(|_| "LCC simulation expects a discrete double model")?;
 
-        // Pre-processing the model: creating objects for each derivative and
-        // lifting all morphisms to be degree 1
+        // Pre-processing the model: creating new objects for each derivative
+        // and ifting all morphisms to be degree 1
 
-        // TO-DO: actually make a new model (modified_model) and pass THIS into
-        // the analysis (remember to e.g. not add anything in degree_zeros)
+        // We will end up creating a CLD corresponding to our ECLD, where we
+        // interpret all arrows in our CLD as being morphisms of degree 1
+        let mut cld_model: model::DiscreteDblModel<uuid::Uuid, _> = model::DiscreteDblModel::new(Rc::new(theories::th_signed_category()));
+
+        // TO-DO: is this actually what we should be doing with IDs?
+        fn fresh_uuid() -> uuid::Uuid {
+            uuid::Uuid::now_v7()
+        }
 
         // tower_heights: [(base, height of corresponding tower)]
         // in_arrows: [(object, morphisms to this object)]
@@ -249,10 +255,13 @@ impl ThNN2Category {
         };
         let mut degree_zeros: Vec<uuid::Uuid> = Vec::new();
 
-        // To start, we have yet to build any of the towers, so everything is
-        // unchecked
+        // At the  start, we have yet to build any of the towers, so everything
+        // is unchecked
         // TO-DO: consider making this a BinaryHeap ?
-        let mut unchecked_bases: Vec<uuid::Uuid> = model.ob_generators().collect::<Vec<_>>().clone();
+        let mut unchecked_bases: Vec<uuid::Uuid> = model
+            .ob_generators()
+            .collect::<Vec<_>>()
+            .clone();
 
         // Given a morphism, return its degree as a usize
         let deg = |f: uuid::Uuid| {
@@ -271,7 +280,7 @@ impl ThNN2Category {
 
             let f_cod = model
                 .get_cod(&f)
-                .expect("DEV_ERROR: pied wagtail");
+                .expect("pied wagtail");
 
             let new_degree = match tower_heights.get(f_cod) {
                 Some(height) => std::cmp::max(*height, degree - 1),
@@ -281,12 +290,12 @@ impl ThNN2Category {
             tower_heights.insert(*f_cod, new_degree);
 
             // While we're here, we might as well also...
-            in_arrows.get_mut(f_cod).expect("DEV_ERROR: coot").push(f);
+            in_arrows.get_mut(f_cod).expect("coot").push(f);
         }
 
         // If a tower isn't big enough, add more floors
         fn update_tower(x: &uuid::Uuid, h: usize, tower: &mut HashMap<uuid::Uuid, usize>) {
-            let current_height = tower.get(&x).expect("DEV_ERROR: chaffinch");
+            let current_height = tower.get(&x).expect("chaffinch");
             if h > *current_height {
                 tower.insert(*x, h);
             }
@@ -299,22 +308,47 @@ impl ThNN2Category {
             unchecked_bases.sort_by(|x, y| {
                 let height = |base| tower_heights
                     .get(base)
-                    .expect("DEV_ERROR: gosling");
+                    .expect("gosling");
                 // we want to sort small to big, so we can pop later on
                 height(y).cmp(height(x))
             });
 
-            let current_base = unchecked_bases.pop().expect("DEV_ERROR: emu");
+            let current_base = unchecked_bases.pop().expect("emu");
             // TO-DO: why do we need a .clone() here and nowhere else?
-            let current_height = tower_heights.get(&current_base).expect("DEV_ERROR: lorikeet").clone();
-            for f in in_arrows.get(&current_base).expect("DEV_ERROR: cygnet") {
-                update_tower(model.get_dom(&f).expect("DEV_ERROR: rosella"), current_height - deg(*f) + 1, &mut tower_heights);
+            let current_height = tower_heights
+                .get(&current_base)
+                .expect("lorikeet")
+                .clone();
+            for f in in_arrows.get(&current_base).expect("cygnet") {
+                update_tower(
+                    model.get_dom(&f).expect("rosella"),
+                    current_height - deg(*f) + 1, &mut tower_heights
+                );
             }
         }
 
+        // Now we actually build up the towers of derivatives for each variable
         let mut derivative_towers: HashMap<uuid::Uuid, Vec<uuid::Uuid>> = HashMap::new();
-        for (x, t) in tower_heights.into_iter() {
-            // derivative_towers.insert(x, )
+        for (x, h) in tower_heights.into_iter() {
+            // First of all, let's add the object from our original model
+            derivative_towers.insert(x, vec![x]);
+            cld_model.add_ob(x, ustr("Object"));
+
+            // Now let's build all our towers of formal derivatives
+            for _i in 1..=h {
+                let x_i = fresh_uuid();
+                let &x_iminusone = derivative_towers
+                    .get(&x)
+                    .expect("peahen")
+                    .last()
+                    .expect("warbler");
+                cld_model.add_ob(x_i, ustr("Object"));
+                cld_model.add_mor(fresh_uuid(), x_i, x_iminusone, ustr("Degree").into());
+                derivative_towers
+                    .get_mut(&x)
+                    .expect("brolga")
+                    .push(x_i);
+            }
         }
 
 
@@ -323,13 +357,13 @@ impl ThNN2Category {
 
         // add_positive(ustr("Degree").into())
         // add_negative(????? something about composites ?????)
-        // create_system(&model, degree_zeros, data.0)
+        // create_system(&cld_model, degree_zeros, data.0)
 
         // START TEST CASE
         let mut migrated_model = model.clone();
-        let (x, f) = (uuid::Uuid::now_v7(), uuid::Uuid::now_v7());
+        let (x, f) = (fresh_uuid(), fresh_uuid());
         migrated_model.add_ob(x, ustr("Object"));
-        migrated_model.add_mor(f, x, x, catlog::one::Path::Id(ustr("Object")));
+        migrated_model.add_mor(f, x, x, Path::Id(ustr("Object")));
         // END TEST CASE
 
         Ok(ODEResult(
