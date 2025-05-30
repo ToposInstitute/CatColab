@@ -7,7 +7,15 @@ server for CatColab, written in TypeScript as a thin wrapper around
 It is not very useful on its own and is intended to run in conjunction with the
 CatColab [backend](../backend/). See there for more information.
 
-### Updating pnpm Dependencies with Nix
+### Error: Could not resolve "package"
+
+This error occurs during a Nix build when an imported package is missing from `package.json`. It
+typically happens when `package.json` is reset or edited without updating `node_modules`.
+
+To fix this, install the missing packages using `pnpm install`. After doing so, you'll also need to
+update `pnpmDeps.hash` in `default.nix`.
+
+### Updating pnpm dependencies with Nix
 Nix tracks dependencies using a fixed hash. If your pnpm dependencies change, you may encounter an error like:
 ```
 ERR_PNPM_NO_OFFLINE_TARBALL  A package is missing from the store but cannot download it in offline mode.
@@ -26,12 +34,17 @@ Replace it with:
 hash = pkgs.lib.fakeHash;
 ```
 
-#### Re-deploy
-Run your deployment command again. Nix will now compute the correct hash and fail with an error message like:
+#### Re-deploy or re-build
+Run your deployment/build command again. Nix will now compute the correct hash and fail with an error message like:
 ```
 error: hash mismatch in fixed-output derivation '/nix/store/xyz-automerge-doc-server-pnpm-deps.drv':
          specified: sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
             got:    sha256-tIgtzlslvm2A1UpwfVsYk3E9HkKJntu36gEtsFjswgo=
+```
+
+You can build locally without a deploy with the following commannd:
+```
+nix build .#nixosConfigurations.catcolab-next.config.system.build.toplevel
 ```
 
 #### Update the hash
