@@ -163,7 +163,7 @@ with lib;
 
       serviceConfig = {
         User = "catcolab";
-        ExecStart = "${lib.getExe pkgs.nodejs_23} ${catcolabPackages.automerge-doc-server}/main.cjs";
+        ExecStart = "${lib.getExe catcolabPackages.automerge-doc-server}";
         Type = "simple";
         Restart = "on-failure";
       };
