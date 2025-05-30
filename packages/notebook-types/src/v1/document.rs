@@ -20,12 +20,11 @@ impl From<v0::document::Document> for Document {
             v0::document::Document::Model(doc) => {
                 let metadata = Metadata::new(doc.name.clone());
                 let notebook = doc.notebook.into();
-                Document::new(metadata, notebook);
+                Document::new(metadata, notebook)
             }
             v0::document::Document::Diagram(doc) => todo!(),
             v0::document::Document::Analysis(doc) => todo!(),
         }
-        todo!()
     }
 }
 
@@ -103,25 +102,36 @@ pub enum FormalCell {
     },
 }
 
-impl From<v0::model_judgment::ModelDecl> for FormalCell {
-    fn from(value: v0::model_judgment::ModelDecl) -> Self {
+impl From<v0::model::Ob> for Reference {
+    fn from(value: v0::model::Ob) -> Self {
         match value {
-            v0::model_judgment::ModelDecl::ObjectDecl { name, ob_type, .. } => Self::Object {
+            v0::Ob::Basic(uuid) => Reference::Resolved(uuid),
+            v0::Ob::Tabulated(m) => match m {
+                v0::Mor::Basic(uuid) => Reference::Resolved(uuid),
+                _ => panic!("no v0 notebook should contain references to the tabulators of fancy morphisms"),
+            },
+        }
+    }
+}
+
+impl From<v0::model_judgment::ModelJudgment> for FormalCell {
+    fn from(value: v0::model_judgment::ModelJudgment) -> Self {
+        match value {
+            v0::model_judgment::ModelJudgment::Object(v0::model_judgment::ObDecl { name, ob_type, .. }) => Self::Object {
                 name,
                 r#type: ob_type,
             },
-            v0::model_judgment::ModelDecl::MorphismDecl {
+            v0::model_judgment::ModelJudgment::Morphism(v0::model_judgment::MorDecl {
                 name,
                 mor_type,
                 dom,
                 cod,
                 ..
-            } => Self::Morphism {
+            }) => Self::Morphism {
                 name,
                 r#type: mor_type,
-                dom: dom.into(),
-                cod: cod.into(),
-            },
+                dom: dom.map(|x| x.into()).unwrap_or_else(|| Reference::Unresolved(String::new())),
+                cod: cod.map(|x| x.into()).unwrap_or_else(|| Reference::Unresolved(String::new())),            },
         }
     }
 }

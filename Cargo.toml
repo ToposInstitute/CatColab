@@ -2,7 +2,7 @@
 resolver="2"
 
 members = [
-    "packages/backend",
+    "packages/backend", "packages/catlaborator",
     "packages/catlog",
     "packages/catlog-wasm",
     "packages/notebook-types",
