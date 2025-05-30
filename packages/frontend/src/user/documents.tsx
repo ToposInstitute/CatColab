@@ -123,41 +123,18 @@ function DocumentsSearch() {
                                     </tr>
                                 </Match>
                                 <Match when={rpcResourceOk(pageData)}>
-                                    {(pageData) => (
-                                        <>
-                                            <For each={pageData().content.items}>
-                                                {(stub) => <RefStubRow stub={stub} />}
-                                            </For>
-
-                                            <tr class="pagination-row">
-                                                <td colspan="5" style={{ "text-align": "center" }}>
-                                                    <button
-                                                        disabled={page() === 0}
-                                                        onClick={() => setPage(page() - 1)}
-                                                    >
-                                                        Previous
-                                                    </button>
-
-                                                    <span class="page-info">
-                                                        Page {page() + 1} of{" "}
-                                                        {Math.ceil(
-                                                            pageData().content.total / pageSize,
-                                                        ) || 1}
-                                                    </span>
-
-                                                    <button
-                                                        disabled={
-                                                            (page() + 1) * pageSize >=
-                                                            pageData().content.total
-                                                        }
-                                                        onClick={() => setPage(page() + 1)}
-                                                    >
-                                                        Next
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        </>
-                                    )}
+                                    {(res) => {
+                                        const { items, total } = res().content;
+                                        return (
+                                            <DocumentRowsPagination
+                                                items={items}
+                                                total={total}
+                                                page={page()}
+                                                setPage={setPage}
+                                                pageSize={pageSize}
+                                            />
+                                        );
+                                    }}
                                 </Match>
                             </Switch>
                         </tbody>
@@ -168,7 +145,43 @@ function DocumentsSearch() {
     );
 }
 
-export function RefStubRow(props: { stub: RefStub }) {
+function DocumentRowsPagination(props: {
+    items: RefStub[];
+    total: number;
+    page: number;
+    setPage: (p: number) => void;
+    pageSize: number;
+}) {
+    return (
+        <>
+            <For each={props.items}>{(stub) => <RefStubRow stub={stub} />}</For>
+
+            <tr class="pagination-row">
+                <td colspan={5} style={{ "text-align": "center" }}>
+                    <button
+                        disabled={props.page === 0}
+                        onClick={() => props.setPage(props.page - 1)}
+                    >
+                        Previous
+                    </button>
+
+                    <span class="page-info">
+                        Page {props.page + 1} of {Math.ceil(props.total / props.pageSize) || 1}
+                    </span>
+
+                    <button
+                        disabled={(props.page + 1) * props.pageSize >= props.total}
+                        onClick={() => props.setPage(props.page + 1)}
+                    >
+                        Next
+                    </button>
+                </td>
+            </tr>
+        </>
+    );
+}
+
+function RefStubRow(props: { stub: RefStub }) {
     const firebaseApp = useFirebaseApp();
     const auth = getAuth(firebaseApp);
     const navigate = useNavigate();
