@@ -7,7 +7,7 @@ use socketioxide::SocketIo;
 use ts_rs::TS;
 use uuid::Uuid;
 
-use crate::app::{AppCtx, AppError, AppState};
+use crate::app::{AppCtx, AppError, AppState, Paginated};
 use crate::{auth::PermissionLevel, user::UserSummary};
 
 /// Creates a new document ref with initial content.
@@ -244,6 +244,8 @@ pub struct RefQueryParams {
     pub searcher_min_level: Option<PermissionLevel>,
     #[serde(rename = "includePublicDocuments")]
     pub include_public_documents: Option<bool>,
+    pub limit: Option<i32>,
+    pub offset: Option<i32>,
     // TODO: add param for document type
 }
 
@@ -252,10 +254,13 @@ pub struct RefQueryParams {
 pub async fn search_ref_stubs(
     ctx: AppCtx,
     search_params: RefQueryParams,
-) -> Result<Vec<RefStub>, AppError> {
+) -> Result<Paginated<RefStub>, AppError> {
     let searcher_id = ctx.user.as_ref().map(|user| user.user_id.clone());
 
     let min_level = search_params.searcher_min_level.unwrap_or(PermissionLevel::Read);
+
+    let limit = search_params.limit.unwrap_or(100);
+    let offset = search_params.offset.unwrap_or(0);
 
     let results = sqlx::query!(
         r#"
@@ -283,7 +288,8 @@ pub async fn search_ref_stubs(
             effective_permissions.level AS "permission_level: PermissionLevel",
             owner.id AS "owner_id?",
             owner.username AS "owner_username?",
-            owner.display_name AS "owner_display_name?"
+            owner.display_name AS "owner_display_name?",
+            COUNT(*) OVER()::int4 AS total_count
         FROM refs
         JOIN snapshots ON snapshots.id = refs.head
         JOIN effective_permissions ON effective_permissions.object = refs.id
@@ -303,19 +309,24 @@ pub async fn search_ref_stubs(
             effective_permissions.level >= $4
         )
         ORDER BY refs.created DESC
-        LIMIT 1000;
+        LIMIT $6::int4
+        OFFSET $7::int4;
         "#,
         searcher_id,
         search_params.owner_username_query,
         search_params.ref_name_query,
         min_level as PermissionLevel,
         search_params.include_public_documents.unwrap_or(false),
+        limit,
+        offset,
     )
     .fetch_all(&ctx.state.db)
     .await?;
 
+    let total = results.first().and_then(|r| r.total_count).unwrap_or(0);
+
     // We can't use sqlx::query_as! because name and type_name can be null
-    let stubs = results
+    let items = results
         .into_iter()
         .map(|row| RefStub {
             ref_id: row.ref_id,
@@ -334,5 +345,9 @@ pub async fn search_ref_stubs(
         })
         .collect();
 
-    Ok(stubs)
+    Ok(Paginated {
+        total,
+        offset,
+        items,
+    })
 }
