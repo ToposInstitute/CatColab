@@ -131,6 +131,9 @@ with lib;
         Type = "oneshot";
         ExecStart = lib.getExe databaseMigrationScript;
         EnvironmentFile = config.age.secrets.backendSecretsForCatcolab.path;
+        Environment = ''
+          PATH=${lib.makeBinPath [ catcolabPackages.automerge-doc-server ]}:$PATH
+        '';
       };
     };
 
