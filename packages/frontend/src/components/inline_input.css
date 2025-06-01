@@ -12,10 +12,10 @@
 .inline-input-filler {
     display: inline-block;
     visibility: hidden;
-    white-space-collapse: preserve;
+    white-space: pre-wrap;
     padding-left: 5px;
     padding-right: 5px;
-    min-width: 1ex;
+    min-width: 1em;
 }
 
 .inline-input {
