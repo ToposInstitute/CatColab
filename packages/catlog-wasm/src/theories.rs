@@ -213,6 +213,25 @@ impl ThDelayableSignedCategory {
 #[wasm_bindgen]
 pub struct ThNN2Category(Rc<theory::UstrDiscreteDblTheory>);
 
+// TO-DO: remove this --- it's just for temporary logging
+#[wasm_bindgen]
+extern "C" {
+    // Use `js_namespace` here to bind `console.log(..)` instead of just
+    // `log(..)`
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
+
+    // The `console.log` is quite polymorphic, so we can bind it with multiple
+    // signatures. Note that we need to use `js_name` to ensure we always call
+    // `log` in JS.
+    #[wasm_bindgen(js_namespace = console, js_name = log)]
+    fn log_u32(a: u32);
+
+    // Multiple arguments too!
+    #[wasm_bindgen(js_namespace = console, js_name = log)]
+    fn log_many(a: &str, b: &str);
+}
+
 #[wasm_bindgen]
 impl ThNN2Category {
     #[wasm_bindgen(constructor)]
@@ -233,7 +252,7 @@ impl ThNN2Category {
             .map_err(|_| "LCC simulation expects a discrete double model")?;
 
         // TO-DO: DELETE ME
-        let mut log = String::new();
+        let mut debug_log = String::new();
 
         // Pre-processing the model: creating new objects for each derivative
         // and ifting all morphisms to be degree 1
@@ -267,7 +286,6 @@ impl ThNN2Category {
             .clone();
 
         // Given a morphism, return its degree as a usize
-        // TO-DO: take a *pointer* to f
         let mor_deg = |f: &uuid::Uuid| {
             model.mor_generator_type(f)
             .into_iter()
@@ -338,7 +356,7 @@ impl ThNN2Category {
         // Now we actually build up the towers of derivatives for each variable
         let mut derivative_towers: HashMap<uuid::Uuid, Vec<uuid::Uuid>> = HashMap::new();
         for (x, h) in tower_heights.iter_mut() {
-            log.push_str(&format!("BUILDING TOWER FOR OBJECT {x} OF HEIGHT {h}\n\n"));
+            debug_log.push_str(&format!("BUILDING TOWER FOR OBJECT {x} OF HEIGHT {h}\n\n"));
             // First of all, we add the object from our original model
             derivative_towers.insert(*x, vec![*x]);
             cld_model.add_ob(*x, ustr("Object"));
@@ -357,7 +375,7 @@ impl ThNN2Category {
                     .get_mut(&x)
                     .expect("brolga")
                     .push(x_i);
-                log.push_str(&format!("ADDING NEW OBJECT {x_i} AT FLOOR {i}\n\n"));
+                debug_log.push_str(&format!("ADDING NEW OBJECT {x_i} AT FLOOR {i}\n\n"));
             }
         }
 
@@ -378,11 +396,11 @@ impl ThNN2Category {
                     1 => cld_model.add_mor(*f, new_dom, new_cod, ustr("Negative").into()),
                     _ => panic!("an integer was found to be neither odd nor even")
                 }
-                log.push_str(&format!("ADDING MORPHISM {f} OF DEGREE {d}\nFROM {new_dom} TO {new_cod}\n\n"));
+                debug_log.push_str(&format!("ADDING MORPHISM {f} OF DEGREE {d}\nFROM {new_dom} TO {new_cod}\n\n"));
             }
         }
 
-        // panic!("{log}");
+        // log(&debug_log);
 
         Ok(ODEResult(
             analyses::ode::LCCAnalysis::new(ustr("Object"))
