@@ -165,6 +165,7 @@ with lib;
       };
 
       serviceConfig = {
+        EnvironmentFile = config.age.secrets.backendSecretsForCatcolab.path;
         User = "catcolab";
         ExecStart = "${lib.getExe catcolabPackages.automerge-doc-server}";
         Type = "simple";
