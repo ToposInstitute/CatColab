@@ -2,8 +2,8 @@ import { createMemo } from "solid-js";
 
 import type {
     DblModel,
-    LCCModelData,
-    LCCProblemData,
+    CCLModelData,
+    CCLProblemData,
     ODEResult,
 } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
@@ -20,29 +20,29 @@ import { createModelODEPlot } from "./simulation";
 
 import "./simulation.css";
 
-/** Configuration for a LCC ODE analysis of a model. */
-export type LCCContent = LCCProblemData<string>;
+/** Configuration for a CCL ODE analysis of a model. */
+export type CCLContent = CCLProblemData<string>;
 
-type Simulator = (model: DblModel, data: LCCModelData) => ODEResult;
+type Simulator = (model: DblModel, data: CCLModelData) => ODEResult;
 
-/** Configure a LCC ODE analysis for use with models of a theory. */
-export function configureLCC(options: {
+/** Configure a CCL ODE analysis for use with models of a theory. */
+export function configureCCL(options: {
     id?: string;
     name?: string;
     description?: string;
     simulate: Simulator;
-}): ModelAnalysisMeta<LCCContent> {
+}): ModelAnalysisMeta<CCLContent> {
     const {
-        id = "lcc",
-        name = "LCC dynamics",
-        description = "Simulate the system using a linear constant-coefficient ODE",
+        id = "ccl",
+        name = "CCL dynamics",
+        description = "Simulate the system using a constant-coefficient linear ODE",
         simulate,
     } = options;
     return {
         id,
         name,
         description,
-        component: (props) => <LCC simulate={simulate} title={name} {...props} />,
+        component: (props) => <CCL simulate={simulate} title={name} {...props} />,
         initialContent: () => ({
             interactionCoefficients: {},
             initialValues: {},
@@ -51,9 +51,9 @@ export function configureLCC(options: {
     };
 }
 
-/** Analyze a model using LCC dynamics. */
-export function LCC(
-    props: ModelAnalysisProps<LCCContent> & {
+/** Analyze a model using CCL dynamics. */
+export function CCL(
+    props: ModelAnalysisProps<CCLContent> & {
         simulate: Simulator;
         title?: string;
     },

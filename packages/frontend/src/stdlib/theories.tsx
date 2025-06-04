@@ -519,8 +519,8 @@ stdTheories.add(
                     name: "Visualization",
                     description: "Visualize the enriched causal loop diagram",
                 }),
-                analyses.configureLCC({
-                    simulate: (model, data) => thNN2Category.lcc(model, data),
+                analyses.configureCCL({
+                    simulate: (model, data) => thNN2Category.ccl(model, data),
                 }),
             ],
         });

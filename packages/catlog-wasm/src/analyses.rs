@@ -19,7 +19,7 @@ pub struct CCLFOModelData(pub analyses::ode::CCLFOProblemData<Uuid>);
 
 #[derive(Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
-pub struct LCCModelData(pub analyses::ode::LCCProblemData<Uuid>);
+pub struct CCLModelData(pub analyses::ode::CCLProblemData<Uuid>);
 
 #[derive(Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]

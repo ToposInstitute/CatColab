@@ -244,16 +244,16 @@ impl ThNN2Category {
         DblTheory(self.0.clone().into())
     }
 
-    /// Simulate the LCC system derived from a model.
-    #[wasm_bindgen(js_name = "lcc")]
-    pub fn lcc(&self, model: &DblModel, data: LCCModelData) -> Result<ODEResult, String> {
+    /// Simulate the CCL system derived from a model.
+    #[wasm_bindgen(js_name = "ccl")]
+    pub fn ccl(&self, model: &DblModel, data: CCLModelData) -> Result<ODEResult, String> {
         let model: &model::DiscreteDblModel<_, _> = (&model.0)
             .try_into()
-            .map_err(|_| "LCC simulation expects a discrete double model")?;
+            .map_err(|_| "CCL simulation expects a discrete double model")?;
 
         // TO-DO: DELETE ME
         let mut debug_log = String::new();
-        debug_log.push_str("ECLD to CLD migration for LCC dynamics\n\n");
+        debug_log.push_str("ECLD to CLD migration for CCL dynamics\n\n");
 
         // Pre-processing the model: creating new objects for each derivative
         // and ifting all morphisms to be degree 1
@@ -404,7 +404,7 @@ impl ThNN2Category {
         log(&debug_log);
 
         Ok(ODEResult(
-            analyses::ode::LCCAnalysis::new(ustr("Object"))
+            analyses::ode::CCLAnalysis::new(ustr("Object"))
                 .add_positive(Path::Id(ustr("Object")))
                 .add_negative(ustr("Negative").into())
                 .create_system(&cld_model, data.0)

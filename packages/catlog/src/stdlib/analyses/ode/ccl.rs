@@ -1,4 +1,4 @@
-//! Linear constant-coefficient ODE analysis of models.
+//! Constant-coefficient linear ODE analysis of models.
 
 use std::{collections::HashMap, hash::Hash};
 
@@ -14,9 +14,9 @@ use super::ODEAnalysis;
 use crate::dbl::model::{DiscreteDblModel, FgDblModel};
 use crate::one::fp_category::UstrFpCategory;
 use crate::one::{FgCategory, Path};
-use crate::simulate::ode::{LCCSystem, ODEProblem};
+use crate::simulate::ode::{CCLSystem, ODEProblem};
 
-/// Data defining a LCC ODE problem for a model.
+/// Data defining a CCL ODE problem for a model.
 #[derive(Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
@@ -24,7 +24,7 @@ use crate::simulate::ode::{LCCSystem, ODEProblem};
     feature = "serde-wasm",
     tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
 )]
-pub struct LCCProblemData<Id>
+pub struct CCLProblemData<Id>
 where
     Id: Eq + Hash,
 {
@@ -42,18 +42,18 @@ where
 
 type Model<Id> = DiscreteDblModel<Id, UstrFpCategory>;
 
-/** LCC ODE analysis for models of a double theory.
+/** CCL ODE analysis for models of a double theory.
 
 The main situation we have in mind is ...
 */
-pub struct LCCAnalysis {
+pub struct CCLAnalysis {
     var_ob_type: Ustr,
     positive_mor_types: Vec<Path<Ustr, Ustr>>,
     negative_mor_types: Vec<Path<Ustr, Ustr>>,
 }
 
-impl LCCAnalysis {
-    /// Creates a new LCC analysis for the given object type.
+impl CCLAnalysis {
+    /// Creates a new CCL analysis for the given object type.
     pub fn new(var_ob_type: Ustr) -> Self {
         Self {
             var_ob_type,
@@ -74,12 +74,12 @@ impl LCCAnalysis {
         self
     }
 
-    /// Creates a LCC system from a model.
+    /// Creates a CCL system from a model.
     pub fn create_system<Id>(
         &self,
         model: &Model<Id>,
-        mut data: LCCProblemData<Id>
-    ) -> ODEAnalysis<Id, LCCSystem>
+        mut data: CCLProblemData<Id>
+    ) -> ODEAnalysis<Id, CCLSystem>
     where
         Id: Eq + Clone + Hash + Ord,
     {
@@ -111,7 +111,7 @@ impl LCCAnalysis {
             .map(|ob| data.initial_values.get(ob).copied().unwrap_or(1.0));
         let x0 = DVector::from_iterator(n, initial_values);
 
-        let system = LCCSystem::new(A);
+        let system = CCLSystem::new(A);
         let problem = ODEProblem::new(system, x0).end_time(data.duration);
         ODEAnalysis::new(problem, ob_index)
     }
@@ -132,13 +132,13 @@ impl LCCAnalysis {
 
 //         let (prey, pred) = (ustr("x"), ustr("y"));
 //         let (pos, neg) = (ustr("positive"), ustr("negative"));
-//         let data = LCCProblemData {
+//         let data = CCLProblemData {
 //             interaction_coeffs: [(pos, 1.0), (neg, 1.0)].into_iter().collect(),
 //             growth_rates: [(prey, 2.0), (pred, -1.0)].into_iter().collect(),
 //             initial_values: [(prey, 1.0), (pred, 1.0)].into_iter().collect(),
 //             duration: 10.0,
 //         };
-//         let analysis = LCCAnalysis::new(ustr("Object"))
+//         let analysis = CCLAnalysis::new(ustr("Object"))
 //             .add_positive(Path::Id(ustr("Object")))
 //             .add_negative(Path::single(ustr("Negative")))
 //             .create_system(&neg_feedback, data);
