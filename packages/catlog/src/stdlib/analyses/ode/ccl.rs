@@ -44,7 +44,11 @@ type Model<Id> = DiscreteDblModel<Id, UstrFpCategory>;
 
 /** CCL ODE analysis for models of a double theory.
 
+<<<<<<< HEAD
 The main situation we have in mind is ... TO-DO
+=======
+The main situation we have in mind is ...
+>>>>>>> d7141f5 (lcc -> ccl)
 */
 pub struct CCLAnalysis {
     var_ob_type: Ustr,
@@ -78,10 +82,22 @@ impl CCLAnalysis {
     pub fn create_system<Id>(
         &self,
         model: &Model<Id>,
+<<<<<<< HEAD
         in_zeros: &HashMap<Id, Vec<(Id, Id)>>,
         degree_zeros_with_depth: HashMap<Id, usize>,
         data: CCLProblemData<Id>,
     ) -> ODEAnalysis<Id, CCLSystem>
+=======
+<<<<<<<< HEAD:packages/catlog/src/stdlib/analyses/ode/lcc.rs
+        mut data: LCCProblemData<Id>,
+        x: Id,
+        f: Id
+    ) -> ODEAnalysis<Id, LCCSystem>
+========
+        mut data: CCLProblemData<Id>
+    ) -> ODEAnalysis<Id, CCLSystem>
+>>>>>>>> d7141f5 (lcc -> ccl):packages/catlog/src/stdlib/analyses/ode/ccl.rs
+>>>>>>> d7141f5 (lcc -> ccl)
     where
         Id: Eq + Clone + Hash + Ord,
     {
@@ -92,18 +108,29 @@ impl CCLAnalysis {
 
         let n = objects.len();
 
+<<<<<<< HEAD
+=======
+        data.initial_values.insert(x, 0.1);
+        data.interaction_coeffs.insert(f, 1.0);
+
+>>>>>>> d7141f5 (lcc -> ccl)
         let mut A = DMatrix::from_element(n, n, 0.0f32);
         for mor_type in self.positive_mor_types.iter() {
             for mor in model.mor_generators_with_type(mor_type) {
                 let i = *ob_index.get(&model.mor_generator_dom(&mor)).unwrap();
                 let j = *ob_index.get(&model.mor_generator_cod(&mor)).unwrap();
+<<<<<<< HEAD
                 A[(j, i)] += data.interaction_coeffs.get(&mor).copied().unwrap_or(1.0);
+=======
+                A[(j, i)] += data.interaction_coeffs.get(&mor).copied().unwrap_or_default();
+>>>>>>> d7141f5 (lcc -> ccl)
             }
         }
         for mor_type in self.negative_mor_types.iter() {
             for mor in model.mor_generators_with_type(mor_type) {
                 let i = *ob_index.get(&model.mor_generator_dom(&mor)).unwrap();
                 let j = *ob_index.get(&model.mor_generator_cod(&mor)).unwrap();
+<<<<<<< HEAD
                 A[(j, i)] -= data.interaction_coeffs.get(&mor).copied().unwrap_or(1.0);
             }
         }
@@ -128,6 +155,15 @@ impl CCLAnalysis {
 
         let initial_values =
             objects.iter().map(|ob| data.initial_values.get(ob).copied().unwrap_or(1.0));
+=======
+                A[(j, i)] -= data.interaction_coeffs.get(&mor).copied().unwrap_or_default();
+            }
+        }
+
+        let initial_values = objects
+            .iter()
+            .map(|ob| data.initial_values.get(ob).copied().unwrap_or_default());
+>>>>>>> d7141f5 (lcc -> ccl)
         let x0 = DVector::from_iterator(n, initial_values);
 
         let system = CCLSystem::new(A);
@@ -135,3 +171,35 @@ impl CCLAnalysis {
         ODEAnalysis::new(problem, ob_index)
     }
 }
+<<<<<<< HEAD
+=======
+
+// #[cfg(test)]
+// mod test {
+//     use std::rc::Rc;
+//     use ustr::ustr;
+
+//     use super::*;
+//     use crate::{simulate::ode::lotka_volterra, stdlib};
+
+//     #[test]
+//     fn predator_prey() {
+//         let th = Rc::new(stdlib::theories::th_signed_category());
+//         let neg_feedback = stdlib::models::negative_feedback(th);
+
+//         let (prey, pred) = (ustr("x"), ustr("y"));
+//         let (pos, neg) = (ustr("positive"), ustr("negative"));
+//         let data = CCLProblemData {
+//             interaction_coeffs: [(pos, 1.0), (neg, 1.0)].into_iter().collect(),
+//             growth_rates: [(prey, 2.0), (pred, -1.0)].into_iter().collect(),
+//             initial_values: [(prey, 1.0), (pred, 1.0)].into_iter().collect(),
+//             duration: 10.0,
+//         };
+//         let analysis = CCLAnalysis::new(ustr("Object"))
+//             .add_positive(Path::Id(ustr("Object")))
+//             .add_negative(Path::single(ustr("Negative")))
+//             .create_system(&neg_feedback, data);
+//         assert_eq!(analysis.problem, lotka_volterra::create_predator_prey());
+//     }
+// }
+>>>>>>> d7141f5 (lcc -> ccl)
