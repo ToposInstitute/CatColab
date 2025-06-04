@@ -253,6 +253,7 @@ impl ThNN2Category {
 
         // TO-DO: DELETE ME
         let mut debug_log = String::new();
+        debug_log.push_str("ECLD to CLD migration for LCC dynamics\n\n");
 
         // Pre-processing the model: creating new objects for each derivative
         // and ifting all morphisms to be degree 1
@@ -394,13 +395,13 @@ impl ThNN2Category {
                 match mor_sign(f) {
                     0 => cld_model.add_mor(*f, new_dom, new_cod, Path::Id(ustr("Object"))),
                     1 => cld_model.add_mor(*f, new_dom, new_cod, ustr("Negative").into()),
-                    _ => panic!("an integer was found to be neither odd nor even")
+                    _ => panic!("somehow an integer was found to be neither odd nor even")
                 }
                 debug_log.push_str(&format!("ADDING MORPHISM {f} OF DEGREE {d}\nFROM {new_dom} TO {new_cod}\n\n"));
             }
         }
 
-        // log(&debug_log);
+        log(&debug_log);
 
         Ok(ODEResult(
             analyses::ode::LCCAnalysis::new(ustr("Object"))
