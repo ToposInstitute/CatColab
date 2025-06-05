@@ -641,10 +641,10 @@ where
     type CodE = ColE::Cod;
 
     fn apply_vertex(&self, v: &Self::DomV) -> Option<Self::CodV> {
-        self.vertex_map.apply(v)
+        self.vertex_map.get(v).cloned()
     }
     fn apply_edge(&self, e: &Self::DomE) -> Option<Self::CodE> {
-        self.edge_map.apply(e)
+        self.edge_map.get(e).cloned()
     }
     fn is_vertex_assigned(&self, v: &Self::DomV) -> bool {
         self.vertex_map.is_set(v)
