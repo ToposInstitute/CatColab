@@ -625,7 +625,7 @@ where
     fn src(&self, m: &Self::Pro) -> Self::Ob {
         match m {
             TabMorType::Basic(e) => {
-                self.src.apply(e).expect("Source of morphism type should be defined")
+                self.src.get(e).cloned().expect("Source of morphism type should be defined")
             }
             TabMorType::Hom(x) => (**x).clone(),
         }
@@ -633,7 +633,7 @@ where
     fn tgt(&self, m: &Self::Pro) -> Self::Ob {
         match m {
             TabMorType::Basic(e) => {
-                self.tgt.apply(e).expect("Target of morphism type should be defined")
+                self.tgt.get(e).cloned().expect("Target of morphism type should be defined")
             }
             TabMorType::Hom(x) => (**x).clone(),
         }
@@ -689,7 +689,7 @@ where
             (m, TabMorType::Hom(y)) if self.tgt(&m) == *y => m,
             (TabMorType::Hom(x), n) if self.src(&n) == *x => n,
             (TabMorType::Basic(d), TabMorType::Basic(e)) => {
-                self.compose_map.apply(&(d, e)).expect("Composition should be defined")
+                self.compose_map.apply((d, e)).expect("Composition should be defined")
             }
             _ => panic!("Ill-typed composite of morphism types in discrete tabulator theory"),
         };
