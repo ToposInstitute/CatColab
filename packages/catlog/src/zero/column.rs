@@ -31,17 +31,7 @@ pub trait Mapping {
     type Cod: Eq + Clone;
 
     /// Applies the mapping at a point possibly in the domain.
-    fn apply(&self, x: &Self::Dom) -> Option<Self::Cod>;
-
-    /** Is the mapping defined at a point?
-
-    The default implementation checks whether [`apply`](Self::apply) returns
-    something. Often this method can be given a more efficient implementation
-    that avoids allocating.
-    */
-    fn is_set(&self, x: &Self::Dom) -> bool {
-        self.apply(x).is_some()
-    }
+    fn apply(&self, x: Self::Dom) -> Option<Self::Cod>;
 }
 
 /** A mutable [mapping](Mapping).
@@ -78,6 +68,11 @@ pub trait MutMapping: Mapping {
             Some(y) => self.set(x, y),
             None => self.unset(&x),
         }
+    }
+
+    /// Is the mapping defined at a point?
+    fn is_set(&self, x: &Self::Dom) -> bool {
+        self.get(x).is_some()
     }
 }
 
@@ -129,7 +124,7 @@ where
         &self,
     ) -> impl Iterator<Item = InvalidFunction<Map::Dom>> + 'a + use<'a, Map, Dom, Cod> {
         let Function(mapping, dom, cod) = self;
-        dom.iter().filter_map(|x| match mapping.apply(&x) {
+        dom.iter().filter_map(|x| match mapping.apply(x.clone()) {
             Some(y) => {
                 if cod.contains(&y) {
                     None
@@ -194,12 +189,8 @@ impl<T: Eq + Clone> Mapping for VecColumn<T> {
     type Dom = usize;
     type Cod = T;
 
-    fn apply(&self, i: &usize) -> Option<T> {
-        self.get(i).cloned()
-    }
-
-    fn is_set(&self, i: &usize) -> bool {
-        *i < self.0.len() && self.0[*i].is_some()
+    fn apply(&self, i: usize) -> Option<T> {
+        self.0.get(i).cloned().flatten()
     }
 }
 
@@ -225,6 +216,10 @@ impl<T: Eq + Clone> MutMapping for VecColumn<T> {
         } else {
             None
         }
+    }
+
+    fn is_set(&self, i: &usize) -> bool {
+        *i < self.0.len() && self.0[*i].is_some()
     }
 }
 
@@ -263,11 +258,8 @@ where
     type Dom = K;
     type Cod = V;
 
-    fn apply(&self, x: &K) -> Option<V> {
-        self.0.get(x).cloned()
-    }
-    fn is_set(&self, x: &K) -> bool {
-        self.0.contains_key(x)
+    fn apply(&self, x: K) -> Option<V> {
+        self.0.get(&x).cloned()
     }
 }
 
@@ -285,6 +277,9 @@ where
     }
     fn unset(&mut self, x: &K) -> Option<V> {
         self.0.remove(x)
+    }
+    fn is_set(&self, x: &K) -> bool {
+        self.0.contains_key(x)
     }
 }
 
@@ -443,11 +438,8 @@ where
     type Dom = Dom;
     type Cod = Cod;
 
-    fn apply(&self, x: &Dom) -> Option<Cod> {
+    fn apply(&self, x: Dom) -> Option<Cod> {
         self.mapping.apply(x)
-    }
-    fn is_set(&self, x: &Dom) -> bool {
-        self.mapping.is_set(x)
     }
 }
 
@@ -475,6 +467,10 @@ where
             self.index.remove(x, y);
         }
         old
+    }
+
+    fn is_set(&self, x: &Dom) -> bool {
+        self.mapping.is_set(x)
     }
 }
 
@@ -522,11 +518,8 @@ impl SkelIndexedColumn {
 impl Mapping for SkelIndexedColumn {
     type Dom = usize;
     type Cod = usize;
-    fn apply(&self, x: &usize) -> Option<usize> {
+    fn apply(&self, x: usize) -> Option<usize> {
         self.0.apply(x)
-    }
-    fn is_set(&self, x: &usize) -> bool {
-        self.0.is_set(x)
     }
 }
 
@@ -539,6 +532,9 @@ impl MutMapping for SkelIndexedColumn {
     }
     fn unset(&mut self, x: &usize) -> Option<usize> {
         self.0.unset(x)
+    }
+    fn is_set(&self, x: &usize) -> bool {
+        self.0.is_set(x)
     }
 }
 
@@ -580,11 +576,8 @@ impl<T: Eq + Hash + Clone> IndexedVecColumn<T> {
 impl<T: Eq + Hash + Clone> Mapping for IndexedVecColumn<T> {
     type Dom = usize;
     type Cod = T;
-    fn apply(&self, x: &usize) -> Option<T> {
+    fn apply(&self, x: usize) -> Option<T> {
         self.0.apply(x)
-    }
-    fn is_set(&self, x: &usize) -> bool {
-        self.0.is_set(x)
     }
 }
 
@@ -597,6 +590,9 @@ impl<T: Eq + Hash + Clone> MutMapping for IndexedVecColumn<T> {
     }
     fn unset(&mut self, x: &usize) -> Option<T> {
         self.0.unset(x)
+    }
+    fn is_set(&self, x: &usize) -> bool {
+        self.0.is_set(x)
     }
 }
 
@@ -637,11 +633,8 @@ where
 {
     type Dom = K;
     type Cod = V;
-    fn apply(&self, x: &K) -> Option<V> {
+    fn apply(&self, x: K) -> Option<V> {
         self.0.apply(x)
-    }
-    fn is_set(&self, x: &K) -> bool {
-        self.0.is_set(x)
     }
 }
 
@@ -659,6 +652,9 @@ where
     }
     fn unset(&mut self, x: &K) -> Option<V> {
         self.0.unset(x)
+    }
+    fn is_set(&self, x: &K) -> bool {
+        self.0.is_set(x)
     }
 }
 
@@ -693,8 +689,8 @@ mod tests {
         assert!(!col.is_empty());
         assert!(col.is_set(&2));
         assert_eq!(col.get(&2), Some(&"baz"));
-        assert_eq!(col.apply(&2), Some("baz"));
-        assert_eq!(col.apply(&3), None);
+        assert_eq!(col.apply(2), Some("baz"));
+        assert_eq!(col.apply(3), None);
         assert_eq!(col.update(2, None), Some("baz"));
         assert!(!col.is_set(&2));
 
@@ -713,7 +709,7 @@ mod tests {
         col.set('c', "baz");
         assert!(!col.is_empty());
         assert_eq!(col.get(&'c'), Some(&"baz"));
-        assert_eq!(col.apply(&'c'), Some("baz"));
+        assert_eq!(col.apply('c'), Some("baz"));
         assert_eq!(col.unset(&'c'), Some("baz"));
         assert!(!col.is_set(&'c'));
         col.set('c', "bar");
@@ -729,7 +725,7 @@ mod tests {
         assert!(!col.is_empty());
         assert!(col.is_set(&2));
         assert_eq!(col.get(&2), Some(&5));
-        assert_eq!(col.apply(&2), Some(5));
+        assert_eq!(col.apply(2), Some(5));
         let preimage: Vec<_> = col.preimage(&5).collect();
         assert_eq!(preimage, vec![2]);
 
@@ -745,7 +741,7 @@ mod tests {
         let mut col = IndexedVecColumn::new(&["foo", "bar", "baz"]);
         assert!(!col.is_empty());
         assert!(col.is_set(&2));
-        assert_eq!(col.apply(&2), Some("baz"));
+        assert_eq!(col.apply(2), Some("baz"));
         let preimage: Vec<_> = col.preimage(&"baz").collect();
         assert_eq!(preimage, vec![2]);
 
@@ -764,7 +760,7 @@ mod tests {
         col.set('b', "bar");
         col.set('c', "baz");
         assert!(!col.is_empty());
-        assert_eq!(col.apply(&'c'), Some("baz"));
+        assert_eq!(col.apply('c'), Some("baz"));
         let preimage: Vec<_> = col.preimage(&"baz").collect();
         assert_eq!(preimage, vec!['c']);
 

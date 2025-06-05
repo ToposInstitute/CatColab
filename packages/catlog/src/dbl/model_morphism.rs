@@ -34,7 +34,7 @@ use tsify::Tsify;
 use crate::one::graph_algorithms::{bounded_simple_paths, simple_paths, spec_order};
 use crate::one::*;
 use crate::validate::{self, Validate};
-use crate::zero::{Column, HashColumn, Mapping, MutMapping};
+use crate::zero::{Column, HashColumn, MutMapping};
 
 use super::model::*;
 
@@ -94,7 +94,7 @@ where
 {
     /// Applies the mapping at a basic morphism in the domain model.
     pub fn apply_basic_mor(&self, e: &DomId) -> Option<Path<CodId, CodId>> {
-        self.mor_map.apply(e)
+        self.mor_map.get(e).cloned()
     }
 
     /// Is the mapping defined at a basic morphism?
@@ -193,7 +193,7 @@ where
     type CodMor = Path<CodId, CodId>;
 
     fn apply_ob(&self, x: &Self::DomOb) -> Option<Self::CodOb> {
-        self.ob_map.apply(x)
+        self.ob_map.get(x).cloned()
     }
 
     fn apply_mor(&self, m: &Self::DomMor) -> Option<Self::CodMor> {
@@ -543,7 +543,7 @@ where
         match var.clone() {
             GraphElem::Vertex(x) => {
                 if self.ob_init.is_set(&x) {
-                    let y = self.ob_init.apply(&x).unwrap();
+                    let y = self.ob_init.get(&x).cloned().unwrap();
                     let can_assign = self.assign_ob(x.clone(), y.clone());
                     if can_assign {
                         self.search(depth + 1);
@@ -561,7 +561,7 @@ where
             }
             GraphElem::Edge(m) => {
                 if self.mor_init.is_set(&m) {
-                    let path = self.mor_init.apply(&m).unwrap();
+                    let path = self.mor_init.get(&m).cloned().unwrap();
                     self.map.assign_basic_mor(m, path);
                     self.search(depth + 1);
                 } else {
