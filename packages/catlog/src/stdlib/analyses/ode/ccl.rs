@@ -107,7 +107,7 @@ impl CCLAnalysis {
             }
         }
         
-        // TO-DO: better would be to have Vec<(Vec<&Id>)> where we just stick
+        // TO-DO: "better" would be to have Vec<(Vec<&Id>)> where we just stick
         // all the morphisms of the same depth into a sub-list
         let mut sorted_degree_zeros: Vec<(&Id, &usize)> = degree_zeros
             .iter().collect();
@@ -117,16 +117,13 @@ impl CCLAnalysis {
             a.1.cmp(b.1)
         });
 
-        let mut deg_zero_updates: HashMap<&Id, DMatrix<f32>> = HashMap::new();
         for (mor, _) in sorted_degree_zeros {
             let mut B = DMatrix::from_element(n, n, 0.0f32);
             let i = *ob_index.get(&model.mor_generator_dom(&mor)).unwrap();
             let j = *ob_index.get(&model.mor_generator_cod(&mor)).unwrap();
             B[(j,i)] += 1.0;
-            deg_zero_updates.insert(&mor, B);
+            A = B * A;
         }
-
-        // TO-DO: compose the matrices in the right order: B_n B_{n-1} ... B_1 A
 
         let initial_values = objects
             .iter()
