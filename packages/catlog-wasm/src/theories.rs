@@ -10,11 +10,9 @@ use std::rc::Rc;
 use ustr::ustr;
 use wasm_bindgen::prelude::*;
 
-use catlog::dbl::model::MutDblModel;
-use catlog::dbl::model::FgDblModel;
 use catlog::dbl::{model, theory};
-use catlog::one::FgCategory;
-use catlog::one::Path;
+use catlog::dbl::model::{FgDblModel, MutDblModel};
+use catlog::one::{FgCategory, Path};
 use catlog::stdlib::{analyses, models, theories};
 
 use super::model_morphism::{MotifsOptions, motifs};
@@ -251,12 +249,14 @@ impl ThNN2Category {
             .try_into()
             .map_err(|_| "CCL simulation expects a discrete double model")?;
 
-        // TO-DO: DELETE ME
         let mut debug_log = String::new();
         debug_log.push_str("ECLD to CLD migration for CCL dynamics\n\n");
 
         // Pre-processing the model: creating new objects for each derivative
-        // and ifting all morphisms to be degree 1
+        // and lifting all morphisms to be degree 1
+
+        // TO-DO: currently whenever the user deletes an object, cld_model is
+        // not updated, so all the phantoms hang around
 
         // We will end up creating a CLD corresponding to our ECLD, where we
         // interpret all arrows in our CLD as being morphisms of degree 1
@@ -276,11 +276,10 @@ impl ThNN2Category {
             tower_heights.insert(x, 1);
             in_arrows.insert(x, Vec::new());
         };
-        let mut degree_zeros: Vec<uuid::Uuid> = Vec::new();
+        let mut degree_zeros: HashMap<uuid::Uuid, usize> = HashMap::new();
 
         // At the  start, we have yet to build any of the towers, so everything
         // is unchecked
-        // TO-DO: consider making this a BinaryHeap ?
         let mut unchecked_bases: Vec<uuid::Uuid> = model
             .ob_generators()
             .collect::<Vec<_>>()
@@ -301,11 +300,18 @@ impl ThNN2Category {
             .count()%2
         };
 
+        let depth_in_dag = |f: &uuid::Uuid| {
+            // TO-DO: write this function
+            return 0;
+        };
+
         // First pass, calculating maximal incoming degree for each base
         for f in model.mor_generators() {
             let degree = mor_deg(&f);
             if degree == 0 {
-                degree_zeros.push(f);
+                // TO-DO: we need to insist that the degree zero arrows form a
+                // directed acyclic graph
+                degree_zeros.insert(f, depth_in_dag(&f));
             }
 
             let f_cod = model
@@ -341,7 +347,6 @@ impl ThNN2Category {
             });
 
             let current_base = unchecked_bases.pop().expect("emu");
-            // TO-DO: why do we need a .clone() here and nowhere else?
             let current_height = tower_heights
                 .get(&current_base)
                 .expect("lorikeet")
@@ -401,13 +406,14 @@ impl ThNN2Category {
             }
         }
 
+        // TO-DO: turn this into an actual visualiser
         log(&debug_log);
 
         Ok(ODEResult(
             analyses::ode::CCLAnalysis::new(ustr("Object"))
                 .add_positive(Path::Id(ustr("Object")))
                 .add_negative(ustr("Negative").into())
-                .create_system(&cld_model, data.0)
+                .create_system(&cld_model, degree_zeros, data.0)
                 .solve_with_defaults()
                 .map_err(|err| format!("{:?}", err))
                 .into(),

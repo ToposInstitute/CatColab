@@ -78,7 +78,8 @@ impl CCLAnalysis {
     pub fn create_system<Id>(
         &self,
         model: &Model<Id>,
-        mut data: CCLProblemData<Id>
+        degree_zeros: HashMap<Id, usize>,
+        data: CCLProblemData<Id>
     ) -> ODEAnalysis<Id, CCLSystem>
     where
         Id: Eq + Clone + Hash + Ord,
@@ -105,6 +106,27 @@ impl CCLAnalysis {
                 A[(j, i)] -= data.interaction_coeffs.get(&mor).copied().unwrap_or(1.0);
             }
         }
+        
+        // TO-DO: better would be to have Vec<(Vec<&Id>)> where we just stick
+        // all the morphisms of the same depth into a sub-list
+        let mut sorted_degree_zeros: Vec<(&Id, &usize)> = degree_zeros
+            .iter().collect();
+            // .iter().collect::<Vec<(&Id, &usize)>>();
+        // TO-DO: why can I not combine these????
+        sorted_degree_zeros.sort_by(|a, b| {
+            a.1.cmp(b.1)
+        });
+
+        let mut deg_zero_updates: HashMap<&Id, DMatrix<f32>> = HashMap::new();
+        for (mor, _) in sorted_degree_zeros {
+            let mut B = DMatrix::from_element(n, n, 0.0f32);
+            let i = *ob_index.get(&model.mor_generator_dom(&mor)).unwrap();
+            let j = *ob_index.get(&model.mor_generator_cod(&mor)).unwrap();
+            B[(j,i)] += 1.0;
+            deg_zero_updates.insert(&mor, B);
+        }
+
+        // TO-DO: compose the matrices in the right order: B_n B_{n-1} ... B_1 A
 
         let initial_values = objects
             .iter()

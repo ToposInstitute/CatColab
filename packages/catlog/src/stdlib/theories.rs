@@ -79,7 +79,7 @@ pub fn th_delayable_signed_category() -> UstrDiscreteDblTheory {
     DiscreteDblTheory::from(cat)
 }
 
-/** The theory of NN2-graded categories
+/** The theory of (N x N x Z/2Z)-graded categories
 
 todo: description
  */
