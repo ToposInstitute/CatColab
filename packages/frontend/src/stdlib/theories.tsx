@@ -353,6 +353,9 @@ stdTheories.add(
                         return thSignedCategory.positiveLoops(model, options);
                     },
                 }),
+                analyses.configureCCLFO({
+                    simulate: (model, data) => thSignedCategory.cclfo(model, data),
+                }),
                 analyses.configureLotkaVolterra({
                     simulate: (model, data) => thSignedCategory.lotkaVolterra(model, data),
                 }),
