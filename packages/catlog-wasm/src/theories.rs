@@ -300,7 +300,7 @@ impl ThNN2Category {
             .count()%2
         };
 
-        let depth_in_dag = |f: &uuid::Uuid| {
+        let depth_in_dag = |_f: &uuid::Uuid| {
             // TO-DO: write this function
             return 0;
         };
@@ -308,18 +308,17 @@ impl ThNN2Category {
         // First pass, calculating maximal incoming degree for each base
         for f in model.mor_generators() {
             let degree = mor_deg(&f);
+            let f_cod = model
+                .get_cod(&f)
+                .expect("pied wagtail");
+
             if degree == 0 {
                 // TO-DO: we need to insist that the degree zero arrows form a
                 // directed acyclic graph
                 degree_zeros.insert(f, depth_in_dag(&f));
             }
 
-            let f_cod = model
-                .get_cod(&f)
-                .expect("pied wagtail");
-
             let new_degree = std::cmp::max(*tower_heights.get(f_cod).expect("currawong"), degree);
-
             tower_heights.insert(*f_cod, new_degree);
 
             // While we're here, we might as well also...
