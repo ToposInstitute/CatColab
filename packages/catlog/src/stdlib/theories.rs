@@ -3,7 +3,7 @@
 use ustr::ustr;
 
 use crate::dbl::theory::*;
-use crate::one::{Path, fp_category::UstrFpCategory};
+use crate::one::{fp_category::UstrFpCategory, Path};
 
 /** The empty theory, which has a single model, the empty model.
 
@@ -133,6 +133,37 @@ pub fn th_category_links() -> UstrDiscreteTabTheory {
         TabObType::Basic(x),
         th.tabulator(th.hom_type(TabObType::Basic(x))),
     );
+    th
+}
+
+/** The theory of energese.
+
+*/
+pub fn th_category_energese() -> UstrDiscreteTabTheory {
+    let mut th: UstrDiscreteTabTheory = Default::default();
+    let x = ustr("Object");
+    th.add_ob_type(x);
+    // there are two proarrows from stocks to flows. they correspond to inflows and outflows.
+    th.add_mor_type(
+        ustr("Inflow"),
+        TabObType::Basic(x),
+        th.tabulator(th.hom_type(TabObType::Basic(x))),
+    );
+    th.add_mor_type(
+        ustr("Outflow"),
+        TabObType::Basic(x),
+        th.tabulator(th.hom_type(TabObType::Basic(x))),
+    );
+    let v = ustr("DynamicVariable");
+    th.add_ob_type(v);
+    // there is a proarrow from the flow tabulator to the dynamic variable
+    th.add_mor_type(
+        ustr("FlowLink"),
+        TabObType::Basic(v),
+        th.tabulator(th.hom_type(TabObType::Basic(x))),
+    );
+    // there is a proarrow from the variable to stocks
+    th.add_mor_type(ustr("VariableLink"), TabObType::Basic(v), TabObType::Basic(x));
     th
 }
 

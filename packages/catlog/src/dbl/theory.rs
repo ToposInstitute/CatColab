@@ -79,8 +79,8 @@ use ustr::{IdentityHasher, Ustr};
 use super::category::*;
 use super::graph::ProedgeGraph;
 use super::tree::{DblNode, DblTree};
-use crate::one::{Graph, path::Path, tree::OpenTree};
 use crate::one::{category::*, fp_category::UstrFpCategory};
+use crate::one::{path::Path, tree::OpenTree, Graph};
 use crate::validate::Validate;
 use crate::zero::*;
 
@@ -191,7 +191,7 @@ pub trait DblTheory {
 
     /// Compose operations on morphisms.
     fn compose_mor_ops(&self, tree: DblTree<Self::ObOp, Self::MorType, Self::MorOp>)
-    -> Self::MorOp;
+        -> Self::MorOp;
 
     /** Identity operation on a morphism type.
 
@@ -540,7 +540,7 @@ where
         self.make_mor_type(e)
     }
 
-    /// Adds a basic morphim type without initializing its source or target.
+    /// Adds a basic morphism type without initializing its source or target.
     pub fn make_mor_type(&mut self, e: E) -> bool {
         self.mor_types.insert(e)
     }
@@ -722,7 +722,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::one::{Path, fp_category::FpCategory};
+    use crate::one::{fp_category::FpCategory, Path};
 
     #[test]
     fn discrete_double_theory() {

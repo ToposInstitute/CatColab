@@ -678,3 +678,85 @@ stdTheories.add(
         });
     },
 );
+
+stdTheories.add(
+    {
+        id: "energese",
+        name: "Energese",
+        description: "Model accumulation (stocks) and change (flows)",
+        group: "System Dynamics",
+        help: "energese",
+    },
+    (meta) => {
+        const thCategoryEnergese = new catlog.ThCategoryEnergese();
+        return new Theory({
+            ...meta,
+            theory: thCategoryEnergese.theory(),
+            onlyFreeModels: true,
+            modelTypes: [
+                {
+                    tag: "ObType",
+                    obType: { tag: "Basic", content: "Object" },
+                    name: "Stock",
+                    description: "Thing with an amount",
+                    shortcut: ["S"],
+                    cssClasses: [styles.box],
+                    svgClasses: [svgStyles.box],
+                },
+                {
+                    tag: "MorType",
+                    morType: {
+                        tag: "Hom",
+                        content: { tag: "Basic", content: "Object" },
+                    },
+                    name: "Flow",
+                    description: "Flow from one stock to another",
+                    shortcut: ["F"],
+                    arrowStyle: "double",
+                },
+				{
+					tag: "ObType",
+					obType: { tag: "Basic", content: "DynamicVariable" },
+					name: "Variable",
+					description: "Variable stuff",
+					shortcut: ["V"],
+					cssClasses: [styles.box],
+					svgClasses: [svgStyles.box],
+				},
+				// f --|--> dv --|--> s
+				{
+                    tag: "MorType",
+                    morType: { tag: "Basic", content: "FlowLink" },
+                    name: "Flow Link",
+                    description: "Influence of a stock on a flow",
+                    preferUnnamed: true,
+                    shortcut: ["L"],
+                },
+				{
+                    tag: "MorType",
+                    morType: { tag: "Basic", content: "VariableLink" },
+                    name: "Variable Link",
+                    description: "Variable controlling stock quantity",
+                    shortcut: ["F"],
+                    arrowStyle: "flat",
+                },
+				
+            ],
+            modelAnalyses: [
+                analyses.configureStockFlowDiagram({
+                    id: "diagram",
+                    name: "Visualization",
+                    description: "Visualize the stock and flow diagram",
+                }),
+                analyses.configureMassAction({
+                    simulate(model, data) {
+                        return thCategoryEnergese.massAction(model, data);
+                    },
+                    isTransition(mor) {
+                        return mor.morType.tag === "Hom";
+                    },
+                }),
+            ],
+        });
+    },
+);

@@ -106,6 +106,8 @@ export function MassAction(
         }),
     ];
 
+	console.log(props.content);
+
     const toplevelSchema: ColumnSchema<null>[] = [
         createNumericalColumn({
             name: "Duration",

@@ -2,3 +2,8 @@
     fill: white;
     stroke: black;
 }
+
+.circle circle {
+    fill: white;
+	stroke: black;
+}

@@ -9,7 +9,7 @@ use std::hash::{BuildHasherDefault, Hash};
 
 use nalgebra::DVector;
 use num_traits::Zero;
-use ustr::{IdentityHasher, Ustr, ustr};
+use ustr::{ustr, IdentityHasher, Ustr};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -85,6 +85,7 @@ impl StockFlowMassActionAnalysis {
         &self,
         model: &StockFlowModel<Id>,
     ) -> PolynomialSystem<Id, Parameter<Id>, u8> {
+        dbg!(&self.flow_mor_type);
         let mut terms: HashMap<Id, Monomial<Id, u8>> = model
             .mor_generators_with_type(&self.flow_mor_type)
             .map(|flow| {
