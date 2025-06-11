@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+bumpalo = { version = "3.18.1", features = ["collections"] }
 egg = "0.10.0"
+expect-test = "1.5.1"
+fexplib = "0.1.4"
+tattle = "0.1.0"
 ustr = "1"
 uuid = { version = "=1.11", features = ["v7", "serde", "js"] }
