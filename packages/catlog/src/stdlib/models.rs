@@ -133,21 +133,27 @@ pub fn water_volume(th: Rc<UstrDiscreteTabTheory>) -> UstrDiscreteTabModel {
     model.add_ob(sediment, ob_type.clone());
     let flow = ustr("deposits");
     model.add_mor(flow, TabOb::Basic(water), TabOb::Basic(sediment), th.hom_type(ob_type));
-    let volume = ustr("Volume");
+    let spillover = ustr("SpilloverChecker");
     let dynamible_type = TabObType::Basic(ustr("DynamicVariable"));
     // flow link
-    model.add_ob(volume, dynamible_type.clone());
+    model.add_ob(spillover, dynamible_type.clone());
     model.add_mor(
-        ustr("heaviside"),
-        TabOb::Basic(volume),
+        ustr("spillover"),
+        TabOb::Basic(spillover),
         model.tabulated_gen(flow),
         TabMorType::Basic(ustr("FlowLink")), // flow
     );
     // variable links
     model.add_mor(
         ustr("left"),
-        TabOb::Basic(volume),
+        TabOb::Basic(spillover),
         TabOb::Basic(water),
+        TabMorType::Basic(ustr("VariableLink")),
+    );
+    model.add_mor(
+        ustr("right"),
+        TabOb::Basic(spillover),
+        TabOb::Basic(container),
         TabMorType::Basic(ustr("VariableLink")),
     );
     model

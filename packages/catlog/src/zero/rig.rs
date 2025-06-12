@@ -102,7 +102,7 @@ elements of the set.
 Combinations have exactly the same underlying data structure as
 [monomials](Monomial), but are written additively rather than multiplicatively.
  */
-#[derive(Clone, PartialEq, Eq, Derivative)]
+#[derive(Clone, Debug, PartialEq, Eq, Derivative)]
 #[derivative(Default(bound = ""))]
 pub struct Combination<Var, Coef>(BTreeMap<Var, Coef>);
 
@@ -385,7 +385,7 @@ monomials themselves become ordered under the lexicographic order. This is a
 valid *monomial ordering* as used in Groebner bases
 ([*IVA*](crate::refs::IdealsVarietiesAlgorithms), Section 2.2).
  */
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Derivative)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Derivative)]
 #[derivative(Default(bound = ""))]
 pub struct Monomial<Var, Exp>(BTreeMap<Var, Exp>);
 
@@ -441,7 +441,7 @@ where
      */
     pub fn map_variables<NewVar, F>(&self, mut f: F) -> Monomial<NewVar, Exp>
     where
-        Exp: Clone + Add<Output = Exp>,
+        Exp: Clone + Add<Output = Exp> + std::fmt::Debug,
         NewVar: Ord,
         F: FnMut(&Var) -> NewVar,
     {

@@ -25,6 +25,9 @@ use crate::one::FgCategory;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
 use crate::zero::{alg::Polynomial, rig::Monomial};
 
+// use std::fs::File;
+// use std::io::prelude::*;
+
 /// Data defining a mass-action ODE problem for a model.
 #[derive(Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -46,32 +49,40 @@ where
 
     /// Duration of simulation.
     duration: f32,
+    // TODO add functions associated to flinks
 }
 
 type Parameter<Id> = Polynomial<Id, f32, u8>;
-type StockFlowModel<Id> = DiscreteTabModel<Id, Ustr, BuildHasherDefault<IdentityHasher>>;
+type EnergeseModel<Id> = DiscreteTabModel<Id, Ustr, BuildHasherDefault<IdentityHasher>>;
 
 /** Mass-action ODE analysis for stock-flow models.
 
 Mass action dynamics TODO
  */
+#[derive(Debug)]
 pub struct EnergeseMassActionAnalysis {
     /// Object type for stocks.
     pub stock_ob_type: TabObType<Ustr, Ustr>,
-    /// Morphism types for flows between stocks.
-    pub flow_mor_type: TabMorType<Ustr, Ustr>,
-    /// Morphism types for links for stocks to flows.
-    pub link_mor_type: TabMorType<Ustr, Ustr>,
+    /// Object type for dynamic variables
+    pub dynamible_ob_type: TabObType<Ustr, Ustr>,
+    /// Morphism types for link between dynamic variable and flows
+    pub flowlink_mor_type: TabMorType<Ustr, Ustr>,
+    /// Morphism types for link between dynamic variable and stocks
+    pub varlink_mor_type: TabMorType<Ustr, Ustr>,
 }
 
 impl Default for EnergeseMassActionAnalysis {
     fn default() -> Self {
         let stock_ob_type = TabObType::Basic(ustr("Object"));
+        let dynamible_ob_type = TabObType::Basic(ustr("DynamicVariable"));
         let flow_mor_type = TabMorType::Hom(Box::new(stock_ob_type.clone()));
         Self {
             stock_ob_type,
+            dynamible_ob_type,
             flow_mor_type,
             link_mor_type: TabMorType::Basic(ustr("Link")),
+            flowlink_mor_type: TabMorType::Basic(ustr("FlowLink")),
+            varlink_mor_type: TabMorType::Basic(ustr("VariableLink")),
         }
     }
 }
@@ -81,10 +92,24 @@ impl EnergeseMassActionAnalysis {
 
     The resulting system has symbolic rate coefficients.
      */
-    pub fn create_system<Id: Eq + Clone + Hash + Ord>(
+    pub fn create_system<Id: Eq + Clone + Hash + Ord + std::fmt::Debug>(
         &self,
-        model: &StockFlowModel<Id>,
+        model: &EnergeseModel<Id>,
     ) -> PolynomialSystem<Id, Parameter<Id>, u8> {
+        // build flow links first
+        let flinks: HashMap<Id, Monomial<Id, u8>> = model
+            .mor_generators_with_type(&self.flowlink_mor_type)
+            .map(|flink| {
+                let _dom = model.mor_generator_dom(&flink).unwrap_basic();
+                let path = model.mor_generator_cod(&flink).unwrap_tabulated();
+                let Some(TabEdge::Basic(cod)) = path.clone().only() else {
+                    panic!("!!!");
+                };
+                // println!("{:#?}, {:#?}, {:#?}, {:#?}", &flink, &dom, &path, &cod);
+                (cod.clone(), Monomial::generator(flink))
+            })
+            .collect();
+
         let mut terms: HashMap<Id, Monomial<Id, u8>> = model
             .mor_generators_with_type(&self.flow_mor_type)
             .map(|flow| {
@@ -93,24 +118,34 @@ impl EnergeseMassActionAnalysis {
             })
             .collect();
 
-        for link in model.mor_generators_with_type(&self.link_mor_type) {
-            let dom = model.mor_generator_dom(&link).unwrap_basic();
-            let path = model.mor_generator_cod(&link).unwrap_tabulated();
-            let Some(TabEdge::Basic(cod)) = path.only() else {
-                panic!("Codomain of link should be basic morphism");
-            };
-            if let Some(term) = terms.get_mut(&cod) {
-                *term = std::mem::take(term) * Monomial::generator(dom);
-            } else {
-                panic!("Codomain of link does not belong to model");
-            };
-        }
+        // for link in model.mor_generators_with_type(&self.link_mor_type) {
+        //     let dom = model.mor_generator_dom(&link).unwrap_basic();
+        //     let path = model.mor_generator_cod(&link).unwrap_tabulated();
+        //     let Some(TabEdge::Basic(cod)) = path.only() else {
+        //         panic!("Codomain of link should be basic morphism");
+        //     };
+        //     if let Some(term) = terms.get_mut(&cod) {
+        //         *term = std::mem::take(term) * Monomial::generator(dom);
+        //     } else {
+        //         panic!("Codomain of link does not belong to model");
+        //     };
+        // }
 
         let terms: Vec<(Id, Polynomial<Id, Parameter<Id>, u8>)> = terms
             .into_iter()
             .map(|(flow, term)| {
                 let param = Parameter::generator(flow.clone());
-                (flow, [(param, term)].into_iter().collect())
+
+                if let Some(flink) = flinks.get(&flow) {
+                    (
+                        flow,
+                        [(param * Polynomial::from_monomial(flink.clone()), term)]
+                            .into_iter()
+                            .collect(),
+                    )
+                } else {
+                    (flow, [(param, term)].into_iter().collect())
+                }
             })
             .collect();
 
@@ -133,9 +168,9 @@ impl EnergeseMassActionAnalysis {
 
     The resulting system has numerical rate coefficients and is ready to solve.
      */
-    pub fn create_numerical_system<Id: Eq + Clone + Hash + Ord>(
+    pub fn create_numerical_system<Id: Eq + Clone + Hash + Ord + std::fmt::Debug>(
         &self,
-        model: &StockFlowModel<Id>,
+        model: &EnergeseModel<Id>,
         data: EnergeseMassActionProblemData<Id>,
     ) -> ODEAnalysis<Id, NumericalPolynomialSystem<u8>> {
         let sys = self.create_system(model);
@@ -173,12 +208,28 @@ mod tests {
         let model = water_volume(th);
         let analysis: EnergeseMassActionAnalysis = Default::default();
         let sys = analysis.create_system(&model);
+
+        println!("SYSTEM: {:#?}", &sys);
         // TODO need to add flow stuff
         let expected = expect!([r#"
             dContainer = 0
-            dSediment = deposits Water
-            dWater = ((-1) deposits) Water
+            dSediment = (spillover deposits) Water
+            dWater = constant + ((-1) spillover deposits) Water
+            spillover = SpilloverChecker (left - right)
         "#]);
         expected.assert_eq(&sys.to_string());
+    }
+
+    // TODO add Heaviside
+    #[test]
+    fn water_volume_analysis() {
+        let th = Rc::new(th_category_energese());
+        let model = water_volume(th);
+        let analysis: EnergeseMassActionAnalysis = Default::default();
+        // println!("{:#?}", &model);
+        // let mut file = File::create("foo.json").expect("");
+        // let _ = file.write_all(format!("{:#?}", model).as_bytes());
+
+        assert!(true);
     }
 }

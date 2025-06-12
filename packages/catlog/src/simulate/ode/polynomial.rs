@@ -14,7 +14,7 @@ use super::ODESystem;
 use crate::zero::alg::Polynomial;
 
 /// A system of polynomial differential equations.
-#[derive(Clone, Derivative)]
+#[derive(Clone, Debug, Derivative)]
 #[derivative(Default(bound = ""))]
 pub struct PolynomialSystem<Var, Coef, Exp> {
     /// Components of the vector field.
@@ -60,7 +60,7 @@ where
 impl<Var, Exp> PolynomialSystem<Var, f32, Exp>
 where
     Var: Clone + Ord,
-    Exp: Clone + Ord + Add<Output = Exp>,
+    Exp: Clone + Ord + Add<Output = Exp> + std::fmt::Debug,
 {
     /** Converts the polynomial system to a numerical one.
 
@@ -87,6 +87,7 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for (var, component) in self.components.iter() {
+            println!("component: {}", component);
             writeln!(f, "d{} = {}", var, component)?;
         }
         Ok(())
@@ -134,6 +135,7 @@ where
 #[cfg(test)]
 mod tests {
     use expect_test::expect;
+    // let flowlink_mor_type = TabMorType::Hom(Box::new(
 
     use super::super::textplot_ode_result;
     use super::*;

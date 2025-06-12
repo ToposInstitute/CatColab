@@ -37,7 +37,7 @@ In abstract terms, polynomials with coefficients valued in a [commutative
 ring](super::rig::CommRing) *R* are the free [commutative algebra](CommAlg)
 over *R*.
  */
-#[derive(Clone, PartialEq, Eq, Derivative)]
+#[derive(Clone, PartialEq, Eq, Debug, Derivative)]
 #[derivative(Default(bound = ""))]
 pub struct Polynomial<Var, Coef, Exp>(Combination<Monomial<Var, Exp>, Coef>);
 
@@ -117,14 +117,17 @@ where
      */
     pub fn map_variables<NewVar, F>(&self, mut f: F) -> Polynomial<NewVar, Coef, Exp>
     where
-        Coef: Clone + Add<Output = Coef>,
-        Exp: Clone + Add<Output = Exp>,
-        NewVar: Clone + Ord,
+        Coef: Clone + Add<Output = Coef> + std::fmt::Debug,
+        Exp: Clone + Add<Output = Exp> + std::fmt::Debug,
+        NewVar: Clone + Ord + std::fmt::Debug,
         F: FnMut(&Var) -> NewVar,
     {
         (&self.0)
             .into_iter()
-            .map(|(coef, m)| (coef.clone(), m.map_variables(|var| f(var))))
+            .map(|(coef, m)| {
+                dbg!("COEF: {}", coef);
+                (coef.clone(), m.map_variables(|var| f(var)))
+            })
             .collect()
     }
 }

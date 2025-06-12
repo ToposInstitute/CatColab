@@ -81,7 +81,7 @@ impl StockFlowMassActionAnalysis {
 
     The resulting system has symbolic rate coefficients.
      */
-    pub fn create_system<Id: Eq + Clone + Hash + Ord>(
+    pub fn create_system<Id: Eq + Clone + Hash + Ord + std::fmt::Debug>(
         &self,
         model: &StockFlowModel<Id>,
     ) -> PolynomialSystem<Id, Parameter<Id>, u8> {
@@ -94,8 +94,11 @@ impl StockFlowMassActionAnalysis {
             .collect();
 
         for link in model.mor_generators_with_type(&self.link_mor_type) {
+            // println!("{:#?}\n", &link);
             let dom = model.mor_generator_dom(&link).unwrap_basic();
+            // println!("{:#?}\n", &dom);
             let path = model.mor_generator_cod(&link).unwrap_tabulated();
+            // println!("{:#?}\n", &path);
             let Some(TabEdge::Basic(cod)) = path.only() else {
                 panic!("Codomain of link should be basic morphism");
             };
@@ -133,7 +136,7 @@ impl StockFlowMassActionAnalysis {
 
     The resulting system has numerical rate coefficients and is ready to solve.
      */
-    pub fn create_numerical_system<Id: Eq + Clone + Hash + Ord>(
+    pub fn create_numerical_system<Id: Eq + Clone + Hash + Ord + std::fmt::Debug>(
         &self,
         model: &StockFlowModel<Id>,
         data: MassActionProblemData<Id>,

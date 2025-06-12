@@ -154,6 +154,11 @@ pub fn th_category_energese() -> UstrDiscreteTabTheory {
         TabObType::Basic(x),
         th.tabulator(th.hom_type(TabObType::Basic(x))),
     );
+    th.add_mor_type(
+        ustr("Link"),
+        TabObType::Basic(x),
+        th.tabulator(th.hom_type(TabObType::Basic(x))),
+    );
     let v = ustr("DynamicVariable");
     th.add_ob_type(v);
     // there is a proarrow from the flow tabulator to the dynamic variable

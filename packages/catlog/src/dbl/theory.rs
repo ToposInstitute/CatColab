@@ -488,7 +488,7 @@ nontrivial discrete double category. A **discrete tabulator theory** is rather a
 small double category with tabulators and with no arrows or cells beyond the
 identities and tabulator projections.
  */
-#[derive(Clone, Derivative)]
+#[derive(Clone, Debug, Derivative)]
 #[derivative(Default(bound = "S: Default"))]
 pub struct DiscreteTabTheory<V, E, S = RandomState> {
     ob_types: HashFinSet<V, S>,
