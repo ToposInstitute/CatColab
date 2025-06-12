@@ -748,9 +748,9 @@ stdTheories.add(
                     name: "Visualization",
                     description: "Visualize the stock and flow diagram",
                 }),
-                analyses.configureMassAction({
+                analyses.configureEnergese({
                     simulate(model, data) {
-                        return thCategoryEnergese.massAction(model, data);
+                        return thCategoryEnergese.energese(model, data);
                     },
                     isTransition(mor) {
                         return mor.morType.tag === "Hom";

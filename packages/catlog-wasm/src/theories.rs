@@ -243,13 +243,14 @@ impl ThCategoryLinks {
     pub fn mass_action(
         &self,
         model: &DblModel,
-        data: MassActionModelData,
+        // TODO wrong
+        data: EnergeseMassActionModelData,
     ) -> Result<ODEResult, String> {
         let model: &model::DiscreteTabModel<_, _, _> = (&model.0)
             .try_into()
             .map_err(|_| "Mass-action simulation expects a discrete tabulator model")?;
         Ok(ODEResult(
-            analyses::ode::StockFlowMassActionAnalysis::default()
+            analyses::ode::EnergeseMassActionAnalysis::default()
                 .create_numerical_system(model, data.0)
                 .solve_with_defaults()
                 .map_err(|err| format!("{:?}", err))
@@ -275,17 +276,17 @@ impl ThCategoryEnergese {
     }
 
     /// Simulates the mass-action system derived from a model.
-    #[wasm_bindgen(js_name = "massAction")]
+    #[wasm_bindgen(js_name = "energese")]
     pub fn mass_action(
         &self,
         model: &DblModel,
-        data: MassActionModelData,
+        data: EnergeseMassActionModelData,
     ) -> Result<ODEResult, String> {
         let model: &model::DiscreteTabModel<_, _, _> = (&model.0)
             .try_into()
             .map_err(|_| "Mass-action simulation expects a discrete tabulator model")?;
         Ok(ODEResult(
-            analyses::ode::StockFlowMassActionAnalysis::default()
+            analyses::ode::EnergeseMassActionAnalysis::default()
                 .create_numerical_system(model, data.0)
                 .solve_with_defaults()
                 .map_err(|err| format!("{:?}", err))

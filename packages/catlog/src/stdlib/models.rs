@@ -1,7 +1,7 @@
 //! Standard library of models of double theories.
 
 use std::rc::Rc;
-use ustr::{Ustr, ustr};
+use ustr::{ustr, Ustr};
 
 use crate::dbl::{model::*, theory::*};
 use crate::one::Path;
@@ -121,6 +121,38 @@ pub fn backward_link(th: Rc<UstrDiscreteTabTheory>) -> UstrDiscreteTabModel {
     model
 }
 
+/** Odum
+
+*/
+pub fn water_volume(th: Rc<UstrDiscreteTabTheory>) -> UstrDiscreteTabModel {
+    let mut model = UstrDiscreteTabModel::new(th.clone());
+    let (water, container, sediment) = (ustr("Water"), ustr("Container"), ustr("Sediment"));
+    let ob_type = TabObType::Basic(ustr("Object"));
+    model.add_ob(water, ob_type.clone());
+    model.add_ob(container, ob_type.clone());
+    model.add_ob(sediment, ob_type.clone());
+    let flow = ustr("deposits");
+    model.add_mor(flow, TabOb::Basic(water), TabOb::Basic(sediment), th.hom_type(ob_type));
+    let volume = ustr("Volume");
+    let dynamible_type = TabObType::Basic(ustr("DynamicVariable"));
+    // flow link
+    model.add_ob(volume, dynamible_type.clone());
+    model.add_mor(
+        ustr("heaviside"),
+        TabOb::Basic(volume),
+        model.tabulated_gen(flow),
+        TabMorType::Basic(ustr("FlowLink")), // flow
+    );
+    // variable links
+    model.add_mor(
+        ustr("left"),
+        TabOb::Basic(volume),
+        TabOb::Basic(water),
+        TabMorType::Basic(ustr("VariableLink")),
+    );
+    model
+}
+
 #[cfg(test)]
 mod tests {
     use super::super::theories::*;
@@ -155,5 +187,11 @@ mod tests {
     fn categories_with_links() {
         let th = Rc::new(th_category_links());
         assert!(backward_link(th).validate().is_ok());
+    }
+
+    #[test]
+    fn categories_energese() {
+        let th = Rc::new(th_category_energese());
+        assert!(water_volume(th).validate().is_ok());
     }
 }

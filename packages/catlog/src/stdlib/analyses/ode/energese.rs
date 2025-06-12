@@ -33,7 +33,7 @@ use crate::zero::{alg::Polynomial, rig::Monomial};
     feature = "serde-wasm",
     tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
 )]
-pub struct MassActionProblemData<Id>
+pub struct EnergeseMassActionProblemData<Id>
 where
     Id: Eq + Hash,
 {
@@ -55,7 +55,7 @@ type StockFlowModel<Id> = DiscreteTabModel<Id, Ustr, BuildHasherDefault<Identity
 
 Mass action dynamics TODO
  */
-pub struct StockFlowMassActionAnalysis {
+pub struct EnergeseMassActionAnalysis {
     /// Object type for stocks.
     pub stock_ob_type: TabObType<Ustr, Ustr>,
     /// Morphism types for flows between stocks.
@@ -64,7 +64,7 @@ pub struct StockFlowMassActionAnalysis {
     pub link_mor_type: TabMorType<Ustr, Ustr>,
 }
 
-impl Default for StockFlowMassActionAnalysis {
+impl Default for EnergeseMassActionAnalysis {
     fn default() -> Self {
         let stock_ob_type = TabObType::Basic(ustr("Object"));
         let flow_mor_type = TabMorType::Hom(Box::new(stock_ob_type.clone()));
@@ -76,7 +76,7 @@ impl Default for StockFlowMassActionAnalysis {
     }
 }
 
-impl StockFlowMassActionAnalysis {
+impl EnergeseMassActionAnalysis {
     /** Creates a mass-action system from a model.
 
     The resulting system has symbolic rate coefficients.
@@ -136,7 +136,7 @@ impl StockFlowMassActionAnalysis {
     pub fn create_numerical_system<Id: Eq + Clone + Hash + Ord>(
         &self,
         model: &StockFlowModel<Id>,
-        data: MassActionProblemData<Id>,
+        data: EnergeseMassActionProblemData<Id>,
     ) -> ODEAnalysis<Id, NumericalPolynomialSystem<u8>> {
         let sys = self.create_system(model);
 
@@ -165,17 +165,19 @@ mod tests {
     use std::rc::Rc;
 
     use super::*;
-    use crate::stdlib::{models::backward_link, theories::th_category_links};
+    use crate::stdlib::{models::water_volume, theories::th_category_energese};
 
     #[test]
-    fn backward_link_dynamics() {
-        let th = Rc::new(th_category_links());
-        let model = backward_link(th);
-        let analysis: StockFlowMassActionAnalysis = Default::default();
+    fn water_volume_dynamics() {
+        let th = Rc::new(th_category_energese());
+        let model = water_volume(th);
+        let analysis: EnergeseMassActionAnalysis = Default::default();
         let sys = analysis.create_system(&model);
+        // TODO need to add flow stuff
         let expected = expect!([r#"
-            dx = ((-1) f) x y
-            dy = f x y
+            dContainer = 0
+            dSediment = deposits Water
+            dWater = ((-1) deposits) Water
         "#]);
         expected.assert_eq(&sys.to_string());
     }
