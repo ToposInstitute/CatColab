@@ -39,6 +39,7 @@ mod test {
     use crate::syntax::Notebook;
 
     use super::*;
+    use catlog::stdlib::{th_category, th_schema, th_signed_category};
     use expect_test::*;
     use std::cell::RefCell;
     use std::fmt::{Debug, Write};
@@ -54,7 +55,7 @@ mod test {
         let reporter = Reporter::new(ReporterOutput::String(out.clone()), input.to_string());
         let res = with_parsed(input, reporter.clone(), |e| f(e, reporter.clone()));
         if let Some(res) = &res {
-            write!(out.borrow_mut(), "{:?}", res);
+            write!(out.borrow_mut(), "{:?}", res).unwrap();
         }
         expected.assert_eq(&*out.borrow());
         res
@@ -66,10 +67,7 @@ mod test {
     }
 
     fn test_ty(input: &str, expected: Expect) {
-        let test_schema: Rc<Schema> = Rc::new(Schema {
-            obtypes: ["object".into()].into(),
-            mortypes: [("morphism".into(), ("object".into(), "object".into()))].into(),
-        });
+        let test_schema: Rc<Schema> = Rc::new(th_category());
         test(input, expected, |e, r| {
             let elaborator = Elaborator::new(r, test_schema.clone());
             let ctx = Context::new(&State::empty());
@@ -94,70 +92,102 @@ mod test {
     fn ty_elab() {
         test_ty(
             "@Ob object",
-            expect![[r#"Some((Object(ObType(u!("object"))), Object(ObType(u!("object")))))"#]],
+            expect![[r#"
+                error[elab]: no such object type object
+                1| @Ob object 
+                1| ^^^^^^^^^^
+                None"#]],
         );
     }
 
     #[test]
     fn notebook_elab() {
-        let test_schema1: Rc<Schema> = Rc::new(Schema {
-            obtypes: ["object".into()].into(),
-            mortypes: [("morphism".into(), ("object".into(), "object".into()))].into(),
-        });
-        let test_schema2: Rc<Schema> = Rc::new(Schema {
-            obtypes: ["object".into(), "attr".into()].into(),
-            mortypes: [("morphism".into(), ("object".into(), "object".into()))].into(),
-        });
+        let test_schema1: Rc<Schema> = Rc::new(th_signed_category());
+        let test_schema2: Rc<Schema> = Rc::new(th_schema());
         let mut state = State::empty();
         let nb1 = test_notebook(
             r#"{
-                a: @Ob object;
-                b: @Ob object;
-                f: @Mor (@Id object) a b;
+                a: @Ob Object;
+                b: @Ob Object;
+                f: @Mor (@Id Object) a b;
             }"#,
-            expect![[r#"Some(Notebook { cells: [Cell { name: u!("a"), ty: Object(ObType(u!("object"))) }, Cell { name: u!("b"), ty: Object(ObType(u!("object"))) }, Cell { name: u!("f"), ty: Morphism(Id(ObType(u!("object"))), Var(Lvl { lvl: 0, name: Some(u!("a")) }), Var(Lvl { lvl: 1, name: Some(u!("b")) })) }] })"#]],
+            expect![[r#"Some(Notebook { cells: [Cell { name: u!("a"), ty: Object(u!("Object")) }, Cell { name: u!("b"), ty: Object(u!("Object")) }, Cell { name: u!("f"), ty: Morphism(Id(u!("Object")), Var(Lvl { lvl: 0, name: Some(u!("a")) }), Var(Lvl { lvl: 1, name: Some(u!("b")) })) }] })"#]],
             test_schema1.clone(),
             &state,
         ).unwrap();
         state.insert_notebook("A", nb1);
         test_notebook(
             r#"{
-                a: @Ob object;
-                b: @Ob attr;
-                f: @Mor morphism a b;
+                a: @Ob Object;
+                b: @Ob Object;
+                c: @Ob Object;
+                f: @Mor Negative a b;
+                g: @Mor Negative b c;
+                h: @Mor (@Id Object) a c;
+                e: (f * g) == h;
+            }"#,
+            expect![[
+                r#"Some(Notebook { cells: [Cell { name: u!("a"), ty: Object(u!("Object")) }, Cell { name: u!("b"), ty: Object(u!("Object")) }, Cell { name: u!("c"), ty: Object(u!("Object")) }, Cell { name: u!("f"), ty: Morphism(Seq(NonEmpty { head: u!("Negative"), tail: [] }), Var(Lvl { lvl: 0, name: Some(u!("a")) }), Var(Lvl { lvl: 1, name: Some(u!("b")) })) }, Cell { name: u!("g"), ty: Morphism(Seq(NonEmpty { head: u!("Negative"), tail: [] }), Var(Lvl { lvl: 1, name: Some(u!("b")) }), Var(Lvl { lvl: 2, name: Some(u!("c")) })) }, Cell { name: u!("h"), ty: Morphism(Id(u!("Object")), Var(Lvl { lvl: 0, name: Some(u!("a")) }), Var(Lvl { lvl: 2, name: Some(u!("c")) })) }, Cell { name: u!("e"), ty: Equality(Compose(Var(Lvl { lvl: 3, name: Some(u!("f")) }), Var(Lvl { lvl: 4, name: Some(u!("g")) })), Var(Lvl { lvl: 5, name: Some(u!("h")) })) }] })"#
+            ]],
+            test_schema1.clone(),
+            &state,
+        );
+        test_notebook(
+            r#"{
+                a: @Ob Object;
+                b: @Ob Object;
+                c: @Ob Object;
+                f: @Mor Negative a b;
+                g: @Mor (@Id Object) b c;
+                h: @Mor (@Id Object) a c;
+                e: (f * g) == h;
             }"#,
             expect![[r#"
-                error[elab]: expected term of type Object(ObType(u!("object"))) got Object(ObType(u!("attr")))
-                4|                 f: @Mor morphism a b;
-                4|                                    ^
+                error[elab]: expected term of type Morphism(Seq(NonEmpty { head: u!("Negative"), tail: [] }), 16, 20) got Morphism(Id(u!("Object")), 16, 20)
+                8|                 e: (f * g) == h;
+                8|                               ^
+                None"#]],
+            test_schema1.clone(),
+            &state,
+        );
+        test_notebook(
+            r#"{
+                a: @Ob Entity;
+                b: @Ob Entity;
+                f: @Mor Attr a b;
+            }"#,
+            expect![[r#"
+                error[elab]: expected term of type Object(u!("AttrType")) got Object(u!("Entity"))
+                4|                 f: @Mor Attr a b;
+                4|                                ^
                 None"#]],
             test_schema2.clone(),
             &state,
         );
         test_notebook(
             r#"{
-                a: @Ob object;
-                b: @Ob object;
-                f: @Mor morphism a b;
-                g: @Mor morphism a b;
+                a: @Ob Entity;
+                b: @Ob Entity;
+                f: @Mor (@Id Entity) a b;
+                g: @Mor (@Id Entity) a b;
                 e: f == g;
             }"#,
             expect![[
-                r#"Some(Notebook { cells: [Cell { name: u!("a"), ty: Object(ObType(u!("object"))) }, Cell { name: u!("b"), ty: Object(ObType(u!("object"))) }, Cell { name: u!("f"), ty: Morphism(Generator(u!("morphism")), Var(Lvl { lvl: 0, name: Some(u!("a")) }), Var(Lvl { lvl: 1, name: Some(u!("b")) })) }, Cell { name: u!("g"), ty: Morphism(Generator(u!("morphism")), Var(Lvl { lvl: 0, name: Some(u!("a")) }), Var(Lvl { lvl: 1, name: Some(u!("b")) })) }, Cell { name: u!("e"), ty: Equality(Var(Lvl { lvl: 2, name: Some(u!("f")) }), Var(Lvl { lvl: 3, name: Some(u!("g")) })) }] })"#
+                r#"Some(Notebook { cells: [Cell { name: u!("a"), ty: Object(u!("Entity")) }, Cell { name: u!("b"), ty: Object(u!("Entity")) }, Cell { name: u!("f"), ty: Morphism(Id(u!("Entity")), Var(Lvl { lvl: 0, name: Some(u!("a")) }), Var(Lvl { lvl: 1, name: Some(u!("b")) })) }, Cell { name: u!("g"), ty: Morphism(Id(u!("Entity")), Var(Lvl { lvl: 0, name: Some(u!("a")) }), Var(Lvl { lvl: 1, name: Some(u!("b")) })) }, Cell { name: u!("e"), ty: Equality(Var(Lvl { lvl: 2, name: Some(u!("f")) }), Var(Lvl { lvl: 3, name: Some(u!("g")) })) }] })"#
             ]],
             test_schema2.clone(),
             &state,
         );
         test_notebook(
             r#"{
-                a: @Ob object;
-                b: @Ob object;
-                f: @Mor morphism a b;
-                g: @Mor morphism b a;
+                a: @Ob Entity;
+                b: @Ob Entity;
+                f: @Mor (@Id Entity) a b;
+                g: @Mor (@Id Entity) b a;
                 e: f == g;
             }"#,
             expect![[r#"
-                error[elab]: expected term of type Morphism(Generator(u!("morphism")), 16, 18) got Morphism(Generator(u!("morphism")), 18, 16)
+                error[elab]: expected term of type Morphism(Id(u!("Entity")), 36, 38) got Morphism(Id(u!("Entity")), 38, 36)
                 6|                 e: f == g;
                 6|                         ^
                 None"#]],
@@ -166,15 +196,15 @@ mod test {
         );
         test_notebook(
             r#"{
-                a: @Ob object;
-                b: @Ob object;
-                f: @Mor morphism a b;
-                g: @Mor morphism b a;
+                a: @Ob Entity;
+                b: @Ob Entity;
+                f: @Mor (@Id Entity) a b;
+                g: @Mor (@Id Entity) b a;
                 e1: a == b;
                 e2: f == g;
             }"#,
             expect![[
-                r#"Some(Notebook { cells: [Cell { name: u!("a"), ty: Object(ObType(u!("object"))) }, Cell { name: u!("b"), ty: Object(ObType(u!("object"))) }, Cell { name: u!("f"), ty: Morphism(Generator(u!("morphism")), Var(Lvl { lvl: 0, name: Some(u!("a")) }), Var(Lvl { lvl: 1, name: Some(u!("b")) })) }, Cell { name: u!("g"), ty: Morphism(Generator(u!("morphism")), Var(Lvl { lvl: 1, name: Some(u!("b")) }), Var(Lvl { lvl: 0, name: Some(u!("a")) })) }, Cell { name: u!("e1"), ty: Equality(Var(Lvl { lvl: 0, name: Some(u!("a")) }), Var(Lvl { lvl: 1, name: Some(u!("b")) })) }, Cell { name: u!("e2"), ty: Equality(Var(Lvl { lvl: 2, name: Some(u!("f")) }), Var(Lvl { lvl: 3, name: Some(u!("g")) })) }] })"#
+                r#"Some(Notebook { cells: [Cell { name: u!("a"), ty: Object(u!("Entity")) }, Cell { name: u!("b"), ty: Object(u!("Entity")) }, Cell { name: u!("f"), ty: Morphism(Id(u!("Entity")), Var(Lvl { lvl: 0, name: Some(u!("a")) }), Var(Lvl { lvl: 1, name: Some(u!("b")) })) }, Cell { name: u!("g"), ty: Morphism(Id(u!("Entity")), Var(Lvl { lvl: 1, name: Some(u!("b")) }), Var(Lvl { lvl: 0, name: Some(u!("a")) })) }, Cell { name: u!("e1"), ty: Equality(Var(Lvl { lvl: 0, name: Some(u!("a")) }), Var(Lvl { lvl: 1, name: Some(u!("b")) })) }, Cell { name: u!("e2"), ty: Equality(Var(Lvl { lvl: 2, name: Some(u!("f")) }), Var(Lvl { lvl: 3, name: Some(u!("g")) })) }] })"#
             ]],
             test_schema2.clone(),
             &state,
@@ -201,7 +231,7 @@ mod test {
                 e3: (n.f * m.f) == @id m.b;
             }"#,
             expect![[r#"
-                error[elab]: expected term of type Morphism(Id(ObType(u!("object"))), 40, 47) got Morphism(Id(ObType(u!("object"))), 47, 47)
+                error[elab]: expected term of type Morphism(Id(u!("Object")), 60, 67) got Morphism(Id(u!("Object")), 67, 67)
                 5|                 e3: (n.f * m.f) == @id m.b;
                 5|                                    ^^^^^^^
                 None"#]],

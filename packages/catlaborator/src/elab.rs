@@ -1,6 +1,7 @@
+use catlog::dbl::category::{VDCWithComposites, VDblCategory};
+use catlog::dbl::theory::UstrDiscreteDblTheory;
+use catlog::one::Path;
 use fexplib::types::*;
-use std::collections::HashMap;
-use std::collections::HashSet;
 use std::fmt;
 use std::rc::Rc;
 use ustr::{Ustr, ustr};
@@ -10,19 +11,7 @@ use crate::syntax::{self, *};
 
 use tattle::{Loc, Reporter, declare_error};
 
-pub struct Schema {
-    pub obtypes: HashSet<Ustr>,
-    pub mortypes: HashMap<Ustr, (ObType, ObType)>,
-}
-
-impl Schema {
-    fn dom_cod(&self, mt: &MorType) -> Option<(ObType, ObType)> {
-        match mt {
-            MorType::Generator(name) => self.mortypes.get(name).copied(),
-            MorType::Id(ot) => Some((*ot, *ot)),
-        }
-    }
-}
+pub type Schema = UstrDiscreteDblTheory;
 
 pub struct Elaborator {
     reporter: Reporter,
@@ -92,10 +81,10 @@ impl Elaborator {
         }
     }
 
-    pub fn morty(&self, e: &FExp) -> Option<MorType> {
+    pub fn morty(&self, e: &FExp) -> Option<Path<Ustr, Ustr>> {
         match e.ast0() {
-            App1(L(_, Prim("Id")), L(_, Var(s))) => Some(MorType::Id(ObType((*s).into()))),
-            Var(s) => Some((*s).into()),
+            App1(L(_, Prim("Id")), L(_, Var(s))) => Some(Path::empty(ustr(s))),
+            Var(s) => Some(Path::single(ustr(s))),
             _ => error!(self.at(e), "could not elaborate morphism type"),
         }
     }
@@ -104,8 +93,7 @@ impl Elaborator {
         match e.ast0() {
             App1(L(_, Prim("Ob")), L(_, Var(obtype))) => {
                 let ot = ustr(obtype);
-                if self.schema.obtypes.contains(&ot) {
-                    let ot = ObType(ot);
+                if self.schema.has_ob(&ot) {
                     Some((TyStx::Object(ot), TyVal::Object(ot)))
                 } else {
                     error!(self.at(e), "no such object type {ot}")
@@ -113,16 +101,16 @@ impl Elaborator {
             }
             App1(L(_, App1(L(_, App1(L(_, Prim("Mor")), mortype)), dome)), code) => {
                 let mt = self.morty(mortype)?;
-                match self.schema.dom_cod(&mt) {
-                    Some((dt, ct)) => {
-                        let (domstx, domval) = self.chk(ctx, &TyVal::Object(dt), dome)?;
-                        let (codstx, codval) = self.chk(ctx, &TyVal::Object(ct), code)?;
-                        Some((
-                            TyStx::Morphism(mt, domstx, codstx),
-                            TyVal::Morphism(mt, domval.as_object(), codval.as_object()),
-                        ))
-                    }
-                    None => error!(self.at(e), "no such morphism type {mt:?}"),
+                if self.schema.has_proarrow(&mt) {
+                    let (dt, ct) = (self.schema.src(&mt), self.schema.tgt(&mt));
+                    let (domstx, domval) = self.chk(ctx, &TyVal::Object(dt), dome)?;
+                    let (codstx, codval) = self.chk(ctx, &TyVal::Object(ct), code)?;
+                    Some((
+                        TyStx::Morphism(mt.clone(), domstx, codstx),
+                        TyVal::Morphism(mt, domval.as_object(), codval.as_object()),
+                    ))
+                } else {
+                    error!(self.at(e), "no such morphism type {mt:?}")
                 }
             }
             App2(L(_, Keyword("==")), e1, e2) => {
@@ -164,7 +152,7 @@ impl Elaborator {
                     .enumerate()
                     .find(|(_, c)| c.name == f)
                     .or_else(|| error!(self.at(e), "no such field {f}"))?;
-                let nbenv = ctx.env.with_values(&*tmval.as_cells());
+                let nbenv = ctx.env.with_values(&tmval.as_cells());
                 let fieldtp = nbenv.eval_ty(&nb.cells[i].ty);
                 let field = syntax::Field::new(i, Some(f));
                 Some((TmStx::Proj(Rc::new(tmstx), field), tmval.proj(field), fieldtp))
@@ -185,9 +173,13 @@ impl Elaborator {
                 let (gtmstx, gtmval, gty) = self.syn(ctx, ge)?;
                 let ty = match (fty, gty) {
                     (TyVal::Morphism(fmt, fd, fc), TyVal::Morphism(gmt, gd, gc)) => {
-                        if fmt == gmt {
+                        if self.schema.tgt(&fmt) == self.schema.src(&gmt) {
                             if ctx.env.equal(fc, gd) {
-                                Some(TyVal::Morphism(fmt, fd, gc))
+                                Some(TyVal::Morphism(
+                                    self.schema.composite2(fmt.clone(), gmt.clone()).unwrap(),
+                                    fd,
+                                    gc,
+                                ))
                             } else {
                                 error!(self.at(e), "mismatching domain and codomain for composite")
                             }
@@ -208,10 +200,11 @@ impl Elaborator {
     }
 
     pub fn chk(&self, ctx: &Context, ty: &TyVal, e: &FExp) -> Option<(TmStx, TmVal)> {
+        #[allow(clippy::match_single_binding)]
         match e.ast0() {
             _ => {
                 let (tmstx, tmval, synthed) = self.syn(ctx, e)?;
-                if ctx.env.convertable_tys(ty, &synthed) {
+                if ctx.env.convertable_tys(&self.schema, ty, &synthed) {
                     Some((tmstx, tmval))
                 } else {
                     error!(self.at(e), "expected term of type {ty:?} got {synthed:?}")
@@ -229,7 +222,7 @@ impl Elaborator {
                     match f.ast0() {
                         App2(L(_, Keyword(":")), L(_, Var(name)), ty_expr) => {
                             let (tystx, tyval) = self.ty(&ctx, ty_expr)?;
-                            let cell = Cell::new(ustr(*name), tystx);
+                            let cell = Cell::new(ustr(name), tystx);
                             ctx.intro(cell.name, tyval);
                             cells.push(cell);
                         }

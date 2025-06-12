@@ -1,9 +1,11 @@
+use catlog::one::Category;
 use egg::*;
 use std::cell::{Ref, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
 use ustr::Ustr;
 
+use crate::elab::Schema;
 use crate::syntax::*;
 
 #[derive(Clone, Debug)]
@@ -178,7 +180,7 @@ impl Env {
                 TmVal::Object(self.state.neutrals.borrow_mut().add_object(*ob_type))
             }
             TyVal::Morphism(mor_type, dom, cod) => TmVal::Morphism(
-                self.state.neutrals.borrow_mut().add_morphism(*dom, *cod, *mor_type),
+                self.state.neutrals.borrow_mut().add_morphism(*dom, *cod, mor_type.clone()),
             ),
             TyVal::Notebook(notebook_ref) => {
                 let notebooks = self.state.notebooks.borrow();
@@ -186,7 +188,7 @@ impl Env {
                 self.state.new_env().intro_notebook(notebook)
             }
             TyVal::Equality(v1, v2) => {
-                self.equate(&v1, &v2);
+                self.equate(v1, v2);
                 TmVal::Erased
             }
         }
@@ -213,9 +215,11 @@ impl Env {
     pub fn eval_ty(&self, ty: &TyStx) -> TyVal {
         match ty {
             TyStx::Object(ob_type) => TyVal::Object(*ob_type),
-            TyStx::Morphism(mor_type, d, c) => {
-                TyVal::Morphism(*mor_type, self.eval(d).as_object(), self.eval(c).as_object())
-            }
+            TyStx::Morphism(mor_type, d, c) => TyVal::Morphism(
+                mor_type.clone(),
+                self.eval(d).as_object(),
+                self.eval(c).as_object(),
+            ),
             TyStx::Notebook(notebook_ref) => TyVal::Notebook(*notebook_ref),
             TyStx::Equality(lhs, rhs) => TyVal::Equality(self.eval(lhs), self.eval(rhs)),
         }
@@ -227,7 +231,7 @@ impl Env {
 
     pub fn intro_notebook(mut self, nb: &Notebook) -> TmVal {
         for cell_stx in nb.cells.iter() {
-            let val = self.intro_cell(&cell_stx);
+            let val = self.intro_cell(cell_stx);
             self.values.push(val);
         }
         TmVal::Cells(Rc::new(self.values))
@@ -241,12 +245,14 @@ impl Env {
         self.find(id1) == self.find(id2)
     }
 
-    pub fn convertable_tys(&self, ty1: &TyVal, ty2: &TyVal) -> bool {
+    pub fn convertable_tys(&self, schema: &Schema, ty1: &TyVal, ty2: &TyVal) -> bool {
         use TyVal::*;
         match (ty1, ty2) {
             (Object(ot1), Object(ot2)) => ot1 == ot2,
             (Morphism(mt1, d1, c1), Morphism(mt2, d2, c2)) => {
-                mt1 == mt2 && self.equal(*d1, *d2) && self.equal(*c1, *c2)
+                schema.category().morphisms_are_equal(mt1.clone(), mt2.clone())
+                    && self.equal(*d1, *d2)
+                    && self.equal(*c1, *c2)
             }
             (Notebook(nr1), Notebook(nr2)) => nr1 == nr2,
             (Equality(_, _), Equality(_, _)) => true,

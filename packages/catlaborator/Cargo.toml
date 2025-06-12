@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 bumpalo = { version = "3.18.1", features = ["collections"] }
+catlog = { version = "0.1.0", path = "../catlog" }
 egg = "0.10.0"
 expect-test = "1.5.1"
 fexplib = "0.1.4"

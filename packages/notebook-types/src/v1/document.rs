@@ -22,8 +22,8 @@ impl From<v0::document::Document> for Document {
                 let notebook = doc.notebook.into();
                 Document::new(metadata, notebook)
             }
-            v0::document::Document::Diagram(doc) => todo!(),
-            v0::document::Document::Analysis(doc) => todo!(),
+            v0::document::Document::Diagram(_doc) => todo!(),
+            v0::document::Document::Analysis(_doc) => todo!(),
         }
     }
 }
@@ -108,7 +108,9 @@ impl From<v0::model::Ob> for Reference {
             v0::Ob::Basic(uuid) => Reference::Resolved(uuid),
             v0::Ob::Tabulated(m) => match m {
                 v0::Mor::Basic(uuid) => Reference::Resolved(uuid),
-                _ => panic!("no v0 notebook should contain references to the tabulators of fancy morphisms"),
+                _ => panic!(
+                    "no v0 notebook should contain references to the tabulators of fancy morphisms"
+                ),
             },
         }
     }
@@ -117,7 +119,11 @@ impl From<v0::model::Ob> for Reference {
 impl From<v0::model_judgment::ModelJudgment> for FormalCell {
     fn from(value: v0::model_judgment::ModelJudgment) -> Self {
         match value {
-            v0::model_judgment::ModelJudgment::Object(v0::model_judgment::ObDecl { name, ob_type, .. }) => Self::Object {
+            v0::model_judgment::ModelJudgment::Object(v0::model_judgment::ObDecl {
+                name,
+                ob_type,
+                ..
+            }) => Self::Object {
                 name,
                 r#type: ob_type,
             },
@@ -131,7 +137,8 @@ impl From<v0::model_judgment::ModelJudgment> for FormalCell {
                 name,
                 r#type: mor_type,
                 dom: dom.map(|x| x.into()).unwrap_or_else(|| Reference::Unresolved(String::new())),
-                cod: cod.map(|x| x.into()).unwrap_or_else(|| Reference::Unresolved(String::new())),            },
+                cod: cod.map(|x| x.into()).unwrap_or_else(|| Reference::Unresolved(String::new())),
+            },
         }
     }
 }

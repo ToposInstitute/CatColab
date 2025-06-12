@@ -1,3 +1,4 @@
+use catlog::one::Path;
 use std::rc::Rc;
 use ustr::Ustr;
 
@@ -39,32 +40,9 @@ pub enum TmStx {
     Compose(Rc<TmStx>, Rc<TmStx>),
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct ObType(pub Ustr);
+pub type ObType = Ustr;
 
-impl ObType {
-    fn name(&self) -> Ustr {
-        self.0
-    }
-}
-
-impl From<&str> for ObType {
-    fn from(value: &str) -> Self {
-        Self(value.into())
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum MorType {
-    Generator(Ustr),
-    Id(ObType),
-}
-
-impl From<&str> for MorType {
-    fn from(value: &str) -> Self {
-        Self::Generator(value.into())
-    }
-}
+pub type MorType = Path<Ustr, Ustr>;
 
 #[derive(Debug)]
 pub enum TyStx {
