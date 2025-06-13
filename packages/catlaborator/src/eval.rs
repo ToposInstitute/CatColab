@@ -189,6 +189,11 @@ impl Env {
                 let g = self.eval(g_stx).as_morphism();
                 self.compose(f, g)
             }
+            TmStx::MkNotebook(items) => TmVal::Cells(
+                Rc::new(items.iter().map(|(name, tm)| (*name, self.eval(tm))).collect()),
+                GeneratorRange { start: 0, end: 0 },
+            ),
+            TmStx::Refl => TmVal::Erased,
         }
     }
 

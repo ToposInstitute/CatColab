@@ -88,8 +88,10 @@ impl Context {
     fn quote_tm(&self, v: &TmVal) -> TmStx {
         match v {
             TmVal::Object(id) | TmVal::Morphism(id) => self.quote_id(*id),
-            TmVal::Cells(_tm_vals, _hash_map) => todo!(),
-            TmVal::Erased => todo!(),
+            TmVal::Cells(tm_vals, _) => TmStx::MkNotebook(Rc::new(
+                tm_vals.iter().map(|(name, v)| (*name, self.quote_tm(v))).collect(),
+            )),
+            TmVal::Erased => TmStx::Refl,
         }
     }
 

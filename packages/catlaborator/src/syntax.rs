@@ -1,6 +1,6 @@
 use catlog::one::Path;
 use pretty::RcDoc;
-use pretty_util::parens;
+use pretty_util::{binop, braces, parens};
 use std::{fmt, rc::Rc};
 use ustr::Ustr;
 
@@ -48,6 +48,8 @@ pub enum TmStx {
     Proj(Rc<TmStx>, Field),
     Identity(Rc<TmStx>),
     Compose(Rc<TmStx>, Rc<TmStx>),
+    MkNotebook(Rc<Vec<(Ustr, TmStx)>>),
+    Refl,
 }
 
 impl TmStx {
@@ -61,6 +63,10 @@ impl TmStx {
             TmStx::Compose(tm1, tm2) => {
                 tm1.pprint().append(RcDoc::text(" * ")).append(tm2.pprint())
             }
+            TmStx::MkNotebook(items) => braces(RcDoc::concat(items.iter().map(|(name, tm)| {
+                binop(RcDoc::text(name.as_str()), "=", tm.pprint()).append(RcDoc::text(";"))
+            }))),
+            TmStx::Refl => RcDoc::text("@refl"),
         }
     }
 }
@@ -106,8 +112,10 @@ impl TyStx {
                 .append(dom.pprint())
                 .append(RcDoc::space())
                 .append(codom.pprint()),
-            TyStx::Notebook(_notebook_ref) => todo!(),
-            TyStx::Equality(_tm_stx, _tm_stx1) => todo!(),
+            TyStx::Notebook(notebook_ref) => RcDoc::text("@Notebook")
+                .append(RcDoc::space())
+                .append(RcDoc::text(notebook_ref.id.as_str())),
+            TyStx::Equality(lhs, rhs) => binop(lhs.pprint(), "==", rhs.pprint()),
         }
     }
 }
