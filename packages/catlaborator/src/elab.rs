@@ -1,6 +1,7 @@
 use catlog::dbl::category::{VDCWithComposites, VDblCategory};
 use catlog::dbl::theory::UstrDiscreteDblTheory;
 use catlog::one::Path;
+use egg::Id;
 use fexplib::types::*;
 use std::fmt;
 use std::rc::Rc;
@@ -56,6 +57,76 @@ impl Context {
         let val = self.env.intro(&ty);
         self.env.values.push(val);
         self.scope.push((name, ty));
+    }
+
+    fn has_generator(&self, val: &TmVal, generator_idx: usize) -> bool {
+        let id = self.env.id_for_generator(generator_idx);
+        match val {
+            TmVal::Object(id1) => self.env.find(*id1) == id,
+            TmVal::Morphism(id1) => self.env.find(*id1) == id,
+            TmVal::Cells(_, generator_range) => generator_range.contains(generator_idx),
+            TmVal::Erased => false,
+        }
+    }
+
+    fn search_for_generator(&self, values: &[TmVal], generator_idx: usize) -> Option<usize> {
+        values
+            .iter()
+            .enumerate()
+            .find(|(_, v)| self.has_generator(v, generator_idx))
+            .map(|(i, _)| i)
+    }
+
+    fn quote_id(&self, id: Id) -> TmStx {
+        let expr = self.env.extract(id);
+        let CatLang::Num(generator_idx) = expr.first().unwrap() else {
+            panic!()
+        };
+        self.quote_generator(*generator_idx as usize)
+    }
+
+    fn quote_tm(&self, v: &TmVal) -> TmStx {
+        match v {
+            TmVal::Object(id) | TmVal::Morphism(id) => self.quote_id(*id),
+            TmVal::Cells(_tm_vals, _hash_map) => todo!(),
+            TmVal::Erased => todo!(),
+        }
+    }
+
+    fn quote_generator(&self, generator_idx: usize) -> TmStx {
+        let lvl = self.search_for_generator(&self.env.values, generator_idx).unwrap();
+        let name = self.scope[lvl].0;
+        let tm = TmStx::Var(Lvl::new(lvl, name.into()));
+        self.quote_generator_in(generator_idx, tm, &self.env.values[lvl])
+    }
+
+    fn quote_generator_in(&self, generator_idx: usize, current: TmStx, val: &TmVal) -> TmStx {
+        match val {
+            TmVal::Object(_) => current,
+            TmVal::Morphism(_) => current,
+            TmVal::Cells(items, _) => {
+                let lvl =
+                    items.iter().position(|(_, v)| self.has_generator(v, generator_idx)).unwrap();
+                let name = items[lvl].0;
+                self.quote_generator_in(
+                    generator_idx,
+                    TmStx::Proj(Rc::new(current), syntax::Field::new(lvl, name.into())),
+                    &items[lvl].1,
+                )
+            }
+            TmVal::Erased => current,
+        }
+    }
+
+    fn quote_ty(&self, ty: &TyVal) -> TyStx {
+        match ty {
+            TyVal::Object(ot) => TyStx::Object(*ot),
+            TyVal::Morphism(path, d, c) => {
+                TyStx::Morphism(path.clone(), self.quote_id(*d), self.quote_id(*c))
+            }
+            TyVal::Notebook(notebook_ref) => TyStx::Notebook(*notebook_ref),
+            TyVal::Equality(lhs, rhs) => TyStx::Equality(self.quote_tm(lhs), self.quote_tm(rhs)),
+        }
     }
 }
 
@@ -181,7 +252,14 @@ impl Elaborator {
                                     gc,
                                 ))
                             } else {
-                                error!(self.at(e), "mismatching domain and codomain for composite")
+                                error!(
+                                    self.at(e),
+                                    "when attempting to compose, could not unify codomain of {} ({}) with domain of {} ({})",
+                                    ctx.quote_tm(&ftmval),
+                                    ctx.quote_id(fc),
+                                    ctx.quote_tm(&gtmval),
+                                    ctx.quote_id(gd)
+                                )
                             }
                         } else {
                             error!(self.at(e), "mismatching morphism types for composite")
@@ -207,7 +285,12 @@ impl Elaborator {
                 if ctx.env.convertable_tys(&self.schema, ty, &synthed) {
                     Some((tmstx, tmval))
                 } else {
-                    error!(self.at(e), "expected term of type {ty:?} got {synthed:?}")
+                    error!(
+                        self.at(e),
+                        "expected term of type {} got {}",
+                        ctx.quote_ty(ty),
+                        ctx.quote_ty(&synthed)
+                    )
                 }
             }
         }

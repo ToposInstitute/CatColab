@@ -8,11 +8,23 @@ use ustr::Ustr;
 use crate::elab::Schema;
 use crate::syntax::*;
 
+#[derive(Copy, Clone, Debug)]
+pub struct GeneratorRange {
+    start: usize,
+    end: usize,
+}
+
+impl GeneratorRange {
+    pub fn contains(&self, i: usize) -> bool {
+        self.start <= i && i < self.end
+    }
+}
+
 #[derive(Clone, Debug)]
 pub enum TmVal {
     Object(Id),
     Morphism(Id),
-    Cells(Rc<Vec<TmVal>>),
+    Cells(Rc<Vec<(Ustr, TmVal)>>, GeneratorRange),
     Erased,
 }
 
@@ -31,16 +43,16 @@ impl TmVal {
         }
     }
 
-    pub fn as_cells(&self) -> Rc<Vec<TmVal>> {
+    pub fn as_cells(&self) -> Rc<Vec<(Ustr, TmVal)>> {
         match self {
-            TmVal::Cells(cells) => cells.clone(),
+            TmVal::Cells(cells, _) => cells.clone(),
             _ => panic!("expected cells"),
         }
     }
 
     pub fn proj(&self, field: Field) -> TmVal {
         match self {
-            TmVal::Cells(fields) => fields[field.lvl].clone(),
+            TmVal::Cells(fields, _) => fields[field.lvl].1.clone(),
             _ => panic!("expected notebook"),
         }
     }
@@ -55,42 +67,44 @@ pub enum TyVal {
 }
 
 define_language! {
-    enum CatLang {
+    pub enum CatLang {
         Num(u32),
-        "object" = Object([Id; 1]),
-        "morphism" = Morphism([Id; 1]),
         "id" = Identity([Id; 1]),
         "compose" = Compose([Id; 2]),
     }
 }
 
+#[allow(dead_code)]
+enum GeneratorType {
+    Object(ObType),
+    Morphism(Id, Id, MorType),
+}
+
 struct Neutrals {
-    object_generators: Vec<ObType>,
-    morphism_generators: Vec<(Id, Id, MorType)>,
+    generators: Vec<(GeneratorType, Id)>,
     egraph: EGraph<CatLang, ()>,
 }
 
 impl Neutrals {
     fn new() -> Self {
         Neutrals {
-            object_generators: Vec::new(),
-            morphism_generators: Vec::new(),
+            generators: Vec::new(),
             egraph: EGraph::new(()),
         }
     }
 
     fn add_object(&mut self, ty: ObType) -> Id {
-        let i = self.object_generators.len();
-        self.object_generators.push(ty);
-        let i = self.egraph.add(CatLang::Num(i as u32));
-        self.egraph.add(CatLang::Object([i]))
+        let i = self.generators.len();
+        let id = self.egraph.add(CatLang::Num(i as u32));
+        self.generators.push((GeneratorType::Object(ty), id));
+        id
     }
 
     fn add_morphism(&mut self, dom: Id, cod: Id, ty: MorType) -> Id {
-        let i = self.morphism_generators.len();
-        self.morphism_generators.push((dom, cod, ty));
-        let i = self.egraph.add(CatLang::Num(i as u32));
-        self.egraph.add(CatLang::Morphism([i]))
+        let i = self.generators.len();
+        let id = self.egraph.add(CatLang::Num(i as u32));
+        self.generators.push((GeneratorType::Morphism(dom, cod, ty), id));
+        id
     }
 }
 
@@ -134,10 +148,10 @@ impl Env {
         Ref::filter_map(self.state.notebooks.borrow(), |m| m.get(nbref)).ok()
     }
 
-    pub fn with_values(&self, values: &[TmVal]) -> Env {
-        Env {
+    pub fn with_values(&self, values: &[(Ustr, TmVal)]) -> Self {
+        Self {
             state: self.state.clone(),
-            values: values.into(),
+            values: values.iter().map(|(_, v)| v.clone()).collect(),
         }
     }
 
@@ -148,6 +162,10 @@ impl Env {
         } else {
             None
         }
+    }
+
+    pub fn id_for_generator(&self, generator: usize) -> Id {
+        self.find(self.state.neutrals.borrow().generators[generator].1)
     }
 
     pub fn identity(&self, id: Id) -> TmVal {
@@ -202,8 +220,8 @@ impl Env {
             (TmVal::Morphism(i1), TmVal::Morphism(i2)) => {
                 self.state.neutrals.borrow_mut().egraph.union(*i1, *i2);
             }
-            (TmVal::Cells(cells1), TmVal::Cells(cells2)) => {
-                for (c1, c2) in cells1.iter().zip(cells2.iter()) {
+            (TmVal::Cells(cells1, _), TmVal::Cells(cells2, _)) => {
+                for ((_, c1), (_, c2)) in cells1.iter().zip(cells2.iter()) {
                     self.equate(c1, c2)
                 }
             }
@@ -230,15 +248,24 @@ impl Env {
     }
 
     pub fn intro_notebook(mut self, nb: &Notebook) -> TmVal {
+        let start = self.state.neutrals.borrow().generators.len();
         for cell_stx in nb.cells.iter() {
             let val = self.intro_cell(cell_stx);
             self.values.push(val);
         }
-        TmVal::Cells(Rc::new(self.values))
+        let end = self.state.neutrals.borrow().generators.len();
+        TmVal::Cells(
+            Rc::new(nb.cells.iter().map(|c| c.name).zip(self.values.into_iter()).collect()),
+            GeneratorRange { start, end },
+        )
     }
 
-    fn find(&self, id: Id) -> Id {
+    pub fn find(&self, id: Id) -> Id {
         self.state.neutrals.borrow().egraph.find(id)
+    }
+
+    pub fn extract(&self, id: Id) -> RecExpr<CatLang> {
+        self.state.neutrals.borrow().egraph.id_to_expr(id)
     }
 
     pub fn equal(&self, id1: Id, id2: Id) -> bool {

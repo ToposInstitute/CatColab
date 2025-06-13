@@ -331,6 +331,8 @@ dependencies = [
  "egg",
  "expect-test",
  "fexplib",
+ "pretty",
+ "pretty-util",
  "tattle",
  "ustr",
  "uuid",
@@ -2186,6 +2188,15 @@ dependencies = [
  "arrayvec",
  "typed-arena",
  "unicode-width",
+]
+
+[[package]]
+name = "pretty-util"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a110fbd32b597933bbd7530848e08eaa729a0d8f24d4929554351ea217bca9c4"
+dependencies = [
+ "pretty",
 ]
 
 [[package]]

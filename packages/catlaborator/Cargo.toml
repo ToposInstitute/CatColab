@@ -9,6 +9,8 @@ catlog = { version = "0.1.0", path = "../catlog" }
 egg = "0.10.0"
 expect-test = "1.5.1"
 fexplib = "0.1.4"
+pretty = "0.12.4"
+pretty-util = "0.1.0"
 tattle = "0.1.0"
 ustr = "1"
 uuid = { version = "=1.11", features = ["v7", "serde", "js"] }

@@ -91,12 +91,8 @@ mod test {
     #[test]
     fn ty_elab() {
         test_ty(
-            "@Ob object",
-            expect![[r#"
-                error[elab]: no such object type object
-                1| @Ob object 
-                1| ^^^^^^^^^^
-                None"#]],
+            "@Ob Object",
+            expect![[r#"Some((Object(u!("Object")), Object(u!("Object"))))"#]],
         );
     }
 
@@ -143,7 +139,7 @@ mod test {
                 e: (f * g) == h;
             }"#,
             expect![[r#"
-                error[elab]: expected term of type Morphism(Seq(NonEmpty { head: u!("Negative"), tail: [] }), 16, 20) got Morphism(Id(u!("Object")), 16, 20)
+                error[elab]: expected term of type @Mor ( Negative ) a c got @Mor ( @Id Object ) a c
                 8|                 e: (f * g) == h;
                 8|                               ^
                 None"#]],
@@ -157,7 +153,7 @@ mod test {
                 f: @Mor Attr a b;
             }"#,
             expect![[r#"
-                error[elab]: expected term of type Object(u!("AttrType")) got Object(u!("Entity"))
+                error[elab]: expected term of type @Ob AttrType got @Ob Entity
                 4|                 f: @Mor Attr a b;
                 4|                                ^
                 None"#]],
@@ -187,7 +183,7 @@ mod test {
                 e: f == g;
             }"#,
             expect![[r#"
-                error[elab]: expected term of type Morphism(Id(u!("Entity")), 36, 38) got Morphism(Id(u!("Entity")), 38, 36)
+                error[elab]: expected term of type @Mor ( @Id Entity ) a b got @Mor ( @Id Entity ) b a
                 6|                 e: f == g;
                 6|                         ^
                 None"#]],
@@ -231,7 +227,7 @@ mod test {
                 e3: (n.f * m.f) == @id m.b;
             }"#,
             expect![[r#"
-                error[elab]: expected term of type Morphism(Id(u!("Object")), 60, 67) got Morphism(Id(u!("Object")), 67, 67)
+                error[elab]: expected term of type @Mor ( @Id Object ) n.a m.b got @Mor ( @Id Object ) m.b m.b
                 5|                 e3: (n.f * m.f) == @id m.b;
                 5|                                    ^^^^^^^
                 None"#]],
@@ -247,7 +243,7 @@ mod test {
                 e3: (n.f * m.f) == @id m.b;
             }"#,
             expect![[r#"
-                error[elab]: mismatching domain and codomain for composite
+                error[elab]: when attempting to compose, could not unify codomain of n.f (n.b) with domain of m.f (m.a)
                 5|                 e3: (n.f * m.f) == @id m.b;
                 5|                      ^^^^^^^^^
                 None"#]],

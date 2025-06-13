@@ -1,5 +1,7 @@
 use catlog::one::Path;
-use std::rc::Rc;
+use pretty::RcDoc;
+use pretty_util::parens;
+use std::{fmt, rc::Rc};
 use ustr::Ustr;
 
 #[derive(Clone, Copy, Debug)]
@@ -12,6 +14,10 @@ impl Field {
     pub fn new(lvl: usize, name: Option<Ustr>) -> Self {
         Self { lvl, name }
     }
+
+    pub fn name(&self) -> &'static str {
+        self.name.map_or("", |n| n.as_str())
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -23,6 +29,10 @@ pub struct Lvl {
 impl Lvl {
     pub fn new(lvl: usize, name: Option<Ustr>) -> Self {
         Self { lvl, name }
+    }
+
+    pub fn name(&self) -> &'static str {
+        self.name.map_or("", |n| n.as_str())
     }
 }
 
@@ -40,6 +50,27 @@ pub enum TmStx {
     Compose(Rc<TmStx>, Rc<TmStx>),
 }
 
+impl TmStx {
+    fn pprint(&self) -> RcDoc {
+        match self {
+            TmStx::Var(lvl) => RcDoc::text(lvl.name()),
+            TmStx::Proj(tm, field) => {
+                tm.pprint().append(RcDoc::text(".")).append(RcDoc::text(field.name()))
+            }
+            TmStx::Identity(tm) => RcDoc::text("@id").append(RcDoc::space()).append(tm.pprint()),
+            TmStx::Compose(tm1, tm2) => {
+                tm1.pprint().append(RcDoc::text(" * ")).append(tm2.pprint())
+            }
+        }
+    }
+}
+
+impl fmt::Display for TmStx {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.pprint().render_fmt(80, f)
+    }
+}
+
 pub type ObType = Ustr;
 
 pub type MorType = Path<Ustr, Ustr>;
@@ -50,6 +81,41 @@ pub enum TyStx {
     Morphism(MorType, TmStx, TmStx),
     Notebook(NotebookRef),
     Equality(TmStx, TmStx),
+}
+
+fn pprint_path(p: &Path<Ustr, Ustr>) -> RcDoc {
+    match p {
+        Path::Id(ob) => {
+            parens(RcDoc::text("@Id").append(RcDoc::space()).append(RcDoc::text(ob.as_str())))
+        }
+        Path::Seq(non_empty) => parens(RcDoc::intersperse(
+            non_empty.iter().map(|mor| RcDoc::text(mor.as_str())),
+            RcDoc::text(" * "),
+        )),
+    }
+}
+
+impl TyStx {
+    fn pprint(&self) -> RcDoc {
+        match self {
+            TyStx::Object(ustr) => RcDoc::text("@Ob ").append(RcDoc::text(ustr.as_str())),
+            TyStx::Morphism(path, dom, codom) => RcDoc::text("@Mor")
+                .append(RcDoc::space())
+                .append(pprint_path(path))
+                .append(RcDoc::space())
+                .append(dom.pprint())
+                .append(RcDoc::space())
+                .append(codom.pprint()),
+            TyStx::Notebook(_notebook_ref) => todo!(),
+            TyStx::Equality(_tm_stx, _tm_stx1) => todo!(),
+        }
+    }
+}
+
+impl fmt::Display for TyStx {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.pprint().render_fmt(80, f)
+    }
 }
 
 #[derive(Debug)]
