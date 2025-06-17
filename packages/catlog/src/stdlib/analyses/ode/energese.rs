@@ -201,6 +201,36 @@ impl EnergeseMassActionAnalysis {
             objects.into_iter().enumerate().map(|(i, x)| (x, i)).collect();
         ODEAnalysis::new(problem, ob_index)
     }
+
+    /**
+     */
+    pub fn to_diffsol<Id: Eq + Clone + Hash + Ord + std::fmt::Debug>(
+        &self,
+        model: &EnergeseModel<Ustr>,
+        // _data: EnergeseMassActionProblemData<Id>,
+    ) -> String {
+        let sys = self.create_system(model);
+        println!("{:#?}", sys.components);
+        println!("{:#?}", sys.components.get(&ustr::Ustr::from("Water")));
+        let mut s = String::new();
+        for (_, c) in sys.components.iter() {
+            s.push_str(&format!("{}\n", c))
+        }
+
+        let objects: Vec<_> = sys.components.keys().cloned().collect();
+        // let initial_values = objects
+        // .iter()
+        // .map(|ob| data.initial_values.get(ob).copied().unwrap_or_default());
+        println!("{:#?}", objects);
+        // println!("{:#?}", initial_values);
+        format!(
+            "
+            u_i {{ {} }}
+            F_i {{ {} }}
+        ",
+            "init", "rhs"
+        )
+    }
 }
 
 #[cfg(test)]
@@ -218,7 +248,7 @@ mod tests {
         let analysis: EnergeseMassActionAnalysis = Default::default();
         let sys = analysis.create_system(&model);
 
-        println!("SYSTEM: {:#?}", &sys);
+        let _ = analysis.to_diffsol::<Ustr>(&model);
         let expected = expect!([r#"
             dContainer = 0
             dSediment = (deposits spillover) Water
@@ -234,7 +264,9 @@ mod tests {
         let th = Rc::new(th_category_energese());
         let model = water_volume(th);
         let analysis: EnergeseMassActionAnalysis = Default::default();
+        let sys = analysis.create_system(&model);
 
+        // TODO: borrow `fmt` and then interpolate initial data
         let stmt = r"
             u_i { 
                 C = 10,
@@ -243,8 +275,8 @@ mod tests {
             }
             F_i {
                 0,
-                0.5-1*heaviside(W-C)*0.5,
-                heaviside(W-C)*0.5 
+                -1*heaviside(W-C)*W,
+                heaviside(W-C)*W 
             }
         ";
         let problem = OdeBuilder::<M>::new().build_from_diffsl::<CG>(stmt).unwrap();
@@ -291,8 +323,8 @@ mod tests {
 
         let _ = root.present();
 
-        println!("{:#?}", water);
-        println!("{:#?}", sediment);
+        // println!("{:#?}", water);
+        // println!("{:#?}", sediment);
 
         assert!(true);
     }
