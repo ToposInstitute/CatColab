@@ -124,10 +124,7 @@ where
     {
         (&self.0)
             .into_iter()
-            .map(|(coef, m)| {
-                dbg!("COEF: {}", coef);
-                (coef.clone(), m.map_variables(|var| f(var)))
-            })
+            .map(|(coef, m)| (coef.clone(), m.map_variables(|var| f(var))))
             .collect()
     }
 }

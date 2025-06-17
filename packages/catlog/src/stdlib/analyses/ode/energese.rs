@@ -25,8 +25,14 @@ use crate::one::FgCategory;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
 use crate::zero::{alg::Polynomial, rig::Monomial};
 
-// use std::fs::File;
-// use std::io::prelude::*;
+use diffsol::{
+    CraneliftJitModule, MatrixCommon, OdeBuilder, OdeSolverMethod, OdeSolverStopReason, Vector,
+};
+use diffsol::{NalgebraMat, OdeEquationsImplicit, OdeSolverProblem};
+type M = diffsol::NalgebraMat<f64>;
+type CG = CraneliftJitModule;
+type LS = diffsol::NalgebraLU<f64>;
+use plotters::prelude::*;
 
 /// Data defining a mass-action ODE problem for a model.
 #[derive(Clone)]
@@ -49,7 +55,9 @@ where
 
     /// Duration of simulation.
     duration: f32,
-    // TODO add functions associated to flinks
+
+    /// Map from dynamic variables to their functions
+    dynamibles: HashMap<Id, f32>,
 }
 
 type Parameter<Id> = Polynomial<Id, f32, u8>;
@@ -65,6 +73,10 @@ pub struct EnergeseMassActionAnalysis {
     pub stock_ob_type: TabObType<Ustr, Ustr>,
     /// Object type for dynamic variables
     pub dynamible_ob_type: TabObType<Ustr, Ustr>,
+    /// Morphism types for flows between stocks
+    pub flow_mor_type: TabMorType<Ustr, Ustr>,
+    /// Morphism types for links for stocks to flows
+    pub link_mor_type: TabMorType<Ustr, Ustr>,
     /// Morphism types for link between dynamic variable and flows
     pub flowlink_mor_type: TabMorType<Ustr, Ustr>,
     /// Morphism types for link between dynamic variable and stocks
@@ -97,39 +109,36 @@ impl EnergeseMassActionAnalysis {
         model: &EnergeseModel<Id>,
     ) -> PolynomialSystem<Id, Parameter<Id>, u8> {
         // build flow links first
+        let vlinks: Vec<Id> = model.mor_generators_with_type(&self.varlink_mor_type).collect();
+        // snd are pairs of outgoing vlinks and their cods for dom(fst)
+        let mut vlinkmap: HashMap<Id, HashMap<Id, Id>> = HashMap::new();
         let flinks: HashMap<Id, Monomial<Id, u8>> = model
             .mor_generators_with_type(&self.flowlink_mor_type)
             .map(|flink| {
-                let _dom = model.mor_generator_dom(&flink).unwrap_basic();
                 let path = model.mor_generator_cod(&flink).unwrap_tabulated();
                 let Some(TabEdge::Basic(cod)) = path.clone().only() else {
                     panic!("!!!");
                 };
-                // println!("{:#?}, {:#?}, {:#?}, {:#?}", &flink, &dom, &path, &cod);
+                // vlink stuff
+                let dom = model.mor_generator_dom(&flink).unwrap_basic();
+                let hashmap: HashMap<Id, Id> = vlinks
+                    .iter()
+                    .filter(|v| model.mor_generator_dom(&v).unwrap_basic() == dom)
+                    .map(|vlink| (vlink.clone(), model.mor_generator_cod(&vlink).unwrap_basic()))
+                    .collect();
+                vlinkmap.insert(flink.clone(), hashmap);
+                // return pair
                 (cod.clone(), Monomial::generator(flink))
             })
             .collect();
 
-        let mut terms: HashMap<Id, Monomial<Id, u8>> = model
+        let terms: HashMap<Id, Monomial<Id, u8>> = model
             .mor_generators_with_type(&self.flow_mor_type)
             .map(|flow| {
                 let dom = model.mor_generator_dom(&flow).unwrap_basic();
                 (flow, Monomial::generator(dom))
             })
             .collect();
-
-        // for link in model.mor_generators_with_type(&self.link_mor_type) {
-        //     let dom = model.mor_generator_dom(&link).unwrap_basic();
-        //     let path = model.mor_generator_cod(&link).unwrap_tabulated();
-        //     let Some(TabEdge::Basic(cod)) = path.only() else {
-        //         panic!("Codomain of link should be basic morphism");
-        //     };
-        //     if let Some(term) = terms.get_mut(&cod) {
-        //         *term = std::mem::take(term) * Monomial::generator(dom);
-        //     } else {
-        //         panic!("Codomain of link does not belong to model");
-        //     };
-        // }
 
         let terms: Vec<(Id, Polynomial<Id, Parameter<Id>, u8>)> = terms
             .into_iter()
@@ -210,11 +219,10 @@ mod tests {
         let sys = analysis.create_system(&model);
 
         println!("SYSTEM: {:#?}", &sys);
-        // TODO need to add flow stuff
         let expected = expect!([r#"
             dContainer = 0
-            dSediment = (spillover deposits) Water
-            dWater = constant + ((-1) spillover deposits) Water
+            dSediment = (deposits spillover) Water
+            dWater = ((-1) deposits spillover) Water
             spillover = SpilloverChecker (left - right)
         "#]);
         expected.assert_eq(&sys.to_string());
@@ -226,9 +234,65 @@ mod tests {
         let th = Rc::new(th_category_energese());
         let model = water_volume(th);
         let analysis: EnergeseMassActionAnalysis = Default::default();
-        // println!("{:#?}", &model);
-        // let mut file = File::create("foo.json").expect("");
-        // let _ = file.write_all(format!("{:#?}", model).as_bytes());
+
+        let stmt = r"
+            u_i { 
+                C = 10,
+                W = 2,
+                S = 0 
+            }
+            F_i {
+                0,
+                0.5-1*heaviside(W-C)*0.5,
+                heaviside(W-C)*0.5 
+            }
+        ";
+        let problem = OdeBuilder::<M>::new().build_from_diffsl::<CG>(stmt).unwrap();
+        let mut solver = problem.bdf::<LS>().unwrap();
+        let (ys, ts): (_, Vec<f64>) = solver.solve(60.0).unwrap();
+
+        let water: Vec<f64> = ys.inner().row(1).into_iter().copied().collect();
+        let sediment: Vec<_> = ys.inner().row(2).into_iter().copied().collect();
+
+        let root = BitMapBackend::new("water_sediment.png", (640, 480)).into_drawing_area();
+        let _ = root.fill(&WHITE);
+        let mut chart = ChartBuilder::on(&root)
+            .caption("water-sediment", ("sans-serif", 50).into_font())
+            .margin(5)
+            .x_label_area_size(30)
+            .y_label_area_size(30)
+            .build_cartesian_2d(0f32..40f32, 0.1f32..30f32)
+            .expect("!");
+
+        let _ = chart.configure_mesh().draw();
+
+        let _ = chart.draw_series(LineSeries::new(
+            ts.clone()
+                .into_iter()
+                .map(|x| x as f32)
+                .enumerate()
+                .map(|(i, t)| (t, water.clone()[i] as f32)),
+            &BLUE,
+        ));
+        let _ = chart.draw_series(LineSeries::new(
+            ts.into_iter()
+                .map(|x| x as f32)
+                .enumerate()
+                .map(|(i, t)| (t, sediment.clone()[i] as f32)),
+            &RED,
+        ));
+        // .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &RED));
+
+        let _ = chart
+            .configure_series_labels()
+            .background_style(&WHITE.mix(0.8))
+            .border_style(&BLACK)
+            .draw();
+
+        let _ = root.present();
+
+        println!("{:#?}", water);
+        println!("{:#?}", sediment);
 
         assert!(true);
     }
