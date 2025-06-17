@@ -10,12 +10,12 @@ use std::rc::Rc;
 use ustr::ustr;
 use wasm_bindgen::prelude::*;
 
-use catlog::dbl::{model, theory};
 use catlog::dbl::model::{FgDblModel, MutDblModel};
+use catlog::dbl::{model, theory};
 use catlog::one::{FgCategory, Path};
 use catlog::stdlib::{analyses, models, theories};
 
-use super::model_morphism::{MotifsOptions, motifs};
+use super::model_morphism::{motifs, MotifsOptions};
 use super::{analyses::*, model::DblModel, theory::DblTheory};
 
 /// The empty or initial theory.
@@ -230,6 +230,40 @@ extern "C" {
     fn log_many(a: &str, b: &str);
 }
 
+// data type for max-depth search in DAGs
+enum DAGDepth {
+    Undef,
+    Seen,
+    Depth(usize),
+}
+
+fn get_depth(
+    x: &uuid::Uuid,
+    zero_path_depths: &mut HashMap<uuid::Uuid, DAGDepth>,
+    in_arrows: &HashMap<uuid::Uuid, Vec<uuid::Uuid>>,
+) -> usize {
+    zero_path_depths.insert(*x, DAGDepth::Seen);
+    let n = match zero_path_depths.get(x).unwrap() {
+        DAGDepth::Seen => {
+            panic!("a degree zero loop found containing {:?}", x)
+        }
+        DAGDepth::Depth(d) => *d,
+        DAGDepth::Undef => {
+            // Recursively compute depths for all incoming arrows.
+            let depth = in_arrows
+                .get(x)
+                .unwrap()
+                .iter()
+                .map(|y| 1 + get_depth(y, zero_path_depths, in_arrows))
+                .max()
+                .unwrap_or(0usize);
+            depth
+        }
+    };
+    zero_path_depths.insert(*x, DAGDepth::Depth(n));
+    n
+}
+
 #[wasm_bindgen]
 impl ThNN2Category {
     #[wasm_bindgen(constructor)]
@@ -260,7 +294,8 @@ impl ThNN2Category {
 
         // We will end up creating a CLD corresponding to our ECLD, where we
         // interpret all arrows in our CLD as being morphisms of degree 1
-        let mut cld_model: model::DiscreteDblModel<uuid::Uuid, _> = model::DiscreteDblModel::new(Rc::new(theories::th_signed_category()));
+        let mut cld_model: model::DiscreteDblModel<uuid::Uuid, _> =
+            model::DiscreteDblModel::new(Rc::new(theories::th_signed_category()));
 
         // TO-DO: is this actually what we should be doing with IDs?
         fn fresh_uuid() -> uuid::Uuid {
@@ -269,53 +304,48 @@ impl ThNN2Category {
 
         // tower_heights: [(base, height of corresponding tower)]
         // in_arrows: [(object, morphisms to this object)]
-        // degree_zeros: [morphisms of degree 0]
+        // zero_path_depths: [morphisms of degree 0]
         let mut tower_heights: HashMap<uuid::Uuid, usize> = HashMap::new();
         let mut in_arrows: HashMap<uuid::Uuid, Vec<uuid::Uuid>> = HashMap::new();
+        let mut in_zeros: HashMap<uuid::Uuid, Vec<uuid::Uuid>> = HashMap::new();
+        let mut zero_path_depths: HashMap<uuid::Uuid, DAGDepth> = HashMap::new();
+        let mut zero_edge_depths: HashMap<uuid::Uuid, usize> = HashMap::new();
+
         for x in model.ob_generators() {
             tower_heights.insert(x, 1);
             in_arrows.insert(x, Vec::new());
-        };
-        let mut degree_zeros: HashMap<uuid::Uuid, usize> = HashMap::new();
+            in_zeros.insert(x, Vec::new());
+            zero_path_depths.insert(x, DAGDepth::Undef);
+        }
 
         // At the  start, we have yet to build any of the towers, so everything
         // is unchecked
-        let mut unchecked_bases: Vec<uuid::Uuid> = model
-            .ob_generators()
-            .collect::<Vec<_>>()
-            .clone();
+        let mut unchecked_bases: Vec<uuid::Uuid> =
+            model.ob_generators().collect::<Vec<_>>().clone();
 
         // Given a morphism, return its degree as a usize
         let mor_deg = |f: &uuid::Uuid| {
-            model.mor_generator_type(f)
-            .into_iter()
-            .filter(|t| *t == ustr("Degree"))
-            .count()
+            model.mor_generator_type(f).into_iter().filter(|t| *t == ustr("Degree")).count()
         };
 
         let mor_sign = |f: &uuid::Uuid| {
-            model.mor_generator_type(f)
-            .into_iter()
-            .filter(|t| *t == ustr("Negative"))
-            .count()%2
-        };
-
-        let depth_in_dag = |_f: &uuid::Uuid| {
-            // TO-DO: write this function
-            return 0;
+            model
+                .mor_generator_type(f)
+                .into_iter()
+                .filter(|t| *t == ustr("Negative"))
+                .count()
+                % 2
         };
 
         // First pass, calculating maximal incoming degree for each base
         for f in model.mor_generators() {
             let degree = mor_deg(&f);
-            let f_cod = model
-                .get_cod(&f)
-                .expect("pied wagtail");
+            let f_cod = model.get_cod(&f).expect("pied wagtail");
 
             if degree == 0 {
                 // TO-DO: we need to insist that the degree zero arrows form a
                 // directed acyclic graph
-                degree_zeros.insert(f, depth_in_dag(&f));
+                in_zeros.get_mut(f_cod).expect("shrike").push(f);
             }
 
             let new_degree = std::cmp::max(*tower_heights.get(f_cod).expect("currawong"), degree);
@@ -338,22 +368,18 @@ impl ThNN2Category {
         // with greatest current height
         while !unchecked_bases.is_empty() {
             unchecked_bases.sort_by(|x, y| {
-                let height = |base| tower_heights
-                    .get(base)
-                    .expect("gosling");
+                let height = |base| tower_heights.get(base).expect("gosling");
                 // we want to sort small to big, so we can pop later on
                 height(y).cmp(height(x))
             });
 
             let current_base = unchecked_bases.pop().expect("emu");
-            let current_height = tower_heights
-                .get(&current_base)
-                .expect("lorikeet")
-                .clone();
+            let current_height = tower_heights.get(&current_base).expect("lorikeet").clone();
             for f in in_arrows.get(&current_base).expect("cygnet") {
                 update_tower(
                     model.get_dom(&f).expect("rosella"),
-                    current_height - mor_deg(f) + 1, &mut tower_heights
+                    current_height - mor_deg(f) + 1,
+                    &mut tower_heights,
                 );
             }
         }
@@ -370,16 +396,10 @@ impl ThNN2Category {
             for i in 1..*h {
                 let x_i = fresh_uuid();
                 cld_model.add_ob(x_i, ustr("Object"));
-                let &x_iminusone = derivative_towers
-                    .get(&x)
-                    .expect("peahen")
-                    .last()
-                    .expect("warbler");
+                let &x_iminusone =
+                    derivative_towers.get(&x).expect("peahen").last().expect("warbler");
                 cld_model.add_mor(fresh_uuid(), x_i, x_iminusone, Path::Id(ustr("Object")));
-                derivative_towers
-                    .get_mut(&x)
-                    .expect("brolga")
-                    .push(x_i);
+                derivative_towers.get_mut(&x).expect("brolga").push(x_i);
                 debug_log.push_str(&format!("ADDING NEW OBJECT {x_i} AT FLOOR {i}\n\n"));
             }
         }
@@ -399,20 +419,27 @@ impl ThNN2Category {
                 match mor_sign(f) {
                     0 => cld_model.add_mor(*f, new_dom, new_cod, Path::Id(ustr("Object"))),
                     1 => cld_model.add_mor(*f, new_dom, new_cod, ustr("Negative").into()),
-                    _ => panic!("somehow an integer was found to be neither odd nor even")
+                    _ => panic!("somehow an integer was found to be neither odd nor even"),
                 }
-                debug_log.push_str(&format!("ADDING MORPHISM {f} OF DEGREE {d}\nFROM {new_dom} TO {new_cod}\n\n"));
+                debug_log.push_str(&format!(
+                    "ADDING MORPHISM {f} OF DEGREE {d}\nFROM {new_dom} TO {new_cod}\n\n"
+                ));
             }
         }
 
-        // TO-DO: turn this into an actual visualiser
-        log(&debug_log);
+        // compute depths
+        for x in model.ob_generators() {
+            let depth = get_depth(&x, &mut zero_path_depths, &in_arrows);
+            for &f in in_zeros.get(&x).unwrap() {
+                zero_edge_depths.insert(f, depth);
+            }
+        }
 
         Ok(ODEResult(
             analyses::ode::CCLAnalysis::new(ustr("Object"))
                 .add_positive(Path::Id(ustr("Object")))
                 .add_negative(ustr("Negative").into())
-                .create_system(&cld_model, degree_zeros, data.0)
+                .create_system(&cld_model, zero_edge_depths, data.0)
                 .solve_with_defaults()
                 .map_err(|err| format!("{:?}", err))
                 .into(),

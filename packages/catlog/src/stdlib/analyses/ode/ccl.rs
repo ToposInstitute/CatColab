@@ -79,7 +79,7 @@ impl CCLAnalysis {
         &self,
         model: &Model<Id>,
         degree_zeros: HashMap<Id, usize>,
-        data: CCLProblemData<Id>
+        data: CCLProblemData<Id>,
     ) -> ODEAnalysis<Id, CCLSystem>
     where
         Id: Eq + Clone + Hash + Ord,
@@ -106,28 +106,24 @@ impl CCLAnalysis {
                 A[(j, i)] -= data.interaction_coeffs.get(&mor).copied().unwrap_or(1.0);
             }
         }
-        
+
         // TO-DO: "better" would be to have Vec<(Vec<&Id>)> where we just stick
         // all the morphisms of the same depth into a sub-list
-        let mut sorted_degree_zeros: Vec<(&Id, &usize)> = degree_zeros
-            .iter().collect();
-            // .iter().collect::<Vec<(&Id, &usize)>>();
+        let mut sorted_degree_zeros: Vec<(&Id, &usize)> = degree_zeros.iter().collect();
+        // .iter().collect::<Vec<(&Id, &usize)>>();
         // TO-DO: why can I not combine these????
-        sorted_degree_zeros.sort_by(|a, b| {
-            a.1.cmp(b.1)
-        });
+        sorted_degree_zeros.sort_by(|a, b| a.1.cmp(b.1));
 
         for (mor, _) in sorted_degree_zeros {
             let mut B = DMatrix::from_element(n, n, 0.0f32);
             let i = *ob_index.get(&model.mor_generator_dom(&mor)).unwrap();
             let j = *ob_index.get(&model.mor_generator_cod(&mor)).unwrap();
-            B[(j,i)] += 1.0;
+            B[(j, i)] += 1.0;
             A = B * A;
         }
 
-        let initial_values = objects
-            .iter()
-            .map(|ob| data.initial_values.get(ob).copied().unwrap_or(1.0));
+        let initial_values =
+            objects.iter().map(|ob| data.initial_values.get(ob).copied().unwrap_or(1.0));
         let x0 = DVector::from_iterator(n, initial_values);
 
         let system = CCLSystem::new(A);
