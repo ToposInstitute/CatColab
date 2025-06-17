@@ -242,7 +242,6 @@ fn get_depth(
     zero_path_depths: &mut HashMap<uuid::Uuid, DAGDepth>,
     in_arrows: &HashMap<uuid::Uuid, Vec<uuid::Uuid>>,
 ) -> usize {
-    zero_path_depths.insert(*x, DAGDepth::Seen);
     let n = match zero_path_depths.get(x).unwrap() {
         DAGDepth::Seen => {
             panic!("a degree zero loop found containing {:?}", x)
@@ -250,6 +249,7 @@ fn get_depth(
         DAGDepth::Depth(d) => *d,
         DAGDepth::Undef => {
             // Recursively compute depths for all incoming arrows.
+            zero_path_depths.insert(*x, DAGDepth::Seen);
             let depth = in_arrows
                 .get(x)
                 .unwrap()
