@@ -3,6 +3,7 @@ import { useDocument, useRepo } from "@automerge/automerge-repo-react-hooks";
 import { type Doc } from "./datatype";
 import { renderSolidComponent } from "./solid-wrapper.solid";
 import { AutomergeUrl } from "@automerge/automerge-repo";
+import { stdTheories } from "../../src/stdlib";
 
 interface ToolProps {
     docUrl: AutomergeUrl;
@@ -17,6 +18,18 @@ export default function Tool({ docUrl }: ToolProps) {
     const disposeRef = React.useRef<(() => void) | null>(null);
 
     const repo = useRepo();
+
+    // Create contexts at React level (static)
+    const api = React.useMemo(() => ({ repo }), [repo]);
+    const theories = React.useMemo(() => stdTheories, []);
+
+    console.log("=== React Level Context Creation ===");
+    console.log("API created:", api);
+    console.log("Theories created:", theories);
+    console.log(
+        "Theories metadata count:",
+        theories ? Array.from(theories.metadata()).length : 0
+    );
 
     // Check if we have a valid docUrl and data before rendering SolidJS component
     const isValidForRendering = React.useMemo(() => {
@@ -48,16 +61,21 @@ export default function Tool({ docUrl }: ToolProps) {
                 disposeRef.current();
             }
 
-            // Render SolidJS component with model data
+            // Pass contexts as props to SolidJS instead of providing them internally
             const props = {
                 docUrl: docUrl,
                 name: data.name,
                 theory: data.theory,
                 notebook: data.notebook,
                 repo: repo,
+                api: api, // Pass context values as props
+                theories: theories, // Pass context values as props
             };
 
-            console.log("Rendering SolidJS component with props:", props);
+            console.log(
+                "Rendering SolidJS component with context props:",
+                props
+            );
 
             try {
                 disposeRef.current = renderSolidComponent(
@@ -86,7 +104,7 @@ export default function Tool({ docUrl }: ToolProps) {
                 disposeRef.current = null;
             }
         };
-    }, [data, repo, docUrl, isValidForRendering]);
+    }, [data, repo, docUrl, isValidForRendering, api, theories]);
 
     console.log("Tool component returning JSX");
 
@@ -104,7 +122,7 @@ export default function Tool({ docUrl }: ToolProps) {
                     color: "#374151",
                 }}
             >
-                ⚛️ React Host Component (Debug Mode)
+                ⚛️ React Host Component (Static Context Props)
             </div>
 
             {/* Validation status */}
@@ -127,6 +145,14 @@ export default function Tool({ docUrl }: ToolProps) {
                 <div>
                     <strong>Valid for Rendering:</strong>{" "}
                     {isValidForRendering ? "✅ Yes" : "❌ No"}
+                </div>
+                <div>
+                    <strong>Context API:</strong>{" "}
+                    {api ? "✅ Available" : "❌ Missing"}
+                </div>
+                <div>
+                    <strong>Context Theories:</strong>{" "}
+                    {theories ? "✅ Available" : "❌ Missing"}
                 </div>
             </div>
 

@@ -1,9 +1,9 @@
 import { createSignal, onMount, createResource, Show } from "solid-js";
 
-// Import the actual model editor components
+// Import contexts using the SAME import path as ModelPane uses
 import { ApiContext } from "../../src/api";
-import { TheoryLibraryContext, stdTheories } from "../../src/stdlib";
-import { DocumentLoadingScreen } from "../../src/page";
+import { TheoryLibraryContext } from "../../src/stdlib";
+import { LiveModelContext } from "../../src/model/context";
 import { ModelPane } from "../../src/model/model_editor";
 import { getLiveModel } from "../../src/model/document";
 
@@ -13,6 +13,8 @@ interface SolidComponentProps {
     theory: string;
     notebook: any;
     repo: any;
+    api: any; // Context values passed as props
+    theories: any; // Context values passed as props
 }
 
 export function SolidComponent(props: SolidComponentProps) {
@@ -20,86 +22,119 @@ export function SolidComponent(props: SolidComponentProps) {
 
     onMount(() => {
         setMounted(true);
-        console.log("Model editor component mounted with props:", props);
-        console.log("Repo:", props.repo);
-        console.log("Theories:", stdTheories);
-    });
+        console.log("=== SolidComponent Mount (Same Import Paths) ===");
+        console.log("Props:", props);
+        console.log("API prop:", props.api);
+        console.log("Theories prop:", props.theories);
+        console.log(
+            "Theories metadata count:",
+            props.theories ? Array.from(props.theories.metadata()).length : 0
+        );
 
-    // Create the API object from the repo
-    const api = { repo: props.repo };
-    const theories = stdTheories;
+        // Debug context identity
+        console.log("=== Context Identity Debug ===");
+        console.log("TheoryLibraryContext identity:", TheoryLibraryContext);
+        console.log("ApiContext identity:", ApiContext);
+        console.log("LiveModelContext identity:", LiveModelContext);
+    });
 
     const [liveModel] = createResource(
         () => props.docUrl,
         async (refId) => {
-            console.log("Loading model with refId:", refId);
             try {
-                const result = await getLiveModel(refId, api, theories);
-                console.log("Model loaded:", result);
+                console.log("=== Loading Model (Same Import Paths) ===");
+                console.log("RefId:", refId);
+                console.log("API from props:", props.api);
+                console.log("Theories from props:", props.theories);
+
+                const result = await getLiveModel(
+                    refId,
+                    props.api,
+                    props.theories
+                );
+                console.log("=== Model Loaded Successfully ===");
+                console.log("Result:", result);
                 return result;
             } catch (error) {
-                console.error("Failed to load model:", error);
+                console.error("=== Model Loading Failed ===");
+                console.error("Error:", error);
+                console.error("Stack:", (error as Error).stack);
                 throw error;
             }
         }
     );
 
     return (
-        <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #e5e7eb;">
-            {/* Header */}
-            <div style="margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #e5e7eb;">
-                <h3 style="font-size: 18px; font-weight: bold; color: #1f2937; margin: 0 0 8px 0;">
-                    📊 CatColab Model Editor
-                </h3>
-                <div style="display: flex; gap: 16px; font-size: 14px; color: #6b7280;">
-                    <span>
-                        <strong>Status:</strong>{" "}
-                        {mounted() ? "✅ Ready" : "⏳ Loading"}
-                    </span>
-                    <span>
-                        <strong>Theory:</strong> {props.theory}
-                    </span>
-                    <span>
-                        <strong>API:</strong>{" "}
-                        {api ? "✅ Connected" : "❌ Missing"}
-                    </span>
-                </div>
+        <div>
+            <div>
+                <h3>🧪 Context Identity Debug</h3>
             </div>
 
-            {/* Model Editor with proper contexts */}
-            <ApiContext.Provider value={api}>
-                <TheoryLibraryContext.Provider value={theories}>
-                    <Show when={liveModel.loading}>
-                        <div style="padding: 20px; text-align: center; color: #6b7280;">
-                            ⏳ Loading model...
-                        </div>
-                    </Show>
-                    <Show when={liveModel.error}>
-                        <div style="padding: 20px; text-align: center; color: #dc2626; background: #fef2f2; border-radius: 4px;">
-                            ❌ Error loading model:{" "}
-                            {liveModel.error?.message || "Unknown error"}
-                        </div>
-                    </Show>
-                    <Show
-                        when={
-                            liveModel() &&
-                            !liveModel.loading &&
-                            !liveModel.error
-                        }
-                    >
-                        {(loadedModel) => (
-                            <ModelPane liveModel={loadedModel()} />
-                        )}
-                    </Show>
-                </TheoryLibraryContext.Provider>
-            </ApiContext.Provider>
+            <div>
+                <div>
+                    <strong>Context Test (From Props):</strong>
+                    <div>API: {props.api ? "✅ Available" : "❌ Missing"}</div>
+                    <div>
+                        Theories:{" "}
+                        {props.theories ? "✅ Available" : "❌ Missing"}
+                    </div>
+                    <div>
+                        Theory Count:{" "}
+                        {props.theories
+                            ? Array.from(props.theories.metadata()).length
+                            : 0}
+                    </div>
+                </div>
 
-            {/* Footer */}
-            <div style="margin-top: 20px; padding-top: 12px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280;">
-                <strong>Note:</strong> This is the full CatColab model editor
-                running in SolidJS within a React/Patchwork environment.
-                <br />
-                <strong>Debug:</strong> docUrl = "{props.docUrl}"
+                <Show when={liveModel.loading}>
+                    <div>⏳ Loading model...</div>
+                </Show>
+                <Show when={liveModel.error}>
+                    <div>
+                        ❌ Error loading model:{" "}
+                        {liveModel.error?.message || "Unknown error"}
+                    </div>
+                </Show>
+                <Show
+                    when={liveModel() && !liveModel.loading && !liveModel.error}
+                >
+                    {(loadedModel) => {
+                        console.log(
+                            "=== Rendering ModelPane (Context Identity Debug) ==="
+                        );
+                        console.log("LoadedModel:", loadedModel());
+                        console.log("About to provide contexts...");
+                        console.log(
+                            "TheoryLibraryContext (provider):",
+                            TheoryLibraryContext
+                        );
+                        console.log("ApiContext (provider):", ApiContext);
+                        console.log(
+                            "LiveModelContext (provider):",
+                            LiveModelContext
+                        );
+                        console.log(
+                            "Providing theories value:",
+                            props.theories
+                        );
+                        console.log("Providing api value:", props.api);
+
+                        // Provide contexts using SAME import paths as ModelPane
+                        return (
+                            <ApiContext.Provider value={props.api}>
+                                <TheoryLibraryContext.Provider
+                                    value={props.theories}
+                                >
+                                    <LiveModelContext.Provider
+                                        value={() => loadedModel()}
+                                    >
+                                        <ModelPane liveModel={loadedModel()} />
+                                    </LiveModelContext.Provider>
+                                </TheoryLibraryContext.Provider>
+                            </ApiContext.Provider>
+                        );
+                    }}
+                </Show>
             </div>
         </div>
     );
