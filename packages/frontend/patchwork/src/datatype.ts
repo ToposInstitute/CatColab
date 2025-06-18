@@ -23,12 +23,12 @@ const setTitle = async (doc: Doc, title: string) => {
 };
 
 const getTitle = async (doc: Doc) => {
-    return doc.name || "Model";
+    return doc.name || "CatColab Model";
 };
 
 export const init = (doc: Doc) => {
     initFrom(doc, {
-        name: "New Model",
+        name: "CatColab Model",
         theory: "simple-olog",
         type: "model",
         notebook: {

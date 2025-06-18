@@ -1,4 +1,3 @@
-import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import topLevelAwait from "vite-plugin-top-level-await";
 import wasm from "vite-plugin-wasm";
@@ -13,20 +12,7 @@ export default defineConfig({
     plugins: [
         topLevelAwait(),
         wasm(),
-        solid({
-            // Configure solid to work with .solid files and parent directory SolidJS files
-            include: [
-                "src/**/*.solid.tsx",
-                "src/**/*.solid.ts",
-                "../src/**/*.tsx",
-                "../src/**/*.ts",
-            ],
-        }),
-        react({
-            // React should only handle our local React files
-            include: ["src/**/*.tsx", "src/**/*.ts"],
-            exclude: [/\.solid\.(tsx|ts)$/, "../src/**/*"],
-        }),
+        solid(),
         tailwindcss(),
         cssInjectedByJsPlugin(),
     ],
