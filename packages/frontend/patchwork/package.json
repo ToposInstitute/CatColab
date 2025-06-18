@@ -1,0 +1,38 @@
+{
+  "name": "@patchwork/solidjs-demo",
+  "version": "0.0.1",
+  "description": "A demo showing how to use SolidJS inside a React app",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "vite build",
+    "push": "pnpm build && jacquard push",
+    "watch": "nodemon --watch src -e js,tsx,ts,tsx,css,json --exec 'pnpm build && pnpm push'"
+  },
+  "keywords": [],
+  "author": "Ink & Switch",
+  "dependencies": {
+    "@automerge/automerge-repo-react-hooks": "2.0.0-alpha.22",
+    "@patchwork/sdk": "file:../../patchwork/sdk",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwindcss": "^4.0.9",
+    "solid-js": "^1.8.0",
+    "solid-element": "^1.8.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.9",
+    "@types/react": "^18.3.3",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.20",
+    "nodemon": "^3.1.9",
+    "vite": "^5.3.4",
+    "vite-plugin-css-injected-by-js": "^3.5.2",
+    "vite-plugin-top-level-await": "^1.4.2",
+    "vite-plugin-wasm": "^3.3.0",
+    "vite-plugin-solid": "^2.10.2"
+  }
+}
