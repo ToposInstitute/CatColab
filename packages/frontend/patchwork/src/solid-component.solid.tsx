@@ -67,25 +67,6 @@ export function SolidComponent(props: SolidComponentProps) {
     return (
         <div>
             <div>
-                <h3>🧪 Context Identity Debug</h3>
-            </div>
-
-            <div>
-                <div>
-                    <strong>Context Test (From Props):</strong>
-                    <div>API: {props.api ? "✅ Available" : "❌ Missing"}</div>
-                    <div>
-                        Theories:{" "}
-                        {props.theories ? "✅ Available" : "❌ Missing"}
-                    </div>
-                    <div>
-                        Theory Count:{" "}
-                        {props.theories
-                            ? Array.from(props.theories.metadata()).length
-                            : 0}
-                    </div>
-                </div>
-
                 <Show when={liveModel.loading}>
                     <div>⏳ Loading model...</div>
                 </Show>

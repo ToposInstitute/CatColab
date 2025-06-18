@@ -6,6 +6,7 @@ import { type DataTypeImplementation, initFrom } from "@patchwork/sdk";
 export type Doc = HasVersionControlMetadata<unknown, unknown> & {
     name: string;
     theory: string;
+    type: string;
     notebook: {
         cells: any[];
     };
@@ -28,7 +29,8 @@ const getTitle = async (doc: Doc) => {
 export const init = (doc: Doc) => {
     initFrom(doc, {
         name: "New Model",
-        theory: "th.fp",
+        theory: "simple-olog",
+        type: "model",
         notebook: {
             cells: [],
         },

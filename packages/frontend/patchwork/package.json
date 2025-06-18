@@ -23,12 +23,13 @@
     "author": "Ink & Switch",
     "dependencies": {
         "@automerge/automerge-repo-react-hooks": "2.0.0-alpha.22",
+        "@corvu/dialog": "^0.2.4",
         "@patchwork/sdk": "file:../../../../patchwork/sdk",
         "react": "^18.3.1",
         "react-dom": "^18.3.1",
-        "tailwindcss": "^4.0.9",
+        "solid-element": "^1.8.0",
         "solid-js": "^1.8.0",
-        "solid-element": "^1.8.0"
+        "tailwindcss": "^4.0.9"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.9",
@@ -38,8 +39,8 @@
         "nodemon": "^3.1.9",
         "vite": "^5.3.4",
         "vite-plugin-css-injected-by-js": "^3.5.2",
+        "vite-plugin-solid": "^2.10.2",
         "vite-plugin-top-level-await": "^1.4.2",
-        "vite-plugin-wasm": "^3.3.0",
-        "vite-plugin-solid": "^2.10.2"
+        "vite-plugin-wasm": "^3.3.0"
     }
 }
