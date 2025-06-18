@@ -220,7 +220,9 @@ where
         let mut pairs = self.0.iter();
         let fmt_scalar_mul = |f: &mut std::fmt::Formatter<'_>, coef: &Coef, var: &Var| {
             if !coef.is_one() {
+                // println!("COEF: {}", coef.to_string());
                 let coef = coef.to_string();
+                // println!("COEF_STRING: {}", coef.clone());
                 if coef.chars().all(|c| c.is_alphabetic())
                     || coef.chars().all(|c| c.is_ascii_digit() || c == '.')
                 {

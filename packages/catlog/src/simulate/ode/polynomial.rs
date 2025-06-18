@@ -75,6 +75,7 @@ where
             .values()
             .map(|poly| poly.map_variables(|var| *indices.get(var).unwrap()))
             .collect();
+        println!("NUMERICAL: {:#?}", components);
         NumericalPolynomialSystem { components }
     }
 }
