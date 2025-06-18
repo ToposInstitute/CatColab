@@ -9,7 +9,7 @@ use std::hash::{BuildHasherDefault, Hash};
 
 use nalgebra::DVector;
 use num_traits::Zero;
-use ustr::{IdentityHasher, Ustr, ustr};
+use ustr::{ustr, IdentityHasher, Ustr};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -163,23 +163,35 @@ impl EnergeseMassActionAnalysis {
             })
             .collect();
 
-        let init: Vec<_> = model
-            .ob_generators_with_type(&self.stock_ob_type)
-            .map(|ob| {
-                format!("{} = {}", ob, data.initial_values.get(&ob).copied().unwrap_or_default())
-            })
-            .collect::<Vec<_>>();
-
-        let mut keys = model
-            .ob_generators_with_type(&self.stock_ob_type)
-            .map(|ob| (ob, String::new()))
-            .collect::<Vec<_>>();
-        keys.concat(
+        let init: Vec<_> = vec![
             model
-                .mor_generators_with_type(&self.varlink_mor_type)
-                .map(|ob| (ob, String::new()))
+                .ob_generators_with_type(&self.stock_ob_type)
+                .map(|ob| {
+                    format!(
+                        "{} = {}",
+                        ob,
+                        data.initial_values.get(&ob).copied().unwrap_or_default()
+                    )
+                })
                 .collect::<Vec<_>>(),
-        );
+            model
+                .mor_generators_with_type(&self.flowlink_mor_type)
+                .map(|ob| format!("{} = 1", ob))
+                .collect::<Vec<_>>(),
+        ]
+        .concat();
+
+        let mut keys = vec![
+            model
+                .ob_generators_with_type(&self.stock_ob_type)
+                .map(|ob| (ob, String::from("0")))
+                .collect::<Vec<_>>(),
+            model
+                .mor_generators_with_type(&self.flowlink_mor_type)
+                .map(|ob| (ob, String::from("0")))
+                .collect::<Vec<_>>(),
+        ]
+        .concat();
         let mut rhs: HashMap<Id, String> = HashMap::from_iter(keys);
 
         for (flow, term) in terms.iter() {
@@ -196,6 +208,11 @@ impl EnergeseMassActionAnalysis {
             rhs.insert(dom, format!("-1 * {}", rhsterm.clone()));
             rhs.insert(cod, rhsterm);
         }
+        for (vlink, vals) in vlinkmap {
+            let legs: Vec<_> = vals.values().collect();
+            rhs.insert(vlink, format!("heaviside({} - {})", legs[1], legs[0]));
+        }
+
         println!("{:#?}", rhs);
 
         // let rhs: Vec<_> = model.
@@ -205,7 +222,7 @@ impl EnergeseMassActionAnalysis {
             F_i {{ {} }}
         ",
             init.join(", "),
-            "rhs"
+            rhs.values().cloned().collect::<Vec<String>>().join(", ")
         )
     }
 
