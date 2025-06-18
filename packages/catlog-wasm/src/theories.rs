@@ -237,33 +237,6 @@ enum DAGDepth {
     Depth(usize),
 }
 
-fn get_depth(
-    x: &uuid::Uuid,
-    zero_path_depths: &mut HashMap<uuid::Uuid, DAGDepth>,
-    in_arrows: &HashMap<uuid::Uuid, Vec<uuid::Uuid>>,
-) -> usize {
-    let n = match zero_path_depths.get(x).unwrap() {
-        DAGDepth::Seen => {
-            panic!("a degree zero loop found containing {:?}", x)
-        }
-        DAGDepth::Depth(d) => *d,
-        DAGDepth::Undef => {
-            // Recursively compute depths for all incoming arrows.
-            zero_path_depths.insert(*x, DAGDepth::Seen);
-            let depth = in_arrows
-                .get(x)
-                .unwrap()
-                .iter()
-                .map(|y| 1 + get_depth(y, zero_path_depths, in_arrows))
-                .max()
-                .unwrap_or(0usize);
-            depth
-        }
-    };
-    zero_path_depths.insert(*x, DAGDepth::Depth(n));
-    n
-}
-
 #[wasm_bindgen]
 impl ThNN2Category {
     #[wasm_bindgen(constructor)]
@@ -274,6 +247,33 @@ impl ThNN2Category {
     #[wasm_bindgen]
     pub fn theory(&self) -> DblTheory {
         DblTheory(self.0.clone().into())
+    }
+
+    fn get_depth(
+        x: uuid::Uuid,
+        zero_path_depths: &mut HashMap<uuid::Uuid, DAGDepth>,
+        in_zeros: &HashMap<uuid::Uuid, Vec<(uuid::Uuid, uuid::Uuid)>>,
+    ) -> usize {
+        let n = match zero_path_depths.get(&x).unwrap() {
+            DAGDepth::Seen => {
+                panic!("a degree zero loop found containing {:?}", x)
+            }
+            DAGDepth::Depth(d) => *d,
+            DAGDepth::Undef => {
+                // Recursively compute depths for all incoming arrows.
+                zero_path_depths.insert(x, DAGDepth::Seen);
+                let depth = in_zeros
+                    .get(&x)
+                    .unwrap()
+                    .iter()
+                    .map(|&(_f, y)| 1 + Self::get_depth(y, zero_path_depths, in_zeros))
+                    .max()
+                    .unwrap_or(0usize);
+                depth
+            }
+        };
+        zero_path_depths.insert(x, DAGDepth::Depth(n));
+        n
     }
 
     /// Simulate the CCL system derived from a model.
@@ -302,12 +302,15 @@ impl ThNN2Category {
             uuid::Uuid::now_v7()
         }
 
+        let get_cod = |f| *model.get_cod(&f).unwrap();
+        let get_dom = |f| *model.get_dom(&f).unwrap();
+
         // tower_heights: [(base, height of corresponding tower)]
         // in_arrows: [(object, morphisms to this object)]
         // zero_path_depths: [morphisms of degree 0]
         let mut tower_heights: HashMap<uuid::Uuid, usize> = HashMap::new();
         let mut in_arrows: HashMap<uuid::Uuid, Vec<uuid::Uuid>> = HashMap::new();
-        let mut in_zeros: HashMap<uuid::Uuid, Vec<uuid::Uuid>> = HashMap::new();
+        let mut in_zeros: HashMap<uuid::Uuid, Vec<(uuid::Uuid, uuid::Uuid)>> = HashMap::new();
         let mut zero_path_depths: HashMap<uuid::Uuid, DAGDepth> = HashMap::new();
         let mut zero_edge_depths: HashMap<uuid::Uuid, usize> = HashMap::new();
 
@@ -340,19 +343,19 @@ impl ThNN2Category {
         // First pass, calculating maximal incoming degree for each base
         for f in model.mor_generators() {
             let degree = mor_deg(&f);
-            let f_cod = model.get_cod(&f).expect("pied wagtail");
+            let f_cod = get_cod(f);
 
             if degree == 0 {
                 // TO-DO: we need to insist that the degree zero arrows form a
                 // directed acyclic graph
-                in_zeros.get_mut(f_cod).expect("shrike").push(f);
+                in_zeros.get_mut(&f_cod).expect("shrike").push((f, get_dom(f)));
             }
 
-            let new_degree = std::cmp::max(*tower_heights.get(f_cod).expect("currawong"), degree);
-            tower_heights.insert(*f_cod, new_degree);
+            let new_degree = std::cmp::max(*tower_heights.get(&f_cod).expect("currawong"), degree);
+            tower_heights.insert(f_cod, new_degree);
 
             // While we're here, we might as well also...
-            in_arrows.get_mut(f_cod).expect("coot").push(f);
+            in_arrows.get_mut(&f_cod).expect("coot").push(f);
         }
 
         // If a tower isn't big enough, add more floors
@@ -429,8 +432,8 @@ impl ThNN2Category {
 
         // compute depths
         for x in model.ob_generators() {
-            let depth = get_depth(&x, &mut zero_path_depths, &in_arrows);
-            for &f in in_zeros.get(&x).unwrap() {
+            let depth = Self::get_depth(x, &mut zero_path_depths, &in_zeros);
+            for &(f, _y) in in_zeros.get(&x).unwrap() {
                 zero_edge_depths.insert(f, depth);
             }
         }
