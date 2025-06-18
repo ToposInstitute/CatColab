@@ -9,7 +9,7 @@ use std::hash::{BuildHasherDefault, Hash};
 
 use nalgebra::DVector;
 use num_traits::Zero;
-use ustr::{ustr, IdentityHasher, Ustr};
+use ustr::{IdentityHasher, Ustr, ustr};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -26,18 +26,21 @@ use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSyst
 use crate::zero::{alg::Polynomial, rig::Monomial};
 
 use diffsol::{
-    CraneliftJitModule, MatrixCommon, OdeBuilder, OdeSolverMethod, OdeSolverStopReason, Vector,
+    CraneliftJitModule, MatrixCommon, NalgebraMat, OdeBuilder, OdeEquationsImplicit,
+    OdeSolverMethod, OdeSolverProblem, OdeSolverStopReason, Vector,
 };
-use diffsol::{NalgebraMat, OdeEquationsImplicit, OdeSolverProblem};
 type M = diffsol::NalgebraMat<f64>;
 type CG = CraneliftJitModule;
 type LS = diffsol::NalgebraLU<f64>;
 use plotters::prelude::*;
 
+/** */
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum DiffSLFunctions {
+    ///
     None,
+    ///
     Heaviside,
 }
 
@@ -140,7 +143,6 @@ impl EnergeseMassActionAnalysis {
                 (cod.clone(), flink)
             })
             .collect();
-        println!("VLINKS: {:#?}", vlinkmap);
 
         let terms: HashMap<Id, Id> = model
             .mor_generators_with_type(&self.flow_mor_type)
@@ -149,7 +151,6 @@ impl EnergeseMassActionAnalysis {
                 (flow, dom)
             })
             .collect();
-        // println!("TERMS: {:#?}", terms);
 
         let terms: Vec<(Id, Vec<_>)> = terms
             .into_iter()
@@ -163,33 +164,31 @@ impl EnergeseMassActionAnalysis {
             })
             .collect();
 
-        let init: Vec<_> = vec![
-            model
-                .ob_generators_with_type(&self.stock_ob_type)
-                .map(|ob| {
-                    format!(
-                        "{} = {}",
-                        ob,
-                        data.initial_values.get(&ob).copied().unwrap_or_default()
-                    )
-                })
-                .collect::<Vec<_>>(),
-            model
-                .mor_generators_with_type(&self.flowlink_mor_type)
-                .map(|ob| format!("{} = 1", ob))
-                .collect::<Vec<_>>(),
-        ]
-        .concat();
+        let mut initmap: HashMap<Id, String> = HashMap::new();
+        for ob in model.ob_generators_with_type(&self.stock_ob_type) {
+            initmap.insert(
+                ob.clone(),
+                format!(
+                    "{} = {}",
+                    ob.clone(),
+                    data.initial_values.get(&ob).copied().unwrap_or_default()
+                ),
+            );
+        }
+        for flink in model.mor_generators_with_type(&self.flowlink_mor_type) {
+            initmap.insert(flink.clone(), format!("{} = 0", flink));
+        }
 
-        let mut keys = vec![
+        let keys = vec![
             model
                 .ob_generators_with_type(&self.stock_ob_type)
                 .map(|ob| (ob, String::from("0")))
                 .collect::<Vec<_>>(),
-            model
-                .mor_generators_with_type(&self.flowlink_mor_type)
-                .map(|ob| (ob, String::from("0")))
-                .collect::<Vec<_>>(),
+            // ERRONEOUSLY ASSUMED THAT THE RHS OF DYNAMIBLE IS A RATE
+            // model
+            //     .mor_generators_with_type(&self.flowlink_mor_type)
+            //     .map(|ob| (ob, String::from("0")))
+            //     .collect::<Vec<_>>(),
         ]
         .concat();
         let mut rhs: HashMap<Id, String> = HashMap::from_iter(keys);
@@ -198,31 +197,47 @@ impl EnergeseMassActionAnalysis {
             let rhsterm: String = term
                 .iter()
                 .map(|(coef, var)| {
-                    let cs =
-                        coef.iter().map(|c| format!("{}", c)).collect::<Vec<String>>().join(" * ");
+                    println!("{:#?}", coef);
+                    let cs = coef
+                        .iter()
+                        .map(|c| {
+                            if let Some(rate) = data.rates.get(c) {
+                                format!("{}", rate)
+                            } else {
+                                format!("{}", c)
+                            }
+                        })
+                        .collect::<Vec<String>>()
+                        .join(" * ");
                     format!("{} * {}", cs, var)
                 })
                 .collect();
             let dom = model.mor_generator_dom(flow).unwrap_basic();
             let cod = model.mor_generator_cod(flow).unwrap_basic();
-            rhs.insert(dom, format!("-1 * {}", rhsterm.clone()));
+            // TODO this is solved by specifying in-flows
+            if format!("{}", flow) == "deposits" {
+                rhs.insert(dom, format!("0.25 + -1 * {}", rhsterm.clone()));
+            } else {
+                rhs.insert(dom, format!("-1 * {}", rhsterm.clone()));
+            }
             rhs.insert(cod, rhsterm);
         }
         for (vlink, vals) in vlinkmap {
             let legs: Vec<_> = vals.values().collect();
-            rhs.insert(vlink, format!("heaviside({} - {})", legs[1], legs[0]));
+            rhs.insert(vlink, format!("heaviside({} - {})", legs[0], legs[1]));
         }
 
-        println!("{:#?}", rhs);
-
-        // let rhs: Vec<_> = model.
         format!(
             "
             u_i {{ {} }}
             F_i {{ {} }}
         ",
-            init.join(", "),
-            rhs.values().cloned().collect::<Vec<String>>().join(", ")
+            initmap.clone().values().cloned().collect::<Vec<String>>().join(", "),
+            initmap
+                .keys()
+                .map(|k| rhs.get(&k).unwrap().clone())
+                .collect::<Vec<String>>()
+                .join(", ")
         )
     }
 
@@ -256,7 +271,6 @@ impl EnergeseMassActionAnalysis {
                 (cod.clone(), Parameter::generator(flink))
             })
             .collect();
-        // println!("VLINKS: {:#?}", vlinkmap);
 
         let terms: HashMap<Id, Monomial<Id, u8>> = model
             .mor_generators_with_type(&self.flow_mor_type)
@@ -280,17 +294,14 @@ impl EnergeseMassActionAnalysis {
 
         let mut sys: PolynomialSystem<Id, Parameter<Id>, u8> = PolynomialSystem::new();
         for ob in model.ob_generators_with_type(&self.stock_ob_type) {
-            // println!("OB: {:#?}", ob);
             sys.add_term(ob, Polynomial::zero());
         }
         for (flow, term) in terms.iter() {
             let dom = model.mor_generator_dom(flow).unwrap_basic();
-            // println!("DOM: {:#?}", (dom.clone(), term.clone()));
             sys.add_term(dom, -term.clone());
         }
         for (flow, term) in terms {
             let cod = model.mor_generator_cod(&flow).unwrap_basic();
-            // println!("COD: {:#?}", (cod.clone(), term.clone()));
             sys.add_term(cod, term);
         }
         sys
@@ -324,63 +335,6 @@ impl EnergeseMassActionAnalysis {
             objects.into_iter().enumerate().map(|(i, x)| (x, i)).collect();
         ODEAnalysis::new(problem, ob_index)
     }
-
-    /**
-     */
-    pub fn to_diffsol<Id: Eq + Clone + Hash + Ord + std::fmt::Debug>(
-        &self,
-        model: &EnergeseModel<Ustr>,
-        data: EnergeseMassActionProblemData<Ustr>,
-    ) -> String {
-        let sys = self.create_system(model);
-        // println!("{:#?}", sys.components);
-        // println!("{:#?}", sys.components.get(&ustr("Water")));
-
-        let objects: Vec<_> = sys.components.keys().cloned().collect();
-        let initial_values = objects
-            .iter()
-            .map(|ob| data.initial_values.get(ob).copied().unwrap_or_default());
-        for (var, component) in sys.components.iter() {
-            // println!("SYSTEM PPRINT: {:#?}", component);
-            // println!("SYSTEM COMPONENT: {}", component);
-        }
-        // let x0 = DVector::from_iterator(objects.len(), initial_values);
-        // println!("{:#?}", x0);
-        // println!("{:#?}", initial_values);
-        // let init: Vec<_> = sys
-        //     .components
-        //     .into_iter()
-        //     .map(|(ob, v)| {
-        //         let s = format!(
-        //             "{} = {}",
-        //             ob,
-        //             data.initial_values.get(&ob).copied().unwrap_or_default()
-        //         );
-        //         s
-        //     })
-        //     .collect();
-        // println!("{}", sys);
-        // println!(
-        //     "COMPONENTS: {:#?}",
-        //     sys.components
-        //         .iter()
-        //         .map(|(var, component)| {
-        //             component.eval_pairs([
-        //                 (ustr("Water"), Polynomial::<Ustr, Parameter<Ustr>, u8>::from_scalar(1)),
-        //                 (ustr("Container"), 1 as &u8),
-        //                 (ustr("Sediment"), 1 as &u8),
-        //             ])
-        //         })
-        //         .collect::<Vec<_>>() // sys.components.iter().map(|(var, component)| { component }).collect::<Vec<_>>()
-        // );
-        format!(
-            "
-            u_i {{ {} }}
-            F_i {{ {} }}
-        ",
-            "init", "rhs"
-        )
-    }
 }
 
 #[cfg(test)]
@@ -398,7 +352,6 @@ mod tests {
         let analysis: EnergeseMassActionAnalysis = Default::default();
         let sys = analysis.create_system(&model);
 
-        // spillover = SpilloverChecker (left - right)
         let expected = expect!([r#"
             dContainer = 0
             dSediment = (deposits spillover) Water
@@ -416,56 +369,44 @@ mod tests {
         let mut data: EnergeseMassActionProblemData<Ustr> = Default::default();
 
         data.duration = 10.0;
+        data.rates.insert(ustr("deposits"), 3.0);
         data.initial_values.insert(ustr("Water"), 2.0);
+        data.initial_values.insert(ustr("Container"), 5.0);
         data.dynamibles.insert(ustr("spillover"), DiffSLFunctions::Heaviside);
-        // let _ = sys.components.iter().map(|(_, p)| {
-        //     p.monomials().map(|m| {
-        //         println!("MONOMIAL => {:#?}", m);
-        //         m
-        //     })
-        // });
 
-        let out = analysis.as_diffsol::<Ustr>(&model, data);
-        println!("{}", out);
+        let _ = analysis.as_diffsol::<Ustr>(&model, data);
         assert!(true);
     }
 
-    // TODO add Heaviside
     #[test]
     fn water_volume_analysis() {
         let th = Rc::new(th_category_energese());
         let model = water_volume(th);
         let analysis: EnergeseMassActionAnalysis = Default::default();
-        let sys = analysis.create_system(&model);
+        let mut data: EnergeseMassActionProblemData<Ustr> = Default::default();
+        data.duration = 10.0;
+        data.rates.insert(ustr("deposits"), 3.0);
+        data.initial_values.insert(ustr("Water"), 4.0);
+        data.initial_values.insert(ustr("Container"), 5.0);
+        data.dynamibles.insert(ustr("spillover"), DiffSLFunctions::Heaviside);
+        let stmt = analysis.as_diffsol(&model, data);
 
-        // TODO: borrow `fmt` and then interpolate initial data
-        let stmt = r"
-            u_i {
-                C = 10,
-                W = 2,
-                S = 0
-            }
-            F_i {
-                0,
-                -1*heaviside(W-C)*W,
-                heaviside(W-C)*W
-            }
-        ";
-        let problem = OdeBuilder::<M>::new().build_from_diffsl::<CG>(stmt).unwrap();
+        let problem = OdeBuilder::<M>::new().build_from_diffsl::<CG>(&stmt).unwrap();
         let mut solver = problem.bdf::<LS>().unwrap();
-        let (ys, ts): (_, Vec<f64>) = solver.solve(60.0).unwrap();
+        const SOLVE_TIME: f32 = 10.0;
+        let (ys, ts): (_, Vec<f64>) = solver.solve(SOLVE_TIME as f64).unwrap();
 
-        let water: Vec<f64> = ys.inner().row(1).into_iter().copied().collect();
-        let sediment: Vec<_> = ys.inner().row(2).into_iter().copied().collect();
+        let water: Vec<f64> = ys.inner().row(2).into_iter().copied().collect();
+        let sediment: Vec<_> = ys.inner().row(0).into_iter().copied().collect();
 
-        let root = BitMapBackend::new("water_sediment.png", (640, 480)).into_drawing_area();
+        let root = BitMapBackend::new("water_sediment_2.png", (640, 480)).into_drawing_area();
         let _ = root.fill(&WHITE);
         let mut chart = ChartBuilder::on(&root)
             .caption("water-sediment", ("sans-serif", 50).into_font())
             .margin(5)
             .x_label_area_size(30)
             .y_label_area_size(30)
-            .build_cartesian_2d(0f32..40f32, 0.1f32..30f32)
+            .build_cartesian_2d(0f32..SOLVE_TIME, 0.1f32..30f32)
             .expect("!");
 
         let _ = chart.configure_mesh().draw();
@@ -475,17 +416,17 @@ mod tests {
                 .into_iter()
                 .map(|x| x as f32)
                 .enumerate()
-                .map(|(i, t)| (t, water.clone()[i] as f32)),
-            &BLUE,
-        ));
-        let _ = chart.draw_series(LineSeries::new(
-            ts.into_iter()
-                .map(|x| x as f32)
-                .enumerate()
                 .map(|(i, t)| (t, sediment.clone()[i] as f32)),
             &RED,
         ));
-        // .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &RED));
+        let _ = chart.draw_series(LineSeries::new(
+            ts.clone()
+                .into_iter()
+                .map(|x| x as f32)
+                .enumerate()
+                .map(|(i, t)| (t, water.clone()[i] as f32)),
+            &BLUE,
+        ));
 
         let _ = chart
             .configure_series_labels()
@@ -494,9 +435,6 @@ mod tests {
             .draw();
 
         let _ = root.present();
-
-        // println!("{:#?}", water);
-        // println!("{:#?}", sediment);
 
         assert!(true);
     }
