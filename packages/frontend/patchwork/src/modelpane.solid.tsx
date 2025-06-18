@@ -11,19 +11,19 @@ import { ModelPane } from "../../src/model/model_editor";
 import { getLiveModel } from "../../src/model/document";
 import type { Repo } from "@automerge/automerge-repo";
 
-interface SolidComponentProps {
+interface ModelPaneProps {
     docUrl: string;
     repo: Repo;
 }
 
-export function SolidComponent(props: SolidComponentProps) {
+export function ModelPaneComponent(props: ModelPaneProps) {
     const [mounted, setMounted] = createSignal(false);
 
     const api = { repo: props.repo };
 
     onMount(() => {
         setMounted(true);
-        console.log("=== SolidComponent Mount (Same Import Paths) ===");
+        console.log("=== ModelPane Mount (Same Import Paths) ===");
     });
 
     const [liveModel] = createResource(

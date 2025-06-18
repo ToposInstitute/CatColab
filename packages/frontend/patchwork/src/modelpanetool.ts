@@ -3,7 +3,7 @@ import { EditorProps } from "@patchwork/sdk";
 import { Doc } from "./datatype";
 import React, { useRef, useEffect } from "react";
 import { createComponent, render } from "solid-js/web";
-import { SolidComponent } from "./solid-component.solid";
+import { ModelPaneComponent } from "./modelpane.solid";
 
 export const Tool: React.FC<EditorProps<Doc, string>> = ({ docUrl }) => {
     const handle = useDocHandle<Doc>(docUrl, { suspense: true });
@@ -24,7 +24,7 @@ export const Tool: React.FC<EditorProps<Doc, string>> = ({ docUrl }) => {
             }
 
             solidDisposeRef.current = render(
-                () => createComponent(SolidComponent, { docUrl, repo }),
+                () => createComponent(ModelPaneComponent, { docUrl, repo }),
                 solidContainerRef.current
             );
         }
