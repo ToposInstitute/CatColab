@@ -12,8 +12,8 @@ importers:
         specifier: 2.0.0-alpha.22
         version: 2.0.0-alpha.22(@swc/core@1.10.14)(@types/node@18.19.75)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.7.3)
       '@patchwork/sdk':
-        specifier: file:../../patchwork/sdk
-        version: file:../../patchwork/sdk(@types/react@18.3.18)
+        specifier: file:../../../../patchwork/sdk
+        version: file:../../../../patchwork/sdk(@types/react@18.3.18)
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -544,8 +544,8 @@ packages:
     resolution: {integrity: sha512-B8XBPsn4vT/KJAGqDzbwztd+6Yte3P4V7iafm24bxgDe/mlRuK6xmWPuCNrKt2vDafZ8MfJLlchDG/vYafQEjQ==}
     engines: {node: ^14.21.3 || >=16}
 
-  '@patchwork/sdk@file:../../patchwork/sdk':
-    resolution: {directory: ../../patchwork/sdk, type: directory}
+  '@patchwork/sdk@file:../../../../patchwork/sdk':
+    resolution: {directory: ../../../../patchwork/sdk, type: directory}
 
   '@radix-ui/number@1.1.1':
     resolution: {integrity: sha512-MkKCwxlXTgz6CFoJx3pCwn07GKp36+aZyu/u2Ln2VrA5DcdyCZkASEDBTd8x5whTQQL5CiYf4prXKLcgQdv29g==}
@@ -2863,7 +2863,7 @@ snapshots:
 
   '@noble/hashes@1.7.1': {}
 
-  '@patchwork/sdk@file:../../patchwork/sdk(@types/react@18.3.18)':
+  '@patchwork/sdk@file:../../../../patchwork/sdk(@types/react@18.3.18)':
     dependencies:
       '@automerge/automerge': 3.0.0-beta.1
       '@automerge/automerge-codemirror': 0.1.0

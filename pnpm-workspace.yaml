@@ -2,3 +2,4 @@ packages:
   - "packages/automerge-doc-server"
   - "packages/backend/pkg"
   - "packages/frontend"
+  - "packages/frontend/patchwork"
