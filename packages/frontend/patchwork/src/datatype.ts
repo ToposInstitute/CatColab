@@ -4,34 +4,40 @@ import { type DataTypeImplementation, initFrom } from "@patchwork/sdk";
 // SCHEMA
 
 export type Doc = HasVersionControlMetadata<unknown, unknown> & {
-  title: string;
-  message: string;
+    name: string;
+    theory: string;
+    notebook: {
+        cells: any[];
+    };
 };
 
 // FUNCTIONS
 
 export const markCopy = (doc: Doc) => {
-  doc.title = "Copy of " + doc.title;
+    doc.name = "Copy of " + doc.name;
 };
 
 const setTitle = async (doc: Doc, title: string) => {
-  doc.title = title;
+    doc.name = title;
 };
 
 const getTitle = async (doc: Doc) => {
-  return doc.title || "SolidJS Demo";
+    return doc.name || "Model";
 };
 
 export const init = (doc: Doc) => {
-  initFrom(doc, {
-    title: "SolidJS Demo",
-    message: "Hello from SolidJS!",
-  });
+    initFrom(doc, {
+        name: "New Model",
+        theory: "th.fp",
+        notebook: {
+            cells: [],
+        },
+    });
 };
 
 export const dataType: DataTypeImplementation<Doc, unknown> = {
-  init,
-  getTitle,
-  setTitle,
-  markCopy,
+    init,
+    getTitle,
+    setTitle,
+    markCopy,
 };
