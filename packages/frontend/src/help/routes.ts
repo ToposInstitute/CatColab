@@ -1,12 +1,12 @@
 import type { RouteDefinition } from "@solidjs/router";
 import { lazy } from "solid-js";
 
-import { stdTheories } from "../stdlib";
+// import { stdTheories } from "../stdlib";
 import { lazyMdx } from "../util/mdx";
 
-const theoryWithIdFilter = {
+/* const theoryWithIdFilter = {
     id: (id: string) => stdTheories.has(id),
-};
+};*/
 
 export const helpRoutes: RouteDefinition[] = [
     {
@@ -21,11 +21,11 @@ export const helpRoutes: RouteDefinition[] = [
         path: "/theories",
         component: lazy(() => import("./theories")),
     },
-    {
+    /*{
         path: "/theory/:id",
         matchFilters: theoryWithIdFilter,
         component: lazy(() => import("./theory")),
-    },
+    },*/
     {
         path: "/quick-intro",
         component: lazyMdx(() => import("./quick_intro.mdx")),

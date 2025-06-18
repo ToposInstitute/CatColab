@@ -2,7 +2,10 @@ import type { KbdKey } from "@solid-primitives/keyboard";
 
 import type { DblTheory, MorType, ObType } from "catlog-wasm";
 import { MorTypeIndex, ObTypeIndex } from "catlog-wasm";
-import type { DiagramAnalysisComponent, ModelAnalysisComponent } from "../analysis";
+import type {
+    DiagramAnalysisComponent,
+    ModelAnalysisComponent,
+} from "../analysis";
 import { uniqueIndexArray } from "../util/indexing";
 import type { ArrowStyle } from "../visualization";
 
@@ -43,8 +46,14 @@ export class Theory {
      */
     readonly instanceOfName: string;
 
-    private readonly modelTypeMeta: TypeMetadata<ModelObTypeMeta, ModelMorTypeMeta>;
-    private readonly instanceTypeMeta: TypeMetadata<InstanceObTypeMeta, InstanceMorTypeMeta>;
+    private readonly modelTypeMeta: TypeMetadata<
+        ModelObTypeMeta,
+        ModelMorTypeMeta
+    >;
+    private readonly instanceTypeMeta: TypeMetadata<
+        InstanceObTypeMeta,
+        InstanceMorTypeMeta
+    >;
 
     /** Map from theory ID to model analysis metadata. */
     private readonly modelAnalysisMap: Map<string, ModelAnalysisMeta>;
@@ -73,16 +82,26 @@ export class Theory {
         // Models.
         this.name = props.name;
         this.description = props.description;
-        this.modelTypeMeta = new TypeMetadata<ModelObTypeMeta, ModelMorTypeMeta>(props.modelTypes);
-        this.modelAnalysisMap = uniqueIndexArray(props.modelAnalyses ?? [], (meta) => meta.id);
+        this.modelTypeMeta = new TypeMetadata<
+            ModelObTypeMeta,
+            ModelMorTypeMeta
+        >(props.modelTypes);
+        this.modelAnalysisMap = uniqueIndexArray(
+            props.modelAnalyses ?? [],
+            (meta) => meta.id
+        );
         this.onlyFreeModels = props.onlyFreeModels ?? false;
 
         // Instances.
         this.instanceOfName = props.instanceOfName ?? "Instance of";
-        this.instanceTypeMeta = new TypeMetadata<InstanceObTypeMeta, InstanceMorTypeMeta>(
-            props.instanceTypes,
+        this.instanceTypeMeta = new TypeMetadata<
+            InstanceObTypeMeta,
+            InstanceMorTypeMeta
+        >(props.instanceTypes);
+        this.diagramAnalysisMap = uniqueIndexArray(
+            props.diagramAnalyses ?? [],
+            (meta) => meta.id
         );
-        this.diagramAnalysisMap = uniqueIndexArray(props.diagramAnalyses ?? [], (meta) => meta.id);
     }
 
     /** Metadata for types in the theory, as used in models.
@@ -149,7 +168,10 @@ export class Theory {
 }
 
 /** Helper class to index and lookup metadata for object and morphism types. */
-class TypeMetadata<ObMeta extends HasObTypeMeta, MorMeta extends HasMorTypeMeta> {
+class TypeMetadata<
+    ObMeta extends HasObTypeMeta,
+    MorMeta extends HasMorTypeMeta
+> {
     readonly types: Array<ObMeta | MorMeta>;
 
     private readonly obTypeIndex: ObTypeIndex;

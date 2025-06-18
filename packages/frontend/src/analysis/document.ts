@@ -27,7 +27,7 @@ export type AnalysisDocument = ModelAnalysisDocument | DiagramAnalysisDocument;
 /** Create an empty analysis. */
 export const newAnalysisDocument = (
     analysisType: AnalysisType,
-    analysisOf: StableRef,
+    analysisOf: StableRef
 ): BaseAnalysisDocument<typeof analysisType> => ({
     name: "",
     type: "analysis",
@@ -68,13 +68,22 @@ export type LiveDiagramAnalysisDocument = {
 };
 
 /** An analysis document "live" for editing. */
-export type LiveAnalysisDocument = LiveModelAnalysisDocument | LiveDiagramAnalysisDocument;
+export type LiveAnalysisDocument =
+    | LiveModelAnalysisDocument
+    | LiveDiagramAnalysisDocument;
 
 /** Create a new, empty analysis in the backend. */
-export async function createAnalysis(api: Api, analysisType: AnalysisType, analysisOf: StableRef) {
+export async function createAnalysis(
+    api: Api,
+    analysisType: AnalysisType,
+    analysisOf: StableRef
+) {
     const init = newAnalysisDocument(analysisType, analysisOf);
 
-    const result = await api.rpc.new_ref.mutate(init as InterfaceToType<AnalysisDocument>);
+    console.log("init", init);
+    const result = await api.rpc.new_ref.mutate(
+        init as InterfaceToType<AnalysisDocument>
+    );
     invariant(result.tag === "Ok", "Failed to create a new analysis");
 
     return result.content;
@@ -84,7 +93,7 @@ export async function createAnalysis(api: Api, analysisType: AnalysisType, analy
 export async function getLiveAnalysis(
     refId: string,
     api: Api,
-    theories: TheoryLibrary,
+    theories: TheoryLibrary
 ): Promise<LiveAnalysisDocument> {
     const liveDoc = await getLiveDoc<AnalysisDocument>(api, refId, "analysis");
     const { doc } = liveDoc;
@@ -98,7 +107,11 @@ export async function getLiveAnalysis(
             liveModel,
         };
     } else if (doc.analysisType === "diagram") {
-        const liveDiagram = await getLiveDiagram(doc.analysisOf._id, api, theories);
+        const liveDiagram = await getLiveDiagram(
+            doc.analysisOf._id,
+            api,
+            theories
+        );
         return {
             analysisType: "diagram",
             refId,
@@ -106,5 +119,7 @@ export async function getLiveAnalysis(
             liveDiagram,
         };
     }
-    throw new Error(`Unknown analysis type: ${(doc as AnalysisDocument).analysisType}`);
+    throw new Error(
+        `Unknown analysis type: ${(doc as AnalysisDocument).analysisType}`
+    );
 }

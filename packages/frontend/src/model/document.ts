@@ -9,6 +9,7 @@ import {
     type Uuid,
     elaborateModel,
 } from "catlog-wasm";
+
 import { type Api, type LiveDoc, getLiveDoc } from "../api";
 import { newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
@@ -65,7 +66,7 @@ export type ValidatedModel = {
 function enlivenModelDocument(
     refId: string,
     liveDoc: LiveDoc<ModelDocument>,
-    theories: TheoryLibrary,
+    theories: TheoryLibrary
 ): LiveModelDocument {
     const { doc } = liveDoc;
 
@@ -109,7 +110,7 @@ function enlivenModelDocument(
             }
         },
         undefined,
-        { equals: false },
+        { equals: false }
     );
 
     return {
@@ -130,7 +131,7 @@ Returns the ref ID of the created document.
  */
 export async function createModel(
     api: Api,
-    initOrTheoryId: ModelDocument | string,
+    initOrTheoryId: ModelDocument | string
 ): Promise<string> {
     let init: ModelDocument;
     if (typeof initOrTheoryId === "string") {
@@ -139,17 +140,22 @@ export async function createModel(
         init = initOrTheoryId;
     }
 
-    const result = await api.rpc.new_ref.mutate(init as InterfaceToType<ModelDocument>);
-    invariant(result.tag === "Ok", "Failed to create model");
+    console.log("init", init);
+    const handle = api.repo.create(init);
 
-    return result.content;
+    /* const result = await api.rpc.new_ref.mutate(
+        init as InterfaceToType<ModelDocument>
+    );*/
+    // invariant(result.tag === "Ok", "Failed to create model");
+
+    return handle.documentId;
 }
 
 /** Retrieve a model from the backend and make it "live" for editing. */
 export async function getLiveModel(
     refId: string,
     api: Api,
-    theories: TheoryLibrary,
+    theories: TheoryLibrary
 ): Promise<LiveModelDocument> {
     const liveDoc = await getLiveDoc<ModelDocument>(api, refId, "model");
     return enlivenModelDocument(refId, liveDoc, theories);

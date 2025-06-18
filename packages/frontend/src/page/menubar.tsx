@@ -1,7 +1,5 @@
 import { DropdownMenu } from "@kobalte/core/dropdown-menu";
 import { useNavigate } from "@solidjs/router";
-import { getAuth, signOut } from "firebase/auth";
-import { useAuth, useFirebaseApp } from "solid-firebase";
 import { type JSX, Show, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
@@ -37,7 +35,9 @@ export function HamburgerMenu(props: {
                 <MenuIcon />
             </DropdownMenu.Trigger>
             <DropdownMenu.Portal>
-                <DropdownMenu.Content class="menu popup">{props.children}</DropdownMenu.Content>
+                <DropdownMenu.Content class="menu popup">
+                    {props.children}
+                </DropdownMenu.Content>
             </DropdownMenu.Portal>
         </DropdownMenu>
     );
@@ -51,13 +51,7 @@ export const MenuSeparator = DropdownMenu.Separator;
 
 Contains menu items common to all pages, plus space for page-specific items.
  */
-export function AppMenu(props: {
-    children?: JSX.Element;
-    disabled?: boolean;
-}) {
-    const firebaseApp = useFirebaseApp();
-    const auth = useAuth(getAuth(firebaseApp));
-
+export function AppMenu(props: { children?: JSX.Element; disabled?: boolean }) {
     // Root the dialog here so that it is not destroyed when the menu closes.
     return (
         <>
@@ -65,11 +59,6 @@ export function AppMenu(props: {
                 {props.children}
                 <Show when={props.children}>
                     <MenuSeparator />
-                </Show>
-                <Show when={auth.data} fallback={<LogInMenuItem />}>
-                    <DocumentsMenuItem />
-                    <SettingsMenuItem />
-                    <LogOutMenuItem />
                 </Show>
                 <MenuSeparator />
                 <HelpMenuItem />
@@ -145,10 +134,8 @@ function LogInMenuItem() {
 }
 
 function LogOutMenuItem() {
-    const firebaseApp = useFirebaseApp();
-
     return (
-        <MenuItem onSelect={() => signOut(getAuth(firebaseApp))}>
+        <MenuItem onSelect={() => "nah"}>
             <LogOutIcon />
             <MenuItemLabel>{"Log out"}</MenuItemLabel>
         </MenuItem>
