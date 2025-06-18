@@ -65,7 +65,7 @@ function CreateModel() {
 const refIsUUIDFilter = {
     ref: (ref: string) => {
         console.log("ref", ref, isValidAutomergeUrl(ref));
-        return isValidAutomergeUrl("automerge:" + ref);
+        return isValidAutomergeUrl(ref);
     },
 };
 

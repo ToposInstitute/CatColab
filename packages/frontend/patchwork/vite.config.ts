@@ -32,6 +32,7 @@ export default defineConfig({
     ],
 
     build: {
+        minify: false,
         rollupOptions: {
             external: EXTERNAL_DEPENDENCIES,
             input: "./src/index.ts",

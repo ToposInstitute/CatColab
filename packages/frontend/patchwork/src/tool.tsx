@@ -1,141 +1,153 @@
-import { useDocHandle } from "@automerge/automerge-repo-react-hooks";
-import { EditorProps } from "@patchwork/sdk";
-import { Button } from "@patchwork/sdk/ui";
-import { Doc } from "./datatype";
-import React, { useRef, useEffect } from "react";
+import React from "react";
+import { useDocument, useRepo } from "@automerge/automerge-repo-react-hooks";
+import { type Doc } from "./datatype";
 import { renderSolidComponent } from "./solid-wrapper.solid";
+import { AutomergeUrl } from "@automerge/automerge-repo";
 
-console.log("This is tool.tsx in the solidjs-demo package");
+interface ToolProps {
+    docUrl: AutomergeUrl;
+}
 
-export const Tool: React.FC<EditorProps<Doc, string>> = ({ docUrl }) => {
-    const handle = useDocHandle<Doc>(docUrl, { suspense: true });
-    const solidContainerRef = useRef<HTMLDivElement>(null);
-    const solidDisposeRef = useRef<(() => void) | null>(null);
+export default function Tool({ docUrl }: ToolProps) {
+    const [data] = useDocument<Doc>(docUrl, { suspense: true });
+    console.log("Tool component rendering with data:", data);
+    console.log("Tool component type:", typeof Tool);
 
-    const doc = handle.doc();
+    const containerRef = React.useRef<HTMLDivElement>(null);
+    const disposeRef = React.useRef<(() => void) | null>(null);
 
-    // Mount/update SolidJS component
-    useEffect(() => {
-        if (solidContainerRef.current && doc) {
+    const repo = useRepo();
+
+    // Check if we have a valid docUrl and data before rendering SolidJS component
+    const isValidForRendering = React.useMemo(() => {
+        const hasValidUrl =
+            docUrl &&
+            docUrl !== "placeholder-doc-url" &&
+            !docUrl.includes("placeholder");
+        const hasValidData = data && data.name && data.theory;
+        console.log("Validation check:", {
+            hasValidUrl,
+            hasValidData,
+            docUrl,
+            data,
+        });
+        return hasValidUrl && hasValidData;
+    }, [docUrl, data]);
+
+    React.useEffect(() => {
+        console.log(
+            "Tool useEffect running, containerRef.current:",
+            containerRef.current
+        );
+        console.log("isValidForRendering:", isValidForRendering);
+
+        if (containerRef.current && isValidForRendering) {
             // Clean up previous render
-            if (solidDisposeRef.current) {
-                solidDisposeRef.current();
+            if (disposeRef.current) {
+                console.log("Cleaning up previous SolidJS render");
+                disposeRef.current();
             }
 
             // Render SolidJS component with model data
             const props = {
-                docUrl,
-                name: doc.name,
-                theory: doc.theory,
-                notebook: doc.notebook,
+                docUrl: docUrl,
+                name: data.name,
+                theory: data.theory,
+                notebook: data.notebook,
+                repo: repo,
             };
-            solidDisposeRef.current = renderSolidComponent(
-                props,
-                solidContainerRef.current
-            );
+
+            console.log("Rendering SolidJS component with props:", props);
+
+            try {
+                disposeRef.current = renderSolidComponent(
+                    props,
+                    containerRef.current
+                );
+                console.log("Successfully rendered SolidJS component");
+            } catch (error) {
+                console.error("Failed to render SolidJS component:", error);
+                throw error;
+            }
+        } else if (containerRef.current && !isValidForRendering) {
+            console.log("Skipping SolidJS render due to invalid data/URL");
+            // Clean up any existing render
+            if (disposeRef.current) {
+                console.log("Cleaning up existing SolidJS render");
+                disposeRef.current();
+                disposeRef.current = null;
+            }
         }
 
-        // Cleanup on unmount
         return () => {
-            if (solidDisposeRef.current) {
-                solidDisposeRef.current();
-                solidDisposeRef.current = null;
+            if (disposeRef.current) {
+                console.log("Cleaning up SolidJS component on unmount");
+                disposeRef.current();
+                disposeRef.current = null;
             }
         };
-    }, [docUrl, doc?.name, doc?.theory, doc?.notebook]);
+    }, [data, repo, docUrl, isValidForRendering]);
 
-    if (!doc) {
-        return null;
-    }
-
-    const updateModel = () => {
-        handle.change((d) => {
-            d.name = `Updated Model - ${new Date().toLocaleTimeString()}`;
-        });
-    };
-
-    const addCell = () => {
-        handle.change((d) => {
-            if (!d.notebook.cells) {
-                d.notebook.cells = [];
-            }
-            d.notebook.cells.push({
-                id: `cell-${Date.now()}`,
-                type: "text",
-                content: "New cell",
-            });
-        });
-    };
+    console.log("Tool component returning JSX");
 
     return (
-        <div className="solidjs-demo p-6">
-            <div className="flex flex-col h-full">
-                <div className="mb-6">
-                    <h2 className="text-3xl font-bold mb-2 text-gray-800">
-                        {doc.name}
-                    </h2>
-                    <p className="text-gray-600">
-                        This shows a CatColab model document rendered through
-                        SolidJS inside a React/Patchwork environment!
-                    </p>
-                </div>
+        <div>
+            {/* React component header */}
+            <div
+                style={{
+                    background: "#f3f4f6",
+                    padding: "12px 16px",
+                    borderRadius: "8px 8px 0 0",
+                    borderBottom: "1px solid #e5e7eb",
+                    fontSize: "14px",
+                    fontWeight: "bold",
+                    color: "#374151",
+                }}
+            >
+                ⚛️ React Host Component (Debug Mode)
+            </div>
 
-                <div className="mb-6 flex gap-4">
-                    <Button
-                        variant="default"
-                        onClick={updateModel}
-                        className="bg-blue-600 hover:bg-blue-700"
+            {/* Validation status */}
+            <div
+                style={{
+                    padding: "12px 16px",
+                    backgroundColor: "#f9fafb",
+                    fontSize: "12px",
+                }}
+            >
+                <div>
+                    <strong>DocURL:</strong> {docUrl}
+                </div>
+                <div>
+                    <strong>Data Name:</strong> {data?.name || "undefined"}
+                </div>
+                <div>
+                    <strong>Data Theory:</strong> {data?.theory || "undefined"}
+                </div>
+                <div>
+                    <strong>Valid for Rendering:</strong>{" "}
+                    {isValidForRendering ? "✅ Yes" : "❌ No"}
+                </div>
+            </div>
+
+            {/* SolidJS component integration */}
+            <div ref={containerRef}>
+                {!isValidForRendering && (
+                    <div
+                        style={{
+                            padding: "20px",
+                            textAlign: "center",
+                            color: "#6b7280",
+                            fontStyle: "italic",
+                        }}
                     >
-                        Update Model Name
-                    </Button>
-                    <Button
-                        variant="default"
-                        onClick={addCell}
-                        className="bg-green-600 hover:bg-green-700"
-                    >
-                        Add Cell
-                    </Button>
-                </div>
-
-                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
-                    <p className="text-sm text-gray-600">
-                        <strong>Debug info:</strong>
-                        <br />
-                        Doc URL: <code className="text-xs">{docUrl}</code>
-                        <br />
-                        Theory: <code className="text-xs">{doc.theory}</code>
-                        <br />
-                        Cells:{" "}
-                        <code className="text-xs">
-                            {doc.notebook?.cells?.length || 0}
-                        </code>
-                    </p>
-                </div>
-
-                <div className="flex-1">
-                    <div ref={solidContainerRef} />
-                </div>
-
-                <div className="mt-6 p-4 bg-gray-100 rounded-lg">
-                    <h4 className="font-semibold text-gray-700 mb-2">
-                        🔧 How this works:
-                    </h4>
-                    <ul className="text-sm text-gray-600 space-y-1">
-                        <li>
-                            • React component manages the Automerge document
-                        </li>
-                        <li>
-                            • SolidJS component renders the model information
-                        </li>
-                        <li>
-                            • Changes in React trigger re-renders in SolidJS
-                        </li>
-                        <li>• Both frameworks can manage their own state</li>
-                        <li>• Model data is passed as props to SolidJS</li>
-                        <li>• Supports hot reloading!</li>
-                    </ul>
-                </div>
+                        {docUrl === "placeholder-doc-url" ||
+                        docUrl?.includes("placeholder")
+                            ? "Waiting for valid document URL..."
+                            : "Waiting for document data to load..."}
+                    </div>
+                )}
             </div>
         </div>
     );
-};
+}

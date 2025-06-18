@@ -1,26 +1,25 @@
 {
     "compilerOptions": {
-        "composite": true,
         "target": "ES2020",
-        "useDefineForClassFields": true,
+        "lib": ["ES2020", "DOM", "DOM.Iterable"],
         "module": "ESNext",
-        "lib": ["ES2022", "DOM", "DOM.Iterable"],
         "skipLibCheck": true,
 
         "moduleResolution": "bundler",
         "allowImportingTsExtensions": true,
         "resolveJsonModule": true,
         "isolatedModules": true,
-        "moduleDetection": "force",
         "noEmit": true,
         "jsx": "react-jsx",
 
         "strict": true,
         "noUnusedLocals": true,
         "noUnusedParameters": true,
-        "noUncheckedIndexedAccess": true,
         "noFallthroughCasesInSwitch": true
     },
-    "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts"],
-    "exclude": ["src/**/*.solid.ts", "src/**/*.solid.tsx"]
+    "include": ["src/**/*", "../src/**/*.ts", "../src/**/*.tsx"],
+    "exclude": ["src/**/*.solid.tsx", "src/**/*.solid.ts"],
+    "ts-node": {
+        "esm": true
+    }
 }

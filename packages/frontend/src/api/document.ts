@@ -59,13 +59,12 @@ export async function getLiveDoc<Doc extends Document>(
     docType?: string
 ): Promise<LiveDoc<Doc>> {
     invariant(
-        isValidAutomergeUrl("automerge:" + refId),
+        isValidAutomergeUrl(refId),
         () => `Invalid document ref ${refId}`
     );
     const { repo } = api;
 
-    let docHandle: DocHandle<Doc>;
-    docHandle = repo.find(refId) as DocHandle<Doc>;
+    let docHandle = await repo.find<Doc>(refId);
 
     const doc = await makeDocHandleReactive(docHandle);
     if (docType !== undefined) {
@@ -86,7 +85,7 @@ export async function getLiveDoc<Doc extends Document>(
 export async function makeDocHandleReactive<T extends object>(
     handle: DocHandle<T>
 ): Promise<T> {
-    const init = await handle.doc();
+    const init = handle.doc();
 
     const [store, setStore] = createStore<T>(init as T);
 
