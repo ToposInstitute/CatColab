@@ -349,13 +349,14 @@ impl ThNN2Category {
                 // TO-DO: we need to insist that the degree zero arrows form a
                 // directed acyclic graph
                 in_zeros.get_mut(&f_cod).expect("shrike").push((f, get_dom(f)));
+            } else {
+                let new_degree =
+                    std::cmp::max(*tower_heights.get(&f_cod).expect("currawong"), degree);
+                tower_heights.insert(f_cod, new_degree);
+
+                // While we're here, we might as well also...
+                in_arrows.get_mut(&f_cod).expect("coot").push(f);
             }
-
-            let new_degree = std::cmp::max(*tower_heights.get(&f_cod).expect("currawong"), degree);
-            tower_heights.insert(f_cod, new_degree);
-
-            // While we're here, we might as well also...
-            in_arrows.get_mut(&f_cod).expect("coot").push(f);
         }
 
         // If a tower isn't big enough, add more floors
@@ -437,6 +438,8 @@ impl ThNN2Category {
                 zero_edge_depths.insert(f, depth);
             }
         }
+
+        log(&debug_log);
 
         Ok(ODEResult(
             analyses::ode::CCLAnalysis::new(ustr("Object"))
