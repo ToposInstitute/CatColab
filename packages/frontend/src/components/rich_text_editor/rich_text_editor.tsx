@@ -152,13 +152,15 @@ export const RichTextEditor = (
                     props.onFocus?.();
                     return false;
                 },
-                blur: (_, event) => {
-                    const relatedTarget = (event as FocusEvent).relatedTarget as Node | null;
+                blur: (view, event) => {
+                    const relatedTarget = event.relatedTarget as Node | null;
 
-                    if (
-                        relatedTarget &&
-                        (menuRoot.contains(relatedTarget) || editorRoot.contains(relatedTarget))
-                    ) {
+                    // Interacting with the menu bar can cause the editor to lose focus which leads to
+                    // the menu bar closing. We can prevent that by ignoring blur events if they
+                    // originate from the menu bar.
+                    if (relatedTarget && menuRoot.contains(relatedTarget)) {
+                        // prevent the editor from losing focus and clearing the selection.
+                        view.focus();
                         return true;
                     }
 
