@@ -190,7 +190,8 @@ stdTheories.add(
                     tag: "ObType",
                     obType: { tag: "Basic", content: "AttrType" },
                     name: "Attribute variable",
-                    description: "Variable that can be bound to attribute values",
+                    description:
+                        "Variable that can be bound to attribute values",
                 },
             ],
             modelAnalyses: [
@@ -263,7 +264,8 @@ stdTheories.add(
                 analyses.configureSubmodelsAnalysis({
                     id: "positive-loops",
                     name: "Positive feedback",
-                    description: "Analyze the network for positive feedback loops",
+                    description:
+                        "Analyze the network for positive feedback loops",
                     findSubmodels(model, options) {
                         return thSignedCategory.positiveLoops(model, options);
                     },
@@ -271,7 +273,8 @@ stdTheories.add(
                 analyses.configureSubmodelsAnalysis({
                     id: "negative-loops",
                     name: "Negative feedback",
-                    description: "Analyze the network for negative feedback loops",
+                    description:
+                        "Analyze the network for negative feedback loops",
                     findSubmodels(model, options) {
                         return thSignedCategory.negativeLoops(model, options);
                     },
@@ -354,7 +357,8 @@ stdTheories.add(
                     },
                 }),
                 analyses.configureLotkaVolterra({
-                    simulate: (model, data) => thSignedCategory.lotkaVolterra(model, data),
+                    simulate: (model, data) =>
+                        thSignedCategory.lotkaVolterra(model, data),
                 }),
             ],
         });
@@ -433,7 +437,10 @@ stdTheories.add(
                     name: "Balancing loops",
                     description: "Find the fast-acting balancing loops",
                     findSubmodels(model, options) {
-                        return thDelayedSignedCategory.negativeLoops(model, options);
+                        return thDelayedSignedCategory.negativeLoops(
+                            model,
+                            options,
+                        );
                     },
                 }),
                 analyses.configureSubmodelsAnalysis({
@@ -441,7 +448,10 @@ stdTheories.add(
                     name: "Reinforcing loops",
                     description: "Find the fast-acting reinforcing loops",
                     findSubmodels(model, options) {
-                        return thDelayedSignedCategory.positiveLoops(model, options);
+                        return thDelayedSignedCategory.positiveLoops(
+                            model,
+                            options,
+                        );
                     },
                 }),
                 analyses.configureSubmodelsAnalysis({
@@ -449,7 +459,10 @@ stdTheories.add(
                     name: "Delayed balancing loops",
                     description: "Find the slow-acting balancing loops",
                     findSubmodels(model, options) {
-                        return thDelayedSignedCategory.delayedNegativeLoops(model, options);
+                        return thDelayedSignedCategory.delayedNegativeLoops(
+                            model,
+                            options,
+                        );
                     },
                 }),
                 analyses.configureSubmodelsAnalysis({
@@ -457,7 +470,10 @@ stdTheories.add(
                     name: "Delayed reinforcing loops",
                     description: "Find the slow-acting reinforcing loops",
                     findSubmodels(model, options) {
-                        return thDelayedSignedCategory.delayedPositiveLoops(model, options);
+                        return thDelayedSignedCategory.delayedPositiveLoops(
+                            model,
+                            options,
+                        );
                     },
                 }),
             ],
@@ -469,7 +485,8 @@ stdTheories.add(
     {
         id: "indeterminate-causal-loop",
         name: "Causal loop diagram with indeterminates",
-        description: "Positive, negative, and indeterminate causal relationships",
+        description:
+            "Positive, negative, and indeterminate causal relationships",
         group: "System Dynamics",
         help: "indeterminate-causal-loop",
     },
@@ -512,7 +529,8 @@ stdTheories.add(
                     tag: "MorType",
                     morType: { tag: "Basic", content: "Zero" },
                     name: "Indeterminate link",
-                    description: "The direction that variables change is indeterminate",
+                    description:
+                        "The direction that variables change is indeterminate",
                     shortcut: ["Z"],
                     arrowStyle: "indeterminate",
                     preferUnnamed: true,
@@ -688,7 +706,7 @@ stdTheories.add(
         help: "energese",
     },
     (meta) => {
-	    // TODO calls catlog.ThCategoryEnergese
+        // TODO calls catlog.ThCategoryEnergese
         const thCategoryEnergese = new catlog.ThCategoryEnergese();
         return new Theory({
             ...meta,
@@ -715,17 +733,17 @@ stdTheories.add(
                     shortcut: ["F"],
                     arrowStyle: "double",
                 },
-				{
-					tag: "ObType",
-					obType: { tag: "Basic", content: "DynamicVariable" },
-					name: "Variable",
-					description: "Variable stuff",
-					shortcut: ["V"],
-					cssClasses: [styles.box],
-					svgClasses: [svgStyles.box],
-				},
-				// f --|--> dv --|--> s
-				{
+                {
+                    tag: "ObType",
+                    obType: { tag: "Basic", content: "DynamicVariable" },
+                    name: "Variable",
+                    description: "Variable stuff",
+                    shortcut: ["V"],
+                    cssClasses: [styles.box],
+                    svgClasses: [svgStyles.box],
+                },
+                // f --|--> dv --|--> s
+                {
                     tag: "MorType",
                     morType: { tag: "Basic", content: "FlowLink" },
                     name: "Flow Link",
@@ -733,7 +751,7 @@ stdTheories.add(
                     preferUnnamed: true,
                     shortcut: ["L"],
                 },
-				{
+                {
                     tag: "MorType",
                     morType: { tag: "Basic", content: "VariableLink" },
                     name: "Variable Link",
@@ -741,7 +759,6 @@ stdTheories.add(
                     shortcut: ["F"],
                     arrowStyle: "flat",
                 },
-				
             ],
             modelAnalyses: [
                 analyses.configureStockFlowDiagram({
@@ -749,11 +766,11 @@ stdTheories.add(
                     name: "Visualization",
                     description: "Visualize the stock and flow diagram",
                 }),
-				// TODO defined in src/stdlib/analyses/energese.tsx
+                // TODO defined in src/stdlib/analyses/energese.tsx
                 analyses.configureEnergese({
-				    // TODO where is this defined
+                    // TODO where is this defined
                     simulate(model, data) {
-					    // catlog-wasm/src/theories
+                        // catlog-wasm/src/theories
                         return thCategoryEnergese.energese(model, data);
                     },
                     isTransition(mor) {

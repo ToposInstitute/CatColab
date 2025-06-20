@@ -1,13 +1,18 @@
 import { createMemo } from "solid-js";
 
-import type { DblModel, EnergeseMassActionModelData, EnergeseMassActionProblemData, ODEResult } from "catlog-wasm";
+import type {
+    DblModel,
+    EnergeseMassActionModelData,
+    EnergeseMassActionProblemData,
+    ODEResult,
+} from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import {
     type ColumnSchema,
     FixedTableEditor,
     Foldable,
     createNumericalColumn,
-	// createEnumColumn,
+    // createEnumColumn,
 } from "../../components";
 import type { MorphismDecl, ObjectDecl } from "../../model";
 import type { ModelAnalysisMeta } from "../../theory";
@@ -22,7 +27,10 @@ import "./simulation.css";
 export type EnergeseMassActionContent = EnergeseMassActionProblemData<string>;
 
 // EnergeseMassActionModelData is in catlog-wasm, wraps EnergeseMassActionModelData
-type Simulator = (model: DblModel, data: EnergeseMassActionModelData) => ODEResult;
+type Simulator = (
+    model: DblModel,
+    data: EnergeseMassActionModelData,
+) => ODEResult;
 
 /** Configure a mass-action ODE analysis for use with models of a theory. */
 export function configureEnergese(options: {
@@ -43,12 +51,14 @@ export function configureEnergese(options: {
         id,
         name,
         description,
-        component: (props) => <EnergeseMassAction title={name} {...otherOptions} {...props} />,
+        component: (props) => (
+            <EnergeseMassAction title={name} {...otherOptions} {...props} />
+        ),
         initialContent: () => ({
             rates: {},
             initialValues: {},
             duration: 10,
-			dynamibles: {},
+            dynamibles: {},
         }),
     };
 }
@@ -66,17 +76,17 @@ export function EnergeseMassAction(
         return props.liveModel
             .formalJudgments()
             .filter((jgmt) => jgmt.tag === "object")
-			.filter((obj) => obj.obType.content === "Object")
+            .filter((obj) => obj.obType.content === "Object")
             .filter((ob) => props.isState?.(ob) ?? true);
     }, []);
 
-	const dynamDecls = createMemo<ObjectDecl[]>(() => {
-	    return props.liveModel
-			.formalJudgments()
-			.filter((jgmt) => jgmt.tag === "object")
-			.filter((obj) => obj.obType.content === "DynamicVariable")
-			.filter((ob) => props.isState?.(ob) ?? true);
-	}, []);
+    const dynamDecls = createMemo<ObjectDecl[]>(() => {
+        return props.liveModel
+            .formalJudgments()
+            .filter((jgmt) => jgmt.tag === "object")
+            .filter((obj) => obj.obType.content === "DynamicVariable")
+            .filter((ob) => props.isState?.(ob) ?? true);
+    }, []);
 
     const morDecls = createMemo<MorphismDecl[]>(() => {
         return props.liveModel
@@ -120,21 +130,20 @@ export function EnergeseMassAction(
         }),
     ];
 
-	const dynamSchema: ColumnSchema<ObjectDecl>[] = [
+    const dynamSchema: ColumnSchema<ObjectDecl>[] = [
         {
             contentType: "string",
             header: true,
             content: (ob) => ob.name,
         },
-		{
+        {
             contentType: "enum",
             name: "Function",
             variants() {
-                return ["Identity", "Heaviside"]; 
+                return ["Identity", "Heaviside"];
             },
-            content: () => "Identity", 
-            setContent: (ob, value) => 
-			
+            content: () => "Identity",
+            setContent: (ob, value) =>
                 props.changeContent((content) => {
                     if (value === null) {
                         delete content.dynamibles[ob.id];
@@ -143,7 +152,7 @@ export function EnergeseMassAction(
                     }
                 }),
         },
-        // TODO createEnumColumn 
+        // TODO createEnumColumn
     ];
 
     const toplevelSchema: ColumnSchema<null>[] = [
@@ -158,20 +167,23 @@ export function EnergeseMassAction(
         }),
     ];
 
-	// XXX
+    // XXX
     const plotResult = createModelODEPlot(
         () => props.liveModel,
         (model: DblModel) => props.simulate(model, props.content),
     );
 
-	console.log(plotResult());
+    console.log(props.liveModel.formalJudgments());
     return (
-		<div class="simulation">
+        <div class="simulation">
             <Foldable title={props.title}>
                 <div class="parameters">
                     <FixedTableEditor rows={obDecls()} schema={obSchema} />
                     <FixedTableEditor rows={morDecls()} schema={morSchema} />
-					<FixedTableEditor rows={dynamDecls()} schema={dynamSchema} />
+                    <FixedTableEditor
+                        rows={dynamDecls()}
+                        schema={dynamSchema}
+                    />
                     <FixedTableEditor rows={[null]} schema={toplevelSchema} />
                 </div>
             </Foldable>

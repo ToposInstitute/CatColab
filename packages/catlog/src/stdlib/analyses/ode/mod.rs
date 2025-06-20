@@ -51,13 +51,14 @@ impl<Id, Sys> ODEAnalysis<Id, Sys> {
     /// Solves the ODE with reasonable default settings and collects results.
     pub fn solve_with_defaults(self) -> Result<ODESolution<Id>, IntegrationError>
     where
-        Id: Eq + Hash,
+        Id: Eq + Hash + std::fmt::Debug,
         Sys: ODESystem,
     {
         // ODE solver will fail in the degenerate case of an empty system.
         if self.variable_index.is_empty() {
             return Ok(Default::default());
         }
+        println!("VARIABLE_INDEX: {:#?}", self.variable_index);
 
         let duration = self.problem.end_time - self.problem.start_time;
         let output_step_size = (duration / 100.0).min(0.01f32);

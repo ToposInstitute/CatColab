@@ -138,7 +138,7 @@ pub fn water_volume(th: Rc<UstrDiscreteTabTheory>) -> UstrDiscreteTabModel {
     // flow link
     model.add_ob(spillover, dynamible_type.clone());
     model.add_mor(
-        ustr("spillover"),
+        ustr("dynVolume"),
         TabOb::Basic(spillover),
         model.tabulated_gen(flow),
         TabMorType::Basic(ustr("FlowLink")), // flow

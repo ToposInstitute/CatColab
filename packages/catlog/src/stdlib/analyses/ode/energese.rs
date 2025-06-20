@@ -9,7 +9,7 @@ use std::hash::{BuildHasherDefault, Hash};
 
 use nalgebra::DVector;
 use num_traits::Zero;
-use ustr::{ustr, IdentityHasher, Ustr};
+use ustr::{IdentityHasher, Ustr, ustr};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -24,22 +24,6 @@ use crate::dbl::{
 use crate::one::FgCategory;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
 use crate::zero::{alg::Polynomial, rig::Monomial};
-
-use diffsol::{
-    // CraneliftJitModule,
-    MatrixCommon,
-    NalgebraMat,
-    OdeBuilder,
-    OdeEquationsImplicit,
-    OdeSolverMethod,
-    OdeSolverProblem,
-    OdeSolverStopReason,
-    Vector,
-};
-type M = diffsol::NalgebraMat<f64>;
-// type CG = CraneliftJitModule;
-type LS = diffsol::NalgebraLU<f64>;
-use plotters::prelude::*;
 
 /** */
 #[derive(Clone, Debug)]
@@ -291,12 +275,12 @@ impl EnergeseMassActionAnalysis {
             .into_iter()
             .map(|(flow, term)| {
                 let param = Parameter::generator(flow.clone());
-                if let Some(flink) = flinks.get(&flow) {
-                    // multiple param by `flink.clone()`
-                    (flow, [(param, term)].into_iter().collect())
-                } else {
-                    (flow, [(param, term)].into_iter().collect())
-                }
+                // if let Some(flink) = flinks.get(&flow) {
+                // multiple param by `flink.clone()`
+                // (flow, [(flink.clone() * param, term)].into_iter().collect())
+                // } else {
+                (flow, [(param, term)].into_iter().collect())
+                // }
             })
             .collect();
 
@@ -319,12 +303,35 @@ impl EnergeseMassActionAnalysis {
 
     The resulting system has numerical rate coefficients and is ready to solve.
      */
-    pub fn create_numerical_system<Id: Eq + Clone + Hash + Ord + std::fmt::Debug>(
+    pub fn create_numerical_system<
+        Id: Eq + Clone + Hash + Ord + std::fmt::Debug + std::fmt::Display,
+    >(
         &self,
         model: &EnergeseModel<Id>,
         data: EnergeseMassActionProblemData<Id>,
     ) -> ODEAnalysis<Id, NumericalPolynomialSystem<u8>> {
         let sys = self.create_system(model);
+
+        let flinks: HashMap<Id, Id> = model
+            .mor_generators_with_type(&self.flowlink_mor_type)
+            .map(|flink| {
+                let path = model.mor_generator_cod(&flink).unwrap_tabulated();
+                let Some(TabEdge::Basic(cod)) = path.clone().only() else {
+                    panic!("!!!");
+                };
+                // vlink stuff
+                // let dom = model.mor_generator_dom(&flink).unwrap_basic();
+                // let hashmap: HashMap<Id, Id> = vlinks
+                //     .iter()
+                //     .filter(|v| model.mor_generator_dom(&v).unwrap_basic() == dom)
+                //     .map(|vlink| (vlink.clone(), model.mor_generator_cod(&vlink).unwrap_basic()))
+                //     .collect();
+                // vlinkmap.insert(flink.clone(), hashmap);
+                // return pair
+                (cod.clone(), flink)
+            })
+            .collect();
+        dbg!(&flinks);
 
         let objects: Vec<_> = sys.components.keys().cloned().collect();
         let initial_values = objects
@@ -334,14 +341,30 @@ impl EnergeseMassActionAnalysis {
 
         let sys = sys
             .extend_scalars(|poly| {
-                poly.eval(|flow| data.rates.get(flow).copied().unwrap_or_default())
+                poly.eval(|flow| {
+                    let rate = data.rates.get(flow).copied().unwrap_or_default();
+                    if let Some(flink) = flinks.get(&flow) {
+                        if let Some(function) = data.dynamibles.get(flink) {
+                            match function.as_str() {
+                                "Identity" => 1.0,
+                                "Heaviside" => 2.0,
+                                _ => 3.0,
+                            }
+                        } else {
+                            rate
+                        }
+                    } else {
+                        rate
+                    }
+                })
             })
             .to_numerical();
 
         let problem = ODEProblem::new(sys, x0).end_time(data.duration);
         let ob_index: HashMap<_, _> =
             objects.into_iter().enumerate().map(|(i, x)| (x, i)).collect();
-        ODEAnalysis::new(problem, ob_index)
+        let out = ODEAnalysis::new(problem, ob_index);
+        out
     }
 }
 
@@ -379,7 +402,7 @@ mod tests {
         data.rates.insert(ustr("deposits"), 3.0);
         data.initial_values.insert(ustr("Water"), 2.0);
         data.initial_values.insert(ustr("Container"), 5.0);
-        data.dynamibles.insert(ustr("Container"), String::from("heaviside"));
+        data.dynamibles.insert(ustr("dynVolume"), String::from("Heaviside"));
 
         let result = analysis.create_numerical_system(&model, data).solve_with_defaults();
         format!("RESULT: {:#?}", result);

@@ -59,7 +59,7 @@ where
 
 impl<Var, Exp> PolynomialSystem<Var, f32, Exp>
 where
-    Var: Clone + Ord,
+    Var: Clone + Ord + std::fmt::Debug,
     Exp: Clone + Ord + Add<Output = Exp> + std::fmt::Debug,
 {
     /** Converts the polynomial system to a numerical one.
@@ -75,7 +75,6 @@ where
             .values()
             .map(|poly| poly.map_variables(|var| *indices.get(var).unwrap()))
             .collect();
-        println!("NUMERICAL: {:#?}", components);
         NumericalPolynomialSystem { components }
     }
 }
