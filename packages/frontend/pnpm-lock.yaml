@@ -74,6 +74,9 @@ importers:
       '@solidjs/router':
         specifier: ^0.14.3
         version: 0.14.7(solid-js@1.9.2)
+      '@thisbeyond/solid-select':
+        specifier: ^0.15.0
+        version: 0.15.0(solid-js@1.9.2)
       '@viz-js/viz':
         specifier: ^3.7.0
         version: 3.9.0
@@ -1318,6 +1321,12 @@ packages:
 
   '@swc/types@0.1.21':
     resolution: {integrity: sha512-2YEtj5HJVbKivud9N4bpPBAyZhj4S2Ipe5LkUG94alTpr7in/GU/EARgPAd3BwU+YOmFVJC2+kjqhGRi3r0ZpQ==}
+
+  '@thisbeyond/solid-select@0.15.0':
+    resolution: {integrity: sha512-L3QnA5vm09JWNqLR4QqEIi7cgfs9/1sJbFjyEnPskjKpxEvb4G+Iy5cyd1qhZ2vAIZ9vaLd3udts3kefayPsMg==}
+    engines: {node: '>=18.0.0', pnpm: '>=9.0.0'}
+    peerDependencies:
+      solid-js: ^1.8
 
   '@tsconfig/node10@1.0.11':
     resolution: {integrity: sha512-DcRjDCujK/kCk/cUe8Xz8ZSpm8mS3mNNpta+jGCA6USEDfktlNvm1+IuZ9eTcDbNk41BHwpHHeW+N1lKCz4zOw==}
@@ -4270,6 +4279,10 @@ snapshots:
     dependencies:
       '@swc/counter': 0.1.3
     optional: true
+
+  '@thisbeyond/solid-select@0.15.0(solid-js@1.9.2)':
+    dependencies:
+      solid-js: 1.9.2
 
   '@tsconfig/node10@1.0.11': {}
 

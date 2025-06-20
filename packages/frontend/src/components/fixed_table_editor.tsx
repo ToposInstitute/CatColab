@@ -119,6 +119,46 @@ export const createNumericalColumn = <Row,>(args: {
         }),
 });
 
+
+/** Create schema for a column with numerical (floating point) data. */
+export const createEnumColumn = <Row,>(args: {
+    name?: string;
+    header?: boolean;
+    data: (row: Row) => number | undefined;
+    default?: number;
+    setData?: (row: Row, data: number) => void;
+}): EnumColumnSchema<Row> => ({
+    contentType: "enum",
+    name: args.name,
+    header: args.header,
+	variants(row) {
+	  console.log(row);
+	  return ["--, Meme"]
+	},
+    content(row) {
+        let value = args.data(row);
+        if (value === undefined) {
+            value = args.default ?? 0;
+            args.setData?.(row, value);
+        }
+        return value.toString();
+    },
+    setContent:
+        args.setData &&
+        ((row, text) => {
+	  console.log(row);
+	  console.log(text);
+	  true
+	}),
+        //     // const parsed = Number(text);
+        //     // const isValid = (args.validate?.(row, text) ?? true);
+        //     // if (isValid) {
+        //     //     args.setData?.(row, text);
+        //     // }
+        //     return isValid;
+        // }),
+});
+
 /** Edit tabular data given by a fixed list of rows.
 
 Displays tabular data given row-wise. The content of individual cells can be

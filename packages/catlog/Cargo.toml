@@ -13,7 +13,8 @@ serde-wasm = ["serde", "dep:wasm-bindgen", "dep:tsify"]
 [dependencies]
 derivative = "2"
 derive_more = { version = "1", features = ["from", "into"] }
-diffsol = { version = "0.6.0", features = ["diffsl-cranelift"] }
+# diffsol = { version = "0.6.0", features = ["diffsl-cranelift"] }
+diffsol = "0.6.0"
 duplicate = "2"
 egglog = { version = "0.4", default-features = false }
 ego-tree = "0.10"

@@ -688,6 +688,7 @@ stdTheories.add(
         help: "energese",
     },
     (meta) => {
+	    // TODO calls catlog.ThCategoryEnergese
         const thCategoryEnergese = new catlog.ThCategoryEnergese();
         return new Theory({
             ...meta,
@@ -748,8 +749,11 @@ stdTheories.add(
                     name: "Visualization",
                     description: "Visualize the stock and flow diagram",
                 }),
+				// TODO defined in src/stdlib/analyses/energese.tsx
                 analyses.configureEnergese({
+				    // TODO where is this defined
                     simulate(model, data) {
+					    // catlog-wasm/src/theories
                         return thCategoryEnergese.energese(model, data);
                     },
                     isTransition(mor) {

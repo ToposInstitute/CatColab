@@ -243,14 +243,13 @@ impl ThCategoryLinks {
     pub fn mass_action(
         &self,
         model: &DblModel,
-        // TODO wrong
-        data: EnergeseMassActionModelData,
+        data: MassActionModelData,
     ) -> Result<ODEResult, String> {
         let model: &model::DiscreteTabModel<_, _, _> = (&model.0)
             .try_into()
             .map_err(|_| "Mass-action simulation expects a discrete tabulator model")?;
         Ok(ODEResult(
-            analyses::ode::EnergeseMassActionAnalysis::default()
+            analyses::ode::StockFlowMassActionAnalysis::default()
                 .create_numerical_system(model, data.0)
                 .solve_with_defaults()
                 .map_err(|err| format!("{:?}", err))

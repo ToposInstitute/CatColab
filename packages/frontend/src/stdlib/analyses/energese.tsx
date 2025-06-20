@@ -1,37 +1,41 @@
 import { createMemo } from "solid-js";
 
-import type { DblModel, MassActionModelData, MassActionProblemData, ODEResult } from "catlog-wasm";
+import type { DblModel, EnergeseMassActionModelData, EnergeseMassActionProblemData, ODEResult } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import {
     type ColumnSchema,
     FixedTableEditor,
     Foldable,
     createNumericalColumn,
+	// createEnumColumn,
 } from "../../components";
 import type { MorphismDecl, ObjectDecl } from "../../model";
 import type { ModelAnalysisMeta } from "../../theory";
 import { ODEResultPlot } from "../../visualization";
 import { createModelODEPlot } from "./simulation";
+// import { Select } from "@thisbeyond/solid-select";
+// import "@thisbeyond/solid-select/style.css";
 
 import "./simulation.css";
 
-/** Configuration for a mass-action ODE analysis of a model. */
-export type MassActionContent = MassActionProblemData<string>;
+/** Configuration for a energese ODE analysis of a model */
+export type EnergeseMassActionContent = EnergeseMassActionProblemData<string>;
 
-type Simulator = (model: DblModel, data: MassActionModelData) => ODEResult;
+// EnergeseMassActionModelData is in catlog-wasm, wraps EnergeseMassActionModelData
+type Simulator = (model: DblModel, data: EnergeseMassActionModelData) => ODEResult;
 
 /** Configure a mass-action ODE analysis for use with models of a theory. */
-export function configureMassAction(options: {
+export function configureEnergese(options: {
     id?: string;
     name?: string;
     description?: string;
     simulate: Simulator;
     isState?: (ob: ObjectDecl) => boolean;
     isTransition?: (mor: MorphismDecl) => boolean;
-}): ModelAnalysisMeta<MassActionContent> {
+}): ModelAnalysisMeta<EnergeseMassActionContent> {
     const {
-        id = "mass-action",
-        name = "Mass-action dynamics",
+        id = "energese",
+        name = "Energese dynamics",
         description = "Simulate the system using the law of mass action",
         ...otherOptions
     } = options;
@@ -39,30 +43,40 @@ export function configureMassAction(options: {
         id,
         name,
         description,
-        component: (props) => <MassAction title={name} {...otherOptions} {...props} />,
+        component: (props) => <EnergeseMassAction title={name} {...otherOptions} {...props} />,
         initialContent: () => ({
             rates: {},
             initialValues: {},
             duration: 10,
+			dynamibles: {},
         }),
     };
 }
 
 /** Analyze a model using mass-action dynamics. */
-export function MassAction(
-    props: ModelAnalysisProps<MassActionContent> & {
+export function EnergeseMassAction(
+    props: ModelAnalysisProps<EnergeseMassActionContent> & {
         simulate: Simulator;
         isState?: (ob: ObjectDecl) => boolean;
         isTransition?: (mor: MorphismDecl) => boolean;
         title?: string;
     },
 ) {
-	const obDecls = createMemo<ObjectDecl[]>(() => {
+    const obDecls = createMemo<ObjectDecl[]>(() => {
         return props.liveModel
             .formalJudgments()
             .filter((jgmt) => jgmt.tag === "object")
-			.filter((ob) => props.isState?.(ob) ?? true);
+			.filter((obj) => obj.obType.content === "Object")
+            .filter((ob) => props.isState?.(ob) ?? true);
     }, []);
+
+	const dynamDecls = createMemo<ObjectDecl[]>(() => {
+	    return props.liveModel
+			.formalJudgments()
+			.filter((jgmt) => jgmt.tag === "object")
+			.filter((obj) => obj.obType.content === "DynamicVariable")
+			.filter((ob) => props.isState?.(ob) ?? true);
+	}, []);
 
     const morDecls = createMemo<MorphismDecl[]>(() => {
         return props.liveModel
@@ -106,6 +120,32 @@ export function MassAction(
         }),
     ];
 
+	const dynamSchema: ColumnSchema<ObjectDecl>[] = [
+        {
+            contentType: "string",
+            header: true,
+            content: (ob) => ob.name,
+        },
+		{
+            contentType: "enum",
+            name: "Function",
+            variants() {
+                return ["Identity", "Heaviside"]; 
+            },
+            content: () => "Identity", 
+            setContent: (ob, value) => 
+			
+                props.changeContent((content) => {
+                    if (value === null) {
+                        delete content.dynamibles[ob.id];
+                    } else {
+                        content.dynamibles[ob.id] = value;
+                    }
+                }),
+        },
+        // TODO createEnumColumn 
+    ];
+
     const toplevelSchema: ColumnSchema<null>[] = [
         createNumericalColumn({
             name: "Duration",
@@ -118,17 +158,20 @@ export function MassAction(
         }),
     ];
 
+	// XXX
     const plotResult = createModelODEPlot(
         () => props.liveModel,
         (model: DblModel) => props.simulate(model, props.content),
     );
 
+	console.log(plotResult());
     return (
-        <div class="simulation">
+		<div class="simulation">
             <Foldable title={props.title}>
                 <div class="parameters">
                     <FixedTableEditor rows={obDecls()} schema={obSchema} />
                     <FixedTableEditor rows={morDecls()} schema={morSchema} />
+					<FixedTableEditor rows={dynamDecls()} schema={dynamSchema} />
                     <FixedTableEditor rows={[null]} schema={toplevelSchema} />
                 </div>
             </Foldable>

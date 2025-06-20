@@ -13,7 +13,7 @@ use tsify::Tsify;
 use crate::simulate::ode::{ODEProblem, ODESystem};
 
 /// Solution to an ODE problem.
-#[derive(Clone, Derivative)]
+#[derive(Clone, Debug, Derivative)]
 #[derivative(Default(bound = ""))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
@@ -30,6 +30,7 @@ where
 }
 
 /// Data needed to simulate and interpret an ODE analysis of a model.
+#[derive(Debug)]
 pub struct ODEAnalysis<Id, Sys> {
     /// ODE problem for the analysis.
     pub problem: ODEProblem<Sys>,
@@ -63,6 +64,10 @@ impl<Id, Sys> ODEAnalysis<Id, Sys> {
         let result = self.problem.solve_dopri5(output_step_size)?;
 
         let (t_out, x_out) = result.get();
+
+        for (ob, i) in self.variable_index.iter() {
+            println!("OUT: {:#?}", x_out.iter().map(|x| x[i.clone()]).collect::<Vec<_>>());
+        }
         Ok(ODESolution {
             time: t_out.clone(),
             states: self
