@@ -8,6 +8,7 @@ use std::rc::Rc;
 
 use ustr::ustr;
 use wasm_bindgen::prelude::*;
+use web_sys::console;
 
 use catlog::dbl::{model, theory};
 use catlog::one::Path;
@@ -284,6 +285,11 @@ impl ThCategoryEnergese {
         let model: &model::DiscreteTabModel<_, _, _> = (&model.0)
             .try_into()
             .map_err(|_| "Mass-action simulation expects a discrete tabulator model")?;
+        //
+        let analysis = analyses::ode::EnergeseMassActionAnalysis::default()
+            .teeup_numerical_system(model, data.0.clone());
+        console::log_1(&format!("{:#?}", analysis).into());
+        //
         Ok(ODEResult(
             analyses::ode::EnergeseMassActionAnalysis::default()
                 .create_numerical_system(model, data.0)

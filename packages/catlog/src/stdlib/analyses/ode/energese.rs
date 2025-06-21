@@ -9,7 +9,7 @@ use std::hash::{BuildHasherDefault, Hash};
 
 use nalgebra::DVector;
 use num_traits::Zero;
-use ustr::{IdentityHasher, Ustr, ustr};
+use ustr::{ustr, IdentityHasher, Ustr};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -24,6 +24,8 @@ use crate::dbl::{
 use crate::one::FgCategory;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
 use crate::zero::{alg::Polynomial, rig::Monomial};
+
+use web_sys::console;
 
 /** */
 #[derive(Clone, Debug)]
@@ -64,7 +66,7 @@ where
     duration: f32,
 
     /// Map from dynamic variables to their functions
-    dynamibles: HashMap<Id, String>,
+    pub dynamibles: HashMap<Id, String>,
 }
 
 type Parameter<Id> = Polynomial<Id, f32, u8>;
@@ -320,7 +322,7 @@ impl EnergeseMassActionAnalysis {
                     panic!("!!!");
                 };
                 // vlink stuff
-                // let dom = model.mor_generator_dom(&flink).unwrap_basic();
+                let dom = model.mor_generator_dom(&flink).unwrap_basic();
                 // let hashmap: HashMap<Id, Id> = vlinks
                 //     .iter()
                 //     .filter(|v| model.mor_generator_dom(&v).unwrap_basic() == dom)
@@ -328,10 +330,9 @@ impl EnergeseMassActionAnalysis {
                 //     .collect();
                 // vlinkmap.insert(flink.clone(), hashmap);
                 // return pair
-                (cod.clone(), flink)
+                (cod.clone(), dom)
             })
             .collect();
-        dbg!(&flinks);
 
         let objects: Vec<_> = sys.components.keys().cloned().collect();
         let initial_values = objects
@@ -345,11 +346,12 @@ impl EnergeseMassActionAnalysis {
                     let rate = data.rates.get(flow).copied().unwrap_or_default();
                     if let Some(flink) = flinks.get(&flow) {
                         if let Some(function) = data.dynamibles.get(flink) {
-                            match function.as_str() {
+                            let modifier = match function.as_str() {
                                 "Identity" => 1.0,
                                 "Heaviside" => 2.0,
-                                _ => 3.0,
-                            }
+                                _ => 1.0,
+                            };
+                            modifier * rate
                         } else {
                             rate
                         }
@@ -365,6 +367,80 @@ impl EnergeseMassActionAnalysis {
             objects.into_iter().enumerate().map(|(i, x)| (x, i)).collect();
         let out = ODEAnalysis::new(problem, ob_index);
         out
+    }
+
+    // -----
+    /** Creates a numerical mass-action system from a model.
+
+    The resulting system has numerical rate coefficients and is ready to solve.
+     */
+    pub fn teeup_numerical_system<
+        Id: Eq + Clone + Hash + Ord + std::fmt::Debug + std::fmt::Display,
+    >(
+        &self,
+        model: &EnergeseModel<Id>,
+        data: EnergeseMassActionProblemData<Id>,
+    ) -> NumericalPolynomialSystem<u8> {
+        let sys = self.create_system(model);
+
+        let flinks: HashMap<Id, Id> = model
+            .mor_generators_with_type(&self.flowlink_mor_type)
+            .map(|flink| {
+                let path = model.mor_generator_cod(&flink).unwrap_tabulated();
+                let Some(TabEdge::Basic(cod)) = path.clone().only() else {
+                    panic!("!!!");
+                };
+                // vlink stuff
+                let dom = model.mor_generator_dom(&flink).unwrap_basic();
+                // let hashmap: HashMap<Id, Id> = vlinks
+                //     .iter()
+                //     .filter(|v| model.mor_generator_dom(&v).unwrap_basic() == dom)
+                //     .map(|vlink| (vlink.clone(), model.mor_generator_cod(&vlink).unwrap_basic()))
+                //     .collect();
+                // vlinkmap.insert(flink.clone(), hashmap);
+                // return pair
+                (cod.clone(), dom)
+            })
+            .collect();
+
+        let objects: Vec<_> = sys.components.keys().cloned().collect();
+        let initial_values = objects
+            .iter()
+            .map(|ob| data.initial_values.get(ob).copied().unwrap_or_default());
+        let x0 = DVector::from_iterator(objects.len(), initial_values);
+
+        sys.extend_scalars(|poly| {
+            poly.eval(|flow| {
+                // need to see why the rates aren't updating
+                console::log_1(
+                    &format!("FLOW!!! {}, {:#?}, {:#?}", flow, flinks.clone(), data.dynamibles)
+                        .into(),
+                );
+                let rate = data.rates.get(flow).copied().unwrap_or_default();
+                if let Some(flink) = flinks.get(&flow) {
+                    console::log_1(&format!("FLINK: {}", flink.clone()).into());
+                    if let Some(function) = data.dynamibles.get(flink) {
+                        let modifier = match function.as_str() {
+                            "Identity" => 1.0,
+                            "Heaviside" => 2.0,
+                            _ => 1.0,
+                        };
+                        modifier * rate
+                    } else {
+                        rate
+                    }
+                } else {
+                    rate
+                }
+            })
+        })
+        .to_numerical()
+
+        // let problem = ODEProblem::new(sys, x0).end_time(data.duration);
+        // let ob_index: HashMap<_, _> =
+        //     objects.into_iter().enumerate().map(|(i, x)| (x, i)).collect();
+        // let out = ODEAnalysis::new(problem, ob_index);
+        // out
     }
 }
 
