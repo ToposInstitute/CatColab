@@ -58,7 +58,6 @@ impl<Id, Sys> ODEAnalysis<Id, Sys> {
         if self.variable_index.is_empty() {
             return Ok(Default::default());
         }
-        println!("VARIABLE_INDEX: {:#?}", self.variable_index);
 
         let duration = self.problem.end_time - self.problem.start_time;
         let output_step_size = (duration / 100.0).min(0.01f32);
@@ -66,9 +65,6 @@ impl<Id, Sys> ODEAnalysis<Id, Sys> {
 
         let (t_out, x_out) = result.get();
 
-        for (ob, i) in self.variable_index.iter() {
-            println!("OUT: {:#?}", x_out.iter().map(|x| x[i.clone()]).collect::<Vec<_>>());
-        }
         Ok(ODESolution {
             time: t_out.clone(),
             states: self

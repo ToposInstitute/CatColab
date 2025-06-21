@@ -360,87 +360,13 @@ impl EnergeseMassActionAnalysis {
                     }
                 })
             })
-            .to_numerical();
+            .to_numerical(); // simulate/ode/polynomial
 
         let problem = ODEProblem::new(sys, x0).end_time(data.duration);
         let ob_index: HashMap<_, _> =
             objects.into_iter().enumerate().map(|(i, x)| (x, i)).collect();
         let out = ODEAnalysis::new(problem, ob_index);
         out
-    }
-
-    // -----
-    /** Creates a numerical mass-action system from a model.
-
-    The resulting system has numerical rate coefficients and is ready to solve.
-     */
-    pub fn teeup_numerical_system<
-        Id: Eq + Clone + Hash + Ord + std::fmt::Debug + std::fmt::Display,
-    >(
-        &self,
-        model: &EnergeseModel<Id>,
-        data: EnergeseMassActionProblemData<Id>,
-    ) -> NumericalPolynomialSystem<u8> {
-        let sys = self.create_system(model);
-
-        let flinks: HashMap<Id, Id> = model
-            .mor_generators_with_type(&self.flowlink_mor_type)
-            .map(|flink| {
-                let path = model.mor_generator_cod(&flink).unwrap_tabulated();
-                let Some(TabEdge::Basic(cod)) = path.clone().only() else {
-                    panic!("!!!");
-                };
-                // vlink stuff
-                let dom = model.mor_generator_dom(&flink).unwrap_basic();
-                // let hashmap: HashMap<Id, Id> = vlinks
-                //     .iter()
-                //     .filter(|v| model.mor_generator_dom(&v).unwrap_basic() == dom)
-                //     .map(|vlink| (vlink.clone(), model.mor_generator_cod(&vlink).unwrap_basic()))
-                //     .collect();
-                // vlinkmap.insert(flink.clone(), hashmap);
-                // return pair
-                (cod.clone(), dom)
-            })
-            .collect();
-
-        let objects: Vec<_> = sys.components.keys().cloned().collect();
-        let initial_values = objects
-            .iter()
-            .map(|ob| data.initial_values.get(ob).copied().unwrap_or_default());
-        let x0 = DVector::from_iterator(objects.len(), initial_values);
-
-        sys.extend_scalars(|poly| {
-            poly.eval(|flow| {
-                // need to see why the rates aren't updating
-                console::log_1(
-                    &format!("FLOW!!! {}, {:#?}, {:#?}", flow, flinks.clone(), data.dynamibles)
-                        .into(),
-                );
-                let rate = data.rates.get(flow).copied().unwrap_or_default();
-                if let Some(flink) = flinks.get(&flow) {
-                    console::log_1(&format!("FLINK: {}", flink.clone()).into());
-                    if let Some(function) = data.dynamibles.get(flink) {
-                        let modifier = match function.as_str() {
-                            "Identity" => 1.0,
-                            "Heaviside" => 2.0,
-                            _ => 1.0,
-                        };
-                        modifier * rate
-                    } else {
-                        rate
-                    }
-                } else {
-                    rate
-                }
-            })
-        })
-        .to_numerical()
-
-        // let problem = ODEProblem::new(sys, x0).end_time(data.duration);
-        // let ob_index: HashMap<_, _> =
-        //     objects.into_iter().enumerate().map(|(i, x)| (x, i)).collect();
-        // let out = ODEAnalysis::new(problem, ob_index);
-        // out
     }
 }
 
@@ -474,14 +400,16 @@ mod tests {
         let analysis: EnergeseMassActionAnalysis = Default::default();
         let mut data: EnergeseMassActionProblemData<Ustr> = Default::default();
 
-        data.duration = 10.0;
+        data.duration = 1.0;
+        data.rates.insert(ustr("inflow"), 4.0);
         data.rates.insert(ustr("deposits"), 3.0);
+        data.initial_values.insert(ustr("Source"), 100.0);
         data.initial_values.insert(ustr("Water"), 2.0);
-        data.initial_values.insert(ustr("Container"), 5.0);
+        data.initial_values.insert(ustr("Container"), 20.0);
         data.dynamibles.insert(ustr("dynVolume"), String::from("Heaviside"));
 
         let result = analysis.create_numerical_system(&model, data).solve_with_defaults();
-        format!("RESULT: {:#?}", result);
+        println!("RESULT: {:#?}", result);
         // let sys = analysis.clone().create_numerical_system(&model, data);
         // let _ = analysis.as_diffsol(&model, data);
         // println!("SYSTEM: {:#?}", sys);

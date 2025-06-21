@@ -1,7 +1,7 @@
 //! Standard library of models of double theories.
 
 use std::rc::Rc;
-use ustr::{Ustr, ustr};
+use ustr::{ustr, Ustr};
 
 use crate::dbl::{model::*, theory::*};
 use crate::one::Path;
@@ -126,12 +126,16 @@ pub fn backward_link(th: Rc<UstrDiscreteTabTheory>) -> UstrDiscreteTabModel {
 */
 pub fn water_volume(th: Rc<UstrDiscreteTabTheory>) -> UstrDiscreteTabModel {
     let mut model = UstrDiscreteTabModel::new(th.clone());
-    let (water, container, sediment) = (ustr("Water"), ustr("Container"), ustr("Sediment"));
+    let (source, water, container, sediment) =
+        (ustr("Source"), ustr("Water"), ustr("Container"), ustr("Sediment"));
     let ob_type = TabObType::Basic(ustr("Object"));
+    model.add_ob(source, ob_type.clone());
     model.add_ob(water, ob_type.clone());
     model.add_ob(container, ob_type.clone());
     model.add_ob(sediment, ob_type.clone());
+    let inflow = ustr("inflow");
     let flow = ustr("deposits");
+    model.add_mor(inflow, TabOb::Basic(source), TabOb::Basic(water), th.hom_type(ob_type.clone()));
     model.add_mor(flow, TabOb::Basic(water), TabOb::Basic(sediment), th.hom_type(ob_type));
     let spillover = ustr("SpilloverChecker");
     let dynamible_type = TabObType::Basic(ustr("DynamicVariable"));

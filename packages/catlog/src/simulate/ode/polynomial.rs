@@ -122,12 +122,26 @@ pub struct NumericalPolynomialSystem<Exp> {
 
 impl<Exp> ODESystem for NumericalPolynomialSystem<Exp>
 where
-    Exp: Clone + Ord,
+    Exp: Clone + Ord + std::fmt::Debug,
     f32: Pow<Exp, Output = f32>,
 {
     fn vector_field(&self, dx: &mut DVector<f32>, x: &DVector<f32>, _t: f32) {
+        println!("NEW STEP: {:#?} ------------------------------------------", x);
+        // 0: C
+        // 1: S
+        // 2: I
+        // 3: W
+        // where dW or dS = \pm [W-C],
         for i in 0..dx.len() {
-            dx[i] = self.components[i].eval(|var| x[*var])
+            dx[i] = self.components[i].eval(|var| {
+                if (*var == 1 || *var == 3) && x[3] <= x[0] {
+                    0.0
+                } else {
+                    dbg!(i, var, &x[*var], "------------------------------------");
+                    x[*var]
+                }
+            });
+            // dbg!(&dx);
         }
     }
 }
