@@ -1,6 +1,7 @@
 //! Polynomial differential equations.
 
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::fmt::Display;
 use std::ops::Add;
 
@@ -12,6 +13,8 @@ use num_traits::{One, Pow};
 use super::ODEProblem;
 use super::ODESystem;
 use crate::zero::alg::Polynomial;
+
+type SystemClosures<T> = HashMap<usize, Box<dyn Fn(DVector<f32>) -> T>>;
 
 /// A system of polynomial differential equations.
 #[derive(Clone, Debug, Derivative)]
@@ -68,14 +71,39 @@ where
     variables in the old one.
      */
     pub fn to_numerical(&self) -> NumericalPolynomialSystem<Exp> {
+        let mut closures: SystemClosures<f32> = HashMap::new();
         let indices: BTreeMap<Var, usize> =
             self.components.keys().enumerate().map(|(i, var)| (var.clone(), i)).collect();
         let components = self
             .components
             .values()
-            .map(|poly| poly.map_variables(|var| *indices.get(var).unwrap()))
+            .map(|poly| {
+                poly.map_variables(|var| {
+                    // We know in our water_volume example that Sediment and Water
+                    // have a Heaviside step function [W-C], an element of R^n --> Bool,
+                    // so for demo purposes I hardcode that here. It would be better to
+                    // handle this when we extend_scalars/eval
+                    if (indices[var] == 1 || indices[var] == 3) {
+                        let _ = closures.insert(
+                            indices[var],
+                            Box::new(|x: DVector<f32>| -> f32 {
+                                if x[3] <= x[0] {
+                                    0.0
+                                } else {
+                                    1.0
+                                }
+                            }),
+                        );
+                    }
+                    *indices.get(var).unwrap()
+                })
+            })
             .collect();
-        NumericalPolynomialSystem { components }
+        // we want to populate `closures` with closures on Sediment and Water
+        NumericalPolynomialSystem {
+            components,
+            closures,
+        }
     }
 }
 
@@ -114,10 +142,11 @@ where
 Such a system is ready for use in numerical solvers: the coefficients are
 floating point numbers and the variables are consecutive integer indices.
  */
-#[derive(Debug)]
 pub struct NumericalPolynomialSystem<Exp> {
     /// Components of the vector field.
     pub components: Vec<Polynomial<usize, f32, Exp>>,
+    /// matrix of closures valued in `bool`
+    pub closures: SystemClosures<f32>,
 }
 
 impl<Exp> ODESystem for NumericalPolynomialSystem<Exp>
@@ -126,22 +155,21 @@ where
     f32: Pow<Exp, Output = f32>,
 {
     fn vector_field(&self, dx: &mut DVector<f32>, x: &DVector<f32>, _t: f32) {
-        println!("NEW STEP: {:#?} ------------------------------------------", x);
-        // 0: C
-        // 1: S
-        // 2: I
-        // 3: W
+        // 0: Container
+        // 1: Sediment (deposited)
+        // 2: Inflow (from huge reservoir)
+        // 3: Water
         // where dW or dS = \pm [W-C],
         for i in 0..dx.len() {
             dx[i] = self.components[i].eval(|var| {
-                if (*var == 1 || *var == 3) && x[3] <= x[0] {
-                    0.0
+                let modifier = if let Some(f) = self.closures.get(var) {
+                    f(x.clone())
                 } else {
-                    dbg!(i, var, &x[*var], "------------------------------------");
-                    x[*var]
-                }
+                    1.0
+                };
+                let val = x[*var];
+                modifier * val
             });
-            // dbg!(&dx);
         }
     }
 }
@@ -149,7 +177,6 @@ where
 #[cfg(test)]
 mod tests {
     use expect_test::expect;
-    // let flowlink_mor_type = TabMorType::Hom(Box::new(
 
     use super::super::textplot_ode_result;
     use super::*;

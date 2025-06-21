@@ -410,6 +410,8 @@ mod tests {
 
         let result = analysis.create_numerical_system(&model, data).solve_with_defaults();
         println!("RESULT: {:#?}", result);
+        // expected.assert_eq(&textplot_ode_result(&problem, &result));
+
         // let sys = analysis.clone().create_numerical_system(&model, data);
         // let _ = analysis.as_diffsol(&model, data);
         // println!("SYSTEM: {:#?}", sys);
