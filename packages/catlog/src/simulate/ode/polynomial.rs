@@ -9,12 +9,13 @@ use derivative::Derivative;
 use nalgebra::DVector;
 use num_traits::{One, Pow};
 
+// TODO delete
+use ustr::{ustr, IdentityHasher, Ustr};
+
 #[cfg(test)]
 use super::ODEProblem;
 use super::ODESystem;
 use crate::zero::alg::Polynomial;
-
-type SystemClosures<T> = HashMap<usize, Box<dyn Fn(DVector<f32>) -> T>>;
 
 /// A system of polynomial differential equations.
 #[derive(Clone, Debug, Derivative)]
@@ -71,7 +72,6 @@ where
     variables in the old one.
      */
     pub fn to_numerical(&self) -> NumericalPolynomialSystem<Exp> {
-        let mut closures: SystemClosures<f32> = HashMap::new();
         let indices: BTreeMap<Var, usize> =
             self.components.keys().enumerate().map(|(i, var)| (var.clone(), i)).collect();
         let components = self
@@ -83,27 +83,23 @@ where
                     // have a Heaviside step function [W-C], an element of R^n --> Bool,
                     // so for demo purposes I hardcode that here. It would be better to
                     // handle this when we extend_scalars/eval
-                    if (indices[var] == 1 || indices[var] == 3) {
-                        let _ = closures.insert(
-                            indices[var],
-                            Box::new(|x: DVector<f32>| -> f32 {
-                                if x[3] <= x[0] {
-                                    0.0
-                                } else {
-                                    1.0
-                                }
-                            }),
-                        );
-                    }
+                    // if indices[var] == 1 || indices[var] == 3 {
+                    //     let _ = closures.insert(
+                    //         indices[var],
+                    //         MonomialBehavior::Heaviside(ustr("Water"), ustr("Container"))
+                    //             .to_closure(indices.clone()),
+                    //         // Box::new(|x: DVector<f32>| -> f32 {
+                    //         //     if let Some(water) = indices.get(u!("Water")) else { panic!("!") };
+                    //         //     if let Some(container) = indices.get(u!("Container")) else { panic!("!") };
+                    //         //     let x[water] <= x[container] as u32 as f32
+                    //         // }),
+                    //     );
+                    // }
                     *indices.get(var).unwrap()
                 })
             })
             .collect();
-        // we want to populate `closures` with closures on Sediment and Water
-        NumericalPolynomialSystem {
-            components,
-            closures,
-        }
+        NumericalPolynomialSystem { components }
     }
 }
 
@@ -145,8 +141,6 @@ floating point numbers and the variables are consecutive integer indices.
 pub struct NumericalPolynomialSystem<Exp> {
     /// Components of the vector field.
     pub components: Vec<Polynomial<usize, f32, Exp>>,
-    /// matrix of closures valued in `bool`
-    pub closures: SystemClosures<f32>,
 }
 
 impl<Exp> ODESystem for NumericalPolynomialSystem<Exp>
@@ -162,11 +156,12 @@ where
         // where dW or dS = \pm [W-C],
         for i in 0..dx.len() {
             dx[i] = self.components[i].eval(|var| {
-                let modifier = if let Some(f) = self.closures.get(var) {
-                    f(x.clone())
-                } else {
-                    1.0
-                };
+                let modifier = 1.0;
+                // if let Some(f) = self.closures.get(var) {
+                // f(x.clone())
+                // } else {
+                // 1.0
+                // };
                 let val = x[*var];
                 modifier * val
             });

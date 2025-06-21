@@ -4,7 +4,7 @@ Such ODEs are based on the *law of mass action* familiar from chemistry and
 mathematical epidemiology.
  */
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::hash::{BuildHasherDefault, Hash};
 
 use nalgebra::DVector;
@@ -27,6 +27,45 @@ use crate::zero::{alg::Polynomial, rig::Monomial};
 
 use web_sys::console;
 
+type StateBehavior<T> = Box<dyn Fn(DVector<f32>) -> T>;
+
+trait Transformer<Var, T> {
+    fn to_closure(&self, indices: BTreeMap<Var, usize>) -> StateBehavior<T>;
+}
+
+/// Functions that may be attached to a monomial
+#[derive(Clone, Debug)]
+pub enum MonomialBehavior<Var> {
+    Identity,
+    Heaviside(Var, Var),
+}
+
+impl<Var> Default for MonomialBehavior<Var> {
+    fn default() -> Self {
+        MonomialBehavior::Identity
+    }
+}
+
+// impl<Var: Clone + Ord> Transformer<Var, f32> for MonomialBehavior<Var> {
+//     fn to_closure(&self, indices: BTreeMap<Var, usize>) -> StateBehavior<f32> {
+//         match self {
+//             // assuming multiplicative identity
+//             MonomialBehavior::Identity => Box::new(|x| 1.0),
+//             MonomialBehavior::Heaviside(left, right) => Box::new(move |x: DVector<f32>| -> f32 {
+//                 let Some(water) = indices.get(left) else {
+//                     panic!("!")
+//                 };
+//                 let Some(container) = indices.get(right) else {
+//                     panic!("!")
+//                 };
+//                 let out = x[*water] <= x[*container];
+//                 out as u32 as f32
+//             }),
+//         }
+//     }
+// }
+
+// TODO merge with MonomialBehaviors
 /** */
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -109,131 +148,6 @@ impl Default for EnergeseMassActionAnalysis {
 }
 
 impl EnergeseMassActionAnalysis {
-    /** */
-    pub fn as_diffsol<Id: Eq + Clone + Hash + Ord + std::fmt::Debug + std::fmt::Display>(
-        &self,
-        model: &EnergeseModel<Id>,
-        data: EnergeseMassActionProblemData<Id>,
-    ) -> String {
-        let vlinks: Vec<Id> = model.mor_generators_with_type(&self.varlink_mor_type).collect();
-        let mut vlinkmap: HashMap<Id, HashMap<Id, Id>> = HashMap::new();
-        let flinks: HashMap<Id, Id> = model
-            .mor_generators_with_type(&self.flowlink_mor_type)
-            .map(|flink| {
-                let path = model.mor_generator_cod(&flink).unwrap_tabulated();
-                let Some(TabEdge::Basic(cod)) = path.clone().only() else {
-                    panic!("!!!");
-                };
-                // vlink stuff
-                let dom = model.mor_generator_dom(&flink).unwrap_basic();
-                let hashmap: HashMap<Id, Id> = vlinks
-                    .iter()
-                    .filter(|v| model.mor_generator_dom(&v).unwrap_basic() == dom)
-                    .map(|vlink| (vlink.clone(), model.mor_generator_cod(&vlink).unwrap_basic()))
-                    .collect();
-                vlinkmap.insert(flink.clone(), hashmap);
-                // return pair
-                (cod.clone(), flink)
-            })
-            .collect();
-
-        let terms: HashMap<Id, Id> = model
-            .mor_generators_with_type(&self.flow_mor_type)
-            .map(|flow| {
-                let dom = model.mor_generator_dom(&flow).unwrap_basic();
-                (flow, dom)
-            })
-            .collect();
-
-        let terms: Vec<(Id, Vec<_>)> = terms
-            .into_iter()
-            .map(|(flow, term)| {
-                let param = flow.clone();
-                if let Some(flink) = flinks.get(&flow) {
-                    (flow, [(vec![param, flink.clone()], term)].into_iter().collect())
-                } else {
-                    (flow, [(vec![param], term)].into_iter().collect())
-                }
-            })
-            .collect();
-
-        let mut initmap: HashMap<Id, String> = HashMap::new();
-        for ob in model.ob_generators_with_type(&self.stock_ob_type) {
-            initmap.insert(
-                ob.clone(),
-                format!(
-                    "{} = {}",
-                    ob.clone(),
-                    data.initial_values.get(&ob).copied().unwrap_or_default()
-                ),
-            );
-        }
-        for flink in model.mor_generators_with_type(&self.flowlink_mor_type) {
-            initmap.insert(flink.clone(), format!("{} = 0", flink));
-        }
-
-        let keys = vec![
-            model
-                .ob_generators_with_type(&self.stock_ob_type)
-                .map(|ob| (ob, String::from("0")))
-                .collect::<Vec<_>>(),
-            // ERRONEOUSLY ASSUMED THAT THE RHS OF DYNAMIBLE IS A RATE
-            // model
-            //     .mor_generators_with_type(&self.flowlink_mor_type)
-            //     .map(|ob| (ob, String::from("0")))
-            //     .collect::<Vec<_>>(),
-        ]
-        .concat();
-        let mut rhs: HashMap<Id, String> = HashMap::from_iter(keys);
-
-        for (flow, term) in terms.iter() {
-            let rhsterm: String = term
-                .iter()
-                .map(|(coef, var)| {
-                    println!("{:#?}", coef);
-                    let cs = coef
-                        .iter()
-                        .map(|c| {
-                            if let Some(rate) = data.rates.get(c) {
-                                format!("{}", rate)
-                            } else {
-                                format!("{}", c)
-                            }
-                        })
-                        .collect::<Vec<String>>()
-                        .join(" * ");
-                    format!("{} * {}", cs, var)
-                })
-                .collect();
-            let dom = model.mor_generator_dom(flow).unwrap_basic();
-            let cod = model.mor_generator_cod(flow).unwrap_basic();
-            // TODO this is solved by specifying in-flows
-            if format!("{}", flow) == "deposits" {
-                rhs.insert(dom, format!("0.25 + -1 * {}", rhsterm.clone()));
-            } else {
-                rhs.insert(dom, format!("-1 * {}", rhsterm.clone()));
-            }
-            rhs.insert(cod, rhsterm);
-        }
-        for (vlink, vals) in vlinkmap {
-            let legs: Vec<_> = vals.values().collect();
-            rhs.insert(vlink, format!("heaviside({} - {})", legs[0], legs[1]));
-        }
-
-        format!(
-            "
-            u_i {{ {} }}
-            F_i {{ {} }}
-        ",
-            initmap.clone().values().cloned().collect::<Vec<String>>().join(", "),
-            initmap
-                .keys()
-                .map(|k| rhs.get(&k).unwrap().clone())
-                .collect::<Vec<String>>()
-                .join(", ")
-        )
-    }
-
     /** Creates a mass-action system from a model.
     The resulting system has symbolic rate coefficients.
      */
@@ -314,6 +228,8 @@ impl EnergeseMassActionAnalysis {
     ) -> ODEAnalysis<Id, NumericalPolynomialSystem<u8>> {
         let sys = self.create_system(model);
 
+        let vlinks: Vec<Id> = model.mor_generators_with_type(&self.varlink_mor_type).collect();
+        let mut vlinkmap: HashMap<Id, HashMap<Id, Id>> = HashMap::new();
         let flinks: HashMap<Id, Id> = model
             .mor_generators_with_type(&self.flowlink_mor_type)
             .map(|flink| {
@@ -323,12 +239,12 @@ impl EnergeseMassActionAnalysis {
                 };
                 // vlink stuff
                 let dom = model.mor_generator_dom(&flink).unwrap_basic();
-                // let hashmap: HashMap<Id, Id> = vlinks
-                //     .iter()
-                //     .filter(|v| model.mor_generator_dom(&v).unwrap_basic() == dom)
-                //     .map(|vlink| (vlink.clone(), model.mor_generator_cod(&vlink).unwrap_basic()))
-                //     .collect();
-                // vlinkmap.insert(flink.clone(), hashmap);
+                let hashmap: HashMap<Id, Id> = vlinks
+                    .iter()
+                    .filter(|v| model.mor_generator_dom(&v).unwrap_basic() == dom)
+                    .map(|vlink| (vlink.clone(), model.mor_generator_cod(&vlink).unwrap_basic()))
+                    .collect();
+                vlinkmap.insert(cod.clone(), hashmap);
                 // return pair
                 (cod.clone(), dom)
             })
@@ -340,29 +256,72 @@ impl EnergeseMassActionAnalysis {
             .map(|ob| data.initial_values.get(ob).copied().unwrap_or_default());
         let x0 = DVector::from_iterator(objects.len(), initial_values);
 
+        // i'm looping through system here because I want to know which `k`
+        let mut closures: HashMap<Id, MonomialBehavior<Id>> = HashMap::new();
+        for (k, p) in sys.clone().components.iter() {
+            dbg!(k);
+            for (coef, var) in p.0.clone().into_iter() {
+                for (_, v) in coef.0.clone().into_iter() {
+                    for flow in v.variables() {
+                        if let Some(flink) = flinks.get(&flow) {
+                            if let Some(function) = data.dynamibles.get(flink) {
+                                match function.as_str() {
+                                    "Identity" => {
+                                        let _ = closures
+                                            .insert(flow.clone(), MonomialBehavior::Identity);
+                                    }
+                                    "Heaviside" => {
+                                        let args: Vec<Id> = vlinkmap
+                                            .clone()
+                                            .get(&flow.clone())
+                                            .unwrap()
+                                            .values()
+                                            .cloned()
+                                            .collect();
+                                        let _ = closures.insert(
+                                            flow.clone(),
+                                            MonomialBehavior::Heaviside(
+                                                args[0].clone(),
+                                                args[1].clone(),
+                                            ),
+                                        );
+                                    }
+                                    &_ => todo!(),
+                                }
+                            }
+                        }
+                    }
+                }
+                // I want to check if this flow is in flinks, etc, etc.
+            }
+        }
+        dbg!(closures);
+
         let sys = sys
+            .clone()
             .extend_scalars(|poly| {
                 poly.eval(|flow| {
-                    let rate = data.rates.get(flow).copied().unwrap_or_default();
-                    if let Some(flink) = flinks.get(&flow) {
-                        if let Some(function) = data.dynamibles.get(flink) {
-                            let modifier = match function.as_str() {
-                                "Identity" => 1.0,
-                                "Heaviside" => 2.0,
-                                _ => 1.0,
-                            };
-                            modifier * rate
-                        } else {
-                            rate
-                        }
-                    } else {
-                        rate
-                    }
+                    // if let Some(flink) = flinks.get(&flow) {
+                    //     if let Some(function) = data.dynamibles.get(flink) {
+                    //         match function.as_str() {
+                    //             "Identity" => {
+                    //                 // let _ =
+                    //                 // closures.insert(flow.clone(), MonomialBehavior::Identity);
+                    //             }
+                    //             "Heaviside" => {
+                    //                 // let _ =
+                    //                 // closures.insert(flow.clone(), MonomialBehavior::Identity);
+                    //             }
+                    //             _ => {}
+                    //         };
+                    //     }
+                    // };
+                    data.rates.get(flow).copied().unwrap_or_default()
                 })
             })
             .to_numerical(); // simulate/ode/polynomial
 
-        let problem = ODEProblem::new(sys, x0).end_time(data.duration);
+        let problem = ODEProblem::new(sys, x0, closures).end_time(data.duration);
         let ob_index: HashMap<_, _> =
             objects.into_iter().enumerate().map(|(i, x)| (x, i)).collect();
         let out = ODEAnalysis::new(problem, ob_index);
@@ -406,10 +365,10 @@ mod tests {
         data.initial_values.insert(ustr("Source"), 100.0);
         data.initial_values.insert(ustr("Water"), 2.0);
         data.initial_values.insert(ustr("Container"), 20.0);
-        data.dynamibles.insert(ustr("dynVolume"), String::from("Heaviside"));
+        data.dynamibles.insert(ustr("SpilloverChecker"), String::from("Heaviside"));
 
         let result = analysis.create_numerical_system(&model, data).solve_with_defaults();
-        println!("RESULT: {:#?}", result);
+        // println!("RESULT: {:#?}", result);
         // expected.assert_eq(&textplot_ode_result(&problem, &result));
 
         // let sys = analysis.clone().create_numerical_system(&model, data);
@@ -440,7 +399,6 @@ mod tests {
         data.dynamibles.insert(ustr("Container"), String::from("heaviside"));
         // data.dynamibles.insert(ustr("spillover"), DiffSLFunctions::Heaviside);
 
-        let _ = analysis.as_diffsol::<Ustr>(&model, data);
         assert!(true);
     }
 

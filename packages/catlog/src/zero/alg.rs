@@ -39,7 +39,7 @@ over *R*.
  */
 #[derive(Clone, PartialEq, Eq, Debug, Derivative)]
 #[derivative(Default(bound = ""))]
-pub struct Polynomial<Var, Coef, Exp>(Combination<Monomial<Var, Exp>, Coef>);
+pub struct Polynomial<Var, Coef, Exp>(pub Combination<Monomial<Var, Exp>, Coef>);
 
 impl<Var, Coef, Exp> Polynomial<Var, Coef, Exp>
 where
