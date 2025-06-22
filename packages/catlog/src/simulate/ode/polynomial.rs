@@ -12,10 +12,25 @@ use num_traits::{One, Pow};
 // TODO delete
 use ustr::{ustr, IdentityHasher, Ustr};
 
+use super::StateBehavior;
+
 #[cfg(test)]
 use super::ODEProblem;
 use super::ODESystem;
 use crate::zero::alg::Polynomial;
+
+/// Functions that may be attached to a monomial
+#[derive(Clone, Debug)]
+pub enum MonomialBehavior<Var> {
+    Identity,
+    Heaviside(Var, Var),
+}
+
+impl<Var> Default for MonomialBehavior<Var> {
+    fn default() -> Self {
+        MonomialBehavior::Identity
+    }
+}
 
 /// A system of polynomial differential equations.
 #[derive(Clone, Debug, Derivative)]
@@ -99,7 +114,10 @@ where
                 })
             })
             .collect();
-        NumericalPolynomialSystem { components }
+        NumericalPolynomialSystem {
+            components,
+            closures: HashMap::new(),
+        }
     }
 }
 
@@ -141,6 +159,8 @@ floating point numbers and the variables are consecutive integer indices.
 pub struct NumericalPolynomialSystem<Exp> {
     /// Components of the vector field.
     pub components: Vec<Polynomial<usize, f32, Exp>>,
+    /// Closures
+    pub closures: HashMap<usize, StateBehavior<f32>>,
 }
 
 impl<Exp> ODESystem for NumericalPolynomialSystem<Exp>
@@ -156,12 +176,12 @@ where
         // where dW or dS = \pm [W-C],
         for i in 0..dx.len() {
             dx[i] = self.components[i].eval(|var| {
-                let modifier = 1.0;
-                // if let Some(f) = self.closures.get(var) {
-                // f(x.clone())
-                // } else {
-                // 1.0
-                // };
+                // let modifier = 1.0;
+                let modifier = if let Some(f) = self.closures.get(var) {
+                    f(x.clone())
+                } else {
+                    1.0
+                };
                 let val = x[*var];
                 modifier * val
             });

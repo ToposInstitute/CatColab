@@ -25,26 +25,9 @@ use crate::one::FgCategory;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
 use crate::zero::{alg::Polynomial, rig::Monomial};
 
+use crate::simulate::ode::{MonomialBehavior, StateBehavior};
+
 use web_sys::console;
-
-type StateBehavior<T> = Box<dyn Fn(DVector<f32>) -> T>;
-
-trait Transformer<Var, T> {
-    fn to_closure(&self, indices: BTreeMap<Var, usize>) -> StateBehavior<T>;
-}
-
-/// Functions that may be attached to a monomial
-#[derive(Clone, Debug)]
-pub enum MonomialBehavior<Var> {
-    Identity,
-    Heaviside(Var, Var),
-}
-
-impl<Var> Default for MonomialBehavior<Var> {
-    fn default() -> Self {
-        MonomialBehavior::Identity
-    }
-}
 
 // impl<Var: Clone + Ord> Transformer<Var, f32> for MonomialBehavior<Var> {
 //     fn to_closure(&self, indices: BTreeMap<Var, usize>) -> StateBehavior<f32> {
@@ -220,7 +203,7 @@ impl EnergeseMassActionAnalysis {
     The resulting system has numerical rate coefficients and is ready to solve.
      */
     pub fn create_numerical_system<
-        Id: Eq + Clone + Hash + Ord + std::fmt::Debug + std::fmt::Display,
+        Id: Eq + Clone + Hash + Ord + std::fmt::Debug + std::fmt::Display + 'static,
     >(
         &self,
         model: &EnergeseModel<Id>,
@@ -257,7 +240,15 @@ impl EnergeseMassActionAnalysis {
         let x0 = DVector::from_iterator(objects.len(), initial_values);
 
         // i'm looping through system here because I want to know which `k`
-        let mut closures: HashMap<Id, MonomialBehavior<Id>> = HashMap::new();
+        let mut closures: HashMap<usize, StateBehavior<f32>> = HashMap::new();
+        let idxvarmap: BTreeMap<Id, usize> = sys
+            .clone()
+            .components
+            .into_iter()
+            .enumerate()
+            .map(|(i, (k, _))| (k, i))
+            .collect();
+        // dbg!(idxvarmap);
         for (k, p) in sys.clone().components.iter() {
             dbg!(k);
             for (coef, var) in p.0.clone().into_iter() {
@@ -266,10 +257,10 @@ impl EnergeseMassActionAnalysis {
                         if let Some(flink) = flinks.get(&flow) {
                             if let Some(function) = data.dynamibles.get(flink) {
                                 match function.as_str() {
-                                    "Identity" => {
-                                        let _ = closures
-                                            .insert(flow.clone(), MonomialBehavior::Identity);
-                                    }
+                                    // "Identity" => {
+                                    //     let _ = closures
+                                    //         .insert(flow.clone(), MonomialBehavior::Identity);
+                                    // }
                                     "Heaviside" => {
                                         let args: Vec<Id> = vlinkmap
                                             .clone()
@@ -278,12 +269,24 @@ impl EnergeseMassActionAnalysis {
                                             .values()
                                             .cloned()
                                             .collect();
+                                        dbg!(&args);
                                         let _ = closures.insert(
-                                            flow.clone(),
-                                            MonomialBehavior::Heaviside(
-                                                args[0].clone(),
-                                                args[1].clone(),
-                                            ),
+                                            // flow.clone(),
+                                            idxvarmap.get(&k).expect("!").clone(),
+                                            {
+                                                let water =
+                                                    *idxvarmap.get(&args[0].clone()).expect("!");
+                                                let container =
+                                                    *idxvarmap.get(&args[1].clone()).expect("!");
+                                                Box::new(move |x: DVector<f32>| -> f32 {
+                                                    let out = x[water] <= x[container];
+                                                    out as u32 as f32
+                                                })
+                                            },
+                                            // MonomialBehavior::Heaviside(
+                                            //     args[0].clone(), // should be indices
+                                            //     args[1].clone(),
+                                            // ),
                                         );
                                     }
                                     &_ => todo!(),
@@ -295,9 +298,9 @@ impl EnergeseMassActionAnalysis {
                 // I want to check if this flow is in flinks, etc, etc.
             }
         }
-        dbg!(closures);
+        // dbg!(closures);
 
-        let sys = sys
+        let mut sys = sys
             .clone()
             .extend_scalars(|poly| {
                 poly.eval(|flow| {
@@ -321,7 +324,9 @@ impl EnergeseMassActionAnalysis {
             })
             .to_numerical(); // simulate/ode/polynomial
 
-        let problem = ODEProblem::new(sys, x0, closures).end_time(data.duration);
+        sys.closures = closures;
+
+        let problem = ODEProblem::new(sys, x0).end_time(data.duration);
         let ob_index: HashMap<_, _> =
             objects.into_iter().enumerate().map(|(i, x)| (x, i)).collect();
         let out = ODEAnalysis::new(problem, ob_index);
@@ -368,7 +373,7 @@ mod tests {
         data.dynamibles.insert(ustr("SpilloverChecker"), String::from("Heaviside"));
 
         let result = analysis.create_numerical_system(&model, data).solve_with_defaults();
-        // println!("RESULT: {:#?}", result);
+        println!("RESULT: {:#?}", result);
         // expected.assert_eq(&textplot_ode_result(&problem, &result));
 
         // let sys = analysis.clone().create_numerical_system(&model, data);

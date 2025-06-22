@@ -6,8 +6,16 @@ use ode_solvers::{
     dop_shared::{IntegrationError, SolverResult},
 };
 
+use std::collections::BTreeMap;
+
 #[cfg(test)]
 use textplots::{Chart, Plot, Shape};
+
+pub type StateBehavior<T> = Box<dyn Fn(DVector<f32>) -> T>;
+
+trait Transformer<Var, T> {
+    fn to_closure(&self, indices: BTreeMap<Var, usize>) -> StateBehavior<T>;
+}
 
 /** A system of ordinary differential equations (ODEs).
 
