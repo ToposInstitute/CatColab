@@ -19,6 +19,19 @@
     pointer-events: none;
 }
 
+.rich-text-editor {
+    overflow: hidden;
+}
+
+.rich-text-editor.focussed {
+    border: 1px solid grey;
+    border-radius: 5px;
+}
+
+.rich-text-editor.focussed .ProseMirror {
+    padding: 5px;
+}
+
 .ref-id-view {
     background-color: grey;
     border-radius: 5px;
@@ -27,21 +40,27 @@
 }
 
 .menubar {
+    background-color: #f0f0f0;
     display: flex;
     flex-direction: column;
-    /* justify-content: space-between; */
-    gap: 10px;
     flex-direction: row;
     justify-content: flex-start;
-    /* padding-bottom: 10px; */
-    /* align-items: stretch; */
-    /* gap: 10px; */
+}
+
+.menubar select
+.menubar button {
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.menubar select:hover,
+.menubar button:hover {
+    background-color: #ccc;
 }
 
 .menubar button {
-    padding: 5px;
+    overflow: hidden;
+    padding: 3px;
     border: none;
-    background-color: #f0f0f0;
     cursor: pointer;
 }
 
@@ -49,14 +68,15 @@
     background-color: #ccc;
 }
 
-.menubar .row {
-    display: flex;
+.menubar select {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
-.menubar .row select {
-    padding: 0.25em 0.5em;
-    border-radius: 4px;
-    font-size: 0.9em;
+.menubar select option {
+    background-color: #ffffff;
 }
 
 blockquote {
