@@ -4,6 +4,8 @@ import { type EditorState, Plugin, type Transaction } from "prosemirror-state";
 import type { EditorView } from "prosemirror-view";
 import type { CustomSchema } from "./schema";
 
+import { wrapInList } from "prosemirror-schema-list";
+
 export function turnSelectionIntoBlockquote(
     state: EditorState,
     dispatch: ((tr: Transaction) => void) | undefined,
@@ -30,6 +32,14 @@ export function turnSelectionIntoBlockquote(
     }
 
     return true;
+}
+
+export function toggleOrderedList(view: EditorView): boolean {
+    return wrapInList((view.state.schema as CustomSchema).nodes.bullet_list)(
+        view.state,
+        view.dispatch,
+        view,
+    );
 }
 
 export function hasContent(state: EditorState): boolean {
