@@ -208,7 +208,7 @@ export const RichTextEditor = (
     });
 
     return (
-        <div class="prosemirror">
+        <div class={`rich-text-editor ${isEditorFocused() || isMenuActive() ? "focussed" : ""}`}>
             <Show when={isEditorFocused() || isMenuActive()}>
                 <div
                     ref={menuRoot}
@@ -218,7 +218,7 @@ export const RichTextEditor = (
                     <MenuBar {...menuControls()} {...markStates()} headingLevel={headingLevel()} />
                 </div>
             </Show>
-            <div class="rich-text-editor" ref={editorRoot} />
+            <div ref={editorRoot} />
         </div>
     );
 };
