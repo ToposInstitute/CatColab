@@ -35,7 +35,6 @@ impl<Id: Clone + Ord + std::fmt::Debug> Transformer<Id, f32> for MonomialBehavio
             // assuming multiplicative identity
             MonomialBehavior::Identity => Box::new(|x| 1.0),
             MonomialBehavior::Heaviside(left, right) => {
-                dbg!(&indices, &left, &right);
                 let left = *indices.get(&left.clone()).expect("!");
                 let right = *indices.get(&right.clone()).expect("!");
                 Box::new(move |x: DVector<f32>| -> f32 {
@@ -44,23 +43,6 @@ impl<Id: Clone + Ord + std::fmt::Debug> Transformer<Id, f32> for MonomialBehavio
                 })
             }
         }
-    }
-}
-
-// TODO merge with MonomialBehaviors
-/** */
-#[derive(Clone, Debug)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub enum DiffSLFunctions {
-    ///
-    None,
-    ///
-    Heaviside,
-}
-
-impl Default for DiffSLFunctions {
-    fn default() -> DiffSLFunctions {
-        DiffSLFunctions::None
     }
 }
 
@@ -161,6 +143,7 @@ impl EnergeseMassActionAnalysis {
             })
             .collect();
 
+        // TODO why not fuse the two iterators?
         let terms: HashMap<Id, Monomial<Id, u8>> = model
             .mor_generators_with_type(&self.flow_mor_type)
             .map(|flow| {
@@ -238,7 +221,6 @@ impl EnergeseMassActionAnalysis {
             .map(|ob| data.initial_values.get(ob).copied().unwrap_or_default());
         let x0 = DVector::from_iterator(objects.len(), initial_values);
 
-        // i'm looping through system here because I want to know which `k`
         let mut closures: HashMap<usize, StateBehavior<f32>> = HashMap::new();
         let idxvarmap: BTreeMap<Id, usize> = sys
             .clone()
@@ -249,17 +231,13 @@ impl EnergeseMassActionAnalysis {
             .collect();
         // dbg!(idxvarmap);
         for (k, p) in sys.clone().components.iter() {
-            dbg!(k);
             for (coef, var) in p.0.clone().into_iter() {
                 for (_, v) in coef.0.clone().into_iter() {
                     for flow in v.variables() {
                         if let Some(flink) = flinks.get(&flow) {
                             if let Some(function) = data.dynamibles.get(flink) {
+                                // TODO should use MonomialBehaviors
                                 match function.as_str() {
-                                    // "Identity" => {
-                                    //     let _ = closures
-                                    //         .insert(flow.clone(), MonomialBehavior::Identity);
-                                    // }
                                     "Heaviside" => {
                                         let args: Vec<Id> = vlinkmap
                                             .clone()
@@ -274,23 +252,8 @@ impl EnergeseMassActionAnalysis {
                                         )
                                         .to_closure(idxvarmap.clone());
                                         let _ = closures.insert(
-                                            // flow.clone(),
                                             idxvarmap.get(&k).expect("!").clone(),
                                             heaviside,
-                                            // {
-                                            //     let water =
-                                            //         *idxvarmap.get(&args[0].clone()).expect("!");
-                                            //     let container =
-                                            //         *idxvarmap.get(&args[1].clone()).expect("!");
-                                            //     Box::new(move |x: DVector<f32>| -> f32 {
-                                            //         let out = x[water] <= x[container];
-                                            //         out as u32 as f32
-                                            //     })
-                                            // },
-                                            // MonomialBehavior::Heaviside(
-                                            //     args[0].clone(), // should be indices
-                                            //     args[1].clone(),
-                                            // ),
                                         );
                                     }
                                     &_ => {} // Box::new(move |x: DVector<f32>| -> f32 { 1.0 }),
@@ -299,10 +262,8 @@ impl EnergeseMassActionAnalysis {
                         }
                     }
                 }
-                // I want to check if this flow is in flinks, etc, etc.
             }
         }
-        // dbg!(closures);
 
         let mut sys = sys
             .clone()
@@ -351,7 +312,7 @@ mod tests {
         let analysis: EnergeseMassActionAnalysis = Default::default();
         let mut data: EnergeseMassActionProblemData<Ustr> = Default::default();
 
-        data.duration = 1.0;
+        data.duration = 13.0;
         data.rates.insert(ustr("inflow"), 4.0);
         data.rates.insert(ustr("deposits"), 3.0);
         data.initial_values.insert(ustr("Source"), 100.0);
@@ -359,22 +320,15 @@ mod tests {
         data.initial_values.insert(ustr("Container"), 40.0);
         data.dynamibles.insert(ustr("SpilloverChecker"), String::from("Heaviside"));
 
+        // sometimes Sediment increases when Water < Container.
+        const LENGTH: usize = 20;
         let result =
             analysis.create_numerical_system(&model, data).solve_with_defaults().expect("!");
-        println!(
-            "RESULT: {:#?}",
-            std::iter::zip(
-                result.clone().states.get(&ustr("Sediment")).unwrap(),
-                result.states.get(&ustr("Water")).unwrap(),
-                // result.clone().unwrap().states.get(&ustr("Water")).unwrap()
-            )
-            .collect::<Vec<_>>()
-        );
-        // expected.assert_eq(&textplot_ode_result(&problem, &result));
-
-        // let sys = analysis.clone().create_numerical_system(&model, data);
-        // let _ = analysis.as_diffsol(&model, data);
-        // println!("SYSTEM: {:#?}", sys);
+        let mut sediment: [f32; LENGTH] = Default::default();
+        sediment.copy_from_slice(&result.states.get(&ustr("Sediment")).unwrap()[0..LENGTH]);
+        let mut water: [f32; LENGTH] = Default::default();
+        water.copy_from_slice(&result.states.get(&ustr("Water")).unwrap()[0..LENGTH]);
+        println!("RESULT: {:#?}", std::iter::zip(sediment, water).collect::<Vec<_>>());
 
         assert!(true);
         // let expected = expect!([r#"
@@ -397,7 +351,7 @@ mod tests {
         data.rates.insert(ustr("deposits"), 3.0);
         data.initial_values.insert(ustr("Water"), 2.0);
         data.initial_values.insert(ustr("Container"), 5.0);
-        data.dynamibles.insert(ustr("Container"), String::from("heaviside"));
+        data.dynamibles.insert(ustr("Container"), String::from("Heaviside"));
         // data.dynamibles.insert(ustr("spillover"), DiffSLFunctions::Heaviside);
 
         assert!(true);

@@ -14,6 +14,8 @@ use ustr::{ustr, IdentityHasher, Ustr};
 
 use super::StateBehavior;
 
+use serde::{Deserialize, Serialize};
+
 #[cfg(test)]
 use super::ODEProblem;
 use super::ODESystem;
@@ -21,6 +23,7 @@ use crate::zero::alg::Polynomial;
 
 /// Functions that may be attached to a monomial
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum MonomialBehavior<Var> {
     Identity,
     Heaviside(Var, Var),
@@ -92,27 +95,7 @@ where
         let components = self
             .components
             .values()
-            .map(|poly| {
-                poly.map_variables(|var| {
-                    // We know in our water_volume example that Sediment and Water
-                    // have a Heaviside step function [W-C], an element of R^n --> Bool,
-                    // so for demo purposes I hardcode that here. It would be better to
-                    // handle this when we extend_scalars/eval
-                    // if indices[var] == 1 || indices[var] == 3 {
-                    //     let _ = closures.insert(
-                    //         indices[var],
-                    //         MonomialBehavior::Heaviside(ustr("Water"), ustr("Container"))
-                    //             .to_closure(indices.clone()),
-                    //         // Box::new(|x: DVector<f32>| -> f32 {
-                    //         //     if let Some(water) = indices.get(u!("Water")) else { panic!("!") };
-                    //         //     if let Some(container) = indices.get(u!("Container")) else { panic!("!") };
-                    //         //     let x[water] <= x[container] as u32 as f32
-                    //         // }),
-                    //     );
-                    // }
-                    *indices.get(var).unwrap()
-                })
-            })
+            .map(|poly| poly.map_variables(|var| *indices.get(var).unwrap()))
             .collect();
         NumericalPolynomialSystem {
             components,
@@ -181,8 +164,9 @@ where
                 } else {
                     1.0
                 };
-                let val = x[*var];
-                modifier * val
+                // TODO sometimes this doesn't seem to take effect.
+                let value = x[*var];
+                modifier * value
             });
         }
     }

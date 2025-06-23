@@ -167,13 +167,11 @@ export function EnergeseMassAction(
         }),
     ];
 
-    // XXX
     const plotResult = createModelODEPlot(
         () => props.liveModel,
         (model: DblModel) => props.simulate(model, props.content),
     );
 
-    console.log(props.liveModel.formalJudgments());
     return (
         <div class="simulation">
             <Foldable title={props.title}>

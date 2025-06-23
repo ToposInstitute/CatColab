@@ -286,9 +286,9 @@ impl ThCategoryEnergese {
             .try_into()
             .map_err(|_| "Mass-action simulation expects a discrete tabulator model")?;
         //
-        let analysis = analyses::ode::EnergeseMassActionAnalysis::default()
-            .teeup_numerical_system(model, data.0.clone());
-        console::log_1(&format!("{:#?}", analysis).into());
+        // let analysis = analyses::ode::EnergeseMassActionAnalysis::default()
+        //     .teeup_numerical_system(model, data.0.clone());
+        // console::log_1(&format!("{:#?}", analysis).into());
         //
         Ok(ODEResult(
             analyses::ode::EnergeseMassActionAnalysis::default()
