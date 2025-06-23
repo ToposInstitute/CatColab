@@ -1,7 +1,15 @@
 import type { Prop } from "@automerge/automerge";
 import type { DocHandle } from "@automerge/automerge-repo";
 
-import { baseKeymap, setBlockType, toggleMark } from "prosemirror-commands";
+import {
+    baseKeymap,
+    chainCommands,
+    deleteSelection,
+    joinBackward,
+    selectNodeBackward,
+    setBlockType,
+    toggleMark,
+} from "prosemirror-commands";
 import { keymap } from "prosemirror-keymap";
 import { type Command, EditorState, type Plugin, type Transaction } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
@@ -17,6 +25,7 @@ import "./rich_text_editor.css";
 import {
     REGEX_BLOCK_MATH_DOLLARS,
     makeBlockMathInputRule,
+    mathBackspaceCmd,
     mathPlugin,
     mathSerializer,
 } from "@benrbray/prosemirror-math";
@@ -239,10 +248,16 @@ function richTextEditorKeymap(schema: CustomSchema, props: RichTextEditorOptions
     bindings["Mod-b"] = toggleMark(schema.marks.strong);
     bindings["Mod-i"] = toggleMark(schema.marks.em);
     bindings["Mod-m"] = insertMathDisplayCmd(schema.nodes.math_display);
+    bindings["Backspace"] = chainCommands(
+        ...[
+            deleteSelection,
+            mathBackspaceCmd,
+            joinBackward,
+            selectNodeBackward,
+            props.deleteBackward ? doIfEmpty(props.deleteBackward) : [],
+        ].flat(),
+    );
 
-    if (props.deleteBackward) {
-        bindings["Backspace"] = doIfEmpty(props.deleteBackward);
-    }
     if (props.deleteForward) {
         bindings["Delete"] = doIfEmpty(props.deleteForward);
     }
