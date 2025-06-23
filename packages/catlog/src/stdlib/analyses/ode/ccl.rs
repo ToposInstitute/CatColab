@@ -78,7 +78,8 @@ impl CCLAnalysis {
     pub fn create_system<Id>(
         &self,
         model: &Model<Id>,
-        degree_zeros: HashMap<Id, usize>,
+        in_zeros: &HashMap<Id, Vec<(Id, Id)>>,
+        degree_zeros_with_depth: HashMap<Id, usize>,
         data: CCLProblemData<Id>,
     ) -> ODEAnalysis<Id, CCLSystem>
     where
@@ -109,17 +110,20 @@ impl CCLAnalysis {
 
         // TO-DO: "better" would be to have Vec<(Vec<&Id>)> where we just stick
         // all the morphisms of the same depth into a sub-list
-        let mut sorted_degree_zeros: Vec<(&Id, &usize)> = degree_zeros.iter().collect();
+        let mut sorted_degree_zeros: Vec<(&Id, &usize)> = degree_zeros_with_depth.iter().collect();
         // .iter().collect::<Vec<(&Id, &usize)>>();
         // TO-DO: why can I not combine these????
         sorted_degree_zeros.sort_by(|a, b| a.1.cmp(b.1));
 
-        for (mor, _) in sorted_degree_zeros {
-            let mut B = DMatrix::from_element(n, n, 0.0f32);
-            let i = *ob_index.get(&model.mor_generator_dom(&mor)).unwrap();
-            let j = *ob_index.get(&model.mor_generator_cod(&mor)).unwrap();
-            B[(j, i)] += 1.0;
-            A = B * A;
+        for (cod, _) in sorted_degree_zeros {
+            for (mor, dom) in in_zeros.get(&cod).expect("unwrap") {
+                let mut B = DMatrix::from_element(n, n, 0.0f32);
+                B.fill_with_identity();
+                let i = *ob_index.get(dom).expect("expect");
+                let j = *ob_index.get(cod).expect("evan");
+                B[(j, i)] += data.interaction_coeffs.get(&mor).copied().unwrap_or(1.0);
+                A = B * A;
+            }
         }
 
         let initial_values =

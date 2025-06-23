@@ -251,28 +251,28 @@ impl ThNN2Category {
 
     fn get_depth(
         x: uuid::Uuid,
-        zero_path_depths: &mut HashMap<uuid::Uuid, DAGDepth>,
+        vertex_depths_in_zero_forest: &mut HashMap<uuid::Uuid, DAGDepth>,
         in_zeros: &HashMap<uuid::Uuid, Vec<(uuid::Uuid, uuid::Uuid)>>,
     ) -> usize {
-        let n = match zero_path_depths.get(&x).unwrap() {
+        let n = match vertex_depths_in_zero_forest.get(&x).expect("magpie") {
             DAGDepth::Seen => {
                 panic!("a degree zero loop found containing {:?}", x)
             }
             DAGDepth::Depth(d) => *d,
             DAGDepth::Undef => {
                 // Recursively compute depths for all incoming arrows.
-                zero_path_depths.insert(x, DAGDepth::Seen);
+                vertex_depths_in_zero_forest.insert(x, DAGDepth::Seen);
                 let depth = in_zeros
                     .get(&x)
-                    .unwrap()
+                    .expect("dunlin")
                     .iter()
-                    .map(|&(_f, y)| 1 + Self::get_depth(y, zero_path_depths, in_zeros))
+                    .map(|&(_, y)| 1 + Self::get_depth(y, vertex_depths_in_zero_forest, in_zeros))
                     .max()
                     .unwrap_or(0usize);
+                vertex_depths_in_zero_forest.insert(x, DAGDepth::Depth(depth));
                 depth
             }
         };
-        zero_path_depths.insert(x, DAGDepth::Depth(n));
         n
     }
 
@@ -306,19 +306,20 @@ impl ThNN2Category {
         let get_dom = |f| *model.get_dom(&f).unwrap();
 
         // tower_heights: [(base, height of corresponding tower)]
-        // in_arrows: [(object, morphisms to this object)]
-        // zero_path_depths: [morphisms of degree 0]
+        // in_arrows: [(target, [morphisms])]
+        // in_zeros: [(target, [(morphism, source)])]
+        // vertex_depths_in_zero_forest: [depths of vertices in the forest of morphisms of degree 0]
         let mut tower_heights: HashMap<uuid::Uuid, usize> = HashMap::new();
         let mut in_arrows: HashMap<uuid::Uuid, Vec<uuid::Uuid>> = HashMap::new();
         let mut in_zeros: HashMap<uuid::Uuid, Vec<(uuid::Uuid, uuid::Uuid)>> = HashMap::new();
-        let mut zero_path_depths: HashMap<uuid::Uuid, DAGDepth> = HashMap::new();
-        let mut zero_edge_depths: HashMap<uuid::Uuid, usize> = HashMap::new();
+        let mut vertex_depths_in_zero_forest: HashMap<uuid::Uuid, DAGDepth> = HashMap::new();
+        let mut degree_zeros_with_depth: HashMap<uuid::Uuid, usize> = HashMap::new();
 
         for x in model.ob_generators() {
             tower_heights.insert(x, 1);
             in_arrows.insert(x, Vec::new());
             in_zeros.insert(x, Vec::new());
-            zero_path_depths.insert(x, DAGDepth::Undef);
+            vertex_depths_in_zero_forest.insert(x, DAGDepth::Undef);
         }
 
         // At the  start, we have yet to build any of the towers, so everything
@@ -411,9 +412,11 @@ impl ThNN2Category {
         // Lift all morphisms to have codomain as the top degree of the tower
         // above their current codomain, and then add them to the CLD model
         for (x, x_tower) in derivative_towers.iter() {
+            debug_log.push_str("LIFTING ALL MORPHISMS\n\n");
             // TO-DO: rewrite this to be not terrible
             let arrows_into_x = in_arrows.get(&x).expect("auk");
             for f in arrows_into_x {
+                debug_log.push_str("LIFTING MORPHISM {f} WITH TARGET {x}\n\n");
                 let d = mor_deg(f);
                 let dom = model.get_dom(f).expect("robin");
                 let dom_tower = derivative_towers.get(dom).expect("penguin");
@@ -433,10 +436,11 @@ impl ThNN2Category {
 
         // compute depths
         for x in model.ob_generators() {
-            let depth = Self::get_depth(x, &mut zero_path_depths, &in_zeros);
-            for &(f, _y) in in_zeros.get(&x).unwrap() {
-                zero_edge_depths.insert(f, depth);
-            }
+            // WARNING: side effects
+            let depth = Self::get_depth(x, &mut vertex_depths_in_zero_forest, &in_zeros);
+            // for &(f, _) in in_zeros.get(&x).expect("dove") {
+            degree_zeros_with_depth.insert(x, depth);
+            // }
         }
 
         log(&debug_log);
@@ -445,7 +449,7 @@ impl ThNN2Category {
             analyses::ode::CCLAnalysis::new(ustr("Object"))
                 .add_positive(Path::Id(ustr("Object")))
                 .add_negative(ustr("Negative").into())
-                .create_system(&cld_model, zero_edge_depths, data.0)
+                .create_system(&cld_model, &in_zeros, degree_zeros_with_depth, data.0)
                 .solve_with_defaults()
                 .map_err(|err| format!("{:?}", err))
                 .into(),
