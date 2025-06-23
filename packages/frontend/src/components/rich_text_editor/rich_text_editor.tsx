@@ -31,12 +31,14 @@ import ListOrdered from "lucide-solid/icons/list-ordered";
 import Outdent from "lucide-solid/icons/outdent";
 import Sigma from "lucide-solid/icons/sigma";
 import TextQuote from "lucide-solid/icons/text-quote";
+import { splitListItem } from "prosemirror-schema-list";
 import { doIfAtBottom, doIfAtTop, doIfEmpty, insertMathDisplayCmd } from "./commands";
 import { type CustomSchema, proseMirrorAutomergeInit } from "./schema";
 import {
     activeHeading,
     initPlaceholderPlugin,
     isMarkActive,
+    toggleOrderedList,
     turnSelectionIntoBlockquote,
 } from "./utils";
 
@@ -185,7 +187,7 @@ export const RichTextEditor = (
             onItalicClicked: () => toggleMark(schema.marks.em)(view.state, view.dispatch),
             onLinkClicked: null,
             onBlockQuoteClicked: () => turnSelectionIntoBlockquote(view.state, view.dispatch, view),
-            onToggleOrderedList: null,
+            onToggleOrderedList: () => toggleOrderedList(view),
             onToggleNumberedList: null,
             onIncreaseIndent: null,
             onDecreaseIndent: null,
@@ -233,6 +235,7 @@ function activeMarks(state: EditorState, schema: CustomSchema): MarkStates {
 function richTextEditorKeymap(schema: CustomSchema, props: RichTextEditorOptions) {
     const bindings: { [key: string]: Command } = {};
 
+    bindings["Enter"] = splitListItem(schema.nodes.list_item);
     bindings["Mod-b"] = toggleMark(schema.marks.strong);
     bindings["Mod-i"] = toggleMark(schema.marks.em);
     bindings["Mod-m"] = insertMathDisplayCmd(schema.nodes.math_display);
@@ -285,7 +288,6 @@ export function MenuBar(props: MenuControls & MarkStates & { headingLevel: numbe
                     <Italic />
                 </button>
             </Show>
-
             <Show when={props.onLinkClicked}>
                 <button id="add-link" onClick={() => props.onLinkClicked?.()}>
                     <Link />
@@ -299,25 +301,6 @@ export function MenuBar(props: MenuControls & MarkStates & { headingLevel: numbe
                     <Sigma />
                 </TooltipButton>
             </Show>
-
-            <Show when={props.onHeadingClicked}>
-                <select
-                    value={props.headingLevel ?? 0}
-                    onInput={(e) => {
-                        const lvl = Number((e.currentTarget as HTMLSelectElement).value);
-                        props.onHeadingClicked?.(lvl);
-                    }}
-                >
-                    <option value={0}>Paragraph</option>
-                    <option value={1}>Heading 1</option>
-                    <option value={2}>Heading 2</option>
-                    <option value={3}>Heading 3</option>
-                    <option value={4}>Heading 4</option>
-                    <option value={5}>Heading 5</option>
-                    <option value={6}>Heading 6</option>
-                </select>
-            </Show>
-
             <Show when={props.onBlockQuoteClicked}>
                 <TooltipButton tooltip="Blockquote" onClick={() => props.onBlockQuoteClicked?.()}>
                     <TextQuote />
@@ -345,6 +328,23 @@ export function MenuBar(props: MenuControls & MarkStates & { headingLevel: numbe
                 <TooltipButton tooltip="Outdent" onClick={() => props.onDecreaseIndent?.()}>
                     <Outdent />
                 </TooltipButton>
+            </Show>
+            <Show when={props.onHeadingClicked}>
+                <select
+                    value={props.headingLevel ?? 0}
+                    onInput={(e) => {
+                        const lvl = Number((e.currentTarget as HTMLSelectElement).value);
+                        props.onHeadingClicked?.(lvl);
+                    }}
+                >
+                    <option value={0}>Paragraph</option>
+                    <option value={1}>Heading 1</option>
+                    <option value={2}>Heading 2</option>
+                    <option value={3}>Heading 3</option>
+                    <option value={4}>Heading 4</option>
+                    <option value={5}>Heading 5</option>
+                    <option value={6}>Heading 6</option>
+                </select>
             </Show>
         </div>
     );

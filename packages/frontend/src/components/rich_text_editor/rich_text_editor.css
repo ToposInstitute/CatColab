@@ -47,8 +47,7 @@
     justify-content: flex-start;
 }
 
-.menubar select
-.menubar button {
+.menubar select .menubar button {
     transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
