@@ -176,7 +176,6 @@ where
         // where dW or dS = \pm [W-C],
         for i in 0..dx.len() {
             dx[i] = self.components[i].eval(|var| {
-                // let modifier = 1.0;
                 let modifier = if let Some(f) = self.closures.get(var) {
                     f(x.clone())
                 } else {

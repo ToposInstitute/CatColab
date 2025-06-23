@@ -25,28 +25,27 @@ use crate::one::FgCategory;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
 use crate::zero::{alg::Polynomial, rig::Monomial};
 
-use crate::simulate::ode::{MonomialBehavior, StateBehavior};
+use crate::simulate::ode::{MonomialBehavior, StateBehavior, Transformer};
 
 use web_sys::console;
 
-// impl<Var: Clone + Ord> Transformer<Var, f32> for MonomialBehavior<Var> {
-//     fn to_closure(&self, indices: BTreeMap<Var, usize>) -> StateBehavior<f32> {
-//         match self {
-//             // assuming multiplicative identity
-//             MonomialBehavior::Identity => Box::new(|x| 1.0),
-//             MonomialBehavior::Heaviside(left, right) => Box::new(move |x: DVector<f32>| -> f32 {
-//                 let Some(water) = indices.get(left) else {
-//                     panic!("!")
-//                 };
-//                 let Some(container) = indices.get(right) else {
-//                     panic!("!")
-//                 };
-//                 let out = x[*water] <= x[*container];
-//                 out as u32 as f32
-//             }),
-//         }
-//     }
-// }
+impl<Id: Clone + Ord + std::fmt::Debug> Transformer<Id, f32> for MonomialBehavior<Id> {
+    fn to_closure(&self, indices: BTreeMap<Id, usize>) -> StateBehavior<f32> {
+        match self {
+            // assuming multiplicative identity
+            MonomialBehavior::Identity => Box::new(|x| 1.0),
+            MonomialBehavior::Heaviside(left, right) => {
+                dbg!(&indices, &left, &right);
+                let left = *indices.get(&left.clone()).expect("!");
+                let right = *indices.get(&right.clone()).expect("!");
+                Box::new(move |x: DVector<f32>| -> f32 {
+                    let out = x[left] < x[right];
+                    out as u32 as f32
+                })
+            }
+        }
+    }
+}
 
 // TODO merge with MonomialBehaviors
 /** */
@@ -269,27 +268,32 @@ impl EnergeseMassActionAnalysis {
                                             .values()
                                             .cloned()
                                             .collect();
-                                        dbg!(&args);
+                                        let heaviside = MonomialBehavior::Heaviside(
+                                            args[0].clone(),
+                                            args[1].clone(),
+                                        )
+                                        .to_closure(idxvarmap.clone());
                                         let _ = closures.insert(
                                             // flow.clone(),
                                             idxvarmap.get(&k).expect("!").clone(),
-                                            {
-                                                let water =
-                                                    *idxvarmap.get(&args[0].clone()).expect("!");
-                                                let container =
-                                                    *idxvarmap.get(&args[1].clone()).expect("!");
-                                                Box::new(move |x: DVector<f32>| -> f32 {
-                                                    let out = x[water] <= x[container];
-                                                    out as u32 as f32
-                                                })
-                                            },
+                                            heaviside,
+                                            // {
+                                            //     let water =
+                                            //         *idxvarmap.get(&args[0].clone()).expect("!");
+                                            //     let container =
+                                            //         *idxvarmap.get(&args[1].clone()).expect("!");
+                                            //     Box::new(move |x: DVector<f32>| -> f32 {
+                                            //         let out = x[water] <= x[container];
+                                            //         out as u32 as f32
+                                            //     })
+                                            // },
                                             // MonomialBehavior::Heaviside(
                                             //     args[0].clone(), // should be indices
                                             //     args[1].clone(),
                                             // ),
                                         );
                                     }
-                                    &_ => todo!(),
+                                    &_ => {} // Box::new(move |x: DVector<f32>| -> f32 { 1.0 }),
                                 }
                             }
                         }
@@ -303,24 +307,7 @@ impl EnergeseMassActionAnalysis {
         let mut sys = sys
             .clone()
             .extend_scalars(|poly| {
-                poly.eval(|flow| {
-                    // if let Some(flink) = flinks.get(&flow) {
-                    //     if let Some(function) = data.dynamibles.get(flink) {
-                    //         match function.as_str() {
-                    //             "Identity" => {
-                    //                 // let _ =
-                    //                 // closures.insert(flow.clone(), MonomialBehavior::Identity);
-                    //             }
-                    //             "Heaviside" => {
-                    //                 // let _ =
-                    //                 // closures.insert(flow.clone(), MonomialBehavior::Identity);
-                    //             }
-                    //             _ => {}
-                    //         };
-                    //     }
-                    // };
-                    data.rates.get(flow).copied().unwrap_or_default()
-                })
+                poly.eval(|flow| data.rates.get(flow).copied().unwrap_or_default())
             })
             .to_numerical(); // simulate/ode/polynomial
 
@@ -369,11 +356,20 @@ mod tests {
         data.rates.insert(ustr("deposits"), 3.0);
         data.initial_values.insert(ustr("Source"), 100.0);
         data.initial_values.insert(ustr("Water"), 2.0);
-        data.initial_values.insert(ustr("Container"), 20.0);
+        data.initial_values.insert(ustr("Container"), 40.0);
         data.dynamibles.insert(ustr("SpilloverChecker"), String::from("Heaviside"));
 
-        let result = analysis.create_numerical_system(&model, data).solve_with_defaults();
-        println!("RESULT: {:#?}", result);
+        let result =
+            analysis.create_numerical_system(&model, data).solve_with_defaults().expect("!");
+        println!(
+            "RESULT: {:#?}",
+            std::iter::zip(
+                result.clone().states.get(&ustr("Sediment")).unwrap(),
+                result.states.get(&ustr("Water")).unwrap(),
+                // result.clone().unwrap().states.get(&ustr("Water")).unwrap()
+            )
+            .collect::<Vec<_>>()
+        );
         // expected.assert_eq(&textplot_ode_result(&problem, &result));
 
         // let sys = analysis.clone().create_numerical_system(&model, data);
