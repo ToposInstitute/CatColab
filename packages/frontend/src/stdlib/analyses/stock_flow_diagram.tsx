@@ -122,8 +122,9 @@ function StockFlowSVG(props: {
         const nodeMap = uniqueIndexArray(props.layout?.nodes ?? [], (node) => node.id);
         const edgeMap = uniqueIndexArray(props.layout?.edges ?? [], (edge) => edge.id);
         for (const judgment of props.model) {
+		    console.log(judgment);
             match(judgment).with(
-                {
+				  {
                     tag: "morphism",
                     dom: {
                         tag: "Basic",
@@ -136,7 +137,7 @@ function StockFlowSVG(props: {
                             content: P.select("tgtId"),
                         },
                     },
-                },
+				}, 
                 ({ srcId, tgtId }) => {
                     const srcNode = nodeMap.get(srcId);
                     const tgtEdge = edgeMap.get(tgtId);
@@ -148,8 +149,38 @@ function StockFlowSVG(props: {
                     const path = quadraticCurve(srcNode.pos, midpoint, 1.0);
                     result.push(path.join(" "));
                 },
-            );
-        }
+			);
+			// TODO
+		    match(judgment).with(
+		    	{
+		    	    tag: "morphism",
+		    	    dom: {
+		    	    	tag: "Basic",
+		    	    	content: P.select("srcId"),
+		    	    },
+		    	    cod: {
+		    	    	tag: "Basic",
+		    	    	content: P.select("tgtId"),
+		    	    },
+		    	    morType: {
+		    	    	tag: "Basic",
+		    	    	content: "VariableLink"
+		    	    }
+		    	},
+		    	({ srcId, tgtId }) => {
+                        const srcNode = nodeMap.get(srcId);
+                        const tgtEdge = edgeMap.get(tgtId);
+                        if (!srcNode || !tgtEdge) {
+                            return;
+                        }
+                        pathElem.setAttribute("d", tgtEdge.path);
+                        const midpoint = pathElem.getPointAtLength(pathElem.getTotalLength() / 2);
+                        const path = quadraticCurve(srcNode.pos, midpoint, 1.0);
+                        result.push(path.join(" "));
+                }
+		    );
+		}
+		console.log(result);
         return result;
     };
 

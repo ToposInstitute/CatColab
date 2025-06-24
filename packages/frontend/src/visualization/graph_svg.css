@@ -8,6 +8,14 @@
     fill: transparent;
 }
 
+.node circle {
+    fill: transparent;
+}
+
+.node circle.point {
+    fill: black;
+}
+
 .edge line,
 .edge path {
     fill: none;

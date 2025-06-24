@@ -682,10 +682,10 @@ stdTheories.add(
 stdTheories.add(
     {
         id: "dynamic-stackflow",
-        name: "DynamicStockFlow",
+        name: "Dynamic Stock Flow",
         description: "Model accumulation (stocks) and change (flows)",
         group: "System Dynamics",
-        help: "energese",
+        help: "dynamic-stockflow",
     },
     (meta) => {
         const thCategoryDynamicStockFlow = new catlog.ThCategoryDynamicStockFlow();
@@ -720,8 +720,8 @@ stdTheories.add(
                     name: "Variable",
                     description: "Variable stuff",
                     shortcut: ["V"],
-                    cssClasses: [styles.box],
-                    svgClasses: [svgStyles.box],
+                    cssClasses: [styles.point],
+                    svgClasses: [svgStyles.point],
                 },
                 {
                     tag: "MorType",

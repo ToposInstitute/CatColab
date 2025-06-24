@@ -108,7 +108,7 @@ export function modelToGraphviz(
                 name: id,
                 attributes: {
                     id,
-                    label: name,
+					label: name,
                     class: GV.svgCssClasses(meta).join(" "),
                     fontname: GV.graphvizFontname(meta),
                 },

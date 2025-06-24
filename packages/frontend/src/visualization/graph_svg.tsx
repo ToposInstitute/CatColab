@@ -37,6 +37,7 @@ export function GraphSVG<Id>(props: {
 /** Draw a node with a layout using SVG.
  */
 export function NodeSVG<Id>(props: { node: GraphLayout.Node<Id> }) {
+    // do we use an || operator?
     const {
         node: {
             pos: { x, y },
@@ -47,11 +48,37 @@ export function NodeSVG<Id>(props: { node: GraphLayout.Node<Id> }) {
 
     return (
         <g class={`node ${props.node.cssClass ?? ""}`}>
-            <rect x={x() - width() / 2} y={y() - height() / 2} width={width()} height={height()} />
+			<Switch fallback={<text class="label" x={x()} y={y()} dominant-baseline="middle" text-anchor="middle">
+							{props.node.label}
+						</text>}>
+				<Match when={props.node.cssClass?.includes("circle")}>
+					<circle cx={x()} cy={y()} r={Math.min(width(), height()) / 2}/>
+				</Match>
+				<Match when={props.node.cssClass?.includes("point")}>
+					<circle class="point" cx={x()} cy={y()} r={5} />
+				</Match>
+				<Match when={props.node.cssClass?.includes("box")}>
+					<rect x={x() - width() / 2} y={y() - height() / 2} width={width()} height={height()} />
+				</Match>
+			</Switch>
             <Show when={props.node.label}>
-                <text class="label" x={x()} y={y()} dominant-baseline="middle" text-anchor="middle">
-                    {props.node.label}
-                </text>
+				<Switch>
+					<Match when={props.node.cssClass?.includes("box") ?? ""}>
+						<text class="label" x={x()} y={y()} dominant-baseline="middle" text-anchor="middle">
+							{props.node.label}
+						</text>
+					</Match>
+					<Match when={props.node.cssClass?.includes("point")}>
+						<text class="label" x={x()} y={y() - 15} dominant-baseline="middle" text-anchor="middle">
+							{props.node.label}
+						</text>
+					</Match>
+					<Match when={props.node.cssClass?.includes("circle")}>
+						<text class="label" x={x()} y={y()} dominant-baseline="middle" text-anchor="middle">
+							{props.node.label}
+						</text>
+					</Match>
+				</Switch>
             </Show>
         </g>
     );
@@ -87,7 +114,6 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
             </text>
         );
     };
-
     return (
         <g class={`edge ${props.edge.cssClass ?? ""}`}>
             <Switch fallback={defaultPath()}>

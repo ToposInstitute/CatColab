@@ -67,7 +67,9 @@ export function parseGraphvizJSON(graphviz: GraphvizJSON.Graph): GraphLayout.Gra
             pos: parsePoint(node.pos),
             width: inchesToPoints(Number.parseFloat(node.width)),
             height: inchesToPoints(Number.parseFloat(node.height)),
-            label: node.label,
+            label: node.xlabel ?? node.label,
+			labelPos: parsePoint(node.pos),
+                // (node.xlp && parsePoint(node.xlp)) || (node.lp && parsePoint(node.lp)) || undefined,
             cssClass: node.class,
         });
     }
