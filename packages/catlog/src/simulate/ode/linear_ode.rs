@@ -19,9 +19,7 @@ pub struct LinearODESystem {
 impl LinearODESystem {
     /// Create a new LinearODE system.
     pub fn new(A: DMatrix<f32>) -> Self {
-        Self {
-            coefficients: A,
-        }
+        Self { coefficients: A }
     }
 }
 

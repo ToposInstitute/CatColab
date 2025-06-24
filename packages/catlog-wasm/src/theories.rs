@@ -128,7 +128,11 @@ impl ThSignedCategory {
 
     /// Simulate the linear ODE system derived from a model.
     #[wasm_bindgen(js_name = "linearODE")]
-    pub fn linear_ode(&self, model: &DblModel, data: LinearODEModelData) -> Result<ODEResult, String> {
+    pub fn linear_ode(
+        &self,
+        model: &DblModel,
+        data: LinearODEModelData,
+    ) -> Result<ODEResult, String> {
         let model: &model::DiscreteDblModel<_, _> = (&model.0)
             .try_into()
             .map_err(|_| "Linear ODE simulation expects a discrete double model")?;
