@@ -258,6 +258,47 @@ impl ThCategoryLinks {
     }
 }
 
+/// The theory of categories of energese.
+#[wasm_bindgen]
+pub struct ThCategoryDynamicStockFlow(Rc<theory::UstrDiscreteTabTheory>);
+
+#[wasm_bindgen]
+impl ThCategoryDynamicStockFlow {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self(Rc::new(theories::th_category_energese()))
+    }
+
+    #[wasm_bindgen]
+    pub fn theory(&self) -> DblTheory {
+        DblTheory(self.0.clone().into())
+    }
+
+    /// Simulates the mass-action system derived from a model.
+    #[wasm_bindgen(js_name = "energese")]
+    pub fn mass_action(
+        &self,
+        model: &DblModel,
+        data: DynamicStockFlowMassActionModelData,
+    ) -> Result<ODEResult, String> {
+        let model: &model::DiscreteTabModel<_, _, _> = (&model.0)
+            .try_into()
+            .map_err(|_| "Mass-action simulation expects a discrete tabulator model")?;
+        //
+        // let analysis = analyses::ode::EnergeseMassActionAnalysis::default()
+        //     .teeup_numerical_system(model, data.0.clone());
+        // console::log_1(&format!("{:#?}", analysis).into());
+        //
+        Ok(ODEResult(
+            analyses::ode::DynamicStockFlowMassActionAnalysis::default()
+                .create_numerical_system(model, data.0)
+                .solve_with_defaults()
+                .map_err(|err| format!("{:?}", err))
+                .into(),
+        ))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
