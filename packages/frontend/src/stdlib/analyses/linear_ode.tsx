@@ -20,21 +20,21 @@ import { createModelODEPlot } from "./simulation";
 
 import "./simulation.css";
 
-/** Configuration for a CCLFO ODE analysis of a model. */
-export type CCLFOContent = CCLFOProblemData<string>;
+/** Configuration for a LinearODE ODE analysis of a model. */
+export type LinearODEContent = LinearODEProblemData<string>;
 
-type Simulator = (model: DblModel, data: CCLFOModelData) => ODEResult;
+type Simulator = (model: DblModel, data: LinearODEModelData) => ODEResult;
 
-/** Configure a CCLFO ODE analysis for use with models of a theory. */
-export function configureCCLFO(options: {
+/** Configure a LinearODE ODE analysis for use with models of a theory. */
+export function configureLinearODE(options: {
     id?: string;
     name?: string;
     description?: string;
     simulate: Simulator;
-}): ModelAnalysisMeta<CCLFOContent> {
+}): ModelAnalysisMeta<LinearODEContent> {
     const {
-        id = "cclfo",
-        name = "CCLFO dynamics",
+        id = "linear-ode",
+        name = "Linear ODE dynamics",
         description = "Simulate the system using a constant-coefficient linear first-order ODE",
         simulate,
     } = options;
@@ -42,18 +42,18 @@ export function configureCCLFO(options: {
         id,
         name,
         description,
-        component: (props) => <CCLFO simulate={simulate} title={name} {...props} />,
+        component: (props) => <LinearODE simulate={simulate} title={name} {...props} />,
         initialContent: () => ({
-            interactionCoefficients: {},
+            coefficients: {},
             initialValues: {},
             duration: 10,
         }),
     };
 }
 
-/** Analyze a model using CCLFO dynamics. */
-export function CCLFO(
-    props: ModelAnalysisProps<CCLFOContent> & {
+/** Analyze a model using LinearODE dynamics. */
+export function LinearODE(
+    props: ModelAnalysisProps<LinearODEContent> & {
         simulate: Simulator;
         title?: string;
     },
@@ -91,12 +91,12 @@ export function CCLFO(
         },
         createNumericalColumn({
             name: "Coefficient",
-            data: (mor) => props.content.interactionCoefficients[mor.id],
+            data: (mor) => props.content.coefficients[mor.id],
             default: 1,
             validate: (_, data) => data >= 0,
             setData: (mor, data) =>
                 props.changeContent((content) => {
-                    content.interactionCoefficients[mor.id] = data;
+                    content.coefficients[mor.id] = data;
                 }),
         }),
     ];

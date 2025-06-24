@@ -14,9 +14,9 @@ use super::ODEAnalysis;
 use crate::dbl::model::{DiscreteDblModel, FgDblModel};
 use crate::one::fp_category::UstrFpCategory;
 use crate::one::{FgCategory, Path};
-use crate::simulate::ode::{CCLFOSystem, ODEProblem};
+use crate::simulate::ode::{LinearODESystem, ODEProblem};
 
-/// Data defining a CCLFO ODE problem for a model.
+/// Data defining a linear ODE problem for a model.
 #[derive(Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
@@ -24,13 +24,13 @@ use crate::simulate::ode::{CCLFOSystem, ODEProblem};
     feature = "serde-wasm",
     tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
 )]
-pub struct CCLFOProblemData<Id>
+pub struct LinearODEProblemData<Id>
 where
     Id: Eq + Hash,
 {
     /// Map from morphism IDs to interaction coefficients (nonnegative reals).
-    #[cfg_attr(feature = "serde", serde(rename = "interactionCoefficients"))]
-    interaction_coeffs: HashMap<Id, f32>,
+    #[cfg_attr(feature = "serde", serde(rename = "coefficients"))]
+    coefficients: HashMap<Id, f32>,
 
     /// Map from object IDs to initial values (nonnegative reals).
     #[cfg_attr(feature = "serde", serde(rename = "initialValues"))]
@@ -42,18 +42,21 @@ where
 
 type Model<Id> = DiscreteDblModel<Id, UstrFpCategory>;
 
-/** CCLFO ODE analysis for models of a double theory.
+/** Linear ODE analysis for models of a double theory.
 
-The main situation we have in mind is ...
+This analysis is somewhat subordinate to the more general case of linear ODE
+analysis for *extended* causal loop diagrams, but it can hopefully act as a
+simple/naive semantics for causal loop diagrams that is useful for building
+toy models for demonstration purposes.
 */
-pub struct CCLFOAnalysis {
+pub struct LinearODEAnalysis {
     var_ob_type: Ustr,
     positive_mor_types: Vec<Path<Ustr, Ustr>>,
     negative_mor_types: Vec<Path<Ustr, Ustr>>,
 }
 
-impl CCLFOAnalysis {
-    /// Creates a new CCLFO analysis for the given object type.
+impl LinearODEAnalysis {
+    /// Creates a new LinearODE analysis for the given object type.
     pub fn new(var_ob_type: Ustr) -> Self {
         Self {
             var_ob_type,
@@ -74,12 +77,12 @@ impl CCLFOAnalysis {
         self
     }
 
-    /// Creates a CCLFO system from a model.
+    /// Creates a LinearODE system from a model.
     pub fn create_system<Id>(
         &self,
         model: &Model<Id>,
-        data: CCLFOProblemData<Id>,
-    ) -> ODEAnalysis<Id, CCLFOSystem>
+        data: LinearODEProblemData<Id>,
+    ) -> ODEAnalysis<Id, LinearODESystem>
     where
         Id: Eq + Clone + Hash + Ord,
     {
@@ -95,14 +98,14 @@ impl CCLFOAnalysis {
             for mor in model.mor_generators_with_type(mor_type) {
                 let i = *ob_index.get(&model.mor_generator_dom(&mor)).unwrap();
                 let j = *ob_index.get(&model.mor_generator_cod(&mor)).unwrap();
-                A[(j, i)] += data.interaction_coeffs.get(&mor).copied().unwrap_or_default();
+                A[(j, i)] += data.coefficients.get(&mor).copied().unwrap_or_default();
             }
         }
         for mor_type in self.negative_mor_types.iter() {
             for mor in model.mor_generators_with_type(mor_type) {
                 let i = *ob_index.get(&model.mor_generator_dom(&mor)).unwrap();
                 let j = *ob_index.get(&model.mor_generator_cod(&mor)).unwrap();
-                A[(j, i)] -= data.interaction_coeffs.get(&mor).copied().unwrap_or_default();
+                A[(j, i)] -= data.coefficients.get(&mor).copied().unwrap_or_default();
             }
         }
 
@@ -111,37 +114,8 @@ impl CCLFOAnalysis {
             .map(|ob| data.initial_values.get(ob).copied().unwrap_or_default());
         let x0 = DVector::from_iterator(n, initial_values);
 
-        let system = CCLFOSystem::new(A);
+        let system = LinearODESystem::new(A);
         let problem = ODEProblem::new(system, x0).end_time(data.duration);
         ODEAnalysis::new(problem, ob_index)
     }
 }
-
-// #[cfg(test)]
-// mod test {
-//     use std::rc::Rc;
-//     use ustr::ustr;
-
-//     use super::*;
-//     use crate::{simulate::ode::lotka_volterra, stdlib};
-
-//     #[test]
-//     fn predator_prey() {
-//         let th = Rc::new(stdlib::theories::th_signed_category());
-//         let neg_feedback = stdlib::models::negative_feedback(th);
-
-//         let (prey, pred) = (ustr("x"), ustr("y"));
-//         let (pos, neg) = (ustr("positive"), ustr("negative"));
-//         let data = CCLFOProblemData {
-//             interaction_coeffs: [(pos, 1.0), (neg, 1.0)].into_iter().collect(),
-//             growth_rates: [(prey, 2.0), (pred, -1.0)].into_iter().collect(),
-//             initial_values: [(prey, 1.0), (pred, 1.0)].into_iter().collect(),
-//             duration: 10.0,
-//         };
-//         let analysis = CCLFOAnalysis::new(ustr("Object"))
-//             .add_positive(Path::Id(ustr("Object")))
-//             .add_negative(Path::single(ustr("Negative")))
-//             .create_system(&neg_feedback, data);
-//         assert_eq!(analysis.problem, lotka_volterra::create_predator_prey());
-//     }
-// }

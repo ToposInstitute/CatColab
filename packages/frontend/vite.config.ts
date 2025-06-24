@@ -1,5 +1,7 @@
 import { nodeTypes } from "@mdx-js/mdx";
+import rehypeKatex from "rehype-katex";
 import rehypeRaw from "rehype-raw";
+import remarkMath from "remark-math";
 import { defineConfig } from "vite";
 import solid from "vite-plugin-solid";
 import wasm from "vite-plugin-wasm";
@@ -17,7 +19,11 @@ export default defineConfig({
             jsx: true,
             jsxImportSource: "solid-js",
             providerImportSource: "solid-mdx",
-            rehypePlugins: [[rehypeRaw, { passThrough: nodeTypes }]],
+            rehypePlugins: [
+                [rehypeRaw, { passThrough: nodeTypes }],
+                [rehypeKatex, { throwOnError: false }],
+            ],
+            remarkPlugins: [[remarkMath, { singleDollarTextMath: true }]],
         }),
         solid({
             extensions: [".mdx", ".md"],
