@@ -367,7 +367,7 @@ stdTheories.add(
 stdTheories.add(
     {
         id: "e-causal-loops",
-        name: "Enriched causal loop diagram",
+        name: "Extended causal loop diagram",
         description: "Causal relationships: positive or negative, with differential degree and delay",
         group: "System Dynamics",
         help: "e-causal-loops",
@@ -517,7 +517,7 @@ stdTheories.add(
                 analyses.configureModelGraph({
                     id: "diagram",
                     name: "Visualization",
-                    description: "Visualize the enriched causal loop diagram",
+                    description: "Visualize the extended causal loop diagram",
                 }),
                 analyses.configureCCL({
                     simulate: (model, data) => thNN2Category.ccl(model, data),

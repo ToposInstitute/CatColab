@@ -9,7 +9,7 @@ use super::ODESystem;
 /** A CCLFO dynamical system.
 
 A system of linear first-order ODEs with constant coefficient; a semantics for
-enriched causal loop diagrams.
+extended causal loop diagrams (ECLDs).
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct CCLFOSystem {
