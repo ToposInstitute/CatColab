@@ -207,28 +207,9 @@ impl ThDelayableSignedCategory {
     }
 }
 
-/// The theory of (N x N)-graded signed categories.
+/// The theory of (N x N)-graded signed categories (for ECLDs).
 #[wasm_bindgen]
 pub struct ThNN2Category(Rc<theory::UstrDiscreteDblTheory>);
-
-// TO-DO: remove this --- it's just for temporary logging
-#[wasm_bindgen]
-extern "C" {
-    // Use `js_namespace` here to bind `console.log(..)` instead of just
-    // `log(..)`
-    #[wasm_bindgen(js_namespace = console)]
-    fn log(s: &str);
-
-    // The `console.log` is quite polymorphic, so we can bind it with multiple
-    // signatures. Note that we need to use `js_name` to ensure we always call
-    // `log` in JS.
-    #[wasm_bindgen(js_namespace = console, js_name = log)]
-    fn log_u32(a: u32);
-
-    // Multiple arguments too!
-    #[wasm_bindgen(js_namespace = console, js_name = log)]
-    fn log_many(a: &str, b: &str);
-}
 
 // data type for max-depth search in DAGs
 enum DAGDepth {
@@ -249,6 +230,8 @@ impl ThNN2Category {
         DblTheory(self.0.clone().into())
     }
 
+    // Just used within cll() to find the depth of a vertex within the forest
+    // of degree-zero arrows
     fn get_depth(
         x: uuid::Uuid,
         vertex_depths_in_zero_forest: &mut HashMap<uuid::Uuid, DAGDepth>,
@@ -256,11 +239,12 @@ impl ThNN2Category {
     ) -> usize {
         let n = match vertex_depths_in_zero_forest.get(&x).expect("magpie") {
             DAGDepth::Seen => {
+                // TO-DO: this should just raise an error in the analysis pane
                 panic!("a degree zero loop found containing {:?}", x)
             }
             DAGDepth::Depth(d) => *d,
             DAGDepth::Undef => {
-                // Recursively compute depths for all incoming arrows.
+                // Recursively compute depths for all incoming arrows
                 vertex_depths_in_zero_forest.insert(x, DAGDepth::Seen);
                 let depth = in_zeros
                     .get(&x)
@@ -286,52 +270,17 @@ impl ThNN2Category {
         let mut debug_log = String::new();
         debug_log.push_str("ECLD to CLD migration for CCL dynamics\n\n");
 
-        // Pre-processing the model: creating new objects for each derivative
-        // and lifting all morphisms to be degree 1
-
-        // TO-DO: currently whenever the user deletes an object, cld_model is
-        // not updated, so all the phantoms hang around
-
-        // We will end up creating a CLD corresponding to our ECLD, where we
-        // interpret all arrows in our CLD as being morphisms of degree 1
-        let mut cld_model: model::DiscreteDblModel<uuid::Uuid, _> =
-            model::DiscreteDblModel::new(Rc::new(theories::th_signed_category()));
-
         // TO-DO: is this actually what we should be doing with IDs?
         fn fresh_uuid() -> uuid::Uuid {
             uuid::Uuid::now_v7()
         }
 
+        // Some helper closures
         let get_cod = |f| *model.get_cod(&f).unwrap();
         let get_dom = |f| *model.get_dom(&f).unwrap();
-
-        // tower_heights: [(base, height of corresponding tower)]
-        // in_arrows: [(target, [morphisms])]
-        // in_zeros: [(target, [(morphism, source)])]
-        // vertex_depths_in_zero_forest: [depths of vertices in the forest of morphisms of degree 0]
-        let mut tower_heights: HashMap<uuid::Uuid, usize> = HashMap::new();
-        let mut in_arrows: HashMap<uuid::Uuid, Vec<uuid::Uuid>> = HashMap::new();
-        let mut in_zeros: HashMap<uuid::Uuid, Vec<(uuid::Uuid, uuid::Uuid)>> = HashMap::new();
-        let mut vertex_depths_in_zero_forest: HashMap<uuid::Uuid, DAGDepth> = HashMap::new();
-        let mut degree_zeros_with_depth: HashMap<uuid::Uuid, usize> = HashMap::new();
-
-        for x in model.ob_generators() {
-            tower_heights.insert(x, 1);
-            in_arrows.insert(x, Vec::new());
-            in_zeros.insert(x, Vec::new());
-            vertex_depths_in_zero_forest.insert(x, DAGDepth::Undef);
-        }
-
-        // At the  start, we have yet to build any of the towers, so everything
-        // is unchecked
-        let mut unchecked_bases: Vec<uuid::Uuid> =
-            model.ob_generators().collect::<Vec<_>>().clone();
-
-        // Given a morphism, return its degree as a usize
         let mor_deg = |f: &uuid::Uuid| {
             model.mor_generator_type(f).into_iter().filter(|t| *t == ustr("Degree")).count()
         };
-
         let mor_sign = |f: &uuid::Uuid| {
             model
                 .mor_generator_type(f)
@@ -341,14 +290,45 @@ impl ThNN2Category {
                 % 2
         };
 
-        // First pass, calculating maximal incoming degree for each base
+        // 0. Pre-processing the model: creating new objects for each derivative
+        //    and lifting all morphisms to be degree 1. We will end up creating
+        //    a CLD corresponding to our ECLD, where we interpret all arrows *of
+        //    positive degree* in our CLD as being morphisms of degree 1; we
+        //    will also *separately* retain the data of the forest of
+        //    degree-zero arrows
+        let mut cld_model: model::DiscreteDblModel<uuid::Uuid, _> =
+            model::DiscreteDblModel::new(Rc::new(theories::th_signed_category()));
+
+        // tower_heights: [base object: height of corresponding tower]
+        // in_arrows: [target: [morphisms with this target]]
+        // in_zeros: [target: [(deg-zero morphism with this target, source)]]
+        // vertex_depths_in_zero_forest: [vertex: depth as a DAGDepth]
+        // degree_zeros_with_depth: [vertex: depth as an integer]
+        let mut tower_heights: HashMap<uuid::Uuid, usize> = HashMap::new();
+        let mut in_arrows: HashMap<uuid::Uuid, Vec<uuid::Uuid>> = HashMap::new();
+        let mut in_zeros: HashMap<uuid::Uuid, Vec<(uuid::Uuid, uuid::Uuid)>> = HashMap::new();
+        let mut vertex_depths_in_zero_forest: HashMap<uuid::Uuid, DAGDepth> = HashMap::new();
+        let mut degree_zeros_with_depth: HashMap<uuid::Uuid, usize> = HashMap::new();
+
+        // Initialising the above variables (apart from degree_zeros_with_depth,
+        // which will be created right at the end)
+        for x in model.ob_generators() {
+            tower_heights.insert(x, 1);
+            in_arrows.insert(x, Vec::new());
+            in_zeros.insert(x, Vec::new());
+            vertex_depths_in_zero_forest.insert(x, DAGDepth::Undef);
+        }
+
+        // We have yet to build any of the towers, so every base is "unchecked"
+        let mut unchecked_bases: Vec<uuid::Uuid> =
+            model.ob_generators().collect::<Vec<_>>().clone();
+
+        // 1. First pass, calculating maximal incoming degree for each base
         for f in model.mor_generators() {
             let degree = mor_deg(&f);
             let f_cod = get_cod(f);
 
             if degree == 0 {
-                // TO-DO: we need to insist that the degree zero arrows form a
-                // directed acyclic graph
                 in_zeros.get_mut(&f_cod).expect("shrike").push((f, get_dom(f)));
             } else {
                 let new_degree =
@@ -360,7 +340,7 @@ impl ThNN2Category {
             }
         }
 
-        // If a tower isn't big enough, add more floors
+        // 2. If a tower isn't big enough, we will need to add more floors
         fn update_tower(x: &uuid::Uuid, h: usize, tower: &mut HashMap<uuid::Uuid, usize>) {
             let current_height = tower.get(&x).expect("chaffinch");
             if h > *current_height {
@@ -368,7 +348,6 @@ impl ThNN2Category {
             }
             return;
         }
-
         // Iterate over all unchecked bases, starting with (one of) the one(s)
         // with greatest current height
         while !unchecked_bases.is_empty() {
@@ -389,14 +368,13 @@ impl ThNN2Category {
             }
         }
 
-        // Now we actually build up the towers of derivatives for each variable
+        // 3. Now we actually build the towers of derivatives for each variable
         let mut derivative_towers: HashMap<uuid::Uuid, Vec<uuid::Uuid>> = HashMap::new();
         for (x, h) in tower_heights.iter_mut() {
             debug_log.push_str(&format!("BUILDING TOWER FOR OBJECT {x} OF HEIGHT {h}\n\n"));
             // First of all, we add the object from our original model
             derivative_towers.insert(*x, vec![*x]);
             cld_model.add_ob(*x, ustr("Object"));
-
             // Now let's build our tower of formal derivatives for the object
             for i in 1..*h {
                 let x_i = fresh_uuid();
@@ -409,8 +387,9 @@ impl ThNN2Category {
             }
         }
 
-        // Lift all morphisms to have codomain as the top degree of the tower
-        // above their current codomain, and then add them to the CLD model
+        // 4. Lift all (positive-degree) morphisms to have codomain as the top
+        //    degree of the tower above their current codomain, and then add
+        //    them to the CLD model
         for (x, x_tower) in derivative_towers.iter() {
             debug_log.push_str("LIFTING ALL MORPHISMS\n\n");
             // TO-DO: rewrite this to be not terrible
@@ -434,7 +413,8 @@ impl ThNN2Category {
             }
         }
 
-        // compute depths
+        // 5. Compute the depths of all the degree-zero arrows (or, really,
+        //    of their targets)
         for x in model.ob_generators() {
             // WARNING: side effects
             let depth = Self::get_depth(x, &mut vertex_depths_in_zero_forest, &in_zeros);
@@ -443,8 +423,8 @@ impl ThNN2Category {
             // }
         }
 
-        log(&debug_log);
-
+        // 6. Pass everything (the CLD, the degree-zero arrows and their depths,
+        //    and the data from the analysis user inputs) into the ODE solver
         Ok(ODEResult(
             analyses::ode::CCLAnalysis::new(ustr("Object"))
                 .add_positive(Path::Id(ustr("Object")))

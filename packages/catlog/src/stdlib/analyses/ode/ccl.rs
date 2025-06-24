@@ -44,7 +44,7 @@ type Model<Id> = DiscreteDblModel<Id, UstrFpCategory>;
 
 /** CCL ODE analysis for models of a double theory.
 
-The main situation we have in mind is ...
+The main situation we have in mind is ... TO-DO
 */
 pub struct CCLAnalysis {
     var_ob_type: Ustr,
