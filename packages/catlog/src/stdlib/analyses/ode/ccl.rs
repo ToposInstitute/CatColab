@@ -111,8 +111,7 @@ impl CCLAnalysis {
         // TO-DO: "better" would be to have Vec<(Vec<&Id>)> where we just stick
         // all the morphisms of the same depth into a sub-list
         let mut sorted_degree_zeros: Vec<(&Id, &usize)> = degree_zeros_with_depth.iter().collect();
-        // .iter().collect::<Vec<(&Id, &usize)>>();
-        // TO-DO: why can I not combine these????
+        // TO-DO: why can I not combine these???? .iter().collect::<Vec<(&Id, &usize)>>()
         sorted_degree_zeros.sort_by(|a, b| a.1.cmp(b.1));
 
         for (cod, _) in sorted_degree_zeros {

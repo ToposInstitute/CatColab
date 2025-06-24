@@ -211,7 +211,7 @@ impl ThDelayableSignedCategory {
 #[wasm_bindgen]
 pub struct ThNN2Category(Rc<theory::UstrDiscreteDblTheory>);
 
-// data type for max-depth search in DAGs
+// Data type for max-depth search in DAGs
 enum DAGDepth {
     Undef,
     Seen,
@@ -302,8 +302,8 @@ impl ThNN2Category {
         // tower_heights: [base object: height of corresponding tower]
         // in_arrows: [target: [morphisms with this target]]
         // in_zeros: [target: [(deg-zero morphism with this target, source)]]
-        // vertex_depths_in_zero_forest: [vertex: depth as a DAGDepth]
-        // degree_zeros_with_depth: [vertex: depth as an integer]
+        // vertex_depths_in_zero_forest: [vertex: depth (as a DAGDepth) in the deg-zero forest]
+        // degree_zeros_with_depth: [vertex: depth (as an integer) in the deg-zero forest]
         let mut tower_heights: HashMap<uuid::Uuid, usize> = HashMap::new();
         let mut in_arrows: HashMap<uuid::Uuid, Vec<uuid::Uuid>> = HashMap::new();
         let mut in_zeros: HashMap<uuid::Uuid, Vec<(uuid::Uuid, uuid::Uuid)>> = HashMap::new();
