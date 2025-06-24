@@ -16,9 +16,57 @@ a mere graph.
 Causal loop diagrams do not currently support instances, though we'd be
 curious to learn more about how they might be used in practice.
 
+
+## Analyses
+
+
+### Lotka--Volterra
+
+#### Semantics
+
+An arrow $A\xrightarrow{\pm}B$ is interpreted as the equation $\dot{B}=\pm (kA + g)B$ for some constants $k$ (the *interaction coefficient*) and $g$ (the *growth rate*).
+Multiple incoming arrows are interpreted additively, so e.g. $A\xrightarrow{+}B\xleftarrow{-}C$ is interpreted as $\dot{B}=(kA - \ell C + g)B$.
+
+#### User inputs
+
+- **Initial value.**
+  ($\mathbb{R}_{\geqslant0}$)
+  The initial value of the variable.
+- **Interaction.**
+  ($\mathbb{R}_{\geqslant0}$)
+  The interaction coefficient ($k$) corresponding to the arrow.
+- **Growth/decay.**
+  ($\mathbb{R}$)
+  The growth rate of the variable.
+- **Duration.**
+  ($\mathbb{R}_{\geqslant0}$)
+  The total duration of the simulation in units of time.
+
+
+### Linear ODE
+
+#### Semantics
+
+An arrow $A\xrightarrow{\pm}B$ is interpreted as the equation $\dot{B}=\pm k A$ for some constant $k$.
+Multiple incoming arrows are interpreted additively, so e.g. $A\xrightarrow{+}B\xleftarrow{-}C$ is interpreted as $\dot{B}=kA-\ell B$.
+
+#### User inputs
+
+- **Initial value.**
+  ($\mathbb{R}_{\geqslant0}$)
+  The initial value of the variable.
+- **Coefficient.**
+  ($\mathbb{R}_{\geqslant0}$)
+  The coefficient ($k$) corresponding to the arrow.
+- **Duration.**
+  ($\mathbb{R}_{\geqslant0}$)
+  The total duration of the simulation in units of time.
+
+
 ## Examples
 
 [Sustainable peace](https://catcolab.org/model/0194cf7f-e59a-7281-a0d9-dce4c68114e4)
+
 
 ## Further Reading
 

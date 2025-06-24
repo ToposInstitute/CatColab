@@ -126,14 +126,18 @@ impl ThSignedCategory {
         ))
     }
 
-    /// Simulate the CCLFO system derived from a model.
-    #[wasm_bindgen(js_name = "cclfo")]
-    pub fn cclfo(&self, model: &DblModel, data: CCLFOModelData) -> Result<ODEResult, String> {
+    /// Simulate the linear ODE system derived from a model.
+    #[wasm_bindgen(js_name = "linearODE")]
+    pub fn linear_ode(
+        &self,
+        model: &DblModel,
+        data: LinearODEModelData,
+    ) -> Result<ODEResult, String> {
         let model: &model::DiscreteDblModel<_, _> = (&model.0)
             .try_into()
-            .map_err(|_| "CCLFO simulation expects a discrete double model")?;
+            .map_err(|_| "Linear ODE simulation expects a discrete double model")?;
         Ok(ODEResult(
-            analyses::ode::CCLFOAnalysis::new(ustr("Object"))
+            analyses::ode::LinearODEAnalysis::new(ustr("Object"))
                 .add_positive(Path::Id(ustr("Object")))
                 .add_negative(ustr("Negative").into())
                 .create_system(model, data.0)
