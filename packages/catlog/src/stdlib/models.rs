@@ -1,7 +1,7 @@
 //! Standard library of models of double theories.
 
 use std::rc::Rc;
-use ustr::{Ustr, ustr};
+use ustr::{ustr, Ustr};
 
 use crate::dbl::{model::*, theory::*};
 use crate::one::Path;
@@ -145,7 +145,7 @@ pub fn water_volume(th: Rc<UstrDiscreteTabTheory>) -> UstrDiscreteTabModel {
         ustr("dynVolume"),
         TabOb::Basic(spillover),
         model.tabulated_gen(flow),
-        TabMorType::Basic(ustr("FlowLink")), // flow
+        TabMorType::Basic(ustr("FlowLink")),
     );
     // variable links
     model.add_mor(

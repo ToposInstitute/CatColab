@@ -13,7 +13,7 @@ use catlog::dbl::{model, theory};
 use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories};
 
-use super::model_morphism::{MotifsOptions, motifs};
+use super::model_morphism::{motifs, MotifsOptions};
 use super::{analyses::*, model::DblModel, theory::DblTheory};
 
 /// The empty or initial theory.
@@ -258,7 +258,7 @@ impl ThCategoryLinks {
     }
 }
 
-/// The theory of categories of energese.
+/// The theory of categories with links and dynamic variables.
 #[wasm_bindgen]
 pub struct ThCategoryDynamicStockFlow(Rc<theory::UstrDiscreteTabTheory>);
 
@@ -266,7 +266,7 @@ pub struct ThCategoryDynamicStockFlow(Rc<theory::UstrDiscreteTabTheory>);
 impl ThCategoryDynamicStockFlow {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
-        Self(Rc::new(theories::th_category_energese()))
+        Self(Rc::new(theories::th_category_dynamic_stockflow()))
     }
 
     #[wasm_bindgen]
@@ -275,22 +275,17 @@ impl ThCategoryDynamicStockFlow {
     }
 
     /// Simulates the mass-action system derived from a model.
-    #[wasm_bindgen(js_name = "energese")]
+    #[wasm_bindgen(js_name = "mass_action")]
     pub fn mass_action(
         &self,
         model: &DblModel,
-        data: DynamicStockFlowMassActionModelData,
+        data: MassActionModelData,
     ) -> Result<ODEResult, String> {
         let model: &model::DiscreteTabModel<_, _, _> = (&model.0)
             .try_into()
             .map_err(|_| "Mass-action simulation expects a discrete tabulator model")?;
-        //
-        // let analysis = analyses::ode::EnergeseMassActionAnalysis::default()
-        //     .teeup_numerical_system(model, data.0.clone());
-        // console::log_1(&format!("{:#?}", analysis).into());
-        //
         Ok(ODEResult(
-            analyses::ode::DynamicStockFlowMassActionAnalysis::default()
+            analyses::ode::StockFlowMassActionAnalysis::default()
                 .create_numerical_system(model, data.0)
                 .solve_with_defaults()
                 .map_err(|err| format!("{:?}", err))
