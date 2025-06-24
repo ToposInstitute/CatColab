@@ -42,9 +42,12 @@ where
 
 type Model<Id> = DiscreteDblModel<Id, UstrFpCategory>;
 
-/** LinearODE ODE analysis for models of a double theory.
+/** Linear ODE analysis for models of a double theory.
 
-The main situation we have in mind is ...
+This analysis is somewhat subordinate to the more general case of linear ODE
+analysis for *extended* causal loop diagrams, but it can hopefully act as a
+simple/naive semantics for causal loop diagrams that is useful for building
+toy models for demonstration purposes.
 */
 pub struct LinearODEAnalysis {
     var_ob_type: Ustr,
