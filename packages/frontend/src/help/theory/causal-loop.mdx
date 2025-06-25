@@ -24,7 +24,8 @@ curious to learn more about how they might be used in practice.
 
 #### Semantics
 
-Whenever we have *unidirectional* influence between variables, we might want to consider **linear dynamics**, where variables affect (the derivatives of) other variables with no feedback a priori.
+Whenever we have *unidirectional* influence between variables, we might want to consider **linear first-order dynamics**, where variables affect the *first derivative* of other variables, with no feedback a priori.
+(For systems where variables directly influence *higher-order* derivatives of other variables, see the linear ODE analysis for <A href="../extended-causal-loop">**extended** causal loop diagrams</A>.)
 
 An arrow $A\xrightarrow{\pm}B$ is interpreted as the equation $\dot{B}=\pm k A$ for some constant $k$.
 Multiple incoming arrows are interpreted additively, so e.g. $A\xrightarrow{+}B\xleftarrow{-}C$ is interpreted as $\dot{B}=kA-\ell B$.
