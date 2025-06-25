@@ -40,13 +40,22 @@ import ListOrdered from "lucide-solid/icons/list-ordered";
 import Outdent from "lucide-solid/icons/outdent";
 import Sigma from "lucide-solid/icons/sigma";
 import TextQuote from "lucide-solid/icons/text-quote";
-import { splitListItem } from "prosemirror-schema-list";
-import { doIfAtBottom, doIfAtTop, doIfEmpty, insertMathDisplayCmd } from "./commands";
+import { liftListItem, splitListItem } from "prosemirror-schema-list";
+import {
+    doIfAtBottom,
+    doIfAtTop,
+    doIfEmpty,
+    increaseListIndet,
+    insertMathDisplayCmd,
+} from "./commands";
 import { type CustomSchema, proseMirrorAutomergeInit } from "./schema";
 import {
     activeHeading,
+    decreaseIndent,
+    increaseIndent,
     initPlaceholderPlugin,
     isMarkActive,
+    toggleNumberedList,
     toggleOrderedList,
     turnSelectionIntoBlockquote,
 } from "./utils";
@@ -194,12 +203,15 @@ export const RichTextEditor = (
         setMenuControls({
             onBoldClicked: () => toggleMark(schema.marks.strong)(view.state, view.dispatch),
             onItalicClicked: () => toggleMark(schema.marks.em)(view.state, view.dispatch),
+            // TODO: A "good" notion-style link editor should probably use an inline group node, which
+            // currently doesn't work: https://github.com/automerge/automerge-prosemirror/issues/30
             onLinkClicked: null,
             onBlockQuoteClicked: () => turnSelectionIntoBlockquote(view.state, view.dispatch, view),
             onToggleOrderedList: () => toggleOrderedList(view),
-            onToggleNumberedList: null,
-            onIncreaseIndent: null,
-            onDecreaseIndent: null,
+            onToggleNumberedList: () => toggleNumberedList(view),
+            onIncreaseIndent: () =>
+                increaseListIndet(schema.nodes.list_item)(view.state, view.dispatch),
+            onDecreaseIndent: () => decreaseIndent(view),
             onHeadingClicked: (level: number) => {
                 if (level === 0) {
                     // paragraph
@@ -244,6 +256,7 @@ function activeMarks(state: EditorState, schema: CustomSchema): MarkStates {
 function richTextEditorKeymap(schema: CustomSchema, props: RichTextEditorOptions) {
     const bindings: { [key: string]: Command } = {};
 
+    bindings["Tab"] = increaseListIndet(schema.nodes.list_item);
     bindings["Enter"] = splitListItem(schema.nodes.list_item);
     bindings["Mod-b"] = toggleMark(schema.marks.strong);
     bindings["Mod-i"] = toggleMark(schema.marks.em);
