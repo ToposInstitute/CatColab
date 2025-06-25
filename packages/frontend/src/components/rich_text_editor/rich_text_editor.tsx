@@ -156,9 +156,9 @@ export const RichTextEditor = (
                 }
 
                 const newState = view.state.apply(tx);
-                setHeadingLevel(activeHeading(view.state, schema));
                 setMarkStates(activeMarks(newState, schema));
                 view.updateState(newState);
+                setHeadingLevel(activeHeading(view.state, schema));
             },
             handleDOMEvents: {
                 focus: () => {
