@@ -252,13 +252,11 @@ function richTextEditorKeymap(schema: CustomSchema, props: RichTextEditorOptions
     bindings["Mod-i"] = toggleMark(schema.marks.em);
     bindings["Mod-m"] = insertMathDisplayCmd;
     bindings["Backspace"] = chainCommands(
-        ...[
-            deleteSelection,
-            mathBackspaceCmd,
-            joinBackward,
-            selectNodeBackward,
-            props.deleteBackward ? doIfEmpty(props.deleteBackward) : [],
-        ].flat(),
+        deleteSelection,
+        mathBackspaceCmd,
+        joinBackward,
+        selectNodeBackward,
+        props.deleteBackward ? doIfEmpty(props.deleteBackward) : () => false,
     );
 
     if (props.deleteForward) {
