@@ -1,68 +1,7 @@
-import { chainCommands, wrapIn } from "prosemirror-commands";
 import type { MarkType } from "prosemirror-model";
-import { type EditorState, Plugin, type Transaction } from "prosemirror-state";
+import { type EditorState, Plugin } from "prosemirror-state";
 import type { EditorView } from "prosemirror-view";
 import type { CustomSchema } from "./schema";
-
-import { liftListItem, sinkListItem, wrapInList } from "prosemirror-schema-list";
-
-export function turnSelectionIntoBlockquote(
-    state: EditorState,
-    dispatch: ((tr: Transaction) => void) | undefined,
-    view: EditorView,
-): boolean {
-    // Check if the blockquote can be applied
-    const { $from, $to } = state.selection;
-    const range = $from.blockRange($to);
-
-    if (!range) {
-        return false;
-    }
-
-    const schema = state.schema as CustomSchema;
-
-    // Check if we can wrap the selection in a blockquote
-    if (!wrapIn(schema.nodes.blockquote)(state, undefined, view)) {
-        return false;
-    }
-
-    // Apply the blockquote transformation
-    if (dispatch) {
-        wrapIn(schema.nodes.blockquote)(state, dispatch, view);
-    }
-
-    return true;
-}
-
-export function toggleOrderedList(view: EditorView): void {
-    if (!view) {
-        return;
-    }
-
-    const schema = view.state.schema as CustomSchema;
-
-    wrapInList(schema.nodes.bullet_list)(view.state, view.dispatch, view);
-}
-
-export function toggleNumberedList(view: EditorView): void {
-    if (!view) {
-        return;
-    }
-
-    const schema = view.state.schema as CustomSchema;
-
-    wrapInList(schema.nodes.ordered_list)(view.state, view.dispatch, view);
-}
-
-export function decreaseIndent(view: EditorView): void {
-    if (!view) {
-        return;
-    }
-
-    const schema = view.state.schema as CustomSchema;
-
-    liftListItem(schema.nodes.list_item)(view.state, view.dispatch, view);
-}
 
 export function hasContent(state: EditorState): boolean {
     const doc = state.doc;

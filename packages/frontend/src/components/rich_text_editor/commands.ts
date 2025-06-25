@@ -1,96 +1,128 @@
-import type { NodeType } from "prosemirror-model";
-import { type Command, type EditorState, NodeSelection, type Transaction } from "prosemirror-state";
+import { type Command, NodeSelection, type Transaction } from "prosemirror-state";
 import { hasContent } from "./utils";
-import { sinkListItem, wrapInList } from "prosemirror-schema-list";
-import { chainCommands } from "prosemirror-commands";
+import { liftListItem, sinkListItem, wrapInList } from "prosemirror-schema-list";
+import { chainCommands, wrapIn } from "prosemirror-commands";
+import { CustomSchema } from "./schema";
 
-export function insertMathDisplayCmd(nodeType: NodeType, initialText = ""): Command {
-    return (state: EditorState, dispatch: ((tr: Transaction) => void) | undefined) => {
-        const { $from, $to } = state.selection;
+export const insertMathDisplayCmd: Command = (state, dispatch) => {
+    const schema = state.schema as CustomSchema;
+    const { $from, $to } = state.selection;
 
-        if (!dispatch) {
-            return true;
-        }
-
-        // There is an idiomatic pattern at the start of commands inserting new nodes to check that the node can
-        // be inserted with canReplaceWith. In this case we skip the check because canReplaceWith will
-        // always (I think) fail when trying to put a block inside a paragraph.
-
-        const selectedText = state.doc.textBetween($from.pos, $to.pos, " ");
-        const initialTextContent = initialText || selectedText;
-        const initialContent = initialTextContent ? state.schema.text(initialTextContent) : null;
-
-        const mathNode = nodeType.create({}, initialContent);
-
-        let tr = state.tr;
-
-        // delete the selected text (it will be replaced with `initalContent`)
-        if ($from.pos !== $to.pos) {
-            tr = tr.delete($from.pos, $to.pos);
-        }
-
-        // if we're inside a paragraph, split the paragraph
-        if ($from.parent.type.name === "paragraph" && $from.parent.content.size !== 0) {
-            tr = tr.split($from.pos);
-        }
-
-        tr = tr.insert($from.pos, mathNode);
-        tr = tr.setSelection(NodeSelection.create(tr.doc, $from.pos + 1));
-
-        dispatch(tr);
-
+    // There is an idiomatic pattern at the start of commands inserting new nodes to check that the node can
+    // be inserted with canReplaceWith. In this case we skip the check because canReplaceWith will
+    // always (I think) fail when trying to put a block inside a paragraph.
+    if (!dispatch) {
         return true;
-    };
-}
+    }
+
+    const selectedText = state.doc.textBetween($from.pos, $to.pos, " ");
+    const initialContent = selectedText ? state.schema.text(selectedText) : null;
+    const mathNode = schema.nodes.math_display.create({}, initialContent);
+
+    let tr = state.tr;
+
+    // delete the selected text (it will be replaced with `initalContent`)
+    if ($from.pos !== $to.pos) {
+        tr = tr.delete($from.pos, $to.pos);
+    }
+
+    // if we're inside a paragraph, split the paragraph
+    if ($from.parent.type.name === "paragraph" && $from.parent.content.size !== 0) {
+        tr = tr.split($from.pos);
+    }
+
+    tr = tr.insert($from.pos, mathNode);
+    tr = tr.setSelection(NodeSelection.create(tr.doc, $from.pos + 1));
+
+    dispatch(tr);
+
+    return true;
+};
 
 // Currently does not work due to bug in the automerge-prosemirror plugin. (It also might not work in
 // general, but it theoretically should)
-export function insertMathInlineCmd(mathNodeType: NodeType, initialText = ""): Command {
-    return (state: EditorState, dispatch: ((tr: Transaction) => void) | undefined) => {
-        const { $from } = state.selection;
-        const index = $from.index();
-        if (!$from.parent.canReplaceWith(index, index, mathNodeType)) {
-            return false;
+export const insertMathInlineCmd: Command = (state, dispatch) => {
+    const schema = state.schema as CustomSchema;
+    const { $from } = state.selection;
+    const index = $from.index();
+    if (!$from.parent.canReplaceWith(index, index, schema.nodes.math_display)) {
+        return false;
+    }
+
+    if (dispatch) {
+        const mathNode = schema.nodes.math_display.create({}, null);
+
+        let tr = state.tr.replaceSelectionWith(mathNode);
+        tr = tr.setSelection(NodeSelection.create(tr.doc, $from.pos));
+
+        dispatch(tr);
+    }
+
+    return true;
+};
+
+export const increaseListIndet: Command = (state, dispatch, view) => {
+    const schema = state.schema as CustomSchema;
+
+    // If we're in a list, figure out what kind it is
+    const { $from } = state.selection;
+    let listNode = null;
+    for (let i = $from.depth; i > 0; i--) {
+        if ($from.node(i).type.name === schema.nodes.list_item.name) {
+            listNode = $from.node(i - 1);
+            break;
         }
+    }
 
-        if (dispatch) {
-            const mathNode = mathNodeType.create(
-                {},
-                initialText ? state.schema.text(initialText) : null,
-            );
+    if (!listNode) {
+        return false;
+    }
 
-            let tr = state.tr.replaceSelectionWith(mathNode);
-            tr = tr.setSelection(NodeSelection.create(tr.doc, $from.pos));
+    return chainCommands(sinkListItem(schema.nodes.list_item), wrapInList(listNode.type))(
+        state,
+        dispatch,
+        view,
+    );
+};
 
-            dispatch(tr);
-        }
+export const toggleBulletList: Command = (state, dispatch, view) => {
+    const schema = state.schema as CustomSchema;
+    return wrapInList(schema.nodes.bullet_list)(state, dispatch, view);
+};
 
-        return true;
-    };
-}
+export const toggleOrderedList: Command = (state, dispatch, view) => {
+    const schema = state.schema as CustomSchema;
+    return wrapInList(schema.nodes.ordered_list)(state, dispatch, view);
+};
 
-export function increaseListIndet(listItemNode: NodeType): Command {
-    return (state: EditorState, dispatch: ((tr: Transaction) => void) | undefined) => {
-        // If we're in a list, figure out what kind it is
-        const { $from } = state.selection;
-        let listNode = null;
-        for (let i = $from.depth; i > 0; i--) {
-            if ($from.node(i).type.name === listItemNode.name) {
-                listNode = $from.node(i - 1);
-                break;
-            }
-        }
+export const decreaseIndent: Command = (state, dispatch, view) => {
+    const schema = state.schema as CustomSchema;
+    return liftListItem(schema.nodes.list_item)(state, dispatch, view);
+};
 
-        if (!listNode) {
-            return false;
-        }
+export const turnSelectionIntoBlockquote: Command = (state, dispatch, view) => {
+    // Check if the blockquote can be applied
+    const { $from, $to } = state.selection;
+    const range = $from.blockRange($to);
 
-        return chainCommands(sinkListItem(listItemNode), wrapInList(listNode.type))(
-            state,
-            dispatch,
-        );
-    };
-}
+    if (!range) {
+        return false;
+    }
+
+    const schema = state.schema as CustomSchema;
+
+    // Check if we can wrap the selection in a blockquote
+    if (!wrapIn(schema.nodes.blockquote)(state, undefined, view)) {
+        return false;
+    }
+
+    // Apply the blockquote transformation
+    if (dispatch) {
+        wrapIn(schema.nodes.blockquote)(state, dispatch, view);
+    }
+
+    return true;
+};
 
 /** ProseMirror command invoked if the document is empty.
  */

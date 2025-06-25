@@ -40,25 +40,19 @@ import ListOrdered from "lucide-solid/icons/list-ordered";
 import Outdent from "lucide-solid/icons/outdent";
 import Sigma from "lucide-solid/icons/sigma";
 import TextQuote from "lucide-solid/icons/text-quote";
-import { liftListItem, splitListItem } from "prosemirror-schema-list";
+import { splitListItem } from "prosemirror-schema-list";
 import {
+    decreaseIndent,
     doIfAtBottom,
     doIfAtTop,
     doIfEmpty,
     increaseListIndet,
     insertMathDisplayCmd,
-} from "./commands";
-import { type CustomSchema, proseMirrorAutomergeInit } from "./schema";
-import {
-    activeHeading,
-    decreaseIndent,
-    increaseIndent,
-    initPlaceholderPlugin,
-    isMarkActive,
-    toggleNumberedList,
     toggleOrderedList,
     turnSelectionIntoBlockquote,
-} from "./utils";
+} from "./commands";
+import { type CustomSchema, proseMirrorAutomergeInit } from "./schema";
+import { activeHeading, initPlaceholderPlugin, isMarkActive } from "./utils";
 
 /** Optional props for `RichTextEditor` component.
  */
@@ -206,12 +200,11 @@ export const RichTextEditor = (
             // TODO: A "good" notion-style link editor should probably use an inline group node, which
             // currently doesn't work: https://github.com/automerge/automerge-prosemirror/issues/30
             onLinkClicked: null,
-            onBlockQuoteClicked: () => turnSelectionIntoBlockquote(view.state, view.dispatch, view),
-            onToggleOrderedList: () => toggleOrderedList(view),
-            onToggleNumberedList: () => toggleNumberedList(view),
-            onIncreaseIndent: () =>
-                increaseListIndet(schema.nodes.list_item)(view.state, view.dispatch),
-            onDecreaseIndent: () => decreaseIndent(view),
+            onBlockQuoteClicked: () => turnSelectionIntoBlockquote(view.state, view.dispatch),
+            onToggleOrderedList: () => toggleOrderedList(view.state, view.dispatch),
+            onToggleNumberedList: () => toggleOrderedList(view.state, view.dispatch),
+            onIncreaseIndent: () => increaseListIndet(view.state, view.dispatch),
+            onDecreaseIndent: () => decreaseIndent(view.state, view.dispatch),
             onHeadingClicked: (level: number) => {
                 if (level === 0) {
                     // paragraph
@@ -221,10 +214,7 @@ export const RichTextEditor = (
                     setBlockType(schema.nodes.heading, { level })(view.state, view.dispatch);
                 }
             },
-            onMathClicked: () => {
-                const cmd = insertMathDisplayCmd(schema.nodes.math_display);
-                cmd(view.state, view.dispatch);
-            },
+            onMathClicked: () => insertMathDisplayCmd(view.state, view.dispatch),
         });
 
         onCleanup(() => view.destroy());
@@ -256,11 +246,11 @@ function activeMarks(state: EditorState, schema: CustomSchema): MarkStates {
 function richTextEditorKeymap(schema: CustomSchema, props: RichTextEditorOptions) {
     const bindings: { [key: string]: Command } = {};
 
-    bindings["Tab"] = increaseListIndet(schema.nodes.list_item);
+    bindings["Tab"] = increaseListIndet;
     bindings["Enter"] = splitListItem(schema.nodes.list_item);
     bindings["Mod-b"] = toggleMark(schema.marks.strong);
     bindings["Mod-i"] = toggleMark(schema.marks.em);
-    bindings["Mod-m"] = insertMathDisplayCmd(schema.nodes.math_display);
+    bindings["Mod-m"] = insertMathDisplayCmd;
     bindings["Backspace"] = chainCommands(
         ...[
             deleteSelection,
