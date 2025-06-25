@@ -1,6 +1,8 @@
 import type { NodeType } from "prosemirror-model";
 import { type Command, type EditorState, NodeSelection, type Transaction } from "prosemirror-state";
 import { hasContent } from "./utils";
+import { sinkListItem, wrapInList } from "prosemirror-schema-list";
+import { chainCommands } from "prosemirror-commands";
 
 export function insertMathDisplayCmd(nodeType: NodeType, initialText = ""): Command {
     return (state: EditorState, dispatch: ((tr: Transaction) => void) | undefined) => {
@@ -64,6 +66,29 @@ export function insertMathInlineCmd(mathNodeType: NodeType, initialText = ""): C
         }
 
         return true;
+    };
+}
+
+export function increaseListIndet(listItemNode: NodeType): Command {
+    return (state: EditorState, dispatch: ((tr: Transaction) => void) | undefined) => {
+        // If we're in a list, figure out what kind it is
+        const { $from } = state.selection;
+        let listNode = null;
+        for (let i = $from.depth; i > 0; i--) {
+            if ($from.node(i).type.name === listItemNode.name) {
+                listNode = $from.node(i - 1);
+                break;
+            }
+        }
+
+        if (!listNode) {
+            return false;
+        }
+
+        return chainCommands(sinkListItem(listItemNode), wrapInList(listNode.type))(
+            state,
+            dispatch,
+        );
     };
 }
 

@@ -1,10 +1,10 @@
-import { wrapIn } from "prosemirror-commands";
+import { chainCommands, wrapIn } from "prosemirror-commands";
 import type { MarkType } from "prosemirror-model";
 import { type EditorState, Plugin, type Transaction } from "prosemirror-state";
 import type { EditorView } from "prosemirror-view";
 import type { CustomSchema } from "./schema";
 
-import { wrapInList } from "prosemirror-schema-list";
+import { liftListItem, sinkListItem, wrapInList } from "prosemirror-schema-list";
 
 export function turnSelectionIntoBlockquote(
     state: EditorState,
@@ -34,12 +34,34 @@ export function turnSelectionIntoBlockquote(
     return true;
 }
 
-export function toggleOrderedList(view: EditorView): boolean {
-    return wrapInList((view.state.schema as CustomSchema).nodes.bullet_list)(
-        view.state,
-        view.dispatch,
-        view,
-    );
+export function toggleOrderedList(view: EditorView): void {
+    if (!view) {
+        return;
+    }
+
+    const schema = view.state.schema as CustomSchema;
+
+    wrapInList(schema.nodes.bullet_list)(view.state, view.dispatch, view);
+}
+
+export function toggleNumberedList(view: EditorView): void {
+    if (!view) {
+        return;
+    }
+
+    const schema = view.state.schema as CustomSchema;
+
+    wrapInList(schema.nodes.ordered_list)(view.state, view.dispatch, view);
+}
+
+export function decreaseIndent(view: EditorView): void {
+    if (!view) {
+        return;
+    }
+
+    const schema = view.state.schema as CustomSchema;
+
+    liftListItem(schema.nodes.list_item)(view.state, view.dispatch, view);
 }
 
 export function hasContent(state: EditorState): boolean {
