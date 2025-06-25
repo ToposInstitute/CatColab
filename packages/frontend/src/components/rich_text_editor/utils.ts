@@ -78,10 +78,13 @@ Source:
  */
 export function initPlaceholderPlugin(text: string) {
     const update = (view: EditorView) => {
-        if (hasContent(view.state)) {
-            view.dom.removeAttribute("data-placeholder");
-        } else {
+        const isEmpty = !hasContent(view.state);
+        const isFocused = view.hasFocus();
+
+        if (isEmpty && !isFocused) {
             view.dom.setAttribute("data-placeholder", text);
+        } else {
+            view.dom.removeAttribute("data-placeholder");
         }
     };
 
@@ -89,7 +92,18 @@ export function initPlaceholderPlugin(text: string) {
         view(view) {
             update(view);
 
-            return { update };
+            const handleUpdate = () => update(view);
+
+            view.dom.addEventListener("focus", handleUpdate);
+            view.dom.addEventListener("blur", handleUpdate);
+
+            return {
+                update: handleUpdate,
+                destroy() {
+                    view.dom.removeEventListener("focus", handleUpdate);
+                    view.dom.removeEventListener("blur", handleUpdate);
+                },
+            };
         },
     });
 }
