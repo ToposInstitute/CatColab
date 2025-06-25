@@ -20,11 +20,42 @@ curious to learn more about how they might be used in practice.
 ## Analyses
 
 
+### Linear ODE
+
+#### Semantics
+
+Whenever we have *unidirectional* influence between variables, we might want to consider **linear dynamics**, where variables affect (the derivatives of) other variables with no feedback a priori.
+
+An arrow $A\xrightarrow{\pm}B$ is interpreted as the equation $\dot{B}=\pm k A$ for some constant $k$.
+Multiple incoming arrows are interpreted additively, so e.g. $A\xrightarrow{+}B\xleftarrow{-}C$ is interpreted as $\dot{B}=kA-\ell B$.
+
+#### User inputs
+
+<dl>
+  <dt>Initial value</dt>
+  <dd>
+    ($\mathbb{R}_{\geqslant0}$)
+    The initial value of the variable.
+  </dd>
+  <dt>Coefficient</dt>
+  <dd>
+    ($\mathbb{R}_{\geqslant0}$)
+    The coefficient ($k$) corresponding to the arrow.
+  </dd>
+  <dt>Duration</dt>
+  <dd>
+    ($\mathbb{R}_{\geqslant0}$)
+    The total duration of the simulation in units of time.
+  </dd>
+</dl>
+
+
+
 ### Lotka--Volterra
 
 #### Semantics
 
-The general idea for Lotka--Volterra systems is that arrows
+In contrast to linear dynamics, we might want to think about **Lotka--Volterra dynamics** whenever influence between variables is *bidirectional*, e.g. for predator--prey models, where higher population of predators means lower population of prey means lower population of predators means ... and so on.
 
 An arrow $A\xrightarrow{\pm}B$ is interpreted as the equation $\dot{B}=\pm (kA + g)B$ for some constants $k$ (the *interaction coefficient*) and $g$ (the *growth rate*).
 Multiple incoming arrows are interpreted additively, so e.g. $A\xrightarrow{+}B\xleftarrow{-}C$ is interpreted as $\dot{B}=(kA - \ell C + g)B$.
@@ -46,34 +77,6 @@ Multiple incoming arrows are interpreted additively, so e.g. $A\xrightarrow{+}B\
   <dd>
     ($\mathbb{R}$)
     The growth rate ($g$) of the variable.
-  </dd>
-  <dt>Duration</dt>
-  <dd>
-    ($\mathbb{R}_{\geqslant0}$)
-    The total duration of the simulation in units of time.
-  </dd>
-</dl>
-
-
-### Linear ODE
-
-#### Semantics
-
-An arrow $A\xrightarrow{\pm}B$ is interpreted as the equation $\dot{B}=\pm k A$ for some constant $k$.
-Multiple incoming arrows are interpreted additively, so e.g. $A\xrightarrow{+}B\xleftarrow{-}C$ is interpreted as $\dot{B}=kA-\ell B$.
-
-#### User inputs
-
-<dl>
-  <dt>Initial value</dt>
-  <dd>
-    ($\mathbb{R}_{\geqslant0}$)
-    The initial value of the variable.
-  </dd>
-  <dt>Coefficient</dt>
-  <dd>
-    ($\mathbb{R}_{\geqslant0}$)
-    The coefficient ($k$) corresponding to the arrow.
   </dd>
   <dt>Duration</dt>
   <dd>
