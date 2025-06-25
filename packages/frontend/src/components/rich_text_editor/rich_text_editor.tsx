@@ -29,6 +29,7 @@ import {
     mathPlugin,
     mathSerializer,
 } from "@benrbray/prosemirror-math";
+
 import { inputRules } from "prosemirror-inputrules";
 
 import Bold from "lucide-solid/icons/bold";
@@ -166,15 +167,18 @@ export const RichTextEditor = (
                     props.onFocus?.();
                     return false;
                 },
-                blur: (view, event) => {
+                focusout: (view, event) => {
                     const relatedTarget = event.relatedTarget as Node | null;
-
-                    // Interacting with the menu bar can cause the editor to lose focus which leads to
-                    // the menu bar closing. We can prevent that by ignoring blur events if they
-                    // originate from the menu bar.
+                    // Ignore focus shifts into the menu bar
                     if (relatedTarget && menuRoot.contains(relatedTarget)) {
                         // prevent the editor from losing focus and clearing the selection.
                         view.focus();
+                        return true;
+                    }
+
+                    // When in a math block we are technically in a different editor, however we still
+                    // don't want the "focussed" state of the parent editor to change
+                    if (relatedTarget && editorRoot.contains(relatedTarget)) {
                         return true;
                     }
 
