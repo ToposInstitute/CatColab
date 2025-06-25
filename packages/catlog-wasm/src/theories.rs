@@ -211,6 +211,7 @@ impl ThDelayableSignedCategory {
 #[wasm_bindgen]
 pub struct ThNN2Category(Rc<theory::UstrDiscreteDblTheory>);
 
+// TO-DO: (also move this to graph_algorithms.rs)
 // Data type for max-depth search in DAGs
 enum DAGDepth {
     Undef,
@@ -230,6 +231,7 @@ impl ThNN2Category {
         DblTheory(self.0.clone().into())
     }
 
+    // TO-DO: this could likely be moved to graph_algorithms.rs
     // Just used within cll() to find the depth of a vertex within the forest
     // of degree-zero arrows
     fn get_depth(
@@ -270,7 +272,6 @@ impl ThNN2Category {
         let mut debug_log = String::new();
         debug_log.push_str("ECLD to CLD migration for CCL dynamics\n\n");
 
-        // TO-DO: is this actually what we should be doing with IDs?
         fn fresh_uuid() -> uuid::Uuid {
             uuid::Uuid::now_v7()
         }
@@ -290,6 +291,8 @@ impl ThNN2Category {
                 % 2
         };
 
+        // TO-DO: move this to a new module: catlog/src/stdlib/ecld
+
         // 0. Pre-processing the model: creating new objects for each derivative
         //    and lifting all morphisms to be degree 1. We will end up creating
         //    a CLD corresponding to our ECLD, where we interpret all arrows *of
@@ -304,11 +307,11 @@ impl ThNN2Category {
         // in_zeros: [target: [(deg-zero morphism with this target, source)]]
         // vertex_depths_in_zero_forest: [vertex: depth (as a DAGDepth) in the deg-zero forest]
         // degree_zeros_with_depth: [vertex: depth (as an integer) in the deg-zero forest]
-        let mut tower_heights: HashMap<uuid::Uuid, usize> = HashMap::new();
-        let mut in_arrows: HashMap<uuid::Uuid, Vec<uuid::Uuid>> = HashMap::new();
-        let mut in_zeros: HashMap<uuid::Uuid, Vec<(uuid::Uuid, uuid::Uuid)>> = HashMap::new();
-        let mut vertex_depths_in_zero_forest: HashMap<uuid::Uuid, DAGDepth> = HashMap::new();
-        let mut degree_zeros_with_depth: HashMap<uuid::Uuid, usize> = HashMap::new();
+        let mut tower_heights = HashMap::new();
+        let mut in_arrows = HashMap::new();
+        let mut in_zeros = HashMap::new();
+        let mut vertex_depths_in_zero_forest = HashMap::new();
+        let mut degree_zeros_with_depth = HashMap::new();
 
         // Initialising the above variables (apart from degree_zeros_with_depth,
         // which will be created right at the end)
