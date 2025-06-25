@@ -24,23 +24,35 @@ curious to learn more about how they might be used in practice.
 
 #### Semantics
 
+The general idea for Lotka--Volterra systems is that arrows
+
 An arrow $A\xrightarrow{\pm}B$ is interpreted as the equation $\dot{B}=\pm (kA + g)B$ for some constants $k$ (the *interaction coefficient*) and $g$ (the *growth rate*).
 Multiple incoming arrows are interpreted additively, so e.g. $A\xrightarrow{+}B\xleftarrow{-}C$ is interpreted as $\dot{B}=(kA - \ell C + g)B$.
 
 #### User inputs
 
-- **Initial value.**
-  ($\mathbb{R}_{\geqslant0}$)
-  The initial value of the variable.
-- **Interaction.**
-  ($\mathbb{R}_{\geqslant0}$)
-  The interaction coefficient ($k$) corresponding to the arrow.
-- **Growth/decay.**
-  ($\mathbb{R}$)
-  The growth rate of the variable.
-- **Duration.**
-  ($\mathbb{R}_{\geqslant0}$)
-  The total duration of the simulation in units of time.
+<dl>
+  <dt>Initial value</dt>
+  <dd>
+    ($\mathbb{R}_{\geqslant0}$)
+    The initial value of the variable.
+  </dd>
+  <dt>Interaction</dt>
+  <dd>
+    ($\mathbb{R}_{\geqslant0}$)
+    The interaction coefficient ($k$) corresponding to the arrow.
+  </dd>
+  <dt>Growth/decay</dt>
+  <dd>
+    ($\mathbb{R}$)
+    The growth rate ($g$) of the variable.
+  </dd>
+  <dt>Duration</dt>
+  <dd>
+    ($\mathbb{R}_{\geqslant0}$)
+    The total duration of the simulation in units of time.
+  </dd>
+</dl>
 
 
 ### Linear ODE
@@ -52,15 +64,23 @@ Multiple incoming arrows are interpreted additively, so e.g. $A\xrightarrow{+}B\
 
 #### User inputs
 
-- **Initial value.**
-  ($\mathbb{R}_{\geqslant0}$)
-  The initial value of the variable.
-- **Coefficient.**
-  ($\mathbb{R}_{\geqslant0}$)
-  The coefficient ($k$) corresponding to the arrow.
-- **Duration.**
-  ($\mathbb{R}_{\geqslant0}$)
-  The total duration of the simulation in units of time.
+<dl>
+  <dt>Initial value</dt>
+  <dd>
+    ($\mathbb{R}_{\geqslant0}$)
+    The initial value of the variable.
+  </dd>
+  <dt>Coefficient</dt>
+  <dd>
+    ($\mathbb{R}_{\geqslant0}$)
+    The coefficient ($k$) corresponding to the arrow.
+  </dd>
+  <dt>Duration</dt>
+  <dd>
+    ($\mathbb{R}_{\geqslant0}$)
+    The total duration of the simulation in units of time.
+  </dd>
+</dl>
 
 
 ## Examples
