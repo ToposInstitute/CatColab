@@ -41,6 +41,7 @@ export const insertMathDisplayCmd: Command = (state, dispatch) => {
 
 // Currently does not work due to bug in the automerge-prosemirror plugin. (It also might not work in
 // general, but it theoretically should)
+// copied from: https://github.com/benrbray/prosemirror-math/blob/master/lib/commands/insert-math-cmd.ts
 export const insertMathInlineCmd: Command = (state, dispatch) => {
     const schema = state.schema as CustomSchema;
     const { $from } = state.selection;
