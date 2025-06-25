@@ -1,8 +1,8 @@
-import { type Command, NodeSelection, type Transaction } from "prosemirror-state";
-import { hasContent } from "./utils";
-import { liftListItem, sinkListItem, wrapInList } from "prosemirror-schema-list";
 import { chainCommands, wrapIn } from "prosemirror-commands";
-import { CustomSchema } from "./schema";
+import { liftListItem, sinkListItem, wrapInList } from "prosemirror-schema-list";
+import { type Command, NodeSelection, type Transaction } from "prosemirror-state";
+import type { CustomSchema } from "./schema";
+import { hasContent } from "./utils";
 
 export const insertMathDisplayCmd: Command = (state, dispatch) => {
     const schema = state.schema as CustomSchema;
