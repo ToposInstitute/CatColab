@@ -31,6 +31,7 @@ import {
     doIfEmpty,
     increaseListIndet,
     insertMathDisplayCmd,
+    toggleBulletList,
     toggleOrderedList,
     turnSelectionIntoBlockquote,
 } from "./commands";
@@ -99,7 +100,7 @@ export const RichTextEditor = (
         onLinkClicked: null,
         onBlockQuoteClicked: null,
         onToggleOrderedList: null,
-        onToggleNumberedList: null,
+        onToggleBulletList: null,
         onIncreaseIndent: null,
         onDecreaseIndent: null,
         onHeadingClicked: null,
@@ -202,8 +203,8 @@ export const RichTextEditor = (
             // currently doesn't work: https://github.com/automerge/automerge-prosemirror/issues/30
             onLinkClicked: null,
             onBlockQuoteClicked: () => turnSelectionIntoBlockquote(view.state, view.dispatch),
+            onToggleBulletList: () => toggleBulletList(view.state, view.dispatch),
             onToggleOrderedList: () => toggleOrderedList(view.state, view.dispatch),
-            onToggleNumberedList: () => toggleOrderedList(view.state, view.dispatch),
             onIncreaseIndent: () => increaseListIndet(view.state, view.dispatch),
             onDecreaseIndent: () => decreaseIndent(view.state, view.dispatch),
             onHeadingClicked: (level: number) => {
@@ -278,8 +279,8 @@ type MenuControls = {
     onItalicClicked: (() => void) | null;
     onLinkClicked: (() => void) | null;
     onBlockQuoteClicked: (() => void) | null;
+    onToggleBulletList: (() => void) | null;
     onToggleOrderedList: (() => void) | null;
-    onToggleNumberedList: (() => void) | null;
     onIncreaseIndent: (() => void) | null;
     onDecreaseIndent: (() => void) | null;
     onHeadingClicked: ((level: number) => void) | null;
@@ -323,16 +324,13 @@ export function MenuBar(props: MenuControls & MarkStates & { headingLevel: numbe
                     <TextQuote />
                 </TooltipButton>
             </Show>
-            <Show when={props.onToggleNumberedList}>
-                <TooltipButton
-                    tooltip="Numbered list"
-                    onClick={() => props.onToggleNumberedList?.()}
-                >
+            <Show when={props.onToggleOrderedList}>
+                <TooltipButton tooltip="Ordered list" onClick={() => props.onToggleOrderedList?.()}>
                     <ListOrdered />
                 </TooltipButton>
             </Show>
-            <Show when={props.onToggleOrderedList}>
-                <TooltipButton tooltip="Bullet list" onClick={() => props.onToggleOrderedList?.()}>
+            <Show when={props.onToggleBulletList}>
+                <TooltipButton tooltip="Bullet list" onClick={() => props.onToggleBulletList?.()}>
                     <List />
                 </TooltipButton>
             </Show>
