@@ -22,6 +22,11 @@
     stroke: black;
     stroke-width: 1.5;
 }
+.edge path.variable-link {
+	fill: none;
+	stroke: blue;
+	stroke-width: 1.5;
+}
 
 .edge path.double-outer {
     stroke-width: 6;

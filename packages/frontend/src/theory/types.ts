@@ -100,6 +100,7 @@ export class Theory {
 
     /** Get metadata for a morphism type as used in models. */
     modelMorTypeMeta(typ: MorType): ModelMorTypeMeta | undefined {
+	    console.log(this.modelTypeMeta.morTypeMeta(typ));
         return this.modelTypeMeta.morTypeMeta(typ);
     }
 
@@ -178,6 +179,7 @@ class TypeMetadata<ObMeta extends HasObTypeMeta, MorMeta extends HasMorTypeMeta>
     }
 
     morTypeMeta(typ: MorType): MorMeta | undefined {
+	    console.log("META: ", this.morTypeIndex.get(typ), this.types);
         const i = this.morTypeIndex.get(typ);
         return i !== undefined ? (this.types[i] as MorMeta) : undefined;
     }

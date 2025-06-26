@@ -13,4 +13,6 @@
 	stroke: black;
 }
 
-
+.link path {
+	stroke: blue;
+}

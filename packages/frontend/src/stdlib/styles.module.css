@@ -22,3 +22,7 @@
     border: 0px solid black;
 	padding: 0px;
 }
+
+.link {
+	border: 1px solid blue;
+}

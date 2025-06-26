@@ -96,13 +96,38 @@ export function StockFlowGraphviz(props: {
 
     const vizLayout = () => {
         const viz = vizResource();
+		const patternAuxiliaryVariable: Pattern<ModelJudgment> = {
+		  tag: "object",
+		  obType: {
+			content: "DynamicVariable",
+			tag: "Basic",
+		  }
+		};
+		const patternVariableLink: Pattern<ModelJudgment> = {
+			tag: "morphism",
+			morType: {
+			  content: "VariableLink",
+			  tag: "Basic",
+			}
+		};
         return (
             viz &&
             vizLayoutGraph(
                 viz,
-                modelToGraphviz(props.model, props.theory, props.attributes),
+                modelToGraphviz(props.model, props.theory, props.attributes, 
+					(jgmt: ModelJudgment) => { 
+					  match(jgmt)
+					  .with(patternAuxiliaryVariable, () => ({ xlabel: jgmt.name, label: "" }))
+					  .with(P._, () => undefined)
+					},
+					(jgmt: ModelJudgment) =>  
+					  match(jgmt)
+					  .with(patternVariableLink, () => ({ style: "variable-link" }))
+					  .with(P._, () => undefined)
+					
+				),
                 props.options,
-            )
+			)
         );
     };
 
@@ -121,53 +146,25 @@ function StockFlowSVG(props: {
         const result: string[] = [];
         const nodeMap = uniqueIndexArray(props.layout?.nodes ?? [], (node) => node.id);
         const edgeMap = uniqueIndexArray(props.layout?.edges ?? [], (edge) => edge.id);
+		console.log(nodeMap, edgeMap);
+		const patternFlowLink: Pattern<ModelJudgment> = {
+		  tag: "morphism",
+		  dom: {
+			tag: "Basic",
+			content: P.select("srcId"),
+		  },
+		  cod: {
+			tag: "Tabulated",
+			content: {
+			  tag: "Basic",
+			  content: P.select("tgtId"),
+			},
+		  },
+		};	
         for (const judgment of props.model) {
-		    console.log(judgment);
-            match(judgment).with(
-				  {
-                    tag: "morphism",
-                    dom: {
-                        tag: "Basic",
-                        content: P.select("srcId"),
-                    },
-                    cod: {
-                        tag: "Tabulated",
-                        content: {
-                            tag: "Basic",
-                            content: P.select("tgtId"),
-                        },
-                    },
-				}, 
-                ({ srcId, tgtId }) => {
-                    const srcNode = nodeMap.get(srcId);
-                    const tgtEdge = edgeMap.get(tgtId);
-                    if (!srcNode || !tgtEdge) {
-                        return;
-                    }
-                    pathElem.setAttribute("d", tgtEdge.path);
-                    const midpoint = pathElem.getPointAtLength(pathElem.getTotalLength() / 2);
-                    const path = quadraticCurve(srcNode.pos, midpoint, 1.0);
-                    result.push(path.join(" "));
-                },
-			);
-			// TODO
-		    match(judgment).with(
-		    	{
-		    	    tag: "morphism",
-		    	    dom: {
-		    	    	tag: "Basic",
-		    	    	content: P.select("srcId"),
-		    	    },
-		    	    cod: {
-		    	    	tag: "Basic",
-		    	    	content: P.select("tgtId"),
-		    	    },
-		    	    morType: {
-		    	    	tag: "Basic",
-		    	    	content: "VariableLink"
-		    	    }
-		    	},
-		    	({ srcId, tgtId }) => {
+            match(judgment)
+				.with(patternFlowLink,
+					({ srcId, tgtId }) => {
                         const srcNode = nodeMap.get(srcId);
                         const tgtEdge = edgeMap.get(tgtId);
                         if (!srcNode || !tgtEdge) {
@@ -177,10 +174,9 @@ function StockFlowSVG(props: {
                         const midpoint = pathElem.getPointAtLength(pathElem.getTotalLength() / 2);
                         const path = quadraticCurve(srcNode.pos, midpoint, 1.0);
                         result.push(path.join(" "));
-                }
-		    );
+					},
+			   );
 		}
-		console.log(result);
         return result;
     };
 
