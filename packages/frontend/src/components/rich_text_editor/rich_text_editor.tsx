@@ -1,6 +1,12 @@
 import type { Prop } from "@automerge/automerge";
 import type { DocHandle } from "@automerge/automerge-repo";
-
+import {
+    REGEX_BLOCK_MATH_DOLLARS,
+    makeBlockMathInputRule,
+    mathBackspaceCmd,
+    mathPlugin,
+    mathSerializer,
+} from "@benrbray/prosemirror-math";
 import {
     baseKeymap,
     chainCommands,
@@ -10,38 +16,14 @@ import {
     setBlockType,
     toggleMark,
 } from "prosemirror-commands";
+import { inputRules } from "prosemirror-inputrules";
 import { keymap } from "prosemirror-keymap";
+import { splitListItem } from "prosemirror-schema-list";
 import { type Command, EditorState, type Plugin, type Transaction } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
-
 import { type JSX, Show, createEffect, createSignal, onCleanup } from "solid-js";
+
 import { useDocHandleReady } from "../../api/document";
-
-import "katex/dist/katex.min.css";
-import "@benrbray/prosemirror-math/dist/prosemirror-math.css";
-import "prosemirror-view/style/prosemirror.css";
-import "./rich_text_editor.css";
-
-import {
-    REGEX_BLOCK_MATH_DOLLARS,
-    makeBlockMathInputRule,
-    mathBackspaceCmd,
-    mathPlugin,
-    mathSerializer,
-} from "@benrbray/prosemirror-math";
-
-import { inputRules } from "prosemirror-inputrules";
-
-import Bold from "lucide-solid/icons/bold";
-import Indent from "lucide-solid/icons/indent";
-import Italic from "lucide-solid/icons/italic";
-import Link from "lucide-solid/icons/link";
-import List from "lucide-solid/icons/list";
-import ListOrdered from "lucide-solid/icons/list-ordered";
-import Outdent from "lucide-solid/icons/outdent";
-import Sigma from "lucide-solid/icons/sigma";
-import TextQuote from "lucide-solid/icons/text-quote";
-import { splitListItem } from "prosemirror-schema-list";
 import {
     decreaseIndent,
     doIfAtBottom,
@@ -54,6 +36,21 @@ import {
 } from "./commands";
 import { type CustomSchema, proseMirrorAutomergeInit } from "./schema";
 import { activeHeading, initPlaceholderPlugin, isMarkActive } from "./utils";
+
+import "katex/dist/katex.min.css";
+import "@benrbray/prosemirror-math/dist/prosemirror-math.css";
+import "prosemirror-view/style/prosemirror.css";
+import "./rich_text_editor.css";
+
+import Bold from "lucide-solid/icons/bold";
+import Indent from "lucide-solid/icons/indent";
+import Italic from "lucide-solid/icons/italic";
+import Link from "lucide-solid/icons/link";
+import List from "lucide-solid/icons/list";
+import ListOrdered from "lucide-solid/icons/list-ordered";
+import Outdent from "lucide-solid/icons/outdent";
+import Sigma from "lucide-solid/icons/sigma";
+import TextQuote from "lucide-solid/icons/text-quote";
 
 /** Optional props for `RichTextEditor` component.
  */
