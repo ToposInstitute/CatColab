@@ -3,3 +3,4 @@
 pub mod ecld;
 #[cfg(feature = "ode")]
 pub mod ode;
+pub mod ecld;

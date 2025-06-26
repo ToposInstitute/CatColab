@@ -1,7 +1,7 @@
 //! Transforming any ECLD into its "normal form", i.e. replacing length-n paths
 //  with n length-1 paths.
 
-use crate::dbl::model::{DiscreteDblModel,UstrDiscreteDblModel};
+use crate::dbl::model::{DiscreteDblModel, UstrDiscreteDblModel};
 use crate::one::fp_category::UstrFpCategory;
 use std::rc::Rc;
 
