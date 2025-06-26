@@ -101,6 +101,7 @@ jobs:
           tlmgr install tikz-cd
           tlmgr install amsmath
           tlmgr install quiver
+          tlmgr install spath3
 
       - name: Build
         run: |
