@@ -1,7 +1,7 @@
 //! Standard library of models of double theories.
 
 use std::rc::Rc;
-use ustr::{ustr, Ustr};
+use ustr::{Ustr, ustr};
 
 use crate::dbl::{model::*, theory::*};
 use crate::one::Path;
@@ -199,8 +199,8 @@ mod tests {
     }
 
     #[test]
-    fn categories_dynvar() {
-        let th = Rc::new(th_category_dynvar());
+    fn categories_dynamic_stockflow() {
+        let th = Rc::new(th_category_dynamic_stockflow());
         assert!(water_volume(th).validate().is_ok());
     }
 }
