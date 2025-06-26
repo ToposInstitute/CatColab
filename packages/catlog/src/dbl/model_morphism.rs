@@ -34,7 +34,7 @@ use tsify::Tsify;
 use crate::one::graph_algorithms::{bounded_simple_paths, simple_paths, spec_order};
 use crate::one::*;
 use crate::validate::{self, Validate};
-use crate::zero::{Column, HashColumn, MutMapping};
+use crate::zero::{Column, HashColumn, Mapping, MutMapping};
 
 use super::model::*;
 

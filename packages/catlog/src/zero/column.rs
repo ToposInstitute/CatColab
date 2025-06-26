@@ -32,6 +32,9 @@ pub trait Mapping {
 
     /// Applies the mapping at a point possibly in the domain.
     fn apply(&self, x: Self::Dom) -> Option<Self::Cod>;
+
+    /// Is the mapping defined at a point?
+    fn is_set(&self, x: &Self::Dom) -> bool;
 }
 
 /** A mutable [mapping](Mapping).
@@ -68,11 +71,6 @@ pub trait MutMapping: Mapping {
             Some(y) => self.set(x, y),
             None => self.unset(&x),
         }
-    }
-
-    /// Is the mapping defined at a point?
-    fn is_set(&self, x: &Self::Dom) -> bool {
-        self.get(x).is_some()
     }
 }
 
@@ -192,6 +190,10 @@ impl<T: Eq + Clone> Mapping for VecColumn<T> {
     fn apply(&self, i: usize) -> Option<T> {
         self.0.get(i).cloned().flatten()
     }
+
+    fn is_set(&self, i: &usize) -> bool {
+        *i < self.0.len() && self.0[*i].is_some()
+    }
 }
 
 impl<T: Eq + Clone> MutMapping for VecColumn<T> {
@@ -216,10 +218,6 @@ impl<T: Eq + Clone> MutMapping for VecColumn<T> {
         } else {
             None
         }
-    }
-
-    fn is_set(&self, i: &usize) -> bool {
-        *i < self.0.len() && self.0[*i].is_some()
     }
 }
 
@@ -261,6 +259,9 @@ where
     fn apply(&self, x: K) -> Option<V> {
         self.0.get(&x).cloned()
     }
+    fn is_set(&self, x: &K) -> bool {
+        self.0.contains_key(x)
+    }
 }
 
 impl<K, V, S> MutMapping for HashColumn<K, V, S>
@@ -277,9 +278,6 @@ where
     }
     fn unset(&mut self, x: &K) -> Option<V> {
         self.0.remove(x)
-    }
-    fn is_set(&self, x: &K) -> bool {
-        self.0.contains_key(x)
     }
 }
 
@@ -441,6 +439,9 @@ where
     fn apply(&self, x: Dom) -> Option<Cod> {
         self.mapping.apply(x)
     }
+    fn is_set(&self, x: &Dom) -> bool {
+        self.mapping.is_set(x)
+    }
 }
 
 impl<Dom, Cod, Col, Ind> MutMapping for IndexedColumn<Dom, Cod, Col, Ind>
@@ -467,10 +468,6 @@ where
             self.index.remove(x, y);
         }
         old
-    }
-
-    fn is_set(&self, x: &Dom) -> bool {
-        self.mapping.is_set(x)
     }
 }
 
@@ -521,6 +518,9 @@ impl Mapping for SkelIndexedColumn {
     fn apply(&self, x: usize) -> Option<usize> {
         self.0.apply(x)
     }
+    fn is_set(&self, x: &usize) -> bool {
+        self.0.is_set(x)
+    }
 }
 
 impl MutMapping for SkelIndexedColumn {
@@ -532,9 +532,6 @@ impl MutMapping for SkelIndexedColumn {
     }
     fn unset(&mut self, x: &usize) -> Option<usize> {
         self.0.unset(x)
-    }
-    fn is_set(&self, x: &usize) -> bool {
-        self.0.is_set(x)
     }
 }
 
@@ -579,6 +576,9 @@ impl<T: Eq + Hash + Clone> Mapping for IndexedVecColumn<T> {
     fn apply(&self, x: usize) -> Option<T> {
         self.0.apply(x)
     }
+    fn is_set(&self, x: &usize) -> bool {
+        self.0.is_set(x)
+    }
 }
 
 impl<T: Eq + Hash + Clone> MutMapping for IndexedVecColumn<T> {
@@ -590,9 +590,6 @@ impl<T: Eq + Hash + Clone> MutMapping for IndexedVecColumn<T> {
     }
     fn unset(&mut self, x: &usize) -> Option<T> {
         self.0.unset(x)
-    }
-    fn is_set(&self, x: &usize) -> bool {
-        self.0.is_set(x)
     }
 }
 
@@ -636,6 +633,9 @@ where
     fn apply(&self, x: K) -> Option<V> {
         self.0.apply(x)
     }
+    fn is_set(&self, x: &K) -> bool {
+        self.0.is_set(x)
+    }
 }
 
 impl<K, V, S> MutMapping for IndexedHashColumn<K, V, S>
@@ -652,9 +652,6 @@ where
     }
     fn unset(&mut self, x: &K) -> Option<V> {
         self.0.unset(x)
-    }
-    fn is_set(&self, x: &K) -> bool {
-        self.0.is_set(x)
     }
 }
 
