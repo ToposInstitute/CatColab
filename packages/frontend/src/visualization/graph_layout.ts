@@ -34,8 +34,8 @@ export interface Node<Id> extends GraphElement {
     /** Node label, if any. */
     label?: string;
 
-	/** Position of center of label. */
-	labelPos?: Point;
+    /** Position of center of label. */
+    labelPos?: Point;
 }
 
 export interface Edge<Id> extends GraphElement {

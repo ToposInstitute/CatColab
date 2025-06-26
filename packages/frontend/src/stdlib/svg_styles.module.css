@@ -5,14 +5,14 @@
 
 .circle circle {
     fill: white;
-	stroke: black;
+    stroke: black;
 }
 
 .point point {
     fill: black;
-	stroke: black;
+    stroke: black;
 }
 
 .link path {
-	stroke: blue;
+    stroke: blue;
 }
