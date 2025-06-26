@@ -290,60 +290,47 @@ type MenuControls = {
 export function MenuBar(props: MenuControls & MarkStates & { headingLevel: number | null }) {
     return (
         <div id="menubar" class="menubar">
-            <Show when={props.onBoldClicked}>
-                <button
-                    onClick={() => props.onBoldClicked?.()}
-                    classList={{ active: props.isBoldActive }}
-                >
-                    <Bold />
-                </button>
-            </Show>
-            <Show when={props.onItalicClicked}>
-                <button
-                    onClick={() => props.onItalicClicked?.()}
-                    classList={{ active: props.isEmActive }}
-                >
-                    <Italic />
-                </button>
-            </Show>
-            <Show when={props.onLinkClicked}>
-                <button id="add-link" onClick={() => props.onLinkClicked?.()}>
-                    <Link />
-                </button>
-            </Show>
-            <Show when={props.onMathClicked}>
-                <TooltipButton
-                    tooltip="KaTex block (shortuct: Mod+m)"
-                    onClick={() => props.onMathClicked?.()}
-                >
-                    <Sigma />
-                </TooltipButton>
-            </Show>
-            <Show when={props.onBlockQuoteClicked}>
-                <TooltipButton tooltip="Blockquote" onClick={() => props.onBlockQuoteClicked?.()}>
-                    <TextQuote />
-                </TooltipButton>
-            </Show>
-            <Show when={props.onToggleOrderedList}>
-                <TooltipButton tooltip="Ordered list" onClick={() => props.onToggleOrderedList?.()}>
-                    <ListOrdered />
-                </TooltipButton>
-            </Show>
-            <Show when={props.onToggleBulletList}>
-                <TooltipButton tooltip="Bullet list" onClick={() => props.onToggleBulletList?.()}>
-                    <List />
-                </TooltipButton>
-            </Show>
-            <Show when={props.onIncreaseIndent}>
-                <TooltipButton tooltip="Indent" onClick={() => props.onIncreaseIndent?.()}>
-                    <Indent />
-                </TooltipButton>
-            </Show>
-            <Show when={props.onDecreaseIndent}>
-                <TooltipButton tooltip="Outdent" onClick={() => props.onDecreaseIndent?.()}>
-                    <Outdent />
-                </TooltipButton>
-            </Show>
+            <TooltipButton
+                callback={props.onBoldClicked}
+                isActive={props.isBoldActive}
+                tooltip="Bold (shortcut: Mod+b)"
+            >
+                <Bold />
+            </TooltipButton>
+            <TooltipButton
+                callback={props.onItalicClicked}
+                isActive={props.isEmActive}
+                tooltip="Italics (shortcut: Mod+i)"
+            >
+                <Italic />
+            </TooltipButton>
+            <TooltipButton callback={props.onLinkClicked} tooltip="Add Link">
+                <Link />
+            </TooltipButton>
+            <TooltipButton callback={props.onMathClicked} tooltip="KaTeX block (shortuct: Mod+m)">
+                <Sigma />
+            </TooltipButton>
+
+            <TooltipButton callback={props.onBlockQuoteClicked} tooltip="Blockquote">
+                <TextQuote />
+            </TooltipButton>
+
+            <TooltipButton callback={props.onToggleOrderedList} tooltip="Ordered list">
+                <ListOrdered />
+            </TooltipButton>
+
+            <TooltipButton callback={props.onToggleBulletList} tooltip="Bullet list">
+                <List />
+            </TooltipButton>
+
+            <TooltipButton callback={props.onIncreaseIndent} tooltip="Indent">
+                <Indent />
+            </TooltipButton>
+
+            <TooltipButton callback={props.onDecreaseIndent} tooltip="Outdent">
+                <Outdent />
+            </TooltipButton>
+
             <Show when={props.onHeadingClicked}>
                 <select
                     value={props.headingLevel ?? 0}
@@ -365,14 +352,25 @@ export function MenuBar(props: MenuControls & MarkStates & { headingLevel: numbe
     );
 }
 
-function TooltipButton({
-    tooltip,
-    onClick,
-    children,
-}: { tooltip: string; onClick: () => void; children: JSX.Element }) {
+function TooltipButton(props: {
+    tooltip: string;
+    callback: (() => void) | null;
+    isActive?: boolean;
+    children: JSX.Element;
+}) {
     return (
-        <div class="tooltipButton tooltip" data-tooltip={tooltip}>
-            <button onClick={onClick}>{children}</button>
-        </div>
+        <Show when={props.callback}>
+            <div class="tooltipButton tooltip" data-tooltip={props.tooltip}>
+                <button
+                    // required to prevent focus loss on firefox
+                    onMouseDown={(e) => e.preventDefault()}
+                    // biome-ignore lint/style/noNonNullAssertion: Show guarantees that callback is non-null
+                    onClick={props.callback!}
+                    classList={{ active: props.isActive }}
+                >
+                    {props.children}
+                </button>
+            </div>
+        </Show>
     );
 }

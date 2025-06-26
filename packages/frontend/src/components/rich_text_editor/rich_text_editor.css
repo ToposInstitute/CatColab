@@ -19,10 +19,6 @@
     pointer-events: none;
 }
 
-.rich-text-editor {
-    overflow: hidden;
-}
-
 .rich-text-editor.focussed {
     border: 1px solid grey;
     border-radius: 5px;
@@ -71,7 +67,7 @@
     background: transparent;
     border: none;
     border-radius: 0;
-    transition: background-color 0.2s ease, transform 0.2s ease;
+    transition: background-color 0.15s ease, transform 0.15s ease;
 }
 
 .menubar select option {
@@ -95,7 +91,6 @@ blockquote {
     font-size: 10px;
 }
 
-/* make sure .tooltipButton (or .tooltip) is positioned */
 .tooltipButton.tooltip {
     position: relative;
     display: inline-block;
@@ -120,7 +115,6 @@ blockquote {
     z-index: 10;
 }
 
-/* show the tooltip on hover/focus */
 .tooltipButton.tooltip:hover::after,
 .tooltipButton.tooltip:focus-within::after {
     opacity: 1;
