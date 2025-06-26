@@ -10,7 +10,7 @@ use nalgebra::DVector;
 use num_traits::{One, Pow};
 
 // TODO delete
-use ustr::{ustr, IdentityHasher, Ustr};
+use ustr::{IdentityHasher, Ustr, ustr};
 
 use super::StateBehavior;
 
@@ -20,6 +20,14 @@ use serde::{Deserialize, Serialize};
 use super::ODEProblem;
 use super::ODESystem;
 use crate::zero::alg::Polynomial;
+
+use diffsol::{
+    Bdf, DenseMatrix, NalgebraLU, NalgebraMat, NalgebraVec, OdeBuilder, OdeSolverMethod,
+    OdeSolverState, Vector,
+};
+use nalgebra::DMatrix;
+type M = NalgebraMat<f64>;
+type LS = NalgebraLU<f64>;
 
 /// Functions that may be attached to a monomial
 #[derive(Clone, Debug)]
@@ -146,11 +154,31 @@ pub struct NumericalPolynomialSystem<Exp> {
     pub closures: HashMap<usize, StateBehavior<f32>>,
 }
 
+// impl<Exp> NumericalPolynomialSystem<Exp>
+// where
+//     Exp: Clone + Ord + std::fmt::Debug,
+//     f64: Pow<Exp, Output = f64>,
+//     f32: Pow<Exp, Output = f32>,
+// {
+//     /** */
+//     pub fn alt_vector_field(&self, dx: &mut NalgebraVec<f64>, x: &NalgebraVec<f64>, _t: f64) {
+//         for (i, p) in self.components.iter().enumerate() {
+//             dx[i] = p.eval(|var| x[*var] as f32) as f64;
+//         }
+//     }
+// }
+
 impl<Exp> ODESystem for NumericalPolynomialSystem<Exp>
 where
     Exp: Clone + Ord + std::fmt::Debug,
     f32: Pow<Exp, Output = f32>,
 {
+    fn alt_vector_field(&self, dx: &mut NalgebraVec<f64>, x: &NalgebraVec<f64>, _t: f64) {
+        for (i, p) in self.components.iter().enumerate() {
+            dx[i] = p.eval(|var| x[*var] as f32) as f64;
+        }
+    }
+
     fn vector_field(&self, dx: &mut DVector<f32>, x: &DVector<f32>, _t: f32) {
         // 0: Container
         // 1: Sediment (deposited)
@@ -159,12 +187,14 @@ where
         // where dW or dS = \pm [W-C],
         for i in 0..dx.len() {
             dx[i] = self.components[i].eval(|var| {
-                let modifier = if let Some(f) = self.closures.get(var) {
-                    f(x.clone())
-                } else {
-                    1.0
-                };
+                // let modifier = if let Some(f) = self.closures.get(var) {
+                //     f(x.clone())
+                // } else {
+                //     1.0
+                // };
+                let modifier = 1.0;
                 // TODO sometimes this doesn't seem to take effect.
+                // dbg!(&x, &var);
                 let value = x[*var];
                 modifier * value
             });

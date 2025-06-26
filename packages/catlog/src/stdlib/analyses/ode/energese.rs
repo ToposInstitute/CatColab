@@ -9,12 +9,14 @@ use std::hash::{BuildHasherDefault, Hash};
 
 use nalgebra::DVector;
 use num_traits::Zero;
-use ustr::{ustr, IdentityHasher, Ustr};
+use ustr::{IdentityHasher, Ustr, ustr};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify::Tsify;
+
+use std::fmt::Debug;
 
 use super::ODEAnalysis;
 use crate::dbl::{
@@ -27,18 +29,25 @@ use crate::zero::{alg::Polynomial, rig::Monomial};
 
 use crate::simulate::ode::{MonomialBehavior, StateBehavior, Transformer};
 
-use web_sys::console;
+use diffsol::{
+    Bdf, DenseMatrix, NalgebraLU, NalgebraMat, OdeBuilder, OdeSolverMethod, OdeSolverState,
+};
+use nalgebra::DMatrix;
+type M = NalgebraMat<f64>;
+// type M = DMatrix<f64>;
+type LS = NalgebraLU<f64>;
 
-impl<Id: Clone + Ord + std::fmt::Debug> Transformer<Id, f32> for MonomialBehavior<Id> {
+// here we implement the `Transformer` trait for MonomialBehaviors.
+impl<Id: Clone + Ord + Debug> Transformer<Id, f32> for MonomialBehavior<Id> {
     fn to_closure(&self, indices: BTreeMap<Id, usize>) -> StateBehavior<f32> {
         match self {
             // assuming multiplicative identity
-            MonomialBehavior::Identity => Box::new(|x| 1.0),
+            MonomialBehavior::Identity => Box::new(|_| 1.0),
             MonomialBehavior::Heaviside(left, right) => {
                 let left = *indices.get(&left.clone()).expect("!");
                 let right = *indices.get(&right.clone()).expect("!");
                 Box::new(move |x: DVector<f32>| -> f32 {
-                    let out = x[left] < x[right];
+                    let out = x[left] <= x[right];
                     out as u32 as f32
                 })
             }
@@ -47,7 +56,7 @@ impl<Id: Clone + Ord + std::fmt::Debug> Transformer<Id, f32> for MonomialBehavio
 }
 
 /// Data defining a mass-action ODE problem for a model.
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(
@@ -119,49 +128,12 @@ impl EnergeseMassActionAnalysis {
         &self,
         model: &EnergeseModel<Id>,
     ) -> PolynomialSystem<Id, Parameter<Id>, u8> {
-        // build flow links first
-        let vlinks: Vec<Id> = model.mor_generators_with_type(&self.varlink_mor_type).collect();
-        // snd are pairs of outgoing vlinks and their cods for dom(fst)
-        let mut vlinkmap: HashMap<Id, HashMap<Id, Id>> = HashMap::new();
-        let flinks: HashMap<Id, Parameter<Id>> = model
-            .mor_generators_with_type(&self.flowlink_mor_type)
-            .map(|flink| {
-                let path = model.mor_generator_cod(&flink).unwrap_tabulated();
-                let Some(TabEdge::Basic(cod)) = path.clone().only() else {
-                    panic!("!!!");
-                };
-                // vlink stuff
-                let dom = model.mor_generator_dom(&flink).unwrap_basic();
-                let hashmap: HashMap<Id, Id> = vlinks
-                    .iter()
-                    .filter(|v| model.mor_generator_dom(&v).unwrap_basic() == dom)
-                    .map(|vlink| (vlink.clone(), model.mor_generator_cod(&vlink).unwrap_basic()))
-                    .collect();
-                vlinkmap.insert(flink.clone(), hashmap);
-                // return pair
-                (cod.clone(), Parameter::generator(flink))
-            })
-            .collect();
-
-        // TODO why not fuse the two iterators?
-        let terms: HashMap<Id, Monomial<Id, u8>> = model
+        let terms: Vec<(Id, Polynomial<Id, Parameter<Id>, u8>)> = model
             .mor_generators_with_type(&self.flow_mor_type)
             .map(|flow| {
-                let dom = model.mor_generator_dom(&flow).unwrap_basic();
-                (flow, Monomial::generator(dom))
-            })
-            .collect();
-
-        let terms: Vec<(Id, Polynomial<Id, Parameter<Id>, u8>)> = terms
-            .into_iter()
-            .map(|(flow, term)| {
                 let param = Parameter::generator(flow.clone());
-                // if let Some(flink) = flinks.get(&flow) {
-                // multiple param by `flink.clone()`
-                // (flow, [(flink.clone() * param, term)].into_iter().collect())
-                // } else {
-                (flow, [(param, term)].into_iter().collect())
-                // }
+                let dom = model.mor_generator_dom(&flow).unwrap_basic();
+                (flow, [(param, Monomial::generator(dom))].into_iter().collect())
             })
             .collect();
 
@@ -193,6 +165,7 @@ impl EnergeseMassActionAnalysis {
     ) -> ODEAnalysis<Id, NumericalPolynomialSystem<u8>> {
         let sys = self.create_system(model);
 
+        // this block associates flows to the dynamic variables which affect them
         let vlinks: Vec<Id> = model.mor_generators_with_type(&self.varlink_mor_type).collect();
         let mut vlinkmap: HashMap<Id, HashMap<Id, Id>> = HashMap::new();
         let flinks: HashMap<Id, Id> = model
@@ -202,7 +175,6 @@ impl EnergeseMassActionAnalysis {
                 let Some(TabEdge::Basic(cod)) = path.clone().only() else {
                     panic!("!!!");
                 };
-                // vlink stuff
                 let dom = model.mor_generator_dom(&flink).unwrap_basic();
                 let hashmap: HashMap<Id, Id> = vlinks
                     .iter()
@@ -210,7 +182,6 @@ impl EnergeseMassActionAnalysis {
                     .map(|vlink| (vlink.clone(), model.mor_generator_cod(&vlink).unwrap_basic()))
                     .collect();
                 vlinkmap.insert(cod.clone(), hashmap);
-                // return pair
                 (cod.clone(), dom)
             })
             .collect();
@@ -231,12 +202,11 @@ impl EnergeseMassActionAnalysis {
             .collect();
         // dbg!(idxvarmap);
         for (k, p) in sys.clone().components.iter() {
-            for (coef, var) in p.0.clone().into_iter() {
+            for (coef, _) in p.0.clone().into_iter() {
                 for (_, v) in coef.0.clone().into_iter() {
                     for flow in v.variables() {
                         if let Some(flink) = flinks.get(&flow) {
                             if let Some(function) = data.dynamibles.get(flink) {
-                                // TODO should use MonomialBehaviors
                                 match function.as_str() {
                                     "Heaviside" => {
                                         let args: Vec<Id> = vlinkmap
@@ -313,7 +283,7 @@ mod tests {
         let mut data: EnergeseMassActionProblemData<Ustr> = Default::default();
 
         data.duration = 13.0;
-        data.rates.insert(ustr("inflow"), 4.0);
+        data.rates.insert(ustr("inflow"), 10.0);
         data.rates.insert(ustr("deposits"), 3.0);
         data.initial_values.insert(ustr("Source"), 100.0);
         data.initial_values.insert(ustr("Water"), 2.0);
@@ -322,13 +292,22 @@ mod tests {
 
         // sometimes Sediment increases when Water < Container.
         const LENGTH: usize = 20;
-        let result =
-            analysis.create_numerical_system(&model, data).solve_with_defaults().expect("!");
+        let result = analysis
+            .create_numerical_system(&model, data.clone())
+            .solve_with_defaults()
+            .expect("!");
         let mut sediment: [f32; LENGTH] = Default::default();
         sediment.copy_from_slice(&result.states.get(&ustr("Sediment")).unwrap()[0..LENGTH]);
         let mut water: [f32; LENGTH] = Default::default();
         water.copy_from_slice(&result.states.get(&ustr("Water")).unwrap()[0..LENGTH]);
-        println!("RESULT: {:#?}", std::iter::zip(sediment, water).collect::<Vec<_>>());
+        // println!("RESULT: {:#?}", std::iter::zip(sediment, water).collect::<Vec<_>>());
+
+        // let t = 0.4;
+        // while solver.state().t <= t {
+        //     solver.step().unwrap();
+        // }
+        // let y = solver(t);
+        // dbg!(y);
 
         assert!(true);
         // let expected = expect!([r#"

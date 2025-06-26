@@ -12,6 +12,15 @@ use tsify::Tsify;
 
 use crate::simulate::ode::{ODEProblem, ODESystem};
 
+// DIFFSOL TESTING
+use diffsol::{
+    Bdf, DenseMatrix, NalgebraLU, NalgebraMat, NalgebraVec, OdeBuilder, OdeSolverMethod,
+    OdeSolverState,
+};
+use ode_solvers::DVector;
+type M = NalgebraMat<f64>;
+type LS = NalgebraLU<f64>;
+
 /// Solution to an ODE problem.
 #[derive(Clone, Debug, Derivative)]
 #[derivative(Default(bound = ""))]
@@ -65,12 +74,36 @@ impl<Id, Sys> ODEAnalysis<Id, Sys> {
 
         let (t_out, x_out) = result.get();
 
+        let poly = self.problem.system;
+
+        // let get = self.variable_index.values(););
+        let problem = OdeBuilder::<M>::new()
+            .rtol(1e-6)
+            // .p([0.1])
+            .rhs(|x, _, t, dx| poly.alt_vector_field(dx, x, t))
+            .init(
+                |_, _, y| {
+                    for i in self.variable_index.values().into_iter() {
+                        y[*i] = self.problem.initial_values[*i] as f64
+                    }
+                },
+                self.variable_index.values().len(),
+            )
+            .build()
+            .unwrap();
+
+        let mut s = problem.tsit45().unwrap();
+        let (_y_out, _t_out) = s.solve(duration.clone().into()).unwrap();
+
         Ok(ODESolution {
-            time: t_out.clone(),
+            time: _t_out.clone().iter().map(|&t| t as f32).collect::<Vec<f32>>(),
             states: self
                 .variable_index
                 .into_iter()
-                .map(|(ob, i)| (ob, x_out.iter().map(|x| x[i]).collect()))
+                .map(|(ob, i)| {
+                    dbg!(&ob, &i);
+                    (ob, (0.._t_out.len()).map(|c| _y_out[(i, c)] as f32).collect::<Vec<f32>>())
+                })
                 .collect(),
         })
     }
