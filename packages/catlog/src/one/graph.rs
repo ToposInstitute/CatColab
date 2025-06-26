@@ -498,6 +498,9 @@ Just as a [`Mapping`] is the data of a function without specified domain or
 codomain sets, a *graph mapping* is the data of a graph homomorphism without
 specified domain or codomain graphs. Turning this around, a *graph morphism* is
 a pair of graphs with a compatible graph mapping.
+
+The data of a graph mapping is a pair of mappings, one on vertices and the other
+edges. Use a [`ColumnarGraphMapping`] to supply this data directly.
  */
 pub trait GraphMapping {
     /// Type of vertices in domain graph.
@@ -512,17 +515,37 @@ pub trait GraphMapping {
     /// Type of edges in codomain graph.
     type CodE: Eq + Clone;
 
+    /// Type of underlying mapping on vertices.
+    type VertexMap: Mapping<Dom = Self::DomV, Cod = Self::CodV>;
+
+    /// Type of underlying mapping on edges.
+    type EdgeMap: Mapping<Dom = Self::DomE, Cod = Self::CodE>;
+
+    /// Gets the underlying mapping on vertices.
+    fn vertex_map(&self) -> &Self::VertexMap;
+
+    /// Gets the underlying mapping on edges.
+    fn edge_map(&self) -> &Self::EdgeMap;
+
     /// Applies the graph mapping at a vertex.
-    fn apply_vertex(&self, v: &Self::DomV) -> Option<Self::CodV>;
+    fn apply_vertex(&self, v: Self::DomV) -> Option<Self::CodV> {
+        self.vertex_map().apply(v)
+    }
 
     /// Applies the graph mapping at an edge.
-    fn apply_edge(&self, e: &Self::DomE) -> Option<Self::CodE>;
+    fn apply_edge(&self, e: Self::DomE) -> Option<Self::CodE> {
+        self.edge_map().apply(e)
+    }
 
     /// Is the mapping defined at a vertex?
-    fn is_vertex_assigned(&self, v: &Self::DomV) -> bool;
+    fn is_vertex_assigned(&self, v: &Self::DomV) -> bool {
+        self.vertex_map().is_set(v)
+    }
 
     /// Is the mapping defined at an edge?
-    fn is_edge_assigned(&self, e: &Self::DomE) -> bool;
+    fn is_edge_assigned(&self, e: &Self::DomE) -> bool {
+        self.edge_map().is_set(e)
+    }
 }
 
 /** A homomorphism between graphs defined by a [mapping](GraphMapping).
@@ -547,7 +570,7 @@ where
     {
         let GraphMorphism(mapping, dom, cod) = *self;
         let vertex_errors = dom.vertices().filter_map(|v| {
-            if mapping.apply_vertex(&v).is_some_and(|w| cod.has_vertex(&w)) {
+            if mapping.apply_vertex(v.clone()).is_some_and(|w| cod.has_vertex(&w)) {
                 None
             } else {
                 Some(InvalidGraphMorphism::Vertex(v))
@@ -555,13 +578,13 @@ where
         });
 
         let edge_errors = dom.edges().flat_map(|e| {
-            if let Some(f) = mapping.apply_edge(&e) {
+            if let Some(f) = mapping.apply_edge(e.clone()) {
                 if cod.has_edge(&f) {
                     let mut errs = Vec::new();
-                    if mapping.apply_vertex(&dom.src(&e)).is_some_and(|v| v != cod.src(&f)) {
+                    if mapping.apply_vertex(dom.src(&e)).is_some_and(|v| v != cod.src(&f)) {
                         errs.push(InvalidGraphMorphism::Src(e.clone()))
                     }
-                    if mapping.apply_vertex(&dom.tgt(&e)).is_some_and(|v| v != cod.tgt(&f)) {
+                    if mapping.apply_vertex(dom.tgt(&e)).is_some_and(|v| v != cod.tgt(&f)) {
                         errs.push(InvalidGraphMorphism::Tgt(e.clone()))
                     }
                     return errs;
@@ -632,25 +655,21 @@ impl<ColV, ColE> ColumnarGraphMapping<ColV, ColE> {
 
 impl<ColV, ColE> GraphMapping for ColumnarGraphMapping<ColV, ColE>
 where
-    ColV: MutMapping,
-    ColE: MutMapping,
+    ColV: Mapping,
+    ColE: Mapping,
 {
     type DomV = ColV::Dom;
     type DomE = ColE::Dom;
     type CodV = ColV::Cod;
     type CodE = ColE::Cod;
+    type VertexMap = ColV;
+    type EdgeMap = ColE;
 
-    fn apply_vertex(&self, v: &Self::DomV) -> Option<Self::CodV> {
-        self.vertex_map.get(v).cloned()
+    fn vertex_map(&self) -> &Self::VertexMap {
+        &self.vertex_map
     }
-    fn apply_edge(&self, e: &Self::DomE) -> Option<Self::CodE> {
-        self.edge_map.get(e).cloned()
-    }
-    fn is_vertex_assigned(&self, v: &Self::DomV) -> bool {
-        self.vertex_map.is_set(v)
-    }
-    fn is_edge_assigned(&self, e: &Self::DomE) -> bool {
-        self.edge_map.is_set(e)
+    fn edge_map(&self) -> &Self::EdgeMap {
+        &self.edge_map
     }
 }
 
