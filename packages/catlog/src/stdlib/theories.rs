@@ -159,7 +159,7 @@ pub fn th_category_dynamic_stockflow() -> UstrDiscreteTabTheory {
         TabObType::Basic(x),
         th.tabulator(th.hom_type(TabObType::Basic(x))),
     );
-    let v = ustr("DynamicVariable");
+    let v = ustr("AuxiliaryVariable");
     th.add_ob_type(v);
     // there is a proarrow from the flow tabulator to the dynamic variable
     th.add_mor_type(

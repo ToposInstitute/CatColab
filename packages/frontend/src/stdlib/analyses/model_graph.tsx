@@ -108,7 +108,7 @@ export function modelToGraphviz(
     theory: Theory,
     attributes?: GV.GraphvizAttributes,
     nodeAttributes?: (jgmt: ModelJudgment) => Record<string, string> | undefined,
-	edgeAttributes?: (jgmt: ModelJudgment) => Record<string, string> | undefined,
+	// edgeAttributes?: (jgmt: ModelJudgment) => Record<string, string> | undefined,
 ): Viz.Graph {
     const nodes = new Map<string, Required<Viz.Graph>["nodes"][0]>();
     for (const judgment of model) {
@@ -163,12 +163,11 @@ export function modelToGraphviz(
                 fontname: GV.graphvizFontname(meta),
                 // Not recognized by Graphviz but will be passed through!
                 arrowstyle: meta?.arrowStyle ?? "default",
-				  ...(edgeAttributes?.(judgment).state.value ?? {
-					// label: judgment.name
-				})
+				  // ...(edgeAttributes?.(judgment).state.value ?? {
+					// // label: judgment.name
+				// })
             },
         });
-		console.log(edges);
     }
 
     return {
