@@ -120,6 +120,7 @@ impl CCLAnalysis {
                 B.fill_with_identity();
                 let i = *ob_index.get(dom).expect("expect");
                 let j = *ob_index.get(cod).expect("evan");
+                // TO-DO: we should care whether or not these are pos/neg
                 B[(j, i)] += data.interaction_coeffs.get(&mor).copied().unwrap_or(1.0);
                 A = B * A;
             }
@@ -134,32 +135,3 @@ impl CCLAnalysis {
         ODEAnalysis::new(problem, ob_index)
     }
 }
-
-// #[cfg(test)]
-// mod test {
-//     use std::rc::Rc;
-//     use ustr::ustr;
-
-//     use super::*;
-//     use crate::{simulate::ode::lotka_volterra, stdlib};
-
-//     #[test]
-//     fn predator_prey() {
-//         let th = Rc::new(stdlib::theories::th_signed_category());
-//         let neg_feedback = stdlib::models::negative_feedback(th);
-
-//         let (prey, pred) = (ustr("x"), ustr("y"));
-//         let (pos, neg) = (ustr("positive"), ustr("negative"));
-//         let data = CCLProblemData {
-//             interaction_coeffs: [(pos, 1.0), (neg, 1.0)].into_iter().collect(),
-//             growth_rates: [(prey, 2.0), (pred, -1.0)].into_iter().collect(),
-//             initial_values: [(prey, 1.0), (pred, 1.0)].into_iter().collect(),
-//             duration: 10.0,
-//         };
-//         let analysis = CCLAnalysis::new(ustr("Object"))
-//             .add_positive(Path::Id(ustr("Object")))
-//             .add_negative(Path::single(ustr("Negative")))
-//             .create_system(&neg_feedback, data);
-//         assert_eq!(analysis.problem, lotka_volterra::create_predator_prey());
-//     }
-// }
