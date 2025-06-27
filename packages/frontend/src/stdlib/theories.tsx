@@ -276,6 +276,9 @@ stdTheories.add(
                         return thSignedCategory.negativeLoops(model, options);
                     },
                 }),
+                analyses.configureLinearODE({
+                    simulate: (model, data) => thSignedCategory.linearODE(model, data),
+                }),
                 analyses.configureLotkaVolterra({
                     simulate(model, data) {
                         return thSignedCategory.lotkaVolterra(model, data);
@@ -352,6 +355,9 @@ stdTheories.add(
                     findSubmodels(model, options) {
                         return thSignedCategory.positiveLoops(model, options);
                     },
+                }),
+                analyses.configureLinearODE({
+                    simulate: (model, data) => thSignedCategory.linearODE(model, data),
                 }),
                 analyses.configureLotkaVolterra({
                     simulate: (model, data) => thSignedCategory.lotkaVolterra(model, data),

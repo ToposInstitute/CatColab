@@ -15,4 +15,8 @@ pub struct LotkaVolterraModelData(pub analyses::ode::LotkaVolterraProblemData<Uu
 
 #[derive(Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct LinearODEModelData(pub analyses::ode::LinearODEProblemData<Uuid>);
+
+#[derive(Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct MassActionModelData(pub analyses::ode::MassActionProblemData<Uuid>);
