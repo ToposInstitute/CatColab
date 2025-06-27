@@ -1,5 +1,4 @@
-/*! Categories: interfaces and basic constructions.
- */
+//! Categories: interfaces and basic constructions.
 
 use derive_more::From;
 use ref_cast::RefCast;
