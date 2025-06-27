@@ -126,13 +126,17 @@ mod test {
     use ustr::ustr;
 
     use super::*;
-    use crate::{dbl::model::{UstrDiscreteDblModel, MutDblModel}, simulate::ode::linear_ode, stdlib};
+    use crate::{
+        dbl::model::{MutDblModel, UstrDiscreteDblModel},
+        simulate::ode::linear_ode,
+        stdlib,
+    };
 
     #[test]
     fn neg_loops_pos_connector() {
         let th = Rc::new(stdlib::theories::th_signed_category());
-        
-        let (A,B,X) = (ustr("A"), ustr("B"), ustr("X"));
+
+        let (A, B, X) = (ustr("A"), ustr("B"), ustr("X"));
 
         let mut test_model = UstrDiscreteDblModel::new(th);
         test_model.add_ob(A, ustr("Object"));
@@ -144,7 +148,14 @@ mod test {
         test_model.add_mor(ustr("xb"), X, B, Path::Id(ustr("Object")));
 
         let test_data = LinearODEProblemData {
-            coefficients: [(ustr("aa"), 0.3), (ustr("ax"), 1.0), (ustr("bx"), 2.0), (ustr("xb"), 0.5)].into_iter().collect(),
+            coefficients: [
+                (ustr("aa"), 0.3),
+                (ustr("ax"), 1.0),
+                (ustr("bx"), 2.0),
+                (ustr("xb"), 0.5),
+            ]
+            .into_iter()
+            .collect(),
             initial_values: [(A, 2.0), (B, 1.0), (X, 1.0)].into_iter().collect(),
             duration: 10.0,
         };
