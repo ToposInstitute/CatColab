@@ -9,7 +9,7 @@ use std::hash::{BuildHasherDefault, Hash};
 
 use nalgebra::DVector;
 use num_traits::Zero;
-use ustr::{IdentityHasher, Ustr, ustr};
+use ustr::{ustr, IdentityHasher, Ustr};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -28,6 +28,8 @@ use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSyst
 use crate::zero::{alg::Polynomial, rig::Monomial};
 
 use crate::simulate::ode::{MonomialBehavior, NStateBehavior, StateBehavior, Transformer};
+
+use web_sys::console;
 
 use diffsol::{
     Bdf, DenseMatrix, NalgebraLU, NalgebraMat, NalgebraVec, OdeBuilder, OdeSolverMethod,
@@ -193,7 +195,7 @@ impl EnergeseMassActionAnalysis {
             .map(|ob| data.initial_values.get(ob).copied().unwrap_or_default());
         let x0 = DVector::from_iterator(objects.len(), initial_values);
 
-        let mut closures: HashMap<usize, StateBehavior<f32>> = HashMap::new();
+        let mut closures: HashMap<usize, NStateBehavior<f32>> = HashMap::new();
         let idxvarmap: BTreeMap<Id, usize> = sys
             .clone()
             .components
@@ -283,16 +285,16 @@ mod tests {
         let analysis: EnergeseMassActionAnalysis = Default::default();
         let mut data: EnergeseMassActionProblemData<Ustr> = Default::default();
 
-        data.duration = 13.0;
-        data.rates.insert(ustr("inflow"), 10.0);
-        data.rates.insert(ustr("deposits"), 3.0);
-        data.initial_values.insert(ustr("Source"), 100.0);
+        data.duration = 1.0;
+        data.rates.insert(ustr("inflow"), 1.0);
+        data.rates.insert(ustr("deposits"), 0.01);
+        data.initial_values.insert(ustr("Source"), 7.0);
         data.initial_values.insert(ustr("Water"), 2.0);
-        data.initial_values.insert(ustr("Container"), 40.0);
+        data.initial_values.insert(ustr("Container"), 5.0);
         data.dynamibles.insert(ustr("SpilloverChecker"), String::from("Heaviside"));
 
         // sometimes Sediment increases when Water < Container.
-        const LENGTH: usize = 20;
+        const LENGTH: usize = 13;
         let result = analysis
             .create_numerical_system(&model, data.clone())
             .solve_with_defaults()

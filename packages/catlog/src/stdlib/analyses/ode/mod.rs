@@ -78,7 +78,8 @@ impl<Id, Sys> ODEAnalysis<Id, Sys> {
 
         // let get = self.variable_index.values(););
         let problem = OdeBuilder::<M>::new()
-            .rtol(1e-6)
+            .rtol(1e-3)
+            .h0(output_step_size.into())
             // .p([0.1])
             .rhs(|x, _, t, dx| poly.alt_vector_field(dx, x, t))
             .init(
@@ -94,6 +95,7 @@ impl<Id, Sys> ODEAnalysis<Id, Sys> {
 
         let mut s = problem.tsit45().unwrap();
         let (_y_out, _t_out) = s.solve(duration.clone().into()).unwrap();
+        // dbg!(&_y_out, &_t_out);
 
         Ok(ODESolution {
             time: _t_out.clone().iter().map(|&t| t as f32).collect::<Vec<f32>>(),
@@ -101,7 +103,7 @@ impl<Id, Sys> ODEAnalysis<Id, Sys> {
                 .variable_index
                 .into_iter()
                 .map(|(ob, i)| {
-                    dbg!(&ob, &i);
+                    // dbg!(&ob, &i);
                     (ob, (0.._t_out.len()).map(|c| _y_out[(i, c)] as f32).collect::<Vec<f32>>())
                 })
                 .collect(),

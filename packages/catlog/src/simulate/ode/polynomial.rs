@@ -10,7 +10,7 @@ use nalgebra::DVector;
 use num_traits::{One, Pow};
 
 // TODO delete
-use ustr::{IdentityHasher, Ustr, ustr};
+use ustr::{ustr, IdentityHasher, Ustr};
 
 use super::NStateBehavior;
 
@@ -28,6 +28,7 @@ use diffsol::{
 use nalgebra::DMatrix;
 type M = NalgebraMat<f64>;
 type LS = NalgebraLU<f64>;
+use web_sys::console;
 
 /// Functions that may be attached to a monomial
 #[derive(Clone, Debug)]
@@ -176,14 +177,18 @@ where
     fn alt_vector_field(&self, dx: &mut NalgebraVec<f64>, x: &NalgebraVec<f64>, _t: f64) {
         for (i, p) in self.components.iter().enumerate() {
             // dx[i] = p.eval(|var| x[*var] as f32) as f64;
+            // 0. Container
+            // 1.
+            // 2.
+            // 3. Source
             dx[i] = p.eval(|var| {
                 let modifier = if let Some(f) = self.closures.get(var) {
                     f(x.clone())
                 } else {
                     1.0
                 };
-                let value = x[*var];
-                (modifier * value) as f32
+                let value = x[*var] as f32;
+                modifier * value
             }) as f64;
         }
     }
