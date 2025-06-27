@@ -131,6 +131,9 @@ with lib;
         Type = "oneshot";
         ExecStart = lib.getExe databaseMigrationScript;
         EnvironmentFile = config.age.secrets.backendSecretsForCatcolab.path;
+        Environment = ''
+          PATH=${lib.makeBinPath [ catcolabPackages.automerge-doc-server ]}:$PATH
+        '';
       };
     };
 
@@ -162,8 +165,9 @@ with lib;
       };
 
       serviceConfig = {
+        EnvironmentFile = config.age.secrets.backendSecretsForCatcolab.path;
         User = "catcolab";
-        ExecStart = "${lib.getExe pkgs.nodejs_23} ${catcolabPackages.automerge-doc-server}/main.cjs";
+        ExecStart = "${lib.getExe catcolabPackages.automerge-doc-server}";
         Type = "simple";
         Restart = "on-failure";
       };

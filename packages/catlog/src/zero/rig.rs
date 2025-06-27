@@ -224,12 +224,12 @@ where
                 if coef.chars().all(|c| c.is_alphabetic())
                     || coef.chars().all(|c| c.is_ascii_digit() || c == '.')
                 {
-                    write!(f, "{} ", coef)?;
+                    write!(f, "{coef} ")?;
                 } else {
-                    write!(f, "({}) ", coef)?;
+                    write!(f, "({coef}) ")?;
                 }
             }
-            write!(f, "{}", var)
+            write!(f, "{var}")
         };
         if let Some((var, coef)) = pairs.next() {
             fmt_scalar_mul(f, coef, var)?;
@@ -473,13 +473,13 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut pairs = self.0.iter();
         let fmt_power = |f: &mut std::fmt::Formatter<'_>, var: &Var, exp: &Exp| {
-            write!(f, "{}", var)?;
+            write!(f, "{var}")?;
             if !exp.is_one() {
                 let exp = exp.to_string();
                 if exp.len() == 1 {
-                    write!(f, "^{}", exp)?;
+                    write!(f, "^{exp}")?;
                 } else {
-                    write!(f, "^{{{}}}", exp)?;
+                    write!(f, "^{{{exp}}}")?;
                 }
             }
             Ok(())

@@ -87,7 +87,7 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for (var, component) in self.components.iter() {
-            writeln!(f, "d{} = {}", var, component)?;
+            writeln!(f, "d{var} = {component}")?;
         }
         Ok(())
     }

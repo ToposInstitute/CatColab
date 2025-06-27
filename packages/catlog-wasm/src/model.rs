@@ -53,7 +53,7 @@ impl CanElaborate<ObType, Ustr> for Elaborator {
     fn elab(&self, x: &ObType) -> Result<Ustr, String> {
         match x {
             ObType::Basic(name) => Ok(*name),
-            _ => Err(format!("Cannot cast object type for discrete double theory: {:#?}", x)),
+            _ => Err(format!("Cannot cast object type for discrete double theory: {x:#?}")),
         }
     }
 }
@@ -91,7 +91,7 @@ impl CanElaborate<Ob, Uuid> for Elaborator {
     fn elab(&self, x: &Ob) -> Result<Uuid, String> {
         match x {
             Ob::Basic(uuid) => Ok(*uuid),
-            _ => Err(format!("Cannot cast object type for discrete double theory: {:#?}", x)),
+            _ => Err(format!("Cannot cast object type for discrete double theory: {x:#?}")),
         }
     }
 }
@@ -114,7 +114,7 @@ impl CanElaborate<Mor, Path<Uuid, Uuid>> for Elaborator {
                     .try_map(|ob| Elaborator.elab(&ob), |mor| Elaborator.elab(&mor));
                 result_path.map(|path| path.flatten())
             }
-            _ => Err(format!("Cannot cast morphism for discrete double theory: {:#?}", mor)),
+            _ => Err(format!("Cannot cast morphism for discrete double theory: {mor:#?}")),
         }
     }
 }
@@ -172,7 +172,7 @@ impl CanElaborate<Mor, TabEdge<Uuid, Uuid>> for Elaborator {
                 pre: Box::new(Elaborator.elab(&**pre)?),
                 post: Box::new(Elaborator.elab(&**post)?),
             }),
-            _ => Err(format!("Cannot cast morphism for discrete tabulator theory: {:#?}", mor)),
+            _ => Err(format!("Cannot cast morphism for discrete tabulator theory: {mor:#?}")),
         }
     }
 }

@@ -18,7 +18,7 @@ pub struct Program(pub Vec<Command>);
 impl Display for Program {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for command in self.0.iter() {
-            writeln!(f, "{}", command)?;
+            writeln!(f, "{command}")?;
         }
         Ok(())
     }
