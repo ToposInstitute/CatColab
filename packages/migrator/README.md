@@ -17,7 +17,7 @@ To view available commands, run
 cargo run -p migrator help
 ```
 
-To apply allmigrations, run
+To apply all migrations, run
 
 ```sh
 cargo run -p migrator apply

@@ -121,7 +121,7 @@ impl ThSignedCategory {
                 .add_negative(ustr("Negative").into())
                 .create_system(model, data.0)
                 .solve_with_defaults()
-                .map_err(|err| format!("{:?}", err))
+                .map_err(|err| format!("{err:?}"))
                 .into(),
         ))
     }
@@ -252,7 +252,7 @@ impl ThCategoryLinks {
             analyses::ode::StockFlowMassActionAnalysis::default()
                 .create_numerical_system(model, data.0)
                 .solve_with_defaults()
-                .map_err(|err| format!("{:?}", err))
+                .map_err(|err| format!("{err:?}"))
                 .into(),
         ))
     }
