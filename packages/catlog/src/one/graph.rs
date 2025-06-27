@@ -638,14 +638,14 @@ That is, the data of the graph mapping is defined by two columns. The mapping
 can be between arbitrary graphs with compatible vertex and edge types.
 */
 #[derive(Clone, Default)]
-pub struct ColumnarGraphMapping<ColV, ColE> {
-    vertex_map: ColV,
-    edge_map: ColE,
+pub struct ColumnarGraphMapping<VMap, EMap> {
+    vertex_map: VMap,
+    edge_map: EMap,
 }
 
-impl<ColV, ColE> ColumnarGraphMapping<ColV, ColE> {
+impl<VMap, EMap> ColumnarGraphMapping<VMap, EMap> {
     /// Constructs a new graph mapping from existing columns.
-    pub fn new(vertex_map: ColV, edge_map: ColE) -> Self {
+    pub fn new(vertex_map: VMap, edge_map: EMap) -> Self {
         Self {
             vertex_map,
             edge_map,
@@ -653,17 +653,17 @@ impl<ColV, ColE> ColumnarGraphMapping<ColV, ColE> {
     }
 }
 
-impl<ColV, ColE> GraphMapping for ColumnarGraphMapping<ColV, ColE>
+impl<VMap, EMap> GraphMapping for ColumnarGraphMapping<VMap, EMap>
 where
-    ColV: Mapping,
-    ColE: Mapping,
+    VMap: Mapping,
+    EMap: Mapping,
 {
-    type DomV = ColV::Dom;
-    type DomE = ColE::Dom;
-    type CodV = ColV::Cod;
-    type CodE = ColE::Cod;
-    type VertexMap = ColV;
-    type EdgeMap = ColE;
+    type DomV = VMap::Dom;
+    type DomE = EMap::Dom;
+    type CodV = VMap::Cod;
+    type CodE = EMap::Cod;
+    type VertexMap = VMap;
+    type EdgeMap = EMap;
 
     fn vertex_map(&self) -> &Self::VertexMap {
         &self.vertex_map

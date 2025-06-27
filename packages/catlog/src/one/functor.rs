@@ -1,11 +1,20 @@
 //! Functors between categories.
 
+use std::hash::{BuildHasher, Hash};
+
+use nonempty::NonEmpty;
+use ref_cast::RefCast;
+use thiserror::Error;
+
+use super::{
+    Category, FpCategory, GraphMapping, GraphMorphism, InvalidGraphMorphism, Path, UnderlyingGraph,
+};
 use crate::zero::{Column, Mapping};
 
 /** A mapping between categories.
 
-Analogous to a [`Mapping`] between sets, this a functor that does not yet know
-its domain or codomain.
+Analogous to a [`Mapping`] between sets, this a functor that does not
+necessarily have a specified domain or codomain.
  */
 pub trait CategoryMap {
     /// Type of objects in domain category.
@@ -55,7 +64,7 @@ pub trait CategoryMap {
 
 /** A mapping out of a finitely generated category.
 
-Such a mapping is determined by its action on generating objects and morphisms.
+Such a mapping is determined by where it sends generating objects and morphisms.
 The codomain category is arbitrary.
  */
 pub trait FgCategoryMap: CategoryMap {
@@ -88,9 +97,165 @@ pub trait FgCategoryMap: CategoryMap {
     }
 }
 
-/** A functor defined by a [category mapping](CategoryMap).
+/** A functor out of a finitely presented (f.p.) category.
 
-Analogous to a [`Function`](crate::zero::Function) between sets, this struct
-exists to validate that a mapping between categories defines a valid functor.
+The data defining such a functor is a [graph mapping](GraphMapping) from the
+f.p. category's generating graph to the codomain category's underlying graph.
+The codomain category is arbitrary.
+
+Like a [`Function`](crate::zero::Function), this struct borrows its data. Unlike
+a function, TODO
  */
-pub struct Functor<'a, Map, Dom, Cod>(pub &'a Map, pub &'a Dom, pub &'a Cod);
+pub struct FpFunctor<'a, Map, Cod> {
+    map: &'a Map,
+    cod: &'a Cod,
+}
+
+impl<'a, Ob, Mor, Map, Cod> CategoryMap for FpFunctor<'a, Map, Cod>
+where
+    Ob: Eq + Clone,
+    Mor: Eq + Clone,
+    Map: GraphMapping<CodV = Ob, CodE = Mor>,
+    Cod: Category<Ob = Ob, Mor = Mor>,
+{
+    type DomOb = Map::DomV;
+    type DomMor = Path<Map::DomV, Map::DomE>;
+    type CodOb = Ob;
+    type CodMor = Mor;
+    type ObMap = Map::VertexMap;
+    type MorMap = FpFunctorMorMap<'a, Map, Cod>;
+
+    fn ob_map(&self) -> &Self::ObMap {
+        self.map.vertex_map()
+    }
+    fn mor_map(&self) -> &Self::MorMap {
+        FpFunctorMorMap::ref_cast(self)
+    }
+}
+
+impl<'a, Ob, Mor, Map, Cod> FgCategoryMap for FpFunctor<'a, Map, Cod>
+where
+    Ob: Eq + Clone,
+    Mor: Eq + Clone,
+    Map: GraphMapping<CodV = Ob, CodE = Mor>,
+    Map::VertexMap: Column,
+    Map::EdgeMap: Column,
+    Cod: Category<Ob = Ob, Mor = Mor>,
+{
+    type ObGen = Map::DomV;
+    type MorGen = Map::DomE;
+    type ObGenMap = Map::VertexMap;
+    type MorGenMap = Map::EdgeMap;
+
+    fn ob_generator_map(&self) -> &Self::ObGenMap {
+        self.map.vertex_map()
+    }
+    fn mor_generator_map(&self) -> &Self::MorGenMap {
+        self.map.edge_map()
+    }
+}
+
+/// Auxiliary struct for the morphism map of a functor out of an f.p. category.
+#[derive(RefCast)]
+#[repr(transparent)]
+pub struct FpFunctorMorMap<'a, Map, Cod>(FpFunctor<'a, Map, Cod>);
+
+impl<'a, V, E, Ob, Mor, Map, Cod> Mapping for FpFunctorMorMap<'a, Map, Cod>
+where
+    V: Eq + Clone,
+    E: Eq + Clone,
+    Mor: Eq + Clone,
+    Map: GraphMapping<DomV = V, DomE = E, CodV = Ob, CodE = Mor>,
+    Cod: Category<Ob = Ob, Mor = Mor>,
+{
+    type Dom = Path<V, E>;
+    type Cod = Mor;
+
+    fn apply(&self, path: Path<V, E>) -> Option<Mor> {
+        path.partial_map(|v| self.0.map.apply_vertex(v), |e| self.0.map.apply_edge(e))
+            .map(|path| self.0.cod.compose(path))
+    }
+
+    fn is_set(&self, path: &Path<V, E>) -> bool {
+        match path {
+            Path::Id(v) => self.0.map.is_vertex_assigned(v),
+            Path::Seq(edges) => edges.iter().all(|e| self.0.map.is_edge_assigned(e)),
+        }
+    }
+}
+
+impl<'a, Map, Cod> FpFunctor<'a, Map, Cod> {
+    /// Constructs a new functor out of an f.p. category.
+    pub fn new(map: &'a Map, cod: &'a Cod) -> Self {
+        Self { map, cod }
+    }
+}
+
+impl<'a, V, E, Ob, Mor, Map, Cod> FpFunctor<'a, Map, Cod>
+where
+    V: Eq + Clone + Hash,
+    E: Eq + Clone + Hash,
+    Ob: Eq + Clone,
+    Mor: Eq + Clone,
+    Map: GraphMapping<DomV = V, DomE = E, CodV = Ob, CodE = Mor>,
+    Cod: Category<Ob = Ob, Mor = Mor>,
+{
+    /// Validates that the functor is well-defined on the given f.p. category.
+    pub fn validate_on<S: BuildHasher>(
+        &self,
+        dom: &FpCategory<V, E, S>,
+    ) -> Result<(), NonEmpty<InvalidFpFunctor<V, E>>> {
+        crate::validate::wrap_errors(self.iter_invalid_on(dom))
+    }
+
+    /// Iterates over failures to be functorial on the given f.p. category.
+    pub fn iter_invalid_on<'b, S: BuildHasher>(
+        &'b self,
+        dom: &'b FpCategory<V, E, S>,
+    ) -> impl Iterator<Item = InvalidFpFunctor<V, E>> + 'b {
+        let generator_errors =
+            GraphMorphism(self.map, dom.generators(), UnderlyingGraph::ref_cast(self.cod))
+                .iter_invalid()
+                .map(|err| match err {
+                    InvalidGraphMorphism::Vertex(v) => InvalidFpFunctor::ObGen(v),
+                    InvalidGraphMorphism::Edge(e) => InvalidFpFunctor::MorGen(e),
+                    InvalidGraphMorphism::Src(e) => InvalidFpFunctor::Dom(e),
+                    InvalidGraphMorphism::Tgt(e) => InvalidFpFunctor::Cod(e),
+                });
+        let equation_errors = dom.equations().enumerate().filter_map(|(i, eq)| {
+            if let (Some(lhs), Some(rhs)) =
+                (self.apply_mor(eq.lhs.clone()), self.apply_mor(eq.rhs.clone()))
+                && !self.cod.morphisms_are_equal(lhs, rhs)
+            {
+                Some(InvalidFpFunctor::Eq(i))
+            } else {
+                None
+            }
+        });
+        generator_errors.chain(equation_errors)
+    }
+}
+
+/// A failure of a map out of an f.p. category to be functorial.
+#[derive(Debug, Error)]
+pub enum InvalidFpFunctor<V, E> {
+    /// A generating object not mapped to an object in the codomain category.
+    #[error("Object generator `{0}` is not mapped to an object in the codomain")]
+    ObGen(V),
+
+    /// A generating morphism not mapped to a morphism in the codomain category.
+    #[error("Morphism generator `{0}` is not mapped to a morphism in the codomain")]
+    MorGen(E),
+
+    /// A generating morphism whose domain is not preserved.
+    #[error("Domain of morphism generator `{0}` is not preserved")]
+    Dom(E),
+
+    /// A generating morphism whose codomain is not preserved.
+    #[error("Codomain of morphism generator `{0}` is not preserved")]
+    Cod(E),
+
+    /// A path equation in domain presentation that is not respected.
+    #[error("Path equation `{0}` is not respected")]
+    Eq(usize),
+}
