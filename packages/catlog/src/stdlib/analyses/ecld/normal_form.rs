@@ -2,9 +2,9 @@
 //  with n length-1 paths.
 
 use crate::dbl::model::DiscreteDblModel;
+use crate::dbl::model::UstrDiscreteDblModel;
 use crate::one::fp_category::UstrFpCategory;
 use std::rc::Rc;
-use crate::dbl::model::UstrDiscreteDblModel;
 
 /** Given an ECLD, return a new ECLD of its normal form
  */
