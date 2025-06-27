@@ -27,10 +27,11 @@ use crate::one::FgCategory;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
 use crate::zero::{alg::Polynomial, rig::Monomial};
 
-use crate::simulate::ode::{MonomialBehavior, StateBehavior, Transformer};
+use crate::simulate::ode::{MonomialBehavior, NStateBehavior, StateBehavior, Transformer};
 
 use diffsol::{
-    Bdf, DenseMatrix, NalgebraLU, NalgebraMat, OdeBuilder, OdeSolverMethod, OdeSolverState,
+    Bdf, DenseMatrix, NalgebraLU, NalgebraMat, NalgebraVec, OdeBuilder, OdeSolverMethod,
+    OdeSolverState,
 };
 use nalgebra::DMatrix;
 type M = NalgebraMat<f64>;
@@ -39,14 +40,14 @@ type LS = NalgebraLU<f64>;
 
 // here we implement the `Transformer` trait for MonomialBehaviors.
 impl<Id: Clone + Ord + Debug> Transformer<Id, f32> for MonomialBehavior<Id> {
-    fn to_closure(&self, indices: BTreeMap<Id, usize>) -> StateBehavior<f32> {
+    fn to_closure(&self, indices: BTreeMap<Id, usize>) -> NStateBehavior<f32> {
         match self {
             // assuming multiplicative identity
             MonomialBehavior::Identity => Box::new(|_| 1.0),
             MonomialBehavior::Heaviside(left, right) => {
                 let left = *indices.get(&left.clone()).expect("!");
                 let right = *indices.get(&right.clone()).expect("!");
-                Box::new(move |x: DVector<f32>| -> f32 {
+                Box::new(move |x: NalgebraVec<f64>| -> f32 {
                     let out = x[left] <= x[right];
                     out as u32 as f32
                 })

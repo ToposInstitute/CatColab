@@ -12,7 +12,7 @@ use num_traits::{One, Pow};
 // TODO delete
 use ustr::{IdentityHasher, Ustr, ustr};
 
-use super::StateBehavior;
+use super::NStateBehavior;
 
 use serde::{Deserialize, Serialize};
 
@@ -151,7 +151,7 @@ pub struct NumericalPolynomialSystem<Exp> {
     /// Components of the vector field.
     pub components: Vec<Polynomial<usize, f32, Exp>>,
     /// Closures
-    pub closures: HashMap<usize, StateBehavior<f32>>,
+    pub closures: HashMap<usize, NStateBehavior<f32>>,
 }
 
 // impl<Exp> NumericalPolynomialSystem<Exp>
@@ -175,7 +175,16 @@ where
 {
     fn alt_vector_field(&self, dx: &mut NalgebraVec<f64>, x: &NalgebraVec<f64>, _t: f64) {
         for (i, p) in self.components.iter().enumerate() {
-            dx[i] = p.eval(|var| x[*var] as f32) as f64;
+            // dx[i] = p.eval(|var| x[*var] as f32) as f64;
+            dx[i] = p.eval(|var| {
+                let modifier = if let Some(f) = self.closures.get(var) {
+                    f(x.clone())
+                } else {
+                    1.0
+                };
+                let value = x[*var];
+                (modifier * value) as f32
+            }) as f64;
         }
     }
 

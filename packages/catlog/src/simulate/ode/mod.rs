@@ -14,8 +14,10 @@ use textplots::{Chart, Plot, Shape};
 
 pub type StateBehavior<T> = Box<dyn Fn(DVector<f32>) -> T>;
 
+pub type NStateBehavior<T> = Box<dyn Fn(NalgebraVec<f64>) -> T>;
+
 pub trait Transformer<Var, T> {
-    fn to_closure(&self, indices: BTreeMap<Var, usize>) -> StateBehavior<T>;
+    fn to_closure(&self, indices: BTreeMap<Var, usize>) -> NStateBehavior<T>;
 }
 
 /** A system of ordinary differential equations (ODEs).
