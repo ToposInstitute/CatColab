@@ -144,7 +144,7 @@ impl ThSignedCategory {
                 .add_negative(ustr("Negative").into())
                 .create_system(model, data.0)
                 .solve_with_defaults()
-                .map_err(|err| format!("{:?}", err))
+                .map_err(|err| format!("{err:?}"))
                 .into(),
         ))
     }
