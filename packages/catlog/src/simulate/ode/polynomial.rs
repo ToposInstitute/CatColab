@@ -1,6 +1,7 @@
 //! Polynomial differential equations.
 
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::fmt::Display;
 use std::ops::Add;
 
@@ -8,13 +9,43 @@ use derivative::Derivative;
 use nalgebra::DVector;
 use num_traits::{One, Pow};
 
+// TODO delete
+use ustr::{ustr, IdentityHasher, Ustr};
+
+use super::NStateBehavior;
+
+use serde::{Deserialize, Serialize};
+
 #[cfg(test)]
 use super::ODEProblem;
 use super::ODESystem;
 use crate::zero::alg::Polynomial;
 
+use diffsol::{
+    Bdf, DenseMatrix, NalgebraLU, NalgebraMat, NalgebraVec, OdeBuilder, OdeSolverMethod,
+    OdeSolverState, Vector,
+};
+use nalgebra::DMatrix;
+type M = NalgebraMat<f64>;
+type LS = NalgebraLU<f64>;
+use web_sys::console;
+
+/// Functions that may be attached to a monomial
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum MonomialBehavior<Var> {
+    Identity,
+    Heaviside(Var, Var),
+}
+
+impl<Var> Default for MonomialBehavior<Var> {
+    fn default() -> Self {
+        MonomialBehavior::Identity
+    }
+}
+
 /// A system of polynomial differential equations.
-#[derive(Clone, Derivative)]
+#[derive(Clone, Debug, Derivative)]
 #[derivative(Default(bound = ""))]
 pub struct PolynomialSystem<Var, Coef, Exp> {
     /// Components of the vector field.
@@ -59,8 +90,8 @@ where
 
 impl<Var, Exp> PolynomialSystem<Var, f32, Exp>
 where
-    Var: Clone + Ord,
-    Exp: Clone + Ord + Add<Output = Exp>,
+    Var: Clone + Ord + std::fmt::Debug,
+    Exp: Clone + Ord + Add<Output = Exp> + std::fmt::Debug,
 {
     /** Converts the polynomial system to a numerical one.
 
@@ -75,7 +106,10 @@ where
             .values()
             .map(|poly| poly.map_variables(|var| *indices.get(var).unwrap()))
             .collect();
-        NumericalPolynomialSystem { components }
+        NumericalPolynomialSystem {
+            components,
+            closures: HashMap::new(),
+        }
     }
 }
 
@@ -117,16 +151,67 @@ floating point numbers and the variables are consecutive integer indices.
 pub struct NumericalPolynomialSystem<Exp> {
     /// Components of the vector field.
     pub components: Vec<Polynomial<usize, f32, Exp>>,
+    /// Closures
+    pub closures: HashMap<usize, NStateBehavior<f32>>,
 }
+
+// impl<Exp> NumericalPolynomialSystem<Exp>
+// where
+//     Exp: Clone + Ord + std::fmt::Debug,
+//     f64: Pow<Exp, Output = f64>,
+//     f32: Pow<Exp, Output = f32>,
+// {
+//     /** */
+//     pub fn alt_vector_field(&self, dx: &mut NalgebraVec<f64>, x: &NalgebraVec<f64>, _t: f64) {
+//         for (i, p) in self.components.iter().enumerate() {
+//             dx[i] = p.eval(|var| x[*var] as f32) as f64;
+//         }
+//     }
+// }
 
 impl<Exp> ODESystem for NumericalPolynomialSystem<Exp>
 where
-    Exp: Clone + Ord,
+    Exp: Clone + Ord + std::fmt::Debug,
     f32: Pow<Exp, Output = f32>,
 {
+    fn alt_vector_field(&self, dx: &mut NalgebraVec<f64>, x: &NalgebraVec<f64>, _t: f64) {
+        for (i, p) in self.components.iter().enumerate() {
+            // dx[i] = p.eval(|var| x[*var] as f32) as f64;
+            // 0. Container
+            // 1.
+            // 2.
+            // 3. Source
+            dx[i] = p.eval(|var| {
+                let modifier = if let Some(f) = self.closures.get(var) {
+                    f(x.clone())
+                } else {
+                    1.0
+                };
+                let value = x[*var] as f32;
+                modifier * value
+            }) as f64;
+        }
+    }
+
     fn vector_field(&self, dx: &mut DVector<f32>, x: &DVector<f32>, _t: f32) {
+        // 0: Container
+        // 1: Sediment (deposited)
+        // 2: Inflow (from huge reservoir)
+        // 3: Water
+        // where dW or dS = \pm [W-C],
         for i in 0..dx.len() {
-            dx[i] = self.components[i].eval(|var| x[*var])
+            dx[i] = self.components[i].eval(|var| {
+                // let modifier = if let Some(f) = self.closures.get(var) {
+                //     f(x.clone())
+                // } else {
+                //     1.0
+                // };
+                let modifier = 1.0;
+                // TODO sometimes this doesn't seem to take effect.
+                // dbg!(&x, &var);
+                let value = x[*var];
+                modifier * value
+            });
         }
     }
 }

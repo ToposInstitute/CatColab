@@ -102,7 +102,7 @@ elements of the set.
 Combinations have exactly the same underlying data structure as
 [monomials](Monomial), but are written additively rather than multiplicatively.
  */
-#[derive(Clone, PartialEq, Eq, Derivative)]
+#[derive(Clone, Debug, PartialEq, Eq, Derivative)]
 #[derivative(Default(bound = ""))]
 pub struct Combination<Var, Coef>(BTreeMap<Var, Coef>);
 
@@ -220,7 +220,9 @@ where
         let mut pairs = self.0.iter();
         let fmt_scalar_mul = |f: &mut std::fmt::Formatter<'_>, coef: &Coef, var: &Var| {
             if !coef.is_one() {
+                // println!("COEF: {}", coef.to_string());
                 let coef = coef.to_string();
+                // println!("COEF_STRING: {}", coef.clone());
                 if coef.chars().all(|c| c.is_alphabetic())
                     || coef.chars().all(|c| c.is_ascii_digit() || c == '.')
                 {
@@ -385,7 +387,7 @@ monomials themselves become ordered under the lexicographic order. This is a
 valid *monomial ordering* as used in Groebner bases
 ([*IVA*](crate::refs::IdealsVarietiesAlgorithms), Section 2.2).
  */
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Derivative)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Derivative)]
 #[derivative(Default(bound = ""))]
 pub struct Monomial<Var, Exp>(BTreeMap<Var, Exp>);
 
@@ -441,7 +443,7 @@ where
      */
     pub fn map_variables<NewVar, F>(&self, mut f: F) -> Monomial<NewVar, Exp>
     where
-        Exp: Clone + Add<Output = Exp>,
+        Exp: Clone + Add<Output = Exp> + std::fmt::Debug,
         NewVar: Ord,
         F: FnMut(&Var) -> NewVar,
     {

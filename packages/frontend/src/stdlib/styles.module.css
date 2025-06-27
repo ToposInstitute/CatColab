@@ -3,6 +3,11 @@
     padding: 2px;
 }
 
+.circle {
+    border: 1px solid black;
+	padding: 2px;
+}
+
 .cornerBox {
     border: 1px solid black;
     padding: 2px;

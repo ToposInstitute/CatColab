@@ -1,5 +1,6 @@
 export * from "./decapodes";
 export * from "./diagram_graph";
+export * from "./energese";
 export * from "./lotka_volterra";
 export * from "./mass_action";
 export * from "./model_graph";

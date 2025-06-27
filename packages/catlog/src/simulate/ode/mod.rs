@@ -1,13 +1,24 @@
 //! Simulation of dynamical systems defined by ODEs.
 
+use diffsol::NalgebraVec;
 use nalgebra::DVector;
 use ode_solvers::{
     self,
     dop_shared::{IntegrationError, SolverResult},
 };
 
+use std::collections::{BTreeMap, HashMap};
+
 #[cfg(test)]
 use textplots::{Chart, Plot, Shape};
+
+pub type StateBehavior<T> = Box<dyn Fn(DVector<f32>) -> T>;
+
+pub type NStateBehavior<T> = Box<dyn Fn(NalgebraVec<f64>) -> T>;
+
+pub trait Transformer<Var, T> {
+    fn to_closure(&self, indices: BTreeMap<Var, usize>) -> NStateBehavior<T>;
+}
 
 /** A system of ordinary differential equations (ODEs).
 
@@ -16,6 +27,9 @@ An ODE system is anything that can compute a vector field.
 pub trait ODESystem {
     /// Compute the vector field at the given time and state in place.
     fn vector_field(&self, dx: &mut DVector<f32>, x: &DVector<f32>, t: f32);
+
+    ///
+    fn alt_vector_field(&self, dx: &mut NalgebraVec<f64>, x: &NalgebraVec<f64>, _t: f64);
 
     /// Compute and return the vector field at the given time and state.
     fn eval_vector_field(&self, x: &DVector<f32>, t: f32) -> DVector<f32> {

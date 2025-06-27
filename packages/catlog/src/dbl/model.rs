@@ -96,11 +96,11 @@ pub trait DblModel: Category {
 
     /// The type of double theory that this is a model of.
     type Theory: DblTheory<
-            ObType = Self::ObType,
-            MorType = Self::MorType,
-            ObOp = Self::ObOp,
-            MorOp = Self::MorOp,
-        >;
+        ObType = Self::ObType,
+        MorType = Self::MorType,
+        ObOp = Self::ObOp,
+        MorOp = Self::MorOp,
+    >;
 
     /// The double theory that this model is a model of.
     fn theory(&self) -> &Self::Theory;
@@ -508,7 +508,7 @@ pub enum InvalidDblModel<Id> {
 }
 
 /// Object in a model of a discrete tabulator theory.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TabOb<V, E> {
     /// Basic or generating object.
     Basic(V),
@@ -555,7 +555,7 @@ impl<V, E> TabOb<V, E> {
 
 Morphisms of these two forms generate all the morphisms in the model.
  */
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TabEdge<V, E> {
     /// Basic morphism between any two objects.
     Basic(E),
@@ -591,7 +591,7 @@ impl<V, E> From<E> for TabMor<V, E> {
     }
 }
 
-#[derive(Clone, Derivative)]
+#[derive(Clone, Debug, Derivative)]
 #[derivative(Default(bound = ""))]
 #[derivative(PartialEq(bound = "V: Eq + Hash, E: Eq + Hash"))]
 #[derivative(Eq(bound = "V: Eq + Hash, E: Eq + Hash"))]
@@ -660,7 +660,7 @@ is a normal lax functor from the theory into the double category of profunctors
 that preserves tabulators. For the definition of "preserving tabulators," see
 the dev docs.
  */
-#[derive(Clone, Derivative)]
+#[derive(Clone, Debug, Derivative)]
 #[derivative(PartialEq(bound = "Id: Eq + Hash, ThId: Eq + Hash"))]
 #[derivative(Eq(bound = "Id: Eq + Hash, ThId: Eq + Hash"))]
 pub struct DiscreteTabModel<Id, ThId, S = RandomState> {

@@ -28,10 +28,12 @@ export function createModelODEPlot(
             const obIndex = liveModel().objectIndex();
             const content = {
                 time: solution.time,
-                states: Array.from(solution.states.entries()).map(([id, data]) => ({
-                    name: obIndex.map.get(id) ?? "",
-                    data,
-                })),
+                states: Array.from(solution.states.entries()).map(
+                    ([id, data]) => ({
+                        name: obIndex.map.get(id) ?? "",
+                        data,
+                    }),
+                ),
             };
             return { tag: "Ok", content };
         },

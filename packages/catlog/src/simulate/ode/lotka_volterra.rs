@@ -34,6 +34,14 @@ impl ODESystem for LotkaVolterraSystem {
         let b = &self.growth_rates;
         *dx = (A * x + b).component_mul(x);
     }
+
+    fn alt_vector_field(
+        &self,
+        dx: &mut diffsol::NalgebraVec<f64>,
+        x: &diffsol::NalgebraVec<f64>,
+        _t: f64,
+    ) {
+    }
 }
 
 #[cfg(test)]
