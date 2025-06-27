@@ -540,7 +540,7 @@ where
         self.make_mor_type(e)
     }
 
-    /// Adds a basic morphim type without initializing its source or target.
+    /// Adds a basic morphism type without initializing its source or target.
     pub fn make_mor_type(&mut self, e: E) -> bool {
         self.mor_types.insert(e)
     }

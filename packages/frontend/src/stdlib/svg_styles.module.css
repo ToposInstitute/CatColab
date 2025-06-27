@@ -2,3 +2,17 @@
     fill: white;
     stroke: black;
 }
+
+.circle circle {
+    fill: white;
+    stroke: black;
+}
+
+.point point {
+    fill: black;
+    stroke: black;
+}
+
+.link path {
+    stroke: blue;
+}

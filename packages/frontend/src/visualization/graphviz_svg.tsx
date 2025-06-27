@@ -35,5 +35,6 @@ function GraphvizOutputSVG(props: {
     graph?: GraphvizJSON.Graph;
     ref?: SVGRefProp;
 }) {
+    console.log(props.graph && parseGraphvizJSON(props.graph));
     return <GraphSVG graph={props.graph && parseGraphvizJSON(props.graph)} ref={props.ref} />;
 }
