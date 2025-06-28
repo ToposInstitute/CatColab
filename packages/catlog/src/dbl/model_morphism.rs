@@ -129,27 +129,23 @@ where
         Self(ColumnarGraphMapping::new(HashColumn::new(ob_map), HashColumn::new(mor_map)))
     }
 
-    /// Assigns the mapping at an object, returning the previous assignment.
+    /// Assigns an object generator, returning the previous assignment.
     pub fn assign_ob(&mut self, x: DomId, y: CodId) -> Option<CodId> {
         self.0.vertex_map_mut().set(x, y)
     }
 
-    /// Assigns the mapping at a basic morphism, returning the previous assignment.
-    pub fn assign_basic_mor(
-        &mut self,
-        e: DomId,
-        n: Path<CodId, CodId>,
-    ) -> Option<Path<CodId, CodId>> {
+    /// Assigns a morphism generator, returning the previous assignment.
+    pub fn assign_mor(&mut self, e: DomId, n: Path<CodId, CodId>) -> Option<Path<CodId, CodId>> {
         self.0.edge_map_mut().set(e, n)
     }
 
-    /// Unassigns the mapping at an object, returning the previous assignment.
+    /// Unassigns an object generator, returning the previous assignment.
     pub fn unassign_ob(&mut self, x: &DomId) -> Option<CodId> {
         self.0.vertex_map_mut().unset(x)
     }
 
-    /// Unassigns the mapping a basic morphism, returning the previous assignment.
-    pub fn unassign_basic_mor(&mut self, e: &DomId) -> Option<Path<CodId, CodId>> {
+    /// Unassigns a morphism generator, returning the previous assignment.
+    pub fn unassign_mor(&mut self, e: &DomId) -> Option<Path<CodId, CodId>> {
         self.0.edge_map_mut().unset(e)
     }
 
@@ -536,7 +532,7 @@ where
             GraphElem::Edge(m) => {
                 if self.mor_init.is_set(&m) {
                     let path = self.mor_init.get(&m).cloned().unwrap();
-                    self.map.assign_basic_mor(m, path);
+                    self.map.assign_mor(m, path);
                     self.search(depth + 1);
                 } else {
                     let mor_type = self.dom.mor_generator_type(&m);
@@ -555,7 +551,7 @@ where
                         if th_cat.morphisms_are_equal(self.cod.mor_type(&path), mor_type.clone())
                             && !(self.faithful && path.is_empty())
                         {
-                            self.map.assign_basic_mor(m.clone(), path);
+                            self.map.assign_mor(m.clone(), path);
                             self.search(depth + 1);
                         }
                     }
@@ -601,8 +597,8 @@ mod tests {
         f.assign_ob('b', 'y');
         assert!(f.is_ob_assigned(&'a'));
         assert_eq!(f.apply_ob('b'), Some('y'));
-        f.assign_basic_mor('f', Path::pair('p', 'q'));
-        f.assign_basic_mor('g', Path::pair('r', 's'));
+        f.assign_mor('f', Path::pair('p', 'q'));
+        f.assign_mor('g', Path::pair('r', 's'));
         assert!(f.is_mor_assigned(&Path::single('f')));
         assert_eq!(f.apply_mor(Path::pair('f', 'g')), Path::from_vec(vec!['p', 'q', 'r', 's']));
     }

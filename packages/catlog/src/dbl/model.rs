@@ -152,29 +152,29 @@ pub trait FgDblModel: DblModel + FgCategory {
 
 /// A mutable, finitely generated model of a double theory.
 pub trait MutDblModel: FgDblModel {
-    /// Adds a basic object to the model.
+    /// Adds an object generator to the model.
     fn add_ob(&mut self, x: Self::ObGen, ob_type: Self::ObType);
 
-    /// Adds a basic morphism to the model.
+    /// Adds a morphism generator to the model.
     fn add_mor(&mut self, f: Self::MorGen, dom: Self::Ob, cod: Self::Ob, mor_type: Self::MorType) {
         self.make_mor(f.clone(), mor_type);
         self.set_dom(f.clone(), dom);
         self.set_cod(f, cod);
     }
 
-    /// Adds a basic morphism to the model without setting its (co)domain.
+    /// Adds a morphism generator to the model without setting its (co)domain.
     fn make_mor(&mut self, f: Self::MorGen, mor_type: Self::MorType);
 
-    /// Gets the domain of a basic morphism, if it is set.
+    /// Gets the domain of a morphism generator, if it is set.
     fn get_dom(&self, f: &Self::MorGen) -> Option<&Self::Ob>;
 
-    /// Gets the codomain of a basic morphism, if it is set.
+    /// Gets the codomain of a morphism generator, if it is set.
     fn get_cod(&self, f: &Self::MorGen) -> Option<&Self::Ob>;
 
-    /// Sets the domain of a basic morphism.
+    /// Sets the domain of a morphism generator.
     fn set_dom(&mut self, f: Self::MorGen, x: Self::Ob);
 
-    /// Sets the codomain of a basic morphism.
+    /// Sets the codomain of a morphism generator.
     fn set_cod(&mut self, f: Self::MorGen, x: Self::Ob);
 }
 
@@ -473,22 +473,22 @@ types on left and right hand sides.
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
 pub enum InvalidDblModel<Id> {
-    /// Domain of basic morphism is undefined or invalid.
+    /// Domain of morphism generator is undefined or invalid.
     Dom(Id),
 
-    /// Codomain of basic morphism is missing or invalid.
+    /// Codomain of morphism generator is missing or invalid.
     Cod(Id),
 
-    /// Basic object has invalid object type.
+    /// Object generator has invalid object type.
     ObType(Id),
 
-    /// Basic morphism has invalid morphism type.
+    /// Morphism generator has invalid morphism type.
     MorType(Id),
 
-    /// Domain of basic morphism has type incompatible with morphism type.
+    /// Domain of morphism generator has type incompatible with morphism type.
     DomType(Id),
 
-    /// Codomain of basic morphism has type incompatible with morphism type.
+    /// Codomain of morphism generator has type incompatible with morphism type.
     CodType(Id),
 
     /// Equation has left hand side that is not a well defined path.
