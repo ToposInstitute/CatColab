@@ -92,19 +92,30 @@ impl<Id, Sys> ODEAnalysis<Id, Sys> {
             )
             .build()
             .unwrap();
-
         let mut s = problem.tsit45().unwrap();
-        let (_y_out, _t_out) = s.solve(duration.clone().into()).unwrap();
+        let (y, t) = s.solve(duration.clone().into()).unwrap();
+
+        // EXPERIMENTAL
+        // save initial state
+        let mut states: HashMap<usize, Vec<_>> = self
+            .variable_index
+            .values()
+            .map(|&k| (k, vec![self.problem.initial_values[k]]))
+            .collect();
+        let mut time: Vec<f64> = Vec::new();
+        // solve until the final time is reached
+        s.set_stop_time(10.0).unwrap();
+
         // dbg!(&_y_out, &_t_out);
 
         Ok(ODESolution {
-            time: _t_out.clone().iter().map(|&t| t as f32).collect::<Vec<f32>>(),
+            time: t.clone().iter().map(|&t| t as f32).collect::<Vec<f32>>(),
             states: self
                 .variable_index
                 .into_iter()
                 .map(|(ob, i)| {
                     // dbg!(&ob, &i);
-                    (ob, (0.._t_out.len()).map(|c| _y_out[(i, c)] as f32).collect::<Vec<f32>>())
+                    (ob, (0..t.len()).map(|c| y[(i, c)] as f32).collect::<Vec<f32>>())
                 })
                 .collect(),
         })

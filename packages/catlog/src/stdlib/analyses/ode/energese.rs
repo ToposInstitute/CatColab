@@ -18,6 +18,9 @@ use tsify::Tsify;
 
 use std::fmt::Debug;
 
+use plotly::{common::Mode, layout::Axis, layout::Layout, Plot, Scatter};
+use std::fs;
+
 use super::ODEAnalysis;
 use crate::dbl::{
     model::{DiscreteTabModel, FgDblModel, TabEdge},
@@ -27,17 +30,18 @@ use crate::one::FgCategory;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
 use crate::zero::{alg::Polynomial, rig::Monomial};
 
-use crate::simulate::ode::{MonomialBehavior, NStateBehavior, StateBehavior, Transformer};
+use crate::simulate::ode::{
+    MonomialBehavior, NStateBehavior, ODESystem, StateBehavior, Transformer,
+};
 
 use web_sys::console;
 
+// DIFFSOL TESTING
 use diffsol::{
     Bdf, DenseMatrix, NalgebraLU, NalgebraMat, NalgebraVec, OdeBuilder, OdeSolverMethod,
-    OdeSolverState,
+    OdeSolverState, OdeSolverStopReason, Vector,
 };
-use nalgebra::DMatrix;
 type M = NalgebraMat<f64>;
-// type M = DMatrix<f64>;
 type LS = NalgebraLU<f64>;
 
 // here we implement the `Transformer` trait for MonomialBehaviors.
@@ -319,6 +323,104 @@ mod tests {
         //     dWater = ((-1) deposits spillover) Water
         // "#]);
         // expected.assert_eq(&sys.to_string());
+    }
+
+    #[test]
+    fn water_volume_diffsol() {
+        let th = Rc::new(th_category_energese());
+        let model = water_volume(th);
+        let analysis: EnergeseMassActionAnalysis = Default::default();
+        let mut data: EnergeseMassActionProblemData<Ustr> = Default::default();
+
+        data.duration = 10.0;
+        data.rates.insert(ustr("inflow"), 2.0);
+        data.rates.insert(ustr("deposits"), 0.5);
+        data.initial_values.insert(ustr("Source"), 4.0);
+        data.initial_values.insert(ustr("Water"), 4.0);
+        data.initial_values.insert(ustr("Container"), 5.0);
+        data.dynamibles.insert(ustr("SpilloverChecker"), String::from("Heaviside"));
+
+        // sometimes Sediment increases when Water < Container.
+        const LENGTH: usize = 13;
+        let result = analysis.create_numerical_system(&model, data.clone());
+
+        // dbg!(&result.variable_index);
+        let problem = OdeBuilder::<M>::new()
+            .rtol(1e-3)
+            .rhs(|x, _, t, dx| result.problem.system.alt_vector_field(dx, x, t))
+            .init(
+                |_, _, y| {
+                    for i in result.variable_index.values().into_iter() {
+                        y[*i] = result.problem.initial_values[*i] as f64
+                    }
+                },
+                result.variable_index.values().len(),
+            )
+            .root(|x, _, _, y| y[0] = x[3] - x[0], 1)
+            .build()
+            .unwrap();
+        let mut solver = problem.tsit45().unwrap();
+
+        let mut container = Vec::new();
+        let mut water = Vec::new();
+        let mut sediment = Vec::new();
+        let mut time: Vec<f64> = Vec::new();
+
+        container.push(solver.state().y[0]);
+        water.push(solver.state().y[3]);
+        sediment.push(solver.state().y[1]);
+        time.push(0.0);
+        // let mut states: HashMap<usize, Vec<_>> = self
+        //     .variable_index
+        //     .values()
+        //     .map(|&k| (k, vec![self.problem.initial_values[k]]))
+        //     .collect();
+        // solve until the final time is reached
+        solver.set_stop_time(10.0).unwrap();
+        loop {
+            match solver.step() {
+                Ok(OdeSolverStopReason::InternalTimestep) => (),
+                Ok(OdeSolverStopReason::RootFound(t)) => {
+                    dbg!("ROOT: {}", t);
+                    // get the state when the event occurred
+                    let mut y = solver.interpolate(t).unwrap();
+
+                    // update the velocity of the ball
+                    y[1] *= 1.0;
+
+                    // make sure the ball is above the ground
+                    y[0] = y[0].max(f64::EPSILON);
+
+                    // set the state to the updated state
+                    solver.state_mut().y.copy_from(&y);
+                    solver.state_mut().dy[0] = y[1];
+                    *solver.state_mut().t = t;
+                }
+                Ok(OdeSolverStopReason::TstopReached) => break,
+                Err(_) => panic!("unexpected solver error"),
+            }
+            container.push(solver.state().y[0]);
+            water.push(solver.state().y[3]);
+            sediment.push(solver.state().y[1]);
+            time.push(solver.state().t);
+        }
+
+        let mut plot = Plot::new();
+        let x = Scatter::new(time.clone(), water).mode(Mode::Lines).name("Water");
+        let v = Scatter::new(time.clone(), sediment).mode(Mode::Lines).name("Sediment");
+        let c = Scatter::new(time, container).mode(Mode::Lines).name("Container");
+        plot.add_trace(x);
+        plot.add_trace(v);
+        plot.add_trace(c);
+
+        let layout = Layout::new().x_axis(Axis::new().title("t")).y_axis(Axis::new());
+        plot.set_layout(layout);
+        // plot.show_image();
+        plot.show();
+        // let plot_html = plot.to_html(Some("bouncing-ball"));
+        // fs::write("bouncing-ball.html", plot_html).expect("Unable to write file");
+
+        assert!(true);
     }
 
     #[test]

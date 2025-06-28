@@ -182,11 +182,12 @@ where
             // 2.
             // 3. Source
             dx[i] = p.eval(|var| {
-                let modifier = if let Some(f) = self.closures.get(var) {
-                    f(x.clone())
-                } else {
-                    1.0
-                };
+                // let modifier = if let Some(f) = self.closures.get(var) {
+                //     f(x.clone())
+                // } else {
+                //     1.0
+                // };
+                let modifier = 1.0;
                 let value = x[*var] as f32;
                 modifier * value
             }) as f64;

@@ -22,6 +22,7 @@ nalgebra = { version = "0.33", optional = true }
 nonempty = "0.10"
 num-traits = "0.2"
 ode_solvers = { version = "0.5.0", optional = true }
+plotly = "0.12.1"
 plotters = "0.3.7"
 ref-cast = "1"
 serde = { version = "1", features = ["derive"], optional = true }
