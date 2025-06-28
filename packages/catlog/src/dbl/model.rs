@@ -342,15 +342,12 @@ where
     fn ob_generators(&self) -> impl Iterator<Item = Self::ObGen> {
         self.category.ob_generators()
     }
-
     fn mor_generators(&self) -> impl Iterator<Item = Self::MorGen> {
         self.category.mor_generators()
     }
-
     fn mor_generator_dom(&self, f: &Self::MorGen) -> Self::Ob {
         self.category.mor_generator_dom(f)
     }
-
     fn mor_generator_cod(&self, f: &Self::MorGen) -> Self::Ob {
         self.category.mor_generator_cod(f)
     }

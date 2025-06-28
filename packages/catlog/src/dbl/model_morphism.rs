@@ -18,12 +18,13 @@ oplax.
   Section 7: Lax transformations
  */
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 use std::rc::Rc;
 
 use derivative::Derivative;
 use nonempty::NonEmpty;
+use ref_cast::RefCast;
 use thiserror::Error;
 
 #[cfg(feature = "serde")]
@@ -38,53 +39,82 @@ use crate::zero::{Column, HashColumn, Mapping, MutMapping};
 
 use super::model::*;
 
-/** A mapping between models of a double theory.
-
-Analogous to a mapping between [sets](crate::zero::Mapping) or
-[graphs](crate::one::GraphMapping), a model mapping is a morphism between models
-of a double theory without specified domain or codomain models.
- */
-pub trait DblModelMapping {
-    /// Type of objects in the domain model.
-    type DomOb: Eq + Clone;
-
-    /// Type of morphisms in the domain model.
-    type DomMor: Eq + Clone;
-
-    /// Type of objects in the codomain model.
-    type CodOb: Eq + Clone;
-
-    /// Type of morphisms in the codomain model.
-    type CodMor: Eq + Clone;
-
-    /// Applies the mapping to an object in the domain model.
-    fn apply_ob(&self, x: &Self::DomOb) -> Option<Self::CodOb>;
-
-    /// Applies the mapping to a morphism in the domain model.
-    fn apply_mor(&self, m: &Self::DomMor) -> Option<Self::CodMor>;
-
-    /// Is the mapping defined at an object?
-    fn is_ob_assigned(&self, x: &Self::DomOb) -> bool {
-        self.apply_ob(x).is_some()
-    }
-
-    /// Is the mapping defined at a morphism?
-    fn is_mor_assigned(&self, m: &Self::DomMor) -> bool {
-        self.apply_mor(m).is_some()
-    }
-}
-
 /** A mapping between models of a discrete double theory.
 
 Because a discrete double theory has only trivial operations, the naturality
-axioms for a model morphism also become trivial.
+axioms for a model morphism are also trivial.
  */
 #[derive(Clone, Debug, Derivative)]
 #[derivative(Default(bound = ""))]
 #[derivative(PartialEq(bound = "DomId: Eq + Hash, CodId: PartialEq"))]
-pub struct DiscreteDblModelMapping<DomId, CodId> {
-    ob_map: HashColumn<DomId, CodId>,
-    mor_map: HashColumn<DomId, Path<CodId, CodId>>,
+pub struct DiscreteDblModelMapping<DomId, CodId>(
+    ColumnarGraphMapping<HashColumn<DomId, CodId>, HashColumn<DomId, Path<CodId, CodId>>>,
+);
+
+/// Auxiliary struct for morphism map of [`DiscreteDblModelMapping`].
+#[derive(RefCast)]
+#[repr(transparent)]
+pub struct DiscreteDblModelMorMap<DomId, CodId>(DiscreteDblModelMapping<DomId, CodId>);
+
+impl<DomId, CodId> Mapping for DiscreteDblModelMorMap<DomId, CodId>
+where
+    DomId: Clone + Eq + Hash,
+    CodId: Clone + Eq + Hash,
+{
+    type Dom = Path<DomId, DomId>;
+    type Cod = Path<CodId, CodId>;
+
+    fn apply(&self, mor: Self::Dom) -> Option<Self::Cod> {
+        let graph_map = &self.0.0;
+        mor.partial_map(|v| graph_map.apply_vertex(v), |e| graph_map.apply_edge(e))
+            .map(|path| path.flatten())
+    }
+
+    fn is_set(&self, mor: &Self::Dom) -> bool {
+        let graph_map = &self.0.0;
+        match mor {
+            Path::Id(v) => graph_map.is_vertex_assigned(v),
+            Path::Seq(edges) => edges.iter().all(|e| graph_map.is_edge_assigned(e)),
+        }
+    }
+}
+
+impl<DomId, CodId> CategoryMap for DiscreteDblModelMapping<DomId, CodId>
+where
+    DomId: Clone + Eq + Hash,
+    CodId: Clone + Eq + Hash,
+{
+    type DomOb = DomId;
+    type DomMor = Path<DomId, DomId>;
+    type CodOb = CodId;
+    type CodMor = Path<CodId, CodId>;
+    type ObMap = HashColumn<DomId, CodId>;
+    type MorMap = DiscreteDblModelMorMap<DomId, CodId>;
+
+    fn ob_map(&self) -> &Self::ObMap {
+        self.0.vertex_map()
+    }
+    fn mor_map(&self) -> &Self::MorMap {
+        RefCast::ref_cast(self)
+    }
+}
+
+impl<DomId, CodId> FgCategoryMap for DiscreteDblModelMapping<DomId, CodId>
+where
+    DomId: Clone + Eq + Hash,
+    CodId: Clone + Eq + Hash,
+{
+    type ObGen = DomId;
+    type MorGen = DomId;
+    type ObGenMap = HashColumn<DomId, CodId>;
+    type MorGenMap = HashColumn<DomId, Path<CodId, CodId>>;
+
+    fn ob_generator_map(&self) -> &Self::ObGenMap {
+        self.0.vertex_map()
+    }
+    fn mor_generator_map(&self) -> &Self::MorGenMap {
+        self.0.edge_map()
+    }
 }
 
 impl<DomId, CodId> DiscreteDblModelMapping<DomId, CodId>
@@ -92,19 +122,14 @@ where
     DomId: Clone + Eq + Hash,
     CodId: Clone + Eq + Hash,
 {
-    /// Applies the mapping at a basic morphism in the domain model.
-    pub fn apply_basic_mor(&self, e: &DomId) -> Option<Path<CodId, CodId>> {
-        self.mor_map.get(e).cloned()
-    }
-
-    /// Is the mapping defined at a basic morphism?
-    pub fn is_basic_mor_assigned(&self, e: &DomId) -> bool {
-        self.mor_map.is_set(e)
+    /// Constructs a model mapping from a pair of hash maps.
+    pub fn new(ob_map: HashMap<DomId, CodId>, mor_map: HashMap<DomId, Path<CodId, CodId>>) -> Self {
+        Self(ColumnarGraphMapping::new(HashColumn::new(ob_map), HashColumn::new(mor_map)))
     }
 
     /// Assigns the mapping at an object, returning the previous assignment.
     pub fn assign_ob(&mut self, x: DomId, y: CodId) -> Option<CodId> {
-        self.ob_map.set(x, y)
+        self.0.vertex_map_mut().set(x, y)
     }
 
     /// Assigns the mapping at a basic morphism, returning the previous assignment.
@@ -113,17 +138,17 @@ where
         e: DomId,
         n: Path<CodId, CodId>,
     ) -> Option<Path<CodId, CodId>> {
-        self.mor_map.set(e, n)
+        self.0.edge_map_mut().set(e, n)
     }
 
     /// Unassigns the mapping at an object, returning the previous assignment.
     pub fn unassign_ob(&mut self, x: &DomId) -> Option<CodId> {
-        self.ob_map.unset(x)
+        self.0.vertex_map_mut().unset(x)
     }
 
     /// Unassigns the mapping a basic morphism, returning the previous assignment.
     pub fn unassign_basic_mor(&mut self, e: &DomId) -> Option<Path<CodId, CodId>> {
-        self.mor_map.unset(e)
+        self.0.edge_map_mut().unset(e)
     }
 
     /** Basic objects and morphisms in the image of the model morphism.
@@ -150,10 +175,10 @@ where
         assert!(cod.is_free(), "Codomain model should be free");
 
         let mut im = DiscreteDblModel::new(cod.theory_rc());
-        for x in self.ob_map.values() {
+        for x in self.ob_generator_map().values() {
             im.add_ob(x.clone(), cod.ob_type(x));
         }
-        for path in self.mor_map.values() {
+        for path in self.mor_generator_map().values() {
             for e in path.iter() {
                 let (x, y) = (cod.mor_generator_dom(e), cod.mor_generator_cod(e));
                 if !im.has_ob(&x) {
@@ -182,39 +207,7 @@ where
     }
 }
 
-impl<DomId, CodId> DblModelMapping for DiscreteDblModelMapping<DomId, CodId>
-where
-    DomId: Clone + Eq + Hash,
-    CodId: Clone + Eq + Hash,
-{
-    type DomOb = DomId;
-    type DomMor = Path<DomId, DomId>;
-    type CodOb = CodId;
-    type CodMor = Path<CodId, CodId>;
-
-    fn apply_ob(&self, x: &Self::DomOb) -> Option<Self::CodOb> {
-        self.ob_map.get(x).cloned()
-    }
-
-    fn apply_mor(&self, m: &Self::DomMor) -> Option<Self::CodMor> {
-        m.clone()
-            .partial_map(|x| self.apply_ob(&x), |e| self.apply_basic_mor(&e))
-            .map(|path| path.flatten())
-    }
-
-    fn is_ob_assigned(&self, x: &Self::DomOb) -> bool {
-        self.ob_map.is_set(x)
-    }
-
-    fn is_mor_assigned(&self, m: &Self::DomMor) -> bool {
-        match m {
-            Path::Id(x) => self.is_ob_assigned(x),
-            Path::Seq(edges) => edges.iter().all(|e| self.is_basic_mor_assigned(e)),
-        }
-    }
-}
-
-/** A functor between models of a double theory defined by a [mapping](DblModelMapping).
+/** A functor between models of a double theory.
 
 This struct borrows its data to perform validation. The domain and codomain are
 assumed to be valid models of double theories. If that is in question, the
@@ -249,10 +242,10 @@ where
         assert!(dom.is_free(), "Domain model should be free");
 
         let ob_errors = dom.ob_generators().filter_map(|v| {
-            if let Some(f_v) = mapping.apply_ob(&v) {
-                if !cod.has_ob(&f_v) {
+            if let Some(f_v) = mapping.ob_generator_map().get(&v) {
+                if !cod.has_ob(f_v) {
                     Some(InvalidDblModelMorphism::Ob(v))
-                } else if dom.ob_type(&v) != cod.ob_type(&f_v) {
+                } else if dom.ob_type(&v) != cod.ob_type(f_v) {
                     Some(InvalidDblModelMorphism::ObType(v))
                 } else {
                     None
@@ -264,21 +257,21 @@ where
 
         let th_cat = cod.theory().category();
         let mor_errors = dom.mor_generators().flat_map(move |f| {
-            if let Some(f_f) = mapping.apply_basic_mor(&f) {
-                if !cod.has_mor(&f_f) {
+            if let Some(f_f) = mapping.mor_generator_map().get(&f) {
+                if !cod.has_mor(f_f) {
                     vec![InvalidDblModelMorphism::Mor(f)]
                 } else {
-                    let dom_f = mapping.apply_ob(&dom.mor_generator_dom(&f));
-                    let cod_f = mapping.apply_ob(&dom.mor_generator_cod(&f));
+                    let dom_f = mapping.apply_ob(dom.mor_generator_dom(&f));
+                    let cod_f = mapping.apply_ob(dom.mor_generator_cod(&f));
 
                     let mut errs = Vec::new();
-                    if Some(cod.dom(&f_f)) != dom_f {
+                    if Some(cod.dom(f_f)) != dom_f {
                         errs.push(InvalidDblModelMorphism::Dom(f.clone()));
                     }
-                    if Some(cod.cod(&f_f)) != cod_f {
+                    if Some(cod.cod(f_f)) != cod_f {
                         errs.push(InvalidDblModelMorphism::Cod(f.clone()));
                     }
-                    if !th_cat.morphisms_are_equal(dom.mor_generator_type(&f), cod.mor_type(&f_f)) {
+                    if !th_cat.morphisms_are_equal(dom.mor_generator_type(&f), cod.mor_type(f_f)) {
                         errs.push(InvalidDblModelMorphism::MorType(f));
                     }
                     errs
@@ -295,7 +288,7 @@ where
     fn is_simple(&self) -> bool {
         let DblModelMorphism(mapping, dom, _) = *self;
         dom.mor_generators()
-            .all(|e| mapping.apply_basic_mor(&e).map(|p| p.is_simple()).unwrap_or(true))
+            .all(|e| mapping.apply_mor_generator(e).map(|p| p.is_simple()).unwrap_or(true))
     }
 
     /// Is the model morphism injective on objects?
@@ -303,7 +296,7 @@ where
         let DblModelMorphism(mapping, dom, _) = *self;
         let mut seen_obs: HashSet<_> = HashSet::new();
         for x in dom.ob_generators() {
-            if let Some(f_x) = mapping.apply_ob(&x) {
+            if let Some(f_x) = mapping.apply_ob_generator(x) {
                 if seen_obs.contains(&f_x) {
                     return false; // not monic
                 } else {
@@ -333,7 +326,7 @@ where
             for y in dom.ob_generators() {
                 let mut seen: HashSet<_> = HashSet::new();
                 for path in simple_paths(dom.generating_graph(), &x, &y) {
-                    if let Some(f_path) = mapping.apply_mor(&path) {
+                    if let Some(f_path) = mapping.apply_mor(path) {
                         if seen.contains(&f_path) {
                             return false; // not faithful
                         } else {
@@ -568,11 +561,11 @@ where
                     let mor_type = self.dom.mor_generator_type(&m);
                     let w = self
                         .map
-                        .apply_ob(&self.dom.mor_generator_dom(&m))
+                        .apply_ob(self.dom.mor_generator_dom(&m))
                         .expect("Domain should already be assigned");
                     let z = self
                         .map
-                        .apply_ob(&self.dom.mor_generator_cod(&m))
+                        .apply_ob(self.dom.mor_generator_cod(&m))
                         .expect("Codomain should already be assigned");
 
                     let cod_graph = self.cod.generating_graph();
@@ -612,7 +605,6 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
     use ustr::ustr;
 
     use super::*;
@@ -627,22 +619,22 @@ mod tests {
         f.assign_ob('a', 'x');
         f.assign_ob('b', 'y');
         assert!(f.is_ob_assigned(&'a'));
-        assert_eq!(f.apply_ob(&'b'), Some('y'));
+        assert_eq!(f.apply_ob('b'), Some('y'));
         f.assign_basic_mor('f', Path::pair('p', 'q'));
         f.assign_basic_mor('g', Path::pair('r', 's'));
         assert!(f.is_mor_assigned(&Path::single('f')));
-        assert_eq!(f.apply_mor(&Path::pair('f', 'g')), Path::from_vec(vec!['p', 'q', 'r', 's']));
+        assert_eq!(f.apply_mor(Path::pair('f', 'g')), Path::from_vec(vec!['p', 'q', 'r', 's']));
     }
 
     #[test]
     fn find_positive_loops() {
         let th = Rc::new(th_signed_category());
         let positive_loop = positive_loop(th.clone());
-        let pos = positive_loop.mor_generators().next().unwrap().into();
+        let pos: Path<_, _> = positive_loop.mor_generators().next().unwrap().into();
 
         let maps = DiscreteDblModelMapping::morphisms(&positive_loop, &positive_loop).find_all();
         assert_eq!(maps.len(), 2);
-        let mors: Vec<_> = maps.into_iter().map(|mor| mor.apply_mor(&pos)).collect();
+        let mors: Vec<_> = maps.into_iter().map(|mor| mor.apply_mor(pos.clone())).collect();
         assert!(mors.iter().any(|mor| matches!(mor, Some(Path::Id(_)))));
         assert!(mors.iter().any(|mor| matches!(mor, Some(Path::Seq(_)))));
 
@@ -650,7 +642,7 @@ mod tests {
             .monic()
             .find_all();
         assert_eq!(maps.len(), 1);
-        assert!(matches!(maps[0].apply_mor(&pos), Some(Path::Seq(_))));
+        assert!(matches!(maps[0].apply_mor(pos), Some(Path::Seq(_))));
     }
 
     /// The [simple path](crate::one::graph_algorithms::simple_paths) should
@@ -665,7 +657,6 @@ mod tests {
         walking.add_ob(a, ustr("Object"));
         walking.add_ob(b, ustr("Object"));
         walking.add_mor(ustr("f"), a, b, Path::Id(ustr("Object")));
-        let w = Path::single(ustr("f"));
 
         //     y         Graph with lots of cyclic paths.
         //   ↗  ↘
@@ -688,7 +679,7 @@ mod tests {
                     .initialize_ob(ustr("B"), j)
                     .find_all()
                     .into_iter()
-                    .map(|f| f.apply_mor(&w).unwrap())
+                    .map(|f| f.apply_mor_generator(ustr("f")).unwrap())
                     .collect();
                 let spaths: HashSet<_> = simple_paths(model.generating_graph(), &i, &j).collect();
                 assert_eq!(maps, spaths);
@@ -707,7 +698,7 @@ mod tests {
             .max_path_len(2)
             .find_all();
         assert_eq!(maps.len(), 2);
-        let obs: Vec<_> = maps.iter().map(|mor| mor.apply_ob(&base_pt)).collect();
+        let obs: Vec<_> = maps.iter().map(|mor| mor.apply_ob(base_pt)).collect();
         assert!(obs.contains(&Some(ustr("x"))));
         assert!(obs.contains(&Some(ustr("y"))));
 
@@ -728,20 +719,20 @@ mod tests {
         let negloop = negative_loop(theory.clone());
         let posfeed = positive_feedback(theory.clone());
 
-        let f = DiscreteDblModelMapping {
-            ob_map: HashMap::from([(ustr("x"), ustr("x"))]).into(),
-            mor_map: HashMap::from([(ustr(""), Path::Id(ustr("negative")))]).into(),
-        };
+        let f = DiscreteDblModelMapping::new(
+            [(ustr("x"), ustr("x"))].into(),
+            [(ustr(""), Path::Id(ustr("negative")))].into(),
+        );
         let dmm = DblModelMorphism(&f, &negloop, &negloop);
         assert!(dmm.validate().is_err());
 
         // A bad map from h to itself that is wrong for the ob (it is in the map
         // but sent to something that doesn't exist) and for the hom generator
         // (not in the map)
-        let f = DiscreteDblModelMapping {
-            ob_map: HashMap::from([(ustr("x"), ustr("y"))]).into(),
-            mor_map: HashMap::from([(ustr("y"), Path::Id(ustr("y")))]).into(),
-        };
+        let f = DiscreteDblModelMapping::new(
+            [(ustr("x"), ustr("y"))].into(),
+            [(ustr("y"), Path::Id(ustr("y")))].into(),
+        );
         let dmm = DblModelMorphism(&f, &negloop, &negloop);
         let errs: Vec<_> = dmm.validate().unwrap_err().into();
         assert!(
@@ -752,10 +743,10 @@ mod tests {
         );
 
         // A bad map that doesn't preserve dom
-        let f = DiscreteDblModelMapping {
-            ob_map: HashMap::from([(ustr("x"), ustr("x"))]).into(),
-            mor_map: HashMap::from([(ustr("loop"), Path::single(ustr("positive1")))]).into(),
-        };
+        let f = DiscreteDblModelMapping::new(
+            [(ustr("x"), ustr("x"))].into(),
+            [(ustr("loop"), Path::single(ustr("positive1")))].into(),
+        );
         let dmm = DblModelMorphism(&f, &negloop, &posfeed);
         let errs: Vec<_> = dmm.validate().unwrap_err().into();
         assert!(
@@ -766,10 +757,10 @@ mod tests {
         );
 
         // A bad map that doesn't preserve codom
-        let f = DiscreteDblModelMapping {
-            ob_map: HashMap::from([(ustr("x"), ustr("x"))]).into(),
-            mor_map: HashMap::from([(ustr("loop"), Path::single(ustr("positive2")))]).into(),
-        };
+        let f = DiscreteDblModelMapping::new(
+            [(ustr("x"), ustr("x"))].into(),
+            [(ustr("loop"), Path::single(ustr("positive2")))].into(),
+        );
         let dmm = DblModelMorphism(&f, &negloop, &posfeed);
         let errs: Vec<_> = dmm.validate().unwrap_err().into();
         assert!(
@@ -786,19 +777,19 @@ mod tests {
         let negloop = positive_loop(theory.clone());
 
         // Identity map
-        let f = DiscreteDblModelMapping {
-            ob_map: HashMap::from([(ustr("x"), ustr("x"))]).into(),
-            mor_map: HashMap::from([(ustr("loop"), Path::single(ustr("loop")))]).into(),
-        };
+        let f = DiscreteDblModelMapping::new(
+            [(ustr("x"), ustr("x"))].into(),
+            [(ustr("loop"), Path::single(ustr("loop")))].into(),
+        );
         let dmm = DblModelMorphism(&f, &negloop, &negloop);
         assert!(dmm.validate().is_ok());
         assert!(dmm.is_free_simple_monic());
 
         // Send generator to identity
-        let f = DiscreteDblModelMapping {
-            ob_map: HashMap::from([(ustr("x"), ustr("x"))]).into(),
-            mor_map: HashMap::from([(ustr("loop"), Path::Id(ustr("x")))]).into(),
-        };
+        let f = DiscreteDblModelMapping::new(
+            [(ustr("x"), ustr("x"))].into(),
+            [(ustr("loop"), Path::Id(ustr("x")))].into(),
+        );
         let dmm = DblModelMorphism(&f, &negloop, &negloop);
         assert!(dmm.validate().is_ok());
         assert!(!dmm.is_free_simple_monic());

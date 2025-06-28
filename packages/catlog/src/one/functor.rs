@@ -13,8 +13,9 @@ use crate::zero::{Column, Mapping};
 
 /** A mapping between categories.
 
-Analogous to a [`Mapping`] between sets, this a functor that does not
-necessarily have a specified domain or codomain.
+Analogous to a mapping between [sets](crate::zero::Mapping) or
+[graphs](crate::one::GraphMapping), a category mapping is a functor without
+specified domain or codomain categories.
  */
 pub trait CategoryMap {
     /// Type of objects in domain category.
@@ -130,7 +131,7 @@ where
         self.map.vertex_map()
     }
     fn mor_map(&self) -> &Self::MorMap {
-        FpFunctorMorMap::ref_cast(self)
+        RefCast::ref_cast(self)
     }
 }
 
