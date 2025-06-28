@@ -1,0 +1,62 @@
+.vertical-split {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.horizontal-split {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+}
+
+.horizontal-split > div {
+    height: 100%;
+}
+
+.horizontal-split > div:nth-child(3) {
+    flex-grow: 1;
+}
+
+.vertical-split > div {
+    width: 100%;
+}
+
+.vertical-split > div:nth-child(3) {
+    flex-grow: 1;
+}
+
+.horizontal-divider {
+    width: 2pt;
+    cursor: ew-resize;
+}
+
+.vertical-divider {
+    height: 2pt;
+    cursor: ns-resize;
+}
+
+.frame {
+    height: 100%;
+    width: 100%;
+    border-style: solid;
+    border-width: 1px;
+    padding: 1em;
+    box-sizing: border-box;
+}
+
+body #root .container {
+    height: 100vh;
+}
+
+.dragns {
+    cursor: ns-resize;
+    user-select: none;
+}
+
+.dragew {
+    cursor: ns-resize;
+    user-select: none;
+}
