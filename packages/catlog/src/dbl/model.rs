@@ -152,29 +152,29 @@ pub trait FgDblModel: DblModel + FgCategory {
 
 /// A mutable, finitely generated model of a double theory.
 pub trait MutDblModel: FgDblModel {
-    /// Adds a basic object to the model.
+    /// Adds an object generator to the model.
     fn add_ob(&mut self, x: Self::ObGen, ob_type: Self::ObType);
 
-    /// Adds a basic morphism to the model.
+    /// Adds a morphism generator to the model.
     fn add_mor(&mut self, f: Self::MorGen, dom: Self::Ob, cod: Self::Ob, mor_type: Self::MorType) {
         self.make_mor(f.clone(), mor_type);
         self.set_dom(f.clone(), dom);
         self.set_cod(f, cod);
     }
 
-    /// Adds a basic morphism to the model without setting its (co)domain.
+    /// Adds a morphism generator to the model without setting its (co)domain.
     fn make_mor(&mut self, f: Self::MorGen, mor_type: Self::MorType);
 
-    /// Gets the domain of a basic morphism, if it is set.
+    /// Gets the domain of a morphism generator, if it is set.
     fn get_dom(&self, f: &Self::MorGen) -> Option<&Self::Ob>;
 
-    /// Gets the codomain of a basic morphism, if it is set.
+    /// Gets the codomain of a morphism generator, if it is set.
     fn get_cod(&self, f: &Self::MorGen) -> Option<&Self::Ob>;
 
-    /// Sets the domain of a basic morphism.
+    /// Sets the domain of a morphism generator.
     fn set_dom(&mut self, f: Self::MorGen, x: Self::Ob);
 
-    /// Sets the codomain of a basic morphism.
+    /// Sets the codomain of a morphism generator.
     fn set_cod(&mut self, f: Self::MorGen, x: Self::Ob);
 }
 
@@ -191,7 +191,7 @@ category"](https://ncatlab.org/nlab/show/displayed+category).
 pub struct DiscreteDblModel<Id, Cat: FgCategory> {
     #[derivative(PartialEq(compare_with = "Rc::ptr_eq"))]
     theory: Rc<DiscreteDblTheory<Cat>>,
-    category: FpCategory<Id, Id>,
+    pub(super) category: FpCategory<Id, Id>,
     ob_types: IndexedHashColumn<Id, Cat::Ob>,
     mor_types: IndexedHashColumn<Id, Cat::Mor>,
 }
@@ -342,15 +342,12 @@ where
     fn ob_generators(&self) -> impl Iterator<Item = Self::ObGen> {
         self.category.ob_generators()
     }
-
     fn mor_generators(&self) -> impl Iterator<Item = Self::MorGen> {
         self.category.mor_generators()
     }
-
     fn mor_generator_dom(&self, f: &Self::MorGen) -> Self::Ob {
         self.category.mor_generator_dom(f)
     }
-
     fn mor_generator_cod(&self, f: &Self::MorGen) -> Self::Ob {
         self.category.mor_generator_cod(f)
     }
@@ -398,10 +395,10 @@ where
     Cat::Mor: Hash,
 {
     fn ob_generator_type(&self, ob: &Self::ObGen) -> Self::ObType {
-        self.ob_types.apply(ob).expect("Object should have type")
+        self.ob_types.get(ob).cloned().expect("Object should have type")
     }
     fn mor_generator_type(&self, mor: &Self::MorGen) -> Self::MorType {
-        self.mor_types.apply(mor).expect("Morphism should have type")
+        self.mor_types.get(mor).cloned().expect("Morphism should have type")
     }
 
     fn ob_generators_with_type(&self, typ: &Self::ObType) -> impl Iterator<Item = Self::ObGen> {
@@ -476,22 +473,22 @@ types on left and right hand sides.
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
 pub enum InvalidDblModel<Id> {
-    /// Domain of basic morphism is undefined or invalid.
+    /// Domain of morphism generator is undefined or invalid.
     Dom(Id),
 
-    /// Codomain of basic morphism is missing or invalid.
+    /// Codomain of morphism generator is missing or invalid.
     Cod(Id),
 
-    /// Basic object has invalid object type.
+    /// Object generator has invalid object type.
     ObType(Id),
 
-    /// Basic morphism has invalid morphism type.
+    /// Morphism generator has invalid morphism type.
     MorType(Id),
 
-    /// Domain of basic morphism has type incompatible with morphism type.
+    /// Domain of morphism generator has type incompatible with morphism type.
     DomType(Id),
 
-    /// Codomain of basic morphism has type incompatible with morphism type.
+    /// Codomain of morphism generator has type incompatible with morphism type.
     CodType(Id),
 
     /// Equation has left hand side that is not a well defined path.
@@ -640,14 +637,18 @@ where
 
     fn src(&self, edge: &Self::E) -> Self::V {
         match edge {
-            TabEdge::Basic(e) => self.dom.apply(e).expect("Domain of morphism should be defined"),
+            TabEdge::Basic(e) => {
+                self.dom.get(e).cloned().expect("Domain of morphism should be defined")
+            }
             TabEdge::Square { dom, .. } => TabOb::Tabulated(dom.clone()),
         }
     }
 
     fn tgt(&self, edge: &Self::E) -> Self::V {
         match edge {
-            TabEdge::Basic(e) => self.cod.apply(e).expect("Codomain of morphism should be defined"),
+            TabEdge::Basic(e) => {
+                self.cod.get(e).cloned().expect("Codomain of morphism should be defined")
+            }
             TabEdge::Square { cod, .. } => TabOb::Tabulated(cod.clone()),
         }
     }
@@ -780,10 +781,10 @@ where
     }
 
     fn mor_generator_dom(&self, f: &Self::MorGen) -> Self::Ob {
-        self.generators.dom.apply(f).expect("Domain should be defined")
+        self.generators.dom.get(f).cloned().expect("Domain should be defined")
     }
     fn mor_generator_cod(&self, f: &Self::MorGen) -> Self::Ob {
-        self.generators.cod.apply(f).expect("Codomain should be defined")
+        self.generators.cod.get(f).cloned().expect("Codomain should be defined")
     }
 }
 
@@ -840,10 +841,10 @@ where
     S: BuildHasher,
 {
     fn ob_generator_type(&self, ob: &Self::ObGen) -> Self::ObType {
-        self.ob_types.apply(ob).expect("Object should have type")
+        self.ob_types.get(ob).cloned().expect("Object should have type")
     }
     fn mor_generator_type(&self, mor: &Self::MorGen) -> Self::MorType {
-        self.mor_types.apply(mor).expect("Morphism should have type")
+        self.mor_types.get(mor).cloned().expect("Morphism should have type")
     }
 
     fn ob_generators_with_type(&self, obtype: &Self::ObType) -> impl Iterator<Item = Self::ObGen> {

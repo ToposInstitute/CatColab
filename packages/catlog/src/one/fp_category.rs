@@ -660,6 +660,49 @@ impl Default for CategorySymbols {
 }
 
 #[cfg(test)]
+use ustr::ustr;
+
+/// The schema for graphs, an f.p. category.
+#[cfg(test)]
+pub fn sch_graph() -> UstrFpCategory {
+    let mut cat = UstrFpCategory::new();
+    let (v, e) = (ustr("V"), ustr("E"));
+    cat.add_ob_generators([v, e]);
+    cat.add_mor_generator(ustr("src"), e, v);
+    cat.add_mor_generator(ustr("tgt"), e, v);
+    cat
+}
+
+/// The schema for symmetric graphs, an f.p. category.
+#[cfg(test)]
+pub fn sch_sgraph() -> UstrFpCategory {
+    let mut cat = UstrFpCategory::new();
+    let (v, e) = (ustr("V"), ustr("E"));
+    let (s, t, i) = (ustr("src"), ustr("tgt"), ustr("inv"));
+    cat.add_ob_generators([v, e]);
+    cat.add_mor_generator(s, e, v);
+    cat.add_mor_generator(t, e, v);
+    cat.add_mor_generator(i, e, e);
+    cat.equate(Path::pair(i, i), Path::empty(e));
+    cat.equate(Path::pair(i, s), Path::single(t));
+    cat.equate(Path::pair(i, t), Path::single(s));
+    cat
+}
+
+/// The schema for half-edge graphs, an f.p. category.
+#[cfg(test)]
+pub fn sch_hgraph() -> UstrFpCategory {
+    let mut cat = UstrFpCategory::new();
+    let (v, h) = (ustr("V"), ustr("H"));
+    let (vert, inv) = (ustr("vert"), ustr("inv"));
+    cat.add_ob_generators([v, h]);
+    cat.add_mor_generator(vert, h, v);
+    cat.add_mor_generator(inv, h, h);
+    cat.equate(Path::pair(inv, inv), Path::empty(h));
+    cat
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use expect_test::expect;
@@ -667,23 +710,14 @@ mod tests {
     use ustr::ustr;
 
     #[test]
-    fn sch_sgraph() {
-        let mut sch_sgraph = UstrFpCategory::new();
-        let (v, e) = (ustr("V"), ustr("E"));
-        let (s, t, i) = (ustr("src"), ustr("tgt"), ustr("inv"));
-        sch_sgraph.add_ob_generators([v, e]);
-        sch_sgraph.add_mor_generator(s, e, v);
-        sch_sgraph.add_mor_generator(t, e, v);
-        sch_sgraph.add_mor_generator(i, e, e);
-        assert!(sch_sgraph.is_free());
-        sch_sgraph.equate(Path::pair(i, i), Path::empty(e));
-        sch_sgraph.equate(Path::pair(i, s), Path::single(t));
-        sch_sgraph.equate(Path::pair(i, t), Path::single(s));
+    fn sch_sgraph_equations() {
+        let sch_sgraph = sch_sgraph();
         assert!(!sch_sgraph.is_free());
         assert!(sch_sgraph.validate().is_ok());
 
+        let (s, t, i) = (ustr("src"), ustr("tgt"), ustr("inv"));
         assert!(!sch_sgraph.morphisms_are_equal(Path::single(s), Path::single(t)));
-        assert!(sch_sgraph.morphisms_are_equal(Path::pair(i, i), Path::empty(e)));
+        assert!(sch_sgraph.morphisms_are_equal(Path::pair(i, i), Path::empty(ustr("E"))));
         assert!(sch_sgraph.morphisms_are_equal(Path::Seq(nonempty![i, i, i, s]), Path::single(t)));
     }
 

@@ -498,6 +498,9 @@ Just as a [`Mapping`] is the data of a function without specified domain or
 codomain sets, a *graph mapping* is the data of a graph homomorphism without
 specified domain or codomain graphs. Turning this around, a *graph morphism* is
 a pair of graphs with a compatible graph mapping.
+
+The data of a graph mapping is a pair of mappings, one on vertices and the other
+edges. Use a [`ColumnarGraphMapping`] to supply this data directly.
  */
 pub trait GraphMapping {
     /// Type of vertices in domain graph.
@@ -512,17 +515,37 @@ pub trait GraphMapping {
     /// Type of edges in codomain graph.
     type CodE: Eq + Clone;
 
+    /// Type of underlying mapping on vertices.
+    type VertexMap: Mapping<Dom = Self::DomV, Cod = Self::CodV>;
+
+    /// Type of underlying mapping on edges.
+    type EdgeMap: Mapping<Dom = Self::DomE, Cod = Self::CodE>;
+
+    /// Gets the underlying mapping on vertices.
+    fn vertex_map(&self) -> &Self::VertexMap;
+
+    /// Gets the underlying mapping on edges.
+    fn edge_map(&self) -> &Self::EdgeMap;
+
     /// Applies the graph mapping at a vertex.
-    fn apply_vertex(&self, v: &Self::DomV) -> Option<Self::CodV>;
+    fn apply_vertex(&self, v: Self::DomV) -> Option<Self::CodV> {
+        self.vertex_map().apply(v)
+    }
 
     /// Applies the graph mapping at an edge.
-    fn apply_edge(&self, e: &Self::DomE) -> Option<Self::CodE>;
+    fn apply_edge(&self, e: Self::DomE) -> Option<Self::CodE> {
+        self.edge_map().apply(e)
+    }
 
     /// Is the mapping defined at a vertex?
-    fn is_vertex_assigned(&self, v: &Self::DomV) -> bool;
+    fn is_vertex_assigned(&self, v: &Self::DomV) -> bool {
+        self.vertex_map().is_set(v)
+    }
 
     /// Is the mapping defined at an edge?
-    fn is_edge_assigned(&self, e: &Self::DomE) -> bool;
+    fn is_edge_assigned(&self, e: &Self::DomE) -> bool {
+        self.edge_map().is_set(e)
+    }
 }
 
 /** A homomorphism between graphs defined by a [mapping](GraphMapping).
@@ -547,7 +570,7 @@ where
     {
         let GraphMorphism(mapping, dom, cod) = *self;
         let vertex_errors = dom.vertices().filter_map(|v| {
-            if mapping.apply_vertex(&v).is_some_and(|w| cod.has_vertex(&w)) {
+            if mapping.apply_vertex(v.clone()).is_some_and(|w| cod.has_vertex(&w)) {
                 None
             } else {
                 Some(InvalidGraphMorphism::Vertex(v))
@@ -555,13 +578,13 @@ where
         });
 
         let edge_errors = dom.edges().flat_map(|e| {
-            if let Some(f) = mapping.apply_edge(&e) {
+            if let Some(f) = mapping.apply_edge(e.clone()) {
                 if cod.has_edge(&f) {
                     let mut errs = Vec::new();
-                    if mapping.apply_vertex(&dom.src(&e)).is_some_and(|v| v != cod.src(&f)) {
+                    if mapping.apply_vertex(dom.src(&e)).is_some_and(|v| v != cod.src(&f)) {
                         errs.push(InvalidGraphMorphism::Src(e.clone()))
                     }
-                    if mapping.apply_vertex(&dom.tgt(&e)).is_some_and(|v| v != cod.tgt(&f)) {
+                    if mapping.apply_vertex(dom.tgt(&e)).is_some_and(|v| v != cod.tgt(&f)) {
                         errs.push(InvalidGraphMorphism::Tgt(e.clone()))
                     }
                     return errs;
@@ -614,43 +637,59 @@ pub enum InvalidGraphMorphism<V, E> {
 That is, the data of the graph mapping is defined by two columns. The mapping
 can be between arbitrary graphs with compatible vertex and edge types.
 */
-#[derive(Clone, Default)]
-pub struct ColumnarGraphMapping<ColV, ColE> {
-    vertex_map: ColV,
-    edge_map: ColE,
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ColumnarGraphMapping<VMap, EMap> {
+    vertex_map: VMap,
+    edge_map: EMap,
 }
 
-impl<ColV, ColE> ColumnarGraphMapping<ColV, ColE> {
-    /// Constructs a new graph mapping from existing columns.
-    pub fn new(vertex_map: ColV, edge_map: ColE) -> Self {
+impl<VMap, EMap> ColumnarGraphMapping<VMap, EMap> {
+    /// Constructs a graph mapping from given vertex and edge mappings.
+    pub fn new(vertex_map: VMap, edge_map: EMap) -> Self {
         Self {
             vertex_map,
             edge_map,
         }
     }
+
+    /// Gets a mutable reference to the vertex mapping.
+    pub fn vertex_map_mut(&mut self) -> &mut VMap {
+        &mut self.vertex_map
+    }
+
+    /// Gets a mutable reference to the edge mapping.
+    pub fn edge_map_mut(&mut self) -> &mut EMap {
+        &mut self.edge_map
+    }
 }
 
-impl<ColV, ColE> GraphMapping for ColumnarGraphMapping<ColV, ColE>
+impl<VMap, EMap> GraphMapping for ColumnarGraphMapping<VMap, EMap>
 where
-    ColV: MutMapping,
-    ColE: MutMapping,
+    VMap: Mapping,
+    EMap: Mapping,
 {
-    type DomV = ColV::Dom;
-    type DomE = ColE::Dom;
-    type CodV = ColV::Cod;
-    type CodE = ColE::Cod;
+    type DomV = VMap::Dom;
+    type DomE = EMap::Dom;
+    type CodV = VMap::Cod;
+    type CodE = EMap::Cod;
+    type VertexMap = VMap;
+    type EdgeMap = EMap;
 
-    fn apply_vertex(&self, v: &Self::DomV) -> Option<Self::CodV> {
-        self.vertex_map.apply(v)
+    fn vertex_map(&self) -> &Self::VertexMap {
+        &self.vertex_map
     }
-    fn apply_edge(&self, e: &Self::DomE) -> Option<Self::CodE> {
-        self.edge_map.apply(e)
+    fn edge_map(&self) -> &Self::EdgeMap {
+        &self.edge_map
     }
-    fn is_vertex_assigned(&self, v: &Self::DomV) -> bool {
-        self.vertex_map.is_set(v)
-    }
-    fn is_edge_assigned(&self, e: &Self::DomE) -> bool {
-        self.edge_map.is_set(e)
+}
+
+/// A graph mapping between skeletal finite graphs, backed by vectors.
+pub type SkelGraphMapping = ColumnarGraphMapping<VecColumn<usize>, VecColumn<usize>>;
+
+impl SkelGraphMapping {
+    /// Constructs a graph mapping from a pair of vectors.
+    pub fn from_vec(vertex_map: Vec<usize>, edge_map: Vec<usize>) -> Self {
+        Self::new(VecColumn::new(vertex_map), VecColumn::new(edge_map))
     }
 }
 
@@ -714,12 +753,10 @@ mod tests {
     fn validate_graph_morphism() {
         let g = SkelGraph::path(3);
         let h = SkelGraph::path(4);
-        let f =
-            ColumnarGraphMapping::new(VecColumn::new(vec![1, 2, 3]), VecColumn::new(vec![1, 2]));
+        let f = SkelGraphMapping::from_vec(vec![1, 2, 3], vec![1, 2]);
         assert!(GraphMorphism(&f, &g, &h).validate().is_ok());
 
-        let f =
-            ColumnarGraphMapping::new(VecColumn::new(vec![1, 2, 3]), VecColumn::new(vec![2, 1])); // Not a homomorphism.
+        let f = SkelGraphMapping::from_vec(vec![1, 2, 3], vec![2, 1]); // Not a homomorphism.
         assert!(GraphMorphism(&f, &g, &h).validate().is_err());
     }
 }
