@@ -644,7 +644,7 @@ pub struct ColumnarGraphMapping<VMap, EMap> {
 }
 
 impl<VMap, EMap> ColumnarGraphMapping<VMap, EMap> {
-    /// Constructs a new graph mapping from existing columns.
+    /// Constructs a graph mapping from given vertex and edge mappings.
     pub fn new(vertex_map: VMap, edge_map: EMap) -> Self {
         Self {
             vertex_map,
@@ -670,6 +670,16 @@ where
     }
     fn edge_map(&self) -> &Self::EdgeMap {
         &self.edge_map
+    }
+}
+
+/// A graph mapping between skeletal finite graphs, backed by vectors.
+pub type SkelGraphMapping = ColumnarGraphMapping<VecColumn<usize>, VecColumn<usize>>;
+
+impl SkelGraphMapping {
+    /// Constructs a graph mapping from a pair of vectors.
+    pub fn from_vec(vertex_map: Vec<usize>, edge_map: Vec<usize>) -> Self {
+        Self::new(VecColumn::new(vertex_map), VecColumn::new(edge_map))
     }
 }
 
@@ -733,12 +743,10 @@ mod tests {
     fn validate_graph_morphism() {
         let g = SkelGraph::path(3);
         let h = SkelGraph::path(4);
-        let f =
-            ColumnarGraphMapping::new(VecColumn::new(vec![1, 2, 3]), VecColumn::new(vec![1, 2]));
+        let f = SkelGraphMapping::from_vec(vec![1, 2, 3], vec![1, 2]);
         assert!(GraphMorphism(&f, &g, &h).validate().is_ok());
 
-        let f =
-            ColumnarGraphMapping::new(VecColumn::new(vec![1, 2, 3]), VecColumn::new(vec![2, 1])); // Not a homomorphism.
+        let f = SkelGraphMapping::from_vec(vec![1, 2, 3], vec![2, 1]); // Not a homomorphism.
         assert!(GraphMorphism(&f, &g, &h).validate().is_err());
     }
 }
