@@ -153,7 +153,7 @@ mod tests {
         let mut f: DiscreteDblModelMapping<_, _> = Default::default();
         f.assign_ob(entity, 'x');
         f.assign_ob(ustr("type"), 'y');
-        f.assign_basic_mor(ustr("attr"), Path::pair('p', 'q'));
+        f.assign_mor(ustr("attr"), Path::pair('p', 'q'));
 
         let diagram = DblModelDiagram(f, model);
         assert_eq!(diagram.ob(entity), 'x');
@@ -168,7 +168,7 @@ mod tests {
 
         let mut f: DiscreteDblModelMapping<_, _> = Default::default();
         f.assign_ob(ustr("x"), ustr("x"));
-        f.assign_basic_mor(ustr("loop"), Path::pair(ustr("loop"), ustr("loop")));
+        f.assign_mor(ustr("loop"), Path::pair(ustr("loop"), ustr("loop")));
         let diagram = DblModelDiagram(f, pos_loop);
         assert!(diagram.validate_in(&neg_loop).is_ok());
     }
@@ -179,7 +179,7 @@ mod tests {
         let mut domain = DiscreteDblModel::new(th.clone());
         domain.add_mor('f', 'x', 'y', ustr("Attr").into());
         let mut f: DiscreteDblModelMapping<_, _> = Default::default();
-        f.assign_basic_mor('f', Path::single(ustr("attr")));
+        f.assign_mor('f', Path::single(ustr("attr")));
         let mut diagram = DblModelDiagram(f, domain);
 
         let model = walking_attr(th);

@@ -75,7 +75,7 @@ impl DblModelDiagram {
                     model.set_cod(decl.id, cod);
                 }
                 if let Some(over) = decl.over.as_ref().map(|mor| Elaborator.elab(mor)).transpose()? {
-                    mapping.assign_basic_mor(decl.id, over);
+                    mapping.assign_mor(decl.id, over);
                 }
                 Ok(())
             }
