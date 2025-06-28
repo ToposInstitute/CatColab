@@ -104,7 +104,8 @@ f.p. category's generating graph to the codomain category's underlying graph.
 The codomain category is arbitrary.
 
 Like a [`Function`](crate::zero::Function), this struct borrows its data. Unlike
-a function, TODO
+a function, the codomain is needed not just for validation but even to evaluate
+the functor on morphisms. The domain category is used only for validation.
  */
 pub struct FpFunctor<'a, Map, Cod> {
     map: &'a Map,
@@ -258,4 +259,55 @@ pub enum InvalidFpFunctor<V, E> {
     /// A path equation in domain presentation that is not respected.
     #[error("Path equation `{0}` is not respected")]
     Eq(usize),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::one::{
+        ColumnarGraphMapping,
+        fp_category::{sch_graph, sch_hgraph, sch_sgraph},
+    };
+    use crate::zero::HashColumn;
+    use ustr::ustr;
+
+    /** Isomorphism b/w the schemas for half-edge graphs and symmetric graphs.
+
+    Reference: https://blog.algebraicjulia.org/post/2020/09/cset-graphs-2/
+     */
+    #[test]
+    fn sch_sgraph_to_hgraph() {
+        let (sch_hgraph, sch_sgraph) = (sch_hgraph(), sch_sgraph());
+        let ob_map = HashColumn::new([(ustr("V"), ustr("V")), (ustr("E"), ustr("H"))].into());
+        let mor_map = HashColumn::new(
+            [
+                (ustr("src"), Path::single(ustr("vert"))),
+                (ustr("tgt"), Path::pair(ustr("inv"), ustr("vert"))),
+                (ustr("inv"), Path::single(ustr("inv"))),
+            ]
+            .into(),
+        );
+        let map = ColumnarGraphMapping::new(ob_map, mor_map);
+        let functor = FpFunctor::new(&map, &sch_hgraph);
+        assert!(functor.validate_on(&sch_sgraph).is_ok());
+    }
+
+    /// Non-functor from schema for symmetric graphs to schema for graphs.
+    #[test]
+    fn sch_sgraph_to_graph() {
+        let (sch_graph, sch_sgraph) = (sch_graph(), sch_sgraph());
+        let ob_map = HashColumn::new([(ustr("V"), ustr("V")), (ustr("E"), ustr("E"))].into());
+        let mor_map = HashColumn::new(
+            [
+                (ustr("src"), Path::single(ustr("src"))),
+                (ustr("tgt"), Path::single(ustr("tgt"))),
+                (ustr("inv"), Path::empty(ustr("E"))),
+            ]
+            .into(),
+        );
+        let map = ColumnarGraphMapping::new(ob_map, mor_map);
+        let functor = FpFunctor::new(&map, &sch_graph);
+        // Two equations fail, namely that `inv` swaps `src` and `tgt`.
+        assert_eq!(functor.validate_on(&sch_sgraph).map_err(|errs| errs.len()), Err(2));
+    }
 }

@@ -247,6 +247,13 @@ pub struct HashColumn<K, V, S = RandomState>(HashMap<K, V, S>);
 /// An unindexed column with keys of type `Ustr`.
 pub type UstrColumn<V> = HashColumn<Ustr, V, BuildHasherDefault<IdentityHasher>>;
 
+impl<K, V, S> HashColumn<K, V, S> {
+    /// Creates a new hash column from an existing hash map.
+    pub fn new(map: HashMap<K, V, S>) -> Self {
+        Self(map)
+    }
+}
+
 impl<K, V, S> Mapping for HashColumn<K, V, S>
 where
     K: Eq + Hash + Clone,
