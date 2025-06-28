@@ -224,12 +224,12 @@ where
                     InvalidGraphMorphism::Src(e) => InvalidFpFunctor::Dom(e),
                     InvalidGraphMorphism::Tgt(e) => InvalidFpFunctor::Cod(e),
                 });
-        let equation_errors = dom.equations().enumerate().filter_map(|(i, eq)| {
+        let equation_errors = dom.equations().enumerate().filter_map(|(id, eq)| {
             if let (Some(lhs), Some(rhs)) =
                 (self.apply_mor(eq.lhs.clone()), self.apply_mor(eq.rhs.clone()))
                 && !self.cod.morphisms_are_equal(lhs, rhs)
             {
-                Some(InvalidFpFunctor::Eq(i))
+                Some(InvalidFpFunctor::Eq(id))
             } else {
                 None
             }
@@ -241,19 +241,19 @@ where
 /// A failure of a map out of an f.p. category to be functorial.
 #[derive(Debug, Error)]
 pub enum InvalidFpFunctor<V, E> {
-    /// A generating object not mapped to an object in the codomain category.
+    /// An object generator not mapped to an object in the codomain category.
     #[error("Object generator `{0}` is not mapped to an object in the codomain")]
     ObGen(V),
 
-    /// A generating morphism not mapped to a morphism in the codomain category.
+    /// A morphism generator not mapped to a morphism in the codomain category.
     #[error("Morphism generator `{0}` is not mapped to a morphism in the codomain")]
     MorGen(E),
 
-    /// A generating morphism whose domain is not preserved.
+    /// A morphism generator whose domain is not preserved.
     #[error("Domain of morphism generator `{0}` is not preserved")]
     Dom(E),
 
-    /// A generating morphism whose codomain is not preserved.
+    /// A morphism generator whose codomain is not preserved.
     #[error("Codomain of morphism generator `{0}` is not preserved")]
     Cod(E),
 

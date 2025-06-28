@@ -191,7 +191,7 @@ category"](https://ncatlab.org/nlab/show/displayed+category).
 pub struct DiscreteDblModel<Id, Cat: FgCategory> {
     #[derivative(PartialEq(compare_with = "Rc::ptr_eq"))]
     theory: Rc<DiscreteDblTheory<Cat>>,
-    category: FpCategory<Id, Id>,
+    pub(super) category: FpCategory<Id, Id>,
     ob_types: IndexedHashColumn<Id, Cat::Ob>,
     mor_types: IndexedHashColumn<Id, Cat::Mor>,
 }
