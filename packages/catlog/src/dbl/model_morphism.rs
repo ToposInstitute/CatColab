@@ -10,10 +10,12 @@ and between morphisms that are:
 
 In mathematical terms, a model morphism is a natural transformation between lax
 double functors. The natural transformation can be strict, pseudo, lax, or
-oplax.
+oplax. For models of *discrete* double theories, all these options coincide.
 
 # References
 
+- [Paré 2011](crate::refs::DblYonedaTheory), Section 1.5: Natural
+  transformations
 - [Lambert & Patterson 2024](crate::refs::CartDblTheories),
   Section 7: Lax transformations
  */
@@ -237,50 +239,38 @@ where
     ) -> impl Iterator<Item = InvalidDblModelMorphism<DomId, DomId>> + 'a + use<'a, DomId, CodId, Cat>
     {
         let DblModelMorphism(mapping, dom, cod) = *self;
-        // TODO: Relax this assumption by verifying that images of path
-        // equations in domain hold in the codomain.
-        assert!(dom.is_free(), "Domain model should be free");
-
-        let ob_errors = dom.ob_generators().filter_map(|v| {
-            if let Some(f_v) = mapping.ob_generator_map().get(&v) {
-                if !cod.has_ob(f_v) {
-                    Some(InvalidDblModelMorphism::Ob(v))
-                } else if dom.ob_type(&v) != cod.ob_type(f_v) {
-                    Some(InvalidDblModelMorphism::ObType(v))
-                } else {
-                    None
-                }
+        let category_errors: Vec<_> = FpFunctor::new(&mapping.0, &cod.category)
+            .iter_invalid_on(&dom.category)
+            .map(|err| match err {
+                InvalidFpFunctor::ObGen(x) => InvalidDblModelMorphism::Ob(x),
+                InvalidFpFunctor::MorGen(m) => InvalidDblModelMorphism::Mor(m),
+                InvalidFpFunctor::Dom(m) => InvalidDblModelMorphism::Dom(m),
+                InvalidFpFunctor::Cod(m) => InvalidDblModelMorphism::Cod(m),
+                InvalidFpFunctor::Eq(id) => InvalidDblModelMorphism::Eq(id),
+            })
+            .collect();
+        let ob_type_errors = dom.ob_generators().filter_map(|x| {
+            if let Some(y) = mapping.ob_generator_map().get(&x)
+                && cod.has_ob(y)
+                && dom.ob_type(&x) != cod.ob_type(y)
+            {
+                Some(InvalidDblModelMorphism::ObType(x))
             } else {
-                Some(InvalidDblModelMorphism::MissingOb(v))
+                None
             }
         });
-
         let th_cat = cod.theory().category();
-        let mor_errors = dom.mor_generators().flat_map(move |f| {
-            if let Some(f_f) = mapping.mor_generator_map().get(&f) {
-                if !cod.has_mor(f_f) {
-                    vec![InvalidDblModelMorphism::Mor(f)]
-                } else {
-                    let dom_f = mapping.apply_ob(dom.mor_generator_dom(&f));
-                    let cod_f = mapping.apply_ob(dom.mor_generator_cod(&f));
-
-                    let mut errs = Vec::new();
-                    if Some(cod.dom(f_f)) != dom_f {
-                        errs.push(InvalidDblModelMorphism::Dom(f.clone()));
-                    }
-                    if Some(cod.cod(f_f)) != cod_f {
-                        errs.push(InvalidDblModelMorphism::Cod(f.clone()));
-                    }
-                    if !th_cat.morphisms_are_equal(dom.mor_generator_type(&f), cod.mor_type(f_f)) {
-                        errs.push(InvalidDblModelMorphism::MorType(f));
-                    }
-                    errs
-                }
+        let mor_type_errors = dom.mor_generators().filter_map(|f| {
+            if let Some(g) = mapping.mor_generator_map().get(&f)
+                && cod.has_mor(g)
+                && !th_cat.morphisms_are_equal(dom.mor_generator_type(&f), cod.mor_type(g))
+            {
+                Some(InvalidDblModelMorphism::MorType(f))
             } else {
-                vec![InvalidDblModelMorphism::MissingMor(f)]
+                None
             }
         });
-        ob_errors.chain(mor_errors)
+        category_errors.into_iter().chain(ob_type_errors).chain(mor_type_errors)
     }
 
     /// Are morphism generators sent to simple composites of morphisms in the
@@ -366,49 +356,40 @@ where
     }
 }
 
-/** An invalid assignment in a double model morphism defined explicitly by data.
- *
- * Note that, by specifying a model morphism via its action on generators, we
- * obtain for free that identities are sent to identities and composites of
- * generators are sent to their composites in the codomain.
-*/
-#[derive(Clone, Debug, Error, PartialEq)]
+/// An invalid assignment in a morphism between models of a double theory.
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(tag = "tag", content = "content"))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
-pub enum InvalidDblModelMorphism<Ob, Mor> {
-    /// Invalid data
-    #[error("Object `{0}` is mapped to an object not in the codomain")]
-    Ob(Ob),
+pub enum InvalidDblModelMorphism<ObGen, MorGen> {
+    /// An object generator not mapped to an object in the codomain model.
+    #[error("Object generator `{0}` is not mapped to an object in the codomain")]
+    Ob(ObGen),
 
-    /// Invalid data
-    #[error("Morphism `{0}` is mapped to a morphism not in the codomain")]
-    Mor(Mor),
+    /// A morphism generator not mapped to a morphism in the codomain model.
+    #[error("Morphism generator `{0}` is not mapped to a morphism in the codomain")]
+    Mor(MorGen),
 
-    /// Missing data
-    #[error("Object `{0}` is not mapped to an anything in the codomain")]
-    MissingOb(Ob),
+    /// A morphism generator whose domain is not preserved.
+    #[error("Domain of morphism generator `{0}` is not preserved")]
+    Dom(MorGen),
 
-    /// Missing data
-    #[error("Morphism `{0}` is not mapped to anything in the codomain")]
-    MissingMor(Mor),
+    /// A morphism generator whose codomain is not preserved.
+    #[error("Codomain of morphism generator `{0}` is not preserved")]
+    Cod(MorGen),
 
-    /// Type error
+    /// An object generator whose type is not preserved.
     #[error("Object `{0}` is not mapped to an object of the same type in the codomain")]
-    ObType(Ob),
+    ObType(ObGen),
 
-    /// Type error
+    /// A morphism generator whose type is not preserved.
     #[error("Morphism `{0}` is not mapped to a morphism of the same type in the codomain")]
-    MorType(Mor),
+    MorType(MorGen),
 
-    /// Not functorial
-    #[error("Morphism `{0}` has domain not preserved by the mapping")]
-    Dom(Mor),
-
-    /// Not functorial
-    #[error("Morphism `{0}` has codomain not preserved by the mapping")]
-    Cod(Mor),
+    /// A path equation in domain presentation that is not respected.
+    #[error("Path equation `{0}` is not respected")]
+    Eq(usize),
 }
 
 /** Finds morphisms between two models of a discrete double theory.
@@ -738,7 +719,7 @@ mod tests {
         assert!(
             errs == vec![
                 InvalidDblModelMorphism::Ob(ustr("x")),
-                InvalidDblModelMorphism::MissingMor(ustr("loop")),
+                InvalidDblModelMorphism::Mor(ustr("loop")),
             ]
         );
 
