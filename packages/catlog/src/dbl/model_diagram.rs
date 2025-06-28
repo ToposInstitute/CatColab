@@ -25,13 +25,13 @@ use serde::{Deserialize, Serialize};
 use tsify::{Tsify, declare};
 
 use super::{model::*, model_morphism::*};
-use crate::one::{Category, FgCategory};
+use crate::one::{Category, CategoryMap, FgCategory, FgCategoryMap};
 use crate::validate;
 
 /** A diagram in a model of a double theory.
 
 This struct owns its data, namely, the domain of the diagram (a model) and the
-model [mapping](DblModelMapping) itself.
+model mapping itself.
 */
 #[derive(Clone, Into)]
 #[into(owned, ref, ref_mut)]
@@ -39,15 +39,15 @@ pub struct DblModelDiagram<Map, Dom>(pub Map, pub Dom);
 
 impl<Map, Dom> DblModelDiagram<Map, Dom>
 where
-    Map: DblModelMapping,
+    Map: CategoryMap,
 {
     /// Gets an object indexed by the diagram.
-    pub fn ob(&self, i: &Map::DomOb) -> Map::CodOb {
+    pub fn ob(&self, i: Map::DomOb) -> Map::CodOb {
         self.0.apply_ob(i).expect("Diagram should be defined at object")
     }
 
     /// Gets a morphism indexed by the diagram.
-    pub fn mor(&self, h: &Map::DomMor) -> Map::CodMor {
+    pub fn mor(&self, h: Map::DomMor) -> Map::CodMor {
         self.0.apply_mor(h).expect("Diagram should be defined at morphism")
     }
 }
@@ -116,7 +116,7 @@ where
         let (mapping, domain) = self.into();
         domain.infer_missing();
         for e in domain.mor_generators() {
-            let Some(g) = mapping.apply_basic_mor(&e) else {
+            let Some(g) = mapping.apply_mor_generator(e.clone()) else {
                 continue;
             };
             if !model.has_mor(&g) {
@@ -156,8 +156,8 @@ mod tests {
         f.assign_basic_mor(ustr("attr"), Path::pair('p', 'q'));
 
         let diagram = DblModelDiagram(f, model);
-        assert_eq!(diagram.ob(&entity), 'x');
-        assert_eq!(diagram.mor(&Path::single(ustr("attr"))), Path::pair('p', 'q'));
+        assert_eq!(diagram.ob(entity), 'x');
+        assert_eq!(diagram.mor(Path::single(ustr("attr"))), Path::pair('p', 'q'));
     }
 
     #[test]

@@ -637,7 +637,7 @@ pub enum InvalidGraphMorphism<V, E> {
 That is, the data of the graph mapping is defined by two columns. The mapping
 can be between arbitrary graphs with compatible vertex and edge types.
 */
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct ColumnarGraphMapping<VMap, EMap> {
     vertex_map: VMap,
     edge_map: EMap,
@@ -650,6 +650,16 @@ impl<VMap, EMap> ColumnarGraphMapping<VMap, EMap> {
             vertex_map,
             edge_map,
         }
+    }
+
+    /// Gets a mutable reference to the vertex mapping.
+    pub fn vertex_map_mut(&mut self) -> &mut VMap {
+        &mut self.vertex_map
+    }
+
+    /// Gets a mutable reference to the edge mapping.
+    pub fn edge_map_mut(&mut self) -> &mut EMap {
+        &mut self.edge_map
     }
 }
 
