@@ -651,16 +651,6 @@ impl<VMap, EMap> ColumnarGraphMapping<VMap, EMap> {
             edge_map,
         }
     }
-
-    /// Gets a mutable reference to the vertex mapping.
-    pub fn vertex_map_mut(&mut self) -> &mut VMap {
-        &mut self.vertex_map
-    }
-
-    /// Gets a mutable reference to the edge mapping.
-    pub fn edge_map_mut(&mut self) -> &mut EMap {
-        &mut self.edge_map
-    }
 }
 
 impl<VMap, EMap> GraphMapping for ColumnarGraphMapping<VMap, EMap>

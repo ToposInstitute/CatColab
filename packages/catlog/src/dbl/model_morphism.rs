@@ -50,7 +50,7 @@ axioms for a model morphism are also trivial.
 #[derivative(Default(bound = ""))]
 #[derivative(PartialEq(bound = "DomId: Eq + Hash, CodId: PartialEq"))]
 pub struct DiscreteDblModelMapping<DomId, CodId>(
-    ColumnarGraphMapping<HashColumn<DomId, CodId>, HashColumn<DomId, Path<CodId, CodId>>>,
+    FpFunctorData<HashColumn<DomId, CodId>, HashColumn<DomId, Path<CodId, CodId>>>,
 );
 
 /// Auxiliary struct for morphism map of [`DiscreteDblModelMapping`].
@@ -94,7 +94,7 @@ where
     type MorMap = DiscreteDblModelMorMap<DomId, CodId>;
 
     fn ob_map(&self) -> &Self::ObMap {
-        self.0.vertex_map()
+        self.0.ob_generator_map()
     }
     fn mor_map(&self) -> &Self::MorMap {
         RefCast::ref_cast(self)
@@ -112,10 +112,10 @@ where
     type MorGenMap = HashColumn<DomId, Path<CodId, CodId>>;
 
     fn ob_generator_map(&self) -> &Self::ObGenMap {
-        self.0.vertex_map()
+        self.0.ob_generator_map()
     }
     fn mor_generator_map(&self) -> &Self::MorGenMap {
-        self.0.edge_map()
+        self.0.mor_generator_map()
     }
 }
 
@@ -126,27 +126,27 @@ where
 {
     /// Constructs a model mapping from a pair of hash maps.
     pub fn new(ob_map: HashMap<DomId, CodId>, mor_map: HashMap<DomId, Path<CodId, CodId>>) -> Self {
-        Self(ColumnarGraphMapping::new(HashColumn::new(ob_map), HashColumn::new(mor_map)))
+        Self(FpFunctorData::new(HashColumn::new(ob_map), HashColumn::new(mor_map)))
     }
 
     /// Assigns an object generator, returning the previous assignment.
     pub fn assign_ob(&mut self, x: DomId, y: CodId) -> Option<CodId> {
-        self.0.vertex_map_mut().set(x, y)
+        self.0.ob_generator_map_mut().set(x, y)
     }
 
     /// Assigns a morphism generator, returning the previous assignment.
     pub fn assign_mor(&mut self, e: DomId, n: Path<CodId, CodId>) -> Option<Path<CodId, CodId>> {
-        self.0.edge_map_mut().set(e, n)
+        self.0.mor_generator_map_mut().set(e, n)
     }
 
     /// Unassigns an object generator, returning the previous assignment.
     pub fn unassign_ob(&mut self, x: &DomId) -> Option<CodId> {
-        self.0.vertex_map_mut().unset(x)
+        self.0.ob_generator_map_mut().unset(x)
     }
 
     /// Unassigns a morphism generator, returning the previous assignment.
     pub fn unassign_mor(&mut self, e: &DomId) -> Option<Path<CodId, CodId>> {
-        self.0.edge_map_mut().unset(e)
+        self.0.mor_generator_map_mut().unset(e)
     }
 
     /** Basic objects and morphisms in the image of the model morphism.
