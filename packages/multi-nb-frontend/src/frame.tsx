@@ -1,11 +1,12 @@
 import { JSX, Match, Switch } from "solid-js";
 import { Window } from "./window";
+import { AnyDocumentId } from "@automerge/automerge-repo";
 
 type DragState = "ns" | "ew" | "none";
 
 export const dragHandler = {
     onMove: (_x: number, _y: number) => {},
-    setDragState: (s: DragState) => {},
+    setDragState: (_s: DragState) => {},
 };
 
 export type Frame = Full | HorizontalSplit | VerticalSplit;
@@ -18,7 +19,7 @@ type FrameProps = {
 
 export type Full = {
     tag: "full";
-    bufferName: string;
+    docId?: AnyDocumentId;
 };
 
 function asFull(f: Frame): Full | undefined {
@@ -36,7 +37,7 @@ function Full(props: FrameProps & { frame: Full }): JSX.Element {
                     props.reset({
                         tag: "vertical",
                         top: props.frame,
-                        bottom: props.frame,
+                        bottom: { tag: "full" },
                         fraction: 0.5,
                     })}
             >
@@ -47,13 +48,16 @@ function Full(props: FrameProps & { frame: Full }): JSX.Element {
                     props.reset({
                         tag: "horizontal",
                         left: props.frame,
-                        right: props.frame,
+                        right: { tag: "full" },
                         fraction: 0.5,
                     })}
             >
                 hsplit
             </button>
-            <Window bufferName={props.frame.bufferName} />
+            <Window
+                docId={props.frame.docId}
+                setDocId={(docId) => props.reset({ tag: "full", docId })}
+            />
         </div>
     );
 }
@@ -101,7 +105,7 @@ function HorizontalSplit(
                     };
                 }}
             />
-            <div>
+            <div style={`width:${(1 - props.frame.fraction) * 100}%`}>
                 <Frame
                     close={() => props.reset(props.frame.left)}
                     reset={(newFrame) =>
@@ -156,7 +160,7 @@ function VerticalSplit(
                     };
                 }}
             />
-            <div>
+            <div style={`height:${(1 - props.frame.fraction) * 100}%`}>
                 <Frame
                     close={() => props.reset(props.frame.top)}
                     reset={(newFrame) =>

@@ -20,9 +20,15 @@ importers:
       '@automerge/automerge-repo-storage-indexeddb':
         specifier: ^1.2.1
         version: 1.2.1(@types/node@24.0.7)(typescript@5.8.3)
+      '@solid-primitives/storage':
+        specifier: ^4.3.2
+        version: 4.3.2(solid-js@1.9.7)
       solid-js:
         specifier: ^1.9.2
         version: 1.9.7
+      uuid:
+        specifier: ^11.0.3
+        version: 11.1.0
     devDependencies:
       typescript:
         specifier: ^5.8.3
@@ -432,6 +438,23 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@solid-primitives/storage@4.3.2':
+    resolution: {integrity: sha512-Vkuk/AqgUOjz6k7Mo5yDFQBQg8KMQcZfaac/bxLApaza3e5c/iNllNvxZWPM9Vf+Gf4m5SgRbvgsm6dSLJ27Jw==}
+    peerDependencies:
+      '@tauri-apps/plugin-store': '*'
+      solid-js: ^1.6.12
+      solid-start: '*'
+    peerDependenciesMeta:
+      '@tauri-apps/plugin-store':
+        optional: true
+      solid-start:
+        optional: true
+
+  '@solid-primitives/utils@6.3.1':
+    resolution: {integrity: sha512-4/Z59nnwu4MPR//zWZmZm2yftx24jMqQ8CSd/JobL26TPfbn4Ph8GKNVJfGJWShg1QB98qObJSskqizbTvcLLA==}
+    peerDependencies:
+      solid-js: ^1.6.12
+
   '@tsconfig/node10@1.0.11':
     resolution: {integrity: sha512-DcRjDCujK/kCk/cUe8Xz8ZSpm8mS3mNNpta+jGCA6USEDfktlNvm1+IuZ9eTcDbNk41BHwpHHeW+N1lKCz4zOw==}
 
@@ -773,6 +796,10 @@ packages:
     hasBin: true
     peerDependencies:
       browserslist: '>= 4.21.0'
+
+  uuid@11.1.0:
+    resolution: {integrity: sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==}
+    hasBin: true
 
   uuid@9.0.1:
     resolution: {integrity: sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==}
@@ -1211,6 +1238,15 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.44.1':
     optional: true
 
+  '@solid-primitives/storage@4.3.2(solid-js@1.9.7)':
+    dependencies:
+      '@solid-primitives/utils': 6.3.1(solid-js@1.9.7)
+      solid-js: 1.9.7
+
+  '@solid-primitives/utils@6.3.1(solid-js@1.9.7)':
+    dependencies:
+      solid-js: 1.9.7
+
   '@tsconfig/node10@1.0.11': {}
 
   '@tsconfig/node12@1.0.11': {}
@@ -1575,6 +1611,8 @@ snapshots:
       browserslist: 4.25.1
       escalade: 3.2.0
       picocolors: 1.1.1
+
+  uuid@11.1.0: {}
 
   uuid@9.0.1: {}
 
