@@ -1,4 +1,18 @@
-//! Functors between categories.
+/*! Functors between categories.
+
+Abstractly, a functor between categories is a just graph morphism between the
+underlying graphs that respects composition. In our applications, we are most
+interested in functors out of *finitely generated* categories, whose action on
+arbitrary morphisms is uniquely determined by that on the morphism generators.
+Thus, in contrast to mappings between [sets](crate::zero::Mapping) and
+[graphs](crate::one::GraphMapping), we generally cannot separate *evaluation*
+from *validation*: to evaluate a [map](FgCategoryMap) on a finitely generated
+category, we might need access to the domain category, in order to decompose
+general morphisms into composites of generators, and also to the codomain
+category, in order to compose images of generating morphisms. The upshot is that
+you must carry around (references to) more data to evaluate functors than to
+evaluate functions or graph morphisms.
+ */
 
 use std::hash::{BuildHasher, Hash};
 
