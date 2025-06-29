@@ -48,9 +48,10 @@ axioms for a model morphism are also trivial.
 #[derive(Clone, Debug, Derivative)]
 #[derivative(Default(bound = ""))]
 #[derivative(PartialEq(bound = "DomId: Eq + Hash, CodId: PartialEq"))]
-pub struct DiscreteDblModelMapping<DomId, CodId>(
-    pub FpFunctorData<HashColumn<DomId, CodId>, HashColumn<DomId, Path<CodId, CodId>>>,
-);
+pub struct DiscreteDblModelMapping<DomId, CodId>(pub DiscreteDblModelMappingData<DomId, CodId>);
+
+type DiscreteDblModelMappingData<DomId, CodId> =
+    FpFunctorData<HashColumn<DomId, CodId>, HashColumn<DomId, Path<CodId, CodId>>>;
 
 impl<DomId, CodId> DiscreteDblModelMapping<DomId, CodId>
 where
@@ -64,36 +65,29 @@ where
 
     /// Assigns an object generator, returning the previous assignment.
     pub fn assign_ob(&mut self, x: DomId, y: CodId) -> Option<CodId> {
-        self.0.ob_generator_map_mut().set(x, y)
+        self.0.ob_generator_map.set(x, y)
     }
 
     /// Assigns a morphism generator, returning the previous assignment.
     pub fn assign_mor(&mut self, e: DomId, n: Path<CodId, CodId>) -> Option<Path<CodId, CodId>> {
-        self.0.mor_generator_map_mut().set(e, n)
+        self.0.mor_generator_map.set(e, n)
     }
 
     /// Unassigns an object generator, returning the previous assignment.
     pub fn unassign_ob(&mut self, x: &DomId) -> Option<CodId> {
-        self.0.ob_generator_map_mut().unset(x)
+        self.0.ob_generator_map.unset(x)
     }
 
     /// Unassigns a morphism generator, returning the previous assignment.
     pub fn unassign_mor(&mut self, e: &DomId) -> Option<Path<CodId, CodId>> {
-        self.0.mor_generator_map_mut().unset(e)
+        self.0.mor_generator_map.unset(e)
     }
 
     /// Interprets the data as a functor into the given model.
     pub fn functor_into<'a, Cat: FgCategory>(
         &'a self,
         cod: &'a DiscreteDblModel<CodId, Cat>,
-    ) -> impl FgCategoryMap<
-        DomOb = DomId,
-        DomMor = Path<DomId, DomId>,
-        CodOb = CodId,
-        CodMor = Path<CodId, CodId>,
-        ObGen = DomId,
-        MorGen = DomId,
-    > {
+    ) -> FpFunctor<'a, DiscreteDblModelMappingData<DomId, CodId>, FpCategory<CodId, CodId>> {
         self.0.functor_into(&cod.category)
     }
 
@@ -120,10 +114,10 @@ where
         assert!(cod.is_free(), "Codomain model should be free");
 
         let mut im = DiscreteDblModel::new(cod.theory_rc());
-        for x in self.0.ob_generator_map().values() {
+        for x in self.0.ob_generator_map.values() {
             im.add_ob(x.clone(), cod.ob_type(x));
         }
-        for path in self.0.mor_generator_map().values() {
+        for path in self.0.mor_generator_map.values() {
             for e in path.iter() {
                 let (x, y) = (cod.mor_generator_dom(e), cod.mor_generator_cod(e));
                 if !im.has_ob(&x) {
@@ -193,7 +187,7 @@ where
             })
             .collect();
         let ob_type_errors = dom.ob_generators().filter_map(|x| {
-            if let Some(y) = mapping.ob_generator_map().get(&x)
+            if let Some(y) = mapping.ob_generator_map.get(&x)
                 && cod.has_ob(y)
                 && dom.ob_type(&x) != cod.ob_type(y)
             {
@@ -204,7 +198,7 @@ where
         });
         let th_cat = cod.theory().category();
         let mor_type_errors = dom.mor_generators().filter_map(|f| {
-            if let Some(g) = mapping.mor_generator_map().get(&f)
+            if let Some(g) = mapping.mor_generator_map.get(&f)
                 && cod.has_mor(g)
                 && !th_cat.morphisms_are_equal(dom.mor_generator_type(&f), cod.mor_type(g))
             {
