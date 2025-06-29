@@ -570,7 +570,7 @@ where
     {
         let GraphMorphism(mapping, dom, cod) = *self;
         let vertex_errors = dom.vertices().filter_map(|v| {
-            if mapping.apply_vertex(v.clone()).is_some_and(|w| cod.has_vertex(&w)) {
+            if mapping.vertex_map().apply_to_ref(&v).is_some_and(|w| cod.has_vertex(&w)) {
                 None
             } else {
                 Some(InvalidGraphMorphism::Vertex(v))
@@ -578,7 +578,7 @@ where
         });
 
         let edge_errors = dom.edges().flat_map(|e| {
-            if let Some(f) = mapping.apply_edge(e.clone()) {
+            if let Some(f) = mapping.edge_map().apply_to_ref(&e) {
                 if cod.has_edge(&f) {
                     let mut errs = Vec::new();
                     if mapping.apply_vertex(dom.src(&e)).is_some_and(|v| v != cod.src(&f)) {

@@ -625,7 +625,7 @@ where
     fn src(&self, m: &Self::Pro) -> Self::Ob {
         match m {
             TabMorType::Basic(e) => {
-                self.src.get(e).cloned().expect("Source of morphism type should be defined")
+                self.src.apply_to_ref(e).expect("Source of morphism type should be defined")
             }
             TabMorType::Hom(x) => (**x).clone(),
         }
@@ -633,7 +633,7 @@ where
     fn tgt(&self, m: &Self::Pro) -> Self::Ob {
         match m {
             TabMorType::Basic(e) => {
-                self.tgt.get(e).cloned().expect("Target of morphism type should be defined")
+                self.tgt.apply_to_ref(e).expect("Target of morphism type should be defined")
             }
             TabMorType::Hom(x) => (**x).clone(),
         }

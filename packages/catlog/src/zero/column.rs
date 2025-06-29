@@ -18,10 +18,17 @@ use crate::validate::{self, Validate};
 A mapping sends values of type [`Dom`](Self::Dom) to values of type
 [`Cod`](Self::Cod). Unlike a function, a mapping need not be defined on its
 whole domain. A mapping is thus more like a partial function, but it does not
-actually know its intended domain of definition. If needed, that information
-should be provided separately, preferably as a [`Set`].
+even know its intended domain of definition, nor the codomain to which its image
+should restrict. If needed, that information should be provided separately as
+(sets)[Set]. Neither domain nor codomain are assumed to be finite.
 
-Neither the domain nor the codomain of the mapping are assumed to be finite.
+This trait encompasses mappings that compute their values on the fly and
+mappings that own their data, say in the form of a vector or hash map. Achieving
+this flexiblity in Rust is delicate due to the sharp distinction between values
+and references, but as a user, deciding which method to call is simple enough.
+To evaluate at a point that you own and can consume, call
+[`apply`](Self::apply). To evaluate at a point that you have only by reference
+or can't consume, call [`apply_to_ref`](Self::apply_to_ref).
  */
 pub trait Mapping {
     /// Type of elements in domain of mapping.
@@ -33,8 +40,24 @@ pub trait Mapping {
     /// Applies the mapping at a point possibly in the domain.
     fn apply(&self, x: Self::Dom) -> Option<Self::Cod>;
 
-    /// Is the mapping defined at a point?
-    fn is_set(&self, x: &Self::Dom) -> bool;
+    /** Applies the mapping at a *reference* to a point possibly in the domain.
+
+    The default implementation just calls [`apply`](Self::apply) after cloning.
+    Mappings that own their data should give a more efficient implementation.
+     */
+    fn apply_to_ref(&self, x: &Self::Dom) -> Option<Self::Cod> {
+        self.apply(x.clone())
+    }
+
+    /** Is the mapping defined at a point?
+
+    The default implementation just checks whether
+    [`apply_to_ref`](Self::apply_to_ref) returns something, but a more efficient
+    implementation that avoids allocating should usually be given.
+    */
+    fn is_set(&self, x: &Self::Dom) -> bool {
+        self.apply_to_ref(x).is_some()
+    }
 }
 
 /** A mutable [mapping](Mapping).
@@ -122,7 +145,7 @@ where
         &self,
     ) -> impl Iterator<Item = InvalidFunction<Map::Dom>> + 'a + use<'a, Map, Dom, Cod> {
         let Function(mapping, dom, cod) = self;
-        dom.iter().filter_map(|x| match mapping.apply(x.clone()) {
+        dom.iter().filter_map(|x| match mapping.apply_to_ref(&x) {
             Some(y) => {
                 if cod.contains(&y) {
                     None
@@ -189,6 +212,10 @@ impl<T: Eq + Clone> Mapping for VecColumn<T> {
 
     fn apply(&self, i: usize) -> Option<T> {
         self.0.get(i).cloned().flatten()
+    }
+
+    fn apply_to_ref(&self, i: &usize) -> Option<T> {
+        self.apply(*i)
     }
 
     fn is_set(&self, i: &usize) -> bool {
@@ -264,7 +291,10 @@ where
     type Cod = V;
 
     fn apply(&self, x: K) -> Option<V> {
-        self.0.get(&x).cloned()
+        self.apply_to_ref(&x)
+    }
+    fn apply_to_ref(&self, x: &K) -> Option<V> {
+        self.0.get(x).cloned()
     }
     fn is_set(&self, x: &K) -> bool {
         self.0.contains_key(x)
@@ -446,6 +476,9 @@ where
     fn apply(&self, x: Dom) -> Option<Cod> {
         self.mapping.apply(x)
     }
+    fn apply_to_ref(&self, x: &Dom) -> Option<Cod> {
+        self.mapping.apply_to_ref(x)
+    }
     fn is_set(&self, x: &Dom) -> bool {
         self.mapping.is_set(x)
     }
@@ -522,8 +555,12 @@ impl SkelIndexedColumn {
 impl Mapping for SkelIndexedColumn {
     type Dom = usize;
     type Cod = usize;
+
     fn apply(&self, x: usize) -> Option<usize> {
         self.0.apply(x)
+    }
+    fn apply_to_ref(&self, x: &usize) -> Option<usize> {
+        self.0.apply(*x)
     }
     fn is_set(&self, x: &usize) -> bool {
         self.0.is_set(x)
@@ -580,8 +617,12 @@ impl<T: Eq + Hash + Clone> IndexedVecColumn<T> {
 impl<T: Eq + Hash + Clone> Mapping for IndexedVecColumn<T> {
     type Dom = usize;
     type Cod = T;
+
     fn apply(&self, x: usize) -> Option<T> {
         self.0.apply(x)
+    }
+    fn apply_to_ref(&self, x: &usize) -> Option<T> {
+        self.0.apply(*x)
     }
     fn is_set(&self, x: &usize) -> bool {
         self.0.is_set(x)
@@ -637,8 +678,12 @@ where
 {
     type Dom = K;
     type Cod = V;
+
     fn apply(&self, x: K) -> Option<V> {
         self.0.apply(x)
+    }
+    fn apply_to_ref(&self, x: &K) -> Option<V> {
+        self.0.apply_to_ref(x)
     }
     fn is_set(&self, x: &K) -> bool {
         self.0.is_set(x)
@@ -692,9 +737,10 @@ mod tests {
         let mut col = VecColumn::new(vec!["foo", "bar", "baz"]);
         assert!(!col.is_empty());
         assert!(col.is_set(&2));
-        assert_eq!(col.get(&2), Some(&"baz"));
         assert_eq!(col.apply(2), Some("baz"));
         assert_eq!(col.apply(3), None);
+        assert_eq!(col.apply_to_ref(&2), Some("baz"));
+        assert_eq!(col.get(&2), Some(&"baz"));
         assert_eq!(col.update(2, None), Some("baz"));
         assert!(!col.is_set(&2));
 
@@ -712,8 +758,9 @@ mod tests {
         col.set('b', "bar");
         col.set('c', "baz");
         assert!(!col.is_empty());
-        assert_eq!(col.get(&'c'), Some(&"baz"));
         assert_eq!(col.apply('c'), Some("baz"));
+        assert_eq!(col.apply_to_ref(&'c'), Some("baz"));
+        assert_eq!(col.get(&'c'), Some(&"baz"));
         assert_eq!(col.unset(&'c'), Some("baz"));
         assert!(!col.is_set(&'c'));
         col.set('c', "bar");
@@ -728,8 +775,9 @@ mod tests {
         let mut col = SkelIndexedColumn::new(&[1, 3, 5]);
         assert!(!col.is_empty());
         assert!(col.is_set(&2));
-        assert_eq!(col.get(&2), Some(&5));
         assert_eq!(col.apply(2), Some(5));
+        assert_eq!(col.apply_to_ref(&2), Some(5));
+        assert_eq!(col.get(&2), Some(&5));
         let preimage: Vec<_> = col.preimage(&5).collect();
         assert_eq!(preimage, vec![2]);
 

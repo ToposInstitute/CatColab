@@ -395,10 +395,10 @@ where
     Cat::Mor: Hash,
 {
     fn ob_generator_type(&self, ob: &Self::ObGen) -> Self::ObType {
-        self.ob_types.get(ob).cloned().expect("Object should have type")
+        self.ob_types.apply_to_ref(ob).expect("Object should have type")
     }
     fn mor_generator_type(&self, mor: &Self::MorGen) -> Self::MorType {
-        self.mor_types.get(mor).cloned().expect("Morphism should have type")
+        self.mor_types.apply_to_ref(mor).expect("Morphism should have type")
     }
 
     fn ob_generators_with_type(&self, typ: &Self::ObType) -> impl Iterator<Item = Self::ObGen> {
@@ -638,7 +638,7 @@ where
     fn src(&self, edge: &Self::E) -> Self::V {
         match edge {
             TabEdge::Basic(e) => {
-                self.dom.get(e).cloned().expect("Domain of morphism should be defined")
+                self.dom.apply_to_ref(e).expect("Domain of morphism should be defined")
             }
             TabEdge::Square { dom, .. } => TabOb::Tabulated(dom.clone()),
         }
@@ -647,7 +647,7 @@ where
     fn tgt(&self, edge: &Self::E) -> Self::V {
         match edge {
             TabEdge::Basic(e) => {
-                self.cod.get(e).cloned().expect("Codomain of morphism should be defined")
+                self.cod.apply_to_ref(e).expect("Codomain of morphism should be defined")
             }
             TabEdge::Square { cod, .. } => TabOb::Tabulated(cod.clone()),
         }
@@ -781,10 +781,10 @@ where
     }
 
     fn mor_generator_dom(&self, f: &Self::MorGen) -> Self::Ob {
-        self.generators.dom.get(f).cloned().expect("Domain should be defined")
+        self.generators.dom.apply_to_ref(f).expect("Domain should be defined")
     }
     fn mor_generator_cod(&self, f: &Self::MorGen) -> Self::Ob {
-        self.generators.cod.get(f).cloned().expect("Codomain should be defined")
+        self.generators.cod.apply_to_ref(f).expect("Codomain should be defined")
     }
 }
 
@@ -841,10 +841,10 @@ where
     S: BuildHasher,
 {
     fn ob_generator_type(&self, ob: &Self::ObGen) -> Self::ObType {
-        self.ob_types.get(ob).cloned().expect("Object should have type")
+        self.ob_types.apply_to_ref(ob).expect("Object should have type")
     }
     fn mor_generator_type(&self, mor: &Self::MorGen) -> Self::MorType {
-        self.mor_types.get(mor).cloned().expect("Morphism should have type")
+        self.mor_types.apply_to_ref(mor).expect("Morphism should have type")
     }
 
     fn ob_generators_with_type(&self, obtype: &Self::ObType) -> impl Iterator<Item = Self::ObGen> {
