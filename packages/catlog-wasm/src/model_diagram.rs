@@ -142,7 +142,7 @@ impl DblModelDiagram {
                         name: "".into(),
                         id: x,
                         ob_type: Quoter.quote(&model.ob_generator_type(&x)),
-                        over: mapping.0.ob_generator_map().get(&x).map(|ob| Quoter.quote(ob))
+                        over: mapping.0.ob_generator_map.get(&x).map(|ob| Quoter.quote(ob))
                     }
                 });
                 decls.collect()
@@ -161,7 +161,7 @@ impl DblModelDiagram {
                         name: "".into(),
                         id: f,
                         mor_type: Quoter.quote(&model.mor_generator_type(&f)),
-                        over: mapping.0.mor_generator_map().get(&f).map(|mor| Quoter.quote(mor)),
+                        over: mapping.0.mor_generator_map.get(&f).map(|mor| Quoter.quote(mor)),
                         dom: model.get_dom(&f).cloned().map(|ob| Quoter.quote(&ob)),
                         cod: model.get_cod(&f).cloned().map(|ob| Quoter.quote(&ob)),
                     }

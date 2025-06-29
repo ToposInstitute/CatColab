@@ -100,8 +100,8 @@ pub trait FgCategoryMap: CategoryMap {
 
 /** The data of a functor out of a finitely presented (f.p.) category.
 
-The data comprises a pair of mappings out of the object and morphism generators
-of the domain category, assumed to be finitely presented. These should form a
+This struct consists of a pair of mappings on the object and morphism generators
+of the domain category, assumed to be finitely presented. This data defines a
 [graph mapping](GraphMapping) from the domain category's generating graph to the
 codomain category's underlying graph.
 
@@ -110,37 +110,20 @@ functor](Self::functor_into) into a specific category.
  */
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct FpFunctorData<ObGenMap, MorGenMap> {
-    ob_gen_map: ObGenMap,
-    mor_gen_map: MorGenMap,
+    /// Mapping on object generators.
+    pub ob_generator_map: ObGenMap,
+
+    /// Mapping on morphism generators.
+    pub mor_generator_map: MorGenMap,
 }
 
 impl<ObGenMap, MorGenMap> FpFunctorData<ObGenMap, MorGenMap> {
     /// Constructs from given mappings on object and morphism generators.
-    pub fn new(ob_gen_map: ObGenMap, mor_gen_map: MorGenMap) -> Self {
+    pub fn new(ob_generator_map: ObGenMap, mor_generator_map: MorGenMap) -> Self {
         Self {
-            ob_gen_map,
-            mor_gen_map,
+            ob_generator_map,
+            mor_generator_map,
         }
-    }
-
-    /// Gets a reference to the mapping on object generators.
-    pub fn ob_generator_map(&self) -> &ObGenMap {
-        &self.ob_gen_map
-    }
-
-    /// Gets a reference to the mapping on morphism generators.
-    pub fn mor_generator_map(&self) -> &MorGenMap {
-        &self.mor_gen_map
-    }
-
-    /// Gets a mutable reference to the mapping on object generators.
-    pub fn ob_generator_map_mut(&mut self) -> &mut ObGenMap {
-        &mut self.ob_gen_map
-    }
-
-    /// Gets a mutable reference to the mapping on morphism generators.
-    pub fn mor_generator_map_mut(&mut self) -> &mut MorGenMap {
-        &mut self.mor_gen_map
     }
 
     /// Interprets the data as a functor into the given category.
@@ -162,10 +145,10 @@ where
     type EdgeMap = MorGenMap;
 
     fn vertex_map(&self) -> &Self::VertexMap {
-        &self.ob_gen_map
+        &self.ob_generator_map
     }
     fn edge_map(&self) -> &Self::EdgeMap {
-        &self.mor_gen_map
+        &self.mor_generator_map
     }
 }
 
