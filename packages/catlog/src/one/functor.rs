@@ -293,8 +293,8 @@ where
                     InvalidGraphMorphism::Tgt(e) => InvalidFpFunctor::Cod(e),
                 });
         let equation_errors = dom.equations().enumerate().filter_map(|(id, eq)| {
-            if let (Some(lhs), Some(rhs)) =
-                (self.apply_mor(eq.lhs.clone()), self.apply_mor(eq.rhs.clone()))
+            let map = self.mor_map();
+            if let (Some(lhs), Some(rhs)) = (map.apply_to_ref(&eq.lhs), map.apply_to_ref(&eq.rhs))
                 && !self.cod.morphisms_are_equal(lhs, rhs)
             {
                 Some(InvalidFpFunctor::Eq(id))

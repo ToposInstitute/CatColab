@@ -27,6 +27,7 @@ use tsify::{Tsify, declare};
 use super::{model::*, model_morphism::*};
 use crate::one::{Category, FgCategory, GraphMapping};
 use crate::validate;
+use crate::zero::Mapping;
 
 /** A diagram in a model of a double theory.
 
@@ -101,7 +102,7 @@ where
         let (mapping, domain) = self.into();
         domain.infer_missing();
         for e in domain.mor_generators() {
-            let Some(g) = mapping.0.apply_edge(e.clone()) else {
+            let Some(g) = mapping.0.edge_map().apply_to_ref(&e) else {
                 continue;
             };
             if !model.has_mor(&g) {

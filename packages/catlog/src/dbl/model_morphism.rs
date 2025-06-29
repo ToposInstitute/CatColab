@@ -460,8 +460,7 @@ where
         let var = &self.var_order[depth];
         match var.clone() {
             GraphElem::Vertex(x) => {
-                if self.ob_init.is_set(&x) {
-                    let y = self.ob_init.get(&x).cloned().unwrap();
+                if let Some(y) = self.ob_init.apply_to_ref(&x) {
                     let can_assign = self.assign_ob(x.clone(), y.clone());
                     if can_assign {
                         self.search(depth + 1);
@@ -478,8 +477,7 @@ where
                 }
             }
             GraphElem::Edge(m) => {
-                if self.mor_init.is_set(&m) {
-                    let path = self.mor_init.get(&m).cloned().unwrap();
+                if let Some(path) = self.mor_init.apply_to_ref(&m) {
                     self.map.assign_mor(m, path);
                     self.search(depth + 1);
                 } else {
@@ -541,13 +539,13 @@ mod tests {
     fn find_positive_loops() {
         let th = Rc::new(th_signed_category());
         let positive_loop = positive_loop(th.clone());
-        let pos: Path<_, _> = positive_loop.mor_generators().next().unwrap().into();
+        let pos = positive_loop.mor_generators().next().unwrap().into();
 
         let maps = DiscreteDblModelMapping::morphisms(&positive_loop, &positive_loop).find_all();
         assert_eq!(maps.len(), 2);
         let mors: Vec<_> = maps
             .into_iter()
-            .map(|map| map.functor_into(&positive_loop).apply_mor(pos.clone()))
+            .map(|map| map.functor_into(&positive_loop).mor_map().apply_to_ref(&pos))
             .collect();
         assert!(mors.iter().any(|mor| matches!(mor, Some(Path::Id(_)))));
         assert!(mors.iter().any(|mor| matches!(mor, Some(Path::Seq(_)))));
