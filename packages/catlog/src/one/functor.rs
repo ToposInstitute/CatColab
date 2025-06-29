@@ -172,8 +172,9 @@ where
 /** A functor out of a finitely presented (f.p.) category.
 
 Like a [`Function`](crate::zero::Function), this struct borrows its data. Unlike
-a function, the codomain is needed not just for validation but even to evaluate
-the functor on morphisms. The domain category is used only for validation.
+a [`Mapping`] between sets, a codomain is needed not just for validation but to
+even evaluate the functor on morphisms, hence is required as extra data. The
+domain category is needed only for validation.
  */
 pub struct FpFunctor<'a, Map, Cod> {
     map: &'a Map,
