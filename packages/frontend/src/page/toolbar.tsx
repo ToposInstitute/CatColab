@@ -66,7 +66,7 @@ export function TheoryHelpButton(props: {
                 {"You are using the logic: "}
                 <strong>{theory.name}</strong>
             </p>
-            <p>{"Learn more about this logic"}</p>
+            <p>{"Click to learn more about this logic"}</p>
         </>
     );
 
