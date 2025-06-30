@@ -300,6 +300,16 @@ where
             }
         }
     }
+
+    /// Migrate model forward along a map between discrete double theories.
+    pub fn push_forward<F>(&mut self, f: &F, new_theory: Rc<DiscreteDblTheory<Cat>>)
+    where
+        F: CategoryMap<DomOb = Cat::Ob, DomMor = Cat::Mor, CodOb = Cat::Ob, CodMor = Cat::Mor>,
+    {
+        self.ob_types = std::mem::take(&mut self.ob_types).postcompose(f.ob_map());
+        self.mor_types = std::mem::take(&mut self.mor_types).postcompose(f.mor_map());
+        self.theory = new_theory;
+    }
 }
 
 impl<Id, Cat> Category for DiscreteDblModel<Id, Cat>
