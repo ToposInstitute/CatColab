@@ -4,7 +4,7 @@ import invariant from "tiny-invariant";
 
 import { TheoryLibraryContext, type TheoryMeta } from "../stdlib";
 
-import { TheoryHelpButton } from "../page/toolbar"
+import { TheoryHelpButton } from "../page/toolbar";
 
 import "./theory_selector.css";
 
@@ -26,7 +26,7 @@ export function TheorySelectorDialog(props: TheorySelectorProps) {
             >
                 {props.theory.name}
             </Dialog.Trigger>
-            <TheoryHelpButton theory={props.theories.get(props.theory.id)}/>
+            <TheoryHelpButton theory={props.theories.get(props.theory.id)} />
             <Dialog.Portal>
                 <Dialog.Overlay class="overlay" />
                 <Dialog.Content class="popup">
