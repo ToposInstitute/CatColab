@@ -1,5 +1,4 @@
 .help-container {
-
     /* Links */
 
     & a {
@@ -19,15 +18,11 @@
 
     & h2 {
         margin: 1.25em 0 0.5em 0;
-        border-bottom: 1px solid rgba(0,0,0,0.2);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.2);
     }
 
     & h3 {
         margin: 0.7em 0;
-    }
-
-    & h4 {
-
     }
 
     /* Lists */

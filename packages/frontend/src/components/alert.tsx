@@ -42,9 +42,7 @@ export const ErrorAlert = (props: AlertProps) => (
 /** An info alert. */
 export const Summary = (props: AlertProps) => (
     <Alert class="alert alert-summary">
-        <div class="alert-heading">
-            {props.title ?? "Summary"}
-        </div>
+        <div class="alert-heading">{props.title ?? "Summary"}</div>
         {props.children}
     </Alert>
 );
