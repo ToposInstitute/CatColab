@@ -337,8 +337,7 @@ impl<T: Eq + Clone> Column for VecColumn<T> {
 
 impl<T: Eq + Clone> MutColumn for VecColumn<T> {}
 
-/** An unindexed column backed by a hash map.
- */
+/// An unindexed column backed by a hash map.
 #[derive(Clone, From, Debug, Derivative)]
 #[derivative(Default(bound = "S: Default"))]
 #[derivative(PartialEq(bound = "K: Eq + Hash, V: PartialEq, S: BuildHasher"))]
@@ -461,8 +460,7 @@ trait Index {
     fn remove(&mut self, x: &Self::Dom, y: &Self::Cod);
 }
 
-/** An index implemented as a vector of vectors.
- */
+/// An index implemented as a vector of vectors.
 #[derive(Clone, Debug, Derivative)]
 #[derivative(Default(bound = ""))]
 struct VecIndex<T>(Vec<Vec<T>>);
@@ -494,8 +492,7 @@ impl<T: Eq + Clone> Index for VecIndex<T> {
     }
 }
 
-/** An index implemented by a hash map into vectors.
- */
+/// An index implemented by a hash map into vectors.
 #[derive(Clone, Debug, Derivative)]
 #[derivative(Default(bound = "S: Default"))]
 struct HashIndex<X, Y, S = RandomState>(HashMap<Y, Vec<X>, S>);
