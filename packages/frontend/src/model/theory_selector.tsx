@@ -3,6 +3,8 @@ import { For, createMemo, createSignal } from "solid-js";
 
 import type { TheoryLibrary, TheoryMeta } from "../stdlib";
 
+import { TheoryHelpButton } from "../page/toolbar"
+
 import "./theory_selector.css";
 
 type TheorySelectorProps = {
@@ -27,6 +29,7 @@ export function TheorySelectorDialog(
             >
                 {props.theory.name}
             </Dialog.Trigger>
+            <TheoryHelpButton theory={props.theories.get(props.theory.id)}/>
             <Dialog.Portal>
                 <Dialog.Overlay class="overlay" />
                 <Dialog.Content class="popup">

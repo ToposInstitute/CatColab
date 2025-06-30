@@ -16,7 +16,6 @@ import {
     DocumentBreadcrumbs,
     DocumentLoadingScreen,
     DocumentMenu,
-    TheoryHelpButton,
     Toolbar,
 } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
@@ -65,7 +64,6 @@ export function ModelDocumentEditor(props: {
                 <DocumentMenu liveDocument={props.liveModel} />
                 <DocumentBreadcrumbs document={props.liveModel} />
                 <span class="filler" />
-                <TheoryHelpButton theory={props.liveModel.theory()} />
                 <PermissionsButton
                     permissions={props.liveModel.liveDoc.permissions}
                     refId={props.liveModel.refId}

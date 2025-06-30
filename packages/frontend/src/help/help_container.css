@@ -1,8 +1,13 @@
 .help-container {
+
+    /* Links */
+
     & a {
         color: #007481;
         text-decoration: none;
     }
+
+    /* Headings */
 
     & h1 {
         margin: 0.5em 0;
@@ -15,6 +20,8 @@
     & h2 {
         margin: 0.67em 0;
     }
+
+    /* Lists */
 
     & li:not(:last-child) {
         margin-bottom: 0.2em;

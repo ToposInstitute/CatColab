@@ -26,7 +26,6 @@ import {
     DocumentBreadcrumbs,
     DocumentLoadingScreen,
     DocumentMenu,
-    TheoryHelpButton,
     Toolbar,
 } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
@@ -108,7 +107,6 @@ export function AnalysisDocumentEditor(props: {
                                 <AnalysisMenu liveAnalysis={props.liveAnalysis} />
                                 <DocumentBreadcrumbs document={props.liveAnalysis} />
                                 <span class="filler" />
-                                <TheoryHelpButton theory={theoryForAnalysis(props.liveAnalysis)} />
                                 <IconButton
                                     onClick={toggleSidePanel}
                                     tooltip={

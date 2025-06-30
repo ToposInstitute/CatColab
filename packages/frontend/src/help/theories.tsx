@@ -28,7 +28,7 @@ function TheoriesHelp(props: {
                                 {(theoryMeta) => (
                                     <>
                                         <dt>
-                                            <A href={`../theory/${theoryMeta.id}`}>
+                                            <A href={`../logics/${theoryMeta.id}`}>
                                                 {theoryMeta.name}
                                             </A>
                                         </dt>

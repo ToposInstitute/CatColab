@@ -14,15 +14,19 @@ export const helpRoutes: RouteDefinition[] = [
         component: lazyMdx(() => import("./index.mdx")),
     },
     {
+        path: "/concepts",
+        component: lazyMdx(() => import("./concepts.mdx")),
+    },
+    {
         path: "/credits",
         component: lazyMdx(() => import("./credits.mdx")),
     },
     {
-        path: "/theories",
+        path: "/logics",
         component: lazy(() => import("./theories")),
     },
     {
-        path: "/theory/:id",
+        path: "/logics/:id",
         matchFilters: theoryWithIdFilter,
         component: lazy(() => import("./theory")),
     },
