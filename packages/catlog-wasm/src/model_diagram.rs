@@ -10,8 +10,8 @@ use wasm_bindgen::prelude::*;
 
 use catlog::dbl::model::{FgDblModel, MutDblModel};
 use catlog::dbl::model_diagram as diagram;
-use catlog::dbl::model_morphism::DblModelMapping;
 use catlog::one::FgCategory;
+use catlog::zero::MutMapping;
 use notebook_types::current::*;
 
 use super::model::{CanElaborate, CanQuote, Elaborator, Quoter};
@@ -75,7 +75,7 @@ impl DblModelDiagram {
                     model.set_cod(decl.id, cod);
                 }
                 if let Some(over) = decl.over.as_ref().map(|mor| Elaborator.elab(mor)).transpose()? {
-                    mapping.assign_basic_mor(decl.id, over);
+                    mapping.assign_mor(decl.id, over);
                 }
                 Ok(())
             }
@@ -142,7 +142,7 @@ impl DblModelDiagram {
                         name: "".into(),
                         id: x,
                         ob_type: Quoter.quote(&model.ob_generator_type(&x)),
-                        over: mapping.apply_ob(&x).map(|ob| Quoter.quote(&ob))
+                        over: mapping.0.ob_generator_map.get(&x).map(|ob| Quoter.quote(ob))
                     }
                 });
                 decls.collect()
@@ -161,7 +161,7 @@ impl DblModelDiagram {
                         name: "".into(),
                         id: f,
                         mor_type: Quoter.quote(&model.mor_generator_type(&f)),
-                        over: mapping.apply_basic_mor(&f).map(|mor| Quoter.quote(&mor)),
+                        over: mapping.0.mor_generator_map.get(&f).map(|mor| Quoter.quote(mor)),
                         dom: model.get_dom(&f).cloned().map(|ob| Quoter.quote(&ob)),
                         cod: model.get_cod(&f).cloned().map(|ob| Quoter.quote(&ob)),
                     }
