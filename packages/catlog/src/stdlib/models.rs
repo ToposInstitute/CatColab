@@ -1,7 +1,7 @@
 //! Standard library of models of double theories.
 
 use std::rc::Rc;
-use ustr::{ustr, Ustr};
+use ustr::{Ustr, ustr};
 
 use crate::dbl::{model::*, theory::*};
 use crate::one::Path;

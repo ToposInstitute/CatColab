@@ -744,7 +744,7 @@ stdTheories.add(
                     description: "Variable controlling stock quantity",
                     shortcut: ["V"],
                     arrowStyle: "flat",
-					cssClasses: [styles.link],
+                    cssClasses: [styles.link],
                     svgClasses: [svgStyles.link],
                 },
             ],

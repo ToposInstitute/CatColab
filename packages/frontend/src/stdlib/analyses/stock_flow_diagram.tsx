@@ -96,37 +96,43 @@ export function StockFlowGraphviz(props: {
 
     const vizLayout = () => {
         const viz = vizResource();
-		const patternAuxiliaryVariable: P.Pattern<ModelJudgment> = {
-		  tag: "object",
-		  obType: {
-			content: "AuxiliaryVariable",
-			tag: "Basic",
-		  }
-		};
-		// const patternVariableLink: P.Pattern<ModelJudgment> = {
-		// 	tag: "morphism",
-		// 	morType: {
-		// 	  content: "VariableLink",
-		// 	  tag: "Basic",
-		// 	}
-		// };
+        const patternAuxiliaryVariable: P.Pattern<ModelJudgment> = {
+            tag: "object",
+            obType: {
+                content: "AuxiliaryVariable",
+                tag: "Basic",
+            },
+        };
+        // const patternVariableLink: P.Pattern<ModelJudgment> = {
+        // 	tag: "morphism",
+        // 	morType: {
+        // 	  content: "VariableLink",
+        // 	  tag: "Basic",
+        // 	}
+        // };
         return (
             viz &&
             vizLayoutGraph(
                 viz,
-                modelToGraphviz(props.model, props.theory, props.attributes, 
-					(jgmt: ModelJudgment) => 
-					  match(jgmt)
-					  .with(patternAuxiliaryVariable, () => ({ xlabel: jgmt.name, label: "" }))
-					  .with(P._, () => undefined)
-					  .run()
-					// (jgmt: ModelJudgment) =>  
-					//   match(jgmt)
-					//   .with(patternVariableLink, () => ({ style: "variable-link" }))
-					//   .with(P._, () => undefined)
-				),
+                modelToGraphviz(
+                    props.model,
+                    props.theory,
+                    props.attributes,
+                    (jgmt: ModelJudgment) =>
+                        match(jgmt)
+                            .with(patternAuxiliaryVariable, () => ({
+                                xlabel: jgmt.name,
+                                label: "",
+                            }))
+                            .with(P._, () => undefined)
+                            .run(),
+                    // (jgmt: ModelJudgment) =>
+                    //   match(jgmt)
+                    //   .with(patternVariableLink, () => ({ style: "variable-link" }))
+                    //   .with(P._, () => undefined)
+                ),
                 props.options,
-			)
+            )
         );
     };
 
@@ -145,50 +151,49 @@ function StockFlowSVG(props: {
         const result: string[] = [];
         const nodeMap = uniqueIndexArray(props.layout?.nodes ?? [], (node) => node.id);
         const edgeMap = uniqueIndexArray(props.layout?.edges ?? [], (edge) => edge.id);
-		// const patternFlowLink: P.Pattern<ModelJudgment> = {
-		//   tag: "morphism",
-		//   dom: {
-		// 	tag: "Basic",
-		// 	content: P.select("srcId"),
-		//   },
-		//   cod: {
-		// 	tag: "Tabulated",
-		// 	content: {
-		// 	  tag: "Basic",
-		// 	  content: P.select("tgtId"),
-		// 	},
-		//   },
-		// };	
+        // const patternFlowLink: P.Pattern<ModelJudgment> = {
+        //   tag: "morphism",
+        //   dom: {
+        // 	tag: "Basic",
+        // 	content: P.select("srcId"),
+        //   },
+        //   cod: {
+        // 	tag: "Tabulated",
+        // 	content: {
+        // 	  tag: "Basic",
+        // 	  content: P.select("tgtId"),
+        // 	},
+        //   },
+        // };
         for (const judgment of props.model) {
-            match(judgment)
-				.with(
-				  {
-		  tag: "morphism",
-		  dom: {
-			tag: "Basic",
-			content: P.select("srcId"),
-		  },
-		  cod: {
-			tag: "Tabulated",
-			content: {
-			  tag: "Basic",
-			  content: P.select("tgtId"),
-			},
-		  },
-		},
-					({ srcId, tgtId }) => {
-                        const srcNode = nodeMap.get(srcId);
-                        const tgtEdge = edgeMap.get(tgtId);
-                        if (!srcNode || !tgtEdge) {
-                            return;
-                        }
-                        pathElem.setAttribute("d", tgtEdge.path);
-                        const midpoint = pathElem.getPointAtLength(pathElem.getTotalLength() / 2);
-                        const path = quadraticCurve(srcNode.pos, midpoint, 1.0);
-                        result.push(path.join(" "));
-					},
-			   );
-		}
+            match(judgment).with(
+                {
+                    tag: "morphism",
+                    dom: {
+                        tag: "Basic",
+                        content: P.select("srcId"),
+                    },
+                    cod: {
+                        tag: "Tabulated",
+                        content: {
+                            tag: "Basic",
+                            content: P.select("tgtId"),
+                        },
+                    },
+                },
+                ({ srcId, tgtId }) => {
+                    const srcNode = nodeMap.get(srcId);
+                    const tgtEdge = edgeMap.get(tgtId);
+                    if (!srcNode || !tgtEdge) {
+                        return;
+                    }
+                    pathElem.setAttribute("d", tgtEdge.path);
+                    const midpoint = pathElem.getPointAtLength(pathElem.getTotalLength() / 2);
+                    const path = quadraticCurve(srcNode.pos, midpoint, 1.0);
+                    result.push(path.join(" "));
+                },
+            );
+        }
         return result;
     };
 

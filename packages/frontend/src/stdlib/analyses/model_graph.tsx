@@ -6,11 +6,7 @@ import type { ModelJudgment } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { Foldable } from "../../components";
 import type { ModelAnalysisMeta, Theory } from "../../theory";
-import {
-    DownloadSVGButton,
-    GraphvizSVG,
-    type SVGRefProp,
-} from "../../visualization";
+import { DownloadSVGButton, GraphvizSVG, type SVGRefProp } from "../../visualization";
 import * as GV from "./graph_visualization";
 
 import "./graph_visualization.css";
@@ -61,10 +57,7 @@ export function ModelGraph(
     return (
         <div class="graph-visualization-analysis">
             <Foldable title={title()} header={header()}>
-                <GV.GraphConfigForm
-                    content={props.content}
-                    changeContent={props.changeContent}
-                />
+                <GV.GraphConfigForm content={props.content} changeContent={props.changeContent} />
             </Foldable>
             <div class="graph-visualization">
                 <Show when={props.liveModel.theory()}>
@@ -91,7 +84,6 @@ export function ModelGraphviz(props: {
     options?: Viz.RenderOptions;
     ref?: SVGRefProp;
 }) {
-    
     return (
         <GraphvizSVG
             graph={modelToGraphviz(props.model, props.theory, props.attributes)}
@@ -108,7 +100,7 @@ export function modelToGraphviz(
     theory: Theory,
     attributes?: GV.GraphvizAttributes,
     nodeAttributes?: (jgmt: ModelJudgment) => Record<string, string> | undefined,
-	// edgeAttributes?: (jgmt: ModelJudgment) => Record<string, string> | undefined,
+    // edgeAttributes?: (jgmt: ModelJudgment) => Record<string, string> | undefined,
 ): Viz.Graph {
     const nodes = new Map<string, Required<Viz.Graph>["nodes"][0]>();
     for (const judgment of model) {
@@ -121,15 +113,15 @@ export function modelToGraphviz(
                     id,
                     class: GV.svgCssClasses(meta).join(" "),
                     fontname: GV.graphvizFontname(meta),
-					...(nodeAttributes?.(judgment) ?? {
+                    ...(nodeAttributes?.(judgment) ?? {
                         label: name,
-                    })
-				}}
-            )
+                    }),
+                },
+            });
         }
     }
 
-    const edges: Required<Viz.Graph>["edges"] = [];	
+    const edges: Required<Viz.Graph>["edges"] = [];
     for (const judgment of model) {
         const matched = match(judgment)
             .with(
@@ -163,9 +155,9 @@ export function modelToGraphviz(
                 fontname: GV.graphvizFontname(meta),
                 // Not recognized by Graphviz but will be passed through!
                 arrowstyle: meta?.arrowStyle ?? "default",
-				  // ...(edgeAttributes?.(judgment).state.value ?? {
-					// // label: judgment.name
-				// })
+                // ...(edgeAttributes?.(judgment).state.value ?? {
+                // // label: judgment.name
+                // })
             },
         });
     }
