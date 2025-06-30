@@ -300,6 +300,16 @@ where
             }
         }
     }
+
+    /// Migrate model forward along a map between discrete double theories.
+    pub fn push_forward<F>(&mut self, f: &F, new_theory: Rc<DiscreteDblTheory<Cat>>)
+    where
+        F: CategoryMap<DomOb = Cat::Ob, DomMor = Cat::Mor, CodOb = Cat::Ob, CodMor = Cat::Mor>,
+    {
+        self.ob_types = std::mem::take(&mut self.ob_types).postcompose(f.ob_map());
+        self.mor_types = std::mem::take(&mut self.mor_types).postcompose(f.mor_map());
+        self.theory = new_theory;
+    }
 }
 
 impl<Id, Cat> Category for DiscreteDblModel<Id, Cat>
@@ -395,10 +405,10 @@ where
     Cat::Mor: Hash,
 {
     fn ob_generator_type(&self, ob: &Self::ObGen) -> Self::ObType {
-        self.ob_types.get(ob).cloned().expect("Object should have type")
+        self.ob_types.apply_to_ref(ob).expect("Object should have type")
     }
     fn mor_generator_type(&self, mor: &Self::MorGen) -> Self::MorType {
-        self.mor_types.get(mor).cloned().expect("Morphism should have type")
+        self.mor_types.apply_to_ref(mor).expect("Morphism should have type")
     }
 
     fn ob_generators_with_type(&self, typ: &Self::ObType) -> impl Iterator<Item = Self::ObGen> {
@@ -638,7 +648,7 @@ where
     fn src(&self, edge: &Self::E) -> Self::V {
         match edge {
             TabEdge::Basic(e) => {
-                self.dom.get(e).cloned().expect("Domain of morphism should be defined")
+                self.dom.apply_to_ref(e).expect("Domain of morphism should be defined")
             }
             TabEdge::Square { dom, .. } => TabOb::Tabulated(dom.clone()),
         }
@@ -647,7 +657,7 @@ where
     fn tgt(&self, edge: &Self::E) -> Self::V {
         match edge {
             TabEdge::Basic(e) => {
-                self.cod.get(e).cloned().expect("Codomain of morphism should be defined")
+                self.cod.apply_to_ref(e).expect("Codomain of morphism should be defined")
             }
             TabEdge::Square { cod, .. } => TabOb::Tabulated(cod.clone()),
         }
@@ -781,10 +791,10 @@ where
     }
 
     fn mor_generator_dom(&self, f: &Self::MorGen) -> Self::Ob {
-        self.generators.dom.get(f).cloned().expect("Domain should be defined")
+        self.generators.dom.apply_to_ref(f).expect("Domain should be defined")
     }
     fn mor_generator_cod(&self, f: &Self::MorGen) -> Self::Ob {
-        self.generators.cod.get(f).cloned().expect("Codomain should be defined")
+        self.generators.cod.apply_to_ref(f).expect("Codomain should be defined")
     }
 }
 
@@ -841,10 +851,10 @@ where
     S: BuildHasher,
 {
     fn ob_generator_type(&self, ob: &Self::ObGen) -> Self::ObType {
-        self.ob_types.get(ob).cloned().expect("Object should have type")
+        self.ob_types.apply_to_ref(ob).expect("Object should have type")
     }
     fn mor_generator_type(&self, mor: &Self::MorGen) -> Self::MorType {
-        self.mor_types.get(mor).cloned().expect("Morphism should have type")
+        self.mor_types.apply_to_ref(mor).expect("Morphism should have type")
     }
 
     fn ob_generators_with_type(&self, obtype: &Self::ObType) -> impl Iterator<Item = Self::ObGen> {
@@ -939,6 +949,24 @@ mod tests {
         model.add_mor(ustr("attr"), ustr("entity"), ustr("type"), ustr("Attr").into());
         model.infer_missing();
         assert_eq!(model, walking_attr(th));
+    }
+
+    #[test]
+    fn migrate_discrete_dbl_model() {
+        let th = Rc::new(th_category());
+        let mut model = DiscreteDblModel::new(th);
+        let (x, f) = (ustr("x"), ustr("f"));
+        model.add_ob(x, ustr("Object"));
+        model.add_mor(f, x, x, Path::Id(ustr("Object")));
+
+        let data = FpFunctorData::new(
+            HashColumn::new([(ustr("Object"), ustr("Entity"))].into()),
+            UstrColumn::default(),
+        );
+        let new_th = Rc::new(th_schema());
+        model.push_forward(&data.functor_into(new_th.category()), new_th.clone());
+        assert_eq!(model.ob_generator_type(&x), ustr("Entity"));
+        assert_eq!(model.mor_generator_type(&f), Path::Id(ustr("Entity")));
     }
 
     #[test]

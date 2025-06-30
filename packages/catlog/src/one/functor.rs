@@ -1,4 +1,18 @@
-//! Functors between categories.
+/*! Functors between categories.
+
+Abstractly, a functor between categories is a just graph morphism between the
+underlying graphs that respects composition. In our applications, we are most
+interested in functors out of *finitely generated* categories, whose action on
+arbitrary morphisms is uniquely determined by that on the morphism generators.
+Thus, in contrast to mappings between [sets](crate::zero::Mapping) and
+[graphs](crate::one::GraphMapping), we generally cannot separate *evaluation*
+from *validation*: to evaluate a [map](FgCategoryMap) on a finitely generated
+category, we might need access to the domain category, in order to decompose
+general morphisms into composites of generators, and also to the codomain
+category, in order to compose images of generating morphisms. The upshot is that
+you must carry around (references to) more data to evaluate functors than to
+evaluate functions or graph morphisms.
+ */
 
 use std::hash::{BuildHasher, Hash};
 
@@ -98,15 +112,66 @@ pub trait FgCategoryMap: CategoryMap {
     }
 }
 
+/** The data of a functor out of a finitely presented (f.p.) category.
+
+This struct consists of a pair of mappings on the object and morphism generators
+of the domain category, assumed to be finitely presented. This data defines a
+[graph mapping](GraphMapping) from the domain category's generating graph to the
+codomain category's underlying graph.
+
+You can't do much with this data until it is [interpreted as a
+functor](Self::functor_into) into a specific category.
+ */
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct FpFunctorData<ObGenMap, MorGenMap> {
+    /// Mapping on object generators.
+    pub ob_generator_map: ObGenMap,
+
+    /// Mapping on morphism generators.
+    pub mor_generator_map: MorGenMap,
+}
+
+impl<ObGenMap, MorGenMap> FpFunctorData<ObGenMap, MorGenMap> {
+    /// Constructs from given mappings on object and morphism generators.
+    pub fn new(ob_generator_map: ObGenMap, mor_generator_map: MorGenMap) -> Self {
+        Self {
+            ob_generator_map,
+            mor_generator_map,
+        }
+    }
+
+    /// Interprets the data as a functor into the given category.
+    pub fn functor_into<'a, Cod>(&'a self, cod: &'a Cod) -> FpFunctor<'a, Self, Cod> {
+        FpFunctor::new(self, cod)
+    }
+}
+
+impl<ObGenMap, MorGenMap> GraphMapping for FpFunctorData<ObGenMap, MorGenMap>
+where
+    ObGenMap: Mapping,
+    MorGenMap: Mapping,
+{
+    type DomV = ObGenMap::Dom;
+    type DomE = MorGenMap::Dom;
+    type CodV = ObGenMap::Cod;
+    type CodE = MorGenMap::Cod;
+    type VertexMap = ObGenMap;
+    type EdgeMap = MorGenMap;
+
+    fn vertex_map(&self) -> &Self::VertexMap {
+        &self.ob_generator_map
+    }
+    fn edge_map(&self) -> &Self::EdgeMap {
+        &self.mor_generator_map
+    }
+}
+
 /** A functor out of a finitely presented (f.p.) category.
 
-The data defining such a functor is a [graph mapping](GraphMapping) from the
-f.p. category's generating graph to the codomain category's underlying graph.
-The codomain category is arbitrary.
-
 Like a [`Function`](crate::zero::Function), this struct borrows its data. Unlike
-a function, the codomain is needed not just for validation but even to evaluate
-the functor on morphisms. The domain category is used only for validation.
+a [`Mapping`] between sets, a codomain is needed not just for validation but to
+even evaluate the functor on morphisms, hence is required as extra data. The
+domain category is needed only for validation.
  */
 pub struct FpFunctor<'a, Map, Cod> {
     map: &'a Map,
@@ -225,8 +290,8 @@ where
                     InvalidGraphMorphism::Tgt(e) => InvalidFpFunctor::Cod(e),
                 });
         let equation_errors = dom.equations().enumerate().filter_map(|(id, eq)| {
-            if let (Some(lhs), Some(rhs)) =
-                (self.apply_mor(eq.lhs.clone()), self.apply_mor(eq.rhs.clone()))
+            let map = self.mor_map();
+            if let (Some(lhs), Some(rhs)) = (map.apply_to_ref(&eq.lhs), map.apply_to_ref(&eq.rhs))
                 && !self.cod.morphisms_are_equal(lhs, rhs)
             {
                 Some(InvalidFpFunctor::Eq(id))
@@ -265,10 +330,7 @@ pub enum InvalidFpFunctor<V, E> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::one::{
-        ColumnarGraphMapping,
-        fp_category::{sch_graph, sch_hgraph, sch_sgraph},
-    };
+    use crate::one::fp_category::{sch_graph, sch_hgraph, sch_sgraph};
     use crate::zero::HashColumn;
     use ustr::ustr;
 
@@ -288,8 +350,13 @@ mod tests {
             ]
             .into(),
         );
-        let map = ColumnarGraphMapping::new(ob_map, mor_map);
-        let functor = FpFunctor::new(&map, &sch_hgraph);
+        let data = FpFunctorData::new(ob_map, mor_map);
+        let functor = data.functor_into(&sch_hgraph);
+        assert_eq!(functor.apply_ob(ustr("E")), Some(ustr("H")));
+        assert_eq!(
+            functor.apply_mor(Path::pair(ustr("inv"), ustr("src"))),
+            Some(Path::pair(ustr("inv"), ustr("vert")))
+        );
         assert!(functor.validate_on(&sch_sgraph).is_ok());
     }
 
@@ -306,8 +373,8 @@ mod tests {
             ]
             .into(),
         );
-        let map = ColumnarGraphMapping::new(ob_map, mor_map);
-        let functor = FpFunctor::new(&map, &sch_graph);
+        let data = FpFunctorData::new(ob_map, mor_map);
+        let functor = data.functor_into(&sch_graph);
         // Two equations fail, namely that `inv` swaps `src` and `tgt`.
         assert_eq!(functor.validate_on(&sch_sgraph).map_err(|errs| errs.len()), Err(2));
     }
