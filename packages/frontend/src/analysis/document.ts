@@ -41,6 +41,7 @@ export const newAnalysisDocument = (
 
 /** A model analysis document "live" for editing. */
 export type LiveModelAnalysisDocument = {
+    type: "analysis";
     analysisType: "model";
 
     /** The ref for which this is a live document. */
@@ -55,6 +56,7 @@ export type LiveModelAnalysisDocument = {
 
 /** A diagram analysis document "live" for editing. */
 export type LiveDiagramAnalysisDocument = {
+    type: "analysis";
     analysisType: "diagram";
 
     /** The ref for which this is a live document. */
@@ -92,6 +94,7 @@ export async function getLiveAnalysis(
     if (doc.analysisType === "model") {
         const liveModel = await getLiveModel(doc.analysisOf._id, api, theories);
         return {
+            type: "analysis",
             analysisType: "model",
             refId,
             liveDoc: liveDoc as LiveDoc<ModelAnalysisDocument>,
@@ -100,6 +103,7 @@ export async function getLiveAnalysis(
     } else if (doc.analysisType === "diagram") {
         const liveDiagram = await getLiveDiagram(doc.analysisOf._id, api, theories);
         return {
+            type: "analysis",
             analysisType: "diagram",
             refId,
             liveDoc: liveDoc as LiveDoc<DiagramAnalysisDocument>,

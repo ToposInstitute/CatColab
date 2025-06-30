@@ -1,17 +1,37 @@
 import { For, Show, createResource } from "solid-js";
-import type { AnalysisDocument, LiveAnalysisDocument } from "../analysis";
-import { getLiveDoc, useApi } from "../api";
-import type { DiagramDocument, LiveDiagramDocument } from "../diagram";
-import type { LiveModelDocument, ModelDocument } from "../model";
+import { getLiveAnalysis, type AnalysisDocument, type LiveAnalysisDocument } from "../analysis";
+import { Api, getLiveDoc, useApi } from "../api";
+import { getLiveDiagram, type DiagramDocument, type LiveDiagramDocument } from "../diagram";
+import { getLiveModel, type LiveModelDocument, type ModelDocument } from "../model";
 import { assertExhaustive } from "../util/assert_exhaustive";
 import "./document_breadcrumbs.css";
+import type { TheoryLibrary } from "../stdlib";
 
 type AnyDocument = ModelDocument | DiagramDocument | AnalysisDocument;
-type AnyLiveDocument = LiveModelDocument | LiveDiagramDocument | LiveAnalysisDocument;
+export type AnyLiveDocument = LiveModelDocument | LiveDiagramDocument | LiveAnalysisDocument;
+type AnyLiveDocumentType = AnyLiveDocument["type"];
 type AnyDocumentWithRefId = {
     document: AnyDocument;
     refId: string;
 };
+
+export async function getLiveDocument(
+    refId: string,
+    api: Api,
+    theories: TheoryLibrary,
+    type: AnyLiveDocumentType,
+): Promise<AnyLiveDocument> {
+    switch (type) {
+        case "model":
+            return getLiveModel(refId, api, theories);
+        case "diagram":
+            return getLiveDiagram(refId, api, theories);
+        case "analysis":
+            return getLiveAnalysis(refId, api, theories);
+        default:
+            assertExhaustive(type);
+    }
+}
 
 export function DocumentBreadcrumbs(props: {
     document: AnyLiveDocument;

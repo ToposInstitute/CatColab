@@ -1,5 +1,5 @@
-import { useParams } from "@solidjs/router";
-import { Match, Show, Switch, createResource, useContext } from "solid-js";
+import { useNavigate, useParams } from "@solidjs/router";
+import { For, Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { ModelJudgment } from "catlog-wasm";
@@ -13,17 +13,18 @@ import {
     newFormalCell,
 } from "../notebook";
 import {
+    AnyLiveDocument,
     DocumentBreadcrumbs,
     DocumentLoadingScreen,
     DocumentMenu,
+    getLiveDocument,
     TheoryHelpButton,
-    Toolbar,
 } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
 import { PermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
-import { type LiveModelDocument, getLiveModel } from "./document";
+import { type LiveModelDocument } from "./document";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
 import { TheorySelectorDialog } from "./theory_selector";
@@ -36,6 +37,10 @@ import {
 } from "./types";
 
 import "./model_editor.css";
+import { Layout } from "../page/layout";
+import { RefStub } from "catcolab-api";
+import { DiagramPane } from "../diagram/diagram_editor";
+import { AnalysisNotebookEditor } from "../analysis/analysis_editor";
 
 export default function ModelPage() {
     const api = useApi();
@@ -46,32 +51,115 @@ export default function ModelPage() {
 
     const [liveModel] = createResource(
         () => params.ref,
-        (refId) => getLiveModel(refId, api, theories),
+        (refId) => getLiveDocument(refId, api, theories, params.kind as any),
     );
 
     return (
         <Show when={liveModel()} fallback={<DocumentLoadingScreen />}>
-            {(loadedModel) => <ModelDocumentEditor liveModel={loadedModel()} />}
+            {(liveModel) => (
+                <Layout
+                    toolbarContents={
+                        <>
+                            <DocumentBreadcrumbs document={liveModel()} />
+                            <span class="filler" />
+                            <PermissionsButton
+                                permissions={liveModel().liveDoc.permissions}
+                                refId={liveModel().refId}
+                            />
+                        </>
+                    }
+                    sidebarContents={
+                        <>
+                            <DocumentMenu liveDocument={liveModel()} />
+                            <RelatedItems refId={params.ref!} liveDocument={liveModel()} />
+                        </>
+                    }
+                >
+                    <DocumentPane liveDocument={liveModel()} />
+                </Layout>
+            )}
         </Show>
     );
 }
 
-export function ModelDocumentEditor(props: {
-    liveModel: LiveModelDocument;
-}) {
+function DocumentPane(props: { liveDocument: AnyLiveDocument }) {
+    console.log(props.liveDocument.type === "analysis");
     return (
-        <div class="growable-container">
-            <Toolbar>
-                <DocumentMenu liveDocument={props.liveModel} />
-                <DocumentBreadcrumbs document={props.liveModel} />
-                <span class="filler" />
-                <TheoryHelpButton theory={props.liveModel.theory()} />
-                <PermissionsButton
-                    permissions={props.liveModel.liveDoc.permissions}
-                    refId={props.liveModel.refId}
-                />
-            </Toolbar>
-            <ModelPane liveModel={props.liveModel} />
+        <Switch>
+            <Match when={props.liveDocument.type === "model" && props.liveDocument}>
+                {(liveModel) => <ModelPane liveModel={liveModel()} />}
+            </Match>
+            <Match when={props.liveDocument.type === "diagram" && props.liveDocument}>
+                {(liveDiagram) => <DiagramPane liveDiagram={liveDiagram()} />}
+            </Match>
+            <Match when={props.liveDocument.type === "analysis" && props.liveDocument}>
+                {(liveAnalysis) => <AnalysisNotebookEditor liveAnalysis={liveAnalysis()} />}
+            </Match>
+        </Switch>
+    );
+}
+
+// <TheoryHelpButton theory={liveModel().theory()} />
+function RelatedItems(props: {
+    refId: string;
+    liveDocument: AnyLiveDocument;
+}) {
+    console.log(props.refId);
+    const api = useApi();
+    const [data] = createResource(
+        () => props.refId,
+        async (refId) => {
+            const results = await api.rpc.search_ref_stubs.query({
+                ownerUsernameQuery: null,
+                refNameQuery: null,
+                includePublicDocuments: true,
+                searcherMinLevel: null,
+                limit: 100,
+                offset: 0,
+                parentRefId: refId,
+            });
+
+            if (results.tag != "Ok") {
+                throw "couldn't load results";
+            }
+
+            return {
+                descendantItems: results.content.items,
+            };
+        },
+    );
+
+    return (
+        <Show when={data()} fallback={<div>loading</div>}>
+            {(data) => (
+                <>
+                    <CurrentItem liveDocument={props.liveDocument} />
+                    <For each={data().descendantItems}>
+                        {(stub) => <RelatedItem stub={stub} indent={1} />}
+                    </For>
+                </>
+            )}
+        </Show>
+    );
+}
+
+function CurrentItem(props: {
+    liveDocument: AnyLiveDocument;
+}) {
+    return <div class="related-item">{props.liveDocument.liveDoc.doc.name || "Untitled"}</div>;
+}
+
+function RelatedItem(props: { stub: RefStub; indent: number }) {
+    const name = props.stub.name || "Untitled";
+
+    const navigate = useNavigate();
+    const handleClick = () => {
+        navigate(`/${props.stub.typeName}/${props.stub.refId}`);
+    };
+
+    return (
+        <div onClick={handleClick} class={`related-item indent-${props.indent}`}>
+            {name}
         </div>
     );
 }

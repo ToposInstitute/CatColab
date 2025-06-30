@@ -121,19 +121,17 @@ const routes: RouteDefinition[] = [
         component: CreateModel,
     },
     {
-        path: "/model/:ref",
-        matchFilters: refIsUUIDFilter,
+        // :kind is one of model|diagram|analysis
+        // :ref    is always required
+        // :subkind? and :subref? are optional trailing segments
+        path: "/:kind/:ref/:subkind?/:subref?",
+        matchFilters: {
+            kind: ["model", "diagram", "analysis"], // only those three
+            ref: refIsUUIDFilter.ref,
+            subkind: (v?: string) => !v || v === "analysis" || v === "diagram",
+            subref: (v?: string) => !v || refIsUUIDFilter.ref(v),
+        },
         component: lazy(() => import("./model/model_editor")),
-    },
-    {
-        path: "/diagram/:ref",
-        matchFilters: refIsUUIDFilter,
-        component: lazy(() => import("./diagram/diagram_editor")),
-    },
-    {
-        path: "/analysis/:ref",
-        matchFilters: refIsUUIDFilter,
-        component: lazy(() => import("./analysis/analysis_editor")),
     },
     {
         path: "/help",
