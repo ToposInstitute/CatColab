@@ -23,12 +23,12 @@ export const helpRoutes: RouteDefinition[] = [
     },
     {
         path: "/logics",
-        component: lazy(() => import("./theories")),
+        component: lazy(() => import("./logics")),
     },
     {
         path: "/logics/:id",
         matchFilters: theoryWithIdFilter,
-        component: lazy(() => import("./theory")),
+        component: lazy(() => import("./logic")),
     },
     {
         path: "/quick-intro",

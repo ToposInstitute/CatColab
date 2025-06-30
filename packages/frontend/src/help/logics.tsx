@@ -3,22 +3,22 @@ import { For, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { type TheoryLibrary, TheoryLibraryContext } from "../stdlib";
-import TheoriesContent from "./theories.mdx";
+import LogicsContent from "./logics.mdx";
 
 /** Help page for all theories in the standard library. */
-export default function TheoriesHelpPage() {
+export default function LogicsHelpPage() {
     const theories = useContext(TheoryLibraryContext);
     invariant(theories, "Library of theories must be provided as context");
 
-    return <TheoriesHelp theories={theories} />;
+    return <LogicsHelp theories={theories} />;
 }
 
-function TheoriesHelp(props: {
+function LogicsHelp(props: {
     theories: TheoryLibrary;
 }) {
     return (
         <>
-            <TheoriesContent />
+            <LogicsContent />
             <For each={Array.from(props.theories.groupedMetadata().entries())}>
                 {([group, theories]) => (
                     <>

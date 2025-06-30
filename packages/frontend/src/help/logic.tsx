@@ -8,7 +8,7 @@ import { TheoryLibraryContext } from "../stdlib";
 import type { Theory } from "../theory";
 
 /** Help page for a theory in the standard library. */
-export default function TheoryHelpPage() {
+export default function LogicHelpPage() {
     const theories = useContext(TheoryLibraryContext);
     invariant(theories, "Library of theories must be provided as context");
 
@@ -19,11 +19,11 @@ export default function TheoryHelpPage() {
         return theories.get(params.id);
     };
 
-    return <TheoryHelp theory={theory()} />;
+    return <LogicHelp theory={theory()} />;
 }
 
 /** Documentation for a theory. */
-export function TheoryHelp(props: {
+export function LogicHelp(props: {
     theory: Theory;
 }) {
     const { theory } = destructure(props);
@@ -53,4 +53,4 @@ export function TheoryHelp(props: {
     );
 }
 
-const helpContent = (name: string) => lazy(() => import(`./theory/${name}.mdx`));
+const helpContent = (name: string) => lazy(() => import(`./logic/${name}.mdx`));
