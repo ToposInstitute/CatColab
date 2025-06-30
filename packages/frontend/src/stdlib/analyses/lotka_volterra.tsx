@@ -94,20 +94,22 @@ export function LotkaVolterra(
     ];
 
     function morNameOrDefault(mor: MorDecl) {
-        if(mor.name == "") {
-            if(mor.dom != null && mor.cod != null) {
-                if(mor.dom.tag == "Basic" && mor.cod.tag == "Basic") {
-                const source = props.liveModel.objectIndex().map.get(mor.dom.content)
-                const target = props.liveModel.objectIndex().map.get(mor.cod.content)
-                    if (source != undefined && target != undefined) {
-                        return source + "→" + target
-                    }
-                }
-            }
-            return ""
-        } else {
-            return mor.name
+        if (mor.name) {
+            return mor.name;
         }
+
+        const { dom, cod } = mor;
+        if (dom?.tag !== "Basic" || cod?.tag !== "Basic") {
+            return "";
+        }
+
+        const source = props.liveModel.objectIndex().map.get(dom.content);
+        const target = props.liveModel.objectIndex().map.get(cod.content);
+        if (source && target) {
+            return `${source}→${target}`;
+        }
+
+        return "";
     }
 
     const morSchema: ColumnSchema<MorphismDecl>[] = [
