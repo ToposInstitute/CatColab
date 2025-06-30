@@ -15,7 +15,7 @@
     }
 
     & label:hover {
-        color: var(--topos-color);
+        color: var(--topos-primary);
         cursor: pointer;
     }
 
