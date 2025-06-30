@@ -1,6 +1,6 @@
 import { createMemo } from "solid-js";
 
-import type { DblModel, MassActionModelData, MassActionProblemData, ODEResult } from "catlog-wasm";
+import type { DblModel, LinearODEModelData, LinearODEProblemData, ODEResult } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import {
     type ColumnSchema,
@@ -16,60 +16,50 @@ import { createModelODEPlot } from "./simulation";
 
 import "./simulation.css";
 
-/** Configuration for a mass-action ODE analysis of a model. */
-export type MassActionContent = MassActionProblemData<string>;
+/** Configuration for a LinearODE ODE analysis of a model. */
+export type LinearODEContent = LinearODEProblemData<string>;
 
-type Simulator = (model: DblModel, data: MassActionModelData) => ODEResult;
+type Simulator = (model: DblModel, data: LinearODEModelData) => ODEResult;
 
-/** Configure a mass-action ODE analysis for use with models of a theory. */
-export function configureMassAction(options: {
+/** Configure a LinearODE ODE analysis for use with models of a theory. */
+export function configureLinearODE(options: {
     id?: string;
     name?: string;
     description?: string;
     simulate: Simulator;
-    isState?: (ob: ObjectDecl) => boolean;
-    isTransition?: (mor: MorphismDecl) => boolean;
-}): ModelAnalysisMeta<MassActionContent> {
+}): ModelAnalysisMeta<LinearODEContent> {
     const {
-        id = "mass-action",
-        name = "Mass-action dynamics",
-        description = "Simulate the system using the law of mass action",
-        ...otherOptions
+        id = "linear-ode",
+        name = "Linear ODE dynamics",
+        description = "Simulate the system using a constant-coefficient linear first-order ODE",
+        simulate,
     } = options;
     return {
         id,
         name,
         description,
-        component: (props) => <MassAction title={name} {...otherOptions} {...props} />,
+        component: (props) => <LinearODE simulate={simulate} title={name} {...props} />,
         initialContent: () => ({
-            rates: {},
+            coefficients: {},
             initialValues: {},
             duration: 10,
         }),
     };
 }
 
-/** Analyze a model using mass-action dynamics. */
-export function MassAction(
-    props: ModelAnalysisProps<MassActionContent> & {
+/** Analyze a model using LinearODE dynamics. */
+export function LinearODE(
+    props: ModelAnalysisProps<LinearODEContent> & {
         simulate: Simulator;
-        isState?: (ob: ObjectDecl) => boolean;
-        isTransition?: (mor: MorphismDecl) => boolean;
         title?: string;
     },
 ) {
     const obDecls = createMemo<ObjectDecl[]>(() => {
-        return props.liveModel
-            .formalJudgments()
-            .filter((jgmt) => jgmt.tag === "object")
-            .filter((ob) => props.isState?.(ob) ?? true);
+        return props.liveModel.formalJudgments().filter((jgmt) => jgmt.tag === "object");
     }, []);
 
     const morDecls = createMemo<MorphismDecl[]>(() => {
-        return props.liveModel
-            .formalJudgments()
-            .filter((jgmt) => jgmt.tag === "morphism")
-            .filter((mor) => props.isTransition?.(mor) ?? true);
+        return props.liveModel.formalJudgments().filter((jgmt) => jgmt.tag === "morphism");
     }, []);
 
     const obSchema: ColumnSchema<ObjectDecl>[] = [
@@ -96,13 +86,13 @@ export function MassAction(
             content: (mor) => morNameOrDefault(mor, props),
         },
         createNumericalColumn({
-            name: "Rate",
-            data: (mor) => props.content.rates[mor.id],
+            name: "Coefficient",
+            data: (mor) => props.content.coefficients[mor.id],
             default: 1,
             validate: (_, data) => data >= 0,
             setData: (mor, data) =>
                 props.changeContent((content) => {
-                    content.rates[mor.id] = data;
+                    content.coefficients[mor.id] = data;
                 }),
         }),
     ];

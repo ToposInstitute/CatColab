@@ -25,32 +25,18 @@ use serde::{Deserialize, Serialize};
 use tsify::{Tsify, declare};
 
 use super::{model::*, model_morphism::*};
-use crate::one::{Category, FgCategory};
+use crate::one::{Category, FgCategory, GraphMapping};
 use crate::validate;
+use crate::zero::Mapping;
 
 /** A diagram in a model of a double theory.
 
 This struct owns its data, namely, the domain of the diagram (a model) and the
-model [mapping](DblModelMapping) itself.
+model mapping itself.
 */
 #[derive(Clone, Into)]
 #[into(owned, ref, ref_mut)]
 pub struct DblModelDiagram<Map, Dom>(pub Map, pub Dom);
-
-impl<Map, Dom> DblModelDiagram<Map, Dom>
-where
-    Map: DblModelMapping,
-{
-    /// Gets an object indexed by the diagram.
-    pub fn ob(&self, i: &Map::DomOb) -> Map::CodOb {
-        self.0.apply_ob(i).expect("Diagram should be defined at object")
-    }
-
-    /// Gets a morphism indexed by the diagram.
-    pub fn mor(&self, h: &Map::DomMor) -> Map::CodMor {
-        self.0.apply_mor(h).expect("Diagram should be defined at morphism")
-    }
-}
 
 /// A failure of a diagram in a model to be valid.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -116,16 +102,16 @@ where
         let (mapping, domain) = self.into();
         domain.infer_missing();
         for e in domain.mor_generators() {
-            let Some(g) = mapping.apply_basic_mor(&e) else {
+            let Some(g) = mapping.0.edge_map().apply_to_ref(&e) else {
                 continue;
             };
             if !model.has_mor(&g) {
                 continue;
             }
-            if let Some(x) = domain.get_dom(&e).filter(|x| !mapping.is_ob_assigned(x)) {
+            if let Some(x) = domain.get_dom(&e).filter(|x| !mapping.0.is_vertex_assigned(x)) {
                 mapping.assign_ob(x.clone(), model.dom(&g));
             }
-            if let Some(x) = domain.get_cod(&e).filter(|x| !mapping.is_ob_assigned(x)) {
+            if let Some(x) = domain.get_cod(&e).filter(|x| !mapping.0.is_vertex_assigned(x)) {
                 mapping.assign_ob(x.clone(), model.cod(&g));
             }
         }
@@ -142,25 +128,6 @@ mod tests {
     use crate::stdlib::*;
 
     #[test]
-    fn discrete_model_diagram() {
-        let th = Rc::new(th_schema());
-        let mut model = DiscreteDblModel::new(th.clone());
-        let entity = ustr("entity");
-        model.add_ob(entity, ustr("Entity"));
-        model.add_ob(ustr("type"), ustr("AttrType"));
-        model.add_mor(ustr("attr"), entity, ustr("type"), ustr("Attr").into());
-
-        let mut f: DiscreteDblModelMapping<_, _> = Default::default();
-        f.assign_ob(entity, 'x');
-        f.assign_ob(ustr("type"), 'y');
-        f.assign_basic_mor(ustr("attr"), Path::pair('p', 'q'));
-
-        let diagram = DblModelDiagram(f, model);
-        assert_eq!(diagram.ob(&entity), 'x');
-        assert_eq!(diagram.mor(&Path::single(ustr("attr"))), Path::pair('p', 'q'));
-    }
-
-    #[test]
     fn validate_model_diagram() {
         let th = Rc::new(th_signed_category());
         let pos_loop = positive_loop(th.clone());
@@ -168,7 +135,7 @@ mod tests {
 
         let mut f: DiscreteDblModelMapping<_, _> = Default::default();
         f.assign_ob(ustr("x"), ustr("x"));
-        f.assign_basic_mor(ustr("loop"), Path::pair(ustr("loop"), ustr("loop")));
+        f.assign_mor(ustr("loop"), Path::pair(ustr("loop"), ustr("loop")));
         let diagram = DblModelDiagram(f, pos_loop);
         assert!(diagram.validate_in(&neg_loop).is_ok());
     }
@@ -179,7 +146,7 @@ mod tests {
         let mut domain = DiscreteDblModel::new(th.clone());
         domain.add_mor('f', 'x', 'y', ustr("Attr").into());
         let mut f: DiscreteDblModelMapping<_, _> = Default::default();
-        f.assign_basic_mor('f', Path::single(ustr("attr")));
+        f.assign_mor('f', Path::single(ustr("attr")));
         let mut diagram = DblModelDiagram(f, domain);
 
         let model = walking_attr(th);

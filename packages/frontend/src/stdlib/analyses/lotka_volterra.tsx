@@ -4,7 +4,6 @@ import type {
     DblModel,
     LotkaVolterraModelData,
     LotkaVolterraProblemData,
-    MorDecl,
     ODEResult,
 } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
@@ -16,6 +15,7 @@ import {
 } from "../../components";
 import type { MorphismDecl, ObjectDecl } from "../../model";
 import type { ModelAnalysisMeta } from "../../theory";
+import { morNameOrDefault } from "../../util/default_names";
 import { ODEResultPlot } from "../../visualization";
 import { createModelODEPlot } from "./simulation";
 
@@ -93,30 +93,11 @@ export function LotkaVolterra(
         }),
     ];
 
-    function morNameOrDefault(mor: MorDecl) {
-        if (mor.name) {
-            return mor.name;
-        }
-
-        const { dom, cod } = mor;
-        if (dom?.tag !== "Basic" || cod?.tag !== "Basic") {
-            return "";
-        }
-
-        const source = props.liveModel.objectIndex().map.get(dom.content);
-        const target = props.liveModel.objectIndex().map.get(cod.content);
-        if (source && target) {
-            return `${source}→${target}`;
-        }
-
-        return "";
-    }
-
     const morSchema: ColumnSchema<MorphismDecl>[] = [
         {
             contentType: "string",
             header: true,
-            content: (mor) => morNameOrDefault(mor),
+            content: (mor) => morNameOrDefault(mor, props),
         },
         createNumericalColumn({
             name: "Interaction",

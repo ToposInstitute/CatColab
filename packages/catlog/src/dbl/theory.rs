@@ -528,19 +528,19 @@ where
         }
     }
 
-    /// Adds a basic object type to the theory.
+    /// Adds a generating object type to the theory.
     pub fn add_ob_type(&mut self, v: V) -> bool {
         self.ob_types.insert(v)
     }
 
-    /// Adds a basic morphism type to the theory.
+    /// Adds a generating morphism type to the theory.
     pub fn add_mor_type(&mut self, e: E, src: TabObType<V, E>, tgt: TabObType<V, E>) -> bool {
         self.src.set(e.clone(), src);
         self.tgt.set(e.clone(), tgt);
         self.make_mor_type(e)
     }
 
-    /// Adds a basic morphim type without initializing its source or target.
+    /// Adds a generating morphim type without initializing its source/target.
     pub fn make_mor_type(&mut self, e: E) -> bool {
         self.mor_types.insert(e)
     }
@@ -625,7 +625,7 @@ where
     fn src(&self, m: &Self::Pro) -> Self::Ob {
         match m {
             TabMorType::Basic(e) => {
-                self.src.apply(e).expect("Source of morphism type should be defined")
+                self.src.apply_to_ref(e).expect("Source of morphism type should be defined")
             }
             TabMorType::Hom(x) => (**x).clone(),
         }
@@ -633,7 +633,7 @@ where
     fn tgt(&self, m: &Self::Pro) -> Self::Ob {
         match m {
             TabMorType::Basic(e) => {
-                self.tgt.apply(e).expect("Target of morphism type should be defined")
+                self.tgt.apply_to_ref(e).expect("Target of morphism type should be defined")
             }
             TabMorType::Hom(x) => (**x).clone(),
         }
@@ -689,7 +689,7 @@ where
             (m, TabMorType::Hom(y)) if self.tgt(&m) == *y => m,
             (TabMorType::Hom(x), n) if self.src(&n) == *x => n,
             (TabMorType::Basic(d), TabMorType::Basic(e)) => {
-                self.compose_map.apply(&(d, e)).expect("Composition should be defined")
+                self.compose_map.apply((d, e)).expect("Composition should be defined")
             }
             _ => panic!("Ill-typed composite of morphism types in discrete tabulator theory"),
         };
