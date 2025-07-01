@@ -37,7 +37,6 @@ export function GraphSVG<Id>(props: {
 /** Draw a node with a layout using SVG.
  */
 export function NodeSVG<Id>(props: { node: GraphLayout.Node<Id> }) {
-    // do we use an || operator?
     const {
         node: {
             pos: { x, y },

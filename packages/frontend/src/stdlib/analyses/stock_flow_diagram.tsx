@@ -103,13 +103,6 @@ export function StockFlowGraphviz(props: {
                 tag: "Basic",
             },
         };
-        // const patternVariableLink: P.Pattern<ModelJudgment> = {
-        // 	tag: "morphism",
-        // 	morType: {
-        // 	  content: "VariableLink",
-        // 	  tag: "Basic",
-        // 	}
-        // };
         return (
             viz &&
             vizLayoutGraph(
@@ -126,10 +119,6 @@ export function StockFlowGraphviz(props: {
                             }))
                             .with(P._, () => undefined)
                             .run(),
-                    // (jgmt: ModelJudgment) =>
-                    //   match(jgmt)
-                    //   .with(patternVariableLink, () => ({ style: "variable-link" }))
-                    //   .with(P._, () => undefined)
                 ),
                 props.options,
             )
@@ -151,20 +140,6 @@ function StockFlowSVG(props: {
         const result: string[] = [];
         const nodeMap = uniqueIndexArray(props.layout?.nodes ?? [], (node) => node.id);
         const edgeMap = uniqueIndexArray(props.layout?.edges ?? [], (edge) => edge.id);
-        // const patternFlowLink: P.Pattern<ModelJudgment> = {
-        //   tag: "morphism",
-        //   dom: {
-        // 	tag: "Basic",
-        // 	content: P.select("srcId"),
-        //   },
-        //   cod: {
-        // 	tag: "Tabulated",
-        // 	content: {
-        // 	  tag: "Basic",
-        // 	  content: P.select("tgtId"),
-        // 	},
-        //   },
-        // };
         for (const judgment of props.model) {
             match(judgment).with(
                 {
