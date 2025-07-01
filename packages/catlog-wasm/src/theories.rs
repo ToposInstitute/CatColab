@@ -13,7 +13,7 @@ use catlog::dbl::{model, theory};
 use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories};
 
-use super::model_morphism::{MotifsOptions, motifs};
+use super::model_morphism::{motifs, MotifsOptions};
 use super::{analyses::*, model::DblModel, theory::DblTheory};
 
 /// The empty or initial theory.
@@ -309,7 +309,7 @@ impl ThCategoryDynamicStockFlow {
             analyses::ode::StockFlowMassActionAnalysis::default()
                 .create_numerical_system(model, data.0)
                 .solve_with_defaults()
-                .map_err(|err| format!("{:?}", err))
+                .map_err(|err| format!("{err:?}"))
                 .into(),
         ))
     }

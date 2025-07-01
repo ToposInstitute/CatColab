@@ -539,7 +539,7 @@ where
         self.tgt.set(e.clone(), tgt);
         self.make_mor_type(e)
     }
-  
+
     /// Adds a generating morphim type without initializing its source/target.
     pub fn make_mor_type(&mut self, e: E) -> bool {
         self.mor_types.insert(e)

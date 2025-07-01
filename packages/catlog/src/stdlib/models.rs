@@ -199,8 +199,8 @@ mod tests {
     }
 
     #[test]
-    fn categories_dynvar() {
-        let th = Rc::new(th_category_dynvar());
+    fn categories_dynamic_stockflow() {
+        let th = Rc::new(th_category_dynamic_stockflow());
         assert!(water_volume(th).validate().is_ok());
     }
 }
