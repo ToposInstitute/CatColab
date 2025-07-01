@@ -5,6 +5,7 @@ pub mod fp_category;
 pub mod functor;
 pub mod graph;
 pub mod graph_algorithms;
+pub mod monoidal;
 pub mod path;
 pub mod tree;
 pub mod tree_algorithms;
