@@ -4,8 +4,11 @@
     box-sizing: border-box;
     border-left: 4px solid var(--alert-color);
     border-radius: 4px;
-    /*padding-left: 1ex;*/
     padding: 0.75rem 0 0.1rem 1.5rem;
+
+    & > p {
+        margin-top: 0.5em;
+    }
 }
 
 .alert-heading {
@@ -26,6 +29,6 @@
     --alert-color: Maroon;
 }
 
-.alert-summary {
+.alert-question {
     --alert-color: Teal;
 }

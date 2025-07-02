@@ -23,8 +23,6 @@
     & h4 {
         font-size: 1.1em;
         font-style: italic;
-        /*margin-bottom: -0.5em;*/
-        border-bottom: 1px solid rgba(0, 0, 0, 0.2);
     }
 
 
@@ -55,31 +53,45 @@
 
     /* Navigation */
 
-    ul.help-navigation {
+    .help-navigation {
         display: flex;
-        justify-content: center;
-        list-style: none;
-    }
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 2em;
+        border-bottom: 1px solid black;
 
-    li.help-navigation-link {
-        margin: 0 1em;
-        white-space: nowrap;
-    }
+        & > .help-navigation-title {
+            font-size: 1.2em;
+            /*font-weight: 600;*/
+        }
 
-    li.help-navigation-link a {
-        text-decoration: none;
-        color: var(--topos-secondary);
-        font-weight: 600;
-        padding: 0.3em 0.5em;
-        border: 1px solid var(--topos-secondary);
-        border-radius: 2px;
+        & > ul.help-navigation-links {
+            display: flex;
+            justify-content: center;
+            list-style: none;
 
-        &:hover {
-            background-color: var(--topos-secondary);
-            color: white;
-              transition: color .15s ease-in-out, background-color .15s ease-in-out;
+            & > li.help-navigation-link {
+                margin: 0 1em;
+                white-space: nowrap;
+            }
+
+            & > li.help-navigation-link a {
+                text-decoration: none;
+                color: var(--topos-secondary);
+                font-weight: 600;
+                padding: 0.3em 0.5em;
+                /*border: 1px solid var(--topos-secondary);*/
+                border-radius: 2px;
+
+                &:hover {
+                    background-color: var(--topos-secondary);
+                    color: white;
+                      transition: color .15s ease-in-out, background-color .15s ease-in-out;
+                }
+            }
         }
     }
+
 
     /* Analyses help boxes */
     .help-analysis-pane {
@@ -90,6 +102,10 @@
 
         h3 {
             margin-top: 0;
+        }
+
+        h4 {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.2);
         }
     }
 }

@@ -47,10 +47,11 @@ export function LogicHelp(props: {
                 </dl>
             </Show>
             <Show when={theory().help}>
-                {(name) => <Dynamic component={helpContent(name())} />}
+                {(name) => <Dynamic component={helpLogicContent(name())} />}
             </Show>
         </>
     );
 }
 
-const helpContent = (name: string) => lazy(() => import(`./logic/${name}.mdx`));
+const helpLogicContent = (name: string) => lazy(() => import(`./logic/${name}.mdx`));
+// const helpAnalysisContent = (name: string) => lazy(() => import(`./analysis/${name}.mdx`));

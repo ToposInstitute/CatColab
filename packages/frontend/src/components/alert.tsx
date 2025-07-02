@@ -3,6 +3,7 @@ import type { JSX } from "solid-js";
 
 import OctagonX from "lucide-solid/icons/octagon-x";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
+import MessageCircleQuestion from "lucide-solid/icons/message-circle-question";
 
 import "./alert.css";
 
@@ -40,9 +41,12 @@ export const ErrorAlert = (props: AlertProps) => (
 );
 
 /** An info alert. */
-export const Summary = (props: AlertProps) => (
-    <Alert class="alert alert-summary">
-        <div class="alert-heading">{props.title ?? "Summary"}</div>
+export const Question = (props: AlertProps) => (
+    <Alert class="alert alert-question">
+        <div class="alert-heading">
+            <MessageCircleQuestion />
+            {props.title ?? "Question"}
+        </div>
         {props.children}
     </Alert>
 );
