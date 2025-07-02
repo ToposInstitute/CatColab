@@ -1,7 +1,6 @@
 .help-container {
     font-size: 1.05rem;
 
-
     /* Headers */
 
     & h1 {
@@ -25,14 +24,12 @@
         font-style: italic;
     }
 
-
     /* Links */
 
     & a {
         color: var(--topos-secondary);
         text-decoration: underline;
     }
-
 
     /* Lists */
 
@@ -50,7 +47,6 @@
         margin-bottom: 0.67em;
     }
 
-
     /* Navigation */
 
     .help-navigation {
@@ -62,7 +58,6 @@
 
         & > .help-navigation-title {
             font-size: 1.2em;
-            /*font-weight: 600;*/
         }
 
         & > ul.help-navigation-links {
@@ -86,12 +81,11 @@
                 &:hover {
                     background-color: var(--topos-secondary);
                     color: white;
-                      transition: color .15s ease-in-out, background-color .15s ease-in-out;
+                    transition: color .15s ease-in-out, background-color .15s ease-in-out;
                 }
             }
         }
     }
-
 
     /* Analyses help boxes */
     .help-analysis-pane {

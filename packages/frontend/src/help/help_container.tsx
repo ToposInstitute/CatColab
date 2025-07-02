@@ -14,10 +14,18 @@ export default function HelpContainer(props: {
                 <div class="help-navigation">
                     <span class="help-navigation-title">Help and resources</span>
                     <ul class="help-navigation-links">
-                        <li class="help-navigation-link"><a href="/help/">Overview</a></li>
-                        <li class="help-navigation-link"><a href="/help/quick-start/">Quick-start</a></li>
-                        <li class="help-navigation-link"><a href="/help/logics/">Logics</a></li>
-                        <li class="help-navigation-link"><a href="/help/credits/">Credits</a></li>
+                        <li class="help-navigation-link">
+                            <a href="/help/">Overview</a>
+                        </li>
+                        <li class="help-navigation-link">
+                            <a href="/help/guides/">Guides</a>
+                        </li>
+                        <li class="help-navigation-link">
+                            <a href="/help/logics/">Logics</a>
+                        </li>
+                        <li class="help-navigation-link">
+                            <a href="/help/credits/">Credits</a>
+                        </li>
                     </ul>
                 </div>
                 {props.children}

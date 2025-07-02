@@ -1,9 +1,9 @@
 import { Alert } from "@kobalte/core/alert";
 import type { JSX } from "solid-js";
 
+import MessageCircleQuestion from "lucide-solid/icons/message-circle-question";
 import OctagonX from "lucide-solid/icons/octagon-x";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
-import MessageCircleQuestion from "lucide-solid/icons/message-circle-question";
 
 import "./alert.css";
 

@@ -1,12 +1,18 @@
 import type { RouteDefinition } from "@solidjs/router";
 import { lazy } from "solid-js";
 
-import { stdTheories } from "../stdlib";
 import { lazyMdx } from "../util/mdx";
+import { stdTheories } from "../stdlib";
+import { guidesList } from "./guides";
 
 const theoryWithIdFilter = {
     id: (id: string) => stdTheories.has(id),
 };
+
+const existingGuideFilter = {
+    // TIM-TO-DO: is there a slicker way of doing this?
+    id: (id:string) => guidesList.find(item => item.id === id) !== undefined,
+}
 
 export const helpRoutes: RouteDefinition[] = [
     {
@@ -22,6 +28,15 @@ export const helpRoutes: RouteDefinition[] = [
         component: lazyMdx(() => import("./credits.mdx")),
     },
     {
+        path: "/guides",
+        component: lazy(() => import("./guides")),
+    },
+    {
+        path: "/guides/:id",
+        matchFilters: existingGuideFilter,
+        component: lazy(() => import("./guide")),
+    },
+    {
         path: "/logics",
         component: lazy(() => import("./logics")),
     },
@@ -29,9 +44,5 @@ export const helpRoutes: RouteDefinition[] = [
         path: "/logics/:id",
         matchFilters: theoryWithIdFilter,
         component: lazy(() => import("./logic")),
-    },
-    {
-        path: "/quick-start",
-        component: lazyMdx(() => import("./quick_start.mdx")),
     },
 ];
