@@ -5,20 +5,27 @@ import GuidesContent from "./guides.mdx";
 export type Guide = {
     id: string;
     title: string;
+    description: string;
 };
 
 export const guidesList: Guide[] = [
     {
-        id: "example-models",
-        title: "Example models",
-    },
-    {
         id: "predator-prey",
         title: "Predator–prey (causal loop diagrams)",
+        description:
+            "Understanding a simple foxes–rabbits–lettuce ecosystem through Lotka–Volterra dynamics",
     },
     {
         id: "seirv",
-        title: "SEIRV (stock and flow)",
+        title: "SEIRV (stock-flow diagrams)",
+        description:
+            "Extending a simple susceptible–exposed–infection (SIR) model to further also allow for exposed and vaccinated states, in the logic of stock-flow diagrams",
+    },
+    {
+        id: "example-models",
+        title: "Example models",
+        description:
+            "Some ready-made models in various logics, of various complexity, and from various domains",
     },
 ];
 
@@ -28,24 +35,24 @@ export default function GuidesHelpPage() {
 }
 
 function GuidesHelp(props: {
-    guides: {
-        id: string;
-        title: string;
-    }[];
+    guides: Guide[];
 }) {
     return (
         <>
             <GuidesContent />
 
-            <ul>
+            <dl>
                 <For each={props.guides}>
                     {(guide, _) => (
-                        <li>
-                            <A href={`${guide.id}`}>{guide.title}</A>
-                        </li>
+                        <>
+                            <dt>
+                                <A href={`${guide.id}`}>{guide.title}</A>
+                            </dt>
+                            <dd>{guide.description}</dd>
+                        </>
                     )}
                 </For>
-            </ul>
+            </dl>
         </>
     );
 }

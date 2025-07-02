@@ -39,6 +39,10 @@
 
     & dt {
         font-weight: bold;
+
+        & > a {
+            text-decoration: none;
+        }
     }
     & dd {
         margin-left: 0;

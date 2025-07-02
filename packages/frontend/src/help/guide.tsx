@@ -23,6 +23,9 @@ export function GuideHelp(props: {
             <h1>
                 <a href="/help/guides/">Guides</a> / {guide?.title}
             </h1>
+            <p>
+                <i>{guide?.description}</i>
+            </p>
             <Dynamic component={helpGuideContent(props.id)} />
         </>
     );
