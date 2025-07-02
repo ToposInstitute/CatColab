@@ -1,4 +1,4 @@
-//! Category theory in dimension one.
+//! Category theory in dimension one, plus a little graph theory.
 
 pub mod category;
 pub mod fp_category;
