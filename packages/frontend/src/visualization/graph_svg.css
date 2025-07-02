@@ -8,10 +8,23 @@
     fill: transparent;
 }
 
+.node circle {
+    fill: transparent;
+}
+
+.node circle.point {
+    fill: black;
+}
+
 .edge line,
 .edge path {
     fill: none;
     stroke: black;
+    stroke-width: 1.5;
+}
+.edge path.variable-link {
+    fill: none;
+    stroke: blue;
     stroke-width: 1.5;
 }
 
