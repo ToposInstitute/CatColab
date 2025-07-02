@@ -1,0 +1,21 @@
+### Lotka–Volterra
+
+#### Semantics
+
+In contrast to linear dynamics, we might want to think about **Lotka–Volterra dynamics** whenever influence between variables is *bidirectional*, e.g. for predator–prey models, where higher population of predators means lower population of prey means lower population of predators means ... and so on.
+
+An arrow $A\xrightarrow{\pm}B$ is interpreted as the equation $\dot{B}=\pm (kA + g)B$ for some constant $k$ (the *interaction coefficient*) and $g$ (the *growth rate*).
+Multiple incoming arrows are interpreted additively, so e.g. $A\xrightarrow{+}B\xleftarrow{-}C$ is interpreted as $\dot{B}=(kA - \ell C + g)B$.
+
+#### User inputs
+
+<dl>
+  <dt>Initial value: $\mathbb{R}_{\geqslant0}$</dt>
+  <dd>The initial value of the variable.</dd>
+  <dt>Interaction: $\mathbb{R}_{\geqslant0}$</dt>
+  <dd>The interaction coefficient ($k$) corresponding to the arrow.</dd>
+  <dt>Growth/decay: $\mathbb{R}$</dt>
+  <dd>The growth rate ($g$) of the variable.</dd>
+  <dt>Duration: $\mathbb{R}_{\geqslant0}$</dt>
+  <dd>The total duration of the simulation in units of time.</dd>
+</dl>

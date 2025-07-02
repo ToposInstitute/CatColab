@@ -1,0 +1,20 @@
+### Linear ODE
+
+#### Semantics
+
+Whenever we have *unidirectional* influence between variables, we might want to consider **linear first-order dynamics**, where variables affect the *first derivative* of other variables, with no feedback a priori.
+(For systems where variables directly influence *higher-order* derivatives of other variables, see the linear ODE analysis for <A href="../extended-causal-loop">**extended** causal loop diagrams</A>.)
+
+An arrow $A\xrightarrow{\pm}B$ is interpreted as the equation $\dot{B}=\pm k A$ for some constant $k$.
+Multiple incoming arrows are interpreted additively, so e.g. $A\xrightarrow{+}B\xleftarrow{-}C$ is interpreted as $\dot{B}=kA-\ell C$.
+
+#### User inputs
+
+<dl>
+  <dt>Initial value: $\mathbb{R}_{\geqslant0}$</dt>
+  <dd>The initial value of the variable.</dd>
+  <dt>Coefficient: $\mathbb{R}_{\geqslant0}$</dt>
+  <dd>The coefficient ($k$) corresponding to the arrow.</dd>
+  <dt>Duration: $\mathbb{R}_{\geqslant0}$</dt>
+  <dd>The total duration of the simulation in units of time.</dd>
+</dl>

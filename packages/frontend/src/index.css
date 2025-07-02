@@ -7,12 +7,10 @@
     --topos-primary: rgb(83, 182, 178);
     --topos-secondary: rgb(128, 49, 78);
 
-    --h1-font-size: 2.25em;
-    --h2-font-size: 1.75em;
-    --h3-font-size: 1.4em;
-    --h4-font-size: 1.2em;
-
-    --body-font-size: 1.05rem;
+    --h1-font-size: 3em;
+    --h2-font-size: 2em;
+    --h3-font-size: 1.5em;
+    --h4-font-size: 1.3em;
 
     color: var(--main-color);
     font-family: var(--main-font);

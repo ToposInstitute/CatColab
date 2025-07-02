@@ -31,7 +31,7 @@ export const helpRoutes: RouteDefinition[] = [
         component: lazy(() => import("./logic")),
     },
     {
-        path: "/quick-intro",
-        component: lazyMdx(() => import("./quick_intro.mdx")),
+        path: "/quick-start",
+        component: lazyMdx(() => import("./quick_start.mdx")),
     },
 ];

@@ -30,7 +30,7 @@ export function LogicHelp(props: {
 
     return (
         <>
-            <h1>{theory().name}</h1>
+            <h1><a href="/help/logics/">Logics</a> / {theory().name}</h1>
             <h2>Summary</h2>
             <p>{theory().description}</p>
             <Show when={theory().modelTypes.length > 0}>
