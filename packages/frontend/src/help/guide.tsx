@@ -16,7 +16,7 @@ export function GuideHelp(props: {
 }) {
     // Note that guide should never be undefined, due to existingGuideFilter
     // in routes.ts
-    const guide = guidesList.find(item => item.id === props.id);
+    const guide = guidesList.find((item) => item.id === props.id);
 
     return (
         <>

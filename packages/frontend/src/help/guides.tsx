@@ -5,7 +5,7 @@ import GuidesContent from "./guides.mdx";
 export type Guide = {
     id: string;
     title: string;
-}
+};
 
 export const guidesList: Guide[] = [
     {
@@ -19,8 +19,8 @@ export const guidesList: Guide[] = [
     {
         id: "seirv",
         title: "SEIRV (stock and flow)",
-    }
-]
+    },
+];
 
 /** Help page for all guides */
 export default function GuidesHelpPage() {
@@ -29,8 +29,8 @@ export default function GuidesHelpPage() {
 
 function GuidesHelp(props: {
     guides: {
-        id: string,
-        title: string,
+        id: string;
+        title: string;
     }[];
 }) {
     return (
@@ -38,13 +38,13 @@ function GuidesHelp(props: {
             <GuidesContent />
 
             <ul>
-            <For each={props.guides}>
-                {(guide, _) =>
-                <li>
-                    <A href={`${guide.id}`}>{guide.title}</A>
-                </li>
-                }
-            </For>
+                <For each={props.guides}>
+                    {(guide, _) => (
+                        <li>
+                            <A href={`${guide.id}`}>{guide.title}</A>
+                        </li>
+                    )}
+                </For>
             </ul>
         </>
     );

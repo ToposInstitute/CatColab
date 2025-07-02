@@ -1,8 +1,8 @@
 import type { RouteDefinition } from "@solidjs/router";
 import { lazy } from "solid-js";
 
-import { lazyMdx } from "../util/mdx";
 import { stdTheories } from "../stdlib";
+import { lazyMdx } from "../util/mdx";
 import { guidesList } from "./guides";
 
 const theoryWithIdFilter = {
@@ -11,8 +11,8 @@ const theoryWithIdFilter = {
 
 const existingGuideFilter = {
     // TIM-TO-DO: is there a slicker way of doing this?
-    id: (id:string) => guidesList.find(item => item.id === id) !== undefined,
-}
+    id: (id: string) => guidesList.find((item) => item.id === id) !== undefined,
+};
 
 export const helpRoutes: RouteDefinition[] = [
     {
