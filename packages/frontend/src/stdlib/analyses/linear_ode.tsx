@@ -10,6 +10,7 @@ import {
 } from "../../components";
 import type { MorphismDecl, ObjectDecl } from "../../model";
 import type { ModelAnalysisMeta } from "../../theory";
+import { morNameOrDefault } from "../../util/default_names";
 import { ODEResultPlot } from "../../visualization";
 import { createModelODEPlot } from "./simulation";
 
@@ -82,7 +83,7 @@ export function LinearODE(
         {
             contentType: "string",
             header: true,
-            content: (mor) => mor.name,
+            content: (mor) => morNameOrDefault(mor, props),
         },
         createNumericalColumn({
             name: "Coefficient",
