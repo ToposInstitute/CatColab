@@ -64,7 +64,7 @@ pub trait Category {
 /// The set of objects of a category.
 #[derive(From, RefCast)]
 #[repr(transparent)]
-pub struct ObSet<Cat: Category>(Cat);
+pub struct ObSet<Cat>(Cat);
 
 impl<Cat: Category> Set for ObSet<Cat> {
     type Elem = Cat::Ob;
@@ -81,7 +81,7 @@ are the identities, which can thus be identified with the objects.
  */
 #[derive(From, RefCast)]
 #[repr(transparent)]
-pub struct DiscreteCategory<S: Set>(S);
+pub struct DiscreteCategory<S>(S);
 
 impl<S: Set> Category for DiscreteCategory<S> {
     type Ob = S::Elem;
