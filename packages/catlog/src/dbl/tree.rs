@@ -13,19 +13,19 @@ Yet another way to say this is that double trees are the cells of [free
 VDCs](super::category::FreeVDblCategory), generalizing how trees are the
 morphisms of free multicategories. Turning this around, we use our data
 structure for trees, specifically [open trees](crate::one::tree), to implement
-double trees, the idea being that a double tree is an open tree whose types are
+double trees. A double tree is thus implemented as an open tree whose types are
 proarrows and operations are cells, subject to additional typing constraints on
 the sources and targets.
 
 The only hitch in this plan is that composition in a VDC includes the degenerate
 case of composing a cell with a zero-length path of cells, which is just a
-single arrow. To accomodate the degenerate case, the [nodes](DblNode) in a
+single arrow. To accomodate nullary cell composition, the [nodes](DblNode) in a
 double tree contain either cells *or* arrows. This complicates the code in a few
 places, since it is now possible for a nullary operation (cell) to have a child
 node, and it gives the data structure something of the spirit of *augmented*
-virtual double categories ([Koudenburg 2020](crate::refs::AugmentedVDCs)). We do
-not however implement pasting diagrams in augmented VDCs, which would introduce
-further complications.
+virtual double categories ([Koudenburg 2020](crate::refs::AugmentedVDCs)).
+Double trees are *not* however data structures for pasting diagrams in augmented
+VDCs, which would introduce further complications.
  */
 
 use derive_more::From;
