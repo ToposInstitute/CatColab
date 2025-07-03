@@ -24,9 +24,10 @@ import {
     NotebookCell,
     RichTextCellEditor,
     StemCellEditor,
+	QuiverCellEditor,
     isCellDragData,
 } from "./notebook_cell";
-import { type FormalCell, newFormalCell, newRichTextCell, newStemCell } from "./types";
+import { type FormalCell, newRichTextCell, newStemCell, newFormalCell, newQuiverCell } from "./types";
 
 import "./notebook_editor.css";
 
@@ -147,6 +148,12 @@ export function NotebookEditor<T>(props: {
             shortcut: [cellShortcutModifier, "T"],
             construct: () => newRichTextCell(),
         },
+		{
+			name: "Quiver",
+			description: "Quiver component",
+			shortcut: [cellShortcutModifier, "D"],
+			construct: () => newQuiverCell(),
+		},
         ...(props.cellConstructors ?? []),
     ];
 
@@ -296,6 +303,15 @@ export function NotebookEditor<T>(props: {
                                     <Switch>
                                         <Match when={cell.tag === "rich-text"}>
                                             <RichTextCellEditor
+                                                cellId={cell.id}
+                                                handle={props.handle}
+                                                path={[...props.path, "cells", i()]}
+                                                isActive={isActive()}
+                                                actions={cellActions}
+                                            />
+                                        </Match>
+										<Match when={cell.tag === "quiver"}>
+                                            <QuiverCellEditor
                                                 cellId={cell.id}
                                                 handle={props.handle}
                                                 path={[...props.path, "cells", i()]}

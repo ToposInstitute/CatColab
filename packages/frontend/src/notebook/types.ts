@@ -17,6 +17,16 @@ export const newRichTextCell = (content?: string): RichTextCell => ({
     content: content ?? "",
 });
 
+/** A cell containing Quiver content. */
+export type QuiverCell = Cell<unknown> & { tag: "quiver" };
+
+/** Creates a quiver text cell with the given content. */
+export const newQuiverCell = (content?: string): QuiverCell => ({
+	tag: "quiver",
+	id: v7(),
+	content: content ?? "",
+});
+
 /** A cell containing custom data, usually a formal object. */
 export type FormalCell<T> = Cell<T> & { tag: "formal" };
 

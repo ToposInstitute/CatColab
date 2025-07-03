@@ -225,6 +225,7 @@ export const RichTextEditor = (
     return (
         <div class={`rich-text-editor ${isEditorFocused() || isMenuActive() ? "focussed" : ""}`}>
             <Show when={isEditorFocused() || isMenuActive()}>
+				<iframe class="quiver-embed" src="https://q.uiver.app/#q=WzAsMSxbMCwwLCJcXGJ1bGxldCJdLFswLDBdXQ==&embed" width="176" height="176" style="border-radius: 8px; border: none;"></iframe>
                 <div
                     ref={menuRoot}
                     onFocusIn={() => setMenuActive(true)}

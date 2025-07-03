@@ -17,6 +17,7 @@ import {
     IconButton,
     InlineInput,
     RichTextEditor,
+	QuiverCell,
 } from "../components";
 import { focusInputWhen } from "../util/focus";
 
@@ -222,6 +223,40 @@ export function RichTextCellEditor(props: {
 
     return (
         <RichTextEditor
+            ref={(view) => setEditorView(view)}
+            id={props.cellId}
+            handle={props.handle}
+            path={[...props.path, "content"]}
+            placeholder="…"
+            deleteBackward={props.actions.deleteBackward}
+            deleteForward={props.actions.deleteForward}
+            exitUp={props.actions.activateAbove}
+            exitDown={props.actions.activateBelow}
+            onFocus={props.actions.hasFocused}
+        />
+    );
+}
+
+/** Editor for rich text cells, a simple wrapper around `RichTextEditor`.
+ */
+export function QuiverCellEditor(props: {
+    cellId: Uuid;
+    handle: DocHandle<unknown>;
+    path: Prop[];
+    isActive: boolean;
+    actions: CellActions;
+}) {
+    const [editorView, setEditorView] = createSignal<EditorView>();
+
+    createEffect(() => {
+        const view = editorView();
+        if (props.isActive && view) {
+            view.focus();
+        }
+    });
+
+    return (
+        <QuiverCell
             ref={(view) => setEditorView(view)}
             id={props.cellId}
             handle={props.handle}
