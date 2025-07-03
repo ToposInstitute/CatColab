@@ -1,7 +1,8 @@
 /*! Paths in graphs and categories.
 
-The central data type is [`Path`]. In addition, this module provides a simple
-data type for [path equations](`PathEq`).
+The central data type is [`Path`], a path of arbitrary finite length. In
+addition, this module provides data types for ["short paths"](`ShortPath`) and
+[path equations](`PathEq`).
 */
 
 use itertools::{Either, Itertools};
@@ -49,6 +50,9 @@ pub enum Path<V, E> {
     /// A nontrivial path, comprising a *non-empty* vector of consecutive edges.
     Seq(NonEmpty<E>),
 }
+
+/// A path in a graph with skeletal vertex and edge sets.
+pub type SkelPath = Path<usize, usize>;
 
 /// Converts an edge into a path of length one.
 impl<V, E> From<E> for Path<V, E> {
@@ -454,8 +458,52 @@ impl<V, E> Path<V, Path<V, E>> {
     }
 }
 
-/// A path in a graph with skeletal vertex and edge sets.
-pub type SkelPath = Path<usize, usize>;
+/** A path of length at most one.
+
+We call a path of length at most one, i.e., a path of lenth zero or one, a
+**short path**. This is not standard terminology, though it is inspired by
+"short maps" between metric spaces, which are Lipschitz maps with Lipschitz
+constant at most 1.
+
+Short paths are convertible into, and fallibly from, [paths](Path). Short paths
+might seem like an odd data structure, but are occasionally useful, such as in:
+
+- *finite* categories defined by an explicit multiplication table, where every
+  morphism is either a generator (path of length one) or an identity (path of
+  length zero)
+- *augmented* virtual double categories ([Koudenburg
+  2020](crate::refs::AugmentedVDCs)), where the codomain of a cell is by
+  definition a short path, and relatedly *unital* virtual double categories
+
+ */
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ShortPath<V, E> {
+    /// Path of length zero.
+    Zero(V),
+
+    /// Path of length one.
+    One(E),
+}
+
+impl<V, E> From<ShortPath<V,E>> for Path<V,E> {
+    fn from(path: ShortPath<V,E>) -> Self {
+        match path {
+            ShortPath::Zero(v) => Path::Id(v),
+            ShortPath::One(e) => Path::single(e),
+        }
+    }
+}
+
+impl<V, E> TryFrom<Path<V,E>> for ShortPath<V,E> {
+    type Error = ();
+
+    fn try_from(path: Path<V,E>) -> Result<Self, Self::Error> {
+        match path {
+            Path::Id(v) => Ok(ShortPath::Zero(v)),
+            _ => path.only().map(ShortPath::One).ok_or(())
+        }
+    }
+}
 
 /// Assertion of an equation between the composites of two paths in a category.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -573,9 +621,13 @@ mod tests {
     }
 
     #[test]
-    fn singleton_path() {
-        let e = 1;
-        assert_eq!(SkelPath::single(e).only(), Some(e));
+    fn short_paths() {
+        let (v, e) = (1, 1);
+        let path: SkelPath = ShortPath::Zero(v).into();
+        assert_eq!(path.try_into(), Ok(ShortPath::Zero(v)));
+        let path: SkelPath = ShortPath::One(e).into();
+        assert_eq!(path.clone().only(), Some(e));
+        assert_eq!(path.try_into(), Ok(ShortPath::One(e)));
     }
 
     #[test]
