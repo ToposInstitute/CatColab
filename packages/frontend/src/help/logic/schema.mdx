@@ -1,24 +1,38 @@
 import { A } from "@solidjs/router";
+import { Warning } from "../../components/alert";
 
 ## Description
 
-A categorical **database schema**, or **schema** for short, 
-is a representation of the structure of a database. Schemas are expressed
-in a diagrammatic language based on two kinds of boxes: 
+A categorical **database schema**, or **schema** for short, is a representation of the structure of a database.
+Schemas are expressed in a diagrammatic language based on two kinds of boxes:
 
-[//]: # (Do we want to reuse the olog names?)
+- **Entities**, corresponding to **tables** in standard database theory
+- **Attribute types**, corresponding to **columns**.
 
-- **Entities**, a type of entity or thing; these correspond to the **tables** in standard database theory.
-- **Mapping**, a many-to-one relationship between entities; these correspond to the **foreign keys** in standard database theory.
-- **Attribute types**, a type of attribute or property; these correspond to the data types of **columns** in standard database theory.
-- **Attributes**, a many-to-one relationship between entities and attribute types; these correspond to the **columns** in standard database theory.
-- **Operations** on attribute types are many-to-one relationships between attribute types; these represent data operations such as rounding a real number to an integer. Note that this logic supports only single-input operations, so many familiar examples such as sums and averages are not directly representable.
+Between these boxes there are three types of arrows:
 
-Note also that consistency constraints on the schema are not yet supported, 
-though they can be added informally in rich text cells. 
+- **Mappings**, many-to-one between entities, corresponding to **foreign keys**
+- **Attributes**, many-to-one from entities to attribute types, also corresponding to **columns**
+- **Operations**, many-to-one between attribute types, corresponding to data operations (such as rounding a real number to an integer).
 
-**Instances** of schemas are called **acsets** in applied category theory lingo, 
-but can also be thought of as being precisely databases. 
+**!TO-DO: explain the difference (in terms of columns) between attribute types and attributes!**
+
+<Warning>
+  CatColab currently only supports **single-input** operations, so many familiar examples (such as sums and averages) are not directly representable.
+
+  Note that consistency constraints on the scheme are also not yet supported, though they can be added informally in rich text cells.
+</Warning>
+
+
+## Instances
+
+Graphical instances of schemas are called **acsets** in applied category theory lingo, but can also be thought of as being precisely *databases*.
+
+
+## Analyses
+
+**!TO-DO: include!**
+
 
 ## Further reading
 

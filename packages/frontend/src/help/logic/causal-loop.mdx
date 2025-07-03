@@ -1,15 +1,20 @@
 import { A } from "@solidjs/router";
 import { Question } from "../../components/alert";
 
+**!TO-DO: rewrite!**
+
 ## Description
 
 A causal loop diagram is a fundamental gadget in systems dynamics, representing a system of causally interacting variables. Variables can "encourage" or "discourage" each other according to positively or negatively signed edges (respectively).
 
 It's important in systems dynamics research to find feedback loops in causal loop diagrams. Positive feedback loops tend to produce unstable behavior, while negative feedback loops are stabilizing. CatColab supports this analysis by searching for morphisms from the causal loop diagram given by a free loop. This is the first demonstration in the tool of the general principle that edges in CatColab models can actually be composed as in a category, rather than forming a mere graph.
 
+
+## Instances
+
 <Question>
-Causal loop diagrams do not currently support instances, though we'd be
-curious to learn more about how they might be used in practice.
+Causal loop diagrams do not currently support instances, though we'd be curious to learn more about how they might be used in practice.
+If you have any ideas then please do get in touch.
 </Question>
 
 
@@ -47,7 +52,7 @@ Multiple incoming arrows are interpreted additively, so e.g. $A\xrightarrow{+}B\
 
 #### Semantics
 
-In contrast to linear dynamics, we might want to think about **Lotka–Volterra dynamics** whenever influence between variables is *bidirectional*, e.g. for predator–prey models, where higher population of predators means lower population of prey means lower population of predators means ... and so on.
+In contrast to linear dynamics, we might want to think about **Lotka–Volterra dynamics** whenever influence between variables is *bidirectional*, e.g. for predator-prey models, where higher population of predators means lower population of prey means lower population of predators means ... and so on.
 
 An arrow $A\xrightarrow{\pm}B$ is interpreted as the equation $\dot{B}=\pm (kA + g)B$ for some constant $k$ (the *interaction coefficient*) and $g$ (the *growth rate*).
 Multiple incoming arrows are interpreted additively, so e.g. $A\xrightarrow{+}B\xleftarrow{-}C$ is interpreted as $\dot{B}=(kA - \ell C + g)B$.
@@ -70,6 +75,7 @@ Multiple incoming arrows are interpreted additively, so e.g. $A\xrightarrow{+}B\
 ## Examples
 
 - [Sustainable peace](https://catcolab.org/model/0194cf7f-e59a-7281-a0d9-dce4c68114e4)
+- See also the <A href="/help/guides/predator-prey">predator-prey guide</A>
 
 
 ## Further reading
