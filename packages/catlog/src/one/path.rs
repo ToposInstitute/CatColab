@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify::Tsify;
 
-use super::graph::Graph;
+use super::graph::{Graph, ReflexiveGraph};
 use crate::validate;
 
 /** A path in a [graph](Graph) or [category](crate::one::category::Category).
@@ -485,8 +485,8 @@ pub enum ShortPath<V, E> {
     One(E),
 }
 
-impl<V, E> From<ShortPath<V,E>> for Path<V,E> {
-    fn from(path: ShortPath<V,E>) -> Self {
+impl<V, E> From<ShortPath<V, E>> for Path<V, E> {
+    fn from(path: ShortPath<V, E>) -> Self {
         match path {
             ShortPath::Zero(v) => Path::Id(v),
             ShortPath::One(e) => Path::single(e),
@@ -494,13 +494,31 @@ impl<V, E> From<ShortPath<V,E>> for Path<V,E> {
     }
 }
 
-impl<V, E> TryFrom<Path<V,E>> for ShortPath<V,E> {
+impl<V, E> TryFrom<Path<V, E>> for ShortPath<V, E> {
     type Error = ();
 
-    fn try_from(path: Path<V,E>) -> Result<Self, Self::Error> {
+    fn try_from(path: Path<V, E>) -> Result<Self, Self::Error> {
         match path {
             Path::Id(v) => Ok(ShortPath::Zero(v)),
-            _ => path.only().map(ShortPath::One).ok_or(())
+            _ => path.only().map(ShortPath::One).ok_or(()),
+        }
+    }
+}
+
+impl<V, E> ShortPath<V, E> {
+    /// Is the path contained in the given graph?
+    pub fn contained_in(&self, graph: &impl Graph<V = V, E = E>) -> bool {
+        match self {
+            ShortPath::Zero(v) => graph.has_vertex(v),
+            ShortPath::One(e) => graph.has_edge(e),
+        }
+    }
+
+    /// Converts the short path into an edge in the given *reflexive* graph.
+    pub fn to_edge_in(self, graph: &impl ReflexiveGraph<V = V, E = E>) -> E {
+        match self {
+            ShortPath::Zero(v) => graph.refl(v),
+            ShortPath::One(e) => e,
         }
     }
 }

@@ -3,7 +3,7 @@
 use derive_more::From;
 use ref_cast::RefCast;
 
-use super::graph::{FinGraph, Graph};
+use super::graph::{FinGraph, Graph, ReflexiveGraph};
 use super::path::Path;
 use crate::zero::{FinSet, Set};
 
@@ -139,6 +139,12 @@ impl<Cat: Category> Graph for UnderlyingGraph<Cat> {
     }
     fn tgt(&self, f: &Self::E) -> Self::V {
         self.0.cod(f)
+    }
+}
+
+impl<Cat: Category> ReflexiveGraph for UnderlyingGraph<Cat> {
+    fn refl(&self, x: Self::V) -> Self::E {
+        self.0.id(x)
     }
 }
 
