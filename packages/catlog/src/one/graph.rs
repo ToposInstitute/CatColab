@@ -8,8 +8,8 @@ theory.
 
 use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
 
-use derive_more::From;
 use derivative::Derivative;
+use derive_more::From;
 use nonempty::NonEmpty;
 use ref_cast::RefCast;
 use thiserror::Error;
@@ -44,8 +44,7 @@ pub trait Graph {
     fn tgt(&self, e: &Self::E) -> Self::V;
 }
 
-/** A graph with finitely many vertices and edges.
- */
+/// A graph with finitely many vertices and edges.
 pub trait FinGraph: Graph {
     /// Iterates over the vertices in the graph.
     fn vertices(&self) -> impl Iterator<Item = Self::V>;
@@ -98,6 +97,15 @@ pub trait FinGraph: Graph {
     fn degree(&self, v: &Self::V) -> usize {
         self.in_degree(v) + self.out_degree(v)
     }
+}
+
+/** A reflexive graph.
+
+A **reflexive graph** is a graph equipped with a distinguished self-loop on each vertex.
+ */
+pub trait ReflexiveGraph: Graph {
+    /// Gets the reflexive loop at a vertex.
+    fn refl(&self, v: Self::V) -> Self::E;
 }
 
 /// The set of vertices of a graph.
