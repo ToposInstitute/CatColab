@@ -203,6 +203,7 @@ export function AnalysisNotebookEditor(props: {
                 formalCellEditor={AnalysisCellEditor}
                 cellConstructors={cellConstructors()}
                 noShortcuts={true}
+				notebookType={["analysis"]}
             />
         </LiveAnalysisContext.Provider>
     );

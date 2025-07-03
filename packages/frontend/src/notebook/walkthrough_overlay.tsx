@@ -1,37 +1,40 @@
 import { For, Show, createEffect, createSignal } from "solid-js";
+import sir from "./assets/demo_sir.gif";
 import "./walkthrough_overlay.css";
 
 export function WalkthroughOverlay(props: { isOpen: boolean; onClose: () => void }) {
     const [currentStep, setCurrentStep] = createSignal(0);
-    const totalSteps = 3;
+    const totalSteps = 2;
 
     // For the intro carousel
     const [currentContentIndex, setCurrentContentIndex] = createSignal(0);
+	// console.log(__dirname);
     const introContent = [
         {
             id: "sir-model",
             type: "image",
-            src: "https://topos.institute/work/catcolab/examples/sir.png",
+			src: sir,
+            // src: "https://topos.institute/work/catcolab/examples/sir.png",
             alt: "A simple SIR (Susceptible, Infectious, or Recovered) model, along with a mass-actions dynamics visualisation",
             caption:
                 "A simple SIR (Susceptible, Infectious, or Recovered) model, along with a mass-actions dynamics visualisation",
         },
-        {
-            id: "vortices",
-            type: "video",
-            src: "https://topos.institute/work/catcolab/examples/vortices.mov",
-            alt: "Video showing inviscid vorticity visualization",
-            caption:
-                "Inviscid vorticity, visualised by automatic interfacing with Decapodes.jl in AlgebraicJulia",
-        },
-        {
-            id: "emissions",
-            type: "video",
-            src: "https://topos.institute/work/catcolab/examples/emissions.mov",
-            alt: "Video showing a cap-and-trade system model",
-            caption:
-                "Searching for feedback loops in a model of the impacts of a cap-and-trade system",
-        },
+        // {
+        //     id: "vortices",
+        //     type: "video",
+        //     src: "https://topos.institute/work/catcolab/examples/vortices.mov",
+        //     alt: "Video showing inviscid vorticity visualization",
+        //     caption:
+        //         "Inviscid vorticity, visualised by automatic interfacing with Decapodes.jl in AlgebraicJulia",
+        // },
+        // {
+        //     id: "emissions",
+        //     type: "video",
+        //     src: "https://topos.institute/work/catcolab/examples/emissions.mov",
+        //     alt: "Video showing a cap-and-trade system model",
+        //     caption:
+        //         "Searching for feedback loops in a model of the impacts of a cap-and-trade system",
+        // },
     ];
 
     createEffect(() => {
@@ -139,7 +142,7 @@ export function WalkthroughOverlay(props: { isOpen: boolean; onClose: () => void
                     </div>
                 </Show>
 
-                <Show when={currentStep() === 1}>
+                <Show when={currentStep() === 3}>
                     <div class="step-content fade-in">
                         <h2>Key Features</h2>
                         <div class="features-grid">
@@ -170,7 +173,7 @@ export function WalkthroughOverlay(props: { isOpen: boolean; onClose: () => void
                     </div>
                 </Show>
 
-                <Show when={currentStep() === 2}>
+                <Show when={currentStep() === 1}>
                     <div class="step-content fade-in">
                         <h2>Resources & Community</h2>
                         <div class="resources-container">
@@ -189,7 +192,7 @@ export function WalkthroughOverlay(props: { isOpen: boolean; onClose: () => void
                                     target="_blank"
                                 >
                                     <span class="resource-icon">💼</span>
-                                    <span>Introduction</span>
+                                    <span>Example Models</span>
                                 </a>
                                 <a
                                     href="https://topos.institute/blog/#category=CatColab"
@@ -254,14 +257,14 @@ export function WalkthroughOverlay(props: { isOpen: boolean; onClose: () => void
                     </div>
 
                     <div class="navigation-buttons">
-                        <Show when={currentStep() < totalSteps - 1}>
+                        <button class="nav-button get-started" onClick={props.onClose}>
+								Get Started
+						</button>
+						<Show when={currentStep() < totalSteps - 1}>
                             <button class="nav-button next" onClick={nextStep}>
                                 Next
                             </button>
                         </Show>
-                        <button class="nav-button get-started" onClick={props.onClose}>
-                            {currentStep() < totalSteps - 1 ? "Get Started" : "Get Started"}
-                        </button>
                     </div>
                 </div>
             </div>

@@ -86,9 +86,10 @@ export function NotebookEditor<T>(props: {
 
     // FIXME: Remove this option once we fix focus management.
     noShortcuts?: boolean;
+	notebookType?: string;
 }) {
     const [activeCell, setActiveCell] = createSignal(props.notebook.cells.length > 0 ? 0 : -1);
-    const [isOverlayOpen, setOverlayOpen] = createSignal(true); // Open overlay by default
+    const [isOverlayOpen, setOverlayOpen] = createSignal(props.notebookType == "model" && props.notebook.cells.length == 0); // Open overlay by default
 
     // Set up commands and their keyboard shortcuts.
 
