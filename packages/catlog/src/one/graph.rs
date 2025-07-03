@@ -8,6 +8,7 @@ theory.
 
 use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
 
+use derive_more::From;
 use derivative::Derivative;
 use nonempty::NonEmpty;
 use ref_cast::RefCast;
@@ -96,6 +97,28 @@ pub trait FinGraph: Graph {
      */
     fn degree(&self, v: &Self::V) -> usize {
         self.in_degree(v) + self.out_degree(v)
+    }
+}
+
+/// The set of vertices of a graph.
+#[derive(From, RefCast)]
+#[repr(transparent)]
+pub struct VertexSet<G>(G);
+
+impl<G: Graph> Set for VertexSet<G> {
+    type Elem = G::V;
+
+    fn contains(&self, v: &Self::Elem) -> bool {
+        self.0.has_vertex(v)
+    }
+}
+
+impl<G: FinGraph> FinSet for VertexSet<G> {
+    fn iter(&self) -> impl Iterator<Item = Self::Elem> {
+        self.0.vertices()
+    }
+    fn len(&self) -> usize {
+        self.0.vertex_count()
     }
 }
 
@@ -727,6 +750,13 @@ mod tests {
         g.set_tgt("fg", 'z');
         assert_eq!(g.src(&"fg"), 'x');
         assert_eq!(g.tgt(&"fg"), 'z');
+    }
+
+    #[test]
+    fn vertex_set() {
+        let set: VertexSet<_> = SkelGraph::triangle().into();
+        assert!(set.contains(&2));
+        assert_eq!(set.len(), 3);
     }
 
     #[test]
