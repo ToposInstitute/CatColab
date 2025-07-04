@@ -264,53 +264,80 @@ pub async fn search_ref_stubs(
 
     let results = sqlx::query!(
         r#"
-        WITH effective_permissions AS (
-            /*
-              select at most one row per ref, the row is either:
-               - the searcher’s own permission, if it exists
-               - the public permission (subject IS NULL) when include_public_documents = TRUE and the
-                 searcher does not already have a row
-            */
-            SELECT DISTINCT ON (object)
-                   object,
-                   level
-            FROM   permissions
-            WHERE  (subject = $1)
-               OR  ($5 AND subject IS NULL)
-            ORDER BY object,
-                     (subject IS NOT NULL) DESC           -- prefer the user‑specific row
-        )
-        SELECT 
-            refs.id AS ref_id,
-            snapshots.content->>'name' AS name,
-            snapshots.content->>'type' AS type_name,
-            refs.created as created_at,
-            effective_permissions.level AS "permission_level: PermissionLevel",
-            owner.id AS "owner_id?",
-            owner.username AS "owner_username?",
-            owner.display_name AS "owner_display_name?",
-            COUNT(*) OVER()::int4 AS total_count
-        FROM refs
-        JOIN snapshots ON snapshots.id = refs.head
-        JOIN effective_permissions ON effective_permissions.object = refs.id
-        JOIN permissions AS p_owner 
-            ON p_owner.object = refs.id AND p_owner.level = 'own'
-        LEFT JOIN users AS owner
-            ON owner.id = p_owner.subject
-        WHERE (
-            owner.username = $2
-            OR $2 IS NULL
-        )
-        AND (
-            snapshots.content->>'name' ILIKE '%' || $3 || '%'
-            OR $3 IS NULL
-        )
-        AND (
-            effective_permissions.level >= $4
-        )
-        ORDER BY refs.created DESC
-        LIMIT $6::int4
-        OFFSET $7::int4;
+        WITH
+            filtered_ids AS (
+                SELECT refs.id
+                FROM refs
+                WHERE (
+                    -- optionally filter by owner username
+                    $2::text IS NULL
+                    OR EXISTS (
+                        SELECT 1
+                        FROM permissions
+                        JOIN users
+                        ON users.id = permissions.subject
+                        WHERE
+                            permissions.object = refs.id
+                            AND permissions.level  = 'own'
+                            AND users.username = $2
+                    )
+                ) AND (
+                    -- optionally filter by document name
+                    $3::text IS NULL
+                    OR EXISTS (
+                      SELECT 1
+                      FROM snapshots
+                      WHERE
+                        snapshots.id = refs.head
+                        AND snapshots.content->>'name' ILIKE '%' || $3 || '%'
+                    )
+                ) AND (
+                    -- filter by minimum permission level or 'read'
+                    get_max_permission($1, refs.id) >= COALESCE($4::permission_level, 'read'::permission_level)
+                ) AND (
+                    -- optionally filter by non-public documents
+                    $5::bool IS NULL
+                    OR $5 IS TRUE
+                    OR EXISTS (
+                        SELECT 1
+                        FROM permissions p_searcher
+                        WHERE
+                            p_searcher.object = refs.id
+                            AND p_searcher.subject = $1
+                    )
+                )
+            ),
+            paged_ids AS (
+                SELECT id
+                FROM filtered_ids
+                ORDER BY (SELECT refs.created FROM refs WHERE refs.id = filtered_ids.id) DESC
+                LIMIT  $6::int4
+                OFFSET $7::int4
+            ),
+            stubs AS (
+                SELECT *
+                FROM get_ref_stubs(
+                    $1,
+                    (SELECT array_agg(id) FROM paged_ids)
+                )
+            ),
+            total AS (
+                SELECT COUNT(*) AS total_count FROM filtered_ids
+            )
+        SELECT
+            stubs.ref_id AS "ref_id!",
+            stubs.name,
+            stubs.type_name,
+            stubs.created_at AS "created_at!",
+            stubs.permission_level AS "permission_level!: PermissionLevel",
+            stubs.owner_id,
+            stubs.owner_username,
+            stubs.owner_display_name,
+            -- returning the total like this is somewhat hacky, but allows us to avoid another table scan
+            -- and duplicating the filter logic
+            total.total_count::int4
+        FROM stubs
+        CROSS JOIN total;
         "#,
         searcher_id,
         search_params.owner_username_query,
@@ -325,7 +352,6 @@ pub async fn search_ref_stubs(
 
     let total = results.first().and_then(|r| r.total_count).unwrap_or(0);
 
-    // We can't use sqlx::query_as! because name and type_name can be null
     let items = results
         .into_iter()
         .map(|row| RefStub {
