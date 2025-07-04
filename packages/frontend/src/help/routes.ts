@@ -20,6 +20,10 @@ export const helpRoutes: RouteDefinition[] = [
         component: lazyMdx(() => import("./index.mdx")),
     },
     {
+        path: "/analyses",
+        component: lazy(() => import("./analyses")),
+    },
+    {
         path: "/concepts",
         component: lazyMdx(() => import("./concepts.mdx")),
     },
