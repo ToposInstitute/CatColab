@@ -1,6 +1,6 @@
 import { type Accessor, createMemo } from "solid-js";
 
-import type { DblModel, JsResult, ODEResult } from "catlog-wasm";
+import type { DblModel, JsResult, ODEResult } from "catlaborator";
 import type { LiveModelDocument } from "../../model";
 import type { ODEPlotData } from "../../visualization";
 

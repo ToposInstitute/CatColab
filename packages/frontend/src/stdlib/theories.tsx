@@ -1,4 +1,4 @@
-import * as catlog from "catlog-wasm";
+import * as catlog from "catlaborator";
 
 import { Theory } from "../theory";
 import * as analyses from "./analyses";

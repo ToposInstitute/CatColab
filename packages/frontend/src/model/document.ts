@@ -8,7 +8,7 @@ import {
     type ModelValidationResult,
     type Uuid,
     elaborateModel,
-} from "catlog-wasm";
+} from "catlaborator";
 import { type Api, type LiveDoc, getLiveDoc } from "../api";
 import { newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";

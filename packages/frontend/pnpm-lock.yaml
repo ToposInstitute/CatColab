@@ -86,6 +86,9 @@ importers:
       catcolab-api:
         specifier: link:../backend/pkg
         version: link:../backend/pkg
+      catlaborator:
+        specifier: link:../catlaborator/pkg
+        version: link:../catlaborator/pkg
       catlog-wasm:
         specifier: link:../catlog-wasm/pkg
         version: link:../catlog-wasm/pkg

@@ -5,7 +5,7 @@ import type {
     LotkaVolterraModelData,
     LotkaVolterraProblemData,
     ODEResult,
-} from "catlog-wasm";
+} from "catlaborator";
 import type { ModelAnalysisProps } from "../../analysis";
 import {
     type ColumnSchema,

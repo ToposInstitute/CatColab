@@ -1,7 +1,7 @@
 import type { KbdKey } from "@solid-primitives/keyboard";
 
-import type { DblTheory, MorType, ObType } from "catlog-wasm";
-import { MorTypeIndex, ObTypeIndex } from "catlog-wasm";
+import type { DblTheory, MorType, ObType } from "catlaborator";
+import { MorTypeIndex, ObTypeIndex } from "catlaborator";
 import type { DiagramAnalysisComponent, ModelAnalysisComponent } from "../analysis";
 import { uniqueIndexArray } from "../util/indexing";
 import type { ArrowStyle } from "../visualization";

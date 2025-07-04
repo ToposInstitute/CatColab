@@ -1,6 +1,6 @@
 import { v7 } from "uuid";
 
-import type { Cell, Notebook } from "catlog-wasm";
+import type { Cell, Notebook } from "catlaborator";
 
 /** Creates an empty notebook. */
 export const newNotebook = <T>(): Notebook<T> => ({

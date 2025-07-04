@@ -1,4 +1,8 @@
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
+
 use fexplib::{parser::Prec, *};
+
+use crate::{eval::NotebookStorage, syntax::Notebook};
 
 pub const PARSE_CONFIG: ParseConfig = ParseConfig::new(
     &[
@@ -10,6 +14,29 @@ pub const PARSE_CONFIG: ParseConfig = ParseConfig::new(
     &["=", ":", "==", "*"],
 );
 
+#[derive(Clone)]
+pub struct Toplevel {
+    notebooks: Rc<RefCell<HashMap<&'static str, Rc<Notebook>>>>,
+}
+
+impl Toplevel {
+    pub fn new() -> Self {
+        Self {
+            notebooks: Rc::new(RefCell::new(HashMap::new())),
+        }
+    }
+
+    fn insert_notebook(&mut self, name: &'static str, notebook: Notebook) {
+        self.notebooks.borrow_mut().insert(name, Rc::new(notebook));
+    }
+}
+
+impl NotebookStorage for Toplevel {
+    fn lookup(&self, id: &str) -> Option<Rc<Notebook>> {
+        self.notebooks.borrow().get(id).cloned()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use crate::elab::{Elaborator, Schema};
@@ -20,35 +47,10 @@ mod test {
     use catlog::stdlib::{th_schema, th_signed_category};
     use expect_test::*;
     use indoc::indoc;
-    use std::cell::RefCell;
-    use std::collections::HashMap;
     use std::fmt::Debug;
     use std::rc::Rc;
     use tattle::Reporter;
     use tattle::display::SourceInfo;
-
-    #[derive(Clone)]
-    struct Toplevel {
-        notebooks: Rc<RefCell<HashMap<&'static str, Rc<Notebook>>>>,
-    }
-
-    impl Toplevel {
-        fn new() -> Self {
-            Self {
-                notebooks: Rc::new(RefCell::new(HashMap::new())),
-            }
-        }
-
-        fn insert_notebook(&mut self, name: &'static str, notebook: Notebook) {
-            self.notebooks.borrow_mut().insert(name, Rc::new(notebook));
-        }
-    }
-
-    impl NotebookStorage for Toplevel {
-        fn lookup(&self, id: &str) -> Option<Rc<Notebook>> {
-            self.notebooks.borrow().get(id).cloned()
-        }
-    }
 
     fn test<T: Debug, F: FnOnce(&FExp, Reporter) -> Option<T>>(
         input: &str,

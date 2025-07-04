@@ -378,10 +378,13 @@ version = "0.1.0"
 dependencies = [
  "bumpalo",
  "catlog",
+ "catlog-wasm",
  "egg",
  "expect-test",
  "fexplib",
  "indoc",
+ "js-sys",
+ "notebook-types",
  "pretty",
  "pretty-util",
  "serde",
@@ -390,6 +393,7 @@ dependencies = [
  "ustr",
  "uuid",
  "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]

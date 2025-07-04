@@ -42,6 +42,7 @@
         "@solid-primitives/timer": "^1.3.10",
         "@solidjs/router": "^0.14.3",
         "@viz-js/viz": "^3.7.0",
+        "catlaborator": "link:../catlaborator/pkg",
         "catcolab-api": "link:../backend/pkg",
         "catlog-wasm": "link:../catlog-wasm/pkg",
         "echarts": "^5.5.1",

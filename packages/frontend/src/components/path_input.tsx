@@ -1,4 +1,4 @@
-import type { Uuid } from "catlog-wasm";
+import type { Uuid } from "catlaborator";
 import { For, Show } from "solid-js";
 import { InlineInput } from "./inline_input";
 

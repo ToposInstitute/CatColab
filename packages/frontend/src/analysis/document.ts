@@ -1,6 +1,6 @@
 import invariant from "tiny-invariant";
 
-import type { Document } from "catlog-wasm";
+import type { Document } from "catlaborator";
 import { type Api, type LiveDoc, type StableRef, getLiveDoc } from "../api";
 import { type LiveDiagramDocument, getLiveDiagram } from "../diagram";
 import { type LiveModelDocument, getLiveModel } from "../model";

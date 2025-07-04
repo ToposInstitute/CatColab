@@ -1,164 +1,209 @@
-use catlog::stdlib::th_signed_category;
-use serde::{Deserialize, Serialize};
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
-use tattle::{Reporter, reporter::Message};
-use tsify::{Tsify, declare};
-use ustr::ustr;
 use wasm_bindgen::prelude::*;
 
+use std::{cell::RefCell, rc::Rc};
+
+use ::notebook_types::v0::{ModelJudgment, notebook};
+use catlog::{
+    dbl::{category::VDblCategory, theory::UstrDiscreteDblTheory},
+    one::Path,
+};
+use catlog_wasm::theory::DblTheory;
+use notebook_types::current::{self as notebook_types};
+use ustr::{Ustr, ustr};
+use uuid::Uuid;
+use web_sys::console;
+
 use crate::{
-    elab::{Context, Elaborator},
-    eval::{NotebookStorage, TyVal},
-    syntax::{Cell, Notebook, NotebookRef, TyStx},
-    toplevel::PARSE_CONFIG,
+    eval::{Env, State, TmVal, TyVal},
+    syntax::{Cell, Lvl, Notebook, ObType, TmStx, TyStx},
+    toplevel::Toplevel,
 };
 
-#[declare]
-pub type DocumentId = String;
-#[declare]
-pub type Uuid = String;
-
-#[derive(Serialize, Deserialize, Tsify)]
-#[serde(tag = "tag")]
-#[tsify(into_wasm_abi, from_wasm_abi)]
-pub enum RawCellType {
-    String { value: String },
-    Notebook { value: DocumentId },
+#[derive(Debug)]
+pub enum ElaborationErrorContent {
+    TabulatorUnsupported,
+    IncompleteCell,
+    NoSuchObjectType(Ustr),
+    NoSuchMorphismType(Path<Ustr, Ustr>),
+    UuidNotFound(Uuid),
+    ExpectedObjectForUuid(Uuid),
+    MismatchingObTypes(ObType, ObType),
 }
 
-#[derive(Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
-pub struct RawCell {
-    name: Option<String>,
-    ty: RawCellType,
+use ElaborationErrorContent::*;
+
+#[derive(Debug)]
+struct ElaborationError {
+    cell: Option<Uuid>,
+    content: ElaborationErrorContent,
 }
 
-#[derive(Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)]
-pub struct RawNotebook {
-    title: String,
-    #[serde(rename = "cellContent")]
-    cell_content: HashMap<Uuid, RawCell>,
-    order: Vec<Uuid>,
+pub struct NotebookElaborator {
+    errors: Rc<RefCell<Vec<ElaborationError>>>,
+    theory: Rc<UstrDiscreteDblTheory>,
+    current_cell_id: Option<Uuid>,
 }
 
-#[derive(Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
-pub struct Database {
-    notebooks: HashMap<DocumentId, RawNotebook>,
+pub struct Context {
+    scope: Vec<(Uuid, Option<Ustr>, TyVal)>,
+    env: Env,
 }
 
-#[derive(Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
-pub struct ErrorMessage {
-    pos: Option<(usize, usize)>,
-    message: String,
-}
-
-impl From<tattle::reporter::Message> for ErrorMessage {
-    fn from(value: tattle::reporter::Message) -> Self {
-        match value {
-            Message::Error(error) => ErrorMessage {
-                pos: error.loc.map(|l| (l.start, l.end)),
-                message: error.message,
-            },
-            Message::Info(m) => ErrorMessage {
-                pos: None,
-                message: m,
-            },
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
-pub struct ElaborationResult {
-    errors: HashMap<Uuid, Vec<ErrorMessage>>,
-}
-
-impl ElaborationResult {
-    pub fn new(errors: HashMap<Uuid, Vec<ErrorMessage>>) -> Self {
-        Self { errors }
-    }
-}
-
-#[derive(Clone)]
-struct NotebookCache {
-    raw_notebooks: Rc<HashMap<DocumentId, RawNotebook>>,
-    notebooks: Rc<RefCell<HashMap<DocumentId, Rc<Notebook>>>>,
-    feedback: Rc<RefCell<HashMap<DocumentId, ElaborationResult>>>,
-}
-
-impl NotebookCache {
-    fn new(raw_notebooks: HashMap<DocumentId, RawNotebook>) -> Self {
+impl Context {
+    fn new() -> Self {
         Self {
-            raw_notebooks: Rc::new(raw_notebooks),
-            notebooks: Rc::new(RefCell::new(HashMap::new())),
-            feedback: Rc::new(RefCell::new(HashMap::new())),
+            scope: Vec::new(),
+            env: State::empty(Rc::new(Toplevel::new())).new_env(),
         }
+    }
+
+    fn lookup(&self, uuid: &Uuid) -> Option<(Lvl, TyVal)> {
+        self.scope
+            .iter()
+            .enumerate()
+            .find(|(_, (uuid1, _, _))| uuid == uuid1)
+            .map(|(i, (_, name, ty))| (Lvl::new(i, *name), ty.clone()))
+    }
+
+    fn intro(&mut self, uuid: Uuid, name: Option<Ustr>, ty: TyVal) {
+        let val = self.env.intro(&ty);
+        self.env.values.push(val);
+        self.scope.push((uuid, name, ty));
     }
 }
 
-impl NotebookStorage for NotebookCache {
-    fn lookup(&self, id: &str) -> Option<Rc<Notebook>> {
-        if let Some(nb) = self.notebooks.borrow().get(id) {
-            return Some(nb.clone());
+impl NotebookElaborator {
+    fn new(theory: Rc<UstrDiscreteDblTheory>) -> Self {
+        Self {
+            errors: Rc::new(RefCell::new(Vec::new())),
+            theory,
+            current_cell_id: None,
         }
-        let reporter = Reporter::new();
-        let elab = Elaborator::new(reporter.clone(), Rc::new(th_signed_category()));
-        if let Some(raw_nb) = self.raw_notebooks.get(id) {
-            let mut ctx = Context::new(Rc::new(self.clone()));
-            let mut cells = Vec::new();
-            let mut errors = HashMap::new();
-            for cell_id in raw_nb.order.iter() {
-                let content = raw_nb.cell_content.get(cell_id).unwrap();
-                let Some((tystx, tyval)) = (match &content.ty {
-                    RawCellType::String { value: s } => {
-                        let res =
-                            PARSE_CONFIG.with_parsed(s, reporter.clone(), |e| elab.ty(&mut ctx, e));
-                        errors.insert(
-                            cell_id.clone(),
-                            reporter.poll().into_iter().map(|m| m.into()).collect(),
-                        );
-                        res
-                    }
-                    RawCellType::Notebook { value: id } => {
-                        if let Some(_) = self.lookup(&id) {
-                            let nbref = NotebookRef { id: ustr(&id) };
-                            errors.insert(cell_id.clone(), Vec::new());
-                            Some((TyStx::Notebook(nbref), TyVal::Notebook(nbref)))
-                        } else {
-                            errors.insert(
-                                cell_id.clone(),
-                                vec![ErrorMessage {
-                                    pos: None,
-                                    message: "could not find notebook with that id".to_string(),
-                                }],
-                            );
-                            None
-                        }
-                    }
-                }) else {
-                    continue;
-                };
-                let name = content.name.as_ref().map(|n| ustr(&n)).unwrap_or(ustr("_"));
-                cells.push(Cell::new(name, tystx));
-                ctx.intro(name, tyval);
-            }
-            let nb = Rc::new(Notebook::new(cells));
-            self.notebooks.borrow_mut().insert(id.to_string(), nb.clone());
-            self.feedback
-                .borrow_mut()
-                .insert(id.to_string(), ElaborationResult::new(errors));
-            return Some(nb);
-        }
+    }
+
+    fn error<T>(&self, error: ElaborationErrorContent) -> Option<T> {
+        self.errors.borrow_mut().push(ElaborationError {
+            cell: self.current_cell_id,
+            content: error,
+        });
         None
+    }
+
+    fn object_ty(&self, ob_decl: &notebook_types::ObDecl) -> Option<(TyStx, TyVal)> {
+        match &ob_decl.ob_type {
+            notebook_types::ObType::Basic(ob_type) => {
+                if !self.theory.has_ob(ob_type) {
+                    return self.error(NoSuchObjectType(*ob_type));
+                }
+                Some((TyStx::Object(*ob_type), TyVal::Object(*ob_type)))
+            }
+            notebook_types::ObType::Tabulator(_mor_type) => self.error(TabulatorUnsupported),
+        }
+    }
+
+    fn syn_object(&self, ctx: &Context, ob: &notebook_types::Ob) -> Option<(TmStx, TmVal, ObType)> {
+        match ob {
+            notebook_types::Ob::Basic(uuid) => {
+                let (l, ty) = ctx.lookup(uuid).or_else(|| self.error(UuidNotFound(*uuid)))?;
+                let val = ctx.env.get(l);
+                let ob_type = match ty {
+                    TyVal::Object(ustr) => ustr,
+                    _ => return self.error(ExpectedObjectForUuid(*uuid)),
+                };
+                Some((TmStx::Var(l), val, ob_type))
+            }
+            notebook_types::Ob::Tabulated(_mor) => self.error(TabulatorUnsupported),
+        }
+    }
+
+    fn chk_object(
+        &self,
+        ctx: &Context,
+        ob_type: ObType,
+        ob: &notebook_types::Ob,
+    ) -> Option<(TmStx, TmVal)> {
+        let (obstx, obval, synthed) = self.syn_object(ctx, ob)?;
+        if synthed != ob_type {
+            self.error(MismatchingObTypes(ob_type, synthed))
+        } else {
+            Some((obstx, obval))
+        }
+    }
+
+    fn morphism_ty(
+        &self,
+        ctx: &Context,
+        mor_decl: &notebook_types::MorDecl,
+    ) -> Option<(TyStx, TyVal)> {
+        let over = match &mor_decl.mor_type {
+            notebook_types::MorType::Basic(ustr) => Path::single(*ustr),
+            notebook_types::MorType::Hom(ob_type) => Path::empty(ob_type.as_basic()),
+        };
+        if !self.theory.has_proarrow(&over) {
+            return self.error(NoSuchMorphismType(over));
+        }
+        let dom_res = self.chk_object(
+            ctx,
+            self.theory.src(&over),
+            mor_decl.dom.as_ref().or_else(|| self.error(IncompleteCell))?,
+        );
+        let cod_res = self.chk_object(
+            ctx,
+            self.theory.tgt(&over),
+            mor_decl.cod.as_ref().or_else(|| self.error(IncompleteCell))?,
+        );
+        let (domstx, domval) = dom_res?;
+        let (codstx, codval) = cod_res?;
+        Some((
+            TyStx::Morphism(over.clone(), domstx, codstx),
+            TyVal::Morphism(over.clone(), domval.as_object(), codval.as_object()),
+        ))
+    }
+
+    pub fn notebook(&self, raw: &notebook::Notebook<ModelJudgment>) -> Option<Notebook> {
+        let mut cells = Vec::new();
+        let mut ctx = Context::new();
+        for raw_cell in raw.cells.iter() {
+            use notebook_types::NotebookCell::*;
+            let content = match raw_cell {
+                Formal { id: _, content } => content,
+                _ => continue,
+            };
+            use notebook_types::ModelJudgment::*;
+            match content {
+                Object(ob_decl) => {
+                    let Some((tystx, tyval)) = self.object_ty(ob_decl) else {
+                        continue;
+                    };
+                    ctx.intro(ob_decl.id, Some(ustr(&ob_decl.name)), tyval);
+                    cells.push(Cell::new(ustr(&ob_decl.name), tystx))
+                }
+                Morphism(mor_decl) => {
+                    let Some((tystx, tyval)) = self.morphism_ty(&ctx, mor_decl) else {
+                        continue;
+                    };
+                    ctx.intro(mor_decl.id, Some(ustr(&mor_decl.name)), tyval);
+                    cells.push(Cell::new(ustr(&mor_decl.name), tystx))
+                }
+            }
+        }
+
+        if self.errors.borrow().len() == 0 {
+            Some(Notebook::new(cells))
+        } else {
+            None
+        }
     }
 }
 
 #[wasm_bindgen]
-pub fn elaborate(database: Database, document_id: DocumentId) -> ElaborationResult {
-    let cache = NotebookCache::new(database.notebooks);
-    cache.lookup(&document_id);
-    cache.feedback.take().remove(&document_id).unwrap()
+pub fn elaborate(raw: &notebook_types::ModelDocumentContent, theory: &DblTheory) {
+    let theory = match &theory.0 {
+        catlog_wasm::theory::DblTheoryBox::Discrete(t) => t,
+        catlog_wasm::theory::DblTheoryBox::DiscreteTab(_) => panic!("tabulators unsupported"),
+    };
+    let elab = NotebookElaborator::new(theory.clone());
+    let res = elab.notebook(&raw.notebook);
+    console::log_1(&format!("{:?}", elab.errors.borrow()).into());
+    console::log_1(&format!("{:?}", res).into())
 }

@@ -1,7 +1,7 @@
 import { createEffect, createSignal, splitProps } from "solid-js";
 import { P, match } from "ts-pattern";
 
-import type { Mor, Ob, Uuid } from "catlog-wasm";
+import type { Mor, Ob, Uuid } from "catlaborator";
 import { type IdToNameMap, type Name, type NameType, nameType } from "../util/indexing";
 import type { Completion } from "./completions";
 import { InlineInput, type InlineInputErrorStatus, type InlineInputOptions } from "./inline_input";

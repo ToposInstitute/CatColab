@@ -2,7 +2,8 @@ import { useParams } from "@solidjs/router";
 import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import type { ModelJudgment } from "catlog-wasm";
+import type { ModelJudgment } from "catlaborator";
+import { elaborate } from "catlaborator";
 import { useApi } from "../api";
 import { InlineInput } from "../components";
 import {
@@ -111,6 +112,13 @@ export function ModelPane(props: {
                     disabled={liveDoc().doc.notebook.cells.some((cell) => cell.tag === "formal")}
                 />
             </div>
+            <button
+                onClick={() => {
+                    elaborate(liveDoc().doc, props.liveModel.theory().theory);
+                }}
+            >
+                Elaborate
+            </button>
             <ModelNotebookEditor liveModel={props.liveModel} />
         </div>
     );
