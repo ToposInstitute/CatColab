@@ -186,14 +186,14 @@ pub trait ColumnarFinGraph:
     >
 {
     /// Iterates over failures to be a valid graph.
-    fn iter_invalid(&self) -> impl Iterator<Item = InvalidGraphData<Self::E>> {
+    fn iter_invalid(&self) -> impl Iterator<Item = InvalidGraph<Self::E>> {
         let (dom, cod) = (self.edge_set(), self.vertex_set());
         let srcs = Function(self.src_map(), dom, cod)
             .iter_invalid()
-            .map(|e| InvalidGraphData::Src(e.take()));
+            .map(|e| InvalidGraph::Src(e.take()));
         let tgts = Function(self.tgt_map(), dom, cod)
             .iter_invalid()
-            .map(|e| InvalidGraphData::Tgt(e.take()));
+            .map(|e| InvalidGraph::Tgt(e.take()));
         srcs.chain(tgts)
     }
 }
@@ -273,13 +273,13 @@ impl<G: ColumnarFinGraph> FinGraph for G {
     }
 }
 
-/** An invalid assignment in a graph defined explicitly by data.
+/** An invalid assignment in a graph.
 
-For [columnar graphs](ColumnarGraph) and other such graphs, it is possible that
-the data is incomplete or inconsistent.
+For [columnar graphs](ColumnarGraph) and other graphs defined explicitly by
+data, it is possible that the data is incomplete or inconsistent.
 */
 #[derive(Debug, Error)]
-pub enum InvalidGraphData<E> {
+pub enum InvalidGraph<E> {
     /// Edge assigned a source that is not a vertex contained in the graph.
     #[error("Source of edge `{0}` is not a vertex in the graph")]
     Src(E),
@@ -399,7 +399,7 @@ impl SkelGraph {
 }
 
 impl Validate for SkelGraph {
-    type ValidationError = InvalidGraphData<usize>;
+    type ValidationError = InvalidGraph<usize>;
 
     fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
         validate::wrap_errors(self.iter_invalid())
@@ -516,7 +516,7 @@ where
     E: Eq + Hash + Clone,
     S: BuildHasher,
 {
-    type ValidationError = InvalidGraphData<E>;
+    type ValidationError = InvalidGraph<E>;
 
     fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
         validate::wrap_errors(self.iter_invalid())
