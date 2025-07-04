@@ -11,6 +11,7 @@ Assumes that the variables in the ODE come from objects in the model.
 export function createModelODEPlot(
     liveModel: Accessor<LiveModelDocument>,
     simulate: (model: DblModel) => ODEResult,
+	colors?: Accessor<Map<string, string>>,
 ) {
     return createMemo<JsResult<ODEPlotData, string> | undefined>(
         () => {
@@ -26,10 +27,13 @@ export function createModelODEPlot(
 
             const solution = simulationResult.content;
             const obIndex = liveModel().objectIndex();
+			const colorMap = colors();
             const content = {
                 time: solution.time,
                 states: Array.from(solution.states.entries()).map(([id, data]) => ({
                     name: obIndex.map.get(id) ?? "",
+					color:  
+					  Reflect.get(colorMap, id) ?? "",
                     data,
                 })),
             };

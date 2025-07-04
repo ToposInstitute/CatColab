@@ -9,7 +9,7 @@ use std::hash::{BuildHasherDefault, Hash};
 
 use nalgebra::DVector;
 use num_traits::Zero;
-use ustr::{IdentityHasher, Ustr, ustr};
+use ustr::{ustr, IdentityHasher, Ustr};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};

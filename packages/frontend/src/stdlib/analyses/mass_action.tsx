@@ -44,6 +44,7 @@ export function configureMassAction(options: {
             rates: {},
             initialValues: {},
             duration: 10,
+			colors: {},
         }),
     };
 }
@@ -55,6 +56,7 @@ export function MassAction(
         isState?: (ob: ObjectDecl) => boolean;
         isTransition?: (mor: MorphismDecl) => boolean;
         title?: string;
+		colors?: Map<string, string>
     },
 ) {
     const obDecls = createMemo<ObjectDecl[]>(() => {
@@ -86,6 +88,22 @@ export function MassAction(
                     content.initialValues[ob.id] = data;
                 }),
         }),
+		{
+            contentType: "enum",
+            name: "Color",
+            variants() {
+                return ["Red", "Blue", "Yellow", "Green"];
+            },
+            content: () => "Red",
+            setContent: (ob, value) =>
+                props.changeContent((content) => {
+                    if (value === null) {
+                        delete content.colors[ob.id];
+                    } else {
+                        content.colors[ob.id] = value;
+                    }
+                }),
+        },	
     ];
 
     const morSchema: ColumnSchema<MorphismDecl>[] = [
@@ -121,6 +139,7 @@ export function MassAction(
     const plotResult = createModelODEPlot(
         () => props.liveModel,
         (model: DblModel) => props.simulate(model, props.content),
+		() => props.content.colors
     );
 
     return (

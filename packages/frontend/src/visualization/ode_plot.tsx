@@ -25,11 +25,12 @@ message otherwise.
  */
 export function ODEResultPlot(props: {
     result?: JsResult<ODEPlotData, string>;
+	colors?: Map<string, string>;
 }) {
     return (
         <Switch>
             <Match when={props.result?.tag === "Ok" && props.result.content}>
-                {(data) => <ODEPlot data={data()} />}
+                {(data) => <ODEPlot data={data()} colors={props.colors} />}
             </Match>
             <Match when={props.result?.tag === "Err" && props.result.content}>
                 {(err) => <ErrorAlert title="Integration error">{err()}</ErrorAlert>}
@@ -42,6 +43,7 @@ export function ODEResultPlot(props: {
 export function ODEPlot(props: {
     data: ODEPlotData;
 }) {
+    console.log(props.data.states);
     const options = (): EChartsOption => ({
         legend: {
             data: props.data.states.map((state) => state.name),
@@ -64,6 +66,7 @@ export function ODEPlot(props: {
             data: state.data,
             type: "line",
             symbol: "none",
+			color: state.color.toLowerCase(),
         })),
     });
 
