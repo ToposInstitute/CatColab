@@ -1,5 +1,6 @@
 import { A } from "@solidjs/router";
 import { Question } from "../../components/alert";
+import { helpLogicAnalyses } from "../logic"
 
 ## Description
 
@@ -16,6 +17,8 @@ If you have any ideas then please do get in touch.
 
 
 ## Analyses
+
+{helpLogicAnalyses({theory: props.theory})}
 
 **!TO-DO: include!**
 
@@ -45,7 +48,6 @@ Multiple incoming arrows are interpreted additively, so e.g. $A\xrightarrow{+}B\
   <dd>The total duration of the simulation in units of time.</dd>
 </dl>
 </div>
-
 
 
 <div class="help-analysis-pane">

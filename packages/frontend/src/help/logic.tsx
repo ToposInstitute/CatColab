@@ -27,6 +27,7 @@ export function LogicHelp(props: {
     theory: Theory;
 }) {
     const { theory } = destructure(props);
+    console.log(theory)
 
     return (
         <>
@@ -36,7 +37,7 @@ export function LogicHelp(props: {
             <h2>Summary</h2>
             <p>{theory().description}</p>
             <Show when={theory().modelTypes.length > 0}>
-                <h4>Definitions</h4>
+                <h3>Definitions</h3>
                 <dl>
                     <For each={theory().modelTypes}>
                         {(typeMeta) => (
@@ -49,11 +50,30 @@ export function LogicHelp(props: {
                 </dl>
             </Show>
             <Show when={theory().help}>
-                {(name) => <Dynamic component={helpLogicContent(name())} />}
+                {(name) => <Dynamic component={helpLogicContent(name())} theory={theory()} />}
+            </Show>
+        </>
+    );
+}
+
+export function helpLogicAnalyses(props: {
+    theory: Theory;
+}) {
+    const { theory } = destructure(props);
+
+    return (
+        <>
+            <Show when={theory().modelAnalyses.length > 0}>
+                <dl>
+                    <For each={theory().modelAnalyses}>
+                        {(typeMeta) => <Dynamic component={helpAnalysisContent(typeMeta.id)} />}
+                            {/*IF THIS FILE DOESN'T EXIST THEN PRINT .name and .description*/}
+                    </For>
+                </dl>
             </Show>
         </>
     );
 }
 
 const helpLogicContent = (name: string) => lazy(() => import(`./logic/${name}.mdx`));
-// const helpAnalysisContent = (name: string) => lazy(() => import(`./analysis/${name}.mdx`));
+const helpAnalysisContent = (name: string) => lazy(() => import(`./analysis/${name}.mdx`));
