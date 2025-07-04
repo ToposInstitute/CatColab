@@ -27,7 +27,6 @@ export const Warning = (props: AlertProps) => (
 );
 
 /** An error alert.
-
 Not called `Error` to avoid shadowing that name in JavaScript.
  */
 export const ErrorAlert = (props: AlertProps) => (

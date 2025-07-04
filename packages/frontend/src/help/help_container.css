@@ -95,7 +95,7 @@
     .help-analysis-pane {
         margin-bottom: 1.5em;
         padding: 1em;
-        border: 1px solid black;
+        border: 1px solid rgba(0, 0, 0, 0.2);
         border-radius: 2px;
 
         h3 {

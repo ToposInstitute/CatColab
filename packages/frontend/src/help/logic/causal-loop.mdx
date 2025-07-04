@@ -1,6 +1,6 @@
 import { A } from "@solidjs/router";
 import { Question } from "../../components/alert";
-import { helpLogicAnalyses } from "../logic"
+import { HelpAnalysisById } from "../logic"
 
 ## Description
 
@@ -24,7 +24,12 @@ CatColab supports this analysis by searching for morphisms from the causal loop 
 
 **!TO-DO: find a way to get the above paragraph to appear in the right place!**
 
-{helpLogicAnalyses({theory: props.theory})}
+<HelpAnalysisById theory={props.theory} analysisId="linear-ode">
+  Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
+  tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+  quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
+  consequat.
+</HelpAnalysisById>
 
 
 ## Examples
