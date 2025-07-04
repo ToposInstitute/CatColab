@@ -1,0 +1,45 @@
+import { A } from "@solidjs/router";
+import { Warning } from "../../components/alert";
+
+## Description
+
+A categorical **database schema**, or **schema** for short, is a representation of the structure of a database.
+Schemas are expressed in a diagrammatic language based on two kinds of boxes:
+
+- **Entities**, corresponding to **tables** in standard database theory
+- **Attribute types**, corresponding to **columns**.
+
+Between these boxes there are three types of arrows:
+
+- **Mappings**, many-to-one between entities, corresponding to **foreign keys**
+- **Attributes**, many-to-one from entities to attribute types, also corresponding to **columns**
+- **Operations**, many-to-one between attribute types, corresponding to data operations (such as rounding a real number to an integer).
+
+**!TO-DO: explain the difference (in terms of columns) between attribute types and attributes!**
+
+<Warning>
+  CatColab currently only supports **single-input** operations, so many familiar examples (such as sums and averages) are not directly representable.
+
+  Note that consistency constraints on the scheme are also not yet supported, though they can be added informally in rich text cells.
+</Warning>
+
+
+## Instances
+
+Graphical instances of schemas are called **acsets** in applied category theory lingo, but can also be thought of as being precisely *databases*.
+
+
+## Analyses
+
+**!TO-DO: include!**
+
+
+## Further reading
+
+- Wikipedia: [Database Schema](https://en.wikipedia.org/wiki/Database_schema)
+- Evan Patterson, Owen Lynch, and James Fairbanks, 2022.
+  Categorical Data Structures for Technical Computing.
+  [arXiv:2202.12345](https://arxiv.org/abs/2202.12345)
+  [DOI:10.32408/compositionality-4-5](
+https://doi.org/10.32408/compositionality-4-5)
+

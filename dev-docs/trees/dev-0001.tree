@@ -1,7 +1,7 @@
 \title{CatColab: Developer Documentation}
 \import{macros}
 
-\subtree{
+\subtree[api]{
 \title{API Documentation}
 
 \ul{
@@ -10,7 +10,7 @@
 }
 }
 
-\subtree{
+\subtree[mathematics]{
 \title{Mathematics}
 
 \p{Doctrines whose free objects have a systems interpretation:}
@@ -35,7 +35,7 @@
 }
 }
 
-\subtree{
+\subtree[technology]{
 \title{Technology}
 
 \ul{

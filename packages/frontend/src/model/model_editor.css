@@ -6,10 +6,18 @@
 
     & .title {
         font-size: var(--h1-font-size);
+        flex: 1;
     }
 
     & .theory-selector-trigger {
         font-size: var(--h4-font-size);
-        max-width: 25%;
+        /*max-width: 25%;*/
+        flex: 1;
+        text-align: right;
+    }
+
+    & .icon-button {
+        flex: 0;
+        margin-left: 0.5em;
     }
 }

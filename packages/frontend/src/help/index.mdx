@@ -1,17 +1,7 @@
 import { A } from "@solidjs/router";
 import { Warning } from "../components/alert";
 
-# Help & resources
-
-## CatColab is...
-
-- a collaborative environment for *formal, interoperable, conceptual modeling*
-- an open source software project: [find us on
-  GitHub](https://github.com/ToposInstitute/CatColab)
-- a technology created by [Topos Institute](https://topos.site/) and our
-  partners: <A href="credits">read the credits</A>
-
-You can find a page with some examples of CatColab in action <A href="quick-intro">here</A>.
+# Overview
 
 <Warning>
 CatColab is under active development with new features added regularly. We aim
@@ -19,40 +9,40 @@ to preserve the integrity of your data but you should not store anything
 critical or sensitive.
 </Warning>
 
-## Concepts
 
-While CatColab has a notebook-style interface inspired by computational
-notebooks like JupyterLab and structured document editors like Notion, its
-conceptual underpinnings are quite different from both kinds of tools. Here is
-an overview of the concepts that you'll encounter in CatColab today.
+## What is CatColab?
 
-<dl>
+CatColab is ...
 
-<dt>Logic</dt>
+- ... a collaborative environment for *formal, interoperable, conceptual modeling*
+- ... an open source software project
+  * [find us on
+  GitHub ↗](https://github.com/ToposInstitute/CatColab)
+  * [chat with the community on Zulip ↗](https://catcolab.zulipchat.com)
+- ... a technology created by the Topos Institute and our
+  partners
+  * [view the credits](credits)
+  * [read about our other work ↗](https://topos.institute)
 
-<dd>CatColab is not a general-purpose programming or modeling language but is
-rather an extensible environment for working in *domain-specific logics*, such
-as those of database schemas or biochemical regulatory networks. To do anything
-in the tool besides write text, you'll need to <A href="theories">choose a
-logic</A>.</dd>
 
-<dt>Model</dt>
+## Using CatColab
 
-<dd>Models in CatColab are models *within* a logic, such as a particular
-database schema or regulatory network. Models are specified declaratively and
-are well-defined mathematical objects. CatColab is a structure editor for models
-in a logic, allowing formal declarations to be intermixed with descriptive rich
-text.</dd>
+The general process of using CatColab looks something like the following:
 
-<dt>Analysis</dt>
+1. Select a **logic**
+2. Build a **model** within the above logic
+3. Run various **analyses** on your model.
 
-<dd>Unlike most computational notebooks, CatColab strictly separates the
-*specification* of a model from any outputs derived from it. Depending on the
-logic, an analysis of a model might include visualization, simulation,
-identification of motifs, and translation into other formats.</dd>
+For more information, see the [guides](guides) or dive into the help pages for [logics](logics).
 
-</dl>
 
-Future of versions of CatColab will display the further concepts of
-**instances**, **morphisms**, and **migrations**, to be described when they
-become available.
+## Other documentation
+
+These help pages are intended for general users of CatColab, but there are some other places where you can find helpful resources:
+
+- General overview: [topos.institute/work/catcolab](https://topos.institute/work/catcolab/)
+- Documentation for software developers: [next.catcolab.org/dev](https://next.catcolab.org/dev/index.xml)
+- Documentation for mathematicians: [next.catcolab.org/dev/mathematics.xml](https://next.catcolab.org/dev/mathematics.xml)
+- Our GitHub: [github.com/ToposInstitute/CatColab](https://github.com/ToposInstitute/CatColab/)
+
+If you have any questions, then we warmly invite you to [chat with us on Zulip ↗](https://catcolab.zulipchat.com).
