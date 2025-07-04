@@ -1,18 +1,30 @@
-**!TO-DO: rewrite!**
+import { A } from "@solidjs/router";
+import { Warning, Question } from "../../components/alert";
 
 ## Description
 
-Stock-flow diagrams are the crown jewel of systems dynamics, a rich language
-allowing the scientist to model a system of stocks of various quantities and
-flows between them, with the rate of the flows depending in complex ways on
-various stocks via *links*.
+Stock and flow (or simply *stock-flow*) diagrams are fundamental to systems dynamics.
+They provide a rich language, allowing the scientist to model a system of stocks of various quantities and flows between them, with the rate of the flows depending in complex ways on various stocks via *links*.
 
-In CatColab, we implement what we call *primitive* stock-flow diagrams, which do
-not allow for the auxiliary variables permitting flows to be arbitrary functions
-of the stocks that are characteristic in systems dynamics. We expect to
-implement this richer semantics in the future; meanwhile, primitive stock-flow
-diagrams already admit an interesting ODE semantics based on mass action
-kinetics.
+<Warning>
+In CatColab we implement what we call *primitive* stock-flow diagrams, which do not allow for the auxiliary variables permitting flows to be arbitrary functions of the stocks, which is characteristic in systems dynamics.
+We expect to implement this richer semantics in the future.
+</Warning>
+
+
+## Instances
+
+<Question>
+Instances are not currently supported for stock-flow diagrams, but if you have suggestions for what these might mean to a systems theorist then please do reach out and let us know.
+</Question>
+
+
+## Analyses
+
+**!TO-DO: include!**
+
+Primitive stock-flow diagrams already admit an interesting ODE semantics based on mass action kinetics.
+
 
 ## Further reading
 

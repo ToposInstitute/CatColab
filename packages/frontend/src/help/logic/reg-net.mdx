@@ -1,23 +1,13 @@
 import { A } from "@solidjs/router";
 import { Question } from "../../components/alert";
 
-**!TO-DO: rewrite!**
-
 ## Description
 
 Regulatory networks depict promoting or inhibiting interactions between molecules in a biochemical system.
-CatColab's theory for regulatory networks presents *signed categories*, where the objects are molecules and the morphisms are interactions between molecules. The interactions are labeled with a sign, which indicates whether the interaction is promoting or inhibiting. It may be interesting to note that 
-this theory is isomorphic to that of <A
-href="../causal-loop">causal loop diagram,</A>  even though the two are presented in different ways in the system.
+CatColab's theory for regulatory networks presents *signed categories*, where the objects are molecules and the morphisms are interactions between molecules.
+The interactions are labeled with a sign, which indicates whether the interaction is *promoting* or *inhibiting*.
 
-Instances of regulatory networks are not currently supported,
-because we don't understand what they mean, biologically. If you have any thoughts,
-we'd love to hear them.
-
-Regulatory networks support an ODE semantics based on the Lotka-Volterra equations, where 
-the derivative of each species is the sum of a linear term proportional to its own value 
-and quadratic terms proportional to the product of its own value and that of the species on the
-other end of an interaction.
+This theory is technically isomorphic to that of <A href="../causal-loop">causal loop diagrams</A>, even though the two are presented in different ways.
 
 
 ## Instances
@@ -31,6 +21,8 @@ If you have any thoughts on how they might be used in practice then please do ge
 ## Analyses
 
 **!TO-DO: include!**
+
+Regulatory networks support an ODE semantics based on the Lotka-Volterra equations, where the derivative of each species is the sum of a linear term proportional to its own value  and quadratic terms proportional to the product of its own value and that of the species on the other end of an interaction.
 
 
 ## Examples
