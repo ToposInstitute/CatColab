@@ -258,6 +258,9 @@ export type AnalysisMeta<T> = {
     /** Short description of analysis. */
     description?: string;
 
+    /** Name of the help page (excluding file extension) for the analysis, if any. */
+    help?: string;
+
     /** Default content created when the analysis is added. */
     initialContent: () => T;
 };

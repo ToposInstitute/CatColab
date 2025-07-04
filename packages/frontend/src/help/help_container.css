@@ -94,7 +94,7 @@
     /* Analyses help boxes */
     .help-analysis-pane {
         margin-bottom: 1.5em;
-        padding: 1em 1em 0.5em 1em;
+        padding: 1em;
         border: 1px solid black;
         border-radius: 2px;
 
@@ -104,6 +104,10 @@
 
         h4 {
             border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        & > *:last-child {
+            margin-bottom: 0;
         }
     }
 }

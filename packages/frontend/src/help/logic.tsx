@@ -5,7 +5,7 @@ import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
 import { TheoryLibraryContext } from "../stdlib";
-import type { Theory } from "../theory";
+import type { ModelAnalysisMeta, Theory } from "../theory";
 
 /** Help page for a theory in the standard library. */
 export default function LogicHelpPage() {
@@ -27,7 +27,6 @@ export function LogicHelp(props: {
     theory: Theory;
 }) {
     const { theory } = destructure(props);
-    console.log(theory)
 
     return (
         <>
@@ -66,8 +65,7 @@ export function helpLogicAnalyses(props: {
             <Show when={theory().modelAnalyses.length > 0}>
                 <dl>
                     <For each={theory().modelAnalyses}>
-                        {(typeMeta) => <Dynamic component={helpAnalysisContent(typeMeta.id)} />}
-                            {/*IF THIS FILE DOESN'T EXIST THEN PRINT .name and .description*/}
+                        {(typeMeta) => helpAnalysisContent({ analysis: typeMeta })}
                     </For>
                 </dl>
             </Show>
@@ -76,4 +74,23 @@ export function helpLogicAnalyses(props: {
 }
 
 const helpLogicContent = (name: string) => lazy(() => import(`./logic/${name}.mdx`));
-const helpAnalysisContent = (name: string) => lazy(() => import(`./analysis/${name}.mdx`));
+
+function helpAnalysisContent(props: {
+    analysis: ModelAnalysisMeta;
+}) {
+    if (props.analysis.help) {
+        const mdx_component = lazy(() => import(`./analysis/${props.analysis.id}.mdx`));
+        return (
+            <div class="help-analysis-pane">
+                <Dynamic component={mdx_component} />
+            </div>
+        );
+    } else {
+        return (
+            <div class="help-analysis-pane">
+                <h3>{props.analysis.name}</h3>
+                <p>{props.analysis.description}</p>
+            </div>
+        );
+    }
+}
