@@ -176,8 +176,8 @@ where
     /// Iterates over failures to be a well-defined presentation of a category.
     pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidFpCategory<E>> + '_ {
         let generator_errors = self.generators.iter_invalid().map(|err| match err {
-            InvalidGraphData::Src(e) => InvalidFpCategory::Dom(e),
-            InvalidGraphData::Tgt(e) => InvalidFpCategory::Cod(e),
+            InvalidGraph::Src(e) => InvalidFpCategory::Dom(e),
+            InvalidGraph::Tgt(e) => InvalidFpCategory::Cod(e),
         });
         let equation_errors = self.equations.iter().enumerate().flat_map(|(i, eq)| {
             eq.iter_invalid_in(&self.generators).map(move |err| match err {

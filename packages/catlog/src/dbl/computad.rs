@@ -1,18 +1,21 @@
-//! Computads for double categories and virtual double categories.
+//! Computads for virtual double categories.
 
 use std::hash::{BuildHasher, Hash, RandomState};
 
-use super::graph::VDblGraph;
+use super::graph::{InvalidVDblGraph, VDblGraph};
 use crate::one::{Graph, Path, ReflexiveGraph, ShortPath};
 use crate::zero::*;
 
-/// TODO
-pub struct AVDCComputadSquares<Ob, Arr, Pro, Sq, S = RandomState> {
-    pub squares: HashFinSet<Sq, S>,
-    pub dom: HashColumn<Sq, Path<Ob, Pro>, S>,
-    pub cod: HashColumn<Sq, ShortPath<Ob, Pro>, S>,
-    pub src: HashColumn<Sq, Arr, S>,
-    pub tgt: HashColumn<Sq, Arr, S>,
+/** Top-dimensional data of an augmented virtual double computad.
+
+Intended for use with [`AVDCComputad`].
+ */
+pub struct AVDCComputadTop<Ob, Arr, Pro, Sq, S = RandomState> {
+    squares: HashFinSet<Sq, S>,
+    dom: HashColumn<Sq, Path<Ob, Pro>, S>,
+    cod: HashColumn<Sq, ShortPath<Ob, Pro>, S>,
+    src: HashColumn<Sq, Arr, S>,
+    tgt: HashColumn<Sq, Arr, S>,
 }
 
 /// TODO
@@ -20,7 +23,7 @@ pub struct AVDCComputad<'a, Ob, Arr, Pro, ObSet, ArrGraph, ProGraph, Sq, S> {
     pub objects: &'a ObSet,
     pub arrows: &'a ArrGraph,
     pub proarrows: &'a ProGraph,
-    pub computad: &'a AVDCComputadSquares<Ob, Arr, Pro, Sq, S>,
+    pub computad: &'a AVDCComputadTop<Ob, Arr, Pro, Sq, S>,
 }
 
 impl<'a, Ob, Arr, Pro, ObSet, ArrGraph, ProGraph, Sq, S> VDblGraph
@@ -78,9 +81,58 @@ where
         self.computad.src.apply_to_ref(sq).expect("Source of square should be defined")
     }
     fn square_tgt(&self, sq: &Self::Sq) -> Self::E {
-        self.computad.src.apply_to_ref(sq).expect("Target of square should be defined")
+        self.computad.tgt.apply_to_ref(sq).expect("Target of square should be defined")
     }
     fn arity(&self, sq: &Self::Sq) -> usize {
         self.computad.dom.get(sq).expect("Domain of square should be defined").len()
+    }
+}
+
+impl<'a, Ob, Arr, Pro, ObSet, ArrGraph, ProGraph, Sq, S>
+    AVDCComputad<'a, Ob, Arr, Pro, ObSet, ArrGraph, ProGraph, Sq, S>
+where
+    Ob: Eq + Clone,
+    Arr: Eq + Clone,
+    Pro: Eq + Clone,
+    Sq: Eq + Clone + Hash,
+    ArrGraph: Graph<V = Ob, E = Arr>,
+    ProGraph: Graph<V = Ob, E = Pro>,
+    S: BuildHasher,
+{
+    /** Iterates over failures to be a valid virtual double graph.
+
+    Note that this method *assumes* that the graphs of objects and (pro)arrows
+    are already valid. If that is in question, validate them first.
+     */
+    pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidVDblGraph<Arr, Pro, Sq>> {
+        let cptd = self.computad;
+        cptd.squares.iter().flat_map(|sq| {
+            let (dom, cod) = (cptd.dom.get(&sq), cptd.cod.get(&sq));
+            let (src, tgt) = (cptd.src.get(&sq), cptd.tgt.get(&sq));
+            let mut errs = Vec::new();
+            if !dom.is_some_and(|path| path.contained_in(self.proarrows)) {
+                errs.push(InvalidVDblGraph::SquareDom(sq.clone()));
+            }
+            if !cod.is_some_and(|path| path.contained_in(self.proarrows)) {
+                errs.push(InvalidVDblGraph::SquareCod(sq.clone()));
+            }
+            if !src.is_some_and(|f| self.arrows.has_edge(f)) {
+                errs.push(InvalidVDblGraph::SquareSrc(sq.clone()));
+            }
+            if !tgt.is_some_and(|g| self.arrows.has_edge(g)) {
+                errs.push(InvalidVDblGraph::SquareTgt(sq.clone()));
+            }
+            if errs.is_empty() {
+                let (m, n, f, g) = (dom.unwrap(), cod.unwrap(), src.unwrap(), tgt.unwrap());
+                if !(m.src(self.proarrows) == self.arrows.src(f)
+                    && m.tgt(self.proarrows) == self.arrows.src(g)
+                    && n.src(self.proarrows) == self.arrows.tgt(f)
+                    && n.tgt(self.proarrows) == self.arrows.tgt(g))
+                {
+                    errs.push(InvalidVDblGraph::NotSquare(sq));
+                }
+            }
+            errs.into_iter()
+        })
     }
 }
