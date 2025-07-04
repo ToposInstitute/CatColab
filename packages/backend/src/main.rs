@@ -49,12 +49,16 @@ async fn main() {
         db,
     };
 
-    // We need to wrap FirebaseAuth in an Arc because if it's ever dropped the process which updates it's
+    // We need to wrap FirebaseAuth in an Arc because if it's ever dropped the process which updates its
     // jwt keys will be killed. The library is using the anti pattern of implementing both Clone and Drop on the
     // same struct.
     // https://github.com/trchopan/firebase-auth/issues/30
-    let firebase_auth =
-        Arc::new(FirebaseAuth::new(&dotenvy::var("FIREBASE_PROJECT_ID").unwrap()).await);
+    let firebase_auth = Arc::new(
+        FirebaseAuth::new(
+            &dotenvy::var("FIREBASE_PROJECT_ID").expect("`FIREBASE_PROJECT_ID` should be set"),
+        )
+        .await,
+    );
 
     socket::setup_automerge_socket(state.clone());
 
