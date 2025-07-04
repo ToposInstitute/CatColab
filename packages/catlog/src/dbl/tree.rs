@@ -371,6 +371,17 @@ impl<V, E, ProE, Sq> DblTree<Path<V, E>, ProE, DblTree<E, ProE, Sq>> {
     }
 }
 
+impl<Arr, ProE, Sq> DblTree<Arr, ProE, DblTree<Arr, ProE, Sq>> {
+    /// Flattens a double tree of double trees into a single double tree.
+    pub fn flatten(self) -> DblTree<Arr, ProE, Sq> {
+        let tree = self.0.map(|dn| match dn {
+            DblNode::Cell(tree) => tree.0,
+            DblNode::Spine(f) => OpenTree::single(DblNode::Spine(f), 1),
+        });
+        tree.flatten().into()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use ego_tree::tree;
