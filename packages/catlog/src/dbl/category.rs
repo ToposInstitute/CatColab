@@ -30,9 +30,9 @@ to composition in a double category does not arise in VDCs.
 
 A [double theory](super::theory) is "just" a unital virtual double category, so
 any double theory in the standard library is an example of a VDC. For testing
-purposes, this module provides several minimal examples of VDCs implemented
-directly, namely ["walking"](https://ncatlab.org/nlab/show/walking+structure)
-categorical structures that can be interpreted in any VDC:
+purposes, this module directly implements several minimal examples of VDCs,
+namely ["walking"](https://ncatlab.org/nlab/show/walking+structure) categorical
+structures that can be interpreted in any VDC:
 
 - the [walking category](WalkingCategory)
 - the [walking functor](WalkingFunctor)

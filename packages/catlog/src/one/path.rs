@@ -514,6 +514,28 @@ impl<V, E> ShortPath<V, E> {
         }
     }
 
+    /// Source of the path in the given graph.
+    pub fn src(&self, graph: &impl Graph<V = V, E = E>) -> V
+    where
+        V: Clone,
+    {
+        match self {
+            ShortPath::Zero(v) => v.clone(),
+            ShortPath::One(e) => graph.src(e),
+        }
+    }
+
+    /// Target of the path in the given graph.
+    pub fn tgt(&self, graph: &impl Graph<V = V, E = E>) -> V
+    where
+        V: Clone,
+    {
+        match self {
+            ShortPath::Zero(v) => v.clone(),
+            ShortPath::One(e) => graph.tgt(e),
+        }
+    }
+
     /// Converts the short path into an edge in the given *reflexive* graph.
     pub fn to_edge_in(self, graph: &impl ReflexiveGraph<V = V, E = E>) -> E {
         match self {
