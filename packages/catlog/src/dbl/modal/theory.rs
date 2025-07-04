@@ -7,9 +7,9 @@ use std::hash::{BuildHasher, Hash, RandomState};
 
 use ref_cast::RefCast;
 
-use crate::dbl::computad::{AVDCComputad, AVDCComputadSquares};
+use crate::dbl::computad::{AVDCComputad, AVDCComputadTop};
 use crate::dbl::{DblTree, VDblCategory, VDblGraph};
-use crate::one::computad::{Computad, ComputadEdges};
+use crate::one::computad::{Computad, ComputadTop};
 use crate::{one::*, zero::*};
 
 /** Modes/modalities available in a modal double theory.
@@ -97,9 +97,9 @@ type ModalMorOp<Id> = DblTree<ModalObOp<Id>, ModalMorType<Id>, ModeApp<Square<Id
 /// A modal double theory.
 pub struct ModalDblTheory<Id, S = RandomState> {
     ob_generators: HashFinSet<Id, S>,
-    arr_generators: ComputadEdges<ModalObType<Id>, Id, S>,
-    pro_generators: ComputadEdges<ModalObType<Id>, Id, S>,
-    cell_generators: AVDCComputadSquares<ModalObType<Id>, ModalObOp<Id>, ModalMorType<Id>, Id, S>,
+    arr_generators: ComputadTop<ModalObType<Id>, Id, S>,
+    pro_generators: ComputadTop<ModalObType<Id>, Id, S>,
+    cell_generators: AVDCComputadTop<ModalObType<Id>, ModalObOp<Id>, ModalMorType<Id>, Id, S>,
     // TODO: Arrow equations, cell equations, composites
     //arr_equations: Vec<PathEq<ModalObType<Id>, ModeApp<Id>>>,
 }
@@ -122,7 +122,7 @@ where
 }
 
 /// Graph of basic object operations or morphism types in a modal double theory.
-struct ModalGraph<'a, Id, S>(&'a HashFinSet<Id, S>, &'a ComputadEdges<ModeApp<Id>, Id, S>);
+struct ModalGraph<'a, Id, S>(&'a HashFinSet<Id, S>, &'a ComputadTop<ModeApp<Id>, Id, S>);
 
 impl<'a, Id, S> ModalGraph<'a, Id, S>
 where
@@ -254,7 +254,7 @@ where
     }
     fn has_square(&self, sq: &Self::Sq) -> bool {
         match &sq.arg {
-            Square::Generator(sq) => self.0.cell_generators.squares.contains(sq),
+            Square::Generator(sq) => self.0.computad().has_square(sq),
             // FIXME: Don't assume all composites exist.
             Square::Composite(_) => true,
         }

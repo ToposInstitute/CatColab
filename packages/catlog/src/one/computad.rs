@@ -5,15 +5,18 @@ use std::hash::{BuildHasher, Hash, RandomState};
 use super::graph::ColumnarGraph;
 use crate::zero::*;
 
-/// TODO
-pub struct ComputadEdges<Ob, E, S = RandomState> {
+/** Top-dimensional data of a 1-computad.
+
+Intended for use with [`Computad`].
+ */
+pub struct ComputadTop<Ob, E, S = RandomState> {
     edges: HashFinSet<E, S>,
     src: HashColumn<E, Ob, S>,
     tgt: HashColumn<E, Ob, S>,
 }
 
 /// TODO
-pub struct Computad<'a, Ob, ObSet, E, S>(pub &'a ObSet, pub &'a ComputadEdges<Ob, E, S>);
+pub struct Computad<'a, Ob, ObSet, E, S>(pub &'a ObSet, pub &'a ComputadTop<Ob, E, S>);
 
 impl<'a, Ob, ObSet, E, S> ColumnarGraph for Computad<'a, Ob, ObSet, E, S>
 where
