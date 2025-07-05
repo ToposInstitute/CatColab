@@ -148,6 +148,16 @@
           ];
           pkgs = pkgsLinux;
         };
+
+        my-vm = nixpkgs.lib.nixosSystem {
+          system = linuxSystem;
+
+          # point to your configuration.nix
+          modules = [ ./configuration.nix ];
+
+          # let your NixOS modules import stuff from this flake
+          specialArgs = { inherit self; };
+        };
       };
 
       deploy.nodes = {
@@ -175,24 +185,11 @@
         nodes.testMachine =
           { config, pkgs, ... }:
           {
-
             # inherit system;
             # tell NixOS what release you're targeting
-            system.stateVersion = "24.11";
+            # system.stateVersion = "24.11";
 
             # 1) Your root filesystem
-            fileSystems = {
-              "/" = {
-                device = "/dev/disk/by-label/nixos";
-                fsType = "ext4";
-              };
-            };
-
-            # 2) Enable and install GRUB
-            boot.loader.grub = {
-              enable = true;
-              devices = [ "/dev/sda" ]; # or whatever your target disk is
-            };
 
             # (optional) enable SSH so you can log in
 

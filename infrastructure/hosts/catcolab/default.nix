@@ -23,7 +23,6 @@ in
   # 2) Enable and install GRUB
   boot.loader.grub = {
     enable = true;
-    version = 2;
     devices = [ "/dev/sda" ]; # or whatever your target disk is
   };
 
