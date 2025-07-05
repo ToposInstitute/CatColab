@@ -11,6 +11,7 @@ use ref_cast::RefCast;
 use ustr::{IdentityHasher, Ustr};
 
 use crate::dbl::computad::{AVDCComputad, AVDCComputadTop};
+use crate::dbl::theory::InvalidDblTheory;
 use crate::dbl::{DblTree, InvalidVDblGraph, VDblCategory, VDblGraph};
 use crate::one::computad::{Computad, ComputadTop};
 use crate::validate::{self, Validate};
@@ -158,8 +159,8 @@ pub struct ModalDblTheory<Id, S = RandomState> {
     arr_generators: ComputadTop<ModalObType<Id>, Id, S>,
     pro_generators: ComputadTop<ModalObType<Id>, Id, S>,
     cell_generators: AVDCComputadTop<ModalObType<Id>, ModalObOp<Id>, ModalMorType<Id>, Id, S>,
-    // TODO: Arrow equations, cell equations, composites
-    //arr_equations: Vec<PathEq<ModalObType<Id>, ModeApp<Id>>>,
+    arr_equations: Vec<PathEq<ModalObType<Id>, ModeApp<ModalEdge<Id>>>>,
+    // TODO: Cell equations and composites
 }
 
 /// A modal double theory with identifiers of type `Ustr`.
@@ -545,16 +546,26 @@ where
     }
 }
 
-// TODO: Validate the equations, not just the generating data.
 impl<Id, S> Validate for ModalDblTheory<Id, S>
 where
     Id: Eq + Clone + Hash,
     S: BuildHasher,
 {
-    type ValidationError = InvalidVDblGraph<Id, Id, Id>;
+    type ValidationError = InvalidDblTheory<Id>;
 
     fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
-        ModalVDblGraph::ref_cast(self).validate()
+        // Validate generating data.
+        ModalVDblGraph::ref_cast(self)
+            .validate()
+            .map_err(|errs| errs.map(|err| err.into()))?;
+
+        // Validate equations between object operations.
+        let graph = ModalEdgeGraph::ref_cast(self);
+        let arr_errors = self.arr_equations.iter().enumerate().filter_map(|(id, eq)| {
+            let errs = eq.validate_in(graph).err()?;
+            Some(InvalidDblTheory::ObOpEq(id, errs))
+        });
+        validate::wrap_errors(arr_errors)
     }
 }
 
@@ -595,5 +606,10 @@ where
         let dom = self.dom(&src); // == self.dom(&tgt)
         let cod = self.cod(&src); // == self.cod(&tgt)
         self.add_mor_op(id, Path::empty(dom), ShortPath::Zero(cod), src, tgt);
+    }
+
+    /// Equate two object operations in the theory.
+    pub fn equate_ob_ops(&mut self, lhs: ModalObOp<Id>, rhs: ModalObOp<Id>) {
+        self.arr_equations.push(PathEq::new(lhs, rhs))
     }
 }
