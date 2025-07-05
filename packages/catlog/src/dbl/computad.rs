@@ -22,6 +22,31 @@ pub struct AVDCComputadTop<Ob, Arr, Pro, Sq, S> {
     tgt: HashColumn<Sq, Arr, S>,
 }
 
+impl<Ob, Arr, Pro, Sq, S> AVDCComputadTop<Ob, Arr, Pro, Sq, S>
+where
+    Ob: Eq + Clone,
+    Arr: Eq + Clone,
+    Pro: Eq + Clone,
+    Sq: Eq + Clone + Hash,
+    S: BuildHasher,
+{
+    /// Adds a square to the double computad.
+    pub fn add_square(
+        &mut self,
+        sq: Sq,
+        dom: Path<Ob, Pro>,
+        cod: ShortPath<Ob, Pro>,
+        src: Arr,
+        tgt: Arr,
+    ) -> bool {
+        self.dom.set(sq.clone(), dom);
+        self.cod.set(sq.clone(), cod);
+        self.src.set(sq.clone(), src);
+        self.tgt.set(sq.clone(), tgt);
+        self.squares.insert(sq)
+    }
+}
+
 /// TODO
 pub struct AVDCComputad<'a, Ob, Arr, Pro, ObSet, ArrGraph, ProGraph, Sq, S> {
     pub objects: &'a ObSet,
