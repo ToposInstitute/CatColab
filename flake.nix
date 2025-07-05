@@ -196,7 +196,9 @@
 
             # (optional) enable SSH so you can log in
 
-            # ./infrastructure/hosts/catcolab
+            imports = [
+              ./infrastructure/hosts/catcolab
+            ];
             # agenix.nixosModules.age
 
           };
