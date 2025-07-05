@@ -3,13 +3,15 @@
 TODO: Explain implementation strategy.
 */
 
-use std::hash::{BuildHasher, Hash, RandomState};
+use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
 
 use ref_cast::RefCast;
+use ustr::{IdentityHasher, Ustr};
 
 use crate::dbl::computad::{AVDCComputad, AVDCComputadTop};
-use crate::dbl::{DblTree, VDblCategory, VDblGraph};
+use crate::dbl::{DblTree, InvalidVDblGraph, VDblCategory, VDblGraph};
 use crate::one::computad::{Computad, ComputadTop};
+use crate::validate::{self, Validate};
 use crate::{one::*, zero::*};
 
 /** Modes/modalities available in a modal double theory.
@@ -17,7 +19,7 @@ use crate::{one::*, zero::*};
 On the semantics side, each of these corresponds to a lax double monad on the
 double category of sets.
  */
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Mode {
     /// Lists of objects and morphisms (of same length).
     List,
@@ -41,14 +43,29 @@ pub enum Mode {
 Due to the simplicity of this logic, we can easily put terms in normal form:
 every term is a generator with a list (possibly empty) of modes applied to it.
  */
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ModeApp<T> {
     arg: T,
     modes: Vec<Mode>,
 }
 
 impl<T> ModeApp<T> {
-    fn apply(mut self, modes: Vec<Mode>) -> Self {
+    /// Constructs a new term with no modes applied.
+    pub fn new(arg: T) -> Self {
+        Self {
+            arg,
+            modes: Vec::new(),
+        }
+    }
+
+    /// Applies a mode.
+    pub fn apply(mut self, mode: Mode) -> Self {
+        self.modes.push(mode);
+        self
+    }
+
+    /// Applies a sequence of modes.
+    pub fn apply_all(mut self, modes: impl IntoIterator<Item = Mode>) -> Self {
         self.modes.extend(modes);
         self
     }
@@ -61,10 +78,10 @@ pub type ModalObType<Id> = ModeApp<Id>;
 pub type ModalMorType<Id> = ShortPath<ModalObType<Id>, ModeApp<Id>>;
 
 impl<Id> ModalMorType<Id> {
-    fn apply_modes(self, modes: Vec<Mode>) -> Self {
+    fn apply_all(self, modes: impl IntoIterator<Item = Mode>) -> Self {
         match self {
-            ShortPath::Zero(x) => ShortPath::Zero(x.apply(modes)),
-            ShortPath::One(f) => ShortPath::One(f.apply(modes)),
+            ShortPath::Zero(x) => ShortPath::Zero(x.apply_all(modes)),
+            ShortPath::One(f) => ShortPath::One(f.apply_all(modes)),
         }
     }
 }
@@ -73,10 +90,10 @@ impl<Id> ModalMorType<Id> {
 type ModalObOp<Id> = Path<ModalObType<Id>, ModeApp<Id>>;
 
 impl<Id> ModalObOp<Id> {
-    fn apply_modes(self, modes: Vec<Mode>) -> Self {
+    fn apply_all(self, modes: impl IntoIterator<Item = Mode> + Clone) -> Self {
         match self {
-            Path::Id(x) => Path::Id(x.apply(modes)),
-            Path::Seq(edges) => Path::Seq(edges.map(|p| p.apply(modes.clone()))),
+            Path::Id(x) => Path::Id(x.apply_all(modes)),
+            Path::Seq(edges) => Path::Seq(edges.map(|p| p.apply_all(modes.clone()))),
         }
     }
 }
@@ -95,6 +112,7 @@ pub enum Square<Id> {
 type ModalMorOp<Id> = DblTree<ModalObOp<Id>, ModalMorType<Id>, ModeApp<Square<Id>>>;
 
 /// A modal double theory.
+#[derive(Debug, Default)]
 pub struct ModalDblTheory<Id, S = RandomState> {
     ob_generators: HashFinSet<Id, S>,
     arr_generators: ComputadTop<ModalObType<Id>, Id, S>,
@@ -103,6 +121,9 @@ pub struct ModalDblTheory<Id, S = RandomState> {
     // TODO: Arrow equations, cell equations, composites
     //arr_equations: Vec<PathEq<ModalObType<Id>, ModeApp<Id>>>,
 }
+
+/// A modal double theory with identifiers of type `Ustr`.
+pub type UstrModalDblTheory = ModalDblTheory<Ustr, BuildHasherDefault<IdentityHasher>>;
 
 /// Set of object types in a modal double theory.
 #[derive(RefCast)]
@@ -135,7 +156,7 @@ where
     fn for_mor_types(th: &'a ModalDblTheory<Id, S>) -> Self {
         ModalGraph(&th.ob_generators, &th.pro_generators)
     }
-    fn computad(&self) -> impl ColumnarGraph<V = ModeApp<Id>, E = Id> {
+    fn computad(&self) -> Computad<'_, ModalObType<Id>, ModalSet<Id, S>, Id, S> {
         Computad(ModalSet::ref_cast(self.0), self.1)
     }
 }
@@ -155,10 +176,10 @@ where
         self.computad().has_edge(&f.arg)
     }
     fn src(&self, f: &Self::E) -> Self::V {
-        self.computad().src(&f.arg).apply(f.modes.clone())
+        self.computad().src(&f.arg).apply_all(f.modes.clone())
     }
     fn tgt(&self, f: &Self::E) -> Self::V {
-        self.computad().tgt(&f.arg).apply(f.modes.clone())
+        self.computad().tgt(&f.arg).apply_all(f.modes.clone())
     }
 }
 
@@ -229,9 +250,64 @@ where
     }
 }
 
+/// Virtual double graph of *basic* cells in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
 struct ModalVDblGraph<Id, S>(ModalDblTheory<Id, S>);
+
+type ModalVDblComputad<'a, Id, S> = AVDCComputad<
+    'a,
+    ModalObType<Id>,
+    ModalObOp<Id>,
+    ModalMorType<Id>,
+    ModalSet<Id, S>,
+    UnderlyingGraph<ModalOneTheory<Id, S>>,
+    ModalMorTypeGraph<Id, S>,
+    Id,
+    S,
+>;
+
+impl<Id, S> ModalVDblGraph<Id, S>
+where
+    Id: Eq + Clone + Hash,
+    S: BuildHasher,
+{
+    fn computad(&self) -> ModalVDblComputad<'_, Id, S> {
+        AVDCComputad {
+            objects: ModalSet::ref_cast(&self.0.ob_generators),
+            arrows: UnderlyingGraph::ref_cast(ModalOneTheory::ref_cast(&self.0)),
+            proarrows: ModalMorTypeGraph::ref_cast(&self.0),
+            computad: &self.0.cell_generators,
+        }
+    }
+}
+
+impl<Id, S> Validate for ModalVDblGraph<Id, S>
+where
+    Id: Eq + Clone + Hash,
+    S: BuildHasher,
+{
+    type ValidationError = InvalidVDblGraph<Id, Id, Id>;
+
+    fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
+        let ob_op_graph = ModalGraph::for_ob_ops(&self.0);
+        let edge_cptd = ob_op_graph.computad();
+        let edge_errors = edge_cptd.iter_invalid().map(|err| match err {
+            InvalidGraph::Src(e) => InvalidVDblGraph::Dom(e),
+            InvalidGraph::Tgt(e) => InvalidVDblGraph::Cod(e),
+        });
+        let mor_type_graph = ModalGraph::for_mor_types(&self.0);
+        let proedge_cptd = mor_type_graph.computad();
+        let proedge_errors = proedge_cptd.iter_invalid().map(|err| match err {
+            InvalidGraph::Src(p) => InvalidVDblGraph::Src(p),
+            InvalidGraph::Tgt(p) => InvalidVDblGraph::Tgt(p),
+        });
+        // Make sure one-dimensional data is valid before validating squares.
+        validate::wrap_errors(edge_errors.chain(proedge_errors))?;
+
+        validate::wrap_errors(self.computad().iter_invalid())
+    }
+}
 
 impl<Id, S> VDblGraph for ModalVDblGraph<Id, S>
 where
@@ -254,7 +330,7 @@ where
     }
     fn has_square(&self, sq: &Self::Sq) -> bool {
         match &sq.arg {
-            Square::Generator(sq) => self.0.computad().has_square(sq),
+            Square::Generator(sq) => self.computad().has_square(sq),
             // FIXME: Don't assume all composites exist.
             Square::Composite(_) => true,
         }
@@ -275,54 +351,36 @@ where
 
     fn square_dom(&self, sq: &Self::Sq) -> Path<Self::V, Self::ProE> {
         let dom = match &sq.arg {
-            Square::Generator(sq) => self.0.computad().square_dom(sq),
+            Square::Generator(sq) => self.computad().square_dom(sq),
             Square::Composite(path) => path.clone(),
         };
-        dom.map(|x| x.apply(sq.modes.clone()), |p| p.apply_modes(sq.modes.clone()))
+        dom.map(|x| x.apply_all(sq.modes.clone()), |p| p.apply_all(sq.modes.clone()))
     }
     fn square_cod(&self, sq: &Self::Sq) -> Self::ProE {
         let cod = match &sq.arg {
-            Square::Generator(sq) => self.0.computad().square_cod(sq),
+            Square::Generator(sq) => self.computad().square_cod(sq),
             Square::Composite(_) => panic!("Composites not implemented"),
         };
-        cod.apply_modes(sq.modes.clone())
+        cod.apply_all(sq.modes.clone())
     }
     fn square_src(&self, sq: &Self::Sq) -> Self::E {
         let src = match &sq.arg {
-            Square::Generator(sq) => self.0.computad().square_src(sq),
+            Square::Generator(sq) => self.computad().square_src(sq),
             Square::Composite(path) => Path::empty(path.src(ModalMorTypeGraph::ref_cast(&self.0))),
         };
-        src.apply_modes(sq.modes.clone())
+        src.apply_all(sq.modes.clone())
     }
     fn square_tgt(&self, sq: &Self::Sq) -> Self::E {
         let tgt = match &sq.arg {
-            Square::Generator(sq) => self.0.computad().square_tgt(sq),
+            Square::Generator(sq) => self.computad().square_tgt(sq),
             Square::Composite(path) => Path::empty(path.tgt(ModalMorTypeGraph::ref_cast(&self.0))),
         };
-        tgt.apply_modes(sq.modes.clone())
+        tgt.apply_all(sq.modes.clone())
     }
     fn arity(&self, sq: &Self::Sq) -> usize {
         match &sq.arg {
-            Square::Generator(sq) => self.0.computad().arity(sq),
+            Square::Generator(sq) => self.computad().arity(sq),
             Square::Composite(path) => path.len(),
-        }
-    }
-}
-
-impl<Id, S> ModalDblTheory<Id, S>
-where
-    Id: Eq + Clone + Hash,
-    S: BuildHasher,
-{
-    fn computad(
-        &self,
-    ) -> impl VDblGraph<V = ModalObType<Id>, E = ModalObOp<Id>, ProE = ModalMorType<Id>, Sq = Id>
-    {
-        AVDCComputad {
-            objects: ModalSet::ref_cast(&self.ob_generators),
-            arrows: UnderlyingGraph::ref_cast(ModalOneTheory::ref_cast(self)),
-            proarrows: ModalMorTypeGraph::ref_cast(self),
-            computad: &self.cell_generators,
         }
     }
 }
@@ -384,5 +442,39 @@ where
     }
     fn compose_cells(&self, tree: DblTree<Self::Arr, Self::Pro, Self::Cell>) -> Self::Cell {
         tree.flatten()
+    }
+}
+
+// TODO: Validate the equations, not just the generating data.
+impl<Id, S> Validate for ModalDblTheory<Id, S>
+where
+    Id: Eq + Clone + Hash,
+    S: BuildHasher,
+{
+    type ValidationError = InvalidVDblGraph<Id, Id, Id>;
+
+    fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
+        ModalVDblGraph::ref_cast(self).validate()
+    }
+}
+
+impl<Id, S> ModalDblTheory<Id, S>
+where
+    Id: Eq + Clone + Hash,
+    S: BuildHasher,
+{
+    /// Adds a generating object type to the theory.
+    pub fn add_ob_type(&mut self, id: Id) {
+        self.ob_generators.insert(id);
+    }
+
+    /// Adds a generating morphism type to the theory.
+    pub fn add_mor_type(&mut self, id: Id, src: ModalObType<Id>, tgt: ModalObType<Id>) {
+        self.pro_generators.add_edge(id, src, tgt);
+    }
+
+    /// Adds a generating object operation to the theory.
+    pub fn add_ob_op(&mut self, id: Id, dom: ModalObType<Id>, cod: ModalObType<Id>) {
+        self.arr_generators.add_edge(id, dom, cod);
     }
 }

@@ -169,6 +169,21 @@ pub trait ColumnarGraph {
 
     /// Gets the mapping assignment a target vertex to each edge.
     fn tgt_map(&self) -> &Self::Tgt;
+
+    /// Iterates over failures to be a valid graph.
+    fn iter_invalid(&self) -> impl Iterator<Item = InvalidGraph<Self::E>>
+    where
+        Self::Edges: FinSet<Elem = Self::E>,
+    {
+        let (dom, cod) = (self.edge_set(), self.vertex_set());
+        let srcs = Function(self.src_map(), dom, cod)
+            .iter_invalid()
+            .map(|e| InvalidGraph::Src(e.take()));
+        let tgts = Function(self.tgt_map(), dom, cod)
+            .iter_invalid()
+            .map(|e| InvalidGraph::Tgt(e.take()));
+        srcs.chain(tgts)
+    }
 }
 
 /** A finite graph backed by columns.
@@ -185,17 +200,6 @@ pub trait ColumnarFinGraph:
         Tgt: Column<Dom = Self::E, Cod = Self::V>,
     >
 {
-    /// Iterates over failures to be a valid graph.
-    fn iter_invalid(&self) -> impl Iterator<Item = InvalidGraph<Self::E>> {
-        let (dom, cod) = (self.edge_set(), self.vertex_set());
-        let srcs = Function(self.src_map(), dom, cod)
-            .iter_invalid()
-            .map(|e| InvalidGraph::Src(e.take()));
-        let tgts = Function(self.tgt_map(), dom, cod)
-            .iter_invalid()
-            .map(|e| InvalidGraph::Tgt(e.take()));
-        srcs.chain(tgts)
-    }
 }
 
 /// A columnar graph with mutable columns.
