@@ -5,10 +5,12 @@ addition, this module provides data types for ["short paths"](`ShortPath`) and
 [path equations](`PathEq`).
 */
 
-use itertools::{Either, Itertools};
-use nonempty::{NonEmpty, nonempty};
 use std::ops::Range;
 use std::{collections::HashSet, hash::Hash};
+
+use derive_more::From;
+use itertools::{Either, Itertools};
+use nonempty::{NonEmpty, nonempty};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -476,24 +478,18 @@ might seem like an odd data structure, but are occasionally useful, such as in:
   definition a short path, and relatedly *unital* virtual double categories
 
  */
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, From)]
 pub enum ShortPath<V, E> {
     /// Path of length zero.
     Zero(V),
 
     /// Path of length one.
+    #[from]
     One(E),
 }
 
 /// A short path in a graph with skeletal vertex and edge sets.
 pub type SkelShortPath = ShortPath<usize, usize>;
-
-/// Converts an edge into a short path of length one.
-impl<V, E> From<E> for ShortPath<V, E> {
-    fn from(e: E) -> Self {
-        ShortPath::One(e)
-    }
-}
 
 impl<V, E> From<ShortPath<V, E>> for Path<V, E> {
     fn from(path: ShortPath<V, E>) -> Self {
@@ -617,17 +613,17 @@ impl<V, E> PathEq<V, E> {
     {
         let mut errs = Vec::new();
         if !self.lhs.contained_in(graph) {
-            errs.push(InvalidPathEq::Lhs());
+            errs.push(InvalidPathEq::Lhs);
         }
         if !self.rhs.contained_in(graph) {
-            errs.push(InvalidPathEq::Rhs());
+            errs.push(InvalidPathEq::Rhs);
         }
         if errs.is_empty() {
             if self.lhs.src(graph) != self.rhs.src(graph) {
-                errs.push(InvalidPathEq::Src());
+                errs.push(InvalidPathEq::Src);
             }
             if self.lhs.tgt(graph) != self.rhs.tgt(graph) {
-                errs.push(InvalidPathEq::Tgt());
+                errs.push(InvalidPathEq::Tgt);
             }
         }
         errs.into_iter()
@@ -635,19 +631,22 @@ impl<V, E> PathEq<V, E> {
 }
 
 /// A failure of a path equation to be well defined in a graph.
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
 pub enum InvalidPathEq {
-    /// Path in left hand side of equation not contained in the graph.
-    Lhs(),
+    /// Left-hand side of equation is not a valid path in the graph.
+    Lhs,
 
-    /// Path in right hand side of equation not contained in the graph.
-    Rhs(),
+    /// Right-hand side of equation is not a valid path in the graph.
+    Rhs,
 
-    /// Sources of left and right hand sides of path equation are not equal.
-    Src(),
+    /// Sources of left- and right-hand sides of path equation are not equal.
+    Src,
 
-    /// Targets of left and right hand sides of path equation are not equal.
-    Tgt(),
+    /// Targets of left- and right-hand sides of path equation are not equal.
+    Tgt,
 }
 
 #[cfg(test)]

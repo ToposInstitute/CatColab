@@ -33,13 +33,15 @@ In addition, a model has the following operations:
   whose type is the composite of the corresponding morphism types.
  */
 
+use nonempty::NonEmpty;
+
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify::Tsify;
 
 use super::theory::DblTheory;
-use crate::one::{Category, FgCategory};
+use crate::one::{Category, FgCategory, InvalidPathEq};
 
 pub use super::discrete::model::*;
 pub use super::discrete_tabulator::model::*;
@@ -200,15 +202,6 @@ pub enum InvalidDblModel<Id> {
     /// Codomain of morphism generator has type incompatible with morphism type.
     CodType(Id),
 
-    /// Equation has left hand side that is not a well defined path.
-    EqLhs(usize),
-
-    /// Equation has right hand side that is not a well defined path.
-    EqRhs(usize),
-
-    /// Equation has different sources on left and right hand sides.
-    EqSrc(usize),
-
-    /// Equation has different sources on left and right hand sides.
-    EqTgt(usize),
+    /// Equation between object operations has one or more errors.
+    Eq(usize, NonEmpty<InvalidPathEq>),
 }
