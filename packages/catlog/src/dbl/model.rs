@@ -172,9 +172,6 @@ pub trait MutDblModel: FgDblModel {
 
 /** A failure of a model of a double theory to be well defined.
 
-We currently are encompassing error variants for all kinds of double theories in
-a single enum. That will likely become unviable but it's convenient for now.
-
 TODO: We are missing the case that an equation has different composite morphism
 types on left and right hand sides.
 */
@@ -202,6 +199,6 @@ pub enum InvalidDblModel<Id> {
     /// Codomain of morphism generator has type incompatible with morphism type.
     CodType(Id),
 
-    /// Equation between object operations has one or more errors.
+    /// Equation between morphisms has one or more errors.
     Eq(usize, NonEmpty<InvalidPathEq>),
 }
