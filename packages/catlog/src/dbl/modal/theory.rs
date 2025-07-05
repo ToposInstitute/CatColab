@@ -194,7 +194,7 @@ where
     S: BuildHasher,
 {
     fn computad(&self) -> Computad<'_, ModalObType<Id>, ModalSet<Id, S>, Id, S> {
-        Computad(ModalSet::ref_cast(&self.0.ob_generators), &self.0.pro_generators)
+        Computad::new(ModalSet::ref_cast(&self.0.ob_generators), &self.0.pro_generators)
     }
 }
 
@@ -268,7 +268,7 @@ where
     S: BuildHasher,
 {
     fn computad(&self) -> Computad<'_, ModalObType<Id>, ModalSet<Id, S>, Id, S> {
-        Computad(ModalSet::ref_cast(&self.0.ob_generators), &self.0.arr_generators)
+        Computad::new(ModalSet::ref_cast(&self.0.ob_generators), &self.0.arr_generators)
     }
 }
 
@@ -356,12 +356,12 @@ where
     S: BuildHasher,
 {
     fn computad(&self) -> ModalVDblComputad<'_, Id, S> {
-        AVDCComputad {
-            objects: ModalSet::ref_cast(&self.0.ob_generators),
-            arrows: UnderlyingGraph::ref_cast(ModalOneTheory::ref_cast(&self.0)),
-            proarrows: ModalMorTypeGraph::ref_cast(&self.0),
-            computad: &self.0.cell_generators,
-        }
+        AVDCComputad::new(
+            ModalSet::ref_cast(&self.0.ob_generators),
+            UnderlyingGraph::ref_cast(ModalOneTheory::ref_cast(&self.0)),
+            ModalMorTypeGraph::ref_cast(&self.0),
+            &self.0.cell_generators,
+        )
     }
 }
 
