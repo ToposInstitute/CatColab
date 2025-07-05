@@ -148,6 +148,16 @@
           ];
           pkgs = pkgsLinux;
         };
+
+        my-vm = nixpkgs.lib.nixosSystem {
+          system = linuxSystem;
+
+          # point to your configuration.nix
+          modules = [ ./configuration.nix ];
+
+          # let your NixOS modules import stuff from this flake
+          specialArgs = { inherit self; };
+        };
       };
 
       deploy.nodes = {
@@ -165,6 +175,34 @@
             path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab-next;
           };
         };
+      };
+
+      checks.x86_64-linux.aTest = nixpkgs.legacyPackages.x86_64-linux.testers.runNixOSTest {
+        name = "A Test";
+        # specialArgs = {
+        #   inherit inputs rustToolchain;
+        # };
+        nodes.testMachine =
+          { config, pkgs, ... }:
+          {
+            # inherit system;
+            # tell NixOS what release you're targeting
+            # system.stateVersion = "24.11";
+
+            # 1) Your root filesystem
+
+            # (optional) enable SSH so you can log in
+
+            imports = [
+              ./infrastructure/hosts/catcolab
+            ];
+            # agenix.nixosModules.age
+
+          };
+        testScript = ''
+          print("hello")
+          print("hello2")
+        '';
       };
     };
 }
