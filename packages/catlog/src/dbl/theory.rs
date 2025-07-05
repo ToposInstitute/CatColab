@@ -73,6 +73,7 @@ use crate::one::{Path, tree::OpenTree};
 
 pub use super::discrete::theory::*;
 pub use super::discrete_tabulator::theory::*;
+pub use super::modal::theory::*;
 
 /** A double theory.
 

@@ -485,6 +485,16 @@ pub enum ShortPath<V, E> {
     One(E),
 }
 
+/// A short path in a graph with skeletal vertex and edge sets.
+pub type SkelShortPath = ShortPath<usize, usize>;
+
+/// Converts an edge into a short path of length one.
+impl<V, E> From<E> for ShortPath<V, E> {
+    fn from(e: E) -> Self {
+        ShortPath::One(e)
+    }
+}
+
 impl<V, E> From<ShortPath<V, E>> for Path<V, E> {
     fn from(path: ShortPath<V, E>) -> Self {
         match path {
@@ -664,7 +674,7 @@ mod tests {
     fn short_paths() {
         let (v, e) = (1, 1);
         let path: SkelPath = ShortPath::Zero(v).into();
-        assert_eq!(path.try_into(), Ok(ShortPath::Zero(v)));
+        assert_eq!(path.try_into(), Ok(SkelShortPath::Zero(v)));
         let path: SkelPath = ShortPath::One(e).into();
         assert_eq!(path.clone().only(), Some(e));
         assert_eq!(path.try_into(), Ok(ShortPath::One(e)));
