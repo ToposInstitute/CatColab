@@ -2,8 +2,9 @@
 
 use ustr::ustr;
 
+use crate::dbl::modal::theory::{ModalObType, Mode, UstrModalDblTheory};
 use crate::dbl::theory::*;
-use crate::one::{Path, fp_category::UstrFpCategory};
+use crate::one::{fp_category::UstrFpCategory, Path};
 
 /** The empty theory, which has a single model, the empty model.
 
@@ -154,6 +155,30 @@ pub fn th_category_links() -> UstrDiscreteTabTheory {
     th
 }
 
+/// The theory of strict monoidal categories.
+pub fn th_monoidal_category() -> UstrModalDblTheory {
+    th_monad_algebra(Mode::List)
+}
+
+/// The theory of strict symmetric monoidal categories.
+pub fn th_sym_monoidal_category() -> UstrModalDblTheory {
+    th_monad_algebra(Mode::SymList)
+}
+
+/** The theory of a strict monad algebra.
+
+This is a modal double theory, parametric over the monad used.
+
+TODO: Monad algebra equations
+ */
+fn th_monad_algebra(mode: Mode) -> UstrModalDblTheory {
+    let mut th: UstrModalDblTheory = Default::default();
+    let (x, a) = (ustr("Object"), ustr("Mul"));
+    th.add_ob_type(x);
+    th.add_ob_op(a, ModalObType::new(x).apply(mode), ModalObType::new(x));
+    th
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -161,7 +186,7 @@ mod tests {
     use nonempty::nonempty;
 
     #[test]
-    fn validate_theories() {
+    fn validate_discrete_theories() {
         assert!(th_empty().validate().is_ok());
         assert!(th_category().validate().is_ok());
         assert!(th_schema().validate().is_ok());
@@ -170,9 +195,17 @@ mod tests {
         assert!(th_delayable_signed_category().validate().is_ok());
         assert!(th_nullable_signed_category().validate().is_ok());
         assert!(th_category_with_scalars().validate().is_ok());
-        assert!(th_category_with_scalars().validate().is_ok());
-        // TODO: Validate discrete tabulator theories.
+    }
+
+    #[test]
+    fn validate_discrete_tabulator_theories() {
+        // TODO: Implementation validation for discrete tabulator theories.
         th_category_links();
+    }
+
+    #[test]
+    fn validate_modal_theories() {
+        assert!(th_monoidal_category().validate().is_ok());
     }
 
     #[test]
