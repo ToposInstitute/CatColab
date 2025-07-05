@@ -179,13 +179,8 @@ where
             InvalidGraph::Src(e) => InvalidFpCategory::Dom(e),
             InvalidGraph::Tgt(e) => InvalidFpCategory::Cod(e),
         });
-        let equation_errors = self.equations.iter().enumerate().flat_map(|(i, eq)| {
-            eq.iter_invalid_in(&self.generators).map(move |err| match err {
-                InvalidPathEq::Lhs() => InvalidFpCategory::EqLhs(i),
-                InvalidPathEq::Rhs() => InvalidFpCategory::EqRhs(i),
-                InvalidPathEq::Src() => InvalidFpCategory::EqSrc(i),
-                InvalidPathEq::Tgt() => InvalidFpCategory::EqTgt(i),
-            })
+        let equation_errors = self.equations.iter().enumerate().filter_map(|(i, eq)| {
+            Some(InvalidFpCategory::Eq(i, eq.validate_in(&self.generators).err()?))
         });
         generator_errors.chain(equation_errors)
     }
@@ -272,29 +267,17 @@ where
 /// A failure of a finite presentation of a category to be well defined.
 #[derive(Debug, Error)]
 pub enum InvalidFpCategory<E> {
-    /// Morphism generator assigned a domain not contained in the category.
+    /// Morphism generator with an invalid domain.
     #[error("Domain of morphism generator `{0}` is not in the category")]
     Dom(E),
 
-    /// Morphism generator assigned a codomain not contained in the category.
+    /// Morphism generator with an invalid codomain.
     #[error("Codomain of morphism generator `{0}` is not in the category")]
     Cod(E),
 
-    /// Path in left hand side of equation not contained in the category.
-    #[error("LHS of path equation `{0}` is not in the category")]
-    EqLhs(usize),
-
-    /// Path in right hand side of equation not contained in the category.
-    #[error("RHS of path equation `{0}` is not in the category")]
-    EqRhs(usize),
-
-    /// Sources of left and right hand sides of path equation are not equal.
-    #[error("Path equation `{0}` has sources that are not equal")]
-    EqSrc(usize),
-
-    /// Targets of left and right hand sides of path equation are not equal.
-    #[error("Path equation `{0}` has targets that are not equal")]
-    EqTgt(usize),
+    /// Path equation with one or more errors.
+    #[error("Path equation `{0}` is not valid: `{1:?}`")]
+    Eq(usize, NonEmpty<InvalidPathEq>),
 }
 
 /** Program builder for computing with categories in egglog.
