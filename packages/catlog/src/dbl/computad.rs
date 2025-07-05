@@ -1,6 +1,8 @@
 //! Computads for virtual double categories.
 
-use std::hash::{BuildHasher, Hash, RandomState};
+use std::hash::{BuildHasher, Hash};
+
+use derivative::Derivative;
 
 use super::graph::{InvalidVDblGraph, VDblGraph};
 use crate::one::{Graph, Path, ReflexiveGraph, ShortPath};
@@ -10,7 +12,9 @@ use crate::zero::*;
 
 Intended for use with [`AVDCComputad`].
  */
-pub struct AVDCComputadTop<Ob, Arr, Pro, Sq, S = RandomState> {
+#[derive(Debug, Derivative)]
+#[derivative(Default(bound = "S: Default"))]
+pub struct AVDCComputadTop<Ob, Arr, Pro, Sq, S> {
     squares: HashFinSet<Sq, S>,
     dom: HashColumn<Sq, Path<Ob, Pro>, S>,
     cod: HashColumn<Sq, ShortPath<Ob, Pro>, S>,
@@ -104,7 +108,7 @@ where
     Note that this method *assumes* that the graphs of objects and (pro)arrows
     are already valid. If that is in question, validate them first.
      */
-    pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidVDblGraph<Arr, Pro, Sq>> {
+    pub fn iter_invalid<E, ProE>(&self) -> impl Iterator<Item = InvalidVDblGraph<E, ProE, Sq>> {
         let cptd = self.computad;
         cptd.squares.iter().flat_map(|sq| {
             let (dom, cod) = (cptd.dom.get(&sq), cptd.cod.get(&sq));

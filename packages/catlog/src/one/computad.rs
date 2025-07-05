@@ -1,6 +1,8 @@
 //! Computads in dimension one.
 
-use std::hash::{BuildHasher, Hash, RandomState};
+use std::hash::{BuildHasher, Hash};
+
+use derivative::Derivative;
 
 use super::graph::ColumnarGraph;
 use crate::zero::*;
@@ -9,10 +11,26 @@ use crate::zero::*;
 
 Intended for use with [`Computad`].
  */
-pub struct ComputadTop<Ob, E, S = RandomState> {
+#[derive(Debug, Derivative)]
+#[derivative(Default(bound = "S: Default"))]
+pub struct ComputadTop<Ob, E, S> {
     edges: HashFinSet<E, S>,
     src: HashColumn<E, Ob, S>,
     tgt: HashColumn<E, Ob, S>,
+}
+
+impl<Ob, E, S> ComputadTop<Ob, E, S>
+where
+    Ob: Eq + Clone,
+    E: Eq + Clone + Hash,
+    S: BuildHasher,
+{
+    /// Adds an edge to the computad.
+    pub fn add_edge(&mut self, e: E, src: Ob, tgt: Ob) -> bool {
+        self.src.set(e.clone(), src);
+        self.tgt.set(e.clone(), tgt);
+        self.edges.insert(e)
+    }
 }
 
 /// TODO
