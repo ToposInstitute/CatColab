@@ -166,5 +166,44 @@
           };
         };
       };
+
+      checks.x86_64-linux.aTest = nixpkgs.legacyPackages.x86_64-linux.testers.runNixOSTest {
+        name = "A Test";
+        # specialArgs = {
+        #   inherit inputs rustToolchain;
+        # };
+        nodes.testMachine =
+          { config, pkgs, ... }:
+          {
+
+            # inherit system;
+            # tell NixOS what release you're targeting
+            system.stateVersion = "24.11";
+
+            # 1) Your root filesystem
+            fileSystems = {
+              "/" = {
+                device = "/dev/disk/by-label/nixos";
+                fsType = "ext4";
+              };
+            };
+
+            # 2) Enable and install GRUB
+            boot.loader.grub = {
+              enable = true;
+              devices = [ "/dev/sda" ]; # or whatever your target disk is
+            };
+
+            # (optional) enable SSH so you can log in
+
+            # ./infrastructure/hosts/catcolab
+            # agenix.nixosModules.age
+
+          };
+        testScript = ''
+          print("hello")
+          print("hello2")
+        '';
+      };
     };
 }
