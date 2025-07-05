@@ -3,6 +3,7 @@
 use std::hash::{BuildHasher, Hash};
 
 use derivative::Derivative;
+use derive_more::Constructor;
 
 use super::graph::ColumnarGraph;
 use crate::zero::*;
@@ -34,7 +35,11 @@ where
 }
 
 /// TODO
-pub struct Computad<'a, Ob, ObSet, E, S>(pub &'a ObSet, pub &'a ComputadTop<Ob, E, S>);
+#[derive(Constructor)]
+pub struct Computad<'a, Ob, ObSet, E, S> {
+    objects: &'a ObSet,
+    computad: &'a ComputadTop<Ob, E, S>,
+}
 
 impl<'a, Ob, ObSet, E, S> ColumnarGraph for Computad<'a, Ob, ObSet, E, S>
 where
@@ -51,15 +56,15 @@ where
     type Tgt = HashColumn<E, Ob, S>;
 
     fn vertex_set(&self) -> &Self::Vertices {
-        self.0
+        self.objects
     }
     fn edge_set(&self) -> &Self::Edges {
-        &self.1.edges
+        &self.computad.edges
     }
     fn src_map(&self) -> &Self::Src {
-        &self.1.src
+        &self.computad.src
     }
     fn tgt_map(&self) -> &Self::Tgt {
-        &self.1.tgt
+        &self.computad.tgt
     }
 }

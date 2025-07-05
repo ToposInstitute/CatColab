@@ -3,6 +3,7 @@
 use std::hash::{BuildHasher, Hash};
 
 use derivative::Derivative;
+use derive_more::Constructor;
 
 use super::graph::{InvalidVDblGraph, VDblGraph};
 use crate::one::{Graph, Path, ReflexiveGraph, ShortPath};
@@ -48,11 +49,12 @@ where
 }
 
 /// TODO
+#[derive(Constructor)]
 pub struct AVDCComputad<'a, Ob, Arr, Pro, ObSet, ArrGraph, ProGraph, Sq, S> {
-    pub objects: &'a ObSet,
-    pub arrows: &'a ArrGraph,
-    pub proarrows: &'a ProGraph,
-    pub computad: &'a AVDCComputadTop<Ob, Arr, Pro, Sq, S>,
+    objects: &'a ObSet,
+    arrows: &'a ArrGraph,
+    proarrows: &'a ProGraph,
+    computad: &'a AVDCComputadTop<Ob, Arr, Pro, Sq, S>,
 }
 
 impl<'a, Ob, Arr, Pro, ObSet, ArrGraph, ProGraph, Sq, S> VDblGraph
