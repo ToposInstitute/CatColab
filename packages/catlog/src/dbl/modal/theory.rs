@@ -1,6 +1,11 @@
 /*! Modal double theories.
 
-TODO: Explain implementation strategy.
+A **modal double theory** is a unital VDC equipped a family of monads (in the
+2-category of unital VDCs, normal functors, and natural transformations) called
+[modes](Mode). In a model, each monad on the theory is interpreted as a monad on
+the VDC of sets, i.e., as a lax double monad on the double category of sets. The
+monads on the semantics side are fixed across all models and include the double
+list monads and its many variants.
 */
 
 use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
@@ -169,9 +174,9 @@ pub type UstrModalDblTheory = ModalDblTheory<Ustr, BuildHasherDefault<IdentityHa
 /// Set of object types in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-struct ModalSet<Id, S>(HashFinSet<Id, S>);
+struct ModalObTypes<Id, S>(ModalDblTheory<Id, S>);
 
-impl<Id, S> Set for ModalSet<Id, S>
+impl<Id, S> Set for ModalObTypes<Id, S>
 where
     Id: Eq + Clone + Hash,
     S: BuildHasher,
@@ -179,7 +184,7 @@ where
     type Elem = ModeApp<Id>;
 
     fn contains(&self, ob: &Self::Elem) -> bool {
-        self.0.contains(&ob.arg)
+        self.0.ob_generators.contains(&ob.arg)
     }
 }
 
@@ -193,8 +198,8 @@ where
     Id: Eq + Clone + Hash,
     S: BuildHasher,
 {
-    fn computad(&self) -> Computad<'_, ModalObType<Id>, ModalSet<Id, S>, Id, S> {
-        Computad::new(ModalSet::ref_cast(&self.0.ob_generators), &self.0.pro_generators)
+    fn computad(&self) -> Computad<'_, ModalObType<Id>, ModalObTypes<Id, S>, Id, S> {
+        Computad::new(ModalObTypes::ref_cast(&self.0), &self.0.pro_generators)
     }
 }
 
@@ -267,8 +272,8 @@ where
     Id: Eq + Clone + Hash,
     S: BuildHasher,
 {
-    fn computad(&self) -> Computad<'_, ModalObType<Id>, ModalSet<Id, S>, Id, S> {
-        Computad::new(ModalSet::ref_cast(&self.0.ob_generators), &self.0.arr_generators)
+    fn computad(&self) -> Computad<'_, ModalObType<Id>, ModalObTypes<Id, S>, Id, S> {
+        Computad::new(ModalObTypes::ref_cast(&self.0), &self.0.arr_generators)
     }
 }
 
@@ -343,7 +348,7 @@ type ModalVDblComputad<'a, Id, S> = AVDCComputad<
     ModalObType<Id>,
     ModalObOp<Id>,
     ModalMorType<Id>,
-    ModalSet<Id, S>,
+    ModalObTypes<Id, S>,
     UnderlyingGraph<ModalOneTheory<Id, S>>,
     ModalMorTypeGraph<Id, S>,
     Id,
@@ -357,7 +362,7 @@ where
 {
     fn computad(&self) -> ModalVDblComputad<'_, Id, S> {
         AVDCComputad::new(
-            ModalSet::ref_cast(&self.0.ob_generators),
+            ModalObTypes::ref_cast(&self.0),
             UnderlyingGraph::ref_cast(ModalOneTheory::ref_cast(&self.0)),
             ModalMorTypeGraph::ref_cast(&self.0),
             &self.0.cell_generators,
@@ -403,7 +408,7 @@ where
     type Sq = ModeApp<ModalSquare<Id>>;
 
     fn has_vertex(&self, x: &Self::V) -> bool {
-        ModalSet::ref_cast(&self.0.ob_generators).contains(x)
+        ModalObTypes::ref_cast(&self.0).contains(x)
     }
     fn has_edge(&self, path: &Self::E) -> bool {
         ModalOneTheory::ref_cast(&self.0).has_mor(path)
