@@ -106,6 +106,7 @@ jobs:
       with:
         # restore and save a cache using this key
         primary-key: nix-${{ runner.os }}-${{ hashFiles('**/*.nix', '**/flake.lock') }}
+        purge: true
         # if there's no cache hit, restore a cache by this prefix
         restore-prefixes-first-match: nix-${{ runner.os }}-
 
