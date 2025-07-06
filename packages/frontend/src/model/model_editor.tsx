@@ -1,17 +1,23 @@
 import { useParams } from "@solidjs/router";
-import { Match, Show, Switch, createResource, useContext } from "solid-js";
+import { createResource, Match, Show, Switch, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import type { ModelJudgment } from "catlaborator";
+import type {
+    DblTheory,
+    Document,
+    ModelDocumentContent,
+    ModelJudgment,
+    Notebook,
+} from "catlaborator";
 import { elaborate } from "catlaborator";
-import { useApi } from "../api";
+import { Api, ApiContext, useApi } from "../api";
 import { InlineInput } from "../components";
 import {
     type CellConstructor,
-    type FormalCellEditorProps,
-    NotebookEditor,
     cellShortcutModifier,
+    type FormalCellEditorProps,
     newFormalCell,
+    NotebookEditor,
 } from "../notebook";
 import {
     DocumentBreadcrumbs,
@@ -20,26 +26,27 @@ import {
     TheoryHelpButton,
     Toolbar,
 } from "../page";
-import { TheoryLibraryContext } from "../stdlib";
-import type { ModelTypeMeta } from "../theory";
+import { TheoryLibrary, TheoryLibraryContext } from "../stdlib";
+import type { ModelTypeMeta, Theory } from "../theory";
 import { PermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
-import { type LiveModelDocument, getLiveModel } from "./document";
+import { getLiveModel, type LiveModelDocument } from "./document";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
 import { TheorySelectorDialog } from "./theory_selector";
 import {
-    type MorphismDecl,
-    type ObjectDecl,
-    type RecordDecl,
     duplicateModelJudgment,
+    type MorphismDecl,
     newMorphismDecl,
     newNotebookDecl,
     newObjectDecl,
+    type ObjectDecl,
+    type RecordDecl,
 } from "./types";
 
 import "./model_editor.css";
 import { RecordCellEditor } from "./record_cell_editor";
+import { AnyDocumentId, Repo } from "@automerge/automerge-repo";
 
 export default function ModelPage() {
     const api = useApi();
@@ -87,6 +94,8 @@ export function ModelPane(props: {
 }) {
     const theories = useContext(TheoryLibraryContext);
     invariant(theories, "Library of theories should be provided as context");
+    const api = useContext(ApiContext);
+    invariant(api, "Api should be provided as context");
 
     const liveDoc = () => props.liveModel.liveDoc;
 
@@ -112,12 +121,20 @@ export function ModelPane(props: {
                         });
                     }}
                     theories={theories}
-                    disabled={liveDoc().doc.notebook.cells.some((cell) => cell.tag === "formal")}
+                    disabled={liveDoc().doc.notebook.cells.some((cell) =>
+                        cell.tag === "formal"
+                    )}
                 />
             </div>
             <button
-                onClick={() => {
-                    elaborate(liveDoc().doc, props.liveModel.theory().theory);
+                onClick={async () => {
+                    await catlaborate(
+                        api,
+                        props.liveModel.refId,
+                        props.liveModel.theory().theory,
+                        liveDoc().doc.theory,
+                        theories,
+                    );
                 }}
             >
                 Elaborate
@@ -165,7 +182,10 @@ function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
             <Match when={props.content.tag === "object"}>
                 <ObjectCellEditor
                     object={props.content as ObjectDecl}
-                    modifyObject={(f) => props.changeContent((content) => f(content as ObjectDecl))}
+                    modifyObject={(f) =>
+                        props.changeContent((content) =>
+                            f(content as ObjectDecl)
+                        )}
                     isActive={props.isActive}
                     actions={props.actions}
                 />
@@ -174,8 +194,9 @@ function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
                 <MorphismCellEditor
                     morphism={props.content as MorphismDecl}
                     modifyMorphism={(f) =>
-                        props.changeContent((content) => f(content as MorphismDecl))
-                    }
+                        props.changeContent((content) =>
+                            f(content as MorphismDecl)
+                        )}
                     isActive={props.isActive}
                     actions={props.actions}
                 />
@@ -183,11 +204,9 @@ function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
             <Match when={props.content.tag === "record"}>
                 <RecordCellEditor
                     record={props.content as RecordDecl}
-                    modifyRecord={(f) =>
-                        props.changeContent((content) => {
-                            f(content as RecordDecl);
-                        })
-                    }
+                    modifyRecord={(f) => props.changeContent((content) => {
+                        f(content as RecordDecl);
+                    })}
                     isActive={props.isActive}
                     actions={props.actions}
                 />
@@ -196,7 +215,9 @@ function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
     );
 }
 
-function modelCellConstructor(meta: ModelTypeMeta): CellConstructor<ModelJudgment> {
+function modelCellConstructor(
+    meta: ModelTypeMeta,
+): CellConstructor<ModelJudgment> {
     const { name, description, shortcut } = meta;
     return {
         name,
@@ -229,4 +250,54 @@ function judgmentLabel(judgment: ModelJudgment): string | undefined {
     if (judgment.tag === "morphism") {
         return theory.modelMorTypeMeta(judgment.morType)?.name;
     }
+}
+
+async function cacheNotebooksReferredToFrom(
+    api: Api,
+    cache: Map<string, ModelDocumentContent>,
+    refId: string,
+    theory: string,
+    theories: TheoryLibrary,
+) {
+    if (cache.has(refId)) {
+        return;
+    }
+    const liveModel = await getLiveModel(refId, api, theories);
+    if (!liveModel) {
+        throw new Error(`could not find document id ${refId}`);
+    }
+    const docHandle = liveModel.liveDoc.docHandle;
+    const doc = await docHandle.doc();
+    if (!doc) {
+        throw new Error(`could not load document id ${refId}`);
+    }
+    if (doc.type !== "model" || doc.theory !== theory) {
+        throw new Error(
+            `can only refer to model documents of the same theory (${theory})`,
+        );
+    }
+    cache.set(refId, doc);
+    for (const cell of doc.notebook.cells) {
+        if (cell.tag == "formal" && cell.content.tag == "record") {
+            await cacheNotebooksReferredToFrom(
+                api,
+                cache,
+                cell.content.notebook_id,
+                theory,
+                theories,
+            );
+        }
+    }
+}
+
+async function catlaborate(
+    api: Api,
+    refId: string,
+    theory: DblTheory,
+    theoryName: string,
+    theories: TheoryLibrary,
+) {
+    const cache = new Map();
+    cacheNotebooksReferredToFrom(api, cache, refId, theoryName, theories);
+    elaborate(cache, refId, theory);
 }

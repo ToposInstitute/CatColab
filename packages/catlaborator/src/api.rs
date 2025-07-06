@@ -1,6 +1,8 @@
+use serde::{Deserialize, Serialize};
+use tsify::Tsify;
 use wasm_bindgen::prelude::*;
 
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use ::notebook_types::v0::{ModelJudgment, notebook};
 use catlog::{
@@ -199,14 +201,23 @@ impl NotebookElaborator {
     }
 }
 
+// #[wasm_bindgen]
+// pub fn elaborate(raw: &notebook_types::ModelDocumentContent, theory: &DblTheory) {
+//     let theory = match &theory.0 {
+//         catlog_wasm::theory::DblTheoryBox::Discrete(t) => t,
+//         catlog_wasm::theory::DblTheoryBox::DiscreteTab(_) => panic!("tabulators unsupported"),
+//     };
+//     let elab = NotebookElaborator::new(theory.clone());
+//     let res = elab.notebook(&raw.notebook);
+//     console::log_1(&format!("{:?}", elab.errors.borrow()).into());
+//     console::log_1(&format!("{:?}", res).into())
+// }
+
+#[derive(Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct NotebookCache(HashMap<String, notebook_types::ModelDocumentContent>);
+
 #[wasm_bindgen]
-pub fn elaborate(raw: &notebook_types::ModelDocumentContent, theory: &DblTheory) {
-    let theory = match &theory.0 {
-        catlog_wasm::theory::DblTheoryBox::Discrete(t) => t,
-        catlog_wasm::theory::DblTheoryBox::DiscreteTab(_) => panic!("tabulators unsupported"),
-    };
-    let elab = NotebookElaborator::new(theory.clone());
-    let res = elab.notebook(&raw.notebook);
-    console::log_1(&format!("{:?}", elab.errors.borrow()).into());
-    console::log_1(&format!("{:?}", res).into())
+pub fn elaborate(cache: NotebookCache, notebook_id: String, theory: &DblTheory) {
+    todo!()
 }
