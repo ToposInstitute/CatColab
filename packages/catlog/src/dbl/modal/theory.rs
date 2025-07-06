@@ -17,7 +17,7 @@ use ustr::{IdentityHasher, Ustr};
 
 use crate::dbl::computad::{AVDCComputad, AVDCComputadTop};
 use crate::dbl::theory::InvalidDblTheory;
-use crate::dbl::{DblTree, InvalidVDblGraph, VDCWithComposites, VDblCategory, VDblGraph};
+use crate::dbl::{DblTree, InvalidVDblGraph, VDblCategory, VDblGraph};
 use crate::one::computad::{Computad, ComputadTop};
 use crate::validate::{self, Validate};
 use crate::{one::*, zero::*};
@@ -54,8 +54,8 @@ applied to it.
  */
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ModeApp<T> {
-    pub(super) arg: T,
-    pub(super) modes: Vec<Mode>,
+    arg: T,
+    modes: Vec<Mode>,
 }
 
 impl<T> ModeApp<T> {
@@ -63,7 +63,7 @@ impl<T> ModeApp<T> {
     pub fn new(arg: T) -> Self {
         Self {
             arg,
-            modes: Default::default(),
+            modes: Vec::new(),
         }
     }
 
@@ -129,10 +129,6 @@ pub type ModalObType<Id> = ModeApp<Id>;
 pub type ModalMorType<Id> = ShortPath<ModalObType<Id>, ModeApp<Id>>;
 
 impl<Id> ModalMorType<Id> {
-    pub(super) fn apply(self, mode: Mode) -> Self {
-        self.map(|x| x.apply(mode), |f| f.apply(mode))
-    }
-
     fn apply_all(self, modes: impl IntoIterator<Item = Mode>) -> Self {
         match self {
             ShortPath::Zero(x) => ShortPath::Zero(x.apply_all(modes)),
@@ -145,16 +141,6 @@ impl<Id> ModalMorType<Id> {
 pub type ModalObOp<Id> = Path<ModalObType<Id>, ModeApp<ModalOp<Id>>>;
 
 impl<Id> ModalObOp<Id> {
-    /// Constructs the object operation for a generator.
-    pub fn generator(id: Id) -> Self {
-        ModeApp::new(ModalOp::Generator(id)).into()
-    }
-
-    /// Constructs the operation operation for a monad multiplication.
-    pub fn mul(mode: Mode, arity: usize, ob_type: ModalObType<Id>) -> Self {
-        ModeApp::new(ModalOp::Mul(mode, arity, ob_type)).into()
-    }
-
     fn apply_all(self, modes: impl IntoIterator<Item = Mode> + Clone) -> Self {
         match self {
             Path::Id(x) => Path::Id(x.apply_all(modes)),
@@ -170,12 +156,9 @@ tree](DblTree) built out of these nodes.
  */
 #[derive(Clone, Debug, PartialEq, Eq, From)]
 pub enum ModalNode<Id> {
-    /// Basic morphism operation.
+    /// Basic cell.
     #[from]
     Basic(ModeApp<ModalOp<Id>>),
-
-    /// Unit cell on a basic object operation.
-    Unit(ModeApp<ModalOp<Id>>),
 
     /** Cell witnessing a composite.
 
@@ -204,7 +187,7 @@ pub type UstrModalDblTheory = ModalDblTheory<Ustr, BuildHasherDefault<IdentityHa
 /// Set of object types in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-pub(super) struct ModalObTypes<Id, S>(ModalDblTheory<Id, S>);
+struct ModalObTypes<Id, S>(ModalDblTheory<Id, S>);
 
 impl<Id, S> Set for ModalObTypes<Id, S>
 where
@@ -223,6 +206,16 @@ where
 #[repr(transparent)]
 struct ModalProedgeGraph<Id, S>(ModalDblTheory<Id, S>);
 
+impl<Id, S> ModalProedgeGraph<Id, S>
+where
+    Id: Eq + Clone + Hash,
+    S: BuildHasher,
+{
+    fn computad(&self) -> Computad<'_, ModalObType<Id>, ModalObTypes<Id, S>, Id, S> {
+        Computad::new(ModalObTypes::ref_cast(&self.0), &self.0.pro_generators)
+    }
+}
+
 impl<Id, S> Graph for ModalProedgeGraph<Id, S>
 where
     Id: Eq + Clone + Hash,
@@ -232,23 +225,23 @@ where
     type E = ModeApp<Id>;
 
     fn has_vertex(&self, ob: &Self::V) -> bool {
-        self.0.loose_computad().has_vertex(ob)
+        self.computad().has_vertex(ob)
     }
     fn has_edge(&self, proedge: &Self::E) -> bool {
-        self.0.loose_computad().has_edge(&proedge.arg)
+        self.computad().has_edge(&proedge.arg)
     }
     fn src(&self, proedge: &Self::E) -> Self::V {
-        proedge.as_ref().flat_map(|e| self.0.loose_computad().src(e))
+        proedge.as_ref().flat_map(|e| self.computad().src(e))
     }
     fn tgt(&self, proedge: &Self::E) -> Self::V {
-        proedge.as_ref().flat_map(|e| self.0.loose_computad().tgt(e))
+        proedge.as_ref().flat_map(|e| self.computad().tgt(e))
     }
 }
 
 /// Graph of object/morphism types in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-pub(super) struct ModalMorTypeGraph<Id, S>(ModalDblTheory<Id, S>);
+struct ModalMorTypeGraph<Id, S>(ModalDblTheory<Id, S>);
 
 impl<Id, S> Graph for ModalMorTypeGraph<Id, S>
 where
@@ -287,6 +280,16 @@ where
 #[repr(transparent)]
 struct ModalEdgeGraph<Id, S>(ModalDblTheory<Id, S>);
 
+impl<Id, S> ModalEdgeGraph<Id, S>
+where
+    Id: Eq + Clone + Hash,
+    S: BuildHasher,
+{
+    fn computad(&self) -> Computad<'_, ModalObType<Id>, ModalObTypes<Id, S>, Id, S> {
+        Computad::new(ModalObTypes::ref_cast(&self.0), &self.0.arr_generators)
+    }
+}
+
 impl<Id, S> Graph for ModalEdgeGraph<Id, S>
 where
     Id: Eq + Clone + Hash,
@@ -296,23 +299,23 @@ where
     type E = ModeApp<ModalOp<Id>>;
 
     fn has_vertex(&self, ob: &Self::V) -> bool {
-        self.0.tight_computad().has_vertex(ob)
+        self.computad().has_vertex(ob)
     }
     fn has_edge(&self, edge: &Self::E) -> bool {
         match &edge.arg {
-            ModalOp::Generator(e) => self.0.tight_computad().has_edge(e),
-            ModalOp::Mul(_, _, ob) => self.0.tight_computad().has_vertex(ob),
+            ModalOp::Generator(e) => self.computad().has_edge(e),
+            ModalOp::Mul(_, _, ob) => self.computad().has_vertex(ob),
         }
     }
     fn src(&self, edge: &Self::E) -> Self::V {
         edge.as_ref().flat_map(|arg| match arg {
-            ModalOp::Generator(e) => self.0.tight_computad().src(e),
+            ModalOp::Generator(e) => self.computad().src(e),
             ModalOp::Mul(mode, n, ob) => ob.clone().apply_all(repeat_n(*mode, *n)),
         })
     }
     fn tgt(&self, edge: &Self::E) -> Self::V {
         edge.as_ref().flat_map(|arg| match arg {
-            ModalOp::Generator(e) => self.0.tight_computad().tgt(e),
+            ModalOp::Generator(e) => self.computad().tgt(e),
             ModalOp::Mul(mode, _, ob) => ob.clone().apply(*mode),
         })
     }
@@ -321,7 +324,7 @@ where
 /// Category of object types/operations in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-pub(super) struct ModalOneTheory<Id, S>(ModalDblTheory<Id, S>);
+struct ModalOneTheory<Id, S>(ModalDblTheory<Id, S>);
 
 impl<Id, S> Category for ModalOneTheory<Id, S>
 where
@@ -365,6 +368,21 @@ type ModalVDblComputad<'a, Id, S> = AVDCComputad<
     S,
 >;
 
+impl<Id, S> ModalVDblGraph<Id, S>
+where
+    Id: Eq + Clone + Hash,
+    S: BuildHasher,
+{
+    fn computad(&self) -> ModalVDblComputad<'_, Id, S> {
+        AVDCComputad::new(
+            ModalObTypes::ref_cast(&self.0),
+            UnderlyingGraph::ref_cast(ModalOneTheory::ref_cast(&self.0)),
+            ModalMorTypeGraph::ref_cast(&self.0),
+            &self.0.cell_generators,
+        )
+    }
+}
+
 impl<Id, S> Validate for ModalVDblGraph<Id, S>
 where
     Id: Eq + Clone + Hash,
@@ -373,12 +391,14 @@ where
     type ValidationError = InvalidVDblGraph<Id, Id, Id>;
 
     fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
-        let edge_cptd = self.0.tight_computad();
+        let edge_graph = ModalEdgeGraph::ref_cast(&self.0);
+        let edge_cptd = edge_graph.computad();
         let edge_errors = edge_cptd.iter_invalid().map(|err| match err {
             InvalidGraph::Src(e) => InvalidVDblGraph::Dom(e),
             InvalidGraph::Tgt(e) => InvalidVDblGraph::Cod(e),
         });
-        let proedge_cptd = self.0.loose_computad();
+        let proedge_graph = ModalProedgeGraph::ref_cast(&self.0);
+        let proedge_cptd = proedge_graph.computad();
         let proedge_errors = proedge_cptd.iter_invalid().map(|err| match err {
             InvalidGraph::Src(p) => InvalidVDblGraph::Src(p),
             InvalidGraph::Tgt(p) => InvalidVDblGraph::Tgt(p),
@@ -386,7 +406,7 @@ where
         // Make sure one-dimensional data is valid before validating squares.
         validate::wrap_errors(edge_errors.chain(proedge_errors))?;
 
-        validate::wrap_errors(self.0.dbl_computad().iter_invalid())
+        validate::wrap_errors(self.computad().iter_invalid())
     }
 }
 
@@ -412,10 +432,9 @@ where
     fn has_square(&self, node: &Self::Sq) -> bool {
         match node {
             ModalNode::Basic(app) => match &app.arg {
-                ModalOp::Generator(sq) => self.0.dbl_computad().has_square(sq),
+                ModalOp::Generator(sq) => self.computad().has_square(sq),
                 ModalOp::Mul(_, _, p) => ModalProedgeGraph::ref_cast(&self.0).has_edge(p),
             },
-            ModalNode::Unit(f) => ModalEdgeGraph::ref_cast(&self.0).has_edge(f),
             // FIXME: Don't assume all composites exist.
             ModalNode::Composite(_) => true,
         }
@@ -438,15 +457,12 @@ where
         match node {
             ModalNode::Basic(app) => {
                 let dom = match &app.arg {
-                    ModalOp::Generator(sq) => self.0.dbl_computad().square_dom(sq),
+                    ModalOp::Generator(sq) => self.computad().square_dom(sq),
                     ModalOp::Mul(mode, n, p) => {
                         ShortPath::One(p.clone().apply_all(repeat_n(*mode, *n))).into()
                     }
                 };
                 dom.map(|x| x.apply_all(app.modes.clone()), |p| p.apply_all(app.modes.clone()))
-            }
-            ModalNode::Unit(f) => {
-                ModalMorType::Zero(ModalEdgeGraph::ref_cast(&self.0).src(f)).into()
             }
             ModalNode::Composite(path) => path.clone(),
         }
@@ -455,22 +471,19 @@ where
         match node {
             ModalNode::Basic(app) => {
                 let cod = match &app.arg {
-                    ModalOp::Generator(sq) => self.0.dbl_computad().square_cod(sq),
+                    ModalOp::Generator(sq) => self.computad().square_cod(sq),
                     ModalOp::Mul(mode, _, p) => p.clone().apply(*mode).into(),
                 };
                 cod.apply_all(app.modes.clone())
             }
-            ModalNode::Unit(f) => ModalMorType::Zero(ModalEdgeGraph::ref_cast(&self.0).tgt(f)),
-            ModalNode::Composite(path) => {
-                self.0.composite(path.clone()).expect("Composite should exist")
-            }
+            ModalNode::Composite(_) => panic!("Composites not implemented"),
         }
     }
     fn square_src(&self, node: &Self::Sq) -> Self::E {
         match node {
             ModalNode::Basic(app) => {
                 let src = match &app.arg {
-                    ModalOp::Generator(sq) => self.0.dbl_computad().square_src(sq),
+                    ModalOp::Generator(sq) => self.computad().square_src(sq),
                     ModalOp::Mul(mode, n, p) => {
                         let graph = ModalProedgeGraph::ref_cast(&self.0);
                         ModeApp::new(ModalOp::Mul(*mode, *n, graph.src(p))).into()
@@ -478,7 +491,6 @@ where
                 };
                 src.apply_all(app.modes.clone())
             }
-            ModalNode::Unit(f) => f.clone().into(),
             ModalNode::Composite(path) => {
                 Path::empty(path.src(ModalMorTypeGraph::ref_cast(&self.0)))
             }
@@ -488,7 +500,7 @@ where
         match node {
             ModalNode::Basic(app) => {
                 let tgt = match &app.arg {
-                    ModalOp::Generator(sq) => self.0.dbl_computad().square_tgt(sq),
+                    ModalOp::Generator(sq) => self.computad().square_tgt(sq),
                     ModalOp::Mul(mode, n, p) => {
                         let graph = ModalProedgeGraph::ref_cast(&self.0);
                         ModeApp::new(ModalOp::Mul(*mode, *n, graph.tgt(p))).into()
@@ -496,7 +508,6 @@ where
                 };
                 tgt.apply_all(app.modes.clone())
             }
-            ModalNode::Unit(f) => f.clone().into(),
             ModalNode::Composite(path) => {
                 Path::empty(path.tgt(ModalMorTypeGraph::ref_cast(&self.0)))
             }
@@ -505,10 +516,9 @@ where
     fn arity(&self, node: &Self::Sq) -> usize {
         match node {
             ModalNode::Basic(app) => match &app.arg {
-                ModalOp::Generator(sq) => self.0.dbl_computad().arity(sq),
+                ModalOp::Generator(sq) => self.computad().arity(sq),
                 ModalOp::Mul(_, _, _) => 1,
             },
-            ModalNode::Unit(_) => 1,
             ModalNode::Composite(path) => path.len(),
         }
     }
@@ -574,43 +584,6 @@ where
     }
 }
 
-impl<Id, S> VDCWithComposites for ModalDblTheory<Id, S>
-where
-    Id: Eq + Clone + Hash,
-    S: BuildHasher,
-{
-    fn composite_ext(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Cell> {
-        if self.composite(path.clone()).is_some() {
-            let graph = ModalVDblGraph::ref_cast(self);
-            Some(DblTree::single(ModalNode::Composite(path), graph))
-        } else {
-            None
-        }
-    }
-
-    fn composite(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Pro> {
-        match path {
-            Path::Id(x) => Some(ShortPath::Zero(x)),
-            Path::Seq(ms) => {
-                if ms.len() == 1 {
-                    Some(ms.head)
-                } else {
-                    // TODO: Support nontrivial composites.
-                    None
-                }
-            }
-        }
-    }
-
-    fn through_composite(
-        &self,
-        _cell: Self::Cell,
-        _range: std::ops::Range<usize>,
-    ) -> Option<Self::Cell> {
-        panic!("Universal property of composites is not implemented")
-    }
-}
-
 impl<Id, S> Validate for ModalDblTheory<Id, S>
 where
     Id: Eq + Clone + Hash,
@@ -639,30 +612,6 @@ where
     Id: Eq + Clone + Hash,
     S: BuildHasher,
 {
-    /// Gets the computad generating the proarrows of the theory.
-    pub(super) fn loose_computad(
-        &self,
-    ) -> Computad<'_, ModalObType<Id>, ModalObTypes<Id, S>, Id, S> {
-        Computad::new(ModalObTypes::ref_cast(self), &self.pro_generators)
-    }
-
-    /// Gets the computad generating the arrows of the theory.
-    pub(super) fn tight_computad(
-        &self,
-    ) -> Computad<'_, ModalObType<Id>, ModalObTypes<Id, S>, Id, S> {
-        Computad::new(ModalObTypes::ref_cast(self), &self.arr_generators)
-    }
-
-    /// Gets the double computad generating the theory.
-    pub(super) fn dbl_computad(&self) -> ModalVDblComputad<'_, Id, S> {
-        AVDCComputad::new(
-            ModalObTypes::ref_cast(self),
-            UnderlyingGraph::ref_cast(ModalOneTheory::ref_cast(self)),
-            ModalMorTypeGraph::ref_cast(self),
-            &self.cell_generators,
-        )
-    }
-
     /// Adds a generating object type to the theory.
     pub fn add_ob_type(&mut self, id: Id) {
         self.ob_generators.insert(id);
