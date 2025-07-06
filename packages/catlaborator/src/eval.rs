@@ -80,14 +80,14 @@ define_language! {
     }
 }
 
-#[allow(dead_code)]
-enum GeneratorType {
+#[derive(Debug)]
+pub enum GeneratorType {
     Object(ObType),
     Morphism(Id, Id, MorType),
 }
 
-struct Neutrals {
-    generators: Vec<(GeneratorType, Id)>,
+pub struct Neutrals {
+    pub generators: Vec<(GeneratorType, Id)>,
     egraph: EGraph<CatLang, ()>,
 }
 
@@ -116,7 +116,7 @@ impl Neutrals {
 
 #[derive(Clone)]
 pub struct State {
-    neutrals: Rc<RefCell<Neutrals>>,
+    pub neutrals: Rc<RefCell<Neutrals>>,
     notebooks: Rc<dyn NotebookStorage>,
 }
 

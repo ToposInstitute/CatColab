@@ -39,6 +39,7 @@ export type RecordDecl = ModelJudgment & {
 export const newNotebookDecl = (): RecordDecl => ({
     tag: "record",
     name: "",
+    id: v7(),
     notebook_id: "",
 });
 

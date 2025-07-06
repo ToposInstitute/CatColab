@@ -10,7 +10,7 @@ import type {
     Notebook,
 } from "catlaborator";
 import { elaborate } from "catlaborator";
-import { Api, ApiContext, useApi } from "../api";
+import { type Api, ApiContext, useApi } from "../api";
 import { InlineInput } from "../components";
 import {
     type CellConstructor,
@@ -26,7 +26,7 @@ import {
     TheoryHelpButton,
     Toolbar,
 } from "../page";
-import { TheoryLibrary, TheoryLibraryContext } from "../stdlib";
+import { type TheoryLibrary, TheoryLibraryContext } from "../stdlib";
 import type { ModelTypeMeta, Theory } from "../theory";
 import { PermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
@@ -121,9 +121,7 @@ export function ModelPane(props: {
                         });
                     }}
                     theories={theories}
-                    disabled={liveDoc().doc.notebook.cells.some((cell) =>
-                        cell.tag === "formal"
-                    )}
+                    disabled={liveDoc().doc.notebook.cells.some((cell) => cell.tag === "formal")}
                 />
             </div>
             <button
@@ -182,10 +180,7 @@ function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
             <Match when={props.content.tag === "object"}>
                 <ObjectCellEditor
                     object={props.content as ObjectDecl}
-                    modifyObject={(f) =>
-                        props.changeContent((content) =>
-                            f(content as ObjectDecl)
-                        )}
+                    modifyObject={(f) => props.changeContent((content) => f(content as ObjectDecl))}
                     isActive={props.isActive}
                     actions={props.actions}
                 />
@@ -194,9 +189,8 @@ function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
                 <MorphismCellEditor
                     morphism={props.content as MorphismDecl}
                     modifyMorphism={(f) =>
-                        props.changeContent((content) =>
-                            f(content as MorphismDecl)
-                        )}
+                        props.changeContent((content) => f(content as MorphismDecl))
+                    }
                     isActive={props.isActive}
                     actions={props.actions}
                 />
@@ -204,9 +198,11 @@ function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
             <Match when={props.content.tag === "record"}>
                 <RecordCellEditor
                     record={props.content as RecordDecl}
-                    modifyRecord={(f) => props.changeContent((content) => {
-                        f(content as RecordDecl);
-                    })}
+                    modifyRecord={(f) =>
+                        props.changeContent((content) => {
+                            f(content as RecordDecl);
+                        })
+                    }
                     isActive={props.isActive}
                     actions={props.actions}
                 />
@@ -215,9 +211,7 @@ function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
     );
 }
 
-function modelCellConstructor(
-    meta: ModelTypeMeta,
-): CellConstructor<ModelJudgment> {
+function modelCellConstructor(meta: ModelTypeMeta): CellConstructor<ModelJudgment> {
     const { name, description, shortcut } = meta;
     return {
         name,
@@ -272,9 +266,7 @@ async function cacheNotebooksReferredToFrom(
         throw new Error(`could not load document id ${refId}`);
     }
     if (doc.type !== "model" || doc.theory !== theory) {
-        throw new Error(
-            `can only refer to model documents of the same theory (${theory})`,
-        );
+        throw new Error(`can only refer to model documents of the same theory (${theory})`);
     }
     cache.set(refId, doc);
     for (const cell of doc.notebook.cells) {
@@ -298,6 +290,6 @@ async function catlaborate(
     theories: TheoryLibrary,
 ) {
     const cache = new Map();
-    cacheNotebooksReferredToFrom(api, cache, refId, theoryName, theories);
+    await cacheNotebooksReferredToFrom(api, cache, refId, theoryName, theories);
     elaborate(cache, refId, theory);
 }

@@ -16,9 +16,8 @@ use uuid::Uuid;
 use web_sys::console;
 
 use crate::{
-    eval::{Env, State, TmVal, TyVal},
-    syntax::{Cell, Lvl, Notebook, ObType, TmStx, TyStx},
-    toplevel::Toplevel,
+    eval::{Env, NotebookStorage, State, TmVal, TyVal},
+    syntax::{Cell, Lvl, Notebook, NotebookRef, ObType, TmStx, TyStx},
 };
 
 #[derive(Debug)]
@@ -30,6 +29,7 @@ pub enum ElaborationErrorContent {
     UuidNotFound(Uuid),
     ExpectedObjectForUuid(Uuid),
     MismatchingObTypes(ObType, ObType),
+    NoSuchNotebook(String),
 }
 
 use ElaborationErrorContent::*;
@@ -40,6 +40,43 @@ struct ElaborationError {
     content: ElaborationErrorContent,
 }
 
+#[derive(Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct Notebooks(HashMap<String, notebook_types::ModelDocumentContent>);
+
+#[derive(Clone)]
+pub struct ElaborationCache {
+    notebooks: Rc<Notebooks>,
+    elaborated: Rc<RefCell<HashMap<String, Rc<Notebook>>>>,
+    elaborator: NotebookElaborator,
+}
+
+impl NotebookStorage for ElaborationCache {
+    fn lookup(&self, id: &str) -> Option<Rc<Notebook>> {
+        if let Some(nb) = self.elaborated.borrow().get(id) {
+            return Some(nb.clone());
+        } else if let Some(raw) = self.notebooks.0.get(id) {
+            if let Some(nb) = self.elaborator.notebook(self.clone(), &raw.notebook) {
+                let nbrc = Rc::new(nb);
+                self.elaborated.borrow_mut().insert(id.to_string(), nbrc.clone());
+                return Some(nbrc);
+            }
+        }
+        None
+    }
+}
+
+impl ElaborationCache {
+    pub fn new(notebooks: Notebooks, theory: Rc<UstrDiscreteDblTheory>) -> Self {
+        Self {
+            notebooks: Rc::new(notebooks),
+            elaborated: Rc::new(RefCell::new(HashMap::new())),
+            elaborator: NotebookElaborator::new(theory),
+        }
+    }
+}
+
+#[derive(Clone)]
 pub struct NotebookElaborator {
     errors: Rc<RefCell<Vec<ElaborationError>>>,
     theory: Rc<UstrDiscreteDblTheory>,
@@ -52,10 +89,10 @@ pub struct Context {
 }
 
 impl Context {
-    fn new() -> Self {
+    fn new(cache: ElaborationCache) -> Self {
         Self {
             scope: Vec::new(),
-            env: State::empty(Rc::new(Toplevel::new())).new_env(),
+            env: State::empty(Rc::new(cache)).new_env(),
         }
     }
 
@@ -162,9 +199,13 @@ impl NotebookElaborator {
         ))
     }
 
-    pub fn notebook(&self, raw: &notebook::Notebook<ModelJudgment>) -> Option<Notebook> {
+    pub fn notebook(
+        &self,
+        cache: ElaborationCache,
+        raw: &notebook::Notebook<ModelJudgment>,
+    ) -> Option<Notebook> {
         let mut cells = Vec::new();
-        let mut ctx = Context::new();
+        let mut ctx = Context::new(cache.clone());
         for raw_cell in raw.cells.iter() {
             use notebook_types::NotebookCell::*;
             let content = match raw_cell {
@@ -187,8 +228,19 @@ impl NotebookElaborator {
                     ctx.intro(mor_decl.id, Some(ustr(&mor_decl.name)), tyval);
                     cells.push(Cell::new(ustr(&mor_decl.name), tystx))
                 }
-                Record(notebook_decl) => {
-                    todo!()
+                Record(record_decl) => {
+                    let Some(_) = cache.lookup(&record_decl.notebook_id) else {
+                        let _: Option<()> =
+                            self.error(NoSuchNotebook(record_decl.notebook_id.to_string()));
+                        continue;
+                    };
+                    let nbref = NotebookRef {
+                        id: ustr(&record_decl.notebook_id),
+                    };
+                    let tyval = TyVal::Notebook(nbref);
+                    let tystx = TyStx::Notebook(nbref);
+                    ctx.intro(record_decl.id, Some(ustr(&record_decl.name)), tyval);
+                    cells.push(Cell::new(ustr(&record_decl.name), tystx))
                 }
             }
         }
@@ -213,11 +265,20 @@ impl NotebookElaborator {
 //     console::log_1(&format!("{:?}", res).into())
 // }
 
-#[derive(Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
-pub struct NotebookCache(HashMap<String, notebook_types::ModelDocumentContent>);
-
 #[wasm_bindgen]
-pub fn elaborate(cache: NotebookCache, notebook_id: String, theory: &DblTheory) {
-    todo!()
+pub fn elaborate(notebooks: Notebooks, notebook_id: String, theory: &DblTheory) {
+    let theory = match &theory.0 {
+        catlog_wasm::theory::DblTheoryBox::Discrete(t) => t,
+        catlog_wasm::theory::DblTheoryBox::DiscreteTab(_) => panic!("tabulators unsupported"),
+    };
+    let cache = ElaborationCache::new(notebooks, theory.clone());
+    let res = cache.lookup(&notebook_id);
+    console::log_1(&format!("{:?}", cache.elaborator.errors.borrow()).into());
+    console::log_1(&format!("{:?}", res).into());
+    if let Some(nb) = res {
+        let state = State::empty(Rc::new(cache));
+        let evaluator = state.new_env();
+        evaluator.intro_notebook(&nb);
+        console::log_1(&format!("{:?}", state.neutrals.borrow().generators).into())
+    }
 }

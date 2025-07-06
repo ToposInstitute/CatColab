@@ -50,6 +50,8 @@ pub struct MorDecl {
 pub struct RecordDecl {
     pub name: String,
 
+    pub id: Uuid,
+
     pub notebook_id: String,
 }
 
