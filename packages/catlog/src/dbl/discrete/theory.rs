@@ -7,8 +7,7 @@ use derive_more::From;
 use ref_cast::RefCast;
 
 use crate::dbl::{category::*, theory::InvalidDblTheory, tree::DblTree};
-use crate::one::fp_category::{FpCategory, InvalidFpCategory, UstrFpCategory};
-use crate::one::{Path, category::*};
+use crate::one::{Path, category::*, fp_category::*};
 use crate::validate::{self, Validate};
 
 /** A discrete double theory.

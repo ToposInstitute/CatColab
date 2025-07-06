@@ -48,7 +48,17 @@ where
     }
 }
 
-/// TODO
+/** An augmented virtual double computad.
+
+The set of objects and the graphs of arrows and proarrows are assumed already
+constructed, possibly from other generating data, while the top-dimensional
+generating data is provided directly.
+
+We say "augmented" because the generating squares have co-arity zero or one,
+like the cells in an *augmented VDC* ([Koudenburg
+2020](crate::refs::AugmentedVDCs)), though we use such computads to generate
+*unital* VDCs.
+ */
 #[derive(Constructor)]
 pub struct AVDCComputad<'a, Ob, Arr, Pro, ObSet, ArrGraph, ProGraph, Sq, S> {
     objects: &'a ObSet,
