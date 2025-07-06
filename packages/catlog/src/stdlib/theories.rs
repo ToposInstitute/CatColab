@@ -162,11 +162,11 @@ fn th_monad_algebra(mode: Mode) -> UstrModalDblTheory {
     th.add_ob_op(a, ModeApp::new(x).apply(mode), ModeApp::new(x));
     th.equate_ob_ops(
         Path::pair(ModeApp::new(a.into()).apply(mode), ModeApp::new(a.into())),
-        Path::pair(ModeApp::new(ModalEdge::Mul(mode, 2, ModeApp::new(x))), ModeApp::new(a.into())),
+        Path::pair(ModeApp::new(ModalOp::Mul(mode, 2, ModeApp::new(x))), ModeApp::new(a.into())),
     );
     th.equate_ob_ops(
         Path::empty(ModeApp::new(x)),
-        Path::pair(ModeApp::new(ModalEdge::Mul(mode, 0, ModeApp::new(x))), ModeApp::new(a.into())),
+        Path::pair(ModeApp::new(ModalOp::Mul(mode, 0, ModeApp::new(x))), ModeApp::new(a.into())),
     );
     th
 }
@@ -180,12 +180,12 @@ fn th_monad_lax_algebra(mode: Mode) -> UstrModalDblTheory {
     th.add_special_mor_op(
         ustr("Associator"),
         Path::pair(ModeApp::new(a.into()).apply(mode), ModeApp::new(a.into())),
-        Path::pair(ModeApp::new(ModalEdge::Mul(mode, 2, ModeApp::new(x))), ModeApp::new(a.into())),
+        Path::pair(ModeApp::new(ModalOp::Mul(mode, 2, ModeApp::new(x))), ModeApp::new(a.into())),
     );
     th.add_special_mor_op(
         ustr("Unitor"),
         Path::empty(ModeApp::new(x)),
-        Path::pair(ModeApp::new(ModalEdge::Mul(mode, 0, ModeApp::new(x))), ModeApp::new(a.into())),
+        Path::pair(ModeApp::new(ModalOp::Mul(mode, 0, ModeApp::new(x))), ModeApp::new(a.into())),
     );
     // TODO: Coherence equations
     th
