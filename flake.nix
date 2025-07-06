@@ -19,8 +19,6 @@
     {
       self,
       nixpkgs,
-      crate2nix,
-      agenix,
       deploy-rs,
       fenix,
       ...
@@ -135,7 +133,6 @@
           system = linuxSystem;
           modules = [
             ./infrastructure/hosts/catcolab
-            agenix.nixosModules.age
           ];
           pkgs = pkgsLinux;
         };
@@ -144,9 +141,14 @@
           system = linuxSystem;
           modules = [
             ./infrastructure/hosts/catcolab-next
-            agenix.nixosModules.age
           ];
           pkgs = pkgsLinux;
+        };
+
+        catcolab-vm = nixpkgs.lib.nixosSystem {
+          system = linuxSystem;
+          modules = [ ./infrastructure/hosts/catcolab-vm ];
+          specialArgs = { inherit inputs rustToolchain; };
         };
       };
 
@@ -165,6 +167,43 @@
             path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab-next;
           };
         };
+      };
+
+      # The backend relies on Firebase, so tests require VM internet access. Enable networking by running
+      # with --no-sandbox.
+      checks.x86_64-linux.integrationTests = nixpkgs.legacyPackages.x86_64-linux.testers.runNixOSTest {
+        name = "Integration Tests";
+
+        skipTypeCheck = true;
+        nodes = {
+          catcolabVm = import ./infrastructure/hosts/catcolab-vm;
+        };
+
+        node.specialArgs = {
+          inherit rustToolchain;
+        };
+
+        testScript = ''
+          def dump_logs(machine, *units):
+              for u in units:
+                  print(f"\n===== journal for {u} =====")
+                  print(machine.succeed(f"journalctl -u {u} --no-pager"))
+
+          def test_service(machine, service):
+              try:
+                  machine.wait_for_unit(service)
+              except:
+                  dump_logs(machine, service)
+                  raise
+
+          catcolab_vm.start()
+
+          test_service(catcolab_vm, "database-setup.service");
+          test_service(catcolab_vm, "migrations.service");
+          test_service(catcolab_vm, "automerge.service");
+          test_service(catcolab_vm, "backend.service");
+          test_service(catcolab_vm, "caddy.service");
+        '';
       };
     };
 }

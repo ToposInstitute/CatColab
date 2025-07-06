@@ -15,7 +15,7 @@ let
 
     ${pkgs.postgresql}/bin/pg_dump --clean --if-exists > $DUMPFILE
 
-    ${lib.getExe pkgs.rclone} --config="/run/agenix/rclone.conf" copy "$DUMPFILE" backup:${config.catcolab.backup.backupdbBucket}
+    ${lib.getExe pkgs.rclone} --config="${config.catcolabBackup.rcloneConfFilePath}" copy "$DUMPFILE" backup:${config.catcolabBackup.backupdbBucket}
 
     echo "Uploaded database dump $DUMPFILE"
     rm $DUMPFILE
@@ -23,10 +23,14 @@ let
 in
 with lib;
 {
-  options.catcolab.backup = {
+  options.catcolabBackup = {
     backupdbBucket = mkOption {
       type = types.str;
       description = "Name of the Backblaze bucket used for database backups";
+    };
+    rcloneConfFilePath = mkOption {
+      type = types.path;
+      description = '''';
     };
   };
 

@@ -96,3 +96,6 @@ instrument.mjs
 
 # Database dumps
 /dumps
+
+# history for the interactive nixos test python shell
+.nixos-test-history
