@@ -1,20 +1,23 @@
 /*! Paths in graphs and categories.
 
-The central data type is [`Path`]. In addition, this module provides a simple
-data type for [path equations](`PathEq`).
+The central data type is [`Path`], a path of arbitrary finite length. In
+addition, this module provides data types for ["short paths"](`ShortPath`) and
+[path equations](`PathEq`).
 */
 
-use itertools::{Either, Itertools};
-use nonempty::{NonEmpty, nonempty};
 use std::ops::Range;
 use std::{collections::HashSet, hash::Hash};
+
+use derive_more::{Constructor, From};
+use itertools::{Either, Itertools};
+use nonempty::{NonEmpty, nonempty};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify::Tsify;
 
-use super::graph::Graph;
+use super::graph::{Graph, ReflexiveGraph};
 use crate::validate;
 
 /** A path in a [graph](Graph) or [category](crate::one::category::Category).
@@ -49,6 +52,9 @@ pub enum Path<V, E> {
     /// A nontrivial path, comprising a *non-empty* vector of consecutive edges.
     Seq(NonEmpty<E>),
 }
+
+/// A path in a graph with skeletal vertex and edge sets.
+pub type SkelPath = Path<usize, usize>;
 
 /// Converts an edge into a path of length one.
 impl<V, E> From<E> for Path<V, E> {
@@ -454,11 +460,99 @@ impl<V, E> Path<V, Path<V, E>> {
     }
 }
 
-/// A path in a graph with skeletal vertex and edge sets.
-pub type SkelPath = Path<usize, usize>;
+/** A path of length at most one.
+
+We call a path of length at most one, i.e., a path of lenth zero or one, a
+**short path**. This is not standard terminology, though it is inspired by
+"short maps" between metric spaces, which are Lipschitz maps with Lipschitz
+constant at most 1.
+
+Short paths are convertible into, and fallibly from, [paths](Path). Short paths
+might seem like an odd data structure, but are occasionally useful, such as in:
+
+- *finite* categories defined by an explicit multiplication table, where every
+  morphism is either a generator (path of length one) or an identity (path of
+  length zero)
+- *augmented* virtual double categories ([Koudenburg
+  2020](crate::refs::AugmentedVDCs)), where the codomain of a cell is by
+  definition a short path, and relatedly *unital* virtual double categories
+
+ */
+#[derive(Clone, Debug, PartialEq, Eq, From)]
+pub enum ShortPath<V, E> {
+    /// Path of length zero.
+    Zero(V),
+
+    /// Path of length one.
+    #[from]
+    One(E),
+}
+
+/// A short path in a graph with skeletal vertex and edge sets.
+pub type SkelShortPath = ShortPath<usize, usize>;
+
+impl<V, E> From<ShortPath<V, E>> for Path<V, E> {
+    fn from(path: ShortPath<V, E>) -> Self {
+        match path {
+            ShortPath::Zero(v) => Path::Id(v),
+            ShortPath::One(e) => Path::single(e),
+        }
+    }
+}
+
+impl<V, E> TryFrom<Path<V, E>> for ShortPath<V, E> {
+    type Error = ();
+
+    fn try_from(path: Path<V, E>) -> Result<Self, Self::Error> {
+        match path {
+            Path::Id(v) => Ok(ShortPath::Zero(v)),
+            _ => path.only().map(ShortPath::One).ok_or(()),
+        }
+    }
+}
+
+impl<V, E> ShortPath<V, E> {
+    /// Is the path contained in the given graph?
+    pub fn contained_in(&self, graph: &impl Graph<V = V, E = E>) -> bool {
+        match self {
+            ShortPath::Zero(v) => graph.has_vertex(v),
+            ShortPath::One(e) => graph.has_edge(e),
+        }
+    }
+
+    /// Source of the path in the given graph.
+    pub fn src(&self, graph: &impl Graph<V = V, E = E>) -> V
+    where
+        V: Clone,
+    {
+        match self {
+            ShortPath::Zero(v) => v.clone(),
+            ShortPath::One(e) => graph.src(e),
+        }
+    }
+
+    /// Target of the path in the given graph.
+    pub fn tgt(&self, graph: &impl Graph<V = V, E = E>) -> V
+    where
+        V: Clone,
+    {
+        match self {
+            ShortPath::Zero(v) => v.clone(),
+            ShortPath::One(e) => graph.tgt(e),
+        }
+    }
+
+    /// Converts the short path into an edge in the given *reflexive* graph.
+    pub fn to_edge_in(self, graph: &impl ReflexiveGraph<V = V, E = E>) -> E {
+        match self {
+            ShortPath::Zero(v) => graph.refl(v),
+            ShortPath::One(e) => e,
+        }
+    }
+}
 
 /// Assertion of an equation between the composites of two paths in a category.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Constructor)]
 pub struct PathEq<V, E> {
     /// Left hand side of equation.
     pub lhs: Path<V, E>,
@@ -468,11 +562,6 @@ pub struct PathEq<V, E> {
 }
 
 impl<V, E> PathEq<V, E> {
-    /// Constructs a path equation with the given left- and right-hand sides.
-    pub fn new(lhs: Path<V, E>, rhs: Path<V, E>) -> PathEq<V, E> {
-        PathEq { lhs, rhs }
-    }
-
     /** Source of the path equation in the given graph.
 
     Panics if the two sides of the path equation have different sources.
@@ -519,17 +608,17 @@ impl<V, E> PathEq<V, E> {
     {
         let mut errs = Vec::new();
         if !self.lhs.contained_in(graph) {
-            errs.push(InvalidPathEq::Lhs());
+            errs.push(InvalidPathEq::Lhs);
         }
         if !self.rhs.contained_in(graph) {
-            errs.push(InvalidPathEq::Rhs());
+            errs.push(InvalidPathEq::Rhs);
         }
         if errs.is_empty() {
             if self.lhs.src(graph) != self.rhs.src(graph) {
-                errs.push(InvalidPathEq::Src());
+                errs.push(InvalidPathEq::Src);
             }
             if self.lhs.tgt(graph) != self.rhs.tgt(graph) {
-                errs.push(InvalidPathEq::Tgt());
+                errs.push(InvalidPathEq::Tgt);
             }
         }
         errs.into_iter()
@@ -537,19 +626,22 @@ impl<V, E> PathEq<V, E> {
 }
 
 /// A failure of a path equation to be well defined in a graph.
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
 pub enum InvalidPathEq {
-    /// Path in left hand side of equation not contained in the graph.
-    Lhs(),
+    /// Left-hand side of equation is not a valid path in the graph.
+    Lhs,
 
-    /// Path in right hand side of equation not contained in the graph.
-    Rhs(),
+    /// Right-hand side of equation is not a valid path in the graph.
+    Rhs,
 
-    /// Sources of left and right hand sides of path equation are not equal.
-    Src(),
+    /// Sources of left- and right-hand sides of path equation are not equal.
+    Src,
 
-    /// Targets of left and right hand sides of path equation are not equal.
-    Tgt(),
+    /// Targets of left- and right-hand sides of path equation are not equal.
+    Tgt,
 }
 
 #[cfg(test)]
@@ -573,9 +665,13 @@ mod tests {
     }
 
     #[test]
-    fn singleton_path() {
-        let e = 1;
-        assert_eq!(SkelPath::single(e).only(), Some(e));
+    fn short_paths() {
+        let (v, e) = (1, 1);
+        let path: SkelPath = ShortPath::Zero(v).into();
+        assert_eq!(path.try_into(), Ok(SkelShortPath::Zero(v)));
+        let path: SkelPath = ShortPath::One(e).into();
+        assert_eq!(path.clone().only(), Some(e));
+        assert_eq!(path.try_into(), Ok(ShortPath::One(e)));
     }
 
     #[test]

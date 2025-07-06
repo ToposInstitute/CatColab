@@ -9,6 +9,7 @@ theory.
 use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
 
 use derivative::Derivative;
+use derive_more::{Constructor, From};
 use nonempty::NonEmpty;
 use ref_cast::RefCast;
 use thiserror::Error;
@@ -43,8 +44,7 @@ pub trait Graph {
     fn tgt(&self, e: &Self::E) -> Self::V;
 }
 
-/** A graph with finitely many vertices and edges.
- */
+/// A graph with finitely many vertices and edges.
 pub trait FinGraph: Graph {
     /// Iterates over the vertices in the graph.
     fn vertices(&self) -> impl Iterator<Item = Self::V>;
@@ -99,6 +99,37 @@ pub trait FinGraph: Graph {
     }
 }
 
+/** A reflexive graph.
+
+A **reflexive graph** is a graph equipped with a distinguished self-loop on each vertex.
+ */
+pub trait ReflexiveGraph: Graph {
+    /// Gets the reflexive loop at a vertex.
+    fn refl(&self, v: Self::V) -> Self::E;
+}
+
+/// The set of vertices of a graph.
+#[derive(From, RefCast)]
+#[repr(transparent)]
+pub struct VertexSet<G>(G);
+
+impl<G: Graph> Set for VertexSet<G> {
+    type Elem = G::V;
+
+    fn contains(&self, v: &Self::Elem) -> bool {
+        self.0.has_vertex(v)
+    }
+}
+
+impl<G: FinGraph> FinSet for VertexSet<G> {
+    fn iter(&self) -> impl Iterator<Item = Self::Elem> {
+        self.0.vertices()
+    }
+    fn len(&self) -> usize {
+        self.0.vertex_count()
+    }
+}
+
 /** A graph backed by sets and mappings.
 
 Such a graph is defined in copresheaf style by two [sets](Set) and two
@@ -138,6 +169,21 @@ pub trait ColumnarGraph {
 
     /// Gets the mapping assignment a target vertex to each edge.
     fn tgt_map(&self) -> &Self::Tgt;
+
+    /// Iterates over failures to be a valid graph.
+    fn iter_invalid(&self) -> impl Iterator<Item = InvalidGraph<Self::E>>
+    where
+        Self::Edges: FinSet<Elem = Self::E>,
+    {
+        let (dom, cod) = (self.edge_set(), self.vertex_set());
+        let srcs = Function(self.src_map(), dom, cod)
+            .iter_invalid()
+            .map(|e| InvalidGraph::Src(e.take()));
+        let tgts = Function(self.tgt_map(), dom, cod)
+            .iter_invalid()
+            .map(|e| InvalidGraph::Tgt(e.take()));
+        srcs.chain(tgts)
+    }
 }
 
 /** A finite graph backed by columns.
@@ -154,17 +200,6 @@ pub trait ColumnarFinGraph:
         Tgt: Column<Dom = Self::E, Cod = Self::V>,
     >
 {
-    /// Iterates over failures to be a valid graph.
-    fn iter_invalid(&self) -> impl Iterator<Item = InvalidGraphData<Self::E>> {
-        let (dom, cod) = (self.edge_set(), self.vertex_set());
-        let srcs = Function(self.src_map(), dom, cod)
-            .iter_invalid()
-            .map(|e| InvalidGraphData::Src(e.take()));
-        let tgts = Function(self.tgt_map(), dom, cod)
-            .iter_invalid()
-            .map(|e| InvalidGraphData::Tgt(e.take()));
-        srcs.chain(tgts)
-    }
 }
 
 /// A columnar graph with mutable columns.
@@ -242,13 +277,13 @@ impl<G: ColumnarFinGraph> FinGraph for G {
     }
 }
 
-/** An invalid assignment in a graph defined explicitly by data.
+/** An invalid assignment in a graph.
 
-For [columnar graphs](ColumnarGraph) and other such graphs, it is possible that
-the data is incomplete or inconsistent.
+For [columnar graphs](ColumnarGraph) and other graphs defined explicitly by
+data, it is possible that the data is incomplete or inconsistent.
 */
 #[derive(Debug, Error)]
-pub enum InvalidGraphData<E> {
+pub enum InvalidGraph<E> {
     /// Edge assigned a source that is not a vertex contained in the graph.
     #[error("Source of edge `{0}` is not a vertex in the graph")]
     Src(E),
@@ -368,7 +403,7 @@ impl SkelGraph {
 }
 
 impl Validate for SkelGraph {
-    type ValidationError = InvalidGraphData<usize>;
+    type ValidationError = InvalidGraph<usize>;
 
     fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
         validate::wrap_errors(self.iter_invalid())
@@ -485,7 +520,7 @@ where
     E: Eq + Hash + Clone,
     S: BuildHasher,
 {
-    type ValidationError = InvalidGraphData<E>;
+    type ValidationError = InvalidGraph<E>;
 
     fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
         validate::wrap_errors(self.iter_invalid())
@@ -637,20 +672,10 @@ pub enum InvalidGraphMorphism<V, E> {
 That is, the data of the graph mapping is defined by two columns. The mapping
 can be between arbitrary graphs with compatible vertex and edge types.
 */
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Constructor)]
 pub struct ColumnarGraphMapping<VMap, EMap> {
     vertex_map: VMap,
     edge_map: EMap,
-}
-
-impl<VMap, EMap> ColumnarGraphMapping<VMap, EMap> {
-    /// Constructs a graph mapping from given vertex and edge mappings.
-    pub fn new(vertex_map: VMap, edge_map: EMap) -> Self {
-        Self {
-            vertex_map,
-            edge_map,
-        }
-    }
 }
 
 impl<VMap, EMap> GraphMapping for ColumnarGraphMapping<VMap, EMap>
@@ -727,6 +752,13 @@ mod tests {
         g.set_tgt("fg", 'z');
         assert_eq!(g.src(&"fg"), 'x');
         assert_eq!(g.tgt(&"fg"), 'z');
+    }
+
+    #[test]
+    fn vertex_set() {
+        let set: VertexSet<_> = SkelGraph::triangle().into();
+        assert!(set.contains(&2));
+        assert_eq!(set.len(), 3);
     }
 
     #[test]

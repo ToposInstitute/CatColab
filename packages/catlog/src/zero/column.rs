@@ -5,7 +5,7 @@ use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
 use std::marker::PhantomData;
 
 use derivative::Derivative;
-use derive_more::From;
+use derive_more::{Constructor, From};
 use nonempty::NonEmpty;
 use thiserror::Error;
 use ustr::{IdentityHasher, Ustr};
@@ -338,7 +338,7 @@ impl<T: Eq + Clone> Column for VecColumn<T> {
 impl<T: Eq + Clone> MutColumn for VecColumn<T> {}
 
 /// An unindexed column backed by a hash map.
-#[derive(Clone, From, Debug, Derivative)]
+#[derive(Clone, Debug, Derivative, Constructor, From)]
 #[derivative(Default(bound = "S: Default"))]
 #[derivative(PartialEq(bound = "K: Eq + Hash, V: PartialEq, S: BuildHasher"))]
 #[derivative(Eq(bound = "K: Eq + Hash, V: Eq, S: BuildHasher"))]
@@ -346,13 +346,6 @@ pub struct HashColumn<K, V, S = RandomState>(HashMap<K, V, S>);
 
 /// An unindexed column with keys of type `Ustr`.
 pub type UstrColumn<V> = HashColumn<Ustr, V, BuildHasherDefault<IdentityHasher>>;
-
-impl<K, V, S> HashColumn<K, V, S> {
-    /// Creates a new hash column from an existing hash map.
-    pub fn new(map: HashMap<K, V, S>) -> Self {
-        Self(map)
-    }
-}
 
 impl<K, V, S> IntoIterator for HashColumn<K, V, S> {
     type Item = (K, V);

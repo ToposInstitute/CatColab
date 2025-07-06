@@ -1,13 +1,14 @@
 //! Discrete double theories.
 
+use std::hash::{BuildHasher, Hash};
 use std::ops::Range;
 
 use derive_more::From;
 use ref_cast::RefCast;
 
-use crate::dbl::{category::*, tree::DblTree};
-use crate::one::{Path, category::*, fp_category::UstrFpCategory};
-use crate::validate::Validate;
+use crate::dbl::{category::*, theory::InvalidDblTheory, tree::DblTree};
+use crate::one::{Path, category::*, fp_category::*};
+use crate::validate::{self, Validate};
 
 /** A discrete double theory.
 
@@ -111,11 +112,19 @@ where
     }
 }
 
-impl<C: FgCategory + Validate> Validate for DiscreteDblTheory<C> {
-    type ValidationError = C::ValidationError;
+impl<Id, S> Validate for DiscreteDblTheory<FpCategory<Id, Id, S>>
+where
+    Id: Eq + Clone + Hash,
+    S: BuildHasher,
+{
+    type ValidationError = InvalidDblTheory<Id>;
 
     fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
-        self.0.validate()
+        validate::wrap_errors(self.0.iter_invalid().map(|err| match err {
+            InvalidFpCategory::Dom(id) => InvalidDblTheory::SrcType(id),
+            InvalidFpCategory::Cod(id) => InvalidDblTheory::TgtType(id),
+            InvalidFpCategory::Eq(eq, errs) => InvalidDblTheory::MorTypeEq(eq, errs),
+        }))
     }
 }
 
