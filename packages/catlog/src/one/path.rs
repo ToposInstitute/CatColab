@@ -8,7 +8,7 @@ addition, this module provides data types for ["short paths"](`ShortPath`) and
 use std::ops::Range;
 use std::{collections::HashSet, hash::Hash};
 
-use derive_more::From;
+use derive_more::{Constructor, From};
 use itertools::{Either, Itertools};
 use nonempty::{NonEmpty, nonempty};
 
@@ -552,7 +552,7 @@ impl<V, E> ShortPath<V, E> {
 }
 
 /// Assertion of an equation between the composites of two paths in a category.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Constructor)]
 pub struct PathEq<V, E> {
     /// Left hand side of equation.
     pub lhs: Path<V, E>,
@@ -562,11 +562,6 @@ pub struct PathEq<V, E> {
 }
 
 impl<V, E> PathEq<V, E> {
-    /// Constructs a path equation with the given left- and right-hand sides.
-    pub fn new(lhs: Path<V, E>, rhs: Path<V, E>) -> PathEq<V, E> {
-        PathEq { lhs, rhs }
-    }
-
     /** Source of the path equation in the given graph.
 
     Panics if the two sides of the path equation have different sources.

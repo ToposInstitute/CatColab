@@ -9,7 +9,7 @@ theory.
 use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
 
 use derivative::Derivative;
-use derive_more::From;
+use derive_more::{Constructor, From};
 use nonempty::NonEmpty;
 use ref_cast::RefCast;
 use thiserror::Error;
@@ -672,20 +672,10 @@ pub enum InvalidGraphMorphism<V, E> {
 That is, the data of the graph mapping is defined by two columns. The mapping
 can be between arbitrary graphs with compatible vertex and edge types.
 */
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Constructor)]
 pub struct ColumnarGraphMapping<VMap, EMap> {
     vertex_map: VMap,
     edge_map: EMap,
-}
-
-impl<VMap, EMap> ColumnarGraphMapping<VMap, EMap> {
-    /// Constructs a graph mapping from given vertex and edge mappings.
-    pub fn new(vertex_map: VMap, edge_map: EMap) -> Self {
-        Self {
-            vertex_map,
-            edge_map,
-        }
-    }
 }
 
 impl<VMap, EMap> GraphMapping for ColumnarGraphMapping<VMap, EMap>
