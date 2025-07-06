@@ -1,4 +1,11 @@
-//! Computads in dimension one.
+/*! Computads in dimension one.
+
+A 1-computad, in the strictest sense of the term, is the generating data for a
+free category, which is just a [graph](super::graph). This module provides
+simple data structures to aid in defining computads for categories with extra
+structure. For example, a computad for monoidal categories is called a "tensor
+scheme" by Joyal and Street and a "pre-net" in the Petri net literature.
+ */
 
 use std::hash::{BuildHasher, Hash};
 
@@ -34,7 +41,11 @@ where
     }
 }
 
-/// TODO
+/** A 1-computad.
+
+The set of objects is assumed already constructed, possibly from other
+generating data, while the top-dimensional generating data is provided directly.
+ */
 #[derive(Constructor)]
 pub struct Computad<'a, Ob, ObSet, E, S> {
     objects: &'a ObSet,
