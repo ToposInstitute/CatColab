@@ -53,7 +53,7 @@ pkgs.stdenv.mkDerivation {
 
     # See README.md
     # hash = pkgs.lib.fakeHash;
-    hash = "sha256-dUsXZCbPZMwZgC/47FpNfSaQzngemvd5AwuC4XAcAvk=";
+    hash = "sha256-qqZCQn0QFbqVsu/TCuye6oVL3ZIYU+blHB2b43K5xPA=";
   };
 
   meta.mainProgram = name;
