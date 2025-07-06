@@ -56,7 +56,7 @@ in
     };
   };
 
-  networking.hostName = "catcolab";
+  networking.hostName = "catcolab-next";
   time.timeZone = "America/New_York";
   system.stateVersion = "24.05";
 }
