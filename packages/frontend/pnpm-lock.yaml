@@ -89,9 +89,6 @@ importers:
       catlaborator:
         specifier: link:../catlaborator/pkg
         version: link:../catlaborator/pkg
-      catlog-wasm:
-        specifier: link:../catlog-wasm/pkg
-        version: link:../catlog-wasm/pkg
       echarts:
         specifier: ^5.5.1
         version: 5.5.1

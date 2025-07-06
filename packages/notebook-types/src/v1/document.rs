@@ -139,6 +139,7 @@ impl From<v0::model_judgment::ModelJudgment> for FormalCell {
                 dom: dom.map(|x| x.into()).unwrap_or_else(|| Reference::Unresolved(String::new())),
                 cod: cod.map(|x| x.into()).unwrap_or_else(|| Reference::Unresolved(String::new())),
             },
+            _ => todo!(),
         }
     }
 }

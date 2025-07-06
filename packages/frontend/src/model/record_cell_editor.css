@@ -1,0 +1,4 @@
+.record-decl {
+    display: flex;
+    flex-direction: row;
+}

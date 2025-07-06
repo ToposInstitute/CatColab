@@ -31,6 +31,17 @@ export const newMorphismDecl = (morType: MorType): MorphismDecl => ({
     cod: null,
 });
 
+/** Declaration of a morphim in a model. */
+export type RecordDecl = ModelJudgment & {
+    tag: "record";
+};
+
+export const newNotebookDecl = (): RecordDecl => ({
+    tag: "record",
+    name: "",
+    notebook_id: "",
+});
+
 /** Duplicate a model judgment, creating a fresh UUID when applicable. */
 export const duplicateModelJudgment = (jgmt: ModelJudgment): ModelJudgment => ({
     ...deepCopyJSON(jgmt),

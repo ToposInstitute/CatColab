@@ -185,6 +185,9 @@ impl NotebookElaborator {
                     ctx.intro(mor_decl.id, Some(ustr(&mor_decl.name)), tyval);
                     cells.push(Cell::new(ustr(&mor_decl.name), tystx))
                 }
+                Record(notebook_decl) => {
+                    todo!()
+                }
             }
         }
 

@@ -31,12 +31,15 @@ import { TheorySelectorDialog } from "./theory_selector";
 import {
     type MorphismDecl,
     type ObjectDecl,
+    type RecordDecl,
     duplicateModelJudgment,
     newMorphismDecl,
+    newNotebookDecl,
     newObjectDecl,
 } from "./types";
 
 import "./model_editor.css";
+import { RecordCellEditor } from "./record_cell_editor";
 
 export default function ModelPage() {
     const api = useApi();
@@ -132,7 +135,9 @@ export function ModelNotebookEditor(props: {
     const liveDoc = () => props.liveModel.liveDoc;
 
     const cellConstructors = () =>
-        (props.liveModel.theory().modelTypes ?? []).map(modelCellConstructor);
+        (props.liveModel.theory().modelTypes ?? [])
+            .map(modelCellConstructor)
+            .concat(notebookCellConstructor);
 
     return (
         <LiveModelContext.Provider value={() => props.liveModel}>
@@ -175,6 +180,18 @@ function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
                     actions={props.actions}
                 />
             </Match>
+            <Match when={props.content.tag === "record"}>
+                <RecordCellEditor
+                    record={props.content as RecordDecl}
+                    modifyRecord={(f) =>
+                        props.changeContent((content) => {
+                            f(content as RecordDecl);
+                        })
+                    }
+                    isActive={props.isActive}
+                    actions={props.actions}
+                />
+            </Match>
         </Switch>
     );
 }
@@ -192,6 +209,14 @@ function modelCellConstructor(meta: ModelTypeMeta): CellConstructor<ModelJudgmen
         },
     };
 }
+
+const notebookCellConstructor: CellConstructor<ModelJudgment> = {
+    name: "Notebook Cell",
+    description: "A cell that imports another notebook",
+    construct() {
+        return newFormalCell(newNotebookDecl());
+    },
+};
 
 function judgmentLabel(judgment: ModelJudgment): string | undefined {
     const liveModel = useContext(LiveModelContext);
