@@ -684,3 +684,74 @@ stdTheories.add(
         });
     },
 );
+
+stdTheories.add(
+    {
+        id: "primitive-stock-flow-with-switches",
+        name: "Stock and flow with switches",
+        description: "Model accumulation (stocks) and change (flows)",
+        group: "System Dynamics",
+        help: "stock-flow",
+    },
+    (meta) => {
+        const thCategoryLinksSwitches = new catlog.ThCategoryLinksSwitches();
+        return new Theory({
+            ...meta,
+            theory: thCategoryLinksSwitches.theory(),
+            onlyFreeModels: true,
+            modelTypes: [
+                {
+                    tag: "ObType",
+                    obType: { tag: "Basic", content: "Object" },
+                    name: "Stock",
+                    description: "Thing with an amount",
+                    shortcut: ["S"],
+                    cssClasses: [styles.box],
+                    svgClasses: [svgStyles.box],
+                },
+                {
+                    tag: "MorType",
+                    morType: {
+                        tag: "Hom",
+                        content: { tag: "Basic", content: "Object" },
+                    },
+                    name: "Flow",
+                    description: "Flow from one stock to another",
+                    shortcut: ["F"],
+                    arrowStyle: "double",
+                },
+                {
+                    tag: "MorType",
+                    morType: { tag: "Basic", content: "Link" },
+                    name: "Link",
+                    description: "Influence of a stock on a flow",
+                    preferUnnamed: true,
+                    shortcut: ["L"],
+                },
+				{
+                    tag: "MorType",
+                    morType: { tag: "Basic", content: "Switch" },
+                    name: "Switch",
+                    description: "Influence of a stock on a flow",
+                    shortcut: ["W"],
+					arrowStyle: "switch",
+                },
+            ],
+            modelAnalyses: [
+			    analyses.configureStockFlowDiagram({
+				    id: "diagram",
+					name: "Visualization",
+					description: "Visualize the stock and flow diagram",
+				}),
+                analyses.configureSwitchingMassAction({
+                    simulate(model, data) {
+                        return thCategoryLinksSwitches.switchingMassAction(model, data);
+                    },
+                    isTransition(mor) {
+                        return mor.morType.tag === "Hom";
+                    },
+                }),
+            ],
+        });
+    },
+);

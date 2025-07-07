@@ -1,7 +1,7 @@
 //! Standard library of models of double theories.
 
 use std::rc::Rc;
-use ustr::{Ustr, ustr};
+use ustr::{ustr, Ustr};
 
 use crate::dbl::{model::*, theory::*};
 use crate::one::Path;
@@ -121,6 +121,24 @@ pub fn backward_link(th: Rc<UstrDiscreteTabTheory>) -> UstrDiscreteTabModel {
     model
 }
 
+pub fn link_switch(th: Rc<UstrDiscreteTabTheory>) -> UstrDiscreteTabModel {
+    let mut model = UstrDiscreteTabModel::new(th.clone());
+    let (water, sediment, container, deposits) =
+        (ustr("water"), ustr("sediment"), ustr("container"), ustr("deposits"));
+    let ob_type = TabObType::Basic(ustr("Object"));
+    model.add_ob(water, ob_type.clone());
+    model.add_ob(sediment, ob_type.clone());
+    model.add_ob(container, ob_type.clone());
+    model.add_mor(deposits, TabOb::Basic(water), TabOb::Basic(sediment), th.hom_type(ob_type));
+    model.add_mor(
+        ustr("switch"),
+        TabOb::Basic(container),
+        model.tabulated_gen(deposits),
+        TabMorType::Basic(ustr("Switch")),
+    );
+    model
+}
+
 #[cfg(test)]
 mod tests {
     use super::super::theories::*;
@@ -155,5 +173,11 @@ mod tests {
     fn categories_with_links() {
         let th = Rc::new(th_category_links());
         assert!(backward_link(th).validate().is_ok());
+    }
+
+    #[test]
+    fn categories_with_links_switches() {
+        let th = Rc::new(th_category_links_switches());
+        assert!(link_switch(th).validate().is_ok());
     }
 }

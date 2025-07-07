@@ -33,6 +33,9 @@ export interface Node<Id> extends GraphElement {
 
     /** Node label, if any. */
     label?: string;
+
+	/** Node shape, if any. */
+	shape?: string;
 }
 
 export interface Edge<Id> extends GraphElement {

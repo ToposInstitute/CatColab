@@ -80,7 +80,9 @@ pub mod linear_ode;
 pub mod lotka_volterra;
 #[allow(clippy::type_complexity)]
 pub mod mass_action;
+pub mod mass_action_switches;
 
 pub use linear_ode::*;
 pub use lotka_volterra::*;
 pub use mass_action::*;
+pub use mass_action_switches::*;

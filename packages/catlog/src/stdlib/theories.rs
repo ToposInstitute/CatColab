@@ -3,7 +3,7 @@
 use ustr::ustr;
 
 use crate::dbl::theory::*;
-use crate::one::{Path, fp_category::UstrFpCategory};
+use crate::one::{fp_category::UstrFpCategory, Path};
 
 /** The empty theory, which has a single model, the empty model.
 
@@ -130,6 +130,31 @@ pub fn th_category_links() -> UstrDiscreteTabTheory {
     th.add_ob_type(x);
     th.add_mor_type(
         ustr("Link"),
+        TabObType::Basic(x),
+        th.tabulator(th.hom_type(TabObType::Basic(x))),
+    );
+    th
+}
+
+/** The theory of categories with links and switches.
+
+A *category with links and switches* is a category `C` together with a profunctor from `C` to
+`Arr(C)`, the arrow category of C.
+
+[Primitive stock and flow diagrams](crate::refs::StockFlow) are free categories
+with links.
+ */
+pub fn th_category_links_switches() -> UstrDiscreteTabTheory {
+    let mut th: UstrDiscreteTabTheory = Default::default();
+    let x = ustr("Object");
+    th.add_ob_type(x);
+    th.add_mor_type(
+        ustr("Link"),
+        TabObType::Basic(x),
+        th.tabulator(th.hom_type(TabObType::Basic(x))),
+    );
+    th.add_mor_type(
+        ustr("Switch"),
         TabObType::Basic(x),
         th.tabulator(th.hom_type(TabObType::Basic(x))),
     );
