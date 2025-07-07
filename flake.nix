@@ -161,7 +161,8 @@
         catcolab = {
           hostname = "backend.catcolab.org";
           profiles.system = {
-            sshUser = "catcolab";
+            # TODO: can be changed to catcolab after the next deploy
+            sshUser = "root";
             path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab;
           };
         };
@@ -169,6 +170,7 @@
           hostname = "backend-next.catcolab.org";
           profiles.system = {
             sshUser = "catcolab";
+            user = "root";
             path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab-next;
           };
         };

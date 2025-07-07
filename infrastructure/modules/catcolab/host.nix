@@ -26,6 +26,8 @@ with lib;
           extraGroups = [ "wheel" ];
           openssh.authorizedKeys.keys = config.catcolab.host.userKeys;
         };
+        # TODO: root access can be dropped after the next prod deploy
+        root.openssh.authorizedKeys.keys = config.catcolab.host.userKeys;
       };
 
       groups.catcolab = { };
@@ -37,8 +39,13 @@ with lib;
     };
 
     services.openssh.enable = true;
-    nix.extraOptions = ''
-      experimental-features = nix-command flakes
-    '';
+    nix = {
+      settings.trusted-users = [
+        "catcolab"
+      ];
+      extraOptions = ''
+        experimental-features = nix-command flakes
+      '';
+    };
   };
 }

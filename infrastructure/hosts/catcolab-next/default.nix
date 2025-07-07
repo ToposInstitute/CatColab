@@ -19,12 +19,14 @@ in
 
   age.secrets = {
     rcloneConf = {
-      file = ../../secrets/rclone.conf.prod.age;
+      file = ../../secrets/rclone.conf.next.age;
       mode = "400";
       owner = "catcolab";
     };
+
     catcolabSecrets = {
       file = ../../secrets/.env.next.age;
+      mode = "400";
       owner = "catcolab";
     };
   };
