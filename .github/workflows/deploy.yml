@@ -208,4 +208,4 @@ jobs:
 
       - name: Run nixos-rebuild switch remotely
         run: |
-           nix run github:serokell/deploy-rs ./catcolab#${HOST_CONFIG}
+           nix run github:serokell/deploy-rs .#${HOST_CONFIG}
