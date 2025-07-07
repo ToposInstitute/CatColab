@@ -126,9 +126,9 @@ const routes: RouteDefinition[] = [
         // :subkind? and :subref? are optional trailing segments
         path: "/:kind/:ref/:subkind?/:subref?",
         matchFilters: {
-            kind: ["model", "diagram", "analysis"], // only those three
+            kind: ["model", "diagram", "analysis"],
             ref: refIsUUIDFilter.ref,
-            subkind: (v?: string) => !v || v === "analysis" || v === "diagram",
+            subkind: (v?: string) => !v || v === "analysis" || v === "diagram" || v === "model",
             subref: (v?: string) => !v || refIsUUIDFilter.ref(v),
         },
         component: lazy(() => import("./model/model_editor")),

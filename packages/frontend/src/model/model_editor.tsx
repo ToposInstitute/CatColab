@@ -1,10 +1,20 @@
 import { useNavigate, useParams } from "@solidjs/router";
-import { For, Match, Show, Switch, createResource, useContext } from "solid-js";
+import {
+    For,
+    Match,
+    Show,
+    Switch,
+    createEffect,
+    createResource,
+    createSignal,
+    onMount,
+    useContext,
+} from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { ModelJudgment } from "catlog-wasm";
 import { useApi } from "../api";
-import { InlineInput } from "../components";
+import { IconButton, InlineInput, ResizableHandle } from "../components";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
@@ -18,7 +28,7 @@ import {
     DocumentLoadingScreen,
     DocumentMenu,
     getLiveDocument,
-    TheoryHelpButton,
+    Toolbar,
 } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
@@ -41,6 +51,11 @@ import { Layout } from "../page/layout";
 import { RefStub, RelatedRefStub } from "catcolab-api";
 import { DiagramPane } from "../diagram/diagram_editor";
 import { AnalysisNotebookEditor } from "../analysis/analysis_editor";
+import Resizable, { type ContextValue } from "@corvu/resizable";
+// import PanelRight from "lucide-solid/icons/panel-right";
+import PanelRightClose from "lucide-solid/icons/panel-right-close";
+import Maximize2 from "lucide-solid/icons/maximize-2";
+import ChevronsRight from "lucide-solid/icons/chevrons-right";
 
 export default function ModelPage() {
     const api = useApi();
@@ -48,11 +63,44 @@ export default function ModelPage() {
     invariant(theories, "Must provide theory library as context to model page");
 
     const params = useParams();
+    const isSidePanelOpen = () => !!params.subkind && !!params.subref;
 
     const [liveModel] = createResource(
         () => params.ref,
         (refId) => getLiveDocument(refId, api, theories, params.kind as any),
     );
+
+    const [secondaryLiveModel] = createResource(
+        () => {
+            if (!params.subkind || !params.subref) {
+                return;
+            }
+
+            return [params.subkind, params.subref] as const;
+        },
+        ([refKind, refId]) => getLiveDocument(refId, api, theories, refKind as any),
+    );
+
+    const navigate = useNavigate();
+    const closeSidePanel = () => {
+        navigate(`/${params.kind}/${params.ref}`);
+    };
+
+    const maximizeSidePanel = () => {
+        navigate(`/${params.subkind}/${params.subref}`);
+    };
+
+    const [resizableContext, setResizableContext] = createSignal<ContextValue>();
+    createEffect(() => {
+        const context = resizableContext();
+        if (isSidePanelOpen()) {
+            context?.expand(1);
+            context?.resize(1, 0.33);
+        } else {
+            context?.collapse(1);
+            context?.resize(0, 1);
+        }
+    });
 
     return (
         <Show when={liveModel()} fallback={<DocumentLoadingScreen />}>
@@ -75,7 +123,58 @@ export default function ModelPage() {
                         </>
                     }
                 >
-                    <DocumentPane liveDocument={liveModel()} />
+                    <Resizable class="growable-container">
+                        {() => {
+                            const context = Resizable.useContext();
+                            setResizableContext(context);
+
+                            return (
+                                <>
+                                    <Resizable.Panel
+                                        class="content-panel"
+                                        collapsible
+                                        initialSize={1}
+                                        minSize={0.25}
+                                    >
+                                        <DocumentPane liveDocument={liveModel()} />
+                                    </Resizable.Panel>
+                                    <ResizableHandle hidden={!isSidePanelOpen()} />
+                                    <Show when={isSidePanelOpen()}>
+                                        <Resizable.Panel
+                                            // class="content-panel side-panel"
+                                            collapsible
+                                            minSize={0.25}
+                                            onCollapse={closeSidePanel}
+                                        >
+                                            <Show when={secondaryLiveModel()}>
+                                                {(secondaryLiveModel) => (
+                                                    <>
+                                                        <Toolbar>
+                                                            <IconButton
+                                                                onClick={closeSidePanel}
+                                                                tooltip="Close"
+                                                            >
+                                                                <ChevronsRight />
+                                                            </IconButton>
+                                                            <IconButton
+                                                                onClick={maximizeSidePanel}
+                                                                tooltip="Open in full page"
+                                                            >
+                                                                <Maximize2 />
+                                                            </IconButton>
+                                                        </Toolbar>
+                                                        <DocumentPane
+                                                            liveDocument={secondaryLiveModel()}
+                                                        />
+                                                    </>
+                                                )}
+                                            </Show>
+                                        </Resizable.Panel>
+                                    </Show>
+                                </>
+                            );
+                        }}
+                    </Resizable>
                 </Layout>
             )}
         </Show>
@@ -83,7 +182,6 @@ export default function ModelPage() {
 }
 
 function DocumentPane(props: { liveDocument: AnyLiveDocument }) {
-    console.log(props.liveDocument.type === "analysis");
     return (
         <Switch>
             <Match when={props.liveDocument.type === "model" && props.liveDocument}>
@@ -104,7 +202,7 @@ function RelatedDocuments(props: {
     refId: string;
     liveDocument: AnyLiveDocument;
 }) {
-    console.log(props.refId);
+    // console.log(props.liveDocument);
     const api = useApi();
     const [data] = createResource(
         () => props.refId,
@@ -115,7 +213,6 @@ function RelatedDocuments(props: {
                 throw "couldn't load results";
             }
 
-            console.log("related item ", results.content);
             return results.content;
         },
     );
@@ -167,7 +264,9 @@ function DocumentsTreeLeaf(props: {
 }) {
     const navigate = useNavigate();
     const handleClick = () => {
-        navigate(`/${props.stub.typeName}/${props.stub.refId}`);
+        navigate(
+            `/${props.currentLiveDoc.type}/${props.currentLiveDoc.refId}/${props.stub.typeName}/${props.stub.refId}`,
+        );
     };
 
     return (
