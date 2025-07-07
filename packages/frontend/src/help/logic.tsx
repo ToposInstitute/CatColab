@@ -64,31 +64,24 @@ export type HelpAnalysisProps = {
 
 /** Documentation for an analysis of a theory. */
 function helpAnalysisByIdContent(props: HelpAnalysisProps) {
+    var content = (<></>);
     const analysis = props.theory.modelAnalyses.filter((analysis) => analysis.id === props.analysisId)[0];
-    if (analysis === undefined) {
-        return (<></>)
-    } else {
-        // TO-DO: remove repetition here
+    if (analysis !== undefined) {
+        var helpMdxContent = (<></>);
         if (analysis.help) {
-            const mdx_component = lazy(() => import(`./analysis/${analysis.id}.mdx`));
-            return (
-                <div class="help-analysis-pane">
-                    <h3>{analysis.name}</h3>
-                    <h5>{analysis.description}</h5>
-                    {props.children}
-                    <Dynamic component={mdx_component} />
-                </div>
-            );
-        } else {
-            return (
-                <div class="help-analysis-pane">
-                    <h3>{analysis.name}</h3>
-                    <h5>{analysis.description}</h5>
-                    {props.children}
-                </div>
-            );
+            const mdx_component = lazy(() => import(`./analysis/${analysis.help}.mdx`));
+            helpMdxContent = <Dynamic component={mdx_component} />
         }
+        content = (
+            <div class="help-analysis-pane">
+                <h3>{analysis.name}</h3>
+                <p><i>{analysis.description}</i></p>
+                {props.children}
+                {helpMdxContent}
+            </div>
+        );
     }
+    return content;
 }
 
-export const HelpAnalysisById = (props: HelpAnalysisProps) => (helpAnalysisByIdContent({theory: props.theory, analysisId: props.analysisId}))
+export const HelpAnalysisById = (props: HelpAnalysisProps) => (helpAnalysisByIdContent({theory: props.theory, analysisId: props.analysisId, children: props.children}))

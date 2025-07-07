@@ -1,6 +1,10 @@
 .help-container {
     font-size: 1.05rem;
 
+    .katex {
+        font-size: 1.2rem;
+    }
+
     /* Headers */
 
     & h1 {
@@ -21,7 +25,7 @@
 
     & h4 {
         font-size: 1.1em;
-        font-style: italic;
+        /*font-style: italic;*/
     }
 
     /* Links */

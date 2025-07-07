@@ -344,6 +344,7 @@ stdTheories.add(
                     id: "negative-loops",
                     name: "Balancing loops",
                     description: "Analyze the diagram for balancing loops",
+                    help: "loops",
                     findSubmodels(model, options) {
                         return thSignedCategory.negativeLoops(model, options);
                     },
@@ -352,6 +353,7 @@ stdTheories.add(
                     id: "positive-loops",
                     name: "Reinforcing loops",
                     description: "Analyze the diagram for reinforcing loops",
+                    help: "loops",
                     findSubmodels(model, options) {
                         return thSignedCategory.positiveLoops(model, options);
                     },
