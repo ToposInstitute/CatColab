@@ -156,9 +156,12 @@ tree](DblTree) built out of these nodes.
  */
 #[derive(Clone, Debug, PartialEq, Eq, From)]
 pub enum ModalNode<Id> {
-    /// Basic cell.
+    /// Basic morphism operation.
     #[from]
     Basic(ModeApp<ModalOp<Id>>),
+
+    /// Unit cell on a basic object operation.
+    Unit(ModeApp<ModalOp<Id>>),
 
     /** Cell witnessing a composite.
 
@@ -435,6 +438,7 @@ where
                 ModalOp::Generator(sq) => self.computad().has_square(sq),
                 ModalOp::Mul(_, _, p) => ModalProedgeGraph::ref_cast(&self.0).has_edge(p),
             },
+            ModalNode::Unit(f) => ModalEdgeGraph::ref_cast(&self.0).has_edge(f),
             // FIXME: Don't assume all composites exist.
             ModalNode::Composite(_) => true,
         }
@@ -464,6 +468,9 @@ where
                 };
                 dom.map(|x| x.apply_all(app.modes.clone()), |p| p.apply_all(app.modes.clone()))
             }
+            ModalNode::Unit(f) => {
+                ModalMorType::Zero(ModalEdgeGraph::ref_cast(&self.0).src(f)).into()
+            }
             ModalNode::Composite(path) => path.clone(),
         }
     }
@@ -476,6 +483,7 @@ where
                 };
                 cod.apply_all(app.modes.clone())
             }
+            ModalNode::Unit(f) => ModalMorType::Zero(ModalEdgeGraph::ref_cast(&self.0).tgt(f)),
             ModalNode::Composite(_) => panic!("Composites not implemented"),
         }
     }
@@ -491,6 +499,7 @@ where
                 };
                 src.apply_all(app.modes.clone())
             }
+            ModalNode::Unit(f) => f.clone().into(),
             ModalNode::Composite(path) => {
                 Path::empty(path.src(ModalMorTypeGraph::ref_cast(&self.0)))
             }
@@ -508,6 +517,7 @@ where
                 };
                 tgt.apply_all(app.modes.clone())
             }
+            ModalNode::Unit(f) => f.clone().into(),
             ModalNode::Composite(path) => {
                 Path::empty(path.tgt(ModalMorTypeGraph::ref_cast(&self.0)))
             }
@@ -519,6 +529,7 @@ where
                 ModalOp::Generator(sq) => self.computad().arity(sq),
                 ModalOp::Mul(_, _, _) => 1,
             },
+            ModalNode::Unit(_) => 1,
             ModalNode::Composite(path) => path.len(),
         }
     }
