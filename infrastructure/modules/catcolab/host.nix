@@ -10,11 +10,11 @@ with lib;
     enable = mkOption {
       type = types.bool;
       default = false;
-      description = "Master switch for all catcolab configuration.";
+      description = "Enable CatColab host mode: configure this machine as a standalone CatColab server.";
     };
     userKeys = mkOption {
       type = types.listOf types.str;
-      description = "SSH public keys to access the catcolab user and the root user.";
+      description = "SSH public keys to access the catcolab user.";
       default = [ ];
     };
   };

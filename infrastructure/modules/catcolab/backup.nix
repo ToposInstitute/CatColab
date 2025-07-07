@@ -35,7 +35,7 @@ with lib;
     enable = mkOption {
       type = types.bool;
       default = false;
-      description = "Master switch for all catcolab configuration.";
+      description = "Enable automated backups of the Catcolab database to a Backblaze bucket.";
     };
     dbBucket = mkOption {
       type = types.nullOr types.str;

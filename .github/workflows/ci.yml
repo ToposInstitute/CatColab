@@ -100,6 +100,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+
+    # Setup Nix and Nix cache, copied in deploy.yml
     - uses: nixbuild/nix-quick-install-action@v31
     - name: Restore and save Nix store
       uses: nix-community/cache-nix-action@v6

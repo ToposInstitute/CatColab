@@ -53,7 +53,7 @@ with lib;
     enable = mkOption {
       type = types.bool;
       default = false;
-      description = "Master switch for all catcolab configuration.";
+      description = "Whether to enable Catcolab services.";
     };
     backend = {
       port = mkOption {
@@ -124,10 +124,6 @@ with lib;
         User = "postgres";
         ExecStart = lib.getExe databaseSetupScript;
         EnvironmentFile = config.catcolab.environmentFilePath;
-
-        # Keep this oneshot marked as "active" after it completes, so tests can simply check `systemctl
-        # is-active` instead of inspecting an "exited" SubState.
-        RemainAfterExit = "yes";
       };
     };
 
@@ -144,7 +140,6 @@ with lib;
         Environment = ''
           PATH=${lib.makeBinPath [ catcolabPackages.automerge-doc-server ]}:$PATH
         '';
-        RemainAfterExit = "yes";
       };
     };
 

@@ -161,7 +161,7 @@
         catcolab = {
           hostname = "backend.catcolab.org";
           profiles.system = {
-            sshUser = "root";
+            sshUser = "catcolab";
             path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab;
           };
         };
@@ -203,13 +203,24 @@
                   dump_logs(machine, service)
                   raise
 
-          catcolab_vm.start()
+          def test_oneshot_service(machine, service):
+              try:
+                  machine.wait_until_succeeds(
+                      f"test $(systemctl is-active {service}) = inactive"
+                  )
+              except:
+                  dump_logs(machine, service)
+                  raise
 
-          test_service(catcolab_vm, "database-setup.service");
-          test_service(catcolab_vm, "migrations.service");
+          test_oneshot_service(catcolab_vm, "database-setup.service")
+          test_oneshot_service(catcolab_vm, "migrations.service")
+
           test_service(catcolab_vm, "automerge.service");
           test_service(catcolab_vm, "backend.service");
           test_service(catcolab_vm, "caddy.service");
+
+          catcolab_vm.start_job("backupdb.service")
+          test_oneshot_service(catcolab_vm, "backupdb.service")
         '';
       };
     };
