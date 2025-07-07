@@ -1,6 +1,6 @@
 import { destructure } from "@solid-primitives/destructure";
 import { useParams } from "@solidjs/router";
-import { For, JSXElement, Show, lazy, useContext } from "solid-js";
+import { For, type JSXElement, Show, lazy, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
@@ -60,22 +60,26 @@ export type HelpAnalysisProps = {
     theory: Theory;
     analysisId: string;
     children?: JSXElement;
-}
+};
 
 /** Documentation for an analysis of a theory. */
 function helpAnalysisByIdContent(props: HelpAnalysisProps) {
-    var content = (<></>);
-    const analysis = props.theory.modelAnalyses.filter((analysis) => analysis.id === props.analysisId)[0];
+    let content = <></>;
+    const analysis = props.theory.modelAnalyses.filter(
+        (analysis) => analysis.id === props.analysisId,
+    )[0];
     if (analysis !== undefined) {
-        var helpMdxContent = (<></>);
+        let helpMdxContent = <></>;
         if (analysis.help) {
             const mdx_component = lazy(() => import(`./analysis/${analysis.help}.mdx`));
-            helpMdxContent = <Dynamic component={mdx_component} />
+            helpMdxContent = <Dynamic component={mdx_component} />;
         }
         content = (
             <div class="help-analysis-pane">
                 <h3>{analysis.name}</h3>
-                <p><i>{analysis.description}</i></p>
+                <p>
+                    <i>{analysis.description}</i>
+                </p>
                 {props.children}
                 {helpMdxContent}
             </div>
@@ -84,4 +88,9 @@ function helpAnalysisByIdContent(props: HelpAnalysisProps) {
     return content;
 }
 
-export const HelpAnalysisById = (props: HelpAnalysisProps) => (helpAnalysisByIdContent({theory: props.theory, analysisId: props.analysisId, children: props.children}))
+export const HelpAnalysisById = (props: HelpAnalysisProps) =>
+    helpAnalysisByIdContent({
+        theory: props.theory,
+        analysisId: props.analysisId,
+        children: props.children,
+    });

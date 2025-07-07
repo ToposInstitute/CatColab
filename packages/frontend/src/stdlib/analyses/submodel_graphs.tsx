@@ -27,7 +27,7 @@ export function configureSubmodelsAnalysis(options: {
     id: string;
     name: string;
     description?: string;
-    help?: string
+    help?: string;
     findSubmodels: FindSubmodelsFn;
 }): ModelAnalysisMeta<SubmodelsAnalysisContent> {
     const { id, name, description, help, findSubmodels } = options;
