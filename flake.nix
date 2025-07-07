@@ -13,6 +13,11 @@
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    pnpmFetchDepsNixpkgs = {
+      url = "github:gepbird/nixpkgs/pnpm-fetch-deps-2";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -182,7 +187,7 @@
         };
 
         node.specialArgs = {
-          inherit rustToolchain;
+          inherit rustToolchain inputs;
         };
 
         testScript = ''

@@ -818,6 +818,22 @@
         "type": "github"
       }
     },
+    "pnpmFetchDepsNixpkgs": {
+      "locked": {
+        "lastModified": 1751821355,
+        "narHash": "sha256-cuuCuTsx9NGd9L3S22vZJBmKysO07/c9XhwSevZACzA=",
+        "owner": "gepbird",
+        "repo": "nixpkgs",
+        "rev": "912d31868f8b97308052635f04f5f2670f710a6e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "gepbird",
+        "ref": "pnpm-fetch-deps-2",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "pre-commit-hooks": {
       "inputs": {
         "flake-compat": [
@@ -924,7 +940,8 @@
         "crate2nix": "crate2nix",
         "deploy-rs": "deploy-rs",
         "fenix": "fenix",
-        "nixpkgs": "nixpkgs_8"
+        "nixpkgs": "nixpkgs_8",
+        "pnpmFetchDepsNixpkgs": "pnpmFetchDepsNixpkgs"
       }
     },
     "rust-analyzer-src": {
