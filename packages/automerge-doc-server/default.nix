@@ -53,12 +53,12 @@ pkgs.stdenv.mkDerivation {
 
   pnpmDeps = pkgsFixed.pnpm_9.fetchDeps {
     pname = name;
-    version = version;
+    version = "2";
     src = ./.;
 
     # See README.md
     # hash = pkgs.lib.fakeHash;
-    hash = "sha256-BWW3DatcRLJNSpXdzYniahFd9dUhG+xneK8qtLXPYVc=";
+    hash = "sha256-qqZCQn0QFbqVsu/TCuye6oVL3ZIYU+blHB2b43K5xPA=";
   };
 
   meta.mainProgram = name;

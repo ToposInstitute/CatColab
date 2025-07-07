@@ -58,7 +58,7 @@
     config.catcolab.automerge.port
   ];
 
-  networking.hostName = "catcolab-vm";
+  networking.hostName = "catcolab";
   time.timeZone = "America/New_York";
   system.stateVersion = "24.05";
 }

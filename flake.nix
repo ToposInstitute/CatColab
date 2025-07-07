@@ -183,7 +183,7 @@
 
         skipTypeCheck = true;
         nodes = {
-          catcolabVm = import ./infrastructure/hosts/catcolab-vm;
+          catcolab = import ./infrastructure/hosts/catcolab-vm;
         };
 
         node.specialArgs = {
@@ -212,15 +212,15 @@
                   dump_logs(machine, service)
                   raise
 
-          test_oneshot_service(catcolab_vm, "database-setup.service")
-          test_oneshot_service(catcolab_vm, "migrations.service")
+          test_oneshot_service(catcolab, "database-setup.service")
+          test_oneshot_service(catcolab, "migrations.service")
 
-          test_service(catcolab_vm, "automerge.service");
-          test_service(catcolab_vm, "backend.service");
-          test_service(catcolab_vm, "caddy.service");
+          test_service(catcolab, "automerge.service");
+          test_service(catcolab, "backend.service");
+          test_service(catcolab, "caddy.service");
 
-          catcolab_vm.start_job("backupdb.service")
-          test_oneshot_service(catcolab_vm, "backupdb.service")
+          catcolab.start_job("backupdb.service")
+          test_oneshot_service(catcolab, "backupdb.service")
         '';
       };
     };

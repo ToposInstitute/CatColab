@@ -107,3 +107,16 @@ over time, is inspired by a wide body of research in applied category theory and
 beyond. Incomplete bibliographies are in the [dev
 docs](https://next.catcolab.org/dev/bib-0001.xml) and the [core
 docs](https://next.catcolab.org/dev/rust/catlog/refs).
+
+
+## TODO: move to dev docs
+
+to run nixos integration tests locally:
+
+nix flake check --no-sandbox
+
+
+to build and run the vm:
+
+nix build .#nixosConfigurations.catcolab-vm.config.system.build.vm
+QEMU_KERNEL_PARAMS=console=ttyS0 ./result/bin/run-catcolab-vm-vm -nographic; reset;
