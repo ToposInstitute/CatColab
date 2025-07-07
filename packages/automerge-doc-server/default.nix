@@ -51,7 +51,7 @@ pkgs.stdenv.mkDerivation {
     makeWrapper ${pkgs.nodejs_23}/bin/node $out/bin/${name} --add-flags "$out/main.cjs"
   '';
 
-  pnpmDeps = pkgs.pnpm_9.fetchDeps {
+  pnpmDeps = pkgsFixed.pnpm_9.fetchDeps {
     pname = name;
     version = "2";
     src = ./.;
