@@ -1,7 +1,7 @@
 import { useNavigate } from "@solidjs/router";
 import { Match, Show, Switch } from "solid-js";
 
-import { createAnalysis } from "../analysis/document";
+import { createAnalysis, LiveAnalysisDocument } from "../analysis/document";
 import { type StableRef, useApi } from "../api";
 import {
     type LiveDiagramDocument,
@@ -29,7 +29,7 @@ import Network from "lucide-solid/icons/network";
 
 /** Hamburger menu for any model or diagram document. */
 export function DocumentMenu(props: {
-    liveDocument: LiveDiagramDocument | LiveModelDocument;
+    liveDocument: LiveDiagramDocument | LiveModelDocument | LiveAnalysisDocument;
 }) {
     const api = useApi();
     const navigate = useNavigate();

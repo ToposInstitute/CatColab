@@ -1,10 +1,20 @@
-import { useParams } from "@solidjs/router";
-import { Match, Show, Switch, createResource, useContext } from "solid-js";
+import { useNavigate, useParams } from "@solidjs/router";
+import {
+    For,
+    Match,
+    Show,
+    Switch,
+    createEffect,
+    createResource,
+    createSignal,
+    onMount,
+    useContext,
+} from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { ModelJudgment } from "catlog-wasm";
 import { useApi } from "../api";
-import { InlineInput } from "../components";
+import { IconButton, InlineInput, ResizableHandle } from "../components";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
@@ -13,17 +23,18 @@ import {
     newFormalCell,
 } from "../notebook";
 import {
+    AnyLiveDocument,
     DocumentBreadcrumbs,
     DocumentLoadingScreen,
     DocumentMenu,
-    TheoryHelpButton,
+    getLiveDocument,
     Toolbar,
 } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
 import { PermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
-import { type LiveModelDocument, getLiveModel } from "./document";
+import { type LiveModelDocument } from "./document";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
 import { TheorySelectorDialog } from "./theory_selector";
@@ -36,6 +47,15 @@ import {
 } from "./types";
 
 import "./model_editor.css";
+import { Layout } from "../page/layout";
+import { RefStub, RelatedRefStub } from "catcolab-api";
+import { DiagramPane } from "../diagram/diagram_editor";
+import { AnalysisNotebookEditor } from "../analysis/analysis_editor";
+import Resizable, { type ContextValue } from "@corvu/resizable";
+// import PanelRight from "lucide-solid/icons/panel-right";
+import PanelRightClose from "lucide-solid/icons/panel-right-close";
+import Maximize2 from "lucide-solid/icons/maximize-2";
+import ChevronsRight from "lucide-solid/icons/chevrons-right";
 
 export default function ModelPage() {
     const api = useApi();
@@ -43,35 +63,221 @@ export default function ModelPage() {
     invariant(theories, "Must provide theory library as context to model page");
 
     const params = useParams();
+    const isSidePanelOpen = () => !!params.subkind && !!params.subref;
 
     const [liveModel] = createResource(
         () => params.ref,
-        (refId) => getLiveModel(refId, api, theories),
+        (refId) => getLiveDocument(refId, api, theories, params.kind as any),
     );
+
+    const [secondaryLiveModel] = createResource(
+        () => {
+            if (!params.subkind || !params.subref) {
+                return;
+            }
+
+            return [params.subkind, params.subref] as const;
+        },
+        ([refKind, refId]) => getLiveDocument(refId, api, theories, refKind as any),
+    );
+
+    const navigate = useNavigate();
+    const closeSidePanel = () => {
+        navigate(`/${params.kind}/${params.ref}`);
+    };
+
+    const maximizeSidePanel = () => {
+        navigate(`/${params.subkind}/${params.subref}`);
+    };
+
+    const [resizableContext, setResizableContext] = createSignal<ContextValue>();
+    createEffect(() => {
+        const context = resizableContext();
+        if (isSidePanelOpen()) {
+            context?.expand(1);
+            context?.resize(1, 0.33);
+        } else {
+            context?.collapse(1);
+            context?.resize(0, 1);
+        }
+    });
 
     return (
         <Show when={liveModel()} fallback={<DocumentLoadingScreen />}>
-            {(loadedModel) => <ModelDocumentEditor liveModel={loadedModel()} />}
+            {(liveModel) => (
+                <Layout
+                    toolbarContents={
+                        <>
+                            <DocumentBreadcrumbs document={liveModel()} />
+                            <span class="filler" />
+                            <PermissionsButton
+                                permissions={liveModel().liveDoc.permissions}
+                                refId={liveModel().refId}
+                            />
+                        </>
+                    }
+                    sidebarContents={
+                        <>
+                            <DocumentMenu liveDocument={liveModel()} />
+                            <RelatedDocuments refId={params.ref!} liveDocument={liveModel()} />
+                        </>
+                    }
+                >
+                    <Resizable class="growable-container">
+                        {() => {
+                            const context = Resizable.useContext();
+                            setResizableContext(context);
+
+                            return (
+                                <>
+                                    <Resizable.Panel
+                                        class="content-panel"
+                                        collapsible
+                                        initialSize={1}
+                                        minSize={0.25}
+                                    >
+                                        <DocumentPane liveDocument={liveModel()} />
+                                    </Resizable.Panel>
+                                    <ResizableHandle hidden={!isSidePanelOpen()} />
+                                    <Show when={isSidePanelOpen()}>
+                                        <Resizable.Panel
+                                            // class="content-panel side-panel"
+                                            collapsible
+                                            minSize={0.25}
+                                            onCollapse={closeSidePanel}
+                                        >
+                                            <Show when={secondaryLiveModel()}>
+                                                {(secondaryLiveModel) => (
+                                                    <>
+                                                        <Toolbar>
+                                                            <IconButton
+                                                                onClick={closeSidePanel}
+                                                                tooltip="Close"
+                                                            >
+                                                                <ChevronsRight />
+                                                            </IconButton>
+                                                            <IconButton
+                                                                onClick={maximizeSidePanel}
+                                                                tooltip="Open in full page"
+                                                            >
+                                                                <Maximize2 />
+                                                            </IconButton>
+                                                        </Toolbar>
+                                                        <DocumentPane
+                                                            liveDocument={secondaryLiveModel()}
+                                                        />
+                                                    </>
+                                                )}
+                                            </Show>
+                                        </Resizable.Panel>
+                                    </Show>
+                                </>
+                            );
+                        }}
+                    </Resizable>
+                </Layout>
+            )}
         </Show>
     );
 }
 
-export function ModelDocumentEditor(props: {
-    liveModel: LiveModelDocument;
+function DocumentPane(props: { liveDocument: AnyLiveDocument }) {
+    return (
+        <Switch>
+            <Match when={props.liveDocument.type === "model" && props.liveDocument}>
+                {(liveModel) => <ModelPane liveModel={liveModel()} />}
+            </Match>
+            <Match when={props.liveDocument.type === "diagram" && props.liveDocument}>
+                {(liveDiagram) => <DiagramPane liveDiagram={liveDiagram()} />}
+            </Match>
+            <Match when={props.liveDocument.type === "analysis" && props.liveDocument}>
+                {(liveAnalysis) => <AnalysisNotebookEditor liveAnalysis={liveAnalysis()} />}
+            </Match>
+        </Switch>
+    );
+}
+
+// <TheoryHelpButton theory={liveModel().theory()} />
+function RelatedDocuments(props: {
+    refId: string;
+    liveDocument: AnyLiveDocument;
+}) {
+    // console.log(props.liveDocument);
+    const api = useApi();
+    const [data] = createResource(
+        () => props.refId,
+        async (refId) => {
+            const results = await api.rpc.get_related_ref_stubs.query(refId);
+
+            if (results.tag != "Ok") {
+                throw "couldn't load results";
+            }
+
+            return results.content;
+        },
+    );
+
+    return (
+        <Show when={data()} fallback={<div>Loading related items...</div>}>
+            {(tree) => (
+                <div class="related-tree">
+                    <DocumentsTreeNode
+                        node={tree()}
+                        indent={1}
+                        currentLiveDoc={props.liveDocument}
+                    />
+                </div>
+            )}
+        </Show>
+    );
+}
+
+function DocumentsTreeNode(props: {
+    node: RelatedRefStub;
+    indent: number;
+    currentLiveDoc: AnyLiveDocument;
 }) {
     return (
-        <div class="growable-container">
-            <Toolbar>
-                <DocumentMenu liveDocument={props.liveModel} />
-                <DocumentBreadcrumbs document={props.liveModel} />
-                <span class="filler" />
-                <TheoryHelpButton theory={props.liveModel.theory()} />
-                <PermissionsButton
-                    permissions={props.liveModel.liveDoc.permissions}
-                    refId={props.liveModel.refId}
-                />
-            </Toolbar>
-            <ModelPane liveModel={props.liveModel} />
+        <>
+            <DocumentsTreeLeaf
+                stub={props.node.stub}
+                indent={props.indent}
+                currentLiveDoc={props.currentLiveDoc}
+            />
+            <For each={props.node.children}>
+                {(child) => (
+                    <DocumentsTreeNode
+                        node={child}
+                        indent={props.indent + 1}
+                        currentLiveDoc={props.currentLiveDoc}
+                    />
+                )}
+            </For>
+        </>
+    );
+}
+
+function DocumentsTreeLeaf(props: {
+    stub: RefStub;
+    indent: number;
+    currentLiveDoc: AnyLiveDocument;
+}) {
+    const navigate = useNavigate();
+    const handleClick = () => {
+        navigate(
+            `/${props.currentLiveDoc.type}/${props.currentLiveDoc.refId}/${props.stub.typeName}/${props.stub.refId}`,
+        );
+    };
+
+    return (
+        <div
+            onClick={handleClick}
+            class={`related-item ${props.stub.refId === props.currentLiveDoc.refId ? "current-item" : ""}`}
+            style={{ "padding-left": `${props.indent * 16}px` }}
+        >
+            {(props.stub.refId === props.currentLiveDoc.refId
+                ? props.currentLiveDoc.liveDoc.doc.name
+                : props.stub.name) || "Untitled"}
         </div>
     );
 }
