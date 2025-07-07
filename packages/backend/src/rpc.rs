@@ -29,6 +29,7 @@ pub fn router() -> Router<AppState> {
         .handler(get_active_user_profile)
         .handler(set_active_user_profile)
         .handler(search_ref_stubs)
+        .handler(get_related_ref_stubs)
 }
 
 #[handler(mutation)]
@@ -84,6 +85,11 @@ async fn search_ref_stubs(
     query_params: doc::RefQueryParams,
 ) -> RpcResult<Paginated<doc::RefStub>> {
     doc::search_ref_stubs(ctx, query_params).await.into()
+}
+
+#[handler(query)]
+async fn get_related_ref_stubs(ctx: AppCtx, ref_id: Uuid) -> RpcResult<doc::RelatedRefStub> {
+    doc::get_related_ref_stubs(ctx, ref_id).await.into()
 }
 
 #[handler(query)]

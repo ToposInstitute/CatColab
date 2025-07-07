@@ -38,7 +38,7 @@ import {
 
 import "./model_editor.css";
 import { Layout } from "../page/layout";
-import { RefStub } from "catcolab-api";
+import { RefStub, RelatedRefStub } from "catcolab-api";
 import { DiagramPane } from "../diagram/diagram_editor";
 import { AnalysisNotebookEditor } from "../analysis/analysis_editor";
 
@@ -71,7 +71,7 @@ export default function ModelPage() {
                     sidebarContents={
                         <>
                             <DocumentMenu liveDocument={liveModel()} />
-                            <RelatedItems refId={params.ref!} liveDocument={liveModel()} />
+                            <RelatedDocuments refId={params.ref!} liveDocument={liveModel()} />
                         </>
                     }
                 >
@@ -100,7 +100,7 @@ function DocumentPane(props: { liveDocument: AnyLiveDocument }) {
 }
 
 // <TheoryHelpButton theory={liveModel().theory()} />
-function RelatedItems(props: {
+function RelatedDocuments(props: {
     refId: string;
     liveDocument: AnyLiveDocument;
 }) {
@@ -109,57 +109,76 @@ function RelatedItems(props: {
     const [data] = createResource(
         () => props.refId,
         async (refId) => {
-            const results = await api.rpc.search_ref_stubs.query({
-                ownerUsernameQuery: null,
-                refNameQuery: null,
-                includePublicDocuments: true,
-                searcherMinLevel: null,
-                limit: 100,
-                offset: 0,
-                parentRefId: refId,
-            });
+            const results = await api.rpc.get_related_ref_stubs.query(refId);
 
             if (results.tag != "Ok") {
                 throw "couldn't load results";
             }
 
-            return {
-                descendantItems: results.content.items,
-            };
+            console.log("related item ", results.content);
+            return results.content;
         },
     );
 
     return (
-        <Show when={data()} fallback={<div>loading</div>}>
-            {(data) => (
-                <>
-                    <CurrentItem liveDocument={props.liveDocument} />
-                    <For each={data().descendantItems}>
-                        {(stub) => <RelatedItem stub={stub} indent={1} />}
-                    </For>
-                </>
+        <Show when={data()} fallback={<div>Loading related items...</div>}>
+            {(tree) => (
+                <div class="related-tree">
+                    <DocumentsTreeNode
+                        node={tree()}
+                        indent={1}
+                        currentLiveDoc={props.liveDocument}
+                    />
+                </div>
             )}
         </Show>
     );
 }
 
-function CurrentItem(props: {
-    liveDocument: AnyLiveDocument;
+function DocumentsTreeNode(props: {
+    node: RelatedRefStub;
+    indent: number;
+    currentLiveDoc: AnyLiveDocument;
 }) {
-    return <div class="related-item">{props.liveDocument.liveDoc.doc.name || "Untitled"}</div>;
+    return (
+        <>
+            <DocumentsTreeLeaf
+                stub={props.node.stub}
+                indent={props.indent}
+                currentLiveDoc={props.currentLiveDoc}
+            />
+            <For each={props.node.children}>
+                {(child) => (
+                    <DocumentsTreeNode
+                        node={child}
+                        indent={props.indent + 1}
+                        currentLiveDoc={props.currentLiveDoc}
+                    />
+                )}
+            </For>
+        </>
+    );
 }
 
-function RelatedItem(props: { stub: RefStub; indent: number }) {
-    const name = props.stub.name || "Untitled";
-
+function DocumentsTreeLeaf(props: {
+    stub: RefStub;
+    indent: number;
+    currentLiveDoc: AnyLiveDocument;
+}) {
     const navigate = useNavigate();
     const handleClick = () => {
         navigate(`/${props.stub.typeName}/${props.stub.refId}`);
     };
 
     return (
-        <div onClick={handleClick} class={`related-item indent-${props.indent}`}>
-            {name}
+        <div
+            onClick={handleClick}
+            class={`related-item ${props.stub.refId === props.currentLiveDoc.refId ? "current-item" : ""}`}
+            style={{ "padding-left": `${props.indent * 16}px` }}
+        >
+            {(props.stub.refId === props.currentLiveDoc.refId
+                ? props.currentLiveDoc.liveDoc.doc.name
+                : props.stub.name) || "Untitled"}
         </div>
     );
 }

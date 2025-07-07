@@ -93,10 +93,6 @@
   cursor: pointer;
 }
 
-.indent-1 {
-  padding-left: 16px !important;
-}
-
 .related-item {
   padding: 5px 8px;
   border-radius: 6px;
@@ -104,6 +100,14 @@
 }
 
 .related-item:hover {
-  background: #e8e8e8;
+  background: #f0f0f0;
   cursor: pointer;
+}
+
+.current-item {
+  background: #f0f0f0;
+}
+
+.current-item:hover {
+  background: #e8e8e8;
 }
