@@ -47,6 +47,10 @@
         & > a {
             text-decoration: none;
         }
+
+        & > code {
+            font-weight: normal;
+        }
     }
     & dd {
         margin-left: 0;
