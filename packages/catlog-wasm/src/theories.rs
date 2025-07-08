@@ -242,6 +242,7 @@ impl ThNN2Category {
         let n = match vertex_depths_in_zero_forest.get(&x).expect("magpie") {
             DAGDepth::Seen => {
                 // TO-DO: this should just raise an error in the analysis pane
+                //        (return a JS result)
                 panic!("a degree zero loop found containing {:?}", x)
             }
             DAGDepth::Depth(d) => *d,
