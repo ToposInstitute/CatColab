@@ -12,18 +12,11 @@ declare const styles: {
     readonly plus: string;
     readonly plusCaesura: string;
     readonly scalar: string;
-<<<<<<< HEAD
     readonly plusDeg: string;
     readonly minusDeg: string;
     readonly plusDelay: string;
     readonly minusDelay: string;
     readonly plusDegDelay: string;
     readonly minusDegDelay: string;
-=======
-    readonly plusOne: string;
-    readonly minusOne: string;
-    readonly plusDelay: string;
-    readonly minusDelay: string;
->>>>>>> 3060eab (theory of ECLDs (replacing CLDs with differential degree))
 };
 export = styles;

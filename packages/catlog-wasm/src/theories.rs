@@ -148,27 +148,6 @@ impl ThSignedCategory {
                 .into(),
         ))
     }
-
-    /// Simulate the CCLFO system derived from a model.
-    #[wasm_bindgen(js_name = "cclfo")]
-    pub fn cclfo(
-        &self,
-        model: &DblModel,
-        data: CCLFOModelData,
-    ) -> Result<ODEResult, String> {
-        let model: &model::DiscreteDblModel<_, _> = (&model.0)
-            .try_into()
-            .map_err(|_| "CCLFO simulation expects a discrete double model")?;
-        Ok(ODEResult(
-            analyses::ode::CCLFOAnalysis::new(ustr("Object"))
-                .add_positive(Path::Id(ustr("Object")))
-                .add_negative(ustr("Negative").into())
-                .create_system(model, data.0)
-                .solve_with_defaults()
-                .map_err(|err| format!("{:?}", err))
-                .into(),
-        ))
-    }
 }
 
 /// The theory of delayable signed categories.
@@ -248,7 +227,6 @@ impl ThNN2Category {
         DblTheory(self.0.clone().into())
     }
 
-<<<<<<< HEAD
     // TO-DO: this could likely be moved to graph_algorithms.rs
     // Just used within cll() to find the depth of a vertex within the forest
     // of degree-zero arrows
@@ -457,32 +435,6 @@ impl ThNN2Category {
                 .into(),
         ))
     }
-<<<<<<< HEAD
-=======
-    // /// Find degree one positive feedback loops in a model.
-    // #[wasm_bindgen(js_name = "positiveOneLoops")]
-    // pub fn positive_one_loops(
-    //     &self,
-    //     model: &DblModel,
-    //     options: MotifsOptions,
-    // ) -> Result<Vec<DblModel>, String> {
-    //     let positive_one_loop = models::degree_one_positive_loop(self.0.clone());
-    //     motifs(&positive_one_loop, model, options)
-    // }
-
-    // /// Find delayed negative feedback loops in a model.
-    // #[wasm_bindgen(js_name = "delayedNegativeLoops")]
-    // pub fn delayed_negative_loops(
-    //     &self,
-    //     model: &DblModel,
-    //     options: MotifsOptions,
-    // ) -> Result<Vec<DblModel>, String> {
-    //     let delayed_negative_loop = models::delayed_negative_loop(self.0.clone());
-    //     motifs(&delayed_negative_loop, model, options)
-    // }
->>>>>>> 3060eab (theory of ECLDs (replacing CLDs with differential degree))
-=======
->>>>>>> cbd7f13 (some HORRIBLE code to test fake model migration)
 }
 
 /// The theory of nullable signed categories.
