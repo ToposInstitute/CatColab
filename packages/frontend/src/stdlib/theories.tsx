@@ -436,6 +436,7 @@ stdTheories.add(
                     id: "diagram",
                     name: "Visualization",
                     description: "Visualize the causal loop diagram",
+                    help: "visualization",
                 }),
                 analyses.configureSubmodelsAnalysis({
                     id: "negative-loops",

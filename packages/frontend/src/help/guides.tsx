@@ -10,20 +10,26 @@ export type Guide = {
 
 export const guidesList: Guide[] = [
     {
+        id: "fundamentals",
+        title: "Fundamentals of CatColab",
+        description:
+            "What do we mean by \"formal, interoperable, conceptual modeling\", and how does CatColab implement this?",
+    },
+    {
         id: "predator-prey",
-        title: "Predator–prey (causal loop diagrams)",
+        title: "Worked example: predator–prey (causal loop diagrams)",
         description:
             "Understanding a simple foxes–rabbits–lettuce ecosystem through Lotka–Volterra dynamics",
     },
     {
         id: "seirv",
-        title: "SEIRV (stock-flow diagrams)",
+        title: "Worked example: SEIRV (stock-flow diagrams)",
         description:
             "Extending a simple susceptible–exposed–infection (SIR) model to further also allow for exposed and vaccinated states, in the logic of stock-flow diagrams",
     },
     {
         id: "example-models",
-        title: "Example models",
+        title: "Ready-made models",
         description:
             "Some ready-made models in various logics, of various complexity, and from various domains",
     },
