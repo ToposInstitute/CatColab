@@ -1,37 +1,18 @@
 import invariant from "tiny-invariant";
 
-import type { JsonValue } from "catcolab-api";
-import {
-    type Api,
-    type Document,
-    type Link,
-    type LiveDoc,
-    type StableRef,
-    getLiveDoc,
-} from "../api";
+import type { Document } from "catlog-wasm";
+import { type Api, type LiveDoc, type StableRef, getLiveDoc } from "../api";
 import { type LiveDiagramDocument, getLiveDiagram } from "../diagram";
 import { type LiveModelDocument, getLiveModel } from "../model";
-import { type Notebook, newNotebook } from "../notebook";
+import { newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
-import type { Analysis } from "./types";
+import type { InterfaceToType } from "../util/types";
 
 type AnalysisType = "model" | "diagram";
 
-/** Common base type for all analysis documents. */
-export type BaseAnalysisDocument<T extends AnalysisType> = Document<"analysis"> & {
-    /** Type of document that the analysis is of. */
+type BaseAnalysisDocument<T extends AnalysisType> = Document & {
+    type: "analysis";
     analysisType: T;
-
-    /** Link to the document that the analysis is of. */
-    analysisOf: Link<"analysis-of">;
-
-    /** Content of the analysis.
-
-    Because each analysis comes with its own content type and Solid component,
-    we do not bother to enumerate all possible analyses in a tagged union.
-    This means that analysis content type is `unknown`.
-     */
-    notebook: Notebook<Analysis<unknown>>;
 };
 
 /** A document defining an analysis of a model. */
@@ -93,7 +74,7 @@ export type LiveAnalysisDocument = LiveModelAnalysisDocument | LiveDiagramAnalys
 export async function createAnalysis(api: Api, analysisType: AnalysisType, analysisOf: StableRef) {
     const init = newAnalysisDocument(analysisType, analysisOf);
 
-    const result = await api.rpc.new_ref.mutate(init as JsonValue);
+    const result = await api.rpc.new_ref.mutate(init as InterfaceToType<AnalysisDocument>);
     invariant(result.tag === "Ok", "Failed to create a new analysis");
 
     return result.content;

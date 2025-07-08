@@ -1,10 +1,9 @@
-/*! Categories: interfaces and basic constructions.
- */
+//! Categories: interfaces and basic constructions.
 
 use derive_more::From;
 use ref_cast::RefCast;
 
-use super::graph::{FinGraph, Graph};
+use super::graph::{FinGraph, Graph, ReflexiveGraph};
 use super::path::Path;
 use crate::zero::{FinSet, Set};
 
@@ -65,7 +64,7 @@ pub trait Category {
 /// The set of objects of a category.
 #[derive(From, RefCast)]
 #[repr(transparent)]
-pub struct ObSet<Cat: Category>(Cat);
+pub struct ObSet<Cat>(Cat);
 
 impl<Cat: Category> Set for ObSet<Cat> {
     type Elem = Cat::Ob;
@@ -82,7 +81,7 @@ are the identities, which can thus be identified with the objects.
  */
 #[derive(From, RefCast)]
 #[repr(transparent)]
-pub struct DiscreteCategory<S: Set>(S);
+pub struct DiscreteCategory<S>(S);
 
 impl<S: Set> Category for DiscreteCategory<S> {
     type Ob = S::Elem;
@@ -140,6 +139,12 @@ impl<Cat: Category> Graph for UnderlyingGraph<Cat> {
     }
     fn tgt(&self, f: &Self::E) -> Self::V {
         self.0.cod(f)
+    }
+}
+
+impl<Cat: Category> ReflexiveGraph for UnderlyingGraph<Cat> {
+    fn refl(&self, x: Self::V) -> Self::E {
+        self.0.id(x)
     }
 }
 

@@ -24,7 +24,9 @@ jobs:
 
       - name: Tests
         run: |
-          rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+          rustup toolchain install ${{ matrix.toolchain }}
+          rustup default ${{ matrix.toolchain }}
+
           cargo build --all-features --verbose
           cargo test --all-features --verbose
 
@@ -35,9 +37,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Install Rust toolchain from file
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
       - name: Check formatting
         run: |
-          rustup update stable && rustup default stable
           cargo fmt --check
 
   rust_lints:
@@ -47,9 +51,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Install Rust toolchain from file
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
       - name: Check clippy warnings
         run: |
-          rustup update stable && rustup default stable
           cargo clippy -- -D warnings
 
   rust_docs:
@@ -59,9 +65,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Install Rust toolchain from file
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
       - name: Check rustdoc warnings
         run: |
-          rustup update stable && rustup default stable
           RUSTDOCFLAGS='--deny warnings' cargo doc --no-deps
 
   npm_checks:

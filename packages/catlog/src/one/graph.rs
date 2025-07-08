@@ -9,6 +9,7 @@ theory.
 use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
 
 use derivative::Derivative;
+use derive_more::{Constructor, From};
 use nonempty::NonEmpty;
 use ref_cast::RefCast;
 use thiserror::Error;
@@ -43,8 +44,7 @@ pub trait Graph {
     fn tgt(&self, e: &Self::E) -> Self::V;
 }
 
-/** A graph with finitely many vertices and edges.
- */
+/// A graph with finitely many vertices and edges.
 pub trait FinGraph: Graph {
     /// Iterates over the vertices in the graph.
     fn vertices(&self) -> impl Iterator<Item = Self::V>;
@@ -99,6 +99,37 @@ pub trait FinGraph: Graph {
     }
 }
 
+/** A reflexive graph.
+
+A **reflexive graph** is a graph equipped with a distinguished self-loop on each vertex.
+ */
+pub trait ReflexiveGraph: Graph {
+    /// Gets the reflexive loop at a vertex.
+    fn refl(&self, v: Self::V) -> Self::E;
+}
+
+/// The set of vertices of a graph.
+#[derive(From, RefCast)]
+#[repr(transparent)]
+pub struct VertexSet<G>(G);
+
+impl<G: Graph> Set for VertexSet<G> {
+    type Elem = G::V;
+
+    fn contains(&self, v: &Self::Elem) -> bool {
+        self.0.has_vertex(v)
+    }
+}
+
+impl<G: FinGraph> FinSet for VertexSet<G> {
+    fn iter(&self) -> impl Iterator<Item = Self::Elem> {
+        self.0.vertices()
+    }
+    fn len(&self) -> usize {
+        self.0.vertex_count()
+    }
+}
+
 /** A graph backed by sets and mappings.
 
 Such a graph is defined in copresheaf style by two [sets](Set) and two
@@ -122,10 +153,10 @@ pub trait ColumnarGraph {
     type Edges: Set<Elem = Self::E>;
 
     /// The map assigning each edge its source vertex.
-    type Src: MutMapping<Dom = Self::E, Cod = Self::V>;
+    type Src: Mapping<Dom = Self::E, Cod = Self::V>;
 
     /// The map assigning each edge its target vertex.
-    type Tgt: MutMapping<Dom = Self::E, Cod = Self::V>;
+    type Tgt: Mapping<Dom = Self::E, Cod = Self::V>;
 
     /// Gets the set of vertices.
     fn vertex_set(&self) -> &Self::Vertices;
@@ -139,14 +170,19 @@ pub trait ColumnarGraph {
     /// Gets the mapping assignment a target vertex to each edge.
     fn tgt_map(&self) -> &Self::Tgt;
 
-    /// Gets the source of an edge, possibly undefined.
-    fn get_src(&self, e: &Self::E) -> Option<&Self::V> {
-        self.src_map().get(e)
-    }
-
-    /// Gets the target of an edge, possibly undefined.
-    fn get_tgt(&self, e: &Self::E) -> Option<&Self::V> {
-        self.tgt_map().get(e)
+    /// Iterates over failures to be a valid graph.
+    fn iter_invalid(&self) -> impl Iterator<Item = InvalidGraph<Self::E>>
+    where
+        Self::Edges: FinSet<Elem = Self::E>,
+    {
+        let (dom, cod) = (self.edge_set(), self.vertex_set());
+        let srcs = Function(self.src_map(), dom, cod)
+            .iter_invalid()
+            .map(|e| InvalidGraph::Src(e.take()));
+        let tgts = Function(self.tgt_map(), dom, cod)
+            .iter_invalid()
+            .map(|e| InvalidGraph::Tgt(e.take()));
+        srcs.chain(tgts)
     }
 }
 
@@ -156,7 +192,7 @@ Such a graph is defined in copresheaf style by two [finite sets](FinSet) and two
 [columns](Column). Implementing this trait provides a *blanket implementation*
 of [`FinGraph`].
  */
-pub trait FiniteColumnarGraph:
+pub trait ColumnarFinGraph:
     ColumnarGraph<
         Vertices: FinSet<Elem = Self::V>,
         Edges: FinSet<Elem = Self::E>,
@@ -164,17 +200,6 @@ pub trait FiniteColumnarGraph:
         Tgt: Column<Dom = Self::E, Cod = Self::V>,
     >
 {
-    /// Iterates over failures to be a valid graph.
-    fn iter_invalid(&self) -> impl Iterator<Item = InvalidGraphData<Self::E>> {
-        let (dom, cod) = (self.edge_set(), self.vertex_set());
-        let srcs = Function(self.src_map(), dom, cod)
-            .iter_invalid()
-            .map(|e| InvalidGraphData::Src(e.take()));
-        let tgts = Function(self.tgt_map(), dom, cod)
-            .iter_invalid()
-            .map(|e| InvalidGraphData::Tgt(e.take()));
-        srcs.chain(tgts)
-    }
 }
 
 /// A columnar graph with mutable columns.
@@ -191,6 +216,16 @@ pub trait MutColumnarGraph:
     /// Variant of [`tgt_map`](ColumnarGraph::tgt_map) that returns a mutable
     /// reference.
     fn tgt_map_mut(&mut self) -> &mut Self::Tgt;
+
+    /// Gets the source of an edge, possibly undefined.
+    fn get_src(&self, e: &Self::E) -> Option<&Self::V> {
+        self.src_map().get(e)
+    }
+
+    /// Gets the target of an edge, possibly undefined.
+    fn get_tgt(&self, e: &Self::E) -> Option<&Self::V> {
+        self.tgt_map().get(e)
+    }
 
     /// Sets the source of an edge.
     fn set_src(&mut self, e: Self::E, v: Self::V) -> Option<Self::V> {
@@ -214,14 +249,14 @@ impl<G: ColumnarGraph> Graph for G {
         self.edge_set().contains(e)
     }
     fn src(&self, e: &Self::E) -> Self::V {
-        self.get_src(e).cloned().expect("Source of edge should be set")
+        self.src_map().apply_to_ref(e).expect("Source of edge should be set")
     }
     fn tgt(&self, e: &Self::E) -> Self::V {
-        self.get_tgt(e).cloned().expect("Target of edge should be set")
+        self.tgt_map().apply_to_ref(e).expect("Target of edge should be set")
     }
 }
 
-impl<G: FiniteColumnarGraph> FinGraph for G {
+impl<G: ColumnarFinGraph> FinGraph for G {
     fn vertices(&self) -> impl Iterator<Item = Self::V> {
         self.vertex_set().iter()
     }
@@ -242,13 +277,13 @@ impl<G: FiniteColumnarGraph> FinGraph for G {
     }
 }
 
-/** An invalid assignment in a graph defined explicitly by data.
+/** An invalid assignment in a graph.
 
-For [columnar graphs](ColumnarGraph) and other such graphs, it is possible that
-the data is incomplete or inconsistent.
+For [columnar graphs](ColumnarGraph) and other graphs defined explicitly by
+data, it is possible that the data is incomplete or inconsistent.
 */
 #[derive(Debug, Error)]
-pub enum InvalidGraphData<E> {
+pub enum InvalidGraph<E> {
     /// Edge assigned a source that is not a vertex contained in the graph.
     #[error("Source of edge `{0}` is not a vertex in the graph")]
     Src(E),
@@ -303,7 +338,7 @@ impl MutColumnarGraph for SkelGraph {
     }
 }
 
-impl FiniteColumnarGraph for SkelGraph {}
+impl ColumnarFinGraph for SkelGraph {}
 
 impl SkelGraph {
     /// Adds a new vertex to the graph and returns it.
@@ -368,7 +403,7 @@ impl SkelGraph {
 }
 
 impl Validate for SkelGraph {
-    type ValidationError = InvalidGraphData<usize>;
+    type ValidationError = InvalidGraph<usize>;
 
     fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
         validate::wrap_errors(self.iter_invalid())
@@ -436,7 +471,7 @@ where
     }
 }
 
-impl<V, E, S> FiniteColumnarGraph for HashGraph<V, E, S>
+impl<V, E, S> ColumnarFinGraph for HashGraph<V, E, S>
 where
     V: Eq + Hash + Clone,
     E: Eq + Hash + Clone,
@@ -485,7 +520,7 @@ where
     E: Eq + Hash + Clone,
     S: BuildHasher,
 {
-    type ValidationError = InvalidGraphData<E>;
+    type ValidationError = InvalidGraph<E>;
 
     fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
         validate::wrap_errors(self.iter_invalid())
@@ -498,6 +533,9 @@ Just as a [`Mapping`] is the data of a function without specified domain or
 codomain sets, a *graph mapping* is the data of a graph homomorphism without
 specified domain or codomain graphs. Turning this around, a *graph morphism* is
 a pair of graphs with a compatible graph mapping.
+
+The data of a graph mapping is a pair of mappings, one on vertices and the other
+edges. Use a [`ColumnarGraphMapping`] to supply this data directly.
  */
 pub trait GraphMapping {
     /// Type of vertices in domain graph.
@@ -512,17 +550,37 @@ pub trait GraphMapping {
     /// Type of edges in codomain graph.
     type CodE: Eq + Clone;
 
+    /// Type of underlying mapping on vertices.
+    type VertexMap: Mapping<Dom = Self::DomV, Cod = Self::CodV>;
+
+    /// Type of underlying mapping on edges.
+    type EdgeMap: Mapping<Dom = Self::DomE, Cod = Self::CodE>;
+
+    /// Gets the underlying mapping on vertices.
+    fn vertex_map(&self) -> &Self::VertexMap;
+
+    /// Gets the underlying mapping on edges.
+    fn edge_map(&self) -> &Self::EdgeMap;
+
     /// Applies the graph mapping at a vertex.
-    fn apply_vertex(&self, v: &Self::DomV) -> Option<Self::CodV>;
+    fn apply_vertex(&self, v: Self::DomV) -> Option<Self::CodV> {
+        self.vertex_map().apply(v)
+    }
 
     /// Applies the graph mapping at an edge.
-    fn apply_edge(&self, e: &Self::DomE) -> Option<Self::CodE>;
+    fn apply_edge(&self, e: Self::DomE) -> Option<Self::CodE> {
+        self.edge_map().apply(e)
+    }
 
     /// Is the mapping defined at a vertex?
-    fn is_vertex_assigned(&self, v: &Self::DomV) -> bool;
+    fn is_vertex_assigned(&self, v: &Self::DomV) -> bool {
+        self.vertex_map().is_set(v)
+    }
 
     /// Is the mapping defined at an edge?
-    fn is_edge_assigned(&self, e: &Self::DomE) -> bool;
+    fn is_edge_assigned(&self, e: &Self::DomE) -> bool {
+        self.edge_map().is_set(e)
+    }
 }
 
 /** A homomorphism between graphs defined by a [mapping](GraphMapping).
@@ -547,7 +605,7 @@ where
     {
         let GraphMorphism(mapping, dom, cod) = *self;
         let vertex_errors = dom.vertices().filter_map(|v| {
-            if mapping.apply_vertex(&v).is_some_and(|w| cod.has_vertex(&w)) {
+            if mapping.vertex_map().apply_to_ref(&v).is_some_and(|w| cod.has_vertex(&w)) {
                 None
             } else {
                 Some(InvalidGraphMorphism::Vertex(v))
@@ -555,13 +613,13 @@ where
         });
 
         let edge_errors = dom.edges().flat_map(|e| {
-            if let Some(f) = mapping.apply_edge(&e) {
+            if let Some(f) = mapping.edge_map().apply_to_ref(&e) {
                 if cod.has_edge(&f) {
                     let mut errs = Vec::new();
-                    if mapping.apply_vertex(&dom.src(&e)).is_some_and(|v| v != cod.src(&f)) {
+                    if mapping.apply_vertex(dom.src(&e)).is_some_and(|v| v != cod.src(&f)) {
                         errs.push(InvalidGraphMorphism::Src(e.clone()))
                     }
-                    if mapping.apply_vertex(&dom.tgt(&e)).is_some_and(|v| v != cod.tgt(&f)) {
+                    if mapping.apply_vertex(dom.tgt(&e)).is_some_and(|v| v != cod.tgt(&f)) {
                         errs.push(InvalidGraphMorphism::Tgt(e.clone()))
                     }
                     return errs;
@@ -614,43 +672,39 @@ pub enum InvalidGraphMorphism<V, E> {
 That is, the data of the graph mapping is defined by two columns. The mapping
 can be between arbitrary graphs with compatible vertex and edge types.
 */
-#[derive(Clone, Default)]
-pub struct ColumnarGraphMapping<ColV, ColE> {
-    vertex_map: ColV,
-    edge_map: ColE,
+#[derive(Clone, Debug, Default, PartialEq, Eq, Constructor)]
+pub struct ColumnarGraphMapping<VMap, EMap> {
+    vertex_map: VMap,
+    edge_map: EMap,
 }
 
-impl<ColV, ColE> ColumnarGraphMapping<ColV, ColE> {
-    /// Constructs a new graph mapping from existing columns.
-    pub fn new(vertex_map: ColV, edge_map: ColE) -> Self {
-        Self {
-            vertex_map,
-            edge_map,
-        }
-    }
-}
-
-impl<ColV, ColE> GraphMapping for ColumnarGraphMapping<ColV, ColE>
+impl<VMap, EMap> GraphMapping for ColumnarGraphMapping<VMap, EMap>
 where
-    ColV: MutMapping,
-    ColE: MutMapping,
+    VMap: Mapping,
+    EMap: Mapping,
 {
-    type DomV = ColV::Dom;
-    type DomE = ColE::Dom;
-    type CodV = ColV::Cod;
-    type CodE = ColE::Cod;
+    type DomV = VMap::Dom;
+    type DomE = EMap::Dom;
+    type CodV = VMap::Cod;
+    type CodE = EMap::Cod;
+    type VertexMap = VMap;
+    type EdgeMap = EMap;
 
-    fn apply_vertex(&self, v: &Self::DomV) -> Option<Self::CodV> {
-        self.vertex_map.apply(v)
+    fn vertex_map(&self) -> &Self::VertexMap {
+        &self.vertex_map
     }
-    fn apply_edge(&self, e: &Self::DomE) -> Option<Self::CodE> {
-        self.edge_map.apply(e)
+    fn edge_map(&self) -> &Self::EdgeMap {
+        &self.edge_map
     }
-    fn is_vertex_assigned(&self, v: &Self::DomV) -> bool {
-        self.vertex_map.is_set(v)
-    }
-    fn is_edge_assigned(&self, e: &Self::DomE) -> bool {
-        self.edge_map.is_set(e)
+}
+
+/// A graph mapping between skeletal finite graphs, backed by vectors.
+pub type SkelGraphMapping = ColumnarGraphMapping<VecColumn<usize>, VecColumn<usize>>;
+
+impl SkelGraphMapping {
+    /// Constructs a graph mapping from a pair of vectors.
+    pub fn from_vec(vertex_map: Vec<usize>, edge_map: Vec<usize>) -> Self {
+        Self::new(VecColumn::new(vertex_map), VecColumn::new(edge_map))
     }
 }
 
@@ -701,6 +755,13 @@ mod tests {
     }
 
     #[test]
+    fn vertex_set() {
+        let set: VertexSet<_> = SkelGraph::triangle().into();
+        assert!(set.contains(&2));
+        assert_eq!(set.len(), 3);
+    }
+
+    #[test]
     fn validate_columnar_graph() {
         let mut g = SkelGraph::triangle();
         assert!(g.validate().is_ok());
@@ -714,12 +775,10 @@ mod tests {
     fn validate_graph_morphism() {
         let g = SkelGraph::path(3);
         let h = SkelGraph::path(4);
-        let f =
-            ColumnarGraphMapping::new(VecColumn::new(vec![1, 2, 3]), VecColumn::new(vec![1, 2]));
+        let f = SkelGraphMapping::from_vec(vec![1, 2, 3], vec![1, 2]);
         assert!(GraphMorphism(&f, &g, &h).validate().is_ok());
 
-        let f =
-            ColumnarGraphMapping::new(VecColumn::new(vec![1, 2, 3]), VecColumn::new(vec![2, 1])); // Not a homomorphism.
+        let f = SkelGraphMapping::from_vec(vec![1, 2, 3], vec![2, 1]); // Not a homomorphism.
         assert!(GraphMorphism(&f, &g, &h).validate().is_err());
     }
 }

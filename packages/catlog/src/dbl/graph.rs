@@ -11,8 +11,9 @@ except that the top boundary is a directed path of proedges rather than a single
 proedge.
  */
 
-use derive_more::derive::From;
+use derive_more::From;
 use ref_cast::RefCast;
+use thiserror::Error;
 
 use crate::one::{Graph, path::Path};
 
@@ -130,4 +131,44 @@ impl<VDG: VDblGraph> Graph for ProedgeGraph<VDG> {
     fn tgt(&self, e: &Self::E) -> Self::V {
         self.0.tgt(e)
     }
+}
+
+/// An invalid assignment in a virtual double graph.
+#[derive(Debug, Error)]
+pub enum InvalidVDblGraph<E, ProE, Sq> {
+    /// Edge with an invalid domain.
+    #[error("Domain of edge `{0}` is not a vertex in the double graph")]
+    Dom(E),
+
+    /// Edge with an invalid codomain.
+    #[error("Codomain of edge `{0}` is not a vertex in the double graph")]
+    Cod(E),
+
+    /// Proedge with an invalid source.
+    #[error("Source of proedge `{0}` is not a vertex in the double graph")]
+    Src(ProE),
+
+    /// Proedge with an invalid target.
+    #[error("Target of proedge `{0}` is not a vertex in the double graph")]
+    Tgt(ProE),
+
+    /// Square with an invalid domain.
+    #[error("Domain of square `{0}` is not a proedge in the double graph")]
+    SquareDom(Sq),
+
+    /// Square with an invalid codomain.
+    #[error("Codomain of square `{0}` is not a proedge in the double graph")]
+    SquareCod(Sq),
+
+    /// Square with an invalid source.
+    #[error("Source of square `{0}` is not an edge in the double graph")]
+    SquareSrc(Sq),
+
+    /// Square with an invalid target.
+    #[error("Target of cell `{0}` is not an edge in the double graph")]
+    SquareTgt(Sq),
+
+    /// Square with incompatible sides.
+    #[error("Square `{0}` has sides with incompatible endpoints")]
+    NotSquare(Sq),
 }

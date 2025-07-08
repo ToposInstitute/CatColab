@@ -3,6 +3,7 @@ import { A, useParams } from "@solidjs/router";
 import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
+import type { DiagramJudgment } from "catlog-wasm";
 import { useApi } from "../api";
 import { InlineInput } from "../components";
 import { LiveModelContext } from "../model";
@@ -13,7 +14,13 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
-import { DocumentLoadingScreen, DocumentMenu, TheoryHelpButton, Toolbar } from "../page";
+import {
+    DocumentBreadcrumbs,
+    DocumentLoadingScreen,
+    DocumentMenu,
+    TheoryHelpButton,
+    Toolbar,
+} from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { InstanceTypeMeta } from "../theory";
 import { PermissionsButton } from "../user";
@@ -22,7 +29,6 @@ import { type LiveDiagramDocument, getLiveDiagram } from "./document";
 import { DiagramMorphismCellEditor } from "./morphism_cell_editor";
 import { DiagramObjectCellEditor } from "./object_cell_editor";
 import {
-    type DiagramJudgment,
     type DiagramMorphismDecl,
     type DiagramObjectDecl,
     duplicateDiagramJudgment,
@@ -58,6 +64,7 @@ export function DiagramDocumentEditor(props: {
         <div class="growable-container">
             <Toolbar>
                 <DocumentMenu liveDocument={props.liveDiagram} />
+                <DocumentBreadcrumbs document={props.liveDiagram} />
                 <span class="filler" />
                 <TheoryHelpButton theory={props.liveDiagram.liveModel.theory()} />
                 <PermissionsButton

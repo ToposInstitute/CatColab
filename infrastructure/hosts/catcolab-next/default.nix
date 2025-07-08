@@ -12,8 +12,27 @@ in
   imports = [
     ../../modules/backend.nix
     ../../modules/host.nix
+    ../../modules/backup.nix
     "${inputs.nixpkgs}/nixos/modules/virtualisation/amazon-image.nix"
   ];
+
+  age.secrets = {
+    "rclone.conf" = {
+      file = "${inputs.self}/infrastructure/secrets/rclone.conf.next.age";
+      mode = "400";
+      owner = "catcolab";
+    };
+    backendSecretsForCatcolab = {
+      file = "${inputs.self}/infrastructure/secrets/.env.next.age";
+      name = "backend-secrets-for-catcolab.env";
+      owner = "catcolab";
+    };
+    backendSecretsForPostgres = {
+      file = "${inputs.self}/infrastructure/secrets/.env.next.age";
+      name = "backend-secrets-for-postgres.env";
+      owner = "postgres";
+    };
+  };
 
   catcolab = {
     backend = {
@@ -21,6 +40,9 @@ in
       automergePort = "8010";
       backendHostname = "backend-next.catcolab.org";
       automergeHostname = "automerge-next.catcolab.org";
+    };
+    backup = {
+      backupdbBucket = "catcolab-next";
     };
     host = {
       userKeys = [

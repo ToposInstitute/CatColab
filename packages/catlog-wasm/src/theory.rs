@@ -9,7 +9,7 @@ use derive_more::From;
 use ustr::Ustr;
 
 use serde::{Deserialize, Serialize};
-use tsify_next::Tsify;
+use tsify::Tsify;
 use wasm_bindgen::prelude::*;
 
 use catlog::dbl::theory;
@@ -73,7 +73,7 @@ impl TryFrom<ObType> for Ustr {
     fn try_from(ob_type: ObType) -> Result<Self, Self::Error> {
         match ob_type {
             ObType::Basic(name) => Ok(name),
-            _ => Err(format!("Cannot cast object type for discrete double theory: {:#?}", ob_type)),
+            _ => Err(format!("Cannot cast object type for discrete double theory: {ob_type:#?}")),
         }
     }
 }

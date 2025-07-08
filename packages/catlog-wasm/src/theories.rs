@@ -123,7 +123,28 @@ impl ThSignedCategory {
                 .add_negative(ustr("Negative").into())
                 .create_system(model, data.0)
                 .solve_with_defaults()
-                .map_err(|err| format!("{:?}", err))
+                .map_err(|err| format!("{err:?}"))
+                .into(),
+        ))
+    }
+
+    /// Simulate the linear ODE system derived from a model.
+    #[wasm_bindgen(js_name = "linearODE")]
+    pub fn linear_ode(
+        &self,
+        model: &DblModel,
+        data: LinearODEModelData,
+    ) -> Result<ODEResult, String> {
+        let model: &model::DiscreteDblModel<_, _> = (&model.0)
+            .try_into()
+            .map_err(|_| "Linear ODE simulation expects a discrete double model")?;
+        Ok(ODEResult(
+            analyses::ode::LinearODEAnalysis::new(ustr("Object"))
+                .add_positive(Path::Id(ustr("Object")))
+                .add_negative(ustr("Negative").into())
+                .create_system(model, data.0)
+                .solve_with_defaults()
+                .map_err(|err| format!("{err:?}"))
                 .into(),
         ))
     }
@@ -505,7 +526,7 @@ impl ThCategoryLinks {
             analyses::ode::StockFlowMassActionAnalysis::default()
                 .create_numerical_system(model, data.0)
                 .solve_with_defaults()
-                .map_err(|err| format!("{:?}", err))
+                .map_err(|err| format!("{err:?}"))
                 .into(),
         ))
     }

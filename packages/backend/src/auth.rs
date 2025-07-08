@@ -281,7 +281,7 @@ pub fn authenticate_from_request<T>(
 
             firebase_auth
                 .verify(bearer)
-                .map_err(|err| format!("Failed to verify token: {}", err))
+                .map_err(|err| format!("Failed to verify token: {err}"))
         })
         .transpose()
 }

@@ -51,8 +51,7 @@ function recurseComputedStyleToInlineStyle(element: StylableElement, cloned: Sty
 
     const computedStyle = getComputedStyle(element);
     for (const property of computedStyle) {
-        // biome-ignore lint/suspicious/noExplicitAny: types are busted?
-        cloned.style[property as any] = computedStyle.getPropertyValue(property);
+        cloned.style.setProperty(property, computedStyle.getPropertyValue(property));
     }
 }
 
