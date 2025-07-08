@@ -276,9 +276,6 @@ stdTheories.add(
                         return thSignedCategory.negativeLoops(model, options);
                     },
                 }),
-                analyses.configureLinearODE({
-                    simulate: (model, data) => thSignedCategory.linearODE(model, data),
-                }),
                 analyses.configureLotkaVolterra({
                     simulate(model, data) {
                         return thSignedCategory.lotkaVolterra(model, data);
@@ -356,11 +353,174 @@ stdTheories.add(
                         return thSignedCategory.positiveLoops(model, options);
                     },
                 }),
-                analyses.configureLinearODE({
-                    simulate: (model, data) => thSignedCategory.linearODE(model, data),
+                analyses.configureCCLFO({
+                    simulate: (model, data) => thSignedCategory.cclfo(model, data),
                 }),
                 analyses.configureLotkaVolterra({
                     simulate: (model, data) => thSignedCategory.lotkaVolterra(model, data),
+                }),
+            ],
+        });
+    },
+);
+
+stdTheories.add(
+    {
+        id: "e-causal-loops",
+        name: "Extended causal loop diagram",
+        description: "Causal relationships: positive or negative, with differential degree and delay",
+        group: "System Dynamics",
+        help: "e-causal-loops",
+    },
+    (meta) => {
+        const thNN2Category = new catlog.ThNN2Category();
+
+        return new Theory({
+            ...meta,
+            theory: thNN2Category.theory(),
+            onlyFreeModels: true,
+            modelTypes: [
+                {
+                    tag: "ObType",
+                    obType: { tag: "Basic", content: "Object" },
+                    name: "Variable",
+                    shortcut: ["V"],
+                    description: "Variable quantity",
+                },
+                {
+                    tag: "MorType",
+                    morType: {
+                        tag: "Hom",
+                        content: { tag: "Basic", content: "Object" },
+                    },
+                    name: "Positive degree 0",
+                    shortcut: ["P"],
+                    description: "Positive influence",
+                    arrowStyle: "plus",
+                    preferUnnamed: true,
+                },
+                {
+                    tag: "MorType",
+                    morType: { tag: "Basic", content: "Negative" },
+                    name: "Negative degree 0",
+                    shortcut: ["N"],
+                    description: "Negative influence",
+                    arrowStyle: "minus",
+                    preferUnnamed: true,
+                },
+                {
+                    tag: "MorType",
+                    morType: { tag: "Basic", content: "Degree" },
+                    name: "Positive degree 1",
+                    description: "Positive influence on the derivative",
+                    arrowStyle: "plusDeg",
+                    preferUnnamed: true,
+                },
+                {
+                    tag: "MorType",
+                    morType: { tag: "Composite", content:
+                               [
+                                   { tag: "Basic", content: "Negative"},
+                                   { tag: "Basic", content: "Degree"},
+                               ] },
+                    name: "Negative degree 1",
+                    description: "Negative influence on the derivative",
+                    arrowStyle: "minusDeg",
+                    preferUnnamed: true,
+                },
+                {
+                    tag: "MorType",
+                    morType: { tag: "Composite", content:
+                               [
+                                   { tag: "Basic", content: "Degree"},
+                                   { tag: "Basic", content: "Degree"},
+                               ] },
+                    name: "Positive degree 2",
+                    description: "Positive influence on the SECOND derivative 📈",
+                    arrowStyle: "plusDeg",
+                    preferUnnamed: true,
+                },
+                {
+                    tag: "MorType",
+                    morType: { tag: "Composite", content:
+                               [
+                                   { tag: "Basic", content: "Negative"},
+                                   { tag: "Basic", content: "Degree"},
+                                   { tag: "Basic", content: "Degree"},
+                               ] },
+                    name: "Negative degree 2",
+                    description: "Negative influence on the SECOND derivative 📉",
+                    arrowStyle: "minusDeg",
+                    preferUnnamed: true,
+                },
+                {
+                    tag: "MorType",
+                    morType: { tag: "Composite", content:
+                               [
+                                   { tag: "Basic", content: "Degree"},
+                                   { tag: "Basic", content: "Degree"},
+                                   { tag: "Basic", content: "Degree"},
+                                   { tag: "Basic", content: "Degree"},
+                               ] },
+                    name: "Positive degree 4",
+                    description: "Positive influence on the FOURTH derivative 🤯🤯",
+                    arrowStyle: "plusDeg",
+                    preferUnnamed: true,
+                },
+                // {
+                //     tag: "MorType",
+                //     morType: { tag: "Basic", content: "Delay" },
+                //     name: "Positive degree 0 with delay",
+                //     description: "Delayed positive influence",
+                //     arrowStyle: "plusDelay",
+                //     preferUnnamed: true,
+                // },
+                // {
+                //     tag: "MorType",
+                //     morType: { tag: "Composite", content:
+                //                [
+                //                    { tag: "Basic", content: "Negative"},
+                //                    { tag: "Basic", content: "Delay"},
+                //                ] },
+                //     name: "Negative degree 0 with delay",
+                //     description: "Delayed negative influence",
+                //     arrowStyle: "minusDelay",
+                //     preferUnnamed: true,
+                // },
+                // {
+                //     tag: "MorType",
+                //     morType: { tag: "Composite", content:
+                //                [
+                //                    { tag: "Basic", content: "Degree"},
+                //                    { tag: "Basic", content: "Delay"},
+                //                ] },
+                //     name: "Positive degree 1 with delay",
+                //     description: "Delayed positive influence on the derivative",
+                //     arrowStyle: "plusDegDelay",
+                //     preferUnnamed: true,
+                // },
+                // {
+                //     tag: "MorType",
+                //     morType: { tag: "Composite", content:
+                //                [
+                //                    { tag: "Basic", content: "Negative"},
+                //                    { tag: "Basic", content: "Degree"},
+                //                    { tag: "Basic", content: "Delay"},
+                //                ] },
+                //     name: "Negative degree 1 with delay",
+                //     description: "Delayed negative influence on the derivative",
+                //     arrowStyle: "minusDegDelay",
+                //     preferUnnamed: true,
+                // },
+            ],
+            modelAnalyses: [
+                analyses.configureModelGraph({
+                    id: "diagram",
+                    name: "Visualization",
+                    description: "Visualize the extended causal loop diagram",
+                }),
+                analyses.configureCCL({
+                    simulate: (model, data) => thNN2Category.ccl(model, data),
                 }),
             ],
         });

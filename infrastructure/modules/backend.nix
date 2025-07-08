@@ -1,8 +1,8 @@
 {
   lib,
   pkgs,
+  inputs,
   config,
-  rustToolchain,
   ...
 }:
 let
@@ -33,45 +33,13 @@ let
     #!/usr/bin/env bash
     set -ex
 
-    # Transition migrations from sqlx to sqlx_migrator
-    # Check if we have run sqlx_migrator before, if we have not, mark all migrations as having been applied
-    # If sqlx_migrator has not been run before then the _sqlx_migrations table will exists, but not the
-    # _sqlx_migrator_migrations table.
-    #
-    # We can get rid of this block after all DBs have been updated with sqlx_migrator, new DBs will never
-    # have have had _sqlx_migrations so there will be no need to transition them. 
-    first_run=$(
-      ${pkgs.postgresql}/bin/psql -d catcolab -qAt -c "
-        SELECT EXISTS (
-          SELECT 1
-            FROM information_schema.tables
-           WHERE table_schema = 'public'
-             AND table_name   = '_sqlx_migrations'
-        )
-        AND NOT EXISTS (
-          SELECT 1
-            FROM information_schema.tables
-           WHERE table_schema = 'public'
-             AND table_name   = '_sqlx_migrator_migrations'
-        );
-      "
-    )
-
-    if [ "$first_run" = "t" ]; then
-        echo "First time running sqlx migrations, applying fake migrations"
-        ${lib.getExe catcolabPackages.migrator} apply --faken
-    fi
-
-    ${lib.getExe catcolabPackages.migrator} apply
+    # the migrations directory is copied into the output of backend
+    cd ${catcolabPackages.backend}
+    ${lib.getExe pkgs.sqlx-cli} migrate run
   '';
 
   catcolabPackages = {
     backend = pkgs.lib.callPackageWith pkgs ../../packages/backend/default.nix {
-      inherit rustToolchain;
-    };
-
-    migrator = pkgs.lib.callPackageWith pkgs ../../packages/migrator/default.nix {
-      inherit rustToolchain;
     };
 
     automerge-doc-server =
@@ -103,6 +71,20 @@ with lib;
   };
 
   config = {
+    age.secrets = {
+      backendSecretsForPostgres = {
+        file = "${inputs.self}/infrastructure/secrets/.env.next.age";
+        name = "backend-secrets-for-postgres.env";
+        owner = "postgres";
+      };
+
+      backendSecretsForCatcolab = {
+        file = "${inputs.self}/infrastructure/secrets/.env.next.age";
+        name = "backend-secrets-for-catcolab.env";
+        owner = "catcolab";
+      };
+    };
+
     services.postgresql = {
       enable = true;
     };
@@ -131,9 +113,6 @@ with lib;
         Type = "oneshot";
         ExecStart = lib.getExe databaseMigrationScript;
         EnvironmentFile = config.age.secrets.backendSecretsForCatcolab.path;
-        Environment = ''
-          PATH=${lib.makeBinPath [ catcolabPackages.automerge-doc-server ]}:$PATH
-        '';
       };
     };
 
@@ -165,9 +144,8 @@ with lib;
       };
 
       serviceConfig = {
-        EnvironmentFile = config.age.secrets.backendSecretsForCatcolab.path;
         User = "catcolab";
-        ExecStart = "${lib.getExe catcolabPackages.automerge-doc-server}";
+        ExecStart = "${lib.getExe pkgs.nodejs_23} ${catcolabPackages.automerge-doc-server}/main.cjs";
         Type = "simple";
         Restart = "on-failure";
       };

@@ -5,7 +5,7 @@ use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
 use std::marker::PhantomData;
 
 use derivative::Derivative;
-use derive_more::{Constructor, From};
+use derive_more::From;
 use nonempty::NonEmpty;
 use thiserror::Error;
 use ustr::{IdentityHasher, Ustr};
@@ -18,17 +18,10 @@ use crate::validate::{self, Validate};
 A mapping sends values of type [`Dom`](Self::Dom) to values of type
 [`Cod`](Self::Cod). Unlike a function, a mapping need not be defined on its
 whole domain. A mapping is thus more like a partial function, but it does not
-even know its intended domain of definition, nor the codomain to which its image
-should restrict. If needed, that information should be provided separately as
-[sets](Set). Neither domain nor codomain are assumed to be finite.
+actually know its intended domain of definition. If needed, that information
+should be provided separately, preferably as a [`Set`].
 
-This trait encompasses mappings that compute their values on the fly and
-mappings that own their data, say in the form of a vector or hash map. Achieving
-this flexiblity in Rust is delicate due to the sharp distinction between values
-and references, but as a user, deciding which method to call is simple enough.
-To evaluate at a point that you own and can consume, call
-[`apply`](Self::apply). To evaluate at a point that you have only by reference
-or can't consume, call [`apply_to_ref`](Self::apply_to_ref).
+Neither the domain nor the codomain of the mapping are assumed to be finite.
  */
 pub trait Mapping {
     /// Type of elements in domain of mapping.
@@ -38,25 +31,16 @@ pub trait Mapping {
     type Cod: Eq + Clone;
 
     /// Applies the mapping at a point possibly in the domain.
-    fn apply(&self, x: Self::Dom) -> Option<Self::Cod>;
-
-    /** Applies the mapping at a *reference* to a point possibly in the domain.
-
-    The default implementation just calls [`apply`](Self::apply) after cloning.
-    Mappings that own their data should give a more efficient implementation.
-     */
-    fn apply_to_ref(&self, x: &Self::Dom) -> Option<Self::Cod> {
-        self.apply(x.clone())
-    }
+    fn apply(&self, x: &Self::Dom) -> Option<Self::Cod>;
 
     /** Is the mapping defined at a point?
 
-    The default implementation just checks whether
-    [`apply_to_ref`](Self::apply_to_ref) returns something, but a more efficient
-    implementation that avoids allocating should usually be given.
+    The default implementation checks whether [`apply`](Self::apply) returns
+    something. Often this method can be given a more efficient implementation
+    that avoids allocating.
     */
     fn is_set(&self, x: &Self::Dom) -> bool {
-        self.apply_to_ref(x).is_some()
+        self.apply(x).is_some()
     }
 }
 
@@ -97,17 +81,17 @@ pub trait MutMapping: Mapping {
     }
 }
 
-/** A [mapping](Mapping) with finite support.
+/** A mapping with finite support.
 
 While its domain and codomain can be infinite, such a mapping is defined at only
 finitely many values in the domain. It is thus a "column of data", as found in
 data tables and relational databases.
  */
 pub trait Column: Mapping {
-    /// Iterates over the column's pairs of elements.
+    /// Iterates over pairs stored by the column.
     fn iter(&self) -> impl Iterator<Item = (Self::Dom, &Self::Cod)>;
 
-    /// Iterates over the column's values.
+    /// Iterates over values stored by the column.
     fn values(&self) -> impl Iterator<Item = &Self::Cod> {
         self.iter().map(|(_, y)| y)
     }
@@ -115,8 +99,7 @@ pub trait Column: Mapping {
     /** Computes the preimage of the mapping at a value in the codomain.
 
     Depending on whether the implementation maintains a reverse index for the
-    mapping, this method will take time linear in the size of the preimage or
-    the size of the whole column.
+    mapping, this method can be cheap or expensive.
     */
     fn preimage(&self, y: &Self::Cod) -> impl Iterator<Item = Self::Dom> {
         self.iter().filter(|&(_, z)| *z == *y).map(|(x, _)| x)
@@ -125,31 +108,6 @@ pub trait Column: Mapping {
     /// Is the mapping not defined anywhere?
     fn is_empty(&self) -> bool {
         self.iter().next().is_none()
-    }
-}
-
-/** A [mutable mapping](MutMapping) with finite support.
-
-Being a finite column that owns its data, a mutable column can be converted
-to/from an iterator of pairs.
- */
-pub trait MutColumn:
-    MutMapping
-    + Column
-    + IntoIterator<Item = (Self::Dom, Self::Cod)>
-    + FromIterator<(Self::Dom, Self::Cod)>
-{
-    /** Post-composes the column with another mapping.
-
-    This is composition of partial functions. Note that the codomain element
-    type must stay the same, which is the only thing that makes sense at this
-    level of type specifity.
-     */
-    fn postcompose<F>(self, f: &F) -> Self
-    where
-        F: Mapping<Dom = Self::Cod, Cod = Self::Cod>,
-    {
-        self.into_iter().filter_map(|(x, y)| f.apply(y).map(|z| (x, z))).collect()
     }
 }
 
@@ -171,7 +129,7 @@ where
         &self,
     ) -> impl Iterator<Item = InvalidFunction<Map::Dom>> + 'a + use<'a, Map, Dom, Cod> {
         let Function(mapping, dom, cod) = self;
-        dom.iter().filter_map(|x| match mapping.apply_to_ref(&x) {
+        dom.iter().filter_map(|x| match mapping.apply(&x) {
             Some(y) => {
                 if cod.contains(&y) {
                     None
@@ -217,18 +175,13 @@ impl<T> InvalidFunction<T> {
     }
 }
 
-/// An unindexed column backed by a vector.
+/** An unindexed column backed by a vector.
+ */
 #[derive(Clone, Debug, Derivative)]
 #[derivative(Default(bound = ""))]
 #[derivative(PartialEq(bound = "T: PartialEq"))]
 #[derivative(Eq(bound = "T: Eq"))]
 pub struct VecColumn<T>(Vec<Option<T>>);
-
-/// Iterator over a [vector column](VecColumn).
-pub struct VecColumnIter<T> {
-    vec: Vec<Option<T>>,
-    index: usize,
-}
 
 impl<T> VecColumn<T> {
     /// Creates a vector-backed column by consuming an existing vector.
@@ -237,57 +190,12 @@ impl<T> VecColumn<T> {
     }
 }
 
-impl<T> Iterator for VecColumnIter<T> {
-    type Item = (usize, T);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let n = self.vec.len();
-        while self.index < n && self.vec[self.index].is_none() {
-            self.index += 1;
-        }
-        if self.index < n {
-            Some((self.index, self.vec[self.index].take().unwrap()))
-        } else {
-            None
-        }
-    }
-}
-
-impl<T> IntoIterator for VecColumn<T> {
-    type Item = (usize, T);
-    type IntoIter = VecColumnIter<T>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        VecColumnIter {
-            vec: self.0,
-            index: 0,
-        }
-    }
-}
-
-impl<T> FromIterator<(usize, T)> for VecColumn<T> {
-    fn from_iter<Iter: IntoIterator<Item = (usize, T)>>(iter: Iter) -> Self {
-        let mut vec = Vec::new();
-        for (i, y) in iter {
-            if i >= vec.len() {
-                vec.resize_with(i + 1, Default::default);
-            }
-            vec[i] = Some(y);
-        }
-        VecColumn(vec)
-    }
-}
-
 impl<T: Eq + Clone> Mapping for VecColumn<T> {
     type Dom = usize;
     type Cod = T;
 
-    fn apply(&self, i: usize) -> Option<T> {
-        self.0.get(i).cloned().flatten()
-    }
-
-    fn apply_to_ref(&self, i: &usize) -> Option<T> {
-        self.apply(*i)
+    fn apply(&self, i: &usize) -> Option<T> {
+        self.get(i).cloned()
     }
 
     fn is_set(&self, i: &usize) -> bool {
@@ -308,7 +216,7 @@ impl<T: Eq + Clone> MutMapping for VecColumn<T> {
         if i >= self.0.len() {
             self.0.resize_with(i + 1, Default::default);
         }
-        self.0[i].replace(y)
+        std::mem::replace(&mut self.0[i], Some(y))
     }
 
     fn unset(&mut self, i: &usize) -> Option<T> {
@@ -335,10 +243,9 @@ impl<T: Eq + Clone> Column for VecColumn<T> {
     }
 }
 
-impl<T: Eq + Clone> MutColumn for VecColumn<T> {}
-
-/// An unindexed column backed by a hash map.
-#[derive(Clone, Debug, Derivative, Constructor, From)]
+/** An unindexed column backed by a hash map.
+ */
+#[derive(Clone, From, Debug, Derivative)]
 #[derivative(Default(bound = "S: Default"))]
 #[derivative(PartialEq(bound = "K: Eq + Hash, V: PartialEq, S: BuildHasher"))]
 #[derivative(Eq(bound = "K: Eq + Hash, V: Eq, S: BuildHasher"))]
@@ -346,25 +253,6 @@ pub struct HashColumn<K, V, S = RandomState>(HashMap<K, V, S>);
 
 /// An unindexed column with keys of type `Ustr`.
 pub type UstrColumn<V> = HashColumn<Ustr, V, BuildHasherDefault<IdentityHasher>>;
-
-impl<K, V, S> IntoIterator for HashColumn<K, V, S> {
-    type Item = (K, V);
-    type IntoIter = std::collections::hash_map::IntoIter<K, V>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter()
-    }
-}
-
-impl<K, V, S> FromIterator<(K, V)> for HashColumn<K, V, S>
-where
-    K: Eq + Hash,
-    S: BuildHasher + Default,
-{
-    fn from_iter<Iter: IntoIterator<Item = (K, V)>>(iter: Iter) -> Self {
-        HashColumn(HashMap::from_iter(iter))
-    }
-}
 
 impl<K, V, S> Mapping for HashColumn<K, V, S>
 where
@@ -375,10 +263,7 @@ where
     type Dom = K;
     type Cod = V;
 
-    fn apply(&self, x: K) -> Option<V> {
-        self.apply_to_ref(&x)
-    }
-    fn apply_to_ref(&self, x: &K) -> Option<V> {
+    fn apply(&self, x: &K) -> Option<V> {
         self.0.get(x).cloned()
     }
     fn is_set(&self, x: &K) -> bool {
@@ -422,14 +307,6 @@ where
     }
 }
 
-impl<K, V, S> MutColumn for HashColumn<K, V, S>
-where
-    K: Eq + Hash + Clone,
-    V: Eq + Clone,
-    S: BuildHasher + Default,
-{
-}
-
 /** An index in a column.
 
 An index is a cache of preimages of a mapping, like an index in a relational
@@ -453,8 +330,9 @@ trait Index {
     fn remove(&mut self, x: &Self::Dom, y: &Self::Cod);
 }
 
-/// An index implemented as a vector of vectors.
-#[derive(Clone, Debug, Derivative)]
+/** An index implemented as a vector of vectors.
+ */
+#[derive(Clone, Derivative)]
 #[derivative(Default(bound = ""))]
 struct VecIndex<T>(Vec<Vec<T>>);
 
@@ -485,8 +363,9 @@ impl<T: Eq + Clone> Index for VecIndex<T> {
     }
 }
 
-/// An index implemented by a hash map into vectors.
-#[derive(Clone, Debug, Derivative)]
+/** An index implemented by a hash map into vectors.
+ */
+#[derive(Clone, Derivative, Debug)]
 #[derivative(Default(bound = "S: Default"))]
 struct HashIndex<X, Y, S = RandomState>(HashMap<Y, Vec<X>, S>);
 
@@ -555,34 +434,6 @@ where
     }
 }
 
-impl<Dom, Cod, Col, Ind> IntoIterator for IndexedColumn<Dom, Cod, Col, Ind>
-where
-    Col: IntoIterator<Item = (Dom, Cod)>,
-{
-    type Item = (Dom, Cod);
-    type IntoIter = Col::IntoIter;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.mapping.into_iter()
-    }
-}
-
-impl<Dom, Cod, Col, Ind> FromIterator<(Dom, Cod)> for IndexedColumn<Dom, Cod, Col, Ind>
-where
-    Dom: Eq + Clone,
-    Cod: Eq + Clone,
-    Col: Default + MutMapping<Dom = Dom, Cod = Cod>,
-    Ind: Default + Index<Dom = Dom, Cod = Cod>,
-{
-    fn from_iter<Iter: IntoIterator<Item = (Dom, Cod)>>(iter: Iter) -> Self {
-        let mut col: Self = Default::default();
-        for (x, y) in iter {
-            col.set(x, y);
-        }
-        col
-    }
-}
-
 impl<Dom, Cod, Col, Ind> Mapping for IndexedColumn<Dom, Cod, Col, Ind>
 where
     Dom: Eq + Clone,
@@ -592,11 +443,8 @@ where
     type Dom = Dom;
     type Cod = Cod;
 
-    fn apply(&self, x: Dom) -> Option<Cod> {
+    fn apply(&self, x: &Dom) -> Option<Cod> {
         self.mapping.apply(x)
-    }
-    fn apply_to_ref(&self, x: &Dom) -> Option<Cod> {
-        self.mapping.apply_to_ref(x)
     }
     fn is_set(&self, x: &Dom) -> bool {
         self.mapping.is_set(x)
@@ -656,7 +504,7 @@ where
 The column has the natural numbers (`usize`) as both its domain and codomain,
 making it suitable for use with skeletal finite sets.
 */
-#[derive(Clone, Debug, Derivative, PartialEq, Eq)]
+#[derive(Clone, Derivative, PartialEq, Eq)]
 #[derivative(Default(bound = ""))]
 pub struct SkelIndexedColumn(IndexedColumn<usize, usize, VecColumn<usize>, VecIndex<usize>>);
 
@@ -671,30 +519,11 @@ impl SkelIndexedColumn {
     }
 }
 
-impl IntoIterator for SkelIndexedColumn {
-    type Item = (usize, usize);
-    type IntoIter = VecColumnIter<usize>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter()
-    }
-}
-
-impl FromIterator<(usize, usize)> for SkelIndexedColumn {
-    fn from_iter<Iter: IntoIterator<Item = (usize, usize)>>(iter: Iter) -> Self {
-        Self(IndexedColumn::from_iter(iter))
-    }
-}
-
 impl Mapping for SkelIndexedColumn {
     type Dom = usize;
     type Cod = usize;
-
-    fn apply(&self, x: usize) -> Option<usize> {
+    fn apply(&self, x: &usize) -> Option<usize> {
         self.0.apply(x)
-    }
-    fn apply_to_ref(&self, x: &usize) -> Option<usize> {
-        self.0.apply(*x)
     }
     fn is_set(&self, x: &usize) -> bool {
         self.0.is_set(x)
@@ -728,48 +557,31 @@ impl Column for SkelIndexedColumn {
     }
 }
 
-impl MutColumn for SkelIndexedColumn {}
-
 /** An indexed column backed by a vector.
 
 The domain of the column is the natural numbers (`usize`). Since the codomain is
 an arbitrary type (`T`), the index is implemented using a hash map.
 */
-#[derive(Clone, Debug, Derivative, PartialEq, Eq)]
+#[derive(Clone, Derivative, PartialEq, Eq)]
 #[derivative(Default(bound = ""))]
 pub struct IndexedVecColumn<T>(IndexedColumn<usize, T, VecColumn<T>, HashIndex<usize, T>>);
 
 impl<T: Eq + Hash + Clone> IndexedVecColumn<T> {
     /// Creates a new vector-backed column from an existing vector.
     pub fn new(values: &[T]) -> Self {
-        values.iter().cloned().enumerate().collect()
-    }
-}
-
-impl<T> IntoIterator for IndexedVecColumn<T> {
-    type Item = (usize, T);
-    type IntoIter = VecColumnIter<T>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter()
-    }
-}
-
-impl<T: Eq + Hash + Clone> FromIterator<(usize, T)> for IndexedVecColumn<T> {
-    fn from_iter<Iter: IntoIterator<Item = (usize, T)>>(iter: Iter) -> Self {
-        Self(IndexedColumn::from_iter(iter))
+        let mut col: Self = Default::default();
+        for (x, y) in values.iter().cloned().enumerate() {
+            col.set(x, y);
+        }
+        col
     }
 }
 
 impl<T: Eq + Hash + Clone> Mapping for IndexedVecColumn<T> {
     type Dom = usize;
     type Cod = T;
-
-    fn apply(&self, x: usize) -> Option<T> {
+    fn apply(&self, x: &usize) -> Option<T> {
         self.0.apply(x)
-    }
-    fn apply_to_ref(&self, x: &usize) -> Option<T> {
-        self.0.apply(*x)
     }
     fn is_set(&self, x: &usize) -> bool {
         self.0.is_set(x)
@@ -803,8 +615,6 @@ impl<T: Eq + Hash + Clone> Column for IndexedVecColumn<T> {
     }
 }
 
-impl<T: Eq + Hash + Clone> MutColumn for IndexedVecColumn<T> {}
-
 /// An indexed column backed by hash maps.
 #[derive(Clone, Derivative, Debug)]
 #[derivative(Default(bound = "S: Default"))]
@@ -819,31 +629,6 @@ pub struct IndexedHashColumn<K, V, S = RandomState>(
 #[allow(clippy::type_complexity)]
 pub type IndexedUstrColumn = IndexedHashColumn<Ustr, Ustr, BuildHasherDefault<IdentityHasher>>;
 
-impl<K, V, S> IntoIterator for IndexedHashColumn<K, V, S>
-where
-    K: Eq + Hash,
-    V: Eq + Hash,
-    S: BuildHasher,
-{
-    type Item = (K, V);
-    type IntoIter = <HashColumn<K, V, S> as IntoIterator>::IntoIter;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter()
-    }
-}
-
-impl<K, V, S> FromIterator<(K, V)> for IndexedHashColumn<K, V, S>
-where
-    K: Eq + Hash + Clone,
-    V: Eq + Hash + Clone,
-    S: Default + BuildHasher,
-{
-    fn from_iter<Iter: IntoIterator<Item = (K, V)>>(iter: Iter) -> Self {
-        Self(IndexedColumn::from_iter(iter))
-    }
-}
-
 impl<K, V, S> Mapping for IndexedHashColumn<K, V, S>
 where
     K: Eq + Hash + Clone,
@@ -852,12 +637,8 @@ where
 {
     type Dom = K;
     type Cod = V;
-
-    fn apply(&self, x: K) -> Option<V> {
+    fn apply(&self, x: &K) -> Option<V> {
         self.0.apply(x)
-    }
-    fn apply_to_ref(&self, x: &K) -> Option<V> {
-        self.0.apply_to_ref(x)
     }
     fn is_set(&self, x: &K) -> bool {
         self.0.is_set(x)
@@ -901,14 +682,6 @@ where
     }
 }
 
-impl<K, V, S> MutColumn for IndexedHashColumn<K, V, S>
-where
-    K: Eq + Hash + Clone,
-    V: Eq + Hash + Clone,
-    S: Default + BuildHasher,
-{
-}
-
 #[cfg(test)]
 mod tests {
     use super::super::set::SkelFinSet;
@@ -919,22 +692,16 @@ mod tests {
         let mut col = VecColumn::new(vec!["foo", "bar", "baz"]);
         assert!(!col.is_empty());
         assert!(col.is_set(&2));
-        assert_eq!(col.apply(2), Some("baz"));
-        assert_eq!(col.apply(3), None);
-        assert_eq!(col.apply_to_ref(&2), Some("baz"));
         assert_eq!(col.get(&2), Some(&"baz"));
+        assert_eq!(col.apply(&2), Some("baz"));
+        assert_eq!(col.apply(&3), None);
         assert_eq!(col.update(2, None), Some("baz"));
         assert!(!col.is_set(&2));
 
-        col.set(5, "baz");
+        col.set(4, "baz");
         col.set(3, "bar");
         let preimage: Vec<_> = col.preimage(&"bar").collect();
         assert_eq!(preimage, vec![1, 3]);
-
-        let data: Vec<_> = col.clone().into_iter().collect();
-        assert_eq!(data, vec![(0, "foo"), (1, "bar"), (3, "bar"), (5, "baz")]);
-        let new_col: VecColumn<_> = data.into_iter().collect();
-        assert_eq!(new_col, col);
     }
 
     #[test]
@@ -945,9 +712,8 @@ mod tests {
         col.set('b', "bar");
         col.set('c', "baz");
         assert!(!col.is_empty());
-        assert_eq!(col.apply('c'), Some("baz"));
-        assert_eq!(col.apply_to_ref(&'c'), Some("baz"));
         assert_eq!(col.get(&'c'), Some(&"baz"));
+        assert_eq!(col.apply(&'c'), Some("baz"));
         assert_eq!(col.unset(&'c'), Some("baz"));
         assert!(!col.is_set(&'c'));
         col.set('c', "bar");
@@ -955,12 +721,6 @@ mod tests {
         let mut preimage: Vec<_> = col.preimage(&"bar").collect();
         preimage.sort();
         assert_eq!(preimage, vec!['b', 'c']);
-
-        let mut data: Vec<_> = col.clone().into_iter().collect();
-        data.sort();
-        assert_eq!(data, vec![('a', "foo"), ('b', "bar"), ('c', "bar")]);
-        let new_col: HashColumn<_, _> = data.into_iter().collect();
-        assert_eq!(new_col, col);
     }
 
     #[test]
@@ -968,9 +728,8 @@ mod tests {
         let mut col = SkelIndexedColumn::new(&[1, 3, 5]);
         assert!(!col.is_empty());
         assert!(col.is_set(&2));
-        assert_eq!(col.apply(2), Some(5));
-        assert_eq!(col.apply_to_ref(&2), Some(5));
         assert_eq!(col.get(&2), Some(&5));
+        assert_eq!(col.apply(&2), Some(5));
         let preimage: Vec<_> = col.preimage(&5).collect();
         assert_eq!(preimage, vec![2]);
 
@@ -979,9 +738,6 @@ mod tests {
         let mut preimage: Vec<_> = col.preimage(&5).collect();
         preimage.sort();
         assert_eq!(preimage, vec![0, 2]);
-
-        let new_col: SkelIndexedColumn = col.clone().into_iter().collect();
-        assert_eq!(new_col, col);
     }
 
     #[test]
@@ -989,7 +745,7 @@ mod tests {
         let mut col = IndexedVecColumn::new(&["foo", "bar", "baz"]);
         assert!(!col.is_empty());
         assert!(col.is_set(&2));
-        assert_eq!(col.apply(2), Some("baz"));
+        assert_eq!(col.apply(&2), Some("baz"));
         let preimage: Vec<_> = col.preimage(&"baz").collect();
         assert_eq!(preimage, vec![2]);
 
@@ -998,9 +754,6 @@ mod tests {
         let mut preimage: Vec<_> = col.preimage(&"baz").collect();
         preimage.sort();
         assert_eq!(preimage, vec![0, 2]);
-
-        let new_col: IndexedVecColumn<_> = col.clone().into_iter().collect();
-        assert_eq!(new_col, col);
     }
 
     #[test]
@@ -1011,7 +764,7 @@ mod tests {
         col.set('b', "bar");
         col.set('c', "baz");
         assert!(!col.is_empty());
-        assert_eq!(col.apply('c'), Some("baz"));
+        assert_eq!(col.apply(&'c'), Some("baz"));
         let preimage: Vec<_> = col.preimage(&"baz").collect();
         assert_eq!(preimage, vec!['c']);
 
@@ -1020,9 +773,6 @@ mod tests {
         let mut preimage: Vec<_> = col.preimage(&"baz").collect();
         preimage.sort();
         assert_eq!(preimage, vec!['a', 'c']);
-
-        let new_col: IndexedHashColumn<_, _> = col.clone().into_iter().collect();
-        assert_eq!(new_col, col);
     }
 
     #[test]

@@ -1,4 +1,4 @@
-//! Sets and functions, plus a little abstract algebra.
+//! Sets and functions, and a little abstract algebra.
 
 pub mod alg;
 pub mod column;

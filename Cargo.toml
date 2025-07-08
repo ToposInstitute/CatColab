@@ -1,13 +1,10 @@
 [workspace]
-resolver = "2"
+resolver="2"
 
 members = [
-  "packages/migrator",
-  "packages/backend",
-  "packages/catlog",
-  "packages/catlog-wasm",
-  "packages/migrator",
-  "packages/notebook-types",
+    "packages/backend",
+    "packages/catlog",
+    "packages/catlog-wasm",
 ]
 
 [profile.release]

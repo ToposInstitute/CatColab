@@ -15,7 +15,6 @@ pkgs.stdenv.mkDerivation {
   nativeBuildInputs = with pkgs; [
     pnpm_9.configHook
     esbuild
-    makeWrapper
   ];
 
   buildInputs = with pkgs; [
@@ -39,11 +38,7 @@ pkgs.stdenv.mkDerivation {
       echo "❌ Error: Node.js automerge WASM file not found!"
       exit 1
     fi
-
     cp "$automerge_wasm_path" "$out/"
-
-    mkdir -p $out/bin
-    makeWrapper ${pkgs.nodejs_23}/bin/node $out/bin/${name} --add-flags "$out/main.cjs"
   '';
 
   pnpmDeps = pkgs.pnpm_9.fetchDeps {
@@ -53,7 +48,7 @@ pkgs.stdenv.mkDerivation {
 
     # See README.md
     # hash = pkgs.lib.fakeHash;
-    hash = "sha256-qqZCQn0QFbqVsu/TCuye6oVL3ZIYU+blHB2b43K5xPA=";
+    hash = "sha256-ADAtb70sy2ORnbyl+DHeVByEigc5e0VXzT4lkhfOdX8=";
   };
 
   meta.mainProgram = name;

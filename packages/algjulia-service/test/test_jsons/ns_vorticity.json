@@ -1,0 +1,545 @@
+{
+    "diagram": [
+        {
+            "tag": "object",
+            "name": "",
+            "id": "01938869-c0ae-7b1f-9179-35d64102bc6e",
+            "obType": {
+                "tag": "Basic",
+                "content": "Object"
+            },
+            "over": {
+                "tag": "Basic",
+                "content": "01938829-293b-726a-8e86-f7462a8f6f07"
+            }
+        },
+        {
+            "tag": "object",
+            "name": "uu",
+            "id": "01938867-e117-7be0-b32a-1e4cd0af5cd9",
+            "obType": {
+                "tag": "Basic",
+                "content": "Object"
+            },
+            "over": {
+                "tag": "Basic",
+                "content": "01938827-ac3d-711a-a508-35087405d2eb"
+            }
+        },
+        {
+            "tag": "object",
+            "name": "",
+            "id": "0193886f-3fe1-740e-9a0e-2f3d8add2fa1",
+            "obType": {
+                "tag": "Basic",
+                "content": "Object"
+            },
+            "over": {
+                "tag": "Basic",
+                "content": "01938827-b4c3-7996-850f-2fecb9dc5343"
+            }
+        },
+        {
+            "tag": "object",
+            "name": "",
+            "id": "0193886b-bba3-7b84-9311-4412f4c0718f",
+            "obType": {
+                "tag": "Basic",
+                "content": "Object"
+            },
+            "over": {
+                "tag": "Basic",
+                "content": "01938827-ac3d-711a-a508-35087405d2eb"
+            }
+        },
+        {
+            "tag": "object",
+            "name": "",
+            "id": "01938868-dfd1-74b2-8b89-32d599ef94e6",
+            "obType": {
+                "tag": "Basic",
+                "content": "Object"
+            },
+            "over": {
+                "tag": "Basic",
+                "content": "01938827-972c-7fd6-a4f7-bbf1e0ee52fc"
+            }
+        },
+        {
+            "tag": "object",
+            "name": "",
+            "id": "01938dad-a5b0-7ce3-a0bf-615e4111ce02",
+            "obType": {
+                "tag": "Basic",
+                "content": "Object"
+            },
+            "over": {
+                "tag": "Basic",
+                "content": "01938827-b4c3-7996-850f-2fecb9dc5343"
+            }
+        },
+        {
+            "tag": "object",
+            "name": "duu",
+            "id": "01938fb0-449c-7614-8086-2384cf6bc784",
+            "obType": {
+                "tag": "Basic",
+                "content": "Object"
+            },
+            "over": {
+                "tag": "Basic",
+                "content": "01938827-b4c3-7996-850f-2fecb9dc5343"
+            }
+        },
+        {
+            "tag": "object",
+            "name": "",
+            "id": "0193886c-f9bd-7872-8d57-1e3c88e7c31b",
+            "obType": {
+                "tag": "Basic",
+                "content": "Object"
+            },
+            "over": {
+                "tag": "Basic",
+                "content": "01938827-ac3d-711a-a508-35087405d2eb"
+            }
+        },
+        {
+            "tag": "object",
+            "name": "",
+            "id": "0193886c-55b4-71a9-816c-3c30896be5d6",
+            "obType": {
+                "tag": "Basic",
+                "content": "Object"
+            },
+            "over": {
+                "tag": "Basic",
+                "content": "01938829-293b-726a-8e86-f7462a8f6f07"
+            }
+        },
+        {
+            "tag": "object",
+            "name": "ψ",
+            "id": "01938867-f97d-7189-97e5-e5cd19500108",
+            "obType": {
+                "tag": "Basic",
+                "content": "Object"
+            },
+            "over": {
+                "tag": "Basic",
+                "content": "01938827-972c-7fd6-a4f7-bbf1e0ee52fc"
+            }
+        },
+        {
+            "tag": "morphism",
+            "name": "",
+            "id": "01938868-f03f-7aed-bd6a-e78476e29a99",
+            "morType": {
+                "tag": "Basic",
+                "content": "Nonscalar"
+            },
+            "over": {
+                "tag": "Basic",
+                "content": "01938828-bdf1-7d20-9dd7-7ad4c8dd78bf"
+            },
+            "dom": {
+                "tag": "Basic",
+                "content": "01938868-dfd1-74b2-8b89-32d599ef94e6"
+            },
+            "cod": {
+                "tag": "Basic",
+                "content": "01938867-f97d-7189-97e5-e5cd19500108"
+            }
+        },
+        {
+            "tag": "morphism",
+            "name": "",
+            "id": "01938869-a775-7129-9daa-40b8709365b9",
+            "morType": {
+                "tag": "Basic",
+                "content": "Nonscalar"
+            },
+            "over": {
+                "tag": "Basic",
+                "content": "01938829-0414-7b82-a0f9-f714d17e6ff4"
+            },
+            "dom": {
+                "tag": "Basic",
+                "content": "01938867-f97d-7189-97e5-e5cd19500108"
+            },
+            "cod": {
+                "tag": "Basic",
+                "content": "01938869-c0ae-7b1f-9179-35d64102bc6e"
+            }
+        },
+        {
+            "tag": "morphism",
+            "name": "",
+            "id": "0193886c-3f95-7922-919b-7cd9a582d312",
+            "morType": {
+                "tag": "Basic",
+                "content": "Nonscalar"
+            },
+            "over": {
+                "tag": "Basic",
+                "content": "0193885a-f4e6-7dc9-9ca7-9b318d93b2c0"
+            },
+            "dom": {
+                "tag": "Basic",
+                "content": "0193886b-bba3-7b84-9311-4412f4c0718f"
+            },
+            "cod": {
+                "tag": "Basic",
+                "content": "0193886c-55b4-71a9-816c-3c30896be5d6"
+            }
+        },
+        {
+            "tag": "morphism",
+            "name": "",
+            "id": "0193886a-1fbb-7049-ad9e-5d78097f2045",
+            "morType": {
+                "tag": "Basic",
+                "content": "Nonscalar"
+            },
+            "over": {
+                "tag": "Basic",
+                "content": "01938829-62c4-7897-b6d6-0a3563ee643d"
+            },
+            "dom": {
+                "tag": "Basic",
+                "content": "01938869-c0ae-7b1f-9179-35d64102bc6e"
+            },
+            "cod": {
+                "tag": "Basic",
+                "content": "01938867-e117-7be0-b32a-1e4cd0af5cd9"
+            }
+        },
+        {
+            "tag": "morphism",
+            "name": "",
+            "id": "0193886e-eb24-767e-ab8e-1b346b0c1797",
+            "morType": {
+                "tag": "Basic",
+                "content": "Nonscalar"
+            },
+            "over": {
+                "tag": "Basic",
+                "content": "0193886b-48c1-788c-9ec4-767eaa555fb6"
+            },
+            "dom": {
+                "tag": "Basic",
+                "content": "01938fb0-449c-7614-8086-2384cf6bc784"
+            },
+            "cod": {
+                "tag": "Basic",
+                "content": "01938dad-a5b0-7ce3-a0bf-615e4111ce02"
+            }
+        },
+        {
+            "tag": "morphism",
+            "name": "",
+            "id": "01938868-8384-7b3c-a56b-d5e4e91d3ee6",
+            "morType": {
+                "tag": "Basic",
+                "content": "Nonscalar"
+            },
+            "over": {
+                "tag": "Basic",
+                "content": "01938828-8662-7ac6-8e68-58c0cd035384"
+            },
+            "dom": {
+                "tag": "Basic",
+                "content": "01938fb0-449c-7614-8086-2384cf6bc784"
+            },
+            "cod": {
+                "tag": "Basic",
+                "content": "01938868-dfd1-74b2-8b89-32d599ef94e6"
+            }
+        },
+        {
+            "tag": "morphism",
+            "name": "",
+            "id": "0193886b-a079-7129-bf3e-6af6be5907b4",
+            "morType": {
+                "tag": "Basic",
+                "content": "Nonscalar"
+            },
+            "over": {
+                "tag": "Basic",
+                "content": "01938829-d95c-74be-ba4d-17a19a569a64"
+            },
+            "dom": {
+                "tag": "Basic",
+                "content": "01938867-e117-7be0-b32a-1e4cd0af5cd9"
+            },
+            "cod": {
+                "tag": "Basic",
+                "content": "0193886b-bba3-7b84-9311-4412f4c0718f"
+            }
+        },
+        {
+            "tag": "morphism",
+            "name": "",
+            "id": "01938dad-834e-708a-9439-d76797e399ce",
+            "morType": {
+                "tag": "Basic",
+                "content": "Nonscalar"
+            },
+            "over": {
+                "tag": "Basic",
+                "content": "01938dac-e35f-77ed-9081-6d926d3e366f"
+            },
+            "dom": {
+                "tag": "Basic",
+                "content": "0193886f-3fe1-740e-9a0e-2f3d8add2fa1"
+            },
+            "cod": {
+                "tag": "Basic",
+                "content": "01938dad-a5b0-7ce3-a0bf-615e4111ce02"
+            }
+        },
+        {
+            "tag": "morphism",
+            "name": "",
+            "id": "0193886c-9d8a-7c1a-b32a-a7f03283df8d",
+            "morType": {
+                "tag": "Basic",
+                "content": "Nonscalar"
+            },
+            "over": {
+                "tag": "Basic",
+                "content": "01938829-62c4-7897-b6d6-0a3563ee643d"
+            },
+            "dom": {
+                "tag": "Basic",
+                "content": "0193886c-55b4-71a9-816c-3c30896be5d6"
+            },
+            "cod": {
+                "tag": "Basic",
+                "content": "0193886c-f9bd-7872-8d57-1e3c88e7c31b"
+            }
+        },
+        {
+            "tag": "morphism",
+            "name": "",
+            "id": "0193886f-0477-7b28-9f71-ed4ea8014758",
+            "morType": {
+                "tag": "Basic",
+                "content": "Nonscalar"
+            },
+            "over": {
+                "tag": "Basic",
+                "content": "0193882a-9357-7283-97e7-ad1171ae957e"
+            },
+            "dom": {
+                "tag": "Basic",
+                "content": "0193886c-f9bd-7872-8d57-1e3c88e7c31b"
+            },
+            "cod": {
+                "tag": "Basic",
+                "content": "0193886f-3fe1-740e-9a0e-2f3d8add2fa1"
+            }
+        }
+    ],
+    "model": [
+        {
+            "id": "01938827-972c-7fd6-a4f7-bbf1e0ee52fc",
+            "name": "0-Form",
+            "obType": {
+                "content": "Object",
+                "tag": "Basic"
+            },
+            "tag": "object"
+        },
+        {
+            "id": "01938827-ac3d-711a-a508-35087405d2eb",
+            "name": "Dual 1-Form",
+            "obType": {
+                "content": "Object",
+                "tag": "Basic"
+            },
+            "tag": "object"
+        },
+        {
+            "id": "01938827-b4c3-7996-850f-2fecb9dc5343",
+            "name": "Dual 2-form",
+            "obType": {
+                "content": "Object",
+                "tag": "Basic"
+            },
+            "tag": "object"
+        },
+        {
+            "cod": {
+                "content": "01938827-972c-7fd6-a4f7-bbf1e0ee52fc",
+                "tag": "Basic"
+            },
+            "dom": {
+                "content": "01938827-b4c3-7996-850f-2fecb9dc5343",
+                "tag": "Basic"
+            },
+            "id": "01938828-8662-7ac6-8e68-58c0cd035384",
+            "morType": {
+                "content": "Nonscalar",
+                "tag": "Basic"
+            },
+            "name": "⋆₀⁻¹",
+            "tag": "morphism"
+        },
+        {
+            "cod": {
+                "content": "01938827-972c-7fd6-a4f7-bbf1e0ee52fc",
+                "tag": "Basic"
+            },
+            "dom": {
+                "content": "01938827-972c-7fd6-a4f7-bbf1e0ee52fc",
+                "tag": "Basic"
+            },
+            "id": "01938828-bdf1-7d20-9dd7-7ad4c8dd78bf",
+            "morType": {
+                "content": "Nonscalar",
+                "tag": "Basic"
+            },
+            "name": "Δ⁻¹",
+            "tag": "morphism"
+        },
+        {
+            "cod": {
+                "content": "01938829-293b-726a-8e86-f7462a8f6f07",
+                "tag": "Basic"
+            },
+            "dom": {
+                "content": "01938827-972c-7fd6-a4f7-bbf1e0ee52fc",
+                "tag": "Basic"
+            },
+            "id": "01938829-0414-7b82-a0f9-f714d17e6ff4",
+            "morType": {
+                "content": "Nonscalar",
+                "tag": "Basic"
+            },
+            "name": "d01",
+            "tag": "morphism"
+        },
+        {
+            "id": "01938829-293b-726a-8e86-f7462a8f6f07",
+            "name": "Primal 1-Form",
+            "obType": {
+                "content": "Object",
+                "tag": "Basic"
+            },
+            "tag": "object"
+        },
+        {
+            "cod": {
+                "content": "01938827-ac3d-711a-a508-35087405d2eb",
+                "tag": "Basic"
+            },
+            "dom": {
+                "content": "01938829-293b-726a-8e86-f7462a8f6f07",
+                "tag": "Basic"
+            },
+            "id": "01938829-62c4-7897-b6d6-0a3563ee643d",
+            "morType": {
+                "content": "Nonscalar",
+                "tag": "Basic"
+            },
+            "name": "⋆₁",
+            "tag": "morphism"
+        },
+        {
+            "cod": {
+                "content": "01938827-ac3d-711a-a508-35087405d2eb",
+                "tag": "Basic"
+            },
+            "dom": {
+                "content": "01938827-ac3d-711a-a508-35087405d2eb",
+                "tag": "Basic"
+            },
+            "id": "01938829-d95c-74be-ba4d-17a19a569a64",
+            "morType": {
+                "content": "Nonscalar",
+                "tag": "Basic"
+            },
+            "name": "lamb",
+            "tag": "morphism"
+        },
+        {
+            "cod": {
+                "content": "01938827-b4c3-7996-850f-2fecb9dc5343",
+                "tag": "Basic"
+            },
+            "dom": {
+                "content": "01938827-ac3d-711a-a508-35087405d2eb",
+                "tag": "Basic"
+            },
+            "id": "0193882a-9357-7283-97e7-ad1171ae957e",
+            "morType": {
+                "content": "Nonscalar",
+                "tag": "Basic"
+            },
+            "name": "d̃₁",
+            "tag": "morphism"
+        },
+        {
+            "cod": {
+                "content": "01938829-293b-726a-8e86-f7462a8f6f07",
+                "tag": "Basic"
+            },
+            "dom": {
+                "content": "01938827-ac3d-711a-a508-35087405d2eb",
+                "tag": "Basic"
+            },
+            "id": "0193885a-f4e6-7dc9-9ca7-9b318d93b2c0",
+            "morType": {
+                "content": "Nonscalar",
+                "tag": "Basic"
+            },
+            "name": "♭♯",
+            "tag": "morphism"
+        },
+        {
+            "cod": {
+                "content": "01938827-b4c3-7996-850f-2fecb9dc5343",
+                "tag": "Basic"
+            },
+            "dom": {
+                "content": "01938827-b4c3-7996-850f-2fecb9dc5343",
+                "tag": "Basic"
+            },
+            "id": "0193886b-48c1-788c-9ec4-767eaa555fb6",
+            "morType": {
+                "content": "Nonscalar",
+                "tag": "Basic"
+            },
+            "name": " ∂ₜ",
+            "tag": "morphism"
+        },
+        {
+            "cod": {
+                "content": "01938827-b4c3-7996-850f-2fecb9dc5343",
+                "tag": "Basic"
+            },
+            "dom": {
+                "content": "01938827-b4c3-7996-850f-2fecb9dc5343",
+                "tag": "Basic"
+            },
+            "id": "01938dac-e35f-77ed-9081-6d926d3e366f",
+            "morType": {
+                "content": "Nonscalar",
+                "tag": "Basic"
+            },
+            "name": "-",
+            "tag": "morphism"
+        }
+    ],
+	"duration": 10,
+    "domain": "Sphere",
+    "mesh": "Icosphere6",
+    "initialConditions": {
+        "01938fb0-449c-7614-8086-2384cf6bc784": "TaylorVortex"
+    },
+    "plotVariables": [
+        "01938fb0-449c-7614-8086-2384cf6bc784"
+    ],
+    "scalars": {}
+}
