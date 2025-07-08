@@ -235,7 +235,7 @@ impl ThNN2Category {
         DblTheory(self.0.clone().into())
     }
 
-    // TO-DO: this could likely be moved to graph_algorithms.rs
+    // TO-DO: move this to vertex_depth() in graph_algorithms.rs
     // Just used within cll() to find the depth of a vertex within the forest
     // of degree-zero arrows
     fn get_depth(

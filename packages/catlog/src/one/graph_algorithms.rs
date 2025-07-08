@@ -168,6 +168,19 @@ where
     result
 }
 
+/** Find the depth of a vertex in a graph
+
+TO-DO: explain
+TO-DO: make sure to mention that this also "secretly" checks for acyclicity
+ */
+pub fn vertex_depth () {
+    enum DAGDepth {
+        Undef,
+        Seen,
+        Depth(usize),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::GraphElem::*;
