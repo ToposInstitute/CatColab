@@ -174,6 +174,9 @@ TO-DO: explain
 TO-DO: make sure to mention that this also "secretly" checks for acyclicity
  */
 pub fn vertex_depth () {
+    // DESIDERATA: this should return (something like) usize | falsy
+    //             with the latter meaning that the graph is not acyclic
+
     enum DAGDepth {
         Undef,
         Seen,

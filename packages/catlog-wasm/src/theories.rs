@@ -296,7 +296,7 @@ impl ThNN2Category {
                 % 2
         };
 
-        // TO-DO: move this to a new module: catlog/src/stdlib/ecld
+        // TO-DO: move this to catlog/src/stdlib/ecld/atomisations.rs
 
         // 0. Pre-processing the model: creating new objects for each derivative
         //    and lifting all morphisms to be degree 1. We will end up creating
