@@ -5,6 +5,9 @@ import type { DocHandle, Prop } from "@automerge/automerge-repo";
 import { type KbdKey, createShortcut } from "@solid-primitives/keyboard";
 import ListPlus from "lucide-solid/icons/list-plus";
 
+import { useAuth, useFirebaseApp } from "solid-firebase";
+import { getAuth, signOut } from "firebase/auth";
+
 import {
     type Component,
     For,
@@ -88,8 +91,12 @@ export function NotebookEditor<T>(props: {
     noShortcuts?: boolean;
 	notebookType?: string;
 }) {
+
+	const firebaseApp = useFirebaseApp();
+	const auth = useAuth(getAuth(firebaseApp));
+
     const [activeCell, setActiveCell] = createSignal(props.notebook.cells.length > 0 ? 0 : -1);
-    const [isOverlayOpen, setOverlayOpen] = createSignal(props.notebookType == "model" && props.notebook.cells.length == 0); // Open overlay by default
+    const [isOverlayOpen, setOverlayOpen] = createSignal(props.notebookType == "model" && props.notebook.cells.length == 0 && auth.data == null);
 
     // Set up commands and their keyboard shortcuts.
 
