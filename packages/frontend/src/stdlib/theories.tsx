@@ -224,6 +224,7 @@ stdTheories.add(
         return new Theory({
             ...meta,
             theory: thSignedCategory.theory(),
+            inclusions: ["causal-loop", "causal-loop-delays", "indeterminate-causal-loop"],
             onlyFreeModels: true,
             modelTypes: [
                 {
@@ -303,6 +304,7 @@ stdTheories.add(
         return new Theory({
             ...meta,
             theory: thSignedCategory.theory(),
+            inclusions: ["reg-net", "causal-loop-delays", "indeterminate-causal-loop"],
             onlyFreeModels: true,
             modelTypes: [
                 {
