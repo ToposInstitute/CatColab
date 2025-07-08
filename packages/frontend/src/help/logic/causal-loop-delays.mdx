@@ -1,25 +1,13 @@
 import { A } from "@solidjs/router";
 import { Question } from "../../components/alert";
+import { HelpAnalysisById } from "../logic"
 
 ## Description
 
 Causal loop diagrams with delays allow for delays (or *caesuras*) in the flow of causality, extending the basic notion of <A href="../causal-loop">causal loop diagrams</A>.
 
 
-## Instances
-
-<Question>
-As with standard causal loop diagrams, instances are not currently supported, though we'd be curious to learn more about how they might be used in practice.
-If you have any ideas then please do get in touch.
-</Question>
-
-
-## Analyses
-
-**!TO-DO: include!**
-
-
-## Further reading
+### Further reading
 
 - "The Systems Thinker" on [Balancing loops with
   delays](https://thesystemsthinker.com/balancing-loops-with-delays/) and
@@ -28,3 +16,40 @@ If you have any ideas then please do get in touch.
 - Series of blog posts by John Baez on variants of causal loop diagrams using
   different monoids of *polarities* for the edges, starting
   [here](https://johncarlosbaez.wordpress.com/2024/11/02/polarities/)
+
+
+## Instances and analyses
+
+### Instances
+
+<Question>
+As with standard causal loop diagrams, instances are not currently supported, though we'd be curious to learn more about how they might be used in practice.
+If you have any ideas then please do get in touch.
+</Question>
+
+
+### Analyses
+
+<HelpAnalysisById theory={props.theory} analysisId="diagram"/>
+
+<HelpAnalysisById theory={props.theory} analysisId="negative-loops">
+Negative feedback loops, or *balancing loops*, are composites of path within the diagram that start and finish at the same point, and whose overall sign (given by multiplying all the signs of each constituent path) is positive.
+Reinforcing loops tend to be stabilising.
+
+CatColab supports this analysis by searching for morphisms from the causal loop diagram given by a free loop.
+</HelpAnalysisById>
+
+<HelpAnalysisById theory={props.theory} analysisId="positive-loops">
+Positive feedback loops, or *reinforcing loops*, are composites of path within the diagram that start and finish at the same point, and whose overall sign (given by multiplying all the signs of each constituent path) is positive.
+Reinforcing loops tend to produce unstable behavior.
+
+CatColab supports this analysis by searching for morphisms from the causal loop diagram given by a free loop.
+</HelpAnalysisById>
+
+<HelpAnalysisById theory={props.theory} analysisId="delayed-negative-loops">
+**!TO-DO: explain!**
+</HelpAnalysisById>
+
+<HelpAnalysisById theory={props.theory} analysisId="delayed-positive-loops">
+**!TO-DO: explain!**
+</HelpAnalysisById>

@@ -35,19 +35,40 @@ export function LogicHelp(props: {
                 <a href="/help/logics/">Logics</a> / {theory().name}
             </h1>
             <h2>Summary</h2>
-            <p>{theory().description}</p>
-            <Show when={theory().modelTypes.length > 0}>
-                <h3>Definitions</h3>
-                <dl>
-                    <For each={theory().modelTypes}>
-                        {(typeMeta) => (
-                            <>
-                                <dt>{typeMeta.name}</dt>
-                                <dd>{typeMeta.description}</dd>
-                            </>
-                        )}
-                    </For>
-                </dl>
+            <p><i>{theory().description}</i></p>
+            <Show when={theory().modelTypes.length + theory().modelAnalyses.length > 0}>
+            <div class="help-summary-lists">
+                <Show when={theory().modelTypes.length > 0}>
+                <div>
+                    <h3>Definitions</h3>
+                    <dl>
+                        <For each={theory().modelTypes}>
+                            {(typeMeta) => (
+                                <>
+                                    <dt>{typeMeta.name}</dt>
+                                    <dd>{typeMeta.description}</dd>
+                                </>
+                            )}
+                        </For>
+                    </dl>
+                </div>
+                </Show>
+                <Show when={theory().modelAnalyses.length > 0}>
+                <div>
+                    <h3>Analyses</h3>
+                    <dl>
+                        <For each={theory().modelAnalyses}>
+                            {(typeMeta) => (
+                                <>
+                                    <dt>{typeMeta.name}</dt>
+                                    <dd>{typeMeta.description}</dd>
+                                </>
+                            )}
+                        </For>
+                    </dl>
+                </div>
+                </Show>
+            </div>
             </Show>
             <Show when={theory().help}>
                 {(name) => <Dynamic component={helpLogicContent(name())} theory={theory()} />}

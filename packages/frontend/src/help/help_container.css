@@ -99,7 +99,21 @@
         }
     }
 
-    /* Analyses help boxes */
+    /* Summary lists of definitions and analyses for a given logic */
+    .help-summary-lists {
+        display: flex;
+        justify-content: space-between;
+
+        & > div {
+            flex-basis: 50%;
+
+            & > h3 {
+                margin-top: 0;
+            }
+        }
+    }
+
+    /* Analyses help boxes for a given logic */
     .help-analysis-pane {
         margin-bottom: 1.5em;
         padding: 1em;

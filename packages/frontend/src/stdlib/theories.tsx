@@ -441,6 +441,7 @@ stdTheories.add(
                     id: "negative-loops",
                     name: "Balancing loops",
                     description: "Find the fast-acting balancing loops",
+                    help: "loops",
                     findSubmodels(model, options) {
                         return thDelayedSignedCategory.negativeLoops(model, options);
                     },
@@ -449,6 +450,7 @@ stdTheories.add(
                     id: "positive-loops",
                     name: "Reinforcing loops",
                     description: "Find the fast-acting reinforcing loops",
+                    help: "loops",
                     findSubmodels(model, options) {
                         return thDelayedSignedCategory.positiveLoops(model, options);
                     },
@@ -457,6 +459,7 @@ stdTheories.add(
                     id: "delayed-negative-loops",
                     name: "Delayed balancing loops",
                     description: "Find the slow-acting balancing loops",
+                    help: "loops",
                     findSubmodels(model, options) {
                         return thDelayedSignedCategory.delayedNegativeLoops(model, options);
                     },
@@ -465,6 +468,7 @@ stdTheories.add(
                     id: "delayed-positive-loops",
                     name: "Delayed reinforcing loops",
                     description: "Find the slow-acting reinforcing loops",
+                    help: "loops",
                     findSubmodels(model, options) {
                         return thDelayedSignedCategory.delayedPositiveLoops(model, options);
                     },
