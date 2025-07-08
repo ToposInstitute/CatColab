@@ -81,7 +81,7 @@ pub fn th_delayable_signed_category() -> UstrDiscreteDblTheory {
 
 /** The theory of (N x N x Z/2Z)-graded categories
 
-todo: description
+TO-DO: description
  */
 pub fn th_nn2_category() -> UstrDiscreteDblTheory {
     let mut cat: UstrFpCategory = Default::default();

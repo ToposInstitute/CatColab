@@ -215,6 +215,14 @@ impl ThDelayableSignedCategory {
 #[wasm_bindgen]
 pub struct ThNN2Category(Rc<theory::UstrDiscreteDblTheory>);
 
+// TO-DO: (also move this to graph_algorithms.rs)
+// Data type for max-depth search in DAGs
+enum DAGDepth {
+    Undef,
+    Seen,
+    Depth(usize),
+}
+
 #[wasm_bindgen]
 impl ThNN2Category {
     #[wasm_bindgen(constructor)]
@@ -259,15 +267,15 @@ impl ThNN2Category {
         n
     }
 
-    /// Simulate the CCL system derived from a model.
-    #[wasm_bindgen(js_name = "ccl")]
-    pub fn ccl(&self, model: &DblModel, data: CCLModelData) -> Result<ODEResult, String> {
+    /// Simulate the linear ODE system derived from a model.
+    #[wasm_bindgen(js_name = "linearODE")]
+    pub fn linear_ode(&self, model: &DblModel, data: LinearODEModelData) -> Result<ODEResult, String> {
         let model: &model::DiscreteDblModel<_, _> = (&model.0)
             .try_into()
-            .map_err(|_| "CCL simulation expects a discrete double model")?;
+            .map_err(|_| "LinearODE simulation expects a discrete double model")?;
 
         let mut debug_log = String::new();
-        debug_log.push_str("ECLD to CLD migration for CCL dynamics\n\n");
+        debug_log.push_str("ECLD to CLD migration for LinearODE dynamics\n\n");
 
         fn fresh_uuid() -> uuid::Uuid {
             uuid::Uuid::now_v7()
@@ -426,10 +434,11 @@ impl ThNN2Category {
         // 6. Pass everything (the CLD, the degree-zero arrows and their depths,
         //    and the data from the analysis user inputs) into the ODE solver
         Ok(ODEResult(
-            analyses::ode::CCLAnalysis::new(ustr("Object"))
+            analyses::ode::LinearODEAnalysis::new(ustr("Object"))
                 .add_positive(Path::Id(ustr("Object")))
                 .add_negative(ustr("Negative").into())
-                .create_system(&cld_model, &in_zeros, degree_zeros_with_depth, data.0)
+                // .create_system(&cld_model, &in_zeros, degree_zeros_with_depth, data.0)
+                .create_system(&cld_model, data.0)
                 .solve_with_defaults()
                 .map_err(|err| format!("{:?}", err))
                 .into(),

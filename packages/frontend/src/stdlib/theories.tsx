@@ -522,8 +522,8 @@ stdTheories.add(
                     name: "Visualization",
                     description: "Visualize the extended causal loop diagram",
                 }),
-                analyses.configureCCL({
-                    simulate: (model, data) => thNN2Category.ccl(model, data),
+                analyses.configureLinearODE({
+                    simulate: (model, data) => thNN2Category.linearODE(model, data),
                 }),
             ],
         });
