@@ -1,4 +1,4 @@
-import Dialog, { Content, Portal } from "@corvu/dialog";
+import Dialog, { Content, Portal, Trigger } from "@corvu/dialog";
 import { DefaultToolbar } from "../page/toolbar";
 import { useContext } from "solid-js";
 import { useNavigate } from "@solidjs/router";
@@ -32,6 +32,7 @@ export function ErrorBoundaryDialog(props: { error: Error }) {
         message = "An unknown error occurred.";
     }
 
+	// probably delete
 	const api = useApi();
 	const navigate = useNavigate();
 	const theories = useContext(TheoryLibraryContext);
@@ -40,15 +41,12 @@ export function ErrorBoundaryDialog(props: { error: Error }) {
 	  const newRef = await createModel(api, theories.getDefault().id);
 	  navigate(`/model/${newRef}`);
 	};
+	//
 
     return (
 	  <div>
-		<IconButton
-            onClick={onNewModel}
-        >
-            <CircleArrowLeft />
-        </IconButton>
-        <Dialog initialOpen={true}>
+		<DefaultToolbar />
+        <Dialog initialOpen={true} noOutsidePointerEvents={false}>
             <Portal>
                 <Content class="popup error-dialog">
                     <h3>{heading}</h3>
