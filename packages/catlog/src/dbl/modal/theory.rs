@@ -145,6 +145,16 @@ impl<Id> ModalMorType<Id> {
 pub type ModalObOp<Id> = Path<ModalObType<Id>, ModeApp<ModalOp<Id>>>;
 
 impl<Id> ModalObOp<Id> {
+    /// Constructs the object operation for a generator.
+    pub fn generator(id: Id) -> Self {
+        ModeApp::new(ModalOp::Generator(id)).into()
+    }
+
+    /// Constructs the operation operation for a monad multiplication.
+    pub fn mul(mode: Mode, arity: usize, ob_type: ModalObType<Id>) -> Self {
+        ModeApp::new(ModalOp::Mul(mode, arity, ob_type)).into()
+    }
+
     fn apply_all(self, modes: impl IntoIterator<Item = Mode> + Clone) -> Self {
         match self {
             Path::Id(x) => Path::Id(x.apply_all(modes)),
@@ -451,7 +461,9 @@ where
                 cod.apply_all(app.modes.clone())
             }
             ModalNode::Unit(f) => ModalMorType::Zero(ModalEdgeGraph::ref_cast(&self.0).tgt(f)),
-            ModalNode::Composite(_) => panic!("Composites not implemented"),
+            ModalNode::Composite(path) => {
+                self.0.composite(path.clone()).expect("Composite should exist")
+            }
         }
     }
     fn square_src(&self, node: &Self::Sq) -> Self::E {
