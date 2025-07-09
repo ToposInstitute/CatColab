@@ -1,4 +1,13 @@
 import Dialog, { Content, Portal } from "@corvu/dialog";
+import { DefaultToolbar } from "../page/toolbar";
+import { useContext } from "solid-js";
+import { useNavigate } from "@solidjs/router";
+import { IconButton } from "../components";
+import { createModel } from "../model/document";
+import { useApi } from "../api";
+import CircleArrowLeft from "lucide-solid/icons/circle-arrow-left";
+import { TheoryLibraryContext } from "../stdlib";
+import invariant from "tiny-invariant";
 
 import "./errors.css";
 
@@ -23,7 +32,22 @@ export function ErrorBoundaryDialog(props: { error: Error }) {
         message = "An unknown error occurred.";
     }
 
+	const api = useApi();
+	const navigate = useNavigate();
+	const theories = useContext(TheoryLibraryContext);
+	invariant(theories, "Theory library must be provided as context");
+	const onNewModel = async () => {
+	  const newRef = await createModel(api, theories.getDefault().id);
+	  navigate(`/model/${newRef}`);
+	};
+
     return (
+	  <div>
+		<IconButton
+            onClick={onNewModel}
+        >
+            <CircleArrowLeft />
+        </IconButton>
         <Dialog initialOpen={true}>
             <Portal>
                 <Content class="popup error-dialog">
@@ -32,5 +56,6 @@ export function ErrorBoundaryDialog(props: { error: Error }) {
                 </Content>
             </Portal>
         </Dialog>
+	  </div>
     );
 }
