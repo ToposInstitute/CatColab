@@ -48,6 +48,11 @@ https://doi.org/10.32408/compositionality-4-5)
 
 Graphical instances of schemas are called **acsets** in applied category theory lingo, but can also be thought of as being precisely *databases*.
 
+<Warning>
+The implementation of schema instances currently in CatColab are not quite acsets, since typing maps (that define the specific sets in which attribute types can have values) are not supported.
+In other words, the set corresponding to an attribute type starts as empty and new elements are added to it whenever a new attribute variable is given.
+</Warning>
+
 <table>
   <thead>
     <tr>
