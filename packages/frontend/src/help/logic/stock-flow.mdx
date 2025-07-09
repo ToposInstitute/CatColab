@@ -1,5 +1,6 @@
 import { A } from "@solidjs/router";
 import { Warning, Question } from "../../components/alert";
+import { HelpAnalysisById } from "../logic"
 
 ## Description
 
@@ -12,22 +13,31 @@ We expect to implement this richer semantics in the future.
 </Warning>
 
 
-## Instances
+### Examples
+
+- [An SEIRV model](https://catcolab.org/model/0195001d-3c7d-7cb3-9019-2f411cfa2663)
+
+
+### Further reading
+
+- Wikipedia: [Stock and flow](https://en.wikipedia.org/wiki/Stock_and_flow)
+- Pete Barbrook-Johnson, Alexandra S. Penn, "System Dynamics" in *Systems Mapping* (2022). [DOI:10.1007/978-3-031-01919-7](https://doi.org/10.1007/978-3-031-01919-7)
+- John C. Baez, Xiaoyan Li, Sophie Libkind, Nathaniel D. Osgood, Eric Redekopp, "A Categorical Framework for Modeling with Stock and Flow Diagrams", (2023) [arXiv:2211.01290](https://arxiv.org/abs/2211.01290)
+
+
+## Instances and analyses
+
+### Instances
 
 <Question>
 Instances are not currently supported for stock-flow diagrams, but if you have suggestions for what these might mean to a systems theorist then please do reach out and let us know.
 </Question>
 
 
-## Analyses
+### Analyses
 
-**!TO-DO: include!**
+<HelpAnalysisById theory={props.theory} analysisId="diagram"/>
 
-Primitive stock-flow diagrams already admit an interesting ODE semantics based on mass action kinetics.
-
-
-## Further reading
-
-- Wikipedia: [Stock and flow](https://en.wikipedia.org/wiki/Stock_and_flow)
-- Barbrook-Johnson, Penn, *System Dynamics*, in *Systems Mapping*, 2022. [DOI:10.1007/978-3-031-01919-7](https://doi.org/10.1007/978-3-031-01919-7)
-- Baez, Li, Libkind, et al, *A Categorical Framework for Modeling with Stock and Flow Diagrams*, [arXiv:2211.01290](https://arxiv.org/abs/2211.01290)
+<HelpAnalysisById theory={props.theory} analysisId="mass-action">
+**TO-DO: write this**
+</HelpAnalysisById>

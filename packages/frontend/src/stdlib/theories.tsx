@@ -200,6 +200,7 @@ stdTheories.add(
                     id: "diagram",
                     name: "Visualization",
                     description: "Visualize the schema as a graph",
+                    help: "visualization",
                 }),
             ],
             diagramAnalyses: [
@@ -207,6 +208,7 @@ stdTheories.add(
                     id: "graph",
                     name: "Visualization",
                     description: "Visualize the instance as a graph",
+                    help: "visualization",
                 }),
             ],
         });
@@ -622,6 +624,7 @@ stdTheories.add(
                     id: "graph",
                     name: "Visualization",
                     description: "Visualize the operations as a graph",
+                    help: "visualization",
                 }),
             ],
             diagramAnalyses: [
@@ -685,6 +688,7 @@ stdTheories.add(
                     id: "diagram",
                     name: "Visualization",
                     description: "Visualize the stock and flow diagram",
+                    help: "visualization",
                 }),
                 analyses.configureMassAction({
                     simulate(model, data) {
