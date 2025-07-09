@@ -87,6 +87,7 @@ stdTheories.add(
                     id: "diagram",
                     name: "Visualization",
                     description: "Visualize the olog as a graph",
+                    help: "visualization",
                 }),
             ],
             diagramAnalyses: [
@@ -94,6 +95,7 @@ stdTheories.add(
                     id: "graph",
                     name: "Visualization",
                     description: "Visualize the instance as a graph",
+                    help: "visualization",
                 }),
             ],
         });
@@ -537,6 +539,7 @@ stdTheories.add(
                     id: "diagram",
                     name: "Visualization",
                     description: "Visualize the causal loop diagram",
+                    help: "visualization",
                 }),
             ],
         });

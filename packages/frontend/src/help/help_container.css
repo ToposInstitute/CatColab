@@ -33,6 +33,11 @@
     & a {
         color: var(--topos-secondary);
         text-decoration: underline;
+
+        &:hover {
+            /*color: color-mix( in oklab, var(--topos-secondary) 80%, black);*/
+            color: var(--topos-primary);
+        }
     }
 
     /* Lists */

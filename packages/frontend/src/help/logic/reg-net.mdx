@@ -1,5 +1,6 @@
 import { A } from "@solidjs/router";
 import { Question } from "../../components/alert";
+import { HelpAnalysisById } from "../logic"
 
 ## Description
 
@@ -10,7 +11,20 @@ The interactions are labeled with a sign, which indicates whether the interactio
 This theory is technically isomorphic to that of <A href="../causal-loop">causal loop diagrams</A>, even though the two are presented in different ways.
 
 
-## Instances
+### Examples
+
+- The classic Lotka-Volterra [model](https://catcolab.org/model/0196b22f-b9b3-7841-a841-54fbc192148b) of foxes and rabbits, together with an ODE semantics.
+
+
+### Further reading
+
+- Wikipedia: [Gene regulatory network](https://en.wikipedia.org/wiki/Gene_regulatory_network)
+- Rebekah Aduddell, James Fairbanks, Amit Kumar, Pablo S. Ocal, Evan Patterson, Brandon T. Shapiro, "A compositional account of motifs, mechanisms, and dynamics in biochemical regulatory networks" (2024). [arXiv:2301.01445](https://arxiv.org/abs/2301.01445) [DOI:10.32408/compositionality-6-2](https://doi.org/10.32408/compositionality-6-2)
+
+
+## Instances and analyses
+
+### Instances
 
 <Question>
 Regulatory networks do not currently support instances because we don't understand what they might mean, biologically.
@@ -18,22 +32,8 @@ If you have any thoughts on how they might be used in practice then please do ge
 </Question>
 
 
-## Analyses
+### Analyses
 
 **!TO-DO: include!**
 
 Regulatory networks support an ODE semantics based on the Lotka-Volterra equations, where the derivative of each species is the sum of a linear term proportional to its own value  and quadratic terms proportional to the product of its own value and that of the species on the other end of an interaction.
-
-
-## Examples
-
-- The classic Lotka-Volterra [model](https://catcolab.org/model/0196b22f-b9b3-7841-a841-54fbc192148b) of foxes and rabbits, together with an ODE semantics.
-
-
-## Further reading
-
-- Wikipedia: [Gene regulatory network](https://en.wikipedia.org/wiki/Gene_regulatory_network)
-- A compositional account of motifs, mechanisms, and dynamics in biochemical
-  regulatory networks
-  [arXiv:2301.01445](https://arxiv.org/abs/2301.01445)
-  [DOI:10.32408/compositionality-6-2](https://doi.org/10.32408/compositionality-6-2)
