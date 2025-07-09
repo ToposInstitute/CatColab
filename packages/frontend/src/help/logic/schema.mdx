@@ -4,25 +4,33 @@ import { HelpAnalysisById } from "../logic"
 
 ## Description
 
-A categorical **database schema**, or **schema** for short, is a representation of the structure of a database.
-Schemas are expressed in a diagrammatic language based on two kinds of boxes:
+A categorical **database schema**, or **schema** for short, is a representation of the *structure*, or *shape*, of a database.
+Once the shape has been defined, an instance of the model will be an actual database of that shape.
 
-- **Entities**, corresponding to **tables** in standard database theory
-- **Attribute types**, corresponding to **columns**.
+Schemas are expressed in a diagrammatic language, with boxes and arrows.
+There are two kinds of boxes:
 
-Between these boxes there are three types of arrows:
+- **Entities**
+- **Attribute types**
 
-- **Mappings**, many-to-one between entities, corresponding to **foreign keys**
-- **Attributes**, many-to-one from entities to attribute types, also corresponding to **columns**
-- **Operations**, many-to-one between attribute types, corresponding to data operations (such as rounding a real number to an integer).
+and three kinds of arrows (each of them possibly many-to-one):
 
-**!TO-DO: explain the difference (in terms of columns) between attribute types and attributes!**
+- **Mappings** from entities to entities
+- **Attributes**, from entities to attribute types
+- **Operations**, from attribute types to attribute types.
+
+What this data actually "means" can be explained in terms of what it corresponds to in an *instance* of the schema (see below, under *Instances and analyses*).
 
 <Warning>
 CatColab currently only supports **single-input** operations, so many familiar examples (such as sums and averages) are not directly representable.
 
-Note that consistency constraints on the scheme are also not yet supported, though they can be added informally in rich text cells.
+Note that consistency constraints on the schema are also not yet supported, though they can be added informally in rich text cells.
 </Warning>
+
+
+### Examples
+
+- See the <A href="/help/guides/employee-structure">Worked example: employee structure (schemas)</A> guide
 
 
 ### Further reading
@@ -39,6 +47,37 @@ https://doi.org/10.32408/compositionality-4-5)
 ### Instances
 
 Graphical instances of schemas are called **acsets** in applied category theory lingo, but can also be thought of as being precisely *databases*.
+
+<table>
+  <thead>
+    <tr>
+      <th>Schema (database shape)</th>
+      <th>Instance (database)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>entity</td>
+      <td>table</td>
+    </tr>
+    <tr>
+      <td>mapping</td>
+      <td>foreign key</td>
+    </tr>
+    <tr>
+      <td>attributes</td>
+      <td>columns</td>
+    </tr>
+    <tr>
+      <td>attribute type</td>
+      <td>attribute column constraints</td>
+    </tr>
+    <tr>
+      <td>operation</td>
+      <td>data operations</td>
+    </tr>
+  </tbody>
+</table>
 
 
 ### Analyses

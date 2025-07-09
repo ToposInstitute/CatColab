@@ -22,6 +22,12 @@ export const guidesList: Guide[] = [
             "Understanding a simple foxes–rabbits–lettuce ecosystem through Lotka–Volterra dynamics",
     },
     {
+        id: "employee-structure",
+        title: "Worked example: employee structure (schemas)",
+        description:
+            "Creating a categorical database for a company using schemas and instances of schemas",
+    },
+    {
         id: "seirv",
         title: "Worked example: SEIRV (stock-flow diagrams)",
         description:
