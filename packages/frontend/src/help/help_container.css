@@ -1,5 +1,4 @@
 .help-container {
-
     /* Navigation */
 
     .help-navigation {
@@ -40,7 +39,6 @@
         }
     }
 
-
     /* All main content */
 
     font-size: 1.05rem;
@@ -49,6 +47,9 @@
         font-size: 1.2rem;
     }
 
+    code {
+        font-size: 0.95em;
+    }
 
     /* Headers */
 
@@ -73,7 +74,6 @@
         /*font-style: italic;*/
     }
 
-
     /* Links */
 
     & a {
@@ -85,7 +85,6 @@
             color: var(--topos-primary);
         }
     }
-
 
     /* Lists */
 
@@ -111,11 +110,11 @@
         margin-bottom: 0.67em;
     }
 
-
     /* Tables */
 
     table {
-        th, td {
+        th,
+        td {
             text-align: left;
             padding: 0.25em 1em;
         }
@@ -130,7 +129,6 @@
         }
     }
 
-
     /* Summary lists of definitions and analyses for a given logic */
     .help-summary-lists {
         display: flex;
@@ -144,7 +142,6 @@
             }
         }
     }
-
 
     /* Analyses help boxes for a given logic */
     .help-analysis-pane {

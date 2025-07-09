@@ -8,7 +8,7 @@ import { HelpAnalysisById } from "../logic"
 They provide a rich language, allowing the scientist to model a system of **stocks** of various quantities and flows between them, with the rate of the flows depending in complex ways on various stocks via **links**.
 
 <Warning>
-In CatColab we implement what we call **primitive** stock-flow diagrams, which do not allow for the auxiliary variables permitting flows to be arbitrary functions of the stocks, which is characteristic in systems dynamics.
+In CatColab we implement what we call **primitive** stock-flow diagrams, which do not allow for the auxiliary variables permitting flows to be arbitrary functions of the stocks (which is characteristic in systems dynamics), but instead simply products of the stocks with a constant rate.
 We expect to implement the richer semantics in the future.
 </Warning>
 
@@ -40,5 +40,13 @@ Instances are not currently supported for stock-flow diagrams, but if you have s
 <HelpAnalysisById theory={props.theory} analysisId="diagram"/>
 
 <HelpAnalysisById theory={props.theory} analysisId="mass-action">
-**TO-DO: write this**
+Stocks are interpreted as quantities that can vary in time, and the flows and links in the model determine equations constraining the time derivatives of the stocks.
+Each stock is given an **initial value**.
+
+A flow $S\overset{f}{\Rightarrow}T$ between stocks $S$ and $T$ is interpreted as the equations $\{\dot{S}=-f,\dot{T}=f\}$, i.e. the flow $f$ goes out of $S$ and into $T$.
+Flows add linearly, i.e. in an arbitrary stock-flow diagram (without links), the equation governing a stock $S$ is $\dot{S}=\sum_{S_\text{in}}f_i - \sum_{S_\text{out}}f_j$, where $S_\text{in}$ (resp. $S_\text{out}$) is the set of all flows whose target (resp. source) is $S$.
+
+In this analysis, since the stock-flow diagrams are primitive, flows are determined their **rate** coefficient $r$, i.e. a flow $S\overset{f}{\Rightarrow}T$ is defined to satisfy $f=rS$.
+
+A link $R\to f$ from a stock $R$ to a flow $S\overset{f}{\Rightarrow}T$ modifies the the equation defining $f$ by multiplication by $R$, i.e. without any link, we would have that $f=rS$, but introducing a link $R\to f$ enforces that $f=rSR$ instead.
 </HelpAnalysisById>

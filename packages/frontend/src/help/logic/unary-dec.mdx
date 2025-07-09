@@ -4,7 +4,10 @@ import { HelpAnalysisById } from "../logic"
 
 ## Description
 
-The unary discrete exterior calculus (DEC) is an implementation of the unary part of the *discrete exterior calculus*, an approach to discrete differential geometry due initially to Anil Hirani.
+The (unary) **discrete exterior calculus** (DEC) is an implementation of the unary part of the *discrete exterior calculus*, an approach to discrete differential geometry due initially to Anil Hirani.
+
+The purpose of the DEC logic is to specify **form types** as well as **operators** between them, and then creating an instance of such a model corresponds to writing down forms (of a given form type) and equations between them, given by either applying the given operators or applying scalar multiplication.
+
 The Topos Institute and collaborators have a substantial DEC library called [Decapodes](https://algebraicjulia.github.io/Decapodes.jl/dev/) implemented in the AlgebraicJulia project.
 The main purpose of the DEC logic in CatColab is to permit the user to build a PDE system via a structure editor which can then be solved in Decapodes, with the result animated right inside of CatColab.
 
@@ -16,7 +19,7 @@ Instructions on the process to do so for those who like are available [on GitHub
 
 ### Examples
 
-- [An inviscid Navier-Stokes equation on the sphere.](https://catcolab.org/analysis/0194d3b8-087b-7130-9c60-68edceff0848)
+- [An inviscid Navier-Stokes equation on the sphere](https://catcolab.org/diagram/0194d39e-c602-7a90-b7af-d51c4fb0cc11), as an instance of the [DEC for vorticity](https://catcolab.org/model/0194d398-6e0a-7e41-a547-86e40973e48d)
 
 
 ### Further reading
@@ -29,7 +32,7 @@ Instructions on the process to do so for those who like are available [on GitHub
 
 ### Instances
 
-**!TO-DO: write about these!**
+An instance consists of an explicit set of forms and equations between them, where the possible types of the forms and possible operators used in the equations are precisely those specified by the model.
 
 
 ### Analyses

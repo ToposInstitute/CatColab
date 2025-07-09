@@ -10,7 +10,6 @@ const theoryWithIdFilter = {
 };
 
 const existingGuideFilter = {
-    // TIM-TO-DO: is there a slicker/more idiomatic way of doing this?
     id: (id: string) => guidesList.find((item) => item.id === id) !== undefined,
 };
 
