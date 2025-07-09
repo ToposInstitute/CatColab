@@ -164,8 +164,12 @@ where
         match mor {
             ModalMor::Generator(id) => self.computad().src(id),
             ModalMor::Composite(path) => path.src(graph),
-            ModalMor::App(_, _) => panic!("TODO"),
-            ModalMor::HomApp(path, op_id) => ModalOp::from(op_id.clone()).ob_act(path.src(graph)),
+            ModalMor::App(path, op_id) => {
+                self.ob_act(path.src(graph), &self.theory.dbl_computad().square_src(op_id))
+            }
+            ModalMor::HomApp(path, op_id) => {
+                ModalOp::from(op_id.clone()).ob_act(path.src(graph)).unwrap()
+            }
             ModalMor::List(mor_list) => ModalOb::List(
                 mor_list.mode(),
                 mor_list.list().iter().map(|f| self.dom(f)).collect(),
@@ -178,8 +182,12 @@ where
         match mor {
             ModalMor::Generator(id) => self.computad().tgt(id),
             ModalMor::Composite(path) => path.tgt(graph),
-            ModalMor::App(_, _) => panic!("TODO"),
-            ModalMor::HomApp(path, op_id) => ModalOp::from(op_id.clone()).ob_act(path.tgt(graph)),
+            ModalMor::App(path, op_id) => {
+                self.ob_act(path.tgt(graph), &self.theory.dbl_computad().square_tgt(op_id))
+            }
+            ModalMor::HomApp(path, op_id) => {
+                ModalOp::from(op_id.clone()).ob_act(path.tgt(graph)).unwrap()
+            }
             ModalMor::List(MorList::List(fs)) => {
                 ModalOb::List(Mode::List, fs.iter().map(|f| self.cod(f)).collect())
             }
@@ -263,7 +271,7 @@ where
     }
 
     fn ob_act(&self, ob: Self::Ob, path: &Self::ObOp) -> Self::Ob {
-        path.iter().cloned().fold(ob, |ob, op| op.ob_act(ob))
+        path.iter().cloned().fold(ob, |ob, op| op.ob_act(ob).unwrap())
     }
 
     fn mor_act(&self, _mor: Self::Mor, _tree: &Self::MorOp) -> Self::Mor {
@@ -328,14 +336,16 @@ impl<ThId> ModeApp<ModalOp<ThId>>
 where
     ThId: Clone,
 {
-    fn ob_act<Id>(mut self, ob: ModalOb<Id, ThId>) -> ModalOb<Id, ThId> {
+    fn ob_act<Id>(mut self, ob: ModalOb<Id, ThId>) -> Result<ModalOb<Id, ThId>, String> {
         if let Some(mode) = self.modes.pop() {
             if let ModalOb::List(other_mode, vec) = ob
                 && other_mode == mode
             {
-                ModalOb::List(mode, vec.into_iter().map(|ob| self.clone().ob_act(ob)).collect())
+                let maybe_vec: Result<Vec<_>, _> =
+                    vec.into_iter().map(|ob| self.clone().ob_act(ob)).collect();
+                Ok(ModalOb::List(mode, maybe_vec?))
             } else {
-                panic!("TODO")
+                Err(format!("Object should be list of mode {mode:?}"))
             }
         } else {
             self.arg.ob_act(ob)
@@ -344,28 +354,34 @@ where
 }
 
 impl<ThId> ModalOp<ThId> {
-    fn ob_act<Id>(self, ob: ModalOb<Id, ThId>) -> ModalOb<Id, ThId> {
+    fn ob_act<Id>(self, ob: ModalOb<Id, ThId>) -> Result<ModalOb<Id, ThId>, String> {
         match self {
-            ModalOp::Generator(id) => ModalOb::App(ob.into(), id),
-            ModalOp::Mul(mode, n, _) => ModalOb::List(mode, flatten_ob(ob, mode, n)),
+            ModalOp::Generator(id) => Ok(ModalOb::App(ob.into(), id)),
+            ModalOp::Mul(mode, n, _) => Ok(ModalOb::List(mode, flatten_ob(ob, mode, n)?)),
         }
     }
 }
 
 /// Recursively flatten a nested list of objects of the given depth.
-fn flatten_ob<Id, ThId>(ob: ModalOb<Id, ThId>, mode: Mode, depth: usize) -> Vec<ModalOb<Id, ThId>> {
+fn flatten_ob<Id, ThId>(
+    ob: ModalOb<Id, ThId>,
+    mode: Mode,
+    depth: usize,
+) -> Result<Vec<ModalOb<Id, ThId>>, String> {
     if depth == 0 {
-        vec![ob]
+        Ok(vec![ob])
     } else if let ModalOb::List(other_mode, vec) = ob
         && other_mode == mode
     {
         if depth == 1 {
-            vec
+            Ok(vec)
         } else {
-            vec.into_iter().flat_map(|ob| flatten_ob(ob, mode, depth - 1)).collect()
+            let maybe_vec: Result<Vec<_>, _> =
+                vec.into_iter().map(|ob| flatten_ob(ob, mode, depth - 1)).collect();
+            Ok(maybe_vec?.into_iter().flatten().collect())
         }
     } else {
-        panic!("TODO")
+        Err(format!("Object should be list of mode {mode:?}"))
     }
 }
 
