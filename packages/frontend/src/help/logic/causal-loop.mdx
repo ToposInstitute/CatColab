@@ -37,15 +37,21 @@ If you have any ideas then please do get in touch.
 <HelpAnalysisById theory={props.theory} analysisId="diagram"/>
 
 <HelpAnalysisById theory={props.theory} analysisId="negative-loops">
-Negative feedback loops, or *balancing loops*, are composites of paths within the diagram that start and finish at the same point, and whose overall sign (given by multiplying all the signs of each constituent path) is positive.
-Reinforcing loops tend to be stabilising.
+Balancing loops are composites of paths within the diagram that start and finish at the same point, and whose overall sign (given by multiplying all the signs of each constituent path) is positive.
+Balancing loops tend to be stabilising.
 </HelpAnalysisById>
 
 <HelpAnalysisById theory={props.theory} analysisId="positive-loops">
-Positive feedback loops, or *reinforcing loops*, are composites of paths within the diagram that start and finish at the same point, and whose overall sign (given by multiplying all the signs of each constituent path) is positive.
+Reinforcing loops are composites of paths within the diagram that start and finish at the same point, and whose overall sign (given by multiplying all the signs of each constituent path) is positive.
 Reinforcing loops tend to produce unstable behavior.
 </HelpAnalysisById>
 
-<HelpAnalysisById theory={props.theory} analysisId="linear-ode"/>
+<HelpAnalysisById theory={props.theory} analysisId="linear-ode">
+An arrow $A\xrightarrow{\pm}B$ is interpreted as the equation $\dot{B}=\pm k A$ for some non-negative constant $k$.
+Multiple incoming arrows are interpreted additively, so e.g. $A\xrightarrow{+}B\xleftarrow{-}C$ is interpreted as $\dot{B}=kA-\ell C$.
+</HelpAnalysisById>
 
-<HelpAnalysisById theory={props.theory} analysisId="lotka-volterra"/>
+<HelpAnalysisById theory={props.theory} analysisId="lotka-volterra">
+An arrow $A\xrightarrow{\pm}B$ is interpreted as the equation $\dot{B}=\pm (kA + g)B$ for some non-negative constant $k$ (the *interaction coefficient*) and constant $g$ (the *growth rate*).
+Multiple incoming arrows are interpreted additively, so e.g. $A\xrightarrow{+}B\xleftarrow{-}C$ is interpreted as $\dot{B}=(kA - \ell C + g)B$.
+</HelpAnalysisById>

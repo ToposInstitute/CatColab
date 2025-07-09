@@ -261,11 +261,13 @@ stdTheories.add(
                     id: "diagram",
                     name: "Visualization",
                     description: "Visualize the regulatory network",
+                    help: "visualization",
                 }),
                 analyses.configureSubmodelsAnalysis({
                     id: "positive-loops",
                     name: "Positive feedback",
                     description: "Analyze the network for positive feedback loops",
+                    help: "loops",
                     findSubmodels(model, options) {
                         return thSignedCategory.positiveLoops(model, options);
                     },
@@ -274,6 +276,7 @@ stdTheories.add(
                     id: "negative-loops",
                     name: "Negative feedback",
                     description: "Analyze the network for negative feedback loops",
+                    help: "loops",
                     findSubmodels(model, options) {
                         return thSignedCategory.negativeLoops(model, options);
                     },
