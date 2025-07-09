@@ -29,7 +29,7 @@ export function TheorySelectorDialog(
             >
                 {props.theory.name}
             </Dialog.Trigger>
-            <TheoryHelpButton theory={props.theories.get(props.theory.id)} />
+            <TheoryHelpButton theory={props.theories?.get(props.theory.id)} />
             <Dialog.Portal>
                 <Dialog.Overlay class="overlay" />
                 <Dialog.Content class="popup">
