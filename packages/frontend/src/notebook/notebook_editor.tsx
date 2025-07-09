@@ -5,8 +5,8 @@ import type { DocHandle, Prop } from "@automerge/automerge-repo";
 import { type KbdKey, createShortcut } from "@solid-primitives/keyboard";
 import ListPlus from "lucide-solid/icons/list-plus";
 
+import { getAuth } from "firebase/auth";
 import { useAuth, useFirebaseApp } from "solid-firebase";
-import { getAuth, signOut } from "firebase/auth";
 
 import {
     type Component,
@@ -89,14 +89,15 @@ export function NotebookEditor<T>(props: {
 
     // FIXME: Remove this option once we fix focus management.
     noShortcuts?: boolean;
-	notebookType?: string;
+    notebookType?: string;
 }) {
-
-	const firebaseApp = useFirebaseApp();
-	const auth = useAuth(getAuth(firebaseApp));
+    const firebaseApp = useFirebaseApp();
+    const auth = useAuth(getAuth(firebaseApp));
 
     const [activeCell, setActiveCell] = createSignal(props.notebook.cells.length > 0 ? 0 : -1);
-    const [isOverlayOpen, setOverlayOpen] = createSignal(props.notebookType == "model" && props.notebook.cells.length == 0 && auth.data == null);
+    const [isOverlayOpen, setOverlayOpen] = createSignal(
+        props.notebookType === "model" && props.notebook.cells.length === 0 && auth.data == null,
+    );
 
     // Set up commands and their keyboard shortcuts.
 

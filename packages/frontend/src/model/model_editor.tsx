@@ -131,7 +131,7 @@ export function ModelNotebookEditor(props: {
                 cellConstructors={cellConstructors()}
                 cellLabel={judgmentLabel}
                 duplicateCell={duplicateModelJudgment}
-				notebookType={"model"}
+                notebookType={"model"}
             />
         </LiveModelContext.Provider>
     );
