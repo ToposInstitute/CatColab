@@ -10,14 +10,13 @@ const theoryWithIdFilter = {
 };
 
 const existingGuideFilter = {
-    // TIM-TO-DO: is there a slicker/more idiomatic way of doing this?
-    id: (id: string) => guidesList.find((item) => item.id === id) !== undefined,
+    id: (id: string) => guidesList.some((item) => item.id === id),
 };
 
 export const helpRoutes: RouteDefinition[] = [
     {
         path: "/",
-        component: lazyMdx(() => import("./index.mdx")),
+        component: lazyMdx(() => import("./overview.mdx")),
     },
     {
         path: "/concepts",
@@ -38,11 +37,11 @@ export const helpRoutes: RouteDefinition[] = [
     },
     {
         path: "/logics",
-        component: lazy(() => import("./logics")),
+        component: lazy(() => import("./logics/logics_help_overview")),
     },
     {
         path: "/logics/:id",
         matchFilters: theoryWithIdFilter,
-        component: lazy(() => import("./logic")),
+        component: lazy(() => import("./logics/logic_help_detail")),
     },
 ];

@@ -2,9 +2,9 @@ import type { JSX } from "solid-js";
 
 import { BrandedToolbar } from "../page/toolbar";
 
-import "./help_container.css";
+import "./help_layout.css";
 
-export default function HelpContainer(props: {
+export default function HelpLayout(props: {
     children?: JSX.Element;
 }) {
     return (
