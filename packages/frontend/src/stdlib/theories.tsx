@@ -741,7 +741,7 @@ stdTheories.add(
                     tag: "MorType",
                     morType: { tag: "Basic", content: "VariableLink" },
                     name: "Variable Link",
-                    description: "Variable controlling stock quantity",
+                    description: "Variable referencing a stock quantity",
                     shortcut: ["V"],
                     arrowStyle: "flat",
                     cssClasses: [styles.link],
@@ -753,14 +753,6 @@ stdTheories.add(
                     id: "diagram",
                     name: "Visualization",
                     description: "Visualize the stock and flow diagram",
-                }),
-                analyses.configureMassAction({
-                    simulate(model, data) {
-                        return thCategoryDynamicStockFlow.mass_action(model, data);
-                    },
-                    isTransition(mor) {
-                        return mor.morType.tag === "Hom";
-                    },
                 }),
             ],
         });

@@ -294,25 +294,6 @@ impl ThCategoryDynamicStockFlow {
     pub fn theory(&self) -> DblTheory {
         DblTheory(self.0.clone().into())
     }
-
-    /// Simulates the mass-action system derived from a model.
-    #[wasm_bindgen(js_name = "mass_action")]
-    pub fn mass_action(
-        &self,
-        model: &DblModel,
-        data: MassActionModelData,
-    ) -> Result<ODEResult, String> {
-        let model: &model::DiscreteTabModel<_, _, _> = (&model.0)
-            .try_into()
-            .map_err(|_| "Mass-action simulation expects a discrete tabulator model")?;
-        Ok(ODEResult(
-            analyses::ode::StockFlowMassActionAnalysis::default()
-                .create_numerical_system(model, data.0)
-                .solve_with_defaults()
-                .map_err(|err| format!("{err:?}"))
-                .into(),
-        ))
-    }
 }
 
 #[cfg(test)]

@@ -143,17 +143,6 @@ pub fn th_category_dynamic_stockflow() -> UstrDiscreteTabTheory {
     let mut th: UstrDiscreteTabTheory = Default::default();
     let x = ustr("Object");
     th.add_ob_type(x);
-    // there are two proarrows from stocks to flows. they correspond to inflows and outflows.
-    th.add_mor_type(
-        ustr("Inflow"),
-        TabObType::Basic(x),
-        th.tabulator(th.hom_type(TabObType::Basic(x))),
-    );
-    th.add_mor_type(
-        ustr("Outflow"),
-        TabObType::Basic(x),
-        th.tabulator(th.hom_type(TabObType::Basic(x))),
-    );
     th.add_mor_type(
         ustr("Link"),
         TabObType::Basic(x),
