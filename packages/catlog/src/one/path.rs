@@ -533,10 +533,22 @@ impl<V, E> ShortPath<V, E> {
     }
 
     /// Converts the short path into an edge in the given *reflexive* graph.
-    pub fn to_edge_in(self, graph: &impl ReflexiveGraph<V = V, E = E>) -> E {
+    pub fn as_edge(self, graph: &impl ReflexiveGraph<V = V, E = E>) -> E {
         match self {
             ShortPath::Zero(v) => graph.refl(v),
             ShortPath::One(e) => e,
+        }
+    }
+
+    /// Maps over the short path.
+    pub fn map<CodV, CodE>(
+        self,
+        fv: impl FnOnce(V) -> CodV,
+        fe: impl FnOnce(E) -> CodE,
+    ) -> ShortPath<CodV, CodE> {
+        match self {
+            ShortPath::Zero(v) => ShortPath::Zero(fv(v)),
+            ShortPath::One(e) => ShortPath::One(fe(e)),
         }
     }
 }

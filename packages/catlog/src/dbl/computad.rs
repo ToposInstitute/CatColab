@@ -116,7 +116,7 @@ where
             .cod
             .apply_to_ref(sq)
             .expect("Codomain of square should be defined")
-            .to_edge_in(self.proarrows)
+            .as_edge(self.proarrows)
     }
     fn square_src(&self, sq: &Self::Sq) -> Self::E {
         self.computad.src.apply_to_ref(sq).expect("Source of square should be defined")

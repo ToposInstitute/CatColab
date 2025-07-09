@@ -7,7 +7,7 @@ structure. For example, a computad for monoidal categories is called a "tensor
 scheme" by Joyal and Street and a "pre-net" in the Petri net literature.
  */
 
-use std::hash::{BuildHasher, Hash};
+use std::hash::{BuildHasher, Hash, RandomState};
 
 use derivative::Derivative;
 use derive_more::Constructor;
@@ -19,9 +19,9 @@ use crate::zero::*;
 
 Intended for use with [`Computad`].
  */
-#[derive(Debug, Derivative)]
+#[derive(Clone, Debug, Derivative)]
 #[derivative(Default(bound = "S: Default"))]
-pub struct ComputadTop<Ob, E, S> {
+pub struct ComputadTop<Ob, E, S = RandomState> {
     edges: HashFinSet<E, S>,
     src: HashColumn<E, Ob, S>,
     tgt: HashColumn<E, Ob, S>,
@@ -47,7 +47,7 @@ The set of objects is assumed already constructed, possibly from other
 generating data, while the top-dimensional generating data is provided directly.
  */
 #[derive(Constructor)]
-pub struct Computad<'a, Ob, ObSet, E, S> {
+pub struct Computad<'a, Ob, ObSet, E, S = RandomState> {
     objects: &'a ObSet,
     computad: &'a ComputadTop<Ob, E, S>,
 }
