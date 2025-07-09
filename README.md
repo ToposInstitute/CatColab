@@ -1,5 +1,7 @@
 # CatColab
 
+[![Catlog documentation](https://img.shields.io/badge/docs-dev-blue.svg)](https://next.catcolab.org/dev/rust/catlog/)
+
 CatColab (working name) is a collaborative environment for *formal,
 interoperable, conceptual modeling*.
 
