@@ -13,7 +13,7 @@ export const guidesList: Guide[] = [
         id: "fundamentals",
         title: "Fundamentals of CatColab",
         description:
-            "What do we mean by \"formal, interoperable, conceptual modeling\", and how does CatColab implement this?",
+            'What do we mean by "formal, interoperable, conceptual modeling", and how does CatColab implement this?',
     },
     {
         id: "predator-prey",

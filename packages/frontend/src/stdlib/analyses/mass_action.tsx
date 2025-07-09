@@ -25,7 +25,7 @@ export function configureMassAction(options: {
     id?: string;
     name?: string;
     description?: string;
-    help?: string
+    help?: string;
     simulate: Simulator;
     isState?: (ob: ObjectDecl) => boolean;
     isTransition?: (mor: MorphismDecl) => boolean;
