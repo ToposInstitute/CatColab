@@ -12,23 +12,21 @@ export class PermissionsError extends Error {
 export function ErrorBoundaryMessage(props: { error: Error }) {
     console.error(props.error);
 
-    let heading: string;
-    let message: string;
-
-    if (props.error instanceof PermissionsError) {
-        heading = "Permissions Error";
-        message = "You are not permitted to view this resource.";
-    } else {
-        heading = "Error";
-        message = "An unknown error occurred.";
-    }
-
-    return <ErrorMessage heading={heading} message={message} />;
+    return <ErrorMessage error={props.error} />;
 }
 
 export function ErrorBoundaryPage(props: { error: Error }) {
     console.error(props.error);
 
+    return (
+        <div class="error-page">
+            <DefaultToolbar />
+            <ErrorMessage error={props.error} />
+        </div>
+    );
+}
+
+export function ErrorMessage(props: { error: Error }) {
     let heading: string;
     let message: string;
 
@@ -41,19 +39,10 @@ export function ErrorBoundaryPage(props: { error: Error }) {
     }
 
     return (
-        <div class="error-page">
-            <DefaultToolbar />
-            <ErrorMessage heading={heading} message={message} />
-        </div>
-    );
-}
-
-export function ErrorMessage(props: { heading: string; message: string }) {
-    return (
         <div class="error-boundary">
             <div>
-                <h3>{props.heading}</h3>
-                <p>{props.message}</p>
+                <h3>{heading}</h3>
+                <p>{message}</p>
             </div>
         </div>
     );
