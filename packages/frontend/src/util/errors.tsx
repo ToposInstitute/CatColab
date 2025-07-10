@@ -1,13 +1,4 @@
-import Dialog, { Content, Portal, Trigger } from "@corvu/dialog";
 import { DefaultToolbar } from "../page/toolbar";
-import { useContext } from "solid-js";
-import { useNavigate } from "@solidjs/router";
-import { IconButton } from "../components";
-import { createModel } from "../model/document";
-import { useApi } from "../api";
-import CircleArrowLeft from "lucide-solid/icons/circle-arrow-left";
-import { TheoryLibraryContext } from "../stdlib";
-import invariant from "tiny-invariant";
 
 import "./errors.css";
 
@@ -18,9 +9,24 @@ export class PermissionsError extends Error {
     }
 }
 
-export function ErrorBoundaryDialog(props: { error: Error }) {
+export function ErrorBoundaryMessage(props: { error: Error }) {
     console.error(props.error);
 
+    return <ErrorMessage error={props.error} />;
+}
+
+export function ErrorBoundaryPage(props: { error: Error }) {
+    console.error(props.error);
+
+    return (
+        <div class="error-page">
+            <DefaultToolbar />
+            <ErrorMessage error={props.error} />
+        </div>
+    );
+}
+
+export function ErrorMessage(props: { error: Error }) {
     let heading: string;
     let message: string;
 
@@ -32,28 +38,12 @@ export function ErrorBoundaryDialog(props: { error: Error }) {
         message = "An unknown error occurred.";
     }
 
-	// probably delete
-	const api = useApi();
-	const navigate = useNavigate();
-	const theories = useContext(TheoryLibraryContext);
-	invariant(theories, "Theory library must be provided as context");
-	const onNewModel = async () => {
-	  const newRef = await createModel(api, theories.getDefault().id);
-	  navigate(`/model/${newRef}`);
-	};
-	//
-
     return (
-	  <div>
-		<DefaultToolbar />
-        <Dialog initialOpen={true} noOutsidePointerEvents={false}>
-            <Portal>
-                <Content class="popup error-dialog">
-                    <h3>{heading}</h3>
-                    <p>{message}</p>
-                </Content>
-            </Portal>
-        </Dialog>
-	  </div>
+        <div class="error-boundary">
+            <div>
+                <h3>{heading}</h3>
+                <p>{message}</p>
+            </div>
+        </div>
     );
 }
