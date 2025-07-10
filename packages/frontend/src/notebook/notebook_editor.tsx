@@ -30,8 +30,8 @@ import {
     StemCellEditor,
     isCellDragData,
 } from "./notebook_cell";
-import { WalkthroughOverlay } from "./walkthrough_overlay";
 import { type FormalCell, newFormalCell, newRichTextCell, newStemCell } from "./types";
+import { WalkthroughOverlay } from "./walkthrough_overlay";
 
 import "./notebook_editor.css";
 
