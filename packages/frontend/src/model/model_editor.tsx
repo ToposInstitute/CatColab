@@ -2,6 +2,7 @@ import { useParams } from "@solidjs/router";
 import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
+import type { ModelJudgment } from "catlog-wasm";
 import { useApi } from "../api";
 import { InlineInput } from "../components";
 import {
@@ -11,18 +12,22 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
-import { TheoryHelpButton, Toolbar } from "../page";
+import {
+    DocumentBreadcrumbs,
+    DocumentLoadingScreen,
+    DocumentMenu,
+    TheoryHelpButton,
+    Toolbar,
+} from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
-import { MaybePermissionsButton } from "../user";
+import { PermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
 import { type LiveModelDocument, getLiveModel } from "./document";
-import { ModelMenu } from "./model_menu";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
 import { TheorySelectorDialog } from "./theory_selector";
 import {
-    type ModelJudgment,
     type MorphismDecl,
     type ObjectDecl,
     duplicateModelJudgment,
@@ -44,26 +49,29 @@ export default function ModelPage() {
         (refId) => getLiveModel(refId, api, theories),
     );
 
-    return <ModelDocumentEditor liveModel={liveModel()} />;
+    return (
+        <Show when={liveModel()} fallback={<DocumentLoadingScreen />}>
+            {(loadedModel) => <ModelDocumentEditor liveModel={loadedModel()} />}
+        </Show>
+    );
 }
 
 export function ModelDocumentEditor(props: {
-    liveModel?: LiveModelDocument;
+    liveModel: LiveModelDocument;
 }) {
     return (
         <div class="growable-container">
             <Toolbar>
-                <ModelMenu liveModel={props.liveModel} />
+                <DocumentMenu liveDocument={props.liveModel} />
+                <DocumentBreadcrumbs document={props.liveModel} />
                 <span class="filler" />
-                <TheoryHelpButton theory={props.liveModel?.theory()} />
-                <MaybePermissionsButton
-                    permissions={props.liveModel?.liveDoc.permissions}
-                    refId={props.liveModel?.refId}
+                <TheoryHelpButton theory={props.liveModel.theory()} />
+                <PermissionsButton
+                    permissions={props.liveModel.liveDoc.permissions}
+                    refId={props.liveModel.refId}
                 />
             </Toolbar>
-            <Show when={props.liveModel}>
-                {(liveModel) => <ModelPane liveModel={liveModel()} />}
-            </Show>
+            <ModelPane liveModel={props.liveModel} />
         </div>
     );
 }
@@ -73,10 +81,17 @@ export function ModelDocumentEditor(props: {
 export function ModelPane(props: {
     liveModel: LiveModelDocument;
 }) {
-    const theories = useContext(TheoryLibraryContext);
-    invariant(theories, "Library of theories should be provided as context");
-
     const liveDoc = () => props.liveModel.liveDoc;
+
+    const selectableTheories = () => {
+        console.log(props.liveModel.theory().inclusions);
+        if (liveDoc().doc.notebook.cells.some((cell) => cell.tag === "formal")) {
+            return props.liveModel.theory().inclusions;
+        } else {
+            // If the model has no formal cells, allow any theory to be selected.
+            return undefined;
+        }
+    };
 
     return (
         <div class="notebook-container">
@@ -99,8 +114,7 @@ export function ModelPane(props: {
                             model.theory = id;
                         });
                     }}
-                    theories={theories}
-                    disabled={liveDoc().doc.notebook.cells.some((cell) => cell.tag === "formal")}
+                    theories={selectableTheories()}
                 />
             </div>
             <ModelNotebookEditor liveModel={props.liveModel} />

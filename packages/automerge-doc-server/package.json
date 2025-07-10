@@ -1,30 +1,30 @@
 {
-  "name": "automerge-doc-server",
-  "version": "0.1.0",
-  "type": "module",
-  "main": "dist/main.js",
-  "scripts": {
-      "main": "tsx src/main.ts",
-      "build": "tsc",
-      "format": "biome format --write",
-      "lint": "biome lint --write && biome check --write"
-  },
-  "author": "CatColab developer team",
-  "license": "MIT",
-  "dependencies": {
-      "@automerge/automerge-repo": "^1.2.1",
-      "@automerge/automerge-repo-network-websocket": "^1.2.1",
-      "@sentry/node": "^8.37.1",
-      "express": "^4.19.2",
-      "socket.io-client": "^4.8.0",
-      "ws": "^8.18.0"
-  },
-  "devDependencies": {
-      "@biomejs/biome": "^1.8.3",
-      "@types/express": "^4.17.21",
-      "@types/node": "^22.7.4",
-      "@types/ws": "^8.5.12",
-      "tsx": "^4.19.1",
-      "typescript": "^5.6.2"
-  }
+    "name": "automerge-doc-server",
+    "version": "0.1.0",
+    "type": "module",
+    "main": "dist/main.js",
+    "scripts": {
+        "main": "tsx src/main.ts",
+        "format": "biome format --write",
+        "lint": "biome lint --write && biome check --write"
+    },
+    "author": "CatColab developer team",
+    "license": "MIT",
+    "dependencies": {
+        "@automerge/automerge-repo": "^1.2.1",
+        "@automerge/automerge-repo-network-websocket": "^1.2.1",
+        "dotenv": "^16.5.0",
+        "express": "^4.19.2",
+        "pg": "^8.16.0",
+        "socket.io-client": "^4.8.0",
+        "ws": "^8.18.0"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "^1.8.3",
+        "@types/express": "^4.17.21",
+        "@types/node": "^22.7.4",
+        "@types/ws": "^8.5.12",
+        "tsx": "^4.19.1",
+        "typescript": "^5.6.2"
+    }
 }

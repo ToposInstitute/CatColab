@@ -1,26 +1,27 @@
 import Dialog from "@corvu/dialog";
-import { For, createMemo, createSignal } from "solid-js";
+import { For, createMemo, createSignal, useContext } from "solid-js";
+import invariant from "tiny-invariant";
 
-import type { TheoryLibrary, TheoryMeta } from "../stdlib";
+import { TheoryLibraryContext, type TheoryMeta } from "../stdlib";
 
 import "./theory_selector.css";
 
 type TheorySelectorProps = {
     theory: TheoryMeta;
     setTheory: (theoryId: string) => void;
-    theories: TheoryLibrary;
+    theories?: string[];
 };
 
-export function TheorySelectorDialog(
-    props: {
-        disabled?: boolean;
-    } & TheorySelectorProps,
-) {
+export function TheorySelectorDialog(props: TheorySelectorProps) {
     const [theorySelectorOpen, setTheorySelectorOpen] = createSignal(false);
 
     return (
         <Dialog open={theorySelectorOpen()} onOpenChange={setTheorySelectorOpen}>
-            <Dialog.Trigger class="theory-selector-button link-button" disabled={props.disabled}>
+            <Dialog.Trigger
+                as="a"
+                class="theory-selector-trigger"
+                data-disabled={props.theories?.length === 0 ? true : undefined}
+            >
                 {props.theory.name}
             </Dialog.Trigger>
             <Dialog.Portal>
@@ -41,8 +42,11 @@ export function TheorySelectorDialog(
 }
 
 export function TheorySelector(props: TheorySelectorProps) {
+    const theories = useContext(TheoryLibraryContext);
+    invariant(theories, "Library of theories should be provided as context");
+
     const groupedTheories = createMemo(() =>
-        Array.from(props.theories.groupedMetadata().entries()),
+        Array.from(theories.groupedMetadata(props.theories).entries()),
     );
 
     return (

@@ -1,22 +1,25 @@
-import type * as Viz from "@viz-js/viz";
 import ChevronLeft from "lucide-solid/icons/chevron-left";
 import ChevronRight from "lucide-solid/icons/chevron-right";
-import { Show } from "solid-js";
+import { Show, createMemo } from "solid-js";
 
-import type { DblModel } from "catlog-wasm";
+import type { DblModel, MotifsOptions } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
-import { IconButton, PanelHeader } from "../../components";
-import type { ModelJudgment } from "../../model";
-import type { ModelAnalysisMeta, Theory } from "../../theory";
-import type { GraphvizAttributes } from "./graph_visualization";
+import { Foldable, FormGroup, IconButton, InputField } from "../../components";
+
+import type { ModelAnalysisMeta } from "../../theory";
 import { ModelGraphviz } from "./model_graph";
 
 import "./submodel_graphs.css";
 
-/** State of a submodels analysis. */
+type FindSubmodelsFn = (model: DblModel, options: MotifsOptions) => DblModel[];
+
+/** Configuration and state of a submodels analysis. */
 export type SubmodelsAnalysisContent = {
     /** Index of active submodel. */
     activeIndex: number;
+
+    /** Maximum length of paths used in morphism search. */
+    maxPathLength?: number | null;
 };
 
 /** Configure a submodel analysis for use with a double theory. */
@@ -24,7 +27,7 @@ export function configureSubmodelsAnalysis(options: {
     id: string;
     name: string;
     description?: string;
-    findSubmodels: (model: DblModel) => Array<DblModel>;
+    findSubmodels: FindSubmodelsFn;
 }): ModelAnalysisMeta<SubmodelsAnalysisContent> {
     const { id, name, description, findSubmodels } = options;
     return {
@@ -36,76 +39,45 @@ export function configureSubmodelsAnalysis(options: {
         ),
         initialContent: () => ({
             activeIndex: 0,
+            maxPathLength: 5,
         }),
     };
 }
 
 function SubmodelsAnalysis(
     props: {
-        findSubmodels: (model: DblModel) => Array<DblModel>;
+        findSubmodels: FindSubmodelsFn;
         title?: string;
     } & ModelAnalysisProps<SubmodelsAnalysisContent>,
 ) {
-    const submodels = () => {
-        const validated = props.liveModel.validatedModel();
-        return validated?.result.tag === "Ok" ? props.findSubmodels(validated.model) : [];
-    };
-
-    return (
-        <SubmodelsGraphviz
-            model={props.liveModel.formalJudgments()}
-            submodels={submodels()}
-            theory={props.liveModel.theory()}
-            activeIndex={props.content.activeIndex}
-            setActiveIndex={(index: number) =>
-                props.changeContent((content) => {
-                    content.activeIndex = index;
-                })
+    const submodels = createMemo<DblModel[]>(
+        () => {
+            const validated = props.liveModel.validatedModel();
+            if (validated?.result.tag !== "Ok") {
+                return [];
             }
-            title={props.title}
-            // Should we expose layout options?
-            options={{
-                engine: "dot",
-            }}
-            attributes={{
-                graph: {
-                    // For compactness.
-                    rankdir: "LR",
-                },
-            }}
-        />
+            return props.findSubmodels(validated.model, {
+                maxPathLength: props.content.maxPathLength ?? null,
+            });
+        },
+        [],
+        { equals: false },
     );
-}
 
-/** Display submodels of a model of a double theory using Graphviz.
-
-The index of the active (currently displayed) submodel is managed externally to
-the component.
- */
-export function SubmodelsGraphviz(props: {
-    model: Array<ModelJudgment>;
-    submodels: Array<DblModel>;
-    theory: Theory;
-    activeIndex: number;
-    setActiveIndex: (index: number) => void;
-    title?: string;
-    attributes?: GraphvizAttributes;
-    options?: Viz.RenderOptions;
-}) {
-    const index = () => props.activeIndex;
-    const setIndex = (index: number) => props.setActiveIndex(index);
+    const index = () => props.content.activeIndex;
+    const setIndex = (index: number) =>
+        props.changeContent((content) => {
+            content.activeIndex = index;
+        });
     const decIndex = () => setIndex(Math.max(0, index() - 1));
-    const incIndex = () => setIndex(Math.min(index() + 1, props.submodels.length - 1));
+    const incIndex = () => setIndex(Math.min(index() + 1, submodels().length - 1));
 
     const filteredModel = () => {
-        if (index() >= props.submodels.length) {
-            return [];
-        }
-        const submodel = props.submodels[index()];
+        const submodel = submodels()[index()];
         if (!submodel) {
             return [];
         }
-        return props.model.filter((judgment) => {
+        return props.liveModel.formalJudgments().filter((judgment) => {
             if (judgment.tag === "object") {
                 return submodel.hasOb({ tag: "Basic", content: judgment.id });
             } else if (judgment.tag === "morphism") {
@@ -116,30 +88,59 @@ export function SubmodelsGraphviz(props: {
         });
     };
 
+    const indexButtons = (
+        <div class="index-buttons">
+            <IconButton onClick={decIndex} disabled={index() <= 0}>
+                <ChevronLeft />
+            </IconButton>
+            <Show when={submodels().length}>
+                {(length) => (
+                    <span>
+                        {index() + 1} / {length()}
+                    </span>
+                )}
+            </Show>
+            <IconButton onClick={incIndex} disabled={index() >= submodels().length - 1}>
+                <ChevronRight />
+            </IconButton>
+        </div>
+    );
+
     return (
         <div class="submodel-graphs">
-            <PanelHeader title={props.title}>
-                <div class="index-buttons">
-                    <IconButton onClick={decIndex} disabled={index() <= 0}>
-                        <ChevronLeft />
-                    </IconButton>
-                    <Show when={props.submodels.length}>
-                        {(length) => (
-                            <span>
-                                {index() + 1} / {length()}
-                            </span>
-                        )}
+            <Foldable title={props.title} header={indexButtons}>
+                <FormGroup compact>
+                    <InputField
+                        type="checkbox"
+                        label="Limit length of paths"
+                        checked={props.content.maxPathLength != null}
+                        onChange={(evt) =>
+                            props.changeContent((content) => {
+                                content.maxPathLength = evt.currentTarget.checked ? 1 : null;
+                            })
+                        }
+                    />
+                    <Show when={props.content.maxPathLength != null}>
+                        <InputField
+                            type="number"
+                            min="0"
+                            label="Maximum length of path"
+                            value={props.content.maxPathLength ?? ""}
+                            onChange={(evt) =>
+                                props.changeContent((content) => {
+                                    content.maxPathLength = evt.currentTarget.valueAsNumber;
+                                })
+                            }
+                        />
                     </Show>
-                    <IconButton onClick={incIndex} disabled={index() >= props.submodels.length - 1}>
-                        <ChevronRight />
-                    </IconButton>
-                </div>
-            </PanelHeader>
+                </FormGroup>
+            </Foldable>
             <ModelGraphviz
                 model={filteredModel()}
-                theory={props.theory}
-                attributes={props.attributes}
-                options={props.options}
+                theory={props.liveModel.theory()}
+                options={{
+                    engine: "dot",
+                }}
             />
         </div>
     );

@@ -31,10 +31,8 @@ jobs:
           node-version: 20
           cache: "pnpm"
 
-      - name: Setup Rust
-        run: |
-          rustup toolchain install stable
-          rustup target add wasm32-unknown-unknown
+      - name: Install Rust toolchain from file
+        uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Build for Prod
         if: github.event_name == 'release'
@@ -71,9 +69,8 @@ jobs:
       - name: Repository Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Rust
-        run: |
-          rustup toolchain install stable
+      - name: Install Rust toolchain from file
+        uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Build
         run: |
@@ -104,6 +101,7 @@ jobs:
           tlmgr install tikz-cd
           tlmgr install amsmath
           tlmgr install quiver
+          tlmgr install spath3
 
       - name: Build
         run: |
@@ -179,3 +177,29 @@ jobs:
         with:
           message: |
             Preview url: ${{ steps.url_preview.outputs.NETLIFY_PREVIEW_URL }}
+
+  deploy_backend:
+    name: Deploy backend to AWS
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' && github.ref_name == 'main'
+    env:
+      TARGET_HOST: backend-next.catcolab.org
+      HOST_CONFIG: catcolab-next
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.CATCOLAB_NEXT_DEPLOYUSER_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan ${TARGET_HOST} >> ~/.ssh/known_hosts
+
+      - name: Rsync the repo to remote host
+        run: |
+          rsync -az --delete ./ deployuser@${TARGET_HOST}:~/catcolab/
+
+      - name: Run nixos-rebuild switch remotely
+        run: |
+          ssh deployuser@${TARGET_HOST} "sudo /run/current-system/sw/bin/nixos-rebuild switch --flake ./catcolab#${HOST_CONFIG}"

@@ -1,10 +1,12 @@
-use axum::{routing::get, Router};
+use axum::{Router, routing::get};
 use firebase_auth::FirebaseAuth;
 use socketioxide::SocketIo;
 use sqlx::postgres::PgPoolOptions;
+use std::sync::Arc;
 use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
 use tracing::{error, info};
+use tracing_subscriber::filter::{EnvFilter, LevelFilter};
 
 mod app;
 mod auth;
@@ -28,7 +30,11 @@ fn automerge_io_port() -> String {
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt().with_max_level(tracing::Level::INFO).init();
+    let env_filter = EnvFilter::builder()
+        .with_default_directive(LevelFilter::INFO.into())
+        .from_env_lossy();
+
+    tracing_subscriber::fmt().with_env_filter(env_filter).init();
 
     let db = PgPoolOptions::new()
         .max_connections(10)
@@ -43,16 +49,18 @@ async fn main() {
         db,
     };
 
+    // We need to wrap FirebaseAuth in an Arc because if it's ever dropped the process which updates it's
+    // jwt keys will be killed. The library is using the anti pattern of implementing both Clone and Drop on the
+    // same struct.
+    // https://github.com/trchopan/firebase-auth/issues/30
+    let firebase_auth =
+        Arc::new(FirebaseAuth::new(&dotenvy::var("FIREBASE_PROJECT_ID").unwrap()).await);
+
     socket::setup_automerge_socket(state.clone());
 
     let main_task = tokio::task::spawn(async {
-        let firebase_auth = FirebaseAuth::new(
-            &dotenvy::var("FIREBASE_PROJECT_ID").expect("`FIREBASE_PROJECT_ID` should be set"),
-        )
-        .await;
-
         let port = web_port();
-        let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port)).await.unwrap();
+        let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await.unwrap();
 
         let router = rpc::router();
         let (qubit_service, qubit_handle) = router.to_service(state);
@@ -64,7 +72,7 @@ async fn main() {
                     }
                     Ok(None) => {}
                     Err(err) => {
-                        error!("Authentication error: {}", err);
+                        error!("Authentication error: {err}");
                     }
                 };
                 req
@@ -75,7 +83,7 @@ async fn main() {
             .route("/", get(|| async { "Hello! The CatColab server is running" }))
             .nest_service("/rpc", qubit_service)
             .layer(CorsLayer::permissive());
-        info!("Web server listening at port {}", port);
+        info!("Web server listening at port {port}");
         axum::serve(listener, app).await.unwrap();
 
         qubit_handle.stop().unwrap();
@@ -83,9 +91,9 @@ async fn main() {
 
     let automerge_io_task = tokio::task::spawn(async {
         let port = automerge_io_port();
-        let listener = tokio::net::TcpListener::bind(format!("localhost:{}", port)).await.unwrap();
+        let listener = tokio::net::TcpListener::bind(format!("localhost:{port}")).await.unwrap();
         let app = Router::new().layer(io_layer);
-        info!("Automerge socket listening at port {}", port);
+        info!("Automerge socket listening at port {port}");
         axum::serve(listener, app).await.unwrap();
     });
 

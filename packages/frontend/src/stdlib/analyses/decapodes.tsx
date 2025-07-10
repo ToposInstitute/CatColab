@@ -1,6 +1,7 @@
 import { For, Match, Show, Switch, createMemo } from "solid-js";
 import { isMatching } from "ts-pattern";
 
+import type { DiagramJudgment, ModelJudgment } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
 import {
     type ColumnSchema,
@@ -11,13 +12,8 @@ import {
     Warning,
     createNumericalColumn,
 } from "../../components";
-import {
-    type DiagramJudgment,
-    type DiagramObjectDecl,
-    type LiveDiagramDocument,
-    fromCatlogDiagram,
-} from "../../diagram";
-import type { ModelJudgment, MorphismDecl } from "../../model";
+import { type DiagramObjectDecl, type LiveDiagramDocument, fromCatlogDiagram } from "../../diagram";
+import type { MorphismDecl } from "../../model";
 import type { DiagramAnalysisMeta } from "../../theory";
 import { uniqueIndexArray } from "../../util/indexing";
 import { PDEPlot2D, type PDEPlotData2D } from "../../visualization";
@@ -195,7 +191,7 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
                 </IconButton>
             </Match>
             <Match when={kernel.error || options.error}>
-                <IconButton onClick={restartKernel} tooltip="Restart the AlgebraicJulia service">
+                <IconButton onClick={restartKernel} tooltip="Restart the Julia kernel">
                     <RotateCcw size={16} />
                 </IconButton>
             </Match>
@@ -262,7 +258,7 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
             </Foldable>
             <Switch>
                 <Match when={kernel.loading || options.loading}>
-                    {"Loading the AlgebraicJulia service..."}
+                    {"Loading the Julia kernel..."}
                 </Match>
                 <Match when={kernel.error}>
                     {(error) => (
@@ -273,7 +269,7 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
                 </Match>
                 <Match when={options.error}>
                     {(error) => (
-                        <Warning title="Failed to initialize the AlgebraicJulia service">
+                        <Warning title="Failed to initialize the Julia kernel">
                             <pre>{error().message}</pre>
                         </Warning>
                     )}
@@ -348,7 +344,7 @@ const makeInitCode = () =>
     import IJulia
     IJulia.register_jsonmime(MIME"application/json"())
 
-    using AlgebraicJuliaService
+    using CatColabInterop
 
     JsonValue(supported_decapodes_geometries())
     `;
@@ -356,7 +352,7 @@ const makeInitCode = () =>
 /** Julia code run to perform a simulation. */
 const makeSimulationCode = (data: SimulationData) =>
     `
-    system = PodeSystem(raw"""${JSON.stringify(data)}""");
+    system = Analysis(ThDecapode(), raw"""${JSON.stringify(data)}""");
     simulator = evalsim(system.pode);
 
     f = simulator(system.geometry.dualmesh, system.generate, DiagonalHodge());

@@ -2,9 +2,9 @@ import type * as Viz from "@viz-js/viz";
 import { type Component, For, Show, createResource, createSignal } from "solid-js";
 import { P, match } from "ts-pattern";
 
+import type { ModelJudgment } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
-import { PanelHeader } from "../../components";
-import type { ModelJudgment } from "../../model";
+import { Foldable } from "../../components";
 import type { ModelAnalysisMeta, Theory } from "../../theory";
 import { uniqueIndexArray } from "../../util/indexing";
 import {
@@ -18,7 +18,7 @@ import {
     loadViz,
     vizLayoutGraph,
 } from "../../visualization";
-import { type GraphContent, type GraphvizAttributes, graphvizEngine } from "./graph_visualization";
+import * as GV from "./graph_visualization";
 import { modelToGraphviz } from "./model_graph";
 
 import "./graph_visualization.css";
@@ -28,38 +28,49 @@ export function configureStockFlowDiagram(options: {
     id: string;
     name: string;
     description?: string;
-}): ModelAnalysisMeta<GraphContent> {
+}): ModelAnalysisMeta<GV.GraphConfig> {
     const { id, name, description } = options;
     return {
         id,
         name,
         description,
         component: StockFlowDiagram,
-        initialContent: () => ({
-            layout: "graphviz-directed",
-        }),
+        initialContent: GV.defaultGraphConfig,
     };
 }
 
+const STOCKFLOW_ATTRIBUTES: GV.GraphvizAttributes = {
+    graph: {
+        splines: "ortho",
+    },
+    node: {
+        width: 0.55,
+        height: 0.55,
+    },
+};
+
 /** Visualize a stock flow diagram.
  */
-export function StockFlowDiagram(props: ModelAnalysisProps<GraphContent>) {
+export function StockFlowDiagram(props: ModelAnalysisProps<GV.GraphConfig>) {
     const [svgRef, setSvgRef] = createSignal<SVGSVGElement>();
+
+    const header = () => (
+        <DownloadSVGButton svg={svgRef()} tooltip="Export the diagram as SVG" size={16} />
+    );
 
     return (
         <div class="graph-visualization-analysis">
-            <PanelHeader title="Diagram">
-                <DownloadSVGButton svg={svgRef()} tooltip="Export the diagram as SVG" size={16} />
-            </PanelHeader>
+            <Foldable title="Visualization" header={header()}>
+                <GV.GraphConfigForm content={props.content} changeContent={props.changeContent} />
+            </Foldable>
             <div class="graph-visualization">
                 <Show when={props.liveModel.theory()}>
                     {(theory) => (
                         <StockFlowGraphviz
                             model={props.liveModel.formalJudgments()}
                             theory={theory()}
-                            options={{
-                                engine: graphvizEngine(props.content.layout),
-                            }}
+                            options={GV.graphvizOptions(props.content)}
+                            attributes={STOCKFLOW_ATTRIBUTES}
                             ref={setSvgRef}
                         />
                     )}
@@ -77,7 +88,7 @@ links from stocks to flows using our own layout heuristics.
 export function StockFlowGraphviz(props: {
     model: Array<ModelJudgment>;
     theory: Theory;
-    attributes?: GraphvizAttributes;
+    attributes?: GV.GraphvizAttributes;
     options?: Viz.RenderOptions;
     ref?: SVGRefProp;
 }) {
@@ -165,6 +176,7 @@ function StockFlowSVG(props: {
         </svg>
     );
 }
+
 /** Quadratic Bezier curve from one point to another.
  */
 function quadraticCurve(src: GraphLayout.Point, tgt: GraphLayout.Point, ratio: number) {

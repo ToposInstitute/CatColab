@@ -15,18 +15,23 @@ import invariant from "tiny-invariant";
 import { useApi } from "../api";
 import { IconButton, ResizableHandle } from "../components";
 import { DiagramPane } from "../diagram/diagram_editor";
-import { DiagramMenuItems } from "../diagram/diagram_menu";
 import { ModelPane } from "../model/model_editor";
-import { ModelMenuItems } from "../model/model_menu";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
     NotebookEditor,
     newFormalCell,
 } from "../notebook";
-import { AppMenu, TheoryHelpButton, Toolbar } from "../page";
+import {
+    DocumentBreadcrumbs,
+    DocumentLoadingScreen,
+    DocumentMenu,
+    TheoryHelpButton,
+    Toolbar,
+} from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { AnalysisMeta } from "../theory";
+import { assertExhaustive } from "../util/assert_exhaustive";
 import { LiveAnalysisContext } from "./context";
 import {
     type LiveAnalysisDocument,
@@ -51,7 +56,11 @@ export default function AnalysisPage() {
         (refId) => getLiveAnalysis(refId, api, theories),
     );
 
-    return <AnalysisDocumentEditor liveAnalysis={liveAnalysis()} />;
+    return (
+        <Show when={liveAnalysis()} fallback={<DocumentLoadingScreen />}>
+            {(loadedAnalysis) => <AnalysisDocumentEditor liveAnalysis={loadedAnalysis()} />}
+        </Show>
+    );
 }
 
 /** Editor for a model of a double theory.
@@ -60,7 +69,7 @@ The editor includes a notebook for the model itself plus another pane for
 performing analysis of the model.
  */
 export function AnalysisDocumentEditor(props: {
-    liveAnalysis?: LiveAnalysisDocument;
+    liveAnalysis: LiveAnalysisDocument;
 }) {
     const [resizableContext, setResizableContext] = createSignal<ContextValue>();
     const [isSidePanelOpen, setSidePanelOpen] = createSignal(true);
@@ -97,6 +106,7 @@ export function AnalysisDocumentEditor(props: {
                         >
                             <Toolbar>
                                 <AnalysisMenu liveAnalysis={props.liveAnalysis} />
+                                <DocumentBreadcrumbs document={props.liveAnalysis} />
                                 <span class="filler" />
                                 <TheoryHelpButton theory={theoryForAnalysis(props.liveAnalysis)} />
                                 <IconButton
@@ -125,12 +135,11 @@ export function AnalysisDocumentEditor(props: {
                             onExpand={() => setSidePanelOpen(true)}
                         >
                             <div class="notebook-container">
+                                <div class="toolbar">
+                                    <div class="toolbar-spacer" />
+                                </div>
                                 <h2>Analysis</h2>
-                                <Show when={props.liveAnalysis}>
-                                    {(liveAnalysis) => (
-                                        <AnalysisNotebookEditor liveAnalysis={liveAnalysis()} />
-                                    )}
-                                </Show>
+                                <AnalysisNotebookEditor liveAnalysis={props.liveAnalysis} />
                             </div>
                         </Resizable.Panel>
                     </>
@@ -141,35 +150,31 @@ export function AnalysisDocumentEditor(props: {
 }
 
 const AnalysisMenu = (props: {
-    liveAnalysis?: LiveAnalysisDocument;
-}) => (
-    <AppMenu disabled={props.liveAnalysis === undefined}>
-        <Switch>
-            <Match
-                when={props.liveAnalysis?.analysisType === "model" && props.liveAnalysis.liveModel}
-            >
-                {(liveModel) => <ModelMenuItems liveModel={liveModel()} />}
-            </Match>
-            <Match
-                when={
-                    props.liveAnalysis?.analysisType === "diagram" && props.liveAnalysis.liveDiagram
-                }
-            >
-                {(liveDiagram) => <DiagramMenuItems liveDiagram={liveDiagram()} />}
-            </Match>
-        </Switch>
-    </AppMenu>
-);
+    liveAnalysis: LiveAnalysisDocument;
+}) => {
+    const liveDocument = () => {
+        switch (props.liveAnalysis.analysisType) {
+            case "diagram":
+                return props.liveAnalysis.liveDiagram;
+            case "model":
+                return props.liveAnalysis.liveModel;
+            default:
+                assertExhaustive(props.liveAnalysis);
+        }
+    };
+
+    return <DocumentMenu liveDocument={liveDocument()} />;
+};
 
 const AnalysisOfPane = (props: {
-    liveAnalysis?: LiveAnalysisDocument;
+    liveAnalysis: LiveAnalysisDocument;
 }) => (
     <Switch>
-        <Match when={props.liveAnalysis?.analysisType === "model" && props.liveAnalysis.liveModel}>
+        <Match when={props.liveAnalysis.analysisType === "model" && props.liveAnalysis.liveModel}>
             {(liveModel) => <ModelPane liveModel={liveModel()} />}
         </Match>
         <Match
-            when={props.liveAnalysis?.analysisType === "diagram" && props.liveAnalysis.liveDiagram}
+            when={props.liveAnalysis.analysisType === "diagram" && props.liveAnalysis.liveDiagram}
         >
             {(liveDiagram) => <DiagramPane liveDiagram={liveDiagram()} />}
         </Match>
@@ -266,11 +271,13 @@ function analysisCellConstructor<T>(meta: AnalysisMeta<T>): CellConstructor<Anal
     };
 }
 
-function theoryForAnalysis(liveAnalysis?: LiveAnalysisDocument) {
-    if (liveAnalysis?.analysisType === "model") {
-        return liveAnalysis.liveModel.theory();
-    }
-    if (liveAnalysis?.analysisType === "diagram") {
-        return liveAnalysis.liveDiagram.liveModel.theory();
+function theoryForAnalysis(liveAnalysis: LiveAnalysisDocument) {
+    switch (liveAnalysis.analysisType) {
+        case "model":
+            return liveAnalysis.liveModel.theory();
+        case "diagram":
+            return liveAnalysis.liveDiagram.liveModel.theory();
+        default:
+            assertExhaustive(liveAnalysis);
     }
 }

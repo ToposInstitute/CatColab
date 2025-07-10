@@ -1,0 +1,81 @@
+import { A } from "@solidjs/router";
+
+## Description
+
+A causal loop diagram is a fundamental gadget in systems dynamics, 
+representing a system of causally interacting variables. Variables
+can encourage or discourage each other according to positively, 
+respectively, negatively signed edges. 
+
+It's important in systems dynamics research to find feedback loops in 
+causal loop diagrams. Positive feedback loops tend to produce unstable behavior,
+while negative feedback loops are stabilizing. CatColab supports this analysis 
+by searching for morphisms from the causal loop diagram given by a free loop. 
+This is the first demonstration in the tool of the general principle that edges in 
+CatColab models can actually be composed as in a category, rather than forming 
+a mere graph.
+
+Causal loop diagrams do not currently support instances, though we'd be
+curious to learn more about how they might be used in practice.
+
+
+## Analyses
+
+
+### Linear ODE
+
+#### Semantics
+
+Whenever we have *unidirectional* influence between variables, we might want to consider **linear first-order dynamics**, where variables affect the *first derivative* of other variables, with no feedback a priori.
+(For systems where variables directly influence *higher-order* derivatives of other variables, see the linear ODE analysis for <A href="../extended-causal-loop">**extended** causal loop diagrams</A>.)
+
+An arrow $A\xrightarrow{\pm}B$ is interpreted as the equation $\dot{B}=\pm k A$ for some constant $k$.
+Multiple incoming arrows are interpreted additively, so e.g. $A\xrightarrow{+}B\xleftarrow{-}C$ is interpreted as $\dot{B}=kA-\ell C$.
+
+#### User inputs
+
+<dl>
+  <dt>Initial value: $\mathbb{R}_{\geqslant0}$</dt>
+  <dd>The initial value of the variable.</dd>
+  <dt>Coefficient: $\mathbb{R}_{\geqslant0}$</dt>
+  <dd>The coefficient ($k$) corresponding to the arrow.</dd>
+  <dt>Duration: $\mathbb{R}_{\geqslant0}$</dt>
+  <dd>The total duration of the simulation in units of time.</dd>
+</dl>
+
+
+
+### Lotka–Volterra
+
+#### Semantics
+
+In contrast to linear dynamics, we might want to think about **Lotka–Volterra dynamics** whenever influence between variables is *bidirectional*, e.g. for predator–prey models, where higher population of predators means lower population of prey means lower population of predators means ... and so on.
+
+An arrow $A\xrightarrow{\pm}B$ is interpreted as the equation $\dot{B}=\pm (kA + g)B$ for some constant $k$ (the *interaction coefficient*) and $g$ (the *growth rate*).
+Multiple incoming arrows are interpreted additively, so e.g. $A\xrightarrow{+}B\xleftarrow{-}C$ is interpreted as $\dot{B}=(kA - \ell C + g)B$.
+
+#### User inputs
+
+<dl>
+  <dt>Initial value: $\mathbb{R}_{\geqslant0}$</dt>
+  <dd>The initial value of the variable.</dd>
+  <dt>Interaction: $\mathbb{R}_{\geqslant0}$</dt>
+  <dd>The interaction coefficient ($k$) corresponding to the arrow.</dd>
+  <dt>Growth/decay: $\mathbb{R}$</dt>
+  <dd>The growth rate ($g$) of the variable.</dd>
+  <dt>Duration: $\mathbb{R}_{\geqslant0}$</dt>
+  <dd>The total duration of the simulation in units of time.</dd>
+</dl>
+
+
+## Examples
+
+[Sustainable peace](https://catcolab.org/model/0194cf7f-e59a-7281-a0d9-dce4c68114e4)
+
+
+## Further Reading
+
+- Wikipedia: [Causal loop diagram](https://en.wikipedia.org/wiki/Causal_loop_diagram)
+- Barbrook-Johnson, Penn, *Causal Loop Diagrams*, in *Systems Mapping*, 2022. [DOI:10.1007/978-3-031-01919-7](doi.org/10.1007/978-3-031-01919-7
+)
+- Baez, Li, Libkind, et al, *A Categorical Framework for Modeling with Stock and Flow Diagrams*, [arXiv:2211.01290](https://arxiv.org/abs/2211.01290)

@@ -3,6 +3,7 @@ import { A, useParams } from "@solidjs/router";
 import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
+import type { DiagramJudgment } from "catlog-wasm";
 import { useApi } from "../api";
 import { InlineInput } from "../components";
 import { LiveModelContext } from "../model";
@@ -13,17 +14,21 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
-import { TheoryHelpButton, Toolbar } from "../page";
+import {
+    DocumentBreadcrumbs,
+    DocumentLoadingScreen,
+    DocumentMenu,
+    TheoryHelpButton,
+    Toolbar,
+} from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { InstanceTypeMeta } from "../theory";
-import { MaybePermissionsButton } from "../user";
+import { PermissionsButton } from "../user";
 import { LiveDiagramContext } from "./context";
-import { DiagramMenu } from "./diagram_menu";
 import { type LiveDiagramDocument, getLiveDiagram } from "./document";
 import { DiagramMorphismCellEditor } from "./morphism_cell_editor";
 import { DiagramObjectCellEditor } from "./object_cell_editor";
 import {
-    type DiagramJudgment,
     type DiagramMorphismDecl,
     type DiagramObjectDecl,
     duplicateDiagramJudgment,
@@ -45,26 +50,29 @@ export default function DiagramPage() {
         (refId) => getLiveDiagram(refId, api, theories),
     );
 
-    return <DiagramDocumentEditor liveDiagram={liveDiagram()} />;
+    return (
+        <Show when={liveDiagram()} fallback={<DocumentLoadingScreen />}>
+            {(loadedDiagram) => <DiagramDocumentEditor liveDiagram={loadedDiagram()} />}
+        </Show>
+    );
 }
 
 export function DiagramDocumentEditor(props: {
-    liveDiagram?: LiveDiagramDocument;
+    liveDiagram: LiveDiagramDocument;
 }) {
     return (
         <div class="growable-container">
             <Toolbar>
-                <DiagramMenu liveDiagram={props.liveDiagram} />
+                <DocumentMenu liveDocument={props.liveDiagram} />
+                <DocumentBreadcrumbs document={props.liveDiagram} />
                 <span class="filler" />
-                <TheoryHelpButton theory={props.liveDiagram?.liveModel.theory()} />
-                <MaybePermissionsButton
-                    permissions={props.liveDiagram?.liveDoc.permissions}
-                    refId={props.liveDiagram?.refId}
+                <TheoryHelpButton theory={props.liveDiagram.liveModel.theory()} />
+                <PermissionsButton
+                    permissions={props.liveDiagram.liveDoc.permissions}
+                    refId={props.liveDiagram.refId}
                 />
             </Toolbar>
-            <Show when={props.liveDiagram}>
-                {(liveDiagram) => <DiagramPane liveDiagram={liveDiagram()} />}
-            </Show>
+            <DiagramPane liveDiagram={props.liveDiagram} />
         </div>
     );
 }

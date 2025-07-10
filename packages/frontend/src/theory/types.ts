@@ -34,6 +34,12 @@ export class Theory {
      */
     readonly description: string;
 
+    /** List of IDs of theories that this theory includes into.
+
+    Migrations along such inclusions are trivial.
+     */
+    readonly inclusions: string[];
+
     /** Whether models of the double theory are constrained to be free. */
     readonly onlyFreeModels!: boolean;
 
@@ -46,10 +52,10 @@ export class Theory {
     private readonly modelTypeMeta: TypeMetadata<ModelObTypeMeta, ModelMorTypeMeta>;
     private readonly instanceTypeMeta: TypeMetadata<InstanceObTypeMeta, InstanceMorTypeMeta>;
 
-    /** Map from theory ID to model analysis metadata. */
+    /** Map from IDs of model analyses to their metadata. */
     private readonly modelAnalysisMap: Map<string, ModelAnalysisMeta>;
 
-    /** Map from theory ID to diagram analysis metadata. */
+    /** Map from IDs of diagram analyses to their metadata. */
     private readonly diagramAnalysisMap: Map<string, DiagramAnalysisMeta>;
 
     constructor(props: {
@@ -58,6 +64,7 @@ export class Theory {
         help?: string;
         name: string;
         description: string;
+        inclusions?: string[];
         modelTypes?: ModelTypeMeta[];
         modelAnalyses?: ModelAnalysisMeta[];
         onlyFreeModels?: boolean;
@@ -69,6 +76,7 @@ export class Theory {
         this.id = props.id;
         this.theory = props.theory;
         this.help = props.help;
+        this.inclusions = props.inclusions ?? [];
 
         // Models.
         this.name = props.name;

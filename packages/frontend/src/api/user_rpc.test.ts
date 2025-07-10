@@ -1,18 +1,12 @@
 import { type FirebaseOptions, initializeApp } from "firebase/app";
-import {
-    createUserWithEmailAndPassword,
-    deleteUser,
-    getAuth,
-    signInWithEmailAndPassword,
-    signOut,
-} from "firebase/auth";
+import { deleteUser, getAuth, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import invariant from "tiny-invariant";
 import { v4 } from "uuid";
 import { assert, afterAll, describe, test } from "vitest";
 
 import type { UserProfile } from "catcolab-api";
-import { createRpcClient } from "./rpc.ts";
-import { unwrap, unwrapErr } from "./test_util.ts";
+import { initTestUserAuth } from "../util/test_util.ts";
+import { createRpcClient, unwrap, unwrapErr } from "./rpc.ts";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
 const firebaseOptions = JSON.parse(import.meta.env.VITE_FIREBASE_OPTIONS) as FirebaseOptions;
@@ -24,20 +18,15 @@ describe("RPC for user profiles", async () => {
     const auth = getAuth(firebaseApp);
     const email = "test-user-rpc@catcolab.org";
     const password = "foobar";
-    await createUserWithEmailAndPassword(auth, email, password);
+    await initTestUserAuth(auth, email, password);
 
     const user = auth.currentUser;
+
     afterAll(async () => user && (await deleteUser(user)));
 
     const signUpResult = await rpc.sign_up_or_sign_in.mutate();
     test.sequential("should allow sign up when authenticated", () => {
         assert.strictEqual(signUpResult.tag, "Ok");
-    });
-
-    const defaultProfile = unwrap(await rpc.get_active_user_profile.query());
-    test.sequential("should get empty profile after user creation", () => {
-        assert.strictEqual(defaultProfile.username, null);
-        assert.strictEqual(defaultProfile.displayName, null);
     });
 
     const username = `test-user-${v4()}`;
@@ -95,7 +84,7 @@ describe("Sharing documents between users", async () => {
     const auth = getAuth(firebaseApp);
     const shareeEmail = "test-user-sharee@catcolab.org";
     const password = "foobar";
-    await createUserWithEmailAndPassword(auth, shareeEmail, password);
+    await initTestUserAuth(auth, shareeEmail, password);
 
     const shareeUser = auth.currentUser;
     invariant(shareeUser);
@@ -115,7 +104,7 @@ describe("Sharing documents between users", async () => {
 
     // Set up account for the user who will share the document (the "sharer").
     const sharerEmail = "test-user-sharer@catcolab.org";
-    await createUserWithEmailAndPassword(auth, sharerEmail, password);
+    await initTestUserAuth(auth, sharerEmail, password);
 
     const sharerUser = auth.currentUser;
     invariant(sharerUser);

@@ -1,14 +1,7 @@
 import * as catlog from "catlog-wasm";
 
 import { Theory } from "../theory";
-import {
-    configureDecapodes,
-    configureDiagramGraph,
-    configureLotkaVolterra,
-    configureModelGraph,
-    configureStockFlowDiagram,
-    configureSubmodelsAnalysis,
-} from "./analyses";
+import * as analyses from "./analyses";
 import { TheoryLibrary } from "./types";
 
 import styles from "./styles.module.css";
@@ -90,14 +83,14 @@ stdTheories.add(
                 },
             ],
             modelAnalyses: [
-                configureModelGraph({
+                analyses.configureModelGraph({
                     id: "diagram",
                     name: "Visualization",
-                    description: "Visualize the olog as a diagram",
+                    description: "Visualize the olog as a graph",
                 }),
             ],
             diagramAnalyses: [
-                configureDiagramGraph({
+                analyses.configureDiagramGraph({
                     id: "graph",
                     name: "Visualization",
                     description: "Visualize the instance as a graph",
@@ -113,6 +106,7 @@ stdTheories.add(
         name: "Schema",
         description: "Schema for a categorical database",
         group: "Knowledge and Data",
+        help: "schema",
     },
     (meta) => {
         const thSchema = new catlog.ThSchema();
@@ -200,14 +194,14 @@ stdTheories.add(
                 },
             ],
             modelAnalyses: [
-                configureModelGraph({
+                analyses.configureModelGraph({
                     id: "diagram",
                     name: "Visualization",
-                    description: "Visualize the schema as a diagram",
+                    description: "Visualize the schema as a graph",
                 }),
             ],
             diagramAnalyses: [
-                configureDiagramGraph({
+                analyses.configureDiagramGraph({
                     id: "graph",
                     name: "Visualization",
                     description: "Visualize the instance as a graph",
@@ -223,12 +217,14 @@ stdTheories.add(
         name: "Regulatory network",
         description: "Biochemical species that promote or inhibit each other",
         group: "Biology",
+        help: "reg-net",
     },
     (meta) => {
         const thSignedCategory = new catlog.ThSignedCategory();
         return new Theory({
             ...meta,
             theory: thSignedCategory.theory(),
+            inclusions: ["causal-loop", "causal-loop-delays", "indeterminate-causal-loop"],
             onlyFreeModels: true,
             modelTypes: [
                 {
@@ -260,25 +256,34 @@ stdTheories.add(
                 },
             ],
             modelAnalyses: [
-                configureModelGraph({
+                analyses.configureModelGraph({
                     id: "diagram",
                     name: "Visualization",
                     description: "Visualize the regulatory network",
                 }),
-                configureSubmodelsAnalysis({
+                analyses.configureSubmodelsAnalysis({
                     id: "positive-loops",
                     name: "Positive feedback",
                     description: "Analyze the network for positive feedback loops",
-                    findSubmodels: (model) => thSignedCategory.positiveLoops(model),
+                    findSubmodels(model, options) {
+                        return thSignedCategory.positiveLoops(model, options);
+                    },
                 }),
-                configureSubmodelsAnalysis({
+                analyses.configureSubmodelsAnalysis({
                     id: "negative-loops",
                     name: "Negative feedback",
                     description: "Analyze the network for negative feedback loops",
-                    findSubmodels: (model) => thSignedCategory.negativeLoops(model),
+                    findSubmodels(model, options) {
+                        return thSignedCategory.negativeLoops(model, options);
+                    },
                 }),
-                configureLotkaVolterra({
-                    simulate: (model, data) => thSignedCategory.lotkaVolterra(model, data),
+                analyses.configureLinearODE({
+                    simulate: (model, data) => thSignedCategory.linearODE(model, data),
+                }),
+                analyses.configureLotkaVolterra({
+                    simulate(model, data) {
+                        return thSignedCategory.lotkaVolterra(model, data);
+                    },
                 }),
             ],
         });
@@ -291,6 +296,7 @@ stdTheories.add(
         name: "Causal loop diagram",
         description: "Positive and negative causal relationships",
         group: "System Dynamics",
+        help: "causal-loop",
     },
     (meta) => {
         const thSignedCategory = new catlog.ThSignedCategory();
@@ -298,6 +304,7 @@ stdTheories.add(
         return new Theory({
             ...meta,
             theory: thSignedCategory.theory(),
+            inclusions: ["reg-net", "causal-loop-delays", "indeterminate-causal-loop"],
             onlyFreeModels: true,
             modelTypes: [
                 {
@@ -330,24 +337,31 @@ stdTheories.add(
                 },
             ],
             modelAnalyses: [
-                configureModelGraph({
+                analyses.configureModelGraph({
                     id: "diagram",
                     name: "Visualization",
                     description: "Visualize the causal loop diagram",
                 }),
-                configureSubmodelsAnalysis({
+                analyses.configureSubmodelsAnalysis({
                     id: "negative-loops",
                     name: "Balancing loops",
                     description: "Analyze the diagram for balancing loops",
-                    findSubmodels: (model) => thSignedCategory.negativeLoops(model),
+                    findSubmodels(model, options) {
+                        return thSignedCategory.negativeLoops(model, options);
+                    },
                 }),
-                configureSubmodelsAnalysis({
+                analyses.configureSubmodelsAnalysis({
                     id: "positive-loops",
                     name: "Reinforcing loops",
                     description: "Analyze the diagram for reinforcing loops",
-                    findSubmodels: (model) => thSignedCategory.positiveLoops(model),
+                    findSubmodels(model, options) {
+                        return thSignedCategory.positiveLoops(model, options);
+                    },
                 }),
-                configureLotkaVolterra({
+                analyses.configureLinearODE({
+                    simulate: (model, data) => thSignedCategory.linearODE(model, data),
+                }),
+                analyses.configureLotkaVolterra({
                     simulate: (model, data) => thSignedCategory.lotkaVolterra(model, data),
                 }),
             ],
@@ -361,6 +375,7 @@ stdTheories.add(
         name: "Causal loop diagram with delays",
         description: "Causal relationships: positive or negative, fast or slow",
         group: "System Dynamics",
+        help: "causal-loop-delays",
     },
     (meta) => {
         const thDelayedSignedCategory = new catlog.ThDelayableSignedCategory();
@@ -416,34 +431,42 @@ stdTheories.add(
                 },
             ],
             modelAnalyses: [
-                configureModelGraph({
+                analyses.configureModelGraph({
                     id: "diagram",
                     name: "Visualization",
                     description: "Visualize the causal loop diagram",
                 }),
-                configureSubmodelsAnalysis({
+                analyses.configureSubmodelsAnalysis({
                     id: "negative-loops",
                     name: "Balancing loops",
                     description: "Find the fast-acting balancing loops",
-                    findSubmodels: (model) => thDelayedSignedCategory.negativeLoops(model),
+                    findSubmodels(model, options) {
+                        return thDelayedSignedCategory.negativeLoops(model, options);
+                    },
                 }),
-                configureSubmodelsAnalysis({
+                analyses.configureSubmodelsAnalysis({
                     id: "positive-loops",
                     name: "Reinforcing loops",
                     description: "Find the fast-acting reinforcing loops",
-                    findSubmodels: (model) => thDelayedSignedCategory.positiveLoops(model),
+                    findSubmodels(model, options) {
+                        return thDelayedSignedCategory.positiveLoops(model, options);
+                    },
                 }),
-                configureSubmodelsAnalysis({
+                analyses.configureSubmodelsAnalysis({
                     id: "delayed-negative-loops",
                     name: "Delayed balancing loops",
                     description: "Find the slow-acting balancing loops",
-                    findSubmodels: (model) => thDelayedSignedCategory.delayedNegativeLoops(model),
+                    findSubmodels(model, options) {
+                        return thDelayedSignedCategory.delayedNegativeLoops(model, options);
+                    },
                 }),
-                configureSubmodelsAnalysis({
+                analyses.configureSubmodelsAnalysis({
                     id: "delayed-positive-loops",
                     name: "Delayed reinforcing loops",
                     description: "Find the slow-acting reinforcing loops",
-                    findSubmodels: (model) => thDelayedSignedCategory.delayedPositiveLoops(model),
+                    findSubmodels(model, options) {
+                        return thDelayedSignedCategory.delayedPositiveLoops(model, options);
+                    },
                 }),
             ],
         });
@@ -456,6 +479,7 @@ stdTheories.add(
         name: "Causal loop diagram with indeterminates",
         description: "Positive, negative, and indeterminate causal relationships",
         group: "System Dynamics",
+        help: "indeterminate-causal-loop",
     },
     (meta) => {
         const thNullableSignedCategory = new catlog.ThNullableSignedCategory();
@@ -503,7 +527,7 @@ stdTheories.add(
                 },
             ],
             modelAnalyses: [
-                configureModelGraph({
+                analyses.configureModelGraph({
                     id: "diagram",
                     name: "Visualization",
                     description: "Visualize the causal loop diagram",
@@ -519,6 +543,7 @@ stdTheories.add(
         name: "Discrete exterior calculus (DEC)",
         description: "DEC operators on a geometrical space",
         group: "Applied Mathematics",
+        help: "unary-dec",
     },
     (meta) => {
         const thCategoryWithScalars = new catlog.ThCategoryWithScalars();
@@ -581,19 +606,19 @@ stdTheories.add(
                 },
             ],
             modelAnalyses: [
-                configureModelGraph({
+                analyses.configureModelGraph({
                     id: "graph",
                     name: "Visualization",
                     description: "Visualize the operations as a graph",
                 }),
             ],
             diagramAnalyses: [
-                configureDiagramGraph({
+                analyses.configureDiagramGraph({
                     id: "graph",
                     name: "Visualization",
                     description: "Visualize the equations as a diagram",
                 }),
-                configureDecapodes({}),
+                analyses.configureDecapodes({}),
             ],
         });
     },
@@ -605,6 +630,7 @@ stdTheories.add(
         name: "Stock and flow",
         description: "Model accumulation (stocks) and change (flows)",
         group: "System Dynamics",
+        help: "stock-flow",
     },
     (meta) => {
         const thCategoryLinks = new catlog.ThCategoryLinks();
@@ -643,10 +669,18 @@ stdTheories.add(
                 },
             ],
             modelAnalyses: [
-                configureStockFlowDiagram({
+                analyses.configureStockFlowDiagram({
                     id: "diagram",
                     name: "Visualization",
                     description: "Visualize the stock and flow diagram",
+                }),
+                analyses.configureMassAction({
+                    simulate(model, data) {
+                        return thCategoryLinks.massAction(model, data);
+                    },
+                    isTransition(mor) {
+                        return mor.morType.tag === "Hom";
+                    },
                 }),
             ],
         });

@@ -2,19 +2,19 @@
 
 use std::collections::HashMap;
 use std::hash::Hash;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use all_the_same::all_the_same;
 use derive_more::From;
 use ustr::Ustr;
 
 use serde::{Deserialize, Serialize};
-use tsify_next::Tsify;
+use tsify::Tsify;
 use wasm_bindgen::prelude::*;
 
 use catlog::dbl::theory;
 use catlog::dbl::theory::{DblTheory as _, TabMorType, TabObType};
-use catlog::one::fin_category::*;
+use catlog::one::Path;
 
 /// Object type in a double theory.
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Serialize, Deserialize, Tsify)]
@@ -36,6 +36,9 @@ pub enum MorType {
     /// Basic or generating morphism type.
     Basic(Ustr),
 
+    /// Composite of morphism types.
+    Composite(Vec<MorType>),
+
     /// Hom type on an object type.
     Hom(Box<ObType>),
 }
@@ -48,11 +51,17 @@ impl From<Ustr> for ObType {
 }
 
 /// Convert from morphism type in a discrete double theory.
-impl From<FinMor<Ustr, Ustr>> for MorType {
-    fn from(mor: FinMor<Ustr, Ustr>) -> Self {
+impl From<Path<Ustr, Ustr>> for MorType {
+    fn from(mor: Path<Ustr, Ustr>) -> Self {
         match mor {
-            FinMor::Generator(e) => MorType::Basic(e),
-            FinMor::Id(v) => MorType::Hom(Box::new(ObType::Basic(v))),
+            Path::Id(v) => MorType::Hom(Box::new(ObType::Basic(v))),
+            Path::Seq(edges) => {
+                if edges.len() == 1 {
+                    MorType::Basic(edges.head)
+                } else {
+                    MorType::Composite(edges.into_iter().map(MorType::Basic).collect())
+                }
+            }
         }
     }
 }
@@ -64,19 +73,24 @@ impl TryFrom<ObType> for Ustr {
     fn try_from(ob_type: ObType) -> Result<Self, Self::Error> {
         match ob_type {
             ObType::Basic(name) => Ok(name),
-            _ => Err(format!("Cannot cast object type for discrete double theory: {:#?}", ob_type)),
+            _ => Err(format!("Cannot cast object type for discrete double theory: {ob_type:#?}")),
         }
     }
 }
 
 /// Convert into morphism type in a discrete double theory.
-impl TryFrom<MorType> for FinMor<Ustr, Ustr> {
+impl TryFrom<MorType> for Path<Ustr, Ustr> {
     type Error = String;
 
     fn try_from(mor_type: MorType) -> Result<Self, Self::Error> {
         match mor_type {
-            MorType::Basic(name) => Ok(FinMor::Generator(name)),
-            MorType::Hom(x) => (*x).try_into().map(FinMor::Id),
+            MorType::Basic(name) => Ok(name.into()),
+            MorType::Composite(fs) => {
+                let fs: Result<Vec<_>, _> = fs.into_iter().map(|f| f.try_into()).collect();
+                let path = Path::from_vec(fs?).ok_or("Composite should not be empty")?;
+                Ok(path.flatten())
+            }
+            MorType::Hom(x) => (*x).try_into().map(Path::Id),
         }
     }
 }
@@ -120,6 +134,9 @@ impl TryFrom<MorType> for TabMorType<Ustr, Ustr> {
     fn try_from(mor_type: MorType) -> Result<Self, Self::Error> {
         match mor_type {
             MorType::Basic(name) => Ok(TabMorType::Basic(name)),
+            MorType::Composite(_) => {
+                Err("Composites not yet implemented for tabulator theories".into())
+            }
             MorType::Hom(x) => (*x).try_into().map(|x| TabMorType::Hom(Box::new(x))),
         }
     }
@@ -134,8 +151,8 @@ explicitly enumerate the supported kinds of double theories in this enum.
  */
 #[derive(From)]
 pub enum DblTheoryBox {
-    Discrete(Arc<theory::UstrDiscreteDblTheory>),
-    DiscreteTab(Arc<theory::UstrDiscreteTabTheory>),
+    Discrete(Rc<theory::UstrDiscreteDblTheory>),
+    DiscreteTab(Rc<theory::UstrDiscreteTabTheory>),
 }
 
 /** Wasm bindings for a double theory.
@@ -162,7 +179,7 @@ impl DblTheory {
         all_the_same!(match &self.0 {
             DblTheoryBox::[Discrete, DiscreteTab](th) => {
                 let m = mor_type.try_into()?;
-                Ok(th.src(&m).into())
+                Ok(th.src_type(&m).into())
             }
         })
     }
@@ -173,7 +190,7 @@ impl DblTheory {
         all_the_same!(match &self.0 {
             DblTheoryBox::[Discrete, DiscreteTab](th) => {
                 let m = mor_type.try_into()?;
-                Ok(th.tgt(&m).into())
+                Ok(th.tgt_type(&m).into())
             }
         })
     }

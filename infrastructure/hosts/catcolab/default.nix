@@ -1,55 +1,56 @@
 { inputs, ... }:
 
 let
-  owen     = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIF2sBTuqGoEXRWpBRqTBwZZPDdLGGJ0GQcuX5dfIZKb4 o@red-special";
+  owen = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIF2sBTuqGoEXRWpBRqTBwZZPDdLGGJ0GQcuX5dfIZKb4 o@red-special";
   epatters = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAKXx6wMJSeYKCHNmbyR803RQ72uto9uYsHhAPPWNl2D evan@epatters.org";
-  shaowei  = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOV/7Vnjn7PwOC9VWyRAvsh5lUieIBHgdf4RRLkL8ZPa shaowei@gmail.com";
+  catcolab-deployuser = "TODO";
 in
 {
   imports = [
-      ./backend.nix
-      "${inputs.nixpkgs}/nixos/modules/virtualisation/amazon-image.nix"
+    ../../modules/backend.nix
+    ../../modules/host.nix
+    ../../modules/backup.nix
+    "${inputs.nixpkgs}/nixos/modules/virtualisation/amazon-image.nix"
   ];
 
+  age.secrets = {
+    "rclone.conf" = {
+      file = "${inputs.self}/infrastructure/secrets/rclone.conf.prod.age";
+      mode = "400";
+      owner = "catcolab";
+    };
+    backendSecretsForCatcolab = {
+      file = "${inputs.self}/infrastructure/secrets/.env.prod.age";
+      name = "backend-secrets-for-catcolab.env";
+      owner = "catcolab";
+    };
+    backendSecretsForPostgres = {
+      file = "${inputs.self}/infrastructure/secrets/.env.prod.age";
+      name = "backend-secrets-for-postgres.env";
+      owner = "postgres";
+    };
+  };
+
+  catcolab = {
+    backend = {
+      backendPort = "8000";
+      automergePort = "8010";
+      backendHostname = "backend.catcolab.org";
+      automergeHostname = "automerge.catcolab.org";
+    };
+    backup = {
+      backupdbBucket = "catcolab";
+    };
+    host = {
+      userKeys = [
+        owen
+        epatters
+      ];
+      deployuserKey = catcolab-deployuser;
+    };
+  };
+
   networking.hostName = "catcolab";
-
-  security.sudo.wheelNeedsPassword = false;
-
-  users.mutableUsers = false;
-
-  users.users.owen = {
-    isNormalUser = true;
-    extraGroups = [ "wheel" ]; # Enable ‘sudo’ for the user.
-    openssh.authorizedKeys.keys = [ owen ];
-  };
-
-  users.users.epatters = {
-    isNormalUser = true;
-    extraGroups = [ "wheel" ];
-    openssh.authorizedKeys.keys = [ epatters ];
-  };
-
-  users.users.shaowei = {
-    isNormalUser = true;
-    extraGroups = [ "wheel" ];
-    openssh.authorizedKeys.keys = [ shaowei ];
-  };
-
-  users.users.root.openssh.authorizedKeys.keys = [ owen epatters shaowei ];
-
   time.timeZone = "America/New_York";
-
-  # Enable the OpenSSH daemon.
-  services.openssh.enable = true;
-
   system.stateVersion = "24.05";
-
-  security.acme.acceptTerms = true;
-  security.acme.defaults.email = "owen@topos.institute";
-
-  nix.extraOptions = ''
-    experimental-features = nix-command flakes
-  '';
-
-  networking.firewall.allowedTCPPorts = [ 80 443 ];
 }

@@ -2,18 +2,26 @@ import { DropdownMenu } from "@kobalte/core/dropdown-menu";
 import { useNavigate } from "@solidjs/router";
 import { getAuth, signOut } from "firebase/auth";
 import { useAuth, useFirebaseApp } from "solid-firebase";
-import { type JSX, Show, createSignal } from "solid-js";
+import { type JSX, Show, useContext } from "solid-js";
+import invariant from "tiny-invariant";
 
-import { Dialog, IconButton } from "../components";
-import { Login } from "../user";
+import { useApi } from "../api";
+import { IconButton } from "../components";
+import { createModel } from "../model/document";
+import { TheoryLibraryContext } from "../stdlib";
+import { PageActionsContext } from "./context";
 
+import FilePlus from "lucide-solid/icons/file-plus";
+import Files from "lucide-solid/icons/files";
 import Info from "lucide-solid/icons/info";
 import LogInIcon from "lucide-solid/icons/log-in";
 import LogOutIcon from "lucide-solid/icons/log-out";
 import MenuIcon from "lucide-solid/icons/menu";
 import SettingsIcon from "lucide-solid/icons/settings";
+import UploadIcon from "lucide-solid/icons/upload";
 
 import "./menubar.css";
+
 /** Menu triggered from a hamburger button. */
 export function HamburgerMenu(props: {
     children: JSX.Element;
@@ -50,29 +58,65 @@ export function AppMenu(props: {
     const firebaseApp = useFirebaseApp();
     const auth = useAuth(getAuth(firebaseApp));
 
-    const [loginOpen, setLoginOpen] = createSignal(false);
-
     // Root the dialog here so that it is not destroyed when the menu closes.
     return (
         <>
-            <HamburgerMenu>
+            <HamburgerMenu disabled={props.disabled}>
                 {props.children}
                 <Show when={props.children}>
                     <MenuSeparator />
                 </Show>
-                <HelpMenuItem />
-                <Show
-                    when={auth.data}
-                    fallback={<LogInMenuItem showLogin={() => setLoginOpen(true)} />}
-                >
+                <Show when={auth.data} fallback={<LogInMenuItem />}>
+                    <DocumentsMenuItem />
                     <SettingsMenuItem />
                     <LogOutMenuItem />
                 </Show>
+                <MenuSeparator />
+                <HelpMenuItem />
             </HamburgerMenu>
-            <Dialog open={loginOpen()} onOpenChange={setLoginOpen} title="Log in">
-                <Login onComplete={() => setLoginOpen(false)} />
-            </Dialog>
         </>
+    );
+}
+
+/** Default application menu for pages without more specific actions. */
+export const DefaultAppMenu = () => (
+    <AppMenu>
+        <NewModelItem />
+        <ImportMenuItem />
+    </AppMenu>
+);
+
+/** Menu item to create a new model. */
+export function NewModelItem() {
+    const api = useApi();
+    const navigate = useNavigate();
+
+    const theories = useContext(TheoryLibraryContext);
+    invariant(theories, "Theory library must be provided as context");
+
+    const onNewModel = async () => {
+        const newRef = await createModel(api, theories.getDefault().id);
+        navigate(`/model/${newRef}`);
+    };
+
+    return (
+        <MenuItem onSelect={onNewModel}>
+            <FilePlus />
+            <MenuItemLabel>{"New model"}</MenuItemLabel>
+        </MenuItem>
+    );
+}
+
+/** Menu item to import a document. */
+export function ImportMenuItem() {
+    const actions = useContext(PageActionsContext);
+    invariant(actions, "Page actions should be provided");
+
+    return (
+        <MenuItem onSelect={actions.showImportDialog}>
+            <UploadIcon />
+            <MenuItemLabel>{"Import notebook"}</MenuItemLabel>
+        </MenuItem>
     );
 }
 
@@ -88,11 +132,12 @@ function HelpMenuItem() {
     );
 }
 
-function LogInMenuItem(props: {
-    showLogin: () => void;
-}) {
+function LogInMenuItem() {
+    const actions = useContext(PageActionsContext);
+    invariant(actions, "Page actions should be provided");
+
     return (
-        <MenuItem onSelect={props.showLogin}>
+        <MenuItem onSelect={actions.showLoginDialog}>
             <LogInIcon />
             <MenuItemLabel>{"Log in or sign up"}</MenuItemLabel>
         </MenuItem>
@@ -116,7 +161,18 @@ function SettingsMenuItem() {
     return (
         <MenuItem onSelect={() => navigate("/profile")}>
             <SettingsIcon />
-            <MenuItemLabel>Settings</MenuItemLabel>
+            <MenuItemLabel>{"Edit user profile"}</MenuItemLabel>
+        </MenuItem>
+    );
+}
+
+function DocumentsMenuItem() {
+    const navigate = useNavigate();
+
+    return (
+        <MenuItem onSelect={() => navigate("/documents")}>
+            <Files />
+            <MenuItemLabel>{"My documents"}</MenuItemLabel>
         </MenuItem>
     );
 }

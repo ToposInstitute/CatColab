@@ -15,8 +15,8 @@ used for any purpose besides documentation.
 
 /** Reference: Cartesian double theories.
 
-Lambert & Patterson, 2024. Cartesian double theories: A double-categorical
-framework for categorical doctrines.
+Michael Lambert & Evan Patterson, 2024. Cartesian double theories: A
+double-categorical framework for categorical doctrines.
 
 - [DOI:10.1016/j.aim.2024.109630](https://doi.org/10.1016/j.aim.2024.109630)
 - [arXiv:2310.05384](https://arxiv.org/abs/2310.05384)
@@ -25,46 +25,48 @@ pub const CartDblTheories: () = ();
 
 /** Reference: Products in double categories, revisited.
 
-Patterson, 2024: Products in double categories, revisited.
+Evan Patterson, 2024: Products in double categories, revisited.
 
 - [arXiv:2401.08990](https://arxiv.org/abs/2401.08990)
  */
 pub const DblProducts: () = ();
 
-/** Reference: Model structures for double categories.
+/** Reference: Yoneda theory for double categories.
 
-Fiore, Paoli, Pronk, 2008: Model structures on the category of small double
-categories.
+Paré, 2011: Yoneda theory for double categories.
 
-- [DOI:10.2140/agt.2008.8.1855](https://doi.org/10.2140/agt.2008.8.1855)
-- [arXiv:0711.0473](https://arxiv.org/abs/0711.0473)
+- [TAC](http://www.tac.mta.ca/tac/volumes/25/17/25-17abs.html)
  */
-pub const ModelStructureDblCat: () = ();
+pub const DblYonedaTheory: () = ();
 
-/** Reference: Word problem for double categories.
+/** Reference: A unified framework for generalized multicategories.
 
-Delpeuch, 2020: The word problem for double categories.
+G.S.H. Cruttwell & Michael Shulman, 2010: A unified framework for generalized
+multicategories.
 
-- [TAC-35-1](http://www.tac.mta.ca/tac/volumes/35/1/35-01abs.html)
-- [arXiv:1907.09927](https://arxiv.org/abs/1907.09927)
+- [arXiv:0907.2460](https://arxiv.org/abs/0907.2460)
+- [TAC](http://www.tac.mta.ca/tac/volumes/24/21/24-21abs.html)
  */
-pub const WordProblemDblCats: () = ();
+pub const GeneralizedMulticategories: () = ();
 
-/** Reference: Word problem for computads.
+/** Reference: *Higher operads, higher categories*.
 
-Makkai, 2005: The word problem for computads.
+Tom Leinster, 2004: *Higher operads, higher categories*. Cambridge University
+Press.
 
-<https://www.math.mcgill.ca/makkai/WordProblem/>
+- [DOI:10.1017/CBO9780511525896](https://doi.org/10.1017/CBO9780511525896)
+- [arXiv:math/0305049](https://arxiv.org/abs/math/0305049)
  */
-pub const MakkaiComputads: () = ();
+pub const HigherOperads: () = ();
 
-/** Reference: Computads and 2-dimensional pasting diagrams.
+/** Reference: Augumented virtual double categories.
 
-Makkai, 2007: Computads and 2-dimensional pasting diagrams.
+Seerp Roald Koudenburg, 2020: Augmented virtual double categories.
 
-<https://www.math.mcgill.ca/makkai/2dcomputads/>
+- [arXiv:1910.11189](https://arxiv.org/abs/1910.11189)
+- [TAC](http://www.tac.mta.ca/tac/volumes/35/10/35-10abs.html)
  */
-pub const MakkaiComputadsPasting: () = ();
+pub const AugmentedVDCs: () = ();
 
 /** Reference: Compositional account of biochemical regulatory networks.
 
@@ -87,6 +89,15 @@ Compositional modeling with stock and flow diagrams.
  */
 pub const StockFlow: () = ();
 
+/** Reference: *Category theory for the sciences*.
+
+David I. Spivak, 2014. *Category theory for the sciences*.
+
+- [Internet Archive](https://archive.org/details/cattheory)
+- [arXiv:1302.6946](https://arxiv.org/abs/1302.6946)
+ */
+pub const CTForTheSciences: () = ();
+
 /** Reference: *Ideals, varieties, and algorithms*.
 
 David A. Cox, John B. Little, Don O'Shea, 2015. *Ideals, varieties, and
@@ -96,3 +107,21 @@ algorithms*. Fourth edition.
 - [Companion website](https://dacox.people.amherst.edu/iva.html)
  */
 pub const IdealsVarietiesAlgorithms: () = ();
+
+/** Reference: Polynomial functors and trees.
+
+Joachim Kock, 2011. Polynomial functors and trees.
+
+- [DOI:10.1093/imrn/rnq068](https://doi.org/10.1093/imrn/rnq068)
+- [arXiv:0807.2874](https://arxiv.org/abs/0807.2874)
+ */
+pub const KockTrees: () = ();
+
+/** Reference: Graphs, hypergraphs, and properads.
+
+Joachim Kock, 2016. Graphs, hypergraphs, and properads.
+
+- [DOI:10.1007/s13348-015-0160-0](https://doi.org/10.1007/s13348-015-0160-0)
+- [arXiv:1407.3744](https://arxiv.org/abs/1407.3744)
+ */
+pub const KockGraphs: () = ();

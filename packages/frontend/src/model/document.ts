@@ -1,28 +1,22 @@
 import { type Accessor, createMemo } from "solid-js";
 import invariant from "tiny-invariant";
 
-import type { JsonValue } from "catcolab-api";
-import type { DblModel, ModelValidationResult, Uuid } from "catlog-wasm";
+import {
+    type DblModel,
+    type Document,
+    type ModelJudgment,
+    type ModelValidationResult,
+    type Uuid,
+    elaborateModel,
+} from "catlog-wasm";
 import { type Api, type LiveDoc, getLiveDoc } from "../api";
-import { type Notebook, newNotebook } from "../notebook";
+import { newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
 import type { Theory } from "../theory";
 import { type IndexedMap, indexMap } from "../util/indexing";
-import { type ModelJudgment, toCatlogModel } from "./types";
+import type { InterfaceToType } from "../util/types";
 
-/** A document defining a model. */
-export type ModelDocument = {
-    type: "model";
-
-    /** User-defined name of model. */
-    name: string;
-
-    /** Identifier of double theory that the model is of. */
-    theory: string;
-
-    /** Content of the model, formal and informal. */
-    notebook: Notebook<ModelJudgment>;
-};
+export type ModelDocument = Document & { type: "model" };
 
 /** Create an empty model document. */
 export const newModelDocument = (theory: string): ModelDocument => ({
@@ -37,6 +31,9 @@ export const newModelDocument = (theory: string): ModelDocument => ({
 Contains a live document for the model, plus various memos of derived data.
  */
 export type LiveModelDocument = {
+    /** discriminator for use in union types */
+    type: "model";
+
     /** The ref for which this is a live document. */
     refId: string;
 
@@ -106,7 +103,7 @@ function enlivenModelDocument(
         () => {
             const th = theory();
             if (th) {
-                const model = toCatlogModel(th.theory, formalJudgments());
+                const model = elaborateModel(doc, theory().theory);
                 const result = model.validate();
                 return { model, result };
             }
@@ -116,6 +113,7 @@ function enlivenModelDocument(
     );
 
     return {
+        type: "model",
         refId,
         liveDoc,
         formalJudgments,
@@ -141,7 +139,7 @@ export async function createModel(
         init = initOrTheoryId;
     }
 
-    const result = await api.rpc.new_ref.mutate(init as JsonValue);
+    const result = await api.rpc.new_ref.mutate(init as InterfaceToType<ModelDocument>);
     invariant(result.tag === "Ok", "Failed to create model");
 
     return result.content;
@@ -153,9 +151,6 @@ export async function getLiveModel(
     api: Api,
     theories: TheoryLibrary,
 ): Promise<LiveModelDocument> {
-    const liveDoc = await getLiveDoc<ModelDocument>(api, refId);
-    const { doc } = liveDoc;
-    invariant(doc.type === "model", () => `Expected model, got type: ${doc.type}`);
-
+    const liveDoc = await getLiveDoc<ModelDocument>(api, refId, "model");
     return enlivenModelDocument(refId, liveDoc, theories);
 }

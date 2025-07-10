@@ -84,3 +84,15 @@ web_modules/
 
 # Sentry files
 instrument.mjs
+
+# .DS_Store
+*.DS_Store
+
+# direnv cache
+.direnv
+
+# nix build output
+/infrastructure/result
+
+# Database dumps
+/dumps

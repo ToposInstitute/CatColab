@@ -29,7 +29,7 @@ impl LotkaVolterraSystem {
 }
 
 impl ODESystem for LotkaVolterraSystem {
-    fn vector_field(&self, dx: &mut DVector<f32>, x: &DVector<f32>, _: f32) {
+    fn vector_field(&self, dx: &mut DVector<f32>, x: &DVector<f32>, _t: f32) {
         let A = &self.interaction_coeffs;
         let b = &self.growth_rates;
         *dx = (A * x + b).component_mul(x);
@@ -47,33 +47,17 @@ pub(crate) fn create_predator_prey() -> ODEProblem<LotkaVolterraSystem> {
 }
 
 #[cfg(test)]
-mod test {
-    use expect_test::{expect, Expect};
-    use textplots::{Chart, Plot, Shape};
+mod tests {
+    use expect_test::expect;
 
+    use super::super::textplot_ode_result;
     use super::*;
-
-    fn check_chart(chart: &mut Chart, expected: Expect) {
-        chart.axis();
-        chart.figures();
-        expected.assert_eq(&format!("{}", chart));
-    }
 
     #[test]
     fn predator_prey() {
         let problem = create_predator_prey();
         let result = problem.solve_rk4(0.1).unwrap();
-        let (t_out, x_out) = result.get();
-
-        check_chart(
-            Chart::new(100, 80, 0.0, 10.0)
-                .lineplot(&Shape::Lines(
-                    &t_out.iter().copied().zip(x_out.iter().map(|x| x[0])).collect::<Vec<_>>(),
-                ))
-                .lineplot(&Shape::Lines(
-                    &t_out.iter().copied().zip(x_out.iter().map(|x| x[1])).collect::<Vec<_>>(),
-                )),
-            expect![["
+        let expected = expect![["
                 ⡁⠀⠀⠀⠀⠀⠀⠀⢠⠊⢢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠎⠱⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 3.5
                 ⠄⠀⠀⠀⠀⠀⠀⠀⡇⠀⠈⡆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡜⠀⠀⢣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
                 ⠂⠀⠀⠀⠀⠀⠀⢸⠀⠀⠀⢸⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠇⠀⠀⠘⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
@@ -96,7 +80,7 @@ mod test {
                 ⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠑⢄⡀⠀⠀⢀⡠⠊⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠑⢄⡀⠀⠀⢀⡠⠔⠁⠀⠀⠀⠀⠀⠀⠀
                 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 0.4
                 0.0                                           10.0
-            "]],
-        );
+            "]];
+        expected.assert_eq(&textplot_ode_result(&problem, &result));
     }
 }

@@ -3,21 +3,18 @@
 use std::{collections::HashMap, hash::Hash};
 
 use nalgebra::{DMatrix, DVector};
-use ode_solvers::dop_shared::IntegrationError;
 use ustr::Ustr;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
-use tsify_next::Tsify;
+use tsify::Tsify;
 
-use super::ODESolution;
-use crate::{
-    dbl::model::{DiscreteDblModel, FgDblModel},
-    one::fin_category::{FinMor, UstrFinCategory},
-    one::FgCategory,
-    simulate::ode::{LotkaVolterraSystem, ODEProblem},
-};
+use super::ODEAnalysis;
+use crate::dbl::model::{DiscreteDblModel, FgDblModel};
+use crate::one::fp_category::UstrFpCategory;
+use crate::one::{FgCategory, Path};
+use crate::simulate::ode::{LotkaVolterraSystem, ODEProblem};
 
 /// Data defining a Lotka-Volterra ODE problem for a model.
 #[derive(Clone)]
@@ -47,7 +44,7 @@ where
     duration: f32,
 }
 
-type Model<Id> = DiscreteDblModel<Id, UstrFinCategory>;
+type Model<Id> = DiscreteDblModel<Id, UstrFpCategory>;
 
 /** Lotka-Volterra ODE analysis for models of a double theory.
 
@@ -57,8 +54,8 @@ paper](crate::refs::RegNets).
 */
 pub struct LotkaVolterraAnalysis {
     var_ob_type: Ustr,
-    positive_mor_types: Vec<FinMor<Ustr, Ustr>>,
-    negative_mor_types: Vec<FinMor<Ustr, Ustr>>,
+    positive_mor_types: Vec<Path<Ustr, Ustr>>,
+    negative_mor_types: Vec<Path<Ustr, Ustr>>,
 }
 
 impl LotkaVolterraAnalysis {
@@ -72,34 +69,30 @@ impl LotkaVolterraAnalysis {
     }
 
     /// Adds a morphism type defining a positive interaction between objects.
-    pub fn add_positive(mut self, mor_type: FinMor<Ustr, Ustr>) -> Self {
+    pub fn add_positive(mut self, mor_type: Path<Ustr, Ustr>) -> Self {
         self.positive_mor_types.push(mor_type);
         self
     }
 
     /// Adds a morphism type defining a negative interaction between objects.
-    pub fn add_negative(mut self, mor_type: FinMor<Ustr, Ustr>) -> Self {
+    pub fn add_negative(mut self, mor_type: Path<Ustr, Ustr>) -> Self {
         self.negative_mor_types.push(mor_type);
         self
     }
 
-    /** Creates a Lotka-Volterra system from a model.
-
-    Returns an ODE problem together with a mapping from object IDs to indices of
-    variables in the ODE.
-    */
+    /// Creates a Lotka-Volterra system from a model.
     pub fn create_system<Id>(
         &self,
         model: &Model<Id>,
         data: LotkaVolterraProblemData<Id>,
-    ) -> (ODEProblem<LotkaVolterraSystem>, HashMap<Id, usize>)
+    ) -> ODEAnalysis<Id, LotkaVolterraSystem>
     where
         Id: Eq + Clone + Hash + Ord,
     {
         let mut objects: Vec<_> = model.ob_generators_with_type(&self.var_ob_type).collect();
         objects.sort();
         let ob_index: HashMap<_, _> =
-            objects.iter().enumerate().map(|(i, x)| (x.clone(), i)).collect();
+            objects.iter().cloned().enumerate().map(|(i, x)| (x, i)).collect();
 
         let n = objects.len();
 
@@ -130,39 +123,13 @@ impl LotkaVolterraAnalysis {
 
         let system = LotkaVolterraSystem::new(A, b);
         let problem = ODEProblem::new(system, x0).end_time(data.duration);
-        (problem, ob_index)
-    }
-
-    /// Solves the Lotka-Volterra ODE system created from a model.
-    pub fn solve<Id>(
-        &self,
-        model: &Model<Id>,
-        data: LotkaVolterraProblemData<Id>,
-    ) -> Result<ODESolution<Id>, IntegrationError>
-    where
-        Id: Eq + Clone + Hash + Ord,
-    {
-        let output_step_size = (data.duration / 100.0).min(0.01f32);
-        let (problem, ob_index) = self.create_system(model, data);
-        if ob_index.is_empty() {
-            return Ok(Default::default());
-        }
-
-        let result = problem.solve_dopri5(output_step_size)?;
-        let (t_out, x_out) = result.get();
-        Ok(ODESolution {
-            time: t_out.clone(),
-            states: ob_index
-                .into_iter()
-                .map(|(ob, i)| (ob, x_out.iter().map(|x| x[i]).collect()))
-                .collect(),
-        })
+        ODEAnalysis::new(problem, ob_index)
     }
 }
 
 #[cfg(test)]
 mod test {
-    use std::sync::Arc;
+    use std::rc::Rc;
     use ustr::ustr;
 
     use super::*;
@@ -170,7 +137,7 @@ mod test {
 
     #[test]
     fn predator_prey() {
-        let th = Arc::new(stdlib::theories::th_signed_category());
+        let th = Rc::new(stdlib::theories::th_signed_category());
         let neg_feedback = stdlib::models::negative_feedback(th);
 
         let (prey, pred) = (ustr("x"), ustr("y"));
@@ -181,10 +148,10 @@ mod test {
             initial_values: [(prey, 1.0), (pred, 1.0)].into_iter().collect(),
             duration: 10.0,
         };
-        let (problem, _) = LotkaVolterraAnalysis::new(ustr("Object"))
-            .add_positive(FinMor::Id(ustr("Object")))
-            .add_negative(FinMor::Generator(ustr("Negative")))
+        let analysis = LotkaVolterraAnalysis::new(ustr("Object"))
+            .add_positive(Path::Id(ustr("Object")))
+            .add_negative(Path::single(ustr("Negative")))
             .create_system(&neg_feedback, data);
-        assert_eq!(problem, lotka_volterra::create_predator_prey());
+        assert_eq!(analysis.problem, lotka_volterra::create_predator_prey());
     }
 }

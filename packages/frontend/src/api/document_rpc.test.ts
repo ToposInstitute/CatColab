@@ -1,12 +1,12 @@
 import { type DocHandle, Repo, isValidDocumentId } from "@automerge/automerge-repo";
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
 import { type FirebaseOptions, initializeApp } from "firebase/app";
-import { createUserWithEmailAndPassword, deleteUser, getAuth, signOut } from "firebase/auth";
+import { deleteUser, getAuth, signOut } from "firebase/auth";
 import * as uuid from "uuid";
 import { assert, afterAll, describe, test } from "vitest";
 
-import { createRpcClient } from "./rpc.ts";
-import { unwrap, unwrapErr } from "./test_util.ts";
+import { initTestUserAuth } from "../util/test_util.ts";
+import { createRpcClient, unwrap, unwrapErr } from "./rpc.ts";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
 const repoUrl = import.meta.env.VITE_AUTOMERGE_REPO_URL;
@@ -79,7 +79,7 @@ describe("Authorized RPC", async () => {
     const auth = getAuth(firebaseApp);
     const email = "test-document-rpc@catcolab.org";
     const password = "foobar";
-    await createUserWithEmailAndPassword(auth, email, password);
+    await initTestUserAuth(auth, email, password);
 
     const user = auth.currentUser;
     afterAll(async () => user && (await deleteUser(user)));

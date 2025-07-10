@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 watch_directory="trees"  
-build_command="forester build"  
+build_command="./forester build"
 
 # Function to use fswatch
 use_fswatch() {

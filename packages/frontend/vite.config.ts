@@ -1,33 +1,26 @@
-import { nodeTypes } from "@mdx-js/mdx";
-import rehypeRaw from "rehype-raw";
+import mdx from "@mdx-js/rollup";
+import rehypeKatex from "rehype-katex";
+import remarkMath from "remark-math";
 import { defineConfig } from "vite";
 import solid from "vite-plugin-solid";
-import topLevelAwait from "vite-plugin-top-level-await";
 import wasm from "vite-plugin-wasm";
-
-// @ts-expect-error Types are missing.
-// *Also*, this plugin causes Vite 5 to complain about CJS.
-// https://github.com/nksaraf/vinxi/issues/289
-import pkg from "@vinxi/plugin-mdx";
-const { default: mdx } = pkg;
 
 export default defineConfig({
     plugins: [
         wasm(),
-        topLevelAwait(),
-        mdx.withImports({})({
-            jsx: true,
-            jsxImportSource: "solid-js",
-            providerImportSource: "solid-mdx",
-            rehypePlugins: [[rehypeRaw, { passThrough: nodeTypes }]],
+        mdx({
+            // https://mdxjs.com/docs/getting-started/#solid
+            jsxImportSource: "solid-js/h",
+            // https://mdxjs.com/guides/math/
+            remarkPlugins: [remarkMath],
+            rehypePlugins: [rehypeKatex],
         }),
-        solid({
-            extensions: [".mdx", ".md"],
-        }),
+        solid(),
     ],
     build: {
         chunkSizeWarningLimit: 2000,
-        sourcemap: false,
+        sourcemap: true,
+        target: "es2022",
     },
     server: {
         proxy: {

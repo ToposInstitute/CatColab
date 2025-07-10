@@ -1,10 +1,9 @@
-/*! Categories: interfaces and basic constructions.
- */
+//! Categories: interfaces and basic constructions.
 
 use derive_more::From;
 use ref_cast::RefCast;
 
-use super::graph::{FinGraph, Graph};
+use super::graph::{FinGraph, Graph, ReflexiveGraph};
 use super::path::Path;
 use crate::zero::{FinSet, Set};
 
@@ -51,12 +50,21 @@ pub trait Category {
     fn id(&self, x: Self::Ob) -> Self::Mor {
         self.compose(Path::empty(x))
     }
+
+    /** Are the two morphisms in the category equal?
+
+    The default implementation compares the morphisms with `==`. In some
+    categories, equality is defined by a weaker equivalence relation.
+     */
+    fn morphisms_are_equal(&self, f: Self::Mor, g: Self::Mor) -> bool {
+        f == g
+    }
 }
 
 /// The set of objects of a category.
 #[derive(From, RefCast)]
 #[repr(transparent)]
-pub struct ObSet<Cat: Category>(Cat);
+pub struct ObSet<Cat>(Cat);
 
 impl<Cat: Category> Set for ObSet<Cat> {
     type Elem = Cat::Ob;
@@ -73,7 +81,7 @@ are the identities, which can thus be identified with the objects.
  */
 #[derive(From, RefCast)]
 #[repr(transparent)]
-pub struct DiscreteCategory<S: Set>(S);
+pub struct DiscreteCategory<S>(S);
 
 impl<S: Set> Category for DiscreteCategory<S> {
     type Ob = S::Elem;
@@ -134,6 +142,12 @@ impl<Cat: Category> Graph for UnderlyingGraph<Cat> {
     }
 }
 
+impl<Cat: Category> ReflexiveGraph for UnderlyingGraph<Cat> {
+    fn refl(&self, x: Self::V) -> Self::E {
+        self.0.id(x)
+    }
+}
+
 /** The free category on a graph.
 
 The objects and morphisms of the free category are the vertices and *paths* in
@@ -172,10 +186,11 @@ impl<G: Graph> Category for FreeCategory<G> {
 
 /** A finitely generated category with specified object and morphism generators.
 
-Unless the category has extra structure, a finitely generated (f.g.) category
-has finitely many objects, which coincide with the object generators so long as
-there are no equations between objects. On the other hand, a f.g. category can
-have infinitely many morphisms and often does.
+Unless the category has extra structure like a monoidal product, a finitely
+generated (f.g.) category has finitely many objects. Moreover, the objects will
+coincide with the object generators in the typical case that there are no
+equations between objects. On the other hand, a f.g. category can have
+infinitely many morphisms and often does.
  */
 pub trait FgCategory: Category {
     /** Type of an object generator.
@@ -210,57 +225,6 @@ pub trait FgCategory: Category {
     /// Iterates over basic morphisms.
     fn morphisms(&self) -> impl Iterator<Item = Self::Mor> {
         self.mor_generators().map(|mor_gen| mor_gen.into())
-    }
-}
-
-impl<S: FinSet> Graph for DiscreteCategory<S> {
-    type V = S::Elem;
-    type E = S::Elem;
-
-    fn has_edge(&self, e: &Self::E) -> bool {
-        self.0.contains(e)
-    }
-
-    fn has_vertex(&self, v: &Self::V) -> bool {
-        self.0.contains(v)
-    }
-
-    fn src(&self, e: &Self::E) -> Self::V {
-        e.clone()
-    }
-
-    fn tgt(&self, e: &Self::E) -> Self::V {
-        e.clone()
-    }
-}
-
-impl<S: FinSet> FinGraph for DiscreteCategory<S> {
-    fn edges(&self) -> impl Iterator<Item = Self::E> {
-        self.0.iter()
-    }
-
-    fn vertices(&self) -> impl Iterator<Item = Self::V> {
-        self.0.iter()
-    }
-
-    fn degree(&self, _v: &Self::V) -> usize {
-        2
-    }
-
-    fn in_edges(&self, v: &Self::V) -> impl Iterator<Item = Self::E> {
-        vec![v.clone()].into_iter()
-    }
-
-    fn out_edges(&self, v: &Self::V) -> impl Iterator<Item = Self::E> {
-        vec![v.clone()].into_iter()
-    }
-
-    fn in_degree(&self, _v: &Self::V) -> usize {
-        1
-    }
-
-    fn out_degree(&self, _v: &Self::V) -> usize {
-        1
     }
 }
 

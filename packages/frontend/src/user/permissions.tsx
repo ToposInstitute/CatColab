@@ -15,12 +15,11 @@ import invariant from "tiny-invariant";
 
 import type { NewPermissions, PermissionLevel, Permissions, UserSummary } from "catcolab-api";
 import { useApi } from "../api";
-import { Dialog, FormGroup, IconButton, SelectItem, Warning } from "../components";
+import { Dialog, FormGroup, IconButton, SelectField, Warning } from "../components";
 import { deepCopyJSON } from "../util/deepcopy";
 import { Login } from "./login";
 import { NameUser, UserInput } from "./username";
 
-import File from "lucide-solid/icons/file";
 import FileLock from "lucide-solid/icons/file-lock-2";
 import FilePen from "lucide-solid/icons/file-pen";
 import FileUser from "lucide-solid/icons/file-user";
@@ -99,24 +98,23 @@ export function PermissionsForm(props: {
     return (
         <form class="permissions" onSubmit={(evt) => evt.preventDefault()}>
             <FormGroup>
-                <SelectItem
-                    id="entry-anyone"
-                    label="Any person can"
+                <SelectField
+                    label="General access"
                     value={state.anyone ?? ""}
                     onInput={(evt) => {
                         const value = evt.currentTarget.value;
                         setState({ anyone: value ? (value as PermissionLevel) : null });
                     }}
                 >
-                    <option value="">Not access the document</option>
-                    <option value="Read">View</option>
-                    <option value="Write">Edit</option>
-                </SelectItem>
+                    <option value="">Only authorized people can access</option>
+                    <option value="Read">Anyone can view</option>
+                    <option value="Write">Anyone can edit</option>
+                </SelectField>
                 <Show
                     when={state.anyone === "Write" && state.anyone !== currentPermissions()?.anyone}
                 >
                     <Warning>
-                        <p>{"Any person with the link will be able to edit the document."}</p>
+                        <p>{"Anyone with the link will be able to edit the document."}</p>
                         <p>{"This setting is convenient but it is not secure."}</p>
                     </Warning>
                 </Show>
@@ -200,26 +198,6 @@ export function PermissionsButton(props: {
                 <ReadonlyPermissionsButton />
             </Match>
         </Switch>
-    );
-}
-
-/** Toolbar button summarizing the document's permissions, if available.
-
-Suitable for use while the document is being loaded.
- */
-export function MaybePermissionsButton(props: {
-    permissions?: Permissions;
-    refId?: string;
-}) {
-    const fallback = () => (
-        <IconButton disabled>
-            <File />
-        </IconButton>
-    );
-    return (
-        <Show when={props.permissions} fallback={fallback()}>
-            {(permissions) => <PermissionsButton permissions={permissions()} refId={props.refId} />}
-        </Show>
     );
 }
 

@@ -1,11 +1,13 @@
 use firebase_auth::FirebaseUser;
 use http::StatusCode;
-use qubit::{handler, Extensions, FromRequestExtensions, Router, RpcError};
+use qubit::{Extensions, FromRequestExtensions, Router, RpcError, handler};
 use serde::Serialize;
 use serde_json::Value;
 use tracing::debug;
 use ts_rs::TS;
 use uuid::Uuid;
+
+use crate::app::Paginated;
 
 use super::app::{AppCtx, AppError, AppState};
 use super::auth::{NewPermissions, PermissionLevel, Permissions};
@@ -17,14 +19,16 @@ pub fn router() -> Router<AppState> {
         .handler(new_ref)
         .handler(get_doc)
         .handler(head_snapshot)
-        .handler(save_snapshot)
+        .handler(create_snapshot)
         .handler(get_permissions)
         .handler(set_permissions)
+        .handler(validate_session)
         .handler(sign_up_or_sign_in)
         .handler(user_by_username)
         .handler(username_status)
         .handler(get_active_user_profile)
         .handler(set_active_user_profile)
+        .handler(search_ref_stubs)
 }
 
 #[handler(mutation)]
@@ -75,6 +79,14 @@ enum RefDoc {
 }
 
 #[handler(query)]
+async fn search_ref_stubs(
+    ctx: AppCtx,
+    query_params: doc::RefQueryParams,
+) -> RpcResult<Paginated<doc::RefStub>> {
+    doc::search_ref_stubs(ctx, query_params).await.into()
+}
+
+#[handler(query)]
 async fn head_snapshot(ctx: AppCtx, ref_id: Uuid) -> RpcResult<Value> {
     _head_snapshot(ctx, ref_id).await.into()
 }
@@ -84,12 +96,13 @@ async fn _head_snapshot(ctx: AppCtx, ref_id: Uuid) -> Result<Value, AppError> {
 }
 
 #[handler(mutation)]
-async fn save_snapshot(ctx: AppCtx, data: doc::RefContent) -> RpcResult<()> {
-    _save_snapshot(ctx, data).await.into()
-}
-async fn _save_snapshot(ctx: AppCtx, data: doc::RefContent) -> Result<(), AppError> {
-    auth::authorize(&ctx, data.ref_id, PermissionLevel::Write).await?;
-    doc::save_snapshot(ctx.state, data).await
+async fn create_snapshot(ctx: AppCtx, ref_id: Uuid) -> RpcResult<()> {
+    async {
+        auth::authorize(&ctx, ref_id, PermissionLevel::Write).await?;
+        doc::create_snapshot(ctx.state, ref_id).await
+    }
+    .await
+    .into()
 }
 
 #[handler(query)]
@@ -107,6 +120,11 @@ async fn _set_permissions(ctx: AppCtx, ref_id: Uuid, new: NewPermissions) -> Res
     }
     auth::authorize(&ctx, ref_id, PermissionLevel::Own).await?;
     auth::set_permissions(&ctx.state, ref_id, new).await
+}
+
+#[handler(query)]
+async fn validate_session(ctx: AppCtx) -> RpcResult<()> {
+    auth::validate_session(ctx).await.into()
 }
 
 #[handler(mutation)]
