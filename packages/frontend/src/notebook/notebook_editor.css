@@ -4,7 +4,6 @@
     margin: 0 auto;
     padding-left: var(--gutter-width);
     padding-right: 5px;
-    font-family: var(--main-font);
 }
 
 .notebook-cells {
@@ -25,18 +24,4 @@
     color: darkgray;
 }
 
-.resources-list {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto 1fr;
-    gap: 1rem;
-}
 
-.resource-link:last-child {
-    grid-column: 1 / -1;
-    grid-row: 3;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #f0f0f0;
-}

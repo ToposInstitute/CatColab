@@ -1,12 +1,12 @@
 import { Binoculars, Bird, Github, NotebookPen } from "lucide-solid";
 import { createSignal } from "solid-js";
 import zulip_favicon from "./assets/zulip_favicon.png";
-import "./walkthrough_overlay.css";
+import "./welcome_overlay.css";
 
 import { Dialog } from "../components";
 import { Login } from "../user";
 
-export function WalkthroughOverlay(props: { isOpen: boolean; onClose: () => void }) {
+export function WelcomeOverlay(props: { isOpen: boolean; onClose: () => void }) {
     const [loginOpen, setLoginOpen] = createSignal(false);
 
     const handleLoginComplete = () => {
@@ -16,13 +16,13 @@ export function WalkthroughOverlay(props: { isOpen: boolean; onClose: () => void
 
     return (
         <div
-            class={`walkthrough-overlay ${props.isOpen ? "open" : ""}`}
+            class={`welcome-overlay ${props.isOpen ? "open" : ""}`}
             onClick={props.onClose}
             role="dialog"
-            aria-labelledby="walkthrough-title"
+            aria-labelledby="welcome-title"
             aria-modal="true"
         >
-            <div class="walkthrough-content" onClick={(e) => e.stopPropagation()}>
+            <div class="welcome-content" onClick={(e) => e.stopPropagation()}>
                 <div class="header-container">
                     <img
                         src="https://topos.institute/assets/logo-name.png"
@@ -31,7 +31,7 @@ export function WalkthroughOverlay(props: { isOpen: boolean; onClose: () => void
                     />
                 </div>
 
-                <div class="step-content fade-in">
+                <div class="welcome-body fade-in">
                     <h2>Welcome to CatColab!</h2>
                     <i>software for modeling the world, together</i>
                     <div class="resources-container">

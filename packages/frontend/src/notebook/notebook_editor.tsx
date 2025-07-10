@@ -31,7 +31,7 @@ import {
     isCellDragData,
 } from "./notebook_cell";
 import { type FormalCell, newFormalCell, newRichTextCell, newStemCell } from "./types";
-import { WalkthroughOverlay } from "./walkthrough_overlay";
+import { WelcomeOverlay } from "./welcome_overlay";
 
 import "./notebook_editor.css";
 
@@ -227,7 +227,7 @@ export function NotebookEditor<T>(props: {
 
     return (
         <div class="notebook">
-            <WalkthroughOverlay isOpen={isOverlayOpen()} onClose={toggleOverlay} />
+            <WelcomeOverlay isOpen={isOverlayOpen()} onClose={toggleOverlay} />
             <Show when={props.notebook.cells.length === 0}>
                 <div class="notebook-empty placeholder">
                     <IconButton onClick={() => appendCell(newStemCell())}>
