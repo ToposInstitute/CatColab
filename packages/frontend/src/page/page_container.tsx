@@ -2,9 +2,9 @@ import { ErrorBoundary, type JSX, createSignal } from "solid-js";
 
 import { Dialog } from "../components";
 import { Login } from "../user";
+import { ErrorBoundaryPage } from "../util/errors";
 import { type PageActions, PageActionsContext } from "./context";
 import { ImportDocument } from "./import_document";
-import { ErrorBoundaryPage } from "../util/errors";
 
 /** Container for any page in the application.
 
