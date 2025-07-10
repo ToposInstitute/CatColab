@@ -3,7 +3,7 @@
 use ustr::ustr;
 
 use crate::dbl::theory::*;
-use crate::one::{Path, fp_category::UstrFpCategory};
+use crate::one::{fp_category::UstrFpCategory, Path};
 
 /** The empty theory, which has a single model, the empty model.
 
@@ -136,9 +136,7 @@ pub fn th_category_links() -> UstrDiscreteTabTheory {
     th
 }
 
-/** The theory of stock and flow diagrams with dynamic variables.
-
-*/
+/// The theory of stock and flow diagrams with dynamic variables.
 pub fn th_category_dynamic_stockflow() -> UstrDiscreteTabTheory {
     let mut th: UstrDiscreteTabTheory = Default::default();
     let x = ustr("Object");
@@ -160,7 +158,7 @@ pub fn th_category_dynamic_stockflow() -> UstrDiscreteTabTheory {
     th.add_mor_type(ustr("VariableLink"), TabObType::Basic(v), TabObType::Basic(x));
     th
 }
-  
+
 /// The theory of strict monoidal categories.
 pub fn th_monoidal_category() -> UstrModalDblTheory {
     th_monad_algebra(Mode::List)
