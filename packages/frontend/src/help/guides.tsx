@@ -16,24 +16,6 @@ export const guidesList: Guide[] = [
             'What do we mean by "formal, interoperable, conceptual modeling", and how does CatColab implement this?',
     },
     {
-        id: "predator-prey",
-        title: "Worked example: predator–prey (causal loop diagrams)",
-        description:
-            "Understanding a simple foxes–rabbits–lettuce ecosystem through Lotka–Volterra dynamics",
-    },
-    {
-        id: "employee-structure",
-        title: "Worked example: employee structure (schemas)",
-        description:
-            "Creating a categorical database for a company using schemas and instances of schemas",
-    },
-    {
-        id: "seirv",
-        title: "Worked example: SEIRV (stock-flow diagrams)",
-        description:
-            "Extending a simple susceptible–exposed–infection (SIR) model to further also allow for exposed and vaccinated states, in the logic of stock-flow diagrams",
-    },
-    {
         id: "example-models",
         title: "Ready-made models",
         description:
