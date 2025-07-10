@@ -1,13 +1,4 @@
-import Dialog, { Content, Portal, Trigger } from "@corvu/dialog";
 import { DefaultToolbar } from "../page/toolbar";
-import { useContext } from "solid-js";
-import { useNavigate } from "@solidjs/router";
-import { IconButton } from "../components";
-import { createModel } from "../model/document";
-import { useApi } from "../api";
-import CircleArrowLeft from "lucide-solid/icons/circle-arrow-left";
-import { TheoryLibraryContext } from "../stdlib";
-import invariant from "tiny-invariant";
 
 import "./errors.css";
 
@@ -18,7 +9,7 @@ export class PermissionsError extends Error {
     }
 }
 
-export function ErrorBoundaryDialog(props: { error: Error }) {
+export function ErrorBoundaryMessage(props: { error: Error }) {
     console.error(props.error);
 
     let heading: string;
@@ -32,28 +23,38 @@ export function ErrorBoundaryDialog(props: { error: Error }) {
         message = "An unknown error occurred.";
     }
 
-	// probably delete
-	const api = useApi();
-	const navigate = useNavigate();
-	const theories = useContext(TheoryLibraryContext);
-	invariant(theories, "Theory library must be provided as context");
-	const onNewModel = async () => {
-	  const newRef = await createModel(api, theories.getDefault().id);
-	  navigate(`/model/${newRef}`);
-	};
-	//
+    return <ErrorMessage heading={heading} message={message} />;
+}
+
+export function ErrorBoundaryPage(props: { error: Error }) {
+    console.error(props.error);
+
+    let heading: string;
+    let message: string;
+
+    if (props.error instanceof PermissionsError) {
+        heading = "Permissions Error";
+        message = "You are not permitted to view this resource.";
+    } else {
+        heading = "Error";
+        message = "An unknown error occurred.";
+    }
 
     return (
-	  <div>
-		<DefaultToolbar />
-        <Dialog initialOpen={true} noOutsidePointerEvents={false}>
-            <Portal>
-                <Content class="popup error-dialog">
-                    <h3>{heading}</h3>
-                    <p>{message}</p>
-                </Content>
-            </Portal>
-        </Dialog>
-	  </div>
+        <div class="error-page">
+            <DefaultToolbar />
+            <ErrorMessage heading={heading} message={message} />
+        </div>
+    );
+}
+
+export function ErrorMessage(props: { heading: string; message: string }) {
+    return (
+        <div class="error-boundary">
+            <div>
+                <h3>{props.heading}</h3>
+                <p>{props.message}</p>
+            </div>
+        </div>
     );
 }

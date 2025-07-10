@@ -1,9 +1,10 @@
-import { type JSX, createSignal } from "solid-js";
+import { ErrorBoundary, type JSX, createSignal } from "solid-js";
 
 import { Dialog } from "../components";
 import { Login } from "../user";
 import { type PageActions, PageActionsContext } from "./context";
 import { ImportDocument } from "./import_document";
+import { ErrorBoundaryPage } from "../util/errors";
 
 /** Container for any page in the application.
 
@@ -25,7 +26,9 @@ export function PageContainer(props: {
     return (
         <>
             <PageActionsContext.Provider value={actions}>
-                {props.children}
+                <ErrorBoundary fallback={(err) => <ErrorBoundaryPage error={err} />}>
+                    {props.children}
+                </ErrorBoundary>
             </PageActionsContext.Provider>
             <Dialog open={loginOpen()} onOpenChange={setLoginOpen} title="Log in">
                 <Login onComplete={() => setLoginOpen(false)} />

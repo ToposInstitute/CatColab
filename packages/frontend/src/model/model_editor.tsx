@@ -38,6 +38,7 @@ import {
 import "./model_editor.css";
 
 export default function ModelPage() {
+    throw "an error";
     const api = useApi();
     const theories = useContext(TheoryLibraryContext);
     invariant(theories, "Must provide theory library as context to model page");

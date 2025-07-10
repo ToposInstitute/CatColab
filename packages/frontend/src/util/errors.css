@@ -1,5 +1,19 @@
-.error-dialog {
-    & h3 {
-        color: #dc2626;
+.error-boundary {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    flex: 1;
+
+    div {
+        h3 {
+            color: #dc2626;
+        }
     }
+}
+
+.error-page {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
