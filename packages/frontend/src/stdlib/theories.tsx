@@ -686,3 +686,77 @@ stdTheories.add(
         });
     },
 );
+
+stdTheories.add(
+    {
+        id: "dynamic-stackflow",
+        name: "Dynamic Stock Flow",
+        description: "Model accumulation (stocks) and change (flows)",
+        group: "System Dynamics",
+        help: "dynamic-stockflow",
+    },
+    (meta) => {
+        const thCategoryDynamicStockFlow = new catlog.ThCategoryDynamicStockFlow();
+        return new Theory({
+            ...meta,
+            theory: thCategoryDynamicStockFlow.theory(),
+            onlyFreeModels: true,
+            modelTypes: [
+                {
+                    tag: "ObType",
+                    obType: { tag: "Basic", content: "Object" },
+                    name: "Stock",
+                    description: "Thing with an amount",
+                    shortcut: ["S"],
+                    cssClasses: [styles.box],
+                    svgClasses: [svgStyles.box],
+                },
+                {
+                    tag: "MorType",
+                    morType: {
+                        tag: "Hom",
+                        content: { tag: "Basic", content: "Object" },
+                    },
+                    name: "Flow",
+                    description: "Flow from one stock to another",
+                    shortcut: ["F"],
+                    arrowStyle: "double",
+                },
+                {
+                    tag: "ObType",
+                    obType: { tag: "Basic", content: "AuxiliaryVariable" },
+                    name: "Variable",
+                    description: "A function of different stocks",
+                    shortcut: ["A"],
+                    cssClasses: [styles.point],
+                    svgClasses: [svgStyles.point],
+                },
+                {
+                    tag: "MorType",
+                    morType: { tag: "Basic", content: "FlowLink" },
+                    name: "Flow Link",
+                    description: "Influence of an auxiliary variable on a flow",
+                    preferUnnamed: true,
+                    shortcut: ["L"],
+                },
+                {
+                    tag: "MorType",
+                    morType: { tag: "Basic", content: "VariableLink" },
+                    name: "Variable Link",
+                    description: "Variable referencing a stock quantity",
+                    shortcut: ["V"],
+                    arrowStyle: "flat",
+                    cssClasses: [styles.link],
+                    svgClasses: [svgStyles.link],
+                },
+            ],
+            modelAnalyses: [
+                analyses.configureStockFlowDiagram({
+                    id: "diagram",
+                    name: "Visualization",
+                    description: "Visualize the stock and flow diagram",
+                }),
+            ],
+        });
+    },
+);

@@ -10,6 +10,7 @@ import { DownloadSVGButton, GraphvizSVG, type SVGRefProp } from "../../visualiza
 import * as GV from "./graph_visualization";
 
 import "./graph_visualization.css";
+// import { DiagramObjectDecl } from "../../diagram";
 
 /** Configure a graph visualization for use with models of a double theory. */
 export function configureModelGraph(options: {
@@ -98,6 +99,8 @@ export function modelToGraphviz(
     model: ModelJudgment[],
     theory: Theory,
     attributes?: GV.GraphvizAttributes,
+    nodeAttributes?: (jgmt: ModelJudgment) => Record<string, string> | undefined,
+    edgeAttributes?: (jgmt: ModelJudgment) => Record<string, string> | undefined,
 ): Viz.Graph {
     const nodes = new Map<string, Required<Viz.Graph>["nodes"][0]>();
     for (const judgment of model) {
@@ -108,9 +111,11 @@ export function modelToGraphviz(
                 name: id,
                 attributes: {
                     id,
-                    label: name,
                     class: GV.svgCssClasses(meta).join(" "),
                     fontname: GV.graphvizFontname(meta),
+                    ...(nodeAttributes?.(judgment) ?? {
+                        label: name,
+                    }),
                 },
             });
         }
@@ -150,6 +155,7 @@ export function modelToGraphviz(
                 fontname: GV.graphvizFontname(meta),
                 // Not recognized by Graphviz but will be passed through!
                 arrowstyle: meta?.arrowStyle ?? "default",
+                ...(edgeAttributes?.(judgment) ?? {}),
             },
         });
     }
