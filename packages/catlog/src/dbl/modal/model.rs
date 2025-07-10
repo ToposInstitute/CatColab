@@ -73,6 +73,16 @@ impl<Id, ThId> MorList<Id, ThId> {
         }
     }
 
+    fn replace_list<E, F>(self, f: F) -> Result<Self, E>
+    where
+        F: FnOnce(Vec<ModalMor<Id, ThId>>) -> Result<Vec<ModalMor<Id, ThId>>, E>,
+    {
+        match self {
+            MorList::List(vec) => Ok(MorList::List(f(vec)?)),
+            MorList::SymList(vec, sigma) => Ok(MorList::SymList(f(vec)?, sigma)),
+        }
+    }
+
     fn mode(&self) -> Mode {
         match self {
             MorList::List(..) => Mode::List,
@@ -198,6 +208,7 @@ where
     }
 
     fn compose(&self, path: Path<Self::Ob, Self::Mor>) -> Self::Mor {
+        // TODO: Normalize composites of lists by composing elementwise.
         ModalMor::Composite(path.into())
     }
 }
@@ -274,8 +285,16 @@ where
         path.iter().cloned().fold(ob, |ob, op| op.ob_act(ob).unwrap())
     }
 
-    fn mor_act(&self, _mor: Self::Mor, _tree: &Self::MorOp) -> Self::Mor {
-        panic!("Action on morphisms not implemented")
+    fn mor_act(&self, mor: Self::Mor, tree: &Self::MorOp) -> Self::Mor {
+        // FIXME: The first argument should be a path, not a single morphism!
+        let Some(node) = tree.clone().only() else {
+            panic!("Morphism action not implemented for composite operations");
+        };
+        match node {
+            ModalNode::Basic(op) => op.mor_act(mor, false).unwrap(),
+            ModalNode::Unit(op) => op.mor_act(mor, true).unwrap(),
+            ModalNode::Composite(_) => mor,
+        }
     }
 }
 
@@ -345,10 +364,34 @@ where
                     vec.into_iter().map(|ob| self.clone().ob_act(ob)).collect();
                 Ok(ModalOb::List(mode, maybe_vec?))
             } else {
-                Err(format!("Object should be list of mode {mode:?}"))
+                Err(format!("Object should be a list in mode {mode:?}"))
             }
         } else {
             self.arg.ob_act(ob)
+        }
+    }
+
+    fn mor_act<Id>(
+        mut self,
+        mor: ModalMor<Id, ThId>,
+        is_unit: bool,
+    ) -> Result<ModalMor<Id, ThId>, String> {
+        if let Some(mode) = self.modes.pop() {
+            if let ModalMor::List(mor_list) = mor
+                && mor_list.mode() == mode
+            {
+                mor_list
+                    .replace_list(|vec| {
+                        let maybe_vec: Result<Vec<_>, _> =
+                            vec.into_iter().map(|mor| self.clone().mor_act(mor, is_unit)).collect();
+                        maybe_vec
+                    })
+                    .map(ModalMor::List)
+            } else {
+                Err(format!("Morphism should be a list in mode {mode:?}"))
+            }
+        } else {
+            self.arg.mor_act(mor, is_unit)
         }
     }
 }
@@ -356,14 +399,32 @@ where
 impl<ThId> ModalOp<ThId> {
     fn ob_act<Id>(self, ob: ModalOb<Id, ThId>) -> Result<ModalOb<Id, ThId>, String> {
         match self {
-            ModalOp::Generator(id) => Ok(ModalOb::App(ob.into(), id)),
-            ModalOp::Mul(mode, n, _) => Ok(ModalOb::List(mode, flatten_ob(ob, mode, n)?)),
+            ModalOp::Generator(id) => Ok(ModalOb::App(Box::new(ob), id)),
+            ModalOp::Mul(mode, n, _) => Ok(ModalOb::List(mode, flatten_ob_list(ob, mode, n)?)),
+        }
+    }
+
+    fn mor_act<Id>(
+        self,
+        mor: ModalMor<Id, ThId>,
+        is_unit: bool,
+    ) -> Result<ModalMor<Id, ThId>, String> {
+        match self {
+            ModalOp::Generator(id) => Ok(if is_unit {
+                ModalMor::HomApp(Box::new(mor.into()), id)
+            } else {
+                ModalMor::App(Box::new(mor.into()), id)
+            }),
+            ModalOp::Mul(mode, n, _) => match mode {
+                Mode::List => Ok(MorList::List(flatten_mor_list(mor, n)?).into()),
+                _ => panic!("Flattening of functions is not implemented"),
+            },
         }
     }
 }
 
 /// Recursively flatten a nested list of objects of the given depth.
-fn flatten_ob<Id, ThId>(
+fn flatten_ob_list<Id, ThId>(
     ob: ModalOb<Id, ThId>,
     mode: Mode,
     depth: usize,
@@ -377,11 +438,31 @@ fn flatten_ob<Id, ThId>(
             Ok(vec)
         } else {
             let maybe_vec: Result<Vec<_>, _> =
-                vec.into_iter().map(|ob| flatten_ob(ob, mode, depth - 1)).collect();
+                vec.into_iter().map(|ob| flatten_ob_list(ob, mode, depth - 1)).collect();
             Ok(maybe_vec?.into_iter().flatten().collect())
         }
     } else {
-        Err(format!("Object should be list of mode {mode:?}"))
+        Err(format!("Object should be a list in mode {mode:?}"))
+    }
+}
+
+/// Recursively flatten a nested list of morphisms of the given depth.
+fn flatten_mor_list<Id, ThId>(
+    mor: ModalMor<Id, ThId>,
+    depth: usize,
+) -> Result<Vec<ModalMor<Id, ThId>>, String> {
+    if depth == 0 {
+        Ok(vec![mor])
+    } else if let ModalMor::List(MorList::List(vec)) = mor {
+        if depth == 1 {
+            Ok(vec)
+        } else {
+            let maybe_vec: Result<Vec<_>, _> =
+                vec.into_iter().map(|mor| flatten_mor_list(mor, depth - 1)).collect();
+            Ok(maybe_vec?.into_iter().flatten().collect())
+        }
+    } else {
+        Err(format!("Morphism should be a list in mode {:?}", Mode::List))
     }
 }
 
@@ -390,6 +471,7 @@ mod tests {
     use super::*;
     use crate::dbl::theory::DblTheory;
     use crate::stdlib::theories::*;
+    use crate::{dbl::tree::DblNode, one::tree::OpenTree};
     use ustr::ustr;
 
     #[test]
@@ -429,7 +511,8 @@ mod tests {
 
         // Products of objects.
         assert_eq!(model.ob_type(&pair), ob_type.clone().apply(Mode::List));
-        let prod = model.ob_act(pair, &ModalObOp::generator(ustr("Mul")));
+        let mul_op = ModalObOp::generator(ustr("Mul"));
+        let prod = model.ob_act(pair, &mul_op);
         assert!(model.has_ob(&prod));
         assert_eq!(model.ob_type(&prod), ob_type);
 
@@ -440,8 +523,20 @@ mod tests {
         assert!(model.has_mor(&f.into()));
         let pair = MorList::List(vec![f.into(), g.into()]).into();
         assert!(model.has_mor(&pair));
-        assert_eq!(model.dom(&pair), ModalOb::List(Mode::List, vec![x.into(), w.into()]));
-        assert_eq!(model.cod(&pair), ModalOb::List(Mode::List, vec![y.into(), z.into()]));
+        assert_eq!(model.mor_type(&pair), th.hom_type(ob_type.clone().apply(Mode::List)));
+        let dom_list = ModalOb::List(Mode::List, vec![x.into(), w.into()]);
+        let cod_list = ModalOb::List(Mode::List, vec![y.into(), z.into()]);
+        assert_eq!(model.dom(&pair), dom_list);
+        assert_eq!(model.cod(&pair), cod_list);
+
+        // Products of morphisms.
+        let ob_op = ModeApp::new(ustr("Mul").into());
+        let hom_op = OpenTree::single(DblNode::Cell(ModalNode::Unit(ob_op)), 1).into();
+        let prod = model.mor_act(pair, &hom_op);
+        assert!(model.has_mor(&prod));
+        assert_eq!(model.mor_type(&prod), th.hom_type(ob_type.clone()));
+        assert_eq!(model.dom(&prod), model.ob_act(dom_list, &mul_op));
+        assert_eq!(model.cod(&prod), model.ob_act(cod_list, &mul_op));
     }
 
     #[test]
