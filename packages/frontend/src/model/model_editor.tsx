@@ -1,7 +1,6 @@
 import { useParams } from "@solidjs/router";
 import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
-
 import type { ModelJudgment } from "catlog-wasm";
 import { useApi } from "../api";
 import { InlineInput } from "../components";
@@ -35,6 +34,11 @@ import {
     newObjectDecl,
 } from "./types";
 
+import { createSignal } from "solid-js";
+import { getAuth } from "firebase/auth";
+import { useAuth, useFirebaseApp } from "solid-firebase";
+import { WelcomeOverlay } from "./welcome_overlay";
+
 import "./model_editor.css";
 
 export default function ModelPage() {
@@ -49,9 +53,9 @@ export default function ModelPage() {
         (refId) => getLiveModel(refId, api, theories),
     );
 
-    return (
-        <Show when={liveModel()} fallback={<DocumentLoadingScreen />}>
-            {(loadedModel) => <ModelDocumentEditor liveModel={loadedModel()} />}
+    return ( 
+		<Show when={liveModel()} fallback={<DocumentLoadingScreen />}>
+			{(loadedModel) => <ModelDocumentEditor liveModel={loadedModel()} />}
         </Show>
     );
 }
@@ -59,6 +63,17 @@ export default function ModelPage() {
 export function ModelDocumentEditor(props: {
     liveModel: LiveModelDocument;
 }) {
+	// const firebaseApp = useFirebaseApp();
+    // const auth = useAuth(getAuth(firebaseApp));
+
+	// console.log(props.liveModel);
+    // const [isOverlayOpen, setOverlayOpen] = createSignal(auth.data == null
+        // // liveModel.cells.length === 0 && auth.data == null,
+    // );
+
+	// const toggleOverlay = () => {
+        // setOverlayOpen(!isOverlayOpen());
+    // };
     return (
         <div class="growable-container">
             <Toolbar>
@@ -145,7 +160,6 @@ export function ModelNotebookEditor(props: {
                 cellConstructors={cellConstructors()}
                 cellLabel={judgmentLabel}
                 duplicateCell={duplicateModelJudgment}
-                notebookType={"model"}
             />
         </LiveModelContext.Provider>
     );
