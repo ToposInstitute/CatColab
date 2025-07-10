@@ -122,9 +122,7 @@ impl<Ty, Op> OpenTree<Ty, Op> {
      */
     pub fn size(&self) -> usize {
         match self {
-            OpenTree::Comp(tree) => {
-                tree.root().descendants().filter(|node| node.value().is_some()).count()
-            }
+            OpenTree::Comp(tree) => tree.nodes().filter(|node| node.value().is_some()).count(),
             OpenTree::Id(_) => 0,
         }
     }
@@ -132,6 +130,20 @@ impl<Ty, Op> OpenTree<Ty, Op> {
     /// Is the open tree empty?
     pub fn is_empty(&self) -> bool {
         matches!(self, OpenTree::Id(_))
+    }
+
+    /** Extracts the unique node in a tree of size 1.
+
+    This method is a one-sided inverse to [`OpenTree::single`].
+     */
+    pub fn only(self) -> Option<Op> {
+        if let OpenTree::Comp(mut tree) = self
+            && tree.root().children().all(|node| node.value().is_none())
+        {
+            std::mem::take(tree.root_mut().value())
+        } else {
+            None
+        }
     }
 
     /** Is the open tree isomorphic to another?
@@ -272,6 +284,7 @@ mod tests {
         let tree = OT::single('f', 2);
         assert_eq!(tree.arity(), 2);
         assert_eq!(tree, tree!(Some('f') => { None, None }).into());
+        assert_eq!(tree.only(), Some('f'));
 
         let tree = tree!(Some('h') => { Some('g') => { Some('f') => { None } } });
         assert_eq!(OT::linear(vec!['f', 'g', 'h']), Some(tree.into()));

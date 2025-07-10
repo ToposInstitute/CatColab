@@ -148,7 +148,7 @@ impl<V, E> Path<V, E> {
         }
     }
 
-    /** Returns the unique edge in a path of length 1.
+    /** Extracts the unique edge in a path of length 1.
 
     This method is a one-sided inverse to [`Path::single`].
      */
