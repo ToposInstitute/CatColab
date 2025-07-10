@@ -70,33 +70,6 @@
     background: rgba(0, 0, 0, 0.05);
 }
 
-.progress-bar {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    padding: 12px 0;
-    background: #f9f9f9;
-}
-
-.progress-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background-color: #ddd;
-    margin: 0 5px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-.progress-dot.active {
-    background: var(--topos-color);
-    transform: scale(1.2);
-}
-
-.progress-dot.completed {
-    background: var(--topos-color);
-}
-
 .step-content {
     padding: 25px 35px;
     min-height: 250px;
@@ -161,11 +134,6 @@
     text-align: center;
     transition: transform 0.2s, box-shadow 0.2s;
 }
-
-/* .feature:hover { */
-/*     transform: translateY(-5px); */
-/*     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1); */
-/* } */
 
 .feature-icon {
     font-size: 28px;

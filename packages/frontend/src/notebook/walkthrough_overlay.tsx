@@ -1,9 +1,8 @@
 import { Binoculars, Bird, Github, NotebookPen } from "lucide-solid";
-import { Show, createEffect, createSignal } from "solid-js";
+import { createSignal } from "solid-js";
 import zulip_favicon from "./assets/zulip_favicon.png";
 import "./walkthrough_overlay.css";
 
-import LogInIcon from "lucide-solid/icons/log-in";
 import { Dialog } from "../components";
 import { Login } from "../user";
 
