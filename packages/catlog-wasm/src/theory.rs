@@ -36,7 +36,7 @@ impl CanElaborate<MorType, Path<Ustr, Ustr>> for Elaborator {
                 let path = Path::from_vec(fs?).ok_or("Composite should not be empty")?;
                 Ok(path.flatten())
             }
-            MorType::Hom(ob_type) => Ok(Path::Id(self.elab(ob_type.as_ref())?)),
+            MorType::Hom(ob_type) => Ok(Path::Id(self.elab(&**ob_type)?)),
         }
     }
 }
@@ -47,7 +47,7 @@ impl CanElaborate<ObType, TabObType<Ustr, Ustr>> for Elaborator {
         match x {
             ObType::Basic(name) => Ok(TabObType::Basic(*name)),
             ObType::Tabulator(mor_type) => {
-                Ok(TabObType::Tabulator(Box::new(self.elab(mor_type.as_ref())?)))
+                Ok(TabObType::Tabulator(Box::new(self.elab(&**mor_type)?)))
             }
         }
     }
@@ -61,7 +61,7 @@ impl CanElaborate<MorType, TabMorType<Ustr, Ustr>> for Elaborator {
             MorType::Composite(_) => {
                 Err("Composites not yet implemented for tabulator theories".into())
             }
-            MorType::Hom(ob_type) => Ok(TabMorType::Hom(Box::new(self.elab(ob_type.as_ref())?))),
+            MorType::Hom(ob_type) => Ok(TabMorType::Hom(Box::new(self.elab(&**ob_type)?))),
         }
     }
 }
@@ -94,9 +94,7 @@ impl CanQuote<TabObType<Ustr, Ustr>, ObType> for Quoter {
     fn quote(&self, ob_type: &TabObType<Ustr, Ustr>) -> ObType {
         match ob_type {
             TabObType::Basic(name) => ObType::Basic(*name),
-            TabObType::Tabulator(mor_type) => {
-                ObType::Tabulator(Box::new(self.quote(mor_type.as_ref())))
-            }
+            TabObType::Tabulator(m) => ObType::Tabulator(Box::new(self.quote(&**m))),
         }
     }
 }
@@ -106,7 +104,7 @@ impl CanQuote<TabMorType<Ustr, Ustr>, MorType> for Quoter {
     fn quote(&self, mor_type: &TabMorType<Ustr, Ustr>) -> MorType {
         match mor_type {
             TabMorType::Basic(name) => MorType::Basic(*name),
-            TabMorType::Hom(ob_type) => MorType::Hom(Box::new(self.quote(ob_type.as_ref()))),
+            TabMorType::Hom(x) => MorType::Hom(Box::new(self.quote(&**x))),
         }
     }
 }
