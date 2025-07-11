@@ -1,4 +1,4 @@
-import { attachClosestEdge } from "@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge";
+import { attachClosestEdge, extractClosestEdge } from "@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import {
     draggable,
@@ -152,48 +152,34 @@ export function NotebookCell(props: {
             draggable({
                 element: handleRef,
                 getInitialData: () => createCellDragData(props.cellId),
-				onDrag: ({ source, location }) => {
-				  // console.log('Dragging...', location);
-				}
             }),
             dropTargetForElements({
                 element: rootRef,
                 canDrop({ source }) {
-					if (source.data.cellId !== props.cellId) {
-						// console.log("source: ", source);
-						// setDropTarget(source.data.cellId);
-						console.log(dropTarget());
-					}
                     // TODO: Reject if cell belongs to a different notebook.
                     return isCellDragData(source.data);
                 },
                 getData({ input }) {
 					// console.log(" get Data ", input);
                     const data = createCellDragData(props.cellId);
+					
                     return attachClosestEdge(data, {
                         element: rootRef,
                         input,
                         allowedEdges: ["top", "bottom"],
                     });
                 },
-				onDragEnter() {
+				onDragEnter: (args) => {
+				  setClosestEdge(extractClosestEdge(args.self.data));
 				  setDropTarget(true);
 				},
 				onDragLeave() {
 				  setDropTarget(false);
 				},
+				onDrop() {
+				  setDropTarget(false);
+				},
             }),
-			// monitorForElements({
-			// 	onDrag({ source, location }) {
-			// 		const isDraggedOver = location.current.dropTargets.some(
-			// 			target => target.data.cellId === props.cellId
-			// 		);
-
-			// 		if (isDraggedOver) {
-			// 			setDropTarget(isDraggedOver);
-			// 		}
-			// 	}
-			// })
         );
         onCleanup(cleanup);
     });
@@ -233,10 +219,15 @@ export function NotebookCell(props: {
                     </Popover.Portal>
                 </Popover>
             </div>
-			<Show when={dropTarget()}>
-				<hr color="blue" />
-			</Show>
-            <div class="cell-content">{props.children}</div>
+            <div class="cell-content">
+				<Show when={dropTarget() && closestEdge() === "top"}>
+					<hr color="blue" />
+				</Show>
+				{props.children}
+				<Show when={dropTarget() && closestEdge() === "bottom"}>
+					<hr color="blue" />
+				</Show>
+			</div>
             <Show when={props.tag}>
                 <div class="cell-tag">{props.tag}</div>
             </Show>
