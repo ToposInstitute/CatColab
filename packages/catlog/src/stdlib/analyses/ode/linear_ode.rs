@@ -53,6 +53,8 @@ pub struct LinearODEAnalysis {
     var_ob_type: Ustr,
     positive_mor_types: Vec<Path<Ustr, Ustr>>,
     negative_mor_types: Vec<Path<Ustr, Ustr>>,
+    positive_deg_zero_mor_types: Vec<Path<Ustr, Ustr>>,
+    negative_deg_zero_mor_types: Vec<Path<Ustr, Ustr>>,
 }
 
 impl LinearODEAnalysis {
@@ -62,18 +64,40 @@ impl LinearODEAnalysis {
             var_ob_type,
             positive_mor_types: Vec::new(),
             negative_mor_types: Vec::new(),
+            positive_deg_zero_mor_types: Vec::new(),
+            negative_deg_zero_mor_types: Vec::new(),
         }
     }
 
-    /// Adds a morphism type defining a positive interaction between objects.
+    /** Adds a morphism type defining a positive positive-degree interaction
+        between objects.
+    */
     pub fn add_positive(mut self, mor_type: Path<Ustr, Ustr>) -> Self {
         self.positive_mor_types.push(mor_type);
         self
     }
 
-    /// Adds a morphism type defining a negative interaction between objects.
+    /** Adds a morphism type defining a negative positive-degree interaction
+        between objects.
+    */
     pub fn add_negative(mut self, mor_type: Path<Ustr, Ustr>) -> Self {
         self.negative_mor_types.push(mor_type);
+        self
+    }
+
+    /** Adds a morphism type defining a positive zero-degree interaction
+        between objects.
+    */
+    pub fn add_positive_zero(mut self, mor_type: Path<Ustr, Ustr>) -> Self {
+        self.positive_deg_zero_mor_types.push(mor_type);
+        self
+    }
+
+    /** Adds a morphism type defining a negative zero-degree interaction
+        between objects.
+    */
+    pub fn add_negative_zero(mut self, mor_type: Path<Ustr, Ustr>) -> Self {
+        self.negative_deg_zero_mor_types.push(mor_type);
         self
     }
 
