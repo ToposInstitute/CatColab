@@ -1,9 +1,12 @@
-import { attachClosestEdge, extractClosestEdge } from "@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge";
+import {
+    attachClosestEdge,
+    extractClosestEdge,
+} from "@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import {
     draggable,
     dropTargetForElements,
-	monitorForElements,
+    monitorForElements,
 } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import type { DocHandle, Prop } from "@automerge/automerge-repo";
 import Popover from "@corvu/popover";
@@ -31,12 +34,12 @@ import Trash2 from "lucide-solid/icons/trash-2";
 import "./notebook_cell.css";
 
 type DraggableState =
-	| { type: 'idle' }
-	| { type: 'preview'; container: HTMLElement }
-	| { type: 'dragging' };
+    | { type: "idle" }
+    | { type: "preview"; container: HTMLElement }
+    | { type: "dragging" };
 
-const idleState: DraggableState = { type: 'idle' };
-const draggingState: DraggableState = { type: 'dragging' };
+const idleState: DraggableState = { type: "idle" };
+const draggingState: DraggableState = { type: "dragging" };
 
 /** Actions invokable *within* a cell but affecting the larger notebook state.
 
@@ -87,9 +90,10 @@ export type CellDragData = {
 };
 
 /** Create drag-and-drop data for a notebook cell. */
-const createCellDragData = (cellId: Uuid) => ({
+const createCellDragData = (cellId: Uuid, index: number) => ({
     [cellDragDataKey]: true,
     cellId,
+    index,
 });
 
 /** Check whether the drag data is of notebook cell type. */
@@ -104,6 +108,7 @@ the cell is rendered by its children.
  */
 export function NotebookCell(props: {
     cellId: Uuid;
+    index: number;
     actions: CellActions;
     children: JSX.Element;
     tag?: string;
@@ -143,15 +148,18 @@ export function NotebookCell(props: {
         },
     ];
 
-	const [draggableState, setDraggableState] = createSignal(idleState);
-	const [closestEdge, setClosestEdge] = createSignal(null);
-	const [dropTarget, setDropTarget] = createSignal(false);
+    const [draggableState, setDraggableState] = createSignal(idleState);
+    const [closestEdge, setClosestEdge] = createSignal(null);
+    const [dropTarget, setDropTarget] = createSignal(false);
 
     createEffect(() => {
         const cleanup = combine(
             draggable({
                 element: handleRef,
-                getInitialData: () => createCellDragData(props.cellId),
+                getInitialData: () => ({
+                    ...createCellDragData(props.cellId),
+                    index: props.index,
+                }),
             }),
             dropTargetForElements({
                 element: rootRef,
@@ -160,25 +168,24 @@ export function NotebookCell(props: {
                     return isCellDragData(source.data);
                 },
                 getData({ input }) {
-					// console.log(" get Data ", input);
-                    const data = createCellDragData(props.cellId);
-					
+                    const data = createCellDragData(props.cellId, props.index);
                     return attachClosestEdge(data, {
                         element: rootRef,
                         input,
                         allowedEdges: ["top", "bottom"],
                     });
                 },
-				onDragEnter: (args) => {
-				  setClosestEdge(extractClosestEdge(args.self.data));
-				  setDropTarget(true);
-				},
-				onDragLeave() {
-				  setDropTarget(false);
-				},
-				onDrop() {
-				  setDropTarget(false);
-				},
+                onDragEnter: (args) => {
+                    console.log(args.source.data.index, args.self.data.index);
+                    setClosestEdge(extractClosestEdge(args.self.data));
+                    setDropTarget(true);
+                },
+                onDragLeave() {
+                    setDropTarget(false);
+                },
+                onDrop() {
+                    setDropTarget(false);
+                },
             }),
         );
         onCleanup(cleanup);
@@ -220,14 +227,13 @@ export function NotebookCell(props: {
                 </Popover>
             </div>
             <div class="cell-content">
-				<Show when={dropTarget() && closestEdge() === "top"}>
-					<hr color="blue" />
-				</Show>
-				{props.children}
-				<Show when={dropTarget() && closestEdge() === "bottom"}>
-					<hr color="blue" />
-				</Show>
-			</div>
+                {props.children}
+                <Show
+                    when={dropTarget() && (closestEdge() === "top" || closestEdge() === "bottom")}
+                >
+                    <div class="drop-indicator-with-dots"></div>
+                </Show>
+            </div>
             <Show when={props.tag}>
                 <div class="cell-tag">{props.tag}</div>
             </Show>

@@ -31,3 +31,23 @@
     height: auto;
     max-width: 100%;
 }
+
+.drop-indicator-with-dots {
+    height: 2px;
+    transition: opacity 0.15s ease;
+    background-color: #6b7280;
+    border-radius: 1px;
+    margin: 5px 0;
+    position: relative;
+    background: linear-gradient(270deg, transparent 0, grey 100%);
+}
+
+.drop-indicator-with-dots::before {
+    content: "";
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background-color: #6b7280;
+    /* border-radius: 50%; */
+    top: -2px;
+}

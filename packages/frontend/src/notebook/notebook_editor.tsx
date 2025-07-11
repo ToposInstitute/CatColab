@@ -81,7 +81,7 @@ export function NotebookEditor<T>(props: {
 }) {
     const [activeCell, setActiveCell] = createSignal(props.notebook.cells.length > 0 ? 0 : -1);
 
-	const [closestEdge, setClosestEdge] = createSignal(0); 
+    const [closestEdge, setClosestEdge] = createSignal(0);
 
     // Set up commands and their keyboard shortcuts.
 
@@ -202,7 +202,7 @@ export function NotebookEditor<T>(props: {
                     closestEdgeOfTarget: extractClosestEdge(target.data),
                     axis: "vertical",
                 });
-				setClosestEdge(extractClosestEdge(target.data));
+                setClosestEdge(extractClosestEdge(target.data));
                 props.changeNotebook((nb) => {
                     const [cell] = nb.cells.splice(sourceIndex, 1);
                     nb.cells.splice(finalIndex, 0, deepCopyJSON(cell));
@@ -289,6 +289,7 @@ export function NotebookEditor<T>(props: {
                             <li>
                                 <NotebookCell
                                     cellId={cell.id}
+                                    index={i()}
                                     actions={cellActions}
                                     tag={
                                         cell.tag === "formal"
@@ -325,7 +326,7 @@ export function NotebookEditor<T>(props: {
                                                 actions={cellActions}
                                             />
                                         </Match>
-                                    </Switch> 
+                                    </Switch>
                                 </NotebookCell>
                             </li>
                         );
