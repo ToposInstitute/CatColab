@@ -41,7 +41,7 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 use super::theory::DblTheory;
-use crate::one::{Category, FgCategory, InvalidPathEq};
+use crate::one::{Category, FgCategory, InvalidPathEq, Path};
 
 pub use super::discrete::model::*;
 pub use super::discrete_tabulator::model::*;
@@ -106,8 +106,8 @@ pub trait DblModel: Category {
     /// Acts on an object with an object operation.
     fn ob_act(&self, x: Self::Ob, f: &Self::ObOp) -> Self::Ob;
 
-    /// Acts on a morphism with a morphism operation.
-    fn mor_act(&self, m: Self::Mor, α: &Self::MorOp) -> Self::Mor;
+    /// Acts on a sequence of morphisms with a morphism operation.
+    fn mor_act(&self, path: Path<Self::Ob, Self::Mor>, α: &Self::MorOp) -> Self::Mor;
 }
 
 /// A finitely generated model of a double theory.
