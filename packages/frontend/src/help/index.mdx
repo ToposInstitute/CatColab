@@ -1,17 +1,16 @@
 import { A } from "@solidjs/router";
 import { Warning } from "../components/alert";
 
-# Help & resources
+# Overview
 
-## CatColab is...
+- CatColab is a **collaborative** environment for **formal**, **interoperable**, **conceptual** modeling.
+  You can read about what we mean by these words in the [**Fundamentals of CatColab**](guides/fundamentals) guide.
 
-- a collaborative environment for *formal, interoperable, conceptual modeling*
-- an open source software project: [find us on
-  GitHub](https://github.com/ToposInstitute/CatColab)
-- a technology created by [Topos Institute](https://topos.site/) and our
-  partners: <A href="credits">read the credits</A>
+- CatColab is an open-source software project.
+  You can [find us on GitHub ↗](https://github.com/ToposInstitute/CatColab) or [chat with the community on Zulip ↗](https://catcolab.zulipchat.com).
 
-You can find a page with some examples of CatColab in action <A href="quick-intro">here</A>.
+- CatColab is a technology created by Topos Institute and our partners.
+  You can [view the credits](credits) or [read more about us ↗](https://topos.institute).
 
 <Warning>
 CatColab is under active development with new features added regularly. We aim
@@ -19,40 +18,36 @@ to preserve the integrity of your data but you should not store anything
 critical or sensitive.
 </Warning>
 
-## Concepts
 
-While CatColab has a notebook-style interface inspired by computational
-notebooks like JupyterLab and structured document editors like Notion, its
-conceptual underpinnings are quite different from both kinds of tools. Here is
-an overview of the concepts that you'll encounter in CatColab today.
+## Using CatColab
 
-<dl>
+The general process of using CatColab looks something like the following:
 
-<dt>Logic</dt>
+1. Select a **logic**
+2. Build a **model** within the above logic
+3. Run various **analyses** on your model.
 
-<dd>CatColab is not a general-purpose programming or modeling language but is
-rather an extensible environment for working in *domain-specific logics*, such
-as those of database schemas or biochemical regulatory networks. To do anything
-in the tool besides write text, you'll need to <A href="theories">choose a
-logic</A>.</dd>
+For more information, see the [guides](guides) or dive into the help pages for [logics](logics).
 
-<dt>Model</dt>
 
-<dd>Models in CatColab are models *within* a logic, such as a particular
-database schema or regulatory network. Models are specified declaratively and
-are well-defined mathematical objects. CatColab is a structure editor for models
-in a logic, allowing formal declarations to be intermixed with descriptive rich
-text.</dd>
+## Other documentation
 
-<dt>Analysis</dt>
+These help pages are intended for general users of CatColab, but there are some other places where you can find helpful resources:
 
-<dd>Unlike most computational notebooks, CatColab strictly separates the
-*specification* of a model from any outputs derived from it. Depending on the
-logic, an analysis of a model might include visualization, simulation,
-identification of motifs, and translation into other formats.</dd>
+- General overview:
+  * [Fundamentals of CatColab](guides/fundamentals) guide
+  * [CatColab on topos.institute ↗](https://topos.institute/work/catcolab/)
+- API documentation for software developers:
+  * Rust packages: [`catlog` ↗](https://next.catcolab.org/dev/rust/catlog/index.html), [`catlog_wasm` ↗](https://next.catcolab.org/dev/rust/catlog_wasm/index.html)
+  * TypeScript: [`frontend` ↗](https://next.catcolab.org/dev/frontend/)
+  * [CatColab on GitHub ↗](https://github.com/ToposInstitute/CatColab/)
+- Mathematical references:
+  * [Mathematical dev docs ↗](https://next.catcolab.org/dev/mathematics.xml)
+  * [Bibliography of suggested reading ↗](https://next.catcolab.org/dev/bib-0001.xml)
 
-</dl>
 
-Future of versions of CatColab will display the further concepts of
-**instances**, **morphisms**, and **migrations**, to be described when they
-become available.
+## Contact us
+
+- You can reach us via email [here](mailto:catcolab@topos.institute) with any questions, comments, or suggestions.
+- You can also join our [Zulip chat ↗](https://catcolab.zulipchat.com/join/ma57lx2yclmkfgen4eft4ias/) to discuss CatColab with the community and the developers. This is our preferred venue for discussions of technical details.
+- All community members are welcome to post new issues on our [GitHub ↗](https://github.com/ToposInstitute/CatColab).

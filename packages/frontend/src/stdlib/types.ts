@@ -16,7 +16,6 @@ export type TheoryMeta = {
     description: string;
 
     /** Is this theory the default theory for new models?
-
     It is enforced that at most one theory will have this status.
      */
     isDefault?: boolean;
