@@ -27,6 +27,10 @@ import {
     isCellDragData,
 } from "./notebook_cell";
 import { type FormalCell, newFormalCell, newRichTextCell, newStemCell } from "./types";
+import { WelcomeOverlay } from "../model/welcome_overlay"; 
+
+import { getAuth } from "firebase/auth";
+import { useAuth, useFirebaseApp } from "solid-firebase";
 
 import "./notebook_editor.css";
 
@@ -82,7 +86,6 @@ export function NotebookEditor<T>(props: {
     const [activeCell, setActiveCell] = createSignal(props.notebook.cells.length > 0 ? 0 : -1);
 
     // Set up commands and their keyboard shortcuts.
-
     const addAfterActiveCell = (cell: Cell<T>) => {
         props.changeNotebook((nb) => {
             const i = Math.min(activeCell() + 1, nb.cells.length);
@@ -209,8 +212,22 @@ export function NotebookEditor<T>(props: {
         onCleanup(cleanup);
     });
 
+	const firebaseApp = useFirebaseApp();
+    const auth = useAuth(getAuth(firebaseApp));
+
+	console.log(props.liveModel);
+    const [isOverlayOpen, setOverlayOpen] = createSignal(auth.data == null
+        // liveModel.cells.length === 0 && auth.data == null,
+    );
+
+	const toggleOverlay = () => {
+        setOverlayOpen(!isOverlayOpen());
+    };
+
+
     return (
         <div class="notebook">
+			<WelcomeOverlay isOpen={isOverlayOpen()} onClose={toggleOverlay} />
             <Show when={props.notebook.cells.length === 0}>
                 <div class="notebook-empty placeholder">
                     <IconButton onClick={() => appendCell(newStemCell())}>
