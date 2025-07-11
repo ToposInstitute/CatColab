@@ -40,6 +40,7 @@ pub enum DblModelBox {
 #[wasm_bindgen]
 pub struct DblModel(#[wasm_bindgen(skip)] pub DblModelBox);
 
+/// Elaborates into object type in a discrete double theory.
 impl CanElaborate<ObType, Ustr> for Elaborator {
     fn elab(&self, x: &ObType) -> Result<Ustr, String> {
         match x {
@@ -49,6 +50,22 @@ impl CanElaborate<ObType, Ustr> for Elaborator {
     }
 }
 
+/// Elaborates into morphism type in a discrete double theory.
+impl CanElaborate<MorType, Path<Ustr, Ustr>> for Elaborator {
+    fn elab(&self, x: &MorType) -> Result<Path<Ustr, Ustr>, String> {
+        match x {
+            MorType::Basic(ustr) => Ok(Path::single(*ustr)),
+            MorType::Composite(fs) => {
+                let fs: Result<Vec<_>, _> = fs.iter().map(|f| self.elab(f)).collect();
+                let path = Path::from_vec(fs?).ok_or("Composite should not be empty")?;
+                Ok(path.flatten())
+            }
+            MorType::Hom(ob_type) => Ok(Path::Id(self.elab(&**ob_type)?)),
+        }
+    }
+}
+
+/// Elaborates into object type in a discrete tabulator theory.
 impl CanElaborate<ObType, TabObType<Ustr, Ustr>> for Elaborator {
     fn elab(&self, x: &ObType) -> Result<TabObType<Ustr, Ustr>, String> {
         match x {
@@ -60,20 +77,15 @@ impl CanElaborate<ObType, TabObType<Ustr, Ustr>> for Elaborator {
     }
 }
 
+/// Elaborates into morphism type in a discrete tabulator theory.
 impl CanElaborate<MorType, TabMorType<Ustr, Ustr>> for Elaborator {
     fn elab(&self, x: &MorType) -> Result<TabMorType<Ustr, Ustr>, String> {
         match x {
             MorType::Basic(ustr) => Ok(TabMorType::Basic(*ustr)),
+            MorType::Composite(_) => {
+                Err("Composites not yet implemented for tabulator theories".into())
+            }
             MorType::Hom(ob_type) => Ok(TabMorType::Hom(Box::new(self.elab(&**ob_type)?))),
-        }
-    }
-}
-
-impl CanElaborate<MorType, Path<Ustr, Ustr>> for Elaborator {
-    fn elab(&self, x: &MorType) -> Result<Path<Ustr, Ustr>, String> {
-        match x {
-            MorType::Basic(ustr) => Ok(Path::single(*ustr)),
-            MorType::Hom(ob_type) => Ok(Path::Id(self.elab(&**ob_type)?)),
         }
     }
 }
@@ -82,7 +94,7 @@ impl CanElaborate<Ob, Uuid> for Elaborator {
     fn elab(&self, x: &Ob) -> Result<Uuid, String> {
         match x {
             Ob::Basic(uuid) => Ok(*uuid),
-            _ => Err(format!("Cannot cast object type for discrete double theory: {x:#?}")),
+            _ => Err(format!("Cannot cast object for discrete double theory: {x:#?}")),
         }
     }
 }
@@ -168,15 +180,32 @@ impl CanElaborate<Mor, TabEdge<Uuid, Uuid>> for Elaborator {
     }
 }
 
-impl CanQuote<Uuid, Ob> for Quoter {
-    fn quote(&self, id: &Uuid) -> Ob {
-        Ob::Basic(*id)
-    }
-}
-
+/// Quotes an object type in a discrete double theory.
 impl CanQuote<Ustr, ObType> for Quoter {
     fn quote(&self, id: &Ustr) -> ObType {
         ObType::Basic(*id)
+    }
+}
+
+/// Quotes a morphism type in a discrete double theory.
+impl CanQuote<Path<Ustr, Ustr>, MorType> for Quoter {
+    fn quote(&self, path: &Path<Ustr, Ustr>) -> MorType {
+        match path {
+            Path::Id(v) => MorType::Hom(Box::new(ObType::Basic(*v))),
+            Path::Seq(edges) => {
+                if edges.len() == 1 {
+                    MorType::Basic(edges.head)
+                } else {
+                    MorType::Composite(edges.iter().map(|e| MorType::Basic(*e)).collect())
+                }
+            }
+        }
+    }
+}
+
+impl CanQuote<Uuid, Ob> for Quoter {
+    fn quote(&self, id: &Uuid) -> Ob {
+        Ob::Basic(*id)
     }
 }
 
@@ -226,15 +255,6 @@ impl CanQuote<Path<Uuid, Uuid>, Mor> for Quoter {
             Mor::Basic(path.clone().only().unwrap())
         } else {
             Mor::Composite(Box::new(demote_path(path.clone().map(Ob::Basic, Mor::Basic))))
-        }
-    }
-}
-
-impl CanQuote<Path<Ustr, Ustr>, MorType> for Quoter {
-    fn quote(&self, path: &Path<Ustr, Ustr>) -> MorType {
-        match path {
-            Path::Id(u) => MorType::Hom(Box::new(ObType::Basic(*u))),
-            Path::Seq(non_empty) => MorType::Basic(non_empty[0]),
         }
     }
 }
