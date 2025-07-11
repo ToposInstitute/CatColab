@@ -336,7 +336,7 @@ where
         panic!("Action on objects not implemented")
     }
 
-    fn mor_act(&self, _mor: Self::Mor, _op: &Self::MorOp) -> Self::Mor {
+    fn mor_act(&self, _path: Path<Self::Ob, Self::Mor>, _op: &Self::MorOp) -> Self::Mor {
         panic!("Action on morphisms not implemented")
     }
 }

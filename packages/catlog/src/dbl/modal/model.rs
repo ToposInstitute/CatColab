@@ -263,10 +263,9 @@ where
         path.iter().cloned().fold(ob, |ob, op| op.ob_act(ob).unwrap())
     }
 
-    fn mor_act(&self, mor: Self::Mor, tree: &Self::MorOp) -> Self::Mor {
-        // FIXME: The first argument should be a path, not a single morphism!
-        let Some(node) = tree.clone().only() else {
-            panic!("Morphism action not implemented for composite operations");
+    fn mor_act(&self, path: Path<Self::Ob, Self::Mor>, tree: &Self::MorOp) -> Self::Mor {
+        let (Some(mor), Some(node)) = (path.only(), tree.clone().only()) else {
+            panic!("Morphism action only implemented for basic operations");
         };
         match node {
             ModalNode::Basic(op) => op.mor_act(mor, false).unwrap(),
@@ -506,7 +505,7 @@ mod tests {
         // Products of morphisms.
         let ob_op = ModeApp::new(ustr("Mul").into());
         let hom_op = OpenTree::single(DblNode::Cell(ModalNode::Unit(ob_op)), 1).into();
-        let prod = model.mor_act(pair, &hom_op);
+        let prod = model.mor_act(pair.into(), &hom_op);
         assert!(model.has_mor(&prod));
         assert_eq!(model.mor_type(&prod), th.hom_type(ob_type.clone()));
         assert_eq!(model.dom(&prod), model.ob_act(dom_list, &mul_op));
