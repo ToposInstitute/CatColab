@@ -14,7 +14,7 @@ use catlog::one::FgCategory;
 use catlog::zero::MutMapping;
 use notebook_types::current::*;
 
-use super::model::{CanElaborate, CanQuote, Elaborator, Quoter};
+use super::notation::*;
 use super::model::{DblModel, DblModelBox, DiscreteDblModel};
 use super::model_morphism::DiscreteDblModelMapping;
 use super::result::JsResult;

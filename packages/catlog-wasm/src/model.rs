@@ -17,6 +17,7 @@ use catlog::one::{Category as _, FgCategory, Path, fp_category::UstrFpCategory};
 use catlog::validate::Validate;
 use notebook_types::current::{path as notebook_path, *};
 
+use super::notation::*;
 use super::result::JsResult;
 use super::theory::{DblTheory, DblTheoryBox};
 
@@ -38,16 +39,6 @@ pub enum DblModelBox {
 
 #[wasm_bindgen]
 pub struct DblModel(#[wasm_bindgen(skip)] pub DblModelBox);
-
-/** Elaboration is the process of transforming notation (as declared in
-notebook-types) into syntax and values. This can possibly fail. Eventually,
-this struct may have some role to play in accumulating errors, but for now it is
-a singleton. */
-pub struct Elaborator;
-
-pub trait CanElaborate<T, S> {
-    fn elab(&self, x: &T) -> Result<S, String>;
-}
 
 impl CanElaborate<ObType, Ustr> for Elaborator {
     fn elab(&self, x: &ObType) -> Result<Ustr, String> {
@@ -175,12 +166,6 @@ impl CanElaborate<Mor, TabEdge<Uuid, Uuid>> for Elaborator {
             _ => Err(format!("Cannot cast morphism for discrete tabulator theory: {mor:#?}")),
         }
     }
-}
-
-pub struct Quoter;
-
-pub trait CanQuote<T, S> {
-    fn quote(&self, x: &T) -> S;
 }
 
 impl CanQuote<Uuid, Ob> for Quoter {
