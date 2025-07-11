@@ -1,7 +1,7 @@
 //! Standard library of models of double theories.
 
 use std::rc::Rc;
-use ustr::{Ustr, ustr};
+use ustr::{ustr, Ustr};
 
 use crate::dbl::{model::*, theory::*};
 use crate::one::Path;
@@ -129,6 +129,36 @@ pub fn backward_link(th: Rc<UstrDiscreteTabTheory>) -> UstrDiscreteTabModel {
     model
 }
 
+/** A small example of a graded CLD to use for testing purposes
+
+   0,+      0,+            2,-
+┌───────┐ ┌───────┐       ╔═══╗
+▼       │ ▼       │       ▼   ║
+a        b        c       d   ║
+║       ▲ ║       ▲       ║   ║
+╚═══════╝ ╚═══════╝       ╚═══╝
+   2,-      1,+
+*/
+pub fn sample_ecld() -> UstrDiscreteDblModel {
+    use nonempty::nonempty;
+    let th = super::theories::th_nn2_category();
+    let mut model = UstrDiscreteDblModel::new(Rc::new(th).clone());
+    let (a, b, c) = (ustr("a"), ustr("b"), ustr("c"));
+    let (f, g, h, k, l) = (ustr("f"), ustr("g"), ustr("h"), ustr("k"), ustr("l"));
+    let ob_type = ustr("Object");
+    for x in vec![a, b, c].into_iter() {
+        model.add_ob(x, ob_type.clone())
+    }
+    let neg = ustr("Negative");
+    let deg = ustr("Degree");
+    model.add_mor(f, a, b, Path::Seq(nonempty![neg, deg, deg]));
+    model.add_mor(g, b, c, Path::Seq(nonempty![deg]));
+    model.add_mor(h, c, b, Path::Id(ob_type));
+    model.add_mor(k, b, a, Path::Id(ob_type));
+    model.add_mor(l, b, a, Path::Seq(nonempty![deg, deg, neg]));
+    model
+}
+
 #[cfg(test)]
 mod tests {
     use super::super::theories::*;
@@ -160,8 +190,7 @@ mod tests {
     }
 
     #[test]
-    fn categories_with_links() {
-        let th = Rc::new(th_category_links());
-        assert!(backward_link(th).validate().is_ok());
+    fn th_nn2_category() {
+        assert!(sample_ecld().validate().is_ok());
     }
 }
