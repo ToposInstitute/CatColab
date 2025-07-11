@@ -84,7 +84,6 @@ export function ModelPane(props: {
     const liveDoc = () => props.liveModel.liveDoc;
 
     const selectableTheories = () => {
-        console.log(props.liveModel.theory().inclusions);
         if (liveDoc().doc.notebook.cells.some((cell) => cell.tag === "formal")) {
             return props.liveModel.theory().inclusions;
         } else {

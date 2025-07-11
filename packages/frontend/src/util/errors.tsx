@@ -1,4 +1,4 @@
-import Dialog, { Content, Portal } from "@corvu/dialog";
+import { DefaultToolbar } from "../page/toolbar";
 
 import "./errors.css";
 
@@ -9,9 +9,24 @@ export class PermissionsError extends Error {
     }
 }
 
-export function ErrorBoundaryDialog(props: { error: Error }) {
+export function ErrorBoundaryMessage(props: { error: Error }) {
     console.error(props.error);
 
+    return <ErrorMessage error={props.error} />;
+}
+
+export function ErrorBoundaryPage(props: { error: Error }) {
+    console.error(props.error);
+
+    return (
+        <div class="error-page">
+            <DefaultToolbar />
+            <ErrorMessage error={props.error} />
+        </div>
+    );
+}
+
+export function ErrorMessage(props: { error: Error }) {
     let heading: string;
     let message: string;
 
@@ -24,13 +39,11 @@ export function ErrorBoundaryDialog(props: { error: Error }) {
     }
 
     return (
-        <Dialog initialOpen={true}>
-            <Portal>
-                <Content class="popup error-dialog">
-                    <h3>{heading}</h3>
-                    <p>{message}</p>
-                </Content>
-            </Portal>
-        </Dialog>
+        <div class="error-boundary">
+            <div>
+                <h3>{heading}</h3>
+                <p>{message}</p>
+            </div>
+        </div>
     );
 }
