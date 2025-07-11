@@ -148,27 +148,6 @@ impl ThSignedCategory {
                 .into(),
         ))
     }
-
-    /// Simulate the linear ODE system derived from a model.
-    #[wasm_bindgen(js_name = "linearODE")]
-    pub fn linear_ode(
-        &self,
-        model: &DblModel,
-        data: LinearODEModelData,
-    ) -> Result<ODEResult, String> {
-        let model: &model::DiscreteDblModel<_, _> = (&model.0)
-            .try_into()
-            .map_err(|_| "Linear ODE simulation expects a discrete double model")?;
-        Ok(ODEResult(
-            analyses::ode::LinearODEAnalysis::new(ustr("Object"))
-                .add_positive(Path::Id(ustr("Object")))
-                .add_negative(ustr("Negative").into())
-                .create_system(model, data.0)
-                .solve_with_defaults()
-                .map_err(|err| format!("{:?}", err))
-                .into(),
-        ))
-    }
 }
 
 /// The theory of delayable signed categories.
@@ -235,6 +214,13 @@ impl ThDelayableSignedCategory {
 /// The theory of (N x N)-graded signed categories (for ECLDs).
 #[wasm_bindgen]
 pub struct ThNN2Category(Rc<theory::UstrDiscreteDblTheory>);
+
+// TO-DO: remove this
+enum DAGDepth {
+    Undef,
+    Seen,
+    Depth(usize),
+}
 
 #[wasm_bindgen]
 impl ThNN2Category {

@@ -98,16 +98,34 @@ impl LinearODEAnalysis {
             for mor in model.mor_generators_with_type(mor_type) {
                 let i = *ob_index.get(&model.mor_generator_dom(&mor)).unwrap();
                 let j = *ob_index.get(&model.mor_generator_cod(&mor)).unwrap();
-                A[(j, i)] += data.coefficients.get(&mor).copied().unwrap_or_default();
+                A[(j, i)] += data.coefficients.get(&mor).copied().unwrap_or(1.0);
             }
         }
         for mor_type in self.negative_mor_types.iter() {
             for mor in model.mor_generators_with_type(mor_type) {
                 let i = *ob_index.get(&model.mor_generator_dom(&mor)).unwrap();
                 let j = *ob_index.get(&model.mor_generator_cod(&mor)).unwrap();
-                A[(j, i)] -= data.coefficients.get(&mor).copied().unwrap_or_default();
+                A[(j, i)] -= data.coefficients.get(&mor).copied().unwrap_or(1.0);
             }
         }
+
+        // // TO-DO: "better" would be to have Vec<(Vec<&Id>)> where we just stick
+        // // all the morphisms of the same depth into a sub-list
+        // let mut sorted_degree_zeros: Vec<(&Id, &usize)> = degree_zeros_with_depth.iter().collect();
+        // // TO-DO: why can I not combine these???? .iter().collect::<Vec<(&Id, &usize)>>()
+        // sorted_degree_zeros.sort_by(|a, b| a.1.cmp(b.1));
+
+        // for (cod, _) in sorted_degree_zeros {
+        //     for (mor, dom) in in_zeros.get(&cod).expect("unwrap") {
+        //         let mut B = DMatrix::from_element(n, n, 0.0f32);
+        //         B.fill_with_identity();
+        //         let i = *ob_index.get(dom).expect("expect");
+        //         let j = *ob_index.get(cod).expect("evan");
+        //         // TO-DO: we should care whether or not these are pos/neg
+        //         B[(j, i)] += data.coefficients.get(&mor).copied().unwrap_or(1.0);
+        //         A = B * A;
+        //     }
+        // }
 
         let initial_values = objects
             .iter()
