@@ -282,7 +282,7 @@ impl ThCategoryLinks {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::theory::*;
+    use notebook_types::current::theory::*;
     use ustr::ustr;
 
     #[test]
