@@ -32,18 +32,31 @@ pub enum Mode {
     /// Lists of objects and morphisms (of same length).
     List,
 
-    /// Lists of objects and morphisms with permutation of codomain list.
+    /// Lists of objects and morphisms, allowing permutation of the codomain list.
     SymList,
 
-    /// Lists of objects and morphisms with reindexing of codomain list.
-    Fam,
+    /** Lists of objects and morphisms, allowing reindexing of the codomain list.
 
-    /// Lists of objects and morphisms with reindexing of domain list..
-    ProdFam,
+    This mode is a skeletized version of the "finite family", or free finite
+    [coproduct completion](https://ncatlab.org/nlab/show/free+coproduct+completion),
+    construction.
+     */
+    CoprodList,
 
-    /// Lists of objects and morphisms with independent reindexing of both
-    /// domain and codomain lists.
-    BiprodFam,
+    /** Lists of objects and morphisms, allowing reindexing of the domain list.
+
+    This mode is a skeletized version of the free finite product completion.
+     */
+    ProdList,
+
+    /** Lists of objects and morphisms, allowing independent reindexing of both
+    domain and codomain lists.
+
+    This mode is a version of the free finite biproduct completion, equivalent
+    to freely enriching in commutative monoids and then applying the matrix
+    construction (Mac Lane, Exercise VIII.2.6) on such an enriched category.
+    */
+    BiprodList,
 }
 
 /** Application of modes/modalities.
