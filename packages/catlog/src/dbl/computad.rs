@@ -3,6 +3,7 @@
 use std::hash::{BuildHasher, Hash};
 
 use derivative::Derivative;
+use derive_more::Constructor;
 
 use super::graph::{InvalidVDblGraph, VDblGraph};
 use crate::one::{Graph, Path, ReflexiveGraph, ShortPath};
@@ -47,12 +48,23 @@ where
     }
 }
 
-/// TODO
+/** An augmented virtual double computad.
+
+The set of objects and the graphs of arrows and proarrows are assumed already
+constructed, possibly from other generating data, while the top-dimensional
+generating data is provided directly.
+
+We say "augmented" because the generating squares have co-arity zero or one,
+like the cells in an *augmented VDC* ([Koudenburg
+2020](crate::refs::AugmentedVDCs)), though we use such computads to generate
+*unital* VDCs.
+ */
+#[derive(Constructor)]
 pub struct AVDCComputad<'a, Ob, Arr, Pro, ObSet, ArrGraph, ProGraph, Sq, S> {
-    pub objects: &'a ObSet,
-    pub arrows: &'a ArrGraph,
-    pub proarrows: &'a ProGraph,
-    pub computad: &'a AVDCComputadTop<Ob, Arr, Pro, Sq, S>,
+    objects: &'a ObSet,
+    arrows: &'a ArrGraph,
+    proarrows: &'a ProGraph,
+    computad: &'a AVDCComputadTop<Ob, Arr, Pro, Sq, S>,
 }
 
 impl<'a, Ob, Arr, Pro, ObSet, ArrGraph, ProGraph, Sq, S> VDblGraph

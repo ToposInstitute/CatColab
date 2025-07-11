@@ -1,143 +1,112 @@
 //! Wasm bindings for double theories.
 
 use std::collections::HashMap;
-use std::hash::Hash;
 use std::rc::Rc;
 
 use all_the_same::all_the_same;
 use derive_more::From;
 use ustr::Ustr;
 
-use serde::{Deserialize, Serialize};
-use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
 use catlog::dbl::theory;
 use catlog::dbl::theory::{DblTheory as _, TabMorType, TabObType};
 use catlog::one::Path;
+use notebook_types::current::theory::*;
 
-/// Object type in a double theory.
-#[derive(Clone, PartialEq, Eq, Hash, Debug, Serialize, Deserialize, Tsify)]
-#[serde(tag = "tag", content = "content")]
-#[tsify(into_wasm_abi, from_wasm_abi)]
-pub enum ObType {
-    /// Basic or generating object type.
-    Basic(Ustr),
+use super::notation::*;
 
-    /// Tabulator of a morphism type.
-    Tabulator(Box<MorType>),
-}
-
-/// Morphism type in a double theory.
-#[derive(Clone, PartialEq, Eq, Hash, Debug, Serialize, Deserialize, Tsify)]
-#[serde(tag = "tag", content = "content")]
-#[tsify(into_wasm_abi, from_wasm_abi)]
-pub enum MorType {
-    /// Basic or generating morphism type.
-    Basic(Ustr),
-
-    /// Composite of morphism types.
-    Composite(Vec<MorType>),
-
-    /// Hom type on an object type.
-    Hom(Box<ObType>),
-}
-
-/// Convert from object type in a discrete double theory.
-impl From<Ustr> for ObType {
-    fn from(value: Ustr) -> Self {
-        ObType::Basic(value)
+/// Elaborates into object type in a discrete double theory.
+impl CanElaborate<ObType, Ustr> for Elaborator {
+    fn elab(&self, x: &ObType) -> Result<Ustr, String> {
+        match x {
+            ObType::Basic(name) => Ok(*name),
+            _ => Err(format!("Cannot cast object type for discrete double theory: {x:#?}")),
+        }
     }
 }
 
-/// Convert from morphism type in a discrete double theory.
-impl From<Path<Ustr, Ustr>> for MorType {
-    fn from(mor: Path<Ustr, Ustr>) -> Self {
-        match mor {
-            Path::Id(v) => MorType::Hom(Box::new(ObType::Basic(v))),
+/// Elaborates into morphism type in a discrete double theory.
+impl CanElaborate<MorType, Path<Ustr, Ustr>> for Elaborator {
+    fn elab(&self, x: &MorType) -> Result<Path<Ustr, Ustr>, String> {
+        match x {
+            MorType::Basic(ustr) => Ok(Path::single(*ustr)),
+            MorType::Composite(fs) => {
+                let fs: Result<Vec<_>, _> = fs.iter().map(|f| self.elab(f)).collect();
+                let path = Path::from_vec(fs?).ok_or("Composite should not be empty")?;
+                Ok(path.flatten())
+            }
+            MorType::Hom(ob_type) => Ok(Path::Id(self.elab(ob_type.as_ref())?)),
+        }
+    }
+}
+
+/// Elaborates into object type in a discrete tabulator theory.
+impl CanElaborate<ObType, TabObType<Ustr, Ustr>> for Elaborator {
+    fn elab(&self, x: &ObType) -> Result<TabObType<Ustr, Ustr>, String> {
+        match x {
+            ObType::Basic(name) => Ok(TabObType::Basic(*name)),
+            ObType::Tabulator(mor_type) => {
+                Ok(TabObType::Tabulator(Box::new(self.elab(mor_type.as_ref())?)))
+            }
+        }
+    }
+}
+
+/// Elaborates into morphism type in a discrete tabulator theory.
+impl CanElaborate<MorType, TabMorType<Ustr, Ustr>> for Elaborator {
+    fn elab(&self, x: &MorType) -> Result<TabMorType<Ustr, Ustr>, String> {
+        match x {
+            MorType::Basic(ustr) => Ok(TabMorType::Basic(*ustr)),
+            MorType::Composite(_) => {
+                Err("Composites not yet implemented for tabulator theories".into())
+            }
+            MorType::Hom(ob_type) => Ok(TabMorType::Hom(Box::new(self.elab(ob_type.as_ref())?))),
+        }
+    }
+}
+
+/// Quotes an object type in a discrete double theory.
+impl CanQuote<Ustr, ObType> for Quoter {
+    fn quote(&self, id: &Ustr) -> ObType {
+        ObType::Basic(*id)
+    }
+}
+
+/// Quotes a morphism type in a discrete double theory.
+impl CanQuote<Path<Ustr, Ustr>, MorType> for Quoter {
+    fn quote(&self, path: &Path<Ustr, Ustr>) -> MorType {
+        match path {
+            Path::Id(v) => MorType::Hom(Box::new(ObType::Basic(*v))),
             Path::Seq(edges) => {
                 if edges.len() == 1 {
                     MorType::Basic(edges.head)
                 } else {
-                    MorType::Composite(edges.into_iter().map(MorType::Basic).collect())
+                    MorType::Composite(edges.iter().map(|e| MorType::Basic(*e)).collect())
                 }
             }
         }
     }
 }
 
-/// Convert into object type in a discrete double theory.
-impl TryFrom<ObType> for Ustr {
-    type Error = String;
-
-    fn try_from(ob_type: ObType) -> Result<Self, Self::Error> {
+/// Quotes an object type in a discrete tabulator theory.
+impl CanQuote<TabObType<Ustr, Ustr>, ObType> for Quoter {
+    fn quote(&self, ob_type: &TabObType<Ustr, Ustr>) -> ObType {
         match ob_type {
-            ObType::Basic(name) => Ok(name),
-            _ => Err(format!("Cannot cast object type for discrete double theory: {:#?}", ob_type)),
-        }
-    }
-}
-
-/// Convert into morphism type in a discrete double theory.
-impl TryFrom<MorType> for Path<Ustr, Ustr> {
-    type Error = String;
-
-    fn try_from(mor_type: MorType) -> Result<Self, Self::Error> {
-        match mor_type {
-            MorType::Basic(name) => Ok(name.into()),
-            MorType::Composite(fs) => {
-                let fs: Result<Vec<_>, _> = fs.into_iter().map(|f| f.try_into()).collect();
-                let path = Path::from_vec(fs?).ok_or("Composite should not be empty")?;
-                Ok(path.flatten())
+            TabObType::Basic(name) => ObType::Basic(*name),
+            TabObType::Tabulator(mor_type) => {
+                ObType::Tabulator(Box::new(self.quote(mor_type.as_ref())))
             }
-            MorType::Hom(x) => (*x).try_into().map(Path::Id),
         }
     }
 }
 
-/// Convert from object type in a discrete tabulator theory.
-impl From<TabObType<Ustr, Ustr>> for ObType {
-    fn from(ob_type: TabObType<Ustr, Ustr>) -> Self {
-        match ob_type {
-            TabObType::Basic(name) => ObType::Basic(name),
-            TabObType::Tabulator(m) => ObType::Tabulator(Box::new((*m).into())),
-        }
-    }
-}
-
-/// Convert from morphism type in a discrete tabulator theory.
-impl From<TabMorType<Ustr, Ustr>> for MorType {
-    fn from(mor_type: TabMorType<Ustr, Ustr>) -> Self {
+/// Quotes a morphism type in a discrete tabulator theory.
+impl CanQuote<TabMorType<Ustr, Ustr>, MorType> for Quoter {
+    fn quote(&self, mor_type: &TabMorType<Ustr, Ustr>) -> MorType {
         match mor_type {
-            TabMorType::Basic(name) => MorType::Basic(name),
-            TabMorType::Hom(x) => MorType::Hom(Box::new((*x).into())),
-        }
-    }
-}
-
-/// Convert into object type in a discrete tabulator theory.
-impl TryFrom<ObType> for TabObType<Ustr, Ustr> {
-    type Error = String;
-
-    fn try_from(ob_type: ObType) -> Result<Self, Self::Error> {
-        match ob_type {
-            ObType::Basic(name) => Ok(TabObType::Basic(name)),
-            ObType::Tabulator(m) => (*m).try_into().map(|m| TabObType::Tabulator(Box::new(m))),
-        }
-    }
-}
-
-/// Convert into morphism type in a discrete tabulator theory.
-impl TryFrom<MorType> for TabMorType<Ustr, Ustr> {
-    type Error = String;
-
-    fn try_from(mor_type: MorType) -> Result<Self, Self::Error> {
-        match mor_type {
-            MorType::Basic(name) => Ok(TabMorType::Basic(name)),
-            MorType::Composite(_) => {
-                Err("Composites not yet implemented for tabulator theories".into())
-            }
-            MorType::Hom(x) => (*x).try_into().map(|x| TabMorType::Hom(Box::new(x))),
+            TabMorType::Basic(name) => MorType::Basic(*name),
+            TabMorType::Hom(ob_type) => MorType::Hom(Box::new(self.quote(ob_type.as_ref()))),
         }
     }
 }
@@ -178,8 +147,8 @@ impl DblTheory {
     pub fn src(&self, mor_type: MorType) -> Result<ObType, String> {
         all_the_same!(match &self.0 {
             DblTheoryBox::[Discrete, DiscreteTab](th) => {
-                let m = mor_type.try_into()?;
-                Ok(th.src_type(&m).into())
+                let m = Elaborator.elab(&mor_type)?;
+                Ok(Quoter.quote(&th.src_type(&m)))
             }
         })
     }
@@ -189,8 +158,8 @@ impl DblTheory {
     pub fn tgt(&self, mor_type: MorType) -> Result<ObType, String> {
         all_the_same!(match &self.0 {
             DblTheoryBox::[Discrete, DiscreteTab](th) => {
-                let m = mor_type.try_into()?;
-                Ok(th.tgt_type(&m).into())
+                let m = Elaborator.elab(&mor_type)?;
+                Ok(Quoter.quote(&th.tgt_type(&m)))
             }
         })
     }

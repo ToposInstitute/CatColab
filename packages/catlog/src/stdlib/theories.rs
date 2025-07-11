@@ -178,7 +178,14 @@ fn th_monad_algebra(mode: Mode) -> UstrModalDblTheory {
     let (x, a) = (ustr("Object"), ustr("Mul"));
     th.add_ob_type(x);
     th.add_ob_op(a, ModeApp::new(x).apply(mode), ModeApp::new(x));
-    // TODO: Monad algebra equations
+    th.equate_ob_ops(
+        Path::pair(ModeApp::new(a.into()).apply(mode), ModeApp::new(a.into())),
+        Path::pair(ModeApp::new(ModalEdge::Mul(mode, 2, ModeApp::new(x))), ModeApp::new(a.into())),
+    );
+    th.equate_ob_ops(
+        Path::empty(ModeApp::new(x)),
+        Path::pair(ModeApp::new(ModalEdge::Mul(mode, 0, ModeApp::new(x))), ModeApp::new(a.into())),
+    );
     th
 }
 
@@ -218,8 +225,11 @@ mod tests {
         assert!(th_delayable_signed_category().validate().is_ok());
         assert!(th_nullable_signed_category().validate().is_ok());
         assert!(th_category_with_scalars().validate().is_ok());
-        assert!(th_category_with_scalars().validate().is_ok());
-        // TODO: Validate discrete tabulator theories.
+    }
+
+    #[test]
+    fn validate_discrete_tabulator_theories() {
+        // TODO: Implementation validation for discrete tabulator theories.
         th_category_links();
     }
 

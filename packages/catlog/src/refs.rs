@@ -31,13 +31,21 @@ Evan Patterson, 2024: Products in double categories, revisited.
  */
 pub const DblProducts: () = ();
 
+/** Reference: Yoneda theory for double categories.
+
+Paré, 2011: Yoneda theory for double categories.
+
+- [TAC](http://www.tac.mta.ca/tac/volumes/25/17/25-17abs.html)
+ */
+pub const DblYonedaTheory: () = ();
+
 /** Reference: A unified framework for generalized multicategories.
 
 G.S.H. Cruttwell & Michael Shulman, 2010: A unified framework for generalized
 multicategories.
 
 - [arXiv:0907.2460](https://arxiv.org/abs/0907.2460)
-- [TAC](http://www.tac.mta.ca/tac/volumes/24/21/24-21.pdf)
+- [TAC](http://www.tac.mta.ca/tac/volumes/24/21/24-21abs.html)
  */
 pub const GeneralizedMulticategories: () = ();
 

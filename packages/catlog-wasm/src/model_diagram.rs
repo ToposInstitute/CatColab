@@ -2,57 +2,23 @@
 
 use all_the_same::all_the_same;
 use derive_more::From;
-use uuid::Uuid;
-
 use serde::{Deserialize, Serialize};
-use tsify_next::Tsify;
+use tsify::Tsify;
+use ustr::Ustr;
+use uuid::Uuid;
 use wasm_bindgen::prelude::*;
 
 use catlog::dbl::model::{FgDblModel, MutDblModel};
 use catlog::dbl::model_diagram as diagram;
-use catlog::dbl::model_morphism::DblModelMapping;
 use catlog::one::FgCategory;
+use catlog::zero::MutMapping;
+use notebook_types::current::*;
 
-use super::model::{DblModel, DblModelBox, DiscreteDblModel, Mor, Ob};
+use super::model::{DblModel, DblModelBox, DiscreteDblModel};
 use super::model_morphism::DiscreteDblModelMapping;
+use super::notation::*;
 use super::result::JsResult;
-use super::theory::{DblTheory, MorType, ObType};
-
-/// Declares an object of a diagram in a model.
-#[derive(Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
-pub struct DiagramObDecl {
-    /// Globally unique identifier of object.
-    pub id: Uuid,
-
-    /// The object's type in the double theory.
-    #[serde(rename = "obType")]
-    pub ob_type: ObType,
-
-    /// Object in the model that this object is over, if defined.
-    pub over: Option<Ob>,
-}
-
-/// Declares a morphism of a diagram in a model.
-#[derive(Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
-pub struct DiagramMorDecl {
-    /// Globally unique identifier of morphism.
-    pub id: Uuid,
-
-    /// The morphism's type in the double theory.
-    #[serde(rename = "morType")]
-    pub mor_type: MorType,
-
-    /// Morphism in the model that this morphism is over, if defined.
-    pub over: Option<Mor>,
-
-    /// Domain of this morphism, if defined.
-    pub dom: Option<Ob>,
-
-    /// Codomain of this morphism, if defined.
-    pub cod: Option<Ob>,
-}
+use super::theory::DblTheory;
 
 /// A box containing a diagram in a model of a double theory.
 #[derive(From)]
@@ -65,10 +31,8 @@ pub enum DblModelDiagramBox {
 #[wasm_bindgen]
 pub struct DblModelDiagram(#[wasm_bindgen(skip)] pub DblModelDiagramBox);
 
-#[wasm_bindgen]
 impl DblModelDiagram {
     /// Creates an empty diagram for the given theory.
-    #[wasm_bindgen(constructor)]
     pub fn new(theory: &DblTheory) -> Self {
         let model = DblModel::new(theory);
         Self(match model.0 {
@@ -83,13 +47,12 @@ impl DblModelDiagram {
     }
 
     /// Adds an object to the diagram.
-    #[wasm_bindgen(js_name = "addOb")]
-    pub fn add_ob(&mut self, decl: DiagramObDecl) -> Result<(), String> {
+    pub fn add_ob(&mut self, decl: &DiagramObDecl) -> Result<(), String> {
         all_the_same!(match &mut self.0 {
             DblModelDiagramBox::[Discrete](diagram) => {
                 let (mapping, model) = diagram.into();
-                let ob_type = decl.ob_type.try_into()?;
-                if let Some(over) = decl.over.map(|ob| ob.try_into()).transpose()? {
+                let ob_type: Ustr = Elaborator.elab(&decl.ob_type)?;
+                if let Some(over) = decl.over.as_ref().map(|ob| Elaborator.elab(ob)).transpose()? {
                     mapping.assign_ob(decl.id, over);
                 }
                 model.add_ob(decl.id, ob_type);
@@ -99,34 +62,36 @@ impl DblModelDiagram {
     }
 
     /// Adds a morphism to the diagram.
-    #[wasm_bindgen(js_name = "addMor")]
-    pub fn add_mor(&mut self, decl: DiagramMorDecl) -> Result<(), String> {
+    pub fn add_mor(&mut self, decl: &DiagramMorDecl) -> Result<(), String> {
         all_the_same!(match &mut self.0 {
             DblModelDiagramBox::[Discrete](diagram) => {
                 let (mapping, model) = diagram.into();
-                let mor_type = decl.mor_type.try_into()?;
+                let mor_type = Elaborator.elab(&decl.mor_type)?;
                 model.make_mor(decl.id, mor_type);
-                if let Some(dom) = decl.dom.map(|ob| ob.try_into()).transpose()? {
+                if let Some(dom) = decl.dom.as_ref().map(|ob| Elaborator.elab(ob)).transpose()? {
                     model.set_dom(decl.id, dom);
                 }
-                if let Some(cod) = decl.cod.map(|ob| ob.try_into()).transpose()? {
+                if let Some(cod) = decl.cod.as_ref().map(|ob| Elaborator.elab(ob)).transpose()? {
                     model.set_cod(decl.id, cod);
                 }
-                if let Some(over) = decl.over.map(|mor| mor.try_into()).transpose()? {
-                    mapping.assign_basic_mor(decl.id, over);
+                if let Some(over) = decl.over.as_ref().map(|mor| Elaborator.elab(mor)).transpose()? {
+                    mapping.assign_mor(decl.id, over);
                 }
                 Ok(())
             }
         })
     }
+}
 
+#[wasm_bindgen]
+impl DblModelDiagram {
     /// Returns array of all basic objects in the diagram.
     #[wasm_bindgen]
     pub fn objects(&self) -> Vec<Ob> {
         all_the_same!(match &self.0 {
             DblModelDiagramBox::[Discrete](diagram) => {
                 let (_, model) = diagram.into();
-                model.objects().map(|x| x.into()).collect()
+                model.objects().map(|x| Quoter.quote(&x)).collect()
             }
         })
     }
@@ -137,7 +102,7 @@ impl DblModelDiagram {
         all_the_same!(match &self.0 {
             DblModelDiagramBox::[Discrete](diagram) => {
                 let (_, model) = diagram.into();
-                model.morphisms().map(|f| f.into()).collect()
+                model.morphisms().map(|f| Quoter.quote(&f)).collect()
             }
         })
     }
@@ -148,8 +113,8 @@ impl DblModelDiagram {
         all_the_same!(match &self.0 {
             DblModelDiagramBox::[Discrete](diagram) => {
                 let (_, model) = diagram.into();
-                let ob_type = ob_type.try_into()?;
-                Ok(model.objects_with_type(&ob_type).map(|x| x.into()).collect())
+                let ob_type = Elaborator.elab(&ob_type)?;
+                Ok(model.objects_with_type(&ob_type).map(|x| Quoter.quote(&x)).collect())
             }
         })
     }
@@ -160,8 +125,8 @@ impl DblModelDiagram {
         all_the_same!(match &self.0 {
             DblModelDiagramBox::[Discrete](diagram) => {
                 let (_, model) = diagram.into();
-                let mor_type = mor_type.try_into()?;
-                Ok(model.morphisms_with_type(&mor_type).map(|f| f.into()).collect())
+                let mor_type = Elaborator.elab(&mor_type)?;
+                Ok(model.morphisms_with_type(&mor_type).map(|f| Quoter.quote(&f)).collect())
             }
         })
     }
@@ -174,9 +139,10 @@ impl DblModelDiagram {
                 let (mapping, model) = diagram.into();
                 let decls = model.ob_generators().map(|x| {
                     DiagramObDecl {
+                        name: "".into(),
                         id: x,
-                        ob_type: model.ob_generator_type(&x).into(),
-                        over: mapping.apply_ob(&x).map(|ob| ob.into())
+                        ob_type: Quoter.quote(&model.ob_generator_type(&x)),
+                        over: mapping.0.ob_generator_map.get(&x).map(|ob| Quoter.quote(ob))
                     }
                 });
                 decls.collect()
@@ -192,11 +158,12 @@ impl DblModelDiagram {
                 let (mapping, model) = diagram.into();
                 let decls = model.mor_generators().map(|f| {
                     DiagramMorDecl {
+                        name: "".into(),
                         id: f,
-                        mor_type: model.mor_generator_type(&f).into(),
-                        over: mapping.apply_basic_mor(&f).map(|mor| mor.into()),
-                        dom: model.get_dom(&f).cloned().map(|ob| ob.into()),
-                        cod: model.get_cod(&f).cloned().map(|ob| ob.into()),
+                        mor_type: Quoter.quote(&model.mor_generator_type(&f)),
+                        over: mapping.0.mor_generator_map.get(&f).map(|mor| Quoter.quote(mor)),
+                        dom: model.get_dom(&f).cloned().map(|ob| Quoter.quote(&ob)),
+                        cod: model.get_cod(&f).cloned().map(|ob| Quoter.quote(&ob)),
                     }
                 });
                 decls.collect()
@@ -238,6 +205,20 @@ pub struct ModelDiagramValidationResult(
     pub JsResult<(), Vec<diagram::InvalidDiscreteDblModelDiagram<Uuid>>>,
 );
 
+#[wasm_bindgen(js_name = "elaborateDiagram")]
+pub fn elaborate_diagram(doc: &DiagramDocumentContent, theory: &DblTheory) -> DblModelDiagram {
+    let mut diagram = DblModelDiagram::new(theory);
+    for cell in doc.notebook.cells.iter() {
+        if let Cell::Formal { id: _, content } = cell {
+            match content {
+                DiagramJudgment::Object(decl) => diagram.add_ob(decl).unwrap(),
+                DiagramJudgment::Morphism(decl) => diagram.add_mor(decl).unwrap(),
+            }
+        }
+    }
+    diagram
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -254,26 +235,29 @@ mod tests {
         let [x, y, var] = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
         assert!(
             diagram
-                .add_ob(DiagramObDecl {
+                .add_ob(&DiagramObDecl {
+                    name: "var".into(),
                     id: var,
                     ob_type: ObType::Basic("AttrType".into()),
                     over: Some(Ob::Basic(attr_type))
                 })
                 .is_ok()
         );
-        for indiv in [x, y] {
+        for (name, indiv) in [("x", x), ("y", y)] {
             assert!(
                 diagram
-                    .add_ob(DiagramObDecl {
+                    .add_ob(&DiagramObDecl {
+                        name: name.into(),
                         id: indiv,
                         ob_type: ObType::Basic("Entity".into()),
-                        over: Some(Ob::Basic(entity))
+                        over: Some(Ob::Basic(entity)),
                     })
                     .is_ok()
             );
             assert!(
                 diagram
-                    .add_mor(DiagramMorDecl {
+                    .add_mor(&DiagramMorDecl {
+                        name: "".into(),
                         id: Uuid::now_v7(),
                         mor_type: MorType::Basic("Attr".into()),
                         dom: Some(Ob::Basic(indiv)),

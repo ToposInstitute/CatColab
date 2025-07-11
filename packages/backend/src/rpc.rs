@@ -7,6 +7,8 @@ use tracing::debug;
 use ts_rs::TS;
 use uuid::Uuid;
 
+use crate::app::Paginated;
+
 use super::app::{AppCtx, AppError, AppState};
 use super::auth::{NewPermissions, PermissionLevel, Permissions};
 use super::{auth, document as doc, user};
@@ -17,7 +19,7 @@ pub fn router() -> Router<AppState> {
         .handler(new_ref)
         .handler(get_doc)
         .handler(head_snapshot)
-        .handler(save_snapshot)
+        .handler(create_snapshot)
         .handler(get_permissions)
         .handler(set_permissions)
         .handler(validate_session)
@@ -80,7 +82,7 @@ enum RefDoc {
 async fn search_ref_stubs(
     ctx: AppCtx,
     query_params: doc::RefQueryParams,
-) -> RpcResult<Vec<doc::RefStub>> {
+) -> RpcResult<Paginated<doc::RefStub>> {
     doc::search_ref_stubs(ctx, query_params).await.into()
 }
 
@@ -94,12 +96,13 @@ async fn _head_snapshot(ctx: AppCtx, ref_id: Uuid) -> Result<Value, AppError> {
 }
 
 #[handler(mutation)]
-async fn save_snapshot(ctx: AppCtx, data: doc::RefContent) -> RpcResult<()> {
-    _save_snapshot(ctx, data).await.into()
-}
-async fn _save_snapshot(ctx: AppCtx, data: doc::RefContent) -> Result<(), AppError> {
-    auth::authorize(&ctx, data.ref_id, PermissionLevel::Write).await?;
-    doc::save_snapshot(ctx.state, data).await
+async fn create_snapshot(ctx: AppCtx, ref_id: Uuid) -> RpcResult<()> {
+    async {
+        auth::authorize(&ctx, ref_id, PermissionLevel::Write).await?;
+        doc::create_snapshot(ctx.state, ref_id).await
+    }
+    .await
+    .into()
 }
 
 #[handler(query)]

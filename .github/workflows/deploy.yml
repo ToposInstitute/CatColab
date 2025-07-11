@@ -31,10 +31,8 @@ jobs:
           node-version: 20
           cache: "pnpm"
 
-      - name: Setup Rust
-        run: |
-          rustup toolchain install stable
-          rustup target add wasm32-unknown-unknown
+      - name: Install Rust toolchain from file
+        uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Build for Prod
         if: github.event_name == 'release'
@@ -71,9 +69,8 @@ jobs:
       - name: Repository Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Rust
-        run: |
-          rustup toolchain install stable
+      - name: Install Rust toolchain from file
+        uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Build
         run: |
@@ -104,6 +101,7 @@ jobs:
           tlmgr install tikz-cd
           tlmgr install amsmath
           tlmgr install quiver
+          tlmgr install spath3
 
       - name: Build
         run: |

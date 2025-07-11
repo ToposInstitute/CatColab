@@ -2,9 +2,9 @@ import type * as Viz from "@viz-js/viz";
 import { type Component, For, Show, createResource, createSignal } from "solid-js";
 import { P, match } from "ts-pattern";
 
+import type { ModelJudgment } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { Foldable } from "../../components";
-import type { ModelJudgment } from "../../model";
 import type { ModelAnalysisMeta, Theory } from "../../theory";
 import { uniqueIndexArray } from "../../util/indexing";
 import {
@@ -39,6 +39,16 @@ export function configureStockFlowDiagram(options: {
     };
 }
 
+const STOCKFLOW_ATTRIBUTES: GV.GraphvizAttributes = {
+    graph: {
+        splines: "ortho",
+    },
+    node: {
+        width: 0.55,
+        height: 0.55,
+    },
+};
+
 /** Visualize a stock flow diagram.
  */
 export function StockFlowDiagram(props: ModelAnalysisProps<GV.GraphConfig>) {
@@ -60,6 +70,7 @@ export function StockFlowDiagram(props: ModelAnalysisProps<GV.GraphConfig>) {
                             model={props.liveModel.formalJudgments()}
                             theory={theory()}
                             options={GV.graphvizOptions(props.content)}
+                            attributes={STOCKFLOW_ATTRIBUTES}
                             ref={setSvgRef}
                         />
                     )}
@@ -165,6 +176,7 @@ function StockFlowSVG(props: {
         </svg>
     );
 }
+
 /** Quadratic Bezier curve from one point to another.
  */
 function quadraticCurve(src: GraphLayout.Point, tgt: GraphLayout.Point, ratio: number) {
