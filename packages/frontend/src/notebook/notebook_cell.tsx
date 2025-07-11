@@ -3,6 +3,7 @@ import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import {
     draggable,
     dropTargetForElements,
+	monitorForElements,
 } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import type { DocHandle, Prop } from "@automerge/automerge-repo";
 import Popover from "@corvu/popover";
@@ -28,6 +29,14 @@ import Plus from "lucide-solid/icons/plus";
 import Trash2 from "lucide-solid/icons/trash-2";
 
 import "./notebook_cell.css";
+
+type DraggableState =
+	| { type: 'idle' }
+	| { type: 'preview'; container: HTMLElement }
+	| { type: 'dragging' };
+
+const idleState: DraggableState = { type: 'idle' };
+const draggingState: DraggableState = { type: 'dragging' };
 
 /** Actions invokable *within* a cell but affecting the larger notebook state.
 
@@ -134,19 +143,32 @@ export function NotebookCell(props: {
         },
     ];
 
+	const [draggableState, setDraggableState] = createSignal(idleState);
+	const [closestEdge, setClosestEdge] = createSignal(null);
+	const [dropTarget, setDropTarget] = createSignal(false);
+
     createEffect(() => {
         const cleanup = combine(
             draggable({
                 element: handleRef,
                 getInitialData: () => createCellDragData(props.cellId),
+				onDrag: ({ source, location }) => {
+				  // console.log('Dragging...', location);
+				}
             }),
             dropTargetForElements({
                 element: rootRef,
                 canDrop({ source }) {
+					if (source.data.cellId !== props.cellId) {
+						// console.log("source: ", source);
+						// setDropTarget(source.data.cellId);
+						console.log(dropTarget());
+					}
                     // TODO: Reject if cell belongs to a different notebook.
                     return isCellDragData(source.data);
                 },
                 getData({ input }) {
+					// console.log(" get Data ", input);
                     const data = createCellDragData(props.cellId);
                     return attachClosestEdge(data, {
                         element: rootRef,
@@ -154,7 +176,24 @@ export function NotebookCell(props: {
                         allowedEdges: ["top", "bottom"],
                     });
                 },
+				onDragEnter() {
+				  setDropTarget(true);
+				},
+				onDragLeave() {
+				  setDropTarget(false);
+				},
             }),
+			// monitorForElements({
+			// 	onDrag({ source, location }) {
+			// 		const isDraggedOver = location.current.dropTargets.some(
+			// 			target => target.data.cellId === props.cellId
+			// 		);
+
+			// 		if (isDraggedOver) {
+			// 			setDropTarget(isDraggedOver);
+			// 		}
+			// 	}
+			// })
         );
         onCleanup(cleanup);
     });
@@ -194,6 +233,9 @@ export function NotebookCell(props: {
                     </Popover.Portal>
                 </Popover>
             </div>
+			<Show when={dropTarget()}>
+				<hr color="blue" />
+			</Show>
             <div class="cell-content">{props.children}</div>
             <Show when={props.tag}>
                 <div class="cell-tag">{props.tag}</div>
