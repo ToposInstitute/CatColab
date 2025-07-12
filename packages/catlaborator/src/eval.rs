@@ -235,7 +235,8 @@ impl Env {
     }
 
     pub fn objects_are_equal(&self, n1: QualifiedName, n2: QualifiedName) -> bool {
-        self.state.neutrals.borrow().objects_are_equal(n1, n2)
+        true
+        // self.state.neutrals.borrow().objects_are_equal(n1, n2)
     }
 
     pub fn convertable_tys(
@@ -250,7 +251,7 @@ impl Env {
             (Morphism(mt1, d1, c1), Morphism(mt2, d2, c2)) => {
                 // TODO: this seems to break WASM compatibility
                 // schema.category().morphisms_are_equal(mt1.clone(), mt2.clone())
-                theory.category().morphisms_are_equal(mt1.clone(), mt2.clone())
+                mt1 == mt2
                     && self.objects_are_equal(d1.clone(), d2.clone())
                     && self.objects_are_equal(c1.clone(), c2.clone())
             }

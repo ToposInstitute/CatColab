@@ -1,3 +1,4 @@
+use js_sys::Array;
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 use wasm_bindgen::prelude::*;
@@ -11,7 +12,7 @@ use catlog::{
         model::{DiscreteDblModel, UstrDiscreteDblModel},
         theory::UstrDiscreteDblTheory,
     },
-    one::{FpCategory, Path, UstrFpCategory},
+    one::{FgCategory, FpCategory, Path, UstrFpCategory},
 };
 use catlog_wasm::theory::DblTheory;
 use notebook_types::current::{self as notebook_types};
@@ -331,11 +332,7 @@ pub struct DblModelNext(Box<DiscreteDblModel<QualifiedName, UstrFpCategory>>);
 // }
 
 #[wasm_bindgen]
-pub fn elaborate(
-    notebooks: Notebooks,
-    notebook_id: String,
-    theory: &DblTheory,
-) -> Option<DblModelNext> {
+pub fn elaborate(notebooks: Notebooks, notebook_id: String, theory: &DblTheory) {
     let theory = match &theory.0 {
         catlog_wasm::theory::DblTheoryBox::Discrete(t) => t,
         catlog_wasm::theory::DblTheoryBox::DiscreteTab(_) => panic!("tabulators unsupported"),
@@ -346,9 +343,21 @@ pub fn elaborate(
         let state = State::empty(Rc::new(cache), theory.clone());
         let evaluator = state.new_env();
         evaluator.intro_notebook(&QualifiedName::empty(), &nb);
+        console::log_1(
+            &format!(
+                "{:?}",
+                state
+                    .neutrals
+                    .borrow()
+                    .ob_generators()
+                    .map(|id| format!("{}", id))
+                    .collect::<Vec<_>>()
+            )
+            .into(),
+        );
         // TODO: shouldn't need a clone here
-        Some(DblModelNext(Box::new(DiscreteDblModel::clone(&state.neutrals.borrow()))))
+        // Some(DblModelNext(Box::new(DiscreteDblModel::clone(&state.neutrals.borrow()))))
     } else {
-        None
+        // None
     }
 }
