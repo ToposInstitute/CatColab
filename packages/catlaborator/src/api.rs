@@ -6,8 +6,12 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use ::notebook_types::v0::{ModelJudgment, notebook};
 use catlog::{
-    dbl::{category::VDblCategory, theory::UstrDiscreteDblTheory},
-    one::Path,
+    dbl::{
+        category::VDblCategory,
+        model::{DiscreteDblModel, UstrDiscreteDblModel},
+        theory::UstrDiscreteDblTheory,
+    },
+    one::{FpCategory, Path, UstrFpCategory},
 };
 use catlog_wasm::theory::DblTheory;
 use notebook_types::current::{self as notebook_types};
@@ -17,6 +21,7 @@ use web_sys::console;
 
 use crate::{
     eval::{Env, NotebookStorage, State, TmVal, TyVal},
+    name::{QualifiedName, Segment},
     syntax::{Cell, Lvl, Notebook, NotebookRef, ObType, TmStx, TyStx},
 };
 
@@ -89,10 +94,10 @@ pub struct Context {
 }
 
 impl Context {
-    fn new(cache: ElaborationCache) -> Self {
+    fn new(cache: ElaborationCache, theory: Rc<UstrDiscreteDblTheory>) -> Self {
         Self {
             scope: Vec::new(),
-            env: State::empty(Rc::new(cache)).new_env(),
+            env: State::empty(Rc::new(cache), theory).new_env(),
         }
     }
 
@@ -105,7 +110,9 @@ impl Context {
     }
 
     fn intro(&mut self, uuid: Uuid, name: Option<Ustr>, ty: TyVal) {
-        let val = self.env.intro(&ty);
+        let i = self.scope.len();
+        let at = QualifiedName::singleton(Segment::new(i).with_id(uuid).set_name(name));
+        let val = self.env.intro(at, &ty);
         self.env.values.push(val);
         self.scope.push((uuid, name, ty));
     }
@@ -205,7 +212,7 @@ impl NotebookElaborator {
         raw: &notebook::Notebook<ModelJudgment>,
     ) -> Option<Notebook> {
         let mut cells = Vec::new();
-        let mut ctx = Context::new(cache.clone());
+        let mut ctx = Context::new(cache.clone(), self.theory.clone());
         for raw_cell in raw.cells.iter() {
             use notebook_types::NotebookCell::*;
             let content = match raw_cell {
@@ -253,32 +260,95 @@ impl NotebookElaborator {
     }
 }
 
+#[wasm_bindgen]
+pub struct DblModelNext(Box<DiscreteDblModel<QualifiedName, UstrFpCategory>>);
+
 // #[wasm_bindgen]
-// pub fn elaborate(raw: &notebook_types::ModelDocumentContent, theory: &DblTheory) {
-//     let theory = match &theory.0 {
-//         catlog_wasm::theory::DblTheoryBox::Discrete(t) => t,
-//         catlog_wasm::theory::DblTheoryBox::DiscreteTab(_) => panic!("tabulators unsupported"),
-//     };
-//     let elab = NotebookElaborator::new(theory.clone());
-//     let res = elab.notebook(&raw.notebook);
-//     console::log_1(&format!("{:?}", elab.errors.borrow()).into());
-//     console::log_1(&format!("{:?}", res).into())
+// impl DblModelNext {
+//     /// Is the object contained in the model?
+//     #[wasm_bindgen(js_name = "hasOb")]
+//     pub fn has_ob(&self, ob: Ob) -> Result<bool, String> {
+//         todo!()
+//     }
+
+//     /// Is the morphism contained in the model?
+//     #[wasm_bindgen(js_name = "hasMor")]
+//     pub fn has_mor(&self, mor: Mor) -> Result<bool, String> {
+//         all_the_same!(match &self.0 {
+//             DblModelBox::[Discrete, DiscreteTab](model) => {
+//                 let mor = Elaborator.elab(&mor)?;
+//                 Ok(model.has_mor(&mor))
+//             }
+//         })
+//     }
+
+//     /// Returns array of all basic objects in the model.
+//     #[wasm_bindgen]
+//     pub fn objects(&self) -> Vec<Ob> {
+//         all_the_same!(match &self.0 {
+//             DblModelBox::[Discrete, DiscreteTab](model) => model.objects().map(|x| Quoter.quote(&x)).collect()
+//         })
+//     }
+
+//     /// Returns array of all basic morphisms in the model.
+//     #[wasm_bindgen]
+//     pub fn morphisms(&self) -> Vec<Mor> {
+//         all_the_same!(match &self.0 {
+//             DblModelBox::[Discrete, DiscreteTab](model) => model.morphisms().map(|f| Quoter.quote(&f)).collect()
+//         })
+//     }
+
+//     /// Returns array of basic objects with the given type.
+//     #[wasm_bindgen(js_name = "objectsWithType")]
+//     pub fn objects_with_type(&self, ob_type: ObType) -> Result<Vec<Ob>, String> {
+//         all_the_same!(match &self.0 {
+//             DblModelBox::[Discrete, DiscreteTab](model) => {
+//                 let ob_type = Elaborator.elab(&ob_type)?;
+//                 Ok(model.objects_with_type(&ob_type).map(|ob| Quoter.quote(&ob)).collect())
+//             }
+//         })
+//     }
+
+//     /// Returns array of basic morphisms with the given type.
+//     #[wasm_bindgen(js_name = "morphismsWithType")]
+//     pub fn morphisms_with_type(&self, mor_type: MorType) -> Result<Vec<Mor>, String> {
+//         all_the_same!(match &self.0 {
+//             DblModelBox::[Discrete, DiscreteTab](model) => {
+//                 let mor_type = Elaborator.elab(&mor_type)?;
+//                 Ok(model.morphisms_with_type(&mor_type).map(|mor| Quoter.quote(&mor)).collect())
+//             }
+//         })
+//     }
+
+//     pub fn validate(&self) -> ModelValidationResult {
+//         all_the_same!(match &self.0 {
+//             DblModelBox::[Discrete, DiscreteTab](model) => {
+//                 let res = model.validate();
+//                 ModelValidationResult(res.map_err(|errs| errs.into()).into())
+//             }
+//         })
+//     }
 // }
 
 #[wasm_bindgen]
-pub fn elaborate(notebooks: Notebooks, notebook_id: String, theory: &DblTheory) {
+pub fn elaborate(
+    notebooks: Notebooks,
+    notebook_id: String,
+    theory: &DblTheory,
+) -> Option<DblModelNext> {
     let theory = match &theory.0 {
         catlog_wasm::theory::DblTheoryBox::Discrete(t) => t,
         catlog_wasm::theory::DblTheoryBox::DiscreteTab(_) => panic!("tabulators unsupported"),
     };
     let cache = ElaborationCache::new(notebooks, theory.clone());
     let res = cache.lookup(&notebook_id);
-    console::log_1(&format!("{:?}", cache.elaborator.errors.borrow()).into());
-    console::log_1(&format!("{:?}", res).into());
     if let Some(nb) = res {
-        let state = State::empty(Rc::new(cache));
+        let state = State::empty(Rc::new(cache), theory.clone());
         let evaluator = state.new_env();
-        evaluator.intro_notebook(&nb);
-        console::log_1(&format!("{:?}", state.neutrals.borrow().generators).into())
+        evaluator.intro_notebook(&QualifiedName::empty(), &nb);
+        // TODO: shouldn't need a clone here
+        Some(DblModelNext(Box::new(DiscreteDblModel::clone(&state.neutrals.borrow()))))
+    } else {
+        None
     }
 }

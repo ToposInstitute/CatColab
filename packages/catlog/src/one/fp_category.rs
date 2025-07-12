@@ -54,7 +54,8 @@ at runtime. The current implementation allows only *single-threaded* usage.
 #[derivative(Eq(bound = "V: Eq + Hash, E: Eq + Hash, S: BuildHasher"))]
 pub struct FpCategory<V, E, S = RandomState> {
     generators: HashGraph<V, E, S>,
-    equations: Vec<PathEq<V, E>>,
+    object_equations: Vec<(V, V)>,
+    morphism_equations: Vec<PathEq<V, E>>,
     #[derivative(Debug = "ignore", PartialEq = "ignore")]
     builder: RefCell<CategoryProgramBuilder<V, E, S>>,
     #[derivative(Debug = "ignore", PartialEq = "ignore")]
@@ -77,12 +78,12 @@ where
 
     /// Gets the path equations of the category presentation.
     pub fn equations(&self) -> impl Iterator<Item = &PathEq<V, E>> {
-        self.equations.iter()
+        self.morphism_equations.iter()
     }
 
     /// Is the category freely generated?
     pub fn is_free(&self) -> bool {
-        self.equations.is_empty()
+        self.morphism_equations.is_empty()
     }
 
     /// Adds an object generator.
@@ -144,9 +145,16 @@ where
         self.builder.get_mut().set_cod(mor, ob);
     }
 
+    /// Adds an object equation to the presentation
+    pub fn add_ob_equation(&mut self, lhs: V, rhs: V) {
+        self.object_equations.push((lhs.clone(), rhs.clone()));
+        let (lhs, rhs) = (self.ob_generator_expr(lhs), self.ob_generator_expr(rhs));
+        self.builder.get_mut().equate(lhs, rhs);
+    }
+
     /// Adds a path equation to the presentation.
     pub fn add_equation(&mut self, eq: PathEq<V, E>) {
-        self.equations.push(eq.clone());
+        self.morphism_equations.push(eq.clone());
         let (lhs, rhs) = (self.path_expr(eq.lhs), self.path_expr(eq.rhs));
         self.builder.get_mut().equate(lhs, rhs);
     }
@@ -179,7 +187,7 @@ where
             InvalidGraphData::Src(e) => InvalidFpCategory::Dom(e),
             InvalidGraphData::Tgt(e) => InvalidFpCategory::Cod(e),
         });
-        let equation_errors = self.equations.iter().enumerate().flat_map(|(i, eq)| {
+        let equation_errors = self.morphism_equations.iter().enumerate().flat_map(|(i, eq)| {
             eq.iter_invalid_in(&self.generators).map(move |err| match err {
                 InvalidPathEq::Lhs() => InvalidFpCategory::EqLhs(i),
                 InvalidPathEq::Rhs() => InvalidFpCategory::EqRhs(i),
@@ -188,6 +196,17 @@ where
             })
         });
         generator_errors.chain(equation_errors)
+    }
+
+    /// Checks whether objects are equal
+    pub fn objects_are_equal(&self, lhs: V, rhs: V) -> bool {
+        let (lhs, rhs) = (self.ob_generator_expr(lhs), self.ob_generator_expr(rhs));
+        self.builder.borrow_mut().check_equal(lhs, rhs);
+        self.builder
+            .borrow_mut()
+            .program()
+            .check_in(&mut self.egraph.borrow_mut())
+            .expect("Unexpected egglog error")
     }
 }
 

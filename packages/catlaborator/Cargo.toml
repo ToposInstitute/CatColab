@@ -9,7 +9,6 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 bumpalo = { version = "3.18.1", features = ["collections"] }
 catlog = { version = "0.1.0", path = "../catlog" }
-egg = "0.10.0"
 expect-test = "1.5.1"
 fexplib = { path = "/home/o/g/ToposInstitute/fexplib" }
 indoc = "2.0.6"
@@ -25,3 +24,5 @@ notebook-types = { version = "0.1.0", path = "../notebook-types" }
 catlog-wasm = { version = "0.1.0", path = "../catlog-wasm" }
 js-sys = "0.3.77"
 web-sys = { version = "0.3.77", features = ["console"] }
+bwd = "0.2.1"
+egglog = "0.5.0"
