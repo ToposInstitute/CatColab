@@ -45,7 +45,7 @@ export function Completions(props: {
     const remainingCompletions = createMemo(() => {
         setPresumptive(0);
         const prefix = props.text?.toLowerCase() ?? "";
-        return props.completions?.filter((c) => c.name.toLowerCase().startsWith(prefix));
+        return props.completions?.filter((c) => c.name.toLowerCase().includes(prefix));
     });
 
     const selectPresumptive = () => {
