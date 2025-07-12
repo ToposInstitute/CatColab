@@ -7,6 +7,7 @@ import {
     Show,
     Switch,
     createEffect,
+    createMemo,
     createResource,
     createSignal,
 } from "solid-js";
@@ -24,6 +25,7 @@ import FileLock from "lucide-solid/icons/file-lock-2";
 import FilePen from "lucide-solid/icons/file-pen";
 import FileUser from "lucide-solid/icons/file-user";
 import Globe from "lucide-solid/icons/globe";
+import Link2 from "lucide-solid/icons/link-2";
 
 import "./permissions.css";
 
@@ -92,6 +94,18 @@ export function PermissionsForm(props: {
     const submitPermissions = async () => {
         await updatePermissions();
         props.onComplete?.();
+    };
+
+    const doclink = createMemo(() => {
+        return window.location.href;
+    });
+
+    const copyToClipboard = async () => {
+        if (navigator.clipboard) {
+            await navigator.clipboard.writeText(doclink());
+        } else {
+            Error("Could not be copied.");
+        }
     };
 
     // Bypass standard form submission so that pressing Enter does not submit.
@@ -165,14 +179,23 @@ export function PermissionsForm(props: {
                     <p>{"Ownership, once granted, cannot be revoked."}</p>
                 </Warning>
             </Show>
-            <button
-                type="button"
-                class="ok"
-                disabled={!props.refId || currentPermissions.loading || currentPermissions.error}
-                onClick={submitPermissions}
-            >
-                Update permissions
-            </button>
+            <div class="button-container">
+                <button type="button" class="utility" onClick={copyToClipboard}>
+                    <Link2 />
+                    Copy link
+                </button>
+                <div class="spacer" />
+                <button
+                    type="button"
+                    class="ok"
+                    disabled={
+                        !props.refId || currentPermissions.loading || currentPermissions.error
+                    }
+                    onClick={submitPermissions}
+                >
+                    Update permissions
+                </button>
+            </div>
         </form>
     );
 }
@@ -211,7 +234,7 @@ function AnonPermissionsButton() {
         await signOut(getAuth(firebaseApp));
         setOpen(false);
     };
-
+    1;
     return (
         <Dialog
             open={open()}
