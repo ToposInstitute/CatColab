@@ -134,4 +134,7 @@ function TabulatedMorInput(allProps: ObInputProps & IdInputOptions) {
 const object_input_components = {
     Basic: BasicObInput,
     Tabulator: TabulatedMorInput,
+    ModeApp: () => {
+        throw new Error("Component for modal object type not implemented");
+    },
 };

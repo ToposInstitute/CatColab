@@ -210,6 +210,7 @@ explicitly enumerate the supported kinds of double theories in this enum.
 pub enum DblTheoryBox {
     Discrete(Rc<theory::UstrDiscreteDblTheory>),
     DiscreteTab(Rc<theory::UstrDiscreteTabTheory>),
+    Modal(Rc<theory::UstrModalDblTheory>),
 }
 
 /** Wasm bindings for a double theory.
@@ -226,6 +227,7 @@ impl DblTheory {
         match &self.0 {
             DblTheoryBox::Discrete(_) => "Discrete",
             DblTheoryBox::DiscreteTab(_) => "DiscreteTab",
+            DblTheoryBox::Modal(_) => "Modal",
         }
         .into()
     }
@@ -234,7 +236,7 @@ impl DblTheory {
     #[wasm_bindgen]
     pub fn src(&self, mor_type: MorType) -> Result<ObType, String> {
         all_the_same!(match &self.0 {
-            DblTheoryBox::[Discrete, DiscreteTab](th) => {
+            DblTheoryBox::[Discrete, DiscreteTab, Modal](th) => {
                 let m = Elaborator.elab(&mor_type)?;
                 Ok(Quoter.quote(&th.src_type(&m)))
             }
@@ -245,7 +247,7 @@ impl DblTheory {
     #[wasm_bindgen]
     pub fn tgt(&self, mor_type: MorType) -> Result<ObType, String> {
         all_the_same!(match &self.0 {
-            DblTheoryBox::[Discrete, DiscreteTab](th) => {
+            DblTheoryBox::[Discrete, DiscreteTab, Modal](th) => {
                 let m = Elaborator.elab(&mor_type)?;
                 Ok(Quoter.quote(&th.tgt_type(&m)))
             }

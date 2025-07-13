@@ -198,6 +198,7 @@ impl DblModel {
         Self(match &theory.0 {
             DblTheoryBox::Discrete(th) => DiscreteDblModel::new(th.clone()).into(),
             DblTheoryBox::DiscreteTab(th) => DiscreteTabModel::new(th.clone()).into(),
+            DblTheoryBox::Modal(_) => panic!("Bindings for modal models not yet implemented"),
         })
     }
 
