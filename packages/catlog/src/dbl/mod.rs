@@ -42,9 +42,8 @@ double doctrines are currently implemented, named according to their theories:
   operations, and no further structure
 - [Discrete tabulator theories](discrete_tabulator): double theories with
   tabulators and only trivial operations
-- [Modal double theories](modal): double theories equipped with modalities, or
-  monads on the types
-
+- [Modal double theories](modal): double theories equipped with
+  [modalities][modal::theory::Modality]
 */
 
 pub mod category;
