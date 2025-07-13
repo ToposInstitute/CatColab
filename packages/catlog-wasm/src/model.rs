@@ -9,14 +9,14 @@ use ustr::{IdentityHasher, Ustr};
 use uuid::Uuid;
 use wasm_bindgen::prelude::*;
 
-use catlog::dbl::{
-    model::{self as dbl_model, FgDblModel, InvalidDblModel, MutDblModel, TabEdge, TabMor, TabOb},
-    theory::{TabMorType, TabObType},
+use catlog::dbl::model::{
+    self as dbl_model, FgDblModel, InvalidDblModel, MutDblModel, TabEdge, TabMor, TabOb,
 };
 use catlog::one::{Category as _, FgCategory, Path, fp_category::UstrFpCategory};
 use catlog::validate::Validate;
 use notebook_types::current::{path as notebook_path, *};
 
+use super::notation::*;
 use super::result::JsResult;
 use super::theory::{DblTheory, DblTheoryBox};
 
@@ -39,76 +39,21 @@ pub enum DblModelBox {
 #[wasm_bindgen]
 pub struct DblModel(#[wasm_bindgen(skip)] pub DblModelBox);
 
-/** Elaboration is the process of transforming notation (as declared in
-notebook-types) into syntax and values. This can possibly fail. Eventually,
-this struct may have some role to play in accumulating errors, but for now it is
-a singleton. */
-pub struct Elaborator;
-
-pub trait CanElaborate<T, S> {
-    fn elab(&self, x: &T) -> Result<S, String>;
-}
-
-impl CanElaborate<ObType, Ustr> for Elaborator {
-    fn elab(&self, x: &ObType) -> Result<Ustr, String> {
-        match x {
-            ObType::Basic(name) => Ok(*name),
-            _ => Err(format!("Cannot cast object type for discrete double theory: {x:#?}")),
-        }
-    }
-}
-
-impl CanElaborate<ObType, TabObType<Ustr, Ustr>> for Elaborator {
-    fn elab(&self, x: &ObType) -> Result<TabObType<Ustr, Ustr>, String> {
-        match x {
-            ObType::Basic(name) => Ok(TabObType::Basic(*name)),
-            ObType::Tabulator(mor_type) => {
-                Ok(TabObType::Tabulator(Box::new(self.elab(&**mor_type)?)))
-            }
-        }
-    }
-}
-
-impl CanElaborate<MorType, TabMorType<Ustr, Ustr>> for Elaborator {
-    fn elab(&self, x: &MorType) -> Result<TabMorType<Ustr, Ustr>, String> {
-        match x {
-            MorType::Basic(ustr) => Ok(TabMorType::Basic(*ustr)),
-            MorType::Hom(ob_type) => Ok(TabMorType::Hom(Box::new(self.elab(&**ob_type)?))),
-        }
-    }
-}
-
-impl CanElaborate<MorType, Path<Ustr, Ustr>> for Elaborator {
-    fn elab(&self, x: &MorType) -> Result<Path<Ustr, Ustr>, String> {
-        match x {
-            MorType::Basic(ustr) => Ok(Path::single(*ustr)),
-            MorType::Hom(ob_type) => Ok(Path::Id(self.elab(&**ob_type)?)),
-        }
-    }
-}
-
+/// Elaborates into an object in a model of a discrete double theory.
 impl CanElaborate<Ob, Uuid> for Elaborator {
     fn elab(&self, x: &Ob) -> Result<Uuid, String> {
         match x {
             Ob::Basic(uuid) => Ok(*uuid),
-            _ => Err(format!("Cannot cast object type for discrete double theory: {x:#?}")),
+            _ => Err(format!("Cannot cast object for discrete double theory: {x:#?}")),
         }
     }
 }
 
-impl CanElaborate<Ob, TabOb<Uuid, Uuid>> for Elaborator {
-    fn elab(&self, x: &Ob) -> Result<TabOb<Uuid, Uuid>, String> {
-        match x {
-            Ob::Basic(uuid) => Ok(TabOb::Basic(*uuid)),
-            Ob::Tabulated(mor) => Ok(TabOb::Tabulated(Box::new(self.elab(mor)?))),
-        }
-    }
-}
-
+/// Elaborates into a morphism in a model of a discrete double theory.
 impl CanElaborate<Mor, Path<Uuid, Uuid>> for Elaborator {
     fn elab(&self, mor: &Mor) -> Result<Path<Uuid, Uuid>, String> {
         match mor {
-            Mor::Basic(uuid) => Ok(Path::single(*uuid)),
+            Mor::Basic(id) => Ok(Path::single(*id)),
             Mor::Composite(path) => {
                 let result_path = upgrade_path(*path.clone())
                     .try_map(|ob| Elaborator.elab(&ob), |mor| Elaborator.elab(&mor));
@@ -122,17 +67,28 @@ impl CanElaborate<Mor, Path<Uuid, Uuid>> for Elaborator {
 fn upgrade_path<V, E>(p: notebook_path::Path<V, E>) -> Path<V, E> {
     match p {
         notebook_path::Path::Id(v) => Path::Id(v),
-        notebook_path::Path::Seq(non_empty) => Path::Seq(non_empty),
+        notebook_path::Path::Seq(edges) => Path::Seq(edges),
     }
 }
 
 fn demote_path<V, E>(p: Path<V, E>) -> notebook_path::Path<V, E> {
     match p {
         Path::Id(v) => notebook_path::Path::Id(v),
-        Path::Seq(non_empty) => notebook_path::Path::Seq(non_empty),
+        Path::Seq(edges) => notebook_path::Path::Seq(edges),
     }
 }
 
+/// Elaborates into an object in a model of a discrete tabulator theory.
+impl CanElaborate<Ob, TabOb<Uuid, Uuid>> for Elaborator {
+    fn elab(&self, x: &Ob) -> Result<TabOb<Uuid, Uuid>, String> {
+        match x {
+            Ob::Basic(id) => Ok(TabOb::Basic(*id)),
+            Ob::Tabulated(mor) => Ok(TabOb::Tabulated(Box::new(self.elab(mor)?))),
+        }
+    }
+}
+
+/// Elaborates into a morphism in a model of a discrete tabulator theory.
 impl CanElaborate<Mor, TabMor<Uuid, Uuid>> for Elaborator {
     fn elab(&self, mor: &Mor) -> Result<TabMor<Uuid, Uuid>, String> {
         match mor {
@@ -148,10 +104,10 @@ impl CanElaborate<Mor, TabMor<Uuid, Uuid>> for Elaborator {
                 pre,
                 post,
             } => Ok(Path::single(dbl_model::TabEdge::Square {
-                dom: Box::new(Elaborator.elab(&**dom)?),
-                cod: Box::new(Elaborator.elab(&**cod)?),
-                pre: Box::new(Elaborator.elab(&**pre)?),
-                post: Box::new(Elaborator.elab(&**post)?),
+                dom: Box::new(Elaborator.elab(dom.as_ref())?),
+                cod: Box::new(Elaborator.elab(cod.as_ref())?),
+                pre: Box::new(Elaborator.elab(pre.as_ref())?),
+                post: Box::new(Elaborator.elab(post.as_ref())?),
             })),
         }
     }
@@ -167,39 +123,40 @@ impl CanElaborate<Mor, TabEdge<Uuid, Uuid>> for Elaborator {
                 pre,
                 post,
             } => Ok(TabEdge::Square {
-                dom: Box::new(Elaborator.elab(&**dom)?),
-                cod: Box::new(Elaborator.elab(&**cod)?),
-                pre: Box::new(Elaborator.elab(&**pre)?),
-                post: Box::new(Elaborator.elab(&**post)?),
+                dom: Box::new(Elaborator.elab(dom.as_ref())?),
+                cod: Box::new(Elaborator.elab(cod.as_ref())?),
+                pre: Box::new(Elaborator.elab(pre.as_ref())?),
+                post: Box::new(Elaborator.elab(post.as_ref())?),
             }),
             _ => Err(format!("Cannot cast morphism for discrete tabulator theory: {mor:#?}")),
         }
     }
 }
 
-pub struct Quoter;
-
-pub trait CanQuote<T, S> {
-    fn quote(&self, x: &T) -> S;
-}
-
+/// Quotes an object in a model of a discrete double theory.
 impl CanQuote<Uuid, Ob> for Quoter {
     fn quote(&self, id: &Uuid) -> Ob {
         Ob::Basic(*id)
     }
 }
 
-impl CanQuote<Ustr, ObType> for Quoter {
-    fn quote(&self, id: &Ustr) -> ObType {
-        ObType::Basic(*id)
+/// Quotes a morphism in a model of a dscrete double theory.
+impl CanQuote<Path<Uuid, Uuid>, Mor> for Quoter {
+    fn quote(&self, path: &Path<Uuid, Uuid>) -> Mor {
+        if path.len() == 1 {
+            Mor::Basic(path.clone().only().unwrap())
+        } else {
+            Mor::Composite(Box::new(demote_path(path.clone().map(Ob::Basic, Mor::Basic))))
+        }
     }
 }
 
+/// Quotes an object in a model of a discrete tabulator theory.
 impl CanQuote<TabOb<Uuid, Uuid>, Ob> for Quoter {
     fn quote(&self, x: &TabOb<Uuid, Uuid>) -> Ob {
         match x {
             TabOb::Basic(id) => Ob::Basic(*id),
-            TabOb::Tabulated(path) => Ob::Tabulated(self.quote(&**path)),
+            TabOb::Tabulated(path) => Ob::Tabulated(self.quote(path.as_ref())),
         }
     }
 }
@@ -214,42 +171,24 @@ impl CanQuote<TabEdge<Uuid, Uuid>, Mor> for Quoter {
                 pre,
                 post,
             } => Mor::TabulatorSquare {
-                dom: Box::new(self.quote(&**dom)),
-                cod: Box::new(self.quote(&**cod)),
-                pre: Box::new(self.quote(&**pre)),
-                post: Box::new(self.quote(&**post)),
+                dom: Box::new(self.quote(dom.as_ref())),
+                cod: Box::new(self.quote(cod.as_ref())),
+                pre: Box::new(self.quote(pre.as_ref())),
+                post: Box::new(self.quote(post.as_ref())),
             },
         }
     }
 }
 
-impl CanQuote<Path<TabOb<Uuid, Uuid>, TabEdge<Uuid, Uuid>>, Mor> for Quoter {
-    fn quote(&self, path: &Path<TabOb<Uuid, Uuid>, TabEdge<Uuid, Uuid>>) -> Mor {
+/// Quotes a morphism in a model of a discrete tabulator theory.
+impl CanQuote<TabMor<Uuid, Uuid>, Mor> for Quoter {
+    fn quote(&self, path: &TabMor<Uuid, Uuid>) -> Mor {
         if path.len() == 1 {
             self.quote(&path.clone().only().unwrap())
         } else {
             Mor::Composite(Box::new(demote_path(
                 path.clone().map(|ob| self.quote(&ob), |mor| self.quote(&mor)),
             )))
-        }
-    }
-}
-
-impl CanQuote<Path<Uuid, Uuid>, Mor> for Quoter {
-    fn quote(&self, path: &Path<Uuid, Uuid>) -> Mor {
-        if path.len() == 1 {
-            Mor::Basic(path.clone().only().unwrap())
-        } else {
-            Mor::Composite(Box::new(demote_path(path.clone().map(Ob::Basic, Mor::Basic))))
-        }
-    }
-}
-
-impl CanQuote<Path<Ustr, Ustr>, MorType> for Quoter {
-    fn quote(&self, path: &Path<Ustr, Ustr>) -> MorType {
-        match path {
-            Path::Id(u) => MorType::Hom(Box::new(ObType::Basic(*u))),
-            Path::Seq(non_empty) => MorType::Basic(non_empty[0]),
         }
     }
 }

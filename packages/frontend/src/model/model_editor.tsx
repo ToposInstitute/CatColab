@@ -74,10 +74,17 @@ export function ModelDocumentEditor(props: {
 export function ModelPane(props: {
     liveModel: LiveModelDocument;
 }) {
-    const theories = useContext(TheoryLibraryContext);
-    invariant(theories, "Library of theories should be provided as context");
-
     const liveDoc = () => props.liveModel.liveDoc;
+
+    const selectableTheories = () => {
+        console.log(props.liveModel.theory().inclusions);
+        if (liveDoc().doc.notebook.cells.some((cell) => cell.tag === "formal")) {
+            return props.liveModel.theory().inclusions;
+        } else {
+            // If the model has no formal cells, allow any theory to be selected.
+            return undefined;
+        }
+    };
 
     return (
         <div class="notebook-container">
@@ -100,8 +107,7 @@ export function ModelPane(props: {
                             model.theory = id;
                         });
                     }}
-                    theories={theories}
-                    disabled={liveDoc().doc.notebook.cells.some((cell) => cell.tag === "formal")}
+                    theories={selectableTheories()}
                 />
             </div>
             <ModelNotebookEditor liveModel={props.liveModel} />

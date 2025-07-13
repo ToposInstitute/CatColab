@@ -1,5 +1,10 @@
 # CatColab
 
+[![core docs](https://img.shields.io/badge/core_docs-D34516.svg)](https://next.catcolab.org/dev/rust/catlog/)
+[![frontend
+docs](https://img.shields.io/badge/frontend_docs-28607F.svg)](https://next.catcolab.org/dev/frontend)
+[![zulip](https://img.shields.io/badge/zulip-join_chat-brightgreen.svg)](https://catcolab.zulipchat.com)
+
 CatColab (working name) is a collaborative environment for *formal,
 interoperable, conceptual modeling*.
 
