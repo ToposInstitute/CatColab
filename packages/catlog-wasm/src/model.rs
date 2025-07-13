@@ -55,7 +55,7 @@ impl CanElaborate<Mor, Path<Uuid, Uuid>> for Elaborator {
         match mor {
             Mor::Basic(id) => Ok(Path::single(*id)),
             Mor::Composite(path) => {
-                let result_path = upgrade_path(*path.clone())
+                let result_path = promote_path(*path.clone())
                     .try_map(|ob| Elaborator.elab(&ob), |mor| Elaborator.elab(&mor));
                 result_path.map(|path| path.flatten())
             }
@@ -64,15 +64,15 @@ impl CanElaborate<Mor, Path<Uuid, Uuid>> for Elaborator {
     }
 }
 
-fn upgrade_path<V, E>(p: notebook_path::Path<V, E>) -> Path<V, E> {
-    match p {
+fn promote_path<V, E>(path: notebook_path::Path<V, E>) -> Path<V, E> {
+    match path {
         notebook_path::Path::Id(v) => Path::Id(v),
         notebook_path::Path::Seq(edges) => Path::Seq(edges),
     }
 }
 
-fn demote_path<V, E>(p: Path<V, E>) -> notebook_path::Path<V, E> {
-    match p {
+fn demote_path<V, E>(path: Path<V, E>) -> notebook_path::Path<V, E> {
+    match path {
         Path::Id(v) => notebook_path::Path::Id(v),
         Path::Seq(edges) => notebook_path::Path::Seq(edges),
     }
@@ -94,7 +94,7 @@ impl CanElaborate<Mor, TabMor<Uuid, Uuid>> for Elaborator {
         match mor {
             Mor::Basic(id) => Ok(Path::single(dbl_model::TabEdge::Basic(*id))),
             Mor::Composite(path) => {
-                let result_path = upgrade_path(*path.clone())
+                let result_path = promote_path(*path.clone())
                     .try_map(|ob| Elaborator.elab(&ob), |mor| Elaborator.elab(&mor));
                 result_path.map(|path| path.flatten())
             }

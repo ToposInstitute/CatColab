@@ -95,8 +95,11 @@ applied to it.
  */
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ModeApp<T> {
-    pub(super) arg: T,
-    pub(super) modalities: Vec<Modality>,
+    /// Argument to which the modalities are applied.
+    pub arg: T,
+
+    /// List of modalities applied (from left to right).
+    pub modalities: Vec<Modality>,
 }
 
 impl<T> ModeApp<T> {
@@ -173,11 +176,13 @@ pub type ModalObType<Id> = ModeApp<Id>;
 pub type ModalMorType<Id> = ShortPath<ModalObType<Id>, ModeApp<Id>>;
 
 impl<Id> ModalMorType<Id> {
-    pub(super) fn apply(self, m: Modality) -> Self {
+    /// Applies a modality.
+    pub fn apply(self, m: Modality) -> Self {
         self.map(|x| x.apply(m), |f| f.apply(m))
     }
 
-    fn apply_all(self, iter: impl IntoIterator<Item = Modality>) -> Self {
+    /// Applies a sequence of modalities.
+    pub fn apply_all(self, iter: impl IntoIterator<Item = Modality>) -> Self {
         match self {
             ShortPath::Zero(x) => ShortPath::Zero(x.apply_all(iter)),
             ShortPath::One(f) => ShortPath::One(f.apply_all(iter)),
