@@ -271,6 +271,20 @@ impl<E, ProE, Sq> DblTree<E, ProE, Sq> {
         }
     }
 
+    /** Extracts the unique node in a tree of size 1.
+
+    This method is a one-sided inverse to [`DblTree::single`].
+     */
+    pub fn only(self) -> Option<Sq> {
+        self.0.only().and_then(|node| {
+            match node {
+                DblNode::Cell(sq) => Some(sq),
+                // This case will never occur in a well-formed double tree.
+                DblNode::Spine(_) => None,
+            }
+        })
+    }
+
     /** Is the double tree contained in the given virtual double graph?
 
     This includes checking whether the double tree is well-typed, i.e., that the

@@ -36,9 +36,8 @@ struct Path<V, E> {
 Not only does the single struct store redundant (hence possibly inconsistent)
 information when the sequence of edges is nonempty, one will often need to do a
 case analysis on the edge sequence anyway to determine whether, say,
-[`fold`](std::iter::Iterator::fold) can be called or the result of
-[`reduce`](std::iter::Iterator::reduce) is valid. Thus, it seems better to reify
-the two cases in the data structure itself.
+[`reduce`](std::iter::Iterator::reduce) returns a non-null value. Thus, it seems
+better to reify the two cases in the data structure itself.
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -149,7 +148,7 @@ impl<V, E> Path<V, E> {
         }
     }
 
-    /** Returns the unique edge in a path of length 1.
+    /** Extracts the unique edge in a path of length 1.
 
     This method is a one-sided inverse to [`Path::single`].
      */
@@ -262,16 +261,15 @@ impl<V, E> Path<V, E> {
 
     Panics under the same conditions as [`subpath`](Self::subpath).
      */
-    pub fn replace_subpath<F>(
+    pub fn replace_subpath(
         self,
         graph: &impl Graph<V = V, E = E>,
         range: Range<usize>,
-        f: F,
+        f: impl FnOnce(Self) -> Self,
     ) -> Self
     where
         V: Eq + Clone,
         E: Clone,
-        F: FnOnce(Self) -> Self,
     {
         let subpath = self.subpath(graph, range.clone());
         self.splice(range, f(subpath))
@@ -338,11 +336,7 @@ impl<V, E> Path<V, E> {
     }
 
     /// Reduces a path using functions on vertices and edges.
-    pub fn reduce<FnV, FnE>(self, fv: FnV, fe: FnE) -> E
-    where
-        FnV: FnOnce(V) -> E,
-        FnE: FnMut(E, E) -> E,
-    {
+    pub fn reduce(self, fv: impl FnOnce(V) -> E, fe: impl FnMut(E, E) -> E) -> E {
         match self {
             Path::Id(v) => fv(v),
             // `reduce` cannot fail since edge sequence is nonempty.
@@ -351,11 +345,11 @@ impl<V, E> Path<V, E> {
     }
 
     /// Maps a path over functions on vertices and edges.
-    pub fn map<CodV, CodE, FnV, FnE>(self, fv: FnV, fe: FnE) -> Path<CodV, CodE>
-    where
-        FnV: FnOnce(V) -> CodV,
-        FnE: FnMut(E) -> CodE,
-    {
+    pub fn map<CodV, CodE>(
+        self,
+        fv: impl FnOnce(V) -> CodV,
+        fe: impl FnMut(E) -> CodE,
+    ) -> Path<CodV, CodE> {
         match self {
             Path::Id(v) => Path::Id(fv(v)),
             Path::Seq(edges) => Path::Seq(edges.map(fe)),
@@ -367,12 +361,12 @@ impl<V, E> Path<V, E> {
     This equivalent to calling [`map`](Path::map) and then
     [`reduce`](Path::reduce) but avoids allocating the intermediate path.
      */
-    pub fn map_reduce<T, FnV, FnE, F>(self, fv: FnV, fe: FnE, f: F) -> T
-    where
-        FnV: FnOnce(V) -> T,
-        FnE: FnMut(E) -> T,
-        F: FnMut(T, T) -> T,
-    {
+    pub fn map_reduce<T>(
+        self,
+        fv: impl FnOnce(V) -> T,
+        fe: impl FnMut(E) -> T,
+        f: impl FnMut(T, T) -> T,
+    ) -> T {
         match self {
             Path::Id(v) => fv(v),
             Path::Seq(edges) => edges.into_iter().map(fe).reduce(f).unwrap(),
@@ -380,11 +374,11 @@ impl<V, E> Path<V, E> {
     }
 
     /// Maps a path over partial functions on vertices and edges.
-    pub fn partial_map<CodV, CodE, FnV, FnE>(self, fv: FnV, fe: FnE) -> Option<Path<CodV, CodE>>
-    where
-        FnV: FnOnce(V) -> Option<CodV>,
-        FnE: FnMut(E) -> Option<CodE>,
-    {
+    pub fn partial_map<CodV, CodE>(
+        self,
+        fv: impl FnOnce(V) -> Option<CodV>,
+        fe: impl FnMut(E) -> Option<CodE>,
+    ) -> Option<Path<CodV, CodE>> {
         match self {
             Path::Id(v) => Some(Path::Id(fv(v)?)),
             Path::Seq(edges) => {
@@ -395,15 +389,11 @@ impl<V, E> Path<V, E> {
     }
 
     /// Maps a path over fallible functions on vertices and edges.
-    pub fn try_map<CodV, CodE, FnV, FnE, Err>(
+    pub fn try_map<CodV, CodE, Err>(
         self,
-        fv: FnV,
-        fe: FnE,
-    ) -> Result<Path<CodV, CodE>, Err>
-    where
-        FnV: FnOnce(V) -> Result<CodV, Err>,
-        FnE: FnMut(E) -> Result<CodE, Err>,
-    {
+        fv: impl FnOnce(V) -> Result<CodV, Err>,
+        fe: impl FnMut(E) -> Result<CodE, Err>,
+    ) -> Result<Path<CodV, CodE>, Err> {
         match self {
             Path::Id(v) => Ok(Path::Id(fv(v)?)),
             Path::Seq(edges) => {
@@ -543,10 +533,22 @@ impl<V, E> ShortPath<V, E> {
     }
 
     /// Converts the short path into an edge in the given *reflexive* graph.
-    pub fn to_edge_in(self, graph: &impl ReflexiveGraph<V = V, E = E>) -> E {
+    pub fn as_edge(self, graph: &impl ReflexiveGraph<V = V, E = E>) -> E {
         match self {
             ShortPath::Zero(v) => graph.refl(v),
             ShortPath::One(e) => e,
+        }
+    }
+
+    /// Maps over the short path.
+    pub fn map<CodV, CodE>(
+        self,
+        fv: impl FnOnce(V) -> CodV,
+        fe: impl FnOnce(E) -> CodE,
+    ) -> ShortPath<CodV, CodE> {
+        match self {
+            ShortPath::Zero(v) => ShortPath::Zero(fv(v)),
+            ShortPath::One(e) => ShortPath::One(fe(e)),
         }
     }
 }
