@@ -1,3 +1,4 @@
+pub mod notation;
 pub mod result;
 
 pub mod model;
