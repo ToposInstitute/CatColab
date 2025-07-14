@@ -135,7 +135,11 @@ export default function ModelPage() {
                                     </Resizable.Panel>
                                     <ResizableHandle hidden={!isSidePanelOpen()} />
                                     <Show when={isSidePanelOpen()}>
-                                        <Resizable.Panel minSize={0.25} onCollapse={closeSidePanel}>
+                                        <Resizable.Panel
+                                            class="content-panel"
+                                            minSize={0.25}
+                                            onCollapse={closeSidePanel}
+                                        >
                                             <Show when={secondaryLiveModel()}>
                                                 {(secondaryLiveModel) => (
                                                     <>
