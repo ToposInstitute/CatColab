@@ -176,8 +176,11 @@ export function NotebookCell(props: {
                     });
                 },
                 onDragEnter: (args) => {
-                    console.log(args.source.data.index, args.self.data.index);
-                    setClosestEdge(extractClosestEdge(args.self.data));
+                    if (args.source.data.index < args.self.data.index) {
+                        setClosestEdge("bottom");
+                    } else {
+                        setClosestEdge("top");
+                    }
                     setDropTarget(true);
                 },
                 onDragLeave() {
@@ -227,11 +230,12 @@ export function NotebookCell(props: {
                 </Popover>
             </div>
             <div class="cell-content">
+                <Show when={dropTarget() && closestEdge() === "top"}>
+                    <div class="drop-indicator-with-dots" />
+                </Show>
                 {props.children}
-                <Show
-                    when={dropTarget() && (closestEdge() === "top" || closestEdge() === "bottom")}
-                >
-                    <div class="drop-indicator-with-dots"></div>
+                <Show when={dropTarget() && closestEdge() === "bottom"}>
+                    <div class="drop-indicator-with-dots" />
                 </Show>
             </div>
             <Show when={props.tag}>

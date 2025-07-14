@@ -35,11 +35,10 @@
 .drop-indicator-with-dots {
     height: 2px;
     transition: opacity 0.15s ease;
-    background-color: #6b7280;
     border-radius: 1px;
     margin: 5px 0;
     position: relative;
-    background: linear-gradient(270deg, transparent 0, grey 100%);
+    background: linear-gradient(270deg, transparent 0, #6b7280 100%);
 }
 
 .drop-indicator-with-dots::before {

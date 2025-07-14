@@ -202,7 +202,6 @@ export function NotebookEditor<T>(props: {
                     closestEdgeOfTarget: extractClosestEdge(target.data),
                     axis: "vertical",
                 });
-                setClosestEdge(extractClosestEdge(target.data));
                 props.changeNotebook((nb) => {
                     const [cell] = nb.cells.splice(sourceIndex, 1);
                     nb.cells.splice(finalIndex, 0, deepCopyJSON(cell));
