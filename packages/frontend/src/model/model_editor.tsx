@@ -119,7 +119,7 @@ export default function ModelPage() {
                         </>
                     }
                 >
-                    <Resizable class="growable-container">
+                    <Resizable>
                         {() => {
                             const context = Resizable.useContext();
                             setResizableContext(context);

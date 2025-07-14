@@ -19,12 +19,12 @@ export function Layout(props: {
                 {props.sidebarContents}
             </Sidebar>
 
-            <div class="main">
-                <Toolbar isSidebarOpen={sidebarOpen()} openSidebar={() => setSidebarOpen(true)}>
+            <div class="content">
+                <Header isSidebarOpen={sidebarOpen()} openSidebar={() => setSidebarOpen(true)}>
                     {props.toolbarContents}
-                </Toolbar>
+                </Header>
 
-                <div class="content">{props.children}</div>
+                <main>{props.children}</main>
             </div>
         </div>
     );
@@ -47,20 +47,20 @@ function Sidebar(props: { isOpen: boolean; closeSidebar: () => void; children?: 
     );
 }
 
-function Toolbar(props: {
+function Header(props: {
     isSidebarOpen: boolean;
     openSidebar: () => void;
     children?: JSX.Element;
 }) {
     return (
-        <div class="toolbar">
+        <header class="toolbar">
             {!props.isSidebarOpen && (
                 <IconButton onClick={props.openSidebar}>
                     <MenuIcon />
                 </IconButton>
             )}
             {props.children}
-        </div>
+        </header>
     );
 }
 
