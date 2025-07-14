@@ -1,10 +1,8 @@
 import { MultiProvider } from "@solid-primitives/context";
-import { A, useParams } from "@solidjs/router";
 import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { DiagramJudgment } from "catlog-wasm";
-import { InlineInput } from "../components";
 import { LiveModelContext } from "../model";
 import {
     type CellConstructor,
@@ -25,43 +23,6 @@ import {
     newDiagramMorphismDecl,
     newDiagramObjectDecl,
 } from "./types";
-
-import "./diagram_editor.css";
-
-/** Pane containing a diagram notebook plus a header for the title and model. */
-export function DiagramPane(props: {
-    liveDiagram: LiveDiagramDocument;
-}) {
-    const liveDoc = () => props.liveDiagram.liveDoc;
-    const liveModel = () => props.liveDiagram.liveModel;
-
-    return (
-        <div class="notebook-container">
-            <div class="diagram-head">
-                <div class="title">
-                    <InlineInput
-                        text={liveDoc().doc.name}
-                        setText={(text) => {
-                            liveDoc().changeDoc((doc) => {
-                                doc.name = text;
-                            });
-                        }}
-                        placeholder="Untitled"
-                    />
-                </div>
-                <div class="instance-of">
-                    <div class="name">{liveModel().theory().instanceOfName}</div>
-                    <div class="model">
-                        <A href={`/model/${liveModel().refId}`}>
-                            {liveModel().liveDoc.doc.name || "Untitled"}
-                        </A>
-                    </div>
-                </div>
-            </div>
-            <DiagramNotebookEditor liveDiagram={props.liveDiagram} />
-        </div>
-    );
-}
 
 /** Notebook editor for a diagram in a model.
  */

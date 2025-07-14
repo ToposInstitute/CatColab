@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from "@solidjs/router";
+import { useNavigate, useParams, A } from "@solidjs/router";
 import {
     For,
     Match,
@@ -11,30 +11,34 @@ import {
 } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { type StableRef, useApi } from "../api";
+import { useApi } from "../api";
 import { IconButton, InlineInput, ResizableHandle } from "../components";
 import {
-    AnyLiveDocument,
     AppMenu,
     DocumentBreadcrumbs,
     DocumentLoadingScreen,
     DocumentMenu,
     getLiveDocument,
     TheoryHelpButton,
+    type AnyLiveDocument,
 } from "../page";
+
 import { TheoryLibraryContext } from "../stdlib";
 import { PermissionsButton } from "../user";
 import { createModel } from "../model/document";
 
 import { Layout } from "../page/layout";
 import { RefStub, RelatedRefStub } from "catcolab-api";
-import { DiagramPane } from "../diagram/diagram_editor";
+import { DiagramNotebookEditor } from "../diagram/diagram_editor";
 import { AnalysisNotebookEditor } from "../analysis/analysis_editor";
 import Resizable, { type ContextValue } from "@corvu/resizable";
 import Maximize2 from "lucide-solid/icons/maximize-2";
 import ChevronsRight from "lucide-solid/icons/chevrons-right";
 import FilePlus from "lucide-solid/icons/file-plus";
-import { ModelPane } from "../model/model_editor";
+
+import "./document.css";
+import { ModelNotebookEditor } from "../model/model_editor";
+import { TheorySelectorDialog } from "../model/theory_selector";
 
 export default function Document() {
     const api = useApi();
@@ -115,8 +119,8 @@ export default function Document() {
                                     >
                                         <DocumentPane liveDocument={liveModel()} />
                                     </Resizable.Panel>
-                                    <ResizableHandle hidden={!isSidePanelOpen()} />
                                     <Show when={isSidePanelOpen()}>
+                                        <ResizableHandle class="resizeable-handle" />
                                         <Resizable.Panel
                                             class="content-panel"
                                             minSize={0.25}
@@ -203,18 +207,102 @@ function SplitPaneToolbar(props: {
 }
 
 function DocumentPane(props: { liveDocument: AnyLiveDocument }) {
+    const theories = useContext(TheoryLibraryContext);
+    invariant(theories, "Library of theories should be provided as context");
+
     return (
-        <Switch>
-            <Match when={props.liveDocument.type === "model" && props.liveDocument}>
-                {(liveModel) => <ModelPane liveModel={liveModel()} />}
-            </Match>
-            <Match when={props.liveDocument.type === "diagram" && props.liveDocument}>
-                {(liveDiagram) => <DiagramPane liveDiagram={liveDiagram()} />}
-            </Match>
-            <Match when={props.liveDocument.type === "analysis" && props.liveDocument}>
-                {(liveAnalysis) => <AnalysisNotebookEditor liveAnalysis={liveAnalysis()} />}
-            </Match>
-        </Switch>
+        <div class="notebook-container">
+            <div class="document-head">
+                <div class="title">
+                    <InlineInput
+                        text={props.liveDocument.liveDoc.doc.name}
+                        setText={(text) => {
+                            props.liveDocument.liveDoc.changeDoc((doc) => {
+                                doc.name = text;
+                            });
+                        }}
+                        placeholder="Untitled"
+                    />
+                </div>
+                <div class="info">
+                    <Switch>
+                        <Match when={props.liveDocument.type === "model" && props.liveDocument}>
+                            {(liveModel) => (
+                                <TheorySelectorDialog
+                                    theory={liveModel().theory()}
+                                    setTheory={(id) => {
+                                        liveModel().liveDoc.changeDoc((model) => {
+                                            model.theory = id;
+                                        });
+                                    }}
+                                    theories={theories}
+                                    disabled={liveModel().liveDoc.doc.notebook.cells.some(
+                                        (cell) => cell.tag === "formal",
+                                    )}
+                                />
+                            )}
+                        </Match>
+                        <Match when={props.liveDocument.type === "diagram" && props.liveDocument}>
+                            {(liveDiagram) => (
+                                <>
+                                    <div class="name">
+                                        {liveDiagram().liveModel.theory().instanceOfName}
+                                    </div>
+                                    <div class="model">
+                                        <A href={`/model/${liveDiagram().liveModel.refId}`}>
+                                            {liveDiagram().liveModel.liveDoc.doc.name || "Untitled"}
+                                        </A>
+                                    </div>
+                                </>
+                            )}
+                        </Match>
+                        <Match when={props.liveDocument.type === "analysis" && props.liveDocument}>
+                            {(liveAnalysis) => {
+                                const parentRefId = () => {
+                                    if (liveAnalysis().analysisType === "diagram") {
+                                        return liveAnalysis().liveDiagram.refId;
+                                    } else {
+                                        return liveAnalysis().liveModel.refId;
+                                    }
+                                };
+
+                                const parentRefName = () => {
+                                    if (liveAnalysis().analysisType === "diagram") {
+                                        return liveAnalysis().liveDiagram.liveDoc.doc.name;
+                                    } else {
+                                        return liveAnalysis().liveModel.liveDoc.doc.name;
+                                    }
+                                };
+
+                                return (
+                                    <>
+                                        <div class="name">Analysis!</div>
+                                        <div class="model">
+                                            <A
+                                                href={`/${liveAnalysis().analysisType}/${parentRefId()}`}
+                                            >
+                                                {parentRefName() || "Untitled"}
+                                            </A>
+                                        </div>
+                                    </>
+                                );
+                            }}
+                        </Match>
+                    </Switch>
+                </div>
+            </div>
+            <Switch>
+                <Match when={props.liveDocument.type === "model" && props.liveDocument}>
+                    {(liveModel) => <ModelNotebookEditor liveModel={liveModel()} />}
+                </Match>
+                <Match when={props.liveDocument.type === "diagram" && props.liveDocument}>
+                    {(liveDiagram) => <DiagramNotebookEditor liveDiagram={liveDiagram()} />}
+                </Match>
+                <Match when={props.liveDocument.type === "analysis" && props.liveDocument}>
+                    {(liveAnalysis) => <AnalysisNotebookEditor liveAnalysis={liveAnalysis()} />}
+                </Match>
+            </Switch>
+        </div>
     );
 }
 

@@ -1,35 +1,13 @@
-import Resizable, { type ContextValue } from "@corvu/resizable";
-import { useParams } from "@solidjs/router";
-import {
-    Match,
-    Show,
-    Switch,
-    createEffect,
-    createResource,
-    createSignal,
-    useContext,
-} from "solid-js";
+import { Match, Switch, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
-import { useApi } from "../api";
-import { IconButton, ResizableHandle } from "../components";
-import { DiagramPane } from "../diagram/diagram_editor";
-import { ModelPane } from "../model/model_editor";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
     NotebookEditor,
     newFormalCell,
 } from "../notebook";
-import {
-    DocumentBreadcrumbs,
-    DocumentLoadingScreen,
-    DocumentMenu,
-    TheoryHelpButton,
-    Toolbar,
-} from "../page";
-import { TheoryLibraryContext } from "../stdlib";
 import type { AnalysisMeta } from "../theory";
 import { assertExhaustive } from "../util/assert_exhaustive";
 import { LiveAnalysisContext } from "./context";

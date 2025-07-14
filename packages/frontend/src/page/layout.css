@@ -156,3 +156,11 @@
       }
   }
 }
+
+.resizeable-handle {
+  background: none;
+  border: none;
+  padding: 3px;
+  border-left: 2px solid #E7E6E4;
+
+}

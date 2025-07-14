@@ -2,7 +2,6 @@ import { Match, Switch, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { ModelJudgment } from "catlog-wasm";
-import { InlineInput } from "../components";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
@@ -10,13 +9,11 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
-import { TheoryLibraryContext } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
 import { LiveModelContext } from "./context";
 import { type LiveModelDocument } from "./document";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
-import { TheorySelectorDialog } from "./theory_selector";
 import {
     type MorphismDecl,
     type ObjectDecl,
@@ -24,48 +21,6 @@ import {
     newMorphismDecl,
     newObjectDecl,
 } from "./types";
-
-import "./model_editor.css";
-
-/** Pane containing a model notebook plus a header with the title and theory.
- */
-export function ModelPane(props: {
-    liveModel: LiveModelDocument;
-}) {
-    const theories = useContext(TheoryLibraryContext);
-    invariant(theories, "Library of theories should be provided as context");
-
-    const liveDoc = () => props.liveModel.liveDoc;
-
-    return (
-        <div class="notebook-container">
-            <div class="model-head">
-                <div class="title">
-                    <InlineInput
-                        text={liveDoc().doc.name}
-                        setText={(text) => {
-                            liveDoc().changeDoc((doc) => {
-                                doc.name = text;
-                            });
-                        }}
-                        placeholder="Untitled"
-                    />
-                </div>
-                <TheorySelectorDialog
-                    theory={props.liveModel.theory()}
-                    setTheory={(id) => {
-                        liveDoc().changeDoc((model) => {
-                            model.theory = id;
-                        });
-                    }}
-                    theories={theories}
-                    disabled={liveDoc().doc.notebook.cells.some((cell) => cell.tag === "formal")}
-                />
-            </div>
-            <ModelNotebookEditor liveModel={props.liveModel} />
-        </div>
-    );
-}
 
 /** Notebook editor for a model of a double theory.
  */
