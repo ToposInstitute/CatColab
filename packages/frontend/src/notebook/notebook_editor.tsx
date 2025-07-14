@@ -81,10 +81,7 @@ export function NotebookEditor<T>(props: {
 }) {
     const [activeCell, setActiveCell] = createSignal(props.notebook.cells.length > 0 ? 0 : -1);
 
-    const [closestEdge, setClosestEdge] = createSignal(0);
-
     // Set up commands and their keyboard shortcuts.
-
     const addAfterActiveCell = (cell: Cell<T>) => {
         props.changeNotebook((nb) => {
             const i = Math.min(activeCell() + 1, nb.cells.length);

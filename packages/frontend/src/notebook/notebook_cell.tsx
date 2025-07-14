@@ -1,12 +1,10 @@
 import {
     attachClosestEdge,
-    extractClosestEdge,
 } from "@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import {
     draggable,
     dropTargetForElements,
-    monitorForElements,
 } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import type { DocHandle, Prop } from "@automerge/automerge-repo";
 import Popover from "@corvu/popover";
@@ -33,13 +31,7 @@ import Trash2 from "lucide-solid/icons/trash-2";
 
 import "./notebook_cell.css";
 
-type DraggableState =
-    | { type: "idle" }
-    | { type: "preview"; container: HTMLElement }
-    | { type: "dragging" };
-
-const idleState: DraggableState = { type: "idle" };
-const draggingState: DraggableState = { type: "dragging" };
+type ClosestEdge = 'top' | 'bottom' | null;
 
 /** Actions invokable *within* a cell but affecting the larger notebook state.
 
@@ -148,8 +140,7 @@ export function NotebookCell(props: {
         },
     ];
 
-    const [draggableState, setDraggableState] = createSignal(idleState);
-    const [closestEdge, setClosestEdge] = createSignal(null);
+    const [closestEdge, setClosestEdge] = createSignal<ClosestEdge>(null);
     const [dropTarget, setDropTarget] = createSignal(false);
 
     createEffect(() => {
@@ -157,7 +148,7 @@ export function NotebookCell(props: {
             draggable({
                 element: handleRef,
                 getInitialData: () => ({
-                    ...createCellDragData(props.cellId),
+                    ...createCellDragData(props.cellId, props.index),
                     index: props.index,
                 }),
             }),
@@ -176,7 +167,7 @@ export function NotebookCell(props: {
                     });
                 },
                 onDragEnter: (args) => {
-                    if (args.source.data.index < args.self.data.index) {
+                    if ((args.source.data.index as number) < (args.self.data.index as number)) {
                         setClosestEdge("bottom");
                     } else {
                         setClosestEdge("top");
