@@ -1,6 +1,4 @@
-import {
-    attachClosestEdge,
-} from "@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge";
+import { attachClosestEdge } from "@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import {
     draggable,
@@ -31,7 +29,7 @@ import Trash2 from "lucide-solid/icons/trash-2";
 
 import "./notebook_cell.css";
 
-type ClosestEdge = 'top' | 'bottom' | null;
+type ClosestEdge = "top" | "bottom" | null;
 
 /** Actions invokable *within* a cell but affecting the larger notebook state.
 
