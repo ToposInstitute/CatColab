@@ -4,7 +4,6 @@ import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { DiagramJudgment } from "catlog-wasm";
-import { useApi } from "../api";
 import { InlineInput } from "../components";
 import { LiveModelContext } from "../model";
 import {
@@ -14,16 +13,7 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
-import {
-    DocumentBreadcrumbs,
-    DocumentLoadingScreen,
-    DocumentMenu,
-    TheoryHelpButton,
-    Toolbar,
-} from "../page";
-import { TheoryLibraryContext } from "../stdlib";
 import type { InstanceTypeMeta } from "../theory";
-import { PermissionsButton } from "../user";
 import { LiveDiagramContext } from "./context";
 import { type LiveDiagramDocument, getLiveDiagram } from "./document";
 import { DiagramMorphismCellEditor } from "./morphism_cell_editor";
@@ -37,45 +27,6 @@ import {
 } from "./types";
 
 import "./diagram_editor.css";
-
-export default function DiagramPage() {
-    const api = useApi();
-    const theories = useContext(TheoryLibraryContext);
-    invariant(theories, "Must provide theory library as context to diagram page");
-
-    const params = useParams();
-
-    const [liveDiagram] = createResource(
-        () => params.ref,
-        (refId) => getLiveDiagram(refId, api, theories),
-    );
-
-    return (
-        <Show when={liveDiagram()} fallback={<DocumentLoadingScreen />}>
-            {(loadedDiagram) => <DiagramDocumentEditor liveDiagram={loadedDiagram()} />}
-        </Show>
-    );
-}
-
-export function DiagramDocumentEditor(props: {
-    liveDiagram: LiveDiagramDocument;
-}) {
-    return (
-        <div class="growable-container">
-            <Toolbar>
-                <DocumentMenu liveDocument={props.liveDiagram} />
-                <DocumentBreadcrumbs document={props.liveDiagram} />
-                <span class="filler" />
-                <TheoryHelpButton theory={props.liveDiagram.liveModel.theory()} />
-                <PermissionsButton
-                    permissions={props.liveDiagram.liveDoc.permissions}
-                    refId={props.liveDiagram.refId}
-                />
-            </Toolbar>
-            <DiagramPane liveDiagram={props.liveDiagram} />
-        </div>
-    );
-}
 
 /** Pane containing a diagram notebook plus a header for the title and model. */
 export function DiagramPane(props: {

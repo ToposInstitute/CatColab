@@ -21,8 +21,8 @@ import type { NewPermissions } from "./NewPermissions.ts";
 import type { UserSummary } from "./UserSummary.ts";
 import type { UsernameStatus } from "./UsernameStatus.ts";
 import type { UserProfile } from "./UserProfile.ts";
-import type { RefStub } from "./RefStub.ts";
 import type { Paginated } from "./Paginated.ts";
+import type { RefStub } from "./RefStub.ts";
 import type { RefQueryParams } from "./RefQueryParams.ts";
 import type { RelatedRefStub } from "./RelatedRefStub.ts";
 
@@ -37,8 +37,8 @@ export type { NewPermissions } from "./NewPermissions.ts";
 export type { UserSummary } from "./UserSummary.ts";
 export type { UsernameStatus } from "./UsernameStatus.ts";
 export type { UserProfile } from "./UserProfile.ts";
-export type { RefStub } from "./RefStub.ts";
 export type { Paginated } from "./Paginated.ts";
+export type { RefStub } from "./RefStub.ts";
 export type { RefQueryParams } from "./RefQueryParams.ts";
 export type { RelatedRefStub } from "./RelatedRefStub.ts";
 

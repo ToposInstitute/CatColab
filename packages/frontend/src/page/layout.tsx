@@ -2,7 +2,6 @@ import { type JSX, createSignal } from "solid-js";
 
 import "./layout.css";
 
-import ChevronsRight from "lucide-solid/icons/chevrons-right";
 import ChevronsLeft from "lucide-solid/icons/chevrons-left";
 import MenuIcon from "lucide-solid/icons/menu";
 

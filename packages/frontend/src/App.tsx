@@ -121,9 +121,6 @@ const routes: RouteDefinition[] = [
         component: CreateModel,
     },
     {
-        // :kind is one of model|diagram|analysis
-        // :ref    is always required
-        // :subkind? and :subref? are optional trailing segments
         path: "/:kind/:ref/:subkind?/:subref?",
         matchFilters: {
             kind: ["model", "diagram", "analysis"],
@@ -131,7 +128,7 @@ const routes: RouteDefinition[] = [
             subkind: (v?: string) => !v || v === "analysis" || v === "diagram" || v === "model",
             subref: (v?: string) => !v || refIsUUIDFilter.ref(v),
         },
-        component: lazy(() => import("./model/model_editor")),
+        component: lazy(() => import("./page/document")),
     },
     {
         path: "/help",
