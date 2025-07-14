@@ -24,8 +24,8 @@ pub enum ModalOb<Id, ThId> {
     /// Application of a generating object operation.
     App(Box<Self>, ThId),
 
-    /// List of objects in the [`List`](Mode::List) mode or one of its variants.
-    List(Mode, Vec<Self>),
+    /// List of objects in a [list modality](List).
+    List(List, Vec<Self>),
 }
 
 /// Morphism is a model of a modal double theory.
@@ -48,25 +48,25 @@ pub enum ModalMor<Id, ThId> {
     List(MorListData, Vec<Self>),
 }
 
-/// Extra data associated with a list of morphisms.
+/// Extra data associated with a list of morphisms in a [list modality](List).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum MorListData {
-    /// No extra data for a morphism in the [`List`](Mode::List) mode.
-    List(),
+    /// No extra data for a morphism in the [plain list](List::Plain) modality.
+    Plain(),
 
-    /** Extra data for a morphism in the [`SymList`](Mode::SymList) mode.
+    /** Data for a morphism in the [symmetric list](List::Symmetric) modality.
 
     A permutation on the indexing set of the list, which acts on the list of
     codomain objects.
      */
-    SymList(SkelColumn),
+    Symmetric(SkelColumn),
 }
 
 impl MorListData {
-    fn mode(&self) -> Mode {
+    fn list_type(&self) -> List {
         match self {
-            MorListData::List() => Mode::List,
-            MorListData::SymList(..) => Mode::SymList,
+            MorListData::Plain() => List::Plain,
+            MorListData::Symmetric(..) => List::Symmetric,
         }
     }
 }
@@ -142,8 +142,8 @@ where
             ModalMor::Composite(path) => path.contained_in(graph),
             // TODO: Check morphism type equals domain of operation.
             ModalMor::App(path, _) | ModalMor::HomApp(path, _) => path.contained_in(graph),
-            ModalMor::List(MorListData::List(), fs) => fs.iter().all(|f| self.has_mor(f)),
-            ModalMor::List(MorListData::SymList(sigma), fs) => {
+            ModalMor::List(MorListData::Plain(), fs) => fs.iter().all(|f| self.has_mor(f)),
+            ModalMor::List(MorListData::Symmetric(sigma), fs) => {
                 sigma.is_permutation(fs.len()) && fs.iter().all(|f| self.has_mor(f))
             }
         }
@@ -161,7 +161,7 @@ where
                 ModalOp::from(op_id.clone()).ob_act(path.src(graph)).unwrap()
             }
             ModalMor::List(data, fs) => {
-                ModalOb::List(data.mode(), fs.iter().map(|f| self.dom(f)).collect())
+                ModalOb::List(data.list_type(), fs.iter().map(|f| self.dom(f)).collect())
             }
         }
     }
@@ -177,11 +177,11 @@ where
             ModalMor::HomApp(path, op_id) => {
                 ModalOp::from(op_id.clone()).ob_act(path.tgt(graph)).unwrap()
             }
-            ModalMor::List(MorListData::List(), fs) => {
-                ModalOb::List(Mode::List, fs.iter().map(|f| self.cod(f)).collect())
+            ModalMor::List(MorListData::Plain(), fs) => {
+                ModalOb::List(List::Plain, fs.iter().map(|f| self.cod(f)).collect())
             }
-            ModalMor::List(MorListData::SymList(sigma), fs) => {
-                ModalOb::List(Mode::SymList, sigma.values().map(|j| self.cod(&fs[*j])).collect())
+            ModalMor::List(MorListData::Symmetric(sigma), fs) => {
+                ModalOb::List(List::Symmetric, sigma.values().map(|j| self.cod(&fs[*j])).collect())
             }
         }
     }
@@ -235,12 +235,12 @@ where
         match ob {
             ModalOb::Generator(id) => self.ob_generator_type(id),
             ModalOb::App(_, op_id) => self.theory.tight_computad().tgt(op_id),
-            ModalOb::List(mode, vec) => vec
+            ModalOb::List(list_type, vec) => vec
                 .iter()
                 .map(|ob| self.ob_type(ob))
                 .all_equal_value()
                 .expect("All objects in list should have the same type")
-                .apply(*mode),
+                .apply((*list_type).into()),
         }
     }
 
@@ -255,7 +255,7 @@ where
                 .map(|mor| self.mor_type(mor))
                 .all_equal_value()
                 .expect("All morphisms in list should have the same type")
-                .apply(data.mode()),
+                .apply(data.list_type().into()),
         }
     }
 
@@ -333,18 +333,19 @@ where
     ThId: Clone,
 {
     fn ob_act<Id>(mut self, ob: ModalOb<Id, ThId>) -> Result<ModalOb<Id, ThId>, String> {
-        if let Some(mode) = self.modes.pop() {
-            if let ModalOb::List(other_mode, vec) = ob
-                && other_mode == mode
-            {
-                let maybe_vec: Result<Vec<_>, _> =
-                    vec.into_iter().map(|ob| self.clone().ob_act(ob)).collect();
-                Ok(ModalOb::List(mode, maybe_vec?))
-            } else {
-                Err(format!("Object should be a list in mode {mode:?}"))
+        match self.modalities.pop() {
+            Some(Modality::List(list_type)) => {
+                if let ModalOb::List(other_type, vec) = ob
+                    && other_type == list_type
+                {
+                    let maybe_vec: Result<Vec<_>, _> =
+                        vec.into_iter().map(|ob| self.clone().ob_act(ob)).collect();
+                    Ok(ModalOb::List(list_type, maybe_vec?))
+                } else {
+                    Err(format!("Object should be a list of type {list_type:?}"))
+                }
             }
-        } else {
-            self.arg.ob_act(ob)
+            Some(Modality::Discrete()) | Some(Modality::Codiscrete()) | None => self.arg.ob_act(ob),
         }
     }
 
@@ -353,18 +354,20 @@ where
         mor: ModalMor<Id, ThId>,
         is_unit: bool,
     ) -> Result<ModalMor<Id, ThId>, String> {
-        if let Some(mode) = self.modes.pop() {
-            if let ModalMor::List(data, vec) = mor
-                && data.mode() == mode
-            {
-                let maybe_vec: Result<Vec<_>, _> =
-                    vec.into_iter().map(|mor| self.clone().mor_act(mor, is_unit)).collect();
-                Ok(ModalMor::List(data, maybe_vec?))
-            } else {
-                Err(format!("Morphism should be a list in mode {mode:?}"))
+        match self.modalities.pop() {
+            Some(Modality::List(list_type)) => {
+                if let ModalMor::List(data, vec) = mor
+                    && data.list_type() == list_type
+                {
+                    let maybe_vec: Result<Vec<_>, _> =
+                        vec.into_iter().map(|mor| self.clone().mor_act(mor, is_unit)).collect();
+                    Ok(ModalMor::List(data, maybe_vec?))
+                } else {
+                    Err(format!("Morphism should be a list of type {list_type:?}"))
+                }
             }
-        } else {
-            self.arg.mor_act(mor, is_unit)
+            Some(modality) => panic!("Modality {modality:?} is not implemented"),
+            None => self.arg.mor_act(mor, is_unit),
         }
     }
 }
@@ -373,7 +376,9 @@ impl<ThId> ModalOp<ThId> {
     fn ob_act<Id>(self, ob: ModalOb<Id, ThId>) -> Result<ModalOb<Id, ThId>, String> {
         match self {
             ModalOp::Generator(id) => Ok(ModalOb::App(Box::new(ob), id)),
-            ModalOp::Mul(mode, n, _) => Ok(ModalOb::List(mode, flatten_ob_list(ob, mode, n)?)),
+            ModalOp::Concat(list_type, n, _) => {
+                Ok(ModalOb::List(list_type, flatten_ob_list(ob, list_type, n)?))
+            }
         }
     }
 
@@ -388,8 +393,8 @@ impl<ThId> ModalOp<ThId> {
             } else {
                 ModalMor::App(Box::new(mor.into()), id)
             }),
-            ModalOp::Mul(mode, n, _) => match mode {
-                Mode::List => Ok(ModalMor::List(MorListData::List(), flatten_mor_list(mor, n)?)),
+            ModalOp::Concat(list_type, n, _) => match list_type {
+                List::Plain => Ok(ModalMor::List(MorListData::Plain(), flatten_mor_list(mor, n)?)),
                 _ => panic!("Flattening of functions is not implemented"),
             },
         }
@@ -399,23 +404,23 @@ impl<ThId> ModalOp<ThId> {
 /// Recursively flatten a nested list of objects of the given depth.
 fn flatten_ob_list<Id, ThId>(
     ob: ModalOb<Id, ThId>,
-    mode: Mode,
+    list_type: List,
     depth: usize,
 ) -> Result<Vec<ModalOb<Id, ThId>>, String> {
     if depth == 0 {
         Ok(vec![ob])
-    } else if let ModalOb::List(other_mode, vec) = ob
-        && other_mode == mode
+    } else if let ModalOb::List(other_type, vec) = ob
+        && other_type == list_type
     {
         if depth == 1 {
             Ok(vec)
         } else {
             let maybe_vec: Result<Vec<_>, _> =
-                vec.into_iter().map(|ob| flatten_ob_list(ob, mode, depth - 1)).collect();
+                vec.into_iter().map(|ob| flatten_ob_list(ob, list_type, depth - 1)).collect();
             Ok(maybe_vec?.into_iter().flatten().collect())
         }
     } else {
-        Err(format!("Object should be a list in mode {mode:?}"))
+        Err(format!("Object should be a list of type {list_type:?}"))
     }
 }
 
@@ -426,7 +431,7 @@ fn flatten_mor_list<Id, ThId>(
 ) -> Result<Vec<ModalMor<Id, ThId>>, String> {
     if depth == 0 {
         Ok(vec![mor])
-    } else if let ModalMor::List(MorListData::List(), vec) = mor {
+    } else if let ModalMor::List(MorListData::Plain(), vec) = mor {
         if depth == 1 {
             Ok(vec)
         } else {
@@ -435,7 +440,7 @@ fn flatten_mor_list<Id, ThId>(
             Ok(maybe_vec?.into_iter().flatten().collect())
         }
     } else {
-        Err(format!("Morphism should be a list in mode {:?}", Mode::List))
+        Err(format!("Morphism should be a list of type {:?}", List::Plain))
     }
 }
 
@@ -458,32 +463,32 @@ mod tests {
         model.add_ob(x, ob_type.clone());
         model.add_ob(y, ob_type.clone());
         assert!(model.has_ob(&x.into()));
-        let pair = ModalOb::List(Mode::List, vec![x.into(), y.into()]);
+        let pair = ModalOb::List(List::Plain, vec![x.into(), y.into()]);
         assert!(model.has_ob(&pair));
-        assert!(!model.has_ob(&ModalOb::List(Mode::List, vec![x.into(), z.into()])));
+        assert!(!model.has_ob(&ModalOb::List(List::Plain, vec![x.into(), z.into()])));
 
         // Nested lists of objects.
         model.add_ob(w, ob_type.clone());
         model.add_ob(z, ob_type.clone());
         let pairs = ModalOb::List(
-            Mode::List,
+            List::Plain,
             vec![
-                ModalOb::List(Mode::List, vec![w.into(), x.into()]),
-                ModalOb::List(Mode::List, vec![y.into(), z.into()]),
+                ModalOb::List(List::Plain, vec![w.into(), x.into()]),
+                ModalOb::List(List::Plain, vec![y.into(), z.into()]),
             ],
         );
         assert!(model.has_ob(&pairs));
         assert_eq!(
-            model.ob_act(pairs, &ModalObOp::mul(Mode::List, 2, ob_type.clone())),
-            ModalOb::List(Mode::List, vec![w.into(), x.into(), y.into(), z.into()])
+            model.ob_act(pairs, &ModalObOp::concat(List::Plain, 2, ob_type.clone())),
+            ModalOb::List(List::Plain, vec![w.into(), x.into(), y.into(), z.into()])
         );
         assert_eq!(
-            model.ob_act(x.into(), &ModalObOp::mul(Mode::List, 0, ob_type.clone())),
-            ModalOb::List(Mode::List, vec![x.into()])
+            model.ob_act(x.into(), &ModalObOp::concat(List::Plain, 0, ob_type.clone())),
+            ModalOb::List(List::Plain, vec![x.into()])
         );
 
         // Products of objects.
-        assert_eq!(model.ob_type(&pair), ob_type.clone().apply(Mode::List));
+        assert_eq!(model.ob_type(&pair), ob_type.clone().apply(List::Plain.into()));
         let mul_op = ModalObOp::generator(ustr("Mul"));
         let prod = model.ob_act(pair, &mul_op);
         assert!(model.has_ob(&prod));
@@ -494,11 +499,11 @@ mod tests {
         model.add_mor(f, x.into(), y.into(), th.hom_type(ob_type.clone()));
         model.add_mor(g, w.into(), z.into(), th.hom_type(ob_type.clone()));
         assert!(model.has_mor(&f.into()));
-        let pair = ModalMor::List(MorListData::List(), vec![f.into(), g.into()]);
+        let pair = ModalMor::List(MorListData::Plain(), vec![f.into(), g.into()]);
         assert!(model.has_mor(&pair));
-        assert_eq!(model.mor_type(&pair), th.hom_type(ob_type.clone().apply(Mode::List)));
-        let dom_list = ModalOb::List(Mode::List, vec![x.into(), w.into()]);
-        let cod_list = ModalOb::List(Mode::List, vec![y.into(), z.into()]);
+        assert_eq!(model.mor_type(&pair), th.hom_type(ob_type.clone().apply(List::Plain.into())));
+        let dom_list = ModalOb::List(List::Plain, vec![x.into(), w.into()]);
+        let cod_list = ModalOb::List(List::Plain, vec![y.into(), z.into()]);
         assert_eq!(model.dom(&pair), dom_list);
         assert_eq!(model.cod(&pair), cod_list);
 
@@ -526,15 +531,15 @@ mod tests {
         model.add_mor(f, x.into(), y.into(), th.hom_type(ob_type.clone()));
         model.add_mor(g, w.into(), z.into(), th.hom_type(ob_type.clone()));
         let pair = ModalMor::List(
-            MorListData::SymList(SkelColumn::new(vec![1, 0])),
+            MorListData::Symmetric(SkelColumn::new(vec![1, 0])),
             vec![f.into(), g.into()],
         );
         assert!(model.has_mor(&pair));
-        assert_eq!(model.dom(&pair), ModalOb::List(Mode::SymList, vec![x.into(), w.into()]));
-        assert_eq!(model.cod(&pair), ModalOb::List(Mode::SymList, vec![z.into(), y.into()]));
+        assert_eq!(model.dom(&pair), ModalOb::List(List::Symmetric, vec![x.into(), w.into()]));
+        assert_eq!(model.cod(&pair), ModalOb::List(List::Symmetric, vec![z.into(), y.into()]));
         // Bad permutation.
         let pair = ModalMor::List(
-            MorListData::SymList(SkelColumn::new(vec![0, 0])),
+            MorListData::Symmetric(SkelColumn::new(vec![0, 0])),
             vec![f.into(), g.into()],
         );
         assert!(!model.has_mor(&pair));
