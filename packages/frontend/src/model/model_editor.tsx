@@ -128,7 +128,6 @@ export default function ModelPage() {
                                 <>
                                     <Resizable.Panel
                                         class="content-panel"
-                                        collapsible
                                         initialSize={1}
                                         minSize={0.25}
                                     >
@@ -136,11 +135,7 @@ export default function ModelPage() {
                                     </Resizable.Panel>
                                     <ResizableHandle hidden={!isSidePanelOpen()} />
                                     <Show when={isSidePanelOpen()}>
-                                        <Resizable.Panel
-                                            collapsible
-                                            minSize={0.25}
-                                            onCollapse={closeSidePanel}
-                                        >
+                                        <Resizable.Panel minSize={0.25} onCollapse={closeSidePanel}>
                                             <Show when={secondaryLiveModel()}>
                                                 {(secondaryLiveModel) => (
                                                     <>
