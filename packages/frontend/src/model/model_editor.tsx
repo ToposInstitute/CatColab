@@ -7,7 +7,6 @@ import {
     createEffect,
     createResource,
     createSignal,
-    onMount,
     useContext,
 } from "solid-js";
 import invariant from "tiny-invariant";
@@ -53,7 +52,6 @@ import { DiagramPane } from "../diagram/diagram_editor";
 import { AnalysisNotebookEditor } from "../analysis/analysis_editor";
 import Resizable, { type ContextValue } from "@corvu/resizable";
 // import PanelRight from "lucide-solid/icons/panel-right";
-import PanelRightClose from "lucide-solid/icons/panel-right-close";
 import Maximize2 from "lucide-solid/icons/maximize-2";
 import ChevronsRight from "lucide-solid/icons/chevrons-right";
 
@@ -107,14 +105,12 @@ export default function ModelPage() {
             {(liveModel) => (
                 <Layout
                     toolbarContents={
-                        <>
-                            <DocumentBreadcrumbs document={liveModel()} />
-                            <span class="filler" />
-                            <PermissionsButton
-                                permissions={liveModel().liveDoc.permissions}
-                                refId={liveModel().refId}
-                            />
-                        </>
+                        <SplitPaneToolbar
+                            liveDocument={liveModel()}
+                            panelSizes={resizableContext()?.sizes()}
+                            maximizeSidePanel={maximizeSidePanel}
+                            closeSidePanel={closeSidePanel}
+                        />
                     }
                     sidebarContents={
                         <>
@@ -141,7 +137,6 @@ export default function ModelPage() {
                                     <ResizableHandle hidden={!isSidePanelOpen()} />
                                     <Show when={isSidePanelOpen()}>
                                         <Resizable.Panel
-                                            // class="content-panel side-panel"
                                             collapsible
                                             minSize={0.25}
                                             onCollapse={closeSidePanel}
@@ -149,20 +144,6 @@ export default function ModelPage() {
                                             <Show when={secondaryLiveModel()}>
                                                 {(secondaryLiveModel) => (
                                                     <>
-                                                        <Toolbar>
-                                                            <IconButton
-                                                                onClick={closeSidePanel}
-                                                                tooltip="Close"
-                                                            >
-                                                                <ChevronsRight />
-                                                            </IconButton>
-                                                            <IconButton
-                                                                onClick={maximizeSidePanel}
-                                                                tooltip="Open in full page"
-                                                            >
-                                                                <Maximize2 />
-                                                            </IconButton>
-                                                        </Toolbar>
                                                         <DocumentPane
                                                             liveDocument={secondaryLiveModel()}
                                                         />
@@ -178,6 +159,41 @@ export default function ModelPage() {
                 </Layout>
             )}
         </Show>
+    );
+}
+
+function SplitPaneToolbar(props: {
+    liveDocument: AnyLiveDocument;
+    panelSizes: number[] | undefined;
+    closeSidePanel: () => void;
+    maximizeSidePanel: () => void;
+}) {
+    const secondaryPanelSize = () => props.panelSizes?.[1];
+
+    return (
+        <>
+            <DocumentBreadcrumbs document={props.liveDocument} />
+            <span class="filler" />
+            <PermissionsButton
+                permissions={props.liveDocument.liveDoc.permissions}
+                refId={props.liveDocument.refId}
+            />
+            <Show when={secondaryPanelSize()}>
+                {(panelSize) => (
+                    <div
+                        class="secondary-toolbar toolbar"
+                        style={{ left: `${(1 - panelSize()) * 100}%` }}
+                    >
+                        <IconButton onClick={props.closeSidePanel} tooltip="Close">
+                            <ChevronsRight />
+                        </IconButton>
+                        <IconButton onClick={props.maximizeSidePanel} tooltip="Open in full page">
+                            <Maximize2 />
+                        </IconButton>
+                    </div>
+                )}
+            </Show>
+        </>
     );
 }
 

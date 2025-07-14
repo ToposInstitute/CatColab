@@ -59,6 +59,7 @@
 }
 
 .toolbar {
+  position: relative;
   display: flex;
   align-items: center;
   height: 32px;
@@ -67,6 +68,10 @@
 
 .toolbar .filler {
   flex: 1;
+}
+
+.secondary-toolbar {
+  position: absolute;
 }
 
 .icon-button {

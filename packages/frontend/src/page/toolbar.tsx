@@ -14,8 +14,9 @@ import "./toolbar.css";
 /** Toolbar component. */
 export function Toolbar(props: {
     children?: JSX.Element;
+    class?: string;
 }) {
-    return <div class="toolbar">{props.children}</div>;
+    return <div class={`toolbar ${props.class ?? ""}`}>{props.children}</div>;
 }
 
 /** Toolbar with default application menu. */
