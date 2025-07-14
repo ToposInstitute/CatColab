@@ -1,10 +1,7 @@
-import { useParams } from "@solidjs/router";
-import { Match, Show, Switch, createResource, useContext } from "solid-js";
+import { Match, Switch, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { ModelJudgment } from "catlog-wasm";
-import { useApi } from "../api";
-import { InlineInput } from "../components";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
@@ -12,21 +9,11 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
-import {
-    DocumentBreadcrumbs,
-    DocumentLoadingScreen,
-    DocumentMenu,
-    TheoryHelpButton,
-    Toolbar,
-} from "../page";
-import { TheoryLibraryContext } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
-import { PermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
-import { type LiveModelDocument, getLiveModel } from "./document";
+import { type LiveModelDocument } from "./document";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
-import { TheorySelectorDialog } from "./theory_selector";
 import {
     type MorphismDecl,
     type ObjectDecl,
@@ -34,87 +21,6 @@ import {
     newMorphismDecl,
     newObjectDecl,
 } from "./types";
-
-import "./model_editor.css";
-
-export default function ModelPage() {
-    const api = useApi();
-    const theories = useContext(TheoryLibraryContext);
-    invariant(theories, "Must provide theory library as context to model page");
-
-    const params = useParams();
-
-    const [liveModel] = createResource(
-        () => params.ref,
-        (refId) => getLiveModel(refId, api, theories),
-    );
-
-    return (
-        <Show when={liveModel()} fallback={<DocumentLoadingScreen />}>
-            {(loadedModel) => <ModelDocumentEditor liveModel={loadedModel()} />}
-        </Show>
-    );
-}
-
-export function ModelDocumentEditor(props: {
-    liveModel: LiveModelDocument;
-}) {
-    return (
-        <div class="growable-container">
-            <Toolbar>
-                <DocumentMenu liveDocument={props.liveModel} />
-                <DocumentBreadcrumbs document={props.liveModel} />
-                <span class="filler" />
-                <TheoryHelpButton theory={props.liveModel.theory()} />
-                <PermissionsButton
-                    permissions={props.liveModel.liveDoc.permissions}
-                    refId={props.liveModel.refId}
-                />
-            </Toolbar>
-            <ModelPane liveModel={props.liveModel} />
-        </div>
-    );
-}
-
-/** Pane containing a model notebook plus a header with the title and theory.
- */
-export function ModelPane(props: {
-    liveModel: LiveModelDocument;
-}) {
-    const theories = useContext(TheoryLibraryContext);
-    invariant(theories, "Library of theories should be provided as context");
-
-    const liveDoc = () => props.liveModel.liveDoc;
-
-    return (
-        <div class="notebook-container">
-            <div class="model-head">
-                <div class="title">
-                    <InlineInput
-                        text={liveDoc().doc.name}
-                        setText={(text) => {
-                            liveDoc().changeDoc((doc) => {
-                                doc.name = text;
-                            });
-                        }}
-                        placeholder="Untitled"
-                    />
-                </div>
-                <TheorySelectorDialog
-                    theory={props.liveModel.theory()}
-                    setTheory={(id) => {
-                        liveDoc().changeDoc((model) => {
-                            model.theory = id;
-                        });
-                    }}
-                    theories={theories}
-                    disabled={liveDoc().doc.notebook.cells.some((cell) => cell.tag === "formal")}
-                />
-            </div>
-            <ModelNotebookEditor liveModel={props.liveModel} />
-        </div>
-    );
-}
 
 /** Notebook editor for a model of a double theory.
  */

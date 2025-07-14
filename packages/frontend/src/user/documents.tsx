@@ -48,6 +48,7 @@ function DocumentsSearch() {
                 searcherMinLevel: null,
                 limit: pageSize,
                 offset: pageValue * pageSize,
+                parentRefId: null,
             });
 
             return results;

@@ -121,19 +121,14 @@ const routes: RouteDefinition[] = [
         component: CreateModel,
     },
     {
-        path: "/model/:ref",
-        matchFilters: refIsUUIDFilter,
-        component: lazy(() => import("./model/model_editor")),
-    },
-    {
-        path: "/diagram/:ref",
-        matchFilters: refIsUUIDFilter,
-        component: lazy(() => import("./diagram/diagram_editor")),
-    },
-    {
-        path: "/analysis/:ref",
-        matchFilters: refIsUUIDFilter,
-        component: lazy(() => import("./analysis/analysis_editor")),
+        path: "/:kind/:ref/:subkind?/:subref?",
+        matchFilters: {
+            kind: ["model", "diagram", "analysis"],
+            ref: refIsUUIDFilter.ref,
+            subkind: (v?: string) => !v || v === "analysis" || v === "diagram" || v === "model",
+            subref: (v?: string) => !v || refIsUUIDFilter.ref(v),
+        },
+        component: lazy(() => import("./page/document")),
     },
     {
         path: "/help",
