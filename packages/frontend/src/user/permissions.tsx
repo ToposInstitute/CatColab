@@ -7,7 +7,6 @@ import {
     Show,
     Switch,
     createEffect,
-    createMemo,
     createResource,
     createSignal,
 } from "solid-js";
@@ -96,15 +95,11 @@ export function PermissionsForm(props: {
         props.onComplete?.();
     };
 
-    const doclink = createMemo(() => {
-        return window.location.href;
-    });
-
     const copyToClipboard = async () => {
         if (navigator.clipboard) {
-            await navigator.clipboard.writeText(doclink());
+            await navigator.clipboard.writeText(window.location.href);
         } else {
-            Error("Could not be copied.");
+            throw new Error("Link to document could not be copied.");
         }
     };
 
@@ -179,12 +174,12 @@ export function PermissionsForm(props: {
                     <p>{"Ownership, once granted, cannot be revoked."}</p>
                 </Warning>
             </Show>
-            <div class="button-container">
-                <button type="button" class="utility" onClick={copyToClipboard}>
+            <div class="permissions-button-container">
+                <button type="button" class="button utility" onClick={copyToClipboard}>
                     <Link2 />
                     Copy link
                 </button>
-                <div class="spacer" />
+                <div class="permissions-spacer" />
                 <button
                     type="button"
                     class="ok"
@@ -234,7 +229,6 @@ function AnonPermissionsButton() {
         await signOut(getAuth(firebaseApp));
         setOpen(false);
     };
-    1;
     return (
         <Dialog
             open={open()}
