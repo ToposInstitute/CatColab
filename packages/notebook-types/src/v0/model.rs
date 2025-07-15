@@ -13,7 +13,7 @@ pub enum Ob {
     Basic(Uuid),
 
     /// Application of an object operation to another object.
-    App(ObOp, Box<Ob>),
+    App { op: ObOp, ob: Box<Ob> },
 
     /// Morphism viewed as an object of a tabulator.
     Tabulated(Mor),
