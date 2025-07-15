@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
-
-use super::path::Path;
 use uuid::Uuid;
+
+use super::{path::Path, theory::ObOp};
 
 /// An object in a model of a double theory.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
@@ -11,6 +11,9 @@ use uuid::Uuid;
 pub enum Ob {
     /// Basic or generating object.
     Basic(Uuid),
+
+    /// Application of an object operation to another object.
+    App(ObOp, Box<Ob>),
 
     /// Morphism viewed as an object of a tabulator.
     Tabulated(Mor),

@@ -489,7 +489,7 @@ mod tests {
 
         // Products of objects.
         assert_eq!(model.ob_type(&pair), ob_type.clone().apply(List::Plain.into()));
-        let mul_op = ModalObOp::generator(ustr("Mul"));
+        let mul_op = ModalObOp::generator(ustr("tensor"));
         let prod = model.ob_act(pair, &mul_op);
         assert!(model.has_ob(&prod));
         assert_eq!(model.ob_type(&prod), ob_type);
@@ -508,7 +508,7 @@ mod tests {
         assert_eq!(model.cod(&pair), cod_list);
 
         // Products of morphisms.
-        let ob_op = ModeApp::new(ustr("Mul").into());
+        let ob_op = ModeApp::new(ustr("tensor").into());
         let hom_op = OpenTree::single(DblNode::Cell(ModalNode::Unit(ob_op)), 1).into();
         let prod = model.mor_act(pair.into(), &hom_op);
         assert!(model.has_mor(&prod));
