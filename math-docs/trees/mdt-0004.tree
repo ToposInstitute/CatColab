@@ -1,0 +1,11 @@
+\date{2025-07-14}
+\author{Kevin Carlson}
+\taxon{definition}
+\import{macros}
+\title{Weakness}
+
+\p{
+    A \define{weakness} is an element of the poset #{\{s,p,\ell,c\}} of weaknesses, 
+    whose elements signify "strict", "pseudo", "lax", and "colax" respectively. The order
+    is given by #{s\le p\le \ell,p\le c}.
+}
