@@ -145,9 +145,7 @@ export function NotebookCell(props: {
         const cleanup = combine(
             draggable({
                 element: handleRef,
-                getInitialData: () => ({
-                    ...createCellDragData(props.cellId, props.index),
-                }),
+                getInitialData: () => createCellDragData(props.cellId, props.index),
             }),
             dropTargetForElements({
                 element: rootRef,
