@@ -326,9 +326,9 @@ mod tests {
         let th = ThSymMonoidalCategory::new().theory();
         let x = ObType::Basic(ustr("Object"));
         let list_x = ObType::ModeApp(Modality::SymmetricList, x.clone().into());
-        let mul = ObOp::Basic(ustr("Mul"));
+        let tensor = ObOp::Basic(ustr("tensor"));
         assert_eq!(th.src(MorType::Hom(list_x.clone().into())), Ok(list_x.clone()));
-        assert_eq!(th.dom(mul.clone()), Ok(list_x));
-        assert_eq!(th.cod(mul), Ok(x));
+        assert_eq!(th.dom(tensor.clone()), Ok(list_x));
+        assert_eq!(th.cod(tensor), Ok(x));
     }
 }

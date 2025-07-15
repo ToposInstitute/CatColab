@@ -41,10 +41,10 @@ pub struct DblModel(#[wasm_bindgen(skip)] pub DblModelBox);
 
 /// Elaborates into an object in a model of a discrete double theory.
 impl CanElaborate<Ob, Uuid> for Elaborator {
-    fn elab(&self, x: &Ob) -> Result<Uuid, String> {
-        match x {
+    fn elab(&self, ob: &Ob) -> Result<Uuid, String> {
+        match ob {
             Ob::Basic(uuid) => Ok(*uuid),
-            _ => Err(format!("Cannot cast object for discrete double theory: {x:#?}")),
+            _ => Err(format!("Cannot use object with discrete double theory: {ob:#?}")),
         }
     }
 }
@@ -59,7 +59,7 @@ impl CanElaborate<Mor, Path<Uuid, Uuid>> for Elaborator {
                     .try_map(|ob| Elaborator.elab(&ob), |mor| Elaborator.elab(&mor));
                 result_path.map(|path| path.flatten())
             }
-            _ => Err(format!("Cannot cast morphism for discrete double theory: {mor:#?}")),
+            _ => Err(format!("Cannot use morphism with discrete double theory: {mor:#?}")),
         }
     }
 }
@@ -80,10 +80,11 @@ fn demote_path<V, E>(path: Path<V, E>) -> notebook_path::Path<V, E> {
 
 /// Elaborates into an object in a model of a discrete tabulator theory.
 impl CanElaborate<Ob, TabOb<Uuid, Uuid>> for Elaborator {
-    fn elab(&self, x: &Ob) -> Result<TabOb<Uuid, Uuid>, String> {
-        match x {
+    fn elab(&self, ob: &Ob) -> Result<TabOb<Uuid, Uuid>, String> {
+        match ob {
             Ob::Basic(id) => Ok(TabOb::Basic(*id)),
             Ob::Tabulated(mor) => Ok(TabOb::Tabulated(Box::new(self.elab(mor)?))),
+            _ => Err(format!("Cannot use object with discrete tabulator theory: {ob:#?}")),
         }
     }
 }

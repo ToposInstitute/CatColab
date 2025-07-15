@@ -159,7 +159,7 @@ monad is used.
 fn th_list_algebra(list: List) -> UstrModalDblTheory {
     let m = Modality::List(list);
     let mut th: UstrModalDblTheory = Default::default();
-    let (x, a) = (ustr("Object"), ustr("Mul"));
+    let (x, a) = (ustr("Object"), ustr("tensor"));
     th.add_ob_type(x);
     th.add_ob_op(a, ModeApp::new(x).apply(m), ModeApp::new(x));
     th.equate_ob_ops(
@@ -177,7 +177,7 @@ fn th_list_algebra(list: List) -> UstrModalDblTheory {
 fn th_list_lax_algebra(list: List) -> UstrModalDblTheory {
     let m = Modality::List(list);
     let mut th: UstrModalDblTheory = Default::default();
-    let (x, a) = (ustr("Object"), ustr("Mul"));
+    let (x, a) = (ustr("Object"), ustr("tensor"));
     th.add_ob_type(x);
     th.add_ob_op(a, ModeApp::new(x).apply(m), ModeApp::new(x));
     th.add_special_mor_op(
