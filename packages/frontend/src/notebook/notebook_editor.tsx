@@ -1,4 +1,3 @@
-import { extractClosestEdge } from "@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge";
 import { getReorderDestinationIndex } from "@atlaskit/pragmatic-drag-and-drop-hitbox/util/get-reorder-destination-index";
 import { monitorForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import type { DocHandle, Prop } from "@automerge/automerge-repo";
@@ -196,7 +195,7 @@ export function NotebookEditor<T>(props: {
                 const finalIndex = getReorderDestinationIndex({
                     startIndex: sourceIndex,
                     indexOfTarget: targetIndex,
-                    closestEdgeOfTarget: extractClosestEdge(target.data),
+                    closestEdgeOfTarget: sourceIndex < targetIndex ? "bottom" : "top",
                     axis: "vertical",
                 });
                 props.changeNotebook((nb) => {
