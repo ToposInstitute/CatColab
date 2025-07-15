@@ -1,7 +1,7 @@
 import { useParams } from "@solidjs/router";
+import type { ModelJudgment } from "catlog-wasm";
 import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
-import type { ModelJudgment } from "catlog-wasm";
 import { useApi } from "../api";
 import { InlineInput } from "../components";
 import {
@@ -34,9 +34,9 @@ import {
     newObjectDecl,
 } from "./types";
 
-import { createSignal } from "solid-js";
 import { getAuth } from "firebase/auth";
 import { useAuth, useFirebaseApp } from "solid-firebase";
+import { createSignal } from "solid-js";
 import { WelcomeOverlay } from "./welcome_overlay";
 
 import "./model_editor.css";
@@ -53,9 +53,9 @@ export default function ModelPage() {
         (refId) => getLiveModel(refId, api, theories),
     );
 
-    return ( 
-		<Show when={liveModel()} fallback={<DocumentLoadingScreen />}>
-			{(loadedModel) => <ModelDocumentEditor liveModel={loadedModel()} />}
+    return (
+        <Show when={liveModel()} fallback={<DocumentLoadingScreen />}>
+            {(loadedModel) => <ModelDocumentEditor liveModel={loadedModel()} />}
         </Show>
     );
 }
@@ -63,17 +63,6 @@ export default function ModelPage() {
 export function ModelDocumentEditor(props: {
     liveModel: LiveModelDocument;
 }) {
-	// const firebaseApp = useFirebaseApp();
-    // const auth = useAuth(getAuth(firebaseApp));
-
-	// console.log(props.liveModel);
-    // const [isOverlayOpen, setOverlayOpen] = createSignal(auth.data == null
-        // // liveModel.cells.length === 0 && auth.data == null,
-    // );
-
-	// const toggleOverlay = () => {
-        // setOverlayOpen(!isOverlayOpen());
-    // };
     return (
         <div class="growable-container">
             <Toolbar>
@@ -147,8 +136,20 @@ export function ModelNotebookEditor(props: {
     const cellConstructors = () =>
         (props.liveModel.theory().modelTypes ?? []).map(modelCellConstructor);
 
+    const firebaseApp = useFirebaseApp();
+    const auth = useAuth(getAuth(firebaseApp));
+
+    const [isOverlayOpen, setOverlayOpen] = createSignal(
+        props.liveModel.liveDoc.doc.notebook.cells.length === 0 && auth.data == null,
+    );
+
+    const toggleOverlay = () => {
+        setOverlayOpen(!isOverlayOpen());
+    };
+
     return (
         <LiveModelContext.Provider value={() => props.liveModel}>
+            <WelcomeOverlay isOpen={isOverlayOpen()} onClose={toggleOverlay} />
             <NotebookEditor
                 handle={liveDoc().docHandle}
                 path={["notebook"]}

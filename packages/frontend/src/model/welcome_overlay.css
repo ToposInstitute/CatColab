@@ -11,6 +11,7 @@
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.3s ease, visibility 0.3s ease;
+    z-index: 10;
 }
 
 .welcome-overlay.open {
@@ -115,7 +116,7 @@
 .resources-list {
     display: grid;
     grid-template-columns: 1fr 1fr;
-	grid-template-rows: auto auto 1fr;
+    grid-template-rows: auto auto 1fr;
     gap: 1rem;
 }
 
@@ -162,7 +163,7 @@
 .footer-container {
     display: grid;
     margin-top: -30px;
-	margin-right: 24px;
+    margin-right: 24px;
 }
 
 .navigation-buttons {
