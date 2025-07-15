@@ -35,6 +35,24 @@ pub enum MorType {
     ModeApp(Modality, Box<MorType>),
 }
 
+/// Object operation in a double theory.
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[serde(tag = "tag", content = "content")]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub enum ObOp {
+    /// Basic or generating object operation.
+    Basic(Ustr),
+
+    /// Identity operation on an object type.
+    Id(ObType),
+
+    /// Composite of object operations.
+    Composite(Vec<ObOp>),
+
+    /// Modality applied to an object operation.
+    ModeApp(Modality, Box<ObOp>),
+}
+
 /// Modality available in a modal double theory.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
