@@ -42,3 +42,10 @@
     category objects. Thus we can see an #{\ell}-algebra over #{T} precisely as a #{T}-algebra structure on a category object in #{\dbl{D}}, carried 
     by a functor. 
 }
+
+\p{
+    In particular, when the double monad #{T} is naturally induced by a pullback-preserving monad #{T:\cat{E}\to \cat{E}} on a category #{\cat{E}} with 
+    pullbacks, then #{T_1} is essentially just #{T} again, and an #{\ell}-algebra over #{T} is a category in #{\dbl{Span}(\cat{E})}
+    with #{T}-algebra structures on objects and arrows such that source and target are algebra homomorphisms and the algebra maps 
+    comprise a functor #{T(X)\to X}. Thus while an #{s}-algebra over the free monoid monad on \Span is a monoid, an #{\ell}-algebra is a strict monoidal category.
+}
