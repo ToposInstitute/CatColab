@@ -14,7 +14,12 @@ pub enum ObType {
     Tabulator(Box<MorType>),
 
     /// Modality applied to an object type.
-    ModeApp(Modality, Box<ObType>),
+    ModeApp {
+        modality: Modality,
+
+        #[serde(rename = "obType")]
+        ob_type: Box<ObType>,
+    },
 }
 
 /// Morphism type in a double theory.
@@ -32,7 +37,12 @@ pub enum MorType {
     Composite(Vec<MorType>),
 
     /// Modality applied to a morphism type.
-    ModeApp(Modality, Box<MorType>),
+    ModeApp {
+        modality: Modality,
+
+        #[serde(rename = "morType")]
+        mor_type: Box<MorType>,
+    },
 }
 
 /// Object operation in a double theory.
@@ -50,7 +60,7 @@ pub enum ObOp {
     Composite(Vec<ObOp>),
 
     /// Modality applied to an object operation.
-    ModeApp(Modality, Box<ObOp>),
+    ModeApp { modality: Modality, op: Box<ObOp> },
 }
 
 /// Modality available in a modal double theory.

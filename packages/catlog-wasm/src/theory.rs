@@ -98,7 +98,7 @@ impl CanElaborate<ObType, ModalObType<Ustr>> for Elaborator {
     fn elab(&self, ob_type: &ObType) -> Result<ModalObType<Ustr>, String> {
         match ob_type {
             ObType::Basic(id) => Ok(ModeApp::new(*id)),
-            ObType::ModeApp(modality, ob_type) => Ok({
+            ObType::ModeApp { modality, ob_type } => Ok({
                 let ob_type: ModalObType<_> = self.elab(ob_type.as_ref())?;
                 ob_type.apply(promote_modality(*modality))
             }),
@@ -113,7 +113,7 @@ impl CanElaborate<MorType, ModalMorType<Ustr>> for Elaborator {
         match mor_type {
             MorType::Basic(id) => Ok(ModeApp::new(*id).into()),
             MorType::Hom(ob_type) => Ok(ShortPath::Zero(self.elab(ob_type.as_ref())?)),
-            MorType::ModeApp(modality, mor_type) => Ok({
+            MorType::ModeApp { modality, mor_type } => Ok({
                 let mor_type: ModalMorType<_> = self.elab(mor_type.as_ref())?;
                 mor_type.apply(promote_modality(*modality))
             }),
@@ -132,7 +132,7 @@ impl CanElaborate<ObOp, ModalObOp<Ustr>> for Elaborator {
                 let ops: Result<Vec<_>, _> = ops.iter().map(|op| self.elab(op)).collect();
                 Ok(Path::from_vec(ops?).ok_or("Composite should be non-empty")?.flatten())
             }
-            ObOp::ModeApp(modality, op) => Ok({
+            ObOp::ModeApp { modality, op } => Ok({
                 let op: ModalObOp<_> = self.elab(op.as_ref())?;
                 op.apply(promote_modality(*modality))
             }),
@@ -209,7 +209,10 @@ impl CanQuote<ModalObType<Ustr>, ObType> for Quoter {
     fn quote(&self, app: &ModalObType<Ustr>) -> ObType {
         let mut quoted = ObType::Basic(app.arg);
         for modality in &app.modalities {
-            quoted = ObType::ModeApp(demote_modality(*modality), quoted.into())
+            quoted = ObType::ModeApp {
+                modality: demote_modality(*modality),
+                ob_type: quoted.into(),
+            }
         }
         quoted
     }
@@ -223,7 +226,10 @@ impl CanQuote<ModalMorType<Ustr>, MorType> for Quoter {
             ShortPath::One(app) => {
                 let mut quoted = MorType::Basic(app.arg);
                 for modality in &app.modalities {
-                    quoted = MorType::ModeApp(demote_modality(*modality), quoted.into())
+                    quoted = MorType::ModeApp {
+                        modality: demote_modality(*modality),
+                        mor_type: quoted.into(),
+                    }
                 }
                 quoted
             }
