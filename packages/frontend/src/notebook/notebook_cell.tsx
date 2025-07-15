@@ -147,7 +147,6 @@ export function NotebookCell(props: {
                 element: handleRef,
                 getInitialData: () => ({
                     ...createCellDragData(props.cellId, props.index),
-                    index: props.index,
                 }),
             }),
             dropTargetForElements({
@@ -164,7 +163,7 @@ export function NotebookCell(props: {
                         allowedEdges: ["top", "bottom"],
                     });
                 },
-                onDragEnter: (args) => {
+                onDragEnter(args) {
                     if ((args.source.data.index as number) < (args.self.data.index as number)) {
                         setClosestEdge("bottom");
                     } else {
