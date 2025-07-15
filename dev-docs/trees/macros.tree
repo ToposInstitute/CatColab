@@ -71,7 +71,8 @@
 % 2-category theory
 
 \def\twocat[name]{#{\mathbf{\name}}}
-\def\Cat{#{\mathbf{Cat}}}
+\def\Cat{\twocat{Cat}}
+\def\Dbl{\twocat{Dbl}}
 
 % Double category theory
 

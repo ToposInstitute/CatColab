@@ -1,0 +1,44 @@
+\date{2025-07-14}
+\author{Kevin Carlson}
+\taxon{definition}
+\import{macros}
+\title{Algebra over a double monad}
+
+\p{
+    If #{w',w} are comparable [mdt-0004]{weaknesses} and #{(T,\mu,\eta):\dbl{D}\to\dbl{D}} is a #{w}-double monad, then a #{w'}-algebra over #{T} 
+    is a #{w'}-double functor #{X:\dbl{1}\to \dbl{D}} equipped with a tight natural transformation #{\xi:T\circ X\to X}
+    satisfying the usual algebra laws, i.e. #{\xi\circ (\eta x)=\id_x} and #{\xi\circ (\mu x)=(\xi\circ (t\xi))}. (That is, it is 
+    a #{T}-module carried by #{X} in the 2-category #{\Dbl_{\mathrm{max}(w,w')}}. Note that these are all "strict algebras" in 
+    the sense of the formal theory of monads, i.e. the algebra laws are satisfied on the nose.) By default, we'll assume #{w=w'}.
+}
+
+\p{
+    If #{w'=s}, then an algebra is just a (strict) algebra over the 2-monad induced by #{T} on the vertical 2-category of #{\dbl{D}}.
+    But by increasing #{w'} we can get quite interesting algebras even for double monads whose base has a boring vertical 2-category, like \Span:
+}
+
+\p{
+    If #{w'=w=\ell}, then the carrier #{X} is a category object in #{\dbl{D}}, consisting of an endo-proarrow #{X_1:X_0\proto X_0} plus 
+    the unitor #{i_X:\id_{X_0}\to X_1} and the laxator #{l_X:X_1\circ X_1\to X_1} satisfying associativity and unitality.
+}
+\p{
+    The algebra structure has components #{\xi_0:T(X_0)\to X_0} and 
+    \quiverinline{
+       % https://q.uiver.app/#q=WzAsNCxbMCwwLCJUWF8wIl0sWzEsMCwiVFhfMCJdLFswLDEsIlhfMCJdLFsxLDEsIlhfMCJdLFswLDEsIlRYXzEiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMiwzLCJYXzEiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMCwyLCJcXHhpXzAiLDFdLFsxLDMsIlxceGlfMCIsMV0sWzQsNSwiXFx4aV8xIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV1d
+    \begin{tikzcd}
+	{TX_0} & {TX_0} \\
+	{X_0} & {X_0}
+	\arrow[""{name=0, anchor=center, inner sep=0}, "{TX_1}"{inner sep=.8ex}, "\shortmid"{marking}, from=1-1, to=1-2]
+	\arrow["{\xi_0}"{description}, from=1-1, to=2-1]
+	\arrow["{\xi_0}"{description}, from=1-2, to=2-2]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "{X_1}"{inner sep=.8ex}, "\shortmid"{marking}, from=2-1, to=2-2]
+	\arrow["{\xi_1}"{description}, draw=none, from=0, to=1]
+\end{tikzcd}}
+    which constitute #{T_i}-algebra structures on #{X_0} and #{X_1} respectively.
+}
+
+\p{
+    As with any natural transformation between lax functors out of #{\dbl{1}}, #{\xi_0} and #{\xi_1} together constitute a functor between the 
+    category objects. Thus we can see an #{\ell}-algebra over #{T} precisely as a #{T}-algebra structure on a category object in #{\dbl{D}}, carried 
+    by a functor. 
+}
