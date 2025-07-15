@@ -13,3 +13,12 @@
     align-items: center;
     gap: 5em;
 }
+
+.permissions-button-container {
+    display: flex;
+}
+
+.permissions-spacer {
+    display: flex;
+    flex-grow: 1;
+}
