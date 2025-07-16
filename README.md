@@ -68,8 +68,21 @@ Developing the backend locally requires more setup. See the instructions in the
 
 #### Test build for nixos deployment
 ```
-nix build .#nixosConfigurations.catcolab-next.config.system.build.toplevel
+nix flake check --no-sandbox
 ```
+
+To get a interactive python session in the test environment:
+```
+nix run .#checks.x86_64-linux.integrationTests.driverInteractive --no-sandbox
+```
+
+#### Build and run nixos QEMU virtual machine
+```
+nix build .#nixosConfigurations.catcolab-vm.config.system.build.vm
+./result/bin/run-catcolab-vm
+```
+
+The username and password of the vm is 'catcolab'
 
 ### Formatting and linting
 
@@ -112,3 +125,4 @@ over time, is inspired by a wide body of research in applied category theory and
 beyond. Incomplete bibliographies are in the [dev
 docs](https://next.catcolab.org/dev/bib-0001.xml) and the [core
 docs](https://next.catcolab.org/dev/rust/catlog/refs).
+

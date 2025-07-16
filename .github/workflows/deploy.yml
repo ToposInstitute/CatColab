@@ -189,6 +189,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Setup Nix and Nix cache, copied in ci.yml
+      - uses: nixbuild/nix-quick-install-action@v31
+      - name: Restore and save Nix store
+        uses: nix-community/cache-nix-action@v6
+        with:
+          # restore and save a cache using this key
+          primary-key: nix-${{ runner.os }}-${{ hashFiles('**/*.nix', '**/flake.lock') }}
+          # if there's no cache hit, restore a cache by this prefix
+          restore-prefixes-first-match: nix-${{ runner.os }}-
+
       - name: Set up SSH key
         run: |
           mkdir -p ~/.ssh
@@ -196,10 +206,6 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan ${TARGET_HOST} >> ~/.ssh/known_hosts
 
-      - name: Rsync the repo to remote host
-        run: |
-          rsync -az --delete ./ deployuser@${TARGET_HOST}:~/catcolab/
-
       - name: Run nixos-rebuild switch remotely
         run: |
-          ssh deployuser@${TARGET_HOST} "sudo /run/current-system/sw/bin/nixos-rebuild switch --flake ./catcolab#${HOST_CONFIG}"
+           nix run github:serokell/deploy-rs .#${HOST_CONFIG}
