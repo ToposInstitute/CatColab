@@ -14,6 +14,14 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    crane = {
+      url = "github:ipetkov/crane";
+      inputs = {
+        flake-utils.follows = "flake-utils";
+        nixpkgs.follows = "nixpkgs";
+      };
+    };
+
     nixpkgsUnstable = {
       # TODO: this should be changed from 'master' to 'nixos-unstable' when the
       # pnpm.fetchDeps.fetcherVersion option lands in nixos-unstable (it's not clear how long that will
@@ -28,6 +36,7 @@
       nixpkgs,
       deploy-rs,
       fenix,
+      crane,
       ...
     }@inputs:
     let
@@ -56,6 +65,60 @@
 
       pkgsLinux = nixpkgsFor linuxSystem;
       rustToolchainLinux = rustToolchainFor linuxSystem;
+
+      # craneLib = crane.lib.${linuxSystem}
+      craneLib = (crane.mkLib pkgsLinux).overrideToolchain rustToolchainLinux;
+      src = craneLib.cleanCargoSource ./.;
+
+      commonArgs = {
+        inherit src;
+        strictDeps = true;
+
+        nativeBuildInputs = [ pkgsLinux.pkg-config ];
+        buildInputs = [
+          pkgsLinux.openssl
+        ];
+
+      };
+
+      cargoArtifacts = craneLib.buildDepsOnly commonArgs;
+
+      individualCrateArgs = commonArgs // {
+        inherit cargoArtifacts;
+        doCheck = false;
+      };
+
+      catlog-wasm = craneLib.buildPackage (
+        individualCrateArgs
+        // {
+          pname = "catlog-wasm";
+
+          nativeBuildInputs = individualCrateArgs.nativeBuildInputs ++ [
+            pkgsLinux.wasm-pack
+            pkgsLinux.wasm-bindgen-cli
+            pkgsLinux.binaryen
+          ];
+
+          src = craneLib.cleanCargoSource ./.;
+
+          # run wasm-pack instead of plain cargo
+          buildPhase = ''
+            cd packages/catlog-wasm
+            echo "before wasm-pack"
+
+            # WTF: engage maximum cargo cult. I have no idea wasm-pack needs $HOME set, that is wild.
+            # https://github.com/NixOS/nixpkgs/blob/b5d0681604d2acd74818561bd2f5585bfad7087d/pkgs/by-name/te/tetrio-desktop/tetrio-plus.nix#L66C7-L66C24
+            # https://discourse.nixos.org/t/help-packaging-mipsy-wasm-pack-error/51876            
+            HOME=$(mktemp -d) wasm-pack build
+          '';
+
+          installPhase = ''
+            mkdir -p $out
+            cp -r pkg/* $out/
+            ls $out/
+          '';
+        }
+      );
 
       # Generate devShells for each system
       devShellForSystem =
@@ -93,6 +156,7 @@
               sqlx-cli
               biome
               wasm-pack
+              wasm-bindgen-cli
             ]
             ++ darwinDeps
             ++ [
@@ -136,11 +200,15 @@
         }) devShellSystems
       );
 
+      packages = {
+        inherit catlog-wasm;
+      };
+
       # Create a NixOS configuration for each host
       nixosConfigurations = {
         catcolab = nixpkgs.lib.nixosSystem {
           specialArgs = {
-            inherit inputs;
+            inherit inputs self;
             rustToolchain = rustToolchainLinux;
           };
           system = linuxSystem;
@@ -151,7 +219,7 @@
         };
         catcolab-next = nixpkgs.lib.nixosSystem {
           specialArgs = {
-            inherit inputs;
+            inherit inputs self;
             rustToolchain = rustToolchainLinux;
           };
           system = linuxSystem;
@@ -164,7 +232,10 @@
         catcolab-vm = nixpkgs.lib.nixosSystem {
           system = linuxSystem;
           modules = [ ./infrastructure/hosts/catcolab-vm ];
-          specialArgs = { inherit inputs rustToolchain; };
+          specialArgs = {
+            inherit inputs self;
+            rustToolchain = rustToolchainLinux;
+          };
         };
       };
 
@@ -201,7 +272,8 @@
         };
 
         node.specialArgs = {
-          inherit rustToolchain inputs;
+          inherit inputs self;
+          rustToolchain = rustToolchainLinux;
         };
 
         testScript = ''

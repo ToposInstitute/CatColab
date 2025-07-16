@@ -114,6 +114,21 @@
         "type": "github"
       }
     },
+    "crane": {
+      "locked": {
+        "lastModified": 1752946753,
+        "narHash": "sha256-g5uP3jIj+STUcfTJDKYopxnSijs2agRg13H0SGL5iE4=",
+        "owner": "ipetkov",
+        "repo": "crane",
+        "rev": "544d09fecc8c2338542c57f3f742f1a0c8c71e13",
+        "type": "github"
+      },
+      "original": {
+        "owner": "ipetkov",
+        "repo": "crane",
+        "type": "github"
+      }
+    },
     "crate2nix": {
       "inputs": {
         "cachix": "cachix",
@@ -714,11 +729,11 @@
     },
     "nixpkgsUnstable": {
       "locked": {
-        "lastModified": 1753203236,
-        "narHash": "sha256-XSvsTpC+bBGxrOz6WaE01lRZDGgNmgVwl3+RRWj4zsw=",
+        "lastModified": 1752673814,
+        "narHash": "sha256-vCIhOKfW54j5nQK7XZArXXakDtVtMvL4qIUPQdCfvhk=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "1181355291f3712213261b246eb21c0a96bfdda7",
+        "rev": "a57183313ca2ce413c3b7fbc36847813b564e35e",
         "type": "github"
       },
       "original": {
@@ -937,6 +952,7 @@
     "root": {
       "inputs": {
         "agenix": "agenix",
+        "crane": "crane",
         "crate2nix": "crate2nix",
         "deploy-rs": "deploy-rs",
         "fenix": "fenix",
