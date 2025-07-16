@@ -4,6 +4,7 @@ import {
     dropTargetForElements,
     monitorForElements,
 } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
+import type { DragLocationHistory } from "@atlaskit/pragmatic-drag-and-drop/types";
 import type { DocHandle, Prop } from "@automerge/automerge-repo";
 import { type KbdKey, createShortcut } from "@solid-primitives/keyboard";
 import ListPlus from "lucide-solid/icons/list-plus";
@@ -86,6 +87,7 @@ export function NotebookEditor<T>(props: {
 
     const [activeCell, setActiveCell] = createSignal(props.notebook.cells.length > 0 ? 0 : -1);
     const [currentDropTarget, setCurrentDropTarget] = createSignal<string | null>(null);
+    const [tether, setTether] = createSignal<DragLocationHistory | null>(null);
 
     // Set up commands and their keyboard shortcuts.
     const addAfterActiveCell = (cell: Cell<T>) => {
@@ -178,9 +180,7 @@ export function NotebookEditor<T>(props: {
         createShortcut(["Shift", "Enter"], () => addAfterActiveCell(newStemCell()));
     });
 
-    const [tether, setTether] = createSignal<any>(null);
-
-    // Set up drag and drop of notebook cells.
+    // Set up drag and drop of notebook cells. Rather than have each cell's `onDragEnter` and `onDragLeve` callbacks compete (which causes UI unpleasantness like jittering), each cell instead reports whether it is the valid drop target to the notebook state. Instead, the `onDragLeave` callback is reserved solely for the notebook; if a cell is not a valid target but the notebook is, the drop target will store the last valid cell in the `tether` signal which be used as a default in the case where the dragging goes above the cell list.
     createEffect(() => {
         const cleanup = combine(
             monitorForElements({
@@ -192,8 +192,7 @@ export function NotebookEditor<T>(props: {
                 },
                 onDrop({ location, source }) {
                     const target =
-                        location.current.dropTargets[0] ??
-                        tether().location.previous?.dropTargets[0];
+                        location.current.dropTargets[0] ?? tether()?.previous?.dropTargets[0];
                     if (!(target && isCellDragData(source.data) && isCellDragData(target.data))) {
                         setTether(null);
                         setCurrentDropTarget(null);
@@ -225,8 +224,8 @@ export function NotebookEditor<T>(props: {
                 canDrop({ source }) {
                     return isCellDragData(source.data);
                 },
-                onDragLeave(args) {
-                    setTether(args);
+                onDragLeave({ location }) {
+                    setTether(location);
                 },
             }),
         );

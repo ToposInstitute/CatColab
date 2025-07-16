@@ -142,8 +142,8 @@ export function NotebookCell(props: {
 
     const [closestEdge, setClosestEdge] = createSignal<ClosestEdge>(null);
     const [dropTarget, setDropTarget] = createSignal(false);
-    const isActiveDropTarget = () => props.currentDropTarget === props.cellId;
 
+    const isActiveDropTarget = () => props.currentDropTarget === props.cellId;
     createEffect(() => {
         if (!isActiveDropTarget()) {
             setClosestEdge(null);
@@ -171,7 +171,7 @@ export function NotebookCell(props: {
                         allowedEdges: ["top", "bottom"],
                     });
                 },
-                onDrag(args) {
+                onDragEnter(args) {
                     const sourceIndex = args.source.data.index as number;
                     const targetIndex = args.self.data.index as number;
 
@@ -181,57 +181,14 @@ export function NotebookCell(props: {
                         return;
                     }
 
-                    const edge = sourceIndex < targetIndex ? "bottom" : "top";
-                    const isItemBeforeSource = targetIndex === sourceIndex - 1;
-                    const isItemAfterSource = targetIndex === sourceIndex + 1;
-
-                    const isDropIndicatorHidden =
-                        (isItemBeforeSource && closestEdge() === "bottom") ||
-                        (isItemAfterSource && closestEdge() === "top");
-
-                    if (isDropIndicatorHidden) {
-                        setClosestEdge(null);
-                        setDropTarget(false);
-                        return;
-                    }
-                    setClosestEdge(edge);
-                    setDropTarget(true);
-                },
-                onDragEnter(args) {
                     props.setCurrentDropTarget(props.cellId);
 
-                    const sourceIndex = args.source.data.index as number;
-                    const targetIndex = args.self.data.index as number;
-
-                    if (sourceIndex === targetIndex) {
-                        setClosestEdge(null);
-                        setDropTarget(false);
-                        return;
-                    }
-
-                    // const edge = extractClosestEdge(args.self.data) as ClosestEdge;
                     const edge = sourceIndex < targetIndex ? "bottom" : "top";
-
-                    const isItemBeforeSource = targetIndex === sourceIndex - 1;
-                    const isItemAfterSource = targetIndex === sourceIndex + 1;
-
-                    const isDropIndicatorHidden =
-                        (isItemBeforeSource && closestEdge() === "bottom") ||
-                        (isItemAfterSource && closestEdge() === "top");
-
-                    if (isDropIndicatorHidden) {
-                        setClosestEdge(null);
-                        setDropTarget(false);
-                        return;
-                    }
-
                     setClosestEdge(edge);
                     setDropTarget(true);
                 },
                 onDrop() {
-                    props.setCurrentDropTarget(null);
                     setDropTarget(false);
-
                     setClosestEdge(null);
                 },
             }),
