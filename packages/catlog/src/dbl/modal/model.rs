@@ -9,9 +9,12 @@ use itertools::Itertools;
 use ref_cast::RefCast;
 
 use super::theory::*;
-use crate::dbl::VDblGraph;
-use crate::dbl::model::{DblModel, FgDblModel, MutDblModel};
+use crate::dbl::{
+    graph::VDblGraph,
+    model::{DblModel, FgDblModel, InvalidDblModel, MutDblModel},
+};
 use crate::one::computad::*;
+use crate::validate::Validate;
 use crate::{one::*, zero::*};
 
 /// Object in a model of a modal double theory.
@@ -260,7 +263,7 @@ where
     }
 
     fn ob_act(&self, ob: Self::Ob, path: &Self::ObOp) -> Self::Ob {
-        path.iter().cloned().fold(ob, |ob, op| op.ob_act(ob).unwrap())
+        path.clone().ob_act(ob).unwrap()
     }
 
     fn mor_act(&self, path: Path<Self::Ob, Self::Mor>, tree: &Self::MorOp) -> Self::Mor {
@@ -325,6 +328,30 @@ where
     }
     fn set_cod(&mut self, f: Self::MorGen, x: Self::Ob) {
         self.mor_generators.tgt_map.set(f, x);
+    }
+}
+
+impl<Id, ThId, S> Validate for ModalDblModel<Id, ThId, S>
+where
+    Id: Eq + Clone + Hash + Debug,
+    ThId: Eq + Clone + Hash + Debug,
+    S: BuildHasher,
+{
+    type ValidationError = InvalidDblModel<Id>;
+
+    fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
+        // TODO: Implement validation!
+        Ok(())
+    }
+}
+
+impl<ThId> ModalObOp<ThId>
+where
+    ThId: Clone,
+{
+    /// Acts on an object in a model of a modal theory.
+    pub fn ob_act<Id>(self, ob: ModalOb<Id, ThId>) -> Result<ModalOb<Id, ThId>, String> {
+        self.into_iter().try_fold(ob, |ob, op| op.ob_act(ob))
     }
 }
 
