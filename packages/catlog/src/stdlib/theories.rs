@@ -161,54 +161,57 @@ pub fn th_category_dynamic_stockflow() -> UstrDiscreteTabTheory {
 
 /// The theory of strict monoidal categories.
 pub fn th_monoidal_category() -> UstrModalDblTheory {
-    th_monad_algebra(Mode::List)
+    th_list_algebra(List::Plain)
 }
 
 /// The theory of lax monoidal categories.
 pub fn th_lax_monoidal_category() -> UstrModalDblTheory {
-    th_monad_lax_algebra(Mode::List)
+    th_list_lax_algebra(List::Plain)
 }
 
 /// The theory of strict symmetric monoidal categories.
 pub fn th_sym_monoidal_category() -> UstrModalDblTheory {
-    th_monad_algebra(Mode::SymList)
+    th_list_algebra(List::Symmetric)
 }
 
-/** The theory of a strict monad algebra.
+/** The theory of a strict algebra of a list monad.
 
-This is a modal double theory, parametric over the monad used.
+This is a modal double theory, parametric over which variant of the double list
+monad is used.
  */
-fn th_monad_algebra(mode: Mode) -> UstrModalDblTheory {
+fn th_list_algebra(list: List) -> UstrModalDblTheory {
+    let m = Modality::List(list);
     let mut th: UstrModalDblTheory = Default::default();
     let (x, a) = (ustr("Object"), ustr("Mul"));
     th.add_ob_type(x);
-    th.add_ob_op(a, ModeApp::new(x).apply(mode), ModeApp::new(x));
+    th.add_ob_op(a, ModeApp::new(x).apply(m), ModeApp::new(x));
     th.equate_ob_ops(
-        Path::pair(ModeApp::new(a.into()).apply(mode), ModeApp::new(a.into())),
-        Path::pair(ModeApp::new(ModalEdge::Mul(mode, 2, ModeApp::new(x))), ModeApp::new(a.into())),
+        Path::pair(ModeApp::new(a.into()).apply(m), ModeApp::new(a.into())),
+        Path::pair(ModeApp::new(ModalOp::Concat(list, 2, ModeApp::new(x))), ModeApp::new(a.into())),
     );
     th.equate_ob_ops(
         Path::empty(ModeApp::new(x)),
-        Path::pair(ModeApp::new(ModalEdge::Mul(mode, 0, ModeApp::new(x))), ModeApp::new(a.into())),
+        Path::pair(ModeApp::new(ModalOp::Concat(list, 0, ModeApp::new(x))), ModeApp::new(a.into())),
     );
     th
 }
 
-/// The theory of a lax monad algebra.
-fn th_monad_lax_algebra(mode: Mode) -> UstrModalDblTheory {
+/// The theory of a lax algebra over a list monad.
+fn th_list_lax_algebra(list: List) -> UstrModalDblTheory {
+    let m = Modality::List(list);
     let mut th: UstrModalDblTheory = Default::default();
     let (x, a) = (ustr("Object"), ustr("Mul"));
     th.add_ob_type(x);
-    th.add_ob_op(a, ModeApp::new(x).apply(mode), ModeApp::new(x));
+    th.add_ob_op(a, ModeApp::new(x).apply(m), ModeApp::new(x));
     th.add_special_mor_op(
         ustr("Associator"),
-        Path::pair(ModeApp::new(a.into()).apply(mode), ModeApp::new(a.into())),
-        Path::pair(ModeApp::new(ModalEdge::Mul(mode, 2, ModeApp::new(x))), ModeApp::new(a.into())),
+        Path::pair(ModeApp::new(a.into()).apply(m), ModeApp::new(a.into())),
+        Path::pair(ModeApp::new(ModalOp::Concat(list, 2, ModeApp::new(x))), ModeApp::new(a.into())),
     );
     th.add_special_mor_op(
         ustr("Unitor"),
         Path::empty(ModeApp::new(x)),
-        Path::pair(ModeApp::new(ModalEdge::Mul(mode, 0, ModeApp::new(x))), ModeApp::new(a.into())),
+        Path::pair(ModeApp::new(ModalOp::Concat(list, 0, ModeApp::new(x))), ModeApp::new(a.into())),
     );
     // TODO: Coherence equations
     th
