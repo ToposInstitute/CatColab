@@ -140,7 +140,7 @@ impl CanElaborate<ObOp, ModalObOp<Ustr>> for Elaborator {
     }
 }
 
-fn promote_modality(modality: Modality) -> theory::Modality {
+pub(crate) fn promote_modality(modality: Modality) -> theory::Modality {
     match modality {
         Modality::Discrete => theory::Modality::Discrete(),
         Modality::Codiscrete => theory::Modality::Codiscrete(),
@@ -237,7 +237,7 @@ impl CanQuote<ModalMorType<Ustr>, MorType> for Quoter {
     }
 }
 
-fn demote_modality(modality: theory::Modality) -> Modality {
+pub(crate) fn demote_modality(modality: theory::Modality) -> Modality {
     match modality {
         theory::Modality::Discrete() => Modality::Discrete,
         theory::Modality::Codiscrete() => Modality::Codiscrete,
