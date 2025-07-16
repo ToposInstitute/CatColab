@@ -29,6 +29,8 @@ import Trash2 from "lucide-solid/icons/trash-2";
 
 import "./notebook_cell.css";
 
+type ClosestEdge = "top" | "bottom" | null;
+
 /** Actions invokable *within* a cell but affecting the larger notebook state.
 
 Through these functions, a cell can request to perform an action on the notebook
@@ -78,9 +80,10 @@ export type CellDragData = {
 };
 
 /** Create drag-and-drop data for a notebook cell. */
-const createCellDragData = (cellId: Uuid) => ({
+const createCellDragData = (cellId: Uuid, index: number) => ({
     [cellDragDataKey]: true,
     cellId,
+    index,
 });
 
 /** Check whether the drag data is of notebook cell type. */
@@ -95,9 +98,12 @@ the cell is rendered by its children.
  */
 export function NotebookCell(props: {
     cellId: Uuid;
+    index: number;
     actions: CellActions;
     children: JSX.Element;
     tag?: string;
+    currentDropTarget: string | null;
+    setCurrentDropTarget: (cellId: string | null) => void;
 }) {
     let rootRef!: HTMLDivElement;
     let handleRef!: HTMLButtonElement;
@@ -134,11 +140,22 @@ export function NotebookCell(props: {
         },
     ];
 
+    const [closestEdge, setClosestEdge] = createSignal<ClosestEdge>(null);
+    const [dropTarget, setDropTarget] = createSignal(false);
+
+    const isActiveDropTarget = () => props.currentDropTarget === props.cellId;
+    createEffect(() => {
+        if (!isActiveDropTarget()) {
+            setClosestEdge(null);
+            setDropTarget(false);
+        }
+    });
+
     createEffect(() => {
         const cleanup = combine(
             draggable({
                 element: handleRef,
-                getInitialData: () => createCellDragData(props.cellId),
+                getInitialData: () => createCellDragData(props.cellId, props.index),
             }),
             dropTargetForElements({
                 element: rootRef,
@@ -147,12 +164,29 @@ export function NotebookCell(props: {
                     return isCellDragData(source.data);
                 },
                 getData({ input }) {
-                    const data = createCellDragData(props.cellId);
+                    const data = createCellDragData(props.cellId, props.index);
                     return attachClosestEdge(data, {
                         element: rootRef,
                         input,
                         allowedEdges: ["top", "bottom"],
                     });
+                },
+                onDragEnter(args) {
+                    const sourceIndex = args.source.data.index as number;
+                    const targetIndex = args.self.data.index as number;
+                    if (sourceIndex === targetIndex) {
+                        setClosestEdge(null);
+                        setDropTarget(false);
+                    } else {
+                        props.setCurrentDropTarget(props.cellId);
+                        const edge = sourceIndex < targetIndex ? "bottom" : "top";
+                        setClosestEdge(edge);
+                        setDropTarget(true);
+                    }
+                },
+                onDrop() {
+                    setDropTarget(false);
+                    setClosestEdge(null);
                 },
             }),
         );
@@ -194,7 +228,15 @@ export function NotebookCell(props: {
                     </Popover.Portal>
                 </Popover>
             </div>
-            <div class="cell-content">{props.children}</div>
+            <div class="cell-content">
+                <Show when={dropTarget() && closestEdge() === "top"}>
+                    <div class="drop-indicator-with-dots" />
+                </Show>
+                {props.children}
+                <Show when={dropTarget() && closestEdge() === "bottom"}>
+                    <div class="drop-indicator-with-dots" />
+                </Show>
+            </div>
             <Show when={props.tag}>
                 <div class="cell-tag">{props.tag}</div>
             </Show>
