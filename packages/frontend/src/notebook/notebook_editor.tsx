@@ -180,7 +180,13 @@ export function NotebookEditor<T>(props: {
         createShortcut(["Shift", "Enter"], () => addAfterActiveCell(newStemCell()));
     });
 
-    // Set up drag and drop of notebook cells. Rather than have each cell's `onDragEnter` and `onDragLeve` callbacks compete (which causes UI unpleasantness like jittering), each cell instead reports whether it is the valid drop target to the notebook state. Instead, the `onDragLeave` callback is reserved solely for the notebook; if a cell is not a valid target but the notebook is, the drop target will store the last valid cell in the `tether` signal which be used as a default in the case where the dragging goes above the cell list.
+    // Set up drag and drop of notebook cells. Rather than have each cell's
+    // `onDragEnter` and `onDragLeave` callbacks compete (causing jittering),
+    // each cell reports whether it is the valid drop target to the notebook
+    // state. The `onDragLeave` callback is reserved solely for the notebook; if
+    // a cell is not a valid target but the notebook is, the drop target will
+    // store the last valid cell in the `tether` signal which be used as a
+    // default in the case where the dragging goes above the cell list.
     createEffect(() => {
         const cleanup = combine(
             monitorForElements({

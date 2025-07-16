@@ -174,18 +174,15 @@ export function NotebookCell(props: {
                 onDragEnter(args) {
                     const sourceIndex = args.source.data.index as number;
                     const targetIndex = args.self.data.index as number;
-
                     if (sourceIndex === targetIndex) {
                         setClosestEdge(null);
                         setDropTarget(false);
-                        return;
+                    } else {
+                        props.setCurrentDropTarget(props.cellId);
+                        const edge = sourceIndex < targetIndex ? "bottom" : "top";
+                        setClosestEdge(edge);
+                        setDropTarget(true);
                     }
-
-                    props.setCurrentDropTarget(props.cellId);
-
-                    const edge = sourceIndex < targetIndex ? "bottom" : "top";
-                    setClosestEdge(edge);
-                    setDropTarget(true);
                 },
                 onDrop() {
                     setDropTarget(false);
