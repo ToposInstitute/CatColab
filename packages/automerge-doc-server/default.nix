@@ -1,11 +1,16 @@
 {
   pkgs,
+  inputs,
   ...
 }:
 let
   packageJson = builtins.fromJSON (builtins.readFile ./package.json);
   name = packageJson.name;
   version = packageJson.version;
+
+  pkgsUnstable = import inputs.nixpkgsUnstable {
+    system = "x86_64-linux";
+  };
 in
 pkgs.stdenv.mkDerivation {
   pname = name;
@@ -46,14 +51,15 @@ pkgs.stdenv.mkDerivation {
     makeWrapper ${pkgs.nodejs_23}/bin/node $out/bin/${name} --add-flags "$out/main.cjs"
   '';
 
-  pnpmDeps = pkgs.pnpm_9.fetchDeps {
+  pnpmDeps = pkgsUnstable.pnpm_9.fetchDeps {
     pname = name;
-    version = version;
+
+    fetcherVersion = "2";
     src = ./.;
 
     # See README.md
     # hash = pkgs.lib.fakeHash;
-    hash = "sha256-qqZCQn0QFbqVsu/TCuye6oVL3ZIYU+blHB2b43K5xPA=";
+    hash = "sha256-CgGi7IlhcBBVXpD78qTun0Dawb/zBjTX4SEaw6ES0hs=";
   };
 
   meta.mainProgram = name;

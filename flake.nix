@@ -13,14 +13,18 @@
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    nixpkgsUnstable = {
+      # TODO: update this to nixos-unstable the next time someone looks at this (required changes haven't
+      # landed yet, but should really soon)
+      url = "github:NixOS/nixpkgs/master";
+    };
   };
 
   outputs =
     {
       self,
       nixpkgs,
-      crate2nix,
-      agenix,
       deploy-rs,
       fenix,
       ...
@@ -135,7 +139,6 @@
           system = linuxSystem;
           modules = [
             ./infrastructure/hosts/catcolab
-            agenix.nixosModules.age
           ];
           pkgs = pkgsLinux;
         };
@@ -144,9 +147,14 @@
           system = linuxSystem;
           modules = [
             ./infrastructure/hosts/catcolab-next
-            agenix.nixosModules.age
           ];
           pkgs = pkgsLinux;
+        };
+
+        catcolab-vm = nixpkgs.lib.nixosSystem {
+          system = linuxSystem;
+          modules = [ ./infrastructure/hosts/catcolab-vm ];
+          specialArgs = { inherit inputs rustToolchain; };
         };
       };
 
@@ -154,6 +162,8 @@
         catcolab = {
           hostname = "backend.catcolab.org";
           profiles.system = {
+            # TODO: can be changed to catcolab after the next deploy (the host needs to first update the
+            # permissions of the catcolab user)
             sshUser = "root";
             path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab;
           };
@@ -161,10 +171,61 @@
         catcolab-next = {
           hostname = "backend-next.catcolab.org";
           profiles.system = {
-            sshUser = "root";
+            sshUser = "catcolab";
+            user = "root";
             path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab-next;
           };
         };
+      };
+
+      # The backend relies on Firebase, so tests require VM internet access. Enable networking by running
+      # with --no-sandbox.
+      # Docs for nixos tests: https://nixos.org/manual/nixos/stable/index.html#sec-nixos-test-nodes
+      # (google and LLMs are useless)
+      checks.x86_64-linux.integrationTests = nixpkgs.legacyPackages.x86_64-linux.testers.runNixOSTest {
+        name = "Integration Tests";
+
+        skipTypeCheck = true;
+        nodes = {
+          catcolab = import ./infrastructure/hosts/catcolab-vm;
+        };
+
+        node.specialArgs = {
+          inherit rustToolchain inputs;
+        };
+
+        testScript = ''
+          def dump_logs(machine, *units):
+              for u in units:
+                  print(f"\n===== journal for {u} =====")
+                  print(machine.succeed(f"journalctl -u {u} --no-pager"))
+
+          def test_service(machine, service):
+              try:
+                  machine.wait_for_unit(service)
+              except:
+                  dump_logs(machine, service)
+                  raise
+
+          def test_oneshot_service(machine, service):
+              try:
+                  machine.wait_until_succeeds(
+                      f"test $(systemctl is-active {service}) = inactive"
+                  )
+              except:
+                  dump_logs(machine, service)
+                  raise
+
+          test_oneshot_service(catcolab, "database-setup.service")
+          test_oneshot_service(catcolab, "migrations.service")
+
+          test_service(catcolab, "automerge.service");
+          test_service(catcolab, "backend.service");
+          test_service(catcolab, "caddy.service");
+
+          catcolab.start_job("backupdb.service")
+          test_oneshot_service(catcolab, "backupdb.service")
+        '';
       };
     };
 }

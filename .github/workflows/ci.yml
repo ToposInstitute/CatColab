@@ -95,3 +95,21 @@ jobs:
       - name: Format/linting/import sorting
         run: |
           pnpm --filter "./packages/*" run ci
+
+  run_nix_tests:
+    name: "nixos integration tests"
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    # Setup Nix and Nix cache, copied in deploy.yml
+    - uses: nixbuild/nix-quick-install-action@v31
+    # - name: Restore and save Nix store
+    #   uses: nix-community/cache-nix-action@v6
+    #   with:
+    #     # restore and save a cache using this key
+    #     primary-key: nix-${{ runner.os }}-${{ hashFiles('**/*.nix', '**/flake.lock') }}
+    #     # if there's no cache hit, restore a cache by this prefix
+    #     restore-prefixes-first-match: nix-${{ runner.os }}-
+
+    - run: nix flake check --no-sandbox
