@@ -1,4 +1,4 @@
-import { createSignal, useContext } from "solid-js";
+import { createMemo, createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { NameInput } from "../components";
@@ -28,13 +28,31 @@ export function MorphismCellEditor(props: {
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
     const theory = () => liveModel().theory();
+    const morTypeMeta = () => theory().modelMorTypeMeta(props.morphism.morType);
 
-    const domType = () => theory().theory.src(props.morphism.morType);
-    const codType = () => theory().theory.tgt(props.morphism.morType);
+    const domType = createMemo(() => {
+        const op = morTypeMeta()?.domain?.apply;
+        if (op === undefined) {
+            return theory().theory.src(props.morphism.morType);
+        } else {
+            // Codomain type for operation should equal source type above.
+            return theory().theory.dom(op);
+        }
+    });
+
+    const codType = createMemo(() => {
+        const op = morTypeMeta()?.codomain?.apply;
+        if (op === undefined) {
+            return theory().theory.tgt(props.morphism.morType);
+        } else {
+            // Codomain type for operation should equal target type above.
+            return theory().theory.dom(op);
+        }
+    });
+
     const domClasses = () => ["morphism-decl-dom", ...obClasses(theory(), domType())];
     const codClasses = () => ["morphism-decl-cod", ...obClasses(theory(), codType())];
 
-    const morTypeMeta = () => theory().modelMorTypeMeta(props.morphism.morType);
     const nameClasses = () => [
         "morphism-decl-name",
         arrowStyles.arrowName,
@@ -63,6 +81,7 @@ export function MorphismCellEditor(props: {
                         });
                     }}
                     obType={domType()}
+                    applyOp={morTypeMeta()?.domain?.apply}
                     invalid={errors().some((err) => err.tag === "Dom" || err.tag === "DomType")}
                     deleteForward={() => nameRef()?.focus()}
                     exitBackward={() => nameRef()?.focus()}
@@ -108,6 +127,7 @@ export function MorphismCellEditor(props: {
                         });
                     }}
                     obType={codType()}
+                    applyOp={morTypeMeta()?.codomain?.apply}
                     invalid={errors().some((err) => err.tag === "Cod" || err.tag === "CodType")}
                     deleteBackward={() => nameRef()?.focus()}
                     exitBackward={() => domRef.focus()}

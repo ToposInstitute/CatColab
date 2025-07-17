@@ -1,6 +1,6 @@
 import Popover from "@corvu/popover";
 import { focus } from "@solid-primitives/active-element";
-import { type JSX, type Setter, createSignal } from "solid-js";
+import { type JSX, createSignal } from "solid-js";
 focus;
 
 import { type Completion, Completions, type CompletionsRef } from "./completions";
@@ -10,7 +10,7 @@ import "./inline_input.css";
 /** Optional props for `InlineInput` component.
  */
 export type InlineInputOptions = {
-    ref?: HTMLInputElement | Setter<HTMLInputElement | undefined>;
+    ref?: HTMLInputElement | ((el: HTMLInputElement) => void);
     placeholder?: string;
     status?: InlineInputErrorStatus;
     completions?: Completion[];
@@ -25,6 +25,7 @@ export type InlineInputOptions = {
     exitDown?: () => void;
     exitLeft?: () => void;
     exitRight?: () => void;
+    insertForward?: (evt: KeyboardEvent) => boolean;
     onFocus?: () => void;
 };
 
@@ -45,7 +46,7 @@ export function InlineInput(
     const [isCompletionsOpen, setCompletionsOpen] = createSignal(false);
     const [completionsRef, setCompletionsRef] = createSignal<CompletionsRef>();
 
-    const onKeyDown: JSX.EventHandlerUnion<HTMLInputElement, KeyboardEvent> = (evt) => {
+    const onKeyDown: JSX.EventHandler<HTMLInputElement, KeyboardEvent> = (evt) => {
         const remaining = completionsRef()?.remainingCompletions() ?? [];
         const value = evt.currentTarget.value;
         if (props.deleteBackward && evt.key === "Backspace" && !value) {
@@ -68,6 +69,11 @@ export function InlineInput(
             evt.currentTarget.selectionStart === value.length
         ) {
             props.exitRight();
+        } else if (
+            props.insertForward &&
+            evt.currentTarget.selectionStart === value.length &&
+            props.insertForward(evt)
+        ) {
         } else if (evt.key === "ArrowUp") {
             if (remaining.length > 0 && isCompletionsOpen()) {
                 completionsRef()?.previousPresumptive();

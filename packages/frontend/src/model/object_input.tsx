@@ -1,30 +1,81 @@
-import { splitProps, useContext } from "solid-js";
+import deepEqualJSON from "deep-equal-json";
+import { type Component, splitProps, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 import { P, match } from "ts-pattern";
 
-import type { MorType, Ob, ObType, Uuid } from "catlog-wasm";
+import type { MorType, Ob, ObOp, ObType, Uuid } from "catlog-wasm";
 import { IdInput, type IdInputOptions, ObIdInput } from "../components";
 import { LiveModelContext } from "./context";
-
-type ObInputProps = {
-    ob: Ob | null;
-    setOb: (ob: Ob | null) => void;
-    obType?: ObType;
-};
+import type { ObInputProps } from "./editor_types";
+import { ObListEditor } from "./object_list_editor";
 
 /** Input an object that already exists in a model.
  */
-export function ObInput(allProps: ObInputProps & IdInputOptions) {
-    const [props, otherProps] = splitProps(allProps, ["obType"]);
+export function ObInput(
+    allProps: ObInputProps &
+        IdInputOptions & {
+            /** Operation to apply to the object afterwards, if any. */
+            applyOp?: ObOp;
+        },
+) {
+    const [props, otherProps] = splitProps(allProps, ["ob", "setOb", "obType", "applyOp"]);
+
+    const ob = () => {
+        if (props.applyOp) {
+            return props.ob?.tag === "App" && deepEqualJSON(props.ob.content.op, props.applyOp)
+                ? props.ob.content.ob
+                : null;
+        } else {
+            return props.ob;
+        }
+    };
+
+    const setOb = (ob: Ob | null) => {
+        if (ob && props.applyOp) {
+            props.setOb({
+                tag: "App",
+                content: {
+                    op: props.applyOp,
+                    ob,
+                },
+            });
+        } else {
+            props.setOb(ob);
+        }
+    };
 
     return (
         <Dynamic
-            component={props.obType ? object_input_components[props.obType.tag] : () => <></>}
+            component={obEditorForType(props.obType)}
+            ob={ob()}
+            setOb={setOb}
             obType={props.obType}
             {...otherProps}
         />
     );
+}
+
+function obEditorForType(obType: ObType): Component<ObInputProps> {
+    if (obType.tag === "Basic") {
+        return BasicObInput;
+    } else if (obType.tag === "Tabulator") {
+        return TabulatedMorInput;
+    } else if (obType.tag === "ModeApp") {
+        switch (obType.content.modality) {
+            case "Discrete":
+            case "Codiscrete":
+                return obEditorForType(obType.content.obType);
+            case "List":
+            case "SymmetricList":
+            case "CoproductList":
+            case "ProductList":
+            case "BiproductList": {
+                return ObListEditor;
+            }
+        }
+    }
+    throw new Error(`No editor for object of type: ${obType}`);
 }
 
 /** Input a basic object via its human-readable name.
@@ -36,7 +87,7 @@ function BasicObInput(allProps: ObInputProps & IdInputOptions) {
     invariant(liveModel, "Live model should be provided as context");
 
     const completions = (): Ob[] | undefined =>
-        props.obType && liveModel().validatedModel()?.model.objectsWithType(props.obType);
+        liveModel().validatedModel()?.model.objectsWithType(props.obType);
 
     return (
         <ObIdInput
@@ -130,11 +181,3 @@ function TabulatedMorInput(allProps: ObInputProps & IdInputOptions) {
         />
     );
 }
-
-const object_input_components = {
-    Basic: BasicObInput,
-    Tabulator: TabulatedMorInput,
-    ModeApp: () => {
-        throw new Error("Component for modal object type not implemented");
-    },
-};

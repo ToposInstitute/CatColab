@@ -686,3 +686,45 @@ stdTheories.add(
         });
     },
 );
+
+stdTheories.add(
+    {
+        id: "petri-net",
+        name: "Petri net",
+        description: "Place/transition networks",
+        group: "Systems",
+    },
+    (meta) => {
+        const thSymMonoidalCategory = new catlog.ThSymMonoidalCategory();
+        return new Theory({
+            ...meta,
+            theory: thSymMonoidalCategory.theory(),
+            onlyFreeModels: true,
+            modelTypes: [
+                {
+                    tag: "ObType",
+                    obType: { tag: "Basic", content: "Object" },
+                    name: "Place",
+                    description: "State of the system",
+                    shortcut: ["P"],
+                },
+                {
+                    tag: "MorType",
+                    morType: {
+                        tag: "Hom",
+                        content: { tag: "Basic", content: "Object" },
+                    },
+                    name: "Transition",
+                    description: "Event causing change of state",
+                    shortcut: ["T"],
+                    domain: {
+                        apply: { tag: "Basic", content: "tensor" },
+                    },
+                    codomain: {
+                        apply: { tag: "Basic", content: "tensor" },
+                    },
+                },
+            ],
+        });
+    },
+);
