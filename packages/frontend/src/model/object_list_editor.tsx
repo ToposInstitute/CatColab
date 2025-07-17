@@ -99,18 +99,31 @@ export function ObListEditor(props: ObListEditorProps) {
                                     objects.splice(i, 1);
                                 });
                             }}
-                            insertForward={(evt) => {
-                                if (evt.key !== props.insertKey) {
-                                    return false;
-                                }
-                                updateObList((objects) => {
-                                    objects.splice(i + 1, 0, null);
-                                });
-                                inputRefs[i + 1]?.focus();
-                                return true;
-                            }}
                             exitLeft={() => inputRefs[i - 1]?.focus()}
                             exitRight={() => inputRefs[i + 1]?.focus()}
+                            interceptKeyDown={(evt) => {
+                                if (evt.key === props.insertKey) {
+                                    updateObList((objects) => {
+                                        objects.splice(i + 1, 0, null);
+                                    });
+                                    inputRefs[i + 1]?.focus();
+                                } else if (evt.key === "Home" && !evt.shiftKey) {
+                                    const ref = inputRefs[0];
+                                    if (ref) {
+                                        ref.focus();
+                                        ref.selectionEnd = 0;
+                                    }
+                                } else if (evt.key === "End" && !evt.shiftKey) {
+                                    const ref = inputRefs[obList().length - 1];
+                                    if (ref) {
+                                        ref.focus();
+                                        ref.selectionStart = ref.value.length;
+                                    }
+                                } else {
+                                    return false;
+                                }
+                                return true;
+                            }}
                         />
                     </li>
                 )}

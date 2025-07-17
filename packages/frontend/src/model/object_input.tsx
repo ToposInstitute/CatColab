@@ -1,4 +1,4 @@
-import deepEqualJSON from "deep-equal-json";
+import { deepEqual } from "fast-equals";
 import { type Component, splitProps, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
@@ -23,7 +23,7 @@ export function ObInput(
 
     const ob = () => {
         if (props.applyOp) {
-            return props.ob?.tag === "App" && deepEqualJSON(props.ob.content.op, props.applyOp)
+            return props.ob?.tag === "App" && deepEqual(props.ob.content.op, props.applyOp)
                 ? props.ob.content.ob
                 : null;
         } else {
