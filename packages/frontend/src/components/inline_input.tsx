@@ -25,9 +25,11 @@ export type InlineInputOptions = {
     exitDown?: () => void;
     exitLeft?: () => void;
     exitRight?: () => void;
-    insertForward?: (evt: KeyboardEvent) => boolean;
     onFocus?: () => void;
+    interceptKeyDown?: (evt: InputElementKeyboardEvent) => boolean;
 };
+
+type InputElementKeyboardEvent = Parameters<JSX.EventHandler<HTMLInputElement, KeyboardEvent>>[0];
 
 /** Error status for `InlineInput` component.
  */
@@ -49,7 +51,8 @@ export function InlineInput(
     const onKeyDown: JSX.EventHandler<HTMLInputElement, KeyboardEvent> = (evt) => {
         const remaining = completionsRef()?.remainingCompletions() ?? [];
         const value = evt.currentTarget.value;
-        if (props.deleteBackward && evt.key === "Backspace" && !value) {
+        if (props.interceptKeyDown?.(evt)) {
+        } else if (props.deleteBackward && evt.key === "Backspace" && !value) {
             props.deleteBackward();
         } else if (props.deleteForward && evt.key === "Delete" && !value) {
             props.deleteForward();
@@ -69,11 +72,6 @@ export function InlineInput(
             evt.currentTarget.selectionStart === value.length
         ) {
             props.exitRight();
-        } else if (
-            props.insertForward &&
-            evt.currentTarget.selectionStart === value.length &&
-            props.insertForward(evt)
-        ) {
         } else if (evt.key === "ArrowUp") {
             if (remaining.length > 0 && isCompletionsOpen()) {
                 completionsRef()?.previousPresumptive();
