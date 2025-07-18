@@ -28,9 +28,33 @@ form button {
     gap: 0.25rem;
 }
 
+/* NEW: Add hover states to form buttons */
+form button:hover:enabled {
+    background: #f8f9fa;
+    border-color: #d0d0d0;
+}
+
+/* NEW: Add focus states for accessibility */
+form button:focus {
+    outline: 2px solid #2e8b57;
+    outline-offset: 2px;
+}
+
+/* NEW: Add disabled state */
+form button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
 form button.utility {
     border: 1px solid #e0e0e0;
     border-radius: 6px;
+}
+
+/* NEW: Specific hover for utility buttons */
+form button.utility:hover:enabled {
+    background: #f8f9fa;
+    border-color: #d0d0d0;
 }
 
 form button[type="submit"],
@@ -39,6 +63,13 @@ form button.ok {
     background: #2e8b57;
     border: 1px solid darkgreen;
     border-radius: 6px;
+}
+
+/* NEW: Hover for submit/ok buttons */
+form button[type="submit"]:hover:enabled,
+form button.ok:hover:enabled {
+    background: #267049;
+    border-color: #1e5a39;
 }
 
 form .error {
