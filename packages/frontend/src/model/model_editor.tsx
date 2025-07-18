@@ -1,8 +1,7 @@
 import { useParams } from "@solidjs/router";
+import type { ModelJudgment } from "catlog-wasm";
 import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
-
-import type { ModelJudgment } from "catlog-wasm";
 import { useApi } from "../api";
 import { InlineInput } from "../components";
 import {
@@ -34,6 +33,11 @@ import {
     newMorphismDecl,
     newObjectDecl,
 } from "./types";
+
+import { getAuth } from "firebase/auth";
+import { useAuth, useFirebaseApp } from "solid-firebase";
+import { createSignal } from "solid-js";
+import { WelcomeOverlay } from "./welcome_overlay";
 
 import "./model_editor.css";
 
@@ -131,8 +135,20 @@ export function ModelNotebookEditor(props: {
     const cellConstructors = () =>
         (props.liveModel.theory().modelTypes ?? []).map(modelCellConstructor);
 
+    const firebaseApp = useFirebaseApp();
+    const auth = useAuth(getAuth(firebaseApp));
+
+    const [isOverlayOpen, setOverlayOpen] = createSignal(
+        props.liveModel.liveDoc.doc.notebook.cells.length === 0 && auth.data == null,
+    );
+
+    const toggleOverlay = () => {
+        setOverlayOpen(!isOverlayOpen());
+    };
+
     return (
         <LiveModelContext.Provider value={() => props.liveModel}>
+            <WelcomeOverlay isOpen={isOverlayOpen()} onClose={toggleOverlay} />
             <NotebookEditor
                 handle={liveDoc().docHandle}
                 path={["notebook"]}
