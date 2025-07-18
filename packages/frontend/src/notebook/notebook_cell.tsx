@@ -29,42 +29,52 @@ import Trash2 from "lucide-solid/icons/trash-2";
 
 import "./notebook_cell.css";
 
-type ClosestEdge = "top" | "bottom" | null;
+/** Props available to all notebook cell editors. */
+export type CellEditorProps = {
+    /** Is the cell requested to be active?
 
-/** Actions invokable *within* a cell but affecting the larger notebook state.
+    When this prop changes to `true`, the cell is authorizeed to grab the focus.
+     */
+    isActive: boolean;
 
-Through these functions, a cell can request to perform an action on the notebook
-or inform the notebook that an action has occcured within the cell.
+    /** Actions invokable within the cell. */
+    actions: CellActions;
+};
+
+/** Actions invokable *within* a cell but affecting the overall notebook state.
+
+Using these functions, a cell can request to perform an action on the notebook
+such as deleting or moving itself.
 */
 export type CellActions = {
-    // Activate the cell above this one.
+    /** Activate the cell above this one. */
     activateAbove: () => void;
 
-    // Activate the cell below this one.
+    /** Activate the cell below this one. */
     activateBelow: () => void;
 
-    // Create a new stem cell above this one.
+    /** Create a new stem cell above this one. */
     createAbove: () => void;
 
-    // Create a new stem cell below this one.
+    /** Create a new stem cell below this one. */
     createBelow: () => void;
 
-    // Delete this cell in the backward/upward direction.
+    /** Delete this cell in the backward/upward direction. */
     deleteBackward: () => void;
 
-    // Delete this cell in the forward/downward direction.
+    /** Delete this cell in the forward/downward direction. */
     deleteForward: () => void;
 
-    // Duplicate this cell, adding the new cell below this one.
+    /** Duplicate this cell, adding the new cell below this one. */
     duplicate: () => void;
 
-    // Move this cell up, if possible.
+    /** Move this cell up, if possible. */
     moveUp: () => void;
 
-    // Move this cell down, if possible.
+    /** Move this cell down, if possible. */
     moveDown: () => void;
 
-    // The cell has received focus.
+    /** The cell has received focus. */
     hasFocused: () => void;
 };
 
@@ -90,6 +100,8 @@ const createCellDragData = (cellId: Uuid, index: number) => ({
 export function isCellDragData(data: Record<string | symbol, unknown>): data is CellDragData {
     return Boolean(data[cellDragDataKey]);
 }
+
+type ClosestEdge = "top" | "bottom" | null;
 
 /** An individual cell in a notebook.
 
@@ -246,13 +258,13 @@ export function NotebookCell(props: {
 
 /** Editor for rich text cells, a simple wrapper around `RichTextEditor`.
  */
-export function RichTextCellEditor(props: {
-    cellId: Uuid;
-    handle: DocHandle<unknown>;
-    path: Prop[];
-    isActive: boolean;
-    actions: CellActions;
-}) {
+export function RichTextCellEditor(
+    props: CellEditorProps & {
+        cellId: Uuid;
+        handle: DocHandle<unknown>;
+        path: Prop[];
+    },
+) {
     const [editorView, setEditorView] = createSignal<EditorView>();
 
     createEffect(() => {
@@ -280,11 +292,11 @@ export function RichTextCellEditor(props: {
 
 /** Editor for stem cells; cells that have not been differentiated yet.
  */
-export function StemCellEditor(props: {
-    completions: Completion[];
-    isActive: boolean;
-    actions: CellActions;
-}) {
+export function StemCellEditor(
+    props: CellEditorProps & {
+        completions: Completion[];
+    },
+) {
     const [text, setText] = createSignal("");
 
     const [ref, setRef] = createSignal<HTMLInputElement>();
@@ -296,23 +308,21 @@ export function StemCellEditor(props: {
             ref={setRef}
             text={text()}
             setText={setText}
+            placeholder="Select cell type"
             completions={props.completions}
             showCompletionsOnFocus={true}
             deleteBackward={props.actions.deleteBackward}
             deleteForward={props.actions.deleteForward}
             exitUp={props.actions.activateAbove}
             exitDown={props.actions.activateBelow}
-            onFocus={props.actions.hasFocused}
-            placeholder="Select cell type"
+            hasFocused={props.actions.hasFocused}
         />
     );
 }
 
 /** Interface for editors of cells with formal content.
  */
-export type FormalCellEditorProps<T> = {
+export type FormalCellEditorProps<T> = CellEditorProps & {
     content: T;
     changeContent: (f: (content: T) => void) => void;
-    isActive: boolean;
-    actions: CellActions;
 };

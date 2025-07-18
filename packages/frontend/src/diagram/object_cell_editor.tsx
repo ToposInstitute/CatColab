@@ -42,7 +42,7 @@ export function DiagramObjectCellEditor(props: {
                 exitUp={props.actions.activateAbove}
                 exitDown={props.actions.activateBelow}
                 exitRight={() => obRef.focus()}
-                onFocus={props.actions.hasFocused}
+                hasFocused={props.actions.hasFocused}
             />
             <span class="is-a" />
             <ObInput
@@ -58,7 +58,7 @@ export function DiagramObjectCellEditor(props: {
                 exitUp={props.actions.activateAbove}
                 exitDown={props.actions.activateBelow}
                 exitLeft={() => nameRef()?.focus()}
-                onFocus={props.actions.hasFocused}
+                hasFocused={props.actions.hasFocused}
             />
         </div>
     );
