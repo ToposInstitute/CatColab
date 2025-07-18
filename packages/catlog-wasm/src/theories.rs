@@ -324,7 +324,14 @@ mod tests {
     #[test]
     fn modal_theory() {
         let th = ThSymMonoidalCategory::new().theory();
-        let list_x = ObType::ModeApp(Modality::List, ObType::Basic(ustr("Object")).into());
-        assert_eq!(th.src(MorType::Hom(list_x.clone().into())), Ok(list_x));
+        let x = ObType::Basic(ustr("Object"));
+        let list_x = ObType::ModeApp {
+            modality: Modality::SymmetricList,
+            ob_type: x.clone().into(),
+        };
+        let tensor = ObOp::Basic(ustr("tensor"));
+        assert_eq!(th.src(MorType::Hom(list_x.clone().into())), Ok(list_x.clone()));
+        assert_eq!(th.dom(tensor.clone()), Ok(list_x));
+        assert_eq!(th.cod(tensor), Ok(x));
     }
 }

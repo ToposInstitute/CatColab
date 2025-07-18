@@ -45,6 +45,7 @@ use crate::one::{Category, FgCategory, InvalidPathEq, Path};
 
 pub use super::discrete::model::*;
 pub use super::discrete_tabulator::model::*;
+pub use super::modal::model::*;
 
 /** A model of a double theory.
 

@@ -1,6 +1,6 @@
 import type { KbdKey } from "@solid-primitives/keyboard";
 
-import type { DblTheory, MorType, ObType } from "catlog-wasm";
+import type { DblTheory, MorType, ObOp, ObType } from "catlog-wasm";
 import { MorTypeIndex, ObTypeIndex } from "catlog-wasm";
 import type { DiagramAnalysisComponent, ModelAnalysisComponent } from "../analysis";
 import { uniqueIndexArray } from "../util/indexing";
@@ -191,20 +191,6 @@ class TypeMetadata<ObMeta extends HasObTypeMeta, MorMeta extends HasMorTypeMeta>
     }
 }
 
-type HasObTypeMeta = {
-    tag: "ObType";
-
-    /** Object type in the underlying double theory. */
-    obType: ObType;
-};
-
-type HasMorTypeMeta = {
-    tag: "MorType";
-
-    /** Morphism type in the underlying double theory. */
-    morType: MorType;
-};
-
 /** Frontend metadata applicable to any type in a double theory. */
 export type BaseTypeMeta = {
     /** Human-readable name of type. */
@@ -226,34 +212,62 @@ export type BaseTypeMeta = {
     textClasses?: string[];
 };
 
+type HasObTypeMeta = {
+    tag: "ObType";
+
+    /** Object type in the underlying double theory. */
+    obType: ObType;
+};
+
+type HasMorTypeMeta = {
+    tag: "MorType";
+
+    /** Morphism type in the underlying double theory. */
+    morType: MorType;
+};
+
+type BaseObTypeMeta = BaseTypeMeta & HasObTypeMeta;
+type BaseMorTypeMeta = BaseTypeMeta & HasMorTypeMeta;
+
 /** Metadata for a type as used in models. */
 export type ModelTypeMeta = ModelObTypeMeta | ModelMorTypeMeta;
 
 /** Metadata for an object type as used in models. */
-export type ModelObTypeMeta = BaseTypeMeta & HasObTypeMeta;
+export type ModelObTypeMeta = BaseObTypeMeta;
 
-/** Metadata for aa morphism type as used in models. */
-export type ModelMorTypeMeta = BaseTypeMeta &
-    HasMorTypeMeta & {
-        /** Style of arrow to use for morphisms of this type. */
-        arrowStyle?: ArrowStyle;
+/** Metadata for a morphism type as used in models. */
+export type ModelMorTypeMeta = BaseMorTypeMeta & {
+    /** Style of arrow to use for morphisms of this type. */
+    arrowStyle?: ArrowStyle;
 
-        /** Whether morphisms of this type are typically unnamed.
+    /** Whether morphisms of this type are typically unnamed.
 
-        By default, morphisms (like objects) have names but for certain morphism
-        types in certain domains, it is common to leave them unnamed.
-        */
-        preferUnnamed?: boolean;
-    };
+    By default, morphisms (like objects) have names but for certain morphism
+    types in certain domains, it is common to leave them unnamed.
+     */
+    preferUnnamed?: boolean;
+
+    /** Metadata for domain of morphism of this type. */
+    domain?: MorDomainMeta;
+
+    /** Metadata for codomain of morphism of this type. */
+    codomain?: MorDomainMeta;
+};
+
+/** Metadata controlling the domain or codomain of a morphism. */
+export type MorDomainMeta = {
+    /** Domain object be application of this operation. */
+    apply?: ObOp;
+};
 
 /** Metadata for a type as used in instances of a model. */
 export type InstanceTypeMeta = InstanceObTypeMeta | InstanceMorTypeMeta;
 
 /** Metadata for an object type as used in instances. */
-export type InstanceObTypeMeta = BaseTypeMeta & HasObTypeMeta;
+export type InstanceObTypeMeta = BaseObTypeMeta;
 
 /** Metadata for a morphism type as used in instances. */
-export type InstanceMorTypeMeta = BaseTypeMeta & HasMorTypeMeta;
+export type InstanceMorTypeMeta = BaseMorTypeMeta;
 
 /** Specifies an analysis with descriptive metadata. */
 export type AnalysisMeta<T> = {
