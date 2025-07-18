@@ -1,10 +1,18 @@
-import { focus } from "@solid-primitives/active-element";
-import { Index, type JSX, type JSXElement, Show, mergeProps, useContext } from "solid-js";
+import {
+    Index,
+    type JSX,
+    Show,
+    batch,
+    createEffect,
+    createSignal,
+    mergeProps,
+    untrack,
+    useContext,
+} from "solid-js";
 import invariant from "tiny-invariant";
-focus;
 
 import type { Ob } from "catlog-wasm";
-import { type InputActions, ObIdInput } from "../components";
+import { type InputOptions, ObIdInput } from "../components";
 import { deepCopyJSON } from "../util/deepcopy";
 import { LiveModelContext } from "./context";
 import type { ObInputProps } from "./object_input";
@@ -12,10 +20,10 @@ import type { ObInputProps } from "./object_input";
 import "./object_list_editor.css";
 
 type ObListEditorProps = ObInputProps &
-    InputActions & {
+    InputOptions & {
         insertKey?: string;
         startDelimiter?: JSX.Element | string;
-        endDelimiter?: JSXElement | string;
+        endDelimiter?: JSX.Element | string;
         separator?: (index: number) => JSX.Element | string;
     };
 
@@ -34,7 +42,7 @@ export function ObListEditor(props: ObListEditorProps) {
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
 
-    const inputRefs: HTMLInputElement[] = [];
+    const [activeIndex, setActiveIndex] = createSignal<number>(0);
 
     const modeAppType = () => {
         if (props.obType.tag !== "ModeApp") {
@@ -73,15 +81,17 @@ export function ObListEditor(props: ObListEditorProps) {
         updateObList((objects) => {
             objects.splice(i, 0, null);
         });
-        inputRefs[i]?.focus();
+        setActiveIndex(i);
     };
 
     const completions = (): Ob[] | undefined =>
         liveModel().validatedModel()?.model.objectsWithType(modeAppType().content.obType);
 
-    const emptyListInput = () => (
-        <input class="empty-list-input" use:focus={(isFocused) => isFocused && insertNewOb(0)} />
-    );
+    createEffect(() => {
+        if (props.isActive && untrack(obList).length === 0) {
+            insertNewOb(0);
+        }
+    });
 
     return (
         <ul
@@ -89,19 +99,17 @@ export function ObListEditor(props: ObListEditorProps) {
             onMouseDown={(evt) => {
                 if (obList().length === 0) {
                     insertNewOb(0);
+                    props.hasFocused?.();
                     evt.preventDefault();
                 }
             }}
         >
             {props.startDelimiter}
-            <Index each={obList()} fallback={emptyListInput()}>
+            <Index each={obList()} fallback={<input class="empty-list-input" />}>
                 {(ob, i) => (
                     <li>
                         <Show when={i > 0 && props.separator}>{(sep) => sep()(i)}</Show>
                         <ObIdInput
-                            ref={(el) => {
-                                inputRefs[i] = el;
-                            }}
                             ob={ob()}
                             setOb={(ob) => {
                                 updateObList((objects) => {
@@ -111,23 +119,28 @@ export function ObListEditor(props: ObListEditorProps) {
                             placeholder={props.placeholder}
                             idToName={liveModel().objectIndex()}
                             completions={completions()}
-                            deleteBackward={() => {
-                                updateObList((objects) => {
-                                    objects.splice(i, 1);
-                                });
-                                if (i === 0) {
-                                    props.deleteBackward?.();
-                                } else {
-                                    inputRefs[i - 1]?.focus();
-                                }
-                            }}
+                            isActive={props.isActive && activeIndex() === i}
+                            deleteBackward={() =>
+                                batch(() => {
+                                    updateObList((objects) => {
+                                        objects.splice(i, 1);
+                                    });
+                                    if (i === 0) {
+                                        props.deleteBackward?.();
+                                    } else {
+                                        setActiveIndex(i - 1);
+                                    }
+                                })
+                            }
                             deleteForward={() => {
-                                updateObList((objects) => {
-                                    objects.splice(i, 1);
+                                batch(() => {
+                                    updateObList((objects) => {
+                                        objects.splice(i, 1);
+                                    });
+                                    if (i === 0) {
+                                        props.deleteForward?.();
+                                    }
                                 });
-                                if (i === obList().length - 1) {
-                                    props.deleteForward?.();
-                                }
                             }}
                             exitBackward={() => props.exitBackward?.()}
                             exitForward={() => props.exitForward?.()}
@@ -135,35 +148,31 @@ export function ObListEditor(props: ObListEditorProps) {
                                 if (i === 0) {
                                     props.exitLeft?.();
                                 } else {
-                                    inputRefs[i - 1]?.focus();
+                                    setActiveIndex(i - 1);
                                 }
                             }}
                             exitRight={() => {
                                 if (i === obList().length - 1) {
                                     props.exitRight?.();
                                 } else {
-                                    inputRefs[i + 1]?.focus();
+                                    setActiveIndex(i + 1);
                                 }
                             }}
                             interceptKeyDown={(evt) => {
                                 if (evt.key === props.insertKey) {
                                     insertNewOb(i + 1);
+                                    return true;
                                 } else if (evt.key === "Home" && !evt.shiftKey) {
-                                    const ref = inputRefs[0];
-                                    if (ref) {
-                                        ref.focus();
-                                        ref.selectionEnd = 0;
-                                    }
+                                    // TODO: Should move to beginning of input.
+                                    setActiveIndex(0);
                                 } else if (evt.key === "End" && !evt.shiftKey) {
-                                    const ref = inputRefs[obList().length - 1];
-                                    if (ref) {
-                                        ref.focus();
-                                        ref.selectionStart = ref.value.length;
-                                    }
-                                } else {
-                                    return false;
+                                    setActiveIndex(obList().length - 1);
                                 }
-                                return true;
+                                return false;
+                            }}
+                            hasFocused={() => {
+                                setActiveIndex(i);
+                                props.hasFocused?.();
                             }}
                         />
                     </li>

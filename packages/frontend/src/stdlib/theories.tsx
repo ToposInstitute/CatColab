@@ -706,7 +706,7 @@ stdTheories.add(
                     obType: { tag: "Basic", content: "Object" },
                     name: "Place",
                     description: "State of the system",
-                    shortcut: ["P"],
+                    shortcut: ["O"],
                 },
                 {
                     tag: "MorType",
@@ -716,7 +716,7 @@ stdTheories.add(
                     },
                     name: "Transition",
                     description: "Event causing change of state",
-                    shortcut: ["T"],
+                    shortcut: ["M"],
                     domain: {
                         apply: { tag: "Basic", content: "tensor" },
                     },

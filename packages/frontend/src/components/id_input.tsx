@@ -13,8 +13,8 @@ import "./id_input.css";
 export type IdInputOptions = {
     generateId?: () => Uuid;
     idToName?: IdToNameMap;
-    invalid?: boolean;
-} & Omit<InlineInputOptions, "completions">;
+    isInvalid?: boolean;
+} & Omit<InlineInputOptions, "completions" | "status">;
 
 /** Input a UUID by specifying its human-readable name.
 
@@ -33,7 +33,7 @@ export function IdInput(
         "generateId",
         "completions",
         "idToName",
-        "invalid",
+        "isInvalid",
     ]);
 
     const idToName = (id: Uuid): Name | undefined => props.idToName?.map.get(id);
@@ -91,7 +91,7 @@ export function IdInput(
         if (!isComplete()) {
             return "incomplete";
         }
-        if (props.invalid) {
+        if (props.isInvalid) {
             return "invalid";
         }
         return null;

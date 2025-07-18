@@ -1,5 +1,17 @@
+/** Optional props available to any input component.
+
+Nearly all of these concern focus management.
+ */
+export type InputOptions = InputActions & {
+    /** Whether the input is active: allowed to the grab the focus. */
+    isActive?: boolean;
+
+    /** This component has received focus. */
+    hasFocused?: () => void;
+};
+
 /** Actions invokable in an input component but affecting nearby components. */
-export type InputActions = {
+type InputActions = {
     /** Request to delete this component and then move backward.
 
     Here "backward" means left or, if at the left boundary, then up. Typically
@@ -39,7 +51,4 @@ export type InputActions = {
 
     /** Request to exit this component and move right. */
     exitRight?: () => void;
-
-    /** This component has received focus. */
-    hasFocused?: () => void;
 };
