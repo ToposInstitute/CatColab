@@ -1,10 +1,10 @@
 import { type SubmitHandler, createForm, reset } from "@modular-forms/solid";
-import { createEffect, createResource } from "solid-js";
+import { createEffect, createResource, createSignal } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { UserProfile } from "catcolab-api";
 import { useApi } from "../api";
-import { FormGroup, TextInputField } from "../components";
+import { FormGroup, TextInputField, SuccessMessage} from "../components";
 import { BrandedToolbar } from "../page";
 import { LoginGate } from "./login";
 
@@ -23,9 +23,10 @@ export default function UserProfilePage() {
     );
 }
 
-/** Form to configure user proifle. */
+/** Form to configure user profile. */
 export function UserProfileForm() {
     const api = useApi();
+    const [showSuccess, setShowSuccess] = createSignal(false);
 
     const [currentProfile, { refetch: refetchProfile }] = createResource(async () => {
         const result = await api.rpc.get_active_user_profile.query();
@@ -40,11 +41,19 @@ export function UserProfileForm() {
     });
 
     const onSubmit: SubmitHandler<UserProfile> = async (values) => {
-        await api.rpc.set_active_user_profile.mutate({
-            username: values.username ? values.username : null,
-            displayName: values.displayName ? values.displayName : null,
-        });
-        refetchProfile();
+        try {
+            await api.rpc.set_active_user_profile.mutate({
+                username: values.username ? values.username : null,
+                displayName: values.displayName ? values.displayName : null,
+            });
+            refetchProfile();
+            
+            // Show success message
+            setShowSuccess(true);
+        } catch (error) {
+            console.error("Failed to update profile:", error);
+            // You could add error handling here if needed
+        }
     };
 
     const validateUsername = async (value?: string | null) => {
@@ -69,30 +78,42 @@ export function UserProfileForm() {
     };
 
     return (
-        <Form onSubmit={onSubmit}>
-            <FormGroup>
-                <Field
-                    name="username"
-                    validate={validateUsername}
-                    validateOn="submit"
-                    revalidateOn="submit"
-                >
-                    {(field, props) => (
-                        <TextInputField
-                            {...props}
-                            label="Username"
-                            value={field.value ?? ""}
-                            error={field.error}
-                        />
-                    )}
-                </Field>
-                <Field name="displayName">
-                    {(field, props) => (
-                        <TextInputField {...props} label="Display name" value={field.value ?? ""} />
-                    )}
-                </Field>
-            </FormGroup>
-            <button type="submit">Update profile</button>
-        </Form>
+        <>
+            <Form onSubmit={onSubmit}>
+                <FormGroup>
+                    <Field
+                        name="username"
+                        validate={validateUsername}
+                        validateOn="submit"
+                        revalidateOn="submit"
+                    >
+                        {(field, props) => (
+                            <TextInputField
+                                {...props}
+                                label="Username"
+                                value={field.value ?? ""}
+                                error={field.error}
+                            />
+                        )}
+                    </Field>
+                    <Field name="displayName">
+                        {(field, props) => (
+                            <TextInputField {...props} label="Display name" value={field.value ?? ""} />
+                        )}
+                    </Field>
+                </FormGroup>
+                <button type="submit">Update profile</button>
+            </Form>
+
+            {/* Success message */}
+            {showSuccess() && (
+                <SuccessMessage 
+                    message="Your profile has been updated successfully!"
+                    onClose={() => setShowSuccess(false)}
+                    autoClose={true}
+                    duration={4000}
+                />
+            )}
+        </>
     );
 }
