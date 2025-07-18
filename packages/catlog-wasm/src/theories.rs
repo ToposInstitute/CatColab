@@ -279,6 +279,23 @@ impl ThCategoryLinks {
     }
 }
 
+/// The theory of categories with links and dynamic variables.
+#[wasm_bindgen]
+pub struct ThCategoryDynamicStockFlow(Rc<theory::UstrDiscreteTabTheory>);
+
+#[wasm_bindgen]
+impl ThCategoryDynamicStockFlow {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self(Rc::new(theories::th_category_dynamic_stockflow()))
+    }
+
+    #[wasm_bindgen]
+    pub fn theory(&self) -> DblTheory {
+        DblTheory(self.0.clone().into())
+    }
+}
+
 /// The theory of strict symmetric monoidal categories.
 #[wasm_bindgen]
 pub struct ThSymMonoidalCategory(Rc<theory::UstrModalDblTheory>);

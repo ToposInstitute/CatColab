@@ -136,6 +136,29 @@ pub fn th_category_links() -> UstrDiscreteTabTheory {
     th
 }
 
+/// The theory of stock and flow diagrams with dynamic variables.
+pub fn th_category_dynamic_stockflow() -> UstrDiscreteTabTheory {
+    let mut th: UstrDiscreteTabTheory = Default::default();
+    let x = ustr("Object");
+    th.add_ob_type(x);
+    th.add_mor_type(
+        ustr("Link"),
+        TabObType::Basic(x),
+        th.tabulator(th.hom_type(TabObType::Basic(x))),
+    );
+    let v = ustr("AuxiliaryVariable");
+    th.add_ob_type(v);
+    // there is a proarrow from the flow tabulator to the dynamic variable
+    th.add_mor_type(
+        ustr("FlowLink"),
+        TabObType::Basic(v),
+        th.tabulator(th.hom_type(TabObType::Basic(x))),
+    );
+    // there is a proarrow from the variable to stocks
+    th.add_mor_type(ustr("VariableLink"), TabObType::Basic(v), TabObType::Basic(x));
+    th
+}
+
 /// The theory of strict monoidal categories.
 pub fn th_monoidal_category() -> UstrModalDblTheory {
     th_list_algebra(List::Plain)

@@ -96,11 +96,30 @@ export function StockFlowGraphviz(props: {
 
     const vizLayout = () => {
         const viz = vizResource();
+        const patternAuxiliaryVariable: P.Pattern<ModelJudgment> = {
+            tag: "object",
+            obType: {
+                content: "AuxiliaryVariable",
+                tag: "Basic",
+            },
+        };
         return (
             viz &&
             vizLayoutGraph(
                 viz,
-                modelToGraphviz(props.model, props.theory, props.attributes),
+                modelToGraphviz(
+                    props.model,
+                    props.theory,
+                    props.attributes,
+                    (jgmt: ModelJudgment) =>
+                        match(jgmt)
+                            .with(patternAuxiliaryVariable, () => ({
+                                xlabel: jgmt.name,
+                                label: "",
+                            }))
+                            .with(P._, () => undefined)
+                            .run(),
+                ),
                 props.options,
             )
         );
