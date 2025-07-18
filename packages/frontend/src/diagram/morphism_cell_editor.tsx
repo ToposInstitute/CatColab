@@ -63,7 +63,7 @@ export function DiagramMorphismCellEditor(props: {
                 exitBackward={() => morRef()?.focus()}
                 exitForward={() => codRef.focus()}
                 exitRight={() => morRef()?.focus()}
-                onFocus={props.actions.hasFocused}
+                hasFocused={props.actions.hasFocused}
             />
             <div class={arrowStyles.arrowWithName}>
                 <div class={arrowStyles.arrowName}>
@@ -85,7 +85,7 @@ export function DiagramMorphismCellEditor(props: {
                         exitDown={props.actions.activateBelow}
                         exitLeft={() => domRef.focus()}
                         exitRight={() => codRef.focus()}
-                        onFocus={props.actions.hasFocused}
+                        hasFocused={props.actions.hasFocused}
                     />
                 </div>
                 <div class={[arrowStyles.arrowContainer, arrowStyles.default].join(" ")}>
@@ -108,7 +108,7 @@ export function DiagramMorphismCellEditor(props: {
                 exitBackward={() => domRef.focus()}
                 exitForward={props.actions.activateBelow}
                 exitLeft={() => morRef()?.focus()}
-                onFocus={props.actions.hasFocused}
+                hasFocused={props.actions.hasFocused}
             />
         </div>
     );

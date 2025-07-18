@@ -87,7 +87,7 @@ export function MorphismCellEditor(props: {
                     exitBackward={() => nameRef()?.focus()}
                     exitForward={() => codRef.focus()}
                     exitRight={() => nameRef()?.focus()}
-                    onFocus={props.actions.hasFocused}
+                    hasFocused={props.actions.hasFocused}
                 />
             </div>
             <div class={arrowStyles.arrowWithName}>
@@ -109,7 +109,7 @@ export function MorphismCellEditor(props: {
                         exitDown={props.actions.activateBelow}
                         exitLeft={() => domRef.focus()}
                         exitRight={() => codRef.focus()}
-                        onFocus={props.actions.hasFocused}
+                        hasFocused={props.actions.hasFocused}
                     />
                 </div>
                 <div class={[arrowStyles.arrowContainer, arrowClass()].join(" ")}>
@@ -133,7 +133,7 @@ export function MorphismCellEditor(props: {
                     exitBackward={() => domRef.focus()}
                     exitForward={props.actions.activateBelow}
                     exitLeft={() => nameRef()?.focus()}
-                    onFocus={props.actions.hasFocused}
+                    hasFocused={props.actions.hasFocused}
                 />
             </div>
         </div>
