@@ -130,7 +130,7 @@ export function InlineInput(
                         }}
                         value={props.text}
                         placeholder={props.placeholder}
-                        use:focus={(isFocused: boolean) => {
+                        use:focus={(isFocused) => {
                             isFocused && props.onFocus && props.onFocus();
                             (!isFocused || props.showCompletionsOnFocus) &&
                                 setCompletionsOpen(isFocused);
