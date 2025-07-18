@@ -5,16 +5,36 @@ import invariant from "tiny-invariant";
 import { P, match } from "ts-pattern";
 
 import type { MorType, Ob, ObOp, ObType, Uuid } from "catlog-wasm";
-import { IdInput, type IdInputOptions, ObIdInput } from "../components";
+import { IdInput, type IdInputOptions, type InputActions, ObIdInput } from "../components";
 import { LiveModelContext } from "./context";
-import type { ObInputProps } from "./editor_types";
 import { ObListEditor } from "./object_list_editor";
+
+/** Props passed to any object input component. */
+export type ObInputProps = {
+    /** Current value of object, if any. */
+    ob: Ob | null;
+
+    /** Handler to set a new value of the object. */
+    setOb: (ob: Ob | null) => void;
+
+    /** Type of object being edited. */
+    obType: ObType;
+
+    /** Placeholder text to show when no object has been chosen.. */
+    placeholder?: string;
+
+    /** Whether the choice of object is invalid, say by having wrong type.
+
+    This is a stub; we should propagate error messages from the core.
+     */
+    invalid?: boolean;
+};
 
 /** Input an object that already exists in a model.
  */
 export function ObInput(
     allProps: ObInputProps &
-        IdInputOptions & {
+        InputActions & {
             /** Operation to apply to the object afterwards, if any. */
             applyOp?: ObOp;
         },
