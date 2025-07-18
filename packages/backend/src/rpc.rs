@@ -2,6 +2,7 @@ use firebase_auth::FirebaseUser;
 use http::StatusCode;
 use qubit::{Extensions, FromRequestExtensions, Router, RpcError, handler};
 use serde::Serialize;
+use serde::Deserialize; 
 use serde_json::Value;
 use tracing::debug;
 use ts_rs::TS;
@@ -22,6 +23,8 @@ pub fn router() -> Router<AppState> {
         .handler(create_snapshot)
         .handler(get_permissions)
         .handler(set_permissions)
+        .handler(delete_ref)           
+        .handler(update_ref_metadata)  
         .handler(validate_session)
         .handler(sign_up_or_sign_in)
         .handler(user_by_username)
@@ -208,4 +211,33 @@ mod tests {
         let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("pkg").join("src");
         super::router().write_bindings_to_dir(dir);
     }
+}
+
+#[handler(mutation)]
+async fn delete_ref(ctx: AppCtx, ref_id: Uuid) -> RpcResult<()> {
+    _delete_ref(ctx, ref_id).await.into()
+}
+
+async fn _delete_ref(ctx: AppCtx, ref_id: Uuid) -> Result<(), AppError> {
+    // Only owners can delete documents
+    auth::authorize(&ctx, ref_id, PermissionLevel::Own).await?;
+    doc::delete_ref(ctx.state, ref_id).await
+}
+
+#[derive(serde::Deserialize, TS)]
+struct UpdateRefMetadataParams {
+    #[serde(rename = "refId")]
+    ref_id: Uuid,
+    name: String,
+}
+
+#[handler(mutation)]
+async fn update_ref_metadata(ctx: AppCtx, params: UpdateRefMetadataParams) -> RpcResult<()> {
+    _update_ref_metadata(ctx, params.ref_id, params.name).await.into()
+}
+
+async fn _update_ref_metadata(ctx: AppCtx, ref_id: Uuid, name: String) -> Result<(), AppError> {
+    // Only owners can rename documents
+    auth::authorize(&ctx, ref_id, PermissionLevel::Own).await?;
+    doc::update_ref_metadata(ctx.state, ref_id, name).await
 }

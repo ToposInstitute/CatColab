@@ -249,6 +249,71 @@ pub struct RefQueryParams {
     // TODO: add param for document type
 }
 
+/// Deletes a document ref and all its associated data
+pub async fn delete_ref(state: AppState, ref_id: Uuid) -> Result<(), AppError> {
+    let mut transaction = state.db.begin().await?;
+
+    // Get the doc_id before deleting (for cleanup if needed)
+    let doc_id_query = sqlx::query!(
+        "
+        SELECT doc_id FROM snapshots
+        WHERE id = (SELECT head FROM refs WHERE id = $1)
+        ",
+        ref_id
+    );
+    
+    // Note: We could call Automerge cleanup here if needed, but for now just delete from DB
+    let _doc_id = doc_id_query.fetch_optional(&mut *transaction).await?;
+
+    // Delete permissions first (foreign key constraint)
+    let delete_permissions = sqlx::query!(
+        "DELETE FROM permissions WHERE object = $1",
+        ref_id
+    );
+    delete_permissions.execute(&mut *transaction).await?;
+
+    // Delete all snapshots for this ref
+    let delete_snapshots = sqlx::query!(
+        "DELETE FROM snapshots WHERE for_ref = $1",
+        ref_id
+    );
+    delete_snapshots.execute(&mut *transaction).await?;
+
+    // Delete the ref itself
+    let delete_ref = sqlx::query!(
+        "DELETE FROM refs WHERE id = $1",
+        ref_id
+    );
+    delete_ref.execute(&mut *transaction).await?;
+
+    transaction.commit().await?;
+    Ok(())
+}
+
+/// Updates the metadata (currently just name) of a document ref
+pub async fn update_ref_metadata(state: AppState, ref_id: Uuid, name: String) -> Result<(), AppError> {
+    // Update the name in the head snapshot's content JSON
+    let query = sqlx::query!(
+        "
+        UPDATE snapshots
+        SET content = jsonb_set(content, '{name}', to_jsonb($2::text), false),
+            last_updated = NOW()
+        WHERE id = (SELECT head FROM refs WHERE id = $1)
+        ",
+        ref_id,
+        name
+    );
+    
+    let result = query.execute(&state.db).await?;
+    
+    // Check if any row was actually updated
+    if result.rows_affected() == 0 {
+        return Err(AppError::Db(sqlx::Error::RowNotFound));
+    }
+    
+    Ok(())
+}
+
 /// Searches for `RefStub`s that the current user has permission to access,
 /// returning lightweight metadata about each matching ref
 pub async fn search_ref_stubs(
