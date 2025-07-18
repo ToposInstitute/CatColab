@@ -1,5 +1,7 @@
+import { focus } from "@solid-primitives/active-element";
 import { Index, type JSX, type JSXElement, Show, mergeProps, useContext } from "solid-js";
 import invariant from "tiny-invariant";
+focus;
 
 import type { Ob } from "catlog-wasm";
 import { ObIdInput } from "../components";
@@ -42,7 +44,7 @@ export function ObListEditor(props: ObListEditorProps) {
 
     const obList = (): Array<Ob | null> => {
         if (!props.ob) {
-            return [null];
+            return [];
         }
         if (props.ob.tag !== "List") {
             throw new Error(`Object should be a list, received: ${props.ob}`);
@@ -66,13 +68,32 @@ export function ObListEditor(props: ObListEditorProps) {
         setObList(objects);
     };
 
+    const insertNewOb = (i: number) => {
+        updateObList((objects) => {
+            objects.splice(i, 0, null);
+        });
+        inputRefs[i]?.focus();
+    };
+
     const completions = (): Ob[] | undefined =>
         liveModel().validatedModel()?.model.objectsWithType(modeAppType().content.obType);
 
+    const emptyListInput = () => (
+        <input class="empty-list-input" use:focus={(isFocused) => isFocused && insertNewOb(0)} />
+    );
+
     return (
-        <ul class="object-list">
+        <ul
+            class="object-list"
+            onMouseDown={(evt) => {
+                if (obList().length === 0) {
+                    insertNewOb(0);
+                    evt.preventDefault();
+                }
+            }}
+        >
             {props.startDelimiter}
-            <Index each={obList()}>
+            <Index each={obList()} fallback={emptyListInput()}>
                 {(ob, i) => (
                     <li>
                         <Show when={i > 0 && props.separator}>{(sep) => sep()(i)}</Show>
@@ -103,10 +124,7 @@ export function ObListEditor(props: ObListEditorProps) {
                             exitRight={() => inputRefs[i + 1]?.focus()}
                             interceptKeyDown={(evt) => {
                                 if (evt.key === props.insertKey) {
-                                    updateObList((objects) => {
-                                        objects.splice(i + 1, 0, null);
-                                    });
-                                    inputRefs[i + 1]?.focus();
+                                    insertNewOb(i + 1);
                                 } else if (evt.key === "Home" && !evt.shiftKey) {
                                     const ref = inputRefs[0];
                                     if (ref) {
