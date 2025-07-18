@@ -16,7 +16,10 @@ pub enum Ob {
     App { op: ObOp, ob: Box<Ob> },
 
     /// List of objects, each possibly ill-defined, in a list modality.
-    List { modality: Modality, objects: Vec<Option<Ob>> },
+    List {
+        modality: Modality,
+        objects: Vec<Option<Ob>>,
+    },
 
     /// Morphism viewed as an object of a tabulator.
     Tabulated(Mor),
