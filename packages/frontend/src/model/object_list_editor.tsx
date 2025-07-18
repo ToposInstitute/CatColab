@@ -4,19 +4,20 @@ import invariant from "tiny-invariant";
 focus;
 
 import type { Ob } from "catlog-wasm";
-import { ObIdInput } from "../components";
+import { type InputActions, ObIdInput } from "../components";
 import { deepCopyJSON } from "../util/deepcopy";
 import { LiveModelContext } from "./context";
-import type { ObInputProps } from "./editor_types";
+import type { ObInputProps } from "./object_input";
 
 import "./object_list_editor.css";
 
-type ObListEditorProps = ObInputProps & {
-    insertKey?: string;
-    startDelimiter?: JSX.Element | string;
-    endDelimiter?: JSXElement | string;
-    separator?: (index: number) => JSX.Element | string;
-};
+type ObListEditorProps = ObInputProps &
+    InputActions & {
+        insertKey?: string;
+        startDelimiter?: JSX.Element | string;
+        endDelimiter?: JSXElement | string;
+        separator?: (index: number) => JSX.Element | string;
+    };
 
 /** Edits a list of objects of given type. */
 export function ObListEditor(props: ObListEditorProps) {
@@ -107,21 +108,43 @@ export function ObListEditor(props: ObListEditorProps) {
                                     objects[i] = ob;
                                 });
                             }}
+                            placeholder={props.placeholder}
                             idToName={liveModel().objectIndex()}
                             completions={completions()}
                             deleteBackward={() => {
                                 updateObList((objects) => {
                                     objects.splice(i, 1);
                                 });
-                                inputRefs[i - 1]?.focus();
+                                if (i === 0) {
+                                    props.deleteBackward?.();
+                                } else {
+                                    inputRefs[i - 1]?.focus();
+                                }
                             }}
                             deleteForward={() => {
                                 updateObList((objects) => {
                                     objects.splice(i, 1);
                                 });
+                                if (i === obList().length - 1) {
+                                    props.deleteForward?.();
+                                }
                             }}
-                            exitLeft={() => inputRefs[i - 1]?.focus()}
-                            exitRight={() => inputRefs[i + 1]?.focus()}
+                            exitBackward={() => props.exitBackward?.()}
+                            exitForward={() => props.exitForward?.()}
+                            exitLeft={() => {
+                                if (i === 0) {
+                                    props.exitLeft?.();
+                                } else {
+                                    inputRefs[i - 1]?.focus();
+                                }
+                            }}
+                            exitRight={() => {
+                                if (i === obList().length - 1) {
+                                    props.exitRight?.();
+                                } else {
+                                    inputRefs[i + 1]?.focus();
+                                }
+                            }}
                             interceptKeyDown={(evt) => {
                                 if (evt.key === props.insertKey) {
                                     insertNewOb(i + 1);

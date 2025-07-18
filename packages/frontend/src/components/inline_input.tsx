@@ -4,28 +4,19 @@ import { type JSX, createSignal } from "solid-js";
 focus;
 
 import { type Completion, Completions, type CompletionsRef } from "./completions";
+import type { InputActions } from "./input_actions";
 
 import "./inline_input.css";
 
 /** Optional props for `InlineInput` component.
  */
-export type InlineInputOptions = {
+export type InlineInputOptions = InputActions & {
     ref?: HTMLInputElement | ((el: HTMLInputElement) => void);
     placeholder?: string;
     status?: InlineInputErrorStatus;
     completions?: Completion[];
     showCompletionsOnFocus?: boolean;
-
     autofill?: () => void;
-    deleteBackward?: () => void;
-    deleteForward?: () => void;
-    exitBackward?: () => void;
-    exitForward?: () => void;
-    exitUp?: () => void;
-    exitDown?: () => void;
-    exitLeft?: () => void;
-    exitRight?: () => void;
-    onFocus?: () => void;
     interceptKeyDown?: (evt: InputElementKeyboardEvent) => boolean;
 };
 
