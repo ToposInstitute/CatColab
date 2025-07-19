@@ -104,6 +104,7 @@ export function NotebookCell(props: {
     tag?: string;
     currentDropTarget: string | null;
     setCurrentDropTarget: (cellId: string | null) => void;
+    replaceCommands: Completion[];
 }) {
     let rootRef!: HTMLDivElement;
     let handleRef!: HTMLButtonElement;
@@ -238,7 +239,12 @@ export function NotebookCell(props: {
                 </Show>
             </div>
             <Show when={props.tag}>
-                <div class="cell-tag">{props.tag}</div>
+                <StemCellEditor
+                    completions={props.replaceCommands}
+                    isActive={true}
+                    actions={props.actions}
+                    placeholder={props.tag}
+                />
             </Show>
         </div>
     );
@@ -284,6 +290,7 @@ export function StemCellEditor(props: {
     completions: Completion[];
     isActive: boolean;
     actions: CellActions;
+    placeholder?: string;
 }) {
     const [text, setText] = createSignal("");
 
@@ -303,7 +310,7 @@ export function StemCellEditor(props: {
             exitUp={props.actions.activateAbove}
             exitDown={props.actions.activateBelow}
             onFocus={props.actions.hasFocused}
-            placeholder="Select cell type"
+            placeholder={props.placeholder ?? "Select cell type"}
         />
     );
 }

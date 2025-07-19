@@ -128,8 +128,14 @@ export function ModelNotebookEditor(props: {
 }) {
     const liveDoc = () => props.liveModel.liveDoc;
 
-    const cellConstructors = () =>
-        (props.liveModel.theory().modelTypes ?? []).map(modelCellConstructor);
+    // XXX pass in optional type
+    console.log(props.liveModel.theory().modelTypes);
+    const cellConstructors = (cellType?: string) =>
+        props.liveModel
+            .theory()
+            .modelTypes.filter((model) => (cellType ? model.tag === cellType : !cellType))
+            .map(modelCellConstructor);
+    // (props.liveModel.theory().modelTypes ?? []).map(modelCellConstructor);
 
     return (
         <LiveModelContext.Provider value={() => props.liveModel}>
@@ -141,7 +147,7 @@ export function ModelNotebookEditor(props: {
                     liveDoc().changeDoc((doc) => f(doc.notebook));
                 }}
                 formalCellEditor={ModelCellEditor}
-                cellConstructors={cellConstructors()}
+                cellConstructors={cellConstructors}
                 cellLabel={judgmentLabel}
                 duplicateCell={duplicateModelJudgment}
             />
