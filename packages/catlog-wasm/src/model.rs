@@ -327,6 +327,28 @@ impl DblModel {
         })
     }
 
+    /// Gets the domain of a morphism in the model.
+    #[wasm_bindgen]
+    pub fn dom(&self, mor: Mor) -> Result<Ob, String> {
+        all_the_same!(match &self.0 {
+            DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
+                let mor = Elaborator.elab(&mor)?;
+                Ok(Quoter.quote(&model.dom(&mor)))
+            }
+        })
+    }
+
+    /// Gets the codomain of a morphism in the model.
+    #[wasm_bindgen]
+    pub fn cod(&self, mor: Mor) -> Result<Ob, String> {
+        all_the_same!(match &self.0 {
+            DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
+                let mor = Elaborator.elab(&mor)?;
+                Ok(Quoter.quote(&model.cod(&mor)))
+            }
+        })
+    }
+
     /// Returns array of all basic objects in the model.
     #[wasm_bindgen]
     pub fn objects(&self) -> Vec<Ob> {
@@ -449,6 +471,8 @@ pub(crate) mod tests {
 
         assert_eq!(model.has_ob(Ob::Basic(x)), Ok(true));
         assert_eq!(model.has_mor(Mor::Basic(a)), Ok(true));
+        assert_eq!(model.dom(Mor::Basic(a)), Ok(Ob::Basic(x)));
+        assert_eq!(model.cod(Mor::Basic(a)), Ok(Ob::Basic(y)));
         assert_eq!(model.objects().len(), 2);
         assert_eq!(model.morphisms().len(), 1);
         assert_eq!(model.objects_with_type(ObType::Basic("Entity".into())), Ok(vec![Ob::Basic(x)]));
