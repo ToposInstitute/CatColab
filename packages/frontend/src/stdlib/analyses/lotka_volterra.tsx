@@ -30,18 +30,21 @@ export function configureLotkaVolterra(options: {
     id?: string;
     name?: string;
     description?: string;
+    help?: string;
     simulate: Simulator;
 }): ModelAnalysisMeta<LotkaVolterraContent> {
     const {
         id = "lotka-volterra",
         name = "Lotka-Volterra dynamics",
         description = "Simulate the system using a Lotka-Volterra ODE",
+        help = "lotka-volterra",
         simulate,
     } = options;
     return {
         id,
         name,
         description,
+        help,
         component: (props) => <LotkaVolterra simulate={simulate} title={name} {...props} />,
         initialContent: () => ({
             interactionCoefficients: {},

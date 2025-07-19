@@ -28,7 +28,7 @@ The production deployment, tracking the latest
 [help page](https://catcolab.org/help) and our blog posts about the releases so
 far:
 
-- [v0.1: Hummingbird](https://topos.site/blog/2024-10-02-introducing-catcolab/)
+- [v0.1: Hummingbird](https://topos.institute/blog/2024-10-02-introducing-catcolab/)
 - [v0.2: Wren](https://topos.institute/blog/2025-02-05-catcolab-0-2-wren/)
 
 > [!WARNING]

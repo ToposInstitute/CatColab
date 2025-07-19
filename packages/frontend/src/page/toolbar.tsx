@@ -49,7 +49,7 @@ const Brand = () => (
 
 /** Button that navigates to the help page for a theory.
 
-If no theory is set, it naviagtes instead to the list of all theories.
+If no theory is set, it navigates instead to the list of all theories.
  */
 export function TheoryHelpButton(props: {
     theory?: Theory;
@@ -66,13 +66,13 @@ export function TheoryHelpButton(props: {
                 {"You are using the logic: "}
                 <strong>{theory.name}</strong>
             </p>
-            <p>{"Learn more about this logic"}</p>
+            <p>{"Click to learn more about this logic"}</p>
         </>
     );
 
     return (
         <IconButton
-            onClick={() => navigate(`/help/theory/${theory().id}`)}
+            onClick={() => navigate(`/help/logics/${theory().id}`)}
             tooltip={tooltip(theory())}
         >
             <CircleHelp />

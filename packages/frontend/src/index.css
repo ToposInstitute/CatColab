@@ -1,15 +1,18 @@
 :root {
-    --main-font: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+    --main-font: Inter, system-ui, Helvetica, Arial, sans-serif;
     --mono-font: Roboto Mono, monospace;
 
     --main-color: black;
     --link-color: dimgray;
-    --topos-color: #53b6b2;
+    --topos-primary: rgb(83, 182, 178);
+    --topos-secondary: rgb(128, 49, 78);
 
-    --h1-font-size: 3em;
-    --h2-font-size: 2em;
-    --h3-font-size: 1.5em;
-    --h4-font-size: 1.3em;
+    --h1-font-size: 2.25em;
+    --h2-font-size: 1.75em;
+    --h3-font-size: 1.4em;
+    --h4-font-size: 1.2em;
+
+    --body-font-size: 1.05rem;
 
     color: var(--main-color);
     font-family: var(--main-font);
@@ -25,6 +28,7 @@ body,
 #root {
     height: 100%;
     margin: 0;
+    font-size: var(--body-font-size);
 }
 
 #root {
@@ -96,7 +100,7 @@ h4 {
 }
 
 .page-container {
-    max-width: 100ex;
+    max-width: 45em;
     margin: 0 auto;
     padding-bottom: 10ex;
 }
