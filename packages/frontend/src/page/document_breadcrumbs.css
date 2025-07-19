@@ -1,5 +1,5 @@
 .breadcrumb-spacer {
-    padding-left: 5px;
+    padding-left: 4px;
     padding-right: 5px;
 }
 
@@ -14,5 +14,5 @@
 .breadcrumbs-wrapper {
     display: flex;
     align-items: center;
-    padding-left: 1em;
+    padding-left: 0.5em;
 }

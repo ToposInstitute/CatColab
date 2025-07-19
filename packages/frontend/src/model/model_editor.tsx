@@ -4,7 +4,7 @@ import invariant from "tiny-invariant";
 
 import type { ModelJudgment } from "catlog-wasm";
 import { useApi } from "../api";
-import { InlineInput } from "../components";
+import { InlineInput, Version } from "../components";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
@@ -63,6 +63,7 @@ export function ModelDocumentEditor(props: {
         <div class="growable-container">
             <Toolbar>
                 <DocumentMenu liveDocument={props.liveModel} />
+                <Version />
                 <DocumentBreadcrumbs document={props.liveModel} />
                 <span class="filler" />
                 <TheoryHelpButton theory={props.liveModel.theory()} />
