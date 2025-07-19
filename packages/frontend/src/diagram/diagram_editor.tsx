@@ -120,8 +120,10 @@ export function DiagramNotebookEditor(props: {
     const liveDoc = () => props.liveDiagram.liveDoc;
     const liveModel = () => props.liveDiagram.liveModel;
 
-    const cellConstructors = () =>
-        (liveModel().theory().instanceTypes ?? []).map(diagramCellConstructor);
+    const cellConstructors = (cellType?: string) => {
+        cellType;
+        return (liveModel().theory().instanceTypes ?? []).map(diagramCellConstructor);
+    };
 
     return (
         <MultiProvider
@@ -138,7 +140,7 @@ export function DiagramNotebookEditor(props: {
                     liveDoc().changeDoc((doc) => f(doc.notebook));
                 }}
                 formalCellEditor={DiagramCellEditor}
-                cellConstructors={cellConstructors()}
+                cellConstructors={cellConstructors}
                 cellLabel={judgmentLabel}
                 duplicateCell={duplicateDiagramJudgment}
             />

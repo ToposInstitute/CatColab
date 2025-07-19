@@ -98,6 +98,7 @@ export function NotebookCell(props: {
     actions: CellActions;
     children: JSX.Element;
     tag?: string;
+    replaceCommands: Completion[];
 }) {
     let rootRef!: HTMLDivElement;
     let handleRef!: HTMLButtonElement;
@@ -196,7 +197,12 @@ export function NotebookCell(props: {
             </div>
             <div class="cell-content">{props.children}</div>
             <Show when={props.tag}>
-                <div class="cell-tag">{props.tag}</div>
+                <StemCellEditor
+                    completions={props.replaceCommands}
+                    isActive={true}
+                    actions={props.actions}
+                    placeholder={props.tag}
+                />
             </Show>
         </div>
     );
@@ -242,6 +248,7 @@ export function StemCellEditor(props: {
     completions: Completion[];
     isActive: boolean;
     actions: CellActions;
+    placeholder?: string;
 }) {
     const [text, setText] = createSignal("");
 
@@ -261,7 +268,7 @@ export function StemCellEditor(props: {
             exitUp={props.actions.activateAbove}
             exitDown={props.actions.activateBelow}
             onFocus={props.actions.hasFocused}
-            placeholder="Select cell type"
+            placeholder={props.placeholder ?? "Select cell type"}
         />
     );
 }

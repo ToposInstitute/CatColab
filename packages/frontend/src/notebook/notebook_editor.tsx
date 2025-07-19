@@ -67,7 +67,7 @@ export function NotebookEditor<T>(props: {
     changeNotebook: (f: (nb: Notebook<T>) => void) => void;
 
     formalCellEditor: Component<FormalCellEditorProps<T>>;
-    cellConstructors?: CellConstructor<T>[];
+    cellConstructors?: (cellType?: string) => CellConstructor<T>[];
     cellLabel?: (content: T) => string | undefined;
 
     /** Called to duplicate an existing cell.
@@ -128,6 +128,20 @@ export function NotebookEditor<T>(props: {
         });
     };
 
+	const retypeCellAs = (i: number, cell: Cell<T>) => {
+        props.changeNotebook((nb) => {
+			const c = nb.cells[i];
+			if (c?.tag === "formal") {
+			  if (c?.content?.tag === "object") {
+				c.content.obType = cell.content.obType;
+			  } else if (c?.content?.tag === "morphism") {
+				c.content.morType = cell.content.morType;
+			  } else {}
+			}
+			else {};
+		});
+    };
+
     const duplicateCell = (cell: Cell<T>): Cell<T> => {
         if (cell.tag === "formal") {
             const content = (props.duplicateCell ?? deepCopyJSON)(cell.content);
@@ -140,14 +154,14 @@ export function NotebookEditor<T>(props: {
         throw new Error(`Cell with unknown tag: ${cell}`);
     };
 
-    const cellConstructors = (): CellConstructor<T>[] => [
+    const cellConstructors = (cellType?: string): CellConstructor<T>[] => [
         {
             name: "Text",
             description: "Start writing text",
             shortcut: [cellShortcutModifier, "T"],
             construct: () => newRichTextCell(),
         },
-        ...(props.cellConstructors ?? []),
+        ...(props.cellConstructors?.(cellType) ?? []),
     ];
 
     const replaceCommands = (i: number): Completion[] =>
@@ -158,6 +172,17 @@ export function NotebookEditor<T>(props: {
                 description,
                 shortcut,
                 onComplete: () => replaceCellWith(i, cc.construct()),
+            };
+        });
+
+	const retypeCommands = (i: number, cellType: string): Completion[] =>
+        cellConstructors(cellType).map((cc) => {
+            const { name, description, shortcut } = cc;
+			return {
+                name,
+                description,
+                shortcut,
+                onComplete: () => retypeCellAs(i, cc.construct()),
             };
         });
 
@@ -222,6 +247,7 @@ export function NotebookEditor<T>(props: {
             <ul class="notebook-cells">
                 <For each={props.notebook.cells}>
                     {(cell, i) => {
+						const cellType = (cell.tag === "formal") ? (cell?.content?.tag === "object" ? "ObType" : "MorType") : "";
                         const isActive = () => activeCell() === i();
                         const cellActions: CellActions = {
                             activateAbove() {
@@ -292,6 +318,7 @@ export function NotebookEditor<T>(props: {
                                             ? props.cellLabel?.(cell.content)
                                             : undefined
                                     }
+                                    replaceCommands={retypeCommands(i(), cellType)}
                                 >
                                     <Switch>
                                         <Match when={cell.tag === "rich-text"}>
