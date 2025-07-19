@@ -404,7 +404,7 @@ impl<ThId> ModalOp<ThId> {
         match self {
             ModalOp::Generator(id) => Ok(ModalOb::App(Box::new(ob), id)),
             ModalOp::Concat(list_type, n, _) => {
-                Ok(ModalOb::List(list_type, flatten_ob_list(ob, list_type, n)?))
+                Ok(ModalOb::List(list_type, ob.flatten_list(list_type, n)?))
             }
         }
     }
@@ -421,53 +421,50 @@ impl<ThId> ModalOp<ThId> {
                 ModalMor::App(Box::new(mor.into()), id)
             }),
             ModalOp::Concat(list_type, n, _) => match list_type {
-                List::Plain => Ok(ModalMor::List(MorListData::Plain(), flatten_mor_list(mor, n)?)),
+                List::Plain => Ok(ModalMor::List(MorListData::Plain(), mor.flatten_list(n)?)),
                 _ => panic!("Flattening of functions is not implemented"),
             },
         }
     }
 }
 
-/// Recursively flatten a nested list of objects of the given depth.
-fn flatten_ob_list<Id, ThId>(
-    ob: ModalOb<Id, ThId>,
-    list_type: List,
-    depth: usize,
-) -> Result<Vec<ModalOb<Id, ThId>>, String> {
-    if depth == 0 {
-        Ok(vec![ob])
-    } else if let ModalOb::List(other_type, vec) = ob
-        && other_type == list_type
-    {
-        if depth == 1 {
-            Ok(vec)
+impl<Id, ThId> ModalOb<Id, ThId> {
+    /// Recursively flatten a nested list of objects of the given depth.
+    fn flatten_list(self, list_type: List, depth: usize) -> Result<Vec<Self>, String> {
+        if depth == 0 {
+            Ok(vec![self])
+        } else if let ModalOb::List(other_type, vec) = self
+            && other_type == list_type
+        {
+            if depth == 1 {
+                Ok(vec)
+            } else {
+                let maybe_vec: Result<Vec<_>, _> =
+                    vec.into_iter().map(|ob| ob.flatten_list(list_type, depth - 1)).collect();
+                Ok(maybe_vec?.into_iter().flatten().collect())
+            }
         } else {
-            let maybe_vec: Result<Vec<_>, _> =
-                vec.into_iter().map(|ob| flatten_ob_list(ob, list_type, depth - 1)).collect();
-            Ok(maybe_vec?.into_iter().flatten().collect())
+            Err(format!("Object should be a list of type {list_type:?}"))
         }
-    } else {
-        Err(format!("Object should be a list of type {list_type:?}"))
     }
 }
 
-/// Recursively flatten a nested list of morphisms of the given depth.
-fn flatten_mor_list<Id, ThId>(
-    mor: ModalMor<Id, ThId>,
-    depth: usize,
-) -> Result<Vec<ModalMor<Id, ThId>>, String> {
-    if depth == 0 {
-        Ok(vec![mor])
-    } else if let ModalMor::List(MorListData::Plain(), vec) = mor {
-        if depth == 1 {
-            Ok(vec)
+impl<Id, ThId> ModalMor<Id, ThId> {
+    /// Recursively flatten a nested list of morphisms of the given depth.
+    fn flatten_list(self, depth: usize) -> Result<Vec<Self>, String> {
+        if depth == 0 {
+            Ok(vec![self])
+        } else if let ModalMor::List(MorListData::Plain(), vec) = self {
+            if depth == 1 {
+                Ok(vec)
+            } else {
+                let maybe_vec: Result<Vec<_>, _> =
+                    vec.into_iter().map(|mor| mor.flatten_list(depth - 1)).collect();
+                Ok(maybe_vec?.into_iter().flatten().collect())
+            }
         } else {
-            let maybe_vec: Result<Vec<_>, _> =
-                vec.into_iter().map(|mor| flatten_mor_list(mor, depth - 1)).collect();
-            Ok(maybe_vec?.into_iter().flatten().collect())
+            Err(format!("Morphism should be a list of type {:?}", List::Plain))
         }
-    } else {
-        Err(format!("Morphism should be a list of type {:?}", List::Plain))
     }
 }
 
