@@ -1,6 +1,7 @@
 .object-list {
     display: flex;
     flex-direction: row;
+    align-items: center;
     list-style: none;
     padding: 0;
 
