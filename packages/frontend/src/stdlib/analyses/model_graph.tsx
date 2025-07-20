@@ -1,5 +1,5 @@
 import type * as Viz from "@viz-js/viz";
-import { Show, createSignal } from "solid-js";
+import { createSignal } from "solid-js";
 import { P, match } from "ts-pattern";
 
 import type { ModelJudgment } from "catlog-wasm";
@@ -59,16 +59,12 @@ export function ModelGraph(
                 <GV.GraphConfigForm content={props.content} changeContent={props.changeContent} />
             </Foldable>
             <div class="graph-visualization">
-                <Show when={props.liveModel.theory()}>
-                    {(theory) => (
-                        <ModelGraphviz
-                            model={props.liveModel.formalJudgments()}
-                            theory={theory()}
-                            options={GV.graphvizOptions(props.content)}
-                            ref={setSvgRef}
-                        />
-                    )}
-                </Show>
+                <ModelGraphviz
+                    model={props.liveModel.formalJudgments()}
+                    theory={props.liveModel.theory()}
+                    options={GV.graphvizOptions(props.content)}
+                    ref={setSvgRef}
+                />
             </div>
         </div>
     );
@@ -99,12 +95,12 @@ export function modelToGraphviz(
     theory: Theory,
     attributes?: GV.GraphvizAttributes,
 ): Viz.Graph {
-    const nodes = new Map<string, Required<Viz.Graph>["nodes"][0]>();
+    const nodes: Required<Viz.Graph>["nodes"] = [];
     for (const judgment of model) {
         if (judgment.tag === "object") {
             const { id, name } = judgment;
             const meta = theory.modelObTypeMeta(judgment.obType);
-            nodes.set(id, {
+            nodes.push({
                 name: id,
                 attributes: {
                     id,
@@ -156,7 +152,7 @@ export function modelToGraphviz(
 
     return {
         directed: true,
-        nodes: Array.from(nodes.values()),
+        nodes,
         edges,
         graphAttributes: { ...GV.defaultGraphAttributes, ...attributes?.graph },
         nodeAttributes: { ...GV.defaultNodeAttributes, ...attributes?.node },
