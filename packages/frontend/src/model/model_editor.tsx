@@ -128,14 +128,15 @@ export function ModelNotebookEditor(props: {
 }) {
     const liveDoc = () => props.liveModel.liveDoc;
 
-    // XXX pass in optional type
-    console.log(props.liveModel.theory().modelTypes);
-    const cellConstructors = (cellType?: string) =>
+    const cellConstructors = (cellType?: string, cellName?: string) =>
         props.liveModel
             .theory()
-            .modelTypes.filter((model) => (cellType ? model.tag === cellType : !cellType))
+            .modelTypes.filter((model) =>
+                cellType
+                    ? model.tag === cellType && (cellName ? model.name !== cellName : false)
+                    : !cellType,
+            )
             .map(modelCellConstructor);
-    // (props.liveModel.theory().modelTypes ?? []).map(modelCellConstructor);
 
     return (
         <LiveModelContext.Provider value={() => props.liveModel}>

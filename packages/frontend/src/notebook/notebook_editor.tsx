@@ -19,7 +19,7 @@ import {
     onCleanup,
 } from "solid-js";
 
-import type { Cell, Notebook } from "catlog-wasm";
+import type { Cell, Notebook, ObType, MorType } from "catlog-wasm";
 import { type Completion, IconButton } from "../components";
 import { deepCopyJSON } from "../util/deepcopy";
 import {
@@ -71,7 +71,7 @@ export function NotebookEditor<T>(props: {
     changeNotebook: (f: (nb: Notebook<T>) => void) => void;
 
     formalCellEditor: Component<FormalCellEditorProps<T>>;
-    cellConstructors?: (cellType?: string) => CellConstructor<T>[];
+    cellConstructors?: (cellType?: string, cellName?: string) => CellConstructor<T>[];
     cellLabel?: (content: T) => string | undefined;
 
     /** Called to duplicate an existing cell.
@@ -135,19 +135,46 @@ export function NotebookEditor<T>(props: {
         });
     };
 
-	const retypeCellAs = (i: number, cell: Cell<T>) => {
-        props.changeNotebook((nb) => {
-			const c = nb.cells[i];
-			if (c?.tag === "formal") {
-			  if (c?.content?.tag === "object") {
-				c.content.obType = cell.content.obType;
-			  } else if (c?.content?.tag === "morphism") {
-				c.content.morType = cell.content.morType;
-			  } else {}
-			}
-			else {};
-		});
+    const isFormalCell = (cell: Cell<T>): cell is { tag: "formal"; id: string; content: T } => {
+        return cell.tag === "formal";
     };
+
+    const isObType = (content: any): content is { tag: "object"; obType: ObType } => {
+        return content && content.tag === "object";
+    };
+
+    const isMorType = (content: any): content is { tag: "morphism"; morType: MorType } => {
+        return content && content.tag === "morphism";
+    };
+
+    const retypeCellAs = (i: number, cell: Cell<T>) => {
+        props.changeNotebook((nb) => {
+            const c = nb.cells[i];
+            if (!c || !isFormalCell(c) || !isFormalCell(cell)) return;
+            if (isObType(c.content) && isObType(cell.content)) {
+                c.content.obType = cell.content.obType;
+            } else if (isMorType(c.content) && isMorType(cell.content)) {
+                c.content.morType = cell.content.morType;
+            }
+        });
+    };
+
+    // const retypeCellAs = (i: number, cell: Cell<T>) => {
+    // props.changeNotebook((nb) => {
+    // 		const c = nb.cells[i];
+    // 		console.log(cell);
+    // 		if (c && cell && c.tag === "formal" && cell.tag === "formal") {
+    // 		  const cContent = c.content;
+    // 		  const cellContent = cell.content;
+    // 		  if (cContent && cellContent && cContent.tag === "object" && cellContent.tag === "object") {
+    // 			cContent.obType = cellContent.obType;
+    // 		  } else if (c.content.tag === "morphism") {
+    // 			c.content.morType = cell.content.morType;
+    // 		  } else {}
+    // 		}
+    // 		else {};
+    // 	});
+    // };
 
     const duplicateCell = (cell: Cell<T>): Cell<T> => {
         if (cell.tag === "formal") {
@@ -161,14 +188,14 @@ export function NotebookEditor<T>(props: {
         throw new Error(`Cell with unknown tag: ${cell}`);
     };
 
-    const cellConstructors = (cellType?: string): CellConstructor<T>[] => [
+    const cellConstructors = (cellType?: string, cellName?: string): CellConstructor<T>[] => [
         {
             name: "Text",
             description: "Start writing text",
             shortcut: [cellShortcutModifier, "T"],
             construct: () => newRichTextCell(),
         },
-        ...(props.cellConstructors?.(cellType) ?? []),
+        ...(props.cellConstructors?.(cellType, cellName) ?? []),
     ];
 
     const replaceCommands = (i: number): Completion[] =>
@@ -182,10 +209,10 @@ export function NotebookEditor<T>(props: {
             };
         });
 
-	const retypeCommands = (i: number, cellType: string): Completion[] =>
-        cellConstructors(cellType).map((cc) => {
+    const retypeCommands = (i: number, cellType: string, cellName: string): Completion[] =>
+        cellConstructors(cellType, cellName).map((cc) => {
             const { name, description, shortcut } = cc;
-			return {
+            return {
                 name,
                 description,
                 shortcut,
@@ -276,7 +303,16 @@ export function NotebookEditor<T>(props: {
             <ul class="notebook-cells">
                 <For each={props.notebook.cells}>
                     {(cell, i) => {
-						const cellType = (cell.tag === "formal") ? (cell?.content?.tag === "object" ? "ObType" : "MorType") : "";
+                        const cellType = isFormalCell(cell)
+                            ? isObType(cell.content)
+                                ? "ObType"
+                                : isMorType(cell.content)
+                                  ? "MorType"
+                                  : ""
+                            : "";
+						const cellName = (cell.tag === "formal"
+                                            ? props.cellLabel?.(cell.content)
+                                            : undefined) as string;
                         const isActive = () => activeCell() === i();
                         const cellActions: CellActions = {
                             activateAbove() {
@@ -337,6 +373,7 @@ export function NotebookEditor<T>(props: {
                             },
                         };
 
+						// TODO reload replace commands
                         return (
                             <li>
                                 <NotebookCell
@@ -350,7 +387,7 @@ export function NotebookEditor<T>(props: {
                                     }
                                     currentDropTarget={currentDropTarget()}
                                     setCurrentDropTarget={setCurrentDropTarget}
-                                    replaceCommands={retypeCommands(i(), cellType)}
+                                    replaceCommands={retypeCommands(i(), cellType, cellName)}
                                 >
                                     <Switch>
                                         <Match when={cell.tag === "rich-text"}>

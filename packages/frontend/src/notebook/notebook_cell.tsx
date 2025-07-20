@@ -241,9 +241,10 @@ export function NotebookCell(props: {
             <Show when={props.tag}>
                 <StemCellEditor
                     completions={props.replaceCommands}
-                    isActive={true}
+                    isActive={false}
                     actions={props.actions}
                     placeholder={props.tag}
+                    isSwitcher={true}
                 />
             </Show>
         </div>
@@ -291,11 +292,14 @@ export function StemCellEditor(props: {
     isActive: boolean;
     actions: CellActions;
     placeholder?: string;
+    isSwitcher?: boolean;
 }) {
     const [text, setText] = createSignal("");
 
     const [ref, setRef] = createSignal<HTMLInputElement>();
-    createAutofocus(ref);
+    if (!props.isSwitcher) {
+        createAutofocus(ref);
+    }
     focusInputWhen(ref, () => props.isActive);
 
     return (

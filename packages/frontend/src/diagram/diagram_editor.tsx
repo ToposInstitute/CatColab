@@ -120,8 +120,9 @@ export function DiagramNotebookEditor(props: {
     const liveDoc = () => props.liveDiagram.liveDoc;
     const liveModel = () => props.liveDiagram.liveModel;
 
-    const cellConstructors = (cellType?: string) => {
+    const cellConstructors = (cellType?: string, cellName?: string) => {
         cellType;
+        cellName;
         return (liveModel().theory().instanceTypes ?? []).map(diagramCellConstructor);
     };
 

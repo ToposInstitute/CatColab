@@ -188,8 +188,9 @@ export function AnalysisNotebookEditor(props: {
 }) {
     const liveDoc = () => props.liveAnalysis.liveDoc;
 
-    const cellConstructors = (cellType?: string) => {
+    const cellConstructors = (cellType?: string, cellName?: string) => {
         cellType;
+        cellName; // TODO
         let meta = undefined;
         if (props.liveAnalysis.analysisType === "model") {
             meta = theoryForAnalysis(props.liveAnalysis)?.modelAnalyses;

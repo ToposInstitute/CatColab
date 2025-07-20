@@ -92,6 +92,7 @@ export function InlineInput(
         evt.preventDefault();
     };
 
+    console.log(props.placeholder, props.text);
     // Uses a hidden filler element to size the input field:
     // https://stackoverflow.com/a/41389961
     return (
@@ -105,7 +106,7 @@ export function InlineInput(
             }}
             floatingOptions={{
                 autoPlacement: {
-                    allowedPlacements: ["bottom-start", "top-start"],
+                    allowedPlacements: ["left-start", "bottom-start", "top-start"],
                 },
             }}
             closeOnOutsideFocus={false}
