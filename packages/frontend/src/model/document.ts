@@ -101,12 +101,9 @@ function enlivenModelDocument(
 
     const validatedModel = createMemo<ValidatedModel | undefined>(
         () => {
-            const th = theory();
-            if (th) {
-                const model = elaborateModel(doc, theory().theory);
-                const result = model.validate();
-                return { model, result };
-            }
+            const model = elaborateModel(doc, theory().theory);
+            const result = model.validate();
+            return { model, result };
         },
         undefined,
         { equals: false },
