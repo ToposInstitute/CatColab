@@ -116,10 +116,10 @@ impl ThSignedCategory {
             .try_into()
             .map_err(|_| "Lotka-Volterra simulation expects a discrete double model")?;
         Ok(ODEResult(
-            analyses::ode::LotkaVolterraAnalysis::new(ustr("Object"))
+            analyses::ode::SignedCoefficientBuilder::new(ustr("Object"))
                 .add_positive(Path::Id(ustr("Object")))
                 .add_negative(ustr("Negative").into())
-                .create_system(model, data.0)
+                .lotka_volterra_analysis(model, data.0)
                 .solve_with_defaults()
                 .map_err(|err| format!("{err:?}"))
                 .into(),
@@ -137,10 +137,10 @@ impl ThSignedCategory {
             .try_into()
             .map_err(|_| "Linear ODE simulation expects a discrete double model")?;
         Ok(ODEResult(
-            analyses::ode::LinearODEAnalysis::new(ustr("Object"))
+            analyses::ode::SignedCoefficientBuilder::new(ustr("Object"))
                 .add_positive(Path::Id(ustr("Object")))
                 .add_negative(ustr("Negative").into())
-                .create_system(model, data.0)
+                .linear_ode_analysis(model, data.0)
                 .solve_with_defaults()
                 .map_err(|err| format!("{err:?}"))
                 .into(),

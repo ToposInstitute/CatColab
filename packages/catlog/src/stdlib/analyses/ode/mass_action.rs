@@ -4,7 +4,7 @@ Such ODEs are based on the *law of mass action* familiar from chemistry and
 mathematical epidemiology.
  */
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::hash::{BuildHasherDefault, Hash};
 
 use nalgebra::DVector;
@@ -153,7 +153,7 @@ impl StockFlowMassActionAnalysis {
             .to_numerical();
 
         let problem = ODEProblem::new(sys, x0).end_time(data.duration);
-        let ob_index: HashMap<_, _> =
+        let ob_index: BTreeMap<_, _> =
             objects.into_iter().enumerate().map(|(i, x)| (x, i)).collect();
         ODEAnalysis::new(problem, ob_index)
     }
