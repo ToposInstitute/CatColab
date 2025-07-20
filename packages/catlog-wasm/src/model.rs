@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::hash::BuildHasherDefault;
 
 use all_the_same::all_the_same;
@@ -349,6 +348,28 @@ impl DblModel {
         })
     }
 
+    /// Gets the domain of a basic morphism, if it is set.
+    #[wasm_bindgen(js_name = "getDom")]
+    pub fn get_dom(&self, id: &str) -> Result<Option<Ob>, String> {
+        all_the_same!(match &self.0 {
+            DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
+                let id = Uuid::try_parse(id).map_err(|err| err.to_string())?;
+                Ok(model.get_dom(&id).map(|ob| Quoter.quote(ob)))
+            }
+        })
+    }
+
+    /// Gets the codomain of a basic morphism, if it is set.
+    #[wasm_bindgen(js_name = "getCod")]
+    pub fn get_cod(&self, id: &str) -> Result<Option<Ob>, String> {
+        all_the_same!(match &self.0 {
+            DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
+                let id = Uuid::try_parse(id).map_err(|err| err.to_string())?;
+                Ok(model.get_cod(&id).map(|ob| Quoter.quote(ob)))
+            }
+        })
+    }
+
     /// Returns array of all basic objects in the model.
     #[wasm_bindgen]
     pub fn objects(&self) -> Vec<Ob> {
@@ -406,8 +427,13 @@ impl DblModel {
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct ModelValidationResult(pub JsResult<(), Vec<InvalidDblModel<Uuid>>>);
 
-#[wasm_bindgen]
-pub struct TheoryLibrary(#[wasm_bindgen(skip)] pub HashMap<String, DblTheory>);
+/// Collects application of a product operation into a list of objects.
+#[wasm_bindgen(js_name = "collectProduct")]
+pub fn collect_product(ob: Ob) -> Result<Vec<Ob>, String> {
+    let ob: ModalOb<_, _> = Elaborator.elab(&ob)?;
+    let vec = ob.collect_product(None).ok_or("Object is not a product")?;
+    Ok(vec.into_iter().map(|ob| Quoter.quote(&ob)).collect())
+}
 
 #[wasm_bindgen(js_name = "elaborateModel")]
 pub fn elaborate_model(doc: &ModelDocumentContent, theory: &DblTheory) -> DblModel {
@@ -473,6 +499,8 @@ pub(crate) mod tests {
         assert_eq!(model.has_mor(Mor::Basic(a)), Ok(true));
         assert_eq!(model.dom(Mor::Basic(a)), Ok(Ob::Basic(x)));
         assert_eq!(model.cod(Mor::Basic(a)), Ok(Ob::Basic(y)));
+        assert_eq!(model.get_dom(&a.to_string()), Ok(Some(Ob::Basic(x))));
+        assert_eq!(model.get_cod(&a.to_string()), Ok(Some(Ob::Basic(y))));
         assert_eq!(model.objects().len(), 2);
         assert_eq!(model.morphisms().len(), 1);
         assert_eq!(model.objects_with_type(ObType::Basic("Entity".into())), Ok(vec![Ob::Basic(x)]));

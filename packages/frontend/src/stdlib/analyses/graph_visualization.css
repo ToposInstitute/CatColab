@@ -1,7 +1,3 @@
 .graph-visualization {
     overflow-x: auto;
 }
-
-g.link path {
-    stroke: blue;
-}

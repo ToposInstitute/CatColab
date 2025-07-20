@@ -324,7 +324,7 @@ where
         self.mor_generators.tgt_map.get(f)
     }
     fn set_dom(&mut self, f: Self::MorGen, x: Self::Ob) {
-        self.mor_generators.tgt_map.set(f, x);
+        self.mor_generators.src_map.set(f, x);
     }
     fn set_cod(&mut self, f: Self::MorGen, x: Self::Ob) {
         self.mor_generators.tgt_map.set(f, x);
@@ -429,6 +429,25 @@ impl<ThId> ModalOp<ThId> {
 }
 
 impl<Id, ThId> ModalOb<Id, ThId> {
+    /** Collects application of a product operation into a list of objects.
+
+    The intended operation has domain equal to the list modality applied to its
+    codomain, which usually signifies a product of some kind.
+     */
+    pub fn collect_product(self, op_id: Option<ThId>) -> Option<Vec<Self>>
+    where
+        ThId: Eq,
+    {
+        match self {
+            ModalOb::Generator(_) => Some(vec![self]),
+            ModalOb::App(ob, other_id) if op_id.is_none_or(|id| id == other_id) => match *ob {
+                ModalOb::List(_, objects) => Some(objects),
+                _ => None,
+            },
+            _ => None,
+        }
+    }
+
     /// Recursively flatten a nested list of objects of the given depth.
     fn flatten_list(self, list_type: List, depth: usize) -> Result<Vec<Self>, String> {
         if depth == 0 {

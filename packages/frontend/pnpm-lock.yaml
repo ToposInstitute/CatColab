@@ -78,8 +78,8 @@ importers:
         specifier: ^0.15.3
         version: 0.15.3(solid-js@1.9.7)
       '@viz-js/viz':
-        specifier: ^3.7.0
-        version: 3.9.0
+        specifier: ^3.15.0
+        version: 3.15.0
       catcolab-api:
         specifier: link:../backend/pkg
         version: link:../backend/pkg
@@ -1342,8 +1342,8 @@ packages:
   '@vitest/utils@3.0.2':
     resolution: {integrity: sha512-Qu01ZYZlgHvDP02JnMBRpX43nRaZtNpIzw3C1clDXmn8eakgX6iQVGzTQ/NjkIr64WD8ioqOjkaYRVvHQI5qiw==}
 
-  '@viz-js/viz@3.9.0':
-    resolution: {integrity: sha512-bwm18uYf1T7xQPkSzi0yiLS/abykB23PKyMPUKnGUxbUZSIclwBWNb0ywhG26XL2j+GAyvNy0AlOht/mIrY/dA==}
+  '@viz-js/viz@3.15.0':
+    resolution: {integrity: sha512-qdAjnvj0xe5yJ6UdwOlRXfeNwW0stDg5fbxs3XTGEc89V9awwa6Psn1KOv9GKtG4qz32BGs7nvLmucG1yBqAzA==}
 
   acorn-jsx@5.3.2:
     resolution: {integrity: sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==}
@@ -4492,7 +4492,7 @@ snapshots:
       loupe: 3.1.2
       tinyrainbow: 2.0.0
 
-  '@viz-js/viz@3.9.0': {}
+  '@viz-js/viz@3.15.0': {}
 
   acorn-jsx@5.3.2(acorn@8.12.1):
     dependencies:

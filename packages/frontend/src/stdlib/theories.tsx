@@ -725,6 +725,13 @@ stdTheories.add(
                     },
                 },
             ],
+            modelAnalyses: [
+                analyses.configurePetriNetVisualization({
+                    id: "diagram",
+                    name: "Visualization",
+                    description: "Visualize the Petri net",
+                }),
+            ],
         });
     },
 );
