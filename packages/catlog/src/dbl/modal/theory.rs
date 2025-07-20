@@ -204,7 +204,13 @@ impl<Id> ModalObOp<Id> {
         ModeApp::new(ModalOp::Concat(list, arity, ob_type)).into()
     }
 
-    fn apply_all(self, iter: impl IntoIterator<Item = Modality> + Clone) -> Self {
+    /// Applies a modality.
+    pub fn apply(self, m: Modality) -> Self {
+        self.map(|x| x.apply(m), |f| f.apply(m))
+    }
+
+    /// Applies a sequence of modalities.
+    pub fn apply_all(self, iter: impl IntoIterator<Item = Modality> + Clone) -> Self {
         match self {
             Path::Id(x) => Path::Id(x.apply_all(iter)),
             Path::Seq(edges) => Path::Seq(edges.map(|p| p.apply_all(iter.clone()))),
