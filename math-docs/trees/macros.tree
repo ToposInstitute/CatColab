@@ -66,6 +66,9 @@
 \def\Fam{#{\mathsf{Fam}}}
 \def\FinFam{#{\mathsf{FinFam}}}
 
+\def\func[name]{#{\mathrm{\name}}}
+% There is a mystery error if you try to name this \fun
+
 \def\Disc{#{\mathop{\mathrm{Disc}}}}
 
 % 2-category theory

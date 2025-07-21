@@ -1,0 +1,142 @@
+\date{2025-07-16}
+\author{Kevin Carlson}
+\title{The generalized list monads}
+\import{macros}
+\def\S{\mathfrak{S}}
+\taxon{example}
+
+\p{
+Let #{\S} be a subcategory of #{\cat{FinSet}}. Our motivating examples 
+are the minimal wide subcategory spanned by identities, the maximal subgroupoid, 
+and the improper subcategory spanned by all morphisms.
+}
+
+\p{
+Consider a span #{A\leftarrow X\to B} of sets. We define the #{\S}-suspended span 
+of #{X} #{\func{List}(A)\leftarrow \S(X)\to \func{List}(B)} as follows:
+Given finite families #{a:S\to A,b:T\to B}, the fiber 
+#{\S(X)_{a,b}} is the family over #{\S(S,T)} whose fiber 
+over a map #{\sigma\in \S(S,T)} is itself the power of the span #{X}
+indexed by the span #{\sigma_*:=S\leftarrow S\xto{\sigma} T}, where we take powers using the 
+finite product structure on #{\Span}. More explicitly, 
+an element of #{\S(X)} over #{a,b,\sigma} is a choice of span map
+\quiver{
+    % https://q.uiver.app/#q=WzAsNixbMCwwLCJTIl0sWzEsMCwiUyJdLFsyLDAsIlQiXSxbMSwxLCJYIl0sWzAsMSwiQSJdLFsyLDEsIkIiXSxbMSwwLCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxLDIsIlxcc2lnbWEiLDJdLFszLDRdLFszLDVdLFswLDQsImEiXSxbMiw1LCJiIiwyXSxbMSwzLCJ4IiwxXV0=
+    \begin{tikzcd}
+        S & S & T \\
+        A & X & B
+        \arrow["a", from=1-1, to=2-1]
+        \arrow[equals, from=1-2, to=1-1]
+        \arrow["\sigma"', from=1-2, to=1-3]
+        \arrow["x"{description}, from=1-2, to=2-2]
+        \arrow["b"', from=1-3, to=2-3]
+        \arrow[from=2-2, to=2-1]
+        \arrow[from=2-2, to=2-3]
+    \end{tikzcd}
+}
+}
+
+\p{
+We now define an endofunctor of \Span, also called #{\S}. On the tight category, 
+#{\S} coincides with #{\func{List}}. On each span, #{\S} operates as defined 
+above. Given a map #{\alpha} of spans as below and an element #{x\in\S(X)_{a,b,\sigma}}, we define
+#{\S(\alpha)(x)} to be the composite:
+\quiver{
+    % https://q.uiver.app/#q=WzAsNixbMCwxLCJBIl0sWzEsMSwiQiJdLFswLDIsIkEnIl0sWzEsMiwiQiciXSxbMCwwLCJTIl0sWzEsMCwiVCJdLFswLDEsIlgiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMiwzLCJYJyIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFswLDIsImYiLDFdLFsxLDMsImciLDFdLFs0LDUsIlxcc2lnbWFfKiIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFs0LDAsImEiXSxbNSwxLCJiIl0sWzYsNywiXFxhbHBoYSIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxMCw2LCJ4IiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV1d
+    \begin{tikzcd}
+        S & T \\
+        A & B \\
+        {A'} & {B'}
+        \arrow[""{name=0, anchor=center, inner sep=0}, "{\sigma_*}"{inner sep=.8ex}, "\shortmid"{marking}, from=1-1, to=1-2]
+        \arrow["a", from=1-1, to=2-1]
+        \arrow["b", from=1-2, to=2-2]
+        \arrow[""{name=1, anchor=center, inner sep=0}, "X"{inner sep=.8ex}, "\shortmid"{marking}, from=2-1, to=2-2]
+        \arrow["f"{description}, from=2-1, to=3-1]
+        \arrow["g"{description}, from=2-2, to=3-2]
+        \arrow[""{name=2, anchor=center, inner sep=0}, "{X'}"{inner sep=.8ex}, "\shortmid"{marking}, from=3-1, to=3-2]
+        \arrow["x"{description}, draw=none, from=0, to=1]
+        \arrow["\alpha"{description}, draw=none, from=1, to=2]
+    \end{tikzcd}
+}
+This visibly produces a functor on the loose category of \Span.
+}
+
+\p{
+    For unitors, we embed the identity span of #{A} into #{\S(\id_A)} as the elements 
+    \quiverinline{% https://q.uiver.app/#q=WzAsNixbMCwwLCIxIl0sWzEsMCwiMSJdLFsyLDAsIjEiXSxbMCwxLCJBIl0sWzEsMSwiQSJdLFsyLDEsIkEiXSxbMSwwLCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxLDIsIiIsMix7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzQsMywiIiwwLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNCw1LCIiLDIseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFswLDMsImEiLDFdLFsxLDQsImEiLDFdLFsyLDUsImEiLDFdXQ==
+    \begin{tikzcd}
+        1 & 1 & 1 \\
+        A & A & A
+        \arrow["a"{description}, from=1-1, to=2-1]
+        \arrow[equals, from=1-2, to=1-1]
+        \arrow[equals, from=1-2, to=1-3]
+        \arrow["a"{description}, from=1-2, to=2-2]
+        \arrow["a"{description}, from=1-3, to=2-3]
+        \arrow[equals, from=2-2, to=2-1]
+        \arrow[equals, from=2-2, to=2-3]
+    \end{tikzcd}}, which visibly satisfies naturality of unitors. 
+}
+
+\p{
+    For laxators, given composable spans #{X,Y} and composable elements #{x\in\S(X),y\in\S(Y)} as below, 
+    we define the laxator #{\S_{X,Y}(x,y)} as the composite below, which lives in the fiber over #{\sigma\tau:S\to U}:
+    % https://q.uiver.app/#q=WzAsOCxbMCwxLCJBIl0sWzEsMSwiQiJdLFsyLDEsIkMiXSxbMCwyLCJBIl0sWzIsMiwiQyJdLFswLDAsIlMiXSxbMSwwLCJUIl0sWzIsMCwiVSJdLFswLDEsIlgiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMSwyLCJZIiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzMsNCwiWFxcdGltZXNfQlkiXSxbMCwzLCIiLDEseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsyLDQsIiIsMSx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzUsMCwiYSIsMV0sWzYsMSwiYiIsMV0sWzcsMiwiYyIsMV0sWzUsNiwiXFxzaWdtYV8qIiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzYsNywiXFx0YXVfKiIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsxNiw4LCJ4IiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzE3LDksInkiLDEseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
+    \quiver{\begin{tikzcd}
+        S & T & U \\
+        A & B & C \\
+        A && C
+        \arrow[""{name=0, anchor=center, inner sep=0}, "{\sigma_*}"{inner sep=.8ex}, "\shortmid"{marking}, from=1-1, to=1-2]
+        \arrow["a"{description}, from=1-1, to=2-1]
+        \arrow[""{name=1, anchor=center, inner sep=0}, "{\tau_*}"{inner sep=.8ex}, "\shortmid"{marking}, from=1-2, to=1-3]
+        \arrow["b"{description}, from=1-2, to=2-2]
+        \arrow["c"{description}, from=1-3, to=2-3]
+        \arrow[""{name=2, anchor=center, inner sep=0}, "X"{inner sep=.8ex}, "\shortmid"{marking}, from=2-1, to=2-2]
+        \arrow[equals, from=2-1, to=3-1]
+        \arrow[""{name=3, anchor=center, inner sep=0}, "Y"{inner sep=.8ex}, "\shortmid"{marking}, from=2-2, to=2-3]
+        \arrow[equals, from=2-3, to=3-3]
+        \arrow["{X\times_BY}", from=3-1, to=3-3]
+        \arrow["x"{description}, draw=none, from=0, to=2]
+        \arrow["y"{description}, draw=none, from=1, to=3]
+    \end{tikzcd}}
+    Associativity and the naturality of laxators now just follow from the well-definedness of pastings in 
+    \Span. That leaves the unitality axiom, which says that pasting with the identity cell on a tight 
+    arrow is the identity operation. Thus #{\S} is indeed a lax double endofunctor of \Span.
+}
+
+\p{
+    We now put a double monad structure on #{\S}. The unit #{\eta} will of course be the unit of #{\func{List}}
+    on objects, and will map an element #{x:a\proto b} of a span #{A\leftarrow X\to B} to the element 
+    % https://q.uiver.app/#q=WzAsNixbMCwwLCIxIl0sWzEsMCwiMSJdLFsyLDAsIjEiXSxbMCwxLCJBIl0sWzEsMSwiWCJdLFsyLDEsIkIiXSxbMSwwLCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxLDIsIiIsMix7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzQsM10sWzQsNV0sWzAsMywiYSIsMV0sWzEsNCwieCIsMV0sWzIsNSwiYiIsMV1d
+    \quiverinline{\begin{tikzcd}
+        1 & 1 & 1 \\
+        A & X & B
+        \arrow["a"{description}, from=1-1, to=2-1]
+        \arrow[equals, from=1-2, to=1-1]
+        \arrow[equals, from=1-2, to=1-3]
+        \arrow["x"{description}, from=1-2, to=2-2]
+        \arrow["b"{description}, from=1-3, to=2-3]
+        \arrow[from=2-2, to=2-1]
+        \arrow[from=2-2, to=2-3]
+    \end{tikzcd}}
+    of #{\S(X)}. All the axioms of a strict natural transformation are quite tautological.
+}
+
+\p{
+    For the multiplication, we first wrap up the image #{\S(X)} of a span 
+    as #{\sum_S A^S\leftarrow \sum_{\sigma:\S(S,T)}X^\sigma\to \sum_T B^T}. Then a 
+    term of #{\S^2(X)} looks like this: 
+    \quiver{
+        % https://q.uiver.app/#q=WzAsNixbMCwxLCJcXHN1bV9TIEFeUyJdLFsxLDEsIlxcc3VtX3tcXHNpZ21hOlxcUyhTLFQpfVheXFxzaWdtYSJdLFsyLDEsIlxcc3VtX1RCXlQiXSxbMCwwLCJVIl0sWzEsMCwiVSJdLFsyLDAsIlYiXSxbMSwwXSxbMSwyXSxbMywwLCJcXGJhciBhIiwyXSxbNCwxLCJcXGJhciB4IiwyXSxbMiw1LCJcXGJhciBiIiwyXSxbNCw1LCJcXHVwc2lsb24iXSxbNCwzLCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dXQ==
+        \begin{tikzcd}
+        U & U & V \\
+        {\sum_S A^S} & {\sum_{\sigma:\S(S,T)}X^{\sigma_*}} & {\sum_TB^T}
+        \arrow["{\bar a}"', from=1-1, to=2-1]
+        \arrow[equals, from=1-2, to=1-1]
+        \arrow["\upsilon", from=1-2, to=1-3]
+        \arrow["{\bar x}"', from=1-2, to=2-2]
+        \arrow["{\bar b}", from=1-3, to=2-3]
+        \arrow[from=2-2, to=2-1]
+        \arrow[from=2-2, to=2-3]
+    \end{tikzcd}
+    }
+}
