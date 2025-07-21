@@ -1,12 +1,13 @@
 //! Models of modal double theories.
 
 use std::fmt::Debug;
-use std::hash::{BuildHasher, Hash, RandomState};
+use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
 use std::rc::Rc;
 
 use derive_more::From;
 use itertools::Itertools;
 use ref_cast::RefCast;
+use ustr::{IdentityHasher, Ustr};
 
 use super::theory::*;
 use crate::dbl::{
@@ -84,6 +85,9 @@ pub struct ModalDblModel<Id, ThId, S = RandomState> {
     ob_types: HashColumn<Id, ModalObType<ThId>>,
     mor_types: HashColumn<Id, ModalMorType<ThId>>,
 }
+
+/// A model of a modal double theory with `Ustr` identifiers.
+pub type UstrModalDblModel = ModalDblModel<Ustr, Ustr, BuildHasherDefault<IdentityHasher>>;
 
 impl<Id, ThId, S> ModalDblModel<Id, ThId, S> {
     /// Creates an empty model of the given theory.
@@ -429,6 +433,19 @@ impl<ThId> ModalOp<ThId> {
 }
 
 impl<Id, ThId> ModalOb<Id, ThId> {
+    /// Extracts an object generator or nothing.
+    pub fn generator(self) -> Option<Id> {
+        match self {
+            ModalOb::Generator(id) => Some(id),
+            _ => None,
+        }
+    }
+
+    /// Unwraps an object generator, or panics.
+    pub fn unwrap_generator(self) -> Id {
+        self.generator().expect("Object should be a generator")
+    }
+
     /** Collects application of a product operation into a list of objects.
 
     The intended operation has domain equal to the list modality applied to its

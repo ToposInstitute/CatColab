@@ -271,7 +271,7 @@ impl ThCategoryLinks {
             .map_err(|_| "Mass-action simulation expects a discrete tabulator model")?;
         Ok(ODEResult(
             analyses::ode::StockFlowMassActionAnalysis::default()
-                .create_numerical_system(model, data.0)
+                .build_numerical_system(model, data.0)
                 .solve_with_defaults()
                 .map_err(|err| format!("{err:?}"))
                 .into(),
