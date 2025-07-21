@@ -40,11 +40,6 @@
         "aarch64-darwin"
       ];
 
-      rustToolchain = fenix.packages.x86_64-linux.fromToolchainFile {
-        file = ./rust-toolchain.toml;
-        sha256 = "sha256-Qxt8XAuaUR2OMdKbN4u8dBJOhSHxS+uS06Wl9+flVEk=";
-      };
-
       nixpkgsFor =
         system:
         import nixpkgs {
@@ -52,13 +47,22 @@
           config.allowUnfree = true;
         };
 
+      rustToolchainFor =
+        system:
+        inputs.fenix.packages.${system}.fromToolchainFile {
+          file = ./rust-toolchain.toml;
+          sha256 = "sha256-Qxt8XAuaUR2OMdKbN4u8dBJOhSHxS+uS06Wl9+flVEk=";
+        };
+
       pkgsLinux = nixpkgsFor linuxSystem;
+      rustToolchainLinux = rustToolchainFor linuxSystem;
 
       # Generate devShells for each system
       devShellForSystem =
         system:
         let
           pkgs = nixpkgsFor system;
+          rustToolchain = rustToolchainFor system;
 
           # macOS-specific configurations for libraries
           darwinDeps =
@@ -88,6 +92,7 @@
               nodejs_24
               sqlx-cli
               biome
+              wasm-pack
             ]
             ++ darwinDeps
             ++ [
@@ -135,7 +140,8 @@
       nixosConfigurations = {
         catcolab = nixpkgs.lib.nixosSystem {
           specialArgs = {
-            inherit inputs rustToolchain;
+            inherit inputs;
+            rustToolchain = rustToolchainLinux;
           };
           system = linuxSystem;
           modules = [
@@ -144,7 +150,10 @@
           pkgs = pkgsLinux;
         };
         catcolab-next = nixpkgs.lib.nixosSystem {
-          specialArgs = { inherit inputs rustToolchain; };
+          specialArgs = {
+            inherit inputs;
+            rustToolchain = rustToolchainLinux;
+          };
           system = linuxSystem;
           modules = [
             ./infrastructure/hosts/catcolab-next

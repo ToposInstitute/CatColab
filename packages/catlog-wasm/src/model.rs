@@ -438,7 +438,9 @@ pub fn collect_product(ob: Ob) -> Result<Vec<Ob>, String> {
 #[wasm_bindgen(js_name = "elaborateModel")]
 pub fn elaborate_model(doc: &ModelDocumentContent, theory: &DblTheory) -> DblModel {
     let mut model = DblModel::new(theory);
-    for cell in doc.notebook.cells.iter() {
+
+    for cell_id in &doc.notebook.cell_order {
+        let cell = &doc.notebook.cell_contents[cell_id];
         if let Cell::Formal { id: _, content } = cell {
             match content {
                 ModelJudgment::Object(decl) => model.add_ob(decl).unwrap(),

@@ -8,7 +8,7 @@ import type {
     ModelDiagramValidationResult,
     Uuid,
 } from "catlog-wasm";
-import { elaborateDiagram } from "catlog-wasm";
+import { currentVersion, elaborateDiagram } from "catlog-wasm";
 import { type Api, type LiveDoc, type StableRef, getLiveDoc } from "../api";
 import { type LiveModelDocument, getLiveModel } from "../model";
 import { newNotebook } from "../notebook";
@@ -28,6 +28,7 @@ export const newDiagramDocument = (modelRef: StableRef): DiagramDocument => ({
         type: "diagram-in",
     },
     notebook: newNotebook(),
+    version: currentVersion(),
 });
 
 /** A diagram document "live" for editing.
@@ -69,9 +70,13 @@ function enlivenDiagramDocument(
     const { doc } = liveDoc;
 
     const formalJudgments = createMemo<Array<DiagramJudgment>>(() => {
-        return doc.notebook.cells
-            .filter((cell) => cell.tag === "formal")
-            .map((cell) => cell.content);
+        return (
+            doc.notebook.cellOrder
+                // biome-ignore lint/style/noNonNullAssertion:
+                .map((cellId) => doc.notebook.cellContents[cellId]!)
+                .filter((cell) => cell.tag === "formal")
+                .map((cell) => cell.content)
+        );
     }, []);
 
     const objectIndex = createMemo<IdToNameMap>(() => {

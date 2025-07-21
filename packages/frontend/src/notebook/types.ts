@@ -4,7 +4,8 @@ import type { Cell, Notebook } from "catlog-wasm";
 
 /** Creates an empty notebook. */
 export const newNotebook = <T>(): Notebook<T> => ({
-    cells: [],
+    cellOrder: [],
+    cellContents: {},
 });
 
 /** A cell containing rich text. */

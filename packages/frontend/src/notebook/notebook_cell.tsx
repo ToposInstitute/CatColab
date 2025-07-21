@@ -20,7 +20,6 @@ import {
 
 import ArrowDown from "lucide-solid/icons/arrow-down";
 import ArrowUp from "lucide-solid/icons/arrow-up";
-import Copy from "lucide-solid/icons/copy";
 import GripVertical from "lucide-solid/icons/grip-vertical";
 import Plus from "lucide-solid/icons/plus";
 import Trash2 from "lucide-solid/icons/trash-2";
@@ -64,7 +63,7 @@ export type CellActions = {
     deleteForward: () => void;
 
     /** Duplicate this cell, adding the new cell below this one. */
-    duplicate: () => void;
+    // duplicate: () => void;
 
     /** Move this cell up, if possible. */
     moveUp: () => void;
@@ -132,11 +131,6 @@ export function NotebookCell(props: {
             name: "Delete",
             icon: <Trash2 size={16} />,
             onComplete: props.actions.deleteForward,
-        },
-        {
-            name: "Duplicate",
-            icon: <Copy size={16} />,
-            onComplete: props.actions.duplicate,
         },
         {
             name: "Move Up",

@@ -5,6 +5,8 @@ import dotenv from "dotenv";
 import express from "express";
 import * as ws from "ws";
 
+import * as catlog from "catlog-wasm";
+
 // pg is a CommonJS package, and this is likely the least painful way of dealing with that
 import pgPkg from "pg";
 const { Pool } = pgPkg;
@@ -13,6 +15,7 @@ import type { Pool as PoolType } from "pg";
 import { PostgresStorageAdapter } from "./postgres_storage_adapter.js";
 import type { NewDocSocketResponse, StartListeningSocketResponse } from "./types.js";
 import type { SocketIOHandlers } from "./socket.js";
+import jsonpatch from "fast-json-patch";
 
 // Load environment variables from .env
 dotenv.config();
@@ -117,6 +120,14 @@ export class AutomergeServer implements SocketIOHandlers {
         // NOTE: this listener is never removed
         handle.on("change", (payload) => {
             this.handleChange!(refId, payload.doc);
+        });
+
+        const docBefore = await handle.doc();
+        const docAfter = catlog.migrateDocument(docBefore);
+        const patches = jsonpatch.compare(docBefore as any, docAfter);
+
+        handle.change((doc: any) => {
+            jsonpatch.applyPatch(doc, patches);
         });
 
         this.docMap.set(refId, handle);
