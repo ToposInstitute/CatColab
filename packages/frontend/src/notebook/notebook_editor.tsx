@@ -19,7 +19,7 @@ import {
     onCleanup,
 } from "solid-js";
 
-import type { Cell, Notebook, ObType, MorType } from "catlog-wasm";
+import type { Cell, MorType, Notebook, ObType } from "catlog-wasm";
 import { type Completion, IconButton } from "../components";
 import { deepCopyJSON } from "../util/deepcopy";
 import {
@@ -310,9 +310,10 @@ export function NotebookEditor<T>(props: {
                                   ? "MorType"
                                   : ""
                             : "";
-						const cellName = (cell.tag === "formal"
-                                            ? props.cellLabel?.(cell.content)
-                                            : undefined) as string;
+                        const cellName = (cell: Cell<T>) =>
+                            (cell.tag === "formal"
+                                ? props.cellLabel?.(cell.content)
+                                : undefined) as string;
                         const isActive = () => activeCell() === i();
                         const cellActions: CellActions = {
                             activateAbove() {
@@ -373,7 +374,7 @@ export function NotebookEditor<T>(props: {
                             },
                         };
 
-						// TODO reload replace commands
+                        // TODO reload replace commands
                         return (
                             <li>
                                 <NotebookCell
@@ -387,7 +388,7 @@ export function NotebookEditor<T>(props: {
                                     }
                                     currentDropTarget={currentDropTarget()}
                                     setCurrentDropTarget={setCurrentDropTarget}
-                                    replaceCommands={retypeCommands(i(), cellType, cellName)}
+                                    replaceCommands={retypeCommands(i(), cellType, cellName(cell))}
                                 >
                                     <Switch>
                                         <Match when={cell.tag === "rich-text"}>
