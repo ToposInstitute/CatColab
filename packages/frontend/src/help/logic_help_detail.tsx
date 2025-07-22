@@ -97,9 +97,7 @@ export function HelpAnalysisById(props: HelpAnalysisProps) {
                 return (
                     <div class="help-analysis-pane">
                         <h3>{analysis().name}</h3>
-                        <p class="help-analysis-pane-description">
-                            {analysis().description}
-                        </p>
+                        <p class="help-analysis-pane-description">{analysis().description}</p>
                         {props.children}
                         {HelpComponent && <Dynamic component={HelpComponent} />}
                     </div>

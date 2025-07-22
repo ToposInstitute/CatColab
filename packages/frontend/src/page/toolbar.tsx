@@ -1,9 +1,9 @@
 import { A, useNavigate } from "@solidjs/router";
-import { createMemo, type JSX, useContext } from "solid-js";
+import { type JSX, createMemo, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { IconButton } from "../components";
-import { TheoryLibraryContext, TheoryMeta } from "../stdlib";
+import { TheoryLibraryContext, type TheoryMeta } from "../stdlib";
 import type { Theory } from "../theory";
 import { DefaultAppMenu } from "./menubar";
 
@@ -62,11 +62,11 @@ export function TheoryHelpButton(props: {
 
     const theory = createMemo(() => {
         if (props.theoryMeta && !props.theory) {
-            return theories.get(props.theoryMeta.id)
+            return theories.get(props.theoryMeta.id);
         } else if (!props.theory) {
             return theories.getDefault();
         } else {
-            return props.theory
+            return props.theory;
         }
     });
 
