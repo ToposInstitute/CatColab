@@ -1,12 +1,14 @@
+import { Match, Switch, createSignal } from "solid-js";
+
+import { Login } from "../user";
+
 import Binoculars from "lucide-solid/icons/binoculars";
 import Bird from "lucide-solid/icons/bird";
 import Github from "lucide-solid/icons/github";
 import NotebookPen from "lucide-solid/icons/notebook-pen";
-import { Match, Switch, createSignal } from "solid-js";
 import zulip_favicon from "./assets/zulip_favicon.png";
-import "./welcome_overlay.css";
 
-import { Login } from "../user";
+import "./welcome_overlay.css";
 
 export function WelcomeOverlay(props: { isOpen: boolean; onClose: () => void }) {
     const [loginOpen, setLoginOpen] = createSignal(false);
@@ -92,7 +94,11 @@ export function WelcomeOverlay(props: { isOpen: boolean; onClose: () => void }) 
                                         </span>
                                         <span>Source code</span>
                                     </a>
-                                    <a href="" class="resource-link" target="_blank">
+                                    <a
+                                        href="https://catcolab.zulipchat.com/"
+                                        class="resource-link"
+                                        target="_blank"
+                                    >
                                         <span class="resource-icon">
                                             <img src={zulip_favicon} width="24" height="24" />
                                         </span>

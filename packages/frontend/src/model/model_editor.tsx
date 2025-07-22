@@ -1,7 +1,10 @@
 import { useParams } from "@solidjs/router";
-import type { ModelJudgment } from "catlog-wasm";
-import { Match, Show, Switch, createResource, useContext } from "solid-js";
+import { getAuth } from "firebase/auth";
+import { useAuth, useFirebaseApp } from "solid-firebase";
+import { Match, Show, Switch, createResource, createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
+
+import type { ModelJudgment } from "catlog-wasm";
 import { useApi } from "../api";
 import { InlineInput } from "../components";
 import {
@@ -18,6 +21,7 @@ import {
     TheoryHelpButton,
     Toolbar,
 } from "../page";
+import { WelcomeOverlay } from "../page/welcome_overlay";
 import { TheoryLibraryContext } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
 import { PermissionsButton } from "../user";
@@ -33,11 +37,6 @@ import {
     newMorphismDecl,
     newObjectDecl,
 } from "./types";
-
-import { getAuth } from "firebase/auth";
-import { useAuth, useFirebaseApp } from "solid-firebase";
-import { createSignal } from "solid-js";
-import { WelcomeOverlay } from "./welcome_overlay";
 
 import "./model_editor.css";
 
@@ -140,12 +139,9 @@ export function ModelNotebookEditor(props: {
     const auth = useAuth(getAuth(firebaseApp));
 
     const [isOverlayOpen, setOverlayOpen] = createSignal(
-        props.liveModel.liveDoc.doc.notebook.cells.length === 0 && auth.data == null,
+        liveDoc().doc.notebook.cells.length === 0 && auth.data == null,
     );
-
-    const toggleOverlay = () => {
-        setOverlayOpen(!isOverlayOpen());
-    };
+    const toggleOverlay = () => setOverlayOpen(!isOverlayOpen());
 
     return (
         <LiveModelContext.Provider value={() => props.liveModel}>
