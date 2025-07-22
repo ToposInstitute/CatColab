@@ -119,10 +119,6 @@ export function NotebookCell(props: {
     const openMenu = () => setMenuOpen(true);
     const closeMenu = () => setMenuOpen(false);
 
-    const [isSwitchMenuOpen, setSwitchMenuOpen] = createSignal(false);
-    const openSwitchMenu = () => setSwitchMenuOpen(true);
-    const closeSwitchMenu = () => setSwitchMenuOpen(false);
-
     const completions = (): Completion[] => [
         {
             name: "Delete",
@@ -243,32 +239,7 @@ export function NotebookCell(props: {
                     <div class="drop-indicator-with-dots" />
                 </Show>
             </div>
-            <Show when={props.tag}>
-                <Popover
-                    open={isSwitchMenuOpen()}
-                    onOpenChange={setSwitchMenuOpen}
-                    floatingOptions={{
-                        autoPlacement: {
-                            allowedPlacements: ["left-start", "bottom-start", "top-start"],
-                        },
-                    }}
-                    trapFocus={false}
-                >
-                    <Popover.Anchor as="span">
-                        <button type="button" class="plain" onClick={openSwitchMenu}>
-                            {props.tag}
-                        </button>
-                    </Popover.Anchor>
-                    <Popover.Portal>
-                        <Popover.Content class="popup">
-                            <Completions
-                                completions={props.replaceCommands}
-                                onComplete={closeSwitchMenu}
-                            />
-                        </Popover.Content>
-                    </Popover.Portal>
-                </Popover>
-            </Show>
+            <CellSwitcher tag={props.tag} completions={props.replaceCommands}></CellSwitcher>
         </div>
     );
 }
@@ -334,6 +305,41 @@ export function StemCellEditor(props: {
             onFocus={props.actions.hasFocused}
             placeholder={props.placeholder ?? "Select cell type"}
         />
+    );
+}
+
+export function CellSwitcher(props: {
+    tag: string | undefined;
+    completions: Completion[];
+}) {
+    const [isSwitchMenuOpen, setSwitchMenuOpen] = createSignal(false);
+    const openSwitchMenu = () => setSwitchMenuOpen(true);
+    const closeSwitchMenu = () => setSwitchMenuOpen(false);
+
+    return (
+        <Show when={props.tag}>
+            <Popover
+                open={isSwitchMenuOpen()}
+                onOpenChange={setSwitchMenuOpen}
+                floatingOptions={{
+                    autoPlacement: {
+                        allowedPlacements: ["left-start", "bottom-start", "top-start"],
+                    },
+                }}
+                trapFocus={false}
+            >
+                <Popover.Anchor as="span">
+                    <button type="button" class="plain" onClick={openSwitchMenu}>
+                        {props.tag}
+                    </button>
+                </Popover.Anchor>
+                <Popover.Portal>
+                    <Popover.Content class="popup">
+                        <Completions completions={props.completions} onComplete={closeSwitchMenu} />
+                    </Popover.Content>
+                </Popover.Portal>
+            </Popover>
+        </Show>
     );
 }
 
