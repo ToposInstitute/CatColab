@@ -1,4 +1,7 @@
-import { Binoculars, Bird, Github, NotebookPen } from "lucide-solid";
+import Binoculars from "lucide-solid/icons/binoculars";
+import Bird from "lucide-solid/icons/bird";
+import Github from "lucide-solid/icons/github";
+import NotebookPen from "lucide-solid/icons/notebook-pen";
 import { Match, Switch, createSignal } from "solid-js";
 import zulip_favicon from "./assets/zulip_favicon.png";
 import "./welcome_overlay.css";
@@ -50,14 +53,14 @@ export function WelcomeOverlay(props: { isOpen: boolean; onClose: () => void }) 
                             <div class="resources-container">
                                 <div class="resources-list">
                                     <a
-                                        href="https://catcolab.org/help"
+                                        href="https://topos.institute/blog/#category=CatColab"
                                         class="resource-link"
                                         target="_blank"
                                     >
                                         <span class="resource-icon">
                                             <Bird />
                                         </span>
-                                        <span>CatColab Overview</span>
+                                        <span>CatColab overview</span>
                                     </a>
                                     <a
                                         href="https://catcolab.org/help/quick-intro"
@@ -67,17 +70,17 @@ export function WelcomeOverlay(props: { isOpen: boolean; onClose: () => void }) 
                                         <span class="resource-icon">
                                             <Binoculars />
                                         </span>
-                                        <span>Example Models</span>
+                                        <span>Example models</span>
                                     </a>
                                     <a
-                                        href="https://topos.institute/blog/#category=CatColab"
+                                        href="https://catcolab.org/help"
                                         class="resource-link"
                                         target="_blank"
                                     >
                                         <span class="resource-icon">
                                             <NotebookPen />
                                         </span>
-                                        <span>Blog Post</span>
+                                        <span>Help pages</span>
                                     </a>
                                     <a
                                         href="https://github.com/ToposInstitute/CatColab"
@@ -87,13 +90,13 @@ export function WelcomeOverlay(props: { isOpen: boolean; onClose: () => void }) 
                                         <span class="resource-icon">
                                             <Github />
                                         </span>
-                                        <span>Source Code</span>
+                                        <span>Source code</span>
                                     </a>
                                     <a href="" class="resource-link" target="_blank">
                                         <span class="resource-icon">
                                             <img src={zulip_favicon} width="24" height="24" />
                                         </span>
-                                        <span>Join us on Zulip!</span>
+                                        <span>Zulip chatroom</span>
                                     </a>
                                 </div>
                             </div>

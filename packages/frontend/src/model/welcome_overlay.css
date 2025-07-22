@@ -136,16 +136,16 @@
     transform: translateY(-2px);
 }
 
-.resource-link:last-child {
+.resource-link:first-child {
     grid-column: 1 / -1;
-    grid-row: 3;
+    grid-row: 1;
     display: flex;
     align-items: center;
     justify-content: center;
     background-color: #f0f0f0;
 }
 
-.resource-link:last-child .resource-icon {
+.resource-link:first-child .resource-icon {
     position: relative;
     top: 4px;
 }
