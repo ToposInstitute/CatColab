@@ -731,6 +731,11 @@ stdTheories.add(
                     name: "Visualization",
                     description: "Visualize the Petri net",
                 }),
+                analyses.configureMassAction({
+                    simulate(model, data) {
+                        return thSymMonoidalCategory.massAction(model, data);
+                    },
+                }),
             ],
         });
     },
