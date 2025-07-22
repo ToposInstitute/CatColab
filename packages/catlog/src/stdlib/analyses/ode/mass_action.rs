@@ -54,7 +54,11 @@ type Parameter<Id> = Polynomial<Id, f32, u8>;
 
 type PetriNetModel<Id> = ModalDblModel<Id, Ustr, BuildHasherDefault<IdentityHasher>>;
 
-/// Mass-action ODE analysis for Petri nets.
+/** Mass-action ODE analysis for Petri nets.
+
+This struct implements the object part of the functorial semantics for reaction
+networks (aka, Petri nets) due to [Baez & Pollard](crate::refs::ReactionNets).
+ */
 pub struct PetriNetMassActionAnalysis {
     /// Object type for places.
     pub place_ob_type: ModalObType<Ustr>,

@@ -78,6 +78,16 @@ modes.
  */
 pub const AdjointLogic: () = ();
 
+/** Reference: Compositional framework for reaction networks.
+
+John C. Baez & Blake S. Pollard, 2017: A compositional framework for reaction
+networks.
+
+- [DOI:10.1142/S0129055X17500283](https://doi.org/10.1142/S0129055X17500283)
+- [arXiv:1704.02051](https://arxiv.org/abs/1704.02051)
+ */
+pub const ReactionNets: () = ();
+
 /** Reference: Compositional account of biochemical regulatory networks.
 
 Rebekah Aduddell, James Fairbanks, Amit Kumar, Pablo S. Ocal, Evan Patterson,
