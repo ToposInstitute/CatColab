@@ -1,14 +1,14 @@
-import { destructure } from "@solid-primitives/destructure";
 import { useParams } from "@solidjs/router";
 import { For, type JSXElement, Show, lazy, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
-import { TheoryLibraryContext } from "../stdlib";
-import type { Theory } from "../theory";
+import { TheoryLibraryContext } from "../../stdlib";
+import type { Theory } from "../../theory";
+import LogicNotFound from "./logic-not-found.mdx";
 
 /** Help page for a theory in the standard library. */
-export default function LogicHelpPage() {
+export default function LogicHelpDetail() {
     const theories = useContext(TheoryLibraryContext);
     invariant(theories, "Library of theories must be provided as context");
 
@@ -19,15 +19,13 @@ export default function LogicHelpPage() {
         return theories.get(params.id);
     };
 
-    return <LogicHelp theory={theory()} />;
-}
-
-/** Documentation for a theory. */
-export function LogicHelp(props: {
-    theory: Theory;
-}) {
-    const { theory } = destructure(props);
-    const helpLogicContent = (name: string) => lazy(() => import(`./logic/${name}.mdx`));
+    const Content = lazy(async () => {
+        try {
+            return await import(`./${params.id}.mdx`);
+        } catch {
+            return { default: LogicNotFound };
+        }
+    });
 
     return (
         <>
@@ -73,7 +71,7 @@ export function LogicHelp(props: {
                 </div>
             </Show>
             <Show when={theory().help}>
-                {(name) => <Dynamic component={helpLogicContent(name())} theory={theory()} />}
+                <Content theory={theory()} />
             </Show>
         </>
     );
@@ -86,34 +84,27 @@ export type HelpAnalysisProps = {
 };
 
 /** Documentation for an analysis of a theory. */
-function helpAnalysisByIdContent(props: HelpAnalysisProps) {
-    let content = <></>;
-    const analysis = props.theory.modelAnalyses.filter(
-        (analysis) => analysis.id === props.analysisId,
-    )[0];
-    if (analysis !== undefined) {
-        let helpMdxContent = <></>;
-        if (analysis.help) {
-            const mdx_component = lazy(() => import(`./analysis/${analysis.help}.mdx`));
-            helpMdxContent = <Dynamic component={mdx_component} />;
-        }
-        content = (
-            <div class="help-analysis-pane">
-                <h3>{analysis.name}</h3>
-                <p>
-                    <i>{analysis.description}</i>
-                </p>
-                {props.children}
-                {helpMdxContent}
-            </div>
-        );
-    }
-    return content;
-}
+export function HelpAnalysisById(props: HelpAnalysisProps) {
+    const analysis = () => props.theory.modelAnalyses.find((a) => a.id === props.analysisId);
 
-export const HelpAnalysisById = (props: HelpAnalysisProps) =>
-    helpAnalysisByIdContent({
-        theory: props.theory,
-        analysisId: props.analysisId,
-        children: props.children,
-    });
+    return (
+        <Show when={analysis()}>
+            {(analysis) => {
+                const HelpComponent = analysis
+                    ? lazy(() => import(`../analysis/${analysis().help}.mdx`))
+                    : null;
+
+                return (
+                    <div class="help-analysis-pane">
+                        <h3>{analysis.name}</h3>
+                        <p>
+                            <i>{analysis().description}</i>
+                        </p>
+                        {props.children}
+                        {HelpComponent && <Dynamic component={HelpComponent} />}
+                    </div>
+                );
+            }}
+        </Show>
+    );
+}
