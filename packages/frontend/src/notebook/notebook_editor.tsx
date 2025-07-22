@@ -370,6 +370,7 @@ export function NotebookEditor<T>(props: {
                                 });
                             },
                             hasFocused() {
+                                console.log(i());
                                 setActiveCell(i());
                             },
                         };
@@ -386,6 +387,7 @@ export function NotebookEditor<T>(props: {
                                             ? props.cellLabel?.(cell.content)
                                             : undefined
                                     }
+                                    isActive={isActive()}
                                     currentDropTarget={currentDropTarget()}
                                     setCurrentDropTarget={setCurrentDropTarget}
                                     replaceCommands={retypeCommands(i(), cellType, cellName(cell))}

@@ -104,6 +104,7 @@ export function NotebookCell(props: {
     tag?: string;
     currentDropTarget: string | null;
     setCurrentDropTarget: (cellId: string | null) => void;
+    isActive: boolean;
     replaceCommands: Completion[];
 }) {
     let rootRef!: HTMLDivElement;
@@ -117,6 +118,10 @@ export function NotebookCell(props: {
     const [isMenuOpen, setMenuOpen] = createSignal(false);
     const openMenu = () => setMenuOpen(true);
     const closeMenu = () => setMenuOpen(false);
+
+    const [isSwitchMenuOpen, setSwitchMenuOpen] = createSignal(false);
+    const openSwitchMenu = () => setSwitchMenuOpen(true);
+    const closeSwitchMenu = () => setSwitchMenuOpen(false);
 
     const completions = (): Completion[] => [
         {
@@ -239,13 +244,30 @@ export function NotebookCell(props: {
                 </Show>
             </div>
             <Show when={props.tag}>
-                <StemCellEditor
-                    completions={props.replaceCommands}
-                    isActive={false}
-                    actions={props.actions}
-                    placeholder={props.tag}
-                    isSwitcher={true}
-                />
+                <Popover
+                    open={isSwitchMenuOpen()}
+                    onOpenChange={setSwitchMenuOpen}
+                    floatingOptions={{
+                        autoPlacement: {
+                            allowedPlacements: ["left-start", "bottom-start", "top-start"],
+                        },
+                    }}
+                    trapFocus={false}
+                >
+                    <Popover.Anchor as="span">
+                        <button type="button" class="plain" onClick={openSwitchMenu}>
+                            {props.tag}
+                        </button>
+                    </Popover.Anchor>
+                    <Popover.Portal>
+                        <Popover.Content class="popup">
+                            <Completions
+                                completions={props.replaceCommands}
+                                onComplete={closeSwitchMenu}
+                            />
+                        </Popover.Content>
+                    </Popover.Portal>
+                </Popover>
             </Show>
         </div>
     );
@@ -292,16 +314,12 @@ export function StemCellEditor(props: {
     isActive: boolean;
     actions: CellActions;
     placeholder?: string;
-    isSwitcher?: boolean;
 }) {
     const [text, setText] = createSignal("");
 
     const [ref, setRef] = createSignal<HTMLInputElement>();
-    if (!props.isSwitcher) {
-        createAutofocus(ref);
-    }
+    createAutofocus(ref);
     focusInputWhen(ref, () => props.isActive);
-
     return (
         <InlineInput
             ref={setRef}
