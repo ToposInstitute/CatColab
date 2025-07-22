@@ -279,6 +279,23 @@ impl ThCategoryLinks {
     }
 }
 
+/// The theory of strict symmetric monoidal categories.
+#[wasm_bindgen]
+pub struct ThSymMonoidalCategory(Rc<theory::UstrModalDblTheory>);
+
+#[wasm_bindgen]
+impl ThSymMonoidalCategory {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self(Rc::new(theories::th_sym_monoidal_category()))
+    }
+
+    #[wasm_bindgen]
+    pub fn theory(&self) -> DblTheory {
+        DblTheory(self.0.clone().into())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -302,5 +319,19 @@ mod tests {
         let link = MorType::Basic(ustr("Link"));
         assert_eq!(th.src(link.clone()), Ok(x));
         assert!(matches!(th.tgt(link), Ok(ObType::Tabulator(_))));
+    }
+
+    #[test]
+    fn modal_theory() {
+        let th = ThSymMonoidalCategory::new().theory();
+        let x = ObType::Basic(ustr("Object"));
+        let list_x = ObType::ModeApp {
+            modality: Modality::SymmetricList,
+            ob_type: x.clone().into(),
+        };
+        let tensor = ObOp::Basic(ustr("tensor"));
+        assert_eq!(th.src(MorType::Hom(list_x.clone().into())), Ok(list_x.clone()));
+        assert_eq!(th.dom(tensor.clone()), Ok(list_x));
+        assert_eq!(th.cod(tensor), Ok(x));
     }
 }

@@ -1,11 +1,22 @@
 /*! Modal double theories.
 
-A **modal double theory** is a unital VDC equipped a family of monads (in the
-2-category of unital VDCs, normal functors, and natural transformations) called
-[modes](Mode). In a model, each monad on the theory is interpreted as a monad on
-the VDC of sets, i.e., as a lax double monad on the double category of sets. The
-monads on the semantics side are fixed across all models and include the double
-list monads and its many variants.
+A **modal double theory** is a unital VDC equipped a family of modalities. A
+**modality** is minimally an endomorphism, and is usually a monad or comonad, in
+the 2-category of unital VDCs, normal functors, and natural transformations. In
+a model of a modal double theory, each endomorphism on the theory is interpreted
+as a endofunctor on the VDC of sets, i.e., as a lax double endofunctor on the
+double category of sets. The modalities on the semantics side are fixed across
+all models and include the double list monads and its many variants.
+
+The various modalities are implicitly organized by a **mode theory** ([Licata &
+Shulman 2015](crate::refs::AdjointLogic)), a 2-category whose objects are called
+**modes**, morphisms are called **modalities**, and cells are sometimes called
+**laws**. Our mode theory has only one mode, corresponding to the fact our
+semantics is currently fixed to be the double category of sets and spans. Thus,
+our mode theory is actually a monoidal category. It seems excessively meta at
+this stage to reify the mode theory as the data of a finitely presented
+2-category or monoidal category. Instead, the mode theory is implicit and baked
+in at the type level.
 */
 
 use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
@@ -22,84 +33,120 @@ use crate::one::computad::{Computad, ComputadTop};
 use crate::validate::{self, Validate};
 use crate::{one::*, zero::*};
 
-/** Modes/modalities available in a modal double theory.
+/// Modalities available in a modal double theory.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, From)]
+pub enum Modality {
+    /// List modalities, all of which are monads.
+    #[from]
+    List(List),
 
-On the semantics side, each of these corresponds to a lax double monad on the
-double category of sets.
- */
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Mode {
-    /// Lists of objects and morphisms (of same length).
-    List,
+    /// Discrete modality, an idempotent comonad.
+    Discrete(),
 
-    /// Lists of objects and morphisms with permutation of codomain list.
-    SymList,
-
-    /// Lists of objects and morphisms with reindexing of codomain list.
-    Fam,
-
-    /// Lists of objects and morphisms with reindexing of domain list..
-    ProdFam,
-
-    /// Lists of objects and morphisms with independent reindexing of both
-    /// domain and codomain lists.
-    BiprodFam,
+    /// Codiscrete modality, an idempotent monad.
+    Codiscrete(),
 }
 
-/** Application of modes/modalities.
+/** List modalities available in a modal double theory.
+
+There is just one list, or free monoid, monad on the category of sets, but the
+double category of sets admits, besides the [plain](Self::Plain) list double
+monad, a number of variations decorating the spans of lists with extra
+combinatorial data.
+ */
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum List {
+    /// Lists of objects and morphisms (of same length).
+    Plain,
+
+    /// Lists of objects and morphisms, allowing permutation of the codomain list.
+    Symmetric,
+
+    /** Lists of objects and morphisms, allowing reindexing of the codomain list.
+
+    This modality is a skeletized version of the "finite family", or free finite
+    [coproduct completion](https://ncatlab.org/nlab/show/free+coproduct+completion),
+    construction.
+     */
+    Coproduct,
+
+    /** Lists of objects and morphisms, allowing reindexing of the domain list.
+
+    This modality is a skeletized version of the free finite product completion.
+     */
+    Product,
+
+    /** Lists of objects and morphisms, allowing independent reindexing of both
+    domain and codomain lists.
+
+    This modality is a version of the free finite biproduct completion,
+    equivalent to freely enriching in commutative monoids and then applying the
+    matrix construction (Mac Lane, Exercise VIII.2.6) on such an enriched
+    category.
+    */
+    Biproduct,
+}
+
+/** Application of modalities.
 
 Due to the simplicity of this logic, we can easily put terms in normal form:
-every term is a single argument along with a (possibly empty) list of modes
+every term is a single argument along with a (possibly empty) list of modalities
 applied to it.
  */
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ModeApp<T> {
-    pub(super) arg: T,
-    pub(super) modes: Vec<Mode>,
+    /// Argument to which the modalities are applied.
+    pub arg: T,
+
+    /// List of modalities applied (from left to right).
+    pub modalities: Vec<Modality>,
 }
 
 impl<T> ModeApp<T> {
-    /// Constructs a new term with no modes applied.
+    /// Constructs a new term with no modalities applied.
     pub fn new(arg: T) -> Self {
         Self {
             arg,
-            modes: Default::default(),
+            modalities: Default::default(),
         }
     }
 
     /** Converts from `&ModeApp<T>` to `ModeApp<&T>`.
 
-    Note that this requires cloning the list of applied modes.
+    Note that this requires cloning the list of applied modalities.
     */
     pub fn as_ref(&self) -> ModeApp<&T> {
         ModeApp {
             arg: &self.arg,
-            modes: self.modes.clone(),
+            modalities: self.modalities.clone(),
         }
     }
 
-    /// Applies a mode.
-    pub fn apply(mut self, mode: Mode) -> Self {
-        self.modes.push(mode);
+    /// Applies a modality.
+    pub fn apply(mut self, m: Modality) -> Self {
+        self.modalities.push(m);
         self
     }
 
-    /// Applies a sequence of modes.
-    pub fn apply_all(mut self, modes: impl IntoIterator<Item = Mode>) -> Self {
-        self.modes.extend(modes);
+    /// Applies a sequence of modalities.
+    pub fn apply_all(mut self, iter: impl IntoIterator<Item = Modality>) -> Self {
+        self.modalities.extend(iter);
         self
     }
 
     /// Maps over the argument.
     pub fn map<S, F: FnOnce(T) -> S>(self, f: F) -> ModeApp<S> {
-        let ModeApp { arg, modes } = self;
-        ModeApp { arg: f(arg), modes }
+        let ModeApp { arg, modalities } = self;
+        ModeApp {
+            arg: f(arg),
+            modalities,
+        }
     }
 
     /// Maps over the argument, flattening nested applications.
     pub fn flat_map<S, F: FnOnce(T) -> ModeApp<S>>(self, f: F) -> ModeApp<S> {
-        let ModeApp { arg, modes } = self;
-        f(arg).apply_all(modes)
+        let ModeApp { arg, modalities } = self;
+        f(arg).apply_all(modalities)
     }
 }
 
@@ -114,12 +161,12 @@ pub enum ModalOp<Id> {
     #[from]
     Generator(Id),
 
-    /** Component of monad multiplication at the given type.
+    /** List concentation.
 
-    The monad multiplication is given in unbiased style, where the second
-    argument is the desired arity.
+    This is a component of the monad multiplication for a [list](List) modality.
+    It is given in unbiased style, where the second argument is the arity.
      */
-    Mul(Mode, usize, ModeApp<Id>),
+    Concat(List, usize, ModeApp<Id>),
 }
 
 /// An object type in a modal double theory.
@@ -129,14 +176,16 @@ pub type ModalObType<Id> = ModeApp<Id>;
 pub type ModalMorType<Id> = ShortPath<ModalObType<Id>, ModeApp<Id>>;
 
 impl<Id> ModalMorType<Id> {
-    pub(super) fn apply(self, mode: Mode) -> Self {
-        self.map(|x| x.apply(mode), |f| f.apply(mode))
+    /// Applies a modality.
+    pub fn apply(self, m: Modality) -> Self {
+        self.map(|x| x.apply(m), |f| f.apply(m))
     }
 
-    fn apply_all(self, modes: impl IntoIterator<Item = Mode>) -> Self {
+    /// Applies a sequence of modalities.
+    pub fn apply_all(self, iter: impl IntoIterator<Item = Modality>) -> Self {
         match self {
-            ShortPath::Zero(x) => ShortPath::Zero(x.apply_all(modes)),
-            ShortPath::One(f) => ShortPath::One(f.apply_all(modes)),
+            ShortPath::Zero(x) => ShortPath::Zero(x.apply_all(iter)),
+            ShortPath::One(f) => ShortPath::One(f.apply_all(iter)),
         }
     }
 }
@@ -150,15 +199,21 @@ impl<Id> ModalObOp<Id> {
         ModeApp::new(ModalOp::Generator(id)).into()
     }
 
-    /// Constructs the operation operation for a monad multiplication.
-    pub fn mul(mode: Mode, arity: usize, ob_type: ModalObType<Id>) -> Self {
-        ModeApp::new(ModalOp::Mul(mode, arity, ob_type)).into()
+    /// Constructs a concatenation operation for a list modality.
+    pub fn concat(list: List, arity: usize, ob_type: ModalObType<Id>) -> Self {
+        ModeApp::new(ModalOp::Concat(list, arity, ob_type)).into()
     }
 
-    fn apply_all(self, modes: impl IntoIterator<Item = Mode> + Clone) -> Self {
+    /// Applies a modality.
+    pub fn apply(self, m: Modality) -> Self {
+        self.map(|x| x.apply(m), |f| f.apply(m))
+    }
+
+    /// Applies a sequence of modalities.
+    pub fn apply_all(self, iter: impl IntoIterator<Item = Modality> + Clone) -> Self {
         match self {
-            Path::Id(x) => Path::Id(x.apply_all(modes)),
-            Path::Seq(edges) => Path::Seq(edges.map(|p| p.apply_all(modes.clone()))),
+            Path::Id(x) => Path::Id(x.apply_all(iter)),
+            Path::Seq(edges) => Path::Seq(edges.map(|p| p.apply_all(iter.clone()))),
         }
     }
 }
@@ -179,7 +234,7 @@ pub enum ModalNode<Id> {
 
     /** Cell witnessing a composite.
 
-    By assumption, modes preserve all composites in the theory.
+    By assumption, modalities preserve all composites in the theory.
      */
     Composite(Path<ModalObType<Id>, ModalMorType<Id>>),
 }
@@ -301,19 +356,21 @@ where
     fn has_edge(&self, edge: &Self::E) -> bool {
         match &edge.arg {
             ModalOp::Generator(e) => self.0.tight_computad().has_edge(e),
-            ModalOp::Mul(_, _, ob) => self.0.tight_computad().has_vertex(ob),
+            ModalOp::Concat(_, _, ob) => self.0.tight_computad().has_vertex(ob),
         }
     }
     fn src(&self, edge: &Self::E) -> Self::V {
         edge.as_ref().flat_map(|arg| match arg {
             ModalOp::Generator(e) => self.0.tight_computad().src(e),
-            ModalOp::Mul(mode, n, ob) => ob.clone().apply_all(repeat_n(*mode, *n)),
+            ModalOp::Concat(list, n, ob) => {
+                ob.clone().apply_all(repeat_n(Modality::List(*list), *n))
+            }
         })
     }
     fn tgt(&self, edge: &Self::E) -> Self::V {
         edge.as_ref().flat_map(|arg| match arg {
             ModalOp::Generator(e) => self.0.tight_computad().tgt(e),
-            ModalOp::Mul(mode, _, ob) => ob.clone().apply(*mode),
+            ModalOp::Concat(list, _, ob) => ob.clone().apply(Modality::List(*list)),
         })
     }
 }
@@ -413,7 +470,7 @@ where
         match node {
             ModalNode::Basic(app) => match &app.arg {
                 ModalOp::Generator(sq) => self.0.dbl_computad().has_square(sq),
-                ModalOp::Mul(_, _, p) => ModalProedgeGraph::ref_cast(&self.0).has_edge(p),
+                ModalOp::Concat(_, _, p) => ModalProedgeGraph::ref_cast(&self.0).has_edge(p),
             },
             ModalNode::Unit(f) => ModalEdgeGraph::ref_cast(&self.0).has_edge(f),
             // FIXME: Don't assume all composites exist.
@@ -437,13 +494,15 @@ where
     fn square_dom(&self, node: &Self::Sq) -> Path<Self::V, Self::ProE> {
         match node {
             ModalNode::Basic(app) => {
-                let dom = match &app.arg {
+                let ModeApp { arg, modalities } = app;
+                let dom = match &arg {
                     ModalOp::Generator(sq) => self.0.dbl_computad().square_dom(sq),
-                    ModalOp::Mul(mode, n, p) => {
-                        ShortPath::One(p.clone().apply_all(repeat_n(*mode, *n))).into()
+                    ModalOp::Concat(list, n, p) => {
+                        let ob_type = p.clone().apply_all(repeat_n(Modality::List(*list), *n));
+                        ShortPath::One(ob_type).into()
                     }
                 };
-                dom.map(|x| x.apply_all(app.modes.clone()), |p| p.apply_all(app.modes.clone()))
+                dom.map(|x| x.apply_all(modalities.clone()), |p| p.apply_all(modalities.clone()))
             }
             ModalNode::Unit(f) => {
                 ModalMorType::Zero(ModalEdgeGraph::ref_cast(&self.0).src(f)).into()
@@ -456,9 +515,9 @@ where
             ModalNode::Basic(app) => {
                 let cod = match &app.arg {
                     ModalOp::Generator(sq) => self.0.dbl_computad().square_cod(sq),
-                    ModalOp::Mul(mode, _, p) => p.clone().apply(*mode).into(),
+                    ModalOp::Concat(list, _, p) => p.clone().apply(Modality::List(*list)).into(),
                 };
-                cod.apply_all(app.modes.clone())
+                cod.apply_all(app.modalities.clone())
             }
             ModalNode::Unit(f) => ModalMorType::Zero(ModalEdgeGraph::ref_cast(&self.0).tgt(f)),
             ModalNode::Composite(path) => {
@@ -471,12 +530,12 @@ where
             ModalNode::Basic(app) => {
                 let src = match &app.arg {
                     ModalOp::Generator(sq) => self.0.dbl_computad().square_src(sq),
-                    ModalOp::Mul(mode, n, p) => {
+                    ModalOp::Concat(list, n, p) => {
                         let graph = ModalProedgeGraph::ref_cast(&self.0);
-                        ModeApp::new(ModalOp::Mul(*mode, *n, graph.src(p))).into()
+                        ModeApp::new(ModalOp::Concat(*list, *n, graph.src(p))).into()
                     }
                 };
-                src.apply_all(app.modes.clone())
+                src.apply_all(app.modalities.clone())
             }
             ModalNode::Unit(f) => f.clone().into(),
             ModalNode::Composite(path) => {
@@ -489,12 +548,12 @@ where
             ModalNode::Basic(app) => {
                 let tgt = match &app.arg {
                     ModalOp::Generator(sq) => self.0.dbl_computad().square_tgt(sq),
-                    ModalOp::Mul(mode, n, p) => {
+                    ModalOp::Concat(list, n, p) => {
                         let graph = ModalProedgeGraph::ref_cast(&self.0);
-                        ModeApp::new(ModalOp::Mul(*mode, *n, graph.tgt(p))).into()
+                        ModeApp::new(ModalOp::Concat(*list, *n, graph.tgt(p))).into()
                     }
                 };
-                tgt.apply_all(app.modes.clone())
+                tgt.apply_all(app.modalities.clone())
             }
             ModalNode::Unit(f) => f.clone().into(),
             ModalNode::Composite(path) => {
@@ -506,7 +565,7 @@ where
         match node {
             ModalNode::Basic(app) => match &app.arg {
                 ModalOp::Generator(sq) => self.0.dbl_computad().arity(sq),
-                ModalOp::Mul(_, _, _) => 1,
+                ModalOp::Concat(_, _, _) => 1,
             },
             ModalNode::Unit(_) => 1,
             ModalNode::Composite(path) => path.len(),

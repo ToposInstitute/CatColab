@@ -1,5 +1,7 @@
 import { useParams } from "@solidjs/router";
-import { Match, Show, Switch, createResource, useContext } from "solid-js";
+import { getAuth } from "firebase/auth";
+import { useAuth, useFirebaseApp } from "solid-firebase";
+import { Match, Show, Switch, createResource, createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { ModelJudgment } from "catlog-wasm";
@@ -12,8 +14,15 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
-import { DocumentBreadcrumbs, DocumentLoadingScreen, DocumentMenu, Toolbar } from "../page";
-import { TheoryLibraryContext, stdTheories } from "../stdlib";
+import {
+    DocumentBreadcrumbs,
+    DocumentLoadingScreen,
+    DocumentMenu,
+    TheoryHelpButton,
+    Toolbar,
+} from "../page";
+import { WelcomeOverlay } from "../page/welcome_overlay";
+import { TheoryLibraryContext } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
 import { PermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
@@ -59,6 +68,7 @@ export function ModelDocumentEditor(props: {
                 <DocumentMenu liveDocument={props.liveModel} />
                 <DocumentBreadcrumbs document={props.liveModel} />
                 <span class="filler" />
+                <TheoryHelpButton theory={props.liveModel.theory()} />
                 <PermissionsButton
                     permissions={props.liveModel.liveDoc.permissions}
                     refId={props.liveModel.refId}
@@ -77,7 +87,6 @@ export function ModelPane(props: {
     const liveDoc = () => props.liveModel.liveDoc;
 
     const selectableTheories = () => {
-        // console.log(props.liveModel.theory().inclusions);
         if (liveDoc().doc.notebook.cells.some((cell) => cell.tag === "formal")) {
             return props.liveModel.theory().inclusions;
         } else {
@@ -101,7 +110,7 @@ export function ModelPane(props: {
                     />
                 </div>
                 <TheorySelectorDialog
-                    theoryMeta={stdTheories.getMetadata(liveDoc().doc.theory)}
+                    theory={props.liveModel.theory()}
                     setTheory={(id) => {
                         liveDoc().changeDoc((model) => {
                             model.theory = id;
@@ -125,8 +134,17 @@ export function ModelNotebookEditor(props: {
     const cellConstructors = () =>
         (props.liveModel.theory().modelTypes ?? []).map(modelCellConstructor);
 
+    const firebaseApp = useFirebaseApp();
+    const auth = useAuth(getAuth(firebaseApp));
+
+    const [isOverlayOpen, setOverlayOpen] = createSignal(
+        liveDoc().doc.notebook.cells.length === 0 && auth.data == null,
+    );
+    const toggleOverlay = () => setOverlayOpen(!isOverlayOpen());
+
     return (
         <LiveModelContext.Provider value={() => props.liveModel}>
+            <WelcomeOverlay isOpen={isOverlayOpen()} onClose={toggleOverlay} />
             <NotebookEditor
                 handle={liveDoc().docHandle}
                 path={["notebook"]}

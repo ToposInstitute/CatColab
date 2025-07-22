@@ -1,0 +1,29 @@
+.object-list {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    list-style: none;
+    padding: 0;
+
+    li {
+        display: flex;
+        flex-direction: row;
+    }
+
+    .default-delimiter,
+    .default-separator {
+        color: dimgray;
+    }
+    .default-delimiter {
+        transform: scale(1, 1.5);
+    }
+
+    .empty-list-input {
+        background: transparent;
+        border: none;
+        outline: none;
+        width: 0.5ex;
+        margin: 0;
+        padding: 0;
+    }
+}

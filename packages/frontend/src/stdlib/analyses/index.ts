@@ -4,5 +4,6 @@ export * from "./linear_ode";
 export * from "./lotka_volterra";
 export * from "./mass_action";
 export * from "./model_graph";
+export * from "./petri_net_visualization";
 export * from "./stock_flow_diagram";
 export * from "./submodel_graphs";

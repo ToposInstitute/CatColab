@@ -1,6 +1,10 @@
-import { extractClosestEdge } from "@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge";
 import { getReorderDestinationIndex } from "@atlaskit/pragmatic-drag-and-drop-hitbox/util/get-reorder-destination-index";
-import { monitorForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
+import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
+import {
+    dropTargetForElements,
+    monitorForElements,
+} from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
+import type { DragLocationHistory } from "@atlaskit/pragmatic-drag-and-drop/types";
 import type { DocHandle, Prop } from "@automerge/automerge-repo";
 import { type KbdKey, createShortcut } from "@solid-primitives/keyboard";
 import ListPlus from "lucide-solid/icons/list-plus";
@@ -79,10 +83,13 @@ export function NotebookEditor<T>(props: {
     // FIXME: Remove this option once we fix focus management.
     noShortcuts?: boolean;
 }) {
+    let notebookRef!: HTMLDivElement;
+
     const [activeCell, setActiveCell] = createSignal(props.notebook.cells.length > 0 ? 0 : -1);
+    const [currentDropTarget, setCurrentDropTarget] = createSignal<string | null>(null);
+    const [tether, setTether] = createSignal<DragLocationHistory | null>(null);
 
     // Set up commands and their keyboard shortcuts.
-
     const addAfterActiveCell = (cell: Cell<T>) => {
         props.changeNotebook((nb) => {
             const i = Math.min(activeCell() + 1, nb.cells.length);
@@ -173,44 +180,66 @@ export function NotebookEditor<T>(props: {
         createShortcut(["Shift", "Enter"], () => addAfterActiveCell(newStemCell()));
     });
 
-    // Set up drag and drop of notebook cells.
+    // Set up drag and drop of notebook cells. Rather than have each cell's
+    // `onDragEnter` and `onDragLeave` callbacks compete (causing jittering),
+    // each cell reports whether it is the valid drop target to the notebook
+    // state. The `onDragLeave` callback is reserved solely for the notebook; if
+    // a cell is not a valid target but the notebook is, the drop target will
+    // store the last valid cell in the `tether` signal which be used as a
+    // default in the case where the dragging goes above the cell list.
     createEffect(() => {
-        const cleanup = monitorForElements({
-            canMonitor({ source }) {
-                return (
-                    isCellDragData(source.data) &&
-                    props.notebook.cells.some((cell) => cell.id === source.data.cellId)
-                );
-            },
-            onDrop({ location, source }) {
-                const target = location.current.dropTargets[0];
-                if (!(target && isCellDragData(source.data) && isCellDragData(target.data))) {
-                    return;
-                }
-                const [sourceId, targetId] = [source.data.cellId, target.data.cellId];
-                const nb = props.notebook;
-                const sourceIndex = nb.cells.findIndex((cell) => cell.id === sourceId);
-                const targetIndex = nb.cells.findIndex((cell) => cell.id === targetId);
-                if (sourceIndex < 0 || targetIndex < 0) {
-                    return;
-                }
-                const finalIndex = getReorderDestinationIndex({
-                    startIndex: sourceIndex,
-                    indexOfTarget: targetIndex,
-                    closestEdgeOfTarget: extractClosestEdge(target.data),
-                    axis: "vertical",
-                });
-                props.changeNotebook((nb) => {
-                    const [cell] = nb.cells.splice(sourceIndex, 1);
-                    nb.cells.splice(finalIndex, 0, deepCopyJSON(cell));
-                });
-            },
-        });
+        const cleanup = combine(
+            monitorForElements({
+                canMonitor({ source }) {
+                    return (
+                        isCellDragData(source.data) &&
+                        props.notebook.cells.some((cell) => cell.id === source.data.cellId)
+                    );
+                },
+                onDrop({ location, source }) {
+                    const target =
+                        location.current.dropTargets[0] ?? tether()?.previous?.dropTargets[0];
+                    if (!(target && isCellDragData(source.data) && isCellDragData(target.data))) {
+                        setTether(null);
+                        setCurrentDropTarget(null);
+                        return;
+                    }
+                    const [sourceId, targetId] = [source.data.cellId, target.data.cellId];
+                    const nb = props.notebook;
+                    const sourceIndex = nb.cells.findIndex((cell) => cell.id === sourceId);
+                    const targetIndex = nb.cells.findIndex((cell) => cell.id === targetId);
+                    if (sourceIndex < 0 || targetIndex < 0) {
+                        return;
+                    }
+                    const finalIndex = getReorderDestinationIndex({
+                        startIndex: sourceIndex,
+                        indexOfTarget: targetIndex,
+                        closestEdgeOfTarget: sourceIndex < targetIndex ? "bottom" : "top",
+                        axis: "vertical",
+                    });
+                    props.changeNotebook((nb) => {
+                        const [cell] = nb.cells.splice(sourceIndex, 1);
+                        nb.cells.splice(finalIndex, 0, deepCopyJSON(cell));
+                    });
+                    setTether(null);
+                    setCurrentDropTarget(null);
+                },
+            }),
+            dropTargetForElements({
+                element: notebookRef,
+                canDrop({ source }) {
+                    return isCellDragData(source.data);
+                },
+                onDragLeave({ location }) {
+                    setTether(location);
+                },
+            }),
+        );
         onCleanup(cleanup);
     });
 
     return (
-        <div class="notebook">
+        <div class="notebook" ref={notebookRef}>
             <Show when={props.notebook.cells.length === 0}>
                 <div class="notebook-empty placeholder">
                     <IconButton onClick={() => appendCell(newStemCell())}>
@@ -286,12 +315,15 @@ export function NotebookEditor<T>(props: {
                             <li>
                                 <NotebookCell
                                     cellId={cell.id}
+                                    index={i()}
                                     actions={cellActions}
                                     tag={
                                         cell.tag === "formal"
                                             ? props.cellLabel?.(cell.content)
                                             : undefined
                                     }
+                                    currentDropTarget={currentDropTarget()}
+                                    setCurrentDropTarget={setCurrentDropTarget}
                                 >
                                     <Switch>
                                         <Match when={cell.tag === "rich-text"}>

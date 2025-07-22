@@ -1,5 +1,5 @@
 import type * as Viz from "@viz-js/viz";
-import { type Component, For, Show, createResource, createSignal } from "solid-js";
+import { type Component, For, createResource, createSignal } from "solid-js";
 import { P, match } from "ts-pattern";
 
 import type { ModelJudgment } from "catlog-wasm";
@@ -21,6 +21,7 @@ import {
 import * as GV from "./graph_visualization";
 import { modelToGraphviz } from "./model_graph";
 
+import svgStyles from "../svg_styles.module.css";
 import "./graph_visualization.css";
 
 /** Configure a visualization of a stock flow diagram. */
@@ -51,8 +52,7 @@ const STOCKFLOW_ATTRIBUTES: GV.GraphvizAttributes = {
     },
 };
 
-/** Visualize a stock flow diagram.
- */
+/** Visualize a stock flow diagram. */
 export function StockFlowDiagram(props: ModelAnalysisProps<GV.GraphConfig>) {
     const [svgRef, setSvgRef] = createSignal<SVGSVGElement>();
 
@@ -66,17 +66,13 @@ export function StockFlowDiagram(props: ModelAnalysisProps<GV.GraphConfig>) {
                 <GV.GraphConfigForm content={props.content} changeContent={props.changeContent} />
             </Foldable>
             <div class="graph-visualization">
-                <Show when={props.liveModel.theory()}>
-                    {(theory) => (
-                        <StockFlowGraphviz
-                            model={props.liveModel.formalJudgments()}
-                            theory={theory()}
-                            options={GV.graphvizOptions(props.content)}
-                            attributes={STOCKFLOW_ATTRIBUTES}
-                            ref={setSvgRef}
-                        />
-                    )}
-                </Show>
+                <StockFlowGraphviz
+                    model={props.liveModel.formalJudgments()}
+                    theory={props.liveModel.theory()}
+                    options={GV.graphvizOptions(props.content)}
+                    attributes={STOCKFLOW_ATTRIBUTES}
+                    ref={setSvgRef}
+                />
             </div>
         </div>
     );
@@ -155,6 +151,7 @@ function StockFlowSVG(props: {
         return result;
     };
 
+    const linkClass = ["edge", svgStyles["link"]].join(" ");
     return (
         <svg
             ref={props.ref}
@@ -169,7 +166,7 @@ function StockFlowSVG(props: {
             <For each={props.layout?.edges ?? []}>{(edge) => <EdgeSVG edge={edge} />}</For>
             <For each={linkPaths()}>
                 {(data) => (
-                    <g class="edge link">
+                    <g class={linkClass}>
                         <path marker-end={`url(#arrowhead-${linkMarker})`} d={data} />
                     </g>
                 )}
