@@ -1,4 +1,4 @@
-import HelpContainer from "../help/help_container";
+import HelpContainer from "../help/help_layout";
 
 export default function NotFoundPage() {
     return (
