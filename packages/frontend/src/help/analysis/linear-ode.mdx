@@ -1,11 +1,6 @@
 import { A } from "@solidjs/router";
 
-#### Semantics
-
-Whenever we have *unidirectional* influence between variables, we might want to consider **linear dynamics**, where variables affect the *first derivative* of other variables, with no feedback a priori.
-
-An arrow $A\xrightarrow{\pm}B$ is interpreted as the equation $\dot{B}=\pm k A$ for some constant $k$.
-Multiple incoming arrows are interpreted additively, so e.g. $A\xrightarrow{+}B\xleftarrow{-}C$ is interpreted as $\dot{B}=kA-\ell C$.
+We might want to consider linear dynamics whenever we have *unidirectional* influence between variables, where variables affect the *first derivative* of other variables, with no feedback a priori.
 
 #### User inputs
 

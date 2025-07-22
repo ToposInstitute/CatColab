@@ -99,15 +99,25 @@ export class TheoryLibrary {
         return this.get(this.defaultTheoryId);
     }
 
-    /** Iterator over metadata for available theories. */
-    metadata(): IterableIterator<TheoryMeta> {
+    /** Gets metadata for a theory by ID. */
+    getMetadata(id: string): TheoryMeta {
+        const meta = this.metaMap.get(id);
+        if (meta === undefined) {
+            throw new Error(`No theory with ID ${id}`);
+        }
+        return meta;
+    }
+
+    /** Gets metadata for all available theories. */
+    allMetadata(): IterableIterator<TheoryMeta> {
         return this.metaMap.values();
     }
 
-    /** Metadata for available theories, clustered by group. */
-    groupedMetadata(): Map<string, TheoryMeta[]> {
+    /** Gets metadata for theories clustered by group. */
+    groupedMetadata(ids?: string[]): Map<string, TheoryMeta[]> {
+        const theories = ids?.map((id) => this.getMetadata(id)) ?? this.allMetadata();
         const grouped = new Map<string, TheoryMeta[]>();
-        for (const theory of this.metadata()) {
+        for (const theory of theories) {
             const groupName = theory.group ?? "Other";
             const group = grouped.get(groupName) || [];
             group.push(theory);

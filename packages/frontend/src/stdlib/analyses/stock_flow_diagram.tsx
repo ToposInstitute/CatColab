@@ -28,12 +28,14 @@ export function configureStockFlowDiagram(options: {
     id: string;
     name: string;
     description?: string;
+    help?: string;
 }): ModelAnalysisMeta<GV.GraphConfig> {
-    const { id, name, description } = options;
+    const { id, name, description, help } = options;
     return {
         id,
         name,
         description,
+        help,
         component: StockFlowDiagram,
         initialContent: GV.defaultGraphConfig,
     };

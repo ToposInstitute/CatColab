@@ -87,6 +87,7 @@ stdTheories.add(
                     id: "diagram",
                     name: "Visualization",
                     description: "Visualize the olog as a graph",
+                    help: "visualization",
                 }),
             ],
             diagramAnalyses: [
@@ -94,6 +95,7 @@ stdTheories.add(
                     id: "graph",
                     name: "Visualization",
                     description: "Visualize the instance as a graph",
+                    help: "visualization",
                 }),
             ],
         });
@@ -198,6 +200,7 @@ stdTheories.add(
                     id: "diagram",
                     name: "Visualization",
                     description: "Visualize the schema as a graph",
+                    help: "visualization",
                 }),
             ],
             diagramAnalyses: [
@@ -205,6 +208,7 @@ stdTheories.add(
                     id: "graph",
                     name: "Visualization",
                     description: "Visualize the instance as a graph",
+                    help: "visualization",
                 }),
             ],
         });
@@ -224,6 +228,7 @@ stdTheories.add(
         return new Theory({
             ...meta,
             theory: thSignedCategory.theory(),
+            inclusions: ["causal-loop", "causal-loop-delays", "indeterminate-causal-loop"],
             onlyFreeModels: true,
             modelTypes: [
                 {
@@ -259,11 +264,13 @@ stdTheories.add(
                     id: "diagram",
                     name: "Visualization",
                     description: "Visualize the regulatory network",
+                    help: "visualization",
                 }),
                 analyses.configureSubmodelsAnalysis({
                     id: "positive-loops",
                     name: "Positive feedback",
                     description: "Analyze the network for positive feedback loops",
+                    help: "loops",
                     findSubmodels(model, options) {
                         return thSignedCategory.positiveLoops(model, options);
                     },
@@ -272,6 +279,7 @@ stdTheories.add(
                     id: "negative-loops",
                     name: "Negative feedback",
                     description: "Analyze the network for negative feedback loops",
+                    help: "loops",
                     findSubmodels(model, options) {
                         return thSignedCategory.negativeLoops(model, options);
                     },
@@ -303,6 +311,7 @@ stdTheories.add(
         return new Theory({
             ...meta,
             theory: thSignedCategory.theory(),
+            inclusions: ["reg-net", "causal-loop-delays", "indeterminate-causal-loop"],
             onlyFreeModels: true,
             modelTypes: [
                 {
@@ -339,6 +348,7 @@ stdTheories.add(
                     id: "diagram",
                     name: "Visualization",
                     description: "Visualize the causal loop diagram",
+                    help: "visualization",
                 }),
                 analyses.configureSubmodelsAnalysis({
                     id: "negative-loops",
@@ -435,11 +445,13 @@ stdTheories.add(
                     id: "diagram",
                     name: "Visualization",
                     description: "Visualize the causal loop diagram",
+                    help: "visualization",
                 }),
                 analyses.configureSubmodelsAnalysis({
                     id: "negative-loops",
                     name: "Balancing loops",
                     description: "Find the fast-acting balancing loops",
+                    help: "loops",
                     findSubmodels(model, options) {
                         return thDelayedSignedCategory.negativeLoops(model, options);
                     },
@@ -448,6 +460,7 @@ stdTheories.add(
                     id: "positive-loops",
                     name: "Reinforcing loops",
                     description: "Find the fast-acting reinforcing loops",
+                    help: "loops",
                     findSubmodels(model, options) {
                         return thDelayedSignedCategory.positiveLoops(model, options);
                     },
@@ -456,6 +469,7 @@ stdTheories.add(
                     id: "delayed-negative-loops",
                     name: "Delayed balancing loops",
                     description: "Find the slow-acting balancing loops",
+                    help: "loops",
                     findSubmodels(model, options) {
                         return thDelayedSignedCategory.delayedNegativeLoops(model, options);
                     },
@@ -464,6 +478,7 @@ stdTheories.add(
                     id: "delayed-positive-loops",
                     name: "Delayed reinforcing loops",
                     description: "Find the slow-acting reinforcing loops",
+                    help: "loops",
                     findSubmodels(model, options) {
                         return thDelayedSignedCategory.delayedPositiveLoops(model, options);
                     },
@@ -531,6 +546,7 @@ stdTheories.add(
                     id: "diagram",
                     name: "Visualization",
                     description: "Visualize the causal loop diagram",
+                    help: "visualization",
                 }),
             ],
         });
@@ -610,6 +626,7 @@ stdTheories.add(
                     id: "graph",
                     name: "Visualization",
                     description: "Visualize the operations as a graph",
+                    help: "visualization",
                 }),
             ],
             diagramAnalyses: [
@@ -673,6 +690,7 @@ stdTheories.add(
                     id: "diagram",
                     name: "Visualization",
                     description: "Visualize the stock and flow diagram",
+                    help: "visualization",
                 }),
                 analyses.configureMassAction({
                     simulate(model, data) {

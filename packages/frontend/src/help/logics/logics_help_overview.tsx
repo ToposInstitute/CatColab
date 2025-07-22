@@ -16,7 +16,7 @@ export default function LogicsHelpOverview() {
             <For each={Array.from(theories.groupedMetadata().entries())}>
                 {([group, theories]) => (
                     <>
-                        <h3>{group}</h3>
+                        <h2>{group}</h2>
                         <dl>
                             <For each={theories}>
                                 {(theoryMeta) => (

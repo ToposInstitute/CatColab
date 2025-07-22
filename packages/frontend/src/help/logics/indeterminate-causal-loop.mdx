@@ -1,12 +1,23 @@
 import { A } from "@solidjs/router";
 import { Question } from "../../components/alert";
+import { HelpAnalysisById } from "../logic"
 
 ## Description
 
-Causal loop diagrams with indeterminates allow for causalities of unspecified or unknown sign, extending the basic notion of <A href="../causal-loop">causal loop diagrams</A>.
+**Causal loop diagrams with indeterminates** allow for causalities of unspecified or unknown sign, extending the basic notion of <A href="../causal-loop">causal loop diagrams</A>.
 
 
-## Instances
+### Further reading
+
+- John C. Baez, Adittya Chaudhuri, "Graphs With Polarities", (2025). [arXiv:2506.23375](https://arxiv.org/abs/2506.23375)
+- Series of blog posts by John Baez on variants of causal loop diagrams using
+  different monoids of *polarities* for the edges, starting
+  [here](https://johncarlosbaez.wordpress.com/2024/11/02/polarities/)
+
+
+## Instances and analyses
+
+### Instances
 
 <Question>
 As with standard causal loop diagrams, instances are not currently supported, though we'd be curious to learn more about how they might be used in practice.
@@ -14,13 +25,6 @@ If you have any ideas then please do get in touch.
 </Question>
 
 
-## Analyses
+### Analyses
 
-**!TO-DO: include!**
-
-
-## Further reading
-
-- Series of blog posts by John Baez on variants of causal loop diagrams using
-  different monoids of *polarities* for the edges, starting
-  [here](https://johncarlosbaez.wordpress.com/2024/11/02/polarities/)
+<HelpAnalysisById theory={props.theory} analysisId="diagram"/>

@@ -39,7 +39,7 @@ export const ErrorAlert = (props: AlertProps) => (
     </Alert>
 );
 
-/** An info alert. */
+/** A question alert. */
 export const Question = (props: AlertProps) => (
     <Alert class="alert alert-question">
         <div class="alert-heading">

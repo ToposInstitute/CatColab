@@ -5,12 +5,12 @@ use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
 use std::marker::PhantomData;
 
 use derivative::Derivative;
-use derive_more::From;
+use derive_more::{Constructor, From};
 use nonempty::NonEmpty;
 use thiserror::Error;
 use ustr::{IdentityHasher, Ustr};
 
-use super::set::{FinSet, Set};
+use super::set::{FinSet, Set, SkelFinSet};
 use crate::validate::{self, Validate};
 
 /** A functional mapping.
@@ -217,6 +217,30 @@ impl<T> InvalidFunction<T> {
     }
 }
 
+/** Finds a retraction of the mapping, if it exists.
+
+A retraction (left inverse) exists if and only if the mapping is injective. The
+retraction is unique when it exists because it is defined only on the image of
+the mapping. When the mapping is not injective, a pair of elements having the
+same image is returned.
+ */
+pub fn retraction<Dom, Cod, InvMap>(
+    mapping: &impl Column<Dom = Dom, Cod = Cod>,
+) -> Result<InvMap, (Dom, Dom)>
+where
+    Dom: Clone,
+    Cod: Clone,
+    InvMap: MutMapping<Dom = Cod, Cod = Dom> + Default,
+{
+    let mut inv = InvMap::default();
+    for (x, y) in mapping.iter() {
+        if let Some(other_x) = inv.set(y.clone(), x.clone()) {
+            return Err((x, other_x));
+        }
+    }
+    Ok(inv)
+}
+
 /// An unindexed column backed by a vector.
 #[derive(Clone, Debug, Derivative)]
 #[derivative(Default(bound = ""))]
@@ -337,8 +361,35 @@ impl<T: Eq + Clone> Column for VecColumn<T> {
 
 impl<T: Eq + Clone> MutColumn for VecColumn<T> {}
 
+/// An unindexed column backed by an integer-valued vector.
+pub type SkelColumn = VecColumn<usize>;
+
+impl SkelColumn {
+    /// Is the mapping a function between the finite sets `[m]` and `[n]`?
+    pub fn is_function(&self, m: usize, n: usize) -> bool {
+        let (dom, cod): (SkelFinSet, SkelFinSet) = (m.into(), n.into());
+        Function(self, &dom, &cod).iter_invalid().next().is_none()
+    }
+
+    /// Is the mapping a partial injection, i.e., injective where it is defined?
+    pub fn is_partial_injection(&self) -> bool {
+        let result: Result<Self, _> = retraction(self);
+        result.is_ok()
+    }
+
+    /// Is the mapping an injection between the finite sets `[m]` and `[n]`?
+    pub fn is_injection(&self, m: usize, n: usize) -> bool {
+        self.is_function(m, n) && self.is_partial_injection()
+    }
+
+    /// Is the mapping a permutation of the finite set `[n]`?
+    pub fn is_permutation(&self, n: usize) -> bool {
+        self.is_injection(n, n)
+    }
+}
+
 /// An unindexed column backed by a hash map.
-#[derive(Clone, From, Debug, Derivative)]
+#[derive(Clone, Debug, Derivative, Constructor, From)]
 #[derivative(Default(bound = "S: Default"))]
 #[derivative(PartialEq(bound = "K: Eq + Hash, V: PartialEq, S: BuildHasher"))]
 #[derivative(Eq(bound = "K: Eq + Hash, V: Eq, S: BuildHasher"))]
@@ -346,13 +397,6 @@ pub struct HashColumn<K, V, S = RandomState>(HashMap<K, V, S>);
 
 /// An unindexed column with keys of type `Ustr`.
 pub type UstrColumn<V> = HashColumn<Ustr, V, BuildHasherDefault<IdentityHasher>>;
-
-impl<K, V, S> HashColumn<K, V, S> {
-    /// Creates a new hash column from an existing hash map.
-    pub fn new(map: HashMap<K, V, S>) -> Self {
-        Self(map)
-    }
-}
 
 impl<K, V, S> IntoIterator for HashColumn<K, V, S> {
     type Item = (K, V);
@@ -918,7 +962,6 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::super::set::SkelFinSet;
     use super::*;
 
     #[test]
@@ -968,6 +1011,18 @@ mod tests {
         assert_eq!(data, vec![('a', "foo"), ('b', "bar"), ('c', "bar")]);
         let new_col: HashColumn<_, _> = data.into_iter().collect();
         assert_eq!(new_col, col);
+    }
+
+    #[test]
+    fn skel_function_properties() {
+        let map = SkelColumn::new(vec![1, 3, 5]);
+        assert!(!map.is_function(3, 5));
+        assert!(map.is_injection(3, 6));
+        let map = SkelColumn::new(vec![0, 1, 0]);
+        assert!(map.is_function(3, 2));
+        assert!(!map.is_injection(3, 2));
+        let map = SkelColumn::new(vec![3, 1, 2, 0]);
+        assert!(map.is_permutation(4));
     }
 
     #[test]
