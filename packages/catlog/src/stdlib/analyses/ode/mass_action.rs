@@ -103,7 +103,9 @@ impl PetriNetMassActionAnalysis {
                 sys.add_term(output.unwrap_generator(), term.clone());
             }
         }
-        sys
+
+        // Normalize since terms commonly cancel out in mass-action dynamics.
+        sys.normalize()
     }
 
     /// Creates a mass-action system with numerical rate coefficients.
@@ -247,7 +249,7 @@ mod tests {
         let model = catalyzed_reaction(th);
         let sys = PetriNetMassActionAnalysis::default().build_system(&model);
         let expected = expect!([r#"
-            dc = (0 f) c x
+            dc = 0
             dx = ((-1) f) c x
             dy = f c x
         "#]);
