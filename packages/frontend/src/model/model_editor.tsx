@@ -22,7 +22,7 @@ import {
     Toolbar,
 } from "../page";
 import { WelcomeOverlay } from "../page/welcome_overlay";
-import { stdTheories, TheoryLibraryContext } from "../stdlib";
+import { TheoryLibraryContext, stdTheories } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
 import { PermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
