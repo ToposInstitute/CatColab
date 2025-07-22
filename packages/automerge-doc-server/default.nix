@@ -24,7 +24,7 @@ pkgs.stdenv.mkDerivation {
   ];
 
   buildInputs = with pkgs; [
-    nodejs_23
+    nodejs_24
   ];
 
   installPhase = ''
@@ -48,7 +48,7 @@ pkgs.stdenv.mkDerivation {
     cp "$automerge_wasm_path" "$out/"
 
     mkdir -p $out/bin
-    makeWrapper ${pkgs.nodejs_23}/bin/node $out/bin/${name} --add-flags "$out/main.cjs"
+    makeWrapper ${pkgs.nodejs_24}/bin/node $out/bin/${name} --add-flags "$out/main.cjs"
   '';
 
   pnpmDeps = pkgsUnstable.pnpm_9.fetchDeps {

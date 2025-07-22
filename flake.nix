@@ -2,7 +2,7 @@
   description = "configurations for deploying catcolab";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-24.11";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
     crate2nix = {
       url = "github:nix-community/crate2nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -15,8 +15,9 @@
     };
 
     nixpkgsUnstable = {
-      # TODO: update this to nixos-unstable the next time someone looks at this (required changes haven't
-      # landed yet, but should really soon)
+      # TODO: this should be changed from 'master' to 'nixos-unstable' when the
+      # pnpm.fetchDeps.fetcherVersion option lands in nixos-unstable (it's not clear how long that will
+      # be)
       url = "github:NixOS/nixpkgs/master";
     };
   };
@@ -84,7 +85,7 @@
               clippy
               pkg-config
               pnpm_9
-              nodejs_23
+              nodejs_24
               sqlx-cli
               biome
             ]
