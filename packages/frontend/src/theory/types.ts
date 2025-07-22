@@ -18,8 +18,8 @@ export class Theory {
     /** Underlying double theory in the core. */
     readonly theory: DblTheory;
 
-    /** Name of help page (excluding file extension) for the theory, if any. */
-    readonly help?: string;
+    /** Does this theory have a corresponding help page? */
+    readonly help?: boolean;
 
     /** Human-readable name for models of theory.
 

@@ -22,7 +22,7 @@ import {
     Toolbar,
 } from "../page";
 import { WelcomeOverlay } from "../page/welcome_overlay";
-import { TheoryLibraryContext } from "../stdlib";
+import { stdTheories, TheoryLibraryContext } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
 import { PermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
@@ -110,7 +110,7 @@ export function ModelPane(props: {
                     />
                 </div>
                 <TheorySelectorDialog
-                    theory={props.liveModel.theory()}
+                    theoryMeta={stdTheories.getMetadata(liveDoc().doc.theory)}
                     setTheory={(id) => {
                         liveDoc().changeDoc((model) => {
                             model.theory = id;
