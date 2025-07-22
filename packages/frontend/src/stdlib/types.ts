@@ -23,8 +23,8 @@ export type TheoryMeta = {
     /** Group to which the theory belongs. */
     group?: string;
 
-    /* Name of help page for the theory. */
-    help?: string;
+    /** Does a help page for this theory exist? */
+    help?: boolean;
 };
 
 /** Library of double theories configured for the frontend.

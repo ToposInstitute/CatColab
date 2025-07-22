@@ -12,7 +12,9 @@ export default function HelpLayout(props: {
             <BrandedToolbar />
             <div class="page-container help-container">
                 <div class="help-navigation">
-                    <span class="help-navigation-title">Help and resources</span>
+                    <span class="help-navigation-title">
+                        <a href="/help/">Help and resources</a>
+                    </span>
                     <ul class="help-navigation-links">
                         <li class="help-navigation-link">
                             <a href="/help/">Overview</a>

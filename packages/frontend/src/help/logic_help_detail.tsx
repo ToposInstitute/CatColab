@@ -3,9 +3,9 @@ import { For, type JSXElement, Show, lazy, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
-import { TheoryLibraryContext } from "../../stdlib";
-import type { Theory } from "../../theory";
-import LogicNotFound from "./logic-not-found.mdx";
+import { TheoryLibraryContext } from "../stdlib";
+import type { Theory } from "../theory";
+import LogicNotFound from "./logics/logic-not-found.mdx";
 
 /** Help page for a theory in the standard library. */
 export default function LogicHelpDetail() {
@@ -21,7 +21,7 @@ export default function LogicHelpDetail() {
 
     const Content = lazy(async () => {
         try {
-            return await import(`./${params.id}.mdx`);
+            return await import(`./logics/${params.id}.mdx`);
         } catch {
             return { default: LogicNotFound };
         }
@@ -91,14 +91,14 @@ export function HelpAnalysisById(props: HelpAnalysisProps) {
         <Show when={analysis()}>
             {(analysis) => {
                 const HelpComponent = analysis
-                    ? lazy(() => import(`../analysis/${analysis().help}.mdx`))
+                    ? lazy(() => import(`./analysis/${analysis().help}.mdx`))
                     : null;
 
                 return (
                     <div class="help-analysis-pane">
-                        <h3>{analysis.name}</h3>
-                        <p>
-                            <i>{analysis().description}</i>
+                        <h3>{analysis().name}</h3>
+                        <p class="help-analysis-pane-description">
+                            {analysis().description}
                         </p>
                         {props.children}
                         {HelpComponent && <Dynamic component={HelpComponent} />}

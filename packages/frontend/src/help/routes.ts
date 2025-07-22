@@ -37,11 +37,11 @@ export const helpRoutes: RouteDefinition[] = [
     },
     {
         path: "/logics",
-        component: lazy(() => import("./logics/logics_help_overview")),
+        component: lazy(() => import("./logics_help_overview")),
     },
     {
         path: "/logics/:id",
         matchFilters: theoryWithIdFilter,
-        component: lazy(() => import("./logics/logic_help_detail")),
+        component: lazy(() => import("./logic_help_detail")),
     },
 ];

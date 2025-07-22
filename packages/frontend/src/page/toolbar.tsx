@@ -1,9 +1,9 @@
 import { A, useNavigate } from "@solidjs/router";
-import { type JSX, useContext } from "solid-js";
+import { createMemo, type JSX, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { IconButton } from "../components";
-import { TheoryLibraryContext } from "../stdlib";
+import { TheoryLibraryContext, TheoryMeta } from "../stdlib";
 import type { Theory } from "../theory";
 import { DefaultAppMenu } from "./menubar";
 
@@ -53,12 +53,22 @@ If no theory is set, it navigates instead to the list of all theories.
  */
 export function TheoryHelpButton(props: {
     theory?: Theory;
+    theoryMeta?: TheoryMeta;
 }) {
     const navigate = useNavigate();
 
     const theories = useContext(TheoryLibraryContext);
     invariant(theories);
-    const theory = (): Theory => props.theory ?? theories.getDefault();
+
+    const theory = createMemo(() => {
+        if (props.theoryMeta && !props.theory) {
+            return theories.get(props.theoryMeta.id)
+        } else if (!props.theory) {
+            return theories.getDefault();
+        } else {
+            return props.theory
+        }
+    });
 
     const tooltip = (theory: Theory) => (
         <>

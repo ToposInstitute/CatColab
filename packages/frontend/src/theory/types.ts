@@ -61,7 +61,7 @@ export class Theory {
     constructor(props: {
         id: string;
         theory: DblTheory;
-        help?: string;
+        help?: boolean;
         name: string;
         description: string;
         inclusions?: string[];

@@ -13,7 +13,7 @@ import {
     newFormalCell,
 } from "../notebook";
 import { DocumentBreadcrumbs, DocumentLoadingScreen, DocumentMenu, Toolbar } from "../page";
-import { TheoryLibraryContext } from "../stdlib";
+import { stdTheories, TheoryLibraryContext } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
 import { PermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
@@ -77,7 +77,7 @@ export function ModelPane(props: {
     const liveDoc = () => props.liveModel.liveDoc;
 
     const selectableTheories = () => {
-        console.log(props.liveModel.theory().inclusions);
+        // console.log(props.liveModel.theory().inclusions);
         if (liveDoc().doc.notebook.cells.some((cell) => cell.tag === "formal")) {
             return props.liveModel.theory().inclusions;
         } else {
@@ -101,7 +101,7 @@ export function ModelPane(props: {
                     />
                 </div>
                 <TheorySelectorDialog
-                    theory={props.liveModel.theory()}
+                    theoryMeta={stdTheories.getMetadata(liveDoc().doc.theory)}
                     setTheory={(id) => {
                         liveDoc().changeDoc((model) => {
                             model.theory = id;

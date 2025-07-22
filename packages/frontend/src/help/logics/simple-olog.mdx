@@ -1,4 +1,5 @@
 import { A } from "@solidjs/router";
+import { HelpAnalysisById } from "../logic_help_detail"
 
 ## Description
 
@@ -12,26 +13,25 @@ used as a stepping stone toward a more precise model, such as a <A
 href="../simple-schema">database schema</A>.
 
 
-## Instances
+### Examples
+
+- [Novels and novelists](https://catcolab.org/model/0194d356-a82a-7362-afd2-72e30864ba9d)
+  * An instance in the above ontology: [Some realist novels](https://catcolab.org/diagram/0194d361-d31b-76e3-be2c-ce1c1e6eade5)
+
+
+### Further reading
+
+- Wikipedia: [Olog](https://en.wikipedia.org/wiki/Olog)
+- David I. Spivak, Robert E. Kent, "Ologs: A categorical framework for knowledge representation", *PLOS One* **7** (2012). [arXiv:1102.1889](https://arxiv.org/abs/1102.1889) [DOI:10.1371/journal.pone.0024274](https://doi.org/10.1371/journal.pone.0024274)
+
+
+## Instances and analyses
+
+### Instances
 
 Graphical instances of an olog populates the types with particular entities, and thus define a **dataset**.
 
 
-## Analyses
+### Analyses
 
-**!TO-DO: include!**
-
-
-## Examples
-
-- [Novels and novelists](https://catcolab.org/model/0194d356-a82a-7362-afd2-72e30864ba9d)
-  * A diagram in the above ontology: [Some realist novels](https://catcolab.org/diagram/0194d361-d31b-76e3-be2c-ce1c1e6eade5)
-
-
-## Further reading
-
-- Wikipedia: [Olog](https://en.wikipedia.org/wiki/Olog)
-- David I. Spivak and Robert E. Kent, 2012.
-  Ologs: A categorical framework for knowledge representation.
-  [arXiv:1102.1889](https://arxiv.org/abs/1102.1889)
-  [DOI:10.1371/journal.pone.0024274](https://doi.org/10.1371/journal.pone.0024274)
+<HelpAnalysisById theory={props.theory} analysisId="diagram"/>

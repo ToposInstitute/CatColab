@@ -8,7 +8,7 @@ import { TheoryLibraryContext, type TheoryMeta } from "../stdlib";
 import "./theory_selector.css";
 
 type TheorySelectorProps = {
-    theory: TheoryMeta;
+    theoryMeta: TheoryMeta;
     setTheory: (theoryId: string) => void;
     theories?: string[];
 };
@@ -23,16 +23,17 @@ export function TheorySelectorDialog(props: TheorySelectorProps) {
                 class="theory-selector-trigger"
                 data-disabled={props.theories?.length === 0 ? true : undefined}
             >
-                {props.theory.name}
+                {props.theoryMeta.name}
             </Dialog.Trigger>
-            <TheoryHelpButton theory={props.theories?.get(props.theory.id)} />
+            <TheoryHelpButton theoryMeta={props.theoryMeta} />
             <Dialog.Portal>
                 <Dialog.Overlay class="overlay" />
                 <Dialog.Content class="popup">
                     <TheorySelector
-                        theory={props.theory}
+                        theoryMeta={props.theoryMeta}
                         setTheory={(id) => {
                             props.setTheory(id);
+                            console.log(props.theoryMeta.id);
                             setTheorySelectorOpen(false);
                         }}
                         theories={props.theories}
