@@ -15,7 +15,15 @@ let
 
     ${pkgs.postgresql}/bin/pg_dump --clean --if-exists > $DUMPFILE
 
-    ${lib.getExe pkgs.rclone} --config="/run/agenix/rclone.conf" copy "$DUMPFILE" backup:${config.catcolab.backup.backupdbBucket}
+    if [ "${toString config.catcolab.host.backup.test}" = "false" ]; then
+      ${lib.getExe pkgs.rclone} \
+        --config="${builtins.toString config.catcolab.host.backup.rcloneConfFilePath}" \
+        copy "$DUMPFILE" backup:${builtins.toString config.catcolab.host.backup.dbBucket}
+
+      echo "Uploaded database dump $DUMPFILE"
+    else
+      echo "Test mode: skipping rclone upload"
+    fi
 
     echo "Uploaded database dump $DUMPFILE"
     rm $DUMPFILE
@@ -23,14 +31,44 @@ let
 in
 with lib;
 {
-  options.catcolab.backup = {
-    backupdbBucket = mkOption {
-      type = types.str;
-      description = "Name of the Backblaze bucket used for database backups";
+  options.catcolab.host.backup = {
+    enable = mkOption {
+      type = types.bool;
+      default = false;
+      description = "Enable automated backups of the Catcolab database to a Backblaze bucket.";
+    };
+    dbBucket = mkOption {
+      type = types.nullOr types.str;
+      default = null;
+      description = ''
+        Name of the Backblaze bucket used for database backups. Not required when `catcolab.test = true`.
+      '';
+    };
+    rcloneConfFilePath = mkOption {
+      type = types.nullOr types.path;
+      default = null;
+      description = "Path to your rclone.conf. Not required when `catcolab.test = true`.";
+    };
+    test = mkOption {
+      type = types.bool;
+      default = false;
+      description = "If true, run pg_dump but skip the rclone upload (for smoke tests).";
     };
   };
 
-  config = {
+  config = lib.mkIf config.catcolab.host.backup.enable {
+    assertions = [
+      {
+        assertion =
+          config.catcolab.host.backup.test || config.catcolab.host.backup.rcloneConfFilePath != null;
+        message = "You must set catcolab.host.backup.rcloneConfFilePath unless test=true";
+      }
+      {
+        assertion = config.catcolab.host.backup.test || config.catcolab.host.backup.dbBucket != null;
+        message = "You must set catcolab.host.backup.dbBucket unless test=true";
+      }
+    ];
+
     systemd.timers.backupdb = {
       wantedBy = [ "timers.target" ];
       timerConfig = {
@@ -81,6 +119,7 @@ with lib;
         rclone
         bash
       ]
+
       ++ [ backupScript ];
   };
 }
