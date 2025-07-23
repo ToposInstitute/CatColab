@@ -180,7 +180,7 @@
 .welcome-nav-button {
     margin-top: 20px;
     padding: 10px 20px;
-    background: var(--topos-color);
+    background: var(--topos-primary);
     border: none;
     border-radius: 5px;
     font-family: var(--main-font);

@@ -5,7 +5,7 @@ import invariant from "tiny-invariant";
 
 import { TheoryLibraryContext } from "../stdlib";
 import type { Theory } from "../theory";
-import LogicNotFound from "./logics/logic-not-found.mdx";
+import LogicHelpNotFound from "./logics/logic-help-not-found.mdx";
 
 /** Help page for a theory in the standard library. */
 export default function LogicHelpDetail() {
@@ -23,7 +23,7 @@ export default function LogicHelpDetail() {
         try {
             return await import(`./logics/${params.id}.mdx`);
         } catch {
-            return { default: LogicNotFound };
+            return { default: LogicHelpNotFound };
         }
     });
 

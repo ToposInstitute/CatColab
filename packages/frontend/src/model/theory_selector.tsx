@@ -33,7 +33,6 @@ export function TheorySelectorDialog(props: TheorySelectorProps) {
                         theoryMeta={props.theoryMeta}
                         setTheory={(id) => {
                             props.setTheory(id);
-                            console.log(props.theoryMeta.id);
                             setTheorySelectorOpen(false);
                         }}
                         theories={props.theories}

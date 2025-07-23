@@ -29,6 +29,10 @@
     --alert-color: Maroon;
 }
 
-.alert-question {
+.alert-note {
     --alert-color: Teal;
+}
+
+.alert-question {
+    --alert-color: CornflowerBlue;
 }

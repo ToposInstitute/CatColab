@@ -711,6 +711,7 @@ stdTheories.add(
         name: "Petri net",
         description: "Place/transition networks",
         group: "Systems",
+        help: true,
     },
     (meta) => {
         const thSymMonoidalCategory = new catlog.ThSymMonoidalCategory();
