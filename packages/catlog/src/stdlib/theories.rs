@@ -3,7 +3,7 @@
 use ustr::ustr;
 
 use crate::dbl::theory::*;
-use crate::one::{Path, fp_category::UstrFpCategory};
+use crate::one::{fp_category::UstrFpCategory, Path};
 
 /** The empty theory, which has a single model, the empty model.
 
@@ -151,6 +151,11 @@ pub fn th_sym_monoidal_category() -> UstrModalDblTheory {
     th_list_algebra(List::Symmetric)
 }
 
+///
+pub fn th_modal_state_aux() -> UstrModalDblTheory {
+    th_modal_sf(List::Plain)
+}
+
 /** The theory of a strict algebra of a list monad.
 
 This is a modal double theory, parametric over which variant of the double list
@@ -209,6 +214,22 @@ fn th_generalized_multicategory(list: List) -> UstrModalDblTheory {
     th
 }
 
+///
+fn th_modal_sf(list: List) -> UstrModalDblTheory {
+    let m = Modality::List(list);
+    let mut th: UstrModalDblTheory = Default::default();
+    let (state, aux) = (ustr("State"), ustr("Auxiliary"));
+    th.add_ob_type(state);
+    th.add_ob_type(aux);
+    let function = ustr("function");
+    th.add_mor_type(function, ModeApp::new(aux).apply(m), ModeApp::new(aux));
+    let (borrow, outpos, outneg) = (ustr("borrow"), ustr("out-pos"), ustr("out-neg"));
+    th.add_mor_type(borrow, ModeApp::new(state), ModeApp::new(aux));
+    th.add_mor_type(outpos, ModeApp::new(aux), ModeApp::new(state));
+    th.add_mor_type(outneg, ModeApp::new(aux), ModeApp::new(state));
+    th
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -237,6 +258,7 @@ mod tests {
         assert!(th_monoidal_category().validate().is_ok());
         assert!(th_lax_monoidal_category().validate().is_ok());
         assert!(th_multicategory().validate().is_ok());
+        assert!(th_modal_state_aux().validate().is_ok());
     }
 
     #[test]
