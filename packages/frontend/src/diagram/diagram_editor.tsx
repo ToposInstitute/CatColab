@@ -14,12 +14,7 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
-import {
-    DocumentBreadcrumbs,
-    DocumentLoadingScreen,
-    DocumentMenu,
-    Toolbar,
-} from "../page";
+import { DocumentBreadcrumbs, DocumentLoadingScreen, DocumentMenu, Toolbar } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { InstanceTypeMeta } from "../theory";
 import { PermissionsButton } from "../user";

@@ -14,12 +14,7 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
-import {
-    DocumentBreadcrumbs,
-    DocumentLoadingScreen,
-    DocumentMenu,
-    Toolbar,
-} from "../page";
+import { DocumentBreadcrumbs, DocumentLoadingScreen, DocumentMenu, Toolbar } from "../page";
 import { WelcomeOverlay } from "../page/welcome_overlay";
 import { TheoryLibraryContext, stdTheories } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";

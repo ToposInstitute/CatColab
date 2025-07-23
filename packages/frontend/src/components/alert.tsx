@@ -1,10 +1,10 @@
 import { Alert } from "@kobalte/core/alert";
 import type { JSX } from "solid-js";
 
+import Info from "lucide-solid/icons/info";
 import MessageCircleQuestion from "lucide-solid/icons/message-circle-question";
 import OctagonX from "lucide-solid/icons/octagon-x";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
-import Info from "lucide-solid/icons/info";
 
 import "./alert.css";
 
