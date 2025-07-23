@@ -41,10 +41,11 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 use super::theory::DblTheory;
-use crate::one::{Category, FgCategory, InvalidPathEq};
+use crate::one::{Category, FgCategory, InvalidPathEq, Path};
 
 pub use super::discrete::model::*;
 pub use super::discrete_tabulator::model::*;
+pub use super::modal::model::*;
 
 /** A model of a double theory.
 
@@ -106,8 +107,8 @@ pub trait DblModel: Category {
     /// Acts on an object with an object operation.
     fn ob_act(&self, x: Self::Ob, f: &Self::ObOp) -> Self::Ob;
 
-    /// Acts on a morphism with a morphism operation.
-    fn mor_act(&self, m: Self::Mor, α: &Self::MorOp) -> Self::Mor;
+    /// Acts on a sequence of morphisms with a morphism operation.
+    fn mor_act(&self, path: Path<Self::Ob, Self::Mor>, α: &Self::MorOp) -> Self::Mor;
 }
 
 /// A finitely generated model of a double theory.
@@ -131,7 +132,7 @@ pub trait FgDblModel: DblModel + FgCategory {
         self.mor_generators().filter(|mor| self.mor_generator_type(mor) == *mortype)
     }
 
-    /// Iterates over basic objects with the given object type.
+    /// Iterators over basic objects with the given object type.
     fn objects_with_type(&self, obtype: &Self::ObType) -> impl Iterator<Item = Self::Ob> {
         self.ob_generators_with_type(obtype).map(|ob_gen| ob_gen.into())
     }

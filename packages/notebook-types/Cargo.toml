@@ -7,10 +7,10 @@ edition = "2024"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-nonempty = { version = "0.10", features = ["serialize"] }
+nonempty = { version = "0.12", features = ["serialize"] }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
 tsify = { version = "0.5", features = ["js"] }
 ustr = { version = "1.1.0", features = ["serde"] }
-uuid = { version = "1.11", features = ["serde", "v7", "js"] }
+uuid = { version = "1.11", features = ["serde", "v7"] }
 wasm-bindgen = "0.2.100"

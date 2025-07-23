@@ -40,9 +40,7 @@ impl DblModelDiagram {
                 let mapping = Default::default();
                 diagram::DblModelDiagram(mapping, model).into()
             }
-            DblModelBox::DiscreteTab(_) => {
-                panic!("Diagrams not implemented for tabulator theories")
-            }
+            _ => panic!("Diagrams only implemented for discrete double theories"),
         })
     }
 

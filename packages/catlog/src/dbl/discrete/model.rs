@@ -214,8 +214,8 @@ where
     fn ob_act(&self, x: Self::Ob, _: &Self::ObOp) -> Self::Ob {
         x
     }
-    fn mor_act(&self, m: Self::Mor, _: &Self::MorOp) -> Self::Mor {
-        m
+    fn mor_act(&self, path: Path<Self::Ob, Self::Mor>, _: &Self::MorOp) -> Self::Mor {
+        path.flatten()
     }
 
     fn ob_type(&self, ob: &Self::Ob) -> Self::ObType {
