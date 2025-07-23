@@ -5,14 +5,14 @@ use wasm_bindgen::prelude::*;
 
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use ::notebook_types::v0::{ModelJudgment, notebook};
+use ::notebook_types::v0::{ModelDocumentContent, ModelJudgment, notebook};
 use catlog::{
     dbl::{
         category::VDblCategory,
         model::{DiscreteDblModel, UstrDiscreteDblModel},
         theory::UstrDiscreteDblTheory,
     },
-    one::{FgCategory, FpCategory, Path, UstrFpCategory},
+    one::{Category, FgCategory, FpCategory, Path, UstrFpCategory},
 };
 use catlog_wasm::theory::DblTheory;
 use notebook_types::current::{self as notebook_types};
@@ -46,22 +46,55 @@ struct ElaborationError {
     content: ElaborationErrorContent,
 }
 
-#[derive(Serialize, Deserialize, Tsify)]
+#[derive(Serialize, Deserialize, Tsify, Hash, PartialEq, Eq)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
-pub struct Notebooks(HashMap<String, notebook_types::ModelDocumentContent>);
+pub struct RefId(String);
+
+#[derive(Serialize, Deserialize, Tsify, Clone, Hash, PartialEq, Eq)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct AutomergeHeads(Vec<String>);
+
+pub struct NotebookData {
+    raw: ModelDocumentContent,
+    elaborated: Option<Rc<Notebook>>,
+}
 
 #[derive(Clone)]
+#[wasm_bindgen]
 pub struct ElaborationCache {
-    notebooks: Rc<Notebooks>,
-    elaborated: Rc<RefCell<HashMap<String, Rc<Notebook>>>>,
+    notebooks: Rc<RefCell<HashMap<(RefId, AutomergeHeads), NotebookData>>>,
     elaborator: NotebookElaborator,
+}
+
+#[wasm_bindgen]
+impl ElaborationCache {
+    #[wasm_bindgen(js_name = "contains")]
+    pub fn contains(&self, r: RefId, heads: AutomergeHeads) -> bool {
+        self.notebooks.borrow().contains_key(&(r, heads))
+    }
+
+    #[wasm_bindgen(js_name = "insertNotebook")]
+    pub fn insert_notebook(
+        &self,
+        r: RefId,
+        heads: AutomergeHeads,
+        notebook: notebook_types::ModelDocumentContent,
+    ) {
+        self.notebooks.borrow_mut().insert(
+            (r, heads),
+            NotebookData {
+                raw: notebook,
+                elaborated: None,
+            },
+        );
+    }
 }
 
 impl NotebookStorage for ElaborationCache {
     fn lookup(&self, id: &str) -> Option<Rc<Notebook>> {
         if let Some(nb) = self.elaborated.borrow().get(id) {
             return Some(nb.clone());
-        } else if let Some(raw) = self.notebooks.0.get(id) {
+        } else if let Some(raw) = self.raw.0.get(id) {
             if let Some(nb) = self.elaborator.notebook(self.clone(), &raw.notebook) {
                 let nbrc = Rc::new(nb);
                 self.elaborated.borrow_mut().insert(id.to_string(), nbrc.clone());
@@ -73,9 +106,9 @@ impl NotebookStorage for ElaborationCache {
 }
 
 impl ElaborationCache {
-    pub fn new(notebooks: Notebooks, theory: Rc<UstrDiscreteDblTheory>) -> Self {
+    pub fn new(notebooks: RawNotebooks, theory: Rc<UstrDiscreteDblTheory>) -> Self {
         Self {
-            notebooks: Rc::new(notebooks),
+            raw: Rc::new(notebooks),
             elaborated: Rc::new(RefCell::new(HashMap::new())),
             elaborator: NotebookElaborator::new(theory),
         }
@@ -261,78 +294,90 @@ impl NotebookElaborator {
     }
 }
 
+#[allow(unused)]
 #[wasm_bindgen]
 pub struct DblModelNext(Box<DiscreteDblModel<QualifiedName, UstrFpCategory>>);
 
-// #[wasm_bindgen]
-// impl DblModelNext {
-//     /// Is the object contained in the model?
-//     #[wasm_bindgen(js_name = "hasOb")]
-//     pub fn has_ob(&self, ob: Ob) -> Result<bool, String> {
-//         todo!()
-//     }
+#[wasm_bindgen]
+impl DblModelNext {
+    // This is currently used in the submodel_graphs analysis
+    // /// Is the object contained in the model?
+    // #[wasm_bindgen(js_name = "hasOb")]
+    // pub fn has_ob(&self, ob: QualifiedName) -> Result<bool, String> {
+    //     Ok(self.0.has_ob(&ob))
+    // }
 
-//     /// Is the morphism contained in the model?
-//     #[wasm_bindgen(js_name = "hasMor")]
-//     pub fn has_mor(&self, mor: Mor) -> Result<bool, String> {
-//         all_the_same!(match &self.0 {
-//             DblModelBox::[Discrete, DiscreteTab](model) => {
-//                 let mor = Elaborator.elab(&mor)?;
-//                 Ok(model.has_mor(&mor))
-//             }
-//         })
-//     }
+    // Used in submodel_graphs
+    // /// Is the morphism contained in the model?
+    // #[wasm_bindgen(js_name = "hasMor")]
+    // pub fn has_mor(&self, mor: Mor) -> Result<bool, String> {
+    //     all_the_same!(match &self.0 {
+    //         DblModelBox::[Discrete, DiscreteTab](model) => {
+    //             let mor = Elaborator.elab(&mor)?;
+    //             Ok(model.has_mor(&mor))
+    //         }
+    //     })
+    // }
 
-//     /// Returns array of all basic objects in the model.
-//     #[wasm_bindgen]
-//     pub fn objects(&self) -> Vec<Ob> {
-//         all_the_same!(match &self.0 {
-//             DblModelBox::[Discrete, DiscreteTab](model) => model.objects().map(|x| Quoter.quote(&x)).collect()
-//         })
-//     }
+    // This is never used
+    //     /// Returns array of all basic objects in the model.
+    //     #[wasm_bindgen]
+    //     pub fn objects(&self) -> Vec<Ob> {
+    //         all_the_same!(match &self.0 {
+    //             DblModelBox::[Discrete, DiscreteTab](model) => model.objects().map(|x| Quoter.quote(&x)).collect()
+    //         })
+    //     }
 
-//     /// Returns array of all basic morphisms in the model.
-//     #[wasm_bindgen]
-//     pub fn morphisms(&self) -> Vec<Mor> {
-//         all_the_same!(match &self.0 {
-//             DblModelBox::[Discrete, DiscreteTab](model) => model.morphisms().map(|f| Quoter.quote(&f)).collect()
-//         })
-//     }
+    // This is never used
+    //     /// Returns array of all basic morphisms in the model.
+    //     #[wasm_bindgen]
+    //     pub fn morphisms(&self) -> Vec<Mor> {
+    //         all_the_same!(match &self.0 {
+    //             DblModelBox::[Discrete, DiscreteTab](model) => model.morphisms().map(|f| Quoter.quote(&f)).collect()
+    //         })
+    //     }
 
-//     /// Returns array of basic objects with the given type.
-//     #[wasm_bindgen(js_name = "objectsWithType")]
-//     pub fn objects_with_type(&self, ob_type: ObType) -> Result<Vec<Ob>, String> {
-//         all_the_same!(match &self.0 {
-//             DblModelBox::[Discrete, DiscreteTab](model) => {
-//                 let ob_type = Elaborator.elab(&ob_type)?;
-//                 Ok(model.objects_with_type(&ob_type).map(|ob| Quoter.quote(&ob)).collect())
-//             }
-//         })
-//     }
+    // This is used for completions
+    //     /// Returns array of basic objects with the given type.
+    //     #[wasm_bindgen(js_name = "objectsWithType")]
+    //     pub fn objects_with_type(&self, ob_type: ObType) -> Result<Vec<Ob>, String> {
+    //         all_the_same!(match &self.0 {
+    //             DblModelBox::[Discrete, DiscreteTab](model) => {
+    //                 let ob_type = Elaborator.elab(&ob_type)?;
+    //                 Ok(model.objects_with_type(&ob_type).map(|ob| Quoter.quote(&ob)).collect())
+    //             }
+    //         })
+    //     }
 
-//     /// Returns array of basic morphisms with the given type.
-//     #[wasm_bindgen(js_name = "morphismsWithType")]
-//     pub fn morphisms_with_type(&self, mor_type: MorType) -> Result<Vec<Mor>, String> {
-//         all_the_same!(match &self.0 {
-//             DblModelBox::[Discrete, DiscreteTab](model) => {
-//                 let mor_type = Elaborator.elab(&mor_type)?;
-//                 Ok(model.morphisms_with_type(&mor_type).map(|mor| Quoter.quote(&mor)).collect())
-//             }
-//         })
-//     }
+    // This is used for completions
+    //     /// Returns array of basic morphisms with the given type.
+    //     #[wasm_bindgen(js_name = "morphismsWithType")]
+    //     pub fn morphisms_with_type(&self, mor_type: MorType) -> Result<Vec<Mor>, String> {
+    //         all_the_same!(match &self.0 {
+    //             DblModelBox::[Discrete, DiscreteTab](model) => {
+    //                 let mor_type = Elaborator.elab(&mor_type)?;
+    //                 Ok(model.morphisms_with_type(&mor_type).map(|mor| Quoter.quote(&mor)).collect())
+    //             }
+    //         })
+    //     }
 
-//     pub fn validate(&self) -> ModelValidationResult {
-//         all_the_same!(match &self.0 {
-//             DblModelBox::[Discrete, DiscreteTab](model) => {
-//                 let res = model.validate();
-//                 ModelValidationResult(res.map_err(|errs| errs.into()).into())
-//             }
-//         })
-//     }
-// }
+    // This is no longer relevant; validation happens before
+    //     pub fn validate(&self) -> ModelValidationResult {
+    //         all_the_same!(match &self.0 {
+    //             DblModelBox::[Discrete, DiscreteTab](model) => {
+    //                 let res = model.validate();
+    //                 ModelValidationResult(res.map_err(|errs| errs.into()).into())
+    //             }
+    //         })
+    //     }
+}
 
 #[wasm_bindgen]
-pub fn elaborate(notebooks: Notebooks, notebook_id: String, theory: &DblTheory) {
+pub fn elaborate(
+    notebooks: RawNotebooks,
+    notebook_id: String,
+    theory: &DblTheory,
+) -> Option<DblModelNext> {
     let theory = match &theory.0 {
         catlog_wasm::theory::DblTheoryBox::Discrete(t) => t,
         catlog_wasm::theory::DblTheoryBox::DiscreteTab(_) => panic!("tabulators unsupported"),
@@ -356,8 +401,8 @@ pub fn elaborate(notebooks: Notebooks, notebook_id: String, theory: &DblTheory) 
             .into(),
         );
         // TODO: shouldn't need a clone here
-        // Some(DblModelNext(Box::new(DiscreteDblModel::clone(&state.neutrals.borrow()))))
+        Some(DblModelNext(Box::new(DiscreteDblModel::clone(&state.neutrals.borrow()))))
     } else {
-        // None
+        None
     }
 }
