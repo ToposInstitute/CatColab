@@ -62,9 +62,6 @@ export type CellActions = {
     /** Delete this cell in the forward/downward direction. */
     deleteForward: () => void;
 
-    /** Duplicate this cell, adding the new cell below this one. */
-    // duplicate: () => void;
-
     /** Move this cell up, if possible. */
     moveUp: () => void;
 

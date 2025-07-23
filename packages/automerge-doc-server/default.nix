@@ -1,7 +1,6 @@
 {
   pkgs,
   inputs,
-  rustToolchain,
   self,
   ...
 }:
@@ -13,7 +12,6 @@ let
   pkgsUnstable = import inputs.nixpkgsUnstable {
     system = "x86_64-linux";
   };
-
 in
 pkgs.stdenv.mkDerivation {
   pname = name;

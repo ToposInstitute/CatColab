@@ -1,19 +1,20 @@
-//! Lotka-Volterra ODE analysis of models.
+/*! Lotka-Volterra ODE analysis of models.
+
+The main entry point for this module is
+[`lotka_volterra_analysis`](SignedCoefficientBuilder::lotka_volterra_analysis).
+ */
 
 use std::{collections::HashMap, hash::Hash};
 
-use nalgebra::{DMatrix, DVector};
-use ustr::Ustr;
+use nalgebra::DVector;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify::Tsify;
 
-use super::ODEAnalysis;
-use crate::dbl::model::{DiscreteDblModel, FgDblModel};
-use crate::one::fp_category::UstrFpCategory;
-use crate::one::{FgCategory, Path};
+use super::{ODEAnalysis, SignedCoefficientBuilder};
+use crate::dbl::model::FgDblModel;
 use crate::simulate::ode::{LotkaVolterraSystem, ODEProblem};
 
 /// Data defining a Lotka-Volterra ODE problem for a model.
@@ -44,84 +45,34 @@ where
     duration: f32,
 }
 
-type Model<Id> = DiscreteDblModel<Id, UstrFpCategory>;
+impl<ObType, MorType> SignedCoefficientBuilder<ObType, MorType> {
+    /** Lotka-Volterra ODE analysis for a model of a double theory.
 
-/** Lotka-Volterra ODE analysis for models of a double theory.
-
-The main situation we have in mind is the Lotka-Volterra ODE semantics for
-regulatory networks (signed graphs) described in our [*Compositionality*
-paper](crate::refs::RegNets).
-*/
-pub struct LotkaVolterraAnalysis {
-    var_ob_type: Ustr,
-    positive_mor_types: Vec<Path<Ustr, Ustr>>,
-    negative_mor_types: Vec<Path<Ustr, Ustr>>,
-}
-
-impl LotkaVolterraAnalysis {
-    /// Creates a new Lotka-Volterra analysis for the given object type.
-    pub fn new(var_ob_type: Ustr) -> Self {
-        Self {
-            var_ob_type,
-            positive_mor_types: Vec::new(),
-            negative_mor_types: Vec::new(),
-        }
-    }
-
-    /// Adds a morphism type defining a positive interaction between objects.
-    pub fn add_positive(mut self, mor_type: Path<Ustr, Ustr>) -> Self {
-        self.positive_mor_types.push(mor_type);
-        self
-    }
-
-    /// Adds a morphism type defining a negative interaction between objects.
-    pub fn add_negative(mut self, mor_type: Path<Ustr, Ustr>) -> Self {
-        self.negative_mor_types.push(mor_type);
-        self
-    }
-
-    /// Creates a Lotka-Volterra system from a model.
-    pub fn create_system<Id>(
+    The main application we have in mind is the Lotka-Volterra ODE semantics for
+    signed graphs described in our [paper on regulatory
+    networks](crate::refs::RegNets).
+     */
+    pub fn lotka_volterra_analysis<Id>(
         &self,
-        model: &Model<Id>,
+        model: &impl FgDblModel<ObType = ObType, MorType = MorType, Ob = Id, ObGen = Id, MorGen = Id>,
         data: LotkaVolterraProblemData<Id>,
     ) -> ODEAnalysis<Id, LotkaVolterraSystem>
     where
         Id: Eq + Clone + Hash + Ord,
     {
-        let mut objects: Vec<_> = model.ob_generators_with_type(&self.var_ob_type).collect();
-        objects.sort();
-        let ob_index: HashMap<_, _> =
-            objects.iter().cloned().enumerate().map(|(i, x)| (x, i)).collect();
-
-        let n = objects.len();
-
-        let mut A = DMatrix::from_element(n, n, 0.0f32);
-        for mor_type in self.positive_mor_types.iter() {
-            for mor in model.mor_generators_with_type(mor_type) {
-                let i = *ob_index.get(&model.mor_generator_dom(&mor)).unwrap();
-                let j = *ob_index.get(&model.mor_generator_cod(&mor)).unwrap();
-                A[(j, i)] += data.interaction_coeffs.get(&mor).copied().unwrap_or_default();
-            }
-        }
-        for mor_type in self.negative_mor_types.iter() {
-            for mor in model.mor_generators_with_type(mor_type) {
-                let i = *ob_index.get(&model.mor_generator_dom(&mor)).unwrap();
-                let j = *ob_index.get(&model.mor_generator_cod(&mor)).unwrap();
-                A[(j, i)] -= data.interaction_coeffs.get(&mor).copied().unwrap_or_default();
-            }
-        }
+        let (matrix, ob_index) = self.build_matrix(model, &data.interaction_coeffs);
+        let n = ob_index.len();
 
         let growth_rates =
-            objects.iter().map(|ob| data.growth_rates.get(ob).copied().unwrap_or_default());
+            ob_index.keys().map(|ob| data.growth_rates.get(ob).copied().unwrap_or_default());
         let b = DVector::from_iterator(n, growth_rates);
 
-        let initial_values = objects
-            .iter()
+        let initial_values = ob_index
+            .keys()
             .map(|ob| data.initial_values.get(ob).copied().unwrap_or_default());
         let x0 = DVector::from_iterator(n, initial_values);
 
-        let system = LotkaVolterraSystem::new(A, b);
+        let system = LotkaVolterraSystem::new(matrix, b);
         let problem = ODEProblem::new(system, x0).end_time(data.duration);
         ODEAnalysis::new(problem, ob_index)
     }
@@ -133,6 +84,7 @@ mod test {
     use ustr::ustr;
 
     use super::*;
+    use crate::one::Path;
     use crate::{simulate::ode::lotka_volterra, stdlib};
 
     #[test]
@@ -148,10 +100,10 @@ mod test {
             initial_values: [(prey, 1.0), (pred, 1.0)].into_iter().collect(),
             duration: 10.0,
         };
-        let analysis = LotkaVolterraAnalysis::new(ustr("Object"))
+        let analysis = SignedCoefficientBuilder::new(ustr("Object"))
             .add_positive(Path::Id(ustr("Object")))
             .add_negative(Path::single(ustr("Negative")))
-            .create_system(&neg_feedback, data);
+            .lotka_volterra_analysis(&neg_feedback, data);
         assert_eq!(analysis.problem, lotka_volterra::create_predator_prey());
     }
 }
