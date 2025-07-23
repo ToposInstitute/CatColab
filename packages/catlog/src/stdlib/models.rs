@@ -1,7 +1,7 @@
 //! Standard library of models of double theories.
 
 use std::rc::Rc;
-use ustr::{Ustr, ustr};
+use ustr::{ustr, Ustr};
 
 use crate::dbl::{model::*, theory::*};
 use crate::one::Path;
@@ -137,6 +137,41 @@ pub fn catalyzed_reaction(th: Rc<UstrModalDblTheory>) -> UstrModalDblModel {
         ModalOb::App(ModalOb::List(List::Symmetric, vec![x.into(), c.into()]).into(), op),
         ModalOb::App(ModalOb::List(List::Symmetric, vec![y.into(), c.into()]).into(), op),
         ModalMorType::Zero(ob_type),
+    );
+    model
+}
+
+/**
+ */
+pub fn water(th: Rc<UstrModalDblTheory>) -> UstrModalDblModel {
+    let (state_type, aux_type) =
+        (ModalObType::new(ustr("State")), ModalObType::new(ustr("Auxiliary")));
+    let mut model = UstrModalDblModel::new(th);
+    let (water, container) = (ustr("water"), ustr("container"));
+    model.add_ob(water, state_type.clone());
+    model.add_ob(container, state_type.clone());
+    let (bwater, bcontainer) = (ustr("&water"), ustr("&container"));
+    model.add_ob(bwater, aux_type.clone());
+    model.add_ob(bcontainer, aux_type);
+    let borrow = ModalMorType::One(ModeApp::new(ustr("borrow")));
+    model.add_mor(
+        ustr("borrow1"),
+        ModalOb::Generator(water),
+        ModalOb::Generator(bwater),
+        borrow.clone(),
+    );
+    model.add_mor(
+        ustr("borrow2"),
+        ModalOb::Generator(container),
+        ModalOb::Generator(bcontainer),
+        borrow,
+    );
+    let (comparator, comparator_out) = (ustr("comparator"), ustr("comparator_out"));
+    model.add_mor(
+        comparator,
+        ModalOb::List(List::Plain, vec![bwater.into(), bcontainer.into()]).into(),
+        ModalOb::Generator(comparator_out),
+        ModalMorType::One(ModeApp::new(ustr("function"))),
     );
     model
 }
