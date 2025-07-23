@@ -3,12 +3,12 @@ import invariant from "tiny-invariant";
 
 import {
     type DblModel,
-    DblModelNext,
-    DblTheory,
+    type DblModelNext,
+    type DblTheory,
     type Document,
     elaborate,
     elaborateModel,
-    ModelDocumentContent,
+    type ModelDocumentContent,
     type ModelJudgment,
     type ModelValidationResult,
     type Uuid,
@@ -123,21 +123,13 @@ function enlivenModelDocument(
 
     console.log(liveDoc.docHandle.heads());
 
-    const [validatedModelNext, _] = createResource<DblModelNext | undefined>(
-        async () => {
-            const th = theory();
-            return undefined;
-            if (th) {
-                return await catlaborate(
-                    api,
-                    refId,
-                    th.theory,
-                    liveDoc.doc.theory,
-                    theories,
-                );
-            }
-        },
-    );
+    const [validatedModelNext, _] = createResource<DblModelNext | undefined>(async () => {
+        const th = theory();
+        return undefined;
+        if (th) {
+            return await catlaborate(api, refId, th.theory, liveDoc.doc.theory, theories);
+        }
+    });
 
     return {
         type: "model",
@@ -167,9 +159,7 @@ export async function createModel(
         init = initOrTheoryId;
     }
 
-    const result = await api.rpc.new_ref.mutate(
-        init as InterfaceToType<ModelDocument>,
-    );
+    const result = await api.rpc.new_ref.mutate(init as InterfaceToType<ModelDocument>);
     invariant(result.tag === "Ok", "Failed to create model");
 
     return result.content;
@@ -205,9 +195,7 @@ async function cacheNotebooksReferredToFrom(
         throw new Error(`could not load document id ${refId}`);
     }
     if (doc.type !== "model" || doc.theory !== theory) {
-        throw new Error(
-            `can only refer to model documents of the same theory (${theory})`,
-        );
+        throw new Error(`can only refer to model documents of the same theory (${theory})`);
     }
     cache.set(refId, doc);
     for (const cell of doc.notebook.cells) {
