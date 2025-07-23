@@ -15,9 +15,8 @@ to check for equivalence of paths under the congruence.
  */
 
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::fmt::Debug;
-use std::hash::{BuildHasher, Hash, RandomState};
+use std::{collections::HashMap, hash::Hash};
 
 use derivative::Derivative;
 use egglog::{EGraph, ast::*, span};
@@ -284,18 +283,17 @@ do not assume that vertices or edges can be converted to strings/symbols since
 we want to support hierarchical naming, where names are a list of symbols.
  */
 #[derive(Clone)]
-struct CategoryProgramBuilder<V, E, S = RandomState> {
+struct CategoryProgramBuilder<V, E> {
     prog: Vec<Command>,
     sym: CategorySymbols,
-    ob_generators: HashMap<V, usize, S>,
-    mor_generators: HashMap<E, usize, S>,
+    ob_generators: HashMap<V, usize>,
+    mor_generators: HashMap<E, usize>,
 }
 
-impl<V, E, S> CategoryProgramBuilder<V, E, S>
+impl<V, E> CategoryProgramBuilder<V, E>
 where
     V: Eq + Hash,
     E: Eq + Hash,
-    S: BuildHasher,
 {
     /// Declares an object generator.
     pub fn add_ob_generator(&mut self, v: V) -> usize {
@@ -358,7 +356,7 @@ where
     }
 }
 
-impl<V, E, S> CategoryProgramBuilder<V, E, S> {
+impl<V, E> CategoryProgramBuilder<V, E> {
     /// Extracts the egglog program, consuming the cached statements.
     pub fn program(&mut self) -> Program {
         Program(std::mem::take(&mut self.prog))
@@ -594,7 +592,7 @@ impl<V, E, S> CategoryProgramBuilder<V, E, S> {
     }
 }
 
-impl<V, E, S: Default> Default for CategoryProgramBuilder<V, E, S> {
+impl<V, E> Default for CategoryProgramBuilder<V, E> {
     fn default() -> Self {
         let mut result = Self {
             prog: Default::default(),
@@ -702,7 +700,7 @@ mod tests {
 
     #[test]
     fn egraph_preamble() {
-        let mut builder: CategoryProgramBuilder<char, char, RandomState> = Default::default();
+        let mut builder: CategoryProgramBuilder<char, char> = Default::default();
         let prog = builder.program();
 
         let expected = expect![[r#"

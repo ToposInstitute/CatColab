@@ -1,17 +1,15 @@
 //! Discrete tabulator theories.
 
-use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
+use std::hash::Hash;
 use std::ops::Range;
 
 use derivative::Derivative;
 use ref_cast::RefCast;
-use ustr::{IdentityHasher, Ustr};
+use ustr::Ustr;
 
 use crate::dbl::{category::*, graph::ProedgeGraph, tree::DblTree};
 use crate::one::{Graph, Path};
 use crate::zero::*;
-
-//use crate::zero::*;
 
 /// Object type in a discrete tabulator theory.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -112,29 +110,25 @@ tabulators and with no arrows or cells beyond the identities and tabulator
 projections.
  */
 #[derive(Clone, Derivative)]
-#[derivative(Default(bound = "S: Default"))]
-pub struct DiscreteTabTheory<V, E, S = RandomState> {
-    ob_types: HashFinSet<V, S>,
-    mor_types: HashFinSet<E, S>,
+#[derivative(Default(bound = ""))]
+pub struct DiscreteTabTheory<V, E> {
+    ob_types: HashFinSet<V>,
+    mor_types: HashFinSet<E>,
     src: HashColumn<E, TabObType<V, E>>,
     tgt: HashColumn<E, TabObType<V, E>>,
     compose_map: HashColumn<(E, E), TabMorType<V, E>>,
 }
 
 /// Discrete tabulator theory with names of type `Ustr`.
-pub type UstrDiscreteTabTheory = DiscreteTabTheory<Ustr, Ustr, BuildHasherDefault<IdentityHasher>>;
+pub type UstrDiscreteTabTheory = DiscreteTabTheory<Ustr, Ustr>;
 
-impl<V, E, S> DiscreteTabTheory<V, E, S>
+impl<V, E> DiscreteTabTheory<V, E>
 where
     V: Eq + Clone + Hash,
     E: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     /// Creates an empty discrete tabulator theory.
-    pub fn new() -> Self
-    where
-        S: Default,
-    {
+    pub fn new() -> Self {
         Default::default()
     }
 
@@ -172,13 +166,12 @@ where
 /// Graph of objects and projection arrows in discrete tabulator theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-struct DiscTabTheoryProjGraph<V, E, S>(DiscreteTabTheory<V, E, S>);
+struct DiscTabTheoryProjGraph<V, E>(DiscreteTabTheory<V, E>);
 
-impl<V, E, S> Graph for DiscTabTheoryProjGraph<V, E, S>
+impl<V, E> Graph for DiscTabTheoryProjGraph<V, E>
 where
     V: Eq + Clone + Hash,
     E: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     type V = TabObType<V, E>;
     type E = TabObProj<V, E>;
@@ -201,11 +194,10 @@ where
     }
 }
 
-impl<V, E, S> VDblCategory for DiscreteTabTheory<V, E, S>
+impl<V, E> VDblCategory for DiscreteTabTheory<V, E>
 where
     V: Eq + Clone + Hash,
     E: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     type Ob = TabObType<V, E>;
     type Arr = TabObOp<V, E>;
@@ -301,11 +293,10 @@ where
     }
 }
 
-impl<V, E, S> VDCWithComposites for DiscreteTabTheory<V, E, S>
+impl<V, E> VDCWithComposites for DiscreteTabTheory<V, E>
 where
     V: Eq + Clone + Hash,
     E: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     fn composite2(&self, m: Self::Pro, n: Self::Pro) -> Option<Self::Pro> {
         let mn = match (m, n) {
