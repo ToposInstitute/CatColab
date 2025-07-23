@@ -116,8 +116,8 @@ projections.
 pub struct DiscreteTabTheory<V, E, S = RandomState> {
     ob_types: HashFinSet<V, S>,
     mor_types: HashFinSet<E, S>,
-    src: HashColumn<E, TabObType<V, E>, S>,
-    tgt: HashColumn<E, TabObType<V, E>, S>,
+    src: HashColumn<E, TabObType<V, E>>,
+    tgt: HashColumn<E, TabObType<V, E>>,
     compose_map: HashColumn<(E, E), TabMorType<V, E>>,
 }
 

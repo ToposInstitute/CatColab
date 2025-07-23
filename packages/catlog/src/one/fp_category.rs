@@ -17,14 +17,14 @@ to check for equivalence of paths under the congruence.
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
+use std::hash::{BuildHasher, Hash, RandomState};
 
 use derivative::Derivative;
 use egglog::{EGraph, ast::*, span};
 use nonempty::NonEmpty;
 use ref_cast::RefCast;
 use thiserror::Error;
-use ustr::{IdentityHasher, Ustr};
+use ustr::Ustr;
 
 use super::{category::*, graph::*, path::*};
 use crate::egglog_util::{CommandRewrite, CommandRule, Program};
@@ -48,30 +48,29 @@ pattern to encapsulate the mutability of the e-graph and perform borrow checking
 at runtime. The current implementation allows only *single-threaded* usage.
  */
 #[derive(Clone, Derivative)]
-#[derivative(Debug(bound = "V: Debug, E: Debug, S: Debug"))]
-#[derivative(Default(bound = "S: Default", new = "true"))]
-#[derivative(PartialEq(bound = "V: Eq + Hash, E: Eq + Hash, S: BuildHasher"))]
-#[derivative(Eq(bound = "V: Eq + Hash, E: Eq + Hash, S: BuildHasher"))]
-pub struct FpCategory<V, E, S = RandomState> {
-    generators: HashGraph<V, E, S>,
+#[derivative(Debug(bound = "V: Debug, E: Debug"))]
+#[derivative(Default(bound = "", new = "true"))]
+#[derivative(PartialEq(bound = "V: Eq + Hash, E: Eq + Hash"))]
+#[derivative(Eq(bound = "V: Eq + Hash, E: Eq + Hash"))]
+pub struct FpCategory<V, E> {
+    generators: HashGraph<V, E>,
     equations: Vec<PathEq<V, E>>,
     #[derivative(Debug = "ignore", PartialEq = "ignore")]
-    builder: RefCell<CategoryProgramBuilder<V, E, S>>,
+    builder: RefCell<CategoryProgramBuilder<V, E>>,
     #[derivative(Debug = "ignore", PartialEq = "ignore")]
     egraph: RefCell<EGraph>,
 }
 
 /// A finitely presented category with generators of type `Ustr`.
-pub type UstrFpCategory = FpCategory<Ustr, Ustr, BuildHasherDefault<IdentityHasher>>;
+pub type UstrFpCategory = FpCategory<Ustr, Ustr>;
 
-impl<V, E, S> FpCategory<V, E, S>
+impl<V, E> FpCategory<V, E>
 where
     V: Eq + Clone + Hash,
     E: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     /// Gets the generating graph of the category presentation.
-    pub fn generators(&self) -> &(impl FinGraph<V = V, E = E> + use<V, E, S>) {
+    pub fn generators(&self) -> &(impl FinGraph<V = V, E = E> + use<V, E>) {
         &self.generators
     }
 
@@ -186,11 +185,10 @@ where
     }
 }
 
-impl<V, E, S> Category for FpCategory<V, E, S>
+impl<V, E> Category for FpCategory<V, E>
 where
     V: Eq + Clone + Hash,
     E: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     type Ob = V;
     type Mor = Path<V, E>;
@@ -228,11 +226,10 @@ where
     }
 }
 
-impl<V, E, S> FgCategory for FpCategory<V, E, S>
+impl<V, E> FgCategory for FpCategory<V, E>
 where
     V: Eq + Clone + Hash,
     E: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     type ObGen = V;
     type MorGen = E;
@@ -251,11 +248,10 @@ where
     }
 }
 
-impl<V, E, S> Validate for FpCategory<V, E, S>
+impl<V, E> Validate for FpCategory<V, E>
 where
     V: Eq + Clone + Hash,
     E: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     type ValidationError = InvalidFpCategory<E>;
 

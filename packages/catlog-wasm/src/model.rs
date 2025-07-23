@@ -24,8 +24,7 @@ use super::theory::{DblTheory, DblTheoryBox, demote_modality, promote_modality};
 pub(crate) type DiscreteDblModel = dbl_model::DiscreteDblModel<Uuid, UstrFpCategory>;
 pub(crate) type DiscreteTabModel =
     dbl_model::DiscreteTabModel<Uuid, Ustr, BuildHasherDefault<IdentityHasher>>;
-pub(crate) type ModalDblModel =
-    dbl_model::ModalDblModel<Uuid, Ustr, BuildHasherDefault<IdentityHasher>>;
+pub(crate) type ModalDblModel = dbl_model::ModalDblModel<Uuid, Ustr>;
 
 /** A box containing a model of a double theory of any kind.
 

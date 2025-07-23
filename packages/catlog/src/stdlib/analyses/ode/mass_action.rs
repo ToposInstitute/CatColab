@@ -52,7 +52,7 @@ where
 /// Symbolic parameter in mass-action polynomial system.
 type Parameter<Id> = Polynomial<Id, f32, u8>;
 
-type PetriNetModel<Id> = ModalDblModel<Id, Ustr, BuildHasherDefault<IdentityHasher>>;
+type PetriNetModel<Id> = ModalDblModel<Id, Ustr>;
 
 /** Mass-action ODE analysis for Petri nets.
 

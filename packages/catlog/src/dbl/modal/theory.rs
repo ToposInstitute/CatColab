@@ -19,12 +19,12 @@ this stage to reify the mode theory as the data of a finitely presented
 in at the type level.
 */
 
-use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
+use std::hash::Hash;
 use std::iter::repeat_n;
 
 use derive_more::From;
 use ref_cast::RefCast;
-use ustr::{IdentityHasher, Ustr};
+use ustr::Ustr;
 
 use crate::dbl::computad::{AVDCComputad, AVDCComputadTop};
 use crate::dbl::theory::InvalidDblTheory;
@@ -244,27 +244,26 @@ pub type ModalMorOp<Id> = DblTree<ModalObOp<Id>, ModalMorType<Id>, ModalNode<Id>
 
 /// A modal double theory.
 #[derive(Debug, Default)]
-pub struct ModalDblTheory<Id, S = RandomState> {
-    ob_generators: HashFinSet<Id, S>,
-    arr_generators: ComputadTop<ModalObType<Id>, Id, S>,
-    pro_generators: ComputadTop<ModalObType<Id>, Id, S>,
-    cell_generators: AVDCComputadTop<ModalObType<Id>, ModalObOp<Id>, ModalMorType<Id>, Id, S>,
+pub struct ModalDblTheory<Id> {
+    ob_generators: HashFinSet<Id>,
+    arr_generators: ComputadTop<ModalObType<Id>, Id>,
+    pro_generators: ComputadTop<ModalObType<Id>, Id>,
+    cell_generators: AVDCComputadTop<ModalObType<Id>, ModalObOp<Id>, ModalMorType<Id>, Id>,
     arr_equations: Vec<PathEq<ModalObType<Id>, ModeApp<ModalOp<Id>>>>,
     // TODO: Cell equations and composites
 }
 
 /// A modal double theory with identifiers of type `Ustr`.
-pub type UstrModalDblTheory = ModalDblTheory<Ustr, BuildHasherDefault<IdentityHasher>>;
+pub type UstrModalDblTheory = ModalDblTheory<Ustr>;
 
 /// Set of object types in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-pub(super) struct ModalObTypes<Id, S>(ModalDblTheory<Id, S>);
+pub(super) struct ModalObTypes<Id>(ModalDblTheory<Id>);
 
-impl<Id, S> Set for ModalObTypes<Id, S>
+impl<Id> Set for ModalObTypes<Id>
 where
     Id: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     type Elem = ModeApp<Id>;
 
@@ -276,12 +275,11 @@ where
 /// Graph of object types and *basic* morphism types in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-struct ModalProedgeGraph<Id, S>(ModalDblTheory<Id, S>);
+struct ModalProedgeGraph<Id>(ModalDblTheory<Id>);
 
-impl<Id, S> Graph for ModalProedgeGraph<Id, S>
+impl<Id> Graph for ModalProedgeGraph<Id>
 where
     Id: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     type V = ModalObType<Id>;
     type E = ModeApp<Id>;
@@ -303,12 +301,11 @@ where
 /// Graph of object/morphism types in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-pub(super) struct ModalMorTypeGraph<Id, S>(ModalDblTheory<Id, S>);
+pub(super) struct ModalMorTypeGraph<Id>(ModalDblTheory<Id>);
 
-impl<Id, S> Graph for ModalMorTypeGraph<Id, S>
+impl<Id> Graph for ModalMorTypeGraph<Id>
 where
     Id: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     type V = ModalObType<Id>;
     type E = ModalMorType<Id>;
@@ -327,10 +324,9 @@ where
     }
 }
 
-impl<Id, S> ReflexiveGraph for ModalMorTypeGraph<Id, S>
+impl<Id> ReflexiveGraph for ModalMorTypeGraph<Id>
 where
     Id: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     fn refl(&self, x: Self::V) -> Self::E {
         ShortPath::Zero(x)
@@ -340,12 +336,11 @@ where
 /// Graph of object types and *basic* object operations in a modal theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-struct ModalEdgeGraph<Id, S>(ModalDblTheory<Id, S>);
+struct ModalEdgeGraph<Id>(ModalDblTheory<Id>);
 
-impl<Id, S> Graph for ModalEdgeGraph<Id, S>
+impl<Id> Graph for ModalEdgeGraph<Id>
 where
     Id: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     type V = ModalObType<Id>;
     type E = ModeApp<ModalOp<Id>>;
@@ -378,12 +373,11 @@ where
 /// Category of object types/operations in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-pub(super) struct ModalOneTheory<Id, S>(ModalDblTheory<Id, S>);
+pub(super) struct ModalOneTheory<Id>(ModalDblTheory<Id>);
 
-impl<Id, S> Category for ModalOneTheory<Id, S>
+impl<Id> Category for ModalOneTheory<Id>
 where
     Id: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     type Ob = ModalObType<Id>;
     type Mor = ModalObOp<Id>;
@@ -408,24 +402,22 @@ where
 /// Virtual double graph of *basic* cells in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-struct ModalVDblGraph<Id, S>(ModalDblTheory<Id, S>);
+struct ModalVDblGraph<Id>(ModalDblTheory<Id>);
 
-type ModalVDblComputad<'a, Id, S> = AVDCComputad<
+type ModalVDblComputad<'a, Id> = AVDCComputad<
     'a,
     ModalObType<Id>,
     ModalObOp<Id>,
     ModalMorType<Id>,
-    ModalObTypes<Id, S>,
-    UnderlyingGraph<ModalOneTheory<Id, S>>,
-    ModalMorTypeGraph<Id, S>,
+    ModalObTypes<Id>,
+    UnderlyingGraph<ModalOneTheory<Id>>,
+    ModalMorTypeGraph<Id>,
     Id,
-    S,
 >;
 
-impl<Id, S> Validate for ModalVDblGraph<Id, S>
+impl<Id> Validate for ModalVDblGraph<Id>
 where
     Id: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     type ValidationError = InvalidVDblGraph<Id, Id, Id>;
 
@@ -447,10 +439,9 @@ where
     }
 }
 
-impl<Id, S> VDblGraph for ModalVDblGraph<Id, S>
+impl<Id> VDblGraph for ModalVDblGraph<Id>
 where
     Id: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     type V = ModalObType<Id>;
     type E = ModalObOp<Id>;
@@ -573,10 +564,9 @@ where
     }
 }
 
-impl<Id, S> VDblCategory for ModalDblTheory<Id, S>
+impl<Id> VDblCategory for ModalDblTheory<Id>
 where
     Id: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     type Ob = ModalObType<Id>;
     type Arr = ModalObOp<Id>;
@@ -633,10 +623,9 @@ where
     }
 }
 
-impl<Id, S> VDCWithComposites for ModalDblTheory<Id, S>
+impl<Id> VDCWithComposites for ModalDblTheory<Id>
 where
     Id: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     fn composite_ext(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Cell> {
         if self.composite(path.clone()).is_some() {
@@ -670,10 +659,9 @@ where
     }
 }
 
-impl<Id, S> Validate for ModalDblTheory<Id, S>
+impl<Id> Validate for ModalDblTheory<Id>
 where
     Id: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     type ValidationError = InvalidDblTheory<Id>;
 
@@ -693,27 +681,22 @@ where
     }
 }
 
-impl<Id, S> ModalDblTheory<Id, S>
+impl<Id> ModalDblTheory<Id>
 where
     Id: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     /// Gets the computad generating the proarrows of the theory.
-    pub(super) fn loose_computad(
-        &self,
-    ) -> Computad<'_, ModalObType<Id>, ModalObTypes<Id, S>, Id, S> {
+    pub(super) fn loose_computad(&self) -> Computad<'_, ModalObType<Id>, ModalObTypes<Id>, Id> {
         Computad::new(ModalObTypes::ref_cast(self), &self.pro_generators)
     }
 
     /// Gets the computad generating the arrows of the theory.
-    pub(super) fn tight_computad(
-        &self,
-    ) -> Computad<'_, ModalObType<Id>, ModalObTypes<Id, S>, Id, S> {
+    pub(super) fn tight_computad(&self) -> Computad<'_, ModalObType<Id>, ModalObTypes<Id>, Id> {
         Computad::new(ModalObTypes::ref_cast(self), &self.arr_generators)
     }
 
     /// Gets the double computad generating the theory.
-    pub(super) fn dbl_computad(&self) -> ModalVDblComputad<'_, Id, S> {
+    pub(super) fn dbl_computad(&self) -> ModalVDblComputad<'_, Id> {
         AVDCComputad::new(
             ModalObTypes::ref_cast(self),
             UnderlyingGraph::ref_cast(ModalOneTheory::ref_cast(self)),

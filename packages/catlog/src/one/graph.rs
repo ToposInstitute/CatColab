@@ -6,14 +6,14 @@ flexible set of traits and structs for graphs as they are used in category
 theory.
  */
 
-use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
+use std::hash::Hash;
 
 use derivative::Derivative;
 use derive_more::{Constructor, From};
 use nonempty::NonEmpty;
 use ref_cast::RefCast;
 use thiserror::Error;
-use ustr::{IdentityHasher, Ustr};
+use ustr::Ustr;
 
 use crate::validate::{self, Validate};
 use crate::zero::*;
@@ -416,32 +416,31 @@ Unlike in a skeletal finite graph, the vertices and edges can have arbitrary
 hashable types.
 */
 #[derive(Clone, Derivative, Debug)]
-#[derivative(Default(bound = "S: Default"))]
-#[derivative(PartialEq(bound = "V: Eq + Hash, E: Eq + Hash, S: BuildHasher"))]
-#[derivative(Eq(bound = "V: Eq + Hash, E: Eq + Hash, S: BuildHasher"))]
-pub struct HashGraph<V, E, S = RandomState> {
-    vertex_set: HashFinSet<V, S>,
-    edge_set: HashFinSet<E, S>,
-    src_map: IndexedHashColumn<E, V, S>,
-    tgt_map: IndexedHashColumn<E, V, S>,
+#[derivative(PartialEq(bound = "V: Eq + Hash, E: Eq + Hash"))]
+#[derivative(Eq(bound = "V: Eq + Hash, E: Eq + Hash"))]
+#[derivative(Default(bound = ""))]
+pub struct HashGraph<V, E> {
+    vertex_set: HashFinSet<V>,
+    edge_set: HashFinSet<E>,
+    src_map: IndexedHashColumn<E, V>,
+    tgt_map: IndexedHashColumn<E, V>,
 }
 
 /// A finite graph with vertices and edges of type `Ustr`.
-pub type UstrGraph = HashGraph<Ustr, Ustr, BuildHasherDefault<IdentityHasher>>;
+pub type UstrGraph = HashGraph<Ustr, Ustr>;
 
-impl<V, E, S> ColumnarGraph for HashGraph<V, E, S>
+impl<V, E> ColumnarGraph for HashGraph<V, E>
 where
     V: Eq + Hash + Clone,
     E: Eq + Hash + Clone,
-    S: BuildHasher,
 {
     type V = V;
     type E = E;
 
-    type Vertices = HashFinSet<V, S>;
-    type Edges = HashFinSet<E, S>;
-    type Src = IndexedHashColumn<E, V, S>;
-    type Tgt = IndexedHashColumn<E, V, S>;
+    type Vertices = HashFinSet<V>;
+    type Edges = HashFinSet<E>;
+    type Src = IndexedHashColumn<E, V>;
+    type Tgt = IndexedHashColumn<E, V>;
 
     fn vertex_set(&self) -> &Self::Vertices {
         &self.vertex_set
@@ -457,11 +456,10 @@ where
     }
 }
 
-impl<V, E, S> MutColumnarGraph for HashGraph<V, E, S>
+impl<V, E> MutColumnarGraph for HashGraph<V, E>
 where
     V: Eq + Hash + Clone,
     E: Eq + Hash + Clone,
-    S: BuildHasher,
 {
     fn src_map_mut(&mut self) -> &mut Self::Src {
         &mut self.src_map
@@ -471,19 +469,17 @@ where
     }
 }
 
-impl<V, E, S> ColumnarFinGraph for HashGraph<V, E, S>
+impl<V, E> ColumnarFinGraph for HashGraph<V, E>
 where
     V: Eq + Hash + Clone,
     E: Eq + Hash + Clone,
-    S: BuildHasher,
 {
 }
 
-impl<V, E, S> HashGraph<V, E, S>
+impl<V, E> HashGraph<V, E>
 where
     V: Eq + Hash + Clone,
     E: Eq + Hash + Clone,
-    S: BuildHasher,
 {
     /// Adds a vertex to the graph, returning whether the vertex is new.
     pub fn add_vertex(&mut self, v: V) -> bool {
@@ -514,11 +510,10 @@ where
     }
 }
 
-impl<V, E, S> Validate for HashGraph<V, E, S>
+impl<V, E> Validate for HashGraph<V, E>
 where
     V: Eq + Hash + Clone,
     E: Eq + Hash + Clone,
-    S: BuildHasher,
 {
     type ValidationError = InvalidGraph<E>;
 
