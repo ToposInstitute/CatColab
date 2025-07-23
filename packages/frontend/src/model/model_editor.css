@@ -19,4 +19,8 @@
         flex: 0;
         margin-left: 0.5em;
     }
+
+    & .lucide {
+        color: var(--link-color);
+    }
 }
