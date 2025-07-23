@@ -14,13 +14,7 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
-import {
-    DocumentBreadcrumbs,
-    DocumentLoadingScreen,
-    DocumentMenu,
-    TheoryHelpButton,
-    Toolbar,
-} from "../page";
+import { DocumentBreadcrumbs, DocumentLoadingScreen, DocumentMenu, Toolbar } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { InstanceTypeMeta } from "../theory";
 import { PermissionsButton } from "../user";
@@ -66,7 +60,6 @@ export function DiagramDocumentEditor(props: {
                 <DocumentMenu liveDocument={props.liveDiagram} />
                 <DocumentBreadcrumbs document={props.liveDiagram} />
                 <span class="filler" />
-                <TheoryHelpButton theory={props.liveDiagram.liveModel.theory()} />
                 <PermissionsButton
                     permissions={props.liveDiagram.liveDoc.permissions}
                     refId={props.liveDiagram.refId}
