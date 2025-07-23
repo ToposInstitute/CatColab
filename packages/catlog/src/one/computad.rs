@@ -7,7 +7,7 @@ structure. For example, a computad for monoidal categories is called a "tensor
 scheme" by Joyal and Street and a "pre-net" in the Petri net literature.
  */
 
-use std::hash::{BuildHasher, Hash, RandomState};
+use std::hash::Hash;
 
 use derivative::Derivative;
 use derive_more::Constructor;
@@ -20,23 +20,22 @@ use crate::zero::*;
 Intended for use with [`Computad`].
  */
 #[derive(Clone, Debug, Derivative)]
-#[derivative(Default(bound = "S: Default"))]
-pub struct ComputadTop<Ob, E, S = RandomState> {
+#[derivative(Default(bound = ""))]
+pub struct ComputadTop<Ob, E> {
     /// Set of edges in the computad.
-    pub edge_set: HashFinSet<E, S>,
+    pub edge_set: HashFinSet<E>,
 
     /// Source map of the computad.
-    pub src_map: HashColumn<E, Ob, S>,
+    pub src_map: HashColumn<E, Ob>,
 
     /// Target map of the computad.
-    pub tgt_map: HashColumn<E, Ob, S>,
+    pub tgt_map: HashColumn<E, Ob>,
 }
 
-impl<Ob, E, S> ComputadTop<Ob, E, S>
+impl<Ob, E> ComputadTop<Ob, E>
 where
     Ob: Eq + Clone,
     E: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     /// Adds an edge to the computad.
     pub fn add_edge(&mut self, e: E, src: Ob, tgt: Ob) -> bool {
@@ -52,24 +51,23 @@ The set of objects is assumed already constructed, possibly from other
 generating data, while the top-dimensional generating data is provided directly.
  */
 #[derive(Constructor)]
-pub struct Computad<'a, Ob, ObSet, E, S = RandomState> {
+pub struct Computad<'a, Ob, ObSet, E> {
     objects: &'a ObSet,
-    computad: &'a ComputadTop<Ob, E, S>,
+    computad: &'a ComputadTop<Ob, E>,
 }
 
-impl<'a, Ob, ObSet, E, S> ColumnarGraph for Computad<'a, Ob, ObSet, E, S>
+impl<'a, Ob, ObSet, E> ColumnarGraph for Computad<'a, Ob, ObSet, E>
 where
     Ob: Eq + Clone,
     ObSet: Set<Elem = Ob>,
     E: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     type V = Ob;
     type E = E;
     type Vertices = ObSet;
-    type Edges = HashFinSet<E, S>;
-    type Src = HashColumn<E, Ob, S>;
-    type Tgt = HashColumn<E, Ob, S>;
+    type Edges = HashFinSet<E>;
+    type Src = HashColumn<E, Ob>;
+    type Tgt = HashColumn<E, Ob>;
 
     fn vertex_set(&self) -> &Self::Vertices {
         self.objects

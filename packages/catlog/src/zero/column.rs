@@ -1,14 +1,14 @@
 //! Data structures for mappings and columns, as found in data tables.
 
 use std::collections::HashMap;
-use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
+use std::hash::Hash;
 use std::marker::PhantomData;
 
 use derivative::Derivative;
 use derive_more::{Constructor, From};
 use nonempty::NonEmpty;
 use thiserror::Error;
-use ustr::{IdentityHasher, Ustr};
+use ustr::Ustr;
 
 use super::set::{FinSet, Set, SkelFinSet};
 use crate::validate::{self, Validate};
@@ -390,15 +390,15 @@ impl SkelColumn {
 
 /// An unindexed column backed by a hash map.
 #[derive(Clone, Debug, Derivative, Constructor, From)]
-#[derivative(Default(bound = "S: Default"))]
-#[derivative(PartialEq(bound = "K: Eq + Hash, V: PartialEq, S: BuildHasher"))]
-#[derivative(Eq(bound = "K: Eq + Hash, V: Eq, S: BuildHasher"))]
-pub struct HashColumn<K, V, S = RandomState>(HashMap<K, V, S>);
+#[derivative(PartialEq(bound = "K: Eq + Hash, V: PartialEq"))]
+#[derivative(Eq(bound = "K: Eq + Hash, V: Eq"))]
+#[derivative(Default(bound = ""))]
+pub struct HashColumn<K, V>(HashMap<K, V>);
 
 /// An unindexed column with keys of type `Ustr`.
-pub type UstrColumn<V> = HashColumn<Ustr, V, BuildHasherDefault<IdentityHasher>>;
+pub type UstrColumn<V> = HashColumn<Ustr, V>;
 
-impl<K, V, S> IntoIterator for HashColumn<K, V, S> {
+impl<K, V> IntoIterator for HashColumn<K, V> {
     type Item = (K, V);
     type IntoIter = std::collections::hash_map::IntoIter<K, V>;
 
@@ -407,21 +407,19 @@ impl<K, V, S> IntoIterator for HashColumn<K, V, S> {
     }
 }
 
-impl<K, V, S> FromIterator<(K, V)> for HashColumn<K, V, S>
+impl<K, V> FromIterator<(K, V)> for HashColumn<K, V>
 where
     K: Eq + Hash,
-    S: BuildHasher + Default,
 {
     fn from_iter<Iter: IntoIterator<Item = (K, V)>>(iter: Iter) -> Self {
         HashColumn(HashMap::from_iter(iter))
     }
 }
 
-impl<K, V, S> Mapping for HashColumn<K, V, S>
+impl<K, V> Mapping for HashColumn<K, V>
 where
     K: Eq + Hash + Clone,
     V: Eq + Clone,
-    S: BuildHasher,
 {
     type Dom = K;
     type Cod = V;
@@ -437,11 +435,10 @@ where
     }
 }
 
-impl<K, V, S> MutMapping for HashColumn<K, V, S>
+impl<K, V> MutMapping for HashColumn<K, V>
 where
     K: Eq + Hash + Clone,
     V: Eq + Clone,
-    S: BuildHasher,
 {
     fn get(&self, x: &K) -> Option<&V> {
         self.0.get(x)
@@ -454,11 +451,10 @@ where
     }
 }
 
-impl<K, V, S> Column for HashColumn<K, V, S>
+impl<K, V> Column for HashColumn<K, V>
 where
     K: Eq + Hash + Clone,
     V: Eq + Clone,
-    S: BuildHasher,
 {
     fn iter(&self) -> impl Iterator<Item = (K, &V)> {
         self.0.iter().map(|(k, v)| (k.clone(), v))
@@ -473,11 +469,10 @@ where
     }
 }
 
-impl<K, V, S> MutColumn for HashColumn<K, V, S>
+impl<K, V> MutColumn for HashColumn<K, V>
 where
     K: Eq + Hash + Clone,
     V: Eq + Clone,
-    S: BuildHasher + Default,
 {
 }
 
@@ -538,14 +533,13 @@ impl<T: Eq + Clone> Index for VecIndex<T> {
 
 /// An index implemented by a hash map into vectors.
 #[derive(Clone, Debug, Derivative)]
-#[derivative(Default(bound = "S: Default"))]
-struct HashIndex<X, Y, S = RandomState>(HashMap<Y, Vec<X>, S>);
+#[derivative(Default(bound = ""))]
+struct HashIndex<X, Y>(HashMap<Y, Vec<X>>);
 
-impl<X, Y, S> Index for HashIndex<X, Y, S>
+impl<X, Y> Index for HashIndex<X, Y>
 where
     X: Eq + Clone,
     Y: Eq + Hash + Clone,
-    S: BuildHasher,
 {
     type Dom = X;
     type Cod = Y;
@@ -707,8 +701,7 @@ where
 The column has the natural numbers (`usize`) as both its domain and codomain,
 making it suitable for use with skeletal finite sets.
 */
-#[derive(Clone, Debug, Derivative, PartialEq, Eq)]
-#[derivative(Default(bound = ""))]
+#[derive(Clone, Debug, Derivative, PartialEq, Eq, Default)]
 pub struct SkelIndexedColumn(IndexedColumn<usize, usize, VecColumn<usize>, VecIndex<usize>>);
 
 impl SkelIndexedColumn {
@@ -858,48 +851,43 @@ impl<T: Eq + Hash + Clone> MutColumn for IndexedVecColumn<T> {}
 
 /// An indexed column backed by hash maps.
 #[derive(Clone, Derivative, Debug)]
-#[derivative(Default(bound = "S: Default"))]
-#[derivative(PartialEq(bound = "K: Eq + Hash, V: PartialEq, S: BuildHasher"))]
-#[derivative(Eq(bound = "K: Eq + Hash, V: Eq, S: BuildHasher"))]
+#[derivative(Default(bound = ""))]
+#[derivative(PartialEq(bound = "K: Eq + Hash, V: PartialEq"))]
+#[derivative(Eq(bound = "K: Eq + Hash, V: Eq"))]
 #[allow(clippy::type_complexity)]
-pub struct IndexedHashColumn<K, V, S = RandomState>(
-    IndexedColumn<K, V, HashColumn<K, V, S>, HashIndex<K, V, S>>,
-);
+pub struct IndexedHashColumn<K, V>(IndexedColumn<K, V, HashColumn<K, V>, HashIndex<K, V>>);
 
 /// An indexed column with keys and values of type `Ustr`.
 #[allow(clippy::type_complexity)]
-pub type IndexedUstrColumn = IndexedHashColumn<Ustr, Ustr, BuildHasherDefault<IdentityHasher>>;
+pub type IndexedUstrColumn = IndexedHashColumn<Ustr, Ustr>;
 
-impl<K, V, S> IntoIterator for IndexedHashColumn<K, V, S>
+impl<K, V> IntoIterator for IndexedHashColumn<K, V>
 where
     K: Eq + Hash,
     V: Eq + Hash,
-    S: BuildHasher,
 {
     type Item = (K, V);
-    type IntoIter = <HashColumn<K, V, S> as IntoIterator>::IntoIter;
+    type IntoIter = <HashColumn<K, V> as IntoIterator>::IntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
     }
 }
 
-impl<K, V, S> FromIterator<(K, V)> for IndexedHashColumn<K, V, S>
+impl<K, V> FromIterator<(K, V)> for IndexedHashColumn<K, V>
 where
     K: Eq + Hash + Clone,
     V: Eq + Hash + Clone,
-    S: Default + BuildHasher,
 {
     fn from_iter<Iter: IntoIterator<Item = (K, V)>>(iter: Iter) -> Self {
         Self(IndexedColumn::from_iter(iter))
     }
 }
 
-impl<K, V, S> Mapping for IndexedHashColumn<K, V, S>
+impl<K, V> Mapping for IndexedHashColumn<K, V>
 where
     K: Eq + Hash + Clone,
     V: Eq + Hash + Clone,
-    S: BuildHasher,
 {
     type Dom = K;
     type Cod = V;
@@ -915,11 +903,10 @@ where
     }
 }
 
-impl<K, V, S> MutMapping for IndexedHashColumn<K, V, S>
+impl<K, V> MutMapping for IndexedHashColumn<K, V>
 where
     K: Eq + Hash + Clone,
     V: Eq + Hash + Clone,
-    S: BuildHasher,
 {
     fn get(&self, x: &K) -> Option<&V> {
         self.0.get(x)
@@ -932,11 +919,10 @@ where
     }
 }
 
-impl<K, V, S> Column for IndexedHashColumn<K, V, S>
+impl<K, V> Column for IndexedHashColumn<K, V>
 where
     K: Eq + Hash + Clone,
     V: Eq + Hash + Clone,
-    S: BuildHasher,
 {
     fn iter(&self) -> impl Iterator<Item = (K, &V)> {
         self.0.iter()
@@ -952,11 +938,10 @@ where
     }
 }
 
-impl<K, V, S> MutColumn for IndexedHashColumn<K, V, S>
+impl<K, V> MutColumn for IndexedHashColumn<K, V>
 where
     K: Eq + Hash + Clone,
     V: Eq + Hash + Clone,
-    S: Default + BuildHasher,
 {
 }
 

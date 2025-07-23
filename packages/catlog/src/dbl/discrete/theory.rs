@@ -1,6 +1,6 @@
 //! Discrete double theories.
 
-use std::hash::{BuildHasher, Hash};
+use std::hash::Hash;
 use std::ops::Range;
 
 use derive_more::From;
@@ -112,10 +112,9 @@ where
     }
 }
 
-impl<Id, S> Validate for DiscreteDblTheory<FpCategory<Id, Id, S>>
+impl<Id> Validate for DiscreteDblTheory<FpCategory<Id, Id>>
 where
     Id: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     type ValidationError = InvalidDblTheory<Id>;
 
