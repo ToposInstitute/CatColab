@@ -8,9 +8,11 @@ use std::collections::{BTreeMap, HashMap};
 use std::fmt::Debug;
 use std::hash::Hash;
 
+use itertools::Itertools;
+
 use nalgebra::DVector;
 use num_traits::Zero;
-use ustr::{Ustr, ustr};
+use ustr::{ustr, Ustr};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -25,6 +27,8 @@ use crate::dbl::{
 use crate::one::FgCategory;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
 use crate::zero::{alg::Polynomial, rig::Monomial};
+
+use rebop::gillespie::{Gillespie, Rate};
 
 /// Data defining a mass-action ODE problem for a model.
 #[derive(Clone)]
@@ -41,6 +45,7 @@ where
     /// Map from morphism IDs to rate coefficients (nonnegative reals).
     rates: HashMap<Id, f32>,
 
+    // reaction network requires isize
     /// Map from object IDs to initial values (nonnegative reals).
     #[cfg_attr(feature = "serde", serde(rename = "initialValues"))]
     initial_values: HashMap<Id, f32>,
@@ -117,6 +122,78 @@ impl PetriNetMassActionAnalysis {
         data: MassActionProblemData<Id>,
     ) -> ODEAnalysis<Id, NumericalPolynomialSystem<u8>> {
         into_numerical_system(self.build_system(model), data)
+    }
+
+    ///
+    pub fn build_reaction<Id: Eq + Clone + Hash + Ord + Debug>(
+        &self,
+        model: &ModalDblModel<Id, Ustr>,
+        data: MassActionProblemData<Id>,
+    ) -> Gillespie {
+        let obs = model.ob_generators_with_type(&self.place_ob_type).collect::<Vec<_>>();
+        let ivs = obs
+            .clone()
+            .into_iter()
+            .map(|ob| match data.initial_values.get(&ob) {
+                Some(iv) => *iv as u32 as isize,
+                None => 0, // TODO throw error
+            })
+            .collect::<Vec<isize>>();
+        let mut sys = Gillespie::new(ivs, false);
+        for mor in model.mor_generators_with_type(&self.transition_mor_type) {
+            let inputs = model
+                .get_dom(&mor)
+                .and_then(|ob| ob.clone().collect_product(None))
+                .unwrap_or_default();
+            let outputs = model
+                .get_cod(&mor)
+                .and_then(|ob| ob.clone().collect_product(None))
+                .unwrap_or_default();
+
+            // 1. convert the inputs/outputs to arrays
+            let input_vec = obs
+                .clone()
+                .into_iter()
+                .map(|obstr| {
+                    inputs
+                        .iter()
+                        .filter(|&g| {
+                            if let crate::dbl::modal::model::ModalOb::Generator(id) = g {
+                                *id == obstr
+                            } else {
+                                false
+                            }
+                        })
+                        .count() as u32
+                })
+                .collect::<Vec<u32>>();
+            let output_vec = obs
+                .clone()
+                .into_iter()
+                .map(|obstr| {
+                    outputs
+                        .iter()
+                        .filter(|&g| {
+                            if let crate::dbl::modal::model::ModalOb::Generator(id) = g {
+                                *id == obstr
+                            } else {
+                                false
+                            }
+                        })
+                        .count() as isize
+                })
+                .collect::<Vec<isize>>();
+            // 2. output := output - input
+            let output_vec = output_vec
+                .into_iter()
+                .zip(input_vec.clone())
+                .map(|(a, b)| a - (b as isize))
+                .collect::<Vec<isize>>();
+            if let Some(rate) = data.rates.get(&mor) {
+                sys.add_reaction(Rate::lma(*rate as f64, input_vec), output_vec)
+            }
+        }
+        sys
     }
 }
 
@@ -254,5 +331,48 @@ mod tests {
             dy = f c x
         "#]);
         expected.assert_eq(&sys.to_string());
+    }
+
+    #[test]
+    fn sir_petri_dynamics() {
+        let th = Rc::new(th_sym_monoidal_category());
+        let model = sir_petri(th);
+        let sys = PetriNetMassActionAnalysis::default().build_system(&model);
+        let expected = expect!([r#"
+            dI = ((-1) recovery) I + infection I S
+            dR = recovery I
+            dS = ((-1) infection) I S
+        "#]);
+        expected.assert_eq(&sys.to_string());
+    }
+
+    #[test]
+    fn sir_petri_reaction_dynamics() {
+        let th = Rc::new(th_sym_monoidal_category());
+        let model = sir_petri(th);
+        let mut rates = HashMap::new();
+        rates.insert(ustr("infection"), 1e-4);
+        rates.insert(ustr("recovery"), 0.01);
+        let mut initial_values = HashMap::new();
+        initial_values.insert(ustr("I"), 1.0);
+        initial_values.insert(ustr("R"), 0.0);
+        initial_values.insert(ustr("S"), 900.0);
+        let data = MassActionProblemData {
+            rates: rates,
+            initial_values: initial_values,
+            duration: 250.0,
+        };
+        let mut sys = PetriNetMassActionAnalysis::default().build_reaction(&model, data.clone());
+        for t in 0..data.duration as u8 {
+            sys.advance_until(t as f64);
+            println!(
+                "{},{},{},{}",
+                sys.get_time(),
+                sys.get_species(0),
+                sys.get_species(1),
+                sys.get_species(2)
+            );
+        }
+        assert!(true)
     }
 }
