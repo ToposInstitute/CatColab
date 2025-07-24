@@ -1,7 +1,7 @@
 //! Standard library of models of double theories.
 
 use std::rc::Rc;
-use ustr::{Ustr, ustr};
+use ustr::{ustr, Ustr};
 
 use crate::dbl::{model::*, theory::*};
 use crate::one::Path;
@@ -136,6 +136,28 @@ pub fn catalyzed_reaction(th: Rc<UstrModalDblTheory>) -> UstrModalDblModel {
         ustr("f"),
         ModalOb::App(ModalOb::List(List::Symmetric, vec![x.into(), c.into()]).into(), op),
         ModalOb::App(ModalOb::List(List::Symmetric, vec![y.into(), c.into()]).into(), op),
+        ModalMorType::Zero(ob_type),
+    );
+    model
+}
+
+pub fn sir_petri(th: Rc<UstrModalDblTheory>) -> UstrModalDblModel {
+    let (ob_type, op) = (ModalObType::new(ustr("Object")), ustr("tensor"));
+    let mut model = UstrModalDblModel::new(th);
+    let (S, I, R) = (ustr("S"), ustr("I"), ustr("R"));
+    model.add_ob(S, ob_type.clone());
+    model.add_ob(I, ob_type.clone());
+    model.add_ob(R, ob_type.clone());
+    model.add_mor(
+        ustr("infection"),
+        ModalOb::App(ModalOb::List(List::Symmetric, vec![S.into(), I.into()]).into(), op),
+        ModalOb::App(ModalOb::List(List::Symmetric, vec![I.into(), I.into()]).into(), op),
+        ModalMorType::Zero(ob_type.clone()),
+    );
+    model.add_mor(
+        ustr("recovery"),
+        ModalOb::App(ModalOb::List(List::Symmetric, vec![I.into()]).into(), op),
+        ModalOb::App(ModalOb::List(List::Symmetric, vec![R.into()]).into(), op),
         ModalMorType::Zero(ob_type),
     );
     model
