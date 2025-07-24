@@ -5,21 +5,191 @@ In many places, we describe CatColab as a ...
 > collaborative environment for formal, interoperable, conceptual modeling.
 
 But what do we actually mean by this?
-This guide aims to answer that question on (at least) two levels: firstly, breaking down this description word by word, examining what we mean by each one and how we have come to our understanding of its use; and secondly, what this means in actual concrete terms, and *what the software actually does* and *how you can use it*.
+This guide aims to answer that question on (at least) two levels: firstly, breaking down this description word by word, examining what we mean by each one and how we have come to our understanding of its use; and secondly, what this means in actual concrete terms, and *what CatColab actually does* and *how you can use it*.
 
-In brief, we use the following definitions:
+Before diving into details, it might be helpful to describe some user stories:
+**first, some example use cases**
+
+- **epidemiologists**
+- **data scientist (acsets for exploring possible structures of data)**
+- **public policy makers (CLDs)**
+- **educator teaching about ODEs that describe systems**
+- **researcher prototyping different semantics (but don't use that word) on the same model**
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Explaining our terminology
+
+- **... probably take some stuff from the old concepts.mdx file?**
+
+{/*## Concepts
+
+While CatColab has a notebook-style interface inspired by computational
+notebooks like JupyterLab and structured document editors like Notion, its
+conceptual underpinnings are quite different from both kinds of tools. Here is
+an overview of the concepts that you'll encounter in CatColab today.
 
 <dl>
-  <dt>collaborative</dt>
-  <dd>models can be built by multiple people working either synchronously or asynchronously, and either in-person or remotely</dd>
-  <dt>formal</dt>
-  <dd>models are mathematical objects that can be critiqued with clarity</dd>
-  <dt>interoperable</dt>
-  <dd>models, and modeling languages, can be interoperated with each other</dd>
-  <dt>conceptual</dt>
-  <dd>modeling languages are well adapted to concepts used by practitioners</dd>
+
+<dt>Logic</dt>
+
+<dd>CatColab is not a general-purpose programming or modeling language but is
+rather an extensible environment for working in *domain-specific logics*, such
+as those of database schemas or biochemical regulatory networks. To do anything
+in the tool besides write text, you'll need to <A href="theories">choose a
+logic</A>.</dd>
+
+<dt>Model</dt>
+
+<dd>Models in CatColab are models *within* a logic, such as a particular
+database schema or regulatory network. Models are specified declaratively and
+are well-defined mathematical objects. CatColab is a structure editor for models
+in a logic, allowing formal declarations to be intermixed with descriptive rich
+text.</dd>
+
+<dt>Analysis</dt>
+
+<dd>Unlike most computational notebooks, CatColab strictly separates the
+*specification* of a model from any outputs derived from it. Depending on the
+logic, an analysis of a model might include visualization, simulation,
+identification of motifs, and translation into other formats.</dd>
+
 </dl>
 
-<Warning>
-  This page is still under construction. For now, we recommend reading [these slides ↗](https://www.epatters.org/assets/slides/2025-act/slides.html#/introducing-catcolab) for further details.
-</Warning>
+Future of versions of CatColab will display the further concepts of
+**instances**, **morphisms**, and **migrations**, to be described when they
+become available.*/}
+
+**Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
+tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
+consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
+cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
+proident, sunt in culpa qui officia deserunt mollit anim id est laborum.**
+
+
+
+
+
+
+
+
+
+
+
+### Collaborative
+
+> *Models can be built by multiple people working either synchronously or asynchronously, and either in-person or remotely*
+
+- **whiteboards/pen and paper/sticky notes**
+- **live simultaneous editing**
+- **asynchronous editing**
+- **permissions setting**
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Formal
+
+> *Models are mathematical objects that can be critiqued with clarity*
+
+- **diagrams are great**
+- **a concrete thing that lets two people point at it and know that they are pointing at the same thing (but obviously whether or not they understand it in the same way is a social question)**
+- **allow for technological support with things that computers are actually really good at doing (think interacting with an LSP and the kinds of tasks this can help with)**
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Interoperable
+
+> *Models, and different modeling languages, can "plug in" to one another*
+
+- **don't want to make one big language to rule them all, but lots of translatable DSLs**
+- **no vendor lock-in**
+
+
+
+
+
+
+
+
+
+
+
+### Conceptual
+
+> *Modelling languages are well adapted to concepts used by practitioners*
+
+
+
+
+
+
+
+
+
+
+
+## Using CatColab
+
+- **mention the other guides as useful for a more concrete explanation of how to use CatColab**
+
+
+
+
+
+
+
+
+
+
+
+## Further reading
+
+- **TO-DO: add some good links**
+- **basically all the other guides?**
+- [**evan's slides**](https://www.epatters.org/assets/slides/2025-act/slides.html#/introducing-catcolab)
+- [**brendan's colloquium talk**](https://www.youtube.com/watch?v=qom2mAimnTc)

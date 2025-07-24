@@ -47,5 +47,15 @@ with lib;
         experimental-features = nix-command flakes
       '';
     };
+
+    programs.nh = {
+      enable = true;
+
+      clean = {
+        enable = true;
+        extraArgs = "--keep 5 --keep-since 5d";
+        dates = "weekly";
+      };
+    };
   };
 }

@@ -15,15 +15,9 @@ let
 
     ${pkgs.postgresql}/bin/pg_dump --clean --if-exists > $DUMPFILE
 
-    if [ "${toString config.catcolab.host.backup.test}" = "false" ]; then
-      ${lib.getExe pkgs.rclone} \
-        --config="${builtins.toString config.catcolab.host.backup.rcloneConfFilePath}" \
-        copy "$DUMPFILE" backup:${builtins.toString config.catcolab.host.backup.dbBucket}
-
-      echo "Uploaded database dump $DUMPFILE"
-    else
-      echo "Test mode: skipping rclone upload"
-    fi
+    ${lib.getExe pkgs.rclone} \
+      --config="${builtins.toString config.catcolab.host.backup.rcloneConfFilePath}" \
+      copy "$DUMPFILE" backup:${builtins.toString config.catcolab.host.backup.dbBucket}
 
     echo "Uploaded database dump $DUMPFILE"
     rm $DUMPFILE
@@ -41,34 +35,18 @@ with lib;
       type = types.nullOr types.str;
       default = null;
       description = ''
-        Name of the Backblaze bucket used for database backups. Not required when `catcolab.test = true`.
+        Name of the Backblaze bucket used for database backups.
       '';
     };
+
     rcloneConfFilePath = mkOption {
       type = types.nullOr types.path;
       default = null;
-      description = "Path to your rclone.conf. Not required when `catcolab.test = true`.";
-    };
-    test = mkOption {
-      type = types.bool;
-      default = false;
-      description = "If true, run pg_dump but skip the rclone upload (for smoke tests).";
+      description = "Path to your rclone.conf.";
     };
   };
 
   config = lib.mkIf config.catcolab.host.backup.enable {
-    assertions = [
-      {
-        assertion =
-          config.catcolab.host.backup.test || config.catcolab.host.backup.rcloneConfFilePath != null;
-        message = "You must set catcolab.host.backup.rcloneConfFilePath unless test=true";
-      }
-      {
-        assertion = config.catcolab.host.backup.test || config.catcolab.host.backup.dbBucket != null;
-        message = "You must set catcolab.host.backup.dbBucket unless test=true";
-      }
-    ];
-
     systemd.timers.backupdb = {
       wantedBy = [ "timers.target" ];
       timerConfig = {
@@ -83,6 +61,7 @@ with lib;
         User = "catcolab";
         ExecStart = getExe backupScript;
         Type = "oneshot";
+        EnvironmentFile = config.catcolab.environmentFilePath;
       };
     };
 
@@ -100,6 +79,7 @@ with lib;
           --description="One-off activation backupdb" \
           --property=Type=${config.systemd.services.backupdb.serviceConfig.Type} \
           --property=User=${config.systemd.services.backupdb.serviceConfig.User} \
+          --property=EnvironmentFile=${config.catcolab.environmentFilePath} \
           --property=Environment=PATH=/run/current-system/sw/bin \
           ${lib.getExe backupScript}
 

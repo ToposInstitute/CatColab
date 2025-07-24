@@ -1,3 +1,5 @@
+//! Wasm bindings for models of a double theory.
+
 use all_the_same::all_the_same;
 use derive_more::{From, TryInto};
 use serde::{Deserialize, Serialize};
@@ -7,8 +9,8 @@ use uuid::Uuid;
 use wasm_bindgen::prelude::*;
 
 use catlog::dbl::model::{
-    self as dbl_model, FgDblModel, InvalidDblModel, ModalMor, ModalOb, MutDblModel, TabEdge,
-    TabMor, TabOb,
+    self as dbl_model, DblModel as _, FgDblModel, InvalidDblModel, ModalMor, ModalOb, MutDblModel,
+    TabEdge, TabMor, TabOb,
 };
 use catlog::dbl::theory::{self as dbl_theory, ModalObOp};
 use catlog::one::{Category as _, FgCategory, Path, fp_category::UstrFpCategory};
@@ -29,13 +31,17 @@ See [`DblTheoryBox`] for motivation.
  */
 #[allow(clippy::large_enum_variant)]
 #[derive(From, TryInto)]
-#[try_into(ref)]
+#[try_into(ref, ref_mut)]
 pub enum DblModelBox {
+    /// A model of a discrete double theory.
     Discrete(DiscreteDblModel),
+    /// A model of a discrete tabulator theory.
     DiscreteTab(DiscreteTabModel),
+    /// A model of a modal double theory.
     Modal(ModalDblModel),
 }
 
+/// Wasm binding of a model of a double theory.
 #[wasm_bindgen]
 pub struct DblModel(#[wasm_bindgen(skip)] pub DblModelBox);
 
@@ -263,6 +269,7 @@ impl CanQuote<ModalMor<Uuid, Ustr>, Mor> for Quoter {
 }
 
 impl DblModel {
+    /// Constructs a new model of a double theory.
     pub fn new(theory: &DblTheory) -> Self {
         Self(match &theory.0 {
             DblTheoryBox::Discrete(th) => DiscreteDblModel::new(th.clone()).into(),
@@ -271,6 +278,31 @@ impl DblModel {
         })
     }
 
+    /// Tries to get a model of a discrete theory.
+    pub fn discrete(&self) -> Result<&DiscreteDblModel, String> {
+        (&self.0).try_into().map_err(|_| "Model should be of a discrete theory".into())
+    }
+
+    /// Tries to get a model of a discrete theory, by mutable reference.
+    pub fn discrete_mut(&mut self) -> Result<&mut DiscreteDblModel, String> {
+        (&mut self.0)
+            .try_into()
+            .map_err(|_| "Model should be of a discrete theory".into())
+    }
+
+    /// Tries to get a model of a discrete tabulator theory.
+    pub fn discrete_tab(&self) -> Result<&DiscreteTabModel, String> {
+        (&self.0)
+            .try_into()
+            .map_err(|_| "Model should be of a discrete tabulator theory".into())
+    }
+
+    /// Tries to get a model of a modal theory.
+    pub fn modal(&self) -> Result<&ModalDblModel, String> {
+        (&self.0).try_into().map_err(|_| "Model should be of a modal theory".into())
+    }
+
+    /// Adds an object to the model.
     pub fn add_ob(&mut self, decl: &ObDecl) -> Result<(), String> {
         all_the_same!(match &mut self.0 {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
@@ -281,6 +313,7 @@ impl DblModel {
         })
     }
 
+    /// Adds a morphism to the model.
     pub fn add_mor(&mut self, decl: &MorDecl) -> Result<(), String> {
         all_the_same!(match &mut self.0 {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
@@ -366,6 +399,26 @@ impl DblModel {
         })
     }
 
+    /// Gets the object type of an object in the model.
+    #[wasm_bindgen(js_name = "obType")]
+    pub fn ob_type(&self, ob: Ob) -> Result<ObType, String> {
+        all_the_same!(match &self.0 {
+            DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
+                Ok(Quoter.quote(&model.ob_type(&Elaborator.elab(&ob)?)))
+            }
+        })
+    }
+
+    /// Gets the morphism type of a morphism in the model.
+    #[wasm_bindgen(js_name = "morType")]
+    pub fn mor_type(&self, mor: Mor) -> Result<MorType, String> {
+        all_the_same!(match &self.0 {
+            DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
+                Ok(Quoter.quote(&model.mor_type(&Elaborator.elab(&mor)?)))
+            }
+        })
+    }
+
     /// Returns array of all basic objects in the model.
     #[wasm_bindgen]
     pub fn objects(&self) -> Vec<Ob> {
@@ -408,6 +461,7 @@ impl DblModel {
         })
     }
 
+    /// Validates the model, returning any validation failures.
     pub fn validate(&self) -> ModelValidationResult {
         all_the_same!(match &self.0 {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
@@ -431,15 +485,14 @@ pub fn collect_product(ob: Ob) -> Result<Vec<Ob>, String> {
     Ok(vec.into_iter().map(|ob| Quoter.quote(&ob)).collect())
 }
 
+/// Elaborates a model defined by a notebook into a catlog model.
 #[wasm_bindgen(js_name = "elaborateModel")]
-pub fn elaborate_model(doc: &ModelDocumentContent, theory: &DblTheory) -> DblModel {
+pub fn elaborate_model(judgments: Vec<ModelJudgment>, theory: &DblTheory) -> DblModel {
     let mut model = DblModel::new(theory);
-    for cell in doc.notebook.cells.iter() {
-        if let Cell::Formal { id: _, content } = cell {
-            match content {
-                ModelJudgment::Object(decl) => model.add_ob(decl).unwrap(),
-                ModelJudgment::Morphism(decl) => model.add_mor(decl).unwrap(),
-            }
+    for judgment in judgments {
+        match judgment {
+            ModelJudgment::Object(decl) => model.add_ob(&decl).unwrap(),
+            ModelJudgment::Morphism(decl) => model.add_mor(&decl).unwrap(),
         }
     }
     model
@@ -497,6 +550,8 @@ pub(crate) mod tests {
         assert_eq!(model.cod(Mor::Basic(a)), Ok(Ob::Basic(y)));
         assert_eq!(model.get_dom(&a.to_string()), Ok(Some(Ob::Basic(x))));
         assert_eq!(model.get_cod(&a.to_string()), Ok(Some(Ob::Basic(y))));
+        assert_eq!(model.ob_type(Ob::Basic(x)), Ok(ObType::Basic("Entity".into())));
+        assert_eq!(model.mor_type(Mor::Basic(a)), Ok(MorType::Basic("Attr".into())));
         assert_eq!(model.objects().len(), 2);
         assert_eq!(model.morphisms().len(), 1);
         assert_eq!(model.objects_with_type(ObType::Basic("Entity".into())), Ok(vec![Ob::Basic(x)]));

@@ -304,7 +304,7 @@ mod tests {
 
     use super::*;
     use crate::one::Path;
-    use crate::stdlib::{models::*, theories::*};
+    use crate::stdlib::{models::*, theories::*, theory_morphisms::*};
 
     #[test]
     fn validate() {
@@ -345,12 +345,9 @@ mod tests {
         model.add_ob(x, ustr("Object"));
         model.add_mor(f, x, x, Path::Id(ustr("Object")));
 
-        let data = FpFunctorData::new(
-            HashColumn::new([(ustr("Object"), ustr("Entity"))].into()),
-            UstrColumn::default(),
-        );
+        let functor_data = th_category_to_schema();
         let new_th = Rc::new(th_schema());
-        model.push_forward(&data.functor_into(new_th.category()), new_th.clone());
+        model.push_forward(&functor_data.functor_into(&new_th.0), new_th.clone());
         assert_eq!(model.ob_generator_type(&x), ustr("Entity"));
         assert_eq!(model.mor_generator_type(&f), Path::Id(ustr("Entity")));
     }

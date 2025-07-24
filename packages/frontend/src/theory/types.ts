@@ -1,6 +1,6 @@
 import type { KbdKey } from "@solid-primitives/keyboard";
 
-import type { DblTheory, MorType, ObOp, ObType } from "catlog-wasm";
+import type { DblModel, DblTheory, MorType, ObOp, ObType } from "catlog-wasm";
 import { MorTypeIndex, ObTypeIndex } from "catlog-wasm";
 import type { DiagramAnalysisComponent, ModelAnalysisComponent } from "../analysis";
 import { uniqueIndexArray } from "../util/indexing";
@@ -40,6 +40,9 @@ export class Theory {
      */
     readonly inclusions: string[];
 
+    /** List of pushforward (covariant) migrations out of this theory. */
+    readonly pushforwards: ModelMigration[];
+
     /** Whether models of the double theory are constrained to be free. */
     readonly onlyFreeModels!: boolean;
 
@@ -65,6 +68,7 @@ export class Theory {
         name: string;
         description: string;
         inclusions?: string[];
+        pushforwards?: ModelMigration[];
         modelTypes?: ModelTypeMeta[];
         modelAnalyses?: ModelAnalysisMeta[];
         onlyFreeModels?: boolean;
@@ -76,7 +80,10 @@ export class Theory {
         this.id = props.id;
         this.theory = props.theory;
         this.help = props.help;
+
+        // Migrations.
         this.inclusions = props.inclusions ?? [];
+        this.pushforwards = props.pushforwards ?? [];
 
         // Models.
         this.name = props.name;
@@ -91,6 +98,11 @@ export class Theory {
             props.instanceTypes,
         );
         this.diagramAnalysisMap = uniqueIndexArray(props.diagramAnalyses ?? [], (meta) => meta.id);
+    }
+
+    /** List of IDs of theories to which models of this theory can be migrated. */
+    get migrationTargets(): Array<string> {
+        return this.inclusions.concat(this.pushforwards.map((m) => m.target));
     }
 
     /** Metadata for types in the theory, as used in models.
@@ -268,6 +280,15 @@ export type InstanceObTypeMeta = BaseObTypeMeta;
 
 /** Metadata for a morphism type as used in instances. */
 export type InstanceMorTypeMeta = BaseMorTypeMeta;
+
+/** Specifies a migration of models from one theory into another. */
+type ModelMigration = {
+    /** Identifier of theory migrated into. */
+    target: string;
+
+    /** Function to perform the migration. */
+    migrate: (model: DblModel, targetTheory: DblTheory) => DblModel;
+};
 
 /** Specifies an analysis with descriptive metadata. */
 export type AnalysisMeta<T> = {

@@ -6,7 +6,6 @@
 
     & .title {
         font-size: var(--h1-font-size);
-        flex: 1;
     }
 
     & .theory-selector-trigger {

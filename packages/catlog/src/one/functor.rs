@@ -291,7 +291,7 @@ where
 }
 
 /// A failure of a map out of an f.p. category to be functorial.
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum InvalidFpFunctor<V, E> {
     /// An object generator not mapped to an object in the codomain category.
     #[error("Object generator `{0}` is not mapped to an object in the codomain")]

@@ -194,6 +194,21 @@ fn th_list_lax_algebra(list: List) -> UstrModalDblTheory {
     th
 }
 
+/// The theory of a (non-symmetric) multicategory.
+pub fn th_multicategory() -> UstrModalDblTheory {
+    th_generalized_multicategory(List::Plain)
+}
+
+/// The theory of a generalized multicategory over a list monad.
+fn th_generalized_multicategory(list: List) -> UstrModalDblTheory {
+    let mut th: UstrModalDblTheory = Default::default();
+    let (x, p) = (ustr("Object"), ustr("Multihom"));
+    th.add_ob_type(x);
+    th.add_mor_type(p, ModeApp::new(x).apply(Modality::List(list)), ModeApp::new(x));
+    // TODO: Axioms, which depend on implementing composites and restrictions.
+    th
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -221,6 +236,7 @@ mod tests {
     fn validate_modal_theories() {
         assert!(th_monoidal_category().validate().is_ok());
         assert!(th_lax_monoidal_category().validate().is_ok());
+        assert!(th_multicategory().validate().is_ok());
     }
 
     #[test]
@@ -231,6 +247,6 @@ mod tests {
         assert!(th.has_mor_type(&neg.into()));
         assert!(th.has_mor_type(&slow.into()));
         let path = Path::Seq(nonempty![neg, slow, neg, slow]);
-        assert!(th.category().morphisms_are_equal(path, slow.into()));
+        assert!(th.0.morphisms_are_equal(path, slow.into()));
     }
 }

@@ -65,7 +65,7 @@ export function WelcomeOverlay(props: { isOpen: boolean; onClose: () => void }) 
                                         <span>CatColab blog posts</span>
                                     </a>
                                     <a
-                                        href="https://catcolab.org/help/guides/example-models"
+                                        href="/help/guides/example-models"
                                         class="resource-link"
                                         target="_blank"
                                     >
@@ -74,11 +74,7 @@ export function WelcomeOverlay(props: { isOpen: boolean; onClose: () => void }) 
                                         </span>
                                         <span>Example models</span>
                                     </a>
-                                    <a
-                                        href="https://catcolab.org/help"
-                                        class="resource-link"
-                                        target="_blank"
-                                    >
+                                    <a href="/help/" class="resource-link" target="_blank">
                                         <span class="resource-icon">
                                             <NotebookPen />
                                         </span>
