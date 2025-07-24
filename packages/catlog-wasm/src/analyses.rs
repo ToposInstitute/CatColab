@@ -11,6 +11,12 @@ pub struct ODEResult(pub JsResult<analyses::ode::ODESolution<Uuid>, String>);
 
 #[derive(Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct ReactionNetworkResult(
+    pub JsResult<analyses::ode::ReactionNetworkSolution<Uuid>, String>,
+);
+
+#[derive(Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct LotkaVolterraModelData(pub analyses::ode::LotkaVolterraProblemData<Uuid>);
 
 #[derive(Serialize, Deserialize, Tsify)]
