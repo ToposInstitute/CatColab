@@ -10,13 +10,11 @@ use ref_cast::RefCast;
 use ustr::Ustr;
 
 use super::theory::*;
-use crate::dbl::{
-    graph::VDblGraph,
-    model::{DblModel, FgDblModel, InvalidDblModel, MutDblModel},
-};
-use crate::one::computad::*;
-use crate::validate::Validate;
-use crate::{one::*, zero::*};
+use crate::dbl::graph::VDblGraph;
+use crate::dbl::model::{DblModel, FgDblModel, InvalidDblModel, MutDblModel};
+use crate::dbl::theory::DblTheory;
+use crate::validate::{self, Validate};
+use crate::{one::computad::*, one::*, zero::*};
 
 /// Object in a model of a modal double theory.
 #[derive(Clone, Debug, PartialEq, Eq, From)]
@@ -337,8 +335,43 @@ where
     type ValidationError = InvalidDblModel<Id>;
 
     fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
-        // TODO: Implement validation!
-        Ok(())
+        let ob_gen_errors = self.ob_generators.iter().filter_map(|x| {
+            if self.ob_types.apply_to_ref(&x).is_none_or(|typ| !self.theory.has_ob_type(&typ)) {
+                Some(InvalidDblModel::ObType(x))
+            } else {
+                None
+            }
+        });
+        validate::wrap_errors(ob_gen_errors)?;
+
+        let computad = self.computad();
+        let mor_gen_errors = computad.edge_set().iter().flat_map(|f| {
+            let mut errors = Vec::new();
+            let mor_type = self.mor_types.apply_to_ref(&f).filter(|m| self.theory.has_mor_type(m));
+            if let Some(ob) = computad.src_map().apply_to_ref(&f)
+                && self.has_ob(&ob)
+            {
+                if mor_type.as_ref().is_some_and(|m| self.theory.src_type(m) != self.ob_type(&ob)) {
+                    errors.push(InvalidDblModel::DomType(f.clone()))
+                }
+            } else {
+                errors.push(InvalidDblModel::Dom(f.clone()))
+            }
+            if let Some(ob) = computad.tgt_map().apply_to_ref(&f)
+                && self.has_ob(&ob)
+            {
+                if mor_type.as_ref().is_some_and(|m| self.theory.tgt_type(m) != self.ob_type(&ob)) {
+                    errors.push(InvalidDblModel::CodType(f.clone()))
+                }
+            } else {
+                errors.push(InvalidDblModel::Cod(f.clone()))
+            }
+            if mor_type.is_none() {
+                errors.push(InvalidDblModel::MorType(f))
+            }
+            errors
+        });
+        validate::wrap_errors(mor_gen_errors)
     }
 }
 
@@ -547,11 +580,14 @@ mod tests {
         assert!(model.has_ob(&prod));
         assert_eq!(model.ob_type(&prod), ob_type);
 
-        // Lists of morphisms.
+        // Model validation.
         let (f, g) = (ustr("f"), ustr("g"));
         model.add_mor(f, x.into(), y.into(), th.hom_type(ob_type.clone()));
         model.add_mor(g, w.into(), z.into(), th.hom_type(ob_type.clone()));
         assert!(model.has_mor(&f.into()));
+        assert!(model.validate().is_ok());
+
+        // Lists of morphisms.
         let pair = ModalMor::List(MorListData::Plain(), vec![f.into(), g.into()]);
         assert!(model.has_mor(&pair));
         assert_eq!(model.mor_type(&pair), th.hom_type(ob_type.clone().apply(List::Plain.into())));
@@ -575,7 +611,7 @@ mod tests {
         let th = Rc::new(th_sym_monoidal_category());
         let ob_type = ModeApp::new(ustr("Object"));
 
-        // Lists of morphisms, with permutation.
+        // Model validation.
         let mut model = ModalDblModel::new(th.clone());
         let (w, x, y, z, f, g) = (ustr("w"), ustr("x"), ustr("y"), ustr("z"), ustr("f"), ustr("g"));
         for id in [w, x, y, z] {
@@ -583,6 +619,9 @@ mod tests {
         }
         model.add_mor(f, x.into(), y.into(), th.hom_type(ob_type.clone()));
         model.add_mor(g, w.into(), z.into(), th.hom_type(ob_type.clone()));
+        assert!(model.validate().is_ok());
+
+        // Lists of morphisms, with permutation.
         let pair = ModalMor::List(
             MorListData::Symmetric(SkelColumn::new(vec![1, 0])),
             vec![f.into(), g.into()],
