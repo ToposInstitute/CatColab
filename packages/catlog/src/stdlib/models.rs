@@ -141,23 +141,25 @@ pub fn catalyzed_reaction(th: Rc<UstrModalDblTheory>) -> UstrModalDblModel {
     model
 }
 
+/**
+ */
 pub fn sir_petri(th: Rc<UstrModalDblTheory>) -> UstrModalDblModel {
     let (ob_type, op) = (ModalObType::new(ustr("Object")), ustr("tensor"));
     let mut model = UstrModalDblModel::new(th);
-    let (S, I, R) = (ustr("S"), ustr("I"), ustr("R"));
-    model.add_ob(S, ob_type.clone());
-    model.add_ob(I, ob_type.clone());
-    model.add_ob(R, ob_type.clone());
+    let (s, i, r) = (ustr("S"), ustr("I"), ustr("R"));
+    model.add_ob(s, ob_type.clone());
+    model.add_ob(i, ob_type.clone());
+    model.add_ob(r, ob_type.clone());
     model.add_mor(
         ustr("infection"),
-        ModalOb::App(ModalOb::List(List::Symmetric, vec![S.into(), I.into()]).into(), op),
-        ModalOb::App(ModalOb::List(List::Symmetric, vec![I.into(), I.into()]).into(), op),
+        ModalOb::App(ModalOb::List(List::Symmetric, vec![s.into(), i.into()]).into(), op),
+        ModalOb::App(ModalOb::List(List::Symmetric, vec![i.into(), i.into()]).into(), op),
         ModalMorType::Zero(ob_type.clone()),
     );
     model.add_mor(
         ustr("recovery"),
-        ModalOb::App(ModalOb::List(List::Symmetric, vec![I.into()]).into(), op),
-        ModalOb::App(ModalOb::List(List::Symmetric, vec![R.into()]).into(), op),
+        ModalOb::App(ModalOb::List(List::Symmetric, vec![i.into()]).into(), op),
+        ModalOb::App(ModalOb::List(List::Symmetric, vec![r.into()]).into(), op),
         ModalMorType::Zero(ob_type),
     );
     model

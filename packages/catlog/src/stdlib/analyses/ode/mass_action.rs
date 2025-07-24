@@ -8,8 +8,6 @@ use std::collections::{BTreeMap, HashMap};
 use std::fmt::Debug;
 use std::hash::Hash;
 
-use itertools::Itertools;
-
 use nalgebra::DVector;
 use num_traits::Zero;
 use ustr::{ustr, Ustr};
@@ -25,9 +23,12 @@ use crate::dbl::{
     theory::{ModalMorType, ModalObType, TabMorType, TabObType},
 };
 use crate::one::FgCategory;
+// TODO create a ReactionNetworkProblem, and shunt ..Analysis
+use super::ReactionNetworkAnalysis;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
 use crate::zero::{alg::Polynomial, rig::Monomial};
 
+// TODO feature flag
 use rebop::gillespie::{Gillespie, Rate};
 
 /// Data defining a mass-action ODE problem for a model.
@@ -48,10 +49,10 @@ where
     // reaction network requires isize
     /// Map from object IDs to initial values (nonnegative reals).
     #[cfg_attr(feature = "serde", serde(rename = "initialValues"))]
-    initial_values: HashMap<Id, f32>,
+    pub initial_values: HashMap<Id, f32>,
 
     /// Duration of simulation.
-    duration: f32,
+    pub duration: f32,
 }
 
 /// Symbolic parameter in mass-action polynomial system.
@@ -129,17 +130,22 @@ impl PetriNetMassActionAnalysis {
         &self,
         model: &ModalDblModel<Id, Ustr>,
         data: MassActionProblemData<Id>,
-    ) -> Gillespie {
+    ) -> ReactionNetworkAnalysis<Id> {
         let obs = model.ob_generators_with_type(&self.place_ob_type).collect::<Vec<_>>();
+        let mut variable_index: BTreeMap<Id, usize> = Default::default();
         let ivs = obs
             .clone()
             .into_iter()
-            .map(|ob| match data.initial_values.get(&ob) {
-                Some(iv) => *iv as u32 as isize,
+            .enumerate()
+            .map(|(idx, ob)| match data.initial_values.get(&ob) {
+                Some(iv) => {
+                    variable_index.insert(ob, idx);
+                    *iv as u32 as isize
+                }
                 None => 0, // TODO throw error
             })
             .collect::<Vec<isize>>();
-        let mut sys = Gillespie::new(ivs, false);
+        let mut problem = Gillespie::new(ivs, false);
         for mor in model.mor_generators_with_type(&self.transition_mor_type) {
             let inputs = model
                 .get_dom(&mor)
@@ -190,10 +196,13 @@ impl PetriNetMassActionAnalysis {
                 .map(|(a, b)| a - (b as isize))
                 .collect::<Vec<isize>>();
             if let Some(rate) = data.rates.get(&mor) {
-                sys.add_reaction(Rate::lma(*rate as f64, input_vec), output_vec)
+                problem.add_reaction(Rate::lma(*rate as f64, input_vec), output_vec)
             }
         }
-        sys
+        ReactionNetworkAnalysis {
+            problem,
+            variable_index,
+        }
     }
 }
 
@@ -351,29 +360,17 @@ mod tests {
     fn sir_petri_reaction_dynamics() {
         let th = Rc::new(th_sym_monoidal_category());
         let model = sir_petri(th);
-        let mut rates = HashMap::new();
-        rates.insert(ustr("infection"), 1e-4);
-        rates.insert(ustr("recovery"), 0.01);
-        let mut initial_values = HashMap::new();
-        initial_values.insert(ustr("I"), 1.0);
-        initial_values.insert(ustr("R"), 0.0);
-        initial_values.insert(ustr("S"), 900.0);
+        let mut rates = HashMap::from([(ustr("infection"), 1e-4), (ustr("recovery"), 0.01)]);
+        let mut initial_values =
+            HashMap::from([(ustr("I"), 1.0), (ustr("R"), 0.0), (ustr("S"), 900.0)]);
         let data = MassActionProblemData {
-            rates: rates,
-            initial_values: initial_values,
+            rates,
+            initial_values,
             duration: 250.0,
         };
-        let mut sys = PetriNetMassActionAnalysis::default().build_reaction(&model, data.clone());
-        for t in 0..data.duration as u8 {
-            sys.advance_until(t as f64);
-            println!(
-                "{},{},{},{}",
-                sys.get_time(),
-                sys.get_species(0),
-                sys.get_species(1),
-                sys.get_species(2)
-            );
-        }
+        let mut analysis =
+            PetriNetMassActionAnalysis::default().build_reaction(&model, data.clone());
+        let result = analysis.solve_with_defaults();
         assert!(true)
     }
 }

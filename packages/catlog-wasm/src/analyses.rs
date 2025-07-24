@@ -15,6 +15,12 @@ pub struct ODEResult(pub JsResult<analyses::ode::ODESolution<Uuid>, String>);
 /// Input data for a Lokta-Volterra analysis of a model.
 #[derive(Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct ReactionNetworkResult(
+    pub JsResult<analyses::ode::ReactionNetworkSolution<Uuid>, String>,
+);
+
+#[derive(Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct LotkaVolterraModelData(pub analyses::ode::LotkaVolterraProblemData<Uuid>);
 
 /// Input data for a linear ODE analysis of a model.
