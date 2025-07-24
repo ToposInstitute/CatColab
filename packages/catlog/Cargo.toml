@@ -7,7 +7,7 @@ edition = "2024"
 
 
 [features]
-ode = ["dep:ode_solvers", "dep:nalgebra"]
+ode = ["dep:ode_solvers", "dep:nalgebra", "dep:rebop"]
 serde = ["dep:serde", "nonempty/serialize", "ustr/serde", "uuid/serde"]
 serde-wasm = ["serde", "dep:wasm-bindgen", "dep:tsify", "dep:instant", "instant/wasm-bindgen"]
 
@@ -27,6 +27,7 @@ nonempty = "0.12"
 num-traits = "0.2"
 ode_solvers = { version = "0.5.0", optional = true }
 pretty = "0.12.4"
+rebop = { git = "https://github.com/Armavica/rebop.git", default-features = false, optional = true }
 ref-cast = "1"
 scopeguard = "1.2.0"
 serde = { version = "1", features = ["derive"], optional = true }

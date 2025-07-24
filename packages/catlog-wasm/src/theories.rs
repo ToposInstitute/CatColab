@@ -13,7 +13,7 @@ use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
 use catlog::zero::name;
 
-use super::model_morphism::{MotifOccurrence, MotifsOptions, motifs};
+use super::model_morphism::{motifs, MotifOccurrence, MotifsOptions};
 use super::{analyses::*, model::DblModel, theory::DblTheory};
 
 /// The empty or initial theory.
@@ -344,6 +344,22 @@ impl ThSymMonoidalCategory {
     ) -> Result<bool, String> {
         let model = model.modal().map_err(|_| "Model should be of a modal theory")?;
         Ok(analyses::reachability::subreachability(model, data))
+    }
+
+    /// Simulates a reaction network
+    #[wasm_bindgen(js_name = "reactionNetwork")]
+    pub fn reaction_network(
+        &self,
+        model: &DblModel,
+        data: analyses::ode::MassActionProblemData,
+    ) -> Result<ODEResult, String> {
+        Ok(ODEResult(
+            analyses::ode::PetriNetMassActionAnalysis::default()
+                .build_reaction(model.modal()?, data.clone())
+                .solve_with_defaults()
+                .map_err(|err| format!("{err:?}"))
+                .into(),
+        ))
     }
 }
 

@@ -52,6 +52,11 @@ export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
                     return thSymMonoidalCategory.subreachability(model, data);
                 },
             }),
+            analyses.configureReactionMassAction({
+                simulate(model, data) {
+                    return thSymMonoidalCategory.reactionNetwork(model, data);
+                },
+            }),
         ],
     });
 }
