@@ -31,4 +31,4 @@ export function GuideHelp(props: {
     );
 }
 
-const helpGuideContent = (id?: string) => lazy(() => import(`./guide/${id}.mdx`));
+const helpGuideContent = (id?: string) => lazy(() => import(`./guides/${id}.mdx`));
