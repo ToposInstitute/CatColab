@@ -3,6 +3,7 @@ import * as catlog from "catlog-wasm";
 import { Theory } from "../theory";
 import * as analyses from "./analyses";
 import { TheoryLibrary } from "./types";
+import {createEmptyTheory} from "./theories/empty"
 
 import styles from "./styles.module.css";
 import svgStyles from "./svg_styles.module.css";
@@ -20,13 +21,7 @@ stdTheories.add(
         group: "Base",
         help: true,
     },
-    (meta) => {
-        const thEmpty = new catlog.ThEmpty();
-        return new Theory({
-            ...meta,
-            theory: thEmpty.theory(),
-        });
-    },
+    createEmptyTheory,
 );
 
 stdTheories.add(
