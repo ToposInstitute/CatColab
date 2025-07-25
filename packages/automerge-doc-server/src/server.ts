@@ -122,10 +122,17 @@ export class AutomergeServer implements SocketIOHandlers {
             this.handleChange!(refId, payload.doc);
         });
 
+        // Automerge relies on JS Proxy Objects to detect changes to the document, however the document
+        // migrations are run in WASM and the Proxy Object does not survive the translation to WASM as
+        // the object is sent as data only JSON.
+        //
+        // In order to register changes from the migrations with Automerge we diff the original document (which
+        // is the proxy object) with the output of the migrations (which is a plain JSON object) and apply the
+        // diff to the original object. The application of the diff happens entirely is JS land, so the changes
+        // are captured by Automerge.
         const docBefore = await handle.doc();
         const docAfter = catlog.migrateDocument(docBefore);
         const patches = jsonpatch.compare(docBefore as any, docAfter);
-
         handle.change((doc: any) => {
             jsonpatch.applyPatch(doc, patches);
         });
