@@ -114,7 +114,7 @@ jobs:
         # if there's no cache hit, restore a cache by this prefix
         # restore-prefixes-all-matches: nix-${{ runner.os }}-
 
-    - nix build .#test-cache
+    - run: nix build .#test-cache
     # - run: nix flake check --no-sandbox
 
   # deploy_backend:
