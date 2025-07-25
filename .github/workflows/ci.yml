@@ -107,9 +107,19 @@ jobs:
     - name: Restore and save Nix store
       uses: nix-community/cache-nix-action@v6
       with:
-        # restore and save a cache using this key
+        # Speculation: if a cache that was cleaned up by github is referenced again (by primary-key)
+        # github does not save that cache again at the end of the job (or automatically collects it?).
+        # This can result in the most "useful" cache being discarded.
+        # 
+        # To work around this, we always reuse the same cache and rely on nix garbage collection for
+        # keeping that cache a reasonable size.
+        #
+        # There is a degenerate case: where parallel development uses different flake inputs (like the
+        # NixOS versions). Each job's garbage collection will prune store paths not tied to that job's
+        # inputs. As a result, branches with differing inputs may end up with almost no cached data.
+        # This case should not come up that often, and when/if it does it will just result in some ~15min
+        # CI times.
         primary-key: "fixed-primary-key"
-        gc-max-store-size: "5368709121"
 
     - run: nix flake check --no-sandbox
 
