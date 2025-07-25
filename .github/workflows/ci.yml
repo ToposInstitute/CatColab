@@ -120,6 +120,8 @@ jobs:
         # This case should not come up that often, and when/if it does it will just result in some ~15min
         # CI times.
         primary-key: "fixed-primary-key"
+        purge: true
+        purge-primary-key: "always"
 
     - run: nix flake check --no-sandbox
 
