@@ -107,6 +107,10 @@ jobs:
     - name: Restore and save Nix store
       uses: nix-community/cache-nix-action@v6
       with:
+        # The github action cache is limited to 10GB and the compressed nix store for this project is
+        # typically between 3GB and 5GB, as a result it is very easy to thrash the cache by when using
+        # using hashed cache keys. This results in "useful" caches being evicted.
+        # 
         # Speculation: if a cache that was cleaned up by github is referenced again (by primary-key)
         # github does not save that cache again at the end of the job (or automatically collects it?).
         # This can result in the most "useful" cache being discarded.
@@ -119,11 +123,12 @@ jobs:
         # inputs. As a result, branches with differing inputs may end up with almost no cached data.
         # This case should not come up that often, and when/if it does it will just result in some ~15min
         # CI times.
-        primary-key: "fixed-primary-key"
+        primary-key: "fixed-primary-ke2"
         purge: true
         purge-primary-key: "always"
 
-    - run: nix flake check --no-sandbox
+    - run: nix build .#test-cache
+    # - run: nix flake check --no-sandbox
 
     - name: Prune unused Nix store paths
       run: nix-collect-garbage -d      
