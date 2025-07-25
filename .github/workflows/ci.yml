@@ -123,7 +123,7 @@ jobs:
         # inputs. As a result, branches with differing inputs may end up with almost no cached data.
         # This case should not come up that often, and when it does it will just result in some ~15min
         # CI times.
-        primary-key: "fixed-primary-key6"
+        primary-key: "fixed-primary-key7"
         restore-prefixes-first-match: "fixed-primary-key"
 
         # Since we are manually updating the cache, and we don't know if the cache has changed we need to
@@ -132,21 +132,33 @@ jobs:
         purge: true
         purge-primary-key: "always"
 
-    - name: print roots
-      run: nix-store --gc --print-roots
-    
 
-    - name: Preserve integrationTests closure
+    # Protect all flake‑input source roots from GC
+    - name: Evaluate flake-input-gc-roots derivation
+      id: gc-flake
       run: |
-        echo "Adding an indirect GC root for the integrationTests store path"
-        testPath=$(nix eval --raw .#checks.x86_64-linux.integrationTests)
-        nix-store --realise "$testPath" --add-root /tmp/tests --indirect
+        echo "gcPath=$(nix eval --raw .#packages.x86_64-linux.gc-roots)" >> $GITHUB_OUTPUT
+ 
+    - name: Realise and add indirect GC root for flake inputs
+      run: |
+        nix-store --realise "${{ steps.gc-flake.outputs.gcPath }}" \
+          --add-root /tmp/flake-inputs --indirect        
 
     - name: print roots
       run: nix-store --gc --print-roots
     
-    # - name: Prune unused Nix store paths
-    #   run: nix-collect-garbage -d      
+    - name: Prune unused Nix store paths
+      run: nix-collect-garbage -d      
+
+    # - name: Preserve integrationTests closure
+    #   run: |
+    #     echo "Adding an indirect GC root for the integrationTests store path"
+    #     testPath=$(nix eval --raw .#checks.x86_64-linux.integrationTests)
+    #     nix-store --realise "$testPath" --add-root /tmp/tests --indirect
+
+    # - name: print roots
+    #   run: nix-store --gc --print-roots
+    
 
   
     # - run: nix flake check --no-sandbox
