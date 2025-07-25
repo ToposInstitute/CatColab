@@ -17,7 +17,7 @@ import { helpRoutes } from "./help/routes";
 import { createModel } from "./model/document";
 import { PageContainer } from "./page/page_container";
 import { TheoryLibraryContext, stdTheories } from "./stdlib";
-import { ErrorBoundaryDialog } from "./util/errors";
+import { ErrorBoundaryMessage } from "./util/errors";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
 const repoUrl = import.meta.env.VITE_AUTOMERGE_REPO_URL;
@@ -68,7 +68,7 @@ const Root = (props: RouteSectionProps<unknown>) => {
             ]}
         >
             <FirebaseProvider app={firebaseApp}>
-                <ErrorBoundary fallback={(err) => <ErrorBoundaryDialog error={err} />}>
+                <ErrorBoundary fallback={(err) => <ErrorBoundaryMessage error={err} />}>
                     <PageContainer>{props.children}</PageContainer>
                 </ErrorBoundary>
                 <Show when={isSessionInvalid()}>
@@ -104,7 +104,6 @@ export function SessionExpiredModal() {
 
 function CreateModel() {
     const api = useApi();
-
     const theoryId = stdTheories.getDefault().id;
     const [ref] = createResource<string>(() => createModel(api, theoryId));
 
@@ -166,7 +165,7 @@ function App() {
     // We need two "top-level" error boundaries in order to display the SessionExpiredModal even after an
     // error occurs, while also catching error created by the router or other providers
     return (
-        <ErrorBoundary fallback={(err) => <ErrorBoundaryDialog error={err} />}>
+        <ErrorBoundary fallback={(err) => <ErrorBoundaryMessage error={err} />}>
             <Router root={Root}>{routes}</Router>
         </ErrorBoundary>
     );
