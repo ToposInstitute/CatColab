@@ -144,7 +144,7 @@ jobs:
     - run: |
         # 1. Pin the flake source itself as a GC‑root
         flake_path=$(nix flake metadata . --json | jq -r .path)
-        sudo nix store --add-root /nix/var/nix/gcroots/flake-source \
+        nix store --add-root /nix/var/nix/gcroots/flake-source \
                        --indirect "$flake_path"  \
             # registers the flake source .store path so GC won't delete it :contentReference[oaicite:0]{index=0}
 
@@ -160,7 +160,7 @@ jobs:
             checks.x86_64-linux.integrationTests
         do
           path=$(nix eval --json .#"$attr" | jq -r .path)
-          sudo nix-store --add-root /nix/var/nix/gcroots/flake-output-$attr \
+          nix store --add-root /nix/var/nix/gcroots/flake-output-$attr \
                          --indirect "$path"
         done
         # each `nix-store --add-root … --indirect` makes an indirect GC‑root for that result :contentReference[oaicite:1]{index=1}
