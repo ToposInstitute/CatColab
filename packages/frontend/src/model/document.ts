@@ -2,9 +2,9 @@ import { type Accessor, createMemo, createResource } from "solid-js";
 import invariant from "tiny-invariant";
 
 import {
-    AutomergeHeads,
+    type AutomergeHeads,
     type DblModel,
-    DblModelNext,
+    type DblModelNext,
     type Document,
     elaborateModel,
     ElaborationDatabase,
@@ -121,11 +121,9 @@ function enlivenModelDocument(
 
     console.log(liveDoc.docHandle.heads());
 
-    const [validatedModelNext, _] = createResource<DblModelNext | undefined>(
-        async () => {
-            return undefined;
-        },
-    );
+    const [validatedModelNext, _] = createResource<DblModelNext | undefined>(async () => {
+        return undefined;
+    });
     // const [validatedModelNext, _] = createResource<DblModelNext | undefined>(
     //     async () => {
     //         const th = theory();
@@ -166,9 +164,7 @@ export async function createModel(
     } else {
         init = initOrTheoryId;
     }
-    const result = await api.rpc.new_ref.mutate(
-        init as InterfaceToType<ModelDocument>,
-    );
+    const result = await api.rpc.new_ref.mutate(init as InterfaceToType<ModelDocument>);
     invariant(result.tag === "Ok", "Failed to create model");
 
     return result.content;
@@ -204,20 +200,13 @@ async function cacheNotebooksReferredToFrom(
         throw new Error(`could not load document id ${refId}`);
     }
     if (doc.type !== "model") {
-        throw new Error(
-            `can only elaborate model documents`,
-        );
+        throw new Error(`can only elaborate model documents`);
     }
     const theory = theories.get(doc.theory).theory;
     cache.insertNotebook(refId, heads, theory, doc);
     for (const cell of doc.notebook.cells) {
         if (cell.tag == "formal" && cell.content.tag == "record") {
-            await cacheNotebooksReferredToFrom(
-                api,
-                cache,
-                cell.content.notebook_id,
-                theories,
-            );
+            await cacheNotebooksReferredToFrom(api, cache, cell.content.notebook_id, theories);
         }
     }
 }

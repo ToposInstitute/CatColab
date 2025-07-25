@@ -119,18 +119,12 @@ export function ModelPane(props: {
                         });
                     }}
                     theories={theories}
-                    disabled={liveDoc().doc.notebook.cells.some((cell) =>
-                        cell.tag === "formal"
-                    )}
+                    disabled={liveDoc().doc.notebook.cells.some((cell) => cell.tag === "formal")}
                 />
             </div>
             <button
                 onClick={async () => {
-                    await catlaborate(
-                        api,
-                        props.liveModel.refId,
-                        theories,
-                    );
+                    await catlaborate(api, props.liveModel.refId, theories);
                 }}
             >
                 Elaborate
@@ -178,10 +172,7 @@ function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
             <Match when={props.content.tag === "object"}>
                 <ObjectCellEditor
                     object={props.content as ObjectDecl}
-                    modifyObject={(f) =>
-                        props.changeContent((content) =>
-                            f(content as ObjectDecl)
-                        )}
+                    modifyObject={(f) => props.changeContent((content) => f(content as ObjectDecl))}
                     isActive={props.isActive}
                     actions={props.actions}
                 />
@@ -190,9 +181,8 @@ function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
                 <MorphismCellEditor
                     morphism={props.content as MorphismDecl}
                     modifyMorphism={(f) =>
-                        props.changeContent((content) =>
-                            f(content as MorphismDecl)
-                        )}
+                        props.changeContent((content) => f(content as MorphismDecl))
+                    }
                     isActive={props.isActive}
                     actions={props.actions}
                 />
@@ -200,9 +190,11 @@ function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
             <Match when={props.content.tag === "record"}>
                 <RecordCellEditor
                     record={props.content as RecordDecl}
-                    modifyRecord={(f) => props.changeContent((content) => {
-                        f(content as RecordDecl);
-                    })}
+                    modifyRecord={(f) =>
+                        props.changeContent((content) => {
+                            f(content as RecordDecl);
+                        })
+                    }
                     isActive={props.isActive}
                     actions={props.actions}
                 />
@@ -211,9 +203,7 @@ function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
     );
 }
 
-function modelCellConstructor(
-    meta: ModelTypeMeta,
-): CellConstructor<ModelJudgment> {
+function modelCellConstructor(meta: ModelTypeMeta): CellConstructor<ModelJudgment> {
     const { name, description, shortcut } = meta;
     return {
         name,
