@@ -204,7 +204,7 @@ fn th_generalized_multicategory(list: List) -> UstrModalDblTheory {
     let mut th: UstrModalDblTheory = Default::default();
     let (x, p) = (ustr("Object"), ustr("Multihom"));
     th.add_ob_type(x);
-    th.add_mor_type(p, ModeApp::new(x.into()).apply(Modality::List(list)), ModeApp::new(x.into()));
+    th.add_mor_type(p, ModeApp::new(x).apply(Modality::List(list)), ModeApp::new(x));
     // TODO: Axioms, which depend on implementing composites and restrictions.
     th
 }
