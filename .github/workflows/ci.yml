@@ -109,7 +109,7 @@ jobs:
       with:
         # restore and save a cache using this key
         primary-key: "fixed-primary-key2"
-        gc-max-store-size: "5368709120"
+        gc-max-store-size: "5368709121"
         # primary-key: nix-${{ runner.os }}-${{ hashFiles('**/*.nix', '**/flake.lock') }}
         # if there's no cache hit, restore a cache by this prefix
         # restore-prefixes-all-matches: nix-${{ runner.os }}-
