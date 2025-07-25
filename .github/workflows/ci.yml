@@ -123,38 +123,39 @@ jobs:
         # inputs. As a result, branches with differing inputs may end up with almost no cached data.
         # This case should not come up that often, and when it does it will just result in some ~15min
         # CI times.
-        primary-key: "fixed-primary-key"
+        primary-key: "fixed-primary-key3"
+        restore-prefixes-first-match: "fixed-primary-key"
 
         # Since we are manually updating the cache, and we don't know if the cache has changed we need to
         # purge the existing cache and re-upload it on every run. We could save (time) in CI it we
         # figured out how to skip the purge + re-upload when no garbage is collected.
-        # purge: true
-        # purge-primary-key: "always"
+        purge: true
+        purge-primary-key: "always"
 
     - run: nix flake check --no-sandbox
 
     
-    # - name: Preserve integrationTests closure
-    #   run: |
-    #     echo "Adding an indirect GC root for the integrationTests store path"
-    #     testPath=$(nix eval --raw .#checks.x86_64-linux.integrationTests)
-    #     nix-store --realise "$testPath" --add-root /tmp/tests --indirect
+    - name: Preserve integrationTests closure
+      run: |
+        echo "Adding an indirect GC root for the integrationTests store path"
+        testPath=$(nix eval --raw .#checks.x86_64-linux.integrationTests)
+        nix-store --realise "$testPath" --add-root /tmp/tests --indirect
 
-    # - name: Prune unused Nix store paths
-    #   run: nix-collect-garbage -d      
+    - name: Prune unused Nix store paths
+      run: nix-collect-garbage -d      
 
   
-    - name: Check dead paths
-      id: gc
-      run: |
-        dead=$(nix-collect-garbage --print-dead | wc -l)
-        echo "::set-output name=dead::$dead"
-    - name: Restore and maybe save Nix store
-      if: steps.gc.outputs.dead != '0'
-      uses: nix-community/cache-nix-action@v6
-      with:
-        primary-key: "nix-store"
-        purge: true
+    # - name: Check dead paths
+    #   id: gc
+    #   run: |
+    #     dead=$(nix-collect-garbage --print-dead | wc -l)
+    #     echo "::set-output name=dead::$dead"
+    # - name: Restore and maybe save Nix store
+    #   if: steps.gc.outputs.dead != '0'
+    #   uses: nix-community/cache-nix-action@v6
+    #   with:
+    #     primary-key: "nix-store"
+    #     purge: true
 
   # deploy_backend:
   #   name: Deploy backend to AWS
