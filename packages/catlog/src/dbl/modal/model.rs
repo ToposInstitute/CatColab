@@ -636,4 +636,26 @@ mod tests {
         );
         assert!(!model.has_mor(&pair));
     }
+
+    #[test]
+    fn multicategory() {
+        let th = Rc::new(th_multicategory());
+        let ob_type = ModeApp::new(ustr("Object"));
+        let mor_type: ModalMorType<_> = ModeApp::new(ustr("Multihom")).into();
+
+        // Model validation.
+        let mut model = ModalDblModel::new(th.clone());
+        let (x, y, z) = (ustr("x"), ustr("y"), ustr("z"));
+        for id in [x, y, z] {
+            model.add_ob(id, ob_type.clone());
+        }
+        model.add_mor(
+            ustr("binary"),
+            ModalOb::List(List::Plain, vec![x.into(), y.into()]),
+            z.into(),
+            mor_type.clone(),
+        );
+        model.add_mor(ustr("nullary"), ModalOb::List(List::Plain, vec![]), z.into(), mor_type);
+        assert!(model.validate().is_ok());
+    }
 }
