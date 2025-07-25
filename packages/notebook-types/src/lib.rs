@@ -83,7 +83,7 @@ mod migration_tests {
 
     #[test]
     fn test_v0_examples_migrate_to_current() {
-        test_example_documents::<VersionedDocument, _>("examples/v0", |doc, path| {
+        test_example_documents::<VersionedDocument, _>("examples/v0", |doc, _| {
             // ensure it migrates without panic
             let _ = doc.to_current();
         });
