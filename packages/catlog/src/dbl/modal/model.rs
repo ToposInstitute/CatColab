@@ -613,6 +613,24 @@ mod tests {
     use ustr::ustr;
 
     #[test]
+    fn emptiness() {
+        let th = Rc::new(th_monoidal_category());
+        let ob_type = ModeApp::new(ustr("Object"));
+
+        let mut m = ModalDblModel::new(th.clone());
+        m.add_ob(ustr("s"), ob_type.clone());
+        m.add_mor(
+            ustr("empty"),
+            ModalOb::List(List::Plain, vec![]),
+            ModalOb::List(List::Plain, vec![]),
+            th.hom_type(ob_type.clone()),
+        );
+
+        m.validate();
+        assert!(true)
+    }
+
+    #[test]
     fn monoidal_category() {
         let th = Rc::new(th_monoidal_category());
         let ob_type = ModeApp::new(ustr("Object"));
