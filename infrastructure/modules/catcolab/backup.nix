@@ -83,6 +83,7 @@ with lib;
         User = "catcolab";
         ExecStart = getExe backupScript;
         Type = "oneshot";
+        EnvironmentFile = config.catcolab.environmentFilePath;
       };
     };
 
@@ -101,6 +102,7 @@ with lib;
           --property=Type=${config.systemd.services.backupdb.serviceConfig.Type} \
           --property=User=${config.systemd.services.backupdb.serviceConfig.User} \
           --property=Environment=PATH=/run/current-system/sw/bin \
+          --property=EnvironmentFile=${config.catcolab.environmentFilePath} \
           ${lib.getExe backupScript}
 
         exit_code=$?
