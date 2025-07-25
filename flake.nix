@@ -257,8 +257,9 @@
         catcolab-next = {
           hostname = "backend-next.catcolab.org";
           profiles.system = {
-            sshUser = "catcolab";
-            user = "root";
+            sshUser = "root";
+            # sshUser = "catcolab";
+            # user = "root";
             path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab-next;
           };
         };
