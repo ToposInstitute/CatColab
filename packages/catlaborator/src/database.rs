@@ -1,4 +1,4 @@
-use catlog_wasm::theory::DblTheory;
+use catlog_wasm::{model::CanQuote, theory::DblTheory};
 use serde::{Deserialize, Serialize};
 use std::fmt::Write;
 use tsify::Tsify;
@@ -8,7 +8,10 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use ::notebook_types::v0::ModelDocumentContent;
 use catlog::{
-    dbl::{model::DiscreteDblModel, theory::UstrDiscreteDblTheory},
+    dbl::{
+        model::{DiscreteDblModel, FgDblModel},
+        theory::UstrDiscreteDblTheory,
+    },
     one::{FgCategory, Path, UstrFpCategory},
     zero::name::QualifiedName,
 };
@@ -27,6 +30,44 @@ pub type RefId = String;
 #[derive(Serialize, Deserialize, Tsify, Clone, Hash, PartialEq, Eq)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct AutomergeHeads(Vec<String>);
+
+#[derive(Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct ObGenerator {
+    name: String,
+    ob_type: catlog_wasm::theory::ObType,
+}
+
+impl ObGenerator {
+    pub fn new(name: String, ob_type: catlog_wasm::theory::ObType) -> Self {
+        ObGenerator { name, ob_type }
+    }
+}
+
+#[derive(Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct MorGenerator {
+    name: String,
+    mor_type: catlog_wasm::theory::MorType,
+    dom: String,
+    cod: String,
+}
+
+impl MorGenerator {
+    pub fn new(
+        name: String,
+        mor_type: catlog_wasm::theory::MorType,
+        dom: String,
+        cod: String,
+    ) -> Self {
+        MorGenerator {
+            name,
+            mor_type,
+            dom,
+            cod,
+        }
+    }
+}
 
 #[derive(Debug)]
 pub enum ElaborationErrorContent {
@@ -61,7 +102,7 @@ pub struct ClassData {
     theory: Rc<UstrDiscreteDblTheory>,
     // TODO: use more general freshness indicator than automerge heads
     heads: AutomergeHeads,
-    elaborated: Option<ElaborationResult>,
+    elaborated: RefCell<Option<ElaborationResult>>,
 }
 
 #[derive(Clone)]
@@ -93,6 +134,41 @@ impl DblModelNext {
             writeln!(&mut out, "{}", mor).unwrap();
         }
         out
+    }
+
+    #[wasm_bindgen]
+    pub fn ob_generators(&self) -> Vec<ObGenerator> {
+        self.model
+            .ob_generators()
+            .map(|n| {
+                let name = format!("{}", n);
+                ObGenerator::new(
+                    name,
+                    catlog_wasm::theory::ObType::Basic(self.model.ob_generator_type(&n)),
+                )
+            })
+            .collect()
+    }
+
+    #[wasm_bindgen]
+    pub fn mor_generators(&self) -> Vec<MorGenerator> {
+        self.model
+            .mor_generators()
+            .map(|n| {
+                let name = format!("{}", n);
+                let src = format!("{}", self.model.mor_generator_dom(&n));
+                let tgt = format!("{}", self.model.mor_generator_cod(&n));
+                let mor_type = match self.model.mor_generator_type(&n) {
+                    Path::Id(ob) => catlog_wasm::theory::MorType::Hom(Box::new(
+                        catlog_wasm::theory::ObType::Basic(ob),
+                    )),
+                    Path::Seq(morphisms) => catlog_wasm::theory::MorType::Composite(
+                        morphisms.iter().map(|f| catlog_wasm::theory::MorType::Basic(*f)).collect(),
+                    ),
+                };
+                MorGenerator::new(name, mor_type, src, tgt)
+            })
+            .collect()
     }
 }
 
@@ -132,7 +208,7 @@ impl ElaborationDatabase {
                 source: Source::CatColab(notebook),
                 theory,
                 heads,
-                elaborated: None,
+                elaborated: RefCell::new(None),
             },
         );
     }
@@ -149,8 +225,8 @@ impl ElaborationDatabase {
 
 impl ClassLibrary for ElaborationDatabase {
     fn lookup<'a>(&'a self, id: &str) -> Option<Rc<ClassStx>> {
-        if let Some(class_data) = self.content.borrow_mut().get_mut(id) {
-            if let Some(elaborated) = &class_data.elaborated {
+        if let Some(class_data) = self.content.borrow().get(id) {
+            if let Some(elaborated) = &class_data.elaborated.borrow().as_ref() {
                 Some(elaborated.class.clone())
             } else {
                 let elaborator = notebook_elab::Elaborator::new(class_data.theory.clone());
@@ -161,10 +237,10 @@ impl ClassLibrary for ElaborationDatabase {
                     let class = Rc::new(class);
                     // TODO: we should always elaborate *some* class, possibly
                     // with no members
-                    class_data.elaborated = Some(ElaborationResult {
+                    class_data.elaborated.replace(Some(ElaborationResult {
                         class: class.clone(),
                         errors: elaborator.report(),
-                    });
+                    }));
                     Some(class)
                 } else {
                     None

@@ -14,12 +14,9 @@ use tsify::Tsify;
 
 /// A segment of a [QualifiedName]
 #[derive(Clone, Copy, Debug)]
-// #[cfg(feature = "serde")]
-// #[derive(Serialize, Deserialize)]
-// #[cfg(feature = "serde-wasm")]
-// #[derive(Tsify)]
-// #[cfg(feature = "serde-wasm")]
-// #[tsify(into_wasm_abi, from_wasm_abi)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
 pub struct Segment {
     /// Index into the relevant scope, counting forward
     ///
@@ -103,12 +100,9 @@ impl fmt::Display for Segment {
 /// we know that we don't care about in-place mutation; using `Rc<[Segment]>`
 /// saves on having to store the capacity field
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
-// #[cfg(feature = "serde")]
-// #[derive(Serialize, Deserialize)]
-// #[cfg(feature = "serde-wasm")]
-// #[derive(Tsify)]
-// #[cfg(feature = "serde-wasm")]
-// #[tsify(into_wasm_abi, from_wasm_abi)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
 pub struct QualifiedName {
     /// Can be empty, which represents the top-level namespace
     segments: Rc<[Segment]>,

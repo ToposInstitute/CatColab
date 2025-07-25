@@ -2,12 +2,13 @@ import { useParams } from "@solidjs/router";
 import { createResource, Match, Show, Switch, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import type {
-    DblTheory,
-    Document,
-    ModelDocumentContent,
-    ModelJudgment,
-    Notebook,
+import {
+    type DblTheory,
+    type Document,
+    ElaborationDatabase,
+    type ModelDocumentContent,
+    type ModelJudgment,
+    type Notebook,
 } from "catlaborator";
 import { type Api, ApiContext, useApi } from "../api";
 import { InlineInput } from "../components";
@@ -124,7 +125,12 @@ export function ModelPane(props: {
             </div>
             <button
                 onClick={async () => {
-                    await catlaborate(api, props.liveModel.refId, theories);
+                    await catlaborate(
+                        api,
+                        new ElaborationDatabase(),
+                        props.liveModel.refId,
+                        theories,
+                    );
                 }}
             >
                 Elaborate

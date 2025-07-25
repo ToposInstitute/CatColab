@@ -121,21 +121,14 @@ function enlivenModelDocument(
 
     console.log(liveDoc.docHandle.heads());
 
+    const cache = new ElaborationDatabase();
+
     const [validatedModelNext, _] = createResource<DblModelNext | undefined>(async () => {
-        return undefined;
+        const th = theory();
+        if (th) {
+            return await catlaborate(api, cache, refId, theories);
+        }
     });
-    // const [validatedModelNext, _] = createResource<DblModelNext | undefined>(
-    //     async () => {
-    //         const th = theory();
-    //         if (th) {
-    //             return await catlaborate(
-    //                 api,
-    //                 refId,
-    //                 theories,
-    //             );
-    //         }
-    //     },
-    // );
 
     return {
         type: "model",
@@ -213,10 +206,10 @@ async function cacheNotebooksReferredToFrom(
 
 export async function catlaborate(
     api: Api,
+    cache: ElaborationDatabase,
     refId: string,
     theories: TheoryLibrary,
 ): Promise<DblModelNext | undefined> {
-    const cache = new ElaborationDatabase();
     await cacheNotebooksReferredToFrom(api, cache, refId, theories);
     const model = cache.createModel(refId);
     if (model) {
