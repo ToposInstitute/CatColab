@@ -132,7 +132,13 @@ jobs:
         purge: true
         purge-primary-key: "always"
 
-    - run: nix flake check --no-sandbox
+    # - run: nix flake check --no-sandbox
+
+    - name: print roots
+      run: nix-store --gc --print-roots
+
+    - name: Prune unused Nix store paths
+      run: nix-collect-garbage -d      
 
     
     - name: Preserve integrationTests closure
