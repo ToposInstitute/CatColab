@@ -124,7 +124,6 @@ jobs:
         # This case should not come up that often, and when it does it will just result in some ~15min
         # CI times.
         primary-key: "fixed-primary-key"
-        restore-prefixes-first-match: "fixed-primary-key"
 
         # Since we are manually updating the cache, and we don't know if the cache has changed we need to
         # purge the existing cache and re-upload it on every run. We could save 90s in CI it we
@@ -132,19 +131,11 @@ jobs:
         purge: true
         purge-primary-key: "always"
 
-    - run: nix flake check --no-sandbox
-
-    
-    # - name: Prune unused Nix store paths
-    #   run: nix-collect-garbage -d      
-
-
-  
 
   deploy_backend:
     name: Deploy backend to AWS
     runs-on: ubuntu-latest
-
+    if: github.event_name != 'pull_request' && github.ref_name == 'main'
     env:
       TARGET_HOST: backend-next.catcolab.org
       HOST_CONFIG: catcolab-next
@@ -168,5 +159,12 @@ jobs:
 
       - name: Run nixos-rebuild switch remotely
         run: |
-            # nix build .#test-cache
            nix run github:serokell/deploy-rs .#${HOST_CONFIG}
+
+  
+
+   # - run: nix flake check --no-sandbox
+
+    
+    # - name: Prune unused Nix store paths
+    #   run: nix-collect-garbage -d      
