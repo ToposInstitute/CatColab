@@ -15,7 +15,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let doc: VersionedDocument = serde_json::from_str(&content)?;
 
         let current_doc = doc.to_current();
-        let migrated_json = serde_json::to_string_pretty(&current_doc)?;
+        let migrated_json = serde_json::to_string(&current_doc)?;
 
         let output_path = output_dir.join(path.file_name().unwrap());
         fs::write(&output_path, migrated_json)?;
