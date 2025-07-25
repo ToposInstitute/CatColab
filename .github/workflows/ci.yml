@@ -144,7 +144,7 @@ jobs:
     - run: |
         # 1. Pin the flake source itself as a GC‑root
         flake_path=$(nix flake metadata . --json | jq -r .path)
-        sudo nix-store --add-root /nix/var/nix/gcroots/flake-source \
+        sudo nix store --add-root /nix/var/nix/gcroots/flake-source \
                        --indirect "$flake_path"  \
             # registers the flake source .store path so GC won't delete it :contentReference[oaicite:0]{index=0}
 
@@ -166,10 +166,10 @@ jobs:
         # each `nix-store --add-root … --indirect` makes an indirect GC‑root for that result :contentReference[oaicite:1]{index=1}
 
         # 3. (Optional) Delete all old profile generations so they no longer act as GC‑roots
-        sudo nix-env --delete-generations old --profile /nix/var/nix/profiles/system
+        # sudo nix-env --delete-generations old --profile /nix/var/nix/profiles/system
 
         # 4. Finally, sweep away everything not pinned
-        sudo nix-collect-garbage --delete-old
+        # sudo nix-collect-garbage --delete-old
         nix-collect-garbage --delete-old
         # this deletes all store paths unreachable from the remaining GC roots :contentReference[oaicite:2]{index=2}
 
