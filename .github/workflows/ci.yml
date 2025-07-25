@@ -123,7 +123,7 @@ jobs:
         # inputs. As a result, branches with differing inputs may end up with almost no cached data.
         # This case should not come up that often, and when it does it will just result in some ~15min
         # CI times.
-        primary-key: "fixed-primary-key10"
+        primary-key: "fixed-primary-key11"
         restore-prefixes-first-match: "fixed-primary-key"
 
         # Since we are manually updating the cache, and we don't know if the cache has changed we need to
@@ -132,46 +132,46 @@ jobs:
         purge: true
         purge-primary-key: "always"
 
-    # - run: |
-    #     nix build .#devShells.x86_64-linux.default
-    #     nix build .#catlog-wasm
-    #     nix build .#nixosConfigurations.catcolab.config.system.build.toplevel
-    #     nix build .#nixosConfigurations.catcolab-next.config.system.build.toplevel
-    #     nix build .#nixosConfigurations.catcolab-vm.config.system.build.toplevel
-    #     nix build .#checks.x86_64-linux.integrationTests
-    #     nix store gc
-
     - run: |
-        # 1. Pin the flake source itself as a GC‑root
-        flake_path=$(nix flake metadata . --json | jq -r .path)
-        sudo nix-store --add-root /nix/var/nix/gcroots/flake-source \
-                       --indirect "$flake_path"  \
-            # registers the flake source .store path so GC won't delete it :contentReference[oaicite:0]{index=0}
+        nix build .#devShells.x86_64-linux.default
+        nix build .#catlog-wasm
+        nix build .#nixosConfigurations.catcolab.config.system.build.toplevel
+        nix build .#nixosConfigurations.catcolab-next.config.system.build.toplevel
+        nix build .#nixosConfigurations.catcolab-vm.config.system.build.toplevel
+        nix build .#checks.x86_64-linux.integrationTests
+        nix store gc
 
-        # 2. Build & pin each output you’ll need
-        for attr in \
-            devShells.x86_64-linux.default \
-            devShells.x86_64-darwin.default \
-            devShells.aarch64-darwin.default \
-            packages.catlog-wasm \
-            nixosConfigurations.catcolab.config.system.build.toplevel \
-            nixosConfigurations.catcolab-next.config.system.build.toplevel \
-            nixosConfigurations.catcolab-vm.config.system.build.toplevel \
-            checks.x86_64-linux.integrationTests
-        do
-          path=$(nix eval --json .#"$attr" | jq -r .path)
-          sudo nix-store --add-root /nix/var/nix/gcroots/flake-output-$attr \
-                         --indirect "$path"
-        done
-        # each `nix-store --add-root … --indirect` makes an indirect GC‑root for that result :contentReference[oaicite:1]{index=1}
+    # - run: |
+    #     # 1. Pin the flake source itself as a GC‑root
+    #     flake_path=$(nix flake metadata . --json | jq -r .path)
+    #     sudo nix-store --add-root /nix/var/nix/gcroots/flake-source \
+    #                    --indirect "$flake_path"  \
+    #         # registers the flake source .store path so GC won't delete it :contentReference[oaicite:0]{index=0}
 
-        # 3. (Optional) Delete all old profile generations so they no longer act as GC‑roots
-        sudo nix-env --delete-generations old --profile /nix/var/nix/profiles/system
+    #     # 2. Build & pin each output you’ll need
+    #     for attr in \
+    #         devShells.x86_64-linux.default \
+    #         devShells.x86_64-darwin.default \
+    #         devShells.aarch64-darwin.default \
+    #         packages.catlog-wasm \
+    #         nixosConfigurations.catcolab.config.system.build.toplevel \
+    #         nixosConfigurations.catcolab-next.config.system.build.toplevel \
+    #         nixosConfigurations.catcolab-vm.config.system.build.toplevel \
+    #         checks.x86_64-linux.integrationTests
+    #     do
+    #       path=$(nix eval --json .#"$attr" | jq -r .path)
+    #       sudo nix-store --add-root /nix/var/nix/gcroots/flake-output-$attr \
+    #                      --indirect "$path"
+    #     done
+    #     # each `nix-store --add-root … --indirect` makes an indirect GC‑root for that result :contentReference[oaicite:1]{index=1}
 
-        # 4. Finally, sweep away everything not pinned
-        sudo nix-collect-garbage --delete-old
-        nix-collect-garbage --delete-old
-        # this deletes all store paths unreachable from the remaining GC roots :contentReference[oaicite:2]{index=2}
+    #     # 3. (Optional) Delete all old profile generations so they no longer act as GC‑roots
+    #     sudo nix-env --delete-generations old --profile /nix/var/nix/profiles/system
+
+    #     # 4. Finally, sweep away everything not pinned
+    #     sudo nix-collect-garbage --delete-old
+    #     nix-collect-garbage --delete-old
+    #     # this deletes all store paths unreachable from the remaining GC roots :contentReference[oaicite:2]{index=2}
 
     # - run: nix build .#packages.x86_64-linux.gc-roots
     # # Protect all flake‑input source roots from GC
