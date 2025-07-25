@@ -188,13 +188,22 @@ export function NotebookEditor<T>(props: {
         throw new Error(`Cell with unknown tag: ${cell}`);
     };
 
-    const cellConstructors = (cellType?: string, cellName?: string): CellConstructor<T>[] => [
-        {
-            name: "Text",
-            description: "Start writing text",
-            shortcut: [cellShortcutModifier, "T"],
-            construct: () => newRichTextCell(),
-        },
+    const cellConstructors = (
+        cellType?: string,
+        cellName?: string,
+        hideText?: boolean,
+    ): CellConstructor<T>[] => [
+        ...(hideText
+            ? []
+            : [
+                  {
+                      name: "Text",
+                      description: "Start writing text",
+                      shortcut: [cellShortcutModifier, "T"],
+                      construct: () => newRichTextCell(),
+                  },
+              ]),
+
         ...(props.cellConstructors?.(cellType, cellName) ?? []),
     ];
 
@@ -210,7 +219,7 @@ export function NotebookEditor<T>(props: {
         });
 
     const retypeCommands = (i: number, cellType: string, cellName: string): Completion[] =>
-        cellConstructors(cellType, cellName).map((cc) => {
+        cellConstructors(cellType, cellName, true).map((cc) => {
             const { name, description, shortcut } = cc;
             return {
                 name,

@@ -27,3 +27,15 @@
         color: darkgray;
     }
 }
+
+.container {
+    display: flex;
+}
+
+.celldiv {
+    float: left;
+}
+
+.aside {
+    float: right;
+}
