@@ -135,7 +135,6 @@ jobs:
   deploy_backend:
     name: Deploy backend to AWS
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' && github.ref_name == 'main'
     env:
       TARGET_HOST: backend-next.catcolab.org
       HOST_CONFIG: catcolab-next
