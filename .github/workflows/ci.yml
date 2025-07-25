@@ -132,6 +132,8 @@ jobs:
         purge: true
         purge-primary-key: "always"
 
+    - run: nix flake check --no-sandbox
+
     
     # - name: Prune unused Nix store paths
     #   run: nix-collect-garbage -d      
@@ -139,36 +141,32 @@ jobs:
 
   
 
-  # deploy_backend:
-  #   name: Deploy backend to AWS
-  #   runs-on: ubuntu-latest
+  deploy_backend:
+    name: Deploy backend to AWS
+    runs-on: ubuntu-latest
 
-  #   env:
-  #     TARGET_HOST: backend-next.catcolab.org
-  #     HOST_CONFIG: catcolab-next
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v4
+    env:
+      TARGET_HOST: backend-next.catcolab.org
+      HOST_CONFIG: catcolab-next
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-  #     # Setup Nix and Nix cache, copied in ci.yml
-  #     - uses: nixbuild/nix-quick-install-action@v31
-  #     - name: Restore and save Nix store
-  #       uses: nix-community/cache-nix-action@v6
-  #       with:
-  #         primary-key: "fixed-primary-key2"
-  #         # restore and save a cache using this key
-  #         # primary-key: nix-${{ runner.os }}-${{ hashFiles('**/*.nix', '**/flake.lock') }}
-  #         # if there's no cache hit, restore a cache by this prefix
-  #         # restore-prefixes-first-match: nix-${{ runner.os }}-
+      # Setup Nix and Nix cache, copied in ci.yml
+      - uses: nixbuild/nix-quick-install-action@v31
+      - name: Restore and save Nix store
+        uses: nix-community/cache-nix-action@v6
+        with:
+          primary-key: "fixed-primary-key"
 
-  #     - name: Set up SSH key
-  #       run: |
-  #         mkdir -p ~/.ssh
-  #         echo "${{ secrets.CATCOLAB_NEXT_DEPLOYUSER_KEY }}" > ~/.ssh/id_ed25519
-  #         chmod 600 ~/.ssh/id_ed25519
-  #         ssh-keyscan ${TARGET_HOST} >> ~/.ssh/known_hosts
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.CATCOLAB_NEXT_DEPLOYUSER_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan ${TARGET_HOST} >> ~/.ssh/known_hosts
 
-  #     - name: Run nixos-rebuild switch remotely
-  #       run: |
-  #           nix build .#test-cache
-  #          # nix run github:serokell/deploy-rs .#${HOST_CONFIG}
+      - name: Run nixos-rebuild switch remotely
+        run: |
+            # nix build .#test-cache
+           nix run github:serokell/deploy-rs .#${HOST_CONFIG}
