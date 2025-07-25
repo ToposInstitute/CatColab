@@ -128,14 +128,14 @@ jobs:
         # Since we are manually updating the cache, and we don't know if the cache has changed we need to
         # purge the existing cache and re-upload it on every run. We could save (time) in CI it we
         # figured out how to skip the purge + re-upload when no garbage is collected.
-        # purge: true
-        # purge-primary-key: "always"
+        purge: true
+        purge-primary-key: "always"
 
     - run: nix flake check --no-sandbox
     # - run: nix build .#test-cache
 
-    - name: Prune unused Nix store paths
-      run: nix-collect-garbage -d      
+    # - name: Prune unused Nix store paths
+    #   run: nix-collect-garbage -d      
 
   # deploy_backend:
   #   name: Deploy backend to AWS
