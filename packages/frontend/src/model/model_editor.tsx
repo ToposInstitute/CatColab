@@ -142,7 +142,7 @@ export function ModelNotebookEditor(props: {
     const auth = useAuth(getAuth(firebaseApp));
 
     const [isOverlayOpen, setOverlayOpen] = createSignal(
-        liveDoc().doc.notebook.cells.length === 0 && auth.data == null,
+        liveDoc().doc.notebook.cellOrder.length === 0 && auth.data == null,
     );
     const toggleOverlay = () => setOverlayOpen(!isOverlayOpen());
 
