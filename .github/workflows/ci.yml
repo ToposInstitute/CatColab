@@ -127,8 +127,8 @@ jobs:
         purge: true
         purge-primary-key: "always"
 
-    - run: nix build .#test-cache
     # - run: nix flake check --no-sandbox
+    - run: nix build .#test-cache
 
     - name: Prune unused Nix store paths
       run: nix-collect-garbage -d      
