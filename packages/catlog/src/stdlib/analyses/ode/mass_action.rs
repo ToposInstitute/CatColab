@@ -10,7 +10,7 @@ use std::hash::Hash;
 
 use nalgebra::DVector;
 use num_traits::Zero;
-use ustr::{ustr, Ustr};
+use ustr::{Ustr, ustr};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -18,17 +18,15 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 use super::ODEAnalysis;
+use super::StochasticODEAnalysis;
 use crate::dbl::{
     model::{DiscreteTabModel, FgDblModel, ModalDblModel, MutDblModel, TabEdge},
     theory::{ModalMorType, ModalObType, TabMorType, TabObType},
 };
 use crate::one::FgCategory;
-// TODO create a ReactionNetworkProblem, and shunt ..Analysis
-use super::ReactionNetworkAnalysis;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
 use crate::zero::{alg::Polynomial, rig::Monomial};
 
-// TODO feature flag
 use rebop::gillespie::{Gillespie, Rate};
 
 /// Data defining a mass-action ODE problem for a model.
@@ -46,7 +44,6 @@ where
     /// Map from morphism IDs to rate coefficients (nonnegative reals).
     rates: HashMap<Id, f32>,
 
-    // reaction network requires isize
     /// Map from object IDs to initial values (nonnegative reals).
     #[cfg_attr(feature = "serde", serde(rename = "initialValues"))]
     pub initial_values: HashMap<Id, f32>,
@@ -125,12 +122,12 @@ impl PetriNetMassActionAnalysis {
         into_numerical_system(self.build_system(model), data)
     }
 
-    ///
+    /// Creates a mass-action system in a reaction network.
     pub fn build_reaction<Id: Eq + Clone + Hash + Ord + Debug>(
         &self,
         model: &ModalDblModel<Id, Ustr>,
         data: MassActionProblemData<Id>,
-    ) -> ReactionNetworkAnalysis<Id> {
+    ) -> StochasticODEAnalysis<Id> {
         let obs = model.ob_generators_with_type(&self.place_ob_type).collect::<Vec<_>>();
         let mut variable_index: BTreeMap<Id, usize> = Default::default();
         let ivs = obs
@@ -199,8 +196,9 @@ impl PetriNetMassActionAnalysis {
                 problem.add_reaction(Rate::lma(*rate as f64, input_vec), output_vec)
             }
         }
-        ReactionNetworkAnalysis {
+        StochasticODEAnalysis {
             problem,
+            data,
             variable_index,
         }
     }
@@ -353,23 +351,5 @@ mod tests {
             dS = ((-1) infection) I S
         "#]);
         expected.assert_eq(&sys.to_string());
-    }
-
-    #[test]
-    fn sir_petri_reaction_dynamics() {
-        let th = Rc::new(th_sym_monoidal_category());
-        let model = sir_petri(th);
-        let mut rates = HashMap::from([(ustr("infection"), 1e-4), (ustr("recovery"), 0.01)]);
-        let mut initial_values =
-            HashMap::from([(ustr("I"), 1.0), (ustr("R"), 0.0), (ustr("S"), 900.0)]);
-        let data = MassActionProblemData {
-            rates,
-            initial_values,
-            duration: 250.0,
-        };
-        let mut analysis =
-            PetriNetMassActionAnalysis::default().build_reaction(&model, data.clone());
-        let result = analysis.solve_with_defaults();
-        assert!(true)
     }
 }

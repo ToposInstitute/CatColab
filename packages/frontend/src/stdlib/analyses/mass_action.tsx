@@ -11,7 +11,7 @@ import {
 import type { MorphismDecl, ObjectDecl } from "../../model";
 import type { ModelAnalysisMeta } from "../../theory";
 import { ODEResultPlot } from "../../visualization";
-import { createModelODEPlot, createModelReactionNetworkPlot } from "./simulation";
+import { createModelODEPlot, createModelStochasticODEPlot } from "./simulation";
 
 import "./simulation.css";
 
@@ -151,9 +151,9 @@ export function configureReactionMassAction(options: {
     isTransition?: (mor: MorphismDecl) => boolean;
 }): ModelAnalysisMeta<MassActionContent> {
     const {
-        id = "reaction-network",
-        name = "Reaction network dynamics",
-        description = "Simulate the system using the law of mass action",
+        id = "stochastic-mass-action",
+        name = "Stochastic mass action dynamics",
+        description = "Simulate a stochastic ODE using the law of mass action",
         help = "mass-action",
         ...otherOptions
     } = options;
@@ -162,7 +162,7 @@ export function configureReactionMassAction(options: {
         name,
         description,
         help,
-        component: (props) => <ReactionNetworkMassAction title={name} {...otherOptions} {...props} />,
+        component: (props) => <StochasticODEMassAction title={name} {...otherOptions} {...props} />,
         initialContent: () => ({
             rates: {},
             initialValues: {},
@@ -172,7 +172,7 @@ export function configureReactionMassAction(options: {
 }
 
 /** Analyze a model using mass-action dynamics. */
-export function ReactionNetworkMassAction(
+export function StochasticODEMassAction(
     props: ModelAnalysisProps<MassActionContent> & {
         simulate: Simulator;
         isState?: (ob: ObjectDecl) => boolean;
@@ -241,7 +241,7 @@ export function ReactionNetworkMassAction(
         }),
     ];
 
-    const plotResult = createModelReactionNetworkPlot(
+    const plotResult = createModelStochasticODEPlot(
         () => props.liveModel,
         (model: DblModel) => props.simulate(model, props.content),
     );
