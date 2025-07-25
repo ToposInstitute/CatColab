@@ -138,7 +138,7 @@ jobs:
       run: |
         echo "Adding an indirect GC root for the integrationTests store path"
         testPath=$(nix eval --raw .#checks.x86_64-linux.integrationTests)
-        nix-store --add-root /tmp/integrationTests-root --indirect "$testPath"
+        nix-store --realise "$testPath" --add-root /tmp/tests --indirect
 
     - name: Prune unused Nix store paths
       run: nix-collect-garbage -d      
