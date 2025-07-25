@@ -1,7 +1,7 @@
 //! Standard library of models of double theories.
 
 use std::rc::Rc;
-use ustr::{ustr, Ustr};
+use ustr::{Ustr, ustr};
 
 use crate::dbl::{model::*, theory::*};
 use crate::one::Path;
@@ -141,7 +141,7 @@ pub fn catalyzed_reaction(th: Rc<UstrModalDblTheory>) -> UstrModalDblModel {
     model
 }
 
-/**
+/** The SIR model viewed as a reaction network.
  */
 pub fn sir_petri(th: Rc<UstrModalDblTheory>) -> UstrModalDblModel {
     let (ob_type, op) = (ModalObType::new(ustr("Object")), ustr("tensor"));

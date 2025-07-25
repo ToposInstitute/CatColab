@@ -1,5 +1,6 @@
 //! ODE analyses of models.
 
+use std::cmp::Eq;
 use std::collections::{BTreeMap, HashMap};
 use std::hash::Hash;
 
@@ -71,20 +72,20 @@ impl<Id, Sys> ODEAnalysis<Id, Sys> {
 
 /// Data needed to simulate and interpret a Reaction Network analysis of a model
 #[derive(Constructor)]
-pub struct ReactionNetworkAnalysis<Id> {
+pub struct StochasticODEAnalysis<Id: Eq + Hash> {
     /// Reaction network for the analysis.
     pub problem: rebop::gillespie::Gillespie,
+
+    /// Data for the stochastic ODE
+    pub data: MassActionProblemData<Id>,
 
     /// mapping from IDs in model (usually object IDs) to variable indices.
     pub variable_index: BTreeMap<Id, usize>,
 }
 
-impl<Id> ReactionNetworkAnalysis<Id> {
-    pub fn solve_with_defaults(
-        &mut self,
-        // need to pass this because Gillespie does not store duration and initial_values
-        data: MassActionProblemData<Id>,
-    ) -> Result<ReactionNetworkSolution<Id>, IntegrationError>
+impl<Id: Eq + Hash> StochasticODEAnalysis<Id> {
+    /// Solves the stochastic ODE with reasonable default settings and collects results.
+    pub fn solve_with_defaults(&mut self) -> Result<StochasticODESolution<Id>, IntegrationError>
     where
         Id: Eq + Hash + Clone,
     {
@@ -95,18 +96,18 @@ impl<Id> ReactionNetworkAnalysis<Id> {
 
         let mut time: Vec<f32> = vec![];
         let mut states: HashMap<Id, Vec<f32>> = HashMap::new();
-        for t in 0..(data.duration as u8) {
+        for t in 0..(self.data.duration as u8) {
             self.problem.advance_until(t as f64);
             time.push(self.problem.get_time() as f32);
             for (id, idx) in self.variable_index.iter() {
                 states
                     .entry(id.clone())
                     .and_modify(|state| state.push(self.problem.get_species(*idx) as f32))
-                    .or_insert(vec![data.initial_values[id]]);
+                    .or_insert(vec![self.data.initial_values[id]]);
             }
         }
 
-        Ok(ReactionNetworkSolution { time, states })
+        Ok(StochasticODESolution { time, states })
     }
 }
 
@@ -116,7 +117,7 @@ impl<Id> ReactionNetworkAnalysis<Id> {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
-pub struct ReactionNetworkSolution<Id>
+pub struct StochasticODESolution<Id>
 where
     Id: Eq + Hash,
 {

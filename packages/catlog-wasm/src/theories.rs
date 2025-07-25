@@ -13,7 +13,7 @@ use catlog::dbl::theory;
 use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
 
-use super::model_morphism::{motifs, MotifsOptions};
+use super::model_morphism::{MotifsOptions, motifs};
 use super::{analyses::*, model::DblModel, theory::DblTheory};
 
 /// The empty or initial theory.
@@ -342,13 +342,13 @@ impl ThSymMonoidalCategory {
         &self,
         model: &DblModel,
         data: MassActionModelData,
-    ) -> Result<ReactionNetworkResult, String> {
+    ) -> Result<StochasticODEResult, String> {
         let model: &model::ModalDblModel<_, _> =
             (&model.0).try_into().map_err(|_| "Model should be of a modal theory")?;
-        Ok(ReactionNetworkResult(
+        Ok(StochasticODEResult(
             analyses::ode::PetriNetMassActionAnalysis::default()
                 .build_reaction(model, data.0.clone())
-                .solve_with_defaults(data.0)
+                .solve_with_defaults()
                 .map_err(|err| format!("{err:?}"))
                 .into(),
         ))

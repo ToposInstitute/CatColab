@@ -1,6 +1,6 @@
 import { type Accessor, createMemo } from "solid-js";
 
-import type { DblModel, JsResult, ODEResult, ReactionNetworkResult } from "catlog-wasm";
+import type { DblModel, JsResult, ODEResult, StochasticODEResult } from "catlog-wasm";
 import type { LiveModelDocument } from "../../model";
 import type { ODEPlotData } from "../../visualization";
 
@@ -44,9 +44,9 @@ export function createModelODEPlot(
 
 Assumes that the variables in the reaction network come from objects in the model.
  */
-export function createModelReactionNetworkPlot(
+export function createModelStochasticODEPlot(
     liveModel: Accessor<LiveModelDocument>,
-    simulate: (model: DblModel) => ReactionNetworkResult,
+    simulate: (model: DblModel) => StochasticODEResult,
 ) {
     return createMemo<JsResult<ODEPlotData, string> | undefined>(
         () => {

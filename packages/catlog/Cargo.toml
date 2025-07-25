@@ -22,7 +22,6 @@ nalgebra = { version = "0.33", optional = true }
 nonempty = "0.12"
 num-traits = "0.2"
 ode_solvers = { version = "0.5.0", optional = true }
-# rebop = { version = "0.9.2", optional = true, default-features = false }
 rebop = { git = "https://github.com/quffaro/rebop.git", branch = "cm/gate-pyo3", default-features = false, optional = true }
 ref-cast = "1"
 serde = { version = "1", features = ["derive"], optional = true }
