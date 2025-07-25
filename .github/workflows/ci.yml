@@ -123,7 +123,7 @@ jobs:
         # inputs. As a result, branches with differing inputs may end up with almost no cached data.
         # This case should not come up that often, and when it does it will just result in some ~15min
         # CI times.
-        primary-key: "fixed-primary-key3"
+        primary-key: "fixed-primary-key5"
         restore-prefixes-first-match: "fixed-primary-key"
 
         # Since we are manually updating the cache, and we don't know if the cache has changed we need to
@@ -132,14 +132,9 @@ jobs:
         purge: true
         purge-primary-key: "always"
 
-    # - run: nix flake check --no-sandbox
 
     - name: print roots
       run: nix-store --gc --print-roots
-
-    - name: Prune unused Nix store paths
-      run: nix-collect-garbage -d      
-
     
     - name: Preserve integrationTests closure
       run: |
@@ -151,6 +146,7 @@ jobs:
       run: nix-collect-garbage -d      
 
   
+    # - run: nix flake check --no-sandbox
     # - name: Check dead paths
     #   id: gc
     #   run: |
