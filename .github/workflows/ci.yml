@@ -132,10 +132,16 @@ jobs:
         purge-primary-key: "always"
 
     - run: nix flake check --no-sandbox
-    # - run: nix build .#test-cache
 
-    # - name: Prune unused Nix store paths
-    #   run: nix-collect-garbage -d      
+    
+    - name: Preserve integrationTests closure
+      run: |
+        echo "Adding an indirect GC root for the integrationTests store path"
+        testPath=$(nix eval --raw .#checks.x86_64-linux.integrationTests)
+        nix-store --add-root /tmp/integrationTests-root --indirect "$testPath"
+
+    - name: Prune unused Nix store paths
+      run: nix-collect-garbage -d      
 
   # deploy_backend:
   #   name: Deploy backend to AWS
