@@ -233,15 +233,21 @@ where
     }
 
     fn ob_type(&self, ob: &Self::Ob) -> Self::ObType {
+        dbg!(&ob);
         match ob {
             ModalOb::Generator(id) => self.ob_generator_type(id),
             ModalOb::App(_, op_id) => self.theory.tight_computad().tgt(op_id),
-            ModalOb::List(list_type, vec) => vec
-                .iter()
-                .map(|ob| self.ob_type(ob))
-                .all_equal_value()
-                .expect("All objects in list should have the same type")
-                .apply((*list_type).into()),
+            ModalOb::List(list_type, vec) => {
+                dbg!(&vec);
+                match vec.iter().map(|ob| self.ob_type(ob)).all_equal_value() {
+                    Ok(val) => {
+                        dbg!(&val.clone().apply((*list_type).into()));
+                        val.apply((*list_type).into())
+                    }
+                    Err(Some(_)) => todo!(),     // values are different
+                    Err(None) => ModalOb::new(), // list is empty
+                }
+            }
         }
     }
 
@@ -351,7 +357,10 @@ where
             if let Some(ob) = computad.src_map().apply_to_ref(&f)
                 && self.has_ob(&ob)
             {
-                if mor_type.as_ref().is_some_and(|m| self.theory.src_type(m) != self.ob_type(&ob)) {
+                if mor_type.as_ref().is_some_and(|m| {
+                    dbg!(&m);
+                    self.theory.src_type(m) != self.ob_type(&ob)
+                }) {
                     errors.push(InvalidDblModel::DomType(f.clone()))
                 }
             } else {
@@ -537,6 +546,24 @@ mod tests {
     use crate::stdlib::theories::*;
     use crate::{dbl::tree::DblNode, one::tree::OpenTree};
     use ustr::ustr;
+
+    #[test]
+    fn emptiness() {
+        let th = Rc::new(th_monoidal_category());
+        let ob_type = ModeApp::new(ustr("Object"));
+
+        let mut m = ModalDblModel::new(th.clone());
+        m.add_ob(ustr("s"), ob_type.clone());
+        m.add_mor(
+            ustr("empty"),
+            ModalOb::List(List::Plain, vec![]),
+            ModalOb::List(List::Plain, vec![]),
+            th.hom_type(ob_type.clone()),
+        );
+
+        m.validate();
+        assert!(true)
+    }
 
     #[test]
     fn monoidal_category() {
