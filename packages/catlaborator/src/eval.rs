@@ -1,17 +1,20 @@
 use catlog::dbl::model::{DiscreteDblModel, MutDblModel};
 use catlog::dbl::theory::UstrDiscreteDblTheory;
 use catlog::one::{Category, Path, PathEq, UstrFpCategory};
+use catlog::zero::name::{QualifiedName, Segment};
 use std::cell::RefCell;
 use std::rc::Rc;
 use ustr::Ustr;
 
-use crate::name::{QualifiedName, Segment};
 use crate::syntax::*;
 
-pub trait NotebookStorage {
-    fn lookup(&self, id: &str) -> Option<Rc<Notebook>>;
+pub trait ClassLibrary {
+    /// We make this a `Rc` instead of a reference because implementations of
+    /// `NotebookStorage` sometimes use interior mutability via `RefCell` and that complicates
+    /// things.
+    fn lookup<'a>(&'a self, id: &str) -> Option<Rc<ClassStx>>;
 
-    fn get(&self, r: NotebookRef) -> Rc<Notebook> {
+    fn get(&self, r: ClassIdent) -> Rc<ClassStx> {
         self.lookup(r.id.as_str()).unwrap()
     }
 }
@@ -32,7 +35,7 @@ impl GeneratorRange {
 pub enum TmVal {
     Object(QualifiedName),
     Morphism(Path<QualifiedName, QualifiedName>),
-    Cells(Rc<Vec<(Ustr, TmVal)>>),
+    Instance(Rc<Vec<(Ustr, TmVal)>>),
     Erased,
 }
 
@@ -53,14 +56,14 @@ impl TmVal {
 
     pub fn as_cells(&self) -> Rc<Vec<(Ustr, TmVal)>> {
         match self {
-            TmVal::Cells(cells) => cells.clone(),
+            TmVal::Instance(cells) => cells.clone(),
             _ => panic!("expected cells"),
         }
     }
 
-    pub fn proj(&self, field: Field) -> TmVal {
+    pub fn proj(&self, field: FwdIdent) -> TmVal {
         match self {
-            TmVal::Cells(fields) => fields[field.lvl].1.clone(),
+            TmVal::Instance(fields) => fields[field.index].1.clone(),
             _ => panic!("expected notebook"),
         }
     }
@@ -70,21 +73,21 @@ impl TmVal {
 pub enum TyVal {
     Object(ObType),
     Morphism(MorType, QualifiedName, QualifiedName),
-    Notebook(NotebookRef),
+    InstanceOf(ClassIdent),
     Equality(TmVal, TmVal),
 }
 
 #[derive(Clone)]
 pub struct State {
     pub neutrals: Rc<RefCell<DiscreteDblModel<QualifiedName, UstrFpCategory>>>,
-    notebooks: Rc<dyn NotebookStorage>,
+    classes: Rc<dyn ClassLibrary>,
 }
 
 impl State {
-    pub fn empty(notebooks: Rc<dyn NotebookStorage>, theory: Rc<UstrDiscreteDblTheory>) -> State {
+    pub fn empty(notebooks: Rc<dyn ClassLibrary>, theory: Rc<UstrDiscreteDblTheory>) -> State {
         State {
             neutrals: Rc::new(RefCell::new(DiscreteDblModel::new(theory))),
-            notebooks,
+            classes: notebooks,
         }
     }
 
@@ -102,12 +105,12 @@ pub struct Env {
 }
 
 impl Env {
-    pub fn get(&self, i: Lvl) -> TmVal {
-        self.values[i.lvl].clone()
+    pub fn get(&self, i: FwdIdent) -> TmVal {
+        self.values[i.index].clone()
     }
 
-    pub fn get_notebook(&self, nbref: &NotebookRef) -> Option<Rc<Notebook>> {
-        self.state.notebooks.lookup(nbref.id.as_str())
+    pub fn get_class<'a>(&'a self, nbref: &ClassIdent) -> Option<Rc<ClassStx>> {
+        self.state.classes.lookup(nbref.id.as_str())
     }
 
     pub fn with_values(&self, values: &[(Ustr, TmVal)]) -> Self {
@@ -117,9 +120,9 @@ impl Env {
         }
     }
 
-    pub fn lookup_notebook(&self, id: Ustr) -> Option<NotebookRef> {
-        if let Some(_) = self.state.notebooks.lookup(id.as_str()) {
-            Some(NotebookRef { id })
+    pub fn resolve_class(&self, id: Ustr) -> Option<ClassIdent> {
+        if let Some(_) = self.state.classes.lookup(id.as_str()) {
+            Some(ClassIdent { id })
         } else {
             None
         }
@@ -150,7 +153,7 @@ impl Env {
                 let g = self.eval(g_stx).as_morphism().clone();
                 self.compose(f, g)
             }
-            TmStx::MkNotebook(items) => TmVal::Cells(Rc::new(
+            TmStx::New(items) => TmVal::Instance(Rc::new(
                 items.iter().map(|(name, tm)| (*name, self.eval(tm))).collect(),
             )),
             TmStx::Refl => TmVal::Erased,
@@ -172,9 +175,9 @@ impl Env {
                 );
                 TmVal::Morphism(Path::single(at))
             }
-            TyVal::Notebook(notebook_ref) => {
-                let notebook = self.state.notebooks.get(*notebook_ref);
-                self.state.new_env().intro_notebook(&at, &*notebook)
+            TyVal::InstanceOf(notebook_ref) => {
+                let notebook = self.state.classes.get(*notebook_ref);
+                self.state.new_env().intro_class(&at, &*notebook)
             }
             TyVal::Equality(v1, v2) => {
                 self.equate(v1, v2);
@@ -194,7 +197,7 @@ impl Env {
                     .borrow_mut()
                     .add_equation(PathEq::new(f1.clone(), f2.clone()));
             }
-            (TmVal::Cells(cells1), TmVal::Cells(cells2)) => {
+            (TmVal::Instance(cells1), TmVal::Instance(cells2)) => {
                 for ((_, c1), (_, c2)) in cells1.iter().zip(cells2.iter()) {
                     self.equate(c1, c2)
                 }
@@ -212,36 +215,42 @@ impl Env {
                 self.eval(d).as_object(),
                 self.eval(c).as_object(),
             ),
-            TyStx::Notebook(notebook_ref) => TyVal::Notebook(*notebook_ref),
+            TyStx::InstanceOf(class_name) => TyVal::InstanceOf(*class_name),
             TyStx::Equality(lhs, rhs) => TyVal::Equality(self.eval(lhs), self.eval(rhs)),
         }
     }
 
-    pub fn intro_cell(&mut self, qualification: &QualifiedName, i: usize, cell: &Cell) -> TmVal {
+    pub fn intro_cell(
+        &mut self,
+        qualification: &QualifiedName,
+        i: usize,
+        member: &MemberStx,
+    ) -> TmVal {
         self.intro(
-            qualification.extend(Segment::new(i).with_name(cell.name)),
-            &self.eval_ty(&cell.ty),
+            qualification.extend(Segment::new(i).with_name(member.name)),
+            &self.eval_ty(&member.ty),
         )
     }
 
-    pub fn intro_notebook(mut self, qualification: &QualifiedName, nb: &Notebook) -> TmVal {
-        for (i, cell_stx) in nb.cells.iter().enumerate() {
+    pub fn intro_class(mut self, qualification: &QualifiedName, class: &ClassStx) -> TmVal {
+        for (i, cell_stx) in class.members.iter().enumerate() {
             let val = self.intro_cell(qualification, i, cell_stx);
             self.values.push(val);
         }
-        TmVal::Cells(Rc::new(
-            nb.cells.iter().map(|c| c.name).zip(self.values.into_iter()).collect(),
+        TmVal::Instance(Rc::new(
+            class.members.iter().map(|c| c.name).zip(self.values.into_iter()).collect(),
         ))
     }
 
-    pub fn objects_are_equal(&self, n1: QualifiedName, n2: QualifiedName) -> bool {
+    pub fn objects_are_equal(&self, _n1: QualifiedName, _n2: QualifiedName) -> bool {
         true
+        // TODO: this seems to break WASM compatibility
         // self.state.neutrals.borrow().objects_are_equal(n1, n2)
     }
 
     pub fn convertable_tys(
         &self,
-        theory: &UstrDiscreteDblTheory,
+        _theory: &UstrDiscreteDblTheory,
         ty1: &TyVal,
         ty2: &TyVal,
     ) -> bool {
@@ -255,7 +264,8 @@ impl Env {
                     && self.objects_are_equal(d1.clone(), d2.clone())
                     && self.objects_are_equal(c1.clone(), c2.clone())
             }
-            (Notebook(nr1), Notebook(nr2)) => nr1 == nr2,
+            (InstanceOf(n1), InstanceOf(n2)) => n1 == n2,
+            // TODO: this is not right: we shoudl check if the lhs and the rhs are equal
             (Equality(_, _), Equality(_, _)) => true,
             _ => false,
         }

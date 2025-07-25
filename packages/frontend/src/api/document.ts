@@ -95,7 +95,9 @@ export async function getLiveDoc<Doc extends Document>(
 
 /** Create a Solid Store that tracks an Automerge document.
  */
-export async function makeDocHandleReactive<T extends object>(handle: DocHandle<T>): Promise<T> {
+export async function makeDocHandleReactive<T extends object>(
+    handle: DocHandle<T>,
+): Promise<T> {
     const init = await handle.doc();
 
     const [store, setStore] = createStore<T>(init as T);
@@ -113,7 +115,9 @@ export async function makeDocHandleReactive<T extends object>(handle: DocHandle<
 
 /** Create a boolean signal for whether an Automerge document handle is ready.
  */
-export function useDocHandleReady(getHandle: () => DocHandle<unknown>): Accessor<boolean> {
+export function useDocHandleReady(
+    getHandle: () => DocHandle<unknown>,
+): Accessor<boolean> {
     const [isReady, setIsReady] = createSignal<boolean>(false);
 
     createEffect(() => {

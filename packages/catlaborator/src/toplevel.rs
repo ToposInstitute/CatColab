@@ -2,7 +2,7 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use fexplib::{parser::Prec, *};
 
-use crate::{eval::NotebookStorage, syntax::Notebook};
+use crate::{eval::ClassLibrary, syntax::ClassStx};
 
 pub const PARSE_CONFIG: ParseConfig = ParseConfig::new(
     &[
@@ -16,24 +16,24 @@ pub const PARSE_CONFIG: ParseConfig = ParseConfig::new(
 
 #[derive(Clone)]
 pub struct Toplevel {
-    notebooks: Rc<RefCell<HashMap<&'static str, Rc<Notebook>>>>,
+    classes: Rc<RefCell<HashMap<&'static str, Rc<ClassStx>>>>,
 }
 
 impl Toplevel {
     pub fn new() -> Self {
         Self {
-            notebooks: Rc::new(RefCell::new(HashMap::new())),
+            classes: Rc::new(RefCell::new(HashMap::new())),
         }
     }
 
-    fn insert_notebook(&mut self, name: &'static str, notebook: Notebook) {
-        self.notebooks.borrow_mut().insert(name, Rc::new(notebook));
+    fn insert_notebook(&mut self, name: &'static str, class: ClassStx) {
+        self.classes.borrow_mut().insert(name, Rc::new(class));
     }
 }
 
-impl NotebookStorage for Toplevel {
-    fn lookup(&self, id: &str) -> Option<Rc<Notebook>> {
-        self.notebooks.borrow().get(id).cloned()
+impl ClassLibrary for Toplevel {
+    fn lookup<'a>(&'a self, id: &str) -> Option<Rc<ClassStx>> {
+        self.classes.borrow().get(id).cloned()
     }
 }
 

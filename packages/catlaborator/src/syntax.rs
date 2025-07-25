@@ -2,68 +2,52 @@ use catlog::one::Path;
 use pretty::RcDoc;
 use pretty_util::{binop, braces, parens};
 use std::{fmt, rc::Rc};
-use ustr::Ustr;
+use ustr::{Ustr, ustr};
 
+/// An identifier with a forward-counting index (0 is the first thing in the scope)
 #[derive(Clone, Copy, Debug)]
-pub struct Field {
-    pub lvl: usize,
-    pub name: Option<Ustr>,
+pub struct FwdIdent {
+    pub index: usize,
+    pub name: Ustr,
 }
 
-impl Field {
-    pub fn new(lvl: usize, name: Option<Ustr>) -> Self {
-        Self { lvl, name }
-    }
-
-    pub fn name(&self) -> &'static str {
-        self.name.map_or("", |n| n.as_str())
-    }
-}
-
-#[derive(Clone, Copy, Debug)]
-pub struct Lvl {
-    pub lvl: usize,
-    pub name: Option<Ustr>,
-}
-
-impl Lvl {
-    pub fn new(lvl: usize, name: Option<Ustr>) -> Self {
-        Self { lvl, name }
-    }
-
-    pub fn name(&self) -> &'static str {
-        self.name.map_or("", |n| n.as_str())
+impl FwdIdent {
+    pub fn new(index: usize, name: Option<Ustr>) -> Self {
+        Self {
+            index,
+            name: name.unwrap_or(ustr("_")),
+        }
     }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-pub struct NotebookRef {
+pub struct ClassIdent {
     pub id: Ustr, // should be Uuid once we're doing real notebooks
 }
 
 #[derive(Debug)]
 pub enum TmStx {
     // We don't need to use deBruijn indices here because we don't have lambdas
-    Var(Lvl),
-    Proj(Rc<TmStx>, Field),
+    Var(FwdIdent),
+    Proj(Rc<TmStx>, FwdIdent),
     Identity(Rc<TmStx>),
     Compose(Rc<TmStx>, Rc<TmStx>),
-    MkNotebook(Rc<Vec<(Ustr, TmStx)>>),
+    New(Rc<Vec<(Ustr, TmStx)>>),
     Refl,
 }
 
 impl TmStx {
     fn pprint(&self) -> RcDoc {
         match self {
-            TmStx::Var(lvl) => RcDoc::text(lvl.name()),
+            TmStx::Var(lvl) => RcDoc::text(lvl.name.as_str()),
             TmStx::Proj(tm, field) => {
-                tm.pprint().append(RcDoc::text(".")).append(RcDoc::text(field.name()))
+                tm.pprint().append(RcDoc::text(".")).append(RcDoc::text(field.name.as_str()))
             }
             TmStx::Identity(tm) => RcDoc::text("@id").append(RcDoc::space()).append(tm.pprint()),
             TmStx::Compose(tm1, tm2) => {
                 tm1.pprint().append(RcDoc::text(" * ")).append(tm2.pprint())
             }
-            TmStx::MkNotebook(items) => braces(RcDoc::concat(items.iter().map(|(name, tm)| {
+            TmStx::New(items) => braces(RcDoc::concat(items.iter().map(|(name, tm)| {
                 binop(RcDoc::text(name.as_str()), "=", tm.pprint()).append(RcDoc::text(";"))
             }))),
             TmStx::Refl => RcDoc::text("@refl"),
@@ -85,7 +69,7 @@ pub type MorType = Path<Ustr, Ustr>;
 pub enum TyStx {
     Object(ObType),
     Morphism(MorType, TmStx, TmStx),
-    Notebook(NotebookRef),
+    InstanceOf(ClassIdent),
     Equality(TmStx, TmStx),
 }
 
@@ -112,7 +96,7 @@ impl TyStx {
                 .append(dom.pprint())
                 .append(RcDoc::space())
                 .append(codom.pprint()),
-            TyStx::Notebook(notebook_ref) => RcDoc::text("@Notebook")
+            TyStx::InstanceOf(notebook_ref) => RcDoc::text("@Notebook")
                 .append(RcDoc::space())
                 .append(RcDoc::text(notebook_ref.id.as_str())),
             TyStx::Equality(lhs, rhs) => binop(lhs.pprint(), "==", rhs.pprint()),
@@ -127,23 +111,23 @@ impl fmt::Display for TyStx {
 }
 
 #[derive(Debug)]
-pub struct Notebook {
-    pub cells: Vec<Cell>,
+pub struct ClassStx {
+    pub members: Vec<MemberStx>,
 }
 
-impl Notebook {
-    pub fn new(cells: Vec<Cell>) -> Self {
-        Self { cells }
+impl ClassStx {
+    pub fn new(members: Vec<MemberStx>) -> Self {
+        Self { members }
     }
 }
 
 #[derive(Debug)]
-pub struct Cell {
+pub struct MemberStx {
     pub name: Ustr,
     pub ty: TyStx,
 }
 
-impl Cell {
+impl MemberStx {
     pub fn new(name: Ustr, ty: TyStx) -> Self {
         Self { name, ty }
     }

@@ -2,6 +2,7 @@
 
 pub mod alg;
 pub mod column;
+pub mod name;
 pub mod rig;
 pub mod set;
 

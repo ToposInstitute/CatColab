@@ -2,24 +2,22 @@ import { type Accessor, createMemo, createResource } from "solid-js";
 import invariant from "tiny-invariant";
 
 import {
+    AutomergeHeads,
     type DblModel,
-    type DblModelNext,
-    type DblTheory,
+    DblModelNext,
     type Document,
-    elaborate,
     elaborateModel,
-    type ModelDocumentContent,
+    ElaborationDatabase,
     type ModelJudgment,
     type ModelValidationResult,
     type Uuid,
 } from "catlaborator";
-import { type Api, getLiveDoc, type LiveDoc, useApi } from "../api";
+import { type Api, getLiveDoc, type LiveDoc } from "../api";
 import { newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
 import type { Theory } from "../theory";
 import { type IndexedMap, indexMap } from "../util/indexing";
 import type { InterfaceToType } from "../util/types";
-import { DocHandle } from "@automerge/automerge-repo";
 
 export type ModelDocument = Document & { type: "model" };
 
@@ -123,13 +121,23 @@ function enlivenModelDocument(
 
     console.log(liveDoc.docHandle.heads());
 
-    const [validatedModelNext, _] = createResource<DblModelNext | undefined>(async () => {
-        const th = theory();
-        return undefined;
-        if (th) {
-            return await catlaborate(api, refId, th.theory, liveDoc.doc.theory, theories);
-        }
-    });
+    const [validatedModelNext, _] = createResource<DblModelNext | undefined>(
+        async () => {
+            return undefined;
+        },
+    );
+    // const [validatedModelNext, _] = createResource<DblModelNext | undefined>(
+    //     async () => {
+    //         const th = theory();
+    //         if (th) {
+    //             return await catlaborate(
+    //                 api,
+    //                 refId,
+    //                 theories,
+    //             );
+    //         }
+    //     },
+    // );
 
     return {
         type: "model",
@@ -158,8 +166,9 @@ export async function createModel(
     } else {
         init = initOrTheoryId;
     }
-
-    const result = await api.rpc.new_ref.mutate(init as InterfaceToType<ModelDocument>);
+    const result = await api.rpc.new_ref.mutate(
+        init as InterfaceToType<ModelDocument>,
+    );
     invariant(result.tag === "Ok", "Failed to create model");
 
     return result.content;
@@ -177,48 +186,52 @@ export async function getLiveModel(
 
 async function cacheNotebooksReferredToFrom(
     api: Api,
-    cache: Map<string, ModelDocumentContent>,
+    cache: ElaborationDatabase,
     refId: string,
-    theory: string,
     theories: TheoryLibrary,
 ) {
-    if (cache.has(refId)) {
-        return;
-    }
     const liveDoc = await getLiveDoc(api, refId, "model");
     if (!liveDoc) {
         throw new Error(`could not find document id ${refId}`);
     }
     const docHandle = liveDoc.docHandle;
     const doc = await docHandle.doc();
+    const heads = docHandle.heads() as AutomergeHeads;
+    if (cache.contains(refId, heads)) {
+        return;
+    }
     if (!doc) {
         throw new Error(`could not load document id ${refId}`);
     }
-    if (doc.type !== "model" || doc.theory !== theory) {
-        throw new Error(`can only refer to model documents of the same theory (${theory})`);
+    if (doc.type !== "model") {
+        throw new Error(
+            `can only elaborate model documents`,
+        );
     }
-    cache.set(refId, doc);
+    const theory = theories.get(doc.theory).theory;
+    cache.insertNotebook(refId, heads, theory, doc);
     for (const cell of doc.notebook.cells) {
         if (cell.tag == "formal" && cell.content.tag == "record") {
             await cacheNotebooksReferredToFrom(
                 api,
                 cache,
                 cell.content.notebook_id,
-                theory,
                 theories,
             );
         }
     }
 }
 
-async function catlaborate(
+export async function catlaborate(
     api: Api,
     refId: string,
-    theory: DblTheory,
-    theoryName: string,
     theories: TheoryLibrary,
 ): Promise<DblModelNext | undefined> {
-    const cache = new Map();
-    await cacheNotebooksReferredToFrom(api, cache, refId, theoryName, theories);
-    return elaborate(cache, refId, theory);
+    const cache = new ElaborationDatabase();
+    await cacheNotebooksReferredToFrom(api, cache, refId, theories);
+    const model = cache.createModel(refId);
+    if (model) {
+        console.log(model.show());
+    }
+    return model;
 }
