@@ -102,7 +102,6 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    # Setup Nix and Nix cache, copied in deploy.yml
     - uses: nixbuild/nix-quick-install-action@v31
     - name: Restore and save Nix store
       uses: nix-community/cache-nix-action@v6
@@ -131,6 +130,9 @@ jobs:
         purge: true
         purge-primary-key: "always"
 
+    - name: Prune unused Nix store paths
+      run: nix-collect-garbage -d      
+   # - run: nix flake check --no-sandbox
 
   deploy_backend:
     name: Deploy backend to AWS
@@ -142,12 +144,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Setup Nix and Nix cache, copied in ci.yml
       - uses: nixbuild/nix-quick-install-action@v31
       - name: Restore and save Nix store
         uses: nix-community/cache-nix-action@v6
         with:
+          # see ci.yml
           primary-key: "fixed-primary-key"
+          purge: true
+          purge-primary-key: "always"
 
       - name: Set up SSH key
         run: |
@@ -161,9 +165,3 @@ jobs:
            nix run github:serokell/deploy-rs .#${HOST_CONFIG}
 
   
-
-   # - run: nix flake check --no-sandbox
-
-    
-    # - name: Prune unused Nix store paths
-    #   run: nix-collect-garbage -d      
