@@ -80,7 +80,11 @@ export function ModelPane(props: {
     const liveDoc = () => props.liveModel.liveDoc;
 
     const selectableTheories = () => {
-        if (liveDoc().doc.notebook.cells.some((cell) => cell.tag === "formal")) {
+        if (
+            liveDoc().doc.notebook.cellOrder.some(
+                (cellId) => liveDoc().doc.notebook.cellContents[cellId]?.tag === "formal",
+            )
+        ) {
             return props.liveModel.theory().inclusions;
         } else {
             // If the model has no formal cells, allow any theory to be selected.
@@ -131,7 +135,7 @@ export function ModelNotebookEditor(props: {
     const auth = useAuth(getAuth(firebaseApp));
 
     const [isOverlayOpen, setOverlayOpen] = createSignal(
-        liveDoc().doc.notebook.cells.length === 0 && auth.data == null,
+        liveDoc().doc.notebook.cellOrder.length === 0 && auth.data == null,
     );
     const toggleOverlay = () => setOverlayOpen(!isOverlayOpen());
 

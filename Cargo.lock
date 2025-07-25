@@ -1884,6 +1884,7 @@ version = "0.1.0"
 dependencies = [
  "nonempty",
  "serde",
+ "serde-wasm-bindgen",
  "serde_json",
  "tsify",
  "ustr",

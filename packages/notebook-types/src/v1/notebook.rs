@@ -1,0 +1,41 @@
+use crate::v0;
+
+use super::cell::NotebookCell;
+
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use tsify::Tsify;
+use uuid::Uuid;
+
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct Notebook<T> {
+    #[serde(rename = "cellContents")]
+    #[tsify(type = "Record<string, NotebookCell<T>>")]
+    pub cell_contents: HashMap<Uuid, NotebookCell<T>>,
+    #[serde(rename = "cellOrder")]
+    pub cell_order: Vec<Uuid>,
+}
+
+impl<T> Notebook<T> {
+    pub fn migrate_from_v0(old: v0::Notebook<T>) -> Self {
+        let mut cell_contents = HashMap::new();
+        let mut cell_order = Vec::new();
+
+        for old_cell in old.cells {
+            let id = match old_cell {
+                v0::NotebookCell::RichText { id, .. }
+                | v0::NotebookCell::Formal { id, .. }
+                | v0::NotebookCell::Stem { id } => id,
+            };
+
+            cell_order.push(id);
+            cell_contents.insert(id, old_cell);
+        }
+
+        Notebook {
+            cell_contents,
+            cell_order,
+        }
+    }
+}

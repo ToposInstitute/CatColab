@@ -2,7 +2,7 @@
   description = "configurations for deploying catcolab";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-24.11";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
     crate2nix = {
       url = "github:nix-community/crate2nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -14,9 +14,18 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    crane = {
+      url = "github:ipetkov/crane";
+      inputs = {
+        flake-utils.follows = "flake-utils";
+        nixpkgs.follows = "nixpkgs";
+      };
+    };
+
     nixpkgsUnstable = {
-      # TODO: update this to nixos-unstable the next time someone looks at this (required changes haven't
-      # landed yet, but should really soon)
+      # TODO: this should be changed from 'master' to 'nixos-unstable' when the
+      # pnpm.fetchDeps.fetcherVersion option lands in nixos-unstable (it's not clear how long that will
+      # be)
       url = "github:NixOS/nixpkgs/master";
     };
   };
@@ -27,6 +36,7 @@
       nixpkgs,
       deploy-rs,
       fenix,
+      crane,
       ...
     }@inputs:
     let
@@ -39,11 +49,6 @@
         "aarch64-darwin"
       ];
 
-      rustToolchain = fenix.packages.x86_64-linux.fromToolchainFile {
-        file = ./rust-toolchain.toml;
-        sha256 = "sha256-Qxt8XAuaUR2OMdKbN4u8dBJOhSHxS+uS06Wl9+flVEk=";
-      };
-
       nixpkgsFor =
         system:
         import nixpkgs {
@@ -51,13 +56,76 @@
           config.allowUnfree = true;
         };
 
+      rustToolchainFor =
+        system:
+        inputs.fenix.packages.${system}.fromToolchainFile {
+          file = ./rust-toolchain.toml;
+          sha256 = "sha256-Qxt8XAuaUR2OMdKbN4u8dBJOhSHxS+uS06Wl9+flVEk=";
+        };
+
       pkgsLinux = nixpkgsFor linuxSystem;
+      rustToolchainLinux = rustToolchainFor linuxSystem;
+
+      # craneLib = crane.lib.${linuxSystem}
+      craneLib = (crane.mkLib pkgsLinux).overrideToolchain rustToolchainLinux;
+      src = craneLib.cleanCargoSource ./.;
+
+      commonArgs = {
+        inherit src;
+        strictDeps = true;
+
+        nativeBuildInputs = [ pkgsLinux.pkg-config ];
+        buildInputs = [
+          pkgsLinux.openssl
+        ];
+
+      };
+
+      cargoArtifacts = craneLib.buildDepsOnly commonArgs;
+
+      individualCrateArgs = commonArgs // {
+        inherit cargoArtifacts;
+        doCheck = false;
+      };
+
+      catlog-wasm = craneLib.buildPackage (
+        individualCrateArgs
+        // {
+          pname = "catlog-wasm";
+
+          nativeBuildInputs = individualCrateArgs.nativeBuildInputs ++ [
+            pkgsLinux.wasm-pack
+            pkgsLinux.wasm-bindgen-cli
+            pkgsLinux.binaryen
+          ];
+
+          src = craneLib.cleanCargoSource ./.;
+
+          # run wasm-pack instead of plain cargo
+          buildPhase = ''
+            cd packages/catlog-wasm
+            echo "before wasm-pack"
+
+            # WTF: engage maximum cargo cult. I have no idea wasm-pack needs $HOME set, that is wild.
+            # https://github.com/NixOS/nixpkgs/blob/b5d0681604d2acd74818561bd2f5585bfad7087d/pkgs/by-name/te/tetrio-desktop/tetrio-plus.nix#L66C7-L66C24
+            # https://discourse.nixos.org/t/help-packaging-mipsy-wasm-pack-error/51876            
+            HOME=$(mktemp -d) wasm-pack build
+          '';
+
+          installPhase = ''
+            mkdir -p $out
+            cp -r pkg/* $out/
+            ls $out/
+          '';
+        }
+      );
 
       # Generate devShells for each system
       devShellForSystem =
         system:
         let
           pkgs = nixpkgsFor system;
+          rustToolchain = rustToolchainFor system;
 
           # macOS-specific configurations for libraries
           darwinDeps =
@@ -84,9 +152,12 @@
               clippy
               pkg-config
               pnpm_9
-              nodejs_23
+              nodejs_24
               sqlx-cli
               biome
+              wasm-pack
+              vscode-langservers-extracted
+              wasm-bindgen-cli
             ]
             ++ darwinDeps
             ++ [
@@ -130,11 +201,16 @@
         }) devShellSystems
       );
 
+      packages = {
+        inherit catlog-wasm;
+      };
+
       # Create a NixOS configuration for each host
       nixosConfigurations = {
         catcolab = nixpkgs.lib.nixosSystem {
           specialArgs = {
-            inherit inputs rustToolchain;
+            inherit inputs self;
+            rustToolchain = rustToolchainLinux;
           };
           system = linuxSystem;
           modules = [
@@ -143,7 +219,10 @@
           pkgs = pkgsLinux;
         };
         catcolab-next = nixpkgs.lib.nixosSystem {
-          specialArgs = { inherit inputs rustToolchain; };
+          specialArgs = {
+            inherit inputs self;
+            rustToolchain = rustToolchainLinux;
+          };
           system = linuxSystem;
           modules = [
             ./infrastructure/hosts/catcolab-next
@@ -154,7 +233,10 @@
         catcolab-vm = nixpkgs.lib.nixosSystem {
           system = linuxSystem;
           modules = [ ./infrastructure/hosts/catcolab-vm ];
-          specialArgs = { inherit inputs rustToolchain; };
+          specialArgs = {
+            inherit inputs self;
+            rustToolchain = rustToolchainLinux;
+          };
         };
       };
 
@@ -191,7 +273,8 @@
         };
 
         node.specialArgs = {
-          inherit rustToolchain inputs;
+          inherit inputs self;
+          rustToolchain = rustToolchainLinux;
         };
 
         testScript = ''

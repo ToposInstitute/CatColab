@@ -7,6 +7,7 @@ import {
     type ModelJudgment,
     type ModelValidationResult,
     type Uuid,
+    currentVersion,
     elaborateModel,
 } from "catlog-wasm";
 import { type Api, type LiveDoc, getLiveDoc } from "../api";
@@ -24,6 +25,7 @@ export const newModelDocument = (theory: string): ModelDocument => ({
     type: "model",
     theory,
     notebook: newNotebook(),
+    version: currentVersion(),
 });
 
 /** A model document "live" for editing.
@@ -72,9 +74,13 @@ function enlivenModelDocument(
     // Memo-ize the *formal* content of the notebook, since most derived objects
     // will not depend on the informal (rich-text) content in notebook.
     const formalJudgments = createMemo<Array<ModelJudgment>>(() => {
-        return doc.notebook.cells
-            .filter((cell) => cell.tag === "formal")
-            .map((cell) => cell.content);
+        return (
+            doc.notebook.cellOrder
+                // biome-ignore lint/style/noNonNullAssertion:
+                .map((cellId) => doc.notebook.cellContents[cellId]!)
+                .filter((cell) => cell.tag === "formal")
+                .map((cell) => cell.content)
+        );
     }, []);
 
     const objectIndex = createMemo<IndexedMap<Uuid, string>>(() => {

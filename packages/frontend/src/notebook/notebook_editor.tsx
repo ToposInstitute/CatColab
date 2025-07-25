@@ -21,7 +21,6 @@ import {
 
 import type { Cell, Notebook } from "catlog-wasm";
 import { type Completion, IconButton } from "../components";
-import { deepCopyJSON } from "../util/deepcopy";
 import {
     type CellActions,
     type FormalCellEditorProps,
@@ -30,7 +29,7 @@ import {
     StemCellEditor,
     isCellDragData,
 } from "./notebook_cell";
-import { type FormalCell, newFormalCell, newRichTextCell, newStemCell } from "./types";
+import { type FormalCell, newRichTextCell, newStemCell } from "./types";
 
 import "./notebook_editor.css";
 
@@ -85,21 +84,23 @@ export function NotebookEditor<T>(props: {
 }) {
     let notebookRef!: HTMLDivElement;
 
-    const [activeCell, setActiveCell] = createSignal(props.notebook.cells.length > 0 ? 0 : -1);
+    const [activeCell, setActiveCell] = createSignal(props.notebook.cellOrder.length > 0 ? 0 : -1);
     const [currentDropTarget, setCurrentDropTarget] = createSignal<string | null>(null);
     const [tether, setTether] = createSignal<DragLocationHistory | null>(null);
 
     // Set up commands and their keyboard shortcuts.
     const addAfterActiveCell = (cell: Cell<T>) => {
         props.changeNotebook((nb) => {
-            const i = Math.min(activeCell() + 1, nb.cells.length);
-            nb.cells.splice(i, 0, cell);
+            const i = Math.min(activeCell() + 1, nb.cellOrder.length);
+            nb.cellOrder.splice(i, 0, cell.id);
+            nb.cellContents[cell.id] = cell;
             setActiveCell(i);
         });
     };
 
     const addOrReplaceActiveCell = (cell: Cell<T>) => {
-        const c = props.notebook.cells[activeCell()];
+        const cellId = props.notebook.cellOrder[activeCell()];
+        const c = !cellId ? null : props.notebook.cellContents[cellId];
         if (c) {
             if (c.tag === "formal" || c.tag === "rich-text") {
                 addAfterActiveCell(cell);
@@ -113,8 +114,9 @@ export function NotebookEditor<T>(props: {
 
     const appendCell = (cell: Cell<T>) => {
         props.changeNotebook((nb) => {
-            nb.cells.push(cell);
-            setActiveCell(nb.cells.length - 1);
+            nb.cellOrder.push(cell.id);
+            nb.cellContents[cell.id] = cell;
+            setActiveCell(nb.cellOrder.length - 1);
         });
     };
 
@@ -131,20 +133,15 @@ export function NotebookEditor<T>(props: {
 
     const replaceCellWith = (i: number, cell: Cell<T>) => {
         props.changeNotebook((nb) => {
-            nb.cells[i] = cell;
-        });
-    };
+            const oldId = nb.cellOrder[i];
 
-    const duplicateCell = (cell: Cell<T>): Cell<T> => {
-        if (cell.tag === "formal") {
-            const content = (props.duplicateCell ?? deepCopyJSON)(cell.content);
-            return newFormalCell(content);
-        } else if (cell.tag === "rich-text") {
-            return newRichTextCell(cell.content);
-        } else if (cell.tag === "stem") {
-            return newStemCell();
-        }
-        throw new Error(`Cell with unknown tag: ${cell}`);
+            nb.cellOrder[i] = cell.id;
+            nb.cellContents[cell.id] = cell;
+
+            if (oldId) {
+                delete nb.cellContents[oldId];
+            }
+        });
     };
 
     const cellConstructors = (): CellConstructor<T>[] => [
@@ -193,7 +190,7 @@ export function NotebookEditor<T>(props: {
                 canMonitor({ source }) {
                     return (
                         isCellDragData(source.data) &&
-                        props.notebook.cells.some((cell) => cell.id === source.data.cellId)
+                        props.notebook.cellOrder.some((cellId) => cellId === source.data.cellId)
                     );
                 },
                 onDrop({ location, source }) {
@@ -206,8 +203,8 @@ export function NotebookEditor<T>(props: {
                     }
                     const [sourceId, targetId] = [source.data.cellId, target.data.cellId];
                     const nb = props.notebook;
-                    const sourceIndex = nb.cells.findIndex((cell) => cell.id === sourceId);
-                    const targetIndex = nb.cells.findIndex((cell) => cell.id === targetId);
+                    const sourceIndex = nb.cellOrder.findIndex((cellId) => cellId === sourceId);
+                    const targetIndex = nb.cellOrder.findIndex((cellId) => cellId === targetId);
                     if (sourceIndex < 0 || targetIndex < 0) {
                         return;
                     }
@@ -218,8 +215,9 @@ export function NotebookEditor<T>(props: {
                         axis: "vertical",
                     });
                     props.changeNotebook((nb) => {
-                        const [cell] = nb.cells.splice(sourceIndex, 1);
-                        nb.cells.splice(finalIndex, 0, deepCopyJSON(cell));
+                        const [cellId] = nb.cellOrder.splice(sourceIndex, 1);
+                        // biome-ignore lint/style/noNonNullAssertion:
+                        nb.cellOrder.splice(finalIndex, 0, cellId!);
                     });
                     setTether(null);
                     setCurrentDropTarget(null);
@@ -240,7 +238,7 @@ export function NotebookEditor<T>(props: {
 
     return (
         <div class="notebook" ref={notebookRef}>
-            <Show when={props.notebook.cells.length === 0}>
+            <Show when={props.notebook.cellOrder.length === 0}>
                 <div class="notebook-empty placeholder">
                     <IconButton onClick={() => appendCell(newStemCell())}>
                         <ListPlus />
@@ -249,60 +247,71 @@ export function NotebookEditor<T>(props: {
                 </div>
             </Show>
             <ul class="notebook-cells">
-                <For each={props.notebook.cells}>
-                    {(cell, i) => {
+                <For each={props.notebook.cellOrder}>
+                    {(cellId, i) => {
+                        const cell = props.notebook.cellContents[cellId];
+                        if (!cell) {
+                            throw `Failed to find contents for cell ${cellId}`;
+                        }
+
                         const isActive = () => activeCell() === i();
                         const cellActions: CellActions = {
                             activateAbove() {
                                 i() > 0 && setActiveCell(i() - 1);
                             },
                             activateBelow() {
-                                const n = props.notebook.cells.length;
+                                const n = props.notebook.cellOrder.length;
                                 i() < n - 1 && setActiveCell(i() + 1);
                             },
                             createAbove() {
                                 props.changeNotebook((nb) => {
-                                    nb.cells.splice(i(), 0, newStemCell());
+                                    const newCell = newStemCell();
+                                    nb.cellOrder.splice(i(), 0, newCell.id);
+                                    nb.cellContents[newCell.id] = newCell;
                                     setActiveCell(i());
                                 });
                             },
                             createBelow() {
                                 props.changeNotebook((nb) => {
-                                    nb.cells.splice(i() + 1, 0, newStemCell());
+                                    const newCell = newStemCell();
+                                    nb.cellOrder.splice(i() + 1, 0, newCell.id);
+                                    nb.cellContents[newCell.id] = newCell;
                                     setActiveCell(i() + 1);
                                 });
                             },
                             deleteBackward() {
                                 props.changeNotebook((nb) => {
-                                    nb.cells.splice(i(), 1);
+                                    const cellId = nb.cellOrder[i()];
+                                    // biome-ignore lint/style/noNonNullAssertion:
+                                    delete nb.cellContents[cellId!];
+                                    nb.cellOrder.splice(i(), 1);
                                     setActiveCell(i() - 1);
                                 });
                             },
                             deleteForward() {
                                 props.changeNotebook((nb) => {
-                                    nb.cells.splice(i(), 1);
+                                    const cellId = nb.cellOrder[i()];
+                                    // biome-ignore lint/style/noNonNullAssertion:
+                                    delete nb.cellContents[cellId!];
+                                    nb.cellOrder.splice(i(), 1);
                                     setActiveCell(i());
-                                });
-                            },
-                            duplicate() {
-                                const cell = props.notebook.cells[i()];
-                                props.changeNotebook((nb) => {
-                                    cell && nb.cells.splice(i() + 1, 0, duplicateCell(cell));
                                 });
                             },
                             moveUp() {
                                 props.changeNotebook((nb) => {
                                     if (i() > 0) {
-                                        const [cellToMoveUp] = nb.cells.splice(i(), 1);
-                                        nb.cells.splice(i() - 1, 0, deepCopyJSON(cellToMoveUp));
+                                        const [cellIdToMoveUp] = nb.cellOrder.splice(i(), 1);
+                                        // biome-ignore lint/style/noNonNullAssertion:
+                                        nb.cellOrder.splice(i() - 1, 0, cellIdToMoveUp!);
                                     }
                                 });
                             },
                             moveDown() {
                                 props.changeNotebook((nb) => {
-                                    if (i() < nb.cells.length - 1) {
-                                        const [cellToMoveDown] = nb.cells.splice(i(), 1);
-                                        nb.cells.splice(i() + 1, 0, deepCopyJSON(cellToMoveDown));
+                                    if (i() < nb.cellOrder.length - 1) {
+                                        const [cellIdToMoveDown] = nb.cellOrder.splice(i(), 1);
+                                        // biome-ignore lint/style/noNonNullAssertion:
+                                        nb.cellOrder.splice(i() + 1, 0, cellIdToMoveDown!);
                                     }
                                 });
                             },
@@ -330,7 +339,12 @@ export function NotebookEditor<T>(props: {
                                             <RichTextCellEditor
                                                 cellId={cell.id}
                                                 handle={props.handle}
-                                                path={[...props.path, "cells", i()]}
+                                                path={[
+                                                    ...props.path,
+                                                    "cellContents",
+                                                    // biome-ignore lint/style/noNonNullAssertion:
+                                                    props.notebook.cellOrder[i()]!,
+                                                ]}
                                                 isActive={isActive()}
                                                 actions={cellActions}
                                             />
@@ -340,7 +354,12 @@ export function NotebookEditor<T>(props: {
                                                 content={(cell as FormalCell<T>).content}
                                                 changeContent={(f) => {
                                                     props.changeNotebook((nb) => {
-                                                        f((nb.cells[i()] as FormalCell<T>).content);
+                                                        const cell = nb.cellContents[
+                                                            // biome-ignore lint/style/noNonNullAssertion:
+                                                            nb.cellOrder[i()]!
+                                                        ] as FormalCell<T>;
+
+                                                        f(cell.content);
                                                     });
                                                 }}
                                                 isActive={isActive()}
@@ -361,7 +380,11 @@ export function NotebookEditor<T>(props: {
                     }}
                 </For>
             </ul>
-            <Show when={props.notebook.cells.some((cell) => cell.tag !== "stem")}>
+            <Show
+                when={props.notebook.cellOrder.some(
+                    (cellId) => props.notebook.cellContents[cellId]?.tag !== "stem",
+                )}
+            >
                 <div class="placeholder">
                     <IconButton
                         onClick={() => appendCell(newStemCell())}
