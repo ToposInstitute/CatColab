@@ -6,6 +6,10 @@ edition = "2024"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[[bin]]
+name = "migrate_examples"
+path = "src/bin/migrate_examples.rs"
+
 [dependencies]
 nonempty = { version = "0.12", features = ["serialize"] }
 serde = { version = "1.0.219", features = ["derive"] }

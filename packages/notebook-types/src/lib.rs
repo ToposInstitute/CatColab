@@ -6,6 +6,9 @@ use wasm_bindgen::prelude::*;
 mod v0;
 pub mod v1;
 
+#[cfg(test)]
+mod test_utils;
+
 pub mod current {
     // this should always track the latest version, and is the only version
     // that is exported from notebook-types
@@ -45,7 +48,7 @@ impl<'de> Deserialize<'de> for VersionedDocument {
                     serde_json::from_value(value).map_err(serde::de::Error::custom)?;
                 Ok(VersionedDocument::V1(doc))
             }
-            other => Err(serde::de::Error::custom(format!("unsupported version {}", other))),
+            other => Err(serde::de::Error::custom(format!("unsupported version {other}"))),
         }
     }
 }
@@ -66,9 +69,23 @@ impl VersionedDocument {
 #[wasm_bindgen(js_name = "migrateDocument")]
 pub fn migrate_document(input: JsValue) -> Result<JsValue, JsValue> {
     let doc: VersionedDocument =
-        from_value(input).map_err(|e| JsValue::from_str(&format!("deserialize error: {}", e)))?;
+        from_value(input).map_err(|e| JsValue::from_str(&format!("deserialize error: {e}")))?;
 
     let current_doc = doc.to_current();
 
-    to_value(&current_doc).map_err(|e| JsValue::from_str(&format!("serialize error: {}", e)))
+    to_value(&current_doc).map_err(|e| JsValue::from_str(&format!("serialize error: {e}")))
+}
+
+#[cfg(test)]
+mod migration_tests {
+    use super::VersionedDocument;
+    use crate::test_utils::test_example_documents;
+
+    #[test]
+    fn test_v0_examples_migrate_to_current() {
+        test_example_documents::<VersionedDocument, _>("examples/v0", |doc, path| {
+            // ensure it migrates without panic
+            let _ = doc.to_current();
+        });
+    }
 }

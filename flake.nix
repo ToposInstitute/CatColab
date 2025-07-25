@@ -156,6 +156,7 @@
               sqlx-cli
               biome
               wasm-pack
+              vscode-langservers-extracted
               wasm-bindgen-cli
             ]
             ++ darwinDeps
