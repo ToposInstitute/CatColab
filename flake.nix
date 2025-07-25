@@ -206,14 +206,6 @@
         x86_64-linux = {
 
           test-cache = pkgsLinux.hello;
-
-          gc-roots = pkgsLinux.runCommand "flake-input-gc-roots" { } ''
-            mkdir -p $out
-            ${pkgsLinux.lib.concatStringsSep "\n" (
-              builtins.map (inp: "ln -s ${inputs.${inp}.outPath} $out/${inp}") (builtins.attrNames inputs)
-            )}
-          '';
-        };
       };
 
       # Create a NixOS configuration for each host
