@@ -203,6 +203,10 @@
 
       packages = {
         inherit catlog-wasm;
+        x86_64-linux = {
+
+          test-cache = pkgsLinux.hello;
+        };
       };
 
       # Create a NixOS configuration for each host
