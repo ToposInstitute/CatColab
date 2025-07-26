@@ -12,13 +12,13 @@ default = ["console_error_panic_hook"]
 
 [dependencies]
 all-the-same = "1.1.0"
-catlog = { path = "../catlog", features = ["ode", "serde-wasm"] }
+catlog = { path = "../catlog", features = ["simulate", "serde-wasm"] }
 console_error_panic_hook = { version = "0.1.7", optional = true }
 derive_more = { version = "2", features = ["from", "try_into"] }
 egglog = { version = "0.4", default-features = false, features = [
     "wasm-bindgen",
 ] }
-getrandom = { version = "0.2", features = ["js"] }
+getrandom = { version = "0.3", features = ["wasm_js"] }
 js-sys = "0.3.77"
 nonempty = { version = "0.12", features = ["serialize"] }
 notebook-types = { version = "0.1.0", path = "../notebook-types" }
@@ -30,3 +30,6 @@ wasm-bindgen = "0.2.100"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.50"
+
+[target.wasm32-unknown-unknown]
+rustflags = ['--cfg', 'getrandom_backend="wasm_js"']
