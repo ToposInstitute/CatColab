@@ -29,8 +29,8 @@ pkgs.stdenv.mkDerivation {
   ];
 
   patchPhase = ''
-    mkdir -p ./pkg-node
-    cp -r ${self.packages.catlog-wasm}/* ./pkg-node/
+    mkdir -p ../catlog-wasm/dist/pkg-node
+    cp -r ${self.packages.catlog-wasm}/* ../catlog-wasm/dist/pkg-node/
   '';
 
   installPhase = ''
