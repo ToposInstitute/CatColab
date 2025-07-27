@@ -3,7 +3,6 @@
   pkgs,
   config,
   rustToolchain,
-  inputs,
   self,
   ...
 }:
@@ -40,9 +39,7 @@ let
       inherit rustToolchain;
     };
 
-    automerge-doc-server =
-      pkgs.lib.callPackageWith pkgs ../../../packages/automerge-doc-server/default.nix
-        { inherit inputs rustToolchain self; };
+    automerge-doc-server = self.packages.x86_64-linux.automerge;
   };
 
   backendPortStr = builtins.toString config.catcolab.backend.port;

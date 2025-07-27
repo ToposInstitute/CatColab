@@ -17,7 +17,6 @@
     crane = {
       url = "github:ipetkov/crane";
       inputs = {
-        flake-utils.follows = "flake-utils";
         nixpkgs.follows = "nixpkgs";
       };
     };
@@ -203,10 +202,12 @@
       );
 
       packages = {
-        inherit catlog-wasm;
+        x86_64-linux = {
+          inherit catlog-wasm;
 
-        automerge = pkgsLinux.callPackage ./packages/automerge-doc-server/default.nix {
-          inherit inputs rustToolchainLinux self;
+          automerge = pkgsLinux.callPackage ./packages/automerge-doc-server/default.nix {
+            inherit inputs rustToolchainLinux self;
+          };
         };
       };
 
@@ -282,6 +283,8 @@
           rustToolchain = rustToolchainLinux;
         };
 
+        # NOTE: This only checks if the services "start" from systemds perspective, not if they are not
+        # failed immediately after starting...
         testScript = ''
           def dump_logs(machine, *units):
               for u in units:

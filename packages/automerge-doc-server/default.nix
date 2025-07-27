@@ -33,7 +33,7 @@ pkgs.stdenv.mkDerivation {
   # directory structure in a way familiar to pnpm.
   unpackPhase = ''
     mkdir -p ./catlog-wasm/dist/pkg-node
-    cp -r ${self.packages.catlog-wasm}/* ./catlog-wasm/dist/pkg-node/
+    cp -r ${self.packages.x86_64-linux.catlog-wasm}/* ./catlog-wasm/dist/pkg-node/
 
     mkdir ./automerge-doc-server
     cp -r $src/* ./automerge-doc-server
@@ -54,7 +54,7 @@ pkgs.stdenv.mkDerivation {
       exit 1
     fi
 
-    cp "${self.packages.catlog-wasm}/catlog_wasm_bg.wasm" "$out/"
+    cp "${self.packages.x86_64-linux.catlog-wasm}/catlog_wasm_bg.wasm" "$out/"
     cp "$automerge_wasm_path" "$out/"
 
     mkdir -p $out/bin
