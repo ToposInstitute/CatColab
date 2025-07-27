@@ -16,9 +16,6 @@
 
     crane = {
       url = "github:ipetkov/crane";
-      inputs = {
-        nixpkgs.follows = "nixpkgs";
-      };
     };
 
     nixpkgsUnstable = {
@@ -72,52 +69,109 @@
       commonArgs = {
         inherit src;
         strictDeps = true;
-
-        nativeBuildInputs = [ pkgsLinux.pkg-config ];
+        nativeBuildInputs = [
+          pkgsLinux.pkg-config
+        ];
         buildInputs = [
           pkgsLinux.openssl
         ];
-
       };
 
       cargoArtifacts = craneLib.buildDepsOnly commonArgs;
 
-      individualCrateArgs = commonArgs // {
+      catlog-wasm = craneLib.buildPackage {
         inherit cargoArtifacts;
         doCheck = false;
+        pname = "catlog-wasm";
+        version = "1";
+
+        nativeBuildInputs = [
+          pkgsLinux.wasm-pack
+          pkgsLinux.wasm-bindgen-cli
+          pkgsLinux.binaryen
+        ];
+
+        buildInputs = [
+          pkgsLinux.openssl
+        ];
+
+        cargoExtraArgs = "-p catlog-wasm";
+        # src = craneLib.cleanCargoSource ./.;
+        src = pkgsLinux.lib.fileset.toSource {
+          root = ./.;
+          fileset = pkgsLinux.lib.fileset.unions [
+            ./Cargo.toml
+            ./Cargo.lock
+            (craneLib.fileset.commonCargoSources ./packages/catlog)
+            (craneLib.fileset.commonCargoSources ./packages/catlog-wasm)
+            (craneLib.fileset.commonCargoSources ./packages/notebook-types)
+            # (craneLib.fileset.commonCargoSources ./crates/my-workspace-hack)
+            # (craneLib.fileset.commonCargoSources ./crates/my-cli)
+          ];
+        };
+
+        # run wasm-pack instead of plain cargo
+        # buildPhase = ''
+        #   cd packages/catlog-wasm
+        #   # WTF: engage maximum cargo cult. I have no idea wasm-pack needs $HOME set, that is wild.
+        #   # https://github.com/NixOS/nixpkgs/blob/b5d0681604d2acd74818561bd2f5585bfad7087d/pkgs/by-name/te/tetrio-desktop/tetrio-plus.nix#L66C7-L66C24
+        #   # https://discourse.nixos.org/t/help-packaging-mipsy-wasm-pack-error/51876
+        #   HOME=$(mktemp -d) wasm-pack build --target nodejs
+        # '';
+
+        # installPhase = ''
+        #   mkdir -p $out
+        #   cp -r pkg/* $out/
+        #   ls $out/
+        # '';
       };
 
-      catlog-wasm = craneLib.buildPackage (
-        individualCrateArgs
-        // {
-          pname = "catlog-wasm";
+      catlog = craneLib.buildPackage {
+        inherit cargoArtifacts;
+        doCheck = false;
+        pname = "catlog";
+        version = "1";
 
-          nativeBuildInputs = individualCrateArgs.nativeBuildInputs ++ [
-            pkgsLinux.wasm-pack
-            pkgsLinux.wasm-bindgen-cli
-            pkgsLinux.binaryen
+        nativeBuildInputs = [
+          pkgsLinux.wasm-pack
+          pkgsLinux.wasm-bindgen-cli
+          pkgsLinux.binaryen
+        ];
+
+        buildInputs = [
+          pkgsLinux.openssl
+        ];
+
+        cargoExtraArgs = "-p catlog";
+        # src = craneLib.cleanCargoSource ./.;
+        src = pkgsLinux.lib.fileset.toSource {
+          root = ./.;
+          fileset = pkgsLinux.lib.fileset.unions [
+            ./Cargo.toml
+            ./Cargo.lock
+            (craneLib.fileset.commonCargoSources ./packages/catlog)
+            # (craneLib.fileset.commonCargoSources ./packages/catlog-wasm)
+            # (craneLib.fileset.commonCargoSources ./packages/notebook-types)
+            # (craneLib.fileset.commonCargoSources ./crates/my-workspace-hack)
+            # (craneLib.fileset.commonCargoSources ./crates/my-cli)
           ];
+        };
 
-          src = craneLib.cleanCargoSource ./.;
+        # run wasm-pack instead of plain cargo
+        # buildPhase = ''
+        #   cd packages/catlog-wasm
+        #   # WTF: engage maximum cargo cult. I have no idea wasm-pack needs $HOME set, that is wild.
+        #   # https://github.com/NixOS/nixpkgs/blob/b5d0681604d2acd74818561bd2f5585bfad7087d/pkgs/by-name/te/tetrio-desktop/tetrio-plus.nix#L66C7-L66C24
+        #   # https://discourse.nixos.org/t/help-packaging-mipsy-wasm-pack-error/51876
+        #   HOME=$(mktemp -d) wasm-pack build --target nodejs
+        # '';
 
-          # run wasm-pack instead of plain cargo
-          buildPhase = ''
-            cd packages/catlog-wasm
-            echo "before wasm-pack"
-
-            # WTF: engage maximum cargo cult. I have no idea wasm-pack needs $HOME set, that is wild.
-            # https://github.com/NixOS/nixpkgs/blob/b5d0681604d2acd74818561bd2f5585bfad7087d/pkgs/by-name/te/tetrio-desktop/tetrio-plus.nix#L66C7-L66C24
-            # https://discourse.nixos.org/t/help-packaging-mipsy-wasm-pack-error/51876            
-            HOME=$(mktemp -d) wasm-pack build --target nodejs
-          '';
-
-          installPhase = ''
-            mkdir -p $out
-            cp -r pkg/* $out/
-            ls $out/
-          '';
-        }
-      );
+        # installPhase = ''
+        #   mkdir -p $out
+        #   cp -r pkg/* $out/
+        #   ls $out/
+        # '';
+      };
 
       # Generate devShells for each system
       devShellForSystem =
@@ -203,7 +257,7 @@
 
       packages = {
         x86_64-linux = {
-          inherit catlog-wasm;
+          inherit catlog-wasm catlog;
 
           automerge = pkgsLinux.callPackage ./packages/automerge-doc-server/default.nix {
             inherit inputs rustToolchainLinux self;
