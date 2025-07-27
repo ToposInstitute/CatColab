@@ -28,15 +28,22 @@ pkgs.stdenv.mkDerivation {
     nodejs_24
   ];
 
-  patchPhase = ''
-    mkdir -p ../catlog-wasm/dist/pkg-node
-    cp -r ${self.packages.catlog-wasm}/* ../catlog-wasm/dist/pkg-node/
+  # package.json expects catlog-wasm to be at ../catlog-wasm, we COULD modify the parent of the nix
+  # `build` directory, but this is technically unsupported. Instead we recreate part of the `packages`
+  # directory structure in a way familiar to pnpm.
+  unpackPhase = ''
+    mkdir -p ./catlog-wasm/dist/pkg-node
+    cp -r ${self.packages.catlog-wasm}/* ./catlog-wasm/dist/pkg-node/
+
+    mkdir ./automerge-doc-server
+    cp -r $src/* ./automerge-doc-server
+
+    cd automerge-doc-server
   '';
 
   installPhase = ''
     # We use esbuild instead of tsc for building, as it bundles all required JavaScript into a single
     # file. This avoids copying the entire ~200MB node_modules directory to the remote machine during deployments.
-    # iterations.
     ${pkgs.lib.getExe pkgs.esbuild} src/main.ts --bundle --platform=node --format=cjs --loader:.wasm=file --outfile=$out/main.cjs
 
     # Since we are no longer copying the entire node_modules directory, we need to manually find and copy
@@ -47,14 +54,11 @@ pkgs.stdenv.mkDerivation {
       exit 1
     fi
 
-    # # echo "ESBUILD"
-    # # ${pkgs.lib.getExe pkgs.esbuild} --version
-    # # exit 1
     cp "${self.packages.catlog-wasm}/catlog_wasm_bg.wasm" "$out/"
     cp "$automerge_wasm_path" "$out/"
 
-    # mkdir -p $out/bin
-    # makeWrapper ${pkgs.nodejs_24}/bin/node $out/bin/${name} --add-flags "$out/main.cjs"
+    mkdir -p $out/bin
+    makeWrapper ${pkgs.nodejs_24}/bin/node $out/bin/${name} --add-flags "$out/main.cjs"
   '';
 
   pnpmDeps = pkgsUnstable.pnpm_9.fetchDeps {
