@@ -74,13 +74,14 @@ function enlivenModelDocument(
     // Memo-ize the *formal* content of the notebook, since most derived objects
     // will not depend on the informal (rich-text) content in notebook.
     const formalJudgments = createMemo<Array<ModelJudgment>>(() => {
-        return (
-            doc.notebook.cellOrder
-                // biome-ignore lint/style/noNonNullAssertion:
-                .map((cellId) => doc.notebook.cellContents[cellId]!)
-                .filter((cell) => cell.tag === "formal")
-                .map((cell) => cell.content)
-        );
+        console.log(JSON.parse(JSON.stringify(doc.notebook)));
+        const a = doc.notebook.cellOrder
+            // biome-ignore lint/style/noNonNullAssertion:
+            .map((cellId) => doc.notebook.cellContents[cellId]!)
+            .filter((cell) => cell.tag === "formal")
+            .map((cell) => cell.content);
+        // console.log("after");
+        return a;
     }, []);
 
     const objectIndex = createMemo<IndexedMap<Uuid, string>>(() => {

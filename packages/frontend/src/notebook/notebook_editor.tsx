@@ -272,10 +272,13 @@ export function NotebookEditor<T>(props: {
                                 });
                             },
                             createBelow() {
+                                console.log("Creating below");
                                 props.changeNotebook((nb) => {
                                     const newCell = newStemCell();
                                     nb.cellOrder.splice(i() + 1, 0, newCell.id);
                                     nb.cellContents[newCell.id] = newCell;
+                                    // @ts-ignore
+                                    nb.cellStuff = { test: "huh" };
                                     setActiveCell(i() + 1);
                                 });
                             },

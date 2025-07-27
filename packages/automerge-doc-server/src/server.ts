@@ -32,6 +32,7 @@ export class AutomergeServer implements SocketIOHandlers {
     public handleChange?: (refId: string, content: any) => void;
 
     constructor(port: number | string) {
+        console.log(catlog.currentVersion());
         this.docMap = new Map();
 
         this.app = express();
@@ -131,8 +132,18 @@ export class AutomergeServer implements SocketIOHandlers {
         // diff to the original object. The application of the diff happens entirely is JS land, so the changes
         // are captured by Automerge.
         const docBefore = await handle.doc();
-        const docAfter = catlog.migrateDocument(docBefore);
+        const copy = JSON.parse(JSON.stringify(docBefore));
+        console.log("doc before", JSON.stringify(docBefore, null, 2));
+        const docAfter = catlog.migrateDocument(copy);
+        console.log("doc after", JSON.stringify(docAfter, null, 2));
         const patches = jsonpatch.compare(docBefore as any, docAfter);
+
+        const replacer = (key, value) =>
+            value instanceof Map ? { dataType: "Map", value: Array.from(value.entries()) } : value;
+
+        console.log(JSON.stringify(docAfter, replacer, 2));
+
+        console.log("patches", JSON.stringify(patches, null, 2));
         handle.change((doc: any) => {
             jsonpatch.applyPatch(doc, patches);
         });

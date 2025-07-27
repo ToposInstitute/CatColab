@@ -14,7 +14,7 @@
   "dependencies": {
     "@automerge/automerge-repo": "^1.2.1",
     "@automerge/automerge-repo-network-websocket": "^1.2.1",
-    "catlog-wasm": "file:../catlog-wasm/dist/pkg-node",
+    "catlog-wasm": "link:../catlog-wasm/dist/pkg-node",
     "dotenv": "^16.5.0",
     "express": "^4.19.2",
     "fast-json-patch": "^3.1.1",
