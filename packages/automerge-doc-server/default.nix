@@ -28,18 +28,16 @@ pkgs.stdenv.mkDerivation {
     nodejs_24
   ];
 
+  patchPhase = ''
+    mkdir -p ./pkg-node
+    cp -r ${self.packages.catlog-wasm}/* ./pkg-node/
+  '';
+
   installPhase = ''
-    mkdir -p $out/
-
-    mkdir -p ../catlog-wasm/pkg-node
-    cp -r ${self.packages.catlog-wasm}/* ../catlog-wasm/pkg-node/
-
     # We use esbuild instead of tsc for building, as it bundles all required JavaScript into a single
-    # file. This avoids copying the entire ~200MB node_modules directory to the remote machine during
-    # deploy-rs deployments, which can increase the deployment time by >2x. It's an intentional
-    # trade-off: slightly increased configuration complexity in exchange for faster development
+    # file. This avoids copying the entire ~200MB node_modules directory to the remote machine during deployments.
     # iterations.
-    ${pkgs.lib.getExe pkgs.esbuild} src/main.ts --bundle --platform=node --format=cjs --loader:.wasm=file \--outfile=$out/main.cjs
+    ${pkgs.lib.getExe pkgs.esbuild} src/main.ts --bundle --platform=node --format=cjs --loader:.wasm=file --outfile=$out/main.cjs
 
     # Since we are no longer copying the entire node_modules directory, we need to manually find and copy
     # the wasm file for automerge
@@ -49,10 +47,14 @@ pkgs.stdenv.mkDerivation {
       exit 1
     fi
 
+    # # echo "ESBUILD"
+    # # ${pkgs.lib.getExe pkgs.esbuild} --version
+    # # exit 1
+    cp "${self.packages.catlog-wasm}/catlog_wasm_bg.wasm" "$out/"
     cp "$automerge_wasm_path" "$out/"
 
-    mkdir -p $out/bin
-    makeWrapper ${pkgs.nodejs_24}/bin/node $out/bin/${name} --add-flags "$out/main.cjs"
+    # mkdir -p $out/bin
+    # makeWrapper ${pkgs.nodejs_24}/bin/node $out/bin/${name} --add-flags "$out/main.cjs"
   '';
 
   pnpmDeps = pkgsUnstable.pnpm_9.fetchDeps {
@@ -62,7 +64,7 @@ pkgs.stdenv.mkDerivation {
     src = ./.;
 
     # See README.md
-    # hash = pkgs.lib.fakeHash;
+    # hash = "";
     hash = "sha256-LViebHXSetQdKCcuLTO2k+SdYeEoF57CMLnYKVEjcb4=";
   };
 

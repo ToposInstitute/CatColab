@@ -109,7 +109,7 @@
             # WTF: engage maximum cargo cult. I have no idea wasm-pack needs $HOME set, that is wild.
             # https://github.com/NixOS/nixpkgs/blob/b5d0681604d2acd74818561bd2f5585bfad7087d/pkgs/by-name/te/tetrio-desktop/tetrio-plus.nix#L66C7-L66C24
             # https://discourse.nixos.org/t/help-packaging-mipsy-wasm-pack-error/51876            
-            HOME=$(mktemp -d) wasm-pack build
+            HOME=$(mktemp -d) wasm-pack build --target nodejs
           '';
 
           installPhase = ''
@@ -158,6 +158,7 @@
               wasm-pack
               vscode-langservers-extracted
               wasm-bindgen-cli
+              esbuild
             ]
             ++ darwinDeps
             ++ [
@@ -203,6 +204,10 @@
 
       packages = {
         inherit catlog-wasm;
+
+        automerge = pkgsLinux.callPackage ./packages/automerge-doc-server/default.nix {
+          inherit inputs rustToolchainLinux self;
+        };
       };
 
       # Create a NixOS configuration for each host

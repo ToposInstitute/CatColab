@@ -15,8 +15,8 @@ importers:
         specifier: ^1.2.1
         version: 1.2.1(@types/node@22.7.4)(typescript@5.6.2)
       catlog-wasm:
-        specifier: link:../catlog-wasm/pkg-node
-        version: link:../catlog-wasm/pkg-node
+        specifier: file:./pkg-node
+        version: file:pkg-node
       dotenv:
         specifier: ^16.5.0
         version: 16.5.0
@@ -401,6 +401,9 @@ packages:
   call-bind@1.0.7:
     resolution: {integrity: sha512-GHTSNSYICQ7scH7sZ+M2rFopRoLh8t2bLSW6BbgrtLsahOIB5iyAVJf9GjWK3cYTDaMj4XdBpM1cA6pIS0Kv2w==}
     engines: {node: '>= 0.4'}
+
+  catlog-wasm@file:pkg-node:
+    resolution: {directory: pkg-node, type: directory}
 
   cbor-extract@2.2.0:
     resolution: {integrity: sha512-Ig1zM66BjLfTXpNgKpvBePq271BPOvu8MR0Jl080yG7Jsl+wAZunfrwiwA+9ruzm/WEdIV5QF/bjDZTqyAIVHA==}
@@ -1140,6 +1143,8 @@ snapshots:
       function-bind: 1.1.2
       get-intrinsic: 1.2.4
       set-function-length: 1.2.2
+
+  catlog-wasm@file:pkg-node: {}
 
   cbor-extract@2.2.0:
     dependencies:
