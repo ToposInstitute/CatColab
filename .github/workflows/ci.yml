@@ -103,32 +103,32 @@ jobs:
     - uses: actions/checkout@v4
 
     - uses: nixbuild/nix-quick-install-action@v31
-    - name: Restore and save Nix store
-      uses: nix-community/cache-nix-action@v6
-      with:
-        # The github action cache is limited to 10GB and the compressed nix store for this project is
-        # typically around 3GB as a result it is very easy to thrash the cache by when using
-        # using hashed cache keys. This results in "useful" caches being evicted.
-        # 
-        # NOTE: The above does not fully explain some issues we've had with cache misses. We've had
-        # back-to-back runs with the exact same key fail to find a cache, when the same key matched a
-        # cache days before.
-        #
-        # To work around this, we always reuse the same cache and rely on nix garbage collection for
-        # keeping that cache a reasonable size.
-        #
-        # There is a degenerate case: where parallel development uses different flake inputs (like the
-        # NixOS versions). Each job's garbage collection will prune store paths not tied to that job's
-        # inputs. As a result, branches with differing inputs may end up with almost no cached data.
-        # This case should not come up that often, and when it does it will just result in some ~15min
-        # CI times.
-        primary-key: "fixed-primary-key13"
+    # - name: Restore and save Nix store
+    #   uses: nix-community/cache-nix-action@v6
+    #   with:
+    #     # The github action cache is limited to 10GB and the compressed nix store for this project is
+    #     # typically around 3GB as a result it is very easy to thrash the cache by when using
+    #     # using hashed cache keys. This results in "useful" caches being evicted.
+    #     # 
+    #     # NOTE: The above does not fully explain some issues we've had with cache misses. We've had
+    #     # back-to-back runs with the exact same key fail to find a cache, when the same key matched a
+    #     # cache days before.
+    #     #
+    #     # To work around this, we always reuse the same cache and rely on nix garbage collection for
+    #     # keeping that cache a reasonable size.
+    #     #
+    #     # There is a degenerate case: where parallel development uses different flake inputs (like the
+    #     # NixOS versions). Each job's garbage collection will prune store paths not tied to that job's
+    #     # inputs. As a result, branches with differing inputs may end up with almost no cached data.
+    #     # This case should not come up that often, and when it does it will just result in some ~15min
+    #     # CI times.
+    #     primary-key: "fixed-primary-key13"
 
-        # Since we are manually updating the cache, and we don't know if the cache has changed we need to
-        # purge the existing cache and re-upload it on every run. We could save 90s in CI it we
-        # figured out how to skip the purge + re-upload when no garbage is collected.
-        purge: true
-        purge-primary-key: "always"
+    #     # Since we are manually updating the cache, and we don't know if the cache has changed we need to
+    #     # purge the existing cache and re-upload it on every run. We could save 90s in CI it we
+    #     # figured out how to skip the purge + re-upload when no garbage is collected.
+    #     purge: true
+    #     purge-primary-key: "always"
 
     # - name: Build 'catcolab-vm' host
     #   run: |
@@ -137,22 +137,31 @@ jobs:
     # - name: Build 'catcolab' host
     #   run: |
     #     nix build .#nixosConfigurations.catcolab.config.system.build.toplevel --out-link result-catcolab
-    - name: build deployrs
-      run: |
-        nix build github:serokell/deploy-rs#deploy-rs --out-link result-deploy-rs
+    # - name: build deployrs
+    #   run: |
+    #     nix build github:serokell/deploy-rs#deploy-rs --out-link result-deploy-rs
 
-    - name: Build 'catcolab-next' host
+    - name: Set up SSH key
       run: |
-        nix build .#nixosConfigurations.catcolab.config.system.build.toplevel --out-link result-catcolab-next
+        mkdir -p ~/.ssh
+        echo "${{ secrets.CATCOLAB_NEXT_DEPLOYUSER_KEY }}" > ~/.ssh/id_ed25519
+        chmod 600 ~/.ssh/id_ed25519
+        ssh-keyscan ${TARGET_HOST} >> ~/.ssh/known_hosts
+        ssh catcolab@backend-next.catcolab.org 'echo "hello"'
+
+
+    # - name: Build 'catcolab-next' host
+    #   run: |
+    #     nix build .#nixosConfigurations.catcolab.config.system.build.toplevel --out-link result-catcolab-next
 
         # sudo nix-store --add-root /nix/var/nix/gcroots/catcolab --indirect --realise $(nix-store --query --requisites ./result-catcolab)
 
-    - name: Run nixos-rebuild switch remotely
-      run: |
-         nix run github:serokell/deploy-rs .#${HOST_CONFIG}
+    # - name: Run nixos-rebuild switch remotely
+    #   run: |
+    #      nix run github:serokell/deploy-rs .#${HOST_CONFIG}
 
-    - name: Prune unused Nix store paths
-      run: nix store gc --option keep-outputs true --option keep-derivations true
+    # - name: Prune unused Nix store paths
+    #   run: nix store gc --option keep-outputs true --option keep-derivations true
 
 
   # deploy_backend:
