@@ -172,6 +172,7 @@ impl StockFlowMassActionAnalysis {
             }
         }
 
+        #[allow(clippy::type_complexity)]
         let terms: Vec<(Id, Polynomial<Id, Parameter<Id>, u8>)> = terms
             .into_iter()
             .map(|(flow, term)| {

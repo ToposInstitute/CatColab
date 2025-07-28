@@ -868,7 +868,6 @@ impl<T: Eq + Hash + Clone> MutColumn for IndexedVecColumn<T> {}
 pub struct IndexedHashColumn<K, V>(IndexedColumn<K, V, HashColumn<K, V>, HashIndex<K, V>>);
 
 /// An indexed column with keys and values of type `Ustr`.
-#[allow(clippy::type_complexity)]
 pub type IndexedUstrColumn = IndexedHashColumn<Ustr, Ustr>;
 
 impl<K, V> IntoIterator for IndexedHashColumn<K, V>

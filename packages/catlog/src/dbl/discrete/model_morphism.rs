@@ -199,14 +199,12 @@ where
     pub fn is_injective_objects(&self) -> bool {
         let DblModelMorphism(DiscreteDblModelMapping(mapping), dom, _) = *self;
         let mut seen_obs: HashSet<_> = HashSet::new();
-        #[allow(clippy::redundant_else)]
         for x in dom.ob_generators() {
             if let Some(f_x) = mapping.apply_vertex(x) {
                 if seen_obs.contains(&f_x) {
                     return false; // not monic
-                } else {
-                    seen_obs.insert(f_x);
                 }
+                seen_obs.insert(f_x);
             }
         }
         true
@@ -229,7 +227,6 @@ where
         assert!(self.is_simple(), "Morphism assignments should be simple");
 
         let functor = mapping.functor_into(&cod.category);
-        #[allow(clippy::redundant_else)]
         for x in dom.ob_generators() {
             for y in dom.ob_generators() {
                 let mut seen: HashSet<_> = HashSet::new();
@@ -237,9 +234,8 @@ where
                     if let Some(f_path) = functor.apply_mor(path) {
                         if seen.contains(&f_path) {
                             return false; // not faithful
-                        } else {
-                            seen.insert(f_path);
                         }
+                        seen.insert(f_path);
                     }
                 }
             }

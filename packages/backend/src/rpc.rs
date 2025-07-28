@@ -1,3 +1,5 @@
+#![allow(clippy::used_underscore_items)]
+
 use firebase_auth::FirebaseUser;
 use http::StatusCode;
 use qubit::{Extensions, FromRequestExtensions, Router, RpcError, handler};
@@ -38,7 +40,6 @@ async fn new_ref(ctx: AppCtx, content: Value) -> RpcResult<Uuid> {
 
 #[handler(query)]
 async fn get_doc(ctx: AppCtx, ref_id: Uuid) -> RpcResult<RefDoc> {
-    #[allow(clippy::used_underscore_items)]
     _get_doc(ctx, ref_id).await.into()
 }
 async fn _get_doc(ctx: AppCtx, ref_id: Uuid) -> Result<RefDoc, AppError> {
@@ -89,7 +90,6 @@ async fn search_ref_stubs(
 
 #[handler(query)]
 async fn head_snapshot(ctx: AppCtx, ref_id: Uuid) -> RpcResult<Value> {
-    #[allow(clippy::used_underscore_items)]
     _head_snapshot(ctx, ref_id).await.into()
 }
 async fn _head_snapshot(ctx: AppCtx, ref_id: Uuid) -> Result<Value, AppError> {
@@ -114,7 +114,6 @@ async fn get_permissions(ctx: AppCtx, ref_id: Uuid) -> RpcResult<Permissions> {
 
 #[handler(mutation)]
 async fn set_permissions(ctx: AppCtx, ref_id: Uuid, new: NewPermissions) -> RpcResult<()> {
-    #[allow(clippy::used_underscore_items)]
     _set_permissions(ctx, ref_id, new).await.into()
 }
 async fn _set_permissions(ctx: AppCtx, ref_id: Uuid, new: NewPermissions) -> Result<(), AppError> {
