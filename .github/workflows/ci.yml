@@ -122,7 +122,7 @@ jobs:
         # inputs. As a result, branches with differing inputs may end up with almost no cached data.
         # This case should not come up that often, and when it does it will just result in some ~15min
         # CI times.
-        primary-key: "fixed-primary-key13"
+        primary-key: "fixed-primary-key"
 
         # Since we are manually updating the cache, and we don't know if the cache has changed we need to
         # purge the existing cache and re-upload it on every run. We could save 90s in CI it we
@@ -130,15 +130,10 @@ jobs:
         purge: true
         purge-primary-key: "always"
 
-    # - name: Build 'catcolab-vm' host
-    #   run: |
-    #     nix build .#nixosConfigurations.catcolab-vm.config.system.build.vm --out-link result-catcolab-vm
+    - name: Build 'catcolab-vm' host
+      run: |
+        nix build .#nixosConfigurations.catcolab-vm.config.system.build.vm --out-link result-catcolab-vm
 
-    # - name: Build 'catcolab' host
-    #   run: |
-    #     nix build .#nixosConfigurations.catcolab.config.system.build.toplevel --out-link result-catcolab
-    # 
-        # sudo nix-store --add-root /nix/var/nix/gcroots/catcolab --indirect --realise $(nix-store --query --requisites ./result-catcolab)
     - name: build deployrs
       run: |
         # nix build github:serokell/deploy-rs#deploy-rs --out-link result-deploy-rs
@@ -147,6 +142,7 @@ jobs:
     - name: Build 'catcolab-next' host
       run: |
         nix build .#nixosConfigurations.catcolab.config.system.build.toplevel --out-link result-catcolab-next
+        # sudo nix-store --add-root /nix/var/nix/gcroots/catcolab --indirect --realise $(nix-store --query --requisites ./result-catcolab)
 
     - name: Set up SSH key
       run: |
@@ -156,13 +152,12 @@ jobs:
         ssh-keyscan backend-next.catcolab.org >> ~/.ssh/known_hosts
         ssh catcolab@backend-next.catcolab.org 'echo "hello"'
 
-
-    - name: Run nixos-rebuild switch remotely
+    - name: Deploy with deploy-rs
       run: |
          nix run github:serokell/deploy-rs .#catcolab-next
 
-    # - name: Prune unused Nix store paths
-    #   run: nix store gc --option keep-outputs true --option keep-derivations true
+    - name: Prune unused Nix store paths
+      run: nix store gc --option keep-outputs true --option keep-derivations true
 
 
   # deploy_backend:
