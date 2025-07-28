@@ -120,7 +120,8 @@ where
         match ob {
             ModalOb::Generator(id) => self.0.ob_generators.contains(id),
             ModalOb::App(x, op_id) => {
-                self.contains(x) && self.0.ob_type(x) == self.0.theory.tight_computad().src(op_id)
+                self.contains(x)
+                    && self.0.ob_has_type(x, &self.0.theory.tight_computad().src(op_id))
             }
             ModalOb::List(_, xs) => xs.iter().all(|x| self.contains(x)),
         }
