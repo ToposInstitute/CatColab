@@ -94,7 +94,7 @@ mod tests {
         let pos_loop = positive_loop(th.clone());
         let neg_loop = negative_loop(th.clone());
 
-        let mut f: DiscreteDblModelMapping<_, _> = Default::default();
+        let mut f: DiscreteDblModelMapping<_, _> = DiscreteDblModelMapping::default();
         f.assign_ob(ustr("x"), ustr("x"));
         f.assign_mor(ustr("loop"), Path::pair(ustr("loop"), ustr("loop")));
         let diagram = DblModelDiagram(f, pos_loop);
@@ -106,7 +106,7 @@ mod tests {
         let th = Rc::new(th_schema());
         let mut domain = DiscreteDblModel::new(th.clone());
         domain.add_mor('f', 'x', 'y', ustr("Attr").into());
-        let mut f: DiscreteDblModelMapping<_, _> = Default::default();
+        let mut f: DiscreteDblModelMapping<_, _> = DiscreteDblModelMapping::default();
         f.assign_mor('f', Path::single(ustr("attr")));
         let mut diagram = DblModelDiagram(f, domain);
 

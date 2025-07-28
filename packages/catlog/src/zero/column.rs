@@ -620,7 +620,7 @@ where
     Ind: Default + Index<Dom = Dom, Cod = Cod>,
 {
     fn from_iter<Iter: IntoIterator<Item = (Dom, Cod)>>(iter: Iter) -> Self {
-        let mut col: Self = Default::default();
+        let mut col: Self = Self::default();
         for (x, y) in iter {
             col.set(x, y);
         }
@@ -707,7 +707,7 @@ pub struct SkelIndexedColumn(IndexedColumn<usize, usize, VecColumn<usize>, VecIn
 impl SkelIndexedColumn {
     /// Creates a new vector-backed column from an existing vector.
     pub fn new(values: &[usize]) -> Self {
-        let mut col: Self = Default::default();
+        let mut col: Self = Self::default();
         for (x, y) in values.iter().enumerate() {
             col.set(x, *y);
         }
@@ -974,7 +974,7 @@ mod tests {
 
     #[test]
     fn hash_column() {
-        let mut col: HashColumn<char, &str> = Default::default();
+        let mut col: HashColumn<char, &str> = HashColumn::default();
         assert!(col.is_empty());
         col.set('a', "foo");
         col.set('b', "bar");
@@ -988,11 +988,11 @@ mod tests {
         col.set('c', "bar");
 
         let mut preimage: Vec<_> = col.preimage(&"bar").collect();
-        preimage.sort();
+        preimage.sort_unstable();
         assert_eq!(preimage, vec!['b', 'c']);
 
         let mut data: Vec<_> = col.clone().into_iter().collect();
-        data.sort();
+        data.sort_unstable();
         assert_eq!(data, vec![('a', "foo"), ('b', "bar"), ('c', "bar")]);
         let new_col: HashColumn<_, _> = data.into_iter().collect();
         assert_eq!(new_col, col);
@@ -1024,7 +1024,7 @@ mod tests {
         assert_eq!(col.set(0, 5), Some(1));
         assert_eq!(col.preimage(&1).count(), 0);
         let mut preimage: Vec<_> = col.preimage(&5).collect();
-        preimage.sort();
+        preimage.sort_unstable();
         assert_eq!(preimage, vec![0, 2]);
 
         let new_col: SkelIndexedColumn = col.clone().into_iter().collect();
@@ -1043,7 +1043,7 @@ mod tests {
         assert_eq!(col.set(0, "baz"), Some("foo"));
         assert_eq!(col.preimage(&"foo").count(), 0);
         let mut preimage: Vec<_> = col.preimage(&"baz").collect();
-        preimage.sort();
+        preimage.sort_unstable();
         assert_eq!(preimage, vec![0, 2]);
 
         let new_col: IndexedVecColumn<_> = col.clone().into_iter().collect();
@@ -1052,7 +1052,7 @@ mod tests {
 
     #[test]
     fn indexed_hash_column() {
-        let mut col: IndexedHashColumn<char, &str> = Default::default();
+        let mut col: IndexedHashColumn<char, &str> = IndexedHashColumn::default();
         assert!(col.is_empty());
         col.set('a', "foo");
         col.set('b', "bar");
@@ -1065,7 +1065,7 @@ mod tests {
         assert_eq!(col.set('a', "baz"), Some("foo"));
         assert_eq!(col.preimage(&"foo").count(), 0);
         let mut preimage: Vec<_> = col.preimage(&"baz").collect();
-        preimage.sort();
+        preimage.sort_unstable();
         assert_eq!(preimage, vec!['a', 'c']);
 
         let new_col: IndexedHashColumn<_, _> = col.clone().into_iter().collect();

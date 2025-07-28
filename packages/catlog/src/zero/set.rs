@@ -246,7 +246,7 @@ mod tests {
 
     #[test]
     fn skel_fin_set() {
-        let mut s: SkelFinSet = Default::default();
+        let mut s: SkelFinSet = SkelFinSet::default();
         assert!(s.is_empty());
         assert_eq!(s.insert(), 0);
         assert!(!s.is_empty());
@@ -266,7 +266,7 @@ mod tests {
 
     #[test]
     fn hash_fin_set() {
-        let mut s: HashFinSet<i32> = Default::default();
+        let mut s: HashFinSet<i32> = HashFinSet::default();
         assert!(s.is_empty());
         s.insert(3);
         s.extend([5, 7]);
@@ -284,7 +284,7 @@ mod tests {
 
     #[test]
     fn attributed_skel_set() {
-        let mut s: AttributedSkelSet<char> = Default::default();
+        let mut s: AttributedSkelSet<char> = AttributedSkelSet::default();
         assert!(s.is_empty());
         assert_eq!(s.insert('a'), 0);
         assert_eq!(s.extend(['b', 'c'].into_iter()), 1..3);

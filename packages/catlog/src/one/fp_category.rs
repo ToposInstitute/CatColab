@@ -744,7 +744,7 @@ mod tests {
         "#]];
         expected.assert_eq(&prog.to_string());
 
-        let mut egraph: EGraph = Default::default();
+        let mut egraph: EGraph = EGraph::default();
         assert!(prog.run_in(&mut egraph).is_ok());
     }
 }

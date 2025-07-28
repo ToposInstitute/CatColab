@@ -373,7 +373,7 @@ impl SkelGraph {
     /// Makes a path graph with `n` vertices.
     #[cfg(test)]
     pub fn path(n: usize) -> Self {
-        let mut g: Self = Default::default();
+        let mut g: Self = Self::default();
         g.add_vertices(n);
         for (i, j) in std::iter::zip(0..(n - 1), 1..n) {
             g.add_edge(i, j);
@@ -384,7 +384,7 @@ impl SkelGraph {
     /// Makes a triangle graph (2-simplex).
     #[cfg(test)]
     pub fn triangle() -> Self {
-        let mut g: Self = Default::default();
+        let mut g: Self = Self::default();
         g.add_vertices(3);
         g.add_edge(0, 1);
         g.add_edge(1, 2);
@@ -737,7 +737,7 @@ mod tests {
 
     #[test]
     fn hash_graph() {
-        let mut g: HashGraph<char, &str> = Default::default();
+        let mut g: HashGraph<char, &str> = HashGraph::default();
         assert!(g.add_vertex('x'));
         g.add_vertices(['y', 'z']);
         assert!(g.add_edge("f", 'x', 'y'));

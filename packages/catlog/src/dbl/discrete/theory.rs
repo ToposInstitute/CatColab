@@ -135,7 +135,7 @@ mod tests {
 
     #[test]
     fn theory_interface() {
-        let mut sgn: FpCategory<char, char> = Default::default();
+        let mut sgn: FpCategory<char, char> = FpCategory::default();
         sgn.add_ob_generator('*');
         sgn.add_mor_generator('n', '*', '*');
         sgn.equate(Path::pair('n', 'n'), Path::Id('*'));

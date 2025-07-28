@@ -45,9 +45,9 @@ where
     pub fn new(theory: Rc<DiscreteDblTheory<Cat>>) -> Self {
         Self {
             theory,
-            category: Default::default(),
-            ob_types: Default::default(),
-            mor_types: Default::default(),
+            category: FpCategory::default(),
+            ob_types: IndexedHashColumn::default(),
+            mor_types: IndexedHashColumn::default(),
         }
     }
 

@@ -320,7 +320,7 @@ where
     Exp: Clone + Ord + Add<Output = Exp>,
 {
     fn one() -> Self {
-        Polynomial::from_monomial(Default::default())
+        Polynomial::from_monomial(Monomial::default())
     }
 }
 

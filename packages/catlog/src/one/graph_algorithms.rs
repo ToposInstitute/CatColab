@@ -196,7 +196,7 @@ mod tests {
         let paths: Vec<_> = simple_paths(&g, &0, &2).collect();
         assert_eq!(paths, vec![Path::Seq(nonempty![0, 1])]);
 
-        let mut g: HashGraph<_, _> = Default::default();
+        let mut g: HashGraph<_, _> = HashGraph::default();
         assert!(g.add_vertex('x'));
         assert!(g.add_edge('f', 'x', 'x'));
         assert!(g.add_edge('g', 'x', 'x'));

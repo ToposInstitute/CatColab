@@ -316,15 +316,15 @@ where
         Self {
             dom,
             cod,
-            map: Default::default(),
-            results: Default::default(),
+            map: DiscreteDblModelMapping::<_, _>::default(),
+            results: Vec::<_>::default(),
             var_order,
             max_path_len: None,
             injective_ob: false,
             faithful: false,
-            ob_init: Default::default(),
-            mor_init: Default::default(),
-            ob_inv: Default::default(),
+            ob_init: HashColumn::<_, _>::default(),
+            mor_init: HashColumn::<_, _>::default(),
+            ob_inv: HashColumn::<_, _>::default(),
         }
     }
 

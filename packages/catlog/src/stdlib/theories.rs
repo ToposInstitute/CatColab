@@ -201,7 +201,7 @@ pub fn th_multicategory() -> UstrModalDblTheory {
 
 /// The theory of a generalized multicategory over a list monad.
 fn th_generalized_multicategory(list: List) -> UstrModalDblTheory {
-    let mut th: UstrModalDblTheory = Default::default();
+    let mut th: UstrModalDblTheory = UstrModalDblTheory::default();
     let (x, p) = (ustr("Object"), ustr("Multihom"));
     th.add_ob_type(x);
     th.add_mor_type(p, ModeApp::new(x).apply(Modality::List(list)), ModeApp::new(x));

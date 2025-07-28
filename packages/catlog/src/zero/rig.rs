@@ -302,7 +302,7 @@ where
     Coef: Add<Output = Coef> + Zero,
 {
     fn zero() -> Self {
-        Combination(Default::default())
+        Combination(BTreeMap::default())
     }
 
     fn is_zero(&self) -> bool {
@@ -559,7 +559,7 @@ where
     Exp: Add<Output = Exp> + Zero,
 {
     fn one() -> Self {
-        Monomial(Default::default())
+        Monomial(BTreeMap::default())
     }
 
     fn is_one(&self) -> bool {
