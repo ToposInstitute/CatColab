@@ -134,42 +134,53 @@ jobs:
     #   run: |
     #     nix build .#nixosConfigurations.catcolab-vm.config.system.build.vm --out-link result-catcolab-vm
 
-    - name: Build 'catcolab' host
+    # - name: Build 'catcolab' host
+    #   run: |
+    #     nix build .#nixosConfigurations.catcolab.config.system.build.toplevel --out-link result-catcolab
+    - name: build deployrs
       run: |
-        nix build .#nixosConfigurations.catcolab.config.system.build.toplevel --out-link result-catcolab
+        nix build github:serokell/deploy-rs#deploy-rs --out-link result-deploy-rs
+
+    - name: Build 'catcolab-next' host
+      run: |
+        nix build .#nixosConfigurations.catcolab.config.system.build.toplevel --out-link result-catcolab-next
+
+    - name: Run nixos-rebuild switch remotely
+      run: |
+         nix run github:serokell/deploy-rs .#${HOST_CONFIG}
 
     - name: Prune unused Nix store paths
       run: nix store gc --option keep-outputs true --option keep-derivations true
 
 
-  deploy_backend:
-    name: Deploy backend to AWS
-    runs-on: ubuntu-latest
-    env:
-      TARGET_HOST: backend-next.catcolab.org
-      HOST_CONFIG: catcolab-next
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+  # deploy_backend:
+  #   name: Deploy backend to AWS
+  #   runs-on: ubuntu-latest
+  #   env:
+  #     TARGET_HOST: backend-next.catcolab.org
+  #     HOST_CONFIG: catcolab-next
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
 
-      - uses: nixbuild/nix-quick-install-action@v31
-      - name: Restore and save Nix store
-        uses: nix-community/cache-nix-action@v6
-        with:
-          # see ci.yml
-          primary-key: "fixed-primary-key13"
-          purge: true
-          purge-primary-key: "always"
+  #     - uses: nixbuild/nix-quick-install-action@v31
+  #     - name: Restore and save Nix store
+  #       uses: nix-community/cache-nix-action@v6
+  #       with:
+  #         # see ci.yml
+  #         primary-key: "fixed-primary-key13"
+  #         purge: true
+  #         purge-primary-key: "always"
 
-      - name: Set up SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.CATCOLAB_NEXT_DEPLOYUSER_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan ${TARGET_HOST} >> ~/.ssh/known_hosts
+  #     - name: Set up SSH key
+  #       run: |
+  #         mkdir -p ~/.ssh
+  #         echo "${{ secrets.CATCOLAB_NEXT_DEPLOYUSER_KEY }}" > ~/.ssh/id_ed25519
+  #         chmod 600 ~/.ssh/id_ed25519
+  #         ssh-keyscan ${TARGET_HOST} >> ~/.ssh/known_hosts
 
-      - name: Run nixos-rebuild switch remotely
-        run: |
-           nix run github:serokell/deploy-rs .#${HOST_CONFIG}
+  #     - name: Run nixos-rebuild switch remotely
+  #       run: |
+  #          nix run github:serokell/deploy-rs .#${HOST_CONFIG}
 
   
