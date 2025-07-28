@@ -1,13 +1,10 @@
-import { BrandedToolbar } from "./toolbar";
+import HelpContainer from "../help/help_layout";
 
 export default function NotFoundPage() {
     return (
-        <div class="growable-container">
-            <BrandedToolbar />
-            <div class="help-container">
-                <h1>404</h1>
-                <h4>{"Sorry, we couldn't find this page."}</h4>
-            </div>
-        </div>
+        <HelpContainer>
+            <h1>404</h1>
+            <p>Sorry, we couldn't find this page.</p>
+        </HelpContainer>
     );
 }

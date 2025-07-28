@@ -6,11 +6,11 @@ mathematical epidemiology.
 
 use std::collections::{BTreeMap, HashMap};
 use std::fmt::Debug;
-use std::hash::{BuildHasherDefault, Hash};
+use std::hash::Hash;
 
 use nalgebra::DVector;
 use num_traits::Zero;
-use ustr::{IdentityHasher, Ustr, ustr};
+use ustr::{Ustr, ustr};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -52,8 +52,6 @@ where
 /// Symbolic parameter in mass-action polynomial system.
 type Parameter<Id> = Polynomial<Id, f32, u8>;
 
-type PetriNetModel<Id> = ModalDblModel<Id, Ustr, BuildHasherDefault<IdentityHasher>>;
-
 /** Mass-action ODE analysis for Petri nets.
 
 This struct implements the object part of the functorial semantics for reaction
@@ -80,7 +78,7 @@ impl PetriNetMassActionAnalysis {
     /// Creates a mass-action system with symbolic rate coefficients.
     pub fn build_system<Id: Eq + Clone + Hash + Ord + Debug>(
         &self,
-        model: &PetriNetModel<Id>,
+        model: &ModalDblModel<Id, Ustr>,
     ) -> PolynomialSystem<Id, Parameter<Id>, u8> {
         let mut sys = PolynomialSystem::new();
         for ob in model.ob_generators_with_type(&self.place_ob_type) {
@@ -115,14 +113,12 @@ impl PetriNetMassActionAnalysis {
     /// Creates a mass-action system with numerical rate coefficients.
     pub fn build_numerical_system<Id: Eq + Clone + Hash + Ord + Debug>(
         &self,
-        model: &PetriNetModel<Id>,
+        model: &ModalDblModel<Id, Ustr>,
         data: MassActionProblemData<Id>,
     ) -> ODEAnalysis<Id, NumericalPolynomialSystem<u8>> {
         into_numerical_system(self.build_system(model), data)
     }
 }
-
-type StockFlowModel<Id> = DiscreteTabModel<Id, Ustr, BuildHasherDefault<IdentityHasher>>;
 
 /// Mass-action ODE analysis for stock-flow models.
 pub struct StockFlowMassActionAnalysis {
@@ -150,7 +146,7 @@ impl StockFlowMassActionAnalysis {
     /// Creates a mass-action system with symbolic rate coefficients.
     pub fn build_system<Id: Eq + Clone + Hash + Ord>(
         &self,
-        model: &StockFlowModel<Id>,
+        model: &DiscreteTabModel<Id, Ustr>,
     ) -> PolynomialSystem<Id, Parameter<Id>, u8> {
         let mut terms: HashMap<Id, Monomial<Id, u8>> = model
             .mor_generators_with_type(&self.flow_mor_type)
@@ -199,7 +195,7 @@ impl StockFlowMassActionAnalysis {
     /// Creates a mass-action system with numerical rate coefficients.
     pub fn build_numerical_system<Id: Eq + Clone + Hash + Ord>(
         &self,
-        model: &StockFlowModel<Id>,
+        model: &DiscreteTabModel<Id, Ustr>,
         data: MassActionProblemData<Id>,
     ) -> ODEAnalysis<Id, NumericalPolynomialSystem<u8>> {
         into_numerical_system(self.build_system(model), data)

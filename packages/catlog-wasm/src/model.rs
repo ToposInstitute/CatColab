@@ -1,10 +1,8 @@
-use std::hash::BuildHasherDefault;
-
 use all_the_same::all_the_same;
 use derive_more::{From, TryInto};
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
-use ustr::{IdentityHasher, Ustr};
+use ustr::Ustr;
 use uuid::Uuid;
 use wasm_bindgen::prelude::*;
 
@@ -22,10 +20,8 @@ use super::result::JsResult;
 use super::theory::{DblTheory, DblTheoryBox, demote_modality, promote_modality};
 
 pub(crate) type DiscreteDblModel = dbl_model::DiscreteDblModel<Uuid, UstrFpCategory>;
-pub(crate) type DiscreteTabModel =
-    dbl_model::DiscreteTabModel<Uuid, Ustr, BuildHasherDefault<IdentityHasher>>;
-pub(crate) type ModalDblModel =
-    dbl_model::ModalDblModel<Uuid, Ustr, BuildHasherDefault<IdentityHasher>>;
+pub(crate) type DiscreteTabModel = dbl_model::DiscreteTabModel<Uuid, Ustr>;
+pub(crate) type ModalDblModel = dbl_model::ModalDblModel<Uuid, Ustr>;
 
 /** A box containing a model of a double theory of any kind.
 

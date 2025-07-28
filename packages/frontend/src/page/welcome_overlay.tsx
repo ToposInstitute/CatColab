@@ -62,10 +62,10 @@ export function WelcomeOverlay(props: { isOpen: boolean; onClose: () => void }) 
                                         <span class="resource-icon">
                                             <Bird />
                                         </span>
-                                        <span>CatColab overview</span>
+                                        <span>CatColab blog posts</span>
                                     </a>
                                     <a
-                                        href="https://catcolab.org/help/quick-intro"
+                                        href="/help/guides/example-models"
                                         class="resource-link"
                                         target="_blank"
                                     >
