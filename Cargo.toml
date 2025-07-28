@@ -6,6 +6,12 @@ resolver = "2"
 # avoid being rebuilt if the other package's sources change.
 members = ["packages/*"]
 
+exclude = [
+  "packages/algjulia-interop",
+  "packages/automerge-doc-server",
+  "packages/frontend",
+]
+
 [workspace.package]
 version = "0.1.0"
 edition = "2024"

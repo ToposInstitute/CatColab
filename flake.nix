@@ -3,10 +3,6 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
-    crate2nix = {
-      url = "github:nix-community/crate2nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     agenix.url = "github:ryantm/agenix";
     deploy-rs.url = "github:serokell/deploy-rs";
     fenix = {
@@ -62,115 +58,18 @@
       pkgsLinux = nixpkgsFor linuxSystem;
       rustToolchainLinux = rustToolchainFor linuxSystem;
 
-      # craneLib = crane.lib.${linuxSystem}
       craneLib = (crane.mkLib pkgsLinux).overrideToolchain rustToolchainLinux;
-      src = craneLib.cleanCargoSource ./.;
 
-      commonArgs = {
-        inherit src;
+      cargoArtifacts = craneLib.buildDepsOnly {
+        src = craneLib.cleanCargoSource ./.;
         strictDeps = true;
         nativeBuildInputs = [
           pkgsLinux.pkg-config
         ];
-        buildInputs = [
-          pkgsLinux.openssl
-        ];
-      };
-
-      cargoArtifacts = craneLib.buildDepsOnly commonArgs;
-
-      catlog-wasm = craneLib.buildPackage {
-        inherit cargoArtifacts;
-        doCheck = false;
-        pname = "catlog-wasm";
-        version = "1";
-
-        nativeBuildInputs = [
-          pkgsLinux.wasm-pack
-          pkgsLinux.wasm-bindgen-cli
-          pkgsLinux.binaryen
-        ];
 
         buildInputs = [
           pkgsLinux.openssl
         ];
-
-        cargoExtraArgs = "-p catlog-wasm";
-        # src = craneLib.cleanCargoSource ./.;
-        src = pkgsLinux.lib.fileset.toSource {
-          root = ./.;
-          fileset = pkgsLinux.lib.fileset.unions [
-            ./Cargo.toml
-            ./Cargo.lock
-            (craneLib.fileset.commonCargoSources ./packages/catlog)
-            (craneLib.fileset.commonCargoSources ./packages/catlog-wasm)
-            (craneLib.fileset.commonCargoSources ./packages/notebook-types)
-            # (craneLib.fileset.commonCargoSources ./crates/my-workspace-hack)
-            # (craneLib.fileset.commonCargoSources ./crates/my-cli)
-          ];
-        };
-
-        # run wasm-pack instead of plain cargo
-        # buildPhase = ''
-        #   cd packages/catlog-wasm
-        #   # WTF: engage maximum cargo cult. I have no idea wasm-pack needs $HOME set, that is wild.
-        #   # https://github.com/NixOS/nixpkgs/blob/b5d0681604d2acd74818561bd2f5585bfad7087d/pkgs/by-name/te/tetrio-desktop/tetrio-plus.nix#L66C7-L66C24
-        #   # https://discourse.nixos.org/t/help-packaging-mipsy-wasm-pack-error/51876
-        #   HOME=$(mktemp -d) wasm-pack build --target nodejs
-        # '';
-
-        # installPhase = ''
-        #   mkdir -p $out
-        #   cp -r pkg/* $out/
-        #   ls $out/
-        # '';
-      };
-
-      catlog = craneLib.buildPackage {
-        inherit cargoArtifacts;
-        doCheck = false;
-        pname = "catlog";
-        version = "1";
-
-        nativeBuildInputs = [
-          pkgsLinux.wasm-pack
-          pkgsLinux.wasm-bindgen-cli
-          pkgsLinux.binaryen
-        ];
-
-        buildInputs = [
-          pkgsLinux.openssl
-        ];
-
-        cargoExtraArgs = "-p catlog";
-        # src = craneLib.cleanCargoSource ./.;
-        src = pkgsLinux.lib.fileset.toSource {
-          root = ./.;
-          fileset = pkgsLinux.lib.fileset.unions [
-            ./Cargo.toml
-            ./Cargo.lock
-            (craneLib.fileset.commonCargoSources ./packages/catlog)
-            # (craneLib.fileset.commonCargoSources ./packages/catlog-wasm)
-            # (craneLib.fileset.commonCargoSources ./packages/notebook-types)
-            # (craneLib.fileset.commonCargoSources ./crates/my-workspace-hack)
-            # (craneLib.fileset.commonCargoSources ./crates/my-cli)
-          ];
-        };
-
-        # run wasm-pack instead of plain cargo
-        # buildPhase = ''
-        #   cd packages/catlog-wasm
-        #   # WTF: engage maximum cargo cult. I have no idea wasm-pack needs $HOME set, that is wild.
-        #   # https://github.com/NixOS/nixpkgs/blob/b5d0681604d2acd74818561bd2f5585bfad7087d/pkgs/by-name/te/tetrio-desktop/tetrio-plus.nix#L66C7-L66C24
-        #   # https://discourse.nixos.org/t/help-packaging-mipsy-wasm-pack-error/51876
-        #   HOME=$(mktemp -d) wasm-pack build --target nodejs
-        # '';
-
-        # installPhase = ''
-        #   mkdir -p $out
-        #   cp -r pkg/* $out/
-        #   ls $out/
-        # '';
       };
 
       # Generate devShells for each system
@@ -255,9 +154,25 @@
         }) devShellSystems
       );
 
+      # Example of how to build and test individual package built by nix:
+      # nix build .#packages.x86_64-linux.automerge
+      # node ./result/main.cjs
       packages = {
         x86_64-linux = {
-          inherit catlog-wasm catlog;
+          backend = pkgsLinux.callPackage ./packages/backend/default.nix {
+            inherit craneLib cargoArtifacts;
+            pkgs = pkgsLinux;
+          };
+
+          migrator = pkgsLinux.callPackage ./packages/migrator/default.nix {
+            inherit craneLib cargoArtifacts;
+            pkgs = pkgsLinux;
+          };
+
+          catlog-wasm = pkgsLinux.callPackage ./packages/catlog-wasm/default.nix {
+            inherit craneLib cargoArtifacts;
+            pkgs = pkgsLinux;
+          };
 
           automerge = pkgsLinux.callPackage ./packages/automerge-doc-server/default.nix {
             inherit inputs rustToolchainLinux self;

@@ -2,7 +2,6 @@
   lib,
   pkgs,
   config,
-  rustToolchain,
   self,
   ...
 }:
@@ -29,18 +28,6 @@ let
     ${pkgs.postgresql}/bin/psql -c "grant all privileges on database catcolab to catcolab;"
     ${pkgs.postgresql}/bin/psql -d catcolab -c "grant all on schema public to catcolab;"
   '';
-
-  catcolabPackages = {
-    backend = pkgs.lib.callPackageWith pkgs ../../../packages/backend/default.nix {
-      inherit rustToolchain;
-    };
-
-    migrator = pkgs.lib.callPackageWith pkgs ../../../packages/migrator/default.nix {
-      inherit rustToolchain;
-    };
-
-    automerge-doc-server = self.packages.x86_64-linux.automerge;
-  };
 
   backendPortStr = builtins.toString config.catcolab.backend.port;
   automergePortStr = builtins.toString config.catcolab.automerge.port;
@@ -105,9 +92,10 @@ with lib;
     ];
 
     environment.systemPackages = [
+      self.packages.x86_64-linux.automerge
+      self.packages.x86_64-linux.backend
+      self.packages.x86_64-linux.migrator
       databaseSetupScript
-      catcolabPackages.automerge-doc-server
-      catcolabPackages.backend
     ];
 
     # Database setup and mirgations are run as different services because the database setup requires the
@@ -133,10 +121,10 @@ with lib;
       serviceConfig = {
         User = "catcolab";
         Type = "oneshot";
-        ExecStart = "${lib.getExe catcolabPackages.migrator} apply";
+        ExecStart = "${lib.getExe self.packages.x86_64-linux.migrator} apply";
         EnvironmentFile = config.catcolab.environmentFilePath;
         Environment = ''
-          PATH=${lib.makeBinPath [ catcolabPackages.automerge-doc-server ]}:$PATH
+          PATH=${lib.makeBinPath [ self.packages.x86_64-linux.automerge ]}:$PATH
         '';
       };
     };
@@ -161,7 +149,7 @@ with lib;
         User = "catcolab";
         Type = "simple";
         Restart = "on-failure";
-        ExecStart = lib.getExe catcolabPackages.backend;
+        ExecStart = lib.getExe self.packages.x86_64-linux.backend;
         EnvironmentFile = config.catcolab.environmentFilePath;
       };
     };
@@ -177,7 +165,7 @@ with lib;
       serviceConfig = {
         EnvironmentFile = config.catcolab.environmentFilePath;
         User = "catcolab";
-        ExecStart = lib.getExe catcolabPackages.automerge-doc-server;
+        ExecStart = lib.getExe self.packages.x86_64-linux.automerge;
         Type = "simple";
         Restart = "on-failure";
       };
