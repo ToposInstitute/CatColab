@@ -175,6 +175,9 @@ export function NotebookCell(props: {
                 element: rootRef,
                 canDrop({ source }) {
                     // TODO: Reject if cell belongs to a different notebook.
+                    if (source.data.cellId === props.cellId) {
+                        return false;
+                    }
                     return isCellDragData(source.data);
                 },
                 getData({ input }) {
