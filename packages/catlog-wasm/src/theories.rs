@@ -295,6 +295,8 @@ impl ThSymMonoidalCategory {
     }
 
     /// Simulates the mass-action ODE system derived from a model.
+    /// # Errors
+    /// If the model is not of a modal theory
     #[wasm_bindgen(js_name = "massAction")]
     pub fn mass_action(
         &self,
