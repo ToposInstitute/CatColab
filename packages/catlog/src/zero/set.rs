@@ -144,7 +144,7 @@ where
     where
         Iter: IntoIterator<Item = T>,
     {
-        self.0.extend(iter)
+        self.0.extend(iter);
     }
 }
 
@@ -215,6 +215,7 @@ impl<T> AttributedSkelSet<T> {
     }
 
     /// View the data value associated with an element.
+    #[must_use]
     pub fn view(&self, x: usize) -> &T {
         &self.0[x]
     }

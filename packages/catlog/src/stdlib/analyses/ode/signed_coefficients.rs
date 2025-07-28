@@ -29,12 +29,14 @@ impl<ObType, MorType> SignedCoefficientBuilder<ObType, MorType> {
     }
 
     /// Adds a morphism type defining a positive interaction between objects.
+    #[must_use]
     pub fn add_positive(mut self, mor_type: MorType) -> Self {
         self.positive_mor_types.push(mor_type);
         self
     }
 
     /// Adds a morphism type defining a negative interaction between objects.
+    #[must_use]
     pub fn add_negative(mut self, mor_type: MorType) -> Self {
         self.negative_mor_types.push(mor_type);
         self
@@ -61,14 +63,14 @@ impl<ObType, MorType> SignedCoefficientBuilder<ObType, MorType> {
 
         let n = ob_index.len();
         let mut mat = DMatrix::from_element(n, n, 0.0f32);
-        for mor_type in self.positive_mor_types.iter() {
+        for mor_type in &self.positive_mor_types {
             for mor in model.mor_generators_with_type(mor_type) {
                 let i = *ob_index.get(&model.mor_generator_dom(&mor)).unwrap();
                 let j = *ob_index.get(&model.mor_generator_cod(&mor)).unwrap();
                 mat[(j, i)] += coeffs.get(&mor).copied().unwrap_or_default();
             }
         }
-        for mor_type in self.negative_mor_types.iter() {
+        for mor_type in &self.negative_mor_types {
             for mor in model.mor_generators_with_type(mor_type) {
                 let i = *ob_index.get(&model.mor_generator_dom(&mor)).unwrap();
                 let j = *ob_index.get(&model.mor_generator_cod(&mor)).unwrap();

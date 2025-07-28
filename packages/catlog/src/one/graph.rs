@@ -372,6 +372,7 @@ impl SkelGraph {
 
     /// Makes a path graph with `n` vertices.
     #[cfg(test)]
+    #[must_use]
     pub fn path(n: usize) -> Self {
         let mut g: Self = Self::default();
         g.add_vertices(n);
@@ -383,6 +384,7 @@ impl SkelGraph {
 
     /// Makes a triangle graph (2-simplex).
     #[cfg(test)]
+    #[must_use]
     pub fn triangle() -> Self {
         let mut g: Self = Self::default();
         g.add_vertices(3);
@@ -394,6 +396,7 @@ impl SkelGraph {
 
     /// Make a cycle graph with `n` vertices.
     #[cfg(test)]
+    #[must_use]
     pub fn cycle(n: usize) -> Self {
         assert!(n > 0);
         let mut g = SkelGraph::path(n);

@@ -56,6 +56,7 @@ where
     }
 
     /// Constructs the polynomial corresponding to a monomial.
+    #[must_use]
     pub fn from_monomial(m: Monomial<Var, Exp>) -> Self
     where
         Coef: One,
@@ -64,6 +65,7 @@ where
     }
 
     /// Iterates over the monomials in the polynomial.
+    #[must_use]
     pub fn monomials(&self) -> impl ExactSizeIterator<Item = &Monomial<Var, Exp>> {
         self.0.variables()
     }
@@ -134,6 +136,7 @@ where
     form, but allows the possibility of coefficients or exponents being zero.
     This method removes those if present.
      */
+    #[must_use]
     pub fn normalize(self) -> Self
     where
         Coef: Zero,

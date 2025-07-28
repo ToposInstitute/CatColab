@@ -641,6 +641,7 @@ use ustr::ustr;
 
 /// The schema for graphs, an f.p. category.
 #[cfg(test)]
+#[must_use]
 pub fn sch_graph() -> UstrFpCategory {
     let mut cat = UstrFpCategory::new();
     let (v, e) = (ustr("V"), ustr("E"));
@@ -652,6 +653,7 @@ pub fn sch_graph() -> UstrFpCategory {
 
 /// The schema for symmetric graphs, an f.p. category.
 #[cfg(test)]
+#[must_use]
 pub fn sch_sgraph() -> UstrFpCategory {
     let mut cat = UstrFpCategory::new();
     let (v, e) = (ustr("V"), ustr("E"));
@@ -668,6 +670,7 @@ pub fn sch_sgraph() -> UstrFpCategory {
 
 /// The schema for half-edge graphs, an f.p. category.
 #[cfg(test)]
+#[must_use]
 pub fn sch_hgraph() -> UstrFpCategory {
     let mut cat = UstrFpCategory::new();
     let (v, h) = (ustr("V"), ustr("H"));
@@ -700,7 +703,7 @@ mod tests {
 
     #[test]
     fn egraph_preamble() {
-        let mut builder: CategoryProgramBuilder<char, char> = Default::default();
+        let mut builder: CategoryProgramBuilder<char, char> = CategoryProgramBuilder::default();
         let prog = builder.program();
 
         let expected = expect![[r#"
