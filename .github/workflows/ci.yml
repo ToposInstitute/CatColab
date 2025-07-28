@@ -141,7 +141,8 @@ jobs:
         # sudo nix-store --add-root /nix/var/nix/gcroots/catcolab --indirect --realise $(nix-store --query --requisites ./result-catcolab)
     - name: build deployrs
       run: |
-        nix build github:serokell/deploy-rs#deploy-rs --out-link result-deploy-rs
+        # nix build github:serokell/deploy-rs#deploy-rs --out-link result-deploy-rs
+        nix profile install github:serokell/deploy-rs#deploy-rs
 
     - name: Build 'catcolab-next' host
       run: |
