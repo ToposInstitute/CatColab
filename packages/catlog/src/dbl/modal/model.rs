@@ -19,7 +19,7 @@ use crate::validate::Validate;
 use crate::{one::*, zero::*};
 
 /// Object in a model of a modal double theory.
-#[derive(Clone, Debug, PartialEq, Eq, From)]
+#[derive(Clone, Debug, PartialEq, Eq, From, Hash)]
 pub enum ModalOb<Id, ThId> {
     /// Generating object.
     #[from]

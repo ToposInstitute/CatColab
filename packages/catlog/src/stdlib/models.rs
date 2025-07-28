@@ -147,31 +147,55 @@ pub fn water(th: Rc<UstrModalDblTheory>) -> UstrModalDblModel {
     let (state_type, aux_type) =
         (ModalObType::new(ustr("State")), ModalObType::new(ustr("Auxiliary")));
     let mut model = UstrModalDblModel::new(th);
-    let (water, container) = (ustr("water"), ustr("container"));
-    model.add_ob(water, state_type.clone());
-    model.add_ob(container, state_type.clone());
-    let (bwater, bcontainer) = (ustr("&water"), ustr("&container"));
-    model.add_ob(bwater, aux_type.clone());
-    model.add_ob(bcontainer, aux_type);
-    let borrow = ModalMorType::One(ModeApp::new(ustr("borrow")));
+    let (watershed, lake, sediment) = (ustr("watershed"), ustr("lake"), ustr("sediment"));
+    model.add_ob(watershed, state_type.clone());
+    model.add_ob(lake, state_type.clone());
+    model.add_ob(sediment, state_type.clone());
+    let blake = ustr("&lake");
+    model.add_ob(blake, aux_type.clone());
+    let borrow = ModalMorType::One(ModeApp::new(ustr("borrowing")));
     model.add_mor(
-        ustr("borrow1"),
-        ModalOb::Generator(water),
-        ModalOb::Generator(bwater),
+        ustr("borrow"),
+        ModalOb::Generator(lake.clone()),
+        ModalOb::Generator(blake.clone()),
         borrow.clone(),
     );
-    model.add_mor(
-        ustr("borrow2"),
-        ModalOb::Generator(container),
-        ModalOb::Generator(bcontainer),
-        borrow,
-    );
-    let (comparator, comparator_out) = (ustr("comparator"), ustr("comparator_out"));
+    let container = ustr("container");
+    model.add_ob(container, state_type.clone());
+    let (comparator, comparator_out) = (ustr("comparator"), ustr("lake_sediment"));
     model.add_mor(
         comparator,
-        ModalOb::List(List::Plain, vec![bwater.into(), bcontainer.into()]).into(),
-        ModalOb::Generator(comparator_out),
+        ModalOb::List(List::Plain, vec![blake.into(), sediment.into()]).into(),
+        ModalOb::Generator(comparator_out.clone()),
         ModalMorType::One(ModeApp::new(ustr("function"))),
+    );
+    // watershed outflow
+    let watershed_lake = ustr("watershed_lake");
+    model.add_ob(watershed_lake.clone(), aux_type.clone());
+    model.add_mor(
+        ustr("watershed-lake-outflow"),
+        ModalOb::Generator(watershed_lake.clone()),
+        ModalOb::Generator(watershed.clone()),
+        ModalMorType::One(ModeApp::new(ustr("out-neg"))),
+    );
+    model.add_mor(
+        ustr("watershed-lake-inflow"),
+        ModalOb::Generator(watershed_lake.clone()),
+        ModalOb::Generator(lake.clone()),
+        ModalMorType::One(ModeApp::new(ustr("out-pos"))),
+    );
+    //
+    model.add_mor(
+        ustr("lake-sediment-outflow"),
+        ModalOb::Generator(comparator_out.clone()),
+        ModalOb::Generator(lake.clone()),
+        ModalMorType::One(ModeApp::new(ustr("out-neg"))),
+    );
+    model.add_mor(
+        ustr("lake-sediment-infow"),
+        ModalOb::Generator(comparator_out.clone()),
+        ModalOb::Generator(sediment.clone()),
+        ModalMorType::One(ModeApp::new(ustr("out-pos"))),
     );
     model
 }
@@ -216,5 +240,12 @@ mod tests {
     fn sym_monoidal_categories() {
         let th = Rc::new(th_sym_monoidal_category());
         assert!(catalyzed_reaction(th).validate().is_ok());
+    }
+
+    #[test]
+    fn modal_state_aux() {
+        let th = Rc::new(th_modal_state_aux());
+        // dbg!(water(th));
+        assert!(true)
     }
 }
