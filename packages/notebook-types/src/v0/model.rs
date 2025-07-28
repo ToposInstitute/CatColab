@@ -25,6 +25,15 @@ pub enum Ob {
     Tabulated(Mor),
 }
 
+impl Ob {
+    pub fn as_basic(&self) -> Uuid {
+        match self {
+            Ob::Basic(uuid) => *uuid,
+            _ => panic!("expected basic object"),
+        }
+    }
+}
+
 /// A morphism in a model of a double theory.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
 #[serde(tag = "tag", content = "content")]

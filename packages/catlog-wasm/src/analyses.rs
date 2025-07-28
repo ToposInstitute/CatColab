@@ -3,7 +3,7 @@ use tsify::Tsify;
 use uuid::Uuid;
 
 use super::result::JsResult;
-use catlog::stdlib::analyses;
+use catlog::{stdlib::analyses, zero::name::QualifiedName};
 
 #[derive(Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
@@ -11,7 +11,11 @@ pub struct ODEResult(pub JsResult<analyses::ode::ODESolution<Uuid>, String>);
 
 #[derive(Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
-pub struct LotkaVolterraModelData(pub analyses::ode::LotkaVolterraProblemData<Uuid>);
+pub struct ODEResultNext(pub JsResult<analyses::ode::ODESolution<QualifiedName>, String>);
+
+#[derive(Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct LotkaVolterraModelData(pub analyses::ode::LotkaVolterraProblemData);
 
 #[derive(Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]

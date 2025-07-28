@@ -41,6 +41,20 @@ pub struct MorDecl {
     pub cod: Option<Ob>,
 }
 
+// For now, we are just going to edit the schema for v0 notebooks
+// Eventually, we will revert all of these changes and move to
+// v1 notebooks.
+
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
+pub struct RecordDecl {
+    pub name: String,
+
+    pub id: Uuid,
+
+    pub notebook_id: String,
+}
+
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
 #[serde(tag = "tag")]
 #[tsify(into_wasm_abi, from_wasm_abi)]
@@ -49,4 +63,6 @@ pub enum ModelJudgment {
     Object(ObDecl),
     #[serde(rename = "morphism")]
     Morphism(MorDecl),
+    #[serde(rename = "record")]
+    Record(RecordDecl),
 }

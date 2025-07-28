@@ -7,8 +7,8 @@ import type {
     Document,
     ModelDiagramValidationResult,
     Uuid,
-} from "catlog-wasm";
-import { elaborateDiagram } from "catlog-wasm";
+} from "catlaborator";
+import { elaborateDiagram } from "catlaborator";
 import { type Api, type LiveDoc, type StableRef, getLiveDoc } from "../api";
 import { type LiveModelDocument, getLiveModel } from "../model";
 import { newNotebook } from "../notebook";

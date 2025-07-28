@@ -2,37 +2,57 @@ import { useParams } from "@solidjs/router";
 import { getAuth } from "firebase/auth";
 import { useAuth, useFirebaseApp } from "solid-firebase";
 import { Match, Show, Switch, createResource, createSignal, useContext } from "solid-js";
+import { createResource, Match, Show, Switch, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import type { ModelJudgment } from "catlog-wasm";
-import { useApi } from "../api";
+import {
+    type DblTheory,
+    type Document,
+    ElaborationDatabase,
+    type ModelDocumentContent,
+    type ModelJudgment,
+    type Notebook,
+} from "catlaborator";
+import { type Api, ApiContext, useApi } from "../api";
 import { InlineInput } from "../components";
 import {
     type CellConstructor,
-    type FormalCellEditorProps,
-    NotebookEditor,
     cellShortcutModifier,
+    type FormalCellEditorProps,
     newFormalCell,
+    NotebookEditor,
 } from "../notebook";
 import { DocumentBreadcrumbs, DocumentLoadingScreen, DocumentMenu, Toolbar } from "../page";
 import { WelcomeOverlay } from "../page/welcome_overlay";
 import { TheoryLibraryContext, stdTheories } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
+import {
+    DocumentBreadcrumbs,
+    DocumentLoadingScreen,
+    DocumentMenu,
+    TheoryHelpButton,
+    Toolbar,
+} from "../page";
+import { TheoryLibraryContext } from "../stdlib";
+import type { ModelTypeMeta, Theory } from "../theory";
 import { PermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
-import { type LiveModelDocument, getLiveModel } from "./document";
+import { catlaborate, getLiveModel, type LiveModelDocument } from "./document";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
 import { TheorySelectorDialog } from "./theory_selector";
 import {
-    type MorphismDecl,
-    type ObjectDecl,
     duplicateModelJudgment,
+    type MorphismDecl,
     newMorphismDecl,
+    newNotebookDecl,
     newObjectDecl,
+    type ObjectDecl,
+    type RecordDecl,
 } from "./types";
 
 import "./model_editor.css";
+import { RecordCellEditor } from "./record_cell_editor";
 
 export default function ModelPage() {
     const api = useApi();
@@ -77,6 +97,11 @@ export function ModelDocumentEditor(props: {
 export function ModelPane(props: {
     liveModel: LiveModelDocument;
 }) {
+    const theories = useContext(TheoryLibraryContext);
+    invariant(theories, "Library of theories should be provided as context");
+    const api = useContext(ApiContext);
+    invariant(api, "Api should be provided as context");
+
     const liveDoc = () => props.liveModel.liveDoc;
 
     const selectableTheories = () => {
@@ -112,6 +137,18 @@ export function ModelPane(props: {
                     theories={selectableTheories()}
                 />
             </div>
+            <button
+                onClick={async () => {
+                    await catlaborate(
+                        api,
+                        new ElaborationDatabase(),
+                        props.liveModel.refId,
+                        theories,
+                    );
+                }}
+            >
+                Elaborate
+            </button>
             <ModelNotebookEditor liveModel={props.liveModel} />
         </div>
     );
@@ -125,7 +162,9 @@ export function ModelNotebookEditor(props: {
     const liveDoc = () => props.liveModel.liveDoc;
 
     const cellConstructors = () =>
-        (props.liveModel.theory().modelTypes ?? []).map(modelCellConstructor);
+        (props.liveModel.theory().modelTypes ?? [])
+            .map(modelCellConstructor)
+            .concat(notebookCellConstructor);
 
     const firebaseApp = useFirebaseApp();
     const auth = useAuth(getAuth(firebaseApp));
@@ -177,6 +216,18 @@ function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
                     actions={props.actions}
                 />
             </Match>
+            <Match when={props.content.tag === "record"}>
+                <RecordCellEditor
+                    record={props.content as RecordDecl}
+                    modifyRecord={(f) =>
+                        props.changeContent((content) => {
+                            f(content as RecordDecl);
+                        })
+                    }
+                    isActive={props.isActive}
+                    actions={props.actions}
+                />
+            </Match>
         </Switch>
     );
 }
@@ -194,6 +245,14 @@ function modelCellConstructor(meta: ModelTypeMeta): CellConstructor<ModelJudgmen
         },
     };
 }
+
+const notebookCellConstructor: CellConstructor<ModelJudgment> = {
+    name: "Notebook Cell",
+    description: "A cell that imports another notebook",
+    construct() {
+        return newFormalCell(newNotebookDecl());
+    },
+};
 
 function judgmentLabel(judgment: ModelJudgment): string | undefined {
     const liveModel = useContext(LiveModelContext);

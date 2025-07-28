@@ -22,6 +22,15 @@ pub enum ObType {
     },
 }
 
+impl ObType {
+    pub fn as_basic(&self) -> Ustr {
+        match self {
+            ObType::Basic(i) => *i,
+            _ => panic!("expected a basic object"),
+        }
+    }
+}
+
 /// Morphism type in a double theory.
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Serialize, Deserialize, Tsify)]
 #[serde(tag = "tag", content = "content")]

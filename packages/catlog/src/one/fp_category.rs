@@ -75,12 +75,12 @@ where
 
     /// Gets the path equations of the category presentation.
     pub fn equations(&self) -> impl Iterator<Item = &PathEq<V, E>> {
-        self.equations.iter()
+        self.morphism_equations.iter()
     }
 
     /// Is the category freely generated?
     pub fn is_free(&self) -> bool {
-        self.equations.is_empty()
+        self.morphism_equations.is_empty()
     }
 
     /// Adds an object generator.
@@ -142,9 +142,16 @@ where
         self.builder.get_mut().set_cod(mor, ob);
     }
 
+    /// Adds an object equation to the presentation
+    pub fn add_ob_equation(&mut self, lhs: V, rhs: V) {
+        self.object_equations.push((lhs.clone(), rhs.clone()));
+        let (lhs, rhs) = (self.ob_generator_expr(lhs), self.ob_generator_expr(rhs));
+        self.builder.get_mut().equate(lhs, rhs);
+    }
+
     /// Adds a path equation to the presentation.
     pub fn add_equation(&mut self, eq: PathEq<V, E>) {
-        self.equations.push(eq.clone());
+        self.morphism_equations.push(eq.clone());
         let (lhs, rhs) = (self.path_expr(eq.lhs), self.path_expr(eq.rhs));
         self.builder.get_mut().equate(lhs, rhs);
     }
@@ -181,6 +188,17 @@ where
             Some(InvalidFpCategory::Eq(i, eq.validate_in(&self.generators).err()?))
         });
         generator_errors.chain(equation_errors)
+    }
+
+    /// Checks whether objects are equal
+    pub fn objects_are_equal(&self, lhs: V, rhs: V) -> bool {
+        let (lhs, rhs) = (self.ob_generator_expr(lhs), self.ob_generator_expr(rhs));
+        self.builder.borrow_mut().check_equal(lhs, rhs);
+        self.builder
+            .borrow_mut()
+            .program()
+            .check_in(&mut self.egraph.borrow_mut())
+            .expect("Unexpected egglog error")
     }
 }
 

@@ -13,6 +13,8 @@ use catlog::dbl::{model, theory};
 use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories};
 
+use crate::model_next::DblModelNext;
+
 use super::model_morphism::{MotifsOptions, motifs};
 use super::{analyses::*, model::DblModel, theory::DblTheory};
 
@@ -106,20 +108,38 @@ impl ThSignedCategory {
     }
 
     /// Simulate the Lotka-Volterra system derived from a model.
-    #[wasm_bindgen(js_name = "lotkaVolterra")]
-    pub fn lotka_volterra(
+    // #[wasm_bindgen(js_name = "lotkaVolterra")]
+    // pub fn lotka_volterra(
+    //     &self,
+    //     model: &DblModel,
+    //     data: LotkaVolterraModelData,
+    // ) -> Result<ODEResult, String> {
+    //     let model: &model::DiscreteDblModel<_, _> = (&model.0)
+    //         .try_into()
+    //         .map_err(|_| "Lotka-Volterra simulation expects a discrete double model")?;
+    //     Ok(ODEResult(
+    //         analyses::ode::LotkaVolterraAnalysis::new(ustr("Object"))
+    //             .add_positive(Path::Id(ustr("Object")))
+    //             .add_negative(ustr("Negative").into())
+    //             .create_system(model, data.0)
+    //             .solve_with_defaults()
+    //             .map_err(|err| format!("{err:?}"))
+    //             .into(),
+    //     ))
+    // }
+
+    /// Simulate the Lotka-Volterra system derived from a model.
+    #[wasm_bindgen(js_name = "lotkaVolterraNext")]
+    pub fn lotka_volterra_next(
         &self,
-        model: &DblModel,
+        model: &DblModelNext,
         data: LotkaVolterraModelData,
     ) -> Result<ODEResult, String> {
-        let model: &model::DiscreteDblModel<_, _> = (&model.0)
-            .try_into()
-            .map_err(|_| "Lotka-Volterra simulation expects a discrete double model")?;
         Ok(ODEResult(
             analyses::ode::SignedCoefficientBuilder::new(ustr("Object"))
                 .add_positive(Path::Id(ustr("Object")))
                 .add_negative(ustr("Negative").into())
-                .lotka_volterra_analysis(model, data.0)
+                .lotka_volterra_analysis(&model.model, data.0)
                 .solve_with_defaults()
                 .map_err(|err| format!("{err:?}"))
                 .into(),

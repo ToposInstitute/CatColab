@@ -1,6 +1,6 @@
 import invariant from "tiny-invariant";
 
-import type { Uuid } from "catlog-wasm";
+import type { Uuid } from "catlaborator";
 
 /** A map together with an index for efficient reverse lookup.
  */

@@ -87,6 +87,7 @@
               nodejs_23
               sqlx-cli
               biome
+              lld
             ]
             ++ darwinDeps
             ++ [

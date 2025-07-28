@@ -2,7 +2,7 @@ import ChevronLeft from "lucide-solid/icons/chevron-left";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import { Show, createMemo } from "solid-js";
 
-import type { DblModel, MotifsOptions } from "catlog-wasm";
+import type { DblModel, MotifsOptions } from "catlaborator";
 import type { ModelAnalysisProps } from "../../analysis";
 import { Foldable, FormGroup, IconButton, InputField } from "../../components";
 

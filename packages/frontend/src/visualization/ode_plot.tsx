@@ -1,7 +1,7 @@
 import type { EChartsOption } from "echarts";
 import { Match, Switch, lazy } from "solid-js";
 
-import type { JsResult } from "catlog-wasm";
+import type { JsResult } from "catlaborator";
 import { ErrorAlert } from "../components";
 
 const ECharts = lazy(() => import("./echarts"));

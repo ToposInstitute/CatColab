@@ -1,29 +1,31 @@
 import { createMemo } from "solid-js";
 
 import type {
-    DblModel,
+    DblModelNext,
     LotkaVolterraModelData,
     LotkaVolterraProblemData,
-    ODEResult,
-} from "catlog-wasm";
+    MorGenerator,
+    ObGenerator,
+    ODEResultNext,
+    QualifiedName,
+} from "catlaborator";
 import type { ModelAnalysisProps } from "../../analysis";
 import {
     type ColumnSchema,
+    createNumericalColumn,
     FixedTableEditor,
     Foldable,
-    createNumericalColumn,
 } from "../../components";
-import type { MorphismDecl, ObjectDecl } from "../../model";
 import type { ModelAnalysisMeta } from "../../theory";
 import { ODEResultPlot } from "../../visualization";
-import { createModelODEPlot } from "./simulation";
+import { createModelODEPlotNext } from "./simulation";
 
 import "./simulation.css";
 
 /** Configuration for a Lotka-Volterra ODE analysis of a model. */
-export type LotkaVolterraContent = LotkaVolterraProblemData<string>;
+export type LotkaVolterraContent = LotkaVolterraProblemData;
 
-type Simulator = (model: DblModel, data: LotkaVolterraModelData) => ODEResult;
+type Simulator = (model: DblModelNext, data: LotkaVolterraModelData) => ODEResultNext;
 
 /** Configure a Lotka-Volterra ODE analysis for use with models of a theory. */
 export function configureLotkaVolterra(options: {
@@ -55,6 +57,14 @@ export function configureLotkaVolterra(options: {
     };
 }
 
+export function stableName(name: QualifiedName): string {
+    return name.segments.map((segment) => segment.id || `<${segment.name}>`).join(" ");
+}
+
+export function displayName(name: QualifiedName): string {
+    return name.segments.map((segment) => segment.name || `<unnamed>`).join(".");
+}
+
 /** Analyze a model using Lotka-Volterra dynamics. */
 export function LotkaVolterra(
     props: ModelAnalysisProps<LotkaVolterraContent> & {
@@ -62,53 +72,55 @@ export function LotkaVolterra(
         title?: string;
     },
 ) {
-    const obDecls = createMemo<ObjectDecl[]>(() => {
-        return props.liveModel.formalJudgments().filter((jgmt) => jgmt.tag === "object");
+    const obGenerators = createMemo<ObGenerator[]>(() => {
+        const obGens = props.liveModel.validatedModelNext()?.ob_generators() || [];
+        console.log(obGens);
+        return obGens;
     }, []);
 
-    const morDecls = createMemo<MorphismDecl[]>(() => {
-        return props.liveModel.formalJudgments().filter((jgmt) => jgmt.tag === "morphism");
+    const morGenerators = createMemo<MorGenerator[]>(() => {
+        return props.liveModel.validatedModelNext()?.mor_generators() || [];
     }, []);
 
-    const obSchema: ColumnSchema<ObjectDecl>[] = [
+    const obSchema: ColumnSchema<ObGenerator>[] = [
         {
             contentType: "string",
             header: true,
-            content: (ob) => ob.name,
+            content: (ob) => displayName(ob.name),
         },
         createNumericalColumn({
             name: "Initial value",
-            data: (ob) => props.content.initialValues[ob.id],
+            data: (ob) => props.content.initialValues[stableName(ob.name)],
             validate: (_, data) => data >= 0,
             setData: (ob, data) =>
                 props.changeContent((content) => {
-                    content.initialValues[ob.id] = data;
+                    content.initialValues[stableName(ob.name)] = data;
                 }),
         }),
         createNumericalColumn({
             name: "Growth/decay",
-            data: (ob) => props.content.growthRates[ob.id],
+            data: (ob) => props.content.growthRates[stableName(ob.name)],
             setData: (ob, data) =>
                 props.changeContent((content) => {
-                    content.growthRates[ob.id] = data;
+                    content.growthRates[stableName(ob.name)] = data;
                 }),
         }),
     ];
 
-    const morSchema: ColumnSchema<MorphismDecl>[] = [
+    const morSchema: ColumnSchema<MorGenerator>[] = [
         {
             contentType: "string",
             header: true,
-            content: (mor) => mor.name,
+            content: (mor) => displayName(mor.name),
         },
         createNumericalColumn({
             name: "Interaction",
-            data: (mor) => props.content.interactionCoefficients[mor.id],
+            data: (mor) => props.content.interactionCoefficients[stableName(mor.name)],
             default: 1,
             validate: (_, data) => data >= 0,
             setData: (mor, data) =>
                 props.changeContent((content) => {
-                    content.interactionCoefficients[mor.id] = data;
+                    content.interactionCoefficients[stableName(mor.name)] = data;
                 }),
         }),
     ];
@@ -125,17 +137,17 @@ export function LotkaVolterra(
         }),
     ];
 
-    const plotResult = createModelODEPlot(
+    const plotResult = createModelODEPlotNext(
         () => props.liveModel,
-        (model: DblModel) => props.simulate(model, props.content),
+        (model: DblModelNext) => props.simulate(model, props.content),
     );
 
     return (
         <div class="simulation">
             <Foldable title={props.title}>
                 <div class="parameters">
-                    <FixedTableEditor rows={obDecls()} schema={obSchema} />
-                    <FixedTableEditor rows={morDecls()} schema={morSchema} />
+                    <FixedTableEditor rows={obGenerators()} schema={obSchema} />
+                    <FixedTableEditor rows={morGenerators()} schema={morSchema} />
                     <FixedTableEditor rows={[null]} schema={toplevelSchema} />
                 </div>
             </Foldable>

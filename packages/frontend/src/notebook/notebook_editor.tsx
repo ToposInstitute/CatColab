@@ -19,7 +19,7 @@ import {
     onCleanup,
 } from "solid-js";
 
-import type { Cell, Notebook } from "catlog-wasm";
+import type { Cell, Notebook } from "catlaborator";
 import { type Completion, IconButton } from "../components";
 import { deepCopyJSON } from "../util/deepcopy";
 import {

@@ -71,6 +71,21 @@ where
         self.category.add_equation(eq);
     }
 
+    /// Adds an object equation to the presentation
+    pub fn add_ob_equation(&mut self, lhs: Id, rhs: Id) {
+        self.category.add_ob_equation(lhs, rhs);
+    }
+
+    /// Checks whether two morphisms are equal
+    pub fn objects_are_equal(&self, x: Id, y: Id) -> bool {
+        self.category.objects_are_equal(x, y)
+    }
+
+    /// Checks whether two morphisms are equal
+    pub fn morphisms_are_equal(&self, f: Path<Id, Id>, g: Path<Id, Id>) -> bool {
+        self.category.morphisms_are_equal(f, g)
+    }
+
     /// Iterates over failures of model to be well defined.
     pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidDblModel<Id>> + '_ {
         type Invalid<Id> = InvalidDblModel<Id>;

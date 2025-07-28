@@ -1,7 +1,7 @@
 import { splitProps, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import type { Mor, MorType } from "catlog-wasm";
+import type { Mor, MorType } from "catlaborator";
 import { type IdInputOptions, MorIdInput } from "../components";
 import { LiveModelContext } from "./context";
 

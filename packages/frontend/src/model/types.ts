@@ -1,6 +1,6 @@
 import { v7 } from "uuid";
 
-import type { ModelJudgment, MorType, ObType } from "catlog-wasm";
+import type { ModelJudgment, MorType, ObType } from "catlaborator";
 import { deepCopyJSON } from "../util/deepcopy";
 
 /** Declaration of an object in a model. */
@@ -29,6 +29,18 @@ export const newMorphismDecl = (morType: MorType): MorphismDecl => ({
     morType,
     dom: null,
     cod: null,
+});
+
+/** Declaration of a morphim in a model. */
+export type RecordDecl = ModelJudgment & {
+    tag: "record";
+};
+
+export const newNotebookDecl = (): RecordDecl => ({
+    tag: "record",
+    name: "",
+    id: v7(),
+    notebook_id: "",
 });
 
 /** Duplicate a model judgment, creating a fresh UUID when applicable. */

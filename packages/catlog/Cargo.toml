@@ -6,6 +6,7 @@ version = "0.1.0"
 edition = "2024"
 
 [features]
+default = ["ode", "serde", "serde-wasm"]
 ode = ["dep:ode_solvers", "dep:nalgebra"]
 serde = ["dep:serde", "nonempty/serialize", "ustr/serde"]
 serde-wasm = ["serde", "dep:wasm-bindgen", "dep:tsify"]
@@ -26,7 +27,7 @@ serde = { version = "1", features = ["derive"], optional = true }
 thiserror = "1"
 tsify = { version = "0.5", features = ["js"], optional = true }
 ustr = "1"
-uuid = { version = "=1.11", optional = true }
+uuid = { version = "=1.11" }
 wasm-bindgen = { version = "0.2.100", optional = true }
 
 [dev-dependencies]

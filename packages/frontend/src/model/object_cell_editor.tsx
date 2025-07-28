@@ -1,7 +1,7 @@
 import { useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import type { ObType } from "catlog-wasm";
+import type { ObType } from "catlaborator";
 import { NameInput } from "../components";
 import type { CellActions } from "../notebook";
 import type { Theory } from "../theory";
