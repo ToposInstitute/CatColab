@@ -107,7 +107,7 @@ jobs:
       uses: nix-community/cache-nix-action@v6
       with:
         # The github action cache is limited to 10GB and the compressed nix store for this project is
-        # typically between 3GB and 5GB, as a result it is very easy to thrash the cache by when using
+        # typically around 3GB as a result it is very easy to thrash the cache by when using
         # using hashed cache keys. This results in "useful" caches being evicted.
         # 
         # NOTE: The above does not fully explain some issues we've had with cache misses. We've had
