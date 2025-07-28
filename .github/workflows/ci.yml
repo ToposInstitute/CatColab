@@ -170,10 +170,10 @@ jobs:
         chmod 600 ~/.ssh/id_ed25519
         ssh-keyscan backend-next.catcolab.org >> ~/.ssh/known_hosts
 
-    - name: Deploy with deploy-rs
-      run: |
-        # The same checks are run in `nix flake check` 
-        nix run github:serokell/deploy-rs --skip-checks .#catcolab-next
+    # - name: Deploy with deploy-rs
+    #   run: |
+    #     # The same checks are run in `nix flake check` 
+    #     nix run github:serokell/deploy-rs --skip-checks .#catcolab-next
 
     - name: Prune unused Nix store paths
       run: nix store gc --option keep-outputs true --option keep-derivations true
