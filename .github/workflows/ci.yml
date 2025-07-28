@@ -136,7 +136,7 @@ jobs:
 
     - name: Build 'catcolab' host
       run: |
-        nix build .#nixosConfigurations.catcolab.config.system.build.toplevel --outlink result-catcolab
+        nix build .#nixosConfigurations.catcolab.config.system.build.toplevel --out-link result-catcolab
 
     - name: Prune unused Nix store paths
       run: nix store gc --option keep-outputs true --option keep-derivations true
