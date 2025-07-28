@@ -134,9 +134,9 @@ jobs:
       run: |
         nix build .#nixosConfigurations.catcolab-vm.config.system.build.vm --out-link result-catcolab-vm
 
-    - name: Build 'catcolab' host
-      run: |
-        nix build .#nixosConfigurations.catcolab.config.system.build.toplevel --out-link result-catcolab
+    # - name: Build 'catcolab' host
+    #   run: |
+    #     nix build .#nixosConfigurations.catcolab.config.system.build.toplevel --out-link result-catcolab
 
     - name: Prune unused Nix store paths
       run: nix store gc --option keep-outputs true --option keep-derivations true
