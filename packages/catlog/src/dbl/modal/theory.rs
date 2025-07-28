@@ -54,7 +54,7 @@ double category of sets admits, besides the [plain](Self::Plain) list double
 monad, a number of variations decorating the spans of lists with extra
 combinatorial data.
  */
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum List {
     /// Lists of objects and morphisms (of same length).
     Plain,

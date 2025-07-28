@@ -337,6 +337,32 @@ impl ThSymMonoidalCategory {
     }
 }
 
+/// The theory of state/aux interactions
+pub struct ThModalStateAuxCategory(Rc<theory::UstrModalDblTheory>);
+
+#[wasm_bindgen]
+impl ThModalStateAuxCategory {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self(Rc::new(theories::th_modal_sf()))
+    }
+
+    #[wasm_bindgen]
+    pub fn theory(&self) -> DblTheory {
+        DblTheory(self.0.clone().into())
+    }
+
+    /// Simulates a mass-action ODE system with additional configurations.
+    #[wasm_bindgen(js_name = "stateAuxMassAction")]
+    pub fn state_aux_mass_action(
+        &self,
+        model: &DblModel,
+        data: AnotherMassActionModelData,
+    ) -> Result<_, String> {
+        let model: &model::ModalDblModel<_, > = (&model.0).try_into().map_err(|_| "Model should be of a modal theory")?;
+        Ok(())
+    }
+
 #[cfg(test)]
 mod tests {
     use super::*;

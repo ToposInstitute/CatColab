@@ -1,6 +1,7 @@
 //! Constant-coefficient linear first-order differential equations.
 
 use nalgebra::{DMatrix, DVector};
+use std::collections::HashMap;
 
 #[cfg(test)]
 use super::ODEProblem;
@@ -27,6 +28,48 @@ impl ODESystem for LinearODESystem {
     fn vector_field(&self, dx: &mut DVector<f32>, x: &DVector<f32>, _t: f32) {
         let A = &self.coefficients;
         *dx = A * x
+    }
+}
+
+// --------------------------------
+
+// TODO move into a context where Id is defined
+#[derive(Clone, Debug)]
+pub enum Condition {
+    Geq(usize, usize),
+}
+
+impl Condition {
+    pub fn call(&self, x: &DVector<f32>) -> bool {
+        match self {
+            Condition::Geq(left, right) => x.row(*left) >= x.row(*right),
+        }
+    }
+}
+
+/**
+ */
+#[derive(Clone)]
+pub struct HybridLinearODESystem {
+    /// Linear ODEs
+    pub subsystems: HashMap<Condition, LinearODESystem>,
+}
+
+impl HybridLinearODESystem {
+    // TODO I dont like checking for the first condition to be met.
+    pub fn get_subsystem(&self, x: &DVector<f32>) -> Option<&LinearODESystem> {
+        self.subsystems
+            .iter()
+            .find(|(cond, _)| cond.call(&x.clone()))
+            .map(|(_, sys)| sys)
+    }
+}
+
+impl ODESystem for HybridLinearODESystem {
+    fn vector_field(&self, dx: &mut DVector<f32>, x: &DVector<f32>, _t: f32) {
+        if let Some(system) = self.get_subsystem(x) {
+            system.vector_field(dx, x, _t)
+        }
     }
 }
 
