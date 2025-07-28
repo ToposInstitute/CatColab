@@ -18,8 +18,8 @@ export class Theory {
     /** Underlying double theory in the core. */
     readonly theory: DblTheory;
 
-    /** Name of help page (excluding file extension) for the theory, if any. */
-    readonly help?: string;
+    /** Does this theory have a corresponding help page? */
+    readonly help?: boolean;
 
     /** Human-readable name for models of theory.
 
@@ -61,7 +61,7 @@ export class Theory {
     constructor(props: {
         id: string;
         theory: DblTheory;
-        help?: string;
+        help?: boolean;
         name: string;
         description: string;
         inclusions?: string[];
@@ -279,6 +279,9 @@ export type AnalysisMeta<T> = {
 
     /** Short description of analysis. */
     description?: string;
+
+    /** Name of the help page (excluding file extension) for the analysis, if any. */
+    help?: string;
 
     /** Default content created when the analysis is added. */
     initialContent: () => T;

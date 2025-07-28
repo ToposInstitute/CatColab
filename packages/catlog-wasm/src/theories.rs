@@ -266,7 +266,7 @@ impl ThCategoryLinks {
         model: &DblModel,
         data: MassActionModelData,
     ) -> Result<ODEResult, String> {
-        let model: &model::DiscreteTabModel<_, _, _> =
+        let model: &model::DiscreteTabModel<_, _> =
             (&model.0).try_into().map_err(|_| "Model should be of a tabulator theory")?;
         Ok(ODEResult(
             analyses::ode::StockFlowMassActionAnalysis::default()
@@ -301,7 +301,7 @@ impl ThSymMonoidalCategory {
         model: &DblModel,
         data: MassActionModelData,
     ) -> Result<ODEResult, String> {
-        let model: &model::ModalDblModel<_, _, _> =
+        let model: &model::ModalDblModel<_, _> =
             (&model.0).try_into().map_err(|_| "Model should be of a modal theory")?;
         Ok(ODEResult(
             analyses::ode::PetriNetMassActionAnalysis::default()

@@ -1,22 +1,20 @@
 //! Models of modal double theories.
 
 use std::fmt::Debug;
-use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
+use std::hash::Hash;
 use std::rc::Rc;
 
 use derive_more::From;
 use itertools::Itertools;
 use ref_cast::RefCast;
-use ustr::{IdentityHasher, Ustr};
+use ustr::Ustr;
 
 use super::theory::*;
-use crate::dbl::{
-    graph::VDblGraph,
-    model::{DblModel, FgDblModel, InvalidDblModel, MutDblModel},
-};
-use crate::one::computad::*;
-use crate::validate::Validate;
-use crate::{one::*, zero::*};
+use crate::dbl::graph::VDblGraph;
+use crate::dbl::model::{DblModel, FgDblModel, InvalidDblModel, MutDblModel};
+use crate::dbl::theory::DblTheory;
+use crate::validate::{self, Validate};
+use crate::{one::computad::*, one::*, zero::*};
 
 /// Object in a model of a modal double theory.
 #[derive(Clone, Debug, PartialEq, Eq, From)]
@@ -77,8 +75,8 @@ impl MorListData {
 
 /// A model of a modal double theory.
 #[derive(Clone)]
-pub struct ModalDblModel<Id, ThId, S = RandomState> {
-    theory: Rc<ModalDblTheory<ThId, S>>,
+pub struct ModalDblModel<Id, ThId> {
+    theory: Rc<ModalDblTheory<ThId>>,
     ob_generators: HashFinSet<Id>,
     mor_generators: ComputadTop<ModalOb<Id, ThId>, Id>,
     // TODO: Equations
@@ -87,11 +85,11 @@ pub struct ModalDblModel<Id, ThId, S = RandomState> {
 }
 
 /// A model of a modal double theory with `Ustr` identifiers.
-pub type UstrModalDblModel = ModalDblModel<Ustr, Ustr, BuildHasherDefault<IdentityHasher>>;
+pub type UstrModalDblModel = ModalDblModel<Ustr, Ustr>;
 
-impl<Id, ThId, S> ModalDblModel<Id, ThId, S> {
+impl<Id, ThId> ModalDblModel<Id, ThId> {
     /// Creates an empty model of the given theory.
-    pub fn new(theory: Rc<ModalDblTheory<ThId, S>>) -> Self {
+    pub fn new(theory: Rc<ModalDblTheory<ThId>>) -> Self {
         Self {
             theory,
             ob_generators: Default::default(),
@@ -102,20 +100,19 @@ impl<Id, ThId, S> ModalDblModel<Id, ThId, S> {
     }
 
     /// Gets the computing generating the morphisms of the model.
-    fn computad(&self) -> Computad<'_, ModalOb<Id, ThId>, ModalDblModelObs<Id, ThId, S>, Id> {
+    fn computad(&self) -> Computad<'_, ModalOb<Id, ThId>, ModalDblModelObs<Id, ThId>, Id> {
         Computad::new(ModalDblModelObs::ref_cast(self), &self.mor_generators)
     }
 }
 
 #[derive(RefCast)]
 #[repr(transparent)]
-struct ModalDblModelObs<Id, ThId, S>(ModalDblModel<Id, ThId, S>);
+struct ModalDblModelObs<Id, ThId>(ModalDblModel<Id, ThId>);
 
-impl<Id, ThId, S> Set for ModalDblModelObs<Id, ThId, S>
+impl<Id, ThId> Set for ModalDblModelObs<Id, ThId>
 where
     Id: Eq + Clone + Hash + Debug,
     ThId: Eq + Clone + Hash + Debug,
-    S: BuildHasher,
 {
     type Elem = ModalOb<Id, ThId>;
 
@@ -130,11 +127,10 @@ where
     }
 }
 
-impl<Id, ThId, S> Category for ModalDblModel<Id, ThId, S>
+impl<Id, ThId> Category for ModalDblModel<Id, ThId>
 where
     Id: Eq + Clone + Hash + Debug,
     ThId: Eq + Clone + Hash + Debug,
-    S: BuildHasher,
 {
     type Ob = ModalOb<Id, ThId>;
     type Mor = ModalMor<Id, ThId>;
@@ -199,11 +195,10 @@ where
     }
 }
 
-impl<Id, ThId, S> FgCategory for ModalDblModel<Id, ThId, S>
+impl<Id, ThId> FgCategory for ModalDblModel<Id, ThId>
 where
     Id: Eq + Clone + Hash + Debug,
     ThId: Eq + Clone + Hash + Debug,
-    S: BuildHasher,
 {
     type ObGen = Id;
     type MorGen = Id;
@@ -222,48 +217,27 @@ where
     }
 }
 
-impl<Id, ThId, S> DblModel for ModalDblModel<Id, ThId, S>
+impl<Id, ThId> DblModel for ModalDblModel<Id, ThId>
 where
     Id: Eq + Clone + Hash + Debug,
     ThId: Eq + Clone + Hash + Debug,
-    S: BuildHasher,
 {
     type ObType = ModalObType<ThId>;
     type MorType = ModalMorType<ThId>;
     type ObOp = ModalObOp<ThId>;
     type MorOp = ModalMorOp<ThId>;
-    type Theory = ModalDblTheory<ThId, S>;
+    type Theory = ModalDblTheory<ThId>;
 
     fn theory(&self) -> &Self::Theory {
         &self.theory
     }
 
     fn ob_type(&self, ob: &Self::Ob) -> Self::ObType {
-        match ob {
-            ModalOb::Generator(id) => self.ob_generator_type(id),
-            ModalOb::App(_, op_id) => self.theory.tight_computad().tgt(op_id),
-            ModalOb::List(list_type, vec) => vec
-                .iter()
-                .map(|ob| self.ob_type(ob))
-                .all_equal_value()
-                .expect("All objects in list should have the same type")
-                .apply((*list_type).into()),
-        }
+        Option::from(self.infer_ob_type(ob).unwrap()).expect("Object type should be known")
     }
 
     fn mor_type(&self, mor: &Self::Mor) -> Self::MorType {
-        match mor {
-            ModalMor::Generator(id) => self.mor_generator_type(id),
-            ModalMor::Composite(_) => panic!("Composites not implemented"),
-            ModalMor::App(_, op_id) => self.theory.dbl_computad().square_cod(op_id),
-            ModalMor::HomApp(_, op_id) => ShortPath::Zero(self.theory.tight_computad().tgt(op_id)),
-            ModalMor::List(data, fs) => fs
-                .iter()
-                .map(|mor| self.mor_type(mor))
-                .all_equal_value()
-                .expect("All morphisms in list should have the same type")
-                .apply(data.list_type().into()),
-        }
+        Option::from(self.infer_mor_type(mor).unwrap()).expect("Morphism type should be known")
     }
 
     fn ob_act(&self, ob: Self::Ob, path: &Self::ObOp) -> Self::Ob {
@@ -282,11 +256,10 @@ where
     }
 }
 
-impl<Id, ThId, S> FgDblModel for ModalDblModel<Id, ThId, S>
+impl<Id, ThId> FgDblModel for ModalDblModel<Id, ThId>
 where
     Id: Eq + Clone + Hash + Debug,
     ThId: Eq + Clone + Hash + Debug,
-    S: BuildHasher,
 {
     fn ob_generator_type(&self, id: &Self::ObGen) -> Self::ObType {
         self.ob_types.apply_to_ref(id).expect("Object should have object type")
@@ -302,11 +275,10 @@ where
     }
 }
 
-impl<Id, ThId, S> MutDblModel for ModalDblModel<Id, ThId, S>
+impl<Id, ThId> MutDblModel for ModalDblModel<Id, ThId>
 where
     Id: Eq + Clone + Hash + Debug,
     ThId: Eq + Clone + Hash + Debug,
-    S: BuildHasher,
 {
     fn add_ob(&mut self, x: Self::ObGen, ob_type: Self::ObType) {
         self.ob_types.set(x.clone(), ob_type);
@@ -335,17 +307,145 @@ where
     }
 }
 
-impl<Id, ThId, S> Validate for ModalDblModel<Id, ThId, S>
+impl<Id, ThId> Validate for ModalDblModel<Id, ThId>
 where
     Id: Eq + Clone + Hash + Debug,
     ThId: Eq + Clone + Hash + Debug,
-    S: BuildHasher,
 {
     type ValidationError = InvalidDblModel<Id>;
 
     fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
-        // TODO: Implement validation!
-        Ok(())
+        let ob_gen_errors = self.ob_generators.iter().filter_map(|x| {
+            if self.ob_types.apply_to_ref(&x).is_none_or(|typ| !self.theory.has_ob_type(&typ)) {
+                Some(InvalidDblModel::ObType(x))
+            } else {
+                None
+            }
+        });
+        validate::wrap_errors(ob_gen_errors)?;
+
+        let computad = self.computad();
+        let mor_gen_errors = computad.edge_set().iter().flat_map(|f| {
+            let mut errors = Vec::new();
+            let mor_type = self.mor_types.apply_to_ref(&f).filter(|m| self.theory.has_mor_type(m));
+            if let Some(ob) = computad.src_map().apply_to_ref(&f)
+                && self.has_ob(&ob)
+            {
+                if mor_type
+                    .as_ref()
+                    .is_some_and(|m| !self.ob_has_type(&ob, &self.theory.src_type(m)))
+                {
+                    errors.push(InvalidDblModel::DomType(f.clone()))
+                }
+            } else {
+                errors.push(InvalidDblModel::Dom(f.clone()))
+            }
+            if let Some(ob) = computad.tgt_map().apply_to_ref(&f)
+                && self.has_ob(&ob)
+            {
+                if mor_type
+                    .as_ref()
+                    .is_some_and(|m| !self.ob_has_type(&ob, &self.theory.tgt_type(m)))
+                {
+                    errors.push(InvalidDblModel::CodType(f.clone()))
+                }
+            } else {
+                errors.push(InvalidDblModel::Cod(f.clone()))
+            }
+            if mor_type.is_none() {
+                errors.push(InvalidDblModel::MorType(f))
+            }
+            errors
+        });
+        validate::wrap_errors(mor_gen_errors)
+    }
+}
+
+#[derive(From)]
+enum InferredType<T> {
+    #[from]
+    Type(T),
+    Unknown,
+}
+
+impl<T> From<InferredType<T>> for Option<T> {
+    fn from(value: InferredType<T>) -> Self {
+        match value {
+            InferredType::Type(value) => Some(value),
+            InferredType::Unknown => None,
+        }
+    }
+}
+
+impl<Id, ThId> ModalDblModel<Id, ThId>
+where
+    Id: Eq + Clone + Hash + Debug,
+    ThId: Eq + Clone + Hash + Debug,
+{
+    /// Tries to infer the type of an object in the model.
+    fn infer_ob_type(
+        &self,
+        ob: &ModalOb<Id, ThId>,
+    ) -> Result<InferredType<ModalObType<ThId>>, String> {
+        match ob {
+            ModalOb::Generator(id) => Ok(self.ob_generator_type(id).into()),
+            ModalOb::App(_, op_id) => Ok(self.theory.tight_computad().tgt(op_id).into()),
+            ModalOb::List(list_type, vec) => {
+                let inferred_types: Result<Vec<_>, _> =
+                    vec.iter().map(|ob| self.infer_ob_type(ob)).collect();
+                let unique_type = inferred_types?
+                    .into_iter()
+                    .filter_map(Option::<ModalObType<_>>::from)
+                    .all_equal_value();
+                match unique_type {
+                    Ok(ob_type) => Ok(ob_type.apply((*list_type).into()).into()),
+                    Err(Some(_)) => Err("All objects in list should have the same type".into()),
+                    Err(None) => Ok(InferredType::Unknown),
+                }
+            }
+        }
+    }
+
+    /// Tries to infer the type of a morphism in the model.
+    fn infer_mor_type(
+        &self,
+        mor: &ModalMor<Id, ThId>,
+    ) -> Result<InferredType<ModalMorType<ThId>>, String> {
+        match mor {
+            ModalMor::Generator(id) => Ok(self.mor_generator_type(id).into()),
+            ModalMor::Composite(_) => panic!("Composites not implemented"),
+            ModalMor::App(_, op_id) => Ok(self.theory.dbl_computad().square_cod(op_id).into()),
+            ModalMor::HomApp(_, op_id) => {
+                Ok(ShortPath::Zero(self.theory.tight_computad().tgt(op_id)).into())
+            }
+            ModalMor::List(data, vec) => {
+                let inferred_types: Result<Vec<_>, _> =
+                    vec.iter().map(|mor| self.infer_mor_type(mor)).collect();
+                let unique_type = inferred_types?
+                    .into_iter()
+                    .filter_map(Option::<ModalMorType<_>>::from)
+                    .all_equal_value();
+                match unique_type {
+                    Ok(mor_type) => Ok(mor_type.apply(data.list_type().into()).into()),
+                    Err(Some(_)) => Err("All morphisms in list should have the same type".into()),
+                    Err(None) => Ok(InferredType::Unknown),
+                }
+            }
+        }
+    }
+
+    /// Does the object have the given type?
+    fn ob_has_type(&self, ob: &ModalOb<Id, ThId>, ob_type: &ModalObType<ThId>) -> bool {
+        if let ModalOb::List(list_type, vec) = ob
+            && vec.is_empty()
+        {
+            // XXX: This is bandaid due to lack of type unification.
+            return ob_type.modalities.last() == Some(&Modality::List(*list_type));
+        }
+        match self.infer_ob_type(ob) {
+            Ok(InferredType::Type(other_type)) => other_type == *ob_type,
+            _ => false,
+        }
     }
 }
 
@@ -554,11 +654,14 @@ mod tests {
         assert!(model.has_ob(&prod));
         assert_eq!(model.ob_type(&prod), ob_type);
 
-        // Lists of morphisms.
+        // Model validation.
         let (f, g) = (ustr("f"), ustr("g"));
         model.add_mor(f, x.into(), y.into(), th.hom_type(ob_type.clone()));
         model.add_mor(g, w.into(), z.into(), th.hom_type(ob_type.clone()));
         assert!(model.has_mor(&f.into()));
+        assert!(model.validate().is_ok());
+
+        // Lists of morphisms.
         let pair = ModalMor::List(MorListData::Plain(), vec![f.into(), g.into()]);
         assert!(model.has_mor(&pair));
         assert_eq!(model.mor_type(&pair), th.hom_type(ob_type.clone().apply(List::Plain.into())));
@@ -582,7 +685,7 @@ mod tests {
         let th = Rc::new(th_sym_monoidal_category());
         let ob_type = ModeApp::new(ustr("Object"));
 
-        // Lists of morphisms, with permutation.
+        // Model validation.
         let mut model = ModalDblModel::new(th.clone());
         let (w, x, y, z, f, g) = (ustr("w"), ustr("x"), ustr("y"), ustr("z"), ustr("f"), ustr("g"));
         for id in [w, x, y, z] {
@@ -590,6 +693,9 @@ mod tests {
         }
         model.add_mor(f, x.into(), y.into(), th.hom_type(ob_type.clone()));
         model.add_mor(g, w.into(), z.into(), th.hom_type(ob_type.clone()));
+        assert!(model.validate().is_ok());
+
+        // Lists of morphisms, with permutation.
         let pair = ModalMor::List(
             MorListData::Symmetric(SkelColumn::new(vec![1, 0])),
             vec![f.into(), g.into()],
@@ -603,5 +709,25 @@ mod tests {
             vec![f.into(), g.into()],
         );
         assert!(!model.has_mor(&pair));
+    }
+
+    #[test]
+    fn multicategory() {
+        let th = Rc::new(th_multicategory());
+        let ob_type = ModeApp::new(ustr("Object"));
+        let mor_type: ModalMorType<_> = ModeApp::new(ustr("Multihom")).into();
+
+        // Model validation.
+        let mut model = ModalDblModel::new(th.clone());
+        let x = ustr("x");
+        model.add_ob(x, ob_type.clone());
+        model.add_mor(
+            ustr("binary"),
+            ModalOb::List(List::Plain, vec![x.into(), x.into()]),
+            x.into(),
+            mor_type.clone(),
+        );
+        model.add_mor(ustr("nullary"), ModalOb::List(List::Plain, vec![]), x.into(), mor_type);
+        assert!(model.validate().is_ok());
     }
 }

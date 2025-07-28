@@ -137,7 +137,7 @@ const routes: RouteDefinition[] = [
     },
     {
         path: "/help",
-        component: lazy(() => import("./help/help_container")),
+        component: lazy(() => import("./help/help_layout")),
         children: helpRoutes,
     },
     {

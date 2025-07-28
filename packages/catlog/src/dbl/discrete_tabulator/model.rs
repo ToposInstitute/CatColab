@@ -1,10 +1,10 @@
 //! Models of discrete tabulator theories.
 
-use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
+use std::hash::Hash;
 use std::rc::Rc;
 
 use derivative::Derivative;
-use ustr::{IdentityHasher, Ustr};
+use ustr::Ustr;
 
 use super::theory::*;
 use crate::dbl::{category::*, model::*, theory::DblTheory};
@@ -171,9 +171,9 @@ the dev docs.
 #[derive(Clone, Derivative)]
 #[derivative(PartialEq(bound = "Id: Eq + Hash, ThId: Eq + Hash"))]
 #[derivative(Eq(bound = "Id: Eq + Hash, ThId: Eq + Hash"))]
-pub struct DiscreteTabModel<Id, ThId, S = RandomState> {
+pub struct DiscreteTabModel<Id, ThId> {
     #[derivative(PartialEq(compare_with = "Rc::ptr_eq"))]
-    theory: Rc<DiscreteTabTheory<ThId, ThId, S>>,
+    theory: Rc<DiscreteTabTheory<ThId, ThId>>,
     generators: DiscreteTabGenerators<Id, Id>,
     // TODO: Equations
     ob_types: IndexedHashColumn<Id, TabObType<ThId, ThId>>,
@@ -182,16 +182,15 @@ pub struct DiscreteTabModel<Id, ThId, S = RandomState> {
 
 /// A model of a discrete tabulator theory where both theory and model have keys
 /// of type `Ustr`.
-pub type UstrDiscreteTabModel = DiscreteTabModel<Ustr, Ustr, BuildHasherDefault<IdentityHasher>>;
+pub type UstrDiscreteTabModel = DiscreteTabModel<Ustr, Ustr>;
 
-impl<Id, ThId, S> DiscreteTabModel<Id, ThId, S>
+impl<Id, ThId> DiscreteTabModel<Id, ThId>
 where
     Id: Eq + Clone + Hash,
     ThId: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     /// Creates an empty model of the given theory.
-    pub fn new(theory: Rc<DiscreteTabTheory<ThId, ThId, S>>) -> Self {
+    pub fn new(theory: Rc<DiscreteTabTheory<ThId, ThId>>) -> Self {
         Self {
             theory,
             generators: Default::default(),
@@ -248,7 +247,7 @@ where
     }
 }
 
-impl<Id, ThId, S> Category for DiscreteTabModel<Id, ThId, S>
+impl<Id, ThId> Category for DiscreteTabModel<Id, ThId>
 where
     Id: Eq + Clone + Hash,
 {
@@ -273,7 +272,7 @@ where
     }
 }
 
-impl<Id, ThId, S> FgCategory for DiscreteTabModel<Id, ThId, S>
+impl<Id, ThId> FgCategory for DiscreteTabModel<Id, ThId>
 where
     Id: Eq + Clone + Hash,
 {
@@ -295,17 +294,16 @@ where
     }
 }
 
-impl<Id, ThId, S> DblModel for DiscreteTabModel<Id, ThId, S>
+impl<Id, ThId> DblModel for DiscreteTabModel<Id, ThId>
 where
     Id: Eq + Clone + Hash,
     ThId: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     type ObType = TabObType<ThId, ThId>;
     type MorType = TabMorType<ThId, ThId>;
     type ObOp = TabObOp<ThId, ThId>;
     type MorOp = TabMorOp<ThId, ThId>;
-    type Theory = DiscreteTabTheory<ThId, ThId, S>;
+    type Theory = DiscreteTabTheory<ThId, ThId>;
 
     fn theory(&self) -> &Self::Theory {
         &self.theory
@@ -341,11 +339,10 @@ where
     }
 }
 
-impl<Id, ThId, S> FgDblModel for DiscreteTabModel<Id, ThId, S>
+impl<Id, ThId> FgDblModel for DiscreteTabModel<Id, ThId>
 where
     Id: Eq + Clone + Hash,
     ThId: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     fn ob_generator_type(&self, ob: &Self::ObGen) -> Self::ObType {
         self.ob_types.apply_to_ref(ob).expect("Object should have type")
@@ -365,11 +362,10 @@ where
     }
 }
 
-impl<Id, ThId, S> MutDblModel for DiscreteTabModel<Id, ThId, S>
+impl<Id, ThId> MutDblModel for DiscreteTabModel<Id, ThId>
 where
     Id: Eq + Clone + Hash,
     ThId: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     fn add_ob(&mut self, x: Self::ObGen, ob_type: Self::ObType) {
         self.ob_types.set(x.clone(), ob_type);
@@ -395,11 +391,10 @@ where
     }
 }
 
-impl<Id, ThId, S> Validate for DiscreteTabModel<Id, ThId, S>
+impl<Id, ThId> Validate for DiscreteTabModel<Id, ThId>
 where
     Id: Eq + Clone + Hash,
     ThId: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     type ValidationError = InvalidDblModel<Id>;
 

@@ -33,9 +33,6 @@ pub struct DiscreteDblModel<Id, Cat: FgCategory> {
 /// A model of a discrete double theory where both theoy and model have keys of
 /// type `Ustr`.
 pub type UstrDiscreteDblModel = DiscreteDblModel<Ustr, UstrFpCategory>;
-// NOTE: We are leaving a small optimization on the table by not using the
-// `IdentityHasher` but adding that extra type parameter quickly gets annoying
-// because it has to be propagated everywhere, including into model morphisms.
 
 impl<Id, Cat> DiscreteDblModel<Id, Cat>
 where

@@ -2,12 +2,13 @@ import Dialog from "@corvu/dialog";
 import { For, createMemo, createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
+import { TheoryHelpButton } from "../page/toolbar";
 import { TheoryLibraryContext, type TheoryMeta } from "../stdlib";
 
 import "./theory_selector.css";
 
 type TheorySelectorProps = {
-    theory: TheoryMeta;
+    theoryMeta: TheoryMeta;
     setTheory: (theoryId: string) => void;
     theories?: string[];
 };
@@ -22,13 +23,14 @@ export function TheorySelectorDialog(props: TheorySelectorProps) {
                 class="theory-selector-trigger"
                 data-disabled={props.theories?.length === 0 ? true : undefined}
             >
-                {props.theory.name}
+                {props.theoryMeta.name}
             </Dialog.Trigger>
+            <TheoryHelpButton theoryMeta={props.theoryMeta} />
             <Dialog.Portal>
                 <Dialog.Overlay class="overlay" />
                 <Dialog.Content class="popup">
                     <TheorySelector
-                        theory={props.theory}
+                        theoryMeta={props.theoryMeta}
                         setTheory={(id) => {
                             props.setTheory(id);
                             setTheorySelectorOpen(false);

@@ -14,15 +14,9 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
-import {
-    DocumentBreadcrumbs,
-    DocumentLoadingScreen,
-    DocumentMenu,
-    TheoryHelpButton,
-    Toolbar,
-} from "../page";
+import { DocumentBreadcrumbs, DocumentLoadingScreen, DocumentMenu, Toolbar } from "../page";
 import { WelcomeOverlay } from "../page/welcome_overlay";
-import { TheoryLibraryContext } from "../stdlib";
+import { TheoryLibraryContext, stdTheories } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
 import { PermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
@@ -68,7 +62,6 @@ export function ModelDocumentEditor(props: {
                 <DocumentMenu liveDocument={props.liveModel} />
                 <DocumentBreadcrumbs document={props.liveModel} />
                 <span class="filler" />
-                <TheoryHelpButton theory={props.liveModel.theory()} />
                 <PermissionsButton
                     permissions={props.liveModel.liveDoc.permissions}
                     refId={props.liveModel.refId}
@@ -114,7 +107,7 @@ export function ModelPane(props: {
                     />
                 </div>
                 <TheorySelectorDialog
-                    theory={props.liveModel.theory()}
+                    theoryMeta={stdTheories.getMetadata(liveDoc().doc.theory)}
                     setTheory={(id) => {
                         liveDoc().changeDoc((model) => {
                             model.theory = id;

@@ -1,9 +1,9 @@
 import { A, useNavigate } from "@solidjs/router";
-import { type JSX, useContext } from "solid-js";
+import { type JSX, createMemo, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { IconButton } from "../components";
-import { TheoryLibraryContext } from "../stdlib";
+import { TheoryLibraryContext, type TheoryMeta } from "../stdlib";
 import type { Theory } from "../theory";
 import { DefaultAppMenu } from "./menubar";
 
@@ -49,16 +49,26 @@ const Brand = () => (
 
 /** Button that navigates to the help page for a theory.
 
-If no theory is set, it naviagtes instead to the list of all theories.
+If no theory is set, it navigates instead to the list of all theories.
  */
 export function TheoryHelpButton(props: {
     theory?: Theory;
+    theoryMeta?: TheoryMeta;
 }) {
     const navigate = useNavigate();
 
     const theories = useContext(TheoryLibraryContext);
     invariant(theories);
-    const theory = (): Theory => props.theory ?? theories.getDefault();
+
+    const theory = createMemo(() => {
+        if (props.theoryMeta && !props.theory) {
+            return theories.get(props.theoryMeta.id);
+        } else if (!props.theory) {
+            return theories.getDefault();
+        } else {
+            return props.theory;
+        }
+    });
 
     const tooltip = (theory: Theory) => (
         <>
@@ -66,13 +76,13 @@ export function TheoryHelpButton(props: {
                 {"You are using the logic: "}
                 <strong>{theory.name}</strong>
             </p>
-            <p>{"Learn more about this logic"}</p>
+            <p>{"Click to learn more about this logic"}</p>
         </>
     );
 
     return (
         <IconButton
-            onClick={() => navigate(`/help/theory/${theory().id}`)}
+            onClick={() => navigate(`/help/logics/${theory().id}`)}
             tooltip={tooltip(theory())}
         >
             <CircleHelp />
