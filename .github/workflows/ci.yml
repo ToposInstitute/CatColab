@@ -122,7 +122,7 @@ jobs:
         # inputs. As a result, branches with differing inputs may end up with almost no cached data.
         # This case should not come up that often, and when it does it will just result in some ~15min
         # CI times.
-        primary-key: "fixed-primary-key"
+        primary-key: "fixed-primary-key13"
 
         # Since we are manually updating the cache, and we don't know if the cache has changed we need to
         # purge the existing cache and re-upload it on every run. We could save 90s in CI it we
@@ -130,9 +130,15 @@ jobs:
         purge: true
         purge-primary-key: "always"
 
+    - name: Run NixOS integration tests
+      run: |
+        nix build .#nixosConfigurations.catcolab-vm.config.system.build.vm
+        nix build .#nixosConfigurations.catcolab.config.system.build.toplevel
+
+
     - name: Prune unused Nix store paths
-      run: nix-collect-garbage -d      
-   # - run: nix flake check --no-sandbox
+      run: nix store gc --option keep-outputs true --option keep-derivations true
+
 
   deploy_backend:
     name: Deploy backend to AWS
