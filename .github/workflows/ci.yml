@@ -145,9 +145,9 @@ jobs:
       run: |
         nix build .#nixosConfigurations.catcolab.config.system.build.toplevel --out-link result-catcolab-next
 
-    - name: Run nixos-rebuild switch remotely
-      run: |
-         nix run github:serokell/deploy-rs .#${HOST_CONFIG}
+    # - name: Run nixos-rebuild switch remotely
+    #   run: |
+    #      nix run github:serokell/deploy-rs .#${HOST_CONFIG}
 
     - name: Prune unused Nix store paths
       run: nix store gc --option keep-outputs true --option keep-derivations true
