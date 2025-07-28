@@ -224,6 +224,10 @@ A retraction (left inverse) exists if and only if the mapping is injective. The
 retraction is unique when it exists because it is defined only on the image of
 the mapping. When the mapping is not injective, a pair of elements having the
 same image is returned.
+
+# Errors
+When the mapping is not injective, a pair of elements having the
+same image is returned. This provides a counterexample to the claim of injectivity.
  */
 pub fn retraction<Dom, Cod, InvMap>(
     mapping: &impl Column<Dom = Dom, Cod = Cod>,
@@ -355,9 +359,8 @@ impl<T: Eq + Clone> Column for VecColumn<T> {
         self.0.iter().flatten()
     }
 
-    #[must_use]
     fn is_empty(&self) -> bool {
-        self.0.iter().all(|y| y.is_none())
+        self.0.iter().all(std::option::Option::is_none)
     }
 }
 
@@ -382,6 +385,7 @@ impl SkelColumn {
     }
 
     /// Is the mapping an injection between the finite sets `[m]` and `[n]`?
+    #[must_use]
     pub fn is_injection(&self, m: usize, n: usize) -> bool {
         self.is_function(m, n) && self.is_partial_injection()
     }

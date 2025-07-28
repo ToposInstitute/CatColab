@@ -397,6 +397,7 @@ impl SkelGraph {
     /// Make a cycle graph with `n` vertices.
     #[cfg(test)]
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn cycle(n: usize) -> Self {
         assert!(n > 0);
         let mut g = SkelGraph::path(n);

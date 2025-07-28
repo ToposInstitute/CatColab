@@ -107,8 +107,9 @@ The main intended application is to categories
 enriched in `M`-sets for a monoid `M` such as the positive real numbers under multiplication,
 but to remain within simple theories the theory defined here is more general.
  */
+#[must_use]
 pub fn th_category_with_scalars() -> UstrDiscreteDblTheory {
-    let mut idem: UstrFpCategory = Default::default();
+    let mut idem: UstrFpCategory = UstrFpCategory::default();
     let (x, s) = (ustr("Object"), ustr("Nonscalar"));
     idem.add_ob_generator(x);
     idem.add_mor_generator(s, x, x);
@@ -124,6 +125,7 @@ A *category with links* is a category `C` together with a profunctor from `C` to
 [Primitive stock and flow diagrams](crate::refs::StockFlow) are free categories
 with links.
  */
+#[must_use]
 pub fn th_category_links() -> UstrDiscreteTabTheory {
     let mut th: UstrDiscreteTabTheory = Default::default();
     let x = ustr("Object");
@@ -137,16 +139,19 @@ pub fn th_category_links() -> UstrDiscreteTabTheory {
 }
 
 /// The theory of strict monoidal categories.
+#[must_use]
 pub fn th_monoidal_category() -> UstrModalDblTheory {
     th_list_algebra(List::Plain)
 }
 
 /// The theory of lax monoidal categories.
+#[must_use]
 pub fn th_lax_monoidal_category() -> UstrModalDblTheory {
     th_list_lax_algebra(List::Plain)
 }
 
 /// The theory of strict symmetric monoidal categories.
+#[must_use]
 pub fn th_sym_monoidal_category() -> UstrModalDblTheory {
     th_list_algebra(List::Symmetric)
 }
@@ -158,7 +163,7 @@ monad is used.
  */
 fn th_list_algebra(list: List) -> UstrModalDblTheory {
     let m = Modality::List(list);
-    let mut th: UstrModalDblTheory = Default::default();
+    let mut th: UstrModalDblTheory = UstrModalDblTheory::default();
     let (x, a) = (ustr("Object"), ustr("tensor"));
     th.add_ob_type(x);
     th.add_ob_op(a, ModeApp::new(x).apply(m), ModeApp::new(x));
@@ -176,7 +181,7 @@ fn th_list_algebra(list: List) -> UstrModalDblTheory {
 /// The theory of a lax algebra over a list monad.
 fn th_list_lax_algebra(list: List) -> UstrModalDblTheory {
     let m = Modality::List(list);
-    let mut th: UstrModalDblTheory = Default::default();
+    let mut th: UstrModalDblTheory = UstrModalDblTheory::default();
     let (x, a) = (ustr("Object"), ustr("tensor"));
     th.add_ob_type(x);
     th.add_ob_op(a, ModeApp::new(x).apply(m), ModeApp::new(x));
@@ -195,6 +200,7 @@ fn th_list_lax_algebra(list: List) -> UstrModalDblTheory {
 }
 
 /// The theory of a (non-symmetric) multicategory.
+#[must_use]
 pub fn th_multicategory() -> UstrModalDblTheory {
     th_generalized_multicategory(List::Plain)
 }
@@ -229,7 +235,7 @@ mod tests {
     #[test]
     fn validate_discrete_tabulator_theories() {
         // TODO: Implementation validation for discrete tabulator theories.
-        th_category_links();
+        let _to_validate = th_category_links();
     }
 
     #[test]

@@ -308,7 +308,7 @@ where
     }
 
     fn is_zero(&self) -> bool {
-        self.0.values().all(|coef| coef.is_zero())
+        self.0.values().all(num_traits::Zero::is_zero)
     }
 }
 
@@ -425,8 +425,9 @@ where
     /** Evaluates the monomial by substituting from a sequence of values.
 
     The order of the values should correspond to the order of the variables.
-    Will panic if the number of values does not equal the length of the
-    monomial.
+
+    # Panics
+    Will panic if the number of values does not equal the lenght of the monomial.
      */
     pub fn eval_with_order<A>(&self, values: impl IntoIterator<Item = A>) -> A
     where

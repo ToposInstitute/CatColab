@@ -50,7 +50,7 @@ impl<Id, Sys> ODEAnalysis<Id, Sys> {
     {
         // ODE solver will fail in the degenerate case of an empty system.
         if self.variable_index.is_empty() {
-            return Ok(Default::default());
+            return Ok(ODESolution::default());
         }
 
         let duration = self.problem.end_time - self.problem.start_time;

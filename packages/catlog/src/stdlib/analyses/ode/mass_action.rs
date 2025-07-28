@@ -111,6 +111,7 @@ impl PetriNetMassActionAnalysis {
     }
 
     /// Creates a mass-action system with numerical rate coefficients.
+    #[must_use]
     pub fn build_numerical_system<Id: Eq + Clone + Hash + Ord + Debug>(
         &self,
         model: &ModalDblModel<Id, Ustr>,
@@ -144,6 +145,7 @@ impl Default for StockFlowMassActionAnalysis {
 
 impl StockFlowMassActionAnalysis {
     /// Creates a mass-action system with symbolic rate coefficients.
+    #[must_use]
     pub fn build_system<Id: Eq + Clone + Hash + Ord>(
         &self,
         model: &DiscreteTabModel<Id, Ustr>,
@@ -166,7 +168,7 @@ impl StockFlowMassActionAnalysis {
                 *term = std::mem::take(term) * Monomial::generator(dom);
             } else {
                 panic!("Codomain of link does not belong to model");
-            };
+            }
         }
 
         let terms: Vec<(Id, Polynomial<Id, Parameter<Id>, u8>)> = terms
@@ -193,6 +195,7 @@ impl StockFlowMassActionAnalysis {
     }
 
     /// Creates a mass-action system with numerical rate coefficients.
+    #[must_use]
     pub fn build_numerical_system<Id: Eq + Clone + Hash + Ord>(
         &self,
         model: &DiscreteTabModel<Id, Ustr>,
