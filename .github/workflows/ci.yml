@@ -130,10 +130,13 @@ jobs:
         purge: true
         purge-primary-key: "always"
 
-    - name: Run NixOS integration tests
+    - name: Build 'catcolab-vm' host
       run: |
-        nix build .#nixosConfigurations.catcolab-vm.config.system.build.vm
-        nix build .#nixosConfigurations.catcolab.config.system.build.toplevel
+        nix build .#nixosConfigurations.catcolab-vm.config.system.build.vm --out-link result-catcolab-vm
+
+    - name: Build 'catcolab' host
+      run: |
+        nix build .#nixosConfigurations.catcolab.config.system.build.toplevel --outlink result-catcolab
 
     - name: Prune unused Nix store paths
       run: nix store gc --option keep-outputs true --option keep-derivations true
