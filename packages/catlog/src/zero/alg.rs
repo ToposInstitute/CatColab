@@ -297,6 +297,7 @@ where
         let mut result = Polynomial::default();
         let (outer, inner) = (self.0, rhs.0);
         let mut outer_iter = outer.into_iter();
+        #[allow(clippy::redundant_else)]
         while let Some((a, m)) = outer_iter.next() {
             if outer_iter.len() == 0 {
                 let mut inner_iter = inner.into_iter();

@@ -8,6 +8,7 @@ use nonempty::NonEmpty;
 #[cfg(feature = "serde-wasm")]
 use tsify::declare;
 
+#[allow(clippy::wildcard_imports)]
 use crate::dbl::{model::*, model_diagram::*, model_morphism::*};
 use crate::one::{Category, FgCategory, GraphMapping};
 use crate::validate;

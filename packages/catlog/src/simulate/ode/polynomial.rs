@@ -167,25 +167,25 @@ mod tests {
             ('R', var('I') * param('γ')),
         ];
         let sys: PolynomialSystem<_, _, _> = terms.into_iter().collect();
-        let expected = expect![[r#"
+        let expected = expect![[r"
             dI = ((-1) γ) I + β I S
             dR = γ I
             dS = ((-1) β) I S
-        "#]];
+        "]];
         expected.assert_eq(&sys.to_string());
 
         let sys = sys.extend_scalars(|p| p.eval(|_| 1.0));
-        let expected = expect![[r#"
+        let expected = expect![[r"
             dI = (-1) I + I S
             dR = I
             dS = (-1) I S
-        "#]];
+        "]];
         expected.assert_eq(&sys.to_string());
 
         let initial = DVector::from_column_slice(&[1.0, 0.0, 4.0]);
         let problem = ODEProblem::new(sys.to_numerical(), initial).end_time(5.0);
         let result = problem.solve_rk4(0.1).unwrap();
-        let expected = expect![[r#"
+        let expected = expect![[r"
             ⡁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⣀⠤⠤⠤⠒⠒⠒⠒⠒⠉⠉⠉⠉⠁ 4.9
             ⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⠤⠒⠒⠉⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
             ⠂⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⠤⠒⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
@@ -208,7 +208,7 @@ mod tests {
             ⢄⠔⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠒⠒⠤⠤⠤⠤⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣉⣉⣒⣒⣒⣒⣤⣤⣤⣤⠤⣀⣀⣀⣀⡀
             ⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠉⠉⠉⠉⠉⠁ 0.0
             0.0                                            5.0
-        "#]];
+        "]];
         expected.assert_eq(&textplot_ode_result(&problem, &result));
     }
 }

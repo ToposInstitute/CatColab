@@ -7,8 +7,10 @@ use derivative::Derivative;
 use ref_cast::RefCast;
 use ustr::Ustr;
 
+#[allow(clippy::wildcard_imports)]
 use crate::dbl::{category::*, graph::ProedgeGraph, tree::DblTree};
 use crate::one::{Graph, Path};
+#[allow(clippy::wildcard_imports)]
 use crate::zero::*;
 
 /// Object type in a discrete tabulator theory.
@@ -128,8 +130,9 @@ where
     E: Eq + Clone + Hash,
 {
     /// Creates an empty discrete tabulator theory.
+    #[must_use]
     pub fn new() -> Self {
-        Default::default()
+        Self::default()
     }
 
     /// Constructs a tabulator of a morphism type.
@@ -262,12 +265,12 @@ where
     }
     fn cell_src(&self, cell: &Self::Cell) -> Self::Arr {
         let graph = ProedgeGraph::ref_cast(UnderlyingDblGraph::ref_cast(self));
-        Path::collect(cell.projections.iter().cloned().map(|proj| proj.src()))
+        Path::collect(cell.projections.iter().cloned().map(TabMorProj::src))
             .unwrap_or_else(|| Path::empty(cell.dom.src(graph)))
     }
     fn cell_tgt(&self, cell: &Self::Cell) -> Self::Arr {
         let graph = ProedgeGraph::ref_cast(UnderlyingDblGraph::ref_cast(self));
-        Path::collect(cell.projections.iter().cloned().map(|proj| proj.tgt()))
+        Path::collect(cell.projections.iter().cloned().map(TabMorProj::tgt))
             .unwrap_or_else(|| Path::empty(cell.dom.tgt(graph)))
     }
 

@@ -655,6 +655,7 @@ pub fn sch_graph() -> UstrFpCategory {
 }
 
 /// The schema for symmetric graphs, an f.p. category.
+#[allow(clippy::many_single_char_names)]
 #[cfg(test)]
 #[must_use]
 pub fn sch_sgraph() -> UstrFpCategory {
@@ -709,7 +710,7 @@ mod tests {
         let mut builder: CategoryProgramBuilder<char, char> = CategoryProgramBuilder::default();
         let prog = builder.program();
 
-        let expected = expect![[r#"
+        let expected = expect![[r"
             (datatype Ob (ObGen i64 :cost 0))
             (datatype Mor (MorGen i64 :cost 0))
             (constructor dom (Mor) Ob :cost 1)
@@ -747,7 +748,7 @@ mod tests {
                     :ruleset CatAxioms )
             (rewrite (compose f (id (cod f))) f :ruleset CatAxioms)
             (rewrite (compose (id (dom f)) f) f :ruleset CatAxioms)
-        "#]];
+        "]];
         expected.assert_eq(&prog.to_string());
 
         let mut egraph: EGraph = EGraph::default();

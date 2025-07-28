@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 use uuid::Uuid;
 
+#[allow(clippy::wildcard_imports)]
 use super::{path::Path, theory::*};
 
 /// An object in a model of a double theory.

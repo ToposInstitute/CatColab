@@ -7,6 +7,7 @@ use derive_more::Constructor;
 
 use super::graph::{InvalidVDblGraph, VDblGraph};
 use crate::one::{Graph, Path, ReflexiveGraph, ShortPath};
+#[allow(clippy::wildcard_imports)]
 use crate::zero::*;
 
 /** Top-dimensional data of an augmented virtual double computad.
@@ -66,6 +67,7 @@ pub struct AVDCComputad<'a, Ob, Arr, Pro, ObSet, ArrGraph, ProGraph, Sq> {
     computad: &'a AVDCComputadTop<Ob, Arr, Pro, Sq>,
 }
 
+#[allow(clippy::elidable_lifetime_names)]
 impl<'a, Ob, Arr, Pro, ObSet, ArrGraph, ProGraph, Sq> VDblGraph
     for AVDCComputad<'a, Ob, Arr, Pro, ObSet, ArrGraph, ProGraph, Sq>
 where
@@ -127,6 +129,7 @@ where
     }
 }
 
+#[allow(clippy::elidable_lifetime_names)]
 impl<'a, Ob, Arr, Pro, ObSet, ArrGraph, ProGraph, Sq>
     AVDCComputad<'a, Ob, Arr, Pro, ObSet, ArrGraph, ProGraph, Sq>
 where

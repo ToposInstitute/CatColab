@@ -88,6 +88,7 @@ mod test {
     use crate::one::Path;
     use crate::{simulate::ode::lotka_volterra, stdlib};
 
+    #[allow(clippy::similar_names)]
     #[test]
     fn predator_prey() {
         let th = Rc::new(stdlib::theories::th_signed_category());

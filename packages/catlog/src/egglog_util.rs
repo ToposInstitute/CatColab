@@ -2,6 +2,7 @@
 
 use std::fmt::Display;
 
+#[allow(clippy::wildcard_imports)]
 use egglog::{EGraph, Error, ast::*, span};
 use ref_cast::RefCast;
 
@@ -17,7 +18,7 @@ pub struct Program(pub Vec<Command>);
 /// Displays the program as a newline-separated sequence of S-expressions.
 impl Display for Program {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for command in self.0.iter() {
+        for command in &self.0 {
             writeln!(f, "{command}")?;
         }
         Ok(())

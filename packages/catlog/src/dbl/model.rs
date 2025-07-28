@@ -134,11 +134,13 @@ pub trait FgDblModel: DblModel + FgCategory {
 
     /// Iterators over basic objects with the given object type.
     fn objects_with_type(&self, obtype: &Self::ObType) -> impl Iterator<Item = Self::Ob> {
+        #[allow(clippy::redundant_closure_for_method_calls)]
         self.ob_generators_with_type(obtype).map(|ob_gen| ob_gen.into())
     }
 
     /// Iterates over basic morphisms with the given morphism type.
     fn morphisms_with_type(&self, mortype: &Self::MorType) -> impl Iterator<Item = Self::Mor> {
+        #[allow(clippy::redundant_closure_for_method_calls)]
         self.mor_generators_with_type(mortype).map(|mor_gen| mor_gen.into())
     }
 }

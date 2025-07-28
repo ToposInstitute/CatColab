@@ -31,6 +31,7 @@ use crate::dbl::theory::InvalidDblTheory;
 use crate::dbl::{DblTree, InvalidVDblGraph, VDCWithComposites, VDblCategory, VDblGraph};
 use crate::one::computad::{Computad, ComputadTop};
 use crate::validate::{self, Validate};
+#[allow(clippy::wildcard_imports)]
 use crate::{one::*, zero::*};
 
 /// Modalities available in a modal double theory.
@@ -107,7 +108,7 @@ impl<T> ModeApp<T> {
     pub fn new(arg: T) -> Self {
         Self {
             arg,
-            modalities: Default::default(),
+            modalities: Vec::default(),
         }
     }
 
@@ -123,12 +124,14 @@ impl<T> ModeApp<T> {
     }
 
     /// Applies a modality.
+    #[must_use]
     pub fn apply(mut self, m: Modality) -> Self {
         self.modalities.push(m);
         self
     }
 
     /// Applies a sequence of modalities.
+    #[must_use]
     pub fn apply_all(mut self, iter: impl IntoIterator<Item = Modality>) -> Self {
         self.modalities.extend(iter);
         self
@@ -177,11 +180,13 @@ pub type ModalMorType<Id> = ShortPath<ModalObType<Id>, ModeApp<Id>>;
 
 impl<Id> ModalMorType<Id> {
     /// Applies a modality.
+    #[must_use]
     pub fn apply(self, m: Modality) -> Self {
         self.map(|x| x.apply(m), |f| f.apply(m))
     }
 
     /// Applies a sequence of modalities.
+    #[must_use]
     pub fn apply_all(self, iter: impl IntoIterator<Item = Modality>) -> Self {
         match self {
             ShortPath::Zero(x) => ShortPath::Zero(x.apply_all(iter)),
@@ -195,21 +200,25 @@ pub type ModalObOp<Id> = Path<ModalObType<Id>, ModeApp<ModalOp<Id>>>;
 
 impl<Id> ModalObOp<Id> {
     /// Constructs the object operation for a generator.
+    #[must_use]
     pub fn generator(id: Id) -> Self {
         ModeApp::new(ModalOp::Generator(id)).into()
     }
 
     /// Constructs a concatenation operation for a list modality.
+    #[must_use]
     pub fn concat(list: List, arity: usize, ob_type: ModalObType<Id>) -> Self {
         ModeApp::new(ModalOp::Concat(list, arity, ob_type)).into()
     }
 
     /// Applies a modality.
+    #[must_use]
     pub fn apply(self, m: Modality) -> Self {
         self.map(|x| x.apply(m), |f| f.apply(m))
     }
 
     /// Applies a sequence of modalities.
+    #[must_use]
     pub fn apply_all(self, iter: impl IntoIterator<Item = Modality> + Clone) -> Self {
         match self {
             Path::Id(x) => Path::Id(x.apply_all(iter)),
@@ -667,6 +676,7 @@ where
 
     fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
         // Validate generating data.
+        #[allow(clippy::redundant_closure_for_method_calls)]
         ModalVDblGraph::ref_cast(self)
             .validate()
             .map_err(|errs| errs.map(|err| err.into()))?;
@@ -741,6 +751,6 @@ where
 
     /// Equate two object operations in the theory.
     pub fn equate_ob_ops(&mut self, lhs: ModalObOp<Id>, rhs: ModalObOp<Id>) {
-        self.arr_equations.push(PathEq::new(lhs, rhs))
+        self.arr_equations.push(PathEq::new(lhs, rhs));
     }
 }

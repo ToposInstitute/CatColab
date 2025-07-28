@@ -328,6 +328,7 @@ mod tests {
 
     Reference: <https://blog.algebraicjulia.org/post/2020/09/cset-graphs-2/>
      */
+    #[allow(clippy::similar_names)]
     #[test]
     fn sch_sgraph_to_hgraph() {
         let (sch_hgraph, sch_sgraph) = (sch_hgraph(), sch_sgraph());
@@ -351,6 +352,7 @@ mod tests {
     }
 
     /// Non-functor from schema for symmetric graphs to schema for graphs.
+    #[allow(clippy::similar_names)]
     #[test]
     fn sch_sgraph_to_graph() {
         let (sch_graph, sch_sgraph) = (sch_graph(), sch_sgraph());

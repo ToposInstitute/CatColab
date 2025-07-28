@@ -9,11 +9,13 @@ use itertools::Itertools;
 use ref_cast::RefCast;
 use ustr::Ustr;
 
+#[allow(clippy::wildcard_imports)]
 use super::theory::*;
 use crate::dbl::graph::VDblGraph;
 use crate::dbl::model::{DblModel, FgDblModel, InvalidDblModel, MutDblModel};
 use crate::dbl::theory::DblTheory;
 use crate::validate::{self, Validate};
+#[allow(clippy::wildcard_imports)]
 use crate::{one::computad::*, one::*, zero::*};
 
 /// Object in a model of a modal double theory.
@@ -89,13 +91,14 @@ pub type UstrModalDblModel = ModalDblModel<Ustr, Ustr>;
 
 impl<Id, ThId> ModalDblModel<Id, ThId> {
     /// Creates an empty model of the given theory.
+    #[must_use]
     pub fn new(theory: Rc<ModalDblTheory<ThId>>) -> Self {
         Self {
             theory,
-            ob_generators: Default::default(),
-            mor_generators: Default::default(),
-            ob_types: Default::default(),
-            mor_types: Default::default(),
+            ob_generators: HashFinSet::default(),
+            mor_generators: ComputadTop::default(),
+            ob_types: HashColumn::default(),
+            mor_types: HashColumn::default(),
         }
     }
 
@@ -140,6 +143,7 @@ where
     }
     fn has_mor(&self, mor: &Self::Mor) -> bool {
         let graph = UnderlyingGraph::ref_cast(self);
+        #[allow(clippy::match_same_arms)]
         match mor {
             ModalMor::Generator(id) => self.computad().has_edge(id),
             ModalMor::Composite(path) => path.contained_in(graph),
@@ -335,10 +339,10 @@ where
                     .as_ref()
                     .is_some_and(|m| !self.ob_has_type(&ob, &self.theory.src_type(m)))
                 {
-                    errors.push(InvalidDblModel::DomType(f.clone()))
+                    errors.push(InvalidDblModel::DomType(f.clone()));
                 }
             } else {
-                errors.push(InvalidDblModel::Dom(f.clone()))
+                errors.push(InvalidDblModel::Dom(f.clone()));
             }
             if let Some(ob) = computad.tgt_map().apply_to_ref(&f)
                 && self.has_ob(&ob)
@@ -347,13 +351,13 @@ where
                     .as_ref()
                     .is_some_and(|m| !self.ob_has_type(&ob, &self.theory.tgt_type(m)))
                 {
-                    errors.push(InvalidDblModel::CodType(f.clone()))
+                    errors.push(InvalidDblModel::CodType(f.clone()));
                 }
             } else {
-                errors.push(InvalidDblModel::Cod(f.clone()))
+                errors.push(InvalidDblModel::Cod(f.clone()));
             }
             if mor_type.is_none() {
-                errors.push(InvalidDblModel::MorType(f))
+                errors.push(InvalidDblModel::MorType(f));
             }
             errors
         });
@@ -476,7 +480,7 @@ where
                     Err(format!("Object should be a list of type {list_type:?}"))
                 }
             }
-            Some(Modality::Discrete()) | Some(Modality::Codiscrete()) | None => self.arg.ob_act(ob),
+            Some(Modality::Discrete() | Modality::Codiscrete()) | None => self.arg.ob_act(ob),
         }
     }
 
@@ -612,6 +616,7 @@ mod tests {
     use crate::{dbl::tree::DblNode, one::tree::OpenTree};
     use ustr::ustr;
 
+    #[allow(clippy::many_single_char_names)]
     #[test]
     fn monoidal_category() {
         let th = Rc::new(th_monoidal_category());
@@ -680,6 +685,7 @@ mod tests {
         assert_eq!(model.cod(&prod), model.ob_act(cod_list, &mul_op));
     }
 
+    #[allow(clippy::many_single_char_names)]
     #[test]
     fn sym_monoidal_category() {
         let th = Rc::new(th_sym_monoidal_category());

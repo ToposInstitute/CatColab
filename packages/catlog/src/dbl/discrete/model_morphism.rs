@@ -7,8 +7,10 @@ use std::rc::Rc;
 use derivative::Derivative;
 use nonempty::NonEmpty;
 
+#[allow(clippy::wildcard_imports)]
 use crate::dbl::{model::*, model_morphism::*};
 use crate::one::graph_algorithms::{bounded_simple_paths, simple_paths, spec_order};
+#[allow(clippy::wildcard_imports)]
 use crate::one::*;
 use crate::validate::{self, Validate};
 use crate::zero::{Column, HashColumn, Mapping, MutMapping};
@@ -32,6 +34,7 @@ where
     CodId: Clone + Eq + Hash,
 {
     /// Constructs a model mapping from a pair of hash maps.
+    #[must_use]
     pub fn new(ob_map: HashMap<DomId, CodId>, mor_map: HashMap<DomId, Path<CodId, CodId>>) -> Self {
         Self(FpFunctorData::new(HashColumn::new(ob_map), HashColumn::new(mor_map)))
     }
@@ -188,13 +191,15 @@ where
     fn is_simple(&self) -> bool {
         let DblModelMorphism(DiscreteDblModelMapping(mapping), dom, _) = *self;
         dom.mor_generators()
-            .all(|e| mapping.apply_edge(e).map(|p| p.is_simple()).unwrap_or(true))
+            .all(|e| mapping.apply_edge(e).is_none_or(|p| p.is_simple()))
     }
 
     /// Is the model morphism injective on objects?
+    #[must_use]
     pub fn is_injective_objects(&self) -> bool {
         let DblModelMorphism(DiscreteDblModelMapping(mapping), dom, _) = *self;
         let mut seen_obs: HashSet<_> = HashSet::new();
+        #[allow(clippy::redundant_else)]
         for x in dom.ob_generators() {
             if let Some(f_x) = mapping.apply_vertex(x) {
                 if seen_obs.contains(&f_x) {
@@ -215,6 +220,7 @@ where
     morphisms in the domain to simple paths in the codomain. If any of these
     assumptions are violated, the function will panic.
      */
+    #[must_use]
     pub fn is_free_simple_faithful(&self) -> bool {
         let DblModelMorphism(DiscreteDblModelMapping(mapping), dom, cod) = *self;
 
@@ -223,6 +229,7 @@ where
         assert!(self.is_simple(), "Morphism assignments should be simple");
 
         let functor = mapping.functor_into(&cod.category);
+        #[allow(clippy::redundant_else)]
         for x in dom.ob_generators() {
             for y in dom.ob_generators() {
                 let mut seen: HashSet<_> = HashSet::new();
@@ -247,6 +254,7 @@ where
     is subject to the same limitations as
     [`is_free_simple_faithful`](DblModelMorphism::is_free_simple_faithful).
      */
+    #[must_use]
     pub fn is_free_simple_monic(&self) -> bool {
         self.is_injective_objects() && self.is_free_simple_faithful()
     }
@@ -354,7 +362,7 @@ where
 
     In future work, this will be efficiently checked for early search tree
     pruning; however, this is currently enforced by filtering with
-    [is_free_simple_faithful](DiscreteDblModelMorphism::is_free_simple_faithful).
+    [`is_free_simple_faithful`](DiscreteDblModelMorphism::is_free_simple_faithful).
      */
     pub fn faithful(&mut self) -> &mut Self {
         self.faithful = true;
@@ -395,14 +403,14 @@ where
                     let can_assign = self.assign_ob(x.clone(), y.clone());
                     if can_assign {
                         self.search(depth + 1);
-                        self.unassign_ob(x, y)
+                        self.unassign_ob(x, y);
                     }
                 } else {
                     for y in self.cod.ob_generators_with_type(&self.dom.ob_type(&x)) {
                         let can_assign = self.assign_ob(x.clone(), y.clone());
                         if can_assign {
                             self.search(depth + 1);
-                            self.unassign_ob(x.clone(), y)
+                            self.unassign_ob(x.clone(), y);
                         }
                     }
                 }
@@ -494,6 +502,7 @@ mod tests {
     /// The [simple path](crate::one::graph_algorithms::simple_paths) should
     /// give identical results to hom search from a walking morphism (assuming
     /// all the object/morphism types are the same).
+    #[allow(clippy::many_single_char_names)]
     #[test]
     fn find_simple_paths() {
         let th = Rc::new(th_signed_category());
@@ -644,6 +653,7 @@ mod tests {
         assert!(!dmm.is_free_simple_monic());
     }
 
+    #[allow(clippy::many_single_char_names)]
     #[test]
     fn monic_constraint() {
         // The number of endomonomorphisms of a set |N| is N!.

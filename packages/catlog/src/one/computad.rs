@@ -13,7 +13,8 @@ use derivative::Derivative;
 use derive_more::Constructor;
 
 use super::graph::ColumnarGraph;
-use crate::zero::*;
+#[allow(unused_imports)]
+use crate::zero::{HashColumn, HashFinSet, MutColumn, MutMapping, Set};
 
 /** Top-dimensional data of a 1-computad.
 

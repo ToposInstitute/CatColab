@@ -7,6 +7,7 @@ use super::notebook::Notebook;
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
+#[allow(clippy::doc_markdown)]
 /// This is the content of a model document. For legacy reasons, we reserve
 /// the name "ModelDocument" for `Document & { type: "model" }`.
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]

@@ -50,10 +50,11 @@ impl Permissions {
     }
 }
 
-/// Returns an error if the user_id in the session does not exist in the DB, returns None otherwise
+/// Returns an error if the `user_id` in the session does not exist in the DB, returns None otherwise
 ///
 /// Used by the client to gracefully handle stale sessions
 pub async fn validate_session(ctx: AppCtx) -> Result<(), AppError> {
+    #[allow(clippy::manual_let_else)]
     let user_id = match ctx.user.as_ref().map(|u| u.user_id.clone()) {
         Some(id) => id,
         None => {
@@ -214,7 +215,7 @@ pub async fn set_permissions(
     ref_id: Uuid,
     new: NewPermissions,
 ) -> Result<(), AppError> {
-    let mut levels: Vec<_> = new.users.values().cloned().collect();
+    let mut levels: Vec<_> = new.users.values().copied().collect();
     let mut subjects: Vec<_> = new.users.into_keys().map(Some).collect();
     if let Some(anyone) = new.anyone {
         subjects.push(None);

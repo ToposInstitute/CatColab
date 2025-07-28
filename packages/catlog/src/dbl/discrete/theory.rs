@@ -6,7 +6,9 @@ use std::ops::Range;
 use derive_more::From;
 use ref_cast::RefCast;
 
+#[allow(clippy::wildcard_imports)]
 use crate::dbl::{category::*, theory::InvalidDblTheory, tree::DblTree};
+#[allow(clippy::wildcard_imports)]
 use crate::one::{Path, category::*, fp_category::*};
 use crate::validate::{self, Validate};
 

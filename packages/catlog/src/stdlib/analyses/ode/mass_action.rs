@@ -241,10 +241,10 @@ mod tests {
         let th = Rc::new(th_category_links());
         let model = backward_link(th);
         let sys = StockFlowMassActionAnalysis::default().build_system(&model);
-        let expected = expect!([r#"
+        let expected = expect!([r"
             dx = ((-1) f) x y
             dy = f x y
-        "#]);
+        "]);
         expected.assert_eq(&sys.to_string());
     }
 
@@ -253,11 +253,11 @@ mod tests {
         let th = Rc::new(th_sym_monoidal_category());
         let model = catalyzed_reaction(th);
         let sys = PetriNetMassActionAnalysis::default().build_system(&model);
-        let expected = expect!([r#"
+        let expected = expect!([r"
             dc = 0
             dx = ((-1) f) c x
             dy = f c x
-        "#]);
+        "]);
         expected.assert_eq(&sys.to_string());
     }
 }

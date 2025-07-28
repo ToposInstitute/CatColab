@@ -74,7 +74,7 @@ async fn main() {
                     Err(err) => {
                         error!("Authentication error: {err}");
                     }
-                };
+                }
                 req
             })
             .service(qubit_service);

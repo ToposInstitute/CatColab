@@ -7,9 +7,12 @@ use derivative::Derivative;
 use ustr::Ustr;
 
 use super::theory::DiscreteDblTheory;
+#[allow(clippy::wildcard_imports)]
 use crate::dbl::{category::*, model::*, theory::DblTheory};
+#[allow(clippy::wildcard_imports)]
 use crate::one::{fp_category::FpCategory, *};
 use crate::validate::{self, Validate};
+#[allow(clippy::wildcard_imports)]
 use crate::zero::*;
 
 /** A finitely presented model of a discrete double theory.

@@ -6,9 +6,12 @@ use std::rc::Rc;
 use derivative::Derivative;
 use ustr::Ustr;
 
+#[allow(clippy::wildcard_imports)]
 use super::theory::*;
+#[allow(clippy::wildcard_imports)]
 use crate::dbl::{category::*, model::*, theory::DblTheory};
 use crate::validate::{self, Validate};
+#[allow(clippy::wildcard_imports)]
 use crate::{one::*, zero::*};
 
 /// Object in a model of a discrete tabulator theory.
@@ -32,7 +35,7 @@ impl<V, E> TabOb<V, E> {
     pub fn basic(self) -> Option<V> {
         match self {
             TabOb::Basic(v) => Some(v),
-            _ => None,
+            TabOb::Tabulated(_) => None,
         }
     }
 
@@ -40,7 +43,7 @@ impl<V, E> TabOb<V, E> {
     pub fn tabulated(self) -> Option<TabMor<V, E>> {
         match self {
             TabOb::Tabulated(mor) => Some(*mor),
-            _ => None,
+            TabOb::Basic(_) => None,
         }
     }
 
@@ -190,12 +193,13 @@ where
     ThId: Eq + Clone + Hash,
 {
     /// Creates an empty model of the given theory.
+    #[must_use]
     pub fn new(theory: Rc<DiscreteTabTheory<ThId, ThId>>) -> Self {
         Self {
             theory,
-            generators: Default::default(),
-            ob_types: Default::default(),
-            mor_types: Default::default(),
+            generators: DiscreteTabGenerators::default(),
+            ob_types: IndexedHashColumn::default(),
+            mor_types: IndexedHashColumn::default(),
         }
     }
 
