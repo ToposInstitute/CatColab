@@ -4,7 +4,7 @@
   "type": "module",
   "main": "dist/main.js",
   "scripts": {
-    "build-wasm": "wasm-pack build ../catlog-wasm --target nodejs -d ./dist/pkg-node",
+    "build:wasm": "npm --prefix ../catlog-wasm run build:node",
     "main": "tsx src/main.ts",
     "format": "biome format --write",
     "lint": "biome lint --write && biome check --write"

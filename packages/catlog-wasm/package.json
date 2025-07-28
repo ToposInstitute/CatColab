@@ -1,0 +1,11 @@
+{
+    "name": "catlog-wasm",
+    "private": true,
+    "license": "MIT",
+    "version": "0.1.0",
+    "type": "module",
+    "scripts": {
+        "build:node": "wasm-pack build ./. --target nodejs -d ./dist/pkg-node",
+        "build:browser": "wasm-pack build ./. --target browser -d ./dist/pkg-browser"
+    }
+}

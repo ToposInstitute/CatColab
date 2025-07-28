@@ -116,7 +116,6 @@
             ++ [
               inputs.agenix.packages.${system}.agenix
               inputs.deploy-rs.packages.${system}.default
-              inputs.crate2nix.packages.${system}.default
             ];
 
           # macOS-specific environment variables for OpenSSL and pkg-config
