@@ -51,24 +51,27 @@ impl<ObType, MorType> SignedCoefficientBuilder<ObType, MorType> {
     signed graphs described in our [paper on regulatory
     networks](crate::refs::RegNets).
      */
-    pub fn lotka_volterra_analysis<Id>(
+    pub fn lotka_volterra_analysis(
         &self,
-        model: &impl FgDblModel<ObType = ObType, MorType = MorType, Ob = Id, ObGen = Id, MorGen = Id>,
-        data: LotkaVolterraProblemData<Id>,
-    ) -> ODEAnalysis<Id, LotkaVolterraSystem>
-    where
-        Id: Eq + Clone + Hash + Ord,
-    {
+        model: &impl FgDblModel<
+            ObType = ObType,
+            MorType = MorType,
+            Ob = QualifiedName,
+            ObGen = QualifiedName,
+            MorGen = QualifiedName,
+        >,
+        data: LotkaVolterraProblemData,
+    ) -> ODEAnalysis<QualifiedName, LotkaVolterraSystem> {
+        // This is tricky because this wants a HashMap<QualifiedName, f32>,
+        // but we only have HashMap<String, f32>
         let (matrix, ob_index) = self.build_matrix(model, &data.interaction_coeffs);
         let n = ob_index.len();
 
-        let growth_rates =
-            ob_index.keys().map(|ob| data.growth_rates.get(ob).copied().unwrap_or_default());
+        let growth_rates = ob_index.keys().map(|ob| data.growth_rates.get(ob).unwrap_or_default());
         let b = DVector::from_iterator(n, growth_rates);
 
-        let initial_values = ob_index
-            .keys()
-            .map(|ob| data.initial_values.get(ob).copied().unwrap_or_default());
+        let initial_values =
+            ob_index.keys().map(|ob| data.initial_values.get(ob).unwrap_or_default());
         let x0 = DVector::from_iterator(n, initial_values);
 
         let system = LotkaVolterraSystem::new(matrix, b);

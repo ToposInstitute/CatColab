@@ -53,7 +53,8 @@ at runtime. The current implementation allows only *single-threaded* usage.
 #[derivative(Eq(bound = "V: Eq + Hash, E: Eq + Hash"))]
 pub struct FpCategory<V, E> {
     generators: HashGraph<V, E>,
-    equations: Vec<PathEq<V, E>>,
+    object_equations: Vec<(V, V)>,
+    morphism_equations: Vec<PathEq<V, E>>,
     #[derivative(Debug = "ignore", PartialEq = "ignore")]
     builder: RefCell<CategoryProgramBuilder<V, E>>,
     #[derivative(Debug = "ignore", PartialEq = "ignore")]
@@ -184,7 +185,7 @@ where
             InvalidGraph::Src(e) => InvalidFpCategory::Dom(e),
             InvalidGraph::Tgt(e) => InvalidFpCategory::Cod(e),
         });
-        let equation_errors = self.equations.iter().enumerate().filter_map(|(i, eq)| {
+        let equation_errors = self.morphism_equations.iter().enumerate().filter_map(|(i, eq)| {
             Some(InvalidFpCategory::Eq(i, eq.validate_in(&self.generators).err()?))
         });
         generator_errors.chain(equation_errors)
