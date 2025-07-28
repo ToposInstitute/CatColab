@@ -102,14 +102,78 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    # Setup Nix and Nix cache, copied in deploy.yml
     - uses: nixbuild/nix-quick-install-action@v31
-    # - name: Restore and save Nix store
-    #   uses: nix-community/cache-nix-action@v6
-    #   with:
-    #     # restore and save a cache using this key
-    #     primary-key: nix-${{ runner.os }}-${{ hashFiles('**/*.nix', '**/flake.lock') }}
-    #     # if there's no cache hit, restore a cache by this prefix
-    #     restore-prefixes-first-match: nix-${{ runner.os }}-
+    - name: Restore and save Nix store
+      uses: nix-community/cache-nix-action@v6
+      with:
+        # The github action cache is limited to 10GB and the compressed nix store for this project is
+        # typically around 3GB. As a result, it is very easy to thrash the cache by when using
+        # using hashed cache keys. This results in "useful" caches being evicted.
+        # 
+        # NOTE: The above does not fully explain some issues we've had with cache misses. We've had
+        # back-to-back runs with the same key fail to find a cache, when the same key matched a cache
+        # days before. The current solution addresses this issue as well.
+        #
+        # To work around this, we always reuse the same cache and rely on nix garbage collection for
+        # keeping that cache a reasonable size.
+        #
+        # There is a degenerate case: where parallel development uses different flake inputs (like the
+        # NixOS versions). Each job's garbage collection will prune store paths not tied to that job's
+        # inputs. As a result, branches with differing inputs may end up with almost no cached data. This
+        # case should not come up that often, and when it does it will result in some ~15min CI times.
+        primary-key: "fixed-primary-key"
 
-    - run: nix flake check --no-sandbox
+        # Since we are manually updating the cache, and we don't know if the cache has changed so we need
+        # to purge the existing cache and re-upload it on every run.
+        #
+        # NOTE: the cache will always change if any of the rust or automerge packages have changed, since
+        # their outputs would be included in /nix/store. Not uploading the cache every time would save
+        # 30-90s in CI, however I don't think it makes sense to optimize for the case when only the
+        # frontend changes, and doing anything more complicated is a non-trivial amount of work.
+        purge: true
+        purge-primary-key: "always"
+
+      # Anything that we want to keep in the cache must have an active gc root, that is done for us by
+      # `nix build` creating indirect roots. As long as the output `result` symlinks aren't overwritten
+      # or removed the output and it's dependencies will not bec GC'd.
+    - name: Build 'catcolab-vm' host
+      run: |
+        nix build .#nixosConfigurations.catcolab-vm.config.system.build.vm --out-link result-catcolab-vm
+        # NOTE: there are still some dependencies which installed and garbage collected on every run, I
+        # think they are runtime dependencies of `nix build` command. Preventing these from being GC'd
+        # would likely save ~15s on every run.
+        # 
+        # In theory the following command SHOULD prevent those dependencies from being GC'd, however we
+        # only have the newer/experimental `nix` command available in this env and it's significantly
+        # different.
+        # sudo nix-store --add-root /nix/var/nix/gcroots/catcolab-vm --indirect --realise $(nix-store --query --requisites ./result-catcolab-vm)
+
+    - name: Build 'catcolab-next' host
+      run: |
+        nix build .#nixosConfigurations.catcolab.config.system.build.toplevel --out-link result-catcolab-next
+
+    # Installing something to the profile will also prevent it from being GC'd
+    # NOTE: We have to run this even if deploy-rs is not being used in this particular job, otherwise it
+    # would be cleaned up by the GC and not available to the deploy job.
+    - name: Install deploy-rs
+      run: |
+        nix profile install github:serokell/deploy-rs#deploy-rs
+
+    - name: Run NixOS integration tests
+      run: |
+        nix flake check --no-sandbox
+
+    - name: Set up SSH key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.CATCOLAB_NEXT_DEPLOYUSER_KEY }}" > ~/.ssh/id_ed25519
+        chmod 600 ~/.ssh/id_ed25519
+        ssh-keyscan backend-next.catcolab.org >> ~/.ssh/known_hosts
+
+    - name: Deploy with deploy-rs
+      run: |
+        # The same checks are run in `nix flake check` 
+        nix run github:serokell/deploy-rs --skip-checks .#catcolab-next
+
+    - name: Prune unused Nix store paths
+      run: nix store gc --option keep-outputs true --option keep-derivations true

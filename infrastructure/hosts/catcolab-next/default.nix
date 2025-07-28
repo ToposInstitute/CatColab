@@ -51,7 +51,7 @@ in
         catcolab-next-deployuser
       ];
       backup = {
-        enable = true;
+        enable = false;
         rcloneConfFilePath = config.age.secrets.rcloneConf.path;
         dbBucket = "catcola-next";
       };
