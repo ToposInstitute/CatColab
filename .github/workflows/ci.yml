@@ -140,17 +140,16 @@ jobs:
     - name: build deployrs
       run: |
         nix build github:serokell/deploy-rs#deploy-rs --out-link result-deploy-rs
-        sudo nix-store --add-root /nix/var/nix/gcroots/result-deploy-rs --indirect --realise $(nix-store --query --requisites ./result-deploy-rs)
 
     - name: Build 'catcolab-next' host
       run: |
         nix build .#nixosConfigurations.catcolab.config.system.build.toplevel --out-link result-catcolab-next
-        sudo nix-store --add-root /nix/var/nix/gcroots/catcolab --indirect --realise $(nix-store --query --requisites ./result-catcolab)
 
+        # sudo nix-store --add-root /nix/var/nix/gcroots/catcolab --indirect --realise $(nix-store --query --requisites ./result-catcolab)
 
-    # - name: Run nixos-rebuild switch remotely
-    #   run: |
-    #      nix run github:serokell/deploy-rs .#${HOST_CONFIG}
+    - name: Run nixos-rebuild switch remotely
+      run: |
+         nix run github:serokell/deploy-rs .#${HOST_CONFIG}
 
     - name: Prune unused Nix store paths
       run: nix store gc --option keep-outputs true --option keep-derivations true
