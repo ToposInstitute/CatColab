@@ -135,7 +135,6 @@ jobs:
         nix build .#nixosConfigurations.catcolab-vm.config.system.build.vm
         nix build .#nixosConfigurations.catcolab.config.system.build.toplevel
 
-
     - name: Prune unused Nix store paths
       run: nix store gc --option keep-outputs true --option keep-derivations true
 
@@ -155,7 +154,7 @@ jobs:
         uses: nix-community/cache-nix-action@v6
         with:
           # see ci.yml
-          primary-key: "fixed-primary-key"
+          primary-key: "fixed-primary-key13"
           purge: true
           purge-primary-key: "always"
 
