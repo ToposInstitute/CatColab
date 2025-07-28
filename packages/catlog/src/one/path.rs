@@ -1,3 +1,4 @@
+#![allow(clippy::doc_link_with_quotes)]
 /*! Paths in graphs and categories.
 
 The central data type is [`Path`], a path of arbitrary finite length. In
@@ -171,6 +172,7 @@ impl<V, E> Path<V, E> {
     }
 
     /// Splices a path into another path at the given range of indices.
+    #[must_use]
     pub fn splice(self, range: Range<usize>, replace_with: Self) -> Self {
         let new_path = if range.start == 0 && range.end == self.len() {
             Some(replace_with)
@@ -216,6 +218,7 @@ impl<V, E> Path<V, E> {
 
     Panics if the range is invalid or an empty subpath would be inconsistent.
      */
+    #[must_use]
     pub fn subpath(&self, graph: &impl Graph<V = V, E = E>, range: Range<usize>) -> Self
     where
         V: Eq + Clone,
@@ -257,6 +260,7 @@ impl<V, E> Path<V, E> {
 
     Panics under the same conditions as [`subpath`](Self::subpath).
      */
+    #[must_use]
     pub fn replace_subpath(
         self,
         graph: &impl Graph<V = V, E = E>,
@@ -287,8 +291,7 @@ impl<V, E> Path<V, E> {
             return None;
         }
         let concatenated = match (self, other) {
-            (path, Path::Id(_)) => path,
-            (Path::Id(_), path) => path,
+            (path, Path::Id(_)) | (Path::Id(_), path) => path,
             (Path::Seq(mut edges), Path::Seq(mut other_edges)) => {
                 edges.push(other_edges.head);
                 edges.append(&mut other_edges.tail);
@@ -492,7 +495,7 @@ impl<V, E> TryFrom<Path<V, E>> for ShortPath<V, E> {
     fn try_from(path: Path<V, E>) -> Result<Self, Self::Error> {
         match path {
             Path::Id(v) => Ok(ShortPath::Zero(v)),
-            _ => path.only().map(ShortPath::One).ok_or(()),
+            Path::Seq(_) => path.only().map(ShortPath::One).ok_or(()),
         }
     }
 }

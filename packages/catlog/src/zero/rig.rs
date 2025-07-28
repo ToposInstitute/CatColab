@@ -14,6 +14,8 @@ Besides the hierarchy of traits, this module provides data structures for
 the same data structure, but with different notation!
  */
 
+#![allow(clippy::used_underscore_items)]
+
 use num_traits::{One, Pow, Zero};
 use std::collections::{BTreeMap, btree_map};
 use std::fmt::Display;
@@ -209,6 +211,14 @@ impl<'a, Var, Coef> IntoIterator for &'a Combination<Var, Coef> {
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.iter().map(|(var, coef)| (coef, var))
+    }
+}
+
+impl<Var, Coeff> Combination<Var, Coeff> {
+    #[allow(missing_docs)]
+    #[must_use]
+    pub fn iter(&self) -> <&Self as IntoIterator>::IntoIter {
+        <&Self as IntoIterator>::into_iter(self)
     }
 }
 

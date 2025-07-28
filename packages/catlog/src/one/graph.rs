@@ -16,6 +16,7 @@ use thiserror::Error;
 use ustr::Ustr;
 
 use crate::validate::{self, Validate};
+#[allow(clippy::wildcard_imports)]
 use crate::zero::*;
 
 /** A graph.
@@ -495,7 +496,7 @@ where
     where
         T: IntoIterator<Item = V>,
     {
-        self.vertex_set.extend(iter)
+        self.vertex_set.extend(iter);
     }
 
     /** Adds an edge to the graph, returning whether the edge is new.
@@ -616,10 +617,10 @@ where
                 if cod.has_edge(&f) {
                     let mut errs = Vec::new();
                     if mapping.apply_vertex(dom.src(&e)).is_some_and(|v| v != cod.src(&f)) {
-                        errs.push(InvalidGraphMorphism::Src(e.clone()))
+                        errs.push(InvalidGraphMorphism::Src(e.clone()));
                     }
                     if mapping.apply_vertex(dom.tgt(&e)).is_some_and(|v| v != cod.tgt(&f)) {
-                        errs.push(InvalidGraphMorphism::Tgt(e.clone()))
+                        errs.push(InvalidGraphMorphism::Tgt(e.clone()));
                     }
                     return errs;
                 }
@@ -702,6 +703,7 @@ pub type SkelGraphMapping = ColumnarGraphMapping<VecColumn<usize>, VecColumn<usi
 
 impl SkelGraphMapping {
     /// Constructs a graph mapping from a pair of vectors.
+    #[must_use]
     pub fn from_vec(vertex_map: Vec<usize>, edge_map: Vec<usize>) -> Self {
         Self::new(VecColumn::new(vertex_map), VecColumn::new(edge_map))
     }

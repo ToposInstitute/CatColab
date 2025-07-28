@@ -8,7 +8,10 @@ use std::ops::{Add, AddAssign, Mul, Neg};
 
 use derivative::Derivative;
 
-use super::rig::*;
+use super::rig::{
+    AbGroup, AdditiveMonoid, Combination, CommMonoid, CommRig, CommRing, Module, Monoid, Monomial,
+    Rig, RigModule, Ring,
+};
 
 /// A commutative algebra over a commutative ring.
 pub trait CommAlg: CommRing + Module<Ring = Self::R> {

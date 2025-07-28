@@ -27,8 +27,9 @@ where
     Exp: Ord,
 {
     /// Constructs a new polynomial system, with no equations.
+    #[must_use]
     pub fn new() -> Self {
-        Default::default()
+        Self::default()
     }
 
     /// Adds a new term to the system.
@@ -52,12 +53,13 @@ where
     }
 
     /// Normalizes the polynomial system by normalizing each polynomial in it.
+    #[must_use]
     pub fn normalize(self) -> Self
     where
         Coef: Zero,
         Exp: Zero,
     {
-        self.map(|poly| poly.normalize())
+        self.map(crate::zero::alg::Polynomial::normalize)
     }
 
     /// Maps over the components of the system.
@@ -80,6 +82,7 @@ where
     The order of the components in the new system is given by the order of the
     variables in the old one.
      */
+    #[must_use]
     pub fn to_numerical(&self) -> NumericalPolynomialSystem<Exp> {
         let indices: BTreeMap<Var, usize> =
             self.components.keys().enumerate().map(|(i, var)| (var.clone(), i)).collect();
@@ -99,7 +102,7 @@ where
     Exp: Display + PartialEq + One,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for (var, component) in self.components.iter() {
+        for (var, component) in &self.components {
             writeln!(f, "d{var} = {component}")?;
         }
         Ok(())
@@ -114,7 +117,7 @@ where
     Exp: Ord,
 {
     fn from_iter<T: IntoIterator<Item = (Var, Polynomial<Var, Coef, Exp>)>>(iter: T) -> Self {
-        let mut system: Self = Default::default();
+        let mut system: Self = Self::default();
         for (var, term) in iter {
             system.add_term(var, term);
         }
@@ -139,7 +142,7 @@ where
 {
     fn vector_field(&self, dx: &mut DVector<f32>, x: &DVector<f32>, _t: f32) {
         for i in 0..dx.len() {
-            dx[i] = self.components[i].eval(|var| x[*var])
+            dx[i] = self.components[i].eval(|var| x[*var]);
         }
     }
 }

@@ -17,7 +17,8 @@ pub struct LinearODESystem {
 }
 
 impl LinearODESystem {
-    /// Create a new LinearODE system.
+    /// Create a new `LinearODE` system.
+    #[must_use]
     pub fn new(A: DMatrix<f32>) -> Self {
         Self { coefficients: A }
     }
@@ -26,7 +27,7 @@ impl LinearODESystem {
 impl ODESystem for LinearODESystem {
     fn vector_field(&self, dx: &mut DVector<f32>, x: &DVector<f32>, _t: f32) {
         let A = &self.coefficients;
-        *dx = A * x
+        *dx = A * x;
     }
 }
 

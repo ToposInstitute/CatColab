@@ -21,6 +21,11 @@ crates.
 #![allow(mixed_script_confusables)]
 #![allow(confusable_idents)]
 #![warn(missing_docs)]
+#![allow(
+    clippy::missing_panics_doc,
+    clippy::needless_pass_by_value,
+    clippy::missing_errors_doc
+)]
 
 #[cfg(doc)]
 pub mod refs;

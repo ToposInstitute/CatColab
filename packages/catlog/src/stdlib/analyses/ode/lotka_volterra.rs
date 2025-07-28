@@ -52,6 +52,7 @@ impl<ObType, MorType> SignedCoefficientBuilder<ObType, MorType> {
     signed graphs described in our [paper on regulatory
     networks](crate::refs::RegNets).
      */
+    #[allow(clippy::needless_pass_by_value)]
     pub fn lotka_volterra_analysis<Id>(
         &self,
         model: &impl FgDblModel<ObType = ObType, MorType = MorType, Ob = Id, ObGen = Id, MorGen = Id>,

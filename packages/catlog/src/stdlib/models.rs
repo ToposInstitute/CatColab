@@ -3,6 +3,7 @@
 use std::rc::Rc;
 use ustr::{Ustr, ustr};
 
+#[allow(clippy::wildcard_imports)]
 use crate::dbl::{model::*, theory::*};
 use crate::one::Path;
 
@@ -105,6 +106,7 @@ flow in a model of an infectious disease, where increasing the number of
 infectives increases the rate of infection of the remaining susceptibles (other
 things equal).
  */
+#[must_use]
 pub fn backward_link(th: Rc<UstrDiscreteTabTheory>) -> UstrDiscreteTabModel {
     let ob_type = TabObType::Basic(ustr("Object"));
     let mut model = UstrDiscreteTabModel::new(th.clone());
@@ -125,6 +127,7 @@ pub fn backward_link(th: Rc<UstrDiscreteTabTheory>) -> UstrDiscreteTabModel {
 
 A free symmetric monoidal category, viewed as a reaction network.
  */
+#[must_use]
 pub fn catalyzed_reaction(th: Rc<UstrModalDblTheory>) -> UstrModalDblModel {
     let (ob_type, op) = (ModalObType::new(ustr("Object")), ustr("tensor"));
     let mut model = UstrModalDblModel::new(th);

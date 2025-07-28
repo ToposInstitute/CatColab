@@ -19,12 +19,14 @@ use std::fmt::Debug;
 use std::{collections::HashMap, hash::Hash};
 
 use derivative::Derivative;
+#[allow(clippy::wildcard_imports)]
 use egglog::{EGraph, ast::*, span};
 use nonempty::NonEmpty;
 use ref_cast::RefCast;
 use thiserror::Error;
 use ustr::Ustr;
 
+#[allow(clippy::wildcard_imports)]
 use super::{category::*, graph::*, path::*};
 use crate::egglog_util::{CommandRewrite, CommandRule, Program};
 use crate::validate::{self, Validate};
@@ -92,7 +94,7 @@ where
     /// Adds several object generators at once.
     pub fn add_ob_generators(&mut self, iter: impl IntoIterator<Item = V>) {
         for v in iter {
-            self.add_ob_generator(v)
+            self.add_ob_generator(v);
         }
     }
 
@@ -425,6 +427,7 @@ impl<V, E> CategoryProgramBuilder<V, E> {
     }
 
     /// Generates the preamble for the program.
+    #[allow(clippy::too_many_lines)]
     fn preamble(&mut self) {
         let sym = &self.sym;
         self.prog = vec![
@@ -588,17 +591,17 @@ impl<V, E> CategoryProgramBuilder<V, E> {
                 lhs: self.compose2(self.id(self.dom(var!("f"))), var!("f")),
                 rhs: var!("f"),
             }),
-        ]
+        ];
     }
 }
 
 impl<V, E> Default for CategoryProgramBuilder<V, E> {
     fn default() -> Self {
         let mut result = Self {
-            prog: Default::default(),
-            sym: Default::default(),
-            ob_generators: Default::default(),
-            mor_generators: Default::default(),
+            prog: Vec::default(),
+            sym: CategorySymbols::default(),
+            ob_generators: HashMap::default(),
+            mor_generators: HashMap::default(),
         };
         result.preamble();
         result

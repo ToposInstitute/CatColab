@@ -29,6 +29,7 @@ pub struct BreadthFirstTraversal<'a, T: 'a> {
 
 impl<'a, T: 'a> BreadthFirstTraversal<'a, T> {
     /// Initialize a breadth-first traversal at the given node.
+    #[must_use]
     pub fn starting_at(root: NodeRef<'a, T>) -> Self {
         let tree = root.tree();
         let mut queue = VecDeque::new();
@@ -41,6 +42,7 @@ impl<'a, T: 'a> BreadthFirstTraversal<'a, T> {
     }
 
     /// Peeks at the next node, if it's at the same level as the previous one.
+    #[must_use]
     pub fn peek_at_same_level(&self) -> Option<NodeRef<'a, T>> {
         self.queue.front().and_then(|(id, level)| {
             if *level == self.current_level {

@@ -194,6 +194,7 @@ where
     }
 }
 
+#[allow(clippy::elidable_lifetime_names)]
 impl<'a, Ob, Mor, Map, Cod> FgCategoryMap for FpFunctor<'a, Map, Cod>
 where
     Ob: Eq + Clone,
@@ -221,6 +222,7 @@ where
 #[repr(transparent)]
 pub struct FpFunctorMorMap<'a, Map, Cod>(FpFunctor<'a, Map, Cod>);
 
+#[allow(clippy::elidable_lifetime_names)]
 impl<'a, V, E, Ob, Mor, Map, Cod> Mapping for FpFunctorMorMap<'a, Map, Cod>
 where
     V: Eq + Clone,
@@ -245,6 +247,7 @@ where
     }
 }
 
+#[allow(clippy::elidable_lifetime_names)]
 impl<'a, V, E, Ob, Mor, Map, Cod> FpFunctor<'a, Map, Cod>
 where
     V: Eq + Clone + Hash,

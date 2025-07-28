@@ -76,6 +76,7 @@ impl Default for PetriNetMassActionAnalysis {
 
 impl PetriNetMassActionAnalysis {
     /// Creates a mass-action system with symbolic rate coefficients.
+    #[must_use]
     pub fn build_system<Id: Eq + Clone + Hash + Ord + Debug>(
         &self,
         model: &ModalDblModel<Id, Ustr>,
@@ -183,7 +184,7 @@ impl StockFlowMassActionAnalysis {
         for ob in model.ob_generators_with_type(&self.stock_ob_type) {
             sys.add_term(ob, Polynomial::zero());
         }
-        for (flow, term) in terms.iter() {
+        for (flow, term) in &terms {
             let dom = model.mor_generator_dom(flow).unwrap_basic();
             sys.add_term(dom, -term.clone());
         }
@@ -205,6 +206,7 @@ impl StockFlowMassActionAnalysis {
     }
 }
 
+#[allow(clippy::needless_pass_by_value)]
 fn into_numerical_system<Id: Eq + Clone + Hash + Ord>(
     sys: PolynomialSystem<Id, Parameter<Id>, u8>,
     data: MassActionProblemData<Id>,

@@ -55,18 +55,21 @@ impl<Sys> ODEProblem<Sys> {
     }
 
     /// Sets the start time for the problem.
+    #[must_use]
     pub fn start_time(mut self, t: f32) -> Self {
         self.start_time = t;
         self
     }
 
     /// Sets the end time for the problem.
+    #[must_use]
     pub fn end_time(mut self, t: f32) -> Self {
         self.end_time = t;
         self
     }
 
     /// Sets the time span (start and end time) for the problem.
+    #[must_use]
     pub fn time_span(mut self, tspan: (f32, f32)) -> Self {
         (self.start_time, self.end_time) = tspan;
         self

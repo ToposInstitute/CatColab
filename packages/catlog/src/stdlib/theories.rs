@@ -2,15 +2,19 @@
 
 use ustr::ustr;
 
-use crate::dbl::theory::*;
+use crate::dbl::theory::{
+    DblTheory, DiscreteDblTheory, List, ModalOp, Modality, ModeApp, TabObType,
+    UstrDiscreteDblTheory, UstrDiscreteTabTheory, UstrModalDblTheory,
+};
 use crate::one::{Path, fp_category::UstrFpCategory};
 
 /** The empty theory, which has a single model, the empty model.
 
 As a double category, this is the initial double category.
  */
+#[must_use]
 pub fn th_empty() -> UstrDiscreteDblTheory {
-    let cat: UstrFpCategory = Default::default();
+    let cat: UstrFpCategory = UstrFpCategory::default();
     DiscreteDblTheory::from(cat)
 }
 
@@ -18,8 +22,9 @@ pub fn th_empty() -> UstrDiscreteDblTheory {
 
 As a double category, this is the terminal double category.
  */
+#[must_use]
 pub fn th_category() -> UstrDiscreteDblTheory {
-    let mut cat: UstrFpCategory = Default::default();
+    let mut cat: UstrFpCategory = UstrFpCategory::default();
     cat.add_ob_generator(ustr("Object"));
     DiscreteDblTheory::from(cat)
 }
@@ -28,8 +33,9 @@ pub fn th_category() -> UstrDiscreteDblTheory {
 
 As a double category, this is the "walking proarrow".
  */
+#[must_use]
 pub fn th_schema() -> UstrDiscreteDblTheory {
-    let mut cat: UstrFpCategory = Default::default();
+    let mut cat: UstrFpCategory = UstrFpCategory::default();
     let (x, y, p) = (ustr("Entity"), ustr("AttrType"), ustr("Attr"));
     cat.add_ob_generator(x);
     cat.add_ob_generator(y);
@@ -43,8 +49,9 @@ A *signed category* is a category sliced over the group of (nonzero) signs. Free
 signed categories are signed graphs, a simple mathematical model of [regulatory
 networks](crate::refs::RegNets) and causal loop diagrams.
  */
+#[must_use]
 pub fn th_signed_category() -> UstrDiscreteDblTheory {
-    let mut sgn: UstrFpCategory = Default::default();
+    let mut sgn: UstrFpCategory = UstrFpCategory::default();
     let (x, neg) = (ustr("Object"), ustr("Negative"));
     sgn.add_ob_generator(x);
     sgn.add_mor_generator(neg, x, x);
@@ -57,8 +64,9 @@ pub fn th_signed_category() -> UstrDiscreteDblTheory {
 Free delayable signed categories are causal loop diagrams with delays, often
 depicted as [caesuras](https://en.wikipedia.org/wiki/Caesura).
  */
+#[must_use]
 pub fn th_delayable_signed_category() -> UstrDiscreteDblTheory {
-    let mut cat: UstrFpCategory = Default::default();
+    let mut cat: UstrFpCategory = UstrFpCategory::default();
     let (x, neg, slow) = (ustr("Object"), ustr("Negative"), ustr("Slow"));
     cat.add_ob_generator(x);
     cat.add_mor_generator(neg, x, x);
@@ -84,8 +92,9 @@ pub fn th_delayable_signed_category() -> UstrDiscreteDblTheory {
 A *nullable signed category* is a category sliced over the monoid of signs,
 including zero.
  */
+#[must_use]
 pub fn th_nullable_signed_category() -> UstrDiscreteDblTheory {
-    let mut sgn: UstrFpCategory = Default::default();
+    let mut sgn: UstrFpCategory = UstrFpCategory::default();
     let (x, neg, zero) = (ustr("Object"), ustr("Negative"), ustr("Zero"));
     sgn.add_ob_generator(x);
     sgn.add_mor_generator(neg, x, x);
@@ -127,7 +136,7 @@ with links.
  */
 #[must_use]
 pub fn th_category_links() -> UstrDiscreteTabTheory {
-    let mut th: UstrDiscreteTabTheory = Default::default();
+    let mut th: UstrDiscreteTabTheory = UstrDiscreteTabTheory::default();
     let x = ustr("Object");
     th.add_ob_type(x);
     th.add_mor_type(
