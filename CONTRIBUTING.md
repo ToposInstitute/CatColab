@@ -2,33 +2,32 @@
 
 - **TO-DO: write!**
 
-- **TO-DO: mention that you can also view this page at next.catcolab.org/dev (and also make this actually be true)**
+- **TO-DO: make a nice architecture diagram [with Mermaid](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/creating-diagrams#creating-mermaid-diagrams)**
 
-- **TO-DO: table of contents!**
-
-- **TO-DO: make a nice architecture diagram**
+> [!INFO]
+> This page can be viewed at either [next.catcolab.org/dev](https://next.catcolab.org/dev) or [github.com/ToposInstitute/CatColab/contribute](https://github.com/ToposInstitute/CatColab/contribute)
 
 The staging deployment, synced to the `main` branch, is available at
 [next.catcolab.org](https://next.catcolab.org).
-
-CatColab is written in a mix of [Rust](https://www.rust-lang.org/) and
-[TypeScript](https://www.typescriptlang.org/). To start developing, install Rust
-(say by using [rustup](https://rustup.rs/)) and install
-[pnpm](https://pnpm.io/), or use the [dev container](./.devcontainer/).
 
 
 ## Package documentation
 
 | Grouping | Package | Language | Instructions | Documentation |
 | :------- | :------ | :------- | :----------- | :------------ |
-| Core | `catlog` | Rust | --- | [next.catcolab.org/dev/rust/catlog](https://next.catcolab.org/dev/rust/catlog) |
+| Core | `catlog` | Rust | — | [next.catcolab.org/dev/rust/catlog](https://next.catcolab.org/dev/rust/catlog) |
 | Frontend | `frontend` | TypeScript | [README](https://github.com/ToposInstitute/CatColab/tree/main/packages/frontend) | [next.catcolab.org/dev/frontend/](https://next.catcolab.org/dev/frontend/) |
-| | `catlog-wasm` | Rust | --- | [next.catcolab.org/dev/rust/catlog_wasm](https://next.catcolab.org/dev/rust/catlog_wasm) |
+| | `catlog-wasm` | Rust | — | [next.catcolab.org/dev/rust/catlog_wasm](https://next.catcolab.org/dev/rust/catlog_wasm) |
 | Backend | `backend` | Rust | [README](https://github.com/ToposInstitute/CatColab/tree/main/packages/backend) | [next.catcolab.org/dev/rust/catcolab_backend](https://next.catcolab.org/dev/rust/catcolab_backend) |
-| | `automerge-doc-server` | TypeScript | [README](https://github.com/ToposInstitute/CatColab/tree/main/packages/automerge-doc-server) | --- |
+| | `automerge-doc-server` | TypeScript | [README](https://github.com/ToposInstitute/CatColab/tree/main/packages/automerge-doc-server) | — |
 
 
 ## Contributing
+
+CatColab is written in a mix of [Rust](https://www.rust-lang.org/) and
+[TypeScript](https://www.typescriptlang.org/). To start developing, install Rust
+(say, by using [rustup](https://rustup.rs/)) and install
+[pnpm](https://pnpm.io/), or use the [dev container](./.devcontainer/).
 
 ### Formatting and linting
 

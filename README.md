@@ -69,5 +69,5 @@ models of double theories.
 The library of domain-specific logics in CatColab, available now and to grow
 over time, is inspired by a wide body of research in applied category theory and
 beyond. Incomplete bibliographies are in the [mathematical
-docs](https://next.catcolab.org/math/bib-0001.xml) and the [`core`
+docs](https://next.catcolab.org/math/bib-0001.xml) and the [`catlog`
 docs](https://next.catcolab.org/dev/rust/catlog/refs). 
