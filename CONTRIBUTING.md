@@ -4,8 +4,6 @@
 
 - **TO-DO: mention that you can also view this page at next.catcolab.org/dev (and also make this actually be true)**
 
-- **TO-DO: include the following: infrastructure/README.md, next.catcolab.org/dev/rust, next.catcolab.org/dev/frontend, next.catcolab.org/dev/backend**
-
 - **TO-DO: table of contents!**
 
 - **TO-DO: make a nice architecture diagram**
@@ -21,54 +19,13 @@ CatColab is written in a mix of [Rust](https://www.rust-lang.org/) and
 
 ## Package documentation
 
-### Core development (`catlog`)
-
-> [!NOTE]
-> See [next.catcolab.org/dev/rust/catlog](https://next.catcolab.org/dev/rust/catlog) for full documentation.
-
-
-### Frontend development (`frontend` and `catlog-wasm`)
-
-> [!NOTE]
-> See [next.catcolab.org/dev/frontend](https://next.catcolab.org/dev/frontend) and [next.catcolab.org/dev/rust/catlog_wasm](https://next.catcolab.org/dev/rust/catlog_wasm) for full documentation.
-
-To develop the frontend locally, clone the repository and, from the top-level directory, run
-
-```sh
-pnpm install
-pnpm run build
-pnpm run dev --mode staging
-```
-
-Then navigate your browser to the URL provided by Vite. Note that the flag
-`--mode staging` uses the staging deployment of the backend, meaning that you don't have to worry about manually setting up a backend.
-
-
-### Backend development (`backend` and `automerge-doc-server`)
-
-> [!NOTE]
-> See [github.com/ToposInstitute/CatColab/tree/main/packages/backend](https://github.com/ToposInstitute/CatColab/tree/main/packages/backend) for full documentation.
-
-Developing the backend locally requires more setup. See the `backend` documentation linked above.
-
-#### Test build for nixos deployment
-```
-nix flake check --no-sandbox
-```
-
-To get a interactive python session in the test environment:
-```
-nix run .#checks.x86_64-linux.integrationTests.driverInteractive --no-sandbox
-```
-
-#### Build and run nixos QEMU virtual machine
-```
-nix build .#nixosConfigurations.catcolab-vm.config.system.build.vm
-./result/bin/run-catcolab-vm
-```
-
-The username and password of the vm is 'catcolab'
-
+| Grouping | Package | Language | Instructions | Documentation |
+| :------- | :------ | :------- | :----------- | :------------ |
+| Core | `catlog` | Rust | | [next.catcolab.org/dev/rust/catlog](https://next.catcolab.org/dev/rust/catlog) |
+| Frontend | `frontend` | TypeScript | [README](https://github.com/ToposInstitute/CatColab/tree/main/packages/frontend) | [next.catcolab.org/dev/frontend/](https://next.catcolab.org/dev/frontend/) |
+| | `catlog-wasm` | Rust | | [next.catcolab.org/dev/rust/catlog_wasm](https://next.catcolab.org/dev/rust/catlog_wasm) |
+| Backend | `backend` | Rust | [README](https://github.com/ToposInstitute/CatColab/tree/main/packages/backend) | [next.catcolab.org/dev/rust/catcolab_backend](https://next.catcolab.org/dev/rust/catcolab_backend) |
+| | `automerge-doc-server` | TypeScript | [README](https://github.com/ToposInstitute/CatColab/tree/main/packages/automerge-doc-server) | |
 
 
 ## Contributing
