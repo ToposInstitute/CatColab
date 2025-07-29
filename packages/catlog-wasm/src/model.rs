@@ -435,8 +435,7 @@ pub fn collect_product(ob: Ob) -> Result<Vec<Ob>, String> {
 pub fn elaborate_model(doc: &ModelDocumentContent, theory: &DblTheory) -> DblModel {
     let mut model = DblModel::new(theory);
 
-    for cell_id in &doc.notebook.cell_order {
-        let cell = &doc.notebook.cell_contents[cell_id];
+    for cell in doc.notebook.cells() {
         if let Cell::Formal { id: _, content } = cell {
             match content {
                 ModelJudgment::Object(decl) => model.add_ob(decl).unwrap(),

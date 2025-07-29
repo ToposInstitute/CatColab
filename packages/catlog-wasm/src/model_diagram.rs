@@ -206,8 +206,7 @@ pub struct ModelDiagramValidationResult(
 #[wasm_bindgen(js_name = "elaborateDiagram")]
 pub fn elaborate_diagram(doc: &DiagramDocumentContent, theory: &DblTheory) -> DblModelDiagram {
     let mut diagram = DblModelDiagram::new(theory);
-    for cell_id in &doc.notebook.cell_order {
-        let cell = &doc.notebook.cell_contents[cell_id];
+    for cell in doc.notebook.cells() {
         if let Cell::Formal { id: _, content } = cell {
             match content {
                 DiagramJudgment::Object(decl) => diagram.add_ob(decl).unwrap(),
