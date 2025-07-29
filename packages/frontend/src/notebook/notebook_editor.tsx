@@ -18,6 +18,7 @@ import {
     createSignal,
     onCleanup,
 } from "solid-js";
+import invariant from "tiny-invariant";
 
 import type { Cell, Notebook } from "catlog-wasm";
 import { type Completion, IconButton } from "../components";
@@ -29,7 +30,7 @@ import {
     StemCellEditor,
     isCellDragData,
 } from "./notebook_cell";
-import { type FormalCell, newRichTextCell, newStemCell } from "./types";
+import { type FormalCell, NotebookUtils, newRichTextCell, newStemCell } from "./types";
 
 import "./notebook_editor.css";
 
@@ -92,8 +93,7 @@ export function NotebookEditor<T>(props: {
     const addAfterActiveCell = (cell: Cell<T>) => {
         props.changeNotebook((nb) => {
             const i = Math.min(activeCell() + 1, nb.cellOrder.length);
-            nb.cellOrder.splice(i, 0, cell.id);
-            nb.cellContents[cell.id] = cell;
+            NotebookUtils.insertCellAtIndex(nb, cell, i);
             setActiveCell(i);
         });
     };
@@ -249,79 +249,64 @@ export function NotebookEditor<T>(props: {
             <ul class="notebook-cells">
                 <For each={props.notebook.cellOrder}>
                     {(cellId, i) => {
-                        const cell = props.notebook.cellContents[cellId];
-                        if (!cell) {
-                            throw `Failed to find contents for cell ${cellId}`;
-                        }
-
                         const isActive = () => activeCell() === i();
+
                         const cellActions: CellActions = {
                             activateAbove() {
-                                i() > 0 && setActiveCell(i() - 1);
+                                if (i() > 0) {
+                                    setActiveCell(i() - 1);
+                                }
                             },
                             activateBelow() {
-                                const n = props.notebook.cellOrder.length;
-                                i() < n - 1 && setActiveCell(i() + 1);
+                                if (i() < NotebookUtils.numCells(props.notebook) - 1) {
+                                    setActiveCell(i() + 1);
+                                }
                             },
                             createAbove() {
                                 props.changeNotebook((nb) => {
-                                    const newCell = newStemCell();
-                                    nb.cellOrder.splice(i(), 0, newCell.id);
-                                    nb.cellContents[newCell.id] = newCell;
-                                    setActiveCell(i());
+                                    const index = i();
+                                    NotebookUtils.newStemCellAtIndex(nb, index);
+                                    setActiveCell(index);
                                 });
                             },
                             createBelow() {
-                                console.log("Creating below");
                                 props.changeNotebook((nb) => {
-                                    const newCell = newStemCell();
-                                    nb.cellOrder.splice(i() + 1, 0, newCell.id);
-                                    nb.cellContents[newCell.id] = newCell;
-                                    // @ts-ignore
-                                    nb.cellStuff = { test: "huh" };
-                                    setActiveCell(i() + 1);
+                                    const index = i() + 1;
+                                    NotebookUtils.newStemCellAtIndex(nb, index);
+                                    setActiveCell(index);
                                 });
                             },
                             deleteBackward() {
                                 props.changeNotebook((nb) => {
-                                    const cellId = nb.cellOrder[i()];
-                                    // biome-ignore lint/style/noNonNullAssertion:
-                                    delete nb.cellContents[cellId!];
-                                    nb.cellOrder.splice(i(), 1);
-                                    setActiveCell(i() - 1);
+                                    const index = i();
+                                    NotebookUtils.deleteCellAtIndex(nb, index);
+                                    setActiveCell(index - 1);
                                 });
                             },
                             deleteForward() {
                                 props.changeNotebook((nb) => {
-                                    const cellId = nb.cellOrder[i()];
-                                    // biome-ignore lint/style/noNonNullAssertion:
-                                    delete nb.cellContents[cellId!];
-                                    nb.cellOrder.splice(i(), 1);
-                                    setActiveCell(i());
+                                    const index = i();
+                                    NotebookUtils.deleteCellAtIndex(nb, index);
+                                    setActiveCell(index);
                                 });
                             },
                             moveUp() {
                                 props.changeNotebook((nb) => {
-                                    if (i() > 0) {
-                                        const [cellIdToMoveUp] = nb.cellOrder.splice(i(), 1);
-                                        // biome-ignore lint/style/noNonNullAssertion:
-                                        nb.cellOrder.splice(i() - 1, 0, cellIdToMoveUp!);
-                                    }
+                                    NotebookUtils.moveCellUp(nb, i());
                                 });
                             },
                             moveDown() {
                                 props.changeNotebook((nb) => {
-                                    if (i() < nb.cellOrder.length - 1) {
-                                        const [cellIdToMoveDown] = nb.cellOrder.splice(i(), 1);
-                                        // biome-ignore lint/style/noNonNullAssertion:
-                                        nb.cellOrder.splice(i() + 1, 0, cellIdToMoveDown!);
-                                    }
+                                    NotebookUtils.moveCellDown(nb, i());
                                 });
                             },
                             hasFocused() {
                                 setActiveCell(i());
                             },
                         };
+
+                        const cell = props.notebook.cellContents[cellId];
+                        invariant(cell, `Failed to find contents for cell '${cellId}'`);
 
                         return (
                             <li>
@@ -342,12 +327,7 @@ export function NotebookEditor<T>(props: {
                                             <RichTextCellEditor
                                                 cellId={cell.id}
                                                 handle={props.handle}
-                                                path={[
-                                                    ...props.path,
-                                                    "cellContents",
-                                                    // biome-ignore lint/style/noNonNullAssertion:
-                                                    props.notebook.cellOrder[i()]!,
-                                                ]}
+                                                path={[...props.path, "cellContents", cell.id]}
                                                 isActive={isActive()}
                                                 actions={cellActions}
                                             />
@@ -355,16 +335,15 @@ export function NotebookEditor<T>(props: {
                                         <Match when={cell.tag === "formal"}>
                                             <props.formalCellEditor
                                                 content={(cell as FormalCell<T>).content}
-                                                changeContent={(f) => {
-                                                    props.changeNotebook((nb) => {
-                                                        const cell = nb.cellContents[
-                                                            // biome-ignore lint/style/noNonNullAssertion:
-                                                            nb.cellOrder[i()]!
-                                                        ] as FormalCell<T>;
-
-                                                        f(cell.content);
-                                                    });
-                                                }}
+                                                changeContent={(f) =>
+                                                    props.changeNotebook((nb) =>
+                                                        NotebookUtils.mutateCellContentById(
+                                                            nb,
+                                                            cell.id,
+                                                            f,
+                                                        ),
+                                                    )
+                                                }
                                                 isActive={isActive()}
                                                 actions={cellActions}
                                             />

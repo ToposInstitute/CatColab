@@ -11,6 +11,7 @@ import {
     type CellConstructor,
     type FormalCellEditorProps,
     NotebookEditor,
+    NotebookUtils,
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
@@ -80,11 +81,7 @@ export function ModelPane(props: {
     const liveDoc = () => props.liveModel.liveDoc;
 
     const selectableTheories = () => {
-        if (
-            liveDoc().doc.notebook.cellOrder.some(
-                (cellId) => liveDoc().doc.notebook.cellContents[cellId]?.tag === "formal",
-            )
-        ) {
+        if (NotebookUtils.hasFormalCells(liveDoc().doc.notebook)) {
             return props.liveModel.theory().inclusions;
         } else {
             // If the model has no formal cells, allow any theory to be selected.

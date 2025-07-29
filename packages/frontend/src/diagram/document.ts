@@ -11,7 +11,7 @@ import type {
 import { currentVersion, elaborateDiagram } from "catlog-wasm";
 import { type Api, type LiveDoc, type StableRef, getLiveDoc } from "../api";
 import { type LiveModelDocument, getLiveModel } from "../model";
-import { newNotebook } from "../notebook";
+import { NotebookUtils, newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
 import { type IdToNameMap, indexMap } from "../util/indexing";
 import type { InterfaceToType } from "../util/types";
@@ -69,15 +69,14 @@ function enlivenDiagramDocument(
 ): LiveDiagramDocument {
     const { doc } = liveDoc;
 
-    const formalJudgments = createMemo<Array<DiagramJudgment>>(() => {
-        return (
+    const formalJudgments = createMemo<Array<DiagramJudgment>>(
+        () =>
             doc.notebook.cellOrder
-                // biome-ignore lint/style/noNonNullAssertion:
-                .map((cellId) => doc.notebook.cellContents[cellId]!)
+                .map((cellId) => NotebookUtils.getCellById(doc.notebook, cellId))
                 .filter((cell) => cell.tag === "formal")
-                .map((cell) => cell.content)
-        );
-    }, []);
+                .map((cell) => cell.content),
+        [],
+    );
 
     const objectIndex = createMemo<IdToNameMap>(() => {
         const judgments = formalJudgments();
