@@ -18,7 +18,7 @@ pub struct ModelDocumentContent {
     pub name: String,
     pub theory: String,
     pub notebook: Notebook<ModelJudgment>,
-    pub version: u32,
+    pub version: String,
 }
 
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
@@ -28,7 +28,7 @@ pub struct DiagramDocumentContent {
     #[serde(rename = "diagramIn")]
     pub diagram_in: Link,
     pub notebook: Notebook<DiagramJudgment>,
-    pub version: u32,
+    pub version: String,
 }
 
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
@@ -40,7 +40,7 @@ pub struct AnalysisDocumentContent {
     #[serde(rename = "analysisOf")]
     pub analysis_of: Link,
     pub notebook: Notebook<Analysis>,
-    pub version: u32,
+    pub version: String,
 }
 
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
@@ -62,14 +62,14 @@ impl Document {
                 name: old.name,
                 theory: old.theory,
                 notebook: Notebook::migrate_from_v0(old.notebook),
-                version: 1,
+                version: "1".to_string(),
             }),
 
             v0::Document::Diagram(old) => Document::Diagram(DiagramDocumentContent {
                 name: old.name,
                 diagram_in: old.diagram_in,
                 notebook: Notebook::migrate_from_v0(old.notebook),
-                version: 1,
+                version: "1".to_string(),
             }),
 
             v0::Document::Analysis(old) => Document::Analysis(AnalysisDocumentContent {
@@ -77,7 +77,7 @@ impl Document {
                 analysis_type: old.analysis_type,
                 analysis_of: old.analysis_of,
                 notebook: Notebook::migrate_from_v0(old.notebook),
-                version: 1,
+                version: "1".to_string(),
             }),
         }
     }

@@ -22,11 +22,11 @@ pub enum VersionedDocument {
     V1(v1::Document),
 }
 
-pub static CURRENT_VERSION: u32 = 1;
+pub static CURRENT_VERSION: &str = "1";
 
 #[wasm_bindgen(js_name = "currentVersion")]
-pub fn current_version() -> u32 {
-    CURRENT_VERSION
+pub fn current_version() -> String {
+    CURRENT_VERSION.to_string()
 }
 
 impl<'de> Deserialize<'de> for VersionedDocument {
@@ -36,15 +36,15 @@ impl<'de> Deserialize<'de> for VersionedDocument {
     {
         let value = Value::deserialize(deserializer)?;
 
-        let version = value.get("version").and_then(Value::as_u64).unwrap_or(0);
+        let version = value.get("version").and_then(Value::as_str).unwrap_or("0");
 
         match version {
-            0 => {
+            "0" => {
                 let doc: v0::Document =
                     serde_json::from_value(value).map_err(serde::de::Error::custom)?;
                 Ok(VersionedDocument::V0(doc))
             }
-            1 => {
+            "1" => {
                 let doc: v1::Document =
                     serde_json::from_value(value).map_err(serde::de::Error::custom)?;
                 Ok(VersionedDocument::V1(doc))
