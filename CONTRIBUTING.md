@@ -8,13 +8,6 @@
 
 - **TO-DO: table of contents!**
 
-| Package | Description | Language | Documentation |
-| :-----: | :---------- | :------- | :------------ |
-| `catlog` | categorical logic core | Rust | [next.catcolab.org/dev/rust/catlog](https://next.catcolab.org/dev/rust/catlog) |
-| `frontend` | web frontend | TypeScript | [next.catcolab.org/dev/frontend](https://next.catcolab.org/dev/frontend) |
-| `catlog_wasm` | WebAssembly bindings (core ⇄ frontend) | Rust | [next.catcolab.org/dev/rust/catlog_wasm](https://next.catcolab.org/dev/rust/catlog_wasm) |
-| `backend` | web server | Rust + PostgreSQL | [next.catcolab.org/dev/rust/catcolab_backend](https://next.catcolab.org/dev/rust/catcolab_backend) |
-
 - **TO-DO: make a nice architecture diagram**
 
 The staging deployment, synced to the `main` branch, is available at
@@ -26,20 +19,20 @@ CatColab is written in a mix of [Rust](https://www.rust-lang.org/) and
 [pnpm](https://pnpm.io/), or use the [dev container](./.devcontainer/).
 
 
+## Package documentation
 
-## Core development
+### Core development (`catlog`)
 
 > [!NOTE]
 > See [next.catcolab.org/dev/rust/catlog](https://next.catcolab.org/dev/rust/catlog) for full documentation.
 
 
-
-## Frontend development
+### Frontend development (`frontend` and `catlog-wasm`)
 
 > [!NOTE]
-> See [next.catcolab.org/dev/frontend](https://next.catcolab.org/dev/frontend) for full documentation.
+> See [next.catcolab.org/dev/frontend](https://next.catcolab.org/dev/frontend) and [next.catcolab.org/dev/rust/catlog_wasm](https://next.catcolab.org/dev/rust/catlog_wasm) for full documentation.
 
-To develop the frontend locally, clone the repository and run
+To develop the frontend locally, clone the repository and, from the top-level directory, run
 
 ```sh
 pnpm install
@@ -51,16 +44,14 @@ Then navigate your browser to the URL provided by Vite. Note that the flag
 `--mode staging` uses the staging deployment of the backend, meaning that you don't have to worry about manually setting up a backend.
 
 
-
-## Backend development
+### Backend development (`backend` and `automerge-doc-server`)
 
 > [!NOTE]
-> See [next.catcolab.org/dev/rust/catcolab_backend](https://next.catcolab.org/dev/rust/catcolab_backend) for full documentation.
+> See [github.com/ToposInstitute/CatColab/tree/main/packages/backend](https://github.com/ToposInstitute/CatColab/tree/main/packages/backend) for full documentation.
 
 Developing the backend locally requires more setup. See the `backend` documentation linked above.
 
-
-### Test build for nixos deployment
+#### Test build for nixos deployment
 ```
 nix flake check --no-sandbox
 ```
@@ -70,8 +61,7 @@ To get a interactive python session in the test environment:
 nix run .#checks.x86_64-linux.integrationTests.driverInteractive --no-sandbox
 ```
 
-
-### Build and run nixos QEMU virtual machine
+#### Build and run nixos QEMU virtual machine
 ```
 nix build .#nixosConfigurations.catcolab-vm.config.system.build.vm
 ./result/bin/run-catcolab-vm
