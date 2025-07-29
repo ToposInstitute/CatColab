@@ -22,6 +22,9 @@ Elaborating on these keywords, CatColab aims to be:
 
 ## For users
 
+> [!INFO]
+> See [catcolab.org/help](https://catcolab.org/help) for user documentation, including tutorial guides.
+
 The production deployment, tracking the latest
 [release](https://github.com/ToposInstitute/CatColab/releases), is available at
 <https://catcolab.org>. For more about the project and where it's going, see the
@@ -31,6 +34,8 @@ far:
 - [v0.1: Hummingbird](https://topos.institute/blog/2024-10-02-introducing-catcolab/)
 - [v0.2: Wren](https://topos.institute/blog/2025-02-05-catcolab-0-2-wren/)
 
+You can also access the latest development version of CatColab, featuring potentially unstable features, at [next.catcolab.org](https://next.catcolab.org).
+
 > [!WARNING]
 > CatColab is under active development with new features added regularly. We aim
 > to preserve the integrity of your data but you should not store anything
@@ -39,18 +44,18 @@ far:
 
 ## For developers
 
-> See <https://next.catcolab.org/dev> for developer information, including contribution guidelines.
+> [!INFO]
+> See [next.catcolab.org/dev](https://next.catcolab.org/dev) for developer documentation, including contribution guidelines.
 
 CatColab is written in a mix of [Rust](https://www.rust-lang.org/) and
-[TypeScript](https://www.typescriptlang.org/).
-
-The staging deployment, synced to the `main` branch, is available at
+[TypeScript](https://www.typescriptlang.org/). The staging deployment, synced to the `main` branch, is available at
 <https://next.catcolab.org>.
 
 
 ## For mathematicians
 
-> See <https://next.catcolab.org/math> for mathematical details
+> [!INFO]
+> See [next.catcolab.org/math](https://next.catcolab.org/math) for mathematical documentation, including bibliographies for further reading.
 
 As the name suggests, CatColab is based on mathematical ideas from category
 theory. It is a specific design goal that the system be usable *without* any
@@ -66,6 +71,6 @@ models of double theories.
 
 The library of domain-specific logics in CatColab, available now and to grow
 over time, is inspired by a wide body of research in applied category theory and
-beyond. Incomplete bibliographies are in the [math
-docs](https://next.catcolab.org/dev/bib-0001.xml) and the [core
+beyond. Incomplete bibliographies are in the [mathematical
+docs](https://next.catcolab.org/math/bib-0001.xml) and the [`core`
 docs](https://next.catcolab.org/dev/rust/catlog/refs). 
