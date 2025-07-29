@@ -5,7 +5,7 @@
 - **TO-DO: make a nice architecture diagram [with Mermaid](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/creating-diagrams#creating-mermaid-diagrams)**
 
 ```mermaid
-flowchart LR
+graph LR
   A[User] -->|web browser| B(`frontend`)
   B -->|`catlog-wasm`| C(`catlog`)
 ```
