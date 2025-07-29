@@ -32,6 +32,7 @@ impl ParameterMap {
 
     /// A wrapper around HashMap::insert
     pub fn insert(&mut self, name: &QualifiedName, value: f32) {
+        // Note that cloning is cheap because there is an internal Rc
         self.0.insert(name.stable_name(), value);
     }
 }

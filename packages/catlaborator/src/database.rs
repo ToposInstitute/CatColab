@@ -98,6 +98,7 @@ impl ElaborationDatabase {
             catlog_wasm::theory::DblTheoryBox::DiscreteTab(_discrete_tab_theory) => {
                 panic!("tabulators not yet supported")
             }
+            _ => todo!(),
         };
         self.content.borrow_mut().insert(
             r,

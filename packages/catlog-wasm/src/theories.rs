@@ -134,8 +134,8 @@ impl ThSignedCategory {
         &self,
         model: &DblModelNext,
         data: LotkaVolterraModelData,
-    ) -> Result<ODEResult, String> {
-        Ok(ODEResult(
+    ) -> Result<ODEResultNext, String> {
+        Ok(ODEResultNext(
             analyses::ode::SignedCoefficientBuilder::new(ustr("Object"))
                 .add_positive(Path::Id(ustr("Object")))
                 .add_negative(ustr("Negative").into())

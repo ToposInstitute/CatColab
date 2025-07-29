@@ -56,17 +56,18 @@ impl<ObType, MorType> SignedCoefficientBuilder<ObType, MorType> {
     where
         Id: Eq + Clone + Hash + Ord,
     {
-        let (matrix, ob_index) = self.build_matrix(model, &data.coefficients);
-        let n = ob_index.len();
+        todo!()
+        // let (matrix, ob_index) = self.build_matrix(model, &data.coefficients);
+        // let n = ob_index.len();
 
-        let initial_values = ob_index
-            .keys()
-            .map(|ob| data.initial_values.get(ob).copied().unwrap_or_default());
-        let x0 = DVector::from_iterator(n, initial_values);
+        // let initial_values = ob_index
+        //     .keys()
+        //     .map(|ob| data.initial_values.get(ob).copied().unwrap_or_default());
+        // let x0 = DVector::from_iterator(n, initial_values);
 
-        let system = LinearODESystem::new(matrix);
-        let problem = ODEProblem::new(system, x0).end_time(data.duration);
-        ODEAnalysis::new(problem, ob_index)
+        // let system = LinearODESystem::new(matrix);
+        // let problem = ODEProblem::new(system, x0).end_time(data.duration);
+        // ODEAnalysis::new(problem, ob_index)
     }
 }
 

@@ -79,6 +79,7 @@ impl Elaborator {
                 Some((TyStx::Object(*ob_type), TyVal::Object(*ob_type)))
             }
             notebook_types::ObType::Tabulator(_mor_type) => self.error(TabulatorUnsupported),
+            _ => todo!(),
         }
     }
 
@@ -94,6 +95,7 @@ impl Elaborator {
                 Some((TmStx::Var(l), val, ob_type))
             }
             notebook_types::Ob::Tabulated(_mor) => self.error(TabulatorUnsupported),
+            _ => todo!(),
         }
     }
 
@@ -119,6 +121,7 @@ impl Elaborator {
         let over = match &mor_decl.mor_type {
             notebook_types::MorType::Basic(ustr) => Path::single(*ustr),
             notebook_types::MorType::Hom(ob_type) => Path::empty(ob_type.as_basic()),
+            _ => todo!(),
         };
         if !self.theory.has_proarrow(&over) {
             return self.error(NoSuchMorphismType(over));

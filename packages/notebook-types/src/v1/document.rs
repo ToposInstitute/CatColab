@@ -112,6 +112,7 @@ impl From<v0::model::Ob> for Reference {
                     "no v0 notebook should contain references to the tabulators of fancy morphisms"
                 ),
             },
+            _ => todo!(),
         }
     }
 }

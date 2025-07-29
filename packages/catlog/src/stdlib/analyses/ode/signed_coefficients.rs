@@ -6,6 +6,8 @@ use std::collections::{BTreeMap, HashMap};
 use std::hash::Hash;
 
 use crate::dbl::model::FgDblModel;
+use crate::zero::name::QualifiedName;
+use crate::zero::parameter_map::ParameterMap;
 
 /** Builder for signed coefficient matrices and analyses based on them.
 
@@ -45,14 +47,17 @@ impl<ObType, MorType> SignedCoefficientBuilder<ObType, MorType> {
     Returns the coefficient matrix along with an ordered map from object
     generators to integer indices.
      */
-    pub fn build_matrix<Id>(
+    pub fn build_matrix(
         &self,
-        model: &impl FgDblModel<ObType = ObType, MorType = MorType, Ob = Id, ObGen = Id, MorGen = Id>,
-        coeffs: &HashMap<Id, f32>,
-    ) -> (DMatrix<f32>, BTreeMap<Id, usize>)
-    where
-        Id: Eq + Clone + Hash + Ord,
-    {
+        model: &impl FgDblModel<
+            ObType = ObType,
+            MorType = MorType,
+            Ob = QualifiedName,
+            ObGen = QualifiedName,
+            MorGen = QualifiedName,
+        >,
+        coeffs: &ParameterMap,
+    ) -> (DMatrix<f32>, BTreeMap<QualifiedName, usize>) {
         let ob_index: BTreeMap<_, _> = model
             .ob_generators_with_type(&self.var_ob_type)
             .enumerate()
@@ -65,14 +70,14 @@ impl<ObType, MorType> SignedCoefficientBuilder<ObType, MorType> {
             for mor in model.mor_generators_with_type(mor_type) {
                 let i = *ob_index.get(&model.mor_generator_dom(&mor)).unwrap();
                 let j = *ob_index.get(&model.mor_generator_cod(&mor)).unwrap();
-                mat[(j, i)] += coeffs.get(&mor).copied().unwrap_or_default();
+                mat[(j, i)] += coeffs.get(&mor).unwrap_or_default();
             }
         }
         for mor_type in self.negative_mor_types.iter() {
             for mor in model.mor_generators_with_type(mor_type) {
                 let i = *ob_index.get(&model.mor_generator_dom(&mor)).unwrap();
                 let j = *ob_index.get(&model.mor_generator_cod(&mor)).unwrap();
-                mat[(j, i)] -= coeffs.get(&mor).copied().unwrap_or_default();
+                mat[(j, i)] -= coeffs.get(&mor).unwrap_or_default();
             }
         }
 

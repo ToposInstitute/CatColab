@@ -14,7 +14,7 @@ use catlog::dbl::theory::{
     TabObOp, TabObType,
 };
 use catlog::one::{Path, ShortPath};
-use notebook_types::current::theory::*;
+pub use notebook_types::current::theory::*;
 
 use super::notation::*;
 
