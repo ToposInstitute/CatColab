@@ -63,7 +63,7 @@ export type LiveDiagramAnalysisDocument = {
     /** Live document defining the analysis. */
     liveDoc: LiveDoc<DiagramAnalysisDocument>;
 
-    /** Live diagarm that the analysis is of. */
+    /** Live diagram that the analysis is of. */
     liveDiagram: LiveDiagramDocument;
 };
 

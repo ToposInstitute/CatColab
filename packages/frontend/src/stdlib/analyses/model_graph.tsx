@@ -1,10 +1,7 @@
 import type * as Viz from "@viz-js/viz";
-import { createSignal } from "solid-js";
-import { P, match } from "ts-pattern";
 import { createSignal, Show } from "solid-js";
-import { match, P } from "ts-pattern";
 
-import type { DblModelNext, ModelJudgment } from "catlaborator";
+import type { DblModelNext } from "catlaborator";
 import type { ModelAnalysisProps } from "../../analysis";
 import { Foldable } from "../../components";
 import type { ModelAnalysisMeta, Theory } from "../../theory";
@@ -12,6 +9,7 @@ import { DownloadSVGButton, GraphvizSVG, type SVGRefProp } from "../../visualiza
 import * as GV from "./graph_visualization";
 
 import "./graph_visualization.css";
+import { displayName, stableName } from "./lotka_volterra";
 
 /** Configure a graph visualization for use with models of a double theory. */
 export function configureModelGraph(options: {
@@ -107,14 +105,14 @@ export function modelToGraphviz(
     theory: Theory,
     attributes?: GV.GraphvizAttributes,
 ): Viz.Graph {
-    const nodes = new Map<string, Required<Viz.Graph>["nodes"][0]>();
+    const nodes = [];
     for (const ob of model.ob_generators()) {
         const meta = theory.modelObTypeMeta(ob.ob_type);
-        nodes.set(ob.name, {
-            name: ob.name,
+        nodes.push({
+            name: displayName(ob.name),
             attributes: {
-                id: ob.name,
-                label: ob.name,
+                id: stableName(ob.name),
+                label: displayName(ob.name),
                 class: GV.svgCssClasses(meta).join(" "),
                 fontname: GV.graphvizFontname(meta),
             },
@@ -125,11 +123,11 @@ export function modelToGraphviz(
     for (const mor of model.mor_generators()) {
         const meta = theory.modelMorTypeMeta(mor.mor_type);
         edges.push({
-            head: mor.dom,
-            tail: mor.cod,
+            head: stableName(mor.dom),
+            tail: stableName(mor.cod),
             attributes: {
-                id: mor.name,
-                label: mor.name,
+                id: stableName(mor.name),
+                label: displayName(mor.name),
                 class: GV.svgCssClasses(meta).join(" "),
                 fontname: GV.graphvizFontname(meta),
                 // Not recognized by Graphviz but will be passed through!

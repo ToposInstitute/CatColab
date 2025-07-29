@@ -1,4 +1,4 @@
-import { type Accessor, createMemo, createResource, createSignal } from "solid-js";
+import { type Accessor, createMemo, createResource } from "solid-js";
 import invariant from "tiny-invariant";
 
 import {
