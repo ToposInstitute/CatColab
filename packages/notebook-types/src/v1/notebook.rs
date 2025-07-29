@@ -8,10 +8,9 @@ use tsify::Tsify;
 use uuid::Uuid;
 
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
+#[tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)]
 pub struct Notebook<T> {
     #[serde(rename = "cellContents")]
-    #[tsify(type = "Record<string, NotebookCell<T>>")]
     pub cell_contents: HashMap<Uuid, NotebookCell<T>>,
     #[serde(rename = "cellOrder")]
     pub cell_order: Vec<Uuid>,
