@@ -1,17 +1,27 @@
-**TO-DO: write!**
+# Developer documentation and contribution guidelines
 
-## Information for developers
+- **TO-DO: write!**
+
+- **TO-DO: mention that you can also view this page at next.catcolab.org/dev (and also make this actually be true)**
+
+- **TO-DO: include the following: infrastructure/README.md, next.catcolab.org/dev/rust, next.catcolab.org/dev/frontend, next.catcolab.org/dev/backend**
+
+- **TO-DO: table of contents!**
 
 The staging deployment, synced to the `main` branch, is available at
-<https://next.catcolab.org>. Documentation for developers is browsable at
-<https://next.catcolab.org/dev/>.
+[next.catcolab.org](https://next.catcolab.org).
 
 CatColab is written in a mix of [Rust](https://www.rust-lang.org/) and
 [TypeScript](https://www.typescriptlang.org/). To start developing, install Rust
 (say by using [rustup](https://rustup.rs/)) and install
 [pnpm](https://pnpm.io/), or use the [dev container](./.devcontainer/).
 
-### Frontend development
+
+
+## Frontend development
+
+> [!NOTE]
+> See [next.catcolab.org/dev/frontend](https://next.catcolab.org/dev/frontend) for full documentation.
 
 To develop the frontend locally, clone the repository and run
 
@@ -22,15 +32,18 @@ pnpm run dev --mode staging
 ```
 
 Then navigate your browser to the URL provided by Vite. Note that the flag
-`--mode staging` uses the staging deployment of the backend. For other options,
-see the [frontend README](packages/frontend/).
+`--mode staging` uses the staging deployment of the backend.
 
-### Backend development
 
-Developing the backend locally requires more setup. See the instructions in the
-[backend README](packages/backend/).
 
-#### Test build for nixos deployment
+## Backend development
+
+> [!NOTE]
+> See [next.catcolab.org/dev/backend](https://next.catcolab.org/dev/backend) for full documentation.
+
+Developing the backend locally requires more setup. See the `backend` documentation linked above.
+
+### Test build for nixos deployment
 ```
 nix flake check --no-sandbox
 ```
@@ -40,13 +53,17 @@ To get a interactive python session in the test environment:
 nix run .#checks.x86_64-linux.integrationTests.driverInteractive --no-sandbox
 ```
 
-#### Build and run nixos QEMU virtual machine
+### Build and run nixos QEMU virtual machine
 ```
 nix build .#nixosConfigurations.catcolab-vm.config.system.build.vm
 ./result/bin/run-catcolab-vm
 ```
 
 The username and password of the vm is 'catcolab'
+
+
+
+## Contributing
 
 ### Formatting and linting
 

@@ -1,8 +1,5 @@
 # CatColab
 
-[![core docs](https://img.shields.io/badge/core_docs-D34516.svg)](https://next.catcolab.org/dev/rust/catlog/)
-[![frontend
-docs](https://img.shields.io/badge/frontend_docs-28607F.svg)](https://next.catcolab.org/dev/frontend)
 [![zulip](https://img.shields.io/badge/zulip-join_chat-brightgreen.svg)](https://catcolab.zulipchat.com)
 
 CatColab (working name) is a collaborative environment for *formal,
@@ -23,7 +20,7 @@ Elaborating on these keywords, CatColab aims to be:
 ## For users
 
 > [!NOTE]
-> See [catcolab.org/help](https://catcolab.org/help) for user documentation, including tutorial guides.
+> See [catcolab.org/help](https://catcolab.org/help) for user documentation, including an overview of CatColab and various tutorial guides.
 
 The production deployment, tracking the latest
 [release](https://github.com/ToposInstitute/CatColab/releases), is available at
@@ -49,7 +46,7 @@ You can also access the latest development version of CatColab, featuring potent
 
 CatColab is written in a mix of [Rust](https://www.rust-lang.org/) and
 [TypeScript](https://www.typescriptlang.org/). The staging deployment, synced to the `main` branch, is available at
-<https://next.catcolab.org>.
+[next.catcolab.org](https://next.catcolab.org).
 
 
 ## For mathematicians
