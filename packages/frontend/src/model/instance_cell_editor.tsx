@@ -3,13 +3,13 @@ import invariant from "tiny-invariant";
 import { InlineInput, NameInput } from "../components";
 import type { CellActions } from "../notebook";
 import { LiveModelContext } from "./context";
-import type { RecordDecl } from "./types";
 
-import "./record_cell_editor.css";
+import "./instance_cell_editor.css";
+import type { InstanceDecl } from "./types";
 
-export function RecordCellEditor(props: {
-    record: RecordDecl;
-    modifyRecord: (f: (decl: RecordDecl) => void) => void;
+export function InstanceCellEditor(props: {
+    decl: InstanceDecl;
+    modifyDecl: (f: (decl: InstanceDecl) => void) => void;
     isActive: boolean;
     actions: CellActions;
 }) {
@@ -25,10 +25,10 @@ export function RecordCellEditor(props: {
             <NameInput
                 ref={setNameRef}
                 placeholder="Unnamed"
-                name={props.record.name}
+                name={props.decl.name}
                 setName={(name) => {
-                    props.modifyRecord((r) => {
-                        r.name = name;
+                    props.modifyDecl((d) => {
+                        d.name = name;
                     });
                 }}
                 deleteBackward={props.actions.deleteBackward}
@@ -41,10 +41,10 @@ export function RecordCellEditor(props: {
             />
             <span>:</span>
             <InlineInput
-                text={props.record.notebook_id}
+                text={props.decl.notebook_id}
                 setText={(text) =>
-                    props.modifyRecord((r) => {
-                        r.notebook_id = text;
+                    props.modifyDecl((d) => {
+                        d.notebook_id = text;
                     })
                 }
                 placeholder="notebook id"

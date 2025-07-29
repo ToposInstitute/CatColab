@@ -47,7 +47,7 @@ pub struct MorDecl {
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
-pub struct RecordDecl {
+pub struct InstanceDecl {
     pub name: String,
 
     pub id: Uuid,
@@ -63,6 +63,6 @@ pub enum ModelJudgment {
     Object(ObDecl),
     #[serde(rename = "morphism")]
     Morphism(MorDecl),
-    #[serde(rename = "record")]
-    Record(RecordDecl),
+    #[serde(rename = "instance")]
+    Instance(InstanceDecl),
 }

@@ -197,7 +197,7 @@ async function cacheNotebooksReferredToFrom(
     const theory = theories.get(doc.theory).theory;
     cache.insertNotebook(refId, heads, theory, doc);
     for (const cell of doc.notebook.cells) {
-        if (cell.tag == "formal" && cell.content.tag == "record") {
+        if (cell.tag == "formal" && cell.content.tag == "instance") {
             await cacheNotebooksReferredToFrom(api, cache, cell.content.notebook_id, theories);
         }
     }

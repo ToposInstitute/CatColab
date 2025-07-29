@@ -32,12 +32,12 @@ export const newMorphismDecl = (morType: MorType): MorphismDecl => ({
 });
 
 /** Declaration of a morphim in a model. */
-export type RecordDecl = ModelJudgment & {
-    tag: "record";
+export type InstanceDecl = ModelJudgment & {
+    tag: "instance";
 };
 
-export const newNotebookDecl = (): RecordDecl => ({
-    tag: "record",
+export const newNotebookDecl = (): InstanceDecl => ({
+    tag: "instance",
     name: "",
     id: v7(),
     notebook_id: "",

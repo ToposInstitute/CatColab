@@ -173,19 +173,19 @@ impl Elaborator {
                     ctx.intro(mor_decl.id, Some(ustr(&mor_decl.name)), tyval);
                     cells.push(MemberStx::new(ustr(&mor_decl.name), tystx))
                 }
-                Record(record_decl) => {
-                    let Some(_) = cache.lookup(&record_decl.notebook_id) else {
+                Instance(instance_decl) => {
+                    let Some(_) = cache.lookup(&instance_decl.notebook_id) else {
                         let _: Option<()> =
-                            self.error(NoSuchNotebook(record_decl.notebook_id.to_string()));
+                            self.error(NoSuchNotebook(instance_decl.notebook_id.to_string()));
                         continue;
                     };
                     let nbref = ClassIdent {
-                        id: ustr(&record_decl.notebook_id),
+                        id: ustr(&instance_decl.notebook_id),
                     };
                     let tyval = TyVal::InstanceOf(nbref);
                     let tystx = TyStx::InstanceOf(nbref);
-                    ctx.intro(record_decl.id, Some(ustr(&record_decl.name)), tyval);
-                    cells.push(MemberStx::new(ustr(&record_decl.name), tystx))
+                    ctx.intro(instance_decl.id, Some(ustr(&instance_decl.name)), tyval);
+                    cells.push(MemberStx::new(ustr(&instance_decl.name), tystx))
                 }
             }
         }

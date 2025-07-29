@@ -34,11 +34,11 @@ import {
     newNotebookDecl,
     newObjectDecl,
     type ObjectDecl,
-    type RecordDecl,
+    type InstanceDecl,
 } from "./types";
 
 import "./model_editor.css";
-import { RecordCellEditor } from "./record_cell_editor";
+import { InstanceCellEditor } from "./instance_cell_editor";
 import { stdTheories, TheoryLibraryContext } from "../stdlib";
 import { DocumentBreadcrumbs, DocumentLoadingScreen, DocumentMenu, Toolbar } from "../page";
 import { WelcomeOverlay } from "../page/welcome_overlay";
@@ -154,7 +154,7 @@ export function ModelNotebookEditor(props: {
     const cellConstructors = () =>
         (props.liveModel.theory().modelTypes ?? [])
             .map(modelCellConstructor)
-            .concat(notebookCellConstructor);
+            .concat(instanceCellConstructor);
 
     const firebaseApp = useFirebaseApp();
     const auth = useAuth(getAuth(firebaseApp));
@@ -206,12 +206,12 @@ function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
                     actions={props.actions}
                 />
             </Match>
-            <Match when={props.content.tag === "record"}>
-                <RecordCellEditor
-                    record={props.content as RecordDecl}
-                    modifyRecord={(f) =>
+            <Match when={props.content.tag === "instance"}>
+                <InstanceCellEditor
+                    decl={props.content as InstanceDecl}
+                    modifyDecl={(f) =>
                         props.changeContent((content) => {
-                            f(content as RecordDecl);
+                            f(content as InstanceDecl);
                         })
                     }
                     isActive={props.isActive}
@@ -236,9 +236,9 @@ function modelCellConstructor(meta: ModelTypeMeta): CellConstructor<ModelJudgmen
     };
 }
 
-const notebookCellConstructor: CellConstructor<ModelJudgment> = {
-    name: "Notebook Cell",
-    description: "A cell that imports another notebook",
+const instanceCellConstructor: CellConstructor<ModelJudgment> = {
+    name: "Instance",
+    description: "An instance of another notebook",
     construct() {
         return newFormalCell(newNotebookDecl());
     },
