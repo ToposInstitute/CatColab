@@ -109,7 +109,7 @@ export function modelToGraphviz(
     for (const ob of model.ob_generators()) {
         const meta = theory.modelObTypeMeta(ob.ob_type);
         nodes.push({
-            name: displayName(ob.name),
+            name: stableName(ob.name),
             attributes: {
                 id: stableName(ob.name),
                 label: displayName(ob.name),

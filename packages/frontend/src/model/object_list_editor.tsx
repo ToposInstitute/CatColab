@@ -11,7 +11,7 @@ import {
 } from "solid-js";
 import invariant from "tiny-invariant";
 
-import type { Ob } from "catlog-wasm";
+import type { Ob } from "catlaborator";
 import { type InputOptions, ObIdInput } from "../components";
 import { deepCopyJSON } from "../util/deepcopy";
 import { LiveModelContext } from "./context";

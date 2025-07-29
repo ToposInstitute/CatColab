@@ -2,7 +2,6 @@ import { createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 import { InlineInput, NameInput } from "../components";
 import type { CellActions } from "../notebook";
-import { focusInputWhen } from "../util/focus";
 import { LiveModelContext } from "./context";
 import type { RecordDecl } from "./types";
 
@@ -15,7 +14,6 @@ export function RecordCellEditor(props: {
     actions: CellActions;
 }) {
     const [nameRef, setNameRef] = createSignal<HTMLInputElement>();
-    focusInputWhen(nameRef, () => props.isActive);
 
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
@@ -39,7 +37,7 @@ export function RecordCellEditor(props: {
                 exitForward={props.actions.activateBelow}
                 exitUp={props.actions.activateAbove}
                 exitDown={props.actions.activateBelow}
-                onFocus={props.actions.hasFocused}
+                // onFocus={props.actions.hasFocused}
             />
             <span>:</span>
             <InlineInput

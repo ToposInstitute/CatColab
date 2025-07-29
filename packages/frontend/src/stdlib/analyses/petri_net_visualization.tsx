@@ -1,7 +1,7 @@
 import type * as Viz from "@viz-js/viz";
 import { Show, createSignal } from "solid-js";
 
-import { type DblModel, type Uuid, collectProduct } from "catlog-wasm";
+import { type DblModel, type Uuid, collectProduct } from "catlaborator";
 import type { ModelAnalysisProps } from "../../analysis";
 import { Foldable } from "../../components";
 import type { ModelAnalysisMeta } from "../../theory";

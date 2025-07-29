@@ -2,7 +2,6 @@ import { useParams } from "@solidjs/router";
 import { getAuth } from "firebase/auth";
 import { useAuth, useFirebaseApp } from "solid-firebase";
 import { Match, Show, Switch, createResource, createSignal, useContext } from "solid-js";
-import { createResource, Match, Show, Switch, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import {
@@ -22,19 +21,6 @@ import {
     newFormalCell,
     NotebookEditor,
 } from "../notebook";
-import { DocumentBreadcrumbs, DocumentLoadingScreen, DocumentMenu, Toolbar } from "../page";
-import { WelcomeOverlay } from "../page/welcome_overlay";
-import { TheoryLibraryContext, stdTheories } from "../stdlib";
-import type { ModelTypeMeta } from "../theory";
-import {
-    DocumentBreadcrumbs,
-    DocumentLoadingScreen,
-    DocumentMenu,
-    TheoryHelpButton,
-    Toolbar,
-} from "../page";
-import { TheoryLibraryContext } from "../stdlib";
-import type { ModelTypeMeta, Theory } from "../theory";
 import { PermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
 import { catlaborate, getLiveModel, type LiveModelDocument } from "./document";
@@ -53,6 +39,9 @@ import {
 
 import "./model_editor.css";
 import { RecordCellEditor } from "./record_cell_editor";
+import { stdTheories, TheoryLibraryContext } from "../stdlib";
+import { DocumentBreadcrumbs, DocumentLoadingScreen, DocumentMenu, Toolbar } from "../page";
+import { WelcomeOverlay } from "../page/welcome_overlay";
 
 export default function ModelPage() {
     const api = useApi();
