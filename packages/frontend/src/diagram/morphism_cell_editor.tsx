@@ -25,8 +25,8 @@ export function DiagramMorphismCellEditor(props: {
     const [activeInput, setActiveInput] = createSignal<DiagramMorphismCellInput>("mor");
 
     const theory = () => liveDiagram().liveModel.theory();
-    const domType = () => theory().theory.src(props.decl.morType);
-    const codType = () => theory().theory.tgt(props.decl.morType);
+    const domType = () => theory()?.theory.src(props.decl.morType);
+    const codType = () => theory()?.theory.tgt(props.decl.morType);
 
     const errors = () => {
         const validated = liveDiagram().validatedDiagram();
@@ -74,7 +74,7 @@ export function DiagramMorphismCellEditor(props: {
                             });
                         }}
                         morType={props.decl.morType}
-                        placeholder={theory().modelMorTypeMeta(props.decl.morType)?.name}
+                        placeholder={theory()?.modelMorTypeMeta(props.decl.morType)?.name}
                         isActive={props.isActive && activeInput() === "mor"}
                         deleteBackward={props.actions.deleteBackward}
                         deleteForward={props.actions.deleteForward}

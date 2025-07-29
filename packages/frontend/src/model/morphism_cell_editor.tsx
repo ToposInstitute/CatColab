@@ -25,25 +25,25 @@ export function MorphismCellEditor(props: {
     const [activeInput, setActiveInput] = createSignal<MorphismCellInput>("name");
 
     const theory = () => liveModel().theory();
-    const morTypeMeta = () => theory().modelMorTypeMeta(props.morphism.morType);
+    const morTypeMeta = () => theory()?.modelMorTypeMeta(props.morphism.morType);
 
     const domType = createMemo(() => {
         const op = morTypeMeta()?.domain?.apply;
         if (op === undefined) {
-            return theory().theory.src(props.morphism.morType);
+            return theory()?.theory.src(props.morphism.morType);
         } else {
             // Codomain type for operation should equal source type above.
-            return theory().theory.dom(op);
+            return theory()?.theory.dom(op);
         }
     });
 
     const codType = createMemo(() => {
         const op = morTypeMeta()?.codomain?.apply;
         if (op === undefined) {
-            return theory().theory.tgt(props.morphism.morType);
+            return theory()?.theory.tgt(props.morphism.morType);
         } else {
             // Codomain type for operation should equal target type above.
-            return theory().theory.dom(op);
+            return theory()?.theory.dom(op);
         }
     });
 

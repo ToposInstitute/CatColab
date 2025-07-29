@@ -82,7 +82,7 @@ export function ModelPane(props: {
 
     const selectableTheories = () => {
         if (NotebookUtils.hasFormalCells(liveDoc().doc.notebook)) {
-            return props.liveModel.theory().inclusions;
+            return props.liveModel.theory()?.inclusions ?? [];
         } else {
             // If the model has no formal cells, allow any theory to be selected.
             return undefined;
@@ -126,7 +126,7 @@ export function ModelNotebookEditor(props: {
     const liveDoc = () => props.liveModel.liveDoc;
 
     const cellConstructors = () =>
-        (props.liveModel.theory().modelTypes ?? []).map(modelCellConstructor);
+        (props.liveModel.theory()?.modelTypes ?? []).map(modelCellConstructor);
 
     const firebaseApp = useFirebaseApp();
     const auth = useAuth(getAuth(firebaseApp));
@@ -202,9 +202,9 @@ function judgmentLabel(judgment: ModelJudgment): string | undefined {
     const theory = liveModel().theory();
 
     if (judgment.tag === "object") {
-        return theory.modelObTypeMeta(judgment.obType)?.name;
+        return theory?.modelObTypeMeta(judgment.obType)?.name;
     }
     if (judgment.tag === "morphism") {
-        return theory.modelMorTypeMeta(judgment.morType)?.name;
+        return theory?.modelMorTypeMeta(judgment.morType)?.name;
     }
 }

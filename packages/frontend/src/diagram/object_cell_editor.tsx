@@ -54,7 +54,7 @@ export function DiagramObjectCellEditor(props: {
                     });
                 }}
                 obType={props.decl.obType}
-                placeholder={theory().modelObTypeMeta(props.decl.obType)?.name}
+                placeholder={theory()?.modelObTypeMeta(props.decl.obType)?.name}
                 exitUp={props.actions.activateAbove}
                 exitDown={props.actions.activateBelow}
                 exitLeft={() => setActiveInput("name")}

@@ -1,5 +1,5 @@
 import { deepEqual } from "fast-equals";
-import { type Component, splitProps, useContext } from "solid-js";
+import { type Component, Show, splitProps, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 import { P, match } from "ts-pattern";
@@ -30,11 +30,13 @@ export type ObInputProps = {
     isInvalid?: boolean;
 };
 
-/** Input an object that already exists in a model.
- */
+/** Input an object that already exists in a model. */
 export function ObInput(
-    allProps: ObInputProps &
+    allProps: Omit<ObInputProps, "obType"> &
         InputOptions & {
+            /** Type of object being edited, if available. */
+            obType?: ObType;
+
             /** Operation to apply to the object afterwards, if any. */
             applyOp?: ObOp;
         },
@@ -66,13 +68,17 @@ export function ObInput(
     };
 
     return (
-        <Dynamic
-            component={obEditorForType(props.obType)}
-            ob={ob()}
-            setOb={setOb}
-            obType={props.obType}
-            {...otherProps}
-        />
+        <Show when={props.obType}>
+            {(obType) => (
+                <Dynamic
+                    component={obEditorForType(obType())}
+                    ob={ob()}
+                    setOb={setOb}
+                    obType={obType()}
+                    {...otherProps}
+                />
+            )}
+        </Show>
     );
 }
 

@@ -109,7 +109,7 @@ export function DocumentMenu(props: {
                 <Match
                     when={
                         props.liveDocument.type === "model" &&
-                        props.liveDocument.theory().supportsInstances
+                        props.liveDocument.theory()?.supportsInstances
                     }
                 >
                     <MenuItem onSelect={() => onNewDiagram()}>

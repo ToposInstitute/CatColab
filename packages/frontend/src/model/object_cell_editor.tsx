@@ -50,7 +50,7 @@ export function ObjectCellEditor(props: {
     );
 }
 
-export function obClasses(theory: Theory, typ?: ObType): string[] {
-    const typeMeta = typ ? theory.modelObTypeMeta(typ) : undefined;
+export function obClasses(theory?: Theory, typ?: ObType): string[] {
+    const typeMeta = typ ? theory?.modelObTypeMeta(typ) : undefined;
     return [...(typeMeta?.cssClasses ?? []), ...(typeMeta?.textClasses ?? [])];
 }

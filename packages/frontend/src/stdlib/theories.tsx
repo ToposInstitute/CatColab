@@ -11,7 +11,7 @@ stdTheories.add(
         isDefault: true,
         group: "Base",
     },
-    () => import("./theories/empty"),
+    async () => (await import("./theories/empty")).default,
 );
 
 stdTheories.add(
@@ -21,7 +21,7 @@ stdTheories.add(
         description: "Ontology log, a simple conceptual model",
         group: "Knowledge and Data",
     },
-    () => import("./theories/simple-olog"),
+    async () => (await import("./theories/simple-olog")).default,
 );
 
 stdTheories.add(
@@ -31,7 +31,7 @@ stdTheories.add(
         description: "Schema for a categorical database",
         group: "Knowledge and Data",
     },
-    () => import("./theories/simple-schema"),
+    async () => (await import("./theories/simple-schema")).default,
 );
 
 stdTheories.add(
@@ -41,7 +41,7 @@ stdTheories.add(
         description: "Place/transition networks",
         group: "Systems",
     },
-    () => import("./theories/petri-net"),
+    async () => (await import("./theories/petri-net")).default,
 );
 
 stdTheories.add(
@@ -51,7 +51,7 @@ stdTheories.add(
         description: "Positive and negative causal relationships",
         group: "System Dynamics",
     },
-    () => import("./theories/causal-loop"),
+    async () => (await import("./theories/causal-loop")).default,
 );
 
 stdTheories.add(
@@ -61,7 +61,7 @@ stdTheories.add(
         description: "Causal relationships: positive or negative, fast or slow",
         group: "System Dynamics",
     },
-    () => import("./theories/causal-loop-delays"),
+    async () => (await import("./theories/causal-loop-delays")).default,
 );
 
 stdTheories.add(
@@ -71,7 +71,7 @@ stdTheories.add(
         description: "Positive, negative, and indeterminate causal relationships",
         group: "System Dynamics",
     },
-    () => import("./theories/indeterminate-causal-loop"),
+    async () => (await import("./theories/indeterminate-causal-loop")).default,
 );
 
 stdTheories.add(
@@ -81,7 +81,7 @@ stdTheories.add(
         description: "Model accumulation (stocks) and change (flows)",
         group: "System Dynamics",
     },
-    () => import("./theories/primitive-stock-flow"),
+    async () => (await import("./theories/primitive-stock-flow")).default,
 );
 
 stdTheories.add(
@@ -91,7 +91,7 @@ stdTheories.add(
         description: "Biochemical species that promote or inhibit each other",
         group: "Biology",
     },
-    () => import("./theories/reg-net"),
+    async () => (await import("./theories/reg-net")).default,
 );
 
 stdTheories.add(
@@ -101,5 +101,5 @@ stdTheories.add(
         description: "DEC operators on a geometrical space",
         group: "Applied Mathematics",
     },
-    () => import("./theories/unary-dec"),
+    async () => (await import("./theories/unary-dec")).default,
 );

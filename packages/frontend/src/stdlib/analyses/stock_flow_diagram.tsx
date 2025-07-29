@@ -85,7 +85,7 @@ links from stocks to flows using our own layout heuristics.
  */
 export function StockFlowGraphviz(props: {
     model: Array<ModelJudgment>;
-    theory: Theory;
+    theory?: Theory;
     attributes?: GV.GraphvizAttributes;
     options?: Viz.RenderOptions;
     ref?: SVGRefProp;
@@ -95,6 +95,7 @@ export function StockFlowGraphviz(props: {
     const vizLayout = () => {
         const viz = vizResource();
         return (
+            props.theory &&
             viz &&
             vizLayoutGraph(
                 viz,
