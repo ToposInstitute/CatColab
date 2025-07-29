@@ -22,16 +22,18 @@ Elaborating on these keywords, CatColab aims to be:
 > [!NOTE]
 > See [catcolab.org/help](https://catcolab.org/help) for user documentation, including an overview of CatColab and various tutorial guides.
 
-The production deployment, tracking the latest
-[release](https://github.com/ToposInstitute/CatColab/releases), is available at
-<https://catcolab.org>. For more about the project and where it's going, see the
-[help page](https://catcolab.org/help) and our blog posts about the releases so
+There are two versions of CatColab available to use:
+
+- The **production version**: [catcolab.org](https://catcolab.org).
+  This tracks the latest [release](https://github.com/ToposInstitute/CatColab/releases), so it is the most stable version.
+- The **development version**: [next.catcolab.org](https://next.catcolab.org).
+  This tracks the `main` branch of this repository, so it contains all the newest experimental features, but is therefore likely to be less stable.
+
+For more about the project and where it's going, see the [help page](https://catcolab.org/help), as well as our blog posts about the major releases so
 far:
 
 - [v0.1: Hummingbird](https://topos.institute/blog/2024-10-02-introducing-catcolab/)
 - [v0.2: Wren](https://topos.institute/blog/2025-02-05-catcolab-0-2-wren/)
-
-You can also access the latest development version of CatColab, featuring potentially unstable features, at [next.catcolab.org](https://next.catcolab.org).
 
 > [!WARNING]
 > CatColab is under active development with new features added regularly. We aim

@@ -1,20 +1,7 @@
 # Developer documentation and contribution guidelines
 
-- **TO-DO: write!**
-
-- **TO-DO: make a nice architecture diagram [with Mermaid](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/creating-diagrams#creating-mermaid-diagrams)**
-
-```mermaid
-graph LR
-  A[User] -->|web browser| B(`frontend`)
-  B -->|`catlog-wasm`| C(`catlog`)
-```
-
 > [!NOTE]
 > This page can be viewed at either [next.catcolab.org/dev](https://next.catcolab.org/dev) or [github.com/ToposInstitute/CatColab/contribute](https://github.com/ToposInstitute/CatColab/contribute)
-
-The staging deployment, synced to the `main` branch, is available at
-[next.catcolab.org](https://next.catcolab.org).
 
 
 ## Package documentation
