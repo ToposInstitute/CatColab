@@ -4,8 +4,8 @@ import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 import { P, match } from "ts-pattern";
 
-import type { MorType, Ob, ObType, Uuid } from "catlaborator";
-import { IdInput, type IdInputOptions, ObIdInput } from "../components";
+import type { MorType, Ob, ObOp, ObType, Uuid } from "catlaborator";
+import { IdInput, type IdInputOptions, type InputOptions, ObIdInput } from "../components";
 import { LiveModelContext } from "./context";
 import { ObListEditor } from "./object_list_editor";
 

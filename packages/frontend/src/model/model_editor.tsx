@@ -42,6 +42,7 @@ import { RecordCellEditor } from "./record_cell_editor";
 import { stdTheories, TheoryLibraryContext } from "../stdlib";
 import { DocumentBreadcrumbs, DocumentLoadingScreen, DocumentMenu, Toolbar } from "../page";
 import { WelcomeOverlay } from "../page/welcome_overlay";
+import type { ModelTypeMeta } from "../theory";
 
 export default function ModelPage() {
     const api = useApi();
