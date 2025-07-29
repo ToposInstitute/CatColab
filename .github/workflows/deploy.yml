@@ -144,6 +144,7 @@ jobs:
         run: |
           mv app site/
           mv math-docs site/math
+          mkdir site/dev
           mv rust_docs site/dev/rust
           mv frontend_docs site/dev/frontend
           echo '/math /math/index.xml' >> site/_redirects
