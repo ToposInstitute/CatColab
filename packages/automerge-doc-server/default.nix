@@ -28,12 +28,12 @@ pkgs.stdenv.mkDerivation {
     nodejs_24
   ];
 
-  # package.json expects catlog-wasm to be at ../catlog-wasm, we COULD modify the parent of the nix
+  # package.json expects notebook-types to be at ../notebook-types, we COULD modify the parent of the nix
   # `build` directory, but this is technically unsupported. Instead we recreate part of the `packages`
   # directory structure in a way familiar to pnpm.
   unpackPhase = ''
-    mkdir -p ./catlog-wasm/dist/pkg-node
-    cp -r ${self.packages.x86_64-linux.catlog-wasm}/* ./catlog-wasm/dist/pkg-node/
+    mkdir -p ./notebook-types/dist/pkg-node
+    cp -r ${self.packages.x86_64-linux.notebook-types}/* ./notebook-types/dist/pkg-node/
 
     mkdir ./automerge-doc-server
     cp -r $src/* ./automerge-doc-server
@@ -54,7 +54,7 @@ pkgs.stdenv.mkDerivation {
       exit 1
     fi
 
-    cp "${self.packages.x86_64-linux.catlog-wasm}/catlog_wasm_bg.wasm" "$out/"
+    cp "${self.packages.x86_64-linux.notebook-types}/notebook_types_bg.wasm" "$out/"
     cp "$automerge_wasm_path" "$out/"
 
     mkdir -p $out/bin

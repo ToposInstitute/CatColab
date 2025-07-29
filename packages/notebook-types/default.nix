@@ -6,8 +6,9 @@
 craneLib.buildPackage {
   inherit cargoArtifacts;
   inherit (craneLib.crateNameFromCargoToml { cargoToml = ./Cargo.toml; }) version pname;
+  doCheck = false;
 
-  cargoExtraArgs = "-p catlog-wasm";
+  cargoExtraArgs = "-p notebook-types";
 
   nativeBuildInputs = [
     pkgs.wasm-pack
@@ -27,14 +28,12 @@ craneLib.buildPackage {
       ../../Cargo.lock
       (craneLib.fileset.commonCargoSources ./.)
       ./package.json
-      (craneLib.fileset.commonCargoSources ../catlog)
-      (craneLib.fileset.commonCargoSources ../notebook-types)
     ];
   };
 
   # run wasm-pack instead of the default cargo
   buildPhase = ''
-    cd packages/catlog-wasm
+    cd packages/notebook-types
     # WTF: engage maximum cargo cult. I have no idea wasm-pack needs $HOME set, that is wild.
     # https://github.com/NixOS/nixpkgs/blob/b5d0681604d2acd74818561bd2f5585bfad7087d/pkgs/by-name/te/tetrio-desktop/tetrio-plus.nix#L66C7-L66C24
     # https://discourse.nixos.org/t/help-packaging-mipsy-wasm-pack-error/51876

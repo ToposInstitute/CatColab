@@ -4,7 +4,7 @@
     "type": "module",
     "main": "dist/main.js",
     "scripts": {
-        "build:wasm": "npm --prefix ../catlog-wasm run build:node",
+        "build:wasm": "npm --prefix ../notebook-types run build:node",
         "main": "tsx src/main.ts",
         "format": "biome format --write",
         "lint": "biome lint --write && biome check --write"
@@ -14,7 +14,7 @@
     "dependencies": {
         "@automerge/automerge-repo": "^1.2.1",
         "@automerge/automerge-repo-network-websocket": "^1.2.1",
-        "catlog-wasm": "link:../catlog-wasm/dist/pkg-node",
+        "notebook-types": "link:../notebook-types/dist/pkg-node",
         "dotenv": "^16.5.0",
         "express": "^4.19.2",
         "fast-json-patch": "^3.1.1",

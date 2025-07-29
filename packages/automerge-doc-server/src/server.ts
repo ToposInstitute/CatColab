@@ -5,7 +5,7 @@ import dotenv from "dotenv";
 import express from "express";
 import * as ws from "ws";
 
-import * as catlog from "catlog-wasm";
+import * as notbookTypes from "notebook-types";
 
 // pg is a CommonJS package, and this is likely the least painful way of dealing with that
 import pgPkg from "pg";
@@ -131,7 +131,7 @@ export class AutomergeServer implements SocketIOHandlers {
         // diff to the original object. The application of the diff happens entirely is JS land, so the changes
         // are captured by Automerge.
         const docBefore = await handle.doc();
-        const docAfter = catlog.migrateDocument(docBefore);
+        const docAfter = notbookTypes.migrateDocument(docBefore);
         const patches = jsonpatch.compare(docBefore as any, docAfter);
         handle.change((doc: any) => {
             jsonpatch.applyPatch(doc, patches);

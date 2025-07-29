@@ -168,7 +168,7 @@
             pkgs = pkgsLinux;
           };
 
-          catlog-wasm = pkgsLinux.callPackage ./packages/catlog-wasm/default.nix {
+          notebook-types = pkgsLinux.callPackage ./packages/notebook-types/default.nix {
             inherit craneLib cargoArtifacts;
             pkgs = pkgsLinux;
           };
