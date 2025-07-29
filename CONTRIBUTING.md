@@ -9,8 +9,8 @@
 - **TO-DO: table of contents!**
 
 | Package | Description | Language | Documentation |
-| :-----: | :---------: | :------: | :-----------: |
-| `catlog` | categorical logic core | Rust | [next.catcolab.org/dev/rust/catlog](https://next.catcolab.org/dev/rust/catlog) |
+| :-----: | :---------- | :------- | :------------ |
+| `catlog` | categorical logic core | Rust | [![Static Badge](https://img.shields.io/badge/rust%2Fcatlog?label=%2Fdev%2F)](https://next.catcolab.org/dev/rust/catlog) |
 | `frontend` | web frontend | TypeScript | [next.catcolab.org/dev/frontend](https://next.catcolab.org/dev/frontend) |
 | `catlog_wasm` | WebAssembly bindings (core ⇄ frontend) | Rust | [next.catcolab.org/dev/rust/catlog_wasm](https://next.catcolab.org/dev/rust/catlog_wasm) |
 | `backend` | web server | Rust + PostgreSQL | [next.catcolab.org/dev/rust/catcolab_backend](https://next.catcolab.org/dev/rust/catcolab_backend) |
