@@ -21,11 +21,11 @@ CatColab is written in a mix of [Rust](https://www.rust-lang.org/) and
 
 | Grouping | Package | Language | Instructions | Documentation |
 | :------- | :------ | :------- | :----------- | :------------ |
-| Core | `catlog` | Rust | | [next.catcolab.org/dev/rust/catlog](https://next.catcolab.org/dev/rust/catlog) |
+| Core | `catlog` | Rust | --- | [next.catcolab.org/dev/rust/catlog](https://next.catcolab.org/dev/rust/catlog) |
 | Frontend | `frontend` | TypeScript | [README](https://github.com/ToposInstitute/CatColab/tree/main/packages/frontend) | [next.catcolab.org/dev/frontend/](https://next.catcolab.org/dev/frontend/) |
-| | `catlog-wasm` | Rust | | [next.catcolab.org/dev/rust/catlog_wasm](https://next.catcolab.org/dev/rust/catlog_wasm) |
+| | `catlog-wasm` | Rust | --- | [next.catcolab.org/dev/rust/catlog_wasm](https://next.catcolab.org/dev/rust/catlog_wasm) |
 | Backend | `backend` | Rust | [README](https://github.com/ToposInstitute/CatColab/tree/main/packages/backend) | [next.catcolab.org/dev/rust/catcolab_backend](https://next.catcolab.org/dev/rust/catcolab_backend) |
-| | `automerge-doc-server` | TypeScript | [README](https://github.com/ToposInstitute/CatColab/tree/main/packages/automerge-doc-server) | |
+| | `automerge-doc-server` | TypeScript | [README](https://github.com/ToposInstitute/CatColab/tree/main/packages/automerge-doc-server) | --- |
 
 
 ## Contributing
