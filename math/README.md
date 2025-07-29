@@ -1,6 +1,6 @@
 # CatColab: Design documents
 
-This folder contains mathematical and technical design documents for CatColab,
+This folder contains mathematical design documents for CatColab,
 written using [forester](https://sr.ht/~jonsterling/forester/).
 
 ## Building the forest

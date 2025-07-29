@@ -1,17 +1,5 @@
-\title{CatColab: Developer Documentation}
+\title{CatColab: Mathematical Documentation}
 \import{macros}
-
-\subtree[api]{
-\title{API Documentation}
-
-\ul{
-  \li{[\code{catlog}](/dev/rust/catlog): Categorical logic core, in Rust}
-  \li{[\code{frontend}](/dev/frontend): Web frontend, in TypeScript and Solidjs}
-}
-}
-
-\subtree[mathematics]{
-\title{Mathematics}
 
 \p{Doctrines whose free objects have a systems interpretation:}
 
@@ -32,15 +20,4 @@
 \li{Additional doctrines: [[dct-0008]], [[dct-0009]], [[dct-000A]]}
 \li{Mathematical background: [[dbl-0001]]}
 \li{[[bib-0001]]}
-}
-}
-
-\subtree[technology]{
-\title{Technology}
-
-\ul{
-  \li{[[dev-0002]]}
-  \li{[[dev-0008]]}
-  \li{[[dev-000A]]}
-}
 }
