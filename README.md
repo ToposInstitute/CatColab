@@ -22,7 +22,7 @@ Elaborating on these keywords, CatColab aims to be:
 
 ## For users
 
-> [!INFO]
+> [!NOTE]
 > See [catcolab.org/help](https://catcolab.org/help) for user documentation, including tutorial guides.
 
 The production deployment, tracking the latest
@@ -44,7 +44,7 @@ You can also access the latest development version of CatColab, featuring potent
 
 ## For developers
 
-> [!INFO]
+> [!NOTE]
 > See [next.catcolab.org/dev](https://next.catcolab.org/dev) for developer documentation, including contribution guidelines.
 
 CatColab is written in a mix of [Rust](https://www.rust-lang.org/) and
@@ -54,7 +54,7 @@ CatColab is written in a mix of [Rust](https://www.rust-lang.org/) and
 
 ## For mathematicians
 
-> [!INFO]
+> [!NOTE]
 > See [next.catcolab.org/math](https://next.catcolab.org/math) for mathematical documentation, including bibliographies for further reading.
 
 As the name suggests, CatColab is based on mathematical ideas from category
