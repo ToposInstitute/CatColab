@@ -22,7 +22,6 @@ import invariant from "tiny-invariant";
 
 import type { Cell, Notebook } from "catlog-wasm";
 import { type Completion, IconButton } from "../components";
-import { deepCopyJSON } from "../util/deepcopy";
 import {
     type CellActions,
     type FormalCellEditorProps,

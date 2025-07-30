@@ -2,8 +2,8 @@ import invariant from "tiny-invariant";
 import { v7 } from "uuid";
 
 import type { Cell, Notebook, NotebookCell } from "catlog-wasm";
-import { deepCopyJSON } from "../util/deepcopy";
 import { assertExhaustive } from "../util/assert_exhaustive";
+import { deepCopyJSON } from "../util/deepcopy";
 
 /** Creates an empty notebook. */
 export const newNotebook = <T>(): Notebook<T> => ({
@@ -128,11 +128,12 @@ export namespace NotebookUtils {
 
     function duplicateCell<T>(cell: Cell<T>, duplicateFn?: (cellContent: T) => T): Cell<T> {
         switch (cell.tag) {
-            case "formal":
+            case "formal": {
                 const content = (duplicateFn ?? deepCopyJSON)(cell.content);
                 return newFormalCell(content);
+            }
             case "rich-text":
-                throw new Error(`Rich text cells may not be duplicated`);
+                throw new Error("Rich text cells may not be duplicated");
             case "stem":
                 return newStemCell();
             default:
