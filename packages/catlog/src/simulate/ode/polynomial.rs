@@ -1,7 +1,9 @@
 //! Polynomial differential equations.
 
-use std::collections::BTreeMap;
+use std::cmp::{Eq, Ord};
+use std::collections::{BTreeMap, HashMap};
 use std::fmt::Display;
+use std::hash::Hash;
 use std::ops::Add;
 
 use derivative::Derivative;
@@ -127,6 +129,7 @@ where
 Such a system is ready for use in numerical solvers: the coefficients are
 floating point numbers and the variables are consecutive integer indices.
  */
+#[derive(Clone)]
 pub struct NumericalPolynomialSystem<Exp> {
     /// Components of the vector field.
     pub components: Vec<Polynomial<usize, f32, Exp>>,
@@ -140,6 +143,45 @@ where
     fn vector_field(&self, dx: &mut DVector<f32>, x: &DVector<f32>, _t: f32) {
         for i in 0..dx.len() {
             dx[i] = self.components[i].eval(|var| x[*var])
+        }
+    }
+}
+
+/**
+ */
+#[derive(Clone, Derivative)]
+#[derivative(Default(bound = ""))]
+pub struct NumericalPolynomialSwitchingSystem<Id, Exp> {
+    /// Components of a switching system.
+    pub subsystems: BTreeMap<Option<Id>, NumericalPolynomialSystem<Exp>>,
+}
+
+impl<Id: Ord, Exp> NumericalPolynomialSwitchingSystem<Id, Exp> {
+    // TODO
+    fn get_current(&self, x: DVector<f32>) -> &NumericalPolynomialSystem<Exp> {
+        &self.subsystems[&None]
+    }
+}
+
+impl<Exp> From<NumericalPolynomialSystem<Exp>>
+    for NumericalPolynomialSwitchingSystem<Option<bool>, Exp>
+{
+    fn from(p: NumericalPolynomialSystem<Exp>) -> Self {
+        let subsystems = BTreeMap::from([(None, p)]);
+        NumericalPolynomialSwitchingSystem { subsystems }
+    }
+}
+
+impl<Id, Exp> ODESystem for NumericalPolynomialSwitchingSystem<Id, Exp>
+where
+    Exp: Clone + Ord,
+    f32: Pow<Exp, Output = f32>,
+    Id: Eq + Hash + Ord,
+{
+    fn vector_field(&self, dx: &mut DVector<f32>, x: &DVector<f32>, _t: f32) {
+        let subsystem = self.get_current(x.clone());
+        for i in 0..dx.len() {
+            dx[i] = subsystem.components[i].eval(|var| x[*var])
         }
     }
 }
@@ -181,6 +223,59 @@ mod tests {
 
         let initial = DVector::from_column_slice(&[1.0, 0.0, 4.0]);
         let problem = ODEProblem::new(sys.to_numerical(), initial).end_time(5.0);
+        let result = problem.solve_rk4(0.1).unwrap();
+        let expected = expect![[r#"
+            ⡁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⣀⠤⠤⠤⠒⠒⠒⠒⠒⠉⠉⠉⠉⠁ 4.9
+            ⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⠤⠒⠒⠉⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠂⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⠤⠒⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⡁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠤⠊⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⢇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡠⠒⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠚⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡠⠊⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⡁⢣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠎⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠄⠘⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡔⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠂⠀⢣⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠎⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⡁⠀⠘⡄⠀⢀⠤⠒⠤⡀⠀⢠⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠄⠀⠀⢣⡔⠁⠀⠀⠀⠈⢦⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠂⠀⠀⡜⡄⠀⠀⠀⠀⢠⠃⠑⢄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⡁⠀⡸⠀⢣⠀⠀⠀⢠⠃⠀⠀⠀⠣⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠄⢠⠃⠀⠘⡄⠀⢠⠃⠀⠀⠀⠀⠀⠈⠢⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⢂⠇⠀⠀⠀⠱⣠⠃⠀⠀⠀⠀⠀⠀⠀⠀⠈⠢⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⡝⠀⠀⠀⠀⢠⢣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠢⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠅⠀⠀⠀⢠⠃⠀⢣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠑⠤⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠂⠀⠀⢠⠃⠀⠀⠀⠣⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠒⠤⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⡁⠀⡠⠃⠀⠀⠀⠀⠀⠈⠒⠤⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠒⠒⠤⠤⣀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⢄⠔⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠒⠒⠤⠤⠤⠤⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣉⣉⣒⣒⣒⣒⣤⣤⣤⣤⠤⣀⣀⣀⣀⡀
+            ⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠉⠉⠉⠉⠉⠁ 0.0
+            0.0                                            5.0
+        "#]];
+        expected.assert_eq(&textplot_ode_result(&problem, &result));
+    }
+
+    #[test]
+    fn water_sim() {
+        let param = |c: char| Parameter::<_>::generator(c);
+        let var = |c: char| Polynomial::<_, Parameter<_>, u8>::generator(c);
+
+        let terms = [
+            ('l', -var('l') * param('L') + var('w') * param('W')),
+            ('s', var('l') * param('L')),
+            ('w', -var('w') * param('W')),
+        ];
+        let starting_sys: PolynomialSystem<_, _, _> = terms.into_iter().collect();
+        let starting_sys = starting_sys.extend_scalars(|p| p.eval(|_| 1.0));
+
+        let terms = [
+            ('l', -var('l') * param('L') + var('w') * param('W')),
+            ('s', var('l') * param('L')),
+            ('w', -var('w') * param('W')),
+        ];
+        let sys: PolynomialSystem<_, _, _> = terms.into_iter().collect();
+        let sys = sys.extend_scalars(|p| p.eval(|_| 1.0));
+
+        let initial = DVector::from_column_slice(&[1.0, 0.0, 4.0]);
+        let sys: NumericalPolynomialSwitchingSystem<_, _> =
+            NumericalPolynomialSwitchingSystem::from(sys.to_numerical());
+        let problem = ODEProblem::new(sys, initial).end_time(5.0);
         let result = problem.solve_rk4(0.1).unwrap();
         let expected = expect![[r#"
             ⡁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⣀⠤⠤⠤⠒⠒⠒⠒⠒⠉⠉⠉⠉⠁ 4.9

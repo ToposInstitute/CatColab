@@ -162,11 +162,11 @@ pub fn water(th: Rc<UstrModalDblTheory>) -> UstrModalDblModel {
     );
     let container = ustr("container");
     model.add_ob(container, state_type.clone());
-    let (comparator, comparator_out) = (ustr("comparator"), ustr("lake_sediment"));
+    let (comparator, lake_sediment) = (ustr("comparator"), ustr("lake_sediment"));
     model.add_mor(
         comparator,
-        ModalOb::List(List::Plain, vec![blake.into(), sediment.into()]).into(),
-        ModalOb::Generator(comparator_out.clone()),
+        ModalOb::List(List::Plain, vec![blake.into(), container.into()]).into(),
+        ModalOb::Generator(lake_sediment.clone()),
         ModalMorType::One(ModeApp::new(ustr("function"))),
     );
     // watershed outflow
@@ -187,13 +187,13 @@ pub fn water(th: Rc<UstrModalDblTheory>) -> UstrModalDblModel {
     //
     model.add_mor(
         ustr("lake-sediment-outflow"),
-        ModalOb::Generator(comparator_out.clone()),
+        ModalOb::Generator(lake_sediment.clone()),
         ModalOb::Generator(lake.clone()),
         ModalMorType::One(ModeApp::new(ustr("out-neg"))),
     );
     model.add_mor(
         ustr("lake-sediment-infow"),
-        ModalOb::Generator(comparator_out.clone()),
+        ModalOb::Generator(lake_sediment.clone()),
         ModalOb::Generator(sediment.clone()),
         ModalMorType::One(ModeApp::new(ustr("out-pos"))),
     );

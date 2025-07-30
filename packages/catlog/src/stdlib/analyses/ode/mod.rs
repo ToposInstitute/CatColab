@@ -7,6 +7,8 @@ use derivative::Derivative;
 use derive_more::Constructor;
 use ode_solvers::dop_shared::IntegrationError;
 
+use nalgebra::DVector;
+
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
@@ -66,6 +68,18 @@ impl<Id, Sys> ODEAnalysis<Id, Sys> {
                 .map(|(ob, i)| (ob, x_out.iter().map(|x| x[i]).collect()))
                 .collect(),
         })
+    }
+
+    /// Solves the ODE construed as a switching system
+    pub fn solve_switching_with_defaults(self) -> Result<ODESolution<Id>, IntegrationError>
+    where
+        Id: Eq + Hash,
+        Sys: ODESystem,
+    {
+        // if self.variable_index.is_empty() {
+        //     return Ok(Default::default());
+        // }
+        Ok(Default::default())
     }
 }
 
