@@ -200,13 +200,11 @@ pub type ModalObOp<Id> = Path<ModalObType<Id>, ModeApp<ModalOp<Id>>>;
 
 impl<Id> ModalObOp<Id> {
     /// Constructs the object operation for a generator.
-    #[must_use]
     pub fn generator(id: Id) -> Self {
         ModeApp::new(ModalOp::Generator(id)).into()
     }
 
     /// Constructs a concatenation operation for a list modality.
-    #[must_use]
     pub fn concat(list: List, arity: usize, ob_type: ModalObType<Id>) -> Self {
         ModeApp::new(ModalOp::Concat(list, arity, ob_type)).into()
     }

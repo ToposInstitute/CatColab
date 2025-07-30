@@ -194,7 +194,6 @@ where
     }
 
     /// Is the model morphism injective on objects?
-    #[must_use]
     pub fn is_injective_objects(&self) -> bool {
         let DblModelMorphism(DiscreteDblModelMapping(mapping), dom, _) = *self;
         let mut seen_obs: HashSet<_> = HashSet::new();
@@ -217,7 +216,6 @@ where
     morphisms in the domain to simple paths in the codomain. If any of these
     assumptions are violated, the function will panic.
      */
-    #[must_use]
     pub fn is_free_simple_faithful(&self) -> bool {
         let DblModelMorphism(DiscreteDblModelMapping(mapping), dom, cod) = *self;
 
@@ -249,7 +247,6 @@ where
     is subject to the same limitations as
     [`is_free_simple_faithful`](DblModelMorphism::is_free_simple_faithful).
      */
-    #[must_use]
     pub fn is_free_simple_monic(&self) -> bool {
         self.is_injective_objects() && self.is_free_simple_faithful()
     }

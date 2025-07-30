@@ -130,7 +130,6 @@ where
     E: Eq + Clone + Hash,
 {
     /// Creates an empty discrete tabulator theory.
-    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }

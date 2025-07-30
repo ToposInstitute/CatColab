@@ -193,7 +193,6 @@ where
     ThId: Eq + Clone + Hash,
 {
     /// Creates an empty model of the given theory.
-    #[must_use]
     pub fn new(theory: Rc<DiscreteTabTheory<ThId, ThId>>) -> Self {
         Self {
             theory,

@@ -12,7 +12,6 @@ use crate::one::{Path, fp_category::UstrFpCategory};
 
 As a double category, this is the initial double category.
  */
-#[must_use]
 pub fn th_empty() -> UstrDiscreteDblTheory {
     let cat: UstrFpCategory = UstrFpCategory::default();
     DiscreteDblTheory::from(cat)
@@ -22,7 +21,6 @@ pub fn th_empty() -> UstrDiscreteDblTheory {
 
 As a double category, this is the terminal double category.
  */
-#[must_use]
 pub fn th_category() -> UstrDiscreteDblTheory {
     let mut cat: UstrFpCategory = UstrFpCategory::default();
     cat.add_ob_generator(ustr("Object"));
@@ -33,7 +31,6 @@ pub fn th_category() -> UstrDiscreteDblTheory {
 
 As a double category, this is the "walking proarrow".
  */
-#[must_use]
 pub fn th_schema() -> UstrDiscreteDblTheory {
     let mut cat: UstrFpCategory = UstrFpCategory::default();
     let (x, y, p) = (ustr("Entity"), ustr("AttrType"), ustr("Attr"));
@@ -49,7 +46,6 @@ A *signed category* is a category sliced over the group of (nonzero) signs. Free
 signed categories are signed graphs, a simple mathematical model of [regulatory
 networks](crate::refs::RegNets) and causal loop diagrams.
  */
-#[must_use]
 pub fn th_signed_category() -> UstrDiscreteDblTheory {
     let mut sgn: UstrFpCategory = UstrFpCategory::default();
     let (x, neg) = (ustr("Object"), ustr("Negative"));
@@ -64,7 +60,6 @@ pub fn th_signed_category() -> UstrDiscreteDblTheory {
 Free delayable signed categories are causal loop diagrams with delays, often
 depicted as [caesuras](https://en.wikipedia.org/wiki/Caesura).
  */
-#[must_use]
 pub fn th_delayable_signed_category() -> UstrDiscreteDblTheory {
     let mut cat: UstrFpCategory = UstrFpCategory::default();
     let (x, neg, slow) = (ustr("Object"), ustr("Negative"), ustr("Slow"));
@@ -92,7 +87,6 @@ pub fn th_delayable_signed_category() -> UstrDiscreteDblTheory {
 A *nullable signed category* is a category sliced over the monoid of signs,
 including zero.
  */
-#[must_use]
 pub fn th_nullable_signed_category() -> UstrDiscreteDblTheory {
     let mut sgn: UstrFpCategory = UstrFpCategory::default();
     let (x, neg, zero) = (ustr("Object"), ustr("Negative"), ustr("Zero"));
@@ -116,7 +110,6 @@ The main intended application is to categories
 enriched in `M`-sets for a monoid `M` such as the positive real numbers under multiplication,
 but to remain within simple theories the theory defined here is more general.
  */
-#[must_use]
 pub fn th_category_with_scalars() -> UstrDiscreteDblTheory {
     let mut idem: UstrFpCategory = UstrFpCategory::default();
     let (x, s) = (ustr("Object"), ustr("Nonscalar"));
@@ -134,7 +127,6 @@ A *category with links* is a category `C` together with a profunctor from `C` to
 [Primitive stock and flow diagrams](crate::refs::StockFlow) are free categories
 with links.
  */
-#[must_use]
 pub fn th_category_links() -> UstrDiscreteTabTheory {
     let mut th: UstrDiscreteTabTheory = UstrDiscreteTabTheory::default();
     let x = ustr("Object");
@@ -148,19 +140,16 @@ pub fn th_category_links() -> UstrDiscreteTabTheory {
 }
 
 /// The theory of strict monoidal categories.
-#[must_use]
 pub fn th_monoidal_category() -> UstrModalDblTheory {
     th_list_algebra(List::Plain)
 }
 
 /// The theory of lax monoidal categories.
-#[must_use]
 pub fn th_lax_monoidal_category() -> UstrModalDblTheory {
     th_list_lax_algebra(List::Plain)
 }
 
 /// The theory of strict symmetric monoidal categories.
-#[must_use]
 pub fn th_sym_monoidal_category() -> UstrModalDblTheory {
     th_list_algebra(List::Symmetric)
 }
@@ -209,7 +198,6 @@ fn th_list_lax_algebra(list: List) -> UstrModalDblTheory {
 }
 
 /// The theory of a (non-symmetric) multicategory.
-#[must_use]
 pub fn th_multicategory() -> UstrModalDblTheory {
     th_generalized_multicategory(List::Plain)
 }
