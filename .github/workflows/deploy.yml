@@ -28,25 +28,20 @@ jobs:
           mv CONTRIBUTING.md dev-docs
 
       - name: Build developer docs
-        uses: actions/jekyll-build-pages@v1
+        uses: docker://pandoc/latex:3.5
         with:
-          source: "dev-docs"
-          destination: "dev-docs/output"
-
-      # - name: Build developer docs
-      #   uses: docker://pandoc/latex:3.5
-      #   with:
-      #     args: >-
-      #       --standalone
-      #       --metadata title="CatColab for developers"
-      #       --output=dev-docs/index.html
-      #       CONTRIBUTING.md
+          args: >-
+            --from=gfm+alerts
+            --standalone
+            --metadata title="CatColab for developers"
+            --output=dev-docs/index.html
+            CONTRIBUTING.md
 
       - name: Upload developer docs
         uses: actions/upload-artifact@v4
         with:
           name: dev-docs
-          path: dev-docs/output
+          path: dev-docs
 
   build_frontend:
     name: Build frontend
