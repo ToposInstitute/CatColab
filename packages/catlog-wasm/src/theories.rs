@@ -13,7 +13,7 @@ use catlog::dbl::theory;
 use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
 
-use super::model_morphism::{MotifsOptions, motifs};
+use super::model_morphism::{motifs, MotifsOptions};
 use super::{analyses::*, model::DblModel, theory::DblTheory};
 
 /// The empty or initial theory.
@@ -338,13 +338,14 @@ impl ThSymMonoidalCategory {
 }
 
 /// The theory of state/aux interactions
+#[wasm_bindgen]
 pub struct ThModalStateAuxCategory(Rc<theory::UstrModalDblTheory>);
 
 #[wasm_bindgen]
 impl ThModalStateAuxCategory {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
-        Self(Rc::new(theories::th_modal_sf()))
+        Self(Rc::new(theories::th_modal_state_aux()))
     }
 
     #[wasm_bindgen]
@@ -358,10 +359,20 @@ impl ThModalStateAuxCategory {
         &self,
         model: &DblModel,
         data: AnotherMassActionModelData,
-    ) -> Result<_, String> {
-        let model: &model::ModalDblModel<_, > = (&model.0).try_into().map_err(|_| "Model should be of a modal theory")?;
-        Ok(())
+    ) -> Result<ODEResult, String> {
+        let model: &model::ModalDblModel<_, _> =
+            (&model.0).try_into().map_err(|_| "Model should be of a modal theory")?;
+        // Ok(())
+        Ok(ODEResult(
+            analyses::ode::PetriNetMassActionFunctionAnalysis::default()
+                .build_numerical_switching_system(model, data.0)
+                // TODO Switching System
+                .solve_with_defaults()
+                .map_err(|err| format!("{err:?}"))
+                .into(),
+        ))
     }
+}
 
 #[cfg(test)]
 mod tests {

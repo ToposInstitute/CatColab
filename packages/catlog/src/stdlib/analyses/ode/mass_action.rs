@@ -25,7 +25,9 @@ use crate::dbl::{
     theory::{ModalMorType, ModalObType, ModeApp, TabMorType, TabObType},
 };
 use crate::one::FgCategory;
-use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
+use crate::simulate::ode::{
+    NumericalPolynomialSwitchingSystem, NumericalPolynomialSystem, ODEProblem, PolynomialSystem,
+};
 use crate::zero::{alg::Polynomial, rig::Monomial};
 
 /// Data defining a mass-action ODE problem for a model.
@@ -295,6 +297,9 @@ impl PetriNetMassActionFunctionAnalysis {
             Id: Clone + Debug + Hash + Eq + Ord,
         {
             let mut out = Vec::new();
+            dbg!(model
+                .mor_generators_with_type(fun_mor_type)
+                .find(|arr| model.mor_generator_cod(arr) == input.clone()));
             if let Some(arrow) = model
                 .mor_generators_with_type(fun_mor_type)
                 .find(|arr| model.mor_generator_cod(arr) == input.clone())
@@ -304,9 +309,12 @@ impl PetriNetMassActionFunctionAnalysis {
                     out.push(el)
                 }
                 for input in vec![model.mor_generator_dom(&arrow)].iter() {
+                    dbg!(&input);
                     search(component.clone(), input.clone(), model, fun_mor_type);
                 }
             }
+            // TODO return inputs here
+            dbg!(&input, &out);
             out
         }
         let outpos = model.mor_generators_with_type(&self.outpos_mor_type);
@@ -383,13 +391,13 @@ impl PetriNetMassActionFunctionAnalysis {
     pub fn build_switching_system<Id: Eq + Clone + Hash + Ord + Debug + std::fmt::Display>(
         &self,
         model: &ModalDblModel<Id, Ustr>,
-    ) -> HashMap<Option<Id>, PolynomialSystem<Id, Parameter<Id>, u8>> {
+    ) -> BTreeMap<Option<Id>, PolynomialSystem<Id, Parameter<Id>, u8>> {
         let programs = self.comps(model);
         if programs.is_empty() {
             let sys = self.build_system(model, None);
-            HashMap::from([(None, sys)])
+            BTreeMap::from([(None, sys)])
         } else {
-            HashMap::from_iter(programs.into_iter().map(|(k, v)| {
+            BTreeMap::from_iter(programs.into_iter().map(|(k, v)| {
                 if v.is_empty() {
                     (None, self.build_system(model, None))
                 } else {
@@ -397,6 +405,48 @@ impl PetriNetMassActionFunctionAnalysis {
                 }
             }))
         }
+    }
+
+    pub fn build_numerical_system<Id: Eq + Clone + Hash + Ord + Debug + std::fmt::Display>(
+        &self,
+        model: &ModalDblModel<Id, Ustr>,
+        data: AnotherMassActionProblemData<Id>,
+    ) -> ODEAnalysis<Id, NumericalPolynomialSwitchingSystem<Id, u8>> {
+        // XXX we forget some data from `data` here
+        into_numerical_switching_system(self.build_switching_system(model), data.mass)
+    }
+}
+
+fn into_numerical_switching_system<Id: Eq + Clone + Hash + Ord>(
+    switching_system: BTreeMap<Option<Id>, PolynomialSystem<Id, Parameter<Id>, u8>>,
+    data: MassActionProblemData<Id>,
+) -> ODEAnalysis<Id, NumericalPolynomialSwitchingSystem<Id, u8>> {
+    let subsystems = BTreeMap::from_iter(switching_system.into_iter().map(|(id, sys)| {
+        let ob_index: BTreeMap<_, _> =
+            sys.components.keys().cloned().enumerate().map(|(i, x)| (x, i)).collect();
+        let n = ob_index.len();
+
+        let initial_values = ob_index
+            .keys()
+            .map(|ob| data.initial_values.get(ob).copied().unwrap_or_default());
+        let x0 = DVector::from_iterator(n, initial_values);
+
+        let sys = sys
+            .extend_scalars(|poly| {
+                poly.eval(|flow| data.rates.get(flow).copied().unwrap_or_default())
+            })
+            .to_numerical();
+        (id, sys)
+    }));
+    let sys = NumericalPolynomialSwitchingSystem { subsystems };
+
+    let ob_index = BTreeMap::new();
+    let x0 = DVector::default();
+    // ODE Problem expects polynomial
+    let problem = ODEProblem::new(sys, x0).end_time(data.duration);
+    ODEAnalysis {
+        problem,
+        variable_index: ob_index,
     }
 }
 
