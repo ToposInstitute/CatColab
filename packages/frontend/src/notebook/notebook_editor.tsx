@@ -99,25 +99,24 @@ export function NotebookEditor<T>(props: {
     };
 
     const addOrReplaceActiveCell = (cell: Cell<T>) => {
-        const cellId = props.notebook.cellOrder[activeCell()];
-        const c = !cellId ? null : props.notebook.cellContents[cellId];
-        if (c) {
-            if (c.tag === "formal" || c.tag === "rich-text") {
-                addAfterActiveCell(cell);
-            } else if (c.tag === "stem") {
-                replaceCellWith(activeCell(), cell);
-            }
-        } else {
+        const c = NotebookUtils.tryGetCellByIndex(props.notebook, activeCell());
+        if (!c) {
             addAfterActiveCell(cell);
+            return;
+        }
+
+        if (c.tag === "formal" || c.tag === "rich-text") {
+            addAfterActiveCell(cell);
+        } else if (c.tag === "stem") {
+            replaceCellWith(activeCell(), cell);
         }
     };
 
     const appendCell = (cell: Cell<T>) => {
         props.changeNotebook((nb) => {
-            nb.cellOrder.push(cell.id);
-            nb.cellContents[cell.id] = cell;
-            setActiveCell(nb.cellOrder.length - 1);
+            NotebookUtils.appendCell(nb, cell);
         });
+        setActiveCell(NotebookUtils.numCells(props.notebook) - 1);
     };
 
     const insertCommands = (): Completion[] =>
@@ -215,9 +214,7 @@ export function NotebookEditor<T>(props: {
                         axis: "vertical",
                     });
                     props.changeNotebook((nb) => {
-                        const [cellId] = nb.cellOrder.splice(sourceIndex, 1);
-                        // biome-ignore lint/style/noNonNullAssertion:
-                        nb.cellOrder.splice(finalIndex, 0, cellId!);
+                        NotebookUtils.moveCellByIndex(nb, sourceIndex, finalIndex);
                     });
                     setTether(null);
                     setCurrentDropTarget(null);
@@ -263,32 +260,32 @@ export function NotebookEditor<T>(props: {
                                 }
                             },
                             createAbove() {
+                                const index = i();
                                 props.changeNotebook((nb) => {
-                                    const index = i();
                                     NotebookUtils.newStemCellAtIndex(nb, index);
-                                    setActiveCell(index);
                                 });
+                                setActiveCell(index);
                             },
                             createBelow() {
+                                const index = i() + 1;
                                 props.changeNotebook((nb) => {
-                                    const index = i() + 1;
                                     NotebookUtils.newStemCellAtIndex(nb, index);
-                                    setActiveCell(index);
                                 });
+                                setActiveCell(index);
                             },
                             deleteBackward() {
+                                const index = i();
                                 props.changeNotebook((nb) => {
-                                    const index = i();
                                     NotebookUtils.deleteCellAtIndex(nb, index);
-                                    setActiveCell(index - 1);
                                 });
+                                setActiveCell(index - 1);
                             },
                             deleteForward() {
+                                const index = i();
                                 props.changeNotebook((nb) => {
-                                    const index = i();
                                     NotebookUtils.deleteCellAtIndex(nb, index);
-                                    setActiveCell(index);
                                 });
+                                setActiveCell(index);
                             },
                             moveUp() {
                                 props.changeNotebook((nb) => {
@@ -307,6 +304,20 @@ export function NotebookEditor<T>(props: {
 
                         const cell = props.notebook.cellContents[cellId];
                         invariant(cell, `Failed to find contents for cell '${cellId}'`);
+
+                        if (cell.tag !== "rich-text") {
+                            cellActions.duplicate = () => {
+                                const index = i();
+                                props.changeNotebook((nb) => {
+                                    NotebookUtils.duplicateCellAtIndex(
+                                        nb,
+                                        index,
+                                        props.duplicateCell,
+                                    );
+                                });
+                                setActiveCell(index + 1);
+                            };
+                        }
 
                         return (
                             <li>

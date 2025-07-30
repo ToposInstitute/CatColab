@@ -2,6 +2,8 @@ import invariant from "tiny-invariant";
 import { v7 } from "uuid";
 
 import type { Cell, Notebook, NotebookCell } from "catlog-wasm";
+import { assertExhaustive } from "../util/assert_exhaustive";
+import { deepCopyJSON } from "../util/deepcopy";
 
 /** Creates an empty notebook. */
 export const newNotebook = <T>(): Notebook<T> => ({
@@ -60,6 +62,19 @@ export namespace NotebookUtils {
         const cellId = getCellIdByIndex(notebook, index);
         return getCellById(notebook, cellId);
     }
+    export function tryGetCellByIndex<T>(notebook: Notebook<T>, index: number): Cell<T> | null {
+        const cellId = notebook.cellOrder[index];
+        if (!cellId) {
+            return null;
+        }
+
+        const cell = notebook.cellContents[cellId];
+        if (!cell) {
+            return null;
+        }
+
+        return cell;
+    }
 
     export function insertCellAtIndex<T>(notebook: Notebook<T>, cell: Cell<T>, index: number) {
         notebook.cellOrder.splice(index, 0, cell.id);
@@ -97,12 +112,48 @@ export namespace NotebookUtils {
         notebook.cellOrder.splice(index + 1, 0, cellIdToMoveUp);
     }
 
+    export function moveCellByIndex<T>(notebook: Notebook<T>, fromIndex: number, toIndex: number) {
+        const [cellId] = notebook.cellOrder.splice(fromIndex, 1);
+        invariant(cellId, () => `Failed to move cell from index '${fromIndex}'`);
+        notebook.cellOrder.splice(toIndex, 0, cellId);
+    }
+
     export function hasFormalCells<T>(notebook: Notebook<T>): boolean {
         return notebook.cellOrder.some((cellId) => notebook.cellContents[cellId]?.tag === "formal");
     }
 
     export function numCells<T>(notebook: Notebook<T>): number {
         return notebook.cellOrder.length;
+    }
+
+    function duplicateCell<T>(cell: Cell<T>, duplicateFn?: (cellContent: T) => T): Cell<T> {
+        switch (cell.tag) {
+            case "formal": {
+                const content = (duplicateFn ?? deepCopyJSON)(cell.content);
+                return newFormalCell(content);
+            }
+            case "rich-text":
+                throw new Error("Rich text cells may not be duplicated");
+            case "stem":
+                return newStemCell();
+            default:
+                assertExhaustive(cell);
+        }
+    }
+
+    export function duplicateCellAtIndex<T>(
+        notebook: Notebook<T>,
+        index: number,
+        duplicateFn?: (cellContent: T) => T,
+    ) {
+        const cell = getCellByIndex(notebook, index);
+        const newCell = duplicateCell(cell, duplicateFn);
+        insertCellAtIndex(notebook, newCell, index + 1);
+    }
+
+    export function appendCell<T>(notebook: Notebook<T>, cell: Cell<T>) {
+        notebook.cellOrder.push(cell.id);
+        notebook.cellContents[cell.id] = cell;
     }
 
     export function mutateCellContentById<T>(
