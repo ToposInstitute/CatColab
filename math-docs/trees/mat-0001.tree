@@ -3,7 +3,7 @@
 
 \p{
   As the name suggests, CatColab is based on mathematical ideas from category
-  theory. It is a specific design goal that the system be usable *without* any
+  theory. It is a specific design goal that the system be usable \em{without} any
   knowledge of such ideas. Still, for those curious about the underlying
   mathematics, here are a few pointers for further reading.
 }

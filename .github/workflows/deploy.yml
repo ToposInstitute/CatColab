@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   build_dev_docs:
-    name: Build developer (contributing) docs
+    name: Build developer docs
     runs-on: ubuntu-latest
     steps:
       - name: Repository Checkout
@@ -25,20 +25,31 @@ jobs:
       - name: Make dev-docs
         run: |
           mkdir dev-docs
+          mv CONTRIBUTING.md dev-docs
 
       - name: Build developer docs
-        uses: docker://pandoc/latex:3.5
+        uses: actions/jekyll-build-pages@v1
         with:
-          args: --standalone --output=dev-docs/index.html CONTRIBUTING.md
+          source: "dev-docs"
+          destination: "dev-docs/output"
+
+      # - name: Build developer docs
+      #   uses: docker://pandoc/latex:3.5
+      #   with:
+      #     args: >-
+      #       --standalone
+      #       --metadata title="CatColab for developers"
+      #       --output=dev-docs/index.html
+      #       CONTRIBUTING.md
 
       - name: Upload developer docs
         uses: actions/upload-artifact@v4
         with:
           name: dev-docs
-          path: dev-docs
+          path: dev-docs/output
 
   build_frontend:
-    name: Build Frontend
+    name: Build frontend
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -85,7 +96,7 @@ jobs:
           path: packages/frontend/docs
 
   build_rust_docs:
-    name: Build Rust Docs
+    name: Build Rust docs
     runs-on: ubuntu-latest
     steps:
       - name: Repository Checkout
@@ -169,7 +180,7 @@ jobs:
           mv rust_docs site/dev/rust
           mv frontend_docs site/dev/frontend
           mv math-docs site/math
-          echo '/rust /rust/catlog' >> site/_redirects
+          echo '/dev/rust /dev/rust/catlog' >> site/_redirects
           echo '/math /math/index.xml' >> site/_redirects
           echo '/* /index.html 200' >> site/_redirects
 
