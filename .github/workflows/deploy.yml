@@ -25,7 +25,6 @@ jobs:
       - name: Make dev-docs
         run: |
           mkdir dev-docs
-          mv CONTRIBUTING.md dev-docs
 
       - name: Build developer docs
         uses: docker://pandoc/latex:3.5
