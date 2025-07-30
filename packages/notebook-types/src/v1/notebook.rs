@@ -18,9 +18,7 @@ pub struct Notebook<T> {
 
 impl<T> Notebook<T> {
     pub fn cells(&self) -> impl Iterator<Item = &NotebookCell<T>> {
-        self.cell_order
-            .iter()
-            .filter_map(|id| self.cell_contents.get(id))
+        self.cell_order.iter().filter_map(|id| self.cell_contents.get(id))
     }
 
     pub fn migrate_from_v0(old: v0::Notebook<T>) -> Self {
