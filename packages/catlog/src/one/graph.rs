@@ -373,7 +373,6 @@ impl SkelGraph {
 
     /// Makes a path graph with `n` vertices.
     #[cfg(test)]
-    #[must_use]
     pub fn path(n: usize) -> Self {
         let mut g: Self = Self::default();
         g.add_vertices(n);
@@ -385,7 +384,6 @@ impl SkelGraph {
 
     /// Makes a triangle graph (2-simplex).
     #[cfg(test)]
-    #[must_use]
     pub fn triangle() -> Self {
         let mut g: Self = Self::default();
         g.add_vertices(3);
@@ -397,7 +395,6 @@ impl SkelGraph {
 
     /// Make a cycle graph with `n` vertices.
     #[cfg(test)]
-    #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn cycle(n: usize) -> Self {
         assert!(n > 0);
@@ -703,7 +700,6 @@ pub type SkelGraphMapping = ColumnarGraphMapping<VecColumn<usize>, VecColumn<usi
 
 impl SkelGraphMapping {
     /// Constructs a graph mapping from a pair of vectors.
-    #[must_use]
     pub fn from_vec(vertex_map: Vec<usize>, edge_map: Vec<usize>) -> Self {
         Self::new(VecColumn::new(vertex_map), VecColumn::new(edge_map))
     }

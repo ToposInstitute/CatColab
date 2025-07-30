@@ -91,7 +91,6 @@ pub type UstrModalDblModel = ModalDblModel<Ustr, Ustr>;
 
 impl<Id, ThId> ModalDblModel<Id, ThId> {
     /// Creates an empty model of the given theory.
-    #[must_use]
     pub fn new(theory: Rc<ModalDblTheory<ThId>>) -> Self {
         Self {
             theory,

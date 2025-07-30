@@ -24,7 +24,9 @@ crates.
 #![allow(
     clippy::missing_panics_doc,
     clippy::needless_pass_by_value,
-    clippy::missing_errors_doc
+    clippy::missing_errors_doc,
+    clippy::must_use_candidate,
+    clippy::return_self_not_must_use
 )]
 
 #[cfg(doc)]

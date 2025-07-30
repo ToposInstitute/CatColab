@@ -371,27 +371,23 @@ pub type SkelColumn = VecColumn<usize>;
 
 impl SkelColumn {
     /// Is the mapping a function between the finite sets `[m]` and `[n]`?
-    #[must_use]
     pub fn is_function(&self, m: usize, n: usize) -> bool {
         let (dom, cod): (SkelFinSet, SkelFinSet) = (m.into(), n.into());
         Function(self, &dom, &cod).iter_invalid().next().is_none()
     }
 
     /// Is the mapping a partial injection, i.e., injective where it is defined?
-    #[must_use]
     pub fn is_partial_injection(&self) -> bool {
         let result: Result<Self, _> = retraction(self);
         result.is_ok()
     }
 
     /// Is the mapping an injection between the finite sets `[m]` and `[n]`?
-    #[must_use]
     pub fn is_injection(&self, m: usize, n: usize) -> bool {
         self.is_function(m, n) && self.is_partial_injection()
     }
 
     /// Is the mapping a permutation of the finite set `[n]`?
-    #[must_use]
     pub fn is_permutation(&self, n: usize) -> bool {
         self.is_injection(n, n)
     }
@@ -715,7 +711,6 @@ pub struct SkelIndexedColumn(IndexedColumn<usize, usize, VecColumn<usize>, VecIn
 
 impl SkelIndexedColumn {
     /// Creates a new vector-backed column from an existing vector.
-    #[must_use]
     pub fn new(values: &[usize]) -> Self {
         let mut col: Self = Self::default();
         for (x, y) in values.iter().enumerate() {

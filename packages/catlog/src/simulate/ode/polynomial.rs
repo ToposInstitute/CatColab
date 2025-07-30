@@ -27,7 +27,6 @@ where
     Exp: Ord,
 {
     /// Constructs a new polynomial system, with no equations.
-    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -82,7 +81,6 @@ where
     The order of the components in the new system is given by the order of the
     variables in the old one.
      */
-    #[must_use]
     pub fn to_numerical(&self) -> NumericalPolynomialSystem<Exp> {
         let indices: BTreeMap<Var, usize> =
             self.components.keys().enumerate().map(|(i, var)| (var.clone(), i)).collect();

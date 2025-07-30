@@ -59,7 +59,6 @@ where
     }
 
     /// Constructs the polynomial corresponding to a monomial.
-    #[must_use]
     pub fn from_monomial(m: Monomial<Var, Exp>) -> Self
     where
         Coef: One,

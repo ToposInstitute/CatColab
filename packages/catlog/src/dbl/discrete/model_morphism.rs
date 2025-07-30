@@ -34,7 +34,6 @@ where
     CodId: Clone + Eq + Hash,
 {
     /// Constructs a model mapping from a pair of hash maps.
-    #[must_use]
     pub fn new(ob_map: HashMap<DomId, CodId>, mor_map: HashMap<DomId, Path<CodId, CodId>>) -> Self {
         Self(FpFunctorData::new(HashColumn::new(ob_map), HashColumn::new(mor_map)))
     }

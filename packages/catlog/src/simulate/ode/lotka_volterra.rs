@@ -20,7 +20,6 @@ pub struct LotkaVolterraSystem {
 
 impl LotkaVolterraSystem {
     /// Create a new Lokta-Volterra system.
-    #[must_use]
     pub fn new(A: DMatrix<f32>, b: DVector<f32>) -> Self {
         Self {
             interaction_coeffs: A,

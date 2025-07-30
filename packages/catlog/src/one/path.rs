@@ -218,7 +218,6 @@ impl<V, E> Path<V, E> {
 
     Panics if the range is invalid or an empty subpath would be inconsistent.
      */
-    #[must_use]
     pub fn subpath(&self, graph: &impl Graph<V = V, E = E>, range: Range<usize>) -> Self
     where
         V: Eq + Clone,
