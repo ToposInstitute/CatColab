@@ -22,6 +22,10 @@ jobs:
       - name: Repository Checkout
         uses: actions/checkout@v4
 
+      - name: Make dev-docs
+        run: |
+          mkdir dev-docs
+
       - name: Build developer docs
         uses: docker://pandoc/latex:3.5
         with:
