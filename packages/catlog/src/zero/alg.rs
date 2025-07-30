@@ -8,7 +8,10 @@ use std::ops::{Add, AddAssign, Mul, Neg};
 
 use derivative::Derivative;
 
-use super::rig::*;
+use super::rig::{
+    AbGroup, AdditiveMonoid, Combination, CommMonoid, CommRig, CommRing, Module, Monoid, Monomial,
+    Rig, RigModule, Ring,
+};
 
 /// A commutative algebra over a commutative ring.
 pub trait CommAlg: CommRing + Module<Ring = Self::R> {
@@ -64,6 +67,7 @@ where
     }
 
     /// Iterates over the monomials in the polynomial.
+    #[must_use]
     pub fn monomials(&self) -> impl ExactSizeIterator<Item = &Monomial<Var, Exp>> {
         self.0.variables()
     }
@@ -134,6 +138,7 @@ where
     form, but allows the possibility of coefficients or exponents being zero.
     This method removes those if present.
      */
+    #[must_use]
     pub fn normalize(self) -> Self
     where
         Coef: Zero,
@@ -291,6 +296,7 @@ where
         let mut result = Polynomial::default();
         let (outer, inner) = (self.0, rhs.0);
         let mut outer_iter = outer.into_iter();
+        #[allow(clippy::redundant_else)]
         while let Some((a, m)) = outer_iter.next() {
             if outer_iter.len() == 0 {
                 let mut inner_iter = inner.into_iter();
@@ -320,7 +326,7 @@ where
     Exp: Clone + Ord + Add<Output = Exp>,
 {
     fn one() -> Self {
-        Polynomial::from_monomial(Default::default())
+        Polynomial::from_monomial(Monomial::default())
     }
 }
 

@@ -31,7 +31,7 @@ to composition in a double category does not arise in VDCs.
 A [double theory](super::theory) is "just" a unital virtual double category, so
 any double theory in the standard library is an example of a VDC. For testing
 purposes, this module directly implements several minimal examples of VDCs,
-namely ["walking"](https://ncatlab.org/nlab/show/walking+structure) categorical
+namely [`walking`](<https://ncatlab.org/nlab/show/walking+structure>) categorical
 structures that can be interpreted in any VDC:
 
 - the [walking category](WalkingCategory)
@@ -410,23 +410,23 @@ impl VDblCategory for WalkingCategory {
     type Pro = ();
     type Cell = usize;
 
-    fn has_ob(&self, _: &Self::Ob) -> bool {
+    fn has_ob(&self, (): &Self::Ob) -> bool {
         true
     }
-    fn has_arrow(&self, _: &Self::Arr) -> bool {
+    fn has_arrow(&self, (): &Self::Arr) -> bool {
         true
     }
-    fn has_proarrow(&self, _: &Self::Pro) -> bool {
+    fn has_proarrow(&self, (): &Self::Pro) -> bool {
         true
     }
     fn has_cell(&self, _: &Self::Cell) -> bool {
         true
     }
 
-    fn dom(&self, _: &Self::Arr) -> Self::Ob {}
-    fn cod(&self, _: &Self::Arr) -> Self::Ob {}
-    fn src(&self, _: &Self::Pro) -> Self::Ob {}
-    fn tgt(&self, _: &Self::Pro) -> Self::Ob {}
+    fn dom(&self, (): &Self::Arr) -> Self::Ob {}
+    fn cod(&self, (): &Self::Arr) -> Self::Ob {}
+    fn src(&self, (): &Self::Pro) -> Self::Ob {}
+    fn tgt(&self, (): &Self::Pro) -> Self::Ob {}
 
     fn cell_dom(&self, n: &Self::Cell) -> Path<Self::Ob, Self::Pro> {
         Path::repeat_n((), (), *n)
@@ -463,6 +463,7 @@ pub mod WalkingBimodule {
     composites.
     */
     use super::super::graph::ProedgeGraph;
+    #[allow(clippy::wildcard_imports)]
     use super::*;
 
     /// Struct representing the walking bimodule.
@@ -491,8 +492,7 @@ pub mod WalkingBimodule {
     impl Pro {
         fn src(self) -> Ob {
             match self {
-                Pro::Left => Ob::Left,
-                Pro::Middle => Ob::Left,
+                Pro::Left | Pro::Middle => Ob::Left,
                 Pro::Right => Ob::Right,
             }
         }
@@ -500,8 +500,7 @@ pub mod WalkingBimodule {
         fn tgt(self) -> Ob {
             match self {
                 Pro::Left => Ob::Left,
-                Pro::Middle => Ob::Right,
-                Pro::Right => Ob::Right,
+                Pro::Middle | Pro::Right => Ob::Right,
             }
         }
     }
@@ -593,6 +592,7 @@ pub mod WalkingFunctor {
     [`One`](Ob::One), and a single arrow between them.
      */
     use super::super::graph::{EdgeGraph, ProedgeGraph};
+    #[allow(clippy::wildcard_imports)]
     use super::*;
 
     /// Struct representing the walking functor.
@@ -621,8 +621,7 @@ pub mod WalkingFunctor {
     impl Arr {
         fn dom(self) -> Ob {
             match self {
-                Arr::Zero => Ob::Zero,
-                Arr::Arrow => Ob::Zero,
+                Arr::Zero | Arr::Arrow => Ob::Zero,
                 Arr::One => Ob::One,
             }
         }
@@ -630,8 +629,7 @@ pub mod WalkingFunctor {
         fn cod(self) -> Ob {
             match self {
                 Arr::Zero => Ob::Zero,
-                Arr::Arrow => Ob::One,
-                Arr::One => Ob::One,
+                Arr::Arrow | Arr::One => Ob::One,
             }
         }
     }
@@ -658,8 +656,7 @@ pub mod WalkingFunctor {
 
         fn dom(self) -> Path<Ob, Ob> {
             let (ob, n) = match self {
-                Cell::Zero(n) => (Ob::Zero, n),
-                Cell::Arrow(n) => (Ob::Zero, n),
+                Cell::Zero(n) | Cell::Arrow(n) => (Ob::Zero, n),
                 Cell::One(n) => (Ob::One, n),
             };
             Path::repeat_n(ob, ob, n)
@@ -668,8 +665,7 @@ pub mod WalkingFunctor {
         fn cod(self) -> Ob {
             match self {
                 Cell::Zero(_) => Ob::Zero,
-                Cell::Arrow(_) => Ob::One,
-                Cell::One(_) => Ob::One,
+                Cell::Arrow(_) | Cell::One(_) => Ob::One,
             }
         }
 

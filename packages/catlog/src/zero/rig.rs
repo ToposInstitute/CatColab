@@ -14,6 +14,8 @@ Besides the hierarchy of traits, this module provides data structures for
 the same data structure, but with different notation!
  */
 
+#![allow(clippy::used_underscore_items)]
+
 use num_traits::{One, Pow, Zero};
 use std::collections::{BTreeMap, btree_map};
 use std::fmt::Display;
@@ -119,6 +121,7 @@ where
     }
 
     /// Iterates over the variables used in the combination.
+    #[must_use]
     pub fn variables(&self) -> impl ExactSizeIterator<Item = &Var> {
         self.0.keys()
     }
@@ -165,6 +168,7 @@ where
     }
 
     /// Normalizes the combination by dropping terms with coefficient zero.
+    #[must_use]
     pub fn normalize(self) -> Self
     where
         Coef: Zero,
@@ -210,6 +214,14 @@ impl<'a, Var, Coef> IntoIterator for &'a Combination<Var, Coef> {
     }
 }
 
+impl<Var, Coeff> Combination<Var, Coeff> {
+    #[allow(missing_docs)]
+    #[must_use]
+    pub fn iter(&self) -> <&Self as IntoIterator>::IntoIter {
+        <&Self as IntoIterator>::into_iter(self)
+    }
+}
+
 /** Pretty print the combination using ASCII.
 
 Intended for debugging/testing rather than any serious use.
@@ -224,7 +236,7 @@ where
         let fmt_scalar_mul = |f: &mut std::fmt::Formatter<'_>, coef: &Coef, var: &Var| {
             if !coef.is_one() {
                 let coef = coef.to_string();
-                if coef.chars().all(|c| c.is_alphabetic())
+                if coef.chars().all(char::is_alphabetic)
                     || coef.chars().all(|c| c.is_ascii_digit() || c == '.')
                 {
                     write!(f, "{coef} ")?;
@@ -302,11 +314,11 @@ where
     Coef: Add<Output = Coef> + Zero,
 {
     fn zero() -> Self {
-        Combination(Default::default())
+        Combination(BTreeMap::default())
     }
 
     fn is_zero(&self) -> bool {
-        self.0.values().all(|coef| coef.is_zero())
+        self.0.values().all(num_traits::Zero::is_zero)
     }
 }
 
@@ -405,6 +417,7 @@ where
     }
 
     /// Iterates over the variables used in the monomial.
+    #[must_use]
     pub fn variables(&self) -> impl ExactSizeIterator<Item = &Var> {
         self.0.keys()
     }
@@ -422,8 +435,9 @@ where
     /** Evaluates the monomial by substituting from a sequence of values.
 
     The order of the values should correspond to the order of the variables.
-    Will panic if the number of values does not equal the length of the
-    monomial.
+
+    # Panics
+    Will panic if the number of values does not equal the lenght of the monomial.
      */
     pub fn eval_with_order<A>(&self, values: impl IntoIterator<Item = A>) -> A
     where
@@ -452,6 +466,7 @@ where
     }
 
     /// Normalizes the monomial by dropping terms with exponent zero.
+    #[must_use]
     pub fn normalize(self) -> Self
     where
         Exp: Zero,
@@ -559,11 +574,11 @@ where
     Exp: Add<Output = Exp> + Zero,
 {
     fn one() -> Self {
-        Monomial(Default::default())
+        Monomial(BTreeMap::default())
     }
 
     fn is_one(&self) -> bool {
-        self.0.values().all(|exp| exp.is_zero())
+        self.0.values().all(num_traits::Zero::is_zero)
     }
 }
 
@@ -610,7 +625,7 @@ mod tests {
         let combination = x() * 2u32 + y() * 3u32;
         assert_eq!(combination.to_string(), "2 x + 3 y");
         assert_eq!(combination.eval_with_order([5, 1]), 13);
-        let vars: Vec<_> = combination.variables().cloned().collect();
+        let vars: Vec<_> = combination.variables().copied().collect();
         assert_eq!(vars, vec!['x', 'y']);
 
         assert_eq!(Combination::<char, u32>::zero().to_string(), "0");
@@ -634,7 +649,7 @@ mod tests {
         let monomial: Monomial<_, u32> = [('x', 1), ('y', 2)].into_iter().collect();
         assert_eq!(monomial.to_string(), "x y^2");
         assert_eq!(monomial.eval_with_order([10, 5]), 250);
-        let vars: Vec<_> = monomial.variables().cloned().collect();
+        let vars: Vec<_> = monomial.variables().copied().collect();
         assert_eq!(vars, vec!['x', 'y']);
         assert_eq!(monomial.map_variables(|_| 'x').to_string(), "x^3");
 

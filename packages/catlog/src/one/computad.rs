@@ -13,7 +13,8 @@ use derivative::Derivative;
 use derive_more::Constructor;
 
 use super::graph::ColumnarGraph;
-use crate::zero::*;
+#[allow(unused_imports)]
+use crate::zero::{HashColumn, HashFinSet, MutColumn, MutMapping, Set};
 
 /** Top-dimensional data of a 1-computad.
 
@@ -56,6 +57,7 @@ pub struct Computad<'a, Ob, ObSet, E> {
     computad: &'a ComputadTop<Ob, E>,
 }
 
+#[allow(clippy::elidable_lifetime_names)]
 impl<'a, Ob, ObSet, E> ColumnarGraph for Computad<'a, Ob, ObSet, E>
 where
     Ob: Eq + Clone,

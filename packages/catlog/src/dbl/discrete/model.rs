@@ -7,9 +7,12 @@ use derivative::Derivative;
 use ustr::Ustr;
 
 use super::theory::DiscreteDblTheory;
+#[allow(clippy::wildcard_imports)]
 use crate::dbl::{category::*, model::*, theory::DblTheory};
+#[allow(clippy::wildcard_imports)]
 use crate::one::{fp_category::FpCategory, *};
 use crate::validate::{self, Validate};
+#[allow(clippy::wildcard_imports)]
 use crate::zero::*;
 
 /** A finitely presented model of a discrete double theory.
@@ -45,9 +48,9 @@ where
     pub fn new(theory: Rc<DiscreteDblTheory<Cat>>) -> Self {
         Self {
             theory,
-            category: Default::default(),
-            ob_types: Default::default(),
-            mor_types: Default::default(),
+            category: FpCategory::default(),
+            ob_types: IndexedHashColumn::default(),
+            mor_types: IndexedHashColumn::default(),
         }
     }
 

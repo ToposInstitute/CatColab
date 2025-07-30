@@ -2,7 +2,10 @@
 
 use ustr::ustr;
 
-use crate::dbl::theory::*;
+use crate::dbl::theory::{
+    DblTheory, DiscreteDblTheory, List, ModalOp, Modality, ModeApp, TabObType,
+    UstrDiscreteDblTheory, UstrDiscreteTabTheory, UstrModalDblTheory,
+};
 use crate::one::{Path, fp_category::UstrFpCategory};
 
 /** The empty theory, which has a single model, the empty model.
@@ -10,7 +13,7 @@ use crate::one::{Path, fp_category::UstrFpCategory};
 As a double category, this is the initial double category.
  */
 pub fn th_empty() -> UstrDiscreteDblTheory {
-    let cat: UstrFpCategory = Default::default();
+    let cat: UstrFpCategory = UstrFpCategory::default();
     DiscreteDblTheory::from(cat)
 }
 
@@ -19,7 +22,7 @@ pub fn th_empty() -> UstrDiscreteDblTheory {
 As a double category, this is the terminal double category.
  */
 pub fn th_category() -> UstrDiscreteDblTheory {
-    let mut cat: UstrFpCategory = Default::default();
+    let mut cat: UstrFpCategory = UstrFpCategory::default();
     cat.add_ob_generator(ustr("Object"));
     DiscreteDblTheory::from(cat)
 }
@@ -29,7 +32,7 @@ pub fn th_category() -> UstrDiscreteDblTheory {
 As a double category, this is the "walking proarrow".
  */
 pub fn th_schema() -> UstrDiscreteDblTheory {
-    let mut cat: UstrFpCategory = Default::default();
+    let mut cat: UstrFpCategory = UstrFpCategory::default();
     let (x, y, p) = (ustr("Entity"), ustr("AttrType"), ustr("Attr"));
     cat.add_ob_generator(x);
     cat.add_ob_generator(y);
@@ -44,7 +47,7 @@ signed categories are signed graphs, a simple mathematical model of [regulatory
 networks](crate::refs::RegNets) and causal loop diagrams.
  */
 pub fn th_signed_category() -> UstrDiscreteDblTheory {
-    let mut sgn: UstrFpCategory = Default::default();
+    let mut sgn: UstrFpCategory = UstrFpCategory::default();
     let (x, neg) = (ustr("Object"), ustr("Negative"));
     sgn.add_ob_generator(x);
     sgn.add_mor_generator(neg, x, x);
@@ -58,7 +61,7 @@ Free delayable signed categories are causal loop diagrams with delays, often
 depicted as [caesuras](https://en.wikipedia.org/wiki/Caesura).
  */
 pub fn th_delayable_signed_category() -> UstrDiscreteDblTheory {
-    let mut cat: UstrFpCategory = Default::default();
+    let mut cat: UstrFpCategory = UstrFpCategory::default();
     let (x, neg, slow) = (ustr("Object"), ustr("Negative"), ustr("Slow"));
     cat.add_ob_generator(x);
     cat.add_mor_generator(neg, x, x);
@@ -85,7 +88,7 @@ A *nullable signed category* is a category sliced over the monoid of signs,
 including zero.
  */
 pub fn th_nullable_signed_category() -> UstrDiscreteDblTheory {
-    let mut sgn: UstrFpCategory = Default::default();
+    let mut sgn: UstrFpCategory = UstrFpCategory::default();
     let (x, neg, zero) = (ustr("Object"), ustr("Negative"), ustr("Zero"));
     sgn.add_ob_generator(x);
     sgn.add_mor_generator(neg, x, x);
@@ -108,7 +111,7 @@ enriched in `M`-sets for a monoid `M` such as the positive real numbers under mu
 but to remain within simple theories the theory defined here is more general.
  */
 pub fn th_category_with_scalars() -> UstrDiscreteDblTheory {
-    let mut idem: UstrFpCategory = Default::default();
+    let mut idem: UstrFpCategory = UstrFpCategory::default();
     let (x, s) = (ustr("Object"), ustr("Nonscalar"));
     idem.add_ob_generator(x);
     idem.add_mor_generator(s, x, x);
@@ -125,7 +128,7 @@ A *category with links* is a category `C` together with a profunctor from `C` to
 with links.
  */
 pub fn th_category_links() -> UstrDiscreteTabTheory {
-    let mut th: UstrDiscreteTabTheory = Default::default();
+    let mut th: UstrDiscreteTabTheory = UstrDiscreteTabTheory::default();
     let x = ustr("Object");
     th.add_ob_type(x);
     th.add_mor_type(
@@ -158,7 +161,7 @@ monad is used.
  */
 fn th_list_algebra(list: List) -> UstrModalDblTheory {
     let m = Modality::List(list);
-    let mut th: UstrModalDblTheory = Default::default();
+    let mut th: UstrModalDblTheory = UstrModalDblTheory::default();
     let (x, a) = (ustr("Object"), ustr("tensor"));
     th.add_ob_type(x);
     th.add_ob_op(a, ModeApp::new(x).apply(m), ModeApp::new(x));
@@ -176,7 +179,7 @@ fn th_list_algebra(list: List) -> UstrModalDblTheory {
 /// The theory of a lax algebra over a list monad.
 fn th_list_lax_algebra(list: List) -> UstrModalDblTheory {
     let m = Modality::List(list);
-    let mut th: UstrModalDblTheory = Default::default();
+    let mut th: UstrModalDblTheory = UstrModalDblTheory::default();
     let (x, a) = (ustr("Object"), ustr("tensor"));
     th.add_ob_type(x);
     th.add_ob_op(a, ModeApp::new(x).apply(m), ModeApp::new(x));
@@ -201,7 +204,7 @@ pub fn th_multicategory() -> UstrModalDblTheory {
 
 /// The theory of a generalized multicategory over a list monad.
 fn th_generalized_multicategory(list: List) -> UstrModalDblTheory {
-    let mut th: UstrModalDblTheory = Default::default();
+    let mut th: UstrModalDblTheory = UstrModalDblTheory::default();
     let (x, p) = (ustr("Object"), ustr("Multihom"));
     th.add_ob_type(x);
     th.add_mor_type(p, ModeApp::new(x).apply(Modality::List(list)), ModeApp::new(x));
@@ -229,7 +232,7 @@ mod tests {
     #[test]
     fn validate_discrete_tabulator_theories() {
         // TODO: Implementation validation for discrete tabulator theories.
-        th_category_links();
+        let _to_validate = th_category_links();
     }
 
     #[test]

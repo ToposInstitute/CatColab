@@ -194,6 +194,7 @@ where
     }
 }
 
+#[allow(clippy::elidable_lifetime_names)]
 impl<'a, Ob, Mor, Map, Cod> FgCategoryMap for FpFunctor<'a, Map, Cod>
 where
     Ob: Eq + Clone,
@@ -221,6 +222,7 @@ where
 #[repr(transparent)]
 pub struct FpFunctorMorMap<'a, Map, Cod>(FpFunctor<'a, Map, Cod>);
 
+#[allow(clippy::elidable_lifetime_names)]
 impl<'a, V, E, Ob, Mor, Map, Cod> Mapping for FpFunctorMorMap<'a, Map, Cod>
 where
     V: Eq + Clone,
@@ -245,6 +247,7 @@ where
     }
 }
 
+#[allow(clippy::elidable_lifetime_names)]
 impl<'a, V, E, Ob, Mor, Map, Cod> FpFunctor<'a, Map, Cod>
 where
     V: Eq + Clone + Hash,
@@ -323,8 +326,9 @@ mod tests {
 
     /** Isomorphism b/w the schemas for half-edge graphs and symmetric graphs.
 
-    Reference: https://blog.algebraicjulia.org/post/2020/09/cset-graphs-2/
+    Reference: <https://blog.algebraicjulia.org/post/2020/09/cset-graphs-2/>
      */
+    #[allow(clippy::similar_names)]
     #[test]
     fn sch_sgraph_to_hgraph() {
         let (sch_hgraph, sch_sgraph) = (sch_hgraph(), sch_sgraph());
@@ -348,6 +352,7 @@ mod tests {
     }
 
     /// Non-functor from schema for symmetric graphs to schema for graphs.
+    #[allow(clippy::similar_names)]
     #[test]
     fn sch_sgraph_to_graph() {
         let (sch_graph, sch_sgraph) = (sch_graph(), sch_sgraph());

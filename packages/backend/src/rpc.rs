@@ -1,3 +1,5 @@
+#![allow(clippy::used_underscore_items)]
+
 use firebase_auth::FirebaseUser;
 use http::StatusCode;
 use qubit::{Extensions, FromRequestExtensions, Router, RpcError, handler};

@@ -33,6 +33,7 @@ use ego_tree::NodeRef;
 use itertools::{EitherOrBoth::Both, Itertools, zip_eq};
 
 use super::graph::VDblGraph;
+#[allow(clippy::wildcard_imports)]
 use crate::one::{path::Path, tree::*, tree_algorithms::*};
 
 /** A node in a [double tree](DblTree).
@@ -496,6 +497,7 @@ mod tests {
         assert!(!tree.contained_in(&graph));
     }
 
+    #[allow(clippy::similar_names)]
     #[test]
     fn flatten_tree() {
         let bimod = Bimod::Main();

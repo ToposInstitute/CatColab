@@ -3,8 +3,10 @@
 use std::collections::{HashSet, VecDeque};
 use std::hash::Hash;
 
-use super::graph::*;
-use super::path::*;
+use super::graph::{FinGraph, GraphElem};
+#[cfg(test)]
+use super::graph::{HashGraph, SkelGraph};
+use super::path::Path;
 
 /** Iterates over all simple paths between two vertices of a finite graph.
 
@@ -145,7 +147,7 @@ where
                 let w = graph.tgt(&e);
                 if w == v || visited.contains(&w) {
                     // Include loops at v.
-                    result.push(GraphElem::Edge(e))
+                    result.push(GraphElem::Edge(e));
                 } else {
                     queue.push_back(w);
                 }
@@ -157,7 +159,7 @@ where
                     continue;
                 }
                 if visited.contains(&w) {
-                    result.push(GraphElem::Edge(e))
+                    result.push(GraphElem::Edge(e));
                 } else {
                     queue.push_back(w);
                 }
@@ -196,7 +198,7 @@ mod tests {
         let paths: Vec<_> = simple_paths(&g, &0, &2).collect();
         assert_eq!(paths, vec![Path::Seq(nonempty![0, 1])]);
 
-        let mut g: HashGraph<_, _> = Default::default();
+        let mut g: HashGraph<_, _> = HashGraph::default();
         assert!(g.add_vertex('x'));
         assert!(g.add_edge('f', 'x', 'x'));
         assert!(g.add_edge('g', 'x', 'x'));

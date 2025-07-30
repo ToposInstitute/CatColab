@@ -166,9 +166,10 @@ impl StockFlowMassActionAnalysis {
                 *term = std::mem::take(term) * Monomial::generator(dom);
             } else {
                 panic!("Codomain of link does not belong to model");
-            };
+            }
         }
 
+        #[allow(clippy::type_complexity)]
         let terms: Vec<(Id, Polynomial<Id, Parameter<Id>, u8>)> = terms
             .into_iter()
             .map(|(flow, term)| {
@@ -181,7 +182,7 @@ impl StockFlowMassActionAnalysis {
         for ob in model.ob_generators_with_type(&self.stock_ob_type) {
             sys.add_term(ob, Polynomial::zero());
         }
-        for (flow, term) in terms.iter() {
+        for (flow, term) in &terms {
             let dom = model.mor_generator_dom(flow).unwrap_basic();
             sys.add_term(dom, -term.clone());
         }
@@ -202,6 +203,7 @@ impl StockFlowMassActionAnalysis {
     }
 }
 
+#[allow(clippy::needless_pass_by_value)]
 fn into_numerical_system<Id: Eq + Clone + Hash + Ord>(
     sys: PolynomialSystem<Id, Parameter<Id>, u8>,
     data: MassActionProblemData<Id>,
@@ -236,10 +238,10 @@ mod tests {
         let th = Rc::new(th_category_links());
         let model = backward_link(th);
         let sys = StockFlowMassActionAnalysis::default().build_system(&model);
-        let expected = expect!([r#"
+        let expected = expect!([r"
             dx = ((-1) f) x y
             dy = f x y
-        "#]);
+        "]);
         expected.assert_eq(&sys.to_string());
     }
 
@@ -248,11 +250,11 @@ mod tests {
         let th = Rc::new(th_sym_monoidal_category());
         let model = catalyzed_reaction(th);
         let sys = PetriNetMassActionAnalysis::default().build_system(&model);
-        let expected = expect!([r#"
+        let expected = expect!([r"
             dc = 0
             dx = ((-1) f) c x
             dy = f c x
-        "#]);
+        "]);
         expected.assert_eq(&sys.to_string());
     }
 }

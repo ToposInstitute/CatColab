@@ -6,7 +6,9 @@ use std::ops::Range;
 use derive_more::From;
 use ref_cast::RefCast;
 
+#[allow(clippy::wildcard_imports)]
 use crate::dbl::{category::*, theory::InvalidDblTheory, tree::DblTree};
+#[allow(clippy::wildcard_imports)]
 use crate::one::{Path, category::*, fp_category::*};
 use crate::validate::{self, Validate};
 
@@ -135,7 +137,7 @@ mod tests {
 
     #[test]
     fn theory_interface() {
-        let mut sgn: FpCategory<char, char> = Default::default();
+        let mut sgn: FpCategory<char, char> = FpCategory::default();
         sgn.add_ob_generator('*');
         sgn.add_mor_generator('n', '*', '*');
         sgn.equate(Path::pair('n', 'n'), Path::Id('*'));

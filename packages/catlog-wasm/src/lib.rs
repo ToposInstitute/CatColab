@@ -1,3 +1,17 @@
+#![allow(
+    clippy::must_use_candidate,
+    clippy::missing_errors_doc,
+    clippy::missing_panics_doc,
+    clippy::wildcard_imports,
+    clippy::default_trait_access,
+    clippy::manual_string_new,
+    clippy::needless_pass_by_value,
+    clippy::match_wildcard_for_single_variants,
+    clippy::explicit_iter_loop,
+    clippy::redundant_closure_for_method_calls,
+    clippy::cloned_instead_of_copied
+)]
+
 pub mod notation;
 pub mod result;
 

@@ -22,12 +22,14 @@ pub use theory::*;
 #[cfg(test)]
 mod test {
     use super::document::Document;
+    #[allow(clippy::single_component_path_imports)]
     use serde_json;
     use std::fs;
 
     #[test]
     fn test_v0_examples() {
         let mut errored = false;
+        #[allow(clippy::manual_flatten)]
         for f in fs::read_dir("examples/v0").unwrap() {
             if let Ok(e) = f {
                 if let Ok(s) = fs::read_to_string(e.path()) {
@@ -44,8 +46,6 @@ mod test {
                 }
             }
         }
-        if errored {
-            panic!()
-        }
+        assert!(!errored,);
     }
 }

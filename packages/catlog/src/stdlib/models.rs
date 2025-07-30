@@ -3,6 +3,7 @@
 use std::rc::Rc;
 use ustr::{Ustr, ustr};
 
+#[allow(clippy::wildcard_imports)]
 use crate::dbl::{model::*, theory::*};
 use crate::one::Path;
 

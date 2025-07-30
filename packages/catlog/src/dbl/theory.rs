@@ -70,6 +70,7 @@ composed:
 
 use nonempty::NonEmpty;
 
+#[allow(clippy::wildcard_imports)]
 use super::{category::*, graph::InvalidVDblGraph, tree::*};
 use crate::one::{InvalidPathEq, Path, tree::OpenTree};
 

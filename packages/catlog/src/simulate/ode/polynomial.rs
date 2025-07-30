@@ -28,7 +28,7 @@ where
 {
     /// Constructs a new polynomial system, with no equations.
     pub fn new() -> Self {
-        Default::default()
+        Self::default()
     }
 
     /// Adds a new term to the system.
@@ -52,12 +52,13 @@ where
     }
 
     /// Normalizes the polynomial system by normalizing each polynomial in it.
+    #[must_use]
     pub fn normalize(self) -> Self
     where
         Coef: Zero,
         Exp: Zero,
     {
-        self.map(|poly| poly.normalize())
+        self.map(crate::zero::alg::Polynomial::normalize)
     }
 
     /// Maps over the components of the system.
@@ -99,7 +100,7 @@ where
     Exp: Display + PartialEq + One,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for (var, component) in self.components.iter() {
+        for (var, component) in &self.components {
             writeln!(f, "d{var} = {component}")?;
         }
         Ok(())
@@ -114,7 +115,7 @@ where
     Exp: Ord,
 {
     fn from_iter<T: IntoIterator<Item = (Var, Polynomial<Var, Coef, Exp>)>>(iter: T) -> Self {
-        let mut system: Self = Default::default();
+        let mut system: Self = Self::default();
         for (var, term) in iter {
             system.add_term(var, term);
         }
@@ -139,7 +140,7 @@ where
 {
     fn vector_field(&self, dx: &mut DVector<f32>, x: &DVector<f32>, _t: f32) {
         for i in 0..dx.len() {
-            dx[i] = self.components[i].eval(|var| x[*var])
+            dx[i] = self.components[i].eval(|var| x[*var]);
         }
     }
 }
@@ -164,25 +165,25 @@ mod tests {
             ('R', var('I') * param('γ')),
         ];
         let sys: PolynomialSystem<_, _, _> = terms.into_iter().collect();
-        let expected = expect![[r#"
+        let expected = expect![[r"
             dI = ((-1) γ) I + β I S
             dR = γ I
             dS = ((-1) β) I S
-        "#]];
+        "]];
         expected.assert_eq(&sys.to_string());
 
         let sys = sys.extend_scalars(|p| p.eval(|_| 1.0));
-        let expected = expect![[r#"
+        let expected = expect![[r"
             dI = (-1) I + I S
             dR = I
             dS = (-1) I S
-        "#]];
+        "]];
         expected.assert_eq(&sys.to_string());
 
         let initial = DVector::from_column_slice(&[1.0, 0.0, 4.0]);
         let problem = ODEProblem::new(sys.to_numerical(), initial).end_time(5.0);
         let result = problem.solve_rk4(0.1).unwrap();
-        let expected = expect![[r#"
+        let expected = expect![[r"
             ⡁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⣀⠤⠤⠤⠒⠒⠒⠒⠒⠉⠉⠉⠉⠁ 4.9
             ⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⠤⠒⠒⠉⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
             ⠂⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⠤⠒⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
@@ -205,7 +206,7 @@ mod tests {
             ⢄⠔⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠒⠒⠤⠤⠤⠤⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣉⣉⣒⣒⣒⣒⣤⣤⣤⣤⠤⣀⣀⣀⣀⡀
             ⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠉⠉⠉⠉⠉⠁ 0.0
             0.0                                            5.0
-        "#]];
+        "]];
         expected.assert_eq(&textplot_ode_result(&problem, &result));
     }
 }

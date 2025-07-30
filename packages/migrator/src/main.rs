@@ -1,3 +1,4 @@
+#![allow(clippy::unnecessary_literal_bound)]
 use sqlx::{Connection, PgConnection};
 use sqlx_migrator::Info;
 use sqlx_migrator::cli::MigrationCommand;

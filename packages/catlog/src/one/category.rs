@@ -219,11 +219,13 @@ pub trait FgCategory: Category {
 
     /// Iterates over basic objects.
     fn objects(&self) -> impl Iterator<Item = Self::Ob> {
+        #[allow(clippy::redundant_closure_for_method_calls)]
         self.ob_generators().map(|ob_gen| ob_gen.into())
     }
 
     /// Iterates over basic morphisms.
     fn morphisms(&self) -> impl Iterator<Item = Self::Mor> {
+        #[allow(clippy::redundant_closure_for_method_calls)]
         self.mor_generators().map(|mor_gen| mor_gen.into())
     }
 }

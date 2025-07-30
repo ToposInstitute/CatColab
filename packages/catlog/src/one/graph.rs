@@ -16,6 +16,7 @@ use thiserror::Error;
 use ustr::Ustr;
 
 use crate::validate::{self, Validate};
+#[allow(clippy::wildcard_imports)]
 use crate::zero::*;
 
 /** A graph.
@@ -373,7 +374,7 @@ impl SkelGraph {
     /// Makes a path graph with `n` vertices.
     #[cfg(test)]
     pub fn path(n: usize) -> Self {
-        let mut g: Self = Default::default();
+        let mut g: Self = Self::default();
         g.add_vertices(n);
         for (i, j) in std::iter::zip(0..(n - 1), 1..n) {
             g.add_edge(i, j);
@@ -384,7 +385,7 @@ impl SkelGraph {
     /// Makes a triangle graph (2-simplex).
     #[cfg(test)]
     pub fn triangle() -> Self {
-        let mut g: Self = Default::default();
+        let mut g: Self = Self::default();
         g.add_vertices(3);
         g.add_edge(0, 1);
         g.add_edge(1, 2);
@@ -394,6 +395,7 @@ impl SkelGraph {
 
     /// Make a cycle graph with `n` vertices.
     #[cfg(test)]
+    #[allow(clippy::missing_panics_doc)]
     pub fn cycle(n: usize) -> Self {
         assert!(n > 0);
         let mut g = SkelGraph::path(n);
@@ -491,7 +493,7 @@ where
     where
         T: IntoIterator<Item = V>,
     {
-        self.vertex_set.extend(iter)
+        self.vertex_set.extend(iter);
     }
 
     /** Adds an edge to the graph, returning whether the edge is new.
@@ -612,10 +614,10 @@ where
                 if cod.has_edge(&f) {
                     let mut errs = Vec::new();
                     if mapping.apply_vertex(dom.src(&e)).is_some_and(|v| v != cod.src(&f)) {
-                        errs.push(InvalidGraphMorphism::Src(e.clone()))
+                        errs.push(InvalidGraphMorphism::Src(e.clone()));
                     }
                     if mapping.apply_vertex(dom.tgt(&e)).is_some_and(|v| v != cod.tgt(&f)) {
-                        errs.push(InvalidGraphMorphism::Tgt(e.clone()))
+                        errs.push(InvalidGraphMorphism::Tgt(e.clone()));
                     }
                     return errs;
                 }
@@ -737,7 +739,7 @@ mod tests {
 
     #[test]
     fn hash_graph() {
-        let mut g: HashGraph<char, &str> = Default::default();
+        let mut g: HashGraph<char, &str> = HashGraph::default();
         assert!(g.add_vertex('x'));
         g.add_vertices(['y', 'z']);
         assert!(g.add_edge("f", 'x', 'y'));

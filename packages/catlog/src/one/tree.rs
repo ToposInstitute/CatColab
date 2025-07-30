@@ -197,7 +197,7 @@ impl<'a, T: 'a> OpenNodeRef<T> for NodeRef<'a, Option<T>> {
     }
 
     fn boundary(&self) -> impl Iterator<Item = Self> {
-        self.descendants().filter(|node| node.is_boundary())
+        self.descendants().filter(OpenNodeRef::is_boundary)
     }
 
     fn get_value(&self) -> Option<&T> {
