@@ -7,8 +7,7 @@
 > to preserve the integrity of your data but you should not store anything
 > critical or sensitive.
 
-CatColab is a collaborative environment for *formal,
-interoperable, conceptual modeling*.
+CatColab is a collaborative environment for *formal, interoperable, conceptual modeling*.
 
 Elaborating on these keywords, CatColab aims to be:
 
@@ -22,10 +21,8 @@ Elaborating on these keywords, CatColab aims to be:
 - **Modeling**: Constructing a model is a collaborative, ongoing process that
   does not required participants to have specialized technical expertise.
 
-## For users
 
-> [!NOTE]
-> See [catcolab.org/help](https://catcolab.org/help) for user documentation, including an overview of CatColab and various tutorial guides.
+## Versions
 
 There are two versions of CatColab available to use:
 
@@ -40,35 +37,11 @@ Each of our major releases is accompanied by a blog post:
 - [v0.2: Wren](https://topos.institute/blog/2025-02-05-catcolab-0-2-wren/)
 
 
-## For developers
 
-> [!NOTE]
-> See [next.catcolab.org/dev](https://next.catcolab.org/dev) for developer documentation, including contribution guidelines.
+## Help and documentation
 
-CatColab is written in a mix of [Rust](https://www.rust-lang.org/) and
-[TypeScript](https://www.typescriptlang.org/). The staging deployment, synced to the `main` branch, is available at
-[next.catcolab.org](https://next.catcolab.org).
-
-
-## For mathematicians
-
-> [!NOTE]
-> See [next.catcolab.org/math](https://next.catcolab.org/math) for mathematical documentation, including bibliographies for further reading.
-
-As the name suggests, CatColab is based on mathematical ideas from category
-theory. It is a specific design goal that the system be usable *without* any
-knowledge of such ideas. Still, for those curious about the underlying
-mathematics, here are a few pointers for further reading.
-
-CatColab is an editor for categorical structures and their morphisms and higher
-morphisms. The meta-logical framework organizing these categorical structures is
-based on [double category theory](https://mathoverflow.net/q/476936). More
-precisely, the **domain-specific logics** in CatColab are defined by [double
-theories](https://arxiv.org/abs/2310.05384), and the **models** in CatColab are
-models of double theories.
-
-The library of domain-specific logics in CatColab, available now and to grow
-over time, is inspired by a wide body of research in applied category theory and
-beyond. Incomplete bibliographies are in the [mathematical
-docs](https://next.catcolab.org/math/bib-0001.xml) and the [`catlog`
-docs](https://next.catcolab.org/dev/rust/catlog/refs). 
+| Use type | Help and documentation |
+| :-------- | :--------------------- |
+| General user | [catcolab.org/help](https://catcolab.org/help) |
+| Software developer | [next.catcolab.org/dev](https://next.catcolab.org/dev) |
+| Mathematician | [next.catcolab.org/math](https://next.catcolab.org/math) |

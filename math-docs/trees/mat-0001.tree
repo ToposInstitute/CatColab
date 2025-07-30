@@ -1,6 +1,28 @@
 \title{CatColab: Mathematical Documentation}
 \import{macros}
 
+\p{
+  As the name suggests, CatColab is based on mathematical ideas from category
+  theory. It is a specific design goal that the system be usable *without* any
+  knowledge of such ideas. Still, for those curious about the underlying
+  mathematics, here are a few pointers for further reading.
+}
+
+\p{
+  CatColab is an editor for categorical structures and their morphisms and higher
+  morphisms. The meta-logical framework organizing these categorical structures is
+  based on [double category theory](https://mathoverflow.net/q/476936). More
+  precisely, the \strong{domain-specific logics} in CatColab are defined by [double
+  theories](https://arxiv.org/abs/2310.05384), and the \strong{models} in CatColab are
+  models of double theories.
+}
+
+\p{
+  The library of domain-specific logics in CatColab, available now and to grow
+  over time, is inspired by a wide body of research in applied category theory and
+  beyond. Incomplete bibliographies are in [\code{bib-0001}](https://next.catcolab.org/math/bib-0001.xml) and the [\code{catlog} docs](https://next.catcolab.org/dev/rust/catlog/refs).
+}
+
 \p{Doctrines whose free objects have a systems interpretation:}
 
 \table{
