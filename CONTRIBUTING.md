@@ -1,5 +1,3 @@
-# CatColab: for developers
-
 > **Note:** This page can be viewed at either [next.catcolab.org/dev](https://next.catcolab.org/dev) or [github.com/ToposInstitute/CatColab/contribute](https://github.com/ToposInstitute/CatColab/contribute)
 
 
