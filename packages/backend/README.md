@@ -49,6 +49,7 @@ cd packages/frontend
 pnpm run dev
 ```
 
+
 ## Updating Cargo dependencies
 
 **tl;dr:** Run `crate2nix generate` in the repository root and commit the updated `Cargo.nix` file.

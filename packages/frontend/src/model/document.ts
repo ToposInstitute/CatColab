@@ -7,10 +7,11 @@ import {
     type ModelJudgment,
     type ModelValidationResult,
     type Uuid,
+    currentVersion,
     elaborateModel,
 } from "catlog-wasm";
 import { type Api, type LiveDoc, getLiveDoc } from "../api";
-import { newNotebook } from "../notebook";
+import { NotebookUtils, newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
 import type { Theory } from "../theory";
 import { type IndexedMap, indexMap } from "../util/indexing";
@@ -24,6 +25,7 @@ export const newModelDocument = (theory: string): ModelDocument => ({
     type: "model",
     theory,
     notebook: newNotebook(),
+    version: currentVersion(),
 });
 
 /** A model document "live" for editing.
@@ -71,11 +73,14 @@ function enlivenModelDocument(
 
     // Memo-ize the *formal* content of the notebook, since most derived objects
     // will not depend on the informal (rich-text) content in notebook.
-    const formalJudgments = createMemo<Array<ModelJudgment>>(() => {
-        return doc.notebook.cells
-            .filter((cell) => cell.tag === "formal")
-            .map((cell) => cell.content);
-    }, []);
+    const formalJudgments = createMemo<Array<ModelJudgment>>(
+        () =>
+            doc.notebook.cellOrder
+                .map((cellId) => NotebookUtils.getCellById(doc.notebook, cellId))
+                .filter((cell) => cell.tag === "formal")
+                .map((cell) => cell.content),
+        [],
+    );
 
     const objectIndex = createMemo<IndexedMap<Uuid, string>>(() => {
         const map = new Map<Uuid, string>();
