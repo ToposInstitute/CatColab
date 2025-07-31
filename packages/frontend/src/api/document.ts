@@ -81,10 +81,12 @@ export async function getLiveDoc<Doc extends Document>(
     // XXX: copied from automerge-doc-server/src/server.ts:
     const docBefore = await docHandle.doc();
     const docAfter = catlogWasm.migrateDocument(docBefore);
-    const patches = jsonpatch.compare(docBefore as unknown as Doc, docAfter);
-    docHandle.change((doc: unknown) => {
-        jsonpatch.applyPatch(doc, patches);
-    });
+    if ((docBefore as Doc).version !== docAfter.version) {
+        const patches = jsonpatch.compare(docBefore as Doc, docAfter);
+        docHandle.change((doc: unknown) => {
+            jsonpatch.applyPatch(doc, patches);
+        });
+    }
 
     const doc = await makeDocHandleReactive(docHandle);
     if (docType !== undefined) {
