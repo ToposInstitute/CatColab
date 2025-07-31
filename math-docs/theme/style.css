@@ -128,7 +128,7 @@ code {
 }
 
 body {
-  /*font-family: "Inria Sans";*/
+  font-family: "Inria Sans";
   font-size: 12pt;
   line-height: 1.55;
 }
@@ -206,16 +206,16 @@ footer h2 {
 
   #grid-wrapper {
     display: grid;
-    grid-template-columns: 90ex;
+    grid-template-columns: 100ex;
   }
 }
 
 body>header {
-  margin-bottom: 0.5em;
+  margin-bottom: 2em;
 }
 
 #grid-wrapper>article {
-  max-width: 90ex;
+  max-width: 100ex;
   margin-right: auto;
   grid-column: 1;
 }

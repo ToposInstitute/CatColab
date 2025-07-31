@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: CC0-1.0 -->
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
-  xmlns:f="http://www.forester-notes.org">
+  xmlns:f="http://www.jonmsterling.com/jms-005P.xml">
 
   <xsl:template match="f:month[.='1']">
     <xsl:text>January</xsl:text>
@@ -114,6 +114,14 @@
     <li class="meta-item">
       <a class="doi link" href="{concat('https://www.doi.org/', .)}">
         <xsl:value-of select="." />
+      </a>
+    </li>
+  </xsl:template>
+
+  <xsl:template match="f:meta[@name='arxiv']">
+    <li class="meta-item">
+      <a class="doi link" href="{concat('https://arxiv.org/abs/', .)}">
+        <xsl:value-of select="concat('arXiv:', .)" />
       </a>
     </li>
   </xsl:template>
