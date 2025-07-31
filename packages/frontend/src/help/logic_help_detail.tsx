@@ -8,7 +8,7 @@ import type { Theory } from "../theory";
 import LogicHelpNotFound from "./logics/logic-help-not-found.mdx";
 
 /** Help page for a theory in the standard library. */
-export default function LogicHelpDetail() {
+export default function LogicHelpPage() {
     const theories = useContext(TheoryLibraryContext);
     invariant(theories, "Library of theories must be provided as context");
 
@@ -18,12 +18,16 @@ export default function LogicHelpDetail() {
         () => params.id,
         (theoryId) => theories.get(theoryId),
     );
-    const modelTypes = () => theory()?.modelTypes ?? [];
-    const modelAnalyses = () => theory()?.modelAnalyses ?? [];
 
+    return <Show when={theory()}>{(theory) => <LogicHelpDetail theory={theory()} />}</Show>;
+}
+
+function LogicHelpDetail(props: {
+    theory: Theory;
+}) {
     const Content = lazy(async () => {
         try {
-            return await import(`./logics/${params.id}.mdx`);
+            return await import(`./logics/${props.theory.id}.mdx`);
         } catch {
             return { default: LogicHelpNotFound };
         }
@@ -32,19 +36,19 @@ export default function LogicHelpDetail() {
     return (
         <>
             <h1>
-                <a href="/help/logics/">Logics</a> / {theory()?.name}
+                <a href="/help/logics/">Logics</a> / {props.theory.name}
             </h1>
             <h2>Summary</h2>
             <p>
-                <i>{theory()?.description}</i>
+                <i>{props.theory.description}</i>
             </p>
-            <Show when={modelTypes().length + modelAnalyses().length > 0}>
+            <Show when={props.theory.modelTypes.length + props.theory.modelAnalyses.length > 0}>
                 <div class="help-summary-lists">
-                    <Show when={modelTypes().length > 0}>
+                    <Show when={props.theory.modelTypes.length > 0}>
                         <div>
                             <h3>Definitions</h3>
                             <dl>
-                                <For each={modelTypes()}>
+                                <For each={props.theory.modelTypes}>
                                     {(typeMeta) => (
                                         <>
                                             <dt>{typeMeta.name}</dt>
@@ -55,11 +59,11 @@ export default function LogicHelpDetail() {
                             </dl>
                         </div>
                     </Show>
-                    <Show when={modelAnalyses().length > 0}>
+                    <Show when={props.theory.modelAnalyses.length > 0}>
                         <div>
                             <h3>Analyses</h3>
                             <dl>
-                                <For each={modelAnalyses()}>
+                                <For each={props.theory.modelAnalyses}>
                                     {(typeMeta) => (
                                         <>
                                             <dt>{typeMeta.name}</dt>
@@ -72,7 +76,7 @@ export default function LogicHelpDetail() {
                     </Show>
                 </div>
             </Show>
-            <Content theory={theory()} />
+            <Content theory={props.theory} />
         </>
     );
 }
