@@ -167,7 +167,8 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v4
 
-      - name: Consolidate
+      - name: Consolidate for Staging
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
         run: |
           mv app site/
           mv dev-docs site/dev
@@ -186,6 +187,12 @@ jobs:
           prod_flag=""
           if [ "$BRANCH_NAME" = "main" ]; then prod_flag="--prod"; fi
           npx netlify deploy --dir ../site --site ${{ secrets.NETLIFY_SITE_ID }} --auth ${{ secrets.NETLIFY_API_TOKEN }} $prod_flag --json > ../deploy_output.json
+
+      - name: Consolidate for Prod
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        run: |
+          mv app site/
+          echo '/* /index.html 200' >> site/_redirects
 
       - name: Deploy to Prod
         if: github.event_name == 'release'
