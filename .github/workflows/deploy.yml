@@ -22,25 +22,16 @@ jobs:
       - name: Repository Checkout
         uses: actions/checkout@v4
 
-      - name: Make dev-docs
-        run: |
-          mkdir dev-docs
-
       - name: Build developer docs
-        uses: docker://pandoc/latex:3.5
-        with:
-          args: >-
-            --from=gfm+alerts
-            --standalone
-            --metadata title="CatColab for developers"
-            --output=dev-docs/index.html
-            CONTRIBUTING.md
+        run: |
+          mv CONTRIBUTING.md dev-docs/README.md
+          pnpm typedoc --options ./dev-docs/typedoc.json
 
       - name: Upload developer docs
         uses: actions/upload-artifact@v4
         with:
           name: dev-docs
-          path: dev-docs
+          path: dev-docs/output
 
   build_frontend:
     name: Build frontend

@@ -1,6 +1,6 @@
 # CatColab
 
-[![Zulip](https://img.shields.io/badge/Zulip-Join_the_chat-blue.svg?logo=zulip)](https://catcolab.zulipchat.com)
+[![Zulip](https://img.shields.io/badge/Join%20the%20chat-%20.svg?style=flat&logo=zulip&label=Zulip&color=%236492FE)](https://catcolab.zulipchat.com)
 
 > [!WARNING]
 > CatColab is under active development with new features added regularly. We aim
