@@ -679,6 +679,42 @@ pub fn sch_hgraph() -> UstrFpCategory {
     cat
 }
 
+/// The schema for a freely generated category where the generating graph of the presentation
+/// is a zig zag graph. This can be thought of as an orientation of an A_n quiver.
+/// e.g. `0 -> 1 <- 2 -> 3 -> 4 <- 5` for `[true,false,true,true,false]`
+/// It is also common to demand that all backwards arrows are actually isomorphisms so we can alternatively
+/// create the non-free version `0 -> 1 <-> 2 -> 3 -> 4 <-> 5` where the `<->` have the equation
+/// that says they are inverses to each other.
+#[cfg(test)]
+fn sch_zigzag(
+    quiver_orientation: impl ExactSizeIterator<Item = bool>,
+    backwards_invertible: bool,
+) -> UstrFpCategory {
+    let mut cat = UstrFpCategory::new();
+    let count_vertices = quiver_orientation.len() + 1;
+    let mut vertex_names = Vec::with_capacity(count_vertices);
+    for idx in 0..count_vertices {
+        let cur_ustr: Ustr = format!("O{idx}").into();
+        cat.add_ob_generator(cur_ustr);
+        vertex_names.push(cur_ustr);
+    }
+    for (idx, current_orientation) in quiver_orientation.enumerate() {
+        let cur_ustr: Ustr = format!("M{idx}").into();
+        if current_orientation {
+            cat.add_mor_generator(cur_ustr, vertex_names[idx], vertex_names[idx + 1]);
+        } else {
+            cat.add_mor_generator(cur_ustr, vertex_names[idx + 1], vertex_names[idx]);
+            if backwards_invertible {
+                let cur_ustr_inv: Ustr = format!("M{idx}^-1").into();
+                cat.add_mor_generator(cur_ustr_inv, vertex_names[idx], vertex_names[idx + 1]);
+                cat.equate(Path::pair(cur_ustr_inv, cur_ustr), Path::Id(vertex_names[idx]));
+                cat.equate(Path::pair(cur_ustr, cur_ustr_inv), Path::Id(vertex_names[idx + 1]));
+            }
+        }
+    }
+    cat
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -743,6 +779,136 @@ mod tests {
             (rewrite (compose (id (dom f)) f) f :ruleset CatAxioms)
         "#]];
         expected.assert_eq(&prog.to_string());
+
+        let mut egraph: EGraph = Default::default();
+        assert!(prog.run_in(&mut egraph).is_ok());
+    }
+
+    #[test]
+    fn egraph_hgraph() {
+        let sch_hgraph = sch_hgraph();
+        assert!(!sch_hgraph.is_free());
+        assert!(sch_hgraph.validate().is_ok());
+
+        let mut builder: CategoryProgramBuilder<char, char> = Default::default();
+        let prog = builder.program();
+        let preamble = prog.to_string();
+
+        let prog = sch_hgraph.builder.borrow_mut().program();
+
+        let expected = expect![[r#"
+            (ObGen 0)
+            (ObGen 1)
+            (MorGen 0)
+            (union (dom (MorGen 0)) (ObGen 1))
+            (union (cod (MorGen 0)) (ObGen 0))
+            (MorGen 1)
+            (union (dom (MorGen 1)) (ObGen 1))
+            (union (cod (MorGen 1)) (ObGen 1))
+            (union (compose (MorGen 1) (MorGen 1)) (id (ObGen 1)))
+        "#]];
+        let prog_string = prog.to_string();
+        let (should_be_preamble, should_be_expected) = prog_string.split_at(preamble.len());
+        expected.assert_eq(&should_be_expected);
+        assert_eq!(should_be_preamble, preamble);
+
+        let mut egraph: EGraph = Default::default();
+        assert!(prog.run_in(&mut egraph).is_ok());
+    }
+
+    #[test]
+    fn egraph_zigzag() {
+        let sch_quiver = sch_zigzag([true, false, true, true, false].into_iter(), false);
+        assert!(sch_quiver.is_free());
+        assert!(sch_quiver.validate().is_ok());
+
+        let mut builder: CategoryProgramBuilder<char, char> = Default::default();
+        let prog = builder.program();
+        let preamble = prog.to_string();
+
+        let prog = sch_quiver.builder.borrow_mut().program();
+
+        let expected = expect![[r#"
+            (ObGen 0)
+            (ObGen 1)
+            (ObGen 2)
+            (ObGen 3)
+            (ObGen 4)
+            (ObGen 5)
+            (MorGen 0)
+            (union (dom (MorGen 0)) (ObGen 0))
+            (union (cod (MorGen 0)) (ObGen 1))
+            (MorGen 1)
+            (union (dom (MorGen 1)) (ObGen 2))
+            (union (cod (MorGen 1)) (ObGen 1))
+            (MorGen 2)
+            (union (dom (MorGen 2)) (ObGen 2))
+            (union (cod (MorGen 2)) (ObGen 3))
+            (MorGen 3)
+            (union (dom (MorGen 3)) (ObGen 3))
+            (union (cod (MorGen 3)) (ObGen 4))
+            (MorGen 4)
+            (union (dom (MorGen 4)) (ObGen 5))
+            (union (cod (MorGen 4)) (ObGen 4))
+        "#]];
+        let prog_string = prog.to_string();
+        let (should_be_preamble, should_be_expected) = prog_string.split_at(preamble.len());
+        expected.assert_eq(&should_be_expected);
+        assert_eq!(should_be_preamble, preamble);
+
+        let mut egraph: EGraph = Default::default();
+        assert!(prog.run_in(&mut egraph).is_ok());
+    }
+
+    #[test]
+    fn egraph_zigzag_equivalences() {
+        let sch_quiver = sch_zigzag([true, false, true, true, false].into_iter(), true);
+        assert!(!sch_quiver.is_free());
+        assert!(sch_quiver.validate().is_ok());
+
+        let mut builder: CategoryProgramBuilder<char, char> = Default::default();
+        let prog = builder.program();
+        let preamble = prog.to_string();
+
+        let prog = sch_quiver.builder.borrow_mut().program();
+
+        let expected = expect![[r#"
+            (ObGen 0)
+            (ObGen 1)
+            (ObGen 2)
+            (ObGen 3)
+            (ObGen 4)
+            (ObGen 5)
+            (MorGen 0)
+            (union (dom (MorGen 0)) (ObGen 0))
+            (union (cod (MorGen 0)) (ObGen 1))
+            (MorGen 1)
+            (union (dom (MorGen 1)) (ObGen 2))
+            (union (cod (MorGen 1)) (ObGen 1))
+            (MorGen 2)
+            (union (dom (MorGen 2)) (ObGen 1))
+            (union (cod (MorGen 2)) (ObGen 2))
+            (union (compose (MorGen 2) (MorGen 1)) (id (ObGen 1)))
+            (union (compose (MorGen 1) (MorGen 2)) (id (ObGen 2)))
+            (MorGen 3)
+            (union (dom (MorGen 3)) (ObGen 2))
+            (union (cod (MorGen 3)) (ObGen 3))
+            (MorGen 4)
+            (union (dom (MorGen 4)) (ObGen 3))
+            (union (cod (MorGen 4)) (ObGen 4))
+            (MorGen 5)
+            (union (dom (MorGen 5)) (ObGen 5))
+            (union (cod (MorGen 5)) (ObGen 4))
+            (MorGen 6)
+            (union (dom (MorGen 6)) (ObGen 4))
+            (union (cod (MorGen 6)) (ObGen 5))
+            (union (compose (MorGen 6) (MorGen 5)) (id (ObGen 4)))
+            (union (compose (MorGen 5) (MorGen 6)) (id (ObGen 5)))
+        "#]];
+        let prog_string = prog.to_string();
+        let (should_be_preamble, should_be_expected) = prog_string.split_at(preamble.len());
+        expected.assert_eq(&should_be_expected);
+        assert_eq!(should_be_preamble, preamble);
 
         let mut egraph: EGraph = Default::default();
         assert!(prog.run_in(&mut egraph).is_ok());
