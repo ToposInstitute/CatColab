@@ -5,6 +5,7 @@ import {
     type DocumentId,
     Repo,
 } from "@automerge/automerge-repo";
+import jsonpatch from "fast-json-patch";
 import { type Accessor, createEffect, createSignal } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 import invariant from "tiny-invariant";
@@ -12,6 +13,7 @@ import * as uuid from "uuid";
 
 import type { Permissions } from "catcolab-api";
 import type { Document } from "catlog-wasm";
+import * as catlogWasm from "catlog-wasm";
 import { PermissionsError } from "../util/errors";
 import type { Api } from "./types";
 
@@ -48,9 +50,6 @@ by Automerge to the backend and to other clients. When the user has only read
 permissions, the Automerge doc handle will be "fake", existing only locally in
 the client. And if the user doesn't even have read permissions, this function
 will yield an unauthorized error!
-
-TODO: Roundtrip the loaded document throught notebook-types to validate it
-and upgrade it to the latest version.
  */
 export async function getLiveDoc<Doc extends Document>(
     api: Api,
@@ -78,6 +77,14 @@ export async function getLiveDoc<Doc extends Document>(
         const init = refDoc.content as unknown as Doc;
         docHandle = localRepo.create(init);
     }
+
+    // XXX: copied from automerge-doc-server/src/server.ts:
+    const docBefore = await docHandle.doc();
+    const docAfter = catlogWasm.migrateDocument(docBefore);
+    const patches = jsonpatch.compare(docBefore as unknown as Doc, docAfter);
+    docHandle.change((doc: unknown) => {
+        jsonpatch.applyPatch(doc, patches);
+    });
 
     const doc = await makeDocHandleReactive(docHandle);
     if (docType !== undefined) {
