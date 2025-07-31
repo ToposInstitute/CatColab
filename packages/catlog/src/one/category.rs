@@ -308,7 +308,7 @@ mod tests {
                 prop_assert_eq!(cat.cod(&obj), obj);
                 prop_assert_eq!(cat.compose(Path::Id(obj)), obj);
                 for len in 1..5 {
-                    prop_assert_eq!(cat.compose(Path::Seq(vec![obj;len].try_into().unwrap())), obj);
+                    prop_assert_eq!(cat.compose(Path::Seq(nonempty::NonEmpty{ head: obj, tail: vec![obj;len-1] })), obj);
                 }
             }
             // These objects do not exist, but confusingly we still have identities on those objects
