@@ -18,7 +18,6 @@ stdTheories.add(
         description: "The empty logic, allowing only informal content",
         isDefault: true,
         group: "Base",
-        help: true,
     },
     (meta) => {
         const thEmpty = new catlog.ThEmpty();
@@ -35,7 +34,6 @@ stdTheories.add(
         name: "Olog",
         description: "Ontology log, a simple conceptual model",
         group: "Knowledge and Data",
-        help: true,
     },
     (meta) => {
         const thCategory = new catlog.ThCategory();
@@ -108,7 +106,6 @@ stdTheories.add(
         name: "Schema",
         description: "Schema for a categorical database",
         group: "Knowledge and Data",
-        help: true,
     },
     (meta) => {
         const thSchema = new catlog.ThSchema();
@@ -221,7 +218,6 @@ stdTheories.add(
         name: "Regulatory network",
         description: "Biochemical species that promote or inhibit each other",
         group: "Biology",
-        help: true,
     },
     (meta) => {
         const thSignedCategory = new catlog.ThSignedCategory();
@@ -303,7 +299,6 @@ stdTheories.add(
         name: "Causal loop diagram",
         description: "Positive and negative causal relationships",
         group: "System Dynamics",
-        help: true,
     },
     (meta) => {
         const thSignedCategory = new catlog.ThSignedCategory();
@@ -385,7 +380,6 @@ stdTheories.add(
         name: "Causal loop diagram with delays",
         description: "Causal relationships: positive or negative, fast or slow",
         group: "System Dynamics",
-        help: true,
     },
     (meta) => {
         const thDelayedSignedCategory = new catlog.ThDelayableSignedCategory();
@@ -494,7 +488,6 @@ stdTheories.add(
         name: "Causal loop diagram with indeterminates",
         description: "Positive, negative, and indeterminate causal relationships",
         group: "System Dynamics",
-        help: true,
     },
     (meta) => {
         const thNullableSignedCategory = new catlog.ThNullableSignedCategory();
@@ -559,7 +552,6 @@ stdTheories.add(
         name: "Discrete exterior calculus (DEC)",
         description: "DEC operators on a geometrical space",
         group: "Applied Mathematics",
-        help: true,
     },
     (meta) => {
         const thCategoryWithScalars = new catlog.ThCategoryWithScalars();
@@ -647,7 +639,6 @@ stdTheories.add(
         name: "Stock and flow",
         description: "Model accumulation (stocks) and change (flows)",
         group: "System Dynamics",
-        help: true,
     },
     (meta) => {
         const thCategoryLinks = new catlog.ThCategoryLinks();
@@ -711,7 +702,6 @@ stdTheories.add(
         name: "Petri net",
         description: "Place/transition networks",
         group: "Systems",
-        help: true,
     },
     (meta) => {
         const thSymMonoidalCategory = new catlog.ThSymMonoidalCategory();
