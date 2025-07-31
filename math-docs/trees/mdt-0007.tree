@@ -7,21 +7,27 @@
 
 \p{
 Let #{\dbl{S}} be a tightly wide and full sub-double category of #{\dbl{F}\mathsf{inSpan}}, the skeletal double category of finite sets.
-Our motivating examples are the following: 
+We must add a certain technical requirement on #{\dbl{S}}, called being a "faithful cartesian club" in \ref{shulman-2016}, which amounts 
+to requiring that the sum of a span-indexed family of spans in #{\dbl{S}} is still in #{\dbl{S}} (see the monad multiplication definition 
+below), and is obviously satisfied in the examples about to be listed. 
+
+To wit, our motivating examples are the following: 
 \ul{
-\li{The double category of identity spans of finite sets #{\dbl{I}} is the minimal example.}
-\li{The double category of companions of functions between finite sets #{\dbl{C}}, i.e. spans of the form #{n=n \to m}}
-\li{The double category of companions of bijections between finite sets #{\dbl{B}}, i.e. spans of the form #{n= n\cong m}}
-\li{The double category of conjoints of functions between finite sets #{\dbl{J}}, i.e. spans of the form #{n\leftarrow m=m}}
-\li{The double category of all spans of finite sets #{\dbl{A}}}
+\li{The double category of identity spans of finite sets is the minimal example.}
+\li{The double category of companions of bijections between finite sets, i.e. spans of the form #{n= n\cong m}}
+\li{The double category of companions of functions between finite sets, i.e. spans of the form #{n=n \to m}}
+\li{The double category of conjoints of functions between finite sets, i.e. spans of the form #{n\leftarrow m=m}}
+\li{The double category of all spans of finite sets (with one or both components injective, surjective, bijective), i.e. spans of the form #{n\leftarrow m\to p}}
 }
+In fact, for any of the five classes #{\mathrm{identity},\mathrm{bijection},\mathrm{injection},\mathrm{surjection},\mathrm{function}}
+we can consider spans with either leg in any of the classes, making for #{25} examples in all.
 }
 
 \p{
 Consider a span #{A\leftarrow X\to B} of sets. We define the #{\S}-suspension 
 of #{X} as a certain span #{\func{List}(A)\leftarrow \S(X)\to \func{List}(B)}. 
-Now #{\S(X)} will be the set
-#{\sum_{(m\leftarrow r\to n)\in\S}\Span(Y,X)}, that is the set of all diagrams of the form
+Specifically, #{\S(X)} will be the set
+#{\sum_{(m\leftarrow r\to n)\in\S}\Span(r,X)}, that is the set of all diagrams of the form
 \quiver{
     % https://q.uiver.app/#q=WzAsNixbMCwwLCJTIl0sWzEsMCwiUyJdLFsyLDAsIlQiXSxbMSwxLCJYIl0sWzAsMSwiQSJdLFsyLDEsIkIiXSxbMSwwLCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxLDIsIlxcc2lnbWEiLDJdLFszLDRdLFszLDVdLFswLDQsImEiXSxbMiw1LCJiIiwyXSxbMSwzLCJ4IiwxXV0=
     \begin{tikzcd}
@@ -36,16 +42,15 @@ Now #{\S(X)} will be the set
         \arrow[from=2-2, to=2-3]
     \end{tikzcd}
 }
-whose first line is in #{\S}. 
+whose first line is in #{\S}. The projections onto #{\List(A),\List(B)} are visible.
 }
 
 \p{
-We now define an endofunctor of \Span, also called #{\S}. In brief, #{\S} sends a set 
-#{X} to the set of all maps to #{X} from a finite total order, and similarly for spans. We now spell this out. }
-\p{On the tight category, #{\S} coincides with #{\func{List}}. On each span, #{\S} operates as defined 
-above, with projections mapping #{(a,x,b)} to #{a,b} respectively. 
-Given a map #{\alpha} of spans as below and an element #{r\in\S(X)}, we define
-#{\S(\alpha)(r)} to be the composite:
+We now use this construction to define an endofunctor of \Span, also called #{\S}. 
+On the tight category, #{\S} coincides with #{\func{List}}. On each span, #{\S} operates as defined 
+above. 
+Given a map #{\alpha} of spans as below and an element #{x\in\S(X)}, we define
+#{\S(\alpha)(x)} to be the composite:
 \quiver{
     % https://q.uiver.app/#q=WzAsNixbMCwxLCJBIl0sWzEsMSwiQiJdLFswLDIsIkEnIl0sWzEsMiwiQiciXSxbMCwwLCJTIl0sWzEsMCwiVCJdLFswLDEsIlgiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMiwzLCJYJyIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFswLDIsImYiLDFdLFsxLDMsImciLDFdLFs0LDUsIlxcc2lnbWFfKiIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFs0LDAsImEiXSxbNSwxLCJiIl0sWzYsNywiXFxhbHBoYSIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxMCw2LCJ4IiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV1d
     \begin{tikzcd}
@@ -83,8 +88,8 @@ This visibly produces a functor on the loose category of \Span.
 }
 
 \p{
-    For laxators, given composable spans #{X,Y} and composable elements #{r\in\S(X),s\in\S(X')} as below, 
-    we define the laxator #{\S_{X,Y}(r,s)} as the composite below:
+    For laxators, given composable spans #{X,Y} and composable elements #{x\in\S(X),y\in\S(Y)} as below, 
+    we define the laxator #{\S_{X,Y}(x,y):r\times_n s\to X\times_B Y} as the composite below:
     % https://q.uiver.app/#q=WzAsOCxbMCwxLCJBIl0sWzEsMSwiQiJdLFsyLDEsIkMiXSxbMCwyLCJBIl0sWzIsMiwiQyJdLFswLDAsIlMiXSxbMSwwLCJUIl0sWzIsMCwiVSJdLFswLDEsIlgiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMSwyLCJZIiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzMsNCwiWFxcdGltZXNfQlkiXSxbMCwzLCIiLDEseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsyLDQsIiIsMSx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzUsMCwiYSIsMV0sWzYsMSwiYiIsMV0sWzcsMiwiYyIsMV0sWzUsNiwiXFxzaWdtYV8qIiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzYsNywiXFx0YXVfKiIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsxNiw4LCJ4IiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzE3LDksInkiLDEseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
     \quiver{\begin{tikzcd}
         m & n & p \\
@@ -150,8 +155,10 @@ This visibly produces a functor on the loose category of \Span.
         \arrow[from=4-2, to=4-1]
         \arrow[from=4-2, to=4-3]
     \end{tikzcd}}
+   The "faithful cartesian club" condition we require on \S is precisely that the flattened span #{\sum \bar a(i)\leftarrow \sum \bar x(k) \to \sum \bar b(j)} lies in \S,
+   which as mentioned above is immediate when each side of \S is determined by lying in the identity, bijection, injective, surjective, or arbitrary functions.
    The naturality of multiplication in cells of \Span is clear; we turn to the other two axioms of naturality of #{\mu}.
-   TODO: You need each side of \S to be a faithful cartesian club, at least approximately, for this to be well-defined.
+
 }
 
 \p{
@@ -284,6 +291,6 @@ This visibly produces a functor on the loose category of \Span.
 }
 
 \p{
-    Since the unit #{\eta} and multiplication #{\mu} are both just tuples of the structure of \List, the monad laws come for free, and we have established
+    Since the unit #{\eta} and multiplication #{\mu} are both just tuples of the unit and multiplication of \List, the monad laws come for free, and we have established
     that \S is a lax double monad on \Span. 
 }

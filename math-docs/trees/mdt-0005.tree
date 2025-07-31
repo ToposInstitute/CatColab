@@ -8,8 +8,8 @@
     If #{w',w} are comparable weaknesses \ref{mdt-0004} and #{(T,\mu,\eta):\dbl{D}\to\dbl{D}} is a #{w}-double monad, then a #{w'}-algebra over #{T} 
     is a #{w'}-double functor #{X:\dbl{1}\to \dbl{D}} equipped with a tight natural transformation #{\xi:T\circ X\to X}
     satisfying the usual algebra laws, i.e. #{\xi\circ (\eta x)=\id_x} and #{\xi\circ (\mu x)=(\xi\circ (t\xi))}. (That is, it is 
-    a #{T}-module carried by #{X} in the 2-category #{\Dbl_{\mathrm{max}(w,w')}}. Note that these are all "strict algebras" in 
-    the sense of the formal theory of monads, i.e. the algebra laws are satisfied on the nose.) By default, we'll assume #{w=w'}.
+    a #{T}-module carried by #{X} in the 2-category #{\Dbl_{\mathrm{max}(w,w')}}.) Note that these are all "strict algebras" in 
+    the sense of the formal theory of monads, i.e. the algebra laws are satisfied on the nose. By default, we'll assume #{w=w'}.
 }
 
 \p{
@@ -45,7 +45,7 @@
 
 \p{
     In particular, when the double monad #{T} is naturally induced by a pullback-preserving monad #{T:\cat{E}\to \cat{E}} on a category #{\cat{E}} with 
-    pullbacks, then #{T_1} is essentially just #{T} again, and an #{\ell}-algebra over #{T} is a category in #{\dbl{Span}(\cat{E})}
+    pullbacks, then #{T_1} is essentially just #{T} again, and an #{\ell}-algebra over #{T} is a category in #{\Span(\cat{E})}
     with #{T}-algebra structures on objects and arrows such that source and target are algebra homomorphisms and the algebra maps 
     comprise a functor #{T(X)\to X}. Thus while an #{s}-algebra over the free monoid monad on \Span is a monoid, an #{\ell}-algebra is a strict monoidal category.
 }
