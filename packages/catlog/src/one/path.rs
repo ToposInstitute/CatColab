@@ -726,6 +726,22 @@ mod tests {
     }
 
     #[test]
+    fn bad_path_eq() {
+        let g = SkelGraph::triangle();
+        let eq = PathEq::new(Path::pair(0, 1), Path::single(3));
+        assert!(eq.validate_in(&g).is_err_and(|e| { e == nonempty![InvalidPathEq::Rhs] }));
+
+        let eq = PathEq::new(Path::pair(0, 1), Path::single(1));
+        assert!(eq.validate_in(&g).is_err_and(|e| { e == nonempty![InvalidPathEq::Src] }));
+
+        let eq = PathEq::new(Path::pair(0, 1), Path::Id(1));
+        assert!(
+            eq.validate_in(&g)
+                .is_err_and(|e| { e == nonempty![InvalidPathEq::Src, InvalidPathEq::Tgt] })
+        );
+    }
+
+    #[test]
     fn path_is_simple() {
         assert!(SkelPath::pair(0, 1).is_simple());
         assert!(!SkelPath::pair(0, 0).is_simple());

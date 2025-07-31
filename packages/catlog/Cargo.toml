@@ -30,5 +30,6 @@ uuid = { version = "=1.11", optional = true }
 wasm-bindgen = { version = "0.2.100", optional = true }
 
 [dev-dependencies]
+proptest = "1.7.0"
 expect-test = "1.5"
 textplots = "0.8.6"

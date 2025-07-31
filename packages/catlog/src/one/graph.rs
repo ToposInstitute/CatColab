@@ -374,6 +374,7 @@ impl SkelGraph {
     #[cfg(test)]
     pub fn path(n: usize) -> Self {
         let mut g: Self = Default::default();
+        assert!(n > 0);
         g.add_vertices(n);
         for (i, j) in std::iter::zip(0..(n - 1), 1..n) {
             g.add_edge(i, j);

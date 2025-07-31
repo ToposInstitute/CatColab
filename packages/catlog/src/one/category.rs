@@ -278,6 +278,8 @@ mod tests {
     use super::*;
     use crate::zero::SkelFinSet;
 
+    use proptest::{prop_assert, prop_assert_eq, proptest};
+
     #[test]
     fn discrete_category() {
         let cat = DiscreteCategory::from(SkelFinSet::from(3));
@@ -287,6 +289,72 @@ mod tests {
         assert_eq!(cat.dom(&1), 1);
         assert_eq!(cat.cod(&1), 1);
         assert_eq!(cat.compose(Path::Seq(nonempty![1, 1, 1])), 1);
+    }
+
+    proptest! {
+        #[test]
+        fn discrete_categories(n in 0usize..5) {
+            let cat = DiscreteCategory::from(SkelFinSet::from(n));
+            for obj in 0..n {
+                prop_assert!(cat.has_ob(&obj));
+                prop_assert!(cat.has_mor(&obj));
+            }
+            for obj in n..2*n+5 {
+                prop_assert!(!cat.has_ob(&obj));
+                prop_assert!(!cat.has_mor(&obj));
+            }
+            for obj in 0..n {
+                prop_assert_eq!(cat.dom(&obj), obj);
+                prop_assert_eq!(cat.cod(&obj), obj);
+                prop_assert_eq!(cat.compose(Path::Id(obj)), obj);
+                for len in 1..5 {
+                    prop_assert_eq!(cat.compose(Path::Seq(vec![obj;len].try_into().unwrap())), obj);
+                }
+            }
+            // These objects do not exist, but confusingly we still have identities on those objects
+            // and we can compose these identities
+            for obj in n..2*n+5 {
+                prop_assert_eq!(cat.dom(&obj), obj);
+                prop_assert_eq!(cat.cod(&obj), obj);
+                prop_assert_eq!(cat.compose(Path::Id(obj)), obj);
+                for len in 1..5 {
+                    prop_assert_eq!(cat.compose(Path::Seq(vec![obj;len].try_into().unwrap())), obj);
+                }
+            }
+        }
+
+        #[test]
+        fn path_free_cat(size in 0usize..6) {
+            let my_graph = if size == 0 {
+                SkelGraph::default()
+            } else {
+                SkelGraph::path(size)
+            };
+            let cat = FreeCategory::from(my_graph);
+
+            for src in 0..size {
+                let mut path = Path::Seq(nonempty![
+                    Path::Id(src)
+                ]);
+                prop_assert_eq!(cat.compose(path.clone()), Path::Id(src));
+                let mut expected_result = nonempty![src];
+                let mut tgt = src+1;
+                while tgt < size {
+                    if tgt == src+1 {
+                        path = Path::Seq(nonempty![
+                            Path::Id(src),
+                            Path::single(src),
+                        ]);
+                    } else {
+                        expected_result.push(tgt-2);
+                        expected_result.push(tgt-1);
+                        path.insert(path.len(),Path::pair(tgt-2,tgt-1));
+                    }
+                    prop_assert_eq!(cat.compose(path.clone()), Path::Seq(expected_result.clone()));
+                    tgt += 2;
+                }
+            }
+        }
     }
 
     #[test]
