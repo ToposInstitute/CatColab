@@ -161,7 +161,7 @@ pub fn water(th: Rc<UstrModalDblTheory>) -> UstrModalDblModel {
         borrow.clone(),
     );
     let container = ustr("container");
-    model.add_ob(container, state_type.clone());
+    model.add_ob(container, aux_type.clone());
     let (comparator, lake_sediment) = (ustr("comparator"), ustr("lake_sediment"));
     model.add_mor(
         comparator,

@@ -5,7 +5,7 @@ mathematical epidemiology.
  */
 
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 use std::hash::Hash;
 
 use itertools::Itertools;
@@ -21,10 +21,10 @@ use tsify::Tsify;
 
 use super::ODEAnalysis;
 use crate::dbl::{
-    model::{DiscreteTabModel, FgDblModel, ModalDblModel, ModalMor, ModalOb, MutDblModel, TabEdge},
+    model::{DiscreteTabModel, FgDblModel, ModalDblModel, ModalOb, MutDblModel, TabEdge},
     theory::{ModalMorType, ModalObType, ModeApp, TabMorType, TabObType},
 };
-use crate::one::FgCategory;
+use crate::one::{FgCategory, FinGraph, HashGraph};
 use crate::simulate::ode::{
     NumericalPolynomialSwitchingSystem, NumericalPolynomialSystem, ODEProblem, PolynomialSystem,
 };
@@ -230,6 +230,68 @@ fn into_numerical_system<Id: Eq + Clone + Hash + Ord>(
 
 // ------------------------------------------------------------------------- //
 
+// trait Evaluable<T> {
+//     type Output;
+//     fn eval(&self) -> Self::Output;
+// }
+
+// pub struct GeqFunction<T>(T, T);
+// pub struct IdentityFunction<T>(T);
+
+// impl<T: PartialOrd> Evaluable<T> for GeqFunction<T> {
+//     type Output = bool;
+
+//     fn eval(&self) -> Self::Output {
+//         self.0 >= self.1
+//     }
+// }
+
+// impl<T> Evaluable<T> for IdentityFunction<T>
+// where
+//     T: Clone,
+// {
+//     type Output = T;
+
+//     fn eval(&self) -> Self::Output {
+//         self.0.clone()
+//     }
+// }
+
+// pub enum EligibleFunctions<Y> {
+//     Geq(Y),
+//     Identity(Y),
+// }
+
+// impl<T> EligibleFunctions<Y> where T: PartialOrd {
+//     pub fn eval(&self, args: Vec<T>) -> Y {
+
+#[derive(Debug)]
+pub enum Output {
+    Bool(bool),
+    Float(f32),
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(
+    feature = "serde-wasm",
+    tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
+)]
+pub enum EligibleFunctions {
+    Geq(),
+    Identity(),
+}
+
+impl EligibleFunctions {
+    pub fn eval(self, args: &Vec<f32>) -> Output {
+        match self {
+            EligibleFunctions::Geq() => Output::Bool(args[0] >= args[1]),
+            EligibleFunctions::Identity() => Output::Float(args[0]),
+        }
+    }
+}
+
 /// Data defining a mass-action ODE problem for a model with function parameters
 #[derive(Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -240,13 +302,194 @@ fn into_numerical_system<Id: Eq + Clone + Hash + Ord>(
 )]
 pub struct AnotherMassActionProblemData<Id>
 where
-    Id: Eq + Hash,
+    Id: Eq + Hash + Clone + Debug,
 {
     /// mass action problem data
     pub mass: MassActionProblemData<Id>,
 
     /// functions associated to T(aux) --> aux
-    pub functions: HashMap<Id, f32>,
+    pub functions: HashMap<Id, EligibleFunctions>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ComputeGraph<Id>
+where
+    Id: Clone + Eq + Hash + Debug,
+{
+    /// compute graph
+    pub graph: HashGraph<Id, String>, // TODO parameterize edge type
+
+    pub obs: Vec<Id>,
+
+    pub funcs: HashMap<Id, Vec<Id>>,
+
+    pub auxes: HashMap<Id, f32>,
+
+    pub borrows: HashMap<Id, Id>,
+
+    // /// in-ports
+
+    // /// out-ports
+    // inp
+    ///
+    pub toposort: Vec<Id>,
+}
+
+impl<Id: Eq + Hash + Clone + Debug> ComputeGraph<Id> {
+    pub fn new() -> Self {
+        Self {
+            graph: HashGraph::<Id, String>::default(),
+            obs: Vec::<Id>::new(),
+            auxes: HashMap::<Id, f32>::new(),
+            funcs: HashMap::<Id, Vec<Id>>::new(), // store inputs
+            borrows: HashMap::<Id, Id>::new(),
+            toposort: vec![],
+        }
+    }
+
+    // TODO need to verify that arrow is an arrow. Otherwise, return an identity function
+    // XXX update this
+    /// This extracts a compute graph associated to an arrow in a model.
+    pub fn complete(model: &ModalDblModel<Id, Ustr>, arrow: Id) -> Self {
+        let mut cg = ComputeGraph::<Id>::new();
+        match model.mor_generator_dom(&arrow.clone()) {
+            ModalOb::Generator(id) => {
+                cg.add_vertex(arrow.clone());
+                cg.add_vertex(id.clone());
+                cg.connect(id, arrow.clone());
+            }
+            ModalOb::List(_, xs) => {
+                cg.add_vertex(arrow.clone());
+                for x in xs {
+                    // TODO `x` may not be Generator
+                    cg.add_vertex(x.clone().unwrap_generator());
+                    cg.connect(x.clone().unwrap_generator(), arrow.clone());
+                }
+            }
+            _ => todo!(),
+        }
+        match model.mor_generator_cod(&arrow) {
+            ModalOb::Generator(id) => {
+                cg.add_vertex(arrow.clone());
+                cg.add_vertex(id.clone());
+                cg.connect(arrow.clone(), id.clone());
+            }
+            ModalOb::List(_, xs) => {
+                cg.add_vertex(arrow.clone());
+                for x in xs {
+                    // TODO `x` may not be Generator
+                    cg.add_vertex(x.clone().unwrap_generator());
+                    cg.connect(arrow.clone(), x.unwrap_generator());
+                }
+            }
+            _ => todo!(),
+        }
+
+        cg.toposort = crate::one::graph_algorithms::toposort(&cg.graph).expect("!");
+        cg
+    }
+
+    pub fn add_vertex(&mut self, v: Id) -> bool {
+        self.graph.add_vertex(v)
+    }
+
+    pub fn add_edge(&mut self, e: String, dom: Id, cod: Id) -> bool {
+        self.graph.add_edge(e, dom, cod)
+    }
+
+    // TODO check that the name exists?
+    /// Connects a src and tgt by an edge whose name is generated automatically.
+    pub fn connect(&mut self, dom: Id, cod: Id) -> bool {
+        self.graph.add_edge(format!("{:?}=>{:?}", dom.clone(), cod.clone()), dom, cod)
+    }
+}
+
+#[derive(Clone)]
+pub struct SwitchingSystem<Id>
+where
+    Id: Eq + Clone + Hash + Debug,
+{
+    pub null_model: PolynomialSystem<Id, Parameter<Id>, u8>,
+    pub subsystems: Vec<(ComputeGraph<Id>, PolynomialSystem<Id, Parameter<Id>, u8>)>,
+    pub ob_index: BTreeMap<Id, usize>,
+}
+
+impl<Id> SwitchingSystem<Id>
+where
+    Id: Hash + Clone + Eq + Ord + Debug,
+{
+    pub fn to_numerical(
+        &self,
+        functions: HashMap<Id, EligibleFunctions>,
+    ) -> NumericalPolynomialSwitchingSystem<Id, u8> {
+        let subsystems: Vec<(ComputeGraph<Id>, _)> = self
+            .subsystems
+            .clone()
+            .into_iter()
+            .map(|(id, poly)| (id, poly.extend_scalars(|p| p.eval(|_| 1.0)).to_numerical()))
+            .collect();
+        // TODO option is used here to avoid implementing Default.
+        let null_model =
+            Some(self.null_model.clone().extend_scalars(|p| p.eval(|_| 1.0)).to_numerical());
+        NumericalPolynomialSwitchingSystem {
+            ob_index: self.ob_index.clone(),
+            functions,
+            null_model,
+            subsystems,
+        }
+    }
+}
+
+/// Convenience struct
+#[derive(Clone, Debug)]
+pub struct PetriNetSystemData<Id>
+where
+    Id: Eq + Clone + Hash + Debug,
+{
+    pub flowneg: HashMap<Id, Id>,
+    pub flowpos: HashMap<Id, Id>,
+    pub outpos_dom: HashSet<Id>,
+    pub outneg_dom: HashSet<Id>,
+    pub mediators: Vec<Id>,
+}
+
+impl<Id> PetriNetSystemData<Id>
+where
+    Id: Hash + Eq + Clone + Debug,
+{
+    fn make(model: &ModalDblModel<Id, Ustr>, pna: &PetriNetMassActionFunctionAnalysis) -> Self {
+        let mut flowneg = HashMap::new();
+        let mut flowpos = HashMap::new();
+        let outpos_dom: HashSet<_> = HashSet::from_iter::<_>(
+            model
+                .mor_generators_with_type(&pna.outpos_mor_type)
+                .map(|p| {
+                    let dom = model.mor_generator_dom(&p).unwrap_generator();
+                    flowpos.insert(dom.clone(), model.mor_generator_cod(&p).unwrap_generator());
+                    dom
+                })
+                .collect::<Vec<_>>(),
+        );
+        let outneg_dom: HashSet<_> = HashSet::from_iter::<_>(
+            model
+                .mor_generators_with_type(&pna.outneg_mor_type)
+                .map(|p| {
+                    let dom = model.mor_generator_dom(&p).unwrap_generator();
+                    flowneg.insert(dom.clone(), model.mor_generator_cod(&p).unwrap_generator());
+                    dom
+                })
+                .collect::<Vec<_>>(),
+        );
+        let mediators: Vec<_> = outpos_dom.intersection(&outneg_dom).cloned().collect();
+
+        Self {
+            flowneg,
+            flowpos,
+            outpos_dom,
+            outneg_dom,
+            mediators,
+        }
+    }
 }
 
 // TODO rename
@@ -257,17 +500,16 @@ pub struct PetriNetMassActionFunctionAnalysis {
     pub state_ob_type: ModalObType<Ustr>,
     /// Object type for auxiliary variables
     pub aux_ob_type: ModalObType<Ustr>,
-    /// Morphism type for ...
+    /// Morphism type for functions between auxiliary variables
     pub fun_mor_type: ModalMorType<Ustr>,
-    ///
+    /// Morphism type for "borrowing," or maps from states to auxiliary variables
     pub borrow_mor_type: ModalMorType<Ustr>,
-    ///
+    /// Morphism type for positively-signed flows
     pub outpos_mor_type: ModalMorType<Ustr>,
-    ///
+    /// Morphism type for negatively-signed flows
     pub outneg_mor_type: ModalMorType<Ustr>,
 }
 
-// TODO
 impl Default for PetriNetMassActionFunctionAnalysis {
     fn default() -> Self {
         Self {
@@ -282,91 +524,86 @@ impl Default for PetriNetMassActionFunctionAnalysis {
 }
 
 impl PetriNetMassActionFunctionAnalysis {
-    fn comps<Id>(&self, model: &ModalDblModel<Id, Ustr>) -> HashMap<Id, Vec<Id>>
-    where
-        Id: Clone + Debug + Hash + Eq + Ord,
-    {
-        let arrows = model.mor_generators_with_type(&self.fun_mor_type);
-        fn search<Id>(
-            mut component: Vec<Id>,
-            input: ModalOb<Id, Ustr>,
-            model: &ModalDblModel<Id, Ustr>,
-            fun_mor_type: &ModalMorType<Ustr>,
-        ) -> Vec<Id>
-        where
-            Id: Clone + Debug + Hash + Eq + Ord,
-        {
-            let mut out = Vec::new();
-            dbg!(model
-                .mor_generators_with_type(fun_mor_type)
-                .find(|arr| model.mor_generator_cod(arr) == input.clone()));
-            if let Some(arrow) = model
-                .mor_generators_with_type(fun_mor_type)
-                .find(|arr| model.mor_generator_cod(arr) == input.clone())
-            {
-                component.push(arrow.clone());
-                for el in component.clone() {
-                    out.push(el)
-                }
-                for input in vec![model.mor_generator_dom(&arrow)].iter() {
-                    dbg!(&input);
-                    search(component.clone(), input.clone(), model, fun_mor_type);
-                }
-            }
-            // TODO return inputs here
-            dbg!(&input, &out);
-            out
-        }
-        let outpos = model.mor_generators_with_type(&self.outpos_mor_type);
-        let outneg = model.mor_generators_with_type(&self.outneg_mor_type);
-        let outpos_dom = outpos.map(|p| model.mor_generator_dom(&p));
-        let mut outneg_dom = outneg.map(|p| model.mor_generator_dom(&p));
-
-        let mediators: Vec<_> = outpos_dom.filter(|el| outneg_dom.contains(el)).collect();
-        let programs: HashMap<_, _> = HashMap::from_iter(mediators.into_iter().map(|m| {
-            (m.clone().unwrap_generator(), search(vec![], m, &model, &self.fun_mor_type))
-        }));
-        programs
-    }
-
-    pub fn build_system<Id: Eq + Clone + Hash + Ord + Debug + std::fmt::Display>(
+    fn build_graph<Id: Clone + Eq + Hash + Debug>(
         &self,
         model: &ModalDblModel<Id, Ustr>,
-        filter_id: Option<Id>,
-    ) -> PolynomialSystem<Id, Parameter<Id>, u8> {
-        let mut flowneg = HashMap::new();
-        let mut flowpos = HashMap::new();
-        let outpos = model.mor_generators_with_type(&self.outpos_mor_type);
-        let outneg = model.mor_generators_with_type(&self.outneg_mor_type);
-        let outpos_dom: HashSet<_> = HashSet::from_iter::<_>(
-            outpos
-                .map(|p| {
-                    let dom = model.mor_generator_dom(&p).unwrap_generator();
-                    flowpos.insert(dom.clone(), model.mor_generator_cod(&p).unwrap_generator());
-                    dom
-                })
-                .collect::<Vec<_>>(),
+    ) -> ComputeGraph<Id> {
+        let mut cg = ComputeGraph::<Id>::new();
+        cg.obs = model.ob_generators_with_type(&self.state_ob_type).collect::<Vec<Id>>();
+        // TODO these should just be auxes entering the graph
+        cg.auxes = HashMap::from_iter(
+            model.ob_generators_with_type(&self.aux_ob_type).map(|aux| (aux, 4.5f32)),
         );
-        let outneg_dom: HashSet<_> = HashSet::from_iter::<_>(
-            outneg
-                .map(|p| {
-                    let dom = model.mor_generator_dom(&p).unwrap_generator();
-                    flowneg.insert(dom.clone(), model.mor_generator_cod(&p).unwrap_generator());
-                    dom
-                })
-                .collect::<Vec<_>>(),
-        );
+        cg.borrows =
+            HashMap::from_iter(model.mor_generators_with_type(&self.borrow_mor_type).map(|f| {
+                (
+                    model.mor_generator_cod(&f.clone()).unwrap_generator(),
+                    model.mor_generator_dom(&f.clone()).unwrap_generator(),
+                )
+            }));
+        let arrows = model.mor_generators_with_type(&self.fun_mor_type).collect::<Vec<_>>();
+        for arrow in arrows {
+            let mut inputs: Vec<Id> = vec![];
+            match model.mor_generator_dom(&arrow) {
+                ModalOb::Generator(id) => {
+                    inputs.push(id.clone());
+                    cg.add_vertex(arrow.clone());
+                    cg.add_vertex(id.clone());
+                    cg.connect(id, arrow.clone());
+                }
+                ModalOb::List(_, xs) => {
+                    cg.add_vertex(arrow.clone());
+                    for x in xs {
+                        inputs.push(x.clone().unwrap_generator());
+                        // TODO `x` may not be Generator
+                        cg.add_vertex(x.clone().unwrap_generator());
+                        cg.connect(x.clone().unwrap_generator(), arrow.clone());
+                    }
+                }
+                _ => todo!(),
+            }
+            cg.funcs.insert(arrow.clone(), inputs);
+            //
+            match model.mor_generator_cod(&arrow) {
+                ModalOb::Generator(id) => {
+                    cg.add_vertex(arrow.clone());
+                    cg.add_vertex(id.clone());
+                    cg.connect(arrow.clone(), id.clone());
+                }
+                ModalOb::List(_, xs) => {
+                    cg.add_vertex(arrow.clone());
+                    for x in xs {
+                        // TODO `x` may not be Generator
+                        cg.add_vertex(x.clone().unwrap_generator());
+                        cg.connect(arrow.clone(), x.unwrap_generator());
+                    }
+                }
+                _ => todo!(),
+            }
+        }
 
-        let mediators: Vec<_> = outpos_dom.intersection(&outneg_dom).cloned().collect();
-        let terms: Vec<(Id, Polynomial<Id, Parameter<Id>, u8>)> = mediators
+        cg.toposort = crate::one::graph_algorithms::toposort(&cg.graph).expect("!");
+        cg
+    }
+
+    pub fn build_system<Id>(
+        &self,
+        model: &ModalDblModel<Id, Ustr>,
+        model_data: PetriNetSystemData<Id>, // TODO rename
+        filter_ids: Vec<Id>,
+    ) -> PolynomialSystem<Id, Parameter<Id>, u8>
+    where
+        Id: Eq + Clone + Hash + Debug + Ord + Display,
+    {
+        // TODO what are these
+        let terms: Vec<(Id, Polynomial<Id, Parameter<Id>, u8>)> = model_data
+            .mediators
             .iter()
-            .filter(|m| match &filter_id {
-                Some(k) => *k != **m,
-                None => true,
-            })
+            // keep the mediator if it is in the list
+            .filter(|m| filter_ids.clone().contains(m))
             .map(|mediator| {
                 let param = Parameter::generator(mediator.clone());
-                let term = Monomial::generator(flowneg[mediator].clone());
+                let term = Monomial::generator(model_data.flowneg[mediator].clone());
                 (mediator.clone(), [(param, term)].into_iter().collect())
             })
             .collect();
@@ -375,9 +612,10 @@ impl PetriNetMassActionFunctionAnalysis {
         for ob in model.ob_generators_with_type(&self.state_ob_type) {
             sys.add_term(ob, Polynomial::zero());
         }
+        // TODO
         for (mediator, term) in terms.iter() {
-            sys.add_term(flowneg[&mediator.clone()].clone(), -term.clone());
-            sys.add_term(flowpos[&mediator].clone(), term.clone());
+            sys.add_term(model_data.flowneg[&mediator.clone()].clone(), -term.clone());
+            sys.add_term(model_data.flowpos[&mediator].clone(), term.clone());
         }
 
         for (var, component) in sys.clone().components.iter() {
@@ -388,67 +626,94 @@ impl PetriNetMassActionFunctionAnalysis {
         sys
     }
 
-    pub fn build_switching_system<Id: Eq + Clone + Hash + Ord + Debug + std::fmt::Display>(
-        &self,
-        model: &ModalDblModel<Id, Ustr>,
-    ) -> BTreeMap<Option<Id>, PolynomialSystem<Id, Parameter<Id>, u8>> {
-        let programs = self.comps(model);
-        if programs.is_empty() {
-            let sys = self.build_system(model, None);
-            BTreeMap::from([(None, sys)])
-        } else {
-            BTreeMap::from_iter(programs.into_iter().map(|(k, v)| {
-                if v.is_empty() {
-                    (None, self.build_system(model, None))
-                } else {
-                    (Some(v[0].clone()), self.build_system(model, Some(k)))
-                }
-            }))
+    pub fn build_switching_system<Id>(&self, model: &ModalDblModel<Id, Ustr>) -> SwitchingSystem<Id>
+    where
+        Id: Clone + Eq + Hash + Debug + Ord + Display,
+    {
+        let modeldata = PetriNetSystemData::make(model.into(), &self);
+
+        // TODO ensure they are connected components
+        let programs = self.build_graph(model);
+
+        // build subsystem with no programs.
+        // This means we exclude all flows are are mediated by
+        // any program
+        let affected_mediators = modeldata
+            .clone()
+            .mediators
+            .into_iter()
+            .filter(|m| programs.graph.vertices().contains(m));
+        let init_model = self.build_system(
+            &model,
+            modeldata.clone(),
+            modeldata
+                .clone()
+                .mediators
+                .into_iter()
+                .filter(|m| !programs.graph.vertices().contains(m))
+                .collect::<Vec<_>>(),
+        );
+        let null_model = self.build_system(&model, modeldata.clone(), vec![]);
+        let mut subsystems = affected_mediators
+            .map(|m| {
+                let sys = self.build_system(&model, modeldata.clone(), vec![m]);
+                (programs.clone(), sys)
+            })
+            .collect::<Vec<(ComputeGraph<Id>, PolynomialSystem<Id, Parameter<Id>, u8>)>>();
+        subsystems.push((ComputeGraph::<Id>::new(), init_model));
+        let ob_index: BTreeMap<Id, usize> =
+            null_model.components.keys().cloned().enumerate().map(|(i, x)| (x, i)).collect();
+        SwitchingSystem {
+            null_model,
+            subsystems,
+            ob_index,
         }
     }
 
-    pub fn build_numerical_system<Id: Eq + Clone + Hash + Ord + Debug + std::fmt::Display>(
-        &self,
-        model: &ModalDblModel<Id, Ustr>,
-        data: AnotherMassActionProblemData<Id>,
-    ) -> ODEAnalysis<Id, NumericalPolynomialSwitchingSystem<Id, u8>> {
-        // XXX we forget some data from `data` here
-        into_numerical_switching_system(self.build_switching_system(model), data.mass)
-    }
+    // pub fn build_numerical_system<Id: Eq + Clone + Hash + Ord + Debug + std::fmt::Display>(
+    //     &self,
+    //     model: &ModalDblModel<Id, Ustr>,
+    //     data: AnotherMassActionProblemData<Id>,
+    // ) -> ODEAnalysis<Id, NumericalPolynomialSwitchingSystem<Id, u8>> {
+    //     // XXX we forget some data from `data` here
+    //     into_numerical_switching_system(self.build_switching_system(model), data.mass)
+    // }
 }
 
-fn into_numerical_switching_system<Id: Eq + Clone + Hash + Ord>(
-    switching_system: BTreeMap<Option<Id>, PolynomialSystem<Id, Parameter<Id>, u8>>,
-    data: MassActionProblemData<Id>,
-) -> ODEAnalysis<Id, NumericalPolynomialSwitchingSystem<Id, u8>> {
-    let subsystems = BTreeMap::from_iter(switching_system.into_iter().map(|(id, sys)| {
-        let ob_index: BTreeMap<_, _> =
-            sys.components.keys().cloned().enumerate().map(|(i, x)| (x, i)).collect();
-        let n = ob_index.len();
+// fn into_numerical_switching_system<Id: Eq + Clone + Hash + Ord + Debug>(
+//     system: SwitchingSystem<Id>,
+//     data: MassActionProblemData<Id>,
+// ) -> ODEAnalysis<Id, NumericalPolynomialSwitchingSystem<Id, u8>> {
+//     //
+//     let subsystems = system.subsystems.into_iter().map(|(graph, sys)| {
+//         let ob_index: BTreeMap<_, _> =
+//             sys.components.keys().cloned().enumerate().map(|(i, x)| (x, i)).collect();
+//         let n = ob_index.len();
 
-        let initial_values = ob_index
-            .keys()
-            .map(|ob| data.initial_values.get(ob).copied().unwrap_or_default());
-        let x0 = DVector::from_iterator(n, initial_values);
+//         let initial_values = ob_index
+//             .keys()
+//             .map(|ob| data.initial_values.get(ob).copied().unwrap_or_default());
+//         let x0 = DVector::from_iterator(n, initial_values);
 
-        let sys = sys
-            .extend_scalars(|poly| {
-                poly.eval(|flow| data.rates.get(flow).copied().unwrap_or_default())
-            })
-            .to_numerical();
-        (id, sys)
-    }));
-    let sys = NumericalPolynomialSwitchingSystem { subsystems };
+//         let sys = sys
+//             .extend_scalars(|poly| {
+//                 poly.eval(|flow| data.rates.get(flow).copied().unwrap_or_default())
+//             })
+//             .to_numerical();
+//         (graph, sys)
+//     });
+//     let sys = NumericalPolynomialSwitchingSystem { subsystems: vec![] };
 
-    let ob_index = BTreeMap::new();
-    let x0 = DVector::default();
-    // ODE Problem expects polynomial
-    let problem = ODEProblem::new(sys, x0).end_time(data.duration);
-    ODEAnalysis {
-        problem,
-        variable_index: ob_index,
-    }
-}
+//     // TODO
+//     let variable_index = BTreeMap::new();
+//     let x0 = DVector::default();
+//     // ODE Problem expects polynomial
+//     let problem = ODEProblem::new(sys, x0).end_time(data.duration);
+//     ODEAnalysis {
+//         problem,
+//         variable_index,
+//     }
+// }
 
 #[cfg(test)]
 mod tests {
@@ -485,6 +750,15 @@ mod tests {
 
     #[test]
     fn water_bath() {
+        let th = Rc::new(th_modal_state_aux());
+        let model = water(th);
+        let sys = PetriNetMassActionFunctionAnalysis::default().build_switching_system(&model);
+        // dbg!(&sys);
+        assert!(true);
+    }
+
+    #[test]
+    fn graph() {
         let th = Rc::new(th_modal_state_aux());
         let model = water(th);
         let sys = PetriNetMassActionFunctionAnalysis::default().build_switching_system(&model);
