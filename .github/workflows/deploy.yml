@@ -19,7 +19,7 @@ jobs:
     name: Build developer docs
     runs-on: ubuntu-latest
     steps:
-      - name: Repository Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup pnpm
@@ -33,6 +33,7 @@ jobs:
 
       - name: Build developer docs
         run: |
+          pnpm install
           mv CONTRIBUTING.md dev-docs/README.md
           pnpm typedoc --options ./dev-docs/typedoc.json
 
@@ -61,17 +62,17 @@ jobs:
       - name: Install Rust toolchain from file
         uses: actions-rust-lang/setup-rust-toolchain@v1
 
-      - name: Build for Prod
-        if: github.event_name == 'release'
-        run: |
-          pnpm install
-          pnpm --filter ./packages/frontend run build
-
       - name: Build for Staging
         if: github.event_name == 'push' || github.event_name == 'pull_request'
         run: |
           pnpm install
           pnpm --filter ./packages/frontend run build --mode staging
+
+      - name: Build for Production
+        if: github.event_name == 'release'
+        run: |
+          pnpm install
+          pnpm --filter ./packages/frontend run build
 
       - name: Upload
         uses: actions/upload-artifact@v4
@@ -79,11 +80,11 @@ jobs:
           name: app
           path: packages/frontend/dist
 
-      - name: Build Frontend Docs
+      - name: Build frontend docs
         run: |
           pnpm --filter ./packages/frontend run doc
 
-      - name: Upload
+      - name: Upload frontend docs
         uses: actions/upload-artifact@v4
         with:
           name: frontend_docs
@@ -93,17 +94,17 @@ jobs:
     name: Build Rust docs
     runs-on: ubuntu-latest
     steps:
-      - name: Repository Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Install Rust toolchain from file
         uses: actions-rust-lang/setup-rust-toolchain@v1
 
-      - name: Build
+      - name: Build Rust docs
         run: |
           cargo doc --all-features --no-deps
 
-      - name: Upload rust docs
+      - name: Upload Rust docs
         uses: actions/upload-artifact@v4
         with:
           name: rust_docs
@@ -130,19 +131,19 @@ jobs:
           tlmgr install quiver
           tlmgr install spath3
 
-      - name: Build
+      - name: Build mathematical docs
         run: |
           cd math-docs
           ./forester build
 
-      - name: Upload
+      - name: Upload mathematical docs
         uses: actions/upload-artifact@v4
         with:
           name: math-docs
           path: math-docs/output
 
   deploy:
-    name: Deploy to netlify
+    name: Deploy to Netlify
     runs-on: ubuntu-latest
     needs: [build_dev_docs, build_frontend, build_rust_docs, build_math-docs]
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == 'ToposInstitute/CatColab'
@@ -167,8 +168,9 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v4
 
-      - name: Consolidate for Staging
+      - name: Consolidate and deploy to Staging
         if: github.event_name == 'push' || github.event_name == 'pull_request'
+        id: netlify_deploy
         run: |
           mv app site/
           mv dev-docs site/dev
@@ -178,36 +180,27 @@ jobs:
           echo '/dev/rust /dev/rust/catlog' >> site/_redirects
           echo '/math /math/index.xml' >> site/_redirects
           echo '/* /index.html 200' >> site/_redirects
-
-      - name: Deploy to Staging
-        if: github.event_name == 'push' || github.event_name == 'pull_request'
-        id: netlify_deploy
-        run: |
           cd .netlify-env
           prod_flag=""
           if [ "$BRANCH_NAME" = "main" ]; then prod_flag="--prod"; fi
           npx netlify deploy --dir ../site --site ${{ secrets.NETLIFY_SITE_ID }} --auth ${{ secrets.NETLIFY_API_TOKEN }} $prod_flag --json > ../deploy_output.json
 
-      - name: Consolidate for Prod
-        if: github.event_name == 'push' || github.event_name == 'pull_request'
+      - name: Consolidate and deploy to Production
+        if: github.event_name == 'release'
         run: |
           mv app site/
           echo '/* /index.html 200' >> site/_redirects
-
-      - name: Deploy to Prod
-        if: github.event_name == 'release'
-        run: |
           cd .netlify-env
           npx netlify deploy --dir ../site --site ${{ secrets.NETLIFY_PROD_SITE_ID }} --auth ${{ secrets.NETLIFY_API_TOKEN }} --prod
 
-      - name: Generate URL Preview
+      - name: Generate URL preview
         id: url_preview
         if: env.BRANCH_NAME != 'main' && (github.event_name == 'push' || github.event_name == 'pull_request')
         run: |
           NETLIFY_PREVIEW_URL=$(jq -r '.deploy_url' deploy_output.json)
           echo "NETLIFY_PREVIEW_URL=$NETLIFY_PREVIEW_URL" >> "$GITHUB_OUTPUT"
 
-      - name: Comment URL Preview on PR
+      - name: Comment URL preview on PR
         uses: mshick/add-pr-comment@v2
         if: env.BRANCH_NAME != 'main' && (github.event_name == 'push' || github.event_name == 'pull_request')
         with:
