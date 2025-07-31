@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-VERSION=4.3.1
+VERSION=5.0-6e68237
 
 OS_NAME=$(uname)
 
@@ -22,7 +22,7 @@ TARFILE="forester-$SPEC.tar.gz"
 FORESTER_URL="http://forester-builds.s3-website.us-east-2.amazonaws.com/$TARFILE"
 
 FORESTER_DIR="$HOME/.forester/$VERSION"
-FORESTER="$FORESTER_DIR/forester"
+FORESTER="$FORESTER_DIR/bin/forester"
 
 if [[ ! -f "$FORESTER" ]]; then
   mkdir -p "$FORESTER_DIR"
@@ -31,13 +31,18 @@ if [[ ! -f "$FORESTER" ]]; then
   cp checksums.txt $TMP
   cd $TMP
   curl -O $FORESTER_URL
-  sha256sum -c checksums.txt --ignore-missing
+  which shasum
   if [[ $? -ne 0 ]]; then
-    print "invalid checksum"
-    exit 1
+    echo "not verifying checksum; if you would like to verify checksum (only for the paranoid), install shasum"
+  else
+    shasum -a 256 -c checksums.txt --ignore-missing
+    if [[ $? -ne 0 ]]; then
+      echo "invalid checksum"
+      exit 1
+    fi
   fi
   tar -xf $TARFILE
-  mv forester "$FORESTER_DIR"
+  mv built/* "$FORESTER_DIR"
   cd $PREV
   rm -rf $TMP
 fi
