@@ -73,10 +73,7 @@ export function TheoryHelpButton(props: {
     );
 
     return (
-        <IconButton
-            onClick={() => navigate(`/help/logics/${meta().id}`)}
-            tooltip={tooltip(meta())}
-        >
+        <IconButton onClick={() => navigate(`/help/logics/${meta().id}`)} tooltip={tooltip(meta())}>
             <CircleHelp />
         </IconButton>
     );
