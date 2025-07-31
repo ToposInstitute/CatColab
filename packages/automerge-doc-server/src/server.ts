@@ -134,10 +134,12 @@ export class AutomergeServer implements SocketIOHandlers {
         // XXX: frontend/src/api/document.ts needs to be kept up to date with this
         const docBefore = await handle.doc();
         const docAfter = notbookTypes.migrateDocument(docBefore);
-        const patches = jsonpatch.compare(docBefore as any, docAfter);
-        handle.change((doc: any) => {
-            jsonpatch.applyPatch(doc, patches);
-        });
+        if ((docBefore as any).version !== docAfter.version) {
+            const patches = jsonpatch.compare(docBefore as any, docAfter);
+            handle.change((doc: any) => {
+                jsonpatch.applyPatch(doc, patches);
+            });
+        }
 
         this.docMap.set(refId, handle);
 
