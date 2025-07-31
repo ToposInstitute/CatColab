@@ -1,6 +1,6 @@
 //! Algorithms on graphs.
 
-use std::collections::{HashSet, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::hash::Hash;
 
 use super::graph::*;
@@ -168,6 +168,136 @@ where
     result
 }
 
+fn out_neighbors<G>(graph: &G, v: &G::V) -> impl Iterator<Item = G::V>
+where
+    G: FinGraph,
+    G::V: Hash,
+{
+    graph.out_edges(v).map(|e| graph.tgt(&e))
+}
+
+fn in_neighbors<G>(graph: &G, v: &G::V) -> impl Iterator<Item = G::V>
+where
+    G: FinGraph,
+    G::V: Hash,
+{
+    graph.in_edges(v).map(|e| graph.src(&e))
+}
+
+#[derive(Clone, Debug)]
+struct VisitMap {
+    visited: Vec<bool>,
+}
+
+impl VisitMap {
+    fn visit(&mut self, idx: usize) -> bool {
+        let previous = self.visited[idx];
+        self.visited[idx] = true;
+        !previous
+    }
+
+    fn is_visited(&self, idx: usize) -> bool {
+        self.visited[idx]
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Dfs<G>
+where
+    G: FinGraph,
+    G::V: Hash,
+{
+    //
+    pub stack: Vec<G::V>,
+    //
+    pub discovered: VisitMap,
+}
+
+// TODO
+// 1. replace String with Cycle error
+/** Computes a topological sorting for a given graph.
+
+This algorithm was borrowed from `petgraph`.
+ */
+pub fn toposort<G>(graph: &G) -> Result<Vec<G::V>, String>
+where
+    G: FinGraph,
+    G::V: Hash + std::fmt::Debug,
+{
+    // XXX dont clone
+    let n = graph.vertices().collect::<Vec<_>>().len();
+    let mut discovered = VisitMap {
+        visited: vec![false; n.clone()],
+    };
+    let mut finished = VisitMap {
+        visited: vec![false; n.clone()],
+    };
+    let mut finish_stack: Vec<G::V> = Vec::new();
+    let mut stack = Vec::new();
+
+    // we shouldn't need to do this
+    let gmap: HashMap<_, _> = HashMap::from_iter(graph.vertices().enumerate().map(|(k, v)| (v, k)));
+
+    for (idx, v) in graph.vertices().enumerate() {
+        if discovered.is_visited(idx) {
+            continue;
+        }
+        stack.push(v);
+        while let Some(nx) = stack.clone().last() {
+            if discovered.visit(gmap[&nx]) {
+                for succ in out_neighbors(graph, &nx) {
+                    if succ == *nx {
+                        return Err("self cycle".to_owned());
+                    }
+                    if !discovered.is_visited(gmap[&succ]) {
+                        stack.push(succ);
+                    }
+                }
+            } else {
+                stack.pop();
+                if finished.visit(gmap[&nx]) {
+                    finish_stack.push(nx.clone());
+                }
+            }
+        }
+    }
+    finish_stack.reverse();
+
+    // dfs.reset(g);
+    let mut discovered = VisitMap {
+        visited: vec![false; n.clone()],
+    };
+    for i in &finish_stack {
+        // dfs.move_to(i);
+        stack.clear();
+        stack.push(i.clone());
+        //
+        let mut cycle = false;
+        while let Some(j) = {
+            let mut out = None;
+            while let Some(node) = stack.pop() {
+                if discovered.visit(gmap[&node]) {
+                    for succ in in_neighbors(graph, &node) {
+                        if !discovered.is_visited(gmap[&succ]) {
+                            stack.push(succ);
+                        }
+                    }
+                    out = Some(node);
+                    break;
+                }
+            }
+            out
+        } {
+            if cycle {
+                return Err(format!("cycle detected involving node {:#?}", j).to_owned());
+            }
+            cycle = true;
+        }
+    }
+
+    Ok(finish_stack)
+}
+
 #[cfg(test)]
 mod tests {
     use super::GraphElem::*;
@@ -230,5 +360,47 @@ mod tests {
 
         let g = SkelGraph::cycle(1);
         assert_eq!(spec_order_all(&g), vec![Vertex(0), Edge(0)]);
+    }
+
+    #[test]
+    fn toposorting() {
+        let mut g = SkelGraph::path(5);
+        assert_eq!(toposort(&g), Ok(vec![0, 1, 2, 3, 4]));
+
+        let mut g = SkelGraph::path(3);
+        g.add_vertices(1);
+        let _ = g.add_edge(2, 3);
+        let _ = g.add_edge(3, 0);
+        assert_eq!(toposort(&g), Err("cycle detected involving node 3".to_owned()));
+
+        let g = SkelGraph::triangle();
+        assert_eq!(toposort(&g), Ok(vec![0, 1, 2]));
+
+        let mut g = SkelGraph::path(4);
+        g.add_vertices(2);
+        let _ = g.add_edge(1, 4);
+        let _ = g.add_edge(4, 3);
+        let _ = g.add_edge(5, 2);
+        assert_eq!(toposort(&g), Ok(vec![5, 0, 1, 2, 4, 3]));
+
+        let mut g: HashGraph<u8, &str> = Default::default();
+        g.add_vertices(vec![0, 1, 2, 3, 4, 5]);
+        g.add_edge("0-1", 0, 1);
+        g.add_edge("1-2", 1, 2);
+        g.add_edge("2-3", 2, 3);
+        g.add_edge("1-4", 1, 4);
+        g.add_edge("4-3", 4, 3);
+        g.add_edge("5-2", 5, 2);
+        // TODO non-deterministic
+        // assert_eq!(toposort(&g), Ok(vec![5, 0, 1, 2, 4, 3]));
+    }
+
+    #[test]
+    #[test]
+    fn neighbors() {
+        let g = SkelGraph::triangle();
+        let out_neighbors = &g.out_edges(&1).map(|e| g.tgt(&e)).collect::<Vec<_>>();
+        // dbg!(&out_neighbors);
+        assert!(true);
     }
 }

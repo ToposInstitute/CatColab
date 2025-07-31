@@ -2,13 +2,15 @@
 
 use std::cmp::{Eq, Ord};
 use std::collections::{BTreeMap, HashMap};
-use std::fmt::Display;
+use std::fmt::{Debug, Display};
 use std::hash::Hash;
 use std::ops::Add;
 
 use derivative::Derivative;
 use nalgebra::DVector;
 use num_traits::{One, Pow, Zero};
+
+use crate::stdlib::analyses::ode::ComputeGraph;
 
 #[cfg(test)]
 use super::ODEProblem;
@@ -151,32 +153,49 @@ where
  */
 #[derive(Clone, Derivative)]
 #[derivative(Default(bound = ""))]
-pub struct NumericalPolynomialSwitchingSystem<Id, Exp> {
+pub struct NumericalPolynomialSwitchingSystem<Id: Hash + Clone + Eq + Debug, Exp> {
     /// Components of a switching system.
-    pub subsystems: BTreeMap<Option<Id>, NumericalPolynomialSystem<Exp>>,
+    pub subsystems: Vec<(ComputeGraph<Id>, NumericalPolynomialSystem<Exp>)>,
 }
 
-impl<Id: Ord, Exp> NumericalPolynomialSwitchingSystem<Id, Exp> {
+impl<Id: Hash + Clone + Eq + Debug, Exp> NumericalPolynomialSwitchingSystem<Id, Exp> {
     // TODO
     fn get_current(&self, x: DVector<f32>) -> &NumericalPolynomialSystem<Exp> {
-        &self.subsystems[&None]
+        let (_, sys) = &self.subsystems[0];
+        sys
     }
 }
 
-impl<Exp> From<NumericalPolynomialSystem<Exp>>
-    for NumericalPolynomialSwitchingSystem<Option<bool>, Exp>
+impl<Id: Hash + Clone + Eq + Debug, Exp> From<NumericalPolynomialSystem<Exp>>
+    for NumericalPolynomialSwitchingSystem<Id, Exp>
 {
-    fn from(p: NumericalPolynomialSystem<Exp>) -> Self {
-        let subsystems = BTreeMap::from([(None, p)]);
+    fn from(nps: NumericalPolynomialSystem<Exp>) -> Self {
+        let subsystems = vec![(ComputeGraph::<Id>::new(), nps)];
         NumericalPolynomialSwitchingSystem { subsystems }
     }
 }
+
+// impl<Id, Var, Exp> From<Vec<(ComputeGraph<Id>, PolynomialSystem<Var, f32, Exp>)>>
+//     for NumericalPolynomialSwitchingSystem<Id, Exp>
+// where
+//     Var: Ord,
+//     Exp: Ord,
+//     Id: Hash + Clone + Eq + Debug,
+// {
+//     fn from(subsystems: Vec<(ComputeGraph<Id>, PolynomialSystem<Var, Coef, Exp>)>) -> Self {
+//         let subsystems = subsystems
+//             .into_iter()
+//             .map(|(id, poly)| (id, poly.to_numerical()))
+//             .collect::<Vec<_>>();
+//         NumericalPolynomialSwitchingSystem { subsystems }
+//     }
+// }
 
 impl<Id, Exp> ODESystem for NumericalPolynomialSwitchingSystem<Id, Exp>
 where
     Exp: Clone + Ord,
     f32: Pow<Exp, Output = f32>,
-    Id: Eq + Hash + Ord,
+    Id: Eq + Hash + Ord + Clone + Debug,
 {
     fn vector_field(&self, dx: &mut DVector<f32>, x: &DVector<f32>, _t: f32) {
         let subsystem = self.get_current(x.clone());
@@ -251,6 +270,7 @@ mod tests {
         expected.assert_eq(&textplot_ode_result(&problem, &result));
     }
 
+    // XXX do we need this test
     #[test]
     fn water_sim() {
         let param = |c: char| Parameter::<_>::generator(c);
@@ -273,8 +293,56 @@ mod tests {
         let sys = sys.extend_scalars(|p| p.eval(|_| 1.0));
 
         let initial = DVector::from_column_slice(&[1.0, 0.0, 4.0]);
-        let sys: NumericalPolynomialSwitchingSystem<_, _> =
+        let sys: NumericalPolynomialSwitchingSystem<ustr::Ustr, _> =
             NumericalPolynomialSwitchingSystem::from(sys.to_numerical());
+        let problem = ODEProblem::new(sys, initial).end_time(5.0);
+        let result = problem.solve_rk4(0.1).unwrap();
+        let expected = expect![[r#"
+            ⡁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⣀⠤⠤⠤⠒⠒⠒⠒⠒⠉⠉⠉⠉⠁ 4.9
+            ⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⠤⠒⠒⠉⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠂⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⠤⠒⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⡁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠤⠊⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⢇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡠⠒⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠚⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡠⠊⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⡁⢣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠎⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠄⠘⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡔⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠂⠀⢣⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠎⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⡁⠀⠘⡄⠀⢀⠤⠒⠤⡀⠀⢠⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠄⠀⠀⢣⡔⠁⠀⠀⠀⠈⢦⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠂⠀⠀⡜⡄⠀⠀⠀⠀⢠⠃⠑⢄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⡁⠀⡸⠀⢣⠀⠀⠀⢠⠃⠀⠀⠀⠣⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠄⢠⠃⠀⠘⡄⠀⢠⠃⠀⠀⠀⠀⠀⠈⠢⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⢂⠇⠀⠀⠀⠱⣠⠃⠀⠀⠀⠀⠀⠀⠀⠀⠈⠢⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⡝⠀⠀⠀⠀⢠⢣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠢⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠅⠀⠀⠀⢠⠃⠀⢣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠑⠤⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠂⠀⠀⢠⠃⠀⠀⠀⠣⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠒⠤⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⡁⠀⡠⠃⠀⠀⠀⠀⠀⠈⠒⠤⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠒⠒⠤⠤⣀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⢄⠔⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠒⠒⠤⠤⠤⠤⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣉⣉⣒⣒⣒⣒⣤⣤⣤⣤⠤⣀⣀⣀⣀⡀
+            ⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠁⠈⠀⠉⠉⠉⠉⠉⠁ 0.0
+            0.0                                            5.0
+        "#]];
+        expected.assert_eq(&textplot_ode_result(&problem, &result));
+    }
+
+    #[test]
+    fn water_simulation() {
+        let th = std::rc::Rc::new(crate::stdlib::th_modal_state_aux());
+        let model = crate::stdlib::water(th);
+        let sys = crate::stdlib::analyses::ode::PetriNetMassActionFunctionAnalysis::default()
+            .build_switching_system(&model);
+
+        // let sys = sys.extend_scalars(|p| p.eval(|_| 1.0));
+
+        let subsystems = sys
+            .into_iter()
+            .map(|(id, poly)| (id, poly.extend_scalars(|p| p.eval(|_| 1.0)).to_numerical()))
+            .collect::<Vec<_>>();
+        let sys: NumericalPolynomialSwitchingSystem<_, _> =
+            NumericalPolynomialSwitchingSystem { subsystems };
+        // let sys: NumericalPolynomialSwitchingSystem<_, _> =
+        // NumericalPolynomialSwitchingSystem::from(sys);
+
+        let initial = DVector::from_column_slice(&[1.0, 2.0, 4.0]);
         let problem = ODEProblem::new(sys, initial).end_time(5.0);
         let result = problem.solve_rk4(0.1).unwrap();
         let expected = expect![[r#"
