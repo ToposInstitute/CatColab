@@ -7,7 +7,8 @@
     "scripts": {
         "staging": "vite --mode staging",
         "dev": "vite --host",
-        "build": "wasm-pack build ../catlog-wasm && tsc -b && vite build --sourcemap true",
+        "build:wasm": "npm --prefix ../catlog-wasm run build:browser",
+        "build": "npm run build:wasm && tsc -b && vite build --sourcemap true",
         "compile": "tcm -p 'src/**/*.module.css' . && tsc -b",
         "preview": "vite preview",
         "format": "biome format --write",
@@ -42,7 +43,7 @@
         "@solidjs/router": "^0.15.3",
         "@viz-js/viz": "^3.15.0",
         "catcolab-api": "link:../backend/pkg",
-        "catlog-wasm": "link:../catlog-wasm/pkg",
+        "catlog-wasm": "link:../catlog-wasm/dist/pkg-browser",
         "echarts": "^5.5.1",
         "echarts-solid": "^0.2.0",
         "fast-equals": "^5.2.2",

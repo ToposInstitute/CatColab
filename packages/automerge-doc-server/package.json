@@ -4,6 +4,7 @@
     "type": "module",
     "main": "dist/main.js",
     "scripts": {
+        "build:wasm": "npm --prefix ../notebook-types run build:node",
         "main": "tsx src/main.ts",
         "format": "biome format --write",
         "lint": "biome lint --write && biome check --write"
@@ -13,8 +14,10 @@
     "dependencies": {
         "@automerge/automerge-repo": "^1.2.1",
         "@automerge/automerge-repo-network-websocket": "^1.2.1",
+        "notebook-types": "link:../notebook-types/dist/pkg-node",
         "dotenv": "^16.5.0",
         "express": "^4.19.2",
+        "fast-json-patch": "^3.1.1",
         "pg": "^8.16.0",
         "socket.io-client": "^4.8.0",
         "ws": "^8.18.0"

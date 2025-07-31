@@ -1,14 +1,23 @@
 [workspace]
 resolver = "2"
 
-members = [
-  "packages/migrator",
-  "packages/backend",
-  "packages/catlog",
-  "packages/catlog-wasm",
-  "packages/migrator",
-  "packages/notebook-types",
+# Note that we define member crates with a wildcard here and NOT with explicit paths because the
+# flake.nix is written in a way such that top-level members are built as different derivations which
+# avoid being rebuilt if the other package's sources change.
+members = ["packages/*"]
+
+exclude = [
+  "packages/algjulia-interop",
+  "packages/automerge-doc-server",
+  "packages/frontend",
 ]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+
+[workspace.metadata.crane]
+name = "my-workspace"
 
 [profile.release]
 # Tell `rustc` to optimize for small code size.
