@@ -130,6 +130,8 @@ export class AutomergeServer implements SocketIOHandlers {
         // is the proxy object) with the output of the migrations (which is a plain JSON object) and apply the
         // diff to the original object. The application of the diff happens entirely is JS land, so the changes
         // are captured by Automerge.
+        //
+        // XXX: frontend/src/api/document.ts needs to be kept up to date with this
         const docBefore = await handle.doc();
         const docAfter = notbookTypes.migrateDocument(docBefore);
         const patches = jsonpatch.compare(docBefore as any, docAfter);
