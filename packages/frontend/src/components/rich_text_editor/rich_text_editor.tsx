@@ -197,8 +197,8 @@ export const RichTextEditor = (
         setMarkStates(activeMarks(view.state, schema));
 
         setMenuControls({
-            onBoldClicked: () => toggleMark(schema.marks.strong)(view.state, view.dispatch),
-            onItalicClicked: () => toggleMark(schema.marks.em)(view.state, view.dispatch),
+            onBoldClicked: () => toggleMark(schema.marks.strong!)(view.state, view.dispatch),
+            onItalicClicked: () => toggleMark(schema.marks.em!)(view.state, view.dispatch),
             // TODO: A "good" notion-style link editor should probably use an inline group node, which
             // currently doesn't work: https://github.com/automerge/automerge-prosemirror/issues/30
             onLinkClicked: null,
@@ -210,10 +210,10 @@ export const RichTextEditor = (
             onHeadingClicked: (level: number) => {
                 if (level === 0) {
                     // paragraph
-                    setBlockType(schema.nodes.paragraph)(view.state, view.dispatch);
+                    setBlockType(schema.nodes.paragraph!)(view.state, view.dispatch);
                 } else {
                     // heading
-                    setBlockType(schema.nodes.heading, { level })(view.state, view.dispatch);
+                    setBlockType(schema.nodes.heading!, { level })(view.state, view.dispatch);
                 }
             },
             onMathClicked: () => insertMathDisplayCmd(view.state, view.dispatch),
@@ -239,8 +239,8 @@ export const RichTextEditor = (
 };
 
 function activeMarks(state: EditorState, schema: CustomSchema): MarkStates {
-    const isBoldActive = isMarkActive(state, schema.marks.strong);
-    const isEmActive = isMarkActive(state, schema.marks.em);
+    const isBoldActive = isMarkActive(state, schema.marks.strong!);
+    const isEmActive = isMarkActive(state, schema.marks.em!);
 
     return { isBoldActive, isEmActive };
 }
@@ -249,9 +249,9 @@ function richTextEditorKeymap(schema: CustomSchema, props: RichTextEditorOptions
     const bindings: { [key: string]: Command } = {};
 
     bindings["Tab"] = increaseListIndet;
-    bindings["Enter"] = splitListItem(schema.nodes.list_item);
-    bindings["Mod-b"] = toggleMark(schema.marks.strong);
-    bindings["Mod-i"] = toggleMark(schema.marks.em);
+    bindings["Enter"] = splitListItem(schema.nodes.list_item!);
+    bindings["Mod-b"] = toggleMark(schema.marks.strong!);
+    bindings["Mod-i"] = toggleMark(schema.marks.em!);
     bindings["Mod-m"] = insertMathDisplayCmd;
     bindings["Backspace"] = chainCommands(
         deleteSelection,
