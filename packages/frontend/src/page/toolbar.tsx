@@ -1,9 +1,8 @@
 import { A, useNavigate } from "@solidjs/router";
-import { type JSX, createMemo, useContext } from "solid-js";
-import invariant from "tiny-invariant";
+import type { JSX } from "solid-js";
 
 import { IconButton } from "../components";
-import { TheoryLibraryContext, type TheoryMeta } from "../stdlib";
+import type { TheoryMeta } from "../stdlib";
 import { DefaultAppMenu } from "./menubar";
 
 import CircleHelp from "lucide-solid/icons/circle-help";
@@ -55,13 +54,6 @@ export function TheoryHelpButton(props: {
 }) {
     const navigate = useNavigate();
 
-    const theories = useContext(TheoryLibraryContext);
-    invariant(theories);
-
-    const meta = createMemo(() => {
-        return theories.get(props.meta.id);
-    });
-
     const tooltip = (meta: TheoryMeta) => (
         <>
             <p>
@@ -73,7 +65,10 @@ export function TheoryHelpButton(props: {
     );
 
     return (
-        <IconButton onClick={() => navigate(`/help/logics/${meta().id}`)} tooltip={tooltip(meta())}>
+        <IconButton
+            onClick={() => navigate(`/help/logics/${props.meta.id}`)}
+            tooltip={tooltip(props.meta)}
+        >
             <CircleHelp />
         </IconButton>
     );

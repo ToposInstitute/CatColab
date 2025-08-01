@@ -1,4 +1,4 @@
-import { type Accessor, createMemo } from "solid-js";
+import { type Accessor, createMemo, createResource } from "solid-js";
 import invariant from "tiny-invariant";
 
 import {
@@ -52,7 +52,7 @@ export type LiveModelDocument = {
     morphismIndex: Accessor<IndexedMap<Uuid, string>>;
 
     /** A memo of the double theory that the model is of. */
-    theory: Accessor<Theory>;
+    theory: Accessor<Theory | undefined>;
 
     /** A memo of the model constructed and validated in the core. */
     validatedModel: Accessor<ValidatedModel | undefined>;
@@ -102,13 +102,19 @@ function enlivenModelDocument(
         return indexMap(map);
     }, indexMap(new Map()));
 
-    const theory = createMemo<Theory>(() => theories.get(doc.theory));
+    const [theory] = createResource(
+        () => doc.theory,
+        (theoryId) => theories.get(theoryId),
+    );
 
     const validatedModel = createMemo<ValidatedModel | undefined>(
         () => {
-            const model = elaborateModel(doc, theory().theory);
-            const result = model.validate();
-            return { model, result };
+            const coreTheory = theory()?.theory;
+            if (coreTheory) {
+                const model = elaborateModel(doc, coreTheory);
+                const result = model.validate();
+                return { model, result };
+            }
         },
         undefined,
         { equals: false },

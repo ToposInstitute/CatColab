@@ -82,7 +82,7 @@ export function ModelPane(props: {
 
     const selectableTheories = () => {
         if (NotebookUtils.hasFormalCells(liveDoc().doc.notebook)) {
-            return props.liveModel.theory().inclusions;
+            return props.liveModel.theory()?.inclusions ?? [];
         } else {
             // If the model has no formal cells, allow any theory to be selected.
             return undefined;
@@ -126,7 +126,7 @@ export function ModelNotebookEditor(props: {
     const liveDoc = () => props.liveModel.liveDoc;
 
     const cellConstructors = () =>
-        (props.liveModel.theory().modelTypes ?? []).map(modelCellConstructor);
+        (props.liveModel.theory()?.modelTypes ?? []).map(modelCellConstructor);
 
     const firebaseApp = useFirebaseApp();
     const auth = useAuth(getAuth(firebaseApp));
@@ -158,25 +158,36 @@ export function ModelNotebookEditor(props: {
 /** Editor for a notebook cell in a model notebook.
  */
 function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
+    const liveModel = useContext(LiveModelContext);
+    invariant(liveModel, "Live model should be provided as context");
+
     return (
         <Switch>
-            <Match when={props.content.tag === "object"}>
-                <ObjectCellEditor
-                    object={props.content as ObjectDecl}
-                    modifyObject={(f) => props.changeContent((content) => f(content as ObjectDecl))}
-                    isActive={props.isActive}
-                    actions={props.actions}
-                />
+            <Match when={props.content.tag === "object" && liveModel().theory()}>
+                {(theory) => (
+                    <ObjectCellEditor
+                        object={props.content as ObjectDecl}
+                        modifyObject={(f) =>
+                            props.changeContent((content) => f(content as ObjectDecl))
+                        }
+                        isActive={props.isActive}
+                        actions={props.actions}
+                        theory={theory()}
+                    />
+                )}
             </Match>
-            <Match when={props.content.tag === "morphism"}>
-                <MorphismCellEditor
-                    morphism={props.content as MorphismDecl}
-                    modifyMorphism={(f) =>
-                        props.changeContent((content) => f(content as MorphismDecl))
-                    }
-                    isActive={props.isActive}
-                    actions={props.actions}
-                />
+            <Match when={props.content.tag === "morphism" && liveModel().theory()}>
+                {(theory) => (
+                    <MorphismCellEditor
+                        morphism={props.content as MorphismDecl}
+                        modifyMorphism={(f) =>
+                            props.changeContent((content) => f(content as MorphismDecl))
+                        }
+                        isActive={props.isActive}
+                        actions={props.actions}
+                        theory={theory()}
+                    />
+                )}
             </Match>
         </Switch>
     );
@@ -202,9 +213,9 @@ function judgmentLabel(judgment: ModelJudgment): string | undefined {
     const theory = liveModel().theory();
 
     if (judgment.tag === "object") {
-        return theory.modelObTypeMeta(judgment.obType)?.name;
+        return theory?.modelObTypeMeta(judgment.obType)?.name;
     }
     if (judgment.tag === "morphism") {
-        return theory.modelMorTypeMeta(judgment.morType)?.name;
+        return theory?.modelMorTypeMeta(judgment.morType)?.name;
     }
 }

@@ -1,5 +1,5 @@
 import type * as Viz from "@viz-js/viz";
-import { createSignal } from "solid-js";
+import { Show, createSignal } from "solid-js";
 import { P, match } from "ts-pattern";
 
 import type { ModelJudgment } from "catlog-wasm";
@@ -76,17 +76,21 @@ export function ModelGraph(
  */
 export function ModelGraphviz(props: {
     model: ModelJudgment[];
-    theory: Theory;
+    theory?: Theory;
     attributes?: GV.GraphvizAttributes;
     options?: Viz.RenderOptions;
     ref?: SVGRefProp;
 }) {
     return (
-        <GraphvizSVG
-            graph={modelToGraphviz(props.model, props.theory, props.attributes)}
-            options={props.options}
-            ref={props.ref}
-        />
+        <Show when={props.theory}>
+            {(theory) => (
+                <GraphvizSVG
+                    graph={modelToGraphviz(props.model, theory(), props.attributes)}
+                    options={props.options}
+                    ref={props.ref}
+                />
+            )}
+        </Show>
     );
 }
 

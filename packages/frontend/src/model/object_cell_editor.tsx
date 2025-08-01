@@ -1,11 +1,7 @@
-import { useContext } from "solid-js";
-import invariant from "tiny-invariant";
-
 import type { ObType } from "catlog-wasm";
 import { NameInput } from "../components";
 import type { CellActions } from "../notebook";
 import type { Theory } from "../theory";
-import { LiveModelContext } from "./context";
 import type { ObjectDecl } from "./types";
 
 import "./object_cell_editor.css";
@@ -17,14 +13,12 @@ export function ObjectCellEditor(props: {
     modifyObject: (f: (decl: ObjectDecl) => void) => void;
     isActive: boolean;
     actions: CellActions;
+    theory: Theory;
 }) {
-    const liveModel = useContext(LiveModelContext);
-    invariant(liveModel, "Live model should be provided as context");
-
     const cssClasses = () => [
         "formal-judgment",
         "object-decl",
-        ...obClasses(liveModel().theory(), props.object.obType),
+        ...obClasses(props.theory, props.object.obType),
     ];
 
     return (
