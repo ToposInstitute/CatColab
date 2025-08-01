@@ -18,7 +18,7 @@ PostgreSQL and the [`axum`](https://github.com/tokio-rs/axum) web framework.
 
 ## Usage
 
-The CatColab backend consists of two services, the main web server (this
+The CatColab backend consists of two services: the main web server (this
 package) and the [Automerge document server](../automerge-doc-server). To run
 the backend locally, launch the two services by running the following commands
 in separate terminals, in any order:
@@ -48,3 +48,49 @@ To launch the frontend using the local backend:
 cd packages/frontend
 pnpm run dev
 ```
+
+
+## Updating Cargo dependencies
+
+**tl;dr:** Run `crate2nix generate` in the repository root and commit the updated `Cargo.nix` file.
+
+To speed up deployments, [crate2nix](https://nix-community.github.io/crate2nix/) is used to cache the
+build artifacts of Rust dependencies. Without it, dependencies would be rebuilt from scratch on every
+deployment, significantly increasing build times.
+
+`crate2nix` solves this by generating a `Cargo.nix` file, which describes the full dependency graph of
+the project in a reproducible, Nix-compatible format. This file allows Nix to more effectively cache and
+reuse dependency builds across deployments.
+
+Whenever you update your `Cargo.toml` or `Cargo.lock` you should regenerate `Cargo.nix` by running the
+following commands in the repository root:
+
+```bash
+nix develop
+crate2nix generate
+```
+
+And committing the the updated `Cargo.nix` file.
+
+Don't forget to run `cargo sqlx prepare` in `packages/backend`!
+
+
+## NixOS
+
+### Test build for NixOS deployment
+```
+nix flake check --no-sandbox
+```
+
+To get a interactive python session in the test environment:
+```
+nix run .#checks.x86_64-linux.integrationTests.driverInteractive --no-sandbox
+```
+
+### Build and run NixOS QEMU virtual machine
+```
+nix build .#nixosConfigurations.catcolab-vm.config.system.build.vm
+./result/bin/run-catcolab-vm
+```
+
+The username and password of the vm is 'catcolab'

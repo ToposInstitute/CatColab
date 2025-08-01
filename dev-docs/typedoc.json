@@ -1,0 +1,6 @@
+{
+    "entryPoints": ["./index.ts"],
+    "out": "output",
+    "name": "CatColab: for developers",
+    // "favicon": "./favicon.png",
+}

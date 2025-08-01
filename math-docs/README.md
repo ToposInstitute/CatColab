@@ -1,6 +1,6 @@
 # CatColab: Design documents
 
-This folder contains mathematical and technical design documents for CatColab,
+This folder contains mathematical design documents for CatColab,
 written using [forester](https://sr.ht/~jonsterling/forester/).
 
 ## Building the forest
@@ -11,6 +11,4 @@ To build this forest, you need to have a working installation of the following s
 
 - LaTeX, preferably the _full_ [TeXLive distribution](https://tug.org/texlive/)
 
-To build the forest, then simply run `./forester build`. To view the forest, run `./serve.sh` and go to `http://localhost:8080/index.xml` in your web browser. Note that you will need python installed for `./serve.sh` to work properly.
-
-You can run `./watch.sh` to watch for changes to the `trees` directory and rebuild accordingly.
+To build the forest, run `./forester build`. To view the forest, run `./forester serve` and go to `http://localhost:8080/index.xml` in your web browser. Note that you will need python installed for `./forester server` (which calls `./serve.sh`) to work properly.
