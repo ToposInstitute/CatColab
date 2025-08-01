@@ -715,6 +715,108 @@ fn sch_zigzag(
     cat
 }
 
+/// The schema for a finitely generated category where the generating graph of the presentation
+/// is as follows.
+/// e.g. `-1 <- 0 <- <- 1 <- <- <- 2 <- <- <- <- 3`
+/// as well as arrows the other way but with 1 fewer
+/// There are many arrows with the same source and targets, but this is a feature of the difference
+/// in what qualifies as a graph vs a multi-graph.
+#[cfg(test)]
+fn sch_simplicial(max_n: usize, is_augmented: bool) -> UstrFpCategory {
+    let mut cat = UstrFpCategory::new();
+    let mut vertex_names = Vec::with_capacity(max_n + 1 + usize::from(is_augmented));
+    if is_augmented {
+        let cur_ustr: Ustr = format!("O(-1)").into();
+        cat.add_ob_generator(cur_ustr);
+        vertex_names.push(cur_ustr);
+    }
+    for idx in 0..=max_n {
+        let cur_ustr: Ustr = format!("O({idx})").into();
+        cat.add_ob_generator(cur_ustr);
+        vertex_names.push(cur_ustr);
+    }
+    let mut face_maps: Vec<Vec<Ustr>> = Vec::with_capacity(max_n + usize::from(is_augmented));
+    let mut degen_maps: Vec<Vec<Ustr>> = Vec::with_capacity(max_n + usize::from(is_augmented));
+    for idx in 0..max_n + usize::from(is_augmented) {
+        let (src_n, src_obj, tgt_obj) = if is_augmented {
+            (idx, vertex_names[idx + 1], vertex_names[idx])
+        } else {
+            (idx + 1, vertex_names[idx + 1], vertex_names[idx])
+        };
+        let mut face_maps_now = Vec::with_capacity(src_n + 1);
+        for face_number in 0..=src_n {
+            let cur_face_number: Ustr = format!("d({idx},{face_number})").into();
+            cat.add_mor_generator(cur_face_number, src_obj, tgt_obj);
+            face_maps_now.push(cur_face_number);
+        }
+        face_maps.push(face_maps_now);
+        let mut degen_maps_now = Vec::with_capacity(src_n);
+        for degen_number in 0..src_n {
+            let cur_degen_number: Ustr = format!("s({idx},{degen_number})").into();
+            cat.add_mor_generator(cur_degen_number, tgt_obj, src_obj);
+            degen_maps_now.push(cur_degen_number);
+        }
+        degen_maps.push(degen_maps_now);
+    }
+    let how_many_faces_degens = face_maps.len();
+    let count_ds = how_many_faces_degens;
+    for n_idx in 0..count_ds - 1 {
+        for j_idx in 0..face_maps[n_idx].len() {
+            for i_idx in 0..=j_idx {
+                cat.equate(
+                    Path::pair(face_maps[n_idx + 1][i_idx], face_maps[n_idx][j_idx]),
+                    Path::pair(face_maps[n_idx + 1][j_idx + 1], face_maps[n_idx][i_idx]),
+                );
+            }
+        }
+    }
+    let count_ss = how_many_faces_degens;
+    for n_idx in 0..count_ss - 1 {
+        for j_idx in 0..degen_maps[n_idx].len() {
+            for i_idx in 0..=j_idx {
+                cat.equate(
+                    Path::pair(degen_maps[n_idx][j_idx], degen_maps[n_idx + 1][i_idx]),
+                    Path::pair(degen_maps[n_idx][i_idx], degen_maps[n_idx + 1][j_idx + 1]),
+                );
+            }
+        }
+    }
+    for n_idx in 0..count_ss {
+        for j_idx in 0..degen_maps[n_idx].len() {
+            for i_idx in 0..face_maps[n_idx].len() {
+                let lhs = Path::pair(degen_maps[n_idx][j_idx], face_maps[n_idx][i_idx]);
+                if i_idx < j_idx {
+                    if i_idx < face_maps[n_idx].len()
+                        && n_idx > 0
+                        && j_idx - 1 < degen_maps[n_idx - 1].len()
+                    {
+                        let rhs = Path::pair(
+                            face_maps[n_idx - 1][i_idx],
+                            degen_maps[n_idx - 1][j_idx - 1],
+                        );
+                        cat.equate(lhs, rhs);
+                    }
+                } else if i_idx == j_idx || i_idx == j_idx + 1 {
+                    let rhs = Path::Id(lhs.src(cat.generators()));
+                    cat.equate(lhs, rhs);
+                } else {
+                    if i_idx - 1 < face_maps[n_idx].len()
+                        && n_idx > 0
+                        && j_idx < degen_maps[n_idx - 1].len()
+                    {
+                        let rhs = Path::pair(
+                            face_maps[n_idx - 1][i_idx - 1],
+                            degen_maps[n_idx - 1][j_idx],
+                        );
+                        cat.equate(lhs, rhs);
+                    }
+                }
+            }
+        }
+    }
+    cat
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -904,6 +1006,180 @@ mod tests {
             (union (cod (MorGen 6)) (ObGen 5))
             (union (compose (MorGen 6) (MorGen 5)) (id (ObGen 4)))
             (union (compose (MorGen 5) (MorGen 6)) (id (ObGen 5)))
+        "#]];
+        let prog_string = prog.to_string();
+        let (should_be_preamble, should_be_expected) = prog_string.split_at(preamble.len());
+        expected.assert_eq(&should_be_expected);
+        assert_eq!(should_be_preamble, preamble);
+
+        let mut egraph: EGraph = Default::default();
+        assert!(prog.run_in(&mut egraph).is_ok());
+    }
+
+    #[test]
+    fn egraph_simplicial() {
+        let sch_quiver = sch_simplicial(2, false);
+        assert!(!sch_quiver.is_free());
+        let validation = sch_quiver.validate();
+        match validation {
+            Ok(_) => {}
+            Err(all_the_errors) => {
+                for cur_error in all_the_errors {
+                    println!("{}", cur_error);
+                }
+                panic!("Had at least one error");
+            }
+        }
+
+        let mut builder: CategoryProgramBuilder<char, char> = Default::default();
+        let prog = builder.program();
+        let preamble = prog.to_string();
+
+        let prog = sch_quiver.builder.borrow_mut().program();
+
+        // Mor 0,1 are d^2_0, d^2_1
+        // Mor 2 is s^1_0
+        // Mor 3,4,5 are d^3_0, d^3_1, d^3_2
+        // Mor 6,7 are s^2_0, s^2_1
+        // so we should get
+        // 3,0 = 4,0 for d^3_0 d^2_0 = d^3_1 d^2_0
+        // 3,1 = 5,0 for d^3_0 d^2_1 = d^3_2 d^2_0
+        // 4,1 = 5,1 for d^3_1 d^2_1 = d^3_2 d^2_1
+        // 2,6 = 2,7 for s^1_0 s^2_0 = s^1_0 s^2_1
+        // 2,0 = id for s^1_0 d^2_0
+        // 2,1 = id for s^1_0 d^2_1
+        // 6,3 = id for s^2_0 d^3_0
+        // 6,4 = id for s^2_0 d^3_1
+        // 6,5 = 1,2 for s^2_0 d^3_2 = d^2_1 s^1_0
+        // 7,3 = 0,2 for s^2_1 d^3_0 = d^2_0 s^1_0
+        // 7,4 = id for s^2_1 d^3_1
+        // 7,5 = id for s^2_1 d^3_2
+        let expected = expect![[r#"
+            (ObGen 0)
+            (ObGen 1)
+            (ObGen 2)
+            (MorGen 0)
+            (union (dom (MorGen 0)) (ObGen 1))
+            (union (cod (MorGen 0)) (ObGen 0))
+            (MorGen 1)
+            (union (dom (MorGen 1)) (ObGen 1))
+            (union (cod (MorGen 1)) (ObGen 0))
+            (MorGen 2)
+            (union (dom (MorGen 2)) (ObGen 0))
+            (union (cod (MorGen 2)) (ObGen 1))
+            (MorGen 3)
+            (union (dom (MorGen 3)) (ObGen 2))
+            (union (cod (MorGen 3)) (ObGen 1))
+            (MorGen 4)
+            (union (dom (MorGen 4)) (ObGen 2))
+            (union (cod (MorGen 4)) (ObGen 1))
+            (MorGen 5)
+            (union (dom (MorGen 5)) (ObGen 2))
+            (union (cod (MorGen 5)) (ObGen 1))
+            (MorGen 6)
+            (union (dom (MorGen 6)) (ObGen 1))
+            (union (cod (MorGen 6)) (ObGen 2))
+            (MorGen 7)
+            (union (dom (MorGen 7)) (ObGen 1))
+            (union (cod (MorGen 7)) (ObGen 2))
+            (union (compose (MorGen 3) (MorGen 0)) (compose (MorGen 4) (MorGen 0)))
+            (union (compose (MorGen 3) (MorGen 1)) (compose (MorGen 5) (MorGen 0)))
+            (union (compose (MorGen 4) (MorGen 1)) (compose (MorGen 5) (MorGen 1)))
+            (union (compose (MorGen 2) (MorGen 6)) (compose (MorGen 2) (MorGen 7)))
+            (union (compose (MorGen 2) (MorGen 0)) (id (ObGen 0)))
+            (union (compose (MorGen 2) (MorGen 1)) (id (ObGen 0)))
+            (union (compose (MorGen 6) (MorGen 3)) (id (ObGen 1)))
+            (union (compose (MorGen 6) (MorGen 4)) (id (ObGen 1)))
+            (union (compose (MorGen 6) (MorGen 5)) (compose (MorGen 1) (MorGen 2)))
+            (union (compose (MorGen 7) (MorGen 3)) (compose (MorGen 0) (MorGen 2)))
+            (union (compose (MorGen 7) (MorGen 4)) (id (ObGen 1)))
+            (union (compose (MorGen 7) (MorGen 5)) (id (ObGen 1)))
+        "#]];
+        let prog_string = prog.to_string();
+        let (should_be_preamble, should_be_expected) = prog_string.split_at(preamble.len());
+        expected.assert_eq(&should_be_expected);
+        assert_eq!(should_be_preamble, preamble);
+
+        let mut egraph: EGraph = Default::default();
+        assert!(prog.run_in(&mut egraph).is_ok());
+    }
+
+    #[test]
+    fn egraph_simplicial_augmented() {
+        let sch_quiver = sch_simplicial(2, true);
+        assert!(!sch_quiver.is_free());
+        assert!(sch_quiver.validate().is_ok());
+
+        let mut builder: CategoryProgramBuilder<char, char> = Default::default();
+        let prog = builder.program();
+        let preamble = prog.to_string();
+
+        let prog = sch_quiver.builder.borrow_mut().program();
+
+        // Mor 0 is d^1_0
+        // Mor 1,2 are d^2_0, d^2_1
+        // Mor 3 is s^1_0
+        // Mor 4,5,6 are d^3_0, d^3_1, d^3_2
+        // Mor 7,8 are s^2_0, s^2_1
+        // so we should get
+        // 1,0 = 2,0 for d^2_0 d^1_0 = d^2_1 d^1_0
+        // 4,1 = 5,1 for d^3_0 d^2_0 = d^3_1 d^2_0
+        // 4,2 = 6,1 for d^3_0 d^2_1 = d^3_2 d^2_0
+        // 5,2 = 6,2 for d^3_1 d^2_1 = d^3_2 d^2_1
+        // 3,7 = 3,8 for s^1_0 s^2_0 = s^1_0 s^2_1
+        // 3,1 = id for s^1_0 d^2_0
+        // 3,2 = id for s^1_0 d^2_1
+        // 7,4 = id for s^2_0 d^3_0
+        // 7,5 = id for s^2_0 d^3_1
+        // 7,6 = 2,3 for s^2_0 d^3_2 = d^2_1 s^1_0
+        // 8,4 = 1,3 for s^2_1 d^3_0 = d^2_0 s^1_0
+        // 8,5 = id for s^2_1 d^3_1
+        // 8,6 = id for s^2_1 d^3_2
+        let expected = expect![[r#"
+            (ObGen 0)
+            (ObGen 1)
+            (ObGen 2)
+            (ObGen 3)
+            (MorGen 0)
+            (union (dom (MorGen 0)) (ObGen 1))
+            (union (cod (MorGen 0)) (ObGen 0))
+            (MorGen 1)
+            (union (dom (MorGen 1)) (ObGen 2))
+            (union (cod (MorGen 1)) (ObGen 1))
+            (MorGen 2)
+            (union (dom (MorGen 2)) (ObGen 2))
+            (union (cod (MorGen 2)) (ObGen 1))
+            (MorGen 3)
+            (union (dom (MorGen 3)) (ObGen 1))
+            (union (cod (MorGen 3)) (ObGen 2))
+            (MorGen 4)
+            (union (dom (MorGen 4)) (ObGen 3))
+            (union (cod (MorGen 4)) (ObGen 2))
+            (MorGen 5)
+            (union (dom (MorGen 5)) (ObGen 3))
+            (union (cod (MorGen 5)) (ObGen 2))
+            (MorGen 6)
+            (union (dom (MorGen 6)) (ObGen 3))
+            (union (cod (MorGen 6)) (ObGen 2))
+            (MorGen 7)
+            (union (dom (MorGen 7)) (ObGen 2))
+            (union (cod (MorGen 7)) (ObGen 3))
+            (MorGen 8)
+            (union (dom (MorGen 8)) (ObGen 2))
+            (union (cod (MorGen 8)) (ObGen 3))
+            (union (compose (MorGen 1) (MorGen 0)) (compose (MorGen 2) (MorGen 0)))
+            (union (compose (MorGen 4) (MorGen 1)) (compose (MorGen 5) (MorGen 1)))
+            (union (compose (MorGen 4) (MorGen 2)) (compose (MorGen 6) (MorGen 1)))
+            (union (compose (MorGen 5) (MorGen 2)) (compose (MorGen 6) (MorGen 2)))
+            (union (compose (MorGen 3) (MorGen 7)) (compose (MorGen 3) (MorGen 8)))
+            (union (compose (MorGen 3) (MorGen 1)) (id (ObGen 1)))
+            (union (compose (MorGen 3) (MorGen 2)) (id (ObGen 1)))
+            (union (compose (MorGen 7) (MorGen 4)) (id (ObGen 2)))
+            (union (compose (MorGen 7) (MorGen 5)) (id (ObGen 2)))
+            (union (compose (MorGen 7) (MorGen 6)) (compose (MorGen 2) (MorGen 3)))
+            (union (compose (MorGen 8) (MorGen 4)) (compose (MorGen 1) (MorGen 3)))
+            (union (compose (MorGen 8) (MorGen 5)) (id (ObGen 2)))
+            (union (compose (MorGen 8) (MorGen 6)) (id (ObGen 2)))
         "#]];
         let prog_string = prog.to_string();
         let (should_be_preamble, should_be_expected) = prog_string.split_at(preamble.len());
