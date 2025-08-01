@@ -158,25 +158,36 @@ export function ModelNotebookEditor(props: {
 /** Editor for a notebook cell in a model notebook.
  */
 function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
+    const liveModel = useContext(LiveModelContext);
+    invariant(liveModel, "Live model should be provided as context");
+
     return (
         <Switch>
-            <Match when={props.content.tag === "object"}>
-                <ObjectCellEditor
-                    object={props.content as ObjectDecl}
-                    modifyObject={(f) => props.changeContent((content) => f(content as ObjectDecl))}
-                    isActive={props.isActive}
-                    actions={props.actions}
-                />
+            <Match when={props.content.tag === "object" && liveModel().theory()}>
+                {(theory) => (
+                    <ObjectCellEditor
+                        object={props.content as ObjectDecl}
+                        modifyObject={(f) =>
+                            props.changeContent((content) => f(content as ObjectDecl))
+                        }
+                        isActive={props.isActive}
+                        actions={props.actions}
+                        theory={theory()}
+                    />
+                )}
             </Match>
-            <Match when={props.content.tag === "morphism"}>
-                <MorphismCellEditor
-                    morphism={props.content as MorphismDecl}
-                    modifyMorphism={(f) =>
-                        props.changeContent((content) => f(content as MorphismDecl))
-                    }
-                    isActive={props.isActive}
-                    actions={props.actions}
-                />
+            <Match when={props.content.tag === "morphism" && liveModel().theory()}>
+                {(theory) => (
+                    <MorphismCellEditor
+                        morphism={props.content as MorphismDecl}
+                        modifyMorphism={(f) =>
+                            props.changeContent((content) => f(content as MorphismDecl))
+                        }
+                        isActive={props.isActive}
+                        actions={props.actions}
+                        theory={theory()}
+                    />
+                )}
             </Match>
         </Switch>
     );

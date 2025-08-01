@@ -4,6 +4,7 @@ import { v7 } from "uuid";
 
 import { BasicMorInput } from "../model/morphism_input";
 import type { CellActions } from "../notebook";
+import type { Theory } from "../theory";
 import { LiveDiagramContext } from "./context";
 import { BasicObInput } from "./object_input";
 import type { DiagramMorphismDecl } from "./types";
@@ -18,15 +19,15 @@ export function DiagramMorphismCellEditor(props: {
     modifyDecl: (f: (decl: DiagramMorphismDecl) => void) => void;
     isActive: boolean;
     actions: CellActions;
+    theory: Theory;
 }) {
     const liveDiagram = useContext(LiveDiagramContext);
     invariant(liveDiagram, "Live diagram should be provided as context");
 
     const [activeInput, setActiveInput] = createSignal<DiagramMorphismCellInput>("mor");
 
-    const theory = () => liveDiagram().liveModel.theory();
-    const domType = () => theory()?.theory.src(props.decl.morType);
-    const codType = () => theory()?.theory.tgt(props.decl.morType);
+    const domType = () => props.theory.theory.src(props.decl.morType);
+    const codType = () => props.theory.theory.tgt(props.decl.morType);
 
     const errors = () => {
         const validated = liveDiagram().validatedDiagram();
@@ -74,7 +75,7 @@ export function DiagramMorphismCellEditor(props: {
                             });
                         }}
                         morType={props.decl.morType}
-                        placeholder={theory()?.modelMorTypeMeta(props.decl.morType)?.name}
+                        placeholder={props.theory.modelMorTypeMeta(props.decl.morType)?.name}
                         isActive={props.isActive && activeInput() === "mor"}
                         deleteBackward={props.actions.deleteBackward}
                         deleteForward={props.actions.deleteForward}

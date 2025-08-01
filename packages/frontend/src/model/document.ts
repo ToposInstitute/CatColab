@@ -109,13 +109,12 @@ function enlivenModelDocument(
 
     const validatedModel = createMemo<ValidatedModel | undefined>(
         () => {
-            const catlogTheory = theory()?.theory;
-            if (!catlogTheory) {
-                return undefined;
+            const coreTheory = theory()?.theory;
+            if (coreTheory) {
+                const model = elaborateModel(doc, coreTheory);
+                const result = model.validate();
+                return { model, result };
             }
-            const model = elaborateModel(doc, catlogTheory);
-            const result = model.validate();
-            return { model, result };
         },
         undefined,
         { equals: false },

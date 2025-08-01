@@ -1,10 +1,9 @@
-import { createSignal, useContext } from "solid-js";
-import invariant from "tiny-invariant";
+import { createSignal } from "solid-js";
 
 import { NameInput } from "../components";
 import { ObInput } from "../model/object_input";
 import type { CellActions } from "../notebook";
-import { LiveDiagramContext } from "./context";
+import type { Theory } from "../theory";
 import type { DiagramObjectDecl } from "./types";
 
 import "./object_cell_editor.css";
@@ -16,13 +15,9 @@ export function DiagramObjectCellEditor(props: {
     modifyDecl: (f: (decl: DiagramObjectDecl) => void) => void;
     isActive: boolean;
     actions: CellActions;
+    theory: Theory;
 }) {
-    const liveDiagram = useContext(LiveDiagramContext);
-    invariant(liveDiagram, "Live diagram should be provided as context");
-
     const [activeInput, setActiveInput] = createSignal<DiagramObjectCellInput>("name");
-
-    const theory = () => liveDiagram().liveModel.theory();
 
     return (
         <div class="formal-judgment diagram-object-decl">
@@ -54,7 +49,7 @@ export function DiagramObjectCellEditor(props: {
                     });
                 }}
                 obType={props.decl.obType}
-                placeholder={theory()?.modelObTypeMeta(props.decl.obType)?.name}
+                placeholder={props.theory.modelObTypeMeta(props.decl.obType)?.name}
                 exitUp={props.actions.activateAbove}
                 exitDown={props.actions.activateBelow}
                 exitLeft={() => setActiveInput("name")}

@@ -3,6 +3,7 @@ import invariant from "tiny-invariant";
 
 import { NameInput } from "../components";
 import type { CellActions } from "../notebook";
+import type { Theory } from "../theory";
 import { LiveModelContext } from "./context";
 import { obClasses } from "./object_cell_editor";
 import { ObInput } from "./object_input";
@@ -18,37 +19,39 @@ export function MorphismCellEditor(props: {
     modifyMorphism: (f: (decl: MorphismDecl) => void) => void;
     isActive: boolean;
     actions: CellActions;
+    theory: Theory;
 }) {
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
 
     const [activeInput, setActiveInput] = createSignal<MorphismCellInput>("name");
 
-    const theory = () => liveModel().theory();
-    const morTypeMeta = () => theory()?.modelMorTypeMeta(props.morphism.morType);
+    const morTypeMeta = () => props.theory.modelMorTypeMeta(props.morphism.morType);
 
     const domType = createMemo(() => {
+        const theory = props.theory.theory;
         const op = morTypeMeta()?.domain?.apply;
         if (op === undefined) {
-            return theory()?.theory.src(props.morphism.morType);
+            return theory.src(props.morphism.morType);
         } else {
             // Codomain type for operation should equal source type above.
-            return theory()?.theory.dom(op);
+            return theory.dom(op);
         }
     });
 
     const codType = createMemo(() => {
+        const theory = props.theory.theory;
         const op = morTypeMeta()?.codomain?.apply;
         if (op === undefined) {
-            return theory()?.theory.tgt(props.morphism.morType);
+            return theory.tgt(props.morphism.morType);
         } else {
             // Codomain type for operation should equal target type above.
-            return theory()?.theory.dom(op);
+            return theory.dom(op);
         }
     });
 
-    const domClasses = () => ["morphism-decl-dom", ...obClasses(theory(), domType())];
-    const codClasses = () => ["morphism-decl-cod", ...obClasses(theory(), codType())];
+    const domClasses = () => ["morphism-decl-dom", ...obClasses(props.theory, domType())];
+    const codClasses = () => ["morphism-decl-cod", ...obClasses(props.theory, codType())];
 
     const nameClasses = () => [
         "morphism-decl-name",
