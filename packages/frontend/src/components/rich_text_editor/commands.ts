@@ -69,7 +69,7 @@ export const increaseListIndet: Command = (state, dispatch, view) => {
     const { $from } = state.selection;
     let listNode = null;
     for (let i = $from.depth; i > 0; i--) {
-        if ($from.node(i).type.name === schema.nodes.list_item.name) {
+        if ($from.node(i).type.name === schema.nodes.list_item!.name) {
             listNode = $from.node(i - 1);
             break;
         }
@@ -79,7 +79,7 @@ export const increaseListIndet: Command = (state, dispatch, view) => {
         return false;
     }
 
-    return chainCommands(sinkListItem(schema.nodes.list_item), wrapInList(listNode.type))(
+    return chainCommands(sinkListItem(schema.nodes.list_item!), wrapInList(listNode.type))(
         state,
         dispatch,
         view,
@@ -88,17 +88,17 @@ export const increaseListIndet: Command = (state, dispatch, view) => {
 
 export const toggleBulletList: Command = (state, dispatch, view) => {
     const schema = state.schema as CustomSchema;
-    return wrapInList(schema.nodes.bullet_list)(state, dispatch, view);
+    return wrapInList(schema.nodes.bullet_list!)(state, dispatch, view);
 };
 
 export const toggleOrderedList: Command = (state, dispatch, view) => {
     const schema = state.schema as CustomSchema;
-    return wrapInList(schema.nodes.ordered_list)(state, dispatch, view);
+    return wrapInList(schema.nodes.ordered_list!)(state, dispatch, view);
 };
 
 export const decreaseIndent: Command = (state, dispatch, view) => {
     const schema = state.schema as CustomSchema;
-    return liftListItem(schema.nodes.list_item)(state, dispatch, view);
+    return liftListItem(schema.nodes.list_item!)(state, dispatch, view);
 };
 
 export const turnSelectionIntoBlockquote: Command = (state, dispatch, view) => {
@@ -113,13 +113,13 @@ export const turnSelectionIntoBlockquote: Command = (state, dispatch, view) => {
     const schema = state.schema as CustomSchema;
 
     // Check if we can wrap the selection in a blockquote
-    if (!wrapIn(schema.nodes.blockquote)(state, undefined, view)) {
+    if (!wrapIn(schema.nodes.blockquote!)(state, undefined, view)) {
         return false;
     }
 
     // Apply the blockquote transformation
     if (dispatch) {
-        wrapIn(schema.nodes.blockquote)(state, dispatch, view);
+        wrapIn(schema.nodes.blockquote!)(state, dispatch, view);
     }
 
     return true;

@@ -12,12 +12,12 @@
     "author": "CatColab developer team",
     "license": "MIT",
     "dependencies": {
-        "@automerge/automerge-repo": "^1.2.1",
-        "@automerge/automerge-repo-network-websocket": "^1.2.1",
-        "notebook-types": "link:../notebook-types/dist/pkg-node",
+        "@automerge/automerge-repo": "^2.2.0",
+        "@automerge/automerge-repo-network-websocket": "^2.2.0",
         "dotenv": "^16.5.0",
         "express": "^4.19.2",
         "fast-json-patch": "^3.1.1",
+        "notebook-types": "link:../notebook-types/dist/pkg-node",
         "pg": "^8.16.0",
         "socket.io-client": "^4.8.0",
         "ws": "^8.18.0"
