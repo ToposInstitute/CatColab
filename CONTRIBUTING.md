@@ -23,15 +23,14 @@ CatColab is written in a mix of [Rust](https://www.rust-lang.org/) and
 
 To maintain a clean and consistent codebase, we follow strict conventions on
 code formatting and style. To format and lint the frontend code, run these
-commands:
+commands from the top-level directory:
 
 ```sh
-cd packages/frontend
-pnpm run format
-pnpm run lint
+pnpm --filter ./packages/frontend run format
+pnpm --filter ./packages/frontend run lint
 ```
 
-To format and lint the Rust code, run these commands:
+To format and lint the Rust code, run these commands from the top-level directory:
 
 ```sh
 cargo fmt
