@@ -817,3 +817,86 @@ mod tests {
         assert!(GraphMorphism(&f, &g, &h).validate().is_err());
     }
 }
+
+#[cfg(test)]
+mod proptesting {
+    use super::{FinGraph, HashGraph, SkelGraph, Validate};
+    use proptest::{
+        prelude::{Strategy, prop_assert, proptest},
+        sample::SizeRange,
+    };
+
+    impl core::fmt::Debug for SkelGraph {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.debug_struct("SkelGraph")
+                .field("nv", &self.nv)
+                .field("ne", &self.ne)
+                .field("src_map", &self.src_map)
+                .field("tgt_map", &self.tgt_map)
+                .finish()
+        }
+    }
+
+    fn skel_graph_strategy(
+        num_v: impl Strategy<Value = usize>,
+        num_e: impl Strategy<Value = usize>,
+    ) -> impl Strategy<Value = SkelGraph> {
+        (num_v, num_e).prop_flat_map(|(num_v, mut num_e)| {
+            let mut to_return = SkelGraph::default();
+            let _vertices: Vec<usize> = to_return.add_vertices(num_v).collect();
+            if num_v == 0 {
+                num_e = 0;
+            }
+            let which_edges = proptest::collection::vec(((0..num_v), (0..num_v)), num_e);
+            which_edges.prop_map(move |zs_ws| {
+                let mut to_return_now = to_return.clone();
+                for (z, w) in zs_ws {
+                    to_return_now.add_edge(z, w);
+                }
+                to_return_now
+            })
+        })
+    }
+
+    proptest! {
+        #[test]
+        fn skel_graph_arbitrary(sk in skel_graph_strategy(0usize..=50,10usize..100)) {
+            prop_assert!(sk.validate().is_ok());
+            prop_assert!(sk.vertex_count() <= 50);
+            prop_assert!(sk.edge_count() < 100);
+            prop_assert!(sk.edge_count() >= 10 || (sk.vertex_count() == 0 && sk.edge_count() == 0));
+        }
+    }
+
+    #[allow(dead_code)]
+    fn hash_graph_strategy<'a, V, E>(
+        num_v: SizeRange,
+        v_strategy: impl Strategy<Value = V> + 'a,
+        num_e: impl Strategy<Value = usize> + 'a,
+        e_strategy: impl Strategy<Value = E> + Clone + 'a,
+    ) -> impl Strategy<Value = HashGraph<V, E>> + 'a
+    where
+        V: Eq + core::fmt::Debug + std::hash::Hash + Clone,
+        E: Eq + core::fmt::Debug + std::hash::Hash + Clone,
+    {
+        (proptest::collection::vec(v_strategy, num_v), num_e).prop_flat_map(
+            move |(v_datas, mut num_e)| {
+                let mut to_return = HashGraph::default();
+                let num_v = v_datas.len();
+                to_return.add_vertices(v_datas.clone().into_iter());
+                if num_v == 0 {
+                    num_e = 0;
+                }
+                let which_edges =
+                    proptest::collection::vec(((0..num_v), (0..num_v), e_strategy.clone()), num_e);
+                which_edges.prop_map(move |zs_ws_datas| {
+                    let mut to_return_now = to_return.clone();
+                    for (z, w, e_label) in zs_ws_datas {
+                        to_return_now.add_edge(e_label, v_datas[z].clone(), v_datas[w].clone());
+                    }
+                    to_return_now
+                })
+            },
+        )
+    }
+}

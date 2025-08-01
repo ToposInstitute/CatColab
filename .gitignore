@@ -99,3 +99,6 @@ instrument.mjs
 
 # history for the interactive nixos test python shell
 .nixos-test-history
+
+#proptest regressions
+*/*/proptest-regressions
