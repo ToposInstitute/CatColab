@@ -108,6 +108,19 @@ pub trait ReflexiveGraph: Graph {
     fn refl(&self, v: Self::V) -> Self::E;
 }
 
+/** Reverse all the edges in the graph, but still keep it the same concrete
+ * implementation of Graph.
+ * This restriction of the same concrete implementation is due to concerns
+ * from (`ColumnarGraph`)[`ColumnarGraph`].
+ * The associated types `Src` and `Tgt` both implement `Mapping` but they do not have to be
+ * the same type.
+ */
+pub trait ReversibleGraph: Graph {
+    /// Reverse all the edges.
+    /// In the quiver picture switch the two arrows of the source category.
+    fn reverse(self) -> Self;
+}
+
 /// The set of vertices of a graph.
 #[derive(From, RefCast)]
 #[repr(transparent)]
@@ -329,6 +342,17 @@ impl ColumnarGraph for SkelGraph {
     }
 }
 
+impl ReversibleGraph for SkelGraph {
+    fn reverse(self) -> Self {
+        Self {
+            nv: self.nv,
+            ne: self.ne,
+            src_map: self.tgt_map,
+            tgt_map: self.src_map,
+        }
+    }
+}
+
 impl MutColumnarGraph for SkelGraph {
     fn src_map_mut(&mut self) -> &mut Self::Src {
         &mut self.src_map
@@ -454,6 +478,21 @@ where
     }
     fn tgt_map(&self) -> &Self::Tgt {
         &self.tgt_map
+    }
+}
+
+impl<V, E> ReversibleGraph for HashGraph<V, E>
+where
+    V: Eq + Hash + Clone,
+    E: Eq + Hash + Clone,
+{
+    fn reverse(self) -> Self {
+        Self {
+            vertex_set: self.vertex_set,
+            edge_set: self.edge_set,
+            src_map: self.tgt_map,
+            tgt_map: self.src_map,
+        }
     }
 }
 

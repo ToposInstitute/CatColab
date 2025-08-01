@@ -398,6 +398,31 @@ impl<V, E> Path<V, E> {
             }
         }
     }
+
+    /// This is no longer a path in the original graph.
+    /// We are now treating it as a path in the graph where the orientations
+    /// of all edges has been reversed.
+    pub(crate) fn reverse(self) -> Self {
+        if let Path::Seq(non_empty) = self {
+            if non_empty.len() > 1 {
+                let NonEmpty {
+                    head: head_part,
+                    tail: mut tail_part,
+                } = non_empty;
+                let new_head = tail_part.pop().expect("Checked that this has length >= 1");
+                tail_part.reverse();
+                tail_part.push(head_part);
+                Self::Seq(NonEmpty {
+                    head: new_head,
+                    tail: tail_part,
+                })
+            } else {
+                Path::Seq(non_empty)
+            }
+        } else {
+            self
+        }
+    }
 }
 
 impl<V, E> Path<V, Path<V, E>> {
@@ -620,6 +645,12 @@ impl<V, E> PathEq<V, E> {
             }
         }
         errs.into_iter()
+    }
+
+    pub(crate) fn reverse_both(self) -> Self {
+        let lhs = self.lhs.reverse();
+        let rhs = self.rhs.reverse();
+        Self { lhs, rhs }
     }
 }
 

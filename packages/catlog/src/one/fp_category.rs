@@ -184,6 +184,36 @@ where
     }
 }
 
+impl<V, E> FpCategory<V, E>
+where
+    V: Eq + Clone + Hash,
+    E: Eq + Clone + Hash,
+{
+    /// Reverse all of the generating morphisms
+    /// On the free version this is based on (`reverse`)[`ReversibleGraph::reverse`]
+    pub fn reverse_generating_morphisms(mut self) -> Self {
+        let _old_builder = self.builder.take();
+        let _old_egraph = self.egraph.take();
+        self.generators = self.generators.reverse();
+        let all_vertices: Vec<_> = self.generators.vertices().collect();
+        for v in all_vertices {
+            self.builder.get_mut().add_ob_generator(v);
+        }
+        let all_edges: Vec<_> = self.generators.edges().collect();
+        for e in all_edges {
+            let (dom, cod) = (self.generators.src(&e), self.generators.tgt(&e));
+            let (dom, cod) = (self.ob_generator_expr(dom), self.ob_generator_expr(cod));
+            self.builder.get_mut().add_mor_generator(e, dom, cod);
+        }
+        let mut all_equations = Vec::new();
+        core::mem::swap(&mut all_equations, &mut self.equations);
+        for equation in all_equations {
+            self.add_equation(equation.reverse_both());
+        }
+        self
+    }
+}
+
 impl<V, E> Category for FpCategory<V, E>
 where
     V: Eq + Clone + Hash,
@@ -1186,6 +1216,57 @@ mod tests {
         expected.assert_eq(&should_be_expected);
         assert_eq!(should_be_preamble, preamble);
 
+        let mut egraph: EGraph = Default::default();
+        assert!(prog.run_in(&mut egraph).is_ok());
+    }
+
+    #[test]
+    fn small_reversed() {
+        let sch_graph_before = sch_graph();
+        let sch_graph_after = sch_graph().reverse_generating_morphisms();
+        for old_obj in sch_graph_before.objects() {
+            assert!(sch_graph_after.has_ob(&old_obj));
+        }
+        for old_morphism in sch_graph_before.morphisms() {
+            assert!(sch_graph_after.has_mor(&old_morphism));
+            assert_eq!(sch_graph_after.dom(&old_morphism), sch_graph_before.cod(&old_morphism));
+            assert_eq!(sch_graph_after.cod(&old_morphism), sch_graph_before.dom(&old_morphism));
+        }
+
+        let sch_graph_before = sch_hgraph();
+        let sch_graph_after = sch_hgraph().reverse_generating_morphisms();
+        for old_obj in sch_graph_before.objects() {
+            assert!(sch_graph_after.has_ob(&old_obj));
+        }
+        for old_morphism in sch_graph_before.morphisms() {
+            assert!(sch_graph_after.has_mor(&old_morphism));
+            assert_eq!(sch_graph_after.dom(&old_morphism), sch_graph_before.cod(&old_morphism));
+            assert_eq!(sch_graph_after.cod(&old_morphism), sch_graph_before.dom(&old_morphism));
+        }
+    }
+
+    #[test]
+    fn egraph_simplicial_reversed() {
+        let sch_quiver = sch_simplicial(2, true).reverse_generating_morphisms();
+        let validation = sch_quiver.validate();
+        match validation {
+            Ok(_) => {}
+            Err(the_errs) => {
+                for err in the_errs {
+                    println!("{}", err);
+                }
+                panic!("At least one error");
+            }
+        }
+        assert!(!sch_quiver.is_free());
+        let prog = sch_quiver.builder.borrow_mut().program();
+        let mut egraph: EGraph = Default::default();
+        assert!(prog.run_in(&mut egraph).is_ok());
+
+        let sch_quiver = sch_simplicial(2, false).reverse_generating_morphisms();
+        assert!(sch_quiver.validate().is_ok());
+        assert!(!sch_quiver.is_free());
+        let prog = sch_quiver.builder.borrow_mut().program();
         let mut egraph: EGraph = Default::default();
         assert!(prog.run_in(&mut egraph).is_ok());
     }
