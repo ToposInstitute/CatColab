@@ -819,7 +819,7 @@ mod tests {
 }
 
 #[cfg(test)]
-mod proptesting {
+pub(crate) mod proptesting {
     use super::{FinGraph, HashGraph, SkelGraph, Validate};
     use proptest::{
         prelude::{Strategy, prop_assert, proptest},
@@ -837,7 +837,7 @@ mod proptesting {
         }
     }
 
-    fn skel_graph_strategy(
+    pub(crate) fn skel_graph_strategy(
         num_v: impl Strategy<Value = usize>,
         num_e: impl Strategy<Value = usize>,
     ) -> impl Strategy<Value = SkelGraph> {
@@ -869,7 +869,7 @@ mod proptesting {
     }
 
     #[allow(dead_code)]
-    fn hash_graph_strategy<'a, V, E>(
+    pub(crate) fn hash_graph_strategy<'a, V, E>(
         num_v: SizeRange,
         v_strategy: impl Strategy<Value = V> + 'a,
         num_e: impl Strategy<Value = usize> + 'a,

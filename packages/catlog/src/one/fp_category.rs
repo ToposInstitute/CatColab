@@ -212,6 +212,23 @@ where
         }
         self
     }
+
+    #[cfg(test)]
+    fn new_free(generators: HashGraph<V, E>) -> Self {
+        let mut new_self = Self::new();
+        new_self.generators = generators;
+        let all_vertices: Vec<_> = new_self.generators.vertices().collect();
+        for v in all_vertices {
+            new_self.builder.get_mut().add_ob_generator(v);
+        }
+        let all_edges: Vec<_> = new_self.generators.edges().collect();
+        for e in all_edges {
+            let (dom, cod) = (new_self.generators.src(&e), new_self.generators.tgt(&e));
+            let (dom, cod) = (new_self.ob_generator_expr(dom), new_self.ob_generator_expr(cod));
+            new_self.builder.get_mut().add_mor_generator(e, dom, cod);
+        }
+        new_self
+    }
 }
 
 impl<V, E> Category for FpCategory<V, E>
@@ -1269,5 +1286,32 @@ mod tests {
         let prog = sch_quiver.builder.borrow_mut().program();
         let mut egraph: EGraph = Default::default();
         assert!(prog.run_in(&mut egraph).is_ok());
+    }
+}
+
+#[cfg(test)]
+mod proptesting {
+    use super::{FgCategory, FpCategory};
+    use crate::one::graph::{FinGraph, proptesting::hash_graph_strategy};
+    use crate::validate::Validate;
+    use proptest::{prop_assert, proptest};
+
+    proptest! {
+        #[test]
+        fn freely_generated_but_messy(hg in hash_graph_strategy(
+            proptest::sample::size_range(0..50),
+            -100i32..=50,
+            10usize..100,
+            0i8..10,
+        )) {
+            prop_assert!(hg.validate().is_ok());
+            let num_v = hg.vertex_count();
+            let num_e = hg.edge_count();
+            let free_cat = FpCategory::new_free(hg);
+            prop_assert!(free_cat.validate().is_ok());
+            prop_assert!(free_cat.is_free());
+            prop_assert!(free_cat.ob_generators().count() == num_v);
+            prop_assert!(free_cat.mor_generators().count() == num_e);
+        }
     }
 }
