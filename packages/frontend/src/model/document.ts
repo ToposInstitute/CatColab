@@ -1,4 +1,4 @@
-import { type Accessor, createMemo } from "solid-js";
+import { type Accessor, createMemo, createResource } from "solid-js";
 import invariant from "tiny-invariant";
 
 import {
@@ -7,10 +7,11 @@ import {
     type ModelJudgment,
     type ModelValidationResult,
     type Uuid,
+    currentVersion,
     elaborateModel,
 } from "catlog-wasm";
 import { type Api, type LiveDoc, getLiveDoc } from "../api";
-import { newNotebook } from "../notebook";
+import { NotebookUtils, newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
 import type { Theory } from "../theory";
 import { type IndexedMap, indexMap } from "../util/indexing";
@@ -24,6 +25,7 @@ export const newModelDocument = (theory: string): ModelDocument => ({
     type: "model",
     theory,
     notebook: newNotebook(),
+    version: currentVersion(),
 });
 
 /** A model document "live" for editing.
@@ -50,7 +52,7 @@ export type LiveModelDocument = {
     morphismIndex: Accessor<IndexedMap<Uuid, string>>;
 
     /** A memo of the double theory that the model is of. */
-    theory: Accessor<Theory>;
+    theory: Accessor<Theory | undefined>;
 
     /** A memo of the model constructed and validated in the core. */
     validatedModel: Accessor<ValidatedModel | undefined>;
@@ -71,11 +73,14 @@ function enlivenModelDocument(
 
     // Memo-ize the *formal* content of the notebook, since most derived objects
     // will not depend on the informal (rich-text) content in notebook.
-    const formalJudgments = createMemo<Array<ModelJudgment>>(() => {
-        return doc.notebook.cells
-            .filter((cell) => cell.tag === "formal")
-            .map((cell) => cell.content);
-    }, []);
+    const formalJudgments = createMemo<Array<ModelJudgment>>(
+        () =>
+            doc.notebook.cellOrder
+                .map((cellId) => NotebookUtils.getCellById(doc.notebook, cellId))
+                .filter((cell) => cell.tag === "formal")
+                .map((cell) => cell.content),
+        [],
+    );
 
     const objectIndex = createMemo<IndexedMap<Uuid, string>>(() => {
         const map = new Map<Uuid, string>();
@@ -97,13 +102,19 @@ function enlivenModelDocument(
         return indexMap(map);
     }, indexMap(new Map()));
 
-    const theory = createMemo<Theory>(() => theories.get(doc.theory));
+    const [theory] = createResource(
+        () => doc.theory,
+        (theoryId) => theories.get(theoryId),
+    );
 
     const validatedModel = createMemo<ValidatedModel | undefined>(
         () => {
-            const model = elaborateModel(doc, theory().theory);
-            const result = model.validate();
-            return { model, result };
+            const coreTheory = theory()?.theory;
+            if (coreTheory) {
+                const model = elaborateModel(doc, coreTheory);
+                const result = model.validate();
+                return { model, result };
+            }
         },
         undefined,
         { equals: false },

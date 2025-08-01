@@ -64,7 +64,7 @@ export type CellActions = {
     deleteForward: () => void;
 
     /** Duplicate this cell, adding the new cell below this one. */
-    duplicate: () => void;
+    duplicate?: () => void;
 
     /** Move this cell up, if possible. */
     moveUp: () => void;
@@ -133,11 +133,15 @@ export function NotebookCell(props: {
             icon: <Trash2 size={16} />,
             onComplete: props.actions.deleteForward,
         },
-        {
-            name: "Duplicate",
-            icon: <Copy size={16} />,
-            onComplete: props.actions.duplicate,
-        },
+        ...(props.actions.duplicate
+            ? [
+                  {
+                      name: "Duplicate",
+                      icon: <Copy size={16} />,
+                      onComplete: props.actions.duplicate,
+                  },
+              ]
+            : []),
         {
             name: "Move Up",
             icon: <ArrowUp size={16} />,
@@ -171,6 +175,9 @@ export function NotebookCell(props: {
                 element: rootRef,
                 canDrop({ source }) {
                     // TODO: Reject if cell belongs to a different notebook.
+                    if (source.data.cellId === props.cellId) {
+                        return false;
+                    }
                     return isCellDragData(source.data);
                 },
                 getData({ input }) {

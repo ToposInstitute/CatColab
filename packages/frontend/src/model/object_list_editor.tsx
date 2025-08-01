@@ -78,15 +78,25 @@ export function ObListEditor(props: ObListEditorProps) {
     };
 
     const insertNewOb = (i: number) => {
-        updateObList((objects) => {
-            objects.splice(i, 0, null);
+        batch(() => {
+            updateObList((objects) => {
+                objects.splice(i, 0, null);
+            });
+            setActiveIndex(i);
         });
-        setActiveIndex(i);
     };
 
     const completions = (): Ob[] | undefined =>
         liveModel().validatedModel()?.model.objectsWithType(modeAppType().content.obType);
 
+    // Make the default value the empty list, rather than null.
+    createEffect(() => {
+        if (!props.ob) {
+            setObList([]);
+        }
+    });
+
+    // Insert into new object into empty list when focus is gained.
     createEffect(() => {
         if (props.isActive && untrack(obList).length === 0) {
             insertNewOb(0);

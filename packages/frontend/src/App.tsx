@@ -105,8 +105,9 @@ export function SessionExpiredModal() {
 function CreateModel() {
     const api = useApi();
 
-    const theoryId = stdTheories.getDefault().id;
-    const [ref] = createResource<string>(() => createModel(api, theoryId));
+    const [ref] = createResource<string>(() => {
+        return createModel(api, stdTheories.defaultTheoryMetadata().id);
+    });
 
     return <Show when={ref()}>{(ref) => <Navigate href={`/model/${ref()}`} />}</Show>;
 }

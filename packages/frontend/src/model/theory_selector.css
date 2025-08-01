@@ -8,6 +8,10 @@
     border-top: transparent;
     border-left: transparent;
 
+    max-height: 80vh;
+    overflow-y: auto;
+    scrollbar-width: none;
+
     & input[type="radio"] {
         position: absolute;
         opacity: 0;

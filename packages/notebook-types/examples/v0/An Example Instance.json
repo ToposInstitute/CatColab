@@ -1,1 +1,539 @@
-{"diagramIn":{"_id":"0194fbf4-fddf-7a12-b88b-33015d17d8e7","_server":"backend.catcolab.org","_version":null,"type":"diagram-in"},"name":"An Example Instance","notebook":{"cells":[{"content":"An olog is a world-view. An instance of an olog describes the world according to that view. For example, using our ontology of CatColab, we can then structure a discussion about specific CatColab features that we have and will demo today. For example, CatColab has a theory of ologs hard coded into it. Our previous document, \"The Ontology of CatColab\", is a user-created a model of this theory.","id":"0194fc9f-1d4d-7238-b007-ec1f070e7272","tag":"rich-text"},{"content":{"id":"0194fbf9-cd25-71cb-9d74-2f77f203b184","name":"Olog","obType":{"content":"Object","tag":"Basic"},"over":{"content":"0194fbf5-51da-7116-8155-e353458e0650","tag":"Basic"},"tag":"object"},"id":"0194fbf9-cd25-71cb-9d74-33733242df4a","tag":"formal"},{"content":{"id":"0194fbfb-c114-7497-a5bd-26109638d7be","name":"The Ontology of CatColab","obType":{"content":"Object","tag":"Basic"},"over":{"content":"0194fbf5-5fac-71cf-a5f0-837d9774397e","tag":"Basic"},"tag":"object"},"id":"0194fbfb-c114-7497-a5bd-2b0fb8cf5bc3","tag":"formal"},{"content":{"cod":{"content":"0194fbf9-cd25-71cb-9d74-2f77f203b184","tag":"Basic"},"dom":{"content":"0194fbfb-c114-7497-a5bd-26109638d7be","tag":"Basic"},"id":"0194fbfb-f4d2-71ec-b663-5dafee23ce28","morType":{"content":{"content":"Object","tag":"Basic"},"tag":"Hom"},"name":"","over":{"content":"0194fbf5-c1c4-727c-af7a-cccf98aedaec","tag":"Basic"},"tag":"morphism"},"id":"0194fbfb-f4d2-71ec-b663-626d97f5c82c","tag":"formal"},{"content":"Moreover, this document is an instance of the ontology of CatColab we created (this is indicated in the top right of the screen):","id":"0194fca9-75a9-7524-a5c3-76e35f49d8e3","tag":"rich-text"},{"content":{"id":"0194fbfc-f5e2-7689-a30a-24434a788286","name":"Today's Example Instance","obType":{"content":"Object","tag":"Basic"},"over":{"content":"0194fbf5-75a7-702a-a6ee-349ba8a73d10","tag":"Basic"},"tag":"object"},"id":"0194fbfc-f5e2-7689-a30a-281846f5cf58","tag":"formal"},{"content":{"cod":{"content":"0194fbfb-c114-7497-a5bd-26109638d7be","tag":"Basic"},"dom":{"content":"0194fbfc-f5e2-7689-a30a-24434a788286","tag":"Basic"},"id":"0194fbfd-8309-70eb-aae4-b5969f233f24","morType":{"content":{"content":"Object","tag":"Basic"},"tag":"Hom"},"name":"","over":{"content":"0194fbf5-8de7-71dc-97ee-7c4c0bd81eee","tag":"Basic"},"tag":"morphism"},"id":"0194fbfd-8309-70eb-aae4-b957aaddb4e3","tag":"formal"},{"content":"What else is available? At the highest level, we have two, hard-coded doctrines., which describe the meta-logical structures that are used to define a given theory:","id":"0194fcbc-bb5e-7669-bcee-0acf9cfb0d2b","tag":"rich-text"},{"content":{"id":"0194fbfa-8eb8-7269-8395-67abb36dfad6","name":"The Doctrine of Simple Double Theories","obType":{"content":"Object","tag":"Basic"},"over":{"content":"0194fbf5-34c8-778e-bc20-2b1ae8148eab","tag":"Basic"},"tag":"object"},"id":"0194fbfa-8eb8-7269-8395-697d889ca239","tag":"formal"},{"content":{"id":"0194fbfa-a353-721a-ad3f-d884f92a40a5","name":"The Doctrine of Double Theories with Tabulators","obType":{"content":"Object","tag":"Basic"},"over":{"content":"0194fbf5-34c8-778e-bc20-2b1ae8148eab","tag":"Basic"},"tag":"object"},"id":"0194fbfa-a353-721a-ad3f-de7173dae36a","tag":"formal"},{"content":"Other theories currently available in CatColab include:","id":"0194fcbd-ef26-7494-99d7-79eec6abf331","tag":"rich-text"},{"content":{"id":"0194fbf9-eda3-719e-9b3c-ec53d8cc13d1","name":"Schema","obType":{"content":"Object","tag":"Basic"},"over":{"content":"0194fbf5-51da-7116-8155-e353458e0650","tag":"Basic"},"tag":"object"},"id":"0194fbf9-eda3-719e-9b3c-f22ca3dea1b7","tag":"formal"},{"content":{"id":"0194fbf9-fe92-73dd-af12-e0df34fc8fac","name":"Causal Loop Diagram","obType":{"content":"Object","tag":"Basic"},"over":{"content":"0194fbf5-51da-7116-8155-e353458e0650","tag":"Basic"},"tag":"object"},"id":"0194fbf9-fe92-73dd-af12-e4930a28df36","tag":"formal"},{"content":{"id":"0194fbfa-6335-7629-980e-41a90cc07342","name":"Stock-Flow Diagram","obType":{"content":"Object","tag":"Basic"},"over":{"content":"0194fbf5-51da-7116-8155-e353458e0650","tag":"Basic"},"tag":"object"},"id":"0194fbfa-6335-7629-980e-46970823d68f","tag":"formal"},{"content":"These specific theories are built with the ","id":"0194fd75-ad37-7537-894b-498b08a6ff70","tag":"rich-text"},{"content":{"cod":{"content":"0194fbfa-8eb8-7269-8395-67abb36dfad6","tag":"Basic"},"dom":{"content":"0194fbf9-cd25-71cb-9d74-2f77f203b184","tag":"Basic"},"id":"0194fbfa-cd21-7620-a343-1deb788264d5","morType":{"content":{"content":"Object","tag":"Basic"},"tag":"Hom"},"name":"","over":{"content":"0194fbf5-f95d-7724-9fb0-9677773a2551","tag":"Basic"},"tag":"morphism"},"id":"0194fbfa-cd21-7620-a343-212c22ddaae7","tag":"formal"},{"content":{"cod":{"content":"0194fbfa-8eb8-7269-8395-67abb36dfad6","tag":"Basic"},"dom":{"content":"0194fbf9-eda3-719e-9b3c-ec53d8cc13d1","tag":"Basic"},"id":"0194fbfb-6038-71fd-b2fb-41a7c1772a6d","morType":{"content":{"content":"Object","tag":"Basic"},"tag":"Hom"},"name":"","over":{"content":"0194fbf5-f95d-7724-9fb0-9677773a2551","tag":"Basic"},"tag":"morphism"},"id":"0194fbfb-6038-71fd-b2fb-4784aea1681c","tag":"formal"},{"content":{"cod":{"content":"0194fbfa-8eb8-7269-8395-67abb36dfad6","tag":"Basic"},"dom":{"content":"0194fbf9-fe92-73dd-af12-e0df34fc8fac","tag":"Basic"},"id":"0194fbfb-68d0-77f2-8f0f-407bec48bce3","morType":{"content":{"content":"Object","tag":"Basic"},"tag":"Hom"},"name":"","over":{"content":"0194fbf5-f95d-7724-9fb0-9677773a2551","tag":"Basic"},"tag":"morphism"},"id":"0194fbfb-68d0-77f2-8f0f-45ce6136a00b","tag":"formal"},{"content":{"cod":{"content":"0194fbfa-a353-721a-ad3f-d884f92a40a5","tag":"Basic"},"dom":{"content":"0194fbfa-6335-7629-980e-41a90cc07342","tag":"Basic"},"id":"0194fbfb-6f52-774b-bb24-707f1ef5f128","morType":{"content":{"content":"Object","tag":"Basic"},"tag":"Hom"},"name":"","over":{"content":"0194fbf5-f95d-7724-9fb0-9677773a2551","tag":"Basic"},"tag":"morphism"},"id":"0194fbfb-6f52-774b-bb24-767b6b9fcc51","tag":"formal"},{"content":"This document has users, permissions, and documents as follows:","id":"0194fccd-0ace-721b-9715-1271c0df6530","tag":"rich-text"},{"content":{"id":"0194fc85-c600-705c-b548-e4ac087d5684","name":"kevincarlson","obType":{"content":"Object","tag":"Basic"},"over":{"content":"0194fbf6-627c-76c8-b227-8513b1233c84","tag":"Basic"},"tag":"object"},"id":"0194fc85-c600-705c-b548-e8f2e8307470","tag":"formal"},{"content":{"cod":{"content":"0194fc85-c600-705c-b548-e4ac087d5684","tag":"Basic"},"dom":{"content":"0194fc86-ad6b-703c-96cd-a1c222aed80d","tag":"Basic"},"id":"0194fc86-37ef-77af-b819-8229a5799725","morType":{"content":{"content":"Object","tag":"Basic"},"tag":"Hom"},"name":"","over":{"content":"0194fbf6-e0b1-71cf-84f3-36203da564d8","tag":"Basic"},"tag":"morphism"},"id":"0194fc86-37ef-77af-b819-8532968e36be","tag":"formal"},{"content":{"cod":{"content":"0194fc8c-ae7e-729d-a08a-20ed123f8277","tag":"Basic"},"dom":{"content":"0194fc86-ad6b-703c-96cd-a1c222aed80d","tag":"Basic"},"id":"0194fc86-fc7d-71bf-8a12-9d9d808e1a4d","morType":{"content":{"content":"Object","tag":"Basic"},"tag":"Hom"},"name":"","over":{"content":"0194fbf7-22ca-708f-a258-2aa4775ad2fe","tag":"Basic"},"tag":"morphism"},"id":"0194fc86-fc7d-71bf-8a12-a08225dbd415","tag":"formal"},{"content":{"cod":{"content":"0194fc8c-ae7e-729d-a08a-20ed123f8277","tag":"Basic"},"dom":{"content":"0194fbfb-c114-7497-a5bd-26109638d7be","tag":"Basic"},"id":"0194fc8b-5b5c-72e6-9437-1454a96c4996","morType":{"content":{"content":"Object","tag":"Basic"},"tag":"Hom"},"name":"","over":{"content":"0194fc8a-1dab-72eb-b4b1-d7b4ed1c2505","tag":"Basic"},"tag":"morphism"},"id":"0194fc8b-5b5c-72e6-9437-1afac429503d","tag":"formal"},{"content":{"id":"0194fc9b-cae0-7663-8f19-ab654bae0f2a","name":"Global Write","obType":{"content":"Object","tag":"Basic"},"over":{"content":"0194fc9b-edab-7627-95ba-ca1d70a6097c","tag":"Basic"},"tag":"object"},"id":"0194fc9b-cae0-7663-8f19-af7b57e86a93","tag":"formal"},{"content":{"cod":{"content":"0194fc9c-e9b2-77fa-abcb-f160ab8dd5fc","tag":"Basic"},"dom":{"content":"0194fbfc-f5e2-7689-a30a-24434a788286","tag":"Basic"},"id":"0194fc9c-9bc2-738d-960c-7530c0ac109d","morType":{"content":{"content":"Object","tag":"Basic"},"tag":"Hom"},"name":"","over":{"content":"0194fc8a-8bee-754a-a121-e5cc2fb34b92","tag":"Basic"},"tag":"morphism"},"id":"0194fc9c-9bc2-738d-960c-7bf97ff496c5","tag":"formal"},{"content":{"cod":{"content":"0194fc9b-cae0-7663-8f19-ab654bae0f2a","tag":"Basic"},"dom":{"content":"0194fc9c-e9b2-77fa-abcb-f160ab8dd5fc","tag":"Basic"},"id":"0194fc9c-fcb7-77ad-89b6-d7cec0125c46","morType":{"content":{"content":"Object","tag":"Basic"},"tag":"Hom"},"name":"","over":{"content":"0194fc9c-0556-72f8-bf01-819e66abf3b0","tag":"Basic"},"tag":"morphism"},"id":"0194fc9c-fcb7-77ad-89b6-d91e0d7ae5c4","tag":"formal"},{"content":{"id":"01950217-c916-72f1-923c-d858e8345dcf","name":"evan","obType":{"content":"Object","tag":"Basic"},"over":{"content":"0194fbf6-627c-76c8-b227-8513b1233c84","tag":"Basic"},"tag":"object"},"id":"01950217-c916-72f1-923c-dc3739a3bfa0","tag":"formal"}]},"type":"diagram"}
+{
+  "diagramIn": {
+    "_id": "0194fbf4-fddf-7a12-b88b-33015d17d8e7",
+    "_server": "backend.catcolab.org",
+    "_version": null,
+    "type": "diagram-in"
+  },
+  "name": "An Example Instance",
+  "notebook": {
+    "cells": [
+      {
+        "content": "An olog is a world-view. An instance of an olog describes the world according to that view. For example, using our ontology of CatColab, we can then structure a discussion about specific CatColab features that we have and will demo today. For example, CatColab has a theory of ologs hard coded into it. Our previous document, \"The Ontology of CatColab\", is a user-created a model of this theory.",
+        "id": "0194fc9f-1d4d-7238-b007-ec1f070e7272",
+        "tag": "rich-text"
+      },
+      {
+        "content": {
+          "id": "0194fbf9-cd25-71cb-9d74-2f77f203b184",
+          "name": "Olog",
+          "obType": {
+            "content": "Object",
+            "tag": "Basic"
+          },
+          "over": {
+            "content": "0194fbf5-51da-7116-8155-e353458e0650",
+            "tag": "Basic"
+          },
+          "tag": "object"
+        },
+        "id": "0194fbf9-cd25-71cb-9d74-33733242df4a",
+        "tag": "formal"
+      },
+      {
+        "content": {
+          "id": "0194fbfb-c114-7497-a5bd-26109638d7be",
+          "name": "The Ontology of CatColab",
+          "obType": {
+            "content": "Object",
+            "tag": "Basic"
+          },
+          "over": {
+            "content": "0194fbf5-5fac-71cf-a5f0-837d9774397e",
+            "tag": "Basic"
+          },
+          "tag": "object"
+        },
+        "id": "0194fbfb-c114-7497-a5bd-2b0fb8cf5bc3",
+        "tag": "formal"
+      },
+      {
+        "content": {
+          "cod": {
+            "content": "0194fbf9-cd25-71cb-9d74-2f77f203b184",
+            "tag": "Basic"
+          },
+          "dom": {
+            "content": "0194fbfb-c114-7497-a5bd-26109638d7be",
+            "tag": "Basic"
+          },
+          "id": "0194fbfb-f4d2-71ec-b663-5dafee23ce28",
+          "morType": {
+            "content": {
+              "content": "Object",
+              "tag": "Basic"
+            },
+            "tag": "Hom"
+          },
+          "name": "",
+          "over": {
+            "content": "0194fbf5-c1c4-727c-af7a-cccf98aedaec",
+            "tag": "Basic"
+          },
+          "tag": "morphism"
+        },
+        "id": "0194fbfb-f4d2-71ec-b663-626d97f5c82c",
+        "tag": "formal"
+      },
+      {
+        "content": "Moreover, this document is an instance of the ontology of CatColab we created (this is indicated in the top right of the screen):",
+        "id": "0194fca9-75a9-7524-a5c3-76e35f49d8e3",
+        "tag": "rich-text"
+      },
+      {
+        "content": {
+          "id": "0194fbfc-f5e2-7689-a30a-24434a788286",
+          "name": "Today's Example Instance",
+          "obType": {
+            "content": "Object",
+            "tag": "Basic"
+          },
+          "over": {
+            "content": "0194fbf5-75a7-702a-a6ee-349ba8a73d10",
+            "tag": "Basic"
+          },
+          "tag": "object"
+        },
+        "id": "0194fbfc-f5e2-7689-a30a-281846f5cf58",
+        "tag": "formal"
+      },
+      {
+        "content": {
+          "cod": {
+            "content": "0194fbfb-c114-7497-a5bd-26109638d7be",
+            "tag": "Basic"
+          },
+          "dom": {
+            "content": "0194fbfc-f5e2-7689-a30a-24434a788286",
+            "tag": "Basic"
+          },
+          "id": "0194fbfd-8309-70eb-aae4-b5969f233f24",
+          "morType": {
+            "content": {
+              "content": "Object",
+              "tag": "Basic"
+            },
+            "tag": "Hom"
+          },
+          "name": "",
+          "over": {
+            "content": "0194fbf5-8de7-71dc-97ee-7c4c0bd81eee",
+            "tag": "Basic"
+          },
+          "tag": "morphism"
+        },
+        "id": "0194fbfd-8309-70eb-aae4-b957aaddb4e3",
+        "tag": "formal"
+      },
+      {
+        "content": "What else is available? At the highest level, we have two, hard-coded doctrines., which describe the meta-logical structures that are used to define a given theory:",
+        "id": "0194fcbc-bb5e-7669-bcee-0acf9cfb0d2b",
+        "tag": "rich-text"
+      },
+      {
+        "content": {
+          "id": "0194fbfa-8eb8-7269-8395-67abb36dfad6",
+          "name": "The Doctrine of Simple Double Theories",
+          "obType": {
+            "content": "Object",
+            "tag": "Basic"
+          },
+          "over": {
+            "content": "0194fbf5-34c8-778e-bc20-2b1ae8148eab",
+            "tag": "Basic"
+          },
+          "tag": "object"
+        },
+        "id": "0194fbfa-8eb8-7269-8395-697d889ca239",
+        "tag": "formal"
+      },
+      {
+        "content": {
+          "id": "0194fbfa-a353-721a-ad3f-d884f92a40a5",
+          "name": "The Doctrine of Double Theories with Tabulators",
+          "obType": {
+            "content": "Object",
+            "tag": "Basic"
+          },
+          "over": {
+            "content": "0194fbf5-34c8-778e-bc20-2b1ae8148eab",
+            "tag": "Basic"
+          },
+          "tag": "object"
+        },
+        "id": "0194fbfa-a353-721a-ad3f-de7173dae36a",
+        "tag": "formal"
+      },
+      {
+        "content": "Other theories currently available in CatColab include:",
+        "id": "0194fcbd-ef26-7494-99d7-79eec6abf331",
+        "tag": "rich-text"
+      },
+      {
+        "content": {
+          "id": "0194fbf9-eda3-719e-9b3c-ec53d8cc13d1",
+          "name": "Schema",
+          "obType": {
+            "content": "Object",
+            "tag": "Basic"
+          },
+          "over": {
+            "content": "0194fbf5-51da-7116-8155-e353458e0650",
+            "tag": "Basic"
+          },
+          "tag": "object"
+        },
+        "id": "0194fbf9-eda3-719e-9b3c-f22ca3dea1b7",
+        "tag": "formal"
+      },
+      {
+        "content": {
+          "id": "0194fbf9-fe92-73dd-af12-e0df34fc8fac",
+          "name": "Causal Loop Diagram",
+          "obType": {
+            "content": "Object",
+            "tag": "Basic"
+          },
+          "over": {
+            "content": "0194fbf5-51da-7116-8155-e353458e0650",
+            "tag": "Basic"
+          },
+          "tag": "object"
+        },
+        "id": "0194fbf9-fe92-73dd-af12-e4930a28df36",
+        "tag": "formal"
+      },
+      {
+        "content": {
+          "id": "0194fbfa-6335-7629-980e-41a90cc07342",
+          "name": "Stock-Flow Diagram",
+          "obType": {
+            "content": "Object",
+            "tag": "Basic"
+          },
+          "over": {
+            "content": "0194fbf5-51da-7116-8155-e353458e0650",
+            "tag": "Basic"
+          },
+          "tag": "object"
+        },
+        "id": "0194fbfa-6335-7629-980e-46970823d68f",
+        "tag": "formal"
+      },
+      {
+        "content": "These specific theories are built with the ",
+        "id": "0194fd75-ad37-7537-894b-498b08a6ff70",
+        "tag": "rich-text"
+      },
+      {
+        "content": {
+          "cod": {
+            "content": "0194fbfa-8eb8-7269-8395-67abb36dfad6",
+            "tag": "Basic"
+          },
+          "dom": {
+            "content": "0194fbf9-cd25-71cb-9d74-2f77f203b184",
+            "tag": "Basic"
+          },
+          "id": "0194fbfa-cd21-7620-a343-1deb788264d5",
+          "morType": {
+            "content": {
+              "content": "Object",
+              "tag": "Basic"
+            },
+            "tag": "Hom"
+          },
+          "name": "",
+          "over": {
+            "content": "0194fbf5-f95d-7724-9fb0-9677773a2551",
+            "tag": "Basic"
+          },
+          "tag": "morphism"
+        },
+        "id": "0194fbfa-cd21-7620-a343-212c22ddaae7",
+        "tag": "formal"
+      },
+      {
+        "content": {
+          "cod": {
+            "content": "0194fbfa-8eb8-7269-8395-67abb36dfad6",
+            "tag": "Basic"
+          },
+          "dom": {
+            "content": "0194fbf9-eda3-719e-9b3c-ec53d8cc13d1",
+            "tag": "Basic"
+          },
+          "id": "0194fbfb-6038-71fd-b2fb-41a7c1772a6d",
+          "morType": {
+            "content": {
+              "content": "Object",
+              "tag": "Basic"
+            },
+            "tag": "Hom"
+          },
+          "name": "",
+          "over": {
+            "content": "0194fbf5-f95d-7724-9fb0-9677773a2551",
+            "tag": "Basic"
+          },
+          "tag": "morphism"
+        },
+        "id": "0194fbfb-6038-71fd-b2fb-4784aea1681c",
+        "tag": "formal"
+      },
+      {
+        "content": {
+          "cod": {
+            "content": "0194fbfa-8eb8-7269-8395-67abb36dfad6",
+            "tag": "Basic"
+          },
+          "dom": {
+            "content": "0194fbf9-fe92-73dd-af12-e0df34fc8fac",
+            "tag": "Basic"
+          },
+          "id": "0194fbfb-68d0-77f2-8f0f-407bec48bce3",
+          "morType": {
+            "content": {
+              "content": "Object",
+              "tag": "Basic"
+            },
+            "tag": "Hom"
+          },
+          "name": "",
+          "over": {
+            "content": "0194fbf5-f95d-7724-9fb0-9677773a2551",
+            "tag": "Basic"
+          },
+          "tag": "morphism"
+        },
+        "id": "0194fbfb-68d0-77f2-8f0f-45ce6136a00b",
+        "tag": "formal"
+      },
+      {
+        "content": {
+          "cod": {
+            "content": "0194fbfa-a353-721a-ad3f-d884f92a40a5",
+            "tag": "Basic"
+          },
+          "dom": {
+            "content": "0194fbfa-6335-7629-980e-41a90cc07342",
+            "tag": "Basic"
+          },
+          "id": "0194fbfb-6f52-774b-bb24-707f1ef5f128",
+          "morType": {
+            "content": {
+              "content": "Object",
+              "tag": "Basic"
+            },
+            "tag": "Hom"
+          },
+          "name": "",
+          "over": {
+            "content": "0194fbf5-f95d-7724-9fb0-9677773a2551",
+            "tag": "Basic"
+          },
+          "tag": "morphism"
+        },
+        "id": "0194fbfb-6f52-774b-bb24-767b6b9fcc51",
+        "tag": "formal"
+      },
+      {
+        "content": "This document has users, permissions, and documents as follows:",
+        "id": "0194fccd-0ace-721b-9715-1271c0df6530",
+        "tag": "rich-text"
+      },
+      {
+        "content": {
+          "id": "0194fc85-c600-705c-b548-e4ac087d5684",
+          "name": "kevincarlson",
+          "obType": {
+            "content": "Object",
+            "tag": "Basic"
+          },
+          "over": {
+            "content": "0194fbf6-627c-76c8-b227-8513b1233c84",
+            "tag": "Basic"
+          },
+          "tag": "object"
+        },
+        "id": "0194fc85-c600-705c-b548-e8f2e8307470",
+        "tag": "formal"
+      },
+      {
+        "content": {
+          "cod": {
+            "content": "0194fc85-c600-705c-b548-e4ac087d5684",
+            "tag": "Basic"
+          },
+          "dom": {
+            "content": "0194fc86-ad6b-703c-96cd-a1c222aed80d",
+            "tag": "Basic"
+          },
+          "id": "0194fc86-37ef-77af-b819-8229a5799725",
+          "morType": {
+            "content": {
+              "content": "Object",
+              "tag": "Basic"
+            },
+            "tag": "Hom"
+          },
+          "name": "",
+          "over": {
+            "content": "0194fbf6-e0b1-71cf-84f3-36203da564d8",
+            "tag": "Basic"
+          },
+          "tag": "morphism"
+        },
+        "id": "0194fc86-37ef-77af-b819-8532968e36be",
+        "tag": "formal"
+      },
+      {
+        "content": {
+          "cod": {
+            "content": "0194fc8c-ae7e-729d-a08a-20ed123f8277",
+            "tag": "Basic"
+          },
+          "dom": {
+            "content": "0194fc86-ad6b-703c-96cd-a1c222aed80d",
+            "tag": "Basic"
+          },
+          "id": "0194fc86-fc7d-71bf-8a12-9d9d808e1a4d",
+          "morType": {
+            "content": {
+              "content": "Object",
+              "tag": "Basic"
+            },
+            "tag": "Hom"
+          },
+          "name": "",
+          "over": {
+            "content": "0194fbf7-22ca-708f-a258-2aa4775ad2fe",
+            "tag": "Basic"
+          },
+          "tag": "morphism"
+        },
+        "id": "0194fc86-fc7d-71bf-8a12-a08225dbd415",
+        "tag": "formal"
+      },
+      {
+        "content": {
+          "cod": {
+            "content": "0194fc8c-ae7e-729d-a08a-20ed123f8277",
+            "tag": "Basic"
+          },
+          "dom": {
+            "content": "0194fbfb-c114-7497-a5bd-26109638d7be",
+            "tag": "Basic"
+          },
+          "id": "0194fc8b-5b5c-72e6-9437-1454a96c4996",
+          "morType": {
+            "content": {
+              "content": "Object",
+              "tag": "Basic"
+            },
+            "tag": "Hom"
+          },
+          "name": "",
+          "over": {
+            "content": "0194fc8a-1dab-72eb-b4b1-d7b4ed1c2505",
+            "tag": "Basic"
+          },
+          "tag": "morphism"
+        },
+        "id": "0194fc8b-5b5c-72e6-9437-1afac429503d",
+        "tag": "formal"
+      },
+      {
+        "content": {
+          "id": "0194fc9b-cae0-7663-8f19-ab654bae0f2a",
+          "name": "Global Write",
+          "obType": {
+            "content": "Object",
+            "tag": "Basic"
+          },
+          "over": {
+            "content": "0194fc9b-edab-7627-95ba-ca1d70a6097c",
+            "tag": "Basic"
+          },
+          "tag": "object"
+        },
+        "id": "0194fc9b-cae0-7663-8f19-af7b57e86a93",
+        "tag": "formal"
+      },
+      {
+        "content": {
+          "cod": {
+            "content": "0194fc9c-e9b2-77fa-abcb-f160ab8dd5fc",
+            "tag": "Basic"
+          },
+          "dom": {
+            "content": "0194fbfc-f5e2-7689-a30a-24434a788286",
+            "tag": "Basic"
+          },
+          "id": "0194fc9c-9bc2-738d-960c-7530c0ac109d",
+          "morType": {
+            "content": {
+              "content": "Object",
+              "tag": "Basic"
+            },
+            "tag": "Hom"
+          },
+          "name": "",
+          "over": {
+            "content": "0194fc8a-8bee-754a-a121-e5cc2fb34b92",
+            "tag": "Basic"
+          },
+          "tag": "morphism"
+        },
+        "id": "0194fc9c-9bc2-738d-960c-7bf97ff496c5",
+        "tag": "formal"
+      },
+      {
+        "content": {
+          "cod": {
+            "content": "0194fc9b-cae0-7663-8f19-ab654bae0f2a",
+            "tag": "Basic"
+          },
+          "dom": {
+            "content": "0194fc9c-e9b2-77fa-abcb-f160ab8dd5fc",
+            "tag": "Basic"
+          },
+          "id": "0194fc9c-fcb7-77ad-89b6-d7cec0125c46",
+          "morType": {
+            "content": {
+              "content": "Object",
+              "tag": "Basic"
+            },
+            "tag": "Hom"
+          },
+          "name": "",
+          "over": {
+            "content": "0194fc9c-0556-72f8-bf01-819e66abf3b0",
+            "tag": "Basic"
+          },
+          "tag": "morphism"
+        },
+        "id": "0194fc9c-fcb7-77ad-89b6-d91e0d7ae5c4",
+        "tag": "formal"
+      },
+      {
+        "content": {
+          "id": "01950217-c916-72f1-923c-d858e8345dcf",
+          "name": "evan",
+          "obType": {
+            "content": "Object",
+            "tag": "Basic"
+          },
+          "over": {
+            "content": "0194fbf6-627c-76c8-b227-8513b1233c84",
+            "tag": "Basic"
+          },
+          "tag": "object"
+        },
+        "id": "01950217-c916-72f1-923c-dc3739a3bfa0",
+        "tag": "formal"
+      }
+    ]
+  },
+  "type": "diagram"
+}

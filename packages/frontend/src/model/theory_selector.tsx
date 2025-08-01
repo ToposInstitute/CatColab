@@ -25,7 +25,7 @@ export function TheorySelectorDialog(props: TheorySelectorProps) {
             >
                 {props.theoryMeta.name}
             </Dialog.Trigger>
-            <TheoryHelpButton theoryMeta={props.theoryMeta} />
+            <TheoryHelpButton meta={props.theoryMeta} />
             <Dialog.Portal>
                 <Dialog.Overlay class="overlay" />
                 <Dialog.Content class="popup">
