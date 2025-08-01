@@ -34,8 +34,7 @@ jobs:
       - name: Build developer docs
         run: |
           pnpm install
-          mv CONTRIBUTING.md dev-docs/README.md
-          pnpm typedoc --options ./dev-docs/typedoc.json
+          pnpm --filter ./dev-docs run doc
 
       - name: Upload developer docs
         uses: actions/upload-artifact@v4
