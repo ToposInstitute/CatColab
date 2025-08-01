@@ -23,8 +23,7 @@ const customSchemaSpec = {
 } satisfies MappedSchemaSpec;
 
 type NodeNames = keyof typeof customSchemaSpec.nodes;
-//type MarkNames = keyof NonNullable<typeof customSchemaSpec.marks>;
-type MarkNames = string;
+type MarkNames = keyof NonNullable<typeof customSchemaSpec.marks>;
 
 export type CustomSchema = Schema<NodeNames, MarkNames>;
 
