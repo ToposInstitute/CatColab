@@ -9,7 +9,7 @@ use std::rc::Rc;
 use ustr::ustr;
 use wasm_bindgen::prelude::*;
 
-use catlog::dbl::{model, theory};
+use catlog::dbl::theory;
 use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories};
 
@@ -112,14 +112,11 @@ impl ThSignedCategory {
         model: &DblModel,
         data: LotkaVolterraModelData,
     ) -> Result<ODEResult, String> {
-        let model: &model::DiscreteDblModel<_, _> = (&model.0)
-            .try_into()
-            .map_err(|_| "Lotka-Volterra simulation expects a discrete double model")?;
         Ok(ODEResult(
             analyses::ode::SignedCoefficientBuilder::new(ustr("Object"))
                 .add_positive(Path::Id(ustr("Object")))
                 .add_negative(ustr("Negative").into())
-                .lotka_volterra_analysis(model, data.0)
+                .lotka_volterra_analysis(model.discrete()?, data.0)
                 .solve_with_defaults()
                 .map_err(|err| format!("{err:?}"))
                 .into(),
@@ -133,14 +130,11 @@ impl ThSignedCategory {
         model: &DblModel,
         data: LinearODEModelData,
     ) -> Result<ODEResult, String> {
-        let model: &model::DiscreteDblModel<_, _> = (&model.0)
-            .try_into()
-            .map_err(|_| "Linear ODE simulation expects a discrete double model")?;
         Ok(ODEResult(
             analyses::ode::SignedCoefficientBuilder::new(ustr("Object"))
                 .add_positive(Path::Id(ustr("Object")))
                 .add_negative(ustr("Negative").into())
-                .linear_ode_analysis(model, data.0)
+                .linear_ode_analysis(model.discrete()?, data.0)
                 .solve_with_defaults()
                 .map_err(|err| format!("{err:?}"))
                 .into(),
@@ -266,11 +260,9 @@ impl ThCategoryLinks {
         model: &DblModel,
         data: MassActionModelData,
     ) -> Result<ODEResult, String> {
-        let model: &model::DiscreteTabModel<_, _> =
-            (&model.0).try_into().map_err(|_| "Model should be of a tabulator theory")?;
         Ok(ODEResult(
             analyses::ode::StockFlowMassActionAnalysis::default()
-                .build_numerical_system(model, data.0)
+                .build_numerical_system(model.discrete_tab()?, data.0)
                 .solve_with_defaults()
                 .map_err(|err| format!("{err:?}"))
                 .into(),
@@ -301,11 +293,9 @@ impl ThSymMonoidalCategory {
         model: &DblModel,
         data: MassActionModelData,
     ) -> Result<ODEResult, String> {
-        let model: &model::ModalDblModel<_, _> =
-            (&model.0).try_into().map_err(|_| "Model should be of a modal theory")?;
         Ok(ODEResult(
             analyses::ode::PetriNetMassActionAnalysis::default()
-                .build_numerical_system(model, data.0)
+                .build_numerical_system(model.modal()?, data.0)
                 .solve_with_defaults()
                 .map_err(|err| format!("{err:?}"))
                 .into(),

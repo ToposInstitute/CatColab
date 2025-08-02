@@ -39,6 +39,25 @@ pub enum DblModelBox {
 #[wasm_bindgen]
 pub struct DblModel(#[wasm_bindgen(skip)] pub DblModelBox);
 
+impl DblModel {
+    /// Tries to extract a model of a discrete theory.
+    pub fn discrete(&self) -> Result<&DiscreteDblModel, String> {
+        (&self.0).try_into().map_err(|_| "Model should be of a discrete theory".into())
+    }
+
+    /// Tries to extract a model of a discrete tabulator theory.
+    pub fn discrete_tab(&self) -> Result<&DiscreteTabModel, String> {
+        (&self.0)
+            .try_into()
+            .map_err(|_| "Model should be of a discrete tabulator theory".into())
+    }
+
+    /// Tries to extract a model of a modal theory.
+    pub fn modal(&self) -> Result<&ModalDblModel, String> {
+        (&self.0).try_into().map_err(|_| "Model should be of a modal theory".into())
+    }
+}
+
 /// Elaborates into an object in a model of a discrete double theory.
 impl CanElaborate<Ob, Uuid> for Elaborator {
     fn elab(&self, ob: &Ob) -> Result<Uuid, String> {
