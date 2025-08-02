@@ -247,6 +247,6 @@ mod tests {
         assert!(th.has_mor_type(&neg.into()));
         assert!(th.has_mor_type(&slow.into()));
         let path = Path::Seq(nonempty![neg, slow, neg, slow]);
-        assert!(th.category().morphisms_are_equal(path, slow.into()));
+        assert!(th.0.morphisms_are_equal(path, slow.into()));
     }
 }
