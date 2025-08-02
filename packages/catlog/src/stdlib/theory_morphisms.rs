@@ -22,7 +22,7 @@ pub fn th_category_to_schema() -> DiscreteDblTheoryMap<Ustr> {
     )
 }
 
-/** Map from theory of scehmas to theory of categories.
+/** Map from theory of schemas to theory of categories.
 
 Sigma migration along this map erases the distinction between entity types and
 attribute types, turning both into objects in a category.
@@ -32,6 +32,27 @@ pub fn th_schema_to_category() -> DiscreteDblTheoryMap<Ustr> {
     FpFunctorData::new(
         HashColumn::new([(ustr("Entity"), x), (ustr("AttrType"), x)].into()),
         HashColumn::new([(ustr("Attr"), Path::Id(x))].into()),
+    )
+}
+
+/** Projection from theory of delayable signed categories.
+
+Sigma migration along this map forgets about the delays.
+ */
+pub fn th_delayable_signed_category_to_signed_category() -> DiscreteDblTheoryMap<Ustr> {
+    let x = ustr("Object");
+    FpFunctorData::new(
+        HashColumn::new([(x, x)].into()),
+        HashColumn::new(
+            [
+                (ustr("Negative"), ustr("Negative").into()),
+                (ustr("Slow"), Path::Id(x)),
+                // TODO: Shouldn't have to define on these superfluous generators.
+                (ustr("PositiveSlow"), Path::Id(x)),
+                (ustr("NegativeSlow"), ustr("Negative").into()),
+            ]
+            .into(),
+        ),
     )
 }
 
@@ -45,5 +66,12 @@ mod tests {
         let (th_cat, th_sch) = (th_category().0, th_schema().0);
         assert!(th_category_to_schema().functor_into(&th_sch).validate_on(&th_cat).is_ok());
         assert!(th_schema_to_category().functor_into(&th_cat).validate_on(&th_sch).is_ok());
+
+        assert!(
+            th_delayable_signed_category_to_signed_category()
+                .functor_into(&th_signed_category().0)
+                .validate_on(&th_delayable_signed_category().0)
+                .is_ok()
+        );
     }
 }
