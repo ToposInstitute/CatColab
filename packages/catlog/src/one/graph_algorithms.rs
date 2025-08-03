@@ -232,3 +232,72 @@ mod tests {
         assert_eq!(spec_order_all(&g), vec![Vertex(0), Edge(0)]);
     }
 }
+
+#[cfg(test)]
+mod proptesting {
+
+    use super::*;
+    use crate::one::graph::proptesting::skel_graph_strategy;
+    use proptest::{prop_assert, prop_assert_eq, proptest};
+
+    fn spec_order_valid<G>(spec_order: &[GraphElem<G::V, G::E>], g: &G) -> bool
+    where
+        G: Graph,
+        G::V: Hash,
+    {
+        let mut vertices_seen = HashSet::<G::V>::new();
+        for cur_element in spec_order {
+            match cur_element {
+                GraphElem::Vertex(v) => {
+                    if !g.has_vertex(v) {
+                        return false;
+                    }
+                    vertices_seen.insert(v.clone());
+                }
+                GraphElem::Edge(e) => {
+                    if !g.has_edge(e) {
+                        return false;
+                    }
+                    let (src, tgt) = (g.src(e), g.tgt(e));
+                    if !vertices_seen.contains(&src) || !vertices_seen.contains(&tgt) {
+                        return false;
+                    }
+                }
+            }
+        }
+        true
+    }
+
+    proptest! {
+        #[test]
+        fn gen_small_simple_paths(sk in skel_graph_strategy(0usize..=7,2usize..13)) {
+            let all_vertices = sk.vertex_set().clone();
+            for s in all_vertices {
+                let mut found_id = false;
+                for simple_path in bounded_simple_paths(&sk, &s, &s, Some(3)) {
+                    prop_assert_eq!(simple_path.src(&sk), s);
+                    prop_assert_eq!(simple_path.tgt(&sk), s);
+                    if !found_id && simple_path == Path::Id(s){
+                        found_id = true;
+                    }
+                }
+                prop_assert!(found_id);
+                for t in all_vertices {
+                    if t==s {
+                        continue;
+                    }
+                    for simple_path in bounded_simple_paths(&sk, &s, &t, Some(3)) {
+                        prop_assert_eq!(simple_path.src(&sk), s);
+                        prop_assert_eq!(simple_path.tgt(&sk), t);
+                    }
+                }
+            }
+        }
+
+        #[test]
+        fn gen_specorder(sk in skel_graph_strategy(0usize..=7,2usize..13)) {
+            let my_spec_order = spec_order_all(&sk);
+            prop_assert!(spec_order_valid(&my_spec_order,&sk));
+        }
+    }
+}
