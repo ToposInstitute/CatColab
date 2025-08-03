@@ -1,15 +1,21 @@
-import * as catlog from "catlog-wasm";
+import { ThDelayableSignedCategory } from "catlog-wasm";
 
 import { Theory } from "../../theory";
 import * as analyses from "../analyses";
 import type { TheoryMeta } from "../types";
 
 export default function createCausalLoopDelaysTheory(theoryMeta: TheoryMeta): Theory {
-    const thDelayedSignedCategory = new catlog.ThDelayableSignedCategory();
+    const thDelayedSignedCategory = new ThDelayableSignedCategory();
 
     return new Theory({
         ...theoryMeta,
         theory: thDelayedSignedCategory.theory(),
+        pushforwards: [
+            {
+                target: "causal-loop",
+                migrate: ThDelayableSignedCategory.toSignedCategory,
+            },
+        ],
         onlyFreeModels: true,
         modelTypes: [
             {

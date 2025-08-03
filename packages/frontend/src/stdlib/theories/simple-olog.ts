@@ -1,4 +1,4 @@
-import * as catlog from "catlog-wasm";
+import { ThCategory } from "catlog-wasm";
 
 import { Theory } from "../../theory";
 import * as analyses from "../analyses";
@@ -8,11 +8,17 @@ import styles from "../styles.module.css";
 import svgStyles from "../svg_styles.module.css";
 
 export default function createOlogTheory(theoryMeta: TheoryMeta): Theory {
-    const thCategory = new catlog.ThCategory();
+    const thCategory = new ThCategory();
 
     return new Theory({
         ...theoryMeta,
         theory: thCategory.theory(),
+        pushforwards: [
+            {
+                target: "simple-schema",
+                migrate: ThCategory.toSchema,
+            },
+        ],
         modelTypes: [
             {
                 tag: "ObType",

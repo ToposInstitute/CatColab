@@ -11,7 +11,7 @@ use wasm_bindgen::prelude::*;
 
 use catlog::dbl::theory;
 use catlog::one::Path;
-use catlog::stdlib::{analyses, models, theories};
+use catlog::stdlib::{analyses, models, theories, theory_morphisms};
 
 use super::model_morphism::{MotifsOptions, motifs};
 use super::{analyses::*, model::DblModel, theory::DblTheory};
@@ -48,6 +48,17 @@ impl ThCategory {
     pub fn theory(&self) -> DblTheory {
         DblTheory(self.0.clone().into())
     }
+
+    /// Sigma migrates a category to a schema.
+    #[wasm_bindgen(js_name = "toSchema")]
+    pub fn to_schema(mut model: DblModel, th_schema: DblTheory) -> Result<DblModel, String> {
+        let th = th_schema.discrete()?;
+        model.discrete_mut()?.push_forward(
+            &theory_morphisms::th_category_to_schema().functor_into(&th.0),
+            th.clone(),
+        );
+        Ok(model)
+    }
 }
 
 /// The theory of database schemas with attributes.
@@ -64,6 +75,17 @@ impl ThSchema {
     #[wasm_bindgen]
     pub fn theory(&self) -> DblTheory {
         DblTheory(self.0.clone().into())
+    }
+
+    /// Sigma migrates a schema to a category.
+    #[wasm_bindgen(js_name = "toCategory")]
+    pub fn to_category(mut model: DblModel, th_category: DblTheory) -> Result<DblModel, String> {
+        let th = th_category.discrete()?;
+        model.discrete_mut()?.push_forward(
+            &theory_morphisms::th_schema_to_category().functor_into(&th.0),
+            th.clone(),
+        );
+        Ok(model)
     }
 }
 
@@ -200,6 +222,18 @@ impl ThDelayableSignedCategory {
     ) -> Result<Vec<DblModel>, String> {
         let delayed_negative_loop = models::delayed_negative_loop(self.0.clone());
         motifs(&delayed_negative_loop, model, options)
+    }
+
+    /// Sigma migrates a delayable signed category to a signed category.
+    #[wasm_bindgen(js_name = "toSignedCategory")]
+    pub fn to_signed_category(mut model: DblModel, th: DblTheory) -> Result<DblModel, String> {
+        let th = th.discrete()?;
+        model.discrete_mut()?.push_forward(
+            &theory_morphisms::th_delayable_signed_category_to_signed_category()
+                .functor_into(&th.0),
+            th.clone(),
+        );
+        Ok(model)
     }
 }
 

@@ -29,7 +29,7 @@ See [`DblTheoryBox`] for motivation.
  */
 #[allow(clippy::large_enum_variant)]
 #[derive(From, TryInto)]
-#[try_into(ref)]
+#[try_into(ref, ref_mut)]
 pub enum DblModelBox {
     Discrete(DiscreteDblModel),
     DiscreteTab(DiscreteTabModel),
@@ -40,19 +40,26 @@ pub enum DblModelBox {
 pub struct DblModel(#[wasm_bindgen(skip)] pub DblModelBox);
 
 impl DblModel {
-    /// Tries to extract a model of a discrete theory.
+    /// Tries to get a model of a discrete theory.
     pub fn discrete(&self) -> Result<&DiscreteDblModel, String> {
         (&self.0).try_into().map_err(|_| "Model should be of a discrete theory".into())
     }
 
-    /// Tries to extract a model of a discrete tabulator theory.
+    /// Tries to get a model of a discrete theory, by mutable reference.
+    pub fn discrete_mut(&mut self) -> Result<&mut DiscreteDblModel, String> {
+        (&mut self.0)
+            .try_into()
+            .map_err(|_| "Model should be of a discrete theory".into())
+    }
+
+    /// Tries to get a model of a discrete tabulator theory.
     pub fn discrete_tab(&self) -> Result<&DiscreteTabModel, String> {
         (&self.0)
             .try_into()
             .map_err(|_| "Model should be of a discrete tabulator theory".into())
     }
 
-    /// Tries to extract a model of a modal theory.
+    /// Tries to get a model of a modal theory.
     pub fn modal(&self) -> Result<&ModalDblModel, String> {
         (&self.0).try_into().map_err(|_| "Model should be of a modal theory".into())
     }
