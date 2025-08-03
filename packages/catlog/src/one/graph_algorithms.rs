@@ -277,6 +277,7 @@ mod proptesting {
                 for simple_path in bounded_simple_paths(&sk, &s, &s, Some(3)) {
                     prop_assert_eq!(simple_path.src(&sk), s);
                     prop_assert_eq!(simple_path.tgt(&sk), s);
+                    prop_assert!(simple_path.is_simple());
                     if !found_id && simple_path == Path::Id(s){
                         found_id = true;
                     }
@@ -289,6 +290,7 @@ mod proptesting {
                     for simple_path in bounded_simple_paths(&sk, &s, &t, Some(3)) {
                         prop_assert_eq!(simple_path.src(&sk), s);
                         prop_assert_eq!(simple_path.tgt(&sk), t);
+                        prop_assert!(simple_path.is_simple());
                     }
                 }
             }

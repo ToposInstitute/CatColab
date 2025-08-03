@@ -170,3 +170,105 @@ mod tests {
         assert!(!tree.is_isomorphic_to(&other));
     }
 }
+
+#[cfg(test)]
+mod proptesting {
+    use super::*;
+    use core::fmt::Debug;
+    use proptest::prelude::{Strategy, prop_assert, prop_assert_eq, proptest};
+
+    fn tree_strategy<'a, T: Debug + Clone + 'static>(
+        desired_size: impl Strategy<Value = u8> + 'a,
+        t_strategy: impl Strategy<Value = T> + Clone + 'static,
+        depth: impl Strategy<Value = u8> + 'a,
+        arities: impl Strategy<Value = u8> + Clone + 'a,
+    ) -> impl Strategy<Value = Tree<T>> + 'a {
+        (desired_size, depth, arities).prop_flat_map(
+            move |(mut desired_size, depth, mut expected_branch_size)| {
+                if expected_branch_size < 1 {
+                    expected_branch_size = 1;
+                }
+                if desired_size == 0 {
+                    desired_size = 1;
+                }
+                let t_strat = t_strategy.clone();
+                t_strat.clone().prop_map(|root| Tree::new(root)).prop_recursive(
+                    depth as u32,
+                    desired_size as u32,
+                    expected_branch_size as u32,
+                    move |subtree_strat| {
+                        (
+                            t_strat.clone(),
+                            proptest::collection::vec(
+                                subtree_strat,
+                                1..=(expected_branch_size as usize),
+                            ),
+                        )
+                            .prop_map(|(root, children)| {
+                                let mut new_tree = Tree::new(root);
+                                for cur_child in children {
+                                    let _ = new_tree.root_mut().append_subtree(cur_child);
+                                }
+                                new_tree
+                            })
+                    },
+                )
+            },
+        )
+    }
+
+    proptest! {
+        #[test]
+        fn self_iso(t in tree_strategy::<i8>(0..10u8,-109i8..116,0u8..6,0u8..4), shift_amount in -104i8..104) {
+            prop_assert!(t.is_isomorphic_to(&t));
+            let t_prime = t.clone().map(|data| {data.checked_add(shift_amount).unwrap_or_default()});
+            if shift_amount == 0 {
+                prop_assert!(t_prime.is_isomorphic_to(&t));
+            } else {
+                prop_assert!(!t_prime.is_isomorphic_to(&t));
+            }
+        }
+
+        #[test]
+        fn arities_depth(t in tree_strategy::<char>(4..10u8,proptest::char::any(),0u8..6,1u8..4)) {
+            #[allow(unused_variables)]
+            let mut count_nodes = 0;
+            for node in t.nodes() {
+                count_nodes += 1;
+                prop_assert!(node.children().count() < 4);
+                let mut my_depth = 0;
+                let mut cur_parent = node.clone();
+                while let Some(cur_node) = cur_parent.parent() {
+                    cur_parent = cur_node;
+                    my_depth += 1;
+                }
+                prop_assert!(my_depth < 6);
+            }
+        }
+
+        #[test]
+        fn traversals_get_all(tree in tree_strategy::<char>(4..10u8,proptest::char::any(),0u8..6,0u8..4)) {
+            let mut desired : Vec<char> = tree.nodes().map(|z| z.value()).copied().collect();
+            desired.sort_unstable();
+            let mut values: Vec<_> = tree.root().dfs().map(|node| *node.value()).collect();
+            values.sort_unstable();
+            prop_assert_eq!(desired.clone(), values);
+            let mut values: Vec<_> = tree.root().bfs().map(|node| *node.value()).collect();
+            values.sort_unstable();
+            prop_assert_eq!(desired, values);
+        }
+
+        #[test]
+        fn linear_tree(tree in tree_strategy::<char>(4..10u8,proptest::char::any(),0u8..6,1u8..=1)) {
+            let desired : Vec<char> = tree.nodes().map(|z| z.value()).copied().collect();
+            let values: Vec<_> = tree.root().dfs().map(|node| *node.value()).collect();
+            prop_assert_eq!(desired.clone(), values);
+            let values: Vec<_> = tree.root().bfs().map(|node| *node.value()).collect();
+            prop_assert_eq!(desired.clone(), values);
+            let left_following : Vec<_> = tree.root().left_boundary().map(|node| *node.value()).collect();
+            prop_assert_eq!(desired.clone(), left_following);
+            let right_following : Vec<_> = tree.root().right_boundary().map(|node| *node.value()).collect();
+            prop_assert_eq!(desired, right_following);
+        }
+    }
+}
