@@ -109,10 +109,11 @@ export function modelToGraphviz(
     const ob_gens = model.ob_generators();
     for (const [id, [ob_type, names]] of ob_gens.classes) {
         const meta = theory.modelObTypeMeta(ob_type);
+        const nonNumericId = "n" + id;
         nodes.push({
-            name: id,
+            name: nonNumericId,
             attributes: {
-                id,
+                id: nonNumericId,
                 label: names.map(displayName).join(","),
                 class: GV.svgCssClasses(meta).join(" "),
                 fontname: GV.graphvizFontname(meta),
@@ -120,12 +121,14 @@ export function modelToGraphviz(
         });
     }
 
+    console.log(nodes)
+
     const edges: Required<Viz.Graph>["edges"] = [];
     for (const mor of model.mor_generators()) {
         const meta = theory.modelMorTypeMeta(mor.mor_type);
         edges.push({
-            head: ob_gens.lookup.get(stableName(mor.dom))!,
-            tail: ob_gens.lookup.get(stableName(mor.cod))!,
+            head: "n" + ob_gens.lookup.get(stableName(mor.cod))!,
+            tail: "n" + ob_gens.lookup.get(stableName(mor.dom))!,
             attributes: {
                 id: stableName(mor.name),
                 label: displayName(mor.name),
@@ -136,6 +139,8 @@ export function modelToGraphviz(
             },
         });
     }
+
+    console.log(edges)
 
     return {
         directed: true,

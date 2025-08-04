@@ -58,7 +58,7 @@ export function configureLotkaVolterra(options: {
 }
 
 export function stableName(name: QualifiedName): string {
-    return name.segments.map((segment) => segment.id || `<${segment.name}>`).join(" ");
+    return name.segments.map((segment) => segment.id || `${segment.name}`).join(" ");
 }
 
 export function displayName(name: QualifiedName): string {

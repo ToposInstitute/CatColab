@@ -76,7 +76,7 @@ impl Segment {
         if let Some(id) = self.id {
             write!(out, "{}", id).unwrap();
         } else if let Some(name) = self.name {
-            write!(out, "<{}>", name).unwrap();
+            write!(out, "{}", name).unwrap();
         } else {
             panic!("segment {self:?} has no stable name")
         }

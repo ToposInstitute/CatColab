@@ -1,5 +1,5 @@
 import type * as Viz from "@viz-js/viz";
-import { type JSX, Suspense, createResource } from "solid-js";
+import { type JSX, Suspense, createEffect, createResource } from "solid-js";
 
 import { GraphSVG } from "./graph_svg";
 import { loadViz, parseGraphvizJSON, vizRenderJSON0 } from "./graphviz";
@@ -20,7 +20,10 @@ export function GraphvizSVG(props: {
     const [vizResource] = createResource(loadViz);
 
     const render = () => {
+        console.log("graph for graphviz")
+        console.log(props.graph)
         const viz = vizResource();
+        viz && props.graph && console.log(viz.renderString(props.graph, { ...props.options, format: "dot", yInvert: true }))
         return viz && props.graph && vizRenderJSON0(viz, props.graph, props.options);
     };
 
@@ -35,5 +38,9 @@ function GraphvizOutputSVG(props: {
     graph?: GraphvizJSON.Graph;
     ref?: SVGRefProp;
 }) {
+    createEffect(() => {
+        console.log(props.graph)
+        console.log(parseGraphvizJSON(props.graph!))
+    })
     return <GraphSVG graph={props.graph && parseGraphvizJSON(props.graph)} ref={props.ref} />;
 }
