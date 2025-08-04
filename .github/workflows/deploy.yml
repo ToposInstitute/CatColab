@@ -180,6 +180,7 @@ jobs:
           echo '/dev/core /dev/rust/catlog' >> site/_redirects
           echo '/dev/backend /dev/rust/catcolab_backend' >> site/_redirects
           echo '/math /math/index.xml' >> site/_redirects
+          echo '/maths /math/index.xml' >> site/_redirects
           echo '/* /index.html 200' >> site/_redirects
           cd .netlify-env
           prod_flag=""
