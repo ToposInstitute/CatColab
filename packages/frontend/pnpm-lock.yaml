@@ -84,8 +84,8 @@ importers:
         specifier: link:../backend/pkg
         version: link:../backend/pkg
       catlog-wasm:
-        specifier: link:../catlog-wasm/dist/pkg-browser
-        version: link:../catlog-wasm/dist/pkg-browser
+        specifier: link:../catlog-wasm/pkg
+        version: link:../catlog-wasm/pkg
       echarts:
         specifier: ^5.5.1
         version: 5.5.1
@@ -110,9 +110,6 @@ importers:
       lucide-solid:
         specifier: ^0.471.0
         version: 0.471.0(solid-js@1.9.7)
-      notebook-types:
-        specifier: link:../notebook-types/pkg
-        version: link:../notebook-types/pkg
       prosemirror-commands:
         specifier: ^1.7.1
         version: 1.7.1

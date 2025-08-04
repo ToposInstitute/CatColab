@@ -17,6 +17,7 @@ import type { Theory } from "../theory";
 import { type IndexedMap, indexMap } from "../util/indexing";
 import type { InterfaceToType } from "../util/types";
 
+/** A document defining a model. */
 export type ModelDocument = Document & { type: "model" };
 
 /** Create an empty model document. */
@@ -74,11 +75,7 @@ function enlivenModelDocument(
     // Memo-ize the *formal* content of the notebook, since most derived objects
     // will not depend on the informal (rich-text) content in notebook.
     const formalJudgments = createMemo<Array<ModelJudgment>>(
-        () =>
-            doc.notebook.cellOrder
-                .map((cellId) => NotebookUtils.getCellById(doc.notebook, cellId))
-                .filter((cell) => cell.tag === "formal")
-                .map((cell) => cell.content),
+        () => NotebookUtils.getFormalContent(doc.notebook),
         [],
     );
 
@@ -161,4 +158,51 @@ export async function getLiveModel(
 ): Promise<LiveModelDocument> {
     const liveDoc = await getLiveDoc<ModelDocument>(api, refId, "model");
     return enlivenModelDocument(refId, liveDoc, theories);
+}
+
+export async function migrateModelDocument(
+    liveDoc: LiveDoc<ModelDocument>,
+    targetTheoryId: string,
+    theories: TheoryLibrary,
+) {
+    const theory = await theories.get(liveDoc.doc.theory);
+    const targetTheory = await theories.get(targetTheoryId);
+
+    // Trivial migration.
+    if (
+        !NotebookUtils.hasFormalCells(liveDoc.doc.notebook) ||
+        theory.inclusions.includes(targetTheoryId)
+    ) {
+        liveDoc.changeDoc((doc) => {
+            doc.theory = targetTheoryId;
+        });
+        return;
+    }
+
+    // Pushforward migration.
+    const migration = theory.pushforwards.find((m) => m.target === targetTheoryId);
+    if (!migration) {
+        throw new Error(`No migration defined from ${theory.id} to ${targetTheoryId}`);
+    }
+    // TODO: We need a general method to propagate changes from catlog models to
+    // notebooks. This stop-gap solution only works because pushforward
+    // migration doesn't have to create/delete cells, only update types.
+    let model = elaborateModel(liveDoc.doc, theory.theory);
+    model = migration.migrate(model, targetTheory.theory);
+    liveDoc.changeDoc((doc) => {
+        doc.theory = targetTheoryId;
+        for (const judgment of NotebookUtils.getFormalContent(doc.notebook)) {
+            if (judgment.tag === "object") {
+                judgment.obType = model.obType({
+                    tag: "Basic",
+                    content: judgment.id,
+                });
+            } else if (judgment.tag === "morphism") {
+                judgment.morType = model.morType({
+                    tag: "Basic",
+                    content: judgment.id,
+                });
+            }
+        }
+    });
 }

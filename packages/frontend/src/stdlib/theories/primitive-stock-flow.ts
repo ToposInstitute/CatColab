@@ -1,4 +1,4 @@
-import * as catlog from "catlog-wasm";
+import { ThCategoryLinks } from "catlog-wasm";
 
 import { Theory } from "../../theory";
 import * as analyses from "../analyses";
@@ -8,7 +8,7 @@ import styles from "../styles.module.css";
 import svgStyles from "../svg_styles.module.css";
 
 export default function createPrimitiveStockFlowTheory(theoryMeta: TheoryMeta): Theory {
-    const thCategoryLinks = new catlog.ThCategoryLinks();
+    const thCategoryLinks = new ThCategoryLinks();
 
     return new Theory({
         ...theoryMeta,

@@ -8,7 +8,6 @@ use derivative::Derivative;
 use derive_more::{Constructor, From};
 use nonempty::NonEmpty;
 use thiserror::Error;
-use ustr::Ustr;
 
 use super::set::{FinSet, Set, SkelFinSet};
 use crate::validate::{self, Validate};
@@ -394,9 +393,6 @@ impl SkelColumn {
 #[derivative(Eq(bound = "K: Eq + Hash, V: Eq"))]
 #[derivative(Default(bound = ""))]
 pub struct HashColumn<K, V>(HashMap<K, V>);
-
-/// An unindexed column with keys of type `Ustr`.
-pub type UstrColumn<V> = HashColumn<Ustr, V>;
 
 impl<K, V> IntoIterator for HashColumn<K, V> {
     type Item = (K, V);
@@ -856,10 +852,6 @@ impl<T: Eq + Hash + Clone> MutColumn for IndexedVecColumn<T> {}
 #[derivative(Eq(bound = "K: Eq + Hash, V: Eq"))]
 #[allow(clippy::type_complexity)]
 pub struct IndexedHashColumn<K, V>(IndexedColumn<K, V, HashColumn<K, V>, HashIndex<K, V>>);
-
-/// An indexed column with keys and values of type `Ustr`.
-#[allow(clippy::type_complexity)]
-pub type IndexedUstrColumn = IndexedHashColumn<Ustr, Ustr>;
 
 impl<K, V> IntoIterator for IndexedHashColumn<K, V>
 where

@@ -45,10 +45,19 @@ export const newStemCell = (): StemCell => ({
 });
 
 export namespace NotebookUtils {
+    export function getCells<T>(notebook: Notebook<T>): Array<Cell<T>> {
+        return notebook.cellOrder.map((cellId) => getCellById(notebook, cellId));
+    }
+
+    export function getFormalContent<T>(notebook: Notebook<T>): Array<T> {
+        return getCells(notebook)
+            .filter((cell) => cell.tag === "formal")
+            .map((cell) => cell.content);
+    }
+
     export function getCellById<T>(notebook: Notebook<T>, cellId: string): NotebookCell<T> {
         const cell = notebook.cellContents[cellId];
         invariant(cell, () => `Failed to find notebook cell contents for cell '${cellId}'`);
-
         return cell;
     }
 

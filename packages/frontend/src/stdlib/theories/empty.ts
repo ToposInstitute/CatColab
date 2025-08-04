@@ -1,10 +1,10 @@
-import * as catlog from "catlog-wasm";
+import { ThEmpty } from "catlog-wasm";
 
 import { Theory } from "../../theory";
 import type { TheoryMeta } from "../types";
 
 export default function createEmptyTheory(theoryMeta: TheoryMeta): Theory {
-    const thEmpty = new catlog.ThEmpty();
+    const thEmpty = new ThEmpty();
 
     return new Theory({
         ...theoryMeta,
