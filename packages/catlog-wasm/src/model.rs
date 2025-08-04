@@ -441,6 +441,7 @@ pub fn elaborate_model(doc: &ModelDocumentContent, theory: &DblTheory) -> DblMod
                 ModelJudgment::Morphism(decl) => model.add_mor(decl).unwrap(),
                 ModelJudgment::MorphismNext(_) => {}
                 ModelJudgment::Instance(_) => {}
+                ModelJudgment::Equation(_) => {}
             }
         }
     }

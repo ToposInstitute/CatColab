@@ -19,7 +19,7 @@ use std::fmt::Debug;
 use std::{collections::HashMap, hash::Hash};
 
 use derivative::Derivative;
-use egglog::{EGraph, ast::*, span};
+use egglog::{EGraph, Value, ast::*, span};
 use nonempty::NonEmpty;
 use ref_cast::RefCast;
 use thiserror::Error;
@@ -189,6 +189,21 @@ where
             Some(InvalidFpCategory::Eq(i, eq.validate_in(&self.generators).err()?))
         });
         generator_errors.chain(equation_errors)
+    }
+
+    /// Get normal form for object generator
+    pub fn object_value(&self, ob: V) -> Value {
+        self.builder
+            .borrow_mut()
+            .program()
+            .check_in(&mut self.egraph.borrow_mut())
+            .expect("Unexpected egglog error");
+        let (_, val) = self
+            .egraph
+            .borrow_mut()
+            .eval_expr(&self.ob_generator_expr(ob))
+            .expect("Unexpected egglog error");
+        val
     }
 
     /// Checks whether objects are equal

@@ -31,12 +31,14 @@ import {
     duplicateModelJudgment,
     type MorphismDecl,
     newMorphismDecl,
-    newNotebookDecl,
+    newInstanceDecl,
     newObjectDecl,
     type ObjectDecl,
     type InstanceDecl,
     type MorphismDeclNext,
     newMorphismDeclNext,
+    type EquationDecl,
+    newEquationDecl,
 } from "./types";
 
 import "./model_editor.css";
@@ -46,6 +48,7 @@ import { DocumentBreadcrumbs, DocumentLoadingScreen, DocumentMenu, Toolbar } fro
 import { WelcomeOverlay } from "../page/welcome_overlay";
 import type { ModelTypeMeta } from "../theory";
 import { MorphismCellEditorNext } from "./morphism_cell_editor_next";
+import { EquationCellEditor } from "./equation_editor";
 
 export default function ModelPage() {
     const api = useApi();
@@ -157,7 +160,8 @@ export function ModelNotebookEditor(props: {
     const cellConstructors = () =>
         (props.liveModel.theory().modelTypes ?? [])
             .map(modelCellConstructor)
-            .concat(instanceCellConstructor);
+            .concat(instanceCellConstructor)
+            .concat(equationCellContructor);
 
     const firebaseApp = useFirebaseApp();
     const auth = useAuth(getAuth(firebaseApp));
@@ -231,6 +235,18 @@ function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
                     actions={props.actions}
                 />
             </Match>
+            <Match when={props.content.tag === "equation"}>
+                <EquationCellEditor
+                    equation={props.content as EquationDecl}
+                    modifyEquation={(f) =>
+                        props.changeContent((content) => {
+                            f(content as EquationDecl);
+                        })
+                    }
+                    isActive={props.isActive}
+                    actions={props.actions}
+                />
+            </Match>
         </Switch>
     );
 }
@@ -253,7 +269,15 @@ const instanceCellConstructor: CellConstructor<ModelJudgment> = {
     name: "Instance",
     description: "An instance of another notebook",
     construct() {
-        return newFormalCell(newNotebookDecl());
+        return newFormalCell(newInstanceDecl());
+    },
+};
+
+const equationCellContructor: CellConstructor<ModelJudgment> = {
+    name: "Equation",
+    description: "An equation between two objects",
+    construct() {
+        return newFormalCell(newEquationDecl());
     },
 };
 

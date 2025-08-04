@@ -4,6 +4,7 @@ use std::hash::Hash;
 use std::rc::Rc;
 
 use derivative::Derivative;
+use egglog::Value;
 use ustr::Ustr;
 
 use super::theory::DiscreteDblTheory;
@@ -74,6 +75,11 @@ where
     /// Adds an object equation to the presentation
     pub fn add_ob_equation(&mut self, lhs: Id, rhs: Id) {
         self.category.add_ob_equation(lhs, rhs);
+    }
+
+    /// Gets the normalized value of `x` in the egraph
+    pub fn object_value(&self, x: Id) -> Value {
+        self.category.object_value(x)
     }
 
     /// Checks whether two morphisms are equal

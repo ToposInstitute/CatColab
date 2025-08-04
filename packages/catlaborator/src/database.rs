@@ -42,6 +42,7 @@ pub enum ElaborationErrorContent {
     NoSuchNotebook(String),
     NotAnInstanceType,
     NoSuchField(Ustr),
+    GeneralEquationsUnsupported,
 }
 
 #[derive(Debug)]

@@ -77,6 +77,14 @@ pub struct InstanceDecl {
 }
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
+pub struct EquationDecl {
+    pub id: Uuid,
+    pub lhs: String,
+    pub rhs: String,
+}
+
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
 #[serde(tag = "tag")]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum ModelJudgment {
@@ -88,4 +96,6 @@ pub enum ModelJudgment {
     MorphismNext(MorDeclNext),
     #[serde(rename = "instance")]
     Instance(InstanceDecl),
+    #[serde(rename = "equation")]
+    Equation(EquationDecl),
 }

@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::fmt::Write;
+use std::{collections::HashMap, fmt::Write};
 use tsify::Tsify;
 use wasm_bindgen::prelude::*;
 
@@ -49,6 +49,22 @@ impl MorGenerator {
     }
 }
 
+#[derive(Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct ObGenerators {
+    classes: HashMap<String, (theory::ObType, Vec<QualifiedName>)>,
+    lookup: HashMap<String, String>,
+}
+
+impl ObGenerators {
+    fn new() -> ObGenerators {
+        ObGenerators {
+            classes: HashMap::new(),
+            lookup: HashMap::new(),
+        }
+    }
+}
+
 #[wasm_bindgen]
 pub struct DblModelNext {
     #[wasm_bindgen(skip)]
@@ -76,13 +92,19 @@ impl DblModelNext {
     }
 
     #[wasm_bindgen]
-    pub fn ob_generators(&self) -> Vec<ObGenerator> {
-        self.model
-            .ob_generators()
-            .map(|n| {
-                ObGenerator::new(n.clone(), theory::ObType::Basic(self.model.ob_generator_type(&n)))
-            })
-            .collect()
+    pub fn ob_generators(&self) -> ObGenerators {
+        let mut g = ObGenerators::new();
+        for x in self.model.ob_generators() {
+            let v = self.model.object_value(x.clone());
+            let name = format!("{}", v.bits);
+            let class = g
+                .classes
+                .entry(name.clone())
+                .or_insert((theory::ObType::Basic(self.model.ob_generator_type(&x)), Vec::new()));
+            class.1.push(x.clone());
+            g.lookup.insert(x.clone().stable_name(), name);
+        }
+        g
     }
 
     #[wasm_bindgen]

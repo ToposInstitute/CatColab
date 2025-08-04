@@ -51,11 +51,22 @@ export type InstanceDecl = ModelJudgment & {
     tag: "instance";
 };
 
-export const newNotebookDecl = (): InstanceDecl => ({
+export const newInstanceDecl = (): InstanceDecl => ({
     tag: "instance",
     name: "",
     id: v7(),
     notebook_id: "",
+});
+
+export type EquationDecl = ModelJudgment & {
+    tag: "equation";
+};
+
+export const newEquationDecl = (): EquationDecl => ({
+    tag: "equation",
+    id: v7(),
+    lhs: "",
+    rhs: "",
 });
 
 /** Duplicate a model judgment, creating a fresh UUID when applicable. */

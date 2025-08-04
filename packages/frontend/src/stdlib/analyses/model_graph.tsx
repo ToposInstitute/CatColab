@@ -106,13 +106,14 @@ export function modelToGraphviz(
     attributes?: GV.GraphvizAttributes,
 ): Viz.Graph {
     const nodes = [];
-    for (const ob of model.ob_generators()) {
-        const meta = theory.modelObTypeMeta(ob.ob_type);
+    const ob_gens = model.ob_generators();
+    for (const [id, [ob_type, names]] of ob_gens.classes) {
+        const meta = theory.modelObTypeMeta(ob_type);
         nodes.push({
-            name: stableName(ob.name),
+            name: id,
             attributes: {
-                id: stableName(ob.name),
-                label: displayName(ob.name),
+                id,
+                label: names.map(displayName).join(","),
                 class: GV.svgCssClasses(meta).join(" "),
                 fontname: GV.graphvizFontname(meta),
             },
@@ -123,8 +124,8 @@ export function modelToGraphviz(
     for (const mor of model.mor_generators()) {
         const meta = theory.modelMorTypeMeta(mor.mor_type);
         edges.push({
-            head: stableName(mor.dom),
-            tail: stableName(mor.cod),
+            head: ob_gens.lookup.get(stableName(mor.dom))!,
+            tail: ob_gens.lookup.get(stableName(mor.cod))!,
             attributes: {
                 id: stableName(mor.name),
                 label: displayName(mor.name),

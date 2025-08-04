@@ -6,9 +6,7 @@ use catlog::one::Path;
 use catlog::zero::name::{QualifiedName, Segment};
 use notebook_types::current as notebook_types;
 use std::cell::RefCell;
-use std::f32::consts::PI;
 use std::rc::Rc;
-use std::str::FromStr;
 use ustr::{Ustr, ustr};
 use uuid::Uuid;
 
@@ -157,20 +155,24 @@ impl Elaborator {
         }
     }
 
+    fn syn_from_string(&self, ctx: &Context, source: &str) -> Option<(TmStx, TmVal, TyVal)> {
+        let segments: Vec<_> = source.split('.').map(ustr).collect();
+        if segments.is_empty() {
+            return self.error(IncompleteCell);
+        }
+        let v = self.syn_var(ctx, segments[0])?;
+        segments[1..]
+            .iter()
+            .try_fold(v, |from, field_name| self.syn_proj(ctx, from, *field_name))
+    }
+
     fn chk_object_string(
         &self,
         ctx: &Context,
         ob_type: ObType,
         source: &str,
     ) -> Option<(TmStx, TmVal)> {
-        let segments: Vec<_> = source.split('.').map(ustr).collect();
-        if segments.is_empty() {
-            return self.error(IncompleteCell);
-        }
-        let v = self.syn_var(ctx, segments[0])?;
-        let (tm, val, ty) = segments[1..]
-            .iter()
-            .try_fold(v, |from, field_name| self.syn_proj(ctx, from, *field_name))?;
+        let (tm, val, ty) = self.syn_from_string(ctx, source)?;
         match ty {
             TyVal::Object(synthed_ob_type) => {
                 if ob_type == synthed_ob_type {
@@ -286,6 +288,29 @@ impl Elaborator {
                     let tystx = TyStx::InstanceOf(nbref);
                     ctx.intro(instance_decl.id, Some(ustr(&instance_decl.name)), tyval);
                     cells.push(MemberStx::new(ustr(&instance_decl.name), tystx))
+                }
+                Equation(equation_decl) => {
+                    let lhs_res = self.syn_from_string(&ctx, &equation_decl.lhs);
+                    let rhs_res = self.syn_from_string(&ctx, &equation_decl.rhs);
+                    let Some((tm0, val0, ty0)) = lhs_res else {
+                        continue;
+                    };
+                    let Some((tm1, val1, ty1)) = rhs_res else {
+                        continue;
+                    };
+                    match (ty0, ty1) {
+                        (TyVal::Object(ot0), TyVal::Object(ot1)) => {
+                            if ot0 == ot1 {
+                                ctx.intro(equation_decl.id, None, TyVal::Equality(val0, val1));
+                                cells.push(MemberStx::new(ustr("_"), TyStx::Equality(tm0, tm1)));
+                            } else {
+                                self.error::<usize>(MismatchingObTypes(ot0, ot1));
+                            }
+                        }
+                        _ => {
+                            self.error::<usize>(GeneralEquationsUnsupported);
+                        }
+                    }
                 }
             }
         }
