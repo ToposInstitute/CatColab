@@ -70,11 +70,7 @@ function enlivenDiagramDocument(
     const { doc } = liveDoc;
 
     const formalJudgments = createMemo<Array<DiagramJudgment>>(
-        () =>
-            doc.notebook.cellOrder
-                .map((cellId) => NotebookUtils.getCellById(doc.notebook, cellId))
-                .filter((cell) => cell.tag === "formal")
-                .map((cell) => cell.content),
+        () => NotebookUtils.getFormalContent(doc.notebook),
         [],
     );
 

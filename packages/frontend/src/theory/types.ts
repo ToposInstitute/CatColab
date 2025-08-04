@@ -100,6 +100,11 @@ export class Theory {
         this.diagramAnalysisMap = uniqueIndexArray(props.diagramAnalyses ?? [], (meta) => meta.id);
     }
 
+    /** List of IDs of theories to which models of this theory can be migrated. */
+    get migrationTargets(): Array<string> {
+        return this.inclusions.concat(this.pushforwards.map((m) => m.target));
+    }
+
     /** Metadata for types in the theory, as used in models.
 
     In a model editor, the types are listed in this order.

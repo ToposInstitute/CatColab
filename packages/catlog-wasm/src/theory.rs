@@ -259,6 +259,7 @@ underlying double theory, but `wasm-bindgen` does not support
 explicitly enumerate the supported kinds of double theories in this enum.
  */
 #[derive(From, TryInto)]
+#[try_into(ref)]
 pub enum DblTheoryBox {
     Discrete(Rc<theory::UstrDiscreteDblTheory>),
     DiscreteTab(Rc<theory::UstrDiscreteTabTheory>),
@@ -272,8 +273,8 @@ pub struct DblTheory(#[wasm_bindgen(skip)] pub DblTheoryBox);
 
 impl DblTheory {
     /// Tries to get a discrete double theory.
-    pub fn discrete(self) -> Result<Rc<theory::UstrDiscreteDblTheory>, String> {
-        self.0.try_into().map_err(|_| "Theory should be discrete".into())
+    pub fn discrete(&self) -> Result<&Rc<theory::UstrDiscreteDblTheory>, String> {
+        (&self.0).try_into().map_err(|_| "Theory should be discrete".into())
     }
 }
 
