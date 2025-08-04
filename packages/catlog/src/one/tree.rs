@@ -30,6 +30,8 @@ are nonplanar, i.e., are the morphisms of free *symmetric* multicategories.
  */
 
 use derive_more::From;
+#[cfg(test)]
+use ego_tree::NodeMut;
 use ego_tree::{NodeRef, Tree};
 use itertools::{Itertools, zip_eq};
 use std::collections::VecDeque;
@@ -210,6 +212,30 @@ impl<'a, T: 'a> OpenNodeRef<T> for NodeRef<'a, Option<T>> {
     }
 }
 
+/// Extension trait for nodes in an [open tree](OpenTree).
+#[cfg(test)]
+trait OpenNodeMut<Op> {
+    fn change_op(&mut self, value_changer: impl Fn(&Option<Op>) -> Option<Op>) -> bool;
+}
+
+#[cfg(test)]
+impl<'a, Op: 'a> OpenNodeMut<Op> for NodeMut<'a, Option<Op>> {
+    fn change_op(&mut self, value_changer: impl Fn(&Option<Op>) -> Option<Op>) -> bool {
+        let is_leaf = !self.has_children();
+        let old_val = self.value();
+        let new_val = value_changer(&old_val);
+        if is_leaf {
+            *old_val = new_val;
+            true
+        } else if new_val.is_some() {
+            *old_val = new_val;
+            true
+        } else {
+            false
+        }
+    }
+}
+
 impl<Ty, Op> OpenTree<Ty, OpenTree<Ty, Op>> {
     /// Flattens an open tree of open trees into a single open tree.
     pub fn flatten(self) -> OpenTree<Ty, Op> {
@@ -359,5 +385,79 @@ mod tests {
         )
         .into();
         assert_eq!(outer_tree.flatten(), OT::Id('X'));
+    }
+}
+
+#[cfg(test)]
+pub(crate) mod proptesting {
+    use core::fmt::Debug;
+    use proptest::prelude::{Strategy, prop_assert, proptest};
+
+    use super::OpenTree;
+    use crate::one::{tree::OpenNodeMut, tree_algorithms::proptesting::tree_strategy};
+
+    #[allow(dead_code)]
+    pub(crate) fn open_tree_strategy<'a, Ty, Op>(
+        ty_strategy: impl Strategy<Value = Ty> + Clone + 'static,
+        desired_size: impl Strategy<Value = u8> + 'a,
+        op_strategy: impl Strategy<Value = Op> + Clone + 'static,
+        depth: impl Strategy<Value = u8> + 'a,
+        arities: impl Strategy<Value = u8> + Clone + 'a,
+    ) -> impl Strategy<Value = OpenTree<Ty, Op>>
+    where
+        Op: Debug + Clone + 'static,
+        Ty: Debug,
+    {
+        let composite_tree =
+            tree_strategy(desired_size, op_strategy.prop_map(Some), depth, arities).prop_flat_map(
+                |comp_tree| {
+                    let num_leaves =
+                        comp_tree.root().descendants().filter(|n| !n.has_children()).count();
+                    (
+                        proptest::prelude::Just(comp_tree),
+                        proptest::collection::vec(proptest::bool::ANY, num_leaves),
+                    )
+                        .prop_map(|(mut comp_tree, make_these_holes)| {
+                            let which_change: Vec<_> = comp_tree
+                                .root()
+                                .descendants()
+                                .filter_map(|n| if n.has_children() { None } else { Some(n.id()) })
+                                .collect();
+                            for (change_this, make_this_hole) in
+                                which_change.into_iter().zip(make_these_holes)
+                            {
+                                if make_this_hole {
+                                    if let Some(mut leaf_node) = comp_tree.get_mut(change_this) {
+                                        let _did_change = leaf_node.change_op(|_| None);
+                                    }
+                                }
+                            }
+                            OpenTree::Comp(comp_tree)
+                        })
+                },
+            );
+        let id_tree = ty_strategy.prop_map(OpenTree::Id);
+        proptest::prop_oneof![composite_tree, id_tree]
+    }
+
+    proptest! {
+        #[test]
+        fn valid_open_trees(open_tree in open_tree_strategy::<i16,i8>(-3i16..40,0..10u8,-109i8..116,0u8..6,0u8..4)) {
+            match open_tree {
+                OpenTree::Id(z) => {
+                    prop_assert!(z >= -3);
+                    prop_assert!(z < 40);
+                }
+                OpenTree::Comp(tree) => {
+                    for cur_node in tree.root().descendants() {
+                        if cur_node.has_children() {
+                            prop_assert!(cur_node.value().is_some_and(|val| val>=-109 && val<116));
+                        } else {
+                            prop_assert!(!cur_node.value().is_some_and(|val| val < -109 || val>=116));
+                        }
+                    }
+                }
+            }
+        }
     }
 }

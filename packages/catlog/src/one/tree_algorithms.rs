@@ -172,12 +172,12 @@ mod tests {
 }
 
 #[cfg(test)]
-mod proptesting {
+pub(crate) mod proptesting {
     use super::*;
     use core::fmt::Debug;
     use proptest::prelude::{Strategy, prop_assert, prop_assert_eq, proptest};
 
-    fn tree_strategy<'a, T: Debug + Clone + 'static>(
+    pub(crate) fn tree_strategy<'a, T: Debug + Clone + 'static>(
         desired_size: impl Strategy<Value = u8> + 'a,
         t_strategy: impl Strategy<Value = T> + Clone + 'static,
         depth: impl Strategy<Value = u8> + 'a,
