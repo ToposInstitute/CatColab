@@ -35,6 +35,8 @@ import {
     newObjectDecl,
     type ObjectDecl,
     type InstanceDecl,
+    type MorphismDeclNext,
+    newMorphismDeclNext,
 } from "./types";
 
 import "./model_editor.css";
@@ -43,6 +45,7 @@ import { stdTheories, TheoryLibraryContext } from "../stdlib";
 import { DocumentBreadcrumbs, DocumentLoadingScreen, DocumentMenu, Toolbar } from "../page";
 import { WelcomeOverlay } from "../page/welcome_overlay";
 import type { ModelTypeMeta } from "../theory";
+import { MorphismCellEditorNext } from "./morphism_cell_editor_next";
 
 export default function ModelPage() {
     const api = useApi();
@@ -206,6 +209,16 @@ function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
                     actions={props.actions}
                 />
             </Match>
+            <Match when={props.content.tag === "morphism-next"}>
+                <MorphismCellEditorNext
+                    morphism={props.content as MorphismDeclNext}
+                    modifyMorphism={(f) =>
+                        props.changeContent((content) => f(content as MorphismDeclNext))
+                    }
+                    isActive={props.isActive}
+                    actions={props.actions}
+                />
+            </Match>
             <Match when={props.content.tag === "instance"}>
                 <InstanceCellEditor
                     decl={props.content as InstanceDecl}
@@ -231,7 +244,7 @@ function modelCellConstructor(meta: ModelTypeMeta): CellConstructor<ModelJudgmen
         construct() {
             return meta.tag === "ObType"
                 ? newFormalCell(newObjectDecl(meta.obType))
-                : newFormalCell(newMorphismDecl(meta.morType));
+                : newFormalCell(newMorphismDeclNext(meta.morType));
         },
     };
 }

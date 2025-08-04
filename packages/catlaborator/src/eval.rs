@@ -57,7 +57,17 @@ impl TmVal {
     pub fn as_cells(&self) -> Rc<Vec<(Ustr, TmVal)>> {
         match self {
             TmVal::Instance(cells) => cells.clone(),
-            _ => panic!("expected cells"),
+            _ => panic!("expected instance"),
+        }
+    }
+
+    pub fn as_env(&self, state: &State) -> Env {
+        match self {
+            TmVal::Instance(cells) => Env {
+                state: state.clone(),
+                values: cells.iter().map(|(_, v)| v.clone()).collect(),
+            },
+            _ => panic!("expected instance"),
         }
     }
 
@@ -100,7 +110,7 @@ impl State {
 }
 
 pub struct Env {
-    state: State,
+    pub state: State,
     pub values: Vec<TmVal>,
 }
 

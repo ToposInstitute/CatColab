@@ -6,7 +6,9 @@ use catlog::one::Path;
 use catlog::zero::name::{QualifiedName, Segment};
 use notebook_types::current as notebook_types;
 use std::cell::RefCell;
+use std::f32::consts::PI;
 use std::rc::Rc;
+use std::str::FromStr;
 use ustr::{Ustr, ustr};
 use uuid::Uuid;
 
@@ -37,6 +39,14 @@ impl Context {
             .iter()
             .enumerate()
             .find(|(_, (uuid1, _, _))| uuid == uuid1)
+            .map(|(i, (_, name, ty))| (FwdIdent::new(i, *name), ty.clone()))
+    }
+
+    fn lookup_by_name(&self, name: Ustr) -> Option<(FwdIdent, TyVal)> {
+        self.scope
+            .iter()
+            .enumerate()
+            .find(|(_, (_, name1, _))| &Some(name) == name1)
             .map(|(i, (_, name, ty))| (FwdIdent::new(i, *name), ty.clone()))
     }
 
@@ -113,6 +123,89 @@ impl Elaborator {
         }
     }
 
+    fn syn_var(&self, ctx: &Context, name: Ustr) -> Option<(TmStx, TmVal, TyVal)> {
+        match ctx.lookup_by_name(name) {
+            Some((i, ty)) => {
+                let tm = TmStx::Var(i);
+                let val = ctx.env.values[i.index].clone();
+                Some((tm, val, ty))
+            }
+            None => self.error(NameNotFound(name)),
+        }
+    }
+
+    fn syn_proj(
+        &self,
+        ctx: &Context,
+        from: (TmStx, TmVal, TyVal),
+        field_name: Ustr,
+    ) -> Option<(TmStx, TmVal, TyVal)> {
+        let (tm, val, ty) = from;
+        let class = match ty {
+            TyVal::InstanceOf(name) => ctx.env.get_class(&name).unwrap(),
+            _ => return self.error(NotAnInstanceType),
+        };
+        match class.members.iter().enumerate().find(|(_, member)| member.name == field_name) {
+            Some((i, member)) => {
+                let field = FwdIdent::new(i, Some(field_name));
+                let proj_tm = TmStx::Proj(Rc::new(tm), field);
+                let proj_val = val.proj(field);
+                let proj_ty = val.as_env(&ctx.env.state).eval_ty(&member.ty);
+                Some((proj_tm, proj_val, proj_ty))
+            }
+            None => self.error(NoSuchField(field_name)),
+        }
+    }
+
+    fn chk_object_string(
+        &self,
+        ctx: &Context,
+        ob_type: ObType,
+        source: &str,
+    ) -> Option<(TmStx, TmVal)> {
+        let segments: Vec<_> = source.split('.').map(ustr).collect();
+        if segments.is_empty() {
+            return self.error(IncompleteCell);
+        }
+        let v = self.syn_var(ctx, segments[0])?;
+        let (tm, val, ty) = segments[1..]
+            .iter()
+            .try_fold(v, |from, field_name| self.syn_proj(ctx, from, *field_name))?;
+        match ty {
+            TyVal::Object(synthed_ob_type) => {
+                if ob_type == synthed_ob_type {
+                    Some((tm, val))
+                } else {
+                    self.error(MismatchingObTypes(ob_type, synthed_ob_type))
+                }
+            }
+            _ => self.error(UnexpectedType),
+        }
+    }
+
+    fn morphism_ty_next(
+        &self,
+        ctx: &Context,
+        mor_decl: &notebook_types::MorDeclNext,
+    ) -> Option<(TyStx, TyVal)> {
+        let over = match &mor_decl.mor_type {
+            notebook_types::MorType::Basic(ustr) => Path::single(*ustr),
+            notebook_types::MorType::Hom(ob_type) => Path::empty(ob_type.as_basic()),
+            _ => todo!(),
+        };
+        if !self.theory.has_proarrow(&over) {
+            return self.error(NoSuchMorphismType(over));
+        }
+        let dom_res = self.chk_object_string(ctx, self.theory.src(&over), &mor_decl.dom);
+        let cod_res = self.chk_object_string(ctx, self.theory.tgt(&over), &mor_decl.cod);
+        let (domstx, domval) = dom_res?;
+        let (codstx, codval) = cod_res?;
+        Some((
+            TyStx::Morphism(over.clone(), domstx, codstx),
+            TyVal::Morphism(over.clone(), domval.as_object(), codval.as_object()),
+        ))
+    }
+
     fn morphism_ty(
         &self,
         ctx: &Context,
@@ -168,6 +261,13 @@ impl Elaborator {
                 }
                 Morphism(mor_decl) => {
                     let Some((tystx, tyval)) = self.morphism_ty(&ctx, mor_decl) else {
+                        continue;
+                    };
+                    ctx.intro(mor_decl.id, Some(ustr(&mor_decl.name)), tyval);
+                    cells.push(MemberStx::new(ustr(&mor_decl.name), tystx))
+                }
+                MorphismNext(mor_decl) => {
+                    let Some((tystx, tyval)) = self.morphism_ty_next(&ctx, mor_decl) else {
                         continue;
                     };
                     ctx.intro(mor_decl.id, Some(ustr(&mor_decl.name)), tyval);

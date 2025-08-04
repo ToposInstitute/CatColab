@@ -34,9 +34,14 @@ pub enum ElaborationErrorContent {
     NoSuchObjectType(Ustr),
     NoSuchMorphismType(Path<Ustr, Ustr>),
     UuidNotFound(Uuid),
+    NameNotFound(Ustr),
     ExpectedObjectForUuid(Uuid),
     MismatchingObTypes(ObType, ObType),
+    // TODO add more context here
+    UnexpectedType,
     NoSuchNotebook(String),
+    NotAnInstanceType,
+    NoSuchField(Ustr),
 }
 
 #[derive(Debug)]
@@ -66,7 +71,7 @@ pub struct ClassData {
 #[derive(Clone)]
 #[wasm_bindgen]
 pub struct ElaborationDatabase {
-    content: Rc<RefCell<HashMap<RefId, ClassData>>>,
+    content: Rc<RefCell<HashMap<RefId, Rc<ClassData>>>>,
 }
 
 #[wasm_bindgen]
@@ -102,12 +107,12 @@ impl ElaborationDatabase {
         };
         self.content.borrow_mut().insert(
             r,
-            ClassData {
+            Rc::new(ClassData {
                 source: Source::CatColab(notebook),
                 theory,
                 heads,
                 elaborated: RefCell::new(None),
-            },
+            }),
         );
     }
 
@@ -123,29 +128,28 @@ impl ElaborationDatabase {
 
 impl ClassLibrary for ElaborationDatabase {
     fn lookup<'a>(&'a self, id: &str) -> Option<Rc<ClassStx>> {
-        if let Some(class_data) = self.content.borrow().get(id) {
-            if let Some(elaborated) = &class_data.elaborated.borrow().as_ref() {
-                Some(elaborated.class.clone())
-            } else {
-                let elaborator = notebook_elab::Elaborator::new(class_data.theory.clone());
-                let notebook = match &class_data.source {
-                    Source::CatColab(model_document_content) => &model_document_content.notebook,
-                };
-                if let Some(class) = elaborator.class(self.clone(), notebook) {
-                    let class = Rc::new(class);
-                    // TODO: we should always elaborate *some* class, possibly
-                    // with no members
-                    class_data.elaborated.replace(Some(ElaborationResult {
-                        class: class.clone(),
-                        errors: elaborator.report(),
-                    }));
-                    Some(class)
-                } else {
-                    None
-                }
-            }
+        let Some(class_data) = self.content.borrow().get(id).cloned() else {
+            return None;
+        };
+        if let Some(elaborated) = &class_data.elaborated.borrow().as_ref() {
+            Some(elaborated.class.clone())
         } else {
-            None
+            let elaborator = notebook_elab::Elaborator::new(class_data.theory.clone());
+            let notebook = match &class_data.source {
+                Source::CatColab(model_document_content) => &model_document_content.notebook,
+            };
+            if let Some(class) = elaborator.class(self.clone(), notebook) {
+                let class = Rc::new(class);
+                // TODO: we should always elaborate *some* class, possibly
+                // with no members
+                class_data.elaborated.replace(Some(ElaborationResult {
+                    class: class.clone(),
+                    errors: elaborator.report(),
+                }));
+                Some(class)
+            } else {
+                None
+            }
         }
     }
 }

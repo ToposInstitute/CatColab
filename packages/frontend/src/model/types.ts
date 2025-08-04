@@ -32,6 +32,21 @@ export const newMorphismDecl = (morType: MorType): MorphismDecl => ({
 });
 
 /** Declaration of a morphim in a model. */
+export type MorphismDeclNext = ModelJudgment & {
+    tag: "morphism-next";
+};
+
+/** Create a new morphism declaration with the given morphism type. */
+export const newMorphismDeclNext = (morType: MorType): MorphismDeclNext => ({
+    tag: "morphism-next",
+    id: v7(),
+    name: "",
+    morType,
+    dom: "",
+    cod: "",
+});
+
+/** Declaration of a morphim in a model. */
 export type InstanceDecl = ModelJudgment & {
     tag: "instance";
 };

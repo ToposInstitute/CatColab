@@ -41,6 +41,27 @@ pub struct MorDecl {
     pub cod: Option<Ob>,
 }
 
+/// Declares a morphism in a model of a double theory.
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
+pub struct MorDeclNext {
+    /// Human-readable name of morphism.
+    pub name: String,
+
+    /// Globally unique identifier of morphism.
+    pub id: Uuid,
+
+    /// The morphism's type in the double theory.
+    #[serde(rename = "morType")]
+    pub mor_type: MorType,
+
+    /// Domain of morphism, to be elaborated
+    pub dom: String,
+
+    /// Codomain of morphism, to be elaborated
+    pub cod: String,
+}
+
 // For now, we are just going to edit the schema for v0 notebooks
 // Eventually, we will revert all of these changes and move to
 // v1 notebooks.
@@ -63,6 +84,8 @@ pub enum ModelJudgment {
     Object(ObDecl),
     #[serde(rename = "morphism")]
     Morphism(MorDecl),
+    #[serde(rename = "morphism-next")]
+    MorphismNext(MorDeclNext),
     #[serde(rename = "instance")]
     Instance(InstanceDecl),
 }
