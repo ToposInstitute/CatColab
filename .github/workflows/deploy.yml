@@ -101,7 +101,7 @@ jobs:
 
       - name: Build Rust docs
         run: |
-          cargo doc --all-features --no-deps
+          cargo doc --all-features --no-deps --workspace --exclude "migrator"
 
       - name: Upload Rust docs
         uses: actions/upload-artifact@v4
