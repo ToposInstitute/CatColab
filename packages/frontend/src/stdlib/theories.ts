@@ -78,8 +78,7 @@ stdTheories.add(
     {
         id: "extended-causal-loop",
         name: "Extended causal loop diagram",
-        description:
-            "Causal relationships: positive or negative, with explicit differential degree and order of delay",
+        description: "Causal relationships: positive or negative, with explicit degree and delay",
         group: "System Dynamics",
     },
     async () => (await import("./theories/extended-causal-loop")).default,

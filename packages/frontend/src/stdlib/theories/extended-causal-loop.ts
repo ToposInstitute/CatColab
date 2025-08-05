@@ -113,6 +113,7 @@ export default function createExtendedCausalLoopTheory(theoryMeta: TheoryMeta): 
                 id: "diagram",
                 name: "Visualization",
                 description: "Visualize the extended causal loop diagram",
+                help: "visualization",
             }),
         ],
     });

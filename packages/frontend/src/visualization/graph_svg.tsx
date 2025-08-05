@@ -73,7 +73,9 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
     const componentId = createUniqueId();
     const pathId = () => `edge-path-${componentId}`;
     const defaultPath = () => <path id={pathId()} marker-end={markerUrl()} d={path()} />;
-    const invisiblePath = () => <path id={pathId()} style="stroke: white;" marker-end={markerUrl()} d={path()} />;
+    const invisiblePath = () => (
+        <path id={pathId()} style="stroke: white;" marker-end={markerUrl()} d={path()} />
+    );
 
     const tgtLabel = (text: string) => {
         // Place the target label offset from the target in the direction
