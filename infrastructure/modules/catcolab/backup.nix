@@ -61,7 +61,7 @@ with lib;
         User = "catcolab";
         ExecStart = getExe backupScript;
         Type = "oneshot";
-        EnvironmentFile = config.catcolab.host.backup.rcloneConfFilePath;
+        EnvironmentFile = config.catcolab.environmentFilePath;
       };
     };
 
@@ -79,7 +79,7 @@ with lib;
           --description="One-off activation backupdb" \
           --property=Type=${config.systemd.services.backupdb.serviceConfig.Type} \
           --property=User=${config.systemd.services.backupdb.serviceConfig.User} \
-          --property=EnvironmentFile=${config.catcolab.host.backup.rcloneConfFilePath} \
+          --property=EnvironmentFile=${config.catcolab.environmentFilePath} \
           --property=Environment=PATH=/run/current-system/sw/bin \
           ${lib.getExe backupScript}
 
