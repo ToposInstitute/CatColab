@@ -300,7 +300,7 @@ impl EligibleFunctions {
     feature = "serde-wasm",
     tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
 )]
-pub struct AnotherMassActionProblemData<Id>
+pub struct SwitchingMassActionProblemData<Id>
 where
     Id: Eq + Hash + Clone + Debug,
 {
@@ -670,50 +670,52 @@ impl PetriNetMassActionFunctionAnalysis {
         }
     }
 
-    // pub fn build_numerical_system<Id: Eq + Clone + Hash + Ord + Debug + std::fmt::Display>(
-    //     &self,
-    //     model: &ModalDblModel<Id, Ustr>,
-    //     data: AnotherMassActionProblemData<Id>,
-    // ) -> ODEAnalysis<Id, NumericalPolynomialSwitchingSystem<Id, u8>> {
-    //     // XXX we forget some data from `data` here
-    //     into_numerical_switching_system(self.build_switching_system(model), data.mass)
-    // }
+    pub fn build_numerical_system<Id: Eq + Clone + Hash + Ord + Debug + std::fmt::Display>(
+        &self,
+        model: &ModalDblModel<Id, Ustr>,
+        data: SwitchingMassActionProblemData<Id>,
+    ) -> ODEAnalysis<Id, NumericalPolynomialSwitchingSystem<Id, u8>> {
+        // XXX we forget some data from `data` here
+        into_numerical_switching_system(self.build_switching_system(model), data)
+    }
 }
 
-// fn into_numerical_switching_system<Id: Eq + Clone + Hash + Ord + Debug>(
-//     system: SwitchingSystem<Id>,
-//     data: MassActionProblemData<Id>,
-// ) -> ODEAnalysis<Id, NumericalPolynomialSwitchingSystem<Id, u8>> {
-//     //
-//     let subsystems = system.subsystems.into_iter().map(|(graph, sys)| {
-//         let ob_index: BTreeMap<_, _> =
-//             sys.components.keys().cloned().enumerate().map(|(i, x)| (x, i)).collect();
-//         let n = ob_index.len();
-
-//         let initial_values = ob_index
-//             .keys()
-//             .map(|ob| data.initial_values.get(ob).copied().unwrap_or_default());
-//         let x0 = DVector::from_iterator(n, initial_values);
-
-//         let sys = sys
-//             .extend_scalars(|poly| {
-//                 poly.eval(|flow| data.rates.get(flow).copied().unwrap_or_default())
-//             })
-//             .to_numerical();
-//         (graph, sys)
-//     });
-//     let sys = NumericalPolynomialSwitchingSystem { subsystems: vec![] };
-
-//     // TODO
-//     let variable_index = BTreeMap::new();
-//     let x0 = DVector::default();
-//     // ODE Problem expects polynomial
-//     let problem = ODEProblem::new(sys, x0).end_time(data.duration);
-//     ODEAnalysis {
-//         problem,
-//         variable_index,
-//     }
-// }
+fn into_numerical_switching_system<Id: Eq + Clone + Hash + Ord + Debug>(
+    system: SwitchingSystem<Id>,
+    data: SwitchingMassActionProblemData<Id>,
+) -> ODEAnalysis<Id, NumericalPolynomialSwitchingSystem<Id, u8>> {
+    let ob_index: BTreeMap<_, _> = system.ob_index.clone();
+    let n = ob_index.len();
+    let null_model =
+        Some(system.null_model.clone().extend_scalars(|p| p.eval(|_| 1.0)).to_numerical());
+    let initial_values = ob_index
+        .keys()
+        .map(|ob| data.mass.initial_values.get(ob).copied().unwrap_or_default());
+    let x0 = DVector::from_iterator(n, initial_values);
+    let subsystems = system
+        .subsystems
+        .into_iter()
+        .map(|(graph, sys)| {
+            let sys = sys
+                .extend_scalars(|poly| {
+                    poly.eval(|flow| data.mass.rates.get(flow).copied().unwrap_or_default())
+                })
+                .to_numerical();
+            (graph, sys)
+        })
+        .collect::<Vec<_>>();
+    let sys = NumericalPolynomialSwitchingSystem {
+        ob_index: ob_index.clone(),
+        subsystems,
+        null_model,
+        functions: data.functions,
+    };
+    let problem = ODEProblem::new(sys, x0).end_time(data.mass.duration);
+    ODEAnalysis {
+        problem,
+        variable_index: ob_index,
+    }
+}
 
 #[cfg(test)]
 mod tests {

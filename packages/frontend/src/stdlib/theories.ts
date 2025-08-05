@@ -86,6 +86,17 @@ stdTheories.add(
 
 stdTheories.add(
     {
+        id: "stock-flow-with-auxes",
+        name: "Stock and flow with logic",
+        description: "Model accumulation (stocks) and change (flows)",
+        group: "System Dynamics",
+    },
+    async () => (await import("./theories/stock-flow-aux")).default,
+);
+
+
+stdTheories.add(
+    {
         id: "reg-net",
         name: "Regulatory network",
         description: "Biochemical species that promote or inhibit each other",

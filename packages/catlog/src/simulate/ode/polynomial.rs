@@ -199,21 +199,12 @@ where
     Id: Hash + Clone + Eq + Debug + Ord,
     Exp: Ord + Clone,
 {
-    // TODO accumulate over first arguments
+    // TODO do we need a `null_model`?
     fn get_current(self, x: DVector<f32>) -> NumericalPolynomialSystem<Exp> {
         self.subsystems
             .into_iter()
             .filter(|(graph, _)| graph.compute(&x, self.functions.clone(), self.ob_index.clone()))
             .fold(self.null_model.unwrap(), |acc, (_, sys)| acc + sys)
-        // if x[0] >= 4.5f32 {
-        //     let (g, sys0) = self.subsystems[0].clone();
-        //     let (_, sys1) = self.subsystems[1].clone();
-        //     let _ = &g.compute(&x, self.functions);
-        //     sys0 + sys1
-        // } else {
-        //     let (graph, sys) = self.subsystems[1].clone();
-        //     sys
-        // }
     }
 }
 

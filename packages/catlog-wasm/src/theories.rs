@@ -354,19 +354,15 @@ impl ThModalStateAuxCategory {
     }
 
     /// Simulates a mass-action ODE system with additional configurations.
-    #[wasm_bindgen(js_name = "stateAuxMassAction")]
+    #[wasm_bindgen(js_name = "massAction")]
     pub fn state_aux_mass_action(
         &self,
         model: &DblModel,
-        data: AnotherMassActionModelData,
+        data: SwitchingMassActionModelData,
     ) -> Result<ODEResult, String> {
-        let model: &model::ModalDblModel<_, _> =
-            (&model.0).try_into().map_err(|_| "Model should be of a modal theory")?;
-        // Ok(())
         Ok(ODEResult(
             analyses::ode::PetriNetMassActionFunctionAnalysis::default()
-                .build_numerical_switching_system(model, data.0)
-                // TODO Switching System
+                .build_numerical_system(model.modal()?, data.0)
                 .solve_with_defaults()
                 .map_err(|err| format!("{err:?}"))
                 .into(),

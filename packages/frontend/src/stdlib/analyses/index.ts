@@ -7,3 +7,4 @@ export * from "./model_graph";
 export * from "./petri_net_visualization";
 export * from "./stock_flow_diagram";
 export * from "./submodel_graphs";
+export * from "./switching_mass_action";

@@ -69,18 +69,6 @@ impl<Id, Sys> ODEAnalysis<Id, Sys> {
                 .collect(),
         })
     }
-
-    /// Solves the ODE construed as a switching system
-    pub fn solve_switching_with_defaults(self) -> Result<ODESolution<Id>, IntegrationError>
-    where
-        Id: Eq + Hash,
-        Sys: ODESystem,
-    {
-        // if self.variable_index.is_empty() {
-        //     return Ok(Default::default());
-        // }
-        Ok(Default::default())
-    }
 }
 
 pub mod linear_ode;
