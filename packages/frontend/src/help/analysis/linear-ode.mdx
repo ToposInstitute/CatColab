@@ -1,0 +1,14 @@
+import { A } from "@solidjs/router";
+
+We might want to consider linear dynamics whenever we have *unidirectional* influence between variables, where variables affect the *first derivative* of other variables, with no feedback a priori.
+
+#### User inputs
+
+<dl>
+  <dt>Initial value: $\mathbb{R}_{\geqslant0}$</dt>
+  <dd>The initial value of the variable.</dd>
+  <dt>Coefficient: $\mathbb{R}_{\geqslant0}$</dt>
+  <dd>The coefficient ($k$) corresponding to the arrow.</dd>
+  <dt>Duration: $\mathbb{R}_{\geqslant0}$</dt>
+  <dd>The total duration of the simulation in units of time.</dd>
+</dl>

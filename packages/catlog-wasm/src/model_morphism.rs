@@ -28,10 +28,7 @@ pub fn motifs<Id>(
 where
     Id: Clone + Eq + Hash,
 {
-    let model: &model::DiscreteDblModel<_, _> = (&model.0)
-        .try_into()
-        .map_err(|_| "Motif finding expects a discrete double model")?;
-
+    let model = model.discrete()?;
     let mut finder = model_morphism::DiscreteDblModelMapping::morphisms(motif, model);
     if let Some(n) = options.max_path_len {
         finder.max_path_len(n);

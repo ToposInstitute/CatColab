@@ -16,12 +16,14 @@ export function configureModelGraph(options: {
     id: string;
     name: string;
     description?: string;
+    help?: string;
 }): ModelAnalysisMeta<GV.GraphConfig> {
-    const { id, name, description } = options;
+    const { id, name, description, help } = options;
     return {
         id,
         name,
         description,
+        help,
         component: (props) => <ModelGraph title={name} {...props} />,
         initialContent: GV.defaultGraphConfig,
     };
@@ -74,17 +76,21 @@ export function ModelGraph(
  */
 export function ModelGraphviz(props: {
     model: ModelJudgment[];
-    theory: Theory;
+    theory?: Theory;
     attributes?: GV.GraphvizAttributes;
     options?: Viz.RenderOptions;
     ref?: SVGRefProp;
 }) {
     return (
-        <GraphvizSVG
-            graph={modelToGraphviz(props.model, props.theory, props.attributes)}
-            options={props.options}
-            ref={props.ref}
-        />
+        <Show when={props.theory}>
+            {(theory) => (
+                <GraphvizSVG
+                    graph={modelToGraphviz(props.model, theory(), props.attributes)}
+                    options={props.options}
+                    ref={props.ref}
+                />
+            )}
+        </Show>
     );
 }
 

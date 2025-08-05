@@ -5,6 +5,7 @@ import {
     type DocumentId,
     Repo,
 } from "@automerge/automerge-repo";
+import jsonpatch from "fast-json-patch";
 import { type Accessor, createEffect, createSignal } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 import invariant from "tiny-invariant";
@@ -12,6 +13,7 @@ import * as uuid from "uuid";
 
 import type { Permissions } from "catcolab-api";
 import type { Document } from "catlog-wasm";
+import * as catlogWasm from "catlog-wasm";
 import { PermissionsError } from "../util/errors";
 import type { Api } from "./types";
 
@@ -48,9 +50,6 @@ by Automerge to the backend and to other clients. When the user has only read
 permissions, the Automerge doc handle will be "fake", existing only locally in
 the client. And if the user doesn't even have read permissions, this function
 will yield an unauthorized error!
-
-TODO: Roundtrip the loaded document throught notebook-types to validate it
-and upgrade it to the latest version.
  */
 export async function getLiveDoc<Doc extends Document>(
     api: Api,
@@ -73,13 +72,23 @@ export async function getLiveDoc<Doc extends Document>(
     let docHandle: DocHandle<Doc>;
     if (refDoc.tag === "Live") {
         const docId = refDoc.docId as DocumentId;
-        docHandle = repo.find(docId) as DocHandle<Doc>;
+        docHandle = (await repo.find(docId)) as DocHandle<Doc>;
     } else {
         const init = refDoc.content as unknown as Doc;
         docHandle = localRepo.create(init);
     }
 
-    const doc = await makeDocHandleReactive(docHandle);
+    // XXX: copied from automerge-doc-server/src/server.ts:
+    const docBefore = docHandle.doc();
+    const docAfter = catlogWasm.migrateDocument(docBefore);
+    if ((docBefore as Doc).version !== docAfter.version) {
+        const patches = jsonpatch.compare(docBefore as Doc, docAfter);
+        docHandle.change((doc: unknown) => {
+            jsonpatch.applyPatch(doc, patches);
+        });
+    }
+
+    const doc = makeDocHandleReactive(docHandle);
     if (docType !== undefined) {
         invariant(
             doc.type === docType,
@@ -95,8 +104,8 @@ export async function getLiveDoc<Doc extends Document>(
 
 /** Create a Solid Store that tracks an Automerge document.
  */
-export async function makeDocHandleReactive<T extends object>(handle: DocHandle<T>): Promise<T> {
-    const init = await handle.doc();
+export function makeDocHandleReactive<T extends object>(handle: DocHandle<T>): T {
+    const init = handle.doc();
 
     const [store, setStore] = createStore<T>(init as T);
 

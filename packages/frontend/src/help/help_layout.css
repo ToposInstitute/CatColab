@@ -1,0 +1,176 @@
+.help-container {
+    /* Navigation */
+
+    .help-navigation {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 2em;
+        border-bottom: 1px solid black;
+
+        & > .help-navigation-title {
+            font-size: 1.2em;
+
+            & > a {
+                text-decoration: none;
+                color: black;
+            }
+        }
+
+        & > ul.help-navigation-links {
+            display: flex;
+            justify-content: center;
+            list-style: none;
+
+            & > li.help-navigation-link {
+                margin: 0 1em;
+                white-space: nowrap;
+            }
+
+            & > li.help-navigation-link a {
+                text-decoration: none;
+                color: var(--topos-secondary);
+                font-weight: 600;
+                padding: 0.3em 0.5em;
+                /*border: 1px solid var(--topos-secondary);*/
+                border-radius: 2px;
+
+                &:hover {
+                    background-color: var(--topos-secondary);
+                    color: white;
+                    transition: color .15s ease-in-out, background-color .15s ease-in-out;
+                }
+            }
+        }
+    }
+
+    /* All main content */
+
+    font-size: 1.05rem;
+
+    .katex {
+        font-size: 1.2rem;
+    }
+
+    code {
+        font-size: 0.95em;
+    }
+
+    /* Headers */
+
+    & h1 {
+        margin: 0.5em 0;
+        font-size: 2em;
+    }
+
+    & h2 {
+        font-size: 1.65em;
+        margin: 1.25em 0 0.5em 0;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+    }
+
+    & h3 {
+        font-size: 1.3em;
+        margin: 1em 0 0.5em 0;
+    }
+
+    & h4 {
+        font-size: 1.1em;
+        /*font-style: italic;*/
+    }
+
+    /* Links */
+
+    & a {
+        color: var(--topos-secondary);
+        text-decoration: underline;
+
+        &:hover {
+            /*color: color-mix( in oklab, var(--topos-secondary) 80%, black);*/
+            color: var(--topos-primary);
+        }
+    }
+
+    /* Lists */
+
+    & li:not(:last-child) {
+        margin-bottom: 0.2em;
+    }
+
+    & dt {
+        font-weight: 600;
+
+        & > a {
+            text-decoration: none;
+        }
+
+        & > code {
+            font-weight: normal;
+        }
+    }
+    & dd {
+        margin-left: 0;
+    }
+    & dd:not(:last-child) {
+        margin-bottom: 0.67em;
+    }
+
+    /* Tables */
+
+    table {
+        th,
+        td {
+            text-align: left;
+            padding: 0.25em 1em;
+        }
+
+        th {
+            background-color: gray;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+    }
+
+    /* Summary lists of definitions and analyses for a given logic */
+    .help-summary-lists {
+        display: flex;
+        justify-content: space-between;
+
+        & > div {
+            flex-basis: 50%;
+
+            & > h3 {
+                margin-top: 0;
+            }
+        }
+    }
+
+    /* Analyses help boxes for a given logic */
+    .help-analysis-pane {
+        margin-bottom: 1.5em;
+        padding: 1em;
+        border: 1px solid rgba(0, 0, 0, 0.2);
+        border-radius: 2px;
+
+        h3 {
+            margin: 0;
+            font-size: 1.2em;
+        }
+
+        h4 {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .help-analysis-pane-description {
+            margin-top: 0.2em;
+            font-style: italic;
+        }
+
+        & > *:last-child {
+            margin-bottom: 0;
+        }
+    }
+}

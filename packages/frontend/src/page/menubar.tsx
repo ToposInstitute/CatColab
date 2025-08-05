@@ -95,7 +95,7 @@ export function NewModelItem() {
     invariant(theories, "Theory library must be provided as context");
 
     const onNewModel = async () => {
-        const newRef = await createModel(api, theories.getDefault().id);
+        const newRef = await createModel(api, theories.defaultTheoryMetadata().id);
         navigate(`/model/${newRef}`);
     };
 

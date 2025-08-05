@@ -156,6 +156,7 @@ pub fn sample_ecld() -> UstrDiscreteDblModel {
     model.add_mor(h, c, b, Path::Id(ob_type));
     model.add_mor(k, b, a, Path::Id(ob_type));
     model.add_mor(l, b, a, Path::Seq(nonempty![deg, deg, neg]));
+
 /** A reaction involving three species, one playing the role of a catalyst.
 
 A free symmetric monoidal category, viewed as a reaction network.
@@ -209,6 +210,12 @@ mod tests {
     #[test]
     fn th_nn2_category() {
         assert!(sample_ecld().validate().is_ok());
+    }
+
+    #[test]
+    fn sym_monoidal_categories() {
+        let th = Rc::new(th_sym_monoidal_category());
+        assert!(catalyzed_reaction(th).validate().is_ok());
     }
 
     #[test]

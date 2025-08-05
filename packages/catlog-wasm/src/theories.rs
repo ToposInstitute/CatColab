@@ -9,9 +9,9 @@ use std::rc::Rc;
 use ustr::ustr;
 use wasm_bindgen::prelude::*;
 
-use catlog::dbl::{model, theory};
+use catlog::dbl::theory;
 use catlog::one::Path;
-use catlog::stdlib::{analyses, models, theories};
+use catlog::stdlib::{analyses, models, theories, theory_morphisms};
 
 use super::model_morphism::{MotifsOptions, motifs};
 use super::{analyses::*, model::DblModel, theory::DblTheory};
@@ -48,6 +48,17 @@ impl ThCategory {
     pub fn theory(&self) -> DblTheory {
         DblTheory(self.0.clone().into())
     }
+
+    /// Sigma migrates a category to a schema.
+    #[wasm_bindgen(js_name = "toSchema")]
+    pub fn to_schema(mut model: DblModel, th_schema: &DblTheory) -> Result<DblModel, String> {
+        let th = th_schema.discrete()?;
+        model.discrete_mut()?.push_forward(
+            &theory_morphisms::th_category_to_schema().functor_into(&th.0),
+            th.clone(),
+        );
+        Ok(model)
+    }
 }
 
 /// The theory of database schemas with attributes.
@@ -64,6 +75,17 @@ impl ThSchema {
     #[wasm_bindgen]
     pub fn theory(&self) -> DblTheory {
         DblTheory(self.0.clone().into())
+    }
+
+    /// Sigma migrates a schema to a category.
+    #[wasm_bindgen(js_name = "toCategory")]
+    pub fn to_category(mut model: DblModel, th_category: &DblTheory) -> Result<DblModel, String> {
+        let th = th_category.discrete()?;
+        model.discrete_mut()?.push_forward(
+            &theory_morphisms::th_schema_to_category().functor_into(&th.0),
+            th.clone(),
+        );
+        Ok(model)
     }
 }
 
@@ -112,14 +134,11 @@ impl ThSignedCategory {
         model: &DblModel,
         data: LotkaVolterraModelData,
     ) -> Result<ODEResult, String> {
-        let model: &model::DiscreteDblModel<_, _> = (&model.0)
-            .try_into()
-            .map_err(|_| "Lotka-Volterra simulation expects a discrete double model")?;
         Ok(ODEResult(
             analyses::ode::SignedCoefficientBuilder::new(ustr("Object"))
                 .add_positive(Path::Id(ustr("Object")))
                 .add_negative(ustr("Negative").into())
-                .lotka_volterra_analysis(model, data.0)
+                .lotka_volterra_analysis(model.discrete()?, data.0)
                 .solve_with_defaults()
                 .map_err(|err| format!("{err:?}"))
                 .into(),
@@ -133,14 +152,11 @@ impl ThSignedCategory {
         model: &DblModel,
         data: LinearODEModelData,
     ) -> Result<ODEResult, String> {
-        let model: &model::DiscreteDblModel<_, _> = (&model.0)
-            .try_into()
-            .map_err(|_| "Linear ODE simulation expects a discrete double model")?;
         Ok(ODEResult(
             analyses::ode::SignedCoefficientBuilder::new(ustr("Object"))
                 .add_positive(Path::Id(ustr("Object")))
                 .add_negative(ustr("Negative").into())
-                .linear_ode_analysis(model, data.0)
+                .linear_ode_analysis(model.discrete()?, data.0)
                 .solve_with_defaults()
                 .map_err(|err| format!("{err:?}"))
                 .into(),
@@ -207,6 +223,18 @@ impl ThDelayableSignedCategory {
         let delayed_negative_loop = models::delayed_negative_loop(self.0.clone());
         motifs(&delayed_negative_loop, model, options)
     }
+
+    /// Sigma migrates a delayable signed category to a signed category.
+    #[wasm_bindgen(js_name = "toSignedCategory")]
+    pub fn to_signed_category(mut model: DblModel, th: &DblTheory) -> Result<DblModel, String> {
+        let th = th.discrete()?;
+        model.discrete_mut()?.push_forward(
+            &theory_morphisms::th_delayable_signed_category_to_signed_category()
+                .functor_into(&th.0),
+            th.clone(),
+        );
+        Ok(model)
+    }
 }
 
 /// The theory of nullable signed categories.
@@ -266,11 +294,9 @@ impl ThCategoryLinks {
         model: &DblModel,
         data: MassActionModelData,
     ) -> Result<ODEResult, String> {
-        let model: &model::DiscreteTabModel<_, _, _> =
-            (&model.0).try_into().map_err(|_| "Model should be of a tabulator theory")?;
         Ok(ODEResult(
             analyses::ode::StockFlowMassActionAnalysis::default()
-                .build_numerical_system(model, data.0)
+                .build_numerical_system(model.discrete_tab()?, data.0)
                 .solve_with_defaults()
                 .map_err(|err| format!("{err:?}"))
                 .into(),
@@ -301,11 +327,9 @@ impl ThSymMonoidalCategory {
         model: &DblModel,
         data: MassActionModelData,
     ) -> Result<ODEResult, String> {
-        let model: &model::ModalDblModel<_, _, _> =
-            (&model.0).try_into().map_err(|_| "Model should be of a modal theory")?;
         Ok(ODEResult(
             analyses::ode::PetriNetMassActionAnalysis::default()
-                .build_numerical_system(model, data.0)
+                .build_numerical_system(model.modal()?, data.0)
                 .solve_with_defaults()
                 .map_err(|err| format!("{err:?}"))
                 .into(),

@@ -30,8 +30,7 @@ export type ObInputProps = {
     isInvalid?: boolean;
 };
 
-/** Input an object that already exists in a model.
- */
+/** Input an object that already exists in a model. */
 export function ObInput(
     allProps: ObInputProps &
         InputOptions & {

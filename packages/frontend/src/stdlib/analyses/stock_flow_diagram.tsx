@@ -29,12 +29,14 @@ export function configureStockFlowDiagram(options: {
     id: string;
     name: string;
     description?: string;
+    help?: string;
 }): ModelAnalysisMeta<GV.GraphConfig> {
-    const { id, name, description } = options;
+    const { id, name, description, help } = options;
     return {
         id,
         name,
         description,
+        help,
         component: StockFlowDiagram,
         initialContent: GV.defaultGraphConfig,
     };
@@ -83,7 +85,7 @@ links from stocks to flows using our own layout heuristics.
  */
 export function StockFlowGraphviz(props: {
     model: Array<ModelJudgment>;
-    theory: Theory;
+    theory?: Theory;
     attributes?: GV.GraphvizAttributes;
     options?: Viz.RenderOptions;
     ref?: SVGRefProp;
@@ -93,6 +95,7 @@ export function StockFlowGraphviz(props: {
     const vizLayout = () => {
         const viz = vizResource();
         return (
+            props.theory &&
             viz &&
             vizLayoutGraph(
                 viz,

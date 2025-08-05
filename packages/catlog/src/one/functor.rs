@@ -14,7 +14,7 @@ you must carry around (references to) more data to evaluate functors than to
 evaluate functions or graph morphisms.
  */
 
-use std::hash::{BuildHasher, Hash};
+use std::hash::Hash;
 
 use derive_more::Constructor;
 use nonempty::NonEmpty;
@@ -255,17 +255,17 @@ where
     Cod: Category<Ob = Ob, Mor = Mor>,
 {
     /// Validates that the functor is well-defined on the given f.p. category.
-    pub fn validate_on<S: BuildHasher>(
+    pub fn validate_on(
         &self,
-        dom: &FpCategory<V, E, S>,
+        dom: &FpCategory<V, E>,
     ) -> Result<(), NonEmpty<InvalidFpFunctor<V, E>>> {
         crate::validate::wrap_errors(self.iter_invalid_on(dom))
     }
 
     /// Iterates over failures to be functorial on the given f.p. category.
-    pub fn iter_invalid_on<'b, S: BuildHasher>(
+    pub fn iter_invalid_on<'b>(
         &'b self,
-        dom: &'b FpCategory<V, E, S>,
+        dom: &'b FpCategory<V, E>,
     ) -> impl Iterator<Item = InvalidFpFunctor<V, E>> + 'b {
         let generator_errors =
             GraphMorphism(self.map, dom.generators(), UnderlyingGraph::ref_cast(self.cod))
@@ -291,7 +291,7 @@ where
 }
 
 /// A failure of a map out of an f.p. category to be functorial.
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum InvalidFpFunctor<V, E> {
     /// An object generator not mapped to an object in the codomain category.
     #[error("Object generator `{0}` is not mapped to an object in the codomain")]

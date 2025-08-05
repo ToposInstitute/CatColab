@@ -1,6 +1,6 @@
 //! Computads for virtual double categories.
 
-use std::hash::{BuildHasher, Hash};
+use std::hash::Hash;
 
 use derivative::Derivative;
 use derive_more::Constructor;
@@ -14,22 +14,21 @@ use crate::zero::*;
 Intended for use with [`AVDCComputad`].
  */
 #[derive(Debug, Derivative)]
-#[derivative(Default(bound = "S: Default"))]
-pub struct AVDCComputadTop<Ob, Arr, Pro, Sq, S> {
-    squares: HashFinSet<Sq, S>,
-    dom: HashColumn<Sq, Path<Ob, Pro>, S>,
-    cod: HashColumn<Sq, ShortPath<Ob, Pro>, S>,
-    src: HashColumn<Sq, Arr, S>,
-    tgt: HashColumn<Sq, Arr, S>,
+#[derivative(Default(bound = ""))]
+pub struct AVDCComputadTop<Ob, Arr, Pro, Sq> {
+    squares: HashFinSet<Sq>,
+    dom: HashColumn<Sq, Path<Ob, Pro>>,
+    cod: HashColumn<Sq, ShortPath<Ob, Pro>>,
+    src: HashColumn<Sq, Arr>,
+    tgt: HashColumn<Sq, Arr>,
 }
 
-impl<Ob, Arr, Pro, Sq, S> AVDCComputadTop<Ob, Arr, Pro, Sq, S>
+impl<Ob, Arr, Pro, Sq> AVDCComputadTop<Ob, Arr, Pro, Sq>
 where
     Ob: Eq + Clone,
     Arr: Eq + Clone,
     Pro: Eq + Clone,
     Sq: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     /// Adds a square to the double computad.
     pub fn add_square(
@@ -60,15 +59,15 @@ like the cells in an *augmented VDC* ([Koudenburg
 *unital* VDCs.
  */
 #[derive(Constructor)]
-pub struct AVDCComputad<'a, Ob, Arr, Pro, ObSet, ArrGraph, ProGraph, Sq, S> {
+pub struct AVDCComputad<'a, Ob, Arr, Pro, ObSet, ArrGraph, ProGraph, Sq> {
     objects: &'a ObSet,
     arrows: &'a ArrGraph,
     proarrows: &'a ProGraph,
-    computad: &'a AVDCComputadTop<Ob, Arr, Pro, Sq, S>,
+    computad: &'a AVDCComputadTop<Ob, Arr, Pro, Sq>,
 }
 
-impl<'a, Ob, Arr, Pro, ObSet, ArrGraph, ProGraph, Sq, S> VDblGraph
-    for AVDCComputad<'a, Ob, Arr, Pro, ObSet, ArrGraph, ProGraph, Sq, S>
+impl<'a, Ob, Arr, Pro, ObSet, ArrGraph, ProGraph, Sq> VDblGraph
+    for AVDCComputad<'a, Ob, Arr, Pro, ObSet, ArrGraph, ProGraph, Sq>
 where
     Ob: Eq + Clone,
     Arr: Eq + Clone,
@@ -77,7 +76,6 @@ where
     ObSet: Set<Elem = Ob>,
     ArrGraph: Graph<V = Ob, E = Arr>,
     ProGraph: ReflexiveGraph<V = Ob, E = Pro>,
-    S: BuildHasher,
 {
     type V = Ob;
     type E = Arr;
@@ -129,8 +127,8 @@ where
     }
 }
 
-impl<'a, Ob, Arr, Pro, ObSet, ArrGraph, ProGraph, Sq, S>
-    AVDCComputad<'a, Ob, Arr, Pro, ObSet, ArrGraph, ProGraph, Sq, S>
+impl<'a, Ob, Arr, Pro, ObSet, ArrGraph, ProGraph, Sq>
+    AVDCComputad<'a, Ob, Arr, Pro, ObSet, ArrGraph, ProGraph, Sq>
 where
     Ob: Eq + Clone,
     Arr: Eq + Clone,
@@ -138,7 +136,6 @@ where
     Sq: Eq + Clone + Hash,
     ArrGraph: Graph<V = Ob, E = Arr>,
     ProGraph: Graph<V = Ob, E = Pro>,
-    S: BuildHasher,
 {
     /** Iterates over failures to be a valid virtual double graph.
 

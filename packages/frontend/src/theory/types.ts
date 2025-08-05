@@ -1,6 +1,6 @@
 import type { KbdKey } from "@solid-primitives/keyboard";
 
-import type { DblTheory, MorType, ObOp, ObType } from "catlog-wasm";
+import type { DblModel, DblTheory, MorType, ObOp, ObType } from "catlog-wasm";
 import { MorTypeIndex, ObTypeIndex } from "catlog-wasm";
 import type { DiagramAnalysisComponent, ModelAnalysisComponent } from "../analysis";
 import { uniqueIndexArray } from "../util/indexing";
@@ -18,8 +18,8 @@ export class Theory {
     /** Underlying double theory in the core. */
     readonly theory: DblTheory;
 
-    /** Name of help page (excluding file extension) for the theory, if any. */
-    readonly help?: string;
+    /** Does this theory have a corresponding help page? */
+    readonly help?: boolean;
 
     /** Human-readable name for models of theory.
 
@@ -39,6 +39,9 @@ export class Theory {
     Migrations along such inclusions are trivial.
      */
     readonly inclusions: string[];
+
+    /** List of pushforward (covariant) migrations out of this theory. */
+    readonly pushforwards: ModelMigration[];
 
     /** Whether models of the double theory are constrained to be free. */
     readonly onlyFreeModels!: boolean;
@@ -61,10 +64,11 @@ export class Theory {
     constructor(props: {
         id: string;
         theory: DblTheory;
-        help?: string;
+        help?: boolean;
         name: string;
         description: string;
         inclusions?: string[];
+        pushforwards?: ModelMigration[];
         modelTypes?: ModelTypeMeta[];
         modelAnalyses?: ModelAnalysisMeta[];
         onlyFreeModels?: boolean;
@@ -76,7 +80,10 @@ export class Theory {
         this.id = props.id;
         this.theory = props.theory;
         this.help = props.help;
+
+        // Migrations.
         this.inclusions = props.inclusions ?? [];
+        this.pushforwards = props.pushforwards ?? [];
 
         // Models.
         this.name = props.name;
@@ -91,6 +98,11 @@ export class Theory {
             props.instanceTypes,
         );
         this.diagramAnalysisMap = uniqueIndexArray(props.diagramAnalyses ?? [], (meta) => meta.id);
+    }
+
+    /** List of IDs of theories to which models of this theory can be migrated. */
+    get migrationTargets(): Array<string> {
+        return this.inclusions.concat(this.pushforwards.map((m) => m.target));
     }
 
     /** Metadata for types in the theory, as used in models.
@@ -269,6 +281,15 @@ export type InstanceObTypeMeta = BaseObTypeMeta;
 /** Metadata for a morphism type as used in instances. */
 export type InstanceMorTypeMeta = BaseMorTypeMeta;
 
+/** Specifies a migration of models from one theory into another. */
+type ModelMigration = {
+    /** Identifier of theory migrated into. */
+    target: string;
+
+    /** Function to perform the migration. */
+    migrate: (model: DblModel, targetTheory: DblTheory) => DblModel;
+};
+
 /** Specifies an analysis with descriptive metadata. */
 export type AnalysisMeta<T> = {
     /** Identifier of analysis, unique relative to the theory. */
@@ -279,6 +300,9 @@ export type AnalysisMeta<T> = {
 
     /** Short description of analysis. */
     description?: string;
+
+    /** Name of the help page (excluding file extension) for the analysis, if any. */
+    help?: string;
 
     /** Default content created when the analysis is added. */
     initialContent: () => T;
