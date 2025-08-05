@@ -15,7 +15,7 @@ export function GraphSVG<Id>(props: {
 }) {
     const edgeMarkers = () => {
         const markers = new Set<ArrowMarker>();
-        for (const edge of props.graph.edges ?? []) {
+        for (const edge of props.graph.edges) {
             markers.add(styleToMarker[edge.style ?? "default"]);
         }
         return Array.from(markers);
@@ -28,8 +28,8 @@ export function GraphSVG<Id>(props: {
                     {(marker) => <Dynamic component={arrowMarkerSVG[marker()]} />}
                 </Index>
             </defs>
-            <For each={props.graph.edges ?? []}>{(edge) => <EdgeSVG edge={edge} />}</For>
-            <For each={props.graph.nodes ?? []}>{(node) => <NodeSVG node={node} />}</For>
+            <For each={props.graph.edges}>{(edge) => <EdgeSVG edge={edge} />}</For>
+            <For each={props.graph.nodes}>{(node) => <NodeSVG node={node} />}</For>
         </svg>
     );
 }

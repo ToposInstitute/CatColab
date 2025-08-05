@@ -1,3 +1,5 @@
+//! Wasm bindings for models of a double theory.
+
 use all_the_same::all_the_same;
 use derive_more::{From, TryInto};
 use serde::{Deserialize, Serialize};
@@ -31,11 +33,15 @@ See [`DblTheoryBox`] for motivation.
 #[derive(From, TryInto)]
 #[try_into(ref, ref_mut)]
 pub enum DblModelBox {
+    /// A model of a discrete double theory.
     Discrete(DiscreteDblModel),
+    /// A model of a discrete tabulator theory.
     DiscreteTab(DiscreteTabModel),
+    /// A model of a modal double theory.
     Modal(ModalDblModel),
 }
 
+/// Wasm binding of a model of a double theory.
 #[wasm_bindgen]
 pub struct DblModel(#[wasm_bindgen(skip)] pub DblModelBox);
 
@@ -455,6 +461,7 @@ impl DblModel {
         })
     }
 
+    /// Validates the model, returning any validation failures.
     pub fn validate(&self) -> ModelValidationResult {
         all_the_same!(match &self.0 {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
@@ -478,6 +485,7 @@ pub fn collect_product(ob: Ob) -> Result<Vec<Ob>, String> {
     Ok(vec.into_iter().map(|ob| Quoter.quote(&ob)).collect())
 }
 
+/// Elaborates a model defined by a notebook into a catlog model.
 #[wasm_bindgen(js_name = "elaborateModel")]
 pub fn elaborate_model(doc: &ModelDocumentContent, theory: &DblTheory) -> DblModel {
     let mut model = DblModel::new(theory);

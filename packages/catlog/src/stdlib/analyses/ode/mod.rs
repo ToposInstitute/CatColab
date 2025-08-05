@@ -71,7 +71,6 @@ impl<Id, Sys> ODEAnalysis<Id, Sys> {
 
 pub mod linear_ode;
 pub mod lotka_volterra;
-#[allow(clippy::type_complexity)]
 pub mod mass_action;
 pub mod signed_coefficients;
 

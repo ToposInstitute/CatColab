@@ -1,3 +1,5 @@
+//! Wasm bindings for morphisms between models of a double theory.
+
 use std::hash::Hash;
 
 use serde::{Deserialize, Serialize};

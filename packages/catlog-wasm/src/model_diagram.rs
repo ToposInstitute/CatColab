@@ -23,11 +23,12 @@ use super::theory::DblTheory;
 /// A box containing a diagram in a model of a double theory.
 #[derive(From)]
 pub enum DblModelDiagramBox {
+    /// A diagram in a model of a discrete double theory.
     Discrete(diagram::DblModelDiagram<DiscreteDblModelMapping, DiscreteDblModel>),
     // DiscreteTab(), # TODO: Not implemented.
 }
 
-/// Wasm bindings for a diagram in a model of a double theory.
+/// Wasm binding for a diagram in a model of a double theory.
 #[wasm_bindgen]
 pub struct DblModelDiagram(#[wasm_bindgen(skip)] pub DblModelDiagramBox);
 
@@ -203,6 +204,7 @@ pub struct ModelDiagramValidationResult(
     pub JsResult<(), Vec<diagram::InvalidDiscreteDblModelDiagram<Uuid>>>,
 );
 
+/// Elaborates a diagram defined by a notebook into a catlog diagram.
 #[wasm_bindgen(js_name = "elaborateDiagram")]
 pub fn elaborate_diagram(doc: &DiagramDocumentContent, theory: &DblTheory) -> DblModelDiagram {
     let mut diagram = DblModelDiagram::new(theory);

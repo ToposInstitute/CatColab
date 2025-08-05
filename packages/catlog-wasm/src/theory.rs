@@ -261,13 +261,15 @@ explicitly enumerate the supported kinds of double theories in this enum.
 #[derive(From, TryInto)]
 #[try_into(ref)]
 pub enum DblTheoryBox {
+    /// A discrete double theory.
     Discrete(Rc<theory::UstrDiscreteDblTheory>),
+    /// A discrete tabulator theory.
     DiscreteTab(Rc<theory::UstrDiscreteTabTheory>),
+    /// A modal double theory.
     Modal(Rc<theory::UstrModalDblTheory>),
 }
 
-/** Wasm bindings for a double theory.
- */
+/// Wasm binding for a double theory.
 #[wasm_bindgen]
 pub struct DblTheory(#[wasm_bindgen(skip)] pub DblTheoryBox);
 
