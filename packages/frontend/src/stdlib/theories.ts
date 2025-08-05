@@ -76,6 +76,17 @@ stdTheories.add(
 
 stdTheories.add(
     {
+        id: "extended-causal-loop",
+        name: "Extended causal loop diagram",
+        description:
+            "Causal relationships: positive or negative, with explicit differential degree and order of delay",
+        group: "System Dynamics",
+    },
+    async () => (await import("./theories/extended-causal-loop")).default,
+);
+
+stdTheories.add(
+    {
         id: "primitive-stock-flow",
         name: "Stock and flow",
         description: "Model accumulation (stocks) and change (flows)",
