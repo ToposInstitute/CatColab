@@ -121,7 +121,7 @@ export function modelToGraphviz(
         });
     }
 
-    console.log(nodes)
+    console.log(nodes);
 
     const edges: Required<Viz.Graph>["edges"] = [];
     for (const mor of model.mor_generators()) {
@@ -140,7 +140,7 @@ export function modelToGraphviz(
         });
     }
 
-    console.log(edges)
+    console.log(edges);
 
     return {
         directed: true,
