@@ -169,11 +169,12 @@ impl StockFlowMassActionAnalysis {
             };
         }
 
-        let terms: Vec<(Id, Polynomial<Id, Parameter<Id>, u8>)> = terms
+        let terms: Vec<_> = terms
             .into_iter()
             .map(|(flow, term)| {
                 let param = Parameter::generator(flow.clone());
-                (flow, [(param, term)].into_iter().collect())
+                let poly: Polynomial<_, _, _> = [(param, term)].into_iter().collect();
+                (flow, poly)
             })
             .collect();
 

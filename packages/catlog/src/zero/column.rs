@@ -850,7 +850,6 @@ impl<T: Eq + Hash + Clone> MutColumn for IndexedVecColumn<T> {}
 #[derivative(Default(bound = ""))]
 #[derivative(PartialEq(bound = "K: Eq + Hash, V: PartialEq"))]
 #[derivative(Eq(bound = "K: Eq + Hash, V: Eq"))]
-#[allow(clippy::type_complexity)]
 pub struct IndexedHashColumn<K, V>(IndexedColumn<K, V, HashColumn<K, V>, HashIndex<K, V>>);
 
 impl<K, V> IntoIterator for IndexedHashColumn<K, V>
