@@ -1,7 +1,7 @@
 //! Standard library of models of double theories.
 
 use std::rc::Rc;
-use ustr::{ustr, Ustr};
+use ustr::{Ustr, ustr};
 
 use crate::dbl::{model::*, theory::*};
 use crate::one::Path;
@@ -159,7 +159,7 @@ pub fn sample_ecld() -> UstrDiscreteDblModel {
     let (f, g, h, k, l) = (ustr("f"), ustr("g"), ustr("h"), ustr("k"), ustr("l"));
     let ob_type = ustr("Object");
     for x in vec![a, b, c].into_iter() {
-        model.add_ob(x, ob_type.clone())
+        model.add_ob(x, ob_type)
     }
     let neg = ustr("Negative");
     let deg = ustr("Degree");
