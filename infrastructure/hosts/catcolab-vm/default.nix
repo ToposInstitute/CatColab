@@ -33,10 +33,6 @@
     environmentFilePath = /etc/catcolab/catcolab-secrets.env;
     host = {
       enable = true;
-      backup = {
-        enable = true;
-        test = true;
-      };
     };
   };
 
