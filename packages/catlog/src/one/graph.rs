@@ -194,20 +194,20 @@ of [`FinGraph`].
  */
 pub trait ColumnarFinGraph:
     ColumnarGraph<
-        Vertices: FinSet<Elem = Self::V>,
-        Edges: FinSet<Elem = Self::E>,
-        Src: Column<Dom = Self::E, Cod = Self::V>,
-        Tgt: Column<Dom = Self::E, Cod = Self::V>,
-    >
+    Vertices: FinSet<Elem = Self::V>,
+    Edges: FinSet<Elem = Self::E>,
+    Src: Column<Dom = Self::E, Cod = Self::V>,
+    Tgt: Column<Dom = Self::E, Cod = Self::V>,
+>
 {
 }
 
 /// A columnar graph with mutable columns.
 pub trait MutColumnarGraph:
     ColumnarGraph<
-        Src: MutMapping<Dom = Self::E, Cod = Self::V>,
-        Tgt: MutMapping<Dom = Self::E, Cod = Self::V>,
-    >
+    Src: MutMapping<Dom = Self::E, Cod = Self::V>,
+    Tgt: MutMapping<Dom = Self::E, Cod = Self::V>,
+>
 {
     /// Variant of [`src_map`](ColumnarGraph::src_map) that returns a mutable
     /// reference.

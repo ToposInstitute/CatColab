@@ -380,6 +380,7 @@ dependencies = [
  "ustr",
  "uuid",
  "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]

@@ -7,6 +7,8 @@ use derivative::Derivative;
 use derive_more::Constructor;
 use ode_solvers::dop_shared::IntegrationError;
 
+use nalgebra::DVector;
+
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
