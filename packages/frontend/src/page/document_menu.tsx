@@ -3,12 +3,9 @@ import { Match, Show, Switch } from "solid-js";
 
 import { createAnalysis } from "../analysis/document";
 import { type StableRef, useApi } from "../api";
-import {
-    type LiveDiagramDocument,
-    createDiagram,
-    createDiagramFromDocument,
-} from "../diagram/document";
-import { type LiveModelDocument, createModel } from "../model/document";
+import { duplicateDocument } from "../api/duplicate_document";
+import { type LiveDiagramDocument, createDiagram } from "../diagram/document";
+import type { LiveModelDocument } from "../model/document";
 import {
     AppMenu,
     ImportMenuItem,
@@ -17,7 +14,6 @@ import {
     MenuSeparator,
     NewModelItem,
 } from "../page";
-import { assertExhaustive } from "../util/assert_exhaustive";
 import { copyToClipboard, downloadJson } from "../util/json_export";
 
 import ChartSpline from "lucide-solid/icons/chart-spline";
@@ -66,28 +62,8 @@ export function DocumentMenu(props: {
     };
 
     const onDuplicateDocument = async () => {
-        switch (props.liveDocument.type) {
-            case "diagram": {
-                const diagram = props.liveDocument.liveDoc.doc;
-                const newRef = await createDiagramFromDocument(api, {
-                    ...diagram,
-                    name: `${diagram.name} (copy)`,
-                });
-                navigate(`/diagram/${newRef}`);
-                break;
-            }
-            case "model": {
-                const model = props.liveDocument.liveDoc.doc;
-                const newRef = await createModel(api, {
-                    ...model,
-                    name: `${model.name} (copy)`,
-                });
-                navigate(`/model/${newRef}`);
-                break;
-            }
-            default:
-                assertExhaustive(props.liveDocument);
-        }
+        const newRef = await duplicateDocument(api, props.liveDocument);
+        navigate(`/${props.liveDocument.type}/${newRef}`);
     };
 
     const onDownloadJSON = () => {

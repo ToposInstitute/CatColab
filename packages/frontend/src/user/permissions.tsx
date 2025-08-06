@@ -1,3 +1,4 @@
+import { useNavigate } from "@solidjs/router";
 import { getAuth, signOut } from "firebase/auth";
 import { useAuth, useFirebaseApp } from "solid-firebase";
 import {
@@ -15,11 +16,15 @@ import invariant from "tiny-invariant";
 
 import type { NewPermissions, PermissionLevel, Permissions, UserSummary } from "catcolab-api";
 import { useApi } from "../api";
+import { duplicateDocument } from "../api/duplicate_document";
 import { Dialog, FormGroup, IconButton, SelectField, Warning } from "../components";
+import type { LiveDiagramDocument } from "../diagram/document";
+import type { LiveModelDocument } from "../model/document";
 import { deepCopyJSON } from "../util/deepcopy";
 import { Login } from "./login";
 import { NameUser, UserInput } from "./username";
 
+import Copy from "lucide-solid/icons/copy";
 import FileLock from "lucide-solid/icons/file-lock-2";
 import FilePen from "lucide-solid/icons/file-pen";
 import FileUser from "lucide-solid/icons/file-user";
@@ -200,6 +205,7 @@ export function PermissionsForm(props: {
 export function PermissionsButton(props: {
     permissions: Permissions;
     refId?: string;
+    liveDocument: LiveDiagramDocument | LiveModelDocument;
 }) {
     const anyone = () => props.permissions.anyone;
     const user = () => props.permissions.user;
@@ -213,7 +219,7 @@ export function PermissionsButton(props: {
                 <OwnerPermissionsButton refId={props.refId} />
             </Match>
             <Match when={[anyone(), user()].every((level) => level === null || level === "Read")}>
-                <ReadonlyPermissionsButton />
+                <ReadonlyPermissionsButton liveDocument={props.liveDocument} />
             </Match>
         </Switch>
     );
@@ -272,17 +278,48 @@ const AnonPermissionsTrigger = (props: ComponentProps<"button">) => {
     );
 };
 
-const ReadonlyPermissionsButton = () => {
-    const tooltip = (
-        <>
-            <p>
-                This document is <strong>read-only</strong>.
-            </p>
-            <p>Any changes that you make will be temporary.</p>
-        </>
-    );
+const ReadonlyPermissionsButton = (props: {
+    liveDocument: LiveDiagramDocument | LiveModelDocument;
+}) => {
+    const [open, setOpen] = createSignal(false);
+    const api = useApi();
+    const navigate = useNavigate();
+
+    const onDuplicateDocument = async () => {
+        const newRef = await duplicateDocument(api, props.liveDocument);
+        navigate(`/${props.liveDocument.type}/${newRef}`);
+    };
+
     return (
-        <IconButton tooltip={tooltip}>
+        <Dialog
+            open={open()}
+            onOpenChange={setOpen}
+            title="Read-only document"
+            trigger={ReadonlyPermissionsTrigger}
+        >
+            <p>
+                This document is <strong>read-only</strong>. Any changes that you make will be
+                temporary.
+            </p>
+            <div class="separator" />
+            <form class="permissions" onSubmit={(evt) => evt.preventDefault()}>
+                <div class="duplicate-button-container">
+                    <span>
+                        <button type="button" class="button utility" onClick={onDuplicateDocument}>
+                            <Copy />
+                            Duplicate {props.liveDocument.type}
+                        </button>
+                    </span>
+                    <span class="duplicate-button-height-text"> to make permanent changes.</span>
+                </div>
+            </form>
+        </Dialog>
+    );
+};
+
+const ReadonlyPermissionsTrigger = (props: ComponentProps<"button">) => {
+    return (
+        <IconButton {...props}>
             <FileLock />
         </IconButton>
     );
