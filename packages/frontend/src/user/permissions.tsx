@@ -318,8 +318,13 @@ const ReadonlyPermissionsButton = (props: {
 };
 
 const ReadonlyPermissionsTrigger = (props: ComponentProps<"button">) => {
+    const tooltip = (
+        <>
+            This document is <strong>read-only</strong>. Click to see more info.
+        </>
+    );
     return (
-        <IconButton {...props}>
+        <IconButton {...props} tooltip={tooltip}>
             <FileLock />
         </IconButton>
     );
