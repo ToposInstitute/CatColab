@@ -22,3 +22,12 @@
     display: flex;
     flex-grow: 1;
 }
+
+.duplicate-button-container {
+    display: flex;
+    margin-top: 0.5rem;
+}
+
+.duplicate-button-height-text {
+    line-height: 2.75em;
+}
