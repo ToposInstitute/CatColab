@@ -64,20 +64,33 @@ export function SwitchingMassAction(
         title?: string;
     },
 ) {
+	console.log(props.liveModel.formalJudgments());
     const obDecls = createMemo<ObjectDecl[]>(() => {
         return props.liveModel
             .formalJudgments()
             .filter((jgmt) => jgmt.tag === "object")
+			.filter((ob) => ob.obType.content === "State")
             .filter((ob) => props.isState?.(ob) ?? true);
     }, []);
 
-    const morDecls = createMemo<MorphismDecl[]>(() => {
+	const auxDecls = createMemo<ObjectDecl[]>(() => {
         return props.liveModel
             .formalJudgments()
-            .filter((jgmt) => jgmt.tag === "morphism");
-            // .filter((mor) => props.isTransition?.(mor) ?? true);
+            .filter((jgmt) => jgmt.tag === "object")
+			.filter((ob) => ob.obType.content === "Auxiliary");
     }, []);
-	console.log(morDecls());
+
+    // const morDecls = createMemo<MorphismDecl[]>(() => {
+    //     return props.liveModel
+    //         .formalJudgments()
+    //         .filter((jgmt) => jgmt.tag === "morphism")
+			// // .filter((mor) => mor.morType.content === "out-pos")
+    //         .filter((mor) => props.isTransition?.(mor) ?? true);
+    // }, []);
+
+	const functionDecls = createMemo<MorphismDecl[]>(() => {
+		return props.liveModel.formalJudgments().filter((jgmt) => jgmt.tag === "morphism").filter((mor) => mor.morType.content === "function").filter((mor) => props.isTransition?.(mor) ?? true);
+	}, []);
 
     const obSchema: ColumnSchema<ObjectDecl>[] = [
         {
@@ -96,7 +109,7 @@ export function SwitchingMassAction(
         }),
     ];
 
-    const morSchema: ColumnSchema<MorphismDecl>[] = [
+    const auxSchema: ColumnSchema<ObjectDecl>[] = [
         {
             contentType: "string",
             header: true,
@@ -109,6 +122,7 @@ export function SwitchingMassAction(
             validate: (_, data) => data >= 0,
             setData: (mor, data) =>
                 props.changeContent((content) => {
+					console.log(content.mass.rates);
                     content.mass.rates[mor.id] = data;
                 }),
         }),
@@ -127,6 +141,33 @@ export function SwitchingMassAction(
         }),
     ];
 
+
+
+	const functionSchema: ColumnSchema<MorphismDecl>[] = [
+        {
+            contentType: "string",
+            header: true,
+            content: (ob) => ob.name,
+        },
+        {
+            contentType: "enum",
+            name: "Function",
+            variants() {
+                return ["Identity", "Geq"];
+            },
+            content: () => "Geq",
+            setContent: (ob, value) =>
+                props.changeContent((content) => {
+                    if (value === null) {
+                        delete content.functions[ob.id];
+                    } else {
+                        content.functions[ob.id] = value;
+                    }
+                }),
+        },
+        // TODO createEnumColumn
+    ];
+
     const plotResult = createModelODEPlot(
         () => props.liveModel,
         (model: DblModel) => props.simulate(model, props.content),
@@ -137,7 +178,8 @@ export function SwitchingMassAction(
             <Foldable title={props.title}>
                 <div class="parameters">
                     <FixedTableEditor rows={obDecls()} schema={obSchema} />
-                    <FixedTableEditor rows={morDecls()} schema={morSchema} />
+                    <FixedTableEditor rows={auxDecls()} schema={auxSchema} />
+					<FixedTableEditor rows={functionDecls()} schema={functionSchema} />
                     <FixedTableEditor rows={[null]} schema={toplevelSchema} />
                 </div>
             </Foldable>

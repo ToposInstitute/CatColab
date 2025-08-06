@@ -308,7 +308,7 @@ where
     pub mass: MassActionProblemData<Id>,
 
     /// functions associated to T(aux) --> aux
-    pub functions: HashMap<Id, EligibleFunctions>,
+    pub functions: HashMap<Id, String>,
 }
 
 #[derive(Debug, Clone)]
@@ -420,7 +420,7 @@ where
 {
     pub fn to_numerical(
         &self,
-        functions: HashMap<Id, EligibleFunctions>,
+        functions: HashMap<Id, String>,
     ) -> NumericalPolynomialSwitchingSystem<Id, u8> {
         let subsystems: Vec<(ComputeGraph<Id>, _)> = self
             .subsystems
@@ -516,7 +516,7 @@ impl Default for PetriNetMassActionFunctionAnalysis {
             state_ob_type: ModalObType::new(ustr("State")),
             aux_ob_type: ModalObType::new(ustr("Auxiliary")),
             fun_mor_type: ModalMorType::One(ModeApp::new(ustr("function"))),
-            borrow_mor_type: ModalMorType::One(ModeApp::new(ustr("borrowing"))),
+            borrow_mor_type: ModalMorType::One(ModeApp::new(ustr("borrow"))),
             outpos_mor_type: ModalMorType::One(ModeApp::new(ustr("out-pos"))),
             outneg_mor_type: ModalMorType::One(ModeApp::new(ustr("out-neg"))),
         }
@@ -531,9 +531,9 @@ impl PetriNetMassActionFunctionAnalysis {
         let mut cg = ComputeGraph::<Id>::new();
         cg.obs = model.ob_generators_with_type(&self.state_ob_type).collect::<Vec<Id>>();
         // TODO these should just be auxes entering the graph
-        cg.auxes = HashMap::from_iter(
-            model.ob_generators_with_type(&self.aux_ob_type).map(|aux| (aux, 4.5f32)),
-        );
+        // cg.auxes = HashMap::from_iter(
+        //     model.ob_generators_with_type(&self.aux_ob_type).map(|aux| (aux, 4.5f32)),
+        // );
         cg.borrows =
             HashMap::from_iter(model.mor_generators_with_type(&self.borrow_mor_type).map(|f| {
                 (
@@ -643,6 +643,7 @@ impl PetriNetMassActionFunctionAnalysis {
             .mediators
             .into_iter()
             .filter(|m| programs.graph.vertices().contains(m));
+        println!("INIT MODEL");
         let init_model = self.build_system(
             &model,
             modeldata.clone(),
@@ -653,16 +654,19 @@ impl PetriNetMassActionFunctionAnalysis {
                 .filter(|m| !programs.graph.vertices().contains(m))
                 .collect::<Vec<_>>(),
         );
+        // println!("DISCRETE MODEL");
         let null_model = self.build_system(&model, modeldata.clone(), vec![]);
         let mut subsystems = affected_mediators
             .map(|m| {
+                println!("MEDIATOR: {:?}", &m);
                 let sys = self.build_system(&model, modeldata.clone(), vec![m]);
                 (programs.clone(), sys)
             })
             .collect::<Vec<(ComputeGraph<Id>, PolynomialSystem<Id, Parameter<Id>, u8>)>>();
-        subsystems.push((ComputeGraph::<Id>::new(), init_model));
+        // subsystems.push((ComputeGraph::<Id>::new(), init_model));
         let ob_index: BTreeMap<Id, usize> =
             null_model.components.keys().cloned().enumerate().map(|(i, x)| (x, i)).collect();
+        let null_model = init_model.clone();
         SwitchingSystem {
             null_model,
             subsystems,
@@ -675,7 +679,6 @@ impl PetriNetMassActionFunctionAnalysis {
         model: &ModalDblModel<Id, Ustr>,
         data: SwitchingMassActionProblemData<Id>,
     ) -> ODEAnalysis<Id, NumericalPolynomialSwitchingSystem<Id, u8>> {
-        // XXX we forget some data from `data` here
         into_numerical_switching_system(self.build_switching_system(model), data)
     }
 }
@@ -686,8 +689,15 @@ fn into_numerical_switching_system<Id: Eq + Clone + Hash + Ord + Debug>(
 ) -> ODEAnalysis<Id, NumericalPolynomialSwitchingSystem<Id, u8>> {
     let ob_index: BTreeMap<_, _> = system.ob_index.clone();
     let n = ob_index.len();
-    let null_model =
-        Some(system.null_model.clone().extend_scalars(|p| p.eval(|_| 1.0)).to_numerical());
+    let null_model = Some(
+        system
+            .null_model
+            .clone()
+            .extend_scalars(|p| {
+                p.eval(|flow| data.mass.rates.get(flow).copied().unwrap_or_default())
+            })
+            .to_numerical(),
+    );
     let initial_values = ob_index
         .keys()
         .map(|ob| data.mass.initial_values.get(ob).copied().unwrap_or_default());
@@ -755,16 +765,7 @@ mod tests {
         let th = Rc::new(th_modal_state_aux());
         let model = water(th);
         let sys = PetriNetMassActionFunctionAnalysis::default().build_switching_system(&model);
-        // dbg!(&sys);
-        assert!(true);
-    }
-
-    #[test]
-    fn graph() {
-        let th = Rc::new(th_modal_state_aux());
-        let model = water(th);
-        let sys = PetriNetMassActionFunctionAnalysis::default().build_switching_system(&model);
-        // dbg!(&sys);
+        // TODO
         assert!(true);
     }
 }

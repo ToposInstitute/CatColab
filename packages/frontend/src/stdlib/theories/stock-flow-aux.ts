@@ -46,17 +46,25 @@ export default function createStockFlowAuxTheory(theoryMeta: TheoryMeta): Theory
                 name: "Auxiliary",
                 description: "Variable used in computation",
                 shortcut: ["A"],
-                cssClasses: [styles.box],
-                svgClasses: [svgStyles.box],
+                // cssClasses: [styles.box],
+                // svgClasses: [svgStyles.box],
             },
             {
                 tag: "MorType",
-                morType: { tag: "Basic", content: "Borrow" },
+                morType: { tag: "Basic", content: "borrow" },
                 name: "Borrow",
                 description: "Influence of a stock on a flow",
                 preferUnnamed: true,
                 shortcut: ["&"],
             },
+			{
+				tag: "MorType",
+				morType: { tag: "Basic", content: "function" },
+				name: "Function",
+				description: "Function consuming auxiliary variables",
+				preferUnnamed: true,
+				shortcut: ["f"],
+			}
         ],
         modelAnalyses: [
             analyses.configureStockFlowDiagram({
@@ -67,10 +75,10 @@ export default function createStockFlowAuxTheory(theoryMeta: TheoryMeta): Theory
             }),
             analyses.configureSwitchingMassAction({
                 simulate(model, data) {
-                    return thCategoryStockFlowAux.massAction(model, data);
+					return thCategoryStockFlowAux.massAction(model, data);
                 },
                 isTransition(mor) {
-                    return mor.morType.tag === "Hom";
+                    return mor.morType.tag === "Basic";
                 },
             }),
         ],

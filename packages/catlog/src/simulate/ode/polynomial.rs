@@ -191,7 +191,7 @@ where
     pub subsystems: Vec<(ComputeGraph<Id>, NumericalPolynomialSystem<Exp>)>,
 
     /// Analysis data
-    pub functions: HashMap<Id, EligibleFunctions>,
+    pub functions: HashMap<Id, String>,
 }
 
 impl<Id, Exp> NumericalPolynomialSwitchingSystem<Id, Exp>
@@ -231,12 +231,11 @@ where
     fn compute(
         &self,
         x: &DVector<f32>,
-        functions: HashMap<Id, EligibleFunctions>,
+        functions: HashMap<Id, String>,
         ob_index: BTreeMap<Id, usize>,
     ) -> bool {
         // binding name
         let mut bindings: Vec<(_, Output)> = Default::default();
-        // dbg!(&self.borrows, &self.obs);
         for var in self.toposort.iter() {
             if self.obs.contains(&var) {
                 let index = ob_index[var];
@@ -252,7 +251,16 @@ where
                     .into_iter()
                     .map(|arg| self.fetch(x, arg, ob_index.clone()))
                     .collect::<Vec<_>>();
-                let out = functions[&var].clone().eval(args);
+                let out = if let Some(function) = functions.get(&var) {
+                    let res = &args[0] >= &args[1];
+                    match function.as_str() {
+                        "Identity" => Output::Bool(true), // do nothing
+                        "Geq" => Output::Bool(args[0] >= args[1]),
+                        _ => Output::Float(args[0]),
+                    }
+                } else {
+                    Output::Bool(true)
+                };
                 bindings.push((var, out));
             }
         }
@@ -273,7 +281,7 @@ where
         } else if self.borrows.keys().contains(&arg) {
             x[ob_index[&self.borrows[&arg]]]
         } else {
-            self.auxes[&arg]
+            7f32 // TODO remove
         }
     }
 }
@@ -303,7 +311,6 @@ where
     fn vector_field(&self, dx: &mut DVector<f32>, x: &DVector<f32>, _t: f32) {
         let subsystem = self.clone().get_current(x.clone());
         for i in 0..dx.len() {
-            // TODO do we still need to .get() ?
             dx[i] = match subsystem.components.get(i) {
                 Some(p) => p.eval(|var| x[*var]),
                 None => 0f32,
@@ -384,14 +391,13 @@ mod tests {
         let system = crate::stdlib::analyses::ode::PetriNetMassActionFunctionAnalysis::default()
             .build_switching_system(&model);
 
-        // TODO this should be obtained from the petri net analysis
-
-        let functions = HashMap::from([(ustr::ustr("comparator"), EligibleFunctions::Geq())]);
+        let functions = HashMap::from([(ustr::ustr("comparator"), String::from("Geq"))]);
         let sys = system.to_numerical(functions);
 
-        // sediment, watershed, lake
-        let initial = DVector::from_column_slice(&[1.0, 2.0, 4.0]);
-        let problem = ODEProblem::new(sys, initial).end_time(5.0);
+        // container, lake, sediment, watershed
+        let initial = DVector::from_column_slice(&[6.0, 4.0, 1.0, 4.0]);
+        // let initial = DVector::from_column_slice(&[1.0, 2.0, 4.0]);
+        let problem = ODEProblem::new(sys, initial).end_time(10.0);
         let result = problem.solve_rk4(0.1).unwrap();
         let expected = expect![[r#"
             ⡁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⠤⠒⠒⢣⠀⣀⠤⠤⠒⠒⠉⠒⠒⠒⠉⠉⠒⠒⠒⠒⠉⠉⠉⠉⠉⠒⠒⠒⠒⠒⠒⠂ 4.5
@@ -417,7 +423,47 @@ mod tests {
             ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠉⠉⠉⠉⠉⠉⠁ 0.0
             0.0                                            5.0
         "#]];
-        // println!("{}", &textplot_ode_result(&problem, &result));
+        expected.assert_eq(&textplot_ode_result(&problem, &result));
+    }
+
+    #[test]
+    fn water_no_logic_simulation() {
+        let th = std::rc::Rc::new(crate::stdlib::th_modal_state_aux());
+        let model = crate::stdlib::water_no_logic(th);
+        let system = crate::stdlib::analyses::ode::PetriNetMassActionFunctionAnalysis::default()
+            .build_switching_system(&model);
+
+        let functions = HashMap::from([(ustr::ustr("comparator"), String::from("Geq"))]);
+        let sys = system.to_numerical(functions);
+
+        // sediment, watershed, lake
+        let initial = DVector::from_column_slice(&[1.0, 2.0, 4.0]);
+        let problem = ODEProblem::new(sys, initial).end_time(10.0);
+        let result = problem.solve_rk4(0.1).unwrap();
+        let expected = expect![[r#"
+            ⡁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⠤⠒⠒⢣⠀⣀⠤⠤⠒⠒⠉⠒⠒⠒⠉⠉⠒⠒⠒⠒⠉⠉⠉⠉⠉⠒⠒⠒⠒⠒⠒⠂ 4.5
+            ⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡠⠒⠉⠀⠀⠀⠀⠀⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⡆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠤⠊⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⣱⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡠⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠄⢇⠀⠀⠀⠀⠀⠀⠀⡠⠊⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠂⠘⡄⠀⠀⠀⠀⠀⡔⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⡁⠀⠱⡀⠀⠀⠀⡜⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠄⠀⠀⢣⠀⢀⠎⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠂⠀⠀⠀⢇⠎⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⣀⣀⣀⣀⡀
+            ⡁⠀⠀⠀⡎⢆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⣀⣀⣀⣀⣀⠤⠤⠤⠤⠤⠒⠒⠒⠒⠒⠒⠒⠒⠊⠀⠀⠀⠀⠀⠀⠀
+            ⠄⠀⠀⡜⠀⠈⢆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⡜⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠒⠒⢲⠓⠒⠒⠚⢖⠒⠒⠒⠒⠒⠒⠒⠒⠒⠒⠒⠒⠊⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⡁⢀⠇⠀⠀⠀⠀⠀⠣⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠄⡜⠀⠀⠀⠀⠀⠀⠀⠑⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⢲⠁⠀⠀⠀⠀⠀⠀⠀⠀⠈⠢⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠢⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠒⠤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠂⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠒⠤⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⡁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠒⠒⠤⣀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠉⠒⠒⠒⠤⠤⠤⠤⣀⣀⣀⣀⣀⣀⣀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠉⠉⠉⠉⠉⠉⠁ 0.0
+            0.0                                            5.0
+        "#]];
         expected.assert_eq(&textplot_ode_result(&problem, &result));
     }
 }
