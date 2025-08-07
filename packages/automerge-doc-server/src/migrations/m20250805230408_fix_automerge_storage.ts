@@ -39,15 +39,16 @@ export async function fixAutomergeStorage() {
 
         await pool.query("UPDATE snapshots SET doc_id = $2 WHERE id = $1", [id, handle.documentId]);
 
-        await sleep(300);
+        // await handle.whenReady();
+        await sleep(500);
         console.log(`created automerge doc for snapshot ${id}`);
     }
 
     // XXX: no methods on repo or handle seem reliable for ensuring new documents get written to the
     // postgres storage adapter.
-    if (Object.values(repo.handles).some((handle) => !handle.isReady())) {
-        throw "Some handles are not ready, try again!";
-    }
+    // if (Object.values(repo.handles).some((handle) => !handle.isReady())) {
+    //     throw "Some handles are not ready, try again!";
+    // }
 
     console.log("Done!");
 }
