@@ -46,7 +46,7 @@ function print_load_help {
   echo "                           local, staging, production"
   echo "                         to pick the most recent dump for that source"
   echo "  -h, --help             Print this help message"
-  echo "  -n, --no-migrate       Skip running migrations after loading"
+  echo "  -s, --skip-migrate     Skip running migrations after loading"
 }
 
 function print_reset_help {
