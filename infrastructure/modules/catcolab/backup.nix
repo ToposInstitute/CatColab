@@ -2,25 +2,45 @@
   pkgs,
   lib,
   config,
+  self,
   ...
 }:
 let
   backupScript = pkgs.writeShellScriptBin "backup-script" ''
     #!/usr/bin/env bash
-    set -ex
+    set -e
 
     DUMPFILE="db_$(date +%F_%H-%M-%S).sql"
 
+    ${lib.getExe self.packages.x86_64-linux.migrator} list
     cd ~
+
+    echo "database url: $DATABASE_URL"
+    echo "pguser: $PGUSER"
 
     ${pkgs.postgresql}/bin/pg_dump --clean --if-exists > $DUMPFILE
 
-    ${lib.getExe pkgs.rclone} \
-      --config="${builtins.toString config.catcolab.host.backup.rcloneConfFilePath}" \
-      copy "$DUMPFILE" backup:${builtins.toString config.catcolab.host.backup.dbBucket}
+    BACKUP_BUCKET="backup:${builtins.toString config.catcolab.host.backup.dbBucket}"
+    RCLONE_CONFIG_PATH="${builtins.toString config.catcolab.host.backup.rcloneConfFilePath}"
 
-    echo "Uploaded database dump $DUMPFILE"
+    ${lib.getExe pkgs.rclone} --config="$RCLONE_CONFIG_PATH" \
+      copy "$DUMPFILE" "$BACKUP_BUCKET"
+
+    echo "Uploaded database backup $DUMPFILE to $BACKUP_BUCKET"
     rm $DUMPFILE
+  '';
+
+  migrationScript = pkgs.writeShellScriptBin "migration-script" ''
+    if $(${lib.getExe self.packages.x86_64-linux.migrator} list) 2>/dev/null | grep -q '✗'; then
+      echo "migration to run"
+    else
+      echo "no migrations to run"
+    fi
+  '';
+
+  activationScript = pkgs.writeShellScriptBin "activation-script" ''
+    ${lib.getExe backupScript}
+    ${lib.getExe migrationScript}
   '';
 in
 with lib;
@@ -70,10 +90,6 @@ with lib;
       text = ''
         echo "Running backupdb script as a transient systemd unit..."
 
-        since=$(date --iso-8601=seconds)
-
-        # we can't run the backupdb unit because at this point systemd doesn't know about the new unit,
-        # so we run a transient unit with the same config.
         ${pkgs.systemd}/bin/systemd-run --system --wait \
           --unit=backupdb-activation \
           --description="One-off activation backupdb" \
@@ -81,12 +97,20 @@ with lib;
           --property=User=${config.systemd.services.backupdb.serviceConfig.User} \
           --property=EnvironmentFile=${config.catcolab.environmentFilePath} \
           --property=Environment=PATH=/run/current-system/sw/bin \
-          ${lib.getExe backupScript}
+          ${lib.getExe activationScript}
 
         exit_code=$?
+
+        journalctl \
+          --unit=backupdb-activation \
+          --invocation=0 \
+          --quiet \
+          --output=cat \
+          --identifier=activation-script
+
         if [ $exit_code -ne 0 ]; then
           echo "activation‐time backup failed with code $exit_code"
-          ${pkgs.systemd}/bin/journalctl -u backupdb-activation.service --since "$since"
+          exit "$exit_code"
         fi
       '';
     };
