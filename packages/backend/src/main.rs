@@ -1,8 +1,10 @@
+use app::AppStatus;
 use axum::{Router, routing::get};
 use firebase_auth::FirebaseAuth;
 use socketioxide::SocketIo;
 use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
+use tokio::sync::watch;
 use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
 use tracing::{error, info};
@@ -44,9 +46,11 @@ async fn main() {
 
     let (io_layer, io) = SocketIo::new_layer();
 
+    let (status_tx, status_rx) = watch::channel(AppStatus::Init);
     let state = app::AppState {
         automerge_io: io,
         db,
+        status_rx,
     };
 
     // We need to wrap FirebaseAuth in an Arc because if it's ever dropped the process which updates it's
@@ -64,13 +68,14 @@ async fn main() {
 
         let router = rpc::router();
         let (qubit_service, qubit_handle) = router.to_service(state);
+
         let qubit_service = ServiceBuilder::new()
             .map_request(move |mut req: hyper::Request<_>| {
                 match auth::authenticate_from_request(&firebase_auth, &req) {
                     Ok(Some(user)) => {
                         req.extensions_mut().insert(user);
                     }
-                    Ok(None) => {}
+                    Ok(_) => {}
                     Err(err) => {
                         error!("Authentication error: {err}");
                     }
@@ -83,6 +88,7 @@ async fn main() {
             .route("/", get(|| async { "Hello! The CatColab server is running" }))
             .nest_service("/rpc", qubit_service)
             .layer(CorsLayer::permissive());
+
         info!("Web server listening at port {port}");
         axum::serve(listener, app).await.unwrap();
 
@@ -100,4 +106,44 @@ async fn main() {
     let (res_main, res_io) = tokio::join!(main_task, automerge_io_task);
     res_main.unwrap();
     res_io.unwrap();
+}
+
+use std::{error::Error, net::SocketAddr};
+type BoxError = Box<dyn Error + Send + Sync>;
+type GenericResult<T> = std::result::Result<T, BoxError>;
+
+async fn run_web_server(
+    state: app::AppState,
+    firebase_auth: Arc<FirebaseAuth>,
+) -> GenericResult<()> {
+    let port = web_port();
+    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await.unwrap();
+    let qubit_router = rpc::router();
+
+    let (qubit_service, qubit_handle) = qubit_router.to_service(state);
+
+    let auth_layer = ServiceBuilder::new().map_request(move |mut req: hyper::Request<_>| {
+        match auth::authenticate_from_request(&firebase_auth, &req) {
+            Ok(Some(user)) => {
+                req.extensions_mut().insert(user);
+            }
+            Ok(_) => (),
+            Err(e) => error!("Auth error: {}", e),
+        };
+        req
+    });
+
+    let rpc_service = auth_layer.service(qubit_service);
+
+    // Now nest that service properly
+    let app = Router::new()
+        .route("/", get(|| async { "Hello! The CatColab server is running" }))
+        .nest_service("/rpc", rpc_service)
+        .layer(CorsLayer::permissive());
+
+    info!("Web server listening at port {port}");
+    axum::serve(listener, app).await.unwrap();
+    qubit_handle.stop().unwrap();
+
+    Ok(())
 }

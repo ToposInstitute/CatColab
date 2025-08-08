@@ -42,6 +42,10 @@ let
     ${lib.getExe backupScript}
     ${lib.getExe migrationScript}
   '';
+
+  testRestartScript = pkgs.writeShellScriptBin "test-restart-script" ''
+    echo "testing restart 5"
+  '';
 in
 with lib;
 {
@@ -85,33 +89,46 @@ with lib;
       };
     };
 
+    systemd.services.test-restart2 = {
+      after = [ "postgresql.service" ];
+      wants = [ "postgresql.service" ];
+      serviceConfig = {
+        User = "catcolab";
+        ExecStart = getExe testRestartScript;
+        Type = "oneshot";
+      };
+    };
+
     # run backup script at end of deploy to act as a canary for the backup script
     system.activationScripts.backupdb = {
       text = ''
         echo "Running backupdb script as a transient systemd unit..."
 
-        ${pkgs.systemd}/bin/systemd-run --system --wait \
-          --unit=backupdb-activation \
-          --description="One-off activation backupdb" \
-          --property=Type=${config.systemd.services.backupdb.serviceConfig.Type} \
-          --property=User=${config.systemd.services.backupdb.serviceConfig.User} \
-          --property=EnvironmentFile=${config.catcolab.environmentFilePath} \
-          --property=Environment=PATH=/run/current-system/sw/bin \
-          ${lib.getExe activationScript}
+        # ${pkgs.systemd}/bin/systemctl daemon-reload
+        # ${pkgs.systemd}/bin/systemctl start test-restart2.service
 
-        exit_code=$?
+        # ${pkgs.systemd}/bin/systemd-run --system --wait \
+        #   --unit=backupdb-activation \
+        #   --description="One-off activation backupdb" \
+        #   --property=Type=${config.systemd.services.backupdb.serviceConfig.Type} \
+        #   --property=User=${config.systemd.services.backupdb.serviceConfig.User} \
+        #   --property=EnvironmentFile=${config.catcolab.environmentFilePath} \
+        #   --property=Environment=PATH=/run/current-system/sw/bin \
+        #   ${lib.getExe activationScript}
 
-        journalctl \
-          --unit=backupdb-activation \
-          --invocation=0 \
-          --quiet \
-          --output=cat \
-          --identifier=activation-script
+        # exit_code=$?
 
-        if [ $exit_code -ne 0 ]; then
-          echo "activation‐time backup failed with code $exit_code"
-          exit "$exit_code"
-        fi
+        # ${pkgs.systemd}/bin/journalctl \
+        #   --unit=backupdb-activation \
+        #   --invocation=0 \
+        #   --quiet \
+        #   --output=cat \
+        #   --identifier=activation-script
+
+        # if [ $exit_code -ne 0 ]; then
+        #   echo "activation‐time backup failed with code $exit_code"
+        #   exit "$exit_code"
+        # fi
       '';
     };
 

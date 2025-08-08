@@ -147,6 +147,22 @@
           '';
         };
 
+      healthcheckWrapper =
+        base:
+        let
+          defaultNixos = deploy-rs.lib.${linuxSystem}.activate.nixos base;
+
+          healthcheckWrapperScript = pkgsLinux.writeShellScriptBin "healthcheck-wrapper" ''
+            echo "=== BEFORE"
+            PROFILE=${defaultNixos}
+            ${defaultNixos}/deploy-rs-activate
+            echo "=== AFTER"
+
+            systemctl status backend
+
+          '';
+        in
+        deploy-rs.lib.${linuxSystem}.activate.custom healthcheckWrapperScript "./bin/healthcheck-wrapper";
     in
     {
       # Create devShells for all supported systems
@@ -235,7 +251,19 @@
           profiles.system = {
             sshUser = "catcolab";
             user = "root";
-            path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab-next;
+            path = healthcheckWrapper self.nixosConfigurations.catcolab-next;
+
+            # deploy-rs.lib.${linuxSystem}.activate.custom activateScript "./bin/activate-script";
+
+            # self.nixosConfigurations.catcolab-next
+            #   pkgsLinux.writeShellScriptBin
+            #   "activate-script"
+            #   ''
+            #     $PROFILE/activate
+            #   '';
+
+            # customActivator
+            #   self.nixosConfigurations.catcolab-next;
           };
         };
       };
