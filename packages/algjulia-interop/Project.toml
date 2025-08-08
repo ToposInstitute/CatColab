@@ -6,6 +6,7 @@ version = "0.1.0"
 
 [deps]
 ACSets = "227ef7b5-1206-438b-ac65-934d6da304b8"
+ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
 Catlab = "134e5e36-593f-5add-ad60-77f754baafbe"
 CombinatorialSpaces = "b1c52339-7909-45ad-8b6a-6e388f7c67f2"
 ComponentArrays = "b0b7db55-cfe3-40fc-9ded-d10e2dbeff66"
@@ -23,8 +24,8 @@ Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
-julia = "1.11" 
 ACSets = "0.2.21"
+ArgParse = "1.2.0"
 Catlab = "0.16.20"
 CombinatorialSpaces = "0.7.4"
 ComponentArrays = "0.15"
@@ -40,3 +41,4 @@ MLStyle = "0.4"
 OrdinaryDiffEq = "6"
 Reexport = "1.2.2"
 StaticArrays = "1"
+julia = "1.11"
