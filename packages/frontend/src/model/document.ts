@@ -1,4 +1,5 @@
 import { type Accessor, createMemo, createResource } from "solid-js";
+import { unwrap } from "solid-js/store";
 import invariant from "tiny-invariant";
 
 import {
@@ -106,9 +107,13 @@ function enlivenModelDocument(
 
     const validatedModel = createMemo<ValidatedModel | undefined>(
         () => {
+            // NOTE: Reactively depend on formal judgments but, by `unwrap`-ing,
+            // not anything else in the document.
+            formalJudgments();
+
             const coreTheory = theory()?.theory;
             if (coreTheory) {
-                const model = elaborateModel(doc, coreTheory);
+                const model = elaborateModel(unwrap(doc), coreTheory);
                 const result = model.validate();
                 return { model, result };
             }

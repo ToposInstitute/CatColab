@@ -1,4 +1,5 @@
 import { type Accessor, createMemo } from "solid-js";
+import { unwrap } from "solid-js/store";
 import invariant from "tiny-invariant";
 
 import type {
@@ -102,6 +103,10 @@ function enlivenDiagramDocument(
 
     const validatedDiagram = createMemo<ValidatedDiagram | undefined>(
         () => {
+            // NOTE: Reactively depend on formal judgments but, by `unwrap`-ing,
+            // not anything else in the document.
+            formalJudgments();
+
             const th = liveModel.theory();
             const validatedModel = liveModel.validatedModel();
             if (!(th && validatedModel?.result.tag === "Ok")) {
@@ -109,7 +114,7 @@ function enlivenDiagramDocument(
                 return undefined;
             }
             const { model } = validatedModel;
-            const diagram = elaborateDiagram(doc, th.theory);
+            const diagram = elaborateDiagram(unwrap(doc), th.theory);
             diagram.inferMissingFrom(model);
             const result = diagram.validateIn(model);
             return { diagram, result };
