@@ -5,7 +5,7 @@
 \title{Weakness}
 
 \p{
-    A \define{weakness} is an element of the poset #{\{s,p,\ell,c\}} of weaknesses, 
+    A \define{level of weakness} is an element of the poset #{\{s,p,\ell,c\}} of levels of weakness, 
     whose elements signify "strict", "pseudo", "lax", and "colax" respectively. The order
     is given by #{s\le p\le \ell,p\le c}.
 }

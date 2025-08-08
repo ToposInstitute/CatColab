@@ -33,7 +33,7 @@
         \arrow[from=4-2, to=4-3]
     \end{tikzcd}}
         we have the unit axiom, which always says the same thing it says for algebras of \List,
-        and more interestingly the multiplication axiom #{\alpha(\mu(\bar x))=\alpha(x)=\alpha(\lambda(k).\alpha(\bar x(k)))}. Let us 
+        and more interestingly the multiplication axiom #{\alpha(\mu(\bar x))=\alpha(x)=\alpha(k\mapsto \alpha(\bar x(k)))}. Let us 
         turn to examples.
 }
 \ul{
