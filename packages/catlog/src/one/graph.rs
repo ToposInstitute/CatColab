@@ -108,6 +108,19 @@ pub trait ReflexiveGraph: Graph {
     fn refl(&self, v: Self::V) -> Self::E;
 }
 
+/** Reverse all the edges in the graph, but still keep it the same concrete
+ * implementation of Graph.
+ * This restriction of the same concrete implementation is due to concerns
+ * from (`ColumnarGraph`)[`ColumnarGraph`].
+ * The associated types `Src` and `Tgt` both implement `Mapping` but they do not have to be
+ * the same type.
+ */
+pub trait ReversibleGraph: Graph {
+    /// Reverse all the edges.
+    /// In the quiver picture switch the two arrows of the source category.
+    fn reverse(self) -> Self;
+}
+
 /// The set of vertices of a graph.
 #[derive(From, RefCast)]
 #[repr(transparent)]
@@ -329,6 +342,17 @@ impl ColumnarGraph for SkelGraph {
     }
 }
 
+impl ReversibleGraph for SkelGraph {
+    fn reverse(self) -> Self {
+        Self {
+            nv: self.nv,
+            ne: self.ne,
+            src_map: self.tgt_map,
+            tgt_map: self.src_map,
+        }
+    }
+}
+
 impl MutColumnarGraph for SkelGraph {
     fn src_map_mut(&mut self) -> &mut Self::Src {
         &mut self.src_map
@@ -374,6 +398,7 @@ impl SkelGraph {
     #[cfg(test)]
     pub fn path(n: usize) -> Self {
         let mut g: Self = Default::default();
+        assert!(n > 0);
         g.add_vertices(n);
         for (i, j) in std::iter::zip(0..(n - 1), 1..n) {
             g.add_edge(i, j);
@@ -453,6 +478,21 @@ where
     }
     fn tgt_map(&self) -> &Self::Tgt {
         &self.tgt_map
+    }
+}
+
+impl<V, E> ReversibleGraph for HashGraph<V, E>
+where
+    V: Eq + Hash + Clone,
+    E: Eq + Hash + Clone,
+{
+    fn reverse(self) -> Self {
+        Self {
+            vertex_set: self.vertex_set,
+            edge_set: self.edge_set,
+            src_map: self.tgt_map,
+            tgt_map: self.src_map,
+        }
     }
 }
 
@@ -775,5 +815,117 @@ mod tests {
 
         let f = SkelGraphMapping::from_vec(vec![1, 2, 3], vec![2, 1]); // Not a homomorphism.
         assert!(GraphMorphism(&f, &g, &h).validate().is_err());
+    }
+}
+
+#[cfg(test)]
+pub(crate) mod proptesting {
+    use super::{FinGraph, HashGraph, SkelGraph, Validate};
+    use proptest::{
+        prelude::{Strategy, prop_assert, proptest},
+        sample::SizeRange,
+    };
+
+    impl core::fmt::Debug for SkelGraph {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.debug_struct("SkelGraph")
+                .field("nv", &self.nv)
+                .field("ne", &self.ne)
+                .field("src_map", &self.src_map)
+                .field("tgt_map", &self.tgt_map)
+                .finish()
+        }
+    }
+
+    pub(crate) fn skel_graph_strategy(
+        num_v: impl Strategy<Value = usize>,
+        num_e: impl Strategy<Value = usize>,
+    ) -> impl Strategy<Value = SkelGraph> {
+        (num_v, num_e).prop_flat_map(|(num_v, mut num_e)| {
+            let mut to_return = SkelGraph::default();
+            let vertices: Vec<usize> = to_return.add_vertices(num_v).collect();
+            let num_v = vertices.len();
+            if num_v == 0 {
+                num_e = 0;
+            }
+            let which_edges = proptest::collection::vec(((0..num_v), (0..num_v)), num_e);
+            which_edges.prop_map(move |zs_ws| {
+                let mut to_return_now = to_return.clone();
+                for (z, w) in zs_ws {
+                    to_return_now.add_edge(vertices[z], vertices[w]);
+                }
+                to_return_now
+            })
+        })
+    }
+
+    proptest! {
+        #[test]
+        fn skel_graph_arbitrary(sk in skel_graph_strategy(0usize..=50,10usize..100)) {
+            prop_assert!(sk.validate().is_ok());
+            prop_assert!(sk.vertex_count() <= 50);
+            prop_assert!(sk.edge_count() < 100);
+            prop_assert!(sk.edge_count() >= 10 || (sk.vertex_count() == 0 && sk.edge_count() == 0));
+        }
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn hash_graph_strategy<'a, V, E>(
+        // The graph that is output may not have fewer vertices
+        // than prescribed by this `SizeRange`. It is just a suggestion.
+        // If the `v_strategy` gave repeats
+        num_v: SizeRange,
+        v_strategy: impl Strategy<Value = V> + 'a,
+        // This is also just a suggestion. For the extreme case, when we produce an empty
+        // graph, then there will be no edges regardless of what `num_e` says.
+        // In addition if `e_strategy` gave too many repeats, then we will end up with fewer edges.
+        // However we do try to follow `num_e` and give the suggested number of edges.
+        num_e: impl Strategy<Value = usize> + 'a,
+        e_strategy: impl Strategy<Value = E> + Clone + 'a,
+    ) -> impl Strategy<Value = HashGraph<V, E>> + 'a
+    where
+        V: Eq + core::fmt::Debug + std::hash::Hash + Clone,
+        E: Eq + core::fmt::Debug + std::hash::Hash + Clone,
+    {
+        (proptest::collection::vec(v_strategy, num_v), num_e).prop_flat_map(
+            move |(v_datas, mut num_e)| {
+                let mut to_return = HashGraph::default();
+                to_return.add_vertices(v_datas.clone().into_iter());
+                let num_v = to_return.vertex_count();
+                if num_v == 0 {
+                    num_e = 0;
+                }
+                let which_edges = proptest::collection::vec(
+                    ((0..num_v), (0..num_v), e_strategy.clone()),
+                    2 * num_e,
+                );
+                which_edges.prop_map(move |zs_ws_datas| {
+                    let mut to_return_now = to_return.clone();
+                    let mut count_edges = 0;
+                    for (z, w, e_label) in zs_ws_datas {
+                        let is_new =
+                            to_return_now.add_edge(e_label, v_datas[z].clone(), v_datas[w].clone());
+                        if is_new {
+                            count_edges += 1;
+                            if count_edges == num_e {
+                                break;
+                            }
+                        }
+                    }
+                    to_return_now
+                })
+            },
+        )
+    }
+
+    proptest! {
+        #[test]
+        fn hash_graph_arbitrary(hg in hash_graph_strategy((0usize..=57).into(),-107i8..114,13usize..44,21u8..134)) {
+            prop_assert!(hg.validate().is_ok());
+            prop_assert!(hg.vertex_count() <= 57);
+            prop_assert!(hg.edge_count() < 44);
+            let degenerate_case = if hg.vertex_count() == 0 {hg.edge_count() == 0} else {true};
+            prop_assert!(degenerate_case);
+        }
     }
 }

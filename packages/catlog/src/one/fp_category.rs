@@ -184,6 +184,53 @@ where
     }
 }
 
+impl<V, E> FpCategory<V, E>
+where
+    V: Eq + Clone + Hash,
+    E: Eq + Clone + Hash,
+{
+    /// Reverse all of the generating morphisms
+    /// On the free version this is based on (`reverse`)[`ReversibleGraph::reverse`]
+    pub fn reverse_generating_morphisms(mut self) -> Self {
+        let _old_builder = self.builder.take();
+        let _old_egraph = self.egraph.take();
+        self.generators = self.generators.reverse();
+        let all_vertices: Vec<_> = self.generators.vertices().collect();
+        for v in all_vertices {
+            self.builder.get_mut().add_ob_generator(v);
+        }
+        let all_edges: Vec<_> = self.generators.edges().collect();
+        for e in all_edges {
+            let (dom, cod) = (self.generators.src(&e), self.generators.tgt(&e));
+            let (dom, cod) = (self.ob_generator_expr(dom), self.ob_generator_expr(cod));
+            self.builder.get_mut().add_mor_generator(e, dom, cod);
+        }
+        let mut all_equations = Vec::new();
+        core::mem::swap(&mut all_equations, &mut self.equations);
+        for equation in all_equations {
+            self.add_equation(equation.reverse_both());
+        }
+        self
+    }
+
+    #[cfg(test)]
+    fn new_free(generators: HashGraph<V, E>) -> Self {
+        let mut new_self = Self::new();
+        new_self.generators = generators;
+        let all_vertices: Vec<_> = new_self.generators.vertices().collect();
+        for v in all_vertices {
+            new_self.builder.get_mut().add_ob_generator(v);
+        }
+        let all_edges: Vec<_> = new_self.generators.edges().collect();
+        for e in all_edges {
+            let (dom, cod) = (new_self.generators.src(&e), new_self.generators.tgt(&e));
+            let (dom, cod) = (new_self.ob_generator_expr(dom), new_self.ob_generator_expr(cod));
+            new_self.builder.get_mut().add_mor_generator(e, dom, cod);
+        }
+        new_self
+    }
+}
+
 impl<V, E> Category for FpCategory<V, E>
 where
     V: Eq + Clone + Hash,
@@ -679,6 +726,144 @@ pub fn sch_hgraph() -> UstrFpCategory {
     cat
 }
 
+/// The schema for a freely generated category where the generating graph of the presentation
+/// is a zig zag graph. This can be thought of as an orientation of an A_n quiver.
+/// e.g. `0 -> 1 <- 2 -> 3 -> 4 <- 5` for `[true,false,true,true,false]`
+/// It is also common to demand that all backwards arrows are actually isomorphisms so we can alternatively
+/// create the non-free version `0 -> 1 <-> 2 -> 3 -> 4 <-> 5` where the `<->` have the equation
+/// that says they are inverses to each other.
+#[cfg(test)]
+fn sch_zigzag(
+    quiver_orientation: impl ExactSizeIterator<Item = bool>,
+    backwards_invertible: bool,
+) -> UstrFpCategory {
+    let mut cat = UstrFpCategory::new();
+    let count_vertices = quiver_orientation.len() + 1;
+    let mut vertex_names = Vec::with_capacity(count_vertices);
+    for idx in 0..count_vertices {
+        let cur_ustr: Ustr = format!("O{idx}").into();
+        cat.add_ob_generator(cur_ustr);
+        vertex_names.push(cur_ustr);
+    }
+    for (idx, current_orientation) in quiver_orientation.enumerate() {
+        let cur_ustr: Ustr = format!("M{idx}").into();
+        if current_orientation {
+            cat.add_mor_generator(cur_ustr, vertex_names[idx], vertex_names[idx + 1]);
+        } else {
+            cat.add_mor_generator(cur_ustr, vertex_names[idx + 1], vertex_names[idx]);
+            if backwards_invertible {
+                let cur_ustr_inv: Ustr = format!("M{idx}^-1").into();
+                cat.add_mor_generator(cur_ustr_inv, vertex_names[idx], vertex_names[idx + 1]);
+                cat.equate(Path::pair(cur_ustr_inv, cur_ustr), Path::Id(vertex_names[idx]));
+                cat.equate(Path::pair(cur_ustr, cur_ustr_inv), Path::Id(vertex_names[idx + 1]));
+            }
+        }
+    }
+    cat
+}
+
+/// The schema for a finitely generated category where the generating graph of the presentation
+/// is as follows.
+/// e.g. `-1 <- 0 <- <- 1 <- <- <- 2 <- <- <- <- 3`
+/// as well as arrows the other way but with 1 fewer
+/// There are many arrows with the same source and targets, but this is a feature of the difference
+/// in what qualifies as a graph vs a multi-graph.
+#[cfg(test)]
+fn sch_simplicial(max_n: usize, is_augmented: bool) -> UstrFpCategory {
+    let mut cat = UstrFpCategory::new();
+    let mut vertex_names = Vec::with_capacity(max_n + 1 + usize::from(is_augmented));
+    if is_augmented {
+        let cur_ustr: Ustr = format!("O(-1)").into();
+        cat.add_ob_generator(cur_ustr);
+        vertex_names.push(cur_ustr);
+    }
+    for idx in 0..=max_n {
+        let cur_ustr: Ustr = format!("O({idx})").into();
+        cat.add_ob_generator(cur_ustr);
+        vertex_names.push(cur_ustr);
+    }
+    let mut face_maps: Vec<Vec<Ustr>> = Vec::with_capacity(max_n + usize::from(is_augmented));
+    let mut degen_maps: Vec<Vec<Ustr>> = Vec::with_capacity(max_n + usize::from(is_augmented));
+    for idx in 0..max_n + usize::from(is_augmented) {
+        let (src_n, src_obj, tgt_obj) = if is_augmented {
+            (idx, vertex_names[idx + 1], vertex_names[idx])
+        } else {
+            (idx + 1, vertex_names[idx + 1], vertex_names[idx])
+        };
+        let mut face_maps_now = Vec::with_capacity(src_n + 1);
+        for face_number in 0..=src_n {
+            let cur_face_number: Ustr = format!("d({idx},{face_number})").into();
+            cat.add_mor_generator(cur_face_number, src_obj, tgt_obj);
+            face_maps_now.push(cur_face_number);
+        }
+        face_maps.push(face_maps_now);
+        let mut degen_maps_now = Vec::with_capacity(src_n);
+        for degen_number in 0..src_n {
+            let cur_degen_number: Ustr = format!("s({idx},{degen_number})").into();
+            cat.add_mor_generator(cur_degen_number, tgt_obj, src_obj);
+            degen_maps_now.push(cur_degen_number);
+        }
+        degen_maps.push(degen_maps_now);
+    }
+    let how_many_faces_degens = face_maps.len();
+    let count_ds = how_many_faces_degens;
+    for n_idx in 0..count_ds - 1 {
+        for j_idx in 0..face_maps[n_idx].len() {
+            for i_idx in 0..=j_idx {
+                cat.equate(
+                    Path::pair(face_maps[n_idx + 1][i_idx], face_maps[n_idx][j_idx]),
+                    Path::pair(face_maps[n_idx + 1][j_idx + 1], face_maps[n_idx][i_idx]),
+                );
+            }
+        }
+    }
+    let count_ss = how_many_faces_degens;
+    for n_idx in 0..count_ss - 1 {
+        for j_idx in 0..degen_maps[n_idx].len() {
+            for i_idx in 0..=j_idx {
+                cat.equate(
+                    Path::pair(degen_maps[n_idx][j_idx], degen_maps[n_idx + 1][i_idx]),
+                    Path::pair(degen_maps[n_idx][i_idx], degen_maps[n_idx + 1][j_idx + 1]),
+                );
+            }
+        }
+    }
+    for n_idx in 0..count_ss {
+        for j_idx in 0..degen_maps[n_idx].len() {
+            for i_idx in 0..face_maps[n_idx].len() {
+                let lhs = Path::pair(degen_maps[n_idx][j_idx], face_maps[n_idx][i_idx]);
+                if i_idx < j_idx {
+                    if i_idx < face_maps[n_idx].len()
+                        && n_idx > 0
+                        && j_idx - 1 < degen_maps[n_idx - 1].len()
+                    {
+                        let rhs = Path::pair(
+                            face_maps[n_idx - 1][i_idx],
+                            degen_maps[n_idx - 1][j_idx - 1],
+                        );
+                        cat.equate(lhs, rhs);
+                    }
+                } else if i_idx == j_idx || i_idx == j_idx + 1 {
+                    let rhs = Path::Id(lhs.src(cat.generators()));
+                    cat.equate(lhs, rhs);
+                } else {
+                    if i_idx - 1 < face_maps[n_idx].len()
+                        && n_idx > 0
+                        && j_idx < degen_maps[n_idx - 1].len()
+                    {
+                        let rhs = Path::pair(
+                            face_maps[n_idx - 1][i_idx - 1],
+                            degen_maps[n_idx - 1][j_idx],
+                        );
+                        cat.equate(lhs, rhs);
+                    }
+                }
+            }
+        }
+    }
+    cat
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -746,5 +931,387 @@ mod tests {
 
         let mut egraph: EGraph = Default::default();
         assert!(prog.run_in(&mut egraph).is_ok());
+    }
+
+    #[test]
+    fn egraph_hgraph() {
+        let sch_hgraph = sch_hgraph();
+        assert!(!sch_hgraph.is_free());
+        assert!(sch_hgraph.validate().is_ok());
+
+        let mut builder: CategoryProgramBuilder<char, char> = Default::default();
+        let prog = builder.program();
+        let preamble = prog.to_string();
+
+        let prog = sch_hgraph.builder.borrow_mut().program();
+
+        let expected = expect![[r#"
+            (ObGen 0)
+            (ObGen 1)
+            (MorGen 0)
+            (union (dom (MorGen 0)) (ObGen 1))
+            (union (cod (MorGen 0)) (ObGen 0))
+            (MorGen 1)
+            (union (dom (MorGen 1)) (ObGen 1))
+            (union (cod (MorGen 1)) (ObGen 1))
+            (union (compose (MorGen 1) (MorGen 1)) (id (ObGen 1)))
+        "#]];
+        let prog_string = prog.to_string();
+        let (should_be_preamble, should_be_expected) = prog_string.split_at(preamble.len());
+        expected.assert_eq(&should_be_expected);
+        assert_eq!(should_be_preamble, preamble);
+
+        let mut egraph: EGraph = Default::default();
+        assert!(prog.run_in(&mut egraph).is_ok());
+    }
+
+    #[test]
+    fn egraph_zigzag() {
+        let sch_quiver = sch_zigzag([true, false, true, true, false].into_iter(), false);
+        assert!(sch_quiver.is_free());
+        assert!(sch_quiver.validate().is_ok());
+
+        let mut builder: CategoryProgramBuilder<char, char> = Default::default();
+        let prog = builder.program();
+        let preamble = prog.to_string();
+
+        let prog = sch_quiver.builder.borrow_mut().program();
+
+        let expected = expect![[r#"
+            (ObGen 0)
+            (ObGen 1)
+            (ObGen 2)
+            (ObGen 3)
+            (ObGen 4)
+            (ObGen 5)
+            (MorGen 0)
+            (union (dom (MorGen 0)) (ObGen 0))
+            (union (cod (MorGen 0)) (ObGen 1))
+            (MorGen 1)
+            (union (dom (MorGen 1)) (ObGen 2))
+            (union (cod (MorGen 1)) (ObGen 1))
+            (MorGen 2)
+            (union (dom (MorGen 2)) (ObGen 2))
+            (union (cod (MorGen 2)) (ObGen 3))
+            (MorGen 3)
+            (union (dom (MorGen 3)) (ObGen 3))
+            (union (cod (MorGen 3)) (ObGen 4))
+            (MorGen 4)
+            (union (dom (MorGen 4)) (ObGen 5))
+            (union (cod (MorGen 4)) (ObGen 4))
+        "#]];
+        let prog_string = prog.to_string();
+        let (should_be_preamble, should_be_expected) = prog_string.split_at(preamble.len());
+        expected.assert_eq(&should_be_expected);
+        assert_eq!(should_be_preamble, preamble);
+
+        let mut egraph: EGraph = Default::default();
+        assert!(prog.run_in(&mut egraph).is_ok());
+    }
+
+    #[test]
+    fn egraph_zigzag_equivalences() {
+        let sch_quiver = sch_zigzag([true, false, true, true, false].into_iter(), true);
+        assert!(!sch_quiver.is_free());
+        assert!(sch_quiver.validate().is_ok());
+
+        let mut builder: CategoryProgramBuilder<char, char> = Default::default();
+        let prog = builder.program();
+        let preamble = prog.to_string();
+
+        let prog = sch_quiver.builder.borrow_mut().program();
+
+        let expected = expect![[r#"
+            (ObGen 0)
+            (ObGen 1)
+            (ObGen 2)
+            (ObGen 3)
+            (ObGen 4)
+            (ObGen 5)
+            (MorGen 0)
+            (union (dom (MorGen 0)) (ObGen 0))
+            (union (cod (MorGen 0)) (ObGen 1))
+            (MorGen 1)
+            (union (dom (MorGen 1)) (ObGen 2))
+            (union (cod (MorGen 1)) (ObGen 1))
+            (MorGen 2)
+            (union (dom (MorGen 2)) (ObGen 1))
+            (union (cod (MorGen 2)) (ObGen 2))
+            (union (compose (MorGen 2) (MorGen 1)) (id (ObGen 1)))
+            (union (compose (MorGen 1) (MorGen 2)) (id (ObGen 2)))
+            (MorGen 3)
+            (union (dom (MorGen 3)) (ObGen 2))
+            (union (cod (MorGen 3)) (ObGen 3))
+            (MorGen 4)
+            (union (dom (MorGen 4)) (ObGen 3))
+            (union (cod (MorGen 4)) (ObGen 4))
+            (MorGen 5)
+            (union (dom (MorGen 5)) (ObGen 5))
+            (union (cod (MorGen 5)) (ObGen 4))
+            (MorGen 6)
+            (union (dom (MorGen 6)) (ObGen 4))
+            (union (cod (MorGen 6)) (ObGen 5))
+            (union (compose (MorGen 6) (MorGen 5)) (id (ObGen 4)))
+            (union (compose (MorGen 5) (MorGen 6)) (id (ObGen 5)))
+        "#]];
+        let prog_string = prog.to_string();
+        let (should_be_preamble, should_be_expected) = prog_string.split_at(preamble.len());
+        expected.assert_eq(&should_be_expected);
+        assert_eq!(should_be_preamble, preamble);
+
+        let mut egraph: EGraph = Default::default();
+        assert!(prog.run_in(&mut egraph).is_ok());
+    }
+
+    #[test]
+    fn egraph_simplicial() {
+        let sch_quiver = sch_simplicial(2, false);
+        assert!(!sch_quiver.is_free());
+        let validation = sch_quiver.validate();
+        match validation {
+            Ok(_) => {}
+            Err(all_the_errors) => {
+                for cur_error in all_the_errors {
+                    println!("{}", cur_error);
+                }
+                panic!("Had at least one error");
+            }
+        }
+
+        let mut builder: CategoryProgramBuilder<char, char> = Default::default();
+        let prog = builder.program();
+        let preamble = prog.to_string();
+
+        let prog = sch_quiver.builder.borrow_mut().program();
+
+        // Mor 0,1 are d^2_0, d^2_1
+        // Mor 2 is s^1_0
+        // Mor 3,4,5 are d^3_0, d^3_1, d^3_2
+        // Mor 6,7 are s^2_0, s^2_1
+        // so we should get
+        // 3,0 = 4,0 for d^3_0 d^2_0 = d^3_1 d^2_0
+        // 3,1 = 5,0 for d^3_0 d^2_1 = d^3_2 d^2_0
+        // 4,1 = 5,1 for d^3_1 d^2_1 = d^3_2 d^2_1
+        // 2,6 = 2,7 for s^1_0 s^2_0 = s^1_0 s^2_1
+        // 2,0 = id for s^1_0 d^2_0
+        // 2,1 = id for s^1_0 d^2_1
+        // 6,3 = id for s^2_0 d^3_0
+        // 6,4 = id for s^2_0 d^3_1
+        // 6,5 = 1,2 for s^2_0 d^3_2 = d^2_1 s^1_0
+        // 7,3 = 0,2 for s^2_1 d^3_0 = d^2_0 s^1_0
+        // 7,4 = id for s^2_1 d^3_1
+        // 7,5 = id for s^2_1 d^3_2
+        let expected = expect![[r#"
+            (ObGen 0)
+            (ObGen 1)
+            (ObGen 2)
+            (MorGen 0)
+            (union (dom (MorGen 0)) (ObGen 1))
+            (union (cod (MorGen 0)) (ObGen 0))
+            (MorGen 1)
+            (union (dom (MorGen 1)) (ObGen 1))
+            (union (cod (MorGen 1)) (ObGen 0))
+            (MorGen 2)
+            (union (dom (MorGen 2)) (ObGen 0))
+            (union (cod (MorGen 2)) (ObGen 1))
+            (MorGen 3)
+            (union (dom (MorGen 3)) (ObGen 2))
+            (union (cod (MorGen 3)) (ObGen 1))
+            (MorGen 4)
+            (union (dom (MorGen 4)) (ObGen 2))
+            (union (cod (MorGen 4)) (ObGen 1))
+            (MorGen 5)
+            (union (dom (MorGen 5)) (ObGen 2))
+            (union (cod (MorGen 5)) (ObGen 1))
+            (MorGen 6)
+            (union (dom (MorGen 6)) (ObGen 1))
+            (union (cod (MorGen 6)) (ObGen 2))
+            (MorGen 7)
+            (union (dom (MorGen 7)) (ObGen 1))
+            (union (cod (MorGen 7)) (ObGen 2))
+            (union (compose (MorGen 3) (MorGen 0)) (compose (MorGen 4) (MorGen 0)))
+            (union (compose (MorGen 3) (MorGen 1)) (compose (MorGen 5) (MorGen 0)))
+            (union (compose (MorGen 4) (MorGen 1)) (compose (MorGen 5) (MorGen 1)))
+            (union (compose (MorGen 2) (MorGen 6)) (compose (MorGen 2) (MorGen 7)))
+            (union (compose (MorGen 2) (MorGen 0)) (id (ObGen 0)))
+            (union (compose (MorGen 2) (MorGen 1)) (id (ObGen 0)))
+            (union (compose (MorGen 6) (MorGen 3)) (id (ObGen 1)))
+            (union (compose (MorGen 6) (MorGen 4)) (id (ObGen 1)))
+            (union (compose (MorGen 6) (MorGen 5)) (compose (MorGen 1) (MorGen 2)))
+            (union (compose (MorGen 7) (MorGen 3)) (compose (MorGen 0) (MorGen 2)))
+            (union (compose (MorGen 7) (MorGen 4)) (id (ObGen 1)))
+            (union (compose (MorGen 7) (MorGen 5)) (id (ObGen 1)))
+        "#]];
+        let prog_string = prog.to_string();
+        let (should_be_preamble, should_be_expected) = prog_string.split_at(preamble.len());
+        expected.assert_eq(&should_be_expected);
+        assert_eq!(should_be_preamble, preamble);
+
+        let mut egraph: EGraph = Default::default();
+        assert!(prog.run_in(&mut egraph).is_ok());
+    }
+
+    #[test]
+    fn egraph_simplicial_augmented() {
+        let sch_quiver = sch_simplicial(2, true);
+        assert!(!sch_quiver.is_free());
+        assert!(sch_quiver.validate().is_ok());
+
+        let mut builder: CategoryProgramBuilder<char, char> = Default::default();
+        let prog = builder.program();
+        let preamble = prog.to_string();
+
+        let prog = sch_quiver.builder.borrow_mut().program();
+
+        // Mor 0 is d^1_0
+        // Mor 1,2 are d^2_0, d^2_1
+        // Mor 3 is s^1_0
+        // Mor 4,5,6 are d^3_0, d^3_1, d^3_2
+        // Mor 7,8 are s^2_0, s^2_1
+        // so we should get
+        // 1,0 = 2,0 for d^2_0 d^1_0 = d^2_1 d^1_0
+        // 4,1 = 5,1 for d^3_0 d^2_0 = d^3_1 d^2_0
+        // 4,2 = 6,1 for d^3_0 d^2_1 = d^3_2 d^2_0
+        // 5,2 = 6,2 for d^3_1 d^2_1 = d^3_2 d^2_1
+        // 3,7 = 3,8 for s^1_0 s^2_0 = s^1_0 s^2_1
+        // 3,1 = id for s^1_0 d^2_0
+        // 3,2 = id for s^1_0 d^2_1
+        // 7,4 = id for s^2_0 d^3_0
+        // 7,5 = id for s^2_0 d^3_1
+        // 7,6 = 2,3 for s^2_0 d^3_2 = d^2_1 s^1_0
+        // 8,4 = 1,3 for s^2_1 d^3_0 = d^2_0 s^1_0
+        // 8,5 = id for s^2_1 d^3_1
+        // 8,6 = id for s^2_1 d^3_2
+        let expected = expect![[r#"
+            (ObGen 0)
+            (ObGen 1)
+            (ObGen 2)
+            (ObGen 3)
+            (MorGen 0)
+            (union (dom (MorGen 0)) (ObGen 1))
+            (union (cod (MorGen 0)) (ObGen 0))
+            (MorGen 1)
+            (union (dom (MorGen 1)) (ObGen 2))
+            (union (cod (MorGen 1)) (ObGen 1))
+            (MorGen 2)
+            (union (dom (MorGen 2)) (ObGen 2))
+            (union (cod (MorGen 2)) (ObGen 1))
+            (MorGen 3)
+            (union (dom (MorGen 3)) (ObGen 1))
+            (union (cod (MorGen 3)) (ObGen 2))
+            (MorGen 4)
+            (union (dom (MorGen 4)) (ObGen 3))
+            (union (cod (MorGen 4)) (ObGen 2))
+            (MorGen 5)
+            (union (dom (MorGen 5)) (ObGen 3))
+            (union (cod (MorGen 5)) (ObGen 2))
+            (MorGen 6)
+            (union (dom (MorGen 6)) (ObGen 3))
+            (union (cod (MorGen 6)) (ObGen 2))
+            (MorGen 7)
+            (union (dom (MorGen 7)) (ObGen 2))
+            (union (cod (MorGen 7)) (ObGen 3))
+            (MorGen 8)
+            (union (dom (MorGen 8)) (ObGen 2))
+            (union (cod (MorGen 8)) (ObGen 3))
+            (union (compose (MorGen 1) (MorGen 0)) (compose (MorGen 2) (MorGen 0)))
+            (union (compose (MorGen 4) (MorGen 1)) (compose (MorGen 5) (MorGen 1)))
+            (union (compose (MorGen 4) (MorGen 2)) (compose (MorGen 6) (MorGen 1)))
+            (union (compose (MorGen 5) (MorGen 2)) (compose (MorGen 6) (MorGen 2)))
+            (union (compose (MorGen 3) (MorGen 7)) (compose (MorGen 3) (MorGen 8)))
+            (union (compose (MorGen 3) (MorGen 1)) (id (ObGen 1)))
+            (union (compose (MorGen 3) (MorGen 2)) (id (ObGen 1)))
+            (union (compose (MorGen 7) (MorGen 4)) (id (ObGen 2)))
+            (union (compose (MorGen 7) (MorGen 5)) (id (ObGen 2)))
+            (union (compose (MorGen 7) (MorGen 6)) (compose (MorGen 2) (MorGen 3)))
+            (union (compose (MorGen 8) (MorGen 4)) (compose (MorGen 1) (MorGen 3)))
+            (union (compose (MorGen 8) (MorGen 5)) (id (ObGen 2)))
+            (union (compose (MorGen 8) (MorGen 6)) (id (ObGen 2)))
+        "#]];
+        let prog_string = prog.to_string();
+        let (should_be_preamble, should_be_expected) = prog_string.split_at(preamble.len());
+        expected.assert_eq(&should_be_expected);
+        assert_eq!(should_be_preamble, preamble);
+
+        let mut egraph: EGraph = Default::default();
+        assert!(prog.run_in(&mut egraph).is_ok());
+    }
+
+    #[test]
+    fn small_reversed() {
+        let sch_graph_before = sch_graph();
+        let sch_graph_after = sch_graph().reverse_generating_morphisms();
+        for old_obj in sch_graph_before.objects() {
+            assert!(sch_graph_after.has_ob(&old_obj));
+        }
+        for old_morphism in sch_graph_before.morphisms() {
+            assert!(sch_graph_after.has_mor(&old_morphism));
+            assert_eq!(sch_graph_after.dom(&old_morphism), sch_graph_before.cod(&old_morphism));
+            assert_eq!(sch_graph_after.cod(&old_morphism), sch_graph_before.dom(&old_morphism));
+        }
+
+        let sch_graph_before = sch_hgraph();
+        let sch_graph_after = sch_hgraph().reverse_generating_morphisms();
+        for old_obj in sch_graph_before.objects() {
+            assert!(sch_graph_after.has_ob(&old_obj));
+        }
+        for old_morphism in sch_graph_before.morphisms() {
+            assert!(sch_graph_after.has_mor(&old_morphism));
+            assert_eq!(sch_graph_after.dom(&old_morphism), sch_graph_before.cod(&old_morphism));
+            assert_eq!(sch_graph_after.cod(&old_morphism), sch_graph_before.dom(&old_morphism));
+        }
+    }
+
+    #[test]
+    fn egraph_simplicial_reversed() {
+        let sch_quiver = sch_simplicial(2, true).reverse_generating_morphisms();
+        let validation = sch_quiver.validate();
+        match validation {
+            Ok(_) => {}
+            Err(the_errs) => {
+                for err in the_errs {
+                    println!("{}", err);
+                }
+                panic!("At least one error");
+            }
+        }
+        assert!(!sch_quiver.is_free());
+        let prog = sch_quiver.builder.borrow_mut().program();
+        let mut egraph: EGraph = Default::default();
+        assert!(prog.run_in(&mut egraph).is_ok());
+
+        let sch_quiver = sch_simplicial(2, false).reverse_generating_morphisms();
+        assert!(sch_quiver.validate().is_ok());
+        assert!(!sch_quiver.is_free());
+        let prog = sch_quiver.builder.borrow_mut().program();
+        let mut egraph: EGraph = Default::default();
+        assert!(prog.run_in(&mut egraph).is_ok());
+    }
+}
+
+#[cfg(test)]
+mod proptesting {
+    use super::{FgCategory, FpCategory};
+    use crate::one::graph::{FinGraph, proptesting::hash_graph_strategy};
+    use crate::validate::Validate;
+    use proptest::{prop_assert, proptest};
+
+    proptest! {
+        #[test]
+        fn freely_generated_but_messy(hg in hash_graph_strategy(
+            proptest::sample::size_range(0..50),
+            -100i32..=50,
+            10usize..100,
+            0i8..10,
+        )) {
+            prop_assert!(hg.validate().is_ok());
+            let num_v = hg.vertex_count();
+            let num_e = hg.edge_count();
+            let free_cat = FpCategory::new_free(hg);
+            prop_assert!(free_cat.validate().is_ok());
+            prop_assert!(free_cat.is_free());
+            prop_assert!(free_cat.ob_generators().count() == num_v);
+            prop_assert!(free_cat.mor_generators().count() == num_e);
+        }
     }
 }
