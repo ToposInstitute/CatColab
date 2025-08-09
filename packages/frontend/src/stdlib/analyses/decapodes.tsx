@@ -94,7 +94,10 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
             }
             return makeSimulationCode(simulationData);
         },
-        (data: PDEPlotData2D) => data,
+        (data: PDEPlotData2D) => {
+		  console.log(data);
+		  return data
+		},
     );
 
     const obDecls = createMemo<DiagramObjectDecl[]>(() =>
@@ -342,7 +345,9 @@ type SimulationData = {
 const makeInitCode = () =>
     `
     import IJulia
+	IJulia.register_mime(MIME"application/gzip"())
     IJulia.register_jsonmime(MIME"application/json"())
+	IJulia.set_verbose(true)
 
     using CatColabInterop
 
@@ -352,14 +357,30 @@ const makeInitCode = () =>
 /** Julia code run to perform a simulation. */
 const makeSimulationCode = (data: SimulationData) =>
     `
+	t1 = time();
     system = Analysis(ThDecapode(), raw"""${JSON.stringify(data)}""");
+	t2 = time();
     simulator = evalsim(system.pode);
-
+	t3 = time();
     f = simulator(system.geometry.dualmesh, system.generate, DiagonalHodge());
-
+	t4 = time();
     soln = run_sim(f, system.init, system.duration, ComponentArray(k=0.5,));
-
-    JsonValue(SimResult(soln, system))
+	t5 = time();
+	result = SimResult(soln, system);
+	t6 = time();
+	# open(tempname(), "w") do f
+	# 	JSON3.write(f, result)
+	# end
+	t7 = time();	
+	#error("$(system.duration):\n
+	#	  Analysis building: $(t2 - t1)\n
+	#	  construct sim: $(t3 - t2)\n
+	#	  evaluate simulator: $(t4 - t3)\n
+	#	  run sim: $(t5 - t4)\n
+	#	  result: $(t6 - t5)\n
+	#	  json: $(t7 - t6)")
+    
+    JsonValue(result)
     `;
 
 /** Create data to send to the Julia kernel. */

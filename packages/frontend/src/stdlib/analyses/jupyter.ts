@@ -1,3 +1,4 @@
+import "pako";
 import type { ServerConnection } from "@jupyterlab/services";
 import type { IKernelConnection, IKernelOptions } from "@jupyterlab/services/lib/kernel/kernel";
 import {
@@ -72,15 +73,19 @@ export function executeAndRetrieve<S, T>(
             return undefined;
         }
         const future = kernel.requestExecute({ code });
-
-        // Set up handler for result from kernel.
+        
+		// Set up handler for result from kernel.
         let result: { data: S } | undefined;
         future.onIOPub = (msg) => {
             if (
                 msg.header.msg_type === "execute_result" &&
                 msg.parent_header.msg_id === future.msg.header.msg_id
             ) {
-                const content = msg.content as JsonDataContent<S>;
+				console.log(msg.content["data"]);
+                if (msg.content["data"]?.["application/gzip"] !== "") {
+				  console.log(msg.content["data"]?.["application/gzip"])
+				}
+				const content = msg.content as JsonDataContent<S>;
                 const data = content["data"]?.["application/json"];
                 if (data !== undefined) {
                     result = { data };

@@ -107,6 +107,11 @@ struct SimResult
 end
 export SimResult
 
+using MsgPack
+function MsgPack.pack(s::SimResult)
+    pack(Dict(:time => s.time, :state => s.state, :x => s.x, :y => s.y))
+end
+
 function SimResult(soln::ODESolution, system::PodeSystem)
     idx_bounds = indexing_bounds(system)
     state_val_dict = variables_state(soln, system) # Dict("UUID1" => VectorMatrixSVectr...)
