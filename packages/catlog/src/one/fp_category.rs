@@ -728,8 +728,10 @@ pub fn sch_hgraph() -> UstrFpCategory {
 
 /// The schema for a freely generated category where the generating graph of the presentation
 /// is a zig zag graph. This can be thought of as an orientation of an A_n quiver.
+/// 
 /// e.g. `0 -> 1 <- 2 -> 3 -> 4 <- 5` for `[true,false,true,true,false]`
-/// It is also common to demand that all backwards arrows are actually isomorphisms so we can alternatively
+/// 
+/// It is also common to demand that all backwards arrows are actually isomorphisms. So we can alternatively
 /// create the non-free version `0 -> 1 <-> 2 -> 3 -> 4 <-> 5` where the `<->` have the equation
 /// that says they are inverses to each other.
 #[cfg(test)]
@@ -765,7 +767,10 @@ fn sch_zigzag(
 /// The schema for a finitely generated category where the generating graph of the presentation
 /// is as follows.
 /// e.g. `-1 <- 0 <- <- 1 <- <- <- 2 <- <- <- <- 3`
-/// as well as arrows the other way but with 1 fewer
+/// as well as arrows the other way but with 1 fewer arrow in that direction.
+/// 
+/// The maps in the different directions are face maps and degeneracy maps.
+/// 
 /// There are many arrows with the same source and targets, but this is a feature of the difference
 /// in what qualifies as a graph vs a multi-graph.
 #[cfg(test)]
