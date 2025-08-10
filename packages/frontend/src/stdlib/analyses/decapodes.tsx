@@ -95,9 +95,9 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
             return makeSimulationCode(simulationData);
         },
         (data: PDEPlotData2D) => {
-		  console.log(data);
-		  return data
-		},
+            console.log(data);
+            return data;
+        },
     );
 
     const obDecls = createMemo<DiagramObjectDecl[]>(() =>

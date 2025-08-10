@@ -1,6 +1,6 @@
-import "pako";
 import type { ServerConnection } from "@jupyterlab/services";
 import type { IKernelConnection, IKernelOptions } from "@jupyterlab/services/lib/kernel/kernel";
+import pako from "pako";
 import {
     type Accessor,
     type Resource,
@@ -73,22 +73,37 @@ export function executeAndRetrieve<S, T>(
             return undefined;
         }
         const future = kernel.requestExecute({ code });
-        
-		// Set up handler for result from kernel.
+
+        // Set up handler for result from kernel.
         let result: { data: S } | undefined;
         future.onIOPub = (msg) => {
             if (
                 msg.header.msg_type === "execute_result" &&
                 msg.parent_header.msg_id === future.msg.header.msg_id
             ) {
-				console.log(msg.content["data"]);
+                console.log(msg.content);
                 if (msg.content["data"]?.["application/gzip"] !== "") {
-				  console.log(msg.content["data"]?.["application/gzip"])
-				}
-				const content = msg.content as JsonDataContent<S>;
-                const data = content["data"]?.["application/json"];
-                if (data !== undefined) {
+                    const _gzip = msg.content["data"]?.["application/gzip"];
+                    const gzip = atob(_gzip);
+                    const binaryString = atob(gzip);
+                    const binaryData = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        binaryData[i] = binaryString.charCodeAt(i);
+                    }
+                    console.log(binaryData);
+                    const decompressed = pako.inflate(binaryData, { to: "string" });
+                    // console.log(decompressed);
+                    const data = JSON.parse(decompressed);
                     result = { data };
+                    // console.log(decompressed);
+                    // // // const arr = Uint8Array.fromBase64(gzip);
+                    // // // console.log(gzip);
+                } else {
+                    const content = msg.content as JsonDataContent<S>;
+                    const data = content["data"]?.["application/json"];
+                    if (data !== undefined) {
+                        result = { data };
+                    }
                 }
             }
         };
