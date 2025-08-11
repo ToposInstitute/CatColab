@@ -13,7 +13,7 @@ use catlog::dbl::theory;
 use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
 
-use super::model_morphism::{MotifsOptions, motifs};
+use super::model_morphism::{motifs, MotifsOptions};
 use super::{analyses::*, model::DblModel, theory::DblTheory};
 
 /// The empty or initial theory.
@@ -329,6 +329,39 @@ impl ThSymMonoidalCategory {
     ) -> Result<ODEResult, String> {
         Ok(ODEResult(
             analyses::ode::PetriNetMassActionAnalysis::default()
+                .build_numerical_system(model.modal()?, data.0)
+                .solve_with_defaults()
+                .map_err(|err| format!("{err:?}"))
+                .into(),
+        ))
+    }
+}
+
+/// The theory of state/aux interactions
+#[wasm_bindgen]
+pub struct ThModalStateAuxCategory(Rc<theory::UstrModalDblTheory>);
+
+#[wasm_bindgen]
+impl ThModalStateAuxCategory {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self(Rc::new(theories::th_modal_state_aux()))
+    }
+
+    #[wasm_bindgen]
+    pub fn theory(&self) -> DblTheory {
+        DblTheory(self.0.clone().into())
+    }
+
+    /// Simulates a mass-action ODE system with additional configurations.
+    #[wasm_bindgen(js_name = "massAction")]
+    pub fn state_aux_mass_action(
+        &self,
+        model: &DblModel,
+        data: SwitchingMassActionModelData,
+    ) -> Result<ODEResult, String> {
+        Ok(ODEResult(
+            analyses::ode::PetriNetMassActionFunctionAnalysis::default()
                 .build_numerical_system(model.modal()?, data.0)
                 .solve_with_defaults()
                 .map_err(|err| format!("{err:?}"))

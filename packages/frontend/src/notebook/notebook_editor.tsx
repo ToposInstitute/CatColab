@@ -301,6 +301,7 @@ export function NotebookEditor<T>(props: {
                         };
 
                         const cell = props.notebook.cellContents[cellId];
+						console.log(props.notebook.cellContents);
                         invariant(cell, `Failed to find contents for cell '${cellId}'`);
 
                         if (cell.tag !== "rich-text") {
