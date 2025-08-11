@@ -23,18 +23,14 @@ use std::{collections::HashMap, hash::Hash, rc::Rc};
 use ustr::ustr;
 
 // Some helpful functions
-fn deg_of_mor<Uuid>(
-    model: &DiscreteDblModel<Uuid, UstrFpCategory>, f: &Uuid
-) -> usize
+fn deg_of_mor<Uuid>(model: &DiscreteDblModel<Uuid, UstrFpCategory>, f: &Uuid) -> usize
 where
     Uuid: Eq + Clone + Hash + Ord,
 {
     model.mor_generator_type(f).into_iter().filter(|t| *t == ustr("Degree")).count()
 }
 
-fn sign_of_mor<Uuid>(
-    model: &DiscreteDblModel<Uuid, UstrFpCategory>, f: &Uuid
-) -> usize
+fn sign_of_mor<Uuid>(model: &DiscreteDblModel<Uuid, UstrFpCategory>, f: &Uuid) -> usize
 where
     Uuid: Eq + Clone + Hash + Ord,
 {
@@ -51,9 +47,8 @@ where
  * degree-0 arrows are kept unchanged.
  */
 pub fn degree_atomisation<Uuid>(
-    model: Rc<DiscreteDblModel<Uuid, UstrFpCategory>>
-)
--> UstrDiscreteDblModel
+    model: Rc<DiscreteDblModel<Uuid, UstrFpCategory>>,
+) -> UstrDiscreteDblModel
 where
     Uuid: Eq + Clone + Hash + Ord + Copy,
 {
