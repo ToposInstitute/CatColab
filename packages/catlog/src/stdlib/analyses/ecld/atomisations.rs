@@ -17,18 +17,27 @@ the *height* of the tower.
  */
 
 use crate::dbl::model::{DiscreteDblModel, FgDblModel, MutDblModel, UstrDiscreteDblModel};
-use crate::one::Path;
-use crate::one::category::FgCategory;
+use crate::one::{UstrFpCategory, category::FgCategory};
 use crate::stdlib::theories;
-use std::collections::HashMap;
-use std::rc::Rc;
-use ustr::{Ustr, ustr};
+use std::{collections::HashMap, hash::Hash, rc::Rc};
+use ustr::ustr;
 
 // Some helpful functions
-fn deg_of_mor(model: &UstrDiscreteDblModel, f: &Ustr) -> usize {
+fn deg_of_mor<Uuid>(
+    model: &DiscreteDblModel<Uuid, UstrFpCategory>, f: &Uuid
+) -> usize
+where
+    Uuid: Eq + Clone + Hash + Ord,
+{
     model.mor_generator_type(f).into_iter().filter(|t| *t == ustr("Degree")).count()
 }
-fn sign_of_mor(model: &UstrDiscreteDblModel, f: &Ustr) -> usize {
+
+fn sign_of_mor<Uuid>(
+    model: &DiscreteDblModel<Uuid, UstrFpCategory>, f: &Uuid
+) -> usize
+where
+    Uuid: Eq + Clone + Hash + Ord,
+{
     model
         .mor_generator_type(f)
         .into_iter()
@@ -37,24 +46,27 @@ fn sign_of_mor(model: &UstrDiscreteDblModel, f: &Ustr) -> usize {
         % 2
 }
 
-// TO-DO: change input type to Rc<DiscreteDblModel<Uuid, UstrFpCategory>>
-//        and, more generally, change Ustr to Uuid (etc.) throughout
-
 /** Atomisiation of an ECLD by degree: replace every degree-d arrow by a path
  * of d-many degree-1 arrows, going via (d-1)-many new objects; all the
  * degree-0 arrows are kept unchanged.
  */
-pub fn degree_atomisation<Uuid>(model: Rc<UstrDiscreteDblModel>) -> UstrDiscreteDblModel {
+pub fn degree_atomisation<Uuid>(
+    model: Rc<DiscreteDblModel<Uuid, UstrFpCategory>>
+)
+-> UstrDiscreteDblModel
+where
+    Uuid: Eq + Clone + Hash + Ord + Copy,
+{
     let mut atomised_model: UstrDiscreteDblModel =
         DiscreteDblModel::new(Rc::new(theories::th_deg_del_signed_category()));
 
     // There are some hash maps that will be useful throughout this algorithm:
     // tower_heights: [base object: height of its tower]
-    let mut tower_heights: HashMap<Ustr, usize> = HashMap::new();
+    let mut tower_heights: HashMap<Uuid, usize> = HashMap::new();
     // in_arrows_pos_deg: [object: [positive-degree arrows with object as codomain]]
-    let mut in_arrows_pos_deg: HashMap<Ustr, Vec<Ustr>> = HashMap::new();
+    let mut in_arrows_pos_deg: HashMap<Uuid, Vec<Uuid>> = HashMap::new();
     // in_arrows_pos_deg: [object: [zero-degree arrows with object as codomain]]
-    let mut in_arrows_zero_deg: HashMap<Ustr, Vec<Ustr>> = HashMap::new();
+    let mut in_arrows_zero_deg: HashMap<Uuid, Vec<Uuid>> = HashMap::new();
 
     // Every tower will be of height at least 1, and will have at the very least
     // an empty list of positive-degree (resp. zero-degree) incoming arrows
@@ -100,7 +112,7 @@ pub fn degree_atomisation<Uuid>(model: Rc<UstrDiscreteDblModel>) -> UstrDiscrete
     // We have yet to build any of the towers so, right now, every base is
     // "unchecked".
     // TO-DO: should we really be using a clone here?
-    let mut unchecked_bases: Vec<Ustr> = model.ob_generators().collect::<Vec<_>>().clone();
+    let mut unchecked_bases: Vec<Uuid> = model.ob_generators().collect::<Vec<_>>().clone();
 
     while !unchecked_bases.is_empty() {
         // Since heights will change as we go, we start by resorting the list
@@ -138,11 +150,12 @@ pub fn degree_atomisation<Uuid>(model: Rc<UstrDiscreteDblModel>) -> UstrDiscrete
     // The hash map of towers will be useful when we later come to lifting all
     // positive-degree arrows, so we build this at the same time as adding all
     // these formal derivatives (and their morphisms) to the final model.
-    let mut towers: HashMap<Ustr, Vec<Ustr>> = HashMap::new();
+    let mut towers: HashMap<Uuid, Vec<Uuid>> = HashMap::new();
     for (base, height) in tower_heights.iter_mut() {
         // Firstly, add the base object itself
         towers.insert(*base, vec![*base]);
-        atomised_model.add_ob(*base, ustr("Object"));
+        // TO-DO: fix atomised_model.add_ob
+        // atomised_model.add_ob(*base, ustr("Object"));
         // Then add all the formal derivatives Y_i, along with the morphisms
         // Y_i -> Y_{i-1}
         for _i in 1..=*height {
@@ -176,8 +189,9 @@ pub fn degree_atomisation<Uuid>(model: Rc<UstrDiscreteDblModel>) -> UstrDiscrete
             let new_source = source_tower[height - deg + 1];
             let &new_target = tower.last().unwrap();
             match sign_of_mor(&model, f) {
+                // TO-DO: fix atomised_model.add_mor
                 // TO-DO: again, should we be adding *f or a clone/dereference?
-                0 => atomised_model.add_mor(*f, new_source, new_target, ustr("Degree").into()),
+                // 0 => atomised_model.add_mor(*f, new_source, new_target, ustr("Degree").into()),
                 // TO-DO: how do we create something of negative degree-1? ustr("Degree Negative")???
                 // 1 => atomised_model.add_mor(*f, new_source, new_target, ustr("???"))
                 // TO-DO: replace the following panic with something more sensible
@@ -185,14 +199,15 @@ pub fn degree_atomisation<Uuid>(model: Rc<UstrDiscreteDblModel>) -> UstrDiscrete
             }
         }
 
-        // TO-DO: again, should we be adding *f or a clone/dereference?
         for f in in_arrows_zero_deg.get(base).unwrap() {
-            atomised_model.add_mor(
-                *f,
-                *model.get_dom(f).unwrap(),
-                *model.get_cod(f).unwrap(),
-                Path::Id(ustr("Object")),
-            );
+            // TO-DO: fix atomised_model.add_mor
+            // TO-DO: again, should we be adding *f or a clone/dereference?
+            // atomised_model.add_mor(
+            //     *f,
+            //     *model.get_dom(f).unwrap(),
+            //     *model.get_cod(f).unwrap(),
+            //     Path::Id(ustr("Object")),
+            // );
         }
     }
 
