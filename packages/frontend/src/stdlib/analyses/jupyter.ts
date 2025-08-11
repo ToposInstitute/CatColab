@@ -92,19 +92,15 @@ export function executeAndRetrieve<S, T>(
                     }
                     console.log(binaryData);
                     const decompressed = pako.inflate(binaryData, { to: "string" });
-                    // console.log(decompressed);
                     const data = JSON.parse(decompressed);
                     result = { data };
-                    // console.log(decompressed);
-                    // // // const arr = Uint8Array.fromBase64(gzip);
-                    // // // console.log(gzip);
-                } else {
+                }
                     const content = msg.content as JsonDataContent<S>;
                     const data = content["data"]?.["application/json"];
                     if (data !== undefined) {
                         result = { data };
                     }
-                }
+                
             }
         };
 

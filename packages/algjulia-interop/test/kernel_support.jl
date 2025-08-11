@@ -57,9 +57,10 @@ infer_types!(diagram.pode)
     @test typeof(result.state) == Dict{String, Vector{AbstractArray{SVector{3, Float64}}}}
     jv = JsonValue(result)
 
-    io = IOBuffer()
-    show(io, MIME("application/gzip"), jv)
-    b = String(take!(io))
+    # io = IOBuffer()
+    # show(io, MIME("application/gzip"), jv)
+    # b = String(take!(io))
+    b = state_compress(jv.value.state)
     # b = take!(io)
     @info length(b) / length(JSON3.write(jv))
 end
