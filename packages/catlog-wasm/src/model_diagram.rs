@@ -206,14 +206,12 @@ pub struct ModelDiagramValidationResult(
 
 /// Elaborates a diagram defined by a notebook into a catlog diagram.
 #[wasm_bindgen(js_name = "elaborateDiagram")]
-pub fn elaborate_diagram(doc: &DiagramDocumentContent, theory: &DblTheory) -> DblModelDiagram {
+pub fn elaborate_diagram(judgments: Vec<DiagramJudgment>, theory: &DblTheory) -> DblModelDiagram {
     let mut diagram = DblModelDiagram::new(theory);
-    for cell in doc.notebook.cells() {
-        if let Cell::Formal { id: _, content } = cell {
-            match content {
-                DiagramJudgment::Object(decl) => diagram.add_ob(decl).unwrap(),
-                DiagramJudgment::Morphism(decl) => diagram.add_mor(decl).unwrap(),
-            }
+    for judgment in judgments {
+        match judgment {
+            DiagramJudgment::Object(decl) => diagram.add_ob(&decl).unwrap(),
+            DiagramJudgment::Morphism(decl) => diagram.add_mor(&decl).unwrap(),
         }
     }
     diagram

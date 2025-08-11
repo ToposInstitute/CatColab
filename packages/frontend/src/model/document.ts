@@ -1,5 +1,4 @@
 import { type Accessor, createMemo, createResource } from "solid-js";
-import { unwrap } from "solid-js/store";
 import invariant from "tiny-invariant";
 
 import {
@@ -107,13 +106,9 @@ function enlivenModelDocument(
 
     const validatedModel = createMemo<ValidatedModel | undefined>(
         () => {
-            // NOTE: Reactively depend on formal judgments but, by `unwrap`-ing,
-            // not anything else in the document.
-            formalJudgments();
-
             const coreTheory = theory()?.theory;
             if (coreTheory) {
-                const model = elaborateModel(unwrap(doc), coreTheory);
+                const model = elaborateModel(formalJudgments(), coreTheory);
                 const result = model.validate();
                 return { model, result };
             }
@@ -170,14 +165,12 @@ export async function migrateModelDocument(
     targetTheoryId: string,
     theories: TheoryLibrary,
 ) {
-    const theory = await theories.get(liveDoc.doc.theory);
+    const doc = liveDoc.doc;
+    const theory = await theories.get(doc.theory);
     const targetTheory = await theories.get(targetTheoryId);
 
     // Trivial migration.
-    if (
-        !NotebookUtils.hasFormalCells(liveDoc.doc.notebook) ||
-        theory.inclusions.includes(targetTheoryId)
-    ) {
+    if (!NotebookUtils.hasFormalCells(doc.notebook) || theory.inclusions.includes(targetTheoryId)) {
         liveDoc.changeDoc((doc) => {
             doc.theory = targetTheoryId;
         });
@@ -192,7 +185,7 @@ export async function migrateModelDocument(
     // TODO: We need a general method to propagate changes from catlog models to
     // notebooks. This stop-gap solution only works because pushforward
     // migration doesn't have to create/delete cells, only update types.
-    let model = elaborateModel(liveDoc.doc, theory.theory);
+    let model = elaborateModel(NotebookUtils.getFormalContent(doc.notebook), theory.theory);
     model = migration.migrate(model, targetTheory.theory);
     liveDoc.changeDoc((doc) => {
         doc.theory = targetTheoryId;
