@@ -94,7 +94,6 @@ with lib;
     environment.systemPackages = [
       self.packages.x86_64-linux.automerge
       self.packages.x86_64-linux.backend
-      self.packages.x86_64-linux.migrator
       databaseSetupScript
     ];
 
@@ -110,22 +109,6 @@ with lib;
         User = "postgres";
         ExecStart = lib.getExe databaseSetupScript;
         EnvironmentFile = config.catcolab.environmentFilePath;
-      };
-    };
-
-    systemd.services.migrations = {
-      enable = true;
-      after = [ "database-setup.service" ];
-      wants = [ "database-setup.service" ];
-
-      serviceConfig = {
-        User = "catcolab";
-        Type = "oneshot";
-        ExecStart = "${lib.getExe self.packages.x86_64-linux.migrator} apply";
-        EnvironmentFile = config.catcolab.environmentFilePath;
-        Environment = ''
-          PATH=${lib.makeBinPath [ self.packages.x86_64-linux.automerge ]}:$PATH
-        '';
       };
     };
 

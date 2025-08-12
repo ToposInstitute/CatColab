@@ -12,7 +12,6 @@ let
 
     DUMPFILE="db_$(date +%F_%H-%M-%S).sql"
 
-    ${lib.getExe self.packages.x86_64-linux.migrator} list
     cd ~
 
     echo "database url: $DATABASE_URL"
@@ -30,17 +29,8 @@ let
     rm $DUMPFILE
   '';
 
-  migrationScript = pkgs.writeShellScriptBin "migration-script" ''
-    if $(${lib.getExe self.packages.x86_64-linux.migrator} list) 2>/dev/null | grep -q '✗'; then
-      echo "migration to run"
-    else
-      echo "no migrations to run"
-    fi
-  '';
-
   activationScript = pkgs.writeShellScriptBin "activation-script" ''
     ${lib.getExe backupScript}
-    ${lib.getExe migrationScript}
   '';
 
   testRestartScript = pkgs.writeShellScriptBin "test-restart-script" ''

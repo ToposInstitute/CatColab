@@ -1,7 +1,6 @@
 use axum::extract::Request;
 
-use axum::middleware::{Next, from_fn, from_fn_with_state};
-use axum::routing::any_service;
+use axum::middleware::{Next, from_fn_with_state};
 use axum::{Router, routing::get};
 use axum::{extract::State, response::IntoResponse};
 use clap::{Parser, Subcommand};
@@ -10,13 +9,12 @@ use http::StatusCode;
 use socketioxide::SocketIo;
 use socketioxide::layer::SocketIoLayer;
 use sqlx::postgres::PgPoolOptions;
-use sqlx::{Connection, PgConnection, PgPool, Postgres};
+use sqlx::{PgPool, Postgres};
 use sqlx_migrator::cli::MigrationCommand;
 use sqlx_migrator::migrator::{Migrate, Migrator};
 use sqlx_migrator::{Info, Plan};
 use std::sync::Arc;
 use tokio::sync::watch;
-use tower::Layer;
 use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
 use tracing::{error, info};
@@ -66,6 +64,7 @@ enum Command {
     /// Start the web server (default)
     Serve,
 }
+
 #[tokio::main]
 async fn main() {
     let env_filter = EnvFilter::builder()
@@ -160,6 +159,33 @@ async fn app_status_gate(
     }
 }
 
+async fn auth_middleware(
+    State(firebase_auth): State<Arc<FirebaseAuth>>,
+    mut req: Request<axum::body::Body>,
+    next: axum::middleware::Next,
+) -> impl IntoResponse {
+    match auth::authenticate_from_request(&firebase_auth, &req) {
+        Ok(Some(user)) => {
+            req.extensions_mut().insert(user);
+        }
+        Ok(_) => {}
+        Err(err) => {
+            error!("Authentication error: {err}");
+        }
+    }
+
+    next.run(req).await
+}
+
+async fn status_handler(State(status_rx): State<watch::Receiver<AppStatus>>) -> String {
+    match status_rx.borrow().clone() {
+        AppStatus::Starting => "Starting".into(),
+        AppStatus::Migrating => "Migrating".into(),
+        AppStatus::Running => "Running".into(),
+        AppStatus::Failed(reason) => format!("Failed: {reason}"),
+    }
+}
+
 async fn run_web_server(
     state: app::AppState,
     firebase_auth: Arc<FirebaseAuth>,
@@ -167,28 +193,21 @@ async fn run_web_server(
     let port = web_port();
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await?;
 
-    let router = rpc::router();
-    let (qubit_service, qubit_handle) = router.to_service(state.clone());
+    let rpc_router = rpc::router();
+    let (qubit_service, qubit_handle) = rpc_router.to_service(state.clone());
 
-    let qubit_service = ServiceBuilder::new()
-        .map_request(move |mut req: hyper::Request<_>| {
-            match auth::authenticate_from_request(&firebase_auth, &req) {
-                Ok(Some(user)) => {
-                    req.extensions_mut().insert(user);
-                }
-                Ok(_) => {}
-                Err(err) => {
-                    error!("Authentication error: {err}");
-                }
-            };
-            req
-        })
+    let rpc_with_mw = ServiceBuilder::new()
+        .layer(from_fn_with_state(state.app_status.clone(), app_status_gate))
+        .layer(from_fn_with_state(firebase_auth, auth_middleware))
         .service(qubit_service);
 
-    let rpc_with_mw = from_fn_with_state(state.app_status, app_status_gate).layer(qubit_service);
+    let status_router = Router::new()
+        .route("/status", get(status_handler))
+        .with_state(state.app_status.clone());
 
     let app = Router::new()
         .route("/", get(|| async { "Hello! The CatColab server is running" }))
+        .merge(status_router)
         .nest_service("/rpc", rpc_with_mw)
         .layer(CorsLayer::permissive());
 

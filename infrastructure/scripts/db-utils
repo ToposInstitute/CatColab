@@ -46,12 +46,18 @@ function print_load_help {
   echo "                           local, staging, production"
   echo "                         to pick the most recent dump for that source"
   echo "  -h, --help             Print this help message"
-  echo "  -s, --skip-migrate     Skip running migrations after loading"
+  echo "  -s, --skip-migrations     Skip running migrations after loading"
 }
 
 function print_reset_help {
-  echo "Usage: $0 reset local"
-  echo "Only the local database may be reset."
+  echo "Usage: $0 reset [options]"
+  echo ""
+  echo "Reset the local database by dropping and recreating it."
+  echo ""
+  echo "Options:"
+  echo "  -s, --skip-migrations     Skip running migrations after resetting"
+  echo "  -t, --to <target>      Target to reset (only 'local' is supported)"
+  echo "  -h, --help             Print this help message"
 }
 
 function run_connect() {
@@ -152,7 +158,7 @@ function run_load() {
 
   while [[ ${1-} ]]; do
     case "$1" in
-      "-s"|"--skip-migrate")
+      "-s"|"--skip-migrations")
         skip_migrate=true
         ;;
       "-t" | "--to")
@@ -228,14 +234,31 @@ function run_load() {
 }
 
 function run_reset() {
-  local target="$1"
-  local skip_migrate="${2:-false}"
+  local target="local"
+  local skip_migrate=false
 
-  if [[ "$target" == "-h" || "$target" == "--help" ]]; then
-    echo ""
-    print_reset_help
-    exit 0
-  fi
+  while [[ ${1-} ]]; do
+    case "$1" in
+      "-s"|"--skip-migrations")
+        skip_migrate=true
+        ;;
+      "-t" | "--to")
+        shift
+        target="$1"
+        ;;
+      "-h" | "--help")
+        print_reset_help
+        exit 0
+        ;;
+      *)
+        echo "Unknown argument: $1"
+        echo ""
+        print_load_help
+        exit 1
+        ;;
+    esac
+    shift
+  done
 
   if [[ "$target" != "local" ]]; then
     echo "Error: reset only supports 'local'." >&2

@@ -12,7 +12,7 @@ PostgreSQL and the [`axum`](https://github.com/tokio-rs/axum) web framework.
 4. Change to this directory: `cd packages/backend`
 5. Update the `DATABASE_URL` variable in the file `.env` as needed with your
    database username, password, and port
-6. Run the database migrations: `cargo run -p migrator apply`
+6. Run the database migrations: `cargo run -p backend migrator apply`
 7. Build the backend binary: `cargo build`
 8. Run the unit tests: `cargo test`
 
