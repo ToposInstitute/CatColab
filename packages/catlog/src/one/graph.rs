@@ -608,17 +608,17 @@ where
         });
 
         let edge_errors = dom.edges().flat_map(|e| {
-            if let Some(f) = mapping.edge_map().apply_to_ref(&e) {
-                if cod.has_edge(&f) {
-                    let mut errs = Vec::new();
-                    if mapping.apply_vertex(dom.src(&e)).is_some_and(|v| v != cod.src(&f)) {
-                        errs.push(InvalidGraphMorphism::Src(e.clone()))
-                    }
-                    if mapping.apply_vertex(dom.tgt(&e)).is_some_and(|v| v != cod.tgt(&f)) {
-                        errs.push(InvalidGraphMorphism::Tgt(e.clone()))
-                    }
-                    return errs;
+            if let Some(f) = mapping.edge_map().apply_to_ref(&e)
+                && cod.has_edge(&f)
+            {
+                let mut errs = Vec::new();
+                if mapping.apply_vertex(dom.src(&e)).is_some_and(|v| v != cod.src(&f)) {
+                    errs.push(InvalidGraphMorphism::Src(e.clone()))
                 }
+                if mapping.apply_vertex(dom.tgt(&e)).is_some_and(|v| v != cod.tgt(&f)) {
+                    errs.push(InvalidGraphMorphism::Tgt(e.clone()))
+                }
+                return errs;
             }
             vec![InvalidGraphMorphism::Edge(e)]
         });

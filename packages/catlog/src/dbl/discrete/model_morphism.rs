@@ -438,12 +438,8 @@ where
 
     /// Attempt an object assignment, returning true iff successful.
     fn assign_ob(&mut self, x: DomId, y: CodId) -> bool {
-        if self.injective_ob {
-            if let Some(y_inv) = self.ob_inv.get(&y) {
-                if *y_inv != x {
-                    return false;
-                }
-            }
+        if self.injective_ob && self.ob_inv.get(&y).is_some_and(|y_inv| *y_inv != x) {
+            return false;
         }
         self.map.assign_ob(x.clone(), y.clone());
         self.ob_inv.set(y, x);
