@@ -7,13 +7,7 @@ use tokio::sync::watch;
 use ts_rs::TS;
 use uuid::Uuid;
 
-#[derive(Clone)]
-pub enum AppStatus {
-    Init,
-    RunningMigrations,
-    Ready,
-    Failed(String),
-}
+use crate::AppStatus;
 
 /** Top-level application state.
 
@@ -27,7 +21,7 @@ pub struct AppState {
     /// Socket for communicating with Automerge document server.
     pub automerge_io: SocketIo,
 
-    pub status_rx: watch::Receiver<AppStatus>,
+    pub app_status: watch::Receiver<AppStatus>,
 }
 
 /// Context available to RPC procedures.

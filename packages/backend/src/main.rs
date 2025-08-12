@@ -1,10 +1,22 @@
-use app::AppStatus;
+use axum::extract::Request;
+
+use axum::middleware::{Next, from_fn, from_fn_with_state};
+use axum::routing::any_service;
 use axum::{Router, routing::get};
+use axum::{extract::State, response::IntoResponse};
+use clap::{Parser, Subcommand};
 use firebase_auth::FirebaseAuth;
+use http::StatusCode;
 use socketioxide::SocketIo;
+use socketioxide::layer::SocketIoLayer;
 use sqlx::postgres::PgPoolOptions;
+use sqlx::{Connection, PgConnection, PgPool, Postgres};
+use sqlx_migrator::cli::MigrationCommand;
+use sqlx_migrator::migrator::{Migrate, Migrator};
+use sqlx_migrator::{Info, Plan};
 use std::sync::Arc;
 use tokio::sync::watch;
+use tower::Layer;
 use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
 use tracing::{error, info};
@@ -13,9 +25,18 @@ use tracing_subscriber::filter::{EnvFilter, LevelFilter};
 mod app;
 mod auth;
 mod document;
+mod migrations;
 mod rpc;
 mod socket;
 mod user;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum AppStatus {
+    Starting,
+    Migrating,
+    Running,
+    Failed(String),
+}
 
 /// Port for the web server providing the RPC API.
 fn web_port() -> String {
@@ -30,6 +51,21 @@ fn automerge_io_port() -> String {
     dotenvy::var("AUTOMERGE_IO_PORT").unwrap_or("3000".to_string())
 }
 
+#[derive(Parser, Debug)]
+#[command(name = "catcolab")]
+#[command(about = "CatColab server and migration CLI", version)]
+struct Cli {
+    #[command(subcommand)]
+    command: Option<Command>,
+}
+
+#[derive(Subcommand, Debug)]
+enum Command {
+    /// Run database migrations (proxied to sqlx_migrator)
+    Migrator(MigrationCommand),
+    /// Start the web server (default)
+    Serve,
+}
 #[tokio::main]
 async fn main() {
     let env_filter = EnvFilter::builder()
@@ -44,106 +80,133 @@ async fn main() {
         .await
         .expect("Failed to connect to database");
 
-    let (io_layer, io) = SocketIo::new_layer();
+    let cli = Cli::parse();
 
-    let (status_tx, status_rx) = watch::channel(AppStatus::Init);
-    let state = app::AppState {
-        automerge_io: io,
-        db,
-        status_rx,
-    };
+    let mut migrator = Migrator::default();
+    migrator
+        .add_migrations(migrations::migrations())
+        .expect("Failed to load migrations");
 
-    // We need to wrap FirebaseAuth in an Arc because if it's ever dropped the process which updates it's
-    // jwt keys will be killed. The library is using the anti pattern of implementing both Clone and Drop on the
-    // same struct.
-    // https://github.com/trchopan/firebase-auth/issues/30
-    let firebase_auth =
-        Arc::new(FirebaseAuth::new(&dotenvy::var("FIREBASE_PROJECT_ID").unwrap()).await);
+    match cli.command.unwrap_or(Command::Serve) {
+        Command::Migrator(cmd) => {
+            let mut conn = db.acquire().await.expect("Failed to acquire DB connection");
 
-    socket::setup_automerge_socket(state.clone());
+            cmd.run(&mut *conn, Box::new(migrator)).await.unwrap();
+            return;
+        }
 
-    let main_task = tokio::task::spawn(async {
-        let port = web_port();
-        let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await.unwrap();
+        Command::Serve => {
+            let (io_layer, io) = SocketIo::new_layer();
 
-        let router = rpc::router();
-        let (qubit_service, qubit_handle) = router.to_service(state);
+            let (status_tx, status_rx) = watch::channel(AppStatus::Starting);
+            let state = app::AppState {
+                automerge_io: io,
+                db: db.clone(),
+                app_status: status_rx.clone(),
+            };
 
-        let qubit_service = ServiceBuilder::new()
-            .map_request(move |mut req: hyper::Request<_>| {
-                match auth::authenticate_from_request(&firebase_auth, &req) {
-                    Ok(Some(user)) => {
-                        req.extensions_mut().insert(user);
-                    }
-                    Ok(_) => {}
-                    Err(err) => {
-                        error!("Authentication error: {err}");
-                    }
-                };
-                req
-            })
-            .service(qubit_service);
+            // We need to wrap FirebaseAuth in an Arc because if it's ever dropped the process which updates it's
+            // jwt keys will be killed. The library is using the anti pattern of implementing both Clone and Drop on the
+            // same struct.
+            // https://github.com/trchopan/firebase-auth/issues/30
+            let firebase_auth =
+                Arc::new(FirebaseAuth::new(&dotenvy::var("FIREBASE_PROJECT_ID").unwrap()).await);
 
-        let app = Router::new()
-            .route("/", get(|| async { "Hello! The CatColab server is running" }))
-            .nest_service("/rpc", qubit_service)
-            .layer(CorsLayer::permissive());
+            socket::setup_automerge_socket(state.clone());
 
-        info!("Web server listening at port {port}");
-        axum::serve(listener, app).await.unwrap();
-
-        qubit_handle.stop().unwrap();
-    });
-
-    let automerge_io_task = tokio::task::spawn(async {
-        let port = automerge_io_port();
-        let listener = tokio::net::TcpListener::bind(format!("localhost:{port}")).await.unwrap();
-        let app = Router::new().layer(io_layer);
-        info!("Automerge socket listening at port {port}");
-        axum::serve(listener, app).await.unwrap();
-    });
-
-    let (res_main, res_io) = tokio::join!(main_task, automerge_io_task);
-    res_main.unwrap();
-    res_io.unwrap();
+            tokio::try_join!(
+                run_migrator_apply(db.clone(), migrator, status_tx.clone()),
+                run_web_server(state.clone(), firebase_auth.clone()),
+                run_automerge_socket(io_layer),
+            )
+            .unwrap();
+        }
+    }
 }
 
-use std::{error::Error, net::SocketAddr};
-type BoxError = Box<dyn Error + Send + Sync>;
-type GenericResult<T> = std::result::Result<T, BoxError>;
+async fn run_migrator_apply(
+    db: PgPool,
+    migrator: Migrator<Postgres>,
+    status_tx: watch::Sender<AppStatus>,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let _ = status_tx.send(AppStatus::Migrating);
+    info!("Applying database migrations...");
+
+    let mut conn = db.acquire().await?;
+    migrator.run(&mut conn, &Plan::apply_all()).await.unwrap();
+
+    let _ = status_tx.send(AppStatus::Running);
+    info!("Migrations complete");
+
+    Ok(())
+}
+
+async fn app_status_gate(
+    State(status_rx): State<watch::Receiver<AppStatus>>,
+    req: Request,
+    next: Next,
+) -> impl IntoResponse {
+    // Combining the following 2 lines will anger the rust gods
+    let status = status_rx.borrow().clone();
+    match status {
+        AppStatus::Running => next.run(req).await,
+        AppStatus::Failed(reason) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, format!("App failed to start: {reason}"))
+                .into_response()
+        }
+        AppStatus::Starting | AppStatus::Migrating => {
+            (StatusCode::SERVICE_UNAVAILABLE, "Server not ready yet").into_response()
+        }
+    }
+}
 
 async fn run_web_server(
     state: app::AppState,
     firebase_auth: Arc<FirebaseAuth>,
-) -> GenericResult<()> {
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let port = web_port();
-    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await.unwrap();
-    let qubit_router = rpc::router();
+    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await?;
 
-    let (qubit_service, qubit_handle) = qubit_router.to_service(state);
+    let router = rpc::router();
+    let (qubit_service, qubit_handle) = router.to_service(state.clone());
 
-    let auth_layer = ServiceBuilder::new().map_request(move |mut req: hyper::Request<_>| {
-        match auth::authenticate_from_request(&firebase_auth, &req) {
-            Ok(Some(user)) => {
-                req.extensions_mut().insert(user);
-            }
-            Ok(_) => (),
-            Err(e) => error!("Auth error: {}", e),
-        };
-        req
-    });
+    let qubit_service = ServiceBuilder::new()
+        .map_request(move |mut req: hyper::Request<_>| {
+            match auth::authenticate_from_request(&firebase_auth, &req) {
+                Ok(Some(user)) => {
+                    req.extensions_mut().insert(user);
+                }
+                Ok(_) => {}
+                Err(err) => {
+                    error!("Authentication error: {err}");
+                }
+            };
+            req
+        })
+        .service(qubit_service);
 
-    let rpc_service = auth_layer.service(qubit_service);
+    let rpc_with_mw = from_fn_with_state(state.app_status, app_status_gate).layer(qubit_service);
 
-    // Now nest that service properly
     let app = Router::new()
         .route("/", get(|| async { "Hello! The CatColab server is running" }))
-        .nest_service("/rpc", rpc_service)
+        .nest_service("/rpc", rpc_with_mw)
         .layer(CorsLayer::permissive());
 
     info!("Web server listening at port {port}");
-    axum::serve(listener, app).await.unwrap();
-    qubit_handle.stop().unwrap();
 
+    axum::serve(listener, app).await?;
+    qubit_handle.stop().ok();
+
+    Ok(())
+}
+
+async fn run_automerge_socket(
+    io_layer: SocketIoLayer,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let port = automerge_io_port();
+    let listener = tokio::net::TcpListener::bind(format!("localhost:{port}")).await?;
+    let app = Router::new().layer(io_layer);
+    info!("Automerge socket listening at port {port}");
+    axum::serve(listener, app).await?;
     Ok(())
 }
