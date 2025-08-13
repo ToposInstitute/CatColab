@@ -53,7 +53,7 @@ in
       backup = {
         enable = true;
         rcloneConfFilePath = config.age.secrets.rcloneConf.path;
-        dbBucket = "catcola-next";
+        dbBucket = "catcolab-next";
       };
     };
   };

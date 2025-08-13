@@ -72,14 +72,14 @@ export async function getLiveDoc<Doc extends Document>(
     let docHandle: DocHandle<Doc>;
     if (refDoc.tag === "Live") {
         const docId = refDoc.docId as DocumentId;
-        docHandle = repo.find(docId) as DocHandle<Doc>;
+        docHandle = (await repo.find(docId)) as DocHandle<Doc>;
     } else {
         const init = refDoc.content as unknown as Doc;
         docHandle = localRepo.create(init);
     }
 
     // XXX: copied from automerge-doc-server/src/server.ts:
-    const docBefore = await docHandle.doc();
+    const docBefore = docHandle.doc();
     const docAfter = catlogWasm.migrateDocument(docBefore);
     if ((docBefore as Doc).version !== docAfter.version) {
         const patches = jsonpatch.compare(docBefore as Doc, docAfter);
@@ -88,7 +88,7 @@ export async function getLiveDoc<Doc extends Document>(
         });
     }
 
-    const doc = await makeDocHandleReactive(docHandle);
+    const doc = makeDocHandleReactive(docHandle);
     if (docType !== undefined) {
         invariant(
             doc.type === docType,
@@ -104,8 +104,8 @@ export async function getLiveDoc<Doc extends Document>(
 
 /** Create a Solid Store that tracks an Automerge document.
  */
-export async function makeDocHandleReactive<T extends object>(handle: DocHandle<T>): Promise<T> {
-    const init = await handle.doc();
+export function makeDocHandleReactive<T extends object>(handle: DocHandle<T>): T {
+    const init = handle.doc();
 
     const [store, setStore] = createStore<T>(init as T);
 

@@ -437,12 +437,13 @@ impl<V, E> Path<V, Path<V, E>> {
     where
         V: Eq + Clone,
     {
-        if let Path::Seq(paths) = &self {
-            if !paths.iter().tuple_windows().all(|(p1, p2)| p1.tgt(graph) == p2.src(graph)) {
-                return None;
-            }
+        if let Path::Seq(paths) = &self
+            && !paths.iter().tuple_windows().all(|(p1, p2)| p1.tgt(graph) == p2.src(graph))
+        {
+            None
+        } else {
+            Some(self.flatten())
         }
-        Some(self.flatten())
     }
 }
 

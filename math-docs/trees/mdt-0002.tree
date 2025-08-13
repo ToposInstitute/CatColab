@@ -1,0 +1,16 @@
+\date{2025-07-14}
+\title{The free monoid double monad}
+\author{Kevin Carlson}
+\taxon{definition}
+\import{macros}
+
+\p{
+    The free monoid monad #{\List} on \Set extends, since (as a polynomial functor) 
+    it preserves pullbacks, to a pseudo double monad, also called \List, on 
+    the double category \Span of sets and spans. Concretely, to apply #{\List} to a span 
+    #{A\leftarrow S\to B}, you just compose this span, seen as a functor 
+    #{(\bullet\leftarrow \bullet\to \bullet)\to\Set},
+    with #{\List}, and similarly for the unit and multiplication. (This is always how you get a colax double
+    functor on spans out of a functor between categories with pullbacks; the pseudo-ness is equivalent to 
+    preservation of those pullbacks.)
+}

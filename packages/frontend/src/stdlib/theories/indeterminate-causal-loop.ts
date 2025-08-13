@@ -1,11 +1,11 @@
-import * as catlog from "catlog-wasm";
+import { ThNullableSignedCategory } from "catlog-wasm";
 
 import { Theory } from "../../theory";
 import * as analyses from "../analyses";
 import type { TheoryMeta } from "../types";
 
 export default function createIndeterminateCausalLoopTheory(theoryMeta: TheoryMeta): Theory {
-    const thNullableSignedCategory = new catlog.ThNullableSignedCategory();
+    const thNullableSignedCategory = new ThNullableSignedCategory();
 
     return new Theory({
         ...theoryMeta,

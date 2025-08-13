@@ -1,11 +1,11 @@
-import * as catlog from "catlog-wasm";
+import { ThSignedCategory } from "catlog-wasm";
 
 import { Theory } from "../../theory";
 import * as analyses from "../analyses";
 import type { TheoryMeta } from "../types";
 
 export default function createRegulatoryNetworkTheory(theoryMeta: TheoryMeta): Theory {
-    const thSignedCategory = new catlog.ThSignedCategory();
+    const thSignedCategory = new ThSignedCategory();
 
     return new Theory({
         ...theoryMeta,

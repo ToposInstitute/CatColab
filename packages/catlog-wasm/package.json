@@ -5,6 +5,6 @@
     "version": "0.1.0",
     "type": "module",
     "scripts": {
-        "build:browser": "wasm-pack build ./. --target browser -d ./dist/pkg-browser"
+        "build:browser": "wasm-pack build ./. --target browser"
     }
 }

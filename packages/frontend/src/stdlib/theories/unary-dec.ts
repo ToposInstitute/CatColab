@@ -1,11 +1,11 @@
-import * as catlog from "catlog-wasm";
+import { ThCategoryWithScalars } from "catlog-wasm";
 
 import { Theory } from "../../theory";
 import * as analyses from "../analyses";
 import type { TheoryMeta } from "../types";
 
 export default function createUnaryDECTheory(theoryMeta: TheoryMeta): Theory {
-    const thCategoryWithScalars = new catlog.ThCategoryWithScalars();
+    const thCategoryWithScalars = new ThCategoryWithScalars();
 
     return new Theory({
         ...theoryMeta,

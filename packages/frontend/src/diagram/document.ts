@@ -70,11 +70,7 @@ function enlivenDiagramDocument(
     const { doc } = liveDoc;
 
     const formalJudgments = createMemo<Array<DiagramJudgment>>(
-        () =>
-            doc.notebook.cellOrder
-                .map((cellId) => NotebookUtils.getCellById(doc.notebook, cellId))
-                .filter((cell) => cell.tag === "formal")
-                .map((cell) => cell.content),
+        () => NotebookUtils.getFormalContent(doc.notebook),
         [],
     );
 
@@ -109,11 +105,11 @@ function enlivenDiagramDocument(
             const th = liveModel.theory();
             const validatedModel = liveModel.validatedModel();
             if (!(th && validatedModel?.result.tag === "Ok")) {
-                // Abort immediately if the model itself is invalid.
+                // Abort immediately if the theory is undefined or the model is invalid.
                 return undefined;
             }
             const { model } = validatedModel;
-            const diagram = elaborateDiagram(doc, th.theory);
+            const diagram = elaborateDiagram(formalJudgments(), th.theory);
             diagram.inferMissingFrom(model);
             const result = diagram.validateIn(model);
             return { diagram, result };

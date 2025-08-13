@@ -21,7 +21,7 @@ import { TheoryLibraryContext, stdTheories } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
 import { PermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
-import { type LiveModelDocument, getLiveModel } from "./document";
+import { type LiveModelDocument, getLiveModel, migrateModelDocument } from "./document";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
 import { TheorySelectorDialog } from "./theory_selector";
@@ -82,7 +82,7 @@ export function ModelPane(props: {
 
     const selectableTheories = () => {
         if (NotebookUtils.hasFormalCells(liveDoc().doc.notebook)) {
-            return props.liveModel.theory()?.inclusions ?? [];
+            return props.liveModel.theory()?.migrationTargets ?? [];
         } else {
             // If the model has no formal cells, allow any theory to be selected.
             return undefined;
@@ -105,11 +105,7 @@ export function ModelPane(props: {
                 </div>
                 <TheorySelectorDialog
                     theoryMeta={stdTheories.getMetadata(liveDoc().doc.theory)}
-                    setTheory={(id) => {
-                        liveDoc().changeDoc((model) => {
-                            model.theory = id;
-                        });
-                    }}
+                    setTheory={(id) => migrateModelDocument(liveDoc(), id, stdTheories)}
                     theories={selectableTheories()}
                 />
             </div>

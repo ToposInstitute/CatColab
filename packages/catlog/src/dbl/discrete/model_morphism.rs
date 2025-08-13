@@ -169,7 +169,7 @@ where
                 None
             }
         });
-        let th_cat = cod.theory().category();
+        let th_cat = &cod.theory().0;
         let mor_type_errors = dom.mor_generators().filter_map(|f| {
             if let Some(g) = mapping.mor_generator_map.get(&f)
                 && cod.has_mor(g)
@@ -422,7 +422,7 @@ where
                         .expect("Codomain should already be assigned");
 
                     let cod_graph = self.cod.generating_graph();
-                    let th_cat = self.cod.theory().category();
+                    let th_cat = &self.cod.theory().0;
                     for path in bounded_simple_paths(cod_graph, &w, &z, self.max_path_len) {
                         if th_cat.morphisms_are_equal(self.cod.mor_type(&path), mor_type.clone())
                             && !(self.faithful && path.is_empty())
@@ -438,12 +438,8 @@ where
 
     /// Attempt an object assignment, returning true iff successful.
     fn assign_ob(&mut self, x: DomId, y: CodId) -> bool {
-        if self.injective_ob {
-            if let Some(y_inv) = self.ob_inv.get(&y) {
-                if *y_inv != x {
-                    return false;
-                }
-            }
+        if self.injective_ob && self.ob_inv.get(&y).is_some_and(|y_inv| *y_inv != x) {
+            return false;
         }
         self.map.assign_ob(x.clone(), y.clone());
         self.ob_inv.set(y, x);

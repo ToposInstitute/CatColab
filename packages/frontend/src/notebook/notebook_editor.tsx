@@ -85,30 +85,28 @@ export function NotebookEditor<T>(props: {
 }) {
     let notebookRef!: HTMLDivElement;
 
-    const [activeCell, setActiveCell] = createSignal(props.notebook.cellOrder.length > 0 ? 0 : -1);
+    const [activeCell, setActiveCell] = createSignal<number | null>(null);
     const [currentDropTarget, setCurrentDropTarget] = createSignal<string | null>(null);
     const [tether, setTether] = createSignal<DragLocationHistory | null>(null);
 
     // Set up commands and their keyboard shortcuts.
     const addAfterActiveCell = (cell: Cell<T>) => {
+        const [i, n] = [activeCell(), props.notebook.cellOrder.length];
+        const cellIndex = i != null ? Math.min(i + 1, n) : n;
         props.changeNotebook((nb) => {
-            const i = Math.min(activeCell() + 1, nb.cellOrder.length);
-            NotebookUtils.insertCellAtIndex(nb, cell, i);
-            setActiveCell(i);
+            NotebookUtils.insertCellAtIndex(nb, cell, cellIndex);
         });
+        setActiveCell(cellIndex);
     };
 
     const addOrReplaceActiveCell = (cell: Cell<T>) => {
-        const c = NotebookUtils.tryGetCellByIndex(props.notebook, activeCell());
-        if (!c) {
+        const cellIndex = activeCell() ?? -1;
+        const existingCell =
+            cellIndex >= 0 ? NotebookUtils.tryGetCellByIndex(props.notebook, cellIndex) : null;
+        if (existingCell?.tag === "stem") {
+            replaceCellWith(cellIndex, cell);
+        } else {
             addAfterActiveCell(cell);
-            return;
-        }
-
-        if (c.tag === "formal" || c.tag === "rich-text") {
-            addAfterActiveCell(cell);
-        } else if (c.tag === "stem") {
-            replaceCellWith(activeCell(), cell);
         }
     };
 

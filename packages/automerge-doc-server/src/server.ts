@@ -73,7 +73,7 @@ export class AutomergeServer implements SocketIOHandlers {
             };
         }
 
-        const docJson = await handle.doc();
+        const docJson = handle.doc();
 
         return {
             Ok: {
@@ -84,13 +84,13 @@ export class AutomergeServer implements SocketIOHandlers {
     }
 
     async cloneDoc(docId: string): Promise<NewDocSocketResponse> {
-        const handle = this.repo.find(docId as DocumentId);
+        const handle = await this.repo.find(docId as DocumentId);
         if (!handle) {
             return { Err: `cloneDoc: Failed to find doc handle in repo for doc_id '${docId}'` };
         }
 
         const clonedHandle = this.repo.clone(handle);
-        const clonedDocJson = await clonedHandle.doc();
+        const clonedDocJson = clonedHandle.doc();
 
         return {
             Ok: {
@@ -112,7 +112,7 @@ export class AutomergeServer implements SocketIOHandlers {
             };
         }
 
-        handle = this.repo.find(docId as DocumentId);
+        handle = await this.repo.find(docId as DocumentId);
         if (!handle) {
             return { Err: `Failed to find doc handle in repo for doc_id '${docId}'` };
         }
@@ -132,7 +132,7 @@ export class AutomergeServer implements SocketIOHandlers {
         // are captured by Automerge.
         //
         // XXX: frontend/src/api/document.ts needs to be kept up to date with this
-        const docBefore = await handle.doc();
+        const docBefore = handle.doc();
         const docAfter = notbookTypes.migrateDocument(docBefore);
         if ((docBefore as any).version !== docAfter.version) {
             const patches = jsonpatch.compare(docBefore as any, docAfter);
