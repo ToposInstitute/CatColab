@@ -207,3 +207,21 @@ pub fn degree_atomisation(
     }
     atomised_model
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::dbl::discrete::model::DiscreteDblModel;
+    use crate::one::UstrFpCategory;
+    use uuid::Uuid;
+
+    use super::degree_atomisation;
+
+    fn sample_ecld_uuid() -> DiscreteDblModel<Uuid, UstrFpCategory> {
+        panic!();
+    }
+
+    #[test]
+    fn ecld_atomisation_test() {
+        panic!()
+    }
+}
