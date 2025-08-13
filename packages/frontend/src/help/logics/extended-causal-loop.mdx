@@ -1,0 +1,22 @@
+import { A } from "@solidjs/router";
+import { HelpAnalysisById } from "../logic_help_detail"
+
+## Description
+
+**Extended causal loop diagrams** (ECLDs) are an extension of <A href="../causal-loop">causal loop diagrams</A> that allow causalities (which are either positive or negative) to be labelled by two natural numbers: one corresponding to the *degree* of the effect, and the other to the *delay*.
+
+For example, in the intended linear ODE semantics for ECLDs, an arrow $A\xrightarrow{(+,d,k)} B$ means that $A$ positively affects the $d$-th derivative of $B$ with a delay following an Erlang distribution of shape $k$.
+
+Note that, although <A href="../causal-loop-delays">causal loop diagrams with delays</A> also have a notion of "delayed" causality, there is not *one* single way of translating between these logics: given an ECLD we might wish to consider all causalities of delay order $<n$ as "fast" and those of delay order $\geqslant n$ as "slow", and this makes sense for any $n=0,1,2,\ldots,\infty$.
+
+
+### Further reading
+
+- For now, see the CatColab mathematical documentation: [next.catcolab.org/math/dct-000C.xml](https://next.catcolab.org/math/dct-000C.xml)
+
+
+## Instances and analyses
+
+### Analyses
+
+<HelpAnalysisById theory={props.theory} analysisId="diagram"/>
