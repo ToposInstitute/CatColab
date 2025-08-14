@@ -1,4 +1,4 @@
-import { SessionManager, type ServerConnection } from "@jupyterlab/services";
+import { type ServerConnection, SessionManager } from "@jupyterlab/services";
 import type { IKernelConnection, IKernelOptions } from "@jupyterlab/services/lib/kernel/kernel";
 import {
     type Accessor,
@@ -22,33 +22,34 @@ export function createKernel(
     kernelOptions: IKernelOptions,
 ): [Resource<IKernelConnection>, ResourceRefetch<IKernelConnection>] {
     const [kernel, { refetch: restartKernel }] = createResource(async () => {
-        const t0 = Date.now();
         const jupyter = await import("@jupyterlab/services");
 
         const serverSettings = jupyter.ServerConnection.makeSettings(serverOptions);
 
-        // const kernelManager = new jupyter.KernelManager({ serverSettings });
-        // const kernel = await kernelManager.startNew(kernelOptions);
-
         const kernelManager = new jupyter.KernelManager({ serverSettings });
-        // const kernel = await kernelManager.startNew(kernelOptions);
         const sessionManager = new SessionManager({
             serverSettings,
             kernelManager,
-            standby: "never", // don't background-pause in Node
         });
 
         const session = await sessionManager.startNew({
             name: "remote-api",
             path: "remote-api.ipynb",
             type: "notebook",
-            kernel: { name: "julia-1.11" },
+            kernel: kernelOptions,
         });
 
-        const kernel = session.kernel!;
-        kernel.anyMessage.connect((_, msg) => {
-            console.log("ANY", (Date.now() - t0) / 1000, msg.direction, msg.msg.header.msg_type);
-        });
+        if (!session.kernel) {
+            throw new Error("session has not kernel?");
+        }
+
+        const kernel = session.kernel;
+
+        // Useful for debugging jupyter stuff
+        // const t0 = Date.now();
+        // kernel.anyMessage.connect((_, msg) => {
+        //     console.log("[Jupyter message]", (Date.now() - t0) / 1000, msg.direction, msg.msg.header.msg_type);
+        // });
 
         return kernel;
     });
@@ -92,25 +93,59 @@ export function executeAndRetrieve<S, T>(
         if (code === undefined) {
             return undefined;
         }
+
         const future = kernel.requestExecute({ code });
 
         // Set up handler for result from kernel.
+        // XXX: we are abusing message types to exfiltrate data
         let result: { data: S } | undefined;
+        let streamedResult = "";
+        let error: string | undefined = undefined;
         future.onIOPub = (msg) => {
-            if (
-                msg.header.msg_type === "display_data" &&
-                msg.parent_header.msg_id === future.msg.header.msg_id
-            ) {
+            if (msg.parent_header.msg_id !== future.msg.header.msg_id) {
+                return;
+            }
+
+            // if a display_data is received, use it's data as the result. In this case msg_type "stream"
+            // will be collected but not used. This only works for relatively small amounts of data, it
+            // could be the case that nothing should be returned like this. The json seriailization done
+            // by IJulia appears to be cripillingly slow for unknown reasons.
+            //
+            // This allows returning something while still being able to inspect print statements from
+            // the client.
+            if (msg.header.msg_type === "display_data") {
                 const content = msg.content as JsonDataContent<S>;
                 const data = content["data"]?.["application/json"];
                 if (data) {
+                    // biome-ignore lint/suspicious/noExplicitAny: maybe it's JSON, maybe it's not! Thanks Julia!
                     result = { data: JSON.parse(data as any) };
                 }
+            }
+
+            // this catches any print statements, which may be broken up into an arbitrary number of
+            // messages. To return large data stringify the JSON result and `println` it. If this method is used,
+            // ensure that no other `print` statements are used, as they will also be collected here.
+            if (msg.header.msg_type === "stream") {
+                // biome-ignore lint/suspicious/noExplicitAny: this should type narrow, but doesn't
+                const text = (msg.content as any).text;
+                if (text) {
+                    streamedResult += text;
+                }
+            }
+
+            if (msg.header.msg_type === "execute_result") {
+                error =
+                    "Unexpected value returned from execute, no value was expected. You need to use a more annoying method of getting the result";
             }
         };
 
         // Wait for execution to finish and process result.
         const reply = await future.done;
+
+        if (error) {
+            throw new Error(error);
+        }
+
         if (reply.content.status === "abort") {
             throw new Error("Execution was aborted");
         }
@@ -119,6 +154,11 @@ export function executeAndRetrieve<S, T>(
             const msg = reply.content.traceback.join("\n");
             throw new Error(msg);
         }
+
+        if (!result && streamedResult) {
+            result = { data: JSON.parse(streamedResult) };
+        }
+
         if (result === undefined) {
             throw new Error("Data was not received from the kernel");
         }

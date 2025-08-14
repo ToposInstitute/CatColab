@@ -53,4 +53,5 @@ jupyter server \
     --ServerApp.disable_check_xsrf=True \
     --ServerApp.allow_origin="$ORIGIN" \
     --ServerApp.allow_credentials=True \
+    --ServerApp.iopub_data_rate_limit=1000000000 \
     --MultiKernelManager.default_kernel_name="$KERNEL"

@@ -343,7 +343,6 @@ const makeInitCode = () =>
     `
     import IJulia
     import JSON3
-    IJulia.register_jsonmime(MIME"application/json"())
 
     using CatColabInterop
 
@@ -353,6 +352,8 @@ const makeInitCode = () =>
 /** Julia code run to perform a simulation. */
 const makeSimulationCode = (data: SimulationData) =>
     `
+    IJulia.set_max_stdio(1_000_000_000)
+
     system = Analysis(ThDecapode(), raw"""${JSON.stringify(data)}""");
     simulator = evalsim(system.pode);
 
@@ -360,7 +361,8 @@ const makeSimulationCode = (data: SimulationData) =>
 
     soln = run_sim(f, system.init, system.duration, ComponentArray(k=0.5,));
 
-    display(MIME"application/json"(), JSON3.write(SimResult(soln, system)))
+    result = JSON3.write(SimResult(soln, system))
+    println(result)
     `;
 
 /** Create data to send to the Julia kernel. */
