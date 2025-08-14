@@ -113,7 +113,7 @@ end
 ## Prefined meshes
 
 const PREDEFINED_MESHES = Dict(
-    :Rectangle => Rectangle(100, 100, 2, 2),
+    :Rectangle => Rectangle(4, 4, 2, 2),
     :Icosphere6 => Sphere(6, 1.0),
     :Icosphere7 => Sphere(7, 1.0),
     :Icosphere8 => Sphere(8, 1.0),

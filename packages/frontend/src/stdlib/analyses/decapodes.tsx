@@ -342,11 +342,12 @@ type SimulationData = {
 const makeInitCode = () =>
     `
     import IJulia
+    import JSON3
     IJulia.register_jsonmime(MIME"application/json"())
 
     using CatColabInterop
 
-    JsonValue(supported_decapodes_geometries())
+    display(MIME"application/json"(), JSON3.write(supported_decapodes_geometries()))
     `;
 
 /** Julia code run to perform a simulation. */
@@ -359,7 +360,7 @@ const makeSimulationCode = (data: SimulationData) =>
 
     soln = run_sim(f, system.init, system.duration, ComponentArray(k=0.5,));
 
-    JsonValue(SimResult(soln, system))
+    display(MIME"application/json"(), JSON3.write(SimResult(soln, system)))
     `;
 
 /** Create data to send to the Julia kernel. */

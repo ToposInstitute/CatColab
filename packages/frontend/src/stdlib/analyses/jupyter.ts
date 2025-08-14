@@ -1,4 +1,4 @@
-import type { ServerConnection } from "@jupyterlab/services";
+import { SessionManager, type ServerConnection } from "@jupyterlab/services";
 import type { IKernelConnection, IKernelOptions } from "@jupyterlab/services/lib/kernel/kernel";
 import {
     type Accessor,
@@ -22,12 +22,33 @@ export function createKernel(
     kernelOptions: IKernelOptions,
 ): [Resource<IKernelConnection>, ResourceRefetch<IKernelConnection>] {
     const [kernel, { refetch: restartKernel }] = createResource(async () => {
+        const t0 = Date.now();
         const jupyter = await import("@jupyterlab/services");
 
         const serverSettings = jupyter.ServerConnection.makeSettings(serverOptions);
 
+        // const kernelManager = new jupyter.KernelManager({ serverSettings });
+        // const kernel = await kernelManager.startNew(kernelOptions);
+
         const kernelManager = new jupyter.KernelManager({ serverSettings });
-        const kernel = await kernelManager.startNew(kernelOptions);
+        // const kernel = await kernelManager.startNew(kernelOptions);
+        const sessionManager = new SessionManager({
+            serverSettings,
+            kernelManager,
+            standby: "never", // don't background-pause in Node
+        });
+
+        const session = await sessionManager.startNew({
+            name: "remote-api",
+            path: "remote-api.ipynb",
+            type: "notebook",
+            kernel: { name: "julia-1.11" },
+        });
+
+        const kernel = session.kernel!;
+        kernel.anyMessage.connect((_, msg) => {
+            console.log("ANY", (Date.now() - t0) / 1000, msg.direction, msg.msg.header.msg_type);
+        });
 
         return kernel;
     });
@@ -77,13 +98,13 @@ export function executeAndRetrieve<S, T>(
         let result: { data: S } | undefined;
         future.onIOPub = (msg) => {
             if (
-                msg.header.msg_type === "execute_result" &&
+                msg.header.msg_type === "display_data" &&
                 msg.parent_header.msg_id === future.msg.header.msg_id
             ) {
                 const content = msg.content as JsonDataContent<S>;
                 const data = content["data"]?.["application/json"];
-                if (data !== undefined) {
-                    result = { data };
+                if (data) {
+                    result = { data: JSON.parse(data as any) };
                 }
             }
         };
