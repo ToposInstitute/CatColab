@@ -1,6 +1,6 @@
 import { type ServerConnection, SessionManager } from "@jupyterlab/services";
 import type { IKernelConnection, IKernelOptions } from "@jupyterlab/services/lib/kernel/kernel";
-import { ISessionConnection } from "@jupyterlab/services/lib/session/session";
+import type { ISessionConnection } from "@jupyterlab/services/lib/session/session";
 import {
     type Accessor,
     type Resource,
@@ -49,10 +49,15 @@ export function createKernel(
         const kernel = session.kernel;
 
         // Useful for debugging jupyter stuff
-        // const t0 = Date.now();
-        // kernel.anyMessage.connect((_, msg) => {
-        //     console.log("[Jupyter message]", (Date.now() - t0) / 1000, msg.direction, msg.msg.header.msg_type);
-        // });
+        const t0 = Date.now();
+        kernel.anyMessage.connect((_, msg) => {
+            console.log(
+                "[Jupyter message]",
+                (Date.now() - t0) / 1000,
+                msg.direction,
+                msg.msg.header.msg_type,
+            );
+        });
 
         return kernel;
     });
@@ -107,26 +112,10 @@ export function executeAndRetrieve<S, T>(
         // XXX: we are abusing message types to exfiltrate data
         let result: { data: S } | undefined;
         let streamedResult = "";
-        let error: string | undefined = undefined;
+        const error: string | undefined = undefined;
         future.onIOPub = (msg) => {
             if (msg.parent_header.msg_id !== future.msg.header.msg_id) {
                 return;
-            }
-
-            // if a display_data is received, use it's data as the result. In this case msg_type "stream"
-            // will be collected but not used. This only works for relatively small amounts of data, it
-            // could be the case that nothing should be returned like this. The json seriailization done
-            // by IJulia appears to be cripillingly slow for unknown reasons.
-            //
-            // This allows returning something while still being able to inspect print statements from
-            // the client.
-            if (msg.header.msg_type === "display_data") {
-                const content = msg.content as JsonDataContent<S>;
-                const data = content["data"]?.["application/json"];
-                if (data) {
-                    // biome-ignore lint/suspicious/noExplicitAny: maybe it's JSON, maybe it's not! Thanks Julia!
-                    result = { data: JSON.parse(data as any) };
-                }
             }
 
             // this catches any print statements, which may be broken up into an arbitrary number of
@@ -140,9 +129,19 @@ export function executeAndRetrieve<S, T>(
                 }
             }
 
+            // In this case msg_type "stream" will be collected but not used. This only works for
+            // relatively small amounts of data, it could be the case that nothing should be returned
+            // like this. The json seriailization done by IJulia appears to be cripillingly slow for
+            // unknown reasons.
+            //
+            // This allows returning something while still being able to inspect print statements from
+            // the client.
             if (msg.header.msg_type === "execute_result") {
-                error =
-                    "Unexpected value returned from execute, no value was expected. You need to use a more annoying method of getting the result";
+                const content = msg.content as JsonDataContent<S>;
+                const data = content["data"]?.["application/json"];
+                if (data) {
+                    result = { data };
+                }
             }
         };
 
