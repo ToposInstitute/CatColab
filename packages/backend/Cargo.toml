@@ -31,7 +31,7 @@ sqlx_migrator = { version = "0.17.0", features = ["postgres"] }
 thiserror = "1.0.64"
 tokio = { version = "1.40.0", features = ["full"] }
 tower = { version = "0.5.1", features = ["util"] }
-tower-http = { version = "0.6.1", features = ["cors", "trace"] }
+tower-http = { version = "0.6.1", features = ["cors", "trace", "fs"] }
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 ts-rs = { version = "10.1.0", features = [

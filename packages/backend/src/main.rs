@@ -1,5 +1,7 @@
 use axum::extract::Request;
 
+
+use std::path::Path;
 use axum::middleware::{Next, from_fn_with_state};
 use axum::{Router, routing::get};
 use axum::{extract::State, response::IntoResponse};
@@ -15,7 +17,7 @@ use sqlx_migrator::migrator::{Migrate, Migrator};
 use sqlx_migrator::{Info, Plan};
 use std::sync::Arc;
 use tokio::sync::watch;
-use tower::ServiceBuilder;
+use tower::{ServiceBuilder, ServiceExt};
 use tower_http::cors::CorsLayer;
 use tracing::{error, info};
 use tracing_subscriber::filter::{EnvFilter, LevelFilter};
@@ -186,6 +188,9 @@ async fn status_handler(State(status_rx): State<watch::Receiver<AppStatus>>) -> 
     }
 }
 
+use axum::routing::get_service;
+use tower_http::services::{ServeDir, ServeFile};
+
 async fn run_web_server(
     state: app::AppState,
     firebase_auth: Arc<FirebaseAuth>,
@@ -205,11 +210,26 @@ async fn run_web_server(
         .route("/status", get(status_handler))
         .with_state(state.app_status.clone());
 
-    let app = Router::new()
-        .route("/", get(|| async { "Hello! The CatColab server is running" }))
+    let mut app = Router::new()
         .merge(status_router)
-        .nest_service("/rpc", rpc_with_mw)
-        .layer(CorsLayer::permissive());
+        .nest_service("/rpc", rpc_with_mw);
+
+    
+    if let Some(spa_dir) = spa_directory() {
+        let index = Path::new(&spa_dir).join("index.html");
+        let spa_service = get_service(
+            ServeDir::new(&spa_dir)
+                .not_found_service(ServeFile::new(index))
+        );
+
+        info!("Serving frontend from directory: {spa_dir}");
+        app = app.nest_service("/", spa_service);
+    } else {
+        info!("frontend directory not found; keeping default text route at /");
+        app = app.route("/", get(|| async { "Hello! The CatColab server is running" }));
+    }
+
+    app = app.layer(CorsLayer::permissive());
 
     info!("Web server listening at port {port}");
 
@@ -217,6 +237,19 @@ async fn run_web_server(
     qubit_handle.stop().ok();
 
     Ok(())
+}
+
+
+ 
+fn spa_directory() -> Option<String> {
+    // Prefer SPA_DIR, otherwise default to "dist"
+    let candidate = dotenvy::var("SPA_DIR").unwrap_or_else(|_| "dist".to_string());
+    let path = Path::new(&candidate);
+    if path.exists() && path.is_dir() {
+        Some(candidate)
+    } else {
+        None
+    }
 }
 
 async fn run_automerge_socket(

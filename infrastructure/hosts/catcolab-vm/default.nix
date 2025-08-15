@@ -23,13 +23,12 @@
 
   catcolab = {
     enable = true;
+    hostname = "localvm.catcolab.org";
     backend = {
       port = 8000;
-      hostname = "backend-next.catcolab.org";
     };
     automerge = {
       port = 8010;
-      hostname = "automerge-next.catcolab.org";
     };
     environmentFilePath = /etc/catcolab/catcolab-secrets.env;
     host = {

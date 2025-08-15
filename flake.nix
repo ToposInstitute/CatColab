@@ -196,7 +196,7 @@
           inherit backendPkg;
 
           backend = pkgsLinux.callPackage ./packages/backend/default.nix {
-            inherit craneLib cargoArtifacts;
+            inherit craneLib cargoArtifacts self;
             pkgs = pkgsLinux;
           };
 
