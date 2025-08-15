@@ -116,11 +116,11 @@ with lib;
       enable = true;
       wantedBy = [ "multi-user.target" ];
       after = [
-        "migrations.service"
+        "database-setup.service"
         "network-online.target"
       ];
       wants = [
-        "migrations.service"
+        "database-setup.service"
         "network-online.target"
       ];
 

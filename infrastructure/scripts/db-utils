@@ -68,16 +68,8 @@ function run_connect() {
   fi
 
   case "$target" in
-    local)
-      load_target_env local
-      psql
-      ;;
-    staging)
-      load_target_env staging
-      psql
-      ;;
-    production)
-      load_target_env production
+    local|vm|staging|production)
+      load_target_env "$target"
       psql
       ;;
     *)
@@ -127,19 +119,9 @@ function run_dump() {
   fi
 
   case "$target" in
-    local)
-      echo "Dumping local to $dump_file..."
-      load_target_env local
-      pg_dump --clean --if-exists > "$dump_file"
-      ;;
-    staging)
-      echo "Dumping staging to $dump_file..."
-      load_target_env staging
-      pg_dump --clean --if-exists > "$dump_file"
-      ;;
-    production)
-      echo "Dumping production to $dump_file..."
-      load_target_env production
+    local|vm|staging|production)
+      echo "Dumping $target to $dump_file..."
+      load_target_env "$target"
       pg_dump --clean --if-exists > "$dump_file"
       ;;
     *)
@@ -209,9 +191,9 @@ function run_load() {
   fi
 
   case "$target" in
-    local)
-      load_target_env local
-      echo "Loading into local..."
+    local|vm)
+      load_target_env "$target"
+      echo "Loading into $target..."
       psql --dbname="$PGDATABASE" -f "$dump_file"
 
       if [[ "$skip_migrate" != "true" ]]; then
@@ -228,6 +210,65 @@ function run_load() {
       echo "Unknown target: $target"
       echo ""
       print_load_help
+      exit 1
+      ;;
+  esac
+}
+
+function run_test_deploy() {
+  local to_branch="main"
+  local from_branch="$(git branch --show-current)"
+  local dump_file=""
+
+  while [[ ${1-} ]]; do
+    case "$1" in
+      "-f" | "--from")
+        shift
+        target="$1"
+        ;;
+      "-t" | "--to")
+        shift
+        dump_file="$1"
+        ;;
+      "-h" | "--help")
+        print_dump_help
+        exit 0
+        ;;
+      *)
+        echo "Unknown argument: $1"
+        echo ""
+        print_dump_help
+        exit 1
+        ;;
+    esac
+    shift
+  done
+
+  if [[ -n $(git status --porcelain --untracked-files=no) ]]; then
+      echo "Repo is dirty (tracked files changed)"
+  else
+      echo "Repo is clean"
+  fi
+
+  local dumps_dir="$(find_git_root)/dumps"
+  mkdir -p "$dumps_dir"
+
+  if [[ -z $dump_file ]]; then
+    dump_file="${dumps_dir}/${target}_dump_$(date +%Y%m%d_%H%M%S).sql"
+  else
+    dump_file="${dumps_dir}/${dump_file}"
+  fi
+
+  case "$target" in
+    local|vm|staging|production)
+      echo "Dumping $target to $dump_file..."
+      load_target_env "$target"
+      pg_dump --clean --if-exists > "$dump_file"
+      ;;
+    *)
+      echo "Unknown target: $target"
+      echo ""
+      print_dump_help
       exit 1
       ;;
   esac

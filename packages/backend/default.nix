@@ -13,7 +13,7 @@ in
 craneLib.buildPackage {
   inherit cargoArtifacts pname version;
 
-  cargoExtraArgs = "-p catcolab-backend";
+  cargoExtraArgs = "-p backend";
 
   nativeBuildInputs = [
     pkgs.pkg-config

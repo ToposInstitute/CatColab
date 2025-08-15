@@ -83,6 +83,10 @@ function load_target_env() {
     local)
       load_env DATABASE_URL "$(find_git_root)/packages/backend/.env"
       ;;
+    vm)
+      load_env DATABASE_URL "$(find_git_root)/infrastructure/secrets/example-secrets.env"
+      export PGPORT="5433"
+      ;;
     staging)
       load_env DATABASE_URL "$(find_git_root)/infrastructure/secrets/.env.next.age"
 

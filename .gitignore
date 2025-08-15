@@ -99,3 +99,9 @@ instrument.mjs
 
 # history for the interactive nixos test python shell
 .nixos-test-history
+
+# output from nix build commands
+result
+
+# image used by nix vm
+/catcolab.qcow2

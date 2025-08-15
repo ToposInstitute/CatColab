@@ -96,6 +96,7 @@
           buildInputs =
             with pkgs;
             [
+              darkhttpd
               lld
               rustToolchain
               openssl
@@ -147,6 +148,18 @@
           '';
         };
 
+      backendPkg = pkgsLinux.stdenv.mkDerivation {
+        pname = "backend-pkg";
+        version = "0.1.0";
+
+        src = ./packages/backend/pkg;
+
+        installPhase = ''
+          mkdir -p $out
+          cp -r * $out/
+        '';
+      };
+
       healthcheckWrapper =
         base:
         let
@@ -180,17 +193,28 @@
       # node ./result/main.cjs
       packages = {
         x86_64-linux = {
+          inherit backendPkg;
+
           backend = pkgsLinux.callPackage ./packages/backend/default.nix {
             inherit craneLib cargoArtifacts;
             pkgs = pkgsLinux;
           };
 
-          notebook-types = pkgsLinux.callPackage ./packages/notebook-types/default.nix {
+          notebook-types-node = pkgsLinux.callPackage ./packages/notebook-types/default.nix {
+            inherit craneLib cargoArtifacts;
+            pkgs = pkgsLinux;
+          };
+
+          catlog-wasm-browser = pkgsLinux.callPackage ./packages/catlog-wasm/default.nix {
             inherit craneLib cargoArtifacts;
             pkgs = pkgsLinux;
           };
 
           automerge = pkgsLinux.callPackage ./packages/automerge-doc-server/default.nix {
+            inherit inputs rustToolchainLinux self;
+          };
+
+          frontend = pkgsLinux.callPackage ./packages/frontend/default.nix {
             inherit inputs rustToolchainLinux self;
           };
         };
