@@ -1,5 +1,6 @@
 import { type ServerConnection, SessionManager } from "@jupyterlab/services";
 import type { IKernelConnection, IKernelOptions } from "@jupyterlab/services/lib/kernel/kernel";
+import { ISessionConnection } from "@jupyterlab/services/lib/session/session";
 import {
     type Accessor,
     type Resource,
@@ -21,6 +22,8 @@ export function createKernel(
     serverOptions: ServerSettings,
     kernelOptions: IKernelOptions,
 ): [Resource<IKernelConnection>, ResourceRefetch<IKernelConnection>] {
+    let session: ISessionConnection | undefined = undefined;
+
     const [kernel, { refetch: restartKernel }] = createResource(async () => {
         const jupyter = await import("@jupyterlab/services");
 
@@ -32,7 +35,7 @@ export function createKernel(
             kernelManager,
         });
 
-        const session = await sessionManager.startNew({
+        session = await sessionManager.startNew({
             name: "remote-api",
             path: "remote-api.ipynb",
             type: "notebook",
@@ -54,7 +57,11 @@ export function createKernel(
         return kernel;
     });
 
-    onCleanup(() => kernel()?.shutdown());
+    onCleanup(() => {
+        if (session) {
+            session.shutdown();
+        }
+    });
 
     return [kernel, restartKernel];
 }
