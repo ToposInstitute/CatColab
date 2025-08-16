@@ -67,6 +67,9 @@ export default function createCausalLoopTheory(theoryMeta: TheoryMeta): Theory {
                     return thSignedCategory.positiveLoops(model, options);
                 },
             }),
+            analyses.configureKuramoto({
+                simulate: (model, data) => thSignedCategory.kuramoto(model, data),
+            }),
             analyses.configureLinearODE({
                 simulate: (model, data) => thSignedCategory.linearODE(model, data),
             }),

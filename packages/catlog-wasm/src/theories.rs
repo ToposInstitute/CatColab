@@ -127,6 +127,20 @@ impl ThSignedCategory {
         motifs(&negative_loop, model, options)
     }
 
+    /// Simulate the Kuramoto system derived from a model.
+    #[wasm_bindgen(js_name = "kuramoto")]
+    pub fn kuramoto(&self, model: &DblModel, data: KuramotoModelData) -> Result<ODEResult, String> {
+        Ok(ODEResult(
+            analyses::ode::SignedCoefficientBuilder::new(ustr("Object"))
+                .add_positive(Path::Id(ustr("Object")))
+                .add_negative(ustr("Negative").into())
+                .kuramoto_analysis(model.discrete()?, data.0)
+                .solve_with_defaults()
+                .map_err(|err| format!("{err:?}"))
+                .into(),
+        ))
+    }
+
     /// Simulate the Lotka-Volterra system derived from a model.
     #[wasm_bindgen(js_name = "lotkaVolterra")]
     pub fn lotka_volterra(

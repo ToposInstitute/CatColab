@@ -9,8 +9,9 @@ use crate::dbl::model::FgDblModel;
 
 /** Builder for signed coefficient matrices and analyses based on them.
 
-Used to construct the [linear](Self::linear_ode_analysis) and
-[Lotka-Volterra](Self::lotka_volterra_analysis) ODE analyses.
+Used to construct the [linear](Self::linear_ode_analysis),
+[Lotka-Volterra](Self::lotka_volterra_analysis), and
+[Kuramoto](Self::kuramoto_analysis) ODE analyses.
  */
 pub struct SignedCoefficientBuilder<ObType, MorType> {
     var_ob_type: ObType,
