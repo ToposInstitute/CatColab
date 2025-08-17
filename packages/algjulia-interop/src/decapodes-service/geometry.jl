@@ -5,9 +5,13 @@ const domain_names = [:Plane, :Sphere]
 
 """ Mapping from supported domains to meshes for the domain. """
 const mesh_names = Dict(
-    :Plane => [:Rectangle, :Periodic],
-    :Sphere => [:Icosphere6, :Icosphere7, :Icosphere8, :UV],
-)
+                        :Plane => [:Rectangle, :Periodic],
+                        :Sphere => [:Icosphere, :UV])
+
+""" Mapping between meshes and their configurable parameters """
+const mesh_config = Dict(:Plane => Dict(:Rectangle => (x=100, y=100)),
+                         :Sphere => Dict(:Icosphere => (dim=[6,7,8],)))
+
 
 """ Mapping from supported domains to initial/boundary conditions. """
 const initial_condition_names = Dict(
@@ -21,6 +25,7 @@ function supported_decapodes_geometries()
         Dict(
             :name => domain,
             :meshes => mesh_names[domain],
+            :meshConfig => mesh_config[domain],
             :initialConditions => initial_condition_names[domain],
         )
     end

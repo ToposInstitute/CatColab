@@ -207,8 +207,8 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
                             return;
                         }
                         content.domain = domain;
-                        content.mesh = options()?.domains.get(domain)?.meshes[0] ?? null;
-                        content.initialConditions = {};
+                        content.mesh = options()?.domains?.get(domain)?.meshes[0] ?? null;
+                        console.log(domains);
                     })
                 }
             >
@@ -234,6 +234,45 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
                         </select>
                     </>
                 )}
+            </Show>
+            <Show when={props.content.domain && props.content.mesh}>
+			{(() => {
+                    const mesh = props.content.mesh;
+                    const domain = props.content.domain;
+                    if (!mesh || !domain) return null;
+
+                    const config = domains.get(domain);
+                    if (!config?.meshConfig) return null;
+
+                    const meshConfigData = (config.meshConfig as any)[mesh!];
+                    if (!meshConfigData) return null;
+
+                    const entries = Object.entries(meshConfigData);
+
+                    return (
+                        <For each={entries}>
+                            {([key, value]) => (
+							  <>
+								<Show when={Array.isArray(value)}>
+								<select>
+									<For each={value}>
+										{(x) => <option value={x}>{x}</option>}
+									</For>
+								</select>
+								</Show>
+								<Show when={!Array.isArray(value)}>
+                                <input
+                                    type="number"
+                                    placeholder={key}
+                                    value={value}
+                                    onInput={(e) => console.log(value, e)}
+                                />
+								</Show>
+								</>
+                            )}
+                        </For>
+                    );
+                })()}
             </Show>
         </div>
     );
@@ -301,6 +340,9 @@ type Domain = {
 
     /** Initial/boundary conditions supported for the domain. */
     initialConditions: string[];
+
+    /** Dimension configuration */
+    meshConfig: Map<string, Record<string, number | number[]>>;
 };
 
 /** Data sent to the Julia kernel defining a simulation. */
@@ -371,6 +413,7 @@ const makeSimulationData = (
         return undefined;
     }
 
+    // console.log("CONFIG: ", content);
     const { domain, mesh, initialConditions, plotVariables, scalars, duration } = content;
     if (domain === null || mesh === null || !Object.values(plotVariables).some((x) => x)) {
         return undefined;
