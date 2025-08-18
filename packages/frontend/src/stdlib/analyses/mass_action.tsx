@@ -8,8 +8,7 @@ import {
     Foldable,
     createNumericalColumn,
 } from "../../components";
-import type { MorphismDecl, ObjectDecl } from "../../model";
-import { morNameOrDefault } from "../../model/types";
+import { type MorphismDecl, type ObjectDecl, morNameOrDefault } from "../../model";
 import type { ModelAnalysisMeta } from "../../theory";
 import { ODEResultPlot } from "../../visualization";
 import { createModelODEPlot } from "./simulation";
