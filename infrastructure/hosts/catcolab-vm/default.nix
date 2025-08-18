@@ -10,8 +10,17 @@
     "${modulesPath}/virtualisation/qemu-vm.nix"
   ];
 
-  users.users.catcolab = {
-    initialPassword = "catcolab";
+  users.users = {
+    catcolab.initialPassword = "catcolab";
+    root.initialPassword = "root";
+  };
+
+  services.openssh = {
+    enable = true;
+    settings = {
+      PermitRootLogin = "yes"; # allow root login
+      PasswordAuthentication = true;
+    };
   };
 
   environment.etc."catcolab/catcolab-secrets.env" = {
@@ -44,6 +53,11 @@
     }
     {
       from = "host";
+      host.port = 2222;
+      guest.port = 22;
+    }
+    {
+      from = "host";
       host.port = config.catcolab.automerge.port;
       guest.port = config.catcolab.automerge.port;
     }
@@ -68,6 +82,7 @@
     config.catcolab.backend.port
     config.catcolab.automerge.port
     5432
+    22
   ];
 
   networking.hostName = "catcolab";

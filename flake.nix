@@ -285,6 +285,15 @@
             #   self.nixosConfigurations.catcolab-next;
           };
         };
+        catcolab-vm = {
+          hostname = "backend.catcolab.org";
+          profiles.system = {
+            # TODO: can be changed to catcolab after the next deploy (the host needs to first update the
+            # permissions of the catcolab user)
+            sshUser = "root";
+            path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab;
+          };
+        };
       };
 
       # The backend relies on Firebase, so tests require VM internet access. Enable networking by running
