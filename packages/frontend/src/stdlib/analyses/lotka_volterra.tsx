@@ -15,7 +15,7 @@ import {
 } from "../../components";
 import type { MorphismDecl, ObjectDecl } from "../../model";
 import type { ModelAnalysisMeta } from "../../theory";
-import { morNameOrDefault } from "../../util/default_names";
+import { morNameOrDefault } from "../../model/types";
 import { ODEResultPlot } from "../../visualization";
 import { createModelODEPlot } from "./simulation";
 
@@ -97,7 +97,7 @@ export function LotkaVolterra(
         {
             contentType: "string",
             header: true,
-            content: (mor) => morNameOrDefault(mor, props),
+            content: (mor) => morNameOrDefault(mor, props.liveModel.objectIndex().map),
         },
         createNumericalColumn({
             name: "Interaction",

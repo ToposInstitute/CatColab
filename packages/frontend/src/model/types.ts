@@ -1,6 +1,6 @@
 import { v7 } from "uuid";
 
-import type { ModelJudgment, MorType, ObType } from "catlog-wasm";
+import type { ModelJudgment, MorType, ObType, MorDecl } from "catlog-wasm";
 import { deepCopyJSON } from "../util/deepcopy";
 
 /** Declaration of an object in a model. */
@@ -36,3 +36,23 @@ export const duplicateModelJudgment = (jgmt: ModelJudgment): ModelJudgment => ({
     ...deepCopyJSON(jgmt),
     id: v7(),
 });
+
+/** Return the name of a morphism if it exists, else a name of the form "src->tgt" */
+export function morNameOrDefault(mor: MorDecl, objectNameMap: Map<string, string>): string {
+    if (mor.name) {
+        return mor.name;
+    }
+
+    const { dom, cod } = mor;
+    if (dom?.tag !== "Basic" || cod?.tag !== "Basic") {
+        return "";
+    }
+
+    const source = objectNameMap.get(dom.content);
+    const target = objectNameMap.get(cod.content);
+    if (source && target) {
+        return `${source}→${target}`;
+    }
+
+    return "";
+}
