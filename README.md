@@ -1,7 +1,13 @@
 # CatColab
 
-CatColab (working name) is a collaborative environment for *formal,
-interoperable, conceptual modeling*.
+[![Zulip](https://img.shields.io/badge/Join%20the%20chat-%20.svg?style=flat&logo=zulip&label=Zulip&color=%236492FE)](https://catcolab.zulipchat.com)
+
+> [!WARNING]
+> CatColab is under active development with new features added regularly. We aim
+> to preserve the integrity of your data but you should not store anything
+> critical or sensitive.
+
+CatColab is a collaborative environment for *formal, interoperable, conceptual modeling*.
 
 Elaborating on these keywords, CatColab aims to be:
 
@@ -15,95 +21,32 @@ Elaborating on these keywords, CatColab aims to be:
 - **Modeling**: Constructing a model is a collaborative, ongoing process that
   does not required participants to have specialized technical expertise.
 
-## For users
+## Versions
 
-The production deployment, tracking the latest
-[release](https://github.com/ToposInstitute/CatColab/releases), is available at
-<https://catcolab.org>. For more about the project and where it's going, see the
-[help page](https://catcolab.org/help) and our blog posts about the releases so
-far:
+There are two versions of CatColab available to use:
 
-- [v0.1: Hummingbird](https://topos.site/blog/2024-10-02-introducing-catcolab/)
+- The **production version**: [catcolab.org](https://catcolab.org).
+  This tracks the latest
+  [release](https://github.com/ToposInstitute/CatColab/releases), so it is the
+  most stable version.
+- The **development version**: [next.catcolab.org](https://next.catcolab.org).
+  This tracks the `main` branch of this repository, so it contains all the
+  newest experimental features but is therefore more likely to have bugs.
+
+Each of our major releases is accompanied by a blog post:
+
+- [v0.1: Hummingbird](https://topos.institute/blog/2024-10-02-introducing-catcolab/)
 - [v0.2: Wren](https://topos.institute/blog/2025-02-05-catcolab-0-2-wren/)
 
-> [!WARNING]
-> CatColab is under active development with new features added regularly. We aim
-> to preserve the integrity of your data but you should not store anything
-> critical or sensitive.
+## Help and documentation
 
-## For developers
+| Use type | Help and documentation |
+| :-------- | :--------------------- |
+| General user | [catcolab.org/help](https://catcolab.org/help) |
+| Software developer | [next.catcolab.org/dev](https://next.catcolab.org/dev) |
+| Mathematician | [next.catcolab.org/math](https://next.catcolab.org/math) |
 
-The staging deployment, synced to the `main` branch, is available at
-<https://next.catcolab.org>. Documentation for developers is browsable at
-<https://next.catcolab.org/dev/>.
+## License
 
-CatColab is written in a mix of [Rust](https://www.rust-lang.org/) and
-[TypeScript](https://www.typescriptlang.org/). To start developing, install Rust
-(say by using [rustup](https://rustup.rs/)) and install
-[pnpm](https://pnpm.io/), or use the [dev container](./.devcontainer/).
-
-### Frontend development
-
-To develop the frontend locally, clone the repository and run
-
-```sh
-pnpm install
-pnpm run build
-pnpm run dev --mode staging
-```
-
-Then navigate your browser to the URL provided by Vite. Note that the flag
-`--mode staging` uses the staging deployment of the backend. For other options,
-see the [frontend README](packages/frontend/).
-
-### Backend development
-
-Developing the backend locally requires more setup. See the instructions in the
-[backend README](packages/backend/).
-
-#### Test build for nixos deployment
-```
-nix build .#nixosConfigurations.catcolab-next.config.system.build.toplevel
-```
-
-### Formatting and linting
-
-To maintain a clean and consistent codebase, we follow strict conventions on
-code formatting and style. To format and lint the frontend code, run these
-commands:
-
-```sh
-cd packages/frontend
-pnpm run format
-pnpm run lint
-```
-
-To format and lint the Rust code, run these commands:
-
-```sh
-cargo fmt
-cargo clippy
-```
-
-Try to remember to run these commands before making a PR. (If you forget, the CI
-will remind you.)
-
-## For mathematicians
-
-As the name suggests, CatColab is based on mathematical ideas from category
-theory. It is a specific design goal that the system be usable *without* any
-knowledge of such ideas. Still, for those curious about the underlying
-mathematics, here are a few pointers for further reading.
-
-CatColab is an editor for categorical structures and their morphisms and higher
-morphisms. The meta-logical framework organizing these categorical structures is
-based on [double category theory](https://mathoverflow.net/q/476936). More
-precisely, the **domain-specific logics** in CatColab are defined by [double
-theories](https://arxiv.org/abs/2310.05384), and the **models** in CatColab are
-models of double theories.
-
-The library of domain-specific logics in CatColab, available now and to grow
-over time, is inspired by a wide body of research in applied category theory and
-beyond. Incomplete bibliographies are in the [dev
-docs](https://next.catcolab.org/dev/bib-0001.xml) and the [core
-docs](https://next.catcolab.org/dev/rust/catlog/refs).
+CatColab is dual-licensed under the MIT license and the Apache License (Version
+2.0). You may use the source code of CatColab under the terms of either license.

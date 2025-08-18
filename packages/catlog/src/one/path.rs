@@ -1,20 +1,23 @@
 /*! Paths in graphs and categories.
 
-The central data type is [`Path`]. In addition, this module provides a simple
-data type for [path equations](`PathEq`).
+The central data type is [`Path`], a path of arbitrary finite length. In
+addition, this module provides data types for ["short paths"](`ShortPath`) and
+[path equations](`PathEq`).
 */
 
-use itertools::{Either, Itertools};
-use nonempty::{NonEmpty, nonempty};
 use std::ops::Range;
 use std::{collections::HashSet, hash::Hash};
+
+use derive_more::{Constructor, From};
+use itertools::{Either, Itertools};
+use nonempty::{NonEmpty, nonempty};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify::Tsify;
 
-use super::graph::Graph;
+use super::graph::{Graph, ReflexiveGraph};
 use crate::validate;
 
 /** A path in a [graph](Graph) or [category](crate::one::category::Category).
@@ -33,15 +36,10 @@ struct Path<V, E> {
 Not only does the single struct store redundant (hence possibly inconsistent)
 information when the sequence of edges is nonempty, one will often need to do a
 case analysis on the edge sequence anyway to determine whether, say,
-[`fold`](std::iter::Iterator::fold) can be called or the result of
-[`reduce`](std::iter::Iterator::reduce) is valid. Thus, it seems better to reify
-the two cases in the data structure itself.
+[`reduce`](std::iter::Iterator::reduce) returns a non-null value. Thus, it seems
+better to reify the two cases in the data structure itself.
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde", serde(tag = "tag", content = "content"))]
-#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
-#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
 pub enum Path<V, E> {
     /// The identity, or empty, path at a vertex.
     Id(V),
@@ -49,6 +47,9 @@ pub enum Path<V, E> {
     /// A nontrivial path, comprising a *non-empty* vector of consecutive edges.
     Seq(NonEmpty<E>),
 }
+
+/// A path in a graph with skeletal vertex and edge sets.
+pub type SkelPath = Path<usize, usize>;
 
 /// Converts an edge into a path of length one.
 impl<V, E> From<E> for Path<V, E> {
@@ -143,7 +144,7 @@ impl<V, E> Path<V, E> {
         }
     }
 
-    /** Returns the unique edge in a path of length 1.
+    /** Extracts the unique edge in a path of length 1.
 
     This method is a one-sided inverse to [`Path::single`].
      */
@@ -256,16 +257,15 @@ impl<V, E> Path<V, E> {
 
     Panics under the same conditions as [`subpath`](Self::subpath).
      */
-    pub fn replace_subpath<F>(
+    pub fn replace_subpath(
         self,
         graph: &impl Graph<V = V, E = E>,
         range: Range<usize>,
-        f: F,
+        f: impl FnOnce(Self) -> Self,
     ) -> Self
     where
         V: Eq + Clone,
         E: Clone,
-        F: FnOnce(Self) -> Self,
     {
         let subpath = self.subpath(graph, range.clone());
         self.splice(range, f(subpath))
@@ -332,11 +332,7 @@ impl<V, E> Path<V, E> {
     }
 
     /// Reduces a path using functions on vertices and edges.
-    pub fn reduce<FnV, FnE>(self, fv: FnV, fe: FnE) -> E
-    where
-        FnV: FnOnce(V) -> E,
-        FnE: FnMut(E, E) -> E,
-    {
+    pub fn reduce(self, fv: impl FnOnce(V) -> E, fe: impl FnMut(E, E) -> E) -> E {
         match self {
             Path::Id(v) => fv(v),
             // `reduce` cannot fail since edge sequence is nonempty.
@@ -345,11 +341,11 @@ impl<V, E> Path<V, E> {
     }
 
     /// Maps a path over functions on vertices and edges.
-    pub fn map<CodV, CodE, FnV, FnE>(self, fv: FnV, fe: FnE) -> Path<CodV, CodE>
-    where
-        FnV: FnOnce(V) -> CodV,
-        FnE: FnMut(E) -> CodE,
-    {
+    pub fn map<CodV, CodE>(
+        self,
+        fv: impl FnOnce(V) -> CodV,
+        fe: impl FnMut(E) -> CodE,
+    ) -> Path<CodV, CodE> {
         match self {
             Path::Id(v) => Path::Id(fv(v)),
             Path::Seq(edges) => Path::Seq(edges.map(fe)),
@@ -361,12 +357,12 @@ impl<V, E> Path<V, E> {
     This equivalent to calling [`map`](Path::map) and then
     [`reduce`](Path::reduce) but avoids allocating the intermediate path.
      */
-    pub fn map_reduce<T, FnV, FnE, F>(self, fv: FnV, fe: FnE, f: F) -> T
-    where
-        FnV: FnOnce(V) -> T,
-        FnE: FnMut(E) -> T,
-        F: FnMut(T, T) -> T,
-    {
+    pub fn map_reduce<T>(
+        self,
+        fv: impl FnOnce(V) -> T,
+        fe: impl FnMut(E) -> T,
+        f: impl FnMut(T, T) -> T,
+    ) -> T {
         match self {
             Path::Id(v) => fv(v),
             Path::Seq(edges) => edges.into_iter().map(fe).reduce(f).unwrap(),
@@ -374,11 +370,11 @@ impl<V, E> Path<V, E> {
     }
 
     /// Maps a path over partial functions on vertices and edges.
-    pub fn partial_map<CodV, CodE, FnV, FnE>(self, fv: FnV, fe: FnE) -> Option<Path<CodV, CodE>>
-    where
-        FnV: FnOnce(V) -> Option<CodV>,
-        FnE: FnMut(E) -> Option<CodE>,
-    {
+    pub fn partial_map<CodV, CodE>(
+        self,
+        fv: impl FnOnce(V) -> Option<CodV>,
+        fe: impl FnMut(E) -> Option<CodE>,
+    ) -> Option<Path<CodV, CodE>> {
         match self {
             Path::Id(v) => Some(Path::Id(fv(v)?)),
             Path::Seq(edges) => {
@@ -389,15 +385,11 @@ impl<V, E> Path<V, E> {
     }
 
     /// Maps a path over fallible functions on vertices and edges.
-    pub fn try_map<CodV, CodE, FnV, FnE, Err>(
+    pub fn try_map<CodV, CodE, Err>(
         self,
-        fv: FnV,
-        fe: FnE,
-    ) -> Result<Path<CodV, CodE>, Err>
-    where
-        FnV: FnOnce(V) -> Result<CodV, Err>,
-        FnE: FnMut(E) -> Result<CodE, Err>,
-    {
+        fv: impl FnOnce(V) -> Result<CodV, Err>,
+        fe: impl FnMut(E) -> Result<CodE, Err>,
+    ) -> Result<Path<CodV, CodE>, Err> {
         match self {
             Path::Id(v) => Ok(Path::Id(fv(v)?)),
             Path::Seq(edges) => {
@@ -445,20 +437,121 @@ impl<V, E> Path<V, Path<V, E>> {
     where
         V: Eq + Clone,
     {
-        if let Path::Seq(paths) = &self {
-            if !paths.iter().tuple_windows().all(|(p1, p2)| p1.tgt(graph) == p2.src(graph)) {
-                return None;
-            }
+        if let Path::Seq(paths) = &self
+            && !paths.iter().tuple_windows().all(|(p1, p2)| p1.tgt(graph) == p2.src(graph))
+        {
+            None
+        } else {
+            Some(self.flatten())
         }
-        Some(self.flatten())
     }
 }
 
-/// A path in a graph with skeletal vertex and edge sets.
-pub type SkelPath = Path<usize, usize>;
+/** A path of length at most one.
+
+We call a path of length at most one, i.e., a path of lenth zero or one, a
+**short path**. This is not standard terminology, though it is inspired by
+"short maps" between metric spaces, which are Lipschitz maps with Lipschitz
+constant at most 1.
+
+Short paths are convertible into, and fallibly from, [paths](Path). Short paths
+might seem like an odd data structure, but are occasionally useful, such as in:
+
+- *finite* categories defined by an explicit multiplication table, where every
+  morphism is either a generator (path of length one) or an identity (path of
+  length zero)
+- *augmented* virtual double categories ([Koudenburg
+  2020](crate::refs::AugmentedVDCs)), where the codomain of a cell is by
+  definition a short path, and relatedly *unital* virtual double categories
+
+ */
+#[derive(Clone, Debug, PartialEq, Eq, From)]
+pub enum ShortPath<V, E> {
+    /// Path of length zero.
+    Zero(V),
+
+    /// Path of length one.
+    #[from]
+    One(E),
+}
+
+/// A short path in a graph with skeletal vertex and edge sets.
+pub type SkelShortPath = ShortPath<usize, usize>;
+
+impl<V, E> From<ShortPath<V, E>> for Path<V, E> {
+    fn from(path: ShortPath<V, E>) -> Self {
+        match path {
+            ShortPath::Zero(v) => Path::Id(v),
+            ShortPath::One(e) => Path::single(e),
+        }
+    }
+}
+
+impl<V, E> TryFrom<Path<V, E>> for ShortPath<V, E> {
+    type Error = ();
+
+    fn try_from(path: Path<V, E>) -> Result<Self, Self::Error> {
+        match path {
+            Path::Id(v) => Ok(ShortPath::Zero(v)),
+            _ => path.only().map(ShortPath::One).ok_or(()),
+        }
+    }
+}
+
+impl<V, E> ShortPath<V, E> {
+    /// Is the path contained in the given graph?
+    pub fn contained_in(&self, graph: &impl Graph<V = V, E = E>) -> bool {
+        match self {
+            ShortPath::Zero(v) => graph.has_vertex(v),
+            ShortPath::One(e) => graph.has_edge(e),
+        }
+    }
+
+    /// Source of the path in the given graph.
+    pub fn src(&self, graph: &impl Graph<V = V, E = E>) -> V
+    where
+        V: Clone,
+    {
+        match self {
+            ShortPath::Zero(v) => v.clone(),
+            ShortPath::One(e) => graph.src(e),
+        }
+    }
+
+    /// Target of the path in the given graph.
+    pub fn tgt(&self, graph: &impl Graph<V = V, E = E>) -> V
+    where
+        V: Clone,
+    {
+        match self {
+            ShortPath::Zero(v) => v.clone(),
+            ShortPath::One(e) => graph.tgt(e),
+        }
+    }
+
+    /// Converts the short path into an edge in the given *reflexive* graph.
+    pub fn as_edge(self, graph: &impl ReflexiveGraph<V = V, E = E>) -> E {
+        match self {
+            ShortPath::Zero(v) => graph.refl(v),
+            ShortPath::One(e) => e,
+        }
+    }
+
+    /// Maps over the short path.
+    pub fn map<CodV, CodE>(
+        self,
+        fv: impl FnOnce(V) -> CodV,
+        fe: impl FnOnce(E) -> CodE,
+    ) -> ShortPath<CodV, CodE> {
+        match self {
+            ShortPath::Zero(v) => ShortPath::Zero(fv(v)),
+            ShortPath::One(e) => ShortPath::One(fe(e)),
+        }
+    }
+}
 
 /// Assertion of an equation between the composites of two paths in a category.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Constructor)]
 pub struct PathEq<V, E> {
     /// Left hand side of equation.
     pub lhs: Path<V, E>,
@@ -468,11 +561,6 @@ pub struct PathEq<V, E> {
 }
 
 impl<V, E> PathEq<V, E> {
-    /// Constructs a path equation with the given left- and right-hand sides.
-    pub fn new(lhs: Path<V, E>, rhs: Path<V, E>) -> PathEq<V, E> {
-        PathEq { lhs, rhs }
-    }
-
     /** Source of the path equation in the given graph.
 
     Panics if the two sides of the path equation have different sources.
@@ -519,17 +607,17 @@ impl<V, E> PathEq<V, E> {
     {
         let mut errs = Vec::new();
         if !self.lhs.contained_in(graph) {
-            errs.push(InvalidPathEq::Lhs());
+            errs.push(InvalidPathEq::Lhs);
         }
         if !self.rhs.contained_in(graph) {
-            errs.push(InvalidPathEq::Rhs());
+            errs.push(InvalidPathEq::Rhs);
         }
         if errs.is_empty() {
             if self.lhs.src(graph) != self.rhs.src(graph) {
-                errs.push(InvalidPathEq::Src());
+                errs.push(InvalidPathEq::Src);
             }
             if self.lhs.tgt(graph) != self.rhs.tgt(graph) {
-                errs.push(InvalidPathEq::Tgt());
+                errs.push(InvalidPathEq::Tgt);
             }
         }
         errs.into_iter()
@@ -537,19 +625,22 @@ impl<V, E> PathEq<V, E> {
 }
 
 /// A failure of a path equation to be well defined in a graph.
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
 pub enum InvalidPathEq {
-    /// Path in left hand side of equation not contained in the graph.
-    Lhs(),
+    /// Left-hand side of equation is not a valid path in the graph.
+    Lhs,
 
-    /// Path in right hand side of equation not contained in the graph.
-    Rhs(),
+    /// Right-hand side of equation is not a valid path in the graph.
+    Rhs,
 
-    /// Sources of left and right hand sides of path equation are not equal.
-    Src(),
+    /// Sources of left- and right-hand sides of path equation are not equal.
+    Src,
 
-    /// Targets of left and right hand sides of path equation are not equal.
-    Tgt(),
+    /// Targets of left- and right-hand sides of path equation are not equal.
+    Tgt,
 }
 
 #[cfg(test)]
@@ -573,9 +664,13 @@ mod tests {
     }
 
     #[test]
-    fn singleton_path() {
-        let e = 1;
-        assert_eq!(SkelPath::single(e).only(), Some(e));
+    fn short_paths() {
+        let (v, e) = (1, 1);
+        let path: SkelPath = ShortPath::Zero(v).into();
+        assert_eq!(path.try_into(), Ok(SkelShortPath::Zero(v)));
+        let path: SkelPath = ShortPath::One(e).into();
+        assert_eq!(path.clone().only(), Some(e));
+        assert_eq!(path.try_into(), Ok(ShortPath::One(e)));
     }
 
     #[test]

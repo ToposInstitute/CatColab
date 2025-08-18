@@ -26,18 +26,21 @@ export function configureLinearODE(options: {
     id?: string;
     name?: string;
     description?: string;
+    help?: string;
     simulate: Simulator;
 }): ModelAnalysisMeta<LinearODEContent> {
     const {
         id = "linear-ode",
         name = "Linear ODE dynamics",
         description = "Simulate the system using a constant-coefficient linear first-order ODE",
+        help = "linear-ode",
         simulate,
     } = options;
     return {
         id,
         name,
         description,
+        help,
         component: (props) => <LinearODE simulate={simulate} title={name} {...props} />,
         initialContent: () => ({
             coefficients: {},

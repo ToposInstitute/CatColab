@@ -26,6 +26,7 @@ export function configureMassAction(options: {
     id?: string;
     name?: string;
     description?: string;
+    help?: string;
     simulate: Simulator;
     isState?: (ob: ObjectDecl) => boolean;
     isTransition?: (mor: MorphismDecl) => boolean;
@@ -34,12 +35,14 @@ export function configureMassAction(options: {
         id = "mass-action",
         name = "Mass-action dynamics",
         description = "Simulate the system using the law of mass action",
+        help = "mass-action",
         ...otherOptions
     } = options;
     return {
         id,
         name,
         description,
+        help,
         component: (props) => <MassAction title={name} {...otherOptions} {...props} />,
         initialContent: () => ({
             rates: {},

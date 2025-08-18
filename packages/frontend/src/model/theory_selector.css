@@ -7,7 +7,10 @@
     text-align: left;
     border-top: transparent;
     border-left: transparent;
-    min-height: 30vh;
+
+    max-height: 80vh;
+    overflow-y: auto;
+    scrollbar-width: none;
 
     & input[type="radio"] {
         position: absolute;
@@ -15,7 +18,7 @@
     }
 
     & label:hover {
-        color: var(--topos-color);
+        color: var(--topos-primary);
         cursor: pointer;
     }
 

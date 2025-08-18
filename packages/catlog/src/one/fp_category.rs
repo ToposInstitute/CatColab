@@ -15,16 +15,15 @@ to check for equivalence of paths under the congruence.
  */
 
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::fmt::Debug;
-use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
+use std::{collections::HashMap, hash::Hash};
 
 use derivative::Derivative;
 use egglog::{EGraph, ast::*, span};
 use nonempty::NonEmpty;
 use ref_cast::RefCast;
 use thiserror::Error;
-use ustr::{IdentityHasher, Ustr};
+use ustr::Ustr;
 
 use super::{category::*, graph::*, path::*};
 use crate::egglog_util::{CommandRewrite, CommandRule, Program};
@@ -48,30 +47,29 @@ pattern to encapsulate the mutability of the e-graph and perform borrow checking
 at runtime. The current implementation allows only *single-threaded* usage.
  */
 #[derive(Clone, Derivative)]
-#[derivative(Debug(bound = "V: Debug, E: Debug, S: Debug"))]
-#[derivative(Default(bound = "S: Default", new = "true"))]
-#[derivative(PartialEq(bound = "V: Eq + Hash, E: Eq + Hash, S: BuildHasher"))]
-#[derivative(Eq(bound = "V: Eq + Hash, E: Eq + Hash, S: BuildHasher"))]
-pub struct FpCategory<V, E, S = RandomState> {
-    generators: HashGraph<V, E, S>,
+#[derivative(Debug(bound = "V: Debug, E: Debug"))]
+#[derivative(Default(bound = "", new = "true"))]
+#[derivative(PartialEq(bound = "V: Eq + Hash, E: Eq + Hash"))]
+#[derivative(Eq(bound = "V: Eq + Hash, E: Eq + Hash"))]
+pub struct FpCategory<V, E> {
+    generators: HashGraph<V, E>,
     equations: Vec<PathEq<V, E>>,
     #[derivative(Debug = "ignore", PartialEq = "ignore")]
-    builder: RefCell<CategoryProgramBuilder<V, E, S>>,
+    builder: RefCell<CategoryProgramBuilder<V, E>>,
     #[derivative(Debug = "ignore", PartialEq = "ignore")]
     egraph: RefCell<EGraph>,
 }
 
 /// A finitely presented category with generators of type `Ustr`.
-pub type UstrFpCategory = FpCategory<Ustr, Ustr, BuildHasherDefault<IdentityHasher>>;
+pub type UstrFpCategory = FpCategory<Ustr, Ustr>;
 
-impl<V, E, S> FpCategory<V, E, S>
+impl<V, E> FpCategory<V, E>
 where
     V: Eq + Clone + Hash,
     E: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     /// Gets the generating graph of the category presentation.
-    pub fn generators(&self) -> &(impl FinGraph<V = V, E = E> + use<V, E, S>) {
+    pub fn generators(&self) -> &(impl FinGraph<V = V, E = E> + use<V, E>) {
         &self.generators
     }
 
@@ -176,26 +174,20 @@ where
     /// Iterates over failures to be a well-defined presentation of a category.
     pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidFpCategory<E>> + '_ {
         let generator_errors = self.generators.iter_invalid().map(|err| match err {
-            InvalidGraphData::Src(e) => InvalidFpCategory::Dom(e),
-            InvalidGraphData::Tgt(e) => InvalidFpCategory::Cod(e),
+            InvalidGraph::Src(e) => InvalidFpCategory::Dom(e),
+            InvalidGraph::Tgt(e) => InvalidFpCategory::Cod(e),
         });
-        let equation_errors = self.equations.iter().enumerate().flat_map(|(i, eq)| {
-            eq.iter_invalid_in(&self.generators).map(move |err| match err {
-                InvalidPathEq::Lhs() => InvalidFpCategory::EqLhs(i),
-                InvalidPathEq::Rhs() => InvalidFpCategory::EqRhs(i),
-                InvalidPathEq::Src() => InvalidFpCategory::EqSrc(i),
-                InvalidPathEq::Tgt() => InvalidFpCategory::EqTgt(i),
-            })
+        let equation_errors = self.equations.iter().enumerate().filter_map(|(i, eq)| {
+            Some(InvalidFpCategory::Eq(i, eq.validate_in(&self.generators).err()?))
         });
         generator_errors.chain(equation_errors)
     }
 }
 
-impl<V, E, S> Category for FpCategory<V, E, S>
+impl<V, E> Category for FpCategory<V, E>
 where
     V: Eq + Clone + Hash,
     E: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     type Ob = V;
     type Mor = Path<V, E>;
@@ -233,11 +225,10 @@ where
     }
 }
 
-impl<V, E, S> FgCategory for FpCategory<V, E, S>
+impl<V, E> FgCategory for FpCategory<V, E>
 where
     V: Eq + Clone + Hash,
     E: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     type ObGen = V;
     type MorGen = E;
@@ -256,11 +247,10 @@ where
     }
 }
 
-impl<V, E, S> Validate for FpCategory<V, E, S>
+impl<V, E> Validate for FpCategory<V, E>
 where
     V: Eq + Clone + Hash,
     E: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     type ValidationError = InvalidFpCategory<E>;
 
@@ -272,29 +262,17 @@ where
 /// A failure of a finite presentation of a category to be well defined.
 #[derive(Debug, Error)]
 pub enum InvalidFpCategory<E> {
-    /// Morphism generator assigned a domain not contained in the category.
+    /// Morphism generator with an invalid domain.
     #[error("Domain of morphism generator `{0}` is not in the category")]
     Dom(E),
 
-    /// Morphism generator assigned a codomain not contained in the category.
+    /// Morphism generator with an invalid codomain.
     #[error("Codomain of morphism generator `{0}` is not in the category")]
     Cod(E),
 
-    /// Path in left hand side of equation not contained in the category.
-    #[error("LHS of path equation `{0}` is not in the category")]
-    EqLhs(usize),
-
-    /// Path in right hand side of equation not contained in the category.
-    #[error("RHS of path equation `{0}` is not in the category")]
-    EqRhs(usize),
-
-    /// Sources of left and right hand sides of path equation are not equal.
-    #[error("Path equation `{0}` has sources that are not equal")]
-    EqSrc(usize),
-
-    /// Targets of left and right hand sides of path equation are not equal.
-    #[error("Path equation `{0}` has targets that are not equal")]
-    EqTgt(usize),
+    /// Path equation with one or more errors.
+    #[error("Path equation `{0}` is not valid: `{1:?}`")]
+    Eq(usize, NonEmpty<InvalidPathEq>),
 }
 
 /** Program builder for computing with categories in egglog.
@@ -305,18 +283,17 @@ do not assume that vertices or edges can be converted to strings/symbols since
 we want to support hierarchical naming, where names are a list of symbols.
  */
 #[derive(Clone)]
-struct CategoryProgramBuilder<V, E, S = RandomState> {
+struct CategoryProgramBuilder<V, E> {
     prog: Vec<Command>,
     sym: CategorySymbols,
-    ob_generators: HashMap<V, usize, S>,
-    mor_generators: HashMap<E, usize, S>,
+    ob_generators: HashMap<V, usize>,
+    mor_generators: HashMap<E, usize>,
 }
 
-impl<V, E, S> CategoryProgramBuilder<V, E, S>
+impl<V, E> CategoryProgramBuilder<V, E>
 where
     V: Eq + Hash,
     E: Eq + Hash,
-    S: BuildHasher,
 {
     /// Declares an object generator.
     pub fn add_ob_generator(&mut self, v: V) -> usize {
@@ -379,7 +356,7 @@ where
     }
 }
 
-impl<V, E, S> CategoryProgramBuilder<V, E, S> {
+impl<V, E> CategoryProgramBuilder<V, E> {
     /// Extracts the egglog program, consuming the cached statements.
     pub fn program(&mut self) -> Program {
         Program(std::mem::take(&mut self.prog))
@@ -615,7 +592,7 @@ impl<V, E, S> CategoryProgramBuilder<V, E, S> {
     }
 }
 
-impl<V, E, S: Default> Default for CategoryProgramBuilder<V, E, S> {
+impl<V, E> Default for CategoryProgramBuilder<V, E> {
     fn default() -> Self {
         let mut result = Self {
             prog: Default::default(),
@@ -723,7 +700,7 @@ mod tests {
 
     #[test]
     fn egraph_preamble() {
-        let mut builder: CategoryProgramBuilder<char, char, RandomState> = Default::default();
+        let mut builder: CategoryProgramBuilder<char, char> = Default::default();
         let prog = builder.program();
 
         let expected = expect![[r#"

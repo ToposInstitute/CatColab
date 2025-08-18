@@ -14,20 +14,21 @@ use catlog::one::FgCategory;
 use catlog::zero::MutMapping;
 use notebook_types::current::*;
 
-use super::model::{CanElaborate, CanQuote, Elaborator, Quoter};
 use super::model::{DblModel, DblModelBox, DiscreteDblModel};
 use super::model_morphism::DiscreteDblModelMapping;
+use super::notation::*;
 use super::result::JsResult;
 use super::theory::DblTheory;
 
 /// A box containing a diagram in a model of a double theory.
 #[derive(From)]
 pub enum DblModelDiagramBox {
+    /// A diagram in a model of a discrete double theory.
     Discrete(diagram::DblModelDiagram<DiscreteDblModelMapping, DiscreteDblModel>),
     // DiscreteTab(), # TODO: Not implemented.
 }
 
-/// Wasm bindings for a diagram in a model of a double theory.
+/// Wasm binding for a diagram in a model of a double theory.
 #[wasm_bindgen]
 pub struct DblModelDiagram(#[wasm_bindgen(skip)] pub DblModelDiagramBox);
 
@@ -40,9 +41,7 @@ impl DblModelDiagram {
                 let mapping = Default::default();
                 diagram::DblModelDiagram(mapping, model).into()
             }
-            DblModelBox::DiscreteTab(_) => {
-                panic!("Diagrams not implemented for tabulator theories")
-            }
+            _ => panic!("Diagrams only implemented for discrete double theories"),
         })
     }
 
@@ -205,15 +204,14 @@ pub struct ModelDiagramValidationResult(
     pub JsResult<(), Vec<diagram::InvalidDiscreteDblModelDiagram<Uuid>>>,
 );
 
+/// Elaborates a diagram defined by a notebook into a catlog diagram.
 #[wasm_bindgen(js_name = "elaborateDiagram")]
-pub fn elaborate_diagram(doc: &DiagramDocumentContent, theory: &DblTheory) -> DblModelDiagram {
+pub fn elaborate_diagram(judgments: Vec<DiagramJudgment>, theory: &DblTheory) -> DblModelDiagram {
     let mut diagram = DblModelDiagram::new(theory);
-    for cell in doc.notebook.cells.iter() {
-        if let Cell::Formal { id: _, content } = cell {
-            match content {
-                DiagramJudgment::Object(decl) => diagram.add_ob(decl).unwrap(),
-                DiagramJudgment::Morphism(decl) => diagram.add_mor(decl).unwrap(),
-            }
+    for judgment in judgments {
+        match judgment {
+            DiagramJudgment::Object(decl) => diagram.add_ob(&decl).unwrap(),
+            DiagramJudgment::Morphism(decl) => diagram.add_mor(&decl).unwrap(),
         }
     }
     diagram

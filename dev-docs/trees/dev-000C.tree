@@ -1,7 +1,0 @@
-\taxon{table}
-\title{Snapshots}
-
-\p{A document snapshot is an arbitrary JSON object stored in binary format.
-Every snapshot has a timestamp and is associated with a single [ref](dev-000D).}
-
-\p{Snapshots are retained for all time unless their associated ref is deleted.}

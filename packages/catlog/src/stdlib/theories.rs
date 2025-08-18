@@ -136,6 +136,79 @@ pub fn th_category_links() -> UstrDiscreteTabTheory {
     th
 }
 
+/// The theory of strict monoidal categories.
+pub fn th_monoidal_category() -> UstrModalDblTheory {
+    th_list_algebra(List::Plain)
+}
+
+/// The theory of lax monoidal categories.
+pub fn th_lax_monoidal_category() -> UstrModalDblTheory {
+    th_list_lax_algebra(List::Plain)
+}
+
+/// The theory of strict symmetric monoidal categories.
+pub fn th_sym_monoidal_category() -> UstrModalDblTheory {
+    th_list_algebra(List::Symmetric)
+}
+
+/** The theory of a strict algebra of a list monad.
+
+This is a modal double theory, parametric over which variant of the double list
+monad is used.
+ */
+fn th_list_algebra(list: List) -> UstrModalDblTheory {
+    let m = Modality::List(list);
+    let mut th: UstrModalDblTheory = Default::default();
+    let (x, a) = (ustr("Object"), ustr("tensor"));
+    th.add_ob_type(x);
+    th.add_ob_op(a, ModeApp::new(x).apply(m), ModeApp::new(x));
+    th.equate_ob_ops(
+        Path::pair(ModeApp::new(a.into()).apply(m), ModeApp::new(a.into())),
+        Path::pair(ModeApp::new(ModalOp::Concat(list, 2, ModeApp::new(x))), ModeApp::new(a.into())),
+    );
+    th.equate_ob_ops(
+        Path::empty(ModeApp::new(x)),
+        Path::pair(ModeApp::new(ModalOp::Concat(list, 0, ModeApp::new(x))), ModeApp::new(a.into())),
+    );
+    th
+}
+
+/// The theory of a lax algebra over a list monad.
+fn th_list_lax_algebra(list: List) -> UstrModalDblTheory {
+    let m = Modality::List(list);
+    let mut th: UstrModalDblTheory = Default::default();
+    let (x, a) = (ustr("Object"), ustr("tensor"));
+    th.add_ob_type(x);
+    th.add_ob_op(a, ModeApp::new(x).apply(m), ModeApp::new(x));
+    th.add_special_mor_op(
+        ustr("Associator"),
+        Path::pair(ModeApp::new(a.into()).apply(m), ModeApp::new(a.into())),
+        Path::pair(ModeApp::new(ModalOp::Concat(list, 2, ModeApp::new(x))), ModeApp::new(a.into())),
+    );
+    th.add_special_mor_op(
+        ustr("Unitor"),
+        Path::empty(ModeApp::new(x)),
+        Path::pair(ModeApp::new(ModalOp::Concat(list, 0, ModeApp::new(x))), ModeApp::new(a.into())),
+    );
+    // TODO: Coherence equations
+    th
+}
+
+/// The theory of a (non-symmetric) multicategory.
+pub fn th_multicategory() -> UstrModalDblTheory {
+    th_generalized_multicategory(List::Plain)
+}
+
+/// The theory of a generalized multicategory over a list monad.
+fn th_generalized_multicategory(list: List) -> UstrModalDblTheory {
+    let mut th: UstrModalDblTheory = Default::default();
+    let (x, p) = (ustr("Object"), ustr("Multihom"));
+    th.add_ob_type(x);
+    th.add_mor_type(p, ModeApp::new(x).apply(Modality::List(list)), ModeApp::new(x));
+    // TODO: Axioms, which depend on implementing composites and restrictions.
+    th
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -143,7 +216,7 @@ mod tests {
     use nonempty::nonempty;
 
     #[test]
-    fn validate_theories() {
+    fn validate_discrete_theories() {
         assert!(th_empty().validate().is_ok());
         assert!(th_category().validate().is_ok());
         assert!(th_schema().validate().is_ok());
@@ -151,8 +224,19 @@ mod tests {
         assert!(th_delayable_signed_category().validate().is_ok());
         assert!(th_nullable_signed_category().validate().is_ok());
         assert!(th_category_with_scalars().validate().is_ok());
-        // TODO: Validate discrete tabulator theories.
+    }
+
+    #[test]
+    fn validate_discrete_tabulator_theories() {
+        // TODO: Implementation validation for discrete tabulator theories.
         th_category_links();
+    }
+
+    #[test]
+    fn validate_modal_theories() {
+        assert!(th_monoidal_category().validate().is_ok());
+        assert!(th_lax_monoidal_category().validate().is_ok());
+        assert!(th_multicategory().validate().is_ok());
     }
 
     #[test]
@@ -163,6 +247,6 @@ mod tests {
         assert!(th.has_mor_type(&neg.into()));
         assert!(th.has_mor_type(&slow.into()));
         let path = Path::Seq(nonempty![neg, slow, neg, slow]);
-        assert!(th.category().morphisms_are_equal(path, slow.into()));
+        assert!(th.0.morphisms_are_equal(path, slow.into()));
     }
 }

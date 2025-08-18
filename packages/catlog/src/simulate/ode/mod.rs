@@ -138,12 +138,10 @@ pub(crate) fn textplot_ode_result<Sys>(
 
     let dim = problem.initial_values.len();
     let line_data: Vec<_> = (0..dim)
-        .into_iter()
         .map(|i| t_out.iter().copied().zip(x_out.iter().map(|x| x[i])).collect::<Vec<_>>())
         .collect();
 
-    let lines: Vec<_> = line_data.iter().map(|data| Shape::Lines(data)).into_iter().collect();
-
+    let lines: Vec<_> = line_data.iter().map(|data| Shape::Lines(data)).collect();
     let chart = lines.iter().fold(&mut chart, |chart, line| chart.lineplot(line));
     chart.axis();
     chart.figures();

@@ -1,52 +1,54 @@
-{ inputs, ... }:
-
+{
+  config,
+  inputs,
+  modulesPath,
+  ...
+}:
 let
   owen = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIF2sBTuqGoEXRWpBRqTBwZZPDdLGGJ0GQcuX5dfIZKb4 o@red-special";
   epatters = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAKXx6wMJSeYKCHNmbyR803RQ72uto9uYsHhAPPWNl2D evan@epatters.org";
-  catcolab-deployuser = "TODO";
 in
 {
   imports = [
-    ../../modules/backend.nix
-    ../../modules/host.nix
-    ../../modules/backup.nix
-    "${inputs.nixpkgs}/nixos/modules/virtualisation/amazon-image.nix"
+    ../../modules/catcolab
+    "${modulesPath}/virtualisation/amazon-image.nix"
+    inputs.agenix.nixosModules.age
   ];
 
   age.secrets = {
-    "rclone.conf" = {
-      file = "${inputs.self}/infrastructure/secrets/rclone.conf.prod.age";
+    rcloneConf = {
+      file = ../../secrets/rclone.conf.prod.age;
       mode = "400";
       owner = "catcolab";
     };
-    backendSecretsForCatcolab = {
-      file = "${inputs.self}/infrastructure/secrets/.env.prod.age";
-      name = "backend-secrets-for-catcolab.env";
+    catcolabSecrets = {
+      file = ../../secrets/.env.prod.age;
       owner = "catcolab";
-    };
-    backendSecretsForPostgres = {
-      file = "${inputs.self}/infrastructure/secrets/.env.prod.age";
-      name = "backend-secrets-for-postgres.env";
-      owner = "postgres";
     };
   };
 
   catcolab = {
+    enable = true;
     backend = {
-      backendPort = "8000";
-      automergePort = "8010";
-      backendHostname = "backend.catcolab.org";
-      automergeHostname = "automerge.catcolab.org";
+      port = 8000;
+      hostname = "backend.catcolab.org";
     };
-    backup = {
-      backupdbBucket = "catcolab";
+    automerge = {
+      port = 8080;
+      hostname = "automerge.catcolab.org";
     };
+    environmentFilePath = config.age.secrets.catcolabSecrets.path;
     host = {
+      enable = true;
       userKeys = [
         owen
         epatters
       ];
-      deployuserKey = catcolab-deployuser;
+      backup = {
+        enable = true;
+        rcloneConfFilePath = config.age.secrets.rcloneConf.path;
+        dbBucket = "catcolab";
+      };
     };
   };
 
