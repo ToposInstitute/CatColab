@@ -1,6 +1,6 @@
 import { v7 } from "uuid";
 
-import type { ModelJudgment, MorType, ObType, MorDecl } from "catlog-wasm";
+import type { ModelJudgment, MorDecl, MorType, ObType } from "catlog-wasm";
 import { deepCopyJSON } from "../util/deepcopy";
 
 /** Declaration of an object in a model. */

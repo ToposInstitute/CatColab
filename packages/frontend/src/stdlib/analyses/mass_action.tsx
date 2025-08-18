@@ -9,8 +9,8 @@ import {
     createNumericalColumn,
 } from "../../components";
 import type { MorphismDecl, ObjectDecl } from "../../model";
-import type { ModelAnalysisMeta } from "../../theory";
 import { morNameOrDefault } from "../../model/types";
+import type { ModelAnalysisMeta } from "../../theory";
 import { ODEResultPlot } from "../../visualization";
 import { createModelODEPlot } from "./simulation";
 
