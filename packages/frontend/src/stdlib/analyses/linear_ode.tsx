@@ -8,7 +8,7 @@ import {
     Foldable,
     createNumericalColumn,
 } from "../../components";
-import type { MorphismDecl, ObjectDecl } from "../../model";
+import { type MorphismDecl, type ObjectDecl, morNameOrDefault } from "../../model";
 import type { ModelAnalysisMeta } from "../../theory";
 import { ODEResultPlot } from "../../visualization";
 import { createModelODEPlot } from "./simulation";
@@ -85,7 +85,7 @@ export function LinearODE(
         {
             contentType: "string",
             header: true,
-            content: (mor) => mor.name,
+            content: (mor) => morNameOrDefault(mor, props.liveModel.objectIndex().map),
         },
         createNumericalColumn({
             name: "Coefficient",
