@@ -127,29 +127,6 @@ where
             .map(|(coef, m)| (coef.clone(), m.map_variables(|var| f(var))))
             .collect()
     }
-
-    /** Puts the polynomial into normal form.
-
-    The data structure for polynomials is already pretty close to being a normal
-    form, but allows the possibility of coefficients or exponents being zero.
-    This method removes those if present.
-     */
-    pub fn normalize(self) -> Self
-    where
-        Coef: Zero,
-        Exp: Zero,
-    {
-        self.0
-            .into_iter()
-            .filter_map(|(coef, m)| {
-                if coef.is_zero() {
-                    None
-                } else {
-                    Some((coef, m.normalize()))
-                }
-            })
-            .collect()
-    }
 }
 
 impl<Var, Coef, Exp> FromIterator<(Coef, Monomial<Var, Exp>)> for Polynomial<Var, Coef, Exp>
@@ -204,11 +181,11 @@ where
 impl<Var, Coef, Exp> Zero for Polynomial<Var, Coef, Exp>
 where
     Var: Ord,
-    Coef: Add<Output = Coef> + Zero,
+    Coef: Add<Output = Coef>,
     Exp: Ord,
 {
     fn zero() -> Self {
-        Polynomial(Combination::default())
+        Polynomial(Combination::zero())
     }
 
     fn is_zero(&self) -> bool {
@@ -288,7 +265,7 @@ where
     fn mul(self, rhs: Self) -> Self::Output {
         // Avoid unnecessary clones by tracking whether we're in the last
         // iteration of the outer and inner loops.
-        let mut result = Polynomial::default();
+        let mut result = Polynomial::zero();
         let (outer, inner) = (self.0, rhs.0);
         let mut outer_iter = outer.into_iter();
         while let Some((a, m)) = outer_iter.next() {
@@ -407,8 +384,5 @@ mod tests {
 
         let p = (x() + y()) * (x() + y());
         assert_eq!(p.to_string(), "2 x y + x^2 + y^2");
-
-        let p = (x() + y()) * (x() + y().neg());
-        assert_eq!(p.normalize().to_string(), "x^2 + (-1) y^2");
     }
 }

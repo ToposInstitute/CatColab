@@ -16,14 +16,12 @@ export function configureModelGraph(options: {
     id: string;
     name: string;
     description?: string;
-    help?: string;
 }): ModelAnalysisMeta<GV.GraphConfig> {
-    const { id, name, description, help } = options;
+    const { id, name, description } = options;
     return {
         id,
         name,
         description,
-        help,
         component: (props) => <ModelGraph title={name} {...props} />,
         initialContent: GV.defaultGraphConfig,
     };
@@ -61,12 +59,16 @@ export function ModelGraph(
                 <GV.GraphConfigForm content={props.content} changeContent={props.changeContent} />
             </Foldable>
             <div class="graph-visualization">
-                <ModelGraphviz
-                    model={props.liveModel.formalJudgments()}
-                    theory={props.liveModel.theory()}
-                    options={GV.graphvizOptions(props.content)}
-                    ref={setSvgRef}
-                />
+                <Show when={props.liveModel.theory()}>
+                    {(theory) => (
+                        <ModelGraphviz
+                            model={props.liveModel.formalJudgments()}
+                            theory={theory()}
+                            options={GV.graphvizOptions(props.content)}
+                            ref={setSvgRef}
+                        />
+                    )}
+                </Show>
             </div>
         </div>
     );
@@ -76,21 +78,17 @@ export function ModelGraph(
  */
 export function ModelGraphviz(props: {
     model: ModelJudgment[];
-    theory?: Theory;
+    theory: Theory;
     attributes?: GV.GraphvizAttributes;
     options?: Viz.RenderOptions;
     ref?: SVGRefProp;
 }) {
     return (
-        <Show when={props.theory}>
-            {(theory) => (
-                <GraphvizSVG
-                    graph={modelToGraphviz(props.model, theory(), props.attributes)}
-                    options={props.options}
-                    ref={props.ref}
-                />
-            )}
-        </Show>
+        <GraphvizSVG
+            graph={modelToGraphviz(props.model, props.theory, props.attributes)}
+            options={props.options}
+            ref={props.ref}
+        />
     );
 }
 
@@ -101,12 +99,12 @@ export function modelToGraphviz(
     theory: Theory,
     attributes?: GV.GraphvizAttributes,
 ): Viz.Graph {
-    const nodes: Required<Viz.Graph>["nodes"] = [];
+    const nodes = new Map<string, Required<Viz.Graph>["nodes"][0]>();
     for (const judgment of model) {
         if (judgment.tag === "object") {
             const { id, name } = judgment;
             const meta = theory.modelObTypeMeta(judgment.obType);
-            nodes.push({
+            nodes.set(id, {
                 name: id,
                 attributes: {
                     id,
@@ -158,7 +156,7 @@ export function modelToGraphviz(
 
     return {
         directed: true,
-        nodes,
+        nodes: Array.from(nodes.values()),
         edges,
         graphAttributes: { ...GV.defaultGraphAttributes, ...attributes?.graph },
         nodeAttributes: { ...GV.defaultNodeAttributes, ...attributes?.node },

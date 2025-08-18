@@ -1,0 +1,16 @@
+\taxon{table}
+\title{Refs}
+
+\p{A "ref" is a persistent reference to a document. A running CatColab server
+maintains an in-memory hash map from refs to Automerge documents; there can be
+at most one Automerge document that is "controlling" a ref at a given time.}
+
+\p{Refs are identified by UUIDs. In the future, they will also have editable
+metadata such as taxon, title, author(s), tags, and so on.}
+
+\p{Additionally, a ref has a \code{head} field that points to a particular
+[snapshot](dev-000C) for the ref. The "autosave" mechanism updates the content
+of this snapshot every time the Automerge document connected to the ref is
+mutated. "Saving" a ref just means creating a new snapshot and making it the
+head. The previous head will continue to exist as a snapshot, and can be used to
+revert the ref to its state at a previous point in time.}

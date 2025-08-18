@@ -4,13 +4,14 @@ This module provides interfaces and simple wrapper types to enable sets to be
 treated in a generic way.
  */
 
+use std::collections::HashSet;
+use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
 use std::ops::Range;
-use std::{collections::HashSet, hash::Hash};
 
 use derivative::Derivative;
 use derive_more::{From, Into};
 use ref_cast::RefCast;
-use ustr::Ustr;
+use ustr::{IdentityHasher, Ustr};
 
 /** A set.
 
@@ -118,17 +119,18 @@ impl IntoIterator for SkelFinSet {
 
 /// A finite set backed by a hash set.
 #[derive(Clone, Debug, From, Into, Derivative)]
-#[derivative(Default(bound = ""))]
-#[derivative(PartialEq(bound = "T: Eq + Hash"))]
-#[derivative(Eq(bound = "T: Eq + Hash"))]
-pub struct HashFinSet<T>(HashSet<T>);
+#[derivative(Default(bound = "S: Default"))]
+#[derivative(PartialEq(bound = "T: Eq + Hash, S: BuildHasher"))]
+#[derivative(Eq(bound = "T: Eq + Hash, S: BuildHasher"))]
+pub struct HashFinSet<T, S = RandomState>(HashSet<T, S>);
 
 /// A finite set with elements of type `Ustr`.
-pub type UstrFinSet = HashFinSet<Ustr>;
+pub type UstrFinSet = HashFinSet<Ustr, BuildHasherDefault<IdentityHasher>>;
 
-impl<T> HashFinSet<T>
+impl<T, S> HashFinSet<T, S>
 where
     T: Eq + Hash,
+    S: BuildHasher,
 {
     /// Adds an element to the set.
     pub fn insert(&mut self, x: T) -> bool {
@@ -136,9 +138,10 @@ where
     }
 }
 
-impl<T> Extend<T> for HashFinSet<T>
+impl<T, S> Extend<T> for HashFinSet<T, S>
 where
     T: Eq + Hash,
+    S: BuildHasher,
 {
     fn extend<Iter>(&mut self, iter: Iter)
     where
@@ -148,9 +151,10 @@ where
     }
 }
 
-impl<T> Set for HashFinSet<T>
+impl<T, S> Set for HashFinSet<T, S>
 where
     T: Eq + Clone + Hash,
+    S: BuildHasher,
 {
     type Elem = T;
 
@@ -159,9 +163,10 @@ where
     }
 }
 
-impl<T> FinSet for HashFinSet<T>
+impl<T, S> FinSet for HashFinSet<T, S>
 where
     T: Eq + Hash + Clone,
+    S: BuildHasher,
 {
     fn iter(&self) -> impl Iterator<Item = T> {
         self.0.iter().cloned()
@@ -174,9 +179,10 @@ where
     }
 }
 
-impl<T> IntoIterator for HashFinSet<T>
+impl<T, S> IntoIterator for HashFinSet<T, S>
 where
     T: Eq + Hash,
+    S: BuildHasher,
 {
     type Item = T;
     type IntoIter = std::collections::hash_set::IntoIter<T>;

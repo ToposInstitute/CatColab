@@ -6,11 +6,6 @@ import { basicSchema } from "./basic_schema";
 import { catcolabSchema } from "./catcolab_schema";
 import { katexSchema } from "./katex_schema";
 
-// Typically all nodes and marks on a prosemirror schema are optionally undefined. This is quite annoying
-// because our schema is defined as a constant and there is nothing at all dynamic about it. We do some
-// cleverish typescript with the `satisfies` operator to make our schema type accurately reflect the
-// contents of the const that defines it. This allows us to avoid doing tedious checks or assertions
-// wherever we use the schema.
 const customSchemaSpec = {
     nodes: {
         ...basicSchema.nodes,

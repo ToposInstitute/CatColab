@@ -1,16 +1,4 @@
-.box rect,
-.transition rect {
+.box rect {
     fill: white;
     stroke: black;
-}
-
-.place rect {
-    fill: #e6e6ff;
-    stroke: #6161ff;
-    rx: 15px;
-    ry: auto;
-}
-
-.link path {
-    stroke: blue;
 }

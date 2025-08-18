@@ -1,7 +1,12 @@
+import { createSignal, useContext } from "solid-js";
+import invariant from "tiny-invariant";
+
 import type { ObType } from "catlog-wasm";
 import { NameInput } from "../components";
 import type { CellActions } from "../notebook";
 import type { Theory } from "../theory";
+import { focusInputWhen } from "../util/focus";
+import { LiveModelContext } from "./context";
 import type { ObjectDecl } from "./types";
 
 import "./object_cell_editor.css";
@@ -13,17 +18,23 @@ export function ObjectCellEditor(props: {
     modifyObject: (f: (decl: ObjectDecl) => void) => void;
     isActive: boolean;
     actions: CellActions;
-    theory: Theory;
 }) {
+    const [nameRef, setNameRef] = createSignal<HTMLInputElement>();
+    focusInputWhen(nameRef, () => props.isActive);
+
+    const liveModel = useContext(LiveModelContext);
+    invariant(liveModel, "Live model should be provided as context");
+
     const cssClasses = () => [
         "formal-judgment",
         "object-decl",
-        ...obClasses(props.theory, props.object.obType),
+        ...obClasses(liveModel().theory(), props.object.obType),
     ];
 
     return (
         <div class={cssClasses().join(" ")}>
             <NameInput
+                ref={setNameRef}
                 placeholder="Unnamed"
                 name={props.object.name}
                 setName={(name) => {
@@ -31,14 +42,13 @@ export function ObjectCellEditor(props: {
                         ob.name = name;
                     });
                 }}
-                isActive={props.isActive}
                 deleteBackward={props.actions.deleteBackward}
                 deleteForward={props.actions.deleteForward}
                 exitBackward={props.actions.activateAbove}
                 exitForward={props.actions.activateBelow}
                 exitUp={props.actions.activateAbove}
                 exitDown={props.actions.activateBelow}
-                hasFocused={props.actions.hasFocused}
+                onFocus={props.actions.hasFocused}
             />
         </div>
     );

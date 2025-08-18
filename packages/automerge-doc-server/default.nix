@@ -1,17 +1,11 @@
 {
   pkgs,
-  inputs,
-  self,
   ...
 }:
 let
   packageJson = builtins.fromJSON (builtins.readFile ./package.json);
   name = packageJson.name;
   version = packageJson.version;
-
-  pkgsUnstable = import inputs.nixpkgsUnstable {
-    system = "x86_64-linux";
-  };
 in
 pkgs.stdenv.mkDerivation {
   pname = name;
@@ -25,26 +19,18 @@ pkgs.stdenv.mkDerivation {
   ];
 
   buildInputs = with pkgs; [
-    nodejs_24
+    nodejs_23
   ];
 
-  # package.json expects notebook-types to be at ../notebook-types, we COULD modify the parent of the nix
-  # `build` directory, but this is technically unsupported. Instead we recreate part of the `packages`
-  # directory structure in a way familiar to pnpm.
-  unpackPhase = ''
-    mkdir -p ./notebook-types/dist/pkg-node
-    cp -r ${self.packages.x86_64-linux.notebook-types}/* ./notebook-types/dist/pkg-node/
-
-    mkdir ./automerge-doc-server
-    cp -r $src/* ./automerge-doc-server
-
-    cd automerge-doc-server
-  '';
-
   installPhase = ''
+    mkdir -p $out/
+
     # We use esbuild instead of tsc for building, as it bundles all required JavaScript into a single
-    # file. This avoids copying the entire ~200MB node_modules directory to the remote machine during deployments.
-    ${pkgs.lib.getExe pkgs.esbuild} src/main.ts --bundle --platform=node --format=cjs --loader:.wasm=file --outfile=$out/main.cjs
+    # file. This avoids copying the entire ~200MB node_modules directory to the remote machine during
+    # deploy-rs deployments, which can increase the deployment time by >2x. It's an intentional
+    # trade-off: slightly increased configuration complexity in exchange for faster development
+    # iterations.
+    ${pkgs.lib.getExe pkgs.esbuild} src/main.ts --bundle --platform=node --format=cjs --outfile=$out/main.cjs
 
     # Since we are no longer copying the entire node_modules directory, we need to manually find and copy
     # the wasm file for automerge
@@ -54,22 +40,20 @@ pkgs.stdenv.mkDerivation {
       exit 1
     fi
 
-    cp "${self.packages.x86_64-linux.notebook-types}/notebook_types_bg.wasm" "$out/"
     cp "$automerge_wasm_path" "$out/"
 
     mkdir -p $out/bin
-    makeWrapper ${pkgs.nodejs_24}/bin/node $out/bin/${name} --add-flags "$out/main.cjs"
+    makeWrapper ${pkgs.nodejs_23}/bin/node $out/bin/${name} --add-flags "$out/main.cjs"
   '';
 
-  pnpmDeps = pkgsUnstable.pnpm_9.fetchDeps {
+  pnpmDeps = pkgs.pnpm_9.fetchDeps {
     pname = name;
-
-    fetcherVersion = "2";
+    version = version;
     src = ./.;
 
     # See README.md
-    # hash = "";
-    hash = "sha256-rF9EWhRthu3ELYGq6oOIeqwzBnGctxGd1NaWiFGjQMY=";
+    # hash = pkgs.lib.fakeHash;
+    hash = "sha256-qqZCQn0QFbqVsu/TCuye6oVL3ZIYU+blHB2b43K5xPA=";
   };
 
   meta.mainProgram = name;

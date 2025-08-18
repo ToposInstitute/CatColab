@@ -1,7 +1,5 @@
 {
-  config,
   inputs,
-  modulesPath,
   ...
 }:
 let
@@ -12,49 +10,47 @@ let
 in
 {
   imports = [
-    ../../modules/catcolab
-    "${modulesPath}/virtualisation/amazon-image.nix"
-    inputs.agenix.nixosModules.age
+    ../../modules/backend.nix
+    ../../modules/host.nix
+    ../../modules/backup.nix
+    "${inputs.nixpkgs}/nixos/modules/virtualisation/amazon-image.nix"
   ];
 
   age.secrets = {
-    rcloneConf = {
-      file = ../../secrets/rclone.conf.next.age;
+    "rclone.conf" = {
+      file = "${inputs.self}/infrastructure/secrets/rclone.conf.next.age";
       mode = "400";
       owner = "catcolab";
     };
-
-    catcolabSecrets = {
-      file = ../../secrets/.env.next.age;
-      mode = "400";
+    backendSecretsForCatcolab = {
+      file = "${inputs.self}/infrastructure/secrets/.env.next.age";
+      name = "backend-secrets-for-catcolab.env";
       owner = "catcolab";
+    };
+    backendSecretsForPostgres = {
+      file = "${inputs.self}/infrastructure/secrets/.env.next.age";
+      name = "backend-secrets-for-postgres.env";
+      owner = "postgres";
     };
   };
 
   catcolab = {
-    enable = true;
     backend = {
-      port = 8000;
-      hostname = "backend-next.catcolab.org";
+      backendPort = "8000";
+      automergePort = "8010";
+      backendHostname = "backend-next.catcolab.org";
+      automergeHostname = "automerge-next.catcolab.org";
     };
-    automerge = {
-      port = 8010;
-      hostname = "automerge-next.catcolab.org";
+    backup = {
+      backupdbBucket = "catcolab-next";
     };
-    environmentFilePath = config.age.secrets.catcolabSecrets.path;
     host = {
-      enable = true;
       userKeys = [
         owen
         epatters
         jmoggr
-        catcolab-next-deployuser
       ];
-      backup = {
-        enable = true;
-        rcloneConfFilePath = config.age.secrets.rcloneConf.path;
-        dbBucket = "catcolab-next";
-      };
+      deployuserKey = catcolab-next-deployuser;
     };
   };
 

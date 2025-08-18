@@ -96,19 +96,19 @@ pub fn walking_attr(th: Rc<UstrDiscreteDblTheory>) -> UstrDiscreteDblModel {
 
 /** The "walking" backward link.
 
-This is the free category with links that has a link from the codomain of a
-morphism back to the morphism itself.
+The free category with links having a link from the codomain of a morphism back
+to the morphism itself.
 
-In system dynamics jargon, a backward link defines a "reinforcing loop,"
+In the system dynamics jargon, a backward link defines a "reinforcing loop,"
 assuming the link has a positive effect on the flow. An example is an infection
 flow in a model of an infectious disease, where increasing the number of
 infectives increases the rate of infection of the remaining susceptibles (other
 things equal).
  */
 pub fn backward_link(th: Rc<UstrDiscreteTabTheory>) -> UstrDiscreteTabModel {
-    let ob_type = TabObType::Basic(ustr("Object"));
     let mut model = UstrDiscreteTabModel::new(th.clone());
     let (x, y, f) = (ustr("x"), ustr("y"), ustr("f"));
+    let ob_type = TabObType::Basic(ustr("Object"));
     model.add_ob(x, ob_type.clone());
     model.add_ob(y, ob_type.clone());
     model.add_mor(f, TabOb::Basic(x), TabOb::Basic(y), th.hom_type(ob_type));
@@ -117,26 +117,6 @@ pub fn backward_link(th: Rc<UstrDiscreteTabTheory>) -> UstrDiscreteTabModel {
         TabOb::Basic(y),
         model.tabulated_gen(f),
         TabMorType::Basic(ustr("Link")),
-    );
-    model
-}
-
-/** A reaction involving three species, one playing the role of a catalyst.
-
-A free symmetric monoidal category, viewed as a reaction network.
- */
-pub fn catalyzed_reaction(th: Rc<UstrModalDblTheory>) -> UstrModalDblModel {
-    let (ob_type, op) = (ModalObType::new(ustr("Object")), ustr("tensor"));
-    let mut model = UstrModalDblModel::new(th);
-    let (x, y, c) = (ustr("x"), ustr("y"), ustr("c"));
-    model.add_ob(x, ob_type.clone());
-    model.add_ob(y, ob_type.clone());
-    model.add_ob(c, ob_type.clone());
-    model.add_mor(
-        ustr("f"),
-        ModalOb::App(ModalOb::List(List::Symmetric, vec![x.into(), c.into()]).into(), op),
-        ModalOb::App(ModalOb::List(List::Symmetric, vec![y.into(), c.into()]).into(), op),
-        ModalMorType::Zero(ob_type),
     );
     model
 }
@@ -175,11 +155,5 @@ mod tests {
     fn categories_with_links() {
         let th = Rc::new(th_category_links());
         assert!(backward_link(th).validate().is_ok());
-    }
-
-    #[test]
-    fn sym_monoidal_categories() {
-        let th = Rc::new(th_sym_monoidal_category());
-        assert!(catalyzed_reaction(th).validate().is_ok());
     }
 }

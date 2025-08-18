@@ -1,6 +1,6 @@
 import type { KbdKey } from "@solid-primitives/keyboard";
 
-import type { DblModel, DblTheory, MorType, ObOp, ObType } from "catlog-wasm";
+import type { DblTheory, MorType, ObType } from "catlog-wasm";
 import { MorTypeIndex, ObTypeIndex } from "catlog-wasm";
 import type { DiagramAnalysisComponent, ModelAnalysisComponent } from "../analysis";
 import { uniqueIndexArray } from "../util/indexing";
@@ -18,8 +18,8 @@ export class Theory {
     /** Underlying double theory in the core. */
     readonly theory: DblTheory;
 
-    /** Does this theory have a corresponding help page? */
-    readonly help?: boolean;
+    /** Name of help page (excluding file extension) for the theory, if any. */
+    readonly help?: string;
 
     /** Human-readable name for models of theory.
 
@@ -34,15 +34,6 @@ export class Theory {
      */
     readonly description: string;
 
-    /** List of IDs of theories that this theory includes into.
-
-    Migrations along such inclusions are trivial.
-     */
-    readonly inclusions: string[];
-
-    /** List of pushforward (covariant) migrations out of this theory. */
-    readonly pushforwards: ModelMigration[];
-
     /** Whether models of the double theory are constrained to be free. */
     readonly onlyFreeModels!: boolean;
 
@@ -55,20 +46,18 @@ export class Theory {
     private readonly modelTypeMeta: TypeMetadata<ModelObTypeMeta, ModelMorTypeMeta>;
     private readonly instanceTypeMeta: TypeMetadata<InstanceObTypeMeta, InstanceMorTypeMeta>;
 
-    /** Map from IDs of model analyses to their metadata. */
+    /** Map from theory ID to model analysis metadata. */
     private readonly modelAnalysisMap: Map<string, ModelAnalysisMeta>;
 
-    /** Map from IDs of diagram analyses to their metadata. */
+    /** Map from theory ID to diagram analysis metadata. */
     private readonly diagramAnalysisMap: Map<string, DiagramAnalysisMeta>;
 
     constructor(props: {
         id: string;
         theory: DblTheory;
-        help?: boolean;
+        help?: string;
         name: string;
         description: string;
-        inclusions?: string[];
-        pushforwards?: ModelMigration[];
         modelTypes?: ModelTypeMeta[];
         modelAnalyses?: ModelAnalysisMeta[];
         onlyFreeModels?: boolean;
@@ -80,10 +69,6 @@ export class Theory {
         this.id = props.id;
         this.theory = props.theory;
         this.help = props.help;
-
-        // Migrations.
-        this.inclusions = props.inclusions ?? [];
-        this.pushforwards = props.pushforwards ?? [];
 
         // Models.
         this.name = props.name;
@@ -98,11 +83,6 @@ export class Theory {
             props.instanceTypes,
         );
         this.diagramAnalysisMap = uniqueIndexArray(props.diagramAnalyses ?? [], (meta) => meta.id);
-    }
-
-    /** List of IDs of theories to which models of this theory can be migrated. */
-    get migrationTargets(): Array<string> {
-        return this.inclusions.concat(this.pushforwards.map((m) => m.target));
     }
 
     /** Metadata for types in the theory, as used in models.
@@ -203,6 +183,20 @@ class TypeMetadata<ObMeta extends HasObTypeMeta, MorMeta extends HasMorTypeMeta>
     }
 }
 
+type HasObTypeMeta = {
+    tag: "ObType";
+
+    /** Object type in the underlying double theory. */
+    obType: ObType;
+};
+
+type HasMorTypeMeta = {
+    tag: "MorType";
+
+    /** Morphism type in the underlying double theory. */
+    morType: MorType;
+};
+
 /** Frontend metadata applicable to any type in a double theory. */
 export type BaseTypeMeta = {
     /** Human-readable name of type. */
@@ -224,71 +218,34 @@ export type BaseTypeMeta = {
     textClasses?: string[];
 };
 
-type HasObTypeMeta = {
-    tag: "ObType";
-
-    /** Object type in the underlying double theory. */
-    obType: ObType;
-};
-
-type HasMorTypeMeta = {
-    tag: "MorType";
-
-    /** Morphism type in the underlying double theory. */
-    morType: MorType;
-};
-
-type BaseObTypeMeta = BaseTypeMeta & HasObTypeMeta;
-type BaseMorTypeMeta = BaseTypeMeta & HasMorTypeMeta;
-
 /** Metadata for a type as used in models. */
 export type ModelTypeMeta = ModelObTypeMeta | ModelMorTypeMeta;
 
 /** Metadata for an object type as used in models. */
-export type ModelObTypeMeta = BaseObTypeMeta;
+export type ModelObTypeMeta = BaseTypeMeta & HasObTypeMeta;
 
-/** Metadata for a morphism type as used in models. */
-export type ModelMorTypeMeta = BaseMorTypeMeta & {
-    /** Style of arrow to use for morphisms of this type. */
-    arrowStyle?: ArrowStyle;
+/** Metadata for aa morphism type as used in models. */
+export type ModelMorTypeMeta = BaseTypeMeta &
+    HasMorTypeMeta & {
+        /** Style of arrow to use for morphisms of this type. */
+        arrowStyle?: ArrowStyle;
 
-    /** Whether morphisms of this type are typically unnamed.
+        /** Whether morphisms of this type are typically unnamed.
 
-    By default, morphisms (like objects) have names but for certain morphism
-    types in certain domains, it is common to leave them unnamed.
-     */
-    preferUnnamed?: boolean;
-
-    /** Metadata for domain of morphism of this type. */
-    domain?: MorDomainMeta;
-
-    /** Metadata for codomain of morphism of this type. */
-    codomain?: MorDomainMeta;
-};
-
-/** Metadata controlling the domain or codomain of a morphism. */
-export type MorDomainMeta = {
-    /** Domain object be application of this operation. */
-    apply?: ObOp;
-};
+        By default, morphisms (like objects) have names but for certain morphism
+        types in certain domains, it is common to leave them unnamed.
+        */
+        preferUnnamed?: boolean;
+    };
 
 /** Metadata for a type as used in instances of a model. */
 export type InstanceTypeMeta = InstanceObTypeMeta | InstanceMorTypeMeta;
 
 /** Metadata for an object type as used in instances. */
-export type InstanceObTypeMeta = BaseObTypeMeta;
+export type InstanceObTypeMeta = BaseTypeMeta & HasObTypeMeta;
 
 /** Metadata for a morphism type as used in instances. */
-export type InstanceMorTypeMeta = BaseMorTypeMeta;
-
-/** Specifies a migration of models from one theory into another. */
-type ModelMigration = {
-    /** Identifier of theory migrated into. */
-    target: string;
-
-    /** Function to perform the migration. */
-    migrate: (model: DblModel, targetTheory: DblTheory) => DblModel;
-};
+export type InstanceMorTypeMeta = BaseTypeMeta & HasMorTypeMeta;
 
 /** Specifies an analysis with descriptive metadata. */
 export type AnalysisMeta<T> = {
@@ -300,9 +257,6 @@ export type AnalysisMeta<T> = {
 
     /** Short description of analysis. */
     description?: string;
-
-    /** Name of the help page (excluding file extension) for the analysis, if any. */
-    help?: string;
 
     /** Default content created when the analysis is added. */
     initialContent: () => T;

@@ -1,8 +1,6 @@
 import { Alert } from "@kobalte/core/alert";
 import type { JSX } from "solid-js";
 
-import Info from "lucide-solid/icons/info";
-import MessageCircleQuestion from "lucide-solid/icons/message-circle-question";
 import OctagonX from "lucide-solid/icons/octagon-x";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
 
@@ -28,6 +26,7 @@ export const Warning = (props: AlertProps) => (
 );
 
 /** An error alert.
+
 Not called `Error` to avoid shadowing that name in JavaScript.
  */
 export const ErrorAlert = (props: AlertProps) => (
@@ -35,28 +34,6 @@ export const ErrorAlert = (props: AlertProps) => (
         <div class="alert-heading">
             <OctagonX />
             {props.title ?? "Error"}
-        </div>
-        {props.children}
-    </Alert>
-);
-
-/** A note alert. */
-export const Note = (props: AlertProps) => (
-    <Alert class="alert alert-note">
-        <div class="alert-heading">
-            <Info />
-            {props.title ?? "Note"}
-        </div>
-        {props.children}
-    </Alert>
-);
-
-/** A question alert. */
-export const Question = (props: AlertProps) => (
-    <Alert class="alert alert-question">
-        <div class="alert-heading">
-            <MessageCircleQuestion />
-            {props.title ?? "Question"}
         </div>
         {props.children}
     </Alert>

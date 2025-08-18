@@ -45,14 +45,7 @@ export function Completions(props: {
     const remainingCompletions = createMemo(() => {
         setPresumptive(0);
         const prefix = props.text?.toLowerCase() ?? "";
-        const starts = props.completions?.filter((c) => c.name.toLowerCase().startsWith(prefix));
-        const startsNames = new Set(starts.map((c) => c.name.toLowerCase()));
-        const includes =
-            props.completions?.filter(
-                (c) =>
-                    c.name.toLowerCase().includes(prefix) && !startsNames.has(c.name.toLowerCase()),
-            ) ?? [];
-        return starts.concat(includes);
+        return props.completions?.filter((c) => c.name.toLowerCase().startsWith(prefix));
     });
 
     const selectPresumptive = () => {

@@ -1,54 +1,52 @@
-{
-  config,
-  inputs,
-  modulesPath,
-  ...
-}:
+{ inputs, ... }:
+
 let
   owen = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIF2sBTuqGoEXRWpBRqTBwZZPDdLGGJ0GQcuX5dfIZKb4 o@red-special";
   epatters = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAKXx6wMJSeYKCHNmbyR803RQ72uto9uYsHhAPPWNl2D evan@epatters.org";
+  catcolab-deployuser = "TODO";
 in
 {
   imports = [
-    ../../modules/catcolab
-    "${modulesPath}/virtualisation/amazon-image.nix"
-    inputs.agenix.nixosModules.age
+    ../../modules/backend.nix
+    ../../modules/host.nix
+    ../../modules/backup.nix
+    "${inputs.nixpkgs}/nixos/modules/virtualisation/amazon-image.nix"
   ];
 
   age.secrets = {
-    rcloneConf = {
-      file = ../../secrets/rclone.conf.prod.age;
+    "rclone.conf" = {
+      file = "${inputs.self}/infrastructure/secrets/rclone.conf.prod.age";
       mode = "400";
       owner = "catcolab";
     };
-    catcolabSecrets = {
-      file = ../../secrets/.env.prod.age;
+    backendSecretsForCatcolab = {
+      file = "${inputs.self}/infrastructure/secrets/.env.prod.age";
+      name = "backend-secrets-for-catcolab.env";
       owner = "catcolab";
+    };
+    backendSecretsForPostgres = {
+      file = "${inputs.self}/infrastructure/secrets/.env.prod.age";
+      name = "backend-secrets-for-postgres.env";
+      owner = "postgres";
     };
   };
 
   catcolab = {
-    enable = true;
     backend = {
-      port = 8000;
-      hostname = "backend.catcolab.org";
+      backendPort = "8000";
+      automergePort = "8010";
+      backendHostname = "backend.catcolab.org";
+      automergeHostname = "automerge.catcolab.org";
     };
-    automerge = {
-      port = 8080;
-      hostname = "automerge.catcolab.org";
+    backup = {
+      backupdbBucket = "catcolab";
     };
-    environmentFilePath = config.age.secrets.catcolabSecrets.path;
     host = {
-      enable = true;
       userKeys = [
         owen
         epatters
       ];
-      backup = {
-        enable = true;
-        rcloneConfFilePath = config.age.secrets.rcloneConf.path;
-        dbBucket = "catcolab";
-      };
+      deployuserKey = catcolab-deployuser;
     };
   };
 

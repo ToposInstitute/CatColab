@@ -1,8 +1,0 @@
-\date{2025-07-14}
-\title{Double monad}
-\author{Kevin Carlson}
-\taxon{definition}
-\import{macros}
-
-\p{A (strict, pseudo, lax, or colax) \define{double monad} is a monad in the 2-category of double categories, 
-strict, pseudo, lax, or colax double functors, and tight natural transformations.}

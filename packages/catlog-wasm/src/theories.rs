@@ -1,7 +1,7 @@
-/*! Wasm bindings for the standard library of theories in `catlog`.
+/*! Wasm bindings for double theories from the `catlog` standard library.
 
-Each struct in this module provides a [`DblTheory`], possibly with additional
-methods for theory-specific analyses.
+Each struct in this module provides a [`DblTheory`] plus possibly
+theory-specific analysis methods.
  */
 
 use std::rc::Rc;
@@ -9,9 +9,9 @@ use std::rc::Rc;
 use ustr::ustr;
 use wasm_bindgen::prelude::*;
 
-use catlog::dbl::theory;
+use catlog::dbl::{model, theory};
 use catlog::one::Path;
-use catlog::stdlib::{analyses, models, theories, theory_morphisms};
+use catlog::stdlib::{analyses, models, theories};
 
 use super::model_morphism::{MotifsOptions, motifs};
 use super::{analyses::*, model::DblModel, theory::DblTheory};
@@ -48,17 +48,6 @@ impl ThCategory {
     pub fn theory(&self) -> DblTheory {
         DblTheory(self.0.clone().into())
     }
-
-    /// Sigma migrates a category to a schema.
-    #[wasm_bindgen(js_name = "toSchema")]
-    pub fn to_schema(mut model: DblModel, th_schema: &DblTheory) -> Result<DblModel, String> {
-        let th = th_schema.discrete()?;
-        model.discrete_mut()?.push_forward(
-            &theory_morphisms::th_category_to_schema().functor_into(&th.0),
-            th.clone(),
-        );
-        Ok(model)
-    }
 }
 
 /// The theory of database schemas with attributes.
@@ -75,17 +64,6 @@ impl ThSchema {
     #[wasm_bindgen]
     pub fn theory(&self) -> DblTheory {
         DblTheory(self.0.clone().into())
-    }
-
-    /// Sigma migrates a schema to a category.
-    #[wasm_bindgen(js_name = "toCategory")]
-    pub fn to_category(mut model: DblModel, th_category: &DblTheory) -> Result<DblModel, String> {
-        let th = th_category.discrete()?;
-        model.discrete_mut()?.push_forward(
-            &theory_morphisms::th_schema_to_category().functor_into(&th.0),
-            th.clone(),
-        );
-        Ok(model)
     }
 }
 
@@ -134,11 +112,14 @@ impl ThSignedCategory {
         model: &DblModel,
         data: LotkaVolterraModelData,
     ) -> Result<ODEResult, String> {
+        let model: &model::DiscreteDblModel<_, _> = (&model.0)
+            .try_into()
+            .map_err(|_| "Lotka-Volterra simulation expects a discrete double model")?;
         Ok(ODEResult(
-            analyses::ode::SignedCoefficientBuilder::new(ustr("Object"))
+            analyses::ode::LotkaVolterraAnalysis::new(ustr("Object"))
                 .add_positive(Path::Id(ustr("Object")))
                 .add_negative(ustr("Negative").into())
-                .lotka_volterra_analysis(model.discrete()?, data.0)
+                .create_system(model, data.0)
                 .solve_with_defaults()
                 .map_err(|err| format!("{err:?}"))
                 .into(),
@@ -152,11 +133,14 @@ impl ThSignedCategory {
         model: &DblModel,
         data: LinearODEModelData,
     ) -> Result<ODEResult, String> {
+        let model: &model::DiscreteDblModel<_, _> = (&model.0)
+            .try_into()
+            .map_err(|_| "Linear ODE simulation expects a discrete double model")?;
         Ok(ODEResult(
-            analyses::ode::SignedCoefficientBuilder::new(ustr("Object"))
+            analyses::ode::LinearODEAnalysis::new(ustr("Object"))
                 .add_positive(Path::Id(ustr("Object")))
                 .add_negative(ustr("Negative").into())
-                .linear_ode_analysis(model.discrete()?, data.0)
+                .create_system(model, data.0)
                 .solve_with_defaults()
                 .map_err(|err| format!("{err:?}"))
                 .into(),
@@ -223,18 +207,6 @@ impl ThDelayableSignedCategory {
         let delayed_negative_loop = models::delayed_negative_loop(self.0.clone());
         motifs(&delayed_negative_loop, model, options)
     }
-
-    /// Sigma migrates a delayable signed category to a signed category.
-    #[wasm_bindgen(js_name = "toSignedCategory")]
-    pub fn to_signed_category(mut model: DblModel, th: &DblTheory) -> Result<DblModel, String> {
-        let th = th.discrete()?;
-        model.discrete_mut()?.push_forward(
-            &theory_morphisms::th_delayable_signed_category_to_signed_category()
-                .functor_into(&th.0),
-            th.clone(),
-        );
-        Ok(model)
-    }
 }
 
 /// The theory of nullable signed categories.
@@ -287,49 +259,19 @@ impl ThCategoryLinks {
         DblTheory(self.0.clone().into())
     }
 
-    /// Simulates the mass-action ODE system derived from a model.
+    /// Simulates the mass-action system derived from a model.
     #[wasm_bindgen(js_name = "massAction")]
     pub fn mass_action(
         &self,
         model: &DblModel,
         data: MassActionModelData,
     ) -> Result<ODEResult, String> {
+        let model: &model::DiscreteTabModel<_, _, _> = (&model.0)
+            .try_into()
+            .map_err(|_| "Mass-action simulation expects a discrete tabulator model")?;
         Ok(ODEResult(
             analyses::ode::StockFlowMassActionAnalysis::default()
-                .build_numerical_system(model.discrete_tab()?, data.0)
-                .solve_with_defaults()
-                .map_err(|err| format!("{err:?}"))
-                .into(),
-        ))
-    }
-}
-
-/// The theory of strict symmetric monoidal categories.
-#[wasm_bindgen]
-pub struct ThSymMonoidalCategory(Rc<theory::UstrModalDblTheory>);
-
-#[wasm_bindgen]
-impl ThSymMonoidalCategory {
-    #[wasm_bindgen(constructor)]
-    pub fn new() -> Self {
-        Self(Rc::new(theories::th_sym_monoidal_category()))
-    }
-
-    #[wasm_bindgen]
-    pub fn theory(&self) -> DblTheory {
-        DblTheory(self.0.clone().into())
-    }
-
-    /// Simulates the mass-action ODE system derived from a model.
-    #[wasm_bindgen(js_name = "massAction")]
-    pub fn mass_action(
-        &self,
-        model: &DblModel,
-        data: MassActionModelData,
-    ) -> Result<ODEResult, String> {
-        Ok(ODEResult(
-            analyses::ode::PetriNetMassActionAnalysis::default()
-                .build_numerical_system(model.modal()?, data.0)
+                .create_numerical_system(model, data.0)
                 .solve_with_defaults()
                 .map_err(|err| format!("{err:?}"))
                 .into(),
@@ -340,7 +282,7 @@ impl ThSymMonoidalCategory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use notebook_types::current::theory::*;
+    use crate::theory::*;
     use ustr::ustr;
 
     #[test]
@@ -360,19 +302,5 @@ mod tests {
         let link = MorType::Basic(ustr("Link"));
         assert_eq!(th.src(link.clone()), Ok(x));
         assert!(matches!(th.tgt(link), Ok(ObType::Tabulator(_))));
-    }
-
-    #[test]
-    fn modal_theory() {
-        let th = ThSymMonoidalCategory::new().theory();
-        let x = ObType::Basic(ustr("Object"));
-        let list_x = ObType::ModeApp {
-            modality: Modality::SymmetricList,
-            ob_type: x.clone().into(),
-        };
-        let tensor = ObOp::Basic(ustr("tensor"));
-        assert_eq!(th.src(MorType::Hom(list_x.clone().into())), Ok(list_x.clone()));
-        assert_eq!(th.dom(tensor.clone()), Ok(list_x));
-        assert_eq!(th.cod(tensor), Ok(x));
     }
 }

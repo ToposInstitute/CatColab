@@ -79,7 +79,7 @@ export function parseGraphvizJSON(graphviz: GraphvizJSON.Graph): GraphLayout.Gra
             // Omit invisible edges, used to tweak the layout in Graphviz.
             continue;
         }
-        const [sourceNode, targetNode] = [nodeByNumber(edge.tail), nodeByNumber(edge.head)];
+        const [sourceNode, targetNode] = [nodeByNumber(edge.head), nodeByNumber(edge.tail)];
         invariant(sourceNode && targetNode, "Source and target nodes should be defined");
 
         const spline = parseSpline(edge.pos);

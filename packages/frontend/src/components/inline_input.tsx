@@ -1,26 +1,35 @@
 import Popover from "@corvu/popover";
 import { focus } from "@solid-primitives/active-element";
-import { type JSX, createEffect, createSignal } from "solid-js";
+import { type JSX, type Setter, createSignal } from "solid-js";
 focus;
 
 import { type Completion, Completions, type CompletionsRef } from "./completions";
-import type { InputOptions } from "./input_options";
 
 import "./inline_input.css";
 
-/** Optional props for `InlineInput` component. */
-export type InlineInputOptions = InputOptions & {
+/** Optional props for `InlineInput` component.
+ */
+export type InlineInputOptions = {
+    ref?: HTMLInputElement | Setter<HTMLInputElement | undefined>;
     placeholder?: string;
     status?: InlineInputErrorStatus;
     completions?: Completion[];
     showCompletionsOnFocus?: boolean;
+
     autofill?: () => void;
-    interceptKeyDown?: (evt: InputElementKeyboardEvent) => boolean;
+    deleteBackward?: () => void;
+    deleteForward?: () => void;
+    exitBackward?: () => void;
+    exitForward?: () => void;
+    exitUp?: () => void;
+    exitDown?: () => void;
+    exitLeft?: () => void;
+    exitRight?: () => void;
+    onFocus?: () => void;
 };
 
-type InputElementKeyboardEvent = Parameters<JSX.EventHandler<HTMLInputElement, KeyboardEvent>>[0];
-
-/** Error status for `InlineInput` component. */
+/** Error status for `InlineInput` component.
+ */
 export type InlineInputErrorStatus = null | "incomplete" | "invalid";
 
 /** An input component that is displayed inline.
@@ -33,24 +42,13 @@ export function InlineInput(
         setText: (text: string) => void;
     } & InlineInputOptions,
 ) {
-    let ref!: HTMLInputElement;
-
-    createEffect(() => {
-        if (props.isActive && document.activeElement !== ref) {
-            ref.focus();
-            // Move cursor to end of input.
-            ref.selectionStart = ref.selectionEnd = ref.value.length;
-        }
-    });
-
     const [isCompletionsOpen, setCompletionsOpen] = createSignal(false);
     const [completionsRef, setCompletionsRef] = createSignal<CompletionsRef>();
 
-    const onKeyDown: JSX.EventHandler<HTMLInputElement, KeyboardEvent> = (evt) => {
+    const onKeyDown: JSX.EventHandlerUnion<HTMLInputElement, KeyboardEvent> = (evt) => {
         const remaining = completionsRef()?.remainingCompletions() ?? [];
         const value = evt.currentTarget.value;
-        if (props.interceptKeyDown?.(evt)) {
-        } else if (props.deleteBackward && evt.key === "Backspace" && !value) {
+        if (props.deleteBackward && evt.key === "Backspace" && !value) {
             props.deleteBackward();
         } else if (props.deleteForward && evt.key === "Delete" && !value) {
             props.deleteForward();
@@ -121,15 +119,15 @@ export function InlineInput(
                         class="inline-input"
                         type="text"
                         size="1"
-                        ref={ref}
+                        ref={props.ref}
                         classList={{
                             incomplete: props.status === "incomplete",
                             invalid: props.status === "invalid",
                         }}
                         value={props.text}
                         placeholder={props.placeholder}
-                        use:focus={(isFocused) => {
-                            isFocused && props.hasFocused && props.hasFocused();
+                        use:focus={(isFocused: boolean) => {
+                            isFocused && props.onFocus && props.onFocus();
                             (!isFocused || props.showCompletionsOnFocus) &&
                                 setCompletionsOpen(isFocused);
                         }}

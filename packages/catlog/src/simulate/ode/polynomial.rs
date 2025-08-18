@@ -6,7 +6,7 @@ use std::ops::Add;
 
 use derivative::Derivative;
 use nalgebra::DVector;
-use num_traits::{One, Pow, Zero};
+use num_traits::{One, Pow};
 
 #[cfg(test)]
 use super::ODEProblem;
@@ -48,24 +48,11 @@ where
     where
         F: Clone + FnMut(Coef) -> NewCoef,
     {
-        self.map(|poly| poly.extend_scalars(f.clone()))
-    }
-
-    /// Normalizes the polynomial system by normalizing each polynomial in it.
-    pub fn normalize(self) -> Self
-    where
-        Coef: Zero,
-        Exp: Zero,
-    {
-        self.map(|poly| poly.normalize())
-    }
-
-    /// Maps over the components of the system.
-    pub fn map<NewCoef, NewExp, F>(self, mut f: F) -> PolynomialSystem<Var, NewCoef, NewExp>
-    where
-        F: FnMut(Polynomial<Var, Coef, Exp>) -> Polynomial<Var, NewCoef, NewExp>,
-    {
-        let components = self.components.into_iter().map(|(var, poly)| (var, f(poly))).collect();
+        let components = self
+            .components
+            .into_iter()
+            .map(|(var, poly)| (var, poly.extend_scalars(f.clone())))
+            .collect();
         PolynomialSystem { components }
     }
 }

@@ -16,15 +16,17 @@ export type TheoryMeta = {
     description: string;
 
     /** Is this theory the default theory for new models?
+
     It is enforced that at most one theory will have this status.
      */
     isDefault?: boolean;
 
     /** Group to which the theory belongs. */
     group?: string;
-};
 
-type TheoryConstructor = (meta: TheoryMeta) => Theory;
+    /* Name of help page for the theory. */
+    help?: string;
+};
 
 /** Library of double theories configured for the frontend.
 
@@ -35,7 +37,7 @@ export class TheoryLibrary {
     private readonly metaMap: Map<string, TheoryMeta>;
 
     /** Map from theory ID to the theory itself or the constructor for it. */
-    private readonly theoryMap: Map<string, Theory | (() => Promise<TheoryConstructor>)>;
+    private readonly theoryMap: Map<string, Theory | ((meta: TheoryMeta) => Theory)>;
 
     /** ID of the default theory for new models. */
     private defaultTheoryId: string | undefined;
@@ -46,7 +48,7 @@ export class TheoryLibrary {
     }
 
     /** Add a theory to the library. */
-    add(meta: TheoryMeta, cons: () => Promise<TheoryConstructor>) {
+    add(meta: TheoryMeta, cons: (meta: TheoryMeta) => Theory) {
         if (!meta.id) {
             throw new Error("The ID of a theory must be a non-empty string");
         }
@@ -73,7 +75,7 @@ export class TheoryLibrary {
 
     A theory is instantiated and cached the first time it is retrieved.
      */
-    async get(id: string): Promise<Theory> {
+    get(id: string): Theory {
         const meta = this.metaMap.get(id);
         const theoryOrCons = this.theoryMap.get(id);
         if (meta === undefined || theoryOrCons === undefined) {
@@ -81,43 +83,32 @@ export class TheoryLibrary {
         } else if (theoryOrCons instanceof Theory) {
             return theoryOrCons;
         } else {
-            const construct = await theoryOrCons();
-            const theory = construct(meta);
+            const theory = theoryOrCons(meta);
             this.theoryMap.set(id, theory);
             return theory;
         }
     }
 
-    /** Gets metadata for a theory by ID. */
-    getMetadata(id: string): TheoryMeta {
-        const meta = this.metaMap.get(id);
-        if (meta === undefined) {
-            throw new Error(`No theory with ID ${id}`);
-        }
-        return meta;
-    }
-
-    /** Gets metadata for the default theory for new models.
+    /** Gets the default theory for new models.
 
     Throws an error if no default has been set.
      */
-    defaultTheoryMetadata(): TheoryMeta {
+    getDefault(): Theory {
         if (!this.defaultTheoryId) {
             throw new Error("The default theory has not been set");
         }
-        return this.getMetadata(this.defaultTheoryId);
+        return this.get(this.defaultTheoryId);
     }
 
-    /** Gets metadata for all available theories. */
-    allMetadata(): IterableIterator<TheoryMeta> {
+    /** Iterator over metadata for available theories. */
+    metadata(): IterableIterator<TheoryMeta> {
         return this.metaMap.values();
     }
 
-    /** Gets metadata for theories clustered by group. */
-    groupedMetadata(ids?: string[]): Map<string, TheoryMeta[]> {
-        const theories = ids?.map((id) => this.getMetadata(id)) ?? this.allMetadata();
+    /** Metadata for available theories, clustered by group. */
+    groupedMetadata(): Map<string, TheoryMeta[]> {
         const grouped = new Map<string, TheoryMeta[]>();
-        for (const theory of theories) {
+        for (const theory of this.metadata()) {
             const groupName = theory.group ?? "Other";
             const group = grouped.get(groupName) || [];
             group.push(theory);

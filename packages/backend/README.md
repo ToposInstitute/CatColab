@@ -18,7 +18,7 @@ PostgreSQL and the [`axum`](https://github.com/tokio-rs/axum) web framework.
 
 ## Usage
 
-The CatColab backend consists of two services: the main web server (this
+The CatColab backend consists of two services, the main web server (this
 package) and the [Automerge document server](../automerge-doc-server). To run
 the backend locally, launch the two services by running the following commands
 in separate terminals, in any order:
@@ -49,7 +49,6 @@ cd packages/frontend
 pnpm run dev
 ```
 
-
 ## Updating Cargo dependencies
 
 **tl;dr:** Run `crate2nix generate` in the repository root and commit the updated `Cargo.nix` file.
@@ -73,24 +72,3 @@ crate2nix generate
 And committing the the updated `Cargo.nix` file.
 
 Don't forget to run `cargo sqlx prepare` in `packages/backend`!
-
-
-## NixOS
-
-### Test build for NixOS deployment
-```
-nix flake check --no-sandbox
-```
-
-To get a interactive python session in the test environment:
-```
-nix run .#checks.x86_64-linux.integrationTests.driverInteractive --no-sandbox
-```
-
-### Build and run NixOS QEMU virtual machine
-```
-nix build .#nixosConfigurations.catcolab-vm.config.system.build.vm
-./result/bin/run-catcolab-vm
-```
-
-The username and password of the vm is 'catcolab'

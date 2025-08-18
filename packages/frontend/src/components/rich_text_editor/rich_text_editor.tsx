@@ -307,7 +307,7 @@ export function MenuBar(props: MenuControls & MarkStates & { headingLevel: numbe
             <TooltipButton callback={props.onLinkClicked} tooltip="Add Link">
                 <Link />
             </TooltipButton>
-            <TooltipButton callback={props.onMathClicked} tooltip="KaTeX block (shortcut: Mod+m)">
+            <TooltipButton callback={props.onMathClicked} tooltip="KaTeX block (shortuct: Mod+m)">
                 <Sigma />
             </TooltipButton>
 

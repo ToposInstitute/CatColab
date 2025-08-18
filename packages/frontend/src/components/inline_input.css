@@ -6,9 +6,7 @@
 .inline-input-filler,
 .inline-input {
     border: none;
-    border-top: 3px solid transparent;
     border-bottom: 3px solid transparent;
-    border-radius: 0;
 }
 
 .inline-input-filler {
@@ -35,9 +33,9 @@
     color: inherit;
 
     &.incomplete {
-        border-bottom: 2px solid sandybrown;
+        border-bottom: 3px solid sandybrown;
     }
     &.invalid {
-        border-bottom: 2px solid indianred;
+        border-bottom: 3px solid indianred;
     }
 }

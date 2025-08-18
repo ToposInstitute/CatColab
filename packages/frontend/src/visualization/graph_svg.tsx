@@ -10,26 +10,26 @@ import "./graph_svg.css";
 /** Draw a graph with a layout using SVG.
  */
 export function GraphSVG<Id>(props: {
-    graph: GraphLayout.Graph<Id>;
+    graph?: GraphLayout.Graph<Id>;
     ref?: SVGRefProp;
 }) {
     const edgeMarkers = () => {
         const markers = new Set<ArrowMarker>();
-        for (const edge of props.graph.edges) {
+        for (const edge of props.graph?.edges ?? []) {
             markers.add(styleToMarker[edge.style ?? "default"]);
         }
         return Array.from(markers);
     };
 
     return (
-        <svg ref={props.ref} class="graph" width={props.graph.width} height={props.graph.height}>
+        <svg ref={props.ref} class="graph" width={props.graph?.width} height={props.graph?.height}>
             <defs>
                 <Index each={edgeMarkers()}>
                     {(marker) => <Dynamic component={arrowMarkerSVG[marker()]} />}
                 </Index>
             </defs>
-            <For each={props.graph.edges}>{(edge) => <EdgeSVG edge={edge} />}</For>
-            <For each={props.graph.nodes}>{(node) => <NodeSVG node={node} />}</For>
+            <For each={props.graph?.edges ?? []}>{(edge) => <EdgeSVG edge={edge} />}</For>
+            <For each={props.graph?.nodes ?? []}>{(node) => <NodeSVG node={node} />}</For>
         </svg>
     );
 }

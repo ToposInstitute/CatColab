@@ -24,7 +24,6 @@ import FileLock from "lucide-solid/icons/file-lock-2";
 import FilePen from "lucide-solid/icons/file-pen";
 import FileUser from "lucide-solid/icons/file-user";
 import Globe from "lucide-solid/icons/globe";
-import Link2 from "lucide-solid/icons/link-2";
 
 import "./permissions.css";
 
@@ -93,14 +92,6 @@ export function PermissionsForm(props: {
     const submitPermissions = async () => {
         await updatePermissions();
         props.onComplete?.();
-    };
-
-    const copyToClipboard = async () => {
-        if (navigator.clipboard) {
-            await navigator.clipboard.writeText(window.location.href);
-        } else {
-            throw new Error("Link to document could not be copied.");
-        }
     };
 
     // Bypass standard form submission so that pressing Enter does not submit.
@@ -174,23 +165,14 @@ export function PermissionsForm(props: {
                     <p>{"Ownership, once granted, cannot be revoked."}</p>
                 </Warning>
             </Show>
-            <div class="permissions-button-container">
-                <button type="button" class="button utility" onClick={copyToClipboard}>
-                    <Link2 />
-                    Copy link
-                </button>
-                <div class="permissions-spacer" />
-                <button
-                    type="button"
-                    class="ok"
-                    disabled={
-                        !props.refId || currentPermissions.loading || currentPermissions.error
-                    }
-                    onClick={submitPermissions}
-                >
-                    Update permissions
-                </button>
-            </div>
+            <button
+                type="button"
+                class="ok"
+                disabled={!props.refId || currentPermissions.loading || currentPermissions.error}
+                onClick={submitPermissions}
+            >
+                Update permissions
+            </button>
         </form>
     );
 }
@@ -229,6 +211,7 @@ function AnonPermissionsButton() {
         await signOut(getAuth(firebaseApp));
         setOpen(false);
     };
+
     return (
         <Dialog
             open={open()}

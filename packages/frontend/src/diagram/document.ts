@@ -8,10 +8,10 @@ import type {
     ModelDiagramValidationResult,
     Uuid,
 } from "catlog-wasm";
-import { currentVersion, elaborateDiagram } from "catlog-wasm";
+import { elaborateDiagram } from "catlog-wasm";
 import { type Api, type LiveDoc, type StableRef, getLiveDoc } from "../api";
 import { type LiveModelDocument, getLiveModel } from "../model";
-import { NotebookUtils, newNotebook } from "../notebook";
+import { newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
 import { type IdToNameMap, indexMap } from "../util/indexing";
 import type { InterfaceToType } from "../util/types";
@@ -28,7 +28,6 @@ export const newDiagramDocument = (modelRef: StableRef): DiagramDocument => ({
         type: "diagram-in",
     },
     notebook: newNotebook(),
-    version: currentVersion(),
 });
 
 /** A diagram document "live" for editing.
@@ -69,10 +68,11 @@ function enlivenDiagramDocument(
 ): LiveDiagramDocument {
     const { doc } = liveDoc;
 
-    const formalJudgments = createMemo<Array<DiagramJudgment>>(
-        () => NotebookUtils.getFormalContent(doc.notebook),
-        [],
-    );
+    const formalJudgments = createMemo<Array<DiagramJudgment>>(() => {
+        return doc.notebook.cells
+            .filter((cell) => cell.tag === "formal")
+            .map((cell) => cell.content);
+    }, []);
 
     const objectIndex = createMemo<IdToNameMap>(() => {
         const judgments = formalJudgments();
@@ -105,11 +105,11 @@ function enlivenDiagramDocument(
             const th = liveModel.theory();
             const validatedModel = liveModel.validatedModel();
             if (!(th && validatedModel?.result.tag === "Ok")) {
-                // Abort immediately if the theory is undefined or the model is invalid.
+                // Abort immediately if the model itself is invalid.
                 return undefined;
             }
             const { model } = validatedModel;
-            const diagram = elaborateDiagram(formalJudgments(), th.theory);
+            const diagram = elaborateDiagram(doc, th.theory);
             diagram.inferMissingFrom(model);
             const result = diagram.validateIn(model);
             return { diagram, result };

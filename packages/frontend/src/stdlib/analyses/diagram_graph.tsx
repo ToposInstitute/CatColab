@@ -17,14 +17,12 @@ export function configureDiagramGraph(options: {
     id: string;
     name: string;
     description?: string;
-    help?: string;
 }): DiagramAnalysisMeta<GV.GraphConfig> {
-    const { id, name, description, help } = options;
+    const { id, name, description } = options;
     return {
         id,
         name,
         description,
-        help,
         component: (props) => <DiagramGraph title={name} {...props} />,
         initialContent: GV.defaultGraphConfig,
     };

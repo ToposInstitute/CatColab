@@ -1,6 +1,6 @@
 import invariant from "tiny-invariant";
 
-import { type Document, currentVersion } from "catlog-wasm";
+import type { Document } from "catlog-wasm";
 import { type Api, type LiveDoc, type StableRef, getLiveDoc } from "../api";
 import { type LiveDiagramDocument, getLiveDiagram } from "../diagram";
 import { type LiveModelDocument, getLiveModel } from "../model";
@@ -37,7 +37,6 @@ export const newAnalysisDocument = (
         type: "analysis-of",
     },
     notebook: newNotebook(),
-    version: currentVersion(),
 });
 
 /** A model analysis document "live" for editing. */

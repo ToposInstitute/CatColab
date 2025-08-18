@@ -1,7 +1,6 @@
-//! Category theory in dimension one, plus a little graph theory.
+//! Category theory in dimension one.
 
 pub mod category;
-pub mod computad;
 pub mod fp_category;
 pub mod functor;
 pub mod graph;

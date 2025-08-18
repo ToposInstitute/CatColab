@@ -15,35 +15,8 @@ permissions:
   pull-requests: write
 
 jobs:
-  build_dev_docs:
-    name: Build developer docs
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup NodeJS
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: "pnpm"
-
-      - name: Build developer docs
-        run: |
-          pnpm install
-          pnpm --filter ./dev-docs run doc
-
-      - name: Upload developer docs
-        uses: actions/upload-artifact@v4
-        with:
-          name: dev-docs
-          path: dev-docs/output
-
   build_frontend:
-    name: Build frontend
+    name: Build Frontend
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -60,6 +33,12 @@ jobs:
 
       - name: Install Rust toolchain from file
         uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Build for Prod
+        if: github.event_name == 'release'
+        run: |
+          pnpm install
+          pnpm --filter ./packages/frontend run build
 
       - name: Build for Staging
         if: github.event_name == 'push' || github.event_name == 'pull_request'
@@ -67,50 +46,44 @@ jobs:
           pnpm install
           pnpm --filter ./packages/frontend run build --mode staging
 
-      - name: Build for Production
-        if: github.event_name == 'release'
-        run: |
-          pnpm install
-          pnpm --filter ./packages/frontend run build
-
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: app
           path: packages/frontend/dist
 
-      - name: Build frontend docs
+      - name: Build Frontend Docs
         run: |
           pnpm --filter ./packages/frontend run doc
 
-      - name: Upload frontend docs
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: frontend_docs
           path: packages/frontend/docs
 
   build_rust_docs:
-    name: Build Rust docs
+    name: Build Rust Docs
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Repository Checkout
         uses: actions/checkout@v4
 
       - name: Install Rust toolchain from file
         uses: actions-rust-lang/setup-rust-toolchain@v1
 
-      - name: Build Rust docs
+      - name: Build
         run: |
-          cargo doc --all-features --no-deps --workspace --exclude "migrator"
+          cargo doc --all-features --no-deps
 
-      - name: Upload Rust docs
+      - name: Upload rust docs
         uses: actions/upload-artifact@v4
         with:
           name: rust_docs
           path: target/doc
 
-  build_math-docs:
-    name: Build mathematical docs
+  build_dev-docs:
+    name: Build dev-docs
     runs-on: ubuntu-latest
     steps:
       - name: Repository Checkout
@@ -130,21 +103,21 @@ jobs:
           tlmgr install quiver
           tlmgr install spath3
 
-      - name: Build mathematical docs
+      - name: Build
         run: |
-          cd math-docs
+          cd dev-docs
           ./forester build
 
-      - name: Upload mathematical docs
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: math-docs
-          path: math-docs/output
+          name: dev-docs
+          path: dev-docs/output
 
   deploy:
-    name: Deploy to Netlify
+    name: Deploy to netlify
     runs-on: ubuntu-latest
-    needs: [build_dev_docs, build_frontend, build_rust_docs, build_math-docs]
+    needs: [build_dev-docs, build_frontend, build_rust_docs]
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == 'ToposInstitute/CatColab'
     steps:
       - name: Checkout repository
@@ -167,42 +140,38 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v4
 
-      - name: Consolidate and deploy to Staging
-        if: github.event_name == 'push' || github.event_name == 'pull_request'
-        id: netlify_deploy
+      - name: Consolidate
         run: |
           mv app site/
           mv dev-docs site/dev
           mv rust_docs site/dev/rust
           mv frontend_docs site/dev/frontend
-          mv math-docs site/math
-          echo '/dev/rust /dev/rust/catlog' >> site/_redirects
-          echo '/dev/core /dev/rust/catlog' >> site/_redirects
-          echo '/dev/backend /dev/rust/catcolab_backend' >> site/_redirects
-          echo '/math /math/index.xml' >> site/_redirects
-          echo '/maths /math/index.xml' >> site/_redirects
+          echo '/dev /dev/index.xml' >> site/_redirects
           echo '/* /index.html 200' >> site/_redirects
+
+      - name: Deploy to Staging
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        id: netlify_deploy
+        run: |
           cd .netlify-env
           prod_flag=""
           if [ "$BRANCH_NAME" = "main" ]; then prod_flag="--prod"; fi
           npx netlify deploy --dir ../site --site ${{ secrets.NETLIFY_SITE_ID }} --auth ${{ secrets.NETLIFY_API_TOKEN }} $prod_flag --json > ../deploy_output.json
 
-      - name: Consolidate and deploy to Production
+      - name: Deploy to Prod
         if: github.event_name == 'release'
         run: |
-          mv app site/
-          echo '/* /index.html 200' >> site/_redirects
           cd .netlify-env
           npx netlify deploy --dir ../site --site ${{ secrets.NETLIFY_PROD_SITE_ID }} --auth ${{ secrets.NETLIFY_API_TOKEN }} --prod
 
-      - name: Generate URL preview
+      - name: Generate URL Preview
         id: url_preview
         if: env.BRANCH_NAME != 'main' && (github.event_name == 'push' || github.event_name == 'pull_request')
         run: |
           NETLIFY_PREVIEW_URL=$(jq -r '.deploy_url' deploy_output.json)
           echo "NETLIFY_PREVIEW_URL=$NETLIFY_PREVIEW_URL" >> "$GITHUB_OUTPUT"
 
-      - name: Comment URL preview on PR
+      - name: Comment URL Preview on PR
         uses: mshick/add-pr-comment@v2
         if: env.BRANCH_NAME != 'main' && (github.event_name == 'push' || github.event_name == 'pull_request')
         with:
@@ -213,6 +182,9 @@ jobs:
     name: Deploy backend to AWS
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request' && github.ref_name == 'main'
+    env:
+      TARGET_HOST: backend-next.catcolab.org
+      HOST_CONFIG: catcolab-next
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -222,12 +194,12 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.CATCOLAB_NEXT_DEPLOYUSER_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan backend-next.catcolab.org >> ~/.ssh/known_hosts
+          ssh-keyscan ${TARGET_HOST} >> ~/.ssh/known_hosts
 
       - name: Rsync the repo to remote host
         run: |
-           rsync -az --delete ./ catcolab@backend-next.catcolab.org:~/catcolab
+          rsync -az --delete ./ deployuser@${TARGET_HOST}:~/catcolab/
 
       - name: Run nixos-rebuild switch remotely
-        run:
-          ssh catcolab@backend-next.catcolab.org "sudo nixos-rebuild switch --flake ./catcolab#catcolab-next"
+        run: |
+          ssh deployuser@${TARGET_HOST} "sudo /run/current-system/sw/bin/nixos-rebuild switch --flake ./catcolab#${HOST_CONFIG}"

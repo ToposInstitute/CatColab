@@ -4,11 +4,7 @@
     box-sizing: border-box;
     border-left: 4px solid var(--alert-color);
     border-radius: 4px;
-    padding: 0.75rem 0 0.1rem 1.5rem;
-
-    & > p {
-        margin-top: 0.5em;
-    }
+    padding-left: 1ex;
 }
 
 .alert-heading {
@@ -18,21 +14,13 @@
     gap: 5px;
 
     color: var(--alert-color);
-    font-weight: bold;
+    font-weight: 500;
 }
 
 .alert-warning {
-    --alert-color: GoldenRod;
+    --alert-color: rgb(102, 77, 3);
 }
 
 .alert-error {
-    --alert-color: Maroon;
-}
-
-.alert-note {
-    --alert-color: Teal;
-}
-
-.alert-question {
-    --alert-color: CornflowerBlue;
+    --alert-color: maroon;
 }

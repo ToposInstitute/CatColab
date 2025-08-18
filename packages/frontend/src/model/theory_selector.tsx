@@ -1,19 +1,21 @@
 import Dialog from "@corvu/dialog";
-import { For, createMemo, createSignal, useContext } from "solid-js";
-import invariant from "tiny-invariant";
+import { For, createMemo, createSignal } from "solid-js";
 
-import { TheoryHelpButton } from "../page/toolbar";
-import { TheoryLibraryContext, type TheoryMeta } from "../stdlib";
+import type { TheoryLibrary, TheoryMeta } from "../stdlib";
 
 import "./theory_selector.css";
 
 type TheorySelectorProps = {
-    theoryMeta: TheoryMeta;
+    theory: TheoryMeta;
     setTheory: (theoryId: string) => void;
-    theories?: string[];
+    theories: TheoryLibrary;
 };
 
-export function TheorySelectorDialog(props: TheorySelectorProps) {
+export function TheorySelectorDialog(
+    props: {
+        disabled?: boolean;
+    } & TheorySelectorProps,
+) {
     const [theorySelectorOpen, setTheorySelectorOpen] = createSignal(false);
 
     return (
@@ -21,16 +23,15 @@ export function TheorySelectorDialog(props: TheorySelectorProps) {
             <Dialog.Trigger
                 as="a"
                 class="theory-selector-trigger"
-                data-disabled={props.theories?.length === 0 ? true : undefined}
+                data-disabled={props.disabled ? true : undefined}
             >
-                {props.theoryMeta.name}
+                {props.theory.name}
             </Dialog.Trigger>
-            <TheoryHelpButton meta={props.theoryMeta} />
             <Dialog.Portal>
                 <Dialog.Overlay class="overlay" />
                 <Dialog.Content class="popup">
                     <TheorySelector
-                        theoryMeta={props.theoryMeta}
+                        theory={props.theory}
                         setTheory={(id) => {
                             props.setTheory(id);
                             setTheorySelectorOpen(false);
@@ -44,11 +45,8 @@ export function TheorySelectorDialog(props: TheorySelectorProps) {
 }
 
 export function TheorySelector(props: TheorySelectorProps) {
-    const theories = useContext(TheoryLibraryContext);
-    invariant(theories, "Library of theories should be provided as context");
-
     const groupedTheories = createMemo(() =>
-        Array.from(theories.groupedMetadata(props.theories).entries()),
+        Array.from(props.theories.groupedMetadata().entries()),
     );
 
     return (

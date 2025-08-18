@@ -1,0 +1,7 @@
+\title{Database design}
+
+\p{The database contains the following tables.}
+
+\transclude{dev-000C}
+
+\transclude{dev-000D}

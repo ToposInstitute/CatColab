@@ -1,0 +1,267 @@
+\title{Backend design}
+
+\subtree{
+\title{Concepts and overview}
+
+\p{The main pieces of state in the backend are the SQL [database](dev-000B) and
+an in-memory hash map from [refs](dev-000D) to Automerge [document
+handles](https://automerge.org/docs/repositories/dochandles/). The important
+thing to realize is that nothing from Automerge is persisted through a restart
+of the backend; the only thing that is persisted are serializations of the
+Automerge documents at different points in time. Thus, when the server restarts,
+clients must request new document handles. (Currently, this is not implemented:
+you must refresh the client after a server restart.)}
+
+\p{With this in mind, we outline the database schema and the operations
+currently supported on the backend.}
+
+\transclude{dev-000B}
+
+\subtree{
+\title{Capabilities of the backend}
+
+\p{The backend has the following current and future capabilities.}
+
+\p{\strong{Currently implemented RPC API:}}
+
+\ul{
+\li{\strong{Mutation}: \code{new_ref(content: any): string}. Creates a new
+[ref](dev-000D) with the given initial content. Returns the ID of the newly
+created ref as a string representation of the UUID.}
+
+\li{\strong{Query}: \code{doc_id(ref_id: string): string}. Returns the Automerge
+document ID associated with the given ref. If the hash map in the backend
+doesn't contain an association for that ref, then a fresh document handle is
+created with initial state given by the current autosave for that ref.}
+
+\li{\strong{Query}: \code{head_snapshot(ref_id: string): any}. Gets the content
+of the current head of a ref. The result is a plain JSON object, not a live
+Automerge document.}
+
+\li{\strong{Mutation}: \code{save_snapshot(ref_id: string, content: any)}. Saves
+the ref with the given content, as described in [refs](dev-000D).}
+}
+
+\p{\strong{API to implement in the future:}}
+
+\ul{
+\li{Searching for refs via their metadata.}
+\li{Displaying all of the snapshots for a ref, sorted by timestamp.}
+}
+}
+}
+
+\subtree{
+\title{Implementation}
+
+\p{The backend consists of two services running in independent processes
+(possibly on different machines).
+
+\ul{
+\li{\strong{Backend web service}, written in Rust}
+\li{\strong{Automerge doc service}, written in TypeScript and running in Node}
+}}
+
+\p{The services communicate bidirectionally using [SocketIO](https://socket.io/), a
+simple protocol that extends WebSockets with niceties such as automatic
+reconnection and message acknowledgments.}
+
+\p{We summarize the backend services' source path, compilation targets, as well as their most
+important dependencies below (without attempting to be exhaustive).}
+
+\subtree{
+\title{Backend service}
+
+\p{Rust code for the backend service can be found in \code{packages/backend/src}. Running \code{cargo build} will create a binary \code{target/debug/backend} which gets executed eventually in a daemon.}
+
+\p{The backend web service depends on the crates:
+
+\ul{
+
+\li{[\code{axum}](https://github.com/tokio-rs/axum): web application framework
+built on the popular [Tokio](https://tokio.rs/) stack}
+
+\li{[\code{rspc}](https://www.rspc.dev/) with its \code{rspc-axum} integration:
+generates a type-safe RPC client for the frontend}
+
+\li{[\code{sqlx}](https://github.com/launchbadge/sqlx): type-safe queries for
+Postgres (and other SQL databases)}
+
+\li{[\code{socketioxide}](https://github.com/Totodore/socketioxide): Rust
+implementation of a SocketIO server}
+
+}}}
+
+\subtree{
+\title{Automerge service}
+
+\p{Node.js code for the automerge doc service can be found in \code{packages/automerge-doc-server/src}. Running \code{pnpm run build} will create a file \code{packages/automerge-doc-server/dist/automerge-doc-server/src/main.js} which gets executed eventually by \code{node} in a daemon.}
+
+\p{The automerge doc service depends on the packages:
+
+\ul{
+
+\li{[\code{automerge-repo}](https://github.com/automerge/automerge-repo/):
+Manages the websocket-based syncing of Automerge documents. Note that we do
+\em{not} use its storage facilities. That's what the database is for. We would
+prefer to use
+[\code{automerge-repo-rs}](https://github.com/automerge/automerge-repo-rs), the
+Rust implementation of the protocol, but at the time of this writing it is not
+stable. That's why this service is written in TypeScript instead of Rust.}
+
+\li{[\code{express}](https://expressjs.com/): The default choice of web
+framework for a Node.js server. We use it only to upgrade from HTTP to the
+WebSocket protocol.}
+
+\li{\code{socket.io-client}: The official client for the SocketIO protocol.}
+
+}}
+
+}
+}
+
+\subtree{
+\title{Infrastructure}
+
+\p{We have two AWS instances or hosts that each run (possibly different versions of) both the backend web service and the automerge doc service. The hosts and services are named:
+  \ul{
+  \li{Production instance \code{catcolab}}
+    \ul{
+    \li{backend.catcolab.org}
+    \li{automerge.catcolab.org}
+    }
+  \li{Development instance \code{catcolab-next}}
+    \ul{
+    \li{backend-next.catcolab.org}
+    \li{automerge-next.catcolab.org}
+    }
+  }
+For example, the domain names \code{backend-next.catcolab.org} and \code{automerge-next.catcolab.org} point to the \code{catcolab-next} instance but are routed to different ports. These web and doc services can be used by the frontend hosted at \code{next.catcolab.org}, or by a dev client.}
+
+\p{Note that this means that PR previews only are for the frontend. So if a PR introduces significant changes to the backend services, the PR preview won't see those backend changes because it will still be pointing to whatever version of the backend is running on the instance. Fortunately, we don't expect the backend to change all too much, at least compared to the frontend; it just serves blobs without caring about what's in the blobs.}
+
+\subtree{
+\title{Changing the system configuration}
+
+\p{The system configuration of this instance is configured via nix, in the \code{infrastructure/} part of the repo. In order to change the system configuration (e.g. add system packages, add new users), make sure that your ssh key is enabled for root access to the instance (ask Evan for this). Then run:}
+
+\ol{
+\li{\code{nix develop}}
+\li{\code{deploy .#catcolab}}
+}
+
+\p{However, this will not update the version of catcolab that is running on the instance. There is currently a somewhat manual process to do this, because Owen believes that it is important for people to understand the steps of the manual process so that they can debug things when they go wrong.}
+}
+
+\subtree{
+\title{Upgrading the CatColab version}
+
+\p{On each AWS instance, there is a git clone of the catcolab repository in \code{/var/lib/catcolab}. There is a daemon (managed via systemd) that runs the automerge doc service, and another daemon that runs the backend web service. In order to upgrade the version of catcolab associated with both services on the instance, one should:}
+\ol{
+\li{Log in via \code{ssh catcolab@backend-next.catcolab.org} or \code{ssh catcolab@<instance ip address>}. Do not log in as \code{root}. If you don't have access, ask Evan.}
+\li{In \code{/var/lib/catcolab/}, use \code{git} to checkout the desired version of catcolab.}
+\li{Run \code{catcolab-build} to produce a new binaries for the automerge doc service (Node) and the backend web service (Rust).}
+\li{Run \code{catcolab-stop}; this will temporarily stop both the automerge and backend services.}
+\li{Run \code{catcolab-migrate}. This will update the database with new any migrations that have been added since the last time the database was migrated.}
+\li{Run \code{catcolab-start}; this will start back up both the automerge and backend services.}
+\li{If there are no new migrations, run \code{catcolab-restart} to simply stop-then-start the services.}
+\li{If you want to check the status of the two services, run \code{catcolab-status}.}
+\li{If you want to look under the hood and see what the above \code{catcolab-*} scripts are doing, check out \code{infrastructure/scripts}.}
+}
+}
+
+\subtree{
+\title{Debugging the backend services}
+
+\ol{
+\li{To look at the log messages, run \code{journalctl -eu automerge} or \code{journalctl -eu backend} depending on the desired service.}
+\li{In the log messages, be aware that the latest error messages may come from systemd trying to restore an old deployment after a new deployment has failed. Scroll up the logs and look at the log timestamps to find the errors that come from your latest tests.}
+\li{To get the path of the script that systemd ran for, say, the automerge service, run \code{systemctl status automerge} and look at the \code{CGroup} field. The script path could be something like \code{/nix/store/4360f6br044ncwzs75qhn79g45j8qss1-automerge.sh}. Running this script separately can help in debugging. Remember to set the working directory and environment variables so that the script runs in the right context. You can get this contextual information from files like \code{infrastructure/hosts/*/backend.nix}.}
+}
+
+}
+
+\subtree{
+\title{Instance access for new users}
+
+\p{To give a new user access to an AWS instance, e.g. \code{catcolab-next}:}
+\ol{
+\li{Update the public keys in \code{infrastructure/hosts/catcolab-next/default.nix}. Remember to update the permissions for the new user as well.} 
+\li{Get someone with instance access to run \code{nix develop} then \code{deploy .#catcolab-next} in the \code{infrastructure} folder.}
+\li{Commit and push the changes to the repository.}
+}
+}
+
+\subtree{
+\title{Secrets access for new users}
+
+\p{To give a new user access to the secrets:}
+\ol{
+\li{Update the public keys in \code{infrastructure/secrets/secrets.nix}. Remember to update the permissions for the new user as well.}
+\li{Get someone with secret access to run \code{nix develop} in the \code{infrastructure} folder, then \code{agenix -r} in the \code{infrastructure/secrets} folder.}
+\li{Commit and push the changes to the repository.}
+}
+}
+
+\subtree{
+\title{Initializing the AWS instance}
+
+\p{If you are creating an AWS instance and setting up a CatColab backend, e.g. \code{backend-next}, for the first time:}
+\ol{
+\li{Create an instance on AWS:}
+  \ul{
+  \li{Use a community AMI of the form \code{nixos/24.05.????.????????????-x86_64-linux}.}
+  \li{Instance type is \code{t3.medium}.}
+  \li{Select "Allow HTTPS traffic.." and "Allow HTTP traffic.." in addition to the already selected "Allow SSH traffic from Anywhere".}
+  \li{Add 50GB of storage to the instance.}
+  }
+\li{On the \code{namecheap} domain name hosting service, point \code{backend-next.catcolab.org} to the instance IP address.}
+\li{Add a public key of the instance to \code{infrastructure/secrets/secrets.nix}. You can get the public keys by running \code{ssh-keyscan <instance-ip-address>}. Follow the instructions above on giving a new user access to the secrets. In this case, the new user is the instance.}
+\li{Add the instance hostname to the desired host under \code{deploy.nodes} in \code{infrastructure/flake.nix}.}
+\li{In \code{infrastructure/}, run \code{nix develop} followed by \code{deploy .#catcolab-next}. The systemd \code{automerge} and \code{backend} services will fail at the end of the deployment, because the CatColab repo is missing. We will restart the services later after cloning the repo.}
+\li{Access the instance in a new terminal:}
+  \ul{
+  \li{Log in via \code{ssh root@<instance-ip-address>}. Do not log in as \code{catcolab}. If you don't have access, ask Evan.}
+  \li{On the instance, run \code{init-catcolab <branch-name>}. If the CatColab github repo branch name is omitted, it will clone the \code{main} branch. This script installs the nodejs dependencies, initializes the postgres database, runs the database migrations, and builds the required binaries.}
+  }
+\li{The automerge and backend services should run now.}
+}
+
+\p{In case you are curious, the \code{catcolab-init} script performs the following tasks. See \code{infrastructure/hosts/*/backend.nix} for more information.
+\ol{
+\li{Clone the CatColab repo at \code{/var/lib/catcolab/}.}
+\li{Symlink the secrets to the right locations in the cloned repo.}
+\li{Install the Node.js dependencies.}
+\li{Install Rust and Cargo.}
+\li{Install Rust-based \code{sqlx-cli} for migrations.}
+\li{Set up the Postgres user, database and permissions.}
+\li{Stop any automerge or backend service that is running.}
+\li{Run the database migrations.}
+\li{Build the binaries for the automerge and backend services.}
+\li{Start the automerge and backend service daemons.}
+}
+}
+}
+
+\subtree{
+\title{Running the services locally}
+
+\p{If you are doing development work and want to run the automerge doc service and backend web service locally on your machine, you do not need to use systemd to run the services in the background. Instead, it might be easier to use \code{tmux} for running and monitoring the services.}
+
+\p{Setting up the Postgres database locally:}
+\ol{
+\li{Assumptions: There is a \code{postgres} user on the machine. The cluster does not contain a \code{catcolab} user or a \code{catcolab} database. Rust and \code{cargo} are installed.}
+\li{Get the \code{DATABASE_URL} from the decrypted \code{.env.age} file.}
+  \ul{
+  \li{In \code{infrastructure/secrets/}, run \code{nix develop} followed by \code{EDITOR=vim agenix -e .env.age}. You should change the \code{EDITOR} variable to your preferred editor tool.}
+  }
+\li{In \code{infrastructure/scripts}, run \code{su -m postgres -- ./initdb.sh "<DATABASE_URL>"}.}
+\li{Run migrations on the database:}
+  \ul{
+  \li{Install \code{sqlx-cli} with \code{cargo install sqlx-cli}}
+  \li{In \code{packages/backend/}, run \code{~/.cargo/bin/sqlx migrate run}}
+  }
+}
+}
+
+}

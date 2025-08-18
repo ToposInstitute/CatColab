@@ -1,0 +1,44 @@
+\title{ProseMirror}
+
+\p{[ProseMirror](https://prosemirror.net/) is a modular library of components
+  for building rich content editors, written in TypeScript. It is often used
+  with [TipTap](https://tiptap.dev/)
+  ([HN](https://news.ycombinator.com/item?id=36957204)), which builds on
+  ProseMirror to make it easier for standard use cases.}
+
+\subtree{
+\title{Collaborative editing}
+
+\p{ProseMirror supports real-time collaborative editing through several
+different backends:
+\ul{
+  \li{[prosemirror-collab](https://prosemirror.net/docs/guide/#collab):
+  ProseMirror's built-in module based on a central authority, \em{not} Yjs}
+  \li{[prosemirror-collab-commit](https://github.com/stepwisehq/prosemirror-collab-commit):
+  third-party module for commit-based collaborative editing}
+  \li{[Hocuspocus](https://tiptap.dev/docs/hocuspocus/introduction):
+  integrates Yjs with ProseMirror/TipTap}
+}}
+}
+
+\subtree{
+\title{Example applications}
+
+\p{Open-source rich-text editors built using
+TypeScript, ProseMirror/TipTap, and in some cases Yjs:
+\ul{
+  \li{[Vrite](https://vrite.io/)
+  ([demo](https://editor.vrite.io/),
+   [GitHub](https://github.com/vriteio/vrite)
+   [HN](https://news.ycombinator.com/item?id=36446045)):
+  WYSIWYG Markdown editor}
+  \li{[BlockNote](https://www.blocknotejs.org/)
+  ([GitHub](https://github.com/TypeCellOS/BlockNote),
+   [HN](https://news.ycombinator.com/item?id=32764493)):
+  block-based editor inspired by Notion}
+  \li{[Novel](https://novel.sh/)
+  ([GitHub](https://github.com/steven-tey/novel),
+   [HN](https://news.ycombinator.com/item?id=36360789)):
+  another Notion-style editor}
+}}
+}

@@ -14,9 +14,8 @@ you must carry around (references to) more data to evaluate functors than to
 evaluate functions or graph morphisms.
  */
 
-use std::hash::Hash;
+use std::hash::{BuildHasher, Hash};
 
-use derive_more::Constructor;
 use nonempty::NonEmpty;
 use ref_cast::RefCast;
 use thiserror::Error;
@@ -123,7 +122,7 @@ codomain category's underlying graph.
 You can't do much with this data until it is [interpreted as a
 functor](Self::functor_into) into a specific category.
  */
-#[derive(Clone, Debug, Default, PartialEq, Eq, Constructor)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct FpFunctorData<ObGenMap, MorGenMap> {
     /// Mapping on object generators.
     pub ob_generator_map: ObGenMap,
@@ -133,6 +132,14 @@ pub struct FpFunctorData<ObGenMap, MorGenMap> {
 }
 
 impl<ObGenMap, MorGenMap> FpFunctorData<ObGenMap, MorGenMap> {
+    /// Constructs from given mappings on object and morphism generators.
+    pub fn new(ob_generator_map: ObGenMap, mor_generator_map: MorGenMap) -> Self {
+        Self {
+            ob_generator_map,
+            mor_generator_map,
+        }
+    }
+
     /// Interprets the data as a functor into the given category.
     pub fn functor_into<'a, Cod>(&'a self, cod: &'a Cod) -> FpFunctor<'a, Self, Cod> {
         FpFunctor::new(self, cod)
@@ -166,7 +173,6 @@ a [`Mapping`] between sets, a codomain is needed not just for validation but to
 even evaluate the functor on morphisms, hence is required as extra data. The
 domain category is needed only for validation.
  */
-#[derive(Constructor)]
 pub struct FpFunctor<'a, Map, Cod> {
     map: &'a Map,
     cod: &'a Cod,
@@ -245,6 +251,13 @@ where
     }
 }
 
+impl<'a, Map, Cod> FpFunctor<'a, Map, Cod> {
+    /// Constructs a new functor out of an f.p. category.
+    pub fn new(map: &'a Map, cod: &'a Cod) -> Self {
+        Self { map, cod }
+    }
+}
+
 impl<'a, V, E, Ob, Mor, Map, Cod> FpFunctor<'a, Map, Cod>
 where
     V: Eq + Clone + Hash,
@@ -255,17 +268,17 @@ where
     Cod: Category<Ob = Ob, Mor = Mor>,
 {
     /// Validates that the functor is well-defined on the given f.p. category.
-    pub fn validate_on(
+    pub fn validate_on<S: BuildHasher>(
         &self,
-        dom: &FpCategory<V, E>,
+        dom: &FpCategory<V, E, S>,
     ) -> Result<(), NonEmpty<InvalidFpFunctor<V, E>>> {
         crate::validate::wrap_errors(self.iter_invalid_on(dom))
     }
 
     /// Iterates over failures to be functorial on the given f.p. category.
-    pub fn iter_invalid_on<'b>(
+    pub fn iter_invalid_on<'b, S: BuildHasher>(
         &'b self,
-        dom: &'b FpCategory<V, E>,
+        dom: &'b FpCategory<V, E, S>,
     ) -> impl Iterator<Item = InvalidFpFunctor<V, E>> + 'b {
         let generator_errors =
             GraphMorphism(self.map, dom.generators(), UnderlyingGraph::ref_cast(self.cod))
@@ -291,7 +304,7 @@ where
 }
 
 /// A failure of a map out of an f.p. category to be functorial.
-#[derive(Debug, Error, PartialEq, Eq)]
+#[derive(Debug, Error)]
 pub enum InvalidFpFunctor<V, E> {
     /// An object generator not mapped to an object in the codomain category.
     #[error("Object generator `{0}` is not mapped to an object in the codomain")]

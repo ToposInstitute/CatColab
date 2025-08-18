@@ -15,7 +15,7 @@ the same data structure, but with different notation!
  */
 
 use num_traits::{One, Pow, Zero};
-use std::collections::{BTreeMap, btree_map};
+use std::collections::BTreeMap;
 use std::fmt::Display;
 use std::iter::{Product, Sum};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg};
@@ -102,7 +102,7 @@ elements of the set.
 Combinations have exactly the same underlying data structure as
 [monomials](Monomial), but are written additively rather than multiplicatively.
  */
-#[derive(Clone, PartialEq, Eq, Debug, Derivative)]
+#[derive(Clone, PartialEq, Eq, Derivative)]
 #[derivative(Default(bound = ""))]
 pub struct Combination<Var, Coef>(BTreeMap<Var, Coef>);
 
@@ -163,14 +163,6 @@ where
         assert!(iter.next().is_none(), "Too many values");
         value
     }
-
-    /// Normalizes the combination by dropping terms with coefficient zero.
-    pub fn normalize(self) -> Self
-    where
-        Coef: Zero,
-    {
-        self.into_iter().filter(|(coef, _)| !coef.is_zero()).collect()
-    }
 }
 
 /// Constructs a combination from a list of terms (coefficient-variable pairs).
@@ -180,7 +172,7 @@ where
     Coef: Add<Output = Coef>,
 {
     fn from_iter<T: IntoIterator<Item = (Coef, Var)>>(iter: T) -> Self {
-        let mut combination = Combination::default();
+        let mut combination = Combination::zero();
         for rhs in iter {
             combination += rhs;
         }
@@ -188,10 +180,14 @@ where
     }
 }
 
-/// Iterates over the terms (coefficient-variable pairs) of the combination.
+/// Iterates over the terms (coefficient-variable pairs) of the polynomial.
 impl<Var, Coef> IntoIterator for Combination<Var, Coef> {
     type Item = (Coef, Var);
-    type IntoIter = std::iter::Map<btree_map::IntoIter<Var, Coef>, fn((Var, Coef)) -> (Coef, Var)>;
+
+    type IntoIter = std::iter::Map<
+        std::collections::btree_map::IntoIter<Var, Coef>,
+        fn((Var, Coef)) -> (Coef, Var),
+    >;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter().map(|(var, coef)| (coef, var))
@@ -200,8 +196,9 @@ impl<Var, Coef> IntoIterator for Combination<Var, Coef> {
 
 impl<'a, Var, Coef> IntoIterator for &'a Combination<Var, Coef> {
     type Item = (&'a Coef, &'a Var);
+
     type IntoIter = std::iter::Map<
-        btree_map::Iter<'a, Var, Coef>,
+        std::collections::btree_map::Iter<'a, Var, Coef>,
         fn((&'a Var, &'a Coef)) -> (&'a Coef, &'a Var),
     >;
 
@@ -299,14 +296,14 @@ where
 impl<Var, Coef> Zero for Combination<Var, Coef>
 where
     Var: Ord,
-    Coef: Add<Output = Coef> + Zero,
+    Coef: Add<Output = Coef>,
 {
     fn zero() -> Self {
         Combination(Default::default())
     }
 
     fn is_zero(&self) -> bool {
-        self.0.values().all(|coef| coef.is_zero())
+        self.0.is_empty()
     }
 }
 
@@ -388,7 +385,7 @@ monomials themselves become ordered under the lexicographic order. This is a
 valid *monomial ordering* as used in Groebner bases
 ([*IVA*](crate::refs::IdealsVarietiesAlgorithms), Section 2.2).
  */
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Derivative)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Derivative)]
 #[derivative(Default(bound = ""))]
 pub struct Monomial<Var, Exp>(BTreeMap<Var, Exp>);
 
@@ -450,14 +447,6 @@ where
     {
         self.0.iter().map(|(var, exp)| (f(var), exp.clone())).collect()
     }
-
-    /// Normalizes the monomial by dropping terms with exponent zero.
-    pub fn normalize(self) -> Self
-    where
-        Exp: Zero,
-    {
-        self.into_iter().filter(|(_, exp)| !exp.is_zero()).collect()
-    }
 }
 
 /// Constructs a monomial from a sequence of variable-exponent pairs.
@@ -467,21 +456,11 @@ where
     Exp: Add<Output = Exp>,
 {
     fn from_iter<T: IntoIterator<Item = (Var, Exp)>>(iter: T) -> Self {
-        let mut monomial = Monomial::default();
+        let mut monomial = Monomial::one();
         for rhs in iter {
             monomial *= rhs;
         }
         monomial
-    }
-}
-
-/// Iterates over the terms (variable-exponent pairs) of the monomial.
-impl<Var, Exp> IntoIterator for Monomial<Var, Exp> {
-    type Item = (Var, Exp);
-    type IntoIter = btree_map::IntoIter<Var, Exp>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter()
     }
 }
 
@@ -556,14 +535,14 @@ where
 impl<Var, Exp> One for Monomial<Var, Exp>
 where
     Var: Ord,
-    Exp: Add<Output = Exp> + Zero,
+    Exp: Add<Output = Exp>,
 {
     fn one() -> Self {
         Monomial(Default::default())
     }
 
     fn is_one(&self) -> bool {
-        self.0.values().all(|exp| exp.is_zero())
+        self.0.is_empty()
     }
 }
 
@@ -617,11 +596,7 @@ mod tests {
 
         let x = Combination::generator('x');
         assert_eq!((x.clone() * -1i32).to_string(), "(-1) x");
-        assert_eq!(x.clone().neg().to_string(), "(-1) x");
-
-        let combination = x.clone() + x.neg();
-        assert_ne!(combination, Combination::default());
-        assert_eq!(combination.normalize(), Combination::default());
+        assert_eq!(x.neg().to_string(), "(-1) x");
     }
 
     #[test]
@@ -639,8 +614,5 @@ mod tests {
         assert_eq!(monomial.map_variables(|_| 'x').to_string(), "x^3");
 
         assert_eq!(Monomial::<char, u32>::one().to_string(), "1");
-
-        let monomial: Monomial<_, u32> = [('x', 1), ('y', 0), ('x', 2)].into_iter().collect();
-        assert_eq!(monomial.normalize().to_string(), "x^3");
     }
 }

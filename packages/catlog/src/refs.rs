@@ -68,26 +68,6 @@ Seerp Roald Koudenburg, 2020: Augmented virtual double categories.
  */
 pub const AugmentedVDCs: () = ();
 
-/** Reference: Adjoint logic with a 2-category of modes.
-
-Daniel R. Licata & Michael Shulman, 2015: Adjoint logic with a 2-category of
-modes.
-
-- [DOI:10.1007/978-3-319-27683-0_16](https://doi.org/10.1007/978-3-319-27683-0_16)
-- [preprint](https://web.archive.org/web/20240921140047/https://dlicata.wescreates.wesleyan.edu/pubs/ls15adjoint/ls15adjoint.pdf)
- */
-pub const AdjointLogic: () = ();
-
-/** Reference: Compositional framework for reaction networks.
-
-John C. Baez & Blake S. Pollard, 2017: A compositional framework for reaction
-networks.
-
-- [DOI:10.1142/S0129055X17500283](https://doi.org/10.1142/S0129055X17500283)
-- [arXiv:1704.02051](https://arxiv.org/abs/1704.02051)
- */
-pub const ReactionNets: () = ();
-
 /** Reference: Compositional account of biochemical regulatory networks.
 
 Rebekah Aduddell, James Fairbanks, Amit Kumar, Pablo S. Ocal, Evan Patterson,

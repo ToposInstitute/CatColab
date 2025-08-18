@@ -1,5 +1,5 @@
 import { HamburgerMenu } from "./menubar";
-import { Toolbar } from "./toolbar";
+import { TheoryHelpButton, Toolbar } from "./toolbar";
 
 export function DocumentLoadingScreen() {
     return (
@@ -9,6 +9,7 @@ export function DocumentLoadingScreen() {
                     <div />
                 </HamburgerMenu>
                 <span class="filler" />
+                <TheoryHelpButton />
             </Toolbar>
         </div>
     );
