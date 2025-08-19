@@ -126,11 +126,10 @@ with lib;
 
       serviceConfig = {
         User = "catcolab";
-        Type = "simple";
+        Type = "notify";
         Restart = "on-failure";
         ExecStart = lib.getExe self.packages.x86_64-linux.backend;
         EnvironmentFile = config.catcolab.environmentFilePath;
-        # This helps avoid circular build probems in the future
         Environment = "SPA_DIR=${self.packages.x86_64-linux.frontend}";
       };
     };

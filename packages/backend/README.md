@@ -86,11 +86,3 @@ To get a interactive python session in the test environment:
 ```
 nix run .#checks.x86_64-linux.integrationTests.driverInteractive --no-sandbox
 ```
-
-### Build and run NixOS QEMU virtual machine
-```
-nix build .#nixosConfigurations.catcolab-vm.config.system.build.vm
-./result/bin/run-catcolab-vm
-```
-
-The username and password of the vm is 'catcolab'

@@ -20,6 +20,8 @@
       # be)
       url = "github:NixOS/nixpkgs/master";
     };
+
+    nixos-generators.url = "github:nix-community/nixos-generators";
   };
 
   outputs =
@@ -29,6 +31,7 @@
       deploy-rs,
       fenix,
       crane,
+      nixos-generators,
       ...
     }@inputs:
     let
@@ -160,22 +163,25 @@
         '';
       };
 
+      # NOTE: this is not currently used, but was painful to build and might be useful in the future.
+      # Wraps the typical `deploy-rs.lib.${linuxSystem}.activate.nixos` activation function
+      # with a custom script that can run additional health checks. The script runs on the remote host
+      # and if it fails the whole deployment will fail.
+      # use:
+      # `deploy.nodes.${host}.profiles.system.path = healthcheckWrapper self.nixosConfigurations.host;`
       healthcheckWrapper =
-        base:
+        nixosConfiguration:
         let
-          defaultNixos = deploy-rs.lib.${linuxSystem}.activate.nixos base;
+          defaultNixos = deploy-rs.lib.${linuxSystem}.activate.nixos nixosConfiguration;
 
-          healthcheckWrapperScript = pkgsLinux.writeShellScriptBin "healthcheck-wrapper" ''
-            echo "=== BEFORE"
+          healthcheckWrapperScript = pkgsLinux.writeShellScriptBin "healthcheck-wrapper-script" ''
             PROFILE=${defaultNixos}
+            # insert healthchecks
             ${defaultNixos}/deploy-rs-activate
-            echo "=== AFTER"
-
-            systemctl status backend
-
           '';
         in
-        deploy-rs.lib.${linuxSystem}.activate.custom healthcheckWrapperScript "./bin/healthcheck-wrapper";
+        deploy-rs.lib.${linuxSystem}.activate.custom healthcheckWrapperScript
+          "./bin/healthcheck-wrapper-script";
     in
     {
       # Create devShells for all supported systems
@@ -217,6 +223,31 @@
           frontend = pkgsLinux.callPackage ./packages/frontend/default.nix {
             inherit inputs rustToolchainLinux self;
           };
+
+          # VM built with `nixos-rebuild build-vm` (like `nix build
+          # .#nixosConfigurations.catcolab-vm.config.system.build.vm`) are not the same
+          # as "traditional" VMs, which causes deploy-rs to fail when deploying to them.
+          # https://github.com/serokell/deploy-rs/issues/85#issuecomment-885782350
+          #
+          # This is worked around by creating a full featured VM image.
+          #
+          # use:
+          # nix build .#catcolab-vm
+          # cp result/nixos.qcow2 nixos.qcow2
+          # db-utils vm start
+          catcolab-vm = nixos-generators.nixosGenerate {
+            system = "x86_64-linux";
+            format = "qcow";
+
+            modules = [
+              ./infrastructure/hosts/catcolab-vm
+            ];
+
+            specialArgs = {
+              inherit inputs self;
+              rustToolchain = rustToolchainLinux;
+            };
+          };
         };
       };
 
@@ -247,7 +278,9 @@
 
         catcolab-vm = nixpkgs.lib.nixosSystem {
           system = linuxSystem;
-          modules = [ ./infrastructure/hosts/catcolab-vm ];
+          modules = [
+            ./infrastructure/hosts/catcolab-vm
+          ];
           specialArgs = {
             inherit inputs self;
             rustToolchain = rustToolchainLinux;
@@ -270,28 +303,20 @@
           profiles.system = {
             sshUser = "catcolab";
             user = "root";
-            path = healthcheckWrapper self.nixosConfigurations.catcolab-next;
-
-            # deploy-rs.lib.${linuxSystem}.activate.custom activateScript "./bin/activate-script";
-
-            # self.nixosConfigurations.catcolab-next
-            #   pkgsLinux.writeShellScriptBin
-            #   "activate-script"
-            #   ''
-            #     $PROFILE/activate
-            #   '';
-
-            # customActivator
-            #   self.nixosConfigurations.catcolab-next;
+            path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab-next;
           };
         };
         catcolab-vm = {
-          hostname = "backend.catcolab.org";
+          hostname = "localhost";
+          fastConnection = true;
           profiles.system = {
-            # TODO: can be changed to catcolab after the next deploy (the host needs to first update the
-            # permissions of the catcolab user)
-            sshUser = "root";
-            path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab;
+            sshOpts = [
+              "-p"
+              "2221"
+            ];
+            sshUser = "catcolab";
+            path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab-vm;
+            user = "root";
           };
         };
       };

@@ -1,7 +1,5 @@
 use axum::extract::Request;
 
-
-use std::path::Path;
 use axum::middleware::{Next, from_fn_with_state};
 use axum::{Router, routing::get};
 use axum::{extract::State, response::IntoResponse};
@@ -15,9 +13,10 @@ use sqlx::{PgPool, Postgres};
 use sqlx_migrator::cli::MigrationCommand;
 use sqlx_migrator::migrator::{Migrate, Migrator};
 use sqlx_migrator::{Info, Plan};
+use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::watch;
-use tower::{ServiceBuilder, ServiceExt};
+use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
 use tracing::{error, info};
 use tracing_subscriber::filter::{EnvFilter, LevelFilter};
@@ -137,6 +136,7 @@ async fn run_migrator_apply(
     migrator.run(&mut conn, &Plan::apply_all()).await.unwrap();
 
     let _ = status_tx.send(AppStatus::Running);
+    let _ = sd_notify::notify(false, &[sd_notify::NotifyState::Ready]);
     info!("Migrations complete");
 
     Ok(())
@@ -206,21 +206,18 @@ async fn run_web_server(
         .layer(from_fn_with_state(firebase_auth, auth_middleware))
         .service(qubit_service);
 
+    // NOTE: Currently nothing is using the /status endpoint. It will likely be used in the future by
+    // tests.
     let status_router = Router::new()
         .route("/status", get(status_handler))
         .with_state(state.app_status.clone());
 
-    let mut app = Router::new()
-        .merge(status_router)
-        .nest_service("/rpc", rpc_with_mw);
+    let mut app = Router::new().merge(status_router).nest_service("/rpc", rpc_with_mw);
 
-    
     if let Some(spa_dir) = spa_directory() {
         let index = Path::new(&spa_dir).join("index.html");
-        let spa_service = get_service(
-            ServeDir::new(&spa_dir)
-                .not_found_service(ServeFile::new(index))
-        );
+        let spa_service =
+            get_service(ServeDir::new(&spa_dir).not_found_service(ServeFile::new(index)));
 
         info!("Serving frontend from directory: {spa_dir}");
         app = app.nest_service("/", spa_service);
@@ -239,17 +236,17 @@ async fn run_web_server(
     Ok(())
 }
 
-
- 
 fn spa_directory() -> Option<String> {
-    // Prefer SPA_DIR, otherwise default to "dist"
-    let candidate = dotenvy::var("SPA_DIR").unwrap_or_else(|_| "dist".to_string());
-    let path = Path::new(&candidate);
-    if path.exists() && path.is_dir() {
-        Some(candidate)
-    } else {
-        None
+    // NOTE: using an environment variable allows us to set the frontend at runtime, which will prevent
+    // possible issues with circular dependencies in the future. (Currently the frontend dependency
+    // catcolab-api, which is built by the backend, is tracked in git)
+    if let Ok(candidate) = dotenvy::var("SPA_DIR") {
+        let path = Path::new(&candidate);
+        if path.exists() && path.is_dir() {
+            return Some(candidate);
+        }
     }
+    None
 }
 
 async fn run_automerge_socket(

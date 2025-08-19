@@ -103,5 +103,5 @@ instrument.mjs
 # output from nix build commands
 result
 
-# image used by nix vm
-/catcolab.qcow2
+# vm image
+nixos.qcow2

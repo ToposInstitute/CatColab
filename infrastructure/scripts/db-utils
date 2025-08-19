@@ -335,11 +335,42 @@ function run_reset() {
   fi
 }
 
+function run_vm() {
+  local target="local"
+  local skip_migrate=false
+
+  while [[ ${1-} ]]; do
+    case "$1" in
+      "start")
+        run_vm_start
+        ;;
+      *)
+        echo "Unknown argument: $1"
+        echo ""
+        print_load_help
+        exit 1
+        ;;
+    esac
+    shift
+  done
+}
+
+function run_vm_start() {
+    qemu-system-x86_64 \
+    -enable-kvm -cpu host -smp 2 -m 2048 \
+    -drive file=./nixos.qcow2,if=virtio,format=qcow2 \
+    -device virtio-net-pci,netdev=net0 \
+    -netdev user,id=net0,hostfwd=tcp::2221-:22,hostfwd=tcp::5433-:5432,hostfwd=tcp::8000-:8000,hostfwd=tcp::8010-:8010
+}
+
 # Entry point
 subcommand="$1"
 shift || true
 
 case "$subcommand" in
+  vm)
+    run_vm "$@"
+    ;;
   connect)
     run_connect "$@"
     ;;
