@@ -151,18 +151,6 @@
           '';
         };
 
-      backendPkg = pkgsLinux.stdenv.mkDerivation {
-        pname = "backend-pkg";
-        version = "0.1.0";
-
-        src = ./packages/backend/pkg;
-
-        installPhase = ''
-          mkdir -p $out
-          cp -r * $out/
-        '';
-      };
-
       # NOTE: this is not currently used, but was painful to build and might be useful in the future.
       # Wraps the typical `deploy-rs.lib.${linuxSystem}.activate.nixos` activation function
       # with a custom script that can run additional health checks. The script runs on the remote host
@@ -199,7 +187,17 @@
       # node ./result/main.cjs
       packages = {
         x86_64-linux = {
-          inherit backendPkg;
+          catcolabApi = pkgsLinux.stdenv.mkDerivation {
+            pname = "catcolab-api";
+            version = "0.1.0";
+
+            src = ./packages/backend/pkg;
+
+            installPhase = ''
+              mkdir -p $out
+              cp -r * $out/
+            '';
+          };
 
           backend = pkgsLinux.callPackage ./packages/backend/default.nix {
             inherit craneLib cargoArtifacts self;
@@ -224,7 +222,7 @@
             inherit inputs rustToolchainLinux self;
           };
 
-          # VM built with `nixos-rebuild build-vm` (like `nix build
+          # VMs built with `nixos-rebuild build-vm` (like `nix build
           # .#nixosConfigurations.catcolab-vm.config.system.build.vm`) are not the same
           # as "traditional" VMs, which causes deploy-rs to fail when deploying to them.
           # https://github.com/serokell/deploy-rs/issues/85#issuecomment-885782350

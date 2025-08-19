@@ -34,7 +34,7 @@ pkgs.stdenv.mkDerivation {
     cp -r ${self.packages.x86_64-linux.catlog-wasm-browser}/* ./catlog-wasm/dist/pkg-browser/
 
     mkdir -p ./backend/pkg
-    cp -r ${self.packages.x86_64-linux.backendPkg}/* ./backend/pkg/
+    cp -r ${self.packages.x86_64-linux.catcolabApi}/* ./backend/pkg/
     mkdir -p ./backend/pkg/node_modules
 
     mkdir ./frontend
