@@ -487,15 +487,18 @@ pub fn collect_product(ob: Ob) -> Result<Vec<Ob>, String> {
 
 /// Elaborates a model defined by a notebook into a catlog model.
 #[wasm_bindgen(js_name = "elaborateModel")]
-pub fn elaborate_model(judgments: Vec<ModelJudgment>, theory: &DblTheory) -> DblModel {
+pub fn elaborate_model(
+    judgments: Vec<ModelJudgment>,
+    theory: &DblTheory,
+) -> Result<DblModel, String> {
     let mut model = DblModel::new(theory);
     for judgment in judgments {
         match judgment {
-            ModelJudgment::Object(decl) => model.add_ob(&decl).unwrap(),
-            ModelJudgment::Morphism(decl) => model.add_mor(&decl).unwrap(),
+            ModelJudgment::Object(decl) => model.add_ob(&decl)?,
+            ModelJudgment::Morphism(decl) => model.add_mor(&decl)?,
         }
     }
-    model
+    Ok(model)
 }
 
 #[cfg(test)]

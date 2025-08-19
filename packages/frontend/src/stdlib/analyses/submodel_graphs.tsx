@@ -55,7 +55,7 @@ function SubmodelsAnalysis(
     const submodels = createMemo<DblModel[]>(
         () => {
             const validated = props.liveModel.validatedModel();
-            if (validated?.result.tag !== "Ok") {
+            if (validated?.tag !== "Valid") {
                 return [];
             }
             return props.findSubmodels(validated.model, {

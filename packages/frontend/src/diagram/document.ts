@@ -104,7 +104,7 @@ function enlivenDiagramDocument(
         () => {
             const th = liveModel.theory();
             const validatedModel = liveModel.validatedModel();
-            if (!(th && validatedModel?.result.tag === "Ok")) {
+            if (!(th && validatedModel?.tag === "Valid")) {
                 // Abort immediately if the theory is undefined or the model is invalid.
                 return undefined;
             }

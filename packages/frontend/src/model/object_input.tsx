@@ -106,7 +106,7 @@ function BasicObInput(allProps: ObInputProps & IdInputOptions) {
     invariant(liveModel, "Live model should be provided as context");
 
     const completions = (): Ob[] | undefined =>
-        liveModel().validatedModel()?.model.objectsWithType(props.obType);
+        liveModel().elaboratedModel()?.objectsWithType(props.obType);
 
     return (
         <ObIdInput
@@ -146,8 +146,8 @@ function TabulatedMorInput(allProps: ObInputProps & IdInputOptions) {
             return undefined;
         }
         return liveModel()
-            .validatedModel()
-            ?.model.morphismsWithType(morType)
+            .elaboratedModel()
+            ?.morphismsWithType(morType)
             .map((mor) =>
                 match(mor)
                     .with(

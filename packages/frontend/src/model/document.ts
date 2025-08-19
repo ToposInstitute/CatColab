@@ -55,15 +55,31 @@ export type LiveModelDocument = {
     /** A memo of the double theory that the model is of. */
     theory: Accessor<Theory | undefined>;
 
-    /** A memo of the model constructed and validated in the core. */
+    /** A memo of the model eleborated in the core, but possibly invalid. */
+    elaboratedModel: Accessor<DblModel | undefined>;
+
+    /** A memo of the model elaborated and validated in the core. */
     validatedModel: Accessor<ValidatedModel | undefined>;
 };
 
 /** A validated model as represented in `catlog`. */
-export type ValidatedModel = {
-    model: DblModel;
-    result: ModelValidationResult;
-};
+export type ValidatedModel =
+    /** A successfully elaborated and validated model. */
+    | {
+          tag: "Valid";
+          model: DblModel;
+      }
+    /** An elaborated model with one or more validation errors. */
+    | {
+          tag: "Invalid";
+          model: DblModel;
+          errors: (ModelValidationResult & { tag: "Err" })["content"];
+      }
+    /** A model that failed to even elaborate. */
+    | {
+          tag: "Illformed";
+          error: string;
+      };
 
 function enlivenModelDocument(
     refId: string,
@@ -104,13 +120,29 @@ function enlivenModelDocument(
         (theoryId) => theories.get(theoryId),
     );
 
+    const elaboratedModel = (): DblModel | undefined => {
+        const validated = validatedModel();
+        if (validated && validated.tag !== "Illformed") {
+            return validated.model;
+        }
+    };
+
     const validatedModel = createMemo<ValidatedModel | undefined>(
         () => {
             const coreTheory = theory()?.theory;
             if (coreTheory) {
-                const model = elaborateModel(formalJudgments(), coreTheory);
+                let model: DblModel;
+                try {
+                    model = elaborateModel(formalJudgments(), coreTheory);
+                } catch (e) {
+                    return { tag: "Illformed", error: String(e) };
+                }
                 const result = model.validate();
-                return { model, result };
+                if (result.tag === "Ok") {
+                    return { tag: "Valid", model };
+                } else {
+                    return { tag: "Invalid", model, errors: result.content };
+                }
             }
         },
         undefined,
@@ -125,6 +157,7 @@ function enlivenModelDocument(
         objectIndex,
         morphismIndex,
         theory,
+        elaboratedModel,
         validatedModel,
     };
 }

@@ -87,7 +87,7 @@ export function ObListEditor(props: ObListEditorProps) {
     };
 
     const completions = (): Ob[] | undefined =>
-        liveModel().validatedModel()?.model.objectsWithType(modeAppType().content.obType);
+        liveModel().elaboratedModel()?.objectsWithType(modeAppType().content.obType);
 
     // Make the default value the empty list, rather than null.
     createEffect(() => {
