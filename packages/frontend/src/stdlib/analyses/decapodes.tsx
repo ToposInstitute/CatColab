@@ -282,7 +282,7 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
                         </ErrorAlert>
                     )}
                 </Match>
-                <Match when={props.liveDiagram.validatedDiagram()?.result.tag === "Err"}>
+                <Match when={props.liveDiagram.validatedDiagram()?.tag !== "Valid"}>
                     <ErrorAlert title="Modeling error">
                         {"Cannot run the simulation because the diagram is invalid"}
                     </ErrorAlert>
@@ -368,7 +368,7 @@ const makeSimulationData = (
     content: DecapodesContent,
 ): SimulationData | undefined => {
     const validatedDiagram = liveDiagram.validatedDiagram();
-    if (validatedDiagram?.result.tag !== "Ok") {
+    if (validatedDiagram?.tag !== "Valid") {
         return undefined;
     }
 

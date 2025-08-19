@@ -18,7 +18,7 @@ export function BasicObInput(
     invariant(liveDiagram, "Live diagram should be provided as context");
 
     const completions = (): Ob[] | undefined =>
-        props.obType && liveDiagram().validatedDiagram()?.diagram.objectsWithType(props.obType);
+        props.obType && liveDiagram().elaboratedDiagram()?.objectsWithType(props.obType);
 
     return (
         <ObIdInput completions={completions()} idToName={liveDiagram().objectIndex()} {...props} />

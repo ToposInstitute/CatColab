@@ -62,10 +62,10 @@ export function MorphismCellEditor(props: {
 
     const errors = () => {
         const validated = liveModel().validatedModel();
-        if (validated?.result.tag !== "Err") {
+        if (validated?.tag !== "Invalid") {
             return [];
         }
-        return validated.result.content.filter((err) => err.content === props.morphism.id);
+        return validated.errors.filter((err) => err.content === props.morphism.id);
     };
 
     return (

@@ -48,7 +48,7 @@ export function DiagramGraph(
         const validatedDiagram = props.liveDiagram.validatedDiagram();
         return (
             theory &&
-            validatedDiagram?.result.tag === "Ok" &&
+            validatedDiagram?.tag === "Valid" &&
             diagramToGraphviz(validatedDiagram.diagram, theory, {
                 obName(id) {
                     return props.liveDiagram.objectIndex().map.get(id);

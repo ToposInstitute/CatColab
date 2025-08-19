@@ -41,7 +41,7 @@ export function PetriNetVisualization(props: ModelAnalysisProps<GV.GraphConfig>)
                 <GV.GraphConfigForm content={props.content} changeContent={props.changeContent} />
             </Foldable>
             <div class="graph-visualization">
-                <Show when={props.liveModel.validatedModel()?.model}>
+                <Show when={props.liveModel.elaboratedModel()}>
                     {(model) => (
                         <PetriNetGraphviz
                             model={model()}

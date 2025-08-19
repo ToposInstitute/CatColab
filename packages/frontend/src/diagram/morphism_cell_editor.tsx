@@ -31,10 +31,10 @@ export function DiagramMorphismCellEditor(props: {
 
     const errors = () => {
         const validated = liveDiagram().validatedDiagram();
-        if (validated?.result.tag !== "Err") {
+        if (validated?.tag !== "Invalid") {
             return [];
         }
-        return validated.result.content.filter((err) => err.err.content === props.decl.id);
+        return validated.errors.filter((err) => err.err.content === props.decl.id);
     };
 
     const domInvalid = (): boolean =>
