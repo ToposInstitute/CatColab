@@ -52,15 +52,31 @@ export type LiveDiagramDocument = {
     /** A memo of the indexed map from object ID to name. */
     objectIndex: Accessor<IdToNameMap>;
 
-    /** A memo of the diagram constructed and validated in the core. */
+    /** A memo of the diagram elaborated in the core, though possibly invalid. */
+    elaboratedDiagram: Accessor<DblModelDiagram | undefined>;
+
+    /** A memo of the diagram elaborated and validated in the core. */
     validatedDiagram: Accessor<ValidatedDiagram | undefined>;
 };
 
 /** A validated diagram as represented in `catlog`. */
-export type ValidatedDiagram = {
-    diagram: DblModelDiagram;
-    result: ModelDiagramValidationResult;
-};
+export type ValidatedDiagram =
+    /** A successfully elaborated and validated diagram. */
+    | {
+          tag: "Valid";
+          diagram: DblModelDiagram;
+      }
+    /** An elaborated diagram with one or more validation errors. */
+    | {
+          tag: "Invalid";
+          diagram: DblModelDiagram;
+          errors: (ModelDiagramValidationResult & { tag: "Err" })["content"];
+      }
+    /** A diagram that failed to even elaborate. */
+    | {
+          tag: "Illformed";
+          error: string;
+      };
 
 function enlivenDiagramDocument(
     refId: string,
@@ -100,6 +116,13 @@ function enlivenDiagramDocument(
         return indexMap(map);
     }, indexMap(new Map()));
 
+    const elaboratedDiagram = (): DblModelDiagram | undefined => {
+        const validated = validatedDiagram();
+        if (validated && validated.tag !== "Illformed") {
+            return validated.diagram;
+        }
+    };
+
     const validatedDiagram = createMemo<ValidatedDiagram | undefined>(
         () => {
             const th = liveModel.theory();
@@ -109,10 +132,19 @@ function enlivenDiagramDocument(
                 return undefined;
             }
             const { model } = validatedModel;
-            const diagram = elaborateDiagram(formalJudgments(), th.theory);
+            let diagram: DblModelDiagram;
+            try {
+                diagram = elaborateDiagram(formalJudgments(), th.theory);
+            } catch (e) {
+                return { tag: "Illformed", error: String(e) };
+            }
             diagram.inferMissingFrom(model);
             const result = diagram.validateIn(model);
-            return { diagram, result };
+            if (result.tag === "Ok") {
+                return { tag: "Valid", diagram };
+            } else {
+                return { tag: "Invalid", diagram, errors: result.content };
+            }
         },
         undefined,
         { equals: false },
@@ -125,6 +157,7 @@ function enlivenDiagramDocument(
         liveModel,
         formalJudgments,
         objectIndex,
+        elaboratedDiagram,
         validatedDiagram,
     };
 }

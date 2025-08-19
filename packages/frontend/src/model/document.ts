@@ -55,7 +55,7 @@ export type LiveModelDocument = {
     /** A memo of the double theory that the model is of. */
     theory: Accessor<Theory | undefined>;
 
-    /** A memo of the model eleborated in the core, but possibly invalid. */
+    /** A memo of the model eleborated in the core, though possibly invalid. */
     elaboratedModel: Accessor<DblModel | undefined>;
 
     /** A memo of the model elaborated and validated in the core. */
@@ -129,20 +129,22 @@ function enlivenModelDocument(
 
     const validatedModel = createMemo<ValidatedModel | undefined>(
         () => {
-            const coreTheory = theory()?.theory;
-            if (coreTheory) {
-                let model: DblModel;
-                try {
-                    model = elaborateModel(formalJudgments(), coreTheory);
-                } catch (e) {
-                    return { tag: "Illformed", error: String(e) };
-                }
-                const result = model.validate();
-                if (result.tag === "Ok") {
-                    return { tag: "Valid", model };
-                } else {
-                    return { tag: "Invalid", model, errors: result.content };
-                }
+            const th = theory();
+            if (!th) {
+                // Abort immediately if the theory is undefined.
+                return undefined;
+            }
+            let model: DblModel;
+            try {
+                model = elaborateModel(formalJudgments(), th.theory);
+            } catch (e) {
+                return { tag: "Illformed", error: String(e) };
+            }
+            const result = model.validate();
+            if (result.tag === "Ok") {
+                return { tag: "Valid", model };
+            } else {
+                return { tag: "Invalid", model, errors: result.content };
             }
         },
         undefined,
