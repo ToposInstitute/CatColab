@@ -35,7 +35,6 @@ pkgs.stdenv.mkDerivation {
 
     mkdir -p ./backend/pkg
     cp -r ${self.packages.x86_64-linux.catcolabApi}/* ./backend/pkg/
-    mkdir -p ./backend/pkg/node_modules
 
     mkdir ./frontend
     cp -r $src/* ./frontend
@@ -45,13 +44,12 @@ pkgs.stdenv.mkDerivation {
   '';
 
   installPhase = ''
-    # ln -s node_modules/ ../backend/pkg/node_modules
+    # The catcolab-api package is a bit odd since it's a built/generated dependency that's tracked by
+    # git. Fortunately it shares dependencies with the frontend, so we can just copy them.
+    mkdir -p ../backend/pkg/node_modules
     cp -Lr node_modules/@qubit-rs ../backend/pkg/node_modules/
     cp -Lr node_modules/typescript ../backend/pkg/node_modules/
-    ls -l ../backend/pkg/node_modules
-    # this type errors on everything from backend/pkg, no idea why
-    # ./node_modules/.bin/tsc -b
-    # ./node_modules/.bin/vite build -- --sourcemap
+
     npm run build:nix
 
     mkdir -p $out

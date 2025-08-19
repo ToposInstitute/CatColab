@@ -215,65 +215,6 @@ function run_load() {
   esac
 }
 
-function run_test_deploy() {
-  local to_branch="main"
-  local from_branch="$(git branch --show-current)"
-  local dump_file=""
-
-  while [[ ${1-} ]]; do
-    case "$1" in
-      "-f" | "--from")
-        shift
-        target="$1"
-        ;;
-      "-t" | "--to")
-        shift
-        dump_file="$1"
-        ;;
-      "-h" | "--help")
-        print_dump_help
-        exit 0
-        ;;
-      *)
-        echo "Unknown argument: $1"
-        echo ""
-        print_dump_help
-        exit 1
-        ;;
-    esac
-    shift
-  done
-
-  if [[ -n $(git status --porcelain --untracked-files=no) ]]; then
-      echo "Repo is dirty (tracked files changed)"
-  else
-      echo "Repo is clean"
-  fi
-
-  local dumps_dir="$(find_git_root)/dumps"
-  mkdir -p "$dumps_dir"
-
-  if [[ -z $dump_file ]]; then
-    dump_file="${dumps_dir}/${target}_dump_$(date +%Y%m%d_%H%M%S).sql"
-  else
-    dump_file="${dumps_dir}/${dump_file}"
-  fi
-
-  case "$target" in
-    local|vm|staging|production)
-      echo "Dumping $target to $dump_file..."
-      load_target_env "$target"
-      pg_dump --clean --if-exists > "$dump_file"
-      ;;
-    *)
-      echo "Unknown target: $target"
-      echo ""
-      print_dump_help
-      exit 1
-      ;;
-  esac
-}
-
 function run_reset() {
   local target="local"
   local skip_migrate=false

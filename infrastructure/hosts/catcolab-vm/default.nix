@@ -19,17 +19,20 @@
 
   catcolab = {
     enable = true;
-    hostname = "catcolab.org";
     backend = {
       port = 8000;
+      hostname = "backend-next.catcolab.org";
     };
     automerge = {
       port = 8010;
+      hostname = "automerge-next.catcolab.org";
     };
     environmentFilePath = /etc/catcolab/catcolab-secrets.env;
     host = {
       enable = true;
-      userKeys = (import ./keys.nix).keys;
+      userKeys = [
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMiaHaeJ5PQL0mka/lY1yGXIs/bDK85uY1O3mLySnwHd j@jmoggr.com"
+      ];
     };
   };
 
@@ -59,7 +62,6 @@
   services.getty.autologinUser = "catcolab";
 
   networking.hostName = "catcolab-vm";
-
-  time.timeZone = "UTC";
-  system.stateVersion = "25.05";
+  time.timeZone = "America/New_York";
+  system.stateVersion = "24.05";
 }

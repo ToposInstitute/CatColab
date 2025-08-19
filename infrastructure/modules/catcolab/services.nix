@@ -40,15 +40,15 @@ with lib;
       default = false;
       description = "Whether to enable Catcolab services.";
     };
-    hostname = mkOption {
-      type = types.str;
-      description = "Hostname for the backend reverse proxy.";
-    };
     backend = {
       port = mkOption {
         type = types.port;
         default = 8000;
         description = "Port for the backend service.";
+      };
+      hostname = mkOption {
+        type = types.str;
+        description = "Hostname for the backend reverse proxy.";
       };
     };
     automerge = {
@@ -56,6 +56,10 @@ with lib;
         type = types.port;
         default = 8010;
         description = "Port for the automerge service.";
+      };
+      hostname = mkOption {
+        type = types.str;
+        description = "Hostname for the automerge reverse proxy.";
       };
     };
     environmentFilePath = mkOption {
@@ -151,27 +155,21 @@ with lib;
       };
     };
 
-    # services.caddy = {
-    #   enable = true;
-    #   virtualHosts = {
-    #     "${config.catcolab.hostname}" = {
-    #       extraConfig = ''
-    #         reverse_proxy :${backendPortStr}
-    #       '';
-    #     };
+    services.caddy = {
+      enable = true;
+      virtualHosts = {
+        "${config.catcolab.backend.hostname}" = {
+          extraConfig = ''
+            reverse_proxy :${backendPortStr}
+          '';
+        };
 
-    #     "${config.catcolab.hostname}:${backendPortStr}" = {
-    #       extraConfig = ''
-    #         reverse_proxy :${backendPortStr}
-    #       '';
-    #     };
-
-    #     "${config.catcolab.hostname}:${automergePortStr}" = {
-    #       extraConfig = ''
-    #         reverse_proxy :${automergePortStr}
-    #       '';
-    #     };
-    #   };
-    # };
+        "${config.catcolab.automerge.hostname}" = {
+          extraConfig = ''
+            reverse_proxy :${automergePortStr}
+          '';
+        };
+      };
+    };
   };
 }

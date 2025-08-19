@@ -233,6 +233,7 @@
           # nix build .#catcolab-vm
           # cp result/nixos.qcow2 nixos.qcow2
           # db-utils vm start
+          # deploy -s .#catcolab-vm
           catcolab-vm = nixos-generators.nixosGenerate {
             system = "x86_64-linux";
             format = "qcow";

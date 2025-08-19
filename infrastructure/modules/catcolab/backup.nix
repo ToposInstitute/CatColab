@@ -2,7 +2,6 @@
   pkgs,
   lib,
   config,
-  self,
   ...
 }:
 let
@@ -14,9 +13,6 @@ let
 
     cd ~
 
-    echo "database url: $DATABASE_URL"
-    echo "pguser: $PGUSER"
-
     ${pkgs.postgresql}/bin/pg_dump --clean --if-exists > $DUMPFILE
 
     BACKUP_BUCKET="backup:${builtins.toString config.catcolab.host.backup.dbBucket}"
@@ -27,14 +23,6 @@ let
 
     echo "Uploaded database backup $DUMPFILE to $BACKUP_BUCKET"
     rm $DUMPFILE
-  '';
-
-  activationScript = pkgs.writeShellScriptBin "activation-script" ''
-    ${lib.getExe backupScript}
-  '';
-
-  testRestartScript = pkgs.writeShellScriptBin "test-restart-script" ''
-    echo "testing restart 5"
   '';
 in
 with lib;
@@ -52,7 +40,6 @@ with lib;
         Name of the Backblaze bucket used for database backups.
       '';
     };
-
     rcloneConfFilePath = mkOption {
       type = types.nullOr types.path;
       default = null;
@@ -71,21 +58,13 @@ with lib;
     };
 
     systemd.services.backupdb = {
+      after = [ "postgresql.service" ];
+      wants = [ "postgresql.service" ];
       serviceConfig = {
         User = "catcolab";
         ExecStart = getExe backupScript;
         Type = "oneshot";
         EnvironmentFile = config.catcolab.environmentFilePath;
-      };
-    };
-
-    systemd.services.test-restart2 = {
-      after = [ "postgresql.service" ];
-      wants = [ "postgresql.service" ];
-      serviceConfig = {
-        User = "catcolab";
-        ExecStart = getExe testRestartScript;
-        Type = "oneshot";
       };
     };
 
@@ -104,7 +83,6 @@ with lib;
         #   --property=User=${config.systemd.services.backupdb.serviceConfig.User} \
         #   --property=EnvironmentFile=${config.catcolab.environmentFilePath} \
         #   --property=Environment=PATH=/run/current-system/sw/bin \
-        #   ${lib.getExe activationScript}
 
         # exit_code=$?
 
