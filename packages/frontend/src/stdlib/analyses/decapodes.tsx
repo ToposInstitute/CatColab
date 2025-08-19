@@ -342,8 +342,8 @@ type SimulationData = {
 const makeInitCode = () =>
     `
     import IJulia
+    import JSON3
     IJulia.register_jsonmime(MIME"application/json"())
-
     using CatColabInterop
 
     JsonValue(supported_decapodes_geometries())
@@ -352,6 +352,9 @@ const makeInitCode = () =>
 /** Julia code run to perform a simulation. */
 const makeSimulationCode = (data: SimulationData) =>
     `
+    # needed for returning large amounts of data, should be paired with a similar setting on the jupyter server
+    IJulia.set_max_stdio(1_000_000_000) 
+
     system = Analysis(ThDecapode(), raw"""${JSON.stringify(data)}""");
     simulator = evalsim(system.pode);
 
@@ -359,7 +362,7 @@ const makeSimulationCode = (data: SimulationData) =>
 
     soln = run_sim(f, system.init, system.duration, ComponentArray(k=0.5,));
 
-    JsonValue(SimResult(soln, system))
+    JSON3.write(stdout, SimResult(soln, system))
     `;
 
 /** Create data to send to the Julia kernel. */

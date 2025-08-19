@@ -111,6 +111,12 @@
               vscode-langservers-extracted
               wasm-bindgen-cli
               esbuild
+              python312Packages.jupyter-server
+              python312Packages.jupyter-core
+              python312Packages.websocket-client
+              python312Packages.requests
+              python312Packages.ipykernel
+              python3
             ]
             ++ darwinDeps
             ++ [
