@@ -362,8 +362,7 @@ const makeSimulationCode = (data: SimulationData) =>
 
     soln = run_sim(f, system.init, system.duration, ComponentArray(k=0.5,));
 
-    result = JSON3.write(SimResult(soln, system))
-    println(result)
+    JSON3.write(stdout, SimResult(soln, system))
     `;
 
 /** Create data to send to the Julia kernel. */

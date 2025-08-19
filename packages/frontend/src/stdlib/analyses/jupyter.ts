@@ -49,15 +49,15 @@ export function createKernel(
         const kernel = session.kernel;
 
         // Useful for debugging jupyter stuff
-        const t0 = Date.now();
-        kernel.anyMessage.connect((_, msg) => {
-            console.log(
-                "[Jupyter message]",
-                (Date.now() - t0) / 1000,
-                msg.direction,
-                msg.msg.header.msg_type,
-            );
-        });
+        // const t0 = Date.now();
+        // kernel.anyMessage.connect((_, msg) => {
+        //     console.log(
+        //         "[Jupyter message]",
+        //         (Date.now() - t0) / 1000,
+        //         msg.direction,
+        //         msg.msg.header.msg_type,
+        //     );
+        // });
 
         return kernel;
     });
@@ -131,7 +131,7 @@ export function executeAndRetrieve<S, T>(
 
             // In this case msg_type "stream" will be collected but not used. This only works for
             // relatively small amounts of data, it could be the case that nothing should be returned
-            // like this. The json seriailization done by IJulia appears to be cripillingly slow for
+            // like this. The json serialization done by IJulia appears to be cripplingly slow for
             // unknown reasons.
             //
             // This allows returning something while still being able to inspect print statements from
