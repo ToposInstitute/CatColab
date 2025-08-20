@@ -41,7 +41,7 @@ in
       port = 8010;
       hostname = "automerge-next.catcolab.org";
     };
-    environmentFilePath = config.age.secrets.catcolabSecrets.path;
+    environmentFile = config.age.secrets.catcolabSecrets.path;
     host = {
       enable = true;
       userKeys = [

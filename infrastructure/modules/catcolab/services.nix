@@ -6,6 +6,15 @@
   ...
 }:
 let
+  cfg = config.catcolab;
+
+  frontendPkg = self.packages.${pkgs.system}.frontend;
+  backendPkg = self.packages.${pkgs.system}.backend;
+  automergePkg = self.packages.${pkgs.system}.automerge;
+
+  backendPortStr = builtins.toString cfg.backend.port;
+  automergePortStr = builtins.toString cfg.automerge.port;
+
   # idempotent script for intializing the catcolab database
   databaseSetupScript = pkgs.writeShellScriptBin "database-setup" ''
     #!/usr/bin/env bash
@@ -28,18 +37,12 @@ let
     ${pkgs.postgresql}/bin/psql -c "grant all privileges on database catcolab to catcolab;"
     ${pkgs.postgresql}/bin/psql -d catcolab -c "grant all on schema public to catcolab;"
   '';
-
-  backendPortStr = builtins.toString config.catcolab.backend.port;
-  automergePortStr = builtins.toString config.catcolab.automerge.port;
 in
 with lib;
 {
   options.catcolab = {
-    enable = mkOption {
-      type = types.bool;
-      default = false;
-      description = "Whether to enable Catcolab services.";
-    };
+    enable = lib.mkEnableOption "Catcolab services";
+
     backend = {
       port = mkOption {
         type = types.port;
@@ -50,6 +53,7 @@ with lib;
         type = types.str;
         description = "Hostname for the backend reverse proxy.";
       };
+      serveFrontend = lib.mkEnableOption "serving the frontend.";
     };
     automerge = {
       port = mkOption {
@@ -62,7 +66,7 @@ with lib;
         description = "Hostname for the automerge reverse proxy.";
       };
     };
-    environmentFilePath = mkOption {
+    environmentFile = mkOption {
       type = types.path;
       description = ''
         Path to the EnvironmentFile used by Catcolab services, must be readable by the
@@ -71,7 +75,7 @@ with lib;
     };
   };
 
-  config = lib.mkIf config.catcolab.enable {
+  config = lib.mkIf cfg.enable {
     services.postgresql = {
       enable = true;
     };
@@ -92,8 +96,8 @@ with lib;
     ];
 
     environment.systemPackages = [
-      self.packages.x86_64-linux.automerge
-      self.packages.x86_64-linux.backend
+      backendPkg
+      automergePkg
       databaseSetupScript
     ];
 
@@ -108,7 +112,7 @@ with lib;
         Type = "oneshot";
         User = "postgres";
         ExecStart = lib.getExe databaseSetupScript;
-        EnvironmentFile = config.catcolab.environmentFilePath;
+        EnvironmentFile = cfg.environmentFile;
       };
     };
 
@@ -124,17 +128,17 @@ with lib;
         "network-online.target"
       ];
 
-      environment = {
-        PORT = backendPortStr;
-      };
+      environment = lib.mkMerge [
+        { PORT = backendPortStr; }
+        (lib.mkIf cfg.backend.serveFrontend { SPA_DIR = "${frontendPkg}"; })
+      ];
 
       serviceConfig = {
         User = "catcolab";
         Type = "notify";
         Restart = "on-failure";
-        ExecStart = lib.getExe self.packages.x86_64-linux.backend;
-        EnvironmentFile = config.catcolab.environmentFilePath;
-        Environment = "SPA_DIR=${self.packages.x86_64-linux.frontend}";
+        ExecStart = lib.getExe backendPkg;
+        EnvironmentFile = cfg.environmentFile;
       };
     };
 
@@ -147,9 +151,9 @@ with lib;
       };
 
       serviceConfig = {
-        EnvironmentFile = config.catcolab.environmentFilePath;
+        EnvironmentFile = cfg.environmentFile;
         User = "catcolab";
-        ExecStart = lib.getExe self.packages.x86_64-linux.automerge;
+        ExecStart = lib.getExe automergePkg;
         Type = "simple";
         Restart = "on-failure";
       };
@@ -158,13 +162,13 @@ with lib;
     services.caddy = {
       enable = true;
       virtualHosts = {
-        "${config.catcolab.backend.hostname}" = {
+        "${cfg.backend.hostname}" = {
           extraConfig = ''
             reverse_proxy :${backendPortStr}
           '';
         };
 
-        "${config.catcolab.automerge.hostname}" = {
+        "${cfg.automerge.hostname}" = {
           extraConfig = ''
             reverse_proxy :${automergePortStr}
           '';
