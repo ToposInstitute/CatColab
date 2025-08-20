@@ -4,13 +4,13 @@ ECLDs have arrows labelled by two natural numbers, for degree and delay. In the
 intended linear ODE semantics, both of these behave additively under composition
 of paths. It is useful to have a rewrite rule that "atomises" any arrow, i.e.
 replacing an arrow X -> Y of degree n (which corresponds to the equation
-(d/dt)^n(Y) = X) by n-many arrows of degree 1, thus also introducing (n-1)-many
-new objects X -> Y_1 -> Y_2 -> ... -> Y_{n-1} -> Y. The idea to keep in mind is
+(d/dt)^n(Y) += kX) by n-many arrows of degree 1, thus also introducing (n-1)-many
+new objects X -> Y_{n-1} -> ... -> Y_2 -> Y_1 -> Y. The idea to keep in mind is
 that a degree-n differential equation of the form (d/dt)^n(Y) = X can
 equivalently be written as a system of degree-1 differential equations, namely
 (d/dt)(Y) = Y_1, (d/dt)(Y_1) = Y_2, ..., (d/dt)(Y_{n-1}) = X. An analogous story
 holds for order of delay, though this is formally dual: an arrow X -> Y of
-order m corresponds to (something like) a morphism E(m)*X -> Y, i.e. the
+order m corresponds to (something like) a morphism Y += k*E(m)*X, i.e. the
 *source* is modified, not the target.
 
 We call the objects Y_i the *formal derivatives* (resp. *formal delays*) of Y,
@@ -20,7 +20,7 @@ and call Y the *base* of this tower; we call the length n of the list
  */
 
 use crate::dbl::model::{DiscreteDblModel, FgDblModel, MutDblModel};
-use crate::one::{category::FgCategory, Path, UstrFpCategory};
+use crate::one::{Path, UstrFpCategory, category::FgCategory};
 use crate::stdlib::theories;
 use std::{cmp::Eq, collections::HashMap, hash::Hash, rc::Rc};
 use ustr::ustr;
@@ -34,7 +34,7 @@ where
     model.mor_generator_type(f).into_iter().filter(|t| *t == ustr("Degree")).count()
 }
 
-// TO-DO: make the return type bool
+// TODO: filter -> find, don't need to do mod 2?
 fn is_mor_pos<Id>(model: &DiscreteDblModel<Id, UstrFpCategory>, f: &Id) -> bool
 where
     Id: Clone + Hash + Eq,
@@ -47,13 +47,15 @@ where
         % 2
 }
 
+// TODO: do we need an Rc here?
 /** Atomisiation of an ECLD by degree: replace every degree-n arrow by a path
  * of n-many degree-1 arrows, going via (n-1)-many new objects; all the
- * degree-0 arrows are kept unchanged.
+ * degree-0 arrows are kept unchanged. Returns the derivative towers to keep
+ * track of the relation between the formal derivatives and the original objects
  */
 pub fn degree_atomisation(
     model: Rc<DiscreteDblModel<Uuid, UstrFpCategory>>,
-) -> DiscreteDblModel<Uuid, UstrFpCategory> {
+) -> (DiscreteDblModel<Uuid, UstrFpCategory>, HashMap<Uuid, Vec<Uuid>>) {
     let mut atomised_model: DiscreteDblModel<Uuid, UstrFpCategory> =
         DiscreteDblModel::new(Rc::new(theories::th_deg_del_signed_category()));
 
@@ -151,7 +153,7 @@ pub fn degree_atomisation(
         atomised_model.add_ob(*base, ustr("Object"));
         // Then add all the formal derivatives Y_i, along with the morphisms
         // Y_i -> Y_{i-1}
-        for _i in 1..=*height {
+        for _i in 1..*height {
             let formal_der_i = Uuid::now_v7();
             atomised_model.add_ob(formal_der_i, ustr("Object"));
             let &formal_der_i_minus_1 = towers.get(base).unwrap().last().unwrap();
@@ -183,7 +185,7 @@ pub fn degree_atomisation(
             // Note that we could alternatively take height to be the length of
             // towers.get(source), which will be equal by construction
             let height = tower_heights.get(base).unwrap();
-            let new_source = source_tower[height - deg + 1];
+            let new_source = source_tower[height - deg];
             let &new_target = tower.last().unwrap();
             match is_mor_pos(&model, f) {
                 true => atomised_model.add_mor(*f, new_source, new_target, ustr("Degree").into()),
@@ -205,7 +207,7 @@ pub fn degree_atomisation(
             );
         }
     }
-    atomised_model
+    (atomised_model, towers)
 }
 
 #[cfg(test)]
