@@ -5,9 +5,9 @@ methods for theory-specific analyses.
  */
 
 use std::rc::Rc;
-
 use wasm_bindgen::prelude::*;
 
+use catlog::dbl::modal::model::ModalDblModel;
 use catlog::dbl::theory;
 use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
@@ -334,6 +334,16 @@ impl ThSymMonoidalCategory {
                 .map_err(|err| format!("{err:?}"))
                 .into(),
         ))
+    }
+    /// Solve the subreachability problem for petri nets.
+    #[wasm_bindgen(js_name = "reachability")]
+    pub fn reachability(
+        &self,
+        model: &DblModel,
+        data: ReachabilityModelData,
+    ) -> Result<bool, String> {
+        let m: &ModalDblModel = model.modal().map_err(|_| "Model should be of a modal theory")?;
+        catlog::stdlib::analyses::reachability::reachability(m, data.0)
     }
 }
 
