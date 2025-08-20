@@ -46,8 +46,8 @@ in
       ];
       backup = {
         enable = true;
-        rcloneConfFilePath = config.age.secrets.rcloneConf.path;
-        dbBucket = "catcolab";
+        rcloneConfigFile = config.age.secrets.rcloneConf.path;
+        destination = "backup:catcolab";
       };
     };
   };
