@@ -145,29 +145,29 @@ pub fn catalyzed_reaction(th: Rc<UstrModalDblTheory>) -> UstrModalDblModel {
 
    0,+      0,+            2,-
 ┌───────┐ ┌───────┐       ╔═══╗
-▼       │ ▼       │       ▼   ║
+▼       │ │       ▼       ▼   ║
 a        b        c       d   ║
-║       ▲ ║       ▲       ║   ║
+║       ▲ ▲       ║       ║   ║
 ╚═══════╝ ╚═══════╝       ╚═══╝
-   2,-      1,+
+   3,-      1,+
 */
 pub fn sample_ecld() -> UstrDiscreteDblModel {
     use nonempty::nonempty;
     let th = super::theories::th_deg_del_signed_category();
     let mut model = UstrDiscreteDblModel::new(Rc::new(th).clone());
-    let (a, b, c) = (ustr("a"), ustr("b"), ustr("c"));
+    let (a, b, c, d) = (ustr("a"), ustr("b"), ustr("c"), ustr("d"));
     let (f, g, h, k, l) = (ustr("f"), ustr("g"), ustr("h"), ustr("k"), ustr("l"));
     let ob_type = ustr("Object");
-    for x in vec![a, b, c].into_iter() {
+    for x in vec![a, b, c, d].into_iter() {
         model.add_ob(x, ob_type)
     }
     let neg = ustr("Negative");
     let deg = ustr("Degree");
-    model.add_mor(f, a, b, Path::Seq(nonempty![neg, deg, deg]));
-    model.add_mor(g, b, c, Path::Seq(nonempty![deg]));
-    model.add_mor(h, c, b, Path::Id(ob_type));
+    model.add_mor(f, a, b, Path::Seq(nonempty![neg, deg, deg, deg]));
+    model.add_mor(g, c, b, Path::Seq(nonempty![deg]));
+    model.add_mor(h, b, c, Path::Id(ob_type));
     model.add_mor(k, b, a, Path::Id(ob_type));
-    model.add_mor(l, b, a, Path::Seq(nonempty![deg, deg, neg]));
+    model.add_mor(l, d, d, Path::Seq(nonempty![deg, deg, neg]));
     model
 }
 
