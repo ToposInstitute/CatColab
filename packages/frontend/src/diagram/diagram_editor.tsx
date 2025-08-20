@@ -63,6 +63,7 @@ export function DiagramDocumentEditor(props: {
                 <PermissionsButton
                     permissions={props.liveDiagram.liveDoc.permissions}
                     refId={props.liveDiagram.refId}
+                    liveDocument={props.liveDiagram}
                 />
             </Toolbar>
             <DiagramPane liveDiagram={props.liveDiagram} />
