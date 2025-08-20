@@ -47,13 +47,14 @@ export function Reachability(
     const [text, setText] = createSignal("");
     const [text2, setText2] = createSignal("");
 
-    const dblmodel: DblModel | undefined = props.liveModel.validatedModel()?.model;
+    const validated = props.liveModel.validatedModel();
+
     const reachabilityResult = () => {
-        if (dblmodel === undefined) {
-            return "fail";
+        if (validated?.tag !== "Valid") {
+            return "failed";
         } else {
             // Parse input text into vectors
-            const objectIds: string[] = dblmodel
+            const objectIds: string[] = validated.model
                 .objects()
                 .filter((ob) => ob.tag === "Basic")
                 .map((ob) => ob.content);
@@ -78,8 +79,10 @@ export function Reachability(
                 ]),
             );
             const data = { tokens: initial, forbidden: forbidden };
-            const res = props.simulate(dblmodel, data);
-            return res ? "\u2705" : "\u274C ";
+            const res = props.simulate(validated.model, data);
+            return res
+                ? "\u2705: the forbidden tokening is not reachable"
+                : "\u274C: the forbidden tokening is reachable";
         }
     };
 

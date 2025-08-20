@@ -15,7 +15,7 @@ use catlog::dbl::modal::model::ModalOb;
 use catlog::dbl::theory;
 use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
-use catlog::zero::{FinSet,MutMapping};
+use catlog::zero::{FinSet, MutMapping};
 
 use super::model_morphism::{MotifsOptions, motifs};
 use super::{analyses::*, model::DblModel, model::ModalDblModel, theory::DblTheory};
@@ -466,8 +466,8 @@ impl ThSymMonoidalCategory {
 
         // Check whether input tokening lies within the region which can access
         // the forbidden state, `init`.
-        let res = f.iter().any(|v| (0..n_p).all(|p| v[p] <= init[p]));
-        Ok(res)
+        let init_in_forbbiden = f.iter().any(|v| (0..n_p).all(|p| v[p] <= init[p]));
+        Ok(!init_in_forbbiden)
     }
 }
 
