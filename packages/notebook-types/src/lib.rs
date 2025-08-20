@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use serde_wasm_bindgen::Serializer;
-use serde_wasm_bindgen::from_value;
+use serde_wasm_bindgen::{Serializer, from_value};
 use wasm_bindgen::prelude::*;
 
 mod v0;
@@ -16,17 +15,39 @@ pub mod current {
     pub use crate::v1::*;
 }
 
-#[derive(Serialize, Debug)]
-pub enum VersionedDocument {
-    V0(v0::Document),
-    V1(v1::Document),
-}
+/** Generate type defs for dependencies supporting `serde` but not `tsify`.
+
+Comments on specific definitions:
+
+- Re: `Value`, we could borrow the definition of `JsonValue` in the `ts-rs` crate:
+  <https://github.com/Aleph-Alpha/ts-rs/blob/main/ts-rs/tests/integration/serde_json.rs>.
+  However, this is causing mysterious TS errors, so we use `unknown` instead.
+- Re: `NonEmpty`, somewhat amazingly, the type system in TypeScript can express
+  the constraint that an array be nonempty, with certain usage caveats:
+  <https://stackoverflow.com/q/56006111>. For now, we will not attempt to
+  enforce non-emptiness in the TypeScript layer.
+ */
+#[wasm_bindgen(typescript_custom_section)]
+const TS_APPEND_CONTENT: &'static str = r#"
+export type Value = unknown;
+
+export type Uuid = string;
+export type Ustr = string;
+
+export type NonEmpty<T> = Array<T>;
+"#;
 
 pub static CURRENT_VERSION: &str = "1";
 
 #[wasm_bindgen(js_name = "currentVersion")]
 pub fn current_version() -> String {
     CURRENT_VERSION.to_string()
+}
+
+#[derive(Serialize, Debug)]
+pub enum VersionedDocument {
+    V0(v0::Document),
+    V1(v1::Document),
 }
 
 impl<'de> Deserialize<'de> for VersionedDocument {

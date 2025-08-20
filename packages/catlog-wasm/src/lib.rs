@@ -27,23 +27,6 @@ pub mod theories;
 
 use wasm_bindgen::prelude::*;
 
-/** Produce type defs for dependencies supporting `serde` but not `tsify`.
-
-Somewhat amazingly, the type system in TypeScript can express the constraint
-that an array be nonempty, with certain usage caveats:
-
-https://stackoverflow.com/q/56006111
-
-For now, though, we will not attempt to enforce this in the TypeScript layer.
- */
-#[wasm_bindgen(typescript_custom_section)]
-const TS_APPEND_CONTENT: &'static str = r#"
-export type Uuid = string;
-export type Ustr = string;
-
-export type NonEmpty<T> = Array<T>;
-"#;
-
 /** Set panic hook to get better error messages on panics.
 
 When the `console_error_panic_hook` feature is enabled, we can call the
