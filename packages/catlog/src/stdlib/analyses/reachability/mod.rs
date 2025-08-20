@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify::Tsify;
 
-use std::hash::Hash;
 use std::collections::HashMap;
+use std::hash::Hash;
 
 /// Data defining a mass-action ODE problem for a model.
 #[derive(Clone)]
