@@ -77,8 +77,10 @@ impl MorListData {
 #[derive(Clone)]
 pub struct ModalDblModel<Id, ThId> {
     theory: Rc<ModalDblTheory<ThId>>,
-    ob_generators: HashFinSet<Id>,
-    mor_generators: ComputadTop<ModalOb<Id, ThId>, Id>,
+    /// Ob Generators
+    pub ob_generators: HashFinSet<Id>,
+    /// Mor generators
+    pub mor_generators: ComputadTop<ModalOb<Id, ThId>, Id>,
     // TODO: Equations
     ob_types: HashColumn<Id, ModalObType<ThId>>,
     mor_types: HashColumn<Id, ModalMorType<ThId>>,

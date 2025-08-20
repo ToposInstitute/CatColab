@@ -2,3 +2,6 @@
 
 #[cfg(feature = "ode")]
 pub mod ode;
+
+pub mod reachability;
+
