@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use serde_wasm_bindgen::Serializer;
-use serde_wasm_bindgen::from_value;
+use serde_wasm_bindgen::{from_value, Serializer};
 use wasm_bindgen::prelude::*;
 
 mod v0;
@@ -16,17 +15,34 @@ pub mod current {
     pub use crate::v1::*;
 }
 
-#[derive(Serialize, Debug)]
-pub enum VersionedDocument {
-    V0(v0::Document),
-    V1(v1::Document),
-}
+/** Produce type defs for dependencies supporting `serde` but not `tsify`.
+
+Somewhat amazingly, the type system in TypeScript can express the constraint
+that an array be nonempty, with certain usage caveats:
+
+https://stackoverflow.com/q/56006111
+
+For now, though, we will not attempt to enforce this in the TypeScript layer.
+ */
+#[wasm_bindgen(typescript_custom_section)]
+const TS_APPEND_CONTENT: &'static str = r#"
+export type Uuid = string;
+export type Ustr = string;
+
+export type NonEmpty<T> = Array<T>;
+"#;
 
 pub static CURRENT_VERSION: &str = "1";
 
 #[wasm_bindgen(js_name = "currentVersion")]
 pub fn current_version() -> String {
     CURRENT_VERSION.to_string()
+}
+
+#[derive(Serialize, Debug)]
+pub enum VersionedDocument {
+    V0(v0::Document),
+    V1(v1::Document),
 }
 
 impl<'de> Deserialize<'de> for VersionedDocument {
