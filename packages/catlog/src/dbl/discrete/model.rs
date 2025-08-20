@@ -30,7 +30,7 @@ pub struct DiscreteDblModel<Id, Cat: FgCategory> {
     mor_types: IndexedHashColumn<Id, Cat::Mor>,
 }
 
-/// A model of a discrete double theory where both theoy and model have keys of
+/// A model of a discrete double theory where both theory and model have keys of
 /// type `Ustr`.
 pub type UstrDiscreteDblModel = DiscreteDblModel<Ustr, UstrFpCategory>;
 

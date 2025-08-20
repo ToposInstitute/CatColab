@@ -13,6 +13,12 @@ export type ArrowStyle =
     | "indeterminate"
     | "plusCaesura"
     | "minusCaesura"
+    | "plusDeg"
+    | "minusDeg"
+    | "plusDelay"
+    | "minusDelay"
+    | "plusDegDelay"
+    | "minusDegDelay"
     | "scalar";
 
 /** Prop for forwarding a ref to an `<svg>` element.
