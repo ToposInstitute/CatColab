@@ -1,29 +1,43 @@
 \title{CatColab: Mathematical Documentation}
 \import{macros}
 
+\subtree{
+\title{Introduction}
+
 \p{
   As the name suggests, CatColab is based on mathematical ideas from category
-  theory. It is a specific design goal that the system be usable \em{without} any
-  knowledge of such ideas. Still, for those curious about the underlying
-  mathematics, here are a few pointers for further reading.
+  theory. It is a specific design goal that the system be usable \em{without}
+  any knowledge of such ideas. These docs are for people who want to know about
+  the mathematics, perhaps because they want to develop the core package
+  [catlog](/dev/rust/catlog/) or just out of curiosity. At the moment, these
+  pages are from being a self-contained introduction, serving mainly to collect
+  new bits of CatColab-related mathematics as they are created. For proper
+  exposition, see the [published literature](bib-0001).
 }
 
 \p{
-  CatColab is an editor for categorical structures and their morphisms and higher
-  morphisms. The meta-logical framework organizing these categorical structures is
-  based on [double category theory](https://mathoverflow.net/q/476936). More
-  precisely, the \strong{domain-specific logics} in CatColab are defined by [double
-  theories](https://arxiv.org/abs/2310.05384), and the \strong{models} in CatColab are
-  models of double theories.
+  In mathematical terms, CatColab is an editor for categorical structures and
+  their morphisms and higher morphisms. The meta-logical framework organizing
+  these categorical structures is based on [double category
+  theory](https://mathoverflow.net/q/476936). More precisely, the
+  \strong{domain-specific logics} in CatColab are defined by [double
+  theories](cartesian-double-theories-2024), and the \strong{models} in
+  CatColab are models of double theories.
 }
 
 \p{
-  The library of domain-specific logics in CatColab, available now and to grow
-  over time, is inspired by a wide body of research in applied category theory and
-  beyond. Incomplete bibliographies are in [\code{bib-0001}](https://next.catcolab.org/math/bib-0001.xml) and the [\code{catlog} docs](https://next.catcolab.org/dev/rust/catlog/refs).
+  The library of domain-specific logics in CatColab is inspired by a wide body
+  of research in applied category theory and beyond. Incomplete bibliographies
+  are in [these docs](bib-0003) and the [\code{catlog}
+  docs](https://next.catcolab.org/dev/rust/catlog/refs).
+}
 }
 
-\p{Doctrines whose free objects have a systems interpretation:}
+\subtree{
+\title{Doctrines}
+
+\p{Systems of categorical logic, or \em{doctrines}, whose free objects have a
+systems interpretation:}
 
 \table{
   \tr{\th{Doctrine} \th{Free objects} \th{Systems interpretation}}
@@ -33,14 +47,12 @@
   \tr{\td{[[dct-000B]]} \td{Signed graphs with delays} \td{Variant of causal loop diagram}}
   \tr{\td{[[dct-0007]]} \td{Nullable signed graphs} \td{Variant of causal loop diagram}}
   \tr{\td{[[dct-0003]]} \td{Graphs with links} \td{Stock-flow diagrams}}
-  \tr{\td{Commutative monoidal categories} \td{Petri nets} \td{Reaction networks}}
+  \tr{\td{Symmetric monoidal categories} \td{Petri nets} \td{Reaction networks}}
   \tr{\td{[[dct-0004]]} \td{Sets} \td{Labels}}
   \tr{\td{[[dct-0005]]} \td{Deterministic transition systems, aka semiautomata} \td{State diagrams}}
 }
 
-\ul{
-\li{Additional doctrines: [[dct-0008]], [[dct-0009]], [[dct-000A]]}
-\li{Mathematical background: [[dbl-0001]]}
-\li{[[mdt-0008]]}
-\li{[[bib-0001]]}
+\p{Additional doctrines: [[dct-0008]], [[dct-0009]], [[dct-000A]]}
 }
+
+\transclude{dbl-0001}
