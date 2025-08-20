@@ -212,18 +212,93 @@ pub fn degree_atomisation(
 
 #[cfg(test)]
 mod tests {
-    use crate::dbl::discrete::model::DiscreteDblModel;
+    use super::degree_atomisation;
+    use crate::dbl::discrete::model::UstrDiscreteDblModel;
+    use crate::dbl::model::{DblModel, DiscreteDblModel, FgDblModel, MutDblModel};
     use crate::one::UstrFpCategory;
+    use crate::one::category::FgCategory;
+    use crate::stdlib::models::sample_ecld;
+    use std::{collections::HashMap, rc::Rc};
+    use ustr::ustr;
     use uuid::Uuid;
 
-    use super::degree_atomisation;
+    /// creates a fresh UUID
+    fn fresh() -> Uuid {
+        Uuid::now_v7()
+    }
 
-    fn sample_ecld_uuid() -> DiscreteDblModel<Uuid, UstrFpCategory> {
-        panic!();
+    /** UUIDify a Ustr model to allow testing with UUID analyses
+
+    This should probably be removed once/if identity types change in CatColab
+     */
+    fn uuidify(
+        model: &UstrDiscreteDblModel,
+    ) -> (DiscreteDblModel<Uuid, UstrFpCategory>, HashMap<ustr::Ustr, Uuid>) {
+        let mut id_map: HashMap<ustr::Ustr, Uuid> = HashMap::new();
+        let mut uuid_model: DiscreteDblModel<Uuid, UstrFpCategory> =
+            DiscreteDblModel::new(model.theory_rc());
+        for x in model.ob_generators() {
+            let uuid_x = fresh();
+            let ob_type = model.ob_type(&x);
+            uuid_model.add_ob(uuid_x, ob_type);
+            id_map.insert(x, uuid_x);
+        }
+        for f in model.mor_generators() {
+            let uuid_f = fresh();
+            let mor_type = model.mor_generator_type(&f);
+            let uuid_dom = id_map.get(model.get_dom(&f).unwrap()).unwrap();
+            let uuid_cod = id_map.get(model.get_cod(&f).unwrap()).unwrap();
+            uuid_model.add_mor(uuid_f, *uuid_dom, *uuid_cod, mor_type);
+            id_map.insert(f, uuid_f);
+        }
+        (uuid_model, id_map)
+    }
+
+    /// makes a hash map from objects in  the ustr model to tower heights
+    fn correct_heights() -> HashMap<ustr::Ustr, usize> {
+        let mut heights = HashMap::new();
+        heights.insert(ustr("a"), 1);
+        heights.insert(ustr("b"), 3);
+        heights.insert(ustr("c"), 3);
+        heights.insert(ustr("d"), 2);
+        heights
+    }
+
+    /** makes a hash map from mor's in the ustr model to the correct index of
+     * the domain in the atomised tower
+     */
+    fn correct_domain_indices() -> HashMap<ustr::Ustr, usize> {
+        let mut domains = HashMap::new();
+        domains.insert(ustr("f"), 0);
+        domains.insert(ustr("g"), 2);
+        domains.insert(ustr("l"), 0);
+        domains
     }
 
     #[test]
-    fn ecld_atomisation_test() {
-        panic!()
+    fn ecld_atomisation_test_tower_heights() {
+        let ustr_model = &sample_ecld();
+        let correct_heights = correct_heights();
+        let (base_model, id_map) = uuidify(ustr_model);
+        let (atomised_model, towers) = degree_atomisation(Rc::new(base_model));
+        for x in ustr_model.ob_generators() {
+            let height_at_x = towers.get(id_map.get(&x).unwrap()).unwrap().len();
+            let correct_height = correct_heights.get(&x).unwrap();
+            assert_eq!(height_at_x, *correct_height);
+        }
+        let correct_domain_indices = correct_domain_indices();
+        for f in correct_domain_indices.keys() {
+            let uuid_f = id_map.get(f).unwrap();
+            let atomised_dom = atomised_model.get_dom(uuid_f).unwrap();
+            let atomised_cod = atomised_model.get_cod(uuid_f).unwrap();
+            let base_dom = ustr_model.get_dom(f).unwrap();
+            let base_cod = ustr_model.get_cod(f).unwrap();
+            let dom_index = *correct_domain_indices.get(f).unwrap();
+            let cod_index = *correct_heights.get(base_cod).unwrap() - 1;
+            let correct_dom = towers.get(id_map.get(base_dom).unwrap()).unwrap()[dom_index];
+            let correct_cod = towers.get(id_map.get(base_cod).unwrap()).unwrap()[cod_index];
+            assert_eq!(*atomised_dom, correct_dom, "Morphism {} has the wrong domain", *f);
+            assert_eq!(*atomised_cod, correct_cod, "Morphism {} has the wrong codomain", *f);
+        }
     }
 }
