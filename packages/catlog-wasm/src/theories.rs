@@ -4,17 +4,21 @@ Each struct in this module provides a [`DblTheory`], possibly with additional
 methods for theory-specific analyses.
  */
 
+use itertools::Itertools;
+use std::collections::HashMap;
 use std::rc::Rc;
-
 use ustr::ustr;
+use uuid::Uuid;
 use wasm_bindgen::prelude::*;
 
+use catlog::dbl::modal::model::ModalOb;
 use catlog::dbl::theory;
 use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
+use catlog::zero::{FinSet, MutMapping};
 
 use super::model_morphism::{MotifsOptions, motifs};
-use super::{analyses::*, model::DblModel, theory::DblTheory};
+use super::{analyses::*, model::DblModel, model::ModalDblModel, theory::DblTheory};
 
 /// The empty or initial theory.
 #[wasm_bindgen]
@@ -334,6 +338,136 @@ impl ThSymMonoidalCategory {
                 .map_err(|err| format!("{err:?}"))
                 .into(),
         ))
+    }
+
+    /// Below is the "Region Algebra for Petri Nets" algorithm from Ch 31 of
+    /// the Handbook of model checking: "Symbolic Model Checking in Non Boolean
+    /// Domains".
+    ///
+    /// The example petri net has the following structure
+    ///                      t1 t2  t3   
+    /// let i_mat = vec![vec![0, 1, 0],  p1
+    ///                  vec![0, 1, 0],  p2
+    ///                  vec![0, 0, 1]]; p3
+    ///
+    /// let o_mat = vec![vec![1, 0, 0],  p1
+    ///                  vec![0, 0, 1],  p2
+    ///                  vec![0, 1, 0]]; p3
+    ///
+    /// (WARNING: the petri net is drawn incorrectly in the chapter)
+    ///
+    /// Let the forbidden state be (0,0,2).
+    ///
+    /// The algorithm terminates in four steps:
+    /// [(0,0,2)] -> [(0,0,2),(1,1,1)] -> [(0,0,2),(0,1,1),(2,2,0)]
+    /// -> [(0,0,2),(0,1,1),(0,2,0)]
+    /// So the three ways one can reach the forbidden state are:
+    /// 1.) starting in the forbidden state (or any superset)
+    /// 2.) having two tokens in p2
+    /// 3.) having one token in each p2 and p3
+    ///
+    /// TODO support input of MULTIPLE forbidden regions and MULTIPLE
+    /// initial tokenings. Return whether ANY path from initial to forbidden.
+    ///
+    /// Consider using algorithm from "Minimal Coverability Tree Construction
+    /// Made Complete and Efficient" for a more efficient algorithm which allows
+    /// "inf" as a possible specification of an invalid state.
+    #[wasm_bindgen(js_name = "reachability")]
+    pub fn reachability(
+        &self,
+        model: &DblModel,
+        data: ReachabilityModelData,
+    ) -> Result<bool, String> {
+        let m: &ModalDblModel =
+            (&model.0).try_into().map_err(|_| "Model should be of a modal theory")?;
+
+        // Convert model into a pair of matrices
+        //--------------------------------------
+
+        // Get a canonical ordering of the objects
+        let ob_vec: Vec<Uuid> = data.0.tokens.keys().copied().collect();
+        let ob_inv: HashMap<Uuid, usize> =
+            ob_vec.iter().enumerate().map(|(x, y)| (*y, x)).collect();
+        let n_p: usize = ob_vec.len();
+
+        // Get a canonical ordering of the homs
+        let hom_vec: Vec<Uuid> = m.mor_generators.edge_set.iter().collect();
+        let hom_inv: HashMap<Uuid, usize> =
+            hom_vec.iter().enumerate().map(|(x, y)| (*y, x)).collect();
+        let n_t = hom_vec.len();
+
+        // Populate the I/O matrices from the hom src/tgt data
+        let mut i_mat = vec![vec![0; n_t]; n_p];
+        let mut o_mat = vec![vec![0; n_t]; n_p];
+
+        for e in m.mor_generators.edge_set.clone() {
+            let e_idx = *hom_inv.get(&e).unwrap();
+            if let Some(vs) =
+                m.mor_generators.src_map.get(&e).unwrap().clone().collect_product(None)
+            {
+                for v in vs.iter() {
+                    if let ModalOb::Generator(u) = v {
+                        i_mat[*ob_inv.get(u).unwrap()][e_idx] += 1;
+                    }
+                }
+            }
+
+            if let Some(vs) =
+                m.mor_generators.tgt_map.get(&e).unwrap().clone().collect_product(None)
+            {
+                for v in vs.iter() {
+                    if let ModalOb::Generator(u) = v {
+                        o_mat[*ob_inv.get(u).unwrap()][e_idx] += 1;
+                    }
+                }
+            }
+        }
+
+        let (i_mat_, o_mat_) = (&i_mat, &o_mat);
+
+        // Parse input data
+        //-----------------
+        let mut f: Vec<Vec<i32>> =
+            vec![ob_vec.iter().map(|u| *data.0.forbidden.get(u).unwrap()).collect()];
+        let init: Vec<i32> = ob_vec.iter().map(|u| *data.0.tokens.get(u).unwrap()).collect();
+
+        // Apply recursive algorithm until fix point
+        //------------------------------------------
+        loop {
+            // For each transition + region (in `f`) pair `(t,v)`, compute the
+            // region that accesses `v` via firing `t`.
+            let pre: Vec<Vec<i32>> = (0..n_t)
+                .flat_map(|t| {
+                    f.iter().map(move |v| {
+                        (0..n_p).map(move |p| {
+                            std::cmp::max(i_mat_[p][t], v[p] - (o_mat_[p][t] - i_mat_[p][t]))
+                        })
+                    })
+                })
+                .map(|z| z.collect())
+                .collect();
+
+            // Filter `pre` for regions which are not already in `f`.
+            let newstuff: Vec<Vec<i32>> = pre
+                .into_iter()
+                .filter(|v| f.iter().all(|old| (0..n_p).any(|p| v[p] < old[p])))
+                .unique()
+                .collect();
+
+            // We have terminated when there is nothing new generated by `pre`
+            if newstuff.is_empty() {
+                break;
+            }
+
+            // Update f with new stuff and remove extraneous old stuff
+            f.retain(|v| newstuff.iter().all(|n| (0..n_p).any(|p| v[p] < n[p])));
+            f.extend(newstuff);
+        }
+
+        // Check whether input tokening lies within the region which can access
+        // the forbidden state, `init`.
+        let init_in_forbbiden = f.iter().any(|v| (0..n_p).all(|p| v[p] <= init[p]));
+        Ok(!init_in_forbbiden)
     }
 }
 
