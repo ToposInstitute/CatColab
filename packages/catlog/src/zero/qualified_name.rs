@@ -1,16 +1,16 @@
 /*! Qualified names for elements of families of sets.
 
 A [qualified name](QualifiedName) is a sequence of [name segments](NameSegment).
-For example, the qualified name displayed as `"foo.bar.baz"`, consisting of
-three segments, can be constructed as
+For example, a qualified name with three segments can be constructed as
 
 ```
 # use catlog::zero::qualified_name::*;
 let name = QualifiedName::from(["foo", "bar", "baz"].map(NameSegment::from));
+assert_eq!(name.to_string(), "foo.bar.baz");
 ```
  */
 
-use std::hash::Hash;
+use std::{fmt::Display, hash::Hash};
 
 use derive_more::From;
 use ustr::Ustr;
@@ -42,7 +42,22 @@ pub enum NameSegment {
 
 impl From<&str> for NameSegment {
     fn from(name: &str) -> Self {
-        Ustr::from(name).into()
+        Self::Name(name.into())
+    }
+}
+
+impl Display for NameSegment {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            NameSegment::Uuid(id) => write!(f, "{}", id.as_braced()),
+            NameSegment::Name(name) => {
+                if name.contains(char::is_whitespace) {
+                    write!(f, "`{name}`")
+                } else {
+                    write!(f, "{name}")
+                }
+            }
+        }
     }
 }
 
@@ -95,9 +110,36 @@ impl From<&str> for QualifiedName {
     }
 }
 
+impl Display for QualifiedName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for (i, segment) in self.0.iter().enumerate() {
+            if i > 0 {
+                write!(f, ".")?;
+            }
+            write!(f, "{segment}")?;
+        }
+        Ok(())
+    }
+}
+
 impl QualifiedName {
     /// Constructs a qualified name with a single segment.
     pub fn single(id: NameSegment) -> Self {
         Self(vec![id])
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use uuid::uuid;
+
+    #[test]
+    fn display_name() {
+        let id = uuid!("67e55044-10b1-426f-9247-bb680e5fe0c8");
+        assert_eq!(NameSegment::from(id).to_string().chars().next(), Some('{'));
+
+        assert_eq!(NameSegment::from("foo").to_string(), "foo");
+        assert_eq!(NameSegment::from("foo bar").to_string(), "`foo bar`");
     }
 }
