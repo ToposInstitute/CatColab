@@ -1,8 +1,8 @@
 /*! Qualified names for elements of families of sets.
 
 A [qualified name](QualifiedName) is a sequence of [name segments](NameSegment).
-For example, the qualified name displayed as `foo.bar.baz`, consisting of three
-segments, can be constructed as
+For example, the qualified name displayed as `"foo.bar.baz"`, consisting of
+three segments, can be constructed as
 
 ```
 # use catlog::zero::qualified_name::*;
@@ -33,32 +33,11 @@ an interned string.
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
 pub enum NameSegment {
-    /** A universally unique identifier (UUID).
+    /// A universally unique identifier (UUID).
+    Uuid(Uuid),
 
-    The UUID is optionally supplemented with a human-readable name, to aid with
-    debugging and writing error messages. The name is allowed to be ambiguous
-    and should never be used for lookup.
-     */
-    Uuid {
-        /// The UUID.
-        id: Uuid,
-        /// An optional human-readable name.
-        name: Option<Ustr>,
-    },
-
-    /** A human-readable name.
-
-    The name is assumed to be unique within the relevant context, hence to
-    unambiguously name something in that context.
-     */
-    #[from]
+    /// A human-readable name, assumed unique within the relevant context.
     Name(Ustr),
-}
-
-impl From<Uuid> for NameSegment {
-    fn from(id: Uuid) -> Self {
-        Self::Uuid { id, name: None }
-    }
 }
 
 impl From<&str> for NameSegment {
@@ -95,6 +74,12 @@ pub fn name(x: impl Into<QualifiedName>) -> QualifiedName {
 impl<const N: usize> From<[NameSegment; N]> for QualifiedName {
     fn from(value: [NameSegment; N]) -> Self {
         Vec::from(value).into()
+    }
+}
+
+impl From<Uuid> for QualifiedName {
+    fn from(id: Uuid) -> Self {
+        Self::single(id.into())
     }
 }
 
