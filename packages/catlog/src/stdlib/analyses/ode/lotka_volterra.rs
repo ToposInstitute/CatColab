@@ -84,7 +84,7 @@ mod test {
     use ustr::ustr;
 
     use super::*;
-    use crate::one::Path;
+    use crate::{one::Path, zero::name};
     use crate::{simulate::ode::lotka_volterra, stdlib};
 
     #[test]
@@ -100,9 +100,9 @@ mod test {
             initial_values: [(prey, 1.0), (pred, 1.0)].into_iter().collect(),
             duration: 10.0,
         };
-        let analysis = SignedCoefficientBuilder::new(ustr("Object"))
-            .add_positive(Path::Id(ustr("Object")))
-            .add_negative(Path::single(ustr("Negative")))
+        let analysis = SignedCoefficientBuilder::new(name("Object"))
+            .add_positive(Path::Id(name("Object")))
+            .add_negative(Path::single(name("Negative")))
             .lotka_volterra_analysis(&neg_feedback, data);
         assert_eq!(analysis.problem, lotka_volterra::create_predator_prey());
     }

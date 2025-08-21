@@ -169,28 +169,24 @@ that preserves tabulators. For the definition of "preserving tabulators," see
 the dev docs.
  */
 #[derive(Clone, Derivative)]
-#[derivative(PartialEq(bound = "Id: Eq + Hash, ThId: Eq + Hash"))]
-#[derivative(Eq(bound = "Id: Eq + Hash, ThId: Eq + Hash"))]
-pub struct DiscreteTabModel<Id, ThId> {
+#[derivative(PartialEq(bound = "Id: Eq + Hash"))]
+#[derivative(Eq(bound = "Id: Eq + Hash"))]
+pub struct DiscreteTabModel<Id> {
     #[derivative(PartialEq(compare_with = "Rc::ptr_eq"))]
-    theory: Rc<DiscreteTabTheory<ThId, ThId>>,
+    theory: Rc<DiscreteTabTheory>,
     generators: DiscreteTabGenerators<Id, Id>,
     // TODO: Equations
-    ob_types: IndexedHashColumn<Id, TabObType<ThId, ThId>>,
-    mor_types: IndexedHashColumn<Id, TabMorType<ThId, ThId>>,
+    ob_types: IndexedHashColumn<Id, TabObType>,
+    mor_types: IndexedHashColumn<Id, TabMorType>,
 }
 
 /// A model of a discrete tabulator theory where both theory and model have keys
 /// of type `Ustr`.
-pub type UstrDiscreteTabModel = DiscreteTabModel<Ustr, Ustr>;
+pub type UstrDiscreteTabModel = DiscreteTabModel<Ustr>;
 
-impl<Id, ThId> DiscreteTabModel<Id, ThId>
-where
-    Id: Eq + Clone + Hash,
-    ThId: Eq + Clone + Hash,
-{
+impl<Id: Eq + Clone + Hash> DiscreteTabModel<Id> {
     /// Creates an empty model of the given theory.
-    pub fn new(theory: Rc<DiscreteTabTheory<ThId, ThId>>) -> Self {
+    pub fn new(theory: Rc<DiscreteTabTheory>) -> Self {
         Self {
             theory,
             generators: Default::default(),
@@ -247,10 +243,7 @@ where
     }
 }
 
-impl<Id, ThId> Category for DiscreteTabModel<Id, ThId>
-where
-    Id: Eq + Clone + Hash,
-{
+impl<Id: Eq + Clone + Hash> Category for DiscreteTabModel<Id> {
     type Ob = TabOb<Id, Id>;
     type Mor = TabMor<Id, Id>;
 
@@ -272,10 +265,7 @@ where
     }
 }
 
-impl<Id, ThId> FgCategory for DiscreteTabModel<Id, ThId>
-where
-    Id: Eq + Clone + Hash,
-{
+impl<Id: Eq + Clone + Hash> FgCategory for DiscreteTabModel<Id> {
     type ObGen = Id;
     type MorGen = Id;
 
@@ -294,16 +284,12 @@ where
     }
 }
 
-impl<Id, ThId> DblModel for DiscreteTabModel<Id, ThId>
-where
-    Id: Eq + Clone + Hash,
-    ThId: Eq + Clone + Hash,
-{
-    type ObType = TabObType<ThId, ThId>;
-    type MorType = TabMorType<ThId, ThId>;
-    type ObOp = TabObOp<ThId, ThId>;
-    type MorOp = TabMorOp<ThId, ThId>;
-    type Theory = DiscreteTabTheory<ThId, ThId>;
+impl<Id: Eq + Clone + Hash> DblModel for DiscreteTabModel<Id> {
+    type ObType = TabObType;
+    type MorType = TabMorType;
+    type ObOp = TabObOp;
+    type MorOp = TabMorOp;
+    type Theory = DiscreteTabTheory;
 
     fn theory(&self) -> &Self::Theory {
         &self.theory
@@ -339,11 +325,7 @@ where
     }
 }
 
-impl<Id, ThId> FgDblModel for DiscreteTabModel<Id, ThId>
-where
-    Id: Eq + Clone + Hash,
-    ThId: Eq + Clone + Hash,
-{
+impl<Id: Eq + Clone + Hash> FgDblModel for DiscreteTabModel<Id> {
     fn ob_generator_type(&self, ob: &Self::ObGen) -> Self::ObType {
         self.ob_types.apply_to_ref(ob).expect("Object should have type")
     }
@@ -362,11 +344,7 @@ where
     }
 }
 
-impl<Id, ThId> MutDblModel for DiscreteTabModel<Id, ThId>
-where
-    Id: Eq + Clone + Hash,
-    ThId: Eq + Clone + Hash,
-{
+impl<Id: Eq + Clone + Hash> MutDblModel for DiscreteTabModel<Id> {
     fn add_ob(&mut self, x: Self::ObGen, ob_type: Self::ObType) {
         self.ob_types.set(x.clone(), ob_type);
         self.generators.objects.insert(x);
@@ -391,11 +369,7 @@ where
     }
 }
 
-impl<Id, ThId> Validate for DiscreteTabModel<Id, ThId>
-where
-    Id: Eq + Clone + Hash,
-    ThId: Eq + Clone + Hash,
-{
+impl<Id: Eq + Clone + Hash> Validate for DiscreteTabModel<Id> {
     type ValidationError = InvalidDblModel<Id>;
 
     fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
@@ -409,15 +383,15 @@ mod tests {
     use ustr::ustr;
 
     use super::*;
-    use crate::stdlib::theories::*;
+    use crate::{stdlib::theories::*, zero::name};
 
     #[test]
     fn validate() {
         let th = Rc::new(th_category_links());
         let mut model = DiscreteTabModel::new(th);
         let (x, f) = (ustr("x"), ustr("f"));
-        model.add_ob(x, TabObType::Basic(ustr("Object")));
-        model.add_mor(f, TabOb::Basic(x), TabOb::Basic(x), TabMorType::Basic(ustr("Link")));
+        model.add_ob(x, TabObType::Basic(name("Object")));
+        model.add_mor(f, TabOb::Basic(x), TabOb::Basic(x), TabMorType::Basic(name("Link")));
         assert_eq!(model.validate(), Err(nonempty![InvalidDblModel::CodType(f)]));
     }
 }

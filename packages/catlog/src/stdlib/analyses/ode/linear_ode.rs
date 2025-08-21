@@ -77,7 +77,7 @@ mod test {
 
     use super::*;
     use crate::dbl::model::{MutDblModel, UstrDiscreteDblModel};
-    use crate::one::Path;
+    use crate::{one::Path, zero::name};
     use crate::{simulate::ode::linear_ode, stdlib};
 
     #[test]
@@ -87,22 +87,22 @@ mod test {
         let (a, b, x) = (ustr("A"), ustr("B"), ustr("X"));
         let (aa, ax, bx, xb) = (ustr("aa"), ustr("ax"), ustr("bx"), ustr("xb"));
         let mut test_model = UstrDiscreteDblModel::new(th);
-        test_model.add_ob(a, ustr("Object"));
-        test_model.add_ob(b, ustr("Object"));
-        test_model.add_ob(x, ustr("Object"));
-        test_model.add_mor(aa, a, a, ustr("Negative").into());
-        test_model.add_mor(ax, a, x, Path::Id(ustr("Object")));
-        test_model.add_mor(bx, b, x, ustr("Negative").into());
-        test_model.add_mor(xb, x, b, Path::Id(ustr("Object")));
+        test_model.add_ob(a, name("Object"));
+        test_model.add_ob(b, name("Object"));
+        test_model.add_ob(x, name("Object"));
+        test_model.add_mor(aa, a, a, name("Negative").into());
+        test_model.add_mor(ax, a, x, Path::Id(name("Object")));
+        test_model.add_mor(bx, b, x, name("Negative").into());
+        test_model.add_mor(xb, x, b, Path::Id(name("Object")));
 
         let data = LinearODEProblemData {
             coefficients: [(aa, 0.3), (ax, 1.0), (bx, 2.0), (xb, 0.5)].into_iter().collect(),
             initial_values: [(a, 2.0), (b, 1.0), (x, 1.0)].into_iter().collect(),
             duration: 10.0,
         };
-        let analysis = SignedCoefficientBuilder::new(ustr("Object"))
-            .add_positive(Path::Id(ustr("Object")))
-            .add_negative(Path::single(ustr("Negative")))
+        let analysis = SignedCoefficientBuilder::new(name("Object"))
+            .add_positive(Path::Id(name("Object")))
+            .add_negative(Path::single(name("Negative")))
             .linear_ode_analysis(&test_model, data);
         assert_eq!(analysis.problem, linear_ode::create_neg_loops_pos_connector());
     }

@@ -23,11 +23,11 @@ use egglog::{EGraph, ast::*, span};
 use nonempty::NonEmpty;
 use ref_cast::RefCast;
 use thiserror::Error;
-use ustr::Ustr;
 
 use super::{category::*, graph::*, path::*};
 use crate::egglog_util::{CommandRewrite, CommandRule, Program};
 use crate::validate::{self, Validate};
+use crate::zero::QualifiedName;
 
 /** A finitely presented category backed by an e-graph.
 
@@ -60,8 +60,8 @@ pub struct FpCategory<V, E> {
     egraph: RefCell<EGraph>,
 }
 
-/// A finitely presented category with generators of type `Ustr`.
-pub type UstrFpCategory = FpCategory<Ustr, Ustr>;
+/// A finitely presented category whose generators have qualified names.
+pub type QualifiedFpCategory = FpCategory<QualifiedName, QualifiedName>;
 
 impl<V, E> FpCategory<V, E>
 where
@@ -637,45 +637,40 @@ impl Default for CategorySymbols {
 }
 
 #[cfg(test)]
-use ustr::ustr;
+use crate::zero::name;
 
 /// The schema for graphs, an f.p. category.
 #[cfg(test)]
-pub fn sch_graph() -> UstrFpCategory {
-    let mut cat = UstrFpCategory::new();
-    let (v, e) = (ustr("V"), ustr("E"));
-    cat.add_ob_generators([v, e]);
-    cat.add_mor_generator(ustr("src"), e, v);
-    cat.add_mor_generator(ustr("tgt"), e, v);
+pub fn sch_graph() -> QualifiedFpCategory {
+    let mut cat = FpCategory::new();
+    cat.add_ob_generators([name("V"), name("E")]);
+    cat.add_mor_generator(name("src"), name("E"), name("V"));
+    cat.add_mor_generator(name("tgt"), name("E"), name("V"));
     cat
 }
 
 /// The schema for symmetric graphs, an f.p. category.
 #[cfg(test)]
-pub fn sch_sgraph() -> UstrFpCategory {
-    let mut cat = UstrFpCategory::new();
-    let (v, e) = (ustr("V"), ustr("E"));
-    let (s, t, i) = (ustr("src"), ustr("tgt"), ustr("inv"));
-    cat.add_ob_generators([v, e]);
-    cat.add_mor_generator(s, e, v);
-    cat.add_mor_generator(t, e, v);
-    cat.add_mor_generator(i, e, e);
-    cat.equate(Path::pair(i, i), Path::empty(e));
-    cat.equate(Path::pair(i, s), Path::single(t));
-    cat.equate(Path::pair(i, t), Path::single(s));
+pub fn sch_sgraph() -> QualifiedFpCategory {
+    let mut cat = FpCategory::new();
+    cat.add_ob_generators([name("V"), name("E")]);
+    cat.add_mor_generator(name("src"), name("E"), name("V"));
+    cat.add_mor_generator(name("tgt"), name("E"), name("V"));
+    cat.add_mor_generator(name("inv"), name("E"), name("E"));
+    cat.equate(Path::pair(name("inv"), name("inv")), Path::empty(name("E")));
+    cat.equate(Path::pair(name("inv"), name("src")), Path::single(name("tgt")));
+    cat.equate(Path::pair(name("inv"), name("tgt")), Path::single(name("src")));
     cat
 }
 
 /// The schema for half-edge graphs, an f.p. category.
 #[cfg(test)]
-pub fn sch_hgraph() -> UstrFpCategory {
-    let mut cat = UstrFpCategory::new();
-    let (v, h) = (ustr("V"), ustr("H"));
-    let (vert, inv) = (ustr("vert"), ustr("inv"));
-    cat.add_ob_generators([v, h]);
-    cat.add_mor_generator(vert, h, v);
-    cat.add_mor_generator(inv, h, h);
-    cat.equate(Path::pair(inv, inv), Path::empty(h));
+pub fn sch_hgraph() -> QualifiedFpCategory {
+    let mut cat = FpCategory::new();
+    cat.add_ob_generators([name("V"), name("H")]);
+    cat.add_mor_generator(name("vert"), name("H"), name("V"));
+    cat.add_mor_generator(name("inv"), name("H"), name("H"));
+    cat.equate(Path::pair(name("inv"), name("inv")), Path::empty(name("H")));
     cat
 }
 
@@ -684,18 +679,21 @@ mod tests {
     use super::*;
     use expect_test::expect;
     use nonempty::nonempty;
-    use ustr::ustr;
 
     #[test]
     fn sch_sgraph_equations() {
-        let sch_sgraph = sch_sgraph();
-        assert!(!sch_sgraph.is_free());
-        assert!(sch_sgraph.validate().is_ok());
+        let sch = sch_sgraph();
+        assert!(!sch.is_free());
+        assert!(sch.validate().is_ok());
 
-        let (s, t, i) = (ustr("src"), ustr("tgt"), ustr("inv"));
-        assert!(!sch_sgraph.morphisms_are_equal(Path::single(s), Path::single(t)));
-        assert!(sch_sgraph.morphisms_are_equal(Path::pair(i, i), Path::empty(ustr("E"))));
-        assert!(sch_sgraph.morphisms_are_equal(Path::Seq(nonempty![i, i, i, s]), Path::single(t)));
+        assert!(!sch.morphisms_are_equal(Path::single(name("src")), Path::single(name("tgt"))));
+        assert!(
+            sch.morphisms_are_equal(Path::pair(name("inv"), name("inv")), Path::empty(name("E")))
+        );
+        assert!(sch.morphisms_are_equal(
+            Path::Seq(nonempty![name("inv"), name("inv"), name("inv"), name("src")]),
+            Path::single(name("tgt"))
+        ));
     }
 
     #[test]

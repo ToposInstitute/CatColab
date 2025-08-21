@@ -10,7 +10,6 @@ use std::hash::Hash;
 
 use nalgebra::DVector;
 use num_traits::Zero;
-use ustr::{Ustr, ustr};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -24,7 +23,7 @@ use crate::dbl::{
 };
 use crate::one::FgCategory;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
-use crate::zero::{alg::Polynomial, rig::Monomial};
+use crate::zero::{alg::Polynomial, name, rig::Monomial};
 
 /// Data defining a mass-action ODE problem for a model.
 #[derive(Clone)]
@@ -59,14 +58,14 @@ networks (aka, Petri nets) due to [Baez & Pollard](crate::refs::ReactionNets).
  */
 pub struct PetriNetMassActionAnalysis {
     /// Object type for places.
-    pub place_ob_type: ModalObType<Ustr>,
+    pub place_ob_type: ModalObType,
     /// Morphism type for transitions.
-    pub transition_mor_type: ModalMorType<Ustr>,
+    pub transition_mor_type: ModalMorType,
 }
 
 impl Default for PetriNetMassActionAnalysis {
     fn default() -> Self {
-        let ob_type = ModalObType::new(ustr("Object"));
+        let ob_type = ModalObType::new(name("Object"));
         Self {
             place_ob_type: ob_type.clone(),
             transition_mor_type: ModalMorType::Zero(ob_type),
@@ -78,7 +77,7 @@ impl PetriNetMassActionAnalysis {
     /// Creates a mass-action system with symbolic rate coefficients.
     pub fn build_system<Id: Eq + Clone + Hash + Ord + Debug>(
         &self,
-        model: &ModalDblModel<Id, Ustr>,
+        model: &ModalDblModel<Id>,
     ) -> PolynomialSystem<Id, Parameter<Id>, u8> {
         let mut sys = PolynomialSystem::new();
         for ob in model.ob_generators_with_type(&self.place_ob_type) {
@@ -113,7 +112,7 @@ impl PetriNetMassActionAnalysis {
     /// Creates a mass-action system with numerical rate coefficients.
     pub fn build_numerical_system<Id: Eq + Clone + Hash + Ord + Debug>(
         &self,
-        model: &ModalDblModel<Id, Ustr>,
+        model: &ModalDblModel<Id>,
         data: MassActionProblemData<Id>,
     ) -> ODEAnalysis<Id, NumericalPolynomialSystem<u8>> {
         into_numerical_system(self.build_system(model), data)
@@ -123,21 +122,21 @@ impl PetriNetMassActionAnalysis {
 /// Mass-action ODE analysis for stock-flow models.
 pub struct StockFlowMassActionAnalysis {
     /// Object type for stocks.
-    pub stock_ob_type: TabObType<Ustr, Ustr>,
+    pub stock_ob_type: TabObType,
     /// Morphism types for flows between stocks.
-    pub flow_mor_type: TabMorType<Ustr, Ustr>,
+    pub flow_mor_type: TabMorType,
     /// Morphism types for links for stocks to flows.
-    pub link_mor_type: TabMorType<Ustr, Ustr>,
+    pub link_mor_type: TabMorType,
 }
 
 impl Default for StockFlowMassActionAnalysis {
     fn default() -> Self {
-        let stock_ob_type = TabObType::Basic(ustr("Object"));
+        let stock_ob_type = TabObType::Basic(name("Object"));
         let flow_mor_type = TabMorType::Hom(Box::new(stock_ob_type.clone()));
         Self {
             stock_ob_type,
             flow_mor_type,
-            link_mor_type: TabMorType::Basic(ustr("Link")),
+            link_mor_type: TabMorType::Basic(name("Link")),
         }
     }
 }
@@ -146,7 +145,7 @@ impl StockFlowMassActionAnalysis {
     /// Creates a mass-action system with symbolic rate coefficients.
     pub fn build_system<Id: Eq + Clone + Hash + Ord>(
         &self,
-        model: &DiscreteTabModel<Id, Ustr>,
+        model: &DiscreteTabModel<Id>,
     ) -> PolynomialSystem<Id, Parameter<Id>, u8> {
         let mut terms: HashMap<Id, Monomial<Id, u8>> = model
             .mor_generators_with_type(&self.flow_mor_type)
@@ -196,7 +195,7 @@ impl StockFlowMassActionAnalysis {
     /// Creates a mass-action system with numerical rate coefficients.
     pub fn build_numerical_system<Id: Eq + Clone + Hash + Ord>(
         &self,
-        model: &DiscreteTabModel<Id, Ustr>,
+        model: &DiscreteTabModel<Id>,
         data: MassActionProblemData<Id>,
     ) -> ODEAnalysis<Id, NumericalPolynomialSystem<u8>> {
         into_numerical_system(self.build_system(model), data)

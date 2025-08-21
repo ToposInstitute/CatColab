@@ -14,21 +14,18 @@ use crate::validate;
 use crate::zero::Mapping;
 
 /// A diagram in a model of a discrete double theory.
-pub type DiscreteDblModelDiagram<DomId, CodId, Cat> =
-    DblModelDiagram<DiscreteDblModelMapping<DomId, CodId>, DiscreteDblModel<DomId, Cat>>;
+pub type DiscreteDblModelDiagram<DomId, CodId> =
+    DblModelDiagram<DiscreteDblModelMapping<DomId, CodId>, DiscreteDblModel<DomId>>;
 
 /// A failure to be valid in a diagram in a model of a discrete double theory.
 #[cfg_attr(feature = "serde-wasm", declare)]
 pub type InvalidDiscreteDblModelDiagram<DomId> =
     InvalidDblModelDiagram<InvalidDblModel<DomId>, InvalidDblModelMorphism<DomId, DomId>>;
 
-impl<DomId, CodId, Cat> DiscreteDblModelDiagram<DomId, CodId, Cat>
+impl<DomId, CodId> DiscreteDblModelDiagram<DomId, CodId>
 where
     DomId: Eq + Clone + Hash,
     CodId: Eq + Clone + Hash,
-    Cat: FgCategory,
-    Cat::Ob: Hash,
-    Cat::Mor: Hash,
 {
     /** Validates that the diagram is well-defined in the given model.
 
@@ -36,7 +33,7 @@ where
      */
     pub fn validate_in(
         &self,
-        model: &DiscreteDblModel<CodId, Cat>,
+        model: &DiscreteDblModel<CodId>,
     ) -> Result<(), NonEmpty<InvalidDiscreteDblModelDiagram<DomId>>> {
         validate::wrap_errors(self.iter_invalid_in(model))
     }
@@ -44,7 +41,7 @@ where
     /// Iterates over failures of the diagram to be valid in the given model.
     pub fn iter_invalid_in<'a>(
         &'a self,
-        model: &'a DiscreteDblModel<CodId, Cat>,
+        model: &'a DiscreteDblModel<CodId>,
     ) -> impl Iterator<Item = InvalidDiscreteDblModelDiagram<DomId>> + 'a {
         let mut dom_errs = self.1.iter_invalid().peekable();
         if dom_errs.peek().is_some() {
@@ -59,7 +56,7 @@ where
 
     Assumes that the model is valid.
      */
-    pub fn infer_missing_from(&mut self, model: &DiscreteDblModel<CodId, Cat>) {
+    pub fn infer_missing_from(&mut self, model: &DiscreteDblModel<CodId>) {
         let (mapping, domain) = self.into();
         domain.infer_missing();
         for e in domain.mor_generators() {
@@ -85,8 +82,8 @@ mod tests {
     use ustr::ustr;
 
     use super::*;
-    use crate::one::Path;
     use crate::stdlib::*;
+    use crate::{one::Path, zero::name};
 
     #[test]
     fn validate_model_diagram() {
@@ -105,7 +102,7 @@ mod tests {
     fn infer_model_diagram() {
         let th = Rc::new(th_schema());
         let mut domain = DiscreteDblModel::new(th.clone());
-        domain.add_mor('f', 'x', 'y', ustr("Attr").into());
+        domain.add_mor('f', 'x', 'y', name("Attr").into());
         let mut f: DiscreteDblModelMapping<_, _> = Default::default();
         f.assign_mor('f', Path::single(ustr("attr")));
         let mut diagram = DblModelDiagram(f, domain);

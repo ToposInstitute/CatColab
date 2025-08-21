@@ -1,14 +1,14 @@
 //! Discrete double theories.
 
-use std::hash::Hash;
 use std::ops::Range;
 
 use derive_more::From;
 use ref_cast::RefCast;
 
 use crate::dbl::{category::*, theory::InvalidDblTheory, tree::DblTree};
-use crate::one::{Path, category::*, fp_category::*};
+use crate::one::{Path, QualifiedPath, category::*, fp_category::*};
 use crate::validate::{self, Validate};
+use crate::zero::QualifiedName;
 
 /** A discrete double theory.
 
@@ -21,20 +21,13 @@ indeed **discrete**, which can equivalently be defined as
 */
 #[derive(From, RefCast, Debug)]
 #[repr(transparent)]
-pub struct DiscreteDblTheory<Cat: FgCategory>(pub Cat);
+pub struct DiscreteDblTheory(pub QualifiedFpCategory);
 
-/// A discrete double theory with keys of type `Ustr`.
-pub type UstrDiscreteDblTheory = DiscreteDblTheory<UstrFpCategory>;
-
-impl<C: FgCategory> VDblCategory for DiscreteDblTheory<C>
-where
-    C::Ob: Clone,
-    C::Mor: Clone,
-{
-    type Ob = C::Ob;
-    type Arr = C::Ob;
-    type Pro = C::Mor;
-    type Cell = Path<C::Ob, C::Mor>;
+impl VDblCategory for DiscreteDblTheory {
+    type Ob = QualifiedName;
+    type Arr = QualifiedName;
+    type Pro = QualifiedPath;
+    type Cell = Path<Self::Ob, Self::Pro>;
 
     fn has_ob(&self, ob: &Self::Ob) -> bool {
         self.0.has_ob(ob)
@@ -85,11 +78,7 @@ where
     }
 }
 
-impl<C: FgCategory> VDCWithComposites for DiscreteDblTheory<C>
-where
-    C::Ob: Clone,
-    C::Mor: Clone,
-{
+impl VDCWithComposites for DiscreteDblTheory {
     fn composite(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Pro> {
         Some(self.0.compose(path))
     }
@@ -105,11 +94,8 @@ where
     }
 }
 
-impl<Id> Validate for DiscreteDblTheory<FpCategory<Id, Id>>
-where
-    Id: Eq + Clone + Hash,
-{
-    type ValidationError = InvalidDblTheory<Id>;
+impl Validate for DiscreteDblTheory {
+    type ValidationError = InvalidDblTheory;
 
     fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
         validate::wrap_errors(self.0.iter_invalid().map(|err| match err {
@@ -125,21 +111,22 @@ mod tests {
     use super::*;
     use crate::dbl::theory::DblTheory;
     use crate::one::{Path, fp_category::FpCategory};
+    use crate::zero::name;
 
     #[test]
     fn theory_interface() {
-        let mut sgn: FpCategory<char, char> = Default::default();
-        sgn.add_ob_generator('*');
-        sgn.add_mor_generator('n', '*', '*');
-        sgn.equate(Path::pair('n', 'n'), Path::Id('*'));
+        let mut sgn = FpCategory::new();
+        sgn.add_ob_generator(name("*"));
+        sgn.add_mor_generator(name("n"), name("*"), name("*"));
+        sgn.equate(Path::pair(name("n"), name("n")), Path::Id(name("*")));
 
         let th = DiscreteDblTheory::from(sgn);
-        assert!(th.has_ob_type(&'*'));
-        assert!(th.has_mor_type(&'n'.into()));
-        let path = Path::pair('n'.into(), 'n'.into());
-        assert!(th.0.morphisms_are_equal(th.compose_types(path).unwrap(), Path::Id('*')));
+        assert!(th.has_ob_type(&name("*")));
+        assert!(th.has_mor_type(&name("n").into()));
+        let path = Path::pair(name("n").into(), name("n").into());
+        assert!(th.0.morphisms_are_equal(th.compose_types(path).unwrap(), Path::Id(name("*"))));
 
-        assert_eq!(th.hom_type('*'), Path::Id('*'));
-        assert_eq!(th.hom_op('*'), Path::single(Path::Id('*')));
+        assert_eq!(th.hom_type(name("*")), Path::Id(name("*")));
+        assert_eq!(th.hom_op(name("*")), Path::single(Path::Id(name("*"))));
     }
 }

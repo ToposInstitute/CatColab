@@ -3,21 +3,22 @@
 These can be used to migrate models from one theory to another.
  */
 
-use ustr::{Ustr, ustr};
+use crate::one::{FpFunctorData, Path, QualifiedPath};
+use crate::zero::{HashColumn, QualifiedName, name};
 
-use crate::one::{FpFunctorData, Path};
-use crate::zero::HashColumn;
-
-type DiscreteDblTheoryMap<Id> = FpFunctorData<HashColumn<Id, Id>, HashColumn<Id, Path<Id, Id>>>;
+type DiscreteDblTheoryMap = FpFunctorData<
+    HashColumn<QualifiedName, QualifiedName>,
+    HashColumn<QualifiedName, QualifiedPath>,
+>;
 
 /** Map from theory of categories to the theories of schemas.
 
 Sigma migration along this map sends objects in a category to entity types in a
 schema, yielding a schema with no attributes or attribute types.
  */
-pub fn th_category_to_schema() -> DiscreteDblTheoryMap<Ustr> {
+pub fn th_category_to_schema() -> DiscreteDblTheoryMap {
     FpFunctorData::new(
-        HashColumn::new([(ustr("Object"), ustr("Entity"))].into()),
+        HashColumn::new([(name("Object"), name("Entity"))].into()),
         HashColumn::default(),
     )
 }
@@ -27,11 +28,12 @@ pub fn th_category_to_schema() -> DiscreteDblTheoryMap<Ustr> {
 Sigma migration along this map erases the distinction between entity types and
 attribute types, turning both into objects in a category.
  */
-pub fn th_schema_to_category() -> DiscreteDblTheoryMap<Ustr> {
-    let x = ustr("Object");
+pub fn th_schema_to_category() -> DiscreteDblTheoryMap {
     FpFunctorData::new(
-        HashColumn::new([(ustr("Entity"), x), (ustr("AttrType"), x)].into()),
-        HashColumn::new([(ustr("Attr"), Path::Id(x))].into()),
+        HashColumn::new(
+            [(name("Entity"), name("Object")), (name("AttrType"), name("Object"))].into(),
+        ),
+        HashColumn::new([(name("Attr"), Path::Id(name("Object")))].into()),
     )
 }
 
@@ -39,17 +41,16 @@ pub fn th_schema_to_category() -> DiscreteDblTheoryMap<Ustr> {
 
 Sigma migration along this map forgets about the delays.
  */
-pub fn th_delayable_signed_category_to_signed_category() -> DiscreteDblTheoryMap<Ustr> {
-    let x = ustr("Object");
+pub fn th_delayable_signed_category_to_signed_category() -> DiscreteDblTheoryMap {
     FpFunctorData::new(
-        HashColumn::new([(x, x)].into()),
+        HashColumn::new([(name("Object"), name("Object"))].into()),
         HashColumn::new(
             [
-                (ustr("Negative"), ustr("Negative").into()),
-                (ustr("Slow"), Path::Id(x)),
+                (name("Negative"), name("Negative").into()),
+                (name("Slow"), Path::Id(name("Object"))),
                 // TODO: Shouldn't have to define on these superfluous generators.
-                (ustr("PositiveSlow"), Path::Id(x)),
-                (ustr("NegativeSlow"), ustr("Negative").into()),
+                (name("PositiveSlow"), Path::Id(name("Object"))),
+                (name("NegativeSlow"), name("Negative").into()),
             ]
             .into(),
         ),
