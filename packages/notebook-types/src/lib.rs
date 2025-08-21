@@ -17,24 +17,18 @@ pub mod current {
 
 /** Generate type defs for dependencies supporting `serde` but not `tsify`.
 
-Comments on specific definitions:
+To define `Value`, we could borrow the definition of `JsonValue` from `ts-rs`:
+<https://github.com/Aleph-Alpha/ts-rs/blob/main/ts-rs/tests/integration/serde_json.rs>.
+However, this causes mysterious TS errors, so we use `unknown` instead.
 
-- Re: `Value`, we could borrow the definition of `JsonValue` in the `ts-rs` crate:
-  <https://github.com/Aleph-Alpha/ts-rs/blob/main/ts-rs/tests/integration/serde_json.rs>.
-  However, this is causing mysterious TS errors, so we use `unknown` instead.
-- Re: `NonEmpty`, somewhat amazingly, the type system in TypeScript can express
-  the constraint that an array be nonempty, with certain usage caveats:
-  <https://stackoverflow.com/q/56006111>. For now, we will not attempt to
-  enforce non-emptiness in the TypeScript layer.
+TODO: Do not use `NonEmpty` in wasm-bound types to avoid need for alias.
  */
 #[wasm_bindgen(typescript_custom_section)]
 const TS_APPEND_CONTENT: &'static str = r#"
-export type Value = unknown;
-
+type NonEmpty<T> = Array<T>;
 export type Uuid = string;
-export type Ustr = string;
-
-export type NonEmpty<T> = Array<T>;
+type Ustr = string;
+type Value = unknown;
 "#;
 
 pub static CURRENT_VERSION: &str = "1";
