@@ -343,11 +343,9 @@ impl ThSymMonoidalCategory {
         model: &DblModel,
         data: MassActionModelData,
     ) -> Result<StochasticODEResult, String> {
-        let model: &model::ModalDblModel<_, _> =
-            (&model.0).try_into().map_err(|_| "Model should be of a modal theory")?;
         Ok(StochasticODEResult(
             analyses::ode::PetriNetMassActionAnalysis::default()
-                .build_reaction(model, data.0.clone())
+                .build_reaction(model.modal()?, data.0.clone())
                 .solve_with_defaults()
                 .map_err(|err| format!("{err:?}"))
                 .into(),

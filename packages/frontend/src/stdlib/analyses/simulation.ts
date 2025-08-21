@@ -51,7 +51,7 @@ export function createModelStochasticODEPlot(
     return createMemo<JsResult<ODEPlotData, string> | undefined>(
         () => {
             const validated = liveModel().validatedModel();
-            if (validated?.result.tag !== "Ok") {
+            if (validated?.tag !== "Valid") {
                 return;
             }
 
