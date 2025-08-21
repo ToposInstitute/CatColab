@@ -12,6 +12,11 @@ use catlog::stdlib::analyses;
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct ODEResult(pub JsResult<analyses::ode::ODESolution<Uuid>, String>);
 
+/// Input data for a Stochastic ODE analysis of a model.
+#[derive(Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct StochasticODEResult(pub JsResult<analyses::ode::StochasticODESolution<Uuid>, String>);
+
 /// Input data for a Lokta-Volterra analysis of a model.
 #[derive(Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]

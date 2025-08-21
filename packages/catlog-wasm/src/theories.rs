@@ -335,6 +335,22 @@ impl ThSymMonoidalCategory {
                 .into(),
         ))
     }
+
+    /// Simulates a reaction network
+    #[wasm_bindgen(js_name = "reactionNetwork")]
+    pub fn reaction_network(
+        &self,
+        model: &DblModel,
+        data: MassActionModelData,
+    ) -> Result<StochasticODEResult, String> {
+        Ok(StochasticODEResult(
+            analyses::ode::PetriNetMassActionAnalysis::default()
+                .build_reaction(model.modal()?, data.0.clone())
+                .solve_with_defaults()
+                .map_err(|err| format!("{err:?}"))
+                .into(),
+        ))
+    }
 }
 
 #[cfg(test)]
