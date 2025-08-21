@@ -2,6 +2,7 @@
 
 use all_the_same::all_the_same;
 use derive_more::{From, TryInto};
+use nonempty::NonEmpty;
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 use ustr::Ustr;
@@ -60,20 +61,23 @@ impl CanElaborate<Mor, Path<Uuid, Uuid>> for Elaborator {
     fn elab(&self, mor: &Mor) -> Result<Path<Uuid, Uuid>, String> {
         match mor {
             Mor::Basic(id) => Ok(Path::single(*id)),
-            Mor::Composite(path) => {
-                let result_path = promote_path(*path.clone())
-                    .try_map(|ob| Elaborator.elab(&ob), |mor| Elaborator.elab(&mor));
-                result_path.map(|path| path.flatten())
-            }
+            Mor::Composite(path) => promote_path(*path.clone())
+                .and_then(|path| {
+                    path.try_map(|ob| Elaborator.elab(&ob), |mor| Elaborator.elab(&mor))
+                })
+                .map(|path| path.flatten()),
             _ => Err(format!("Cannot use morphism with discrete double theory: {mor:#?}")),
         }
     }
 }
 
-fn promote_path<V, E>(path: notebook_path::Path<V, E>) -> Path<V, E> {
+fn promote_path<V, E>(path: notebook_path::Path<V, E>) -> Result<Path<V, E>, String> {
     match path {
-        notebook_path::Path::Id(v) => Path::Id(v),
-        notebook_path::Path::Seq(edges) => Path::Seq(edges),
+        notebook_path::Path::Id(v) => Ok(Path::Id(v)),
+        notebook_path::Path::Seq(edges) if !edges.is_empty() => {
+            Ok(Path::Seq(NonEmpty::from_vec(edges).unwrap()))
+        }
+        _ => Err("Sequence of edges in path must be non-empty".into()),
     }
 }
 
@@ -93,11 +97,11 @@ impl CanElaborate<Mor, TabMor<Uuid, Uuid>> for Elaborator {
     fn elab(&self, mor: &Mor) -> Result<TabMor<Uuid, Uuid>, String> {
         match mor {
             Mor::Basic(id) => Ok(Path::single(dbl_model::TabEdge::Basic(*id))),
-            Mor::Composite(path) => {
-                let result_path = promote_path(*path.clone())
-                    .try_map(|ob| Elaborator.elab(&ob), |mor| Elaborator.elab(&mor));
-                result_path.map(|path| path.flatten())
-            }
+            Mor::Composite(path) => promote_path(*path.clone())
+                .and_then(|path| {
+                    path.try_map(|ob| Elaborator.elab(&ob), |mor| Elaborator.elab(&mor))
+                })
+                .map(|path| path.flatten()),
             Mor::TabulatorSquare {
                 dom,
                 cod,
@@ -175,10 +179,11 @@ impl CanQuote<Uuid, Ob> for Quoter {
 /// Quotes a morphism in a model of a discrete double theory.
 impl CanQuote<Path<Uuid, Uuid>, Mor> for Quoter {
     fn quote(&self, path: &Path<Uuid, Uuid>) -> Mor {
+        let path = path.clone();
         if path.len() == 1 {
-            Mor::Basic(path.clone().only().unwrap())
+            Mor::Basic(path.only().unwrap())
         } else {
-            Mor::Composite(Box::new(demote_path(path.clone().map(Ob::Basic, Mor::Basic))))
+            Mor::Composite(Box::new(demote_path(path.map(Ob::Basic, Mor::Basic))))
         }
     }
 }
@@ -186,7 +191,7 @@ impl CanQuote<Path<Uuid, Uuid>, Mor> for Quoter {
 fn demote_path<V, E>(path: Path<V, E>) -> notebook_path::Path<V, E> {
     match path {
         Path::Id(v) => notebook_path::Path::Id(v),
-        Path::Seq(edges) => notebook_path::Path::Seq(edges),
+        Path::Seq(edges) => notebook_path::Path::Seq(edges.into()),
     }
 }
 

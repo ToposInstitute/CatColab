@@ -11,7 +11,6 @@ name = "migrate_examples"
 path = "src/bin/migrate_examples.rs"
 
 [dependencies]
-nonempty = { version = "0.12", features = ["serialize"] }
 getrandom = { version = "0.2", features = ["js"] }
 serde = { version = "1.0.219", features = ["derive"] }
 serde-wasm-bindgen = "0.6.5"
