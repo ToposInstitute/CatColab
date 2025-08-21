@@ -47,11 +47,11 @@ export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
                     return thSymMonoidalCategory.massAction(model, data);
                 },
             }),
-			analyses.configureReactionMassAction({
-				simulate(model, data) {
-					return thSymMonoidalCategory.reactionNetwork(model, data);
-				},
-			}),
+            analyses.configureReactionMassAction({
+                simulate(model, data) {
+                    return thSymMonoidalCategory.reactionNetwork(model, data);
+                },
+            }),
         ],
     });
 }

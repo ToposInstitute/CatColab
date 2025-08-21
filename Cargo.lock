@@ -2390,7 +2390,7 @@ checksum = "60a357793950651c4ed0f3f52338f53b2f809f32d83a07f72909fa13e4c6c1e3"
 [[package]]
 name = "rebop"
 version = "0.9.2"
-source = "git+https://github.com/quffaro/rebop.git?branch=cm%2Fgate-pyo3#8cef7ee6d48c53ce5e1147d477b0627e7049656a"
+source = "git+https://github.com/Armavica/rebop.git#eb1e500511721dd1981e3ea7792dc65cf5f28066"
 dependencies = [
  "rand 0.9.2",
  "rand_distr",
