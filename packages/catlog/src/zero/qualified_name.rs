@@ -16,6 +16,11 @@ use derive_more::From;
 use ustr::Ustr;
 use uuid::Uuid;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+#[cfg(feature = "serde-wasm")]
+use tsify::Tsify;
+
 /** A segment in a [qualified name](QualifiedName).
 
 A segment is either a meaningless, machine-generated identifier, represented as
@@ -23,6 +28,10 @@ a [UUID](Uuid), or a meaningful, typically human-generated name, represented as
 an interned string.
  */
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, From)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(tag = "tag", content = "content"))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
 pub enum NameSegment {
     /** A universally unique identifier (UUID).
 
@@ -70,6 +79,9 @@ since qualified names tend to have only a few segments, a
 premature optimizations until there is good evidence in favor of them.
  */
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, From)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
 pub struct QualifiedName(Vec<NameSegment>);
 
 /** Helper function to construct a qualified name.

@@ -1,7 +1,6 @@
 //! ODE analyses of models.
 
 use std::collections::{BTreeMap, HashMap};
-use std::hash::Hash;
 
 use derivative::Derivative;
 use derive_more::Constructor;
@@ -13,6 +12,7 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 use crate::simulate::ode::{ODEProblem, ODESystem};
+use crate::zero::QualifiedName;
 
 /// Solution to an ODE problem.
 #[derive(Clone, Derivative)]
@@ -20,32 +20,28 @@ use crate::simulate::ode::{ODEProblem, ODESystem};
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
-pub struct ODESolution<Id>
-where
-    Id: Eq + Hash,
-{
+pub struct ODESolution {
     /// Values of time variable for the duration of the simulation.
     time: Vec<f32>,
 
     /// Values of state variables for the duration of the simulation.
-    states: HashMap<Id, Vec<f32>>,
+    states: HashMap<QualifiedName, Vec<f32>>,
 }
 
 /// Data needed to simulate and interpret an ODE analysis of a model.
 #[derive(Constructor)]
-pub struct ODEAnalysis<Id, Sys> {
+pub struct ODEAnalysis<Sys> {
     /// ODE problem for the analysis.
     pub problem: ODEProblem<Sys>,
 
     /// Mapping from IDs in model (usually object IDs) to variable indices.
-    pub variable_index: BTreeMap<Id, usize>,
+    pub variable_index: BTreeMap<QualifiedName, usize>,
 }
 
-impl<Id, Sys> ODEAnalysis<Id, Sys> {
+impl<Sys> ODEAnalysis<Sys> {
     /// Solves the ODE with reasonable default settings and collects results.
-    pub fn solve_with_defaults(self) -> Result<ODESolution<Id>, IntegrationError>
+    pub fn solve_with_defaults(self) -> Result<ODESolution, IntegrationError>
     where
-        Id: Eq + Hash,
         Sys: ODESystem,
     {
         // ODE solver will fail in the degenerate case of an empty system.

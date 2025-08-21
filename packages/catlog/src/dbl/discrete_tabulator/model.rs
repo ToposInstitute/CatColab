@@ -1,10 +1,9 @@
 //! Models of discrete tabulator theories.
 
-use std::hash::Hash;
 use std::rc::Rc;
 
 use derivative::Derivative;
-use ustr::Ustr;
+use derive_more::From;
 
 use super::theory::*;
 use crate::dbl::{category::*, model::*, theory::DblTheory};
@@ -12,32 +11,27 @@ use crate::validate::{self, Validate};
 use crate::{one::*, zero::*};
 
 /// Object in a model of a discrete tabulator theory.
-#[derive(Clone, PartialEq, Eq)]
-pub enum TabOb<V, E> {
+#[derive(Clone, PartialEq, Eq, From)]
+pub enum TabOb {
     /// Basic or generating object.
-    Basic(V),
+    #[from]
+    Basic(QualifiedName),
 
     /// A morphism viewed as an object of a tabulator.
-    Tabulated(Box<TabMor<V, E>>),
+    Tabulated(Box<TabMor>),
 }
 
-impl<V, E> From<V> for TabOb<V, E> {
-    fn from(value: V) -> Self {
-        TabOb::Basic(value)
-    }
-}
-
-impl<V, E> TabOb<V, E> {
+impl TabOb {
     /// Extracts a basic object or nothing.
-    pub fn basic(self) -> Option<V> {
+    pub fn basic(self) -> Option<QualifiedName> {
         match self {
-            TabOb::Basic(v) => Some(v),
+            TabOb::Basic(id) => Some(id),
             _ => None,
         }
     }
 
     /// Extracts a tabulated morphism or nothing.
-    pub fn tabulated(self) -> Option<TabMor<V, E>> {
+    pub fn tabulated(self) -> Option<TabMor> {
         match self {
             TabOb::Tabulated(mor) => Some(*mor),
             _ => None,
@@ -45,12 +39,12 @@ impl<V, E> TabOb<V, E> {
     }
 
     /// Unwraps a basic object, or panics.
-    pub fn unwrap_basic(self) -> V {
+    pub fn unwrap_basic(self) -> QualifiedName {
         self.basic().expect("Object should be a basic object")
     }
 
     /// Unwraps a tabulated morphism, or panics.
-    pub fn unwrap_tabulated(self) -> TabMor<V, E> {
+    pub fn unwrap_tabulated(self) -> TabMor {
         self.tabulated().expect("Object should be a tabulated morphism")
     }
 }
@@ -59,60 +53,48 @@ impl<V, E> TabOb<V, E> {
 
 Morphisms of these two forms generate all the morphisms in the model.
  */
-#[derive(Clone, PartialEq, Eq)]
-pub enum TabEdge<V, E> {
+#[derive(Clone, PartialEq, Eq, From)]
+pub enum TabEdge {
     /// Basic morphism between any two objects.
-    Basic(E),
+    #[from]
+    Basic(QualifiedName),
 
     /// Generating morphism between tabulated morphisms, a commutative square.
     Square {
         /// The domain, a tabulated morphism.
-        dom: Box<TabMor<V, E>>,
+        dom: Box<TabMor>,
 
         /// The codomain, a tabulated morphism.
-        cod: Box<TabMor<V, E>>,
+        cod: Box<TabMor>,
 
         /// Edge that acts by pre-composition onto codomain.
-        pre: Box<TabEdge<V, E>>,
+        pre: Box<TabEdge>,
 
         /// Edge that acts by post-composition onto domain.
-        post: Box<TabEdge<V, E>>,
+        post: Box<TabEdge>,
     },
 }
 
-impl<V, E> From<E> for TabEdge<V, E> {
-    fn from(value: E) -> Self {
-        TabEdge::Basic(value)
-    }
-}
-
 /// Morphism in a model of a discrete tabulator theory.
-pub type TabMor<V, E> = Path<TabOb<V, E>, TabEdge<V, E>>;
+pub type TabMor = Path<TabOb, TabEdge>;
 
-impl<V, E> From<E> for TabMor<V, E> {
-    fn from(value: E) -> Self {
+impl From<QualifiedName> for TabMor {
+    fn from(value: QualifiedName) -> Self {
         Path::single(value.into())
     }
 }
 
-#[derive(Clone, Derivative)]
-#[derivative(Default(bound = ""))]
-#[derivative(PartialEq(bound = "V: Eq + Hash, E: Eq + Hash"))]
-#[derivative(Eq(bound = "V: Eq + Hash, E: Eq + Hash"))]
-struct DiscreteTabGenerators<V, E> {
-    objects: HashFinSet<V>,
-    morphisms: HashFinSet<E>,
-    dom: HashColumn<E, TabOb<V, E>>,
-    cod: HashColumn<E, TabOb<V, E>>,
+#[derive(Clone, Default, PartialEq, Eq)]
+struct DiscreteTabGenerators {
+    objects: HashFinSet<QualifiedName>,
+    morphisms: HashFinSet<QualifiedName>,
+    dom: HashColumn<QualifiedName, TabOb>,
+    cod: HashColumn<QualifiedName, TabOb>,
 }
 
-impl<V, E> Graph for DiscreteTabGenerators<V, E>
-where
-    V: Eq + Clone + Hash,
-    E: Eq + Clone + Hash,
-{
-    type V = TabOb<V, E>;
-    type E = TabEdge<V, E>;
+impl Graph for DiscreteTabGenerators {
+    type V = TabOb;
+    type E = TabEdge;
 
     fn has_vertex(&self, ob: &Self::V) -> bool {
         match ob {
@@ -169,22 +151,17 @@ that preserves tabulators. For the definition of "preserving tabulators," see
 the dev docs.
  */
 #[derive(Clone, Derivative)]
-#[derivative(PartialEq(bound = "Id: Eq + Hash"))]
-#[derivative(Eq(bound = "Id: Eq + Hash"))]
-pub struct DiscreteTabModel<Id> {
+#[derivative(PartialEq, Eq)]
+pub struct DiscreteTabModel {
     #[derivative(PartialEq(compare_with = "Rc::ptr_eq"))]
     theory: Rc<DiscreteTabTheory>,
-    generators: DiscreteTabGenerators<Id, Id>,
+    generators: DiscreteTabGenerators,
     // TODO: Equations
-    ob_types: IndexedHashColumn<Id, TabObType>,
-    mor_types: IndexedHashColumn<Id, TabMorType>,
+    ob_types: IndexedHashColumn<QualifiedName, TabObType>,
+    mor_types: IndexedHashColumn<QualifiedName, TabMorType>,
 }
 
-/// A model of a discrete tabulator theory where both theory and model have keys
-/// of type `Ustr`.
-pub type UstrDiscreteTabModel = DiscreteTabModel<Ustr>;
-
-impl<Id: Eq + Clone + Hash> DiscreteTabModel<Id> {
+impl DiscreteTabModel {
     /// Creates an empty model of the given theory.
     pub fn new(theory: Rc<DiscreteTabTheory>) -> Self {
         Self {
@@ -196,18 +173,18 @@ impl<Id: Eq + Clone + Hash> DiscreteTabModel<Id> {
     }
 
     /// Convenience method to turn a morphism into an object.
-    pub fn tabulated(&self, mor: TabMor<Id, Id>) -> TabOb<Id, Id> {
+    pub fn tabulated(&self, mor: TabMor) -> TabOb {
         TabOb::Tabulated(Box::new(mor))
     }
 
     /// Convenience method to turn a morphism generator into an object.
-    pub fn tabulated_gen(&self, f: Id) -> TabOb<Id, Id> {
+    pub fn tabulated_gen(&self, f: QualifiedName) -> TabOb {
         self.tabulated(Path::single(TabEdge::Basic(f)))
     }
 
     /// Iterates over failures of model to be well defined.
-    pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidDblModel<Id>> + '_ {
-        type Invalid<Id> = InvalidDblModel<Id>;
+    pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidDblModel> + '_ {
+        type Invalid = InvalidDblModel;
         let ob_errors = self.generators.objects.iter().filter_map(|x| {
             if self.ob_types.get(&x).is_some_and(|typ| self.theory.has_ob_type(typ)) {
                 None
@@ -243,9 +220,9 @@ impl<Id: Eq + Clone + Hash> DiscreteTabModel<Id> {
     }
 }
 
-impl<Id: Eq + Clone + Hash> Category for DiscreteTabModel<Id> {
-    type Ob = TabOb<Id, Id>;
-    type Mor = TabMor<Id, Id>;
+impl Category for DiscreteTabModel {
+    type Ob = TabOb;
+    type Mor = TabMor;
 
     fn has_ob(&self, x: &Self::Ob) -> bool {
         self.generators.has_vertex(x)
@@ -265,9 +242,9 @@ impl<Id: Eq + Clone + Hash> Category for DiscreteTabModel<Id> {
     }
 }
 
-impl<Id: Eq + Clone + Hash> FgCategory for DiscreteTabModel<Id> {
-    type ObGen = Id;
-    type MorGen = Id;
+impl FgCategory for DiscreteTabModel {
+    type ObGen = QualifiedName;
+    type MorGen = QualifiedName;
 
     fn ob_generators(&self) -> impl Iterator<Item = Self::ObGen> {
         self.generators.objects.iter()
@@ -284,7 +261,7 @@ impl<Id: Eq + Clone + Hash> FgCategory for DiscreteTabModel<Id> {
     }
 }
 
-impl<Id: Eq + Clone + Hash> DblModel for DiscreteTabModel<Id> {
+impl DblModel for DiscreteTabModel {
     type ObType = TabObType;
     type MorType = TabMorType;
     type ObOp = TabObOp;
@@ -325,7 +302,7 @@ impl<Id: Eq + Clone + Hash> DblModel for DiscreteTabModel<Id> {
     }
 }
 
-impl<Id: Eq + Clone + Hash> FgDblModel for DiscreteTabModel<Id> {
+impl FgDblModel for DiscreteTabModel {
     fn ob_generator_type(&self, ob: &Self::ObGen) -> Self::ObType {
         self.ob_types.apply_to_ref(ob).expect("Object should have type")
     }
@@ -344,7 +321,7 @@ impl<Id: Eq + Clone + Hash> FgDblModel for DiscreteTabModel<Id> {
     }
 }
 
-impl<Id: Eq + Clone + Hash> MutDblModel for DiscreteTabModel<Id> {
+impl MutDblModel for DiscreteTabModel {
     fn add_ob(&mut self, x: Self::ObGen, ob_type: Self::ObType) {
         self.ob_types.set(x.clone(), ob_type);
         self.generators.objects.insert(x);
@@ -369,8 +346,8 @@ impl<Id: Eq + Clone + Hash> MutDblModel for DiscreteTabModel<Id> {
     }
 }
 
-impl<Id: Eq + Clone + Hash> Validate for DiscreteTabModel<Id> {
-    type ValidationError = InvalidDblModel<Id>;
+impl Validate for DiscreteTabModel {
+    type ValidationError = InvalidDblModel;
 
     fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
         validate::wrap_errors(self.iter_invalid())
@@ -380,7 +357,6 @@ impl<Id: Eq + Clone + Hash> Validate for DiscreteTabModel<Id> {
 #[cfg(test)]
 mod tests {
     use nonempty::nonempty;
-    use ustr::ustr;
 
     use super::*;
     use crate::{stdlib::theories::*, zero::name};
@@ -389,9 +365,8 @@ mod tests {
     fn validate() {
         let th = Rc::new(th_category_links());
         let mut model = DiscreteTabModel::new(th);
-        let (x, f) = (ustr("x"), ustr("f"));
-        model.add_ob(x, TabObType::Basic(name("Object")));
-        model.add_mor(f, TabOb::Basic(x), TabOb::Basic(x), TabMorType::Basic(name("Link")));
-        assert_eq!(model.validate(), Err(nonempty![InvalidDblModel::CodType(f)]));
+        model.add_ob(name("x"), name("Object").into());
+        model.add_mor(name("f"), name("x").into(), name("x").into(), name("Link").into());
+        assert_eq!(model.validate(), Err(nonempty![InvalidDblModel::CodType(name("f"))]));
     }
 }

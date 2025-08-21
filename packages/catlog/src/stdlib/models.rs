@@ -1,7 +1,6 @@
 //! Standard library of models of double theories.
 
 use std::rc::Rc;
-use ustr::ustr;
 
 use crate::dbl::{model::*, theory::*};
 use crate::one::{Path, QualifiedPath};
@@ -12,7 +11,7 @@ use crate::zero::{QualifiedName, name};
 A signed graph or free [signed category](super::theories::th_signed_category),
 possibly with delays or indeterminates.
  */
-pub fn positive_loop(th: Rc<DiscreteDblTheory>) -> UstrDiscreteDblModel {
+pub fn positive_loop(th: Rc<DiscreteDblTheory>) -> DiscreteDblModel {
     loop_of_type(th, name("Object"), Path::Id(name("Object")))
 }
 
@@ -21,7 +20,7 @@ pub fn positive_loop(th: Rc<DiscreteDblTheory>) -> UstrDiscreteDblModel {
 A signed graph or free [signed category](super::theories::th_signed_category),
 possibly with delays or indeterminates.
  */
-pub fn negative_loop(th: Rc<DiscreteDblTheory>) -> UstrDiscreteDblModel {
+pub fn negative_loop(th: Rc<DiscreteDblTheory>) -> DiscreteDblModel {
     loop_of_type(th, name("Object"), name("Negative").into())
 }
 
@@ -29,7 +28,7 @@ pub fn negative_loop(th: Rc<DiscreteDblTheory>) -> UstrDiscreteDblModel {
 
 A free [delayable signed category](super::theories::th_delayable_signed_category).
  */
-pub fn delayed_positive_loop(th: Rc<DiscreteDblTheory>) -> UstrDiscreteDblModel {
+pub fn delayed_positive_loop(th: Rc<DiscreteDblTheory>) -> DiscreteDblModel {
     loop_of_type(th, name("Object"), name("Slow").into())
 }
 
@@ -37,7 +36,7 @@ pub fn delayed_positive_loop(th: Rc<DiscreteDblTheory>) -> UstrDiscreteDblModel 
 
 A free [delayable signed category](super::theories::th_delayable_signed_category).
  */
-pub fn delayed_negative_loop(th: Rc<DiscreteDblTheory>) -> UstrDiscreteDblModel {
+pub fn delayed_negative_loop(th: Rc<DiscreteDblTheory>) -> DiscreteDblModel {
     loop_of_type(th, name("Object"), Path::pair(name("Negative"), name("Slow")))
 }
 
@@ -46,11 +45,10 @@ fn loop_of_type(
     th: Rc<DiscreteDblTheory>,
     ob_type: QualifiedName,
     mor_type: QualifiedPath,
-) -> UstrDiscreteDblModel {
-    let mut model = UstrDiscreteDblModel::new(th);
-    let x = ustr("x");
-    model.add_ob(x, ob_type);
-    model.add_mor(ustr("loop"), x, x, mor_type);
+) -> DiscreteDblModel {
+    let mut model = DiscreteDblModel::new(th);
+    model.add_ob(name("x"), ob_type);
+    model.add_mor(name("loop"), name("x"), name("x"), mor_type);
     model
 }
 
@@ -58,13 +56,12 @@ fn loop_of_type(
 
 A signed graph or free [signed category](super::theories::th_signed_category).
  */
-pub fn positive_feedback(th: Rc<DiscreteDblTheory>) -> UstrDiscreteDblModel {
-    let mut model = UstrDiscreteDblModel::new(th);
-    let (x, y) = (ustr("x"), ustr("y"));
-    model.add_ob(x, name("Object"));
-    model.add_ob(y, name("Object"));
-    model.add_mor(ustr("positive1"), x, y, Path::Id(name("Object")));
-    model.add_mor(ustr("positive2"), y, x, Path::Id(name("Object")));
+pub fn positive_feedback(th: Rc<DiscreteDblTheory>) -> DiscreteDblModel {
+    let mut model = DiscreteDblModel::new(th);
+    model.add_ob(name("x"), name("Object"));
+    model.add_ob(name("y"), name("Object"));
+    model.add_mor(name("positive1"), name("x"), name("y"), Path::Id(name("Object")));
+    model.add_mor(name("positive2"), name("y"), name("x"), Path::Id(name("Object")));
     model
 }
 
@@ -72,13 +69,12 @@ pub fn positive_feedback(th: Rc<DiscreteDblTheory>) -> UstrDiscreteDblModel {
 
 A signed graph or free [signed category](super::theories::th_signed_category).
  */
-pub fn negative_feedback(th: Rc<DiscreteDblTheory>) -> UstrDiscreteDblModel {
-    let mut model = UstrDiscreteDblModel::new(th);
-    let (x, y) = (ustr("x"), ustr("y"));
-    model.add_ob(x, name("Object"));
-    model.add_ob(y, name("Object"));
-    model.add_mor(ustr("positive"), x, y, Path::Id(name("Object")));
-    model.add_mor(ustr("negative"), y, x, name("Negative").into());
+pub fn negative_feedback(th: Rc<DiscreteDblTheory>) -> DiscreteDblModel {
+    let mut model = DiscreteDblModel::new(th);
+    model.add_ob(name("x"), name("Object"));
+    model.add_ob(name("y"), name("Object"));
+    model.add_mor(name("positive"), name("x"), name("y"), Path::Id(name("Object")));
+    model.add_mor(name("negative"), name("y"), name("x"), name("Negative").into());
     model
 }
 
@@ -86,12 +82,11 @@ pub fn negative_feedback(th: Rc<DiscreteDblTheory>) -> UstrDiscreteDblModel {
 
 A schema with one entity type, one attribute type, and one attribute.
  */
-pub fn walking_attr(th: Rc<DiscreteDblTheory>) -> UstrDiscreteDblModel {
-    let mut model = UstrDiscreteDblModel::new(th);
-    let (entity, attr_type) = (ustr("entity"), ustr("type"));
-    model.add_ob(entity, name("Entity"));
-    model.add_ob(attr_type, name("AttrType"));
-    model.add_mor(ustr("attr"), entity, attr_type, name("Attr").into());
+pub fn walking_attr(th: Rc<DiscreteDblTheory>) -> DiscreteDblModel {
+    let mut model = DiscreteDblModel::new(th);
+    model.add_ob(name("entity"), name("Entity"));
+    model.add_ob(name("type"), name("AttrType"));
+    model.add_mor(name("attr"), name("entity"), name("type"), name("Attr").into());
     model
 }
 
@@ -106,17 +101,16 @@ flow in a model of an infectious disease, where increasing the number of
 infectives increases the rate of infection of the remaining susceptibles (other
 things equal).
  */
-pub fn backward_link(th: Rc<DiscreteTabTheory>) -> UstrDiscreteTabModel {
+pub fn backward_link(th: Rc<DiscreteTabTheory>) -> DiscreteTabModel {
     let ob_type = TabObType::Basic(name("Object"));
-    let mut model = UstrDiscreteTabModel::new(th.clone());
-    let (x, y, f) = (ustr("x"), ustr("y"), ustr("f"));
-    model.add_ob(x, ob_type.clone());
-    model.add_ob(y, ob_type.clone());
-    model.add_mor(f, TabOb::Basic(x), TabOb::Basic(y), th.hom_type(ob_type));
+    let mut model = DiscreteTabModel::new(th.clone());
+    model.add_ob(name("x"), ob_type.clone());
+    model.add_ob(name("y"), ob_type.clone());
+    model.add_mor(name("f"), name("x").into(), name("y").into(), th.hom_type(ob_type));
     model.add_mor(
-        ustr("link"),
-        TabOb::Basic(y),
-        model.tabulated_gen(f),
+        name("link"),
+        name("y").into(),
+        model.tabulated_gen(name("f")),
         TabMorType::Basic(name("Link")),
     );
     model
@@ -126,17 +120,17 @@ pub fn backward_link(th: Rc<DiscreteTabTheory>) -> UstrDiscreteTabModel {
 
 A free symmetric monoidal category, viewed as a reaction network.
  */
-pub fn catalyzed_reaction(th: Rc<ModalDblTheory>) -> UstrModalDblModel {
+pub fn catalyzed_reaction(th: Rc<ModalDblTheory>) -> ModalDblModel {
     let (ob_type, op) = (ModalObType::new(name("Object")), name("tensor"));
-    let mut model = UstrModalDblModel::new(th);
-    let (x, y, c) = (ustr("x"), ustr("y"), ustr("c"));
-    model.add_ob(x, ob_type.clone());
-    model.add_ob(y, ob_type.clone());
-    model.add_ob(c, ob_type.clone());
+    let mut model = ModalDblModel::new(th);
+    model.add_ob(name("x"), ob_type.clone());
+    model.add_ob(name("y"), ob_type.clone());
+    model.add_ob(name("c"), ob_type.clone());
+    let [x, y, c] = [name("x"), name("y"), name("c")].map(ModalOb::from);
     model.add_mor(
-        ustr("f"),
-        ModalOb::App(ModalOb::List(List::Symmetric, vec![x.into(), c.into()]).into(), op.clone()),
-        ModalOb::App(ModalOb::List(List::Symmetric, vec![y.into(), c.into()]).into(), op),
+        name("f"),
+        ModalOb::App(ModalOb::List(List::Symmetric, vec![x, c.clone()]).into(), op.clone()),
+        ModalOb::App(ModalOb::List(List::Symmetric, vec![y, c]).into(), op),
         ModalMorType::Zero(ob_type),
     );
     model

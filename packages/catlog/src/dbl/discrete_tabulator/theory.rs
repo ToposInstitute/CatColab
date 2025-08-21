@@ -3,6 +3,7 @@
 use std::hash::Hash;
 use std::ops::Range;
 
+use derive_more::From;
 use ref_cast::RefCast;
 
 use crate::dbl::{category::*, graph::ProedgeGraph, tree::DblTree};
@@ -10,9 +11,10 @@ use crate::one::{Graph, Path};
 use crate::zero::*;
 
 /// Object type in a discrete tabulator theory.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, From)]
 pub enum TabObType {
     /// Basic or generating object type.
+    #[from]
     Basic(QualifiedName),
 
     /// Tabulator of a morphism type.
@@ -20,9 +22,10 @@ pub enum TabObType {
 }
 
 /// Morphism type in a discrete tabulator theory.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, From)]
 pub enum TabMorType {
     /// Basic or generating morphism type.
+    #[from]
     Basic(QualifiedName),
 
     /// Hom type on an object type.

@@ -5,8 +5,6 @@ mathematical epidemiology.
  */
 
 use std::collections::{BTreeMap, HashMap};
-use std::fmt::Debug;
-use std::hash::Hash;
 
 use nalgebra::DVector;
 use num_traits::Zero;
@@ -23,7 +21,7 @@ use crate::dbl::{
 };
 use crate::one::FgCategory;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
-use crate::zero::{alg::Polynomial, name, rig::Monomial};
+use crate::zero::{QualifiedName, alg::Polynomial, name, rig::Monomial};
 
 /// Data defining a mass-action ODE problem for a model.
 #[derive(Clone)]
@@ -33,16 +31,13 @@ use crate::zero::{alg::Polynomial, name, rig::Monomial};
     feature = "serde-wasm",
     tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
 )]
-pub struct MassActionProblemData<Id>
-where
-    Id: Eq + Hash,
-{
+pub struct MassActionProblemData {
     /// Map from morphism IDs to rate coefficients (nonnegative reals).
-    rates: HashMap<Id, f32>,
+    rates: HashMap<QualifiedName, f32>,
 
     /// Map from object IDs to initial values (nonnegative reals).
     #[cfg_attr(feature = "serde", serde(rename = "initialValues"))]
-    initial_values: HashMap<Id, f32>,
+    initial_values: HashMap<QualifiedName, f32>,
 
     /// Duration of simulation.
     duration: f32,
@@ -75,10 +70,10 @@ impl Default for PetriNetMassActionAnalysis {
 
 impl PetriNetMassActionAnalysis {
     /// Creates a mass-action system with symbolic rate coefficients.
-    pub fn build_system<Id: Eq + Clone + Hash + Ord + Debug>(
+    pub fn build_system(
         &self,
-        model: &ModalDblModel<Id>,
-    ) -> PolynomialSystem<Id, Parameter<Id>, u8> {
+        model: &ModalDblModel,
+    ) -> PolynomialSystem<QualifiedName, Parameter<QualifiedName>, u8> {
         let mut sys = PolynomialSystem::new();
         for ob in model.ob_generators_with_type(&self.place_ob_type) {
             sys.add_term(ob, Polynomial::zero());
@@ -110,11 +105,11 @@ impl PetriNetMassActionAnalysis {
     }
 
     /// Creates a mass-action system with numerical rate coefficients.
-    pub fn build_numerical_system<Id: Eq + Clone + Hash + Ord + Debug>(
+    pub fn build_numerical_system(
         &self,
-        model: &ModalDblModel<Id>,
-        data: MassActionProblemData<Id>,
-    ) -> ODEAnalysis<Id, NumericalPolynomialSystem<u8>> {
+        model: &ModalDblModel,
+        data: MassActionProblemData,
+    ) -> ODEAnalysis<NumericalPolynomialSystem<u8>> {
         into_numerical_system(self.build_system(model), data)
     }
 }
@@ -143,11 +138,11 @@ impl Default for StockFlowMassActionAnalysis {
 
 impl StockFlowMassActionAnalysis {
     /// Creates a mass-action system with symbolic rate coefficients.
-    pub fn build_system<Id: Eq + Clone + Hash + Ord>(
+    pub fn build_system(
         &self,
-        model: &DiscreteTabModel<Id>,
-    ) -> PolynomialSystem<Id, Parameter<Id>, u8> {
-        let mut terms: HashMap<Id, Monomial<Id, u8>> = model
+        model: &DiscreteTabModel,
+    ) -> PolynomialSystem<QualifiedName, Parameter<QualifiedName>, u8> {
+        let mut terms: HashMap<QualifiedName, Monomial<QualifiedName, u8>> = model
             .mor_generators_with_type(&self.flow_mor_type)
             .map(|flow| {
                 let dom = model.mor_generator_dom(&flow).unwrap_basic();
@@ -193,19 +188,19 @@ impl StockFlowMassActionAnalysis {
     }
 
     /// Creates a mass-action system with numerical rate coefficients.
-    pub fn build_numerical_system<Id: Eq + Clone + Hash + Ord>(
+    pub fn build_numerical_system(
         &self,
-        model: &DiscreteTabModel<Id>,
-        data: MassActionProblemData<Id>,
-    ) -> ODEAnalysis<Id, NumericalPolynomialSystem<u8>> {
+        model: &DiscreteTabModel,
+        data: MassActionProblemData,
+    ) -> ODEAnalysis<NumericalPolynomialSystem<u8>> {
         into_numerical_system(self.build_system(model), data)
     }
 }
 
-fn into_numerical_system<Id: Eq + Clone + Hash + Ord>(
-    sys: PolynomialSystem<Id, Parameter<Id>, u8>,
-    data: MassActionProblemData<Id>,
-) -> ODEAnalysis<Id, NumericalPolynomialSystem<u8>> {
+fn into_numerical_system(
+    sys: PolynomialSystem<QualifiedName, Parameter<QualifiedName>, u8>,
+    data: MassActionProblemData,
+) -> ODEAnalysis<NumericalPolynomialSystem<u8>> {
     let ob_index: BTreeMap<_, _> =
         sys.components.keys().cloned().enumerate().map(|(i, x)| (x, i)).collect();
     let n = ob_index.len();

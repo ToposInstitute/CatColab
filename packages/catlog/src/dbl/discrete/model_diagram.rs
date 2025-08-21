@@ -1,7 +1,5 @@
 //! Diagrams in models of a discrete double theory.
 
-use std::hash::Hash;
-
 use itertools::Either;
 use nonempty::NonEmpty;
 
@@ -11,38 +9,33 @@ use tsify::declare;
 use crate::dbl::{model::*, model_diagram::*, model_morphism::*};
 use crate::one::{Category, FgCategory, GraphMapping};
 use crate::validate;
-use crate::zero::Mapping;
+use crate::zero::{Mapping, QualifiedName};
 
 /// A diagram in a model of a discrete double theory.
-pub type DiscreteDblModelDiagram<DomId, CodId> =
-    DblModelDiagram<DiscreteDblModelMapping<DomId, CodId>, DiscreteDblModel<DomId>>;
+pub type DiscreteDblModelDiagram = DblModelDiagram<DiscreteDblModelMapping, DiscreteDblModel>;
 
 /// A failure to be valid in a diagram in a model of a discrete double theory.
 #[cfg_attr(feature = "serde-wasm", declare)]
-pub type InvalidDiscreteDblModelDiagram<DomId> =
-    InvalidDblModelDiagram<InvalidDblModel<DomId>, InvalidDblModelMorphism<DomId, DomId>>;
+pub type InvalidDiscreteDblModelDiagram =
+    InvalidDblModelDiagram<InvalidDblModel, InvalidDblModelMorphism<QualifiedName, QualifiedName>>;
 
-impl<DomId, CodId> DiscreteDblModelDiagram<DomId, CodId>
-where
-    DomId: Eq + Clone + Hash,
-    CodId: Eq + Clone + Hash,
-{
+impl DiscreteDblModelDiagram {
     /** Validates that the diagram is well-defined in the given model.
 
     Assumes that the model is valid. If it is not, this function may panic.
      */
     pub fn validate_in(
         &self,
-        model: &DiscreteDblModel<CodId>,
-    ) -> Result<(), NonEmpty<InvalidDiscreteDblModelDiagram<DomId>>> {
+        model: &DiscreteDblModel,
+    ) -> Result<(), NonEmpty<InvalidDiscreteDblModelDiagram>> {
         validate::wrap_errors(self.iter_invalid_in(model))
     }
 
     /// Iterates over failures of the diagram to be valid in the given model.
     pub fn iter_invalid_in<'a>(
         &'a self,
-        model: &'a DiscreteDblModel<CodId>,
-    ) -> impl Iterator<Item = InvalidDiscreteDblModelDiagram<DomId>> + 'a {
+        model: &'a DiscreteDblModel,
+    ) -> impl Iterator<Item = InvalidDiscreteDblModelDiagram> + 'a {
         let mut dom_errs = self.1.iter_invalid().peekable();
         if dom_errs.peek().is_some() {
             Either::Left(dom_errs.map(InvalidDblModelDiagram::Dom))
@@ -56,7 +49,7 @@ where
 
     Assumes that the model is valid.
      */
-    pub fn infer_missing_from(&mut self, model: &DiscreteDblModel<CodId>) {
+    pub fn infer_missing_from(&mut self, model: &DiscreteDblModel) {
         let (mapping, domain) = self.into();
         domain.infer_missing();
         for e in domain.mor_generators() {
@@ -79,7 +72,6 @@ where
 #[cfg(test)]
 mod tests {
     use std::rc::Rc;
-    use ustr::ustr;
 
     use super::*;
     use crate::stdlib::*;
@@ -91,9 +83,9 @@ mod tests {
         let pos_loop = positive_loop(th.clone());
         let neg_loop = negative_loop(th.clone());
 
-        let mut f: DiscreteDblModelMapping<_, _> = Default::default();
-        f.assign_ob(ustr("x"), ustr("x"));
-        f.assign_mor(ustr("loop"), Path::pair(ustr("loop"), ustr("loop")));
+        let mut f: DiscreteDblModelMapping = Default::default();
+        f.assign_ob(name("x"), name("x"));
+        f.assign_mor(name("loop"), Path::pair(name("loop"), name("loop")));
         let diagram = DblModelDiagram(f, pos_loop);
         assert!(diagram.validate_in(&neg_loop).is_ok());
     }
@@ -102,9 +94,9 @@ mod tests {
     fn infer_model_diagram() {
         let th = Rc::new(th_schema());
         let mut domain = DiscreteDblModel::new(th.clone());
-        domain.add_mor('f', 'x', 'y', name("Attr").into());
-        let mut f: DiscreteDblModelMapping<_, _> = Default::default();
-        f.assign_mor('f', Path::single(ustr("attr")));
+        domain.add_mor(name("f"), name("x"), name("y"), name("Attr").into());
+        let mut f: DiscreteDblModelMapping = Default::default();
+        f.assign_mor(name("f"), Path::single(name("attr")));
         let mut diagram = DblModelDiagram(f, domain);
 
         let model = walking_attr(th);

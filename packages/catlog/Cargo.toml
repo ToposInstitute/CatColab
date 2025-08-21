@@ -7,7 +7,7 @@ edition = "2024"
 
 [features]
 ode = ["dep:ode_solvers", "dep:nalgebra"]
-serde = ["dep:serde", "nonempty/serialize", "ustr/serde"]
+serde = ["dep:serde", "nonempty/serialize", "ustr/serde", "uuid/serde"]
 serde-wasm = ["serde", "dep:wasm-bindgen", "dep:tsify"]
 
 [dependencies]

@@ -1,13 +1,11 @@
 //! Models of modal double theories.
 
 use std::fmt::Debug;
-use std::hash::Hash;
 use std::rc::Rc;
 
 use derive_more::From;
 use itertools::Itertools;
 use ref_cast::RefCast;
-use ustr::Ustr;
 
 use super::theory::*;
 use crate::dbl::graph::VDblGraph;
@@ -18,10 +16,10 @@ use crate::{one::computad::*, one::*, zero::*};
 
 /// Object in a model of a modal double theory.
 #[derive(Clone, Debug, PartialEq, Eq, From)]
-pub enum ModalOb<Id> {
+pub enum ModalOb {
     /// Generating object.
     #[from]
-    Generator(Id),
+    Generator(QualifiedName),
 
     /// Application of a generating object operation.
     App(Box<Self>, QualifiedName),
@@ -32,19 +30,19 @@ pub enum ModalOb<Id> {
 
 /// Morphism is a model of a modal double theory.
 #[derive(Clone, Debug, PartialEq, Eq, From)]
-pub enum ModalMor<Id> {
+pub enum ModalMor {
     /// Generating morphism.
     #[from]
-    Generator(Id),
+    Generator(QualifiedName),
 
     /// Composite of morphisms.
-    Composite(Box<Path<ModalOb<Id>, Self>>),
+    Composite(Box<Path<ModalOb, Self>>),
 
     /// Application of a basic morphism operation.
-    App(Box<Path<ModalOb<Id>, Self>>, QualifiedName),
+    App(Box<Path<ModalOb, Self>>, QualifiedName),
 
     /// Application of the hom operation on a basic object operation.
-    HomApp(Box<Path<ModalOb<Id>, Self>>, QualifiedName),
+    HomApp(Box<Path<ModalOb, Self>>, QualifiedName),
 
     /// List of morphisms.
     List(MorListData, Vec<Self>),
@@ -75,19 +73,16 @@ impl MorListData {
 
 /// A model of a modal double theory.
 #[derive(Clone)]
-pub struct ModalDblModel<Id> {
+pub struct ModalDblModel {
     theory: Rc<ModalDblTheory>,
-    ob_generators: HashFinSet<Id>,
-    mor_generators: ComputadTop<ModalOb<Id>, Id>,
+    ob_generators: HashFinSet<QualifiedName>,
+    mor_generators: ComputadTop<ModalOb, QualifiedName>,
     // TODO: Equations
-    ob_types: HashColumn<Id, ModalObType>,
-    mor_types: HashColumn<Id, ModalMorType>,
+    ob_types: HashColumn<QualifiedName, ModalObType>,
+    mor_types: HashColumn<QualifiedName, ModalMorType>,
 }
 
-/// A model of a modal double theory with `Ustr` identifiers.
-pub type UstrModalDblModel = ModalDblModel<Ustr>;
-
-impl<Id> ModalDblModel<Id> {
+impl ModalDblModel {
     /// Creates an empty model of the given theory.
     pub fn new(theory: Rc<ModalDblTheory>) -> Self {
         Self {
@@ -100,20 +95,17 @@ impl<Id> ModalDblModel<Id> {
     }
 
     /// Gets the computing generating the morphisms of the model.
-    fn computad(&self) -> Computad<'_, ModalOb<Id>, ModalDblModelObs<Id>, Id> {
+    fn computad(&self) -> Computad<'_, ModalOb, ModalDblModelObs, QualifiedName> {
         Computad::new(ModalDblModelObs::ref_cast(self), &self.mor_generators)
     }
 }
 
 #[derive(RefCast)]
 #[repr(transparent)]
-struct ModalDblModelObs<Id>(ModalDblModel<Id>);
+struct ModalDblModelObs(ModalDblModel);
 
-impl<Id> Set for ModalDblModelObs<Id>
-where
-    Id: Eq + Clone + Hash + Debug,
-{
-    type Elem = ModalOb<Id>;
+impl Set for ModalDblModelObs {
+    type Elem = ModalOb;
 
     fn contains(&self, ob: &Self::Elem) -> bool {
         match ob {
@@ -127,12 +119,9 @@ where
     }
 }
 
-impl<Id> Category for ModalDblModel<Id>
-where
-    Id: Eq + Clone + Hash + Debug,
-{
-    type Ob = ModalOb<Id>;
-    type Mor = ModalMor<Id>;
+impl Category for ModalDblModel {
+    type Ob = ModalOb;
+    type Mor = ModalMor;
 
     fn has_ob(&self, ob: &Self::Ob) -> bool {
         ModalDblModelObs::ref_cast(self).contains(ob)
@@ -194,12 +183,9 @@ where
     }
 }
 
-impl<Id> FgCategory for ModalDblModel<Id>
-where
-    Id: Eq + Clone + Hash + Debug,
-{
-    type ObGen = Id;
-    type MorGen = Id;
+impl FgCategory for ModalDblModel {
+    type ObGen = QualifiedName;
+    type MorGen = QualifiedName;
 
     fn ob_generators(&self) -> impl Iterator<Item = Self::ObGen> {
         self.ob_generators.iter()
@@ -215,10 +201,7 @@ where
     }
 }
 
-impl<Id> DblModel for ModalDblModel<Id>
-where
-    Id: Eq + Clone + Hash + Debug,
-{
+impl DblModel for ModalDblModel {
     type ObType = ModalObType;
     type MorType = ModalMorType;
     type ObOp = ModalObOp;
@@ -253,10 +236,7 @@ where
     }
 }
 
-impl<Id> FgDblModel for ModalDblModel<Id>
-where
-    Id: Eq + Clone + Hash + Debug,
-{
+impl FgDblModel for ModalDblModel {
     fn ob_generator_type(&self, id: &Self::ObGen) -> Self::ObType {
         self.ob_types.apply_to_ref(id).expect("Object should have object type")
     }
@@ -271,10 +251,7 @@ where
     }
 }
 
-impl<Id> MutDblModel for ModalDblModel<Id>
-where
-    Id: Eq + Clone + Hash + Debug,
-{
+impl MutDblModel for ModalDblModel {
     fn add_ob(&mut self, x: Self::ObGen, ob_type: Self::ObType) {
         self.ob_types.set(x.clone(), ob_type);
         self.ob_generators.insert(x);
@@ -302,11 +279,8 @@ where
     }
 }
 
-impl<Id> Validate for ModalDblModel<Id>
-where
-    Id: Eq + Clone + Hash + Debug,
-{
-    type ValidationError = InvalidDblModel<Id>;
+impl Validate for ModalDblModel {
+    type ValidationError = InvalidDblModel;
 
     fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
         let ob_gen_errors = self.ob_generators.iter().filter_map(|x| {
@@ -371,12 +345,9 @@ impl<T> From<InferredType<T>> for Option<T> {
     }
 }
 
-impl<Id> ModalDblModel<Id>
-where
-    Id: Eq + Clone + Hash + Debug,
-{
+impl ModalDblModel {
     /// Tries to infer the type of an object in the model.
-    fn infer_ob_type(&self, ob: &ModalOb<Id>) -> Result<InferredType<ModalObType>, String> {
+    fn infer_ob_type(&self, ob: &ModalOb) -> Result<InferredType<ModalObType>, String> {
         match ob {
             ModalOb::Generator(id) => Ok(self.ob_generator_type(id).into()),
             ModalOb::App(_, op_id) => Ok(self.theory.tight_computad().tgt(op_id).into()),
@@ -397,7 +368,7 @@ where
     }
 
     /// Tries to infer the type of a morphism in the model.
-    fn infer_mor_type(&self, mor: &ModalMor<Id>) -> Result<InferredType<ModalMorType>, String> {
+    fn infer_mor_type(&self, mor: &ModalMor) -> Result<InferredType<ModalMorType>, String> {
         match mor {
             ModalMor::Generator(id) => Ok(self.mor_generator_type(id).into()),
             ModalMor::Composite(_) => panic!("Composites not implemented"),
@@ -422,7 +393,7 @@ where
     }
 
     /// Does the object have the given type?
-    fn ob_has_type(&self, ob: &ModalOb<Id>, ob_type: &ModalObType) -> bool {
+    fn ob_has_type(&self, ob: &ModalOb, ob_type: &ModalObType) -> bool {
         if let ModalOb::List(list_type, vec) = ob
             && vec.is_empty()
         {
@@ -438,13 +409,13 @@ where
 
 impl ModalObOp {
     /// Acts on an object in a model of a modal theory.
-    pub fn ob_act<Id>(self, ob: ModalOb<Id>) -> Result<ModalOb<Id>, String> {
+    pub fn ob_act(self, ob: ModalOb) -> Result<ModalOb, String> {
         self.into_iter().try_fold(ob, |ob, op| op.ob_act(ob))
     }
 }
 
 impl ModeApp<ModalOp> {
-    fn ob_act<Id>(mut self, ob: ModalOb<Id>) -> Result<ModalOb<Id>, String> {
+    fn ob_act(mut self, ob: ModalOb) -> Result<ModalOb, String> {
         match self.modalities.pop() {
             Some(Modality::List(list_type)) => {
                 if let ModalOb::List(other_type, vec) = ob
@@ -461,7 +432,7 @@ impl ModeApp<ModalOp> {
         }
     }
 
-    fn mor_act<Id>(mut self, mor: ModalMor<Id>, is_unit: bool) -> Result<ModalMor<Id>, String> {
+    fn mor_act(mut self, mor: ModalMor, is_unit: bool) -> Result<ModalMor, String> {
         match self.modalities.pop() {
             Some(Modality::List(list_type)) => {
                 if let ModalMor::List(data, vec) = mor
@@ -481,7 +452,7 @@ impl ModeApp<ModalOp> {
 }
 
 impl ModalOp {
-    fn ob_act<Id>(self, ob: ModalOb<Id>) -> Result<ModalOb<Id>, String> {
+    fn ob_act(self, ob: ModalOb) -> Result<ModalOb, String> {
         match self {
             ModalOp::Generator(id) => Ok(ModalOb::App(Box::new(ob), id)),
             ModalOp::Concat(list_type, n, _) => {
@@ -490,7 +461,7 @@ impl ModalOp {
         }
     }
 
-    fn mor_act<Id>(self, mor: ModalMor<Id>, is_unit: bool) -> Result<ModalMor<Id>, String> {
+    fn mor_act(self, mor: ModalMor, is_unit: bool) -> Result<ModalMor, String> {
         match self {
             ModalOp::Generator(id) => Ok(if is_unit {
                 ModalMor::HomApp(Box::new(mor.into()), id)
@@ -505,9 +476,9 @@ impl ModalOp {
     }
 }
 
-impl<Id> ModalOb<Id> {
+impl ModalOb {
     /// Extracts an object generator or nothing.
-    pub fn generator(self) -> Option<Id> {
+    pub fn generator(self) -> Option<QualifiedName> {
         match self {
             ModalOb::Generator(id) => Some(id),
             _ => None,
@@ -515,7 +486,7 @@ impl<Id> ModalOb<Id> {
     }
 
     /// Unwraps an object generator, or panics.
-    pub fn unwrap_generator(self) -> Id {
+    pub fn unwrap_generator(self) -> QualifiedName {
         self.generator().expect("Object should be a generator")
     }
 
@@ -555,7 +526,7 @@ impl<Id> ModalOb<Id> {
     }
 }
 
-impl<Id> ModalMor<Id> {
+impl ModalMor {
     /// Recursively flatten a nested list of morphisms of the given depth.
     fn flatten_list(self, depth: usize) -> Result<Vec<Self>, String> {
         if depth == 0 {
@@ -581,7 +552,6 @@ mod tests {
     use crate::stdlib::theories::*;
     use crate::zero::name;
     use crate::{dbl::tree::DblNode, one::tree::OpenTree};
-    use ustr::ustr;
 
     #[test]
     fn monoidal_category() {
@@ -590,32 +560,32 @@ mod tests {
 
         // Lists of objects.
         let mut model = ModalDblModel::new(th.clone());
-        let (w, x, y, z) = (ustr("w"), ustr("x"), ustr("y"), ustr("z"));
-        model.add_ob(x, ob_type.clone());
-        model.add_ob(y, ob_type.clone());
-        assert!(model.has_ob(&x.into()));
-        let pair = ModalOb::List(List::Plain, vec![x.into(), y.into()]);
+        model.add_ob(name("x"), ob_type.clone());
+        model.add_ob(name("y"), ob_type.clone());
+        let [w, x, y, z] = [name("w"), name("x"), name("y"), name("z")].map(ModalOb::from);
+        assert!(model.has_ob(&x));
+        let pair = ModalOb::List(List::Plain, vec![x.clone(), y.clone()]);
         assert!(model.has_ob(&pair));
-        assert!(!model.has_ob(&ModalOb::List(List::Plain, vec![x.into(), z.into()])));
+        assert!(!model.has_ob(&ModalOb::List(List::Plain, vec![x.clone(), z.clone()])));
 
         // Nested lists of objects.
-        model.add_ob(w, ob_type.clone());
-        model.add_ob(z, ob_type.clone());
+        model.add_ob(name("w"), ob_type.clone());
+        model.add_ob(name("z"), ob_type.clone());
         let pairs = ModalOb::List(
             List::Plain,
             vec![
-                ModalOb::List(List::Plain, vec![w.into(), x.into()]),
-                ModalOb::List(List::Plain, vec![y.into(), z.into()]),
+                ModalOb::List(List::Plain, vec![w.clone(), x.clone()]),
+                ModalOb::List(List::Plain, vec![y.clone(), z.clone()]),
             ],
         );
         assert!(model.has_ob(&pairs));
         assert_eq!(
             model.ob_act(pairs, &ModalObOp::concat(List::Plain, 2, ob_type.clone())),
-            ModalOb::List(List::Plain, vec![w.into(), x.into(), y.into(), z.into()])
+            ModalOb::List(List::Plain, vec![w.clone(), x.clone(), y.clone(), z.clone()])
         );
         assert_eq!(
-            model.ob_act(x.into(), &ModalObOp::concat(List::Plain, 0, ob_type.clone())),
-            ModalOb::List(List::Plain, vec![x.into()])
+            model.ob_act(x.clone(), &ModalObOp::concat(List::Plain, 0, ob_type.clone())),
+            ModalOb::List(List::Plain, vec![x.clone()])
         );
 
         // Products of objects.
@@ -626,18 +596,18 @@ mod tests {
         assert_eq!(model.ob_type(&prod), ob_type);
 
         // Model validation.
-        let (f, g) = (ustr("f"), ustr("g"));
-        model.add_mor(f, x.into(), y.into(), th.hom_type(ob_type.clone()));
-        model.add_mor(g, w.into(), z.into(), th.hom_type(ob_type.clone()));
-        assert!(model.has_mor(&f.into()));
+        model.add_mor(name("f"), x.clone(), y.clone(), th.hom_type(ob_type.clone()));
+        model.add_mor(name("g"), w.clone(), z.clone(), th.hom_type(ob_type.clone()));
+        let [f, g] = [name("f"), name("g")].map(ModalMor::from);
+        assert!(model.has_mor(&f));
         assert!(model.validate().is_ok());
 
         // Lists of morphisms.
-        let pair = ModalMor::List(MorListData::Plain(), vec![f.into(), g.into()]);
+        let pair = ModalMor::List(MorListData::Plain(), vec![f.clone(), g.clone()]);
         assert!(model.has_mor(&pair));
         assert_eq!(model.mor_type(&pair), th.hom_type(ob_type.clone().apply(List::Plain.into())));
-        let dom_list = ModalOb::List(List::Plain, vec![x.into(), w.into()]);
-        let cod_list = ModalOb::List(List::Plain, vec![y.into(), z.into()]);
+        let dom_list = ModalOb::List(List::Plain, vec![x.clone(), w.clone()]);
+        let cod_list = ModalOb::List(List::Plain, vec![y.clone(), z.clone()]);
         assert_eq!(model.dom(&pair), dom_list);
         assert_eq!(model.cod(&pair), cod_list);
 
@@ -658,27 +628,25 @@ mod tests {
 
         // Model validation.
         let mut model = ModalDblModel::new(th.clone());
-        let (w, x, y, z, f, g) = (ustr("w"), ustr("x"), ustr("y"), ustr("z"), ustr("f"), ustr("g"));
-        for id in [w, x, y, z] {
+        for id in [name("w"), name("x"), name("y"), name("z")] {
             model.add_ob(id, ob_type.clone());
         }
-        model.add_mor(f, x.into(), y.into(), th.hom_type(ob_type.clone()));
-        model.add_mor(g, w.into(), z.into(), th.hom_type(ob_type.clone()));
+        let [w, x, y, z] = [name("w"), name("x"), name("y"), name("z")].map(ModalOb::from);
+        model.add_mor(name("f"), x.clone(), y.clone(), th.hom_type(ob_type.clone()));
+        model.add_mor(name("g"), w.clone(), z.clone(), th.hom_type(ob_type.clone()));
+        let [f, g] = [name("f"), name("g")].map(ModalMor::from);
         assert!(model.validate().is_ok());
 
         // Lists of morphisms, with permutation.
         let pair = ModalMor::List(
             MorListData::Symmetric(SkelColumn::new(vec![1, 0])),
-            vec![f.into(), g.into()],
+            vec![f.clone(), g.clone()],
         );
         assert!(model.has_mor(&pair));
-        assert_eq!(model.dom(&pair), ModalOb::List(List::Symmetric, vec![x.into(), w.into()]));
-        assert_eq!(model.cod(&pair), ModalOb::List(List::Symmetric, vec![z.into(), y.into()]));
+        assert_eq!(model.dom(&pair), ModalOb::List(List::Symmetric, vec![x.clone(), w.clone()]));
+        assert_eq!(model.cod(&pair), ModalOb::List(List::Symmetric, vec![z.clone(), y.clone()]));
         // Bad permutation.
-        let pair = ModalMor::List(
-            MorListData::Symmetric(SkelColumn::new(vec![0, 0])),
-            vec![f.into(), g.into()],
-        );
+        let pair = ModalMor::List(MorListData::Symmetric(SkelColumn::new(vec![0, 0])), vec![f, g]);
         assert!(!model.has_mor(&pair));
     }
 
@@ -690,15 +658,15 @@ mod tests {
 
         // Model validation.
         let mut model = ModalDblModel::new(th.clone());
-        let x = ustr("x");
-        model.add_ob(x, ob_type.clone());
+        model.add_ob(name("x"), ob_type.clone());
+        let x: ModalOb = name("x").into();
         model.add_mor(
-            ustr("binary"),
-            ModalOb::List(List::Plain, vec![x.into(), x.into()]),
-            x.into(),
+            name("binary"),
+            ModalOb::List(List::Plain, vec![x.clone(), x.clone()]),
+            x.clone(),
             mor_type.clone(),
         );
-        model.add_mor(ustr("nullary"), ModalOb::List(List::Plain, vec![]), x.into(), mor_type);
+        model.add_mor(name("nullary"), ModalOb::List(List::Plain, vec![]), x.clone(), mor_type);
         assert!(model.validate().is_ok());
     }
 }
