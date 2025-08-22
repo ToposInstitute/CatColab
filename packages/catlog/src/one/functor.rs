@@ -318,8 +318,7 @@ pub enum InvalidFpFunctor<V, E> {
 mod tests {
     use super::*;
     use crate::one::fp_category::{sch_graph, sch_hgraph, sch_sgraph};
-    use crate::zero::HashColumn;
-    use ustr::ustr;
+    use crate::zero::{HashColumn, name};
 
     /** Isomorphism b/w the schemas for half-edge graphs and symmetric graphs.
 
@@ -328,21 +327,21 @@ mod tests {
     #[test]
     fn sch_sgraph_to_hgraph() {
         let (sch_hgraph, sch_sgraph) = (sch_hgraph(), sch_sgraph());
-        let ob_map = HashColumn::new([(ustr("V"), ustr("V")), (ustr("E"), ustr("H"))].into());
+        let ob_map = HashColumn::new([(name("V"), name("V")), (name("E"), name("H"))].into());
         let mor_map = HashColumn::new(
             [
-                (ustr("src"), Path::single(ustr("vert"))),
-                (ustr("tgt"), Path::pair(ustr("inv"), ustr("vert"))),
-                (ustr("inv"), Path::single(ustr("inv"))),
+                (name("src"), Path::single(name("vert"))),
+                (name("tgt"), Path::pair(name("inv"), name("vert"))),
+                (name("inv"), Path::single(name("inv"))),
             ]
             .into(),
         );
         let data = FpFunctorData::new(ob_map, mor_map);
         let functor = data.functor_into(&sch_hgraph);
-        assert_eq!(functor.apply_ob(ustr("E")), Some(ustr("H")));
+        assert_eq!(functor.apply_ob(name("E")), Some(name("H")));
         assert_eq!(
-            functor.apply_mor(Path::pair(ustr("inv"), ustr("src"))),
-            Some(Path::pair(ustr("inv"), ustr("vert")))
+            functor.apply_mor(Path::pair(name("inv"), name("src"))),
+            Some(Path::pair(name("inv"), name("vert")))
         );
         assert!(functor.validate_on(&sch_sgraph).is_ok());
     }
@@ -351,12 +350,12 @@ mod tests {
     #[test]
     fn sch_sgraph_to_graph() {
         let (sch_graph, sch_sgraph) = (sch_graph(), sch_sgraph());
-        let ob_map = HashColumn::new([(ustr("V"), ustr("V")), (ustr("E"), ustr("E"))].into());
+        let ob_map = HashColumn::new([(name("V"), name("V")), (name("E"), name("E"))].into());
         let mor_map = HashColumn::new(
             [
-                (ustr("src"), Path::single(ustr("src"))),
-                (ustr("tgt"), Path::single(ustr("tgt"))),
-                (ustr("inv"), Path::empty(ustr("E"))),
+                (name("src"), Path::single(name("src"))),
+                (name("tgt"), Path::single(name("tgt"))),
+                (name("inv"), Path::empty(name("E"))),
             ]
             .into(),
         );

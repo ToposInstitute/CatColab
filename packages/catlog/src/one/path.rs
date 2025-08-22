@@ -19,6 +19,7 @@ use tsify::Tsify;
 
 use super::graph::{Graph, ReflexiveGraph};
 use crate::validate;
+use crate::zero::QualifiedName;
 
 /** A path in a [graph](Graph) or [category](crate::one::category::Category).
 
@@ -47,6 +48,9 @@ pub enum Path<V, E> {
     /// A nontrivial path, comprising a *non-empty* vector of consecutive edges.
     Seq(NonEmpty<E>),
 }
+
+/// A path whose vertices and edges are qualified names.
+pub type QualifiedPath = Path<QualifiedName, QualifiedName>;
 
 /// A path in a graph with skeletal vertex and edge sets.
 pub type SkelPath = Path<usize, usize>;

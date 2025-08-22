@@ -1,14 +1,12 @@
 //! Models of discrete double theories.
 
-use std::hash::Hash;
 use std::rc::Rc;
 
 use derivative::Derivative;
-use ustr::Ustr;
 
 use super::theory::DiscreteDblTheory;
 use crate::dbl::{category::*, model::*, theory::DblTheory};
-use crate::one::{fp_category::FpCategory, *};
+use crate::one::{fp_category::QualifiedFpCategory, *};
 use crate::validate::{self, Validate};
 use crate::zero::*;
 
@@ -20,29 +18,18 @@ comprising the theory. A type theorist would call it a ["displayed
 category"](https://ncatlab.org/nlab/show/displayed+category).
 */
 #[derive(Clone, Debug, Derivative)]
-#[derivative(PartialEq(bound = "Id: Eq + Hash"))]
-#[derivative(Eq(bound = "Id: Eq + Hash"))]
-pub struct DiscreteDblModel<Id, Cat: FgCategory> {
+#[derivative(PartialEq, Eq)]
+pub struct DiscreteDblModel {
     #[derivative(PartialEq(compare_with = "Rc::ptr_eq"))]
-    theory: Rc<DiscreteDblTheory<Cat>>,
-    pub(crate) category: FpCategory<Id, Id>,
-    ob_types: IndexedHashColumn<Id, Cat::Ob>,
-    mor_types: IndexedHashColumn<Id, Cat::Mor>,
+    theory: Rc<DiscreteDblTheory>,
+    pub(crate) category: QualifiedFpCategory,
+    ob_types: IndexedHashColumn<QualifiedName, QualifiedName>,
+    mor_types: IndexedHashColumn<QualifiedName, QualifiedPath>,
 }
 
-/// A model of a discrete double theory where both theoy and model have keys of
-/// type `Ustr`.
-pub type UstrDiscreteDblModel = DiscreteDblModel<Ustr, UstrFpCategory>;
-
-impl<Id, Cat> DiscreteDblModel<Id, Cat>
-where
-    Id: Eq + Clone + Hash,
-    Cat: FgCategory,
-    Cat::Ob: Hash,
-    Cat::Mor: Hash,
-{
+impl DiscreteDblModel {
     /// Creates an empty model of the given theory.
-    pub fn new(theory: Rc<DiscreteDblTheory<Cat>>) -> Self {
+    pub fn new(theory: Rc<DiscreteDblTheory>) -> Self {
         Self {
             theory,
             category: Default::default(),
@@ -52,12 +39,12 @@ where
     }
 
     /// Gets reference-counting pointer to the theory that this model is of.
-    pub fn theory_rc(&self) -> Rc<DiscreteDblTheory<Cat>> {
+    pub fn theory_rc(&self) -> Rc<DiscreteDblTheory> {
         self.theory.clone()
     }
 
     /// Returns the underlying graph of the model.
-    pub fn generating_graph(&self) -> &(impl FinGraph<V = Id, E = Id> + use<Id, Cat>) {
+    pub fn generating_graph(&self) -> &impl FinGraph<V = QualifiedName, E = QualifiedName> {
         self.category.generators()
     }
 
@@ -67,13 +54,13 @@ where
     }
 
     /// Adds a path equation to the model.
-    pub fn add_equation(&mut self, eq: PathEq<Id, Id>) {
+    pub fn add_equation(&mut self, eq: PathEq<QualifiedName, QualifiedName>) {
         self.category.add_equation(eq);
     }
 
     /// Iterates over failures of model to be well defined.
-    pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidDblModel<Id>> + '_ {
-        type Invalid<Id> = InvalidDblModel<Id>;
+    pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidDblModel> + '_ {
+        type Invalid = InvalidDblModel;
         let category_errors = self.category.iter_invalid().map(|err| match err {
             InvalidFpCategory::Dom(e) => Invalid::Dom(e),
             InvalidFpCategory::Cod(e) => Invalid::Cod(e),
@@ -130,9 +117,14 @@ where
     }
 
     /// Migrate model forward along a map between discrete double theories.
-    pub fn push_forward<F>(&mut self, f: &F, new_theory: Rc<DiscreteDblTheory<Cat>>)
+    pub fn push_forward<F>(&mut self, f: &F, new_theory: Rc<DiscreteDblTheory>)
     where
-        F: CategoryMap<DomOb = Cat::Ob, DomMor = Cat::Mor, CodOb = Cat::Ob, CodMor = Cat::Mor>,
+        F: CategoryMap<
+                DomOb = QualifiedName,
+                DomMor = QualifiedPath,
+                CodOb = QualifiedName,
+                CodMor = QualifiedPath,
+            >,
     {
         self.ob_types = std::mem::take(&mut self.ob_types).postcompose(f.ob_map());
         self.mor_types = std::mem::take(&mut self.mor_types).postcompose(f.mor_map());
@@ -140,15 +132,9 @@ where
     }
 }
 
-impl<Id, Cat> Category for DiscreteDblModel<Id, Cat>
-where
-    Id: Eq + Clone + Hash,
-    Cat: FgCategory,
-    Cat::Ob: Hash,
-    Cat::Mor: Hash,
-{
-    type Ob = Id;
-    type Mor = Path<Id, Id>;
+impl Category for DiscreteDblModel {
+    type Ob = QualifiedName;
+    type Mor = QualifiedPath;
 
     fn has_ob(&self, x: &Self::Ob) -> bool {
         self.category.has_ob(x)
@@ -167,15 +153,9 @@ where
     }
 }
 
-impl<Id, Cat> FgCategory for DiscreteDblModel<Id, Cat>
-where
-    Id: Eq + Clone + Hash,
-    Cat: FgCategory,
-    Cat::Ob: Hash,
-    Cat::Mor: Hash,
-{
-    type ObGen = Id;
-    type MorGen = Id;
+impl FgCategory for DiscreteDblModel {
+    type ObGen = QualifiedName;
+    type MorGen = QualifiedName;
 
     fn ob_generators(&self) -> impl Iterator<Item = Self::ObGen> {
         self.category.ob_generators()
@@ -191,18 +171,12 @@ where
     }
 }
 
-impl<Id, Cat> DblModel for DiscreteDblModel<Id, Cat>
-where
-    Id: Eq + Clone + Hash,
-    Cat: FgCategory,
-    Cat::Ob: Hash,
-    Cat::Mor: Hash,
-{
-    type ObType = Cat::Ob;
-    type MorType = Cat::Mor;
-    type ObOp = Cat::Ob;
-    type MorOp = Path<Cat::Ob, Cat::Mor>;
-    type Theory = DiscreteDblTheory<Cat>;
+impl DblModel for DiscreteDblModel {
+    type ObType = QualifiedName;
+    type MorType = QualifiedPath;
+    type ObOp = QualifiedName;
+    type MorOp = Path<QualifiedName, QualifiedPath>;
+    type Theory = DiscreteDblTheory;
 
     fn theory(&self) -> &Self::Theory {
         &self.theory
@@ -225,13 +199,7 @@ where
     }
 }
 
-impl<Id, Cat> FgDblModel for DiscreteDblModel<Id, Cat>
-where
-    Id: Eq + Clone + Hash,
-    Cat: FgCategory,
-    Cat::Ob: Hash,
-    Cat::Mor: Hash,
-{
+impl FgDblModel for DiscreteDblModel {
     fn ob_generator_type(&self, ob: &Self::ObGen) -> Self::ObType {
         self.ob_types.apply_to_ref(ob).expect("Object should have type")
     }
@@ -247,50 +215,38 @@ where
     }
 }
 
-impl<Id, Cat> MutDblModel for DiscreteDblModel<Id, Cat>
-where
-    Id: Eq + Clone + Hash,
-    Cat: FgCategory,
-    Cat::Ob: Hash,
-    Cat::Mor: Hash,
-{
-    fn add_ob(&mut self, x: Id, typ: Cat::Ob) {
-        self.ob_types.set(x.clone(), typ);
+impl MutDblModel for DiscreteDblModel {
+    fn add_ob(&mut self, x: Self::ObGen, ob_type: Self::ObType) {
+        self.ob_types.set(x.clone(), ob_type);
         self.category.add_ob_generator(x);
     }
 
-    fn add_mor(&mut self, f: Id, dom: Id, cod: Id, typ: Cat::Mor) {
-        self.mor_types.set(f.clone(), typ);
+    fn add_mor(&mut self, f: Self::MorGen, dom: Self::Ob, cod: Self::Ob, mor_type: Self::MorType) {
+        self.mor_types.set(f.clone(), mor_type);
         self.category.add_mor_generator(f, dom, cod);
     }
 
-    fn make_mor(&mut self, f: Id, typ: Cat::Mor) {
-        self.mor_types.set(f.clone(), typ);
+    fn make_mor(&mut self, f: Self::MorGen, mor_type: Self::MorType) {
+        self.mor_types.set(f.clone(), mor_type);
         self.category.make_mor_generator(f);
     }
 
-    fn get_dom(&self, f: &Id) -> Option<&Id> {
+    fn get_dom(&self, f: &Self::MorGen) -> Option<&Self::Ob> {
         self.category.get_dom(f)
     }
-    fn get_cod(&self, f: &Id) -> Option<&Id> {
+    fn get_cod(&self, f: &Self::MorGen) -> Option<&Self::Ob> {
         self.category.get_cod(f)
     }
-    fn set_dom(&mut self, f: Id, x: Id) {
+    fn set_dom(&mut self, f: Self::MorGen, x: Self::Ob) {
         self.category.set_dom(f, x);
     }
-    fn set_cod(&mut self, f: Id, x: Id) {
+    fn set_cod(&mut self, f: Self::MorGen, x: Self::Ob) {
         self.category.set_cod(f, x);
     }
 }
 
-impl<Id, Cat> Validate for DiscreteDblModel<Id, Cat>
-where
-    Id: Eq + Clone + Hash,
-    Cat: FgCategory,
-    Cat::Ob: Hash,
-    Cat::Mor: Hash,
-{
-    type ValidationError = InvalidDblModel<Id>;
+impl Validate for DiscreteDblModel {
+    type ValidationError = InvalidDblModel;
 
     fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
         validate::wrap_errors(self.iter_invalid())
@@ -300,39 +256,37 @@ where
 #[cfg(test)]
 mod tests {
     use nonempty::nonempty;
-    use ustr::ustr;
 
     use super::*;
-    use crate::one::Path;
     use crate::stdlib::{models::*, theories::*, theory_morphisms::*};
+    use crate::{one::Path, zero::name};
 
     #[test]
     fn validate() {
         let th = Rc::new(th_schema());
         let mut model = DiscreteDblModel::new(th.clone());
-        let entity = ustr("entity");
-        model.add_ob(entity, ustr("NotObType"));
-        assert_eq!(model.validate(), Err(nonempty![InvalidDblModel::ObType(entity)]));
+        model.add_ob(name("entity"), name("NotObType"));
+        assert_eq!(model.validate(), Err(nonempty![InvalidDblModel::ObType(name("entity"))]));
 
         let mut model = DiscreteDblModel::new(th.clone());
-        model.add_ob(entity, ustr("Entity"));
-        model.add_mor(ustr("map"), entity, entity, ustr("NotMorType").into());
-        assert_eq!(model.validate(), Err(nonempty![InvalidDblModel::MorType(ustr("map"))]));
+        model.add_ob(name("entity"), name("Entity"));
+        model.add_mor(name("map"), name("entity"), name("entity"), name("NotMorType").into());
+        assert_eq!(model.validate(), Err(nonempty![InvalidDblModel::MorType(name("map"))]));
 
         let mut model = DiscreteDblModel::new(th);
-        model.add_ob(entity, ustr("Entity"));
-        model.add_ob(ustr("type"), ustr("AttrType"));
-        model.add_mor(ustr("a"), entity, ustr("type"), ustr("Attr").into());
+        model.add_ob(name("entity"), name("Entity"));
+        model.add_ob(name("type"), name("AttrType"));
+        model.add_mor(name("a"), name("entity"), name("type"), name("Attr").into());
         assert!(model.validate().is_ok());
-        model.add_mor(ustr("b"), entity, ustr("type"), Path::Id(ustr("Entity")));
-        assert_eq!(model.validate(), Err(nonempty![InvalidDblModel::CodType(ustr("b"))]));
+        model.add_mor(name("b"), name("entity"), name("type"), Path::Id(name("Entity")));
+        assert_eq!(model.validate(), Err(nonempty![InvalidDblModel::CodType(name("b"))]));
     }
 
     #[test]
     fn infer_missing() {
         let th = Rc::new(th_schema());
         let mut model = DiscreteDblModel::new(th.clone());
-        model.add_mor(ustr("attr"), ustr("entity"), ustr("type"), ustr("Attr").into());
+        model.add_mor(name("attr"), name("entity"), name("type"), name("Attr").into());
         model.infer_missing();
         assert_eq!(model, walking_attr(th));
     }
@@ -341,14 +295,13 @@ mod tests {
     fn pushforward_migrate() {
         let th = Rc::new(th_category());
         let mut model = DiscreteDblModel::new(th);
-        let (x, f) = (ustr("x"), ustr("f"));
-        model.add_ob(x, ustr("Object"));
-        model.add_mor(f, x, x, Path::Id(ustr("Object")));
+        model.add_ob(name("x"), name("Object"));
+        model.add_mor(name("f"), name("x"), name("x"), Path::Id(name("Object")));
 
         let functor_data = th_category_to_schema();
         let new_th = Rc::new(th_schema());
         model.push_forward(&functor_data.functor_into(&new_th.0), new_th.clone());
-        assert_eq!(model.ob_generator_type(&x), ustr("Entity"));
-        assert_eq!(model.mor_generator_type(&f), Path::Id(ustr("Entity")));
+        assert_eq!(model.ob_generator_type(&name("x")), name("Entity"));
+        assert_eq!(model.mor_generator_type(&name("f")), Path::Id(name("Entity")));
     }
 }

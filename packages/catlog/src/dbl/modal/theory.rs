@@ -19,12 +19,11 @@ this stage to reify the mode theory as the data of a finitely presented
 in at the type level.
 */
 
-use std::hash::Hash;
 use std::iter::repeat_n;
 
+use derivative::Derivative;
 use derive_more::From;
 use ref_cast::RefCast;
-use ustr::Ustr;
 
 use crate::dbl::computad::{AVDCComputad, AVDCComputadTop};
 use crate::dbl::theory::InvalidDblTheory;
@@ -156,26 +155,26 @@ These are (object or morphisms) operations that cannot be built out of others
 using the structure of a VDC or virtual equipment.
  */
 #[derive(Clone, Debug, PartialEq, Eq, From)]
-pub enum ModalOp<Id> {
+pub enum ModalOp {
     /// Generating operation.
     #[from]
-    Generator(Id),
+    Generator(QualifiedName),
 
     /** List concentation.
 
     This is a component of the monad multiplication for a [list](List) modality.
     It is given in unbiased style, where the second argument is the arity.
      */
-    Concat(List, usize, ModeApp<Id>),
+    Concat(List, usize, ModeApp<QualifiedName>),
 }
 
 /// An object type in a modal double theory.
-pub type ModalObType<Id> = ModeApp<Id>;
+pub type ModalObType = ModeApp<QualifiedName>;
 
 /// A morphism type in a modal double theory.
-pub type ModalMorType<Id> = ShortPath<ModalObType<Id>, ModeApp<Id>>;
+pub type ModalMorType = ShortPath<ModalObType, ModeApp<QualifiedName>>;
 
-impl<Id> ModalMorType<Id> {
+impl ModalMorType {
     /// Applies a modality.
     pub fn apply(self, m: Modality) -> Self {
         self.map(|x| x.apply(m), |f| f.apply(m))
@@ -191,16 +190,16 @@ impl<Id> ModalMorType<Id> {
 }
 
 /// An object operation in a modal double theory.
-pub type ModalObOp<Id> = Path<ModalObType<Id>, ModeApp<ModalOp<Id>>>;
+pub type ModalObOp = Path<ModalObType, ModeApp<ModalOp>>;
 
-impl<Id> ModalObOp<Id> {
+impl ModalObOp {
     /// Constructs the object operation for a generator.
-    pub fn generator(id: Id) -> Self {
+    pub fn generator(id: QualifiedName) -> Self {
         ModeApp::new(ModalOp::Generator(id)).into()
     }
 
     /// Constructs a concatenation operation for a list modality.
-    pub fn concat(list: List, arity: usize, ob_type: ModalObType<Id>) -> Self {
+    pub fn concat(list: List, arity: usize, ob_type: ModalObType) -> Self {
         ModeApp::new(ModalOp::Concat(list, arity, ob_type)).into()
     }
 
@@ -224,48 +223,43 @@ A generic [morphism operation](ModalMorOp) in a modal double theory is a [double
 tree](DblTree) built out of these nodes.
  */
 #[derive(Clone, Debug, PartialEq, Eq, From)]
-pub enum ModalNode<Id> {
+pub enum ModalNode {
     /// Basic morphism operation.
     #[from]
-    Basic(ModeApp<ModalOp<Id>>),
+    Basic(ModeApp<ModalOp>),
 
     /// Unit cell on a basic object operation.
-    Unit(ModeApp<ModalOp<Id>>),
+    Unit(ModeApp<ModalOp>),
 
     /** Cell witnessing a composite.
 
     By assumption, modalities preserve all composites in the theory.
      */
-    Composite(Path<ModalObType<Id>, ModalMorType<Id>>),
+    Composite(Path<ModalObType, ModalMorType>),
 }
 
 /// A morphism operation in a modal double theory.
-pub type ModalMorOp<Id> = DblTree<ModalObOp<Id>, ModalMorType<Id>, ModalNode<Id>>;
+pub type ModalMorOp = DblTree<ModalObOp, ModalMorType, ModalNode>;
 
 /// A modal double theory.
-#[derive(Debug, Default)]
-pub struct ModalDblTheory<Id> {
-    ob_generators: HashFinSet<Id>,
-    arr_generators: ComputadTop<ModalObType<Id>, Id>,
-    pro_generators: ComputadTop<ModalObType<Id>, Id>,
-    cell_generators: AVDCComputadTop<ModalObType<Id>, ModalObOp<Id>, ModalMorType<Id>, Id>,
-    arr_equations: Vec<PathEq<ModalObType<Id>, ModeApp<ModalOp<Id>>>>,
+#[derive(Debug, Derivative)]
+#[derivative(Default(new = "true"))]
+pub struct ModalDblTheory {
+    ob_generators: HashFinSet<QualifiedName>,
+    arr_generators: ComputadTop<ModalObType, QualifiedName>,
+    pro_generators: ComputadTop<ModalObType, QualifiedName>,
+    cell_generators: AVDCComputadTop<ModalObType, ModalObOp, ModalMorType, QualifiedName>,
+    arr_equations: Vec<PathEq<ModalObType, ModeApp<ModalOp>>>,
     // TODO: Cell equations and composites
 }
-
-/// A modal double theory with identifiers of type `Ustr`.
-pub type UstrModalDblTheory = ModalDblTheory<Ustr>;
 
 /// Set of object types in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-pub(super) struct ModalObTypes<Id>(ModalDblTheory<Id>);
+pub(super) struct ModalObTypes(ModalDblTheory);
 
-impl<Id> Set for ModalObTypes<Id>
-where
-    Id: Eq + Clone + Hash,
-{
-    type Elem = ModeApp<Id>;
+impl Set for ModalObTypes {
+    type Elem = ModeApp<QualifiedName>;
 
     fn contains(&self, ob: &Self::Elem) -> bool {
         self.0.ob_generators.contains(&ob.arg)
@@ -275,14 +269,11 @@ where
 /// Graph of object types and *basic* morphism types in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-struct ModalProedgeGraph<Id>(ModalDblTheory<Id>);
+struct ModalProedgeGraph(ModalDblTheory);
 
-impl<Id> Graph for ModalProedgeGraph<Id>
-where
-    Id: Eq + Clone + Hash,
-{
-    type V = ModalObType<Id>;
-    type E = ModeApp<Id>;
+impl Graph for ModalProedgeGraph {
+    type V = ModalObType;
+    type E = ModeApp<QualifiedName>;
 
     fn has_vertex(&self, ob: &Self::V) -> bool {
         self.0.loose_computad().has_vertex(ob)
@@ -301,14 +292,11 @@ where
 /// Graph of object/morphism types in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-pub(super) struct ModalMorTypeGraph<Id>(ModalDblTheory<Id>);
+pub(super) struct ModalMorTypeGraph(ModalDblTheory);
 
-impl<Id> Graph for ModalMorTypeGraph<Id>
-where
-    Id: Eq + Clone + Hash,
-{
-    type V = ModalObType<Id>;
-    type E = ModalMorType<Id>;
+impl Graph for ModalMorTypeGraph {
+    type V = ModalObType;
+    type E = ModalMorType;
 
     fn has_vertex(&self, x: &Self::V) -> bool {
         ModalProedgeGraph::ref_cast(&self.0).has_vertex(x)
@@ -324,10 +312,7 @@ where
     }
 }
 
-impl<Id> ReflexiveGraph for ModalMorTypeGraph<Id>
-where
-    Id: Eq + Clone + Hash,
-{
+impl ReflexiveGraph for ModalMorTypeGraph {
     fn refl(&self, x: Self::V) -> Self::E {
         ShortPath::Zero(x)
     }
@@ -336,14 +321,11 @@ where
 /// Graph of object types and *basic* object operations in a modal theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-struct ModalEdgeGraph<Id>(ModalDblTheory<Id>);
+struct ModalEdgeGraph(ModalDblTheory);
 
-impl<Id> Graph for ModalEdgeGraph<Id>
-where
-    Id: Eq + Clone + Hash,
-{
-    type V = ModalObType<Id>;
-    type E = ModeApp<ModalOp<Id>>;
+impl Graph for ModalEdgeGraph {
+    type V = ModalObType;
+    type E = ModeApp<ModalOp>;
 
     fn has_vertex(&self, ob: &Self::V) -> bool {
         self.0.tight_computad().has_vertex(ob)
@@ -373,14 +355,11 @@ where
 /// Category of object types/operations in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-pub(super) struct ModalOneTheory<Id>(ModalDblTheory<Id>);
+pub(super) struct ModalOneTheory(ModalDblTheory);
 
-impl<Id> Category for ModalOneTheory<Id>
-where
-    Id: Eq + Clone + Hash,
-{
-    type Ob = ModalObType<Id>;
-    type Mor = ModalObOp<Id>;
+impl Category for ModalOneTheory {
+    type Ob = ModalObType;
+    type Mor = ModalObOp;
 
     fn has_ob(&self, x: &Self::Ob) -> bool {
         ModalEdgeGraph::ref_cast(&self.0).has_vertex(x)
@@ -402,24 +381,21 @@ where
 /// Virtual double graph of *basic* cells in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-struct ModalVDblGraph<Id>(ModalDblTheory<Id>);
+struct ModalVDblGraph(ModalDblTheory);
 
-type ModalVDblComputad<'a, Id> = AVDCComputad<
+type ModalVDblComputad<'a> = AVDCComputad<
     'a,
-    ModalObType<Id>,
-    ModalObOp<Id>,
-    ModalMorType<Id>,
-    ModalObTypes<Id>,
-    UnderlyingGraph<ModalOneTheory<Id>>,
-    ModalMorTypeGraph<Id>,
-    Id,
+    ModalObType,
+    ModalObOp,
+    ModalMorType,
+    ModalObTypes,
+    UnderlyingGraph<ModalOneTheory>,
+    ModalMorTypeGraph,
+    QualifiedName,
 >;
 
-impl<Id> Validate for ModalVDblGraph<Id>
-where
-    Id: Eq + Clone + Hash,
-{
-    type ValidationError = InvalidVDblGraph<Id, Id, Id>;
+impl Validate for ModalVDblGraph {
+    type ValidationError = InvalidVDblGraph<QualifiedName, QualifiedName, QualifiedName>;
 
     fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
         let edge_cptd = self.0.tight_computad();
@@ -439,14 +415,11 @@ where
     }
 }
 
-impl<Id> VDblGraph for ModalVDblGraph<Id>
-where
-    Id: Eq + Clone + Hash,
-{
-    type V = ModalObType<Id>;
-    type E = ModalObOp<Id>;
-    type ProE = ModalMorType<Id>;
-    type Sq = ModalNode<Id>;
+impl VDblGraph for ModalVDblGraph {
+    type V = ModalObType;
+    type E = ModalObOp;
+    type ProE = ModalMorType;
+    type Sq = ModalNode;
 
     fn has_vertex(&self, x: &Self::V) -> bool {
         ModalObTypes::ref_cast(&self.0).contains(x)
@@ -564,14 +537,11 @@ where
     }
 }
 
-impl<Id> VDblCategory for ModalDblTheory<Id>
-where
-    Id: Eq + Clone + Hash,
-{
-    type Ob = ModalObType<Id>;
-    type Arr = ModalObOp<Id>;
-    type Pro = ModalMorType<Id>;
-    type Cell = ModalMorOp<Id>;
+impl VDblCategory for ModalDblTheory {
+    type Ob = ModalObType;
+    type Arr = ModalObOp;
+    type Pro = ModalMorType;
+    type Cell = ModalMorOp;
 
     fn has_ob(&self, x: &Self::Ob) -> bool {
         ModalVDblGraph::ref_cast(self).has_vertex(x)
@@ -623,10 +593,7 @@ where
     }
 }
 
-impl<Id> VDCWithComposites for ModalDblTheory<Id>
-where
-    Id: Eq + Clone + Hash,
-{
+impl VDCWithComposites for ModalDblTheory {
     fn composite_ext(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Cell> {
         if self.composite(path.clone()).is_some() {
             let graph = ModalVDblGraph::ref_cast(self);
@@ -659,11 +626,8 @@ where
     }
 }
 
-impl<Id> Validate for ModalDblTheory<Id>
-where
-    Id: Eq + Clone + Hash,
-{
-    type ValidationError = InvalidDblTheory<Id>;
+impl Validate for ModalDblTheory {
+    type ValidationError = InvalidDblTheory;
 
     fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
         // Validate generating data.
@@ -681,22 +645,19 @@ where
     }
 }
 
-impl<Id> ModalDblTheory<Id>
-where
-    Id: Eq + Clone + Hash,
-{
+impl ModalDblTheory {
     /// Gets the computad generating the proarrows of the theory.
-    pub(super) fn loose_computad(&self) -> Computad<'_, ModalObType<Id>, ModalObTypes<Id>, Id> {
+    pub(super) fn loose_computad(&self) -> Computad<'_, ModalObType, ModalObTypes, QualifiedName> {
         Computad::new(ModalObTypes::ref_cast(self), &self.pro_generators)
     }
 
     /// Gets the computad generating the arrows of the theory.
-    pub(super) fn tight_computad(&self) -> Computad<'_, ModalObType<Id>, ModalObTypes<Id>, Id> {
+    pub(super) fn tight_computad(&self) -> Computad<'_, ModalObType, ModalObTypes, QualifiedName> {
         Computad::new(ModalObTypes::ref_cast(self), &self.arr_generators)
     }
 
     /// Gets the double computad generating the theory.
-    pub(super) fn dbl_computad(&self) -> ModalVDblComputad<'_, Id> {
+    pub(super) fn dbl_computad(&self) -> ModalVDblComputad<'_> {
         AVDCComputad::new(
             ModalObTypes::ref_cast(self),
             UnderlyingGraph::ref_cast(ModalOneTheory::ref_cast(self)),
@@ -706,41 +667,41 @@ where
     }
 
     /// Adds a generating object type to the theory.
-    pub fn add_ob_type(&mut self, id: Id) {
+    pub fn add_ob_type(&mut self, id: QualifiedName) {
         self.ob_generators.insert(id);
     }
 
     /// Adds a generating morphism type to the theory.
-    pub fn add_mor_type(&mut self, id: Id, src: ModalObType<Id>, tgt: ModalObType<Id>) {
+    pub fn add_mor_type(&mut self, id: QualifiedName, src: ModalObType, tgt: ModalObType) {
         self.pro_generators.add_edge(id, src, tgt);
     }
 
     /// Adds a generating object operation to the theory.
-    pub fn add_ob_op(&mut self, id: Id, dom: ModalObType<Id>, cod: ModalObType<Id>) {
+    pub fn add_ob_op(&mut self, id: QualifiedName, dom: ModalObType, cod: ModalObType) {
         self.arr_generators.add_edge(id, dom, cod);
     }
 
     /// Adds a generating morphism operation to the theory.
     pub fn add_mor_op(
         &mut self,
-        id: Id,
-        dom: Path<ModalObType<Id>, ModalMorType<Id>>,
-        cod: ModalMorType<Id>,
-        src: ModalObOp<Id>,
-        tgt: ModalObOp<Id>,
+        id: QualifiedName,
+        dom: Path<ModalObType, ModalMorType>,
+        cod: ModalMorType,
+        src: ModalObOp,
+        tgt: ModalObOp,
     ) {
         self.cell_generators.add_square(id, dom, cod.into(), src, tgt);
     }
 
     /// Adds a morphism operation with nullary domain and unit codomain.
-    pub fn add_special_mor_op(&mut self, id: Id, src: ModalObOp<Id>, tgt: ModalObOp<Id>) {
+    pub fn add_special_mor_op(&mut self, id: QualifiedName, src: ModalObOp, tgt: ModalObOp) {
         let dom = self.dom(&src); // == self.dom(&tgt)
         let cod = self.cod(&src); // == self.cod(&tgt)
         self.add_mor_op(id, Path::empty(dom), ShortPath::Zero(cod), src, tgt);
     }
 
     /// Equate two object operations in the theory.
-    pub fn equate_ob_ops(&mut self, lhs: ModalObOp<Id>, rhs: ModalObOp<Id>) {
+    pub fn equate_ob_ops(&mut self, lhs: ModalObOp, rhs: ModalObOp) {
         self.arr_equations.push(PathEq::new(lhs, rhs))
     }
 }

@@ -4,7 +4,7 @@ The main entry point for this module is
 [`lotka_volterra_analysis`](SignedCoefficientBuilder::lotka_volterra_analysis).
  */
 
-use std::{collections::HashMap, hash::Hash};
+use std::collections::HashMap;
 
 use nalgebra::DVector;
 
@@ -14,8 +14,9 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 use super::{ODEAnalysis, SignedCoefficientBuilder};
-use crate::dbl::model::FgDblModel;
+use crate::dbl::model::DiscreteDblModel;
 use crate::simulate::ode::{LotkaVolterraSystem, ODEProblem};
+use crate::{one::QualifiedPath, zero::QualifiedName};
 
 /// Data defining a Lotka-Volterra ODE problem for a model.
 #[derive(Clone)]
@@ -25,41 +26,35 @@ use crate::simulate::ode::{LotkaVolterraSystem, ODEProblem};
     feature = "serde-wasm",
     tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
 )]
-pub struct LotkaVolterraProblemData<Id>
-where
-    Id: Eq + Hash,
-{
+pub struct LotkaVolterraProblemData {
     /// Map from morphism IDs to interaction coefficients (nonnegative reals).
     #[cfg_attr(feature = "serde", serde(rename = "interactionCoefficients"))]
-    interaction_coeffs: HashMap<Id, f32>,
+    interaction_coeffs: HashMap<QualifiedName, f32>,
 
     /// Map from object IDs to growth rates (arbitrary real numbers).
     #[cfg_attr(feature = "serde", serde(rename = "growthRates"))]
-    growth_rates: HashMap<Id, f32>,
+    growth_rates: HashMap<QualifiedName, f32>,
 
     /// Map from object IDs to initial values (nonnegative reals).
     #[cfg_attr(feature = "serde", serde(rename = "initialValues"))]
-    initial_values: HashMap<Id, f32>,
+    initial_values: HashMap<QualifiedName, f32>,
 
     /// Duration of simulation.
     duration: f32,
 }
 
-impl<ObType, MorType> SignedCoefficientBuilder<ObType, MorType> {
+impl SignedCoefficientBuilder<QualifiedName, QualifiedPath> {
     /** Lotka-Volterra ODE analysis for a model of a double theory.
 
     The main application we have in mind is the Lotka-Volterra ODE semantics for
     signed graphs described in our [paper on regulatory
     networks](crate::refs::RegNets).
      */
-    pub fn lotka_volterra_analysis<Id>(
+    pub fn lotka_volterra_analysis(
         &self,
-        model: &impl FgDblModel<ObType = ObType, MorType = MorType, Ob = Id, ObGen = Id, MorGen = Id>,
-        data: LotkaVolterraProblemData<Id>,
-    ) -> ODEAnalysis<Id, LotkaVolterraSystem>
-    where
-        Id: Eq + Clone + Hash + Ord,
-    {
+        model: &DiscreteDblModel,
+        data: LotkaVolterraProblemData,
+    ) -> ODEAnalysis<LotkaVolterraSystem> {
         let (matrix, ob_index) = self.build_matrix(model, &data.interaction_coeffs);
         let n = ob_index.len();
 
@@ -81,10 +76,9 @@ impl<ObType, MorType> SignedCoefficientBuilder<ObType, MorType> {
 #[cfg(test)]
 mod test {
     use std::rc::Rc;
-    use ustr::ustr;
 
     use super::*;
-    use crate::one::Path;
+    use crate::{one::Path, zero::name};
     use crate::{simulate::ode::lotka_volterra, stdlib};
 
     #[test]
@@ -92,17 +86,17 @@ mod test {
         let th = Rc::new(stdlib::theories::th_signed_category());
         let neg_feedback = stdlib::models::negative_feedback(th);
 
-        let (prey, pred) = (ustr("x"), ustr("y"));
-        let (pos, neg) = (ustr("positive"), ustr("negative"));
         let data = LotkaVolterraProblemData {
-            interaction_coeffs: [(pos, 1.0), (neg, 1.0)].into_iter().collect(),
-            growth_rates: [(prey, 2.0), (pred, -1.0)].into_iter().collect(),
-            initial_values: [(prey, 1.0), (pred, 1.0)].into_iter().collect(),
+            interaction_coeffs: [(name("positive"), 1.0), (name("negative"), 1.0)]
+                .into_iter()
+                .collect(),
+            growth_rates: [(name("x"), 2.0), (name("y"), -1.0)].into_iter().collect(),
+            initial_values: [(name("x"), 1.0), (name("y"), 1.0)].into_iter().collect(),
             duration: 10.0,
         };
-        let analysis = SignedCoefficientBuilder::new(ustr("Object"))
-            .add_positive(Path::Id(ustr("Object")))
-            .add_negative(Path::single(ustr("Negative")))
+        let analysis = SignedCoefficientBuilder::new(name("Object"))
+            .add_positive(Path::Id(name("Object")))
+            .add_negative(Path::single(name("Negative")))
             .lotka_volterra_analysis(&neg_feedback, data);
         assert_eq!(analysis.problem, lotka_volterra::create_predator_prey());
     }
