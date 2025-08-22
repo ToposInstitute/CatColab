@@ -1,6 +1,6 @@
 import { createMemo } from "solid-js";
 
-import type { DblModel, MassActionModelData, MassActionProblemData, ODEResult } from "catlog-wasm";
+import type { DblModel, MassActionProblemData, ODEResult } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import {
     type ColumnSchema,
@@ -15,10 +15,7 @@ import { createModelODEPlot } from "./simulation";
 
 import "./simulation.css";
 
-/** Configuration for a mass-action ODE analysis of a model. */
-export type MassActionContent = MassActionProblemData<string>;
-
-type Simulator = (model: DblModel, data: MassActionModelData) => ODEResult;
+type Simulator = (model: DblModel, data: MassActionProblemData) => ODEResult;
 
 /** Configure a mass-action ODE analysis for use with models of a theory. */
 export function configureMassAction(options: {
@@ -29,7 +26,7 @@ export function configureMassAction(options: {
     simulate: Simulator;
     isState?: (ob: ObjectDecl) => boolean;
     isTransition?: (mor: MorphismDecl) => boolean;
-}): ModelAnalysisMeta<MassActionContent> {
+}): ModelAnalysisMeta<MassActionProblemData> {
     const {
         id = "mass-action",
         name = "Mass-action dynamics",
@@ -53,7 +50,7 @@ export function configureMassAction(options: {
 
 /** Analyze a model using mass-action dynamics. */
 export function MassAction(
-    props: ModelAnalysisProps<MassActionContent> & {
+    props: ModelAnalysisProps<MassActionProblemData> & {
         simulate: Simulator;
         isState?: (ob: ObjectDecl) => boolean;
         isTransition?: (mor: MorphismDecl) => boolean;

@@ -1,11 +1,6 @@
 import { createMemo } from "solid-js";
 
-import type {
-    DblModel,
-    LotkaVolterraModelData,
-    LotkaVolterraProblemData,
-    ODEResult,
-} from "catlog-wasm";
+import type { DblModel, LotkaVolterraProblemData, ODEResult } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import {
     type ColumnSchema,
@@ -20,10 +15,7 @@ import { createModelODEPlot } from "./simulation";
 
 import "./simulation.css";
 
-/** Configuration for a Lotka-Volterra ODE analysis of a model. */
-export type LotkaVolterraContent = LotkaVolterraProblemData<string>;
-
-type Simulator = (model: DblModel, data: LotkaVolterraModelData) => ODEResult;
+type Simulator = (model: DblModel, data: LotkaVolterraProblemData) => ODEResult;
 
 /** Configure a Lotka-Volterra ODE analysis for use with models of a theory. */
 export function configureLotkaVolterra(options: {
@@ -32,7 +24,7 @@ export function configureLotkaVolterra(options: {
     description?: string;
     help?: string;
     simulate: Simulator;
-}): ModelAnalysisMeta<LotkaVolterraContent> {
+}): ModelAnalysisMeta<LotkaVolterraProblemData> {
     const {
         id = "lotka-volterra",
         name = "Lotka-Volterra dynamics",
@@ -57,7 +49,7 @@ export function configureLotkaVolterra(options: {
 
 /** Analyze a model using Lotka-Volterra dynamics. */
 export function LotkaVolterra(
-    props: ModelAnalysisProps<LotkaVolterraContent> & {
+    props: ModelAnalysisProps<LotkaVolterraProblemData> & {
         simulate: Simulator;
         title?: string;
     },

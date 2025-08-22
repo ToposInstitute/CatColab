@@ -4,18 +4,16 @@ use all_the_same::all_the_same;
 use derive_more::From;
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
-use ustr::Ustr;
-use uuid::Uuid;
 use wasm_bindgen::prelude::*;
 
-use catlog::dbl::model::{FgDblModel, MutDblModel};
+use catlog::dbl::model::{DiscreteDblModel, FgDblModel, MutDblModel};
 use catlog::dbl::model_diagram as diagram;
+use catlog::dbl::model_morphism::DiscreteDblModelMapping;
 use catlog::one::FgCategory;
-use catlog::zero::MutMapping;
+use catlog::zero::{MutMapping, QualifiedName};
 use notebook_types::current::*;
 
-use super::model::{DblModel, DblModelBox, DiscreteDblModel};
-use super::model_morphism::DiscreteDblModelMapping;
+use super::model::{DblModel, DblModelBox, expect_single_uuid};
 use super::notation::*;
 use super::result::JsResult;
 use super::theory::DblTheory;
@@ -50,11 +48,11 @@ impl DblModelDiagram {
         all_the_same!(match &mut self.0 {
             DblModelDiagramBox::[Discrete](diagram) => {
                 let (mapping, model) = diagram.into();
-                let ob_type: Ustr = Elaborator.elab(&decl.ob_type)?;
+                let ob_type: QualifiedName = Elaborator.elab(&decl.ob_type)?;
                 if let Some(over) = decl.over.as_ref().map(|ob| Elaborator.elab(ob)).transpose()? {
-                    mapping.assign_ob(decl.id, over);
+                    mapping.assign_ob(decl.id.into(), over);
                 }
-                model.add_ob(decl.id, ob_type);
+                model.add_ob(decl.id.into(), ob_type);
                 Ok(())
             }
         })
@@ -66,15 +64,15 @@ impl DblModelDiagram {
             DblModelDiagramBox::[Discrete](diagram) => {
                 let (mapping, model) = diagram.into();
                 let mor_type = Elaborator.elab(&decl.mor_type)?;
-                model.make_mor(decl.id, mor_type);
+                model.make_mor(decl.id.into(), mor_type);
                 if let Some(dom) = decl.dom.as_ref().map(|ob| Elaborator.elab(ob)).transpose()? {
-                    model.set_dom(decl.id, dom);
+                    model.set_dom(decl.id.into(), dom);
                 }
                 if let Some(cod) = decl.cod.as_ref().map(|ob| Elaborator.elab(ob)).transpose()? {
-                    model.set_cod(decl.id, cod);
+                    model.set_cod(decl.id.into(), cod);
                 }
                 if let Some(over) = decl.over.as_ref().map(|mor| Elaborator.elab(mor)).transpose()? {
-                    mapping.assign_mor(decl.id, over);
+                    mapping.assign_mor(decl.id.into(), over);
                 }
                 Ok(())
             }
@@ -139,7 +137,7 @@ impl DblModelDiagram {
                 let decls = model.ob_generators().map(|x| {
                     DiagramObDecl {
                         name: "".into(),
-                        id: x,
+                        id: expect_single_uuid(&x),
                         ob_type: Quoter.quote(&model.ob_generator_type(&x)),
                         over: mapping.0.ob_generator_map.get(&x).map(|ob| Quoter.quote(ob))
                     }
@@ -158,7 +156,7 @@ impl DblModelDiagram {
                 let decls = model.mor_generators().map(|f| {
                     DiagramMorDecl {
                         name: "".into(),
-                        id: f,
+                        id: expect_single_uuid(&f),
                         mor_type: Quoter.quote(&model.mor_generator_type(&f)),
                         over: mapping.0.mor_generator_map.get(&f).map(|mor| Quoter.quote(mor)),
                         dom: model.get_dom(&f).cloned().map(|ob| Quoter.quote(&ob)),
@@ -201,7 +199,7 @@ impl DblModelDiagram {
 #[derive(Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct ModelDiagramValidationResult(
-    pub JsResult<(), Vec<diagram::InvalidDiscreteDblModelDiagram<Uuid>>>,
+    pub JsResult<(), Vec<diagram::InvalidDiscreteDblModelDiagram>>,
 );
 
 /// Elaborates a diagram defined by a notebook into a catlog diagram.
@@ -222,6 +220,8 @@ pub fn elaborate_diagram(
 
 #[cfg(test)]
 mod tests {
+    use uuid::Uuid;
+
     use super::*;
     use crate::model::tests::sch_walking_attr;
     use crate::theories::*;

@@ -196,6 +196,15 @@ impl QualifiedName {
         Self(vec![id])
     }
 
+    /// Gets the segment from a qualified name with only one segment.
+    pub fn only(&self) -> Option<NameSegment> {
+        if self.0.len() == 1 {
+            Some(self.0[0])
+        } else {
+            None
+        }
+    }
+
     /// Serializes the qualified name into a string.
     pub fn serialize_string(&self) -> String {
         self.0.iter().map(|segment| segment.serialize_string()).join(".")
@@ -228,12 +237,12 @@ mod tests {
 
     #[test]
     fn serialize_name() {
-        let name = QualifiedName::from(A_UUID);
+        let name: QualifiedName = A_UUID.into();
         let serialized = name.serialize_string();
         assert_eq!(serialized.chars().next_tuple(), Some(('6', '7', 'e')));
         assert_eq!(QualifiedName::deserialize_str(&serialized), Ok(name));
 
-        let name = QualifiedName::from(["foo", "bar", "baz"].map(NameSegment::from));
+        let name: QualifiedName = ["foo", "bar", "baz"].map(NameSegment::from).into();
         let serialized = name.serialize_string();
         assert_eq!(serialized, "`foo`.`bar`.`baz`");
         assert_eq!(QualifiedName::deserialize_str(&serialized), Ok(name));

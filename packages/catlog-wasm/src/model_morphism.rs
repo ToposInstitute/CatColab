@@ -1,17 +1,12 @@
 //! Wasm bindings for morphisms between models of a double theory.
 
-use std::hash::Hash;
-
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
-use uuid::Uuid;
 
 use catlog::dbl::{model, model_morphism};
-use catlog::one::{FgCategory, fp_category::UstrFpCategory};
+use catlog::one::FgCategory;
 
 use super::model::DblModel;
-
-pub(crate) type DiscreteDblModelMapping = model_morphism::DiscreteDblModelMapping<Uuid, Uuid>;
 
 /// Options for motif finder.
 #[derive(Debug, Deserialize, Serialize, Tsify)]
@@ -22,14 +17,11 @@ pub struct MotifsOptions {
 }
 
 /// Find motifs in a model of a discrete double theory.
-pub fn motifs<Id>(
-    motif: &model::DiscreteDblModel<Id, UstrFpCategory>,
+pub fn motifs(
+    motif: &model::DiscreteDblModel,
     model: &DblModel,
     options: MotifsOptions,
-) -> Result<Vec<DblModel>, String>
-where
-    Id: Clone + Eq + Hash,
-{
+) -> Result<Vec<DblModel>, String> {
     let model = model.discrete()?;
     let mut finder = model_morphism::DiscreteDblModelMapping::morphisms(motif, model);
     if let Some(n) = options.max_path_len {
