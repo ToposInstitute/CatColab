@@ -1,4 +1,5 @@
 {
+  self,
   craneLib,
   cargoArtifacts,
   pkgs,
@@ -13,7 +14,7 @@ in
 craneLib.buildPackage {
   inherit cargoArtifacts pname version;
 
-  cargoExtraArgs = "-p catcolab-backend";
+  cargoExtraArgs = "-p backend";
 
   nativeBuildInputs = [
     pkgs.pkg-config
@@ -21,6 +22,7 @@ craneLib.buildPackage {
 
   buildInputs = [
     pkgs.openssl
+    pkgs.makeWrapper
   ];
 
   src = pkgs.lib.fileset.toSource {
@@ -33,6 +35,14 @@ craneLib.buildPackage {
     ];
   };
 
+  propagatedBuildInputs = [
+    self.packages.x86_64-linux.automerge
+  ];
+
+  postFixup = ''
+    wrapProgram $out/bin/${pname} \
+      --prefix PATH : ${pkgs.lib.makeBinPath [ self.packages.x86_64-linux.automerge ]}
+  '';
   meta = {
     mainProgram = pname;
   };

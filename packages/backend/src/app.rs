@@ -3,8 +3,11 @@ use serde::Serialize;
 use socketioxide::SocketIo;
 use sqlx::PgPool;
 use thiserror::Error;
+use tokio::sync::watch;
 use ts_rs::TS;
 use uuid::Uuid;
+
+use crate::AppStatus;
 
 /** Top-level application state.
 
@@ -17,6 +20,8 @@ pub struct AppState {
 
     /// Socket for communicating with Automerge document server.
     pub automerge_io: SocketIo,
+
+    pub app_status: watch::Receiver<AppStatus>,
 }
 
 /// Context available to RPC procedures.

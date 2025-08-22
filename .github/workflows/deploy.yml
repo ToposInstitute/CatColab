@@ -65,7 +65,7 @@ jobs:
         if: github.event_name == 'push' || github.event_name == 'pull_request'
         run: |
           pnpm install
-          pnpm --filter ./packages/frontend run build --mode staging
+          pnpm --filter ./packages/frontend run build -- --mode staging
 
       - name: Build for Production
         if: github.event_name == 'release'
