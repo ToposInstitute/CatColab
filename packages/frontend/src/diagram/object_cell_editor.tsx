@@ -1,5 +1,5 @@
 import { createSignal } from "solid-js";
-
+import { ObType } from "catlog-wasm";
 import { NameInput } from "../components";
 import { ObInput } from "../model/object_input";
 import type { CellActions } from "../notebook";
@@ -19,8 +19,14 @@ export function DiagramObjectCellEditor(props: {
 }) {
     const [activeInput, setActiveInput] = createSignal<DiagramObjectCellInput>("name");
 
+	const cssClasses = () => [
+	  "formal-judgment",
+	  "object-decl",
+	  ...obClasses(props.theory, props.decl.obType),
+	];
+
     return (
-        <div class="formal-judgment diagram-object-decl">
+        <div class={cssClasses().join(" ")}>
             <NameInput
                 name={props.decl.name}
                 setName={(name) => {
@@ -64,3 +70,8 @@ export function DiagramObjectCellEditor(props: {
 }
 
 type DiagramObjectCellInput = "name" | "overOb";
+
+export function obClasses(theory: Theory, typ?: ObType): string[] {
+    const typeMeta = typ ? theory.modelObTypeMeta(typ) : undefined;
+    return [...(typeMeta?.cssClasses ?? []), ...(typeMeta?.textClasses ?? [])];
+}

@@ -17,6 +17,8 @@ export function BasicObInput(
     const liveDiagram = useContext(LiveDiagramContext);
     invariant(liveDiagram, "Live diagram should be provided as context");
 
+	console.log("OBTYPE: ", props.ob, props.obType);
+
     const completions = (): Ob[] | undefined =>
         props.obType && liveDiagram().elaboratedDiagram()?.objectsWithType(props.obType);
 

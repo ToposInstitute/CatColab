@@ -7,11 +7,14 @@ use tsify::Tsify;
 use uuid::Uuid;
 
 use catlog::dbl::{model, model_morphism};
-use catlog::one::{FgCategory, fp_category::UstrFpCategory};
+use catlog::one::{fp_category::UstrFpCategory, FgCategory};
 
 use super::model::DblModel;
 
 pub(crate) type DiscreteDblModelMapping = model_morphism::DiscreteDblModelMapping<Uuid, Uuid>;
+
+// TODO need to add ModalDblModelMapping
+pub(crate) type ModalDblModelMapping = model_morphism::ModalDblModelMapping<Uuid, Uuid>;
 
 /// Options for motif finder.
 #[derive(Debug, Deserialize, Serialize, Tsify)]

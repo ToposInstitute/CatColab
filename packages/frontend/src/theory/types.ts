@@ -279,7 +279,23 @@ export type InstanceTypeMeta = InstanceObTypeMeta | InstanceMorTypeMeta;
 export type InstanceObTypeMeta = BaseObTypeMeta;
 
 /** Metadata for a morphism type as used in instances. */
-export type InstanceMorTypeMeta = BaseMorTypeMeta;
+export type InstanceMorTypeMeta = BaseMorTypeMeta & {
+	/** Style of arrow to use for morphisms of this type. */
+	arrowStyle?: ArrowStyle;
+
+	/** Whether morphism of this type are typically unnamed.
+	
+	By defualt, morphisms (like objects) have named but for certain morphism
+	types in certain domains, it is common to leave them unnamed.
+	*/
+	preferUnnamed?: boolean;
+
+	/** Metadata for domain of morphisms of this type. */
+	domain?: MorDomainMeta;
+
+	/** Metadata for codomain of morphism of this type. */
+	codomain?: MorDomainMeta;
+};
 
 /** Specifies a migration of models from one theory into another. */
 type ModelMigration = {

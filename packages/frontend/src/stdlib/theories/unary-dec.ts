@@ -1,15 +1,15 @@
-import { ThCategoryWithScalars } from "catlog-wasm";
+import { ThSymMonoidalCategory } from "catlog-wasm";
 
 import { Theory } from "../../theory";
 import * as analyses from "../analyses";
 import type { TheoryMeta } from "../types";
 
 export default function createUnaryDECTheory(theoryMeta: TheoryMeta): Theory {
-    const thCategoryWithScalars = new ThCategoryWithScalars();
+    const thSymMonoidalCategory = new ThSymMonoidalCategory();
 
     return new Theory({
         ...theoryMeta,
-        theory: thCategoryWithScalars.theory(),
+        theory: thSymMonoidalCategory.theory(),
         modelTypes: [
             {
                 tag: "ObType",
@@ -18,23 +18,21 @@ export default function createUnaryDECTheory(theoryMeta: TheoryMeta): Theory {
                 shortcut: ["F"],
                 description: "A type of differential form on the space",
             },
-            {
-                tag: "MorType",
-                morType: { tag: "Basic", content: "Nonscalar" },
-                name: "Operator",
-                shortcut: ["D"],
-                description: "A differential operator",
-            },
-            {
+			{
                 tag: "MorType",
                 morType: {
                     tag: "Hom",
                     content: { tag: "Basic", content: "Object" },
                 },
-                name: "Scalar",
-                arrowStyle: "scalar",
-                shortcut: ["S"],
-                description: "Multiplication by a scalar",
+                name: "Transition",
+                description: "Event causing change of state",
+                shortcut: ["M"],
+                domain: {
+                    apply: { tag: "Basic", content: "tensor" },
+                },
+                codomain: {
+                    apply: { tag: "Basic", content: "tensor" },
+                },
             },
         ],
         instanceOfName: "Equations in",
@@ -48,28 +46,26 @@ export default function createUnaryDECTheory(theoryMeta: TheoryMeta): Theory {
             },
             {
                 tag: "MorType",
-                morType: { tag: "Basic", content: "Nonscalar" },
+                morType: {
+					tag: "Hom",
+					content: { tag: "Basic", content: "Object" },
+				},
                 name: "Apply operator",
                 description: "An application of an operator to a form",
                 shortcut: ["D"],
-            },
-            {
-                tag: "MorType",
-                morType: {
-                    tag: "Hom",
-                    content: { tag: "Basic", content: "Object" },
+				domain: {
+                    apply: { tag: "Basic", content: "tensor" },
                 },
-                name: "Scalar multiply",
-                description: "A scalar multiplication on a form",
-                shortcut: ["S"],
+                codomain: {
+                    apply: { tag: "Basic", content: "tensor" },
+                },
             },
         ],
         modelAnalyses: [
-            analyses.configureModelGraph({
+            analyses.configurePetriNetVisualization({
                 id: "graph",
                 name: "Visualization",
-                description: "Visualize the operations as a graph",
-                help: "visualization",
+                description: "Visualize the [...]",
             }),
         ],
         diagramAnalyses: [
