@@ -139,6 +139,7 @@ infer_types!(diagram.pode)
     add_part!(handcrafted_pode, :Op1, src=2, tgt=9, op1=:∂ₜ)
     add_part!(handcrafted_pode, :Op1, src=8, tgt=10, op1=:dual_d₁)
     add_part!(handcrafted_pode, :Op1, src=10, tgt=9, op1=:neg)
+    infer_types!(handcrafted_pode)
     @test diagram.pode == handcrafted_pode
 end
 # TODO not specifying initial boundary conditions for `B` on the front-end

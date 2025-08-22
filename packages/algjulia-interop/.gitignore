@@ -25,3 +25,6 @@ Manifest.toml
 
 # Julia sys images
 *.so
+
+# Local preferences
+LocalPreferences.toml
