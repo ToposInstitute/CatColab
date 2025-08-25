@@ -384,10 +384,9 @@ impl DblModel {
         })
     }
 
-    /// Gets the domain of a basic morphism, if it is set.
+    /// Gets the domain of a morphism generator, if it is set.
     #[wasm_bindgen(js_name = "getDom")]
-    pub fn get_dom(&self, name: &str) -> Result<Option<Ob>, String> {
-        let name = QualifiedName::deserialize_str(name)?;
+    pub fn get_dom(&self, name: &QualifiedName) -> Result<Option<Ob>, String> {
         all_the_same!(match &self.0 {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
                 Ok(model.get_dom(&name).map(|ob| Quoter.quote(ob)))
@@ -395,10 +394,9 @@ impl DblModel {
         })
     }
 
-    /// Gets the codomain of a basic morphism, if it is set.
+    /// Gets the codomain of a morphism generator, if it is set.
     #[wasm_bindgen(js_name = "getCod")]
-    pub fn get_cod(&self, name: &str) -> Result<Option<Ob>, String> {
-        let name = QualifiedName::deserialize_str(name)?;
+    pub fn get_cod(&self, name: &QualifiedName) -> Result<Option<Ob>, String> {
         all_the_same!(match &self.0 {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
                 Ok(model.get_cod(&name).map(|ob| Quoter.quote(ob)))
@@ -562,8 +560,8 @@ pub(crate) mod tests {
         assert_eq!(model.has_mor(a.clone()), Ok(true));
         assert_eq!(model.dom(a.clone()), Ok(x.clone()));
         assert_eq!(model.cod(a.clone()), Ok(y.clone()));
-        assert_eq!(model.get_dom(&a_id.to_string()), Ok(Some(x.clone())));
-        assert_eq!(model.get_cod(&a_id.to_string()), Ok(Some(y.clone())));
+        assert_eq!(model.get_dom(&a_id.into()), Ok(Some(x.clone())));
+        assert_eq!(model.get_cod(&a_id.into()), Ok(Some(y.clone())));
         assert_eq!(model.ob_type(x.clone()), Ok(ObType::Basic("Entity".into())));
         assert_eq!(model.mor_type(a.clone()), Ok(MorType::Basic("Attr".into())));
         assert_eq!(model.objects().len(), 2);
