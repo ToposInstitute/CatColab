@@ -14,6 +14,7 @@ export type IdInputOptions = {
     generateId?: () => Uuid;
     idToName?: IdToNameMap;
     isInvalid?: boolean;
+    completions?: Uuid[];
 } & Omit<InlineInputOptions, "completions" | "status">;
 
 /** Input a UUID by specifying its human-readable name.
@@ -24,7 +25,6 @@ export function IdInput(
     allProps: {
         id: Uuid | null;
         setId: (id: Uuid | null) => void;
-        completions?: Uuid[];
     } & IdInputOptions,
 ) {
     const [props, inputProps] = splitProps(allProps, [
@@ -127,10 +127,9 @@ export function ObIdInput(
     allProps: {
         ob: Ob | null;
         setOb: (ob: Ob | null) => void;
-        completions?: Ob[];
     } & IdInputOptions,
 ) {
-    const [props, inputProps] = splitProps(allProps, ["ob", "setOb", "completions"]);
+    const [props, inputProps] = splitProps(allProps, ["ob", "setOb"]);
 
     const getId = (ob: Ob | null): Uuid | null =>
         match(ob)
@@ -156,10 +155,7 @@ export function ObIdInput(
         );
     };
 
-    const completions = (): Uuid[] | undefined =>
-        props.completions?.map(getId).filter((id) => id !== null);
-
-    return <IdInput id={id()} setId={setId} completions={completions()} {...inputProps} />;
+    return <IdInput id={id()} setId={setId} {...inputProps} />;
 }
 
 /** Input a basic morphism by specifying its human-readable name.
@@ -168,10 +164,9 @@ export function MorIdInput(
     allProps: {
         mor: Mor | null;
         setMor: (mor: Mor | null) => void;
-        completions?: Mor[];
     } & IdInputOptions,
 ) {
-    const [props, inputProps] = splitProps(allProps, ["mor", "setMor", "completions"]);
+    const [props, inputProps] = splitProps(allProps, ["mor", "setMor"]);
 
     const getId = (mor: Mor | null): Uuid | null =>
         match(mor)
@@ -197,8 +192,5 @@ export function MorIdInput(
         );
     };
 
-    const completions = (): Uuid[] | undefined =>
-        props.completions?.map(getId).filter((id) => id !== null);
-
-    return <IdInput id={id()} setId={setId} completions={completions()} {...inputProps} />;
+    return <IdInput id={id()} setId={setId} {...inputProps} />;
 }

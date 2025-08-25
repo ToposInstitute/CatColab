@@ -85,12 +85,7 @@ export function petriNetToGraphviz(
 ): Viz.Graph {
     // Add nodes for places.
     const nodes: Required<Viz.Graph>["nodes"] = [];
-    const objectIds = model
-        .objects()
-        .filter((ob) => ob.tag === "Basic")
-        .map((ob) => ob.content);
-    objectIds.sort();
-    for (const id of objectIds) {
+    for (const id of model.obGenerators()) {
         nodes.push({
             name: id,
             attributes: {
@@ -105,12 +100,7 @@ export function petriNetToGraphviz(
 
     /// Add nodes for transitions and edges for arcs.
     const edges: Required<Viz.Graph>["edges"] = [];
-    const morphismIds = model
-        .morphisms()
-        .filter((mor) => mor.tag === "Basic")
-        .map((mor) => mor.content);
-    morphismIds.sort();
-    for (const id of morphismIds) {
+    for (const id of model.morGenerators()) {
         nodes.push({
             name: id,
             attributes: {

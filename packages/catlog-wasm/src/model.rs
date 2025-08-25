@@ -389,7 +389,7 @@ impl DblModel {
     pub fn get_dom(&self, name: &QualifiedName) -> Result<Option<Ob>, String> {
         all_the_same!(match &self.0 {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
-                Ok(model.get_dom(&name).map(|ob| Quoter.quote(ob)))
+                Ok(model.get_dom(name).map(|ob| Quoter.quote(ob)))
             }
         })
     }
@@ -399,7 +399,7 @@ impl DblModel {
     pub fn get_cod(&self, name: &QualifiedName) -> Result<Option<Ob>, String> {
         all_the_same!(match &self.0 {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
-                Ok(model.get_cod(&name).map(|ob| Quoter.quote(ob)))
+                Ok(model.get_cod(name).map(|ob| Quoter.quote(ob)))
             }
         })
     }
@@ -424,44 +424,51 @@ impl DblModel {
         })
     }
 
-    /// Returns array of all basic objects in the model.
-    #[wasm_bindgen]
-    pub fn objects(&self) -> Vec<Ob> {
-        all_the_same!(match &self.0 {
+    /// Returns the object generators for the model.
+    #[wasm_bindgen(js_name = "obGenerators")]
+    pub fn ob_generators(&self) -> Vec<QualifiedName> {
+        let mut ob_gens: Vec<_> = all_the_same!(match &self.0 {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
-                model.objects().map(|x| Quoter.quote(&x)).collect()
+                model.ob_generators().collect()
             }
-        })
+        });
+        ob_gens.sort(); // Ensure stable order in frontend.
+        ob_gens
     }
 
-    /// Returns array of all basic morphisms in the model.
-    #[wasm_bindgen]
-    pub fn morphisms(&self) -> Vec<Mor> {
-        all_the_same!(match &self.0 {
+    /// Returns the morphism generators for the model.
+    #[wasm_bindgen(js_name = "morGenerators")]
+    pub fn mor_generators(&self) -> Vec<QualifiedName> {
+        let mut mor_gens: Vec<_> = all_the_same!(match &self.0 {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
-                model.morphisms().map(|f| Quoter.quote(&f)).collect()
+                model.mor_generators().collect()
             }
-        })
+        });
+        mor_gens.sort(); // Ensure stable order in frontend.
+        mor_gens
     }
 
-    /// Returns array of basic objects with the given type.
-    #[wasm_bindgen(js_name = "objectsWithType")]
-    pub fn objects_with_type(&self, ob_type: ObType) -> Result<Vec<Ob>, String> {
+    /// Returns the object generators of the given object type.
+    #[wasm_bindgen(js_name = "obGeneratorsWithType")]
+    pub fn ob_generators_with_type(&self, ob_type: ObType) -> Result<Vec<QualifiedName>, String> {
         all_the_same!(match &self.0 {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
                 let ob_type = Elaborator.elab(&ob_type)?;
-                Ok(model.objects_with_type(&ob_type).map(|ob| Quoter.quote(&ob)).collect())
+                Ok(model.ob_generators_with_type(&ob_type).collect())
             }
         })
     }
 
-    /// Returns array of basic morphisms with the given type.
-    #[wasm_bindgen(js_name = "morphismsWithType")]
-    pub fn morphisms_with_type(&self, mor_type: MorType) -> Result<Vec<Mor>, String> {
+    /// Returns the morphism generators of the given morphism type.
+    #[wasm_bindgen(js_name = "morGeneratorsWithType")]
+    pub fn mor_generators_with_type(
+        &self,
+        mor_type: MorType,
+    ) -> Result<Vec<QualifiedName>, String> {
         all_the_same!(match &self.0 {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
                 let mor_type = Elaborator.elab(&mor_type)?;
-                Ok(model.morphisms_with_type(&mor_type).map(|mor| Quoter.quote(&mor)).collect())
+                Ok(model.mor_generators_with_type(&mor_type).collect())
             }
         })
     }
@@ -555,7 +562,7 @@ pub(crate) mod tests {
         let model = sch_walking_attr(&th, [a, x, y]);
 
         let (a_id, a) = (a, Mor::Basic(a.to_string()));
-        let (x, y) = (Ob::Basic(x.to_string()), Ob::Basic(y.to_string()));
+        let (x_id, x, y) = (x, Ob::Basic(x.to_string()), Ob::Basic(y.to_string()));
         assert_eq!(model.has_ob(x.clone()), Ok(true));
         assert_eq!(model.has_mor(a.clone()), Ok(true));
         assert_eq!(model.dom(a.clone()), Ok(x.clone()));
@@ -564,10 +571,16 @@ pub(crate) mod tests {
         assert_eq!(model.get_cod(&a_id.into()), Ok(Some(y.clone())));
         assert_eq!(model.ob_type(x.clone()), Ok(ObType::Basic("Entity".into())));
         assert_eq!(model.mor_type(a.clone()), Ok(MorType::Basic("Attr".into())));
-        assert_eq!(model.objects().len(), 2);
-        assert_eq!(model.morphisms().len(), 1);
-        assert_eq!(model.objects_with_type(ObType::Basic("Entity".into())), Ok(vec![x.clone()]));
-        assert_eq!(model.morphisms_with_type(MorType::Basic("Attr".into())), Ok(vec![a.clone()]));
+        assert_eq!(model.ob_generators().len(), 2);
+        assert_eq!(model.mor_generators().len(), 1);
+        assert_eq!(
+            model.ob_generators_with_type(ObType::Basic("Entity".into())),
+            Ok(vec![x_id.into()])
+        );
+        assert_eq!(
+            model.mor_generators_with_type(MorType::Basic("Attr".into())),
+            Ok(vec![a_id.into()])
+        );
         assert_eq!(model.validate().0, JsResult::Ok(()));
 
         let mut model = DblModel::new(&th);
@@ -630,8 +643,8 @@ pub(crate) mod tests {
                 })
                 .is_ok()
         );
-        assert_eq!(model.objects().len(), 2);
-        assert_eq!(model.morphisms().len(), 2);
+        assert_eq!(model.ob_generators().len(), 2);
+        assert_eq!(model.mor_generators().len(), 2);
         assert_eq!(model.validate().0, JsResult::Ok(()));
     }
 }

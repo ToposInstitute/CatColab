@@ -1,7 +1,7 @@
 import { useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import type { Ob, ObType } from "catlog-wasm";
+import type { Ob, ObType, QualifiedName } from "catlog-wasm";
 import { type IdInputOptions, ObIdInput } from "../components";
 import { LiveDiagramContext } from "./context";
 
@@ -17,8 +17,8 @@ export function BasicObInput(
     const liveDiagram = useContext(LiveDiagramContext);
     invariant(liveDiagram, "Live diagram should be provided as context");
 
-    const completions = (): Ob[] | undefined =>
-        props.obType && liveDiagram().elaboratedDiagram()?.objectsWithType(props.obType);
+    const completions = (): QualifiedName[] | undefined =>
+        props.obType && liveDiagram().elaboratedDiagram()?.obGeneratorsWithType(props.obType);
 
     return (
         <ObIdInput completions={completions()} idToName={liveDiagram().objectIndex()} {...props} />

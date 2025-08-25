@@ -11,7 +11,7 @@ import {
 } from "solid-js";
 import invariant from "tiny-invariant";
 
-import type { Ob } from "catlog-wasm";
+import type { Ob, QualifiedName } from "catlog-wasm";
 import { type InputOptions, ObIdInput } from "../components";
 import { deepCopyJSON } from "../util/deepcopy";
 import { LiveModelContext } from "./context";
@@ -86,8 +86,8 @@ export function ObListEditor(props: ObListEditorProps) {
         });
     };
 
-    const completions = (): Ob[] | undefined =>
-        liveModel().elaboratedModel()?.objectsWithType(modeAppType().content.obType);
+    const completions = (): QualifiedName[] | undefined =>
+        liveModel().elaboratedModel()?.obGeneratorsWithType(modeAppType().content.obType);
 
     // Make the default value the empty list, rather than null.
     createEffect(() => {

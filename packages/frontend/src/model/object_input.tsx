@@ -105,8 +105,8 @@ function BasicObInput(allProps: ObInputProps & IdInputOptions) {
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
 
-    const completions = (): Ob[] | undefined =>
-        liveModel().elaboratedModel()?.objectsWithType(props.obType);
+    const completions = (): Uuid[] | undefined =>
+        liveModel().elaboratedModel()?.obGeneratorsWithType(props.obType);
 
     return (
         <ObIdInput
@@ -145,21 +145,7 @@ function TabulatedMorInput(allProps: ObInputProps & IdInputOptions) {
         if (!morType) {
             return undefined;
         }
-        return liveModel()
-            .elaboratedModel()
-            ?.morphismsWithType(morType)
-            .map((mor) =>
-                match(mor)
-                    .with(
-                        {
-                            tag: "Basic",
-                            content: P.select(),
-                        },
-                        (id) => id,
-                    )
-                    .otherwise(() => null),
-            )
-            .filter((id) => id !== null);
+        return liveModel().elaboratedModel()?.morGeneratorsWithType(morType);
     };
 
     const id = (): Uuid | null =>

@@ -83,48 +83,55 @@ impl DblModelDiagram {
 
 #[wasm_bindgen]
 impl DblModelDiagram {
-    /// Returns array of all basic objects in the diagram.
-    #[wasm_bindgen]
-    pub fn objects(&self) -> Vec<Ob> {
-        all_the_same!(match &self.0 {
+    /// Returns the object generators for the diagram's indexing model.
+    #[wasm_bindgen(js_name = "obGenerators")]
+    pub fn ob_generators(&self) -> Vec<QualifiedName> {
+        let mut ob_gens: Vec<_> = all_the_same!(match &self.0 {
             DblModelDiagramBox::[Discrete](diagram) => {
                 let (_, model) = diagram.into();
-                model.objects().map(|x| Quoter.quote(&x)).collect()
+                model.ob_generators().collect()
             }
-        })
+        });
+        ob_gens.sort();
+        ob_gens
     }
 
-    /// Returns array of all basic morphisms in the diagram.
-    #[wasm_bindgen]
-    pub fn morphisms(&self) -> Vec<Mor> {
-        all_the_same!(match &self.0 {
+    /// Returns the morphism generators for the diagram's indexing model.
+    #[wasm_bindgen(js_name = "morGenerators")]
+    pub fn mor_generators(&self) -> Vec<QualifiedName> {
+        let mut mor_gens: Vec<_> = all_the_same!(match &self.0 {
             DblModelDiagramBox::[Discrete](diagram) => {
                 let (_, model) = diagram.into();
-                model.morphisms().map(|f| Quoter.quote(&f)).collect()
+                model.mor_generators().collect()
             }
-        })
+        });
+        mor_gens.sort();
+        mor_gens
     }
 
-    /// Returns array of basic objects with the given type.
-    #[wasm_bindgen(js_name = "objectsWithType")]
-    pub fn objects_with_type(&self, ob_type: ObType) -> Result<Vec<Ob>, String> {
+    /// Returns the object generators of the given object type.
+    #[wasm_bindgen(js_name = "obGeneratorsWithType")]
+    pub fn ob_generators_with_type(&self, ob_type: ObType) -> Result<Vec<QualifiedName>, String> {
         all_the_same!(match &self.0 {
             DblModelDiagramBox::[Discrete](diagram) => {
                 let (_, model) = diagram.into();
                 let ob_type = Elaborator.elab(&ob_type)?;
-                Ok(model.objects_with_type(&ob_type).map(|x| Quoter.quote(&x)).collect())
+                Ok(model.ob_generators_with_type(&ob_type).collect())
             }
         })
     }
 
-    /// Returns array of basic morphisms with the given type.
-    #[wasm_bindgen(js_name = "morphismsWithType")]
-    pub fn morphisms_with_type(&self, mor_type: MorType) -> Result<Vec<Mor>, String> {
+    /// Returns the morphism generators of the given morphism type.
+    #[wasm_bindgen(js_name = "morGeneratorsWithType")]
+    pub fn mor_generators_with_type(
+        &self,
+        mor_type: MorType,
+    ) -> Result<Vec<QualifiedName>, String> {
         all_the_same!(match &self.0 {
             DblModelDiagramBox::[Discrete](diagram) => {
                 let (_, model) = diagram.into();
                 let mor_type = Elaborator.elab(&mor_type)?;
-                Ok(model.morphisms_with_type(&mor_type).map(|f| Quoter.quote(&f)).collect())
+                Ok(model.mor_generators_with_type(&mor_type).collect())
             }
         })
     }
@@ -278,9 +285,9 @@ mod tests {
                     .is_ok()
             );
         }
-        assert_eq!(diagram.objects().len(), 3);
+        assert_eq!(diagram.ob_generators().len(), 3);
         assert_eq!(diagram.object_declarations().len(), 3);
-        assert_eq!(diagram.morphisms().len(), 2);
+        assert_eq!(diagram.mor_generators().len(), 2);
         assert_eq!(diagram.morphism_declarations().len(), 2);
         assert_eq!(diagram.validate_in(&model).unwrap().0, JsResult::Ok(()));
     }
