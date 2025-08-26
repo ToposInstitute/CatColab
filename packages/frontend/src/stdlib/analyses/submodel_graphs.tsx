@@ -74,22 +74,6 @@ function SubmodelsAnalysis(
     const decIndex = () => setIndex(Math.max(0, index() - 1));
     const incIndex = () => setIndex(Math.min(index() + 1, submodels().length - 1));
 
-    const filteredModel = () => {
-        const submodel = submodels()[index()];
-        if (!submodel) {
-            return [];
-        }
-        return props.liveModel.formalJudgments().filter((judgment) => {
-            if (judgment.tag === "object") {
-                return submodel.hasOb({ tag: "Basic", content: judgment.id });
-            } else if (judgment.tag === "morphism") {
-                return submodel.hasMor({ tag: "Basic", content: judgment.id });
-            } else {
-                return false;
-            }
-        });
-    };
-
     const indexButtons = (
         <div class="index-buttons">
             <IconButton onClick={decIndex} disabled={index() <= 0}>
@@ -137,13 +121,19 @@ function SubmodelsAnalysis(
                     </Show>
                 </FormGroup>
             </Foldable>
-            <ModelGraphviz
-                model={filteredModel()}
-                theory={props.liveModel.theory()}
-                options={{
-                    engine: "dot",
-                }}
-            />
+            <Show when={submodels()[index()]}>
+                {(model) => (
+                    <ModelGraphviz
+                        model={model()}
+                        theory={props.liveModel.theory()}
+                        objectIndex={props.liveModel.objectIndex().map}
+                        morphismIndex={props.liveModel.morphismIndex().map}
+                        options={{
+                            engine: "dot",
+                        }}
+                    />
+                )}
+            </Show>
         </div>
     );
 }

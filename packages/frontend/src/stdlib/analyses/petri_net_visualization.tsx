@@ -1,7 +1,7 @@
 import type * as Viz from "@viz-js/viz";
 import { Show, createSignal } from "solid-js";
 
-import { type DblModel, type Uuid, collectProduct } from "catlog-wasm";
+import { type DblModel, type QualifiedName, collectProduct } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { Foldable } from "../../components";
 import type { ModelAnalysisMeta } from "../../theory";
@@ -60,8 +60,8 @@ export function PetriNetVisualization(props: ModelAnalysisProps<GV.GraphConfig>)
 /** Visualize a Petri net using Graphviz. */
 export function PetriNetGraphviz(props: {
     model: DblModel;
-    objectIndex?: Map<Uuid, string>;
-    morphismIndex?: Map<Uuid, string>;
+    objectIndex?: Map<QualifiedName, string>;
+    morphismIndex?: Map<QualifiedName, string>;
     options?: Viz.RenderOptions;
     ref?: SVGRefProp;
 }) {
@@ -80,8 +80,8 @@ Both the places and the transitions become nodes in the graph.
  */
 export function petriNetToGraphviz(
     model: DblModel,
-    objectIndex?: Map<Uuid, string>,
-    morphismIndex?: Map<Uuid, string>,
+    objectIndex?: Map<QualifiedName, string>,
+    morphismIndex?: Map<QualifiedName, string>,
 ): Viz.Graph {
     // Add nodes for places.
     const nodes: Required<Viz.Graph>["nodes"] = [];
