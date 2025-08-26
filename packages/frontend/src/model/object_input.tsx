@@ -4,7 +4,7 @@ import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 import { P, match } from "ts-pattern";
 
-import type { MorType, Ob, ObOp, ObType, Uuid } from "catlog-wasm";
+import type { MorType, Ob, ObOp, ObType, QualifiedName, Uuid } from "catlog-wasm";
 import { IdInput, type IdInputOptions, type InputOptions, ObIdInput } from "../components";
 import { LiveModelContext } from "./context";
 import { ObListEditor } from "./object_list_editor";
@@ -105,13 +105,20 @@ function BasicObInput(allProps: ObInputProps & IdInputOptions) {
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
 
-    const completions = (): Uuid[] | undefined =>
+    const completions = (): QualifiedName[] | undefined =>
         liveModel().elaboratedModel()?.obGeneratorsWithType(props.obType);
 
     return (
         <ObIdInput
             completions={completions()}
-            idToName={liveModel().objectIndex()}
+            idToName={(id) => liveModel().elaboratedModel()?.obGeneratorName(id)}
+            nameToIds={(name) => {
+                if (typeof name === "string") {
+                    return liveModel().elaboratedModel()?.obGeneratorsWithName(name) ?? [];
+                } else {
+                    return [];
+                }
+            }}
             {...otherProps}
         />
     );
@@ -140,7 +147,7 @@ function TabulatedMorInput(allProps: ObInputProps & IdInputOptions) {
             )
             .otherwise(() => null);
 
-    const completions = (): Uuid[] | undefined => {
+    const completions = (): QualifiedName[] | undefined => {
         const morType = tabulatedType();
         if (!morType) {
             return undefined;
@@ -180,7 +187,14 @@ function TabulatedMorInput(allProps: ObInputProps & IdInputOptions) {
         <IdInput
             id={id()}
             setId={setId}
-            idToName={liveModel().morphismIndex()}
+            idToName={(id) => liveModel().elaboratedModel()?.morGeneratorName(id)}
+            nameToIds={(name) => {
+                if (typeof name === "string") {
+                    return liveModel().elaboratedModel()?.morGeneratorsWithName(name) ?? [];
+                } else {
+                    return [];
+                }
+            }}
             completions={completions()}
             {...inputProps}
         />

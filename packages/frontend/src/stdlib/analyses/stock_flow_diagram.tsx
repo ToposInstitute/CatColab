@@ -1,7 +1,7 @@
 import type * as Viz from "@viz-js/viz";
 import { type Component, For, Show, createResource, createSignal } from "solid-js";
 
-import type { DblModel, QualifiedName } from "catlog-wasm";
+import type { DblModel } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { Foldable } from "../../components";
 import type { ModelAnalysisMeta, Theory } from "../../theory";
@@ -70,8 +70,6 @@ export function StockFlowDiagram(props: ModelAnalysisProps<GV.GraphConfig>) {
                         <StockFlowGraphviz
                             model={model()}
                             theory={props.liveModel.theory()}
-                            objectIndex={props.liveModel.objectIndex().map}
-                            morphismIndex={props.liveModel.morphismIndex().map}
                             options={GV.graphvizOptions(props.content)}
                             attributes={STOCKFLOW_ATTRIBUTES}
                             ref={setSvgRef}
@@ -91,8 +89,6 @@ links from stocks to flows using our own layout heuristics.
 export function StockFlowGraphviz(props: {
     model: DblModel;
     theory?: Theory;
-    objectIndex?: Map<QualifiedName, string>;
-    morphismIndex?: Map<QualifiedName, string>;
     attributes?: GV.GraphvizAttributes;
     options?: Viz.RenderOptions;
     ref?: SVGRefProp;
@@ -106,13 +102,7 @@ export function StockFlowGraphviz(props: {
             viz &&
             vizLayoutGraph(
                 viz,
-                modelToGraphviz(
-                    props.model,
-                    props.theory,
-                    props.objectIndex,
-                    props.morphismIndex,
-                    props.attributes,
-                ),
+                modelToGraphviz(props.model, props.theory, props.attributes),
                 props.options,
             )
         );

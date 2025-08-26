@@ -24,29 +24,34 @@ use super::theory::DblTheory;
 pub enum DblModelDiagramBox {
     /// A diagram in a model of a discrete double theory.
     Discrete(diagram::DblModelDiagram<DiscreteDblModelMapping, DiscreteDblModel>),
-    // DiscreteTab(), # TODO: Not implemented.
+    // Modal(), # TODO: Not implemented.
 }
 
 /// Wasm binding for a diagram in a model of a double theory.
 #[wasm_bindgen]
-pub struct DblModelDiagram(#[wasm_bindgen(skip)] pub DblModelDiagramBox);
+pub struct DblModelDiagram {
+    /// The boxed underlying diagram.
+    #[wasm_bindgen(skip)]
+    pub diagram: DblModelDiagramBox,
+}
 
 impl DblModelDiagram {
     /// Creates an empty diagram for the given theory.
     pub fn new(theory: &DblTheory) -> Self {
         let model = DblModel::new(theory);
-        Self(match model.0 {
+        let diagram = match model.model {
             DblModelBox::Discrete(model) => {
                 let mapping = Default::default();
                 diagram::DblModelDiagram(mapping, model).into()
             }
             _ => panic!("Diagrams only implemented for discrete double theories"),
-        })
+        };
+        Self { diagram }
     }
 
     /// Adds an object to the diagram.
     pub fn add_ob(&mut self, decl: &DiagramObDecl) -> Result<(), String> {
-        all_the_same!(match &mut self.0 {
+        all_the_same!(match &mut self.diagram {
             DblModelDiagramBox::[Discrete](diagram) => {
                 let (mapping, model) = diagram.into();
                 let ob_type: QualifiedName = Elaborator.elab(&decl.ob_type)?;
@@ -54,14 +59,14 @@ impl DblModelDiagram {
                     mapping.assign_ob(decl.id.into(), over);
                 }
                 model.add_ob(decl.id.into(), ob_type);
-                Ok(())
             }
-        })
+        });
+        Ok(())
     }
 
     /// Adds a morphism to the diagram.
     pub fn add_mor(&mut self, decl: &DiagramMorDecl) -> Result<(), String> {
-        all_the_same!(match &mut self.0 {
+        all_the_same!(match &mut self.diagram {
             DblModelDiagramBox::[Discrete](diagram) => {
                 let (mapping, model) = diagram.into();
                 let mor_type = Elaborator.elab(&decl.mor_type)?;
@@ -75,9 +80,9 @@ impl DblModelDiagram {
                 if let Some(over) = decl.over.as_ref().map(|mor| Elaborator.elab(mor)).transpose()? {
                     mapping.assign_mor(decl.id.into(), over);
                 }
-                Ok(())
             }
-        })
+        });
+        Ok(())
     }
 }
 
@@ -86,7 +91,7 @@ impl DblModelDiagram {
     /// Returns the object generators for the diagram's indexing model.
     #[wasm_bindgen(js_name = "obGenerators")]
     pub fn ob_generators(&self) -> Vec<QualifiedName> {
-        let mut ob_gens: Vec<_> = all_the_same!(match &self.0 {
+        let mut ob_gens: Vec<_> = all_the_same!(match &self.diagram {
             DblModelDiagramBox::[Discrete](diagram) => {
                 let (_, model) = diagram.into();
                 model.ob_generators().collect()
@@ -99,7 +104,7 @@ impl DblModelDiagram {
     /// Returns the morphism generators for the diagram's indexing model.
     #[wasm_bindgen(js_name = "morGenerators")]
     pub fn mor_generators(&self) -> Vec<QualifiedName> {
-        let mut mor_gens: Vec<_> = all_the_same!(match &self.0 {
+        let mut mor_gens: Vec<_> = all_the_same!(match &self.diagram {
             DblModelDiagramBox::[Discrete](diagram) => {
                 let (_, model) = diagram.into();
                 model.mor_generators().collect()
@@ -112,7 +117,7 @@ impl DblModelDiagram {
     /// Returns the object generators of the given object type.
     #[wasm_bindgen(js_name = "obGeneratorsWithType")]
     pub fn ob_generators_with_type(&self, ob_type: ObType) -> Result<Vec<QualifiedName>, String> {
-        all_the_same!(match &self.0 {
+        all_the_same!(match &self.diagram {
             DblModelDiagramBox::[Discrete](diagram) => {
                 let (_, model) = diagram.into();
                 let ob_type = Elaborator.elab(&ob_type)?;
@@ -127,7 +132,7 @@ impl DblModelDiagram {
         &self,
         mor_type: MorType,
     ) -> Result<Vec<QualifiedName>, String> {
-        all_the_same!(match &self.0 {
+        all_the_same!(match &self.diagram {
             DblModelDiagramBox::[Discrete](diagram) => {
                 let (_, model) = diagram.into();
                 let mor_type = Elaborator.elab(&mor_type)?;
@@ -139,7 +144,7 @@ impl DblModelDiagram {
     /// Returns array of declarations of basic objects.
     #[wasm_bindgen(js_name = "objectDeclarations")]
     pub fn object_declarations(&self) -> Vec<DiagramObDecl> {
-        all_the_same!(match &self.0 {
+        all_the_same!(match &self.diagram {
             DblModelDiagramBox::[Discrete](diagram) => {
                 let (mapping, model) = diagram.into();
                 let decls = model.ob_generators().map(|x| {
@@ -158,7 +163,7 @@ impl DblModelDiagram {
     /// Returns array of declarations of basic morphisms.
     #[wasm_bindgen(js_name = "morphismDeclarations")]
     pub fn morphism_declarations(&self) -> Vec<DiagramMorDecl> {
-        all_the_same!(match &self.0 {
+        all_the_same!(match &self.diagram {
             DblModelDiagramBox::[Discrete](diagram) => {
                 let (mapping, model) = diagram.into();
                 let decls = model.mor_generators().map(|f| {
@@ -179,27 +184,27 @@ impl DblModelDiagram {
     /// Infers missing data in the diagram from the model, where possible.
     #[wasm_bindgen(js_name = "inferMissingFrom")]
     pub fn infer_missing_from(&mut self, model: &DblModel) -> Result<(), String> {
-        all_the_same!(match &mut self.0 {
+        all_the_same!(match &mut self.diagram {
             DblModelDiagramBox::[Discrete](diagram) => {
-                let model = (&model.0).try_into().map_err(
+                let model = (&model.model).try_into().map_err(
                     |_| "Type of model should match type of diagram")?;
                 diagram.infer_missing_from(model);
-                Ok(())
             }
-        })
+        });
+        Ok(())
     }
 
     /// Validates that the diagram is well defined in a model.
     #[wasm_bindgen(js_name = "validateIn")]
     pub fn validate_in(&self, model: &DblModel) -> Result<ModelDiagramValidationResult, String> {
-        all_the_same!(match &self.0 {
+        let result = all_the_same!(match &self.diagram {
             DblModelDiagramBox::[Discrete](diagram) => {
-                let model = (&model.0).try_into().map_err(
+                let model = (&model.model).try_into().map_err(
                     |_| "Type of model should match type of diagram")?;
-                let res = diagram.validate_in(model);
-                Ok(ModelDiagramValidationResult(res.map_err(|errs| errs.into()).into()))
+                diagram.validate_in(model)
             }
-        })
+        });
+        Ok(ModelDiagramValidationResult(result.map_err(|errs| errs.into()).into()))
     }
 }
 

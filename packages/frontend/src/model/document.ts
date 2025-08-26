@@ -6,7 +6,6 @@ import {
     type Document,
     type ModelJudgment,
     type ModelValidationResult,
-    type Uuid,
     currentVersion,
     elaborateModel,
 } from "catlog-wasm";
@@ -14,7 +13,6 @@ import { type Api, type LiveDoc, getLiveDoc } from "../api";
 import { NotebookUtils, newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
 import type { Theory } from "../theory";
-import { type IndexedMap, indexMap } from "../util/indexing";
 import type { InterfaceToType } from "../util/types";
 
 /** A document defining a model. */
@@ -45,12 +43,6 @@ export type LiveModelDocument = {
 
     /** A memo of the formal content of the model. */
     formalJudgments: Accessor<Array<ModelJudgment>>;
-
-    /** A memo of the indexed map from object ID to name. */
-    objectIndex: Accessor<IndexedMap<Uuid, string>>;
-
-    /** A memo of the indexed map from morphism ID to name. */
-    morphismIndex: Accessor<IndexedMap<Uuid, string>>;
 
     /** A memo of the double theory that the model is of. */
     theory: Accessor<Theory | undefined>;
@@ -95,26 +87,6 @@ function enlivenModelDocument(
         [],
     );
 
-    const objectIndex = createMemo<IndexedMap<Uuid, string>>(() => {
-        const map = new Map<Uuid, string>();
-        for (const judgment of formalJudgments()) {
-            if (judgment.tag === "object") {
-                map.set(judgment.id, judgment.name);
-            }
-        }
-        return indexMap(map);
-    }, indexMap(new Map()));
-
-    const morphismIndex = createMemo<IndexedMap<Uuid, string>>(() => {
-        const map = new Map<Uuid, string>();
-        for (const judgment of formalJudgments()) {
-            if (judgment.tag === "morphism") {
-                map.set(judgment.id, judgment.name);
-            }
-        }
-        return indexMap(map);
-    }, indexMap(new Map()));
-
     const [theory] = createResource(
         () => doc.theory,
         (theoryId) => theories.get(theoryId),
@@ -156,8 +128,6 @@ function enlivenModelDocument(
         refId,
         liveDoc,
         formalJudgments,
-        objectIndex,
-        morphismIndex,
         theory,
         elaboratedModel,
         validatedModel,

@@ -14,7 +14,7 @@ use catlog::dbl::model::{
 use catlog::dbl::theory::{self as dbl_theory, ModalObOp};
 use catlog::one::{Category as _, FgCategory, Path, QualifiedPath};
 use catlog::validate::Validate;
-use catlog::zero::QualifiedName;
+use catlog::zero::{Column, IndexedHashColumn, Mapping, MutMapping, QualifiedName};
 use notebook_types::current::{path as notebook_path, *};
 
 use super::notation::*;
@@ -41,7 +41,17 @@ pub enum DblModelBox {
 
 /// Wasm binding of a model of a double theory.
 #[wasm_bindgen]
-pub struct DblModel(#[wasm_bindgen(skip)] pub DblModelBox);
+pub struct DblModel {
+    /// The boxed underlying model.
+    #[wasm_bindgen(skip)]
+    pub model: DblModelBox,
+
+    /// Mapping from object generators to human-readable names.
+    pub(crate) ob_index: IndexedHashColumn<QualifiedName, String>,
+
+    /// Mapping from morphism generators to human-readable names.
+    pub(crate) mor_index: IndexedHashColumn<QualifiedName, String>,
+}
 
 /// Elaborates into an object in a model of a discrete double theory.
 impl CanElaborate<Ob, QualifiedName> for Elaborator {
@@ -278,51 +288,61 @@ impl CanQuote<ModalMor, Mor> for Quoter {
 impl DblModel {
     /// Constructs a new model of a double theory.
     pub fn new(theory: &DblTheory) -> Self {
-        Self(match &theory.0 {
+        let model = match &theory.0 {
             DblTheoryBox::Discrete(th) => dbl_model::DiscreteDblModel::new(th.clone()).into(),
             DblTheoryBox::DiscreteTab(th) => dbl_model::DiscreteTabModel::new(th.clone()).into(),
             DblTheoryBox::Modal(th) => dbl_model::ModalDblModel::new(th.clone()).into(),
-        })
+        };
+        Self {
+            model,
+            ob_index: Default::default(),
+            mor_index: Default::default(),
+        }
     }
 
     /// Tries to get a model of a discrete theory.
     pub fn discrete(&self) -> Result<&dbl_model::DiscreteDblModel, String> {
-        (&self.0).try_into().map_err(|_| "Model should be of a discrete theory".into())
+        (&self.model)
+            .try_into()
+            .map_err(|_| "Model should be of a discrete theory".into())
     }
 
     /// Tries to get a model of a discrete theory, by mutable reference.
     pub fn discrete_mut(&mut self) -> Result<&mut dbl_model::DiscreteDblModel, String> {
-        (&mut self.0)
+        (&mut self.model)
             .try_into()
             .map_err(|_| "Model should be of a discrete theory".into())
     }
 
     /// Tries to get a model of a discrete tabulator theory.
     pub fn discrete_tab(&self) -> Result<&dbl_model::DiscreteTabModel, String> {
-        (&self.0)
+        (&self.model)
             .try_into()
             .map_err(|_| "Model should be of a discrete tabulator theory".into())
     }
 
     /// Tries to get a model of a modal theory.
     pub fn modal(&self) -> Result<&dbl_model::ModalDblModel, String> {
-        (&self.0).try_into().map_err(|_| "Model should be of a modal theory".into())
+        (&self.model).try_into().map_err(|_| "Model should be of a modal theory".into())
     }
 
     /// Adds an object to the model.
     pub fn add_ob(&mut self, decl: &ObDecl) -> Result<(), String> {
-        all_the_same!(match &mut self.0 {
+        all_the_same!(match &mut self.model {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
                 let ob_type = Elaborator.elab(&decl.ob_type)?;
                 model.add_ob(decl.id.into(), ob_type);
-                Ok(())
             }
-        })
+        });
+        if !decl.name.is_empty() {
+            self.ob_index.set(decl.id.into(), decl.name.clone());
+        }
+        Ok(())
     }
 
     /// Adds a morphism to the model.
     pub fn add_mor(&mut self, decl: &MorDecl) -> Result<(), String> {
-        all_the_same!(match &mut self.0 {
+        all_the_same!(match &mut self.model {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
                 let mor_type = Elaborator.elab(&decl.mor_type)?;
                 model.make_mor(decl.id.into(), mor_type);
@@ -332,9 +352,12 @@ impl DblModel {
                 if let Some(cod) = decl.cod.as_ref().map(|ob| Elaborator.elab(ob)).transpose()? {
                     model.set_cod(decl.id.into(), cod);
                 }
-                Ok(())
             }
-        })
+        });
+        if !decl.name.is_empty() {
+            self.mor_index.set(decl.id.into(), decl.name.clone());
+        }
+        Ok(())
     }
 }
 
@@ -343,7 +366,7 @@ impl DblModel {
     /// Is the object contained in the model?
     #[wasm_bindgen(js_name = "hasOb")]
     pub fn has_ob(&self, ob: Ob) -> Result<bool, String> {
-        all_the_same!(match &self.0 {
+        all_the_same!(match &self.model {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
                 let ob = Elaborator.elab(&ob)?;
                 Ok(model.has_ob(&ob))
@@ -354,7 +377,7 @@ impl DblModel {
     /// Is the morphism contained in the model?
     #[wasm_bindgen(js_name = "hasMor")]
     pub fn has_mor(&self, mor: Mor) -> Result<bool, String> {
-        all_the_same!(match &self.0 {
+        all_the_same!(match &self.model {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
                 let mor = Elaborator.elab(&mor)?;
                 Ok(model.has_mor(&mor))
@@ -365,7 +388,7 @@ impl DblModel {
     /// Gets the domain of a morphism in the model.
     #[wasm_bindgen]
     pub fn dom(&self, mor: Mor) -> Result<Ob, String> {
-        all_the_same!(match &self.0 {
+        all_the_same!(match &self.model {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
                 let mor = Elaborator.elab(&mor)?;
                 Ok(Quoter.quote(&model.dom(&mor)))
@@ -376,7 +399,7 @@ impl DblModel {
     /// Gets the codomain of a morphism in the model.
     #[wasm_bindgen]
     pub fn cod(&self, mor: Mor) -> Result<Ob, String> {
-        all_the_same!(match &self.0 {
+        all_the_same!(match &self.model {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
                 let mor = Elaborator.elab(&mor)?;
                 Ok(Quoter.quote(&model.cod(&mor)))
@@ -386,20 +409,20 @@ impl DblModel {
 
     /// Gets the domain of a morphism generator, if it is set.
     #[wasm_bindgen(js_name = "getDom")]
-    pub fn get_dom(&self, name: &QualifiedName) -> Result<Option<Ob>, String> {
-        all_the_same!(match &self.0 {
+    pub fn get_dom(&self, id: &QualifiedName) -> Result<Option<Ob>, String> {
+        all_the_same!(match &self.model {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
-                Ok(model.get_dom(name).map(|ob| Quoter.quote(ob)))
+                Ok(model.get_dom(id).map(|ob| Quoter.quote(ob)))
             }
         })
     }
 
     /// Gets the codomain of a morphism generator, if it is set.
     #[wasm_bindgen(js_name = "getCod")]
-    pub fn get_cod(&self, name: &QualifiedName) -> Result<Option<Ob>, String> {
-        all_the_same!(match &self.0 {
+    pub fn get_cod(&self, id: &QualifiedName) -> Result<Option<Ob>, String> {
+        all_the_same!(match &self.model {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
-                Ok(model.get_cod(name).map(|ob| Quoter.quote(ob)))
+                Ok(model.get_cod(id).map(|ob| Quoter.quote(ob)))
             }
         })
     }
@@ -407,7 +430,7 @@ impl DblModel {
     /// Gets the object type of an object in the model.
     #[wasm_bindgen(js_name = "obType")]
     pub fn ob_type(&self, ob: Ob) -> Result<ObType, String> {
-        all_the_same!(match &self.0 {
+        all_the_same!(match &self.model {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
                 Ok(Quoter.quote(&model.ob_type(&Elaborator.elab(&ob)?)))
             }
@@ -417,7 +440,7 @@ impl DblModel {
     /// Gets the morphism type of a morphism in the model.
     #[wasm_bindgen(js_name = "morType")]
     pub fn mor_type(&self, mor: Mor) -> Result<MorType, String> {
-        all_the_same!(match &self.0 {
+        all_the_same!(match &self.model {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
                 Ok(Quoter.quote(&model.mor_type(&Elaborator.elab(&mor)?)))
             }
@@ -427,7 +450,7 @@ impl DblModel {
     /// Returns the object generators for the model.
     #[wasm_bindgen(js_name = "obGenerators")]
     pub fn ob_generators(&self) -> Vec<QualifiedName> {
-        let mut ob_gens: Vec<_> = all_the_same!(match &self.0 {
+        let mut ob_gens: Vec<_> = all_the_same!(match &self.model {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
                 model.ob_generators().collect()
             }
@@ -439,7 +462,7 @@ impl DblModel {
     /// Returns the morphism generators for the model.
     #[wasm_bindgen(js_name = "morGenerators")]
     pub fn mor_generators(&self) -> Vec<QualifiedName> {
-        let mut mor_gens: Vec<_> = all_the_same!(match &self.0 {
+        let mut mor_gens: Vec<_> = all_the_same!(match &self.model {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
                 model.mor_generators().collect()
             }
@@ -451,7 +474,7 @@ impl DblModel {
     /// Returns the object generators of the given object type.
     #[wasm_bindgen(js_name = "obGeneratorsWithType")]
     pub fn ob_generators_with_type(&self, ob_type: ObType) -> Result<Vec<QualifiedName>, String> {
-        all_the_same!(match &self.0 {
+        all_the_same!(match &self.model {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
                 let ob_type = Elaborator.elab(&ob_type)?;
                 Ok(model.ob_generators_with_type(&ob_type).collect())
@@ -465,7 +488,7 @@ impl DblModel {
         &self,
         mor_type: MorType,
     ) -> Result<Vec<QualifiedName>, String> {
-        all_the_same!(match &self.0 {
+        all_the_same!(match &self.model {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
                 let mor_type = Elaborator.elab(&mor_type)?;
                 Ok(model.mor_generators_with_type(&mor_type).collect())
@@ -473,14 +496,36 @@ impl DblModel {
         })
     }
 
+    /// Gets the human-readable name, if any, for an object generator.
+    #[wasm_bindgen(js_name = "obGeneratorName")]
+    pub fn ob_generator_name(&self, id: &QualifiedName) -> Option<String> {
+        self.ob_index.apply_to_ref(id)
+    }
+
+    /// Gets the object generators with the given human-readable name.
+    #[wasm_bindgen(js_name = "obGeneratorsWithName")]
+    pub fn ob_generators_with_name(&self, name: String) -> Vec<QualifiedName> {
+        self.ob_index.preimage(&name).collect()
+    }
+
+    /// Gets the human-readable name, if any, for a morphism generator.
+    #[wasm_bindgen(js_name = "morGeneratorName")]
+    pub fn mor_generator_name(&self, id: &QualifiedName) -> Option<String> {
+        self.mor_index.apply_to_ref(id)
+    }
+
+    /// Gets the morphism generators with the given human-readable name.
+    #[wasm_bindgen(js_name = "morGeneratorsWithName")]
+    pub fn mor_generators_with_name(&self, name: String) -> Vec<QualifiedName> {
+        self.mor_index.preimage(&name).collect()
+    }
+
     /// Validates the model, returning any validation failures.
     pub fn validate(&self) -> ModelValidationResult {
-        all_the_same!(match &self.0 {
-            DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
-                let res = model.validate();
-                ModelValidationResult(res.map_err(|errs| errs.into()).into())
-            }
-        })
+        let result = all_the_same!(match &self.model {
+            DblModelBox::[Discrete, DiscreteTab, Modal](model) => model.validate()
+        });
+        ModelValidationResult(result.map_err(|errs| errs.into()).into())
     }
 }
 
@@ -581,6 +626,8 @@ pub(crate) mod tests {
             model.mor_generators_with_type(MorType::Basic("Attr".into())),
             Ok(vec![a_id.into()])
         );
+        assert_eq!(model.ob_generator_name(&x_id.into()), Some("entity".into()));
+        assert_eq!(model.mor_generator_name(&a_id.into()), Some("attr".into()));
         assert_eq!(model.validate().0, JsResult::Ok(()));
 
         let mut model = DblModel::new(&th);

@@ -1,7 +1,7 @@
 import type * as Viz from "@viz-js/viz";
 import { Show, createSignal } from "solid-js";
 
-import type { DblModel, QualifiedName } from "catlog-wasm";
+import type { DblModel } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { Foldable } from "../../components";
 import type { ModelAnalysisMeta, Theory } from "../../theory";
@@ -65,8 +65,6 @@ export function ModelGraph(
                         <ModelGraphviz
                             model={model()}
                             theory={props.liveModel.theory()}
-                            objectIndex={props.liveModel.objectIndex().map}
-                            morphismIndex={props.liveModel.morphismIndex().map}
                             options={GV.graphvizOptions(props.content)}
                             ref={setSvgRef}
                         />
@@ -82,8 +80,6 @@ export function ModelGraph(
 export function ModelGraphviz(props: {
     model: DblModel;
     theory?: Theory;
-    objectIndex?: Map<QualifiedName, string>;
-    morphismIndex?: Map<QualifiedName, string>;
     attributes?: GV.GraphvizAttributes;
     options?: Viz.RenderOptions;
     ref?: SVGRefProp;
@@ -92,13 +88,7 @@ export function ModelGraphviz(props: {
         <Show when={props.theory}>
             {(theory) => (
                 <GraphvizSVG
-                    graph={modelToGraphviz(
-                        props.model,
-                        theory(),
-                        props.objectIndex,
-                        props.morphismIndex,
-                        props.attributes,
-                    )}
+                    graph={modelToGraphviz(props.model, theory(), props.attributes)}
                     options={props.options}
                     ref={props.ref}
                 />
@@ -112,8 +102,6 @@ export function ModelGraphviz(props: {
 export function modelToGraphviz(
     model: DblModel,
     theory: Theory,
-    objectIndex?: Map<QualifiedName, string>,
-    morphismIndex?: Map<QualifiedName, string>,
     attributes?: GV.GraphvizAttributes,
 ): Viz.Graph {
     const nodes: Required<Viz.Graph>["nodes"] = [];
@@ -124,7 +112,7 @@ export function modelToGraphviz(
             name: id,
             attributes: {
                 id,
-                label: objectIndex?.get(id) ?? "",
+                label: model.obGeneratorName(id) ?? "",
                 class: GV.svgCssClasses(meta).join(" "),
                 fontname: GV.graphvizFontname(meta),
             },
@@ -144,7 +132,7 @@ export function modelToGraphviz(
             tail: dom.content,
             attributes: {
                 id: id,
-                label: morphismIndex?.get(id) ?? "",
+                label: model.morGeneratorName(id) ?? "",
                 class: GV.svgCssClasses(meta).join(" "),
                 fontname: GV.graphvizFontname(meta),
                 // Not recognized by Graphviz but will be passed through!

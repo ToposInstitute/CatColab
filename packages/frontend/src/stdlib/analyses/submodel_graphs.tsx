@@ -126,8 +126,6 @@ function SubmodelsAnalysis(
                     <ModelGraphviz
                         model={model()}
                         theory={props.liveModel.theory()}
-                        objectIndex={props.liveModel.objectIndex().map}
-                        morphismIndex={props.liveModel.morphismIndex().map}
                         options={{
                             engine: "dot",
                         }}

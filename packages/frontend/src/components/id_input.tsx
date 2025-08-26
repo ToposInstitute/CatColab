@@ -1,8 +1,8 @@
 import { createEffect, createSignal, splitProps } from "solid-js";
 import { P, match } from "ts-pattern";
 
-import type { Mor, Ob, Uuid } from "catlog-wasm";
-import { type IdToNameMap, type Name, type NameType, nameType } from "../util/indexing";
+import type { Mor, Ob, QualifiedName, Uuid } from "catlog-wasm";
+import { type Name, type NameType, nameType } from "../util/indexing";
 import type { Completion } from "./completions";
 import { InlineInput, type InlineInputErrorStatus, type InlineInputOptions } from "./inline_input";
 
@@ -12,7 +12,8 @@ import "./id_input.css";
  */
 export type IdInputOptions = {
     generateId?: () => Uuid;
-    idToName?: IdToNameMap;
+    idToName?: (id: QualifiedName) => Name | undefined;
+    nameToIds?: (name: Name) => QualifiedName[];
     isInvalid?: boolean;
     completions?: Uuid[];
 } & Omit<InlineInputOptions, "completions" | "status">;
@@ -33,18 +34,19 @@ export function IdInput(
         "generateId",
         "completions",
         "idToName",
+        "nameToIds",
         "isInvalid",
     ]);
 
-    const idToName = (id: Uuid): Name | undefined => props.idToName?.map.get(id);
-    const idToText = (id: Uuid): string | undefined => idToName(id)?.toString();
+    const idToName = (id: QualifiedName): Name | undefined => props.idToName?.(id);
+    const idToText = (id: QualifiedName): string | undefined => idToName(id)?.toString();
 
-    const textToIds = (text: string): Uuid[] => {
+    const textToIds = (text: string): QualifiedName[] => {
         let name: Name = text;
         if (/^\d+$/.test(text)) {
             name = Number.parseInt(text);
         }
-        return props.idToName?.index.get(name) ?? [];
+        return props.nameToIds?.(name) ?? [];
     };
 
     const [text, setText] = createSignal("");
