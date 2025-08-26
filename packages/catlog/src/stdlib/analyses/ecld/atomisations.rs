@@ -20,19 +20,14 @@ and call Y the *base* of this tower; we call the length n of the list
  */
 
 use crate::dbl::model::{DiscreteDblModel, FgDblModel, MutDblModel};
-use crate::one::{category::FgCategory, Path};
+use crate::one::{Path, category::FgCategory};
 use crate::stdlib::theories;
-use crate::zero::{name, QualifiedName};
+use crate::zero::{QualifiedName, name};
 use std::{collections::HashMap, rc::Rc};
-use ustr::{ustr, Ustr};
 
 // Some helpful functions
 fn deg_of_mor(model: &DiscreteDblModel, f: &QualifiedName) -> usize {
-    model
-        .mor_generator_type(f)
-        .into_iter()
-        .filter(|t| *t == ustr("Degree").into())
-        .count()
+    model.mor_generator_type(f).into_iter().filter(|t| *t == name("Degree")).count()
 }
 
 // TODO: filter -> find, don't need to do mod 2?
@@ -40,7 +35,7 @@ fn is_mor_pos(model: &DiscreteDblModel, f: &QualifiedName) -> bool {
     0 == model
         .mor_generator_type(f)
         .into_iter()
-        .filter(|t| *t == ustr("Negative").into())
+        .filter(|t| *t == name("Negative"))
         .count()
         % 2
 }
@@ -153,11 +148,12 @@ pub fn degree_atomisation(
         // Then add all the formal derivatives Y_i, along with the morphisms
         // Y_i -> Y_{i-1}
         for i in 1..*height {
-            let formal_der_i = base.clone().append("dot".into());
+            let suffix = format!("{}ot", "d".repeat(i));
+            let formal_der_i = base.clone().append(suffix.as_str().into());
             atomised_model.add_ob(formal_der_i.clone(), name("Object"));
             let formal_der_i_minus_1 = towers.get(base).unwrap().last().unwrap();
             atomised_model.add_mor(
-                Ustr::from(&format!("d_({})^({})", base, i)).into(),
+                format!("d_({})^({})", base, i).as_str().into(),
                 formal_der_i.clone(),
                 formal_der_i_minus_1.clone(),
                 name("Degree").into(),
@@ -220,7 +216,7 @@ mod tests {
     use crate::dbl::model::MutDblModel;
     use crate::one::category::FgCategory;
     use crate::stdlib::models::sample_ecld;
-    use crate::zero::{name, QualifiedName};
+    use crate::zero::{QualifiedName, name};
     use std::{collections::HashMap, rc::Rc};
 
     // Makes a hash map from objects in sample_ecld to tower heights

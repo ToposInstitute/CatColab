@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use crate::dbl::{model::*, theory::*};
 use crate::one::{Path, QualifiedPath};
-use crate::zero::{name, QualifiedName};
+use crate::zero::{QualifiedName, name};
 
 /** The positive self-loop.
 
