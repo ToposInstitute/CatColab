@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
-use uuid::Uuid;
 
 use super::{path::Path, theory::*};
 
@@ -10,7 +9,7 @@ use super::{path::Path, theory::*};
 #[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
 pub enum Ob {
     /// Basic or generating object.
-    Basic(Uuid),
+    Basic(String),
 
     /// Application of an object operation to another object.
     App { op: ObOp, ob: Box<Ob> },
@@ -31,7 +30,7 @@ pub enum Ob {
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum Mor {
     /// Basic or generating morphism.
-    Basic(Uuid),
+    Basic(String),
 
     /// Composite of morphisms.
     Composite(Box<Path<Ob, Mor>>),

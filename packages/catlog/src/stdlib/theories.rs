@@ -1,40 +1,37 @@
 //! Standard library of double theories.
 
-use ustr::ustr;
-
 use crate::dbl::theory::*;
-use crate::one::{Path, fp_category::UstrFpCategory};
+use crate::one::{Path, fp_category::FpCategory};
+use crate::zero::name;
 
 /** The empty theory, which has a single model, the empty model.
 
 As a double category, this is the initial double category.
  */
-pub fn th_empty() -> UstrDiscreteDblTheory {
-    let cat: UstrFpCategory = Default::default();
-    DiscreteDblTheory::from(cat)
+pub fn th_empty() -> DiscreteDblTheory {
+    FpCategory::new().into()
 }
 
 /** The theory of categories, aka the trivial double theory.
 
 As a double category, this is the terminal double category.
  */
-pub fn th_category() -> UstrDiscreteDblTheory {
-    let mut cat: UstrFpCategory = Default::default();
-    cat.add_ob_generator(ustr("Object"));
-    DiscreteDblTheory::from(cat)
+pub fn th_category() -> DiscreteDblTheory {
+    let mut cat = FpCategory::new();
+    cat.add_ob_generator(name("Object"));
+    cat.into()
 }
 
 /** The theory of database schemas with attributes.
 
 As a double category, this is the "walking proarrow".
  */
-pub fn th_schema() -> UstrDiscreteDblTheory {
-    let mut cat: UstrFpCategory = Default::default();
-    let (x, y, p) = (ustr("Entity"), ustr("AttrType"), ustr("Attr"));
-    cat.add_ob_generator(x);
-    cat.add_ob_generator(y);
-    cat.add_mor_generator(p, x, y);
-    DiscreteDblTheory::from(cat)
+pub fn th_schema() -> DiscreteDblTheory {
+    let mut cat = FpCategory::new();
+    cat.add_ob_generator(name("Entity"));
+    cat.add_ob_generator(name("AttrType"));
+    cat.add_mor_generator(name("Attr"), name("Entity"), name("AttrType"));
+    cat.into()
 }
 
 /** The theory of signed categories.
@@ -43,13 +40,12 @@ A *signed category* is a category sliced over the group of (nonzero) signs. Free
 signed categories are signed graphs, a simple mathematical model of [regulatory
 networks](crate::refs::RegNets) and causal loop diagrams.
  */
-pub fn th_signed_category() -> UstrDiscreteDblTheory {
-    let mut sgn: UstrFpCategory = Default::default();
-    let (x, neg) = (ustr("Object"), ustr("Negative"));
-    sgn.add_ob_generator(x);
-    sgn.add_mor_generator(neg, x, x);
-    sgn.equate(Path::pair(neg, neg), Path::empty(x));
-    DiscreteDblTheory::from(sgn)
+pub fn th_signed_category() -> DiscreteDblTheory {
+    let mut sgn = FpCategory::new();
+    sgn.add_ob_generator(name("Object"));
+    sgn.add_mor_generator(name("Negative"), name("Object"), name("Object"));
+    sgn.equate(Path::pair(name("Negative"), name("Negative")), Path::empty(name("Object")));
+    sgn.into()
 }
 
 /** The theory of delayable signed categories.
@@ -57,26 +53,27 @@ pub fn th_signed_category() -> UstrDiscreteDblTheory {
 Free delayable signed categories are causal loop diagrams with delays, often
 depicted as [caesuras](https://en.wikipedia.org/wiki/Caesura).
  */
-pub fn th_delayable_signed_category() -> UstrDiscreteDblTheory {
-    let mut cat: UstrFpCategory = Default::default();
-    let (x, neg, slow) = (ustr("Object"), ustr("Negative"), ustr("Slow"));
-    cat.add_ob_generator(x);
-    cat.add_mor_generator(neg, x, x);
-    cat.add_mor_generator(slow, x, x);
-    cat.equate(Path::pair(neg, neg), Path::empty(x));
-    cat.equate(Path::pair(slow, slow), slow.into());
-    cat.equate(Path::pair(neg, slow), Path::pair(slow, neg));
+pub fn th_delayable_signed_category() -> DiscreteDblTheory {
+    let mut cat = FpCategory::new();
+    cat.add_ob_generator(name("Object"));
+    cat.add_mor_generator(name("Negative"), name("Object"), name("Object"));
+    cat.add_mor_generator(name("Slow"), name("Object"), name("Object"));
+    cat.equate(Path::pair(name("Negative"), name("Negative")), Path::empty(name("Object")));
+    cat.equate(Path::pair(name("Slow"), name("Slow")), name("Slow").into());
+    cat.equate(
+        Path::pair(name("Negative"), name("Slow")),
+        Path::pair(name("Slow"), name("Negative")),
+    );
 
     // NOTE: These aliases are superfluous but are included for backwards
     // compatibility with the previous version of the theory, defined by an
     // explicit multiplication table.
-    let (pos_slow, neg_slow) = (ustr("PositiveSlow"), ustr("NegativeSlow"));
-    cat.add_mor_generator(pos_slow, x, x);
-    cat.add_mor_generator(neg_slow, x, x);
-    cat.equate(pos_slow.into(), slow.into());
-    cat.equate(neg_slow.into(), Path::pair(neg, slow));
+    cat.add_mor_generator(name("PositiveSlow"), name("Object"), name("Object"));
+    cat.add_mor_generator(name("NegativeSlow"), name("Object"), name("Object"));
+    cat.equate(name("PositiveSlow").into(), name("Slow").into());
+    cat.equate(name("NegativeSlow").into(), Path::pair(name("Negative"), name("Slow")));
 
-    DiscreteDblTheory::from(cat)
+    cat.into()
 }
 
 /** The theory of nullable signed categories.
@@ -84,17 +81,16 @@ pub fn th_delayable_signed_category() -> UstrDiscreteDblTheory {
 A *nullable signed category* is a category sliced over the monoid of signs,
 including zero.
  */
-pub fn th_nullable_signed_category() -> UstrDiscreteDblTheory {
-    let mut sgn: UstrFpCategory = Default::default();
-    let (x, neg, zero) = (ustr("Object"), ustr("Negative"), ustr("Zero"));
-    sgn.add_ob_generator(x);
-    sgn.add_mor_generator(neg, x, x);
-    sgn.add_mor_generator(zero, x, x);
-    sgn.equate(Path::pair(neg, neg), Path::empty(x));
-    sgn.equate(Path::pair(neg, zero), zero.into());
-    sgn.equate(Path::pair(zero, neg), zero.into());
-    sgn.equate(Path::pair(zero, zero), zero.into());
-    DiscreteDblTheory::from(sgn)
+pub fn th_nullable_signed_category() -> DiscreteDblTheory {
+    let mut sgn = FpCategory::new();
+    sgn.add_ob_generator(name("Object"));
+    sgn.add_mor_generator(name("Negative"), name("Object"), name("Object"));
+    sgn.add_mor_generator(name("Zero"), name("Object"), name("Object"));
+    sgn.equate(Path::pair(name("Negative"), name("Negative")), Path::empty(name("Object")));
+    sgn.equate(Path::pair(name("Negative"), name("Zero")), name("Zero").into());
+    sgn.equate(Path::pair(name("Zero"), name("Negative")), name("Zero").into());
+    sgn.equate(Path::pair(name("Zero"), name("Zero")), name("Zero").into());
+    sgn.into()
 }
 
 /** The theory of categories with scalars.
@@ -107,13 +103,12 @@ The main intended application is to categories
 enriched in `M`-sets for a monoid `M` such as the positive real numbers under multiplication,
 but to remain within simple theories the theory defined here is more general.
  */
-pub fn th_category_with_scalars() -> UstrDiscreteDblTheory {
-    let mut idem: UstrFpCategory = Default::default();
-    let (x, s) = (ustr("Object"), ustr("Nonscalar"));
-    idem.add_ob_generator(x);
-    idem.add_mor_generator(s, x, x);
-    idem.equate(Path::pair(s, s), s.into());
-    DiscreteDblTheory::from(idem)
+pub fn th_category_with_scalars() -> DiscreteDblTheory {
+    let mut idem = FpCategory::new();
+    idem.add_ob_generator(name("Object"));
+    idem.add_mor_generator(name("Nonscalar"), name("Object"), name("Object"));
+    idem.equate(Path::pair(name("Nonscalar"), name("Nonscalar")), name("Nonscalar").into());
+    idem.into()
 }
 
 /** The theory of categories with links.
@@ -124,30 +119,26 @@ A *category with links* is a category `C` together with a profunctor from `C` to
 [Primitive stock and flow diagrams](crate::refs::StockFlow) are free categories
 with links.
  */
-pub fn th_category_links() -> UstrDiscreteTabTheory {
-    let mut th: UstrDiscreteTabTheory = Default::default();
-    let x = ustr("Object");
-    th.add_ob_type(x);
-    th.add_mor_type(
-        ustr("Link"),
-        TabObType::Basic(x),
-        th.tabulator(th.hom_type(TabObType::Basic(x))),
-    );
+pub fn th_category_links() -> DiscreteTabTheory {
+    let mut th = DiscreteTabTheory::new();
+    th.add_ob_type(name("Object"));
+    let ob_type = TabObType::Basic(name("Object"));
+    th.add_mor_type(name("Link"), ob_type.clone(), th.tabulator(th.hom_type(ob_type)));
     th
 }
 
 /// The theory of strict monoidal categories.
-pub fn th_monoidal_category() -> UstrModalDblTheory {
+pub fn th_monoidal_category() -> ModalDblTheory {
     th_list_algebra(List::Plain)
 }
 
 /// The theory of lax monoidal categories.
-pub fn th_lax_monoidal_category() -> UstrModalDblTheory {
+pub fn th_lax_monoidal_category() -> ModalDblTheory {
     th_list_lax_algebra(List::Plain)
 }
 
 /// The theory of strict symmetric monoidal categories.
-pub fn th_sym_monoidal_category() -> UstrModalDblTheory {
+pub fn th_sym_monoidal_category() -> ModalDblTheory {
     th_list_algebra(List::Symmetric)
 }
 
@@ -156,55 +147,61 @@ pub fn th_sym_monoidal_category() -> UstrModalDblTheory {
 This is a modal double theory, parametric over which variant of the double list
 monad is used.
  */
-fn th_list_algebra(list: List) -> UstrModalDblTheory {
+fn th_list_algebra(list: List) -> ModalDblTheory {
     let m = Modality::List(list);
-    let mut th: UstrModalDblTheory = Default::default();
-    let (x, a) = (ustr("Object"), ustr("tensor"));
-    th.add_ob_type(x);
-    th.add_ob_op(a, ModeApp::new(x).apply(m), ModeApp::new(x));
+
+    let mut th = ModalDblTheory::new();
+    th.add_ob_type(name("Object"));
+    let x = ModeApp::new(name("Object"));
+    th.add_ob_op(name("tensor"), x.clone().apply(m), x.clone());
+    let a = ModeApp::new(name("tensor").into());
+
     th.equate_ob_ops(
-        Path::pair(ModeApp::new(a.into()).apply(m), ModeApp::new(a.into())),
-        Path::pair(ModeApp::new(ModalOp::Concat(list, 2, ModeApp::new(x))), ModeApp::new(a.into())),
+        Path::pair(a.clone().apply(m), a.clone()),
+        Path::pair(ModeApp::new(ModalOp::Concat(list, 2, x.clone())), a.clone()),
     );
     th.equate_ob_ops(
-        Path::empty(ModeApp::new(x)),
-        Path::pair(ModeApp::new(ModalOp::Concat(list, 0, ModeApp::new(x))), ModeApp::new(a.into())),
+        Path::empty(x.clone()),
+        Path::pair(ModeApp::new(ModalOp::Concat(list, 0, x)), a),
     );
     th
 }
 
 /// The theory of a lax algebra over a list monad.
-fn th_list_lax_algebra(list: List) -> UstrModalDblTheory {
+fn th_list_lax_algebra(list: List) -> ModalDblTheory {
     let m = Modality::List(list);
-    let mut th: UstrModalDblTheory = Default::default();
-    let (x, a) = (ustr("Object"), ustr("tensor"));
-    th.add_ob_type(x);
-    th.add_ob_op(a, ModeApp::new(x).apply(m), ModeApp::new(x));
+
+    let mut th = ModalDblTheory::new();
+    th.add_ob_type(name("Object"));
+    let x = ModeApp::new(name("Object"));
+    th.add_ob_op(name("tensor"), x.clone().apply(m), x.clone());
+    let a = ModeApp::new(name("tensor").into());
+
     th.add_special_mor_op(
-        ustr("Associator"),
-        Path::pair(ModeApp::new(a.into()).apply(m), ModeApp::new(a.into())),
-        Path::pair(ModeApp::new(ModalOp::Concat(list, 2, ModeApp::new(x))), ModeApp::new(a.into())),
+        name("Associator"),
+        Path::pair(a.clone().apply(m), a.clone()),
+        Path::pair(ModeApp::new(ModalOp::Concat(list, 2, x.clone())), a.clone()),
     );
     th.add_special_mor_op(
-        ustr("Unitor"),
-        Path::empty(ModeApp::new(x)),
-        Path::pair(ModeApp::new(ModalOp::Concat(list, 0, ModeApp::new(x))), ModeApp::new(a.into())),
+        name("Unitor"),
+        Path::empty(x.clone()),
+        Path::pair(ModeApp::new(ModalOp::Concat(list, 0, x)), a),
     );
     // TODO: Coherence equations
     th
 }
 
 /// The theory of a (non-symmetric) multicategory.
-pub fn th_multicategory() -> UstrModalDblTheory {
+pub fn th_multicategory() -> ModalDblTheory {
     th_generalized_multicategory(List::Plain)
 }
 
 /// The theory of a generalized multicategory over a list monad.
-fn th_generalized_multicategory(list: List) -> UstrModalDblTheory {
-    let mut th: UstrModalDblTheory = Default::default();
-    let (x, p) = (ustr("Object"), ustr("Multihom"));
-    th.add_ob_type(x);
-    th.add_mor_type(p, ModeApp::new(x).apply(Modality::List(list)), ModeApp::new(x));
+fn th_generalized_multicategory(list: List) -> ModalDblTheory {
+    let mut th = ModalDblTheory::new();
+    th.add_ob_type(name("Object"));
+    let x = ModeApp::new(name("Object"));
+    th.add_mor_type(name("Multihom"), x.clone().apply(Modality::List(list)), x);
     // TODO: Axioms, which depend on implementing composites and restrictions.
     th
 }
@@ -243,10 +240,10 @@ mod tests {
     fn delayable_signed_categories() {
         // Check the nontrivial computer algebra in this theory.
         let th = th_delayable_signed_category();
-        let (neg, slow) = (ustr("Negative"), ustr("Slow"));
-        assert!(th.has_mor_type(&neg.into()));
-        assert!(th.has_mor_type(&slow.into()));
-        let path = Path::Seq(nonempty![neg, slow, neg, slow]);
-        assert!(th.0.morphisms_are_equal(path, slow.into()));
+        assert!(th.has_mor_type(&name("Negative").into()));
+        assert!(th.has_mor_type(&name("Slow").into()));
+        let path =
+            Path::Seq(nonempty![name("Negative"), name("Slow"), name("Negative"), name("Slow")]);
+        assert!(th.0.morphisms_are_equal(path, name("Slow").into()));
     }
 }

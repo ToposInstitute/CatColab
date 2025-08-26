@@ -1,6 +1,6 @@
 import { createMemo } from "solid-js";
 
-import type { DblModel, LinearODEModelData, LinearODEProblemData, ODEResult } from "catlog-wasm";
+import type { DblModel, LinearODEProblemData, ODEResult } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import {
     type ColumnSchema,
@@ -15,10 +15,7 @@ import { createModelODEPlot } from "./simulation";
 
 import "./simulation.css";
 
-/** Configuration for a LinearODE ODE analysis of a model. */
-export type LinearODEContent = LinearODEProblemData<string>;
-
-type Simulator = (model: DblModel, data: LinearODEModelData) => ODEResult;
+type Simulator = (model: DblModel, data: LinearODEProblemData) => ODEResult;
 
 /** Configure a LinearODE ODE analysis for use with models of a theory. */
 export function configureLinearODE(options: {
@@ -27,7 +24,7 @@ export function configureLinearODE(options: {
     description?: string;
     help?: string;
     simulate: Simulator;
-}): ModelAnalysisMeta<LinearODEContent> {
+}): ModelAnalysisMeta<LinearODEProblemData> {
     const {
         id = "linear-ode",
         name = "Linear ODE dynamics",
@@ -51,7 +48,7 @@ export function configureLinearODE(options: {
 
 /** Analyze a model using LinearODE dynamics. */
 export function LinearODE(
-    props: ModelAnalysisProps<LinearODEContent> & {
+    props: ModelAnalysisProps<LinearODEProblemData> & {
         simulate: Simulator;
         title?: string;
     },

@@ -5,8 +5,6 @@ use derive_more::{From, TryInto};
 use nonempty::NonEmpty;
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
-use ustr::Ustr;
-use uuid::Uuid;
 use wasm_bindgen::prelude::*;
 
 use catlog::dbl::model::{
@@ -14,17 +12,16 @@ use catlog::dbl::model::{
     TabEdge, TabMor, TabOb,
 };
 use catlog::dbl::theory::{self as dbl_theory, ModalObOp};
-use catlog::one::{Category as _, FgCategory, Path, fp_category::UstrFpCategory};
+use catlog::one::{Category as _, FgCategory, Path, QualifiedPath};
 use catlog::validate::Validate;
+use catlog::zero::QualifiedName;
 use notebook_types::current::{path as notebook_path, *};
 
 use super::notation::*;
 use super::result::JsResult;
-use super::theory::{DblTheory, DblTheoryBox, demote_modality, promote_modality};
-
-pub(crate) type DiscreteDblModel = dbl_model::DiscreteDblModel<Uuid, UstrFpCategory>;
-pub(crate) type DiscreteTabModel = dbl_model::DiscreteTabModel<Uuid, Ustr>;
-pub(crate) type ModalDblModel = dbl_model::ModalDblModel<Uuid, Ustr>;
+use super::theory::{
+    DblTheory, DblTheoryBox, demote_modality, expect_single_name, promote_modality,
+};
 
 /** A box containing a model of a double theory of any kind.
 
@@ -35,11 +32,11 @@ See [`DblTheoryBox`] for motivation.
 #[try_into(ref, ref_mut)]
 pub enum DblModelBox {
     /// A model of a discrete double theory.
-    Discrete(DiscreteDblModel),
+    Discrete(dbl_model::DiscreteDblModel),
     /// A model of a discrete tabulator theory.
-    DiscreteTab(DiscreteTabModel),
+    DiscreteTab(dbl_model::DiscreteTabModel),
     /// A model of a modal double theory.
-    Modal(ModalDblModel),
+    Modal(dbl_model::ModalDblModel),
 }
 
 /// Wasm binding of a model of a double theory.
@@ -47,20 +44,20 @@ pub enum DblModelBox {
 pub struct DblModel(#[wasm_bindgen(skip)] pub DblModelBox);
 
 /// Elaborates into an object in a model of a discrete double theory.
-impl CanElaborate<Ob, Uuid> for Elaborator {
-    fn elab(&self, ob: &Ob) -> Result<Uuid, String> {
+impl CanElaborate<Ob, QualifiedName> for Elaborator {
+    fn elab(&self, ob: &Ob) -> Result<QualifiedName, String> {
         match ob {
-            Ob::Basic(uuid) => Ok(*uuid),
+            Ob::Basic(name) => QualifiedName::deserialize_str(name),
             _ => Err(format!("Cannot use object with discrete double theory: {ob:#?}")),
         }
     }
 }
 
 /// Elaborates into a morphism in a model of a discrete double theory.
-impl CanElaborate<Mor, Path<Uuid, Uuid>> for Elaborator {
-    fn elab(&self, mor: &Mor) -> Result<Path<Uuid, Uuid>, String> {
+impl CanElaborate<Mor, QualifiedPath> for Elaborator {
+    fn elab(&self, mor: &Mor) -> Result<QualifiedPath, String> {
         match mor {
-            Mor::Basic(id) => Ok(Path::single(*id)),
+            Mor::Basic(name) => Ok(Path::single(QualifiedName::deserialize_str(name)?)),
             Mor::Composite(path) => promote_path(*path.clone())
                 .and_then(|path| {
                     path.try_map(|ob| Elaborator.elab(&ob), |mor| Elaborator.elab(&mor))
@@ -82,10 +79,10 @@ fn promote_path<V, E>(path: notebook_path::Path<V, E>) -> Result<Path<V, E>, Str
 }
 
 /// Elaborates into an object in a model of a discrete tabulator theory.
-impl CanElaborate<Ob, TabOb<Uuid, Uuid>> for Elaborator {
-    fn elab(&self, ob: &Ob) -> Result<TabOb<Uuid, Uuid>, String> {
+impl CanElaborate<Ob, TabOb> for Elaborator {
+    fn elab(&self, ob: &Ob) -> Result<TabOb, String> {
         match ob {
-            Ob::Basic(id) => Ok(TabOb::Basic(*id)),
+            Ob::Basic(name) => Ok(TabOb::Basic(QualifiedName::deserialize_str(name)?)),
             Ob::Tabulated(mor) => Ok(TabOb::Tabulated(Box::new(self.elab(mor)?))),
             _ => Err(format!("Cannot use object with discrete tabulator theory: {ob:#?}")),
         }
@@ -93,10 +90,13 @@ impl CanElaborate<Ob, TabOb<Uuid, Uuid>> for Elaborator {
 }
 
 /// Elaborates into a morphism in a model of a discrete tabulator theory.
-impl CanElaborate<Mor, TabMor<Uuid, Uuid>> for Elaborator {
-    fn elab(&self, mor: &Mor) -> Result<TabMor<Uuid, Uuid>, String> {
+impl CanElaborate<Mor, TabMor> for Elaborator {
+    fn elab(&self, mor: &Mor) -> Result<TabMor, String> {
         match mor {
-            Mor::Basic(id) => Ok(Path::single(dbl_model::TabEdge::Basic(*id))),
+            Mor::Basic(name) => {
+                let name = QualifiedName::deserialize_str(name)?;
+                Ok(Path::single(dbl_model::TabEdge::Basic(name)))
+            }
             Mor::Composite(path) => promote_path(*path.clone())
                 .and_then(|path| {
                     path.try_map(|ob| Elaborator.elab(&ob), |mor| Elaborator.elab(&mor))
@@ -117,10 +117,10 @@ impl CanElaborate<Mor, TabMor<Uuid, Uuid>> for Elaborator {
     }
 }
 
-impl CanElaborate<Mor, TabEdge<Uuid, Uuid>> for Elaborator {
-    fn elab(&self, mor: &Mor) -> Result<TabEdge<Uuid, Uuid>, String> {
+impl CanElaborate<Mor, TabEdge> for Elaborator {
+    fn elab(&self, mor: &Mor) -> Result<TabEdge, String> {
         match mor {
-            Mor::Basic(uuid) => Ok(TabEdge::Basic(*uuid)),
+            Mor::Basic(name) => Ok(TabEdge::Basic(QualifiedName::deserialize_str(name)?)),
             Mor::TabulatorSquare {
                 dom,
                 cod,
@@ -138,12 +138,12 @@ impl CanElaborate<Mor, TabEdge<Uuid, Uuid>> for Elaborator {
 }
 
 /// Elaborates into an object in a model of a modal theory.
-impl CanElaborate<Ob, ModalOb<Uuid, Ustr>> for Elaborator {
-    fn elab(&self, ob: &Ob) -> Result<ModalOb<Uuid, Ustr>, String> {
+impl CanElaborate<Ob, ModalOb> for Elaborator {
+    fn elab(&self, ob: &Ob) -> Result<ModalOb, String> {
         match ob {
-            Ob::Basic(id) => Ok(ModalOb::Generator(*id)),
+            Ob::Basic(name) => Ok(ModalOb::Generator(QualifiedName::deserialize_str(name)?)),
             Ob::App { op, ob } => {
-                let op: ModalObOp<_> = self.elab(op)?;
+                let op: ModalObOp = self.elab(op)?;
                 op.ob_act(self.elab(ob.as_ref())?)
             }
             Ob::List { modality, objects } => {
@@ -160,30 +160,32 @@ impl CanElaborate<Ob, ModalOb<Uuid, Ustr>> for Elaborator {
 }
 
 /// Elaborates into a morphism in a model of a modal theory.
-impl CanElaborate<Mor, ModalMor<Uuid, Ustr>> for Elaborator {
-    fn elab(&self, mor: &Mor) -> Result<ModalMor<Uuid, Ustr>, String> {
+impl CanElaborate<Mor, ModalMor> for Elaborator {
+    fn elab(&self, mor: &Mor) -> Result<ModalMor, String> {
         match mor {
-            Mor::Basic(id) => Ok(ModalMor::Generator(*id)),
+            Mor::Basic(name) => Ok(ModalMor::Generator(QualifiedName::deserialize_str(name)?)),
             _ => Err(format!("Cannot use morphism with modal theory: {mor:#?}")),
         }
     }
 }
 
 /// Quotes an object in a model of a discrete double theory.
-impl CanQuote<Uuid, Ob> for Quoter {
-    fn quote(&self, id: &Uuid) -> Ob {
-        Ob::Basic(*id)
+impl CanQuote<QualifiedName, Ob> for Quoter {
+    fn quote(&self, name: &QualifiedName) -> Ob {
+        Ob::Basic(name.serialize_string())
     }
 }
 
 /// Quotes a morphism in a model of a discrete double theory.
-impl CanQuote<Path<Uuid, Uuid>, Mor> for Quoter {
-    fn quote(&self, path: &Path<Uuid, Uuid>) -> Mor {
+impl CanQuote<QualifiedPath, Mor> for Quoter {
+    fn quote(&self, path: &QualifiedPath) -> Mor {
         let path = path.clone();
         if path.len() == 1 {
-            Mor::Basic(path.only().unwrap())
+            Mor::Basic(path.only().unwrap().serialize_string())
         } else {
-            Mor::Composite(Box::new(demote_path(path.map(Ob::Basic, Mor::Basic))))
+            Mor::Composite(Box::new(demote_path(
+                path.map(|v| Ob::Basic(v.serialize_string()), |e| Mor::Basic(e.serialize_string())),
+            )))
         }
     }
 }
@@ -196,18 +198,18 @@ fn demote_path<V, E>(path: Path<V, E>) -> notebook_path::Path<V, E> {
 }
 
 /// Quotes an object in a model of a discrete tabulator theory.
-impl CanQuote<TabOb<Uuid, Uuid>, Ob> for Quoter {
-    fn quote(&self, ob: &TabOb<Uuid, Uuid>) -> Ob {
+impl CanQuote<TabOb, Ob> for Quoter {
+    fn quote(&self, ob: &TabOb) -> Ob {
         match ob {
-            TabOb::Basic(id) => Ob::Basic(*id),
+            TabOb::Basic(name) => Ob::Basic(name.serialize_string()),
             TabOb::Tabulated(path) => Ob::Tabulated(self.quote(path.as_ref())),
         }
     }
 }
 
 /// Quotes a morphism in a model of a discrete tabulator theory.
-impl CanQuote<TabMor<Uuid, Uuid>, Mor> for Quoter {
-    fn quote(&self, path: &TabMor<Uuid, Uuid>) -> Mor {
+impl CanQuote<TabMor, Mor> for Quoter {
+    fn quote(&self, path: &TabMor) -> Mor {
         if path.len() == 1 {
             self.quote(&path.clone().only().unwrap())
         } else {
@@ -218,10 +220,10 @@ impl CanQuote<TabMor<Uuid, Uuid>, Mor> for Quoter {
     }
 }
 
-impl CanQuote<TabEdge<Uuid, Uuid>, Mor> for Quoter {
-    fn quote(&self, ob: &TabEdge<Uuid, Uuid>) -> Mor {
+impl CanQuote<TabEdge, Mor> for Quoter {
+    fn quote(&self, ob: &TabEdge) -> Mor {
         match ob {
-            TabEdge::Basic(id) => Mor::Basic(*id),
+            TabEdge::Basic(name) => Mor::Basic(name.serialize_string()),
             TabEdge::Square {
                 dom,
                 cod,
@@ -238,12 +240,12 @@ impl CanQuote<TabEdge<Uuid, Uuid>, Mor> for Quoter {
 }
 
 /// Quotes an object in a modal of a modal theory.
-impl CanQuote<ModalOb<Uuid, Ustr>, Ob> for Quoter {
-    fn quote(&self, ob: &ModalOb<Uuid, Ustr>) -> Ob {
+impl CanQuote<ModalOb, Ob> for Quoter {
+    fn quote(&self, ob: &ModalOb) -> Ob {
         match ob {
-            ModalOb::Generator(id) => Ob::Basic(*id),
+            ModalOb::Generator(name) => Ob::Basic(name.serialize_string()),
             ModalOb::App(ob, th_id) => Ob::App {
-                op: ObOp::Basic(*th_id),
+                op: ObOp::Basic(expect_single_name(th_id)),
                 ob: self.quote(ob.as_ref()).into(),
             },
             ModalOb::List(list_type, objects) => Ob::List {
@@ -255,10 +257,10 @@ impl CanQuote<ModalOb<Uuid, Ustr>, Ob> for Quoter {
 }
 
 /// Quotes a morphism in a model of a modal theory.
-impl CanQuote<ModalMor<Uuid, Ustr>, Mor> for Quoter {
-    fn quote(&self, mor: &ModalMor<Uuid, Ustr>) -> Mor {
+impl CanQuote<ModalMor, Mor> for Quoter {
+    fn quote(&self, mor: &ModalMor) -> Mor {
         match mor {
-            ModalMor::Generator(id) => Mor::Basic(*id),
+            ModalMor::Generator(name) => Mor::Basic(name.serialize_string()),
             ModalMor::Composite(path) => {
                 if path.len() == 1 {
                     self.quote(&path.clone().only().unwrap())
@@ -277,33 +279,33 @@ impl DblModel {
     /// Constructs a new model of a double theory.
     pub fn new(theory: &DblTheory) -> Self {
         Self(match &theory.0 {
-            DblTheoryBox::Discrete(th) => DiscreteDblModel::new(th.clone()).into(),
-            DblTheoryBox::DiscreteTab(th) => DiscreteTabModel::new(th.clone()).into(),
-            DblTheoryBox::Modal(th) => ModalDblModel::new(th.clone()).into(),
+            DblTheoryBox::Discrete(th) => dbl_model::DiscreteDblModel::new(th.clone()).into(),
+            DblTheoryBox::DiscreteTab(th) => dbl_model::DiscreteTabModel::new(th.clone()).into(),
+            DblTheoryBox::Modal(th) => dbl_model::ModalDblModel::new(th.clone()).into(),
         })
     }
 
     /// Tries to get a model of a discrete theory.
-    pub fn discrete(&self) -> Result<&DiscreteDblModel, String> {
+    pub fn discrete(&self) -> Result<&dbl_model::DiscreteDblModel, String> {
         (&self.0).try_into().map_err(|_| "Model should be of a discrete theory".into())
     }
 
     /// Tries to get a model of a discrete theory, by mutable reference.
-    pub fn discrete_mut(&mut self) -> Result<&mut DiscreteDblModel, String> {
+    pub fn discrete_mut(&mut self) -> Result<&mut dbl_model::DiscreteDblModel, String> {
         (&mut self.0)
             .try_into()
             .map_err(|_| "Model should be of a discrete theory".into())
     }
 
     /// Tries to get a model of a discrete tabulator theory.
-    pub fn discrete_tab(&self) -> Result<&DiscreteTabModel, String> {
+    pub fn discrete_tab(&self) -> Result<&dbl_model::DiscreteTabModel, String> {
         (&self.0)
             .try_into()
             .map_err(|_| "Model should be of a discrete tabulator theory".into())
     }
 
     /// Tries to get a model of a modal theory.
-    pub fn modal(&self) -> Result<&ModalDblModel, String> {
+    pub fn modal(&self) -> Result<&dbl_model::ModalDblModel, String> {
         (&self.0).try_into().map_err(|_| "Model should be of a modal theory".into())
     }
 
@@ -312,7 +314,7 @@ impl DblModel {
         all_the_same!(match &mut self.0 {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
                 let ob_type = Elaborator.elab(&decl.ob_type)?;
-                model.add_ob(decl.id, ob_type);
+                model.add_ob(decl.id.into(), ob_type);
                 Ok(())
             }
         })
@@ -323,12 +325,12 @@ impl DblModel {
         all_the_same!(match &mut self.0 {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
                 let mor_type = Elaborator.elab(&decl.mor_type)?;
-                model.make_mor(decl.id, mor_type);
+                model.make_mor(decl.id.into(), mor_type);
                 if let Some(dom) = decl.dom.as_ref().map(|ob| Elaborator.elab(ob)).transpose()? {
-                    model.set_dom(decl.id, dom);
+                    model.set_dom(decl.id.into(), dom);
                 }
                 if let Some(cod) = decl.cod.as_ref().map(|ob| Elaborator.elab(ob)).transpose()? {
-                    model.set_cod(decl.id, cod);
+                    model.set_cod(decl.id.into(), cod);
                 }
                 Ok(())
             }
@@ -384,22 +386,22 @@ impl DblModel {
 
     /// Gets the domain of a basic morphism, if it is set.
     #[wasm_bindgen(js_name = "getDom")]
-    pub fn get_dom(&self, id: &str) -> Result<Option<Ob>, String> {
+    pub fn get_dom(&self, name: &str) -> Result<Option<Ob>, String> {
+        let name = QualifiedName::deserialize_str(name)?;
         all_the_same!(match &self.0 {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
-                let id = Uuid::try_parse(id).map_err(|err| err.to_string())?;
-                Ok(model.get_dom(&id).map(|ob| Quoter.quote(ob)))
+                Ok(model.get_dom(&name).map(|ob| Quoter.quote(ob)))
             }
         })
     }
 
     /// Gets the codomain of a basic morphism, if it is set.
     #[wasm_bindgen(js_name = "getCod")]
-    pub fn get_cod(&self, id: &str) -> Result<Option<Ob>, String> {
+    pub fn get_cod(&self, name: &str) -> Result<Option<Ob>, String> {
+        let name = QualifiedName::deserialize_str(name)?;
         all_the_same!(match &self.0 {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
-                let id = Uuid::try_parse(id).map_err(|err| err.to_string())?;
-                Ok(model.get_cod(&id).map(|ob| Quoter.quote(ob)))
+                Ok(model.get_cod(&name).map(|ob| Quoter.quote(ob)))
             }
         })
     }
@@ -480,12 +482,12 @@ impl DblModel {
 /// Result of validating a model of a double theory.
 #[derive(Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
-pub struct ModelValidationResult(pub JsResult<(), Vec<InvalidDblModel<Uuid>>>);
+pub struct ModelValidationResult(pub JsResult<(), Vec<InvalidDblModel>>);
 
 /// Collects application of a product operation into a list of objects.
 #[wasm_bindgen(js_name = "collectProduct")]
 pub fn collect_product(ob: Ob) -> Result<Vec<Ob>, String> {
-    let ob: ModalOb<_, _> = Elaborator.elab(&ob)?;
+    let ob: ModalOb = Elaborator.elab(&ob)?;
     let vec = ob.collect_product(None).ok_or("Object is not a product")?;
     Ok(vec.into_iter().map(|ob| Quoter.quote(&ob)).collect())
 }
@@ -508,6 +510,8 @@ pub fn elaborate_model(
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use uuid::Uuid;
+
     use super::*;
     use crate::theories::*;
 
@@ -538,8 +542,8 @@ pub(crate) mod tests {
                     name: "attr".into(),
                     id: attr,
                     mor_type: MorType::Basic("Attr".into()),
-                    dom: Some(Ob::Basic(entity)),
-                    cod: Some(Ob::Basic(attr_type)),
+                    dom: Some(Ob::Basic(entity.to_string())),
+                    cod: Some(Ob::Basic(attr_type.to_string())),
                 })
                 .is_ok()
         );
@@ -552,21 +556,20 @@ pub(crate) mod tests {
         let [a, x, y] = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
         let model = sch_walking_attr(&th, [a, x, y]);
 
-        assert_eq!(model.has_ob(Ob::Basic(x)), Ok(true));
-        assert_eq!(model.has_mor(Mor::Basic(a)), Ok(true));
-        assert_eq!(model.dom(Mor::Basic(a)), Ok(Ob::Basic(x)));
-        assert_eq!(model.cod(Mor::Basic(a)), Ok(Ob::Basic(y)));
-        assert_eq!(model.get_dom(&a.to_string()), Ok(Some(Ob::Basic(x))));
-        assert_eq!(model.get_cod(&a.to_string()), Ok(Some(Ob::Basic(y))));
-        assert_eq!(model.ob_type(Ob::Basic(x)), Ok(ObType::Basic("Entity".into())));
-        assert_eq!(model.mor_type(Mor::Basic(a)), Ok(MorType::Basic("Attr".into())));
+        let (a_id, a) = (a, Mor::Basic(a.to_string()));
+        let (x, y) = (Ob::Basic(x.to_string()), Ob::Basic(y.to_string()));
+        assert_eq!(model.has_ob(x.clone()), Ok(true));
+        assert_eq!(model.has_mor(a.clone()), Ok(true));
+        assert_eq!(model.dom(a.clone()), Ok(x.clone()));
+        assert_eq!(model.cod(a.clone()), Ok(y.clone()));
+        assert_eq!(model.get_dom(&a_id.to_string()), Ok(Some(x.clone())));
+        assert_eq!(model.get_cod(&a_id.to_string()), Ok(Some(y.clone())));
+        assert_eq!(model.ob_type(x.clone()), Ok(ObType::Basic("Entity".into())));
+        assert_eq!(model.mor_type(a.clone()), Ok(MorType::Basic("Attr".into())));
         assert_eq!(model.objects().len(), 2);
         assert_eq!(model.morphisms().len(), 1);
-        assert_eq!(model.objects_with_type(ObType::Basic("Entity".into())), Ok(vec![Ob::Basic(x)]));
-        assert_eq!(
-            model.morphisms_with_type(MorType::Basic("Attr".into())),
-            Ok(vec![Mor::Basic(a)])
-        );
+        assert_eq!(model.objects_with_type(ObType::Basic("Entity".into())), Ok(vec![x.clone()]));
+        assert_eq!(model.morphisms_with_type(MorType::Basic("Attr".into())), Ok(vec![a.clone()]));
         assert_eq!(model.validate().0, JsResult::Ok(()));
 
         let mut model = DblModel::new(&th);
@@ -574,10 +577,10 @@ pub(crate) mod tests {
             model
                 .add_mor(&MorDecl {
                     name: "a".into(),
-                    id: a,
+                    id: a_id,
                     mor_type: MorType::Basic("Attr".into()),
                     dom: None,
-                    cod: Some(Ob::Basic(y)),
+                    cod: Some(y.clone())
                 })
                 .is_ok()
         );
@@ -613,8 +616,8 @@ pub(crate) mod tests {
                     name: "f".into(),
                     id: f,
                     mor_type: MorType::Hom(Box::new(ObType::Basic("Object".into()))),
-                    dom: Some(Ob::Basic(x)),
-                    cod: Some(Ob::Basic(y)),
+                    dom: Some(Ob::Basic(x.to_string())),
+                    cod: Some(Ob::Basic(y.to_string())),
                 })
                 .is_ok()
         );
@@ -624,8 +627,8 @@ pub(crate) mod tests {
                     name: "link".into(),
                     id: link,
                     mor_type: MorType::Basic("Link".into()),
-                    dom: Some(Ob::Basic(x)),
-                    cod: Some(Ob::Tabulated(Mor::Basic(f))),
+                    dom: Some(Ob::Basic(x.to_string())),
+                    cod: Some(Ob::Tabulated(Mor::Basic(f.to_string()))),
                 })
                 .is_ok()
         );

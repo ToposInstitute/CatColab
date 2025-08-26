@@ -42,6 +42,7 @@ use tsify::Tsify;
 
 use super::theory::DblTheory;
 use crate::one::{Category, FgCategory, InvalidPathEq, Path};
+use crate::zero::QualifiedName;
 
 pub use super::discrete::model::*;
 pub use super::discrete_tabulator::model::*;
@@ -181,24 +182,24 @@ types on left and right hand sides.
 #[cfg_attr(feature = "serde", serde(tag = "tag", content = "content"))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
-pub enum InvalidDblModel<Id> {
+pub enum InvalidDblModel {
     /// Domain of morphism generator is undefined or invalid.
-    Dom(Id),
+    Dom(QualifiedName),
 
     /// Codomain of morphism generator is missing or invalid.
-    Cod(Id),
+    Cod(QualifiedName),
 
     /// Object generator has invalid object type.
-    ObType(Id),
+    ObType(QualifiedName),
 
     /// Morphism generator has invalid morphism type.
-    MorType(Id),
+    MorType(QualifiedName),
 
     /// Domain of morphism generator has type incompatible with morphism type.
-    DomType(Id),
+    DomType(QualifiedName),
 
     /// Codomain of morphism generator has type incompatible with morphism type.
-    CodType(Id),
+    CodType(QualifiedName),
 
     /// Equation between morphisms has one or more errors.
     Eq(usize, NonEmpty<InvalidPathEq>),

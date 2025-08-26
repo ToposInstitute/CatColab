@@ -6,19 +6,19 @@ methods for theory-specific analyses.
 
 use std::rc::Rc;
 
-use ustr::ustr;
 use wasm_bindgen::prelude::*;
 
 use catlog::dbl::theory;
 use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
+use catlog::zero::name;
 
 use super::model_morphism::{MotifsOptions, motifs};
 use super::{analyses::*, model::DblModel, theory::DblTheory};
 
 /// The empty or initial theory.
 #[wasm_bindgen]
-pub struct ThEmpty(Rc<theory::UstrDiscreteDblTheory>);
+pub struct ThEmpty(Rc<theory::DiscreteDblTheory>);
 
 #[wasm_bindgen]
 impl ThEmpty {
@@ -35,7 +35,7 @@ impl ThEmpty {
 
 /// The theory of categories.
 #[wasm_bindgen]
-pub struct ThCategory(Rc<theory::UstrDiscreteDblTheory>);
+pub struct ThCategory(Rc<theory::DiscreteDblTheory>);
 
 #[wasm_bindgen]
 impl ThCategory {
@@ -63,7 +63,7 @@ impl ThCategory {
 
 /// The theory of database schemas with attributes.
 #[wasm_bindgen]
-pub struct ThSchema(Rc<theory::UstrDiscreteDblTheory>);
+pub struct ThSchema(Rc<theory::DiscreteDblTheory>);
 
 #[wasm_bindgen]
 impl ThSchema {
@@ -91,7 +91,7 @@ impl ThSchema {
 
 /// The theory of signed categories.
 #[wasm_bindgen]
-pub struct ThSignedCategory(Rc<theory::UstrDiscreteDblTheory>);
+pub struct ThSignedCategory(Rc<theory::DiscreteDblTheory>);
 
 #[wasm_bindgen]
 impl ThSignedCategory {
@@ -132,13 +132,13 @@ impl ThSignedCategory {
     pub fn lotka_volterra(
         &self,
         model: &DblModel,
-        data: LotkaVolterraModelData,
+        data: analyses::ode::LotkaVolterraProblemData,
     ) -> Result<ODEResult, String> {
         Ok(ODEResult(
-            analyses::ode::SignedCoefficientBuilder::new(ustr("Object"))
-                .add_positive(Path::Id(ustr("Object")))
-                .add_negative(ustr("Negative").into())
-                .lotka_volterra_analysis(model.discrete()?, data.0)
+            analyses::ode::SignedCoefficientBuilder::new(name("Object"))
+                .add_positive(Path::Id(name("Object")))
+                .add_negative(name("Negative").into())
+                .lotka_volterra_analysis(model.discrete()?, data)
                 .solve_with_defaults()
                 .map_err(|err| format!("{err:?}"))
                 .into(),
@@ -150,13 +150,13 @@ impl ThSignedCategory {
     pub fn linear_ode(
         &self,
         model: &DblModel,
-        data: LinearODEModelData,
+        data: analyses::ode::LinearODEProblemData,
     ) -> Result<ODEResult, String> {
         Ok(ODEResult(
-            analyses::ode::SignedCoefficientBuilder::new(ustr("Object"))
-                .add_positive(Path::Id(ustr("Object")))
-                .add_negative(ustr("Negative").into())
-                .linear_ode_analysis(model.discrete()?, data.0)
+            analyses::ode::SignedCoefficientBuilder::new(name("Object"))
+                .add_positive(Path::Id(name("Object")))
+                .add_negative(name("Negative").into())
+                .linear_ode_analysis(model.discrete()?, data)
                 .solve_with_defaults()
                 .map_err(|err| format!("{err:?}"))
                 .into(),
@@ -166,7 +166,7 @@ impl ThSignedCategory {
 
 /// The theory of delayable signed categories.
 #[wasm_bindgen]
-pub struct ThDelayableSignedCategory(Rc<theory::UstrDiscreteDblTheory>);
+pub struct ThDelayableSignedCategory(Rc<theory::DiscreteDblTheory>);
 
 #[wasm_bindgen]
 impl ThDelayableSignedCategory {
@@ -239,7 +239,7 @@ impl ThDelayableSignedCategory {
 
 /// The theory of nullable signed categories.
 #[wasm_bindgen]
-pub struct ThNullableSignedCategory(Rc<theory::UstrDiscreteDblTheory>);
+pub struct ThNullableSignedCategory(Rc<theory::DiscreteDblTheory>);
 
 #[wasm_bindgen]
 impl ThNullableSignedCategory {
@@ -256,7 +256,7 @@ impl ThNullableSignedCategory {
 
 /// The theory of categories with scalars.
 #[wasm_bindgen]
-pub struct ThCategoryWithScalars(Rc<theory::UstrDiscreteDblTheory>);
+pub struct ThCategoryWithScalars(Rc<theory::DiscreteDblTheory>);
 
 #[wasm_bindgen]
 impl ThCategoryWithScalars {
@@ -273,7 +273,7 @@ impl ThCategoryWithScalars {
 
 /// The theory of categories with links.
 #[wasm_bindgen]
-pub struct ThCategoryLinks(Rc<theory::UstrDiscreteTabTheory>);
+pub struct ThCategoryLinks(Rc<theory::DiscreteTabTheory>);
 
 #[wasm_bindgen]
 impl ThCategoryLinks {
@@ -292,11 +292,11 @@ impl ThCategoryLinks {
     pub fn mass_action(
         &self,
         model: &DblModel,
-        data: MassActionModelData,
+        data: analyses::ode::MassActionProblemData,
     ) -> Result<ODEResult, String> {
         Ok(ODEResult(
             analyses::ode::StockFlowMassActionAnalysis::default()
-                .build_numerical_system(model.discrete_tab()?, data.0)
+                .build_numerical_system(model.discrete_tab()?, data)
                 .solve_with_defaults()
                 .map_err(|err| format!("{err:?}"))
                 .into(),
@@ -306,7 +306,7 @@ impl ThCategoryLinks {
 
 /// The theory of strict symmetric monoidal categories.
 #[wasm_bindgen]
-pub struct ThSymMonoidalCategory(Rc<theory::UstrModalDblTheory>);
+pub struct ThSymMonoidalCategory(Rc<theory::ModalDblTheory>);
 
 #[wasm_bindgen]
 impl ThSymMonoidalCategory {
@@ -325,11 +325,11 @@ impl ThSymMonoidalCategory {
     pub fn mass_action(
         &self,
         model: &DblModel,
-        data: MassActionModelData,
+        data: analyses::ode::MassActionProblemData,
     ) -> Result<ODEResult, String> {
         Ok(ODEResult(
             analyses::ode::PetriNetMassActionAnalysis::default()
-                .build_numerical_system(model.modal()?, data.0)
+                .build_numerical_system(model.modal()?, data)
                 .solve_with_defaults()
                 .map_err(|err| format!("{err:?}"))
                 .into(),

@@ -5,12 +5,9 @@ mathematical epidemiology.
  */
 
 use std::collections::{BTreeMap, HashMap};
-use std::fmt::Debug;
-use std::hash::Hash;
 
 use nalgebra::DVector;
 use num_traits::Zero;
-use ustr::{Ustr, ustr};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -25,7 +22,7 @@ use crate::dbl::{
 };
 use crate::one::FgCategory;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
-use crate::zero::{alg::Polynomial, rig::Monomial};
+use crate::zero::{QualifiedName, alg::Polynomial, name, rig::Monomial};
 
 use rebop::gillespie::{Gillespie, Rate};
 
@@ -37,16 +34,13 @@ use rebop::gillespie::{Gillespie, Rate};
     feature = "serde-wasm",
     tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
 )]
-pub struct MassActionProblemData<Id>
-where
-    Id: Eq + Hash,
-{
+pub struct MassActionProblemData {
     /// Map from morphism IDs to rate coefficients (nonnegative reals).
-    rates: HashMap<Id, f32>,
+    rates: HashMap<QualifiedName, f32>,
 
     /// Map from object IDs to initial values (nonnegative reals).
     #[cfg_attr(feature = "serde", serde(rename = "initialValues"))]
-    pub initial_values: HashMap<Id, f32>,
+    initial_values: HashMap<QualifiedName, f32>,
 
     /// Duration of simulation.
     pub duration: f32,
@@ -62,14 +56,14 @@ networks (aka, Petri nets) due to [Baez & Pollard](crate::refs::ReactionNets).
  */
 pub struct PetriNetMassActionAnalysis {
     /// Object type for places.
-    pub place_ob_type: ModalObType<Ustr>,
+    pub place_ob_type: ModalObType,
     /// Morphism type for transitions.
-    pub transition_mor_type: ModalMorType<Ustr>,
+    pub transition_mor_type: ModalMorType,
 }
 
 impl Default for PetriNetMassActionAnalysis {
     fn default() -> Self {
-        let ob_type = ModalObType::new(ustr("Object"));
+        let ob_type = ModalObType::new(name("Object"));
         Self {
             place_ob_type: ob_type.clone(),
             transition_mor_type: ModalMorType::Zero(ob_type),
@@ -79,10 +73,10 @@ impl Default for PetriNetMassActionAnalysis {
 
 impl PetriNetMassActionAnalysis {
     /// Creates a mass-action system with symbolic rate coefficients.
-    pub fn build_system<Id: Eq + Clone + Hash + Ord + Debug>(
+    pub fn build_system(
         &self,
-        model: &ModalDblModel<Id, Ustr>,
-    ) -> PolynomialSystem<Id, Parameter<Id>, u8> {
+        model: &ModalDblModel,
+    ) -> PolynomialSystem<QualifiedName, Parameter<QualifiedName>, u8> {
         let mut sys = PolynomialSystem::new();
         for ob in model.ob_generators_with_type(&self.place_ob_type) {
             sys.add_term(ob, Polynomial::zero());
@@ -114,11 +108,11 @@ impl PetriNetMassActionAnalysis {
     }
 
     /// Creates a mass-action system with numerical rate coefficients.
-    pub fn build_numerical_system<Id: Eq + Clone + Hash + Ord + Debug>(
+    pub fn build_numerical_system(
         &self,
-        model: &ModalDblModel<Id, Ustr>,
-        data: MassActionProblemData<Id>,
-    ) -> ODEAnalysis<Id, NumericalPolynomialSystem<u8>> {
+        model: &ModalDblModel,
+        data: MassActionProblemData,
+    ) -> ODEAnalysis<NumericalPolynomialSystem<u8>> {
         into_numerical_system(self.build_system(model), data)
     }
 
@@ -207,32 +201,32 @@ impl PetriNetMassActionAnalysis {
 /// Mass-action ODE analysis for stock-flow models.
 pub struct StockFlowMassActionAnalysis {
     /// Object type for stocks.
-    pub stock_ob_type: TabObType<Ustr, Ustr>,
+    pub stock_ob_type: TabObType,
     /// Morphism types for flows between stocks.
-    pub flow_mor_type: TabMorType<Ustr, Ustr>,
+    pub flow_mor_type: TabMorType,
     /// Morphism types for links for stocks to flows.
-    pub link_mor_type: TabMorType<Ustr, Ustr>,
+    pub link_mor_type: TabMorType,
 }
 
 impl Default for StockFlowMassActionAnalysis {
     fn default() -> Self {
-        let stock_ob_type = TabObType::Basic(ustr("Object"));
+        let stock_ob_type = TabObType::Basic(name("Object"));
         let flow_mor_type = TabMorType::Hom(Box::new(stock_ob_type.clone()));
         Self {
             stock_ob_type,
             flow_mor_type,
-            link_mor_type: TabMorType::Basic(ustr("Link")),
+            link_mor_type: TabMorType::Basic(name("Link")),
         }
     }
 }
 
 impl StockFlowMassActionAnalysis {
     /// Creates a mass-action system with symbolic rate coefficients.
-    pub fn build_system<Id: Eq + Clone + Hash + Ord>(
+    pub fn build_system(
         &self,
-        model: &DiscreteTabModel<Id, Ustr>,
-    ) -> PolynomialSystem<Id, Parameter<Id>, u8> {
-        let mut terms: HashMap<Id, Monomial<Id, u8>> = model
+        model: &DiscreteTabModel,
+    ) -> PolynomialSystem<QualifiedName, Parameter<QualifiedName>, u8> {
+        let mut terms: HashMap<QualifiedName, Monomial<QualifiedName, u8>> = model
             .mor_generators_with_type(&self.flow_mor_type)
             .map(|flow| {
                 let dom = model.mor_generator_dom(&flow).unwrap_basic();
@@ -278,19 +272,19 @@ impl StockFlowMassActionAnalysis {
     }
 
     /// Creates a mass-action system with numerical rate coefficients.
-    pub fn build_numerical_system<Id: Eq + Clone + Hash + Ord>(
+    pub fn build_numerical_system(
         &self,
-        model: &DiscreteTabModel<Id, Ustr>,
-        data: MassActionProblemData<Id>,
-    ) -> ODEAnalysis<Id, NumericalPolynomialSystem<u8>> {
+        model: &DiscreteTabModel,
+        data: MassActionProblemData,
+    ) -> ODEAnalysis<NumericalPolynomialSystem<u8>> {
         into_numerical_system(self.build_system(model), data)
     }
 }
 
-fn into_numerical_system<Id: Eq + Clone + Hash + Ord>(
-    sys: PolynomialSystem<Id, Parameter<Id>, u8>,
-    data: MassActionProblemData<Id>,
-) -> ODEAnalysis<Id, NumericalPolynomialSystem<u8>> {
+fn into_numerical_system(
+    sys: PolynomialSystem<QualifiedName, Parameter<QualifiedName>, u8>,
+    data: MassActionProblemData,
+) -> ODEAnalysis<NumericalPolynomialSystem<u8>> {
     let ob_index: BTreeMap<_, _> =
         sys.components.keys().cloned().enumerate().map(|(i, x)| (x, i)).collect();
     let n = ob_index.len();

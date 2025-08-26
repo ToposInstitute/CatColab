@@ -72,6 +72,7 @@ use nonempty::NonEmpty;
 
 use super::{category::*, graph::InvalidVDblGraph, tree::*};
 use crate::one::{InvalidPathEq, Path, tree::OpenTree};
+use crate::zero::QualifiedName;
 
 pub use super::discrete::theory::*;
 pub use super::discrete_tabulator::theory::*;
@@ -276,33 +277,33 @@ impl<VDC: VDCWithComposites> DblTheory for VDC {
 
 /// A failure of a double theory to be well defined.
 #[derive(Debug)]
-pub enum InvalidDblTheory<Id> {
+pub enum InvalidDblTheory {
     /// Morphism type with an invalid source type.
-    SrcType(Id),
+    SrcType(QualifiedName),
 
     /// Morphism type with an invalid target type.
-    TgtType(Id),
+    TgtType(QualifiedName),
 
     /// Object operation with an invalid domain.
-    ObOpDom(Id),
+    ObOpDom(QualifiedName),
 
     /// Object operation with an invalid codomain.
-    ObOpCod(Id),
+    ObOpCod(QualifiedName),
 
     /// Morphism operation with an invalid domain.
-    MorOpDom(Id),
+    MorOpDom(QualifiedName),
 
     /// Morphism operation with an invalid codomain.
-    MorOpCod(Id),
+    MorOpCod(QualifiedName),
 
     /// Morphism operation with an invalid source operation.
-    SrcOp(Id),
+    SrcOp(QualifiedName),
 
     /// Morphism operation with an invalid target operation.
-    TgtOp(Id),
+    TgtOp(QualifiedName),
 
     /// Morphism operation having a boundary with incompatible corners.
-    MorOpBoundary(Id),
+    MorOpBoundary(QualifiedName),
 
     /// Equation between morphism types with one or more errors.
     MorTypeEq(usize, NonEmpty<InvalidPathEq>),
@@ -311,8 +312,8 @@ pub enum InvalidDblTheory<Id> {
     ObOpEq(usize, NonEmpty<InvalidPathEq>),
 }
 
-impl<Id> From<InvalidVDblGraph<Id, Id, Id>> for InvalidDblTheory<Id> {
-    fn from(err: InvalidVDblGraph<Id, Id, Id>) -> Self {
+impl From<InvalidVDblGraph<QualifiedName, QualifiedName, QualifiedName>> for InvalidDblTheory {
+    fn from(err: InvalidVDblGraph<QualifiedName, QualifiedName, QualifiedName>) -> Self {
         match err {
             InvalidVDblGraph::Dom(id) => InvalidDblTheory::ObOpDom(id),
             InvalidVDblGraph::Cod(id) => InvalidDblTheory::ObOpCod(id),
