@@ -148,7 +148,7 @@ pub fn degree_atomisation(
         // Then add all the formal derivatives Y_i, along with the morphisms
         // Y_i -> Y_{i-1}
         for i in 1..*height {
-            let suffix = format!("{}ot", "d".repeat(i));
+            let suffix = format!("_d[{}]", i);
             let formal_der_i = base.clone().append(suffix.as_str().into());
             atomised_model.add_ob(formal_der_i.clone(), name("Object"));
             let formal_der_i_minus_1 = towers.get(base).unwrap().last().unwrap();
