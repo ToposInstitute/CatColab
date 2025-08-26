@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use crate::dbl::{model::*, theory::*};
 use crate::one::{Path, QualifiedPath};
-use crate::zero::{QualifiedName, name};
+use crate::zero::{name, QualifiedName};
 
 /** The positive self-loop.
 
@@ -150,26 +150,19 @@ pub fn sample_ecld() -> DiscreteDblModel {
     use nonempty::nonempty;
     let th = super::theories::th_deg_del_signed_category();
     let mut model = DiscreteDblModel::new(Rc::new(th).clone());
-    model.add_ob(name("a"), name("Object"));
-    model.add_ob(name("b"), name("Object"));
-    model.add_ob(name("c"), name("Object"));
-    model.add_ob(name("d"), name("Object"));
-
-    model.add_mor(
-        name("f"),
-        name("a"),
-        name("b"),
-        Path::Seq(nonempty![name("neg"), name("deg"), name("deg"), name("deg")]),
-    );
-    model.add_mor(name("g"), name("c"), name("b"), Path::Seq(nonempty![name("deg")]));
-    model.add_mor(name("h"), name("b"), name("c"), Path::Id(name("Object")));
-    model.add_mor(name("k"), name("b"), name("a"), Path::Id(name("Object")));
-    model.add_mor(
-        name("l"),
-        name("d"),
-        name("d"),
-        Path::Seq(nonempty![name("deg"), name("deg"), name("neg")]),
-    );
+    let (a, b, c, d) = (|| name("a"), || name("b"), || name("c"), || name("d"));
+    let (f, g, h, k, l) = (|| name("f"), || name("g"), || name("h"), || name("k"), || name("l"));
+    let ob_type = || name("Object");
+    for x in vec![a, b, c, d].into_iter() {
+        model.add_ob(x(), ob_type())
+    }
+    let neg = || name("Negative");
+    let deg = || name("Degree");
+    model.add_mor(f(), a(), b(), Path::Seq(nonempty![neg(), deg(), deg(), deg()]));
+    model.add_mor(g(), c(), b(), Path::Seq(nonempty![deg()]));
+    model.add_mor(h(), b(), c(), Path::Id(ob_type()));
+    model.add_mor(k(), b(), a(), Path::Id(ob_type()));
+    model.add_mor(l(), d(), d(), Path::Seq(nonempty![deg(), deg(), neg()]));
     model
 }
 
