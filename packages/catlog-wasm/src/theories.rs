@@ -256,7 +256,7 @@ impl ThNullableSignedCategory {
 
 /// The theory of degree delay signed categories (for ECLDs).
 #[wasm_bindgen]
-pub struct ThDegDelSignedCategory(Rc<theory::UstrDiscreteDblTheory>);
+pub struct ThDegDelSignedCategory(Rc<theory::DiscreteDblTheory>);
 
 #[wasm_bindgen]
 impl ThDegDelSignedCategory {

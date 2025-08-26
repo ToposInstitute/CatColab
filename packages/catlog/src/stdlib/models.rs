@@ -146,23 +146,30 @@ a        b        c       d   ║
 ╚═══════╝ ╚═══════╝       ╚═══╝
    3,-      1,+
 */
-pub fn sample_ecld() -> UstrDiscreteDblModel {
+pub fn sample_ecld() -> DiscreteDblModel {
     use nonempty::nonempty;
     let th = super::theories::th_deg_del_signed_category();
-    let mut model = UstrDiscreteDblModel::new(Rc::new(th).clone());
-    let (a, b, c, d) = (ustr("a"), ustr("b"), ustr("c"), ustr("d"));
-    let (f, g, h, k, l) = (ustr("f"), ustr("g"), ustr("h"), ustr("k"), ustr("l"));
-    let ob_type = ustr("Object");
-    for x in vec![a, b, c, d].into_iter() {
-        model.add_ob(x, ob_type)
-    }
-    let neg = ustr("Negative");
-    let deg = ustr("Degree");
-    model.add_mor(f, a, b, Path::Seq(nonempty![neg, deg, deg, deg]));
-    model.add_mor(g, c, b, Path::Seq(nonempty![deg]));
-    model.add_mor(h, b, c, Path::Id(ob_type));
-    model.add_mor(k, b, a, Path::Id(ob_type));
-    model.add_mor(l, d, d, Path::Seq(nonempty![deg, deg, neg]));
+    let mut model = DiscreteDblModel::new(Rc::new(th).clone());
+    model.add_ob(name("a"), name("Object"));
+    model.add_ob(name("b"), name("Object"));
+    model.add_ob(name("c"), name("Object"));
+    model.add_ob(name("d"), name("Object"));
+
+    model.add_mor(
+        name("f"),
+        name("a"),
+        name("b"),
+        Path::Seq(nonempty![name("neg"), name("deg"), name("deg"), name("deg")]),
+    );
+    model.add_mor(name("g"), name("c"), name("b"), Path::Seq(nonempty![name("deg")]));
+    model.add_mor(name("h"), name("b"), name("c"), Path::Id(name("Object")));
+    model.add_mor(name("k"), name("b"), name("a"), Path::Id(name("Object")));
+    model.add_mor(
+        name("l"),
+        name("d"),
+        name("d"),
+        Path::Seq(nonempty![name("deg"), name("deg"), name("neg")]),
+    );
     model
 }
 
