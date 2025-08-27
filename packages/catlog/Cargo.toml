@@ -6,7 +6,7 @@ version = "0.1.0"
 edition = "2024"
 
 [features]
-ode = ["dep:ode_solvers", "dep:nalgebra"]
+ode = ["dep:ode_solvers", "dep:nalgebra", "dep:rebop"]
 serde = ["dep:serde", "nonempty/serialize", "ustr/serde", "uuid/serde"]
 serde-wasm = ["serde", "dep:wasm-bindgen", "dep:tsify"]
 

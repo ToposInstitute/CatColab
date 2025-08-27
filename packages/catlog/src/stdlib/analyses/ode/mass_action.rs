@@ -17,6 +17,7 @@ use tsify::Tsify;
 use super::ODEAnalysis;
 use super::StochasticODEAnalysis;
 use crate::dbl::{
+    modal::model::ModalOb,
     model::{DiscreteTabModel, FgDblModel, ModalDblModel, MutDblModel, TabEdge},
     theory::{ModalMorType, ModalObType, TabMorType, TabObType},
 };
@@ -40,7 +41,7 @@ pub struct MassActionProblemData {
 
     /// Map from object IDs to initial values (nonnegative reals).
     #[cfg_attr(feature = "serde", serde(rename = "initialValues"))]
-    initial_values: HashMap<QualifiedName, f32>,
+    pub initial_values: HashMap<QualifiedName, f32>,
 
     /// Duration of simulation.
     pub duration: f32,
@@ -117,13 +118,13 @@ impl PetriNetMassActionAnalysis {
     }
 
     /// Creates a mass-action system in a reaction network.
-    pub fn build_reaction<Id: Eq + Clone + Hash + Ord + Debug>(
+    pub fn build_reaction(
         &self,
-        model: &ModalDblModel<Id, Ustr>,
-        data: MassActionProblemData<Id>,
-    ) -> StochasticODEAnalysis<Id> {
+        model: &ModalDblModel,
+        data: MassActionProblemData,
+    ) -> StochasticODEAnalysis {
         let obs = model.ob_generators_with_type(&self.place_ob_type).collect::<Vec<_>>();
-        let mut variable_index: BTreeMap<Id, usize> = Default::default();
+        let mut variable_index: BTreeMap<QualifiedName, usize> = Default::default();
         let ivs = obs
             .clone()
             .into_iter()
@@ -155,7 +156,7 @@ impl PetriNetMassActionAnalysis {
                     inputs
                         .iter()
                         .filter(|&g| {
-                            if let crate::dbl::modal::model::ModalOb::Generator(id) = g {
+                            if let ModalOb::Generator(id) = g {
                                 *id == obstr
                             } else {
                                 false
@@ -171,7 +172,7 @@ impl PetriNetMassActionAnalysis {
                     outputs
                         .iter()
                         .filter(|&g| {
-                            if let crate::dbl::modal::model::ModalOb::Generator(id) = g {
+                            if let ModalOb::Generator(id) = g {
                                 *id == obstr
                             } else {
                                 false

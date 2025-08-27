@@ -1,6 +1,5 @@
 //! ODE analyses of models.
 
-use std::cmp::Eq;
 use std::collections::{BTreeMap, HashMap};
 
 use derivative::Derivative;
@@ -68,30 +67,27 @@ impl<Sys> ODEAnalysis<Sys> {
 
 /// Data needed to simulate and interpret a Reaction Network analysis of a model
 #[derive(Constructor)]
-pub struct StochasticODEAnalysis<Id: Eq + Hash> {
+pub struct StochasticODEAnalysis {
     /// Reaction network for the analysis.
     pub problem: rebop::gillespie::Gillespie,
 
     /// Data for the stochastic ODE
-    pub data: MassActionProblemData<Id>,
+    pub data: MassActionProblemData,
 
     /// mapping from IDs in model (usually object IDs) to variable indices.
-    pub variable_index: BTreeMap<Id, usize>,
+    pub variable_index: BTreeMap<QualifiedName, usize>,
 }
 
-impl<Id: Eq + Hash> StochasticODEAnalysis<Id> {
+impl StochasticODEAnalysis {
     /// Solves the stochastic ODE with reasonable default settings and collects results.
-    pub fn solve_with_defaults(&mut self) -> Result<StochasticODESolution<Id>, IntegrationError>
-    where
-        Id: Eq + Hash + Clone,
-    {
+    pub fn solve_with_defaults(&mut self) -> Result<ODESolution, IntegrationError> {
         // ODE solver will fail in the degenerate case of an empty system.
         if self.variable_index.is_empty() {
             return Ok(Default::default());
         }
 
         let mut time: Vec<f32> = vec![];
-        let mut states: HashMap<Id, Vec<f32>> = HashMap::new();
+        let mut states: HashMap<QualifiedName, Vec<f32>> = HashMap::new();
         for t in 0..(self.data.duration as u8) {
             self.problem.advance_until(t as f64);
             time.push(self.problem.get_time() as f32);
@@ -103,25 +99,8 @@ impl<Id: Eq + Hash> StochasticODEAnalysis<Id> {
             }
         }
 
-        Ok(StochasticODESolution { time, states })
+        Ok(ODESolution { time, states })
     }
-}
-
-/// Solution to a Reaction Network problem.
-#[derive(Clone, Derivative)]
-#[derivative(Default(bound = ""))]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
-#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
-pub struct StochasticODESolution<Id>
-where
-    Id: Eq + Hash,
-{
-    /// Values of time variable for the duration the simulation.
-    time: Vec<f32>,
-
-    /// Values of the state variables for the duration of the simulation
-    states: HashMap<Id, Vec<f32>>,
 }
 
 pub mod linear_ode;

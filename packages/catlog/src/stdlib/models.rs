@@ -138,22 +138,28 @@ pub fn catalyzed_reaction(th: Rc<ModalDblTheory>) -> ModalDblModel {
 
 /** The SIR model viewed as a reaction network.
  */
-pub fn sir_petri(th: Rc<UstrModalDblTheory>) -> UstrModalDblModel {
-    let (ob_type, op) = (ModalObType::new(ustr("Object")), ustr("tensor"));
-    let mut model = UstrModalDblModel::new(th);
-    let (s, i, r) = (ustr("S"), ustr("I"), ustr("R"));
-    model.add_ob(s, ob_type.clone());
-    model.add_ob(i, ob_type.clone());
-    model.add_ob(r, ob_type.clone());
+pub fn sir_petri(th: Rc<ModalDblTheory>) -> ModalDblModel {
+    let (ob_type, op) = (ModalObType::new(name("Object")), name("tensor"));
+    let mut model = ModalDblModel::new(th);
+    let (s, i, r) = (name("S"), name("I"), name("R"));
+    model.add_ob(s.clone(), ob_type.clone());
+    model.add_ob(i.clone(), ob_type.clone());
+    model.add_ob(r.clone(), ob_type.clone());
     model.add_mor(
-        ustr("infection"),
-        ModalOb::App(ModalOb::List(List::Symmetric, vec![s.into(), i.into()]).into(), op),
-        ModalOb::App(ModalOb::List(List::Symmetric, vec![i.into(), i.into()]).into(), op),
+        name("infection"),
+        ModalOb::App(
+            ModalOb::List(List::Symmetric, vec![s.into(), i.clone().into()]).into(),
+            op.clone(),
+        ),
+        ModalOb::App(
+            ModalOb::List(List::Symmetric, vec![i.clone().into(), i.clone().into()]).into(),
+            op.clone(),
+        ),
         ModalMorType::Zero(ob_type.clone()),
     );
     model.add_mor(
-        ustr("recovery"),
-        ModalOb::App(ModalOb::List(List::Symmetric, vec![i.into()]).into(), op),
+        name("recovery"),
+        ModalOb::App(ModalOb::List(List::Symmetric, vec![i.into()]).into(), op.clone()),
         ModalOb::App(ModalOb::List(List::Symmetric, vec![r.into()]).into(), op),
         ModalMorType::Zero(ob_type),
     );

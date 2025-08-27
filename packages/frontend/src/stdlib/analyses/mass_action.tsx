@@ -11,7 +11,7 @@ import {
 import { type MorphismDecl, type ObjectDecl, morNameOrDefault } from "../../model";
 import type { ModelAnalysisMeta } from "../../theory";
 import { ODEResultPlot } from "../../visualization";
-import { createModelODEPlot, createModelStochasticODEPlot } from "./simulation";
+import { createModelODEPlot } from "./simulation";
 
 import "./simulation.css";
 
@@ -146,7 +146,7 @@ export function configureReactionMassAction(options: {
     simulate: Simulator;
     isState?: (ob: ObjectDecl) => boolean;
     isTransition?: (mor: MorphismDecl) => boolean;
-}): ModelAnalysisMeta<MassActionContent> {
+}): ModelAnalysisMeta<MassActionProblemData> {
     const {
         id = "stochastic-mass-action",
         name = "Stochastic mass action dynamics",
@@ -170,7 +170,7 @@ export function configureReactionMassAction(options: {
 
 /** Analyze a model using mass-action dynamics. */
 export function StochasticODEMassAction(
-    props: ModelAnalysisProps<MassActionContent> & {
+    props: ModelAnalysisProps<MassActionProblemData> & {
         simulate: Simulator;
         isState?: (ob: ObjectDecl) => boolean;
         isTransition?: (mor: MorphismDecl) => boolean;
@@ -238,7 +238,7 @@ export function StochasticODEMassAction(
         }),
     ];
 
-    const plotResult = createModelStochasticODEPlot(
+    const plotResult = createModelODEPlot(
         () => props.liveModel,
         (model: DblModel) => props.simulate(model, props.content),
     );

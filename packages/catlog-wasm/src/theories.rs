@@ -341,11 +341,11 @@ impl ThSymMonoidalCategory {
     pub fn reaction_network(
         &self,
         model: &DblModel,
-        data: MassActionModelData,
-    ) -> Result<StochasticODEResult, String> {
-        Ok(StochasticODEResult(
+        data: analyses::ode::MassActionProblemData,
+    ) -> Result<ODEResult, String> {
+        Ok(ODEResult(
             analyses::ode::PetriNetMassActionAnalysis::default()
-                .build_reaction(model.modal()?, data.0.clone())
+                .build_reaction(model.modal()?, data.clone())
                 .solve_with_defaults()
                 .map_err(|err| format!("{err:?}"))
                 .into(),
