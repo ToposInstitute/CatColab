@@ -223,12 +223,13 @@ end
 # means that it will be automatically specified
 @testset "Analysis - Diffusivity Constant" begin
     system = Analysis(ThDecapode(), payloadjson)
-    # simulator = evalsim(system.pode)
-    path = joinpath(@__DIR__, "testsim.jl")
-    open(path, "w") do f
-        write(f, string(gensim(system.pode)))
-    end
-    simulator = include(path)
+    simulator = evalsim(system.pode)
+    # DEBUGGING SNIPPET:
+    # path = joinpath(@__DIR__, "testsim.jl")
+    # open(path, "w") do f
+    #     write(f, string(gensim(system.pode)))
+    # end
+    # simulator = include(path)
     f = simulator(system.geometry.dualmesh, system.generate, DiagonalHodge())
     soln = run_sim(f, system.init, system.duration, ComponentArray(k=0.5,))
     @test soln.retcode == ReturnCode.Success

@@ -1,8 +1,5 @@
 using IJulia
-using ArgParse
-import PackageCompiler: create_sysimage
 using Preferences
-
 import REPL
 using REPL.TerminalMenus
 
@@ -75,12 +72,12 @@ end
 export change_mode!
 
 function change_kernel!(prefer::Bool=true; config::ServerConfig=CONFIG)
-    menu = RadioMenu(config.kernels, pagesize=4)
+    menu = RadioMenu(basename.(config.kernels), pagesize=4)
     cursor = something(findfirst(==(config.kernel), config.kernels), 0)
     choice = request("Select a kernel: ", menu; cursor=cursor)
     if choice != -1
         # Assumes kernel name is a path
-        config.kernel = basename(config.kernels[choice])
+        config.kernel = config.kernels[choice]
         if prefer
             @set_preferences!("kernel" => config.kernel)
         end
@@ -102,10 +99,33 @@ function load_kernels!(;config::ServerConfig=CONFIG)
     config.kernels = basename.(kernels)
 end
 
+"""    install_ccl_kernel!()
+
+This calls IJulia to install a kernel `CatColabInteropKernel` in the current project directory.
+
+To build a sysimage, load the `SysImageExt` package extension by loading `PackageCompiler.jl`. This adds an additional method to `install_ccl_kernel!` which builds the sysimg.
+
+You can see installed kernels visible to IJulia by running `change_kernel!()`.
+
+Usage:
+
+For building an IJulia kernel
+```
+using CatColabInterop
+install_ccl_kernel!()
+```
+For building the sysimg:
+```
+using CatColabInterop
+using PackageCompiler # loads Julia extension for building the sysimage
+install_ccl_kernel!(Val(:sysimg))
+```
+"""
 function install_ccl_kernel!(;config::ServerConfig=CONFIG, kwargs...)
     kernel = installkernel("CatColabInteropKernel", "--project=@.", kwargs...)
     load_kernels!(config)
 end
+export install_ccl_kernel!
 
 function build_jupyter_server_cmd(args::Dict{String, Any})
     return `
@@ -161,18 +181,3 @@ function stop_server!(;config::ServerConfig=CONFIG)
     end
 end
 export stop_server!
-
-# SYS IMAGE
-
-function build_sysimage(;config::ServerConfig=CONFIG, sysimg = "CatColabInteropSysImage.so")
-    @info "Creating the sys image. This may take a while..."
-    create_sysimage(["CatColabInterop"], sysimage_path=sysimg,
-                    precompile_execution_file="sysimage_precompile.jl")
-
-    @info "Adding $sysimg to IJulia kernel"
-    installkernel("CatColabInteropSysImage", "--project=@.", "--sysimage=$sysimg")
-
-    load_kernels!()
-    @info "Done!"
-end
-export build_sysimage
