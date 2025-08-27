@@ -73,6 +73,9 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
     const componentId = createUniqueId();
     const pathId = () => `edge-path-${componentId}`;
     const defaultPath = () => <path id={pathId()} marker-end={markerUrl()} d={path()} />;
+    const invisiblePath = () => (
+        <path id={pathId()} style="stroke: white;" marker-end={markerUrl()} d={path()} />
+    );
 
     const tgtLabel = (text: string) => {
         // Place the target label offset from the target in the direction
@@ -120,6 +123,60 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
                 <Match when={props.edge.style === "minusCaesura"}>
                     {defaultPath()}
                     {tgtLabel("-")}
+                    <text style="dominant-baseline: central;">
+                        <textPath href={`#${pathId()}`} startOffset="40%">
+                            {"‖"}
+                        </textPath>
+                    </text>
+                </Match>
+                <Match when={props.edge.style === "plusDeg"}>
+                    <path class="double-outer" d={path()} />
+                    <path class="double-inner" d={path()} />
+                    <path class="double-marker" marker-end={markerUrl()} d={path()} />
+                    {tgtLabel("+")}
+                </Match>
+                <Match when={props.edge.style === "minusDeg"}>
+                    <path class="double-outer" d={path()} />
+                    <path class="double-inner" d={path()} />
+                    <path class="double-marker" marker-end={markerUrl()} d={path()} />
+                    {tgtLabel("-")}
+                </Match>
+                <Match when={props.edge.style === "plusDelay"}>
+                    {defaultPath()}
+                    {tgtLabel("+")}
+                    <text style="dominant-baseline: central;">
+                        <textPath href={`#${pathId()}`} startOffset="35%">
+                            {"‖"}
+                        </textPath>
+                    </text>
+                </Match>
+                <Match when={props.edge.style === "minusDelay"}>
+                    {defaultPath()}
+                    {tgtLabel("-")}
+                    <text style="dominant-baseline: central;">
+                        <textPath href={`#${pathId()}`} startOffset="35%">
+                            {"‖"}
+                        </textPath>
+                    </text>
+                </Match>
+                <Match when={props.edge.style === "plusDegDelay"}>
+                    <path class="double-outer" d={path()} />
+                    <path class="double-inner" d={path()} />
+                    <path class="double-marker" marker-end={markerUrl()} d={path()} />
+                    {tgtLabel("+")}
+                    {invisiblePath()}
+                    <text style="dominant-baseline: central;">
+                        <textPath href={`#${pathId()}`} startOffset="40%">
+                            {"‖"}
+                        </textPath>
+                    </text>
+                </Match>
+                <Match when={props.edge.style === "minusDegDelay"}>
+                    <path class="double-outer" d={path()} />
+                    <path class="double-inner" d={path()} />
+                    <path class="double-marker" marker-end={markerUrl()} d={path()} />
+                    {tgtLabel("-")}
+                    {invisiblePath()}
                     <text style="dominant-baseline: central;">
                         <textPath href={`#${pathId()}`} startOffset="40%">
                             {"‖"}
@@ -204,11 +261,17 @@ const styleToMarker: Record<ArrowStyle, ArrowMarker> = {
     default: "vee",
     double: "double",
     flat: "flat",
-    plus: "triangle",
-    minus: "triangle",
+    plus: "vee",
+    minus: "vee",
     indeterminate: "triangle",
     plusCaesura: "triangle",
     minusCaesura: "triangle",
+    plusDeg: "double",
+    minusDeg: "double",
+    plusDelay: "vee",
+    minusDelay: "vee",
+    plusDegDelay: "double",
+    minusDegDelay: "double",
     scalar: "triangle",
 };
 

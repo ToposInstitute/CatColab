@@ -136,6 +136,36 @@ pub fn catalyzed_reaction(th: Rc<ModalDblTheory>) -> ModalDblModel {
     model
 }
 
+/** A small example of an ECLD to use for testing purposes
+
+   0,+      0,+            2,-
+┌───────┐ ┌───────┐       ╔═══╗
+▼       │ │       ▼       ▼   ║
+a        b        c       d   ║
+║       ▲ ▲       ║       ║   ║
+╚═══════╝ ╚═══════╝       ╚═══╝
+   3,-      1,+
+*/
+pub fn sample_ecld() -> DiscreteDblModel {
+    use nonempty::nonempty;
+    let th = super::theories::th_deg_del_signed_category();
+    let mut model = DiscreteDblModel::new(Rc::new(th).clone());
+    let (a, b, c, d) = (|| name("a"), || name("b"), || name("c"), || name("d"));
+    let (f, g, h, k, l) = (|| name("f"), || name("g"), || name("h"), || name("k"), || name("l"));
+    let ob_type = || name("Object");
+    for x in vec![a, b, c, d].into_iter() {
+        model.add_ob(x(), ob_type())
+    }
+    let neg = || name("Negative");
+    let deg = || name("Degree");
+    model.add_mor(f(), a(), b(), Path::Seq(nonempty![neg(), deg(), deg(), deg()]));
+    model.add_mor(g(), c(), b(), Path::Seq(nonempty![deg()]));
+    model.add_mor(h(), b(), c(), Path::Id(ob_type()));
+    model.add_mor(k(), b(), a(), Path::Id(ob_type()));
+    model.add_mor(l(), d(), d(), Path::Seq(nonempty![deg(), deg(), neg()]));
+    model
+}
+
 #[cfg(test)]
 mod tests {
     use super::super::theories::*;
