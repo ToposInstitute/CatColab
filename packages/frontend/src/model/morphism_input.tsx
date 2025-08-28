@@ -25,7 +25,8 @@ export function BasicMorInput(
     return (
         <MorIdInput
             completions={completions()}
-            idToName={liveModel().morphismIndex()}
+            idToLabel={(id) => liveModel().elaboratedModel()?.morGeneratorLabel(id)}
+            labelToId={(label) => liveModel().elaboratedModel()?.morGeneratorWithLabel(label)}
             {...otherProps}
         />
     );

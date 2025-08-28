@@ -2,7 +2,7 @@ import ChevronLeft from "lucide-solid/icons/chevron-left";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import { Show, createMemo } from "solid-js";
 
-import type { DblModel, MotifsOptions } from "catlog-wasm";
+import type { DblModel, MotifOccurrence, MotifsOptions } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { Foldable, FormGroup, IconButton, InputField } from "../../components";
 
@@ -11,7 +11,7 @@ import { ModelGraphviz } from "./model_graph";
 
 import "./submodel_graphs.css";
 
-type FindSubmodelsFn = (model: DblModel, options: MotifsOptions) => DblModel[];
+type FindSubmodelsFn = (model: DblModel, options: MotifsOptions) => MotifOccurrence[];
 
 /** Configuration and state of a submodels analysis. */
 export type SubmodelsAnalysisContent = {
@@ -52,7 +52,7 @@ function SubmodelsAnalysis(
         title?: string;
     } & ModelAnalysisProps<SubmodelsAnalysisContent>,
 ) {
-    const submodels = createMemo<DblModel[]>(
+    const submodels = createMemo<MotifOccurrence[]>(
         () => {
             const validated = props.liveModel.validatedModel();
             if (validated?.tag !== "Valid") {
@@ -121,15 +121,21 @@ function SubmodelsAnalysis(
                     </Show>
                 </FormGroup>
             </Foldable>
-            <Show when={submodels()[index()]}>
+            <Show when={props.liveModel.elaboratedModel()}>
                 {(model) => (
-                    <ModelGraphviz
-                        model={model()}
-                        theory={props.liveModel.theory()}
-                        options={{
-                            engine: "dot",
-                        }}
-                    />
+                    <Show when={submodels()[index()]}>
+                        {(submodel) => (
+                            <ModelGraphviz
+                                model={model()}
+                                theory={props.liveModel.theory()}
+                                obGenerators={submodel().obGenerators}
+                                morGenerators={submodel().morGenerators}
+                                options={{
+                                    engine: "dot",
+                                }}
+                            />
+                        )}
+                    </Show>
                 )}
             </Show>
         </div>

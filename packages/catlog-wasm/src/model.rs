@@ -14,7 +14,7 @@ use catlog::dbl::model::{
 use catlog::dbl::theory::{self as dbl_theory, ModalObOp};
 use catlog::one::{Category as _, FgCategory, Path, QualifiedPath};
 use catlog::validate::Validate;
-use catlog::zero::{Column, IndexedHashColumn, Mapping, MutMapping, QualifiedName};
+use catlog::zero::{NameLookup, Namespace, QualifiedLabel, QualifiedName};
 use notebook_types::current::{path as notebook_path, *};
 
 use super::notation::*;
@@ -22,36 +22,6 @@ use super::result::JsResult;
 use super::theory::{
     DblTheory, DblTheoryBox, demote_modality, expect_single_name, promote_modality,
 };
-
-/** A box containing a model of a double theory of any kind.
-
-See [`DblTheoryBox`] for motivation.
- */
-#[allow(clippy::large_enum_variant)]
-#[derive(From, TryInto)]
-#[try_into(ref, ref_mut)]
-pub enum DblModelBox {
-    /// A model of a discrete double theory.
-    Discrete(dbl_model::DiscreteDblModel),
-    /// A model of a discrete tabulator theory.
-    DiscreteTab(dbl_model::DiscreteTabModel),
-    /// A model of a modal double theory.
-    Modal(dbl_model::ModalDblModel),
-}
-
-/// Wasm binding of a model of a double theory.
-#[wasm_bindgen]
-pub struct DblModel {
-    /// The boxed underlying model.
-    #[wasm_bindgen(skip)]
-    pub model: DblModelBox,
-
-    /// Mapping from object generators to human-readable names.
-    pub(crate) ob_index: IndexedHashColumn<QualifiedName, String>,
-
-    /// Mapping from morphism generators to human-readable names.
-    pub(crate) mor_index: IndexedHashColumn<QualifiedName, String>,
-}
 
 /// Elaborates into an object in a model of a discrete double theory.
 impl CanElaborate<Ob, QualifiedName> for Elaborator {
@@ -285,6 +255,32 @@ impl CanQuote<ModalMor, Mor> for Quoter {
     }
 }
 
+/** A box containing a model of a double theory of any kind.
+
+See [`DblTheoryBox`] for motivation.
+ */
+#[allow(clippy::large_enum_variant)]
+#[derive(From, TryInto)]
+#[try_into(ref, ref_mut)]
+pub enum DblModelBox {
+    /// A model of a discrete double theory.
+    Discrete(dbl_model::DiscreteDblModel),
+    /// A model of a discrete tabulator theory.
+    DiscreteTab(dbl_model::DiscreteTabModel),
+    /// A model of a modal double theory.
+    Modal(dbl_model::ModalDblModel),
+}
+
+/// Wasm binding of a model of a double theory.
+#[wasm_bindgen]
+pub struct DblModel {
+    /// The boxed underlying model.
+    #[wasm_bindgen(skip)]
+    pub model: DblModelBox,
+    ob_namespace: Namespace,
+    mor_namespace: Namespace,
+}
+
 impl DblModel {
     /// Constructs a new model of a double theory.
     pub fn new(theory: &DblTheory) -> Self {
@@ -295,8 +291,8 @@ impl DblModel {
         };
         Self {
             model,
-            ob_index: Default::default(),
-            mor_index: Default::default(),
+            ob_namespace: Namespace::new_for_uuid(),
+            mor_namespace: Namespace::new_for_uuid(),
         }
     }
 
@@ -335,7 +331,7 @@ impl DblModel {
             }
         });
         if !decl.name.is_empty() {
-            self.ob_index.set(decl.id.into(), decl.name.clone());
+            self.ob_namespace.set_label(decl.id, decl.name.as_str().into())
         }
         Ok(())
     }
@@ -355,7 +351,7 @@ impl DblModel {
             }
         });
         if !decl.name.is_empty() {
-            self.mor_index.set(decl.id.into(), decl.name.clone());
+            self.mor_namespace.set_label(decl.id, decl.name.as_str().into())
         }
         Ok(())
     }
@@ -496,28 +492,28 @@ impl DblModel {
         })
     }
 
-    /// Gets the human-readable name, if any, for an object generator.
-    #[wasm_bindgen(js_name = "obGeneratorName")]
-    pub fn ob_generator_name(&self, id: &QualifiedName) -> Option<String> {
-        self.ob_index.apply_to_ref(id)
+    /// Gets the human-readable label, if any, for an object generator.
+    #[wasm_bindgen(js_name = "obGeneratorLabel")]
+    pub fn ob_generator_label(&self, id: &QualifiedName) -> Option<QualifiedLabel> {
+        self.ob_namespace.label(id)
     }
 
-    /// Gets the object generators with the given human-readable name.
-    #[wasm_bindgen(js_name = "obGeneratorsWithName")]
-    pub fn ob_generators_with_name(&self, name: String) -> Vec<QualifiedName> {
-        self.ob_index.preimage(&name).collect()
+    /// Gets an object generator with the given human-readable label.
+    #[wasm_bindgen(js_name = "obGeneratorWithLabel")]
+    pub fn ob_generator_with_label(&self, label: &QualifiedLabel) -> NameLookup {
+        self.ob_namespace.name_with_label(label)
     }
 
-    /// Gets the human-readable name, if any, for a morphism generator.
-    #[wasm_bindgen(js_name = "morGeneratorName")]
-    pub fn mor_generator_name(&self, id: &QualifiedName) -> Option<String> {
-        self.mor_index.apply_to_ref(id)
+    /// Gets the human-readable label, if any, for a morphism generator.
+    #[wasm_bindgen(js_name = "morGeneratorLabel")]
+    pub fn mor_generator_label(&self, id: &QualifiedName) -> Option<QualifiedLabel> {
+        self.mor_namespace.label(id)
     }
 
-    /// Gets the morphism generators with the given human-readable name.
-    #[wasm_bindgen(js_name = "morGeneratorsWithName")]
-    pub fn mor_generators_with_name(&self, name: String) -> Vec<QualifiedName> {
-        self.mor_index.preimage(&name).collect()
+    /// Gets a morphism generator with the given human-readable label.
+    #[wasm_bindgen(js_name = "morGeneratorWithLabel")]
+    pub fn mor_generator_with_label(&self, label: &QualifiedLabel) -> NameLookup {
+        self.mor_namespace.name_with_label(label)
     }
 
     /// Validates the model, returning any validation failures.
@@ -626,8 +622,8 @@ pub(crate) mod tests {
             model.mor_generators_with_type(MorType::Basic("Attr".into())),
             Ok(vec![a_id.into()])
         );
-        assert_eq!(model.ob_generator_name(&x_id.into()), Some("entity".into()));
-        assert_eq!(model.mor_generator_name(&a_id.into()), Some("attr".into()));
+        assert_eq!(model.ob_generator_label(&x_id.into()), Some("entity".into()));
+        assert_eq!(model.mor_generator_label(&a_id.into()), Some("attr".into()));
         assert_eq!(model.validate().0, JsResult::Ok(()));
 
         let mut model = DblModel::new(&th);

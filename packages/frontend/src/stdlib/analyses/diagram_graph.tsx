@@ -2,11 +2,10 @@ import type * as Viz from "@viz-js/viz";
 import { Show, createSignal } from "solid-js";
 import { P, match } from "ts-pattern";
 
-import type { DblModelDiagram, Uuid } from "catlog-wasm";
+import type { DblModelDiagram, LabelSegment, Uuid } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
 import { Foldable } from "../../components";
 import type { DiagramAnalysisMeta, Theory } from "../../theory";
-import type { Name } from "../../util/indexing";
 import { DownloadSVGButton, GraphvizSVG } from "../../visualization";
 import * as GV from "./graph_visualization";
 
@@ -45,6 +44,7 @@ export function DiagramGraph(
     const graphviz = () => {
         const liveModel = props.liveDiagram.liveModel;
         const theory = liveModel.theory();
+        const model = liveModel.elaboratedModel();
         const validatedDiagram = props.liveDiagram.validatedDiagram();
         return (
             theory &&
@@ -54,10 +54,10 @@ export function DiagramGraph(
                     return props.liveDiagram.objectIndex().map.get(id);
                 },
                 baseObName(id) {
-                    return liveModel.objectIndex().map.get(id);
+                    return model?.obGeneratorLabel(id)?.join(".");
                 },
                 baseMorName(id) {
-                    return liveModel.morphismIndex().map.get(id);
+                    return model?.morGeneratorLabel(id)?.join(".");
                 },
             })
         );
@@ -98,7 +98,7 @@ export function diagramToGraphviz(
     diagram: DblModelDiagram,
     theory: Theory,
     options?: {
-        obName?: (id: Uuid) => Name | undefined;
+        obName?: (id: Uuid) => LabelSegment | undefined;
         baseObName?: (id: Uuid) => string | undefined;
         baseMorName: (id: Uuid) => string | undefined;
         attributes?: GV.GraphvizAttributes;

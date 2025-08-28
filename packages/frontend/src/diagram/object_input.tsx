@@ -20,7 +20,23 @@ export function BasicObInput(
     const completions = (): QualifiedName[] | undefined =>
         props.obType && liveDiagram().elaboratedDiagram()?.obGeneratorsWithType(props.obType);
 
+    // FIXME: Push diagram labels into Wasm layer.
     return (
-        <ObIdInput completions={completions()} idToName={liveDiagram().objectIndex()} {...props} />
+        <ObIdInput
+            completions={completions()}
+            idToLabel={(id) => {
+                const segment = liveDiagram().objectIndex().map.get(id);
+                return segment ? [segment] : undefined;
+            }}
+            labelToId={(label) => {
+                const segment = label[0];
+                let id = undefined;
+                if (segment) {
+                    id = liveDiagram().objectIndex().index.get(segment)?.[0];
+                }
+                return id ? { tag: "Unique", content: id } : { tag: "None" };
+            }}
+            {...props}
+        />
     );
 }

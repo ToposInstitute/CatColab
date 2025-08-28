@@ -1,8 +1,15 @@
 import { createEffect, createSignal, splitProps } from "solid-js";
 import { P, match } from "ts-pattern";
 
-import type { Mor, Ob, QualifiedName, Uuid } from "catlog-wasm";
-import { type Name, type NameType, nameType } from "../util/indexing";
+import type {
+    LabelSegment,
+    Mor,
+    NameLookup,
+    Ob,
+    QualifiedLabel,
+    QualifiedName,
+    Uuid,
+} from "catlog-wasm";
 import type { Completion } from "./completions";
 import { InlineInput, type InlineInputErrorStatus, type InlineInputOptions } from "./inline_input";
 
@@ -12,8 +19,8 @@ import "./id_input.css";
  */
 export type IdInputOptions = {
     generateId?: () => Uuid;
-    idToName?: (id: QualifiedName) => Name | undefined;
-    nameToIds?: (name: Name) => QualifiedName[];
+    idToLabel?: (id: QualifiedName) => QualifiedLabel | undefined;
+    labelToId?: (label: QualifiedLabel) => NameLookup | undefined;
     isInvalid?: boolean;
     completions?: Uuid[];
 } & Omit<InlineInputOptions, "completions" | "status">;
@@ -33,20 +40,20 @@ export function IdInput(
         "setId",
         "generateId",
         "completions",
-        "idToName",
-        "nameToIds",
+        "idToLabel",
+        "labelToId",
         "isInvalid",
     ]);
 
-    const idToName = (id: QualifiedName): Name | undefined => props.idToName?.(id);
-    const idToText = (id: QualifiedName): string | undefined => idToName(id)?.toString();
+    const idToLabel = (id: QualifiedName): QualifiedLabel | undefined => props.idToLabel?.(id);
+    const idToText = (id: QualifiedName): string | undefined => idToLabel(id)?.join(".");
 
-    const textToIds = (text: string): QualifiedName[] => {
-        let name: Name = text;
+    const textToId = (text: string): NameLookup => {
+        let label: LabelSegment = text;
         if (/^\d+$/.test(text)) {
-            name = Number.parseInt(text);
+            label = Number.parseInt(text);
         }
-        return props.nameToIds?.(name) ?? [];
+        return props.labelToId?.([label]) ?? { tag: "None" };
     };
 
     const [text, setText] = createSignal("");
@@ -62,11 +69,10 @@ export function IdInput(
     createEffect(() => updateText(props.id));
 
     const handleNewText = (text: string) => {
-        const possibleIds = textToIds(text);
-        const firstId = possibleIds?.[0];
-        if (firstId) {
+        const lookup = textToId(text);
+        if (lookup.tag !== "None") {
             // TODO: Warn the user when the names are not unique.
-            props.setId(firstId);
+            props.setId(lookup.content);
         } else if (text === "") {
             // To avoid erasing incompletely entered text, only reset the ID
             // to null when the text is also empty.
@@ -101,16 +107,20 @@ export function IdInput(
 
     const setNewId = () => props.generateId && props.setId(props.generateId());
 
-    const maybeNameType = (id: Uuid | null): NameType | "undefined" => {
-        if (id === null) {
+    const labelType = (id: Uuid | null): "named" | "anonymous" | "undefined" => {
+        if (id == null) {
             return "undefined";
         }
-        const name = idToName(id);
-        return name === undefined ? "undefined" : nameType(name);
+        const label = idToLabel(id);
+        // TODO: Currently punting on labels of length > 1.
+        if (label == null || label.length === 0) {
+            return "undefined";
+        }
+        return typeof label[0] === "string" ? "named" : "anonymous";
     };
 
     return (
-        <div class={`id-input ${maybeNameType(props.id)}`}>
+        <div class={`id-input ${labelType(props.id)}`}>
             <InlineInput
                 text={text()}
                 setText={handleNewText}

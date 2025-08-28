@@ -19,17 +19,17 @@ export function createModelODEPlot(
                 return;
             }
 
-            const simulationResult = simulate(validated.model);
+            const model = validated.model;
+            const simulationResult = simulate(model);
             if (simulationResult?.tag !== "Ok") {
                 return simulationResult;
             }
 
             const solution = simulationResult.content;
-            const obIndex = liveModel().objectIndex();
             const content = {
                 time: solution.time,
                 states: Array.from(solution.states.entries()).map(([id, data]) => ({
-                    name: obIndex.map.get(id) ?? "",
+                    name: model.obGeneratorLabel(id)?.join(".") ?? "",
                     data,
                 })),
             };

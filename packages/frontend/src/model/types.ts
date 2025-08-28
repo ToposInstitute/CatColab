@@ -1,6 +1,6 @@
 import { v7 } from "uuid";
 
-import type { ModelJudgment, MorDecl, MorType, ObType } from "catlog-wasm";
+import type { DblModel, ModelJudgment, MorType, ObType, QualifiedName } from "catlog-wasm";
 import { deepCopyJSON } from "../util/deepcopy";
 
 /** Declaration of an object in a model. */
@@ -37,21 +37,22 @@ export const duplicateModelJudgment = (jgmt: ModelJudgment): ModelJudgment => ({
     id: v7(),
 });
 
-/** Return the name of a morphism if it exists, else a name of the form "src->tgt" */
-export function morNameOrDefault(mor: MorDecl, objectNameMap: Map<string, string>): string {
-    if (mor.name) {
-        return mor.name;
+/** Return the label of a morphism if it exists, otherwise a label of the form "src->tgt" */
+export function morLabelOrDefault(id: QualifiedName, model?: DblModel): string {
+    const label = model?.morGeneratorLabel(id);
+    if (label) {
+        return label.join(".");
     }
 
-    const { dom, cod } = mor;
+    const [dom, cod] = [model?.getDom(id), model?.getCod(id)];
     if (dom?.tag !== "Basic" || cod?.tag !== "Basic") {
         return "";
     }
 
-    const source = objectNameMap.get(dom.content);
-    const target = objectNameMap.get(cod.content);
+    const source = model?.obGeneratorLabel(dom.content);
+    const target = model?.obGeneratorLabel(cod.content);
     if (source && target) {
-        return `${source}→${target}`;
+        return `${source.join(".")}→${target.join(".")}`;
     }
 
     return "";

@@ -127,7 +127,10 @@ export function ObListEditor(props: ObListEditorProps) {
                                 });
                             }}
                             placeholder={props.placeholder}
-                            idToName={liveModel().objectIndex()}
+                            idToLabel={(id) => liveModel().elaboratedModel()?.obGeneratorLabel(id)}
+                            labelToId={(label) =>
+                                liveModel().elaboratedModel()?.obGeneratorWithLabel(label)
+                            }
                             completions={completions()}
                             isActive={props.isActive && activeIndex() === i}
                             deleteBackward={() =>

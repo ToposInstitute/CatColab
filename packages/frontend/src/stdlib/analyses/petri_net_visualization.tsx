@@ -82,7 +82,7 @@ export function petriNetToGraphviz(model: DblModel): Viz.Graph {
             name: id,
             attributes: {
                 id,
-                label: model.obGeneratorName(id) ?? "",
+                label: model.obGeneratorLabel(id)?.join(".") ?? "",
                 class: svgStyles["place"],
                 width: "0.5",
                 height: "0.5",
@@ -97,7 +97,7 @@ export function petriNetToGraphviz(model: DblModel): Viz.Graph {
             name: id,
             attributes: {
                 id,
-                label: model.morGeneratorName(id) ?? "",
+                label: model.morGeneratorLabel(id)?.join(".") ?? "",
                 class: svgStyles["transition"],
                 width: "1",
                 height: "0.25",

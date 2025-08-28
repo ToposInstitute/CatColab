@@ -5,6 +5,7 @@ import type {
     DblModelDiagram,
     DiagramJudgment,
     Document,
+    LabelSegment,
     ModelDiagramValidationResult,
     Uuid,
 } from "catlog-wasm";
@@ -13,7 +14,7 @@ import { type Api, type LiveDoc, type StableRef, getLiveDoc } from "../api";
 import { type LiveModelDocument, getLiveModel } from "../model";
 import { NotebookUtils, newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
-import { type IdToNameMap, indexMap } from "../util/indexing";
+import { type IndexedMap, indexMap } from "../util/indexing";
 import type { InterfaceToType } from "../util/types";
 
 /** A document defining a diagram in a model. */
@@ -50,7 +51,7 @@ export type LiveDiagramDocument = {
     formalJudgments: Accessor<Array<DiagramJudgment>>;
 
     /** A memo of the indexed map from object ID to name. */
-    objectIndex: Accessor<IdToNameMap>;
+    objectIndex: Accessor<IndexedMap<Uuid, LabelSegment>>;
 
     /** A memo of the diagram elaborated in the core, though possibly invalid. */
     elaboratedDiagram: Accessor<DblModelDiagram | undefined>;
@@ -90,7 +91,7 @@ function enlivenDiagramDocument(
         [],
     );
 
-    const objectIndex = createMemo<IdToNameMap>(() => {
+    const objectIndex = createMemo<IndexedMap<Uuid, LabelSegment>>(() => {
         const judgments = formalJudgments();
         const map = new Map<Uuid, string | number>();
 

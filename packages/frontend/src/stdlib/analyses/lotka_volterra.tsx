@@ -8,7 +8,7 @@ import {
     Foldable,
     createNumericalColumn,
 } from "../../components";
-import { type MorphismDecl, type ObjectDecl, morNameOrDefault } from "../../model";
+import { type MorphismDecl, type ObjectDecl, morLabelOrDefault } from "../../model";
 import type { ModelAnalysisMeta } from "../../theory";
 import { ODEResultPlot } from "../../visualization";
 import { createModelODEPlot } from "./simulation";
@@ -91,7 +91,7 @@ export function LotkaVolterra(
         {
             contentType: "string",
             header: true,
-            content: (mor) => morNameOrDefault(mor, props.liveModel.objectIndex().map),
+            content: (mor) => morLabelOrDefault(mor.id, props.liveModel.elaboratedModel()),
         },
         createNumericalColumn({
             name: "Interaction",

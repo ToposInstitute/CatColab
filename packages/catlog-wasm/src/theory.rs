@@ -155,7 +155,7 @@ pub(crate) fn promote_modality(modality: Modality) -> theory::Modality {
 
 pub(crate) fn expect_single_name(name: &QualifiedName) -> Ustr {
     match name.only() {
-        Some(NameSegment::Name(name)) => name,
+        Some(NameSegment::Text(text)) => text,
         _ => panic!("Only singleton names are currently supported in notebook types"),
     }
 }

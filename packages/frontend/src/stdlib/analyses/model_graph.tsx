@@ -1,7 +1,7 @@
 import type * as Viz from "@viz-js/viz";
 import { Show, createSignal } from "solid-js";
 
-import type { DblModel } from "catlog-wasm";
+import type { DblModel, QualifiedName } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { Foldable } from "../../components";
 import type { ModelAnalysisMeta, Theory } from "../../theory";
@@ -80,6 +80,8 @@ export function ModelGraph(
 export function ModelGraphviz(props: {
     model: DblModel;
     theory?: Theory;
+    obGenerators?: QualifiedName[];
+    morGenerators?: QualifiedName[];
     attributes?: GV.GraphvizAttributes;
     options?: Viz.RenderOptions;
     ref?: SVGRefProp;
@@ -88,7 +90,13 @@ export function ModelGraphviz(props: {
         <Show when={props.theory}>
             {(theory) => (
                 <GraphvizSVG
-                    graph={modelToGraphviz(props.model, theory(), props.attributes)}
+                    graph={modelToGraphviz(
+                        props.model,
+                        theory(),
+                        props.attributes,
+                        props.obGenerators,
+                        props.morGenerators,
+                    )}
                     options={props.options}
                     ref={props.ref}
                 />
@@ -103,16 +111,18 @@ export function modelToGraphviz(
     model: DblModel,
     theory: Theory,
     attributes?: GV.GraphvizAttributes,
+    obGenerators?: QualifiedName[],
+    morGenerators?: QualifiedName[],
 ): Viz.Graph {
     const nodes: Required<Viz.Graph>["nodes"] = [];
-    for (const id of model.obGenerators()) {
+    for (const id of obGenerators ?? model.obGenerators()) {
         const obType = model.obType({ tag: "Basic", content: id });
         const meta = theory.modelObTypeMeta(obType);
         nodes.push({
             name: id,
             attributes: {
                 id,
-                label: model.obGeneratorName(id) ?? "",
+                label: model.obGeneratorLabel(id)?.join(".") ?? "",
                 class: GV.svgCssClasses(meta).join(" "),
                 fontname: GV.graphvizFontname(meta),
             },
@@ -120,7 +130,7 @@ export function modelToGraphviz(
     }
 
     const edges: Required<Viz.Graph>["edges"] = [];
-    for (const id of model.morGenerators()) {
+    for (const id of morGenerators ?? model.morGenerators()) {
         const [dom, cod] = [model.getDom(id), model.getCod(id)];
         if (!(dom?.tag === "Basic" && cod?.tag === "Basic")) {
             continue;
@@ -132,7 +142,7 @@ export function modelToGraphviz(
             tail: dom.content,
             attributes: {
                 id: id,
-                label: model.morGeneratorName(id) ?? "",
+                label: model.morGeneratorLabel(id)?.join(".") ?? "",
                 class: GV.svgCssClasses(meta).join(" "),
                 fontname: GV.graphvizFontname(meta),
                 // Not recognized by Graphviz but will be passed through!

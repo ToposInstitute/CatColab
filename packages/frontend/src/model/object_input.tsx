@@ -111,14 +111,8 @@ function BasicObInput(allProps: ObInputProps & IdInputOptions) {
     return (
         <ObIdInput
             completions={completions()}
-            idToName={(id) => liveModel().elaboratedModel()?.obGeneratorName(id)}
-            nameToIds={(name) => {
-                if (typeof name === "string") {
-                    return liveModel().elaboratedModel()?.obGeneratorsWithName(name) ?? [];
-                } else {
-                    return [];
-                }
-            }}
+            idToLabel={(id) => liveModel().elaboratedModel()?.obGeneratorLabel(id)}
+            labelToId={(label) => liveModel().elaboratedModel()?.obGeneratorWithLabel(label)}
             {...otherProps}
         />
     );
@@ -187,14 +181,8 @@ function TabulatedMorInput(allProps: ObInputProps & IdInputOptions) {
         <IdInput
             id={id()}
             setId={setId}
-            idToName={(id) => liveModel().elaboratedModel()?.morGeneratorName(id)}
-            nameToIds={(name) => {
-                if (typeof name === "string") {
-                    return liveModel().elaboratedModel()?.morGeneratorsWithName(name) ?? [];
-                } else {
-                    return [];
-                }
-            }}
+            idToLabel={(id) => liveModel().elaboratedModel()?.morGeneratorLabel(id)}
+            labelToId={(label) => liveModel().elaboratedModel()?.morGeneratorWithLabel(label)}
             completions={completions()}
             {...inputProps}
         />
