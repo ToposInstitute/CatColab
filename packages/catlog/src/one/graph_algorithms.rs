@@ -1,6 +1,7 @@
 //! Algorithms on graphs.
 
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::fmt::Debug;
 use std::hash::Hash;
 
 use super::graph::*;
@@ -168,94 +169,77 @@ where
     result
 }
 
-fn out_neighbors<G>(graph: &G, v: &G::V) -> impl Iterator<Item = G::V>
-where
-    G: FinGraph,
-    G::V: Hash,
-{
-    graph.out_edges(v).map(|e| graph.tgt(&e))
-}
-
-fn in_neighbors<G>(graph: &G, v: &G::V) -> impl Iterator<Item = G::V>
-where
-    G: FinGraph,
-    G::V: Hash,
-{
-    graph.in_edges(v).map(|e| graph.src(&e))
-}
-
 #[derive(Clone, Debug)]
-struct VisitMap {
-    visited: Vec<bool>,
+struct VisitMap<G>
+where
+    G: FinGraph,
+    G::V: Hash + Debug,
+{
+    visited: HashMap<G::V, bool>,
 }
 
-impl VisitMap {
-    fn visit(&mut self, idx: usize) -> bool {
-        let previous = self.visited[idx];
-        self.visited[idx] = true;
-        !previous
+impl<G> VisitMap<G>
+where
+    G: FinGraph,
+    G::V: Hash + Debug,
+{
+    fn new(graph: &G) -> Self {
+        let visited: HashMap<_, _> = HashMap::from_iter(graph.vertices().map(|v| (v, false)));
+        Self { visited }
     }
 
-    fn is_visited(&self, idx: usize) -> bool {
-        self.visited[idx]
+    fn visit(&mut self, v: G::V) -> bool {
+        let previous = self.visited.clone();
+        let previous = previous.get(&v);
+        self.visited.insert(v, true);
+        if let Some(val) = previous {
+            !*val
+        } else {
+            false
+        }
+    }
+
+    fn is_visited(&self, v: &G::V) -> bool {
+        if let Some(val) = self.visited.get(v) {
+            *val
+        } else {
+            false
+        }
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct Dfs<G>
-where
-    G: FinGraph,
-    G::V: Hash,
-{
-    //
-    pub stack: Vec<G::V>,
-    //
-    pub discovered: VisitMap,
-}
-
-// TODO
-// 1. replace String with Cycle error
 /** Computes a topological sorting for a given graph.
 
-This algorithm was borrowed from `petgraph`.
+This toposort algorithm was borrowed from `petgraph`, found [here](https://github.com/petgraph/petgraph/blob/4d807c19304c02c9dd687c68577f75aefcb98491/src/algo/mod.rs#L204)
  */
 pub fn toposort<G>(graph: &G) -> Result<Vec<G::V>, String>
 where
     G: FinGraph,
     G::V: Hash + std::fmt::Debug,
 {
-    // XXX dont clone
-    let n = graph.vertices().collect::<Vec<_>>().len();
-    let mut discovered = VisitMap {
-        visited: vec![false; n.clone()],
-    };
-    let mut finished = VisitMap {
-        visited: vec![false; n.clone()],
-    };
+    let mut discovered = VisitMap::new(graph);
+    let mut finished = VisitMap::new(graph);
     let mut finish_stack: Vec<G::V> = Vec::new();
     let mut stack = Vec::new();
 
-    // we shouldn't need to do this
-    let gmap: HashMap<_, _> = HashMap::from_iter(graph.vertices().enumerate().map(|(k, v)| (v, k)));
-
-    for (idx, v) in graph.vertices().enumerate() {
-        if discovered.is_visited(idx) {
+    for v in graph.vertices() {
+        if discovered.is_visited(&v) {
             continue;
         }
         stack.push(v);
         while let Some(nx) = stack.clone().last() {
-            if discovered.visit(gmap[&nx]) {
-                for succ in out_neighbors(graph, &nx) {
-                    if succ == *nx {
+            if discovered.visit(nx.clone()) {
+                for succ in graph.out_neighbors(nx) {
+                    if &succ == nx {
                         return Err("self cycle".to_owned());
                     }
-                    if !discovered.is_visited(gmap[&succ]) {
+                    if !discovered.is_visited(&succ) {
                         stack.push(succ);
                     }
                 }
             } else {
                 stack.pop();
-                if finished.visit(gmap[&nx]) {
+                if finished.visit(nx.clone()) {
                     finish_stack.push(nx.clone());
                 }
             }
@@ -263,22 +247,17 @@ where
     }
     finish_stack.reverse();
 
-    // dfs.reset(g);
-    let mut discovered = VisitMap {
-        visited: vec![false; n.clone()],
-    };
+    let mut discovered = VisitMap::new(graph);
     for i in &finish_stack {
-        // dfs.move_to(i);
         stack.clear();
         stack.push(i.clone());
-        //
         let mut cycle = false;
         while let Some(j) = {
             let mut out = None;
             while let Some(node) = stack.pop() {
-                if discovered.visit(gmap[&node]) {
-                    for succ in in_neighbors(graph, &node) {
-                        if !discovered.is_visited(gmap[&succ]) {
+                if discovered.visit(node.clone()) {
+                    for succ in graph.in_neighbors(&node) {
+                        if !discovered.is_visited(&succ) {
                             stack.push(succ);
                         }
                     }
@@ -343,23 +322,24 @@ mod tests {
 
     #[test]
     fn toposorting() {
-        let mut g = SkelGraph::path(5);
+        let g = SkelGraph::path(5);
         assert_eq!(toposort(&g), Ok(vec![0, 1, 2, 3, 4]));
 
         let mut g = SkelGraph::path(3);
         g.add_vertices(1);
-        let _ = g.add_edge(2, 3);
-        let _ = g.add_edge(3, 0);
-        assert_eq!(toposort(&g), Err("cycle detected involving node 3".to_owned()));
+        g.add_edge(2, 3);
+        g.add_edge(3, 0);
+        expect_test::expect!["cycle detected involving node 3"]
+            .assert_eq(&toposort(&g).unwrap_err());
 
         let g = SkelGraph::triangle();
         assert_eq!(toposort(&g), Ok(vec![0, 1, 2]));
 
         let mut g = SkelGraph::path(4);
         g.add_vertices(2);
-        let _ = g.add_edge(1, 4);
-        let _ = g.add_edge(4, 3);
-        let _ = g.add_edge(5, 2);
+        g.add_edge(1, 4);
+        g.add_edge(4, 3);
+        g.add_edge(5, 2);
         assert_eq!(toposort(&g), Ok(vec![5, 0, 1, 2, 4, 3]));
 
         let mut g: HashGraph<u8, &str> = Default::default();
@@ -370,8 +350,12 @@ mod tests {
         g.add_edge("1-4", 1, 4);
         g.add_edge("4-3", 4, 3);
         g.add_edge("5-2", 5, 2);
-        // TODO non-deterministic
-        // assert_eq!(toposort(&g), Ok(vec![5, 0, 1, 2, 4, 3]));
+        let sort = toposort(&g).unwrap();
+        if let (Some(i0), Some(i1)) =
+            (sort.iter().position(|&x| x == 5), sort.iter().position(|&x| x == 2))
+        {
+            assert!(i0 < i1);
+        }
     }
 
     #[test]
