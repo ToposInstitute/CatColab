@@ -199,22 +199,14 @@ impl VisitMap {
     fn is_visited(&self, idx: usize) -> bool {
         self.visited[idx]
     }
+
+    fn init(n: usize) -> Self {
+        Self {
+            visited: vec![false; n],
+        }
+    }
 }
 
-#[derive(Clone, Debug)]
-pub struct Dfs<G>
-where
-    G: FinGraph,
-    G::V: Hash,
-{
-    //
-    pub stack: Vec<G::V>,
-    //
-    pub discovered: VisitMap,
-}
-
-// TODO
-// 1. replace String with Cycle error
 /** Computes a topological sorting for a given graph.
 
 This algorithm was borrowed from `petgraph`.
@@ -224,18 +216,12 @@ where
     G: FinGraph,
     G::V: Hash + std::fmt::Debug,
 {
-    // XXX dont clone
     let n = graph.vertices().collect::<Vec<_>>().len();
-    let mut discovered = VisitMap {
-        visited: vec![false; n.clone()],
-    };
-    let mut finished = VisitMap {
-        visited: vec![false; n.clone()],
-    };
+    let mut discovered = VisitMap::init(n);
+    let mut finished = VisitMap::init(n);
     let mut finish_stack: Vec<G::V> = Vec::new();
     let mut stack = Vec::new();
 
-    // we shouldn't need to do this
     let gmap: HashMap<_, _> = HashMap::from_iter(graph.vertices().enumerate().map(|(k, v)| (v, k)));
 
     for (idx, v) in graph.vertices().enumerate() {
@@ -244,8 +230,8 @@ where
         }
         stack.push(v);
         while let Some(nx) = stack.clone().last() {
-            if discovered.visit(gmap[&nx]) {
-                for succ in out_neighbors(graph, &nx) {
+            if discovered.visit(gmap[nx]) {
+                for succ in out_neighbors(graph, nx) {
                     if succ == *nx {
                         return Err("self cycle".to_owned());
                     }
@@ -255,7 +241,7 @@ where
                 }
             } else {
                 stack.pop();
-                if finished.visit(gmap[&nx]) {
+                if finished.visit(gmap[nx]) {
                     finish_stack.push(nx.clone());
                 }
             }
@@ -263,12 +249,8 @@ where
     }
     finish_stack.reverse();
 
-    // dfs.reset(g);
-    let mut discovered = VisitMap {
-        visited: vec![false; n.clone()],
-    };
+    let mut discovered = VisitMap::init(n);
     for i in &finish_stack {
-        // dfs.move_to(i);
         stack.clear();
         stack.push(i.clone());
         //
@@ -343,7 +325,7 @@ mod tests {
 
     #[test]
     fn toposorting() {
-        let mut g = SkelGraph::path(5);
+        let g = SkelGraph::path(5);
         assert_eq!(toposort(&g), Ok(vec![0, 1, 2, 3, 4]));
 
         let mut g = SkelGraph::path(3);
