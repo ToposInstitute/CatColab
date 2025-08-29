@@ -2,6 +2,7 @@ using IJulia
 using Preferences
 import REPL
 using REPL.TerminalMenus
+using MLStyle
 
 struct KernelNotFoundException <: Exception
     dir::String
@@ -9,7 +10,7 @@ end
 
 KernelNotFoundException() = KernelNotFoundException(IJulia.kerneldir())
 
-function Base.String(err::KernelNotFoundException)
+function Base.showerror(err::KernelNotFoundException)
     """
     IJulia cannot find any kernels in the directory $(err.dir). To install a kernel, you may run `CatColabInterop.install_ccl_kernel()`. Refer to the [IJulia documentation](https://julialang.github.io/IJulia.jl/stable/library/public/#IJulia.installkernel) for more information about managing Jupyter kernels in IJulia.
 
@@ -22,7 +23,7 @@ function Base.String(err::KernelNotFoundException)
 end
 
 function Base.showerror(io::IO, err::KernelNotFoundException)
-    print(io, String(err))
+    print(io, showerror(err))
 end
 
 const YESNO = ["Yes", "No"]
@@ -33,7 +34,7 @@ const MODES = Dict("dev" => "http://localhost:5173",
 
 @kwdef mutable struct ServerConfig
     sysimg_path::Union{String, Nothing} = nothing
-    kernels::Vector{String} = basename.(readdir(IJulia.kerneldir(), join=true))
+    kernels::Vector{String} = readdir(IJulia.kerneldir(), join=true)
     kernel::Union{String, Nothing} = @load_preference("kernel", nothing)
     modes::Dict{String, String} = MODES 
     mode::String = @load_preference("mode", "production")
@@ -68,7 +69,7 @@ function set_mode!(config::ServerConfig, mode::String)
     end
 end
 
-function change_mode!(prefer::Bool=true; config::ServerConfig=CONFIG)::Union{Bool, Nothing}
+function change_mode!(prefer::Bool=true; config::ServerConfig=CONFIG)
     modes = collect(keys(config.modes))
     menu = RadioMenu(modes, pagesize=3)
     cursor = something(findfirst(==(config.mode), modes), 0)
@@ -79,16 +80,14 @@ function change_mode!(prefer::Bool=true; config::ServerConfig=CONFIG)::Union{Boo
             @set_preferences!("mode" => modes[choice])
             @info "Preferred mode set to $(modes[choice])"
         end
-        println("""Mode "$(config.mode)" chosen.""")
-        return nothing 
+        Ok("""Mode "$(config.mode)" chosen.""")
     else
-        println("Mode selection canceled")
-        return false
+        Err("Mode selection canceled")
     end
 end
 export change_mode!
 
-function change_kernel!(prefer::Bool=true; config::ServerConfig=CONFIG)::Union{Bool, Nothing}
+function change_kernel!(prefer::Bool=true; config::ServerConfig=CONFIG)
     menu = RadioMenu(config.kernels, pagesize=4)
     cursor = something(findfirst(==(config.kernel), config.kernels), 0)
     choice = request("Select a kernel: ", menu; cursor=cursor)
@@ -98,11 +97,9 @@ function change_kernel!(prefer::Bool=true; config::ServerConfig=CONFIG)::Union{B
             @set_preferences!("kernel" => config.kernel)
             @info "Preferred kernel set to $(config.kernels[choice])"
         end
-        println("Kernel $(config.kernel) chosen.")
-        return nothing 
+        Ok("Kernel $(config.kernel) chosen.")
     else
-        println("Kernel selection canceled")
-        return false
+        Err("Kernel selection canceled")
     end
 end
 export change_kernel!
@@ -114,10 +111,12 @@ Loads kernels visible to IJulia's [kernel_dir](@ref IJulia.kerneldir) function.
 function load_kernels!(;config::ServerConfig=CONFIG, warn=false)
     dir = IJulia.kerneldir()
     kernels = readdir(dir, join=true)
-    isempty(kernels) && (warn ? @warn(String(KernelNotFoundException(dir))) : throw(KernelNotFoundException(dir)))
-    config.kernels = basename.(kernels)
-    println("Kernels reloaded!")
-    return nothing
+    if !isempty(kernels)
+        config.kernels = kernels
+        return Ok("Kernels reloaded!")
+    end
+    # otherwise, throw a warning or an error
+    warn ? @warn(showerror(KernelNotFoundException(dir))) : throw(KernelNotFoundException(dir))
 end
 
 """    uninstall_kernel!(;config::ServerConfig=CONFIG)::Union{Nothing, Bool}
@@ -129,7 +128,7 @@ Usage:
 uninstall_kernel!()
 ```
 """
-function uninstall_kernel!(;config::ServerConfig=CONFIG)::Union{Nothing, Bool}
+function uninstall_kernel!(;config::ServerConfig=CONFIG)
     isempty(config.kernels) && throw(KernelNotFoundException()) 
     menu = MultiSelectMenu(config.kernels, pagesize=4)
     cursor = something(findfirst(==(config.kernel), config.kernels), 0)
@@ -137,10 +136,11 @@ function uninstall_kernel!(;config::ServerConfig=CONFIG)::Union{Nothing, Bool}
     if !isempty(choices)
         selections = getindex(config.kernels, collect(choices))
         confirm = RadioMenu(YESNO, pagesize=2)
-        permission = request("The following kernel(s) will be uninstalled from your machine. Continue?", confirm)
+        permission = request("Kernel(s) will be uninstalled from your machine. Continue?", confirm)
         if YESNO[permission] == "Yes"
             for selection in selections
                 isdir(selection) && rm(selection; recursive=true)
+                @info selection isdir(selection) "Removed!"
             end
             preferred = @load_preference("kernel", nothing)
             if preferred ∈ selections
@@ -148,16 +148,13 @@ function uninstall_kernel!(;config::ServerConfig=CONFIG)::Union{Nothing, Bool}
                 @info "Preferred kernel $preferred was removed."
             end
             load_kernels!(;config=config, warn=true)
-            return nothing
+            Ok()
         else
-            println("Kernel uninstallation cancelled.")
-            return false
+            Err("Kernel uninstallation cancelled.")
         end
-        println("Kernel deletion successful.")
-        return nothing
+        Ok("Kernel deletion successful.")
     else
-        println("Kernel uninstallation cancelled")
-        return false
+        Err("Kernel uninstallation cancelled")
     end
 end
 export uninstall_kernel!
@@ -204,7 +201,7 @@ function build_jupyter_server_cmd(args::Dict{String, Any})
         --ServerApp.allow_origin="$(args["mode"])" \
         --ServerApp.allow_credentials=True \
         --ServerApp.iopub_data_rate_limit=$(args["limit"]) \
-        --MultiKernelManager.default_kernel_name="$(args["kernel"])"
+        --MultiKernelManager.default_kernel_name="$(basename(args["kernel"]))"
     `
 end
 
@@ -234,8 +231,8 @@ start_server!(;manual=true)
 """
 function start_server!(;config::ServerConfig=CONFIG, mode::Union{String, Nothing}=nothing, manual=false)
     if manual
-        isnothing(change_kernel!(;config=config)) || error("Start server process aborted because kernel selection was cancelled.")
-        isnothing(change_mode!(;config=config)) || error("Start server process aborted because mode selection was cancelled.")
+        change_kernel!(;config=config) | Err("Start server process aborted because kernel selection was cancelled.")
+        change_mode!(;config=config) | Err("Start server process aborted because mode selection was cancelled.")
     end
     if isnothing(config.kernel)
         change_kernel!(;config=config)
