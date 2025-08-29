@@ -12,7 +12,7 @@ import {
     Warning,
     createNumericalColumn,
 } from "../../components";
-import { type DiagramObjectDecl, type LiveDiagramDocument, fromCatlogDiagram } from "../../diagram";
+import type { DiagramObjectDecl, LiveDiagramDocument } from "../../diagram";
 import type { MorphismDecl } from "../../model";
 import type { DiagramAnalysisMeta } from "../../theory";
 import { uniqueIndexArray } from "../../util/indexing";
@@ -381,9 +381,7 @@ const makeSimulationData = (
     }
 
     return {
-        diagram: fromCatlogDiagram(validatedDiagram.diagram, (id) =>
-            liveDiagram.objectIndex().map.get(id),
-        ),
+        diagram: validatedDiagram.diagram.judgments(),
         model: liveDiagram.liveModel.formalJudgments(),
         domain,
         mesh,

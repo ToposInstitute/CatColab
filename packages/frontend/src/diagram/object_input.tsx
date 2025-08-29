@@ -24,18 +24,8 @@ export function BasicObInput(
     return (
         <ObIdInput
             completions={completions()}
-            idToLabel={(id) => {
-                const segment = liveDiagram().objectIndex().map.get(id);
-                return segment ? [segment] : undefined;
-            }}
-            labelToId={(label) => {
-                const segment = label[0];
-                let id = undefined;
-                if (segment) {
-                    id = liveDiagram().objectIndex().index.get(segment)?.[0];
-                }
-                return id ? { tag: "Unique", content: id } : { tag: "None" };
-            }}
+            idToLabel={(id) => liveDiagram().elaboratedDiagram()?.obGeneratorLabel(id)}
+            labelToId={(label) => liveDiagram().elaboratedDiagram()?.obGeneratorWithLabel(label)}
             {...props}
         />
     );
