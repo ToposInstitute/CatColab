@@ -13,7 +13,7 @@ use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
 use catlog::zero::name;
 
-use super::model_morphism::{MotifsOptions, motifs};
+use super::model_morphism::{MotifOccurrence, MotifsOptions, motifs};
 use super::{analyses::*, model::DblModel, theory::DblTheory};
 
 /// The empty or initial theory.
@@ -111,7 +111,7 @@ impl ThSignedCategory {
         &self,
         model: &DblModel,
         options: MotifsOptions,
-    ) -> Result<Vec<DblModel>, String> {
+    ) -> Result<Vec<MotifOccurrence>, String> {
         let positive_loop = models::positive_loop(self.0.clone());
         motifs(&positive_loop, model, options)
     }
@@ -122,7 +122,7 @@ impl ThSignedCategory {
         &self,
         model: &DblModel,
         options: MotifsOptions,
-    ) -> Result<Vec<DblModel>, String> {
+    ) -> Result<Vec<MotifOccurrence>, String> {
         let negative_loop = models::negative_loop(self.0.clone());
         motifs(&negative_loop, model, options)
     }
@@ -186,7 +186,7 @@ impl ThDelayableSignedCategory {
         &self,
         model: &DblModel,
         options: MotifsOptions,
-    ) -> Result<Vec<DblModel>, String> {
+    ) -> Result<Vec<MotifOccurrence>, String> {
         let positive_loop = models::positive_loop(self.0.clone());
         motifs(&positive_loop, model, options)
     }
@@ -197,7 +197,7 @@ impl ThDelayableSignedCategory {
         &self,
         model: &DblModel,
         options: MotifsOptions,
-    ) -> Result<Vec<DblModel>, String> {
+    ) -> Result<Vec<MotifOccurrence>, String> {
         let negative_loop = models::negative_loop(self.0.clone());
         motifs(&negative_loop, model, options)
     }
@@ -208,7 +208,7 @@ impl ThDelayableSignedCategory {
         &self,
         model: &DblModel,
         options: MotifsOptions,
-    ) -> Result<Vec<DblModel>, String> {
+    ) -> Result<Vec<MotifOccurrence>, String> {
         let delayed_positive_loop = models::delayed_positive_loop(self.0.clone());
         motifs(&delayed_positive_loop, model, options)
     }
@@ -219,7 +219,7 @@ impl ThDelayableSignedCategory {
         &self,
         model: &DblModel,
         options: MotifsOptions,
-    ) -> Result<Vec<DblModel>, String> {
+    ) -> Result<Vec<MotifOccurrence>, String> {
         let delayed_negative_loop = models::delayed_negative_loop(self.0.clone());
         motifs(&delayed_negative_loop, model, options)
     }

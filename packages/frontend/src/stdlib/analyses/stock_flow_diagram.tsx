@@ -1,8 +1,7 @@
 import type * as Viz from "@viz-js/viz";
-import { type Component, For, createResource, createSignal } from "solid-js";
-import { P, match } from "ts-pattern";
+import { type Component, For, Show, createResource, createSignal } from "solid-js";
 
-import type { ModelJudgment } from "catlog-wasm";
+import type { DblModel } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { Foldable } from "../../components";
 import type { ModelAnalysisMeta, Theory } from "../../theory";
@@ -66,13 +65,17 @@ export function StockFlowDiagram(props: ModelAnalysisProps<GV.GraphConfig>) {
                 <GV.GraphConfigForm content={props.content} changeContent={props.changeContent} />
             </Foldable>
             <div class="graph-visualization">
-                <StockFlowGraphviz
-                    model={props.liveModel.formalJudgments()}
-                    theory={props.liveModel.theory()}
-                    options={GV.graphvizOptions(props.content)}
-                    attributes={STOCKFLOW_ATTRIBUTES}
-                    ref={setSvgRef}
-                />
+                <Show when={props.liveModel.elaboratedModel()}>
+                    {(model) => (
+                        <StockFlowGraphviz
+                            model={model()}
+                            theory={props.liveModel.theory()}
+                            options={GV.graphvizOptions(props.content)}
+                            attributes={STOCKFLOW_ATTRIBUTES}
+                            ref={setSvgRef}
+                        />
+                    )}
+                </Show>
             </div>
         </div>
     );
@@ -84,7 +87,7 @@ First, Graphviz computes a layout for the stocks and flows. Then we add the
 links from stocks to flows using our own layout heuristics.
  */
 export function StockFlowGraphviz(props: {
-    model: Array<ModelJudgment>;
+    model: DblModel;
     theory?: Theory;
     attributes?: GV.GraphvizAttributes;
     options?: Viz.RenderOptions;
@@ -109,7 +112,7 @@ export function StockFlowGraphviz(props: {
 }
 
 function StockFlowSVG(props: {
-    model: Array<ModelJudgment>;
+    model: DblModel;
     layout?: GraphLayout.Graph<string>;
     ref?: SVGRefProp;
 }) {
@@ -118,36 +121,25 @@ function StockFlowSVG(props: {
 
     const linkPaths = () => {
         const result: string[] = [];
+        const model = props.model;
         const nodeMap = uniqueIndexArray(props.layout?.nodes ?? [], (node) => node.id);
         const edgeMap = uniqueIndexArray(props.layout?.edges ?? [], (edge) => edge.id);
-        for (const judgment of props.model) {
-            match(judgment).with(
-                {
-                    tag: "morphism",
-                    dom: {
-                        tag: "Basic",
-                        content: P.select("srcId"),
-                    },
-                    cod: {
-                        tag: "Tabulated",
-                        content: {
-                            tag: "Basic",
-                            content: P.select("tgtId"),
-                        },
-                    },
-                },
-                ({ srcId, tgtId }) => {
-                    const srcNode = nodeMap.get(srcId);
-                    const tgtEdge = edgeMap.get(tgtId);
-                    if (!srcNode || !tgtEdge) {
-                        return;
-                    }
-                    pathElem.setAttribute("d", tgtEdge.path);
-                    const midpoint = pathElem.getPointAtLength(pathElem.getTotalLength() / 2);
-                    const path = quadraticCurve(srcNode.pos, midpoint, 1.0);
-                    result.push(path.join(" "));
-                },
-            );
+        for (const id of model.morGenerators()) {
+            const [dom, cod] = [model.getDom(id), model.getCod(id)];
+            if (
+                !(dom?.tag === "Basic" && cod?.tag === "Tabulated" && cod.content.tag === "Basic")
+            ) {
+                continue;
+            }
+            const [srcId, tgtId] = [dom.content, cod.content.content];
+            const [srcNode, tgtEdge] = [nodeMap.get(srcId), edgeMap.get(tgtId)];
+            if (!srcNode || !tgtEdge) {
+                continue;
+            }
+            pathElem.setAttribute("d", tgtEdge.path);
+            const midpoint = pathElem.getPointAtLength(pathElem.getTotalLength() / 2);
+            const path = quadraticCurve(srcNode.pos, midpoint, 1.0);
+            result.push(path.join(" "));
         }
         return result;
     };

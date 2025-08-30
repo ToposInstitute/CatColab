@@ -1,7 +1,7 @@
 import type * as Viz from "@viz-js/viz";
 import { Show, createSignal } from "solid-js";
 
-import { type DblModel, type Uuid, collectProduct } from "catlog-wasm";
+import { type DblModel, collectProduct } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { Foldable } from "../../components";
 import type { ModelAnalysisMeta } from "../../theory";
@@ -45,8 +45,6 @@ export function PetriNetVisualization(props: ModelAnalysisProps<GV.GraphConfig>)
                     {(model) => (
                         <PetriNetGraphviz
                             model={model()}
-                            objectIndex={props.liveModel.objectIndex().map}
-                            morphismIndex={props.liveModel.morphismIndex().map}
                             options={GV.graphvizOptions(props.content)}
                             ref={setSvgRef}
                         />
@@ -60,14 +58,12 @@ export function PetriNetVisualization(props: ModelAnalysisProps<GV.GraphConfig>)
 /** Visualize a Petri net using Graphviz. */
 export function PetriNetGraphviz(props: {
     model: DblModel;
-    objectIndex?: Map<Uuid, string>;
-    morphismIndex?: Map<Uuid, string>;
     options?: Viz.RenderOptions;
     ref?: SVGRefProp;
 }) {
     return (
         <GraphvizSVG
-            graph={petriNetToGraphviz(props.model, props.objectIndex, props.morphismIndex)}
+            graph={petriNetToGraphviz(props.model)}
             options={props.options}
             ref={props.ref}
         />
@@ -78,24 +74,15 @@ export function PetriNetGraphviz(props: {
 
 Both the places and the transitions become nodes in the graph.
  */
-export function petriNetToGraphviz(
-    model: DblModel,
-    objectIndex?: Map<Uuid, string>,
-    morphismIndex?: Map<Uuid, string>,
-): Viz.Graph {
+export function petriNetToGraphviz(model: DblModel): Viz.Graph {
     // Add nodes for places.
     const nodes: Required<Viz.Graph>["nodes"] = [];
-    const objectIds = model
-        .objects()
-        .filter((ob) => ob.tag === "Basic")
-        .map((ob) => ob.content);
-    objectIds.sort();
-    for (const id of objectIds) {
+    for (const id of model.obGenerators()) {
         nodes.push({
             name: id,
             attributes: {
                 id,
-                label: objectIndex?.get(id) ?? "",
+                label: model.obGeneratorLabel(id)?.join(".") ?? "",
                 class: svgStyles["place"],
                 width: "0.5",
                 height: "0.5",
@@ -105,17 +92,12 @@ export function petriNetToGraphviz(
 
     /// Add nodes for transitions and edges for arcs.
     const edges: Required<Viz.Graph>["edges"] = [];
-    const morphismIds = model
-        .morphisms()
-        .filter((mor) => mor.tag === "Basic")
-        .map((mor) => mor.content);
-    morphismIds.sort();
-    for (const id of morphismIds) {
+    for (const id of model.morGenerators()) {
         nodes.push({
             name: id,
             attributes: {
                 id,
-                label: morphismIndex?.get(id) ?? "",
+                label: model.morGeneratorLabel(id)?.join(".") ?? "",
                 class: svgStyles["transition"],
                 width: "1",
                 height: "0.25",

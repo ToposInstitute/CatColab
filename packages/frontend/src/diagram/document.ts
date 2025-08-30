@@ -6,14 +6,12 @@ import type {
     DiagramJudgment,
     Document,
     ModelDiagramValidationResult,
-    Uuid,
 } from "catlog-wasm";
 import { currentVersion, elaborateDiagram } from "catlog-wasm";
 import { type Api, type LiveDoc, type StableRef, getLiveDoc } from "../api";
 import { type LiveModelDocument, getLiveModel } from "../model";
 import { NotebookUtils, newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
-import { type IdToNameMap, indexMap } from "../util/indexing";
 import type { InterfaceToType } from "../util/types";
 
 /** A document defining a diagram in a model. */
@@ -48,9 +46,6 @@ export type LiveDiagramDocument = {
 
     /** A memo of the formal content of the model. */
     formalJudgments: Accessor<Array<DiagramJudgment>>;
-
-    /** A memo of the indexed map from object ID to name. */
-    objectIndex: Accessor<IdToNameMap>;
 
     /** A memo of the diagram elaborated in the core, though possibly invalid. */
     elaboratedDiagram: Accessor<DblModelDiagram | undefined>;
@@ -89,32 +84,6 @@ function enlivenDiagramDocument(
         () => NotebookUtils.getFormalContent(doc.notebook),
         [],
     );
-
-    const objectIndex = createMemo<IdToNameMap>(() => {
-        const judgments = formalJudgments();
-        const map = new Map<Uuid, string | number>();
-
-        for (const judgment of judgments) {
-            if (judgment.tag === "object") {
-                map.set(judgment.id, judgment.name);
-            }
-        }
-
-        let nanon = 0;
-        for (const judgment of judgments) {
-            if (judgment.tag === "morphism") {
-                const { dom, cod } = judgment;
-                if (dom?.tag === "Basic" && !map.has(dom.content)) {
-                    map.set(dom.content, ++nanon);
-                }
-                if (cod?.tag === "Basic" && !map.has(cod.content)) {
-                    map.set(cod.content, ++nanon);
-                }
-            }
-        }
-
-        return indexMap(map);
-    }, indexMap(new Map()));
 
     const elaboratedDiagram = (): DblModelDiagram | undefined => {
         const validated = validatedDiagram();
@@ -156,7 +125,6 @@ function enlivenDiagramDocument(
         liveDoc,
         liveModel,
         formalJudgments,
-        objectIndex,
         elaboratedDiagram,
         validatedDiagram,
     };
