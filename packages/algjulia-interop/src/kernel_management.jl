@@ -10,20 +10,20 @@ end
 
 KernelNotFoundException() = KernelNotFoundException(IJulia.kerneldir())
 
-function Base.showerror(err::KernelNotFoundException)
-    """
-    IJulia cannot find any kernels in the directory $(err.dir). To install a kernel, you may run `CatColabInterop.install_ccl_kernel()`. Refer to the [IJulia documentation](https://julialang.github.io/IJulia.jl/stable/library/public/#IJulia.installkernel) for more information about managing Jupyter kernels in IJulia.
+function Base.showerror(io::IO, err::KernelNotFoundException)
+    print(io, """
+    IJulia cannot find any kernels in the directory `$(err.dir)`.
+
+    To install a kernel, you may run `CatColabInterop.install_ccl_kernel()`.
+    Refer to the [IJulia documentation](https://julialang.github.io/IJulia.jl/stable/library/public/#IJulia.installkernel)
+    for more information about managing Jupyter kernels in IJulia.
 
     If you wish to install a sysimage instead, run
     ```julia
     using PackageCompiler
     install_ccl_kernel(Val(:sysimge))
     ```
-    """
-end
-
-function Base.showerror(io::IO, err::KernelNotFoundException)
-    print(io, showerror(err))
+    """)
 end
 
 const YESNO = ["Yes", "No"]
@@ -116,7 +116,7 @@ function load_kernels!(;config::ServerConfig=CONFIG, warn=false)
         return Ok("Kernels reloaded!")
     end
     # otherwise, throw a warning or an error
-    warn ? @warn(showerror(KernelNotFoundException(dir))) : throw(KernelNotFoundException(dir))
+    warn ? @warn(sprint(showerror, KernelNotFoundException(dir))) : throw(KernelNotFoundException(dir))
 end
 
 """    uninstall_kernel!(;config::ServerConfig=CONFIG)::Union{Nothing, Bool}
