@@ -9,7 +9,7 @@ use crate::dbl::{model::*, model_morphism::*};
 use crate::one::graph_algorithms::{bounded_simple_paths, simple_paths, spec_order};
 use crate::one::*;
 use crate::validate::{self, Validate};
-use crate::zero::{Column, HashColumn, Mapping, MutMapping, QualifiedName};
+use crate::zero::{HashColumn, Mapping, MutMapping, QualifiedName};
 
 /** A mapping between models of a discrete double theory.
 
@@ -59,40 +59,6 @@ impl DiscreteDblModelMapping {
         cod: &'a DiscreteDblModel,
     ) -> FpFunctor<'a, DiscreteDblModelMappingData, QualifiedFpCategory> {
         self.0.functor_into(&cod.category)
-    }
-
-    /** Basic objects and morphisms in the image of the model morphism.
-
-    Note this method does not compute the set-theoretic image of the model
-    morphism, as the image of a functor need not even form a category
-    ([Math.SE](https://math.stackexchange.com/a/4399114)), nor does it compute
-    submodel spanned by the image, generalizing the subcategory spanned by the
-    image of a functor. Instead, this method constructs a "syntactical image"
-    comprising all *basic* objects and morphisms appearing in the image of the
-    model morphism, possibly inside composites.
-     */
-    pub fn syntactic_image(&self, cod: &DiscreteDblModel) -> DiscreteDblModel {
-        // TODO: For non-free models, we should filter the equations to those
-        // involving only generators that appear in the image.
-        assert!(cod.is_free(), "Codomain model should be free");
-
-        let mut im = DiscreteDblModel::new(cod.theory_rc());
-        for x in self.0.ob_generator_map.values() {
-            im.add_ob(x.clone(), cod.ob_type(x));
-        }
-        for path in self.0.mor_generator_map.values() {
-            for e in path.iter() {
-                let (x, y) = (cod.mor_generator_dom(e), cod.mor_generator_cod(e));
-                if !im.has_ob(&x) {
-                    im.add_ob(x.clone(), cod.ob_type(&x));
-                }
-                if !im.has_ob(&y) {
-                    im.add_ob(y.clone(), cod.ob_type(&y));
-                }
-                im.add_mor(e.clone(), x, y, cod.mor_generator_type(e));
-            }
-        }
-        im
     }
 
     /// Finder of morphisms between two models of a discrete double theory.
@@ -502,11 +468,6 @@ mod tests {
             .collect();
         assert!(obs.contains(&Some(name("x"))));
         assert!(obs.contains(&Some(name("y"))));
-
-        let im = maps[0].syntactic_image(&negative_feedback);
-        assert!(im.validate().is_ok());
-        assert!(im.has_mor(&Path::single(name("positive"))));
-        assert!(im.has_mor(&Path::single(name("negative"))));
 
         let maps = DiscreteDblModelMapping::morphisms(&negative_loop, &negative_feedback)
             .max_path_len(1)

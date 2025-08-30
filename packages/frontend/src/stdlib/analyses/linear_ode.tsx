@@ -1,6 +1,4 @@
-import { createMemo } from "solid-js";
-
-import type { DblModel, LinearODEProblemData, ODEResult } from "catlog-wasm";
+import type { DblModel, LinearODEProblemData, ODEResult, QualifiedName } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import {
     type ColumnSchema,
@@ -8,7 +6,7 @@ import {
     Foldable,
     createNumericalColumn,
 } from "../../components";
-import { type MorphismDecl, type ObjectDecl, morNameOrDefault } from "../../model";
+import { morLabelOrDefault } from "../../model";
 import type { ModelAnalysisMeta } from "../../theory";
 import { ODEResultPlot } from "../../visualization";
 import { createModelODEPlot } from "./simulation";
@@ -53,45 +51,39 @@ export function LinearODE(
         title?: string;
     },
 ) {
-    const obDecls = createMemo<ObjectDecl[]>(() => {
-        return props.liveModel.formalJudgments().filter((jgmt) => jgmt.tag === "object");
-    }, []);
+    const elaboratedModel = () => props.liveModel.elaboratedModel();
 
-    const morDecls = createMemo<MorphismDecl[]>(() => {
-        return props.liveModel.formalJudgments().filter((jgmt) => jgmt.tag === "morphism");
-    }, []);
-
-    const obSchema: ColumnSchema<ObjectDecl>[] = [
+    const obSchema: ColumnSchema<QualifiedName>[] = [
         {
             contentType: "string",
             header: true,
-            content: (ob) => ob.name,
+            content: (id) => elaboratedModel()?.obGeneratorLabel(id)?.join(".") ?? "",
         },
         createNumericalColumn({
             name: "Initial value",
-            data: (ob) => props.content.initialValues[ob.id],
+            data: (id) => props.content.initialValues[id],
             validate: (_, data) => data >= 0,
-            setData: (ob, data) =>
+            setData: (id, data) =>
                 props.changeContent((content) => {
-                    content.initialValues[ob.id] = data;
+                    content.initialValues[id] = data;
                 }),
         }),
     ];
 
-    const morSchema: ColumnSchema<MorphismDecl>[] = [
+    const morSchema: ColumnSchema<QualifiedName>[] = [
         {
             contentType: "string",
             header: true,
-            content: (mor) => morNameOrDefault(mor, props.liveModel.objectIndex().map),
+            content: (id) => morLabelOrDefault(id, elaboratedModel()),
         },
         createNumericalColumn({
             name: "Coefficient",
-            data: (mor) => props.content.coefficients[mor.id],
+            data: (id) => props.content.coefficients[id],
             default: 1,
             validate: (_, data) => data >= 0,
-            setData: (mor, data) =>
+            setData: (id, data) =>
                 props.changeContent((content) => {
-                    content.coefficients[mor.id] = data;
+                    content.coefficients[id] = data;
                 }),
         }),
     ];
@@ -117,8 +109,14 @@ export function LinearODE(
         <div class="simulation">
             <Foldable title={props.title}>
                 <div class="parameters">
-                    <FixedTableEditor rows={obDecls()} schema={obSchema} />
-                    <FixedTableEditor rows={morDecls()} schema={morSchema} />
+                    <FixedTableEditor
+                        rows={elaboratedModel()?.obGenerators() ?? []}
+                        schema={obSchema}
+                    />
+                    <FixedTableEditor
+                        rows={elaboratedModel()?.morGenerators() ?? []}
+                        schema={morSchema}
+                    />
                     <FixedTableEditor rows={[null]} schema={toplevelSchema} />
                 </div>
             </Foldable>
