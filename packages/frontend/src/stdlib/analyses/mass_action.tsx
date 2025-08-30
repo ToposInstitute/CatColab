@@ -1,6 +1,13 @@
 import { createMemo } from "solid-js";
 
-import type { DblModel, MassActionProblemData, ODEResult } from "catlog-wasm";
+import type {
+    DblModel,
+    MassActionProblemData,
+    MorType,
+    ODEResult,
+    ObType,
+    QualifiedName,
+} from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import {
     type ColumnSchema,
@@ -8,7 +15,7 @@ import {
     Foldable,
     createNumericalColumn,
 } from "../../components";
-import { type MorphismDecl, type ObjectDecl, morLabelOrDefault } from "../../model";
+import { morLabelOrDefault } from "../../model";
 import type { ModelAnalysisMeta } from "../../theory";
 import { ODEResultPlot } from "../../visualization";
 import { createModelODEPlot } from "./simulation";
@@ -24,8 +31,8 @@ export function configureMassAction(options: {
     description?: string;
     help?: string;
     simulate: Simulator;
-    isState?: (ob: ObjectDecl) => boolean;
-    isTransition?: (mor: MorphismDecl) => boolean;
+    isState?: (obType: ObType) => boolean;
+    isTransition?: (morType: MorType) => boolean;
 }): ModelAnalysisMeta<MassActionProblemData> {
     const {
         id = "mass-action",
@@ -52,56 +59,64 @@ export function configureMassAction(options: {
 export function MassAction(
     props: ModelAnalysisProps<MassActionProblemData> & {
         simulate: Simulator;
-        isState?: (ob: ObjectDecl) => boolean;
-        isTransition?: (mor: MorphismDecl) => boolean;
+        isState?: (obType: ObType) => boolean;
+        isTransition?: (morType: MorType) => boolean;
         title?: string;
     },
 ) {
-    const obDecls = createMemo<ObjectDecl[]>(() => {
-        return props.liveModel
-            .formalJudgments()
-            .filter((jgmt) => jgmt.tag === "object")
-            .filter((ob) => props.isState?.(ob) ?? true);
+    const elaboratedModel = () => props.liveModel.elaboratedModel();
+
+    const obGenerators = createMemo<QualifiedName[]>(() => {
+        const [model, pred] = [elaboratedModel(), props.isState];
+        if (!model) {
+            return [];
+        }
+        return model
+            .obGenerators()
+            .filter((id) => !pred || pred(model.obType({ tag: "Basic", content: id })));
     }, []);
 
-    const morDecls = createMemo<MorphismDecl[]>(() => {
-        return props.liveModel
-            .formalJudgments()
-            .filter((jgmt) => jgmt.tag === "morphism")
-            .filter((mor) => props.isTransition?.(mor) ?? true);
+    const morGenerators = createMemo<QualifiedName[]>(() => {
+        const [model, pred] = [elaboratedModel(), props.isTransition];
+        if (!model) {
+            return [];
+        }
+        return model
+            .morGenerators()
+            .filter((id) => !pred || pred(model.morType({ tag: "Basic", content: id })));
     }, []);
 
-    const obSchema: ColumnSchema<ObjectDecl>[] = [
+    const obSchema: ColumnSchema<QualifiedName>[] = [
         {
             contentType: "string",
             header: true,
-            content: (ob) => ob.name,
+            content: (id) => elaboratedModel()?.obGeneratorLabel(id)?.join(".") ?? "",
         },
         createNumericalColumn({
             name: "Initial value",
-            data: (ob) => props.content.initialValues[ob.id],
+            data: (id) => props.content.initialValues[id],
             validate: (_, data) => data >= 0,
-            setData: (ob, data) =>
+            setData: (id, data) =>
                 props.changeContent((content) => {
-                    content.initialValues[ob.id] = data;
+                    content.initialValues[id] = data;
                 }),
         }),
     ];
 
-    const morSchema: ColumnSchema<MorphismDecl>[] = [
+    const morSchema: ColumnSchema<QualifiedName>[] = [
         {
             contentType: "string",
             header: true,
-            content: (mor) => morLabelOrDefault(mor.id, props.liveModel.elaboratedModel()),
+            content: (id) => morLabelOrDefault(id, elaboratedModel()),
         },
         createNumericalColumn({
             name: "Rate",
-            data: (mor) => props.content.rates[mor.id],
+            data: (id) => props.content.rates[id],
             default: 1,
             validate: (_, data) => data >= 0,
-            setData: (mor, data) =>
+            setData: (id, data) =>
                 props.changeContent((content) => {
-                    content.rates[mor.id] = data;
+                    content.rates[id] = data;
                 }),
         }),
     ];
@@ -127,8 +142,8 @@ export function MassAction(
         <div class="simulation">
             <Foldable title={props.title}>
                 <div class="parameters">
-                    <FixedTableEditor rows={obDecls()} schema={obSchema} />
-                    <FixedTableEditor rows={morDecls()} schema={morSchema} />
+                    <FixedTableEditor rows={obGenerators()} schema={obSchema} />
+                    <FixedTableEditor rows={morGenerators()} schema={morSchema} />
                     <FixedTableEditor rows={[null]} schema={toplevelSchema} />
                 </div>
             </Foldable>
