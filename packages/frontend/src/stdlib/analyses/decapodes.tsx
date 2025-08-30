@@ -341,6 +341,10 @@ type SimulationData = {
 /** Julia code run after kernel is started. */
 const makeInitCode = () =>
     `
+    for k in keys(Base.text_colors)
+		Base.text_colors[k] = ""
+	end
+
     import IJulia
     import JSON3
     IJulia.register_jsonmime(MIME"application/json"())
