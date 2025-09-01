@@ -392,6 +392,7 @@ dependencies = [
  "derive_more",
  "egglog",
  "getrandom 0.2.16",
+ "getrandom 0.3.3",
  "js-sys",
  "nonempty",
  "notebook-types",
@@ -1032,9 +1033,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "26145e563e54f2cadc477553f1ec5ee650b00862f0a58bcd12cbdc5f0ea2d2f4"
 dependencies = [
  "cfg-if",
+ "js-sys",
  "libc",
  "r-efi",
  "wasi 0.14.2+wasi-0.2.4",
+ "wasm-bindgen",
 ]
 
 [[package]]
@@ -1882,7 +1885,6 @@ dependencies = [
 name = "notebook-types"
 version = "0.1.0"
 dependencies = [
- "getrandom 0.2.16",
  "serde",
  "serde-wasm-bindgen",
  "serde_json",
@@ -2658,9 +2660,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.140"
+version = "1.0.143"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "20068b6e96dc6c9bd23e01df8827e6c7e1f2fddd43c21810382803c136b99373"
+checksum = "d401abef1d108fbd9cbaebc3e46611f4b1021f714a0597a71f41ee463f5f4a5a"
 dependencies = [
  "itoa",
  "memchr",
@@ -3732,12 +3734,24 @@ checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 
 [[package]]
 name = "uuid"
-version = "1.11.1"
+version = "1.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b913a3b5fe84142e269d63cc62b64319ccaf89b748fc31fe025177f767a756c4"
+checksum = "f33196643e165781c20a5ead5582283a7dacbb87855d867fbc2df3f81eddc1be"
 dependencies = [
- "getrandom 0.2.16",
+ "getrandom 0.3.3",
+ "js-sys",
  "serde",
+ "uuid-rng-internal",
+ "wasm-bindgen",
+]
+
+[[package]]
+name = "uuid-rng-internal"
+version = "1.18.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "23bf87b6052a24c8ebbe4a5301be9df955b874cb3a6d2ede0e1b2468dc7d0e65"
+dependencies = [
+ "getrandom 0.3.3",
 ]
 
 [[package]]

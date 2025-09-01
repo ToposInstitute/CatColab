@@ -26,9 +26,9 @@ serde = { version = "1", features = ["derive"], optional = true }
 thiserror = "1"
 tsify = { version = "0.5", features = ["js"], optional = true }
 ustr = "1"
-uuid = { version = "=1.11" }
+uuid = { version = "1.18" }
 wasm-bindgen = { version = "0.2.100", optional = true }
 
 [dev-dependencies]
 expect-test = "1.5"
-textplots = "0.8.6"
+textplots = "0.8.7"
