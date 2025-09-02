@@ -129,14 +129,14 @@ async fn run_migrator_apply(
     migrator: Migrator<Postgres>,
     status_tx: watch::Sender<AppStatus>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let _ = status_tx.send(AppStatus::Migrating);
+    status_tx.send(AppStatus::Migrating)?;
     info!("Applying database migrations...");
 
     let mut conn = db.acquire().await?;
     migrator.run(&mut conn, &Plan::apply_all()).await.unwrap();
 
-    let _ = status_tx.send(AppStatus::Running);
-    let _ = sd_notify::notify(false, &[sd_notify::NotifyState::Ready]);
+    status_tx.send(AppStatus::Running)?;
+    sd_notify::notify(false, &[sd_notify::NotifyState::Ready])?;
     info!("Migrations complete");
 
     Ok(())
