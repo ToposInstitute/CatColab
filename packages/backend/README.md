@@ -49,40 +49,43 @@ cd packages/frontend
 pnpm run dev
 ```
 
+## Running migrations
 
-## Updating Cargo dependencies
+This package runs databaes migrations using `migrator` subcommand which uses the
+[sqlx_migrator](https://github.com/iamsauravsharma/sqlx_migrator) framework.
 
-**tl;dr:** Run `crate2nix generate` in the repository root and commit the updated `Cargo.nix` file.
+### Usage
+The migrator tool can be run from any directory using the `cargo run -p backend migrator ...` command.
+The migrator tool uses the default CLI interface provided by `sqlx_migrator`, which is very similar to
+the `sqlx` CLI.
 
-To speed up deployments, [crate2nix](https://nix-community.github.io/crate2nix/) is used to cache the
-build artifacts of Rust dependencies. Without it, dependencies would be rebuilt from scratch on every
-deployment, significantly increasing build times.
+The `DATABASE_URL` environment variable must be set for the target database. This is typically configured
+automatically by the Nix dev shell defined in the repository's `flake.nix`.
 
-`crate2nix` solves this by generating a `Cargo.nix` file, which describes the full dependency graph of
-the project in a reproducible, Nix-compatible format. This file allows Nix to more effectively cache and
-reuse dependency builds across deployments.
+To view available commands, run
 
-Whenever you update your `Cargo.toml` or `Cargo.lock` you should regenerate `Cargo.nix` by running the
-following commands in the repository root:
-
-```bash
-nix develop
-crate2nix generate
+```sh
+cargo run -p backend migrator help
 ```
 
-And committing the the updated `Cargo.nix` file.
+To apply all migrations, run
 
-Don't forget to run `cargo sqlx prepare` in `packages/backend`!
-
-
-## NixOS
-
-### Test build for NixOS deployment
-```
-nix flake check --no-sandbox
+```sh
+cargo run -p backend migrator apply
 ```
 
-To get a interactive python session in the test environment:
+## Writing new migrations
+
+For migrations that consist solely of SQL statements, the easiest way to get started is to copy the first
+migration file: `src/migrations/m20241004010448_document_refs.rs` and modify it as needed.
+
+Be sure to register your new migration in `src/migrations/mod.rs`.
+
+To generate a timestamp for the migration filename, run:
+
+```sh
+date -u +"%Y%m%d%H%M%S"
 ```
-nix run .#checks.x86_64-linux.integrationTests.driverInteractive --no-sandbox
-```
+
+Don't forget to run `cargo sqlx prepare` in `packages/backend` after making schema changes!
+
