@@ -7,8 +7,6 @@ use tokio::sync::watch;
 use ts_rs::TS;
 use uuid::Uuid;
 
-use crate::AppStatus;
-
 /** Top-level application state.
 
 Cheaply cloneable and intended to be moved around the program.
@@ -22,6 +20,15 @@ pub struct AppState {
     pub automerge_io: SocketIo,
 
     pub app_status: watch::Receiver<AppStatus>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum AppStatus {
+    Starting,
+    Migrating,
+    Running,
+    #[allow(dead_code)]
+    Failed(String),
 }
 
 /// Context available to RPC procedures.

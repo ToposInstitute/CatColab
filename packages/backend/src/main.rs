@@ -29,13 +29,7 @@ mod rpc;
 mod socket;
 mod user;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum AppStatus {
-    Starting,
-    Migrating,
-    Running,
-    Failed(String),
-}
+use app::AppStatus;
 
 /// Port for the web server providing the RPC API.
 fn web_port() -> String {
