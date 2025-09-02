@@ -15,13 +15,17 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 use super::ODEAnalysis;
+use super::StochasticODEAnalysis;
 use crate::dbl::{
+    modal::model::ModalOb,
     model::{DiscreteTabModel, FgDblModel, ModalDblModel, MutDblModel, TabEdge},
     theory::{ModalMorType, ModalObType, TabMorType, TabObType},
 };
 use crate::one::FgCategory;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
 use crate::zero::{QualifiedName, alg::Polynomial, name, rig::Monomial};
+
+use rebop::gillespie::{Gillespie, Rate};
 
 /// Data defining a mass-action ODE problem for a model.
 #[derive(Clone)]
@@ -37,10 +41,10 @@ pub struct MassActionProblemData {
 
     /// Map from object IDs to initial values (nonnegative reals).
     #[cfg_attr(feature = "serde", serde(rename = "initialValues"))]
-    initial_values: HashMap<QualifiedName, f32>,
+    pub initial_values: HashMap<QualifiedName, f32>,
 
     /// Duration of simulation.
-    duration: f32,
+    pub duration: f32,
 }
 
 /// Symbolic parameter in mass-action polynomial system.
@@ -111,6 +115,87 @@ impl PetriNetMassActionAnalysis {
         data: MassActionProblemData,
     ) -> ODEAnalysis<NumericalPolynomialSystem<u8>> {
         into_numerical_system(self.build_system(model), data)
+    }
+
+    /// Creates a mass-action system in a reaction network.
+    pub fn build_reaction(
+        &self,
+        model: &ModalDblModel,
+        data: MassActionProblemData,
+    ) -> StochasticODEAnalysis {
+        let obs = model.ob_generators_with_type(&self.place_ob_type).collect::<Vec<_>>();
+        let mut variable_index: BTreeMap<QualifiedName, usize> = Default::default();
+        let ivs = obs
+            .clone()
+            .into_iter()
+            .enumerate()
+            .map(|(idx, ob)| match data.initial_values.get(&ob) {
+                Some(iv) => {
+                    variable_index.insert(ob, idx);
+                    *iv as u32 as isize
+                }
+                None => 0, // TODO throw error
+            })
+            .collect::<Vec<isize>>();
+        let mut problem = Gillespie::new(ivs, false);
+        for mor in model.mor_generators_with_type(&self.transition_mor_type) {
+            let inputs = model
+                .get_dom(&mor)
+                .and_then(|ob| ob.clone().collect_product(None))
+                .unwrap_or_default();
+            let outputs = model
+                .get_cod(&mor)
+                .and_then(|ob| ob.clone().collect_product(None))
+                .unwrap_or_default();
+
+            // 1. convert the inputs/outputs to arrays
+            let input_vec = obs
+                .clone()
+                .into_iter()
+                .map(|obstr| {
+                    inputs
+                        .iter()
+                        .filter(|&g| {
+                            if let ModalOb::Generator(id) = g {
+                                *id == obstr
+                            } else {
+                                false
+                            }
+                        })
+                        .count() as u32
+                })
+                .collect::<Vec<u32>>();
+            let output_vec = obs
+                .clone()
+                .into_iter()
+                .map(|obstr| {
+                    outputs
+                        .iter()
+                        .filter(|&g| {
+                            if let ModalOb::Generator(id) = g {
+                                *id == obstr
+                            } else {
+                                false
+                            }
+                        })
+                        .count() as isize
+                })
+                .collect::<Vec<isize>>();
+            // 2. output := output - input
+            let output_vec = output_vec
+                .into_iter()
+                .zip(input_vec.clone())
+                .map(|(a, b)| a - (b as isize))
+                .collect::<Vec<isize>>();
+            if let Some(rate) = data.rates.get(&mor) {
+                problem.add_reaction(Rate::lma(*rate as f64, input_vec), output_vec)
+            }
+        }
+        StochasticODEAnalysis {
+            problem,
+            data,
+            variable_index,
+        }
     }
 }
 
@@ -247,6 +332,19 @@ mod tests {
             dc = 0
             dx = ((-1) f) c x
             dy = f c x
+        "#]);
+        expected.assert_eq(&sys.to_string());
+    }
+
+    #[test]
+    fn sir_petri_dynamics() {
+        let th = Rc::new(th_sym_monoidal_category());
+        let model = sir_petri(th);
+        let sys = PetriNetMassActionAnalysis::default().build_system(&model);
+        let expected = expect!([r#"
+            dI = ((-1) recovery) I + infection I S
+            dR = recovery I
+            dS = ((-1) infection) I S
         "#]);
         expected.assert_eq(&sys.to_string());
     }
