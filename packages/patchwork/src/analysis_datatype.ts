@@ -1,7 +1,7 @@
-import { HasVersionControlMetadata } from "@patchwork/sdk/versionControl";
+import type { HasVersionControlMetadata } from "@patchwork/sdk/versionControl";
 import { type DataTypeImplementation, initFrom } from "@patchwork/sdk";
-import { AutomergeUrl } from "@automerge/automerge-repo";
-import { Cell, Uuid } from "catlog-wasm";
+import type { AutomergeUrl } from "@automerge/automerge-repo";
+import type { Cell, Uuid } from "catlog-wasm";
 
 // SCHEMA
 

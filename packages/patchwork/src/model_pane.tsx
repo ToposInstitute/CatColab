@@ -5,7 +5,7 @@ import { getLiveModel } from "../../frontend/src/model/document";
 import { ModelPane } from "../../frontend/src/model/model_editor";
 import { stdTheories, TheoryLibraryContext } from "../../frontend/src/stdlib";
 import { AnnotationsContext } from "./annotations_solid";
-import { SolidToolProps } from "./tools";
+import type { SolidToolProps } from "./tools";
 
 export function ModelPaneComponent(props: SolidToolProps) {
     // Typescript gets confused because the patchwork and the frontend package both import "@automerge/automerge-repo" in their package.json

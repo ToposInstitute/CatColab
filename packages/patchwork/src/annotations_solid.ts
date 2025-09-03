@@ -6,7 +6,7 @@ import type {
     Pointer,
     useAllAnnotations,
 } from "@patchwork/sdk/annotations";
-import { Accessor, createContext, useContext } from "solid-js";
+import { type Accessor, createContext, useContext } from "solid-js";
 
 export type DocUrlWithAnnotations = {
     originalUrl: AutomergeUrl;

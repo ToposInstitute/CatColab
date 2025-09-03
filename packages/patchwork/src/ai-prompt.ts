@@ -1,5 +1,5 @@
-import { DocHandle } from "@automerge/automerge-repo";
-import { AIEditPrompt } from "@patchwork/sdk";
+import type { DocHandle } from "@automerge/automerge-repo";
+import type { AIEditPrompt } from "@patchwork/sdk";
 import { v7 } from "uuid";
 
 console.log("this is the full updated ai prompt 12:25");
@@ -369,7 +369,7 @@ You MUST provide a brief explanation followed by <edit> tags with valid JSON!`,
                 // Helper function to resolve names to IDs (objects or morphisms)
                 const resolveNameToId = (name: string, context: string): string => {
                     // First try existing items (objects or morphisms)
-                    let id = nameToId.get(name);
+                    const id = nameToId.get(name);
                     if (id) {
                         console.log(`🔍 ${context} resolved "${name}" to existing ID: ${id}`);
                         return id;
