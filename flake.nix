@@ -20,6 +20,8 @@
       # be)
       url = "github:NixOS/nixpkgs/master";
     };
+
+    nixos-generators.url = "github:nix-community/nixos-generators";
   };
 
   outputs =
@@ -29,6 +31,7 @@
       deploy-rs,
       fenix,
       crane,
+      nixos-generators,
       ...
     }@inputs:
     let
@@ -96,6 +99,7 @@
           buildInputs =
             with pkgs;
             [
+              darkhttpd
               lld
               rustToolchain
               openssl
@@ -147,6 +151,25 @@
           '';
         };
 
+      # NOTE: this is not currently used, but was painful to build and might be useful in the future.
+      # Wraps the typical `deploy-rs.lib.${linuxSystem}.activate.nixos` activation function
+      # with a custom script that can run additional health checks. The script runs on the remote host
+      # and if it fails the whole deployment will fail.
+      # use:
+      # `deploy.nodes.${host}.profiles.system.path = healthcheckWrapper self.nixosConfigurations.host;`
+      healthcheckWrapper =
+        nixosConfiguration:
+        let
+          defaultNixos = deploy-rs.lib.${linuxSystem}.activate.nixos nixosConfiguration;
+
+          healthcheckWrapperScript = pkgsLinux.writeShellScriptBin "healthcheck-wrapper-script" ''
+            PROFILE=${defaultNixos}
+            # insert healthchecks
+            ${defaultNixos}/deploy-rs-activate
+          '';
+        in
+        deploy-rs.lib.${linuxSystem}.activate.custom healthcheckWrapperScript
+          "./bin/healthcheck-wrapper-script";
     in
     {
       # Create devShells for all supported systems
@@ -164,23 +187,65 @@
       # node ./result/main.cjs
       packages = {
         x86_64-linux = {
+          catcolabApi = pkgsLinux.stdenv.mkDerivation {
+            pname = "catcolab-api";
+            version = "0.1.0";
+
+            src = ./packages/backend/pkg;
+
+            installPhase = ''
+              mkdir -p $out
+              cp -r * $out/
+            '';
+          };
+
           backend = pkgsLinux.callPackage ./packages/backend/default.nix {
+            inherit craneLib cargoArtifacts self;
+            pkgs = pkgsLinux;
+          };
+
+          notebook-types-node = pkgsLinux.callPackage ./packages/notebook-types/default.nix {
             inherit craneLib cargoArtifacts;
             pkgs = pkgsLinux;
           };
 
-          migrator = pkgsLinux.callPackage ./packages/migrator/default.nix {
-            inherit craneLib cargoArtifacts;
-            pkgs = pkgsLinux;
-          };
-
-          notebook-types = pkgsLinux.callPackage ./packages/notebook-types/default.nix {
+          catlog-wasm-browser = pkgsLinux.callPackage ./packages/catlog-wasm/default.nix {
             inherit craneLib cargoArtifacts;
             pkgs = pkgsLinux;
           };
 
           automerge = pkgsLinux.callPackage ./packages/automerge-doc-server/default.nix {
             inherit inputs rustToolchainLinux self;
+          };
+
+          frontend = pkgsLinux.callPackage ./packages/frontend/default.nix {
+            inherit inputs rustToolchainLinux self;
+          };
+
+          # VMs built with `nixos-rebuild build-vm` (like `nix build
+          # .#nixosConfigurations.catcolab-vm.config.system.build.vm`) are not the same
+          # as "traditional" VMs, which causes deploy-rs to fail when deploying to them.
+          # https://github.com/serokell/deploy-rs/issues/85#issuecomment-885782350
+          #
+          # This is worked around by creating a full featured VM image.
+          #
+          # use:
+          # nix build .#catcolab-vm
+          # cp result/nixos.qcow2 nixos.qcow2
+          # db-utils vm start
+          # deploy -s .#catcolab-vm
+          catcolab-vm = nixos-generators.nixosGenerate {
+            system = "x86_64-linux";
+            format = "qcow";
+
+            modules = [
+              ./infrastructure/hosts/catcolab-vm
+            ];
+
+            specialArgs = {
+              inherit inputs self;
+              rustToolchain = rustToolchainLinux;
+            };
           };
         };
       };
@@ -212,7 +277,9 @@
 
         catcolab-vm = nixpkgs.lib.nixosSystem {
           system = linuxSystem;
-          modules = [ ./infrastructure/hosts/catcolab-vm ];
+          modules = [
+            ./infrastructure/hosts/catcolab-vm
+          ];
           specialArgs = {
             inherit inputs self;
             rustToolchain = rustToolchainLinux;
@@ -236,6 +303,19 @@
             sshUser = "catcolab";
             user = "root";
             path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab-next;
+          };
+        };
+        catcolab-vm = {
+          hostname = "localhost";
+          fastConnection = true;
+          profiles.system = {
+            sshOpts = [
+              "-p"
+              "2221"
+            ];
+            sshUser = "catcolab";
+            path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab-vm;
+            user = "root";
           };
         };
       };

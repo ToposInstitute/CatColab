@@ -1,11 +1,13 @@
 [package]
-name = "catcolab-backend"
+name = "backend"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+async-trait = "0.1.88"
 axum = "0.7.7"
 chrono = { version = "0.4.40", features = ["serde"] }
+clap = "4.5.44"
 dotenvy = "0.15.7"
 firebase-auth = { version = "0.4.3", default-features = false }
 http = "1.1.0"
@@ -14,6 +16,7 @@ jsonrpsee = "0.24.6"
 jsonrpsee-server = "0.24.6"
 qubit = "0.10.2"
 regex = "1.11.1"
+sd-notify = "0.4.5"
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0.128"
 socketioxide = { version = "0.14.1", features = ["tracing"] }
@@ -25,10 +28,11 @@ sqlx = { version = "0.8.2", features = [
   "json",
   "chrono",
 ] }
+sqlx_migrator = { version = "0.17.0", features = ["postgres"] }
 thiserror = "1.0.64"
 tokio = { version = "1.40.0", features = ["full"] }
 tower = { version = "0.5.1", features = ["util"] }
-tower-http = { version = "0.6.1", features = ["cors", "trace"] }
+tower-http = { version = "0.6.1", features = ["cors", "trace", "fs"] }
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 ts-rs = { version = "10.1.0", features = [

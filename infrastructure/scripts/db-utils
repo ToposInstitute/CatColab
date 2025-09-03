@@ -46,12 +46,18 @@ function print_load_help {
   echo "                           local, staging, production"
   echo "                         to pick the most recent dump for that source"
   echo "  -h, --help             Print this help message"
-  echo "  -n, --no-migrate       Skip running migrations after loading"
+  echo "  -s, --skip-migrations     Skip running migrations after loading"
 }
 
 function print_reset_help {
-  echo "Usage: $0 reset local"
-  echo "Only the local database may be reset."
+  echo "Usage: $0 reset [options]"
+  echo ""
+  echo "Reset the local database by dropping and recreating it."
+  echo ""
+  echo "Options:"
+  echo "  -s, --skip-migrations     Skip running migrations after resetting"
+  echo "  -t, --to <target>      Target to reset (only 'local' is supported)"
+  echo "  -h, --help             Print this help message"
 }
 
 function run_connect() {
@@ -62,16 +68,8 @@ function run_connect() {
   fi
 
   case "$target" in
-    local)
-      load_target_env local
-      psql
-      ;;
-    staging)
-      load_target_env staging
-      psql
-      ;;
-    production)
-      load_target_env production
+    local|vm|staging|production)
+      load_target_env "$target"
       psql
       ;;
     *)
@@ -121,19 +119,9 @@ function run_dump() {
   fi
 
   case "$target" in
-    local)
-      echo "Dumping local to $dump_file..."
-      load_target_env local
-      pg_dump --clean --if-exists > "$dump_file"
-      ;;
-    staging)
-      echo "Dumping staging to $dump_file..."
-      load_target_env staging
-      pg_dump --clean --if-exists > "$dump_file"
-      ;;
-    production)
-      echo "Dumping production to $dump_file..."
-      load_target_env production
+    local|vm|staging|production)
+      echo "Dumping $target to $dump_file..."
+      load_target_env "$target"
       pg_dump --clean --if-exists > "$dump_file"
       ;;
     *)
@@ -152,7 +140,7 @@ function run_load() {
 
   while [[ ${1-} ]]; do
     case "$1" in
-      "-s"|"--skip-migrate")
+      "-s"|"--skip-migrations")
         skip_migrate=true
         ;;
       "-t" | "--to")
@@ -203,9 +191,9 @@ function run_load() {
   fi
 
   case "$target" in
-    local)
-      load_target_env local
-      echo "Loading into local..."
+    local|vm)
+      load_target_env "$target"
+      echo "Loading into $target..."
       psql --dbname="$PGDATABASE" -f "$dump_file"
 
       if [[ "$skip_migrate" != "true" ]]; then
@@ -228,14 +216,31 @@ function run_load() {
 }
 
 function run_reset() {
-  local target="$1"
-  local skip_migrate="${2:-false}"
+  local target="local"
+  local skip_migrate=false
 
-  if [[ "$target" == "-h" || "$target" == "--help" ]]; then
-    echo ""
-    print_reset_help
-    exit 0
-  fi
+  while [[ ${1-} ]]; do
+    case "$1" in
+      "-s"|"--skip-migrations")
+        skip_migrate=true
+        ;;
+      "-t" | "--to")
+        shift
+        target="$1"
+        ;;
+      "-h" | "--help")
+        print_reset_help
+        exit 0
+        ;;
+      *)
+        echo "Unknown argument: $1"
+        echo ""
+        print_load_help
+        exit 1
+        ;;
+    esac
+    shift
+  done
 
   if [[ "$target" != "local" ]]; then
     echo "Error: reset only supports 'local'." >&2
@@ -271,11 +276,42 @@ function run_reset() {
   fi
 }
 
+function run_vm() {
+  local target="local"
+  local skip_migrate=false
+
+  while [[ ${1-} ]]; do
+    case "$1" in
+      "start")
+        run_vm_start
+        ;;
+      *)
+        echo "Unknown argument: $1"
+        echo ""
+        print_load_help
+        exit 1
+        ;;
+    esac
+    shift
+  done
+}
+
+function run_vm_start() {
+    qemu-system-x86_64 \
+    -enable-kvm -cpu host -smp 2 -m 2048 \
+    -drive file=./nixos.qcow2,if=virtio,format=qcow2 \
+    -device virtio-net-pci,netdev=net0 \
+    -netdev user,id=net0,hostfwd=tcp::2221-:22,hostfwd=tcp::5433-:5432,hostfwd=tcp::8000-:8000,hostfwd=tcp::8010-:8010
+}
+
 # Entry point
 subcommand="$1"
 shift || true
 
 case "$subcommand" in
+  vm)
+    run_vm "$@"
+    ;;
   connect)
     run_connect "$@"
     ;;

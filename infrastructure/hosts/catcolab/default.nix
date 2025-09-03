@@ -37,7 +37,7 @@ in
       port = 8080;
       hostname = "automerge.catcolab.org";
     };
-    environmentFilePath = config.age.secrets.catcolabSecrets.path;
+    environmentFile = config.age.secrets.catcolabSecrets.path;
     host = {
       enable = true;
       userKeys = [
@@ -46,8 +46,8 @@ in
       ];
       backup = {
         enable = true;
-        rcloneConfFilePath = config.age.secrets.rcloneConf.path;
-        dbBucket = "catcolab";
+        rcloneConfigFile = config.age.secrets.rcloneConf.path;
+        destination = "backup:catcolab";
       };
     };
   };

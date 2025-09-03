@@ -1,52 +1,59 @@
 {
-  pkgs,
-  lib,
   config,
+  lib,
+  pkgs,
   ...
 }:
 let
-  backupScript = pkgs.writeShellScriptBin "backup-script" ''
-    #!/usr/bin/env bash
-    set -ex
+  cfg = config.catcolab.host.backup;
 
-    DUMPFILE="db_$(date +%F_%H-%M-%S).sql"
+  backupdbScript = pkgs.writeShellApplication {
+    name = "backupdb-script";
+    runtimeInputs = [
+      pkgs.postgresql
+      pkgs.rclone
+      pkgs.coreutils
+    ];
+    text = ''
+      set -euo pipefail
 
-    cd ~
+      tmpdir="$(mktemp -d -t backupdb.XXXXXX)"
+      cleanup() { rm -rf -- "$tmpdir"; }
+      trap cleanup EXIT
 
-    ${pkgs.postgresql}/bin/pg_dump --clean --if-exists > $DUMPFILE
+      timestamp="$(date +%F_%H-%M-%S)"
+      dumpfile="db_$timestamp.sql"
+      dumpfile_path="$tmpdir/$dumpfile"
 
-    ${lib.getExe pkgs.rclone} \
-      --config="${builtins.toString config.catcolab.host.backup.rcloneConfFilePath}" \
-      copy "$DUMPFILE" backup:${builtins.toString config.catcolab.host.backup.dbBucket}
+      pg_dump --clean --if-exists > "$dumpfile_path"
 
-    echo "Uploaded database dump $DUMPFILE"
-    rm $DUMPFILE
-  '';
+      rclone --config="${builtins.toString cfg.rcloneConfigFile}" \
+        copy "$dumpfile_path" "${cfg.destination}"
+
+      echo "Uploaded database backup $dumpfile to ${cfg.destination}"
+    '';
+  };
 in
 with lib;
 {
   options.catcolab.host.backup = {
-    enable = mkOption {
-      type = types.bool;
-      default = false;
-      description = "Enable automated backups of the Catcolab database to a Backblaze bucket.";
-    };
-    dbBucket = mkOption {
-      type = types.nullOr types.str;
+    enable = mkEnableOption "automated database backups to a Backblaze bucket via rclone";
+
+    destination = mkOption {
+      type = types.str;
       default = null;
       description = ''
-        Name of the Backblaze bucket used for database backups.
+        Url of the Backblaze bucket used for database backups.
       '';
     };
-
-    rcloneConfFilePath = mkOption {
-      type = types.nullOr types.path;
+    rcloneConfigFile = mkOption {
+      type = types.path;
       default = null;
-      description = "Path to your rclone.conf.";
+      description = "Path the rclone configuration file.";
     };
   };
 
-  config = lib.mkIf config.catcolab.host.backup.enable {
+  config = lib.mkIf cfg.enable {
     systemd.timers.backupdb = {
       wantedBy = [ "timers.target" ];
       timerConfig = {
@@ -57,49 +64,28 @@ with lib;
     };
 
     systemd.services.backupdb = {
+      after = [ "postgresql.service" ];
+      wants = [ "postgresql.service" ];
       serviceConfig = {
         User = "catcolab";
-        ExecStart = getExe backupScript;
         Type = "oneshot";
-        EnvironmentFile = config.catcolab.environmentFilePath;
+        ExecStart = getExe backupdbScript;
       };
     };
 
-    # run backup script at end of deploy to act as a canary for the backup script
+    # Run the backup script early in activation, before services are restarted. This ensures that if the
+    # activation or new generation damages the DB, we still have a dump from the last known-good state.
     system.activationScripts.backupdb = {
       text = ''
-        echo "Running backupdb script as a transient systemd unit..."
+        echo "Running backupdb script..."
 
-        since=$(date --iso-8601=seconds)
-
-        # we can't run the backupdb unit because at this point systemd doesn't know about the new unit,
-        # so we run a transient unit with the same config.
-        ${pkgs.systemd}/bin/systemd-run --system --wait \
-          --unit=backupdb-activation \
-          --description="One-off activation backupdb" \
-          --property=Type=${config.systemd.services.backupdb.serviceConfig.Type} \
-          --property=User=${config.systemd.services.backupdb.serviceConfig.User} \
-          --property=EnvironmentFile=${config.catcolab.environmentFilePath} \
-          --property=Environment=PATH=/run/current-system/sw/bin \
-          ${lib.getExe backupScript}
-
-        exit_code=$?
-        if [ $exit_code -ne 0 ]; then
-          echo "activation‐time backup failed with code $exit_code"
-          ${pkgs.systemd}/bin/journalctl -u backupdb-activation.service --since "$since"
-        fi
+        ${pkgs.util-linux}/bin/runuser -u catcolab -- ${getExe backupdbScript}
       '';
     };
 
-    # install all packages used in this module
-    environment.systemPackages =
-      with pkgs;
-      [
-        postgresql
-        rclone
-        bash
-      ]
-
-      ++ [ backupScript ];
+    environment.systemPackages = [
+      pkgs.rclone
+      backupdbScript
+    ];
   };
 }
