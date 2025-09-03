@@ -1,5 +1,4 @@
 import type { Plugin } from "@patchwork/sdk/plugins";
-import { stockFlowAIPrompt } from "./ai-prompt";
 import type { LoadableAnnotationPlugin } from "@patchwork/sdk/annotations";
 
 export const plugins: Plugin<any>[] = [
@@ -65,7 +64,6 @@ export const plugins: Plugin<any>[] = [
             };
         },
     },
-    stockFlowAIPrompt,
     {
         type: "patchwork:annotations",
         name: "Model Annotations (Evan)",
