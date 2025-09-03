@@ -1,10 +1,10 @@
 import { createResource, Show } from "solid-js";
 
-import { getLiveAnalysis, LiveAnalysisDocument } from "../../frontend/src/analysis";
+import { getLiveAnalysis, type LiveAnalysisDocument } from "../../frontend/src/analysis";
 import { AnalysisNotebookEditor } from "../../frontend/src/analysis/analysis_editor";
 import { ApiContext } from "../../frontend/src/api";
 import { stdTheories, TheoryLibraryContext } from "../../frontend/src/stdlib";
-import { SolidToolProps } from "./tools";
+import type { SolidToolProps } from "./tools";
 import { AnnotationsContext } from "./annotations_solid";
 
 export function AnalysisPaneComponent(props: SolidToolProps) {

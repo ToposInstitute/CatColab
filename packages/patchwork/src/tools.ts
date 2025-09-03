@@ -1,15 +1,15 @@
-import { Repo } from "@automerge/automerge-repo";
+import type { Repo } from "@automerge/automerge-repo";
 import { useDocHandle, useDocument, useRepo } from "@automerge/automerge-repo-react-hooks";
-import { EditorProps } from "@patchwork/sdk";
+import type { EditorProps } from "@patchwork/sdk";
 import { useAllAnnotations } from "@patchwork/sdk/annotations";
-import { Cell, Uuid } from "catlog-wasm";
+import type { Cell, Uuid } from "catlog-wasm";
 import React, { useEffect, useMemo, useRef } from "react";
-import { Accessor, JSX, createSignal } from "solid-js";
+import { type Accessor, type JSX, createSignal } from "solid-js";
 
 import { createComponent, render } from "solid-js/web";
-import { AnalysisDoc } from "./analysis_datatype";
+import type { AnalysisDoc } from "./analysis_datatype";
 import { AnalysisPaneComponent } from "./analysis_pane";
-import { ModelDoc } from "./model_datatype";
+import type { ModelDoc } from "./model_datatype";
 import { ModelPaneComponent } from "./model_pane";
 import "./tools.css";
 

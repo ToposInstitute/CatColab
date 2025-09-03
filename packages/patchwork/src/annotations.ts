@@ -1,13 +1,13 @@
-import * as Automerge from "@automerge/automerge";
-import { AutomergeUrl, Repo } from "@automerge/automerge-repo";
+import type * as Automerge from "@automerge/automerge";
+import type { AutomergeUrl, Repo } from "@automerge/automerge-repo";
 import { useRepo } from "@automerge/automerge-repo-react-hooks";
-import { Annotation, DiffAnnotation, Pointer } from "@patchwork/sdk/annotations";
-import { Cell, Uuid } from "catlog-wasm";
+import type { Annotation, DiffAnnotation, Pointer } from "@patchwork/sdk/annotations";
+import type { Cell, Uuid } from "catlog-wasm";
 import React, { useEffect, useRef } from "react";
-import { Component } from "solid-js";
+import type { Component } from "solid-js";
 import { createComponent, render } from "solid-js/web";
-import { AnalysisDoc } from "./analysis_datatype";
-import { ModelDoc } from "./model_datatype";
+import type { AnalysisDoc } from "./analysis_datatype";
+import type { ModelDoc } from "./model_datatype";
 import "./annotations.css";
 
 export class CellPointer<D extends ModelDoc | AnalysisDoc> implements Pointer<D, Uuid, any> {
