@@ -1,14 +1,14 @@
 import * as A from "@automerge/automerge";
-import {
+import type {
     HasVersionControlMetadata,
     Annotation,
     TextPatch,
     DecodedChangeWithMetadata,
 } from "@patchwork/sdk/versionControl";
-import { type DataTypeImplementation, DocLink, initFrom } from "@patchwork/sdk";
-import { Cell, Uuid } from "catlog-wasm";
-import { AutomergeUrl, Repo } from "@automerge/automerge-repo";
-import { AnalysisDoc, init as initAnalysis } from "./analysis_datatype";
+import { type DataTypeImplementation, type DocLink, initFrom } from "@patchwork/sdk";
+import type { Cell, Uuid } from "catlog-wasm";
+import type { AutomergeUrl, Repo } from "@automerge/automerge-repo";
+import { type AnalysisDoc, init as initAnalysis } from "./analysis_datatype";
 
 // SCHEMA
 

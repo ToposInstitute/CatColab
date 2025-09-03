@@ -1,20 +1,20 @@
-import { AnnotationsViewProps } from "@patchwork/sdk/annotations";
-import { Cell, Uuid } from "catlog-wasm";
+import type { AnnotationsViewProps } from "@patchwork/sdk/annotations";
+import type { Cell, Uuid } from "catlog-wasm";
 import React from "react";
-import { Component, createResource, For, Match, Show, Switch } from "solid-js";
-import { AnnotationsPluginImplementation } from "../../../../patchwork/sdk/dist/annotations/types";
+import { type Component, createResource, For, Match, Show, Switch } from "solid-js";
+import type { AnnotationsPluginImplementation } from "../../../../patchwork/sdk/dist/annotations/types";
 import { ApiContext } from "../../frontend/src/api";
 import { getLiveModel, LiveModelContext } from "../../frontend/src/model";
 import { ModelCellEditor } from "../../frontend/src/model/model_editor";
-import { CellActions, FormalCell, RichTextCell } from "../../frontend/src/notebook";
+import type { CellActions, FormalCell, RichTextCell } from "../../frontend/src/notebook";
 import { stdTheories, TheoryLibraryContext } from "../../frontend/src/stdlib";
 import {
-    CellAnnotationsViewProps,
+    type CellAnnotationsViewProps,
     CellAnnotationsViewWrapper,
     CellPointer,
     patchesToAnnotation,
 } from "./annotations";
-import { ModelDoc } from "./model_datatype";
+import type { ModelDoc } from "./model_datatype";
 
 export function AnnotationsView({
     annotations,
