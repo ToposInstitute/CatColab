@@ -151,9 +151,8 @@ export function ModelNotebookEditor(props: {
     );
 }
 
-/** Editor for a notebook cell in a model notebook.
- */
-function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
+/** Editor for a notebook cell in a model notebook. */
+export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
 
