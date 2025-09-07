@@ -30,7 +30,6 @@ fn deg_of_mor(model: &DiscreteDblModel, f: &QualifiedName) -> usize {
     model.mor_generator_type(f).into_iter().filter(|t| *t == name("Degree")).count()
 }
 
-// TODO: filter -> find, don't need to do mod 2?
 fn is_mor_pos(model: &DiscreteDblModel, f: &QualifiedName) -> bool {
     0 == model
         .mor_generator_type(f)
@@ -40,33 +39,39 @@ fn is_mor_pos(model: &DiscreteDblModel, f: &QualifiedName) -> bool {
         % 2
 }
 
-// TODO: do we really need an Rc here?
-// TODO: we use clones throughout because QualifiedName cannot derive Copy
 /** Atomisiation of an ECLD by degree: replace every degree-n arrow by a path
  * of n-many degree-1 arrows, going via (n-1)-many new objects; all the
  * degree-0 arrows are kept unchanged. Returns the derivative towers to keep
  * track of the relation between the formal derivatives and the original objects
  */
 pub fn degree_atomisation(
+    // TODO: do we really need an Rc here?
     model: Rc<DiscreteDblModel>,
 ) -> (DiscreteDblModel, HashMap<QualifiedName, Vec<QualifiedName>>) {
     let mut atomised_model: DiscreteDblModel =
         DiscreteDblModel::new(Rc::new(theories::th_deg_del_signed_category()));
 
-    // There are some hash maps that will be useful throughout this algorithm:
-    // tower_heights: [base object: height of its tower]
-    let mut tower_heights: HashMap<QualifiedName, usize> = HashMap::new();
-    // in_arrows_pos_deg: [object: [positive-degree arrows with object as codomain]]
-    let mut in_arrows_pos_deg: HashMap<QualifiedName, Vec<QualifiedName>> = HashMap::new();
-    // in_arrows_pos_deg: [object: [zero-degree arrows with object as codomain]]
-    let mut in_arrows_zero_deg: HashMap<QualifiedName, Vec<QualifiedName>> = HashMap::new();
+    // height: the total height of the tower
+    // in_arrows_pos_deg: all incoming arrows of (strictly) positive degree
+    // in_arrows_zero_deg: all incoming arrows of zero degree
+    struct TowerConstructor {
+        height: usize,
+        in_arrows_pos_deg: Vec<QualifiedName>,
+        in_arrows_zero_deg: Vec<QualifiedName>,
+    }
+    let mut tower_constructors: HashMap<QualifiedName, TowerConstructor> = HashMap::new();
 
     // Every tower will be of height at least 1, and will have at the very least
     // an empty list of positive-degree (resp. zero-degree) incoming arrows
     for x in model.ob_generators() {
-        tower_heights.insert(x.clone(), 1);
-        in_arrows_pos_deg.insert(x.clone(), Vec::new());
-        in_arrows_zero_deg.insert(x.clone(), Vec::new());
+        tower_constructors.insert(
+            x.clone(),
+            TowerConstructor {
+                height: 1,
+                in_arrows_pos_deg: Vec::new(),
+                in_arrows_zero_deg: Vec::new(),
+            },
+        );
     }
 
     // -------------------------------------------------------------------------
@@ -79,14 +84,17 @@ pub fn degree_atomisation(
         let f_degree = deg_of_mor(&model, &f);
 
         if f_degree != 0 {
-            let new_degree = std::cmp::max(*tower_heights.get(f_cod).unwrap(), f_degree);
-            tower_heights.insert(f_cod.clone(), new_degree);
-
-            // Since we already have the codomain, we can add this to our
-            // hash map of positive-degree incoming arrows
-            in_arrows_pos_deg.get_mut(f_cod).unwrap().push(f);
+            let new_degree = std::cmp::max(tower_constructors.get(f_cod).unwrap().height, f_degree);
+            tower_constructors
+                .entry(f_cod.clone())
+                .and_modify(|tower_cons| tower_cons.height = new_degree)
+                // Since we already have the codomain, we can add this to our
+                // hash map of positive-degree incoming arrows
+                .and_modify(|tower_cons| tower_cons.in_arrows_pos_deg.push(f.clone()));
         } else {
-            in_arrows_zero_deg.get_mut(f_cod).unwrap().push(f);
+            tower_constructors
+                .entry(f_cod.clone())
+                .and_modify(|tower_cons| tower_cons.in_arrows_zero_deg.push(f.clone()));
         }
     }
 
@@ -107,9 +115,9 @@ pub fn degree_atomisation(
     while !unchecked_bases.is_empty() {
         // Since heights will change as we go, we start by resorting the list
         unchecked_bases.sort_by(|x, y| {
-            let height = |base| tower_heights.get(base).unwrap();
+            let height = |base| tower_constructors.get(base).unwrap().height;
             // Sort from smallest to largest so that we can pop from this stack
-            height(y).cmp(height(x))
+            height(y).cmp(&height(x))
         });
 
         // Work on the base of (any one of) the tallest tower(s)
@@ -117,14 +125,16 @@ pub fn degree_atomisation(
 
         // Ensure that every incoming arrow can be lifted high enough in the
         // tower over its source
-        for f in in_arrows_pos_deg.get(&target).unwrap() {
+        let target_in_arrows = &tower_constructors.get(&target).unwrap().in_arrows_pos_deg.clone();
+        for f in target_in_arrows {
             let source = model.get_dom(f).unwrap();
-            let source_height = *tower_heights.get(source).unwrap();
-            let req_height = tower_heights.get(&target).unwrap() - deg_of_mor(&model, f) + 1;
-
-            if req_height > source_height {
-                tower_heights.insert(source.clone(), req_height);
-            }
+            let required_height =
+                tower_constructors.get(&target).unwrap().height - deg_of_mor(&model, f) + 1;
+            tower_constructors.entry(source.clone()).and_modify(|tower_cons| {
+                if tower_cons.height < required_height {
+                    tower_cons.height = required_height
+                }
+            });
         }
     }
 
@@ -141,13 +151,14 @@ pub fn degree_atomisation(
     // positive-degree arrows, so we build this at the same time as adding all
     // these formal derivatives (and their morphisms) to the final model.
     let mut towers: HashMap<QualifiedName, Vec<QualifiedName>> = HashMap::new();
-    for (base, height) in tower_heights.iter_mut() {
+
+    for (base, tower_cons) in tower_constructors.iter_mut() {
         // Firstly, add the base object itself
         towers.insert(base.clone(), vec![base.clone()]);
         atomised_model.add_ob(base.clone(), name("Object"));
         // Then add all the formal derivatives Y_i, along with the morphisms
         // Y_i -> Y_{i-1}
-        for i in 1..*height {
+        for i in 1..tower_cons.height {
             let suffix = format!("_d[{}]", i);
             let formal_der_i = base.clone().append(suffix.as_str().into());
             atomised_model.add_ob(formal_der_i.clone(), name("Object"));
@@ -173,13 +184,14 @@ pub fn degree_atomisation(
     //      -   we simply copy over all the degree-zero morphisms.
 
     for (base, tower) in towers.iter() {
-        for f in in_arrows_pos_deg.get(base).unwrap() {
+        let tower_cons = tower_constructors.get(base).unwrap();
+        for f in &tower_cons.in_arrows_pos_deg {
             let deg = deg_of_mor(&model, f);
             let source = model.get_dom(f).unwrap();
             let source_tower = towers.get(source).unwrap();
             // Note that we could alternatively take height to be the length of
-            // towers.get(source), which will be equal by construction
-            let height = tower_heights.get(base).unwrap();
+            // towers.get(source), which is equal by construction/definition
+            let height = tower_cons.height;
             let new_source = &source_tower[height - deg];
             let new_target = tower.last().unwrap();
             match is_mor_pos(&model, f) {
@@ -198,7 +210,7 @@ pub fn degree_atomisation(
             }
         }
 
-        for f in in_arrows_zero_deg.get(base).unwrap() {
+        for f in &tower_cons.in_arrows_zero_deg {
             atomised_model.add_mor(
                 f.clone(),
                 model.get_dom(f).unwrap().clone(),

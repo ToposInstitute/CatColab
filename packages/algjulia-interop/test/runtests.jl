@@ -139,6 +139,7 @@ infer_types!(diagram.pode)
     add_part!(handcrafted_pode, :Op1, src=2, tgt=9, op1=:∂ₜ)
     add_part!(handcrafted_pode, :Op1, src=8, tgt=10, op1=:dual_d₁)
     add_part!(handcrafted_pode, :Op1, src=10, tgt=9, op1=:neg)
+    infer_types!(handcrafted_pode)
     @test diagram.pode == handcrafted_pode
 end
 # TODO not specifying initial boundary conditions for `B` on the front-end
@@ -222,12 +223,13 @@ end
 # means that it will be automatically specified
 @testset "Analysis - Diffusivity Constant" begin
     system = Analysis(ThDecapode(), payloadjson)
-    # simulator = evalsim(system.pode)
-    path = joinpath(@__DIR__, "testsim.jl")
-    open(path, "w") do f
-        write(f, string(gensim(system.pode)))
-    end
-    simulator = include(path)
+    simulator = evalsim(system.pode)
+    # DEBUGGING SNIPPET:
+    # path = joinpath(@__DIR__, "testsim.jl")
+    # open(path, "w") do f
+    #     write(f, string(gensim(system.pode)))
+    # end
+    # simulator = include(path)
     f = simulator(system.geometry.dualmesh, system.generate, DiagonalHodge())
     soln = run_sim(f, system.init, system.duration, ComponentArray(k=0.5,))
     @test soln.retcode == ReturnCode.Success

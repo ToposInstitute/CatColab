@@ -4,7 +4,7 @@ import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 import { P, match } from "ts-pattern";
 
-import type { MorType, Ob, ObOp, ObType, Uuid } from "catlog-wasm";
+import type { MorType, Ob, ObOp, ObType, QualifiedName, Uuid } from "catlog-wasm";
 import { IdInput, type IdInputOptions, type InputOptions, ObIdInput } from "../components";
 import { LiveModelContext } from "./context";
 import { ObListEditor } from "./object_list_editor";
@@ -105,13 +105,14 @@ function BasicObInput(allProps: ObInputProps & IdInputOptions) {
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
 
-    const completions = (): Ob[] | undefined =>
-        liveModel().elaboratedModel()?.objectsWithType(props.obType);
+    const completions = (): QualifiedName[] | undefined =>
+        liveModel().elaboratedModel()?.obGeneratorsWithType(props.obType);
 
     return (
         <ObIdInput
             completions={completions()}
-            idToName={liveModel().objectIndex()}
+            idToLabel={(id) => liveModel().elaboratedModel()?.obGeneratorLabel(id)}
+            labelToId={(label) => liveModel().elaboratedModel()?.obGeneratorWithLabel(label)}
             {...otherProps}
         />
     );
@@ -140,26 +141,12 @@ function TabulatedMorInput(allProps: ObInputProps & IdInputOptions) {
             )
             .otherwise(() => null);
 
-    const completions = (): Uuid[] | undefined => {
+    const completions = (): QualifiedName[] | undefined => {
         const morType = tabulatedType();
         if (!morType) {
             return undefined;
         }
-        return liveModel()
-            .elaboratedModel()
-            ?.morphismsWithType(morType)
-            .map((mor) =>
-                match(mor)
-                    .with(
-                        {
-                            tag: "Basic",
-                            content: P.select(),
-                        },
-                        (id) => id,
-                    )
-                    .otherwise(() => null),
-            )
-            .filter((id) => id !== null);
+        return liveModel().elaboratedModel()?.morGeneratorsWithType(morType);
     };
 
     const id = (): Uuid | null =>
@@ -194,7 +181,8 @@ function TabulatedMorInput(allProps: ObInputProps & IdInputOptions) {
         <IdInput
             id={id()}
             setId={setId}
-            idToName={liveModel().morphismIndex()}
+            idToLabel={(id) => liveModel().elaboratedModel()?.morGeneratorLabel(id)}
+            labelToId={(label) => liveModel().elaboratedModel()?.morGeneratorWithLabel(label)}
             completions={completions()}
             {...inputProps}
         />

@@ -155,7 +155,7 @@ pub(crate) fn promote_modality(modality: Modality) -> theory::Modality {
 
 pub(crate) fn expect_single_name(name: &QualifiedName) -> Ustr {
     match name.only() {
-        Some(NameSegment::Name(name)) => name,
+        Some(NameSegment::Text(text)) => text,
         _ => panic!("Only singleton names are currently supported in notebook types"),
     }
 }
@@ -292,29 +292,29 @@ impl DblTheory {
 
 #[wasm_bindgen]
 impl DblTheory {
-    /// Source of a morphism type.
+    /// Gets the source of a morphism type.
     #[wasm_bindgen]
     pub fn src(&self, mor_type: MorType) -> Result<ObType, String> {
         all_the_same!(match &self.0 {
             DblTheoryBox::[Discrete, DiscreteTab, Modal](th) => {
-                let m = Elaborator.elab(&mor_type)?;
-                Ok(Quoter.quote(&th.src_type(&m)))
+                let mor_type = Elaborator.elab(&mor_type)?;
+                Ok(Quoter.quote(&th.src_type(&mor_type)))
             }
         })
     }
 
-    /// Target of a morphism type.
+    /// Gets the target of a morphism type.
     #[wasm_bindgen]
     pub fn tgt(&self, mor_type: MorType) -> Result<ObType, String> {
         all_the_same!(match &self.0 {
             DblTheoryBox::[Discrete, DiscreteTab, Modal](th) => {
-                let m = Elaborator.elab(&mor_type)?;
-                Ok(Quoter.quote(&th.tgt_type(&m)))
+                let mor_type = Elaborator.elab(&mor_type)?;
+                Ok(Quoter.quote(&th.tgt_type(&mor_type)))
             }
         })
     }
 
-    /// Domain of an object operation.
+    /// Gets the domain of an object operation.
     #[wasm_bindgen]
     pub fn dom(&self, op: ObOp) -> Result<ObType, String> {
         all_the_same!(match &self.0 {
@@ -325,7 +325,7 @@ impl DblTheory {
         })
     }
 
-    /// Codomain of an object operation.
+    /// Gets the codomain of an object operation.
     #[wasm_bindgen]
     pub fn cod(&self, op: ObOp) -> Result<ObType, String> {
         all_the_same!(match &self.0 {

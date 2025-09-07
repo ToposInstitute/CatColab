@@ -55,8 +55,8 @@ export default function createPrimitiveStockFlowTheory(theoryMeta: TheoryMeta): 
                 simulate(model, data) {
                     return thCategoryLinks.massAction(model, data);
                 },
-                isTransition(mor) {
-                    return mor.morType.tag === "Hom";
+                isTransition(morType) {
+                    return morType.tag === "Hom";
                 },
             }),
         ],

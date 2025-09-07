@@ -84,8 +84,8 @@ importers:
         specifier: link:../backend/pkg
         version: link:../backend/pkg
       catlog-wasm:
-        specifier: link:../catlog-wasm/pkg
-        version: link:../catlog-wasm/pkg
+        specifier: link:../catlog-wasm/dist/pkg-browser
+        version: link:../catlog-wasm/dist/pkg-browser
       echarts:
         specifier: ^5.5.1
         version: 5.5.1

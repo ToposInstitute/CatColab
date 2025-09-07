@@ -91,22 +91,6 @@ export default function createExtendedCausalLoopTheory(theoryMeta: TheoryMeta): 
                 arrowStyle: "minusDeg",
                 preferUnnamed: true,
             },
-            {
-                tag: "MorType",
-                morType: {
-                    tag: "Composite",
-                    content: [
-                        { tag: "Basic", content: "Degree" },
-                        { tag: "Basic", content: "Degree" },
-                        { tag: "Basic", content: "Degree" },
-                        { tag: "Basic", content: "Degree" },
-                    ],
-                },
-                name: "Positive degree 4",
-                description: "Positive influence on the fourth derivative",
-                arrowStyle: "plusDeg",
-                preferUnnamed: true,
-            },
         ],
         modelAnalyses: [
             analyses.configureModelGraph({
