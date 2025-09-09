@@ -1,4 +1,4 @@
-import type { DocHandle } from "@automerge/automerge-repo";
+import type { AutomergeUrl, Repo } from "@automerge/automerge-repo";
 import { type Accessor, createMemo, createResource } from "solid-js";
 import invariant from "tiny-invariant";
 
@@ -165,15 +165,16 @@ export async function getLiveModel(
     return { ...liveModel, refId };
 }
 
-/** Get a model from an Automerge doc handle and make it "live" for editing.
+/** Get a model from an Automerge repo and make it "live" for editing.
 
-Unless you're bypassing the official CatColab backend, you should call
-[`getLiveModel`] instead.
+Prefer [`getLiveModel`] unless you're bypassing the official CatColab backend.
  */
-export function getLiveModelFromDocHandle(
-    docHandle: DocHandle<ModelDocument>,
+export async function getLiveModelFromRepo(
+    docId: AutomergeUrl,
+    repo: Repo,
     theories: TheoryLibrary,
-): LiveModelDocument {
+): Promise<LiveModelDocument> {
+    const docHandle = await repo.find<ModelDocument>(docId);
     const liveDoc = getLiveDocFromDocHandle(docHandle);
     return enlivenModelDocument(liveDoc, theories);
 }
