@@ -161,11 +161,36 @@ impl TyS {
     pub fn unit() -> Self {
         Self(Rc::new(TyS_::Unit))
     }
+
+    fn to_doc<'a>(&self) -> D<'a> {
+        match &**self {
+            TyS_::Object(object_type) => t(format!("{}", object_type)),
+            TyS_::Morphism(morphism_type, dom, cod) => {
+                (t(format!("{}", morphism_type)) + s() + dom.to_doc() + s() + cod.to_doc()).parens()
+            }
+            TyS_::Record(r) => tuple(
+                r.fields1
+                    .iter()
+                    .map(|(name, ty)| binop(":", t(format!("{}", name)), ty.to_doc())),
+            ),
+            TyS_::Sing(_, tm) => (t("@sing") + s() + tm.to_doc()),
+            TyS_::Specialize(ty, d) => binop(
+                "&",
+                ty.to_doc(),
+                tuple(
+                    d.flatten()
+                        .into_iter()
+                        .map(|(name, ty)| binop(":", t(format!(".{}", name)), ty.to_doc())),
+                ),
+            ),
+            TyS_::Unit => t("Unit"),
+        }
+    }
 }
 
 impl fmt::Display for TyS {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        todo!()
+        write!(f, "{}", self.to_doc().pretty())
     }
 }
 
@@ -224,10 +249,23 @@ impl TmS {
     pub fn tt() -> Self {
         Self(Rc::new(TmS_::Tt))
     }
+
+    fn to_doc<'a>(&self) -> D<'a> {
+        match &**self {
+            TmS_::Var(_, name) => t(format!("{}", name)),
+            TmS_::Proj(tm, field) => tm.to_doc() + t(format!(".{}", field)),
+            TmS_::Cons(fields) => tuple(
+                fields
+                    .iter()
+                    .map(|(name, field)| binop(":=", t(format!("{}", name)), field.to_doc())),
+            ),
+            TmS_::Tt => t("tt"),
+        }
+    }
 }
 
 impl fmt::Display for TmS {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        todo!()
+        write!(f, "{}", self.to_doc().pretty())
     }
 }

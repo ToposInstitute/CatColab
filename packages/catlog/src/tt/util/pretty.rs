@@ -30,9 +30,9 @@ pub fn s<'a>() -> D<'a> {
     D(RcDoc::line())
 }
 
-/// Creates a binary operator applied to two arguments, surrounded by parens.
+/// Creates a binary operator applied to two arguments.
 pub fn binop<'a>(op: &'a str, l: D<'a>, r: D<'a>) -> D<'a> {
-    (l + s() + t(op) + s() + r).parens()
+    (l + s() + t(op) + s() + r)
 }
 
 /// Creates a tuple in [fnotation]: (`[x, y, z, ...]`)

@@ -1,6 +1,6 @@
 /*! Directories. */
 
-use crate::tt::prelude::*;
+use crate::{tt::prelude::*, zero::QualifiedName};
 
 /** An entry in a [Dtry].
 
@@ -22,6 +22,15 @@ impl<T> DtryEntry<T> {
         match self {
             DtryEntry::File(x) => DtryEntry::File(f(x)),
             DtryEntry::SubDir(d) => DtryEntry::SubDir(d.map(f)),
+        }
+    }
+}
+
+impl<T: Clone> DtryEntry<T> {
+    fn flatten_into(&self, namespace: QualifiedName, out: &mut Vec<(QualifiedName, T)>) {
+        match self {
+            DtryEntry::File(x) => out.push((namespace, x.clone())),
+            DtryEntry::SubDir(d) => d.flatten_into(namespace, out),
         }
     }
 }
@@ -65,6 +74,22 @@ impl<T> Dtry<T> {
     /// Get the entry for `field` if it exists
     pub fn entry(&self, field: &FieldName) -> Option<&DtryEntry<T>> {
         self.0.get(*field)
+    }
+}
+
+impl<T: Clone> Dtry<T> {
+    /// Produce the list of paths in `self` that refer to files, along with the
+    /// value of the files that they refer to
+    pub fn flatten(&self) -> Vec<(QualifiedName, T)> {
+        let mut out = Vec::new();
+        self.flatten_into(vec![].into(), &mut out);
+        out
+    }
+
+    fn flatten_into(&self, namespace: QualifiedName, out: &mut Vec<(QualifiedName, T)>) {
+        for (field, entry) in self.entries() {
+            entry.flatten_into(namespace.snoc(*field), out)
+        }
     }
 }
 
