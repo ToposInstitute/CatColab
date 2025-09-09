@@ -5,14 +5,14 @@ use std::ops::Index;
 #[derive(Clone)]
 pub struct Tele<T>(Rc<[(FieldName, T)]>);
 
-impl<'a, T> Index<FieldName> for Tele<T> {
+impl<T> Index<FieldName> for Tele<T> {
     type Output = T;
     fn index(&self, index: FieldName) -> &Self::Output {
         self.get(index).unwrap()
     }
 }
 
-impl<'a, T> From<Vec<(FieldName, T)>> for Tele<T> {
+impl<T> From<Vec<(FieldName, T)>> for Tele<T> {
     fn from(value: Vec<(FieldName, T)>) -> Self {
         Self(value.into())
     }
@@ -37,7 +37,7 @@ impl<T> Tele<T> {
     }
 }
 
-impl<'a, T> FromIterator<(FieldName, T)> for Tele<T> {
+impl<T> FromIterator<(FieldName, T)> for Tele<T> {
     fn from_iter<I>(iter: I) -> Self
     where
         I: IntoIterator<Item = (FieldName, T)>,

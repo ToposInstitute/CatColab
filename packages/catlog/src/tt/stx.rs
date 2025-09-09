@@ -72,7 +72,7 @@ impl TyS {
     }
 }
 
-impl<'a> fmt::Display for TyS {
+impl fmt::Display for TyS {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         todo!()
     }

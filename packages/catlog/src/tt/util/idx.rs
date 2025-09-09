@@ -22,7 +22,7 @@ impl FwdIdx {
         Self(self.0 + 1)
     }
 
-    pub fn to_bwd(&self, scope_length: usize) -> BwdIdx {
+    pub fn as_bwd(&self, scope_length: usize) -> BwdIdx {
         BwdIdx(scope_length - self.0 - 1)
     }
 }
