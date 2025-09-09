@@ -25,7 +25,7 @@ impl<T> DtryEntry<T> {
         }
     }
 
-    /// Part of [[eval::Evaluator::specialize]]
+    /// Part of [[crate::tt::val::TyV::specialize]]
     // `A : DtryEntry` is a *refinement* of `B : DtryEntry` if either:
     //
     // 1. `A` and `B` are both files. Then their merge is given by `B`.
@@ -38,7 +38,7 @@ impl<T> DtryEntry<T> {
 
 /** A directory.
 
-A `Dtry<T>` consists of a mapping from [FieldName]s to directory
+A `Dtry<T>` consists of a mapping from `FieldName`s to directory
 entries, where a directory entry is either a "File" ([DtryEntry::File]),
 that is an element of `T`, or a "subdirectory" ([DtryEntry::SubDir]),
 which is just another directory.
@@ -67,7 +67,7 @@ impl<T> Dtry<T> {
         Dtry(Row::empty())
     }
 
-    /// Part of [eval::Evaluator::specialize]
+    /// Part of [[crate::tt::val::TyV::specialize]]
     // `A : Dtry` is a *refinement* of `B : Dtry` if, for every
     // key `k` shared between `A` and `B`, `A[k]` is a refinement
     // of `B[k]`.
