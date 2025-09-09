@@ -1,9 +1,16 @@
+import type { AutomergeUrl, Repo } from "@automerge/automerge-repo";
 import invariant from "tiny-invariant";
 
 import { type AnalysisType, type Document, currentVersion } from "catlog-wasm";
-import { type Api, type LiveDoc, type StableRef, getLiveDoc } from "../api";
-import { type LiveDiagramDocument, getLiveDiagram } from "../diagram";
-import { type LiveModelDocument, getLiveModel } from "../model";
+import {
+    type Api,
+    type LiveDoc,
+    type StableRef,
+    getLiveDoc,
+    getLiveDocFromDocHandle,
+} from "../api";
+import { type LiveDiagramDocument, getLiveDiagram, getLiveDiagramFromRepo } from "../diagram";
+import { type LiveModelDocument, getLiveModel, getLiveModelFromRepo } from "../model";
 import { newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
 import type { InterfaceToType } from "../util/types";
@@ -40,8 +47,8 @@ type BaseLiveAnalysisDocument = {
     /** Type of document that this analysis is of. */
     analysisType: AnalysisType;
 
-    /** The ref for which this is a live document. */
-    refId: string;
+    /** The ref in the backend, if any, for which this is a live document. */
+    refId?: string;
 };
 
 /** A model analysis document "live" for editing. */
@@ -104,6 +111,40 @@ export async function getLiveAnalysis(
             type: "analysis",
             analysisType: "diagram",
             refId,
+            liveDoc: liveDoc as LiveDoc<DiagramAnalysisDocument>,
+            liveDiagram,
+        };
+    }
+    throw new Error(`Unknown analysis type: ${doc.analysisType}`);
+}
+
+/** Get an analysis from an Automerge repo and make it "live" for editing.
+
+Prefer [`getLiveAnalysis`] unless you're bypassing the official backend.
+ */
+export async function getLiveAnalysisFromRepo(
+    docId: AutomergeUrl,
+    repo: Repo,
+    theories: TheoryLibrary,
+): Promise<LiveAnalysisDocument> {
+    const docHandle = await repo.find<AnalysisDocument>(docId);
+    const liveDoc = getLiveDocFromDocHandle(docHandle);
+    const { doc } = liveDoc;
+
+    const parentId = doc.analysisOf._id as AutomergeUrl;
+    if (doc.analysisType === "model") {
+        const liveModel = await getLiveModelFromRepo(parentId, repo, theories);
+        return {
+            type: "analysis",
+            analysisType: "model",
+            liveDoc: liveDoc as LiveDoc<ModelAnalysisDocument>,
+            liveModel,
+        };
+    } else if (doc.analysisType === "diagram") {
+        const liveDiagram = await getLiveDiagramFromRepo(parentId, repo, theories);
+        return {
+            type: "analysis",
+            analysisType: "diagram",
             liveDoc: liveDoc as LiveDoc<DiagramAnalysisDocument>,
             liveDiagram,
         };

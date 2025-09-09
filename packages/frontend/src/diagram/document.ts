@@ -36,8 +36,7 @@ export const newDiagramDocument = (modelRef: StableRef): DiagramDocument => ({
     version: currentVersion(),
 });
 
-/** A diagram document "live" for editing.
- */
+/** A diagram document "live" for editing. */
 export type LiveDiagramDocument = {
     /** Tag for use in tagged unions of document types. */
     type: "diagram";
@@ -164,7 +163,7 @@ export async function getLiveDiagram(
 
 /** Get a diagram from an Automerge repo and make it "live" for editing.
 
-Prefer [`getLiveDiagram`] unless you're bypassing the official CatColab backend.
+Prefer [`getLiveDiagram`] unless you're bypassing the official backend.
  */
 export async function getLiveDiagramFromRepo(
     docId: AutomergeUrl,
