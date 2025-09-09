@@ -1,25 +1,40 @@
+/*! Values for types and terms.
+
+See [crate::tt] for what this means.
+*/
+
 use bwd::Bwd;
 use std::ops::Deref;
 
 use crate::tt::{prelude::*, stx::*};
 
+/** A way of resolving [BwdIdx] found in [TmS_::Var] to values */
 pub type Env = Bwd<TmV>;
 
+/** The content of a record type value */
 #[derive(Clone)]
 pub struct RecordV {
+    /// The base type.
     pub fields0: Row<Ty0>,
+    /// The closed-over environment.
     pub env: Env,
-    pub fields1: Tele<TyS>,
+    /** The total types for the fields.
+
+    These are ready to be evaluated in `env.snoc(x)` where `x` is a value of
+    type `Ty0::Record(fields0)`.
+    */
+    pub fields1: Row<TyS>,
+    /** Specializations of the fields.
+
+    When we get to actually computing the type of fields, we will look here
+    to see if they have been specialized.
+    */
     pub specializations: Dtry<TyV>,
 }
 
 impl RecordV {
-    pub fn new(
-        fields0: Row<Ty0>,
-        env: Env,
-        fields1: Tele<TyS>,
-        specializations: Dtry<TyV>,
-    ) -> Self {
+    /// Constructor for [RecordV].
+    pub fn new(fields0: Row<Ty0>, env: Env, fields1: Row<TyS>, specializations: Dtry<TyV>) -> Self {
         Self {
             fields0,
             env,
@@ -28,6 +43,7 @@ impl RecordV {
         }
     }
 
+    /// Add new specializations to the record type.
     pub fn specialize(&self, specializations: Dtry<TyV>) -> Self {
         Self {
             specializations: self.specializations.merge(specializations),
@@ -36,14 +52,28 @@ impl RecordV {
     }
 }
 
+/** Inner enum for [TyV] */
 pub enum TyV_ {
+    /// Type constructor for object types, also see [TyS_::Object].
     Object(ObjectType),
-    ProArrow(ProArrowType, TmV, TmV),
+    /// Type constructor for morphism types, also see [TyS_::Morphism].
+    Morphism(MorphismType, TmV, TmV),
+    /** Type constructor for specialized record types.
+
+    This is the target of both [TyS_::Specialize] and [TyS_::Record].
+    Specifically, [TyS_::Record] evaluates to `TyV_::Record(r)` with
+    `r.specializations = Dtry::empty()`, and then `TyS_::Specialize(ty, d)` will
+    add the specializations in `d` to the evaluation of `ty` (which must
+    evaluate to a value of form `TyV_::Record(_)`).
+    */
     Record(RecordV),
+    /// Type constructor for singleton types, also see [TyS_::Sing].
     Sing(TyV, TmV),
+    /// Type constructor for unit types, also see [TyS_::Unit].
     Unit,
 }
 
+/// Value for total types, dereferences to [TyV_].
 #[derive(Clone)]
 pub struct TyV(Rc<TyV_>);
 
@@ -56,40 +86,47 @@ impl Deref for TyV {
 }
 
 impl TyV {
+    /// Smart constructor for [TyV], [TyV_::Object] case.
     pub fn object(object_type: ObjectType) -> Self {
         Self(Rc::new(TyV_::Object(object_type)))
     }
 
-    pub fn pro_arrow(proarrow_type: ProArrowType, dom: TmV, cod: TmV) -> Self {
-        Self(Rc::new(TyV_::ProArrow(proarrow_type, dom, cod)))
+    /// Smart constructor for [TyV], [TyV_::Morphism] case.
+    pub fn morphism(morphism_type: MorphismType, dom: TmV, cod: TmV) -> Self {
+        Self(Rc::new(TyV_::Morphism(morphism_type, dom, cod)))
     }
 
+    /// Smart constructor for [TyV], [TyV_::Record] case.
     pub fn record(record_v: RecordV) -> Self {
         Self(Rc::new(TyV_::Record(record_v)))
     }
 
+    /// Smart constructor for [TyV], [TyV_::Sing] case.
     pub fn sing(ty_v: TyV, tm_v: TmV) -> Self {
         Self(Rc::new(TyV_::Sing(ty_v, tm_v)))
     }
 
-    // Specialization is the process of assigning subtypes to the fields
-    // of a (possibly nested) record.
-    //
-    // There are some subtle points around how multiple specializations
-    // compose that we have to think about.
-    //
-    // Consider the following:
-    //
-    // ```
-    // type r1 = [ A : Type, B : Type, a : A ]
-    // type r2 = [ x : r1, y : x.B ]
-    // type r3 = r2 & [ .x : r1 & [ .A : (= Int) ] ] & [ .x.B : (= Bool) ]
-    // type r3' = r2 & [ .x : r1 & [ .A : (= Int), .B : (= Bool) ] ]
-    // type r3'' = r2 & [ .x.A : (= Int), .x.B : (= Bool) ]
-    // ```
-    //
-    // r3 and r3' should be represented in the same way, and r3, r3' and r3''
-    // should all be equivalent.
+    /** Compute the specialization of `self` by `specializations`.
+
+    Specialization is the process of assigning subtypes to the fields
+    of a (possibly nested) record.
+
+    There are some subtle points around how multiple specializations
+    compose that we have to think about.
+
+    Consider the following:
+
+    ```text
+    type r1 = [ A : Type, B : Type, a : A ]
+    type r2 = [ x : r1, y : x.B ]
+    type r3 = r2 & [ .x : r1 & [ .A : (= Int) ] ] & [ .x.B : (= Bool) ]
+    type r3' = r2 & [ .x : r1 & [ .A : (= Int), .B : (= Bool) ] ]
+    type r3'' = r2 & [ .x.A : (= Int), .x.B : (= Bool) ]
+    ```
+
+    r3 and r3' should be represented in the same way, and r3, r3' and r3''
+    should all be equivalent.
+    */
     pub fn specialize(&self, specializations: Dtry<TyV>) -> Self {
         match &**self {
             TyV_::Record(r) => TyV::record(r.specialize(specializations)),
@@ -97,16 +134,21 @@ impl TyV {
         }
     }
 
+    /// Smart constructor for [TyV], [TyV_::Unit] case.
     pub fn unit() -> Self {
         Self(Rc::new(TyV_::Unit))
     }
 }
 
+/** Inner enum for [TmN]. */
 pub enum TmN_ {
-    Var(VarName, FwdIdx),
+    /// Variable.
+    Var(FwdIdx, VarName),
+    /// Projection.
     Proj(TmN, FieldName),
 }
 
+/** Neutrals for base terms, dereferences to [TmN_]. */
 #[derive(Clone)]
 pub struct TmN(Rc<TmN_>);
 
@@ -119,18 +161,35 @@ impl Deref for TmN {
 }
 
 impl TmN {
-    pub fn var(var_name: VarName, fwd_idx: FwdIdx) -> Self {
-        TmN(Rc::new(TmN_::Var(var_name, fwd_idx)))
+    /// Smart constructor for [TmN], [TmN_::Var] case.
+    pub fn var(fwd_idx: FwdIdx, var_name: VarName) -> Self {
+        TmN(Rc::new(TmN_::Var(fwd_idx, var_name)))
     }
 
+    /// Smart constructor for [TmN], [TmN_::Proj] case.
     pub fn proj(tm_n: TmN, field_name: FieldName) -> Self {
         TmN(Rc::new(TmN_::Proj(tm_n, field_name)))
     }
 }
 
+/** Values for base terms.
+
+Note that this is *not* the value for total terms. So evaluating a `TmS` to
+produce a `TmV` and then quoting back will lose information about anything
+morphism-related. See [crate::tt] for more information.
+
+It turns out that each of the cases for [TmV] has a single cheaply cloneable
+field, so we don't need to bother making a `TmV_`.
+*/
 #[derive(Clone)]
 pub enum TmV {
+    /** Neutrals.
+
+    We store the type because we need it for eta-expansion.
+    */
     Neu(TmN, TyV),
+    /// Records.
     Cons(Row<TmV>),
+    /// The unique element of `Ty0::Unit`.
     Tt,
 }

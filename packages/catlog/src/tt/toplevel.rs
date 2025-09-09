@@ -1,13 +1,33 @@
+/*! Data structures for managing toplevel declarations in the type theory.
+
+Specifically, notebooks will produce [TopDecl::Type] declarations.
+*/
 use std::fmt;
 
 use crate::tt::{prelude::*, stx::*, val::*};
 
+/// A toplevel declaration.
 pub enum TopDecl {
+    /** A toplevel declaration of a type.
+
+    Also stores the evaluation of that type. Because this is an evaluation in
+    the empty context, this is OK to use in any other context as well.
+    */
     Type(TyS, TyV),
+    /** A toplevel declaration of a term.
+
+    Also stores the evaluation of that term, and the evaluation of the corresponding type of that term. Because this is an evaluation in the
+    empty context, this is OK to use in any other context as well.
+    */
     Term(TmS, TmV, TyV),
 }
 
 impl TopDecl {
+    /** Extract the type for a toplevel-declaration of a type.
+
+    This should only be used after type checking, when we know that a toplevel
+    variable name does in fact point to a toplevel declaration for a type.
+    */
     pub fn as_ty(&self) -> TyV {
         match self {
             TopDecl::Type(_, ty) => ty.clone(),
@@ -15,6 +35,11 @@ impl TopDecl {
         }
     }
 
+    /** Extract the term for a toplevel-declaration of a term.
+
+    This should only be used after type checking, when we know that a toplevel
+    variable name does in fact point to a toplevel declaration for a term.
+    */
     pub fn as_tm(&self) -> TmV {
         match self {
             TopDecl::Term(_, tm, _) => tm.clone(),
@@ -32,18 +57,21 @@ impl fmt::Display for TopDecl {
     }
 }
 
+/** Storage for toplevel declarations. */
+#[derive(Default)]
 pub struct Toplevel {
-    pub definitions: HashMap<TopVarName, TopDecl>,
+    /// The toplevel declarations, indexed by their name.
+    pub declarations: HashMap<TopVarName, TopDecl>,
 }
 
 impl Toplevel {
+    /// Constructor for an empty [Toplevel].
     pub fn new() -> Self {
-        Self {
-            definitions: HashMap::new(),
-        }
+        Self::default()
     }
 
+    /// Lookup a toplevel declaration by name.
     pub fn lookup(&self, name: TopVarName) -> Option<&TopDecl> {
-        self.definitions.get(&name)
+        self.declarations.get(&name)
     }
 }

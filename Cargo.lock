@@ -394,6 +394,7 @@ dependencies = [
  "ego-tree",
  "expect-test",
  "fnotation",
+ "indexmap",
  "instant",
  "itertools",
  "nalgebra",
@@ -1505,9 +1506,9 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "2.9.0"
+version = "2.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cea70ddb795996207ad57735b50c5982d8844f38ba9ee5f1aedcfb708a2aa11e"
+checksum = "206a8042aec68fa4a62e8d3f7aa4ceb508177d9324faf261e1959e495b7a1921"
 dependencies = [
  "equivalent",
  "hashbrown",

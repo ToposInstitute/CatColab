@@ -2,6 +2,7 @@ use std::ops::Index;
 
 pub use crate::tt::util::*;
 use crate::zero::NameSegment;
+pub use indexmap::IndexMap;
 pub use std::collections::HashMap;
 pub use std::rc::Rc;
 pub use tattle::{Loc, Reporter};

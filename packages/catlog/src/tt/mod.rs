@@ -1,21 +1,17 @@
-//! Type theory for catlog
+/*! Type theory for models of a double category
+
+TODO: write high-level description.
+*/
+
 #[allow(unused)]
-mod eval;
+pub mod eval;
 #[allow(unused)]
 mod prelude;
 #[allow(unused)]
-mod stx;
+pub mod stx;
 #[allow(unused)]
-mod toplevel;
+pub mod toplevel;
 #[allow(unused)]
-mod util;
+pub mod util;
 #[allow(unused)]
-mod val;
-
-// How are we going to use memory in this module?
-//
-// In the prototype, I used a bump allocator which ended up turning out pretty nicely.
-// In this version, we have to maintain a cache of elaborated notebooks, which might
-// persist indefinitely.
-//
-// I think to be compatible with the rest of catlog, we should use Rc.
+pub mod val;

@@ -1,9 +1,16 @@
+/*! Rows. */
 use crate::tt::prelude::*;
 use std::ops::Index;
 
-/// A sorted list of name-value pairs
+/** A cheaply cloneable, insertion-ordered map from `FieldName` to `T`.
+
+This is called "row" because it's a short name, and it corresponds to the idea
+of a row in a database, which is a map from fields to values.
+
+Create this using the [FromIterator] implementation.
+*/
 #[derive(Clone)]
-pub struct Row<T>(Rc<[(FieldName, T)]>);
+pub struct Row<T>(Rc<IndexMap<FieldName, T>>);
 
 impl<T> Index<FieldName> for Row<T> {
     type Output = T;
@@ -13,24 +20,31 @@ impl<T> Index<FieldName> for Row<T> {
 }
 
 impl<T> Row<T> {
+    /// Lookup the field `name` if it exists.
+    ///
+    /// Also see the [Index] implementation, which just `unwrap`s this.
     pub fn get(&self, name: FieldName) -> Option<&T> {
-        if let Ok(i) = self.0.binary_search_by_key(&name, |(name, _)| *name) {
-            Some(&self.0[i].1)
-        } else {
-            None
-        }
+        self.0.get(&name)
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = &(FieldName, T)> {
+    /// Iterate through the fields in insertion order.
+    pub fn iter(&self) -> impl Iterator<Item = (&FieldName, &T)> {
         self.0.iter()
     }
 
+    /// Return the number of fields.
     pub fn len(&self) -> usize {
         self.0.len()
     }
 
+    /// Return whether the row is empty (Clippy wants this).
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    /// Produce the empty row.
     pub fn empty() -> Self {
-        Self(Rc::new([]))
+        Self(Rc::new(IndexMap::new()))
     }
 }
 
@@ -39,8 +53,6 @@ impl<T> FromIterator<(FieldName, T)> for Row<T> {
     where
         I: IntoIterator<Item = (FieldName, T)>,
     {
-        let mut v: Vec<_> = iter.into_iter().collect();
-        v.sort_by_key(|(f, _)| *f);
-        Row(v.into())
+        Row(Rc::new(iter.into_iter().collect()))
     }
 }
