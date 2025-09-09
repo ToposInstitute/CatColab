@@ -25,10 +25,7 @@ pub fn binop<'a>(op: &'a str, l: D<'a>, r: D<'a>) -> D<'a> {
 }
 
 pub fn tuple<'a, I: IntoIterator<Item = D<'a>>>(i: I) -> D<'a> {
-    D(RcDoc::intersperse(
-        i.into_iter().map(|d| d.0),
-        (t(",") + s()).0,
-    ))
+    D(RcDoc::intersperse(i.into_iter().map(|d| d.0), (t(",") + s()).0))
 }
 
 impl<'a> D<'a> {
