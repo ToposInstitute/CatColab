@@ -9,9 +9,9 @@ enum.
 */
 #[derive(Clone)]
 pub enum DtryEntry<T> {
-    /// A leaf node
+    /// A leaf node.
     File(T),
-    /// An internal node
+    /// An internal node.
     SubDir(Dtry<T>),
 }
 
@@ -25,7 +25,7 @@ impl<T> DtryEntry<T> {
         }
     }
 
-    /// Part of [[crate::tt::val::TyV::specialize]]
+    /// Part of [[crate::tt::val::TyV::specialize]].
     // `A : DtryEntry` is a *refinement* of `B : DtryEntry` if either:
     //
     // 1. `A` and `B` are both files. Then their merge is given by `B`.
@@ -62,7 +62,7 @@ impl<T> Dtry<T> {
         Dtry(self.0.iter().map(|(name, e)| (*name, e.map(f))).collect())
     }
 
-    /// Constructor for the empty directory
+    /// Constructor for the empty directory.
     pub fn empty() -> Dtry<T> {
         Dtry(Row::empty())
     }
@@ -75,7 +75,7 @@ impl<T> Dtry<T> {
     // See the definition of refinement at [[DtryEntry::merge]]
     // for more information.
     //
-    // Precondition: other must be a *refinement* of self
+    // Precondition: other must be a *refinement* of self.
     pub fn merge(&self, other: Dtry<T>) -> Dtry<T> {
         todo!()
     }
