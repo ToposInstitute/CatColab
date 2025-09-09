@@ -1,34 +1,34 @@
+import type { AutomergeUrl, Repo } from "@automerge/automerge-repo";
 import invariant from "tiny-invariant";
 
-import { type Document, currentVersion } from "catlog-wasm";
-import { type Api, type LiveDoc, type StableRef, getLiveDoc } from "../api";
-import { type LiveDiagramDocument, getLiveDiagram } from "../diagram";
-import { type LiveModelDocument, getLiveModel } from "../model";
+import { type AnalysisType, type Document, currentVersion } from "catlog-wasm";
+import {
+    type Api,
+    type LiveDoc,
+    type StableRef,
+    getLiveDoc,
+    getLiveDocFromDocHandle,
+} from "../api";
+import { type LiveDiagramDocument, getLiveDiagram, getLiveDiagramFromRepo } from "../diagram";
+import { type LiveModelDocument, getLiveModel, getLiveModelFromRepo } from "../model";
 import { newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
 import type { InterfaceToType } from "../util/types";
 
-type AnalysisType = "model" | "diagram";
-
-type BaseAnalysisDocument<T extends AnalysisType> = Document & {
-    type: "analysis";
-    analysisType: T;
-};
+/** A document defining an analysis. */
+export type AnalysisDocument = Document & { type: "analysis" };
 
 /** A document defining an analysis of a model. */
-export type ModelAnalysisDocument = BaseAnalysisDocument<"model">;
+export type ModelAnalysisDocument = AnalysisDocument & { analysisType: "model" };
 
 /** A document defining an analysis of a diagram. */
-export type DiagramAnalysisDocument = BaseAnalysisDocument<"diagram">;
-
-/** A document defining an analysis. */
-export type AnalysisDocument = ModelAnalysisDocument | DiagramAnalysisDocument;
+export type DiagramAnalysisDocument = AnalysisDocument & { analysisType: "diagram" };
 
 /** Create an empty analysis. */
 export const newAnalysisDocument = (
     analysisType: AnalysisType,
     analysisOf: StableRef,
-): BaseAnalysisDocument<typeof analysisType> => ({
+): AnalysisDocument => ({
     name: "",
     type: "analysis",
     analysisType,
@@ -40,12 +40,20 @@ export const newAnalysisDocument = (
     version: currentVersion(),
 });
 
-/** A model analysis document "live" for editing. */
-export type LiveModelAnalysisDocument = {
-    analysisType: "model";
+type BaseLiveAnalysisDocument = {
+    /** Tag for use in tagged unions of document types. */
+    type: "analysis";
 
-    /** The ref for which this is a live document. */
-    refId: string;
+    /** Type of document that this analysis is of. */
+    analysisType: AnalysisType;
+
+    /** The ref in the backend, if any, for which this is a live document. */
+    refId?: string;
+};
+
+/** A model analysis document "live" for editing. */
+export type LiveModelAnalysisDocument = BaseLiveAnalysisDocument & {
+    analysisType: "model";
 
     /** Live document defining the analysis. */
     liveDoc: LiveDoc<ModelAnalysisDocument>;
@@ -55,16 +63,13 @@ export type LiveModelAnalysisDocument = {
 };
 
 /** A diagram analysis document "live" for editing. */
-export type LiveDiagramAnalysisDocument = {
+export type LiveDiagramAnalysisDocument = BaseLiveAnalysisDocument & {
     analysisType: "diagram";
-
-    /** The ref for which this is a live document. */
-    refId: string;
 
     /** Live document defining the analysis. */
     liveDoc: LiveDoc<DiagramAnalysisDocument>;
 
-    /** Live diagarm that the analysis is of. */
+    /** Live diagram that the analysis is of. */
     liveDiagram: LiveDiagramDocument;
 };
 
@@ -90,9 +95,11 @@ export async function getLiveAnalysis(
     const liveDoc = await getLiveDoc<AnalysisDocument>(api, refId, "analysis");
     const { doc } = liveDoc;
 
+    // XXX: TypeScript cannot narrow types in nested tagged unions.
     if (doc.analysisType === "model") {
         const liveModel = await getLiveModel(doc.analysisOf._id, api, theories);
         return {
+            type: "analysis",
             analysisType: "model",
             refId,
             liveDoc: liveDoc as LiveDoc<ModelAnalysisDocument>,
@@ -101,11 +108,46 @@ export async function getLiveAnalysis(
     } else if (doc.analysisType === "diagram") {
         const liveDiagram = await getLiveDiagram(doc.analysisOf._id, api, theories);
         return {
+            type: "analysis",
             analysisType: "diagram",
             refId,
             liveDoc: liveDoc as LiveDoc<DiagramAnalysisDocument>,
             liveDiagram,
         };
     }
-    throw new Error(`Unknown analysis type: ${(doc as AnalysisDocument).analysisType}`);
+    throw new Error(`Unknown analysis type: ${doc.analysisType}`);
+}
+
+/** Get an analysis from an Automerge repo and make it "live" for editing.
+
+Prefer [`getLiveAnalysis`] unless you're bypassing the official backend.
+ */
+export async function getLiveAnalysisFromRepo(
+    docId: AutomergeUrl,
+    repo: Repo,
+    theories: TheoryLibrary,
+): Promise<LiveAnalysisDocument> {
+    const docHandle = await repo.find<AnalysisDocument>(docId);
+    const liveDoc = getLiveDocFromDocHandle(docHandle);
+    const { doc } = liveDoc;
+
+    const parentId = doc.analysisOf._id as AutomergeUrl;
+    if (doc.analysisType === "model") {
+        const liveModel = await getLiveModelFromRepo(parentId, repo, theories);
+        return {
+            type: "analysis",
+            analysisType: "model",
+            liveDoc: liveDoc as LiveDoc<ModelAnalysisDocument>,
+            liveModel,
+        };
+    } else if (doc.analysisType === "diagram") {
+        const liveDiagram = await getLiveDiagramFromRepo(parentId, repo, theories);
+        return {
+            type: "analysis",
+            analysisType: "diagram",
+            liveDoc: liveDoc as LiveDoc<DiagramAnalysisDocument>,
+            liveDiagram,
+        };
+    }
+    throw new Error(`Unknown analysis type: ${doc.analysisType}`);
 }

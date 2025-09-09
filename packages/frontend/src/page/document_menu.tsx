@@ -1,5 +1,6 @@
 import { useNavigate } from "@solidjs/router";
 import { Match, Show, Switch } from "solid-js";
+import invariant from "tiny-invariant";
 
 import { createAnalysis } from "../analysis/document";
 import { type StableRef, useApi } from "../api";
@@ -41,27 +42,23 @@ export function DocumentMenu(props: {
     });
 
     const onNewDiagram = async () => {
-        const modelRefId = (() => {
-            switch (props.liveDocument.type) {
-                case "diagram":
-                    return props.liveDocument.liveModel.refId;
-                case "model":
-                    return props.liveDocument.refId;
-                default:
-                    assertExhaustive(props.liveDocument);
-            }
-        })();
+        let modelRefId: string | undefined;
+        if (props.liveDocument.type === "diagram") {
+            modelRefId = props.liveDocument.liveModel.refId;
+        } else if (props.liveDocument.type === "model") {
+            modelRefId = props.liveDocument.refId;
+        }
+        invariant(modelRefId, "To create diagram, parent model should have a ref ID");
 
         const newRef = await createDiagram(api, unversionedRef(modelRefId));
         navigate(`/diagram/${newRef}`);
     };
 
     const onNewAnalysis = async () => {
-        const newRef = await createAnalysis(
-            api,
-            props.liveDocument.type,
-            unversionedRef(props.liveDocument.refId),
-        );
+        const refId = props.liveDocument.refId;
+        invariant(refId, "To create analysis, parent document should have aa ref ID");
+
+        const newRef = await createAnalysis(api, props.liveDocument.type, unversionedRef(refId));
         navigate(`/analysis/${newRef}`);
     };
 
