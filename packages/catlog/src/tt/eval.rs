@@ -16,6 +16,7 @@ involves evaluating the body of the lambda in the context of a freshly
 introduced variable; even though we don't have lambdas, a similar
 thing applies to dependent records.
 */
+#[derive(Clone)]
 pub struct Evaluator<'a> {
     toplevel: &'a Toplevel,
     env: Env,
@@ -26,6 +27,14 @@ pub struct Evaluator<'a> {
 impl<'a> Evaluator<'a> {
     fn eval_record(&self, r: &RecordS) -> RecordV {
         RecordV::new(r.fields0.clone(), self.env.clone(), r.fields1.clone(), Dtry::empty())
+    }
+
+    /// Return a new [Evaluator] with environment `env`
+    pub fn with_env(&self, env: Env) -> Self {
+        Self {
+            env,
+            ..self.clone()
+        }
     }
 
     /** Evaluate type syntax to produce a type value
@@ -42,7 +51,7 @@ impl<'a> Evaluator<'a> {
             TyS_::Record(r) => TyV::record(self.eval_record(r)),
             TyS_::Sing(ty_s, tm_s) => TyV::sing(self.eval_ty(ty_s), self.eval_tm(tm_s)),
             TyS_::Specialize(ty_s, specializations) => {
-                self.eval_ty(ty_s).specialize(specializations.map(&|ty_s| self.eval_ty(ty_s)))
+                self.eval_ty(ty_s).specialize(&specializations.map(&|ty_s| self.eval_ty(ty_s)))
             }
             TyS_::Unit => TyV::unit(),
         }
@@ -79,8 +88,13 @@ impl<'a> Evaluator<'a> {
     pub fn field_ty(&self, ty: &TyV, val: &TmV, field_name: FieldName) -> TyV {
         match &**ty {
             TyV_::Record(r) => {
-                let field_ty_s = r.fields1.get(field_name).cloned().unwrap();
-                todo!()
+                let field_ty_s = r.fields1.get(field_name).unwrap();
+                let orig_field_ty = self.with_env(r.env.snoc(val.clone())).eval_ty(field_ty_s);
+                match r.specializations.entry(&field_name) {
+                    Some(DtryEntry::File(ty)) => ty.clone(),
+                    Some(DtryEntry::SubDir(d)) => orig_field_ty.specialize(d),
+                    Option::None => orig_field_ty,
+                }
             }
             _ => panic!("tried to get the type of field for non-record type"),
         }

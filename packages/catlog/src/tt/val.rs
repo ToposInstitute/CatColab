@@ -4,6 +4,7 @@ See [crate::tt] for what this means.
 */
 
 use bwd::Bwd;
+use itertools::merge;
 use std::ops::Deref;
 
 use crate::tt::{prelude::*, stx::*};
@@ -42,14 +43,24 @@ impl RecordV {
             specializations,
         }
     }
+}
 
-    /// Add new specializations to the record type.
-    pub fn specialize(&self, specializations: Dtry<TyV>) -> Self {
-        Self {
-            specializations: self.specializations.merge(specializations),
-            ..self.clone()
-        }
+/// Merge new specializations with old specializations
+pub fn merge_specializations(old: &Dtry<TyV>, new: &Dtry<TyV>) -> Dtry<TyV> {
+    let mut result: IndexMap<FieldName, DtryEntry<TyV>> =
+        old.entries().map(|(name, e)| (*name, e.clone())).collect();
+    for (field, entry) in new.entries() {
+        let new_entry = match (old.entry(field), entry) {
+            (Option::None, e) => e.clone(),
+            (Some(_), DtryEntry::File(subty)) => DtryEntry::File(subty.clone()),
+            (Some(DtryEntry::File(ty)), DtryEntry::SubDir(d)) => DtryEntry::File(ty.specialize(d)),
+            (Some(DtryEntry::SubDir(d1)), DtryEntry::SubDir(d2)) => {
+                DtryEntry::SubDir(merge_specializations(d1, d2))
+            }
+        };
+        result.insert(*field, new_entry);
     }
+    result.into()
 }
 
 /** Inner enum for [TyV] */
@@ -127,9 +138,12 @@ impl TyV {
     r3 and r3' should be represented in the same way, and r3, r3' and r3''
     should all be equivalent.
     */
-    pub fn specialize(&self, specializations: Dtry<TyV>) -> Self {
+    pub fn specialize(&self, specializations: &Dtry<TyV>) -> Self {
         match &**self {
-            TyV_::Record(r) => TyV::record(r.specialize(specializations)),
+            TyV_::Record(r) => TyV::record(RecordV {
+                specializations: merge_specializations(&r.specializations, specializations),
+                ..r.clone()
+            }),
             _ => panic!("can only specialize a record type"),
         }
     }

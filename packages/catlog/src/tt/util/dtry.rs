@@ -24,16 +24,6 @@ impl<T> DtryEntry<T> {
             DtryEntry::SubDir(d) => DtryEntry::SubDir(d.map(f)),
         }
     }
-
-    /// Part of [[crate::tt::val::TyV::specialize]].
-    // `A : DtryEntry` is a *refinement* of `B : DtryEntry` if either:
-    //
-    // 1. `A` and `B` are both files. Then their merge is given by `B`.
-    // 2. `A` and `B` are both subdirectories. Then their merge is given
-    // by `Dtry::merge`.
-    pub fn merge(&self, other: DtryEntry<T>) -> DtryEntry<T> {
-        todo!()
-    }
 }
 
 /** A directory.
@@ -67,16 +57,19 @@ impl<T> Dtry<T> {
         Dtry(Row::empty())
     }
 
-    /// Part of [[crate::tt::val::TyV::specialize]]
-    // `A : Dtry` is a *refinement* of `B : Dtry` if, for every
-    // key `k` shared between `A` and `B`, `A[k]` is a refinement
-    // of `B[k]`.
-    //
-    // See the definition of refinement at [[DtryEntry::merge]]
-    // for more information.
-    //
-    // Precondition: other must be a *refinement* of self.
-    pub fn merge(&self, other: Dtry<T>) -> Dtry<T> {
-        todo!()
+    /// Iterate through the entries of the directory
+    pub fn entries(&self) -> impl Iterator<Item = (&FieldName, &DtryEntry<T>)> {
+        self.0.iter()
+    }
+
+    /// Get the entry for `field` if it exists
+    pub fn entry(&self, field: &FieldName) -> Option<&DtryEntry<T>> {
+        self.0.get(*field)
+    }
+}
+
+impl<T> From<IndexMap<FieldName, DtryEntry<T>>> for Dtry<T> {
+    fn from(value: IndexMap<FieldName, DtryEntry<T>>) -> Self {
+        Self(value.into())
     }
 }

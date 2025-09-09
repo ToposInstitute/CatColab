@@ -56,3 +56,9 @@ impl<T> FromIterator<(FieldName, T)> for Row<T> {
         Row(Rc::new(iter.into_iter().collect()))
     }
 }
+
+impl<T> From<IndexMap<FieldName, T>> for Row<T> {
+    fn from(value: IndexMap<FieldName, T>) -> Self {
+        Self(Rc::new(value))
+    }
+}
