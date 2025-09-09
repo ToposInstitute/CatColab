@@ -78,6 +78,22 @@ export async function getLiveDoc<Doc extends Document>(
         docHandle = localRepo.create(init);
     }
 
+    return getLiveDocFromDocHandle(docHandle, docType, refDoc.permissions);
+}
+
+/** Create a live document from an Automerge document handle.
+
+When using the official CatColab backend, this function should be called only
+indirectly, via [`getLiveDoc`]. However, if you want to bypass the CatColab
+backend and fetch a document from another Automerge repo, you can call this
+function directly.
+ */
+export function getLiveDocFromDocHandle<Doc extends Document>(
+    docHandle: DocHandle<Doc>,
+    docType?: string,
+    permissions?: Permissions,
+): LiveDoc<Doc> {
+    // Perform any migrations on the document.
     // XXX: copied from automerge-doc-server/src/server.ts:
     const docBefore = docHandle.doc();
     const docAfter = catlogWasm.migrateDocument(docBefore);
@@ -98,12 +114,15 @@ export async function getLiveDoc<Doc extends Document>(
 
     const changeDoc = (f: ChangeFn<Doc>) => docHandle.change(f);
 
-    const permissions = refDoc.permissions;
+    // If permissions are omitted, assume that no restrictions are present.
+    if (!permissions) {
+        permissions = { anyone: "Own", user: null, users: [] };
+    }
+
     return { doc, changeDoc, docHandle, permissions };
 }
 
-/** Create a Solid Store that tracks an Automerge document.
- */
+/** Create a Solid Store that tracks an Automerge document. */
 export function makeDocHandleReactive<T extends object>(handle: DocHandle<T>): T {
     const init = handle.doc();
 
@@ -120,8 +139,7 @@ export function makeDocHandleReactive<T extends object>(handle: DocHandle<T>): T
     return store;
 }
 
-/** Create a boolean signal for whether an Automerge document handle is ready.
- */
+/** Create a boolean signal for whether an Automerge document handle is ready. */
 export function useDocHandleReady(getHandle: () => DocHandle<unknown>): Accessor<boolean> {
     const [isReady, setIsReady] = createSignal<boolean>(false);
 

@@ -1,4 +1,6 @@
 import { For, Show, createResource } from "solid-js";
+import invariant from "tiny-invariant";
+
 import type { AnalysisDocument, LiveAnalysisDocument } from "../analysis";
 import { getLiveDoc, useApi } from "../api";
 import type { DiagramDocument, LiveDiagramDocument } from "../diagram";
@@ -6,6 +8,7 @@ import type { LiveModelDocument, ModelDocument } from "../model";
 import { assertExhaustive } from "../util/assert_exhaustive";
 import "./document_breadcrumbs.css";
 
+// FIXME: These unions should be defined elsewhere.
 type AnyDocument = ModelDocument | DiagramDocument | AnalysisDocument;
 type AnyLiveDocument = LiveModelDocument | LiveDiagramDocument | LiveAnalysisDocument;
 type AnyDocumentWithRefId = {
@@ -50,6 +53,8 @@ export function getParentRefId(document: AnyDocument): string | null {
 }
 
 async function getDocumentChain(document: AnyLiveDocument): Promise<AnyDocumentWithRefId[]> {
+    invariant(document.refId, "Document should have a ref ID");
+
     const api = useApi();
     const documentChain: AnyDocumentWithRefId[] = [
         { document: document.liveDoc.doc, refId: document.refId },

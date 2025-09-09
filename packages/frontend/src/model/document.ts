@@ -1,3 +1,4 @@
+import type { DocHandle } from "@automerge/automerge-repo";
 import { type Accessor, createMemo, createResource } from "solid-js";
 import invariant from "tiny-invariant";
 
@@ -9,7 +10,7 @@ import {
     currentVersion,
     elaborateModel,
 } from "catlog-wasm";
-import { type Api, type LiveDoc, getLiveDoc } from "../api";
+import { type Api, type LiveDoc, getLiveDoc, getLiveDocFromDocHandle } from "../api";
 import { NotebookUtils, newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
 import type { Theory } from "../theory";
@@ -32,11 +33,11 @@ export const newModelDocument = (theory: string): ModelDocument => ({
 Contains a live document for the model, plus various memos of derived data.
  */
 export type LiveModelDocument = {
-    /** discriminator for use in union types */
+    /** Tag for use in tagged unions of document types. */
     type: "model";
 
-    /** The ref for which this is a live document. */
-    refId: string;
+    /** The ref in the backend, if any, for which this is a live document. */
+    refId?: string;
 
     /** Live document with the model data. */
     liveDoc: LiveDoc<ModelDocument>;
@@ -74,7 +75,6 @@ export type ValidatedModel =
       };
 
 function enlivenModelDocument(
-    refId: string,
     liveDoc: LiveDoc<ModelDocument>,
     theories: TheoryLibrary,
 ): LiveModelDocument {
@@ -125,7 +125,6 @@ function enlivenModelDocument(
 
     return {
         type: "model",
-        refId,
         liveDoc,
         formalJudgments,
         theory,
@@ -162,9 +161,24 @@ export async function getLiveModel(
     theories: TheoryLibrary,
 ): Promise<LiveModelDocument> {
     const liveDoc = await getLiveDoc<ModelDocument>(api, refId, "model");
-    return enlivenModelDocument(refId, liveDoc, theories);
+    const liveModel = enlivenModelDocument(liveDoc, theories);
+    return { ...liveModel, refId };
 }
 
+/** Get a model from an Automerge doc handle and make it "live" for editing.
+
+Unless you're bypassing the official CatColab backend, you should call
+[`getLiveModel`] instead.
+ */
+export function getLiveModelFromDocHandle(
+    docHandle: DocHandle<ModelDocument>,
+    theories: TheoryLibrary,
+): LiveModelDocument {
+    const liveDoc = getLiveDocFromDocHandle(docHandle);
+    return enlivenModelDocument(liveDoc, theories);
+}
+
+/** Migrate a model document from one theory to another. */
 export async function migrateModelDocument(
     liveDoc: LiveDoc<ModelDocument>,
     targetTheoryId: string,

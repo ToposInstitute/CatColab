@@ -32,7 +32,7 @@ export const newDiagramDocument = (modelRef: StableRef): DiagramDocument => ({
 /** A diagram document "live" for editing.
  */
 export type LiveDiagramDocument = {
-    /** discriminator for use in union types */
+    /** Tag for use in tagged unions of document types. */
     type: "diagram";
 
     /** The ref for which this is a live document. */
