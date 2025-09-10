@@ -491,7 +491,7 @@ impl<V, E> CategoryProgramBuilder<V, E> {
                 unextractable: false,
             },
             // Rule set: all the axioms for a category.
-            Command::AddRuleset(sym.axioms),
+            Command::AddRuleset(span!(), sym.axioms),
             // Predicate: is the morphism well-typed?
             Command::Relation {
                 span: span!(),

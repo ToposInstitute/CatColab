@@ -14,7 +14,7 @@ serde-wasm = ["serde", "dep:wasm-bindgen", "dep:tsify"]
 derivative = "2"
 derive_more = { version = "2", features = ["constructor", "from", "into"] }
 duplicate = "2"
-egglog = { version = "0.4", default-features = false }
+egglog = { version = "0.5", default-features = false }
 ego-tree = "0.10"
 itertools = "0.14"
 nalgebra = { version = "0.33", optional = true }
