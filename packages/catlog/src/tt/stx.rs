@@ -12,7 +12,7 @@ use std::ops::Deref;
 /// Object types are just qualified names, see [DiscreteDblTheory].
 pub type ObjectType = QualifiedName;
 /// Morphism types are just qualified names, see [DiscreteDblTheory].
-pub type MorphismType = QualifiedName;
+pub type MorphismType = Path<QualifiedName, QualifiedName>;
 
 /** Type in the base type theory.
 
@@ -166,7 +166,9 @@ impl TyS {
         match &**self {
             TyS_::Object(object_type) => t(format!("{}", object_type)),
             TyS_::Morphism(morphism_type, dom, cod) => {
-                (t(format!("{}", morphism_type)) + s() + dom.to_doc() + s() + cod.to_doc()).parens()
+                // TODO: how should morphism types be printed out?
+                (t(format!("{:?}", morphism_type)) + s() + dom.to_doc() + s() + cod.to_doc())
+                    .parens()
             }
             TyS_::Record(r) => tuple(
                 r.fields1

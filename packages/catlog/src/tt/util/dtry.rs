@@ -66,6 +66,11 @@ impl<T> Dtry<T> {
         Dtry(Row::empty())
     }
 
+    /// Returns whether the directory is empty
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
     /// Iterate through the entries of the directory
     pub fn entries(&self) -> impl Iterator<Item = (&FieldName, &DtryEntry<T>)> {
         self.0.iter()

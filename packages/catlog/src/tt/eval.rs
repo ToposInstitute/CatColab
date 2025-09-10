@@ -99,4 +99,78 @@ impl<'a> Evaluator<'a> {
             _ => panic!("tried to get the type of field for non-record type"),
         }
     }
+
+    fn bind_neu(&self, name: VarName, ty: TyV) -> Self {
+        let v = TmV::Neu(TmN::var(self.scope_length.into(), name), ty);
+        Self {
+            env: self.env.snoc(v),
+            scope_length: self.scope_length + 1,
+            ..self.clone()
+        }
+    }
+
+    /** Produce type syntax from a type value.
+
+    This is a *section* of eval, in that `self.eval_ty(self.quote_ty(ty_v)) == ty_v`
+    but it is not necessarily true that `self.quote_ty(self.eval_ty(ty_s)) == ty_v`.
+
+    This is used for displaying `TyV` to the user in type errors. In theory this
+    could be used for conversion checking, but it's more efficient to implement that
+    directly, and it's better to *not* do eta-expansion for user-facing messages.
+    */
+    pub fn quote_ty(&self, ty: &TyV) -> TyS {
+        match &**ty {
+            TyV_::Object(object_type) => TyS::object(object_type.clone()),
+            TyV_::Morphism(morphism_type, dom, cod) => {
+                TyS::morphism(morphism_type.clone(), self.quote_tm(dom), self.quote_tm(cod))
+            }
+            TyV_::Record(r) => {
+                let self_varname = NameSegment::Text(ustr("self"));
+                let r_eval = self.with_env(r.env.clone()).bind_neu(self_varname, ty.clone());
+                let fields1 = r
+                    .fields1
+                    .iter()
+                    .map(|(name, ty_s)| {
+                        (
+                            *name,
+                            self.bind_neu(self_varname, ty.clone()).quote_ty(&r_eval.eval_ty(ty_s)),
+                        )
+                    })
+                    .collect();
+                let record_ty_s = TyS::record(RecordS::new(r.fields0.clone(), fields1));
+                if r.specializations.is_empty() {
+                    record_ty_s
+                } else {
+                    TyS::specialize(record_ty_s, r.specializations.map(&|ty_v| self.quote_ty(ty_v)))
+                }
+            }
+            TyV_::Sing(ty, tm) => TyS::sing(self.quote_ty(ty), self.quote_tm(tm)),
+            TyV_::Unit => TyS::unit(),
+        }
+    }
+
+    /** Produce term syntax from a term neutral.
+
+    The documentation for [Evaluator::quote_ty] is also applicable here.
+    */
+    pub fn quote_neu(&self, n: &TmN) -> TmS {
+        match &**n {
+            TmN_::Var(i, name) => TmS::var(i.as_bwd(self.scope_length), *name),
+            TmN_::Proj(tm, field) => TmS::proj(self.quote_neu(tm), *field),
+        }
+    }
+
+    /** Produce term syntax from a term value.
+
+    The documentation for [Evaluator::quote_ty] is also applicable here.
+    */
+    pub fn quote_tm(&self, tm: &TmV) -> TmS {
+        match tm {
+            TmV::Neu(n, _) => self.quote_neu(n),
+            TmV::Cons(fields) => {
+                TmS::cons(fields.iter().map(|(name, tm)| (*name, self.quote_tm(tm))).collect())
+            }
+            TmV::Tt => TmS::tt(),
+        }
+    }
 }
