@@ -5,6 +5,10 @@ authors = ["Evan Patterson"]
 version = "0.1.0"
 edition = "2024"
 
+[[bin]]
+name = "check"
+path = "bin/check.rs"
+
 [features]
 ode = ["dep:ode_solvers", "dep:nalgebra"]
 serde = ["dep:serde", "nonempty/serialize", "ustr/serde", "uuid/serde"]
@@ -12,6 +16,7 @@ serde-wasm = ["serde", "dep:wasm-bindgen", "dep:tsify", "dep:instant", "instant/
 
 [dependencies]
 bwd = "0.2.1"
+clap = { version = "4.5.47", features = ["derive"] }
 derivative = "2"
 derive_more = { version = "2", features = ["constructor", "from", "into"] }
 duplicate = "2"
@@ -23,10 +28,13 @@ indexmap = "2.11.1"
 itertools = "0.14"
 nalgebra = { version = "0.33", optional = true }
 nonempty = "0.12"
+notify = "8.2.0"
+notify-debouncer-full = "0.6.0"
 num-traits = "0.2"
 ode_solvers = { version = "0.5.0", optional = true }
 pretty = "0.12.4"
 ref-cast = "1"
+scopeguard = "1.2.0"
 serde = { version = "1", features = ["derive"], optional = true }
 tattle = "0.4.2"
 thiserror = "1"

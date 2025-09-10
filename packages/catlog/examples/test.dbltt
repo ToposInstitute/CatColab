@@ -1,0 +1,18 @@
+type u := Unit
+
+type u2 := u
+
+type WeightedGraph := [
+  V : Entity,
+  E : Entity,
+  Weight : AttrType,
+  src : (Id Entity)[E, V],
+  tgt : (Id Entity)[E, V],
+  weight : Attr[E, Weight]
+]
+
+type EntityArr := [
+  src : Entity,
+  tgt : Entity,
+  arr : (Id Entity)[src, tgt]
+]

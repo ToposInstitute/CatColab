@@ -152,6 +152,17 @@ impl TyV {
     pub fn unit() -> Self {
         Self(Rc::new(TyV_::Unit))
     }
+
+    /// The base type
+    pub fn ty0(&self) -> Ty0 {
+        match &**self {
+            TyV_::Object(qname) => Ty0::Object(qname.clone()),
+            TyV_::Morphism(morphism_type, tm_v, tm_v1) => Ty0::Unit,
+            TyV_::Record(record_v) => Ty0::Record(record_v.fields0.clone()),
+            TyV_::Sing(ty_v, _) => ty_v.ty0(),
+            TyV_::Unit => Ty0::Unit,
+        }
+    }
 }
 
 /** Inner enum for [TmN]. */
@@ -207,4 +218,14 @@ pub enum TmV {
     Cons(Row<TmV>),
     /// The unique element of `Ty0::Unit`.
     Tt,
+}
+
+impl TmV {
+    /// Coerces self to a neutral
+    pub fn as_neu(&self) -> TmN {
+        match self {
+            TmV::Neu(n, _) => n.clone(),
+            _ => panic!("expected neutral"),
+        }
+    }
 }

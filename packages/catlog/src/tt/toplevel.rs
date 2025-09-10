@@ -4,7 +4,10 @@ Specifically, notebooks will produce [TopDecl::Type] declarations.
 */
 use std::fmt;
 
-use crate::tt::{prelude::*, stx::*, val::*};
+use crate::{
+    dbl::theory::DiscreteDblTheory,
+    tt::{prelude::*, stx::*, val::*},
+};
 
 /// A toplevel declaration.
 pub enum TopDecl {
@@ -58,16 +61,20 @@ impl fmt::Display for TopDecl {
 }
 
 /** Storage for toplevel declarations. */
-#[derive(Default)]
 pub struct Toplevel {
+    /// The theory that we are elaborating with respect to
+    pub theory: DiscreteDblTheory,
     /// The toplevel declarations, indexed by their name.
     pub declarations: HashMap<TopVarName, TopDecl>,
 }
 
 impl Toplevel {
     /// Constructor for an empty [Toplevel].
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(theory: DiscreteDblTheory) -> Self {
+        Toplevel {
+            theory,
+            declarations: HashMap::new(),
+        }
     }
 
     /// Lookup a toplevel declaration by name.

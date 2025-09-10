@@ -25,6 +25,15 @@ pub struct Evaluator<'a> {
 }
 
 impl<'a> Evaluator<'a> {
+    /// Constructor for [Evaluator]
+    pub fn new(toplevel: &'a Toplevel, env: Env, scope_length: usize) -> Self {
+        Self {
+            toplevel,
+            env,
+            scope_length,
+        }
+    }
+
     fn eval_record(&self, r: &RecordS) -> RecordV {
         RecordV::new(r.fields0.clone(), self.env.clone(), r.fields1.clone(), Dtry::empty())
     }
@@ -44,6 +53,7 @@ impl<'a> Evaluator<'a> {
     */
     pub fn eval_ty(&self, ty: &TyS) -> TyV {
         match &**ty {
+            TyS_::TopVar(tv) => self.toplevel.declarations.get(tv).unwrap().as_ty(),
             TyS_::Object(ot) => TyV::object(ot.clone()),
             TyS_::Morphism(pt, dom, cod) => {
                 TyV::morphism(pt.clone(), self.eval_tm(dom), self.eval_tm(cod))
@@ -64,6 +74,7 @@ impl<'a> Evaluator<'a> {
     */
     pub fn eval_tm(&self, tm: &TmS) -> TmV {
         match &**tm {
+            TmS_::TopVar(tv) => self.toplevel.declarations.get(tv).unwrap().as_tm(),
             TmS_::Var(i, _) => self.env.get(**i).cloned().unwrap(),
             TmS_::Cons(fields) => {
                 TmV::Cons(fields.iter().map(|(name, tm)| (*name, self.eval_tm(tm))).collect())

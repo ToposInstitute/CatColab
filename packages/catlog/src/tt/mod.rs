@@ -4,6 +4,8 @@ TODO: write high-level description.
 */
 
 #[allow(unused)]
+pub mod elab;
+#[allow(unused)]
 pub mod eval;
 #[allow(unused)]
 mod prelude;

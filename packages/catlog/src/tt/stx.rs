@@ -13,7 +13,7 @@ use std::ops::Deref;
 pub type ObjectType = QualifiedName;
 /// Morphism types are paths of qualified names, see [DiscreteDblTheory].
 #[derive(Clone, PartialEq, Eq)]
-pub struct MorphismType(Path<QualifiedName, QualifiedName>);
+pub struct MorphismType(pub Path<QualifiedName, QualifiedName>);
 
 impl fmt::Display for MorphismType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -69,6 +69,8 @@ impl RecordS {
 
 /** Inner enum for [TyS]. */
 pub enum TyS_ {
+    /** A reference to a top-level declaration */
+    TopVar(TopVarName),
     /** Type constructor for object types.
 
     Example syntax: `Entity` (top-level constants are bound by the elaborator to
@@ -150,6 +152,11 @@ impl Deref for TyS {
 }
 
 impl TyS {
+    /// Smart constructor for [TyS], [TyS_::TopVar] case.
+    pub fn topvar(name: TopVarName) -> Self {
+        Self(Rc::new(TyS_::TopVar(name)))
+    }
+
     /// Smart constructor for [TyS], [TyS_::Object] case.
     pub fn object(object_type: ObjectType) -> Self {
         Self(Rc::new(TyS_::Object(object_type)))
@@ -182,6 +189,7 @@ impl TyS {
 
     fn to_doc<'a>(&self) -> D<'a> {
         match &**self {
+            TyS_::TopVar(name) => t(format!("{}", name)),
             TyS_::Object(object_type) => t(format!("{}", object_type)),
             TyS_::Morphism(morphism_type, dom, cod) => {
                 // TODO: how should morphism types be printed out?
@@ -215,6 +223,8 @@ impl fmt::Display for TyS {
 
 /** Inner enum for [TmS]. */
 pub enum TmS_ {
+    /** A reference to a top-level declaration */
+    TopVar(TopVarName),
     /** Variable syntax.
 
     We use a backward index, as when we evaluate we store the
@@ -249,6 +259,11 @@ impl Deref for TmS {
 }
 
 impl TmS {
+    /// Smart constructor for [TmS], [TmS_::TopVar] case.
+    pub fn topvar(var_name: VarName) -> Self {
+        Self(Rc::new(TmS_::TopVar(var_name)))
+    }
+
     /// Smart constructor for [TmS], [TmS_::Var] case.
     pub fn var(bwd_idx: BwdIdx, var_name: VarName) -> Self {
         Self(Rc::new(TmS_::Var(bwd_idx, var_name)))
@@ -271,6 +286,7 @@ impl TmS {
 
     fn to_doc<'a>(&self) -> D<'a> {
         match &**self {
+            TmS_::TopVar(name) => t(format!("{}", name)),
             TmS_::Var(_, name) => t(format!("{}", name)),
             TmS_::Proj(tm, field) => tm.to_doc() + t(format!(".{}", field)),
             TmS_::Cons(fields) => tuple(
