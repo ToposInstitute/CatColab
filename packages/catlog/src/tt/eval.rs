@@ -114,9 +114,11 @@ impl<'a> Evaluator<'a> {
     This is a *section* of eval, in that `self.eval_ty(self.quote_ty(ty_v)) == ty_v`
     but it is not necessarily true that `self.quote_ty(self.eval_ty(ty_s)) == ty_v`.
 
-    This is used for displaying `TyV` to the user in type errors. In theory this
-    could be used for conversion checking, but it's more efficient to implement that
-    directly, and it's better to *not* do eta-expansion for user-facing messages.
+    This is used for displaying [TyV] to the user in type errors, and for
+    creating syntax that can be re-evaluated in other contexts. In theory this
+    could be used for conversion checking, but it's more efficient to implement
+    that directly, and it's better to *not* do eta-expansion for user-facing
+    messages or for syntax that is meant to be re-evaluated.
     */
     pub fn quote_ty(&self, ty: &TyV) -> TyS {
         match &**ty {
