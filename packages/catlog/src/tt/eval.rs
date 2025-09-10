@@ -291,8 +291,8 @@ impl<'a> Evaluator<'a> {
     First attempts to do conversion checking without eta-expansion (strict
     mode), and if that fails, does conversion checking with eta-expansion.
     */
-    fn equal_tm<'b>(&self, tm1: &TmV, tm2: &TmV) -> Result<(), D<'b>> {
-        if let Err(_) = self.equal_tm_helper(tm1, tm2, true, true) {
+    pub fn equal_tm<'b>(&self, tm1: &TmV, tm2: &TmV) -> Result<(), D<'b>> {
+        if self.equal_tm_helper(tm1, tm2, true, true).is_err() {
             self.equal_tm_helper(tm1, tm2, false, false)
         } else {
             Ok(())

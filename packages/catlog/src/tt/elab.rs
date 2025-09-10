@@ -217,7 +217,7 @@ impl<'a> Elaborator<'a> {
                     elab.error(format!("no such morphism type {name}"))
                 }
             }
-            _ => elab.error(format!("unexpected notation for morphism type")),
+            _ => elab.error("unexpected notation for morphism type"),
         }
     }
 
@@ -315,7 +315,8 @@ impl<'a> Elaborator<'a> {
 
     fn chk(&mut self, ty: &TyV, n: &FNtn) -> Option<(TmS, TmV)> {
         let mut elab = self.enter(n.loc());
-        match n {
+        match n.ast0() {
+            Tuple(field_ns) => todo!(),
             _ => {
                 let (tm_s, tm_v, synthed) = elab.syn(n)?;
                 let eval = elab.evaluator();

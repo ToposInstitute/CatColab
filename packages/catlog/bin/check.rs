@@ -34,7 +34,7 @@ const PARSE_CONFIG: ParseConfig = ParseConfig::new(
 declare_error!(TOP_ERROR, "top", "an error at the top-level");
 
 fn run(path: &str) -> io::Result<()> {
-    let src = match fs::read_to_string(&path) {
+    let src = match fs::read_to_string(path) {
         Ok(s) => s,
         Err(e) => {
             eprintln!("Could not read {}: {}", &path, e);
@@ -58,6 +58,7 @@ fn run(path: &str) -> io::Result<()> {
         for topntn in topntns.iter() {
             let mut should_fail = false;
             for annot in topntn.annotations {
+                #[allow(clippy::single_match)]
                 match annot.ast0() {
                     fnotation::Var("should_fail") => {
                         should_fail = true;
@@ -81,18 +82,16 @@ fn run(path: &str) -> io::Result<()> {
                         .unwrap();
                 }
                 toplevel.declarations.insert(d.0, d.1);
+            } else if should_fail {
+                reporter.poll();
             } else {
-                if should_fail {
-                    reporter.poll();
-                } else {
-                    source_info
-                        .extract_report_to_io(
-                            &mut io::stdout(),
-                            reporter.clone(),
-                            tattle::display::DisplayOptions::Terminal,
-                        )
-                        .unwrap();
-                }
+                source_info
+                    .extract_report_to_io(
+                        &mut io::stdout(),
+                        reporter.clone(),
+                        tattle::display::DisplayOptions::Terminal,
+                    )
+                    .unwrap();
             }
         }
         Some(())
@@ -133,6 +132,7 @@ fn main() -> io::Result<()> {
                 Ok(es) => {
                     let mut modified = false;
                     for e in es.iter() {
+                        #[allow(clippy::single_match)]
                         match e.kind {
                             notify::EventKind::Modify(_modify_kind) => {
                                 modified = true;
