@@ -9,6 +9,7 @@ pub use tattle::{Loc, Reporter};
 pub use ustr::{Ustr, ustr};
 pub use uuid::Uuid;
 
+// TODO: maybe we should also have a "display name" for pretty-printing
 pub type VarName = NameSegment;
 pub type TopVarName = NameSegment;
 pub type FieldName = NameSegment;

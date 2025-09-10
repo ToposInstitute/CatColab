@@ -155,6 +155,7 @@ impl TyV {
 }
 
 /** Inner enum for [TmN]. */
+#[derive(PartialEq, Eq)]
 pub enum TmN_ {
     /// Variable.
     Var(FwdIdx, VarName),
@@ -163,7 +164,7 @@ pub enum TmN_ {
 }
 
 /** Neutrals for base terms, dereferences to [TmN_]. */
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct TmN(Rc<TmN_>);
 
 impl Deref for TmN {

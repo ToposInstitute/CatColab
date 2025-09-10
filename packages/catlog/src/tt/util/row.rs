@@ -48,6 +48,18 @@ impl<T> Row<T> {
     }
 }
 
+impl<T: Clone> Row<T> {
+    /**  Insert a new field
+
+    Uses [Rc::make_mut] to mutate in place if there are no other references to self,
+    otherwise performs a clone.
+    */
+    pub fn insert(mut self, field: FieldName, value: T) -> Self {
+        Rc::make_mut(&mut self.0).insert(field, value);
+        self
+    }
+}
+
 impl<T> FromIterator<(FieldName, T)> for Row<T> {
     fn from_iter<I>(iter: I) -> Self
     where

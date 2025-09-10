@@ -11,8 +11,26 @@ use std::ops::Deref;
 
 /// Object types are just qualified names, see [DiscreteDblTheory].
 pub type ObjectType = QualifiedName;
-/// Morphism types are just qualified names, see [DiscreteDblTheory].
-pub type MorphismType = Path<QualifiedName, QualifiedName>;
+/// Morphism types are paths of qualified names, see [DiscreteDblTheory].
+#[derive(Clone, PartialEq, Eq)]
+pub struct MorphismType(Path<QualifiedName, QualifiedName>);
+
+impl fmt::Display for MorphismType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.0 {
+            Path::Id(ot) => write!(f, "Id {ot}"),
+            Path::Seq(non_empty) => {
+                for (i, segment) in non_empty.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, " · ")?;
+                    }
+                    write!(f, "{segment}")?;
+                }
+                Ok(())
+            }
+        }
+    }
+}
 
 /** Type in the base type theory.
 
@@ -167,8 +185,7 @@ impl TyS {
             TyS_::Object(object_type) => t(format!("{}", object_type)),
             TyS_::Morphism(morphism_type, dom, cod) => {
                 // TODO: how should morphism types be printed out?
-                (t(format!("{:?}", morphism_type)) + s() + dom.to_doc() + s() + cod.to_doc())
-                    .parens()
+                (t(format!("{}", morphism_type)) + s() + dom.to_doc() + s() + cod.to_doc()).parens()
             }
             TyS_::Record(r) => tuple(
                 r.fields1

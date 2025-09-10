@@ -1,10 +1,10 @@
-/*! Evaluation, quoting, and conversion checking
+/*! Evaluation, quoting, and conversion/equality checking
 
 At a high level, this module implements three operations:
 
 - `eval : syntax -> value` ([Evaluator::eval_tm], [Evaluator::eval_ty])
-- `quote : value -> syntax` (todo)
-- `convertable? : value -> value -> bool` (todo)
+- `quote : value -> syntax` ([Evaluator::quote_tm], [Evaluator::quote_neu], [Evaluator::quote_ty])
+- `convertable? : value -> value -> bool` ([Evaluator::equal_tm], [Evaluator::element_of], [Evaluator::subtype])
 */
 use crate::tt::{prelude::*, stx::*, toplevel::*, val::*};
 
@@ -100,13 +100,17 @@ impl<'a> Evaluator<'a> {
         }
     }
 
-    fn bind_neu(&self, name: VarName, ty: TyV) -> Self {
-        let v = TmV::Neu(TmN::var(self.scope_length.into(), name), ty);
-        Self {
-            env: self.env.snoc(v),
-            scope_length: self.scope_length + 1,
-            ..self.clone()
-        }
+    fn bind_neu(&self, name: VarName, ty: TyV) -> (TmN, Self) {
+        let n = TmN::var(self.scope_length.into(), name);
+        let v = TmV::Neu(n.clone(), ty);
+        (
+            n,
+            Self {
+                env: self.env.snoc(v),
+                scope_length: self.scope_length + 1,
+                ..self.clone()
+            },
+        )
     }
 
     /** Produce type syntax from a type value.
@@ -128,14 +132,16 @@ impl<'a> Evaluator<'a> {
             }
             TyV_::Record(r) => {
                 let self_varname = NameSegment::Text(ustr("self"));
-                let r_eval = self.with_env(r.env.clone()).bind_neu(self_varname, ty.clone());
+                let r_eval = self.with_env(r.env.clone()).bind_neu(self_varname, ty.clone()).1;
                 let fields1 = r
                     .fields1
                     .iter()
                     .map(|(name, ty_s)| {
                         (
                             *name,
-                            self.bind_neu(self_varname, ty.clone()).quote_ty(&r_eval.eval_ty(ty_s)),
+                            self.bind_neu(self_varname, ty.clone())
+                                .1
+                                .quote_ty(&r_eval.eval_ty(ty_s)),
                         )
                     })
                     .collect();
@@ -173,6 +179,152 @@ impl<'a> Evaluator<'a> {
                 TmS::cons(fields.iter().map(|(name, tm)| (*name, self.quote_tm(tm))).collect())
             }
             TmV::Tt => TmS::tt(),
+        }
+    }
+
+    /** Check if `ty1` is a subtype of `ty2`.
+
+    This is true iff `ty1` is convertable with `ty2`, and an eta-expanded
+    neutral of type `ty1` is an element of `ty2`.
+    */
+    pub fn subtype<'b>(&self, ty1: &TyV, ty2: &TyV) -> Result<(), D<'b>> {
+        self.convertable_ty(ty1, ty2)?;
+        let (n, self1) = self.bind_neu(NameSegment::Text(ustr("self")), ty1.clone());
+        let v = self.eta(&n, ty1);
+        self.element_of(&v, ty2)
+    }
+
+    /** Check if `tm` is an element of `ty`, accounting for specializations
+    of `ty`.
+
+    Precondition: the type of `tm` must be convertable with `ty`, and `tm`
+    is eta-expanded.
+
+    Example: if `a : Entity` and `b : Entity` are neutrals, then `a` is not an
+    element of `@sing b`, but `a` is an element of `@sing a`.
+    */
+    pub fn element_of<'b>(&self, tm: &TmV, ty: &TyV) -> Result<(), D<'b>> {
+        match &**ty {
+            TyV_::Object(_) => Ok(()),
+            TyV_::Morphism(_, _, _) => Ok(()),
+            TyV_::Record(r) => {
+                for (name, _) in r.fields1.iter() {
+                    self.element_of(&self.proj(tm, *name), &self.field_ty(ty, tm, *name))?
+                }
+                Ok(())
+            }
+            TyV_::Sing(_, x) => self.equal_tm(tm, x),
+            TyV_::Unit => Ok(()),
+        }
+    }
+
+    /** Check if two types are convertable.
+
+    Ignores specializations: specializations are handled in [Evaluator::subtype]
+
+    On failure, returns a doc which describes the obstruction to convertability.
+    */
+    pub fn convertable_ty<'b>(&self, ty1: &TyV, ty2: &TyV) -> Result<(), D<'b>> {
+        match (&**ty1, &**ty2) {
+            (TyV_::Object(ot1), TyV_::Object(ot2)) => {
+                if ot1 == ot2 {
+                    Ok(())
+                } else {
+                    Err(t(format!("object types {ot1} and {ot2} are not equal")))
+                }
+            }
+            (TyV_::Morphism(mt1, dom1, cod1), TyV_::Morphism(mt2, dom2, cod2)) => {
+                if mt1 != mt2 {
+                    return Err(t(format!("morphism types {mt1} and {mt2} are not equal")));
+                }
+                self.equal_tm(dom1, dom2).map_err(|d| t("could not convert domains: ") + d)?;
+                self.equal_tm(cod1, cod2).map_err(|d| t("could not convert codomains: ") + d)?;
+                Ok(())
+            }
+            (TyV_::Record(r1), TyV_::Record(r2)) => {
+                todo!()
+            }
+            (TyV_::Sing(ty1, _), _) => self.convertable_ty(ty1, ty2),
+            (_, TyV_::Sing(ty2, _)) => self.convertable_ty(ty1, ty2),
+            (TyV_::Unit, TyV_::Unit) => Ok(()),
+            _ => Err(t(
+                "tried to convert between types of different type constructors (for instance, object type and record type)",
+            )),
+        }
+    }
+
+    /** Performs eta-expansion of the neutral `n` at type `ty`. */
+    pub fn eta(&self, n: &TmN, ty: &TyV) -> TmV {
+        match &**ty {
+            TyV_::Object(_) => TmV::Neu(n.clone(), ty.clone()),
+            TyV_::Morphism(_, _, _) => TmV::Tt,
+            TyV_::Record(r) => {
+                let mut fields = Row::empty();
+                for (name, _) in r.fields1.iter() {
+                    let ty_v = self.field_ty(ty, &TmV::Cons(fields.clone()), *name);
+                    let v = self.eta(&TmN::proj(n.clone(), *name), &ty_v);
+                    fields = fields.insert(*name, v);
+                }
+                TmV::Cons(fields)
+            }
+            TyV_::Sing(_, x) => x.clone(),
+            TyV_::Unit => TmV::Tt,
+        }
+    }
+
+    /** Check if two terms are definitionally equal.
+
+    On failure, returns a doc which describes the obstruction to convertability.
+
+    Assumes that the base type of tm1 is convertable with the base type of tm2.
+    First attempts to do conversion checking without eta-expansion (strict
+    mode), and if that fails, does conversion checking with eta-expansion.
+    */
+    fn equal_tm<'b>(&self, tm1: &TmV, tm2: &TmV) -> Result<(), D<'b>> {
+        if let Err(_) = self.equal_tm_helper(tm1, tm2, true, true) {
+            self.equal_tm_helper(tm1, tm2, false, false)
+        } else {
+            Ok(())
+        }
+    }
+
+    fn equal_tm_helper<'b>(
+        &self,
+        tm1: &TmV,
+        tm2: &TmV,
+        strict1: bool,
+        strict2: bool,
+    ) -> Result<(), D<'b>> {
+        match (tm1, tm2) {
+            (TmV::Neu(n1, ty1), _) if !strict1 => {
+                self.equal_tm_helper(&self.eta(n1, ty1), tm2, true, strict2)
+            }
+            (_, TmV::Neu(n2, ty2)) if !strict2 => {
+                self.equal_tm_helper(tm1, &self.eta(n2, ty2), strict1, true)
+            }
+            (TmV::Neu(n1, _), TmV::Neu(n2, _)) => {
+                if n1 == n2 {
+                    Ok(())
+                } else {
+                    Err(t(format!(
+                        "neutrals {} and {} not equal",
+                        self.quote_neu(n1),
+                        self.quote_neu(n2)
+                    )))
+                }
+            }
+            (TmV::Cons(fields1), TmV::Cons(fields2)) => {
+                for ((_, tm1), (_, tm2)) in fields1.iter().zip(fields2.iter()) {
+                    self.equal_tm_helper(tm1, tm2, strict1, strict2)?
+                }
+                Ok(())
+            }
+            (TmV::Tt, TmV::Tt) => Ok(()),
+            _ => Err(t(format!(
+                "failed to match terms {} and {}",
+                self.quote_tm(tm1),
+                self.quote_tm(tm2)
+            ))),
         }
     }
 }
