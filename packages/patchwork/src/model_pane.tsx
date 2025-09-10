@@ -4,7 +4,6 @@ import { ApiContext } from "../../frontend/src/api";
 import { getLiveModel } from "../../frontend/src/model/document";
 import { ModelPane } from "../../frontend/src/model/model_editor";
 import { stdTheories, TheoryLibraryContext } from "../../frontend/src/stdlib";
-import { AnnotationsContext } from "./annotations_solid";
 import type { SolidToolProps } from "./tools";
 
 export function ModelPaneComponent(props: SolidToolProps) {
@@ -45,13 +44,11 @@ export function ModelPaneComponent(props: SolidToolProps) {
                 <Show when={!isLoading()}>
                     {(_) => {
                         return (
-                            <AnnotationsContext.Provider value={props.annotationsContextValue}>
-                                <ApiContext.Provider value={api}>
-                                    <TheoryLibraryContext.Provider value={stdTheories}>
-                                        <ModelPane liveModel={liveModel()!} />
-                                    </TheoryLibraryContext.Provider>
-                                </ApiContext.Provider>
-                            </AnnotationsContext.Provider>
+                            <ApiContext.Provider value={api}>
+                                <TheoryLibraryContext.Provider value={stdTheories}>
+                                    <ModelPane liveModel={liveModel()!} />
+                                </TheoryLibraryContext.Provider>
+                            </ApiContext.Provider>
                         );
                     }}
                 </Show>

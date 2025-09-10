@@ -1,5 +1,4 @@
 import type { Plugin } from "@patchwork/sdk/plugins";
-import type { LoadableAnnotationPlugin } from "@patchwork/sdk/annotations";
 
 export const plugins: Plugin<any>[] = [
     {
@@ -53,8 +52,8 @@ export const plugins: Plugin<any>[] = [
     // },
     {
         type: "patchwork:tool",
-        id: "catcolab-model-side-by-side-view-evan",
-        name: "CatColab (Evan)",
+        id: "catcolab-model-side-by-side-view",
+        name: "CatColab",
         icon: "Zap",
         supportedDataTypes: ["catcolab-model"],
         async load() {
@@ -64,24 +63,4 @@ export const plugins: Plugin<any>[] = [
             };
         },
     },
-    {
-        type: "patchwork:annotations",
-        name: "Model Annotations (Evan)",
-        id: "model-annotations-evan",
-        supportedDataTypes: ["catcolab-model"],
-        async load() {
-            const { plugin } = await import("./model_annotations");
-            return plugin;
-        },
-    } as LoadableAnnotationPlugin,
-    {
-        type: "patchwork:annotations",
-        name: "Analysis Annotations (Evan)",
-        id: "analysis-annotations-evan",
-        supportedDataTypes: ["catcolab-analysis"],
-        async load() {
-            const { plugin } = await import("./analysis_annotations");
-            return plugin;
-        },
-    } as LoadableAnnotationPlugin,
 ];
