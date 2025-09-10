@@ -371,6 +371,7 @@ dependencies = [
  "egglog",
  "ego-tree",
  "expect-test",
+ "instant",
  "itertools",
  "nalgebra",
  "nonempty",
@@ -394,7 +395,6 @@ dependencies = [
  "catlog",
  "console_error_panic_hook",
  "derive_more",
- "egglog",
  "getrandom 0.2.16",
  "getrandom 0.3.3",
  "js-sys",
@@ -708,12 +708,11 @@ dependencies = [
 
 [[package]]
 name = "egglog"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3906e8f27e882ae5483f47715bd1702423ad4eb90dd4f790009754e180718eb"
+checksum = "2895d70f1b4f4658c40c1f9715e131857591a1373358ae68ac85cd91196fd5fb"
 dependencies = [
  "egraph-serialize",
- "getrandom 0.2.16",
  "hashbrown",
  "im",
  "im-rc",

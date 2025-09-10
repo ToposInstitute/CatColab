@@ -15,9 +15,6 @@ all-the-same = "1.1.0"
 catlog = { path = "../catlog", features = ["ode", "serde-wasm"] }
 console_error_panic_hook = { version = "0.1.7", optional = true }
 derive_more = { version = "2", features = ["from", "try_into"] }
-egglog = { version = "0.4", default-features = false, features = [
-    "wasm-bindgen",
-] }
 getrandom_v03 = { package = "getrandom", version = "0.3", features = ["wasm_js"] }
 getrandom_v02 = { package = "getrandom", version = "0.2", features = ["js"] }
 js-sys = "0.3.77"
