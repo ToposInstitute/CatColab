@@ -70,6 +70,22 @@ pub trait FinGraph: Graph {
         self.edges().filter(|e| self.src(e) == *v)
     }
 
+    /** Iterates over neighbors of a vertex connected by an outgoing edge.
+
+    When multiple edges are present, neighboring vertices are repeated.
+     */
+    fn out_neighbors(&self, v: &Self::V) -> impl Iterator<Item = Self::V> {
+        self.out_edges(v).map(|e| self.tgt(&e))
+    }
+
+    /** Iterates over neighbors of a vertex connected by an incoming edge.
+
+    When multiple edges are present, neighboring vertices are repeated.
+     */
+    fn in_neighbors(&self, v: &Self::V) -> impl Iterator<Item = Self::V> {
+        self.in_edges(v).map(|e| self.src(&e))
+    }
+
     /// Number of vertices in the graph.
     fn vertex_count(&self) -> usize {
         self.vertices().count()

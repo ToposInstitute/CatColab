@@ -168,6 +168,75 @@ where
     result
 }
 
+/** Computes a topological sorting for a given graph.
+
+This toposort algorithm was borrowed from the crate `petgraph`, found
+[here](https://github.com/petgraph/petgraph/blob/4d807c19304c02c9dd687c68577f75aefcb98491/src/algo/mod.rs#L204)
+ */
+pub fn toposort<G>(graph: &G) -> Result<Vec<G::V>, String>
+where
+    G: FinGraph,
+    G::V: Hash + std::fmt::Debug,
+{
+    let mut discovered = HashSet::new();
+    let mut finished = HashSet::new();
+    let mut finish_stack = Vec::new();
+    let mut stack = Vec::new();
+
+    for v in graph.vertices() {
+        if discovered.contains(&v) {
+            continue;
+        }
+        stack.push(v);
+        while let Some(nx) = stack.last().cloned() {
+            if discovered.insert(nx.clone()) {
+                for succ in graph.out_neighbors(&nx) {
+                    if succ == nx {
+                        return Err(format!("Self loop at node {:#?}", nx).to_owned());
+                    }
+                    if !discovered.contains(&succ) {
+                        stack.push(succ);
+                    }
+                }
+            } else {
+                stack.pop();
+                if finished.insert(nx.clone()) {
+                    finish_stack.push(nx);
+                }
+            }
+        }
+    }
+    finish_stack.reverse();
+
+    discovered.clear();
+    for i in finish_stack.iter() {
+        stack.clear();
+        stack.push(i.clone());
+        let mut rev_dfs_next = || {
+            while let Some(node) = stack.pop() {
+                if discovered.insert(node.clone()) {
+                    for succ in graph.in_neighbors(&node) {
+                        if !discovered.contains(&succ) {
+                            stack.push(succ);
+                        }
+                    }
+                    return Some(node);
+                }
+            }
+            None
+        };
+        let mut cycle = false;
+        while let Some(j) = rev_dfs_next() {
+            if cycle {
+                return Err(format!("Cycle detected involving node {:#?}", j).to_owned());
+            }
+            cycle = true;
+        }
+    }
+
+    Ok(finish_stack)
+}
+
 #[cfg(test)]
 mod tests {
     use super::GraphElem::*;
@@ -209,6 +278,41 @@ mod tests {
             Path::Seq(nonempty!['g', 'f']),
         ]);
         assert_eq!(paths, target);
+    }
+
+    #[test]
+    fn toposorting() {
+        let g = SkelGraph::path(5);
+        assert_eq!(toposort(&g), Ok(vec![0, 1, 2, 3, 4]));
+
+        let mut g = SkelGraph::path(3);
+        g.add_vertices(1);
+        g.add_edge(2, 3);
+        g.add_edge(3, 0);
+        expect_test::expect!["Cycle detected involving node 3"]
+            .assert_eq(&toposort(&g).unwrap_err());
+
+        let g = SkelGraph::triangle();
+        assert_eq!(toposort(&g), Ok(vec![0, 1, 2]));
+
+        let mut g = SkelGraph::path(4);
+        g.add_vertices(2);
+        g.add_edge(1, 4);
+        g.add_edge(4, 3);
+        g.add_edge(5, 2);
+        assert_eq!(toposort(&g), Ok(vec![5, 0, 1, 2, 4, 3]));
+
+        let mut g: HashGraph<_, _> = Default::default();
+        g.add_vertices(vec![0, 1, 2, 3, 4, 5]);
+        g.add_edge("0-1", 0, 1);
+        g.add_edge("1-2", 1, 2);
+        g.add_edge("2-3", 2, 3);
+        g.add_edge("1-4", 1, 4);
+        g.add_edge("4-3", 4, 3);
+        g.add_edge("5-2", 5, 2);
+        let sort = toposort(&g).unwrap();
+        let (i0, i1) = (sort.iter().position(|&x| x == 5), sort.iter().position(|&x| x == 2));
+        assert!(i0.unwrap() < i1.unwrap());
     }
 
     #[test]
