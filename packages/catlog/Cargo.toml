@@ -5,9 +5,6 @@ authors = ["Evan Patterson"]
 version = "0.1.0"
 edition = "2024"
 
-[[bin]]
-name = "check"
-path = "bin/check.rs"
 
 [features]
 ode = ["dep:ode_solvers", "dep:nalgebra"]
@@ -28,8 +25,6 @@ indexmap = "2.11.1"
 itertools = "0.14"
 nalgebra = { version = "0.33", optional = true }
 nonempty = "0.12"
-notify = "8.2.0"
-notify-debouncer-full = "0.6.0"
 num-traits = "0.2"
 ode_solvers = { version = "0.5.0", optional = true }
 pretty = "0.12.4"
@@ -44,5 +39,10 @@ uuid = { version = "1.18" }
 wasm-bindgen = { version = "0.2.100", optional = true }
 
 [dev-dependencies]
+notify = "8.2.0"
+notify-debouncer-full = "0.6.0"
 expect-test = "1.5"
 textplots = "0.8.7"
+
+[[example]]
+name = "check"

@@ -338,4 +338,19 @@ impl<'a> Evaluator<'a> {
             ))),
         }
     }
+    /** Try to specialize the record `r` with the subtype `ty` at `path`
+    Precondition: `path` is non-empty.
+    */
+    pub fn try_specialize(
+        &self,
+        r: &RecordV,
+        path: &[FieldName],
+        ty: TyV,
+    ) -> Result<RecordV, String> {
+        assert!(!path.is_empty());
+
+        let (field, path) = (path[0], [&path[1..]]);
+        todo!()
+        // if r.fields1
+    }
 }

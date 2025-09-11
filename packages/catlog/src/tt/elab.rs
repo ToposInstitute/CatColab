@@ -283,6 +283,20 @@ impl<'a> Elaborator<'a> {
                 let r_v = RecordV::new(field_ty0s, elab.ctx.env.clone(), field_tys, Dtry::empty());
                 Some((TyS::record(r_s), TyV::record(r_v)))
             }
+            App2(L(_, Keyword("&")), ty_n, L(_, Tuple(specialization_ns))) => {
+                let (ty_s, ty_v) = elab.ty(ty_n)?;
+                let r = match &*ty_v {
+                    TyV_::Record(r) => (r),
+                    _ => return elab.error("can only specialize record types"),
+                };
+                // Approach:
+                //
+                // 1. Write a try_specialize method which attempts to specialize ty_v
+                // with a given path + type (e.g. `.x.y : @sing a`), returning a new
+                // type or an error message.
+                // 2. Iteratively apply try_specialize to each specialization in turn.
+                todo!()
+            }
             _ => elab.error("unexpected notation for type"),
         }
     }
