@@ -1,20 +1,17 @@
-import { createResource, Show } from "solid-js";
+import type { AutomergeUrl } from "@automerge/automerge-repo";
+import { createResource, Switch, Match } from "solid-js";
 
-import { ApiContext } from "../../frontend/src/api";
-import { getLiveModel } from "../../frontend/src/model/document";
+import { getLiveModelFromRepo } from "../../frontend/src/model";
 import { ModelPane } from "../../frontend/src/model/model_editor";
 import { stdTheories, TheoryLibraryContext } from "../../frontend/src/stdlib";
 import type { SolidToolProps } from "./tools";
 
 export function ModelPaneComponent(props: SolidToolProps) {
-    // Typescript gets confused because the patchwork and the frontend package both import "@automerge/automerge-repo" in their package.json
-    const api = { repo: props.repo as any };
-
     const [liveModel] = createResource(
         () => props.docUrl,
-        async (refId) => {
+        async (docUrl) => {
             try {
-                return await getLiveModel(refId, api, stdTheories);
+                return await getLiveModelFromRepo(docUrl as AutomergeUrl, props.repo, stdTheories);
             } catch (error) {
                 console.error("=== Model Loading Failed ===");
                 console.error("Error:", error);
@@ -24,35 +21,23 @@ export function ModelPaneComponent(props: SolidToolProps) {
         },
     );
 
-    const isLoading = () => liveModel.loading || !liveModel();
-
-    const hasError = () => liveModel.error;
-
     return (
         <div>
-            <div>
-                <Show when={isLoading()}>
+            <Switch>
+                <Match when={liveModel.loading}>
                     <div>⏳ Loading model...</div>
-                </Show>
-                <Show when={hasError()}>
-                    <Show when={liveModel.error}>
-                        <div>
-                            ❌ Error loading model: {liveModel.error?.message || "Unknown error"}
-                        </div>
-                    </Show>
-                </Show>
-                <Show when={!isLoading()}>
-                    {(_) => {
-                        return (
-                            <ApiContext.Provider value={api}>
-                                <TheoryLibraryContext.Provider value={stdTheories}>
-                                    <ModelPane liveModel={liveModel()!} />
-                                </TheoryLibraryContext.Provider>
-                            </ApiContext.Provider>
-                        );
-                    }}
-                </Show>
-            </div>
+                </Match>
+                <Match when={liveModel.error}>
+                    <div>❌ Error loading model: {liveModel.error?.message || "Unknown error"}</div>
+                </Match>
+                <Match when={liveModel()}>
+                    {(liveModel) => (
+                        <TheoryLibraryContext.Provider value={stdTheories}>
+                            <ModelPane liveModel={liveModel()} />
+                        </TheoryLibraryContext.Provider>
+                    )}
+                </Match>
+            </Switch>
         </div>
     );
 }

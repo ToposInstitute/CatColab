@@ -133,7 +133,7 @@ export const includeChangeInHistory = (doc: ModelDoc) => {
 };
 
 export const markCopy = (doc: ModelDoc) => {
-    doc.name = "Copy of " + doc.name;
+    doc.name = `Copy of ${doc.name}`;
 };
 
 const setTitle = async (doc: ModelDoc, title: string) => {

@@ -21,7 +21,7 @@ export type AnalysisDoc = HasVersionControlMetadata<Uuid, Cell<unknown>> & {
 // FUNCTIONS
 
 export const markCopy = (doc: AnalysisDoc) => {
-    doc.name = "Copy of " + doc.name;
+    doc.name = `Copy of ${doc.name}`;
 };
 
 const setTitle = async (doc: AnalysisDoc, title: string) => {
