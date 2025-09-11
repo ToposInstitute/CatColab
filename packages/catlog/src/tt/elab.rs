@@ -226,7 +226,7 @@ impl<'a> Elaborator<'a> {
             ty.clone().unwrap_or(TyV::unit()),
         );
         let v = if let Some(ty) = &ty {
-            self.evaluator().eta(&v, &ty)
+            self.evaluator().eta(&v, ty)
         } else {
             v
         };
@@ -389,13 +389,16 @@ impl<'a> Elaborator<'a> {
                 // type or an error message.
                 // 2. Iteratively apply try_specialize to each specialization in turn.
                 for specialization_n in specialization_ns.iter() {
+                    elab.loc = Some(specialization_n.loc());
                     let (path, sty_s, sty_v) = elab.specialization(specialization_n)?;
                     match elab.evaluator().try_specialize(&ty_v, &path, sty_v) {
                         Ok(specialized) => {
                             ty_v = specialized;
                             specializations.push((path, sty_s));
                         }
-                        Err(s) => return elab.error("Could not specialize:\n{s}"),
+                        Err(s) => {
+                            return elab.error(format!("Failed to specialize:\n... because {s}"));
+                        }
                     }
                 }
                 Some((TyS::specialize(ty_s, specializations), ty_v))
@@ -441,6 +444,8 @@ impl<'a> Elaborator<'a> {
                     elab.evaluator().field_ty(&ty_v, &tm_v, f),
                 ))
             }
+            Tag("tt") => Some((TmS::tt(), TmV::Tt, TyV::unit())),
+            Tuple(_) => elab.error("must check agains a type in order to construct a record"),
             _ => elab.error("unexpected notation for term"),
         }
     }
@@ -448,7 +453,9 @@ impl<'a> Elaborator<'a> {
     fn chk(&mut self, ty: &TyV, n: &FNtn) -> Option<(TmS, TmV)> {
         let mut elab = self.enter(n.loc());
         match n.ast0() {
-            Tuple(field_ns) => todo!(),
+            Tuple(field_ns) => {
+                todo!()
+            }
             _ => {
                 let (tm_s, tm_v, synthed) = elab.syn(n)?;
                 let eval = elab.evaluator();

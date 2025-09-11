@@ -34,3 +34,10 @@ chk [G : Graph1] (G.src : EntityArr & [ .src := G.E ] )
 chk [G : Graph1] (G.src : EntityArr & [ .src := G.V ] )
 
 norm [x : [a : Entity, b : @sing a]] x.b
+
+#(should_fail)
+type Graph1 := [
+  V : Entity,
+  E : Entity,
+  src : EntityArr & [ .src := E, .src := V ]
+]

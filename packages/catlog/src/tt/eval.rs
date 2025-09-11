@@ -358,7 +358,7 @@ impl<'a> Evaluator<'a> {
                     Ok(())
                 } else {
                     Err(t(format!(
-                        "neutrals {} and {} not equal",
+                        "Neutrals {} and {} are not equal.",
                         self.quote_neu(n1),
                         self.quote_neu(n2)
                     )))
@@ -389,7 +389,7 @@ impl<'a> Evaluator<'a> {
         assert!(!path.is_empty());
 
         let TyV_::Record(r) = &**ty else {
-            return Err(format!("cannot specialize a non-record type"));
+            return Err("cannot specialize a non-record type".into());
         };
 
         let (field, path) = (path[0], &path[1..]);
@@ -397,10 +397,10 @@ impl<'a> Evaluator<'a> {
             return Err(format!("no such field .{field}"));
         }
         let orig_field_ty = self.field_ty(ty, val, field);
-        if path.len() == 0 {
+        if path.is_empty() {
             self.subtype(&field_ty, &orig_field_ty).map_err(|msg| {
                 format!(
-                    "{} is not a subtype of {}:\n{}",
+                    "{} is not a subtype of {}:\n... because {}",
                     self.quote_ty(&field_ty),
                     self.quote_ty(&orig_field_ty),
                     msg.pretty()
