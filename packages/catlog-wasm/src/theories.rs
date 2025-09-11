@@ -254,6 +254,23 @@ impl ThNullableSignedCategory {
     }
 }
 
+/// The theory of degree delay signed categories (for ECLDs).
+#[wasm_bindgen]
+pub struct ThDegDelSignedCategory(Rc<theory::DiscreteDblTheory>);
+
+#[wasm_bindgen]
+impl ThDegDelSignedCategory {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self(Rc::new(theories::th_deg_del_signed_category()))
+    }
+
+    #[wasm_bindgen]
+    pub fn theory(&self) -> DblTheory {
+        DblTheory(self.0.clone().into())
+    }
+}
+
 /// The theory of categories with scalars.
 #[wasm_bindgen]
 pub struct ThCategoryWithScalars(Rc<theory::DiscreteDblTheory>);

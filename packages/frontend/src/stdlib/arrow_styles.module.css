@@ -25,6 +25,8 @@
 .arrow.indeterminate,
 .arrow.plusCaesura,
 .arrow.minusCaesura,
+.arrow.minusDelay,
+.arrow.plusDelay,
 .arrow.scalar {
     &:before,
     &:after {
@@ -49,8 +51,42 @@
     }
 }
 
+.arrow.minusDeg,
+.arrow.plusDeg,
+.arrow.minusDegDelay,
+.arrow.plusDegDelay {
+    background: transparent;
+    height: 4px;
+    border-top: 2px solid var(--main-color);
+    border-bottom: 2px solid var(--main-color);
+    border-radius: 1px;
+
+    &:before,
+    &:after {
+        content: "";
+        background: var(--main-color);
+        position: absolute;
+        height: 2px;
+        width: 12px;
+        border-radius: 3px;
+    }
+
+    &:before {
+        right: -5px;
+        bottom: -0.5px;
+        transform: rotate(-45deg);
+    }
+
+    &:after {
+        right: -5px;
+        top: -0.5px;
+        transform: rotate(45deg);
+    }
+}
+
 .arrowContainer.plus,
-.arrowContainer.plusCaesura {
+.arrowContainer.plusCaesura,
+.arrowContainer.plusDelay {
     &:after {
         content: "+";
         transform: none;
@@ -60,14 +96,37 @@
     }
 }
 
+.arrowContainer.plusDeg,
+.arrowContainer.plusDegDelay {
+    &:after {
+        content: "+";
+        transform: none;
+        position: absolute;
+        right: -11px;
+        bottom: 3px;
+    }
+}
+
 .arrowContainer.minus,
-.arrowContainer.minusCaesura {
+.arrowContainer.minusCaesura,
+.arrowContainer.minusDelay {
     &:after {
         content: "-";
         transform: none;
         position: absolute;
         right: -7.5px;
         bottom: 0px;
+    }
+}
+
+.arrowContainer.minusDeg,
+.arrowContainer.minusDegDelay {
+    &:after {
+        content: "-";
+        transform: none;
+        position: absolute;
+        right: -11px;
+        bottom: 3px;
     }
 }
 
@@ -90,6 +149,41 @@
         top: 0;
         left: 50%;
     }
+}
+
+.arrowContainer.plusDelay,
+.arrowContainer.minusDelay {
+    &:before {
+        content: "‖";
+        font-size: 0.75em;
+        position: absolute;
+        transform: translate(-50%, -55%);
+        top: 0;
+        left: 50%;
+    }
+}
+
+.arrowContainer.plusDegDelay,
+.arrowContainer.minusDegDelay {
+    &:before {
+        content: "‖";
+        font-size: 0.85em;
+        position: absolute;
+        transform: translate(-50%, -40%);
+        top: 0;
+        left: 50%;
+    }
+}
+
+.arrow.flat:after {
+    content: "";
+    background: var(--main-color);
+    position: absolute;
+    border-radius: 3px;
+    height: 14px;
+    width: 2px;
+    bottom: -6px;
+    right: 0;
 }
 
 .arrowContainer.scalar {
