@@ -6,7 +6,6 @@ import Binoculars from "lucide-solid/icons/binoculars";
 import Bird from "lucide-solid/icons/bird";
 import Github from "lucide-solid/icons/github";
 import NotebookPen from "lucide-solid/icons/notebook-pen";
-import zulip_favicon from "./assets/zulip_favicon.png";
 
 import "./welcome_overlay.css";
 
@@ -96,7 +95,7 @@ export function WelcomeOverlay(props: { isOpen: boolean; onClose: () => void }) 
                                         target="_blank"
                                     >
                                         <span class="resource-icon">
-                                            <img src={zulip_favicon} width="24" height="24" />
+                                            <img src="/zulip_icon.png" width="24" height="24" />
                                         </span>
                                         <span>Zulip chatroom</span>
                                     </a>
