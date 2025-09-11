@@ -43,6 +43,31 @@ impl RecordV {
             specializations,
         }
     }
+
+    /** Add a specialization a path `path` to type `ty`
+
+    Precondition: assumes that this produces a subtype.
+    */
+    pub fn add_specialization(&self, path: &[FieldName], ty: TyV) -> Self {
+        Self {
+            specializations: merge_specializations(
+                &self.specializations,
+                &Dtry::singleton(path, ty),
+            ),
+            ..self.clone()
+        }
+    }
+
+    /** Merge in the specializations in `specializations`
+
+    Precondition: assumes that this produces a subtype.
+    */
+    pub fn specialize(&self, specializations: &Dtry<TyV>) -> Self {
+        Self {
+            specializations: merge_specializations(&self.specializations, specializations),
+            ..self.clone()
+        }
+    }
 }
 
 /// Merge new specializations with old specializations
@@ -140,10 +165,18 @@ impl TyV {
     */
     pub fn specialize(&self, specializations: &Dtry<TyV>) -> Self {
         match &**self {
-            TyV_::Record(r) => TyV::record(RecordV {
-                specializations: merge_specializations(&r.specializations, specializations),
-                ..r.clone()
-            }),
+            TyV_::Record(r) => TyV::record(r.specialize(specializations)),
+            _ => panic!("can only specialize a record type"),
+        }
+    }
+
+    /** Specializes the field at `path` to `ty`
+
+    Precondition: assumes that this produces a subtype.
+    */
+    pub fn add_specialization(&self, path: &[FieldName], ty: TyV) -> Self {
+        match &**self {
+            TyV_::Record(r) => TyV::record(r.add_specialization(path, ty)),
             _ => panic!("can only specialize a record type"),
         }
     }

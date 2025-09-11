@@ -9,8 +9,12 @@ use crate::{
     zero::QualifiedName,
 };
 
-fn text_seg(s: impl Into<Ustr>) -> NameSegment {
-    NameSegment::Text(s.into())
+/** The result of elaborating a top-level statement. */
+pub enum TopElabResult {
+    /** A new declaration */
+    Declaration(TopVarName, TopDecl),
+    /** Output that should be logged */
+    Output(String),
 }
 
 /** Context for top-level elaboration
@@ -48,6 +52,13 @@ impl<'a> TopElaborator<'a> {
         }
     }
 
+    fn expr_with_context<'c>(&self, n: &'c FNtn<'c>) -> (&'c [&'c FNtn<'c>], &'c FNtn<'c>) {
+        match n.ast0() {
+            App1(L(_, Tuple(ctx_elems)), n) => (ctx_elems.as_slice(), n),
+            _ => (&[], n),
+        }
+    }
+
     fn elaborator(&self) -> Elaborator<'a> {
         Elaborator::new(self.reporter.clone(), self.toplevel)
     }
@@ -58,7 +69,7 @@ impl<'a> TopElaborator<'a> {
     }
 
     /// Elaborate a single top-level declaration
-    pub fn elab(&self, tn: &FNtnTop) -> Option<(TopVarName, TopDecl)> {
+    pub fn elab(&self, tn: &FNtnTop) -> Option<TopElabResult> {
         match tn.name {
             "type" => {
                 let (name, ty_n) = self.bare_def(tn.body).or_else(|| {
@@ -68,7 +79,7 @@ impl<'a> TopElaborator<'a> {
                     )
                 })?;
                 let (ty_s, ty_v) = self.elaborator().ty(ty_n)?;
-                Some((name, TopDecl::Type(ty_s, ty_v)))
+                Some(TopElabResult::Declaration(name, TopDecl::Type(ty_s, ty_v)))
             }
             "term" => {
                 let (name, ty_n, tm_n) = self.annotated_def(tn.body).or_else(|| {
@@ -79,7 +90,46 @@ impl<'a> TopElaborator<'a> {
                 })?;
                 let (_, ty_v) = self.elaborator().ty(ty_n)?;
                 let (tm_s, tm_v) = self.elaborator().chk(&ty_v, tm_n)?;
-                Some((name, TopDecl::Term(tm_s, tm_v, ty_v)))
+                Some(TopElabResult::Declaration(name, TopDecl::Term(tm_s, tm_v, ty_v)))
+            }
+            "syn" => {
+                let (ctx_ns, n) = self.expr_with_context(tn.body);
+                let mut elab = self.elaborator();
+                for ctx_n in ctx_ns {
+                    let (name, _, ty_v) = elab.binding(ctx_n)?;
+                    elab.intro(name, Some(ty_v));
+                }
+                let (tm_s, _, ty_v) = elab.syn(n)?;
+                Some(TopElabResult::Output(format!(
+                    "{tm_s} : {}",
+                    elab.evaluator().quote_ty(&ty_v)
+                )))
+            }
+            "norm" => {
+                let (ctx_ns, n) = self.expr_with_context(tn.body);
+                let mut elab = self.elaborator();
+                for ctx_n in ctx_ns {
+                    let (name, _, ty_v) = elab.binding(ctx_n)?;
+                    elab.intro(name, Some(ty_v));
+                }
+                let (_, tm_v, ty_v) = elab.syn(n)?;
+                let eval = elab.evaluator();
+                Some(TopElabResult::Output(format!("{}", eval.quote_tm(&eval.eta(&tm_v, &ty_v)),)))
+            }
+            "chk" => {
+                let (ctx_ns, n) = self.expr_with_context(tn.body);
+                let mut elab = self.elaborator();
+                for ctx_n in ctx_ns {
+                    let (name, _, ty_v) = elab.binding(ctx_n)?;
+                    elab.intro(name, Some(ty_v));
+                }
+                let (tm_n, ty_n) = match n.ast0() {
+                    App2(L(_, Keyword(":")), tm_n, ty_n) => (tm_n, ty_n),
+                    _ => return elab.error("expected <expr> : <type>"),
+                };
+                let (_, ty_v) = elab.ty(ty_n)?;
+                let (tm_s, _) = elab.chk(&ty_v, tm_n)?;
+                Some(TopElabResult::Output(format!("{tm_s}")))
             }
             _ => self.error(tn.loc, "unknown toplevel declaration"),
         }
@@ -175,9 +225,25 @@ impl<'a> Elaborator<'a> {
             TmN::var(self.ctx.scope.len().into(), name),
             ty.clone().unwrap_or(TyV::unit()),
         );
+        let v = if let Some(ty) = &ty {
+            self.evaluator().eta(&v, &ty)
+        } else {
+            v
+        };
         self.ctx.env = self.ctx.env.snoc(v.clone());
         self.ctx.scope.push((name, ty));
         v
+    }
+
+    fn binding(&mut self, n: &FNtn) -> Option<(VarName, TyS, TyV)> {
+        let mut elab = self.enter(n.loc());
+        match n.ast0() {
+            App2(L(_, Keyword(":")), L(_, Var(name)), ty_n) => {
+                let (ty_s, ty_v) = elab.ty(ty_n)?;
+                Some((text_seg(*name), ty_s, ty_v))
+            }
+            _ => elab.error("unexpected notation for binding"),
+        }
     }
 
     fn lookup_ty(&self, name: VarName) -> Option<(TyS, TyV)> {
@@ -218,6 +284,36 @@ impl<'a> Elaborator<'a> {
                 }
             }
             _ => elab.error("unexpected notation for morphism type"),
+        }
+    }
+
+    fn path(&mut self, n: &FNtn) -> Option<(Vec<NameSegment>)> {
+        let mut elab = self.enter(n.loc());
+        match n.ast0() {
+            Field(f) => Some(vec![text_seg(*f)]),
+            App1(p_n, L(_, Field(f))) => {
+                let mut p = elab.path(p_n)?;
+                p.push(text_seg(*f));
+                Some(p)
+            }
+            _ => elab.error("unexpected notation for path"),
+        }
+    }
+
+    fn specialization(&mut self, n: &FNtn) -> Option<(Vec<NameSegment>, TyS, TyV)> {
+        let mut elab = self.enter(n.loc());
+        match n.ast0() {
+            App2(L(_, Keyword(":")), p_n, ty_n) => {
+                let p = elab.path(p_n)?;
+                let (ty_s, ty_v) = elab.ty(ty_n)?;
+                Some((p, ty_s, ty_v))
+            }
+            App2(L(_, Keyword(":=")), p_n, tm_n) => {
+                let p = elab.path(p_n)?;
+                let (tm_s, tm_v, ty_v) = elab.syn(tm_n)?;
+                Some((p, TyS::sing(elab.evaluator().quote_ty(&ty_v), tm_s), TyV::sing(ty_v, tm_v)))
+            }
+            _ => elab.error("unexpected notation for specialization"),
         }
     }
 
@@ -284,18 +380,25 @@ impl<'a> Elaborator<'a> {
                 Some((TyS::record(r_s), TyV::record(r_v)))
             }
             App2(L(_, Keyword("&")), ty_n, L(_, Tuple(specialization_ns))) => {
-                let (ty_s, ty_v) = elab.ty(ty_n)?;
-                let r = match &*ty_v {
-                    TyV_::Record(r) => (r),
-                    _ => return elab.error("can only specialize record types"),
-                };
+                let (ty_s, mut ty_v) = elab.ty(ty_n)?;
+                let mut specializations = Vec::new();
                 // Approach:
                 //
                 // 1. Write a try_specialize method which attempts to specialize ty_v
                 // with a given path + type (e.g. `.x.y : @sing a`), returning a new
                 // type or an error message.
                 // 2. Iteratively apply try_specialize to each specialization in turn.
-                todo!()
+                for specialization_n in specialization_ns.iter() {
+                    let (path, sty_s, sty_v) = elab.specialization(specialization_n)?;
+                    match elab.evaluator().try_specialize(&ty_v, &path, sty_v) {
+                        Ok(specialized) => {
+                            ty_v = specialized;
+                            specializations.push((path, sty_s));
+                        }
+                        Err(s) => return elab.error("Could not specialize:\n{s}"),
+                    }
+                }
+                Some((TyS::specialize(ty_s, specializations), ty_v))
             }
             _ => elab.error("unexpected notation for type"),
         }
@@ -323,6 +426,21 @@ impl<'a> Elaborator<'a> {
         let mut elab = self.enter(n.loc());
         match n.ast0() {
             Var(name) => elab.lookup_tm(text_seg(*name)),
+            App1(tm_n, L(_, Field(f))) => {
+                let (tm_s, tm_v, ty_v) = elab.syn(tm_n)?;
+                let TyV_::Record(r) = &*ty_v else {
+                    return elab.error("can only project from record type");
+                };
+                let f = text_seg(*f);
+                if !r.fields1.has(f) {
+                    return elab.error("no such field {f}");
+                }
+                Some((
+                    TmS::proj(tm_s, f),
+                    elab.evaluator().proj(&tm_v, f),
+                    elab.evaluator().field_ty(&ty_v, &tm_v, f),
+                ))
+            }
             _ => elab.error("unexpected notation for term"),
         }
     }

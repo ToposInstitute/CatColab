@@ -28,7 +28,7 @@ struct Args {
 const PARSE_CONFIG: ParseConfig = ParseConfig::new(
     &[(":", Prec::nonassoc(20)), (":=", Prec::nonassoc(10)), ("&", Prec::lassoc(40))],
     &[":", ":=", "&", "Unit", "Id"],
-    &["type", "term"],
+    &["type", "term", "syn", "chk", "norm"],
 );
 
 declare_error!(TOP_ERROR, "top", "an error at the top-level");
@@ -73,26 +73,26 @@ fn run(path: &str) -> io::Result<()> {
                         TOP_ERROR,
                         "expected a failure to elaborate".to_string(),
                     );
-                    source_info
-                        .extract_report_to_io(
-                            &mut io::stdout(),
-                            reporter.clone(),
-                            tattle::display::DisplayOptions::Terminal,
-                        )
-                        .unwrap();
+                } else {
+                    match d {
+                        TopElabResult::Declaration(name_segment, top_decl) => {
+                            toplevel.declarations.insert(name_segment, top_decl);
+                        }
+                        TopElabResult::Output(s) => {
+                            reporter.info(s);
+                        }
+                    }
                 }
-                toplevel.declarations.insert(d.0, d.1);
             } else if should_fail {
                 reporter.poll();
-            } else {
-                source_info
-                    .extract_report_to_io(
-                        &mut io::stdout(),
-                        reporter.clone(),
-                        tattle::display::DisplayOptions::Terminal,
-                    )
-                    .unwrap();
             }
+            source_info
+                .extract_report_to_io(
+                    &mut io::stdout(),
+                    reporter.clone(),
+                    tattle::display::DisplayOptions::Terminal,
+                )
+                .unwrap();
         }
         Some(())
     });

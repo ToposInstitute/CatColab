@@ -9,7 +9,7 @@ of a row in a database, which is a map from fields to values.
 
 Create this using the [FromIterator] implementation.
 */
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Row<T>(Rc<IndexMap<FieldName, T>>);
 
 impl<T> Index<FieldName> for Row<T> {
@@ -40,6 +40,11 @@ impl<T> Row<T> {
     /// Return whether the row is empty (Clippy wants this).
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
+    }
+
+    /// Return whether the row contains the given field
+    pub fn has(&self, field_name: FieldName) -> bool {
+        self.0.contains_key(&field_name)
     }
 
     /// Produce the empty row.

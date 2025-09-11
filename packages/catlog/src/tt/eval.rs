@@ -61,7 +61,9 @@ impl<'a> Evaluator<'a> {
             TyS_::Record(r) => TyV::record(self.eval_record(r)),
             TyS_::Sing(ty_s, tm_s) => TyV::sing(self.eval_ty(ty_s), self.eval_tm(tm_s)),
             TyS_::Specialize(ty_s, specializations) => {
-                self.eval_ty(ty_s).specialize(&specializations.map(&|ty_s| self.eval_ty(ty_s)))
+                specializations.iter().fold(self.eval_ty(ty_s), |ty_v, (path, s)| {
+                    ty_v.add_specialization(path, self.eval_ty(s))
+                })
             }
             TyS_::Unit => TyV::unit(),
         }
@@ -160,7 +162,16 @@ impl<'a> Evaluator<'a> {
                 if r.specializations.is_empty() {
                     record_ty_s
                 } else {
-                    TyS::specialize(record_ty_s, r.specializations.map(&|ty_v| self.quote_ty(ty_v)))
+                    TyS::specialize(
+                        record_ty_s,
+                        r.specializations
+                            .flatten()
+                            .into_iter()
+                            .map(|(path, ty_v)| {
+                                (path.segments().copied().collect::<Vec<_>>(), self.quote_ty(&ty_v))
+                            })
+                            .collect(),
+                    )
                 }
             }
             TyV_::Sing(ty, tm) => TyS::sing(self.quote_ty(ty), self.quote_tm(tm)),
@@ -201,7 +212,7 @@ impl<'a> Evaluator<'a> {
     pub fn subtype<'b>(&self, ty1: &TyV, ty2: &TyV) -> Result<(), D<'b>> {
         self.convertable_ty(ty1, ty2)?;
         let (n, self1) = self.bind_neu(NameSegment::Text(ustr("self")), ty1.clone());
-        let v = self.eta(&n, ty1);
+        let v = self.eta_neu(&n, ty1);
         self.element_of(&v, ty2)
     }
 
@@ -253,7 +264,23 @@ impl<'a> Evaluator<'a> {
                 Ok(())
             }
             (TyV_::Record(r1), TyV_::Record(r2)) => {
-                todo!()
+                if r1.fields0 != r2.fields0 {
+                    return Err(t("record types have unequal base types"));
+                }
+                let mut fields = IndexMap::new();
+                let mut self1 = self.clone();
+                for ((name, field_ty1_s), (_, field_ty2_s)) in
+                    r1.fields1.iter().zip(r2.fields1.iter())
+                {
+                    let v = TmV::Cons(fields.clone().into());
+                    let field_ty1_v = self1.with_env(r1.env.snoc(v.clone())).eval_ty(field_ty1_s);
+                    let field_ty2_v = self1.with_env(r2.env.snoc(v.clone())).eval_ty(field_ty2_s);
+                    self1.convertable_ty(&field_ty1_v, &field_ty2_v)?;
+                    let (field_val, self_next) = self.bind_neu(*name, field_ty1_v.clone());
+                    self1 = self_next;
+                    fields.insert(*name, TmV::Neu(field_val, field_ty1_v));
+                }
+                Ok(())
             }
             (TyV_::Sing(ty1, _), _) => self.convertable_ty(ty1, ty2),
             (_, TyV_::Sing(ty2, _)) => self.convertable_ty(ty1, ty2),
@@ -265,7 +292,7 @@ impl<'a> Evaluator<'a> {
     }
 
     /** Performs eta-expansion of the neutral `n` at type `ty`. */
-    pub fn eta(&self, n: &TmN, ty: &TyV) -> TmV {
+    pub fn eta_neu(&self, n: &TmN, ty: &TyV) -> TmV {
         match &**ty {
             TyV_::Object(_) => TmV::Neu(n.clone(), ty.clone()),
             TyV_::Morphism(_, _, _) => TmV::Tt,
@@ -273,13 +300,26 @@ impl<'a> Evaluator<'a> {
                 let mut fields = Row::empty();
                 for (name, _) in r.fields1.iter() {
                     let ty_v = self.field_ty(ty, &TmV::Cons(fields.clone()), *name);
-                    let v = self.eta(&TmN::proj(n.clone(), *name), &ty_v);
+                    let v = self.eta_neu(&TmN::proj(n.clone(), *name), &ty_v);
                     fields = fields.insert(*name, v);
                 }
                 TmV::Cons(fields)
             }
             TyV_::Sing(_, x) => x.clone(),
             TyV_::Unit => TmV::Tt,
+        }
+    }
+
+    /** Performs eta-expansion of the term `n` at type `ty` */
+    pub fn eta(&self, v: &TmV, ty: &TyV) -> TmV {
+        match v {
+            TmV::Neu(tm_n, ty_v) => self.eta_neu(tm_n, ty_v),
+            TmV::Cons(row) => TmV::Cons(
+                row.iter()
+                    .map(|(name, field_v)| (*name, self.eta(field_v, &self.field_ty(ty, v, *name))))
+                    .collect(),
+            ),
+            TmV::Tt => TmV::Tt,
         }
     }
 
@@ -308,10 +348,10 @@ impl<'a> Evaluator<'a> {
     ) -> Result<(), D<'b>> {
         match (tm1, tm2) {
             (TmV::Neu(n1, ty1), _) if !strict1 => {
-                self.equal_tm_helper(&self.eta(n1, ty1), tm2, true, strict2)
+                self.equal_tm_helper(&self.eta_neu(n1, ty1), tm2, true, strict2)
             }
             (_, TmV::Neu(n2, ty2)) if !strict2 => {
-                self.equal_tm_helper(tm1, &self.eta(n2, ty2), strict1, true)
+                self.equal_tm_helper(tm1, &self.eta_neu(n2, ty2), strict1, true)
             }
             (TmV::Neu(n1, _), TmV::Neu(n2, _)) => {
                 if n1 == n2 {
@@ -338,19 +378,53 @@ impl<'a> Evaluator<'a> {
             ))),
         }
     }
+
+    fn can_specialize(
+        &self,
+        ty: &TyV,
+        val: &TmV,
+        path: &[FieldName],
+        field_ty: TyV,
+    ) -> Result<(), String> {
+        assert!(!path.is_empty());
+
+        let TyV_::Record(r) = &**ty else {
+            return Err(format!("cannot specialize a non-record type"));
+        };
+
+        let (field, path) = (path[0], &path[1..]);
+        if !r.fields1.has(field) {
+            return Err(format!("no such field .{field}"));
+        }
+        let orig_field_ty = self.field_ty(ty, val, field);
+        if path.len() == 0 {
+            self.subtype(&field_ty, &orig_field_ty).map_err(|msg| {
+                format!(
+                    "{} is not a subtype of {}:\n{}",
+                    self.quote_ty(&field_ty),
+                    self.quote_ty(&orig_field_ty),
+                    msg.pretty()
+                )
+            })
+        } else {
+            self.can_specialize(&orig_field_ty, &self.proj(val, field), path, field_ty)
+        }
+    }
+
     /** Try to specialize the record `r` with the subtype `ty` at `path`
+
     Precondition: `path` is non-empty.
     */
     pub fn try_specialize(
         &self,
-        r: &RecordV,
+        ty: &TyV,
         path: &[FieldName],
-        ty: TyV,
-    ) -> Result<RecordV, String> {
-        assert!(!path.is_empty());
-
-        let (field, path) = (path[0], [&path[1..]]);
-        todo!()
-        // if r.fields1
+        field_ty: TyV,
+    ) -> Result<TyV, String> {
+        let (self_var, _) = self.bind_neu(text_seg("self"), ty.clone());
+        let self_val = self.eta_neu(&self_var, ty);
+        self.can_specialize(ty, &self_val, path, field_ty.clone())?;
+        let TyV_::Record(r) = &**ty else { panic!() };
+        Ok(TyV::record(r.add_specialization(path, field_ty)))
     }
 }

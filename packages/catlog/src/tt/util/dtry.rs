@@ -24,6 +24,14 @@ impl<T> DtryEntry<T> {
             DtryEntry::SubDir(d) => DtryEntry::SubDir(d.map(f)),
         }
     }
+
+    fn singleton(path: &[NameSegment], val: T) -> Self {
+        if path.is_empty() {
+            DtryEntry::File(val)
+        } else {
+            DtryEntry::SubDir(Dtry::singleton(path, val))
+        }
+    }
 }
 
 impl<T: Clone> DtryEntry<T> {
@@ -79,6 +87,13 @@ impl<T> Dtry<T> {
     /// Get the entry for `field` if it exists
     pub fn entry(&self, field: &FieldName) -> Option<&DtryEntry<T>> {
         self.0.get(*field)
+    }
+
+    /// Create a singleton directory with just one entry at the given path
+    pub fn singleton(path: &[FieldName], val: T) -> Self {
+        assert!(!path.is_empty());
+        let (field, path) = (path[0], &path[1..]);
+        Dtry([(field, DtryEntry::singleton(path, val))].into_iter().collect())
     }
 }
 

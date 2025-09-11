@@ -10,7 +10,7 @@ In particular, we implement [ops::Add], which allows concatenating docs with
 `+`.
 */
 #[derive(Clone)]
-pub struct D<'a>(RcDoc<'a, ()>);
+pub struct D<'a>(pub RcDoc<'a, ()>);
 
 impl<'a> ops::Add for D<'a> {
     type Output = D<'a>;
@@ -32,12 +32,14 @@ pub fn s<'a>() -> D<'a> {
 
 /// Creates a binary operator applied to two arguments.
 pub fn binop<'a>(op: &'a str, l: D<'a>, r: D<'a>) -> D<'a> {
-    (l + s() + t(op) + s() + r)
+    ((l + s() + t(op)).group() + (s() + r).indented()).group()
 }
 
 /// Creates a tuple in [fnotation]: (`[x, y, z, ...]`)
 pub fn tuple<'a, I: IntoIterator<Item = D<'a>>>(i: I) -> D<'a> {
-    D(RcDoc::intersperse(i.into_iter().map(|d| d.0), (t(",") + s()).0)).brackets()
+    D(RcDoc::intersperse(i.into_iter().map(|d| d.0.group()), (t(",") + s()).0))
+        .brackets()
+        .group()
 }
 
 impl<'a> D<'a> {
@@ -51,9 +53,14 @@ impl<'a> D<'a> {
         t("(") + self.group() + t(")")
     }
 
+    /// Increase the indentation level
+    pub fn indented(self) -> Self {
+        D(self.0.nest(2))
+    }
+
     /// Surround this document with brackets
     pub fn brackets(self) -> D<'a> {
-        t("[") + self.group() + t("]")
+        t("[") + (s() + self + s()).indented() + t("]")
     }
 
     /// Use this to print a document

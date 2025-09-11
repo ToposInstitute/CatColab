@@ -16,3 +16,21 @@ type EntityArr := [
   tgt : Entity,
   arr : (Id Entity)[src, tgt]
 ]
+
+type Graph1 := [
+  V : Entity,
+  E : Entity,
+  src : EntityArr & [ .src := E, .tgt := V ],
+  tgt : EntityArr & [ .src := E, .tgt := V ],
+]
+
+chk [G : Graph1] (G.src.arr : (Id Entity)[G.E, G.V])
+
+chk [G : Graph1] (G.src : EntityArr)
+
+chk [G : Graph1] (G.src : EntityArr & [ .src := G.E ] )
+
+#(should_fail)
+chk [G : Graph1] (G.src : EntityArr & [ .src := G.V ] )
+
+norm [x : [a : Entity, b : @sing a]] x.b

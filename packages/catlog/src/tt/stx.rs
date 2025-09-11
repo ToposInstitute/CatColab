@@ -3,10 +3,13 @@
 See [crate::tt] for what this means.
 */
 
+use ::pretty::RcDoc;
+
 #[cfg(doc)]
 use crate::dbl::discrete::theory::DiscreteDblTheory;
 use crate::{tt::prelude::*, zero::QualifiedName};
 use std::fmt;
+use std::fmt::Write as _;
 use std::ops::Deref;
 
 /// Object types are just qualified names, see [DiscreteDblTheory].
@@ -32,12 +35,28 @@ impl fmt::Display for MorphismType {
     }
 }
 
+impl MorphismType {
+    fn to_doc<'a>(&self) -> D<'a> {
+        match &self.0 {
+            Path::Id(ot) => (t("Id") + s() + t(format!("{ot}"))).parens(),
+            Path::Seq(non_empty) => {
+                if non_empty.len() == 1 {
+                    t(format!("{}", non_empty[0]))
+                } else {
+                    D(RcDoc::intersperse(non_empty.iter().map(|x| t(format!("{x}")).0), t(" · ").0))
+                        .parens()
+                }
+            }
+        }
+    }
+}
+
 /** Type in the base type theory.
 
 See [crate::tt] for more information about what this means. Note that this
 is a simple type, so we don't need syntax and value variants.
 */
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum Ty0 {
     /// The type of (objects of a given object type).
     Object(ObjectType),
@@ -124,7 +143,7 @@ pub enum TyS_ {
     In order to form this type, it must be the case that `d[p]` is a subtype of
     the type of the field at path `p`.
     */
-    Specialize(TyS, Dtry<TyS>),
+    Specialize(TyS, Vec<(Vec<FieldName>, TyS)>),
 
     /** Type constructor for the unit type.
 
@@ -178,7 +197,7 @@ impl TyS {
     }
 
     /// Smart constructor for [TyS], [TyS_::Specialize] case.
-    pub fn specialize(ty: TyS, specializations: Dtry<TyS>) -> Self {
+    pub fn specialize(ty: TyS, specializations: Vec<(Vec<FieldName>, TyS)>) -> Self {
         Self(Rc::new(TyS_::Specialize(ty, specializations)))
     }
 
@@ -192,32 +211,35 @@ impl TyS {
             TyS_::TopVar(name) => t(format!("{}", name)),
             TyS_::Object(object_type) => t(format!("{}", object_type)),
             TyS_::Morphism(morphism_type, dom, cod) => {
-                // TODO: how should morphism types be printed out?
-                (t(format!("{}", morphism_type)) + s() + dom.to_doc() + s() + cod.to_doc()).parens()
+                morphism_type.to_doc() + tuple([dom.to_doc(), cod.to_doc()])
             }
             TyS_::Record(r) => tuple(
                 r.fields1
                     .iter()
-                    .map(|(name, ty)| binop(":", t(format!("{}", name)), ty.to_doc())),
+                    .map(|(name, ty)| binop(":", t(format!("{}", name)).group(), ty.to_doc())),
             ),
             TyS_::Sing(_, tm) => (t("@sing") + s() + tm.to_doc()),
             TyS_::Specialize(ty, d) => binop(
                 "&",
                 ty.to_doc(),
-                tuple(
-                    d.flatten()
-                        .into_iter()
-                        .map(|(name, ty)| binop(":", t(format!(".{}", name)), ty.to_doc())),
-                ),
+                tuple(d.iter().map(|(name, ty)| binop(":", t(path_to_string(name)), ty.to_doc()))),
             ),
             TyS_::Unit => t("Unit"),
         }
     }
 }
 
+fn path_to_string(path: &[FieldName]) -> String {
+    let mut out = String::new();
+    for seg in path {
+        write!(&mut out, ".{}", seg);
+    }
+    out
+}
+
 impl fmt::Display for TyS {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.to_doc().pretty())
+        write!(f, "{}", self.to_doc().group().pretty())
     }
 }
 
@@ -301,6 +323,6 @@ impl TmS {
 
 impl fmt::Display for TmS {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.to_doc().pretty())
+        write!(f, "{}", self.to_doc().group().pretty())
     }
 }

@@ -13,3 +13,7 @@ pub use uuid::Uuid;
 pub type VarName = NameSegment;
 pub type TopVarName = NameSegment;
 pub type FieldName = NameSegment;
+
+pub fn text_seg(s: impl Into<Ustr>) -> NameSegment {
+    NameSegment::Text(s.into())
+}
