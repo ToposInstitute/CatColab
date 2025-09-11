@@ -21,7 +21,7 @@
         "@automerge/automerge-repo": "^2.2.0",
         "@automerge/automerge-repo-react-hooks": "^2.2.0",
         "@patchwork/sdk": "link:../../../patchwork/sdk",
-        "catlog-wasm": "link:../catlog-wasm/pkg",
+        "catlog-wasm": "link:../catlog-wasm/dist/pkg-browser",
         "react": "^18.3.1",
         "react-dom": "^18.3.1",
         "solid-js": "^1.9.7",

@@ -24,7 +24,7 @@ export const newModelDocument = (theory: string): ModelDocument => ({
     name: "",
     type: "model",
     theory,
-    notebook: newNotebook(),
+    notebook: newNotebook<ModelJudgment>(),
     version: currentVersion(),
 });
 
