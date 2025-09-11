@@ -208,13 +208,11 @@ where
     }
     finish_stack.reverse();
 
-    let mut discovered = HashSet::new();
+    discovered.clear();
     for i in finish_stack.iter() {
         stack.clear();
         stack.push(i.clone());
-        let mut cycle = false;
-        while let Some(j) = {
-            let mut out = None;
+        let mut rev_dfs_next = || {
             while let Some(node) = stack.pop() {
                 if discovered.insert(node.clone()) {
                     for succ in graph.in_neighbors(&node) {
@@ -222,12 +220,13 @@ where
                             stack.push(succ);
                         }
                     }
-                    out = Some(node);
-                    break;
+                    return Some(node);
                 }
             }
-            out
-        } {
+            None
+        };
+        let mut cycle = false;
+        while let Some(j) = rev_dfs_next() {
             if cycle {
                 return Err(format!("Cycle detected involving node {:#?}", j).to_owned());
             }
@@ -303,7 +302,7 @@ mod tests {
         g.add_edge(5, 2);
         assert_eq!(toposort(&g), Ok(vec![5, 0, 1, 2, 4, 3]));
 
-        let mut g: HashGraph<u8, &str> = Default::default();
+        let mut g: HashGraph<_, _> = Default::default();
         g.add_vertices(vec![0, 1, 2, 3, 4, 5]);
         g.add_edge("0-1", 0, 1);
         g.add_edge("1-2", 1, 2);
@@ -312,11 +311,8 @@ mod tests {
         g.add_edge("4-3", 4, 3);
         g.add_edge("5-2", 5, 2);
         let sort = toposort(&g).unwrap();
-        if let (Some(i0), Some(i1)) =
-            (sort.iter().position(|&x| x == 5), sort.iter().position(|&x| x == 2))
-        {
-            assert!(i0 < i1);
-        }
+        let (i0, i1) = (sort.iter().position(|&x| x == 5), sort.iter().position(|&x| x == 2));
+        assert!(i0.unwrap() < i1.unwrap());
     }
 
     #[test]
