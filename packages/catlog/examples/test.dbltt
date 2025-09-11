@@ -41,3 +41,27 @@ type Graph1 := [
   E : Entity,
   src : EntityArr & [ .src := E, .src := V ]
 ]
+
+type Graph := [
+  V : Entity,
+  E : Entity,
+  src : (Id Entity)[E, V],
+  tgt : (Id Entity)[E, V]
+]
+
+def reverse[G : Graph] : Graph := [
+  V := G.V,
+  E := G.E,
+  src := G.tgt,
+  tgt := G.src
+]
+
+#(should_fail)
+def reverse[G : Graph] : Graph := [
+  V := G.E,
+  E := G.E,
+  src := G.tgt,
+  tgt := G.src
+]
+
+norm [G : Graph] (reverse[G]).V

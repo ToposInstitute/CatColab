@@ -41,13 +41,20 @@ impl<'a> TopElaborator<'a> {
         }
     }
 
-    fn annotated_def<'c>(&self, n: &FNtn<'c>) -> Option<(TopVarName, &'c FNtn<'c>, &'c FNtn<'c>)> {
+    fn annotated_def<'c>(
+        &self,
+        n: &FNtn<'c>,
+    ) -> Option<(TopVarName, Option<&'c [&'c FNtn<'c>]>, &'c FNtn<'c>, &'c FNtn<'c>)> {
         match n.ast0() {
-            App2(
-                L(_, Keyword(":=")),
-                L(_, App2(L(_, Keyword(":")), L(_, Var(name)), annotn)),
-                valn,
-            ) => Some((NameSegment::Text(ustr(name)), annotn, valn)),
+            App2(L(_, Keyword(":=")), L(_, App2(L(_, Keyword(":")), head_n, annotn)), valn) => {
+                match head_n.ast0() {
+                    App1(L(_, Var(name)), L(_, Tuple(args))) => {
+                        Some((text_seg(*name), Some(args.as_slice()), annotn, valn))
+                    }
+                    Var(name) => Some((text_seg(*name), None, annotn, valn)),
+                    _ => None,
+                }
+            }
             _ => None,
         }
     }
@@ -81,16 +88,35 @@ impl<'a> TopElaborator<'a> {
                 let (ty_s, ty_v) = self.elaborator().ty(ty_n)?;
                 Some(TopElabResult::Declaration(name, TopDecl::Type(ty_s, ty_v)))
             }
-            "term" => {
-                let (name, ty_n, tm_n) = self.annotated_def(tn.body).or_else(|| {
+            "def" => {
+                let (name, args_n, ty_n, tm_n) = self.annotated_def(tn.body).or_else(|| {
                     self.error(
                         tn.loc,
                         "unknown syntax for term declaration, expected <name> : <type> := <term>",
                     )
                 })?;
-                let (_, ty_v) = self.elaborator().ty(ty_n)?;
-                let (tm_s, tm_v) = self.elaborator().chk(&ty_v, tm_n)?;
-                Some(TopElabResult::Declaration(name, TopDecl::Term(tm_s, tm_v, ty_v)))
+                match args_n {
+                    Some(args_n) => {
+                        let mut elab = self.elaborator();
+                        let mut args_stx = IndexMap::new();
+                        for arg_n in args_n {
+                            let (name, ty_s, ty_v) = elab.binding(arg_n)?;
+                            args_stx.insert(name, ty_s);
+                            elab.intro(name, Some(ty_v));
+                        }
+                        let (ret_ty_s, ret_ty_v) = elab.ty(ty_n)?;
+                        let (body_s, _) = elab.chk(&ret_ty_v, tm_n)?;
+                        Some(TopElabResult::Declaration(
+                            name,
+                            TopDecl::Def(args_stx.into(), ret_ty_s, body_s),
+                        ))
+                    }
+                    None => {
+                        let (_, ty_v) = self.elaborator().ty(ty_n)?;
+                        let (tm_s, tm_v) = self.elaborator().chk(&ty_v, tm_n)?;
+                        Some(TopElabResult::Declaration(name, TopDecl::DefConst(tm_s, tm_v, ty_v)))
+                    }
+                }
             }
             "syn" => {
                 let (ctx_ns, n) = self.expr_with_context(tn.body);
@@ -253,7 +279,9 @@ impl<'a> Elaborator<'a> {
         } else if let Some(d) = self.toplevel.declarations.get(&name) {
             match d {
                 TopDecl::Type(_, ty_v) => Some((TyS::topvar(name), ty_v.clone())),
-                TopDecl::Term(tm_s, tm_v, ty_v) => self.error("{name} refers to a term not a type"),
+                TopDecl::Def(_, _, _) | TopDecl::DefConst(_, _, _) => {
+                    self.error("{name} refers to a term not a type")
+                }
             }
         } else {
             self.error(format!("no such type {name} defined"))
@@ -416,9 +444,10 @@ impl<'a> Elaborator<'a> {
         } else if let Some(d) = self.toplevel.lookup(name) {
             match d {
                 TopDecl::Type(_, ty_v) => self.error(format!("{name} refers type, not term")),
-                TopDecl::Term(_, tm_v, ty_v) => {
+                TopDecl::DefConst(_, tm_v, ty_v) => {
                     Some((TmS::topvar(name), tm_v.clone(), ty_v.clone()))
                 }
+                TopDecl::Def(_, _, _) => self.error(format!("{name} must be applied to arguments")),
             }
         } else {
             self.error(format!("no such variable {name}"))
@@ -444,6 +473,30 @@ impl<'a> Elaborator<'a> {
                     elab.evaluator().field_ty(&ty_v, &tm_v, f),
                 ))
             }
+            App1(L(_, Var(tv)), L(_, Tuple(args_n))) => {
+                let tv = text_seg(*tv);
+                let Some(TopDecl::Def(arg_tys_s, ret_ty_s, body_s)) = elab.toplevel.lookup(tv)
+                else {
+                    return elab.error(format!("no such toplevel def {tv}"));
+                };
+                let mut arg_stxs = Vec::new();
+                let mut env = Env::nil();
+                if args_n.len() != arg_tys_s.len() {
+                    return elab.error(format!(
+                        "wrong number of args for {tv}, expected {}, got {}",
+                        arg_tys_s.len(),
+                        args_n.len()
+                    ));
+                }
+                for (arg_n, (_, arg_ty_s)) in args_n.iter().zip(arg_tys_s.iter()) {
+                    let arg_ty_v = elab.evaluator().with_env(env.clone()).eval_ty(arg_ty_s);
+                    let (arg_s, arg_v) = elab.chk(&arg_ty_v, arg_n)?;
+                    arg_stxs.push(arg_s);
+                    env = env.snoc(arg_v);
+                }
+                let eval = elab.evaluator().with_env(env.clone());
+                Some((TmS::topapp(tv, arg_stxs), eval.eval_tm(body_s), eval.eval_ty(ret_ty_s)))
+            }
             Tag("tt") => Some((TmS::tt(), TmV::Tt, TyV::unit())),
             Tuple(_) => elab.error("must check agains a type in order to construct a record"),
             _ => elab.error("unexpected notation for term"),
@@ -454,7 +507,40 @@ impl<'a> Elaborator<'a> {
         let mut elab = self.enter(n.loc());
         match n.ast0() {
             Tuple(field_ns) => {
-                todo!()
+                let TyV_::Record(r) = &**ty else {
+                    return elab.error("must check record former against record type");
+                };
+                if r.fields1.len() != field_ns.len() {
+                    return elab.error(format!(
+                        "wrong number of fields provided, expected {}, got {}",
+                        r.fields1.len(),
+                        r.fields0.len(),
+                    ));
+                }
+                let mut field_stxs = IndexMap::new();
+                let mut field_vals = IndexMap::new();
+                for (field_n, (name, field_ty_s)) in field_ns.iter().zip(r.fields1.iter()) {
+                    elab.loc = Some(field_n.loc());
+                    let tm_n = match field_n.ast0() {
+                        App2(L(_, Keyword(":=")), L(_, Var(given_name)), field_val_n) => {
+                            if text_seg(*given_name) == *name {
+                                field_val_n
+                            } else {
+                                return elab.error(format!("unexpected field {given_name}"));
+                            }
+                        }
+                        _ => {
+                            return elab.error("unexpected notation for field");
+                        }
+                    };
+                    let v = TmV::Cons(field_vals.clone().into());
+                    let field_ty_v =
+                        elab.evaluator().with_env(r.env.snoc(v.clone())).eval_ty(field_ty_s);
+                    let (tm_s, tm_v) = elab.chk(&field_ty_v, tm_n)?;
+                    field_stxs.insert(*name, tm_s);
+                    field_vals.insert(*name, tm_v);
+                }
+                Some((TmS::cons(field_stxs.into()), TmV::Cons(field_vals.into())))
             }
             _ => {
                 let (tm_s, tm_v, synthed) = elab.syn(n)?;

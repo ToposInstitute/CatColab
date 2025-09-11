@@ -28,7 +28,7 @@ struct Args {
 const PARSE_CONFIG: ParseConfig = ParseConfig::new(
     &[(":", Prec::nonassoc(20)), (":=", Prec::nonassoc(10)), ("&", Prec::lassoc(40))],
     &[":", ":=", "&", "Unit", "Id"],
-    &["type", "term", "syn", "chk", "norm"],
+    &["type", "def", "syn", "chk", "norm"],
 );
 
 declare_error!(TOP_ERROR, "top", "an error at the top-level");

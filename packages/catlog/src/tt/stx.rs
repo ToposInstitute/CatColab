@@ -245,8 +245,10 @@ impl fmt::Display for TyS {
 
 /** Inner enum for [TmS]. */
 pub enum TmS_ {
-    /** A reference to a top-level declaration */
+    /** A reference to a top-level constant def */
     TopVar(TopVarName),
+    /** An application of a top-level term judgment to arguments */
+    TopApp(TopVarName, Vec<TmS>),
     /** Variable syntax.
 
     We use a backward index, as when we evaluate we store the
@@ -286,6 +288,11 @@ impl TmS {
         Self(Rc::new(TmS_::TopVar(var_name)))
     }
 
+    /// Smart constructor for [TmS], [TmS_::TopApp] case.
+    pub fn topapp(var_name: VarName, args: Vec<TmS>) -> Self {
+        Self(Rc::new(TmS_::TopApp(var_name, args)))
+    }
+
     /// Smart constructor for [TmS], [TmS_::Var] case.
     pub fn var(bwd_idx: BwdIdx, var_name: VarName) -> Self {
         Self(Rc::new(TmS_::Var(bwd_idx, var_name)))
@@ -309,6 +316,9 @@ impl TmS {
     fn to_doc<'a>(&self) -> D<'a> {
         match &**self {
             TmS_::TopVar(name) => t(format!("{}", name)),
+            TmS_::TopApp(name, args) => {
+                t(format!("{}", name)) + tuple(args.iter().map(|arg| arg.to_doc()))
+            }
             TmS_::Var(_, name) => t(format!("{}", name)),
             TmS_::Proj(tm, field) => tm.to_doc() + t(format!(".{}", field)),
             TmS_::Cons(fields) => tuple(

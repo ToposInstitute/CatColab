@@ -17,12 +17,14 @@ pub enum TopDecl {
     the empty context, this is OK to use in any other context as well.
     */
     Type(TyS, TyV),
-    /** A toplevel declaration of a term.
+    /** A toplevel declaration of a term in the empty context.
 
     Also stores the evaluation of that term, and the evaluation of the corresponding type of that term. Because this is an evaluation in the
     empty context, this is OK to use in any other context as well.
     */
-    Term(TmS, TmV, TyV),
+    DefConst(TmS, TmV, TyV),
+    /** A toplevel declaration of a term judgment */
+    Def(Row<TyS>, TyS, TmS),
 }
 
 impl TopDecl {
@@ -38,24 +40,23 @@ impl TopDecl {
         }
     }
 
-    /** Extract the term for a toplevel-declaration of a term.
+    /** Extract the term for a toplevel declaration of a term.
 
     This should only be used after type checking, when we know that a toplevel
     variable name does in fact point to a toplevel declaration for a term.
     */
-    pub fn as_tm(&self) -> TmV {
+    pub fn as_const(&self) -> TmV {
         match self {
-            TopDecl::Term(_, tm, _) => tm.clone(),
-            _ => panic!("expected type"),
+            TopDecl::DefConst(_, tm, _) => tm.clone(),
+            _ => panic!("expected const"),
         }
     }
-}
 
-impl fmt::Display for TopDecl {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    /** Extract the definition for a toplevel term judgment */
+    pub fn as_def(&self) -> (Row<TyS>, TyS, TmS) {
         match self {
-            TopDecl::Type(ty_s, _) => write!(f, "{}", ty_s),
-            TopDecl::Term(tm_s, _, _) => write!(f, "{}", tm_s),
+            TopDecl::Def(args, ret, body) => (args.clone(), ret.clone(), body.clone()),
+            _ => panic!("expected def"),
         }
     }
 }

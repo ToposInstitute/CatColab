@@ -76,7 +76,12 @@ impl<'a> Evaluator<'a> {
     */
     pub fn eval_tm(&self, tm: &TmS) -> TmV {
         match &**tm {
-            TmS_::TopVar(tv) => self.toplevel.declarations.get(tv).unwrap().as_tm(),
+            TmS_::TopVar(tv) => self.toplevel.declarations.get(tv).unwrap().as_const(),
+            TmS_::TopApp(tv, args_s) => {
+                let env = Env::nil().extend_by(args_s.iter().map(|arg_s| self.eval_tm(arg_s)));
+                let (_, _, body) = self.toplevel.declarations.get(tv).unwrap().as_def();
+                self.with_env(env).eval_tm(&body)
+            }
             TmS_::Var(i, _) => self.env.get(**i).cloned().unwrap(),
             TmS_::Cons(fields) => {
                 TmV::Cons(fields.iter().map(|(name, tm)| (*name, self.eval_tm(tm))).collect())
