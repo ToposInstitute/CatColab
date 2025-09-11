@@ -1,7 +1,6 @@
 //! Algorithms on graphs.
 
-use std::collections::{HashMap, HashSet, VecDeque};
-use std::fmt::Debug;
+use std::collections::{HashSet, VecDeque};
 use std::hash::Hash;
 
 use super::graph::*;
@@ -169,95 +168,57 @@ where
     result
 }
 
-#[derive(Clone, Debug)]
-struct VisitMap<G>
-where
-    G: FinGraph,
-    G::V: Hash + Debug,
-{
-    visited: HashMap<G::V, bool>,
-}
-
-impl<G> VisitMap<G>
-where
-    G: FinGraph,
-    G::V: Hash + Debug,
-{
-    fn new(graph: &G) -> Self {
-        let visited: HashMap<_, _> = HashMap::from_iter(graph.vertices().map(|v| (v, false)));
-        Self { visited }
-    }
-
-    fn visit(&mut self, v: G::V) -> bool {
-        let previous = self.visited.clone();
-        let previous = previous.get(&v);
-        self.visited.insert(v, true);
-        if let Some(val) = previous {
-            !*val
-        } else {
-            false
-        }
-    }
-
-    fn is_visited(&self, v: &G::V) -> bool {
-        if let Some(val) = self.visited.get(v) {
-            *val
-        } else {
-            false
-        }
-    }
-}
-
 /** Computes a topological sorting for a given graph.
 
-This toposort algorithm was borrowed from `petgraph`, found [here](https://github.com/petgraph/petgraph/blob/4d807c19304c02c9dd687c68577f75aefcb98491/src/algo/mod.rs#L204)
+This toposort algorithm was borrowed from the crate `petgraph`, found
+[here](https://github.com/petgraph/petgraph/blob/4d807c19304c02c9dd687c68577f75aefcb98491/src/algo/mod.rs#L204)
  */
 pub fn toposort<G>(graph: &G) -> Result<Vec<G::V>, String>
 where
     G: FinGraph,
     G::V: Hash + std::fmt::Debug,
 {
-    let mut discovered = VisitMap::new(graph);
-    let mut finished = VisitMap::new(graph);
-    let mut finish_stack: Vec<G::V> = Vec::new();
+    let mut discovered = HashSet::new();
+    let mut finished = HashSet::new();
+    let mut finish_stack = Vec::new();
     let mut stack = Vec::new();
 
     for v in graph.vertices() {
-        if discovered.is_visited(&v) {
+        if discovered.contains(&v) {
             continue;
         }
         stack.push(v);
-        while let Some(nx) = stack.clone().last() {
-            if discovered.visit(nx.clone()) {
-                for succ in graph.out_neighbors(nx) {
-                    if &succ == nx {
-                        return Err("self cycle".to_owned());
+        while let Some(nx) = stack.last().cloned() {
+            if discovered.insert(nx.clone()) {
+                for succ in graph.out_neighbors(&nx) {
+                    if succ == nx {
+                        return Err(format!("Self loop at node {:#?}", nx).to_owned());
                     }
-                    if !discovered.is_visited(&succ) {
+                    if !discovered.contains(&succ) {
                         stack.push(succ);
                     }
                 }
             } else {
                 stack.pop();
-                if finished.visit(nx.clone()) {
-                    finish_stack.push(nx.clone());
+                if finished.insert(nx.clone()) {
+                    finish_stack.push(nx);
                 }
             }
         }
     }
     finish_stack.reverse();
 
-    let mut discovered = VisitMap::new(graph);
-    for i in &finish_stack {
+    let mut discovered = HashSet::new();
+    for i in finish_stack.iter() {
         stack.clear();
         stack.push(i.clone());
         let mut cycle = false;
         while let Some(j) = {
             let mut out = None;
             while let Some(node) = stack.pop() {
-                if discovered.visit(node.clone()) {
+                if discovered.insert(node.clone()) {
                     for succ in graph.in_neighbors(&node) {
-                        if !discovered.is_visited(&succ) {
+                        if !discovered.contains(&succ) {
                             stack.push(succ);
                         }
                     }
@@ -268,7 +229,7 @@ where
             out
         } {
             if cycle {
-                return Err(format!("cycle detected involving node {:#?}", j).to_owned());
+                return Err(format!("Cycle detected involving node {:#?}", j).to_owned());
             }
             cycle = true;
         }
@@ -329,7 +290,7 @@ mod tests {
         g.add_vertices(1);
         g.add_edge(2, 3);
         g.add_edge(3, 0);
-        expect_test::expect!["cycle detected involving node 3"]
+        expect_test::expect!["Cycle detected involving node 3"]
             .assert_eq(&toposort(&g).unwrap_err());
 
         let g = SkelGraph::triangle();
