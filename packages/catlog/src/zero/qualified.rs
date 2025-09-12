@@ -197,6 +197,15 @@ impl<'de> Deserialize<'de> for QualifiedName {
     }
 }
 
+impl QualifiedName {
+    /// Add another segment onto the end
+    pub fn snoc(&self, segment: NameSegment) -> Self {
+        let mut segments = self.0.clone();
+        segments.push(segment);
+        Self(segments)
+    }
+}
+
 #[cfg(feature = "serde")]
 struct QualifiedNameVisitor;
 
