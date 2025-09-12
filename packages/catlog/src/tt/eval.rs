@@ -88,6 +88,8 @@ impl<'a> Evaluator<'a> {
             }
             TmS_::Proj(tm, field) => self.proj(&self.eval_tm(tm), *field),
             TmS_::Tt => TmV::Tt,
+            TmS_::Id(_) => TmV::Tt,
+            TmS_::Compose(_, _) => TmV::Tt,
         }
     }
 

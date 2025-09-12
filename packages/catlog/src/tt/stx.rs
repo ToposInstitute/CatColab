@@ -264,6 +264,10 @@ pub enum TmS_ {
     Note that eta-expansion takes care of elimination for units
     */
     Tt,
+    /** Identity morphism at an object */
+    Id(TmS),
+    /** Composition of two morphisms */
+    Compose(TmS, TmS),
 }
 
 /** Syntax for total terms, dereferences to [TmS_].
@@ -313,6 +317,16 @@ impl TmS {
         Self(Rc::new(TmS_::Tt))
     }
 
+    /// Smart constructor for [TmS], [TmS_::Id] case.
+    pub fn id(ob: TmS) -> Self {
+        Self(Rc::new(TmS_::Id(ob)))
+    }
+
+    /// Smart constructor for [TmS], [TmS_::Compose] case.
+    pub fn compose(f: TmS, g: TmS) -> Self {
+        Self(Rc::new(TmS_::Compose(f, g)))
+    }
+
     fn to_doc<'a>(&self) -> D<'a> {
         match &**self {
             TmS_::TopVar(name) => t(format!("{}", name)),
@@ -326,6 +340,8 @@ impl TmS {
                     .iter()
                     .map(|(name, field)| binop(":=", t(format!("{}", name)), field.to_doc())),
             ),
+            TmS_::Id(ob) => (t("@id") + s() + ob.to_doc()).parens(),
+            TmS_::Compose(f, g) => binop("·", f.to_doc(), g.to_doc()),
             TmS_::Tt => t("tt"),
         }
     }

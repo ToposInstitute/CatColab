@@ -1,6 +1,7 @@
 /*! Elaboration for doublett */
-use crate::dbl::category::VDblCategory;
+use crate::dbl::{category::VDblCategory, theory::DblTheory};
 use fnotation::*;
+use nonempty::nonempty;
 use scopeguard::{ScopeGuard, guard};
 use tattle::declare_error;
 
@@ -471,6 +472,54 @@ impl<'a> Elaborator<'a> {
                     TmS::proj(tm_s, f),
                     elab.evaluator().proj(&tm_v, f),
                     elab.evaluator().field_ty(&ty_v, &tm_v, f),
+                ))
+            }
+            App1(L(_, Prim("id")), ob_n) => {
+                let (ob_s, ob_v, ob_t) = elab.syn(ob_n)?;
+                let TyV_::Object(ot) = &*ob_t else {
+                    return elab.error("can only apply @id to objects");
+                };
+                Some((
+                    TmS::id(ob_s),
+                    TmV::Tt,
+                    TyV::morphism(MorphismType(Path::Id(ot.clone())), ob_v.clone(), ob_v),
+                ))
+            }
+            App2(L(_, Keyword("*")), f_n, g_n) => {
+                let (f_s, _, f_ty) = elab.syn(f_n)?;
+                let (g_s, _, g_ty) = elab.syn(g_n)?;
+                let TyV_::Morphism(f_mt, f_dom, f_cod) = &*f_ty else {
+                    elab.loc = Some(f_n.loc());
+                    return elab.error("expected a morphism");
+                };
+                let TyV_::Morphism(g_mt, g_dom, g_cod) = &*g_ty else {
+                    elab.loc = Some(g_n.loc());
+                    return elab.error("expected a morphism");
+                };
+                if elab.toplevel.theory.tgt(&f_mt.0) != elab.toplevel.theory.src(&g_mt.0) {
+                    return elab.error("incompatible morphism types");
+                }
+                if let Err(s) = elab.evaluator().equal_tm(f_cod, g_dom) {
+                    return elab.error(format!(
+                        "codomain {} and domain {} not equal:\n...because {}",
+                        elab.evaluator().quote_tm(f_cod),
+                        elab.evaluator().quote_tm(g_dom),
+                        s.pretty()
+                    ));
+                }
+                Some((
+                    TmS::compose(f_s, g_s),
+                    TmV::Tt,
+                    TyV::morphism(
+                        MorphismType(
+                            elab.toplevel
+                                .theory
+                                .compose_types(Path::Seq(nonempty![f_mt.0.clone(), g_mt.0.clone()]))
+                                .unwrap(),
+                        ),
+                        f_dom.clone(),
+                        g_cod.clone(),
+                    ),
                 ))
             }
             App1(L(_, Var(tv)), L(_, Tuple(args_n))) => {

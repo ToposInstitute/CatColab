@@ -2,6 +2,8 @@ type u := Unit
 
 type u2 := u
 
+def t : u := 'tt
+
 type WeightedGraph := [
   V : Entity,
   E : Entity,
@@ -66,3 +68,15 @@ def reverse[G : Graph] : Graph := [
 
 norm [G : Graph] (reverse[G]).E
 syn [G : Graph] (reverse[G]).src
+
+type ReflexiveGraph := [
+  V : Entity,
+  E : Entity,
+  src : (Id Entity)[E, V],
+  tgt : (Id Entity)[E, V],
+  refl : (Id Entity)[V, E]
+]
+
+def edge_id[G : ReflexiveGraph] : (Id Entity)[G.E, G.E] := @id G.E
+
+def edge_src[G : ReflexiveGraph] : (Id Entity)[G.E, G.E] := G.src * G.refl

@@ -26,8 +26,13 @@ struct Args {
 }
 
 const PARSE_CONFIG: ParseConfig = ParseConfig::new(
-    &[(":", Prec::nonassoc(20)), (":=", Prec::nonassoc(10)), ("&", Prec::lassoc(40))],
-    &[":", ":=", "&", "Unit", "Id"],
+    &[
+        (":", Prec::nonassoc(20)),
+        (":=", Prec::nonassoc(10)),
+        ("&", Prec::lassoc(40)),
+        ("*", Prec::lassoc(60)),
+    ],
+    &[":", ":=", "&", "Unit", "Id", "*"],
     &["type", "def", "syn", "chk", "norm"],
 );
 
