@@ -4,7 +4,6 @@ See [crate::tt] for what this means.
 */
 
 use bwd::Bwd;
-use itertools::merge;
 use std::ops::Deref;
 
 use crate::tt::{prelude::*, stx::*};
@@ -190,7 +189,7 @@ impl TyV {
     pub fn ty0(&self) -> Ty0 {
         match &**self {
             TyV_::Object(qname) => Ty0::Object(qname.clone()),
-            TyV_::Morphism(morphism_type, tm_v, tm_v1) => Ty0::Unit,
+            TyV_::Morphism(_, _, _) => Ty0::Unit,
             TyV_::Record(record_v) => Ty0::Record(record_v.fields0.clone()),
             TyV_::Sing(ty_v, _) => ty_v.ty0(),
             TyV_::Unit => Ty0::Unit,

@@ -290,7 +290,7 @@ impl<'a> Elaborator<'a> {
     }
 
     fn morphism_ty(&mut self, n: &FNtn) -> Option<(MorphismType, ObjectType, ObjectType)> {
-        let mut elab = self.enter(n.loc());
+        let elab = self.enter(n.loc());
         match n.ast0() {
             App1(L(_, Keyword("Id")), L(_, Var(name))) => {
                 let qname = QualifiedName::single(text_seg(*name));
@@ -316,7 +316,7 @@ impl<'a> Elaborator<'a> {
         }
     }
 
-    fn path(&mut self, n: &FNtn) -> Option<(Vec<NameSegment>)> {
+    fn path(&mut self, n: &FNtn) -> Option<Vec<NameSegment>> {
         let mut elab = self.enter(n.loc());
         match n.ast0() {
             Field(f) => Some(vec![text_seg(*f)]),
@@ -444,7 +444,7 @@ impl<'a> Elaborator<'a> {
             Some((TmS::var(i, name), self.ctx.env.get(*i).unwrap().clone(), ty.clone().unwrap()))
         } else if let Some(d) = self.toplevel.lookup(name) {
             match d {
-                TopDecl::Type(_, ty_v) => self.error(format!("{name} refers type, not term")),
+                TopDecl::Type(_, _) => self.error(format!("{name} refers type, not term")),
                 TopDecl::DefConst(_, tm_v, ty_v) => {
                     Some((TmS::topvar(name), tm_v.clone(), ty_v.clone()))
                 }

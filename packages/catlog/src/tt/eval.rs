@@ -218,7 +218,7 @@ impl<'a> Evaluator<'a> {
     */
     pub fn subtype<'b>(&self, ty1: &TyV, ty2: &TyV) -> Result<(), D<'b>> {
         self.convertable_ty(ty1, ty2)?;
-        let (n, self1) = self.bind_neu(NameSegment::Text(ustr("self")), ty1.clone());
+        let (n, _) = self.bind_neu(NameSegment::Text(ustr("self")), ty1.clone());
         let v = self.eta_neu(&n, ty1);
         self.element_of(&v, ty2)
     }

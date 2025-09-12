@@ -13,7 +13,6 @@ serde-wasm = ["serde", "dep:wasm-bindgen", "dep:tsify", "dep:instant", "instant/
 
 [dependencies]
 bwd = "0.2.1"
-clap = { version = "4.5.47", features = ["derive"] }
 derivative = "2"
 derive_more = { version = "2", features = ["constructor", "from", "into"] }
 duplicate = "2"
@@ -31,7 +30,7 @@ pretty = "0.12.4"
 ref-cast = "1"
 scopeguard = "1.2.0"
 serde = { version = "1", features = ["derive"], optional = true }
-tattle = "0.4.2"
+tattle = "0.4.3"
 thiserror = "1"
 tsify = { version = "0.5", features = ["js"], optional = true }
 ustr = "1"
@@ -39,10 +38,12 @@ uuid = { version = "1.18" }
 wasm-bindgen = { version = "0.2.100", optional = true }
 
 [dev-dependencies]
+clap = { version = "4.5.47", features = ["derive"] }
 notify = "8.2.0"
 notify-debouncer-full = "0.6.0"
 expect-test = "1.5"
 textplots = "0.8.7"
+similar = "2.7.0"
 
 [[example]]
 name = "check"

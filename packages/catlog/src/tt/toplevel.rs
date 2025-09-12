@@ -2,7 +2,6 @@
 
 Specifically, notebooks will produce [TopDecl::Type] declarations.
 */
-use std::fmt;
 
 use crate::{
     dbl::theory::DiscreteDblTheory,

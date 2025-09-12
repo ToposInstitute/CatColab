@@ -3,17 +3,11 @@
 TODO: write high-level description.
 */
 
-#[allow(unused)]
+pub mod batch;
 pub mod elab;
-#[allow(unused)]
 pub mod eval;
-#[allow(unused)]
-mod prelude;
-#[allow(unused)]
+pub mod prelude;
 pub mod stx;
-#[allow(unused)]
 pub mod toplevel;
-#[allow(unused)]
 pub mod util;
-#[allow(unused)]
 pub mod val;

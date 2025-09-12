@@ -218,7 +218,7 @@ impl TyS {
                     .iter()
                     .map(|(name, ty)| binop(":", t(format!("{}", name)).group(), ty.to_doc())),
             ),
-            TyS_::Sing(_, tm) => (t("@sing") + s() + tm.to_doc()),
+            TyS_::Sing(_, tm) => t("@sing") + s() + tm.to_doc(),
             TyS_::Specialize(ty, d) => binop(
                 "&",
                 ty.to_doc(),
@@ -232,7 +232,7 @@ impl TyS {
 fn path_to_string(path: &[FieldName]) -> String {
     let mut out = String::new();
     for seg in path {
-        write!(&mut out, ".{}", seg);
+        write!(&mut out, ".{}", seg).unwrap();
     }
     out
 }

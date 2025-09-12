@@ -1,9 +1,11 @@
 type u := Unit
+/# declared: u
 
 type u2 := u
+/# declared: u2
 
-#/ The unique element of Unit
 def t : u := 'tt
+/# declared: t
 
 type WeightedGraph := [
   V : Entity,
@@ -13,12 +15,14 @@ type WeightedGraph := [
   tgt : (Id Entity)[E, V],
   weight : Attr[E, Weight]
 ]
+/# declared: WeightedGraph
 
 type EntityArr := [
   dom : Entity,
   cod : Entity,
   arr : (Id Entity)[dom, cod]
 ]
+/# declared: EntityArr
 
 type Graph1 := [
   V : Entity,
@@ -26,24 +30,41 @@ type Graph1 := [
   src : EntityArr & [ .dom := E, .cod := V ],
   tgt : EntityArr & [ .dom := E, .cod := V ],
 ]
+/# declared: Graph1
 
 chk [G : Graph1] (G.src.arr : (Id Entity)[G.E, G.V])
+/# result: G.src.arr
 
 chk [G : Graph1] (G.src : EntityArr)
+/# result: G.src
 
 chk [G : Graph1] (G.src : EntityArr & [ .dom := G.E ] )
+/# result: G.src
 
-#(should_fail)
 chk [G : Graph1] (G.src : EntityArr & [ .dom := G.V ] )
+/# expected errors:
+/# error[elab]: evaluated term [ dom := G.E, cod := G.V, arr := tt ] is not an element of specialized type [ dom : Entity, cod : Entity, arr : (Id Entity)[ self.dom, self.cod ] ] &
+/#   [ .dom : @sing G.V ]:
+/# Neutrals G.E and G.V are not equal.
+/# --> examples/test.dbltt:37:19
+/# 37| chk [G : Graph1] (G.src : EntityArr & [ .dom := G.V ] )
+/# 37|                   ^^^^^
 
 norm [x : [a : Entity, b : @sing a]] x.b
+/# result: x.a
 
-#(should_fail)
 type Graph1 := [
   V : Entity,
   E : Entity,
   src : EntityArr & [ .dom := E, .dom := V ]
 ]
+/# expected errors:
+/# error[elab]: Failed to specialize:
+/# ... because @sing self.V is not a subtype of @sing self.E:
+/# ... because Neutrals self.V and self.E are not equal.
+/# --> examples/test.dbltt:45:34
+/# 45|   src : EntityArr & [ .dom := E, .dom := V ]
+/# 45|                                  ^^^^^^^^^
 
 type Graph := [
   V : Entity,
@@ -51,6 +72,7 @@ type Graph := [
   src : (Id Entity)[E, V],
   tgt : (Id Entity)[E, V]
 ]
+/# declared: Graph
 
 def reverse[G : Graph] : Graph := [
   V := G.V,
@@ -58,17 +80,26 @@ def reverse[G : Graph] : Graph := [
   src := G.tgt,
   tgt := G.src
 ]
+/# declared: reverse
 
-#(should_fail)
 def reverse[G : Graph] : Graph := [
   V := G.E,
   E := G.E,
   src := G.tgt,
   tgt := G.src
 ]
+/# expected errors:
+/# error[elab]: synthesized type (Id Entity)[ G.E, G.V ] does not match expected type (Id Entity)[ G.E, G.E ]:
+/# could not convert codomains: Neutrals G.V and G.E are not equal.
+/# --> examples/test.dbltt:66:10
+/# 66|   src := G.tgt,
+/# 66|          ^^^^^
 
 norm [G : Graph] (reverse[G]).E
+/# result: G.E
+
 syn [G : Graph] (reverse[G]).src
+/# result: reverse[ G ].src : (Id Entity)[ G.E, G.V ]
 
 type ReflexiveGraph := [
   V : Entity,
@@ -77,7 +108,11 @@ type ReflexiveGraph := [
   tgt : (Id Entity)[E, V],
   refl : (Id Entity)[V, E]
 ]
+/# declared: ReflexiveGraph
 
 def edge_id[G : ReflexiveGraph] : (Id Entity)[G.E, G.E] := @id G.E
+/# declared: edge_id
 
 def edge_src[G : ReflexiveGraph] : (Id Entity)[G.E, G.E] := G.src * G.refl
+/# declared: edge_src
+
