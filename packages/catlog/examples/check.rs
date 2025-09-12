@@ -79,7 +79,7 @@ fn run(path: &str) -> io::Result<()> {
                             toplevel.declarations.insert(name_segment, top_decl);
                         }
                         TopElabResult::Output(s) => {
-                            reporter.info(s);
+                            println!("> {}\n{}\n", topntn.loc.slice(&src), s);
                         }
                     }
                 }

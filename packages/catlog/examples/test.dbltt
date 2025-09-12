@@ -64,4 +64,5 @@ def reverse[G : Graph] : Graph := [
   tgt := G.src
 ]
 
-norm [G : Graph] (reverse[G]).V
+norm [G : Graph] (reverse[G]).E
+syn [G : Graph] (reverse[G]).src
