@@ -110,7 +110,7 @@ impl BatchOutput {
                         writeln!(out, "/# {l}").unwrap();
                     }
                 }
-                writeln!(out, "").unwrap();
+                writeln!(out).unwrap();
             }
             BatchOutput::Interactive => {
                 if should_fail {
@@ -194,10 +194,8 @@ pub fn run(path: &str, output: &BatchOutput) -> io::Result<bool> {
                         }
                     }
                 }
-            } else {
-                if !should_fail {
-                    succeeded = false;
-                }
+            } else if !should_fail {
+                succeeded = false;
             }
             output.display_errors(should_fail, &reporter, &source_info);
         }
