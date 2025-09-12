@@ -268,6 +268,10 @@ pub enum TmS_ {
     Id(TmS),
     /** Composition of two morphisms */
     Compose(TmS, TmS),
+    /** An opaque term.
+
+    This only appears when we quote a value */
+    Opaque,
 }
 
 /** Syntax for total terms, dereferences to [TmS_].
@@ -327,6 +331,11 @@ impl TmS {
         Self(Rc::new(TmS_::Compose(f, g)))
     }
 
+    /// An opaque term
+    pub fn opaque() -> Self {
+        Self(Rc::new(TmS_::Opaque))
+    }
+
     fn to_doc<'a>(&self) -> D<'a> {
         match &**self {
             TmS_::TopVar(name) => t(format!("{}", name)),
@@ -343,6 +352,7 @@ impl TmS {
             TmS_::Id(ob) => (t("@id") + s() + ob.to_doc()).parens(),
             TmS_::Compose(f, g) => binop("·", f.to_doc(), g.to_doc()),
             TmS_::Tt => t("tt"),
+            TmS_::Opaque => t("<opaque>"),
         }
     }
 }

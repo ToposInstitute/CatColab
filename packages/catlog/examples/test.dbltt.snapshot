@@ -43,7 +43,7 @@ chk [G : Graph1] (G.src : EntityArr & [ .dom := G.E ] )
 
 chk [G : Graph1] (G.src : EntityArr & [ .dom := G.V ] )
 /# expected errors:
-/# error[elab]: evaluated term [ dom := G.E, cod := G.V, arr := tt ] is not an element of specialized type [ dom : Entity, cod : Entity, arr : (Id Entity)[ self.dom, self.cod ] ] &
+/# error[elab]: evaluated term [ dom := G.E, cod := G.V, arr := <opaque> ] is not an element of specialized type [ dom : Entity, cod : Entity, arr : (Id Entity)[ self.dom, self.cod ] ] &
 /#   [ .dom : @sing G.V ]:
 /# Neutrals G.E and G.V are not equal.
 /# --> examples/test.dbltt:37:19

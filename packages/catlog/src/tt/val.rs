@@ -250,6 +250,8 @@ pub enum TmV {
     Cons(Row<TmV>),
     /// The unique element of `Ty0::Unit`.
     Tt,
+    /// An element of a type that is opaque to conversion checking
+    Opaque,
 }
 
 impl TmV {

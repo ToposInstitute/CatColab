@@ -88,8 +88,9 @@ impl<'a> Evaluator<'a> {
             }
             TmS_::Proj(tm, field) => self.proj(&self.eval_tm(tm), *field),
             TmS_::Tt => TmV::Tt,
-            TmS_::Id(_) => TmV::Tt,
-            TmS_::Compose(_, _) => TmV::Tt,
+            TmS_::Id(_) => TmV::Opaque,
+            TmS_::Compose(_, _) => TmV::Opaque,
+            TmS_::Opaque => TmV::Opaque,
         }
     }
 
@@ -208,6 +209,7 @@ impl<'a> Evaluator<'a> {
                 TmS::cons(fields.iter().map(|(name, tm)| (*name, self.quote_tm(tm))).collect())
             }
             TmV::Tt => TmS::tt(),
+            TmV::Opaque => TmS::opaque(),
         }
     }
 
@@ -302,7 +304,7 @@ impl<'a> Evaluator<'a> {
     pub fn eta_neu(&self, n: &TmN, ty: &TyV) -> TmV {
         match &**ty {
             TyV_::Object(_) => TmV::Neu(n.clone(), ty.clone()),
-            TyV_::Morphism(_, _, _) => TmV::Tt,
+            TyV_::Morphism(_, _, _) => TmV::Opaque,
             TyV_::Record(r) => {
                 let mut fields = Row::empty();
                 for (name, _) in r.fields1.iter() {
@@ -327,6 +329,7 @@ impl<'a> Evaluator<'a> {
                     .collect(),
             ),
             TmV::Tt => TmV::Tt,
+            TmV::Opaque => TmV::Opaque,
         }
     }
 
@@ -378,6 +381,7 @@ impl<'a> Evaluator<'a> {
                 Ok(())
             }
             (TmV::Tt, TmV::Tt) => Ok(()),
+            (TmV::Opaque, TmV::Opaque) => Ok(()),
             _ => Err(t(format!(
                 "failed to match terms {} and {}",
                 self.quote_tm(tm1),
