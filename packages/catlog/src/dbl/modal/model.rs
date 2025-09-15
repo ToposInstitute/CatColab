@@ -75,10 +75,8 @@ impl MorListData {
 #[derive(Clone)]
 pub struct ModalDblModel {
     theory: Rc<ModalDblTheory>,
-    /// Object generators
-    pub ob_generators: HashFinSet<QualifiedName>,
-    /// Morphism generators
-    pub mor_generators: ComputadTop<ModalOb, QualifiedName>,
+    ob_generators: HashFinSet<QualifiedName>,
+    mor_generators: ComputadTop<ModalOb, QualifiedName>,
     // TODO: Equations
     ob_types: HashColumn<QualifiedName, ModalObType>,
     mor_types: HashColumn<QualifiedName, ModalMorType>,

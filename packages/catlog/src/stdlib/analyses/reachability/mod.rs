@@ -1,13 +1,14 @@
 //! Reachability analyses of models.
 
 use itertools::Itertools;
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 use crate::dbl::modal::model::{ModalDblModel, ModalOb};
+use crate::one::category::FgCategory;
 use crate::zero::QualifiedName;
-use crate::zero::{FinSet, MutMapping};
 use std::collections::HashMap;
+
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify::Tsify;
 
@@ -28,46 +29,41 @@ pub struct ReachabilityProblemData {
 }
 
 /// The "Region Algebra for Petri Nets" algorithm from Ch 31 of
-/// the Handbook of Model Checking: "Symbolic Model Checking in Non Boolean
-/// Domains".
-pub fn reachability(m: &ModalDblModel, data: ReachabilityProblemData) -> Result<bool, String> {
+/// ([Clarke et al 2018](crate::refs::HandbookModelChecking)):
+/// "Symbolic Model Checking in Non Boolean Domains".
+pub fn subreachability(m: &ModalDblModel, data: ReachabilityProblemData) -> bool {
     // Convert model into a pair of matrices
     //--------------------------------------
 
     // Get a canonical ordering of the objects
-    let ob_vec: Vec<QualifiedName> = data.tokens.keys().cloned().sorted().collect();
-    let ob_inv: HashMap<QualifiedName, usize> =
-        ob_vec.iter().enumerate().map(|(x, y)| (y.clone(), x)).collect();
-    let n_p: usize = ob_vec.len();
+    let ob_vec: Vec<_> = m.ob_generators().sorted().collect();
+    let ob_inv: HashMap<_, _> = ob_vec.iter().enumerate().map(|(x, y)| (y.clone(), x)).collect();
+    let n_p = ob_vec.len();
     if n_p == 0 {
-        return Ok(true);
+        return true;
     }
 
     // Get a canonical ordering of the homs
-    let hom_vec: Vec<QualifiedName> = m.mor_generators.edge_set.iter().sorted().collect();
+    let hom_vec: Vec<_> = m.mor_generators().sorted().collect();
 
-    let hom_inv: HashMap<QualifiedName, usize> =
-        hom_vec.iter().enumerate().map(|(x, y)| (y.clone(), x)).collect();
+    let hom_inv: HashMap<_, _> = hom_vec.iter().enumerate().map(|(x, y)| (y.clone(), x)).collect();
     let n_t = hom_vec.len();
 
     // Populate the I/O matrices from the hom src/tgt data
     let mut i_mat = vec![vec![0; n_t]; n_p];
     let mut o_mat = vec![vec![0; n_t]; n_p];
 
-    for e in m.mor_generators.edge_set.clone() {
-        let e_idx =
-            *hom_inv.get(&e).unwrap_or_else(|| panic!("Hom inv missing {e:?}\n{hom_inv:?}"));
-        if let Some(vs) = m.mor_generators.src_map.get(&e).unwrap().clone().collect_product(None) {
+    for e in m.mor_generators() {
+        let e_idx = *hom_inv.get(&e).unwrap();
+        if let Some(vs) = m.mor_generator_dom(&e).collect_product(None) {
             for v in vs.iter() {
                 if let ModalOb::Generator(u) = v {
-                    i_mat[*ob_inv
-                        .get(u)
-                        .unwrap_or_else(|| panic!("Ob inv missing {u:?}\n{ob_inv:?}"))][e_idx] += 1;
+                    i_mat[*ob_inv.get(u).unwrap()][e_idx] += 1;
                 }
             }
         }
 
-        if let Some(vs) = m.mor_generators.tgt_map.get(&e).unwrap().clone().collect_product(None) {
+        if let Some(vs) = m.mor_generator_cod(&e).collect_product(None) {
             for v in vs.iter() {
                 if let ModalOb::Generator(u) = v {
                     o_mat[*ob_inv.get(u).unwrap()][e_idx] += 1;
@@ -79,28 +75,16 @@ pub fn reachability(m: &ModalDblModel, data: ReachabilityProblemData) -> Result<
 
     // Parse input data
     //-----------------
-    let mut f: Vec<Vec<i32>> = vec![
-        ob_vec
-            .iter()
-            .map(|u| {
-                *data
-                    .forbidden
-                    .get(u)
-                    .unwrap_or_else(|| panic!("Missing key {u:?} in data.forbidden"))
-            })
-            .collect(),
-    ];
-    let init: Vec<i32> = ob_vec
-        .iter()
-        .map(|u| *data.tokens.get(u).unwrap_or_else(|| panic!("Missing key {u:?} in data.tokens")))
-        .collect();
+    let mut f: Vec<Vec<_>> =
+        vec![ob_vec.iter().map(|u| *data.forbidden.get(u).unwrap_or(&0)).collect()];
+    let init: Vec<_> = ob_vec.iter().map(|u| *data.tokens.get(u).unwrap_or(&0)).collect();
 
     // Apply recursive algorithm until fix point
     //------------------------------------------
     loop {
         // For each transition + region (in `f`) pair `(t,v)`, compute the
         // region that accesses `v` via firing `t`.
-        let pre: Vec<Vec<i32>> = (0..n_t)
+        let pre: Vec<Vec<_>> = (0..n_t)
             .flat_map(|t| {
                 f.iter().map(move |v| {
                     (0..n_p).map(move |p| {
@@ -112,7 +96,7 @@ pub fn reachability(m: &ModalDblModel, data: ReachabilityProblemData) -> Result<
             .collect();
 
         // Filter `pre` for regions which are not already in `f`.
-        let newstuff: Vec<Vec<i32>> = pre
+        let newstuff: Vec<Vec<_>> = pre
             .into_iter()
             .filter(|v| f.iter().all(|old| (0..n_p).any(|p| v[p] < old[p])))
             .unique()
@@ -131,7 +115,7 @@ pub fn reachability(m: &ModalDblModel, data: ReachabilityProblemData) -> Result<
     // Check whether input tokening lies within the region which can access
     // the forbidden state, `init`.
     let init_in_forbbiden = f.iter().any(|v| (0..n_p).all(|p| v[p] <= init[p]));
-    Ok(!init_in_forbbiden)
+    !init_in_forbbiden
 }
 
 #[cfg(test)]
@@ -168,7 +152,7 @@ mod tests {
     /// Made Complete and Efficient" for a more efficient algorithm which allows
     /// "inf" as a possible specification of an invalid state.
     #[test]
-    fn validate_reachability() {
+    fn validate_subreachability() {
         // Define a petri net
         let th = Rc::new(th_sym_monoidal_category());
         let (ob_type, op) = (ModalObType::new(name("Object")), name("tensor"));
@@ -210,7 +194,7 @@ mod tests {
                 tokens: HashMap::from_iter([(p1, x1), (p2, x2), (p3, x3)]),
                 forbidden: forbidden.clone(),
             };
-            assert_eq!(reachability(m, data), Ok(expect));
+            assert_eq!(subreachability(m, data), expect);
         }
 
         test_input(&model, 0, 0, 2, false);

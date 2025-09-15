@@ -17,7 +17,6 @@ console_error_panic_hook = { version = "0.1.7", optional = true }
 derive_more = { version = "2", features = ["from", "try_into"] }
 getrandom_v03 = { package = "getrandom", version = "0.3", features = ["wasm_js"] }
 getrandom_v02 = { package = "getrandom", version = "0.2", features = ["js"] }
-itertools = "0.14.0"
 js-sys = "0.3.77"
 nonempty = { version = "0.12", features = ["serialize"] }
 notebook-types = { version = "0.1.0", path = "../notebook-types" }

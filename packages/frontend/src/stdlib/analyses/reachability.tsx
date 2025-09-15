@@ -1,9 +1,8 @@
-import type { DblModel, ReachabilityProblemData } from "catlog-wasm";
+import type { DblModel, ReachabilityProblemData, QualifiedName } from "catlog-wasm";
 import { createMemo } from "solid-js";
 import type { ModelAnalysisProps } from "../../analysis";
 import { type ColumnSchema, FixedTableEditor, createNumericalColumn } from "../../components";
 
-import type { ObjectDecl } from "../../model";
 import type { ModelAnalysisMeta } from "../../theory";
 
 import "./simulation.css";
@@ -22,10 +21,10 @@ export function configureReachability(options: {
     simulate: Simulator;
 }): ModelAnalysisMeta<ReachabilityContent> {
     const {
-        id = "reachability",
-        name = "Reachability model checking",
+        id = "subreachability",
+        name = "Sub-reachability model checking",
         description = "Check a Reachability formula",
-        help = "reachability",
+        help = "subreachability",
         ...otherOptions
     } = options;
     return {
@@ -45,54 +44,64 @@ export function Reachability(
         title?: string;
     },
 ) {
-    const obDecls = createMemo<ObjectDecl[]>(() => {
-        return props.liveModel.formalJudgments().filter((jgmt) => jgmt.tag === "object");
+    const elaboratedModel = () => props.liveModel.elaboratedModel();
+    const obGenerators = createMemo<QualifiedName[]>(() => {
+        const model = elaboratedModel();
+        if (!model) {
+            return [];
+        }
+        return model
+            .obGenerators()
+            .filter((id) => model.obType({ tag: "Basic", content: id }));
     }, []);
 
-    const obSchema: ColumnSchema<ObjectDecl>[] = [
+    const obSchema: ColumnSchema<QualifiedName>[] = [
         {
             contentType: "string",
             header: true,
-            content: (ob) => ob.name,
+            content: (id) => elaboratedModel()?.obGeneratorLabel(id)?.join(".") ?? "",
         },
         createNumericalColumn({
             name: "Initial value",
-            data: (ob) => props.content.tokens[ob.id],
+            data: (id) => props.content.tokens[id],
             validate: (_, data) => data >= 0,
-            setData: (ob, data) =>
+            setData: (id, data) =>
                 props.changeContent((content) => {
-                    content.tokens[ob.id] = data;
+                    content.tokens[id] = data;
                 }),
         }),
         createNumericalColumn({
             name: "Forbidden value",
-            data: (ob) => props.content.forbidden[ob.id],
+            data: (id) => props.content.forbidden[id],
             validate: (_, data) => data >= 0,
-            setData: (ob, data) =>
+            setData: (id, data) =>
                 props.changeContent((content) => {
-                    content.forbidden[ob.id] = data;
+                    content.forbidden[id] = data;
                 }),
         }),
     ];
 
-    const reachabilityResult = () => {
-        const validated = props.liveModel.validatedModel();
-
-        if (validated?.tag !== "Valid") {
-            return "failed";
-        } else {
-            const res = props.simulate(validated.model, props.content);
-            return res
-                ? "\u2705: the forbidden tokening is not reachable"
-                : "\u274C: the forbidden tokening is reachable";
-        }
-    };
+    const reachabilityMemo = createMemo<string | undefined>(
+            () => {
+                const validated = props.liveModel.validatedModel();
+                if (validated?.tag !== "Valid") {
+                    return ;
+                } else {
+                    const res = props.simulate(validated.model, props.content);
+                    return res
+                        ? "\u2705: the forbidden tokening is not reachable"
+                        : "\u274C: the forbidden tokening is reachable";
+                }
+            },
+            undefined,
+            { equals: false },
+        );
 
     return (
         <div class="simulation">
             <p> {"Reachability analysis"} </p>
-            <FixedTableEditor rows={obDecls()} schema={obSchema} />
-            <p> {reachabilityResult()} </p>
+            <FixedTableEditor rows={obGenerators()} schema={obSchema} />
+            <p> {reachabilityMemo()} </p>
         </div>
     );
 }

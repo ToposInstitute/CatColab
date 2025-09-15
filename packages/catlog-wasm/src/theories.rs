@@ -15,7 +15,6 @@ use catlog::zero::name;
 
 use super::model_morphism::{MotifOccurrence, MotifsOptions, motifs};
 use super::{analyses::*, model::DblModel, theory::DblTheory};
-
 /// The empty or initial theory.
 #[wasm_bindgen]
 pub struct ThEmpty(Rc<theory::DiscreteDblTheory>);
@@ -336,14 +335,14 @@ impl ThSymMonoidalCategory {
         ))
     }
     /// Solve the subreachability problem for petri nets.
-    #[wasm_bindgen(js_name = "reachability")]
-    pub fn reachability(
+    #[wasm_bindgen(js_name = "subreachability")]
+    pub fn subreachability(
         &self,
         model: &DblModel,
-        data: ReachabilityModelData,
+        data: catlog::stdlib::analyses::reachability::ReachabilityProblemData,
     ) -> Result<bool, String> {
         let m: &ModalDblModel = model.modal().map_err(|_| "Model should be of a modal theory")?;
-        catlog::stdlib::analyses::reachability::reachability(m, data.0)
+        Ok(catlog::stdlib::analyses::reachability::subreachability(m, data))
     }
 }
 
