@@ -5,9 +5,9 @@ methods for theory-specific analyses.
  */
 
 use std::rc::Rc;
+
 use wasm_bindgen::prelude::*;
 
-use catlog::dbl::modal::model::ModalDblModel;
 use catlog::dbl::theory;
 use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
@@ -15,6 +15,7 @@ use catlog::zero::name;
 
 use super::model_morphism::{MotifOccurrence, MotifsOptions, motifs};
 use super::{analyses::*, model::DblModel, theory::DblTheory};
+
 /// The empty or initial theory.
 #[wasm_bindgen]
 pub struct ThEmpty(Rc<theory::DiscreteDblTheory>);
@@ -339,10 +340,10 @@ impl ThSymMonoidalCategory {
     pub fn subreachability(
         &self,
         model: &DblModel,
-        data: catlog::stdlib::analyses::reachability::ReachabilityProblemData,
+        data: analyses::reachability::ReachabilityProblemData,
     ) -> Result<bool, String> {
-        let m: &ModalDblModel = model.modal().map_err(|_| "Model should be of a modal theory")?;
-        Ok(catlog::stdlib::analyses::reachability::subreachability(m, data))
+        let model = model.modal().map_err(|_| "Model should be of a modal theory")?;
+        Ok(analyses::reachability::subreachability(model, data))
     }
 }
 

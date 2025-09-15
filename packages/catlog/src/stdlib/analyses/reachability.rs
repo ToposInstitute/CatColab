@@ -1,18 +1,18 @@
 //! Reachability analyses of models.
 
 use itertools::Itertools;
+use std::collections::HashMap;
 
 use crate::dbl::modal::model::{ModalDblModel, ModalOb};
 use crate::one::category::FgCategory;
 use crate::zero::QualifiedName;
-use std::collections::HashMap;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify::Tsify;
 
-/// Data defining a mass-action ODE problem for a model.
+/// Data defining a reachability problem for a Petri net.
 #[derive(Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
@@ -21,10 +21,10 @@ use tsify::Tsify;
     tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
 )]
 pub struct ReachabilityProblemData {
-    /// Map from morphism IDs to rate coefficients (nonnegative reals).
+    /// Map from place IDs to number of initial token of that type.
     pub tokens: HashMap<QualifiedName, i32>,
 
-    /// Map from object IDs to initial values (nonnegative reals).
+    /// Map from place IDs to number of forbidden tokens of that type.
     pub forbidden: HashMap<QualifiedName, i32>,
 }
 
