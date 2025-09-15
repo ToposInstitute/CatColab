@@ -1,18 +1,23 @@
-import type { DblModel, QualifiedName, ReachabilityProblemData } from "catlog-wasm";
-import { createMemo } from "solid-js";
-import type { ModelAnalysisProps } from "../../analysis";
-import { type ColumnSchema, FixedTableEditor, createNumericalColumn } from "../../components";
+import { Match, Switch, createMemo } from "solid-js";
 
+import type { DblModel, QualifiedName, ReachabilityProblemData } from "catlog-wasm";
+import type { ModelAnalysisProps } from "../../analysis";
+import {
+    type ColumnSchema,
+    FixedTableEditor,
+    PanelHeader,
+    createNumericalColumn,
+} from "../../components";
 import type { ModelAnalysisMeta } from "../../theory";
 
 import "./simulation.css";
 
-/** Configuration for a mass-action ODE analysis of a model. */
+/** Configuration for a reachability analysis of a model. */
 export type ReachabilityContent = ReachabilityProblemData;
 
 type Simulator = (model: DblModel, data: ReachabilityContent) => boolean;
 
-/** Configure a mass-action ODE analysis for use with models of a theory. */
+/** Configure a reachability analysis for use with models of a theory. */
 export function configureReachability(options: {
     id?: string;
     name?: string;
@@ -23,7 +28,7 @@ export function configureReachability(options: {
     const {
         id = "subreachability",
         name = "Sub-reachability model checking",
-        description = "Check a Reachability formula",
+        description = "Check that forbidden tokenings are unreachable",
         help = "subreachability",
         ...otherOptions
     } = options;
@@ -37,7 +42,7 @@ export function configureReachability(options: {
     };
 }
 
-/** Analyze a model using Reachability formula. */
+/** Check a reachability property in a model. */
 export function Reachability(
     props: ModelAnalysisProps<ReachabilityContent> & {
         simulate: Simulator;
@@ -45,13 +50,11 @@ export function Reachability(
     },
 ) {
     const elaboratedModel = () => props.liveModel.elaboratedModel();
-    const obGenerators = createMemo<QualifiedName[]>(() => {
-        const model = elaboratedModel();
-        if (!model) {
-            return [];
-        }
-        return model.obGenerators().filter((id) => model.obType({ tag: "Basic", content: id }));
-    }, []);
+
+    const obGenerators = createMemo<QualifiedName[]>(
+        () => elaboratedModel()?.obGenerators() ?? [],
+        [],
+    );
 
     const obSchema: ColumnSchema<QualifiedName>[] = [
         {
@@ -60,7 +63,7 @@ export function Reachability(
             content: (id) => elaboratedModel()?.obGeneratorLabel(id)?.join(".") ?? "",
         },
         createNumericalColumn({
-            name: "Initial value",
+            name: "Initial tokens",
             data: (id) => props.content.tokens[id],
             validate: (_, data) => data >= 0,
             setData: (id, data) =>
@@ -69,7 +72,7 @@ export function Reachability(
                 }),
         }),
         createNumericalColumn({
-            name: "Forbidden value",
+            name: "Forbidden tokens",
             data: (id) => props.content.forbidden[id],
             validate: (_, data) => data >= 0,
             setData: (id, data) =>
@@ -79,27 +82,27 @@ export function Reachability(
         }),
     ];
 
-    const reachabilityMemo = createMemo<string | undefined>(
-        () => {
-            const validated = props.liveModel.validatedModel();
-            if (validated?.tag !== "Valid") {
-                return;
-            } else {
-                const res = props.simulate(validated.model, props.content);
-                return res
-                    ? "\u2705: the forbidden tokening is not reachable"
-                    : "\u274C: the forbidden tokening is reachable";
-            }
-        },
-        undefined,
-        { equals: false },
-    );
+    const isForbiddenUnreachable = createMemo<boolean | undefined>(() => {
+        const validated = props.liveModel.validatedModel();
+        if (validated?.tag !== "Valid") {
+            return;
+        } else {
+            return props.simulate(validated.model, props.content);
+        }
+    }, undefined);
 
     return (
         <div class="simulation">
-            <p> {"Reachability analysis"} </p>
+            <PanelHeader title="Subreachability analysis" />
             <FixedTableEditor rows={obGenerators()} schema={obSchema} />
-            <p> {reachabilityMemo()} </p>
+            <Switch>
+                <Match when={isForbiddenUnreachable() === false}>
+                    <p>{"\u274C forbidden tokening is reachable"}</p>
+                </Match>
+                <Match when={isForbiddenUnreachable() === true}>
+                    <p>{"\u2705 forbidden tokening is not reachable"}</p>
+                </Match>
+            </Switch>
         </div>
     );
 }
