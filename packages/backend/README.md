@@ -4,6 +4,8 @@ This directory contains the web server for the CatColab application, written in
 Rust using the [`sqlx`](https://github.com/launchbadge/sqlx) bindings for
 PostgreSQL and the [`axum`](https://github.com/tokio-rs/axum) web framework.
 
+You can find the auto-generated documentation for this Rust crate at [next.catcolab.org/dev/rust/backend/](https://next.catcolab.org/dev/rust/backend/).
+
 ## Setup
 
 1. Install Rust, say by using [rustup](https://rustup.rs/)
@@ -18,8 +20,12 @@ PostgreSQL and the [`axum`](https://github.com/tokio-rs/axum) web framework.
 
 ## Usage
 
-The CatColab backend consists of two services: the main web server (this
-package) and the [Automerge document server](../automerge-doc-server). To run
+The CatColab backend consists of two services:
+
+1. the main web server (this package)
+2. the [Automerge document server](../automerge-doc-server).
+
+To run
 the backend locally, launch the two services by running the following commands
 in separate terminals, in any order:
 
