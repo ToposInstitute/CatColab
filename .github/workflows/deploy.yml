@@ -181,7 +181,7 @@ jobs:
           mv math-docs site/math
           echo '/dev/rust /dev/rust/catlog' >> site/_redirects
           echo '/dev/core /dev/rust/catlog' >> site/_redirects
-          echo '/dev/backend /dev/rust/catcolab_backend' >> site/_redirects
+          echo '/dev/catcolab_backend /dev/rust/backend' >> site/_redirects
           echo '/math /math/index.xml' >> site/_redirects
           echo '/maths /math/index.xml' >> site/_redirects
           echo '/* /index.html 200' >> site/_redirects
