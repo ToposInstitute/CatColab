@@ -1,4 +1,4 @@
-import type { DblModel, ReachabilityProblemData, QualifiedName } from "catlog-wasm";
+import type { DblModel, QualifiedName, ReachabilityProblemData } from "catlog-wasm";
 import { createMemo } from "solid-js";
 import type { ModelAnalysisProps } from "../../analysis";
 import { type ColumnSchema, FixedTableEditor, createNumericalColumn } from "../../components";
@@ -50,9 +50,7 @@ export function Reachability(
         if (!model) {
             return [];
         }
-        return model
-            .obGenerators()
-            .filter((id) => model.obType({ tag: "Basic", content: id }));
+        return model.obGenerators().filter((id) => model.obType({ tag: "Basic", content: id }));
     }, []);
 
     const obSchema: ColumnSchema<QualifiedName>[] = [
@@ -82,20 +80,20 @@ export function Reachability(
     ];
 
     const reachabilityMemo = createMemo<string | undefined>(
-            () => {
-                const validated = props.liveModel.validatedModel();
-                if (validated?.tag !== "Valid") {
-                    return ;
-                } else {
-                    const res = props.simulate(validated.model, props.content);
-                    return res
-                        ? "\u2705: the forbidden tokening is not reachable"
-                        : "\u274C: the forbidden tokening is reachable";
-                }
-            },
-            undefined,
-            { equals: false },
-        );
+        () => {
+            const validated = props.liveModel.validatedModel();
+            if (validated?.tag !== "Valid") {
+                return;
+            } else {
+                const res = props.simulate(validated.model, props.content);
+                return res
+                    ? "\u2705: the forbidden tokening is not reachable"
+                    : "\u274C: the forbidden tokening is reachable";
+            }
+        },
+        undefined,
+        { equals: false },
+    );
 
     return (
         <div class="simulation">
