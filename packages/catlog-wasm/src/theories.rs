@@ -335,6 +335,16 @@ impl ThSymMonoidalCategory {
                 .into(),
         ))
     }
+    /// Solve the subreachability problem for petri nets.
+    #[wasm_bindgen(js_name = "subreachability")]
+    pub fn subreachability(
+        &self,
+        model: &DblModel,
+        data: analyses::reachability::ReachabilityProblemData,
+    ) -> Result<bool, String> {
+        let model = model.modal().map_err(|_| "Model should be of a modal theory")?;
+        Ok(analyses::reachability::subreachability(model, data))
+    }
 }
 
 #[cfg(test)]

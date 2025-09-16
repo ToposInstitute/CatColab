@@ -145,3 +145,12 @@ Joachim Kock, 2016. Graphs, hypergraphs, and properads.
 - [arXiv:1407.3744](https://arxiv.org/abs/1407.3744)
  */
 pub const KockGraphs: () = ();
+
+/** Reference: Handbook of Model Checking.
+
+Edmund M. Clarke, Thomas A. Henzinger, Helmut Veith, Roderick Bloem, 2018.
+Handbook of Model Checking.
+
+- [DOI:10.1007/978-3-319-10575-8](https://doi.org/10.1007/978-3-319-10575-8)
+ */
+pub const HandbookModelChecking: () = ();
