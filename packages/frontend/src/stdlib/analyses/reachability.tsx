@@ -15,7 +15,7 @@ import "./simulation.css";
 /** Configuration for a reachability analysis of a model. */
 export type ReachabilityContent = ReachabilityProblemData;
 
-type Simulator = (model: DblModel, data: ReachabilityContent) => boolean;
+type Checker = (model: DblModel, data: ReachabilityContent) => boolean;
 
 /** Configure a reachability analysis for use with models of a theory. */
 export function configureReachability(options: {
@@ -23,11 +23,11 @@ export function configureReachability(options: {
     name?: string;
     description?: string;
     help?: string;
-    simulate: Simulator;
+    check: Checker;
 }): ModelAnalysisMeta<ReachabilityContent> {
     const {
         id = "subreachability",
-        name = "Sub-reachability model checking",
+        name = "Sub-reachability check",
         description = "Check that forbidden tokenings are unreachable",
         help = "subreachability",
         ...otherOptions
@@ -45,7 +45,7 @@ export function configureReachability(options: {
 /** Check a reachability property in a model. */
 export function Reachability(
     props: ModelAnalysisProps<ReachabilityContent> & {
-        simulate: Simulator;
+        check: Checker;
         title?: string;
     },
 ) {
@@ -82,25 +82,24 @@ export function Reachability(
         }),
     ];
 
-    const isForbiddenUnreachable = createMemo<boolean | undefined>(() => {
+    const isChecked = createMemo<boolean | undefined>(() => {
         const validated = props.liveModel.validatedModel();
         if (validated?.tag !== "Valid") {
             return;
-        } else {
-            return props.simulate(validated.model, props.content);
         }
+        return props.check(validated.model, props.content);
     }, undefined);
 
     return (
         <div class="simulation">
-            <PanelHeader title="Subreachability analysis" />
+            <PanelHeader title={props.title} />
             <FixedTableEditor rows={obGenerators()} schema={obSchema} />
             <Switch>
-                <Match when={isForbiddenUnreachable() === false}>
-                    <p>{"\u274C forbidden tokening is reachable"}</p>
-                </Match>
-                <Match when={isForbiddenUnreachable() === true}>
+                <Match when={isChecked() === true}>
                     <p>{"\u2705 forbidden tokening is not reachable"}</p>
+                </Match>
+                <Match when={isChecked() === false}>
+                    <p>{"\u274C forbidden tokening is reachable"}</p>
                 </Match>
             </Switch>
         </div>
