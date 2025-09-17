@@ -14,6 +14,8 @@ type WeightedGraph := [
   weight : Attr[E, Weight]
 ]
 
+generate WeightedGraph
+
 type EntityArr := [
   dom : Entity,
   cod : Entity,
@@ -91,3 +93,5 @@ type Graph2 := [
 syn [g : Graph2] g.g1.V
 
 norm [g : Graph2] g.g1.V
+
+generate Graph2

@@ -1,12 +1,20 @@
 /*! Elaboration for doublett */
-use crate::dbl::{category::VDblCategory, theory::DblTheory};
+use crate::{
+    dbl::{
+        category::VDblCategory,
+        model::{DblModel, FgDblModel},
+        theory::DblTheory,
+    },
+    one::FgCategory,
+};
 use fnotation::*;
 use nonempty::nonempty;
 use scopeguard::{ScopeGuard, guard};
+use std::fmt::Write;
 use tattle::declare_error;
 
 use crate::{
-    tt::{eval::*, prelude::*, stx::*, toplevel::*, val::*},
+    tt::{eval::*, modelgen::*, prelude::*, stx::*, toplevel::*, val::*},
     zero::QualifiedName,
 };
 
@@ -157,6 +165,30 @@ impl<'a> TopElaborator<'a> {
                 let (_, ty_v) = elab.ty(ty_n)?;
                 let (tm_s, _) = elab.chk(&ty_v, tm_n)?;
                 Some(TopElabResult::Output(format!("{tm_s}")))
+            }
+            "generate" => {
+                let mut elab = self.elaborator();
+                let (_, ty_v) = elab.ty(tn.body)?;
+                let model = generate(self.toplevel, &ty_v);
+                let mut out = String::new();
+                writeln!(&mut out).unwrap();
+                writeln!(&mut out, "#/ object generators: ").unwrap();
+                for obgen in model.ob_generators() {
+                    writeln!(&mut out, "#/  {} : {}", obgen, model.ob_type(&obgen)).unwrap();
+                }
+                writeln!(&mut out, "#/ morphism generators: ").unwrap();
+                for morgen in model.mor_generators() {
+                    writeln!(
+                        &mut out,
+                        "#/  {} : {} -> {} ({})",
+                        morgen,
+                        model.mor_generator_dom(&morgen),
+                        model.mor_generator_cod(&morgen),
+                        MorphismType(model.mor_generator_type(&morgen))
+                    )
+                    .unwrap();
+                }
+                Some(TopElabResult::Output(out))
             }
             _ => self.error(tn.loc, "unknown toplevel declaration"),
         }

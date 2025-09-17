@@ -11,6 +11,7 @@ use crate::{stdlib, tt::*};
 use elab::*;
 use fnotation::parser::Prec;
 use fnotation::{FNtnTop, ParseConfig};
+use prelude::*;
 use scopeguard::guard;
 use tattle::display::SourceInfo;
 use tattle::{Reporter, declare_error};
@@ -24,7 +25,7 @@ const PARSE_CONFIG: ParseConfig = ParseConfig::new(
         ("*", Prec::lassoc(60)),
     ],
     &[":", ":=", "&", "Unit", "Id", "*"],
-    &["type", "def", "syn", "chk", "norm"],
+    &["type", "def", "syn", "chk", "norm", "generate"],
 );
 
 declare_error!(TOP_ERROR, "top", "an error at the top-level");
@@ -167,7 +168,7 @@ pub fn elaborate(src: &str, path: &str, output: &BatchOutput) -> io::Result<bool
     });
     let mut succeeded = true;
     let _ = PARSE_CONFIG.with_parsed_top(src, reporter.clone(), |topntns| {
-        let mut toplevel = Toplevel::new(stdlib::th_schema());
+        let mut toplevel = Toplevel::new(Rc::new(stdlib::th_schema()));
         for topntn in topntns.iter() {
             output.log_input(src, topntn);
             let mut should_fail = false;

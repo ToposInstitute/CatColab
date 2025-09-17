@@ -912,9 +912,9 @@ dependencies = [
 
 [[package]]
 name = "fnotation"
-version = "0.8.1"
+version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "022b6c756653ad725b475641caa29b074065b39bc7b060df71173b7afce61e57"
+checksum = "db95701550ee5c911d678a7b9da12d6fe4b2aa7a856c05ce2a3570d96e53dd39"
 dependencies = [
  "ansi_term",
  "bumpalo",

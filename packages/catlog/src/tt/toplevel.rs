@@ -63,14 +63,14 @@ impl TopDecl {
 /** Storage for toplevel declarations. */
 pub struct Toplevel {
     /// The theory that we are elaborating with respect to
-    pub theory: DiscreteDblTheory,
+    pub theory: Rc<DiscreteDblTheory>,
     /// The toplevel declarations, indexed by their name.
     pub declarations: HashMap<TopVarName, TopDecl>,
 }
 
 impl Toplevel {
     /// Constructor for an empty [Toplevel].
-    pub fn new(theory: DiscreteDblTheory) -> Self {
+    pub fn new(theory: Rc<DiscreteDblTheory>) -> Self {
         Toplevel {
             theory,
             declarations: HashMap::new(),
