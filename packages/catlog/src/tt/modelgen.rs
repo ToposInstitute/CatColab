@@ -14,7 +14,7 @@ pub fn generate(toplevel: &Toplevel, ty: &TyV) -> DiscreteDblModel {
     let (elt, eval) = eval.bind_neu(text_seg("self"), ty.clone());
     let elt = eval.eta_neu(&elt, ty);
     let mut out = DiscreteDblModel::new(toplevel.theory.clone());
-    extract_to(&eval, &mut out, vec![], &elt, &ty);
+    extract_to(&eval, &mut out, vec![], &elt, ty);
     out
 }
 
@@ -24,7 +24,7 @@ fn name_of(val: &TmV) -> QualifiedName {
     let mut n = val.as_neu();
     while let TmN_::Proj(n1, f) = &*n.clone() {
         n = n1.clone();
-        out.push(f.clone());
+        out.push(*f);
     }
     out.reverse();
     out.into()
