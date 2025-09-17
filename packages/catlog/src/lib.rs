@@ -32,4 +32,5 @@ pub mod dbl;
 pub mod one;
 pub mod simulate;
 pub mod stdlib;
+pub mod tt;
 pub mod zero;

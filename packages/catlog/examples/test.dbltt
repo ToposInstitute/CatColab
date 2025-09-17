@@ -1,0 +1,93 @@
+type u := Unit
+
+type u2 := u
+
+#/ The unique element of Unit
+def t : u := 'tt
+
+type WeightedGraph := [
+  V : Entity,
+  E : Entity,
+  Weight : AttrType,
+  src : (Id Entity)[E, V],
+  tgt : (Id Entity)[E, V],
+  weight : Attr[E, Weight]
+]
+
+type EntityArr := [
+  dom : Entity,
+  cod : Entity,
+  arr : (Id Entity)[dom, cod]
+]
+
+type Graph1 := [
+  V : Entity,
+  E : Entity,
+  src : EntityArr & [ .dom := E, .cod := V ],
+  tgt : EntityArr & [ .dom := E, .cod := V ],
+]
+
+chk [G : Graph1] (G.src.arr : (Id Entity)[G.E, G.V])
+
+chk [G : Graph1] (G.src : EntityArr)
+
+chk [G : Graph1] (G.src : EntityArr & [ .dom := G.E ] )
+
+#(should_fail)
+chk [G : Graph1] (G.src : EntityArr & [ .dom := G.V ] )
+
+norm [x : [a : Entity, b : @sing a]] x.b
+
+#(should_fail)
+type Graph1 := [
+  V : Entity,
+  E : Entity,
+  src : EntityArr & [ .dom := E, .dom := V ]
+]
+
+type Graph := [
+  V : Entity,
+  E : Entity,
+  src : (Id Entity)[E, V],
+  tgt : (Id Entity)[E, V]
+]
+
+def reverse[G : Graph] : Graph := [
+  V := G.V,
+  E := G.E,
+  src := G.tgt,
+  tgt := G.src
+]
+
+#(should_fail)
+def reverse[G : Graph] : Graph := [
+  V := G.E,
+  E := G.E,
+  src := G.tgt,
+  tgt := G.src
+]
+
+norm [G : Graph] (reverse[G]).E
+syn [G : Graph] (reverse[G]).src
+
+type ReflexiveGraph := [
+  V : Entity,
+  E : Entity,
+  src : (Id Entity)[E, V],
+  tgt : (Id Entity)[E, V],
+  refl : (Id Entity)[V, E]
+]
+
+def edge_id[G : ReflexiveGraph] : (Id Entity)[G.E, G.E] := @id G.E
+
+def edge_src[G : ReflexiveGraph] : (Id Entity)[G.E, G.E] := G.src * G.refl
+
+type Graph2 := [
+  V : Entity,
+  g1 : Graph & [ .V := V],
+  g2 : Graph & [ .V := V]
+]
+
+syn [g : Graph2] g.g1.V
+
+norm [g : Graph2] g.g1.V
