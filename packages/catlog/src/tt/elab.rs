@@ -176,7 +176,7 @@ impl<'a> TopElaborator<'a> {
                 let mut obgens = model.ob_generators().collect::<Vec<_>>();
                 obgens.sort();
                 for obgen in obgens.iter() {
-                    writeln!(&mut out, "#/  {} : {}", obgen, model.ob_type(&obgen)).unwrap();
+                    writeln!(&mut out, "#/  {} : {}", obgen, model.ob_type(obgen)).unwrap();
                 }
                 writeln!(&mut out, "#/ morphism generators: ").unwrap();
                 let mut morgens = model.mor_generators().collect::<Vec<_>>();
@@ -186,9 +186,9 @@ impl<'a> TopElaborator<'a> {
                         &mut out,
                         "#/  {} : {} -> {} ({})",
                         morgen,
-                        model.mor_generator_dom(&morgen),
-                        model.mor_generator_cod(&morgen),
-                        MorphismType(model.mor_generator_type(&morgen))
+                        model.mor_generator_dom(morgen),
+                        model.mor_generator_cod(morgen),
+                        MorphismType(model.mor_generator_type(morgen))
                     )
                     .unwrap();
                 }
