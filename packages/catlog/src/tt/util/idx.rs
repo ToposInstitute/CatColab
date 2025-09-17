@@ -12,20 +12,15 @@ linked list uses `snoc` to put a new element on the back.
 We take this terminology from [narya](https://github.com/gwaithimirdain/narya).
 */
 
+use derive_more::From;
 use std::ops::Deref;
 
 /** Forward indices (aka DeBruijn levels)
 
 Get the underlying `usize` using the [Deref] implementation.
 */
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, From)]
 pub struct FwdIdx(usize);
-
-impl From<usize> for FwdIdx {
-    fn from(value: usize) -> Self {
-        Self(value)
-    }
-}
 
 impl Deref for FwdIdx {
     type Target = usize;
@@ -52,14 +47,8 @@ impl FwdIdx {
 
 Get the underlying `usize` using the [Deref] implementation.
 */
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, From)]
 pub struct BwdIdx(usize);
-
-impl From<usize> for BwdIdx {
-    fn from(value: usize) -> Self {
-        Self(value)
-    }
-}
 
 impl Deref for BwdIdx {
     type Target = usize;

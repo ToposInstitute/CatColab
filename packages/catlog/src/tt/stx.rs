@@ -4,6 +4,7 @@ See [crate::tt] for what this means.
 */
 
 use ::pretty::RcDoc;
+use derive_more::Constructor;
 
 #[cfg(doc)]
 use crate::dbl::discrete::theory::DiscreteDblTheory;
@@ -66,8 +67,8 @@ pub enum Ty0 {
     Unit,
 }
 
-/** Context of record type syntax. */
-#[derive(Clone)]
+/** Content of record type syntax. */
+#[derive(Clone, Constructor)]
 pub struct RecordS {
     /// The base types of the fields.
     pub fields0: Row<Ty0>,
@@ -77,13 +78,6 @@ pub struct RecordS {
     where the last element is a value of type `fields0`.
     */
     pub fields1: Row<TyS>,
-}
-
-impl RecordS {
-    /// Constructor for [RecordS].
-    pub fn new(fields0: Row<Ty0>, fields1: Row<TyS>) -> Self {
-        Self { fields0, fields1 }
-    }
 }
 
 /** Inner enum for [TyS]. */

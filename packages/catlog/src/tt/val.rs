@@ -4,6 +4,7 @@ See [crate::tt] for what this means.
 */
 
 use bwd::Bwd;
+use derive_more::Constructor;
 use std::ops::Deref;
 
 use crate::tt::{prelude::*, stx::*};
@@ -12,7 +13,7 @@ use crate::tt::{prelude::*, stx::*};
 pub type Env = Bwd<TmV>;
 
 /** The content of a record type value */
-#[derive(Clone)]
+#[derive(Clone, Constructor)]
 pub struct RecordV {
     /// The base type.
     pub fields0: Row<Ty0>,
@@ -33,16 +34,6 @@ pub struct RecordV {
 }
 
 impl RecordV {
-    /// Constructor for [RecordV].
-    pub fn new(fields0: Row<Ty0>, env: Env, fields1: Row<TyS>, specializations: Dtry<TyV>) -> Self {
-        Self {
-            fields0,
-            env,
-            fields1,
-            specializations,
-        }
-    }
-
     /** Add a specialization a path `path` to type `ty`
 
     Precondition: assumes that this produces a subtype.
