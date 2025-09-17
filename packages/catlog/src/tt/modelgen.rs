@@ -55,7 +55,7 @@ fn extract_to(
                 )
             }
         }
-        TyV_::Sing(ty_v, tm_v) => {}
+        TyV_::Sing(_, _) => {}
         TyV_::Unit => {}
     }
 }
