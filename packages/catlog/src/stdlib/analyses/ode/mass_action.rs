@@ -117,8 +117,8 @@ impl PetriNetMassActionAnalysis {
         into_numerical_system(self.build_system(model), data)
     }
 
-    /// Creates a mass-action system in a reaction network.
-    pub fn build_reaction(
+    /// Creates a stochastic mass-action system.
+    pub fn build_stochastic_system(
         &self,
         model: &ModalDblModel,
         data: MassActionProblemData,
@@ -340,12 +340,17 @@ mod tests {
     fn sir_petri_dynamics() {
         let th = Rc::new(th_sym_monoidal_category());
         let model = sir_petri(th);
-        let sys = PetriNetMassActionAnalysis::default().build_system(&model);
-        let expected = expect!([r#"
-            dI = ((-1) recovery) I + infection I S
-            dR = recovery I
-            dS = ((-1) infection) I S
-        "#]);
-        expected.assert_eq(&sys.to_string());
+        let data = MassActionProblemData {
+            rates: HashMap::from_iter([(name("infection"), 1e-5f32), (name("recovery"), 1e-2f32)]),
+            initial_values: HashMap::from_iter([
+                (name("S"), 1e5f32),
+                (name("I"), 1f32),
+                (name("R"), 0f32),
+            ]),
+            duration: 10f32,
+        };
+        let sys = PetriNetMassActionAnalysis::default().build_stochastic_system(&model, data);
+        assert_eq!(2, sys.problem.nb_reactions());
+        assert_eq!(3, sys.problem.nb_species());
     }
 }

@@ -13,7 +13,7 @@ use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
 use catlog::zero::name;
 
-use super::model_morphism::{motifs, MotifOccurrence, MotifsOptions};
+use super::model_morphism::{MotifOccurrence, MotifsOptions, motifs};
 use super::{analyses::*, model::DblModel, theory::DblTheory};
 
 /// The empty or initial theory.
@@ -347,15 +347,15 @@ impl ThSymMonoidalCategory {
     }
 
     /// Simulates a reaction network
-    #[wasm_bindgen(js_name = "reactionNetwork")]
-    pub fn reaction_network(
+    #[wasm_bindgen(js_name = "stochasticMassAction")]
+    pub fn stochastic_mass_action(
         &self,
         model: &DblModel,
         data: analyses::ode::MassActionProblemData,
     ) -> Result<ODEResult, String> {
         Ok(ODEResult(
             analyses::ode::PetriNetMassActionAnalysis::default()
-                .build_reaction(model.modal()?, data.clone())
+                .build_stochastic_system(model.modal()?, data.clone())
                 .solve_with_defaults()
                 .map_err(|err| format!("{err:?}"))
                 .into(),
