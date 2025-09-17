@@ -26,7 +26,7 @@ stick to that assumption).
 An evaluator for the untyped lambda calculus would look like the following code,
 which is in a "rust with a gc" syntax.
 
-```rust
+```ignore
 type BwdIdx = usize;
 
 enum TmS {
@@ -61,7 +61,7 @@ which means that a value is either a closure, or a variable. This permits us
 to normalize *past a binding*. For instance, we can normalize `λ x. (λ x. x) x`
 to `λ x. x`. This looks like the following:
 
-```rust
+```ignore
 type FwdIdx = usize;
 
 enum TmV {
@@ -212,7 +212,7 @@ However, we want to freely intermix object generators and morphism generators in
 a notebook. We produce a type theory which permits this via a Grothendieck construction.
 
 
-```
+```text
 Con := (Γ₀ : Con₀) x Con₁ Γ₀
 Γ ⇒ Δ := (γ₀ : Γ₀ ⇒₀ Δ₀) x (Γ₁ ⇒₁ (Δ₁ [ γ₀ ]con₁))
 Ty Γ := (A₀ : Ty₀) x Ty₁ (Γ₀ ▷₀ A₀)
