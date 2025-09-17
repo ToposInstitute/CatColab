@@ -287,12 +287,12 @@ and normalization of the `.g1.V` field of a model of `Graph2`.
 Specialization is a way of creating *subtypes* of a record type by setting the
 type of a field to be a subtype of its original type. So in order to understand
 specialization, one must first understand subtyping. In doublett, there are
-two ways for form subtypes. We write `A <: B` for "`A` is a subtype of `B`".
+two ways to form subtypes. We write `A <: B` for "`A` is a subtype of `B`".
 
 1. If `a : A`, then `@sing a <: A`.
 2. If `A` is a record type with a field `.x`, and `B` is a subtype of the type of
-`a.x` for a generic element `a : A`, then `A & [ .x : B ] <: A`. The notation `A
-& [ .x := y ]` is just syntactic sugar for `A & [ .x : @sing y ]`.
+   `a.x` for a generic element `a : A`, then `A & [ .x : B ] <: A`. The notation `A
+   & [ .x := y ]` is just syntactic sugar for `A & [ .x : @sing y ]`.
 
 Crucially, the type of `a.x` may depend on the values of other fields of `a`, so
 it is important that the subtyping check is performed in the context of a *generic*

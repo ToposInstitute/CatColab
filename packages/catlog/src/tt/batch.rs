@@ -160,16 +160,16 @@ pub fn run(path: &str, output: &BatchOutput) -> io::Result<bool> {
 /// Run the doublett elaborator in batch mode
 pub fn elaborate(src: &str, path: &str, output: &BatchOutput) -> io::Result<bool> {
     let reporter = Reporter::new();
-    let source_info = SourceInfo::new(Some(path), &src);
+    let source_info = SourceInfo::new(Some(path), src);
     let start_t = Instant::now();
     let _unwind_guard = guard((), |_| {
         output.report(&reporter, &source_info);
     });
     let mut succeeded = true;
-    let _ = PARSE_CONFIG.with_parsed_top(&src, reporter.clone(), |topntns| {
+    let _ = PARSE_CONFIG.with_parsed_top(src, reporter.clone(), |topntns| {
         let mut toplevel = Toplevel::new(stdlib::th_schema());
         for topntn in topntns.iter() {
-            output.log_input(&src, topntn);
+            output.log_input(src, topntn);
             let mut should_fail = false;
             for annot in topntn.annotations {
                 // We allow single_match here because in the future we might want
