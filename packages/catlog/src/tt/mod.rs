@@ -244,7 +244,12 @@ for morphism terms.
 There's a third component to doublett, which we call "specialization." Specialization
 looks like the following:
 
-```text
+```
+use expect_test::expect;
+use catlog::tt::batch::{elaborate, BatchOutput};
+use std::cell::RefCell;
+
+let src = r#"
 type Graph := [
   E : Entity,
   V : Entity,
@@ -257,6 +262,13 @@ type Graph2 := [
   g1 : Graph & [ .V := V ],
   g2 : Graph & [ .V := V ]
 ]
+
+syn [g: Graph2] g.g1.V
+"#;
+
+let output = BatchOutput::Snapshot(RefCell::new(String::new()));
+elaborate(src, "<doctest>", &output);
+expect![].assert_eq(&output.result());
 ```
 
 

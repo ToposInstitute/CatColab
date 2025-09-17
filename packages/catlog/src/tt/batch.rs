@@ -136,7 +136,7 @@ impl BatchOutput {
     }
 
     #[allow(unused)]
-    fn result<'a>(&'a self) -> Ref<'a, String> {
+    pub fn result<'a>(&'a self) -> Ref<'a, String> {
         match self {
             BatchOutput::Snapshot(out) => out.borrow(),
             _ => panic!("cannot get result of interactive session"),
