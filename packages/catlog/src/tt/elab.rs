@@ -173,11 +173,15 @@ impl<'a> TopElaborator<'a> {
                 let mut out = String::new();
                 writeln!(&mut out).unwrap();
                 writeln!(&mut out, "#/ object generators: ").unwrap();
-                for obgen in model.ob_generators() {
+                let mut obgens = model.ob_generators().collect::<Vec<_>>();
+                obgens.sort();
+                for obgen in obgens.iter() {
                     writeln!(&mut out, "#/  {} : {}", obgen, model.ob_type(&obgen)).unwrap();
                 }
                 writeln!(&mut out, "#/ morphism generators: ").unwrap();
-                for morgen in model.mor_generators() {
+                let mut morgens = model.mor_generators().collect::<Vec<_>>();
+                morgens.sort();
+                for morgen in morgens.iter() {
                     writeln!(
                         &mut out,
                         "#/  {} : {} -> {} ({})",

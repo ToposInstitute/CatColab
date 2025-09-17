@@ -72,7 +72,7 @@ impl BatchOutput {
     fn declared(&self, name: NameSegment) {
         match self {
             BatchOutput::Snapshot(out) => {
-                writeln!(out.borrow_mut(), "/# declared: {}", name).unwrap();
+                writeln!(out.borrow_mut(), "#/ declared: {}", name).unwrap();
             }
             BatchOutput::Interactive => {}
         }
@@ -81,7 +81,7 @@ impl BatchOutput {
     fn got_result(&self, result: &str) {
         match self {
             BatchOutput::Snapshot(out) => {
-                writeln!(out.borrow_mut(), "/# result: {}", result).unwrap();
+                writeln!(out.borrow_mut(), "#/ result: {}", result).unwrap();
             }
             BatchOutput::Interactive => {
                 println!("{}", result);
@@ -95,9 +95,9 @@ impl BatchOutput {
                 let mut out = out.borrow_mut();
                 if reporter.errored() {
                     if should_fail {
-                        writeln!(out, "/# expected errors:").unwrap();
+                        writeln!(out, "#/ expected errors:").unwrap();
                     } else {
-                        writeln!(out, "/# unexpected errors:").unwrap();
+                        writeln!(out, "#/ unexpected errors:").unwrap();
                     }
                     let mut errors = String::new();
                     source_info
@@ -108,7 +108,7 @@ impl BatchOutput {
                         )
                         .unwrap();
                     for l in errors.lines() {
-                        writeln!(out, "/# {l}").unwrap();
+                        writeln!(out, "#/ {l}").unwrap();
                     }
                 }
                 writeln!(out).unwrap();
