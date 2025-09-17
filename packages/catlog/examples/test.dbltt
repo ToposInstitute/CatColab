@@ -81,3 +81,13 @@ type ReflexiveGraph := [
 def edge_id[G : ReflexiveGraph] : (Id Entity)[G.E, G.E] := @id G.E
 
 def edge_src[G : ReflexiveGraph] : (Id Entity)[G.E, G.E] := G.src * G.refl
+
+type Graph2 := [
+  V : Entity,
+  g1 : Graph & [ .V := V],
+  g2 : Graph & [ .V := V]
+]
+
+syn [g : Graph2] g.g1.V
+
+norm [g : Graph2] g.g1.V

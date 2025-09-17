@@ -136,6 +136,7 @@ impl BatchOutput {
     }
 
     #[allow(unused)]
+    /// Get the result of a snapshot test
     pub fn result<'a>(&'a self) -> Ref<'a, String> {
         match self {
             BatchOutput::Snapshot(out) => out.borrow(),
@@ -144,7 +145,7 @@ impl BatchOutput {
     }
 }
 
-/// Run the doublett elaborator in batch mode
+/// Read from path and elaborate
 pub fn run(path: &str, output: &BatchOutput) -> io::Result<bool> {
     let src = match fs::read_to_string(path) {
         Ok(s) => s,
@@ -153,6 +154,11 @@ pub fn run(path: &str, output: &BatchOutput) -> io::Result<bool> {
             return Ok(false);
         }
     };
+    elaborate(&src, path, output)
+}
+
+/// Run the doublett elaborator in batch mode
+pub fn elaborate(src: &str, path: &str, output: &BatchOutput) -> io::Result<bool> {
     let reporter = Reporter::new();
     let source_info = SourceInfo::new(Some(path), &src);
     let start_t = Instant::now();

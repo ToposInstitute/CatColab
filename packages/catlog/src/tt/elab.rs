@@ -466,7 +466,7 @@ impl<'a> Elaborator<'a> {
                 };
                 let f = text_seg(*f);
                 if !r.fields1.has(f) {
-                    return elab.error("no such field {f}");
+                    return elab.error(format!("no such field {f}"));
                 }
                 Some((
                     TmS::proj(tm_s, f),

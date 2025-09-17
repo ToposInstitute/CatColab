@@ -1,8 +1,12 @@
 /*! Type theory for models of a double category
 
-To a first approximation, this is a standard dependent type theory
-implementation following Coquand's algorithm, and so we start by explaining what
-that looks like.
+This is developer documentation for those who wish to learn more about how
+doublett works "under the hood" -- it expects that you already know the basics
+of how to write double models and morphisms between them using doublett.
+
+To a first approximation, the implementation of doublett is a standard dependent
+type theory implementation following Coquand's algorithm, and so we start by
+explaining what that looks like.
 
 # Basics of Normalization by Evaluation
 
@@ -241,37 +245,111 @@ for morphism terms.
 
 # Specializations
 
-There's a third component to doublett, which we call "specialization." Specialization
-looks like the following:
+There's a third component to doublett, which we call "specialization." We can see
+specialization at play in the following example. Let `Graph` and `Graph2` be
+the following double models.
 
-```
-use expect_test::expect;
-use catlog::tt::batch::{elaborate, BatchOutput};
-use std::cell::RefCell;
-
-let src = r#"
+```text
 type Graph := [
   E : Entity,
   V : Entity,
   src : (Id Entity)[E, V],
   tgt : (Id Entity)[E, V],
 ]
+/# declared: Graph
 
 type Graph2 := [
   V : Entity,
   g1 : Graph & [ .V := V ],
   g2 : Graph & [ .V := V ]
 ]
-
-syn [g: Graph2] g.g1.V
-"#;
-
-let output = BatchOutput::Snapshot(RefCell::new(String::new()));
-elaborate(src, "<doctest>", &output);
-expect![].assert_eq(&output.result());
+/# declared: Graph2
 ```
 
+Then we can synthesize the type of `g.g1.V` in the context of a variable `g: Graph2`
+via:
 
+```text
+syn [g: Graph2] g.g1.V
+/# result: g.g1.V : @sing g.V
+```
+
+We can also normalize `g.g1.V` in the context of a variable `g: Graph2`
+
+```text
+norm [g: Graph2] g.g1.V
+/# result: g.V
+```
+
+This shows how the specialization `g1 : Graph & [ .V := V ]` influences the type
+and normalization of the `.g1.V` field of a model of `Graph2`.
+
+Specialization is a way of creating *subtypes* of a record type by setting the
+type of a field to be a subtype of its original type. So in order to understand
+specialization, one must first understand subtyping. In doublett, there are
+two ways for form subtypes. We write `A <: B` for "`A` is a subtype of `B`".
+
+1. If `a : A`, then `@sing a <: A`.
+2. If `A` is a record type with a field `.x`, and `B` is a subtype of the type of
+`a.x` for a generic element `a : A`, then `A & [ .x : B ] <: A`. The notation `A
+& [ .x := y ]` is just syntactic sugar for `A & [ .x : @sing y ]`.
+
+Crucially, the type of `a.x` may depend on the values of other fields of `a`, so
+it is important that the subtyping check is performed in the context of a *generic*
+element of `A`. In the above case, the type of `g1.V` is `Entity` for a generic
+`g1 : Graph`, and as `V : Entity`, we have `@sing V <: Entity` as required for
+`Graph & [ .V := V ]` to be a well-formed type.
+
+Mathematically speaking, one could think of specialization as adding a third
+component to each of the definitions for `Con`, `⇒`, `Ty`, and `Tm` from before.
+That is, we have a base component, an indexed component, and a specialization
+component. In the style of presentation that we were using before, this looks
+like the following:
+
+```text
+-- a specialization of a type in a context
+Spcl : Con₀ → Ty₀ → Set
+-- whether a term satisfies a specialization
+Sat : Tm₀ Γ A → Spcl Γ A → Prop
+
+-- s is a subspecialization of s' if all terms satisfying s also satisfy s'
+Sub : Spcl Γ A → Spcl Γ A → Prop
+Sub s s' := ∀ (a : Tm₀ Γ A) . Sat a s → Sat a s'
+
+Sing : Tm₀ Γ A → Spcl Γ A
+Elt : (a : Tm₀ Γ A) → Sat a (Sing a)
+
+SCon : Con₀ → Set
+· : SCon ·
+_▷s_ : SCon Γ → {A : Ty₀} → Spcl Γ A → SCon (Γ ▷ A)
+
+-- A context consists of a base context, an indexed context, and a
+-- specialization of the base context
+Con := (Γ₀ : Con₀) x Con₁ Γ₀ x SCon Γ₀
+-- A type consists of a base type, an indexed type, and a specialization
+-- of the base type
+Ty Γ := (A₀ : Ty₀) x Ty₁ (Γ₀ ▷ A₀) x Spcl Γ₀ A₀
+-- A term consists of a base term, an indexed term, and a proof
+-- that the term satisfies the specialization of the base type.
+Tm Γ A := (a₀ : Tm₀ Γ₀ A₀) x Tm₁ Γ₁ (A₁ [ (id , a₀) ]ty₁) x Sat a₀ A₂
+
+...
+```
+
+However, just as before we do not literally represent types as a base part and
+an indexed part (we instead implement the projection from total category to base
+category via `Opaque` values) we do not literally represent types as base part +
+indexed part + specialized part. Instead, we have some algorithms which simply
+ignore specializations, and this is equivalent to a projection from (base +
+indexed + specialized) to (base + indexed). This is the case in, for instance
+[eval::Evaluator::convertable_ty].
+
+This is convenient, because it means that checking whether two types are
+subtypes can be reduced to checking whether they are convertable, and then
+checking whether a generic element of the first type is an element of the second
+type. This neatly resolves the difference between `[ x : @sing a ]` and
+`[ x : Entity ] & [ .x := a ]`, which are represented differently, but should
+be semantically the same type.
 */
 
 pub mod batch;
