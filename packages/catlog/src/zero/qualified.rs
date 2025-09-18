@@ -245,6 +245,11 @@ impl QualifiedName {
         }
     }
 
+    /// Constructs a new qualified name by appending a new segment.
+    pub fn append(&mut self, id: NameSegment) -> Self {
+        Self([self.0.clone(), vec![id]].concat())
+    }
+
     /// Serializes the qualified name into a string.
     pub fn serialize_string(&self) -> String {
         self.segments().map(|segment| segment.serialize_string()).join(".")

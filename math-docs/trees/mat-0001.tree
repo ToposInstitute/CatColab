@@ -46,6 +46,7 @@ systems interpretation:}
   \tr{\td{[[dct-0002]]} \td{Signed graphs} \td{Regulatory networks/causal loop diagrams}}
   \tr{\td{[[dct-000B]]} \td{Signed graphs with delays} \td{Variant of causal loop diagram}}
   \tr{\td{[[dct-0007]]} \td{Nullable signed graphs} \td{Variant of causal loop diagram}}
+  \tr{\td{[[dct-000C]]} \td{Delay-degree signed graphs} \td{Extension of causal loop diagram}}  
   \tr{\td{[[dct-0003]]} \td{Graphs with links} \td{Stock-flow diagrams}}
   \tr{\td{Symmetric monoidal categories} \td{Petri nets} \td{Reaction networks}}
   \tr{\td{[[dct-0004]]} \td{Sets} \td{Labels}}

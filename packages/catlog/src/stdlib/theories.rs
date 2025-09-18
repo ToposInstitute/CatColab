@@ -93,6 +93,32 @@ pub fn th_nullable_signed_category() -> DiscreteDblTheory {
     sgn.into()
 }
 
+/** The theory of delayable signed categories with differential degree (degree-delay signed categories)
+
+A *degree-delay signed category* is a category sliced over the monoid (N x N x sgn)
+ */
+pub fn th_deg_del_signed_category() -> DiscreteDblTheory {
+    let mut dds = FpCategory::new();
+    dds.add_ob_generator(name("Object"));
+    dds.add_mor_generator(name("Negative"), name("Object"), name("Object"));
+    dds.add_mor_generator(name("Degree"), name("Object"), name("Object"));
+    dds.add_mor_generator(name("Delay"), name("Object"), name("Object"));
+    dds.equate(Path::pair(name("Negative"), name("Negative")), Path::empty(name("Object")));
+    dds.equate(
+        Path::pair(name("Negative"), name("Delay")),
+        Path::pair(name("Delay"), name("Negative")),
+    );
+    dds.equate(
+        Path::pair(name("Negative"), name("Degree")),
+        Path::pair(name("Degree"), name("Negative")),
+    );
+    dds.equate(
+        Path::pair(name("Delay"), name("Degree")),
+        Path::pair(name("Degree"), name("Delay")),
+    );
+    DiscreteDblTheory::from(dds)
+}
+
 /** The theory of categories with scalars.
 
 A *category with scalars* is a category sliced over the monoid representing a walking
