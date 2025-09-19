@@ -8,6 +8,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use nalgebra::DVector;
 use num_traits::Zero;
+use rebop::gillespie;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -24,8 +25,6 @@ use crate::dbl::{
 use crate::one::FgCategory;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
 use crate::zero::{QualifiedName, alg::Polynomial, name, rig::Monomial};
-
-use rebop::gillespie::{Gillespie, Rate};
 
 /// Data defining a mass-action ODE problem for a model.
 #[derive(Clone)]
@@ -123,21 +122,14 @@ impl PetriNetMassActionAnalysis {
         model: &ModalDblModel,
         data: MassActionProblemData,
     ) -> StochasticODEAnalysis {
-        let obs = model.ob_generators_with_type(&self.place_ob_type).collect::<Vec<_>>();
-        let mut variable_index: BTreeMap<QualifiedName, usize> = Default::default();
-        let ivs = obs
-            .clone()
-            .into_iter()
-            .enumerate()
-            .map(|(idx, ob)| match data.initial_values.get(&ob) {
-                Some(iv) => {
-                    variable_index.insert(ob, idx);
-                    *iv as u32 as isize
-                }
-                None => 0, // TODO throw error
-            })
-            .collect::<Vec<isize>>();
-        let mut problem = Gillespie::new(ivs, false);
+        let ob_generators: Vec<_> = model.ob_generators_with_type(&self.place_ob_type).collect();
+
+        let initial: Vec<_> = ob_generators
+            .iter()
+            .map(|id| data.initial_values.get(id).copied().unwrap_or_default() as isize)
+            .collect();
+        let mut problem = gillespie::Gillespie::new(initial, false);
+
         for mor in model.mor_generators_with_type(&self.transition_mor_type) {
             let inputs = model
                 .get_dom(&mor)
@@ -148,49 +140,35 @@ impl PetriNetMassActionAnalysis {
                 .and_then(|ob| ob.clone().collect_product(None))
                 .unwrap_or_default();
 
-            // 1. convert the inputs/outputs to arrays
-            let input_vec = obs
-                .clone()
-                .into_iter()
-                .map(|obstr| {
+            // 1. convert the inputs/outputs to vectors of counts
+            let input_vec: Vec<_> = ob_generators
+                .iter()
+                .map(|id| {
                     inputs
                         .iter()
-                        .filter(|&g| {
-                            if let ModalOb::Generator(id) = g {
-                                *id == obstr
-                            } else {
-                                false
-                            }
-                        })
+                        .filter(|&ob| matches!(ob, ModalOb::Generator(id2) if id2 == id))
                         .count() as u32
                 })
-                .collect::<Vec<u32>>();
-            let output_vec = obs
-                .clone()
-                .into_iter()
-                .map(|obstr| {
-                    outputs
-                        .iter()
-                        .filter(|&g| {
-                            if let ModalOb::Generator(id) = g {
-                                *id == obstr
-                            } else {
-                                false
-                            }
-                        })
-                        .count() as isize
-                })
-                .collect::<Vec<isize>>();
+                .collect();
+            let output_vec = ob_generators.iter().map(|id| {
+                outputs
+                    .iter()
+                    .filter(|&ob| matches!(ob, ModalOb::Generator(id2) if id2 == id))
+                    .count() as isize
+            });
+
             // 2. output := output - input
-            let output_vec = output_vec
-                .into_iter()
-                .zip(input_vec.clone())
+            let output_vec: Vec<_> = output_vec
+                .zip(input_vec.iter().copied())
                 .map(|(a, b)| a - (b as isize))
-                .collect::<Vec<isize>>();
+                .collect();
             if let Some(rate) = data.rates.get(&mor) {
-                problem.add_reaction(Rate::lma(*rate as f64, input_vec), output_vec)
+                problem.add_reaction(gillespie::Rate::lma(*rate as f64, input_vec), output_vec)
             }
         }
+
+        let variable_index: BTreeMap<_, _> =
+            ob_generators.into_iter().enumerate().map(|(i, x)| (x, i)).collect();
         StochasticODEAnalysis {
             problem,
             data,
