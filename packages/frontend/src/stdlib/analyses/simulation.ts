@@ -2,7 +2,7 @@ import { type Accessor, createMemo } from "solid-js";
 
 import type { DblModel, JsResult, ODEResult } from "catlog-wasm";
 import type { LiveModelDocument } from "../../model";
-import type { ODEPlotData } from "../../visualization";
+import type { ODEPlotData, StateVarData } from "../../visualization";
 
 /** Reactively simulate and plot an ODE derived from a model.
 
@@ -24,15 +24,19 @@ export function createModelODEPlot(
             if (simulationResult?.tag !== "Ok") {
                 return simulationResult;
             }
-
             const solution = simulationResult.content;
-            const content = {
-                time: solution.time,
-                states: Array.from(solution.states.entries()).map(([id, data]) => ({
-                    name: model.obGeneratorLabel(id)?.join(".") ?? "",
-                    data,
-                })),
-            };
+
+            const states: StateVarData[] = [];
+            for (const id of model.obGenerators()) {
+                const data = solution.states.get(id);
+                if (data !== undefined) {
+                    states.push({
+                        name: model.obGeneratorLabel(id)?.join(".") ?? "",
+                        data,
+                    });
+                }
+            }
+            const content = { time: solution.time, states };
             return { tag: "Ok", content };
         },
         undefined,

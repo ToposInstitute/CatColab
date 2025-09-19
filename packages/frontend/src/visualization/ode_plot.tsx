@@ -13,7 +13,7 @@ export type ODEPlotData = {
 };
 
 /** Values of a state variable over time. */
-type StateVarData = {
+export type StateVarData = {
     name: string;
     data: number[];
 };
