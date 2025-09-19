@@ -14,6 +14,7 @@ use catlog::stdlib::{analyses, models, theories, theory_morphisms};
 use catlog::zero::name;
 
 use super::model_morphism::{MotifOccurrence, MotifsOptions, motifs};
+use super::result::JsResult;
 use super::{analyses::*, model::DblModel, theory::DblTheory};
 
 /// The empty or initial theory.
@@ -335,6 +336,21 @@ impl ThSymMonoidalCategory {
                 .into(),
         ))
     }
+
+    /// Simulates the stochastic mass-action system derived from a model.
+    #[wasm_bindgen(js_name = "stochasticMassAction")]
+    pub fn stochastic_mass_action(
+        &self,
+        model: &DblModel,
+        data: analyses::ode::MassActionProblemData,
+    ) -> Result<ODEResult, String> {
+        Ok(ODEResult(JsResult::Ok(
+            analyses::ode::PetriNetMassActionAnalysis::default()
+                .build_stochastic_system(model.modal()?, data)
+                .simulate(),
+        )))
+    }
+
     /// Solve the subreachability problem for petri nets.
     #[wasm_bindgen(js_name = "subreachability")]
     pub fn subreachability(

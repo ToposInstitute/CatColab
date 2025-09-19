@@ -34,7 +34,7 @@ pub struct ODEAnalysis<Sys> {
     /// ODE problem for the analysis.
     pub problem: ODEProblem<Sys>,
 
-    /// Mapping from IDs in model (usually object IDs) to variable indices.
+    /// Map from IDs in model (usually object IDs) to variable indices.
     pub variable_index: BTreeMap<QualifiedName, usize>,
 }
 
