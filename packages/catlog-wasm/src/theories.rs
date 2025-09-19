@@ -14,6 +14,7 @@ use catlog::stdlib::{analyses, models, theories, theory_morphisms};
 use catlog::zero::name;
 
 use super::model_morphism::{MotifOccurrence, MotifsOptions, motifs};
+use super::result::JsResult;
 use super::{analyses::*, model::DblModel, theory::DblTheory};
 
 /// The empty or initial theory.
@@ -335,6 +336,21 @@ impl ThSymMonoidalCategory {
                 .into(),
         ))
     }
+
+    /// Simulates the stochastic mass-action system derived from a model.
+    #[wasm_bindgen(js_name = "stochasticMassAction")]
+    pub fn stochastic_mass_action(
+        &self,
+        model: &DblModel,
+        data: analyses::ode::MassActionProblemData,
+    ) -> Result<ODEResult, String> {
+        Ok(ODEResult(JsResult::Ok(
+            analyses::ode::PetriNetMassActionAnalysis::default()
+                .build_stochastic_system(model.modal()?, data)
+                .simulate(),
+        )))
+    }
+
     /// Solve the subreachability problem for petri nets.
     #[wasm_bindgen(js_name = "subreachability")]
     pub fn subreachability(
@@ -344,22 +360,6 @@ impl ThSymMonoidalCategory {
     ) -> Result<bool, String> {
         let model = model.modal().map_err(|_| "Model should be of a modal theory")?;
         Ok(analyses::reachability::subreachability(model, data))
-    }
-
-    /// Simulates a reaction network
-    #[wasm_bindgen(js_name = "stochasticMassAction")]
-    pub fn stochastic_mass_action(
-        &self,
-        model: &DblModel,
-        data: analyses::ode::MassActionProblemData,
-    ) -> Result<ODEResult, String> {
-        Ok(ODEResult(
-            analyses::ode::PetriNetMassActionAnalysis::default()
-                .build_stochastic_system(model.modal()?, data.clone())
-                .solve_with_defaults()
-                .map_err(|err| format!("{err:?}"))
-                .into(),
-        ))
     }
 }
 

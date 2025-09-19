@@ -34,7 +34,7 @@ pub struct ODEAnalysis<Sys> {
     /// ODE problem for the analysis.
     pub problem: ODEProblem<Sys>,
 
-    /// Mapping from IDs in model (usually object IDs) to variable indices.
+    /// Map from IDs in model (usually object IDs) to variable indices.
     pub variable_index: BTreeMap<QualifiedName, usize>,
 }
 
@@ -62,44 +62,6 @@ impl<Sys> ODEAnalysis<Sys> {
                 .map(|(ob, i)| (ob, x_out.iter().map(|x| x[i]).collect()))
                 .collect(),
         })
-    }
-}
-
-/// Data needed to simulate and interpret a Reaction Network analysis of a model
-#[derive(Constructor)]
-pub struct StochasticODEAnalysis {
-    /// Reaction network for the analysis.
-    pub problem: rebop::gillespie::Gillespie,
-
-    /// Data for the stochastic ODE
-    pub data: MassActionProblemData,
-
-    /// mapping from IDs in model (usually object IDs) to variable indices.
-    pub variable_index: BTreeMap<QualifiedName, usize>,
-}
-
-impl StochasticODEAnalysis {
-    /// Solves the stochastic ODE with reasonable default settings and collects results.
-    pub fn solve_with_defaults(&mut self) -> Result<ODESolution, IntegrationError> {
-        // ODE solver will fail in the degenerate case of an empty system.
-        if self.variable_index.is_empty() {
-            return Ok(Default::default());
-        }
-
-        let mut time: Vec<f32> = vec![];
-        let mut states: HashMap<QualifiedName, Vec<f32>> = HashMap::new();
-        for t in 0..(self.data.duration as u8) {
-            self.problem.advance_until(t as f64);
-            time.push(self.problem.get_time() as f32);
-            for (id, idx) in self.variable_index.iter() {
-                states
-                    .entry(id.clone())
-                    .and_modify(|state| state.push(self.problem.get_species(*idx) as f32))
-                    .or_insert(vec![self.data.initial_values[id]]);
-            }
-        }
-
-        Ok(ODESolution { time, states })
     }
 }
 

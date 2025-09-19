@@ -15,8 +15,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify::Tsify;
 
-use super::ODEAnalysis;
-use super::StochasticODEAnalysis;
+use super::{ODEAnalysis, ODESolution};
 use crate::dbl::{
     modal::model::ModalOb,
     model::{DiscreteTabModel, FgDblModel, ModalDblModel, MutDblModel, TabEdge},
@@ -44,6 +43,43 @@ pub struct MassActionProblemData {
 
     /// Duration of simulation.
     pub duration: f32,
+}
+
+/// Stochastic mass-action analysis of a model.
+pub struct StochasticMassActionAnalysis {
+    /// Reaction network for the analysis.
+    pub problem: rebop::gillespie::Gillespie,
+
+    /// Map from object IDs to variable indices.
+    pub variable_index: BTreeMap<QualifiedName, usize>,
+
+    /// Map from object IDs to initial values.
+    pub initial_values: HashMap<QualifiedName, f32>,
+
+    /// Duration of simulation.
+    pub duration: f32,
+}
+
+impl StochasticMassActionAnalysis {
+    /// Simulates the stochastic mass-action system and collects the results.
+    pub fn simulate(&mut self) -> ODESolution {
+        let mut time = Vec::new();
+        let mut states: HashMap<_, Vec<_>> = HashMap::new();
+        for t in 0..(self.duration as u8) {
+            self.problem.advance_until(t as f64);
+            time.push(self.problem.get_time() as f32);
+            for (id, idx) in self.variable_index.iter() {
+                states
+                    .entry(id.clone())
+                    .and_modify(|state| state.push(self.problem.get_species(*idx) as f32))
+                    .or_insert_with(|| {
+                        let initial = self.initial_values.get(id).copied().unwrap_or_default();
+                        vec![initial]
+                    });
+            }
+        }
+        ODESolution { time, states }
+    }
 }
 
 /// Symbolic parameter in mass-action polynomial system.
@@ -121,7 +157,7 @@ impl PetriNetMassActionAnalysis {
         &self,
         model: &ModalDblModel,
         data: MassActionProblemData,
-    ) -> StochasticODEAnalysis {
+    ) -> StochasticMassActionAnalysis {
         let ob_generators: Vec<_> = model.ob_generators_with_type(&self.place_ob_type).collect();
 
         let initial: Vec<_> = ob_generators
@@ -140,16 +176,13 @@ impl PetriNetMassActionAnalysis {
                 .and_then(|ob| ob.clone().collect_product(None))
                 .unwrap_or_default();
 
-            // 1. convert the inputs/outputs to vectors of counts
-            let input_vec: Vec<_> = ob_generators
-                .iter()
-                .map(|id| {
-                    inputs
-                        .iter()
-                        .filter(|&ob| matches!(ob, ModalOb::Generator(id2) if id2 == id))
-                        .count() as u32
-                })
-                .collect();
+            // 1. convert the inputs/outputs to sequences of counts
+            let input_vec = ob_generators.iter().map(|id| {
+                inputs
+                    .iter()
+                    .filter(|&ob| matches!(ob, ModalOb::Generator(id2) if id2 == id))
+                    .count() as u32
+            });
             let output_vec = ob_generators.iter().map(|id| {
                 outputs
                     .iter()
@@ -158,9 +191,10 @@ impl PetriNetMassActionAnalysis {
             });
 
             // 2. output := output - input
+            let input_vec: Vec<_> = input_vec.collect();
             let output_vec: Vec<_> = output_vec
                 .zip(input_vec.iter().copied())
-                .map(|(a, b)| a - (b as isize))
+                .map(|(o, i)| o - (i as isize))
                 .collect();
             if let Some(rate) = data.rates.get(&mor) {
                 problem.add_reaction(gillespie::Rate::lma(*rate as f64, input_vec), output_vec)
@@ -169,10 +203,12 @@ impl PetriNetMassActionAnalysis {
 
         let variable_index: BTreeMap<_, _> =
             ob_generators.into_iter().enumerate().map(|(i, x)| (x, i)).collect();
-        StochasticODEAnalysis {
+
+        StochasticMassActionAnalysis {
             problem,
-            data,
             variable_index,
+            initial_values: data.initial_values,
+            duration: data.duration,
         }
     }
 }
@@ -315,7 +351,7 @@ mod tests {
     }
 
     #[test]
-    fn sir_petri_dynamics() {
+    fn sir_petri_stochastic_dynamics() {
         let th = Rc::new(th_sym_monoidal_category());
         let model = sir_petri(th);
         let data = MassActionProblemData {
