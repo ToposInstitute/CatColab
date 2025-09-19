@@ -171,27 +171,23 @@ impl DblModelDiagram {
     /// Returns the object generators for the diagram's indexing model.
     #[wasm_bindgen(js_name = "obGenerators")]
     pub fn ob_generators(&self) -> Vec<QualifiedName> {
-        let mut ob_gens: Vec<_> = all_the_same!(match &self.diagram {
+        all_the_same!(match &self.diagram {
             DblModelDiagramBox::[Discrete](diagram) => {
                 let (_, model) = diagram.into();
                 model.ob_generators().collect()
             }
-        });
-        ob_gens.sort();
-        ob_gens
+        })
     }
 
     /// Returns the morphism generators for the diagram's indexing model.
     #[wasm_bindgen(js_name = "morGenerators")]
     pub fn mor_generators(&self) -> Vec<QualifiedName> {
-        let mut mor_gens: Vec<_> = all_the_same!(match &self.diagram {
+        all_the_same!(match &self.diagram {
             DblModelDiagramBox::[Discrete](diagram) => {
                 let (_, model) = diagram.into();
                 model.mor_generators().collect()
             }
-        });
-        mor_gens.sort();
-        mor_gens
+        })
     }
 
     /// Returns the object generators of the given object type.
