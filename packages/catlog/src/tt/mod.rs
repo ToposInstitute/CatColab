@@ -355,6 +355,7 @@ be semantically the same type.
 pub mod batch;
 pub mod elab;
 pub mod eval;
+pub mod modelgen;
 pub mod prelude;
 pub mod stx;
 pub mod toplevel;
