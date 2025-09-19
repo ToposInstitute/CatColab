@@ -4,11 +4,12 @@ This module provides interfaces and simple wrapper types to enable sets to be
 treated in a generic way.
  */
 
+use std::hash::Hash;
 use std::ops::Range;
-use std::{collections::HashSet, hash::Hash};
 
 use derivative::Derivative;
 use derive_more::{From, Into};
+use indexmap::IndexSet;
 use ref_cast::RefCast;
 use ustr::Ustr;
 
@@ -116,12 +117,17 @@ impl IntoIterator for SkelFinSet {
     }
 }
 
-/// A finite set backed by a hash set.
-#[derive(Clone, Debug, From, Into, Derivative)]
+/** A finite set backed by a hash set.
+
+A stable order is guaranteed when iterating over the elements of the set.
+Currently, this achieved by using an [`IndexSet`] rather than a `HashSet` for
+the underlying data structure.
+ */
+#[derive(Clone, Debug, Derivative)]
 #[derivative(Default(bound = ""))]
 #[derivative(PartialEq(bound = "T: Eq + Hash"))]
 #[derivative(Eq(bound = "T: Eq + Hash"))]
-pub struct HashFinSet<T>(HashSet<T>);
+pub struct HashFinSet<T>(IndexSet<T>);
 
 /// A finite set with elements of type `Ustr`.
 pub type UstrFinSet = HashFinSet<Ustr>;
@@ -179,7 +185,7 @@ where
     T: Eq + Hash,
 {
     type Item = T;
-    type IntoIter = std::collections::hash_set::IntoIter<T>;
+    type IntoIter = indexmap::set::IntoIter<T>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
@@ -275,10 +281,7 @@ mod tests {
         assert!(s.contains(&3));
         assert!(s.contains(&7));
         assert!(!s.contains(&2));
-
-        let s = HashFinSet::from(HashSet::from([3, 5, 7]));
-        let sum: i32 = s.iter().sum();
-        assert_eq!(sum, 15);
+        assert_eq!(s.iter().sum::<i32>(), 15);
         assert_eq!(s.len(), 3);
     }
 
