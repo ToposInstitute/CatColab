@@ -9,7 +9,9 @@ axum = "0.7.7"
 chrono = { version = "0.4.40", features = ["serde"] }
 clap = "4.5.44"
 dotenvy = "0.15.7"
-firebase-auth = { version = "0.4.3", default-features = false }
+firebase-auth = { version = "0.5.1", default-features = false, features = [
+  "rustls",
+] }
 http = "1.1.0"
 hyper = { version = "1.4.1", features = ["server"] }
 jsonrpsee = "0.24.6"
@@ -22,7 +24,7 @@ serde_json = "1.0.128"
 socketioxide = { version = "0.14.1", features = ["tracing"] }
 sqlx = { version = "0.8.2", features = [
   "runtime-tokio",
-  "tls-native-tls",
+  "tls-rustls",
   "postgres",
   "uuid",
   "json",
@@ -41,3 +43,11 @@ ts-rs = { version = "10.1.0", features = [
   "chrono-impl",
 ] }
 uuid = { version = "1.10.0", features = ["v7", "serde"] }
+
+
+[patch.crates-io]
+# Pin reqwest to rustls; add subfeatures only if you need them
+reqwest = { version = "0.12.23", default-features = false, features = [
+  "rustls-tls",
+  "json",
+] }
