@@ -63,19 +63,20 @@ pub struct StochasticMassActionAnalysis {
 impl StochasticMassActionAnalysis {
     /// Simulates the stochastic mass-action system and collects the results.
     pub fn simulate(&mut self) -> ODESolution {
-        let mut time = Vec::new();
-        let mut states: HashMap<_, Vec<_>> = HashMap::new();
-        for t in 0..(self.duration as u8) {
+        let mut time = vec![0.0];
+        let mut states: HashMap<_, _> = self
+            .variable_index
+            .keys()
+            .map(|id| {
+                let initial = self.initial_values.get(id).copied().unwrap_or_default();
+                (id.clone(), vec![initial])
+            })
+            .collect();
+        for t in 0..(self.duration as usize) {
             self.problem.advance_until(t as f64);
             time.push(self.problem.get_time() as f32);
             for (id, idx) in self.variable_index.iter() {
-                states
-                    .entry(id.clone())
-                    .and_modify(|state| state.push(self.problem.get_species(*idx) as f32))
-                    .or_insert_with(|| {
-                        let initial = self.initial_values.get(id).copied().unwrap_or_default();
-                        vec![initial]
-                    });
+                states.get_mut(id).unwrap().push(self.problem.get_species(*idx) as f32)
             }
         }
         ODESolution { time, states }
