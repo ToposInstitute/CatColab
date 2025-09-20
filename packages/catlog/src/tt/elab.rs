@@ -2,7 +2,7 @@
 use crate::{
     dbl::{
         category::VDblCategory,
-        model::{DblModel, FgDblModel},
+        model::{DblModel, DiscreteDblModel, FgDblModel},
         theory::DblTheory,
     },
     one::FgCategory,
@@ -10,7 +10,8 @@ use crate::{
 use fnotation::*;
 use nonempty::nonempty;
 use scopeguard::{ScopeGuard, guard};
-use std::fmt::Write;
+use std::fmt;
+
 use tattle::declare_error;
 
 use crate::{
@@ -33,6 +34,30 @@ Top-level elaboration is elaboration of declarations.
 pub struct TopElaborator<'a> {
     toplevel: &'a Toplevel,
     reporter: Reporter,
+}
+
+fn model_output(out: &mut impl fmt::Write, model: &DiscreteDblModel) -> fmt::Result {
+    writeln!(out)?;
+    writeln!(out, "#/ object generators: ")?;
+    let mut obgens = model.ob_generators().collect::<Vec<_>>();
+    obgens.sort();
+    for obgen in obgens.iter() {
+        writeln!(out, "#/  {} : {}", obgen, model.ob_type(obgen))?;
+    }
+    writeln!(out, "#/ morphism generators: ")?;
+    let mut morgens = model.mor_generators().collect::<Vec<_>>();
+    morgens.sort();
+    for morgen in morgens.iter() {
+        writeln!(
+            out,
+            "#/  {} : {} -> {} ({})",
+            morgen,
+            model.mor_generator_dom(morgen),
+            model.mor_generator_cod(morgen),
+            MorphismType(model.mor_generator_type(morgen))
+        )?;
+    }
+    Ok(())
 }
 
 impl<'a> TopElaborator<'a> {
@@ -171,27 +196,7 @@ impl<'a> TopElaborator<'a> {
                 let (_, ty_v) = elab.ty(tn.body)?;
                 let model = generate(self.toplevel, &ty_v);
                 let mut out = String::new();
-                writeln!(&mut out).unwrap();
-                writeln!(&mut out, "#/ object generators: ").unwrap();
-                let mut obgens = model.ob_generators().collect::<Vec<_>>();
-                obgens.sort();
-                for obgen in obgens.iter() {
-                    writeln!(&mut out, "#/  {} : {}", obgen, model.ob_type(obgen)).unwrap();
-                }
-                writeln!(&mut out, "#/ morphism generators: ").unwrap();
-                let mut morgens = model.mor_generators().collect::<Vec<_>>();
-                morgens.sort();
-                for morgen in morgens.iter() {
-                    writeln!(
-                        &mut out,
-                        "#/  {} : {} -> {} ({})",
-                        morgen,
-                        model.mor_generator_dom(morgen),
-                        model.mor_generator_cod(morgen),
-                        MorphismType(model.mor_generator_type(morgen))
-                    )
-                    .unwrap();
-                }
+                model_output(&mut out, &model).unwrap();
                 Some(TopElabResult::Output(out))
             }
             _ => self.error(tn.loc, "unknown toplevel declaration"),
