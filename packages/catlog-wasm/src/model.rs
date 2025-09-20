@@ -446,25 +446,21 @@ impl DblModel {
     /// Returns the object generators for the model.
     #[wasm_bindgen(js_name = "obGenerators")]
     pub fn ob_generators(&self) -> Vec<QualifiedName> {
-        let mut ob_gens: Vec<_> = all_the_same!(match &self.model {
+        all_the_same!(match &self.model {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
                 model.ob_generators().collect()
             }
-        });
-        ob_gens.sort(); // Ensure stable order in frontend.
-        ob_gens
+        })
     }
 
     /// Returns the morphism generators for the model.
     #[wasm_bindgen(js_name = "morGenerators")]
     pub fn mor_generators(&self) -> Vec<QualifiedName> {
-        let mut mor_gens: Vec<_> = all_the_same!(match &self.model {
+        all_the_same!(match &self.model {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
                 model.mor_generators().collect()
             }
-        });
-        mor_gens.sort(); // Ensure stable order in frontend.
-        mor_gens
+        })
     }
 
     /// Returns the object generators of the given object type.
