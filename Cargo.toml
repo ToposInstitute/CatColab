@@ -10,6 +10,7 @@ exclude = [
   "packages/algjulia-interop",
   "packages/automerge-doc-server",
   "packages/frontend",
+  "packages/patchwork",
 ]
 
 [workspace.package]

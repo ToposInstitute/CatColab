@@ -32,7 +32,7 @@ export const newDiagramDocument = (modelRef: StableRef): DiagramDocument => ({
         ...modelRef,
         type: "diagram-in",
     },
-    notebook: newNotebook(),
+    notebook: newNotebook<DiagramJudgment>(),
     version: currentVersion(),
 });
 

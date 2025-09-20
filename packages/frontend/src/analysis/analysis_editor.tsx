@@ -206,7 +206,8 @@ export function AnalysisNotebookEditor(props: {
     );
 }
 
-function AnalysisCellEditor(props: FormalCellEditorProps<Analysis<unknown>>) {
+/** Editor for a notebook cell in an analysis notebook. */
+export function AnalysisCellEditor(props: FormalCellEditorProps<Analysis<unknown>>) {
     const liveAnalysis = useContext(LiveAnalysisContext);
     invariant(liveAnalysis, "Live analysis should be provided as context for cell editor");
 
