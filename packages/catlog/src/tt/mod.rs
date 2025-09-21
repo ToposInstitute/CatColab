@@ -352,11 +352,12 @@
 //! be semantically the same type.
 
 pub mod batch;
-pub mod elab;
+pub mod context;
 pub mod eval;
 pub mod modelgen;
 pub mod prelude;
 pub mod stx;
+pub mod text_elab;
 pub mod toplevel;
 pub mod util;
 pub mod val;

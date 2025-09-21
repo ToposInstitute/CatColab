@@ -15,7 +15,7 @@ use std::fmt;
 use tattle::declare_error;
 
 use crate::{
-    tt::{eval::*, modelgen::*, prelude::*, stx::*, toplevel::*, val::*},
+    tt::{context::*, eval::*, modelgen::*, prelude::*, stx::*, toplevel::*, val::*},
     zero::QualifiedName,
 };
 
@@ -196,37 +196,6 @@ impl<'a> TopElaborator<'a> {
             }
             _ => self.error(tn.loc, "unknown toplevel declaration"),
         }
-    }
-}
-
-struct Context {
-    env: Env,
-    scope: Vec<(VarName, Option<TyV>)>,
-}
-
-struct ContextCheckpoint {
-    env: Env,
-    scope: usize,
-}
-
-impl Context {
-    fn new() -> Self {
-        Self {
-            env: Env::Nil,
-            scope: Vec::new(),
-        }
-    }
-
-    fn checkpoint(&self) -> ContextCheckpoint {
-        ContextCheckpoint {
-            env: self.env.clone(),
-            scope: self.scope.len(),
-        }
-    }
-
-    fn reset_to(&mut self, c: ContextCheckpoint) {
-        self.env = c.env;
-        self.scope.truncate(c.scope);
     }
 }
 

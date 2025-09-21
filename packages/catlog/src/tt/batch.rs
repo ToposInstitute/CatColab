@@ -8,13 +8,13 @@ use std::{fs, io};
 use crate::zero::NameSegment;
 use crate::{stdlib, tt::*};
 
-use elab::*;
 use fnotation::parser::Prec;
 use fnotation::{FNtnTop, ParseConfig};
 use prelude::*;
 use scopeguard::guard;
 use tattle::display::SourceInfo;
 use tattle::{Reporter, declare_error};
+use text_elab::*;
 use toplevel::*;
 
 const PARSE_CONFIG: ParseConfig = ParseConfig::new(
