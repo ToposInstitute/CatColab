@@ -39,22 +39,18 @@ pub struct TopElaborator<'a> {
 fn model_output(out: &mut impl fmt::Write, model: &DiscreteDblModel) -> fmt::Result {
     writeln!(out)?;
     writeln!(out, "#/ object generators: ")?;
-    let mut obgens = model.ob_generators().collect::<Vec<_>>();
-    obgens.sort();
-    for obgen in obgens.iter() {
-        writeln!(out, "#/  {} : {}", obgen, model.ob_type(obgen))?;
+    for obgen in model.ob_generators() {
+        writeln!(out, "#/  {} : {}", obgen, model.ob_type(&obgen))?;
     }
     writeln!(out, "#/ morphism generators: ")?;
-    let mut morgens = model.mor_generators().collect::<Vec<_>>();
-    morgens.sort();
-    for morgen in morgens.iter() {
+    for morgen in model.mor_generators() {
         writeln!(
             out,
             "#/  {} : {} -> {} ({})",
             morgen,
-            model.mor_generator_dom(morgen),
-            model.mor_generator_cod(morgen),
-            MorphismType(model.mor_generator_type(morgen))
+            model.mor_generator_dom(&morgen),
+            model.mor_generator_cod(&morgen),
+            MorphismType(model.mor_generator_type(&morgen))
         )?;
     }
     Ok(())

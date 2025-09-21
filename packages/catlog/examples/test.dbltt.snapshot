@@ -20,8 +20,8 @@ type WeightedGraph := [
 generate WeightedGraph
 #/ result: 
 #/ object generators: 
-#/  E : Entity
 #/  V : Entity
+#/  E : Entity
 #/  Weight : AttrType
 #/ morphism generators: 
 #/  src : E -> V (Id Entity)
