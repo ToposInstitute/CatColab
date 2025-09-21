@@ -18,6 +18,13 @@ pub struct ContextCheckpoint {
     scope: usize,
 }
 
+// Clippy wants this for some reason
+impl Default for Context {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Context {
     /// Create an empty context
     pub fn new() -> Self {
