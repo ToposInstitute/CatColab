@@ -20,10 +20,9 @@ pub type InvalidDiscreteDblModelDiagram =
     InvalidDblModelDiagram<InvalidDblModel, InvalidDblModelMorphism<QualifiedName, QualifiedName>>;
 
 impl DiscreteDblModelDiagram {
-    /** Validates that the diagram is well-defined in the given model.
-
-    Assumes that the model is valid. If it is not, this function may panic.
-     */
+    /// Validates that the diagram is well-defined in the given model.
+    ///
+    /// Assumes that the model is valid. If it is not, this function may panic.
     pub fn validate_in(
         &self,
         model: &DiscreteDblModel,
@@ -45,10 +44,9 @@ impl DiscreteDblModelDiagram {
         }
     }
 
-    /** Infer missing data in the diagram from the model, where possible.
-
-    Assumes that the model is valid.
-     */
+    /// Infer missing data in the diagram from the model, where possible.
+    ///
+    /// Assumes that the model is valid.
     pub fn infer_missing_from(&mut self, model: &DiscreteDblModel) {
         let (mapping, domain) = self.into();
         domain.infer_missing();

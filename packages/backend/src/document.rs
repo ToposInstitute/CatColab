@@ -81,10 +81,9 @@ pub async fn autosave(state: AppState, data: RefContent) -> Result<(), AppError>
     Ok(())
 }
 
-/** Saves the document by replacing the head with a new snapshot.
-
-The snapshot at the previous head is *not* deleted.
-*/
+/// Saves the document by replacing the head with a new snapshot.
+///
+/// The snapshot at the previous head is *not* deleted.
 pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppError> {
     let head_doc_id_query = sqlx::query!(
         "

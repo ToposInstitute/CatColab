@@ -6,23 +6,22 @@ use std::hash::Hash;
 use super::graph::*;
 use super::path::*;
 
-/** Iterates over all simple paths between two vertices of a finite graph.
-
-On our definition, a **simple path** is a path in which all edges are distinct.
-
-A **simple cycle** is a simple path in which the source and target coincide.
-This being a category theory library, we do consider the empty/identity path at
-a vertex to be a simple cycle.
-
-# References
-
-This function is adapted from previous implementations of the same algorithm:
-
-- [`all_simple_paths`](https://docs.rs/petgraph/latest/petgraph/algo/simple_paths/fn.all_simple_paths.html)
-  in [petgraph](https://github.com/petgraph/petgraph)
-- [`all_simple_paths`](https://networkx.org/documentation/stable/reference/algorithms/generated/networkx.algorithms.simple_paths.all_simple_paths.html)
-  in [NetworkX](https://networkx.org)
- */
+/// Iterates over all simple paths between two vertices of a finite graph.
+///
+/// On our definition, a **simple path** is a path in which all edges are distinct.
+///
+/// A **simple cycle** is a simple path in which the source and target coincide.
+/// This being a category theory library, we do consider the empty/identity path at
+/// a vertex to be a simple cycle.
+///
+/// # References
+///
+/// This function is adapted from previous implementations of the same algorithm:
+///
+/// - [`all_simple_paths`](https://docs.rs/petgraph/latest/petgraph/algo/simple_paths/fn.all_simple_paths.html)
+///   in [petgraph](https://github.com/petgraph/petgraph)
+/// - [`all_simple_paths`](https://networkx.org/documentation/stable/reference/algorithms/generated/networkx.algorithms.simple_paths.all_simple_paths.html)
+///   in [NetworkX](https://networkx.org)
 pub fn simple_paths<'a, G>(
     graph: &'a G,
     from: &'a G::V,
@@ -36,12 +35,11 @@ where
     bounded_simple_paths(graph, from, to, None)
 }
 
-/** Iterates over all simple paths of bounded length between two vertices.
-
-Works like [`simple_paths`], with the same definition of *simple path*, but the
-returned paths are also optionally restricted to those of bounded length. The
-**length** of a path is the number of edges in it.
- */
+/// Iterates over all simple paths of bounded length between two vertices.
+///
+/// Works like [`simple_paths`], with the same definition of *simple path*, but the
+/// returned paths are also optionally restricted to those of bounded length. The
+/// length** of a path is the number of edges in it.
 pub fn bounded_simple_paths<'a, G>(
     graph: &'a G,
     from: &'a G::V,
@@ -94,23 +92,22 @@ where
     maybe_empty_path.into_iter().chain(nonempty_paths)
 }
 
-/** Arrange all the elements of a finite graph in specialization order.
-
-The [specialization
-order](https://en.wikipedia.org/wiki/Specialization_(pre)order) is the preorder
-associated with the [Alexandrov
-topology](https://en.wikipedia.org/wiki/Alexandrov_topology) on the graph.
-Equivalently, it is the preorder reflection of the category of elements of the
-graph. In simple terms, this means that every edge is greater than its source
-and its target.
-
-This function computes a total ordering of the elements of the graph that
-extends the specialization order. Such a total ordering is precisely a
-[topological ordering](https://en.wikipedia.org/wiki/Topological_ordering) on
-the category of elements of the graph. The particular ordering is computed using
-breadth-first search, which ensures that edges are close to their sources and
-targets (while still always being greater than them).
- */
+/// Arrange all the elements of a finite graph in specialization order.
+///
+/// The [specialization
+/// order](https://en.wikipedia.org/wiki/Specialization_(pre)order) is the preorder
+/// associated with the [Alexandrov
+/// topology](https://en.wikipedia.org/wiki/Alexandrov_topology) on the graph.
+/// Equivalently, it is the preorder reflection of the category of elements of the
+/// graph. In simple terms, this means that every edge is greater than its source
+/// and its target.
+///
+/// This function computes a total ordering of the elements of the graph that
+/// extends the specialization order. Such a total ordering is precisely a
+/// [topological ordering](https://en.wikipedia.org/wiki/Topological_ordering) on
+/// the category of elements of the graph. The particular ordering is computed using
+/// breadth-first search, which ensures that edges are close to their sources and
+/// targets (while still always being greater than them).
 pub fn spec_order_all<G>(graph: &G) -> Vec<GraphElem<G::V, G::E>>
 where
     G: FinGraph,
@@ -119,11 +116,10 @@ where
     spec_order(graph, graph.vertices())
 }
 
-/** Arrange some or all elements of a graph in specialization order.
-
-This function is similar to [`spec_order_all`] except that the breadth-first
-search starts only from the given vertices.
- */
+/// Arrange some or all elements of a graph in specialization order.
+///
+/// This function is similar to [`spec_order_all`] except that the breadth-first
+/// search starts only from the given vertices.
 pub fn spec_order<G>(graph: &G, vertices: impl Iterator<Item = G::V>) -> Vec<GraphElem<G::V, G::E>>
 where
     G: FinGraph,
@@ -168,11 +164,10 @@ where
     result
 }
 
-/** Computes a topological sorting for a given graph.
-
-This toposort algorithm was borrowed from the crate `petgraph`, found
-[here](https://github.com/petgraph/petgraph/blob/4d807c19304c02c9dd687c68577f75aefcb98491/src/algo/mod.rs#L204)
- */
+/// Computes a topological sorting for a given graph.
+///
+/// This toposort algorithm was borrowed from the crate `petgraph`, found
+/// [here](https://github.com/petgraph/petgraph/blob/4d807c19304c02c9dd687c68577f75aefcb98491/src/algo/mod.rs#L204)
 pub fn toposort<G>(graph: &G) -> Result<Vec<G::V>, String>
 where
     G: FinGraph,

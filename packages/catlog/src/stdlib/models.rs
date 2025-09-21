@@ -6,36 +6,32 @@ use crate::dbl::{model::*, theory::*};
 use crate::one::{Path, QualifiedPath};
 use crate::zero::{QualifiedName, name};
 
-/** The positive self-loop.
-
-A signed graph or free [signed category](super::theories::th_signed_category),
-possibly with delays or indeterminates.
- */
+/// The positive self-loop.
+///
+/// A signed graph or free [signed category](super::theories::th_signed_category),
+/// possibly with delays or indeterminates.
 pub fn positive_loop(th: Rc<DiscreteDblTheory>) -> DiscreteDblModel {
     loop_of_type(th, name("Object"), Path::Id(name("Object")))
 }
 
-/** The negative self-loop.
-
-A signed graph or free [signed category](super::theories::th_signed_category),
-possibly with delays or indeterminates.
- */
+/// The negative self-loop.
+///
+/// A signed graph or free [signed category](super::theories::th_signed_category),
+/// possibly with delays or indeterminates.
 pub fn negative_loop(th: Rc<DiscreteDblTheory>) -> DiscreteDblModel {
     loop_of_type(th, name("Object"), name("Negative").into())
 }
 
-/** The delayed positive self-loop.
-
-A free [delayable signed category](super::theories::th_delayable_signed_category).
- */
+/// The delayed positive self-loop.
+///
+/// A free [delayable signed category](super::theories::th_delayable_signed_category).
 pub fn delayed_positive_loop(th: Rc<DiscreteDblTheory>) -> DiscreteDblModel {
     loop_of_type(th, name("Object"), name("Slow").into())
 }
 
-/** The delayed negative self-loop.
-
-A free [delayable signed category](super::theories::th_delayable_signed_category).
- */
+/// The delayed negative self-loop.
+///
+/// A free [delayable signed category](super::theories::th_delayable_signed_category).
 pub fn delayed_negative_loop(th: Rc<DiscreteDblTheory>) -> DiscreteDblModel {
     loop_of_type(th, name("Object"), Path::pair(name("Negative"), name("Slow")))
 }
@@ -52,10 +48,9 @@ fn loop_of_type(
     model
 }
 
-/** The positive feedback loop between two objects.
-
-A signed graph or free [signed category](super::theories::th_signed_category).
- */
+/// The positive feedback loop between two objects.
+///
+/// A signed graph or free [signed category](super::theories::th_signed_category).
 pub fn positive_feedback(th: Rc<DiscreteDblTheory>) -> DiscreteDblModel {
     let mut model = DiscreteDblModel::new(th);
     model.add_ob(name("x"), name("Object"));
@@ -65,10 +60,9 @@ pub fn positive_feedback(th: Rc<DiscreteDblTheory>) -> DiscreteDblModel {
     model
 }
 
-/** The negative feedback loop between two objects.
-
-A signed graph or free [signed category](super::theories::th_signed_category).
- */
+/// The negative feedback loop between two objects.
+///
+/// A signed graph or free [signed category](super::theories::th_signed_category).
 pub fn negative_feedback(th: Rc<DiscreteDblTheory>) -> DiscreteDblModel {
     let mut model = DiscreteDblModel::new(th);
     model.add_ob(name("x"), name("Object"));
@@ -78,10 +72,9 @@ pub fn negative_feedback(th: Rc<DiscreteDblTheory>) -> DiscreteDblModel {
     model
 }
 
-/** The "walking attribute" schema.
-
-A schema with one entity type, one attribute type, and one attribute.
- */
+/// The "walking attribute" schema.
+///
+/// A schema with one entity type, one attribute type, and one attribute.
 pub fn walking_attr(th: Rc<DiscreteDblTheory>) -> DiscreteDblModel {
     let mut model = DiscreteDblModel::new(th);
     model.add_ob(name("entity"), name("Entity"));
@@ -90,17 +83,16 @@ pub fn walking_attr(th: Rc<DiscreteDblTheory>) -> DiscreteDblModel {
     model
 }
 
-/** The "walking" backward link.
-
-This is the free category with links that has a link from the codomain of a
-morphism back to the morphism itself.
-
-In system dynamics jargon, a backward link defines a "reinforcing loop,"
-assuming the link has a positive effect on the flow. An example is an infection
-flow in a model of an infectious disease, where increasing the number of
-infectives increases the rate of infection of the remaining susceptibles (other
-things equal).
- */
+/// The "walking" backward link.
+///
+/// This is the free category with links that has a link from the codomain of a
+/// morphism back to the morphism itself.
+///
+/// In system dynamics jargon, a backward link defines a "reinforcing loop,"
+/// assuming the link has a positive effect on the flow. An example is an infection
+/// flow in a model of an infectious disease, where increasing the number of
+/// infectives increases the rate of infection of the remaining susceptibles (other
+/// things equal).
 pub fn backward_link(th: Rc<DiscreteTabTheory>) -> DiscreteTabModel {
     let ob_type = TabObType::Basic(name("Object"));
     let mut model = DiscreteTabModel::new(th.clone());
@@ -116,10 +108,9 @@ pub fn backward_link(th: Rc<DiscreteTabTheory>) -> DiscreteTabModel {
     model
 }
 
-/** A reaction involving three species, one playing the role of a catalyst.
-
-A free symmetric monoidal category, viewed as a reaction network.
- */
+/// A reaction involving three species, one playing the role of a catalyst.
+///
+/// A free symmetric monoidal category, viewed as a reaction network.
 pub fn catalyzed_reaction(th: Rc<ModalDblTheory>) -> ModalDblModel {
     let (ob_type, op) = (ModalObType::new(name("Object")), name("tensor"));
     let mut model = ModalDblModel::new(th);
@@ -136,8 +127,7 @@ pub fn catalyzed_reaction(th: Rc<ModalDblTheory>) -> ModalDblModel {
     model
 }
 
-/** The SIR model viewed as a reaction network.
- */
+/// The SIR model viewed as a reaction network.
 pub fn sir_petri(th: Rc<ModalDblTheory>) -> ModalDblModel {
     let (ob_type, op) = (ModalObType::new(name("Object")), name("tensor"));
     let mut model = ModalDblModel::new(th);

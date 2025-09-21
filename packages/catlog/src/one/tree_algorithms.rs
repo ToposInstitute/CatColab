@@ -101,16 +101,15 @@ impl<'a, T: 'a> TreeTraversal<T> for NodeRef<'a, T> {
 
 /// Extension trait adding isomorphism checking on [trees](Tree).
 pub trait TreeIsomorphism<T> {
-    /** Is the tree isomorphic to another?
-
-    The standard data structure for trees based on pointers has only one notion
-    of "sameness" that makes sense, but for vector-backed trees with node IDs,
-    trees can be isomorphic (logically the same) without having underlying data
-    that is equal. This methods checks for logical sameness.
-
-    Note that the isomorphism check ignores orphaned nodes, since those are
-    logically deleted.
-     */
+    /// Is the tree isomorphic to another?
+    ///
+    /// The standard data structure for trees based on pointers has only one notion
+    /// of "sameness" that makes sense, but for vector-backed trees with node IDs,
+    /// trees can be isomorphic (logically the same) without having underlying data
+    /// that is equal. This methods checks for logical sameness.
+    ///
+    /// Note that the isomorphism check ignores orphaned nodes, since those are
+    /// logically deleted.
     fn is_isomorphic_to(&self, other: &Self) -> bool;
 }
 

@@ -1,7 +1,6 @@
-/*! Qualified names and labels.
-
-TODO
- */
+//! Qualified names and labels.
+//!
+//! TODO
 
 use std::fmt::Display;
 use std::{collections::HashMap, hash::Hash};
@@ -18,12 +17,11 @@ use tsify::Tsify;
 
 use super::column::{Column, IndexedHashColumn, Mapping, MutMapping};
 
-/** A segment in a [qualified name](QualifiedName).
-
-A segment is either a meaningless, machine-generated identifier, represented as
-a [UUID](Uuid), or a meaningful, operator-generated name, represented as an
-interned string.
- */
+/// A segment in a [qualified name](QualifiedName).
+///
+/// A segment is either a meaningless, machine-generated identifier, represented as
+/// a [UUID](Uuid), or a meaningful, operator-generated name, represented as an
+/// interned string.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, From)]
 pub enum NameSegment {
     /// A universally unique identifier (UUID).
@@ -69,34 +67,33 @@ impl NameSegment {
     }
 }
 
-/** A qualified name, consisting of a sequence of [name segments](NameSegment).
-
-A qualified name is a sequence of segments that unambiguously names an element
-in a set, or a family of sets, or a family of family of sets, and so on. For
-example, a qualified name with three segments can be constructed as
-
-```
-# use catlog::zero::qualified::*;
-let name: QualifiedName = ["foo", "bar", "baz"].map(NameSegment::from).into();
-assert_eq!(name.to_string(), "foo.bar.baz");
-```
-
-# Data structure
-
-At this time, a qualified name is stored simply as a vector of name segments.
-Various optimizations could be considered, such as an `Rc<[NameSegment]>` or,
-since qualified names tend to have only a few segments, a
-`SmallVec<[NameSegment; n]>` for some choice of `n`. These will be considered
-premature optimizations until there is good evidence in favor of them.
-
-# Serialization
-
-To simplify their use in JavaScript, qualified name are serialized as flat
-strings with segments separated by periods. Human-readable names are quoted with
-backticks regardless of whether they contain whitespace, which makes parsing
-easier. Note that the [display](Display) format is different from the
-serialization format.
- */
+/// A qualified name, consisting of a sequence of [name segments](NameSegment).
+///
+/// A qualified name is a sequence of segments that unambiguously names an element
+/// in a set, or a family of sets, or a family of family of sets, and so on. For
+/// example, a qualified name with three segments can be constructed as
+///
+/// ```
+/// # use catlog::zero::qualified::*;
+/// let name: QualifiedName = ["foo", "bar", "baz"].map(NameSegment::from).into();
+/// assert_eq!(name.to_string(), "foo.bar.baz");
+/// ```
+///
+/// # Data structure
+///
+/// At this time, a qualified name is stored simply as a vector of name segments.
+/// Various optimizations could be considered, such as an `Rc<[NameSegment]>` or,
+/// since qualified names tend to have only a few segments, a
+/// `SmallVec<[NameSegment; n]>` for some choice of `n`. These will be considered
+/// premature optimizations until there is good evidence in favor of them.
+///
+/// # Serialization
+///
+/// To simplify their use in JavaScript, qualified name are serialized as flat
+/// strings with segments separated by periods. Human-readable names are quoted with
+/// backticks regardless of whether they contain whitespace, which makes parsing
+/// easier. Note that the [display](Display) format is different from the
+/// serialization format.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, From)]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]

@@ -1,12 +1,11 @@
-/*! Directories. */
+//! Directories.
 
 use crate::{tt::prelude::*, zero::QualifiedName};
 
-/** An entry in a [Dtry].
-
-We use naming conventions from UNIX directories to name the variants of this
-enum.
-*/
+/// An entry in a [Dtry].
+///
+/// We use naming conventions from UNIX directories to name the variants of this
+/// enum.
 #[derive(Clone)]
 pub enum DtryEntry<T> {
     /// A leaf node.
@@ -43,22 +42,21 @@ impl<T: Clone> DtryEntry<T> {
     }
 }
 
-/** A directory.
-
-A `Dtry<T>` consists of a mapping from `FieldName`s to directory
-entries, where a directory entry is either a "File" ([DtryEntry::File]),
-that is an element of `T`, or a "subdirectory" ([DtryEntry::SubDir]),
-which is just another directory.
-
-The terminology is slightly different from [the directories paper][1];
-in the directories paper we call [DtryEntry] a directory, and [Dtry] is
-just the internal node case of [DtryEntry] (internal node as opposed to
-leaf node). This makes `Dtry` no longer a monad (there isn't a unit),
-but it's slightly more convenient for our use case here (keeping track
-of specializations).
-
-[1]: https://arxiv.org/abs/2504.19389
-*/
+/// A directory.
+///
+/// A `Dtry<T>` consists of a mapping from `FieldName`s to directory
+/// entries, where a directory entry is either a "File" ([DtryEntry::File]),
+/// that is an element of `T`, or a "subdirectory" ([DtryEntry::SubDir]),
+/// which is just another directory.
+///
+/// The terminology is slightly different from [the directories paper][1];
+/// in the directories paper we call [DtryEntry] a directory, and [Dtry] is
+/// just the internal node case of [DtryEntry] (internal node as opposed to
+/// leaf node). This makes `Dtry` no longer a monad (there isn't a unit),
+/// but it's slightly more convenient for our use case here (keeping track
+/// of specializations).
+///
+/// [1]: https://arxiv.org/abs/2504.19389
 #[derive(Clone)]
 pub struct Dtry<T>(Row<DtryEntry<T>>);
 

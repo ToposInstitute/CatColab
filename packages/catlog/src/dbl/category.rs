@@ -1,47 +1,46 @@
-/*! Virtual double categories.
-
-# Background
-
-A [*virtual double
-category*](https://ncatlab.org/nlab/show/virtual+double+category) (VDC) is like
-a double category, except that there is no external composition operation on
-proarrows or cells. Rather, a cell has a domain that is a path of proarrows (a
-"virtual" composite). The name "virtual double category" was introduced by
-[Cruttwell and Shulman](crate::refs::GeneralizedMulticategories) but the concept
-has gone by many other names, notably *fc-multicategory* ([Leinster
-2004](crate::refs::HigherOperads)).
-
-*Composites* of proarrows in a VDC, if they exist, are represented by cells
-satsifying a universal property ([Cruttwell-Shulman
-2008](crate::refs::GeneralizedMulticategories), Section 5). In our usage of
-virtual double categories as double theories, we will assume that *units*
-(nullary composites) exist. We will not assume that any other composites exist,
-though often they do.
-
-Virtual double categories have pros and cons compared with ordinary double
-categories. We prefer VDCs in `catlog` because pastings of cells are much
-simpler in a VDC than in a double category: a pasting diagram in VDC is a
-well-typed [tree](super::tree) of cells, rather than a kind of planar string
-diagram, and the notorious
-[pinwheel](https://ncatlab.org/nlab/show/double+category#Unbiased) obstruction
-to composition in a double category does not arise in VDCs.
-
-# Examples
-
-A [double theory](super::theory) is "just" a unital virtual double category, so
-any double theory in the standard library is an example of a VDC. For testing
-purposes, this module directly implements several minimal examples of VDCs,
-namely ["walking"](https://ncatlab.org/nlab/show/walking+structure) categorical
-structures that can be interpreted in any VDC:
-
-- the [walking category](WalkingCategory)
-- the [walking functor](WalkingFunctor)
-- the [walking bimodule](WalkingBimodule) or profunctor
-
-The walking category and bimodule can be seen as discrete double theories, while
-the walking functor is a simple double theory, but here they are implemented at
-the type level rather than as instances of general data structures.
- */
+//! Virtual double categories.
+//!
+//! # Background
+//!
+//! A [*virtual double
+//! category*](https://ncatlab.org/nlab/show/virtual+double+category) (VDC) is like
+//! a double category, except that there is no external composition operation on
+//! proarrows or cells. Rather, a cell has a domain that is a path of proarrows (a
+//! "virtual" composite). The name "virtual double category" was introduced by
+//! [Cruttwell and Shulman](crate::refs::GeneralizedMulticategories) but the concept
+//! has gone by many other names, notably *fc-multicategory* ([Leinster
+//! 2004](crate::refs::HigherOperads)).
+//!
+//! Composites* of proarrows in a VDC, if they exist, are represented by cells
+//! satsifying a universal property ([Cruttwell-Shulman
+//! 2008](crate::refs::GeneralizedMulticategories), Section 5). In our usage of
+//! virtual double categories as double theories, we will assume that *units*
+//! (nullary composites) exist. We will not assume that any other composites exist,
+//! though often they do.
+//!
+//! Virtual double categories have pros and cons compared with ordinary double
+//! categories. We prefer VDCs in `catlog` because pastings of cells are much
+//! simpler in a VDC than in a double category: a pasting diagram in VDC is a
+//! well-typed [tree](super::tree) of cells, rather than a kind of planar string
+//! diagram, and the notorious
+//! [pinwheel](https://ncatlab.org/nlab/show/double+category#Unbiased) obstruction
+//! to composition in a double category does not arise in VDCs.
+//!
+//! # Examples
+//!
+//! A [double theory](super::theory) is "just" a unital virtual double category, so
+//! any double theory in the standard library is an example of a VDC. For testing
+//! purposes, this module directly implements several minimal examples of VDCs,
+//! namely ["walking"](https://ncatlab.org/nlab/show/walking+structure) categorical
+//! structures that can be interpreted in any VDC:
+//!
+//! - the [walking category](WalkingCategory)
+//! - the [walking functor](WalkingFunctor)
+//! - the [walking bimodule](WalkingBimodule) or profunctor
+//!
+//! The walking category and bimodule can be seen as discrete double theories, while
+//! the walking functor is a simple double theory, but here they are implemented at
+//! the type level rather than as instances of general data structures.
 
 use derive_more::From;
 use ref_cast::RefCast;
@@ -51,10 +50,9 @@ use super::graph::{EdgeGraph, VDblGraph};
 use super::tree::DblTree;
 use crate::one::{Category, Path};
 
-/** A virtual double category (VDC).
-
-See the [module-level docs](super::category) for background on VDCs.
- */
+/// A virtual double category (VDC).
+///
+/// See the [module-level docs](super::category) for background on VDCs.
 pub trait VDblCategory {
     /// Type of objects in the VDC.
     type Ob: Eq + Clone;
@@ -104,10 +102,9 @@ pub trait VDblCategory {
     /// Gets the target of a cell, an edge.
     fn cell_tgt(&self, cell: &Self::Cell) -> Self::Arr;
 
-    /** Gets the arity of a cell.
-
-    The default implementation returns the length of the cell's domain.
-     */
+    /// Gets the arity of a cell.
+    ///
+    /// The default implementation returns the length of the cell's domain.
     fn arity(&self, cell: &Self::Cell) -> usize {
         self.cell_dom(cell).len()
     }
@@ -145,37 +142,33 @@ pub trait VDblCategory {
     }
 }
 
-/** A virtual double category with some or all chosen composites.
-
-Like anything defined by a universal property, composites in a VDC are not
-strictly unique if they exist but they *are* unique up to unique isomorphism. As
-often when working with (co)limits, this trait assumes that a *choice* of
-composites has been made whenever they are exist. We do not attempt to
-"recognize" whether an arbitrary cell has the relevant universal property.
- */
+/// A virtual double category with some or all chosen composites.
+///
+/// Like anything defined by a universal property, composites in a VDC are not
+/// strictly unique if they exist but they *are* unique up to unique isomorphism. As
+/// often when working with (co)limits, this trait assumes that a *choice* of
+/// composites has been made whenever they are exist. We do not attempt to
+/// "recognize" whether an arbitrary cell has the relevant universal property.
 pub trait VDCWithComposites: VDblCategory {
-    /** Does the path of proarrows have a chosen composite?
-
-    The default implementation checks whether [`composite`](Self::composite)
-    returns something.
-    */
+    /// Does the path of proarrows have a chosen composite?
+    ///
+    /// The default implementation checks whether [`composite`](Self::composite)
+    /// returns something.
     fn has_composite(&self, path: &Path<Self::Ob, Self::Pro>) -> bool {
         self.composite(path.clone()).is_some()
     }
 
-    /** Does the object have a chosen unit?
-
-    The default implementation checks whether [`unit`](Self::unit) returns
-    something.
-     */
+    /// Does the object have a chosen unit?
+    ///
+    /// The default implementation checks whether [`unit`](Self::unit) returns
+    /// something.
     fn has_unit(&self, x: &Self::Ob) -> bool {
         self.unit(x.clone()).is_some()
     }
 
-    /** Gets the chosen cell witnessing a composite of proarrows, if there is one.
-
-    Such a cell is called an **extension or **opcartesian** cell.
-     */
+    /// Gets the chosen cell witnessing a composite of proarrows, if there is one.
+    ///
+    /// Such a cell is called an **extension or **opcartesian** cell.
     fn composite_ext(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Cell>;
 
     /// Gets the chosen cell witnessing a composite of two proarrows, if there is one.
@@ -183,11 +176,10 @@ pub trait VDCWithComposites: VDblCategory {
         self.composite_ext(Path::pair(m, n))
     }
 
-    /** Gets the chosen composite for a path of proarrows, if there is one.
-
-    The default implementation returns the codomain of the extension cell from
-    [`composite_ext`](Self::composite_ext).
-     */
+    /// Gets the chosen composite for a path of proarrows, if there is one.
+    ///
+    /// The default implementation returns the codomain of the extension cell from
+    /// [`composite_ext`](Self::composite_ext).
     fn composite(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Pro> {
         self.composite_ext(path).map(|α| self.cell_cod(&α))
     }
@@ -197,37 +189,33 @@ pub trait VDCWithComposites: VDblCategory {
         self.composite(Path::pair(m, n))
     }
 
-    /** Gets the chosen extension cell for an object, if there is one.
-
-    Such a cell is an [extension](Self::composite_ext) or opcartesian cell
-    in the nullary case.
-     */
+    /// Gets the chosen extension cell for an object, if there is one.
+    ///
+    /// Such a cell is an [extension](Self::composite_ext) or opcartesian cell
+    /// in the nullary case.
     fn unit_ext(&self, x: Self::Ob) -> Option<Self::Cell> {
         self.composite_ext(Path::empty(x))
     }
 
-    /** Gets the chosen unit for an object, if there is one.
-
-    The default implementation returns the codomain of the extension cell from
-    [`unit_ext`](Self::unit_ext).
-     */
+    /// Gets the chosen unit for an object, if there is one.
+    ///
+    /// The default implementation returns the codomain of the extension cell from
+    /// [`unit_ext`](Self::unit_ext).
     fn unit(&self, x: Self::Ob) -> Option<Self::Pro> {
         self.unit_ext(x).map(|α| self.cell_cod(&α))
     }
 
-    /** Factorizes a cell through a composite of proarrows.
-
-    The subpath of the domain path at the given range is replaced with the
-    composite of that subpath, if the composite exists. This is the universal
-    property of the composite.
-    */
+    /// Factorizes a cell through a composite of proarrows.
+    ///
+    /// The subpath of the domain path at the given range is replaced with the
+    /// composite of that subpath, if the composite exists. This is the universal
+    /// property of the composite.
     fn through_composite(&self, cell: Self::Cell, range: Range<usize>) -> Option<Self::Cell>;
 
-    /** Factorizes a cell through the unit proarrow for an object.
-
-    A unit proarrow is inserted into the domain path at the given index, if the
-    unit exists. This is the universal property of the unit.
-     */
+    /// Factorizes a cell through the unit proarrow for an object.
+    ///
+    /// A unit proarrow is inserted into the domain path at the given index, if the
+    /// unit exists. This is the universal property of the unit.
     fn through_unit(&self, cell: Self::Cell, index: usize) -> Option<Self::Cell> {
         self.through_composite(cell, index..index)
     }
@@ -319,14 +307,13 @@ impl<VDC: VDblCategory> VDblGraph for UnderlyingDblGraph<VDC> {
     }
 }
 
-/** The VDC freely generated by a virtual double graph.
-
-A virtual double graph freely generated a virtual double category, generalizing
-how a graph [freely generates](crate::one::category::FreeCategory) a category.
-This is not, however, the most general way to freely generate a VDC. A "virtual
-double computad" freely generates a VDC but allows the generating cells to have
-sources and targets that are *paths* of generating arrows.
- */
+/// The VDC freely generated by a virtual double graph.
+///
+/// A virtual double graph freely generated a virtual double category, generalizing
+/// how a graph [freely generates](crate::one::category::FreeCategory) a category.
+/// This is not, however, the most general way to freely generate a VDC. A "virtual
+/// double computad" freely generates a VDC but allows the generating cells to have
+/// sources and targets that are *paths* of generating arrows.
 #[derive(From, RefCast)]
 #[repr(transparent)]
 pub struct FreeVDblCategory<G: VDblGraph>(pub G);
@@ -391,17 +378,16 @@ where
     }
 }
 
-/** The walking category as a VDC.
-
-The walking category is the simplest example of a virtual double category that
-has units (and in fact all composites). Specifically, the **walking category**
-is the unital VDC freely generated by a single object, here called `()`.
-
-The concept of a category can be interpreted in any virtual double category: a
-**category object** in a VDC is a functor from the walking category into that
-VDC. In particular, a category object in spans is a category in the ordinary
-sense.
- */
+/// The walking category as a VDC.
+///
+/// The walking category is the simplest example of a virtual double category that
+/// has units (and in fact all composites). Specifically, the **walking category**
+/// is the unital VDC freely generated by a single object, here called `()`.
+///
+/// The concept of a category can be interpreted in any virtual double category: a
+/// category object** in a VDC is a functor from the walking category into that
+/// VDC. In particular, a category object in spans is a category in the ordinary
+/// sense.
 pub struct WalkingCategory();
 
 impl VDblCategory for WalkingCategory {
@@ -454,14 +440,13 @@ impl VDCWithComposites for WalkingCategory {
 
 #[allow(non_snake_case)]
 pub mod WalkingBimodule {
-    /*! The walking bimodule as a VDC.
-
-    The **walking bimodule**, also known as the **walking profunctor**, is the
-    unital virtual double category freely generated by a pair of objects, here
-    called [`Left`](Ob::Left) and [`Right`](Ob::Right), and a single proarrow
-    between them, here called [`Middle`](Pro::Middle). In fact, this VDC has all
-    composites.
-    */
+    //! The walking bimodule as a VDC.
+    //!
+    //! The **walking bimodule**, also known as the **walking profunctor**, is the
+    //! unital virtual double category freely generated by a pair of objects, here
+    //! called [`Left`](Ob::Left) and [`Right`](Ob::Right), and a single proarrow
+    //! between them, here called [`Middle`](Pro::Middle). In fact, this VDC has all
+    //! composites.
     use super::super::graph::ProedgeGraph;
     use super::*;
 
@@ -586,12 +571,11 @@ pub mod WalkingBimodule {
 
 #[allow(non_snake_case)]
 pub mod WalkingFunctor {
-    /*! The walking functor as a VDC.
-
-    The **walking functor** is the unital virtual double category freely
-    generated by a pair of objects, here called [`Zero`](Ob::Zero) and
-    [`One`](Ob::One), and a single arrow between them.
-     */
+    //! The walking functor as a VDC.
+    //!
+    //! The **walking functor** is the unital virtual double category freely
+    //! generated by a pair of objects, here called [`Zero`](Ob::Zero) and
+    //! [`One`](Ob::One), and a single arrow between them.
     use super::super::graph::{EdgeGraph, ProedgeGraph};
     use super::*;
 

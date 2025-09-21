@@ -75,11 +75,10 @@ where
     Var: Clone + Ord,
     Exp: Clone + Ord + Add<Output = Exp>,
 {
-    /** Converts the polynomial system to a numerical one.
-
-    The order of the components in the new system is given by the order of the
-    variables in the old one.
-     */
+    /// Converts the polynomial system to a numerical one.
+    ///
+    /// The order of the components in the new system is given by the order of the
+    /// variables in the old one.
     pub fn to_numerical(&self) -> NumericalPolynomialSystem<Exp> {
         let indices: BTreeMap<Var, usize> =
             self.components.keys().enumerate().map(|(i, var)| (var.clone(), i)).collect();
@@ -122,11 +121,10 @@ where
     }
 }
 
-/** A numerical system of polynomial differential equations.
-
-Such a system is ready for use in numerical solvers: the coefficients are
-floating point numbers and the variables are consecutive integer indices.
- */
+/// A numerical system of polynomial differential equations.
+///
+/// Such a system is ready for use in numerical solvers: the coefficients are
+/// floating point numbers and the variables are consecutive integer indices.
 pub struct NumericalPolynomialSystem<Exp> {
     /// Components of the vector field.
     pub components: Vec<Polynomial<usize, f32, Exp>>,

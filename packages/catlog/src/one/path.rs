@@ -1,9 +1,8 @@
-/*! Paths in graphs and categories.
-
-The central data type is [`Path`], a path of arbitrary finite length. In
-addition, this module provides data types for ["short paths"](`ShortPath`) and
-[path equations](`PathEq`).
-*/
+//! Paths in graphs and categories.
+//!
+//! The central data type is [`Path`], a path of arbitrary finite length. In
+//! addition, this module provides data types for ["short paths"](`ShortPath`) and
+//! [path equations](`PathEq`).
 
 use std::ops::Range;
 use std::{collections::HashSet, hash::Hash};
@@ -21,25 +20,24 @@ use super::graph::{Graph, ReflexiveGraph};
 use crate::validate;
 use crate::zero::QualifiedName;
 
-/** A path in a [graph](Graph) or [category](crate::one::category::Category).
-
-This definition by cases can be compared with the perhaps more obvious
-definition:
-
-```
-struct Path<V, E> {
-    start: V,
-    end: V, // Optional: more symmetric but also more redundant.
-    seq: Vec<E>,
-}
-```
-
-Not only does the single struct store redundant (hence possibly inconsistent)
-information when the sequence of edges is nonempty, one will often need to do a
-case analysis on the edge sequence anyway to determine whether, say,
-[`reduce`](std::iter::Iterator::reduce) returns a non-null value. Thus, it seems
-better to reify the two cases in the data structure itself.
-*/
+/// A path in a [graph](Graph) or [category](crate::one::category::Category).
+///
+/// This definition by cases can be compared with the perhaps more obvious
+/// definition:
+///
+/// ```
+/// struct Path<V, E> {
+/// start: V,
+/// end: V, // Optional: more symmetric but also more redundant.
+/// seq: Vec<E>,
+/// }
+/// ```
+///
+/// Not only does the single struct store redundant (hence possibly inconsistent)
+/// information when the sequence of edges is nonempty, one will often need to do a
+/// case analysis on the edge sequence anyway to determine whether, say,
+/// [`reduce`](std::iter::Iterator::reduce) returns a non-null value. Thus, it seems
+/// better to reify the two cases in the data structure itself.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Path<V, E> {
     /// The identity, or empty, path at a vertex.
@@ -91,10 +89,9 @@ impl<V, E> Path<V, E> {
         Path::Seq(nonempty![e, f])
     }
 
-    /** Constructs a path from an iterator over edges.
-
-    Returns `None` if the iterator is empty.
-     */
+    /// Constructs a path from an iterator over edges.
+    ///
+    /// Returns `None` if the iterator is empty.
     pub fn collect<I>(iter: I) -> Option<Self>
     where
         I: IntoIterator<Item = E>,
@@ -102,18 +99,16 @@ impl<V, E> Path<V, E> {
         NonEmpty::collect(iter).map(Path::Seq)
     }
 
-    /** Constructs a path from a vector of edges.
-
-    Returns `None` if the vector is empty.
-     */
+    /// Constructs a path from a vector of edges.
+    ///
+    /// Returns `None` if the vector is empty.
     pub fn from_vec(vec: Vec<E>) -> Option<Self> {
         NonEmpty::from_vec(vec).map(Path::Seq)
     }
 
-    /** Constructs a path by repeating an edge `n` times.
-
-    The edge should have the same source and target, namely the first argument.
-     */
+    /// Constructs a path by repeating an edge `n` times.
+    ///
+    /// The edge should have the same source and target, namely the first argument.
     pub fn repeat_n(v: V, e: E, n: usize) -> Self
     where
         E: Clone,
@@ -137,10 +132,9 @@ impl<V, E> Path<V, E> {
         }
     }
 
-    /** Iterates over edges in the path, if any.
-
-    This method is a one-sided inverse to [`Path::collect`].
-     */
+    /// Iterates over edges in the path, if any.
+    ///
+    /// This method is a one-sided inverse to [`Path::collect`].
     pub fn iter(&self) -> impl Iterator<Item = &E> {
         match self {
             Path::Id(_) => Either::Left(std::iter::empty()),
@@ -148,10 +142,9 @@ impl<V, E> Path<V, E> {
         }
     }
 
-    /** Extracts the unique edge in a path of length 1.
-
-    This method is a one-sided inverse to [`Path::single`].
-     */
+    /// Extracts the unique edge in a path of length 1.
+    ///
+    /// This method is a one-sided inverse to [`Path::single`].
     pub fn only(self) -> Option<E> {
         match self {
             Path::Id(_) => None,
@@ -188,10 +181,9 @@ impl<V, E> Path<V, E> {
         new_path.expect("Range of indices into path should be valid")
     }
 
-    /** Source of the path in the given graph.
-
-    Assumes that the path is [contained in](Path::contained_in) the graph.
-    */
+    /// Source of the path in the given graph.
+    ///
+    /// Assumes that the path is [contained in](Path::contained_in) the graph.
     pub fn src(&self, graph: &impl Graph<V = V, E = E>) -> V
     where
         V: Clone,
@@ -202,10 +194,9 @@ impl<V, E> Path<V, E> {
         }
     }
 
-    /** Target of the path in the given graph.
-
-    Assumes that the path is [contained in](Path::contained_in) the graph.
-    */
+    /// Target of the path in the given graph.
+    ///
+    /// Assumes that the path is [contained in](Path::contained_in) the graph.
     pub fn tgt(&self, graph: &impl Graph<V = V, E = E>) -> V
     where
         V: Clone,
@@ -216,10 +207,9 @@ impl<V, E> Path<V, E> {
         }
     }
 
-    /** Extracts a subpath of a path in a graph.
-
-    Panics if the range is invalid or an empty subpath would be inconsistent.
-     */
+    /// Extracts a subpath of a path in a graph.
+    ///
+    /// Panics if the range is invalid or an empty subpath would be inconsistent.
     pub fn subpath(&self, graph: &impl Graph<V = V, E = E>, range: Range<usize>) -> Self
     where
         V: Eq + Clone,
@@ -257,10 +247,9 @@ impl<V, E> Path<V, E> {
         }
     }
 
-    /** Replaces the subpath at the given range with a function of that subpath.
-
-    Panics under the same conditions as [`subpath`](Self::subpath).
-     */
+    /// Replaces the subpath at the given range with a function of that subpath.
+    ///
+    /// Panics under the same conditions as [`subpath`](Self::subpath).
     pub fn replace_subpath(
         self,
         graph: &impl Graph<V = V, E = E>,
@@ -275,14 +264,13 @@ impl<V, E> Path<V, E> {
         self.splice(range, f(subpath))
     }
 
-    /** Concatenates this path with another path in the graph.
-
-    This methods *checks* that the two paths are compatible (the target of this
-    path equals the source of the other path) and it *assumes* that both paths
-    are contained in the graph, which should be checked with
-    [`contained_in`](Self::contained_in) if in doubt. Thus, when returned, the
-    concatenated path is also a valid path.
-     */
+    /// Concatenates this path with another path in the graph.
+    ///
+    /// This methods *checks* that the two paths are compatible (the target of this
+    /// path equals the source of the other path) and it *assumes* that both paths
+    /// are contained in the graph, which should be checked with
+    /// [`contained_in`](Self::contained_in) if in doubt. Thus, when returned, the
+    /// concatenated path is also a valid path.
     pub fn concat_in(self, graph: &impl Graph<V = V, E = E>, other: Self) -> Option<Self>
     where
         V: Eq + Clone,
@@ -318,10 +306,9 @@ impl<V, E> Path<V, E> {
         }
     }
 
-    /** Returns whether the path is simple.
-
-    On our definition, a path is **simple** if it has no repeated edges.
-     */
+    /// Returns whether the path is simple.
+    ///
+    /// On our definition, a path is **simple** if it has no repeated edges.
     pub fn is_simple(&self) -> bool
     where
         E: Eq + Hash,
@@ -356,11 +343,10 @@ impl<V, E> Path<V, E> {
         }
     }
 
-    /** Maps and then reduces over a path.
-
-    This equivalent to calling [`map`](Path::map) and then
-    [`reduce`](Path::reduce) but avoids allocating the intermediate path.
-     */
+    /// Maps and then reduces over a path.
+    ///
+    /// This equivalent to calling [`map`](Path::map) and then
+    /// [`reduce`](Path::reduce) but avoids allocating the intermediate path.
     pub fn map_reduce<T>(
         self,
         fv: impl FnOnce(V) -> T,
@@ -405,11 +391,10 @@ impl<V, E> Path<V, E> {
 }
 
 impl<V, E> Path<V, Path<V, E>> {
-    /** Flattens a path of paths into a single path.
-
-    Unlike [`flatten_in`](Self::flatten_in), this method does not check that the
-    composite is well typed before computing it.
-     */
+    /// Flattens a path of paths into a single path.
+    ///
+    /// Unlike [`flatten_in`](Self::flatten_in), this method does not check that the
+    /// composite is well typed before computing it.
     pub fn flatten(self) -> Path<V, E> {
         match self {
             Path::Id(x) => Path::Id(x),
@@ -432,11 +417,10 @@ impl<V, E> Path<V, Path<V, E>> {
         }
     }
 
-    /** Flattens a path of paths in a graph into a single path.
-
-    Returns the flattened path just when the original paths have compatible
-    start and end points.
-     */
+    /// Flattens a path of paths in a graph into a single path.
+    ///
+    /// Returns the flattened path just when the original paths have compatible
+    /// start and end points.
     pub fn flatten_in(self, graph: &impl Graph<V = V, E = E>) -> Option<Path<V, E>>
     where
         V: Eq + Clone,
@@ -451,24 +435,22 @@ impl<V, E> Path<V, Path<V, E>> {
     }
 }
 
-/** A path of length at most one.
-
-We call a path of length at most one, i.e., a path of lenth zero or one, a
-**short path**. This is not standard terminology, though it is inspired by
-"short maps" between metric spaces, which are Lipschitz maps with Lipschitz
-constant at most 1.
-
-Short paths are convertible into, and fallibly from, [paths](Path). Short paths
-might seem like an odd data structure, but are occasionally useful, such as in:
-
-- *finite* categories defined by an explicit multiplication table, where every
-  morphism is either a generator (path of length one) or an identity (path of
-  length zero)
-- *augmented* virtual double categories ([Koudenburg
-  2020](crate::refs::AugmentedVDCs)), where the codomain of a cell is by
-  definition a short path, and relatedly *unital* virtual double categories
-
- */
+/// A path of length at most one.
+///
+/// We call a path of length at most one, i.e., a path of lenth zero or one, a
+/// short path**. This is not standard terminology, though it is inspired by
+/// "short maps" between metric spaces, which are Lipschitz maps with Lipschitz
+/// constant at most 1.
+///
+/// Short paths are convertible into, and fallibly from, [paths](Path). Short paths
+/// might seem like an odd data structure, but are occasionally useful, such as in:
+///
+/// - *finite* categories defined by an explicit multiplication table, where every
+///   morphism is either a generator (path of length one) or an identity (path of
+///   length zero)
+/// - *augmented* virtual double categories ([Koudenburg
+///   2020](crate::refs::AugmentedVDCs)), where the codomain of a cell is by
+///   definition a short path, and relatedly *unital* virtual double categories
 #[derive(Clone, Debug, PartialEq, Eq, From)]
 pub enum ShortPath<V, E> {
     /// Path of length zero.
@@ -565,10 +547,9 @@ pub struct PathEq<V, E> {
 }
 
 impl<V, E> PathEq<V, E> {
-    /** Source of the path equation in the given graph.
-
-    Panics if the two sides of the path equation have different sources.
-    */
+    /// Source of the path equation in the given graph.
+    ///
+    /// Panics if the two sides of the path equation have different sources.
     pub fn src(&self, graph: &impl Graph<V = V, E = E>) -> V
     where
         V: Eq + Clone,
@@ -578,10 +559,9 @@ impl<V, E> PathEq<V, E> {
         x
     }
 
-    /** Target of the path equation in the given graph.
-
-    Panics if the two sides of the path equation have different targets.
-    */
+    /// Target of the path equation in the given graph.
+    ///
+    /// Panics if the two sides of the path equation have different targets.
     pub fn tgt(&self, graph: &impl Graph<V = V, E = E>) -> V
     where
         V: Eq + Clone,

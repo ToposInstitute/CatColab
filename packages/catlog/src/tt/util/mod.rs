@@ -1,7 +1,6 @@
-/*! Various utilities that are not strictly tied to the specific type theory.
-
-Perhaps some of these could move to [crate::zero].
-*/
+//! Various utilities that are not strictly tied to the specific type theory.
+//!
+//! Perhaps some of these could move to [crate::zero].
 
 pub mod dtry;
 pub mod idx;

@@ -7,18 +7,17 @@ use super::graph::{FinGraph, Graph, ReflexiveGraph};
 use super::path::Path;
 use crate::zero::{FinSet, Set};
 
-/** A category.
-
-We take the unbiased view of categories, meaning that composition is an
-operation on [paths](Path) of arbitrary finite length. This has several
-advantages. First, it takes as primitive the natural data structure for
-morphisms in a free category, or more generally in a presentation of a category.
-It also enables more intelligent strategies for evaluating composites in
-specific categories. For instance, when composing (multiplying) a sequence of
-matrices, it can be very inefficient to just fold from the left or right,
-compared to multiplying in the [optimal
-order](https://en.wikipedia.org/wiki/Matrix_chain_multiplication).
- */
+/// A category.
+///
+/// We take the unbiased view of categories, meaning that composition is an
+/// operation on [paths](Path) of arbitrary finite length. This has several
+/// advantages. First, it takes as primitive the natural data structure for
+/// morphisms in a free category, or more generally in a presentation of a category.
+/// It also enables more intelligent strategies for evaluating composites in
+/// specific categories. For instance, when composing (multiplying) a sequence of
+/// matrices, it can be very inefficient to just fold from the left or right,
+/// compared to multiplying in the [optimal
+/// order](https://en.wikipedia.org/wiki/Matrix_chain_multiplication).
 pub trait Category {
     /// Type of objects in category.
     type Ob: Eq + Clone;
@@ -51,11 +50,10 @@ pub trait Category {
         self.compose(Path::empty(x))
     }
 
-    /** Are the two morphisms in the category equal?
-
-    The default implementation compares the morphisms with `==`. In some
-    categories, equality is defined by a weaker equivalence relation.
-     */
+    /// Are the two morphisms in the category equal?
+    ///
+    /// The default implementation compares the morphisms with `==`. In some
+    /// categories, equality is defined by a weaker equivalence relation.
     fn morphisms_are_equal(&self, f: Self::Mor, g: Self::Mor) -> bool {
         f == g
     }
@@ -74,11 +72,10 @@ impl<Cat: Category> Set for ObSet<Cat> {
     }
 }
 
-/** The discrete category on a set.
-
-The objects of the category are the elements of the set, and the only morphisms
-are the identities, which can thus be identified with the objects.
- */
+/// The discrete category on a set.
+///
+/// The objects of the category are the elements of the set, and the only morphisms
+/// are the identities, which can thus be identified with the objects.
 #[derive(From, RefCast)]
 #[repr(transparent)]
 pub struct DiscreteCategory<S>(S);
@@ -115,11 +112,10 @@ impl<S: Set> Category for DiscreteCategory<S> {
     }
 }
 
-/** The underlying graph of a category.
-
-The vertices and edges of the graph are the objects and morphisms of the
-category, respectively.
- */
+/// The underlying graph of a category.
+///
+/// The vertices and edges of the graph are the objects and morphisms of the
+/// category, respectively.
 #[derive(From, RefCast)]
 #[repr(transparent)]
 pub struct UnderlyingGraph<Cat: Category>(Cat);
@@ -148,11 +144,10 @@ impl<Cat: Category> ReflexiveGraph for UnderlyingGraph<Cat> {
     }
 }
 
-/** The free category on a graph.
-
-The objects and morphisms of the free category are the vertices and *paths* in
-the graph, respectively. Paths compose by concatenation.
- */
+/// The free category on a graph.
+///
+/// The objects and morphisms of the free category are the vertices and *paths* in
+/// the graph, respectively. Paths compose by concatenation.
 #[derive(From, RefCast)]
 #[repr(transparent)]
 pub struct FreeCategory<G: Graph>(G);
@@ -184,25 +179,22 @@ impl<G: Graph> Category for FreeCategory<G> {
     }
 }
 
-/** A finitely generated category with specified object and morphism generators.
-
-Unless the category has extra structure like a monoidal product, a finitely
-generated (f.g.) category has finitely many objects. Moreover, the objects will
-coincide with the object generators in the typical case that there are no
-equations between objects. On the other hand, a f.g. category can have
-infinitely many morphisms and often does.
- */
+/// A finitely generated category with specified object and morphism generators.
+///
+/// Unless the category has extra structure like a monoidal product, a finitely
+/// generated (f.g.) category has finitely many objects. Moreover, the objects will
+/// coincide with the object generators in the typical case that there are no
+/// equations between objects. On the other hand, a f.g. category can have
+/// infinitely many morphisms and often does.
 pub trait FgCategory: Category {
-    /** Type of an object generator.
-
-    In simple cases, `Ob = ObGen`.
-     */
+    /// Type of an object generator.
+    ///
+    /// In simple cases, `Ob = ObGen`.
     type ObGen: Eq + Clone + Into<Self::Ob>;
 
-    /** Type of a morphism generator
-
-    Often `Mor = Path<Ob, MorGen>`.
-     */
+    /// Type of a morphism generator
+    ///
+    /// Often `Mor = Path<Ob, MorGen>`.
     type MorGen: Eq + Clone + Into<Self::Mor>;
 
     /// Iterates over object generators.

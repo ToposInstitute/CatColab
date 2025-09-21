@@ -1,8 +1,7 @@
-/*! Wasm bindings for the standard library of theories in `catlog`.
-
-Each struct in this module provides a [`DblTheory`], possibly with additional
-methods for theory-specific analyses.
- */
+//! Wasm bindings for the standard library of theories in `catlog`.
+//!
+//! Each struct in this module provides a [`DblTheory`], possibly with additional
+//! methods for theory-specific analyses.
 
 use std::rc::Rc;
 

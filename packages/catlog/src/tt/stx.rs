@@ -1,7 +1,6 @@
-/*! Syntax for types and terms.
-
-See [crate::tt] for what this means.
-*/
+//! Syntax for types and terms.
+//!
+//! See [crate::tt] for what this means.
 
 use ::pretty::RcDoc;
 use derive_more::Constructor;
@@ -52,11 +51,10 @@ impl MorphismType {
     }
 }
 
-/** Type in the base type theory.
-
-See [crate::tt] for more information about what this means. Note that this
-is a simple type, so we don't need syntax and value variants.
-*/
+/// Type in the base type theory.
+///
+/// See [crate::tt] for more information about what this means. Note that this
+/// is a simple type, so we don't need syntax and value variants.
 #[derive(Clone, PartialEq, Eq)]
 pub enum Ty0 {
     /// The type of (objects of a given object type).
@@ -67,92 +65,84 @@ pub enum Ty0 {
     Unit,
 }
 
-/** Content of record type syntax. */
+/// Content of record type syntax.
 #[derive(Clone, Constructor)]
 pub struct RecordS {
     /// The base types of the fields.
     pub fields0: Row<Ty0>,
-    /**  The total types of the fields.
-
-    Each of these types is meant to be evaluated in an environment
-    where the last element is a value of type `fields0`.
-    */
+    ///  The total types of the fields.
+    ///
+    /// Each of these types is meant to be evaluated in an environment
+    /// where the last element is a value of type `fields0`.
     pub fields1: Row<TyS>,
 }
 
-/** Inner enum for [TyS]. */
+/// Inner enum for [TyS].
 pub enum TyS_ {
-    /** A reference to a top-level declaration */
+    /// A reference to a top-level declaration
     TopVar(TopVarName),
-    /** Type constructor for object types.
-
-    Example syntax: `Entity` (top-level constants are bound by the elaborator to
-    various object types).
-
-    A term of type `Object(ot)` represents an object of object type `ot`.
-
-    The base type for `Object(ot)` is `Ty0::Object(ot)`.
-    */
+    /// Type constructor for object types.
+    ///
+    /// Example syntax: `Entity` (top-level constants are bound by the elaborator to
+    /// various object types).
+    ///
+    /// A term of type `Object(ot)` represents an object of object type `ot`.
+    ///
+    /// The base type for `Object(ot)` is `Ty0::Object(ot)`.
     Object(ObjectType),
 
-    /** Type constructor for morphism types.
-
-    Example syntax: `Attr x a` (top-level constants are bound by the elaborator
-    to constructors for morphism types).
-
-    A term of type `Morphism(mt, dom, cod)` represents an morphism of morphism
-    type `mt` from `dom` to `cod`.
-
-    The base type for `Morphism(mt, dom, cod)` is Ty0::Unit.
-    */
+    /// Type constructor for morphism types.
+    ///
+    /// Example syntax: `Attr x a` (top-level constants are bound by the elaborator
+    /// to constructors for morphism types).
+    ///
+    /// A term of type `Morphism(mt, dom, cod)` represents an morphism of morphism
+    /// type `mt` from `dom` to `cod`.
+    ///
+    /// The base type for `Morphism(mt, dom, cod)` is Ty0::Unit.
     Morphism(MorphismType, TmS, TmS),
 
-    /** Type constructor for record types.
-
-    Example syntax: `[x : A, y : B]`.
-
-    A term `x` of type `Record(r)` represents a record where field `f` has type
-    `eval(env.snoc(eval(env, x)), r.fields1[f])`.
-
-    The base type for `Record(r)` is `Ty0::Record(r.fields0)`.
-    */
+    /// Type constructor for record types.
+    ///
+    /// Example syntax: `[x : A, y : B]`.
+    ///
+    /// A term `x` of type `Record(r)` represents a record where field `f` has type
+    /// `eval(env.snoc(eval(env, x)), r.fields1[f])`.
+    ///
+    /// The base type for `Record(r)` is `Ty0::Record(r.fields0)`.
     Record(RecordS),
 
-    /** Type constructor for singleton types.
-
-    Example syntax: `@sing a` (assuming `a` is a term that synthesizes a type).
-
-    A term `x` of type `Sing(ty, tm)` is a term of `ty` that is convertable with
-    `tm`.
-    */
+    /// Type constructor for singleton types.
+    ///
+    /// Example syntax: `@sing a` (assuming `a` is a term that synthesizes a type).
+    ///
+    /// A term `x` of type `Sing(ty, tm)` is a term of `ty` that is convertable with
+    /// `tm`.
     Sing(TyS, TmS),
 
-    /** Type constructor for specialized types.
-
-    Example syntax: `A & [ .x : @sing a ]`.
-
-    A term `x` of type `Specialize(ty, d)` is a term of `ty` where additionally
-    for each path `p` (e.g. `.x`, `.a.b`, etc.) in `d`, `x.p` is of type `d[p]`.
-
-    In order to form this type, it must be the case that `d[p]` is a subtype of
-    the type of the field at path `p`.
-    */
+    /// Type constructor for specialized types.
+    ///
+    /// Example syntax: `A & [ .x : @sing a ]`.
+    ///
+    /// A term `x` of type `Specialize(ty, d)` is a term of `ty` where additionally
+    /// for each path `p` (e.g. `.x`, `.a.b`, etc.) in `d`, `x.p` is of type `d[p]`.
+    ///
+    /// In order to form this type, it must be the case that `d[p]` is a subtype of
+    /// the type of the field at path `p`.
     Specialize(TyS, Vec<(Vec<FieldName>, TyS)>),
 
-    /** Type constructor for the unit type.
-
-    Example syntax: `Unit`.
-
-    All terms of this type are convertable with `tt : Unit`.
-    */
+    /// Type constructor for the unit type.
+    ///
+    /// Example syntax: `Unit`.
+    ///
+    /// All terms of this type are convertable with `tt : Unit`.
     Unit,
 }
 
-/** Syntax for total types, dereferences to [TyS_].
-
-See [crate::tt] for an explanation of what total types are, and for an
-explanation of our approach to Rc pointers in abstract syntax trees.
-*/
+/// Syntax for total types, dereferences to [TyS_].
+///
+/// See [crate::tt] for an explanation of what total types are, and for an
+/// explanation of our approach to Rc pointers in abstract syntax trees.
 #[derive(Clone)]
 pub struct TyS(Rc<TyS_>);
 
@@ -237,42 +227,39 @@ impl fmt::Display for TyS {
     }
 }
 
-/** Inner enum for [TmS]. */
+/// Inner enum for [TmS].
 pub enum TmS_ {
-    /** A reference to a top-level constant def */
+    /// A reference to a top-level constant def
     TopVar(TopVarName),
-    /** An application of a top-level term judgment to arguments */
+    /// An application of a top-level term judgment to arguments
     TopApp(TopVarName, Vec<TmS>),
-    /** Variable syntax.
-
-    We use a backward index, as when we evaluate we store the
-    environment in a [bwd::Bwd], and this indexes into that.
-    */
+    /// Variable syntax.
+    ///
+    /// We use a backward index, as when we evaluate we store the
+    /// environment in a [bwd::Bwd], and this indexes into that.
     Var(BwdIdx, VarName),
-    /** Record introduction. */
+    /// Record introduction.
     Cons(Row<TmS>),
-    /** Record elimination. */
+    /// Record elimination.
     Proj(TmS, FieldName),
-    /** Unit introduction.
-
-    Note that eta-expansion takes care of elimination for units
-    */
+    /// Unit introduction.
+    ///
+    /// Note that eta-expansion takes care of elimination for units
     Tt,
-    /** Identity morphism at an object */
+    /// Identity morphism at an object
     Id(TmS),
-    /** Composition of two morphisms */
+    /// Composition of two morphisms
     Compose(TmS, TmS),
-    /** An opaque term.
-
-    This only appears when we quote a value */
+    /// An opaque term.
+    ///
+    /// This only appears when we quote a value
     Opaque,
 }
 
-/** Syntax for total terms, dereferences to [TmS_].
-
-See [crate::tt] for an explanation of what total types are, and for an
-explanation of our approach to Rc pointers in abstract syntax trees.
-*/
+/// Syntax for total terms, dereferences to [TmS_].
+///
+/// See [crate::tt] for an explanation of what total types are, and for an
+/// explanation of our approach to Rc pointers in abstract syntax trees.
 #[derive(Clone)]
 pub struct TmS(Rc<TmS_>);
 

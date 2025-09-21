@@ -1,23 +1,22 @@
-/*! Modal double theories.
-
-A **modal double theory** is a unital VDC equipped a family of modalities. A
-**modality** is minimally an endomorphism, and is usually a monad or comonad, in
-the 2-category of unital VDCs, normal functors, and natural transformations. In
-a model of a modal double theory, each endomorphism on the theory is interpreted
-as a endofunctor on the VDC of sets, i.e., as a lax double endofunctor on the
-double category of sets. The modalities on the semantics side are fixed across
-all models and include the double list monads and its many variants.
-
-The various modalities are implicitly organized by a **mode theory** ([Licata &
-Shulman 2015](crate::refs::AdjointLogic)), a 2-category whose objects are called
-**modes**, morphisms are called **modalities**, and cells are sometimes called
-**laws**. Our mode theory has only one mode, corresponding to the fact our
-semantics is currently fixed to be the double category of sets and spans. Thus,
-our mode theory is actually a monoidal category. It seems excessively meta at
-this stage to reify the mode theory as the data of a finitely presented
-2-category or monoidal category. Instead, the mode theory is implicit and baked
-in at the type level.
-*/
+//! Modal double theories.
+//!
+//! A **modal double theory** is a unital VDC equipped a family of modalities. A
+//! modality** is minimally an endomorphism, and is usually a monad or comonad, in
+//! the 2-category of unital VDCs, normal functors, and natural transformations. In
+//! a model of a modal double theory, each endomorphism on the theory is interpreted
+//! as a endofunctor on the VDC of sets, i.e., as a lax double endofunctor on the
+//! double category of sets. The modalities on the semantics side are fixed across
+//! all models and include the double list monads and its many variants.
+//!
+//! The various modalities are implicitly organized by a **mode theory** ([Licata &
+//! Shulman 2015](crate::refs::AdjointLogic)), a 2-category whose objects are called
+//! modes**, morphisms are called **modalities**, and cells are sometimes called
+//! laws**. Our mode theory has only one mode, corresponding to the fact our
+//! semantics is currently fixed to be the double category of sets and spans. Thus,
+//! our mode theory is actually a monoidal category. It seems excessively meta at
+//! this stage to reify the mode theory as the data of a finitely presented
+//! 2-category or monoidal category. Instead, the mode theory is implicit and baked
+//! in at the type level.
 
 use std::iter::repeat_n;
 
@@ -46,13 +45,12 @@ pub enum Modality {
     Codiscrete(),
 }
 
-/** List modalities available in a modal double theory.
-
-There is just one list, or free monoid, monad on the category of sets, but the
-double category of sets admits, besides the [plain](Self::Plain) list double
-monad, a number of variations decorating the spans of lists with extra
-combinatorial data.
- */
+/// List modalities available in a modal double theory.
+///
+/// There is just one list, or free monoid, monad on the category of sets, but the
+/// double category of sets admits, besides the [plain](Self::Plain) list double
+/// monad, a number of variations decorating the spans of lists with extra
+/// combinatorial data.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum List {
     /// Lists of objects and morphisms (of same length).
@@ -61,37 +59,33 @@ pub enum List {
     /// Lists of objects and morphisms, allowing permutation of the codomain list.
     Symmetric,
 
-    /** Lists of objects and morphisms, allowing reindexing of the codomain list.
-
-    This modality is a skeletized version of the "finite family", or free finite
-    [coproduct completion](https://ncatlab.org/nlab/show/free+coproduct+completion),
-    construction.
-     */
+    /// Lists of objects and morphisms, allowing reindexing of the codomain list.
+    ///
+    /// This modality is a skeletized version of the "finite family", or free finite
+    /// [coproduct completion](https://ncatlab.org/nlab/show/free+coproduct+completion),
+    /// construction.
     Coproduct,
 
-    /** Lists of objects and morphisms, allowing reindexing of the domain list.
-
-    This modality is a skeletized version of the free finite product completion.
-     */
+    /// Lists of objects and morphisms, allowing reindexing of the domain list.
+    ///
+    /// This modality is a skeletized version of the free finite product completion.
     Product,
 
-    /** Lists of objects and morphisms, allowing independent reindexing of both
-    domain and codomain lists.
-
-    This modality is a version of the free finite biproduct completion,
-    equivalent to freely enriching in commutative monoids and then applying the
-    matrix construction (Mac Lane, Exercise VIII.2.6) on such an enriched
-    category.
-    */
+    /// Lists of objects and morphisms, allowing independent reindexing of both
+    /// domain and codomain lists.
+    ///
+    /// This modality is a version of the free finite biproduct completion,
+    /// equivalent to freely enriching in commutative monoids and then applying the
+    /// matrix construction (Mac Lane, Exercise VIII.2.6) on such an enriched
+    /// category.
     Biproduct,
 }
 
-/** Application of modalities.
-
-Due to the simplicity of this logic, we can easily put terms in normal form:
-every term is a single argument along with a (possibly empty) list of modalities
-applied to it.
- */
+/// Application of modalities.
+///
+/// Due to the simplicity of this logic, we can easily put terms in normal form:
+/// every term is a single argument along with a (possibly empty) list of modalities
+/// applied to it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ModeApp<T> {
     /// Argument to which the modalities are applied.
@@ -110,10 +104,9 @@ impl<T> ModeApp<T> {
         }
     }
 
-    /** Converts from `&ModeApp<T>` to `ModeApp<&T>`.
-
-    Note that this requires cloning the list of applied modalities.
-    */
+    /// Converts from `&ModeApp<T>` to `ModeApp<&T>`.
+    ///
+    /// Note that this requires cloning the list of applied modalities.
     pub fn as_ref(&self) -> ModeApp<&T> {
         ModeApp {
             arg: &self.arg,
@@ -149,22 +142,20 @@ impl<T> ModeApp<T> {
     }
 }
 
-/** A basic operation in a modal double theory.
-
-These are (object or morphisms) operations that cannot be built out of others
-using the structure of a VDC or virtual equipment.
- */
+/// A basic operation in a modal double theory.
+///
+/// These are (object or morphisms) operations that cannot be built out of others
+/// using the structure of a VDC or virtual equipment.
 #[derive(Clone, Debug, PartialEq, Eq, From)]
 pub enum ModalOp {
     /// Generating operation.
     #[from]
     Generator(QualifiedName),
 
-    /** List concentation.
-
-    This is a component of the monad multiplication for a [list](List) modality.
-    It is given in unbiased style, where the second argument is the arity.
-     */
+    /// List concentation.
+    ///
+    /// This is a component of the monad multiplication for a [list](List) modality.
+    /// It is given in unbiased style, where the second argument is the arity.
     Concat(List, usize, ModeApp<QualifiedName>),
 }
 
@@ -217,11 +208,10 @@ impl ModalObOp {
     }
 }
 
-/** A node in a morphism operation of a modal double theory.
-
-A generic [morphism operation](ModalMorOp) in a modal double theory is a [double
-tree](DblTree) built out of these nodes.
- */
+/// A node in a morphism operation of a modal double theory.
+///
+/// A generic [morphism operation](ModalMorOp) in a modal double theory is a [double
+/// tree](DblTree) built out of these nodes.
 #[derive(Clone, Debug, PartialEq, Eq, From)]
 pub enum ModalNode {
     /// Basic morphism operation.
@@ -231,10 +221,9 @@ pub enum ModalNode {
     /// Unit cell on a basic object operation.
     Unit(ModeApp<ModalOp>),
 
-    /** Cell witnessing a composite.
-
-    By assumption, modalities preserve all composites in the theory.
-     */
+    /// Cell witnessing a composite.
+    ///
+    /// By assumption, modalities preserve all composites in the theory.
     Composite(Path<ModalObType, ModalMorType>),
 }
 

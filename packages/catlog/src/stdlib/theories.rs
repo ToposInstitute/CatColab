@@ -4,28 +4,25 @@ use crate::dbl::theory::*;
 use crate::one::{Path, fp_category::FpCategory};
 use crate::zero::name;
 
-/** The empty theory, which has a single model, the empty model.
-
-As a double category, this is the initial double category.
- */
+/// The empty theory, which has a single model, the empty model.
+///
+/// As a double category, this is the initial double category.
 pub fn th_empty() -> DiscreteDblTheory {
     FpCategory::new().into()
 }
 
-/** The theory of categories, aka the trivial double theory.
-
-As a double category, this is the terminal double category.
- */
+/// The theory of categories, aka the trivial double theory.
+///
+/// As a double category, this is the terminal double category.
 pub fn th_category() -> DiscreteDblTheory {
     let mut cat = FpCategory::new();
     cat.add_ob_generator(name("Object"));
     cat.into()
 }
 
-/** The theory of database schemas with attributes.
-
-As a double category, this is the "walking proarrow".
- */
+/// The theory of database schemas with attributes.
+///
+/// As a double category, this is the "walking proarrow".
 pub fn th_schema() -> DiscreteDblTheory {
     let mut cat = FpCategory::new();
     cat.add_ob_generator(name("Entity"));
@@ -34,12 +31,11 @@ pub fn th_schema() -> DiscreteDblTheory {
     cat.into()
 }
 
-/** The theory of signed categories.
-
-A *signed category* is a category sliced over the group of (nonzero) signs. Free
-signed categories are signed graphs, a simple mathematical model of [regulatory
-networks](crate::refs::RegNets) and causal loop diagrams.
- */
+/// The theory of signed categories.
+///
+/// A *signed category* is a category sliced over the group of (nonzero) signs. Free
+/// signed categories are signed graphs, a simple mathematical model of [regulatory
+/// networks](crate::refs::RegNets) and causal loop diagrams.
 pub fn th_signed_category() -> DiscreteDblTheory {
     let mut sgn = FpCategory::new();
     sgn.add_ob_generator(name("Object"));
@@ -48,11 +44,10 @@ pub fn th_signed_category() -> DiscreteDblTheory {
     sgn.into()
 }
 
-/** The theory of delayable signed categories.
-
-Free delayable signed categories are causal loop diagrams with delays, often
-depicted as [caesuras](https://en.wikipedia.org/wiki/Caesura).
- */
+/// The theory of delayable signed categories.
+///
+/// Free delayable signed categories are causal loop diagrams with delays, often
+/// depicted as [caesuras](https://en.wikipedia.org/wiki/Caesura).
 pub fn th_delayable_signed_category() -> DiscreteDblTheory {
     let mut cat = FpCategory::new();
     cat.add_ob_generator(name("Object"));
@@ -76,11 +71,10 @@ pub fn th_delayable_signed_category() -> DiscreteDblTheory {
     cat.into()
 }
 
-/** The theory of nullable signed categories.
-
-A *nullable signed category* is a category sliced over the monoid of signs,
-including zero.
- */
+/// The theory of nullable signed categories.
+///
+/// A *nullable signed category* is a category sliced over the monoid of signs,
+/// including zero.
 pub fn th_nullable_signed_category() -> DiscreteDblTheory {
     let mut sgn = FpCategory::new();
     sgn.add_ob_generator(name("Object"));
@@ -93,16 +87,15 @@ pub fn th_nullable_signed_category() -> DiscreteDblTheory {
     sgn.into()
 }
 
-/** The theory of categories with scalars.
-
-A *category with scalars* is a category sliced over the monoid representing a walking
-idempotent. The morphisms over the identity are interpreted as scalars, which are closed
-under composition, as are the non-scalar morphisms.
-
-The main intended application is to categories
-enriched in `M`-sets for a monoid `M` such as the positive real numbers under multiplication,
-but to remain within simple theories the theory defined here is more general.
- */
+/// The theory of categories with scalars.
+///
+/// A *category with scalars* is a category sliced over the monoid representing a walking
+/// idempotent. The morphisms over the identity are interpreted as scalars, which are closed
+/// under composition, as are the non-scalar morphisms.
+///
+/// The main intended application is to categories
+/// enriched in `M`-sets for a monoid `M` such as the positive real numbers under multiplication,
+/// but to remain within simple theories the theory defined here is more general.
 pub fn th_category_with_scalars() -> DiscreteDblTheory {
     let mut idem = FpCategory::new();
     idem.add_ob_generator(name("Object"));
@@ -111,14 +104,13 @@ pub fn th_category_with_scalars() -> DiscreteDblTheory {
     idem.into()
 }
 
-/** The theory of categories with links.
-
-A *category with links* is a category `C` together with a profunctor from `C` to
-`Arr(C)`, the arrow category of C.
-
-[Primitive stock and flow diagrams](crate::refs::StockFlow) are free categories
-with links.
- */
+/// The theory of categories with links.
+///
+/// A *category with links* is a category `C` together with a profunctor from `C` to
+/// `Arr(C)`, the arrow category of C.
+///
+/// [Primitive stock and flow diagrams](crate::refs::StockFlow) are free categories
+/// with links.
 pub fn th_category_links() -> DiscreteTabTheory {
     let mut th = DiscreteTabTheory::new();
     th.add_ob_type(name("Object"));
@@ -142,11 +134,10 @@ pub fn th_sym_monoidal_category() -> ModalDblTheory {
     th_list_algebra(List::Symmetric)
 }
 
-/** The theory of a strict algebra of a list monad.
-
-This is a modal double theory, parametric over which variant of the double list
-monad is used.
- */
+/// The theory of a strict algebra of a list monad.
+///
+/// This is a modal double theory, parametric over which variant of the double list
+/// monad is used.
 fn th_list_algebra(list: List) -> ModalDblTheory {
     let m = Modality::List(list);
 

@@ -1,8 +1,7 @@
-/*! Lotka-Volterra ODE analysis of models.
-
-The main entry point for this module is
-[`lotka_volterra_analysis`](SignedCoefficientBuilder::lotka_volterra_analysis).
- */
+//! Lotka-Volterra ODE analysis of models.
+//!
+//! The main entry point for this module is
+//! [`lotka_volterra_analysis`](SignedCoefficientBuilder::lotka_volterra_analysis).
 
 use std::collections::HashMap;
 
@@ -44,12 +43,11 @@ pub struct LotkaVolterraProblemData {
 }
 
 impl SignedCoefficientBuilder<QualifiedName, QualifiedPath> {
-    /** Lotka-Volterra ODE analysis for a model of a double theory.
-
-    The main application we have in mind is the Lotka-Volterra ODE semantics for
-    signed graphs described in our [paper on regulatory
-    networks](crate::refs::RegNets).
-     */
+    /// Lotka-Volterra ODE analysis for a model of a double theory.
+    ///
+    /// The main application we have in mind is the Lotka-Volterra ODE semantics for
+    /// signed graphs described in our [paper on regulatory
+    /// networks](crate::refs::RegNets).
     pub fn lotka_volterra_analysis(
         &self,
         model: &DiscreteDblModel,

@@ -1,7 +1,6 @@
-/*! Standard library of morphisms between double theories.
-
-These can be used to migrate models from one theory to another.
- */
+//! Standard library of morphisms between double theories.
+//!
+//! These can be used to migrate models from one theory to another.
 
 use crate::one::{FpFunctorData, Path, QualifiedPath};
 use crate::zero::{HashColumn, QualifiedName, name};
@@ -11,11 +10,10 @@ type DiscreteDblTheoryMap = FpFunctorData<
     HashColumn<QualifiedName, QualifiedPath>,
 >;
 
-/** Map from theory of categories to the theories of schemas.
-
-Sigma migration along this map sends objects in a category to entity types in a
-schema, yielding a schema with no attributes or attribute types.
- */
+/// Map from theory of categories to the theories of schemas.
+///
+/// Sigma migration along this map sends objects in a category to entity types in a
+/// schema, yielding a schema with no attributes or attribute types.
 pub fn th_category_to_schema() -> DiscreteDblTheoryMap {
     FpFunctorData::new(
         HashColumn::new([(name("Object"), name("Entity"))].into()),
@@ -23,11 +21,10 @@ pub fn th_category_to_schema() -> DiscreteDblTheoryMap {
     )
 }
 
-/** Map from theory of schemas to theory of categories.
-
-Sigma migration along this map erases the distinction between entity types and
-attribute types, turning both into objects in a category.
- */
+/// Map from theory of schemas to theory of categories.
+///
+/// Sigma migration along this map erases the distinction between entity types and
+/// attribute types, turning both into objects in a category.
 pub fn th_schema_to_category() -> DiscreteDblTheoryMap {
     FpFunctorData::new(
         HashColumn::new(
@@ -37,10 +34,9 @@ pub fn th_schema_to_category() -> DiscreteDblTheoryMap {
     )
 }
 
-/** Projection from theory of delayable signed categories.
-
-Sigma migration along this map forgets about the delays.
- */
+/// Projection from theory of delayable signed categories.
+///
+/// Sigma migration along this map forgets about the delays.
 pub fn th_delayable_signed_category_to_signed_category() -> DiscreteDblTheoryMap {
     FpFunctorData::new(
         HashColumn::new([(name("Object"), name("Object"))].into()),

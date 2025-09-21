@@ -1,21 +1,19 @@
-/*! Evaluation, quoting, and conversion/equality checking
-
-At a high level, this module implements three operations:
-
-- `eval : syntax -> value` ([Evaluator::eval_tm], [Evaluator::eval_ty])
-- `quote : value -> syntax` ([Evaluator::quote_tm], [Evaluator::quote_neu], [Evaluator::quote_ty])
-- `convertable? : value -> value -> bool` ([Evaluator::equal_tm], [Evaluator::element_of], [Evaluator::subtype])
-*/
+//! Evaluation, quoting, and conversion/equality checking
+//!
+//! At a high level, this module implements three operations:
+//!
+//! - `eval : syntax -> value` ([Evaluator::eval_tm], [Evaluator::eval_ty])
+//! - `quote : value -> syntax` ([Evaluator::quote_tm], [Evaluator::quote_neu], [Evaluator::quote_ty])
+//! - `convertable? : value -> value -> bool` ([Evaluator::equal_tm], [Evaluator::element_of], [Evaluator::subtype])
 use crate::tt::{prelude::*, stx::*, toplevel::*, val::*};
 
-/** The context used in evaluation, quoting, and conversion checking
-
-We bundle this all together because conversion checking and quoting
-sometimes need to evaluate terms. For instance, quoting a lambda
-involves evaluating the body of the lambda in the context of a freshly
-introduced variable; even though we don't have lambdas, a similar
-thing applies to dependent records.
-*/
+/// The context used in evaluation, quoting, and conversion checking
+///
+/// We bundle this all together because conversion checking and quoting
+/// sometimes need to evaluate terms. For instance, quoting a lambda
+/// involves evaluating the body of the lambda in the context of a freshly
+/// introduced variable; even though we don't have lambdas, a similar
+/// thing applies to dependent records.
 #[derive(Clone)]
 pub struct Evaluator<'a> {
     toplevel: &'a Toplevel,
@@ -46,11 +44,10 @@ impl<'a> Evaluator<'a> {
         }
     }
 
-    /** Evaluate type syntax to produce a type value
-
-    Assumes that the type syntax is well-formed and well-scoped with respect
-    to self.env
-    */
+    /// Evaluate type syntax to produce a type value
+    ///
+    /// Assumes that the type syntax is well-formed and well-scoped with respect
+    /// to self.env
     pub fn eval_ty(&self, ty: &TyS) -> TyV {
         match &**ty {
             TyS_::TopVar(tv) => self.toplevel.declarations.get(tv).unwrap().as_ty(),
@@ -69,11 +66,10 @@ impl<'a> Evaluator<'a> {
         }
     }
 
-    /** Evaluate term syntax to produce a term value
-
-    Assumes that the term syntax is well-formed and well-scoped with respect
-    to self.env
-    */
+    /// Evaluate term syntax to produce a term value
+    ///
+    /// Assumes that the term syntax is well-formed and well-scoped with respect
+    /// to self.env
     pub fn eval_tm(&self, tm: &TmS) -> TmV {
         match &**tm {
             TmS_::TopVar(tv) => self.toplevel.declarations.get(tv).unwrap().as_const(),
@@ -135,17 +131,16 @@ impl<'a> Evaluator<'a> {
         )
     }
 
-    /** Produce type syntax from a type value.
-
-    This is a *section* of eval, in that `self.eval_ty(self.quote_ty(ty_v)) == ty_v`
-    but it is not necessarily true that `self.quote_ty(self.eval_ty(ty_s)) == ty_v`.
-
-    This is used for displaying [TyV] to the user in type errors, and for
-    creating syntax that can be re-evaluated in other contexts. In theory this
-    could be used for conversion checking, but it's more efficient to implement
-    that directly, and it's better to *not* do eta-expansion for user-facing
-    messages or for syntax that is meant to be re-evaluated.
-    */
+    /// Produce type syntax from a type value.
+    ///
+    /// This is a *section* of eval, in that `self.eval_ty(self.quote_ty(ty_v)) == ty_v`
+    /// but it is not necessarily true that `self.quote_ty(self.eval_ty(ty_s)) == ty_v`.
+    ///
+    /// This is used for displaying [TyV] to the user in type errors, and for
+    /// creating syntax that can be re-evaluated in other contexts. In theory this
+    /// could be used for conversion checking, but it's more efficient to implement
+    /// that directly, and it's better to *not* do eta-expansion for user-facing
+    /// messages or for syntax that is meant to be re-evaluated.
     pub fn quote_ty(&self, ty: &TyV) -> TyS {
         match &**ty {
             TyV_::Object(object_type) => TyS::object(object_type.clone()),
@@ -188,10 +183,9 @@ impl<'a> Evaluator<'a> {
         }
     }
 
-    /** Produce term syntax from a term neutral.
-
-    The documentation for [Evaluator::quote_ty] is also applicable here.
-    */
+    /// Produce term syntax from a term neutral.
+    ///
+    /// The documentation for [Evaluator::quote_ty] is also applicable here.
     pub fn quote_neu(&self, n: &TmN) -> TmS {
         match &**n {
             TmN_::Var(i, name) => TmS::var(i.as_bwd(self.scope_length), *name),
@@ -199,10 +193,9 @@ impl<'a> Evaluator<'a> {
         }
     }
 
-    /** Produce term syntax from a term value.
-
-    The documentation for [Evaluator::quote_ty] is also applicable here.
-    */
+    /// Produce term syntax from a term value.
+    ///
+    /// The documentation for [Evaluator::quote_ty] is also applicable here.
     pub fn quote_tm(&self, tm: &TmV) -> TmS {
         match tm {
             TmV::Neu(n, _) => self.quote_neu(n),
@@ -214,11 +207,10 @@ impl<'a> Evaluator<'a> {
         }
     }
 
-    /** Check if `ty1` is a subtype of `ty2`.
-
-    This is true iff `ty1` is convertable with `ty2`, and an eta-expanded
-    neutral of type `ty1` is an element of `ty2`.
-    */
+    /// Check if `ty1` is a subtype of `ty2`.
+    ///
+    /// This is true iff `ty1` is convertable with `ty2`, and an eta-expanded
+    /// neutral of type `ty1` is an element of `ty2`.
     pub fn subtype<'b>(&self, ty1: &TyV, ty2: &TyV) -> Result<(), D<'b>> {
         self.convertable_ty(ty1, ty2)?;
         let (n, _) = self.bind_neu(NameSegment::Text(ustr("self")), ty1.clone());
@@ -226,15 +218,14 @@ impl<'a> Evaluator<'a> {
         self.element_of(&v, ty2)
     }
 
-    /** Check if `tm` is an element of `ty`, accounting for specializations
-    of `ty`.
-
-    Precondition: the type of `tm` must be convertable with `ty`, and `tm`
-    is eta-expanded.
-
-    Example: if `a : Entity` and `b : Entity` are neutrals, then `a` is not an
-    element of `@sing b`, but `a` is an element of `@sing a`.
-    */
+    /// Check if `tm` is an element of `ty`, accounting for specializations
+    /// of `ty`.
+    ///
+    /// Precondition: the type of `tm` must be convertable with `ty`, and `tm`
+    /// is eta-expanded.
+    ///
+    /// Example: if `a : Entity` and `b : Entity` are neutrals, then `a` is not an
+    /// element of `@sing b`, but `a` is an element of `@sing a`.
     pub fn element_of<'b>(&self, tm: &TmV, ty: &TyV) -> Result<(), D<'b>> {
         match &**ty {
             TyV_::Object(_) => Ok(()),
@@ -250,12 +241,11 @@ impl<'a> Evaluator<'a> {
         }
     }
 
-    /** Check if two types are convertable.
-
-    Ignores specializations: specializations are handled in [Evaluator::subtype]
-
-    On failure, returns a doc which describes the obstruction to convertability.
-    */
+    /// Check if two types are convertable.
+    ///
+    /// Ignores specializations: specializations are handled in [Evaluator::subtype]
+    ///
+    /// On failure, returns a doc which describes the obstruction to convertability.
     pub fn convertable_ty<'b>(&self, ty1: &TyV, ty2: &TyV) -> Result<(), D<'b>> {
         match (&**ty1, &**ty2) {
             (TyV_::Object(ot1), TyV_::Object(ot2)) => {
@@ -301,7 +291,7 @@ impl<'a> Evaluator<'a> {
         }
     }
 
-    /** Performs eta-expansion of the neutral `n` at type `ty`. */
+    /// Performs eta-expansion of the neutral `n` at type `ty`.
     pub fn eta_neu(&self, n: &TmN, ty: &TyV) -> TmV {
         match &**ty {
             TyV_::Object(_) => TmV::Neu(n.clone(), ty.clone()),
@@ -320,7 +310,7 @@ impl<'a> Evaluator<'a> {
         }
     }
 
-    /** Performs eta-expansion of the term `n` at type `ty` */
+    /// Performs eta-expansion of the term `n` at type `ty`
     pub fn eta(&self, v: &TmV, ty: &TyV) -> TmV {
         match v {
             TmV::Neu(tm_n, ty_v) => self.eta_neu(tm_n, ty_v),
@@ -334,14 +324,13 @@ impl<'a> Evaluator<'a> {
         }
     }
 
-    /** Check if two terms are definitionally equal.
-
-    On failure, returns a doc which describes the obstruction to convertability.
-
-    Assumes that the base type of tm1 is convertable with the base type of tm2.
-    First attempts to do conversion checking without eta-expansion (strict
-    mode), and if that fails, does conversion checking with eta-expansion.
-    */
+    /// Check if two terms are definitionally equal.
+    ///
+    /// On failure, returns a doc which describes the obstruction to convertability.
+    ///
+    /// Assumes that the base type of tm1 is convertable with the base type of tm2.
+    /// First attempts to do conversion checking without eta-expansion (strict
+    /// mode), and if that fails, does conversion checking with eta-expansion.
     pub fn equal_tm<'b>(&self, tm1: &TmV, tm2: &TmV) -> Result<(), D<'b>> {
         if self.equal_tm_helper(tm1, tm2, true, true).is_err() {
             self.equal_tm_helper(tm1, tm2, false, false)
@@ -423,10 +412,9 @@ impl<'a> Evaluator<'a> {
         }
     }
 
-    /** Try to specialize the record `r` with the subtype `ty` at `path`
-
-    Precondition: `path` is non-empty.
-    */
+    /// Try to specialize the record `r` with the subtype `ty` at `path`
+    ///
+    /// Precondition: `path` is non-empty.
     pub fn try_specialize(
         &self,
         ty: &TyV,

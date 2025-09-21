@@ -15,14 +15,13 @@ pub mod current {
     pub use crate::v1::*;
 }
 
-/** Generate type defs for dependencies supporting `serde` but not `tsify`.
-
-To define `Value`, we could borrow the definition of `JsonValue` from `ts-rs`:
-<https://github.com/Aleph-Alpha/ts-rs/blob/main/ts-rs/tests/integration/serde_json.rs>.
-However, this causes mysterious TS errors, so we use `unknown` instead.
-
-TODO: Do not use `NonEmpty` in wasm-bound types to avoid need for alias.
- */
+/// Generate type defs for dependencies supporting `serde` but not `tsify`.
+///
+/// To define `Value`, we could borrow the definition of `JsonValue` from `ts-rs`:
+/// <https://github.com/Aleph-Alpha/ts-rs/blob/main/ts-rs/tests/integration/serde_json.rs>.
+/// However, this causes mysterious TS errors, so we use `unknown` instead.
+///
+/// TODO: Do not use `NonEmpty` in wasm-bound types to avoid need for alias.
 #[wasm_bindgen(typescript_custom_section)]
 const TS_APPEND_CONTENT: &'static str = r#"
 type NonEmpty<T> = Array<T>;

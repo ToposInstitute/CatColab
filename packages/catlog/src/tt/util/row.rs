@@ -1,14 +1,13 @@
-/*! Rows. */
+//! Rows.
 use crate::tt::prelude::*;
 use std::ops::Index;
 
-/** A cheaply cloneable, insertion-ordered map from `FieldName` to `T`.
-
-This is called "row" because it's a short name, and it corresponds to the idea
-of a row in a database, which is a map from fields to values.
-
-Create this using the [FromIterator] implementation.
-*/
+/// A cheaply cloneable, insertion-ordered map from `FieldName` to `T`.
+///
+/// This is called "row" because it's a short name, and it corresponds to the idea
+/// of a row in a database, which is a map from fields to values.
+///
+/// Create this using the [FromIterator] implementation.
 #[derive(Clone, PartialEq, Eq)]
 pub struct Row<T>(Rc<IndexMap<FieldName, T>>);
 
@@ -54,11 +53,10 @@ impl<T> Row<T> {
 }
 
 impl<T: Clone> Row<T> {
-    /**  Insert a new field
-
-    Uses [Rc::make_mut] to mutate in place if there are no other references to self,
-    otherwise performs a clone.
-    */
+    ///  Insert a new field
+    ///
+    /// Uses [Rc::make_mut] to mutate in place if there are no other references to self,
+    /// otherwise performs a clone.
     pub fn insert(mut self, field: FieldName, value: T) -> Self {
         Rc::make_mut(&mut self.0).insert(field, value);
         self

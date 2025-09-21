@@ -10,15 +10,14 @@ use crate::one::{Path, QualifiedPath, category::*, fp_category::*};
 use crate::validate::{self, Validate};
 use crate::zero::QualifiedName;
 
-/** A discrete double theory.
-
-A **discrete double theory** is a double theory with no nontrivial operations on
-either object or morphism types. Viewed as a double category, such a theory is
-indeed **discrete**, which can equivalently be defined as
-
-- a discrete object in the 2-category of double categories
-- a double category whose underlying categories are both discrete categories
-*/
+/// A discrete double theory.
+///
+/// A **discrete double theory** is a double theory with no nontrivial operations on
+/// either object or morphism types. Viewed as a double category, such a theory is
+/// indeed **discrete**, which can equivalently be defined as
+///
+/// - a discrete object in the 2-category of double categories
+/// - a double category whose underlying categories are both discrete categories
 #[derive(From, RefCast, Debug)]
 #[repr(transparent)]
 pub struct DiscreteDblTheory(pub QualifiedFpCategory);

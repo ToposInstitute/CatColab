@@ -1,11 +1,10 @@
-/*! Computads in dimension one.
-
-A 1-computad, in the strictest sense of the term, is the generating data for a
-free category, which is just a [graph](super::graph). This module provides
-simple data structures to aid in defining computads for categories with extra
-structure. For example, a computad for monoidal categories is called a "tensor
-scheme" by Joyal and Street and a "pre-net" in the Petri net literature.
- */
+//! Computads in dimension one.
+//!
+//! A 1-computad, in the strictest sense of the term, is the generating data for a
+//! free category, which is just a [graph](super::graph). This module provides
+//! simple data structures to aid in defining computads for categories with extra
+//! structure. For example, a computad for monoidal categories is called a "tensor
+//! scheme" by Joyal and Street and a "pre-net" in the Petri net literature.
 
 use std::hash::Hash;
 
@@ -15,10 +14,9 @@ use derive_more::Constructor;
 use super::graph::ColumnarGraph;
 use crate::zero::*;
 
-/** Top-dimensional data of a 1-computad.
-
-Intended for use with [`Computad`].
- */
+/// Top-dimensional data of a 1-computad.
+///
+/// Intended for use with [`Computad`].
 #[derive(Clone, Debug, Derivative)]
 #[derivative(Default(bound = ""))]
 pub struct ComputadTop<Ob, E> {
@@ -45,11 +43,10 @@ where
     }
 }
 
-/** A 1-computad.
-
-The set of objects is assumed already constructed, possibly from other
-generating data, while the top-dimensional generating data is provided directly.
- */
+/// A 1-computad.
+///
+/// The set of objects is assumed already constructed, possibly from other
+/// generating data, while the top-dimensional generating data is provided directly.
 #[derive(Constructor)]
 pub struct Computad<'a, Ob, ObSet, E> {
     objects: &'a ObSet,

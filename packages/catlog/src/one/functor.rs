@@ -1,18 +1,17 @@
-/*! Functors between categories.
-
-Abstractly, a functor between categories is a just graph morphism between the
-underlying graphs that respects composition. In our applications, we are most
-interested in functors out of *finitely generated* categories, whose action on
-arbitrary morphisms is uniquely determined by that on the morphism generators.
-Thus, in contrast to mappings between [sets](crate::zero::Mapping) and
-[graphs](crate::one::GraphMapping), we generally cannot separate *evaluation*
-from *validation*: to evaluate a [map](FgCategoryMap) on a finitely generated
-category, we might need access to the domain category, in order to decompose
-general morphisms into composites of generators, and also to the codomain
-category, in order to compose images of generating morphisms. The upshot is that
-you must carry around (references to) more data to evaluate functors than to
-evaluate functions or graph morphisms.
- */
+//! Functors between categories.
+//!
+//! Abstractly, a functor between categories is a just graph morphism between the
+//! underlying graphs that respects composition. In our applications, we are most
+//! interested in functors out of *finitely generated* categories, whose action on
+//! arbitrary morphisms is uniquely determined by that on the morphism generators.
+//! Thus, in contrast to mappings between [sets](crate::zero::Mapping) and
+//! [graphs](crate::one::GraphMapping), we generally cannot separate *evaluation*
+//! from *validation*: to evaluate a [map](FgCategoryMap) on a finitely generated
+//! category, we might need access to the domain category, in order to decompose
+//! general morphisms into composites of generators, and also to the codomain
+//! category, in order to compose images of generating morphisms. The upshot is that
+//! you must carry around (references to) more data to evaluate functors than to
+//! evaluate functions or graph morphisms.
 
 use std::hash::Hash;
 
@@ -26,12 +25,11 @@ use super::{
 };
 use crate::zero::{Column, Mapping};
 
-/** A mapping between categories.
-
-Analogous to a mapping between [sets](crate::zero::Mapping) or
-[graphs](crate::one::GraphMapping), a category mapping is a functor without
-specified domain or codomain categories.
- */
+/// A mapping between categories.
+///
+/// Analogous to a mapping between [sets](crate::zero::Mapping) or
+/// [graphs](crate::one::GraphMapping), a category mapping is a functor without
+/// specified domain or codomain categories.
 pub trait CategoryMap {
     /// Type of objects in domain category.
     type DomOb: Eq + Clone;
@@ -78,11 +76,10 @@ pub trait CategoryMap {
     }
 }
 
-/** A mapping out of a finitely generated category.
-
-Such a mapping is determined by where it sends generating objects and morphisms.
-The codomain category is arbitrary.
- */
+/// A mapping out of a finitely generated category.
+///
+/// Such a mapping is determined by where it sends generating objects and morphisms.
+/// The codomain category is arbitrary.
 pub trait FgCategoryMap: CategoryMap {
     /// Type of object generators in domain category.
     type ObGen: Eq + Clone;
@@ -113,16 +110,15 @@ pub trait FgCategoryMap: CategoryMap {
     }
 }
 
-/** The data of a functor out of a finitely presented (f.p.) category.
-
-This struct consists of a pair of mappings on the object and morphism generators
-of the domain category, assumed to be finitely presented. This data defines a
-[graph mapping](GraphMapping) from the domain category's generating graph to the
-codomain category's underlying graph.
-
-You can't do much with this data until it is [interpreted as a
-functor](Self::functor_into) into a specific category.
- */
+/// The data of a functor out of a finitely presented (f.p.) category.
+///
+/// This struct consists of a pair of mappings on the object and morphism generators
+/// of the domain category, assumed to be finitely presented. This data defines a
+/// [graph mapping](GraphMapping) from the domain category's generating graph to the
+/// codomain category's underlying graph.
+///
+/// You can't do much with this data until it is [interpreted as a
+/// functor](Self::functor_into) into a specific category.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Constructor)]
 pub struct FpFunctorData<ObGenMap, MorGenMap> {
     /// Mapping on object generators.
@@ -159,13 +155,12 @@ where
     }
 }
 
-/** A functor out of a finitely presented (f.p.) category.
-
-Like a [`Function`](crate::zero::Function), this struct borrows its data. Unlike
-a [`Mapping`] between sets, a codomain is needed not just for validation but to
-even evaluate the functor on morphisms, hence is required as extra data. The
-domain category is needed only for validation.
- */
+/// A functor out of a finitely presented (f.p.) category.
+///
+/// Like a [`Function`](crate::zero::Function), this struct borrows its data. Unlike
+/// a [`Mapping`] between sets, a codomain is needed not just for validation but to
+/// even evaluate the functor on morphisms, hence is required as extra data. The
+/// domain category is needed only for validation.
 #[derive(Constructor)]
 pub struct FpFunctor<'a, Map, Cod> {
     map: &'a Map,
@@ -320,10 +315,9 @@ mod tests {
     use crate::one::fp_category::{sch_graph, sch_hgraph, sch_sgraph};
     use crate::zero::{HashColumn, name};
 
-    /** Isomorphism b/w the schemas for half-edge graphs and symmetric graphs.
-
-    Reference: https://blog.algebraicjulia.org/post/2020/09/cset-graphs-2/
-     */
+    /// Isomorphism b/w the schemas for half-edge graphs and symmetric graphs.
+    ///
+    /// Reference: https://blog.algebraicjulia.org/post/2020/09/cset-graphs-2/
     #[test]
     fn sch_sgraph_to_hgraph() {
         let (sch_hgraph, sch_sgraph) = (sch_hgraph(), sch_sgraph());
