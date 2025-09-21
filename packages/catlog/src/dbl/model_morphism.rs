@@ -6,7 +6,7 @@
 //! 1. *Well-typed*: preserve object and morphism types
 //! 2. *Functorial*: preserve composition and identities
 //! 3. *Natural*: commute with object operations and morphism operations, possibly up
-//! to comparison maps
+//!    to comparison maps
 //!
 //! In mathematical terms, a model morphism is a natural transformation between lax
 //! double functors. The natural transformation can be strict, pseudo, lax, or
@@ -15,9 +15,9 @@
 //! # References
 //!
 //! - [Paré 2011](crate::refs::DblYonedaTheory), Section 1.5: Natural
-//! transformations
+//!   transformations
 //! - [Lambert & Patterson 2024](crate::refs::CartDblTheories),
-//! Section 7: Lax transformations
+//!   Section 7: Lax transformations
 
 use thiserror::Error;
 

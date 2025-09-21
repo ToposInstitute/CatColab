@@ -16,15 +16,15 @@
 //! 1. **Object type**, interpreted in models as a set of objects.
 //!
 //! 2. **Morphism type**, having a source and a target object type and interpreted
-//! in models as a span of morphisms (or
-//! [heteromorphisms](https://ncatlab.org/nlab/show/heteromorphism)) between sets
-//! of objects.
+//!    in models as a span of morphisms (or
+//!    [heteromorphisms](https://ncatlab.org/nlab/show/heteromorphism)) between sets
+//!    of objects.
 //!
 //! 3. **Object operation**, interpreted in models as a function between sets of
-//! objects.
+//!    objects.
 //!
 //! 4. **Morphism operation**, having a source and target object operation and
-//! interpreted in models as map between spans of morphisms.
+//!    interpreted in models as map between spans of morphisms.
 //!
 //! The dictionary between the type-theoretic and double-categorical terminology is
 //! summarized by the table:
@@ -65,7 +65,7 @@
 //!
 //! - [Lambert & Patterson, 2024](crate::refs::CartDblTheories)
 //! - [Patterson, 2024](crate::refs::DblProducts),
-//! Section 10: Finite-product double theories
+//!   Section 10: Finite-product double theories
 
 use nonempty::NonEmpty;
 

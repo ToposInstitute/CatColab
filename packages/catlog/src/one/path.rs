@@ -446,11 +446,11 @@ impl<V, E> Path<V, Path<V, E>> {
 /// might seem like an odd data structure, but are occasionally useful, such as in:
 ///
 /// - *finite* categories defined by an explicit multiplication table, where every
-/// morphism is either a generator (path of length one) or an identity (path of
-/// length zero)
+///   morphism is either a generator (path of length one) or an identity (path of
+///   length zero)
 /// - *augmented* virtual double categories ([Koudenburg
-/// 2020](crate::refs::AugmentedVDCs)), where the codomain of a cell is by
-/// definition a short path, and relatedly *unital* virtual double categories
+///   2020](crate::refs::AugmentedVDCs)), where the codomain of a cell is by
+///   definition a short path, and relatedly *unital* virtual double categories
 #[derive(Clone, Debug, PartialEq, Eq, From)]
 pub enum ShortPath<V, E> {
     /// Path of length zero.

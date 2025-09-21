@@ -11,7 +11,7 @@
 //! category theory:
 //!
 //! - [Virtual double categories](category) (VDCs), our preferred variant of double
-//! categories
+//!   categories
 //! - [Virtual double graphs](graph), the data underlying a virtual double category
 //! - [Double trees](tree), the data structure for pasting diagrams in a VDC
 //!
@@ -20,12 +20,12 @@
 //! Interfaces are provided for concepts from double-categorical logic:
 //!
 //! - [Double theories](theory), a kind of two-dimensional
-//! [theory](https://ncatlab.org/nlab/show/theory) in the sense of logic
+//!   [theory](https://ncatlab.org/nlab/show/theory) in the sense of logic
 //! - [Models](model) of double theories, which are categorical structures
 //! - [Morphisms](model_morphism) between models of double theories, generalizing
-//! functors between categories
+//!   functors between categories
 //! - [Diagrams](model_diagram) in a model, generalizing
-//! [diagrams](https://ncatlab.org/nlab/show/diagram) in a category
+//!   [diagrams](https://ncatlab.org/nlab/show/diagram) in a category
 //!
 //! These submodules mostly provide traits and generic data structures applicable to
 //! any kind of double theory, model, etc. Specific kinds are implemented in the
@@ -39,11 +39,11 @@
 //! double doctrines are currently implemented, named according to their theories:
 //!
 //! - [Discrete double theories](discrete): double theories with only trivial
-//! operations, and no further structure
+//!   operations, and no further structure
 //! - [Discrete tabulator theories](discrete_tabulator): double theories with
-//! tabulators and only trivial operations
+//!   tabulators and only trivial operations
 //! - [Modal double theories](modal): double theories equipped with
-//! [modalities][modal::theory::Modality]
+//!   [modalities][modal::theory::Modality]
 
 pub mod category;
 pub mod computad;

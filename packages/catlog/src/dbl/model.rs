@@ -19,18 +19,18 @@
 //! 1. **Objects**, each assigned an object type in the theory;
 //!
 //! 2. **Morphisms**, each having a domain and a codomain object and assigned a
-//! morphism type in the theory, compatibly with the domain and codomain types;
+//!    morphism type in the theory, compatibly with the domain and codomain types;
 //!
 //! In addition, a model has the following operations:
 //!
 //! - **Object action**: object operations in the theory act on objects in the model
-//! to produce new objects;
+//!   to produce new objects;
 //!
 //! - **Morphism action**: morphism operations in the theory act on morphisms in
-//! the model to produce new morphisms, compatibly with the object action;
+//!   the model to produce new morphisms, compatibly with the object action;
 //!
 //! - **Composition**: a path of morphisms in the model has a composite morphism,
-//! whose type is the composite of the corresponding morphism types.
+//!   whose type is the composite of the corresponding morphism types.
 
 use nonempty::NonEmpty;
 

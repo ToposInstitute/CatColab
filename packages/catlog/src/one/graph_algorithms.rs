@@ -19,9 +19,9 @@ use super::path::*;
 /// This function is adapted from previous implementations of the same algorithm:
 ///
 /// - [`all_simple_paths`](https://docs.rs/petgraph/latest/petgraph/algo/simple_paths/fn.all_simple_paths.html)
-/// in [petgraph](https://github.com/petgraph/petgraph)
+///   in [petgraph](https://github.com/petgraph/petgraph)
 /// - [`all_simple_paths`](https://networkx.org/documentation/stable/reference/algorithms/generated/networkx.algorithms.simple_paths.all_simple_paths.html)
-/// in [NetworkX](https://networkx.org)
+///   in [NetworkX](https://networkx.org)
 pub fn simple_paths<'a, G>(
     graph: &'a G,
     from: &'a G::V,
