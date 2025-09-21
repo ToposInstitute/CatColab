@@ -1,4 +1,4 @@
-/*! Generate catlog models from doublett types. */
+//! Generate catlog models from doublett types.
 
 use crate::dbl::model::DiscreteDblModel;
 use crate::dbl::model::MutDblModel;
@@ -6,9 +6,9 @@ use crate::tt::toplevel::Toplevel;
 use crate::tt::{eval::*, prelude::*, val::*};
 use crate::zero::QualifiedName;
 
-/** Generate a discrete double model from a type.
-
-Precondition: `ty` must be valid in the empty context. */
+/// Generate a discrete double model from a type.
+///
+/// Precondition: `ty` must be valid in the empty context.
 pub fn generate(toplevel: &Toplevel, ty: &TyV) -> DiscreteDblModel {
     let eval = Evaluator::new(toplevel, Env::Nil, 0);
     let (elt, eval) = eval.bind_neu(text_seg("self"), ty.clone());
