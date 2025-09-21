@@ -7,10 +7,9 @@ use tokio::sync::watch;
 use ts_rs::TS;
 use uuid::Uuid;
 
-/** Top-level application state.
-
-Cheaply cloneable and intended to be moved around the program.
- */
+/// Top-level application state.
+///
+/// Cheaply cloneable and intended to be moved around the program.
 #[derive(Clone)]
 pub struct AppState {
     /// Connection to the Postgres database.

@@ -99,17 +99,16 @@ pub struct TabMorOp {
     projections: Vec<TabMorProj>,
 }
 
-/** A discrete tabulator theory.
-
-Loosely speaking, a discrete tabulator theory is a [discrete double
-theory](crate::dbl::theory::DiscreteDblTheory) extended to allow tabulators.
-That doesn't quite make sense as stated because a
-[tabulator](https://ncatlab.org/nlab/show/tabulator) comes with two projection
-arrows and a projection cell, which cannot exist in a nontrivial discrete double
-category. A **discrete tabulator theory** is thus a small double category with
-tabulators and with no arrows or cells beyond the identities and tabulator
-projections.
- */
+/// A discrete tabulator theory.
+///
+/// Loosely speaking, a discrete tabulator theory is a [discrete double
+/// theory](crate::dbl::theory::DiscreteDblTheory) extended to allow tabulators.
+/// That doesn't quite make sense as stated because a
+/// [tabulator](https://ncatlab.org/nlab/show/tabulator) comes with two projection
+/// arrows and a projection cell, which cannot exist in a nontrivial discrete double
+/// category. A **discrete tabulator theory** is thus a small double category with
+/// tabulators and with no arrows or cells beyond the identities and tabulator
+/// projections.
 #[derive(Clone, Default)]
 pub struct DiscreteTabTheory {
     ob_types: HashFinSet<QualifiedName>,

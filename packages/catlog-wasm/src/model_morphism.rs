@@ -77,10 +77,9 @@ pub fn motifs(
     Ok(images)
 }
 
-/** Remove duplicate elements from a vector.
-
-This is the naive quadratic algorithm that only uses equality tests.
- */
+/// Remove duplicate elements from a vector.
+///
+/// This is the naive quadratic algorithm that only uses equality tests.
 fn retain_unique<T: Eq>(vec: &mut Vec<T>) {
     let mut i = 0;
     while i < vec.len() {

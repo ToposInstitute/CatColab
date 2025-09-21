@@ -1,8 +1,7 @@
-/*! Mass-action ODE analysis of models.
-
-Such ODEs are based on the *law of mass action* familiar from chemistry and
-mathematical epidemiology.
- */
+//! Mass-action ODE analysis of models.
+//!
+//! Such ODEs are based on the *law of mass action* familiar from chemistry and
+//! mathematical epidemiology.
 
 use std::collections::{BTreeMap, HashMap};
 
@@ -86,11 +85,10 @@ impl StochasticMassActionAnalysis {
 /// Symbolic parameter in mass-action polynomial system.
 type Parameter<Id> = Polynomial<Id, f32, u8>;
 
-/** Mass-action ODE analysis for Petri nets.
-
-This struct implements the object part of the functorial semantics for reaction
-networks (aka, Petri nets) due to [Baez & Pollard](crate::refs::ReactionNets).
- */
+/// Mass-action ODE analysis for Petri nets.
+///
+/// This struct implements the object part of the functorial semantics for reaction
+/// networks (aka, Petri nets) due to [Baez & Pollard](crate::refs::ReactionNets).
 pub struct PetriNetMassActionAnalysis {
     /// Object type for places.
     pub place_ob_type: ModalObType,

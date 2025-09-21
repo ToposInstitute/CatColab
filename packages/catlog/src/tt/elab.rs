@@ -1,4 +1,4 @@
-/*! Elaboration for doublett */
+//! Elaboration for doublett
 use crate::{
     dbl::{
         category::VDblCategory,
@@ -19,18 +19,17 @@ use crate::{
     zero::QualifiedName,
 };
 
-/** The result of elaborating a top-level statement. */
+/// The result of elaborating a top-level statement.
 pub enum TopElabResult {
-    /** A new declaration */
+    /// A new declaration
     Declaration(TopVarName, TopDecl),
-    /** Output that should be logged */
+    /// Output that should be logged
     Output(String),
 }
 
-/** Context for top-level elaboration
-
-Top-level elaboration is elaboration of declarations.
-*/
+/// Context for top-level elaboration
+///
+/// Top-level elaboration is elaboration of declarations.
 pub struct TopElaborator<'a> {
     toplevel: &'a Toplevel,
     reporter: Reporter,

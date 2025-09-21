@@ -3,17 +3,16 @@
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
-/** A `Result`-like type that translates to/from JavaScript.
-
-In `wasm-bindgen`, returning a [`Result`] raises an exception in JavaScript when
-the `Err` variant is given:
-
-<https://rustwasm.github.io/docs/wasm-bindgen/reference/types/result.html>
-
-When an error should be handled in the UI, it is more convenient to return an
-error value than to raise an exception. That's what this enum does. It is
-isomorphic to, and interconvertible with, the standard [`Result`] type.
-*/
+/// A `Result`-like type that translates to/from JavaScript.
+///
+/// In `wasm-bindgen`, returning a [`Result`] raises an exception in JavaScript when
+/// the `Err` variant is given:
+///
+/// <https://rustwasm.github.io/docs/wasm-bindgen/reference/types/result.html>
+///
+/// When an error should be handled in the UI, it is more convenient to return an
+/// error value than to raise an exception. That's what this enum does. It is
+/// isomorphic to, and interconvertible with, the standard [`Result`] type.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
 #[serde(tag = "tag", content = "content")]
 #[tsify(into_wasm_abi, from_wasm_abi)]

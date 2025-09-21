@@ -1,72 +1,71 @@
-/*! Double theories.
-
-A double theory specifies a categorical structure, meaning a category (or
-categories) equipped with extra structure. The spirit of the formalism is that a
-double theory is "just" a [virtual double category](super::category),
-categorifying Lawvere's idea that a theory is "just" a category. Thus, a double
-theory is a [concept with an
-attitude](https://ncatlab.org/nlab/show/concept+with+an+attitude). To bring out
-these intuitions, the interface for double theories, [`DblTheory`], introduces
-new terminology compared to the references cited below.
-
-# Terminology
-
-A double theory comprises four kinds of things:
-
-1. **Object type**, interpreted in models as a set of objects.
-
-2. **Morphism type**, having a source and a target object type and interpreted
-   in models as a span of morphisms (or
-   [heteromorphisms](https://ncatlab.org/nlab/show/heteromorphism)) between sets
-   of objects.
-
-3. **Object operation**, interpreted in models as a function between sets of
-   objects.
-
-4. **Morphism operation**, having a source and target object operation and
-   interpreted in models as map between spans of morphisms.
-
-The dictionary between the type-theoretic and double-categorical terminology is
-summarized by the table:
-
-| Associated type                 | Double theory      | Double category           | Interpreted as |
-|---------------------------------|--------------------|---------------------------|----------------|
-| [`ObType`](DblTheory::ObType)   | Object type        | Object                    | Set            |
-| [`MorType`](DblTheory::MorType) | Morphism type      | Proarrow (loose morphism) | Span           |
-| [`ObOp`](DblTheory::ObOp)       | Object operation   | Arrow (tight morphism)    | Function       |
-| [`MorOp`](DblTheory::MorOp)     | Morphism operation | Cell                      | Map of spans   |
-
-Models of a double theory are *categorical* structures, rather than merely
-*set-theoretical* ones, because each object type is assigned not just a set of
-objects but also a span of morphisms between those objects, constituting a
-category. The morphisms come from a distinguished "Hom" morphism type for each
-object type in the double theory. Similarly, each object operation is not just a
-function but a functor because it comes with an "Hom" operation between the Hom
-types. Moreover, morphism types can be composed to give new ones, as summarized
-by the table:
-
-| Method                                      | Double theory          | Double category        |
-|---------------------------------------------|------------------------|------------------------|
-| [`hom_type`](DblTheory::hom_type)           | Hom type               | Identity proarrow      |
-| [`hom_op`](DblTheory::hom_op)               | Hom operation          | Identity cell on arrow |
-| [`compose_types`](DblTheory::compose_types) | Compose morphism types | Compose proarrows      |
-
-Finally, operations on both objects and morphisms have identities and can be
-composed:
-
-| Method                                          | Double theory                       | Double category           |
-|-------------------------------------------------|-------------------------------------|---------------------------|
-| [`id_ob_op`](DblTheory::id_ob_op)               | Identity operation on object type   | Identity arrow            |
-| [`id_mor_op`](DblTheory::id_mor_op)             | Identity operation on morphism type | Identity cell on proarrow |
-| [`compose_ob_ops`](DblTheory::compose_ob_ops)   | Compose object operations           | Compose arrows            |
-| [`compose_mor_ops`](DblTheory::compose_mor_ops) | Compose morphism operations         | Compose cells             |
-
-# References
-
-- [Lambert & Patterson, 2024](crate::refs::CartDblTheories)
-- [Patterson, 2024](crate::refs::DblProducts),
-  Section 10: Finite-product double theories
-*/
+//! Double theories.
+//!
+//! A double theory specifies a categorical structure, meaning a category (or
+//! categories) equipped with extra structure. The spirit of the formalism is that a
+//! double theory is "just" a [virtual double category](super::category),
+//! categorifying Lawvere's idea that a theory is "just" a category. Thus, a double
+//! theory is a [concept with an
+//! attitude](https://ncatlab.org/nlab/show/concept+with+an+attitude). To bring out
+//! these intuitions, the interface for double theories, [`DblTheory`], introduces
+//! new terminology compared to the references cited below.
+//!
+//! # Terminology
+//!
+//! A double theory comprises four kinds of things:
+//!
+//! 1. **Object type**, interpreted in models as a set of objects.
+//!
+//! 2. **Morphism type**, having a source and a target object type and interpreted
+//! in models as a span of morphisms (or
+//! [heteromorphisms](https://ncatlab.org/nlab/show/heteromorphism)) between sets
+//! of objects.
+//!
+//! 3. **Object operation**, interpreted in models as a function between sets of
+//! objects.
+//!
+//! 4. **Morphism operation**, having a source and target object operation and
+//! interpreted in models as map between spans of morphisms.
+//!
+//! The dictionary between the type-theoretic and double-categorical terminology is
+//! summarized by the table:
+//!
+//! | Associated type                 | Double theory      | Double category           | Interpreted as |
+//! |---------------------------------|--------------------|---------------------------|----------------|
+//! | [`ObType`](DblTheory::ObType)   | Object type        | Object                    | Set            |
+//! | [`MorType`](DblTheory::MorType) | Morphism type      | Proarrow (loose morphism) | Span           |
+//! | [`ObOp`](DblTheory::ObOp)       | Object operation   | Arrow (tight morphism)    | Function       |
+//! | [`MorOp`](DblTheory::MorOp)     | Morphism operation | Cell                      | Map of spans   |
+//!
+//! Models of a double theory are *categorical* structures, rather than merely
+//! set-theoretical* ones, because each object type is assigned not just a set of
+//! objects but also a span of morphisms between those objects, constituting a
+//! category. The morphisms come from a distinguished "Hom" morphism type for each
+//! object type in the double theory. Similarly, each object operation is not just a
+//! function but a functor because it comes with an "Hom" operation between the Hom
+//! types. Moreover, morphism types can be composed to give new ones, as summarized
+//! by the table:
+//!
+//! | Method                                      | Double theory          | Double category        |
+//! |---------------------------------------------|------------------------|------------------------|
+//! | [`hom_type`](DblTheory::hom_type)           | Hom type               | Identity proarrow      |
+//! | [`hom_op`](DblTheory::hom_op)               | Hom operation          | Identity cell on arrow |
+//! | [`compose_types`](DblTheory::compose_types) | Compose morphism types | Compose proarrows      |
+//!
+//! Finally, operations on both objects and morphisms have identities and can be
+//! composed:
+//!
+//! | Method                                          | Double theory                       | Double category           |
+//! |-------------------------------------------------|-------------------------------------|---------------------------|
+//! | [`id_ob_op`](DblTheory::id_ob_op)               | Identity operation on object type   | Identity arrow            |
+//! | [`id_mor_op`](DblTheory::id_mor_op)             | Identity operation on morphism type | Identity cell on proarrow |
+//! | [`compose_ob_ops`](DblTheory::compose_ob_ops)   | Compose object operations           | Compose arrows            |
+//! | [`compose_mor_ops`](DblTheory::compose_mor_ops) | Compose morphism operations         | Compose cells             |
+//!
+//! # References
+//!
+//! - [Lambert & Patterson, 2024](crate::refs::CartDblTheories)
+//! - [Patterson, 2024](crate::refs::DblProducts),
+//! Section 10: Finite-product double theories
 
 use nonempty::NonEmpty;
 
@@ -78,41 +77,36 @@ pub use super::discrete::theory::*;
 pub use super::discrete_tabulator::theory::*;
 pub use super::modal::theory::*;
 
-/** A double theory.
-
-A double theory is "just" a virtual double category (VDC) assumed to have units.
-Reflecting this, this trait has a blanket implementation for any
-[`VDblCategory`]. It is not recommended to implement this trait directly.
-
-See the [module-level docs](super::theory) for background on the terminology.
- */
+/// A double theory.
+///
+/// A double theory is "just" a virtual double category (VDC) assumed to have units.
+/// Reflecting this, this trait has a blanket implementation for any
+/// [`VDblCategory`]. It is not recommended to implement this trait directly.
+///
+/// See the [module-level docs](super::theory) for background on the terminology.
 pub trait DblTheory {
-    /** Rust type of object types in the theory.
-
-    Viewing the double theory as a virtual double category, this is the type of
-    objects.
-    */
+    /// Rust type of object types in the theory.
+    ///
+    /// Viewing the double theory as a virtual double category, this is the type of
+    /// objects.
     type ObType: Eq + Clone;
 
-    /** Rust type of morphism types in the theory.
-
-    Viewing the double theory as a virtual double category, this is the type of
-    proarrows.
-    */
+    /// Rust type of morphism types in the theory.
+    ///
+    /// Viewing the double theory as a virtual double category, this is the type of
+    /// proarrows.
     type MorType: Eq + Clone;
 
-    /** Rust type of operations on objects in the double theory.
-
-    Viewing the double theory as a virtual double category, this is the type of
-    arrows.
-    */
+    /// Rust type of operations on objects in the double theory.
+    ///
+    /// Viewing the double theory as a virtual double category, this is the type of
+    /// arrows.
     type ObOp: Eq + Clone;
 
-    /** Rust type of operations on morphisms in the double theory.
-
-    Viewing the double theory as a virtual double category, this is the type of
-    cells.
-    */
+    /// Rust type of operations on morphisms in the double theory.
+    ///
+    /// Viewing the double theory as a virtual double category, this is the type of
+    /// cells.
     type MorOp: Eq + Clone;
 
     /// Does the object type belong to the theory?
@@ -154,11 +148,10 @@ pub trait DblTheory {
     /// Composes a sequence of morphism types, if they have a composite.
     fn compose_types(&self, path: Path<Self::ObType, Self::MorType>) -> Option<Self::MorType>;
 
-    /** Hom morphism type on an object type.
-
-    Viewing the double theory as a virtual double category, this is the unit
-    proarrow on an object.
-    */
+    /// Hom morphism type on an object type.
+    ///
+    /// Viewing the double theory as a virtual double category, this is the unit
+    /// proarrow on an object.
     fn hom_type(&self, x: Self::ObType) -> Self::MorType {
         self.compose_types(Path::Id(x))
             .expect("A double theory should have a hom type for each object type")
@@ -167,31 +160,28 @@ pub trait DblTheory {
     /// Compose a sequence of operations on objects.
     fn compose_ob_ops(&self, path: Path<Self::ObType, Self::ObOp>) -> Self::ObOp;
 
-    /** Identity operation on an object type.
-
-    View the double theory as a virtual double category, this is the identity
-    arrow on an object.
-    */
+    /// Identity operation on an object type.
+    ///
+    /// View the double theory as a virtual double category, this is the identity
+    /// arrow on an object.
     fn id_ob_op(&self, x: Self::ObType) -> Self::ObOp {
         self.compose_ob_ops(Path::Id(x))
     }
 
-    /** Hom morphism operation on an object operation.
-
-    Viewing the double theory as a virtual double category, this is the unit
-    cell on an arrow.
-     */
+    /// Hom morphism operation on an object operation.
+    ///
+    /// Viewing the double theory as a virtual double category, this is the unit
+    /// cell on an arrow.
     fn hom_op(&self, f: Self::ObOp) -> Self::MorOp;
 
     /// Compose operations on morphisms.
     fn compose_mor_ops(&self, tree: DblTree<Self::ObOp, Self::MorType, Self::MorOp>)
     -> Self::MorOp;
 
-    /** Identity operation on a morphism type.
-
-    Viewing the double theory as a virtual double category, this is the identity
-    cell on a proarrow.
-    */
+    /// Identity operation on a morphism type.
+    ///
+    /// Viewing the double theory as a virtual double category, this is the identity
+    /// cell on a proarrow.
     fn id_mor_op(&self, m: Self::MorType) -> Self::MorOp {
         self.compose_mor_ops(DblTree::empty(m))
     }

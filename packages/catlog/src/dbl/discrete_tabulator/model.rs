@@ -49,10 +49,9 @@ impl TabOb {
     }
 }
 
-/** "Edge" in a model of a discrete tabulator theory.
-
-Morphisms of these two forms generate all the morphisms in the model.
- */
+/// "Edge" in a model of a discrete tabulator theory.
+///
+/// Morphisms of these two forms generate all the morphisms in the model.
 #[derive(Clone, PartialEq, Eq, From)]
 pub enum TabEdge {
     /// Basic morphism between any two objects.
@@ -143,13 +142,12 @@ impl Graph for DiscreteTabGenerators {
     }
 }
 
-/** A finitely presented model of a discrete tabulator theory.
-
-A **model** of a [discrete tabulator theory](super::theory::DiscreteTabTheory)
-is a normal lax functor from the theory into the double category of profunctors
-that preserves tabulators. For the definition of "preserving tabulators," see
-the dev docs.
- */
+/// A finitely presented model of a discrete tabulator theory.
+///
+/// A **model** of a [discrete tabulator theory](super::theory::DiscreteTabTheory)
+/// is a normal lax functor from the theory into the double category of profunctors
+/// that preserves tabulators. For the definition of "preserving tabulators," see
+/// the dev docs.
 #[derive(Clone, Derivative)]
 #[derivative(PartialEq, Eq)]
 pub struct DiscreteTabModel {

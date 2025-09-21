@@ -1,24 +1,23 @@
-/*! Morphisms between models of double theories.
-
-A morphism between [models](super::model) consists of functions between objects
-and between morphisms that are:
-
-1. *Well-typed*: preserve object and morphism types
-2. *Functorial*: preserve composition and identities
-3. *Natural*: commute with object operations and morphism operations, possibly up
-   to comparison maps
-
-In mathematical terms, a model morphism is a natural transformation between lax
-double functors. The natural transformation can be strict, pseudo, lax, or
-oplax. For models of *discrete* double theories, all these options coincide.
-
-# References
-
-- [Paré 2011](crate::refs::DblYonedaTheory), Section 1.5: Natural
-  transformations
-- [Lambert & Patterson 2024](crate::refs::CartDblTheories),
-  Section 7: Lax transformations
- */
+//! Morphisms between models of double theories.
+//!
+//! A morphism between [models](super::model) consists of functions between objects
+//! and between morphisms that are:
+//!
+//! 1. *Well-typed*: preserve object and morphism types
+//! 2. *Functorial*: preserve composition and identities
+//! 3. *Natural*: commute with object operations and morphism operations, possibly up
+//! to comparison maps
+//!
+//! In mathematical terms, a model morphism is a natural transformation between lax
+//! double functors. The natural transformation can be strict, pseudo, lax, or
+//! oplax. For models of *discrete* double theories, all these options coincide.
+//!
+//! # References
+//!
+//! - [Paré 2011](crate::refs::DblYonedaTheory), Section 1.5: Natural
+//! transformations
+//! - [Lambert & Patterson 2024](crate::refs::CartDblTheories),
+//! Section 7: Lax transformations
 
 use thiserror::Error;
 

@@ -54,11 +54,10 @@ pub enum MorListData {
     /// No extra data for a morphism in the [plain list](List::Plain) modality.
     Plain(),
 
-    /** Data for a morphism in the [symmetric list](List::Symmetric) modality.
-
-    A permutation on the indexing set of the list, which acts on the list of
-    codomain objects.
-     */
+    /// Data for a morphism in the [symmetric list](List::Symmetric) modality.
+    ///
+    /// A permutation on the indexing set of the list, which acts on the list of
+    /// codomain objects.
     Symmetric(SkelColumn),
 }
 
@@ -490,11 +489,10 @@ impl ModalOb {
         self.generator().expect("Object should be a generator")
     }
 
-    /** Collects application of a product operation into a list of objects.
-
-    The intended operation has domain equal to the list modality applied to its
-    codomain, which usually signifies a product of some kind.
-     */
+    /// Collects application of a product operation into a list of objects.
+    ///
+    /// The intended operation has domain equal to the list modality applied to its
+    /// codomain, which usually signifies a product of some kind.
     pub fn collect_product(self, op_id: Option<QualifiedName>) -> Option<Vec<Self>> {
         match self {
             ModalOb::Generator(_) => Some(vec![self]),

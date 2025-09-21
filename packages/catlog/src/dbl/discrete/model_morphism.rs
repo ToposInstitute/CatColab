@@ -11,11 +11,10 @@ use crate::one::*;
 use crate::validate::{self, Validate};
 use crate::zero::{HashColumn, Mapping, MutMapping, QualifiedName};
 
-/** A mapping between models of a discrete double theory.
-
-Because a discrete double theory has only trivial operations, the naturality
-axioms for a model morphism are also trivial.
- */
+/// A mapping between models of a discrete double theory.
+///
+/// Because a discrete double theory has only trivial operations, the naturality
+/// axioms for a model morphism are also trivial.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct DiscreteDblModelMapping(pub DiscreteDblModelMappingData);
 
@@ -70,12 +69,11 @@ impl DiscreteDblModelMapping {
     }
 }
 
-/** A functor between models of a double theory.
-
-This struct borrows its data to perform validation. The domain and codomain are
-assumed to be valid models of double theories. If that is in question, the
-models should be validated *before* validating this object.
- */
+/// A functor between models of a double theory.
+///
+/// This struct borrows its data to perform validation. The domain and codomain are
+/// assumed to be valid models of double theories. If that is in question, the
+/// models should be validated *before* validating this object.
 pub struct DblModelMorphism<'a, Map, Dom, Cod>(pub &'a Map, pub &'a Dom, pub &'a Cod);
 
 /// A morphism between models of a discrete double theory.
@@ -148,14 +146,13 @@ impl<'a> DiscreteDblModelMorphism<'a> {
         true
     }
 
-    /** Is the model morphism faithful?
-
-    This check is a nontrivial computation since we cannot enumerate all of the
-    morphisms of the domain category. We simplify the problem by only allowing
-    free models. Furthermore, we restrict the mapping to send generating
-    morphisms in the domain to simple paths in the codomain. If any of these
-    assumptions are violated, the function will panic.
-     */
+    /// Is the model morphism faithful?
+    ///
+    /// This check is a nontrivial computation since we cannot enumerate all of the
+    /// morphisms of the domain category. We simplify the problem by only allowing
+    /// free models. Furthermore, we restrict the mapping to send generating
+    /// morphisms in the domain to simple paths in the codomain. If any of these
+    /// assumptions are violated, the function will panic.
     pub fn is_free_simple_faithful(&self) -> bool {
         let DblModelMorphism(DiscreteDblModelMapping(mapping), dom, cod) = *self;
 
@@ -181,13 +178,12 @@ impl<'a> DiscreteDblModelMorphism<'a> {
         true
     }
 
-    /** Is the model morphism a monomorphism?
-
-    A monomorphism in Cat is an injective on objects and faithful functor. Thus,
-    we check injectivity on objects and faithfulness. Note that the latter check
-    is subject to the same limitations as
-    [`is_free_simple_faithful`](DblModelMorphism::is_free_simple_faithful).
-     */
+    /// Is the model morphism a monomorphism?
+    ///
+    /// A monomorphism in Cat is an injective on objects and faithful functor. Thus,
+    /// we check injectivity on objects and faithfulness. Note that the latter check
+    /// is subject to the same limitations as
+    /// [`is_free_simple_faithful`](DblModelMorphism::is_free_simple_faithful).
     pub fn is_free_simple_monic(&self) -> bool {
         self.is_injective_objects() && self.is_free_simple_faithful()
     }
@@ -201,14 +197,13 @@ impl Validate for DiscreteDblModelMorphism<'_> {
     }
 }
 
-/** Finds morphisms between two models of a discrete double theory.
-
-Morphisms are found using backtracking search. In general, there can be
-infinitely many morphisms between two models, so not all of them can be
-reported. The search is restricted to morphisms that send each basic morphism in
-the domain to a [simple path](crate::one::graph_algorithms::simple_paths) of
-basic morphisms in the codomain.
-*/
+/// Finds morphisms between two models of a discrete double theory.
+///
+/// Morphisms are found using backtracking search. In general, there can be
+/// infinitely many morphisms between two models, so not all of them can be
+/// reported. The search is restricted to morphisms that send each basic morphism in
+/// the domain to a [simple path](crate::one::graph_algorithms::simple_paths) of
+/// basic morphisms in the codomain.
 pub struct DiscreteDblModelMorphismFinder<'a> {
     dom: &'a DiscreteDblModel,
     cod: &'a DiscreteDblModel,
@@ -274,15 +269,14 @@ impl<'a> DiscreteDblModelMorphismFinder<'a> {
         self
     }
 
-    /** Restrict the search to model morphisms that are faithful.
-
-    A faithful morphism is an injective map on morphisms when restricted to any
-    domain/codomain pair of objects in the domain.
-
-    In future work, this will be efficiently checked for early search tree
-    pruning; however, this is currently enforced by filtering with
-    [is_free_simple_faithful](DiscreteDblModelMorphism::is_free_simple_faithful).
-     */
+    /// Restrict the search to model morphisms that are faithful.
+    ///
+    /// A faithful morphism is an injective map on morphisms when restricted to any
+    /// domain/codomain pair of objects in the domain.
+    ///
+    /// In future work, this will be efficiently checked for early search tree
+    /// pruning; however, this is currently enforced by filtering with
+    /// [is_free_simple_faithful](DiscreteDblModelMorphism::is_free_simple_faithful).
     pub fn faithful(&mut self) -> &mut Self {
         self.faithful = true;
         self

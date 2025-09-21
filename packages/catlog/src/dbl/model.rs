@@ -1,37 +1,36 @@
-/*! Models of double theories.
-
-A model of a double theory is a category (or categories) equipped with
-operations specified by the theory, categorifying the familiar idea from logic
-that a model of a theory is a set (or sets) equipped with operations. For
-background on double theories, see the [`theory`](super::theory) module.
-
-In the case of a *simple* double theory, which amounts to a small double
-category, a **model** of the theory is a span-valued *lax* double functor out of
-the theory. Such a model is a "lax copresheaf," categorifying the notion of a
-copresheaf or set-valued functor. Though they are "just" lax double functors,
-models come with extra intuitions. To bring that out we introduce new jargon,
-building on that for double theories.
-
-# Terminology
-
-A model of a double theory consists of elements of two kinds:
-
-1. **Objects**, each assigned an object type in the theory;
-
-2. **Morphisms**, each having a domain and a codomain object and assigned a
-   morphism type in the theory, compatibly with the domain and codomain types;
-
-In addition, a model has the following operations:
-
-- **Object action**: object operations in the theory act on objects in the model
-  to produce new objects;
-
-- **Morphism action**: morphism operations in the theory act on morphisms in
-  the model to produce new morphisms, compatibly with the object action;
-
-- **Composition**: a path of morphisms in the model has a composite morphism,
-  whose type is the composite of the corresponding morphism types.
- */
+//! Models of double theories.
+//!
+//! A model of a double theory is a category (or categories) equipped with
+//! operations specified by the theory, categorifying the familiar idea from logic
+//! that a model of a theory is a set (or sets) equipped with operations. For
+//! background on double theories, see the [`theory`](super::theory) module.
+//!
+//! In the case of a *simple* double theory, which amounts to a small double
+//! category, a **model** of the theory is a span-valued *lax* double functor out of
+//! the theory. Such a model is a "lax copresheaf," categorifying the notion of a
+//! copresheaf or set-valued functor. Though they are "just" lax double functors,
+//! models come with extra intuitions. To bring that out we introduce new jargon,
+//! building on that for double theories.
+//!
+//! # Terminology
+//!
+//! A model of a double theory consists of elements of two kinds:
+//!
+//! 1. **Objects**, each assigned an object type in the theory;
+//!
+//! 2. **Morphisms**, each having a domain and a codomain object and assigned a
+//! morphism type in the theory, compatibly with the domain and codomain types;
+//!
+//! In addition, a model has the following operations:
+//!
+//! - **Object action**: object operations in the theory act on objects in the model
+//! to produce new objects;
+//!
+//! - **Morphism action**: morphism operations in the theory act on morphisms in
+//! the model to produce new morphisms, compatibly with the object action;
+//!
+//! - **Composition**: a path of morphisms in the model has a composite morphism,
+//! whose type is the composite of the corresponding morphism types.
 
 use nonempty::NonEmpty;
 
@@ -48,33 +47,32 @@ pub use super::discrete::model::*;
 pub use super::discrete_tabulator::model::*;
 pub use super::modal::model::*;
 
-/** A model of a double theory.
-
-As always in logic, a model makes sense only relative to a theory, but a theory
-can have many different models. So, in Rust, a model needs access to its theory
-but should not *own* its theory. Implementors of this trait might use an
-immutable shared reference to the theory.
-
-Objects and morphisms in a model are typed by object types and morphism types in
-the theory. There is a design choice about whether identifiers for objects
-([`Ob`](Category::Ob)) and morphisms ([`Mor`](Category::Mor)) are unique
-relative to their types or globally within the model. If we took the first
-approach (as we do in the Julia package
-[ACSets.jl](https://github.com/AlgebraicJulia/ACSets.jl)), one could only make
-sense of objects and morphisms when their types are known, so the early methods
-in the trait would look like this:
-
-```ignore
-fn has_ob(&self, x: &Self::Ob, t: &Self::ObType) -> bool;
-fn has_mor(&self, m: &Self::Mor, t: &Self::MorType) -> bool;
-fn dom(&self, m: &Self::Mor, t: &Self::MorType) -> Self::Ob;
-fn cod(&self, m: &Self::Mor, t: &Self::MorType) -> Self::Ob;
-```
-
-It will be more convenient for us to take the second approach since in our usage
-object and morphism identifiers will be globally unique in a very strong sense
-(something like UUIDs).
- */
+/// A model of a double theory.
+///
+/// As always in logic, a model makes sense only relative to a theory, but a theory
+/// can have many different models. So, in Rust, a model needs access to its theory
+/// but should not *own* its theory. Implementors of this trait might use an
+/// immutable shared reference to the theory.
+///
+/// Objects and morphisms in a model are typed by object types and morphism types in
+/// the theory. There is a design choice about whether identifiers for objects
+/// ([`Ob`](Category::Ob)) and morphisms ([`Mor`](Category::Mor)) are unique
+/// relative to their types or globally within the model. If we took the first
+/// approach (as we do in the Julia package
+/// [ACSets.jl](https://github.com/AlgebraicJulia/ACSets.jl)), one could only make
+/// sense of objects and morphisms when their types are known, so the early methods
+/// in the trait would look like this:
+///
+/// ```ignore
+/// fn has_ob(&self, x: &Self::Ob, t: &Self::ObType) -> bool;
+/// fn has_mor(&self, m: &Self::Mor, t: &Self::MorType) -> bool;
+/// fn dom(&self, m: &Self::Mor, t: &Self::MorType) -> Self::Ob;
+/// fn cod(&self, m: &Self::Mor, t: &Self::MorType) -> Self::Ob;
+/// ```
+///
+/// It will be more convenient for us to take the second approach since in our usage
+/// object and morphism identifiers will be globally unique in a very strong sense
+/// (something like UUIDs).
 pub trait DblModel: Category {
     /// Rust type of object types defined in the theory.
     type ObType: Eq;
@@ -172,11 +170,10 @@ pub trait MutDblModel: FgDblModel {
     fn set_cod(&mut self, f: Self::MorGen, x: Self::Ob);
 }
 
-/** A failure of a model of a double theory to be well defined.
-
-TODO: We are missing the case that an equation has different composite morphism
-types on left and right hand sides.
-*/
+/// A failure of a model of a double theory to be well defined.
+///
+/// TODO: We are missing the case that an equation has different composite morphism
+/// types on left and right hand sides.
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(tag = "tag", content = "content"))]

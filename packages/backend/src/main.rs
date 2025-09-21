@@ -36,10 +36,9 @@ fn web_port() -> String {
     dotenvy::var("PORT").unwrap_or("8000".to_string())
 }
 
-/** Port for internal communication with the Automerge doc server.
-
-This port should *not* be open to the public.
-*/
+/// Port for internal communication with the Automerge doc server.
+///
+/// This port should *not* be open to the public.
 fn automerge_io_port() -> String {
     dotenvy::var("AUTOMERGE_IO_PORT").unwrap_or("3000".to_string())
 }

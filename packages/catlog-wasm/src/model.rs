@@ -255,10 +255,9 @@ impl CanQuote<ModalMor, Mor> for Quoter {
     }
 }
 
-/** A box containing a model of a double theory of any kind.
-
-See [`DblTheoryBox`] for motivation.
- */
+/// A box containing a model of a double theory of any kind.
+///
+/// See [`DblTheoryBox`] for motivation.
 #[allow(clippy::large_enum_variant)]
 #[derive(From, TryInto)]
 #[try_into(ref, ref_mut)]

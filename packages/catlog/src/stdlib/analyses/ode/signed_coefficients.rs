@@ -7,11 +7,10 @@ use std::hash::Hash;
 
 use crate::dbl::model::FgDblModel;
 
-/** Builder for signed coefficient matrices and analyses based on them.
-
-Used to construct the [linear](Self::linear_ode_analysis) and
-[Lotka-Volterra](Self::lotka_volterra_analysis) ODE analyses.
- */
+/// Builder for signed coefficient matrices and analyses based on them.
+///
+/// Used to construct the [linear](Self::linear_ode_analysis) and
+/// [Lotka-Volterra](Self::lotka_volterra_analysis) ODE analyses.
 pub struct SignedCoefficientBuilder<ObType, MorType> {
     var_ob_type: ObType,
     positive_mor_types: Vec<MorType>,
@@ -40,11 +39,10 @@ impl<ObType, MorType> SignedCoefficientBuilder<ObType, MorType> {
         self
     }
 
-    /** Builds the matrix of coefficients for the given model.
-
-    Returns the coefficient matrix along with an ordered map from object
-    generators to integer indices.
-     */
+    /// Builds the matrix of coefficients for the given model.
+    ///
+    /// Returns the coefficient matrix along with an ordered map from object
+    /// generators to integer indices.
     pub fn build_matrix<Id>(
         &self,
         model: &impl FgDblModel<ObType = ObType, MorType = MorType, Ob = Id, ObGen = Id, MorGen = Id>,

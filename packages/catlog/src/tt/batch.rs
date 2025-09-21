@@ -1,4 +1,4 @@
-/*! Batch elaboration for doublett */
+//! Batch elaboration for doublett
 use std::cell::{Ref, RefCell, RefMut};
 use std::fmt::Write;
 use std::ops::DerefMut;

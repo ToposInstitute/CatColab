@@ -261,13 +261,12 @@ pub(crate) fn demote_modality(modality: theory::Modality) -> Modality {
     }
 }
 
-/** A box containing a double theory of any kind.
-
-Ideally the Wasm-bound [`DblTheory`] would just have a type parameter for the
-underlying double theory, but `wasm-bindgen` does not support
-[generics](https://github.com/rustwasm/wasm-bindgen/issues/3309). Instead, we
-explicitly enumerate the supported kinds of double theories in this enum.
- */
+/// A box containing a double theory of any kind.
+///
+/// Ideally the Wasm-bound [`DblTheory`] would just have a type parameter for the
+/// underlying double theory, but `wasm-bindgen` does not support
+/// [generics](https://github.com/rustwasm/wasm-bindgen/issues/3309). Instead, we
+/// explicitly enumerate the supported kinds of double theories in this enum.
 #[derive(From, TryInto)]
 #[try_into(ref)]
 pub enum DblTheoryBox {
@@ -337,11 +336,10 @@ impl DblTheory {
     }
 }
 
-/** Mapping from object types to numerical indices.
-
-Like [`MorTypeIndex`], this struct just compensates for the lack of hash maps
-with arbitrary keys in JavaScript.
- */
+/// Mapping from object types to numerical indices.
+///
+/// Like [`MorTypeIndex`], this struct just compensates for the lack of hash maps
+/// with arbitrary keys in JavaScript.
 #[wasm_bindgen]
 #[derive(Clone, Default)]
 pub struct ObTypeIndex(HashMap<ObType, usize>);
@@ -367,11 +365,10 @@ impl ObTypeIndex {
     }
 }
 
-/** Mapping from morphism types to numerical indices.
-
-Like [`ObTypeIndex`], this struct just compensates for the lack of hash maps
-with arbitrary keys in JavaScript.
- */
+/// Mapping from morphism types to numerical indices.
+///
+/// Like [`ObTypeIndex`], this struct just compensates for the lack of hash maps
+/// with arbitrary keys in JavaScript.
 #[wasm_bindgen]
 #[derive(Clone, Default)]
 pub struct MorTypeIndex(HashMap<MorType, usize>);

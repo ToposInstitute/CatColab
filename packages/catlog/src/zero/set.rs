@@ -1,8 +1,7 @@
-/*! Sets, finite and infinite.
-
-This module provides interfaces and simple wrapper types to enable sets to be
-treated in a generic way.
- */
+//! Sets, finite and infinite.
+//!
+//! This module provides interfaces and simple wrapper types to enable sets to be
+//! treated in a generic way.
 
 use std::hash::Hash;
 use std::ops::Range;
@@ -13,40 +12,36 @@ use indexmap::IndexSet;
 use ref_cast::RefCast;
 use ustr::Ustr;
 
-/** A set.
-
-The interface is minimal. A set has an element type ([`Elem`](Self::Elem)) and
-can check whether values of that type belongs to the set. Sets are not assumed
-to be finite.
- */
+/// A set.
+///
+/// The interface is minimal. A set has an element type ([`Elem`](Self::Elem)) and
+/// can check whether values of that type belongs to the set. Sets are not assumed
+/// to be finite.
 pub trait Set {
-    /** Type of elements of the set.
-
-    Elements can be compared for equality, as required by ordinary mathematics.
-    Elements can also be cloned and, in practice, we tend to assume that they
-    can be *cheaply* cloned.
-    */
+    /// Type of elements of the set.
+    ///
+    /// Elements can be compared for equality, as required by ordinary mathematics.
+    /// Elements can also be cloned and, in practice, we tend to assume that they
+    /// can be *cheaply* cloned.
     type Elem: Eq + Clone;
 
     /// Does the set contain the element `x`?
     fn contains(&self, x: &Self::Elem) -> bool;
 }
 
-/** A finite set.
-
-In addition to checking for element containment, finite sets know their size and
-are iterable. The elements of a finite set are assumed to be cheaply cloneable
-values, such as integers or interned strings. Thus, iteration of elements is by
-value, not by reference.
- */
+/// A finite set.
+///
+/// In addition to checking for element containment, finite sets know their size and
+/// are iterable. The elements of a finite set are assumed to be cheaply cloneable
+/// values, such as integers or interned strings. Thus, iteration of elements is by
+/// value, not by reference.
 pub trait FinSet: Set {
-    /** Iterates over elements of the finite set.
-
-    Though finite sets have a definite size, the iterator is not required to be
-    an [`ExactSizeIterator`] because they are not stable under even predictable
-    operations like chaining. Instead, retrieve the size of the set through the
-    separate method [`len`](FinSet::len).
-    */
+    /// Iterates over elements of the finite set.
+    ///
+    /// Though finite sets have a definite size, the iterator is not required to be
+    /// an [`ExactSizeIterator`] because they are not stable under even predictable
+    /// operations like chaining. Instead, retrieve the size of the set through the
+    /// separate method [`len`](FinSet::len).
     fn iter(&self) -> impl Iterator<Item = Self::Elem>;
 
     /// The size of the finite set.
@@ -60,11 +55,10 @@ pub trait FinSet: Set {
     }
 }
 
-/** A skeletal finite set.
-
-The elements of the skeletal finite set of size `n` are the numbers `0..n`
-(excluding `n`).
- */
+/// A skeletal finite set.
+///
+/// The elements of the skeletal finite set of size `n` are the numbers `0..n`
+/// (excluding `n`).
 #[derive(Clone, Copy, Debug, From, Into, PartialEq, Eq, RefCast)]
 #[repr(transparent)]
 pub struct SkelFinSet(usize);
@@ -117,12 +111,11 @@ impl IntoIterator for SkelFinSet {
     }
 }
 
-/** A finite set backed by a hash set.
-
-A stable order is guaranteed when iterating over the elements of the set.
-Currently, this achieved by using an [`IndexSet`] rather than a `HashSet` for
-the underlying data structure.
- */
+/// A finite set backed by a hash set.
+///
+/// A stable order is guaranteed when iterating over the elements of the set.
+/// Currently, this achieved by using an [`IndexSet`] rather than a `HashSet` for
+/// the underlying data structure.
 #[derive(Clone, Debug, Derivative)]
 #[derivative(Default(bound = ""))]
 #[derivative(PartialEq(bound = "T: Eq + Hash"))]
@@ -192,10 +185,9 @@ where
     }
 }
 
-/** A skeletal finite set with a data attribute.
-
-The internal representation is simply a vector.
-*/
+/// A skeletal finite set with a data attribute.
+///
+/// The internal representation is simply a vector.
 #[derive(Clone, Debug, From, Derivative)]
 #[derivative(Default(bound = ""))]
 #[derivative(PartialEq(bound = "T: PartialEq"))]

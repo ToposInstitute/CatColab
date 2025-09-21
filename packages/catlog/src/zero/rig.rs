@@ -1,18 +1,17 @@
-/*! Rigs, rings, and modules over them.
-
-Lots of people have their own versions of a trait hierarchy for abstract
-algebra; see [`noether`](https://crates.io/crates/noether) and links therein.
-Our aim is not to make the most complete or general hierarchy but just to meet
-our own needs. Currently that is a bit of [commutative algebra](super::alg),
-especially polynomial algebras over rings. So we avoid slicing the salomi too
-thin with minor concepts like magmas and semigroups. We take the category
-theorist's attitude that rigs are a respectable concept that do not deserve to
-be called "semirings".
-
-Besides the hierarchy of traits, this module provides data structures for
-[linear combinations](Combination) and [monomials](Monomial). These are actually
-the same data structure, but with different notation!
- */
+//! Rigs, rings, and modules over them.
+//!
+//! Lots of people have their own versions of a trait hierarchy for abstract
+//! algebra; see [`noether`](https://crates.io/crates/noether) and links therein.
+//! Our aim is not to make the most complete or general hierarchy but just to meet
+//! our own needs. Currently that is a bit of [commutative algebra](super::alg),
+//! especially polynomial algebras over rings. So we avoid slicing the salomi too
+//! thin with minor concepts like magmas and semigroups. We take the category
+//! theorist's attitude that rigs are a respectable concept that do not deserve to
+//! be called "semirings".
+//!
+//! Besides the hierarchy of traits, this module provides data structures for
+//! [linear combinations](Combination) and [monomials](Monomial). These are actually
+//! the same data structure, but with different notation!
 
 use num_traits::{One, Pow, Zero};
 use std::collections::{BTreeMap, btree_map};
@@ -29,12 +28,11 @@ pub trait AdditiveMonoid: Add<Output = Self> + Zero {}
 #[duplicate_item(T; [f32]; [f64]; [i32]; [i64]; [u32]; [u64]; [usize])]
 impl AdditiveMonoid for T {}
 
-/** An abelian group, written additively.
-
-Though logically redundant, this trait should also extend `Sub<Output = Self>`.
-So far I've been too lazy to make this change since the extra trait cannot be
-automatically derived without macro magic.
- */
+/// An abelian group, written additively.
+///
+/// Though logically redundant, this trait should also extend `Sub<Output = Self>`.
+/// So far I've been too lazy to make this change since the extra trait cannot be
+/// automatically derived without macro magic.
 pub trait AbGroup: AdditiveMonoid + Neg<Output = Self> {}
 
 #[duplicate_item(T; [f32]; [f64]; [i32]; [i64])]
@@ -88,20 +86,19 @@ pub trait Module: RigModule<Rig = Self::Ring> + AbGroup {
     type Ring: CommRing;
 }
 
-/** A formal linear combination.
-
-This data structure is for linear combinations of indeterminates/variables
-(`Var`) with coefficients (`Coef`) valued in a [rig](Rig) or at minimum in an
-[additive monoid](AdditiveMonoid). For example, the coefficients could be
-natural numbers, integers, real numbers, or nonnegative real numbers.
-
-Linear combinations are the data structure for free modules. That is, for any
-rig R, the free R-module on a set consists of formal R-linear combinations on
-elements of the set.
-
-Combinations have exactly the same underlying data structure as
-[monomials](Monomial), but are written additively rather than multiplicatively.
- */
+/// A formal linear combination.
+///
+/// This data structure is for linear combinations of indeterminates/variables
+/// (`Var`) with coefficients (`Coef`) valued in a [rig](Rig) or at minimum in an
+/// [additive monoid](AdditiveMonoid). For example, the coefficients could be
+/// natural numbers, integers, real numbers, or nonnegative real numbers.
+///
+/// Linear combinations are the data structure for free modules. That is, for any
+/// rig R, the free R-module on a set consists of formal R-linear combinations on
+/// elements of the set.
+///
+/// Combinations have exactly the same underlying data structure as
+/// [monomials](Monomial), but are written additively rather than multiplicatively.
 #[derive(Clone, PartialEq, Eq, Debug, Derivative)]
 #[derivative(Default(bound = ""))]
 pub struct Combination<Var, Coef>(BTreeMap<Var, Coef>);
@@ -123,13 +120,12 @@ where
         self.0.keys()
     }
 
-    /** Maps the coefficients in the combination.
-
-    In the usual situation when the coefficients form rigs and the mapping is a
-    rig homomorphism, this operation is [extension of
-    scalars](https://ncatlab.org/nlab/show/extension+of+scalars) applied to
-    free modules.
-     */
+    /// Maps the coefficients in the combination.
+    ///
+    /// In the usual situation when the coefficients form rigs and the mapping is a
+    /// rig homomorphism, this operation is [extension of
+    /// scalars](https://ncatlab.org/nlab/show/extension+of+scalars) applied to
+    /// free modules.
     pub fn extend_scalars<NewCoef, F>(self, mut f: F) -> Combination<Var, NewCoef>
     where
         F: FnMut(Coef) -> NewCoef,
@@ -147,12 +143,11 @@ where
         self.0.iter().map(|(var, coef)| f(var) * coef.clone()).sum()
     }
 
-    /** Evaluates the combination by substituting from a sequence of values.
-
-    The order of the values should correspond to the order of the variables.
-    Will panic if the number of values does not equal the length of the
-    combination.
-     */
+    /// Evaluates the combination by substituting from a sequence of values.
+    ///
+    /// The order of the values should correspond to the order of the variables.
+    /// Will panic if the number of values does not equal the length of the
+    /// combination.
     pub fn eval_with_order<A>(&self, values: impl IntoIterator<Item = A>) -> A
     where
         A: Mul<Coef, Output = A> + Sum,
@@ -210,10 +205,9 @@ impl<'a, Var, Coef> IntoIterator for &'a Combination<Var, Coef> {
     }
 }
 
-/** Pretty print the combination using ASCII.
-
-Intended for debugging/testing rather than any serious use.
- */
+/// Pretty print the combination using ASCII.
+///
+/// Intended for debugging/testing rather than any serious use.
 impl<Var, Coef> Display for Combination<Var, Coef>
 where
     Var: Display,
@@ -370,24 +364,23 @@ where
     type Ring = Coef;
 }
 
-/** A monomial in several variables.
-
-This data structure is for monomials in several indeterminates/variables
-(`Var`), having exponents (`Exp`) valued in an [additive
-monoid](AdditiveMonoid). Most standardly, the exponents will be natural numbers
-(say `u32` or `u64`), in which case the monomials in a set of variables, under
-their usual multiplication, are the free commutative monoid on that set. Other
-types of coefficents are also allowed, such as negative integers as in Laurent
-polynomials, or real numbers as in
-[S-systems](https://doi.org/10.1016/0895-7177(88)90553-5).
-
-The underlying data structure is a [B-tree map](std::collections::BTreeMap) from
-variables to exponents. Thus, the variable type is assumed to be ordered.
-Moreover, when the exponents are also ordered, as they almost always are, the
-monomials themselves become ordered under the lexicographic order. This is a
-valid *monomial ordering* as used in Groebner bases
-([*IVA*](crate::refs::IdealsVarietiesAlgorithms), Section 2.2).
- */
+/// A monomial in several variables.
+///
+/// This data structure is for monomials in several indeterminates/variables
+/// (`Var`), having exponents (`Exp`) valued in an [additive
+/// monoid](AdditiveMonoid). Most standardly, the exponents will be natural numbers
+/// (say `u32` or `u64`), in which case the monomials in a set of variables, under
+/// their usual multiplication, are the free commutative monoid on that set. Other
+/// types of coefficents are also allowed, such as negative integers as in Laurent
+/// polynomials, or real numbers as in
+/// [S-systems](https://doi.org/10.1016/0895-7177(88)90553-5).
+///
+/// The underlying data structure is a [B-tree map](std::collections::BTreeMap) from
+/// variables to exponents. Thus, the variable type is assumed to be ordered.
+/// Moreover, when the exponents are also ordered, as they almost always are, the
+/// monomials themselves become ordered under the lexicographic order. This is a
+/// valid *monomial ordering* as used in Groebner bases
+/// ([*IVA*](crate::refs::IdealsVarietiesAlgorithms), Section 2.2).
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Derivative)]
 #[derivative(Default(bound = ""))]
 pub struct Monomial<Var, Exp>(BTreeMap<Var, Exp>);
@@ -419,12 +412,11 @@ where
         self.0.iter().map(|(var, exp)| f(var).pow(exp.clone())).product()
     }
 
-    /** Evaluates the monomial by substituting from a sequence of values.
-
-    The order of the values should correspond to the order of the variables.
-    Will panic if the number of values does not equal the length of the
-    monomial.
-     */
+    /// Evaluates the monomial by substituting from a sequence of values.
+    ///
+    /// The order of the values should correspond to the order of the variables.
+    /// Will panic if the number of values does not equal the length of the
+    /// monomial.
     pub fn eval_with_order<A>(&self, values: impl IntoIterator<Item = A>) -> A
     where
         A: Pow<Exp, Output = A> + Product,
@@ -436,12 +428,11 @@ where
         value
     }
 
-    /** Maps over the variables of the monomial.
-
-    The mapping need not be injective. This is conceptually equivalent to
-    [evaluating](Monomial::eval) the monomial with a map that sends generators
-    to generators.
-     */
+    /// Maps over the variables of the monomial.
+    ///
+    /// The mapping need not be injective. This is conceptually equivalent to
+    /// [evaluating](Monomial::eval) the monomial with a map that sends generators
+    /// to generators.
     pub fn map_variables<NewVar, F>(&self, mut f: F) -> Monomial<NewVar, Exp>
     where
         Exp: Clone + Add<Output = Exp>,

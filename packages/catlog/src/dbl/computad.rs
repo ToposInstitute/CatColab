@@ -9,10 +9,9 @@ use super::graph::{InvalidVDblGraph, VDblGraph};
 use crate::one::{Graph, Path, ReflexiveGraph, ShortPath};
 use crate::zero::*;
 
-/** Top-dimensional data of an augmented virtual double computad.
-
-Intended for use with [`AVDCComputad`].
- */
+/// Top-dimensional data of an augmented virtual double computad.
+///
+/// Intended for use with [`AVDCComputad`].
 #[derive(Debug, Derivative)]
 #[derivative(Default(bound = ""))]
 pub struct AVDCComputadTop<Ob, Arr, Pro, Sq> {
@@ -47,17 +46,16 @@ where
     }
 }
 
-/** An augmented virtual double computad.
-
-The set of objects and the graphs of arrows and proarrows are assumed already
-constructed, possibly from other generating data, while the top-dimensional
-generating data is provided directly.
-
-We say "augmented" because the generating squares have co-arity zero or one,
-like the cells in an *augmented VDC* ([Koudenburg
-2020](crate::refs::AugmentedVDCs)), though we use such computads to generate
-*unital* VDCs.
- */
+/// An augmented virtual double computad.
+///
+/// The set of objects and the graphs of arrows and proarrows are assumed already
+/// constructed, possibly from other generating data, while the top-dimensional
+/// generating data is provided directly.
+///
+/// We say "augmented" because the generating squares have co-arity zero or one,
+/// like the cells in an *augmented VDC* ([Koudenburg
+/// 2020](crate::refs::AugmentedVDCs)), though we use such computads to generate
+/// unital* VDCs.
 #[derive(Constructor)]
 pub struct AVDCComputad<'a, Ob, Arr, Pro, ObSet, ArrGraph, ProGraph, Sq> {
     objects: &'a ObSet,
@@ -137,11 +135,10 @@ where
     ArrGraph: Graph<V = Ob, E = Arr>,
     ProGraph: Graph<V = Ob, E = Pro>,
 {
-    /** Iterates over failures to be a valid virtual double graph.
-
-    Note that this method *assumes* that the graphs of objects and (pro)arrows
-    are already valid. If that is in question, validate them first.
-     */
+    /// Iterates over failures to be a valid virtual double graph.
+    ///
+    /// Note that this method *assumes* that the graphs of objects and (pro)arrows
+    /// are already valid. If that is in question, validate them first.
     pub fn iter_invalid<E, ProE>(&self) -> impl Iterator<Item = InvalidVDblGraph<E, ProE, Sq>> {
         let cptd = self.computad;
         cptd.squares.iter().flat_map(|sq| {

@@ -10,13 +10,12 @@ use crate::one::{fp_category::QualifiedFpCategory, *};
 use crate::validate::{self, Validate};
 use crate::zero::*;
 
-/** A finitely presented model of a discrete double theory.
-
-Since discrete double theory has only identity operations, such a model is a
-finite presentation of a category sliced over the object and morphism types
-comprising the theory. A type theorist would call it a ["displayed
-category"](https://ncatlab.org/nlab/show/displayed+category).
-*/
+/// A finitely presented model of a discrete double theory.
+///
+/// Since discrete double theory has only identity operations, such a model is a
+/// finite presentation of a category sliced over the object and morphism types
+/// comprising the theory. A type theorist would call it a ["displayed
+/// category"](https://ncatlab.org/nlab/show/displayed+category).
 #[derive(Clone, Debug, Derivative)]
 #[derivative(PartialEq, Eq)]
 pub struct DiscreteDblModel {
@@ -95,13 +94,12 @@ impl DiscreteDblModel {
         category_errors.chain(ob_type_errors).chain(mor_type_errors)
     }
 
-    /** Infer missing data in the model, where possible.
-
-    Objects used in the domain or codomain of morphisms, but not contained as
-    objects of the model, are added and their types are inferred. It is not
-    always possible to do this consistently, so it is important to `validate`
-    the model even after calling this method.
-    */
+    /// Infer missing data in the model, where possible.
+    ///
+    /// Objects used in the domain or codomain of morphisms, but not contained as
+    /// objects of the model, are added and their types are inferred. It is not
+    /// always possible to do this consistently, so it is important to `validate`
+    /// the model even after calling this method.
     pub fn infer_missing(&mut self) {
         let edges: Vec<_> = self.mor_generators().collect();
         for e in edges {

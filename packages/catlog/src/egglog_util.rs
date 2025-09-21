@@ -5,11 +5,10 @@ use std::fmt::Display;
 use egglog::{EGraph, Error, ast::*, span};
 use ref_cast::RefCast;
 
-/** An egglog program.
-
-This struct is just a newtype wrapper around a vector of [`Command`]s with a
-builder interface.
- */
+/// An egglog program.
+///
+/// This struct is just a newtype wrapper around a vector of [`Command`]s with a
+/// builder interface.
 #[derive(Clone, Debug, RefCast)]
 #[repr(transparent)]
 pub struct Program(pub Vec<Command>);
@@ -47,10 +46,9 @@ impl Program {
         egraph.run_program(self.0)
     }
 
-    /** Runs the program and returns whether all checks were successful.
-
-    Any errors besides check failures are handled normally.
-     */
+    /// Runs the program and returns whether all checks were successful.
+    ///
+    /// Any errors besides check failures are handled normally.
     pub fn check_in(self, egraph: &mut EGraph) -> Result<bool, Error> {
         match self.run_in(egraph) {
             Ok(_) => Ok(true),

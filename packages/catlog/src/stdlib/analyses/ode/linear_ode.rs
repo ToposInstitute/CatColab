@@ -1,8 +1,7 @@
-/*! Constant-coefficient linear first-order ODE analysis of models.
-
-The main entry point for this module is
-[`linear_ode_analysis`](SignedCoefficientBuilder::linear_ode_analysis).
- */
+//! Constant-coefficient linear first-order ODE analysis of models.
+//!
+//! The main entry point for this module is
+//! [`linear_ode_analysis`](SignedCoefficientBuilder::linear_ode_analysis).
 
 use std::collections::HashMap;
 
@@ -40,12 +39,11 @@ pub struct LinearODEProblemData {
 }
 
 impl SignedCoefficientBuilder<QualifiedName, QualifiedPath> {
-    /** Linear ODE analysis for a model of a double theory.
-
-    This analysis is a special case of linear ODE analysis for *extended* causal
-    loop diagrams but can serve as a simple/naive semantics for causal loop
-    diagrams, hopefully useful for toy models and demonstration purposes.
-     */
+    /// Linear ODE analysis for a model of a double theory.
+    ///
+    /// This analysis is a special case of linear ODE analysis for *extended* causal
+    /// loop diagrams but can serve as a simple/naive semantics for causal loop
+    /// diagrams, hopefully useful for toy models and demonstration purposes.
     pub fn linear_ode_analysis(
         &self,
         model: &DiscreteDblModel,

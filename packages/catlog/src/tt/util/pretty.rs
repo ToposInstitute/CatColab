@@ -1,14 +1,13 @@
-/*! Helper functions for writing pretty-printers. */
+//! Helper functions for writing pretty-printers.
 
 use pretty::RcDoc;
 use std::{borrow::Cow, fmt, ops};
 
-/** A wrapper around RcDoc that allows us to add some new methods, and also is
-shorter to type.
-
-In particular, we implement [ops::Add], which allows concatenating docs with
-`+`.
-*/
+/// A wrapper around RcDoc that allows us to add some new methods, and also is
+/// shorter to type.
+///
+/// In particular, we implement [ops::Add], which allows concatenating docs with
+/// `+`.
 #[derive(Clone)]
 pub struct D<'a>(pub RcDoc<'a, ()>);
 

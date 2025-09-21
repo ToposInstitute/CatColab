@@ -1,4 +1,4 @@
-/*! Common imports for [crate::tt] */
+//! Common imports for [crate::tt]
 pub use crate::tt::util::*;
 pub use crate::{one::Path, zero::NameSegment};
 pub use indexmap::IndexMap;
