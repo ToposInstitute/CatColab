@@ -41,6 +41,7 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: "nightly-2025-09-20"
+          components: rustfmt
 
       - name: Check formatting
         run: |
