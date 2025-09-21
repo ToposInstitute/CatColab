@@ -1,11 +1,11 @@
 type u := Unit
-/# declared: u
+#/ declared: u
 
 type u2 := u
-/# declared: u2
+#/ declared: u2
 
 def t : u := 'tt
-/# declared: t
+#/ declared: t
 
 type WeightedGraph := [
   V : Entity,
@@ -15,14 +15,26 @@ type WeightedGraph := [
   tgt : (Id Entity)[E, V],
   weight : Attr[E, Weight]
 ]
-/# declared: WeightedGraph
+#/ declared: WeightedGraph
+
+generate WeightedGraph
+#/ result: 
+#/ object generators: 
+#/  V : Entity
+#/  E : Entity
+#/  Weight : AttrType
+#/ morphism generators: 
+#/  src : E -> V (Id Entity)
+#/  tgt : E -> V (Id Entity)
+#/  weight : E -> Weight (Attr)
+
 
 type EntityArr := [
   dom : Entity,
   cod : Entity,
   arr : (Id Entity)[dom, cod]
 ]
-/# declared: EntityArr
+#/ declared: EntityArr
 
 type Graph1 := [
   V : Entity,
@@ -30,41 +42,43 @@ type Graph1 := [
   src : EntityArr & [ .dom := E, .cod := V ],
   tgt : EntityArr & [ .dom := E, .cod := V ],
 ]
-/# declared: Graph1
+#/ declared: Graph1
 
 chk [G : Graph1] (G.src.arr : (Id Entity)[G.E, G.V])
-/# result: G.src.arr
+#/ result: G.src.arr
 
 chk [G : Graph1] (G.src : EntityArr)
-/# result: G.src
+#/ result: G.src
 
 chk [G : Graph1] (G.src : EntityArr & [ .dom := G.E ] )
-/# result: G.src
+#/ result: G.src
 
+#(should_fail)
 chk [G : Graph1] (G.src : EntityArr & [ .dom := G.V ] )
-/# expected errors:
-/# error[elab]: evaluated term [ dom := G.E, cod := G.V, arr := <opaque> ] is not an element of specialized type [ dom : Entity, cod : Entity, arr : (Id Entity)[ self.dom, self.cod ] ] &
-/#   [ .dom : @sing G.V ]:
-/# Neutrals G.E and G.V are not equal.
-/# --> examples/test.dbltt:37:19
-/# 37| chk [G : Graph1] (G.src : EntityArr & [ .dom := G.V ] )
-/# 37|                   ^^^^^
+#/ expected errors:
+#/ error[elab]: evaluated term [ dom := G.E, cod := G.V, arr := <opaque> ] is not an element of specialized type [ dom : Entity, cod : Entity, arr : (Id Entity)[ self.dom, self.cod ] ] &
+#/   [ .dom : @sing G.V ]:
+#/ Neutrals G.E and G.V are not equal.
+#/ --> examples/test.dbltt:39:19
+#/ 39| chk [G : Graph1] (G.src : EntityArr & [ .dom := G.V ] )
+#/ 39|                   ^^^^^
 
 norm [x : [a : Entity, b : @sing a]] x.b
-/# result: x.a
+#/ result: x.a
 
+#(should_fail)
 type Graph1 := [
   V : Entity,
   E : Entity,
   src : EntityArr & [ .dom := E, .dom := V ]
 ]
-/# expected errors:
-/# error[elab]: Failed to specialize:
-/# ... because @sing self.V is not a subtype of @sing self.E:
-/# ... because Neutrals self.V and self.E are not equal.
-/# --> examples/test.dbltt:45:34
-/# 45|   src : EntityArr & [ .dom := E, .dom := V ]
-/# 45|                                  ^^^^^^^^^
+#/ expected errors:
+#/ error[elab]: Failed to specialize:
+#/ ... because @sing self.V is not a subtype of @sing self.E:
+#/ ... because Neutrals self.V and self.E are not equal.
+#/ --> examples/test.dbltt:47:34
+#/ 47|   src : EntityArr & [ .dom := E, .dom := V ]
+#/ 47|                                  ^^^^^^^^^
 
 type Graph := [
   V : Entity,
@@ -72,7 +86,7 @@ type Graph := [
   src : (Id Entity)[E, V],
   tgt : (Id Entity)[E, V]
 ]
-/# declared: Graph
+#/ declared: Graph
 
 def reverse[G : Graph] : Graph := [
   V := G.V,
@@ -80,26 +94,27 @@ def reverse[G : Graph] : Graph := [
   src := G.tgt,
   tgt := G.src
 ]
-/# declared: reverse
+#/ declared: reverse
 
+#(should_fail)
 def reverse[G : Graph] : Graph := [
   V := G.E,
   E := G.E,
   src := G.tgt,
   tgt := G.src
 ]
-/# expected errors:
-/# error[elab]: synthesized type (Id Entity)[ G.E, G.V ] does not match expected type (Id Entity)[ G.E, G.E ]:
-/# could not convert codomains: Neutrals G.V and G.E are not equal.
-/# --> examples/test.dbltt:66:10
-/# 66|   src := G.tgt,
-/# 66|          ^^^^^
+#/ expected errors:
+#/ error[elab]: synthesized type (Id Entity)[ G.E, G.V ] does not match expected type (Id Entity)[ G.E, G.E ]:
+#/ could not convert codomains: Neutrals G.V and G.E are not equal.
+#/ --> examples/test.dbltt:68:10
+#/ 68|   src := G.tgt,
+#/ 68|          ^^^^^
 
 norm [G : Graph] (reverse[G]).E
-/# result: G.E
+#/ result: G.E
 
 syn [G : Graph] (reverse[G]).src
-/# result: reverse[ G ].src : (Id Entity)[ G.E, G.V ]
+#/ result: reverse[ G ].src : (Id Entity)[ G.E, G.V ]
 
 type ReflexiveGraph := [
   V : Entity,
@@ -108,24 +123,37 @@ type ReflexiveGraph := [
   tgt : (Id Entity)[E, V],
   refl : (Id Entity)[V, E]
 ]
-/# declared: ReflexiveGraph
+#/ declared: ReflexiveGraph
 
 def edge_id[G : ReflexiveGraph] : (Id Entity)[G.E, G.E] := @id G.E
-/# declared: edge_id
+#/ declared: edge_id
 
 def edge_src[G : ReflexiveGraph] : (Id Entity)[G.E, G.E] := G.src * G.refl
-/# declared: edge_src
+#/ declared: edge_src
 
 type Graph2 := [
   V : Entity,
   g1 : Graph & [ .V := V],
   g2 : Graph & [ .V := V]
 ]
-/# declared: Graph2
+#/ declared: Graph2
 
 syn [g : Graph2] g.g1.V
-/# result: g.g1.V : @sing g.V
+#/ result: g.g1.V : @sing g.V
 
 norm [g : Graph2] g.g1.V
-/# result: g.V
+#/ result: g.V
+
+generate Graph2
+#/ result: 
+#/ object generators: 
+#/  V : Entity
+#/  g1.E : Entity
+#/  g2.E : Entity
+#/ morphism generators: 
+#/  g1.src : g1.E -> V (Id Entity)
+#/  g1.tgt : g1.E -> V (Id Entity)
+#/  g2.src : g2.E -> V (Id Entity)
+#/  g2.tgt : g2.E -> V (Id Entity)
+
 

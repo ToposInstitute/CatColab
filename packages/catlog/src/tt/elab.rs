@@ -1,12 +1,21 @@
 /*! Elaboration for doublett */
-use crate::dbl::{category::VDblCategory, theory::DblTheory};
+use crate::{
+    dbl::{
+        category::VDblCategory,
+        model::{DblModel, DiscreteDblModel, FgDblModel},
+        theory::DblTheory,
+    },
+    one::FgCategory,
+};
 use fnotation::*;
 use nonempty::nonempty;
 use scopeguard::{ScopeGuard, guard};
+use std::fmt;
+
 use tattle::declare_error;
 
 use crate::{
-    tt::{eval::*, prelude::*, stx::*, toplevel::*, val::*},
+    tt::{eval::*, modelgen::*, prelude::*, stx::*, toplevel::*, val::*},
     zero::QualifiedName,
 };
 
@@ -25,6 +34,26 @@ Top-level elaboration is elaboration of declarations.
 pub struct TopElaborator<'a> {
     toplevel: &'a Toplevel,
     reporter: Reporter,
+}
+
+fn model_output(out: &mut impl fmt::Write, model: &DiscreteDblModel) -> fmt::Result {
+    writeln!(out)?;
+    writeln!(out, "#/ object generators: ")?;
+    for obgen in model.ob_generators() {
+        writeln!(out, "#/  {} : {}", obgen, model.ob_type(&obgen))?;
+    }
+    writeln!(out, "#/ morphism generators: ")?;
+    for morgen in model.mor_generators() {
+        writeln!(
+            out,
+            "#/  {} : {} -> {} ({})",
+            morgen,
+            model.mor_generator_dom(&morgen),
+            model.mor_generator_cod(&morgen),
+            MorphismType(model.mor_generator_type(&morgen))
+        )?;
+    }
+    Ok(())
 }
 
 impl<'a> TopElaborator<'a> {
@@ -157,6 +186,14 @@ impl<'a> TopElaborator<'a> {
                 let (_, ty_v) = elab.ty(ty_n)?;
                 let (tm_s, _) = elab.chk(&ty_v, tm_n)?;
                 Some(TopElabResult::Output(format!("{tm_s}")))
+            }
+            "generate" => {
+                let mut elab = self.elaborator();
+                let (_, ty_v) = elab.ty(tn.body)?;
+                let model = generate(self.toplevel, &ty_v);
+                let mut out = String::new();
+                model_output(&mut out, &model).unwrap();
+                Some(TopElabResult::Output(out))
             }
             _ => self.error(tn.loc, "unknown toplevel declaration"),
         }

@@ -11,6 +11,7 @@ use crate::{stdlib, tt::*};
 use elab::*;
 use fnotation::parser::Prec;
 use fnotation::{FNtnTop, ParseConfig};
+use prelude::*;
 use scopeguard::guard;
 use tattle::display::SourceInfo;
 use tattle::{Reporter, declare_error};
@@ -24,7 +25,7 @@ const PARSE_CONFIG: ParseConfig = ParseConfig::new(
         ("*", Prec::lassoc(60)),
     ],
     &[":", ":=", "&", "Unit", "Id", "*"],
-    &["type", "def", "syn", "chk", "norm"],
+    &["type", "def", "syn", "chk", "norm", "generate"],
 );
 
 declare_error!(TOP_ERROR, "top", "an error at the top-level");
@@ -71,7 +72,7 @@ impl BatchOutput {
     fn declared(&self, name: NameSegment) {
         match self {
             BatchOutput::Snapshot(out) => {
-                writeln!(out.borrow_mut(), "/# declared: {}", name).unwrap();
+                writeln!(out.borrow_mut(), "#/ declared: {}", name).unwrap();
             }
             BatchOutput::Interactive => {}
         }
@@ -80,7 +81,7 @@ impl BatchOutput {
     fn got_result(&self, result: &str) {
         match self {
             BatchOutput::Snapshot(out) => {
-                writeln!(out.borrow_mut(), "/# result: {}", result).unwrap();
+                writeln!(out.borrow_mut(), "#/ result: {}", result).unwrap();
             }
             BatchOutput::Interactive => {
                 println!("{}", result);
@@ -94,9 +95,9 @@ impl BatchOutput {
                 let mut out = out.borrow_mut();
                 if reporter.errored() {
                     if should_fail {
-                        writeln!(out, "/# expected errors:").unwrap();
+                        writeln!(out, "#/ expected errors:").unwrap();
                     } else {
-                        writeln!(out, "/# unexpected errors:").unwrap();
+                        writeln!(out, "#/ unexpected errors:").unwrap();
                     }
                     let mut errors = String::new();
                     source_info
@@ -107,7 +108,7 @@ impl BatchOutput {
                         )
                         .unwrap();
                     for l in errors.lines() {
-                        writeln!(out, "/# {l}").unwrap();
+                        writeln!(out, "#/ {l}").unwrap();
                     }
                 }
                 writeln!(out).unwrap();
@@ -167,7 +168,7 @@ pub fn elaborate(src: &str, path: &str, output: &BatchOutput) -> io::Result<bool
     });
     let mut succeeded = true;
     let _ = PARSE_CONFIG.with_parsed_top(src, reporter.clone(), |topntns| {
-        let mut toplevel = Toplevel::new(stdlib::th_schema());
+        let mut toplevel = Toplevel::new(Rc::new(stdlib::th_schema()));
         for topntn in topntns.iter() {
             output.log_input(src, topntn);
             let mut should_fail = false;

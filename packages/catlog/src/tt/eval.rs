@@ -121,7 +121,8 @@ impl<'a> Evaluator<'a> {
         }
     }
 
-    fn bind_neu(&self, name: VarName, ty: TyV) -> (TmN, Self) {
+    /// Bind a new neutral of type `ty`
+    pub fn bind_neu(&self, name: VarName, ty: TyV) -> (TmN, Self) {
         let n = TmN::var(self.scope_length.into(), name);
         let v = TmV::Neu(n.clone(), ty);
         (
