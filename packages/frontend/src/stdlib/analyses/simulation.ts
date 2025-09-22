@@ -1,6 +1,7 @@
 import { type Accessor, createMemo } from "solid-js";
 
 import type { DblModel, JsResult, ODEResult } from "catlog-wasm";
+import { StochasticWrapper } from "catlog-wasm";
 import type { LiveModelDocument } from "../../model";
 import type { ODEPlotData, StateVarData } from "../../visualization";
 
@@ -11,7 +12,7 @@ Assumes that the variables in the ODE come from objects in the model.
 export function createModelODEPlot(
     liveModel: Accessor<LiveModelDocument>,
     simulate: (model: DblModel) => ODEResult,
-    iterationCount: Accessor<number>,
+    iterationCount?: Accessor<number>,
 ) {
     return createMemo<JsResult<ODEPlotData, string> | undefined>(
         () => {
@@ -37,7 +38,50 @@ export function createModelODEPlot(
                     });
                 }
             }
-            const content = { time: solution.time, states, iterationCount: iterationCount() };
+            const content = { time: solution.time, states, iterationCount: iterationCount?.() ?? 1 };
+            return { tag: "Ok", content };
+        },
+        undefined,
+        { equals: false },
+    );
+}
+
+/** Behaves like createModelODEPlot but expects pre-initialized StochasticWrapper
+*/
+export function createModelODEPlotFromAnalysis(
+    model: Accessor<DblModel | undefined>,
+    wrapper: Accessor<StochasticWrapper | undefined>,
+    iterationCount?: Accessor<number>,
+) {
+    return createMemo<JsResult<ODEPlotData, string> | undefined>(
+        () => {
+            const _wrapper = wrapper();
+            if (!_wrapper) {
+                return;
+            }
+
+            const simulationResult = _wrapper.simulate();
+            if (simulationResult?.tag !== "Ok") {
+                return simulationResult;
+            }
+            const solution = simulationResult.content;
+
+            const _model = model();
+            if (!_model) {
+                return;
+            }
+
+            const states: StateVarData[] = [];
+            for (const id of _model.obGenerators()) {
+                const data = solution.states.get(id);
+                if (data !== undefined) {
+                    states.push({
+                        name: _model.obGeneratorLabel(id)?.join(".") ?? "",
+                        data,
+                    });
+                }
+            }
+            const content = { time: solution.time, states, iterationCount: iterationCount?.() ?? 1 };
             return { tag: "Ok", content };
         },
         undefined,
