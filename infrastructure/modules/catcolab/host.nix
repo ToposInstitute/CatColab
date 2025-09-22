@@ -1,6 +1,7 @@
 {
   lib,
   config,
+  pkgs,
   ...
 }:
 with lib;
@@ -47,6 +48,10 @@ with lib;
         experimental-features = nix-command flakes
       '';
     };
+
+    environment.systemPackages = with pkgs; [
+      git
+    ];
 
     programs.nh = {
       enable = true;
