@@ -11,6 +11,7 @@ Assumes that the variables in the ODE come from objects in the model.
 export function createModelODEPlot(
     liveModel: Accessor<LiveModelDocument>,
     simulate: (model: DblModel) => ODEResult,
+    iterationCount: Accessor<number>,
 ) {
     return createMemo<JsResult<ODEPlotData, string> | undefined>(
         () => {
@@ -36,7 +37,7 @@ export function createModelODEPlot(
                     });
                 }
             }
-            const content = { time: solution.time, states };
+            const content = { time: solution.time, states, iterationCount: iterationCount() };
             return { tag: "Ok", content };
         },
         undefined,

@@ -1,4 +1,5 @@
-import { createMemo } from "solid-js";
+import { createMemo, createSignal, Show } from "solid-js";
+import RefreshIcon from 'lucide-solid/icons/rotate-cw';
 
 import type {
     DblModel,
@@ -13,6 +14,7 @@ import {
     type ColumnSchema,
     FixedTableEditor,
     Foldable,
+    IconButton,
     createNumericalColumn,
 } from "../../components";
 import { morLabelOrDefault } from "../../model";
@@ -133,10 +135,17 @@ export function MassAction(
         }),
     ];
 
+    const [iterationCount, setIterationCount] = createSignal(1);
+
     const plotResult = createModelODEPlot(
         () => props.liveModel,
         (model: DblModel) => props.simulate(model, props.content),
+        iterationCount,
     );
+
+    function handleRerun() {
+        setIterationCount(prev => prev + 1);
+    }
 
     return (
         <div class="simulation">
@@ -145,6 +154,11 @@ export function MassAction(
                     <FixedTableEditor rows={obGenerators()} schema={obSchema} />
                     <FixedTableEditor rows={morGenerators()} schema={morSchema} />
                     <FixedTableEditor rows={[null]} schema={toplevelSchema} />
+                        <div>
+                            <IconButton tooltip="Rerun" onClick={handleRerun}>
+                                <RefreshIcon size={20} />
+                            </IconButton>
+                        </div>
                 </div>
             </Foldable>
             <ODEResultPlot result={plotResult()} />
