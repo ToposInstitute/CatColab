@@ -35,6 +35,7 @@ export function configureMassAction(options: {
     simulate: Simulator;
     isState?: (obType: ObType) => boolean;
     isTransition?: (morType: MorType) => boolean;
+    isStochastic?: boolean;
 }): ModelAnalysisMeta<MassActionProblemData> {
     const {
         id = "mass-action",
@@ -63,6 +64,7 @@ export function MassAction(
         simulate: Simulator;
         isState?: (obType: ObType) => boolean;
         isTransition?: (morType: MorType) => boolean;
+        isStochastic?: boolean;
         title?: string;
     },
 ) {
@@ -154,11 +156,13 @@ export function MassAction(
                     <FixedTableEditor rows={obGenerators()} schema={obSchema} />
                     <FixedTableEditor rows={morGenerators()} schema={morSchema} />
                     <FixedTableEditor rows={[null]} schema={toplevelSchema} />
+                    <Show when={props.isStochastic}>
                         <div>
                             <IconButton tooltip="Rerun" onClick={handleRerun}>
                                 <RefreshIcon size={20} />
                             </IconButton>
                         </div>
+                    </Show>
                 </div>
             </Foldable>
             <ODEResultPlot result={plotResult()} />
