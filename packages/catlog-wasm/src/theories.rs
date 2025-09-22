@@ -345,9 +345,19 @@ impl ThSymMonoidalCategory {
     ) -> Result<ODEResult, String> {
         Ok(ODEResult(JsResult::Ok(
             analyses::ode::PetriNetMassActionAnalysis::default()
-                .build_stochastic_system(model.modal()?, data)
+                .build_stochastic_system(model.modal()?, data, None)
                 .simulate(),
         )))
+    }
+
+    #[wasm_bindgen(js_name = "initStochasticMassAction")]
+    pub fn init_stochastic_mass_action(
+        &self,
+        model: &DblModel,
+        data: analyses::ode::MassActionProblemData,
+        seed: u64,
+    ) -> Result<StochasticWrapper, String> {
+        StochasticWrapper::new(model, data, seed)
     }
 
     /// Solve the subreachability problem for petri nets.

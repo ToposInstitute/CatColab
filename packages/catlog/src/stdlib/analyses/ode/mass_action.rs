@@ -156,6 +156,7 @@ impl PetriNetMassActionAnalysis {
         &self,
         model: &ModalDblModel,
         data: MassActionProblemData,
+        seed: Option<u64>,
     ) -> StochasticMassActionAnalysis {
         let ob_generators: Vec<_> = model.ob_generators_with_type(&self.place_ob_type).collect();
 
@@ -163,7 +164,11 @@ impl PetriNetMassActionAnalysis {
             .iter()
             .map(|id| data.initial_values.get(id).copied().unwrap_or_default() as isize)
             .collect();
-        let mut problem = gillespie::Gillespie::new(initial, false);
+
+        let mut problem = match seed {
+            Some(s) => { gillespie::Gillespie::new_with_seed(initial, false, s) }
+            None    => { gillespie::Gillespie::new(initial, false) }
+        };
 
         for mor in model.mor_generators_with_type(&self.transition_mor_type) {
             let inputs = model
