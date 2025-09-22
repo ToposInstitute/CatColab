@@ -1,10 +1,9 @@
 import type { Repo } from "@automerge/automerge-repo";
 import { useDocHandle, useDocument, useRepo } from "@automerge/automerge-repo-react-hooks";
 import type { EditorProps } from "@patchwork/sdk";
-import { useAllAnnotations } from "@patchwork/sdk/annotations";
 import type { Cell, Uuid } from "catlog-wasm";
 import React, { useEffect, useMemo, useRef } from "react";
-import { type Accessor, type JSX, createSignal } from "solid-js";
+import type { JSX } from "solid-js";
 
 import { createComponent, render } from "solid-js/web";
 import type { AnalysisDoc } from "./analysis_datatype";
@@ -16,7 +15,6 @@ import "./tools.css";
 export type SolidToolProps = {
     docUrl: string;
     repo: Repo;
-    annotationsContextValue: Accessor<ReturnType<typeof useAllAnnotations>>;
 };
 
 export const ModelTool: React.FC<EditorProps<Uuid, Cell<unknown>>> = ({ docUrl }) => {
@@ -29,21 +27,10 @@ export const ModelTool: React.FC<EditorProps<Uuid, Cell<unknown>>> = ({ docUrl }
 export const AnalysisTool: React.FC<EditorProps<Uuid, Cell<unknown>>> = ({ docUrl }) => {
     const [modelDoc] = useDocument<ModelDoc>(docUrl, { suspense: true });
 
-    const { docLinksWithAnnotations } = useAllAnnotations();
-
     const analysisDocUrl = modelDoc.analysisDocUrl;
 
-    const resolvedAnalysisDocUrl = useMemo(
-        () =>
-            docLinksWithAnnotations.find((a) => a.main?.url === analysisDocUrl)?.url ??
-            analysisDocUrl,
-        [modelDoc.analysisDocUrl, docLinksWithAnnotations],
-    );
-
-    const resolvedModelDocUrl = useMemo(
-        () => docLinksWithAnnotations.find((a) => a.main?.url === docUrl)?.url ?? docUrl,
-        [docUrl, docLinksWithAnnotations],
-    );
+    const resolvedAnalysisDocUrl = useMemo(() => analysisDocUrl, [modelDoc.analysisDocUrl]);
+    const resolvedModelDocUrl = useMemo(() => docUrl, [docUrl]);
 
     const analysisDocHandle = useDocHandle<AnalysisDoc>(resolvedAnalysisDocUrl, {
         suspense: true,
@@ -106,28 +93,12 @@ const Tool: React.FC<
     const handle = useDocHandle<ModelDoc>(docUrl, { suspense: true });
     const repo = useRepo();
 
-    const allAnnotations = useAllAnnotations();
-
     const solidContainerRef = useRef<HTMLDivElement>(null);
     const solidDisposeRef = useRef<(() => void) | null>(null);
 
-    const [getAnnotationsContextValue, setAnnotationsContextValue] = useMemo(
-        () => createSignal<ReturnType<typeof useAllAnnotations> | null>(null),
-        [],
-    );
-
-    // update annoations context whenever it changes
-    useEffect(() => {
-        if (allAnnotations) {
-            setAnnotationsContextValue(allAnnotations);
-        }
-    }, [allAnnotations]);
-
     // mount the solid component once the handle and repo are available
     useEffect(() => {
-        const annotationContextValue = getAnnotationsContextValue();
-
-        if (!handle || !repo || !annotationContextValue) {
+        if (!handle || !repo) {
             return;
         }
 
@@ -142,7 +113,6 @@ const Tool: React.FC<
                     createComponent(solidComponent, {
                         docUrl,
                         repo,
-                        annotationsContextValue: () => getAnnotationsContextValue()!,
                     }),
                 solidContainerRef.current,
             );
