@@ -16,3 +16,8 @@
     width: 100%;
     height: 400px;
 }
+
+.iterations {
+    display: flex;
+    gap: 20px;
+}

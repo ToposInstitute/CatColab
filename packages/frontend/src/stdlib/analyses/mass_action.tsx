@@ -157,7 +157,12 @@ export function MassAction(
                     <FixedTableEditor rows={morGenerators()} schema={morSchema} />
                     <FixedTableEditor rows={[null]} schema={toplevelSchema} />
                     <Show when={props.isStochastic}>
-                        <div>
+                        <div class="iterations">
+                            <p>
+                                <span>Iteration #:</span>
+                                &nbsp;
+                                <span>{iterationCount()}</span>
+                            </p>
                             <IconButton tooltip="Rerun" onClick={handleRerun}>
                                 <RefreshIcon size={20} />
                             </IconButton>
