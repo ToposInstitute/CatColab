@@ -1,10 +1,5 @@
 import { getReorderDestinationIndex } from "@atlaskit/pragmatic-drag-and-drop-hitbox/util/get-reorder-destination-index";
-import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
-import {
-    dropTargetForElements,
-    monitorForElements,
-} from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
-import type { DragLocationHistory } from "@atlaskit/pragmatic-drag-and-drop/types";
+import { monitorForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import type { DocHandle, Prop } from "@automerge/automerge-repo";
 import { type KbdKey, createShortcut } from "@solid-primitives/keyboard";
 import ListPlus from "lucide-solid/icons/list-plus";
@@ -83,11 +78,8 @@ export function NotebookEditor<T>(props: {
     // FIXME: Remove this option once we fix focus management.
     noShortcuts?: boolean;
 }) {
-    let notebookRef!: HTMLDivElement;
-
     const [activeCell, setActiveCell] = createSignal<number | null>(null);
     const [currentDropTarget, setCurrentDropTarget] = createSignal<string | null>(null);
-    const [tether, setTether] = createSignal<DragLocationHistory | null>(null);
 
     // Set up commands and their keyboard shortcuts.
     const addAfterActiveCell = (cell: Cell<T>) => {
@@ -174,65 +166,47 @@ export function NotebookEditor<T>(props: {
         createShortcut(["Shift", "Enter"], () => addAfterActiveCell(newStemCell()));
     });
 
-    // Set up drag and drop of notebook cells. Rather than have each cell's
-    // `onDragEnter` and `onDragLeave` callbacks compete (causing jittering),
-    // each cell reports whether it is the valid drop target to the notebook
-    // state. The `onDragLeave` callback is reserved solely for the notebook; if
-    // a cell is not a valid target but the notebook is, the drop target will
-    // store the last valid cell in the `tether` signal which be used as a
-    // default in the case where the dragging goes above the cell list.
+    // Set up drag and drop for notebook cells. Each cell reports to the
+    // notebook whether it is the current drop target. Only the drop action is
+    // handled here.
     createEffect(() => {
-        const cleanup = combine(
-            monitorForElements({
-                canMonitor({ source }) {
-                    return (
-                        isCellDragData(source.data) &&
-                        props.notebook.cellOrder.some((cellId) => cellId === source.data.cellId)
-                    );
-                },
-                onDrop({ location, source }) {
-                    const target =
-                        location.current.dropTargets[0] ?? tether()?.previous?.dropTargets[0];
-                    if (!(target && isCellDragData(source.data) && isCellDragData(target.data))) {
-                        setTether(null);
-                        setCurrentDropTarget(null);
-                        return;
-                    }
-                    const [sourceId, targetId] = [source.data.cellId, target.data.cellId];
-                    const nb = props.notebook;
-                    const sourceIndex = nb.cellOrder.findIndex((cellId) => cellId === sourceId);
-                    const targetIndex = nb.cellOrder.findIndex((cellId) => cellId === targetId);
-                    if (sourceIndex < 0 || targetIndex < 0) {
-                        return;
-                    }
-                    const finalIndex = getReorderDestinationIndex({
-                        startIndex: sourceIndex,
-                        indexOfTarget: targetIndex,
-                        closestEdgeOfTarget: sourceIndex < targetIndex ? "bottom" : "top",
-                        axis: "vertical",
-                    });
-                    props.changeNotebook((nb) => {
-                        NotebookUtils.moveCellByIndex(nb, sourceIndex, finalIndex);
-                    });
-                    setTether(null);
+        const cleanup = monitorForElements({
+            canMonitor({ source }) {
+                return (
+                    isCellDragData(source.data) &&
+                    props.notebook.cellOrder.some((cellId) => cellId === source.data.cellId)
+                );
+            },
+            onDrop({ location, source }) {
+                const target = location.current.dropTargets[0];
+                if (!(target && isCellDragData(source.data) && isCellDragData(target.data))) {
                     setCurrentDropTarget(null);
-                },
-            }),
-            dropTargetForElements({
-                element: notebookRef,
-                canDrop({ source }) {
-                    return isCellDragData(source.data);
-                },
-                onDragLeave({ location }) {
-                    setTether(location);
-                },
-            }),
-        );
+                    return;
+                }
+                const [sourceId, targetId] = [source.data.cellId, target.data.cellId];
+                const nb = props.notebook;
+                const sourceIndex = nb.cellOrder.findIndex((cellId) => cellId === sourceId);
+                const targetIndex = nb.cellOrder.findIndex((cellId) => cellId === targetId);
+                if (sourceIndex < 0 || targetIndex < 0) {
+                    return;
+                }
+                const finalIndex = getReorderDestinationIndex({
+                    startIndex: sourceIndex,
+                    indexOfTarget: targetIndex,
+                    closestEdgeOfTarget: sourceIndex < targetIndex ? "bottom" : "top",
+                    axis: "vertical",
+                });
+                props.changeNotebook((nb) => {
+                    NotebookUtils.moveCellByIndex(nb, sourceIndex, finalIndex);
+                });
+                setCurrentDropTarget(null);
+            },
+        });
         onCleanup(cleanup);
     });
 
     return (
-        <div class="notebook" ref={notebookRef}>
+        <div class="notebook">
             <Show when={props.notebook.cellOrder.length === 0}>
                 <div class="notebook-empty placeholder">
                     <IconButton onClick={() => appendCell(newStemCell())}>
