@@ -1,4 +1,5 @@
 //! Elaboration for frontend notebooks.
+use notebook_types::v1::{ModelJudgment, Notebook};
 use uuid::Uuid;
 
 use crate::tt::{context::*, eval::*, prelude::*, stx::*, toplevel::*, val::*};
@@ -43,4 +44,10 @@ struct ElaboratorCheckpoint {
     context: ContextCheckpoint,
 }
 
-impl<'a> Elaborator<'a> {}
+impl<'a> Elaborator<'a> {
+    fn notebook(&mut self, cells: &[ModelJudgment]) -> Option<(TyS, TyV)> {
+        // let mut field_stxs = Vec::new();
+        // let mut field_vals = Vec::new();
+        todo!()
+    }
+}
