@@ -66,6 +66,7 @@ export function ModelDocumentEditor(props: {
                 <PermissionsButton
                     permissions={props.liveModel.liveDoc.permissions}
                     refId={props.liveModel.refId}
+                    liveDocument={props.liveModel}
                 />
             </Toolbar>
             <ModelPane liveModel={props.liveModel} />

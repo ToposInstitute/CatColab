@@ -26,6 +26,7 @@ form button {
     justify-content: center;
     align-items: center;
     gap: 0.25rem;
+    margin: 0.25rem;
 }
 
 form button.utility {
