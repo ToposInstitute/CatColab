@@ -103,7 +103,7 @@ async fn main() {
             // same struct.
             // https://github.com/trchopan/firebase-auth/issues/30
             let firebase_auth =
-                Arc::new(FirebaseAuth::new(&dotenvy::var("FIREBASE_PROJECT_ID").unwrap()).await);
+                Arc::new(FirebaseAuth::new(&dotenvy::var("FIREBASE_PROJECT_ID").expect("FIREBASE_PROJECT_ID env variable needs to be set")).await);
 
             socket::setup_automerge_socket(state.clone());
 
