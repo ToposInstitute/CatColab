@@ -1,0 +1,100 @@
+\title{Fibrations}
+\taxon{theory}
+\import{macros}
+
+\p{The \define{theory of fibrations} is presented by
+
+\ul{
+  \li{objects #{b} and #{e}}
+  \li{an arrow #{p: e \to b}}
+  \li{an arrow #{r: \top p^* \to e}}
+  \li{unit and counit cells #{\eta} and #{\varepsilon} plus associated equations
+  making #{r} right adjoint to the arrow #{i: e \to \top p^*} induced by the
+  universal property of the tabulator: \quiver{
+  % https://q.uiver.app/#q=WzAsNyxbMSwxLCJlIl0sWzAsMiwiYiJdLFsyLDIsImUiXSxbNCwxLCJcXHRvcCBwXioiXSxbMywyLCJiIl0sWzUsMiwiZSJdLFs0LDAsImUiXSxbMSwyLCJwXioiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMCwyLCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFswLDEsInAiLDJdLFszLDQsIlxccGlfMCIsMl0sWzQsNSwicF4qIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzMsNSwiXFxwaV8xIl0sWzYsMywiaSIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImRhc2hlZCJ9fX1dLFswLDMsIj0iLDEseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMCw3LCJcXG1hdGhybXtleHR9IiwxLHsic2hvcnRlbiI6eyJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzMsMTEsIlxccGkiLDEseyJzaG9ydGVuIjp7InRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
+  \begin{tikzcd}[column sep=scriptsize]
+  &&&& e \\
+	& e &&& {\top p^*} \\
+	b && e & b && e
+  \arrow["i"', dashed, from=1-5, to=2-5]
+  \arrow["{=}"{description}, draw=none, from=2-2, to=2-5]
+  \arrow["p"', from=2-2, to=3-1]
+  \arrow[equals, from=2-2, to=3-3]
+  \arrow["{\pi_0}"', from=2-5, to=3-4]
+  \arrow["{\pi_1}", from=2-5, to=3-6]
+  \arrow[""{name=0, anchor=center, inner sep=0}, "{p^*}"'{inner sep=.8ex}, "\shortmid"{marking}, from=3-1, to=3-3]
+  \arrow[""{name=1, anchor=center, inner sep=0}, "{p^*}"'{inner sep=.8ex}, "\shortmid"{marking}, from=3-4, to=3-6]
+  \arrow["{\mathrm{ext}}"{description}, draw=none, from=2-2, to=0]
+  \arrow["\pi"{description}, draw=none, from=2-5, to=1]
+  \end{tikzcd}
+  }
+  }
+  \li{equations making the adjunction #{i \dashv r} "live over #{b}," meaning first that
+  \quiver{
+  % https://q.uiver.app/#q=WzAsMyxbMCwwLCJcXHRvcCBwXioiXSxbMSwxLCJiIl0sWzIsMCwiZSJdLFswLDEsIlxccGlfMCIsMl0sWzAsMiwiciJdLFsyLDEsInAiXV0=
+  \begin{tikzcd}[column sep=scriptsize]
+  {\top p^*} && e \\
+	& b
+  \arrow["r", from=1-1, to=1-3]
+  \arrow["{\pi_0}"', from=1-1, to=2-2]
+  \arrow["p", from=1-3, to=2-2]
+  \end{tikzcd}
+  }
+  and furthermore that the counit satisfies
+  \quiver{
+  % https://q.uiver.app/#q=WzAsMTEsWzAsMCwiXFx0b3AgcF4qIl0sWzAsMSwiZSJdLFswLDIsIlxcdG9wIHBeKiJdLFsxLDIsIlxcdG9wIHBeKiJdLFsxLDAsIlxcdG9wIHBeKiJdLFswLDMsImIiXSxbMSwzLCJlIl0sWzMsMSwiXFx0b3AgcF4qIl0sWzQsMSwiXFx0b3AgcF4qIl0sWzMsMiwiYiJdLFs0LDIsImUiXSxbMCwxLCJyIiwyXSxbMSwyLCJpIiwyXSxbMCw0LCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNCwzLCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsyLDMsIiIsMix7ImxldmVsIjoyLCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsyLDUsIlxccGlfMCIsMl0sWzMsNiwiXFxwaV8xIl0sWzcsOSwiXFxwaV8wIiwyXSxbOCwxMCwiXFxwaV8xIl0sWzcsOCwiIiwwLHsibGV2ZWwiOjIsInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzUsNiwicF4qIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzksMTAsInBeKiIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsxMywxNSwiXFx2YXJlcHNpbG9uIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzE1LDIxLCJcXHBpIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzIwLDIyLCJcXHBpIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzE0LDE4LCI9IiwyLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV1d
+  \begin{tikzcd}
+	{\top p^*} & {\top p^*} \\
+	e &&& {\top p^*} & {\top p^*} \\
+	{\top p^*} & {\top p^*} && b & e \\
+	b & e
+	\arrow[""{name=0, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=1-1, to=1-2]
+	\arrow["r"', from=1-1, to=2-1]
+	\arrow[""{name=1, anchor=center, inner sep=0}, equals, from=1-2, to=3-2]
+	\arrow["i"', from=2-1, to=3-1]
+	\arrow[""{name=2, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=2-4, to=2-5]
+	\arrow[""{name=3, anchor=center, inner sep=0}, "{\pi_0}"', from=2-4, to=3-4]
+	\arrow["{\pi_1}", from=2-5, to=3-5]
+	\arrow[""{name=4, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=3-1, to=3-2]
+	\arrow["{\pi_0}"', from=3-1, to=4-1]
+	\arrow["{\pi_1}", from=3-2, to=4-2]
+	\arrow[""{name=5, anchor=center, inner sep=0}, "{p^*}"'{inner sep=.8ex}, "\shortmid"{marking}, from=3-4, to=3-5]
+	\arrow[""{name=6, anchor=center, inner sep=0}, "{p^*}"'{inner sep=.8ex}, "\shortmid"{marking}, from=4-1, to=4-2]
+	\arrow["\varepsilon"{description}, draw=none, from=0, to=4]
+	\arrow["{=}"', draw=none, from=1, to=3]
+	\arrow["\pi"{description}, draw=none, from=2, to=5]
+	\arrow["\pi"{description}, draw=none, from=4, to=6]
+  \end{tikzcd}
+  }
+  and the unit satisfies
+  \quiver{
+  % https://q.uiver.app/#q=WzAsMTEsWzAsMCwiZSJdLFsxLDAsImUiXSxbMCwyLCJlIl0sWzEsMiwiZSJdLFsxLDEsIlxcdG9wIHBeKiJdLFswLDMsImIiXSxbMSwzLCJiIl0sWzMsMSwiZSJdLFszLDIsImIiXSxbNCwxLCJlIl0sWzQsMiwiYiJdLFswLDEsIiIsMCx7ImxldmVsIjoyLCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFswLDIsIiIsMix7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzEsNCwiaSJdLFs0LDMsInIiXSxbMiwzLCIiLDIseyJsZXZlbCI6Miwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMiw1LCJwIiwyXSxbMyw2LCJwIl0sWzUsNiwiIiwyLHsibGV2ZWwiOjIsInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzcsOCwicCIsMl0sWzksMTAsInAiXSxbNyw5LCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbOCwxMCwiIiwyLHsibGV2ZWwiOjIsInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzE1LDE4LCJcXG1hdGhybXtpZH1fcCIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxMSwxNSwiXFxldGEiLDEseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMjEsMjIsIlxcbWF0aHJte2lkfV9wIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzQsMTksIj0iLDIseyJzaG9ydGVuIjp7InRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
+  \begin{tikzcd}
+	e & e \\
+	& {\top p^*} && e & e \\
+	e & e && b & b \\
+	b & b
+	\arrow[""{name=0, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=1-1, to=1-2]
+	\arrow[equals, from=1-1, to=3-1]
+	\arrow["i", from=1-2, to=2-2]
+	\arrow["r", from=2-2, to=3-2]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=2-4, to=2-5]
+	\arrow[""{name=2, anchor=center, inner sep=0}, "p"', from=2-4, to=3-4]
+	\arrow["p", from=2-5, to=3-5]
+	\arrow[""{name=3, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=3-1, to=3-2]
+	\arrow["p"', from=3-1, to=4-1]
+	\arrow["p", from=3-2, to=4-2]
+	\arrow[""{name=4, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=3-4, to=3-5]
+	\arrow[""{name=5, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=4-1, to=4-2]
+	\arrow["\eta"{description}, draw=none, from=0, to=3]
+	\arrow["{=}"', draw=none, from=2-2, to=2]
+	\arrow["{\mathrm{id}_p}"{description}, draw=none, from=1, to=4]
+	\arrow["{\mathrm{id}_p}"{description}, draw=none, from=3, to=5]
+  \end{tikzcd}
+  }
+  }
+}
+
+\p{Thanks to Corinthia Aberlé for suggesting this theory.}
+
+}

@@ -52,7 +52,7 @@ systems interpretation:}
   \tr{\td{[[dct-0005]]} \td{Deterministic transition systems, aka semiautomata} \td{State diagrams}}
 }
 
-\p{Additional doctrines: [[dct-0008]], [[dct-0009]], [[dct-000A]]}
+\p{Additional doctrines: [[dct-0008]], [[dct-0009]], [[dct-000A]], [[dct-000C]]}
 }
 
 \transclude{dbl-0001}

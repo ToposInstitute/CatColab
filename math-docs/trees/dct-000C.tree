@@ -1,0 +1,12 @@
+\title{Fibrations}
+\taxon{doctrine}
+\import{macros}
+
+\p{By a \define{fibration} we mean a \nlab{Grothendieck fibration}. By the
+characterization of fibrations [in terms of
+adjoints](https://ncatlab.org/nlab/show/Grothendieck+fibration#in_terms_of_adjoints),
+the following tabulator theory has as models a pair of categories \cat{B} and
+\cat{E} and a fibation #{P: \cat{E} \to \cat{B}} equipped with a chosen cleavage
+in the form of a functor #{R: \cat{B} \downarrow P \to \cat{E}}.}
+
+\transclude{thy-000C}
