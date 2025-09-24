@@ -27,7 +27,12 @@ TO-DO
 </HelpAnalysisById>
 
 <HelpAnalysisById theory={props.theory} analysisId="mass-action">
-TO-DO
+Places are interpreted as quantities that can vary in time ("concentrations"), and the transitions ("reactions") in the model determine equations constraining the time derivatives of the stocks.
+Each place is given an **initial value**.
+
+A transition $A\to T\to B$ between places $A$ and $B$ is interpreted as the equations $\{\dot{A}=-T,\dot{B}=T\}$, i.e. the transition $T$ goes out of $A$ and into $B$.
+Transitions add linearly, i.e. in an arbitrary Petri net, the equation governing a place $A$ is $\dot{A}=\sum_{A_\text{in}}T_i - \sum_{A_\text{out}}T_j$, where $A_\text{in}$ (resp. $A_\text{out}$) is the set of all transitions whose target (resp. source) is $A$.
+Transitions are determined by their **rate** coefficient $r$, i.e. a transition $A\to T\to B$ is defined to satisfy $T=rA$.
 </HelpAnalysisById>
 
 <HelpAnalysisById theory={props.theory} analysisId="stochastic-mass-action">
