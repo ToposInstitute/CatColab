@@ -308,6 +308,7 @@ impl<'a> Elaborator<'a> {
         }
     }
 
+    #[allow(clippy::type_complexity)]
     fn specialization(&mut self, n: &FNtn) -> Option<(Vec<(NameSegment, LabelSegment)>, TyS, TyV)> {
         let mut elab = self.enter(n.loc());
         match n.ast0() {
@@ -448,7 +449,7 @@ impl<'a> Elaborator<'a> {
     fn syn(&mut self, n: &FNtn) -> Option<(TmS, TmV, TyV)> {
         let mut elab = self.enter(n.loc());
         match n.ast0() {
-            Var(name) => elab.lookup_tm(ustr(*name)),
+            Var(name) => elab.lookup_tm(ustr(name)),
             App1(tm_n, L(_, Field(f))) => {
                 let (tm_s, tm_v, ty_v) = elab.syn(tm_n)?;
                 let TyV_::Record(r) = &*ty_v else {
