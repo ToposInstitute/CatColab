@@ -170,7 +170,7 @@ impl<'a> Elaborator<'a> {
         match n {
             Ob::Basic(name) => {
                 let (tm, val, ty) =
-                    self.lookup_tm(NameSegment::Uuid(Uuid::from_str(&name).unwrap()))?;
+                    self.lookup_tm(NameSegment::Uuid(Uuid::from_str(name).unwrap()))?;
                 let ob_type = match &*ty {
                     TyV_::Object(ob_type) => ob_type.clone(),
                     _ => return self.error(Error::ExpectedObject),
