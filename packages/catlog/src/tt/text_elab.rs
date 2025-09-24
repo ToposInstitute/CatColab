@@ -1,16 +1,9 @@
 //! Elaboration for doublett
-use crate::{
-    dbl::{
-        category::VDblCategory,
-        model::{DblModel, DiscreteDblModel, FgDblModel},
-        theory::DblTheory,
-    },
-    one::FgCategory,
-};
+use crate::dbl::{category::VDblCategory, theory::DblTheory};
 use fnotation::*;
 use nonempty::nonempty;
 use scopeguard::{ScopeGuard, guard};
-use std::fmt;
+use std::fmt::Write;
 
 use tattle::declare_error;
 
@@ -33,26 +26,6 @@ pub enum TopElabResult {
 pub struct TopElaborator<'a> {
     toplevel: &'a Toplevel,
     reporter: Reporter,
-}
-
-fn model_output(out: &mut impl fmt::Write, model: &DiscreteDblModel) -> fmt::Result {
-    writeln!(out)?;
-    writeln!(out, "#/ object generators: ")?;
-    for obgen in model.ob_generators() {
-        writeln!(out, "#/  {} : {}", obgen, model.ob_type(&obgen))?;
-    }
-    writeln!(out, "#/ morphism generators: ")?;
-    for morgen in model.mor_generators() {
-        writeln!(
-            out,
-            "#/  {} : {} -> {} ({})",
-            morgen,
-            model.mor_generator_dom(&morgen),
-            model.mor_generator_cod(&morgen),
-            MorphismType(model.mor_generator_type(&morgen))
-        )?;
-    }
-    Ok(())
 }
 
 impl<'a> TopElaborator<'a> {
@@ -189,9 +162,10 @@ impl<'a> TopElaborator<'a> {
             "generate" => {
                 let mut elab = self.elaborator();
                 let (_, ty_v) = elab.ty(tn.body)?;
-                let model = generate(self.toplevel, &ty_v);
+                let (model, name_translation) = generate(self.toplevel, &ty_v);
                 let mut out = String::new();
-                model_output(&mut out, &model).unwrap();
+                writeln!(&mut out).unwrap();
+                model_output("#/ ", &mut out, &model, &name_translation).unwrap();
                 Some(TopElabResult::Output(out))
             }
             _ => self.error(tn.loc, "unknown toplevel declaration"),
@@ -263,7 +237,7 @@ impl<'a> Elaborator<'a> {
             v
         };
         self.ctx.env = self.ctx.env.snoc(v.clone());
-        self.ctx.scope.push((name, ty));
+        self.ctx.scope.push((name, label, ty));
         v
     }
 
@@ -396,7 +370,7 @@ impl<'a> Elaborator<'a> {
                     };
                     field_ty0s.push((name, (label, ty_v.ty0())));
                     field_ty_vs.push((name, (label, ty_v.clone())));
-                    elab.ctx.scope.push((name, Some(ty_v.clone())));
+                    elab.ctx.scope.push((name, label, Some(ty_v.clone())));
                     elab.ctx.env =
                         elab.ctx.env.snoc(TmV::Neu(TmN::proj(self_var.clone(), name, label), ty_v));
                 }
@@ -444,8 +418,13 @@ impl<'a> Elaborator<'a> {
     fn lookup_tm(&mut self, name: Ustr) -> Option<(TmS, TmV, TyV)> {
         let label = label_seg(name);
         let name = text_seg(name);
-        if let Some((i, (_, ty))) =
-            self.ctx.scope.iter().rev().enumerate().find(|(_, (vname, _))| *vname == name)
+        if let Some((i, (_, _, ty))) = self
+            .ctx
+            .scope
+            .iter()
+            .rev()
+            .enumerate()
+            .find(|(_, (vname, _, _))| *vname == name)
         {
             let i = i.into();
             Some((

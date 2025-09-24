@@ -9,7 +9,7 @@ pub struct Context {
     ///
     /// We allow the type to be "none" as a hack for the `self` variable before we
     /// know the type of the `self` variable.
-    pub scope: Vec<(VarName, Option<TyV>)>,
+    pub scope: Vec<(VarName, LabelSegment, Option<TyV>)>,
 }
 
 /// A checkpoint that we can return the context to.
