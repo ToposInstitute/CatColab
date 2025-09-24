@@ -125,11 +125,15 @@ export function ModelNotebookEditor(props: {
     const cellConstructors = () =>
         (props.liveModel.theory()?.modelTypes ?? []).map(modelCellConstructor);
 
-    const firebaseApp = useFirebaseApp();
-    const auth = useAuth(getAuth(firebaseApp));
+    const firebaseApp = (() => {
+        try {
+            return useFirebaseApp();
+        } catch {}
+    })();
+    const auth = firebaseApp && useAuth(getAuth(firebaseApp));
 
     const [isOverlayOpen, setOverlayOpen] = createSignal(
-        liveDoc().doc.notebook.cellOrder.length === 0 && auth.data == null,
+        liveDoc().doc.notebook.cellOrder.length === 0 && auth != null && auth.data == null,
     );
     const toggleOverlay = () => setOverlayOpen(!isOverlayOpen());
 
@@ -152,9 +156,8 @@ export function ModelNotebookEditor(props: {
     );
 }
 
-/** Editor for a notebook cell in a model notebook.
- */
-function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
+/** Editor for a notebook cell in a model notebook. */
+export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
 

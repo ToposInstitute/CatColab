@@ -1,7 +1,7 @@
 import type { AutomergeUrl, Repo } from "@automerge/automerge-repo";
 import invariant from "tiny-invariant";
 
-import { type AnalysisType, type Document, currentVersion } from "catlog-wasm";
+import { type Analysis, type AnalysisType, type Document, currentVersion } from "catlog-wasm";
 import {
     type Api,
     type LiveDoc,
@@ -36,7 +36,7 @@ export const newAnalysisDocument = (
         ...analysisOf,
         type: "analysis-of",
     },
-    notebook: newNotebook(),
+    notebook: newNotebook<Analysis>(),
     version: currentVersion(),
 });
 
