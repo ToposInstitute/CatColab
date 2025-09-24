@@ -1,7 +1,7 @@
 {
-    "name": "@patchwork/solidjs-demo",
+    "name": "catcolab-patchwork",
     "version": "0.0.1",
-    "description": "A demo showing how to use SolidJS inside a React app",
+    "description": "A Patchwork module for CatColab",
     "type": "module",
     "main": "src/index.ts",
     "exports": {
