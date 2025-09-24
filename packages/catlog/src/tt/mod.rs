@@ -355,6 +355,8 @@ pub mod batch;
 pub mod context;
 pub mod eval;
 pub mod modelgen;
+#[allow(unused)]
+pub mod notebook_elab;
 pub mod prelude;
 pub mod stx;
 pub mod text_elab;
