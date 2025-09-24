@@ -7,6 +7,7 @@ use derive_more::Constructor;
 
 #[cfg(doc)]
 use crate::dbl::discrete::theory::DiscreteDblTheory;
+use crate::zero::LabelSegment;
 use crate::{tt::prelude::*, zero::QualifiedName};
 use std::fmt;
 use std::fmt::Write as _;
@@ -129,7 +130,7 @@ pub enum TyS_ {
     ///
     /// In order to form this type, it must be the case that `d[p]` is a subtype of
     /// the type of the field at path `p`.
-    Specialize(TyS, Vec<(Vec<FieldName>, TyS)>),
+    Specialize(TyS, Vec<(Vec<(FieldName, LabelSegment)>, TyS)>),
 
     /// Type constructor for the unit type.
     ///
@@ -181,7 +182,10 @@ impl TyS {
     }
 
     /// Smart constructor for [TyS], [TyS_::Specialize] case.
-    pub fn specialize(ty: TyS, specializations: Vec<(Vec<FieldName>, TyS)>) -> Self {
+    pub fn specialize(
+        ty: TyS,
+        specializations: Vec<(Vec<(FieldName, LabelSegment)>, TyS)>,
+    ) -> Self {
         Self(Rc::new(TyS_::Specialize(ty, specializations)))
     }
 
@@ -197,11 +201,11 @@ impl TyS {
             TyS_::Morphism(morphism_type, dom, cod) => {
                 morphism_type.to_doc() + tuple([dom.to_doc(), cod.to_doc()])
             }
-            TyS_::Record(r) => tuple(
-                r.fields1
-                    .iter()
-                    .map(|(name, ty)| binop(":", t(format!("{}", name)).group(), ty.to_doc())),
-            ),
+            TyS_::Record(r) => {
+                tuple(r.fields1.iter().map(|(_, (label, ty))| {
+                    binop(":", t(format!("{}", label)).group(), ty.to_doc())
+                }))
+            }
             TyS_::Sing(_, tm) => t("@sing") + s() + tm.to_doc(),
             TyS_::Specialize(ty, d) => binop(
                 "&",
@@ -213,9 +217,9 @@ impl TyS {
     }
 }
 
-fn path_to_string(path: &[FieldName]) -> String {
+fn path_to_string(path: &[(FieldName, LabelSegment)]) -> String {
     let mut out = String::new();
-    for seg in path {
+    for (_, seg) in path {
         write!(&mut out, ".{}", seg).unwrap();
     }
     out
@@ -237,11 +241,11 @@ pub enum TmS_ {
     ///
     /// We use a backward index, as when we evaluate we store the
     /// environment in a [bwd::Bwd], and this indexes into that.
-    Var(BwdIdx, VarName),
+    Var(BwdIdx, VarName, LabelSegment),
     /// Record introduction.
     Cons(Row<TmS>),
     /// Record elimination.
-    Proj(TmS, FieldName),
+    Proj(TmS, FieldName, LabelSegment),
     /// Unit introduction.
     ///
     /// Note that eta-expansion takes care of elimination for units
@@ -283,8 +287,8 @@ impl TmS {
     }
 
     /// Smart constructor for [TmS], [TmS_::Var] case.
-    pub fn var(bwd_idx: BwdIdx, var_name: VarName) -> Self {
-        Self(Rc::new(TmS_::Var(bwd_idx, var_name)))
+    pub fn var(bwd_idx: BwdIdx, var_name: VarName, label: LabelSegment) -> Self {
+        Self(Rc::new(TmS_::Var(bwd_idx, var_name, label)))
     }
 
     /// Smart constructor for [TmS], [TmS_::Cons] case.
@@ -293,8 +297,8 @@ impl TmS {
     }
 
     /// Smart constructor for [TmS], [TmS_::Proj] case.
-    pub fn proj(tm_s: TmS, field_name: FieldName) -> Self {
-        Self(Rc::new(TmS_::Proj(tm_s, field_name)))
+    pub fn proj(tm_s: TmS, field_name: FieldName, label: LabelSegment) -> Self {
+        Self(Rc::new(TmS_::Proj(tm_s, field_name, label)))
     }
 
     /// Smart constructor for [TmS], [TmS_::Tt] case.
@@ -323,13 +327,13 @@ impl TmS {
             TmS_::TopApp(name, args) => {
                 t(format!("{}", name)) + tuple(args.iter().map(|arg| arg.to_doc()))
             }
-            TmS_::Var(_, name) => t(format!("{}", name)),
-            TmS_::Proj(tm, field) => tm.to_doc() + t(format!(".{}", field)),
-            TmS_::Cons(fields) => tuple(
-                fields
-                    .iter()
-                    .map(|(name, field)| binop(":=", t(format!("{}", name)), field.to_doc())),
-            ),
+            TmS_::Var(_, _, label) => t(format!("{}", label)),
+            TmS_::Proj(tm, _, label) => tm.to_doc() + t(format!(".{}", label)),
+            TmS_::Cons(fields) => {
+                tuple(fields.iter().map(|(_, (label, field))| {
+                    binop(":=", t(format!("{}", label)), field.to_doc())
+                }))
+            }
             TmS_::Id(ob) => (t("@id") + s() + ob.to_doc()).parens(),
             TmS_::Compose(f, g) => binop("·", f.to_doc(), g.to_doc()),
             TmS_::Tt => t("tt"),

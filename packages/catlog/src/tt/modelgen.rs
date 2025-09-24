@@ -11,7 +11,7 @@ use crate::zero::QualifiedName;
 /// Precondition: `ty` must be valid in the empty context.
 pub fn generate(toplevel: &Toplevel, ty: &TyV) -> DiscreteDblModel {
     let eval = Evaluator::new(toplevel, Env::Nil, 0);
-    let (elt, eval) = eval.bind_neu(text_seg("self"), ty.clone());
+    let (elt, eval) = eval.bind_self(ty.clone());
     let elt = eval.eta_neu(&elt, ty);
     let mut out = DiscreteDblModel::new(toplevel.theory.clone());
     extract_to(&eval, &mut out, vec![], &elt, ty);
@@ -22,7 +22,7 @@ pub fn generate(toplevel: &Toplevel, ty: &TyV) -> DiscreteDblModel {
 fn name_of(val: &TmV) -> QualifiedName {
     let mut out = Vec::new();
     let mut n = val.as_neu();
-    while let TmN_::Proj(n1, f) = &*n.clone() {
+    while let TmN_::Proj(n1, f, _) = &*n.clone() {
         n = n1.clone();
         out.push(*f);
     }
@@ -43,14 +43,14 @@ fn extract_to(
             out.add_mor(prefix.into(), name_of(dom), name_of(cod), mt.0.clone())
         }
         TyV_::Record(r) => {
-            for (name, _) in r.fields1.iter() {
+            for (name, (label, _)) in r.fields1.iter() {
                 let mut prefix = prefix.clone();
                 prefix.push(*name);
                 extract_to(
                     eval,
                     out,
                     prefix,
-                    &eval.proj(val, *name),
+                    &eval.proj(val, *name, *label),
                     &eval.field_ty(ty, val, *name),
                 )
             }

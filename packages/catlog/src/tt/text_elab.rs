@@ -129,9 +129,9 @@ impl<'a> TopElaborator<'a> {
                         let mut elab = self.elaborator();
                         let mut args_stx = IndexMap::new();
                         for arg_n in args_n {
-                            let (name, ty_s, ty_v) = elab.binding(arg_n)?;
-                            args_stx.insert(name, ty_s);
-                            elab.intro(name, Some(ty_v));
+                            let (name, label, ty_s, ty_v) = elab.binding(arg_n)?;
+                            args_stx.insert(name, (label, ty_s));
+                            elab.intro(name, label, Some(ty_v));
                         }
                         let (ret_ty_s, ret_ty_v) = elab.ty(ty_n)?;
                         let (body_s, _) = elab.chk(&ret_ty_v, tm_n)?;
@@ -151,8 +151,8 @@ impl<'a> TopElaborator<'a> {
                 let (ctx_ns, n) = self.expr_with_context(tn.body);
                 let mut elab = self.elaborator();
                 for ctx_n in ctx_ns {
-                    let (name, _, ty_v) = elab.binding(ctx_n)?;
-                    elab.intro(name, Some(ty_v));
+                    let (name, label, _, ty_v) = elab.binding(ctx_n)?;
+                    elab.intro(name, label, Some(ty_v));
                 }
                 let (tm_s, _, ty_v) = elab.syn(n)?;
                 Some(TopElabResult::Output(format!(
@@ -164,8 +164,8 @@ impl<'a> TopElaborator<'a> {
                 let (ctx_ns, n) = self.expr_with_context(tn.body);
                 let mut elab = self.elaborator();
                 for ctx_n in ctx_ns {
-                    let (name, _, ty_v) = elab.binding(ctx_n)?;
-                    elab.intro(name, Some(ty_v));
+                    let (name, label, _, ty_v) = elab.binding(ctx_n)?;
+                    elab.intro(name, label, Some(ty_v));
                 }
                 let (_, tm_v, ty_v) = elab.syn(n)?;
                 let eval = elab.evaluator();
@@ -175,8 +175,8 @@ impl<'a> TopElaborator<'a> {
                 let (ctx_ns, n) = self.expr_with_context(tn.body);
                 let mut elab = self.elaborator();
                 for ctx_n in ctx_ns {
-                    let (name, _, ty_v) = elab.binding(ctx_n)?;
-                    elab.intro(name, Some(ty_v));
+                    let (name, label, _, ty_v) = elab.binding(ctx_n)?;
+                    elab.intro(name, label, Some(ty_v));
                 }
                 let (tm_n, ty_n) = match n.ast0() {
                     App2(L(_, Keyword(":")), tm_n, ty_n) => (tm_n, ty_n),
@@ -252,9 +252,9 @@ impl<'a> Elaborator<'a> {
         Evaluator::new(self.toplevel, self.ctx.env.clone(), self.ctx.scope.len())
     }
 
-    fn intro(&mut self, name: VarName, ty: Option<TyV>) -> TmV {
+    fn intro(&mut self, name: VarName, label: LabelSegment, ty: Option<TyV>) -> TmV {
         let v = TmV::Neu(
-            TmN::var(self.ctx.scope.len().into(), name),
+            TmN::var(self.ctx.scope.len().into(), name, label),
             ty.clone().unwrap_or(TyV::unit()),
         );
         let v = if let Some(ty) = &ty {
@@ -267,12 +267,12 @@ impl<'a> Elaborator<'a> {
         v
     }
 
-    fn binding(&mut self, n: &FNtn) -> Option<(VarName, TyS, TyV)> {
+    fn binding(&mut self, n: &FNtn) -> Option<(VarName, LabelSegment, TyS, TyV)> {
         let mut elab = self.enter(n.loc());
         match n.ast0() {
             App2(L(_, Keyword(":")), L(_, Var(name)), ty_n) => {
                 let (ty_s, ty_v) = elab.ty(ty_n)?;
-                Some((text_seg(*name), ty_s, ty_v))
+                Some((text_seg(*name), label_seg(*name), ty_s, ty_v))
             }
             _ => elab.error("unexpected notation for binding"),
         }
@@ -321,20 +321,20 @@ impl<'a> Elaborator<'a> {
         }
     }
 
-    fn path(&mut self, n: &FNtn) -> Option<Vec<NameSegment>> {
+    fn path(&mut self, n: &FNtn) -> Option<Vec<(NameSegment, LabelSegment)>> {
         let mut elab = self.enter(n.loc());
         match n.ast0() {
-            Field(f) => Some(vec![text_seg(*f)]),
+            Field(f) => Some(vec![(text_seg(*f), label_seg(*f))]),
             App1(p_n, L(_, Field(f))) => {
                 let mut p = elab.path(p_n)?;
-                p.push(text_seg(*f));
+                p.push((text_seg(*f), label_seg(*f)));
                 Some(p)
             }
             _ => elab.error("unexpected notation for path"),
         }
     }
 
-    fn specialization(&mut self, n: &FNtn) -> Option<(Vec<NameSegment>, TyS, TyV)> {
+    fn specialization(&mut self, n: &FNtn) -> Option<(Vec<(NameSegment, LabelSegment)>, TyS, TyV)> {
         let mut elab = self.enter(n.loc());
         match n.ast0() {
             App2(L(_, Keyword(":")), p_n, ty_n) => {
@@ -373,16 +373,16 @@ impl<'a> Elaborator<'a> {
                 ))
             }
             Tuple(field_ns) => {
-                let mut field_ty0s = Vec::<(FieldName, Ty0)>::new();
-                let mut field_ty_vs = Vec::<(FieldName, TyV)>::new();
+                let mut field_ty0s = Vec::<(FieldName, (LabelSegment, Ty0))>::new();
+                let mut field_ty_vs = Vec::<(FieldName, (LabelSegment, TyV))>::new();
                 let mut failed = false;
-                let self_var = elab.intro(text_seg("self"), None).as_neu();
+                let self_var = elab.intro(text_seg("self"), label_seg("self"), None).as_neu();
                 let c = elab.checkpoint();
                 for field_n in field_ns.iter() {
                     elab.loc = Some(field_n.loc());
-                    let Some((name, ty_n)) = (match field_n.ast0() {
+                    let Some((name, label, ty_n)) = (match field_n.ast0() {
                         App2(L(_, Keyword(":")), L(_, Var(name)), ty_n) => {
-                            Some((text_seg(*name), ty_n))
+                            Some((text_seg(*name), label_seg(*name), ty_n))
                         }
                         _ => elab.error("expected fields in the form <name> : <type>"),
                     }) else {
@@ -394,11 +394,11 @@ impl<'a> Elaborator<'a> {
                         failed = true;
                         continue;
                     };
-                    field_ty0s.push((name, ty_v.ty0()));
-                    field_ty_vs.push((name, ty_v.clone()));
+                    field_ty0s.push((name, (label, ty_v.ty0())));
+                    field_ty_vs.push((name, (label, ty_v.clone())));
                     elab.ctx.scope.push((name, Some(ty_v.clone())));
                     elab.ctx.env =
-                        elab.ctx.env.snoc(TmV::Neu(TmN::proj(self_var.clone(), name), ty_v));
+                        elab.ctx.env.snoc(TmV::Neu(TmN::proj(self_var.clone(), name, label), ty_v));
                 }
                 if failed {
                     return None;
@@ -406,7 +406,7 @@ impl<'a> Elaborator<'a> {
                 elab.reset_to(c);
                 let field_tys: Row<_> = field_ty_vs
                     .iter()
-                    .map(|(name, ty_v)| (*name, elab.evaluator().quote_ty(ty_v)))
+                    .map(|(name, (label, ty_v))| (*name, (*label, elab.evaluator().quote_ty(ty_v))))
                     .collect();
                 let field_ty0s: Row<_> = field_ty0s.into_iter().collect();
                 let r_s = RecordS::new(field_ty0s.clone(), field_tys.clone());
@@ -441,12 +441,18 @@ impl<'a> Elaborator<'a> {
         }
     }
 
-    fn lookup_tm(&mut self, name: VarName) -> Option<(TmS, TmV, TyV)> {
+    fn lookup_tm(&mut self, name: Ustr) -> Option<(TmS, TmV, TyV)> {
+        let label = label_seg(name);
+        let name = text_seg(name);
         if let Some((i, (_, ty))) =
             self.ctx.scope.iter().rev().enumerate().find(|(_, (vname, _))| *vname == name)
         {
             let i = i.into();
-            Some((TmS::var(i, name), self.ctx.env.get(*i).unwrap().clone(), ty.clone().unwrap()))
+            Some((
+                TmS::var(i, name, label),
+                self.ctx.env.get(*i).unwrap().clone(),
+                ty.clone().unwrap(),
+            ))
         } else if let Some(d) = self.toplevel.lookup(name) {
             match d {
                 TopDecl::Type(_, _) => self.error(format!("{name} refers type, not term")),
@@ -463,19 +469,20 @@ impl<'a> Elaborator<'a> {
     fn syn(&mut self, n: &FNtn) -> Option<(TmS, TmV, TyV)> {
         let mut elab = self.enter(n.loc());
         match n.ast0() {
-            Var(name) => elab.lookup_tm(text_seg(*name)),
+            Var(name) => elab.lookup_tm(ustr(*name)),
             App1(tm_n, L(_, Field(f))) => {
                 let (tm_s, tm_v, ty_v) = elab.syn(tm_n)?;
                 let TyV_::Record(r) = &*ty_v else {
                     return elab.error("can only project from record type");
                 };
+                let label = label_seg(*f);
                 let f = text_seg(*f);
                 if !r.fields1.has(f) {
                     return elab.error(format!("no such field {f}"));
                 }
                 Some((
-                    TmS::proj(tm_s, f),
-                    elab.evaluator().proj(&tm_v, f),
+                    TmS::proj(tm_s, f, label),
+                    elab.evaluator().proj(&tm_v, f, label),
                     elab.evaluator().field_ty(&ty_v, &tm_v, f),
                 ))
             }
@@ -542,7 +549,7 @@ impl<'a> Elaborator<'a> {
                         args_n.len()
                     ));
                 }
-                for (arg_n, (_, arg_ty_s)) in args_n.iter().zip(arg_tys_s.iter()) {
+                for (arg_n, (_, (_, arg_ty_s))) in args_n.iter().zip(arg_tys_s.iter()) {
                     let arg_ty_v = elab.evaluator().with_env(env.clone()).eval_ty(arg_ty_s);
                     let (arg_s, arg_v) = elab.chk(&arg_ty_v, arg_n)?;
                     arg_stxs.push(arg_s);
@@ -573,7 +580,8 @@ impl<'a> Elaborator<'a> {
                 }
                 let mut field_stxs = IndexMap::new();
                 let mut field_vals = IndexMap::new();
-                for (field_n, (name, field_ty_s)) in field_ns.iter().zip(r.fields1.iter()) {
+                for (field_n, (name, (label, field_ty_s))) in field_ns.iter().zip(r.fields1.iter())
+                {
                     elab.loc = Some(field_n.loc());
                     let tm_n = match field_n.ast0() {
                         App2(L(_, Keyword(":=")), L(_, Var(given_name)), field_val_n) => {
@@ -591,8 +599,8 @@ impl<'a> Elaborator<'a> {
                     let field_ty_v =
                         elab.evaluator().with_env(r.env.snoc(v.clone())).eval_ty(field_ty_s);
                     let (tm_s, tm_v) = elab.chk(&field_ty_v, tm_n)?;
-                    field_stxs.insert(*name, tm_s);
-                    field_vals.insert(*name, tm_v);
+                    field_stxs.insert(*name, (*label, tm_s));
+                    field_vals.insert(*name, (*label, tm_v));
                 }
                 Some((TmS::cons(field_stxs.into()), TmV::Cons(field_vals.into())))
             }

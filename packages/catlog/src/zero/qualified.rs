@@ -346,6 +346,13 @@ impl QualifiedLabel {
     pub fn segments(&self) -> impl Iterator<Item = &LabelSegment> {
         self.0.iter()
     }
+
+    /// Add another segment onto the end
+    pub fn snoc(&self, segment: LabelSegment) -> Self {
+        let mut segments = self.0.clone();
+        segments.push(segment);
+        Self(segments)
+    }
 }
 
 /// A namespace in which to resolve qualified labels as qualified names.
