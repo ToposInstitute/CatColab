@@ -1,4 +1,7 @@
-//! Elaboration for frontend notebooks
+//! Elaboration for frontend notebooks.
+use uuid::Uuid;
+
+use crate::tt::{context::*, eval::*, prelude::*, stx::*, toplevel::*, val::*};
 
 // There is some infrastructure that needs to be put into place before
 // notebook elaboration can be fully successful.
@@ -19,4 +22,25 @@
 // I think that this is possible if we simply ignore any cells that have
 // errors, including cells that depend on cells that have errors.
 
-struct Elaborator {}
+enum Error {}
+
+struct LocatedError {
+    cell: Option<Uuid>,
+    content: Error,
+}
+
+/// The current state of a notebook elaboration session.
+///
+/// We feed a notebook into this cell-by-cell.
+pub struct Elaborator<'a> {
+    toplevel: &'a Toplevel,
+    current_cell: Option<Uuid>,
+    context: Context,
+    errors: Vec<LocatedError>,
+}
+
+struct ElaboratorCheckpoint {
+    context: ContextCheckpoint,
+}
+
+impl<'a> Elaborator<'a> {}
