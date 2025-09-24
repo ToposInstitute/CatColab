@@ -20,9 +20,9 @@ and call Y the *base* of this tower; we call the length n of the list
  */
 
 use crate::dbl::model::{DiscreteDblModel, FgDblModel, MutDblModel};
-use crate::one::{Path, category::FgCategory};
+use crate::one::{category::FgCategory, Path};
 use crate::stdlib::theories;
-use crate::zero::{QualifiedName, name};
+use crate::zero::{name, QualifiedName};
 use std::{collections::HashMap, rc::Rc};
 
 // Some helpful functions
@@ -31,6 +31,7 @@ fn deg_of_mor(model: &DiscreteDblModel, f: &QualifiedName) -> usize {
 }
 
 fn is_mor_pos(model: &DiscreteDblModel, f: &QualifiedName) -> bool {
+    // TO-DO: use th_deg_del_signed_category_to_signed_category()
     0 == model
         .mor_generator_type(f)
         .into_iter()
@@ -45,8 +46,7 @@ fn is_mor_pos(model: &DiscreteDblModel, f: &QualifiedName) -> bool {
  * track of the relation between the formal derivatives and the original objects
  */
 pub fn degree_atomisation(
-    // TODO: do we really need an Rc here?
-    model: Rc<DiscreteDblModel>,
+    model: DiscreteDblModel,
 ) -> (DiscreteDblModel, HashMap<QualifiedName, Vec<QualifiedName>>) {
     let mut atomised_model: DiscreteDblModel =
         DiscreteDblModel::new(Rc::new(theories::th_deg_del_signed_category()));
@@ -65,7 +65,7 @@ pub fn degree_atomisation(
     // an empty list of positive-degree (resp. zero-degree) incoming arrows
     for x in model.ob_generators() {
         tower_constructors.insert(
-            x.clone(),
+            x,
             TowerConstructor {
                 height: 1,
                 in_arrows_pos_deg: Vec::new(),
@@ -80,21 +80,17 @@ pub fn degree_atomisation(
     //      over the *morphisms* instead.
 
     for f in model.mor_generators() {
-        let f_cod = model.get_cod(&f).unwrap();
+        let f_cod = model.mor_generator_cod(&f);
         let f_degree = deg_of_mor(&model, &f);
 
         if f_degree != 0 {
-            let new_degree = std::cmp::max(tower_constructors.get(f_cod).unwrap().height, f_degree);
-            tower_constructors
-                .entry(f_cod.clone())
-                .and_modify(|tower_cons| tower_cons.height = new_degree)
-                // Since we already have the codomain, we can add this to our
-                // hash map of positive-degree incoming arrows
-                .and_modify(|tower_cons| tower_cons.in_arrows_pos_deg.push(f.clone()));
+            let tower_cons = tower_constructors.get_mut(&f_cod).unwrap();
+            let new_degree = std::cmp::max(tower_cons.height, f_degree);
+            tower_cons.height = new_degree;
+            tower_cons.in_arrows_pos_deg.push(f.clone());
         } else {
-            tower_constructors
-                .entry(f_cod.clone())
-                .and_modify(|tower_cons| tower_cons.in_arrows_zero_deg.push(f.clone()));
+            let tower_cons = tower_constructors.get_mut(&f_cod).unwrap();
+            tower_cons.in_arrows_zero_deg.push(f.clone());
         }
     }
 
@@ -110,7 +106,7 @@ pub fn degree_atomisation(
 
     // We have yet to build any of the towers so, right now, every base is
     // "unchecked".
-    let mut unchecked_bases: Vec<QualifiedName> = model.ob_generators().collect::<Vec<_>>().clone();
+    let mut unchecked_bases: Vec<QualifiedName> = model.ob_generators().collect::<Vec<_>>();
 
     while !unchecked_bases.is_empty() {
         // Since heights will change as we go, we start by resorting the list
@@ -127,7 +123,7 @@ pub fn degree_atomisation(
         // tower over its source
         let target_in_arrows = &tower_constructors.get(&target).unwrap().in_arrows_pos_deg.clone();
         for f in target_in_arrows {
-            let source = model.get_dom(f).unwrap();
+            let source = model.mor_generator_dom(f);
             let required_height =
                 tower_constructors.get(&target).unwrap().height - deg_of_mor(&model, f) + 1;
             tower_constructors.entry(source.clone()).and_modify(|tower_cons| {
@@ -187,34 +183,35 @@ pub fn degree_atomisation(
         let tower_cons = tower_constructors.get(base).unwrap();
         for f in &tower_cons.in_arrows_pos_deg {
             let deg = deg_of_mor(&model, f);
-            let source = model.get_dom(f).unwrap();
-            let source_tower = towers.get(source).unwrap();
+            let source = model.mor_generator_dom(f);
+            let source_tower = towers.get(&source).unwrap();
             // Note that we could alternatively take height to be the length of
             // towers.get(source), which is equal by construction/definition
             let height = tower_cons.height;
             let new_source = &source_tower[height - deg];
             let new_target = tower.last().unwrap();
-            match is_mor_pos(&model, f) {
-                true => atomised_model.add_mor(
+            if is_mor_pos(&model, f) {
+                atomised_model.add_mor(
                     f.clone(),
                     new_source.clone(),
                     new_target.clone(),
                     name("Degree").into(),
-                ),
-                false => atomised_model.add_mor(
+                )
+            } else {
+                atomised_model.add_mor(
                     f.clone(),
                     new_source.clone(),
                     new_target.clone(),
                     Path::pair(name("Negative"), name("Degree")),
-                ),
+                )
             }
         }
 
         for f in &tower_cons.in_arrows_zero_deg {
             atomised_model.add_mor(
                 f.clone(),
-                model.get_dom(f).unwrap().clone(),
-                model.get_cod(f).unwrap().clone(),
+                model.mor_generator_dom(f).clone(),
+                model.mor_generator_cod(f).clone(),
                 Path::Id(name("Object")),
             );
         }
@@ -225,11 +222,11 @@ pub fn degree_atomisation(
 #[cfg(test)]
 mod tests {
     use super::degree_atomisation;
-    use crate::dbl::model::MutDblModel;
+
     use crate::one::category::FgCategory;
     use crate::stdlib::models::sample_ecld;
-    use crate::zero::{QualifiedName, name};
-    use std::{collections::HashMap, rc::Rc};
+    use crate::zero::{name, QualifiedName};
+    use std::collections::HashMap;
 
     // Makes a hash map from objects in sample_ecld to tower heights
     fn correct_heights() -> HashMap<QualifiedName, usize> {
@@ -239,6 +236,9 @@ mod tests {
         heights.insert(name("c"), 3);
         heights.insert(name("d"), 2);
         heights
+        // TO-DO: make the following work
+        // [(name("a"), 1), (name("b"), 3), (name("c"), 3), (name("d"), 2)]
+        //     .collect::<HashMap<QualifiedName, usize>>()
     }
 
     // Makes a hash map from morphisms in sample_ecld to the correct index of
@@ -255,7 +255,7 @@ mod tests {
     fn ecld_atomisation_test_tower_heights() {
         let model = &sample_ecld();
         let correct_heights = correct_heights();
-        let (atomised_model, towers) = degree_atomisation(Rc::new(model.clone()));
+        let (atomised_model, towers) = degree_atomisation(model.clone());
         for x in model.ob_generators() {
             let height_at_x = towers.get(&x).unwrap().len();
             let correct_height = correct_heights.get(&x).unwrap();
@@ -267,22 +267,22 @@ mod tests {
         }
         let correct_domain_indices = correct_domain_indices();
         for f in correct_domain_indices.keys() {
-            let atomised_dom = atomised_model.get_dom(f).unwrap();
-            let atomised_cod = atomised_model.get_cod(f).unwrap();
-            let base_dom = model.get_dom(f).unwrap();
-            let base_cod = model.get_cod(f).unwrap();
+            let atomised_dom = atomised_model.mor_generator_dom(f);
+            let atomised_cod = atomised_model.mor_generator_cod(f);
+            let base_dom = model.mor_generator_dom(f);
+            let base_cod = model.mor_generator_cod(f);
             let dom_index = *correct_domain_indices.get(f).unwrap();
-            let cod_index = *correct_heights.get(base_cod).unwrap() - 1;
-            let correct_dom = &towers.get(base_dom).unwrap()[dom_index].clone();
-            let correct_cod = &towers.get(base_cod).unwrap()[cod_index].clone();
+            let cod_index = *correct_heights.get(&base_cod).unwrap() - 1;
+            let correct_dom = &towers.get(&base_dom).unwrap()[dom_index].clone();
+            let correct_cod = &towers.get(&base_cod).unwrap()[cod_index].clone();
             assert_eq!(
-                *atomised_dom,
+                atomised_dom,
                 correct_dom.clone(),
                 "The morphism {} has the wrong domain",
                 *f
             );
             assert_eq!(
-                *atomised_cod,
+                atomised_cod,
                 correct_cod.clone(),
                 "The morphism {} has the wrong codomain",
                 *f

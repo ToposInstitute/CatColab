@@ -2,6 +2,6 @@
 \taxon{theory}
 \import{macros}
 
-\p{The \define{theory of degree-delay signed categories} is the simple double
+\p{The \define{theory of degree-delay signed categories} is the discrete double
 theory with a single object and with proarrows given by the elements of the
 monoid #{\mathbb{N} \times \mathbb{N} \times \mathbb{Z}_2}.}

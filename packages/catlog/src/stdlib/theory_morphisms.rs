@@ -4,7 +4,7 @@ These can be used to migrate models from one theory to another.
  */
 
 use crate::one::{FpFunctorData, Path, QualifiedPath};
-use crate::zero::{HashColumn, QualifiedName, name};
+use crate::zero::{name, HashColumn, QualifiedName};
 
 type DiscreteDblTheoryMap = FpFunctorData<
     HashColumn<QualifiedName, QualifiedName>,
@@ -57,6 +57,24 @@ pub fn th_delayable_signed_category_to_signed_category() -> DiscreteDblTheoryMap
     )
 }
 
+/** Projection from theory of degree-delay signed categories.
+
+Sigma migration along this map forgets about the degrees and delays.
+ */
+pub fn th_deg_del_signed_category_to_signed_category() -> DiscreteDblTheoryMap {
+    FpFunctorData::new(
+        HashColumn::new([(name("Object"), name("Object"))].into()),
+        HashColumn::new(
+            [
+                (name("Negative"), name("Negative").into()),
+                (name("Degree"), Path::Id(name("Object"))),
+                (name("Delay"), Path::Id(name("Object"))),
+            ]
+            .into(),
+        ),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::super::theories::*;
@@ -68,11 +86,9 @@ mod tests {
         assert!(th_category_to_schema().functor_into(&th_sch).validate_on(&th_cat).is_ok());
         assert!(th_schema_to_category().functor_into(&th_cat).validate_on(&th_sch).is_ok());
 
-        assert!(
-            th_delayable_signed_category_to_signed_category()
-                .functor_into(&th_signed_category().0)
-                .validate_on(&th_delayable_signed_category().0)
-                .is_ok()
-        );
+        assert!(th_delayable_signed_category_to_signed_category()
+            .functor_into(&th_signed_category().0)
+            .validate_on(&th_delayable_signed_category().0)
+            .is_ok());
     }
 }

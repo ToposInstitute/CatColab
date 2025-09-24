@@ -16,4 +16,4 @@ monoid #{\mathbb{N} \times \mathbb{N} \times \mathbb{Z}_2} with the monoidal pro
 \transclude{thy-000C}
 
 \p{A free model of this double theory a causal loop diagram in which edges can
-are additionally marked with two natural numbers indicating the \em{degree} and \em{delay} of the influence, called an ]em{extended causal loop diagram}.}
+are additionally marked with two natural numbers indicating the \em{degree} and \em{delay} of the influence, called an \em{extended causal loop diagram}.}
