@@ -95,3 +95,11 @@ syn [g : Graph2] g.g1.V
 norm [g : Graph2] g.g1.V
 
 generate Graph2
+
+type WeightedGraph2 := [
+  V : Entity,
+  g1 : WeightedGraph & [ .V := V ],
+  g2 : WeightedGraph & [ .V := V ]
+]
+
+generate WeightedGraph2
