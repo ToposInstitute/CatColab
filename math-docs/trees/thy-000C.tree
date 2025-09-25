@@ -29,7 +29,8 @@
   \end{tikzcd}
   }
   }
-  \li{equations making the adjunction #{i \dashv r} "live over #{b}," meaning first that
+  \li{equations making the adjunction #{i \dashv r} be sliced over #{b},
+  meaning first that the triangle commutes
   \quiver{
   % https://q.uiver.app/#q=WzAsMyxbMCwwLCJcXHRvcCBwXioiXSxbMSwxLCJiIl0sWzIsMCwiZSJdLFswLDEsIlxccGlfMCIsMl0sWzAsMiwiciJdLFsyLDEsInAiXV0=
   \begin{tikzcd}[column sep=scriptsize]
@@ -42,28 +43,28 @@
   }
   and furthermore that the counit satisfies
   \quiver{
-  % https://q.uiver.app/#q=WzAsMTEsWzAsMCwiXFx0b3AgcF4qIl0sWzAsMSwiZSJdLFswLDIsIlxcdG9wIHBeKiJdLFsxLDIsIlxcdG9wIHBeKiJdLFsxLDAsIlxcdG9wIHBeKiJdLFswLDMsImIiXSxbMSwzLCJlIl0sWzMsMSwiXFx0b3AgcF4qIl0sWzQsMSwiXFx0b3AgcF4qIl0sWzMsMiwiYiJdLFs0LDIsImUiXSxbMCwxLCJyIiwyXSxbMSwyLCJpIiwyXSxbMCw0LCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNCwzLCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsyLDMsIiIsMix7ImxldmVsIjoyLCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsyLDUsIlxccGlfMCIsMl0sWzMsNiwiXFxwaV8xIl0sWzcsOSwiXFxwaV8wIiwyXSxbOCwxMCwiXFxwaV8xIl0sWzcsOCwiIiwwLHsibGV2ZWwiOjIsInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzUsNiwicF4qIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzksMTAsInBeKiIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsxMywxNSwiXFx2YXJlcHNpbG9uIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzE1LDIxLCJcXHBpIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzIwLDIyLCJcXHBpIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzE0LDE4LCI9IiwyLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV1d
+  % https://q.uiver.app/#q=WzAsMTEsWzAsMCwiXFx0b3AgcF4qIl0sWzAsMSwiZSJdLFswLDIsIlxcdG9wIHBeKiJdLFsxLDIsIlxcdG9wIHBeKiJdLFsxLDAsIlxcdG9wIHBeKiJdLFswLDMsImIiXSxbMSwzLCJiIl0sWzMsMSwiXFx0b3AgcF4qIl0sWzQsMSwiXFx0b3AgcF4qIl0sWzMsMiwiYiJdLFs0LDIsImIiXSxbMCwxLCJyIiwyXSxbMSwyLCJpIiwyXSxbMCw0LCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNCwzLCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsyLDMsIiIsMix7ImxldmVsIjoyLCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsyLDUsIlxccGlfMCIsMl0sWzMsNiwiXFxwaV8wIl0sWzcsOSwiXFxwaV8wIiwyXSxbOCwxMCwiXFxwaV8wIl0sWzcsOCwiIiwwLHsibGV2ZWwiOjIsInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzksMTAsIiIsMix7ImxldmVsIjoyLCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs1LDYsIiIsMix7ImxldmVsIjoyLCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxMywxNSwiXFx2YXJlcHNpbG9uIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzE0LDE4LCI9IiwyLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzE1LDIyLCJcXG1hdGhybXtpZH1fe1xccGlfMH0iLDEseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMjAsMjEsIlxcbWF0aHJte2lkfV97XFxwaV8wfSIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dXQ==
   \begin{tikzcd}
 	{\top p^*} & {\top p^*} \\
 	e &&& {\top p^*} & {\top p^*} \\
-	{\top p^*} & {\top p^*} && b & e \\
-	b & e
+	{\top p^*} & {\top p^*} && b & b \\
+	b & b
 	\arrow[""{name=0, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=1-1, to=1-2]
 	\arrow["r"', from=1-1, to=2-1]
 	\arrow[""{name=1, anchor=center, inner sep=0}, equals, from=1-2, to=3-2]
 	\arrow["i"', from=2-1, to=3-1]
 	\arrow[""{name=2, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=2-4, to=2-5]
 	\arrow[""{name=3, anchor=center, inner sep=0}, "{\pi_0}"', from=2-4, to=3-4]
-	\arrow["{\pi_1}", from=2-5, to=3-5]
+	\arrow["{\pi_0}", from=2-5, to=3-5]
 	\arrow[""{name=4, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=3-1, to=3-2]
 	\arrow["{\pi_0}"', from=3-1, to=4-1]
-	\arrow["{\pi_1}", from=3-2, to=4-2]
-	\arrow[""{name=5, anchor=center, inner sep=0}, "{p^*}"'{inner sep=.8ex}, "\shortmid"{marking}, from=3-4, to=3-5]
-	\arrow[""{name=6, anchor=center, inner sep=0}, "{p^*}"'{inner sep=.8ex}, "\shortmid"{marking}, from=4-1, to=4-2]
+	\arrow["{\pi_0}", from=3-2, to=4-2]
+	\arrow[""{name=5, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=3-4, to=3-5]
+	\arrow[""{name=6, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=4-1, to=4-2]
 	\arrow["\varepsilon"{description}, draw=none, from=0, to=4]
 	\arrow["{=}"', draw=none, from=1, to=3]
-	\arrow["\pi"{description}, draw=none, from=2, to=5]
-	\arrow["\pi"{description}, draw=none, from=4, to=6]
+	\arrow["{\mathrm{id}_{\pi_0}}"{description}, draw=none, from=2, to=5]
+	\arrow["{\mathrm{id}_{\pi_0}}"{description}, draw=none, from=4, to=6]
   \end{tikzcd}
   }
   and the unit satisfies
