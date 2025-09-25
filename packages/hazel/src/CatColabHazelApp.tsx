@@ -1,21 +1,12 @@
-import {
-    createEffect,
-    createResource,
-    Match,
-    Switch,
-    createSignal,
-} from "solid-js";
 import { Repo } from "@automerge/automerge-repo";
 import type { AutomergeUrl } from "@automerge/automerge-repo";
-import { useHazelIntegration } from "./hazel/useHazelIntegration";
-import {
-    getLiveModelFromRepo,
-    newModelDocument,
-} from "../../frontend/src/model/document";
+import { Match, Switch, createEffect, createResource, createSignal } from "solid-js";
+import { getLiveModelFromRepo, newModelDocument } from "../../frontend/src/model/document";
 import { ModelPane } from "../../frontend/src/model/model_editor";
-import { stdTheories, TheoryLibraryContext } from "../../frontend/src/stdlib";
+import { TheoryLibraryContext, stdTheories } from "../../frontend/src/stdlib";
+import { useHazelIntegration } from "./hazel/useHazelIntegration";
 
-export default function CatColabHazelApp(_props: any) {
+export default function CatColabHazelApp(_props: Record<string, never>) {
     const urlParams = new URLSearchParams(window.location.search);
     const id = urlParams.get("id") || "local-demo";
     const codec = "json";
@@ -28,13 +19,12 @@ export default function CatColabHazelApp(_props: any) {
         codec,
         onInit: (valueStr) => {
             try {
-                const parsed = valueStr ? JSON.parse(valueStr) : null;
-                const initial =
-                    parsed &&
+                const parsed: unknown = valueStr ? JSON.parse(valueStr) : null;
+                const isModelDoc =
+                    parsed != null &&
                     typeof parsed === "object" &&
-                    (parsed as any).type === "model"
-                        ? parsed
-                        : newModelDocument("empty");
+                    (parsed as { type?: unknown }).type === "model";
+                const initial = isModelDoc ? (parsed as object) : newModelDocument("empty");
                 const handle = repo().create(initial);
                 setDocUrl(handle.url as AutomergeUrl);
             } catch (e) {
@@ -46,10 +36,8 @@ export default function CatColabHazelApp(_props: any) {
         onConstraints: (c) => {
             document.body.style.maxWidth = `${c.maxWidth}px`;
             document.body.style.maxHeight = `${c.maxHeight}px`;
-            if (c.minWidth != null)
-                document.body.style.minWidth = `${c.minWidth}px`;
-            if (c.minHeight != null)
-                document.body.style.minHeight = `${c.minHeight}px`;
+            if (c.minWidth != null) document.body.style.minWidth = `${c.minWidth}px`;
+            if (c.minHeight != null) document.body.style.minHeight = `${c.minHeight}px`;
         },
     });
 
@@ -57,8 +45,8 @@ export default function CatColabHazelApp(_props: any) {
         () => docUrl(),
         async (url) => {
             if (!url) throw new Error("docUrl not set yet");
-            return await getLiveModelFromRepo(url, repo() as any, stdTheories);
-        }
+            return await getLiveModelFromRepo(url, repo() as unknown as any, stdTheories);
+        },
     );
 
     createEffect(() => {
@@ -70,8 +58,9 @@ export default function CatColabHazelApp(_props: any) {
         let objects = 0;
         let morphisms = 0;
         for (const j of judgments) {
-            if ((j as any).tag === "object") objects++;
-            else if ((j as any).tag === "morphism") morphisms++;
+            const tag = (j as { tag?: string }).tag;
+            if (tag === "object") objects++;
+            else if (tag === "morphism") morphisms++;
         }
 
         const payload = { objects, morphisms };
@@ -97,14 +86,6 @@ export default function CatColabHazelApp(_props: any) {
                 <div>
                     <strong>CatColab 🆚 Hazel</strong>
                 </div>
-                {/* <button
-                    onClick={() => {
-                        const payload = "hello from catcolab";
-                        setSyntax(JSON.stringify(payload));
-                    }}
-                >
-                    Send setSyntax (stub)
-                </button> */}
             </div>
 
             <Switch>

@@ -27,9 +27,9 @@ export function isFromHazelMessage(data: unknown): data is FromHazelMessage {
     );
 }
 
-function throttle<T extends (...args: any[]) => void>(fn: T, ms: number): T {
+function throttle<T extends (...args: unknown[]) => void>(fn: T, ms: number): T {
     let timeoutId: number | null = null;
-    let lastArgs: any[] | null = null;
+    let lastArgs: unknown[] | null = null;
 
     const run = () => {
         timeoutId = null;
@@ -39,7 +39,7 @@ function throttle<T extends (...args: any[]) => void>(fn: T, ms: number): T {
         }
     };
 
-    return ((...args: any[]) => {
+    return ((...args: unknown[]) => {
         lastArgs = args;
         if (timeoutId === null) {
             timeoutId = window.setTimeout(run, ms);
