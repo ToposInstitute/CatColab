@@ -87,7 +87,7 @@ pub fn model_output(
     model: &DiscreteDblModel,
     name_translation: &HashMap<QualifiedName, QualifiedLabel>,
 ) -> fmt::Result {
-    writeln!(out, "{prefix}object generators: ")?;
+    writeln!(out, "{prefix}object generators:")?;
     for obgen in model.ob_generators() {
         writeln!(
             out,
@@ -96,7 +96,7 @@ pub fn model_output(
             model.ob_type(&obgen)
         )?;
     }
-    writeln!(out, "{prefix}morphism generators: ")?;
+    writeln!(out, "{prefix}morphism generators:")?;
     for morgen in model.mor_generators() {
         writeln!(
             out,

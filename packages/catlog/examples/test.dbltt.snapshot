@@ -19,11 +19,11 @@ type WeightedGraph := [
 
 generate WeightedGraph
 #/ result: 
-#/ object generators: 
+#/ object generators:
 #/  V : Entity
 #/  E : Entity
 #/  Weight : AttrType
-#/ morphism generators: 
+#/ morphism generators:
 #/  src : E -> V (Id Entity)
 #/  tgt : E -> V (Id Entity)
 #/  weight : E -> Weight (Attr)
@@ -146,11 +146,11 @@ norm [g : Graph2] g.g1.V
 
 generate Graph2
 #/ result: 
-#/ object generators: 
+#/ object generators:
 #/  V : Entity
 #/  g1.E : Entity
 #/  g2.E : Entity
-#/ morphism generators: 
+#/ morphism generators:
 #/  g1.src : g1.E -> V (Id Entity)
 #/  g1.tgt : g1.E -> V (Id Entity)
 #/  g2.src : g2.E -> V (Id Entity)
@@ -166,13 +166,13 @@ type WeightedGraph2 := [
 
 generate WeightedGraph2
 #/ result: 
-#/ object generators: 
+#/ object generators:
 #/  V : Entity
 #/  g1.E : Entity
 #/  g1.Weight : AttrType
 #/  g2.E : Entity
 #/  g2.Weight : AttrType
-#/ morphism generators: 
+#/ morphism generators:
 #/  g1.src : g1.E -> V (Id Entity)
 #/  g1.tgt : g1.E -> V (Id Entity)
 #/  g1.weight : g1.E -> g1.Weight (Attr)
