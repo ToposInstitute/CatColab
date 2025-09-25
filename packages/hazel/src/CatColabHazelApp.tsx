@@ -15,7 +15,7 @@ import {
 import { ModelPane } from "../../frontend/src/model/model_editor";
 import { stdTheories, TheoryLibraryContext } from "../../frontend/src/stdlib";
 
-export default function CatColabHazelApp(_props: {}) {
+export default function CatColabHazelApp(_props: any) {
     const urlParams = new URLSearchParams(window.location.search);
     const id = urlParams.get("id") || "local-demo";
     const codec = "json";

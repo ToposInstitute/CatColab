@@ -55,7 +55,12 @@ export interface HazelIntegrationConfig {
     id: string;
     codec: string;
     onInit?: (value: string) => void;
-    onConstraints?: (c: { maxWidth: number; maxHeight: number; minWidth?: number; minHeight?: number }) => void;
+    onConstraints?: (c: {
+        maxWidth: number;
+        maxHeight: number;
+        minWidth?: number;
+        minHeight?: number;
+    }) => void;
     resizeStrategy?: ResizeStrategy;
 }
 
@@ -120,5 +125,3 @@ export function createHazelIntegration(config: HazelIntegrationConfig) {
 
     return { setSyntax, resize };
 }
-
-

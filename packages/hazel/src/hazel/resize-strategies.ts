@@ -5,7 +5,7 @@ export function createBasicResize(): ResizeStrategy {
         setup({ id, sendToHazel }) {
             let resizeObserver: ResizeObserver | null = null;
             let resizeTimeout: number | null = null;
-            
+
             const debouncedResize = (width: number, height: number) => {
                 if (resizeTimeout) {
                     clearTimeout(resizeTimeout);
@@ -33,5 +33,3 @@ export function createBasicResize(): ResizeStrategy {
         },
     };
 }
-
-
