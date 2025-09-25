@@ -26,7 +26,9 @@ export default function CatColabHazelApp(_props: Props) {
             try {
                 const parsed = valueStr ? JSON.parse(valueStr) : null;
                 const initial =
-                    parsed && typeof parsed === "object" && (parsed as any).type === "model"
+                    parsed &&
+                    typeof parsed === "object" &&
+                    (parsed as any).type === "model"
                         ? parsed
                         : newModelDocument("empty");
                 const handle = repo().create(initial);
