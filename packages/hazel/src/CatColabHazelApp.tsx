@@ -1,4 +1,10 @@
-import { createResource, Match, Switch, createSignal } from "solid-js";
+import {
+    createEffect,
+    createResource,
+    Match,
+    Switch,
+    createSignal,
+} from "solid-js";
 import { Repo } from "@automerge/automerge-repo";
 import type { AutomergeUrl } from "@automerge/automerge-repo";
 import { useHazelIntegration } from "./hazel/useHazelIntegration";
@@ -9,9 +15,7 @@ import {
 import { ModelPane } from "../../frontend/src/model/model_editor";
 import { stdTheories, TheoryLibraryContext } from "../../frontend/src/stdlib";
 
-type Props = {};
-
-export default function CatColabHazelApp(_props: Props) {
+export default function CatColabHazelApp(_props: {}) {
     const urlParams = new URLSearchParams(window.location.search);
     const id = urlParams.get("id") || "local-demo";
     const codec = "json";
@@ -41,6 +45,11 @@ export default function CatColabHazelApp(_props: Props) {
         },
         onConstraints: (c) => {
             document.body.style.maxWidth = `${c.maxWidth}px`;
+            document.body.style.maxHeight = `${c.maxHeight}px`;
+            if (c.minWidth != null)
+                document.body.style.minWidth = `${c.minWidth}px`;
+            if (c.minHeight != null)
+                document.body.style.minHeight = `${c.minHeight}px`;
         },
     });
 
@@ -48,13 +57,36 @@ export default function CatColabHazelApp(_props: Props) {
         () => docUrl(),
         async (url) => {
             if (!url) throw new Error("docUrl not set yet");
-            // Cast to any to avoid cross-package Repo type mismatch (version skew)
             return await getLiveModelFromRepo(url, repo() as any, stdTheories);
         }
     );
 
+    createEffect(() => {
+        const lm = liveModel();
+        if (!lm) return;
+
+        /* for now i'm just sending over a summary of the contents of the model to hazel... */
+        const judgments = lm.formalJudgments();
+        let objects = 0;
+        let morphisms = 0;
+        for (const j of judgments) {
+            if ((j as any).tag === "object") objects++;
+            else if ((j as any).tag === "morphism") morphisms++;
+        }
+
+        const payload = { objects, morphisms };
+        setSyntax(JSON.stringify(payload));
+    });
+
     return (
-        <div style={{ padding: "8px" }}>
+        <div
+            style={{
+                padding: "8px",
+                "min-width": "680px",
+                "min-height": "480px",
+                "box-sizing": "border-box",
+            }}
+        >
             <div
                 style={{
                     display: "flex",
@@ -63,16 +95,16 @@ export default function CatColabHazelApp(_props: Props) {
                 }}
             >
                 <div>
-                    <strong>CatColab v. Hazel</strong>
+                    <strong>CatColab 🆚 Hazel</strong>
                 </div>
-                <button
+                {/* <button
                     onClick={() => {
                         const payload = "hello from catcolab";
                         setSyntax(JSON.stringify(payload));
                     }}
                 >
                     Send setSyntax (stub)
-                </button>
+                </button> */}
             </div>
 
             <Switch>
