@@ -102,8 +102,13 @@ async fn main() {
             // jwt keys will be killed. The library is using the anti pattern of implementing both Clone and Drop on the
             // same struct.
             // https://github.com/trchopan/firebase-auth/issues/30
-            let firebase_auth =
-                Arc::new(FirebaseAuth::new(&dotenvy::var("FIREBASE_PROJECT_ID").expect("FIREBASE_PROJECT_ID env variable needs to be set")).await);
+            let firebase_auth = Arc::new(
+                FirebaseAuth::new(
+                    &dotenvy::var("FIREBASE_PROJECT_ID")
+                        .expect("`FIREBASE_PROJECT_ID` should be set"),
+                )
+                .await,
+            );
 
             socket::setup_automerge_socket(state.clone());
 
