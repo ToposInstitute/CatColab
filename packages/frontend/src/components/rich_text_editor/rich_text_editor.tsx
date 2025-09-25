@@ -30,11 +30,13 @@ import {
     doIfAtTop,
     doIfEmpty,
     increaseListIndet,
+    insertLinkCmd,
     insertMathDisplayCmd,
     toggleBulletList,
     toggleOrderedList,
     turnSelectionIntoBlockquote,
 } from "./commands";
+import { linkEditorPlugin } from "./link_editor";
 import { type CustomSchema, proseMirrorAutomergeInit } from "./schema";
 import { activeHeading, initPlaceholderPlugin, isMarkActive } from "./utils";
 
@@ -140,6 +142,7 @@ export const RichTextEditor = (
             keymap(baseKeymap),
             ...(props.placeholder ? [initPlaceholderPlugin(props.placeholder)] : []),
             automergePlugin,
+            linkEditorPlugin,
             mathPlugin,
             inputRules({ rules: [blockMathInputRule] }),
         ];
@@ -183,6 +186,18 @@ export const RichTextEditor = (
                     setEditorFocused(false);
                     return false;
                 },
+                click(_view, event) {
+                    const a = (event.target as Element)?.closest?.(
+                        "a[href]",
+                    ) as HTMLAnchorElement | null;
+                    if (!a || event.metaKey || event.ctrlKey) {
+                        return false;
+                    }
+
+                    event.preventDefault();
+                    window.open(a.href, "_blank", "noopener,noreferrer"); // new tab
+                    return true;
+                },
             },
             clipboardTextSerializer: (slice) => {
                 return mathSerializer.serializeSlice(slice);
@@ -199,9 +214,7 @@ export const RichTextEditor = (
         setMenuControls({
             onBoldClicked: () => toggleMark(schema.marks.strong)(view.state, view.dispatch),
             onItalicClicked: () => toggleMark(schema.marks.em)(view.state, view.dispatch),
-            // TODO: A "good" notion-style link editor should probably use an inline group node, which
-            // currently doesn't work: https://github.com/automerge/automerge-prosemirror/issues/30
-            onLinkClicked: null,
+            onLinkClicked: () => insertLinkCmd(view.state, view.dispatch, view),
             onBlockQuoteClicked: () => turnSelectionIntoBlockquote(view.state, view.dispatch),
             onToggleBulletList: () => toggleBulletList(view.state, view.dispatch),
             onToggleOrderedList: () => toggleOrderedList(view.state, view.dispatch),
@@ -252,6 +265,7 @@ function richTextEditorKeymap(schema: CustomSchema, props: RichTextEditorOptions
     bindings["Enter"] = splitListItem(schema.nodes.list_item);
     bindings["Mod-b"] = toggleMark(schema.marks.strong);
     bindings["Mod-i"] = toggleMark(schema.marks.em);
+    bindings["Mod-l"] = insertLinkCmd;
     bindings["Mod-m"] = insertMathDisplayCmd;
     bindings["Backspace"] = chainCommands(
         deleteSelection,
