@@ -10,6 +10,7 @@ const ECharts = lazy(() => import("./echarts"));
 export type ODEPlotData = {
     time: number[];
     states: StateVarData[];
+    iterationCount: number;
 };
 
 /** Values of a state variable over time. */
