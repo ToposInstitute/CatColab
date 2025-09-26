@@ -296,7 +296,8 @@ pub async fn search_ref_stubs(
             ON p_owner.object = refs.id AND p_owner.level = 'own'
         LEFT JOIN users AS owner
             ON owner.id = p_owner.subject
-        WHERE (
+        WHERE refs.deleted_at IS NULL
+        AND (
             owner.username = $2
             OR $2 IS NULL
         )
