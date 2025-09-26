@@ -36,7 +36,7 @@ import {
     toggleOrderedList,
     turnSelectionIntoBlockquote,
 } from "./commands";
-import { linkEditorPlugin } from "./link_editor";
+import { getLinkAtPos, linkEditorPlugin } from "./link_editor";
 import { type CustomSchema, proseMirrorAutomergeInit } from "./schema";
 import { activeHeading, initPlaceholderPlugin, isMarkActive } from "./utils";
 
@@ -186,18 +186,18 @@ export const RichTextEditor = (
                     setEditorFocused(false);
                     return false;
                 },
-                click(_view, event) {
-                    const a = (event.target as Element)?.closest?.(
-                        "a[href]",
-                    ) as HTMLAnchorElement | null;
-                    if (!a || event.metaKey || event.ctrlKey) {
-                        return false;
-                    }
+            },
+            handleClickOn(view, pos) {
+                const link = getLinkAtPos(view, pos);
+                if (!link) {
+                    return false;
+                }
 
-                    event.preventDefault();
-                    window.open(a.href, "_blank", "noopener,noreferrer"); // new tab
-                    return true;
-                },
+                if (link.href) {
+                    window.open(link.href, "_blank", "noopener,noreferrer");
+                }
+
+                return true;
             },
             clipboardTextSerializer: (slice) => {
                 return mathSerializer.serializeSlice(slice);

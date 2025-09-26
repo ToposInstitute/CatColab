@@ -13,7 +13,7 @@ type LinkState = {
     top: number;
 };
 
-function getLinkAtPos(view: EditorView, pos: number): LinkState | null {
+export function getLinkAtPos(view: EditorView, pos: number): LinkState | null {
     const linkType = view.state.schema.marks.link as MarkType;
     const $pos = view.state.doc.resolve(pos);
     const parent = $pos.parent;
