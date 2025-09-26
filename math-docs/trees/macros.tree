@@ -53,6 +53,8 @@
 
 \def\Ob{#{\operatorname{Ob}}}
 \def\Hom{#{\operatorname{Hom}}}
+\def\dom{#{\operatorname{dom}}}
+\def\cod{#{\operatorname{cod}}}
 \def\id{#{\operatorname{id}}}
 \def\op{#{\mathrm{op}}}
 

@@ -1,0 +1,14 @@
+\title{Categories with pullbacks}
+\taxon{theory}
+\import{macros}
+\def\pb{#{\mathrm{pb}}}
+
+\p{The \define{theory of categories with pullbacks} is presented by an object
+#{x} plus data making the arrow ##{\pi_1: \top \id_x \to x,} the target
+projection of the tabulator of #{\id_x}, be an interpreted as fibration.}
+
+\p{According to the [theory of fibrations](thy-000C), the latter data consists
+of an arrow ##{\pb: \top \pi_1^* \to \top \id_x} along with cells and equations
+making \pb the right part of an adjunction sliced over #{\top \id_x}.}
+
+\p{Thanks to Corinthia Aberlé for suggesting this theory.}
