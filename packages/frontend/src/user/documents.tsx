@@ -9,7 +9,7 @@ import "./documents.css";
 import { useNavigate } from "@solidjs/router";
 import { Spinner } from "../components/spinner";
 import ChartSpline from "lucide-solid/icons/chart-spline";
-import FilePlus from "lucide-solid/icons/file-plus";
+import File from "lucide-solid/icons/file";
 import UploadIcon from "lucide-solid/icons/upload";
 import { IconButton } from "../components";
 
@@ -229,7 +229,7 @@ function DocumentIconType(props: { typeName?: string }) {
                     <UploadIcon size="20" />
                 </Match>
                 <Match when={props.typeName === "model"}>
-                    <FilePlus size="20" />
+                    <File size="20" />
                 </Match>
             </Switch>
         </IconButton>
