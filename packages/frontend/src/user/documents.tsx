@@ -9,7 +9,7 @@ import "./documents.css";
 import { useNavigate } from "@solidjs/router";
 import { Spinner } from "../components/spinner";
 import ChartSpline from "lucide-solid/icons/chart-spline";
-import FilePlus from "lucide-solid/icons/file";
+import File from "lucide-solid/icons/file";
 import UploadIcon from "lucide-solid/icons/upload";
 import { IconButton } from "../components";
 import invariant from "tiny-invariant";
@@ -78,27 +78,23 @@ function DocumentsSearch() {
 
     return (
         <>
-            <div class="flex">
+            <input
+                type="text"
+                class="search-input"
+                placeholder="Search..."
+                value={searchQuery()}
+                onInput={(e) => updateQuery(e.currentTarget.value)}
+            />
+            <label class="show_only_mine_filter"> Show only mine
                 <input
-                    type="text"
-                    class="search-input"
-                    placeholder="Search..."
-                    value={searchQuery()}
-                    onInput={(e) => updateQuery(e.currentTarget.value)}
+                    class="fixed-table-cell-input"
+                    type="checkbox"
+                    checked={showOwnedOnlyDocument()}
+                    onInput={e => {
+                        setShowOwnedOnlyDocument(e.currentTarget.checked)
+                    }}
                 />
-                <label> Show only mine {showOwnedOnlyDocument()}
-                    <input
-                        class="fixed-table-cell-input"
-                        type="checkbox"
-                        checked={showOwnedOnlyDocument()}
-                        onInput={e => {
-                            setShowOwnedOnlyDocument(e.currentTarget.checked)
-                        }}
-                    />
-                </label>
-
-
-            </div>
+            </label>
 
             <h3>My Documents</h3>
             <div class="ref-table-outer">
@@ -258,7 +254,7 @@ function DocumentIconType(props: { typeName?: string }) {
                     <UploadIcon size="20" />
                 </Match>
                 <Match when={props.typeName === "model"}>
-                    <FilePlus size="20" />
+                    <File size="20" />
                 </Match>
             </Switch>
         </IconButton>
