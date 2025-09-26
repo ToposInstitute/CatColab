@@ -78,23 +78,25 @@ function DocumentsSearch() {
 
     return (
         <>
-            <input
-                type="text"
-                class="search-input"
-                placeholder="Search..."
-                value={searchQuery()}
-                onInput={(e) => updateQuery(e.currentTarget.value)}
-            />
-            <label class="show_only_mine_filter"> Show only mine
+            <div class="search-form">
                 <input
-                    class="fixed-table-cell-input"
-                    type="checkbox"
-                    checked={showOwnedOnlyDocument()}
-                    onInput={e => {
-                        setShowOwnedOnlyDocument(e.currentTarget.checked)
-                    }}
+                    type="text"
+                    class="search-input"
+                    placeholder="Search..."
+                    value={searchQuery()}
+                    onInput={(e) => updateQuery(e.currentTarget.value)}
                 />
-            </label>
+
+                <label class="show-only-mine">
+                    <input
+                        type="checkbox"
+                        checked={showOwnedOnlyDocument()}
+                        onInput={(e) => setShowOwnedOnlyDocument(e.currentTarget.checked)}
+                    />
+                    Show only mine
+                </label>
+            </div>
+
 
             <h3>My Documents</h3>
             <div class="ref-table-outer">
