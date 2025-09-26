@@ -8,6 +8,9 @@ import { LoginGate } from "./login";
 import "./documents.css";
 import { useNavigate } from "@solidjs/router";
 import { Spinner } from "../components/spinner";
+import ChartSpline from "lucide-solid/icons/chart-spline";
+import FilePlus from "lucide-solid/icons/file-plus";
+import UploadIcon from "lucide-solid/icons/upload";
 
 export default function UserDocuments() {
     return (
@@ -198,7 +201,7 @@ function RefStubRow(props: { stub: RefStub }) {
 
     return (
         <tr class="ref-stub-row" onClick={handleClick}>
-            <td>{props.stub.typeName}</td>
+            <td><DocumentIconType typeName={props.stub.typeName}></DocumentIconType></td>
             <td>{props.stub.name}</td>
             <td>{ownerName}</td>
             <td>{props.stub.permissionLevel}</td>
@@ -210,5 +213,22 @@ function RefStubRow(props: { stub: RefStub }) {
                 })}
             </td>
         </tr>
+    );
+}
+
+function DocumentIconType(props: { typeName?: string }) {
+
+    return (
+        <Switch fallback={props.typeName}>
+            <Match when={props.typeName === "analysis"}>
+                <ChartSpline size="20"></ChartSpline>
+            </Match>
+            <Match when={props.typeName === "diagram"}>
+                <UploadIcon size="20" />
+            </Match>
+            <Match when={props.typeName === "model"}>
+                <FilePlus size="20" />
+            </Match>
+        </Switch>
     );
 }
