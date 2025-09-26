@@ -1,0 +1,32 @@
+{
+    "name": "catcolab-hazel",
+    "version": "0.0.1",
+    "description": "A Hazel module for CatColab",
+    "type": "module",
+    "main": "src/index.ts",
+    "exports": {
+        ".": "./dist/index.js"
+    },
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "format": "biome format --write",
+        "lint": "biome lint --write && biome check --write"
+    },
+    "keywords": [],
+    "author": "FPLab",
+    "dependencies": {
+        "@automerge/automerge": "^3.1.1",
+        "@automerge/automerge-repo": "^2.2.0",
+        "catlog-wasm": "link:../catlog-wasm/dist/pkg-browser",
+        "solid-js": "^1.9.7"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "^1.9.3",
+        "typescript": "^5.2.2",
+        "vite": "^5.4.20",
+        "vite-plugin-solid": "^2.11.8",
+        "vite-plugin-top-level-await": "^1.6.0",
+        "vite-plugin-wasm": "^3.5.0"
+    }
+}
