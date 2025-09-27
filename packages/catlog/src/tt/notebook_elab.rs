@@ -121,7 +121,7 @@ impl<'a> Elaborator<'a> {
             v
         };
         self.ctx.env = self.ctx.env.snoc(v.clone());
-        self.ctx.scope.push((name, label, ty));
+        self.ctx.scope.push(VarInContext::new(name, label, ty));
         v
     }
 
@@ -152,18 +152,11 @@ impl<'a> Elaborator<'a> {
     }
 
     fn lookup_tm(&mut self, name: VarName) -> Option<(TmS, TmV, TyV)> {
-        let Some((i, (_, label, ty))) = self
-            .ctx
-            .scope
-            .iter()
-            .rev()
-            .enumerate()
-            .find(|(_, (name1, _, _))| name1 == &name)
-        else {
+        let Some((i, label, ty)) = self.ctx.lookup(name) else {
             return self.error(Error::NoSuchVariable(name));
         };
-        let v = self.ctx.env.get(i).unwrap().clone();
-        Some((TmS::var(i.into(), name, *label), v, ty.clone().unwrap()))
+        let v = self.ctx.env.get(*i).unwrap().clone();
+        Some((TmS::var(i, name, label), v, ty.clone().unwrap()))
     }
 
     fn ob(&mut self, n: &Ob) -> Option<(TmS, TmV, ObjectType)> {
@@ -249,7 +242,7 @@ impl<'a> Elaborator<'a> {
             }?;
             field_ty0s.push((name, (label, ty_v.ty0())));
             field_ty_vs.push((name, (label, ty_v.clone())));
-            self.ctx.scope.push((name, label, Some(ty_v.clone())));
+            self.ctx.scope.push(VarInContext::new(name, label, Some(ty_v.clone())));
             self.ctx.env =
                 self.ctx.env.snoc(TmV::Neu(TmN::proj(self_var.clone(), name, label), ty_v));
         }
@@ -319,13 +312,13 @@ mod test {
             "weighted_graph",
             expect![[r#"
                 object generators:
-                 E : Entity
-                 V : Entity
-                 Weight : AttrType
+                  E : Entity
+                  V : Entity
+                  Weight : AttrType
                 morphism generators:
-                 weight : E -> Weight (Attr)
-                 src : E -> V (Id Entity)
-                 tgt : E -> V (Id Entity)
+                  weight : E -> Weight (Attr)
+                  src : E -> V (Id Entity)
+                  tgt : E -> V (Id Entity)
             "#]],
         );
     }
