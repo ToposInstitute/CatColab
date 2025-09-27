@@ -1,13 +1,15 @@
 import { useNavigate } from "@solidjs/router";
 import invariant from "tiny-invariant";
-import { type Document, useApi } from "../api";
+
+import type { Document } from "catlog-wasm";
+import { useApi } from "../api";
 import { JsonImport } from "../components";
 import { type DiagramDocument, createDiagramFromDocument } from "../diagram";
 import { type ModelDocument, createModel } from "../model";
 
 type ImportableDocument = ModelDocument | DiagramDocument;
 
-function isImportableDocument(doc: Document<string>): doc is ImportableDocument {
+function isImportableDocument(doc: Document): doc is ImportableDocument {
     return doc.type === "model" || doc.type === "diagram";
 }
 
@@ -16,7 +18,7 @@ export function ImportDocument(props: { onComplete?: () => void }) {
     const api = useApi();
     const navigate = useNavigate();
 
-    const handleImport = async (data: Document<string>) => {
+    const handleImport = async (data: Document) => {
         invariant(
             isImportableDocument(data),
             "Analysis and other document types cannot be imported at this time.",
@@ -52,12 +54,12 @@ export function ImportDocument(props: { onComplete?: () => void }) {
 
     // Placeholder, not doing more than typechecking does for now but
     // will eventually validate against json schema
-    const validateJson = (data: Document<string>) => {
+    const validateJson = (data: Document) => {
         if (!isImportableDocument(data)) {
             return "Analysis and other document types cannot be imported at this time.";
         }
         return true;
     };
 
-    return <JsonImport<"model" | "diagram"> onImport={handleImport} validate={validateJson} />;
+    return <JsonImport onImport={handleImport} validate={validateJson} />;
 }

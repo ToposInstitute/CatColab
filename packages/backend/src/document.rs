@@ -214,9 +214,8 @@ pub struct NewDocSocketResponse {
     pub doc_json: Value,
 }
 
-/// A subset of user relevant information about a ref. Used for showing
-/// users information on a variety of refs without having to load whole
-/// refs.
+/// A subset of user relevant information about a ref. Used for showing users
+/// information on a variety of refs without having to load whole refs.
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 pub struct RefStub {
     pub name: String,

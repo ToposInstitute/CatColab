@@ -1,14 +1,14 @@
 import type { AutomergeUrl, Repo } from "@automerge/automerge-repo";
 import invariant from "tiny-invariant";
 
-import { type Analysis, type AnalysisType, type Document, currentVersion } from "catlog-wasm";
 import {
-    type Api,
-    type LiveDoc,
+    type Analysis,
+    type AnalysisType,
+    type Document,
     type StableRef,
-    getLiveDoc,
-    getLiveDocFromDocHandle,
-} from "../api";
+    currentVersion,
+} from "catlog-wasm";
+import { type Api, type LiveDoc, getLiveDoc, getLiveDocFromDocHandle } from "../api";
 import { type LiveDiagramDocument, getLiveDiagram, getLiveDiagramFromRepo } from "../diagram";
 import { type LiveModelDocument, getLiveModel, getLiveModelFromRepo } from "../model";
 import { newNotebook } from "../notebook";
