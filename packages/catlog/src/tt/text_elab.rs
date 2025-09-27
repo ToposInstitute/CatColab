@@ -51,9 +51,9 @@ impl<'a> TopElaborator<'a> {
             App2(L(_, Keyword(":=")), L(_, App2(L(_, Keyword(":")), head_n, annotn)), valn) => {
                 match head_n.ast0() {
                     App1(L(_, Var(name)), L(_, Tuple(args))) => {
-                        Some((text_seg(*name), Some(args.as_slice()), annotn, valn))
+                        Some((name_seg(*name), Some(args.as_slice()), annotn, valn))
                     }
-                    Var(name) => Some((text_seg(*name), None, annotn, valn)),
+                    Var(name) => Some((name_seg(*name), None, annotn, valn)),
                     _ => None,
                 }
             }
@@ -246,7 +246,7 @@ impl<'a> Elaborator<'a> {
         match n.ast0() {
             App2(L(_, Keyword(":")), L(_, Var(name)), ty_n) => {
                 let (ty_s, ty_v) = elab.ty(ty_n)?;
-                Some((text_seg(*name), label_seg(*name), ty_s, ty_v))
+                Some((name_seg(*name), label_seg(*name), ty_s, ty_v))
             }
             _ => elab.error("unexpected notation for binding"),
         }
@@ -272,7 +272,7 @@ impl<'a> Elaborator<'a> {
         let elab = self.enter(n.loc());
         match n.ast0() {
             App1(L(_, Keyword("Id")), L(_, Var(name))) => {
-                let qname = QualifiedName::single(text_seg(*name));
+                let qname = QualifiedName::single(name_seg(*name));
                 if elab.toplevel.theory.has_ob(&qname) {
                     Some((MorphismType(Path::Id(qname.clone())), qname.clone(), qname))
                 } else {
@@ -280,7 +280,7 @@ impl<'a> Elaborator<'a> {
                 }
             }
             Var(name) => {
-                let qname = QualifiedName::single(text_seg(*name));
+                let qname = QualifiedName::single(name_seg(*name));
                 let mt = Path::single(qname);
                 let theory = &elab.toplevel.theory;
                 if theory.has_proarrow(&mt) {
@@ -298,10 +298,10 @@ impl<'a> Elaborator<'a> {
     fn path(&mut self, n: &FNtn) -> Option<Vec<(NameSegment, LabelSegment)>> {
         let mut elab = self.enter(n.loc());
         match n.ast0() {
-            Field(f) => Some(vec![(text_seg(*f), label_seg(*f))]),
+            Field(f) => Some(vec![(name_seg(*f), label_seg(*f))]),
             App1(p_n, L(_, Field(f))) => {
                 let mut p = elab.path(p_n)?;
-                p.push((text_seg(*f), label_seg(*f)));
+                p.push((name_seg(*f), label_seg(*f)));
                 Some(p)
             }
             _ => elab.error("unexpected notation for path"),
@@ -329,7 +329,7 @@ impl<'a> Elaborator<'a> {
     fn ty(&mut self, n: &FNtn) -> Option<(TyS, TyV)> {
         let mut elab = self.enter(n.loc());
         match n.ast0() {
-            Var(name) => elab.lookup_ty(text_seg(*name)),
+            Var(name) => elab.lookup_ty(name_seg(*name)),
             Keyword("Unit") => Some((TyS::unit(), TyV::unit())),
             App1(L(_, Prim("sing")), tm_n) => {
                 let (tm_s, tm_v, ty_v) = elab.syn(tm_n)?;
@@ -351,13 +351,13 @@ impl<'a> Elaborator<'a> {
                 let mut field_ty0s = Vec::<(FieldName, (LabelSegment, Ty0))>::new();
                 let mut field_ty_vs = Vec::<(FieldName, (LabelSegment, TyV))>::new();
                 let mut failed = false;
-                let self_var = elab.intro(text_seg("self"), label_seg("self"), None).as_neu();
+                let self_var = elab.intro(name_seg("self"), label_seg("self"), None).as_neu();
                 let c = elab.checkpoint();
                 for field_n in field_ns.iter() {
                     elab.loc = Some(field_n.loc());
                     let Some((name, label, ty_n)) = (match field_n.ast0() {
                         App2(L(_, Keyword(":")), L(_, Var(name)), ty_n) => {
-                            Some((text_seg(*name), label_seg(*name), ty_n))
+                            Some((name_seg(*name), label_seg(*name), ty_n))
                         }
                         _ => elab.error("expected fields in the form <name> : <type>"),
                     }) else {
@@ -418,7 +418,7 @@ impl<'a> Elaborator<'a> {
 
     fn lookup_tm(&mut self, name: Ustr) -> Option<(TmS, TmV, TyV)> {
         let label = label_seg(name);
-        let name = text_seg(name);
+        let name = name_seg(name);
         if let Some((i, _, ty)) = self.ctx.lookup(name) {
             Some((
                 TmS::var(i, name, label),
@@ -448,7 +448,7 @@ impl<'a> Elaborator<'a> {
                     return elab.error("can only project from record type");
                 };
                 let label = label_seg(*f);
-                let f = text_seg(*f);
+                let f = name_seg(*f);
                 if !r.fields1.has(f) {
                     return elab.error(format!("no such field {f}"));
                 }
@@ -507,7 +507,7 @@ impl<'a> Elaborator<'a> {
                 ))
             }
             App1(L(_, Var(tv)), L(_, Tuple(args_n))) => {
-                let tv = text_seg(*tv);
+                let tv = name_seg(*tv);
                 let Some(TopDecl::Def(arg_tys_s, ret_ty_s, body_s)) = elab.toplevel.lookup(tv)
                 else {
                     return elab.error(format!("no such toplevel def {tv}"));
@@ -557,7 +557,7 @@ impl<'a> Elaborator<'a> {
                     elab.loc = Some(field_n.loc());
                     let tm_n = match field_n.ast0() {
                         App2(L(_, Keyword(":=")), L(_, Var(given_name)), field_val_n) => {
-                            if text_seg(*given_name) == *name {
+                            if name_seg(*given_name) == *name {
                                 field_val_n
                             } else {
                                 return elab.error(format!("unexpected field {given_name}"));

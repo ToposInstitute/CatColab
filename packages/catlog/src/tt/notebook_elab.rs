@@ -1,5 +1,5 @@
 //! Elaboration for frontend notebooks.
-use notebook_types::v1::{ModelJudgment, MorDecl, Notebook, Ob, ObDecl, ObType};
+use notebook_types::v1::{ModelJudgment, MorDecl, Ob, ObDecl, ObType};
 use uuid::Uuid;
 
 use crate::dbl::{VDblCategory, theory::DblTheory};
@@ -62,8 +62,10 @@ pub enum Error {
 
 /// An error along with its location (a cell in a notebook)
 pub struct LocatedError {
-    cell: Option<Uuid>,
-    content: Error,
+    /// The location of the error.
+    pub cell: Option<Uuid>,
+    /// The content of the error.
+    pub content: Error,
 }
 
 /// The current state of a notebook elaboration session.
@@ -135,7 +137,7 @@ impl<'a> Elaborator<'a> {
 
     fn ob_type(&mut self, ob_type: &ObType) -> Option<QualifiedName> {
         match &ob_type {
-            ObType::Basic(name) => Some(QualifiedName::single(text_seg(*name))),
+            ObType::Basic(name) => Some(QualifiedName::single(name_seg(*name))),
             ObType::Tabulator(_) => self.error(Error::TabulatorUnsupported),
             ObType::ModeApp { .. } => self.error(Error::ModalUnsupported),
         }
@@ -182,7 +184,7 @@ impl<'a> Elaborator<'a> {
     ) -> Option<(NameSegment, LabelSegment, TyS, TyV)> {
         let (mor_type, dom_ty, cod_ty) = match &mor_decl.mor_type {
             notebook_types::v1::MorType::Basic(name) => {
-                let name = QualifiedName::single(text_seg(*name));
+                let name = QualifiedName::single(name_seg(*name));
                 let mor_type = Path::single(name);
                 let dom_ty = self.toplevel.theory.src_type(&mor_type);
                 let cod_ty = self.toplevel.theory.tgt_type(&mor_type);
@@ -192,7 +194,7 @@ impl<'a> Elaborator<'a> {
                 let ob_type = self.ob_type(ob_type)?;
                 (MorphismType(Path::Id(ob_type.clone())), ob_type.clone(), ob_type)
             }
-            notebook_types::v1::MorType::Composite(mor_types) => {
+            notebook_types::v1::MorType::Composite(_) => {
                 todo!()
             }
             notebook_types::v1::MorType::ModeApp { .. } => {
@@ -229,14 +231,15 @@ impl<'a> Elaborator<'a> {
         ))
     }
 
-    fn notebook(&mut self, cells: &[(Uuid, &ModelJudgment)]) -> Option<(TyS, TyV)> {
+    /// Elaborate a notebook into a type.
+    pub fn notebook(&mut self, cells: &[(Uuid, &ModelJudgment)]) -> Option<(TyS, TyV)> {
         let mut field_ty0s = Vec::new();
         let mut field_ty_vs = Vec::new();
-        let self_var = self.intro(text_seg("self"), label_seg("self"), None).as_neu();
+        let self_var = self.intro(name_seg("self"), label_seg("self"), None).as_neu();
         let c = self.checkpoint();
         for (id, cell) in cells.iter() {
             self.current_cell = Some(*id);
-            let (name, label, ty_s, ty_v) = match cell {
+            let (name, label, _, ty_v) = match cell {
                 ModelJudgment::Object(ob_decl) => self.object_cell(ob_decl),
                 ModelJudgment::Morphism(mor_decl) => self.morphism_cell(mor_decl),
             }?;
@@ -260,7 +263,7 @@ impl<'a> Elaborator<'a> {
 
 #[cfg(test)]
 mod test {
-    use notebook_types::v1::{Document, ModelDocumentContent, ModelJudgment, Notebook};
+    use notebook_types::v1::ModelDocumentContent;
     use serde_json;
     use std::fmt::Write;
     use std::{fs, rc::Rc};

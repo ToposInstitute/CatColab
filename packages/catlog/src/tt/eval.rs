@@ -135,7 +135,7 @@ impl<'a> Evaluator<'a> {
 
     /// Bind a variable called "self" to `ty`
     pub fn bind_self(&self, ty: TyV) -> (TmN, Self) {
-        self.bind_neu(text_seg("self"), label_seg("self"), ty)
+        self.bind_neu(name_seg("self"), label_seg("self"), ty)
     }
 
     /// Produce type syntax from a type value.
