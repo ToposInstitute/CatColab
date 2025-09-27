@@ -237,7 +237,7 @@ impl<'a> Elaborator<'a> {
             v
         };
         self.ctx.env = self.ctx.env.snoc(v.clone());
-        self.ctx.scope.push((name, label, ty));
+        self.ctx.push_scope(name, label, ty);
         v
     }
 
@@ -371,7 +371,7 @@ impl<'a> Elaborator<'a> {
                     };
                     field_ty0s.push((name, (label, ty_v.ty0())));
                     field_ty_vs.push((name, (label, ty_v.clone())));
-                    elab.ctx.scope.push((name, label, Some(ty_v.clone())));
+                    elab.ctx.push_scope(name, label, Some(ty_v.clone()));
                     elab.ctx.env =
                         elab.ctx.env.snoc(TmV::Neu(TmN::proj(self_var.clone(), name, label), ty_v));
                 }
@@ -419,15 +419,7 @@ impl<'a> Elaborator<'a> {
     fn lookup_tm(&mut self, name: Ustr) -> Option<(TmS, TmV, TyV)> {
         let label = label_seg(name);
         let name = text_seg(name);
-        if let Some((i, (_, _, ty))) = self
-            .ctx
-            .scope
-            .iter()
-            .rev()
-            .enumerate()
-            .find(|(_, (vname, _, _))| *vname == name)
-        {
-            let i = i.into();
+        if let Some((i, _, ty)) = self.ctx.lookup(name) {
             Some((
                 TmS::var(i, name, label),
                 self.ctx.env.get(*i).unwrap().clone(),
