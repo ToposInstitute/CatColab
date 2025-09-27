@@ -7,15 +7,10 @@ import type {
     DiagramJudgment,
     Document,
     ModelDiagramValidationResult,
+    StableRef,
 } from "catlog-wasm";
 import { currentVersion, elaborateDiagram } from "catlog-wasm";
-import {
-    type Api,
-    type LiveDoc,
-    type StableRef,
-    getLiveDoc,
-    getLiveDocFromDocHandle,
-} from "../api";
+import { type Api, type LiveDoc, getLiveDoc, getLiveDocFromDocHandle } from "../api";
 import { type LiveModelDocument, getLiveModel, getLiveModelFromRepo } from "../model";
 import { NotebookUtils, newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";

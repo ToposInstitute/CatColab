@@ -2,8 +2,9 @@ import { useNavigate } from "@solidjs/router";
 import { Match, Show, Switch } from "solid-js";
 import invariant from "tiny-invariant";
 
+import type { StableRef } from "catlog-wasm";
 import { createAnalysis } from "../analysis/document";
-import { type StableRef, useApi } from "../api";
+import { useApi } from "../api";
 import { duplicateDocument } from "../api/duplicate_document";
 import { type LiveDiagramDocument, createDiagram } from "../diagram/document";
 import type { LiveModelDocument } from "../model/document";

@@ -7,8 +7,8 @@ use super::notebook::Notebook;
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
-/// This is the content of a model document. For legacy reasons, we reserve
-/// the name "ModelDocument" for `Document & { type: "model" }`.
+/// The content of a model document. For legacy reasons, we reserve the name
+/// `ModelDocument` for the type `Document & { type: "model" }`.
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct ModelDocumentContent {
     pub name: String,
