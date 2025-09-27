@@ -46,6 +46,12 @@ impl Display for NameSegment {
     }
 }
 
+/// Shorthand for constructing a label segment from something that can convert
+/// into a Ustr.
+pub fn name_seg(s: impl Into<Ustr>) -> NameSegment {
+    NameSegment::Text(s.into())
+}
+
 impl NameSegment {
     /// Serializes the segment into a string.
     pub fn serialize_string(&self) -> String {
@@ -267,6 +273,12 @@ pub enum LabelSegment {
 
     /// Integer index representing an anonymous entity.
     Index(usize),
+}
+
+/// Shorthand for constructing a label segment from something that can convert
+/// into a Ustr.
+pub fn label_seg(s: impl Into<Ustr>) -> LabelSegment {
+    LabelSegment::Text(s.into())
 }
 
 impl From<&str> for LabelSegment {
