@@ -36,9 +36,6 @@ export type LiveModelDocument = {
     /** Tag for use in tagged unions of document types. */
     type: "model";
 
-    /** The ref in the backend, if any, for which this is a live document. */
-    refId?: string;
-
     /** Live document with the model data. */
     liveDoc: LiveDoc<ModelDocument>;
 
@@ -161,8 +158,7 @@ export async function getLiveModel(
     theories: TheoryLibrary,
 ): Promise<LiveModelDocument> {
     const liveDoc = await getLiveDoc<ModelDocument>(api, refId, "model");
-    const liveModel = enlivenModelDocument(liveDoc, theories);
-    return { ...liveModel, refId };
+    return enlivenModelDocument(liveDoc, theories);
 }
 
 /** Get a model from an Automerge repo and make it "live" for editing.

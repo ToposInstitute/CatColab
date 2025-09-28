@@ -46,9 +46,6 @@ type BaseLiveAnalysisDocument = {
 
     /** Type of document that this analysis is of. */
     analysisType: AnalysisType;
-
-    /** The ref in the backend, if any, for which this is a live document. */
-    refId?: string;
 };
 
 /** A model analysis document "live" for editing. */
@@ -101,7 +98,6 @@ export async function getLiveAnalysis(
         return {
             type: "analysis",
             analysisType: "model",
-            refId,
             liveDoc: liveDoc as LiveDoc<ModelAnalysisDocument>,
             liveModel,
         };
@@ -110,7 +106,6 @@ export async function getLiveAnalysis(
         return {
             type: "analysis",
             analysisType: "diagram",
-            refId,
             liveDoc: liveDoc as LiveDoc<DiagramAnalysisDocument>,
             liveDiagram,
         };

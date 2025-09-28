@@ -61,7 +61,7 @@ export function ModelDocumentEditor(props: {
         <div class="growable-container">
             <Toolbar>
                 <DocumentMenu liveDocument={props.liveModel} />
-                <DocumentBreadcrumbs document={props.liveModel} />
+                <DocumentBreadcrumbs document={props.liveModel.liveDoc} />
                 <span class="filler" />
                 <Show when={props.liveModel.liveDoc.docRef}>
                     {(docRef) => (

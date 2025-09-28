@@ -36,9 +36,6 @@ export type LiveDiagramDocument = {
     /** Tag for use in tagged unions of document types. */
     type: "diagram";
 
-    /** The ref in the backend, if any, for which this is a live document. */
-    refId?: string;
-
     /** Live document containing the diagram data. */
     liveDoc: LiveDoc<DiagramDocument>;
 
@@ -152,8 +149,7 @@ export async function getLiveDiagram(
     const modelRefId = liveDoc.doc.diagramIn._id;
 
     const liveModel = await getLiveModel(modelRefId, api, theories);
-    const liveDiagram = enlivenDiagramDocument(liveDoc, liveModel);
-    return { ...liveDiagram, refId };
+    return enlivenDiagramDocument(liveDoc, liveModel);
 }
 
 /** Get a diagram from an Automerge repo and make it "live" for editing.

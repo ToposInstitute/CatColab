@@ -21,7 +21,7 @@ export type Api = {
 A live document can be used in reactive contexts and is connected to an
 Automerge document handle.
  */
-export type LiveDoc<Doc extends Document> = {
+export type LiveDoc<Doc extends Document = Document> = {
     /** The document data, suitable for use in reactive contexts.
 
     This data should never be mutated directly. Instead, call `changeDoc` or, if

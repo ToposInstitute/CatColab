@@ -27,7 +27,7 @@ import Network from "lucide-solid/icons/network";
 
 /** Hamburger menu for any model or diagram document. */
 export function DocumentMenu(props: {
-    liveDocument: LiveDiagramDocument | LiveModelDocument;
+    liveDocument: LiveModelDocument | LiveDiagramDocument;
 }) {
     const api = useApi();
     const navigate = useNavigate();
@@ -41,9 +41,9 @@ export function DocumentMenu(props: {
     const onNewDiagram = async () => {
         let modelRefId: string | undefined;
         if (props.liveDocument.type === "diagram") {
-            modelRefId = props.liveDocument.liveModel.refId;
+            modelRefId = props.liveDocument.liveModel.liveDoc.docRef?.refId;
         } else if (props.liveDocument.type === "model") {
-            modelRefId = props.liveDocument.refId;
+            modelRefId = props.liveDocument.liveDoc.docRef?.refId;
         }
         invariant(modelRefId, "To create diagram, parent model should have a ref ID");
 
@@ -52,7 +52,7 @@ export function DocumentMenu(props: {
     };
 
     const onNewAnalysis = async () => {
-        const refId = props.liveDocument.refId;
+        const refId = props.liveDocument.liveDoc.docRef?.refId;
         invariant(refId, "To create analysis, parent document should have aa ref ID");
 
         const newRef = await createAnalysis(api, props.liveDocument.type, unversionedRef(refId));
