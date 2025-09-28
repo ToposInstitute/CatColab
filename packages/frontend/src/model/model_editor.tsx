@@ -63,11 +63,15 @@ export function ModelDocumentEditor(props: {
                 <DocumentMenu liveDocument={props.liveModel} />
                 <DocumentBreadcrumbs document={props.liveModel} />
                 <span class="filler" />
-                <PermissionsButton
-                    permissions={props.liveModel.liveDoc.permissions}
-                    refId={props.liveModel.refId}
-                    liveDocument={props.liveModel}
-                />
+                <Show when={props.liveModel.liveDoc.docRef}>
+                    {(docRef) => (
+                        <PermissionsButton
+                            permissions={docRef().permissions}
+                            refId={docRef().refId}
+                            liveDocument={props.liveModel}
+                        />
+                    )}
+                </Show>
             </Toolbar>
             <ModelPane liveModel={props.liveModel} />
         </div>

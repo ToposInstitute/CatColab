@@ -60,11 +60,15 @@ export function DiagramDocumentEditor(props: {
                 <DocumentMenu liveDocument={props.liveDiagram} />
                 <DocumentBreadcrumbs document={props.liveDiagram} />
                 <span class="filler" />
-                <PermissionsButton
-                    permissions={props.liveDiagram.liveDoc.permissions}
-                    refId={props.liveDiagram.refId}
-                    liveDocument={props.liveDiagram}
-                />
+                <Show when={props.liveDiagram.liveDoc.docRef}>
+                    {(docRef) => (
+                        <PermissionsButton
+                            permissions={docRef().permissions}
+                            refId={docRef().refId}
+                            liveDocument={props.liveDiagram}
+                        />
+                    )}
+                </Show>
             </Toolbar>
             <DiagramPane liveDiagram={props.liveDiagram} />
         </div>

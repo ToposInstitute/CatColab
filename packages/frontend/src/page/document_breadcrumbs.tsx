@@ -1,18 +1,18 @@
 import { For, Show, createResource } from "solid-js";
 import invariant from "tiny-invariant";
 
-import type { AnalysisDocument, LiveAnalysisDocument } from "../analysis";
+import type { Document } from "catlog-wasm";
+import type { LiveAnalysisDocument } from "../analysis";
 import { getLiveDoc, useApi } from "../api";
-import type { DiagramDocument, LiveDiagramDocument } from "../diagram";
-import type { LiveModelDocument, ModelDocument } from "../model";
+import type { LiveDiagramDocument } from "../diagram";
+import type { LiveModelDocument } from "../model";
 import { assertExhaustive } from "../util/assert_exhaustive";
 import "./document_breadcrumbs.css";
 
 // FIXME: These unions should be defined elsewhere.
-type AnyDocument = ModelDocument | DiagramDocument | AnalysisDocument;
 type AnyLiveDocument = LiveModelDocument | LiveDiagramDocument | LiveAnalysisDocument;
 type AnyDocumentWithRefId = {
-    document: AnyDocument;
+    document: Document;
     refId: string;
 };
 
@@ -39,7 +39,7 @@ export function DocumentBreadcrumbs(props: {
     );
 }
 
-export function getParentRefId(document: AnyDocument): string | null {
+export function getParentRefId(document: Document): string | null {
     switch (document.type) {
         case "model":
             return null;
@@ -71,7 +71,7 @@ async function getDocumentChain(document: AnyLiveDocument): Promise<AnyDocumentW
         // reasonable to hope that either the parents are already in the local automerge repo, or that
         // they will be needed by the app at some point in the near future. The alternative is picking
         // apart a JSON blob in postgres, and that sounds neither fun nor maintainable.
-        const parentDocument = await getLiveDoc<AnyDocument>(api, parentRefId);
+        const parentDocument = await getLiveDoc<Document>(api, parentRefId);
         documentChain.unshift({
             document: parentDocument.doc,
             refId: parentRefId,
