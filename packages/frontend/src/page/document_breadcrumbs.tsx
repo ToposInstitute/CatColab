@@ -7,9 +7,9 @@ import { assertExhaustive } from "../util/assert_exhaustive";
 import "./document_breadcrumbs.css";
 
 export function DocumentBreadcrumbs(props: {
-    document: LiveDoc;
+    liveDoc: LiveDoc;
 }) {
-    const [documentChain] = createResource(() => props.document, getDocumentChain);
+    const [documentChain] = createResource(() => props.liveDoc, getDocumentChain);
 
     return (
         <div class="breadcrumbs-wrapper">
