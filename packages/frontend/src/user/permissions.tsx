@@ -15,11 +15,9 @@ import { createStore, produce } from "solid-js/store";
 import invariant from "tiny-invariant";
 
 import type { NewPermissions, PermissionLevel, Permissions, UserSummary } from "catcolab-api";
-import { useApi } from "../api";
-import { duplicateDocument } from "../api/duplicate_document";
+import type { Document } from "catlog-wasm";
+import { type LiveDoc, duplicateDoc, useApi } from "../api";
 import { Dialog, FormGroup, IconButton, SelectField, Warning } from "../components";
-import type { LiveDiagramDocument } from "../diagram/document";
-import type { LiveModelDocument } from "../model/document";
 import { deepCopyJSON } from "../util/deepcopy";
 import { Login } from "./login";
 import { NameUser, UserInput } from "./username";
@@ -200,30 +198,34 @@ export function PermissionsForm(props: {
     );
 }
 
-/** Toolbar button summarizing the document's permissions.
- */
-export function PermissionsButton(props: {
-    permissions: Permissions;
-    refId?: string;
-    liveDocument: LiveDiagramDocument | LiveModelDocument;
-}) {
-    const anyone = () => props.permissions.anyone;
-    const user = () => props.permissions.user;
-
-    return (
-        <Switch fallback={<EditorPermissionsButton permissions={props.permissions} />}>
-            <Match when={anyone() === "Own"}>
-                <AnonPermissionsButton />
-            </Match>
-            <Match when={user() === "Own"}>
-                <OwnerPermissionsButton refId={props.refId} />
-            </Match>
-            <Match when={[anyone(), user()].every((level) => level === null || level === "Read")}>
-                <ReadonlyPermissionsButton liveDocument={props.liveDocument} />
-            </Match>
-        </Switch>
-    );
-}
+/** Toolbar button summarizing the document's permissions. */
+export const PermissionsButton = (props: {
+    liveDoc: LiveDoc;
+}) => (
+    <Show when={props.liveDoc.docRef}>
+        {(docRef) => {
+            const anyone = () => docRef().permissions.anyone;
+            const user = () => docRef().permissions.user;
+            return (
+                <Switch fallback={<EditorPermissionsButton permissions={docRef().permissions} />}>
+                    <Match when={anyone() === "Own"}>
+                        <AnonPermissionsButton />
+                    </Match>
+                    <Match when={user() === "Own"}>
+                        <OwnerPermissionsButton refId={docRef().refId} />
+                    </Match>
+                    <Match
+                        when={[anyone(), user()].every(
+                            (level) => level === null || level === "Read",
+                        )}
+                    >
+                        <ReadonlyPermissionsButton doc={props.liveDoc.doc} />
+                    </Match>
+                </Switch>
+            );
+        }}
+    </Show>
+);
 
 function AnonPermissionsButton() {
     const firebaseApp = useFirebaseApp();
@@ -279,15 +281,15 @@ const AnonPermissionsTrigger = (props: ComponentProps<"button">) => {
 };
 
 const ReadonlyPermissionsButton = (props: {
-    liveDocument: LiveDiagramDocument | LiveModelDocument;
+    doc: Document;
 }) => {
     const [open, setOpen] = createSignal(false);
     const api = useApi();
     const navigate = useNavigate();
 
     const onDuplicateDocument = async () => {
-        const newRef = await duplicateDocument(api, props.liveDocument);
-        navigate(`/${props.liveDocument.type}/${newRef}`);
+        const newRef = await duplicateDoc(api, props.doc);
+        navigate(`/${props.doc.type}/${newRef}`);
     };
 
     return (
@@ -307,7 +309,7 @@ const ReadonlyPermissionsButton = (props: {
                     <span>
                         <button type="button" class="button utility" onClick={onDuplicateDocument}>
                             <Copy />
-                            Duplicate {props.liveDocument.type}
+                            Duplicate {props.doc.type}
                         </button>
                     </span>
                     <span class="duplicate-button-height-text"> to make permanent changes.</span>

@@ -1,6 +1,5 @@
 import type { AutomergeUrl, Repo } from "@automerge/automerge-repo";
 import { type Accessor, createMemo } from "solid-js";
-import invariant from "tiny-invariant";
 
 import type {
     DblModelDiagram,
@@ -10,11 +9,10 @@ import type {
     StableRef,
 } from "catlog-wasm";
 import { currentVersion, elaborateDiagram } from "catlog-wasm";
-import { type Api, type LiveDoc, getLiveDoc, getLiveDocFromDocHandle } from "../api";
+import { type Api, type LiveDoc, createDoc, getLiveDoc, getLiveDocFromDocHandle } from "../api";
 import { type LiveModelDocument, getLiveModel, getLiveModelFromRepo } from "../model";
 import { NotebookUtils, newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
-import type { InterfaceToType } from "../util/types";
 
 /** A document defining a diagram in a model. */
 export type DiagramDocument = Document & { type: "diagram" };
@@ -35,9 +33,6 @@ export const newDiagramDocument = (modelRef: StableRef): DiagramDocument => ({
 export type LiveDiagramDocument = {
     /** Tag for use in tagged unions of document types. */
     type: "diagram";
-
-    /** The ref in the backend, if any, for which this is a live document. */
-    refId?: string;
 
     /** Live document containing the diagram data. */
     liveDoc: LiveDoc<DiagramDocument>;
@@ -132,14 +127,7 @@ function enlivenDiagramDocument(
 /** Create a new, empty diagram in the backend. */
 export function createDiagram(api: Api, inModel: StableRef): Promise<string> {
     const init = newDiagramDocument(inModel);
-    return createDiagramFromDocument(api, init);
-}
-
-/** Create a new diagram in the backend from initial data. */
-export async function createDiagramFromDocument(api: Api, init: DiagramDocument): Promise<string> {
-    const result = await api.rpc.new_ref.mutate(init as InterfaceToType<DiagramDocument>);
-    invariant(result.tag === "Ok", "Failed to create a new diagram");
-    return result.content;
+    return createDoc(api, init);
 }
 
 /** Retrieve a diagram from the backend and make it "live" for editing. */
@@ -152,8 +140,7 @@ export async function getLiveDiagram(
     const modelRefId = liveDoc.doc.diagramIn._id;
 
     const liveModel = await getLiveModel(modelRefId, api, theories);
-    const liveDiagram = enlivenDiagramDocument(liveDoc, liveModel);
-    return { ...liveDiagram, refId };
+    return enlivenDiagramDocument(liveDoc, liveModel);
 }
 
 /** Get a diagram from an Automerge repo and make it "live" for editing.

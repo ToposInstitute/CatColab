@@ -61,13 +61,9 @@ export function ModelDocumentEditor(props: {
         <div class="growable-container">
             <Toolbar>
                 <DocumentMenu liveDocument={props.liveModel} />
-                <DocumentBreadcrumbs document={props.liveModel} />
+                <DocumentBreadcrumbs liveDoc={props.liveModel.liveDoc} />
                 <span class="filler" />
-                <PermissionsButton
-                    permissions={props.liveModel.liveDoc.permissions}
-                    refId={props.liveModel.refId}
-                    liveDocument={props.liveModel}
-                />
+                <PermissionsButton liveDoc={props.liveModel.liveDoc} />
             </Toolbar>
             <ModelPane liveModel={props.liveModel} />
         </div>

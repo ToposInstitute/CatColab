@@ -100,7 +100,7 @@ export function AnalysisDocumentEditor(props: {
                         >
                             <Toolbar>
                                 <AnalysisMenu liveAnalysis={props.liveAnalysis} />
-                                <DocumentBreadcrumbs document={props.liveAnalysis} />
+                                <DocumentBreadcrumbs liveDoc={props.liveAnalysis.liveDoc} />
                                 <span class="filler" />
                                 <IconButton
                                     onClick={toggleSidePanel}

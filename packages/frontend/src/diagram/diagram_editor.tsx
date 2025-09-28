@@ -58,13 +58,9 @@ export function DiagramDocumentEditor(props: {
         <div class="growable-container">
             <Toolbar>
                 <DocumentMenu liveDocument={props.liveDiagram} />
-                <DocumentBreadcrumbs document={props.liveDiagram} />
+                <DocumentBreadcrumbs liveDoc={props.liveDiagram.liveDoc} />
                 <span class="filler" />
-                <PermissionsButton
-                    permissions={props.liveDiagram.liveDoc.permissions}
-                    refId={props.liveDiagram.refId}
-                    liveDocument={props.liveDiagram}
-                />
+                <PermissionsButton liveDoc={props.liveDiagram.liveDoc} />
             </Toolbar>
             <DiagramPane liveDiagram={props.liveDiagram} />
         </div>
@@ -95,7 +91,7 @@ export function DiagramPane(props: {
                 <div class="instance-of">
                     <div class="name">{liveModel().theory()?.instanceOfName}</div>
                     <div class="model">
-                        <A href={`/model/${liveModel().refId}`}>
+                        <A href={`/model/${liveModel().liveDoc.docRef?.refId}`}>
                             {liveModel().liveDoc.doc.name || "Untitled"}
                         </A>
                     </div>

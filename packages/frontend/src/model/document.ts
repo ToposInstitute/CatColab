@@ -1,6 +1,5 @@
 import type { AutomergeUrl, Repo } from "@automerge/automerge-repo";
 import { type Accessor, createMemo, createResource } from "solid-js";
-import invariant from "tiny-invariant";
 
 import {
     type DblModel,
@@ -10,11 +9,10 @@ import {
     currentVersion,
     elaborateModel,
 } from "catlog-wasm";
-import { type Api, type LiveDoc, getLiveDoc, getLiveDocFromDocHandle } from "../api";
+import { type Api, type LiveDoc, createDoc, getLiveDoc, getLiveDocFromDocHandle } from "../api";
 import { NotebookUtils, newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
 import type { Theory } from "../theory";
-import type { InterfaceToType } from "../util/types";
 
 /** A document defining a model. */
 export type ModelDocument = Document & { type: "model" };
@@ -35,9 +33,6 @@ Contains a live document for the model, plus various memos of derived data.
 export type LiveModelDocument = {
     /** Tag for use in tagged unions of document types. */
     type: "model";
-
-    /** The ref in the backend, if any, for which this is a live document. */
-    refId?: string;
 
     /** Live document with the model data. */
     liveDoc: LiveDoc<ModelDocument>;
@@ -147,11 +142,7 @@ export async function createModel(
     } else {
         init = initOrTheoryId;
     }
-
-    const result = await api.rpc.new_ref.mutate(init as InterfaceToType<ModelDocument>);
-    invariant(result.tag === "Ok", "Failed to create model");
-
-    return result.content;
+    return createDoc(api, init);
 }
 
 /** Retrieve a model from the backend and make it "live" for editing. */
@@ -161,8 +152,7 @@ export async function getLiveModel(
     theories: TheoryLibrary,
 ): Promise<LiveModelDocument> {
     const liveDoc = await getLiveDoc<ModelDocument>(api, refId, "model");
-    const liveModel = enlivenModelDocument(liveDoc, theories);
-    return { ...liveModel, refId };
+    return enlivenModelDocument(liveDoc, theories);
 }
 
 /** Get a model from an Automerge repo and make it "live" for editing.
