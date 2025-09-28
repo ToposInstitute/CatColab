@@ -1,6 +1,5 @@
 import type { AutomergeUrl, Repo } from "@automerge/automerge-repo";
 import { type Accessor, createMemo, createResource } from "solid-js";
-import invariant from "tiny-invariant";
 
 import {
     type DblModel,
@@ -10,11 +9,10 @@ import {
     currentVersion,
     elaborateModel,
 } from "catlog-wasm";
-import { type Api, type LiveDoc, getLiveDoc, getLiveDocFromDocHandle } from "../api";
+import { type Api, type LiveDoc, createDoc, getLiveDoc, getLiveDocFromDocHandle } from "../api";
 import { NotebookUtils, newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../stdlib";
 import type { Theory } from "../theory";
-import type { InterfaceToType } from "../util/types";
 
 /** A document defining a model. */
 export type ModelDocument = Document & { type: "model" };
@@ -144,11 +142,7 @@ export async function createModel(
     } else {
         init = initOrTheoryId;
     }
-
-    const result = await api.rpc.new_ref.mutate(init as InterfaceToType<ModelDocument>);
-    invariant(result.tag === "Ok", "Failed to create model");
-
-    return result.content;
+    return createDoc(api, init);
 }
 
 /** Retrieve a model from the backend and make it "live" for editing. */

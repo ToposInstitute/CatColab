@@ -13,6 +13,7 @@ import * as uuid from "uuid";
 
 import { type Document, migrateDocument } from "catlog-wasm";
 import { PermissionsError } from "../util/errors";
+import type { InterfaceToType } from "../util/types";
 import type { Api, LiveDoc } from "./types";
 
 /** An Automerge repo with no networking, used for read-only documents. */
@@ -96,6 +97,27 @@ export function getLiveDocFromDocHandle<Doc extends Document>(
     const changeDoc = (f: ChangeFn<Doc>) => docHandle.change(f);
 
     return { doc, changeDoc, docHandle };
+}
+
+/** Create a new document in the backend, returning its ref ID. */
+export async function createDoc(api: Api, init: Document): Promise<string> {
+    const result = await api.rpc.new_ref.mutate(init as InterfaceToType<Document>);
+    invariant(result.tag === "Ok", `Failed to create a new ${init.type}`);
+
+    return result.content;
+}
+
+/** Duplicate a document in the backend, returning the new ref ID. */
+export async function duplicateDoc(api: Api, doc: Document): Promise<string> {
+    const init: Document = {
+        ...doc,
+        name: `${doc.name} (copy)`,
+    };
+
+    const result = await api.rpc.new_ref.mutate(init as InterfaceToType<Document>);
+    invariant(result.tag === "Ok", `Failed to duplicate the ${doc.type}`);
+
+    return result.content;
 }
 
 /** Create a Solid Store that tracks an Automerge document. */

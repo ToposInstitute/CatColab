@@ -4,8 +4,7 @@ import invariant from "tiny-invariant";
 
 import type { StableRef } from "catlog-wasm";
 import { createAnalysis } from "../analysis/document";
-import { useApi } from "../api";
-import { duplicateDocument } from "../api/duplicate_document";
+import { duplicateDoc, useApi } from "../api";
 import { type LiveDiagramDocument, createDiagram } from "../diagram/document";
 import type { LiveModelDocument } from "../model/document";
 import {
@@ -60,7 +59,7 @@ export function DocumentMenu(props: {
     };
 
     const onDuplicateDocument = async () => {
-        const newRef = await duplicateDocument(api, props.liveDocument);
+        const newRef = await duplicateDoc(api, props.liveDocument.liveDoc.doc);
         navigate(`/${props.liveDocument.type}/${newRef}`);
     };
 

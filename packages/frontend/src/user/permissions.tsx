@@ -15,8 +15,7 @@ import { createStore, produce } from "solid-js/store";
 import invariant from "tiny-invariant";
 
 import type { NewPermissions, PermissionLevel, Permissions, UserSummary } from "catcolab-api";
-import { useApi } from "../api";
-import { duplicateDocument } from "../api/duplicate_document";
+import { duplicateDoc, useApi } from "../api";
 import { Dialog, FormGroup, IconButton, SelectField, Warning } from "../components";
 import type { LiveDiagramDocument } from "../diagram/document";
 import type { LiveModelDocument } from "../model/document";
@@ -286,7 +285,7 @@ const ReadonlyPermissionsButton = (props: {
     const navigate = useNavigate();
 
     const onDuplicateDocument = async () => {
-        const newRef = await duplicateDocument(api, props.liveDocument);
+        const newRef = await duplicateDoc(api, props.liveDocument.liveDoc.doc);
         navigate(`/${props.liveDocument.type}/${newRef}`);
     };
 
