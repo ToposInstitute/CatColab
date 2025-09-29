@@ -36,7 +36,7 @@ import {
     toggleOrderedList,
     turnSelectionIntoBlockquote,
 } from "./commands";
-import { linkEditorPlugin } from "./link_editor";
+import { getLinkAtPos, linkEditorPlugin } from "./link_editor";
 import { type CustomSchema, proseMirrorAutomergeInit } from "./schema";
 import { activeHeading, initPlaceholderPlugin, isMarkActive } from "./utils";
 
@@ -186,16 +186,31 @@ export const RichTextEditor = (
                     setEditorFocused(false);
                     return false;
                 },
-                click(_view, event) {
-                    const a = (event.target as Element)?.closest?.(
-                        "a[href]",
-                    ) as HTMLAnchorElement | null;
-                    if (!a || event.metaKey || event.ctrlKey) {
+                mousedown: (view, event) => {
+                    if (
+                        event.button !== 0 ||
+                        event.metaKey ||
+                        event.ctrlKey ||
+                        event.shiftKey ||
+                        event.altKey
+                    ) {
                         return false;
                     }
 
-                    event.preventDefault();
-                    window.open(a.href, "_blank", "noopener,noreferrer"); // new tab
+                    const posInfo = view.posAtCoords({ left: event.clientX, top: event.clientY });
+                    if (!posInfo) {
+                        return;
+                    }
+
+                    const link = getLinkAtPos(view, posInfo.pos);
+                    if (!link) {
+                        return false;
+                    }
+
+                    if (link.href) {
+                        window.open(link.href, "_blank", "noopener,noreferrer");
+                    }
+
                     return true;
                 },
             },
