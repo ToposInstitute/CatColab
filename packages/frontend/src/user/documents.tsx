@@ -7,12 +7,12 @@ import { BrandedToolbar } from "../page";
 import { LoginGate } from "./login";
 import "./documents.css";
 import { useNavigate } from "@solidjs/router";
-import { Spinner } from "../components/spinner";
 import ChartSpline from "lucide-solid/icons/chart-spline";
 import File from "lucide-solid/icons/file";
 import UploadIcon from "lucide-solid/icons/upload";
-import { IconButton } from "../components";
 import invariant from "tiny-invariant";
+import { IconButton } from "../components";
+import { Spinner } from "../components/spinner";
 
 export default function UserDocuments() {
     return (
@@ -34,7 +34,7 @@ function DocumentsSearch() {
         const result = await api.rpc.get_active_user_profile.query();
 
         invariant(result.tag === "Ok");
-        result.content?.username && localStorage.setItem("username", result.content.username)
+        result.content?.username && localStorage.setItem("username", result.content.username);
         return result.content;
     });
     const [searchQuery, setSearchQuery] = createSignal<string>("");
@@ -54,9 +54,10 @@ function DocumentsSearch() {
     const [pageData] = createResource(
         () => [debouncedQuery(), page(), showOwnedOnlyDocument()] as const,
         async ([debouncedQueryValue, pageValue, showOwnedOnlyDocumentValue]) => {
-
             const results = await api.rpc.search_ref_stubs.query({
-                ownerUsernameQuery: showOwnedOnlyDocumentValue ? localStorage.getItem("username") : null,
+                ownerUsernameQuery: showOwnedOnlyDocumentValue
+                    ? localStorage.getItem("username")
+                    : null,
                 refNameQuery: debouncedQueryValue,
                 includePublicDocuments: false,
                 searcherMinLevel: null,
@@ -68,12 +69,12 @@ function DocumentsSearch() {
         },
         {
             deferStream: true,
-        }
+        },
     );
 
     onMount(() => {
         setDebouncedQuery(""); // Trigger fetch on page load
-        currentProfile()
+        currentProfile();
     });
 
     return (
@@ -96,7 +97,6 @@ function DocumentsSearch() {
                     Show only mine
                 </label>
             </div>
-
 
             <h3>My Documents</h3>
             <div class="ref-table-outer">
@@ -229,8 +229,12 @@ function RefStubRow(props: { stub: RefStub }) {
 
     return (
         <tr class="ref-stub-row" onClick={handleClick}>
-            <td class=" tooltip" data-tooltip={props.stub.typeName}><DocumentIconType typeName={props.stub.typeName}></DocumentIconType></td>
-            <td class=" tooltip" data-tooltip={props.stub.typeName}>{props.stub.name}</td>
+            <td class=" tooltip" data-tooltip={props.stub.typeName}>
+                <DocumentIconType typeName={props.stub.typeName} />
+            </td>
+            <td class=" tooltip" data-tooltip={props.stub.typeName}>
+                {props.stub.name}
+            </td>
             <td>{ownerName}</td>
             <td>{props.stub.permissionLevel}</td>
             <td>
@@ -245,7 +249,6 @@ function RefStubRow(props: { stub: RefStub }) {
 }
 
 function DocumentIconType(props: { typeName?: string }) {
-
     return (
         <IconButton tooltip={props.typeName ?? "unknown"}>
             <Switch fallback={props.typeName}>

@@ -107,3 +107,26 @@
 .ref-table .spinner {
     display: block;
 }
+
+.search-form {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.search-input {
+    flex: 1;
+}
+
+.show-only-mine {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+.show-only-mine input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+}
