@@ -1,0 +1,44 @@
+{
+    "name": "frontend-gaios",
+    "version": "0.0.1",
+    "description": "version of catcolab that can run in GAIOS",
+    "type": "module",
+    "main": "src/index.ts",
+    "exports": {
+        ".": "./dist/index.js"
+    },
+    "scripts": {
+        "build": "vite build",
+        "push": "pnpm build && patchwork push",
+        "format": "biome format --write",
+        "lint": "biome lint --write && biome check --write",
+        "watch": "nodemon --watch src -e js,tsx,ts,tsx,css,json --exec 'pnpm build && pnpm push'"
+    },
+    "keywords": [],
+    "author": "Ink & Switch",
+    "dependencies": {
+        "@automerge/automerge": "^3.1.1",
+        "@automerge/automerge-repo": "^2.2.0",
+        "@automerge/automerge-repo-react-hooks": "^2.2.0",
+        "@patchwork/context": "github:inkandswitch/context",
+        "catlog-wasm": "link:../catlog-wasm/dist/pkg-browser",
+        "react": "^18.3.1",
+        "react-dom": "^18.3.1",
+        "solid-js": "^1.9.7",
+        "uuid": "^11.0.3"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "^1.9.3",
+        "@types/react": "^18.3.3",
+        "@types/uuid": "^10.0.0",
+        "@vitejs/plugin-react": "^4.3.1",
+        "autoprefixer": "^10.4.20",
+        "nodemon": "^3.1.9",
+        "typescript": "^5.2.2",
+        "vite": "^5.3.4",
+        "vite-plugin-css-injected-by-js": "^3.5.2",
+        "vite-plugin-solid": "^2.10.2",
+        "vite-plugin-top-level-await": "^1.4.2",
+        "vite-plugin-wasm": "^3.3.0"
+    }
+}
