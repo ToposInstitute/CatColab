@@ -20,7 +20,11 @@ import { HelpAnalysisById } from "../logic_help_detail"
 <HelpAnalysisById theory={props.theory} analysisId="diagram"/>
 
 <HelpAnalysisById theory={props.theory} analysisId="subreachability">
-**TO-DO**
+A **tokening** of a Petri net assigns some number of tokens to each place. A transition can **fire** by removing a token from each of its inputs and adding a token to each of its outputs. Given an initial tokening, we are concerned with all of the possible tokenings that can be arrived at via some sequence of transitions firing. This is usually infinite. Sometimes we care about a particular tokening as "forbidden": we care about confirming that no sequence of transitions firing could ever reach state for which includes the forbidden state.
+
+This analysis shows a ❌ if there does exist any reachable tokening from the given initial one which is greater or equal to the given forbidden one, and shows a ✅ otherwise.
+
+*Note:* we are *not* checking that the forbidden state is reached exactly, just whether *some* state which is strictly larger than the forbidden state can be reached.
 </HelpAnalysisById>
 
 <HelpAnalysisById theory={props.theory} analysisId="mass-action">
