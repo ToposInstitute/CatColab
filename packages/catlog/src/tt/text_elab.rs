@@ -246,7 +246,7 @@ impl<'a> Elaborator<'a> {
         }
     }
 
-    fn dbl_theory<'b>(&'b self) -> &'b DiscreteDblTheory {
+    fn dbl_theory(&self) -> &DiscreteDblTheory {
         &self.theory.definition
     }
 
