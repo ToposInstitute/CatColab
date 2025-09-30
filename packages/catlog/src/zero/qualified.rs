@@ -46,6 +46,12 @@ impl Display for NameSegment {
     }
 }
 
+/// Shorthand for constructing a label segment from something that can convert
+/// into a Ustr.
+pub fn name_seg(s: impl Into<Ustr>) -> NameSegment {
+    NameSegment::Text(s.into())
+}
+
 impl NameSegment {
     /// Serializes the segment into a string.
     pub fn serialize_string(&self) -> String {
@@ -269,6 +275,12 @@ pub enum LabelSegment {
     Index(usize),
 }
 
+/// Shorthand for constructing a label segment from something that can convert
+/// into a Ustr.
+pub fn label_seg(s: impl Into<Ustr>) -> LabelSegment {
+    LabelSegment::Text(s.into())
+}
+
 impl From<&str> for LabelSegment {
     fn from(label: &str) -> Self {
         Self::Text(label.into())
@@ -345,6 +357,13 @@ impl QualifiedLabel {
     /// Iterates over the segments of the qualified label.
     pub fn segments(&self) -> impl Iterator<Item = &LabelSegment> {
         self.0.iter()
+    }
+
+    /// Add another segment onto the end
+    pub fn snoc(&self, segment: LabelSegment) -> Self {
+        let mut segments = self.0.clone();
+        segments.push(segment);
+        Self(segments)
     }
 }
 
