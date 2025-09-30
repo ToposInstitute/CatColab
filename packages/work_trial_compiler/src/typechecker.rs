@@ -1,50 +1,51 @@
 //! Type checker
 //! support uni type checking
+//! 
+//!  extended type system (beyond length of arguments)
+//! Base types: "int", "str", "bool", "X", "Y"
+//! when declare variable x, it expects type of form Product(Vec<Typ>)
+//!     e.g. ["int"], ["int", "a"]
+//! when declare function f, it expects type of form FuncType(Vec<Typ>, Vec<Typ>)
+//!     e.g. ["int", "int"] -> ["bool"]
+//!     e.g. [FuncType[["int", "int"] -> ["bool"]]] -> ["bool"]
+//! 
+//! there's a caveat to use the type system, and following type checker potentially
+//! suffered from this, do we expect ["bool"] same as "bool"?
+//! To handle this:
+//! 
+//! solution 1: 
+//! manually implement type equal instead of derived Eq to descently handle this
+//! 
+//! solution 2 (we go with this):
+//! we should always store simplies form of a type in environment, e.g. no [[[["bool"]]]]
+//! (based on which I should write more tests in tests/test_typecheck.rs)
 
 use core::fmt;
 use std::collections::HashMap;
 use crate::ast::Expr;
 
-/// extended type system (beyond length of arguments)
-/// Base types: "int", "str", "bool", "X", "Y"
-/// when declare variable x, it expects type of form Product(Vec<Typ>)
-///     e.g. ["int"], ["int", "a"]
-/// when declare function f, it expects type of form FuncType(Vec<Typ>, Vec<Typ>)
-///     e.g. ["int", "int"] -> ["bool"]
-///     e.g. [FuncType[["int", "int"] -> ["bool"]]] -> ["bool"]
-/// 
-/// there's a caveat to use the type system, and following type checker potentially
-/// suffered from this, do we expect ["bool"] same as "bool"?
-/// To handle this:
-/// 
-/// solution 1: 
-/// manually implement type equal instead of derived Eq to descently handle this
-/// 
-/// solution 2:
-/// we should always store simplies form of a type in environment, e.g. no [[[["bool"]]]]
-/// (based on which I should write more tests in tests/test_typecheck.rs)
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub enum Typ {
     Base(String),
-    Product(Vec<Typ>),            // variable type encodes as List(its_length)
-    FuncType(Vec<Typ>, Vec<Typ>), // function type encoded as FuncType(input_length, output_length)
+    Product(Vec<Typ>),
+    FuncType(Vec<Typ>, Box<Typ>),
 }
 
 impl fmt::Display for Typ {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Typ::Base(name) => write!(f, "{}", name),
-            Typ::Product(types) => format_product(f, types),
+            Typ::Product(types) => format_vector_types(f, types),
             Typ::FuncType(inputs, outputs) => {
-                format_product(f, inputs)?;
-                write!(f, " -> ")?;
-                format_product(f, outputs)
+                format_vector_types(f, inputs)?;
+                write!(f, "->{}", outputs)
             }
+            
         }
     }
 }
 
-fn format_product(f: &mut fmt::Formatter<'_>, types: &[Typ]) -> fmt::Result {
+fn format_vector_types(f: &mut fmt::Formatter<'_>, types: &[Typ]) -> fmt::Result {
     match types.len() {
         0 => write!(f, "()"),
         1 => write!(f, "{}", types[0]),
@@ -57,6 +58,45 @@ fn format_product(f: &mut fmt::Formatter<'_>, types: &[Typ]) -> fmt::Result {
                 write!(f, "{}", typ)?;
             }
             write!(f, ")")
+        }
+    }
+}
+
+impl From<&str> for Typ {
+    fn from(value: &str) -> Self {
+        Typ::Base(value.to_string())
+    }
+}
+
+impl Typ {
+    /// Typechecker will assert all types in environment are normalized
+    pub fn is_normal(&self) -> bool {
+        match self {
+            Typ::Base(_) => true,
+            Typ::Product(typs) => 
+                typs.len() != 1 && typs.iter().all(|typ| typ.is_normal()),
+            Typ::FuncType(typs, typ) => 
+                typ.is_normal() && typs.iter().all(Self::is_normal),
+        }
+    }
+
+    /// Caller of typechecker should use normalize to ensure all types are in canonical form
+    pub fn normalize(self) -> Self {
+        match self {
+            Typ::Base(_) => self,
+            Typ::Product(typs) => {
+                let normalized: Vec<Typ> = typs.into_iter().map(Self::normalize).collect();
+                if normalized.len() == 1 {
+                    normalized.into_iter().next().unwrap()
+                } else {
+                    Typ::Product(normalized)
+                }
+            },
+            Typ::FuncType(typs, typ) => {
+                let inputs = typs.into_iter().map(Self::normalize).collect();
+                let output = Box::new(typ.normalize());
+                Typ::FuncType(inputs, output)
+            },
         }
     }
 }
@@ -75,9 +115,17 @@ impl TypeChecker {
     }
 
     pub fn type_check(&mut self, expr: &Expr) -> Result<Typ, String> {
+        // Invariant: assume all types maintained in vars and funcs are normalized
+        // [["typ"]], ["typ"] are all normalized to "typ"
+        // and Typ returned by type_check is also normalized
+        assert!(self.vars.iter().all(|(_, v)| v.is_normal()));
+        assert!(self.funcs.iter().all(|(_, v)| v.is_normal()));
+
         match expr {
             Expr::Var(x) => {
                 if let Some(typ) = self.vars.get(x).cloned() {
+                    Ok(typ)
+                } else if let Some(typ) = self.funcs.get(x).cloned() {
                     Ok(typ)
                 } else {
                     Err(format!("Cannot find {} in variable context", x))
@@ -86,11 +134,11 @@ impl TypeChecker {
 
             Expr::FuncApp { name, args } => {
                 // look up function type
-                let func_typ = self.funcs.get(name).cloned()
+                let func_typ: Typ = self.funcs.get(name).cloned()
                     .ok_or_else(|| format!("Cannot find {} in function context", name))?;
                 
                 // and ensure it's a function type
-                let (arg_typs, ret_typs) = match func_typ {
+                let (arg_typs, ret_typ) = match func_typ {
                     Typ::FuncType(arg_typs, ret_typs) => (arg_typs, ret_typs),
                     _ => return Err(format!("'{}' is not a function, has type {}", name, func_typ))
                 };
@@ -115,8 +163,9 @@ impl TypeChecker {
                         ));
                     }
                 }
-                
-                Ok(Typ::Product(ret_typs))
+                 
+                assert!(ret_typ.is_normal());
+                Ok(*ret_typ)
             }
 
             Expr::Let { name, value, body } => {
