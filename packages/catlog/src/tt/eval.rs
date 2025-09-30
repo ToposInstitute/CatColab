@@ -53,7 +53,7 @@ impl<'a> Evaluator<'a> {
     /// to self.env
     pub fn eval_ty(&self, ty: &TyS) -> TyV {
         match &**ty {
-            TyS_::TopVar(tv) => self.toplevel.declarations.get(tv).unwrap().as_ty(),
+            TyS_::TopVar(tv) => self.toplevel.declarations.get(tv).unwrap().as_ty().val,
             TyS_::Object(ot) => TyV::object(ot.clone()),
             TyS_::Morphism(pt, dom, cod) => {
                 TyV::morphism(pt.clone(), self.eval_tm(dom), self.eval_tm(cod))
@@ -75,11 +75,11 @@ impl<'a> Evaluator<'a> {
     /// to self.env
     pub fn eval_tm(&self, tm: &TmS) -> TmV {
         match &**tm {
-            TmS_::TopVar(tv) => self.toplevel.declarations.get(tv).unwrap().as_const(),
+            TmS_::TopVar(tv) => self.toplevel.declarations.get(tv).unwrap().as_const().val,
             TmS_::TopApp(tv, args_s) => {
                 let env = Env::nil().extend_by(args_s.iter().map(|arg_s| self.eval_tm(arg_s)));
-                let (_, _, body) = self.toplevel.declarations.get(tv).unwrap().as_def();
-                self.with_env(env).eval_tm(&body)
+                let def = self.toplevel.declarations.get(tv).unwrap().as_def();
+                self.with_env(env).eval_tm(&def.body)
             }
             TmS_::Var(i, _, _) => self.env.get(**i).cloned().unwrap(),
             TmS_::Cons(fields) => TmV::Cons(fields.map(|tm| self.eval_tm(tm))),
