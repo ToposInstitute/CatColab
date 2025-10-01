@@ -2,7 +2,10 @@
 use notebook_types::v1::{ModelJudgment, MorDecl, Ob, ObDecl, ObType};
 use uuid::Uuid;
 
-use crate::dbl::{VDblCategory, theory::DblTheory};
+use crate::dbl::{
+    VDblCategory,
+    theory::{DblTheory, DiscreteDblTheory},
+};
 use std::str::FromStr;
 
 use crate::{
@@ -72,6 +75,7 @@ pub struct LocatedError {
 ///
 /// We feed a notebook into this cell-by-cell.
 pub struct Elaborator<'a> {
+    theory: Theory,
     toplevel: &'a Toplevel,
     current_cell: Option<Uuid>,
     ctx: Context,
@@ -84,13 +88,18 @@ struct ElaboratorCheckpoint {
 
 impl<'a> Elaborator<'a> {
     /// Create a new notebook elaborator
-    pub fn new(toplevel: &'a Toplevel) -> Self {
+    pub fn new(theory: Theory, toplevel: &'a Toplevel) -> Self {
         Self {
+            theory,
             toplevel,
             current_cell: None,
             ctx: Context::new(),
             errors: Vec::new(),
         }
+    }
+
+    fn dbl_theory(&self) -> &DiscreteDblTheory {
+        &self.theory.definition
     }
 
     /// Get all of the errors from elaboration
@@ -145,7 +154,7 @@ impl<'a> Elaborator<'a> {
 
     fn object_cell(&mut self, ob_decl: &ObDecl) -> Option<(NameSegment, LabelSegment, TyS, TyV)> {
         let ob_type = self.ob_type(&ob_decl.ob_type)?;
-        if !self.toplevel.theory.has_ob(&ob_type) {
+        if !self.dbl_theory().has_ob(&ob_type) {
             return self.error(Error::NoSuchObjectType(ob_type.clone()));
         }
         let name = NameSegment::Uuid(ob_decl.id);
@@ -186,8 +195,8 @@ impl<'a> Elaborator<'a> {
             notebook_types::v1::MorType::Basic(name) => {
                 let name = QualifiedName::single(name_seg(*name));
                 let mor_type = Path::single(name);
-                let dom_ty = self.toplevel.theory.src_type(&mor_type);
-                let cod_ty = self.toplevel.theory.tgt_type(&mor_type);
+                let dom_ty = self.dbl_theory().src_type(&mor_type);
+                let cod_ty = self.dbl_theory().tgt_type(&mor_type);
                 (MorphismType(mor_type), dom_ty, cod_ty)
             }
             notebook_types::v1::MorType::Hom(ob_type) => {
@@ -270,16 +279,16 @@ mod test {
 
     use expect_test::{Expect, expect};
 
-    use crate::{
-        stdlib::th_schema,
-        tt::{
-            modelgen::{generate, model_output},
-            notebook_elab::Elaborator,
-            toplevel::Toplevel,
-        },
+    use crate::stdlib::th_schema;
+    use crate::tt::toplevel::{Theory, std_theories};
+    use crate::tt::{
+        modelgen::{generate, model_output},
+        notebook_elab::Elaborator,
+        toplevel::Toplevel,
     };
+    use crate::zero::name;
 
-    fn elab_example(name: &str, expected: Expect) {
+    fn elab_example(theory: &Theory, name: &str, expected: Expect) {
         let src = fs::read_to_string(format!("examples/{name}.json")).unwrap();
         let doc: ModelDocumentContent = serde_json::from_str(&src).unwrap();
         let cells = doc
@@ -290,11 +299,11 @@ mod test {
                 _ => None,
             })
             .collect::<Vec<_>>();
-        let toplevel = Toplevel::new(Rc::new(th_schema()));
-        let mut elab = Elaborator::new(&toplevel);
+        let toplevel = Toplevel::new(std_theories());
+        let mut elab = Elaborator::new(theory.clone(), &toplevel);
         let mut out = String::new();
         if let Some((_, ty_v)) = elab.notebook(&cells) {
-            let (model, name_translation) = generate(&toplevel, &ty_v);
+            let (model, name_translation) = generate(&toplevel, &theory, &ty_v);
             model_output("", &mut out, &model, &name_translation).unwrap();
         } else {
             assert!(
@@ -311,7 +320,9 @@ mod test {
 
     #[test]
     fn examples() {
+        let th_schema = Theory::new(name("ThSchema"), Rc::new(th_schema()));
         elab_example(
+            &th_schema,
             "weighted_graph",
             expect![[r#"
                 object generators:

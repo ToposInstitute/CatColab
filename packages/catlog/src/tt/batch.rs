@@ -5,12 +5,11 @@ use std::ops::DerefMut;
 use std::time::{Duration, Instant};
 use std::{fs, io};
 
+use crate::tt::*;
 use crate::zero::NameSegment;
-use crate::{stdlib, tt::*};
 
 use fnotation::parser::Prec;
 use fnotation::{FNtnTop, ParseConfig};
-use prelude::*;
 use scopeguard::guard;
 use tattle::display::SourceInfo;
 use tattle::{Reporter, declare_error};
@@ -25,7 +24,7 @@ const PARSE_CONFIG: ParseConfig = ParseConfig::new(
         ("*", Prec::lassoc(60)),
     ],
     &[":", ":=", "&", "Unit", "Id", "*"],
-    &["type", "def", "syn", "chk", "norm", "generate"],
+    &["type", "def", "syn", "chk", "norm", "generate", "set_theory"],
 );
 
 declare_error!(TOP_ERROR, "top", "an error at the top-level");
@@ -168,7 +167,8 @@ pub fn elaborate(src: &str, path: &str, output: &BatchOutput) -> io::Result<bool
     });
     let mut succeeded = true;
     let _ = PARSE_CONFIG.with_parsed_top(src, reporter.clone(), |topntns| {
-        let mut toplevel = Toplevel::new(Rc::new(stdlib::th_schema()));
+        let mut toplevel = Toplevel::new(std_theories());
+        let mut topelab = TopElaborator::new(reporter.clone());
         for topntn in topntns.iter() {
             output.log_input(src, topntn);
             let mut should_fail = false;
@@ -183,7 +183,7 @@ pub fn elaborate(src: &str, path: &str, output: &BatchOutput) -> io::Result<bool
                     _ => {}
                 }
             }
-            if let Some(d) = TopElaborator::new(&toplevel, reporter.clone()).elab(topntn) {
+            if let Some(d) = topelab.elab(&toplevel, topntn) {
                 if should_fail {
                     reporter.error(
                         topntn.loc,

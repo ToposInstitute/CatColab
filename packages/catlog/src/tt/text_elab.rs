@@ -1,5 +1,11 @@
 //! Elaboration for doublett
-use crate::dbl::{category::VDblCategory, theory::DblTheory};
+use crate::{
+    dbl::{
+        category::VDblCategory,
+        theory::{DblTheory, DiscreteDblTheory},
+    },
+    zero::name,
+};
 use fnotation::*;
 use nonempty::nonempty;
 use scopeguard::{ScopeGuard, guard};
@@ -23,15 +29,18 @@ pub enum TopElabResult {
 /// Context for top-level elaboration
 ///
 /// Top-level elaboration is elaboration of declarations.
-pub struct TopElaborator<'a> {
-    toplevel: &'a Toplevel,
+pub struct TopElaborator {
+    current_theory: Option<Theory>,
     reporter: Reporter,
 }
 
-impl<'a> TopElaborator<'a> {
+impl TopElaborator {
     /// Constructor
-    pub fn new(toplevel: &'a Toplevel, reporter: Reporter) -> Self {
-        Self { toplevel, reporter }
+    pub fn new(reporter: Reporter) -> Self {
+        Self {
+            current_theory: None,
+            reporter,
+        }
     }
 
     fn bare_def<'c>(&self, n: &FNtn<'c>) -> Option<(TopVarName, &'c FNtn<'c>)> {
@@ -68,8 +77,18 @@ impl<'a> TopElaborator<'a> {
         }
     }
 
-    fn elaborator(&self) -> Elaborator<'a> {
-        Elaborator::new(self.reporter.clone(), self.toplevel)
+    fn get_theory(&self, loc: Loc) -> Option<Theory> {
+        let Some(theory) = &self.current_theory else {
+            return self.error(
+                loc,
+                "have not yet set a theory, set a theory via `set_theory <THEORY_NAME>`",
+            );
+        };
+        Some(theory.clone())
+    }
+
+    fn elaborator<'a>(&self, theory: &Theory, toplevel: &'a Toplevel) -> Elaborator<'a> {
+        Elaborator::new(theory.clone(), self.reporter.clone(), toplevel)
     }
 
     fn error<T>(&self, loc: Loc, msg: impl Into<String>) -> Option<T> {
@@ -78,19 +97,34 @@ impl<'a> TopElaborator<'a> {
     }
 
     /// Elaborate a single top-level declaration
-    pub fn elab(&self, tn: &FNtnTop) -> Option<TopElabResult> {
+    pub fn elab(&mut self, toplevel: &Toplevel, tn: &FNtnTop) -> Option<TopElabResult> {
         match tn.name {
+            "set_theory" => match tn.body.ast0() {
+                Var(theory_name) => match toplevel.theory_library.get(&name(*theory_name)) {
+                    Some(theory) => {
+                        self.current_theory = Some(theory.clone());
+                        Some(TopElabResult::Output(format!("set theory to {}", theory_name)))
+                    }
+                    None => self.error(tn.loc, format!("{theory_name} not found")),
+                },
+                _ => self.error(tn.loc, "expected a theory name"),
+            },
             "type" => {
+                let theory = self.get_theory(tn.loc)?;
                 let (name, ty_n) = self.bare_def(tn.body).or_else(|| {
                     self.error(
                         tn.loc,
                         "unknown syntax for type declaration, expected <name> := <type>",
                     )
                 })?;
-                let (ty_s, ty_v) = self.elaborator().ty(ty_n)?;
-                Some(TopElabResult::Declaration(name, TopDecl::Type(ty_s, ty_v)))
+                let (ty_s, ty_v) = self.elaborator(&theory, toplevel).ty(ty_n)?;
+                Some(TopElabResult::Declaration(
+                    name,
+                    TopDecl::Type(Type::new(theory.clone(), ty_s, ty_v)),
+                ))
             }
             "def" => {
+                let theory = self.get_theory(tn.loc)?;
                 let (name, args_n, ty_n, tm_n) = self.annotated_def(tn.body).or_else(|| {
                     self.error(
                         tn.loc,
@@ -99,7 +133,7 @@ impl<'a> TopElaborator<'a> {
                 })?;
                 match args_n {
                     Some(args_n) => {
-                        let mut elab = self.elaborator();
+                        let mut elab = self.elaborator(&theory, toplevel);
                         let mut args_stx = IndexMap::new();
                         for arg_n in args_n {
                             let (name, label, ty_s, ty_v) = elab.binding(arg_n)?;
@@ -110,19 +144,29 @@ impl<'a> TopElaborator<'a> {
                         let (body_s, _) = elab.chk(&ret_ty_v, tm_n)?;
                         Some(TopElabResult::Declaration(
                             name,
-                            TopDecl::Def(args_stx.into(), ret_ty_s, body_s),
+                            TopDecl::Def(Def::new(
+                                theory.clone(),
+                                args_stx.into(),
+                                ret_ty_s,
+                                body_s,
+                            )),
                         ))
                     }
                     None => {
-                        let (_, ty_v) = self.elaborator().ty(ty_n)?;
-                        let (tm_s, tm_v) = self.elaborator().chk(&ty_v, tm_n)?;
-                        Some(TopElabResult::Declaration(name, TopDecl::DefConst(tm_s, tm_v, ty_v)))
+                        let mut elab = self.elaborator(&theory, toplevel);
+                        let (_, ty_v) = elab.ty(ty_n)?;
+                        let (tm_s, tm_v) = elab.chk(&ty_v, tm_n)?;
+                        Some(TopElabResult::Declaration(
+                            name,
+                            TopDecl::DefConst(DefConst::new(theory.clone(), tm_s, tm_v, ty_v)),
+                        ))
                     }
                 }
             }
             "syn" => {
+                let theory = self.get_theory(tn.loc)?;
                 let (ctx_ns, n) = self.expr_with_context(tn.body);
-                let mut elab = self.elaborator();
+                let mut elab = self.elaborator(&theory, toplevel);
                 for ctx_n in ctx_ns {
                     let (name, label, _, ty_v) = elab.binding(ctx_n)?;
                     elab.intro(name, label, Some(ty_v));
@@ -134,8 +178,9 @@ impl<'a> TopElaborator<'a> {
                 )))
             }
             "norm" => {
+                let theory = self.get_theory(tn.loc)?;
                 let (ctx_ns, n) = self.expr_with_context(tn.body);
-                let mut elab = self.elaborator();
+                let mut elab = self.elaborator(&theory, toplevel);
                 for ctx_n in ctx_ns {
                     let (name, label, _, ty_v) = elab.binding(ctx_n)?;
                     elab.intro(name, label, Some(ty_v));
@@ -145,8 +190,9 @@ impl<'a> TopElaborator<'a> {
                 Some(TopElabResult::Output(format!("{}", eval.quote_tm(&eval.eta(&tm_v, &ty_v)),)))
             }
             "chk" => {
+                let theory = self.get_theory(tn.loc)?;
                 let (ctx_ns, n) = self.expr_with_context(tn.body);
-                let mut elab = self.elaborator();
+                let mut elab = self.elaborator(&theory, toplevel);
                 for ctx_n in ctx_ns {
                     let (name, label, _, ty_v) = elab.binding(ctx_n)?;
                     elab.intro(name, label, Some(ty_v));
@@ -160,9 +206,10 @@ impl<'a> TopElaborator<'a> {
                 Some(TopElabResult::Output(format!("{tm_s}")))
             }
             "generate" => {
-                let mut elab = self.elaborator();
+                let theory = self.get_theory(tn.loc)?;
+                let mut elab = self.elaborator(&theory, toplevel);
                 let (_, ty_v) = elab.ty(tn.body)?;
-                let (model, name_translation) = generate(self.toplevel, &ty_v);
+                let (model, name_translation) = generate(toplevel, &theory, &ty_v);
                 let mut out = String::new();
                 writeln!(&mut out).unwrap();
                 model_output("#/ ", &mut out, &model, &name_translation).unwrap();
@@ -174,6 +221,7 @@ impl<'a> TopElaborator<'a> {
 }
 
 struct Elaborator<'a> {
+    theory: Theory,
     reporter: Reporter,
     toplevel: &'a Toplevel,
     loc: Option<Loc>,
@@ -188,13 +236,18 @@ struct ElaboratorCheckpoint {
 declare_error!(ELAB_ERROR, "elab", "an error during elaboration");
 
 impl<'a> Elaborator<'a> {
-    fn new(reporter: Reporter, toplevel: &'a Toplevel) -> Self {
+    fn new(theory: Theory, reporter: Reporter, toplevel: &'a Toplevel) -> Self {
         Self {
+            theory,
             reporter,
             toplevel,
             loc: None,
             ctx: Context::new(),
         }
+    }
+
+    fn dbl_theory(&self) -> &DiscreteDblTheory {
+        &self.theory.definition
     }
 
     fn checkpoint(&self) -> ElaboratorCheckpoint {
@@ -254,13 +307,22 @@ impl<'a> Elaborator<'a> {
 
     fn lookup_ty(&self, name: VarName) -> Option<(TyS, TyV)> {
         let qname = QualifiedName::single(name);
-        if self.toplevel.theory.has_ob(&qname) {
+        if self.dbl_theory().has_ob(&qname) {
             Some((TyS::object(qname.clone()), TyV::object(qname)))
         } else if let Some(d) = self.toplevel.declarations.get(&name) {
             match d {
-                TopDecl::Type(_, ty_v) => Some((TyS::topvar(name), ty_v.clone())),
-                TopDecl::Def(_, _, _) | TopDecl::DefConst(_, _, _) => {
-                    self.error("{name} refers to a term not a type")
+                TopDecl::Type(t) => {
+                    if t.theory == self.theory {
+                        Some((TyS::topvar(name), t.val.clone()))
+                    } else {
+                        self.error(format!(
+                            "{name} refers to a type in theory {}, expected a type in theory {}",
+                            t.theory, self.theory
+                        ))
+                    }
+                }
+                TopDecl::Def(_) | TopDecl::DefConst(_) => {
+                    self.error(format!("{name} refers to a term not a type"))
                 }
             }
         } else {
@@ -273,7 +335,7 @@ impl<'a> Elaborator<'a> {
         match n.ast0() {
             App1(L(_, Keyword("Id")), L(_, Var(name))) => {
                 let qname = QualifiedName::single(name_seg(*name));
-                if elab.toplevel.theory.has_ob(&qname) {
+                if elab.dbl_theory().has_ob(&qname) {
                     Some((MorphismType(Path::Id(qname.clone())), qname.clone(), qname))
                 } else {
                     elab.error(format!("no such object type {name}"))
@@ -282,7 +344,7 @@ impl<'a> Elaborator<'a> {
             Var(name) => {
                 let qname = QualifiedName::single(name_seg(*name));
                 let mt = Path::single(qname);
-                let theory = &elab.toplevel.theory;
+                let theory = elab.dbl_theory();
                 if theory.has_proarrow(&mt) {
                     let dom = theory.src(&mt);
                     let cod = theory.tgt(&mt);
@@ -427,11 +489,9 @@ impl<'a> Elaborator<'a> {
             ))
         } else if let Some(d) = self.toplevel.lookup(name) {
             match d {
-                TopDecl::Type(_, _) => self.error(format!("{name} refers type, not term")),
-                TopDecl::DefConst(_, tm_v, ty_v) => {
-                    Some((TmS::topvar(name), tm_v.clone(), ty_v.clone()))
-                }
-                TopDecl::Def(_, _, _) => self.error(format!("{name} must be applied to arguments")),
+                TopDecl::Type(_) => self.error(format!("{name} refers type, not term")),
+                TopDecl::DefConst(d) => Some((TmS::topvar(name), d.val.clone(), d.ty.clone())),
+                TopDecl::Def(_) => self.error(format!("{name} must be applied to arguments")),
             }
         } else {
             self.error(format!("no such variable {name}"))
@@ -480,7 +540,7 @@ impl<'a> Elaborator<'a> {
                     elab.loc = Some(g_n.loc());
                     return elab.error("expected a morphism");
                 };
-                if elab.toplevel.theory.tgt(&f_mt.0) != elab.toplevel.theory.src(&g_mt.0) {
+                if elab.dbl_theory().tgt(&f_mt.0) != elab.dbl_theory().src(&g_mt.0) {
                     return elab.error("incompatible morphism types");
                 }
                 if let Err(s) = elab.evaluator().equal_tm(f_cod, g_dom) {
@@ -496,8 +556,7 @@ impl<'a> Elaborator<'a> {
                     TmV::Tt,
                     TyV::morphism(
                         MorphismType(
-                            elab.toplevel
-                                .theory
+                            elab.dbl_theory()
                                 .compose_types(Path::Seq(nonempty![f_mt.0.clone(), g_mt.0.clone()]))
                                 .unwrap(),
                         ),
@@ -508,27 +567,26 @@ impl<'a> Elaborator<'a> {
             }
             App1(L(_, Var(tv)), L(_, Tuple(args_n))) => {
                 let tv = name_seg(*tv);
-                let Some(TopDecl::Def(arg_tys_s, ret_ty_s, body_s)) = elab.toplevel.lookup(tv)
-                else {
+                let Some(TopDecl::Def(d)) = elab.toplevel.lookup(tv) else {
                     return elab.error(format!("no such toplevel def {tv}"));
                 };
                 let mut arg_stxs = Vec::new();
                 let mut env = Env::nil();
-                if args_n.len() != arg_tys_s.len() {
+                if args_n.len() != d.args.len() {
                     return elab.error(format!(
                         "wrong number of args for {tv}, expected {}, got {}",
-                        arg_tys_s.len(),
+                        d.args.len(),
                         args_n.len()
                     ));
                 }
-                for (arg_n, (_, (_, arg_ty_s))) in args_n.iter().zip(arg_tys_s.iter()) {
+                for (arg_n, (_, (_, arg_ty_s))) in args_n.iter().zip(d.args.iter()) {
                     let arg_ty_v = elab.evaluator().with_env(env.clone()).eval_ty(arg_ty_s);
                     let (arg_s, arg_v) = elab.chk(&arg_ty_v, arg_n)?;
                     arg_stxs.push(arg_s);
                     env = env.snoc(arg_v);
                 }
                 let eval = elab.evaluator().with_env(env.clone());
-                Some((TmS::topapp(tv, arg_stxs), eval.eval_tm(body_s), eval.eval_ty(ret_ty_s)))
+                Some((TmS::topapp(tv, arg_stxs), eval.eval_tm(&d.body), eval.eval_ty(&d.ret_ty)))
             }
             Tag("tt") => Some((TmS::tt(), TmV::Tt, TyV::unit())),
             Tuple(_) => elab.error("must check agains a type in order to construct a record"),

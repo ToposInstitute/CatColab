@@ -7,8 +7,7 @@ use crate::dbl::model::MutDblModel;
 use crate::dbl::model::{DblModel, FgDblModel};
 use crate::one::category::FgCategory;
 use crate::tt::stx::MorphismType;
-use crate::tt::toplevel::Toplevel;
-use crate::tt::{eval::*, prelude::*, val::*};
+use crate::tt::{eval::*, prelude::*, toplevel::*, val::*};
 use crate::zero::QualifiedLabel;
 use crate::zero::QualifiedName;
 
@@ -17,12 +16,13 @@ use crate::zero::QualifiedName;
 /// Precondition: `ty` must be valid in the empty context.
 pub fn generate(
     toplevel: &Toplevel,
+    theory: &Theory,
     ty: &TyV,
 ) -> (DiscreteDblModel, HashMap<QualifiedName, QualifiedLabel>) {
     let eval = Evaluator::new(toplevel, Env::Nil, 0);
     let (elt, eval) = eval.bind_self(ty.clone());
     let elt = eval.eta_neu(&elt, ty);
-    let mut out = DiscreteDblModel::new(toplevel.theory.clone());
+    let mut out = DiscreteDblModel::new(theory.definition.clone());
     let mut name_translation = HashMap::new();
     extract_to(&eval, &mut out, &mut name_translation, vec![], vec![], &elt, ty);
     (out, name_translation)
