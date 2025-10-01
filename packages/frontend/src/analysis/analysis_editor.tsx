@@ -15,14 +15,16 @@ import invariant from "tiny-invariant";
 import { useApi } from "../api";
 import { IconButton, ResizableHandle } from "../components";
 import { DiagramPane } from "../diagram/diagram_editor";
+import { DiagramMenu } from "../diagram/diagram_menu";
 import { ModelPane } from "../model/model_editor";
+import { ModelMenu } from "../model/model_menu";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
     NotebookEditor,
     newFormalCell,
 } from "../notebook";
-import { DocumentBreadcrumbs, DocumentLoadingScreen, DocumentMenu, Toolbar } from "../page";
+import { DocumentBreadcrumbs, DocumentLoadingScreen, Toolbar } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { AnalysisMeta } from "../theory";
 import { assertExhaustive } from "../util/assert_exhaustive";
@@ -144,20 +146,18 @@ export function AnalysisDocumentEditor(props: {
 
 const AnalysisMenu = (props: {
     liveAnalysis: LiveAnalysisDocument;
-}) => {
-    const liveDocument = () => {
-        switch (props.liveAnalysis.analysisType) {
-            case "diagram":
-                return props.liveAnalysis.liveDiagram;
-            case "model":
-                return props.liveAnalysis.liveModel;
-            default:
-                assertExhaustive(props.liveAnalysis);
-        }
-    };
-
-    return <DocumentMenu liveDocument={liveDocument()} />;
-};
+}) => (
+    <Switch>
+        <Match when={props.liveAnalysis.analysisType === "model" && props.liveAnalysis.liveModel}>
+            {(liveModel) => <ModelMenu liveModel={liveModel()} />}
+        </Match>
+        <Match
+            when={props.liveAnalysis.analysisType === "diagram" && props.liveAnalysis.liveDiagram}
+        >
+            {(liveDiagram) => <DiagramMenu liveDiagram={liveDiagram()} />}
+        </Match>
+    </Switch>
+);
 
 const AnalysisOfPane = (props: {
     liveAnalysis: LiveAnalysisDocument;
