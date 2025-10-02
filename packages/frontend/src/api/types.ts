@@ -1,7 +1,7 @@
 import type { ChangeFn, DocHandle, Repo } from "@automerge/automerge-repo";
 
 import type { Permissions } from "catcolab-api";
-import type { Document } from "catlog-wasm";
+import type { Document, StableRef } from "catlog-wasm";
 import type { RpcClient } from "./rpc";
 
 /** Bundle of everything needed to interact with the CatColab backend. */
@@ -15,6 +15,13 @@ export type Api = {
     /** Automerge repo connected to the Automerge document server. */
     repo: Repo;
 };
+
+/** Create a stable reference to a document ref, without a version. */
+export const makeUnversionedRef = (api: Api, refId: string): StableRef => ({
+    _id: refId,
+    _version: null,
+    _server: api.serverHost,
+});
 
 /** Live document, typically retrieved from the backend.
 

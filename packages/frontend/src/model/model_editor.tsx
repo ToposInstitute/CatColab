@@ -15,13 +15,14 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
-import { DocumentBreadcrumbs, DocumentLoadingScreen, DocumentMenu, Toolbar } from "../page";
+import { DocumentBreadcrumbs, DocumentLoadingScreen, Toolbar } from "../page";
 import { WelcomeOverlay } from "../page/welcome_overlay";
 import { TheoryLibraryContext, stdTheories } from "../stdlib";
 import type { ModelTypeMeta } from "../theory";
 import { PermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
 import { type LiveModelDocument, getLiveModel, migrateModelDocument } from "./document";
+import { ModelMenu } from "./model_menu";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
 import { TheorySelectorDialog } from "./theory_selector";
@@ -60,7 +61,7 @@ export function ModelDocumentEditor(props: {
     return (
         <div class="growable-container">
             <Toolbar>
-                <DocumentMenu liveDocument={props.liveModel} />
+                <ModelMenu liveModel={props.liveModel} />
                 <DocumentBreadcrumbs liveDoc={props.liveModel.liveDoc} />
                 <span class="filler" />
                 <PermissionsButton liveDoc={props.liveModel.liveDoc} />

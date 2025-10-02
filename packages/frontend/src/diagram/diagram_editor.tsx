@@ -14,11 +14,12 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
-import { DocumentBreadcrumbs, DocumentLoadingScreen, DocumentMenu, Toolbar } from "../page";
+import { DocumentBreadcrumbs, DocumentLoadingScreen, Toolbar } from "../page";
 import { TheoryLibraryContext } from "../stdlib";
 import type { InstanceTypeMeta } from "../theory";
 import { PermissionsButton } from "../user";
 import { LiveDiagramContext } from "./context";
+import { DiagramMenu } from "./diagram_menu";
 import { type LiveDiagramDocument, getLiveDiagram } from "./document";
 import { DiagramMorphismCellEditor } from "./morphism_cell_editor";
 import { DiagramObjectCellEditor } from "./object_cell_editor";
@@ -57,7 +58,7 @@ export function DiagramDocumentEditor(props: {
     return (
         <div class="growable-container">
             <Toolbar>
-                <DocumentMenu liveDocument={props.liveDiagram} />
+                <DiagramMenu liveDiagram={props.liveDiagram} />
                 <DocumentBreadcrumbs liveDoc={props.liveDiagram.liveDoc} />
                 <span class="filler" />
                 <PermissionsButton liveDoc={props.liveDiagram.liveDoc} />
