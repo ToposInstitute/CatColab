@@ -253,14 +253,13 @@ export const basicSchema = {
                     getAttrs(dom: HTMLElement) {
                         return {
                             href: dom.getAttribute("href"),
-                            title: dom.getAttribute("title"),
                         };
                     },
                 },
             ],
             toDOM(node) {
-                const { href, title } = node.attrs;
-                return ["a", { href, title }, 0];
+                const { href } = node.attrs;
+                return ["a", { href }, 0];
             },
             automerge: {
                 markName: "link",
@@ -271,7 +270,6 @@ export const basicSchema = {
                                 const value = JSON.parse(mark);
                                 return {
                                     href: value.href || "",
-                                    title: value.title || "",
                                 };
                             } catch (e) {
                                 console.warn("failed to parse link mark as JSON");
@@ -279,14 +277,13 @@ export const basicSchema = {
                         }
                         return {
                             href: "",
-                            title: "",
                         };
                     },
-                    fromProsemirror: (mark: Mark) =>
-                        JSON.stringify({
+                    fromProsemirror: (mark: Mark) => {
+                        return JSON.stringify({
                             href: mark.attrs.href,
-                            title: mark.attrs.title,
-                        }),
+                        });
+                    },
                 },
             },
         },

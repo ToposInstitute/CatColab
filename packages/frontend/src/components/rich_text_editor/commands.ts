@@ -39,6 +39,28 @@ export const insertMathDisplayCmd: Command = (state, dispatch) => {
     return true;
 };
 
+export const insertLinkCmd: Command = (state, dispatch) => {
+    if (!dispatch) {
+        return true;
+    }
+
+    const schema = state.schema as CustomSchema;
+    const linkMark = schema.marks.link.create({ href: "" });
+    const { from, to } = state.selection;
+
+    let tr = state.tr;
+    if (state.selection.empty) {
+        const textNode = schema.text("link", [linkMark]);
+        tr = tr.replaceSelectionWith(textNode, false);
+    } else {
+        tr = tr.addMark(from, to, linkMark);
+    }
+
+    dispatch(tr);
+
+    return true;
+};
+
 // Currently does not work due to bug in the automerge-prosemirror plugin. (It also might not work in
 // general, but it theoretically should)
 // copied from: https://github.com/benrbray/prosemirror-math/blob/master/lib/commands/insert-math-cmd.ts
