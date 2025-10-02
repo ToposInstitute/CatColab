@@ -28,10 +28,8 @@ export function DiagramMenu(props: {
     const liveDoc = () => props.liveDiagram.liveDoc;
 
     const onNewDiagram = async () => {
-        const modelRefId = props.liveDiagram.liveModel.liveDoc.docRef?.refId;
-        invariant(modelRefId, "To create diagram, parent model should have a ref ID");
-
-        const newRef = await createDiagram(api, makeUnversionedRef(api, modelRefId));
+        const modelRef = props.liveDiagram.liveDoc.doc.diagramIn;
+        const newRef = await createDiagram(api, modelRef);
         navigate(`/diagram/${newRef}`);
     };
 
