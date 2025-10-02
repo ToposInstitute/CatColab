@@ -7,6 +7,11 @@ import { BrandedToolbar } from "../page";
 import { LoginGate } from "./login";
 import "./documents.css";
 import { useNavigate } from "@solidjs/router";
+import ChartSpline from "lucide-solid/icons/chart-spline";
+import File from "lucide-solid/icons/file";
+import UploadIcon from "lucide-solid/icons/upload";
+import invariant from "tiny-invariant";
+import { IconButton } from "../components";
 import { Spinner } from "../components/spinner";
 
 export default function UserDocuments() {
@@ -25,7 +30,15 @@ export default function UserDocuments() {
 function DocumentsSearch() {
     const api = useApi();
 
+    const [currentProfile] = createResource(async () => {
+        const result = await api.rpc.get_active_user_profile.query();
+
+        invariant(result.tag === "Ok");
+        result.content?.username && localStorage.setItem("username", result.content.username);
+        return result.content;
+    });
     const [searchQuery, setSearchQuery] = createSignal<string>("");
+    const [showOwnedOnlyDocument, setShowOwnedOnlyDocument] = createSignal(false);
     const [debouncedQuery, setDebouncedQuery] = createSignal<string | null>(null);
     const [page, setPage] = createSignal(0);
     const pageSize = 15;
@@ -39,10 +52,12 @@ function DocumentsSearch() {
     };
 
     const [pageData] = createResource(
-        () => [debouncedQuery(), page()] as const,
-        async ([debouncedQueryValue, pageValue]) => {
+        () => [debouncedQuery(), page(), showOwnedOnlyDocument()] as const,
+        async ([debouncedQueryValue, pageValue, showOwnedOnlyDocumentValue]) => {
             const results = await api.rpc.search_ref_stubs.query({
-                ownerUsernameQuery: null,
+                ownerUsernameQuery: showOwnedOnlyDocumentValue
+                    ? localStorage.getItem("username")
+                    : null,
                 refNameQuery: debouncedQueryValue,
                 includePublicDocuments: false,
                 searcherMinLevel: null,
@@ -52,21 +67,37 @@ function DocumentsSearch() {
 
             return results;
         },
+        {
+            deferStream: true,
+        },
     );
 
     onMount(() => {
         setDebouncedQuery(""); // Trigger fetch on page load
+        currentProfile();
     });
 
     return (
         <>
-            <input
-                type="text"
-                class="search-input"
-                placeholder="Search..."
-                value={searchQuery()}
-                onInput={(e) => updateQuery(e.currentTarget.value)}
-            />
+            <div class="search-form">
+                <input
+                    type="text"
+                    class="search-input"
+                    placeholder="Search..."
+                    value={searchQuery()}
+                    onInput={(e) => updateQuery(e.currentTarget.value)}
+                />
+
+                <label class="show-only-mine">
+                    <input
+                        type="checkbox"
+                        checked={showOwnedOnlyDocument()}
+                        onInput={(e) => setShowOwnedOnlyDocument(e.currentTarget.checked)}
+                    />
+                    Show only mine
+                </label>
+            </div>
+
             <h3>My Documents</h3>
             <div class="ref-table-outer">
                 <div class="ref-table-header">
@@ -198,8 +229,12 @@ function RefStubRow(props: { stub: RefStub }) {
 
     return (
         <tr class="ref-stub-row" onClick={handleClick}>
-            <td>{props.stub.typeName}</td>
-            <td>{props.stub.name}</td>
+            <td class=" tooltip" data-tooltip={props.stub.typeName}>
+                <DocumentIconType typeName={props.stub.typeName} />
+            </td>
+            <td class=" tooltip" data-tooltip={props.stub.typeName}>
+                {props.stub.name}
+            </td>
             <td>{ownerName}</td>
             <td>{props.stub.permissionLevel}</td>
             <td>
@@ -210,5 +245,23 @@ function RefStubRow(props: { stub: RefStub }) {
                 })}
             </td>
         </tr>
+    );
+}
+
+function DocumentIconType(props: { typeName?: string }) {
+    return (
+        <IconButton tooltip={props.typeName ?? "unknown"}>
+            <Switch fallback={props.typeName}>
+                <Match when={props.typeName === "analysis"}>
+                    <ChartSpline size={20} />
+                </Match>
+                <Match when={props.typeName === "diagram"}>
+                    <UploadIcon size="20" />
+                </Match>
+                <Match when={props.typeName === "model"}>
+                    <File size="20" />
+                </Match>
+            </Switch>
+        </IconButton>
     );
 }
