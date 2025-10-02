@@ -1,0 +1,41 @@
+import { A } from "@solidjs/router";
+import { HelpAnalysisById } from "../logic_help_detail"
+
+## Description
+
+**TO-DO**
+
+
+### Further reading
+
+- Wikipedia: [Petri net](https://en.wikipedia.org/wiki/Petri_net)
+- Series of blog posts by John Baez on Petri nets, all listed
+  [here](https://johncarlosbaez.wordpress.com/?s=petri)
+
+
+## Instances and analyses
+
+### Analyses
+
+<HelpAnalysisById theory={props.theory} analysisId="diagram"/>
+
+<HelpAnalysisById theory={props.theory} analysisId="subreachability">
+A **tokening** of a Petri net assigns some number of tokens to each place. A transition can **fire** by removing a token from each of its inputs and adding a token to each of its outputs. Given an initial tokening, we are concerned with all of the possible tokenings that can be arrived at via some sequence of transitions firing. This is usually infinite. Sometimes we care about a particular tokening as "forbidden": we care about confirming that no sequence of transitions firing could ever reach state for which includes the forbidden state.
+
+This analysis shows a ❌ if there does exist any reachable tokening from the given initial one which is greater or equal to the given forbidden one, and shows a ✅ otherwise.
+
+*Note:* we are *not* checking that the forbidden state is reached exactly, just whether *some* state which is strictly larger than the forbidden state can be reached.
+</HelpAnalysisById>
+
+<HelpAnalysisById theory={props.theory} analysisId="mass-action">
+Places are interpreted as quantities that can vary in time ("concentrations"), and the transitions ("reactions") in the model determine equations constraining the time derivatives of the stocks.
+Each place is given an **initial value**.
+
+A transition $A\to T\to B$ between places $A$ and $B$ is interpreted as the equations $\{\dot{A}=-T,\dot{B}=T\}$, i.e. the transition $T$ goes out of $A$ and into $B$.
+Transitions add linearly, i.e. in an arbitrary Petri net, the equation governing a place $A$ is $\dot{A}=\sum_{A_\text{in}}T_i - \sum_{A_\text{out}}T_j$, where $A_\text{in}$ (resp. $A_\text{out}$) is the set of all transitions whose target (resp. source) is $A$.
+Transitions are determined by their **rate** coefficient $r$, i.e. a transition $A\to T\to B$ is defined to satisfy $T=rA$.
+</HelpAnalysisById>
+
+<HelpAnalysisById theory={props.theory} analysisId="stochastic-mass-action">
+**TO-DO**
+</HelpAnalysisById>
