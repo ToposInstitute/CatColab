@@ -12,4 +12,5 @@ export * from "./name_input";
 export * from "./panel";
 export * from "./resizable";
 export * from "./spinner";
+export * from "./text_input";
 export * from "./util/keyboard";
