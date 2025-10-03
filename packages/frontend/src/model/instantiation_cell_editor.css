@@ -1,0 +1,10 @@
+.model-instantiation {
+    display: flex;
+    flex-direction: row;
+    gap: 1ex;
+    align-items: baseline;
+
+    & .is-a:before {
+        content: ":";
+    }
+}

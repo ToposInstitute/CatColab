@@ -21,6 +21,15 @@ export const newMorphismDecl = (morType: MorType): ModelJudgment & { tag: "morph
     cod: null,
 });
 
+/** Create a new instantiation of an existing model. */
+export const newInstantiatedModel = (): ModelJudgment & { tag: "instantiation" } => ({
+    tag: "instantiation",
+    id: v7(),
+    name: "",
+    model: null,
+    specializations: [],
+});
+
 /** Duplicate a model judgment, creating a fresh UUID when applicable. */
 export const duplicateModelJudgment = (jgmt: ModelJudgment): ModelJudgment => ({
     ...deepCopyJSON(jgmt),

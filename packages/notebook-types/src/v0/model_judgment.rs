@@ -43,7 +43,7 @@ pub struct MorDecl {
 
 /// Instantiates an existing model into the current model.
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
+#[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
 pub struct InstantiatedModel {
     /// Human-readable label for the instantiation.
     pub name: String,
@@ -52,7 +52,7 @@ pub struct InstantiatedModel {
     pub id: Uuid,
 
     /// Globally unique identifier of model to instantiate.
-    pub model: Uuid,
+    pub model: Option<Uuid>,
 
     /// List of specializations to perform on the instantiated model.
     pub specializations: Vec<SpecializeModel>,
@@ -60,13 +60,13 @@ pub struct InstantiatedModel {
 
 /// A specialization of a generating object in an instantiated model.
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
+#[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
 pub struct SpecializeModel {
     /// ID (qualified name) of generating object to specialize.
-    pub id: String,
+    pub id: Option<String>,
 
     /// Object to insert as the specialization.
-    pub ob: Ob,
+    pub ob: Option<Ob>,
 }
 
 /// A judgment defining part of a model of a double theory.
