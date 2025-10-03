@@ -1,18 +1,17 @@
 import { createSignal } from "solid-js";
 
+import type { DiagramObDecl } from "catlog-wasm";
 import { NameInput } from "../components";
 import { ObInput } from "../model/object_input";
 import type { CellActions } from "../notebook";
 import type { Theory } from "../theory";
-import type { DiagramObjectDecl } from "./types";
 
 import "./object_cell_editor.css";
 
-/** Editor an object declaration cell in a diagram in a model.
- */
+/** Editor an object declaration cell in a diagram in a model. */
 export function DiagramObjectCellEditor(props: {
-    decl: DiagramObjectDecl;
-    modifyDecl: (f: (decl: DiagramObjectDecl) => void) => void;
+    decl: DiagramObDecl;
+    modifyDecl: (f: (decl: DiagramObDecl) => void) => void;
     isActive: boolean;
     actions: CellActions;
     theory: Theory;

@@ -3,7 +3,7 @@ import { A, useParams } from "@solidjs/router";
 import { Match, Show, Switch, createResource, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import type { DiagramJudgment } from "catlog-wasm";
+import type { DiagramJudgment, DiagramObDecl, DiagramMorDecl } from "catlog-wasm";
 import { useApi } from "../api";
 import { InlineInput } from "../components";
 import { LiveModelContext, createModelLibrary } from "../model";
@@ -21,13 +21,7 @@ import { DiagramMenu } from "./diagram_menu";
 import { type LiveDiagramDocument, getLiveDiagram } from "./document";
 import { DiagramMorphismCellEditor } from "./morphism_cell_editor";
 import { DiagramObjectCellEditor } from "./object_cell_editor";
-import {
-    type DiagramMorphismDecl,
-    type DiagramObjectDecl,
-    duplicateDiagramJudgment,
-    newDiagramMorphismDecl,
-    newDiagramObjectDecl,
-} from "./types";
+import { duplicateDiagramJudgment, newDiagramMorphismDecl, newDiagramObjectDecl } from "./types";
 
 import "./diagram_editor.css";
 
@@ -147,9 +141,9 @@ function DiagramCellEditor(props: FormalCellEditorProps<DiagramJudgment>) {
             <Match when={props.content.tag === "object" && liveDiagram().liveModel.theory()}>
                 {(theory) => (
                     <DiagramObjectCellEditor
-                        decl={props.content as DiagramObjectDecl}
+                        decl={props.content as DiagramObDecl}
                         modifyDecl={(f) =>
-                            props.changeContent((content) => f(content as DiagramObjectDecl))
+                            props.changeContent((content) => f(content as DiagramObDecl))
                         }
                         isActive={props.isActive}
                         actions={props.actions}
@@ -160,9 +154,9 @@ function DiagramCellEditor(props: FormalCellEditorProps<DiagramJudgment>) {
             <Match when={props.content.tag === "morphism" && liveDiagram().liveModel.theory()}>
                 {(theory) => (
                     <DiagramMorphismCellEditor
-                        decl={props.content as DiagramMorphismDecl}
+                        decl={props.content as DiagramMorDecl}
                         modifyDecl={(f) =>
-                            props.changeContent((content) => f(content as DiagramMorphismDecl))
+                            props.changeContent((content) => f(content as DiagramMorDecl))
                         }
                         isActive={props.isActive}
                         actions={props.actions}
@@ -175,15 +169,20 @@ function DiagramCellEditor(props: FormalCellEditorProps<DiagramJudgment>) {
 }
 
 function diagramCellConstructor(meta: InstanceTypeMeta): CellConstructor<DiagramJudgment> {
-    const { name, description, shortcut } = meta;
+    const { tag, name, description, shortcut } = meta;
     return {
         name,
         description,
         shortcut,
         construct() {
-            return meta.tag === "ObType"
-                ? newFormalCell(newDiagramObjectDecl(meta.obType))
-                : newFormalCell(newDiagramMorphismDecl(meta.morType));
+            switch (tag) {
+                case "ObType":
+                    return newFormalCell(newDiagramObjectDecl(meta.obType));
+                case "MorType":
+                    return newFormalCell(newDiagramMorphismDecl(meta.morType));
+                default:
+                    throw tag satisfies never;
+            }
         },
     };
 }
@@ -193,10 +192,12 @@ function judgmentLabel(judgment: DiagramJudgment): string | undefined {
     invariant(liveModel);
     const theory = liveModel().theory();
 
-    if (judgment.tag === "object") {
-        return theory?.instanceObTypeMeta(judgment.obType)?.name;
-    }
-    if (judgment.tag === "morphism") {
-        return theory?.instanceMorTypeMeta(judgment.morType)?.name;
+    switch (judgment.tag) {
+        case "object":
+            return theory?.instanceObTypeMeta(judgment.obType)?.name;
+        case "morphism":
+            return theory?.instanceMorTypeMeta(judgment.morType)?.name;
+        default:
+            judgment satisfies never;
     }
 }
