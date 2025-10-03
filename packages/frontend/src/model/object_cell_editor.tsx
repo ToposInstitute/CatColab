@@ -1,4 +1,4 @@
-import type { ObType, ObDecl } from "catlog-wasm";
+import type { ObDecl, ObType } from "catlog-wasm";
 import { NameInput } from "../components";
 import type { CellActions } from "../notebook";
 import type { Theory } from "../theory";

@@ -33,7 +33,7 @@ export default function createRegulatoryNetworkTheory(theoryMeta: TheoryMeta): T
                 tag: "MorType",
                 morType: { tag: "Basic", content: "Negative" },
                 name: "Inhibition",
-                shortcut: ["I"],
+                shortcut: ["N"],
                 description: "Negative interaction: represses or inhibits",
                 arrowStyle: "flat",
                 preferUnnamed: true,
