@@ -70,10 +70,11 @@ export function DocumentPicker(props: {
         <div class="document-picker">
             <Show when={editMode()} fallback={<EditableDocLink />}>
                 <RefInput
-                    setRefId={(refId) => {
+                    onSubmit={(refId) => {
                         props.setRefId(refId);
                         disableEditMode();
                     }}
+                    onCancel={disableEditMode}
                     docType={props.docType}
                 />
             </Show>
@@ -87,16 +88,17 @@ The UUID can be provided directly or extracted from a URL, which is more
 convenient for copy-paste.
  */
 function RefInput(props: {
-    setRefId: (refId: Uuid | null) => void;
+    onSubmit: (refId: Uuid | null) => void;
+    onCancel?: () => void;
     docType?: Document["type"];
 }) {
     const [inputText, setInputText] = createSignal("");
     const [errorText, setErrorText] = createSignal("");
 
-    const handleInput = (text: string) => {
+    const onSubmit = (text: string) => {
         text = text.trim();
         if (text === "") {
-            props.setRefId(null);
+            props.onSubmit(null);
             return;
         }
 
@@ -105,7 +107,7 @@ function RefInput(props: {
             text = url.pathname.split("/").pop() ?? "";
         }
         if (uuid.validate(text)) {
-            props.setRefId(text);
+            props.onSubmit(text);
         } else {
             setErrorText(`The ${props.docType ?? "document"} identifier is not valid`);
         }
@@ -115,12 +117,23 @@ function RefInput(props: {
         <form
             onSubmit={(evt) => {
                 evt.preventDefault();
-                handleInput(inputText());
+                onSubmit(inputText());
             }}
         >
             <input
                 type="text"
                 value={inputText()}
+                onBlur={(evt) => {
+                    if (evt.currentTarget !== document.activeElement && props.onCancel) {
+                        props.onCancel();
+                    }
+                }}
+                onKeyDown={(evt) => {
+                    if (evt.key === "Escape" && props.onCancel) {
+                        evt.preventDefault();
+                        props.onCancel();
+                    }
+                }}
                 onInput={(evt) => setInputText(evt.currentTarget.value)}
                 use:autofocus
                 autofocus
