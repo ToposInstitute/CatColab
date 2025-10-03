@@ -36,7 +36,7 @@ export type TextInputOptions = TextInputActions & {
 
 type InputElementKeyboardEvent = Parameters<JSX.EventHandler<HTMLInputElement, KeyboardEvent>>[0];
 
-/** Actions invokable in a `TextInput` component but affecting nearby components. */
+/** Actions invokable in `TextInput` component, possibly affecting nearby components. */
 type TextInputActions = {
     /** Request to automatically fill out the input. */
     autofill?: () => void;
@@ -57,14 +57,14 @@ type TextInputActions = {
 
     /** Request to exit this component and move backward.
 
-    Here "backward" can mean left or up with possiblity of cycling. Typically
+    Here "backward" can mean left or up, possibly with cycling. Typically
     triggered by pressing `Tab`.
      */
     exitBackward?: () => void;
 
     /** Request to exit this component and move forward.
 
-    Here "forward" can mean right or down with possibility of cycling. Typically
+    Here "forward" can mean right or down, possibly with cycling. Typically
     triggered by pressing `Shift + Tab`.
      */
     exitForward?: () => void;

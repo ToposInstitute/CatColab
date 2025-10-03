@@ -1,3 +1,10 @@
+.document-picker {
+    & form input {
+        outline: none;
+        padding: 0px 6px;
+    }
+}
+
 .popup.document-picker-popup {
     font-size: smaller;
     padding: 0.4rem;

@@ -33,6 +33,7 @@ export function DiagramObjectCellEditor(props: {
                 exitUp={props.actions.activateAbove}
                 exitDown={props.actions.activateBelow}
                 exitRight={() => setActiveInput("overOb")}
+                exitForward={() => setActiveInput("overOb")}
                 isActive={props.isActive && activeInput() === "name"}
                 hasFocused={() => {
                     setActiveInput("name");
@@ -52,6 +53,7 @@ export function DiagramObjectCellEditor(props: {
                 exitUp={props.actions.activateAbove}
                 exitDown={props.actions.activateBelow}
                 exitLeft={() => setActiveInput("name")}
+                exitBackward={() => setActiveInput("name")}
                 isActive={props.isActive && activeInput() === "overOb"}
                 hasFocused={() => {
                     setActiveInput("overOb");
