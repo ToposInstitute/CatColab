@@ -5,7 +5,7 @@ import invariant from "tiny-invariant";
 import { P, match } from "ts-pattern";
 
 import type { MorType, Ob, ObOp, ObType, QualifiedName, Uuid } from "catlog-wasm";
-import { IdInput, type IdInputOptions, type InputOptions, ObIdInput } from "../components";
+import { IdInput, type IdInputOptions, ObIdInput, type TextInputOptions } from "../components";
 import { LiveModelContext } from "./context";
 import { ObListEditor } from "./object_list_editor";
 
@@ -33,7 +33,7 @@ export type ObInputProps = {
 /** Input an object that already exists in a model. */
 export function ObInput(
     allProps: ObInputProps &
-        InputOptions & {
+        TextInputOptions & {
             /** Operation to apply to the object afterwards, if any. */
             applyOp?: ObOp;
         },
