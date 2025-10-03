@@ -1,0 +1,10 @@
+.popup.document-picker-popup {
+    font-size: smaller;
+    padding: 0.4rem;
+
+    & .lucide {
+        color: dimgray;
+        width: 1em;
+        height: 1em;
+    }
+}

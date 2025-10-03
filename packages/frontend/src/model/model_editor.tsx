@@ -4,7 +4,7 @@ import { useAuth, useFirebaseApp } from "solid-firebase";
 import { Match, Show, Switch, createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import type { ModelJudgment, ObDecl, MorDecl } from "catlog-wasm";
+import type { InstantiatedModel, ModelJudgment, MorDecl, ObDecl } from "catlog-wasm";
 import { useApi } from "../api";
 import { InlineInput } from "../components";
 import {
@@ -22,11 +22,17 @@ import { TheorySelectorDialog } from "../theory/theory_selector";
 import { PermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
 import { type LiveModelDocument, migrateModelDocument } from "./document";
+import { InstantiationCellEditor } from "./instantiation_cell_editor";
 import { createModelLibrary } from "./model_library";
 import { ModelMenu } from "./model_menu";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
-import { duplicateModelJudgment, newMorphismDecl, newObjectDecl } from "./types";
+import {
+    duplicateModelJudgment,
+    newInstantiatedModel,
+    newMorphismDecl,
+    newObjectDecl,
+} from "./types";
 
 import "./model_editor.css";
 
@@ -111,8 +117,17 @@ export function ModelNotebookEditor(props: {
 }) {
     const liveDoc = () => props.liveModel.liveDoc;
 
-    const cellConstructors = () =>
-        (props.liveModel.theory()?.modelTypes ?? []).map(modelCellConstructor);
+    const cellConstructors = (): CellConstructor<ModelJudgment>[] => [
+        {
+            name: "Instantiate",
+            description: "Instantiate an existing model into this one",
+            shortcut: ["I"],
+            construct() {
+                return newFormalCell(newInstantiatedModel());
+            },
+        },
+        ...(props.liveModel.theory()?.modelTypes ?? []).map(modelCellConstructor),
+    ];
 
     const firebaseApp = (() => {
         try {
@@ -175,6 +190,15 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
                         theory={theory()}
                     />
                 )}
+            </Match>
+            <Match when={props.content.tag === "instantiation"}>
+                <InstantiationCellEditor
+                    instantiation={props.content as InstantiatedModel}
+                    modifyInstantiation={(f) =>
+                        props.changeContent((content) => f(content as InstantiatedModel))
+                    }
+                    isActive={props.isActive}
+                />
             </Match>
         </Switch>
     );
