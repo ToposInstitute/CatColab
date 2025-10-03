@@ -1,6 +1,9 @@
+import { createSignal } from "solid-js";
+
 import type { InstantiatedModel } from "catlog-wasm";
 import { useApi } from "../api";
 import { DocumentPicker, NameInput } from "../components";
+import type { CellActions } from "../notebook";
 
 import "./instantiation_cell_editor.css";
 
@@ -9,8 +12,11 @@ export function InstantiationCellEditor(props: {
     instantiation: InstantiatedModel;
     modifyInstantiation: (f: (inst: InstantiatedModel) => void) => void;
     isActive: boolean;
+    actions: CellActions;
 }) {
     const api = useApi();
+
+    const [activeInput, setActiveInput] = createSignal<InstantiationCellInput>("name");
 
     return (
         <div class="formal-judgment model-instantiation">
@@ -22,6 +28,17 @@ export function InstantiationCellEditor(props: {
                     })
                 }
                 placeholder="Unnamed"
+                deleteBackward={props.actions.deleteBackward}
+                deleteForward={props.actions.deleteForward}
+                exitUp={props.actions.activateAbove}
+                exitDown={props.actions.activateBelow}
+                exitRight={() => setActiveInput("model")}
+                exitForward={() => setActiveInput("model")}
+                isActive={props.isActive && activeInput() === "name"}
+                hasFocused={() => {
+                    setActiveInput("name");
+                    props.actions.hasFocused?.();
+                }}
             />
             <span class="is-a" />
             <DocumentPicker
@@ -32,7 +49,19 @@ export function InstantiationCellEditor(props: {
                     });
                 }}
                 placeholder="..."
+                deleteBackward={() => setActiveInput("name")}
+                exitUp={props.actions.activateAbove}
+                exitDown={props.actions.activateBelow}
+                exitLeft={() => setActiveInput("name")}
+                exitBackward={() => setActiveInput("name")}
+                isActive={props.isActive && activeInput() === "model"}
+                hasFocused={() => {
+                    setActiveInput("model");
+                    props.actions.hasFocused?.();
+                }}
             />
         </div>
     );
 }
+
+type InstantiationCellInput = "name" | "model";
