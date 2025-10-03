@@ -1,7 +1,7 @@
 import { Match, Switch, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import type { ModelJudgment } from "catlog-wasm";
+import type { ModelJudgment, MorDecl, ObDecl } from "catlog-wasm";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
@@ -13,13 +13,7 @@ import { LiveModelContext } from "./context";
 import type { LiveModelDocument } from "./document";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
-import {
-    type MorphismDecl,
-    type ObjectDecl,
-    duplicateModelJudgment,
-    newMorphismDecl,
-    newObjectDecl,
-} from "./types";
+import { duplicateModelJudgment, newMorphismDecl, newObjectDecl } from "./types";
 
 /** Notebook editor for a model of a double theory.
  */
@@ -59,10 +53,8 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
             <Match when={props.content.tag === "object" && liveModel().theory()}>
                 {(theory) => (
                     <ObjectCellEditor
-                        object={props.content as ObjectDecl}
-                        modifyObject={(f) =>
-                            props.changeContent((content) => f(content as ObjectDecl))
-                        }
+                        object={props.content as ObDecl}
+                        modifyObject={(f) => props.changeContent((content) => f(content as ObDecl))}
                         isActive={props.isActive}
                         actions={props.actions}
                         theory={theory()}
@@ -72,9 +64,9 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
             <Match when={props.content.tag === "morphism" && liveModel().theory()}>
                 {(theory) => (
                     <MorphismCellEditor
-                        morphism={props.content as MorphismDecl}
+                        morphism={props.content as MorDecl}
                         modifyMorphism={(f) =>
-                            props.changeContent((content) => f(content as MorphismDecl))
+                            props.changeContent((content) => f(content as MorDecl))
                         }
                         isActive={props.isActive}
                         actions={props.actions}
@@ -87,15 +79,20 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
 }
 
 function modelCellConstructor(meta: ModelTypeMeta): CellConstructor<ModelJudgment> {
-    const { name, description, shortcut } = meta;
+    const { tag, name, description, shortcut } = meta;
     return {
         name,
         description,
         shortcut,
         construct() {
-            return meta.tag === "ObType"
-                ? newFormalCell(newObjectDecl(meta.obType))
-                : newFormalCell(newMorphismDecl(meta.morType));
+            switch (tag) {
+                case "ObType":
+                    return newFormalCell(newObjectDecl(meta.obType));
+                case "MorType":
+                    return newFormalCell(newMorphismDecl(meta.morType));
+                default:
+                    throw tag satisfies never;
+            }
         },
     };
 }
@@ -105,10 +102,14 @@ function judgmentLabel(judgment: ModelJudgment): string | undefined {
     invariant(liveModel);
     const theory = liveModel().theory();
 
-    if (judgment.tag === "object") {
-        return theory?.modelObTypeMeta(judgment.obType)?.name;
-    }
-    if (judgment.tag === "morphism") {
-        return theory?.modelMorTypeMeta(judgment.morType)?.name;
+    switch (judgment.tag) {
+        case "object":
+            return theory?.modelObTypeMeta(judgment.obType)?.name;
+        case "morphism":
+            return theory?.modelMorTypeMeta(judgment.morType)?.name;
+        case "instantiation":
+            return theory?.name;
+        default:
+            judgment satisfies never;
     }
 }
