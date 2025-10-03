@@ -1,11 +1,18 @@
 import Tooltip from "@corvu/tooltip";
-import { autofocus } from "@solid-primitives/autofocus";
 import { A } from "@solidjs/router";
-import { type ComponentProps, Match, Show, Switch, createResource, createSignal } from "solid-js";
+import {
+    type ComponentProps,
+    Match,
+    Show,
+    Switch,
+    createEffect,
+    createResource,
+    createSignal,
+    splitProps,
+} from "solid-js";
 import * as uuid from "uuid";
-autofocus;
 
-import { FieldError, IconButton } from "catcolab-ui-components";
+import { FieldError, IconButton, TextInput, type TextInputOptions } from "catcolab-ui-components";
 import type { Document, Uuid } from "catlog-wasm";
 import { useApi } from "../api";
 
@@ -14,12 +21,22 @@ import Pencil from "lucide-solid/icons/pencil";
 import "./document_picker.css";
 
 /** Dual-mode component to display and pick a document. */
-export function DocumentPicker(props: {
-    refId: Uuid | null;
-    setRefId: (refId: Uuid | null) => void;
-    docType?: Document["type"];
-    placeholder?: string;
-}) {
+export function DocumentPicker(
+    allProps: TextInputOptions & {
+        refId: Uuid | null;
+        setRefId: (refId: Uuid | null) => void;
+        docType?: Document["type"];
+        placeholder?: string;
+    },
+) {
+    const [props, inputOptions] = splitProps(allProps, [
+        "refId",
+        "setRefId",
+        "docType",
+        "placeholder",
+        "isActive",
+    ]);
+
     const api = useApi();
 
     // TODO: API should cache mapping from ref ID to Automerge doc URL to avoid
@@ -32,6 +49,8 @@ export function DocumentPicker(props: {
     const [editMode, setEditMode] = createSignal(false);
     const enableEditMode = () => setEditMode(true);
     const disableEditMode = () => setEditMode(false);
+
+    createEffect(() => setEditMode(props.isActive ?? false));
 
     const DocLink = (linkProps: ComponentProps<"a">) => (
         <Switch>
@@ -70,12 +89,14 @@ export function DocumentPicker(props: {
         <div class="document-picker">
             <Show when={editMode()} fallback={<EditableDocLink />}>
                 <RefInput
+                    isActive={true}
                     onSubmit={(refId) => {
                         props.setRefId(refId);
                         disableEditMode();
                     }}
                     onCancel={disableEditMode}
                     docType={props.docType}
+                    {...inputOptions}
                 />
             </Show>
         </div>
@@ -84,14 +105,18 @@ export function DocumentPicker(props: {
 
 /** Input a document ref ID.
 
-The UUID can be provided directly or extracted from a URL, which is more
+The UUID can be entered directly or parsed from a URL, the latter being more
 convenient for copy-paste.
  */
-function RefInput(props: {
-    onSubmit: (refId: Uuid | null) => void;
-    onCancel?: () => void;
-    docType?: Document["type"];
-}) {
+function RefInput(
+    allProps: TextInputOptions & {
+        onSubmit: (refId: Uuid | null) => void;
+        onCancel?: () => void;
+        docType?: Document["type"];
+    },
+) {
+    const [props, inputOptions] = splitProps(allProps, ["onSubmit", "onCancel", "docType"]);
+
     const [inputText, setInputText] = createSignal("");
     const [errorText, setErrorText] = createSignal("");
 
@@ -120,24 +145,21 @@ function RefInput(props: {
                 onSubmit(inputText());
             }}
         >
-            <input
-                type="text"
-                value={inputText()}
-                onBlur={(evt) => {
-                    if (evt.currentTarget !== document.activeElement && props.onCancel) {
-                        props.onCancel();
-                    }
-                }}
-                onKeyDown={(evt) => {
-                    if (evt.key === "Escape" && props.onCancel) {
-                        evt.preventDefault();
-                        props.onCancel();
-                    }
-                }}
-                onInput={(evt) => setInputText(evt.currentTarget.value)}
-                use:autofocus
-                autofocus
+            <TextInput
+                text={inputText()}
+                setText={setInputText}
                 placeholder="Enter URL"
+                interceptKeyDown={(evt) => {
+                    if (evt.key === "Enter") {
+                        onSubmit(inputText());
+                    } else if (evt.key === "Escape" && props.onCancel) {
+                        props.onCancel();
+                    } else {
+                        return false;
+                    }
+                    return true;
+                }}
+                {...inputOptions}
             />
             <FieldError error={errorText()} />
         </form>

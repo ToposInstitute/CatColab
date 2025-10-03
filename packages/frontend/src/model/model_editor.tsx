@@ -96,6 +96,7 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
                         props.changeContent((content) => f(content as InstantiatedModel))
                     }
                     isActive={props.isActive}
+                    actions={props.actions}
                 />
             </Match>
         </Switch>
