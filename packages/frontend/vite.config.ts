@@ -30,6 +30,7 @@ export default defineConfig({
             "@corvu/dialog",
             "@corvu/popover",
             "@corvu/resizable",
+            "@corvu/tooltip",
             "@solid-primitives/destructure",
             "lucide-solid",
             "solid-js",

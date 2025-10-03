@@ -6,7 +6,7 @@ import invariant from "tiny-invariant";
 import * as uuid from "uuid";
 
 import type { Permissions } from "catcolab-api";
-import type { Document, Link, StableRef, Uuid } from "catlog-wasm";
+import type { Document, Link, LinkType, StableRef, Uuid } from "catlog-wasm";
 import type { InterfaceToType } from "../util/types";
 import { type LiveDoc, findAndMigrate, makeLiveDoc } from "./document";
 import { type RpcClient, createRpcClient } from "./rpc";
@@ -167,12 +167,20 @@ export class Api {
         return result.content;
     }
 
-    /** Create a stable reference to a document ref, without a version. */
+    /** Create a stable reference to a document, without a version. */
     makeUnversionedRef(refId: Uuid): StableRef {
         return {
             _id: refId,
             _version: null,
             _server: this.serverHost,
+        };
+    }
+
+    /** Create a link to a document, without a version. */
+    makeUnversionedLink(refId: Uuid, linkType: LinkType): Link {
+        return {
+            ...this.makeUnversionedRef(refId),
+            type: linkType,
         };
     }
 }

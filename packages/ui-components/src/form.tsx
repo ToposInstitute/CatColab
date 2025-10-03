@@ -97,7 +97,7 @@ export function TextAreaField(allProps: InputFieldProps & Omit<ComponentProps<"t
 }
 
 /** Validation error for a field. */
-const FieldError = (props: { error?: string }) => (
+export const FieldError = (props: { error?: string }) => (
     <Show when={props.error}>
         <div class="error">{props.error}</div>
     </Show>

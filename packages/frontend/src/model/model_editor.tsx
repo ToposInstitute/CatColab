@@ -1,7 +1,7 @@
 import { Match, Switch, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import type { ModelJudgment, MorDecl, ObDecl } from "catlog-wasm";
+import type { InstantiatedModel, ModelJudgment, MorDecl, ObDecl } from "catlog-wasm";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
@@ -11,9 +11,15 @@ import {
 import type { ModelTypeMeta } from "../theory";
 import { LiveModelContext } from "./context";
 import type { LiveModelDocument } from "./document";
+import { InstantiationCellEditor } from "./instantiation_cell_editor";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
-import { duplicateModelJudgment, newMorphismDecl, newObjectDecl } from "./types";
+import {
+    duplicateModelJudgment,
+    newInstantiatedModel,
+    newMorphismDecl,
+    newObjectDecl,
+} from "./types";
 
 /** Notebook editor for a model of a double theory.
  */
@@ -22,8 +28,17 @@ export function ModelNotebookEditor(props: {
 }) {
     const liveDoc = () => props.liveModel.liveDoc;
 
-    const cellConstructors = () =>
-        (props.liveModel.theory()?.modelTypes ?? []).map(modelCellConstructor);
+    const cellConstructors = (): CellConstructor<ModelJudgment>[] => [
+        {
+            name: "Instantiate",
+            description: "Instantiate an existing model into this one",
+            shortcut: ["I"],
+            construct() {
+                return newFormalCell(newInstantiatedModel());
+            },
+        },
+        ...(props.liveModel.theory()?.modelTypes ?? []).map(modelCellConstructor),
+    ];
 
     return (
         <LiveModelContext.Provider value={() => props.liveModel}>
@@ -73,6 +88,15 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
                         theory={theory()}
                     />
                 )}
+            </Match>
+            <Match when={props.content.tag === "instantiation"}>
+                <InstantiationCellEditor
+                    instantiation={props.content as InstantiatedModel}
+                    modifyInstantiation={(f) =>
+                        props.changeContent((content) => f(content as InstantiatedModel))
+                    }
+                    isActive={props.isActive}
+                />
             </Match>
         </Switch>
     );
