@@ -3,32 +3,31 @@ import { v7 } from "uuid";
 import type { DblModel, ModelJudgment, MorType, ObType, QualifiedName } from "catlog-wasm";
 import { deepCopyJSON } from "../util/deepcopy";
 
-/** Declaration of an object in a model. */
-export type ObjectDecl = ModelJudgment & {
-    tag: "object";
-};
-
 /** Create a new object declaration with the given object type. */
-export const newObjectDecl = (obType: ObType): ObjectDecl => ({
+export const newObjectDecl = (obType: ObType): ModelJudgment & { tag: "object" } => ({
     tag: "object",
     id: v7(),
     name: "",
     obType,
 });
 
-/** Declaration of a morphim in a model. */
-export type MorphismDecl = ModelJudgment & {
-    tag: "morphism";
-};
-
 /** Create a new morphism declaration with the given morphism type. */
-export const newMorphismDecl = (morType: MorType): MorphismDecl => ({
+export const newMorphismDecl = (morType: MorType): ModelJudgment & { tag: "morphism" } => ({
     tag: "morphism",
     id: v7(),
     name: "",
     morType,
     dom: null,
     cod: null,
+});
+
+/** Create a new instantiation of an existing model. */
+export const newInstantiatedModel = (): ModelJudgment & { tag: "instantiation" } => ({
+    tag: "instantiation",
+    id: v7(),
+    name: "",
+    model: null,
+    specializations: [],
 });
 
 /** Duplicate a model judgment, creating a fresh UUID when applicable. */

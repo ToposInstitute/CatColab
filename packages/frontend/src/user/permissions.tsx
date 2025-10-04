@@ -16,7 +16,7 @@ import invariant from "tiny-invariant";
 
 import type { NewPermissions, PermissionLevel, Permissions, UserSummary } from "catcolab-api";
 import type { Document } from "catlog-wasm";
-import { type LiveDoc, duplicateDoc, useApi } from "../api";
+import { type LiveDoc, useApi } from "../api";
 import { Dialog, FormGroup, IconButton, SelectField, Warning } from "../components";
 import { deepCopyJSON } from "../util/deepcopy";
 import { Login } from "./login";
@@ -288,7 +288,7 @@ const ReadonlyPermissionsButton = (props: {
     const navigate = useNavigate();
 
     const onDuplicateDocument = async () => {
-        const newRef = await duplicateDoc(api, props.doc);
+        const newRef = await api.duplicateDoc(props.doc);
         navigate(`/${props.doc.type}/${newRef}`);
     };
 
