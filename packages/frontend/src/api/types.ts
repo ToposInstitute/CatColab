@@ -6,7 +6,6 @@ import invariant from "tiny-invariant";
 import * as uuid from "uuid";
 
 import type { Document, StableRef } from "catlog-wasm";
-import { PermissionsError } from "../util/errors";
 import type { InterfaceToType } from "../util/types";
 import { type LiveDoc, getLiveDocFromDocHandle } from "./document";
 import { type RpcClient, createRpcClient } from "./rpc";
@@ -47,7 +46,7 @@ export class Api {
     propagated by Automerge to the backend and to other clients. When the user
     has only read permissions, the Automerge doc handle will be "fake", existing
     only locally in the client. And if the user doesn't even have read
-    permissions, this function will raise an authorization error!
+    permissions, this method will raise a `PermissionsError`.
      */
     async getLiveDoc<Doc extends Document>(
         refId: string,
@@ -112,5 +111,13 @@ export class Api {
             _version: null,
             _server: this.serverHost,
         };
+    }
+}
+
+/** Error raised when backend reports that permissions are insufficient. */
+export class PermissionsError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = "PermisssionsError";
     }
 }
