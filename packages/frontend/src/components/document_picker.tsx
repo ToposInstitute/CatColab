@@ -13,7 +13,7 @@ import {
 import * as uuid from "uuid";
 
 import type { Document, Uuid } from "catlog-wasm";
-import { getLiveDoc, useApi } from "../api";
+import { useApi } from "../api";
 import { FieldError } from "./form";
 import { IconButton } from "./icon_button";
 import { TextInput, type TextInputOptions } from "./text_input";
@@ -45,7 +45,7 @@ export function DocumentPicker(
     // hitting the backend too frequently.
     const [liveDoc] = createResource(
         () => props.refId,
-        (refId) => getLiveDoc(api, refId),
+        (refId) => api.getLiveDoc(refId),
     );
 
     const [editMode, setEditMode] = createSignal(false);

@@ -2,7 +2,7 @@ import { For, Show, createResource } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { Document } from "catlog-wasm";
-import { type LiveDoc, getLiveDoc, useApi } from "../api";
+import { type LiveDoc, useApi } from "../api";
 import { assertExhaustive } from "../util/assert_exhaustive";
 import "./document_breadcrumbs.css";
 
@@ -64,7 +64,7 @@ async function getDocumentChain(document: LiveDoc): Promise<LiveDoc[]> {
         // the app at some point in the near future. The alternative is picking
         // apart a JSON blob in postgres, and that sounds neither fun nor
         // maintainable.
-        const parentDocument = await getLiveDoc(api, parentRefId);
+        const parentDocument = await api.getLiveDoc(parentRefId);
         documentChain.unshift(parentDocument);
     }
 

@@ -2,7 +2,7 @@ import { useNavigate } from "@solidjs/router";
 import invariant from "tiny-invariant";
 
 import { createAnalysis } from "../analysis/document";
-import { makeUnversionedRef, useApi } from "../api";
+import { useApi } from "../api";
 import { type LiveDiagramDocument, createDiagram } from "../diagram/document";
 import {
     AppMenu,
@@ -37,7 +37,7 @@ export function DiagramMenu(props: {
         const refId = props.liveDiagram.liveDoc.docRef?.refId;
         invariant(refId, "To create analysis, parent diagram should have a ref ID");
 
-        const newRef = await createAnalysis(api, "diagram", makeUnversionedRef(api, refId));
+        const newRef = await createAnalysis(api, "diagram", api.makeUnversionedRef(refId));
         navigate(`/analysis/${newRef}`);
     };
 
