@@ -1,6 +1,7 @@
 import { createSignal } from "solid-js";
 
 import type { InstantiatedModel } from "catlog-wasm";
+import { useApi } from "../api";
 import { DocumentPicker, NameInput } from "../components";
 import type { CellActions } from "../notebook";
 
@@ -13,6 +14,8 @@ export function InstantiationCellEditor(props: {
     isActive: boolean;
     actions: CellActions;
 }) {
+    const api = useApi();
+
     const [activeInput, setActiveInput] = createSignal<InstantiationCellInput>("name");
 
     return (
@@ -39,10 +42,10 @@ export function InstantiationCellEditor(props: {
             />
             <span class="is-a" />
             <DocumentPicker
-                refId={props.instantiation.model}
-                setRefId={(id) => {
+                refId={props.instantiation.model?._id ?? null}
+                setRefId={(refId) => {
                     props.modifyInstantiation((inst) => {
-                        inst.model = id;
+                        inst.model = refId ? api.makeUnversionedRef(refId) : null;
                     });
                 }}
                 placeholder="..."
