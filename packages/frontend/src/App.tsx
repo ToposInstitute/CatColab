@@ -1,6 +1,3 @@
-import { Repo } from "@automerge/automerge-repo";
-import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
-import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb";
 import { type FirebaseOptions, initializeApp } from "firebase/app";
 import invariant from "tiny-invariant";
 import * as uuid from "uuid";
@@ -12,7 +9,7 @@ import { ErrorBoundary, Show, createResource, createSignal, lazy } from "solid-j
 
 import Dialog, { Content, Portal } from "@corvu/dialog";
 import { getAuth, signOut } from "firebase/auth";
-import { type Api, ApiContext, createRpcClient, useApi } from "./api";
+import { Api, ApiContext, useApi } from "./api";
 import { helpRoutes } from "./help/routes";
 import { createModel } from "./model/document";
 import { PageContainer } from "./page/page_container";
@@ -27,21 +24,13 @@ const firebaseOptions = JSON.parse(import.meta.env.VITE_FIREBASE_OPTIONS) as Fir
 const Root = (props: RouteSectionProps<unknown>) => {
     invariant(serverUrl, "Must set environment variable VITE_SERVER_URL");
     invariant(repoUrl, "Must set environment variable VITE_AUTOMERGE_REPO_URL");
-    const serverHost = new URL(serverUrl).host;
 
     const firebaseApp = initializeApp(firebaseOptions);
-    const rpc = createRpcClient(serverUrl, firebaseApp);
-
-    const repo = new Repo({
-        storage: new IndexedDBStorageAdapter("catcolab"),
-        network: [new BrowserWebSocketClientAdapter(repoUrl)],
-    });
-
-    const api: Api = { serverHost, rpc, repo };
+    const api = new Api({ serverUrl, repoUrl, firebaseApp });
 
     const [isSessionInvalid] = createResource(
         async () => {
-            const result = await rpc.validate_session.query();
+            const result = await api.rpc.validate_session.query();
             if (result.tag === "Err") {
                 await signOut(getAuth(firebaseApp));
 

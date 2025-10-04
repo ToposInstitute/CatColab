@@ -2,7 +2,7 @@ import { useNavigate } from "@solidjs/router";
 import invariant from "tiny-invariant";
 
 import type { Document } from "catlog-wasm";
-import { createDoc, useApi } from "../api";
+import { useApi } from "../api";
 import { JsonImport } from "../components";
 
 const isImportableDocument = (doc: Document) => doc.type === "model" || doc.type === "diagram";
@@ -18,7 +18,7 @@ export function ImportDocument(props: { onComplete?: () => void }) {
             "Only models and diagrams are importable at this time",
         );
 
-        const newRef = await createDoc(api, data);
+        const newRef = await api.createDoc(data);
         navigate(`/${data.type}/${newRef}`);
 
         props.onComplete?.();

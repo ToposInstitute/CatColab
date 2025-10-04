@@ -9,7 +9,7 @@ import type {
     StableRef,
 } from "catlog-wasm";
 import { currentVersion, elaborateDiagram } from "catlog-wasm";
-import { type Api, type LiveDoc, createDoc, getLiveDoc, getLiveDocFromDocHandle } from "../api";
+import { type Api, type LiveDoc, getLiveDocFromDocHandle } from "../api";
 import { type LiveModelDocument, getLiveModel, getLiveModelFromRepo } from "../model";
 import { NotebookUtils, newNotebook } from "../notebook";
 import type { TheoryLibrary } from "../theory";
@@ -127,7 +127,7 @@ function enlivenDiagramDocument(
 /** Create a new, empty diagram in the backend. */
 export function createDiagram(api: Api, inModel: StableRef): Promise<string> {
     const init = newDiagramDocument(inModel);
-    return createDoc(api, init);
+    return api.createDoc(init);
 }
 
 /** Retrieve a diagram from the backend and make it "live" for editing. */
@@ -136,7 +136,7 @@ export async function getLiveDiagram(
     api: Api,
     theories: TheoryLibrary,
 ): Promise<LiveDiagramDocument> {
-    const liveDoc = await getLiveDoc<DiagramDocument>(api, refId, "diagram");
+    const liveDoc = await api.getLiveDoc<DiagramDocument>(refId, "diagram");
     const modelRefId = liveDoc.doc.diagramIn._id;
 
     const liveModel = await getLiveModel(modelRefId, api, theories);

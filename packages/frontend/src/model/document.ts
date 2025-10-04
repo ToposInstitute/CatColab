@@ -9,7 +9,7 @@ import {
     currentVersion,
     elaborateModel,
 } from "catlog-wasm";
-import { type Api, type LiveDoc, createDoc, getLiveDoc, getLiveDocFromDocHandle } from "../api";
+import { type Api, type LiveDoc, getLiveDocFromDocHandle } from "../api";
 import { NotebookUtils, newNotebook } from "../notebook";
 import type { Theory, TheoryLibrary } from "../theory";
 
@@ -141,7 +141,7 @@ export async function createModel(
     } else {
         init = initOrTheoryId;
     }
-    return createDoc(api, init);
+    return api.createDoc(init);
 }
 
 /** Retrieve a model from the backend and make it "live" for editing. */
@@ -150,7 +150,7 @@ export async function getLiveModel(
     api: Api,
     theories: TheoryLibrary,
 ): Promise<LiveModelDocument> {
-    const liveDoc = await getLiveDoc<ModelDocument>(api, refId, "model");
+    const liveDoc = await api.getLiveDoc<ModelDocument>(refId, "model");
     return enlivenModelDocument(liveDoc, theories);
 }
 
