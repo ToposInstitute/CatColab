@@ -41,8 +41,6 @@ export function DocumentPicker(
 
     const api = useApi();
 
-    // TODO: API should cache mapping from ref ID to Automerge doc URL to avoid
-    // hitting the backend too frequently.
     const [liveDoc] = createResource(
         () => props.refId,
         (refId) => api.getLiveDoc(refId),

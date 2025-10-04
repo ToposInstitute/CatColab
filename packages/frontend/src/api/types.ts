@@ -1,11 +1,17 @@
-import { type DocHandle, type DocumentId, Repo } from "@automerge/automerge-repo";
+import {
+    type AnyDocumentId,
+    type DocHandle,
+    type DocumentId,
+    Repo,
+} from "@automerge/automerge-repo";
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
 import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb";
 import type { FirebaseApp } from "firebase/app";
 import invariant from "tiny-invariant";
 import * as uuid from "uuid";
 
-import type { Document, StableRef } from "catlog-wasm";
+import type { Permissions } from "catcolab-api";
+import type { Document, StableRef, Uuid } from "catlog-wasm";
 import type { InterfaceToType } from "../util/types";
 import { type LiveDoc, getLiveDocFromDocHandle } from "./document";
 import { type RpcClient, createRpcClient } from "./rpc";
@@ -21,8 +27,21 @@ export class Api {
     /** Automerge repo connected to the Automerge document server. */
     readonly repo: Repo;
 
-    /** An Automerge repo with no networking, used for read-only documents. */
+    /** Mapping from document ref ID to Automerge document ID.
+
+    This is the simplest and safest form of caching that we can do. It is
+    entirely transient---it will be cleared on a page refresh---but it at least
+    ensures that we'll go straight to the Automerge repo's local storage instead
+    of thrashing the backend when a document is retrieved by multiple
+    components, such as in document breadcrumbs or compositional models.
+     */
+    private readonly docRefCache: Map<Uuid, DocCacheEntry>;
+
+    /** Automerge repo with no networking, used for read-only documents. */
     private readonly localRepo: Repo;
+
+    /** Mapping from ref ID to Automerge ID for local-only Automerge repo. */
+    private readonly localDocRefCache: Map<Uuid, DocCacheEntry>;
 
     constructor(props: {
         serverUrl: string;
@@ -37,7 +56,10 @@ export class Api {
             storage: new IndexedDBStorageAdapter("catcolab"),
             network: [new BrowserWebSocketClientAdapter(props.repoUrl)],
         });
+        this.docRefCache = new Map();
+
         this.localRepo = new Repo();
+        this.localDocRefCache = new Map();
     }
 
     /** Retrieve a live document from the backend.
@@ -49,11 +71,36 @@ export class Api {
     permissions, this method will raise a `PermissionsError`.
      */
     async getLiveDoc<Doc extends Document>(
-        refId: string,
+        refId: Uuid,
         docType?: Doc["type"],
     ): Promise<LiveDoc<Doc>> {
         invariant(uuid.validate(refId), () => `Invalid document ref ${refId}`);
 
+        // Attemtp to retrieve the Automerge document ID from internal cache.
+        for (const [repo, cache] of [
+            [this.repo, this.docRefCache],
+            [this.localRepo, this.localDocRefCache],
+        ] as const) {
+            const cached = cache.get(refId);
+            if (cached === undefined) {
+                continue;
+            }
+            const { docId, permissions } = cached;
+            const docHandle = await repo.find<Doc>(docId);
+            return getLiveDocFromDocHandle(docHandle, docType, {
+                refId,
+                permissions,
+            });
+        }
+
+        // If that fails, retrieve from the backend.
+        return this.getFreshLiveDoc(refId, docType);
+    }
+
+    private async getFreshLiveDoc<Doc extends Document>(
+        refId: Uuid,
+        docType?: Doc["type"],
+    ): Promise<LiveDoc<Doc>> {
         const result = await this.rpc.get_doc.query(refId);
         if (result.tag !== "Ok") {
             if (result.code === 403) {
@@ -63,28 +110,33 @@ export class Api {
             }
         }
         const refDoc = result.content;
+        const { permissions } = refDoc;
 
         let docHandle: DocHandle<Doc>;
         if (refDoc.tag === "Live") {
             const docId = refDoc.docId as DocumentId;
-            docHandle = (await this.repo.find(docId)) as DocHandle<Doc>;
+            docHandle = await this.repo.find<Doc>(docId);
+            this.docRefCache.set(refId, {
+                docId,
+                permissions,
+            });
         } else {
             const init = refDoc.content as unknown as Doc;
             docHandle = this.localRepo.create(init);
+            this.localDocRefCache.set(refId, {
+                docId: docHandle.documentId,
+                permissions,
+            });
         }
 
-        const { permissions } = refDoc;
-        return {
-            ...getLiveDocFromDocHandle(docHandle, docType),
-            docRef: {
-                refId,
-                permissions,
-            },
-        };
+        return getLiveDocFromDocHandle(docHandle, docType, {
+            refId,
+            permissions,
+        });
     }
 
     /** Create a new document in the backend, returning its ref ID. */
-    async createDoc(init: Document): Promise<string> {
+    async createDoc(init: Document): Promise<Uuid> {
         const result = await this.rpc.new_ref.mutate(init as InterfaceToType<Document>);
         invariant(result.tag === "Ok", `Failed to create a new ${init.type}`);
 
@@ -92,7 +144,7 @@ export class Api {
     }
 
     /** Duplicate a document in the backend, returning the new ref ID. */
-    async duplicateDoc(doc: Document): Promise<string> {
+    async duplicateDoc(doc: Document): Promise<Uuid> {
         const init: Document = {
             ...doc,
             name: `${doc.name} (copy)`,
@@ -105,7 +157,7 @@ export class Api {
     }
 
     /** Create a stable reference to a document ref, without a version. */
-    makeUnversionedRef(refId: string): StableRef {
+    makeUnversionedRef(refId: Uuid): StableRef {
         return {
             _id: refId,
             _version: null,
@@ -113,6 +165,11 @@ export class Api {
         };
     }
 }
+
+type DocCacheEntry = {
+    docId: AnyDocumentId;
+    permissions: Permissions;
+};
 
 /** Error raised when backend reports that permissions are insufficient. */
 export class PermissionsError extends Error {

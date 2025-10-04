@@ -54,6 +54,7 @@ function directly.
 export function getLiveDocFromDocHandle<Doc extends Document>(
     docHandle: DocHandle<Doc>,
     docType?: Doc["type"],
+    docRef?: DocRef,
 ): LiveDoc<Doc> {
     // Perform any migrations on the document.
     // XXX: copied from automerge-doc-server/src/server.ts:
@@ -76,7 +77,7 @@ export function getLiveDocFromDocHandle<Doc extends Document>(
 
     const changeDoc = (f: ChangeFn<Doc>) => docHandle.change(f);
 
-    return { doc, changeDoc, docHandle };
+    return { doc, changeDoc, docHandle, docRef };
 }
 
 /** Create a Solid Store that tracks an Automerge document. */

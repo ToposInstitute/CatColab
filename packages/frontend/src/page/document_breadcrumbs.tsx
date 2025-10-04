@@ -58,12 +58,6 @@ async function getDocumentChain(document: LiveDoc): Promise<LiveDoc[]> {
             break;
         }
 
-        // In a worst case this results in sequential round trips to the server.
-        // However it should be reasonable to hope that either the parents are
-        // already in the local automerge repo, or that they will be needed by
-        // the app at some point in the near future. The alternative is picking
-        // apart a JSON blob in postgres, and that sounds neither fun nor
-        // maintainable.
         const parentDocument = await api.getLiveDoc(parentRefId);
         documentChain.unshift(parentDocument);
     }
