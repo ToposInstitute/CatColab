@@ -44,6 +44,19 @@ pub struct Link {
     #[serde(flatten)]
     pub stable_ref: StableRef,
 
-    /// Type of the link, such as "diagramIn" or "analysisOf".
-    pub r#type: String,
+    pub r#type: LinkType,
+}
+
+/// Type of link between documents.
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub enum LinkType {
+    #[serde(rename = "analysis-of")]
+    AnalysisOf,
+
+    #[serde(rename = "diagram-in")]
+    DiagramIn,
+
+    #[serde(rename = "instantiation")]
+    Instantiation,
 }

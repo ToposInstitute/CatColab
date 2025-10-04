@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 use uuid::Uuid;
 
-use super::api::StableRef;
+use super::api::Link;
 use super::model::Ob;
 use super::theory::{MorType, ObType};
 
@@ -52,8 +52,8 @@ pub struct InstantiatedModel {
     /// Globally unique identifer of the instantiation.
     pub id: Uuid,
 
-    /// Reference to the model to instantiate.
-    pub model: Option<StableRef>,
+    /// Link to the model to instantiate.
+    pub model: Option<Link>,
 
     /// List of specializations to perform on the instantiated model.
     pub specializations: Vec<SpecializeModel>,

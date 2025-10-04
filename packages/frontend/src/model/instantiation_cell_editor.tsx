@@ -45,7 +45,7 @@ export function InstantiationCellEditor(props: {
                 refId={props.instantiation.model?._id ?? null}
                 setRefId={(refId) => {
                     props.modifyInstantiation((inst) => {
-                        inst.model = refId ? api.makeUnversionedRef(refId) : null;
+                        inst.model = refId ? api.makeUnversionedLink(refId, "instantiation") : null;
                     });
                 }}
                 placeholder="..."
