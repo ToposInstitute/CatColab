@@ -12,9 +12,9 @@ import { getAuth, signOut } from "firebase/auth";
 import { Api, ApiContext, useApi } from "./api";
 import { helpRoutes } from "./help/routes";
 import { createModel } from "./model/document";
+import { ErrorBoundaryDialog } from "./page/error_boundary";
 import { PageContainer } from "./page/page_container";
 import { TheoryLibraryContext, stdTheories } from "./stdlib";
-import { ErrorBoundaryDialog } from "./util/errors";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
 const repoUrl = import.meta.env.VITE_AUTOMERGE_REPO_URL;
