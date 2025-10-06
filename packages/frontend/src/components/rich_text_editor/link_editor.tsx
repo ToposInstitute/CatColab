@@ -277,7 +277,7 @@ export class LinkEditorView {
             this.setLinkEditorState(link);
             this.isLinkHovered = true;
             this.showTimer = null;
-        }, 250);
+        }, 500);
     }
 
     scheduleHide() {
