@@ -13,3 +13,21 @@
     align-items: center;
     gap: 5em;
 }
+
+.permissions-button-container {
+    display: flex;
+}
+
+.permissions-spacer {
+    display: flex;
+    flex-grow: 1;
+}
+
+.duplicate-button-container {
+    display: flex;
+    margin-top: 0.5rem;
+}
+
+.duplicate-button-height-text {
+    line-height: 2.75em;
+}

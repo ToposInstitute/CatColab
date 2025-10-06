@@ -1,8 +1,9 @@
 //! ODE analyses of models.
 
-use std::{collections::HashMap, hash::Hash};
+use std::collections::{BTreeMap, HashMap};
 
 use derivative::Derivative;
+use derive_more::Constructor;
 use ode_solvers::dop_shared::IntegrationError;
 
 #[cfg(feature = "serde")]
@@ -11,6 +12,7 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 use crate::simulate::ode::{ODEProblem, ODESystem};
+use crate::zero::QualifiedName;
 
 /// Solution to an ODE problem.
 #[derive(Clone, Derivative)]
@@ -18,39 +20,28 @@ use crate::simulate::ode::{ODEProblem, ODESystem};
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
-pub struct ODESolution<Id>
-where
-    Id: Eq + Hash,
-{
+pub struct ODESolution {
     /// Values of time variable for the duration of the simulation.
     time: Vec<f32>,
 
     /// Values of state variables for the duration of the simulation.
-    states: HashMap<Id, Vec<f32>>,
+    states: HashMap<QualifiedName, Vec<f32>>,
 }
 
 /// Data needed to simulate and interpret an ODE analysis of a model.
-pub struct ODEAnalysis<Id, Sys> {
+#[derive(Constructor)]
+pub struct ODEAnalysis<Sys> {
     /// ODE problem for the analysis.
     pub problem: ODEProblem<Sys>,
 
-    /// Mapping from IDs in model (usually object IDs) to variable indices.
-    pub variable_index: HashMap<Id, usize>,
+    /// Map from IDs in model (usually object IDs) to variable indices.
+    pub variable_index: BTreeMap<QualifiedName, usize>,
 }
 
-impl<Id, Sys> ODEAnalysis<Id, Sys> {
-    /// Constructs a new ODE analysis.
-    pub fn new(problem: ODEProblem<Sys>, variable_index: HashMap<Id, usize>) -> Self {
-        Self {
-            problem,
-            variable_index,
-        }
-    }
-
+impl<Sys> ODEAnalysis<Sys> {
     /// Solves the ODE with reasonable default settings and collects results.
-    pub fn solve_with_defaults(self) -> Result<ODESolution<Id>, IntegrationError>
+    pub fn solve_with_defaults(self) -> Result<ODESolution, IntegrationError>
     where
-        Id: Eq + Hash,
         Sys: ODESystem,
     {
         // ODE solver will fail in the degenerate case of an empty system.
@@ -74,13 +65,12 @@ impl<Id, Sys> ODEAnalysis<Id, Sys> {
     }
 }
 
-#[allow(non_snake_case)]
 pub mod linear_ode;
-#[allow(non_snake_case)]
 pub mod lotka_volterra;
-#[allow(clippy::type_complexity)]
 pub mod mass_action;
+pub mod signed_coefficients;
 
 pub use linear_ode::*;
 pub use lotka_volterra::*;
 pub use mass_action::*;
+pub use signed_coefficients::*;

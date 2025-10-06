@@ -96,3 +96,12 @@ instrument.mjs
 
 # Database dumps
 /dumps
+
+# history for the interactive nixos test python shell
+.nixos-test-history
+
+# output from nix build commands
+result
+
+# vm image
+nixos.qcow2

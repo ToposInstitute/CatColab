@@ -1,4 +1,7 @@
-import { Match, Switch, useContext } from "solid-js";
+import { useParams } from "@solidjs/router";
+import { getAuth } from "firebase/auth";
+import { useAuth, useFirebaseApp } from "solid-firebase";
+import { Match, Show, Switch, createResource, createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { ModelJudgment } from "catlog-wasm";
@@ -9,9 +12,10 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
+import { WelcomeOverlay } from "../page/welcome_overlay";
 import type { ModelTypeMeta } from "../theory";
 import { LiveModelContext } from "./context";
-import { type LiveModelDocument } from "./document";
+import { type LiveModelDocument, getLiveModel, migrateModelDocument } from "./document";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
 import {
@@ -22,6 +26,8 @@ import {
     newObjectDecl,
 } from "./types";
 
+import "./model_editor.css";
+
 /** Notebook editor for a model of a double theory.
  */
 export function ModelNotebookEditor(props: {
@@ -30,10 +36,23 @@ export function ModelNotebookEditor(props: {
     const liveDoc = () => props.liveModel.liveDoc;
 
     const cellConstructors = () =>
-        (props.liveModel.theory().modelTypes ?? []).map(modelCellConstructor);
+        (props.liveModel.theory()?.modelTypes ?? []).map(modelCellConstructor);
+
+    const firebaseApp = (() => {
+        try {
+            return useFirebaseApp();
+        } catch {}
+    })();
+    const auth = firebaseApp && useAuth(getAuth(firebaseApp));
+
+    const [isOverlayOpen, setOverlayOpen] = createSignal(
+        liveDoc().doc.notebook.cellOrder.length === 0 && auth != null && auth.data == null,
+    );
+    const toggleOverlay = () => setOverlayOpen(!isOverlayOpen());
 
     return (
         <LiveModelContext.Provider value={() => props.liveModel}>
+            <WelcomeOverlay isOpen={isOverlayOpen()} onClose={toggleOverlay} />
             <NotebookEditor
                 handle={liveDoc().docHandle}
                 path={["notebook"]}
@@ -50,28 +69,38 @@ export function ModelNotebookEditor(props: {
     );
 }
 
-/** Editor for a notebook cell in a model notebook.
- */
-function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
+/** Editor for a notebook cell in a model notebook. */
+export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
+    const liveModel = useContext(LiveModelContext);
+    invariant(liveModel, "Live model should be provided as context");
+
     return (
         <Switch>
-            <Match when={props.content.tag === "object"}>
-                <ObjectCellEditor
-                    object={props.content as ObjectDecl}
-                    modifyObject={(f) => props.changeContent((content) => f(content as ObjectDecl))}
-                    isActive={props.isActive}
-                    actions={props.actions}
-                />
+            <Match when={props.content.tag === "object" && liveModel().theory()}>
+                {(theory) => (
+                    <ObjectCellEditor
+                        object={props.content as ObjectDecl}
+                        modifyObject={(f) =>
+                            props.changeContent((content) => f(content as ObjectDecl))
+                        }
+                        isActive={props.isActive}
+                        actions={props.actions}
+                        theory={theory()}
+                    />
+                )}
             </Match>
-            <Match when={props.content.tag === "morphism"}>
-                <MorphismCellEditor
-                    morphism={props.content as MorphismDecl}
-                    modifyMorphism={(f) =>
-                        props.changeContent((content) => f(content as MorphismDecl))
-                    }
-                    isActive={props.isActive}
-                    actions={props.actions}
-                />
+            <Match when={props.content.tag === "morphism" && liveModel().theory()}>
+                {(theory) => (
+                    <MorphismCellEditor
+                        morphism={props.content as MorphismDecl}
+                        modifyMorphism={(f) =>
+                            props.changeContent((content) => f(content as MorphismDecl))
+                        }
+                        isActive={props.isActive}
+                        actions={props.actions}
+                        theory={theory()}
+                    />
+                )}
             </Match>
         </Switch>
     );
@@ -97,9 +126,9 @@ function judgmentLabel(judgment: ModelJudgment): string | undefined {
     const theory = liveModel().theory();
 
     if (judgment.tag === "object") {
-        return theory.modelObTypeMeta(judgment.obType)?.name;
+        return theory?.modelObTypeMeta(judgment.obType)?.name;
     }
     if (judgment.tag === "morphism") {
-        return theory.modelMorTypeMeta(judgment.morType)?.name;
+        return theory?.modelMorTypeMeta(judgment.morType)?.name;
     }
 }

@@ -83,6 +83,10 @@ function load_target_env() {
     local)
       load_env DATABASE_URL "$(find_git_root)/packages/backend/.env"
       ;;
+    vm)
+      load_env DATABASE_URL "$(find_git_root)/infrastructure/secrets/example-secrets.env"
+      export PGPORT="5433"
+      ;;
     staging)
       load_env DATABASE_URL "$(find_git_root)/infrastructure/secrets/.env.next.age"
 
@@ -119,5 +123,5 @@ function find_git_root() {
 
 function run_local_migrations() {
   echo "Running local migrations..."
-  cargo run -p migrator apply
+  cargo run -p backend migrator apply
 }

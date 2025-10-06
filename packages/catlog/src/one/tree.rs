@@ -1,33 +1,32 @@
-/*! Trees with boundary.
-
-Trees are an ubiquitous data structure in computer science and computer algebra.
-This module implements trees with specified boundary, or [*open
-trees*](OpenTree) for short. This is the category theorist's preferred notion of
-planar tree, since open trees are the morphisms of free multicategories.
-
-To see the difference between (closed) trees and open trees, consider their use
-to represent symbolic expressions. A closed expression tree cannot, except by
-convention, distinguish between free variables and constants (nullary
-operations). However, when boundaries are admitted, the expression `f(x, g(y))`
-with free variables `x` and `y` can be represented as an open tree of with arity
-2, whereas the expression `f(c, g(d))`, shorthand for `f(c(), g(d()))`, is
-represented as an open tree with arity 0.
-
-A subtle but important feature of open trees is that they include [*identity*
-trees](OpenTree::Id), which carry a type but have no nodes. By contrast, the
-computer scientist's tree is rooted, which implies that it has at least one
-node, namely its root.
-
-The main use of open trees in this crate is to implement [double
-trees](crate::dbl::tree).
-
-# References
-
-Joachim Kock has proposed a combinatorial formalism for open trees ([Kock
-2011](crate::refs::KockTrees)) and, in the same style, open graphs ([Kock
-2016](crate::refs::KockGraphs)). Kock's trees are similar in spirit to ours but
-are nonplanar, i.e., are the morphisms of free *symmetric* multicategories.
- */
+//! Trees with boundary.
+//!
+//! Trees are an ubiquitous data structure in computer science and computer algebra.
+//! This module implements trees with specified boundary, or [*open
+//! trees*](OpenTree) for short. This is the category theorist's preferred notion of
+//! planar tree, since open trees are the morphisms of free multicategories.
+//!
+//! To see the difference between (closed) trees and open trees, consider their use
+//! to represent symbolic expressions. A closed expression tree cannot, except by
+//! convention, distinguish between free variables and constants (nullary
+//! operations). However, when boundaries are admitted, the expression `f(x, g(y))`
+//! with free variables `x` and `y` can be represented as an open tree of with arity
+//! 2, whereas the expression `f(c, g(d))`, shorthand for `f(c(), g(d()))`, is
+//! represented as an open tree with arity 0.
+//!
+//! A subtle but important feature of open trees is that they include [*identity*
+//! trees](OpenTree::Id), which carry a type but have no nodes. By contrast, the
+//! computer scientist's tree is rooted, which implies that it has at least one
+//! node, namely its root.
+//!
+//! The main use of open trees in this crate is to implement [double
+//! trees](crate::dbl::tree).
+//!
+//! # References
+//!
+//! Joachim Kock has proposed a combinatorial formalism for open trees ([Kock
+//! 2011](crate::refs::KockTrees)) and, in the same style, open graphs ([Kock
+//! 2016](crate::refs::KockGraphs)). Kock's trees are similar in spirit to ours but
+//! are nonplanar, i.e., are the morphisms of free *symmetric* multicategories.
 
 use derive_more::From;
 use ego_tree::{NodeRef, Tree};
@@ -36,16 +35,15 @@ use std::collections::VecDeque;
 
 use super::tree_algorithms::TreeIsomorphism;
 
-/** An open tree, or tree with boundary.
-
-In a non-empty open tree, backed by a [`Tree`], each node carries either an
-operation or a null value. The null nodes constitute the boundary of the tree.
-It is an error for null nodes to have children or for the root to be null.
-Failure to maintain this invariant may result in panics.
-
-Compare with the [`Path`](super::path::Path) data type, of which this type may
-be considered a generalization.
- */
+/// An open tree, or tree with boundary.
+///
+/// In a non-empty open tree, backed by a [`Tree`], each node carries either an
+/// operation or a null value. The null nodes constitute the boundary of the tree.
+/// It is an error for null nodes to have children or for the root to be null.
+/// Failure to maintain this invariant may result in panics.
+///
+/// Compare with the [`Path`](super::path::Path) data type, of which this type may
+/// be considered a generalization.
 #[derive(Clone, Debug, From, PartialEq, Eq)]
 pub enum OpenTree<Ty, Op> {
     /// The identity, or empty, tree on a type.
@@ -71,11 +69,10 @@ impl<Ty, Op> OpenTree<Ty, Op> {
         tree.into()
     }
 
-    /** Constructs an open tree by grafting subtrees onto a root operation.
-
-    The root operation is *assumed* to have arity equal to the number of
-    subtrees.
-     */
+    /// Constructs an open tree by grafting subtrees onto a root operation.
+    ///
+    /// The root operation is *assumed* to have arity equal to the number of
+    /// subtrees.
     pub fn graft(subtrees: impl IntoIterator<Item = Self>, op: Op) -> Self {
         let mut tree = Tree::new(Some(op));
         for subtree in subtrees {
@@ -87,11 +84,10 @@ impl<Ty, Op> OpenTree<Ty, Op> {
         tree.into()
     }
 
-    /** Constructs a linear open tree from a sequence of unary operations.
-
-    Each operation is *assumed* to be unary. This constructor returns nothing if
-    the sequence is empty.
-     */
+    /// Constructs a linear open tree from a sequence of unary operations.
+    ///
+    /// Each operation is *assumed* to be unary. This constructor returns nothing if
+    /// the sequence is empty.
     pub fn linear(iter: impl IntoIterator<Item = Op>) -> Option<Self> {
         let mut values: Vec<_> = iter.into_iter().collect();
         let value = values.pop()?;
@@ -104,10 +100,9 @@ impl<Ty, Op> OpenTree<Ty, Op> {
         Some(tree.into())
     }
 
-    /** Gets the arity of the open tree.
-
-    The *arity* of an open tree is the number of boundary nodes in it.
-     */
+    /// Gets the arity of the open tree.
+    ///
+    /// The *arity* of an open tree is the number of boundary nodes in it.
     pub fn arity(&self) -> usize {
         match self {
             OpenTree::Comp(tree) => tree.root().boundary().count(),
@@ -115,16 +110,13 @@ impl<Ty, Op> OpenTree<Ty, Op> {
         }
     }
 
-    /** Gets the size of the open tree.
-
-    The *size* of an open tree is the number of non-boundary nodes in it,
-    ignoring orphans.
-     */
+    /// Gets the size of the open tree.
+    ///
+    /// The *size* of an open tree is the number of non-boundary nodes in it,
+    /// ignoring orphans.
     pub fn size(&self) -> usize {
         match self {
-            OpenTree::Comp(tree) => {
-                tree.root().descendants().filter(|node| node.value().is_some()).count()
-            }
+            OpenTree::Comp(tree) => tree.nodes().filter(|node| node.value().is_some()).count(),
             OpenTree::Id(_) => 0,
         }
     }
@@ -134,13 +126,25 @@ impl<Ty, Op> OpenTree<Ty, Op> {
         matches!(self, OpenTree::Id(_))
     }
 
-    /** Is the open tree isomorphic to another?
+    /// Extracts the unique node in a tree of size 1.
+    ///
+    /// This method is a one-sided inverse to [`OpenTree::single`].
+    pub fn only(self) -> Option<Op> {
+        if let OpenTree::Comp(mut tree) = self
+            && tree.root().children().all(|node| node.value().is_none())
+        {
+            std::mem::take(tree.root_mut().value())
+        } else {
+            None
+        }
+    }
 
-    Open trees should generally be compared for
-    [isomorphism](TreeIsomorphism::is_isomorphic_to) rather than equality
-    because, among other reasons, the [`flatten`](OpenTree::flatten) method
-    produces orphan nodes.
-     */
+    /// Is the open tree isomorphic to another?
+    ///
+    /// Open trees should generally be compared for
+    /// [isomorphism](TreeIsomorphism::is_isomorphic_to) rather than equality
+    /// because, among other reasons, the [`flatten`](OpenTree::flatten) method
+    /// produces orphan nodes.
     pub fn is_isomorphic_to(&self, other: &Self) -> bool
     where
         Ty: Eq,
@@ -272,6 +276,7 @@ mod tests {
         let tree = OT::single('f', 2);
         assert_eq!(tree.arity(), 2);
         assert_eq!(tree, tree!(Some('f') => { None, None }).into());
+        assert_eq!(tree.only(), Some('f'));
 
         let tree = tree!(Some('h') => { Some('g') => { Some('f') => { None } } });
         assert_eq!(OT::linear(vec!['f', 'g', 'h']), Some(tree.into()));

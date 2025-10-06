@@ -7,18 +7,16 @@ use super::notebook::Notebook;
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
-/// This is the content of a model document. For legacy reasons, we reserve
-/// the name "ModelDocument" for `Document & { type: "model" }`.
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
+/// The content of a model document. For legacy reasons, we reserve the name
+/// `ModelDocument` for the type `Document & { type: "model" }`.
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct ModelDocumentContent {
     pub name: String,
     pub theory: String,
     pub notebook: Notebook<ModelJudgment>,
 }
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct DiagramDocumentContent {
     pub name: String,
     #[serde(rename = "diagramIn")]
@@ -35,8 +33,7 @@ pub enum AnalysisType {
     Diagram,
 }
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct AnalysisDocumentContent {
     pub name: String,
     #[serde(rename = "analysisType")]
@@ -46,9 +43,8 @@ pub struct AnalysisDocumentContent {
     pub notebook: Notebook<Analysis>,
 }
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum Document {
     #[serde(rename = "model")]
     Model(ModelDocumentContent),

@@ -1,6 +1,13 @@
 import { createMemo } from "solid-js";
 
-import type { DblModel, MassActionModelData, MassActionProblemData, ODEResult } from "catlog-wasm";
+import type {
+    DblModel,
+    MassActionProblemData,
+    MorType,
+    ODEResult,
+    ObType,
+    QualifiedName,
+} from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import {
     type ColumnSchema,
@@ -8,37 +15,37 @@ import {
     Foldable,
     createNumericalColumn,
 } from "../../components";
-import type { MorphismDecl, ObjectDecl } from "../../model";
+import { morLabelOrDefault } from "../../model";
 import type { ModelAnalysisMeta } from "../../theory";
 import { ODEResultPlot } from "../../visualization";
 import { createModelODEPlot } from "./simulation";
 
 import "./simulation.css";
 
-/** Configuration for a mass-action ODE analysis of a model. */
-export type MassActionContent = MassActionProblemData<string>;
-
-type Simulator = (model: DblModel, data: MassActionModelData) => ODEResult;
+type Simulator = (model: DblModel, data: MassActionProblemData) => ODEResult;
 
 /** Configure a mass-action ODE analysis for use with models of a theory. */
 export function configureMassAction(options: {
     id?: string;
     name?: string;
     description?: string;
+    help?: string;
     simulate: Simulator;
-    isState?: (ob: ObjectDecl) => boolean;
-    isTransition?: (mor: MorphismDecl) => boolean;
-}): ModelAnalysisMeta<MassActionContent> {
+    isState?: (obType: ObType) => boolean;
+    isTransition?: (morType: MorType) => boolean;
+}): ModelAnalysisMeta<MassActionProblemData> {
     const {
         id = "mass-action",
         name = "Mass-action dynamics",
         description = "Simulate the system using the law of mass action",
+        help = "mass-action",
         ...otherOptions
     } = options;
     return {
         id,
         name,
         description,
+        help,
         component: (props) => <MassAction title={name} {...otherOptions} {...props} />,
         initialContent: () => ({
             rates: {},
@@ -50,58 +57,66 @@ export function configureMassAction(options: {
 
 /** Analyze a model using mass-action dynamics. */
 export function MassAction(
-    props: ModelAnalysisProps<MassActionContent> & {
+    props: ModelAnalysisProps<MassActionProblemData> & {
         simulate: Simulator;
-        isState?: (ob: ObjectDecl) => boolean;
-        isTransition?: (mor: MorphismDecl) => boolean;
+        isState?: (obType: ObType) => boolean;
+        isTransition?: (morType: MorType) => boolean;
         title?: string;
     },
 ) {
-    const obDecls = createMemo<ObjectDecl[]>(() => {
-        return props.liveModel
-            .formalJudgments()
-            .filter((jgmt) => jgmt.tag === "object")
-            .filter((ob) => props.isState?.(ob) ?? true);
+    const elaboratedModel = () => props.liveModel.elaboratedModel();
+
+    const obGenerators = createMemo<QualifiedName[]>(() => {
+        const [model, pred] = [elaboratedModel(), props.isState];
+        if (!model) {
+            return [];
+        }
+        return model
+            .obGenerators()
+            .filter((id) => !pred || pred(model.obType({ tag: "Basic", content: id })));
     }, []);
 
-    const morDecls = createMemo<MorphismDecl[]>(() => {
-        return props.liveModel
-            .formalJudgments()
-            .filter((jgmt) => jgmt.tag === "morphism")
-            .filter((mor) => props.isTransition?.(mor) ?? true);
+    const morGenerators = createMemo<QualifiedName[]>(() => {
+        const [model, pred] = [elaboratedModel(), props.isTransition];
+        if (!model) {
+            return [];
+        }
+        return model
+            .morGenerators()
+            .filter((id) => !pred || pred(model.morType({ tag: "Basic", content: id })));
     }, []);
 
-    const obSchema: ColumnSchema<ObjectDecl>[] = [
+    const obSchema: ColumnSchema<QualifiedName>[] = [
         {
             contentType: "string",
             header: true,
-            content: (ob) => ob.name,
+            content: (id) => elaboratedModel()?.obGeneratorLabel(id)?.join(".") ?? "",
         },
         createNumericalColumn({
             name: "Initial value",
-            data: (ob) => props.content.initialValues[ob.id],
+            data: (id) => props.content.initialValues[id],
             validate: (_, data) => data >= 0,
-            setData: (ob, data) =>
+            setData: (id, data) =>
                 props.changeContent((content) => {
-                    content.initialValues[ob.id] = data;
+                    content.initialValues[id] = data;
                 }),
         }),
     ];
 
-    const morSchema: ColumnSchema<MorphismDecl>[] = [
+    const morSchema: ColumnSchema<QualifiedName>[] = [
         {
             contentType: "string",
             header: true,
-            content: (mor) => mor.name,
+            content: (id) => morLabelOrDefault(id, elaboratedModel()),
         },
         createNumericalColumn({
             name: "Rate",
-            data: (mor) => props.content.rates[mor.id],
+            data: (id) => props.content.rates[id],
             default: 1,
             validate: (_, data) => data >= 0,
-            setData: (mor, data) =>
+            setData: (id, data) =>
                 props.changeContent((content) => {
-                    content.rates[mor.id] = data;
+                    content.rates[id] = data;
                 }),
         }),
     ];
@@ -127,8 +142,8 @@ export function MassAction(
         <div class="simulation">
             <Foldable title={props.title}>
                 <div class="parameters">
-                    <FixedTableEditor rows={obDecls()} schema={obSchema} />
-                    <FixedTableEditor rows={morDecls()} schema={morSchema} />
+                    <FixedTableEditor rows={obGenerators()} schema={obSchema} />
+                    <FixedTableEditor rows={morGenerators()} schema={morSchema} />
                     <FixedTableEditor rows={[null]} schema={toplevelSchema} />
                 </div>
             </Foldable>

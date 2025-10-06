@@ -1,21 +1,19 @@
 import { Match, Switch } from "solid-js";
-
-import { type StableRef, useApi } from "../api";
-import { IconButton } from "../components";
-import { MenuItem, MenuItemLabel, MenuSeparator } from "../page";
-
-import { RefStub } from "catcolab-api";
 import Ellipsis from "lucide-solid/icons/ellipsis";
-import Network from "lucide-solid/icons/network";
-import FilePlus from "lucide-solid/icons/file-plus";
-import ChartSpline from "lucide-solid/icons/chart-spline";
 import CopyToClipboard from "lucide-solid/icons/clipboard-copy";
 import Copy from "lucide-solid/icons/copy";
 import Export from "lucide-solid/icons/download";
 import { DropdownMenu } from "@kobalte/core/dropdown-menu";
+import { useNavigate } from "@solidjs/router";
+
+import { useApi } from "../api";
+import { IconButton } from "../components";
+import { MenuItem, MenuItemLabel, MenuSeparator } from "../page";
+import type { RefStub } from "catcolab-api";
 import { createDiagram } from "../diagram";
 import { createAnalysis } from "../analysis";
-import { useNavigate } from "@solidjs/router";
+import { DocumentTypeIcon } from "../util/document_type_icon";
+import type { StableRef } from "catlog-wasm";
 
 export function DocumentMenu(props: {
     stub: RefStub;
@@ -110,19 +108,19 @@ export function DocumentMenu(props: {
                             }
                         >
                             <MenuItem onSelect={() => onNewDiagram()}>
-                                <Network />
+                                <DocumentTypeIcon documentType="diagram" />
                                 <MenuItemLabel>{"New diagram in this model"}</MenuItemLabel>
                             </MenuItem>
                         </Match>
                         <Match when={props.stub.typeName === "diagram"}>
                             <MenuItem onSelect={() => onNewDiagram()}>
-                                <FilePlus />
+                                <DocumentTypeIcon documentType="diagram" />
                                 <MenuItemLabel>{"New diagram"}</MenuItemLabel>
                             </MenuItem>
                         </Match>
                     </Switch>
                     <MenuItem onSelect={() => onNewAnalysis()}>
-                        <ChartSpline />
+                        <DocumentTypeIcon documentType="analysis" />
                         <MenuItemLabel>{`New analysis of this ${props.stub.typeName}`}</MenuItemLabel>
                     </MenuItem>
                     <MenuSeparator />

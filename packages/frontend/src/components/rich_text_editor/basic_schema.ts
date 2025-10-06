@@ -143,7 +143,7 @@ export const basicSchema = {
                         title: block.attrs.title,
                     }),
                     fromProsemirror: (node: Node) => ({
-                        src: new am.RawString(node.attrs.src),
+                        src: new am.ImmutableString(node.attrs.src),
                         alt: node.attrs.alt,
                         title: node.attrs.title,
                     }),

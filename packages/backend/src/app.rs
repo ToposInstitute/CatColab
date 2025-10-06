@@ -3,13 +3,13 @@ use serde::Serialize;
 use socketioxide::SocketIo;
 use sqlx::PgPool;
 use thiserror::Error;
+use tokio::sync::watch;
 use ts_rs::TS;
 use uuid::Uuid;
 
-/** Top-level application state.
-
-Cheaply cloneable and intended to be moved around the program.
- */
+/// Top-level application state.
+///
+/// Cheaply cloneable and intended to be moved around the program.
 #[derive(Clone)]
 pub struct AppState {
     /// Connection to the Postgres database.
@@ -17,6 +17,17 @@ pub struct AppState {
 
     /// Socket for communicating with Automerge document server.
     pub automerge_io: SocketIo,
+
+    pub app_status: watch::Receiver<AppStatus>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum AppStatus {
+    Starting,
+    Migrating,
+    Running,
+    #[allow(dead_code)]
+    Failed(String),
 }
 
 /// Context available to RPC procedures.

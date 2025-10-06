@@ -37,11 +37,10 @@ pub async fn user_by_username(
     Ok(query.fetch_optional(&state.db).await?)
 }
 
-/** Summary of a user.
-
-The minimal information needed to uniquely identify a user and display the user
-in human-readable form.
- */
+/// Summary of a user.
+///
+/// The minimal information needed to uniquely identify a user and display the user
+/// in human-readable form.
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 pub struct UserSummary {
     pub id: String,
@@ -139,17 +138,16 @@ impl UserProfile {
     }
 }
 
-/** Is the proposed user name valid?
-
-A username is **valid** when it
-
-- is nonempty
-- comprises ASCII alphanumeric characters, dashes, dots, and underscores
-- has alphanumeric first and last characters
-
-In particular, this ensures that a valid username is also a valid URL. Similar
-rules for usernames are enforced by sites such as GitHub.
- */
+/// Is the proposed user name valid?
+///
+/// A username is **valid** when it
+///
+/// - is nonempty
+/// - comprises ASCII alphanumeric characters, dashes, dots, and underscores
+/// - has alphanumeric first and last characters
+///
+/// In particular, this ensures that a valid username is also a valid URL. Similar
+/// rules for usernames are enforced by sites such as GitHub.
 pub fn is_username_valid(username: &str) -> bool {
     let valid_chars = Regex::new(r"^[0-9A-Za-z_\-\.]*$").unwrap();
     let starts_alpha = Regex::new(r"^[0-9A-Za-z]").unwrap();

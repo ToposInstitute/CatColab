@@ -1,6 +1,5 @@
 import { useNavigate, useParams, A } from "@solidjs/router";
 import {
-    For,
     Match,
     Show,
     Switch,
@@ -9,36 +8,26 @@ import {
     createSignal,
     useContext,
 } from "solid-js";
-import invariant from "tiny-invariant";
-
-import { useApi } from "../api";
-import { IconButton, InlineInput, ResizableHandle } from "../components";
-import {
-    AppMenu,
-    DocumentBreadcrumbs,
-    DocumentLoadingScreen,
-    DocumentMenu,
-    getLiveDocument,
-    TheoryHelpButton,
-    type AnyLiveDocument,
-} from "../page";
-
-import { TheoryLibraryContext } from "../stdlib";
-import { PermissionsButton } from "../user";
-import { createModel } from "../model/document";
-
-import { Layout } from "../page/layout";
-import { RefStub, RelatedRefStub } from "catcolab-api";
-import { DiagramNotebookEditor } from "../diagram/diagram_editor";
-import { AnalysisNotebookEditor } from "../analysis/analysis_editor";
 import Resizable, { type ContextValue } from "@corvu/resizable";
 import Maximize2 from "lucide-solid/icons/maximize-2";
 import ChevronsRight from "lucide-solid/icons/chevrons-right";
-import FilePlus from "lucide-solid/icons/file-plus";
+import invariant from "tiny-invariant";
 
-import "./document.css";
+import { Api, useApi } from "../api";
+import { IconButton, InlineInput, ResizableHandle } from "../components";
+import { DocumentBreadcrumbs, DocumentLoadingScreen, TheoryHelpButton } from "../page";
+import { stdTheories, TheoryLibrary, TheoryLibraryContext } from "../stdlib";
+import { getLiveModel, LiveModelDocument, migrateModelDocument } from "../model/document";
+import { Layout } from "../page/layout";
+import { DiagramNotebookEditor } from "../diagram/diagram_editor";
+import { AnalysisNotebookEditor } from "../analysis/analysis_editor";
 import { ModelNotebookEditor } from "../model/model_editor";
 import { TheorySelectorDialog } from "../model/theory_selector";
+import { NotebookUtils } from "../notebook";
+import { DocumentSidebar } from "./document_sidebar";
+import { type AnyLiveDocument, getDocumentTheory, getLiveDocument } from "./utils";
+
+import "./document.css";
 
 export default function Document() {
     const api = useApi();
@@ -48,7 +37,7 @@ export default function Document() {
     const params = useParams();
     const isSidePanelOpen = () => !!params.subkind && !!params.subref;
 
-    const [liveModel] = createResource(
+    const [liveDocument] = createResource(
         () => params.ref,
         (refId) => getLiveDocument(refId, api, theories, params.kind as any),
     );
@@ -86,24 +75,18 @@ export default function Document() {
     });
 
     return (
-        <Show when={liveModel()} fallback={<DocumentLoadingScreen />}>
-            {(liveModel) => (
+        <Show when={liveDocument()} fallback={<DocumentLoadingScreen />}>
+            {(liveDocument) => (
                 <Layout
                     toolbarContents={
                         <SplitPaneToolbar
-                            liveDocument={liveModel()}
+                            document={liveDocument()}
                             panelSizes={resizableContext()?.sizes()}
                             maximizeSidePanel={maximizeSidePanel}
                             closeSidePanel={closeSidePanel}
                         />
                     }
-                    sidebarContents={
-                        <>
-                            <AppMenu />
-                            <RelatedDocuments refId={params.ref!} liveDocument={liveModel()} />
-                            <NewModelItem2 />
-                        </>
-                    }
+                    sidebarContents={<DocumentSidebar liveDocument={liveDocument()} />}
                 >
                     <Resizable class="growable-container">
                         {() => {
@@ -117,7 +100,7 @@ export default function Document() {
                                         initialSize={1}
                                         minSize={0.25}
                                     >
-                                        <DocumentPane liveDocument={liveModel()} />
+                                        <DocumentPane document={liveDocument()} />
                                     </Resizable.Panel>
                                     <Show when={isSidePanelOpen()}>
                                         <ResizableHandle class="resizeable-handle" />
@@ -130,7 +113,7 @@ export default function Document() {
                                                 {(secondaryLiveModel) => (
                                                     <>
                                                         <DocumentPane
-                                                            liveDocument={secondaryLiveModel()}
+                                                            document={secondaryLiveModel()}
                                                         />
                                                     </>
                                                 )}
@@ -147,46 +130,32 @@ export default function Document() {
     );
 }
 
-export function NewModelItem2() {
-    const api = useApi();
-    const navigate = useNavigate();
-
-    const theories = useContext(TheoryLibraryContext);
-    invariant(theories, "Theory library must be provided as context");
-
-    const onNewModel = async () => {
-        const newRef = await createModel(api, theories.getDefault().id);
-        navigate(`/model/${newRef}`);
-    };
-
-    return (
-        <div onClick={onNewModel}>
-            <FilePlus />
-            New Model
-        </div>
-    );
-}
-
 function SplitPaneToolbar(props: {
-    liveDocument: AnyLiveDocument;
+    document: AnyLiveDocument;
     panelSizes: number[] | undefined;
     closeSidePanel: () => void;
     maximizeSidePanel: () => void;
 }) {
     const secondaryPanelSize = () => props.panelSizes?.[1];
-    console.log(props.liveDocument);
+
+    const documentTheory = () => getDocumentTheory(props.document);
 
     return (
         <>
-            <DocumentBreadcrumbs document={props.liveDocument} />
+            <DocumentBreadcrumbs document={props.document.liveDoc} />
             <span class="filler" />
-            <Show when={(props.liveDocument as any).liveModel?.theory()}>
-                <TheoryHelpButton theory={(props.liveDocument as any).liveModel.theory()} />
+            <Show when={documentTheory()}>
+                {(documentTheory) => (
+                    <TheoryHelpButton meta={stdTheories.getMetadata(documentTheory().id)} />
+                )}
             </Show>
+            {/*
+        
             <PermissionsButton
                 permissions={props.liveDocument.liveDoc.permissions}
                 refId={props.liveDocument.refId}
             />
+   */}
             <Show when={secondaryPanelSize()}>
                 {(panelSize) => (
                     <div
@@ -206,7 +175,7 @@ function SplitPaneToolbar(props: {
     );
 }
 
-function DocumentPane(props: { liveDocument: AnyLiveDocument }) {
+function DocumentPane(props: { document: AnyLiveDocument }) {
     const theories = useContext(TheoryLibraryContext);
     invariant(theories, "Library of theories should be provided as context");
 
@@ -215,9 +184,9 @@ function DocumentPane(props: { liveDocument: AnyLiveDocument }) {
             <div class="document-head">
                 <div class="title">
                     <InlineInput
-                        text={props.liveDocument.liveDoc.doc.name}
+                        text={props.document.liveDoc.doc.name}
                         setText={(text) => {
-                            props.liveDocument.liveDoc.changeDoc((doc) => {
+                            props.document.liveDoc.changeDoc((doc) => {
                                 doc.name = text;
                             });
                         }}
@@ -226,51 +195,63 @@ function DocumentPane(props: { liveDocument: AnyLiveDocument }) {
                 </div>
                 <div class="info">
                     <Switch>
-                        <Match when={props.liveDocument.type === "model" && props.liveDocument}>
-                            {(liveModel) => (
-                                <TheorySelectorDialog
-                                    theory={liveModel().theory()}
-                                    setTheory={(id) => {
-                                        liveModel().liveDoc.changeDoc((model) => {
-                                            model.theory = id;
-                                        });
-                                    }}
-                                    theories={theories}
-                                    disabled={liveModel().liveDoc.doc.notebook.cells.some(
-                                        (cell) => cell.tag === "formal",
-                                    )}
-                                />
-                            )}
+                        <Match when={props.document.type === "model" && props.document}>
+                            {(liveModel) => {
+                                const selectableTheories = () => {
+                                    if (
+                                        NotebookUtils.hasFormalCells(
+                                            liveModel().liveDoc.doc.notebook,
+                                        )
+                                    ) {
+                                        return liveModel().theory()?.migrationTargets ?? [];
+                                    } else {
+                                        // If the model has no formal cells, allow any theory to be selected.
+                                        return undefined;
+                                    }
+                                };
+                                return (
+                                    <TheorySelectorDialog
+                                        theoryMeta={stdTheories.getMetadata(
+                                            liveModel().liveDoc.doc.theory,
+                                        )}
+                                        setTheory={(id) =>
+                                            migrateModelDocument(
+                                                liveModel().liveDoc,
+                                                id,
+                                                stdTheories,
+                                            )
+                                        }
+                                        theories={selectableTheories()}
+                                    />
+                                );
+                            }}
                         </Match>
-                        <Match when={props.liveDocument.type === "diagram" && props.liveDocument}>
+                        <Match when={props.document.type === "diagram" && props.document}>
                             {(liveDiagram) => (
                                 <>
                                     <div class="name">
-                                        {liveDiagram().liveModel.theory().instanceOfName}
+                                        {liveDiagram().liveModel.theory()?.instanceOfName}
                                     </div>
                                     <div class="model">
-                                        <A href={`/model/${liveDiagram().liveModel.refId}`}>
+                                        <A
+                                            href={`/model/${liveDiagram().liveModel.liveDoc.docRef?.refId}`}
+                                        >
                                             {liveDiagram().liveModel.liveDoc.doc.name || "Untitled"}
                                         </A>
                                     </div>
                                 </>
                             )}
                         </Match>
-                        <Match when={props.liveDocument.type === "analysis" && props.liveDocument}>
+                        <Match when={props.document.type === "analysis" && props.document}>
                             {(liveAnalysis) => {
-                                const parentRefId = () => {
-                                    if (liveAnalysis().analysisType === "diagram") {
-                                        return liveAnalysis().liveDiagram.refId;
-                                    } else {
-                                        return liveAnalysis().liveModel.refId;
-                                    }
-                                };
+                                const parentRefId = liveAnalysis().liveDoc.doc.analysisOf._id;
+                                const analysis = liveAnalysis();
 
                                 const parentRefName = () => {
-                                    if (liveAnalysis().analysisType === "diagram") {
-                                        return liveAnalysis().liveDiagram.liveDoc.doc.name;
+                                    if (analysis.analysisType === "diagram") {
+                                        return analysis.liveDiagram.liveDoc.doc.name;
                                     } else {
-                                        return liveAnalysis().liveModel.liveDoc.doc.name;
+                                        return analysis.liveModel.liveDoc.doc.name;
                                     }
                                 };
 
@@ -279,7 +260,7 @@ function DocumentPane(props: { liveDocument: AnyLiveDocument }) {
                                         <div class="name">Analysis!</div>
                                         <div class="model">
                                             <A
-                                                href={`/${liveAnalysis().analysisType}/${parentRefId()}`}
+                                                href={`/${liveAnalysis().analysisType}/${parentRefId}`}
                                             >
                                                 {parentRefName() || "Untitled"}
                                             </A>
@@ -292,144 +273,16 @@ function DocumentPane(props: { liveDocument: AnyLiveDocument }) {
                 </div>
             </div>
             <Switch>
-                <Match when={props.liveDocument.type === "model" && props.liveDocument}>
+                <Match when={props.document.type === "model" && props.document}>
                     {(liveModel) => <ModelNotebookEditor liveModel={liveModel()} />}
                 </Match>
-                <Match when={props.liveDocument.type === "diagram" && props.liveDocument}>
+                <Match when={props.document.type === "diagram" && props.document}>
                     {(liveDiagram) => <DiagramNotebookEditor liveDiagram={liveDiagram()} />}
                 </Match>
-                <Match when={props.liveDocument.type === "analysis" && props.liveDocument}>
+                <Match when={props.document.type === "analysis" && props.document}>
                     {(liveAnalysis) => <AnalysisNotebookEditor liveAnalysis={liveAnalysis()} />}
                 </Match>
             </Switch>
-        </div>
-    );
-}
-
-function RelatedDocuments(props: {
-    refId: string;
-    liveDocument: AnyLiveDocument;
-}) {
-    const api = useApi();
-    const [data] = createResource(
-        () => props.refId,
-        async (refId) => {
-            const results = await api.rpc.get_related_ref_stubs.query(refId);
-
-            if (results.tag != "Ok") {
-                throw "couldn't load results";
-            }
-
-            return results.content;
-        },
-    );
-
-    return (
-        <Show when={data()} fallback={<div>Loading related items...</div>}>
-            {(tree) => (
-                <div class="related-tree">
-                    <DocumentsTreeNode
-                        isDescendantOfActiveDocument={false}
-                        parentRefId={null}
-                        node={tree()}
-                        indent={1}
-                        currentLiveDoc={props.liveDocument}
-                    />
-                </div>
-            )}
-        </Show>
-    );
-}
-
-function DocumentsTreeNode(props: {
-    node: RelatedRefStub;
-    indent: number;
-    parentRefId: string | null;
-    isDescendantOfActiveDocument: boolean;
-    currentLiveDoc: AnyLiveDocument;
-}) {
-    const isDescendant = () => {
-        if (props.isDescendantOfActiveDocument) {
-            return true;
-        }
-
-        if (props.node.stub.refId === props.currentLiveDoc.refId) {
-            return true;
-        }
-
-        return false;
-    };
-
-    return (
-        <>
-            <DocumentsTreeLeaf
-                stub={props.node.stub}
-                indent={props.indent}
-                currentLiveDoc={props.currentLiveDoc}
-                parentRefId={props.parentRefId}
-                isDescendantOfActiveDocument={props.isDescendantOfActiveDocument}
-            />
-            <For each={props.node.children}>
-                {(child) => (
-                    <DocumentsTreeNode
-                        node={child}
-                        indent={props.indent + 1}
-                        parentRefId={props.node.stub.refId}
-                        currentLiveDoc={props.currentLiveDoc}
-                        isDescendantOfActiveDocument={isDescendant()}
-                    />
-                )}
-            </For>
-        </>
-    );
-}
-
-function DocumentsTreeLeaf(props: {
-    stub: RefStub;
-    parentRefId: string | null;
-    indent: number;
-    currentLiveDoc: AnyLiveDocument;
-    isDescendantOfActiveDocument: boolean;
-}) {
-    const navigate = useNavigate();
-
-    const handleClick = () => {
-        // if (props.stub.refId === props.currentLiveDoc.refId) {
-        //     navigate(`/${props.stub.typeName}/${props.stub.refId}`);
-        //     return;
-        // }
-
-        // if (props.isDescendantOfActiveDocument) {
-        navigate(
-            `/${props.currentLiveDoc.type}/${props.currentLiveDoc.refId}/${props.stub.typeName}/${props.stub.refId}`,
-        );
-
-        // return;
-        // }
-
-        // navigate(`/${props.stub.typeName}/${props.stub.refId}`);
-    };
-
-    return (
-        <div
-            onClick={handleClick}
-            class="related-document"
-            classList={{
-                active: props.stub.refId === props.currentLiveDoc.refId,
-                descendant: props.isDescendantOfActiveDocument,
-            }}
-            style={{ "padding-left": `${props.indent * 16}px` }}
-        >
-            <div class="document-name">
-                {(props.stub.refId === props.currentLiveDoc.refId
-                    ? props.currentLiveDoc.liveDoc.doc.name
-                    : props.stub.name) || "Untitled"}
-            </div>
-            <div class="document-actions">
-                <div>
-                    <DocumentMenu stub={props.stub} parentRefId={props.parentRefId}></DocumentMenu>
-                </div>
-            </div>
         </div>
     );
 }

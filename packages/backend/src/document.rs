@@ -82,10 +82,9 @@ pub async fn autosave(state: AppState, data: RefContent) -> Result<(), AppError>
     Ok(())
 }
 
-/** Saves the document by replacing the head with a new snapshot.
-
-The snapshot at the previous head is *not* deleted.
-*/
+/// Saves the document by replacing the head with a new snapshot.
+///
+/// The snapshot at the previous head is *not* deleted.
 pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppError> {
     let head_doc_id_query = sqlx::query!(
         "
@@ -216,9 +215,8 @@ pub struct NewDocSocketResponse {
     pub doc_json: Value,
 }
 
-/// A subset of user relevant information about a ref. Used for showing
-/// users information on a variety of refs without having to load whole
-/// refs.
+/// A subset of user relevant information about a ref. Used for showing users
+/// information on a variety of refs without having to load whole refs.
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 pub struct RefStub {
     pub name: String,

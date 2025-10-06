@@ -6,11 +6,10 @@ use nalgebra::{DMatrix, DVector};
 use super::ODEProblem;
 use super::ODESystem;
 
-/** A (constant-coefficient) linear (first-order) dynamical system.
-
-A system of linear first-order ODEs with constant coefficients; a semantics for
-causal loop diagrams.
-*/
+/// A (constant-coefficient) linear (first-order) dynamical system.
+///
+/// A system of linear first-order ODEs with constant coefficients; a semantics for
+/// causal loop diagrams.
 #[derive(Clone, Debug, PartialEq)]
 pub struct LinearODESystem {
     coefficients: DMatrix<f32>,

@@ -1,7 +1,6 @@
 import { For, Match, Show, Switch, createMemo } from "solid-js";
-import { isMatching } from "ts-pattern";
 
-import type { DiagramJudgment, ModelJudgment } from "catlog-wasm";
+import type { DiagramJudgment, ModelJudgment, QualifiedName } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
 import {
     type ColumnSchema,
@@ -12,8 +11,7 @@ import {
     Warning,
     createNumericalColumn,
 } from "../../components";
-import { type DiagramObjectDecl, type LiveDiagramDocument, fromCatlogDiagram } from "../../diagram";
-import type { MorphismDecl } from "../../model";
+import type { LiveDiagramDocument } from "../../diagram";
 import type { DiagramAnalysisMeta } from "../../theory";
 import { uniqueIndexArray } from "../../util/indexing";
 import { PDEPlot2D, type PDEPlotData2D } from "../../visualization";
@@ -97,49 +95,43 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
         (data: PDEPlotData2D) => data,
     );
 
-    const obDecls = createMemo<DiagramObjectDecl[]>(() =>
-        props.liveDiagram.formalJudgments().filter((jgmt) => jgmt.tag === "object"),
+    const elaboratedModel = () => props.liveDiagram.liveModel.elaboratedModel();
+    const elaboratedDiagram = () => props.liveDiagram.elaboratedDiagram();
+
+    const scalars = createMemo<QualifiedName[]>(
+        () =>
+            elaboratedModel()?.morGeneratorsWithType({
+                tag: "Hom",
+                content: { tag: "Basic", content: "Object" },
+            }) ?? [],
+        [],
     );
 
-    const scalarDecls = createMemo<MorphismDecl[]>(() => {
-        const liveModel = props.liveDiagram.liveModel;
-        return liveModel.formalJudgments().filter((jgmt) =>
-            isMatching(
-                {
-                    tag: "morphism",
-                    morType: {
-                        tag: "Hom",
-                        content: { tag: "Basic", content: "Object" },
-                    },
-                },
-                jgmt,
-            ),
-        );
-    });
+    const variables = (): QualifiedName[] => elaboratedDiagram()?.obGenerators() ?? [];
 
-    const scalarSchema: ColumnSchema<MorphismDecl>[] = [
+    const scalarSchema: ColumnSchema<QualifiedName>[] = [
         {
             contentType: "string",
             header: true,
             name: "Scalar constant",
-            content: (mor) => mor.name,
+            content: (id) => elaboratedModel()?.morGeneratorLabel(id)?.join(".") ?? "",
         },
         createNumericalColumn({
             name: "Value",
-            data: (mor) => props.content.scalars[mor.id],
-            setData: (mor, value) =>
+            data: (id) => props.content.scalars[id],
+            setData: (id, value) =>
                 props.changeContent((content) => {
-                    content.scalars[mor.id] = value;
+                    content.scalars[id] = value;
                 }),
         }),
     ];
 
-    const variableSchema: ColumnSchema<DiagramObjectDecl>[] = [
+    const variableSchema: ColumnSchema<QualifiedName>[] = [
         {
             contentType: "string",
             header: true,
             name: "Variable",
-            content: (ob) => ob.name,
+            content: (id) => elaboratedDiagram()?.obGeneratorLabel(id)?.join(".") ?? "",
         },
         {
             contentType: "enum",
@@ -150,23 +142,23 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
                 }
                 return options()?.domains.get(props.content.domain)?.initialConditions ?? [];
             },
-            content: (ob) => props.content.initialConditions[ob.id] ?? null,
-            setContent: (ob, value) =>
+            content: (id) => props.content.initialConditions[id] ?? null,
+            setContent: (id, value) =>
                 props.changeContent((content) => {
                     if (value === null) {
-                        delete content.initialConditions[ob.id];
+                        delete content.initialConditions[id];
                     } else {
-                        content.initialConditions[ob.id] = value;
+                        content.initialConditions[id] = value;
                     }
                 }),
         },
         {
             contentType: "boolean",
             name: "Plot",
-            content: (ob) => props.content.plotVariables[ob.id] ?? false,
-            setContent: (ob, value) =>
+            content: (id) => props.content.plotVariables[id] ?? false,
+            setContent: (id, value) =>
                 props.changeContent((content) => {
-                    content.plotVariables[ob.id] = value;
+                    content.plotVariables[id] = value;
                 }),
         },
     ];
@@ -251,8 +243,8 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
             <Foldable title="Simulation" header={RestartOrRerunButton()}>
                 <Show when={options()}>{(options) => DomainConfig(options().domains)}</Show>
                 <div class="parameters">
-                    <FixedTableEditor rows={obDecls()} schema={variableSchema} />
-                    <FixedTableEditor rows={scalarDecls()} schema={scalarSchema} />
+                    <FixedTableEditor rows={variables()} schema={variableSchema} />
+                    <FixedTableEditor rows={scalars()} schema={scalarSchema} />
                     <FixedTableEditor rows={[null]} schema={toplevelSchema} />
                 </div>
             </Foldable>
@@ -282,7 +274,7 @@ export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
                         </ErrorAlert>
                     )}
                 </Match>
-                <Match when={props.liveDiagram.validatedDiagram()?.result.tag === "Err"}>
+                <Match when={props.liveDiagram.validatedDiagram()?.tag !== "Valid"}>
                     <ErrorAlert title="Modeling error">
                         {"Cannot run the simulation because the diagram is invalid"}
                     </ErrorAlert>
@@ -341,9 +333,13 @@ type SimulationData = {
 /** Julia code run after kernel is started. */
 const makeInitCode = () =>
     `
-    import IJulia
-    IJulia.register_jsonmime(MIME"application/json"())
+    for k in keys(Base.text_colors)
+		Base.text_colors[k] = ""
+	end
 
+    import IJulia
+    import JSON3
+    IJulia.register_jsonmime(MIME"application/json"())
     using CatColabInterop
 
     JsonValue(supported_decapodes_geometries())
@@ -352,6 +348,9 @@ const makeInitCode = () =>
 /** Julia code run to perform a simulation. */
 const makeSimulationCode = (data: SimulationData) =>
     `
+    # needed for returning large amounts of data, should be paired with a similar setting on the jupyter server
+    IJulia.set_max_stdio(1_000_000_000) 
+
     system = Analysis(ThDecapode(), raw"""${JSON.stringify(data)}""");
     simulator = evalsim(system.pode);
 
@@ -359,7 +358,7 @@ const makeSimulationCode = (data: SimulationData) =>
 
     soln = run_sim(f, system.init, system.duration, ComponentArray(k=0.5,));
 
-    JsonValue(SimResult(soln, system))
+    JSON3.write(stdout, SimResult(soln, system))
     `;
 
 /** Create data to send to the Julia kernel. */
@@ -368,7 +367,7 @@ const makeSimulationData = (
     content: DecapodesContent,
 ): SimulationData | undefined => {
     const validatedDiagram = liveDiagram.validatedDiagram();
-    if (validatedDiagram?.result.tag !== "Ok") {
+    if (validatedDiagram?.tag !== "Valid") {
         return undefined;
     }
 
@@ -378,9 +377,9 @@ const makeSimulationData = (
     }
 
     return {
-        diagram: fromCatlogDiagram(validatedDiagram.diagram, (id) =>
-            liveDiagram.objectIndex().map.get(id),
-        ),
+        diagram: validatedDiagram.diagram.judgments(),
+        // FIXME: Depending on judgments from notebook means that model cannot
+        // be composed of other models.
         model: liveDiagram.liveModel.formalJudgments(),
         domain,
         mesh,

@@ -1,8 +1,15 @@
 import { createEffect, createSignal, splitProps } from "solid-js";
 import { P, match } from "ts-pattern";
 
-import type { Mor, Ob, Uuid } from "catlog-wasm";
-import { type IdToNameMap, type Name, type NameType, nameType } from "../util/indexing";
+import type {
+    LabelSegment,
+    Mor,
+    NameLookup,
+    Ob,
+    QualifiedLabel,
+    QualifiedName,
+    Uuid,
+} from "catlog-wasm";
 import type { Completion } from "./completions";
 import { InlineInput, type InlineInputErrorStatus, type InlineInputOptions } from "./inline_input";
 
@@ -12,9 +19,11 @@ import "./id_input.css";
  */
 export type IdInputOptions = {
     generateId?: () => Uuid;
-    idToName?: IdToNameMap;
-    invalid?: boolean;
-} & Omit<InlineInputOptions, "completions">;
+    idToLabel?: (id: QualifiedName) => QualifiedLabel | undefined;
+    labelToId?: (label: QualifiedLabel) => NameLookup | undefined;
+    isInvalid?: boolean;
+    completions?: Uuid[];
+} & Omit<InlineInputOptions, "completions" | "status">;
 
 /** Input a UUID by specifying its human-readable name.
 
@@ -24,7 +33,6 @@ export function IdInput(
     allProps: {
         id: Uuid | null;
         setId: (id: Uuid | null) => void;
-        completions?: Uuid[];
     } & IdInputOptions,
 ) {
     const [props, inputProps] = splitProps(allProps, [
@@ -32,19 +40,20 @@ export function IdInput(
         "setId",
         "generateId",
         "completions",
-        "idToName",
-        "invalid",
+        "idToLabel",
+        "labelToId",
+        "isInvalid",
     ]);
 
-    const idToName = (id: Uuid): Name | undefined => props.idToName?.map.get(id);
-    const idToText = (id: Uuid): string | undefined => idToName(id)?.toString();
+    const idToLabel = (id: QualifiedName): QualifiedLabel | undefined => props.idToLabel?.(id);
+    const idToText = (id: QualifiedName): string | undefined => idToLabel(id)?.join(".");
 
-    const textToIds = (text: string): Uuid[] => {
-        let name: Name = text;
+    const textToId = (text: string): NameLookup => {
+        let label: LabelSegment = text;
         if (/^\d+$/.test(text)) {
-            name = Number.parseInt(text);
+            label = Number.parseInt(text);
         }
-        return props.idToName?.index.get(name) ?? [];
+        return props.labelToId?.([label]) ?? { tag: "None" };
     };
 
     const [text, setText] = createSignal("");
@@ -60,11 +69,10 @@ export function IdInput(
     createEffect(() => updateText(props.id));
 
     const handleNewText = (text: string) => {
-        const possibleIds = textToIds(text);
-        const firstId = possibleIds?.[0];
-        if (firstId) {
+        const lookup = textToId(text);
+        if (lookup.tag !== "None") {
             // TODO: Warn the user when the names are not unique.
-            props.setId(firstId);
+            props.setId(lookup.content);
         } else if (text === "") {
             // To avoid erasing incompletely entered text, only reset the ID
             // to null when the text is also empty.
@@ -91,7 +99,7 @@ export function IdInput(
         if (!isComplete()) {
             return "incomplete";
         }
-        if (props.invalid) {
+        if (props.isInvalid) {
             return "invalid";
         }
         return null;
@@ -99,16 +107,20 @@ export function IdInput(
 
     const setNewId = () => props.generateId && props.setId(props.generateId());
 
-    const maybeNameType = (id: Uuid | null): NameType | "undefined" => {
-        if (id === null) {
+    const labelType = (id: Uuid | null): "named" | "anonymous" | "undefined" => {
+        if (id == null) {
             return "undefined";
         }
-        const name = idToName(id);
-        return name === undefined ? "undefined" : nameType(name);
+        const label = idToLabel(id);
+        // TODO: Currently punting on labels of length > 1.
+        if (label == null || label.length === 0) {
+            return "undefined";
+        }
+        return typeof label[0] === "string" ? "named" : "anonymous";
     };
 
     return (
-        <div class={`id-input ${maybeNameType(props.id)}`}>
+        <div class={`id-input ${labelType(props.id)}`}>
             <InlineInput
                 text={text()}
                 setText={handleNewText}
@@ -127,10 +139,9 @@ export function ObIdInput(
     allProps: {
         ob: Ob | null;
         setOb: (ob: Ob | null) => void;
-        completions?: Ob[];
     } & IdInputOptions,
 ) {
-    const [props, inputProps] = splitProps(allProps, ["ob", "setOb", "completions"]);
+    const [props, inputProps] = splitProps(allProps, ["ob", "setOb"]);
 
     const getId = (ob: Ob | null): Uuid | null =>
         match(ob)
@@ -156,10 +167,7 @@ export function ObIdInput(
         );
     };
 
-    const completions = (): Uuid[] | undefined =>
-        props.completions?.map(getId).filter((id) => id !== null);
-
-    return <IdInput id={id()} setId={setId} completions={completions()} {...inputProps} />;
+    return <IdInput id={id()} setId={setId} {...inputProps} />;
 }
 
 /** Input a basic morphism by specifying its human-readable name.
@@ -168,10 +176,9 @@ export function MorIdInput(
     allProps: {
         mor: Mor | null;
         setMor: (mor: Mor | null) => void;
-        completions?: Mor[];
     } & IdInputOptions,
 ) {
-    const [props, inputProps] = splitProps(allProps, ["mor", "setMor", "completions"]);
+    const [props, inputProps] = splitProps(allProps, ["mor", "setMor"]);
 
     const getId = (mor: Mor | null): Uuid | null =>
         match(mor)
@@ -197,8 +204,5 @@ export function MorIdInput(
         );
     };
 
-    const completions = (): Uuid[] | undefined =>
-        props.completions?.map(getId).filter((id) => id !== null);
-
-    return <IdInput id={id()} setId={setId} completions={completions()} {...inputProps} />;
+    return <IdInput id={id()} setId={setId} {...inputProps} />;
 }

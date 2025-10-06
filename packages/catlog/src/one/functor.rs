@@ -1,21 +1,21 @@
-/*! Functors between categories.
+//! Functors between categories.
+//!
+//! Abstractly, a functor between categories is a just graph morphism between the
+//! underlying graphs that respects composition. In our applications, we are most
+//! interested in functors out of *finitely generated* categories, whose action on
+//! arbitrary morphisms is uniquely determined by that on the morphism generators.
+//! Thus, in contrast to mappings between [sets](crate::zero::Mapping) and
+//! [graphs](crate::one::GraphMapping), we generally cannot separate *evaluation*
+//! from *validation*: to evaluate a [map](FgCategoryMap) on a finitely generated
+//! category, we might need access to the domain category, in order to decompose
+//! general morphisms into composites of generators, and also to the codomain
+//! category, in order to compose images of generating morphisms. The upshot is that
+//! you must carry around (references to) more data to evaluate functors than to
+//! evaluate functions or graph morphisms.
 
-Abstractly, a functor between categories is a just graph morphism between the
-underlying graphs that respects composition. In our applications, we are most
-interested in functors out of *finitely generated* categories, whose action on
-arbitrary morphisms is uniquely determined by that on the morphism generators.
-Thus, in contrast to mappings between [sets](crate::zero::Mapping) and
-[graphs](crate::one::GraphMapping), we generally cannot separate *evaluation*
-from *validation*: to evaluate a [map](FgCategoryMap) on a finitely generated
-category, we might need access to the domain category, in order to decompose
-general morphisms into composites of generators, and also to the codomain
-category, in order to compose images of generating morphisms. The upshot is that
-you must carry around (references to) more data to evaluate functors than to
-evaluate functions or graph morphisms.
- */
+use std::hash::Hash;
 
-use std::hash::{BuildHasher, Hash};
-
+use derive_more::Constructor;
 use nonempty::NonEmpty;
 use ref_cast::RefCast;
 use thiserror::Error;
@@ -25,12 +25,11 @@ use super::{
 };
 use crate::zero::{Column, Mapping};
 
-/** A mapping between categories.
-
-Analogous to a mapping between [sets](crate::zero::Mapping) or
-[graphs](crate::one::GraphMapping), a category mapping is a functor without
-specified domain or codomain categories.
- */
+/// A mapping between categories.
+///
+/// Analogous to a mapping between [sets](crate::zero::Mapping) or
+/// [graphs](crate::one::GraphMapping), a category mapping is a functor without
+/// specified domain or codomain categories.
 pub trait CategoryMap {
     /// Type of objects in domain category.
     type DomOb: Eq + Clone;
@@ -77,11 +76,10 @@ pub trait CategoryMap {
     }
 }
 
-/** A mapping out of a finitely generated category.
-
-Such a mapping is determined by where it sends generating objects and morphisms.
-The codomain category is arbitrary.
- */
+/// A mapping out of a finitely generated category.
+///
+/// Such a mapping is determined by where it sends generating objects and morphisms.
+/// The codomain category is arbitrary.
 pub trait FgCategoryMap: CategoryMap {
     /// Type of object generators in domain category.
     type ObGen: Eq + Clone;
@@ -112,17 +110,16 @@ pub trait FgCategoryMap: CategoryMap {
     }
 }
 
-/** The data of a functor out of a finitely presented (f.p.) category.
-
-This struct consists of a pair of mappings on the object and morphism generators
-of the domain category, assumed to be finitely presented. This data defines a
-[graph mapping](GraphMapping) from the domain category's generating graph to the
-codomain category's underlying graph.
-
-You can't do much with this data until it is [interpreted as a
-functor](Self::functor_into) into a specific category.
- */
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+/// The data of a functor out of a finitely presented (f.p.) category.
+///
+/// This struct consists of a pair of mappings on the object and morphism generators
+/// of the domain category, assumed to be finitely presented. This data defines a
+/// [graph mapping](GraphMapping) from the domain category's generating graph to the
+/// codomain category's underlying graph.
+///
+/// You can't do much with this data until it is [interpreted as a
+/// functor](Self::functor_into) into a specific category.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Constructor)]
 pub struct FpFunctorData<ObGenMap, MorGenMap> {
     /// Mapping on object generators.
     pub ob_generator_map: ObGenMap,
@@ -132,14 +129,6 @@ pub struct FpFunctorData<ObGenMap, MorGenMap> {
 }
 
 impl<ObGenMap, MorGenMap> FpFunctorData<ObGenMap, MorGenMap> {
-    /// Constructs from given mappings on object and morphism generators.
-    pub fn new(ob_generator_map: ObGenMap, mor_generator_map: MorGenMap) -> Self {
-        Self {
-            ob_generator_map,
-            mor_generator_map,
-        }
-    }
-
     /// Interprets the data as a functor into the given category.
     pub fn functor_into<'a, Cod>(&'a self, cod: &'a Cod) -> FpFunctor<'a, Self, Cod> {
         FpFunctor::new(self, cod)
@@ -166,13 +155,13 @@ where
     }
 }
 
-/** A functor out of a finitely presented (f.p.) category.
-
-Like a [`Function`](crate::zero::Function), this struct borrows its data. Unlike
-a [`Mapping`] between sets, a codomain is needed not just for validation but to
-even evaluate the functor on morphisms, hence is required as extra data. The
-domain category is needed only for validation.
- */
+/// A functor out of a finitely presented (f.p.) category.
+///
+/// Like a [`Function`](crate::zero::Function), this struct borrows its data. Unlike
+/// a [`Mapping`] between sets, a codomain is needed not just for validation but to
+/// even evaluate the functor on morphisms, hence is required as extra data. The
+/// domain category is needed only for validation.
+#[derive(Constructor)]
 pub struct FpFunctor<'a, Map, Cod> {
     map: &'a Map,
     cod: &'a Cod,
@@ -251,13 +240,6 @@ where
     }
 }
 
-impl<'a, Map, Cod> FpFunctor<'a, Map, Cod> {
-    /// Constructs a new functor out of an f.p. category.
-    pub fn new(map: &'a Map, cod: &'a Cod) -> Self {
-        Self { map, cod }
-    }
-}
-
 impl<'a, V, E, Ob, Mor, Map, Cod> FpFunctor<'a, Map, Cod>
 where
     V: Eq + Clone + Hash,
@@ -268,17 +250,17 @@ where
     Cod: Category<Ob = Ob, Mor = Mor>,
 {
     /// Validates that the functor is well-defined on the given f.p. category.
-    pub fn validate_on<S: BuildHasher>(
+    pub fn validate_on(
         &self,
-        dom: &FpCategory<V, E, S>,
+        dom: &FpCategory<V, E>,
     ) -> Result<(), NonEmpty<InvalidFpFunctor<V, E>>> {
         crate::validate::wrap_errors(self.iter_invalid_on(dom))
     }
 
     /// Iterates over failures to be functorial on the given f.p. category.
-    pub fn iter_invalid_on<'b, S: BuildHasher>(
+    pub fn iter_invalid_on<'b>(
         &'b self,
-        dom: &'b FpCategory<V, E, S>,
+        dom: &'b FpCategory<V, E>,
     ) -> impl Iterator<Item = InvalidFpFunctor<V, E>> + 'b {
         let generator_errors =
             GraphMorphism(self.map, dom.generators(), UnderlyingGraph::ref_cast(self.cod))
@@ -304,7 +286,7 @@ where
 }
 
 /// A failure of a map out of an f.p. category to be functorial.
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum InvalidFpFunctor<V, E> {
     /// An object generator not mapped to an object in the codomain category.
     #[error("Object generator `{0}` is not mapped to an object in the codomain")]
@@ -331,31 +313,29 @@ pub enum InvalidFpFunctor<V, E> {
 mod tests {
     use super::*;
     use crate::one::fp_category::{sch_graph, sch_hgraph, sch_sgraph};
-    use crate::zero::HashColumn;
-    use ustr::ustr;
+    use crate::zero::{HashColumn, name};
 
-    /** Isomorphism b/w the schemas for half-edge graphs and symmetric graphs.
-
-    Reference: https://blog.algebraicjulia.org/post/2020/09/cset-graphs-2/
-     */
+    /// Isomorphism b/w the schemas for half-edge graphs and symmetric graphs.
+    ///
+    /// Reference: https://blog.algebraicjulia.org/post/2020/09/cset-graphs-2/
     #[test]
     fn sch_sgraph_to_hgraph() {
         let (sch_hgraph, sch_sgraph) = (sch_hgraph(), sch_sgraph());
-        let ob_map = HashColumn::new([(ustr("V"), ustr("V")), (ustr("E"), ustr("H"))].into());
+        let ob_map = HashColumn::new([(name("V"), name("V")), (name("E"), name("H"))].into());
         let mor_map = HashColumn::new(
             [
-                (ustr("src"), Path::single(ustr("vert"))),
-                (ustr("tgt"), Path::pair(ustr("inv"), ustr("vert"))),
-                (ustr("inv"), Path::single(ustr("inv"))),
+                (name("src"), Path::single(name("vert"))),
+                (name("tgt"), Path::pair(name("inv"), name("vert"))),
+                (name("inv"), Path::single(name("inv"))),
             ]
             .into(),
         );
         let data = FpFunctorData::new(ob_map, mor_map);
         let functor = data.functor_into(&sch_hgraph);
-        assert_eq!(functor.apply_ob(ustr("E")), Some(ustr("H")));
+        assert_eq!(functor.apply_ob(name("E")), Some(name("H")));
         assert_eq!(
-            functor.apply_mor(Path::pair(ustr("inv"), ustr("src"))),
-            Some(Path::pair(ustr("inv"), ustr("vert")))
+            functor.apply_mor(Path::pair(name("inv"), name("src"))),
+            Some(Path::pair(name("inv"), name("vert")))
         );
         assert!(functor.validate_on(&sch_sgraph).is_ok());
     }
@@ -364,12 +344,12 @@ mod tests {
     #[test]
     fn sch_sgraph_to_graph() {
         let (sch_graph, sch_sgraph) = (sch_graph(), sch_sgraph());
-        let ob_map = HashColumn::new([(ustr("V"), ustr("V")), (ustr("E"), ustr("E"))].into());
+        let ob_map = HashColumn::new([(name("V"), name("V")), (name("E"), name("E"))].into());
         let mor_map = HashColumn::new(
             [
-                (ustr("src"), Path::single(ustr("src"))),
-                (ustr("tgt"), Path::single(ustr("tgt"))),
-                (ustr("inv"), Path::empty(ustr("E"))),
+                (name("src"), Path::single(name("src"))),
+                (name("tgt"), Path::single(name("tgt"))),
+                (name("inv"), Path::empty(name("E"))),
             ]
             .into(),
         );

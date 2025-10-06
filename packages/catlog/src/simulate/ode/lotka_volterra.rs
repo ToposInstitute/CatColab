@@ -6,12 +6,11 @@ use nalgebra::{DMatrix, DVector};
 use super::ODEProblem;
 use super::ODESystem;
 
-/** A Lotka-Volterra dynamical system.
-
-A system of ODEs that is affine in its *logarithmic* derivative. These are
-sometimes called the "generalized Lotka-Volterra equations." For more, see
-[Wikipedia](https://en.wikipedia.org/wiki/Generalized_Lotka%E2%80%93Volterra_equation).
-*/
+/// A Lotka-Volterra dynamical system.
+///
+/// A system of ODEs that is affine in its *logarithmic* derivative. These are
+/// sometimes called the "generalized Lotka-Volterra equations." For more, see
+/// [Wikipedia](https://en.wikipedia.org/wiki/Generalized_Lotka%E2%80%93Volterra_equation).
 #[derive(Clone, Debug, PartialEq)]
 pub struct LotkaVolterraSystem {
     interaction_coeffs: DMatrix<f32>,

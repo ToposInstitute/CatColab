@@ -1,12 +1,10 @@
 import type * as Viz from "@viz-js/viz";
 import { Show, createSignal } from "solid-js";
-import { P, match } from "ts-pattern";
 
-import type { DblModelDiagram, Uuid } from "catlog-wasm";
+import type { DblModel, DblModelDiagram } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
 import { Foldable } from "../../components";
 import type { DiagramAnalysisMeta, Theory } from "../../theory";
-import type { Name } from "../../util/indexing";
 import { DownloadSVGButton, GraphvizSVG } from "../../visualization";
 import * as GV from "./graph_visualization";
 
@@ -17,12 +15,14 @@ export function configureDiagramGraph(options: {
     id: string;
     name: string;
     description?: string;
+    help?: string;
 }): DiagramAnalysisMeta<GV.GraphConfig> {
-    const { id, name, description } = options;
+    const { id, name, description, help } = options;
     return {
         id,
         name,
         description,
+        help,
         component: (props) => <DiagramGraph title={name} {...props} />,
         initialContent: GV.defaultGraphConfig,
     };
@@ -41,23 +41,14 @@ export function DiagramGraph(
     const [svgRef, setSvgRef] = createSignal<SVGSVGElement>();
 
     const graphviz = () => {
-        const liveModel = props.liveDiagram.liveModel;
-        const theory = liveModel.theory();
+        const theory = props.liveDiagram.liveModel.theory();
+        const model = props.liveDiagram.liveModel.elaboratedModel();
         const validatedDiagram = props.liveDiagram.validatedDiagram();
         return (
             theory &&
-            validatedDiagram?.result.tag === "Ok" &&
-            diagramToGraphviz(validatedDiagram.diagram, theory, {
-                obName(id) {
-                    return props.liveDiagram.objectIndex().map.get(id);
-                },
-                baseObName(id) {
-                    return liveModel.objectIndex().map.get(id);
-                },
-                baseMorName(id) {
-                    return liveModel.morphismIndex().map.get(id);
-                },
-            })
+            model &&
+            validatedDiagram?.tag === "Valid" &&
+            diagramToGraphviz(validatedDiagram.diagram, model, theory)
         );
     };
 
@@ -94,41 +85,25 @@ export function DiagramGraph(
  */
 export function diagramToGraphviz(
     diagram: DblModelDiagram,
+    model: DblModel,
     theory: Theory,
-    options?: {
-        obName?: (id: Uuid) => Name | undefined;
-        baseObName?: (id: Uuid) => string | undefined;
-        baseMorName: (id: Uuid) => string | undefined;
-        attributes?: GV.GraphvizAttributes;
-    },
+    attributes?: GV.GraphvizAttributes,
 ): Viz.Graph {
     const nodes = new Map<string, Required<Viz.Graph>["nodes"][0]>();
-    for (const judgment of diagram.objectDeclarations()) {
-        const matched = match(judgment)
-            .with(
-                {
-                    id: P.select("id"),
-                    obType: P.select("obType"),
-                    over: {
-                        tag: "Basic",
-                        content: P.select("overId"),
-                    },
-                },
-                (matched) => matched,
-            )
-            .otherwise(() => null);
-        if (!matched) {
+    for (const id of diagram.obGenerators()) {
+        const over = diagram.getObOver(id);
+        if (over?.tag !== "Basic") {
             continue;
         }
-        const { id, obType, overId } = matched;
-        const name = options?.obName?.(id);
-        const overName = options?.baseObName?.(overId);
+        const obType = diagram.obType({ tag: "Basic", content: id });
         const meta = theory.instanceObTypeMeta(obType);
+        const label = diagram.obGeneratorLabel(id)?.join(".");
+        const overLabel = model.obGeneratorLabel(over.content)?.join(".");
         nodes.set(id, {
             name: id,
             attributes: {
                 id,
-                label: [name, overName].filter((s) => s).join(" : "),
+                label: [label, overLabel].filter((s) => s).join(" : "),
                 class: GV.svgCssClasses(meta).join(" "),
                 fontname: GV.graphvizFontname(meta),
             },
@@ -136,46 +111,26 @@ export function diagramToGraphviz(
     }
 
     const edges: Required<Viz.Graph>["edges"] = [];
-    for (const judgment of diagram.morphismDeclarations()) {
-        const matched = match(judgment)
-            .with(
-                {
-                    id: P.select("id"),
-                    morType: P.select("morType"),
-                    over: {
-                        tag: "Basic",
-                        content: P.select("overId"),
-                    },
-                    dom: {
-                        tag: "Basic",
-                        content: P.select("domId"),
-                    },
-                    cod: {
-                        tag: "Basic",
-                        content: P.select("codId"),
-                    },
-                },
-                (matched) => matched,
-            )
-            .otherwise(() => null);
-        if (!matched) {
+    for (const id of diagram.morGenerators()) {
+        const [dom, cod, over] = [diagram.getDom(id), diagram.getCod(id), diagram.getMorOver(id)];
+        if (dom?.tag !== "Basic" || cod?.tag !== "Basic" || over?.tag !== "Basic") {
             continue;
         }
-        const { id, morType, overId, codId, domId } = matched;
+        const morType = diagram.morType({ tag: "Basic", content: id });
         const meta = theory.instanceMorTypeMeta(morType);
+        const overLabel = model.morGeneratorLabel(over.content)?.join(".");
         edges.push({
-            head: codId,
-            tail: domId,
+            head: cod.content,
+            tail: dom.content,
             attributes: {
                 id,
-                label: options?.baseMorName?.(overId) ?? "",
+                label: overLabel ?? "",
                 class: GV.svgCssClasses(meta).join(" "),
                 fontname: GV.graphvizFontname(meta),
             },
         });
     }
 
-    const attributes = options?.attributes;
     return {
         directed: true,
         nodes: Array.from(nodes.values()),

@@ -1,28 +1,27 @@
-/*! Graphs, finite and infinite.
+//! Graphs, finite and infinite.
+//!
+//! Graphs are the fundamental combinatorial structure in category theory and a
+//! basic building block for higher dimensional categories. We thus aim to provide a
+//! flexible set of traits and structs for graphs as they are used in category
+//! theory.
 
-Graphs are the fundamental combinatorial structure in category theory and a
-basic building block for higher dimensional categories. We thus aim to provide a
-flexible set of traits and structs for graphs as they are used in category
-theory.
- */
-
-use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
+use std::hash::Hash;
 
 use derivative::Derivative;
+use derive_more::{Constructor, From};
 use nonempty::NonEmpty;
 use ref_cast::RefCast;
 use thiserror::Error;
-use ustr::{IdentityHasher, Ustr};
+use ustr::Ustr;
 
 use crate::validate::{self, Validate};
 use crate::zero::*;
 
-/** A graph.
-
-This is a graph in the category theorist's sense, i.e., it is directed and
-admits multiple edges and self loops. Moreover, a graph is not assumed to be
-finite, even locally.
- */
+/// A graph.
+///
+/// This is a graph in the category theorist's sense, i.e., it is directed and
+/// admits multiple edges and self loops. Moreover, a graph is not assumed to be
+/// finite, even locally.
 pub trait Graph {
     /// Type of vertices in graph.
     type V: Eq + Clone;
@@ -43,8 +42,7 @@ pub trait Graph {
     fn tgt(&self, e: &Self::E) -> Self::V;
 }
 
-/** A graph with finitely many vertices and edges.
- */
+/// A graph with finitely many vertices and edges.
 pub trait FinGraph: Graph {
     /// Iterates over the vertices in the graph.
     fn vertices(&self) -> impl Iterator<Item = Self::V>;
@@ -52,22 +50,34 @@ pub trait FinGraph: Graph {
     /// Iterates over the edges in the graph.
     fn edges(&self) -> impl Iterator<Item = Self::E>;
 
-    /** Iterates over the edges incoming to a vertex.
-
-    Depending on whether the target map is indexed, this method can be cheap or
-    expensive.
-    */
+    /// Iterates over the edges incoming to a vertex.
+    ///
+    /// Depending on whether the target map is indexed, this method can be cheap or
+    /// expensive.
     fn in_edges(&self, v: &Self::V) -> impl Iterator<Item = Self::E> {
         self.edges().filter(|e| self.tgt(e) == *v)
     }
 
-    /** Iterates over the edges outgoing from a vertex.
-
-    Depending on whether the source map is indexed, this method can be cheap or
-    expensive.
-    */
+    /// Iterates over the edges outgoing from a vertex.
+    ///
+    /// Depending on whether the source map is indexed, this method can be cheap or
+    /// expensive.
     fn out_edges(&self, v: &Self::V) -> impl Iterator<Item = Self::E> {
         self.edges().filter(|e| self.src(e) == *v)
+    }
+
+    /// Iterates over neighbors of a vertex connected by an outgoing edge.
+    ///
+    /// When multiple edges are present, neighboring vertices are repeated.
+    fn out_neighbors(&self, v: &Self::V) -> impl Iterator<Item = Self::V> {
+        self.out_edges(v).map(|e| self.tgt(&e))
+    }
+
+    /// Iterates over neighbors of a vertex connected by an incoming edge.
+    ///
+    /// When multiple edges are present, neighboring vertices are repeated.
+    fn in_neighbors(&self, v: &Self::V) -> impl Iterator<Item = Self::V> {
+        self.in_edges(v).map(|e| self.src(&e))
     }
 
     /// Number of vertices in the graph.
@@ -90,24 +100,52 @@ pub trait FinGraph: Graph {
         self.out_edges(v).count()
     }
 
-    /** Number of edges incoming to or outgoing from a vertex.
-
-    Self-loops are counted twice.
-     */
+    /// Number of edges incoming to or outgoing from a vertex.
+    ///
+    /// Self-loops are counted twice.
     fn degree(&self, v: &Self::V) -> usize {
         self.in_degree(v) + self.out_degree(v)
     }
 }
 
-/** A graph backed by sets and mappings.
+/// A reflexive graph.
+///
+/// A **reflexive graph** is a graph equipped with a distinguished self-loop on each vertex.
+pub trait ReflexiveGraph: Graph {
+    /// Gets the reflexive loop at a vertex.
+    fn refl(&self, v: Self::V) -> Self::E;
+}
 
-Such a graph is defined in copresheaf style by two [sets](Set) and two
-[mappings](Mapping). Implementing this trait provides a *blanket implementation*
-of [`Graph`]. This is the easiest way to define a new graph type.
+/// The set of vertices of a graph.
+#[derive(From, RefCast)]
+#[repr(transparent)]
+pub struct VertexSet<G>(G);
 
-This trait does not assume that the graph is mutable; for that, you must also
-implement the trait [`MutColumnarGraph`].
- */
+impl<G: Graph> Set for VertexSet<G> {
+    type Elem = G::V;
+
+    fn contains(&self, v: &Self::Elem) -> bool {
+        self.0.has_vertex(v)
+    }
+}
+
+impl<G: FinGraph> FinSet for VertexSet<G> {
+    fn iter(&self) -> impl Iterator<Item = Self::Elem> {
+        self.0.vertices()
+    }
+    fn len(&self) -> usize {
+        self.0.vertex_count()
+    }
+}
+
+/// A graph backed by sets and mappings.
+///
+/// Such a graph is defined in copresheaf style by two [sets](Set) and two
+/// [mappings](Mapping). Implementing this trait provides a *blanket implementation*
+/// of [`Graph`]. This is the easiest way to define a new graph type.
+///
+/// This trait does not assume that the graph is mutable; for that, you must also
+/// implement the trait [`MutColumnarGraph`].
 pub trait ColumnarGraph {
     /// Type of vertices in the graph.
     type V: Eq + Clone;
@@ -138,14 +176,28 @@ pub trait ColumnarGraph {
 
     /// Gets the mapping assignment a target vertex to each edge.
     fn tgt_map(&self) -> &Self::Tgt;
+
+    /// Iterates over failures to be a valid graph.
+    fn iter_invalid(&self) -> impl Iterator<Item = InvalidGraph<Self::E>>
+    where
+        Self::Edges: FinSet<Elem = Self::E>,
+    {
+        let (dom, cod) = (self.edge_set(), self.vertex_set());
+        let srcs = Function(self.src_map(), dom, cod)
+            .iter_invalid()
+            .map(|e| InvalidGraph::Src(e.take()));
+        let tgts = Function(self.tgt_map(), dom, cod)
+            .iter_invalid()
+            .map(|e| InvalidGraph::Tgt(e.take()));
+        srcs.chain(tgts)
+    }
 }
 
-/** A finite graph backed by columns.
-
-Such a graph is defined in copresheaf style by two [finite sets](FinSet) and two
-[columns](Column). Implementing this trait provides a *blanket implementation*
-of [`FinGraph`].
- */
+/// A finite graph backed by columns.
+///
+/// Such a graph is defined in copresheaf style by two [finite sets](FinSet) and two
+/// [columns](Column). Implementing this trait provides a *blanket implementation*
+/// of [`FinGraph`].
 pub trait ColumnarFinGraph:
     ColumnarGraph<
         Vertices: FinSet<Elem = Self::V>,
@@ -154,17 +206,6 @@ pub trait ColumnarFinGraph:
         Tgt: Column<Dom = Self::E, Cod = Self::V>,
     >
 {
-    /// Iterates over failures to be a valid graph.
-    fn iter_invalid(&self) -> impl Iterator<Item = InvalidGraphData<Self::E>> {
-        let (dom, cod) = (self.edge_set(), self.vertex_set());
-        let srcs = Function(self.src_map(), dom, cod)
-            .iter_invalid()
-            .map(|e| InvalidGraphData::Src(e.take()));
-        let tgts = Function(self.tgt_map(), dom, cod)
-            .iter_invalid()
-            .map(|e| InvalidGraphData::Tgt(e.take()));
-        srcs.chain(tgts)
-    }
 }
 
 /// A columnar graph with mutable columns.
@@ -242,13 +283,12 @@ impl<G: ColumnarFinGraph> FinGraph for G {
     }
 }
 
-/** An invalid assignment in a graph defined explicitly by data.
-
-For [columnar graphs](ColumnarGraph) and other such graphs, it is possible that
-the data is incomplete or inconsistent.
-*/
+/// An invalid assignment in a graph.
+///
+/// For [columnar graphs](ColumnarGraph) and other graphs defined explicitly by
+/// data, it is possible that the data is incomplete or inconsistent.
 #[derive(Debug, Error)]
-pub enum InvalidGraphData<E> {
+pub enum InvalidGraph<E> {
     /// Edge assigned a source that is not a vertex contained in the graph.
     #[error("Source of edge `{0}` is not a vertex in the graph")]
     Src(E),
@@ -258,11 +298,10 @@ pub enum InvalidGraphData<E> {
     Tgt(E),
 }
 
-/** A skeletal finite graph with indexed source and target maps.
-
-The data structure is the same as the standard `Graph` type in
-[Catlab.jl](https://github.com/AlgebraicJulia/Catlab.jl).
- */
+/// A skeletal finite graph with indexed source and target maps.
+///
+/// The data structure is the same as the standard `Graph` type in
+/// [Catlab.jl](https://github.com/AlgebraicJulia/Catlab.jl).
 #[derive(Clone, Default, PartialEq, Eq)]
 pub struct SkelGraph {
     nv: usize,
@@ -368,45 +407,43 @@ impl SkelGraph {
 }
 
 impl Validate for SkelGraph {
-    type ValidationError = InvalidGraphData<usize>;
+    type ValidationError = InvalidGraph<usize>;
 
     fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
         validate::wrap_errors(self.iter_invalid())
     }
 }
 
-/** A finite graph with indexed source and target maps, based on hash maps.
-
-Unlike in a skeletal finite graph, the vertices and edges can have arbitrary
-hashable types.
-*/
+/// A finite graph with indexed source and target maps, based on hash maps.
+///
+/// Unlike in a skeletal finite graph, the vertices and edges can have arbitrary
+/// hashable types.
 #[derive(Clone, Derivative, Debug)]
-#[derivative(Default(bound = "S: Default"))]
-#[derivative(PartialEq(bound = "V: Eq + Hash, E: Eq + Hash, S: BuildHasher"))]
-#[derivative(Eq(bound = "V: Eq + Hash, E: Eq + Hash, S: BuildHasher"))]
-pub struct HashGraph<V, E, S = RandomState> {
-    vertex_set: HashFinSet<V, S>,
-    edge_set: HashFinSet<E, S>,
-    src_map: IndexedHashColumn<E, V, S>,
-    tgt_map: IndexedHashColumn<E, V, S>,
+#[derivative(PartialEq(bound = "V: Eq + Hash, E: Eq + Hash"))]
+#[derivative(Eq(bound = "V: Eq + Hash, E: Eq + Hash"))]
+#[derivative(Default(bound = ""))]
+pub struct HashGraph<V, E> {
+    vertex_set: HashFinSet<V>,
+    edge_set: HashFinSet<E>,
+    src_map: IndexedHashColumn<E, V>,
+    tgt_map: IndexedHashColumn<E, V>,
 }
 
 /// A finite graph with vertices and edges of type `Ustr`.
-pub type UstrGraph = HashGraph<Ustr, Ustr, BuildHasherDefault<IdentityHasher>>;
+pub type UstrGraph = HashGraph<Ustr, Ustr>;
 
-impl<V, E, S> ColumnarGraph for HashGraph<V, E, S>
+impl<V, E> ColumnarGraph for HashGraph<V, E>
 where
     V: Eq + Hash + Clone,
     E: Eq + Hash + Clone,
-    S: BuildHasher,
 {
     type V = V;
     type E = E;
 
-    type Vertices = HashFinSet<V, S>;
-    type Edges = HashFinSet<E, S>;
-    type Src = IndexedHashColumn<E, V, S>;
-    type Tgt = IndexedHashColumn<E, V, S>;
+    type Vertices = HashFinSet<V>;
+    type Edges = HashFinSet<E>;
+    type Src = IndexedHashColumn<E, V>;
+    type Tgt = IndexedHashColumn<E, V>;
 
     fn vertex_set(&self) -> &Self::Vertices {
         &self.vertex_set
@@ -422,11 +459,10 @@ where
     }
 }
 
-impl<V, E, S> MutColumnarGraph for HashGraph<V, E, S>
+impl<V, E> MutColumnarGraph for HashGraph<V, E>
 where
     V: Eq + Hash + Clone,
     E: Eq + Hash + Clone,
-    S: BuildHasher,
 {
     fn src_map_mut(&mut self) -> &mut Self::Src {
         &mut self.src_map
@@ -436,19 +472,17 @@ where
     }
 }
 
-impl<V, E, S> ColumnarFinGraph for HashGraph<V, E, S>
+impl<V, E> ColumnarFinGraph for HashGraph<V, E>
 where
     V: Eq + Hash + Clone,
     E: Eq + Hash + Clone,
-    S: BuildHasher,
 {
 }
 
-impl<V, E, S> HashGraph<V, E, S>
+impl<V, E> HashGraph<V, E>
 where
     V: Eq + Hash + Clone,
     E: Eq + Hash + Clone,
-    S: BuildHasher,
 {
     /// Adds a vertex to the graph, returning whether the vertex is new.
     pub fn add_vertex(&mut self, v: V) -> bool {
@@ -463,10 +497,9 @@ where
         self.vertex_set.extend(iter)
     }
 
-    /** Adds an edge to the graph, returning whether the edge is new.
-
-    If the edge is not new, its source and target are updated.
-    */
+    /// Adds an edge to the graph, returning whether the edge is new.
+    ///
+    /// If the edge is not new, its source and target are updated.
     pub fn add_edge(&mut self, e: E, src: V, tgt: V) -> bool {
         self.src_map.set(e.clone(), src);
         self.tgt_map.set(e.clone(), tgt);
@@ -479,29 +512,27 @@ where
     }
 }
 
-impl<V, E, S> Validate for HashGraph<V, E, S>
+impl<V, E> Validate for HashGraph<V, E>
 where
     V: Eq + Hash + Clone,
     E: Eq + Hash + Clone,
-    S: BuildHasher,
 {
-    type ValidationError = InvalidGraphData<E>;
+    type ValidationError = InvalidGraph<E>;
 
     fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
         validate::wrap_errors(self.iter_invalid())
     }
 }
 
-/** A mapping between graphs.
-
-Just as a [`Mapping`] is the data of a function without specified domain or
-codomain sets, a *graph mapping* is the data of a graph homomorphism without
-specified domain or codomain graphs. Turning this around, a *graph morphism* is
-a pair of graphs with a compatible graph mapping.
-
-The data of a graph mapping is a pair of mappings, one on vertices and the other
-edges. Use a [`ColumnarGraphMapping`] to supply this data directly.
- */
+/// A mapping between graphs.
+///
+/// Just as a [`Mapping`] is the data of a function without specified domain or
+/// codomain sets, a *graph mapping* is the data of a graph homomorphism without
+/// specified domain or codomain graphs. Turning this around, a *graph morphism* is
+/// a pair of graphs with a compatible graph mapping.
+///
+/// The data of a graph mapping is a pair of mappings, one on vertices and the other
+/// edges. Use a [`ColumnarGraphMapping`] to supply this data directly.
 pub trait GraphMapping {
     /// Type of vertices in domain graph.
     type DomV: Eq + Clone;
@@ -548,12 +579,11 @@ pub trait GraphMapping {
     }
 }
 
-/** A homomorphism between graphs defined by a [mapping](GraphMapping).
-
-This struct borrows its data to perform validation. The domain and codomain are
-assumed to be valid graphs. If that is in question, the graphs should be
-validated *before* validating this object.
- */
+/// A homomorphism between graphs defined by a [mapping](GraphMapping).
+///
+/// This struct borrows its data to perform validation. The domain and codomain are
+/// assumed to be valid graphs. If that is in question, the graphs should be
+/// validated *before* validating this object.
 pub struct GraphMorphism<'a, Map, Dom, Cod>(pub &'a Map, pub &'a Dom, pub &'a Cod);
 
 impl<'a, Map, Dom, Cod> GraphMorphism<'a, Map, Dom, Cod>
@@ -578,17 +608,17 @@ where
         });
 
         let edge_errors = dom.edges().flat_map(|e| {
-            if let Some(f) = mapping.edge_map().apply_to_ref(&e) {
-                if cod.has_edge(&f) {
-                    let mut errs = Vec::new();
-                    if mapping.apply_vertex(dom.src(&e)).is_some_and(|v| v != cod.src(&f)) {
-                        errs.push(InvalidGraphMorphism::Src(e.clone()))
-                    }
-                    if mapping.apply_vertex(dom.tgt(&e)).is_some_and(|v| v != cod.tgt(&f)) {
-                        errs.push(InvalidGraphMorphism::Tgt(e.clone()))
-                    }
-                    return errs;
+            if let Some(f) = mapping.edge_map().apply_to_ref(&e)
+                && cod.has_edge(&f)
+            {
+                let mut errs = Vec::new();
+                if mapping.apply_vertex(dom.src(&e)).is_some_and(|v| v != cod.src(&f)) {
+                    errs.push(InvalidGraphMorphism::Src(e.clone()))
                 }
+                if mapping.apply_vertex(dom.tgt(&e)).is_some_and(|v| v != cod.tgt(&f)) {
+                    errs.push(InvalidGraphMorphism::Tgt(e.clone()))
+                }
+                return errs;
             }
             vec![InvalidGraphMorphism::Edge(e)]
         });
@@ -632,25 +662,14 @@ pub enum InvalidGraphMorphism<V, E> {
     Tgt(E),
 }
 
-/** A graph mapping backed by columns.
-
-That is, the data of the graph mapping is defined by two columns. The mapping
-can be between arbitrary graphs with compatible vertex and edge types.
-*/
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+/// A graph mapping backed by columns.
+///
+/// That is, the data of the graph mapping is defined by two columns. The mapping
+/// can be between arbitrary graphs with compatible vertex and edge types.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Constructor)]
 pub struct ColumnarGraphMapping<VMap, EMap> {
     vertex_map: VMap,
     edge_map: EMap,
-}
-
-impl<VMap, EMap> ColumnarGraphMapping<VMap, EMap> {
-    /// Constructs a graph mapping from given vertex and edge mappings.
-    pub fn new(vertex_map: VMap, edge_map: EMap) -> Self {
-        Self {
-            vertex_map,
-            edge_map,
-        }
-    }
 }
 
 impl<VMap, EMap> GraphMapping for ColumnarGraphMapping<VMap, EMap>
@@ -683,11 +702,10 @@ impl SkelGraphMapping {
     }
 }
 
-/** An element in a graph.
-
-This type plays no role in the core API for graphs but is useful on rare
-occasion when heterogeneous collection of vertices *and* edges is needed.
- */
+/// An element in a graph.
+///
+/// This type plays no role in the core API for graphs but is useful on rare
+/// occasion when heterogeneous collection of vertices *and* edges is needed.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum GraphElem<V, E> {
     /// A vertex in a graph.
@@ -727,6 +745,13 @@ mod tests {
         g.set_tgt("fg", 'z');
         assert_eq!(g.src(&"fg"), 'x');
         assert_eq!(g.tgt(&"fg"), 'z');
+    }
+
+    #[test]
+    fn vertex_set() {
+        let set: VertexSet<_> = SkelGraph::triangle().into();
+        assert!(set.contains(&2));
+        assert_eq!(set.len(), 3);
     }
 
     #[test]

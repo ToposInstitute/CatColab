@@ -1,5 +1,5 @@
 import { MultiProvider } from "@solid-primitives/context";
-import { Match, Show, Switch, createResource, useContext } from "solid-js";
+import { Match, Switch, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { DiagramJudgment } from "catlog-wasm";
@@ -13,7 +13,7 @@ import {
 } from "../notebook";
 import type { InstanceTypeMeta } from "../theory";
 import { LiveDiagramContext } from "./context";
-import { type LiveDiagramDocument, getLiveDiagram } from "./document";
+import type { LiveDiagramDocument } from "./document";
 import { DiagramMorphismCellEditor } from "./morphism_cell_editor";
 import { DiagramObjectCellEditor } from "./object_cell_editor";
 import {
@@ -24,6 +24,8 @@ import {
     newDiagramObjectDecl,
 } from "./types";
 
+import "./diagram_editor.css";
+
 /** Notebook editor for a diagram in a model.
  */
 export function DiagramNotebookEditor(props: {
@@ -33,7 +35,7 @@ export function DiagramNotebookEditor(props: {
     const liveModel = () => props.liveDiagram.liveModel;
 
     const cellConstructors = () =>
-        (liveModel().theory().instanceTypes ?? []).map(diagramCellConstructor);
+        (liveModel().theory()?.instanceTypes ?? []).map(diagramCellConstructor);
 
     return (
         <MultiProvider
@@ -61,27 +63,36 @@ export function DiagramNotebookEditor(props: {
 /** Editor for a notebook cell in a diagram notebook.
  */
 function DiagramCellEditor(props: FormalCellEditorProps<DiagramJudgment>) {
+    const liveDiagram = useContext(LiveDiagramContext);
+    invariant(liveDiagram, "Live diagram should be provided as context");
+
     return (
         <Switch>
-            <Match when={props.content.tag === "object"}>
-                <DiagramObjectCellEditor
-                    decl={props.content as DiagramObjectDecl}
-                    modifyDecl={(f) =>
-                        props.changeContent((content) => f(content as DiagramObjectDecl))
-                    }
-                    isActive={props.isActive}
-                    actions={props.actions}
-                />
+            <Match when={props.content.tag === "object" && liveDiagram().liveModel.theory()}>
+                {(theory) => (
+                    <DiagramObjectCellEditor
+                        decl={props.content as DiagramObjectDecl}
+                        modifyDecl={(f) =>
+                            props.changeContent((content) => f(content as DiagramObjectDecl))
+                        }
+                        isActive={props.isActive}
+                        actions={props.actions}
+                        theory={theory()}
+                    />
+                )}
             </Match>
-            <Match when={props.content.tag === "morphism"}>
-                <DiagramMorphismCellEditor
-                    decl={props.content as DiagramMorphismDecl}
-                    modifyDecl={(f) =>
-                        props.changeContent((content) => f(content as DiagramMorphismDecl))
-                    }
-                    isActive={props.isActive}
-                    actions={props.actions}
-                />
+            <Match when={props.content.tag === "morphism" && liveDiagram().liveModel.theory()}>
+                {(theory) => (
+                    <DiagramMorphismCellEditor
+                        decl={props.content as DiagramMorphismDecl}
+                        modifyDecl={(f) =>
+                            props.changeContent((content) => f(content as DiagramMorphismDecl))
+                        }
+                        isActive={props.isActive}
+                        actions={props.actions}
+                        theory={theory()}
+                    />
+                )}
             </Match>
         </Switch>
     );
@@ -107,9 +118,9 @@ function judgmentLabel(judgment: DiagramJudgment): string | undefined {
     const theory = liveModel().theory();
 
     if (judgment.tag === "object") {
-        return theory.instanceObTypeMeta(judgment.obType)?.name;
+        return theory?.instanceObTypeMeta(judgment.obType)?.name;
     }
     if (judgment.tag === "morphism") {
-        return theory.instanceMorTypeMeta(judgment.morType)?.name;
+        return theory?.instanceMorTypeMeta(judgment.morType)?.name;
     }
 }

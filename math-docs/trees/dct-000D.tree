@@ -1,0 +1,19 @@
+\title{Categories with pullbacks}
+\taxon{doctrine}
+\import{macros}
+
+\p{Recall that a category \cat{C} has pullbacks if and only if the codomain
+projection ##{\cod: \cat{C}^\to \to \cat{C}} is a fibration, in which case the
+functor is called the \nlab{codomain fibration} of \cat{C}. Combining
+
+\ul{
+  \li{this characterization of pullbacks}
+  \li{the description of the arrow category as the [tabulator](dbl-0002)
+  of the hom-profunctor}
+  \li{our axioms for [fibrations](dct-000C)}
+}
+
+we obtain a tabulator double theory whose models are categories with chosen
+pullbacks.}
+
+\transclude{thy-000D}

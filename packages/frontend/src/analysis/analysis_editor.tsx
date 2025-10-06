@@ -2,6 +2,8 @@ import { Match, Switch, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
+import { DiagramMenu } from "../diagram/diagram_menu";
+import { ModelMenu } from "../model/model_menu";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
@@ -11,12 +13,27 @@ import {
 import type { AnalysisMeta } from "../theory";
 import { assertExhaustive } from "../util/assert_exhaustive";
 import { LiveAnalysisContext } from "./context";
-import {
-    type LiveAnalysisDocument,
-    type LiveDiagramAnalysisDocument,
-    type LiveModelAnalysisDocument,
+import type {
+    LiveAnalysisDocument,
+    LiveDiagramAnalysisDocument,
+    LiveModelAnalysisDocument,
 } from "./document";
 import type { Analysis } from "./types";
+
+const AnalysisMenu = (props: {
+    liveAnalysis: LiveAnalysisDocument;
+}) => (
+    <Switch>
+        <Match when={props.liveAnalysis.analysisType === "model" && props.liveAnalysis.liveModel}>
+            {(liveModel) => <ModelMenu liveModel={liveModel()} />}
+        </Match>
+        <Match
+            when={props.liveAnalysis.analysisType === "diagram" && props.liveAnalysis.liveDiagram}
+        >
+            {(liveDiagram) => <DiagramMenu liveDiagram={liveDiagram()} />}
+        </Match>
+    </Switch>
+);
 
 /** Notebook editor for analyses of models of double theories.
  */
@@ -50,7 +67,8 @@ export function AnalysisNotebookEditor(props: {
     );
 }
 
-function AnalysisCellEditor(props: FormalCellEditorProps<Analysis<unknown>>) {
+/** Editor for a notebook cell in an analysis notebook. */
+export function AnalysisCellEditor(props: FormalCellEditorProps<Analysis<unknown>>) {
     const liveAnalysis = useContext(LiveAnalysisContext);
     invariant(liveAnalysis, "Live analysis should be provided as context for cell editor");
 

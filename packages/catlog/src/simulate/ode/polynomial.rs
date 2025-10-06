@@ -6,7 +6,7 @@ use std::ops::Add;
 
 use derivative::Derivative;
 use nalgebra::DVector;
-use num_traits::{One, Pow};
+use num_traits::{One, Pow, Zero};
 
 #[cfg(test)]
 use super::ODEProblem;
@@ -48,11 +48,24 @@ where
     where
         F: Clone + FnMut(Coef) -> NewCoef,
     {
-        let components = self
-            .components
-            .into_iter()
-            .map(|(var, poly)| (var, poly.extend_scalars(f.clone())))
-            .collect();
+        self.map(|poly| poly.extend_scalars(f.clone()))
+    }
+
+    /// Normalizes the polynomial system by normalizing each polynomial in it.
+    pub fn normalize(self) -> Self
+    where
+        Coef: Zero,
+        Exp: Zero,
+    {
+        self.map(|poly| poly.normalize())
+    }
+
+    /// Maps over the components of the system.
+    pub fn map<NewCoef, NewExp, F>(self, mut f: F) -> PolynomialSystem<Var, NewCoef, NewExp>
+    where
+        F: FnMut(Polynomial<Var, Coef, Exp>) -> Polynomial<Var, NewCoef, NewExp>,
+    {
+        let components = self.components.into_iter().map(|(var, poly)| (var, f(poly))).collect();
         PolynomialSystem { components }
     }
 }
@@ -62,11 +75,10 @@ where
     Var: Clone + Ord,
     Exp: Clone + Ord + Add<Output = Exp>,
 {
-    /** Converts the polynomial system to a numerical one.
-
-    The order of the components in the new system is given by the order of the
-    variables in the old one.
-     */
+    /// Converts the polynomial system to a numerical one.
+    ///
+    /// The order of the components in the new system is given by the order of the
+    /// variables in the old one.
     pub fn to_numerical(&self) -> NumericalPolynomialSystem<Exp> {
         let indices: BTreeMap<Var, usize> =
             self.components.keys().enumerate().map(|(i, var)| (var.clone(), i)).collect();
@@ -109,11 +121,10 @@ where
     }
 }
 
-/** A numerical system of polynomial differential equations.
-
-Such a system is ready for use in numerical solvers: the coefficients are
-floating point numbers and the variables are consecutive integer indices.
- */
+/// A numerical system of polynomial differential equations.
+///
+/// Such a system is ready for use in numerical solvers: the coefficients are
+/// floating point numbers and the variables are consecutive integer indices.
 pub struct NumericalPolynomialSystem<Exp> {
     /// Components of the vector field.
     pub components: Vec<Polynomial<usize, f32, Exp>>,

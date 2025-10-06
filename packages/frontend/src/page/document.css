@@ -10,6 +10,16 @@
 
     & .info {
         font-size: var(--h4-font-size);
-        max-width: 25%;
+        flex: 1;
+        text-align: right;
+    }
+
+    & .icon-button {
+        flex: 0;
+        margin-left: 0.5em;
+    }
+
+    & .lucide {
+        color: var(--link-color);
     }
 }

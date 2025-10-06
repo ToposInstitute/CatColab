@@ -1,8 +1,7 @@
 import type * as Viz from "@viz-js/viz";
 import { Show, createSignal } from "solid-js";
-import { P, match } from "ts-pattern";
 
-import type { ModelJudgment } from "catlog-wasm";
+import type { DblModel, QualifiedName } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { Foldable } from "../../components";
 import type { ModelAnalysisMeta, Theory } from "../../theory";
@@ -16,12 +15,14 @@ export function configureModelGraph(options: {
     id: string;
     name: string;
     description?: string;
+    help?: string;
 }): ModelAnalysisMeta<GV.GraphConfig> {
-    const { id, name, description } = options;
+    const { id, name, description, help } = options;
     return {
         id,
         name,
         description,
+        help,
         component: (props) => <ModelGraph title={name} {...props} />,
         initialContent: GV.defaultGraphConfig,
     };
@@ -59,11 +60,11 @@ export function ModelGraph(
                 <GV.GraphConfigForm content={props.content} changeContent={props.changeContent} />
             </Foldable>
             <div class="graph-visualization">
-                <Show when={props.liveModel.theory()}>
-                    {(theory) => (
+                <Show when={props.liveModel.elaboratedModel()}>
+                    {(model) => (
                         <ModelGraphviz
-                            model={props.liveModel.formalJudgments()}
-                            theory={theory()}
+                            model={model()}
+                            theory={props.liveModel.theory()}
                             options={GV.graphvizOptions(props.content)}
                             ref={setSvgRef}
                         />
@@ -77,75 +78,71 @@ export function ModelGraph(
 /** Visualize a model of a double theory as a graph using Graphviz.
  */
 export function ModelGraphviz(props: {
-    model: ModelJudgment[];
-    theory: Theory;
+    model: DblModel;
+    theory?: Theory;
+    obGenerators?: QualifiedName[];
+    morGenerators?: QualifiedName[];
     attributes?: GV.GraphvizAttributes;
     options?: Viz.RenderOptions;
     ref?: SVGRefProp;
 }) {
     return (
-        <GraphvizSVG
-            graph={modelToGraphviz(props.model, props.theory, props.attributes)}
-            options={props.options}
-            ref={props.ref}
-        />
+        <Show when={props.theory}>
+            {(theory) => (
+                <GraphvizSVG
+                    graph={modelToGraphviz(
+                        props.model,
+                        theory(),
+                        props.attributes,
+                        props.obGenerators,
+                        props.morGenerators,
+                    )}
+                    options={props.options}
+                    ref={props.ref}
+                />
+            )}
+        </Show>
     );
 }
 
 /** Convert a model of a double theory into a Graphviz graph.
  */
 export function modelToGraphviz(
-    model: ModelJudgment[],
+    model: DblModel,
     theory: Theory,
     attributes?: GV.GraphvizAttributes,
+    obGenerators?: QualifiedName[],
+    morGenerators?: QualifiedName[],
 ): Viz.Graph {
-    const nodes = new Map<string, Required<Viz.Graph>["nodes"][0]>();
-    for (const judgment of model) {
-        if (judgment.tag === "object") {
-            const { id, name } = judgment;
-            const meta = theory.modelObTypeMeta(judgment.obType);
-            nodes.set(id, {
-                name: id,
-                attributes: {
-                    id,
-                    label: name,
-                    class: GV.svgCssClasses(meta).join(" "),
-                    fontname: GV.graphvizFontname(meta),
-                },
-            });
-        }
+    const nodes: Required<Viz.Graph>["nodes"] = [];
+    for (const id of obGenerators ?? model.obGenerators()) {
+        const obType = model.obType({ tag: "Basic", content: id });
+        const meta = theory.modelObTypeMeta(obType);
+        nodes.push({
+            name: id,
+            attributes: {
+                id,
+                label: model.obGeneratorLabel(id)?.join(".") ?? "",
+                class: GV.svgCssClasses(meta).join(" "),
+                fontname: GV.graphvizFontname(meta),
+            },
+        });
     }
 
     const edges: Required<Viz.Graph>["edges"] = [];
-    for (const judgment of model) {
-        const matched = match(judgment)
-            .with(
-                {
-                    tag: "morphism",
-                    morType: P.select("morType"),
-                    dom: {
-                        tag: "Basic",
-                        content: P.select("domId"),
-                    },
-                    cod: {
-                        tag: "Basic",
-                        content: P.select("codId"),
-                    },
-                },
-                (matched) => matched,
-            )
-            .otherwise(() => null);
-        if (!matched) {
+    for (const id of morGenerators ?? model.morGenerators()) {
+        const [dom, cod] = [model.getDom(id), model.getCod(id)];
+        if (!(dom?.tag === "Basic" && cod?.tag === "Basic")) {
             continue;
         }
-        const { morType, codId, domId } = matched;
+        const morType = model.morType({ tag: "Basic", content: id });
         const meta = theory.modelMorTypeMeta(morType);
         edges.push({
-            head: codId,
-            tail: domId,
+            head: cod.content,
+            tail: dom.content,
             attributes: {
-                id: judgment.id,
-                label: judgment.name,
+                id: id,
+                label: model.morGeneratorLabel(id)?.join(".") ?? "",
                 class: GV.svgCssClasses(meta).join(" "),
                 fontname: GV.graphvizFontname(meta),
                 // Not recognized by Graphviz but will be passed through!
@@ -156,7 +153,7 @@ export function modelToGraphviz(
 
     return {
         directed: true,
-        nodes: Array.from(nodes.values()),
+        nodes,
         edges,
         graphAttributes: { ...GV.defaultGraphAttributes, ...attributes?.graph },
         nodeAttributes: { ...GV.defaultNodeAttributes, ...attributes?.node },

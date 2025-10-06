@@ -9,10 +9,9 @@ use ode_solvers::{
 #[cfg(test)]
 use textplots::{Chart, Plot, Shape};
 
-/** A system of ordinary differential equations (ODEs).
-
-An ODE system is anything that can compute a vector field.
- */
+/// A system of ordinary differential equations (ODEs).
+///
+/// An ODE system is anything that can compute a vector field.
 pub trait ODESystem {
     /// Compute the vector field at the given time and state in place.
     fn vector_field(&self, dx: &mut DVector<f32>, x: &DVector<f32>, t: f32);
@@ -25,11 +24,10 @@ pub trait ODESystem {
     }
 }
 
-/** An ODE problem ready to be solved.
-
-An ODE problem comprises an [ODE system](ODESystem) plus the extra information
-needed to solve the system, namely the initial values and the time span.
- */
+/// An ODE problem ready to be solved.
+///
+/// An ODE problem comprises an [ODE system](ODESystem) plus the extra information
+/// needed to solve the system, namely the initial values and the time span.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ODEProblem<Sys> {
     pub(crate) system: Sys,
@@ -77,10 +75,9 @@ impl<Sys> ODEProblem<Sys>
 where
     Sys: ODESystem,
 {
-    /** Solves the ODE system using the Runge-Kutta method.
-
-    Returns the solver results if successful and an integration error otherwise.
-     */
+    /// Solves the ODE system using the Runge-Kutta method.
+    ///
+    /// Returns the solver results if successful and an integration error otherwise.
     pub fn solve_rk4(
         &self,
         step_size: f32,
@@ -96,11 +93,10 @@ where
         Ok(stepper.into())
     }
 
-    /** Solves the ODE system using the Dormand-Prince method.
-
-    A variant of Runge-Kutta with adaptive step size control and automatic
-    selection of initial step size.
-    */
+    /// Solves the ODE system using the Dormand-Prince method.
+    ///
+    /// A variant of Runge-Kutta with adaptive step size control and automatic
+    /// selection of initial step size.
     pub fn solve_dopri5(
         &self,
         output_step_size: f32,
@@ -138,12 +134,10 @@ pub(crate) fn textplot_ode_result<Sys>(
 
     let dim = problem.initial_values.len();
     let line_data: Vec<_> = (0..dim)
-        .into_iter()
         .map(|i| t_out.iter().copied().zip(x_out.iter().map(|x| x[i])).collect::<Vec<_>>())
         .collect();
 
-    let lines: Vec<_> = line_data.iter().map(|data| Shape::Lines(data)).into_iter().collect();
-
+    let lines: Vec<_> = line_data.iter().map(|data| Shape::Lines(data)).collect();
     let chart = lines.iter().fold(&mut chart, |chart, line| chart.lineplot(line));
     chart.axis();
     chart.figures();

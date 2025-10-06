@@ -39,10 +39,13 @@ jobs:
 
       - name: Install Rust toolchain from file
         uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: nightly
+          components: rustfmt
 
       - name: Check formatting
         run: |
-          cargo fmt --check
+          cargo fmt --check -- --config=normalize_comments=true
 
   rust_lints:
     name: rust lints

@@ -1,7 +1,7 @@
 import { splitProps, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import type { Mor, MorType } from "catlog-wasm";
+import type { Mor, MorType, QualifiedName } from "catlog-wasm";
 import { type IdInputOptions, MorIdInput } from "../components";
 import { LiveModelContext } from "./context";
 
@@ -19,13 +19,14 @@ export function BasicMorInput(
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
 
-    const completions = (): Mor[] | undefined =>
-        props.morType && liveModel().validatedModel()?.model.morphismsWithType(props.morType);
+    const completions = (): QualifiedName[] | undefined =>
+        props.morType && liveModel().elaboratedModel()?.morGeneratorsWithType(props.morType);
 
     return (
         <MorIdInput
             completions={completions()}
-            idToName={liveModel().morphismIndex()}
+            idToLabel={(id) => liveModel().elaboratedModel()?.morGeneratorLabel(id)}
+            labelToId={(label) => liveModel().elaboratedModel()?.morGeneratorWithLabel(label)}
             {...otherProps}
         />
     );

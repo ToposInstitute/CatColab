@@ -3,17 +3,17 @@
   height: 100vh;
   width: 100vw;
 
-  & > .content {
+  &>.content {
     display: flex;
     flex-direction: column;
     flex: 1;
     overflow-x: hidden;
 
-    & > header {
+    &>header {
       flex-shrink: 0;
     }
 
-    & > main {
+    &>main {
       flex: 1;
       display: flex;
       flex-direction: column;
@@ -92,7 +92,7 @@
   margin-right: 2px;
 }
 
-.icon-button > div {
+.icon-button>div {
   height: 28px;
   width: 28px;
   display: flex;
@@ -102,7 +102,7 @@
   transition: background 20ms;
 }
 
-.icon-button:hover > div {
+.icon-button:hover>div {
   color: black;
   background: #e8e8e8;
   cursor: pointer;
@@ -122,8 +122,7 @@
     background: #f0f0f0;
     cursor: pointer;
 
-    .document-actions {
-    }
+    .document-actions {}
   }
 
   &.active {
@@ -138,22 +137,24 @@
     flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
+    padding-left: 5px;
   }
 
   .document-actions {
-      /* display: none; */
+    /* display: none; */
+    display: flex;
+    align-items: center;
+
+    &>div {
       display: flex;
       align-items: center;
+      padding: 2px;
+      border-radius: 6px;
 
-      & > div {
-        display: flex;
-        align-items: center;
-        padding: 2px;
-        border-radius: 6px;
-        &:hover {
-          background-color: #d0d0d0;
-        }
+      &:hover {
+        background-color: #d0d0d0;
       }
+    }
   }
 }
 

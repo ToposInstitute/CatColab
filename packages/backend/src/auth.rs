@@ -36,10 +36,9 @@ pub struct Permissions {
     /// Permission level for the current user.
     pub user: Option<PermissionLevel>,
 
-    /** Permission levels for all other users.
-
-    Only owners of the document have access to this information.
-     */
+    /// Permission levels for all other users.
+    ///
+    /// Only owners of the document have access to this information.
     pub users: Option<Vec<UserPermissions>>,
 }
 
@@ -79,11 +78,10 @@ pub async fn validate_session(ctx: AppCtx) -> Result<(), AppError> {
     Ok(())
 }
 
-/** Verify that user is authorized to access a ref at a given permission level.
-
-It is safe to proceed if the result is `Ok`; otherwise, the requested action
-should be aborted.
- */
+/// Verify that user is authorized to access a ref at a given permission level.
+///
+/// It is safe to proceed if the result is `Ok`; otherwise, the requested action
+/// should be aborted.
 pub async fn authorize(ctx: &AppCtx, ref_id: Uuid, level: PermissionLevel) -> Result<(), AppError> {
     let authorized = is_authorized(ctx, ref_id, level).await?;
     if authorized {
@@ -93,10 +91,9 @@ pub async fn authorize(ctx: &AppCtx, ref_id: Uuid, level: PermissionLevel) -> Re
     }
 }
 
-/** Is the user authorized to access a ref at a given permission level?
-
-The result is an error if the ref does not exist.
- */
+/// Is the user authorized to access a ref at a given permission level?
+///
+/// The result is an error if the ref does not exist.
 pub async fn is_authorized(
     ctx: &AppCtx,
     ref_id: Uuid,
@@ -197,18 +194,16 @@ pub struct NewPermissions {
     /// Base permission level for any person, logged in or not.
     pub anyone: Option<PermissionLevel>,
 
-    /** Permission levels for users.
-
-    A mapping from user IDs to permission levels.
-    */
+    /// Permission levels for users.
+    ///
+    /// A mapping from user IDs to permission levels.
     pub users: HashMap<String, PermissionLevel>,
 }
 
-/** Replaces the set of permissions for a ref.
-
-Note that this function does not update/diff the permissions, it replaces them
-entirely. An exception is ownership which can never be revoked once granted.
-*/
+/// Replaces the set of permissions for a ref.
+///
+/// Note that this function does not update/diff the permissions, it replaces them
+/// entirely. An exception is ownership which can never be revoked once granted.
 pub async fn set_permissions(
     state: &AppState,
     ref_id: Uuid,
@@ -258,12 +253,11 @@ async fn ref_exists(ctx: &AppCtx, ref_id: Uuid) -> Result<(), AppError> {
     Ok(())
 }
 
-/** Extracts an authenticated user from an HTTP request.
-
-Note that the `firebase_auth` crate has an Axum feature with similar
-functionality, but we don't use it because it doesn't integrate well with the
-RPC service.
- */
+/// Extracts an authenticated user from an HTTP request.
+///
+/// Note that the `firebase_auth` crate has an Axum feature with similar
+/// functionality, but we don't use it because it doesn't integrate well with the
+/// RPC service.
 pub fn authenticate_from_request<T>(
     firebase_auth: &FirebaseAuth,
     req: &hyper::Request<T>,

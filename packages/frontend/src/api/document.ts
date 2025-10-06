@@ -5,41 +5,19 @@ import {
     type DocumentId,
     Repo,
 } from "@automerge/automerge-repo";
+import jsonpatch from "fast-json-patch";
 import { type Accessor, createEffect, createSignal } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 import invariant from "tiny-invariant";
 import * as uuid from "uuid";
 
-import type { Permissions } from "catcolab-api";
-import type { Document } from "catlog-wasm";
+import { type Document, migrateDocument } from "catlog-wasm";
 import { PermissionsError } from "../util/errors";
-import type { Api } from "./types";
+import type { InterfaceToType } from "../util/types";
+import type { Api, LiveDoc } from "./types";
 
 /** An Automerge repo with no networking, used for read-only documents. */
 const localRepo = new Repo();
-
-/** Live document retrieved from the backend.
-
-A live document can be used in reactive contexts and is connected to an
-Automerge document handle.
- */
-export type LiveDoc<Doc extends Document> = {
-    /** The document data, suitable for use in reactive contexts.
-
-    This data should never be mutated directly. Instead, call `changeDoc` or, if
-    necessary, interact with the Automerge document handle.
-     */
-    doc: Doc;
-
-    /** Call this function to make changes to the document. */
-    changeDoc: (f: ChangeFn<Doc>) => void;
-
-    /** The Automerge document handle for the document. */
-    docHandle: DocHandle<Doc>;
-
-    /** Permissions for the document retrieved from the backend. */
-    permissions: Permissions;
-};
 
 /** Retrieve a live document from the backend.
 
@@ -48,9 +26,6 @@ by Automerge to the backend and to other clients. When the user has only read
 permissions, the Automerge doc handle will be "fake", existing only locally in
 the client. And if the user doesn't even have read permissions, this function
 will yield an unauthorized error!
-
-TODO: Roundtrip the loaded document throught notebook-types to validate it
-and upgrade it to the latest version.
  */
 export async function getLiveDoc<Doc extends Document>(
     api: Api,
@@ -73,13 +48,45 @@ export async function getLiveDoc<Doc extends Document>(
     let docHandle: DocHandle<Doc>;
     if (refDoc.tag === "Live") {
         const docId = refDoc.docId as DocumentId;
-        docHandle = repo.find(docId) as DocHandle<Doc>;
+        docHandle = (await repo.find(docId)) as DocHandle<Doc>;
     } else {
         const init = refDoc.content as unknown as Doc;
         docHandle = localRepo.create(init);
     }
 
-    const doc = await makeDocHandleReactive(docHandle);
+    const { permissions } = refDoc;
+    return {
+        ...getLiveDocFromDocHandle(docHandle, docType),
+        docRef: {
+            refId,
+            permissions,
+        },
+    };
+}
+
+/** Create a live document from an Automerge document handle.
+
+When using the official CatColab backend, this function should be called only
+indirectly, via [`getLiveDoc`]. However, if you want to bypass the CatColab
+backend and fetch a document from another Automerge repo, you can call this
+function directly.
+ */
+export function getLiveDocFromDocHandle<Doc extends Document>(
+    docHandle: DocHandle<Doc>,
+    docType?: string,
+): LiveDoc<Doc> {
+    // Perform any migrations on the document.
+    // XXX: copied from automerge-doc-server/src/server.ts:
+    const docBefore = docHandle.doc();
+    const docAfter = migrateDocument(docBefore);
+    if ((docBefore as Doc).version !== docAfter.version) {
+        const patches = jsonpatch.compare(docBefore as Doc, docAfter);
+        docHandle.change((doc: unknown) => {
+            jsonpatch.applyPatch(doc, patches);
+        });
+    }
+
+    const doc = makeDocHandleReactive(docHandle);
     if (docType !== undefined) {
         invariant(
             doc.type === docType,
@@ -89,14 +96,33 @@ export async function getLiveDoc<Doc extends Document>(
 
     const changeDoc = (f: ChangeFn<Doc>) => docHandle.change(f);
 
-    const permissions = refDoc.permissions;
-    return { doc, changeDoc, docHandle, permissions };
+    return { doc, changeDoc, docHandle };
 }
 
-/** Create a Solid Store that tracks an Automerge document.
- */
-export async function makeDocHandleReactive<T extends object>(handle: DocHandle<T>): Promise<T> {
-    const init = await handle.doc();
+/** Create a new document in the backend, returning its ref ID. */
+export async function createDoc(api: Api, init: Document): Promise<string> {
+    const result = await api.rpc.new_ref.mutate(init as InterfaceToType<Document>);
+    invariant(result.tag === "Ok", `Failed to create a new ${init.type}`);
+
+    return result.content;
+}
+
+/** Duplicate a document in the backend, returning the new ref ID. */
+export async function duplicateDoc(api: Api, doc: Document): Promise<string> {
+    const init: Document = {
+        ...doc,
+        name: `${doc.name} (copy)`,
+    };
+
+    const result = await api.rpc.new_ref.mutate(init as InterfaceToType<Document>);
+    invariant(result.tag === "Ok", `Failed to duplicate the ${doc.type}`);
+
+    return result.content;
+}
+
+/** Create a Solid Store that tracks an Automerge document. */
+export function makeDocHandleReactive<T extends object>(handle: DocHandle<T>): T {
+    const init = handle.doc();
 
     const [store, setStore] = createStore<T>(init as T);
 
@@ -111,8 +137,7 @@ export async function makeDocHandleReactive<T extends object>(handle: DocHandle<
     return store;
 }
 
-/** Create a boolean signal for whether an Automerge document handle is ready.
- */
+/** Create a boolean signal for whether an Automerge document handle is ready. */
 export function useDocHandleReady(getHandle: () => DocHandle<unknown>): Accessor<boolean> {
     const [isReady, setIsReady] = createSignal<boolean>(false);
 
