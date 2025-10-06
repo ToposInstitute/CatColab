@@ -179,6 +179,26 @@ const LinkEditorWidget: Component<LinkEditorWidgetProps> = (props) => {
     );
 };
 
+export function getLinkFromHouseEvent(view: EditorView, event: MouseEvent): LinkState | null {
+    // Check to see if the mouse event happened on a link element.
+    const target = event.target as HTMLElement | null;
+    const linkEl = target?.closest("a[href]") as HTMLAnchorElement | null;
+    if (!linkEl) {
+        return null;
+    }
+
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+        return null;
+    }
+
+    const posInfo = view.posAtCoords({ left: event.clientX, top: event.clientY });
+    if (!posInfo) {
+        return null;
+    }
+
+    return getLinkAtPos(view, posInfo.pos);
+}
+
 export class LinkEditorView {
     dom: HTMLDivElement;
 
@@ -204,27 +224,14 @@ export class LinkEditorView {
         const container = (this.view.dom.parentElement ?? this.view.dom) as HTMLElement;
         container.appendChild(this.dom);
 
-        // Emulate hover functionality by checking if the mouse is near a link
+        // Emulate hover functionality by checking if the mouse is on a link
         this.handleMouseMove = (e: MouseEvent) => {
-            const target = e.target as HTMLElement | null;
-            const linkEl = target?.closest("a[href]") as HTMLAnchorElement | null;
-
-            if (!linkEl) {
+            const link = getLinkFromHouseEvent(this.view, e);
+            if (link) {
+                this.scheduleShow(link);
+            } else {
                 this.scheduleHide();
-                return;
             }
-
-            const posInfo = this.view.posAtCoords({ left: e.clientX, top: e.clientY });
-            if (!posInfo) {
-                return;
-            }
-
-            const link = getLinkAtPos(this.view, posInfo.pos);
-            if (!link) {
-                return;
-            }
-
-            this.scheduleShow(link);
         };
 
         this.handleMouseLeave = () => {

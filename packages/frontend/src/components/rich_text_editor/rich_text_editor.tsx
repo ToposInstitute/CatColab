@@ -36,7 +36,7 @@ import {
     toggleOrderedList,
     turnSelectionIntoBlockquote,
 } from "./commands";
-import { getLinkAtPos, linkEditorPlugin } from "./link_editor";
+import { getLinkAtPos, getLinkFromHouseEvent, linkEditorPlugin } from "./link_editor";
 import { type CustomSchema, proseMirrorAutomergeInit } from "./schema";
 import { activeHeading, initPlaceholderPlugin, isMarkActive } from "./utils";
 
@@ -162,7 +162,20 @@ export const RichTextEditor = (
                 view.updateState(newState);
                 setHeadingLevel(activeHeading(view.state, schema));
             },
+            // returning true: Prosemirror's internal handlers will not run for the event.
             handleDOMEvents: {
+                // If mousedown is on a link, cancel the event.
+                // Why: letting it propagate will trigger the onfocus event, which can change the DOM. No
+                // click event is triggered when the DOM changes between mousedown and mouseup.
+                mousedown: (view, event) => {
+                    const link = getLinkFromHouseEvent(view, event);
+                    if (!link) {
+                        return false;
+                    }
+
+                    event.preventDefault();
+                    return true;
+                },
                 focus: () => {
                     setEditorFocused(true);
                     props.onFocus?.();
@@ -185,33 +198,6 @@ export const RichTextEditor = (
 
                     setEditorFocused(false);
                     return false;
-                },
-                mousedown: (view, event) => {
-                    if (
-                        event.button !== 0 ||
-                        event.metaKey ||
-                        event.ctrlKey ||
-                        event.shiftKey ||
-                        event.altKey
-                    ) {
-                        return false;
-                    }
-
-                    const posInfo = view.posAtCoords({ left: event.clientX, top: event.clientY });
-                    if (!posInfo) {
-                        return;
-                    }
-
-                    const link = getLinkAtPos(view, posInfo.pos);
-                    if (!link) {
-                        return false;
-                    }
-
-                    if (link.href) {
-                        window.open(link.href, "_blank", "noopener,noreferrer");
-                    }
-
-                    return true;
                 },
             },
             clipboardTextSerializer: (slice) => {
