@@ -19,32 +19,39 @@
     pointer-events: none;
 }
 
-.rich-text-editor.focussed {
-    border: 1px solid grey;
+.rich-text-editor {
+    border: 1px solid transparent;
     border-radius: 5px;
+    position: relative;
+    box-sizing: border-box;
+    padding: 0.3em; /* affects .menubar bottom */
 }
 
-.rich-text-editor.focussed .ProseMirror {
-    padding: 5px;
+.rich-text-editor.focussed {
+    border: 1px solid grey;
 }
 
 .rich-text-editor > div {
     position: relative;
 }
 
-.ref-id-view {
-    background-color: grey;
-    border-radius: 5px;
-    padding-left: 5px;
-    padding-right: 5px;
-}
-
 .menubar {
-    background-color: #f0f0f0;
+    position: absolute;
+    box-sizing: border-box;
+    bottom: calc(100% + 0.3em); /* based on .rich-text-editor padding */
+    right: 5px;
+    left: 5px;
     display: flex;
     flex-direction: column;
     flex-direction: row;
     justify-content: flex-start;
+    border-radius: 5px 5px 0 0;
+    border: 1px solid grey;
+    background-color: #f0f0f0;
+}
+
+.menubar > :first-child > button {
+    border-radius: 5px 0 0 0;
 }
 
 .menubar select .menubar button {
