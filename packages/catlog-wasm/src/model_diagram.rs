@@ -7,6 +7,7 @@ use tsify::Tsify;
 use uuid::Uuid;
 use wasm_bindgen::prelude::*;
 
+use catlog::dbl::discrete::model_diagram::InvalidDiscreteDblModelDiagram;
 use catlog::dbl::model::{DblModel as _, DiscreteDblModel, FgDblModel, MutDblModel};
 use catlog::dbl::model_diagram as diagram;
 use catlog::dbl::model_morphism::DiscreteDblModelMapping;
@@ -325,9 +326,7 @@ fn expect_single_uuid(name: &QualifiedName) -> Uuid {
 /// Result of validating a diagram in a model.
 #[derive(Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
-pub struct ModelDiagramValidationResult(
-    pub JsResult<(), Vec<diagram::InvalidDiscreteDblModelDiagram>>,
-);
+pub struct ModelDiagramValidationResult(pub JsResult<(), Vec<InvalidDiscreteDblModelDiagram>>);
 
 /// Elaborates a diagram defined by a notebook into a catlog diagram.
 #[wasm_bindgen(js_name = "elaborateDiagram")]
