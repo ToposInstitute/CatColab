@@ -14,6 +14,7 @@ use tattle::{Reporter, declare_error};
 use super::{text_elab::*, theory::std_theories, toplevel::*};
 use crate::zero::NameSegment;
 
+
 declare_error!(TOP_ERROR, "top", "an error at the top-level");
 
 /// An enum to configure the output of batch processing.
