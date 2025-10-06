@@ -176,6 +176,19 @@ export const RichTextEditor = (
                     event.preventDefault();
                     return true;
                 },
+                // XXX: this is needed because otherwise links to a different domain than the current
+                // page don't open. This solution seems to work fine, but it's unfortunate that we can't
+                // rely on the default link behavior. This may be a problem with the SolidJS router.
+                click: (view, event) => {
+                    const link = getLinkFromHouseEvent(view, event);
+                    if (!link || !link.href) {
+                        return false;
+                    }
+
+                    window.open(link.href, "_blank", "noopener,noreferrer");
+                    event.preventDefault();
+                    return true;
+                },
                 focus: () => {
                     setEditorFocused(true);
                     props.onFocus?.();
