@@ -13,7 +13,8 @@ import type { RefStub } from "catcolab-api";
 import { createDiagram } from "../diagram";
 import { createAnalysis } from "../analysis";
 import { DocumentTypeIcon } from "../util/document_type_icon";
-import type { StableRef } from "catlog-wasm";
+import type { AnalysisType, StableRef } from "catlog-wasm";
+import { AnyLiveDocumentType } from "./utils";
 
 export function DocumentMenu(props: {
     stub: RefStub;
@@ -51,7 +52,7 @@ export function DocumentMenu(props: {
     const onNewAnalysis = async () => {
         const newRef = await createAnalysis(
             api,
-            props.stub.typeName as any,
+            props.stub.typeName as AnalysisType,
             unversionedRef(props.stub.refId),
         );
         navigate(`/analysis/${newRef}`);

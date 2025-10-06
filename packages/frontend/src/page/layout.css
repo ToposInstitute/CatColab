@@ -58,14 +58,17 @@
   justify-content: flex-end;
   height: 32px;
   margin-top: 6px;
-  magrin-bottom: 6x;
+  margin-bottom: 6px;
   border-radius: 6px;
   transition: background 20ms;
+
+  &>.icon-button {
+    margin-right: 2px;
+  }
 }
 
 .sidebar-header:hover {
-  /* currently there is only one other element in the header, so this hover is somewhat redundant for now */
-  /* background: #f0f0f0; */
+  background: #f0f0f0;
 }
 
 .toolbar {
@@ -82,6 +85,8 @@
 
 .secondary-toolbar {
   position: absolute;
+  display: flex;
+  gap: 2px;
 }
 
 .icon-button {
@@ -89,7 +94,6 @@
   align-items: center;
   height: 100%;
   color: dimgray;
-  margin-right: 2px;
 }
 
 .icon-button>div {
@@ -117,12 +121,16 @@
   justify-content: space-between;
   align-items: center;
   box-sizing: border-box;
+  position: relative;
 
   &:hover {
     background: #f0f0f0;
     cursor: pointer;
 
-    .document-actions {}
+    .document-actions {
+      position: static;
+      visibility: visible;
+    }
   }
 
   &.active {
@@ -141,17 +149,22 @@
   }
 
   .document-actions {
-    /* display: none; */
-    display: flex;
+    position: absolute;
+    right: 0;
+    visibility: hidden;
     align-items: center;
 
-    &>div {
+    & {
       display: flex;
       align-items: center;
       padding: 2px;
       border-radius: 6px;
 
       &:hover {
+        .icon-button {
+          background-color: #d0d0d0;
+        }
+
         background-color: #d0d0d0;
       }
     }
@@ -163,5 +176,4 @@
   border: none;
   padding: 3px;
   border-left: 2px solid #E7E6E4;
-
 }
