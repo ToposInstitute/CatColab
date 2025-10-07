@@ -1,4 +1,3 @@
-import { useParams } from "@solidjs/router";
 import { getAuth } from "firebase/auth";
 import { useAuth, useFirebaseApp } from "solid-firebase";
 import { Match, Show, Switch, createResource, createSignal, useContext } from "solid-js";

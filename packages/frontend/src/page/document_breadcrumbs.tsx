@@ -3,14 +3,14 @@ import { getLiveDoc, type LiveDoc, useApi } from "../api";
 import invariant from "tiny-invariant";
 
 import type { Document } from "catlog-wasm";
-// import { type LiveDoc, getLiveDoc, useApi } from "../api";
+
 import { assertExhaustive } from "../util/assert_exhaustive";
 import "./document_breadcrumbs.css";
 
 export function DocumentBreadcrumbs(props: {
-    document: LiveDoc;
+    liveDoc: LiveDoc;
 }) {
-    const [documentChain] = createResource(() => props.document, getDocumentChain);
+    const [documentChain] = createResource(() => props.liveDoc, getDocumentChain);
 
     return (
         <div class="breadcrumbs-wrapper">
@@ -53,7 +53,8 @@ async function getDocumentChain(document: LiveDoc): Promise<LiveDoc[]> {
     const documentChain: LiveDoc[] = [document];
 
     while (true) {
-        // biome-ignore lint/style/noNonNullAssertion: the array initializer guarantees that there will always be at least one item in the array
+        // biome-ignore lint/style/noNonNullAssertion: the array initializer guarantees that there will
+        // always be at least one item in the array
         const parentRefId = getParentRefId(documentChain[0]!.doc);
         if (!parentRefId) {
             break;

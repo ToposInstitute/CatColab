@@ -14,7 +14,6 @@ import { createDiagram } from "../diagram";
 import { createAnalysis } from "../analysis";
 import { DocumentTypeIcon } from "../util/document_type_icon";
 import type { AnalysisType, StableRef } from "catlog-wasm";
-import { AnyLiveDocumentType } from "./utils";
 
 export function DocumentMenu(props: {
     stub: RefStub;
