@@ -41,6 +41,7 @@ export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
                 id: "diagram",
                 name: "Visualization",
                 description: "Visualize the Petri net",
+                help: "visualization",
             }),
             analyses.configureReachability({
                 check(model, data) {
