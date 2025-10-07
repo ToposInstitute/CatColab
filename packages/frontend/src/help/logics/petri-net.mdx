@@ -7,8 +7,8 @@ import { HelpAnalysisById } from "../logic_help_detail"
 Each transition has incoming and outgoing arrows connected to places, which describe the **input** and **output** places of the transition (respectively).
 
 One way of understanding Petri nets is through their **token semantics**.
-We place a number of "tokens" in each place and then check all the transitions to see if all their input places have a token: if so, then we "fire" the transition, moving the tokens from the input places to the output places; if not, then nothing happens.
-In many classical references the token semantics are built directly in to the definition of Petri nets, but from a categorical point of view --- and, in particular, from the CatColab point of view --- the underlying shape of Petri nets is itself an expressive formal gadget.
+We place a number of "tokens" in each place and then check all the transitions to see if all their input places have a token: if so, then we can "fire" the transition, moving the tokens from the input places to the output places; if not, then nothing happens.
+In many classical references the token semantics are built directly in to the definition of Petri nets (often called a **marking** or **tokening**), but from a categorical point of view --- and, in particular, from the CatColab point of view --- the underlying shape of Petri nets is itself an expressive formal gadget.
 
 
 ### Further reading
