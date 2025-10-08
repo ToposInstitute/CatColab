@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::ast::{AstConverter, Expr};
+    use crate::ast::{Expr, convert};
     use crate::fnotation_parser::FNotationParser;
     use crate::typechecker::{Typ, TypeChecker};
     use std::collections::HashMap;
@@ -9,8 +9,7 @@ mod tests {
         let parser = FNotationParser::new();
         let context = parser.create_context(input)?;
         let fntn = parser.parse_to_fnotation(input, &context)?;
-        let converter = AstConverter::new();
-        converter.convert(fntn)
+        convert(fntn)
     }
 
     fn setup_simple() -> (HashMap<String, Typ>, HashMap<String, Typ>) {
@@ -22,160 +21,188 @@ mod tests {
         vars.insert("flag".to_string(), Typ::Base("bool".to_string()));
 
         let mut funcs = HashMap::new();
-        
+
         // Basic arithmetic
-        funcs.insert("add".to_string(), Typ::FuncType(
-            vec![
-                Typ::Base("int".to_string()), 
-                Typ::Base("int".to_string())
-            ], 
-            Box::new(Typ::Base("int".to_string()))
-        ));
-        
-        funcs.insert("multiply".to_string(), Typ::FuncType(
-            vec![
-                Typ::Base("int".to_string()), 
-                Typ::Base("int".to_string())
-            ], 
-            Box::new(Typ::Base("int".to_string()))
-        ));
-        
-        // Predicates
-        funcs.insert("greater_than_zero".to_string(), Typ::FuncType(
-            vec![Typ::Base("int".to_string())], 
-            Box::new(Typ::Base("bool".to_string()))
-        ));
-        
-        funcs.insert("is_empty".to_string(), Typ::FuncType(
-            vec![Typ::Base("str".to_string())], 
-            Box::new(Typ::Base("bool".to_string()))
-        ));
-        
-        // String operations
-        funcs.insert("concat".to_string(), Typ::FuncType(
-            vec![
-                Typ::Base("str".to_string()), 
-                Typ::Base("str".to_string())
-            ], 
-            Box::new(Typ::Base("str".to_string()))
-        ));
-        
-        funcs.insert("to_string".to_string(), Typ::FuncType(
-            vec![Typ::Base("int".to_string())], 
-            Box::new(Typ::Base("str".to_string()))
-        ));
-        
-        // Product type functions - CONCRETE TYPES (no polymorphism)
-        funcs.insert("pair_int_str".to_string(), Typ::FuncType(
-            vec![
-                Typ::Base("int".to_string()), 
-                Typ::Base("str".to_string())
-            ], 
-            Box::new(Typ::Product(vec![
-                Typ::Base("int".to_string()), 
-                Typ::Base("str".to_string())
-            ]))
-        ));
-        
-        funcs.insert("swap_int_str".to_string(), Typ::FuncType(
-            vec![
-                Typ::Product(vec![
-                    Typ::Base("int".to_string()), 
-                    Typ::Base("str".to_string())
-                ])
-            ], 
-            Box::new(Typ::Product(vec![
-                Typ::Base("str".to_string()), 
-                Typ::Base("int".to_string())
-            ]))
-        ));
-        
-        funcs.insert("pair_int_int".to_string(), Typ::FuncType(
-            vec![
-                Typ::Base("int".to_string()), 
-                Typ::Base("int".to_string())
-            ], 
-            Box::new(Typ::Product(vec![
-                Typ::Base("int".to_string()), 
-                Typ::Base("int".to_string())
-            ]))
-        ));
-        
-        funcs.insert("triple".to_string(), Typ::FuncType(
-            vec![
-                Typ::Base("int".to_string()),
-                Typ::Base("str".to_string()),
-                Typ::Base("bool".to_string())
-            ], 
-            Box::new(Typ::Product(vec![
-                Typ::Base("int".to_string()),
-                Typ::Base("str".to_string()),
-                Typ::Base("bool".to_string())
-            ]))
-        ));
-        
-        // Higher-order functions - CONCRETE TYPES
-        funcs.insert("map_int".to_string(), Typ::FuncType(
-            vec![
-                Typ::FuncType(
-                    vec![Typ::Base("int".to_string())],
-                    Box::new(Typ::Base("int".to_string()))
-                ),
-                Typ::Base("int".to_string())
-            ], 
-            Box::new(Typ::Base("int".to_string()))
-        ));
-        
-        funcs.insert("compose".to_string(), Typ::FuncType(
-            vec![
-                Typ::FuncType(
-                    vec![Typ::Base("int".to_string())],
-                    Box::new(Typ::Base("str".to_string()))
-                ),
-                Typ::FuncType(
-                    vec![Typ::Base("int".to_string()), Typ::Base("int".to_string())],
-                    Box::new(Typ::Base("int".to_string()))
-                )
-            ], 
-            Box::new(Typ::FuncType(
+        funcs.insert(
+            "add".to_string(),
+            Typ::FuncType(
                 vec![Typ::Base("int".to_string()), Typ::Base("int".to_string())],
-                Box::new(Typ::Base("str".to_string()))
-            ))
-        ));
-        
-        funcs.insert("apply".to_string(), Typ::FuncType(
-            vec![
-                Typ::FuncType(
-                    vec![Typ::Base("int".to_string())],
-                    Box::new(Typ::Base("int".to_string()))
-                ),
-                Typ::Base("int".to_string())
-            ], 
-            Box::new(Typ::Base("int".to_string()))
-        ));
-        
-        // Function that returns a function
-        funcs.insert("make_adder".to_string(), Typ::FuncType(
-            vec![Typ::Base("int".to_string())], 
-            Box::new(Typ::FuncType(
+                Box::new(Typ::Base("int".to_string())),
+            ),
+        );
+
+        funcs.insert(
+            "multiply".to_string(),
+            Typ::FuncType(
+                vec![Typ::Base("int".to_string()), Typ::Base("int".to_string())],
+                Box::new(Typ::Base("int".to_string())),
+            ),
+        );
+
+        // Predicates
+        funcs.insert(
+            "greater_than_zero".to_string(),
+            Typ::FuncType(
                 vec![Typ::Base("int".to_string())],
-                Box::new(Typ::Base("int".to_string()))
-            ))
-        ));
-        
+                Box::new(Typ::Base("bool".to_string())),
+            ),
+        );
+
+        funcs.insert(
+            "is_empty".to_string(),
+            Typ::FuncType(
+                vec![Typ::Base("str".to_string())],
+                Box::new(Typ::Base("bool".to_string())),
+            ),
+        );
+
+        // String operations
+        funcs.insert(
+            "concat".to_string(),
+            Typ::FuncType(
+                vec![Typ::Base("str".to_string()), Typ::Base("str".to_string())],
+                Box::new(Typ::Base("str".to_string())),
+            ),
+        );
+
+        funcs.insert(
+            "to_string".to_string(),
+            Typ::FuncType(
+                vec![Typ::Base("int".to_string())],
+                Box::new(Typ::Base("str".to_string())),
+            ),
+        );
+
+        // Product type functions - CONCRETE TYPES (no polymorphism)
+        funcs.insert(
+            "pair_int_str".to_string(),
+            Typ::FuncType(
+                vec![Typ::Base("int".to_string()), Typ::Base("str".to_string())],
+                Box::new(Typ::Product(vec![
+                    Typ::Base("int".to_string()),
+                    Typ::Base("str".to_string()),
+                ])),
+            ),
+        );
+
+        funcs.insert(
+            "swap_int_str".to_string(),
+            Typ::FuncType(
+                vec![Typ::Product(vec![
+                    Typ::Base("int".to_string()),
+                    Typ::Base("str".to_string()),
+                ])],
+                Box::new(Typ::Product(vec![
+                    Typ::Base("str".to_string()),
+                    Typ::Base("int".to_string()),
+                ])),
+            ),
+        );
+
+        funcs.insert(
+            "pair_int_int".to_string(),
+            Typ::FuncType(
+                vec![Typ::Base("int".to_string()), Typ::Base("int".to_string())],
+                Box::new(Typ::Product(vec![
+                    Typ::Base("int".to_string()),
+                    Typ::Base("int".to_string()),
+                ])),
+            ),
+        );
+
+        funcs.insert(
+            "triple".to_string(),
+            Typ::FuncType(
+                vec![
+                    Typ::Base("int".to_string()),
+                    Typ::Base("str".to_string()),
+                    Typ::Base("bool".to_string()),
+                ],
+                Box::new(Typ::Product(vec![
+                    Typ::Base("int".to_string()),
+                    Typ::Base("str".to_string()),
+                    Typ::Base("bool".to_string()),
+                ])),
+            ),
+        );
+
+        // Higher-order functions - CONCRETE TYPES
+        funcs.insert(
+            "map_int".to_string(),
+            Typ::FuncType(
+                vec![
+                    Typ::FuncType(
+                        vec![Typ::Base("int".to_string())],
+                        Box::new(Typ::Base("int".to_string())),
+                    ),
+                    Typ::Base("int".to_string()),
+                ],
+                Box::new(Typ::Base("int".to_string())),
+            ),
+        );
+
+        funcs.insert(
+            "compose".to_string(),
+            Typ::FuncType(
+                vec![
+                    Typ::FuncType(
+                        vec![Typ::Base("int".to_string())],
+                        Box::new(Typ::Base("str".to_string())),
+                    ),
+                    Typ::FuncType(
+                        vec![Typ::Base("int".to_string()), Typ::Base("int".to_string())],
+                        Box::new(Typ::Base("int".to_string())),
+                    ),
+                ],
+                Box::new(Typ::FuncType(
+                    vec![Typ::Base("int".to_string()), Typ::Base("int".to_string())],
+                    Box::new(Typ::Base("str".to_string())),
+                )),
+            ),
+        );
+
+        funcs.insert(
+            "apply".to_string(),
+            Typ::FuncType(
+                vec![
+                    Typ::FuncType(
+                        vec![Typ::Base("int".to_string())],
+                        Box::new(Typ::Base("int".to_string())),
+                    ),
+                    Typ::Base("int".to_string()),
+                ],
+                Box::new(Typ::Base("int".to_string())),
+            ),
+        );
+
+        // Function that returns a function
+        funcs.insert(
+            "make_adder".to_string(),
+            Typ::FuncType(
+                vec![Typ::Base("int".to_string())],
+                Box::new(Typ::FuncType(
+                    vec![Typ::Base("int".to_string())],
+                    Box::new(Typ::Base("int".to_string())),
+                )),
+            ),
+        );
+
         // Boolean operations
-        funcs.insert("and".to_string(), Typ::FuncType(
-            vec![
-                Typ::Base("bool".to_string()),
-                Typ::Base("bool".to_string())
-            ], 
-            Box::new(Typ::Base("bool".to_string()))
-        ));
-        
-        funcs.insert("not".to_string(), Typ::FuncType(
-            vec![Typ::Base("bool".to_string())], 
-            Box::new(Typ::Base("bool".to_string()))
-        ));
+        funcs.insert(
+            "and".to_string(),
+            Typ::FuncType(
+                vec![Typ::Base("bool".to_string()), Typ::Base("bool".to_string())],
+                Box::new(Typ::Base("bool".to_string())),
+            ),
+        );
+
+        funcs.insert(
+            "not".to_string(),
+            Typ::FuncType(
+                vec![Typ::Base("bool".to_string())],
+                Box::new(Typ::Base("bool".to_string())),
+            ),
+        );
 
         (vars, funcs)
     }
@@ -214,83 +241,90 @@ mod tests {
 
     #[test]
     fn test_simple_let() {
-        test_driver("
+        test_driver(
+            "
             {
                 x = greater_than_zero[x1];
                 x
             }
-        ", Typ::Base("bool".to_string()));
-        
-        test_driver("
+        ",
+            Typ::Base("bool".to_string()),
+        );
+
+        test_driver(
+            "
             {
                 result = add[x, x1];
                 result
             }
-        ", Typ::Base("int".to_string()));
+        ",
+            Typ::Base("int".to_string()),
+        );
     }
 
     // ============ Product Type Tests ============
     #[test]
     fn test_product_return() {
         test_driver(
-            "pair_int_str[x, y]", 
-            Typ::Product(vec![
-                Typ::Base("int".to_string()),
-                Typ::Base("str".to_string())
-            ])
+            "pair_int_str[x, y]",
+            Typ::Product(vec![Typ::Base("int".to_string()), Typ::Base("str".to_string())]),
         );
-        
+
         test_driver(
-            "triple[x, y, b]", 
+            "triple[x, y, b]",
             Typ::Product(vec![
                 Typ::Base("int".to_string()),
                 Typ::Base("str".to_string()),
-                Typ::Base("bool".to_string())
-            ])
+                Typ::Base("bool".to_string()),
+            ]),
         );
     }
 
     #[test]
     fn test_product_as_argument() {
-        test_driver("
+        test_driver(
+            "
             {
                 pair = pair_int_str[x, y];
                 swap_int_str[pair]
             }
-        ", Typ::Product(vec![
-            Typ::Base("str".to_string()),
-            Typ::Base("int".to_string())
-        ]));
+        ",
+            Typ::Product(vec![Typ::Base("str".to_string()), Typ::Base("int".to_string())]),
+        );
     }
 
     #[test]
     fn test_nested_product_operations() {
-        test_driver("
+        test_driver(
+            "
             {
                 p1 = pair_int_str[x, y];
                 p2 = swap_int_str[p1];
                 p2
             }
-        ", Typ::Product(vec![
-            Typ::Base("str".to_string()),
-            Typ::Base("int".to_string())
-        ]));
+        ",
+            Typ::Product(vec![Typ::Base("str".to_string()), Typ::Base("int".to_string())]),
+        );
     }
 
     // ============ Shadowing Tests ============
     #[test]
     fn test_simple_shadowing() {
-        test_driver("
+        test_driver(
+            "
             {
                 x = to_string[x];
                 x
             }
-        ", Typ::Base("str".to_string()));
+        ",
+            Typ::Base("str".to_string()),
+        );
     }
 
     #[test]
     fn test_nested_shadowing() {
-        test_driver("
+        test_driver(
+            "
             {
                 x = add[x, x1];
                 {
@@ -298,25 +332,31 @@ mod tests {
                     x
                 }
             }
-        ", Typ::Base("str".to_string()));
+        ",
+            Typ::Base("str".to_string()),
+        );
     }
 
     #[test]
     fn test_shadowing_with_different_types() {
-        test_driver("
+        test_driver(
+            "
             {
                 temp = x;
                 temp = to_string[temp];
                 temp = is_empty[temp];
                 temp
             }
-        ", Typ::Base("bool".to_string()));
+        ",
+            Typ::Base("bool".to_string()),
+        );
     }
 
     #[test]
     fn test_shadowing_scope_restoration() {
         // After inner let, outer variable should be accessible with original type
-        test_driver("
+        test_driver(
+            "
             {
                 x = to_string[x];
                 temp = {
@@ -325,58 +365,73 @@ mod tests {
                 };
                 concat[x, y]
             }
-        ", Typ::Base("str".to_string()));
+        ",
+            Typ::Base("str".to_string()),
+        );
     }
 
     // ============ Higher-Order Function Tests ============
     #[test]
     fn test_map_with_function() {
-        test_driver("
+        test_driver(
+            "
             {
                 f = make_adder[x];
                 map_int[f, x1]
             }
-        ", Typ::Base("int".to_string()));
+        ",
+            Typ::Base("int".to_string()),
+        );
     }
 
     #[test]
     fn test_function_composition() {
-        test_driver("
+        test_driver(
+            "
             {
                 f = compose[to_string, add];
                 f
             }
-        ", Typ::FuncType(
-            vec![Typ::Base("int".to_string()), Typ::Base("int".to_string())],
-            Box::new(Typ::Base("str".to_string()))
-        ));
+        ",
+            Typ::FuncType(
+                vec![Typ::Base("int".to_string()), Typ::Base("int".to_string())],
+                Box::new(Typ::Base("str".to_string())),
+            ),
+        );
     }
 
     #[test]
     fn test_apply_function() {
-        test_driver("
+        test_driver(
+            "
             {
                 f = make_adder[x];
                 apply[f, x1]
             }
-        ", Typ::Base("int".to_string()));
+        ",
+            Typ::Base("int".to_string()),
+        );
     }
 
     #[test]
     fn test_nested_higher_order() {
-        test_driver("
+        test_driver(
+            "
             {
                 adder = make_adder[x];
                 result = map_int[adder, x1];
                 result
             }
-        ", Typ::Base("int".to_string()));
+        ",
+            Typ::Base("int".to_string()),
+        );
     }
 
     // ============ Complex Nested Expressions ============
     #[test]
     fn test_deeply_nested_let() {
-        test_driver("
+        test_driver(
+            "
             {
                 a = add[x, x1];
                 {
@@ -387,34 +442,39 @@ mod tests {
                     }
                 }
             }
-        ", Typ::Base("bool".to_string()));
+        ",
+            Typ::Base("bool".to_string()),
+        );
     }
 
     #[test]
     fn test_multiple_intermediate_bindings() {
-        test_driver("
+        test_driver(
+            "
             {
                 sum = add[x, x1];
                 product = multiply[sum, x];
                 str_result = to_string[product];
                 is_empty[str_result]
             }
-        ", Typ::Base("bool".to_string()));
+        ",
+            Typ::Base("bool".to_string()),
+        );
     }
 
     #[test]
     fn test_mixed_operations() {
-        test_driver("
+        test_driver(
+            "
             {
                 num = add[x, multiply[x1, x]];
                 pair = pair_int_str[num, y];
                 swapped = swap_int_str[pair];
                 swapped
             }
-        ", Typ::Product(vec![
-            Typ::Base("str".to_string()),
-            Typ::Base("int".to_string())
-        ]));
+        ",
+            Typ::Product(vec![Typ::Base("str".to_string()), Typ::Base("int".to_string())]),
+        );
     }
 
     // ============ Error Cases ============
@@ -441,12 +501,15 @@ mod tests {
 
     #[test]
     fn test_type_mismatch_in_nested_call() {
-        error_driver("
+        error_driver(
+            "
             {
                 str_val = to_string[x];
                 add[str_val, x1]
             }
-        ", "expected type int, got str");
+        ",
+            "expected type int, got str",
+        );
     }
 
     #[test]
@@ -461,12 +524,15 @@ mod tests {
 
     #[test]
     fn test_product_type_mismatch() {
-        error_driver("
+        error_driver(
+            "
             {
                 wrong_pair = pair_int_int[x, x1];
                 swap_int_str[wrong_pair]
             }
-        ", ""); // Should fail because pair_int_int returns (int, int) but swap_int_str expects (int, str)
+        ",
+            "",
+        ); // Should fail because pair_int_int returns (int, int) but swap_int_str expects (int, str)
     }
 
     #[test]
@@ -476,79 +542,100 @@ mod tests {
 
     #[test]
     fn test_shadowing_with_wrong_type() {
-        error_driver("
+        error_driver(
+            "
             {
                 x = to_string[x];
                 add[x, x1]
             }
-        ", "expected type int, got str");
+        ",
+            "expected type int, got str",
+        );
     }
 
     // ============ Edge Cases ============
     #[test]
     fn test_identity_binding() {
-        test_driver("
+        test_driver(
+            "
             {
                 temp = x;
                 temp
             }
-        ", Typ::Base("int".to_string()));
+        ",
+            Typ::Base("int".to_string()),
+        );
     }
 
     #[test]
     fn test_chained_function_calls() {
-        test_driver("
+        test_driver(
+            "
             to_string[add[multiply[x, x1], x]]
-        ", Typ::Base("str".to_string()));
+        ",
+            Typ::Base("str".to_string()),
+        );
     }
 
     #[test]
     fn test_boolean_operations() {
-        test_driver("
+        test_driver(
+            "
             {
                 cond1 = greater_than_zero[x];
                 cond2 = is_empty[y];
                 and[cond1, cond2]
             }
-        ", Typ::Base("bool".to_string()));
+        ",
+            Typ::Base("bool".to_string()),
+        );
     }
 
     #[test]
     fn test_complex_higher_order() {
-        test_driver("
+        test_driver(
+            "
             {
                 adder5 = make_adder[x];
                 doubled = map_int[adder5, x1];
                 greater_than_zero[doubled]
             }
-        ", Typ::Base("bool".to_string()));
+        ",
+            Typ::Base("bool".to_string()),
+        );
     }
 
     #[test]
     fn test_function_as_let_binding() {
-        test_driver("
+        test_driver(
+            "
             {
                 my_func = make_adder[x];
                 my_func
             }
-        ", Typ::FuncType(
-            vec![Typ::Base("int".to_string())],
-            Box::new(Typ::Base("int".to_string()))
-        ));
+        ",
+            Typ::FuncType(
+                vec![Typ::Base("int".to_string())],
+                Box::new(Typ::Base("int".to_string())),
+            ),
+        );
     }
 
     #[test]
     fn test_multiple_product_operations() {
-        test_driver("
+        test_driver(
+            "
             {
                 t = triple[x, y, b];
                 p = pair_int_str[x, y];
                 t
             }
-        ", Typ::Product(vec![
-            Typ::Base("int".to_string()),
-            Typ::Base("str".to_string()),
-            Typ::Base("bool".to_string())
-        ]));
+        ",
+            Typ::Product(vec![
+                Typ::Base("int".to_string()),
+                Typ::Base("str".to_string()),
+                Typ::Base("bool".to_string()),
+            ]),
+        );
     }
 }

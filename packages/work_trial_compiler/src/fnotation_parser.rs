@@ -32,12 +32,8 @@ impl FNotationParser {
     pub fn create_context(&self, input: &str) -> Result<ParseContext, String> {
         let reporter = Reporter::new();
 
-        let prectable: HashMap<_, _> = self
-            .config
-            .precedences
-            .iter()
-            .map(|(name, p)| (name.to_string(), *p))
-            .collect();
+        let prectable: HashMap<_, _> =
+            self.config.precedences.iter().map(|(name, p)| (name.to_string(), *p)).collect();
 
         let tokens = lex(input, &self.config, reporter.clone())
             .map_err(|e| format!("Lexing error: {:?}", e))?;

@@ -1,28 +1,28 @@
 //! Type checker
 //! support uni type checking
-//! 
+//!
 //!  extended type system (beyond length of arguments)
 //! Base types: "int", "str", "bool", "X", "Y"
-//! when declare variable x, it expects type of form Product(Vec<Typ>)
+//! when declare variable x, it expects type of form Product(`Vec<Typ>`)
 //!     e.g. ["int"], ["int", "a"]
-//! when declare function f, it expects type of form FuncType(Vec<Typ>, Vec<Typ>)
+//! when declare function f, it expects type of form FuncType(`Vec<Typ>`, `Vec<Typ>`)
 //!     e.g. ["int", "int"] -> ["bool"]
 //!     e.g. [FuncType[["int", "int"] -> ["bool"]]] -> ["bool"]
-//! 
+//!
 //! there's a caveat to use the type system, and following type checker potentially
 //! suffered from this, do we expect ["bool"] same as "bool"?
 //! To handle this:
-//! 
-//! solution 1: 
+//!
+//! solution 1:
 //! manually implement type equal instead of derived Eq to descently handle this
-//! 
+//!
 //! solution 2 (we go with this):
 //! we should always store simplies form of a type in environment, e.g. no [[[["bool"]]]]
 //! (based on which I should write more tests in tests/test_typecheck.rs)
 
+use crate::ast::Expr;
 use core::fmt;
 use std::collections::HashMap;
-use crate::ast::Expr;
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub enum Typ {
@@ -40,7 +40,6 @@ impl fmt::Display for Typ {
                 format_vector_types(f, inputs)?;
                 write!(f, "->{}", outputs)
             }
-            
         }
     }
 }
@@ -73,10 +72,8 @@ impl Typ {
     pub fn is_normal(&self) -> bool {
         match self {
             Typ::Base(_) => true,
-            Typ::Product(typs) => 
-                typs.len() != 1 && typs.iter().all(|typ| typ.is_normal()),
-            Typ::FuncType(typs, typ) => 
-                typ.is_normal() && typs.iter().all(Self::is_normal),
+            Typ::Product(typs) => typs.len() != 1 && typs.iter().all(|typ| typ.is_normal()),
+            Typ::FuncType(typs, typ) => typ.is_normal() && typs.iter().all(Self::is_normal),
         }
     }
 
@@ -91,12 +88,12 @@ impl Typ {
                 } else {
                     Typ::Product(normalized)
                 }
-            },
+            }
             Typ::FuncType(typs, typ) => {
                 let inputs = typs.into_iter().map(Self::normalize).collect();
                 let output = Box::new(typ.normalize());
                 Typ::FuncType(inputs, output)
-            },
+            }
         }
     }
 }
@@ -134,50 +131,61 @@ impl TypeChecker {
 
             Expr::FuncApp { name, args } => {
                 // look up function type
-                let func_typ: Typ = self.funcs.get(name).cloned()
+                let func_typ: Typ = self
+                    .funcs
+                    .get(name)
+                    .cloned()
                     .ok_or_else(|| format!("Cannot find {} in function context", name))?;
-                
+
                 // and ensure it's a function type
                 let (arg_typs, ret_typ) = match func_typ {
                     Typ::FuncType(arg_typs, ret_typs) => (arg_typs, ret_typs),
-                    _ => return Err(format!("'{}' is not a function, has type {}", name, func_typ))
+                    _ => {
+                        return Err(format!("'{}' is not a function, has type {}", name, func_typ));
+                    }
                 };
-                
+
                 // Check argument count
                 if args.len() != arg_typs.len() {
                     return Err(format!(
-                        "Function '{}' expects {} arguments, got {}", 
-                        name, arg_typs.len(), args.len()
+                        "Function '{}' expects {} arguments, got {}",
+                        name,
+                        arg_typs.len(),
+                        args.len()
                     ));
                 }
-                
+
                 // infer type of each argument and verify it matches expected type
                 for (i, (arg, expected_typ)) in args.iter().zip(arg_typs.iter()).enumerate() {
-                    let actual_typ = self.type_check(arg)
+                    let actual_typ = self
+                        .type_check(arg)
                         .map_err(|e| format!("In argument {} of '{}': {}", i + 1, name, e))?;
-                    
+
                     if actual_typ != *expected_typ {
                         return Err(format!(
                             "Argument {} of '{}': expected type {}, got {}",
-                            i + 1, name, expected_typ, actual_typ
+                            i + 1,
+                            name,
+                            expected_typ,
+                            actual_typ
                         ));
                     }
                 }
-                 
+
                 assert!(ret_typ.is_normal());
                 Ok(*ret_typ)
             }
 
             Expr::Let { name, value, body } => {
                 // first check value has a legal type
-                let value_typ = self.type_check(&*value)?;
+                let value_typ = self.type_check(value)?;
 
                 // store old var context
                 let old_var_ctx = self.vars.clone();
 
                 // infer type of body based on new context
                 self.vars.insert(name.clone(), value_typ);
-                let body_type = self.type_check(&*body)?;
+                let body_type = self.type_check(body)?;
 
                 // restore old var context
                 self.vars = old_var_ctx;

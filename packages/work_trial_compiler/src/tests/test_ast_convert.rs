@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::ast::{AstConverter, Expr};
+    use crate::ast::{Expr, convert};
     use crate::fnotation_parser::FNotationParser;
 
     fn parse_and_convert(input: &str) -> Result<Expr, String> {
@@ -8,8 +8,7 @@ mod tests {
         let context = parser.create_context(input)?;
         let fntn = parser.parse_to_fnotation(input, &context)?;
 
-        let converter = AstConverter::new();
-        converter.convert(fntn)
+        convert(fntn)
     }
 
     #[test]
