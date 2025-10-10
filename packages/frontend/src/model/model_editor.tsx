@@ -14,7 +14,7 @@ import {
 import { WelcomeOverlay } from "../page/welcome_overlay";
 import type { ModelTypeMeta } from "../theory";
 import { LiveModelContext } from "./context";
-import { type LiveModelDocument, getLiveModel, migrateModelDocument } from "./document";
+import type { LiveModelDocument } from "./document";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
 import {

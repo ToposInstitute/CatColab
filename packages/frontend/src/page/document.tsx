@@ -1,4 +1,7 @@
-import { useNavigate, useParams, A } from "@solidjs/router";
+import Resizable, { type ContextValue } from "@corvu/resizable";
+import { A, useNavigate, useParams } from "@solidjs/router";
+import ChevronsRight from "lucide-solid/icons/chevrons-right";
+import Maximize2 from "lucide-solid/icons/maximize-2";
 import {
     Match,
     Show,
@@ -8,26 +11,28 @@ import {
     createSignal,
     useContext,
 } from "solid-js";
-import Resizable, { type ContextValue } from "@corvu/resizable";
-import Maximize2 from "lucide-solid/icons/maximize-2";
-import ChevronsRight from "lucide-solid/icons/chevrons-right";
 import invariant from "tiny-invariant";
 
+import { AnalysisNotebookEditor } from "../analysis/analysis_editor";
 import { Api, useApi } from "../api";
 import { IconButton, InlineInput, ResizableHandle } from "../components";
-import { DocumentBreadcrumbs, DocumentLoadingScreen, TheoryHelpButton } from "../page";
-import { stdTheories, TheoryLibrary, TheoryLibraryContext } from "../stdlib";
-import { getLiveModel, LiveModelDocument, migrateModelDocument } from "../model/document";
-import { Layout } from "../page/layout";
 import { DiagramNotebookEditor } from "../diagram/diagram_editor";
-import { AnalysisNotebookEditor } from "../analysis/analysis_editor";
 import { ModelNotebookEditor } from "../model/model_editor";
-import { TheorySelectorDialog } from "../model/theory_selector";
-import { NotebookUtils } from "../notebook";
+import { DocumentBreadcrumbs, DocumentLoadingScreen, TheoryHelpButton } from "../page";
+import { Layout } from "../page/layout";
+import { TheoryLibrary, TheoryLibraryContext, stdTheories } from "../stdlib";
 import { DocumentSidebar } from "./document_sidebar";
-import { type AnyLiveDocument, getDocumentTheory, getLiveDocument } from "./utils";
+import {
+    type AnyLiveDocument,
+    type AnyLiveDocumentType,
+    getDocumentTheory,
+    getLiveDocument,
+} from "./utils";
 
 import "./document.css";
+import { AnalysisWidget } from "../analysis/analysis_widget";
+import { DiagramWidget } from "../diagram/diagram_widget";
+import { ModelWidget } from "../model/model_widget";
 
 export default function Document() {
     const api = useApi();
@@ -39,7 +44,7 @@ export default function Document() {
 
     const [liveDocument] = createResource(
         () => params.ref,
-        (refId) => getLiveDocument(refId, api, theories, params.kind as any),
+        (refId) => getLiveDocument(refId, api, theories, params.kind as AnyLiveDocumentType),
     );
 
     const [secondaryLiveModel] = createResource(
@@ -50,7 +55,7 @@ export default function Document() {
 
             return [params.subkind, params.subref] as const;
         },
-        ([refKind, refId]) => getLiveDocument(refId, api, theories, refKind as any),
+        ([refKind, refId]) => getLiveDocument(refId, api, theories, refKind as AnyLiveDocumentType),
     );
 
     const navigate = useNavigate();
@@ -196,78 +201,13 @@ function DocumentPane(props: { document: AnyLiveDocument }) {
                 <div class="info">
                     <Switch>
                         <Match when={props.document.type === "model" && props.document}>
-                            {(liveModel) => {
-                                const selectableTheories = () => {
-                                    if (
-                                        NotebookUtils.hasFormalCells(
-                                            liveModel().liveDoc.doc.notebook,
-                                        )
-                                    ) {
-                                        return liveModel().theory()?.migrationTargets ?? [];
-                                    } else {
-                                        // If the model has no formal cells, allow any theory to be selected.
-                                        return undefined;
-                                    }
-                                };
-                                return (
-                                    <TheorySelectorDialog
-                                        theoryMeta={stdTheories.getMetadata(
-                                            liveModel().liveDoc.doc.theory,
-                                        )}
-                                        setTheory={(id) =>
-                                            migrateModelDocument(
-                                                liveModel().liveDoc,
-                                                id,
-                                                stdTheories,
-                                            )
-                                        }
-                                        theories={selectableTheories()}
-                                    />
-                                );
-                            }}
+                            {(liveModel) => <ModelWidget liveModel={liveModel()} />}
                         </Match>
                         <Match when={props.document.type === "diagram" && props.document}>
-                            {(liveDiagram) => (
-                                <>
-                                    <div class="name">
-                                        {liveDiagram().liveModel.theory()?.instanceOfName}
-                                    </div>
-                                    <div class="model">
-                                        <A
-                                            href={`/model/${liveDiagram().liveModel.liveDoc.docRef?.refId}`}
-                                        >
-                                            {liveDiagram().liveModel.liveDoc.doc.name || "Untitled"}
-                                        </A>
-                                    </div>
-                                </>
-                            )}
+                            {(liveDiagram) => <DiagramWidget liveDiagram={liveDiagram()} />}
                         </Match>
                         <Match when={props.document.type === "analysis" && props.document}>
-                            {(liveAnalysis) => {
-                                const parentRefId = liveAnalysis().liveDoc.doc.analysisOf._id;
-                                const analysis = liveAnalysis();
-
-                                const parentRefName = () => {
-                                    if (analysis.analysisType === "diagram") {
-                                        return analysis.liveDiagram.liveDoc.doc.name;
-                                    } else {
-                                        return analysis.liveModel.liveDoc.doc.name;
-                                    }
-                                };
-
-                                return (
-                                    <>
-                                        <div class="name">Analysis!</div>
-                                        <div class="model">
-                                            <A
-                                                href={`/${liveAnalysis().analysisType}/${parentRefId}`}
-                                            >
-                                                {parentRefName() || "Untitled"}
-                                            </A>
-                                        </div>
-                                    </>
-                                );
-                            }}
+                            {(liveAnalysis) => <AnalysisWidget liveAnalysis={liveAnalysis()} />}
                         </Match>
                     </Switch>
                 </div>

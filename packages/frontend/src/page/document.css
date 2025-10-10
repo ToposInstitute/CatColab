@@ -12,6 +12,9 @@
         font-size: var(--h4-font-size);
         flex: 1;
         text-align: right;
+        display: flex;
+        display: flex;
+        justify-content: flex-end;
     }
 
     & .icon-button {

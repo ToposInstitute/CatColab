@@ -1,6 +1,6 @@
 import { For, Show, createResource } from "solid-js";
-import { getLiveDoc, type LiveDoc, useApi } from "../api";
 import invariant from "tiny-invariant";
+import { type LiveDoc, getLiveDoc, useApi } from "../api";
 
 import type { Document } from "catlog-wasm";
 
@@ -53,8 +53,7 @@ async function getDocumentChain(document: LiveDoc): Promise<LiveDoc[]> {
     const documentChain: LiveDoc[] = [document];
 
     while (true) {
-        // biome-ignore lint/style/noNonNullAssertion: the array initializer guarantees that there will
-        // always be at least one item in the array
+        // biome-ignore lint/style/noNonNullAssertion: the array initializer guarantees that there will always be at least one item in the array
         const parentRefId = getParentRefId(documentChain[0]!.doc);
         if (!parentRefId) {
             break;

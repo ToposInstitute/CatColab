@@ -1,19 +1,23 @@
-import { Match, Switch } from "solid-js";
-import Ellipsis from "lucide-solid/icons/ellipsis";
-import CopyToClipboard from "lucide-solid/icons/clipboard-copy";
-import Copy from "lucide-solid/icons/copy";
-import Export from "lucide-solid/icons/download";
 import { DropdownMenu } from "@kobalte/core/dropdown-menu";
 import { useNavigate } from "@solidjs/router";
+import Copy from "lucide-solid/icons/copy";
+import Ellipsis from "lucide-solid/icons/ellipsis";
+import { Match, Switch } from "solid-js";
 
-import { useApi } from "../api";
-import { IconButton } from "../components";
-import { MenuItem, MenuItemLabel, MenuSeparator } from "../page";
 import type { RefStub } from "catcolab-api";
-import { createDiagram } from "../diagram";
 import { createAnalysis } from "../analysis";
+import { Api, duplicateDoc, makeUnversionedRef, useApi } from "../api";
+import { IconButton } from "../components";
+import { createDiagram } from "../diagram";
+import {
+    CopyJSONMenuItem,
+    DuplicateMenuItem,
+    ExportJSONMenuItem,
+    MenuItem,
+    MenuItemLabel,
+    MenuSeparator,
+} from "../page";
 import { DocumentTypeIcon } from "../util/document_type_icon";
-import type { AnalysisType, StableRef } from "catlog-wasm";
 
 export function DocumentMenu(props: {
     stub: RefStub;
@@ -21,75 +25,36 @@ export function DocumentMenu(props: {
 }) {
     const api = useApi();
 
-    const unversionedRef = (refId: string): StableRef => ({
-        _id: refId,
-        _version: null,
-        _server: api.serverHost,
-    });
     const navigate = useNavigate();
 
     const onNewDiagram = async () => {
-        const modelRefId = (() => {
-            switch (props.stub.typeName) {
-                case "diagram":
-                    if (!props.parentRefId) {
-                        throw "Diagram does not have a parent!";
-                    }
+        let modelRefId: string | undefined;
+        switch (props.stub.typeName) {
+            case "diagram":
+                if (!props.parentRefId) {
+                    throw "Diagram does not have a parent!";
+                }
 
-                    return props.parentRefId;
-                case "model":
-                    return props.stub.refId;
-                default:
-                    throw `Can't create diagram for ${props.stub.typeName}`;
-            }
-        })();
+                modelRefId = props.parentRefId;
+                break;
+            case "model":
+                modelRefId = props.stub.refId;
+                break;
+            default:
+                throw `Can't create diagram for ${props.stub.typeName}`;
+        }
 
-        const newRef = await createDiagram(api, unversionedRef(modelRefId));
+        const newRef = await createDiagram(api, makeUnversionedRef(api, modelRefId));
         navigate(`/diagram/${newRef}`);
     };
 
     const onNewAnalysis = async () => {
         const newRef = await createAnalysis(
             api,
-            props.stub.typeName as AnalysisType,
-            unversionedRef(props.stub.refId),
+            "diagram",
+            makeUnversionedRef(api, props.stub.refId),
         );
         navigate(`/analysis/${newRef}`);
-    };
-
-    const onDownloadJSON = () => {
-        //     const doc = props.liveDocument.liveDoc.doc;
-        //     downloadJson(JSON.stringify(doc), `${doc.name}.json`);
-    };
-
-    const onCopy = () => {
-        //     const doc = props.liveDocument.liveDoc.doc;
-        //     copyToClipboard(JSON.stringify(doc));
-    };
-
-    const onDuplicateDocument = async () => {
-        //     switch (props.liveDocument.type) {
-        //         case "diagram": {
-        //             const diagram = props.liveDocument.liveDoc.doc;
-        //             const newRef = await createDiagramFromDocument(api, {
-        //                 ...diagram,
-        //                 name: `${diagram.name} (copy)`,
-        //             });
-        //             navigate(`/diagram/${newRef}`);
-        //             break;
-        //         }
-        //         case "model": {
-        //             const model = props.liveDocument.liveDoc.doc;
-        //             const newRef = await createModel(api, {
-        //                 ...model,
-        //                 name: `${model.name} (copy)`,
-        //             });
-        //             navigate(`/model/${newRef}`);
-        //             break;
-        //         }
-        //         default:
-        //             assertExhaustive(props.liveDocument);
-        //     }
     };
 
     return (
@@ -103,7 +68,7 @@ export function DocumentMenu(props: {
                         <Match
                             when={
                                 props.stub.typeName === "model"
-                                // TODO: need to return theory with ref stub
+                                // TODO: refStub needs to have a theory field in order to check if it supports the diagram instance
                                 // && props.liveDocument.theory().supportsInstances
                             }
                         >
@@ -124,18 +89,9 @@ export function DocumentMenu(props: {
                         <MenuItemLabel>{`New analysis of this ${props.stub.typeName}`}</MenuItemLabel>
                     </MenuItem>
                     <MenuSeparator />
-                    <MenuItem onSelect={() => onDuplicateDocument()}>
-                        <Copy />
-                        <MenuItemLabel>{`Duplicate ${props.stub.typeName}`}</MenuItemLabel>
-                    </MenuItem>
-                    <MenuItem onSelect={() => onDownloadJSON()}>
-                        <Export />
-                        <MenuItemLabel>{`Export ${props.stub.typeName}`}</MenuItemLabel>
-                    </MenuItem>
-                    <MenuItem onSelect={() => onCopy()}>
-                        <CopyToClipboard />
-                        <MenuItemLabel>{"Copy to clipboard"}</MenuItemLabel>
-                    </MenuItem>
+                    <DuplicateMenuItem stub={props.stub} />
+                    <ExportJSONMenuItem stub={props.stub} />
+                    <CopyJSONMenuItem stub={props.stub} />
                 </DropdownMenu.Content>
             </DropdownMenu.Portal>
         </DropdownMenu>
