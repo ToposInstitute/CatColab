@@ -1,11 +1,4 @@
-import { createMemo } from "solid-js";
-
-import type {
-    DblModel,
-    LotkaVolterraModelData,
-    LotkaVolterraProblemData,
-    ODEResult,
-} from "catlog-wasm";
+import type { DblModel, LotkaVolterraProblemData, ODEResult, QualifiedName } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import {
     type ColumnSchema,
@@ -13,35 +6,35 @@ import {
     Foldable,
     createNumericalColumn,
 } from "../../components";
-import type { MorphismDecl, ObjectDecl } from "../../model";
+import { morLabelOrDefault } from "../../model";
 import type { ModelAnalysisMeta } from "../../theory";
 import { ODEResultPlot } from "../../visualization";
 import { createModelODEPlot } from "./simulation";
 
 import "./simulation.css";
 
-/** Configuration for a Lotka-Volterra ODE analysis of a model. */
-export type LotkaVolterraContent = LotkaVolterraProblemData<string>;
-
-type Simulator = (model: DblModel, data: LotkaVolterraModelData) => ODEResult;
+type Simulator = (model: DblModel, data: LotkaVolterraProblemData) => ODEResult;
 
 /** Configure a Lotka-Volterra ODE analysis for use with models of a theory. */
 export function configureLotkaVolterra(options: {
     id?: string;
     name?: string;
     description?: string;
+    help?: string;
     simulate: Simulator;
-}): ModelAnalysisMeta<LotkaVolterraContent> {
+}): ModelAnalysisMeta<LotkaVolterraProblemData> {
     const {
         id = "lotka-volterra",
         name = "Lotka-Volterra dynamics",
         description = "Simulate the system using a Lotka-Volterra ODE",
+        help = "lotka-volterra",
         simulate,
     } = options;
     return {
         id,
         name,
         description,
+        help,
         component: (props) => <LotkaVolterra simulate={simulate} title={name} {...props} />,
         initialContent: () => ({
             interactionCoefficients: {},
@@ -54,58 +47,52 @@ export function configureLotkaVolterra(options: {
 
 /** Analyze a model using Lotka-Volterra dynamics. */
 export function LotkaVolterra(
-    props: ModelAnalysisProps<LotkaVolterraContent> & {
+    props: ModelAnalysisProps<LotkaVolterraProblemData> & {
         simulate: Simulator;
         title?: string;
     },
 ) {
-    const obDecls = createMemo<ObjectDecl[]>(() => {
-        return props.liveModel.formalJudgments().filter((jgmt) => jgmt.tag === "object");
-    }, []);
+    const elaboratedModel = () => props.liveModel.elaboratedModel();
 
-    const morDecls = createMemo<MorphismDecl[]>(() => {
-        return props.liveModel.formalJudgments().filter((jgmt) => jgmt.tag === "morphism");
-    }, []);
-
-    const obSchema: ColumnSchema<ObjectDecl>[] = [
+    const obSchema: ColumnSchema<QualifiedName>[] = [
         {
             contentType: "string",
             header: true,
-            content: (ob) => ob.name,
+            content: (id) => elaboratedModel()?.obGeneratorLabel(id)?.join(".") ?? "",
         },
         createNumericalColumn({
             name: "Initial value",
-            data: (ob) => props.content.initialValues[ob.id],
+            data: (id) => props.content.initialValues[id],
             validate: (_, data) => data >= 0,
-            setData: (ob, data) =>
+            setData: (id, data) =>
                 props.changeContent((content) => {
-                    content.initialValues[ob.id] = data;
+                    content.initialValues[id] = data;
                 }),
         }),
         createNumericalColumn({
             name: "Growth/decay",
-            data: (ob) => props.content.growthRates[ob.id],
-            setData: (ob, data) =>
+            data: (id) => props.content.growthRates[id],
+            setData: (id, data) =>
                 props.changeContent((content) => {
-                    content.growthRates[ob.id] = data;
+                    content.growthRates[id] = data;
                 }),
         }),
     ];
 
-    const morSchema: ColumnSchema<MorphismDecl>[] = [
+    const morSchema: ColumnSchema<QualifiedName>[] = [
         {
             contentType: "string",
             header: true,
-            content: (mor) => mor.name,
+            content: (id) => morLabelOrDefault(id, elaboratedModel()),
         },
         createNumericalColumn({
             name: "Interaction",
-            data: (mor) => props.content.interactionCoefficients[mor.id],
+            data: (id) => props.content.interactionCoefficients[id],
             default: 1,
             validate: (_, data) => data >= 0,
-            setData: (mor, data) =>
+            setData: (id, data) =>
                 props.changeContent((content) => {
-                    content.interactionCoefficients[mor.id] = data;
+                    content.interactionCoefficients[id] = data;
                 }),
         }),
     ];
@@ -131,8 +118,14 @@ export function LotkaVolterra(
         <div class="simulation">
             <Foldable title={props.title}>
                 <div class="parameters">
-                    <FixedTableEditor rows={obDecls()} schema={obSchema} />
-                    <FixedTableEditor rows={morDecls()} schema={morSchema} />
+                    <FixedTableEditor
+                        rows={elaboratedModel()?.obGenerators() ?? []}
+                        schema={obSchema}
+                    />
+                    <FixedTableEditor
+                        rows={elaboratedModel()?.morGenerators() ?? []}
+                        schema={morSchema}
+                    />
                     <FixedTableEditor rows={[null]} schema={toplevelSchema} />
                 </div>
             </Foldable>

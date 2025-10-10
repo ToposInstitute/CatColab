@@ -6,23 +6,22 @@ use std::hash::Hash;
 use super::graph::*;
 use super::path::*;
 
-/** Iterates over all simple paths between two vertices of a finite graph.
-
-On our definition, a **simple path** is a path in which all edges are distinct.
-
-A **simple cycle** is a simple path in which the source and target coincide.
-This being a category theory library, we do consider the empty/identity path at
-a vertex to be a simple cycle.
-
-# References
-
-This function is adapted from previous implementations of the same algorithm:
-
-- [`all_simple_paths`](https://docs.rs/petgraph/latest/petgraph/algo/simple_paths/fn.all_simple_paths.html)
-  in [petgraph](https://github.com/petgraph/petgraph)
-- [`all_simple_paths`](https://networkx.org/documentation/stable/reference/algorithms/generated/networkx.algorithms.simple_paths.all_simple_paths.html)
-  in [NetworkX](https://networkx.org)
- */
+/// Iterates over all simple paths between two vertices of a finite graph.
+///
+/// On our definition, a **simple path** is a path in which all edges are distinct.
+///
+/// A **simple cycle** is a simple path in which the source and target coincide.
+/// This being a category theory library, we do consider the empty/identity path at
+/// a vertex to be a simple cycle.
+///
+/// # References
+///
+/// This function is adapted from previous implementations of the same algorithm:
+///
+/// - [`all_simple_paths`](https://docs.rs/petgraph/latest/petgraph/algo/simple_paths/fn.all_simple_paths.html)
+///   in [petgraph](https://github.com/petgraph/petgraph)
+/// - [`all_simple_paths`](https://networkx.org/documentation/stable/reference/algorithms/generated/networkx.algorithms.simple_paths.all_simple_paths.html)
+///   in [NetworkX](https://networkx.org)
 pub fn simple_paths<'a, G>(
     graph: &'a G,
     from: &'a G::V,
@@ -36,12 +35,11 @@ where
     bounded_simple_paths(graph, from, to, None)
 }
 
-/** Iterates over all simple paths of bounded length between two vertices.
-
-Works like [`simple_paths`], with the same definition of *simple path*, but the
-returned paths are also optionally restricted to those of bounded length. The
-**length** of a path is the number of edges in it.
- */
+/// Iterates over all simple paths of bounded length between two vertices.
+///
+/// Works like [`simple_paths`], with the same definition of *simple path*, but the
+/// returned paths are also optionally restricted to those of bounded length. The
+/// length** of a path is the number of edges in it.
 pub fn bounded_simple_paths<'a, G>(
     graph: &'a G,
     from: &'a G::V,
@@ -94,23 +92,22 @@ where
     maybe_empty_path.into_iter().chain(nonempty_paths)
 }
 
-/** Arrange all the elements of a finite graph in specialization order.
-
-The [specialization
-order](https://en.wikipedia.org/wiki/Specialization_(pre)order) is the preorder
-associated with the [Alexandrov
-topology](https://en.wikipedia.org/wiki/Alexandrov_topology) on the graph.
-Equivalently, it is the preorder reflection of the category of elements of the
-graph. In simple terms, this means that every edge is greater than its source
-and its target.
-
-This function computes a total ordering of the elements of the graph that
-extends the specialization order. Such a total ordering is precisely a
-[topological ordering](https://en.wikipedia.org/wiki/Topological_ordering) on
-the category of elements of the graph. The particular ordering is computed using
-breadth-first search, which ensures that edges are close to their sources and
-targets (while still always being greater than them).
- */
+/// Arrange all the elements of a finite graph in specialization order.
+///
+/// The [specialization
+/// order](https://en.wikipedia.org/wiki/Specialization_(pre)order) is the preorder
+/// associated with the [Alexandrov
+/// topology](https://en.wikipedia.org/wiki/Alexandrov_topology) on the graph.
+/// Equivalently, it is the preorder reflection of the category of elements of the
+/// graph. In simple terms, this means that every edge is greater than its source
+/// and its target.
+///
+/// This function computes a total ordering of the elements of the graph that
+/// extends the specialization order. Such a total ordering is precisely a
+/// [topological ordering](https://en.wikipedia.org/wiki/Topological_ordering) on
+/// the category of elements of the graph. The particular ordering is computed using
+/// breadth-first search, which ensures that edges are close to their sources and
+/// targets (while still always being greater than them).
 pub fn spec_order_all<G>(graph: &G) -> Vec<GraphElem<G::V, G::E>>
 where
     G: FinGraph,
@@ -119,11 +116,10 @@ where
     spec_order(graph, graph.vertices())
 }
 
-/** Arrange some or all elements of a graph in specialization order.
-
-This function is similar to [`spec_order_all`] except that the breadth-first
-search starts only from the given vertices.
- */
+/// Arrange some or all elements of a graph in specialization order.
+///
+/// This function is similar to [`spec_order_all`] except that the breadth-first
+/// search starts only from the given vertices.
 pub fn spec_order<G>(graph: &G, vertices: impl Iterator<Item = G::V>) -> Vec<GraphElem<G::V, G::E>>
 where
     G: FinGraph,
@@ -168,6 +164,74 @@ where
     result
 }
 
+/// Computes a topological sorting for a given graph.
+///
+/// This toposort algorithm was borrowed from the crate `petgraph`, found
+/// [here](https://github.com/petgraph/petgraph/blob/4d807c19304c02c9dd687c68577f75aefcb98491/src/algo/mod.rs#L204)
+pub fn toposort<G>(graph: &G) -> Result<Vec<G::V>, String>
+where
+    G: FinGraph,
+    G::V: Hash + std::fmt::Debug,
+{
+    let mut discovered = HashSet::new();
+    let mut finished = HashSet::new();
+    let mut finish_stack = Vec::new();
+    let mut stack = Vec::new();
+
+    for v in graph.vertices() {
+        if discovered.contains(&v) {
+            continue;
+        }
+        stack.push(v);
+        while let Some(nx) = stack.last().cloned() {
+            if discovered.insert(nx.clone()) {
+                for succ in graph.out_neighbors(&nx) {
+                    if succ == nx {
+                        return Err(format!("Self loop at node {:#?}", nx).to_owned());
+                    }
+                    if !discovered.contains(&succ) {
+                        stack.push(succ);
+                    }
+                }
+            } else {
+                stack.pop();
+                if finished.insert(nx.clone()) {
+                    finish_stack.push(nx);
+                }
+            }
+        }
+    }
+    finish_stack.reverse();
+
+    discovered.clear();
+    for i in finish_stack.iter() {
+        stack.clear();
+        stack.push(i.clone());
+        let mut rev_dfs_next = || {
+            while let Some(node) = stack.pop() {
+                if discovered.insert(node.clone()) {
+                    for succ in graph.in_neighbors(&node) {
+                        if !discovered.contains(&succ) {
+                            stack.push(succ);
+                        }
+                    }
+                    return Some(node);
+                }
+            }
+            None
+        };
+        let mut cycle = false;
+        while let Some(j) = rev_dfs_next() {
+            if cycle {
+                return Err(format!("Cycle detected involving node {:#?}", j).to_owned());
+            }
+            cycle = true;
+        }
+    }
+
+    Ok(finish_stack)
+}
+
 #[cfg(test)]
 mod tests {
     use super::GraphElem::*;
@@ -209,6 +273,41 @@ mod tests {
             Path::Seq(nonempty!['g', 'f']),
         ]);
         assert_eq!(paths, target);
+    }
+
+    #[test]
+    fn toposorting() {
+        let g = SkelGraph::path(5);
+        assert_eq!(toposort(&g), Ok(vec![0, 1, 2, 3, 4]));
+
+        let mut g = SkelGraph::path(3);
+        g.add_vertices(1);
+        g.add_edge(2, 3);
+        g.add_edge(3, 0);
+        expect_test::expect!["Cycle detected involving node 3"]
+            .assert_eq(&toposort(&g).unwrap_err());
+
+        let g = SkelGraph::triangle();
+        assert_eq!(toposort(&g), Ok(vec![0, 1, 2]));
+
+        let mut g = SkelGraph::path(4);
+        g.add_vertices(2);
+        g.add_edge(1, 4);
+        g.add_edge(4, 3);
+        g.add_edge(5, 2);
+        assert_eq!(toposort(&g), Ok(vec![5, 0, 1, 2, 4, 3]));
+
+        let mut g: HashGraph<_, _> = Default::default();
+        g.add_vertices(vec![0, 1, 2, 3, 4, 5]);
+        g.add_edge("0-1", 0, 1);
+        g.add_edge("1-2", 1, 2);
+        g.add_edge("2-3", 2, 3);
+        g.add_edge("1-4", 1, 4);
+        g.add_edge("4-3", 4, 3);
+        g.add_edge("5-2", 5, 2);
+        let sort = toposort(&g).unwrap();
+        let (i0, i1) = (sort.iter().position(|&x| x == 5), sort.iter().position(|&x| x == 2));
+        assert!(i0.unwrap() < i1.unwrap());
     }
 
     #[test]

@@ -1,0 +1,300 @@
+\date{2025-07-16}
+\author{Kevin Carlson}
+\title{The generalized list monads}
+\import{macros}
+\def\S{\dbl{S}}
+\taxon{definition}
+
+\p{
+Let #{\dbl{S}} be a sub-double category of #{\dbl{F}\mathsf{inSpan}}, the skeletal double category of finite sets.
+We must add a certain technical requirement on #{\dbl{S}}, called being a "faithful cartesian club" in \ref{shulman-2016}, which amounts 
+to requiring that the sum of a span-indexed family of spans in #{\dbl{S}} is still in #{\dbl{S}} (see the monad multiplication definition 
+below), and is obviously satisfied in the examples about to be listed. 
+
+To wit, our motivating examples are the following: 
+\ul{
+\li{The one-object full sub-double category spanned by #{1}, so that the spans are all those of the form #{1\leftarrow n\to 1}.}
+\li{The double category of identity spans of finite sets.}
+\li{The double category of companions of bijections between finite sets, i.e. spans of the form #{n= n\cong m}}
+\li{The double category of companions of functions between finite sets, i.e. spans of the form #{n=n \to m}}
+\li{The double category of conjoints of functions between finite sets, i.e. spans of the form #{n\leftarrow m=m}}
+\li{The double category of all spans of finite sets (with one or both components injective, surjective, bijective), i.e. spans of the form #{n\leftarrow m\to p}}
+}
+In fact, for any of the five classes #{\mathrm{identity},\mathrm{bijection},\mathrm{injection},\mathrm{surjection},\mathrm{function}}
+we can consider spans with either leg in any of the classes, making for #{26} examples in all.
+}
+
+\p{
+Consider a span #{A\leftarrow X\to B} of sets. We define #{\Span(\S,X)} as a certain span 
+#{A^{\S_0} \leftarrow X^{\S_1} \to B^{\S_0}}. Here, #{A^{\S_0}=\sum_{n\in \S} A^n} and
+#{X^{\S_1}} will be the set
+#{\sum_{(m\leftarrow r\to n)\in\S}\Span(r,X)}, that is the set of all diagrams of the form
+\quiver{
+    % https://q.uiver.app/#q=WzAsNixbMCwwLCJTIl0sWzEsMCwiUyJdLFsyLDAsIlQiXSxbMSwxLCJYIl0sWzAsMSwiQSJdLFsyLDEsIkIiXSxbMSwwLCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxLDIsIlxcc2lnbWEiLDJdLFszLDRdLFszLDVdLFswLDQsImEiXSxbMiw1LCJiIiwyXSxbMSwzLCJ4IiwxXV0=
+    \begin{tikzcd}
+        m & r & n \\
+        A & X & B
+        \arrow["a", from=1-1, to=2-1]
+        \arrow[ from=1-2, to=1-1]
+        \arrow[from=1-2, to=1-3]
+        \arrow["x"{description}, from=1-2, to=2-2]
+        \arrow["b"', from=1-3, to=2-3]
+        \arrow[from=2-2, to=2-1]
+        \arrow[from=2-2, to=2-3]
+    \end{tikzcd}
+}
+whose first line is in #{\S}. The projections onto #{A^{\S_0},B^{\S_0}} are visible.
+}
+
+\p{
+We now use this construction to define an endofunctor of \Span, called #{\Span(\S,-)} or #{\S} for short. 
+On the tight category, #{\S=(-)^{\S_0}} as defined above. On each span, #{\S(X)=\Span(\S,X)} as defined above.
+}
+\p{
+Given a map #{\alpha} of spans as below and an element #{x\in\S(X)}, we define
+#{\S(\alpha)(x)} to be the composite:
+\quiver{
+    % https://q.uiver.app/#q=WzAsNixbMCwxLCJBIl0sWzEsMSwiQiJdLFswLDIsIkEnIl0sWzEsMiwiQiciXSxbMCwwLCJTIl0sWzEsMCwiVCJdLFswLDEsIlgiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMiwzLCJYJyIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFswLDIsImYiLDFdLFsxLDMsImciLDFdLFs0LDUsIlxcc2lnbWFfKiIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFs0LDAsImEiXSxbNSwxLCJiIl0sWzYsNywiXFxhbHBoYSIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxMCw2LCJ4IiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV1d
+    \begin{tikzcd}
+        m & n \\
+        A & B \\
+        {A'} & {B'}
+        \arrow[""{name=0, anchor=center, inner sep=0}, "{r}"{inner sep=.8ex}, "\shortmid"{marking}, from=1-1, to=1-2]
+        \arrow["a", from=1-1, to=2-1]
+        \arrow["b", from=1-2, to=2-2]
+        \arrow[""{name=1, anchor=center, inner sep=0}, "X"{inner sep=.8ex}, "\shortmid"{marking}, from=2-1, to=2-2]
+        \arrow["f"{description}, from=2-1, to=3-1]
+        \arrow["g"{description}, from=2-2, to=3-2]
+        \arrow[""{name=2, anchor=center, inner sep=0}, "{X'}"{inner sep=.8ex}, "\shortmid"{marking}, from=3-1, to=3-2]
+        \arrow["x"{description}, draw=none, from=0, to=1]
+        \arrow["\alpha"{description}, draw=none, from=1, to=2]
+    \end{tikzcd}
+}
+This visibly produces a functor on the loose category of \Span.
+}
+
+\p{
+    For unitors, we embed the identity span #{A^{\S_0}\leftarrow\id_{A^{\S_0}}\to A^{\S_0}} into #{\S(\id_A)} as the elements 
+    \quiver{% https://q.uiver.app/#q=WzAsNixbMCwwLCIxIl0sWzEsMCwiMSJdLFsyLDAsIjEiXSxbMCwxLCJBIl0sWzEsMSwiQSJdLFsyLDEsIkEiXSxbMSwwLCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxLDIsIiIsMix7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzQsMywiIiwwLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNCw1LCIiLDIseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFswLDMsImEiLDFdLFsxLDQsImEiLDFdLFsyLDUsImEiLDFdXQ==
+    \begin{tikzcd}
+        n & n & n \\
+        A & A & A
+        \arrow["a"{description}, from=1-1, to=2-1]
+        \arrow[equals, from=1-2, to=1-1]
+        \arrow[equals, from=1-2, to=1-3]
+        \arrow["a"{description}, from=1-2, to=2-2]
+        \arrow["a"{description}, from=1-3, to=2-3]
+        \arrow[equals, from=2-2, to=2-1]
+        \arrow[equals, from=2-2, to=2-3]
+    \end{tikzcd}}
+    for #{(a:n\to A)\in A^{\S_0}}, which visibly satisfies naturality of unitors. 
+}
+
+\p{
+    For laxators, given composable spans #{X,Y} and composable elements #{x\in\S(X),y\in\S(Y)} as below, 
+    we define the laxator #{\S_{X,Y}(x,y):r\times_n s\to X\times_B Y} as the composite below:
+    % https://q.uiver.app/#q=WzAsOCxbMCwxLCJBIl0sWzEsMSwiQiJdLFsyLDEsIkMiXSxbMCwyLCJBIl0sWzIsMiwiQyJdLFswLDAsIlMiXSxbMSwwLCJUIl0sWzIsMCwiVSJdLFswLDEsIlgiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMSwyLCJZIiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzMsNCwiWFxcdGltZXNfQlkiXSxbMCwzLCIiLDEseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsyLDQsIiIsMSx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzUsMCwiYSIsMV0sWzYsMSwiYiIsMV0sWzcsMiwiYyIsMV0sWzUsNiwiXFxzaWdtYV8qIiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzYsNywiXFx0YXVfKiIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsxNiw4LCJ4IiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzE3LDksInkiLDEseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
+    \quiver{\begin{tikzcd}
+        m & n & p \\
+        A & B & C \\
+        A && C
+        \arrow[""{name=0, anchor=center, inner sep=0}, "{r}"{inner sep=.8ex}, "\shortmid"{marking}, from=1-1, to=1-2]
+        \arrow["a"{description}, from=1-1, to=2-1]
+        \arrow[""{name=1, anchor=center, inner sep=0}, "{s}"{inner sep=.8ex}, "\shortmid"{marking}, from=1-2, to=1-3]
+        \arrow["b"{description}, from=1-2, to=2-2]
+        \arrow["c"{description}, from=1-3, to=2-3]
+        \arrow[""{name=2, anchor=center, inner sep=0}, "X"{inner sep=.8ex}, "\shortmid"{marking}, from=2-1, to=2-2]
+        \arrow[equals, from=2-1, to=3-1]
+        \arrow[""{name=3, anchor=center, inner sep=0}, "Y"{inner sep=.8ex}, "\shortmid"{marking}, from=2-2, to=2-3]
+        \arrow[equals, from=2-3, to=3-3]
+        \arrow["{X\times_B Y}", from=3-1, to=3-3]
+        \arrow["x"{description}, draw=none, from=0, to=2]
+        \arrow["y"{description}, draw=none, from=1, to=3]
+    \end{tikzcd}}
+    Associativity and the naturality of laxators now just follow from the well-definedness of pastings in 
+    \Span. That leaves the unitality axiom, which says that pasting with the identity cell on a tight 
+    arrow is the identity operation. Thus #{\S} is indeed a lax double endofunctor of \Span.
+}
+
+\p{
+    We now put a double monad structure on #{\S}. The tight part of the monad will be restricted from that of #{\func{List}}, which implies that #{\S_0} contains #{1} and the sum of any family of
+    its elements indexed by any of its members. (The only obvious examples of that are all the natural numbers, the positive ones, and #{1}, although more singular examples exist.) 
+    On spans, the unit will map an element #{x:a\proto b} of a span #{A\leftarrow X\to B} to the element 
+    % https://q.uiver.app/#q=WzAsNixbMCwwLCIxIl0sWzEsMCwiMSJdLFsyLDAsIjEiXSxbMCwxLCJBIl0sWzEsMSwiWCJdLFsyLDEsIkIiXSxbMSwwLCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxLDIsIiIsMix7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzQsM10sWzQsNV0sWzAsMywiYSIsMV0sWzEsNCwieCIsMV0sWzIsNSwiYiIsMV1d
+    \quiver{\begin{tikzcd}
+        1 & 1 & 1 \\
+        A & X & B
+        \arrow["a"{description}, from=1-1, to=2-1]
+        \arrow[equals, from=1-2, to=1-1]
+        \arrow[equals, from=1-2, to=1-3]
+        \arrow["x"{description}, from=1-2, to=2-2]
+        \arrow["b"{description}, from=1-3, to=2-3]
+        \arrow[from=2-2, to=2-1]
+        \arrow[from=2-2, to=2-3]
+    \end{tikzcd}}
+    of #{\S(X)}. All the axioms of a strict natural transformation are quite tautological.
+}
+
+\p{
+    For the multiplication #{\mu} at a span #{A\leftarrow X\to B}, the action on an element of #{\S^2(X)} uses the multiplication of \List pointwise: 
+    % https://q.uiver.app/#q=WzAsMTIsWzAsMCwibSJdLFsxLDAsInIiXSxbMiwwLCJuIl0sWzAsMSwiXFxzdW1fe20nfUFee20nfSJdLFsyLDEsIlxcc3VtX3tuJ31CXntuJ30iXSxbMSwxLCJcXHN1bV97bSdcXGxlZnRhcnJvdyByJ1xcdG8gbid9XFxTcGFuKHInLFgpIl0sWzAsMiwiXFxzdW1faVxcYmFyIGEoaSkiXSxbMCwzLCJBIl0sWzEsMiwiXFxzdW1fa1xcYmFyIHgoaykiXSxbMSwzLCJYIl0sWzIsMywiQiJdLFsyLDIsIlxcc3VtX2pcXGJhciBiKGopIl0sWzEsMF0sWzEsMl0sWzUsM10sWzUsNF0sWzAsMywiXFxiYXIgYSJdLFsxLDUsIlxcYmFyIHgiLDFdLFsyLDQsIlxcYmFyIGIiLDJdLFs2LDddLFs5LDddLFs4LDldLFs4LDZdLFs5LDEwXSxbMTEsMTBdLFs4LDExXSxbNSw4LCIiLDAseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJ0YWlsIjp7Im5hbWUiOiJtYXBzIHRvIn19fV1d
+    \quiver{\begin{tikzcd}
+        m & r & n \\
+        {\sum_{m'}A^{m'}} & {\sum_{m'\leftarrow r'\to n'}\Span(r',X)} & {\sum_{n'}B^{n'}} \\
+        {\sum_i\bar a(i)} & {\sum_k\bar x(k)} & {\sum_j\bar b(j)} \\
+        A & X & B
+        \arrow["{\bar a}", from=1-1, to=2-1]
+        \arrow[from=1-2, to=1-1]
+        \arrow[from=1-2, to=1-3]
+        \arrow["{\bar x}"{description}, from=1-2, to=2-2]
+        \arrow["{\bar b}"', from=1-3, to=2-3]
+        \arrow[from=2-2, to=2-1]
+        \arrow[from=2-2, to=2-3]
+        \arrow[maps to, from=2-2, to=3-2]
+        \arrow[from=3-1, to=4-1]
+        \arrow[from=3-2, to=3-1]
+        \arrow[from=3-2, to=3-3]
+        \arrow[from=3-2, to=4-2]
+        \arrow[from=3-3, to=4-3]
+        \arrow[from=4-2, to=4-1]
+        \arrow[from=4-2, to=4-3]
+    \end{tikzcd}}
+   The "faithful cartesian club" condition we require on \S is precisely that the flattened span #{\sum \bar a(i)\leftarrow \sum \bar x(k) \to \sum \bar b(j)} lies in \S,
+   which as mentioned above is immediate when each side of \S is determined by lying in the identity, bijection, injective, surjective, or arbitrary functions.
+   The naturality of multiplication in cells of \Span is clear; we turn to the other two axioms of naturality of #{\mu}.
+
+}
+
+\p{
+    Coherence of #{\mu} with external units says that the composite #{\S^2_A\cdot \mu_{\id_A}}, where #{\S^2_A} is the unitor, coincides with 
+    #{\id_{\mu_A}\cdot \S_A}. The latter is easier to compute: it sends a list of lists to the constant span on its flattening, like so:
+    % https://q.uiver.app/#q=WzAsMTYsWzAsMCwiXFxTXjJBIl0sWzEsMCwiXFxTXjJBIl0sWzAsMSwiXFxTIEEiXSxbMSwxLCJcXFMgQSJdLFswLDIsIlxcUyBBIl0sWzEsMiwiXFxTIEEiXSxbMiwwLCJuIl0sWzMsMCwiXFxMaXN0IEEiXSxbMiwxLCJcXHN1bV9pIG5faSJdLFszLDEsIkEiXSxbMiwyLCJcXHN1bV9pIG5faSJdLFszLDIsIlxcc3VtX2kgbl9pIl0sWzQsMiwiXFxzdW1faSBuX2kiXSxbMiwzLCJBIl0sWzMsMywiQSJdLFs0LDMsIkEiXSxbMCwxLCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMCwyLCJcXG11X0EiLDJdLFsyLDMsIiIsMix7ImxldmVsIjoyLCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxLDMsIlxcbXVfQSJdLFs0LDUsIlxcU1xcaWRfQSIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsyLDQsIiIsMix7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzMsNSwiIiwyLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNiw3XSxbOCw5XSxbMTEsMTAsIiIsMSx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzExLDEyLCIiLDEseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxMiwxNV0sWzEwLDEzXSxbMTEsMTRdLFsxNCwxMywiIiwxLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMTQsMTUsIiIsMSx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzE4LDIwLCJcXFNfQSIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsyMywyNCwiIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwibGV2ZWwiOjEsInN0eWxlIjp7InRhaWwiOnsibmFtZSI6Im1hcHMgdG8ifX19XSxbMjQsMTEsIiIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMH0sImxldmVsIjoxLCJzdHlsZSI6eyJ0YWlsIjp7Im5hbWUiOiJtYXBzIHRvIn19fV1d
+    \quiver{\begin{tikzcd}
+        {\S^2A} & {\S^2A} & n & {A^{\S_0}} \\
+        {\S A} & {\S A} & {\sum_i n_i} & A \\
+        {\S A} & {\S A} & {\sum_i n_i} & {\sum_i n_i} & {\sum_i n_i} \\
+        && A & A & A
+        \arrow["\shortmid"{marking}, equals, from=1-1, to=1-2]
+        \arrow["{\mu_A}"', from=1-1, to=2-1]
+        \arrow["{\mu_A}", from=1-2, to=2-2]
+        \arrow[""{name=0, anchor=center, inner sep=0}, from=1-3, to=1-4]
+        \arrow[""{name=1, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=2-1, to=2-2]
+        \arrow[equals, from=2-1, to=3-1]
+        \arrow[equals, from=2-2, to=3-2]
+        \arrow[""{name=2, anchor=center, inner sep=0}, from=2-3, to=2-4]
+        \arrow[""{name=3, anchor=center, inner sep=0}, "{\S\id_A}"'{inner sep=.8ex}, "\shortmid"{marking}, from=3-1, to=3-2]
+        \arrow[from=3-3, to=4-3]
+        \arrow[equals, from=3-4, to=3-3]
+        \arrow[equals, from=3-4, to=3-5]
+        \arrow[from=3-4, to=4-4]
+        \arrow[from=3-5, to=4-5]
+        \arrow[equals, from=4-4, to=4-3]
+        \arrow[equals, from=4-4, to=4-5]
+        \arrow[maps to, from=0, to=2]
+        \arrow["{\S_A}"{description}, draw=none, from=1, to=3]
+        \arrow[maps to, from=2, to=3-4]
+    \end{tikzcd}}
+    The unitor #{\S^2_A} sends a list of lists #{\ell:n\to A^{\S_0}} to the span below, which we see is indeed sent to the right place by #{\mu}:
+    % https://q.uiver.app/#q=WzAsNixbMCwwLCJuIl0sWzEsMCwibiJdLFsyLDAsIm4iXSxbMCwxLCJcXExpc3QgQSJdLFsxLDEsIlxcUyBcXGlkX0EiXSxbMiwxLCJcXExpc3QgQSJdLFsxLDAsIiIsMCx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzEsMiwiIiwyLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNCwzXSxbNCw1XSxbMCwzXSxbMSw0LCJcXGVsbFxcY2RvdCBcXGV0YV97XFxpZF9BfSIsMV0sWzIsNV1d
+    \quiver{\begin{tikzcd}
+        n & n & n \\
+        {A^{\S_0}} & {\S \id_A} & {A^{\S_0}}
+        \arrow[from=1-1, to=2-1]
+        \arrow[equals, from=1-2, to=1-1]
+        \arrow[equals, from=1-2, to=1-3]
+        \arrow["{\ell\cdot \eta_{\id_A}}"{description}, from=1-2, to=2-2]
+        \arrow[from=1-3, to=2-3]
+        \arrow[from=2-2, to=2-1]
+        \arrow[from=2-2, to=2-3]
+    \end{tikzcd}}
+}
+
+\p{
+    Finally, for coherence of laxators we must show that #{\S^2_{X,Y}\cdot \mu_{X\odot Y}= (\mu_X\odot \mu_Y)\cdot \S_{X,Y}}. Calculating again the right-hand side first, we see it has the following action
+    on an element of #{\S^2(X)\odot \S^2(Y)}:
+% https://q.uiver.app/#q=WzAsMTYsWzAsMCwibSJdLFsxLDAsInIiXSxbMiwwLCJuIl0sWzMsMCwicyJdLFs0LDAsInAiXSxbMCwxLCJcXExpc3QgQSJdLFsxLDEsIlxcUyBYIl0sWzIsMSwiXFxMaXN0IEIiXSxbMywxLCJcXFMgWSJdLFs0LDEsIlxcTGlzdCBDIl0sWzAsMiwiXFxzdW0gXFxiYXIgYShpKSJdLFsyLDIsIlxcc3VtXFxiYXIgeChcXGVsbClcXHRpbWVzX3tcXHN1bSBcXGJhciBiKGopfVxcc3VtIFxcYmFyIHkobSkiXSxbNCwyLCJcXHN1bVxcYmFyIGMoaykiXSxbMCwzLCJBIl0sWzQsMywiQyJdLFsyLDMsIlhcXHRpbWVzX0IgWSJdLFswLDUsIlxcYmFyIGEiLDFdLFsxLDYsIlxcYmFyIHgiLDFdLFsyLDcsIlxcYmFyIGIiLDFdLFszLDgsIlxcYmFyIHkiLDFdLFs0LDksIlxcYmFyIGMiLDFdLFsxMSwxMF0sWzExLDEyXSxbMTUsMTNdLFsxNSwxNF0sWzEyLDE0XSxbMTAsMTNdLFsxMSwxNV0sWzYsNV0sWzYsN10sWzgsN10sWzgsOV0sWzMsNF0sWzMsMl0sWzEsMl0sWzcsMTEsIiIsMSx7InN0eWxlIjp7InRhaWwiOnsibmFtZSI6Im1hcHMgdG8ifX19XSxbMSwwXV0=
+    \quiver{\begin{tikzcd}
+        m & r & n & s & p \\
+        {A^{\S_0}} & {\S X} & {B^{\S_0}} & {\S Y} & {C^{\S_0}} \\
+        {\sum \bar a(i)} && {\sum\bar x(\ell)\times_{\sum \bar b(j)}\sum \bar y(m)} && {\sum\bar c(k)} \\
+        A && {X\times_B Y} && C
+        \arrow["{\bar a}"{description}, from=1-1, to=2-1]
+        \arrow[from=1-2, to=1-1]
+        \arrow[from=1-2, to=1-3]
+        \arrow["{\bar x}"{description}, from=1-2, to=2-2]
+        \arrow["{\bar b}"{description}, from=1-3, to=2-3]
+        \arrow[from=1-4, to=1-3]
+        \arrow[from=1-4, to=1-5]
+        \arrow["{\bar y}"{description}, from=1-4, to=2-4]
+        \arrow["{\bar c}"{description}, from=1-5, to=2-5]
+        \arrow[from=2-2, to=2-1]
+        \arrow[from=2-2, to=2-3]
+        \arrow[maps to, from=2-3, to=3-3]
+        \arrow[from=2-4, to=2-3]
+        \arrow[from=2-4, to=2-5]
+        \arrow[from=3-1, to=4-1]
+        \arrow[from=3-3, to=3-1]
+        \arrow[from=3-3, to=3-5]
+        \arrow[from=3-3, to=4-3]
+        \arrow[from=3-5, to=4-5]
+        \arrow[from=4-3, to=4-1]
+        \arrow[from=4-3, to=4-5]
+    \end{tikzcd}}
+    On the other hand, #{\S^2_{X,Y}\cdot \mu_{X\odot Y}=\S_{\S X,\S Y}\cdot \S(\S_{X,Y})\cdot \mu_{X\odot Y}} acts on such an #{(\bar x,\bar y)} as follows: 
+  % https://q.uiver.app/#q=WzAsMjgsWzAsMCwibSJdLFsxLDAsInIiXSxbMiwwLCJuIl0sWzMsMCwicyJdLFs0LDAsInAiXSxbMCwxLCJcXExpc3QgQSJdLFsxLDEsIlxcUyBYIl0sWzIsMSwiXFxMaXN0IEIiXSxbMywxLCJcXFMgWSJdLFs0LDEsIlxcTGlzdCBDIl0sWzIsMiwiclxcdGltZXNfbiBzIl0sWzAsMiwibSJdLFs0LDIsInAiXSxbMCwzLCJcXExpc3QgQSJdLFs0LDMsIlxcTGlzdCBDIl0sWzIsMywiXFxTIFhcXHRpbWVzX3tcXExpc3QgQn0gXFxTIFkiXSxbMiw0LCJyXFx0aW1lc19uIHMiXSxbMCw0LCJtIl0sWzQsNCwicCJdLFswLDUsIlxcTGlzdCBBIl0sWzQsNSwiXFxMaXN0IEMiXSxbMiw1LCJcXFMoWFxcdGltZXNfQiBZKSJdLFswLDYsIlxcc3VtIFxcYmFyIGEoaSkiXSxbMCw3LCJBIl0sWzIsNiwiXFxzdW0gKFxcYmFyIHhcXHRpbWVzX3tcXGJhciBifSBcXGJhciB5KShcXGVsbCkiXSxbNCw2LCJcXHN1bSBcXGJhciBjKGopIl0sWzQsNywiQyJdLFsyLDcsIlhcXHRpbWVzX0IgWSJdLFswLDUsIlxcYmFyIGEiLDFdLFsxLDYsIlxcYmFyIHgiLDFdLFsyLDcsIlxcYmFyIGIiLDFdLFszLDgsIlxcYmFyIHkiLDFdLFs0LDksIlxcYmFyIGMiLDFdLFs2LDVdLFs2LDddLFs4LDddLFs4LDldLFszLDRdLFszLDJdLFsxLDJdLFsxLDBdLFsxNSwxM10sWzE1LDE0XSxbMTIsMTRdLFsxMCwxNSwiXFxiYXIgeFxcdGltZXNfe1xcYmFyIGJ9XFxiYXIgeSIsMV0sWzExLDEzXSxbMTAsMTFdLFsxMCwxMl0sWzcsMTAsIiIsMSx7InN0eWxlIjp7InRhaWwiOnsibmFtZSI6Im1hcHMgdG8ifX19XSxbMTgsMjBdLFsxNywxOV0sWzE2LDE3XSxbMTYsMThdLFsyMSwxOV0sWzIxLDIwXSxbMTYsMjEsIihcXGJhciB4XFx0aW1lc197XFxiYXIgYn1cXGJhciB5KVxcY2RvdCBcXFNfe1gsWX0iLDFdLFsxNSwxNiwiIiwxLHsic3R5bGUiOnsidGFpbCI6eyJuYW1lIjoibWFwcyB0byJ9fX1dLFsyNCwyMl0sWzI0LDI1XSxbMjUsMjZdLFsyMiwyM10sWzI3LDIzXSxbMjcsMjZdLFsyNCwyN10sWzIxLDI0LCIiLDEseyJzdHlsZSI6eyJ0YWlsIjp7Im5hbWUiOiJtYXBzIHRvIn19fV1d
+    \quiver{\begin{tikzcd}
+        m & r & n & s & p \\
+        {A^{\S_0}} & {\S X} & {B^{\S_0}} & {\S Y} & {C^{\S_0}} \\
+        m && {r\times_n s} && p \\
+        {A^{\S_0}} && {\S X\times_{B^{\S_0}} \S Y} && {C^{\S_0}} \\
+        m && {r\times_n s} && p \\
+        {A^{\S_0}} && {\S(X\times_{B^{\S_0}} Y)} && {C^{\S_0}} \\
+        {\sum \bar a(i)} && {\sum (\bar x\times_{\bar b} \bar y)(q)} && {\sum \bar c(j)} \\
+        A && {X\times_B Y} && C
+        \arrow["{\bar a}"{description}, from=1-1, to=2-1]
+        \arrow[from=1-2, to=1-1]
+        \arrow[from=1-2, to=1-3]
+        \arrow["{\bar x}"{description}, from=1-2, to=2-2]
+        \arrow["{\bar b}"{description}, from=1-3, to=2-3]
+        \arrow[from=1-4, to=1-3]
+        \arrow[from=1-4, to=1-5]
+        \arrow["{\bar y}"{description}, from=1-4, to=2-4]
+        \arrow["{\bar c}"{description}, from=1-5, to=2-5]
+        \arrow[from=2-2, to=2-1]
+        \arrow[from=2-2, to=2-3]
+        \arrow[maps to, from=2-3, to=3-3]
+        \arrow[from=2-4, to=2-3]
+        \arrow[from=2-4, to=2-5]
+        \arrow[from=3-1, to=4-1]
+        \arrow[from=3-3, to=3-1]
+        \arrow[from=3-3, to=3-5]
+        \arrow["{\bar x\times_{\bar b}\bar y}"{description}, from=3-3, to=4-3]
+        \arrow[from=3-5, to=4-5]
+        \arrow[from=4-3, to=4-1]
+        \arrow[from=4-3, to=4-5]
+        \arrow[maps to, from=4-3, to=5-3]
+        \arrow[from=5-1, to=6-1]
+        \arrow[from=5-3, to=5-1]
+        \arrow[from=5-3, to=5-5]
+        \arrow["{(\bar x\times_{\bar b}\bar y)\cdot \S_{X,Y}}"{description}, from=5-3, to=6-3]
+        \arrow[from=5-5, to=6-5]
+        \arrow[from=6-3, to=6-1]
+        \arrow[from=6-3, to=6-5]
+        \arrow[maps to, from=6-3, to=7-3]
+        \arrow[from=7-1, to=8-1]
+        \arrow[from=7-3, to=7-1]
+        \arrow[from=7-3, to=7-5]
+        \arrow[from=7-3, to=8-3]
+        \arrow[from=7-5, to=8-5]
+        \arrow[from=8-3, to=8-1]
+        \arrow[from=8-3, to=8-5]
+    \end{tikzcd}}
+    The key observation to verify this last axiom is that distributivity of pullbacks in \Set means that 
+    ##{\sum_{q \le r\times_n s} (\bar x\times_{\bar b} \bar y)(q)= \sum_{\ell \le r,j\le n, m\le s} \bar x(\ell)\times_{\bar b(j)} \bar y(m)}.
+    We have thus verified that #{\mu} is a strict natural transformation.
+}
+
+\p{
+    Since the unit #{\eta} and multiplication #{\mu} are both just tuples of the unit and multiplication of \List, the monad laws come for free, and we have established
+    that \S is a lax double monad on \Span. 
+}

@@ -1,13 +1,13 @@
-import { createSignal } from "solid-js";
-import type { JSX } from "solid-js";
-import type { Document } from "../api";
+import { type JSX, createSignal } from "solid-js";
+
+import type { Document } from "catlog-wasm";
 import { FormGroup, InputField, TextAreaField } from "./form";
 
 import "./json_import.css";
 
-interface JsonImportProps<T extends string> {
-    onImport: (data: Document<T>) => void;
-    validate?: (data: Document<T>) => boolean | string;
+interface JsonImportProps {
+    onImport: (data: Document) => void;
+    validate?: (data: Document) => boolean | string;
 }
 
 /**
@@ -16,7 +16,7 @@ interface JsonImportProps<T extends string> {
  * File size is currently limited to 5MB.
  *
  */
-export const JsonImport = <T extends string>({ onImport, validate }: JsonImportProps<T>) => {
+export const JsonImport = ({ onImport, validate }: JsonImportProps) => {
     const [error, setError] = createSignal<string | null>(null);
     const [importValue, setImportValue] = createSignal("");
 

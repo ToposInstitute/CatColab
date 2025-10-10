@@ -76,6 +76,8 @@ export ImplError
 
 Base.showerror(io::IO, e::ImplError) = print(io, "$(e.name) not implemented")
 
+include("result.jl")
+include("kernel_management.jl")
 include("kernel_support.jl")
 include("decapodes-service/DecapodesService.jl")
 

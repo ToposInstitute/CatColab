@@ -15,28 +15,26 @@ pub trait CommAlg: CommRing + Module<Ring = Self::R> {
     /// The base ring of the algebra.
     type R: CommRing;
 
-    /** Convert an element of the base ring into an element of the algebra.
-
-    A commutative algebra A over a commutative ring R can be defined as a ring
-    homomorphism from R to A. This method computes that homomorphism.
-     */
+    /// Convert an element of the base ring into an element of the algebra.
+    ///
+    /// A commutative algebra A over a commutative ring R can be defined as a ring
+    /// homomorphism from R to A. This method computes that homomorphism.
     fn from_scalar(r: Self::R) -> Self {
         Self::one() * r
     }
 }
 
-/** A polynomial in several variables.
-
-This data structure is for polynomials in *normal form*: a **polynomial** is a
-formal linear combination of monomials in which no monomial is repeated, and no
-variable is repeated within any monomial. The implementation is indeed a
-[`Combination`] of a [`Monomial`]s. The use of a normal form means that
-polynomial arithmetic automatically performs certain simplifications.
-
-In abstract terms, polynomials with coefficients valued in a [commutative
-ring](super::rig::CommRing) *R* are the free [commutative algebra](CommAlg)
-over *R*.
- */
+/// A polynomial in several variables.
+///
+/// This data structure is for polynomials in *normal form*: a **polynomial** is a
+/// formal linear combination of monomials in which no monomial is repeated, and no
+/// variable is repeated within any monomial. The implementation is indeed a
+/// [`Combination`] of a [`Monomial`]s. The use of a normal form means that
+/// polynomial arithmetic automatically performs certain simplifications.
+///
+/// In abstract terms, polynomials with coefficients valued in a [commutative
+/// ring](super::rig::CommRing) *R* are the free [commutative algebra](CommAlg)
+/// over *R*.
 #[derive(Clone, PartialEq, Eq, Derivative)]
 #[derivative(Default(bound = ""))]
 pub struct Polynomial<Var, Coef, Exp>(Combination<Monomial<Var, Exp>, Coef>);
@@ -68,12 +66,11 @@ where
         self.0.variables()
     }
 
-    /** Maps the coefficients of the polynomial.
-
-    In the usual situations when the coefficients from commutative rigs and the
-    mapping is a rig homomorphism, this operation is extension of scalars
-    applied to free commutative algebras.
-     */
+    /// Maps the coefficients of the polynomial.
+    ///
+    /// In the usual situations when the coefficients from commutative rigs and the
+    /// mapping is a rig homomorphism, this operation is extension of scalars
+    /// applied to free commutative algebras.
     pub fn extend_scalars<NewCoef, F>(self, f: F) -> Polynomial<Var, NewCoef, Exp>
     where
         F: FnMut(Coef) -> NewCoef,
@@ -92,11 +89,10 @@ where
         self.0.eval_with_order(self.monomials().map(|m| m.eval(f.clone())))
     }
 
-    /** Evaluates the polynomial on a sequence of variable-value pairs.
-
-    This is a convenient way to evaluate the polynomial at a single point but it
-    is not very efficient.
-    */
+    /// Evaluates the polynomial on a sequence of variable-value pairs.
+    ///
+    /// This is a convenient way to evaluate the polynomial at a single point but it
+    /// is not very efficient.
     pub fn eval_pairs<A>(&self, pairs: impl IntoIterator<Item = (Var, A)>) -> A
     where
         A: Clone + Mul<Coef, Output = A> + Pow<Exp, Output = A> + Sum + Product,
@@ -107,14 +103,13 @@ where
         self.eval(|var| map.get(var).cloned().unwrap())
     }
 
-    /** Maps over the variables in the polynomial.
-
-    The mapping need not be injective. This is conceptually equivalent to
-    [evaluating](Polynomial::eval) the polynomial with a map that sends
-    generators to generators but avoids assuming that an arbitrary polynomial
-    can be exponentiated, which is only makes sense when the exponents are
-    nonnegative integers.
-     */
+    /// Maps over the variables in the polynomial.
+    ///
+    /// The mapping need not be injective. This is conceptually equivalent to
+    /// [evaluating](Polynomial::eval) the polynomial with a map that sends
+    /// generators to generators but avoids assuming that an arbitrary polynomial
+    /// can be exponentiated, which is only makes sense when the exponents are
+    /// nonnegative integers.
     pub fn map_variables<NewVar, F>(&self, mut f: F) -> Polynomial<NewVar, Coef, Exp>
     where
         Coef: Clone + Add<Output = Coef>,
@@ -125,6 +120,28 @@ where
         (&self.0)
             .into_iter()
             .map(|(coef, m)| (coef.clone(), m.map_variables(|var| f(var))))
+            .collect()
+    }
+
+    /// Puts the polynomial into normal form.
+    ///
+    /// The data structure for polynomials is already pretty close to being a normal
+    /// form, but allows the possibility of coefficients or exponents being zero.
+    /// This method removes those if present.
+    pub fn normalize(self) -> Self
+    where
+        Coef: Zero,
+        Exp: Zero,
+    {
+        self.0
+            .into_iter()
+            .filter_map(|(coef, m)| {
+                if coef.is_zero() {
+                    None
+                } else {
+                    Some((coef, m.normalize()))
+                }
+            })
             .collect()
     }
 }
@@ -181,11 +198,11 @@ where
 impl<Var, Coef, Exp> Zero for Polynomial<Var, Coef, Exp>
 where
     Var: Ord,
-    Coef: Add<Output = Coef>,
+    Coef: Add<Output = Coef> + Zero,
     Exp: Ord,
 {
     fn zero() -> Self {
-        Polynomial(Combination::zero())
+        Polynomial(Combination::default())
     }
 
     fn is_zero(&self) -> bool {
@@ -265,7 +282,7 @@ where
     fn mul(self, rhs: Self) -> Self::Output {
         // Avoid unnecessary clones by tracking whether we're in the last
         // iteration of the outer and inner loops.
-        let mut result = Polynomial::zero();
+        let mut result = Polynomial::default();
         let (outer, inner) = (self.0, rhs.0);
         let mut outer_iter = outer.into_iter();
         while let Some((a, m)) = outer_iter.next() {
@@ -384,5 +401,8 @@ mod tests {
 
         let p = (x() + y()) * (x() + y());
         assert_eq!(p.to_string(), "2 x y + x^2 + y^2");
+
+        let p = (x() + y()) * (x() + y().neg());
+        assert_eq!(p.normalize().to_string(), "x^2 + (-1) y^2");
     }
 }

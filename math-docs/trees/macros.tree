@@ -1,0 +1,93 @@
+% XML namespaces
+
+\xmlns:html{http://www.w3.org/1999/xhtml}
+
+% Markup
+
+\def\table[body]{\<html:table>{\body}}
+\def\th[body]{\<html:th>{\body}}
+\def\tr[body]{\<html:tr>{\body}}
+\def\td[body]{\<html:td>{\body}}
+
+\def\nlab[article]{\<html:span>[class]{nlab}{[\article](https://ncatlab.org/nlab/show/\article)}}
+\def\wikipedia[article]{\<html:span>[class]{wikipedia}{[\article](https://en.wikipedia.org/wiki/\article)}}
+
+% Figures
+
+\def\quiverinline[body]{
+  \tex{\usepackage{quiver,amsopn,amssymb}}{\body}
+}
+
+\def\quiver[body]{\<html:center>{\quiverinline{\body}}}
+
+\def\centerfigs[body]{
+    \<html:div>[class]{centerfigs}{\body}
+}
+
+% Theorems
+
+\def\definition[head][body]{
+  \subtree{\title{\head} \taxon{definition} \body}
+}
+
+\def\proposition[head][body]{
+  \subtree{\title{\head} \taxon{proposition} \body}
+}
+
+\def\example[head][body]{
+  \subtree{\title{\head} \taxon{example} \body}
+}
+
+% General mathematics
+
+\def\define[name]{\strong{\name}}
+
+\def\proof[body]{
+  \subtree{
+    \taxon{proof}
+    \body
+  }
+}
+
+% Category theory
+
+\def\Ob{#{\operatorname{Ob}}}
+\def\Hom{#{\operatorname{Hom}}}
+\def\dom{#{\operatorname{dom}}}
+\def\cod{#{\operatorname{cod}}}
+\def\id{#{\operatorname{id}}}
+\def\op{#{\mathrm{op}}}
+
+\def\xto[label]{#{\xrightarrow{\label}}}
+\def\xfrom[label]{#{\xleftarrow{\label}}}
+\def\To{#{\Rightarrow}}
+\def\hetto{#{\dashrightarrow}}
+
+\def\cat[name]{#{\mathsf{\name}}}
+\def\Set{#{\mathsf{Set}}}
+\def\Fam{#{\mathsf{Fam}}}
+\def\FinFam{#{\mathsf{FinFam}}}
+
+\def\func[name]{#{\mathrm{\name}}}
+\def\List{#{\func{List}}}
+% There is a mystery error if you try to name this \fun
+
+\def\Disc{#{\mathop{\mathrm{Disc}}}}
+
+% 2-category theory
+
+\def\twocat[name]{#{\mathbf{\name}}}
+\def\Cat{\twocat{Cat}}
+\def\Dbl{\twocat{Dbl}}
+
+% Double category theory
+
+\def\proto{#{\mathrel{\mkern3mu\vcenter{\hbox{$\shortmid$}}\mkern-10mu{\to}}}}
+\def\xproto[label]{#{\overset{\label}{\proto}}}
+\def\proTo{#{\mathrel{\mkern3mu\vcenter{\hbox{$\shortmid$}}\mkern-10mu{\Rightarrow}}}}
+
+\def\tabulator[ob]{#{\top\ob}}
+
+\def\dbl[name]{#{\mathbb{\name}}}
+\def\Span{#{\mathbb{S}\mathsf{pan}}}
+\def\Mod{#{\mathbb{M}}\mathsf{od}}

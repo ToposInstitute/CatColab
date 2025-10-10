@@ -1,16 +1,24 @@
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
-use super::path::Path;
-use uuid::Uuid;
+use super::{path::Path, theory::*};
 
 /// An object in a model of a double theory.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
 #[serde(tag = "tag", content = "content")]
-#[tsify(into_wasm_abi, from_wasm_abi)]
+#[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
 pub enum Ob {
     /// Basic or generating object.
-    Basic(Uuid),
+    Basic(String),
+
+    /// Application of an object operation to another object.
+    App { op: ObOp, ob: Box<Ob> },
+
+    /// List of objects, each possibly ill-defined, in a list modality.
+    List {
+        modality: Modality,
+        objects: Vec<Option<Ob>>,
+    },
 
     /// Morphism viewed as an object of a tabulator.
     Tabulated(Mor),
@@ -22,7 +30,7 @@ pub enum Ob {
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum Mor {
     /// Basic or generating morphism.
-    Basic(Uuid),
+    Basic(String),
 
     /// Composite of morphisms.
     Composite(Box<Path<Ob, Mor>>),

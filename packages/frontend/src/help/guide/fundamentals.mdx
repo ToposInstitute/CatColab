@@ -1,0 +1,67 @@
+import { Warning } from "../../components/alert";
+
+In many places, we describe CatColab as a ...
+
+> collaborative environment for formal, interoperable, conceptual modeling.
+
+But what do we actually mean by this?
+This guide aims to answer that question on (at least) two levels: firstly, breaking down this description word by word, examining what we mean by each one and how we have come to our understanding of its use; and secondly, what this means in actual concrete terms, and *what the software actually does* and *how you can use it*.
+
+In brief, we use the following definitions:
+
+<dl>
+  <dt>collaborative</dt>
+  <dd>models can be built by multiple people working either synchronously or asynchronously, and either in-person or remotely</dd>
+  <dt>formal</dt>
+  <dd>models are mathematical objects that can be critiqued with clarity</dd>
+  <dt>interoperable</dt>
+  <dd>models, and modeling languages, can be interoperated with each other</dd>
+  <dt>conceptual</dt>
+  <dd>modeling languages are well adapted to concepts used by practitioners</dd>
+</dl>
+
+<Warning>
+  This page is still under construction. For now, we recommend reading [these slides ↗](https://www.epatters.org/assets/slides/2025-act/slides.html#/introducing-catcolab) for further details.
+</Warning>
+
+
+## Concepts
+
+While CatColab has a notebook-style interface inspired by computational
+notebooks like JupyterLab and structured document editors like Notion, its
+conceptual underpinnings are quite different from both kinds of tools. Here is
+an overview of the concepts that you'll encounter in CatColab today:
+
+<dl>
+
+<dt>Logic</dt>
+
+<dd>CatColab is not a general-purpose programming or modeling language but is
+rather an extensible environment for working in *domain-specific logics*, such
+as those of database schemas or biochemical regulatory networks. To do anything
+in the tool besides write text, you'll need to choose a logic (also known as a **theory** in some of the accompanying mathematical literature).</dd>
+
+<dt>Model</dt>
+
+<dd>Models in CatColab are models *within* a logic, such as a particular
+database schema or regulatory network. Models are specified declaratively and
+are well-defined mathematical objects. CatColab is a structure editor for models
+in a logic, allowing formal declarations to be intermixed with descriptive rich
+text.</dd>
+
+<dt>Analysis</dt>
+
+<dd>Unlike most computational notebooks, CatColab strictly separates the
+*specification* of a model from any outputs derived from it. Depending on the
+logic, an analysis of a model might include visualization, simulation,
+identification of motifs, and translation into other formats.</dd>
+
+<dt>Diagram</dt>
+
+<dd>A diagram, one way of presenting an **instance** of a model, populates a model. If the model is seen as an ontology &mdash; a way of describing what kinds of things are under consideration and how things of those kinds relate to each other &mdash; then the instance gives a list of actual things cohereing with that ontology.</dd>
+
+</dl>
+
+Future of versions of CatColab will display the further concepts of
+**morphisms**, **migrations**, and **compositions** (to be described here when they
+become available).

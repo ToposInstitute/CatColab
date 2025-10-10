@@ -5,30 +5,48 @@ authors = ["Evan Patterson"]
 version = "0.1.0"
 edition = "2024"
 
+
 [features]
-ode = ["dep:ode_solvers", "dep:nalgebra"]
-serde = ["dep:serde", "nonempty/serialize", "ustr/serde"]
-serde-wasm = ["serde", "dep:wasm-bindgen", "dep:tsify"]
+ode = ["dep:ode_solvers", "dep:nalgebra", "dep:rebop"]
+serde = ["dep:serde", "nonempty/serialize", "ustr/serde", "uuid/serde"]
+serde-wasm = ["serde", "dep:wasm-bindgen", "dep:tsify", "dep:instant", "instant/wasm-bindgen"]
 
 [dependencies]
+bwd = "0.2.1"
 derivative = "2"
-derive_more = { version = "1", features = ["from", "into"] }
+derive_more = { version = "2", features = ["constructor", "from", "into"] }
 duplicate = "2"
-egglog = { version = "0.4", default-features = false }
+egglog = { version = "0.5", default-features = false }
 ego-tree = "0.10"
+instant = { version = "0.1", optional = true } # Needed for egglog v0.5
+fnotation = "0.10.2"
+indexmap = "2.11.1"
 itertools = "0.14"
 nalgebra = { version = "0.33", optional = true }
-nonempty = "0.10"
+nonempty = "0.12"
 num-traits = "0.2"
 ode_solvers = { version = "0.5.0", optional = true }
+pretty = "0.12.4"
+rebop = { git = "https://github.com/Armavica/rebop.git", rev = "eb1e500", default-features = false, optional = true }
 ref-cast = "1"
+scopeguard = "1.2.0"
 serde = { version = "1", features = ["derive"], optional = true }
+tattle = "0.4.3"
 thiserror = "1"
 tsify = { version = "0.5", features = ["js"], optional = true }
 ustr = "1"
-uuid = { version = "=1.11", optional = true }
+uuid = { version = "1.18" }
 wasm-bindgen = { version = "0.2.100", optional = true }
+notebook-types = { version = "0.1.0", path = "../notebook-types" }
 
 [dev-dependencies]
+clap = { version = "4.5.47", features = ["derive"] }
+notify = "8.2.0"
+notify-debouncer-full = "0.6.0"
 expect-test = "1.5"
-textplots = "0.8.6"
+textplots = "0.8.7"
+similar = "2.7.0"
+serde_json = "1.0.145"
+
+[[example]]
+name = "check"

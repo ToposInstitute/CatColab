@@ -1,27 +1,26 @@
-/*! Virtual double graphs.
+//! Virtual double graphs.
+//!
+//! Analogous to how a graph is the combinatorial data that underlies a category, a
+//! virtual double graph* (nonstandard term) is the combinatorial data that
+//! underlies a virtual double category.
+//!
+//! In Leinster's terminology, a virtual double graph is called an *fc-graph*
+//! ([Leinster 2004](crate::refs::HigherOperads), Section 5.1). A virtual double
+//! graph is similar to a *double graph*, or two-dimensional semi-cubical set,
+//! except that the top boundary is a directed path of proedges rather than a single
+//! proedge.
 
-Analogous to how a graph is the combinatorial data that underlies a category, a
-*virtual double graph* (nonstandard term) is the combinatorial data that
-underlies a virtual double category.
-
-In Leinster's terminology, a virtual double graph is called an *fc-graph*
-([Leinster 2004](crate::refs::HigherOperads), Section 5.1). A virtual double
-graph is similar to a *double graph*, or two-dimensional semi-cubical set,
-except that the top boundary is a directed path of proedges rather than a single
-proedge.
- */
-
-use derive_more::derive::From;
+use derive_more::From;
 use ref_cast::RefCast;
+use thiserror::Error;
 
 use crate::one::{Graph, path::Path};
 
-/** A virtual double graph, the data underlying a virtual double category.
-
-Following our nomenclature for double categories, we say that an edge in a
-double graph has a *domain* and *codomain*, whereas a proedge has a *source* and
-a *target*. A square has all four of those.
-*/
+/// A virtual double graph, the data underlying a virtual double category.
+///
+/// Following our nomenclature for double categories, we say that an edge in a
+/// double graph has a *domain* and *codomain*, whereas a proedge has a *source* and
+/// a *target*. A square has all four of those.
 pub trait VDblGraph {
     /// Type of vertices.
     type V: Eq + Clone;
@@ -71,19 +70,17 @@ pub trait VDblGraph {
     /// Gets the target of a square, an edge.
     fn square_tgt(&self, sq: &Self::Sq) -> Self::E;
 
-    /** Gets the arity of a square.
-
-    The default implementation returns the length of the square's domain.
-     */
+    /// Gets the arity of a square.
+    ///
+    /// The default implementation returns the length of the square's domain.
     fn arity(&self, sq: &Self::Sq) -> usize {
         self.square_dom(sq).len()
     }
 }
 
-/** The underlying graph of vertices and edges in a virtual double graph.
-
-Compare with [`ProedgeGraph`].
- */
+/// The underlying graph of vertices and edges in a virtual double graph.
+///
+/// Compare with [`ProedgeGraph`].
 #[derive(From, RefCast)]
 #[repr(transparent)]
 pub struct EdgeGraph<VDG: VDblGraph>(VDG);
@@ -106,10 +103,9 @@ impl<VDG: VDblGraph> Graph for EdgeGraph<VDG> {
     }
 }
 
-/** The underlying graph of vertices and pro-edges in a virtual double graph.
-
-Compare with [`EdgeGraph`].
- */
+/// The underlying graph of vertices and pro-edges in a virtual double graph.
+///
+/// Compare with [`EdgeGraph`].
 #[derive(From, RefCast)]
 #[repr(transparent)]
 pub struct ProedgeGraph<VDG: VDblGraph>(VDG);
@@ -130,4 +126,44 @@ impl<VDG: VDblGraph> Graph for ProedgeGraph<VDG> {
     fn tgt(&self, e: &Self::E) -> Self::V {
         self.0.tgt(e)
     }
+}
+
+/// An invalid assignment in a virtual double graph.
+#[derive(Debug, Error)]
+pub enum InvalidVDblGraph<E, ProE, Sq> {
+    /// Edge with an invalid domain.
+    #[error("Domain of edge `{0}` is not a vertex in the double graph")]
+    Dom(E),
+
+    /// Edge with an invalid codomain.
+    #[error("Codomain of edge `{0}` is not a vertex in the double graph")]
+    Cod(E),
+
+    /// Proedge with an invalid source.
+    #[error("Source of proedge `{0}` is not a vertex in the double graph")]
+    Src(ProE),
+
+    /// Proedge with an invalid target.
+    #[error("Target of proedge `{0}` is not a vertex in the double graph")]
+    Tgt(ProE),
+
+    /// Square with an invalid domain.
+    #[error("Domain of square `{0}` is not a proedge in the double graph")]
+    SquareDom(Sq),
+
+    /// Square with an invalid codomain.
+    #[error("Codomain of square `{0}` is not a proedge in the double graph")]
+    SquareCod(Sq),
+
+    /// Square with an invalid source.
+    #[error("Source of square `{0}` is not an edge in the double graph")]
+    SquareSrc(Sq),
+
+    /// Square with an invalid target.
+    #[error("Target of cell `{0}` is not an edge in the double graph")]
+    SquareTgt(Sq),
+
+    /// Square with incompatible sides.
+    #[error("Square `{0}` has sides with incompatible endpoints")]
+    NotSquare(Sq),
 }

@@ -1,11 +1,9 @@
-import { createSignal, useContext } from "solid-js";
-import invariant from "tiny-invariant";
+import { createSignal } from "solid-js";
 
 import { NameInput } from "../components";
 import { ObInput } from "../model/object_input";
 import type { CellActions } from "../notebook";
-import { focusInputWhen } from "../util/focus";
-import { LiveDiagramContext } from "./context";
+import type { Theory } from "../theory";
 import type { DiagramObjectDecl } from "./types";
 
 import "./object_cell_editor.css";
@@ -17,19 +15,13 @@ export function DiagramObjectCellEditor(props: {
     modifyDecl: (f: (decl: DiagramObjectDecl) => void) => void;
     isActive: boolean;
     actions: CellActions;
+    theory: Theory;
 }) {
-    const [nameRef, setNameRef] = createSignal<HTMLInputElement>();
-    let obRef!: HTMLInputElement;
-    focusInputWhen(nameRef, () => props.isActive);
-
-    const liveDiagram = useContext(LiveDiagramContext);
-    invariant(liveDiagram, "Live diagram should be provided as context");
-    const theory = () => liveDiagram().liveModel.theory();
+    const [activeInput, setActiveInput] = createSignal<DiagramObjectCellInput>("name");
 
     return (
         <div class="formal-judgment diagram-object-decl">
             <NameInput
-                ref={setNameRef}
                 name={props.decl.name}
                 setName={(name) => {
                     props.modifyDecl((decl) => {
@@ -41,12 +33,15 @@ export function DiagramObjectCellEditor(props: {
                 deleteForward={props.actions.deleteForward}
                 exitUp={props.actions.activateAbove}
                 exitDown={props.actions.activateBelow}
-                exitRight={() => obRef.focus()}
-                onFocus={props.actions.hasFocused}
+                exitRight={() => setActiveInput("overOb")}
+                isActive={props.isActive && activeInput() === "name"}
+                hasFocused={() => {
+                    setActiveInput("name");
+                    props.actions.hasFocused?.();
+                }}
             />
             <span class="is-a" />
             <ObInput
-                ref={obRef}
                 ob={props.decl.over}
                 setOb={(ob) => {
                     props.modifyDecl((decl) => {
@@ -54,12 +49,18 @@ export function DiagramObjectCellEditor(props: {
                     });
                 }}
                 obType={props.decl.obType}
-                placeholder={theory().modelObTypeMeta(props.decl.obType)?.name}
+                placeholder={props.theory.modelObTypeMeta(props.decl.obType)?.name}
                 exitUp={props.actions.activateAbove}
                 exitDown={props.actions.activateBelow}
-                exitLeft={() => nameRef()?.focus()}
-                onFocus={props.actions.hasFocused}
+                exitLeft={() => setActiveInput("name")}
+                isActive={props.isActive && activeInput() === "overOb"}
+                hasFocused={() => {
+                    setActiveInput("overOb");
+                    props.actions.hasFocused?.();
+                }}
             />
         </div>
     );
 }
+
+type DiagramObjectCellInput = "name" | "overOb";

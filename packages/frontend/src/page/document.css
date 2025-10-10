@@ -1,0 +1,19 @@
+.document-head {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+
+    & .title {
+        font-size: var(--h1-font-size);
+        flex: 1;
+    }
+
+    & .info {
+        font-size: var(--h4-font-size);
+    }
+
+    & .lucide {
+        color: var(--link-color);
+    }
+}

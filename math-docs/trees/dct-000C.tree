@@ -1,0 +1,31 @@
+\title{Fibrations}
+\taxon{doctrine}
+\import{macros}
+
+\p{By a \define{fibration} we mean a \nlab{Grothendieck fibration}. We define a
+double theory, using [tabulators](dbl-0002) and [conjoints](dct-0009), whose
+models are \em{cloven} fibrations.}
+
+\transclude{thy-000C}
+
+\subtree{
+  \title{Models of theory of fibrations}
+  \taxon{theorem}
+
+  \p{A model of the [theory of fibrations](thy-000C) consists of a pair of
+categories \cat{B} and \cat{E} and a cloven fibration #{P: \cat{E} \to \cat{B}}
+with cleavage given in the form of a functor #{R: \cat{B} \downarrow P \to
+\cat{E}}.}
+
+  \proof{\em{(Sketch)} As shown on the
+  [nLab](https://ncatlab.org/nlab/show/Grothendieck+fibration#in_terms_of_adjoints),
+  a cloven fibration is equivalent to a functor #{P: \cat{E} \to \cat{B}} such
+  that the canonical functor
+
+  ##{I: \cat{E} \to \cat{B} \downarrow P, \qquad e \mapsto (P(e), e, 1_{P(e)})}
+
+  has a chosen right adjoint #{R: \cat{B} \downarrow P \to \cat{E}} in the
+  strict slice 2-category #{\Cat / \cat{B}}. The theory is an encoding in formal
+  category theory of this characterization.}
+
+}

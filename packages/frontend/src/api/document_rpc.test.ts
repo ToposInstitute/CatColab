@@ -57,8 +57,8 @@ describe("RPC for Automerge documents", async () => {
     if (!isValidDocumentId(refDoc.docId)) {
         return;
     }
-    const docHandle = repo.find(refDoc.docId) as DocHandle<typeof content>;
-    const doc = await docHandle.doc();
+    const docHandle = (await repo.find(refDoc.docId)) as DocHandle<typeof content>;
+    const doc = docHandle.doc();
 
     test.sequential("should get the original document data", () => {
         assert.deepStrictEqual(doc, content);

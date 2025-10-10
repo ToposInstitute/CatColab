@@ -1,0 +1,40 @@
+import { A } from "@solidjs/router";
+import { Warning } from "../../components/alert";
+import { HelpAnalysisById } from "../logic_help_detail"
+
+## Description
+
+The (unary) **discrete exterior calculus** (DEC) is an implementation of the unary part of the *discrete exterior calculus*, an approach to discrete differential geometry due initially to Anil Hirani.
+
+The purpose of the DEC logic is to specify **form types** as well as **operators** between them, and then creating an instance of such a model corresponds to writing down forms (of a given form type) and equations between them, given by either applying the given operators or applying scalar multiplication.
+
+The Topos Institute and collaborators have a substantial DEC library called [Decapodes](https://algebraicjulia.github.io/Decapodes.jl/dev/) implemented in the AlgebraicJulia project.
+The main purpose of the DEC logic in CatColab is to permit the user to build a PDE system via a structure editor which can then be solved in Decapodes, with the result animated right inside of CatColab.
+
+<Warning>
+This workflow has been completed in some proofs of concept, but the need to run a Julia kernel means it's not particularly convenient for non-Julia users at this time.
+Instructions on the process to do so for those who like are available [on GitHub](https://github.com/ToposInstitute/CatColab/tree/main/packages/algjulia-service).
+</Warning>
+
+
+### Examples
+
+- [An inviscid Navier-Stokes equation on the sphere](https://catcolab.org/diagram/0194d39e-c602-7a90-b7af-d51c4fb0cc11), as an instance of the [DEC for vorticity](https://catcolab.org/model/0194d398-6e0a-7e41-a547-86e40973e48d)
+
+
+### Further reading
+
+- Anil N. Hirani, "Discrete Exterior Calculus", PhD thesis (2003). [[PDF]](http://www.cs.jhu.edu/~misha/Fall09/Hirani03.pdf)
+- The [Decapodes documentation](https://algebraicjulia.github.io/Decapodes.jl/dev/), for many worked examples directly using AlgebraicJulia syntax
+
+
+## Instances and analyses
+
+### Instances
+
+An instance consists of an explicit set of forms and equations between them, where the possible types of the forms and possible operators used in the equations are precisely those specified by the model.
+
+
+### Analyses
+
+<HelpAnalysisById theory={props.theory} analysisId="diagram"/>

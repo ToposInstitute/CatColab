@@ -5,12 +5,16 @@ import { useAuth, useFirebaseApp } from "solid-firebase";
 import { type JSX, Show, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { useApi } from "../api";
+import { duplicateDoc, useApi } from "../api";
 import { IconButton } from "../components";
 import { createModel } from "../model/document";
-import { TheoryLibraryContext } from "../stdlib";
+import { TheoryLibraryContext, stdTheories } from "../stdlib";
+import { copyToClipboard, downloadJson } from "../util/json_export";
 import { PageActionsContext } from "./context";
 
+import CopyToClipboard from "lucide-solid/icons/clipboard-copy";
+import Copy from "lucide-solid/icons/copy";
+import Export from "lucide-solid/icons/download";
 import FilePlus from "lucide-solid/icons/file-plus";
 import Files from "lucide-solid/icons/files";
 import Info from "lucide-solid/icons/info";
@@ -21,6 +25,8 @@ import SettingsIcon from "lucide-solid/icons/settings";
 import UploadIcon from "lucide-solid/icons/upload";
 
 import "./menubar.css";
+import type { RefStub } from "catcolab-api";
+import { getLiveDocumentFromStub } from "./utils";
 
 /** Menu triggered from a hamburger button. */
 export function HamburgerMenu(props: {
@@ -95,7 +101,7 @@ export function NewModelItem() {
     invariant(theories, "Theory library must be provided as context");
 
     const onNewModel = async () => {
-        const newRef = await createModel(api, theories.getDefault().id);
+        const newRef = await createModel(api, theories.defaultTheoryMetadata().id);
         navigate(`/model/${newRef}`);
     };
 
@@ -103,6 +109,70 @@ export function NewModelItem() {
         <MenuItem onSelect={onNewModel}>
             <FilePlus />
             <MenuItemLabel>{"New model"}</MenuItemLabel>
+        </MenuItem>
+    );
+}
+
+/** Menu item to duplicate a document. */
+export function DuplicateMenuItem(props: {
+    stub: RefStub;
+}) {
+    const api = useApi();
+    const navigate = useNavigate();
+
+    const onDuplicate = async () => {
+        const liveDoc = await getLiveDocumentFromStub(props.stub, api, stdTheories);
+        const newRef = await duplicateDoc(api, liveDoc.liveDoc.doc);
+        navigate(`/${liveDoc.type}/${newRef}`);
+    };
+
+    const menuLabel = () => `Duplicate ${props.stub.typeName}`;
+
+    return (
+        <MenuItem onSelect={onDuplicate}>
+            <Copy />
+            <MenuItemLabel>{menuLabel()}</MenuItemLabel>
+        </MenuItem>
+    );
+}
+
+/** Menu item to export document as JSON. */
+export function ExportJSONMenuItem(props: {
+    stub: RefStub;
+}) {
+    const api = useApi();
+
+    const onExportJSON = async () => {
+        const liveDoc = await getLiveDocumentFromStub(props.stub, api, stdTheories);
+        downloadJson(JSON.stringify(liveDoc.liveDoc.doc), `${liveDoc.liveDoc.doc.name}.json`);
+    };
+
+    const menuLabel = () => `Export ${props.stub.typeName}`;
+
+    return (
+        <MenuItem onSelect={onExportJSON}>
+            <Export />
+            <MenuItemLabel>{menuLabel()}</MenuItemLabel>
+        </MenuItem>
+    );
+}
+
+/** Menu item to copy document to clipboard in JSON format. */
+export function CopyJSONMenuItem(props: {
+    stub: RefStub;
+}) {
+    const api = useApi();
+    const onCopyJSON = async () => {
+        const liveDoc = await getLiveDocumentFromStub(props.stub, api, stdTheories);
+        copyToClipboard(JSON.stringify(liveDoc.liveDoc.doc));
+    };
+
+    const menuLabel = () => `Export ${props.stub.typeName}`;
+
+    return (
+        <MenuItem onSelect={onCopyJSON}>
+            <CopyToClipboard />
+            <MenuItemLabel>{menuLabel()}</MenuItemLabel>
         </MenuItem>
     );
 }

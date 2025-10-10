@@ -1,4 +1,3 @@
-use nonempty::NonEmpty;
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
@@ -7,5 +6,5 @@ use tsify::Tsify;
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum Path<V, E> {
     Id(V),
-    Seq(NonEmpty<E>),
+    Seq(Vec<E>),
 }

@@ -1,52 +1,47 @@
-/*! Sets, finite and infinite.
+//! Sets, finite and infinite.
+//!
+//! This module provides interfaces and simple wrapper types to enable sets to be
+//! treated in a generic way.
 
-This module provides interfaces and simple wrapper types to enable sets to be
-treated in a generic way.
- */
-
-use std::collections::HashSet;
-use std::hash::{BuildHasher, BuildHasherDefault, Hash, RandomState};
+use std::hash::Hash;
 use std::ops::Range;
 
 use derivative::Derivative;
 use derive_more::{From, Into};
+use indexmap::IndexSet;
 use ref_cast::RefCast;
-use ustr::{IdentityHasher, Ustr};
+use ustr::Ustr;
 
-/** A set.
-
-The interface is minimal. A set has an element type ([`Elem`](Self::Elem)) and
-can check whether values of that type belongs to the set. Sets are not assumed
-to be finite.
- */
+/// A set.
+///
+/// The interface is minimal. A set has an element type ([`Elem`](Self::Elem)) and
+/// can check whether values of that type belongs to the set. Sets are not assumed
+/// to be finite.
 pub trait Set {
-    /** Type of elements of the set.
-
-    Elements can be compared for equality, as required by ordinary mathematics.
-    Elements can also be cloned and, in practice, we tend to assume that they
-    can be *cheaply* cloned.
-    */
+    /// Type of elements of the set.
+    ///
+    /// Elements can be compared for equality, as required by ordinary mathematics.
+    /// Elements can also be cloned and, in practice, we tend to assume that they
+    /// can be *cheaply* cloned.
     type Elem: Eq + Clone;
 
     /// Does the set contain the element `x`?
     fn contains(&self, x: &Self::Elem) -> bool;
 }
 
-/** A finite set.
-
-In addition to checking for element containment, finite sets know their size and
-are iterable. The elements of a finite set are assumed to be cheaply cloneable
-values, such as integers or interned strings. Thus, iteration of elements is by
-value, not by reference.
- */
+/// A finite set.
+///
+/// In addition to checking for element containment, finite sets know their size and
+/// are iterable. The elements of a finite set are assumed to be cheaply cloneable
+/// values, such as integers or interned strings. Thus, iteration of elements is by
+/// value, not by reference.
 pub trait FinSet: Set {
-    /** Iterates over elements of the finite set.
-
-    Though finite sets have a definite size, the iterator is not required to be
-    an [`ExactSizeIterator`] because they are not stable under even predictable
-    operations like chaining. Instead, retrieve the size of the set through the
-    separate method [`len`](FinSet::len).
-    */
+    /// Iterates over elements of the finite set.
+    ///
+    /// Though finite sets have a definite size, the iterator is not required to be
+    /// an [`ExactSizeIterator`] because they are not stable under even predictable
+    /// operations like chaining. Instead, retrieve the size of the set through the
+    /// separate method [`len`](FinSet::len).
     fn iter(&self) -> impl Iterator<Item = Self::Elem>;
 
     /// The size of the finite set.
@@ -60,11 +55,10 @@ pub trait FinSet: Set {
     }
 }
 
-/** A skeletal finite set.
-
-The elements of the skeletal finite set of size `n` are the numbers `0..n`
-(excluding `n`).
- */
+/// A skeletal finite set.
+///
+/// The elements of the skeletal finite set of size `n` are the numbers `0..n`
+/// (excluding `n`).
 #[derive(Clone, Copy, Debug, From, Into, PartialEq, Eq, RefCast)]
 #[repr(transparent)]
 pub struct SkelFinSet(usize);
@@ -118,19 +112,22 @@ impl IntoIterator for SkelFinSet {
 }
 
 /// A finite set backed by a hash set.
-#[derive(Clone, Debug, From, Into, Derivative)]
-#[derivative(Default(bound = "S: Default"))]
-#[derivative(PartialEq(bound = "T: Eq + Hash, S: BuildHasher"))]
-#[derivative(Eq(bound = "T: Eq + Hash, S: BuildHasher"))]
-pub struct HashFinSet<T, S = RandomState>(HashSet<T, S>);
+///
+/// A stable order is guaranteed when iterating over the elements of the set.
+/// Currently, this achieved by using an [`IndexSet`] rather than a `HashSet` for
+/// the underlying data structure.
+#[derive(Clone, Debug, Derivative)]
+#[derivative(Default(bound = ""))]
+#[derivative(PartialEq(bound = "T: Eq + Hash"))]
+#[derivative(Eq(bound = "T: Eq + Hash"))]
+pub struct HashFinSet<T>(IndexSet<T>);
 
 /// A finite set with elements of type `Ustr`.
-pub type UstrFinSet = HashFinSet<Ustr, BuildHasherDefault<IdentityHasher>>;
+pub type UstrFinSet = HashFinSet<Ustr>;
 
-impl<T, S> HashFinSet<T, S>
+impl<T> HashFinSet<T>
 where
     T: Eq + Hash,
-    S: BuildHasher,
 {
     /// Adds an element to the set.
     pub fn insert(&mut self, x: T) -> bool {
@@ -138,10 +135,9 @@ where
     }
 }
 
-impl<T, S> Extend<T> for HashFinSet<T, S>
+impl<T> Extend<T> for HashFinSet<T>
 where
     T: Eq + Hash,
-    S: BuildHasher,
 {
     fn extend<Iter>(&mut self, iter: Iter)
     where
@@ -151,10 +147,9 @@ where
     }
 }
 
-impl<T, S> Set for HashFinSet<T, S>
+impl<T> Set for HashFinSet<T>
 where
     T: Eq + Clone + Hash,
-    S: BuildHasher,
 {
     type Elem = T;
 
@@ -163,10 +158,9 @@ where
     }
 }
 
-impl<T, S> FinSet for HashFinSet<T, S>
+impl<T> FinSet for HashFinSet<T>
 where
     T: Eq + Hash + Clone,
-    S: BuildHasher,
 {
     fn iter(&self) -> impl Iterator<Item = T> {
         self.0.iter().cloned()
@@ -179,23 +173,21 @@ where
     }
 }
 
-impl<T, S> IntoIterator for HashFinSet<T, S>
+impl<T> IntoIterator for HashFinSet<T>
 where
     T: Eq + Hash,
-    S: BuildHasher,
 {
     type Item = T;
-    type IntoIter = std::collections::hash_set::IntoIter<T>;
+    type IntoIter = indexmap::set::IntoIter<T>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
     }
 }
 
-/** A skeletal finite set with a data attribute.
-
-The internal representation is simply a vector.
-*/
+/// A skeletal finite set with a data attribute.
+///
+/// The internal representation is simply a vector.
 #[derive(Clone, Debug, From, Derivative)]
 #[derivative(Default(bound = ""))]
 #[derivative(PartialEq(bound = "T: PartialEq"))]
@@ -281,10 +273,7 @@ mod tests {
         assert!(s.contains(&3));
         assert!(s.contains(&7));
         assert!(!s.contains(&2));
-
-        let s = HashFinSet::from(HashSet::from([3, 5, 7]));
-        let sum: i32 = s.iter().sum();
-        assert_eq!(sum, 15);
+        assert_eq!(s.iter().sum::<i32>(), 15);
         assert_eq!(s.len(), 3);
     }
 

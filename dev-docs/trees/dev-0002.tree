@@ -1,8 +1,0 @@
-\title{Frontend technology survey}
-
-\p{A survey of relevant frontend technology for building a structure editor.}
-
-\transclude{dev-0003}
-\transclude{dev-0004}
-\transclude{dev-0006}
-\transclude{dev-0007}
