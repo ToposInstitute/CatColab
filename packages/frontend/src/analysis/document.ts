@@ -11,7 +11,7 @@ import { type Api, type LiveDoc, createDoc, getLiveDoc, getLiveDocFromDocHandle 
 import { type LiveDiagramDocument, getLiveDiagram, getLiveDiagramFromRepo } from "../diagram";
 import { type LiveModelDocument, getLiveModel, getLiveModelFromRepo } from "../model";
 import { newNotebook } from "../notebook";
-import type { TheoryLibrary } from "../stdlib";
+import type { TheoryLibrary } from "../theory";
 
 /** A document defining an analysis. */
 export type AnalysisDocument = Document & { type: "analysis" };

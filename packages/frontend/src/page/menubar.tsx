@@ -9,7 +9,7 @@ import type { Document } from "catlog-wasm";
 import { duplicateDoc, useApi } from "../api";
 import { IconButton } from "../components";
 import { createModel } from "../model/document";
-import { TheoryLibraryContext } from "../stdlib";
+import { TheoryLibraryContext } from "../theory";
 import { copyToClipboard, downloadJson } from "../util/json_export";
 import { PageActionsContext } from "./context";
 
