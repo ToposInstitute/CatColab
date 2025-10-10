@@ -4,7 +4,7 @@ import { useAuth, useFirebaseApp } from "solid-firebase";
 import { Match, Show, Switch, createResource, createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import type { ModelJudgment } from "catlog-wasm";
+import type { InstantiatedModel, ModelJudgment, MorDecl, ObDecl } from "catlog-wasm";
 import { useApi } from "../api";
 import { InlineInput } from "../components";
 import {
@@ -17,19 +17,19 @@ import {
 } from "../notebook";
 import { DocumentBreadcrumbs, DocumentLoadingScreen, Toolbar } from "../page";
 import { WelcomeOverlay } from "../page/welcome_overlay";
-import { TheoryLibraryContext, stdTheories } from "../stdlib";
-import type { ModelTypeMeta } from "../theory";
+import { stdTheories } from "../stdlib";
+import { type ModelTypeMeta, TheoryLibraryContext } from "../theory";
 import { PermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
 import { type LiveModelDocument, getLiveModel, migrateModelDocument } from "./document";
+import { InstantiationCellEditor } from "./instantiation_cell_editor";
 import { ModelMenu } from "./model_menu";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
 import { TheorySelectorDialog } from "./theory_selector";
 import {
-    type MorphismDecl,
-    type ObjectDecl,
     duplicateModelJudgment,
+    newInstantiatedModel,
     newMorphismDecl,
     newObjectDecl,
 } from "./types";
@@ -119,8 +119,17 @@ export function ModelNotebookEditor(props: {
 }) {
     const liveDoc = () => props.liveModel.liveDoc;
 
-    const cellConstructors = () =>
-        (props.liveModel.theory()?.modelTypes ?? []).map(modelCellConstructor);
+    const cellConstructors = (): CellConstructor<ModelJudgment>[] => [
+        {
+            name: "Instantiate",
+            description: "Instantiate an existing model into this one",
+            shortcut: [cellShortcutModifier, "I"],
+            construct() {
+                return newFormalCell(newInstantiatedModel());
+            },
+        },
+        ...(props.liveModel.theory()?.modelTypes ?? []).map(modelCellConstructor),
+    ];
 
     const firebaseApp = (() => {
         try {
@@ -163,10 +172,8 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
             <Match when={props.content.tag === "object" && liveModel().theory()}>
                 {(theory) => (
                     <ObjectCellEditor
-                        object={props.content as ObjectDecl}
-                        modifyObject={(f) =>
-                            props.changeContent((content) => f(content as ObjectDecl))
-                        }
+                        object={props.content as ObDecl}
+                        modifyObject={(f) => props.changeContent((content) => f(content as ObDecl))}
                         isActive={props.isActive}
                         actions={props.actions}
                         theory={theory()}
@@ -176,9 +183,9 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
             <Match when={props.content.tag === "morphism" && liveModel().theory()}>
                 {(theory) => (
                     <MorphismCellEditor
-                        morphism={props.content as MorphismDecl}
+                        morphism={props.content as MorDecl}
                         modifyMorphism={(f) =>
-                            props.changeContent((content) => f(content as MorphismDecl))
+                            props.changeContent((content) => f(content as MorDecl))
                         }
                         isActive={props.isActive}
                         actions={props.actions}
@@ -186,20 +193,35 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
                     />
                 )}
             </Match>
+            <Match when={props.content.tag === "instantiation"}>
+                <InstantiationCellEditor
+                    instantiation={props.content as InstantiatedModel}
+                    modifyInstantiation={(f) =>
+                        props.changeContent((content) => f(content as InstantiatedModel))
+                    }
+                    isActive={props.isActive}
+                    actions={props.actions}
+                />
+            </Match>
         </Switch>
     );
 }
 
 function modelCellConstructor(meta: ModelTypeMeta): CellConstructor<ModelJudgment> {
-    const { name, description, shortcut } = meta;
+    const { tag, name, description, shortcut } = meta;
     return {
         name,
         description,
         shortcut: shortcut && [cellShortcutModifier, ...shortcut],
         construct() {
-            return meta.tag === "ObType"
-                ? newFormalCell(newObjectDecl(meta.obType))
-                : newFormalCell(newMorphismDecl(meta.morType));
+            switch (tag) {
+                case "ObType":
+                    return newFormalCell(newObjectDecl(meta.obType));
+                case "MorType":
+                    return newFormalCell(newMorphismDecl(meta.morType));
+                default:
+                    throw tag satisfies never;
+            }
         },
     };
 }
@@ -209,10 +231,14 @@ function judgmentLabel(judgment: ModelJudgment): string | undefined {
     invariant(liveModel);
     const theory = liveModel().theory();
 
-    if (judgment.tag === "object") {
-        return theory?.modelObTypeMeta(judgment.obType)?.name;
-    }
-    if (judgment.tag === "morphism") {
-        return theory?.modelMorTypeMeta(judgment.morType)?.name;
+    switch (judgment.tag) {
+        case "object":
+            return theory?.modelObTypeMeta(judgment.obType)?.name;
+        case "morphism":
+            return theory?.modelMorTypeMeta(judgment.morType)?.name;
+        case "instantiation":
+            return theory?.name;
+        default:
+            judgment satisfies never;
     }
 }

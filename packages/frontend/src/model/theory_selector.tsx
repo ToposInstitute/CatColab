@@ -4,7 +4,7 @@ import { For, createMemo, createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { TheoryHelpButton } from "../page/toolbar";
-import { TheoryLibraryContext, type TheoryMeta } from "../stdlib";
+import { TheoryLibraryContext, type TheoryMeta } from "../theory";
 
 import "./theory_selector.css";
 

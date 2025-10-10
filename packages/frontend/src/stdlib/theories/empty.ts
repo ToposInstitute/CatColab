@@ -1,7 +1,5 @@
 import { ThEmpty } from "catlog-wasm";
-
-import { Theory } from "../../theory";
-import type { TheoryMeta } from "../types";
+import { Theory, type TheoryMeta } from "../../theory";
 
 export default function createEmptyTheory(theoryMeta: TheoryMeta): Theory {
     const thEmpty = new ThEmpty();

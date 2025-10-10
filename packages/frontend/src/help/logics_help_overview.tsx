@@ -2,7 +2,7 @@ import { A } from "@solidjs/router";
 import { For, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { TheoryLibraryContext } from "../stdlib";
+import { TheoryLibraryContext } from "../theory";
 import LogicsHelpOverviewContent from "./logics_help_overview.mdx";
 
 /** Help page for all theories in the standard library. */

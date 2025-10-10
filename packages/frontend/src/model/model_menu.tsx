@@ -3,7 +3,7 @@ import { Show } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { createAnalysis } from "../analysis/document";
-import { makeUnversionedRef, useApi } from "../api";
+import { useApi } from "../api";
 import { createDiagram } from "../diagram/document";
 import {
     AppMenu,
@@ -34,7 +34,7 @@ export function ModelMenu(props: {
         const modelRefId = liveDoc().docRef?.refId;
         invariant(modelRefId, "To create diagram, parent model should have a ref ID");
 
-        const newRef = await createDiagram(api, makeUnversionedRef(api, modelRefId));
+        const newRef = await createDiagram(api, api.makeUnversionedRef(modelRefId));
         navigate(`/diagram/${newRef}`);
     };
 
@@ -42,7 +42,7 @@ export function ModelMenu(props: {
         const refId = liveDoc().docRef?.refId;
         invariant(refId, "To create analysis, parent model should have a ref ID");
 
-        const newRef = await createAnalysis(api, "model", makeUnversionedRef(api, refId));
+        const newRef = await createAnalysis(api, "model", api.makeUnversionedRef(refId));
         navigate(`/analysis/${newRef}`);
     };
 

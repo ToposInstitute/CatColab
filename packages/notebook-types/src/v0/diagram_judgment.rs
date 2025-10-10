@@ -9,7 +9,7 @@ use super::theory::{MorType, ObType};
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
 pub struct DiagramObDecl {
-    /// Human-readable name of object.
+    /// Human-readable label for object.
     pub name: String,
 
     /// Globally unique identifier of object.
@@ -27,7 +27,7 @@ pub struct DiagramObDecl {
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
 pub struct DiagramMorDecl {
-    /// Human-readable name of morphism.
+    /// Human-readable label for morphism.
     pub name: String,
 
     /// Globally unique identifier of morphism.
@@ -47,13 +47,16 @@ pub struct DiagramMorDecl {
     pub cod: Option<Ob>,
 }
 
-/// A judgment in the definition of a diagram in a model.
+/// A judgment defining part of a diagram in a model.
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
 #[serde(tag = "tag")]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum DiagramJudgment {
+    /// Declares a generating object in the diagram.
     #[serde(rename = "object")]
     Object(DiagramObDecl),
+
+    /// Declares a generating morphism in the diagram.
     #[serde(rename = "morphism")]
     Morphism(DiagramMorDecl),
 }

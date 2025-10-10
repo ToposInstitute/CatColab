@@ -25,8 +25,7 @@ import {
     newFormalCell,
 } from "../notebook";
 import { DocumentBreadcrumbs, DocumentLoadingScreen, Toolbar } from "../page";
-import { TheoryLibraryContext } from "../stdlib";
-import type { AnalysisMeta } from "../theory";
+import { type AnalysisMeta, TheoryLibraryContext } from "../theory";
 import { assertExhaustive } from "../util/assert_exhaustive";
 import { LiveAnalysisContext } from "./context";
 import {
