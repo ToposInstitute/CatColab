@@ -6,20 +6,11 @@
 
     & .title {
         font-size: var(--h1-font-size);
+        flex: 1;
     }
 
     & .info {
         font-size: var(--h4-font-size);
-        flex: 1;
-        text-align: right;
-        display: flex;
-        display: flex;
-        justify-content: flex-end;
-    }
-
-    & .icon-button {
-        flex: 0;
-        margin-left: 0.5em;
     }
 
     & .lucide {

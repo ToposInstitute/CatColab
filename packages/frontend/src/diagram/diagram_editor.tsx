@@ -24,8 +24,6 @@ import {
     newDiagramObjectDecl,
 } from "./types";
 
-import "./diagram_editor.css";
-
 /** Notebook editor for a diagram in a model.
  */
 export function DiagramNotebookEditor(props: {

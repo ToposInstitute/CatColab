@@ -1,14 +1,6 @@
-import { A, useNavigate, useParams } from "@solidjs/router";
+import { A } from "@solidjs/router";
 
-import { NotebookUtils } from "../notebook";
-import { stdTheories } from "../stdlib";
-import {
-    type LiveAnalysisDocument,
-    LiveDiagramDocument,
-    LiveModelDocument,
-    migrateModelDocument,
-} from "./document";
-import { TheorySelectorDialog } from "./theory_selector";
+import type { LiveAnalysisDocument } from "./document";
 
 /** Widget in the top right corner of a diagram document pane.
  */

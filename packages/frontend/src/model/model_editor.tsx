@@ -1,6 +1,6 @@
 import { getAuth } from "firebase/auth";
 import { useAuth, useFirebaseApp } from "solid-firebase";
-import { Match, Show, Switch, createResource, createSignal, useContext } from "solid-js";
+import { Match, Switch, createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { ModelJudgment } from "catlog-wasm";
@@ -24,8 +24,6 @@ import {
     newMorphismDecl,
     newObjectDecl,
 } from "./types";
-
-import "./model_editor.css";
 
 /** Notebook editor for a model of a double theory.
  */

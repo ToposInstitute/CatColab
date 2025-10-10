@@ -1,6 +1,6 @@
-import { A, useNavigate, useParams } from "@solidjs/router";
+import { A } from "@solidjs/router";
 
-import { type LiveDiagramDocument, LiveModelDocument, migrateModelDocument } from "./document";
+import type { LiveDiagramDocument } from "./document";
 
 /** Widget in the top right corner of a diagram document pane.
  */

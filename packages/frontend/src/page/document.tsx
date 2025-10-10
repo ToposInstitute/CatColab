@@ -1,5 +1,5 @@
 import Resizable, { type ContextValue } from "@corvu/resizable";
-import { A, useNavigate, useParams } from "@solidjs/router";
+import { useNavigate, useParams } from "@solidjs/router";
 import ChevronsRight from "lucide-solid/icons/chevrons-right";
 import Maximize2 from "lucide-solid/icons/maximize-2";
 import {
@@ -14,13 +14,16 @@ import {
 import invariant from "tiny-invariant";
 
 import { AnalysisNotebookEditor } from "../analysis/analysis_editor";
-import { Api, useApi } from "../api";
+import { AnalysisWidget } from "../analysis/analysis_widget";
+import { useApi } from "../api";
 import { IconButton, InlineInput, ResizableHandle } from "../components";
 import { DiagramNotebookEditor } from "../diagram/diagram_editor";
+import { DiagramWidget } from "../diagram/diagram_widget";
 import { ModelNotebookEditor } from "../model/model_editor";
+import { ModelWidget } from "../model/model_widget";
 import { DocumentBreadcrumbs, DocumentLoadingScreen, TheoryHelpButton } from "../page";
 import { Layout } from "../page/layout";
-import { TheoryLibrary, TheoryLibraryContext, stdTheories } from "../stdlib";
+import { TheoryLibraryContext, stdTheories } from "../stdlib";
 import { DocumentSidebar } from "./document_sidebar";
 import {
     type AnyLiveDocument,
@@ -30,9 +33,7 @@ import {
 } from "./utils";
 
 import "./document.css";
-import { AnalysisWidget } from "../analysis/analysis_widget";
-import { DiagramWidget } from "../diagram/diagram_widget";
-import { ModelWidget } from "../model/model_widget";
+import { PermissionsButton } from "../user";
 
 export default function Document() {
     const api = useApi();
@@ -154,13 +155,7 @@ function SplitPaneToolbar(props: {
                     <TheoryHelpButton meta={stdTheories.getMetadata(documentTheory().id)} />
                 )}
             </Show>
-            {/*
-        
-            <PermissionsButton
-                permissions={props.liveDocument.liveDoc.permissions}
-                refId={props.liveDocument.refId}
-            />
-   */}
+            <PermissionsButton liveDoc={props.document.liveDoc} />
             <Show when={secondaryPanelSize()}>
                 {(panelSize) => (
                     <div

@@ -5,7 +5,6 @@ import { useAuth, useFirebaseApp } from "solid-firebase";
 import { type JSX, Show, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import type { Document } from "catlog-wasm";
 import { duplicateDoc, useApi } from "../api";
 import { IconButton } from "../components";
 import { createModel } from "../model/document";

@@ -1,12 +1,11 @@
 import { DropdownMenu } from "@kobalte/core/dropdown-menu";
 import { useNavigate } from "@solidjs/router";
-import Copy from "lucide-solid/icons/copy";
 import Ellipsis from "lucide-solid/icons/ellipsis";
 import { Match, Switch } from "solid-js";
 
 import type { RefStub } from "catcolab-api";
 import { createAnalysis } from "../analysis";
-import { Api, duplicateDoc, makeUnversionedRef, useApi } from "../api";
+import { makeUnversionedRef, useApi } from "../api";
 import { IconButton } from "../components";
 import { createDiagram } from "../diagram";
 import {
