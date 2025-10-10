@@ -1,8 +1,9 @@
 import { For, Show, createResource } from "solid-js";
 import invariant from "tiny-invariant";
+import { type LiveDoc, getLiveDoc, useApi } from "../api";
 
 import type { Document } from "catlog-wasm";
-import { type LiveDoc, getLiveDoc, useApi } from "../api";
+
 import { assertExhaustive } from "../util/assert_exhaustive";
 import "./document_breadcrumbs.css";
 
