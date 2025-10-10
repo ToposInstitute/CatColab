@@ -36,7 +36,7 @@ import {
     toggleOrderedList,
     turnSelectionIntoBlockquote,
 } from "./commands";
-import { getLinkAtPos, getLinkFromHouseEvent, linkEditorPlugin } from "./link_editor";
+import { getLinkFromHouseEvent, linkEditorPlugin } from "./link_editor";
 import { type CustomSchema, proseMirrorAutomergeInit } from "./schema";
 import { activeHeading, initPlaceholderPlugin, isMarkActive } from "./utils";
 
