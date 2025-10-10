@@ -147,7 +147,7 @@ function SplitPaneToolbar(props: {
 
     return (
         <>
-            <DocumentBreadcrumbs document={props.document.liveDoc} />
+            <DocumentBreadcrumbs liveDoc={props.document.liveDoc} />
             <span class="filler" />
             <Show when={documentTheory()}>
                 {(documentTheory) => (
