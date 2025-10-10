@@ -3,8 +3,7 @@ import { For, type JSXElement, Show, createResource, lazy, useContext } from "so
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
-import { TheoryLibraryContext } from "../stdlib";
-import type { Theory } from "../theory";
+import { type Theory, TheoryLibraryContext } from "../theory";
 import LogicHelpNotFound from "./logics/logic-help-not-found.mdx";
 
 /** Help page for a theory in the standard library. */

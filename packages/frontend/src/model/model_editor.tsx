@@ -17,8 +17,8 @@ import {
 } from "../notebook";
 import { DocumentBreadcrumbs, DocumentLoadingScreen, Toolbar } from "../page";
 import { WelcomeOverlay } from "../page/welcome_overlay";
-import { TheoryLibraryContext, stdTheories } from "../stdlib";
-import type { ModelTypeMeta } from "../theory";
+import { stdTheories } from "../stdlib";
+import { type ModelTypeMeta, TheoryLibraryContext } from "../theory";
 import { PermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
 import { type LiveModelDocument, getLiveModel, migrateModelDocument } from "./document";

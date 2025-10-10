@@ -1,4 +1,4 @@
-import { Theory } from "../theory";
+import { Theory } from "./theory";
 
 /** Frontend metadata for a double theory.
 

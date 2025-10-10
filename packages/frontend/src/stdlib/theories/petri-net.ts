@@ -1,8 +1,6 @@
 import { ThSymMonoidalCategory } from "catlog-wasm";
-
-import { Theory } from "../../theory";
+import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
-import type { TheoryMeta } from "../types";
 
 export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
     const thSymMonoidalCategory = new ThSymMonoidalCategory();

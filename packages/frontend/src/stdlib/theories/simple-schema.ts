@@ -1,8 +1,6 @@
 import { ThSchema } from "catlog-wasm";
-
-import { Theory } from "../../theory";
+import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
-import type { TheoryMeta } from "../types";
 
 import styles from "../styles.module.css";
 import svgStyles from "../svg_styles.module.css";
