@@ -21,7 +21,7 @@ export function DocumentSidebar(props: {
         <>
             <AppMenu />
             <RelatedDocuments liveDocument={props.liveDocument} />
-            <NewModelItem2 />
+            <NewModelItem />
         </>
     );
 }
@@ -114,20 +114,9 @@ function DocumentsTreeLeaf(props: {
     const currentRefId = () => documentRefId(props.currentLiveDoc);
 
     const handleClick = () => {
-        // if (props.stub.refId === props.currentLiveDoc.refId) {
-        //     navigate(`/${props.stub.typeName}/${props.stub.refId}`);
-        //     return;
-        // }
-
-        // if (props.isDescendantOfActiveDocument) {
         navigate(
             `/${props.currentLiveDoc.type}/${currentRefId()}/${props.stub.typeName}/${props.stub.refId}`,
         );
-
-        // return;
-        // }
-
-        // navigate(`/${props.stub.typeName}/${props.stub.refId}`);
     };
 
     return (
@@ -153,7 +142,8 @@ function DocumentsTreeLeaf(props: {
     );
 }
 
-function NewModelItem2() {
+// Re-implementation from page/menubar.tsx that works outside of a kobalte menu.
+function NewModelItem() {
     const api = useApi();
     const navigate = useNavigate();
 
