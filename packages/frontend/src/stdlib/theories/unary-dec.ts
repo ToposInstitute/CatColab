@@ -76,7 +76,11 @@ export default function createUnaryDECTheory(theoryMeta: TheoryMeta): Theory {
                 name: "Visualization",
                 description: "Visualize the equations as a diagram",
             }),
-            analyses.configureDecapodes({}),
+            analyses.configureDecapodes({
+                id: "decapodes",
+                name: "Simulation",
+                description: "Simulate the PDE using Decapodes",
+            }),
         ],
     });
 }
