@@ -49,7 +49,7 @@ export default function createIndeterminateCausalLoopTheory(theoryMeta: TheoryMe
             },
         ],
         modelAnalyses: [
-            analyses.configureModelGraph({
+            analyses.modelGraph({
                 id: "diagram",
                 name: "Visualization",
                 description: "Visualize the causal loop diagram",

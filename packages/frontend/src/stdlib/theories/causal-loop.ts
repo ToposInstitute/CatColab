@@ -41,13 +41,13 @@ export default function createCausalLoopTheory(theoryMeta: TheoryMeta): Theory {
             },
         ],
         modelAnalyses: [
-            analyses.configureModelGraph({
+            analyses.modelGraph({
                 id: "diagram",
                 name: "Visualization",
                 description: "Visualize the causal loop diagram",
                 help: "visualization",
             }),
-            analyses.configureMotifFindingAnalysis({
+            analyses.motifFinding({
                 id: "negative-loops",
                 name: "Balancing loops",
                 description: "Analyze the diagram for balancing loops",
@@ -56,7 +56,7 @@ export default function createCausalLoopTheory(theoryMeta: TheoryMeta): Theory {
                     return thSignedCategory.negativeLoops(model, options);
                 },
             }),
-            analyses.configureMotifFindingAnalysis({
+            analyses.motifFinding({
                 id: "positive-loops",
                 name: "Reinforcing loops",
                 description: "Analyze the diagram for reinforcing loops",
@@ -65,10 +65,10 @@ export default function createCausalLoopTheory(theoryMeta: TheoryMeta): Theory {
                     return thSignedCategory.positiveLoops(model, options);
                 },
             }),
-            analyses.configureLinearODE({
+            analyses.linearODE({
                 simulate: (model, data) => thSignedCategory.linearODE(model, data),
             }),
-            analyses.configureLotkaVolterra({
+            analyses.lotkaVolterra({
                 simulate: (model, data) => thSignedCategory.lotkaVolterra(model, data),
             }),
         ],

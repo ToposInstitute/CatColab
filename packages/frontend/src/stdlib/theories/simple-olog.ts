@@ -58,7 +58,7 @@ export default function createOlogTheory(theoryMeta: TheoryMeta): Theory {
             },
         ],
         modelAnalyses: [
-            analyses.configureModelGraph({
+            analyses.modelGraph({
                 id: "diagram",
                 name: "Visualization",
                 description: "Visualize the olog as a graph",
@@ -66,7 +66,7 @@ export default function createOlogTheory(theoryMeta: TheoryMeta): Theory {
             }),
         ],
         diagramAnalyses: [
-            analyses.configureDiagramGraph({
+            analyses.diagramGraph({
                 id: "graph",
                 name: "Visualization",
                 description: "Visualize the instance as a graph",

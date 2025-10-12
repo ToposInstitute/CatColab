@@ -40,13 +40,13 @@ export default function createRegulatoryNetworkTheory(theoryMeta: TheoryMeta): T
             },
         ],
         modelAnalyses: [
-            analyses.configureModelGraph({
+            analyses.modelGraph({
                 id: "diagram",
                 name: "Visualization",
                 description: "Visualize the regulatory network",
                 help: "visualization",
             }),
-            analyses.configureMotifFindingAnalysis({
+            analyses.motifFinding({
                 id: "positive-loops",
                 name: "Positive feedback",
                 description: "Analyze the network for positive feedback loops",
@@ -55,7 +55,7 @@ export default function createRegulatoryNetworkTheory(theoryMeta: TheoryMeta): T
                     return thSignedCategory.positiveLoops(model, options);
                 },
             }),
-            analyses.configureMotifFindingAnalysis({
+            analyses.motifFinding({
                 id: "negative-loops",
                 name: "Negative feedback",
                 description: "Analyze the network for negative feedback loops",
@@ -64,10 +64,10 @@ export default function createRegulatoryNetworkTheory(theoryMeta: TheoryMeta): T
                     return thSignedCategory.negativeLoops(model, options);
                 },
             }),
-            analyses.configureLinearODE({
+            analyses.linearODE({
                 simulate: (model, data) => thSignedCategory.linearODE(model, data),
             }),
-            analyses.configureLotkaVolterra({
+            analyses.lotkaVolterra({
                 simulate(model, data) {
                     return thSignedCategory.lotkaVolterra(model, data);
                 },

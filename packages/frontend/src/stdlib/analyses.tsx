@@ -13,7 +13,7 @@ type AnalysisOptions = {
     help?: string;
 };
 
-export const configureDecapodes = (
+export const decapodes = (
     options: AnalysisOptions,
 ): DiagramAnalysisMeta<Simulators.DecapodesAnalysisContent> => ({
     ...options,
@@ -30,7 +30,7 @@ export const configureDecapodes = (
 
 const Decapodes = lazy(() => import("./analyses/decapodes"));
 
-export const configureDiagramGraph = (
+export const diagramGraph = (
     options: AnalysisOptions,
 ): DiagramAnalysisMeta<GraphLayoutConfig.Config> => ({
     ...options,
@@ -40,7 +40,7 @@ export const configureDiagramGraph = (
 
 const DiagramGraph = lazy(() => import("./analyses/diagram_graph"));
 
-export function configureLinearODE(
+export function linearODE(
     options: Partial<AnalysisOptions> & {
         simulate: Simulators.LinearODESimulator;
     },
@@ -68,7 +68,7 @@ export function configureLinearODE(
 
 const LinearODE = lazy(() => import("./analyses/linear_ode"));
 
-export function configureLotkaVolterra(
+export function lotkaVolterra(
     options: Partial<AnalysisOptions> & {
         simulate: Simulators.LotkaVolterraSimulator;
     },
@@ -97,7 +97,7 @@ export function configureLotkaVolterra(
 
 const LotkaVolterra = lazy(() => import("./analyses/lotka_volterra"));
 
-export function configureMassAction(
+export function massAction(
     options: Partial<AnalysisOptions> & {
         simulate: Simulators.MassActionSimulator;
         isState?: (obType: ObType) => boolean;
@@ -127,7 +127,7 @@ export function configureMassAction(
 
 const MassAction = lazy(() => import("./analyses/mass_action"));
 
-export const configureModelGraph = (
+export const modelGraph = (
     options: AnalysisOptions,
 ): ModelAnalysisMeta<GraphLayoutConfig.Config> => ({
     ...options,
@@ -137,7 +137,7 @@ export const configureModelGraph = (
 
 const ModelGraph = lazy(() => import("./analyses/model_graph"));
 
-export function configureMotifFindingAnalysis(
+export function motifFinding(
     options: AnalysisOptions & {
         findMotifs: Checkers.MotifFinder;
     },
@@ -158,7 +158,7 @@ export function configureMotifFindingAnalysis(
 
 const SubmodelGraphs = lazy(() => import("./analyses/submodel_graphs"));
 
-export const configurePetriNetVisualization = (
+export const petriNetVisualization = (
     options: AnalysisOptions,
 ): ModelAnalysisMeta<GraphLayoutConfig.Config> => ({
     ...options,
@@ -168,7 +168,7 @@ export const configurePetriNetVisualization = (
 
 const PetriNetVisualization = lazy(() => import("./analyses/petri_net_visualization"));
 
-export function configureReachability(
+export function reachability(
     options: Partial<AnalysisOptions> & {
         check: Checkers.ReachabilityChecker;
     },
@@ -192,7 +192,7 @@ export function configureReachability(
 
 const Reachability = lazy(() => import("./analyses/reachability"));
 
-export const configureStockFlowDiagram = (
+export const stockFlowDiagram = (
     options: AnalysisOptions,
 ): ModelAnalysisMeta<GraphLayoutConfig.Config> => ({
     ...options,

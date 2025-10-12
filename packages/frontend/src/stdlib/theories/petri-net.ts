@@ -35,17 +35,17 @@ export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
             },
         ],
         modelAnalyses: [
-            analyses.configurePetriNetVisualization({
+            analyses.petriNetVisualization({
                 id: "diagram",
                 name: "Visualization",
                 description: "Visualize the Petri net",
             }),
-            analyses.configureMassAction({
+            analyses.massAction({
                 simulate(model, data) {
                     return thSymMonoidalCategory.massAction(model, data);
                 },
             }),
-            analyses.configureMassAction({
+            analyses.massAction({
                 id: "stochastic-mass-action",
                 name: "Stochastic mass action dynamics",
                 description: "Simulate a stochastic system using the law of mass action",
@@ -54,7 +54,7 @@ export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
                     return thSymMonoidalCategory.stochasticMassAction(model, data);
                 },
             }),
-            analyses.configureReachability({
+            analyses.reachability({
                 check(model, data) {
                     return thSymMonoidalCategory.subreachability(model, data);
                 },

@@ -62,13 +62,13 @@ export default function createCausalLoopDelaysTheory(theoryMeta: TheoryMeta): Th
             },
         ],
         modelAnalyses: [
-            analyses.configureModelGraph({
+            analyses.modelGraph({
                 id: "diagram",
                 name: "Visualization",
                 description: "Visualize the causal loop diagram",
                 help: "visualization",
             }),
-            analyses.configureMotifFindingAnalysis({
+            analyses.motifFinding({
                 id: "negative-loops",
                 name: "Balancing loops",
                 description: "Find the fast-acting balancing loops",
@@ -77,7 +77,7 @@ export default function createCausalLoopDelaysTheory(theoryMeta: TheoryMeta): Th
                     return thDelayedSignedCategory.negativeLoops(model, options);
                 },
             }),
-            analyses.configureMotifFindingAnalysis({
+            analyses.motifFinding({
                 id: "positive-loops",
                 name: "Reinforcing loops",
                 description: "Find the fast-acting reinforcing loops",
@@ -86,7 +86,7 @@ export default function createCausalLoopDelaysTheory(theoryMeta: TheoryMeta): Th
                     return thDelayedSignedCategory.positiveLoops(model, options);
                 },
             }),
-            analyses.configureMotifFindingAnalysis({
+            analyses.motifFinding({
                 id: "delayed-negative-loops",
                 name: "Delayed balancing loops",
                 description: "Find the slow-acting balancing loops",
@@ -95,7 +95,7 @@ export default function createCausalLoopDelaysTheory(theoryMeta: TheoryMeta): Th
                     return thDelayedSignedCategory.delayedNegativeLoops(model, options);
                 },
             }),
-            analyses.configureMotifFindingAnalysis({
+            analyses.motifFinding({
                 id: "delayed-positive-loops",
                 name: "Delayed reinforcing loops",
                 description: "Find the slow-acting reinforcing loops",
