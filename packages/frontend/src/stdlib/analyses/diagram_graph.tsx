@@ -1,20 +1,11 @@
 import type * as Viz from "@viz-js/viz";
-import { Show, createSignal } from "solid-js";
 
 import type { DblModel, DblModelDiagram } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
-import { Foldable } from "../../components";
 import type { DiagramAnalysisMeta, Theory } from "../../theory";
-import {
-    DownloadSVGButton,
-    GraphLayoutConfig,
-    GraphLayoutConfigForm,
-    type GraphvizAttributes,
-    GraphvizSVG,
-} from "../../visualization";
-import * as GV from "./graph_visualization";
-
-import "./graph_visualization.css";
+import { GraphLayoutConfig, type GraphvizAttributes } from "../../visualization";
+import * as graphStyles from "../graph_styles";
+import { GraphVisualization } from "./graph_visualization";
 
 /** Configure a graph visualization for use with diagrams in a model. */
 export function configureDiagramGraph(options: {
@@ -36,59 +27,34 @@ export function configureDiagramGraph(options: {
 
 /** Visualize a diagram in a model as a graph.
 
-Such a visualizations makes sense for any discrete double theory and is in
+Such a visualization makes sense for any discrete double theory and is in
 general restricted to basic objects. See `ModelGraph` for more.
  */
 export function DiagramGraph(
-    props: {
+    props: DiagramAnalysisProps<GraphLayoutConfig.Config> & {
         title?: string;
-    } & DiagramAnalysisProps<GraphLayoutConfig.Config>,
+    },
 ) {
-    const [svgRef, setSvgRef] = createSignal<SVGSVGElement>();
-
-    const graphviz = () => {
+    const graph = () => {
         const theory = props.liveDiagram.liveModel.theory();
         const model = props.liveDiagram.liveModel.elaboratedModel();
         const validatedDiagram = props.liveDiagram.validatedDiagram();
-        return (
-            theory &&
-            model &&
-            validatedDiagram?.tag === "Valid" &&
-            diagramToGraphviz(validatedDiagram.diagram, model, theory)
-        );
+        if (theory && model && validatedDiagram?.tag === "Valid") {
+            return diagramToGraphviz(validatedDiagram.diagram, model, theory);
+        }
     };
 
-    const title = () => props.title ?? "Diagram";
-    const header = () => (
-        <DownloadSVGButton
-            svg={svgRef()}
-            tooltip={`Export the ${title().toLowerCase()} as SVG`}
-            size={16}
-        />
-    );
-
     return (
-        <div class="graph-visualization-analysis">
-            <Foldable title={title()} header={header()}>
-                <GraphLayoutConfigForm config={props.content} changeConfig={props.changeContent} />
-            </Foldable>
-            <div class="graph-visualization">
-                <Show when={graphviz()}>
-                    {(graph) => (
-                        <GraphvizSVG
-                            graph={graph()}
-                            options={GraphLayoutConfig.graphvizOptions(props.content)}
-                            ref={setSvgRef}
-                        />
-                    )}
-                </Show>
-            </div>
-        </div>
+        <GraphVisualization
+            title={props.title}
+            graph={graph()}
+            config={props.content}
+            changeConfig={props.changeContent}
+        />
     );
 }
 
-/** Convert a diagram in a model into a Graphviz graph.
- */
+/** Convert a diagram in a model into a Graphviz graph. */
 export function diagramToGraphviz(
     diagram: DblModelDiagram,
     model: DblModel,
@@ -110,8 +76,8 @@ export function diagramToGraphviz(
             attributes: {
                 id,
                 label: [label, overLabel].filter((s) => s).join(" : "),
-                class: GV.svgCssClasses(meta).join(" "),
-                fontname: GV.graphvizFontname(meta),
+                class: graphStyles.svgCssClasses(meta).join(" "),
+                fontname: graphStyles.graphvizFontname(meta),
             },
         });
     }
@@ -131,8 +97,8 @@ export function diagramToGraphviz(
             attributes: {
                 id,
                 label: overLabel ?? "",
-                class: GV.svgCssClasses(meta).join(" "),
-                fontname: GV.graphvizFontname(meta),
+                class: graphStyles.svgCssClasses(meta).join(" "),
+                fontname: graphStyles.graphvizFontname(meta),
             },
         });
     }
@@ -141,8 +107,8 @@ export function diagramToGraphviz(
         directed: true,
         nodes: Array.from(nodes.values()),
         edges,
-        graphAttributes: { ...GV.defaultGraphAttributes, ...attributes?.graph },
-        nodeAttributes: { ...GV.defaultNodeAttributes, ...attributes?.node },
-        edgeAttributes: { ...GV.defaultEdgeAttributes, ...attributes?.edge },
+        graphAttributes: { ...graphStyles.defaultGraphAttributes, ...attributes?.graph },
+        nodeAttributes: { ...graphStyles.defaultNodeAttributes, ...attributes?.node },
+        edgeAttributes: { ...graphStyles.defaultEdgeAttributes, ...attributes?.edge },
     };
 }

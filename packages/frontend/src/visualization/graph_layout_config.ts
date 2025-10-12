@@ -9,7 +9,7 @@ export type Config = {
     direction?: Direction;
 };
 
-/** Supported engines for graph layout.
+/** Engines supported for graph layout.
 
 At this time we support only programs from Graphviz. In the future we may
 support other tools.
@@ -25,6 +25,7 @@ export enum Direction {
     Vertical = "vertical",
 }
 
+/** Construct the default graph layout configuration. */
 export const defaultConfig = (): Config => ({
     layout: Engine.VizDirected,
 });

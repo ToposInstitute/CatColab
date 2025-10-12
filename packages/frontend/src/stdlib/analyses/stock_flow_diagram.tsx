@@ -43,18 +43,9 @@ export function configureStockFlowDiagram(options: {
     };
 }
 
-const STOCKFLOW_ATTRIBUTES: GraphvizAttributes = {
-    graph: {
-        splines: "ortho",
-    },
-    node: {
-        width: 0.55,
-        height: 0.55,
-    },
-};
-
 /** Visualize a stock flow diagram. */
 export function StockFlowDiagram(props: ModelAnalysisProps<GraphLayoutConfig.Config>) {
+    // XXX: Following code is mostly copy-paste from `GraphVisualization`.
     const [svgRef, setSvgRef] = createSignal<SVGSVGElement>();
 
     const header = () => (
@@ -62,7 +53,7 @@ export function StockFlowDiagram(props: ModelAnalysisProps<GraphLayoutConfig.Con
     );
 
     return (
-        <div class="graph-visualization-analysis">
+        <div class="graph-visualization-container">
             <Foldable title="Visualization" header={header()}>
                 <GraphLayoutConfigForm config={props.content} changeConfig={props.changeContent} />
             </Foldable>
@@ -73,7 +64,6 @@ export function StockFlowDiagram(props: ModelAnalysisProps<GraphLayoutConfig.Con
                             model={model()}
                             theory={props.liveModel.theory()}
                             options={GraphLayoutConfig.graphvizOptions(props.content)}
-                            attributes={STOCKFLOW_ATTRIBUTES}
                             ref={setSvgRef}
                         />
                     )}
@@ -91,7 +81,6 @@ links from stocks to flows using our own layout heuristics.
 export function StockFlowGraphviz(props: {
     model: DblModel;
     theory?: Theory;
-    attributes?: GraphvizAttributes;
     options?: Viz.RenderOptions;
     ref?: SVGRefProp;
 }) {
@@ -99,19 +88,27 @@ export function StockFlowGraphviz(props: {
 
     const vizLayout = () => {
         const viz = vizResource();
-        return (
-            props.theory &&
-            viz &&
-            vizLayoutGraph(
+        if (props.theory && viz) {
+            return vizLayoutGraph(
                 viz,
-                modelToGraphviz(props.model, props.theory, props.attributes),
+                modelToGraphviz(props.model, props.theory, stockFlowAttributes),
                 props.options,
-            )
-        );
+            );
+        }
     };
 
     return <StockFlowSVG model={props.model} layout={vizLayout()} ref={props.ref} />;
 }
+
+const stockFlowAttributes: GraphvizAttributes = {
+    graph: {
+        splines: "ortho",
+    },
+    node: {
+        width: 0.55,
+        height: 0.55,
+    },
+};
 
 function StockFlowSVG(props: {
     model: DblModel;

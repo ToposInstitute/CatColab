@@ -5,9 +5,9 @@ import { Show, createMemo } from "solid-js";
 import type { DblModel, MotifOccurrence, MotifsOptions } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { Foldable, FormGroup, IconButton, InputField } from "../../components";
-
 import type { ModelAnalysisMeta } from "../../theory";
-import { ModelGraphviz } from "./model_graph";
+import { GraphvizSVG } from "../../visualization";
+import { modelToGraphviz } from "./model_graph";
 
 import "./submodel_graphs.css";
 
@@ -92,6 +92,21 @@ function SubmodelsAnalysis(
         </div>
     );
 
+    const activeGraph = () => {
+        const theory = props.liveModel.theory();
+        const model = props.liveModel.elaboratedModel();
+        const submodel = submodels()[index()];
+        if (theory && model && submodel) {
+            return modelToGraphviz(
+                model,
+                theory,
+                undefined,
+                submodel.obGenerators,
+                submodel.morGenerators,
+            );
+        }
+    };
+
     return (
         <div class="submodel-graphs">
             <Foldable title={props.title} header={indexButtons}>
@@ -121,21 +136,14 @@ function SubmodelsAnalysis(
                     </Show>
                 </FormGroup>
             </Foldable>
-            <Show when={props.liveModel.elaboratedModel()}>
-                {(model) => (
-                    <Show when={submodels()[index()]}>
-                        {(submodel) => (
-                            <ModelGraphviz
-                                model={model()}
-                                theory={props.liveModel.theory()}
-                                obGenerators={submodel().obGenerators}
-                                morGenerators={submodel().morGenerators}
-                                options={{
-                                    engine: "dot",
-                                }}
-                            />
-                        )}
-                    </Show>
+            <Show when={activeGraph()}>
+                {(graph) => (
+                    <GraphvizSVG
+                        graph={graph()}
+                        options={{
+                            engine: "dot",
+                        }}
+                    />
                 )}
             </Show>
         </div>
