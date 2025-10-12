@@ -1,4 +1,4 @@
-import { TheoryLibrary } from "./types";
+import { TheoryLibrary } from "../theory";
 
 /** Standard library of double theories supported by the frontend. */
 export const stdTheories = new TheoryLibrary();

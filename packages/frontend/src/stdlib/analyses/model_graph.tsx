@@ -2,28 +2,10 @@ import type * as Viz from "@viz-js/viz";
 
 import type { DblModel, QualifiedName } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
-import type { ModelAnalysisMeta, Theory } from "../../theory";
-import { GraphLayoutConfig, type GraphvizAttributes } from "../../visualization";
+import type { Theory } from "../../theory";
+import type { GraphLayoutConfig, GraphvizAttributes } from "../../visualization";
 import * as graphStyles from "../graph_styles";
 import { GraphVisualization } from "./graph_visualization";
-
-/** Configure a graph visualization for use with models of a double theory. */
-export function configureModelGraph(options: {
-    id: string;
-    name: string;
-    description?: string;
-    help?: string;
-}): ModelAnalysisMeta<GraphLayoutConfig.Config> {
-    const { id, name, description, help } = options;
-    return {
-        id,
-        name,
-        description,
-        help,
-        component: (props) => <ModelGraph title={name} {...props} />,
-        initialContent: GraphLayoutConfig.defaultConfig,
-    };
-}
 
 /** Visualize a model of a double theory as a graph.
 
@@ -32,7 +14,7 @@ the generating data for such a model is just a typed graph. For other kinds of
 double theories, the visualization will ignore any basic morphism whose domain
 or codomain is not a basic object.
  */
-export function ModelGraph(
+export default function ModelGraph(
     props: ModelAnalysisProps<GraphLayoutConfig.Config> & {
         title?: string;
     },

@@ -16,7 +16,8 @@ import { type Api, ApiContext, createRpcClient, useApi } from "./api";
 import { helpRoutes } from "./help/routes";
 import { createModel } from "./model/document";
 import { PageContainer } from "./page/page_container";
-import { TheoryLibraryContext, stdTheories } from "./stdlib";
+import { stdTheories } from "./stdlib";
+import { TheoryLibraryContext } from "./theory";
 import { ErrorBoundaryDialog } from "./util/errors";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;

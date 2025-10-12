@@ -12,7 +12,7 @@ import { currentVersion, elaborateDiagram } from "catlog-wasm";
 import { type Api, type LiveDoc, createDoc, getLiveDoc, getLiveDocFromDocHandle } from "../api";
 import { type LiveModelDocument, getLiveModel, getLiveModelFromRepo } from "../model";
 import { NotebookUtils, newNotebook } from "../notebook";
-import type { TheoryLibrary } from "../stdlib";
+import type { TheoryLibrary } from "../theory";
 
 /** A document defining a diagram in a model. */
 export type DiagramDocument = Document & { type: "diagram" };

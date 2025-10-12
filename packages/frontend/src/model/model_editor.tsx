@@ -17,15 +17,15 @@ import {
 } from "../notebook";
 import { DocumentBreadcrumbs, DocumentLoadingScreen, Toolbar } from "../page";
 import { WelcomeOverlay } from "../page/welcome_overlay";
-import { TheoryLibraryContext, stdTheories } from "../stdlib";
-import type { ModelTypeMeta } from "../theory";
+import { stdTheories } from "../stdlib";
+import { type ModelTypeMeta, TheoryLibraryContext } from "../theory";
+import { TheorySelectorDialog } from "../theory/theory_selector";
 import { PermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
 import { type LiveModelDocument, getLiveModel, migrateModelDocument } from "./document";
 import { ModelMenu } from "./model_menu";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
-import { TheorySelectorDialog } from "./theory_selector";
 import {
     type MorphismDecl,
     type ObjectDecl,

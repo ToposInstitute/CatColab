@@ -11,8 +11,7 @@ import {
 } from "catlog-wasm";
 import { type Api, type LiveDoc, createDoc, getLiveDoc, getLiveDocFromDocHandle } from "../api";
 import { NotebookUtils, newNotebook } from "../notebook";
-import type { TheoryLibrary } from "../stdlib";
-import type { Theory } from "../theory";
+import type { Theory, TheoryLibrary } from "../theory";
 
 /** A document defining a model. */
 export type ModelDocument = Document & { type: "model" };

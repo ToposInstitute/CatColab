@@ -1,6 +1,6 @@
 import { Match, Switch, createMemo } from "solid-js";
 
-import type { DblModel, QualifiedName, ReachabilityProblemData } from "catlog-wasm";
+import type { QualifiedName, ReachabilityProblemData } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import {
     type ColumnSchema,
@@ -8,44 +8,14 @@ import {
     PanelHeader,
     createNumericalColumn,
 } from "../../components";
-import type { ModelAnalysisMeta } from "../../theory";
+import type { ReachabilityChecker } from "./checker_types";
 
 import "./simulation.css";
 
-/** Configuration for a reachability analysis of a model. */
-export type ReachabilityContent = ReachabilityProblemData;
-
-type Checker = (model: DblModel, data: ReachabilityContent) => boolean;
-
-/** Configure a reachability analysis for use with models of a theory. */
-export function configureReachability(options: {
-    id?: string;
-    name?: string;
-    description?: string;
-    help?: string;
-    check: Checker;
-}): ModelAnalysisMeta<ReachabilityContent> {
-    const {
-        id = "subreachability",
-        name = "Sub-reachability check",
-        description = "Check that forbidden tokenings are unreachable",
-        help = "subreachability",
-        ...otherOptions
-    } = options;
-    return {
-        id,
-        name,
-        description,
-        help,
-        component: (props) => <Reachability title={name} {...otherOptions} {...props} />,
-        initialContent: () => ({ tokens: {}, forbidden: {} }),
-    };
-}
-
 /** Check a reachability property in a model. */
-export function Reachability(
-    props: ModelAnalysisProps<ReachabilityContent> & {
-        check: Checker;
+export default function Reachability(
+    props: ModelAnalysisProps<ReachabilityProblemData> & {
+        check: ReachabilityChecker;
         title?: string;
     },
 ) {

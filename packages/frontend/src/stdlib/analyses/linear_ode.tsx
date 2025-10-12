@@ -1,4 +1,4 @@
-import type { DblModel, LinearODEProblemData, ODEResult, QualifiedName } from "catlog-wasm";
+import type { DblModel, LinearODEProblemData, QualifiedName } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import {
     type ColumnSchema,
@@ -7,47 +7,16 @@ import {
     createNumericalColumn,
 } from "../../components";
 import { morLabelOrDefault } from "../../model";
-import type { ModelAnalysisMeta } from "../../theory";
 import { ODEResultPlot } from "../../visualization";
-import { createModelODEPlot } from "./simulation";
+import { createModelODEPlot } from "./model_ode_plot";
+import type { LinearODESimulator } from "./simulator_types";
 
 import "./simulation.css";
 
-type Simulator = (model: DblModel, data: LinearODEProblemData) => ODEResult;
-
-/** Configure a LinearODE ODE analysis for use with models of a theory. */
-export function configureLinearODE(options: {
-    id?: string;
-    name?: string;
-    description?: string;
-    help?: string;
-    simulate: Simulator;
-}): ModelAnalysisMeta<LinearODEProblemData> {
-    const {
-        id = "linear-ode",
-        name = "Linear ODE dynamics",
-        description = "Simulate the system using a constant-coefficient linear first-order ODE",
-        help = "linear-ode",
-        simulate,
-    } = options;
-    return {
-        id,
-        name,
-        description,
-        help,
-        component: (props) => <LinearODE simulate={simulate} title={name} {...props} />,
-        initialContent: () => ({
-            coefficients: {},
-            initialValues: {},
-            duration: 10,
-        }),
-    };
-}
-
 /** Analyze a model using LinearODE dynamics. */
-export function LinearODE(
+export default function LinearODE(
     props: ModelAnalysisProps<LinearODEProblemData> & {
-        simulate: Simulator;
+        simulate: LinearODESimulator;
         title?: string;
     },
 ) {
