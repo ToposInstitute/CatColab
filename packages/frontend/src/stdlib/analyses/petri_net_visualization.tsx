@@ -1,71 +1,44 @@
 import type * as Viz from "@viz-js/viz";
-import { Show, createSignal } from "solid-js";
 
 import { type DblModel, collectProduct } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
-import { Foldable } from "../../components";
 import type { ModelAnalysisMeta } from "../../theory";
-import { DownloadSVGButton, GraphvizSVG, type SVGRefProp } from "../../visualization";
-import * as GV from "./graph_visualization";
+import { GraphLayoutConfig } from "../../visualization";
+import * as graphStyles from "../graph_styles";
+import { GraphVisualization } from "./graph_visualization";
 
 import svgStyles from "../svg_styles.module.css";
-import "./graph_visualization.css";
 
 /** Configure a visualization of a Petri net. */
 export function configurePetriNetVisualization(options: {
     id: string;
     name: string;
     description?: string;
-}): ModelAnalysisMeta<GV.GraphConfig> {
+}): ModelAnalysisMeta<GraphLayoutConfig.Config> {
     const { id, name, description } = options;
     return {
         id,
         name,
         description,
         component: PetriNetVisualization,
-        initialContent: GV.defaultGraphConfig,
+        initialContent: GraphLayoutConfig.defaultConfig,
     };
 }
 
 /** Visualize a Petri net. */
-export function PetriNetVisualization(props: ModelAnalysisProps<GV.GraphConfig>) {
-    const [svgRef, setSvgRef] = createSignal<SVGSVGElement>();
-
-    const header = () => (
-        <DownloadSVGButton svg={svgRef()} tooltip="Export Petri net as SVG" size={16} />
-    );
+export function PetriNetVisualization(props: ModelAnalysisProps<GraphLayoutConfig.Config>) {
+    const graph = () => {
+        const model = props.liveModel.elaboratedModel();
+        if (model) {
+            return petriNetToGraphviz(model);
+        }
+    };
 
     return (
-        <div class="graph-visualization-analysis">
-            <Foldable title="Visualization" header={header()}>
-                <GV.GraphConfigForm content={props.content} changeContent={props.changeContent} />
-            </Foldable>
-            <div class="graph-visualization">
-                <Show when={props.liveModel.elaboratedModel()}>
-                    {(model) => (
-                        <PetriNetGraphviz
-                            model={model()}
-                            options={GV.graphvizOptions(props.content)}
-                            ref={setSvgRef}
-                        />
-                    )}
-                </Show>
-            </div>
-        </div>
-    );
-}
-
-/** Visualize a Petri net using Graphviz. */
-export function PetriNetGraphviz(props: {
-    model: DblModel;
-    options?: Viz.RenderOptions;
-    ref?: SVGRefProp;
-}) {
-    return (
-        <GraphvizSVG
-            graph={petriNetToGraphviz(props.model)}
-            options={props.options}
-            ref={props.ref}
+        <GraphVisualization
+            graph={graph()}
+            config={props.content}
+            changeConfig={props.changeContent}
         />
     );
 }
@@ -130,10 +103,10 @@ export function petriNetToGraphviz(model: DblModel): Viz.Graph {
         nodes,
         edges,
         graphAttributes: {
-            ...GV.defaultGraphAttributes,
+            ...graphStyles.defaultGraphAttributes,
             fontname: "Helvetica",
         },
-        nodeAttributes: GV.defaultNodeAttributes,
-        edgeAttributes: GV.defaultEdgeAttributes,
+        nodeAttributes: graphStyles.defaultNodeAttributes,
+        edgeAttributes: graphStyles.defaultEdgeAttributes,
     };
 }
