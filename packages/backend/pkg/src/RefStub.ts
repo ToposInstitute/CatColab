@@ -3,8 +3,7 @@ import type { PermissionLevel } from "./PermissionLevel";
 import type { UserSummary } from "./UserSummary";
 
 /**
- * A subset of user relevant information about a ref. Used for showing
- * users information on a variety of refs without having to load whole
- * refs.
+ * A subset of user relevant information about a ref. Used for showing users
+ * information on a variety of refs without having to load whole refs.
  */
 export type RefStub = { name: string, typeName: string, refId: string, permissionLevel: PermissionLevel, owner: UserSummary | null, createdAt: string, };
