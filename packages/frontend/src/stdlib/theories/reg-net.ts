@@ -46,21 +46,21 @@ export default function createRegulatoryNetworkTheory(theoryMeta: TheoryMeta): T
                 description: "Visualize the regulatory network",
                 help: "visualization",
             }),
-            analyses.configureSubmodelsAnalysis({
+            analyses.configureMotifFindingAnalysis({
                 id: "positive-loops",
                 name: "Positive feedback",
                 description: "Analyze the network for positive feedback loops",
                 help: "loops",
-                findSubmodels(model, options) {
+                findMotifs(model, options) {
                     return thSignedCategory.positiveLoops(model, options);
                 },
             }),
-            analyses.configureSubmodelsAnalysis({
+            analyses.configureMotifFindingAnalysis({
                 id: "negative-loops",
                 name: "Negative feedback",
                 description: "Analyze the network for negative feedback loops",
                 help: "loops",
-                findSubmodels(model, options) {
+                findMotifs(model, options) {
                     return thSignedCategory.negativeLoops(model, options);
                 },
             }),

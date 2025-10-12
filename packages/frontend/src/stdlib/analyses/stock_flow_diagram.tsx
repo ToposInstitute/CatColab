@@ -4,7 +4,7 @@ import { type Component, For, Show, createResource, createSignal } from "solid-j
 import type { DblModel } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { Foldable } from "../../components";
-import type { ModelAnalysisMeta, Theory } from "../../theory";
+import type { Theory } from "../../theory";
 import { uniqueIndexArray } from "../../util/indexing";
 import {
     type ArrowMarker,
@@ -25,26 +25,8 @@ import { modelToGraphviz } from "./model_graph";
 import svgStyles from "../svg_styles.module.css";
 import "./graph_visualization.css";
 
-/** Configure a visualization of a stock flow diagram. */
-export function configureStockFlowDiagram(options: {
-    id: string;
-    name: string;
-    description?: string;
-    help?: string;
-}): ModelAnalysisMeta<GraphLayoutConfig.Config> {
-    const { id, name, description, help } = options;
-    return {
-        id,
-        name,
-        description,
-        help,
-        component: StockFlowDiagram,
-        initialContent: GraphLayoutConfig.defaultConfig,
-    };
-}
-
 /** Visualize a stock flow diagram. */
-export function StockFlowDiagram(props: ModelAnalysisProps<GraphLayoutConfig.Config>) {
+export default function StockFlowDiagram(props: ModelAnalysisProps<GraphLayoutConfig.Config>) {
     // XXX: Following code is mostly copy-paste from `GraphVisualization`.
     const [svgRef, setSvgRef] = createSignal<SVGSVGElement>();
 

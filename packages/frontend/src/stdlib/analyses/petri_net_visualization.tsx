@@ -2,31 +2,14 @@ import type * as Viz from "@viz-js/viz";
 
 import { type DblModel, collectProduct } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
-import type { ModelAnalysisMeta } from "../../theory";
-import { GraphLayoutConfig } from "../../visualization";
+import type { GraphLayoutConfig } from "../../visualization";
 import * as graphStyles from "../graph_styles";
 import { GraphVisualization } from "./graph_visualization";
 
 import svgStyles from "../svg_styles.module.css";
 
-/** Configure a visualization of a Petri net. */
-export function configurePetriNetVisualization(options: {
-    id: string;
-    name: string;
-    description?: string;
-}): ModelAnalysisMeta<GraphLayoutConfig.Config> {
-    const { id, name, description } = options;
-    return {
-        id,
-        name,
-        description,
-        component: PetriNetVisualization,
-        initialContent: GraphLayoutConfig.defaultConfig,
-    };
-}
-
 /** Visualize a Petri net. */
-export function PetriNetVisualization(props: ModelAnalysisProps<GraphLayoutConfig.Config>) {
+export default function PetriNetVisualization(props: ModelAnalysisProps<GraphLayoutConfig.Config>) {
     const graph = () => {
         const model = props.liveModel.elaboratedModel();
         if (model) {

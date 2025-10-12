@@ -40,11 +40,6 @@ export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
                 name: "Visualization",
                 description: "Visualize the Petri net",
             }),
-            analyses.configureReachability({
-                check(model, data) {
-                    return thSymMonoidalCategory.subreachability(model, data);
-                },
-            }),
             analyses.configureMassAction({
                 simulate(model, data) {
                     return thSymMonoidalCategory.massAction(model, data);
@@ -57,6 +52,11 @@ export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
                 help: "stochastic-mass-action",
                 simulate(model, data) {
                     return thSymMonoidalCategory.stochasticMassAction(model, data);
+                },
+            }),
+            analyses.configureReachability({
+                check(model, data) {
+                    return thSymMonoidalCategory.subreachability(model, data);
                 },
             }),
         ],

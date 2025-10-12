@@ -2,35 +2,17 @@ import type * as Viz from "@viz-js/viz";
 
 import type { DblModel, DblModelDiagram } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
-import type { DiagramAnalysisMeta, Theory } from "../../theory";
-import { GraphLayoutConfig, type GraphvizAttributes } from "../../visualization";
+import type { Theory } from "../../theory";
+import type { GraphLayoutConfig, GraphvizAttributes } from "../../visualization";
 import * as graphStyles from "../graph_styles";
 import { GraphVisualization } from "./graph_visualization";
-
-/** Configure a graph visualization for use with diagrams in a model. */
-export function configureDiagramGraph(options: {
-    id: string;
-    name: string;
-    description?: string;
-    help?: string;
-}): DiagramAnalysisMeta<GraphLayoutConfig.Config> {
-    const { id, name, description, help } = options;
-    return {
-        id,
-        name,
-        description,
-        help,
-        component: (props) => <DiagramGraph title={name} {...props} />,
-        initialContent: GraphLayoutConfig.defaultConfig,
-    };
-}
 
 /** Visualize a diagram in a model as a graph.
 
 Such a visualization makes sense for any discrete double theory and is in
 general restricted to basic objects. See `ModelGraph` for more.
  */
-export function DiagramGraph(
+export default function DiagramGraph(
     props: DiagramAnalysisProps<GraphLayoutConfig.Config> & {
         title?: string;
     },

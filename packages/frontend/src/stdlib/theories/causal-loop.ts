@@ -47,21 +47,21 @@ export default function createCausalLoopTheory(theoryMeta: TheoryMeta): Theory {
                 description: "Visualize the causal loop diagram",
                 help: "visualization",
             }),
-            analyses.configureSubmodelsAnalysis({
+            analyses.configureMotifFindingAnalysis({
                 id: "negative-loops",
                 name: "Balancing loops",
                 description: "Analyze the diagram for balancing loops",
                 help: "loops",
-                findSubmodels(model, options) {
+                findMotifs(model, options) {
                     return thSignedCategory.negativeLoops(model, options);
                 },
             }),
-            analyses.configureSubmodelsAnalysis({
+            analyses.configureMotifFindingAnalysis({
                 id: "positive-loops",
                 name: "Reinforcing loops",
                 description: "Analyze the diagram for reinforcing loops",
                 help: "loops",
-                findSubmodels(model, options) {
+                findMotifs(model, options) {
                     return thSignedCategory.positiveLoops(model, options);
                 },
             }),
