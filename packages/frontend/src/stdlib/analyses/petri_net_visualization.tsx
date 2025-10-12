@@ -5,7 +5,13 @@ import { type DblModel, collectProduct } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { Foldable } from "../../components";
 import type { ModelAnalysisMeta } from "../../theory";
-import { DownloadSVGButton, GraphvizSVG, type SVGRefProp } from "../../visualization";
+import {
+    DownloadSVGButton,
+    GraphLayoutConfig,
+    GraphLayoutConfigForm,
+    GraphvizSVG,
+    type SVGRefProp,
+} from "../../visualization";
 import * as GV from "./graph_visualization";
 
 import svgStyles from "../svg_styles.module.css";
@@ -16,19 +22,19 @@ export function configurePetriNetVisualization(options: {
     id: string;
     name: string;
     description?: string;
-}): ModelAnalysisMeta<GV.GraphConfig> {
+}): ModelAnalysisMeta<GraphLayoutConfig.Config> {
     const { id, name, description } = options;
     return {
         id,
         name,
         description,
         component: PetriNetVisualization,
-        initialContent: GV.defaultGraphConfig,
+        initialContent: GraphLayoutConfig.defaultConfig,
     };
 }
 
 /** Visualize a Petri net. */
-export function PetriNetVisualization(props: ModelAnalysisProps<GV.GraphConfig>) {
+export function PetriNetVisualization(props: ModelAnalysisProps<GraphLayoutConfig.Config>) {
     const [svgRef, setSvgRef] = createSignal<SVGSVGElement>();
 
     const header = () => (
@@ -38,14 +44,14 @@ export function PetriNetVisualization(props: ModelAnalysisProps<GV.GraphConfig>)
     return (
         <div class="graph-visualization-analysis">
             <Foldable title="Visualization" header={header()}>
-                <GV.GraphConfigForm content={props.content} changeContent={props.changeContent} />
+                <GraphLayoutConfigForm config={props.content} changeConfig={props.changeContent} />
             </Foldable>
             <div class="graph-visualization">
                 <Show when={props.liveModel.elaboratedModel()}>
                     {(model) => (
                         <PetriNetGraphviz
                             model={model()}
-                            options={GV.graphvizOptions(props.content)}
+                            options={GraphLayoutConfig.graphvizOptions(props.content)}
                             ref={setSvgRef}
                         />
                     )}

@@ -5,7 +5,13 @@ import type { DblModel, DblModelDiagram } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
 import { Foldable } from "../../components";
 import type { DiagramAnalysisMeta, Theory } from "../../theory";
-import { DownloadSVGButton, GraphvizSVG } from "../../visualization";
+import {
+    DownloadSVGButton,
+    GraphLayoutConfig,
+    GraphLayoutConfigForm,
+    type GraphvizAttributes,
+    GraphvizSVG,
+} from "../../visualization";
 import * as GV from "./graph_visualization";
 
 import "./graph_visualization.css";
@@ -16,7 +22,7 @@ export function configureDiagramGraph(options: {
     name: string;
     description?: string;
     help?: string;
-}): DiagramAnalysisMeta<GV.GraphConfig> {
+}): DiagramAnalysisMeta<GraphLayoutConfig.Config> {
     const { id, name, description, help } = options;
     return {
         id,
@@ -24,7 +30,7 @@ export function configureDiagramGraph(options: {
         description,
         help,
         component: (props) => <DiagramGraph title={name} {...props} />,
-        initialContent: GV.defaultGraphConfig,
+        initialContent: GraphLayoutConfig.defaultConfig,
     };
 }
 
@@ -36,7 +42,7 @@ general restricted to basic objects. See `ModelGraph` for more.
 export function DiagramGraph(
     props: {
         title?: string;
-    } & DiagramAnalysisProps<GV.GraphConfig>,
+    } & DiagramAnalysisProps<GraphLayoutConfig.Config>,
 ) {
     const [svgRef, setSvgRef] = createSignal<SVGSVGElement>();
 
@@ -64,14 +70,14 @@ export function DiagramGraph(
     return (
         <div class="graph-visualization-analysis">
             <Foldable title={title()} header={header()}>
-                <GV.GraphConfigForm content={props.content} changeContent={props.changeContent} />
+                <GraphLayoutConfigForm config={props.content} changeConfig={props.changeContent} />
             </Foldable>
             <div class="graph-visualization">
                 <Show when={graphviz()}>
                     {(graph) => (
                         <GraphvizSVG
                             graph={graph()}
-                            options={GV.graphvizOptions(props.content)}
+                            options={GraphLayoutConfig.graphvizOptions(props.content)}
                             ref={setSvgRef}
                         />
                     )}
@@ -87,7 +93,7 @@ export function diagramToGraphviz(
     diagram: DblModelDiagram,
     model: DblModel,
     theory: Theory,
-    attributes?: GV.GraphvizAttributes,
+    attributes?: GraphvizAttributes,
 ): Viz.Graph {
     const nodes = new Map<string, Required<Viz.Graph>["nodes"][0]>();
     for (const id of diagram.obGenerators()) {
