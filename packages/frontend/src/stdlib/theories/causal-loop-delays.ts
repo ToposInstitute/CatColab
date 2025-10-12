@@ -1,8 +1,6 @@
 import { ThDelayableSignedCategory } from "catlog-wasm";
-
-import { Theory } from "../../theory";
+import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
-import type { TheoryMeta } from "../types";
 
 export default function createCausalLoopDelaysTheory(theoryMeta: TheoryMeta): Theory {
     const thDelayedSignedCategory = new ThDelayableSignedCategory();
@@ -64,45 +62,45 @@ export default function createCausalLoopDelaysTheory(theoryMeta: TheoryMeta): Th
             },
         ],
         modelAnalyses: [
-            analyses.configureModelGraph({
+            analyses.modelGraph({
                 id: "diagram",
                 name: "Visualization",
                 description: "Visualize the causal loop diagram",
                 help: "visualization",
             }),
-            analyses.configureSubmodelsAnalysis({
+            analyses.motifFinding({
                 id: "negative-loops",
                 name: "Balancing loops",
                 description: "Find the fast-acting balancing loops",
                 help: "loops",
-                findSubmodels(model, options) {
+                findMotifs(model, options) {
                     return thDelayedSignedCategory.negativeLoops(model, options);
                 },
             }),
-            analyses.configureSubmodelsAnalysis({
+            analyses.motifFinding({
                 id: "positive-loops",
                 name: "Reinforcing loops",
                 description: "Find the fast-acting reinforcing loops",
                 help: "loops",
-                findSubmodels(model, options) {
+                findMotifs(model, options) {
                     return thDelayedSignedCategory.positiveLoops(model, options);
                 },
             }),
-            analyses.configureSubmodelsAnalysis({
+            analyses.motifFinding({
                 id: "delayed-negative-loops",
                 name: "Delayed balancing loops",
                 description: "Find the slow-acting balancing loops",
                 help: "loops",
-                findSubmodels(model, options) {
+                findMotifs(model, options) {
                     return thDelayedSignedCategory.delayedNegativeLoops(model, options);
                 },
             }),
-            analyses.configureSubmodelsAnalysis({
+            analyses.motifFinding({
                 id: "delayed-positive-loops",
                 name: "Delayed reinforcing loops",
                 description: "Find the slow-acting reinforcing loops",
                 help: "loops",
-                findSubmodels(model, options) {
+                findMotifs(model, options) {
                     return thDelayedSignedCategory.delayedPositiveLoops(model, options);
                 },
             }),

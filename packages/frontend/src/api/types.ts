@@ -1,6 +1,7 @@
-import type { Repo } from "@automerge/automerge-repo";
+import type { ChangeFn, DocHandle, Repo } from "@automerge/automerge-repo";
 
-import type { Uuid } from "catlog-wasm";
+import type { Permissions } from "catcolab-api";
+import type { Document, StableRef } from "catlog-wasm";
 import type { RpcClient } from "./rpc";
 
 /** Bundle of everything needed to interact with the CatColab backend. */
@@ -15,51 +16,46 @@ export type Api = {
     repo: Repo;
 };
 
-/** A stable reference to a document in the database.
+/** Create a stable reference to a document ref, without a version. */
+export const makeUnversionedRef = (api: Api, refId: string): StableRef => ({
+    _id: refId,
+    _version: null,
+    _server: api.serverHost,
+});
 
-Such a reference identifies a specific document, possibly at a specific version.
-The keys are prefixed with an underscore, e.g. `_id` instead of `id`, to avoid
-conflicts with other keys and unambiguously signal that the ID and other data
-apply at the *database* level, rather than merely the *document* level. The same
-convention is used in document databases like CouchDB and MongoDB.
+/** Live document, typically retrieved from the backend.
+
+A live document can be used in reactive contexts and is connected to an
+Automerge document handle.
  */
-export type StableRef = {
-    /** Unique identifier of the document. */
-    _id: Uuid;
+export type LiveDoc<Doc extends Document = Document> = {
+    /** The document data, suitable for use in reactive contexts.
 
-    /** Version of the document.
-
-    If null, refers to the head snapshot of document. This is the case when the
-    referenced document will receive live updates.
+    This data should never be mutated directly. Instead, call `changeDoc` or, if
+    necessary, use the Automerge document handle.
      */
-    _version: string | null;
+    doc: Doc;
 
-    /** Server containing the document.
+    /** Call this function to make changes to the document. */
+    changeDoc: (f: ChangeFn<Doc>) => void;
 
-    Assuming one of the official deployments is used, this will be either
-    `catcolab.org` or `next.catcolab.org`.
+    /** The Automerge document handle for the document. */
+    docHandle: DocHandle<Doc>;
+
+    /** Associated document ref in the backend, if any.
+
+    In typical usage of the official CatColab frontend and backend, this field
+    will be set, but lower-level components in the frontend are decoupled from
+    the backend, relying on Automerge only.
      */
-    _server: string;
+    docRef?: DocRef;
 };
 
-/** Base type for a document persisted in the database. */
-export type Document<T extends string> = {
-    /** Type of the document, such as "model" or "diagram". */
-    type: T;
+/** Info about a document ref in the CatColab backend. */
+type DocRef = {
+    /** ID of the document ref. */
+    refId: string;
 
-    /** Human-readable name of the document. */
-    name: string;
-};
-
-/** A document located within the database. */
-export type StableDocument<T extends string> = StableRef & Document<T>;
-
-/** A link from one document to another.
-
-The source of the link is the document containing this data and the target of
-link is given by the data itself.
- */
-export type Link<T extends string> = StableRef & {
-    /** Type of the link, such as "diagramIn" or "analysisOf" .*/
-    type: T;
+    /** Permissions for the document ref. */
+    permissions: Permissions;
 };

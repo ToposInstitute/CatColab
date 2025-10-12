@@ -15,16 +15,17 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
-import { DocumentBreadcrumbs, DocumentLoadingScreen, DocumentMenu, Toolbar } from "../page";
+import { DocumentBreadcrumbs, DocumentLoadingScreen, Toolbar } from "../page";
 import { WelcomeOverlay } from "../page/welcome_overlay";
-import { TheoryLibraryContext, stdTheories } from "../stdlib";
-import type { ModelTypeMeta } from "../theory";
+import { stdTheories } from "../stdlib";
+import { type ModelTypeMeta, TheoryLibraryContext } from "../theory";
+import { TheorySelectorDialog } from "../theory/theory_selector";
 import { PermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
 import { type LiveModelDocument, getLiveModel, migrateModelDocument } from "./document";
+import { ModelMenu } from "./model_menu";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
-import { TheorySelectorDialog } from "./theory_selector";
 import {
     type MorphismDecl,
     type ObjectDecl,
@@ -60,13 +61,10 @@ export function ModelDocumentEditor(props: {
     return (
         <div class="growable-container">
             <Toolbar>
-                <DocumentMenu liveDocument={props.liveModel} />
-                <DocumentBreadcrumbs document={props.liveModel} />
+                <ModelMenu liveModel={props.liveModel} />
+                <DocumentBreadcrumbs liveDoc={props.liveModel.liveDoc} />
                 <span class="filler" />
-                <PermissionsButton
-                    permissions={props.liveModel.liveDoc.permissions}
-                    refId={props.liveModel.refId}
-                />
+                <PermissionsButton liveDoc={props.liveModel.liveDoc} />
             </Toolbar>
             <ModelPane liveModel={props.liveModel} />
         </div>
@@ -124,11 +122,15 @@ export function ModelNotebookEditor(props: {
     const cellConstructors = () =>
         (props.liveModel.theory()?.modelTypes ?? []).map(modelCellConstructor);
 
-    const firebaseApp = useFirebaseApp();
-    const auth = useAuth(getAuth(firebaseApp));
+    const firebaseApp = (() => {
+        try {
+            return useFirebaseApp();
+        } catch {}
+    })();
+    const auth = firebaseApp && useAuth(getAuth(firebaseApp));
 
     const [isOverlayOpen, setOverlayOpen] = createSignal(
-        liveDoc().doc.notebook.cellOrder.length === 0 && auth.data == null,
+        liveDoc().doc.notebook.cellOrder.length === 0 && auth != null && auth.data == null,
     );
     const toggleOverlay = () => setOverlayOpen(!isOverlayOpen());
 
@@ -151,9 +153,8 @@ export function ModelNotebookEditor(props: {
     );
 }
 
-/** Editor for a notebook cell in a model notebook.
- */
-function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
+/** Editor for a notebook cell in a model notebook. */
+export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
 

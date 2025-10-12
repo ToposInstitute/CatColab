@@ -1,3 +1,6 @@
+set_theory ThSchema
+#/ result: set theory to ThSchema
+
 type u := Unit
 #/ declared: u
 
@@ -19,14 +22,14 @@ type WeightedGraph := [
 
 generate WeightedGraph
 #/ result: 
-#/ object generators: 
-#/  V : Entity
-#/  E : Entity
-#/  Weight : AttrType
-#/ morphism generators: 
-#/  src : E -> V (Id Entity)
-#/  tgt : E -> V (Id Entity)
-#/  weight : E -> Weight (Attr)
+#/ object generators:
+#/   V : Entity
+#/   E : Entity
+#/   Weight : AttrType
+#/ morphism generators:
+#/   src : E -> V (Id Entity)
+#/   tgt : E -> V (Id Entity)
+#/   weight : E -> Weight (Attr)
 
 
 type EntityArr := [
@@ -59,9 +62,9 @@ chk [G : Graph1] (G.src : EntityArr & [ .dom := G.V ] )
 #/ error[elab]: evaluated term [ dom := G.E, cod := G.V, arr := <opaque> ] is not an element of specialized type [ dom : Entity, cod : Entity, arr : (Id Entity)[ self.dom, self.cod ] ] &
 #/   [ .dom : @sing G.V ]:
 #/ Neutrals G.E and G.V are not equal.
-#/ --> examples/test.dbltt:39:19
-#/ 39| chk [G : Graph1] (G.src : EntityArr & [ .dom := G.V ] )
-#/ 39|                   ^^^^^
+#/ --> examples/test.dbltt:41:19
+#/ 41| chk [G : Graph1] (G.src : EntityArr & [ .dom := G.V ] )
+#/ 41|                   ^^^^^
 
 norm [x : [a : Entity, b : @sing a]] x.b
 #/ result: x.a
@@ -76,9 +79,9 @@ type Graph1 := [
 #/ error[elab]: Failed to specialize:
 #/ ... because @sing self.V is not a subtype of @sing self.E:
 #/ ... because Neutrals self.V and self.E are not equal.
-#/ --> examples/test.dbltt:47:34
-#/ 47|   src : EntityArr & [ .dom := E, .dom := V ]
-#/ 47|                                  ^^^^^^^^^
+#/ --> examples/test.dbltt:49:34
+#/ 49|   src : EntityArr & [ .dom := E, .dom := V ]
+#/ 49|                                  ^^^^^^^^^
 
 type Graph := [
   V : Entity,
@@ -106,9 +109,9 @@ def reverse[G : Graph] : Graph := [
 #/ expected errors:
 #/ error[elab]: synthesized type (Id Entity)[ G.E, G.V ] does not match expected type (Id Entity)[ G.E, G.E ]:
 #/ could not convert codomains: Neutrals G.V and G.E are not equal.
-#/ --> examples/test.dbltt:68:10
-#/ 68|   src := G.tgt,
-#/ 68|          ^^^^^
+#/ --> examples/test.dbltt:70:10
+#/ 70|   src := G.tgt,
+#/ 70|          ^^^^^
 
 norm [G : Graph] (reverse[G]).E
 #/ result: G.E
@@ -146,14 +149,83 @@ norm [g : Graph2] g.g1.V
 
 generate Graph2
 #/ result: 
-#/ object generators: 
-#/  V : Entity
-#/  g1.E : Entity
-#/  g2.E : Entity
-#/ morphism generators: 
-#/  g1.src : g1.E -> V (Id Entity)
-#/  g1.tgt : g1.E -> V (Id Entity)
-#/  g2.src : g2.E -> V (Id Entity)
-#/  g2.tgt : g2.E -> V (Id Entity)
+#/ object generators:
+#/   V : Entity
+#/   g1.E : Entity
+#/   g2.E : Entity
+#/ morphism generators:
+#/   g1.src : g1.E -> V (Id Entity)
+#/   g1.tgt : g1.E -> V (Id Entity)
+#/   g2.src : g2.E -> V (Id Entity)
+#/   g2.tgt : g2.E -> V (Id Entity)
+
+
+type WeightedGraph2 := [
+  V : Entity,
+  g1 : WeightedGraph & [ .V := V ],
+  g2 : WeightedGraph & [ .V := V ]
+]
+#/ declared: WeightedGraph2
+
+generate WeightedGraph2
+#/ result: 
+#/ object generators:
+#/   V : Entity
+#/   g1.E : Entity
+#/   g1.Weight : AttrType
+#/   g2.E : Entity
+#/   g2.Weight : AttrType
+#/ morphism generators:
+#/   g1.src : g1.E -> V (Id Entity)
+#/   g1.tgt : g1.E -> V (Id Entity)
+#/   g1.weight : g1.E -> g1.Weight (Attr)
+#/   g2.src : g2.E -> V (Id Entity)
+#/   g2.tgt : g2.E -> V (Id Entity)
+#/   g2.weight : g2.E -> g2.Weight (Attr)
+
+
+set_theory ThCategory
+#/ result: set theory to ThCategory
+
+#(should_fail)
+type Set := [
+  A : Entity,
+]
+#/ expected errors:
+#/ error[elab]: no such type Entity defined
+#/ --> examples/test.dbltt:113:7
+#/ 113|   A : Entity,
+#/ 113|       ^^^^^^
+
+type Set := [
+  A : Object
+]
+#/ declared: Set
+
+type DDS := [
+  X : Object,
+  φ : (Id Object)[X, X]
+]
+#/ declared: DDS
+
+set_theory ThSignedCategory
+#/ result: set theory to ThSignedCategory
+
+type NegFeedback := [
+  X : Object,
+  Y : Object,
+  f : (Id Object)[X, Y],
+  g : Negative[Y, X]
+]
+#/ declared: NegFeedback
+
+generate NegFeedback
+#/ result: 
+#/ object generators:
+#/   X : Object
+#/   Y : Object
+#/ morphism generators:
+#/   f : X -> Y (Id Object)
+#/   g : Y -> X (Negative)
 
 

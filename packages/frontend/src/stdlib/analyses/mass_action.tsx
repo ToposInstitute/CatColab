@@ -1,13 +1,6 @@
 import { createMemo } from "solid-js";
 
-import type {
-    DblModel,
-    MassActionProblemData,
-    MorType,
-    ODEResult,
-    ObType,
-    QualifiedName,
-} from "catlog-wasm";
+import type { DblModel, MassActionProblemData, MorType, ObType, QualifiedName } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import {
     type ColumnSchema,
@@ -16,49 +9,16 @@ import {
     createNumericalColumn,
 } from "../../components";
 import { morLabelOrDefault } from "../../model";
-import type { ModelAnalysisMeta } from "../../theory";
 import { ODEResultPlot } from "../../visualization";
-import { createModelODEPlot } from "./simulation";
+import { createModelODEPlot } from "./model_ode_plot";
+import type { MassActionSimulator } from "./simulator_types";
 
 import "./simulation.css";
 
-type Simulator = (model: DblModel, data: MassActionProblemData) => ODEResult;
-
-/** Configure a mass-action ODE analysis for use with models of a theory. */
-export function configureMassAction(options: {
-    id?: string;
-    name?: string;
-    description?: string;
-    help?: string;
-    simulate: Simulator;
-    isState?: (obType: ObType) => boolean;
-    isTransition?: (morType: MorType) => boolean;
-}): ModelAnalysisMeta<MassActionProblemData> {
-    const {
-        id = "mass-action",
-        name = "Mass-action dynamics",
-        description = "Simulate the system using the law of mass action",
-        help = "mass-action",
-        ...otherOptions
-    } = options;
-    return {
-        id,
-        name,
-        description,
-        help,
-        component: (props) => <MassAction title={name} {...otherOptions} {...props} />,
-        initialContent: () => ({
-            rates: {},
-            initialValues: {},
-            duration: 10,
-        }),
-    };
-}
-
 /** Analyze a model using mass-action dynamics. */
-export function MassAction(
+export default function MassAction(
     props: ModelAnalysisProps<MassActionProblemData> & {
-        simulate: Simulator;
+        simulate: MassActionSimulator;
         isState?: (obType: ObType) => boolean;
         isTransition?: (morType: MorType) => boolean;
         title?: string;

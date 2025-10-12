@@ -1,19 +1,17 @@
 import type { AutomergeUrl, Repo } from "@automerge/automerge-repo";
-import invariant from "tiny-invariant";
 
-import { type AnalysisType, type Document, currentVersion } from "catlog-wasm";
 import {
-    type Api,
-    type LiveDoc,
+    type Analysis,
+    type AnalysisType,
+    type Document,
     type StableRef,
-    getLiveDoc,
-    getLiveDocFromDocHandle,
-} from "../api";
+    currentVersion,
+} from "catlog-wasm";
+import { type Api, type LiveDoc, createDoc, getLiveDoc, getLiveDocFromDocHandle } from "../api";
 import { type LiveDiagramDocument, getLiveDiagram, getLiveDiagramFromRepo } from "../diagram";
 import { type LiveModelDocument, getLiveModel, getLiveModelFromRepo } from "../model";
 import { newNotebook } from "../notebook";
-import type { TheoryLibrary } from "../stdlib";
-import type { InterfaceToType } from "../util/types";
+import type { TheoryLibrary } from "../theory";
 
 /** A document defining an analysis. */
 export type AnalysisDocument = Document & { type: "analysis" };
@@ -36,7 +34,7 @@ export const newAnalysisDocument = (
         ...analysisOf,
         type: "analysis-of",
     },
-    notebook: newNotebook(),
+    notebook: newNotebook<Analysis>(),
     version: currentVersion(),
 });
 
@@ -46,9 +44,6 @@ type BaseLiveAnalysisDocument = {
 
     /** Type of document that this analysis is of. */
     analysisType: AnalysisType;
-
-    /** The ref in the backend, if any, for which this is a live document. */
-    refId?: string;
 };
 
 /** A model analysis document "live" for editing. */
@@ -79,11 +74,7 @@ export type LiveAnalysisDocument = LiveModelAnalysisDocument | LiveDiagramAnalys
 /** Create a new, empty analysis in the backend. */
 export async function createAnalysis(api: Api, analysisType: AnalysisType, analysisOf: StableRef) {
     const init = newAnalysisDocument(analysisType, analysisOf);
-
-    const result = await api.rpc.new_ref.mutate(init as InterfaceToType<AnalysisDocument>);
-    invariant(result.tag === "Ok", "Failed to create a new analysis");
-
-    return result.content;
+    return createDoc(api, init);
 }
 
 /** Retrieve an analysis and make it "live" for editing. */
@@ -101,7 +92,6 @@ export async function getLiveAnalysis(
         return {
             type: "analysis",
             analysisType: "model",
-            refId,
             liveDoc: liveDoc as LiveDoc<ModelAnalysisDocument>,
             liveModel,
         };
@@ -110,7 +100,6 @@ export async function getLiveAnalysis(
         return {
             type: "analysis",
             analysisType: "diagram",
-            refId,
             liveDoc: liveDoc as LiveDoc<DiagramAnalysisDocument>,
             liveDiagram,
         };

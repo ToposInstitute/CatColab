@@ -11,37 +11,13 @@ import { createStore, reconcile } from "solid-js/store";
 import invariant from "tiny-invariant";
 import * as uuid from "uuid";
 
-import type { Permissions } from "catcolab-api";
-import type { Document } from "catlog-wasm";
-import * as catlogWasm from "catlog-wasm";
+import { type Document, migrateDocument } from "catlog-wasm";
 import { PermissionsError } from "../util/errors";
-import type { Api } from "./types";
+import type { InterfaceToType } from "../util/types";
+import type { Api, LiveDoc } from "./types";
 
 /** An Automerge repo with no networking, used for read-only documents. */
 const localRepo = new Repo();
-
-/** Live document retrieved from the backend.
-
-A live document can be used in reactive contexts and is connected to an
-Automerge document handle.
- */
-export type LiveDoc<Doc extends Document> = {
-    /** The document data, suitable for use in reactive contexts.
-
-    This data should never be mutated directly. Instead, call `changeDoc` or, if
-    necessary, interact with the Automerge document handle.
-     */
-    doc: Doc;
-
-    /** Call this function to make changes to the document. */
-    changeDoc: (f: ChangeFn<Doc>) => void;
-
-    /** The Automerge document handle for the document. */
-    docHandle: DocHandle<Doc>;
-
-    /** Permissions for the document retrieved from the backend. */
-    permissions: Permissions;
-};
 
 /** Retrieve a live document from the backend.
 
@@ -78,7 +54,14 @@ export async function getLiveDoc<Doc extends Document>(
         docHandle = localRepo.create(init);
     }
 
-    return getLiveDocFromDocHandle(docHandle, docType, refDoc.permissions);
+    const { permissions } = refDoc;
+    return {
+        ...getLiveDocFromDocHandle(docHandle, docType),
+        docRef: {
+            refId,
+            permissions,
+        },
+    };
 }
 
 /** Create a live document from an Automerge document handle.
@@ -91,12 +74,11 @@ function directly.
 export function getLiveDocFromDocHandle<Doc extends Document>(
     docHandle: DocHandle<Doc>,
     docType?: string,
-    permissions?: Permissions,
 ): LiveDoc<Doc> {
     // Perform any migrations on the document.
     // XXX: copied from automerge-doc-server/src/server.ts:
     const docBefore = docHandle.doc();
-    const docAfter = catlogWasm.migrateDocument(docBefore);
+    const docAfter = migrateDocument(docBefore);
     if ((docBefore as Doc).version !== docAfter.version) {
         const patches = jsonpatch.compare(docBefore as Doc, docAfter);
         docHandle.change((doc: unknown) => {
@@ -114,12 +96,28 @@ export function getLiveDocFromDocHandle<Doc extends Document>(
 
     const changeDoc = (f: ChangeFn<Doc>) => docHandle.change(f);
 
-    // If permissions are omitted, assume that no restrictions are present.
-    if (!permissions) {
-        permissions = { anyone: "Own", user: null, users: [] };
-    }
+    return { doc, changeDoc, docHandle };
+}
 
-    return { doc, changeDoc, docHandle, permissions };
+/** Create a new document in the backend, returning its ref ID. */
+export async function createDoc(api: Api, init: Document): Promise<string> {
+    const result = await api.rpc.new_ref.mutate(init as InterfaceToType<Document>);
+    invariant(result.tag === "Ok", `Failed to create a new ${init.type}`);
+
+    return result.content;
+}
+
+/** Duplicate a document in the backend, returning the new ref ID. */
+export async function duplicateDoc(api: Api, doc: Document): Promise<string> {
+    const init: Document = {
+        ...doc,
+        name: `${doc.name} (copy)`,
+    };
+
+    const result = await api.rpc.new_ref.mutate(init as InterfaceToType<Document>);
+    invariant(result.tag === "Ok", `Failed to duplicate the ${doc.type}`);
+
+    return result.content;
 }
 
 /** Create a Solid Store that tracks an Automerge document. */

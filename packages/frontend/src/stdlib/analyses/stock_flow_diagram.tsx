@@ -4,55 +4,30 @@ import { type Component, For, Show, createResource, createSignal } from "solid-j
 import type { DblModel } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { Foldable } from "../../components";
-import type { ModelAnalysisMeta, Theory } from "../../theory";
+import type { Theory } from "../../theory";
 import { uniqueIndexArray } from "../../util/indexing";
 import {
     type ArrowMarker,
     DownloadSVGButton,
     EdgeSVG,
     type GraphLayout,
+    GraphLayoutConfig,
+    GraphLayoutConfigForm,
+    type GraphvizAttributes,
     NodeSVG,
     type SVGRefProp,
     arrowMarkerSVG,
     loadViz,
     vizLayoutGraph,
 } from "../../visualization";
-import * as GV from "./graph_visualization";
 import { modelToGraphviz } from "./model_graph";
 
 import svgStyles from "../svg_styles.module.css";
 import "./graph_visualization.css";
 
-/** Configure a visualization of a stock flow diagram. */
-export function configureStockFlowDiagram(options: {
-    id: string;
-    name: string;
-    description?: string;
-    help?: string;
-}): ModelAnalysisMeta<GV.GraphConfig> {
-    const { id, name, description, help } = options;
-    return {
-        id,
-        name,
-        description,
-        help,
-        component: StockFlowDiagram,
-        initialContent: GV.defaultGraphConfig,
-    };
-}
-
-const STOCKFLOW_ATTRIBUTES: GV.GraphvizAttributes = {
-    graph: {
-        splines: "ortho",
-    },
-    node: {
-        width: 0.55,
-        height: 0.55,
-    },
-};
-
 /** Visualize a stock flow diagram. */
-export function StockFlowDiagram(props: ModelAnalysisProps<GV.GraphConfig>) {
+export default function StockFlowDiagram(props: ModelAnalysisProps<GraphLayoutConfig.Config>) {
+    // XXX: Following code is mostly copy-paste from `GraphVisualization`.
     const [svgRef, setSvgRef] = createSignal<SVGSVGElement>();
 
     const header = () => (
@@ -60,9 +35,9 @@ export function StockFlowDiagram(props: ModelAnalysisProps<GV.GraphConfig>) {
     );
 
     return (
-        <div class="graph-visualization-analysis">
+        <div class="graph-visualization-container">
             <Foldable title="Visualization" header={header()}>
-                <GV.GraphConfigForm content={props.content} changeContent={props.changeContent} />
+                <GraphLayoutConfigForm config={props.content} changeConfig={props.changeContent} />
             </Foldable>
             <div class="graph-visualization">
                 <Show when={props.liveModel.elaboratedModel()}>
@@ -70,8 +45,7 @@ export function StockFlowDiagram(props: ModelAnalysisProps<GV.GraphConfig>) {
                         <StockFlowGraphviz
                             model={model()}
                             theory={props.liveModel.theory()}
-                            options={GV.graphvizOptions(props.content)}
-                            attributes={STOCKFLOW_ATTRIBUTES}
+                            options={GraphLayoutConfig.graphvizOptions(props.content)}
                             ref={setSvgRef}
                         />
                     )}
@@ -89,7 +63,6 @@ links from stocks to flows using our own layout heuristics.
 export function StockFlowGraphviz(props: {
     model: DblModel;
     theory?: Theory;
-    attributes?: GV.GraphvizAttributes;
     options?: Viz.RenderOptions;
     ref?: SVGRefProp;
 }) {
@@ -97,19 +70,27 @@ export function StockFlowGraphviz(props: {
 
     const vizLayout = () => {
         const viz = vizResource();
-        return (
-            props.theory &&
-            viz &&
-            vizLayoutGraph(
+        if (props.theory && viz) {
+            return vizLayoutGraph(
                 viz,
-                modelToGraphviz(props.model, props.theory, props.attributes),
+                modelToGraphviz(props.model, props.theory, stockFlowAttributes),
                 props.options,
-            )
-        );
+            );
+        }
     };
 
     return <StockFlowSVG model={props.model} layout={vizLayout()} ref={props.ref} />;
 }
+
+const stockFlowAttributes: GraphvizAttributes = {
+    graph: {
+        splines: "ortho",
+    },
+    node: {
+        width: 0.55,
+        height: 0.55,
+    },
+};
 
 function StockFlowSVG(props: {
     model: DblModel;

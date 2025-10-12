@@ -1,0 +1,20 @@
+@import "../../frontend/src/index.css";
+
+.split-view-container {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+}
+
+.split-view-pane {
+    flex: 1;
+    height: 100%;
+    padding: 8px;
+}
+
+.split-view-divider {
+    width: 1px;
+    height: 100%;
+    border-left: 1px solid #e5e7eb;
+    padding: 0 8px;
+}

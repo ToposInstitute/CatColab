@@ -5,7 +5,10 @@
 //! - `eval : syntax -> value` ([Evaluator::eval_tm], [Evaluator::eval_ty])
 //! - `quote : value -> syntax` ([Evaluator::quote_tm], [Evaluator::quote_neu], [Evaluator::quote_ty])
 //! - `convertable? : value -> value -> bool` ([Evaluator::equal_tm], [Evaluator::element_of], [Evaluator::subtype])
-use crate::tt::{prelude::*, stx::*, toplevel::*, val::*};
+use crate::{
+    tt::{prelude::*, stx::*, toplevel::*, val::*},
+    zero::LabelSegment,
+};
 
 /// The context used in evaluation, quoting, and conversion checking
 ///
@@ -50,7 +53,7 @@ impl<'a> Evaluator<'a> {
     /// to self.env
     pub fn eval_ty(&self, ty: &TyS) -> TyV {
         match &**ty {
-            TyS_::TopVar(tv) => self.toplevel.declarations.get(tv).unwrap().as_ty(),
+            TyS_::TopVar(tv) => self.toplevel.declarations.get(tv).unwrap().as_ty().val,
             TyS_::Object(ot) => TyV::object(ot.clone()),
             TyS_::Morphism(pt, dom, cod) => {
                 TyV::morphism(pt.clone(), self.eval_tm(dom), self.eval_tm(cod))
@@ -72,17 +75,15 @@ impl<'a> Evaluator<'a> {
     /// to self.env
     pub fn eval_tm(&self, tm: &TmS) -> TmV {
         match &**tm {
-            TmS_::TopVar(tv) => self.toplevel.declarations.get(tv).unwrap().as_const(),
+            TmS_::TopVar(tv) => self.toplevel.declarations.get(tv).unwrap().as_const().val,
             TmS_::TopApp(tv, args_s) => {
                 let env = Env::nil().extend_by(args_s.iter().map(|arg_s| self.eval_tm(arg_s)));
-                let (_, _, body) = self.toplevel.declarations.get(tv).unwrap().as_def();
-                self.with_env(env).eval_tm(&body)
+                let def = self.toplevel.declarations.get(tv).unwrap().as_def();
+                self.with_env(env).eval_tm(&def.body)
             }
-            TmS_::Var(i, _) => self.env.get(**i).cloned().unwrap(),
-            TmS_::Cons(fields) => {
-                TmV::Cons(fields.iter().map(|(name, tm)| (*name, self.eval_tm(tm))).collect())
-            }
-            TmS_::Proj(tm, field) => self.proj(&self.eval_tm(tm), *field),
+            TmS_::Var(i, _, _) => self.env.get(**i).cloned().unwrap(),
+            TmS_::Cons(fields) => TmV::Cons(fields.map(|tm| self.eval_tm(tm))),
+            TmS_::Proj(tm, field, label) => self.proj(&self.eval_tm(tm), *field, *label),
             TmS_::Tt => TmV::Tt,
             TmS_::Id(_) => TmV::Opaque,
             TmS_::Compose(_, _) => TmV::Opaque,
@@ -91,11 +92,12 @@ impl<'a> Evaluator<'a> {
     }
 
     /// Compute the projection of a field from a term value
-    pub fn proj(&self, tm: &TmV, field_name: FieldName) -> TmV {
+    pub fn proj(&self, tm: &TmV, field_name: FieldName, field_label: LabelSegment) -> TmV {
         match tm {
-            TmV::Neu(n, ty) => {
-                TmV::Neu(TmN::proj(n.clone(), field_name), self.field_ty(ty, tm, field_name))
-            }
+            TmV::Neu(n, ty) => TmV::Neu(
+                TmN::proj(n.clone(), field_name, field_label),
+                self.field_ty(ty, tm, field_name),
+            ),
             TmV::Cons(fields) => fields.get(field_name).cloned().unwrap(),
             _ => panic!(),
         }
@@ -118,8 +120,8 @@ impl<'a> Evaluator<'a> {
     }
 
     /// Bind a new neutral of type `ty`
-    pub fn bind_neu(&self, name: VarName, ty: TyV) -> (TmN, Self) {
-        let n = TmN::var(self.scope_length.into(), name);
+    pub fn bind_neu(&self, name: VarName, label: LabelSegment, ty: TyV) -> (TmN, Self) {
+        let n = TmN::var(self.scope_length.into(), name, label);
         let v = TmV::Neu(n.clone(), ty);
         (
             n,
@@ -129,6 +131,11 @@ impl<'a> Evaluator<'a> {
                 ..self.clone()
             },
         )
+    }
+
+    /// Bind a variable called "self" to `ty`
+    pub fn bind_self(&self, ty: TyV) -> (TmN, Self) {
+        self.bind_neu(name_seg("self"), label_seg("self"), ty)
     }
 
     /// Produce type syntax from a type value.
@@ -148,20 +155,10 @@ impl<'a> Evaluator<'a> {
                 TyS::morphism(morphism_type.clone(), self.quote_tm(dom), self.quote_tm(cod))
             }
             TyV_::Record(r) => {
-                let self_varname = NameSegment::Text(ustr("self"));
-                let r_eval = self.with_env(r.env.clone()).bind_neu(self_varname, ty.clone()).1;
+                let r_eval = self.with_env(r.env.clone()).bind_self(ty.clone()).1;
                 let fields1 = r
                     .fields1
-                    .iter()
-                    .map(|(name, ty_s)| {
-                        (
-                            *name,
-                            self.bind_neu(self_varname, ty.clone())
-                                .1
-                                .quote_ty(&r_eval.eval_ty(ty_s)),
-                        )
-                    })
-                    .collect();
+                    .map(|ty_s| self.bind_self(ty.clone()).1.quote_ty(&r_eval.eval_ty(ty_s)));
                 let record_ty_s = TyS::record(RecordS::new(r.fields0.clone(), fields1));
                 if r.specializations.is_empty() {
                     record_ty_s
@@ -171,8 +168,14 @@ impl<'a> Evaluator<'a> {
                         r.specializations
                             .flatten()
                             .into_iter()
-                            .map(|(path, ty_v)| {
-                                (path.segments().copied().collect::<Vec<_>>(), self.quote_ty(&ty_v))
+                            .map(|(name, label, ty_v)| {
+                                (
+                                    name.segments()
+                                        .copied()
+                                        .zip(label.segments().copied())
+                                        .collect::<Vec<_>>(),
+                                    self.quote_ty(&ty_v),
+                                )
                             })
                             .collect(),
                     )
@@ -188,8 +191,8 @@ impl<'a> Evaluator<'a> {
     /// The documentation for [Evaluator::quote_ty] is also applicable here.
     pub fn quote_neu(&self, n: &TmN) -> TmS {
         match &**n {
-            TmN_::Var(i, name) => TmS::var(i.as_bwd(self.scope_length), *name),
-            TmN_::Proj(tm, field) => TmS::proj(self.quote_neu(tm), *field),
+            TmN_::Var(i, name, label) => TmS::var(i.as_bwd(self.scope_length), *name, *label),
+            TmN_::Proj(tm, field, label) => TmS::proj(self.quote_neu(tm), *field, *label),
         }
     }
 
@@ -199,9 +202,7 @@ impl<'a> Evaluator<'a> {
     pub fn quote_tm(&self, tm: &TmV) -> TmS {
         match tm {
             TmV::Neu(n, _) => self.quote_neu(n),
-            TmV::Cons(fields) => {
-                TmS::cons(fields.iter().map(|(name, tm)| (*name, self.quote_tm(tm))).collect())
-            }
+            TmV::Cons(fields) => TmS::cons(fields.map(|tm| self.quote_tm(tm))),
             TmV::Tt => TmS::tt(),
             TmV::Opaque => TmS::opaque(),
         }
@@ -213,7 +214,7 @@ impl<'a> Evaluator<'a> {
     /// neutral of type `ty1` is an element of `ty2`.
     pub fn subtype<'b>(&self, ty1: &TyV, ty2: &TyV) -> Result<(), D<'b>> {
         self.convertable_ty(ty1, ty2)?;
-        let (n, _) = self.bind_neu(NameSegment::Text(ustr("self")), ty1.clone());
+        let (n, _) = self.bind_self(ty1.clone());
         let v = self.eta_neu(&n, ty1);
         self.element_of(&v, ty2)
     }
@@ -231,8 +232,8 @@ impl<'a> Evaluator<'a> {
             TyV_::Object(_) => Ok(()),
             TyV_::Morphism(_, _, _) => Ok(()),
             TyV_::Record(r) => {
-                for (name, _) in r.fields1.iter() {
-                    self.element_of(&self.proj(tm, *name), &self.field_ty(ty, tm, *name))?
+                for (name, (label, _)) in r.fields1.iter() {
+                    self.element_of(&self.proj(tm, *name, *label), &self.field_ty(ty, tm, *name))?
                 }
                 Ok(())
             }
@@ -269,16 +270,16 @@ impl<'a> Evaluator<'a> {
                 }
                 let mut fields = IndexMap::new();
                 let mut self1 = self.clone();
-                for ((name, field_ty1_s), (_, field_ty2_s)) in
+                for ((name, (label, field_ty1_s)), (_, (_, field_ty2_s))) in
                     r1.fields1.iter().zip(r2.fields1.iter())
                 {
                     let v = TmV::Cons(fields.clone().into());
                     let field_ty1_v = self1.with_env(r1.env.snoc(v.clone())).eval_ty(field_ty1_s);
                     let field_ty2_v = self1.with_env(r2.env.snoc(v.clone())).eval_ty(field_ty2_s);
                     self1.convertable_ty(&field_ty1_v, &field_ty2_v)?;
-                    let (field_val, self_next) = self.bind_neu(*name, field_ty1_v.clone());
+                    let (field_val, self_next) = self.bind_neu(*name, *label, field_ty1_v.clone());
                     self1 = self_next;
-                    fields.insert(*name, TmV::Neu(field_val, field_ty1_v));
+                    fields.insert(*name, (*label, TmV::Neu(field_val, field_ty1_v)));
                 }
                 Ok(())
             }
@@ -298,10 +299,10 @@ impl<'a> Evaluator<'a> {
             TyV_::Morphism(_, _, _) => TmV::Opaque,
             TyV_::Record(r) => {
                 let mut fields = Row::empty();
-                for (name, _) in r.fields1.iter() {
+                for (name, (label, _)) in r.fields1.iter() {
                     let ty_v = self.field_ty(ty, &TmV::Cons(fields.clone()), *name);
-                    let v = self.eta_neu(&TmN::proj(n.clone(), *name), &ty_v);
-                    fields = fields.insert(*name, v);
+                    let v = self.eta_neu(&TmN::proj(n.clone(), *name, *label), &ty_v);
+                    fields = fields.insert(*name, *label, v);
                 }
                 TmV::Cons(fields)
             }
@@ -316,7 +317,9 @@ impl<'a> Evaluator<'a> {
             TmV::Neu(tm_n, ty_v) => self.eta_neu(tm_n, ty_v),
             TmV::Cons(row) => TmV::Cons(
                 row.iter()
-                    .map(|(name, field_v)| (*name, self.eta(field_v, &self.field_ty(ty, v, *name))))
+                    .map(|(name, (label, field_v))| {
+                        (*name, (*label, self.eta(field_v, &self.field_ty(ty, v, *name))))
+                    })
                     .collect(),
             ),
             TmV::Tt => TmV::Tt,
@@ -365,7 +368,7 @@ impl<'a> Evaluator<'a> {
                 }
             }
             (TmV::Cons(fields1), TmV::Cons(fields2)) => {
-                for ((_, tm1), (_, tm2)) in fields1.iter().zip(fields2.iter()) {
+                for ((_, (_, tm1)), (_, (_, tm2))) in fields1.iter().zip(fields2.iter()) {
                     self.equal_tm_helper(tm1, tm2, strict1, strict2)?
                 }
                 Ok(())
@@ -384,7 +387,7 @@ impl<'a> Evaluator<'a> {
         &self,
         ty: &TyV,
         val: &TmV,
-        path: &[FieldName],
+        path: &[(FieldName, LabelSegment)],
         field_ty: TyV,
     ) -> Result<(), String> {
         assert!(!path.is_empty());
@@ -394,10 +397,10 @@ impl<'a> Evaluator<'a> {
         };
 
         let (field, path) = (path[0], &path[1..]);
-        if !r.fields1.has(field) {
-            return Err(format!("no such field .{field}"));
+        if !r.fields1.has(field.0) {
+            return Err(format!("no such field .{}", field.1));
         }
-        let orig_field_ty = self.field_ty(ty, val, field);
+        let orig_field_ty = self.field_ty(ty, val, field.0);
         if path.is_empty() {
             self.subtype(&field_ty, &orig_field_ty).map_err(|msg| {
                 format!(
@@ -408,7 +411,7 @@ impl<'a> Evaluator<'a> {
                 )
             })
         } else {
-            self.can_specialize(&orig_field_ty, &self.proj(val, field), path, field_ty)
+            self.can_specialize(&orig_field_ty, &self.proj(val, field.0, field.1), path, field_ty)
         }
     }
 
@@ -418,10 +421,10 @@ impl<'a> Evaluator<'a> {
     pub fn try_specialize(
         &self,
         ty: &TyV,
-        path: &[FieldName],
+        path: &[(FieldName, LabelSegment)],
         field_ty: TyV,
     ) -> Result<TyV, String> {
-        let (self_var, _) = self.bind_neu(text_seg("self"), ty.clone());
+        let (self_var, _) = self.bind_self(ty.clone());
         let self_val = self.eta_neu(&self_var, ty);
         self.can_specialize(ty, &self_val, path, field_ty.clone())?;
         let TyV_::Record(r) = &**ty else { panic!() };

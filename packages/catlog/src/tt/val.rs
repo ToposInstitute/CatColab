@@ -6,7 +6,10 @@ use bwd::Bwd;
 use derive_more::Constructor;
 use std::ops::Deref;
 
-use crate::tt::{prelude::*, stx::*};
+use crate::{
+    tt::{prelude::*, stx::*},
+    zero::LabelSegment,
+};
 
 /// A way of resolving [BwdIdx] found in [TmS_::Var] to values
 pub type Env = Bwd<TmV>;
@@ -34,7 +37,7 @@ impl RecordV {
     /// Add a specialization a path `path` to type `ty`
     ///
     /// Precondition: assumes that this produces a subtype.
-    pub fn add_specialization(&self, path: &[FieldName], ty: TyV) -> Self {
+    pub fn add_specialization(&self, path: &[(FieldName, LabelSegment)], ty: TyV) -> Self {
         Self {
             specializations: merge_specializations(
                 &self.specializations,
@@ -57,10 +60,10 @@ impl RecordV {
 
 /// Merge new specializations with old specializations
 pub fn merge_specializations(old: &Dtry<TyV>, new: &Dtry<TyV>) -> Dtry<TyV> {
-    let mut result: IndexMap<FieldName, DtryEntry<TyV>> =
+    let mut result: IndexMap<FieldName, (LabelSegment, DtryEntry<TyV>)> =
         old.entries().map(|(name, e)| (*name, e.clone())).collect();
     for (field, entry) in new.entries() {
-        let new_entry = match (old.entry(field), entry) {
+        let new_entry = match (old.entry(field), &entry.1) {
             (Option::None, e) => e.clone(),
             (Some(_), DtryEntry::File(subty)) => DtryEntry::File(subty.clone()),
             (Some(DtryEntry::File(ty)), DtryEntry::SubDir(d)) => DtryEntry::File(ty.specialize(d)),
@@ -68,7 +71,7 @@ pub fn merge_specializations(old: &Dtry<TyV>, new: &Dtry<TyV>) -> Dtry<TyV> {
                 DtryEntry::SubDir(merge_specializations(d1, d2))
             }
         };
-        result.insert(*field, new_entry);
+        result.insert(*field, (entry.0, new_entry));
     }
     result.into()
 }
@@ -156,7 +159,7 @@ impl TyV {
     /// Specializes the field at `path` to `ty`
     ///
     /// Precondition: assumes that this produces a subtype.
-    pub fn add_specialization(&self, path: &[FieldName], ty: TyV) -> Self {
+    pub fn add_specialization(&self, path: &[(FieldName, LabelSegment)], ty: TyV) -> Self {
         match &**self {
             TyV_::Record(r) => TyV::record(r.add_specialization(path, ty)),
             _ => panic!("can only specialize a record type"),
@@ -184,9 +187,9 @@ impl TyV {
 #[derive(PartialEq, Eq)]
 pub enum TmN_ {
     /// Variable.
-    Var(FwdIdx, VarName),
+    Var(FwdIdx, VarName, LabelSegment),
     /// Projection.
-    Proj(TmN, FieldName),
+    Proj(TmN, FieldName, LabelSegment),
 }
 
 /// Neutrals for base terms, dereferences to [TmN_].
@@ -203,13 +206,13 @@ impl Deref for TmN {
 
 impl TmN {
     /// Smart constructor for [TmN], [TmN_::Var] case.
-    pub fn var(fwd_idx: FwdIdx, var_name: VarName) -> Self {
-        TmN(Rc::new(TmN_::Var(fwd_idx, var_name)))
+    pub fn var(fwd_idx: FwdIdx, var_name: VarName, label: LabelSegment) -> Self {
+        TmN(Rc::new(TmN_::Var(fwd_idx, var_name, label)))
     }
 
     /// Smart constructor for [TmN], [TmN_::Proj] case.
-    pub fn proj(tm_n: TmN, field_name: FieldName) -> Self {
-        TmN(Rc::new(TmN_::Proj(tm_n, field_name)))
+    pub fn proj(tm_n: TmN, field_name: FieldName, label: LabelSegment) -> Self {
+        TmN(Rc::new(TmN_::Proj(tm_n, field_name, label)))
     }
 }
 

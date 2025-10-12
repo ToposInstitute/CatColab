@@ -27,7 +27,7 @@ nonempty = "0.12"
 num-traits = "0.2"
 ode_solvers = { version = "0.5.0", optional = true }
 pretty = "0.12.4"
-rebop = { git = "https://github.com/Armavica/rebop.git", rev = "eb1e500", default-features = false, optional = true }
+rebop = { version = "0.9.3", default-features = false, optional = true }
 ref-cast = "1"
 scopeguard = "1.2.0"
 serde = { version = "1", features = ["derive"], optional = true }
@@ -37,6 +37,7 @@ tsify = { version = "0.5", features = ["js"], optional = true }
 ustr = "1"
 uuid = { version = "1.18" }
 wasm-bindgen = { version = "0.2.100", optional = true }
+notebook-types = { version = "0.1.0", path = "../notebook-types" }
 
 [dev-dependencies]
 clap = { version = "4.5.47", features = ["derive"] }
@@ -45,6 +46,7 @@ notify-debouncer-full = "0.6.0"
 expect-test = "1.5"
 textplots = "0.8.7"
 similar = "2.7.0"
+serde_json = "1.0.145"
 
 [[example]]
 name = "check"

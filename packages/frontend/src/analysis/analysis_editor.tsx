@@ -15,16 +15,17 @@ import invariant from "tiny-invariant";
 import { useApi } from "../api";
 import { IconButton, ResizableHandle } from "../components";
 import { DiagramPane } from "../diagram/diagram_editor";
+import { DiagramMenu } from "../diagram/diagram_menu";
 import { ModelPane } from "../model/model_editor";
+import { ModelMenu } from "../model/model_menu";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
     NotebookEditor,
     newFormalCell,
 } from "../notebook";
-import { DocumentBreadcrumbs, DocumentLoadingScreen, DocumentMenu, Toolbar } from "../page";
-import { TheoryLibraryContext } from "../stdlib";
-import type { AnalysisMeta } from "../theory";
+import { DocumentBreadcrumbs, DocumentLoadingScreen, Toolbar } from "../page";
+import { type AnalysisMeta, TheoryLibraryContext } from "../theory";
 import { assertExhaustive } from "../util/assert_exhaustive";
 import { LiveAnalysisContext } from "./context";
 import {
@@ -100,7 +101,7 @@ export function AnalysisDocumentEditor(props: {
                         >
                             <Toolbar>
                                 <AnalysisMenu liveAnalysis={props.liveAnalysis} />
-                                <DocumentBreadcrumbs document={props.liveAnalysis} />
+                                <DocumentBreadcrumbs liveDoc={props.liveAnalysis.liveDoc} />
                                 <span class="filler" />
                                 <IconButton
                                     onClick={toggleSidePanel}
@@ -144,20 +145,18 @@ export function AnalysisDocumentEditor(props: {
 
 const AnalysisMenu = (props: {
     liveAnalysis: LiveAnalysisDocument;
-}) => {
-    const liveDocument = () => {
-        switch (props.liveAnalysis.analysisType) {
-            case "diagram":
-                return props.liveAnalysis.liveDiagram;
-            case "model":
-                return props.liveAnalysis.liveModel;
-            default:
-                assertExhaustive(props.liveAnalysis);
-        }
-    };
-
-    return <DocumentMenu liveDocument={liveDocument()} />;
-};
+}) => (
+    <Switch>
+        <Match when={props.liveAnalysis.analysisType === "model" && props.liveAnalysis.liveModel}>
+            {(liveModel) => <ModelMenu liveModel={liveModel()} />}
+        </Match>
+        <Match
+            when={props.liveAnalysis.analysisType === "diagram" && props.liveAnalysis.liveDiagram}
+        >
+            {(liveDiagram) => <DiagramMenu liveDiagram={liveDiagram()} />}
+        </Match>
+    </Switch>
+);
 
 const AnalysisOfPane = (props: {
     liveAnalysis: LiveAnalysisDocument;
@@ -206,7 +205,8 @@ export function AnalysisNotebookEditor(props: {
     );
 }
 
-function AnalysisCellEditor(props: FormalCellEditorProps<Analysis<unknown>>) {
+/** Editor for a notebook cell in an analysis notebook. */
+export function AnalysisCellEditor(props: FormalCellEditorProps<Analysis<unknown>>) {
     const liveAnalysis = useContext(LiveAnalysisContext);
     invariant(liveAnalysis, "Live analysis should be provided as context for cell editor");
 

@@ -1,6 +1,9 @@
 //! Directories.
 
-use crate::{tt::prelude::*, zero::QualifiedName};
+use crate::{
+    tt::prelude::*,
+    zero::{LabelSegment, QualifiedLabel, QualifiedName},
+};
 
 /// An entry in a [Dtry].
 ///
@@ -24,7 +27,7 @@ impl<T> DtryEntry<T> {
         }
     }
 
-    fn singleton(path: &[NameSegment], val: T) -> Self {
+    fn singleton(path: &[(FieldName, LabelSegment)], val: T) -> Self {
         if path.is_empty() {
             DtryEntry::File(val)
         } else {
@@ -34,10 +37,15 @@ impl<T> DtryEntry<T> {
 }
 
 impl<T: Clone> DtryEntry<T> {
-    fn flatten_into(&self, namespace: QualifiedName, out: &mut Vec<(QualifiedName, T)>) {
+    fn flatten_into(
+        &self,
+        namespace: QualifiedName,
+        label_namespace: QualifiedLabel,
+        out: &mut Vec<(QualifiedName, QualifiedLabel, T)>,
+    ) {
         match self {
-            DtryEntry::File(x) => out.push((namespace, x.clone())),
-            DtryEntry::SubDir(d) => d.flatten_into(namespace, out),
+            DtryEntry::File(x) => out.push((namespace, label_namespace, x.clone())),
+            DtryEntry::SubDir(d) => d.flatten_into(namespace, label_namespace, out),
         }
     }
 }
@@ -64,7 +72,7 @@ impl<T> Dtry<T> {
     /// Produce a new directory given by mapping `f` over all of the
     /// [DtryEntry::File] nodes.
     pub fn map<S>(&self, f: &impl Fn(&T) -> S) -> Dtry<S> {
-        Dtry(self.0.iter().map(|(name, e)| (*name, e.map(f))).collect())
+        Dtry(self.0.iter().map(|(name, (label, e))| (*name, (*label, e.map(f)))).collect())
     }
 
     /// Constructor for the empty directory.
@@ -78,7 +86,7 @@ impl<T> Dtry<T> {
     }
 
     /// Iterate through the entries of the directory
-    pub fn entries(&self) -> impl Iterator<Item = (&FieldName, &DtryEntry<T>)> {
+    pub fn entries(&self) -> impl Iterator<Item = (&FieldName, &(LabelSegment, DtryEntry<T>))> {
         self.0.iter()
     }
 
@@ -88,31 +96,36 @@ impl<T> Dtry<T> {
     }
 
     /// Create a singleton directory with just one entry at the given path
-    pub fn singleton(path: &[FieldName], val: T) -> Self {
+    pub fn singleton(path: &[(FieldName, LabelSegment)], val: T) -> Self {
         assert!(!path.is_empty());
-        let (field, path) = (path[0], &path[1..]);
-        Dtry([(field, DtryEntry::singleton(path, val))].into_iter().collect())
+        let ((field, label), path) = (path[0], &path[1..]);
+        Dtry([(field, (label, DtryEntry::singleton(path, val)))].into_iter().collect())
     }
 }
 
 impl<T: Clone> Dtry<T> {
     /// Produce the list of paths in `self` that refer to files, along with the
     /// value of the files that they refer to
-    pub fn flatten(&self) -> Vec<(QualifiedName, T)> {
+    pub fn flatten(&self) -> Vec<(QualifiedName, QualifiedLabel, T)> {
         let mut out = Vec::new();
-        self.flatten_into(vec![].into(), &mut out);
+        self.flatten_into(vec![].into(), vec![].into(), &mut out);
         out
     }
 
-    fn flatten_into(&self, namespace: QualifiedName, out: &mut Vec<(QualifiedName, T)>) {
-        for (field, entry) in self.entries() {
-            entry.flatten_into(namespace.snoc(*field), out)
+    fn flatten_into(
+        &self,
+        namespace: QualifiedName,
+        label_namespace: QualifiedLabel,
+        out: &mut Vec<(QualifiedName, QualifiedLabel, T)>,
+    ) {
+        for (field, (label, entry)) in self.entries() {
+            entry.flatten_into(namespace.snoc(*field), label_namespace.snoc(*label), out)
         }
     }
 }
 
-impl<T> From<IndexMap<FieldName, DtryEntry<T>>> for Dtry<T> {
-    fn from(value: IndexMap<FieldName, DtryEntry<T>>) -> Self {
+impl<T> From<IndexMap<FieldName, (LabelSegment, DtryEntry<T>)>> for Dtry<T> {
+    fn from(value: IndexMap<FieldName, (LabelSegment, DtryEntry<T>)>) -> Self {
         Self(value.into())
     }
 }

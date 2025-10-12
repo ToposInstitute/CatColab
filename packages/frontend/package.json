@@ -25,7 +25,7 @@
         "@automerge/automerge-repo": "^2.2.0",
         "@automerge/automerge-repo-network-websocket": "^2.2.0",
         "@automerge/automerge-repo-storage-indexeddb": "^2.2.0",
-        "@automerge/prosemirror": "^0.1.0",
+        "@automerge/prosemirror": "v0.2.0-alpha.0",
         "@benrbray/prosemirror-math": "^1.0.0",
         "@corvu/dialog": "^0.2.4",
         "@corvu/disclosure": "^0.2.1",
@@ -81,7 +81,7 @@
         "vite": "^5.3.1",
         "vite-plugin-solid": "^2.10.2",
         "vite-plugin-wasm": "^3.4.1",
-        "vitest": "^3.0.2",
+        "vitest": "^3.2.4",
         "wasm-pack": "^0.13.1"
     }
 }

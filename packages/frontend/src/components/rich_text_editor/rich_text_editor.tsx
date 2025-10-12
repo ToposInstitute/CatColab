@@ -30,11 +30,13 @@ import {
     doIfAtTop,
     doIfEmpty,
     increaseListIndet,
+    insertLinkCmd,
     insertMathDisplayCmd,
     toggleBulletList,
     toggleOrderedList,
     turnSelectionIntoBlockquote,
 } from "./commands";
+import { getLinkFromHouseEvent, linkEditorPlugin } from "./link_editor";
 import { type CustomSchema, proseMirrorAutomergeInit } from "./schema";
 import { activeHeading, initPlaceholderPlugin, isMarkActive } from "./utils";
 
@@ -140,6 +142,7 @@ export const RichTextEditor = (
             keymap(baseKeymap),
             ...(props.placeholder ? [initPlaceholderPlugin(props.placeholder)] : []),
             automergePlugin,
+            linkEditorPlugin,
             mathPlugin,
             inputRules({ rules: [blockMathInputRule] }),
         ];
@@ -159,7 +162,33 @@ export const RichTextEditor = (
                 view.updateState(newState);
                 setHeadingLevel(activeHeading(view.state, schema));
             },
+            // returning true: Prosemirror's internal handlers will not run for the event.
             handleDOMEvents: {
+                // If mousedown is on a link, cancel the event.
+                // Why: letting it propagate will trigger the onfocus event, which can change the DOM. No
+                // click event is triggered when the DOM changes between mousedown and mouseup.
+                mousedown: (view, event) => {
+                    const link = getLinkFromHouseEvent(view, event);
+                    if (!link) {
+                        return false;
+                    }
+
+                    event.preventDefault();
+                    return true;
+                },
+                // XXX: this is needed because otherwise links to a different domain than the current
+                // page don't open. This solution seems to work fine, but it's unfortunate that we can't
+                // rely on the default link behavior. This may be a problem with the SolidJS router.
+                click: (view, event) => {
+                    const link = getLinkFromHouseEvent(view, event);
+                    if (!link || !link.href) {
+                        return false;
+                    }
+
+                    window.open(link.href, "_blank", "noopener,noreferrer");
+                    event.preventDefault();
+                    return true;
+                },
                 focus: () => {
                     setEditorFocused(true);
                     props.onFocus?.();
@@ -199,9 +228,7 @@ export const RichTextEditor = (
         setMenuControls({
             onBoldClicked: () => toggleMark(schema.marks.strong)(view.state, view.dispatch),
             onItalicClicked: () => toggleMark(schema.marks.em)(view.state, view.dispatch),
-            // TODO: A "good" notion-style link editor should probably use an inline group node, which
-            // currently doesn't work: https://github.com/automerge/automerge-prosemirror/issues/30
-            onLinkClicked: null,
+            onLinkClicked: () => insertLinkCmd(view.state, view.dispatch, view),
             onBlockQuoteClicked: () => turnSelectionIntoBlockquote(view.state, view.dispatch),
             onToggleBulletList: () => toggleBulletList(view.state, view.dispatch),
             onToggleOrderedList: () => toggleOrderedList(view.state, view.dispatch),
@@ -252,6 +279,7 @@ function richTextEditorKeymap(schema: CustomSchema, props: RichTextEditorOptions
     bindings["Enter"] = splitListItem(schema.nodes.list_item);
     bindings["Mod-b"] = toggleMark(schema.marks.strong);
     bindings["Mod-i"] = toggleMark(schema.marks.em);
+    bindings["Mod-l"] = insertLinkCmd;
     bindings["Mod-m"] = insertMathDisplayCmd;
     bindings["Backspace"] = chainCommands(
         deleteSelection,

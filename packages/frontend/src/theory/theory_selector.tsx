@@ -1,9 +1,10 @@
 import Dialog from "@corvu/dialog";
+import { useLocation } from "@solidjs/router";
 import { For, createMemo, createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { TheoryHelpButton } from "../page/toolbar";
-import { TheoryLibraryContext, type TheoryMeta } from "../stdlib";
+import { TheoryLibraryContext, type TheoryMeta } from "../theory";
 
 import "./theory_selector.css";
 
@@ -16,6 +17,14 @@ type TheorySelectorProps = {
 export function TheorySelectorDialog(props: TheorySelectorProps) {
     const [theorySelectorOpen, setTheorySelectorOpen] = createSignal(false);
 
+    // Only show help button when router is available.
+    let HelpButton = () => <TheoryHelpButton meta={props.theoryMeta} />;
+    try {
+        useLocation();
+    } catch {
+        HelpButton = () => <></>;
+    }
+
     return (
         <Dialog open={theorySelectorOpen()} onOpenChange={setTheorySelectorOpen}>
             <Dialog.Trigger
@@ -25,7 +34,7 @@ export function TheorySelectorDialog(props: TheorySelectorProps) {
             >
                 {props.theoryMeta.name}
             </Dialog.Trigger>
-            <TheoryHelpButton meta={props.theoryMeta} />
+            <HelpButton />
             <Dialog.Portal>
                 <Dialog.Overlay class="overlay" />
                 <Dialog.Content class="popup">

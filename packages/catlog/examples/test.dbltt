@@ -1,3 +1,5 @@
+set_theory ThSchema
+
 type u := Unit
 
 type u2 := u
@@ -95,3 +97,38 @@ syn [g : Graph2] g.g1.V
 norm [g : Graph2] g.g1.V
 
 generate Graph2
+
+type WeightedGraph2 := [
+  V : Entity,
+  g1 : WeightedGraph & [ .V := V ],
+  g2 : WeightedGraph & [ .V := V ]
+]
+
+generate WeightedGraph2
+
+set_theory ThCategory
+
+#(should_fail)
+type Set := [
+  A : Entity,
+]
+
+type Set := [
+  A : Object
+]
+
+type DDS := [
+  X : Object,
+  φ : (Id Object)[X, X]
+]
+
+set_theory ThSignedCategory
+
+type NegFeedback := [
+  X : Object,
+  Y : Object,
+  f : (Id Object)[X, Y],
+  g : Negative[Y, X]
+]
+
+generate NegFeedback

@@ -14,11 +14,11 @@ import {
     cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
-import { DocumentBreadcrumbs, DocumentLoadingScreen, DocumentMenu, Toolbar } from "../page";
-import { TheoryLibraryContext } from "../stdlib";
-import type { InstanceTypeMeta } from "../theory";
+import { DocumentBreadcrumbs, DocumentLoadingScreen, Toolbar } from "../page";
+import { type InstanceTypeMeta, TheoryLibraryContext } from "../theory";
 import { PermissionsButton } from "../user";
 import { LiveDiagramContext } from "./context";
+import { DiagramMenu } from "./diagram_menu";
 import { type LiveDiagramDocument, getLiveDiagram } from "./document";
 import { DiagramMorphismCellEditor } from "./morphism_cell_editor";
 import { DiagramObjectCellEditor } from "./object_cell_editor";
@@ -57,13 +57,10 @@ export function DiagramDocumentEditor(props: {
     return (
         <div class="growable-container">
             <Toolbar>
-                <DocumentMenu liveDocument={props.liveDiagram} />
-                <DocumentBreadcrumbs document={props.liveDiagram} />
+                <DiagramMenu liveDiagram={props.liveDiagram} />
+                <DocumentBreadcrumbs liveDoc={props.liveDiagram.liveDoc} />
                 <span class="filler" />
-                <PermissionsButton
-                    permissions={props.liveDiagram.liveDoc.permissions}
-                    refId={props.liveDiagram.refId}
-                />
+                <PermissionsButton liveDoc={props.liveDiagram.liveDoc} />
             </Toolbar>
             <DiagramPane liveDiagram={props.liveDiagram} />
         </div>
@@ -94,7 +91,7 @@ export function DiagramPane(props: {
                 <div class="instance-of">
                     <div class="name">{liveModel().theory()?.instanceOfName}</div>
                     <div class="model">
-                        <A href={`/model/${liveModel().refId}`}>
+                        <A href={`/model/${liveModel().liveDoc.docRef?.refId}`}>
                             {liveModel().liveDoc.doc.name || "Untitled"}
                         </A>
                     </div>
