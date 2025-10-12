@@ -3,7 +3,8 @@ import { createResource, Switch, Match } from "solid-js";
 
 import { getLiveModelFromRepo } from "../../frontend/src/model";
 import { ModelPane } from "../../frontend/src/model/model_editor";
-import { stdTheories, TheoryLibraryContext } from "../../frontend/src/stdlib";
+import { TheoryLibraryContext } from "../../frontend/src/theory";
+import { stdTheories } from "../../frontend/src/stdlib";
 import type { SolidToolProps } from "./tools";
 
 export function ModelPaneComponent(props: SolidToolProps) {

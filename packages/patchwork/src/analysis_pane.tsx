@@ -3,7 +3,8 @@ import { createResource, Switch, Match } from "solid-js";
 
 import { getLiveAnalysisFromRepo } from "../../frontend/src/analysis";
 import { AnalysisNotebookEditor } from "../../frontend/src/analysis/analysis_editor";
-import { stdTheories, TheoryLibraryContext } from "../../frontend/src/stdlib";
+import { TheoryLibraryContext } from "../../frontend/src/theory";
+import { stdTheories } from "../../frontend/src/stdlib";
 import type { SolidToolProps } from "./tools";
 
 export function AnalysisPaneComponent(props: SolidToolProps) {
