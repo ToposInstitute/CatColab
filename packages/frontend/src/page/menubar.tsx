@@ -6,7 +6,7 @@ import { type JSX, Show, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { Document } from "catlog-wasm";
-import { duplicateDoc, useApi } from "../api";
+import { useApi } from "../api";
 import { IconButton } from "../components";
 import { createModel } from "../model/document";
 import { TheoryLibraryContext } from "../theory";
@@ -120,7 +120,7 @@ export function DuplicateMenuItem(props: {
     const navigate = useNavigate();
 
     const onDuplicate = async () => {
-        const newRef = await duplicateDoc(api, props.doc);
+        const newRef = await api.duplicateDoc(props.doc);
         navigate(`/${props.doc.type}/${newRef}`);
     };
 

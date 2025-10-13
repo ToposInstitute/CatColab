@@ -7,7 +7,7 @@ import {
     type StableRef,
     currentVersion,
 } from "catlog-wasm";
-import { type Api, type LiveDoc, createDoc, getLiveDoc, getLiveDocFromDocHandle } from "../api";
+import { type Api, type LiveDoc, getLiveDocFromDocHandle } from "../api";
 import { type LiveDiagramDocument, getLiveDiagram, getLiveDiagramFromRepo } from "../diagram";
 import { type LiveModelDocument, getLiveModel, getLiveModelFromRepo } from "../model";
 import { newNotebook } from "../notebook";
@@ -74,7 +74,7 @@ export type LiveAnalysisDocument = LiveModelAnalysisDocument | LiveDiagramAnalys
 /** Create a new, empty analysis in the backend. */
 export async function createAnalysis(api: Api, analysisType: AnalysisType, analysisOf: StableRef) {
     const init = newAnalysisDocument(analysisType, analysisOf);
-    return createDoc(api, init);
+    return api.createDoc(init);
 }
 
 /** Retrieve an analysis and make it "live" for editing. */
@@ -83,7 +83,7 @@ export async function getLiveAnalysis(
     api: Api,
     theories: TheoryLibrary,
 ): Promise<LiveAnalysisDocument> {
-    const liveDoc = await getLiveDoc<AnalysisDocument>(api, refId, "analysis");
+    const liveDoc = await api.getLiveDoc<AnalysisDocument>(refId, "analysis");
     const { doc } = liveDoc;
 
     // XXX: TypeScript cannot narrow types in nested tagged unions.
