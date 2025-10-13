@@ -1,4 +1,4 @@
-import type { AutomergeUrl, Repo } from "@automerge/automerge-repo";
+import type { DocumentId, Repo } from "@automerge/automerge-repo";
 import { type Accessor, createMemo } from "solid-js";
 
 import type {
@@ -10,9 +10,8 @@ import type {
 } from "catlog-wasm";
 import { currentVersion, elaborateDiagram } from "catlog-wasm";
 import { type Api, type LiveDoc, getLiveDocFromDocHandle } from "../api";
-import { type LiveModelDocument, getLiveModel, getLiveModelFromRepo } from "../model";
+import type { LiveModelDocument, ModelLibrary } from "../model";
 import { NotebookUtils, newNotebook } from "../notebook";
-import type { TheoryLibrary } from "../theory";
 
 /** A document defining a diagram in a model. */
 export type DiagramDocument = Document & { type: "diagram" };
@@ -134,12 +133,12 @@ export function createDiagram(api: Api, inModel: StableRef): Promise<string> {
 export async function getLiveDiagram(
     refId: string,
     api: Api,
-    theories: TheoryLibrary,
+    models: ModelLibrary,
 ): Promise<LiveDiagramDocument> {
     const liveDoc = await api.getLiveDoc<DiagramDocument>(refId, "diagram");
     const modelRefId = liveDoc.doc.diagramIn._id;
 
-    const liveModel = await getLiveModel(modelRefId, api, theories);
+    const liveModel = await models.getLiveModelWithRefId(api, modelRefId);
     return enlivenDiagramDocument(liveDoc, liveModel);
 }
 
@@ -148,14 +147,14 @@ export async function getLiveDiagram(
 Prefer [`getLiveDiagram`] unless you're bypassing the official backend.
  */
 export async function getLiveDiagramFromRepo(
-    docId: AutomergeUrl,
+    docId: DocumentId,
     repo: Repo,
-    theories: TheoryLibrary,
+    models: ModelLibrary,
 ): Promise<LiveDiagramDocument> {
     const docHandle = await repo.find<DiagramDocument>(docId);
     const liveDoc = getLiveDocFromDocHandle(docHandle);
-    const modelDocId = liveDoc.doc.diagramIn._id as AutomergeUrl;
+    const modelDocId = liveDoc.doc.diagramIn._id as DocumentId;
 
-    const liveModel = await getLiveModelFromRepo(modelDocId, repo, theories);
+    const liveModel = await models.getLiveModelWithDocId(repo, modelDocId);
     return enlivenDiagramDocument(liveDoc, liveModel);
 }

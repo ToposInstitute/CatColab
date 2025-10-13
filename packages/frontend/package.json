@@ -40,6 +40,7 @@
         "@solid-primitives/context": "^0.3.1",
         "@solid-primitives/destructure": "^0.2.1",
         "@solid-primitives/event-listener": "^2.4.3",
+        "@solid-primitives/map": "^0.7.2",
         "@solid-primitives/timer": "^1.4.1",
         "@solidjs/router": "^0.15.3",
         "@viz-js/viz": "^3.15.0",

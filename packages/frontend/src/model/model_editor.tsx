@@ -1,7 +1,7 @@
 import { useParams } from "@solidjs/router";
 import { getAuth } from "firebase/auth";
 import { useAuth, useFirebaseApp } from "solid-firebase";
-import { Match, Show, Switch, createResource, createSignal, useContext } from "solid-js";
+import { Match, Show, Switch, createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { ModelJudgment } from "catlog-wasm";
@@ -21,7 +21,8 @@ import { type ModelTypeMeta, TheoryLibraryContext } from "../theory";
 import { TheorySelectorDialog } from "../theory/theory_selector";
 import { PermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
-import { type LiveModelDocument, getLiveModel, migrateModelDocument } from "./document";
+import { type LiveModelDocument, migrateModelDocument } from "./document";
+import { createModelLibrary } from "./model_library";
 import { ModelMenu } from "./model_menu";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
@@ -36,16 +37,14 @@ import {
 import "./model_editor.css";
 
 export default function ModelPage() {
+    const params = useParams();
     const api = useApi();
+
     const theories = useContext(TheoryLibraryContext);
     invariant(theories, "Must provide theory library as context to model page");
+    const models = createModelLibrary(theories);
 
-    const params = useParams();
-
-    const [liveModel] = createResource(
-        () => params.ref,
-        (refId) => getLiveModel(refId, api, theories),
-    );
+    const liveModel = models.useLiveModelWithRefId(api, () => params.ref);
 
     return (
         <Show when={liveModel()} fallback={<DocumentLoadingScreen />}>

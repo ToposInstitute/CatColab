@@ -71,6 +71,9 @@ importers:
       '@solid-primitives/event-listener':
         specifier: ^2.4.3
         version: 2.4.3(solid-js@1.9.7)
+      '@solid-primitives/map':
+        specifier: ^0.7.2
+        version: 0.7.2(solid-js@1.9.7)
       '@solid-primitives/timer':
         specifier: ^1.4.1
         version: 1.4.2(solid-js@1.9.7)
@@ -1089,6 +1092,11 @@ packages:
     peerDependencies:
       solid-js: ^1.6.12
 
+  '@solid-primitives/map@0.7.2':
+    resolution: {integrity: sha512-sXK/rS68B4oq3XXNyLrzVhLtT1pnimmMUahd2FqhtYUuyQsCfnW058ptO1s+lWc2k8F/3zQSNVkZ2ifJjlcNbQ==}
+    peerDependencies:
+      solid-js: ^1.6.12
+
   '@solid-primitives/media@2.2.9':
     resolution: {integrity: sha512-QUmU62D4/d9YWx/4Dvr/UZasIkIpqNXz7wosA5GLmesRW9XlPa3G5M6uOmTw73SByHNTCw0D6x8bSdtvvLgzvQ==}
     peerDependencies:
@@ -1131,6 +1139,11 @@ packages:
 
   '@solid-primitives/trigger@1.1.0':
     resolution: {integrity: sha512-00BbAiXV66WwjHuKZc3wr0+GLb9C24mMUmi3JdTpNFgHBbrQGrIHubmZDg36c5/7wH+E0GQtOOanwQS063PO+A==}
+    peerDependencies:
+      solid-js: ^1.6.12
+
+  '@solid-primitives/trigger@1.2.2':
+    resolution: {integrity: sha512-IWoptVc0SWYgmpBPpCMehS5b07+tpFcvw15tOQ3QbXedSYn6KP8zCjPkHNzMxcOvOicTneleeZDP7lqmz+PQ6g==}
     peerDependencies:
       solid-js: ^1.6.12
 
@@ -4133,6 +4146,11 @@ snapshots:
       '@solid-primitives/trigger': 1.1.0(solid-js@1.9.7)
       solid-js: 1.9.7
 
+  '@solid-primitives/map@0.7.2(solid-js@1.9.7)':
+    dependencies:
+      '@solid-primitives/trigger': 1.2.2(solid-js@1.9.7)
+      solid-js: 1.9.7
+
   '@solid-primitives/media@2.2.9(solid-js@1.9.7)':
     dependencies:
       '@solid-primitives/event-listener': 2.4.3(solid-js@1.9.7)
@@ -4179,6 +4197,11 @@ snapshots:
       solid-js: 1.9.7
 
   '@solid-primitives/trigger@1.1.0(solid-js@1.9.7)':
+    dependencies:
+      '@solid-primitives/utils': 6.3.2(solid-js@1.9.7)
+      solid-js: 1.9.7
+
+  '@solid-primitives/trigger@1.2.2(solid-js@1.9.7)':
     dependencies:
       '@solid-primitives/utils': 6.3.2(solid-js@1.9.7)
       solid-js: 1.9.7
