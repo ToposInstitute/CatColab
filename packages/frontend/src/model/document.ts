@@ -1,17 +1,16 @@
-import type { AutomergeUrl, Repo } from "@automerge/automerge-repo";
-import { type Accessor, createMemo, createResource } from "solid-js";
+import type { Accessor } from "solid-js";
 
 import {
     type DblModel,
     type Document,
     type ModelJudgment,
-    type ModelValidationResult,
     currentVersion,
     elaborateModel,
 } from "catlog-wasm";
-import { type Api, type LiveDoc, getLiveDocFromDocHandle } from "../api";
+import type { Api, LiveDoc } from "../api";
 import { NotebookUtils, newNotebook } from "../notebook";
 import type { Theory, TheoryLibrary } from "../theory";
+import type { ValidatedModel } from "./model_library";
 
 /** A document defining a model. */
 export type ModelDocument = Document & { type: "model" };
@@ -36,9 +35,6 @@ export type LiveModelDocument = {
     /** Live document with the model data. */
     liveDoc: LiveDoc<ModelDocument>;
 
-    /** A memo of the formal content of the model. */
-    formalJudgments: Accessor<Array<ModelJudgment>>;
-
     /** A memo of the double theory that the model is of. */
     theory: Accessor<Theory | undefined>;
 
@@ -48,84 +44,6 @@ export type LiveModelDocument = {
     /** A memo of the model elaborated and validated in the core. */
     validatedModel: Accessor<ValidatedModel | undefined>;
 };
-
-/** A validated model as represented in `catlog`. */
-export type ValidatedModel =
-    /** A successfully elaborated and validated model. */
-    | {
-          tag: "Valid";
-          model: DblModel;
-      }
-    /** An elaborated model with one or more validation errors. */
-    | {
-          tag: "Invalid";
-          model: DblModel;
-          errors: (ModelValidationResult & { tag: "Err" })["content"];
-      }
-    /** A model that failed to even elaborate. */
-    | {
-          tag: "Illformed";
-          error: string;
-      };
-
-function enlivenModelDocument(
-    liveDoc: LiveDoc<ModelDocument>,
-    theories: TheoryLibrary,
-): LiveModelDocument {
-    const { doc } = liveDoc;
-
-    // Memo-ize the *formal* content of the notebook, since most derived objects
-    // will not depend on the informal (rich-text) content in notebook.
-    const formalJudgments = createMemo<Array<ModelJudgment>>(
-        () => NotebookUtils.getFormalContent(doc.notebook),
-        [],
-    );
-
-    const [theory] = createResource(
-        () => doc.theory,
-        (theoryId) => theories.get(theoryId),
-    );
-
-    const elaboratedModel = (): DblModel | undefined => {
-        const validated = validatedModel();
-        if (validated && validated.tag !== "Illformed") {
-            return validated.model;
-        }
-    };
-
-    const validatedModel = createMemo<ValidatedModel | undefined>(
-        () => {
-            const th = theory();
-            if (!th) {
-                // Abort immediately if the theory is undefined.
-                return undefined;
-            }
-            let model: DblModel;
-            try {
-                model = elaborateModel(formalJudgments(), th.theory);
-            } catch (e) {
-                return { tag: "Illformed", error: String(e) };
-            }
-            const result = model.validate();
-            if (result.tag === "Ok") {
-                return { tag: "Valid", model };
-            } else {
-                return { tag: "Invalid", model, errors: result.content };
-            }
-        },
-        undefined,
-        { equals: false },
-    );
-
-    return {
-        type: "model",
-        liveDoc,
-        formalJudgments,
-        theory,
-        elaboratedModel,
-        validatedModel,
-    };
-}
 
 /** Create a new model in the backend.
 
@@ -142,30 +60,6 @@ export async function createModel(
         init = initOrTheoryId;
     }
     return api.createDoc(init);
-}
-
-/** Retrieve a model from the backend and make it "live" for editing. */
-export async function getLiveModel(
-    refId: string,
-    api: Api,
-    theories: TheoryLibrary,
-): Promise<LiveModelDocument> {
-    const liveDoc = await api.getLiveDoc<ModelDocument>(refId, "model");
-    return enlivenModelDocument(liveDoc, theories);
-}
-
-/** Get a model from an Automerge repo and make it "live" for editing.
-
-Prefer [`getLiveModel`] unless you're bypassing the official CatColab backend.
- */
-export async function getLiveModelFromRepo(
-    docId: AutomergeUrl,
-    repo: Repo,
-    theories: TheoryLibrary,
-): Promise<LiveModelDocument> {
-    const docHandle = await repo.find<ModelDocument>(docId);
-    const liveDoc = getLiveDocFromDocHandle(docHandle);
-    return enlivenModelDocument(liveDoc, theories);
 }
 
 /** Migrate a model document from one theory to another. */
