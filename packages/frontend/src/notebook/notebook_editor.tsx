@@ -1,7 +1,7 @@
 import { getReorderDestinationIndex } from "@atlaskit/pragmatic-drag-and-drop-hitbox/util/get-reorder-destination-index";
 import { monitorForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import type { DocHandle, Prop } from "@automerge/automerge-repo";
-import { type KbdKey, createShortcut } from "@solid-primitives/keyboard";
+import { makeEventListener } from "@solid-primitives/event-listener";
 import ListPlus from "lucide-solid/icons/list-plus";
 import {
     type Component,
@@ -17,6 +17,7 @@ import invariant from "tiny-invariant";
 
 import type { Cell, Notebook } from "catlog-wasm";
 import { type Completion, IconButton } from "../components";
+import { type KbdKey, type ModifierKey, keyEventHasModifier } from "../util/keyboard";
 import {
     type CellActions,
     type FormalCellEditorProps,
@@ -137,7 +138,7 @@ export function NotebookEditor<T>(props: {
         {
             name: "Text",
             description: "Start writing text",
-            shortcut: [cellShortcutModifier, "T"],
+            shortcut: ["T"],
             construct: () => newRichTextCell(),
         },
         ...(props.cellConstructors ?? []),
@@ -149,21 +150,27 @@ export function NotebookEditor<T>(props: {
             return {
                 name,
                 description,
-                shortcut,
+                shortcut: shortcut && [cellShortcutModifier, ...shortcut],
                 onComplete: () => replaceCellWith(i, cc.construct()),
             };
         });
 
-    createEffect(() => {
+    makeEventListener(window, "keydown", (evt) => {
         if (props.noShortcuts) {
             return;
         }
-        for (const command of insertCommands()) {
-            if (command.shortcut) {
-                createShortcut(command.shortcut, () => command.onComplete?.());
+        if (keyEventHasModifier(evt, cellShortcutModifier)) {
+            for (const command of insertCommands()) {
+                if (command.shortcut && evt.key.toUpperCase() === command.shortcut[0]) {
+                    command.onComplete?.();
+                    return evt.preventDefault();
+                }
             }
         }
-        createShortcut(["Shift", "Enter"], () => addAfterActiveCell(newStemCell()));
+        if (evt.shiftKey && evt.key === "Enter") {
+            addAfterActiveCell(newStemCell());
+            return evt.preventDefault();
+        }
     });
 
     // Set up drag and drop for notebook cells. Each cell reports to the
@@ -369,4 +376,4 @@ The choice is platform-specific: On Mac, the Alt/Option key remaps keys, so we
 use Control, whereas on other platforms Control tends to be already bound in
 other shortcuts, so we Alt.
  */
-export const cellShortcutModifier: KbdKey = navigator.userAgent.includes("Mac") ? "Control" : "Alt";
+const cellShortcutModifier: ModifierKey = navigator.userAgent.includes("Mac") ? "Control" : "Alt";
