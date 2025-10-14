@@ -1,5 +1,6 @@
-import type { KbdKey } from "@solid-primitives/keyboard";
 import { For, type JSX, Show, createMemo, createSignal, onMount } from "solid-js";
+
+import type { KbdKey } from "../util/keyboard";
 
 import "./completions.css";
 
@@ -96,7 +97,7 @@ export function Completions(props: {
                             <div class="completion-name">{c.name}</div>
                             <Show when={c.shortcut}>
                                 <div class="completion-shortcut">
-                                    <KbdShortcut shortcut={c.shortcut as KbdKey[]} />
+                                    <KbdShortcut shortcut={c.shortcut ?? []} />
                                 </div>
                             </Show>
                         </div>

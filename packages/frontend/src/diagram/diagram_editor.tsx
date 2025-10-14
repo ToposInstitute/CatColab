@@ -11,7 +11,6 @@ import {
     type CellConstructor,
     type FormalCellEditorProps,
     NotebookEditor,
-    cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
 import { DocumentBreadcrumbs, DocumentLoadingScreen, Toolbar } from "../page";
@@ -179,7 +178,7 @@ function diagramCellConstructor(meta: InstanceTypeMeta): CellConstructor<Diagram
     return {
         name,
         description,
-        shortcut: shortcut && [cellShortcutModifier, ...shortcut],
+        shortcut,
         construct() {
             return meta.tag === "ObType"
                 ? newFormalCell(newDiagramObjectDecl(meta.obType))
