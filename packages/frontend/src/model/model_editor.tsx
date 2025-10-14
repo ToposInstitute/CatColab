@@ -12,7 +12,6 @@ import {
     type FormalCellEditorProps,
     NotebookEditor,
     NotebookUtils,
-    cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
 import { DocumentBreadcrumbs, DocumentLoadingScreen, Toolbar } from "../page";
@@ -195,7 +194,7 @@ function modelCellConstructor(meta: ModelTypeMeta): CellConstructor<ModelJudgmen
     return {
         name,
         description,
-        shortcut: shortcut && [cellShortcutModifier, ...shortcut],
+        shortcut,
         construct() {
             return meta.tag === "ObType"
                 ? newFormalCell(newObjectDecl(meta.obType))
