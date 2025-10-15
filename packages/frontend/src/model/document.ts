@@ -8,7 +8,7 @@ import {
     elaborateModel,
 } from "catlog-wasm";
 import type { Api, LiveDoc } from "../api";
-import { NotebookUtils, newNotebook } from "../notebook";
+import { NotebookUtils, newNotebook } from "../notebook/types";
 import type { Theory, TheoryLibrary } from "../theory";
 import type { ValidatedModel } from "./model_library";
 

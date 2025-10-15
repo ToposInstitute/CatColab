@@ -12,7 +12,7 @@ import { type Accessor, createResource, onCleanup } from "solid-js";
 
 import { type DblModel, type ModelValidationResult, type Uuid, elaborateModel } from "catlog-wasm";
 import { type Api, type LiveDoc, getLiveDocFromDocHandle } from "../api";
-import { NotebookUtils } from "../notebook";
+import { NotebookUtils } from "../notebook/types";
 import type { Theory, TheoryLibrary } from "../theory";
 import type { LiveModelDocument, ModelDocument } from "./document";
 
@@ -35,10 +35,19 @@ export type ValidatedModel =
           error: string;
       };
 
-/** An entry in the model library, comprising a model and its theory. */
+/** An entry in a `ModelLibrary`. */
 export type ModelEntry = {
+    /** The double theory that the model is a model of. */
     theory: Theory;
+
+    /** The elaborated and validated model. */
     validatedModel: ValidatedModel;
+
+    /** Generation number, incremented each time the model is elaborated.
+
+    Mainly intended for debugging and testing purposes.
+     */
+    generation: number;
 };
 
 /** Create a new `ModelLibrary` in a Solid component.
@@ -102,15 +111,26 @@ export class ModelLibrary {
         const destroy = () => docHandle.off("change", handler);
         this.destructors.set(docHandle.documentId, destroy);
 
-        const entry = await elaborateAndValidateModel(docHandle.doc(), this.theories);
-        this.modelMap.set(docHandle.documentId, entry);
+        const doc = docHandle.doc();
+        const [theory, validatedModel] = await elaborateAndValidateModel(doc, this.theories);
+
+        this.modelMap.set(docHandle.documentId, {
+            theory,
+            validatedModel,
+            generation: 1,
+        });
     }
 
     private async onChange(payload: DocHandleChangePayload<ModelDocument>) {
         const doc = payload.doc;
         if (payload.patches.some((patch) => isPatchToFormalContent(doc, patch))) {
-            const entry = await elaborateAndValidateModel(doc, this.theories);
-            this.modelMap.set(payload.handle.documentId, entry);
+            console.log(payload.patches);
+            const [theory, validatedModel] = await elaborateAndValidateModel(doc, this.theories);
+
+            const docId = payload.handle.documentId;
+            const generation = (this.modelMap.get(docId)?.generation ?? 0) + 1;
+            console.log(generation);
+            this.modelMap.set(docId, { theory, validatedModel, generation });
         }
     }
 
@@ -201,7 +221,7 @@ export class ModelLibrary {
 async function elaborateAndValidateModel(
     doc: ModelDocument,
     theories: TheoryLibrary,
-): Promise<ModelEntry> {
+): Promise<[Theory, ValidatedModel]> {
     const theory = await theories.get(doc.theory);
 
     const formalJudgments = NotebookUtils.getFormalContent(doc.notebook);
@@ -209,13 +229,13 @@ async function elaborateAndValidateModel(
     try {
         model = elaborateModel(formalJudgments, theory.theory);
     } catch (e) {
-        return { theory, validatedModel: { tag: "Illformed", error: String(e) } };
+        return [theory, { tag: "Illformed", error: String(e) }];
     }
     const result = model.validate();
     if (result.tag === "Ok") {
-        return { theory, validatedModel: { tag: "Valid", model } };
+        return [theory, { tag: "Valid", model }];
     } else {
-        return { theory, validatedModel: { tag: "Invalid", model, errors: result.content } };
+        return [theory, { tag: "Invalid", model, errors: result.content }];
     }
 }
 
