@@ -1,4 +1,4 @@
-import type { DocumentId, Repo } from "@automerge/automerge-repo";
+import type { AnyDocumentId, Repo } from "@automerge/automerge-repo";
 
 import {
     type Analysis,
@@ -111,7 +111,7 @@ export async function getLiveAnalysis(
 Prefer [`getLiveAnalysis`] unless you're bypassing the official backend.
  */
 export async function getLiveAnalysisFromRepo(
-    docId: DocumentId,
+    docId: AnyDocumentId,
     repo: Repo,
     models: ModelLibrary,
 ): Promise<LiveAnalysisDocument> {
@@ -119,7 +119,7 @@ export async function getLiveAnalysisFromRepo(
     const liveDoc = getLiveDocFromDocHandle(docHandle);
     const { doc } = liveDoc;
 
-    const parentId = doc.analysisOf._id as DocumentId;
+    const parentId = doc.analysisOf._id as AnyDocumentId;
     if (doc.analysisType === "model") {
         const liveModel = await models.getLiveModelWithDocId(repo, parentId);
         return {

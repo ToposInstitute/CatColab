@@ -1,4 +1,4 @@
-import type { DocumentId, Repo } from "@automerge/automerge-repo";
+import type { AnyDocumentId, Repo } from "@automerge/automerge-repo";
 import { type Accessor, createMemo } from "solid-js";
 
 import type {
@@ -147,13 +147,13 @@ export async function getLiveDiagram(
 Prefer [`getLiveDiagram`] unless you're bypassing the official backend.
  */
 export async function getLiveDiagramFromRepo(
-    docId: DocumentId,
+    docId: AnyDocumentId,
     repo: Repo,
     models: ModelLibrary,
 ): Promise<LiveDiagramDocument> {
     const docHandle = await repo.find<DiagramDocument>(docId);
     const liveDoc = getLiveDocFromDocHandle(docHandle);
-    const modelDocId = liveDoc.doc.diagramIn._id as DocumentId;
+    const modelDocId = liveDoc.doc.diagramIn._id as AnyDocumentId;
 
     const liveModel = await models.getLiveModelWithDocId(repo, modelDocId);
     return enlivenDiagramDocument(liveDoc, liveModel);

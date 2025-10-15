@@ -1,9 +1,11 @@
-import type {
-    DocHandle,
-    DocHandleChangePayload,
-    DocumentId,
-    Patch,
-    Repo,
+import {
+    type AnyDocumentId,
+    type DocHandle,
+    type DocHandleChangePayload,
+    type DocumentId,
+    type Patch,
+    type Repo,
+    interpretAsDocumentId,
 } from "@automerge/automerge-repo";
 import { ReactiveMap } from "@solid-primitives/map";
 import { type Accessor, createResource, onCleanup } from "solid-js";
@@ -124,8 +126,9 @@ export class ModelLibrary {
     /** Get accessor for elaborated model with given Automerge document ID. */
     async getElaboratedModelWithDocId(
         repo: Repo,
-        docId: DocumentId,
+        id: AnyDocumentId,
     ): Promise<Accessor<ModelEntry | undefined>> {
+        const docId = interpretAsDocumentId(id);
         await this.addModelWithDocId(repo, docId);
         return () => this.modelMap.get(docId);
     }
@@ -140,7 +143,8 @@ export class ModelLibrary {
     }
 
     /** Get "live" model from given Automerge document ID. */
-    async getLiveModelWithDocId(repo: Repo, docId: DocumentId): Promise<LiveModelDocument> {
+    async getLiveModelWithDocId(repo: Repo, id: AnyDocumentId): Promise<LiveModelDocument> {
+        const docId = interpretAsDocumentId(id);
         const docHandle = await repo.find<ModelDocument>(docId);
         await this.addModelFromDocHandle(docHandle);
 
@@ -162,7 +166,7 @@ export class ModelLibrary {
     /** Use elaborated model with given Automerge document ID in a component. */
     useElaboratedModelWithDocId(
         repo: Repo,
-        docId: () => DocumentId | undefined,
+        docId: () => AnyDocumentId | undefined,
     ): Accessor<ModelEntry | undefined> {
         const [resource] = createResource(docId, (docId) =>
             this.getElaboratedModelWithDocId(repo, docId),
@@ -184,7 +188,7 @@ export class ModelLibrary {
     /** Use "live" model with given Automerge doc ID in a component. */
     useLiveModelWithDocId(
         repo: Repo,
-        docId: () => DocumentId | undefined,
+        docId: () => AnyDocumentId | undefined,
     ): Accessor<LiveModelDocument | undefined> {
         const [liveModel] = createResource(docId, (docId) =>
             this.getLiveModelWithDocId(repo, docId),
