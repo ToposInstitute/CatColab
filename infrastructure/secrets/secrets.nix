@@ -7,14 +7,14 @@ let
   catcolab-next-deployuser = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM7AYg1fZM0zMxb/BuZTSwK4O3ycUIHruApr1tKoO8nJ deployuser@next.catcolab.org";
 in
 builtins.mapAttrs (_: publicKeys: { inherit publicKeys; }) ({
-  ".env.next.age" = [
+  "env.next.age" = [
     catcolab-next
     owen
     epatters
     jmoggr
     catcolab-next-deployuser
   ];
-  ".env.prod.age" = [
+  "env.prod.age" = [
     catcolab
     owen
     epatters
