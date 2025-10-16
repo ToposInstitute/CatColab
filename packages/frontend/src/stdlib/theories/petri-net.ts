@@ -39,6 +39,7 @@ export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
                 id: "diagram",
                 name: "Visualization",
                 description: "Visualize the Petri net",
+                help: "visualization",
             }),
             analyses.massAction({
                 simulate(model, data) {
