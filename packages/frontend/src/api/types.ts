@@ -2,6 +2,7 @@ import { type DocumentId, Repo } from "@automerge/automerge-repo";
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
 import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb";
 import type { FirebaseApp } from "firebase/app";
+import { type Accessor, createResource } from "solid-js";
 import invariant from "tiny-invariant";
 import * as uuid from "uuid";
 
@@ -78,6 +79,12 @@ export class Api {
     /** Get an Automerge document ID for the given document ref. */
     async getDocId(refId: Uuid): Promise<DocumentId> {
         const { docId } = await this.getDocCacheEntry(refId);
+        return docId;
+    }
+
+    /** TODO */
+    useDocId(refId: () => Uuid | undefined): Accessor<DocumentId | undefined> {
+        const [docId] = createResource(refId, (refId) => this.getDocId(refId));
         return docId;
     }
 

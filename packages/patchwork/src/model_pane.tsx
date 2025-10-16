@@ -1,18 +1,20 @@
-import type { AutomergeUrl } from "@automerge/automerge-repo";
+import type { AnyDocumentId } from "@automerge/automerge-repo";
 import { createResource, Switch, Match } from "solid-js";
 
-import { getLiveModelFromRepo } from "../../frontend/src/model";
+import { createModelLibrary } from "../../frontend/src/model";
 import { ModelPane } from "../../frontend/src/model/model_editor";
 import { TheoryLibraryContext } from "../../frontend/src/theory";
 import { stdTheories } from "../../frontend/src/stdlib";
 import type { SolidToolProps } from "./tools";
 
 export function ModelPaneComponent(props: SolidToolProps) {
+    const models = createModelLibrary(stdTheories);
+
     const [liveModel] = createResource(
         () => props.docUrl,
         async (docUrl) => {
             try {
-                return await getLiveModelFromRepo(docUrl as AutomergeUrl, props.repo, stdTheories);
+                return await models.getLiveModelWithDocId(props.repo, docUrl as AnyDocumentId);
             } catch (error) {
                 console.error("=== Model Loading Failed ===");
                 console.error("Error:", error);

@@ -16,9 +16,24 @@ pub struct Notebook<T> {
     pub cell_order: Vec<Uuid>,
 }
 
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct ModelNotebook(pub Notebook<super::model_judgment::ModelJudgment>);
+
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct DiagramNotebook(pub Notebook<super::diagram_judgment::DiagramJudgment>);
+
 impl<T> Notebook<T> {
     pub fn cells(&self) -> impl Iterator<Item = &NotebookCell<T>> {
         self.cell_order.iter().filter_map(|id| self.cell_contents.get(id))
+    }
+
+    pub fn formal_content(&self) -> impl Iterator<Item = &T> {
+        self.cells().filter_map(|cell| match cell {
+            NotebookCell::Formal { content, .. } => Some(content),
+            _ => None,
+        })
     }
 
     pub fn migrate_from_v0(old: v0::Notebook<T>) -> Self {

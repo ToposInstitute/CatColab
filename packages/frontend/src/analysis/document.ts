@@ -1,4 +1,4 @@
-import type { AutomergeUrl, Repo } from "@automerge/automerge-repo";
+import type { AnyDocumentId, Repo } from "@automerge/automerge-repo";
 
 import {
     type Analysis,
@@ -9,9 +9,8 @@ import {
 } from "catlog-wasm";
 import { type Api, type LiveDoc, getLiveDocFromDocHandle } from "../api";
 import { type LiveDiagramDocument, getLiveDiagram, getLiveDiagramFromRepo } from "../diagram";
-import { type LiveModelDocument, getLiveModel, getLiveModelFromRepo } from "../model";
+import type { LiveModelDocument, ModelLibrary } from "../model";
 import { newNotebook } from "../notebook";
-import type { TheoryLibrary } from "../theory";
 
 /** A document defining an analysis. */
 export type AnalysisDocument = Document & { type: "analysis" };
@@ -81,14 +80,14 @@ export async function createAnalysis(api: Api, analysisType: AnalysisType, analy
 export async function getLiveAnalysis(
     refId: string,
     api: Api,
-    theories: TheoryLibrary,
+    models: ModelLibrary,
 ): Promise<LiveAnalysisDocument> {
     const liveDoc = await api.getLiveDoc<AnalysisDocument>(refId, "analysis");
     const { doc } = liveDoc;
 
     // XXX: TypeScript cannot narrow types in nested tagged unions.
     if (doc.analysisType === "model") {
-        const liveModel = await getLiveModel(doc.analysisOf._id, api, theories);
+        const liveModel = await models.getLiveModelWithRefId(api, doc.analysisOf._id);
         return {
             type: "analysis",
             analysisType: "model",
@@ -96,7 +95,7 @@ export async function getLiveAnalysis(
             liveModel,
         };
     } else if (doc.analysisType === "diagram") {
-        const liveDiagram = await getLiveDiagram(doc.analysisOf._id, api, theories);
+        const liveDiagram = await getLiveDiagram(doc.analysisOf._id, api, models);
         return {
             type: "analysis",
             analysisType: "diagram",
@@ -112,17 +111,17 @@ export async function getLiveAnalysis(
 Prefer [`getLiveAnalysis`] unless you're bypassing the official backend.
  */
 export async function getLiveAnalysisFromRepo(
-    docId: AutomergeUrl,
+    docId: AnyDocumentId,
     repo: Repo,
-    theories: TheoryLibrary,
+    models: ModelLibrary,
 ): Promise<LiveAnalysisDocument> {
     const docHandle = await repo.find<AnalysisDocument>(docId);
     const liveDoc = getLiveDocFromDocHandle(docHandle);
     const { doc } = liveDoc;
 
-    const parentId = doc.analysisOf._id as AutomergeUrl;
+    const parentId = doc.analysisOf._id as AnyDocumentId;
     if (doc.analysisType === "model") {
-        const liveModel = await getLiveModelFromRepo(parentId, repo, theories);
+        const liveModel = await models.getLiveModelWithDocId(repo, parentId);
         return {
             type: "analysis",
             analysisType: "model",
@@ -130,7 +129,7 @@ export async function getLiveAnalysisFromRepo(
             liveModel,
         };
     } else if (doc.analysisType === "diagram") {
-        const liveDiagram = await getLiveDiagramFromRepo(parentId, repo, theories);
+        const liveDiagram = await getLiveDiagramFromRepo(parentId, repo, models);
         return {
             type: "analysis",
             analysisType: "diagram",

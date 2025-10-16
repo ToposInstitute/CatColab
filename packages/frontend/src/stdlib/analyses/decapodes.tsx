@@ -12,6 +12,7 @@ import {
     createNumericalColumn,
 } from "../../components";
 import type { LiveDiagramDocument } from "../../diagram";
+import { NotebookUtils } from "../../notebook";
 import { uniqueIndexArray } from "../../util/indexing";
 import { PDEPlot2D, type PDEPlotData2D } from "../../visualization";
 import { createJuliaKernel, executeAndRetrieve } from "./jupyter";
@@ -343,7 +344,7 @@ const makeSimulationData = (
         diagram: validatedDiagram.diagram.judgments(),
         // FIXME: Depending on judgments from notebook means that model cannot
         // be composed of other models.
-        model: liveDiagram.liveModel.formalJudgments(),
+        model: NotebookUtils.getFormalContent(liveDiagram.liveModel.liveDoc.doc.notebook),
         domain,
         mesh,
         initialConditions,
