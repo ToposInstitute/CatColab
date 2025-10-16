@@ -3,8 +3,6 @@ use crate::v0::AnalysisType;
 
 use super::analysis::Analysis;
 use super::api::Link;
-use super::diagram_judgment::DiagramJudgment;
-use super::model_judgment::ModelJudgment;
 use super::notebook::Notebook;
 
 use serde::{Deserialize, Serialize};
@@ -17,7 +15,7 @@ use tsify::Tsify;
 pub struct ModelDocumentContent {
     pub name: String,
     pub theory: String,
-    pub notebook: Notebook<ModelJudgment>,
+    pub notebook: Notebook<super::model_judgment::ModelJudgment>,
     pub version: String,
 }
 
@@ -27,7 +25,7 @@ pub struct DiagramDocumentContent {
     pub name: String,
     #[serde(rename = "diagramIn")]
     pub diagram_in: Link,
-    pub notebook: Notebook<DiagramJudgment>,
+    pub notebook: Notebook<super::diagram_judgment::DiagramJudgment>,
     pub version: String,
 }
 
