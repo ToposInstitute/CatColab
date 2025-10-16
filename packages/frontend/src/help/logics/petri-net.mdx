@@ -42,5 +42,21 @@ Transitions are determined by their **rate** coefficient $r$, i.e. a transition 
 </HelpAnalysisById>
 
 <HelpAnalysisById theory={props.theory} analysisId="stochastic-mass-action">
-**TO-DO**
+Like ordinary mass-action dynamics, stochastic mass-action dynamics for Petri Nets interpret places in their underlying model as time-varying quantities which transfer mass through transitions. The difference here is that the time between reactions is determined by an exponential distribution whose mean is the total reaction rate. The reaction rate is just the sum of *propensity* for each reaction, which is calculated as the product of the quantity for each reactant. This process was first popularized by Gillespie in "A General Method for Numerically Simulating the Stochastic Time Evolution of Coupled Chemical Reactions." 
+
+Let's consider the simple SIR model as an example,
+```
+[S, I] --infection--> [I, I]
+[I]    --recovery---> [R]
+```
+The infection rate is proportional to the product of the sizes between susceptible and infected populations, and the recovery rate is proportional to the infected populations. The time between events is sampled from an exponential distribution whose rate is the reaction rate. The probability that a certain event will occur at this next step is determined by its rate. After a particular event is chosen, the mass of the reactants are updated appropriately. In our example, if infection takes place, the susceptible population decreases by one and the infected increases by one, since an infected person was "used" to produce two new infected persons. If a recovery takes place, then the infected and recovery populations decrease and increase by one, respectively.
+
+We can add an additional `death` process by either considering a new population "D" for "deceased," or by leaving the list in the domain empty,
+```
+[I] --death--> []
+```
+In this case, a fatality is interpreted as only decrementing the infected population. The empty list, a valid term in the model, has a valid interpretation in the analysis.
+
+We use the Gillespie algorithm from the `rebop` package. 
+
 </HelpAnalysisById>
