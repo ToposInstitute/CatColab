@@ -25,7 +25,7 @@ in
     };
 
     catcolabSecrets = {
-      file = ../../secrets/.env.next.age;
+      file = ../../secrets/env.next.age;
       mode = "400";
       owner = "catcolab";
     };
