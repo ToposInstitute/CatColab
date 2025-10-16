@@ -320,14 +320,16 @@
         };
       };
 
-      checks.x86_64-linux.integrationTests = import ./infrastructure/tests/integration.nix {
-        inherit
-          nixpkgs
-          inputs
-          self
-          linuxSystem
-          ;
-        rustToolchain = rustToolchainLinux;
-      };
+      # Temporarily disabled until more meaningful tests are developed. Keeping the frontend dependecies
+      # up to date is currently not worth the hassle.
+      # checks.x86_64-linux.integrationTests = import ./infrastructure/tests/integration.nix {
+      #   inherit
+      #     nixpkgs
+      #     inputs
+      #     self
+      #     linuxSystem
+      #     ;
+      #   rustToolchain = rustToolchainLinux;
+      # };
     };
 }
