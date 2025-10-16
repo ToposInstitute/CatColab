@@ -12,7 +12,6 @@ import { type Accessor, createResource, onCleanup } from "solid-js";
 
 import { type DblModel, type ModelValidationResult, type Uuid, elaborateModel } from "catlog-wasm";
 import { type Api, type LiveDoc, getLiveDocFromDocHandle } from "../api";
-import { NotebookUtils } from "../notebook/types";
 import type { Theory, TheoryLibrary } from "../theory";
 import type { LiveModelDocument, ModelDocument } from "./document";
 
@@ -224,10 +223,9 @@ async function elaborateAndValidateModel(
 ): Promise<[Theory, ValidatedModel]> {
     const theory = await theories.get(doc.theory);
 
-    const formalJudgments = NotebookUtils.getFormalContent(doc.notebook);
     let model: DblModel;
     try {
-        model = elaborateModel(formalJudgments, theory.theory);
+        model = elaborateModel(doc.notebook, theory.theory);
     } catch (e) {
         return [theory, { tag: "Illformed", error: String(e) }];
     }

@@ -88,7 +88,7 @@ export async function migrateModelDocument(
     // TODO: We need a general method to propagate changes from catlog models to
     // notebooks. This stop-gap solution only works because pushforward
     // migration doesn't have to create/delete cells, only update types.
-    let model = elaborateModel(NotebookUtils.getFormalContent(doc.notebook), theory.theory);
+    let model = elaborateModel(doc.notebook, theory.theory);
     model = migration.migrate(model, targetTheory.theory);
     liveDoc.changeDoc((doc) => {
         doc.theory = targetTheoryId;
