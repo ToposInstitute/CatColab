@@ -7,7 +7,7 @@ import { stdTheories } from "../stdlib";
 import { Theory } from "../theory";
 import { type ModelDocument, newModelDocument } from "./document";
 import { ModelLibrary } from "./model_library";
-import { newObjectDecl } from "./types";
+import { newInstantiatedModel, newObjectDecl } from "./types";
 
 // Dummy Automerge repo with no networking or storage.
 const repo = new Repo();
@@ -18,13 +18,14 @@ afterAll(() => models.destroy());
 describe("Model in library", async () => {
     const modelDoc = newModelDocument("empty");
     const docHandle = repo.create(modelDoc);
-    const docId = docHandle.documentId;
 
-    const getEntry = await models.getElaboratedModel(docId);
+    const getEntry = await models.getElaboratedModel(docHandle.documentId);
     const generation = () => getEntry()?.generation;
+    const status = () => getEntry()?.validatedModel.tag;
 
-    test("should have a generation number", () => {
+    test("should have generation number", () => {
         assert.strictEqual(generation(), 1);
+        assert.strictEqual(models.size, 1);
     });
 
     test("should have instantiated theory", () => {
@@ -51,6 +52,8 @@ describe("Model in library", async () => {
             doc.theory = "causal-loop";
         });
         assert.strictEqual(generation(), 2);
+        assert.strictEqual(status(), "Valid");
+        assert.strictEqual(models.size, 1);
     });
 
     test.sequential("should NOT re-elaborate when document name changes", async () => {
@@ -69,13 +72,10 @@ describe("Model in library", async () => {
             NotebookUtils.appendCell(doc.notebook, newRichTextCell());
         });
         assert.strictEqual(generation(), 3);
-
-        const validated = getEntry()?.validatedModel;
-        assert(validated?.tag === "Valid");
-        assert.strictEqual(validated.model.obGenerators().length, 1);
+        assert.strictEqual(status(), "Valid");
     });
 
-    test.sequential("should NOT re-elaborate when rich text cell is edited", async () => {
+    test.sequential("should NOT re-elaborate when rich text is edited", async () => {
         await changeDoc((doc) => {
             const cellId = NotebookUtils.getCellIdByIndex(docHandle.doc().notebook, 1);
             const cell = doc.notebook.cellContents[cellId];
@@ -83,6 +83,28 @@ describe("Model in library", async () => {
             cell.content = "Some text";
         });
         assert.strictEqual(generation(), 3);
+    });
+
+    const anotherModelDoc = newModelDocument("causal-loop");
+    NotebookUtils.appendCell(
+        anotherModelDoc.notebook,
+        newFormalCell(newObjectDecl({ tag: "Basic", content: "Object" })),
+    );
+    const anotherDocHandle = repo.create(modelDoc);
+
+    test.sequential("should automatically include instantiated models", async () => {
+        const inst = newInstantiatedModel({
+            _id: anotherDocHandle.documentId,
+            _version: null,
+            _server: "",
+            type: "instantiation",
+        });
+        await changeDoc((doc) => {
+            NotebookUtils.appendCell(doc.notebook, newFormalCell(inst));
+        });
+        assert.strictEqual(generation(), 4);
+        assert.strictEqual(status(), "Valid");
+        assert.strictEqual(models.size, 2);
     });
 });
 

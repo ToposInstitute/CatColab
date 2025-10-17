@@ -1,12 +1,7 @@
 import type { Accessor } from "solid-js";
+import invariant from "tiny-invariant";
 
-import {
-    type DblModel,
-    type Document,
-    type ModelJudgment,
-    currentVersion,
-    elaborateModel,
-} from "catlog-wasm";
+import { type DblModel, type Document, type ModelJudgment, currentVersion } from "catlog-wasm";
 import type { Api, LiveDoc } from "../api";
 import { NotebookUtils, newNotebook } from "../notebook/types";
 import type { Theory, TheoryLibrary } from "../theory";
@@ -64,17 +59,19 @@ export async function createModel(
 
 /** Migrate a model document from one theory to another. */
 export async function migrateModelDocument(
-    liveDoc: LiveDoc<ModelDocument>,
+    liveModel: LiveModelDocument,
     targetTheoryId: string,
     theories: TheoryLibrary,
 ) {
-    const doc = liveDoc.doc;
-    const theory = await theories.get(doc.theory);
+    const { doc, changeDoc } = liveModel.liveDoc;
     const targetTheory = await theories.get(targetTheoryId);
+    const theory = liveModel.theory();
+    let model = liveModel.elaboratedModel();
+    invariant(theory && model); // FIXME: Should fail gracefully.
 
     // Trivial migration.
     if (!NotebookUtils.hasFormalCells(doc.notebook) || theory.inclusions.includes(targetTheoryId)) {
-        liveDoc.changeDoc((doc) => {
+        changeDoc((doc) => {
             doc.theory = targetTheoryId;
         });
         return;
@@ -88,9 +85,8 @@ export async function migrateModelDocument(
     // TODO: We need a general method to propagate changes from catlog models to
     // notebooks. This stop-gap solution only works because pushforward
     // migration doesn't have to create/delete cells, only update types.
-    let model = elaborateModel(doc.notebook, theory.theory);
     model = migration.migrate(model, targetTheory.theory);
-    liveDoc.changeDoc((doc) => {
+    changeDoc((doc) => {
         doc.theory = targetTheoryId;
         for (const judgment of NotebookUtils.getFormalContent(doc.notebook)) {
             if (judgment.tag === "object") {
