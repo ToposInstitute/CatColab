@@ -251,6 +251,7 @@ impl<'a> Elaborator<'a> {
             let (name, label, _, ty_v) = match cell {
                 ModelJudgment::Object(ob_decl) => self.object_cell(ob_decl),
                 ModelJudgment::Morphism(mor_decl) => self.morphism_cell(mor_decl),
+                ModelJudgment::Instantiation(_) => todo!(),
             }?;
             field_ty0s.push((name, (label, ty_v.ty0())));
             field_ty_vs.push((name, (label, ty_v.clone())));
