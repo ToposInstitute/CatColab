@@ -101,7 +101,7 @@ export function ModelPane(props: {
                 </div>
                 <TheorySelectorDialog
                     theoryMeta={stdTheories.getMetadata(liveDoc().doc.theory)}
-                    setTheory={(id) => migrateModelDocument(liveDoc(), id, stdTheories)}
+                    setTheory={(id) => migrateModelDocument(props.liveModel, id, stdTheories)}
                     theories={selectableTheories()}
                 />
             </div>

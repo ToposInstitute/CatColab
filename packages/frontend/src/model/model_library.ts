@@ -11,8 +11,17 @@ import { type Accessor, createResource, onCleanup } from "solid-js";
 import invariant from "tiny-invariant";
 import * as uuid from "uuid";
 
-import { type DblModel, type ModelValidationResult, type Uuid, elaborateModel } from "catlog-wasm";
+import {
+    type DblModel,
+    DblModelMap,
+    type DblTheory,
+    type ModelNotebook,
+    type ModelValidationResult,
+    type Uuid,
+    elaborateModel,
+} from "catlog-wasm";
 import { type Api, type DocRef, type LiveDoc, findAndMigrate, makeLiveDoc } from "../api";
+import { NotebookUtils } from "../notebook/types";
 import type { Theory, TheoryLibrary } from "../theory";
 import type { LiveModelDocument, ModelDocument } from "./document";
 
@@ -99,6 +108,10 @@ export class ModelLibrary<RefId> {
         this.params = params;
     }
 
+    get size(): number {
+        return this.entries.size;
+    }
+
     static withApi(api: Api, theories: TheoryLibrary): ModelLibrary<Uuid> {
         return new ModelLibrary<Uuid>({
             canonicalize(refId) {
@@ -149,10 +162,9 @@ export class ModelLibrary<RefId> {
         if (this.entries.has(key)) {
             return;
         }
-        
+
         const docHandle = await this.params.fetch(refId);
-        const theories = this.params.theories;
-        const [theory, validatedModel] = await elaborateAndValidateModel(docHandle.doc(), theories);
+        const [theory, validatedModel] = await this.elaborateAndValidate(docHandle.doc());
 
         const onChange = (payload: DocHandleChangePayload<ModelDocument>) =>
             this.onChange(key, payload);
@@ -175,8 +187,7 @@ export class ModelLibrary<RefId> {
     private async onChange(key: ModelKey, payload: DocHandleChangePayload<ModelDocument>) {
         const doc = payload.doc;
         if (payload.patches.some((patch) => isPatchToFormalContent(doc, patch))) {
-            const theories = this.params.theories;
-            const [theory, validatedModel] = await elaborateAndValidateModel(doc, theories);
+            const [theory, validatedModel] = await this.elaborateAndValidate(doc);
 
             const generation = (this.entries.get(key)?.generation ?? 0) + 1;
             this.entries.set(key, { theory, validatedModel, generation });
@@ -215,26 +226,52 @@ export class ModelLibrary<RefId> {
         const [liveModel] = createResource(refId, (refId) => this.getLiveModel(refId));
         return liveModel;
     }
+
+    private async elaborateAndValidate(doc: ModelDocument): Promise<[Theory, ValidatedModel]> {
+        const theory = await this.params.theories.get(doc.theory);
+
+        const instantiated = new DblModelMap();
+        for (const cell of NotebookUtils.getFormalContent(doc.notebook)) {
+            if (!(cell.tag === "instantiation" && cell.model)) {
+                continue;
+            }
+            const refId = cell.model._id;
+            if (instantiated.has(refId)) {
+                continue;
+            }
+
+            await this.addModel(refId as RefId);
+            const entry = this.entries.get(this.params.canonicalize(refId as RefId));
+            invariant(entry);
+            if (entry.validatedModel.tag === "Illformed") {
+                const error = `Instantiated model is ill-formed: ${entry.validatedModel.error}`;
+                return [theory, { tag: "Illformed", error }];
+            }
+            instantiated.set(refId, entry.validatedModel.model);
+        }
+
+        const validatedModel = elaborateAndValidateModel(doc.notebook, instantiated, theory.theory);
+        return [theory, validatedModel];
+    }
 }
 
-/** Elaborate and then validate a model document. */
-async function elaborateAndValidateModel(
-    doc: ModelDocument,
-    theories: TheoryLibrary,
-): Promise<[Theory, ValidatedModel]> {
-    const theory = await theories.get(doc.theory);
-
+/** Elaborate and then validate a model notebook. */
+function elaborateAndValidateModel(
+    notebook: ModelNotebook,
+    instantiated: DblModelMap,
+    theory: DblTheory,
+): ValidatedModel {
     let model: DblModel;
     try {
-        model = elaborateModel(doc.notebook, theory.theory);
+        model = elaborateModel(notebook, instantiated, theory);
     } catch (e) {
-        return [theory, { tag: "Illformed", error: String(e) }];
+        return { tag: "Illformed", error: String(e) };
     }
     const result = model.validate();
     if (result.tag === "Ok") {
-        return [theory, { tag: "Valid", model }];
+        return { tag: "Valid", model };
     } else {
-        return [theory, { tag: "Invalid", model, errors: result.content }];
+        return { tag: "Invalid", model, errors: result.content };
     }
 }
 
