@@ -7,6 +7,7 @@ import type {
     Document,
     ModelDiagramValidationResult,
     StableRef,
+    Uuid,
 } from "catlog-wasm";
 import { currentVersion, elaborateDiagram } from "catlog-wasm";
 import { type Api, type LiveDoc, findAndMigrate, makeLiveDoc } from "../api";
@@ -131,14 +132,14 @@ export function createDiagram(api: Api, inModel: StableRef): Promise<string> {
 
 /** Retrieve a diagram from the backend and make it "live" for editing. */
 export async function getLiveDiagram(
-    refId: string,
+    refId: Uuid,
     api: Api,
-    models: ModelLibrary,
+    models: ModelLibrary<Uuid>,
 ): Promise<LiveDiagramDocument> {
     const liveDoc = await api.getLiveDoc<DiagramDocument>(refId, "diagram");
     const modelRefId = liveDoc.doc.diagramIn._id;
 
-    const liveModel = await models.getLiveModelWithRefId(api, modelRefId);
+    const liveModel = await models.getLiveModel(modelRefId);
     return enlivenDiagramDocument(liveDoc, liveModel);
 }
 
@@ -149,12 +150,12 @@ Prefer [`getLiveDiagram`] unless you're bypassing the official backend.
 export async function getLiveDiagramFromRepo(
     docId: AnyDocumentId,
     repo: Repo,
-    models: ModelLibrary,
+    models: ModelLibrary<AnyDocumentId>,
 ): Promise<LiveDiagramDocument> {
     const docHandle = await findAndMigrate<DiagramDocument>(repo, docId, "diagram");
     const liveDoc = makeLiveDoc(docHandle);
     const modelDocId = liveDoc.doc.diagramIn._id as AnyDocumentId;
 
-    const liveModel = await models.getLiveModelWithDocId(repo, modelDocId);
+    const liveModel = await models.getLiveModel(modelDocId);
     return enlivenDiagramDocument(liveDoc, liveModel);
 }
