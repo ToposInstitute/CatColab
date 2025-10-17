@@ -541,6 +541,7 @@ pub fn elaborate_model(notebook: ModelNotebook, theory: &DblTheory) -> Result<Db
         match judgment {
             ModelJudgment::Object(decl) => model.add_ob(decl)?,
             ModelJudgment::Morphism(decl) => model.add_mor(decl)?,
+            ModelJudgment::Instantiation(_) => {} // FIXME: Ignored for now.
         }
     }
     Ok(model)
