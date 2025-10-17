@@ -7,7 +7,7 @@ import {
     type StableRef,
     currentVersion,
 } from "catlog-wasm";
-import { type Api, type LiveDoc, getLiveDocFromDocHandle } from "../api";
+import { type Api, type LiveDoc, findAndMigrate, makeLiveDoc } from "../api";
 import { type LiveDiagramDocument, getLiveDiagram, getLiveDiagramFromRepo } from "../diagram";
 import type { LiveModelDocument, ModelLibrary } from "../model";
 import { newNotebook } from "../notebook";
@@ -115,8 +115,8 @@ export async function getLiveAnalysisFromRepo(
     repo: Repo,
     models: ModelLibrary,
 ): Promise<LiveAnalysisDocument> {
-    const docHandle = await repo.find<AnalysisDocument>(docId);
-    const liveDoc = getLiveDocFromDocHandle(docHandle);
+    const docHandle = await findAndMigrate<AnalysisDocument>(repo, docId, "analysis");
+    const liveDoc = makeLiveDoc(docHandle);
     const { doc } = liveDoc;
 
     const parentId = doc.analysisOf._id as AnyDocumentId;

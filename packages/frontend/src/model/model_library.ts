@@ -11,7 +11,7 @@ import { ReactiveMap } from "@solid-primitives/map";
 import { type Accessor, createResource, onCleanup } from "solid-js";
 
 import { type DblModel, type ModelValidationResult, type Uuid, elaborateModel } from "catlog-wasm";
-import { type Api, type LiveDoc, getLiveDocFromDocHandle } from "../api";
+import { type Api, type LiveDoc, findAndMigrate, makeLiveDoc } from "../api";
 import type { Theory, TheoryLibrary } from "../theory";
 import type { LiveModelDocument, ModelDocument } from "./document";
 
@@ -96,7 +96,7 @@ export class ModelLibrary {
         if (this.modelMap.has(docId)) {
             return;
         }
-        const docHandle = await repo.find<ModelDocument>(docId);
+        const docHandle = await findAndMigrate<ModelDocument>(repo, docId, "model");
         await this.addModelFromDocHandle(docHandle);
     }
 
@@ -123,12 +123,10 @@ export class ModelLibrary {
     private async onChange(payload: DocHandleChangePayload<ModelDocument>) {
         const doc = payload.doc;
         if (payload.patches.some((patch) => isPatchToFormalContent(doc, patch))) {
-            console.log(payload.patches);
             const [theory, validatedModel] = await elaborateAndValidateModel(doc, this.theories);
 
             const docId = payload.handle.documentId;
             const generation = (this.modelMap.get(docId)?.generation ?? 0) + 1;
-            console.log(generation);
             this.modelMap.set(docId, { theory, validatedModel, generation });
         }
     }
@@ -164,10 +162,10 @@ export class ModelLibrary {
     /** Get "live" model from given Automerge document ID. */
     async getLiveModelWithDocId(repo: Repo, id: AnyDocumentId): Promise<LiveModelDocument> {
         const docId = interpretAsDocumentId(id);
-        const docHandle = await repo.find<ModelDocument>(docId);
+        const docHandle = await findAndMigrate<ModelDocument>(repo, docId, "model");
         await this.addModelFromDocHandle(docHandle);
 
-        const liveDoc = getLiveDocFromDocHandle(docHandle);
+        const liveDoc = makeLiveDoc(docHandle);
         return makeLiveModel(liveDoc, () => this.modelMap.get(docId));
     }
 
