@@ -215,7 +215,7 @@ export function NotebookEditor<T>(props: {
     return (
         <div class="notebook">
             <Show when={props.notebook.cellOrder.length === 0}>
-                <div class="notebook-empty placeholder">
+                <div class="notebook-cell-placeholder">
                     <IconButton onClick={() => appendCell(newStemCell())}>
                         <ListPlus />
                     </IconButton>
@@ -352,12 +352,8 @@ export function NotebookEditor<T>(props: {
                     }}
                 </For>
             </ul>
-            <Show
-                when={props.notebook.cellOrder.some(
-                    (cellId) => props.notebook.cellContents[cellId]?.tag !== "stem",
-                )}
-            >
-                <div class="placeholder">
+            <Show when={NotebookUtils.getCells(props.notebook).some((cell) => cell.tag !== "stem")}>
+                <div class="notebook-cell-placeholder">
                     <IconButton
                         onClick={() => appendCell(newStemCell())}
                         tooltip="Create a new cell"

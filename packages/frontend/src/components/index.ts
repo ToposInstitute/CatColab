@@ -1,5 +1,6 @@
 export * from "./alert";
 export * from "./completions";
+export * from "./document_picker";
 export * from "./dialog";
 export * from "./fixed_table_editor";
 export * from "./foldable";
@@ -7,9 +8,9 @@ export * from "./form";
 export * from "./icon_button";
 export * from "./id_input";
 export * from "./inline_input";
-export * from "./input_options";
 export * from "./json_import";
 export * from "./name_input";
 export * from "./panel";
 export * from "./resizable";
 export * from "./rich_text_editor";
+export * from "./text_input";
