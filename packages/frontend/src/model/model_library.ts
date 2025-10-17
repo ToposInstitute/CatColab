@@ -2,16 +2,17 @@ import {
     type AnyDocumentId,
     type DocHandle,
     type DocHandleChangePayload,
-    type DocumentId,
     type Patch,
     type Repo,
     interpretAsDocumentId,
 } from "@automerge/automerge-repo";
 import { ReactiveMap } from "@solid-primitives/map";
 import { type Accessor, createResource, onCleanup } from "solid-js";
+import invariant from "tiny-invariant";
+import * as uuid from "uuid";
 
 import { type DblModel, type ModelValidationResult, type Uuid, elaborateModel } from "catlog-wasm";
-import { type Api, type LiveDoc, findAndMigrate, makeLiveDoc } from "../api";
+import { type Api, type DocRef, type LiveDoc, findAndMigrate, makeLiveDoc } from "../api";
 import type { Theory, TheoryLibrary } from "../theory";
 import type { LiveModelDocument, ModelDocument } from "./document";
 
@@ -49,167 +50,169 @@ export type ModelEntry = {
     generation: number;
 };
 
-/** Create a new `ModelLibrary` in a Solid component.
+type ModelLibraryParameters<RefId> = {
+    canonicalize: (refId: RefId) => ModelKey;
+    fetch: (refId: RefId) => Promise<DocHandle<ModelDocument>>;
+    docRef?: (refId: RefId) => Promise<DocRef>;
+    theories: TheoryLibrary;
+};
 
-Ensures that the library is properly cleaned up when the component is unmounted.
- */
-export function createModelLibrary(theories: TheoryLibrary): ModelLibrary {
-    const library = new ModelLibrary(theories);
+type ModelHandle = {
+    docHandle: DocHandle<ModelDocument>;
+    destroy: () => void;
+};
 
+type ModelKey = string & { __modelLibraryKey: true };
+
+/** Create a `ModelLibrary` from an API object within a Solid component. */
+export function createModelLibraryWithApi(api: Api, theories: TheoryLibrary): ModelLibrary<Uuid> {
+    const library = ModelLibrary.withApi(api, theories);
     onCleanup(() => library.destroy());
+    return library;
+}
 
+/** Create a `ModelLibrary` from an Automerge repo within a Solid component. */
+export function createModelLibraryWithRepo(
+    repo: Repo,
+    theories: TheoryLibrary,
+): ModelLibrary<AnyDocumentId> {
+    const library = ModelLibrary.withRepo(repo, theories);
+    onCleanup(() => library.destroy());
     return library;
 }
 
 /** A reactive library of models.
 
 Maintains a library of models, each associated with an Automerge document,
-elaborating and validating each model when the document changes and caching the
-result. Moreover, the cache is reactive when used in a Solid reactive context.
+elaborating and validating a model when its associated document changes and
+caching the result. Moreover, the cache is reactive when used in a Solid
+reactive context.
  */
-export class ModelLibrary {
-    private modelMap: ReactiveMap<DocumentId, ModelEntry>;
-    private destructors: Map<DocumentId, () => void>;
-    private theories: TheoryLibrary;
+export class ModelLibrary<RefId> {
+    private entries: ReactiveMap<ModelKey, ModelEntry>;
+    private handles: Map<ModelKey, ModelHandle>;
+    private params: ModelLibraryParameters<RefId>;
 
-    constructor(theories: TheoryLibrary) {
-        this.modelMap = new ReactiveMap();
-        this.destructors = new Map();
-        this.theories = theories;
+    constructor(params: ModelLibraryParameters<RefId>) {
+        this.entries = new ReactiveMap();
+        this.handles = new Map();
+        this.params = params;
+    }
+
+    static withApi(api: Api, theories: TheoryLibrary): ModelLibrary<Uuid> {
+        return new ModelLibrary<Uuid>({
+            canonicalize(refId) {
+                invariant(uuid.validate(refId), () => `Ref ID is not a valid UUID: ${refId}`);
+                return refId as ModelKey;
+            },
+            fetch(refId) {
+                return api.getDocHandle<ModelDocument>(refId, "model");
+            },
+            async docRef(refId) {
+                const permissions = await api.getPermissions(refId);
+                return { refId, permissions };
+            },
+            theories,
+        });
+    }
+
+    static withRepo(repo: Repo, theories: TheoryLibrary): ModelLibrary<AnyDocumentId> {
+        return new ModelLibrary<AnyDocumentId>({
+            canonicalize(docId) {
+                return interpretAsDocumentId(docId) as string as ModelKey;
+            },
+            fetch(docId) {
+                return findAndMigrate<ModelDocument>(repo, docId, "model");
+            },
+            theories,
+        });
     }
 
     /** Destroys the model library.
 
-    Removes all event handlers that re-elaborate models on document changes. If
-    you create a model library in a component by calling `createModelLibarary`,
-    this method will be called automatically when the component unmounts.
+    Removes all cached document handles and associated event handlers. If you
+    create a model library in a component by calling `createModelLibrary`, this
+    method will be called automatically when the component unmounts. It is safe
+    to call this method multiple times.
      */
     destroy() {
-        for (const destructor of this.destructors.values()) {
-            destructor();
+        for (const handle of this.handles.values()) {
+            handle.destroy();
         }
-        this.destructors.clear();
-        this.modelMap.clear();
+        this.handles.clear();
+        this.entries.clear();
     }
 
-    private async addModelWithDocId(repo: Repo, docId: DocumentId) {
-        if (this.modelMap.has(docId)) {
+    /** Adds a model to the library, if it has not already been added. */
+    private async addModel(refId: RefId) {
+        const key = this.params.canonicalize(refId);
+        if (this.entries.has(key)) {
             return;
         }
-        const docHandle = await findAndMigrate<ModelDocument>(repo, docId, "model");
-        await this.addModelFromDocHandle(docHandle);
-    }
+        
+        const docHandle = await this.params.fetch(refId);
+        const theories = this.params.theories;
+        const [theory, validatedModel] = await elaborateAndValidateModel(docHandle.doc(), theories);
 
-    private async addModelFromDocHandle(docHandle: DocHandle<ModelDocument>) {
-        if (this.modelMap.has(docHandle.documentId)) {
-            return;
-        }
-        const handler = (payload: DocHandleChangePayload<ModelDocument>) => this.onChange(payload);
-        docHandle.on("change", handler);
+        const onChange = (payload: DocHandleChangePayload<ModelDocument>) =>
+            this.onChange(key, payload);
+        docHandle.on("change", onChange);
 
-        const destroy = () => docHandle.off("change", handler);
-        this.destructors.set(docHandle.documentId, destroy);
+        this.handles.set(key, {
+            docHandle,
+            destroy() {
+                docHandle.off("change", onChange);
+            },
+        });
 
-        const doc = docHandle.doc();
-        const [theory, validatedModel] = await elaborateAndValidateModel(doc, this.theories);
-
-        this.modelMap.set(docHandle.documentId, {
+        this.entries.set(key, {
             theory,
             validatedModel,
             generation: 1,
         });
     }
 
-    private async onChange(payload: DocHandleChangePayload<ModelDocument>) {
+    private async onChange(key: ModelKey, payload: DocHandleChangePayload<ModelDocument>) {
         const doc = payload.doc;
         if (payload.patches.some((patch) => isPatchToFormalContent(doc, patch))) {
-            const [theory, validatedModel] = await elaborateAndValidateModel(doc, this.theories);
+            const theories = this.params.theories;
+            const [theory, validatedModel] = await elaborateAndValidateModel(doc, theories);
 
-            const docId = payload.handle.documentId;
-            const generation = (this.modelMap.get(docId)?.generation ?? 0) + 1;
-            this.modelMap.set(docId, { theory, validatedModel, generation });
+            const generation = (this.entries.get(key)?.generation ?? 0) + 1;
+            this.entries.set(key, { theory, validatedModel, generation });
         }
     }
 
-    /** Get accessor for elaborated model with given document ref ID. */
-    async getElaboratedModelWithRefId(
-        api: Api,
-        refId: Uuid,
-    ): Promise<Accessor<ModelEntry | undefined>> {
-        const docId = await api.getDocId(refId);
-        return await this.getElaboratedModelWithDocId(api.repo, docId);
+    /** Gets reactive accessor for elaborated model. */
+    async getElaboratedModel(refId: RefId): Promise<Accessor<ModelEntry | undefined>> {
+        await this.addModel(refId);
+
+        const key = this.params.canonicalize(refId);
+        return () => this.entries.get(key);
     }
 
-    /** Get accessor for elaborated model with given Automerge document ID. */
-    async getElaboratedModelWithDocId(
-        repo: Repo,
-        id: AnyDocumentId,
-    ): Promise<Accessor<ModelEntry | undefined>> {
-        const docId = interpretAsDocumentId(id);
-        await this.addModelWithDocId(repo, docId);
-        return () => this.modelMap.get(docId);
+    /** Gets "live" model containing a reactive model document. */
+    async getLiveModel(refId: RefId): Promise<LiveModelDocument> {
+        await this.addModel(refId);
+
+        const key = this.params.canonicalize(refId);
+        const docHandle = this.handles.get(key)?.docHandle;
+        invariant(docHandle);
+
+        const docRef = this.params.docRef ? await this.params.docRef(refId) : undefined;
+        const liveDoc = makeLiveDoc(docHandle, docRef);
+        return makeLiveModel(liveDoc, () => this.entries.get(key));
     }
 
-    /** Get "live" model with given document ref ID. */
-    async getLiveModelWithRefId(api: Api, refId: Uuid): Promise<LiveModelDocument> {
-        const liveDoc = await api.getLiveDoc<ModelDocument>(refId, "model");
-        const docHandle = liveDoc.docHandle;
-        await this.addModelFromDocHandle(docHandle);
-
-        return makeLiveModel(liveDoc, () => this.modelMap.get(docHandle.documentId));
-    }
-
-    /** Get "live" model from given Automerge document ID. */
-    async getLiveModelWithDocId(repo: Repo, id: AnyDocumentId): Promise<LiveModelDocument> {
-        const docId = interpretAsDocumentId(id);
-        const docHandle = await findAndMigrate<ModelDocument>(repo, docId, "model");
-        await this.addModelFromDocHandle(docHandle);
-
-        const liveDoc = makeLiveDoc(docHandle);
-        return makeLiveModel(liveDoc, () => this.modelMap.get(docId));
-    }
-
-    /** Use elaborated model with given document ref ID in a component. */
-    useElaboratedModelWithRefId(
-        api: Api,
-        refId: () => Uuid | undefined,
-    ): Accessor<ModelEntry | undefined> {
-        const [resource] = createResource(refId, (refId) =>
-            this.getElaboratedModelWithRefId(api, refId),
-        );
+    /** Use elaborated model in a component. */
+    useElaboratedModel(refId: () => RefId | undefined): Accessor<ModelEntry | undefined> {
+        const [resource] = createResource(refId, (refId) => this.getElaboratedModel(refId));
         return () => resource()?.();
     }
 
-    /** Use elaborated model with given Automerge document ID in a component. */
-    useElaboratedModelWithDocId(
-        repo: Repo,
-        docId: () => AnyDocumentId | undefined,
-    ): Accessor<ModelEntry | undefined> {
-        const [resource] = createResource(docId, (docId) =>
-            this.getElaboratedModelWithDocId(repo, docId),
-        );
-        return () => resource()?.();
-    }
-
-    /** Use "live" model with given document ref ID in a component. */
-    useLiveModelWithRefId(
-        api: Api,
-        refId: () => Uuid | undefined,
-    ): Accessor<LiveModelDocument | undefined> {
-        const [liveModel] = createResource(refId, (refId) =>
-            this.getLiveModelWithRefId(api, refId),
-        );
-        return liveModel;
-    }
-
-    /** Use "live" model with given Automerge doc ID in a component. */
-    useLiveModelWithDocId(
-        repo: Repo,
-        docId: () => AnyDocumentId | undefined,
-    ): Accessor<LiveModelDocument | undefined> {
-        const [liveModel] = createResource(docId, (docId) =>
-            this.getLiveModelWithDocId(repo, docId),
-        );
+    /** Use "live" model in a component. */
+    useLiveModel(refId: () => RefId | undefined): Accessor<LiveModelDocument | undefined> {
+        const [liveModel] = createResource(refId, (refId) => this.getLiveModel(refId));
         return liveModel;
     }
 }

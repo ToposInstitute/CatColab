@@ -65,9 +65,8 @@ export class Api {
         refId: Uuid,
         docType?: Doc["type"],
     ): Promise<LiveDoc<Doc>> {
-        const { docId, permissions, localOnly } = await this.getDocCacheEntry(refId);
-        const repo = localOnly ? this.localRepo : this.repo;
-        const docHandle = await findAndMigrate<Doc>(repo, docId, docType);
+        const docHandle = await this.getDocHandle<Doc>(refId, docType);
+        const permissions = await this.getPermissions(refId);
         return makeLiveDoc(docHandle, {
             refId,
             permissions,
@@ -84,10 +83,10 @@ export class Api {
         return await findAndMigrate<Doc>(repo, docId, docType);
     }
 
-    /** Get an Automerge document ID for the given document ref. */
-    async getDocId(refId: Uuid): Promise<DocumentId> {
-        const { docId } = await this.getDocCacheEntry(refId);
-        return docId;
+    /** Get permissions for the given document ref. */
+    async getPermissions(refId: Uuid): Promise<Permissions> {
+        const { permissions } = await this.getDocCacheEntry(refId);
+        return permissions;
     }
 
     private async getDocCacheEntry(refId: Uuid): Promise<DocCacheEntry> {

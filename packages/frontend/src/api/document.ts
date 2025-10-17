@@ -42,7 +42,7 @@ export type LiveDoc<Doc extends Document = Document> = {
 };
 
 /** Info about a document ref in the CatColab backend. */
-type DocRef = {
+export type DocRef = {
     /** ID of the document ref. */
     refId: string;
 

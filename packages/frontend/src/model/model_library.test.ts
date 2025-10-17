@@ -12,7 +12,7 @@ import { newObjectDecl } from "./types";
 // Dummy Automerge repo with no networking or storage.
 const repo = new Repo();
 
-const models = new ModelLibrary(stdTheories);
+const models = ModelLibrary.withRepo(repo, stdTheories);
 afterAll(() => models.destroy());
 
 describe("Model in library", async () => {
@@ -20,7 +20,7 @@ describe("Model in library", async () => {
     const docHandle = repo.create(modelDoc);
     const docId = docHandle.documentId;
 
-    const getEntry = await models.getElaboratedModelWithDocId(repo, docId);
+    const getEntry = await models.getElaboratedModel(docId);
     const generation = () => getEntry()?.generation;
 
     test("should have a generation number", () => {
