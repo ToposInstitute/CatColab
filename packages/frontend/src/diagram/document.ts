@@ -9,7 +9,7 @@ import type {
     StableRef,
 } from "catlog-wasm";
 import { currentVersion, elaborateDiagram } from "catlog-wasm";
-import { type Api, type LiveDoc, getLiveDocFromDocHandle } from "../api";
+import { type Api, type LiveDoc, findAndMigrate, makeLiveDoc } from "../api";
 import type { LiveModelDocument, ModelLibrary } from "../model";
 import { NotebookUtils, newNotebook } from "../notebook";
 
@@ -151,8 +151,8 @@ export async function getLiveDiagramFromRepo(
     repo: Repo,
     models: ModelLibrary,
 ): Promise<LiveDiagramDocument> {
-    const docHandle = await repo.find<DiagramDocument>(docId);
-    const liveDoc = getLiveDocFromDocHandle(docHandle);
+    const docHandle = await findAndMigrate<DiagramDocument>(repo, docId, "diagram");
+    const liveDoc = makeLiveDoc(docHandle);
     const modelDocId = liveDoc.doc.diagramIn._id as AnyDocumentId;
 
     const liveModel = await models.getLiveModelWithDocId(repo, modelDocId);
