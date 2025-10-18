@@ -100,11 +100,13 @@ reactive context.
 export class ModelLibrary<RefId> {
     private entries: ReactiveMap<ModelKey, ModelEntry>;
     private handles: Map<ModelKey, ModelHandle>;
+    private isElaborating: Set<ModelKey>;
     private params: ModelLibraryParameters<RefId>;
 
     constructor(params: ModelLibraryParameters<RefId>) {
         this.entries = new ReactiveMap();
         this.handles = new Map();
+        this.isElaborating = new Set();
         this.params = params;
     }
 
@@ -164,7 +166,7 @@ export class ModelLibrary<RefId> {
         }
 
         const docHandle = await this.params.fetch(refId);
-        const [theory, validatedModel] = await this.elaborateAndValidate(docHandle.doc());
+        const [theory, validatedModel] = await this.elaborateAndValidate(key, docHandle.doc());
 
         const onChange = (payload: DocHandleChangePayload<ModelDocument>) =>
             this.onChange(key, payload);
@@ -187,7 +189,7 @@ export class ModelLibrary<RefId> {
     private async onChange(key: ModelKey, payload: DocHandleChangePayload<ModelDocument>) {
         const doc = payload.doc;
         if (payload.patches.some((patch) => isPatchToFormalContent(doc, patch))) {
-            const [theory, validatedModel] = await this.elaborateAndValidate(doc);
+            const [theory, validatedModel] = await this.elaborateAndValidate(key, doc);
 
             const generation = (this.entries.get(key)?.generation ?? 0) + 1;
             this.entries.set(key, { theory, validatedModel, generation });
@@ -227,11 +229,34 @@ export class ModelLibrary<RefId> {
         return liveModel;
     }
 
-    private async elaborateAndValidate(doc: ModelDocument): Promise<[Theory, ValidatedModel]> {
+    // Outer method detects cycles to avoid looping infinitely.
+    private async elaborateAndValidate(
+        key: ModelKey,
+        doc: ModelDocument,
+    ): Promise<[Theory, ValidatedModel]> {
         const theory = await this.params.theories.get(doc.theory);
 
+        if (this.isElaborating.has(key)) {
+            const error = "Model contains a cycle of instantiations";
+            return [theory, { tag: "Illformed", error }];
+        }
+
+        this.isElaborating.add(key);
+        try {
+            const validatedModel = await this._elaborateAndValidate(doc.notebook, theory.theory);
+            return [theory, validatedModel];
+        } finally {
+            this.isElaborating.delete(key);
+        }
+    }
+
+    // Inner method actually elaborates. Do not call directly!
+    private async _elaborateAndValidate(
+        notebook: ModelNotebook,
+        theory: DblTheory,
+    ): Promise<ValidatedModel> {
         const instantiated = new DblModelMap();
-        for (const cell of NotebookUtils.getFormalContent(doc.notebook)) {
+        for (const cell of NotebookUtils.getFormalContent(notebook)) {
             if (!(cell.tag === "instantiation" && cell.model)) {
                 continue;
             }
@@ -245,13 +270,12 @@ export class ModelLibrary<RefId> {
             invariant(entry);
             if (entry.validatedModel.tag === "Illformed") {
                 const error = `Instantiated model is ill-formed: ${entry.validatedModel.error}`;
-                return [theory, { tag: "Illformed", error }];
+                return { tag: "Illformed", error };
             }
             instantiated.set(refId, entry.validatedModel.model);
         }
 
-        const validatedModel = elaborateAndValidateModel(doc.notebook, instantiated, theory.theory);
-        return [theory, validatedModel];
+        return elaborateAndValidateModel(notebook, instantiated, theory);
     }
 }
 
